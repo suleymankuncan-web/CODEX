@@ -1,0 +1,58 @@
+import * as request from "supertest";
+import { createIntegrationApp } from "./test-app";
+
+describe("HealthController (integration)", () => {
+  it("returns dependency-aware health when database is reachable and redis is skipped", async () => {
+    const app = await createIntegrationApp({
+      databaseService: {
+        query: jest.fn().mockResolvedValue({ rowCount: 1, rows: [{ "?column?": 1 }] }),
+      },
+      appConfigService: {
+        appName: "store-ops-backend",
+        queueBackend: "in-memory",
+        redisUrl: "redis://localhost:6379",
+      },
+    });
+
+    try {
+      const response = await request(app.getHttpServer()).get("/api/health");
+
+      expect(response.status).toBe(200);
+      expect(response.body.status).toBe("ok");
+      expect(response.body.service).toBe("store-ops-backend");
+      expect(response.headers["x-correlation-id"]).toBeDefined();
+      expect(response.body.checks.database.status).toBe("ok");
+      expect(response.body.checks.redis.status).toBe("skipped");
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("returns 503 when database health fails", async () => {
+    const app = await createIntegrationApp({
+      databaseService: {
+        query: jest.fn().mockRejectedValue(new Error("database unavailable")),
+      },
+      appConfigService: {
+        appName: "store-ops-backend",
+        queueBackend: "in-memory",
+        redisUrl: "redis://localhost:6379",
+      },
+    });
+
+    try {
+      const response = await request(app.getHttpServer())
+        .get("/api/health")
+        .set("x-correlation-id", "corr-health-test");
+
+      expect(response.status).toBe(503);
+      expect(response.body.status).toBe("error");
+      expect(response.headers["x-correlation-id"]).toBe("corr-health-test");
+      expect(response.body.checks.database.status).toBe("error");
+      expect(response.body.checks.database.message).toContain("database unavailable");
+      expect(response.body.checks.redis.status).toBe("skipped");
+    } finally {
+      await app.close();
+    }
+  });
+});

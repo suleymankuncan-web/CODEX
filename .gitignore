@@ -1,0 +1,13 @@
+backend/nestjs/node_modules/
+backend/nestjs/dist/
+backend/nestjs/.release-rehearsal-*.log
+backend/nestjs/.release-rehearsal-*.err.log
+backend/nestjs/.smoke-app*.log
+backend/nestjs/.smoke-app*.err.log
+backend/nestjs/coverage/
+backend/nestjs/.env
+backend/nestjs/.env.local
+backend/nestjs/.env.*.local
+.git/
+.DS_Store
+Thumbs.db

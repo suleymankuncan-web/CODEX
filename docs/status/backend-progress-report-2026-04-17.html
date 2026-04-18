@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Backend İlerleme Raporu - 17 Nisan 2026</title>
+  <style>
+    :root {
+      --ink: #18222f;
+      --muted: #52606d;
+      --line: #d7dee7;
+      --soft: #f4f7fa;
+      --accent: #0d5c63;
+      --accent-soft: #dff2f1;
+      --ok: #0b6e4f;
+      --warn: #8f5b00;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: var(--ink);
+      line-height: 1.55;
+      background: white;
+    }
+
+    .page {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 40px 48px 64px;
+    }
+
+    .hero {
+      border: 1px solid var(--line);
+      background: linear-gradient(135deg, #f7fbfb 0%, #eef4f8 100%);
+      padding: 28px 32px;
+      border-radius: 18px;
+      margin-bottom: 28px;
+    }
+
+    h1, h2, h3 {
+      margin: 0 0 12px;
+      line-height: 1.2;
+    }
+
+    h1 {
+      font-size: 32px;
+    }
+
+    h2 {
+      margin-top: 28px;
+      font-size: 22px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--line);
+    }
+
+    h3 {
+      margin-top: 22px;
+      font-size: 18px;
+    }
+
+    p {
+      margin: 0 0 12px;
+    }
+
+    ul, ol {
+      margin: 0 0 14px 20px;
+      padding: 0;
+    }
+
+    li {
+      margin: 0 0 8px;
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 14px;
+      margin-top: 10px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin: 16px 0 8px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      background: white;
+      border-radius: 14px;
+      padding: 16px 18px;
+    }
+
+    .badge {
+      display: inline-block;
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    .status-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0 18px;
+      font-size: 14px;
+    }
+
+    .status-table th,
+    .status-table td {
+      border: 1px solid var(--line);
+      padding: 10px 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .status-table th {
+      background: var(--soft);
+    }
+
+    .note {
+      border-left: 4px solid var(--accent);
+      background: #f7fbfd;
+      padding: 14px 16px;
+      margin: 14px 0 18px;
+    }
+
+    .ok {
+      color: var(--ok);
+      font-weight: 600;
+    }
+
+    .warn {
+      color: var(--warn);
+      font-weight: 600;
+    }
+
+    .small {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    @media print {
+      .page {
+        padding: 20px 28px 40px;
+      }
+
+      h2 {
+        break-after: avoid;
+      }
+
+      .card,
+      .hero,
+      .note {
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <div class="badge">Backend Durum Raporu</div>
+      <h1>Store Operations Platform</h1>
+      <p>
+        Bu rapor, 17 Nisan 2026 itibarıyla backend tarafında yapılan mimari ve uygulama çalışmalarının
+        detaylı özetini, mevcut teknik olgunluk seviyesini ve kademeli yol haritasını sunar.
+      </p>
+      <p class="meta">
+        Proje yönü: NestJS modular monolith + PostgreSQL | Veri sınırları: <code>ops</code>, <code>stg</code>,
+        <code>rpt</code>, <code>audit</code> | Çalışma alanı: <code>backend/nestjs</code>
+      </p>
+    </section>
+
+    <h2>1. Yönetici Özeti</h2>
+    <p>
+      Çalışmanın ana hedefi, mağaza operasyonu, workforce, checklist, KPI ve reporting süreçlerini taşıyabilecek
+      büyüyebilir bir backend çekirdeği oluşturmaktır. Bu noktada sistem yalnızca CRUD seviyesinde bir API olmaktan
+      çıkmış, veri ingest eden, doğrulayan, materialize eden, snapshot üreten, raporlayan ve operasyonel olarak
+      izlenebilen bir platform omurgasına dönüşmüştür.
+    </p>
+    <div class="grid">
+      <div class="card">
+        <div class="badge">Tamamlanan Omurga</div>
+        <p>
+          Materialization, worker, import observability, reporting read API ve external ID mapping tabanlı
+          integration zinciri çalışır durumda.
+        </p>
+      </div>
+      <div class="card">
+        <div class="badge">Bulunulan Aşama</div>
+        <p>
+          Backend çekirdeği ileri olgunluk aşamasında. Ana eksen artık altyapı kurmaktan çok işletilebilirlik,
+          güvenilirlik ve kalan bounded slice’ları tamamlama yönünde ilerliyor.
+        </p>
+      </div>
+    </div>
+
+    <h2>2. Hedeflenen Son Ürün</h2>
+    <p>
+      Nihai hedef, mağaza operasyonlarını taşıyan bir <strong>retail operations backbone</strong> üretmektir.
+      Bu backbone üzerine yönetim paneli, dashboard, bölge müdürü ekranları, denetim akışları ve ileri analitik
+      katmanları oturabilecektir.
+    </p>
+    <ul>
+      <li>Dış sistemlerden veri alma ve güvenli staging.</li>
+      <li>Operational model içine kontrollü materialization.</li>
+      <li>Immutable snapshot üretimi ve raporlama.</li>
+      <li>Audit izleri ve retry kontrollü async işleme.</li>
+      <li>Yeni modül eklemelerinde düzeni bozmayan bounded architecture.</li>
+    </ul>
+
+    <h2>3. Mimari Kararlar ve Korunan Sınırlar</h2>
+    <table class="status-table">
+      <thead>
+        <tr>
+          <th>Karar</th>
+          <th>Anlamı</th>
+          <th>Neden Kritik</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>ops</code></td>
+          <td>Operasyonel, güncel, çalışan iş verisi</td>
+          <td>Uygulama davranışını raporlamadan ayırır</td>
+        </tr>
+        <tr>
+          <td><code>stg</code></td>
+          <td>Entegrasyonlardan gelen ham ve normalize edilmemiş veri</td>
+          <td>Kirli dış veri ile domain verisini karıştırmaz</td>
+        </tr>
+        <tr>
+          <td><code>rpt</code></td>
+          <td>Immutable snapshot ve raporlama yüzeyi</td>
+          <td>Raporlamayı operational değişimlerden izole eder</td>
+        </tr>
+        <tr>
+          <td><code>audit</code></td>
+          <td>İz, event ve operasyon geçmişi</td>
+          <td>İşletilebilirlik ve inceleme kabiliyeti sağlar</td>
+        </tr>
+        <tr>
+          <td>Worker ayrımı</td>
+          <td>API process ve async job process ayrıdır</td>
+          <td>Ağır işlerin HTTP akışını bozmadan büyümesini sağlar</td>
+        </tr>
+        <tr>
+          <td>External ID mapping</td>
+          <td><code>stg.external_id_map</code> kanonik eşleme kaynağıdır</td>
+          <td>Yeni entegrasyonlarda kimlik çözümlemeyi standartlaştırır</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>4. Bu Çalışmada Neler Yapıldı</h2>
+
+    <h3>4.1 Integration ve Materialization Omurgası</h3>
+    <ul>
+      <li>Materialization validation/error handling sertleştirildi.</li>
+      <li>Satır bazlı durum modeli netleştirildi: <code>processed</code>, <code>validation_failed</code>, <code>retryable_error</code>.</li>
+      <li>Batch final durumları netleştirildi: <code>completed</code>, <code>completed_with_errors</code>, <code>failed</code>.</li>
+      <li>Reference ve dependent entity akışları ayrıştırıldı.</li>
+      <li><code>stg.external_id_map</code> merkezde tutularak mapping lookup/upsert mantığı shared hale getirildi.</li>
+    </ul>
+
+    <h3>4.2 Worker ve Async İşleme</h3>
+    <ul>
+      <li>BullMQ worker host eklendi.</li>
+      <li>Worker-only bootstrap eklendi.</li>
+      <li>Snapshot üretimi enqueue aşamasından ayrılıp gerçek worker execution semantiğine taşındı.</li>
+      <li><code>start:workers</code> script’i eklendi.</li>
+    </ul>
+
+    <h3>4.3 Reporting Katmanı</h3>
+    <ul>
+      <li>Read-only reporting endpoint’leri açıldı.</li>
+      <li>Snapshot run, workforce, KPI, checklist ve turnover raporları sağlandı.</li>
+      <li>Endpoint’lere pagination ve response metadata eklendi: <code>count</code>, <code>total</code>, <code>limit</code>, <code>offset</code>.</li>
+      <li><code>GET /api/reports/summary</code> ile dashboard başlangıç özeti üretildi.</li>
+    </ul>
+
+    <h3>4.4 Import Türleri ve Reference Zinciri</h3>
+    <ul>
+      <li>Ayrı import entity desteği eklendi: <code>assignment</code>, <code>position</code>, <code>company</code>, <code>region</code>.</li>
+      <li>Store, employee, position ve KPI importları mapping-aware hale getirildi.</li>
+      <li>KPI importuna scope bazlı dependency guard eklendi.</li>
+      <li>Önerilen import sırası kod seviyesinde anlamlı hale geldi:
+        <code>company -&gt; region -&gt; store -&gt; position -&gt; employee -&gt; assignment -&gt; kpi</code>.
+      </li>
+    </ul>
+
+    <h3>4.5 Operasyonel Görünürlük ve Retry Kontrolü</h3>
+    <ul>
+      <li>Import batch detail ve error endpoint’leri eklendi.</li>
+      <li>Dependency analizi eklendi: <code>dependencySummary</code>, <code>blockedByEntityTypes</code>, <code>recommendedImportOrder</code>.</li>
+      <li>Operasyonel karar alanları eklendi: <code>recommendedNextEntityType</code>, <code>canRetryNow</code>.</li>
+      <li>Batch list ve summary endpoint’leri eklendi.</li>
+      <li>Controlled retry endpoint’i eklendi.</li>
+      <li>Retry tracking alanları eklendi: <code>retryCount</code>, <code>lastRetriedAt</code>.</li>
+      <li>Retry audit event yazımı eklendi: <code>import_batch.retried</code>.</li>
+      <li>Batch audit geçmişi okunabilir hale getirildi.</li>
+    </ul>
+
+    <h2>5. Şu An Hangi Aşamadayız?</h2>
+    <div class="note">
+      <strong>Mevcut aşama:</strong> Backend core inşası büyük ölçüde tamamlanmış durumda. Şu an bulunduğumuz seviye,
+      “altyapı var mı?” aşamasından “işletme kalitesi, görünürlük, güvenilirlik ve kalan domain yüzeylerini tamamlama”
+      aşamasına geçmiş durumda.
+    </div>
+    <table class="status-table">
+      <thead>
+        <tr>
+          <th>Alan</th>
+          <th>Durum</th>
+          <th>Yorum</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Mimari omurga</td>
+          <td class="ok">Güçlü</td>
+          <td>Schema sınırları, bounded slice yaklaşımı ve async model yerleşti</td>
+        </tr>
+        <tr>
+          <td>Integration ingestion</td>
+          <td class="ok">İleri seviye</td>
+          <td>Mapping-aware, retry kontrollü ve gözlemlenebilir durumda</td>
+        </tr>
+        <tr>
+          <td>Reporting API</td>
+          <td class="ok">Kullanılabilir</td>
+          <td>İlk dashboard ve management ekranlarını besleyebilir</td>
+        </tr>
+        <tr>
+          <td>Testing</td>
+          <td class="ok">Temel güvence var</td>
+          <td>Gerçek integration testleri ve servis testleri mevcut, fakat live infra E2E daha sonra derinleşmeli</td>
+        </tr>
+        <tr>
+          <td>Auth / RBAC</td>
+          <td class="warn">Kısmen hazır</td>
+          <td>Scope mantığı var, enterprise düzey identity entegrasyonu henüz tamamlanmış değil</td>
+        </tr>
+        <tr>
+          <td>Snapshot observability</td>
+          <td class="warn">Açık alan</td>
+          <td>Import kadar zengin operasyonel görünürlük henüz yok</td>
+        </tr>
+        <tr>
+          <td>UI readiness</td>
+          <td class="ok">Başlangıç için hazır</td>
+          <td>Reporting ve import operasyon yüzeyi artık ekran beslemeye elverişli</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>6. Uygulama Tarafında Şu An Olan Somut Yetenekler</h2>
+    <h3>6.1 Reporting API Yüzeyi</h3>
+    <ul>
+      <li><code>GET /api/reports/snapshot-runs</code></li>
+      <li><code>GET /api/reports/workforce</code></li>
+      <li><code>GET /api/reports/kpis</code></li>
+      <li><code>GET /api/reports/checklists</code></li>
+      <li><code>GET /api/reports/turnover</code></li>
+      <li><code>GET /api/reports/summary</code></li>
+    </ul>
+
+    <h3>6.2 Import Operasyon Yüzeyi</h3>
+    <ul>
+      <li><code>POST /api/integrations/import-batches</code></li>
+      <li><code>GET /api/integrations/import-batches</code></li>
+      <li><code>GET /api/integrations/import-batches/summary</code></li>
+      <li><code>GET /api/integrations/import-batches/:batchId</code></li>
+      <li><code>GET /api/integrations/import-batches/:batchId/errors</code></li>
+      <li><code>POST /api/integrations/import-batches/:batchId/retry</code></li>
+      <li><code>GET /api/integrations/import-batch-audit/:batchId</code></li>
+    </ul>
+
+    <h3>6.3 Desteklenen Import Entity Türleri</h3>
+    <ul>
+      <li><code>company</code></li>
+      <li><code>region</code></li>
+      <li><code>store</code></li>
+      <li><code>position</code></li>
+      <li><code>employee</code></li>
+      <li><code>assignment</code></li>
+      <li><code>kpi</code></li>
+    </ul>
+
+    <h2>7. Doğrulama ve Mevcut Teknik Güvence</h2>
+    <p>
+      Backend tarafında yaptığımız tüm ana geliştirmelerden sonra test ve build doğrulamaları tekrar çalıştırılarak
+      güncel durum tazelendi.
+    </p>
+    <ul>
+      <li><span class="ok">Jest test suite:</span> <code>npm test -- --runInBand</code></li>
+      <li><span class="ok">Build doğrulaması:</span> <code>npm run build</code></li>
+      <li>Güncel toplam güvence: <strong>8 test suite</strong>, <strong>40 test</strong></li>
+    </ul>
+
+    <h2>8. Güçlü Taraflar ve Kalan Boşluklar</h2>
+    <div class="grid">
+      <div class="card">
+        <div class="badge">Güçlü Taraflar</div>
+        <ul>
+          <li>Mimari sınırlar net ve korunuyor.</li>
+          <li>Import pipeline artık işletilebilir.</li>
+          <li>Reporting katmanı immutable ve okunabilir bir contract sunuyor.</li>
+          <li>Yeni modül eklemeye uygun bir düzen oluştu.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="badge">Kalan Boşluklar</div>
+        <ul>
+          <li>Snapshot operasyon görünürlüğü import kadar güçlü değil.</li>
+          <li>Auth/RBAC enterprise seviyede tamamlanmadı.</li>
+          <li>Canlı PostgreSQL ve Redis ile tam E2E worker doğrulaması genişletilmeli.</li>
+          <li>UI tüketimi için bazı summary/health derived contract’lar zenginleştirilebilir.</li>
+        </ul>
+      </div>
+    </div>
+
+    <h2>9. Kademe Kademe Yol Haritası</h2>
+
+    <h3>Kademe 1: Backend Core Kapanışı</h3>
+    <p class="small">Amaç: Import ve snapshot omurgasını tam işletilebilir seviyeye taşımak.</p>
+    <ol>
+      <li>Import response’larına derived health state ekleme: <code>healthy</code>, <code>needs_action</code>, <code>blocked</code>, <code>retry_ready</code>.</li>
+      <li>Snapshot ve worker tarafına import benzeri observability yüzeyi açma.</li>
+      <li>Retry ve audit zincirini snapshot run’lar için de standardize etme.</li>
+      <li>Live infra odaklı worker/integration E2E doğrulamalarını artırma.</li>
+    </ol>
+
+    <h3>Kademe 2: Domain Coverage Genişletme</h3>
+    <p class="small">Amaç: Kalan bounded slice’ları aynı mimari disiplinle tamamlamak.</p>
+    <ol>
+      <li>Checklist ve turnover tarafında gerekirse ek operational API ve summary yüzeyleri açma.</li>
+      <li>Eksik master/reference entity akışlarını netleştirme.</li>
+      <li>Yeni modüller için aynı pattern’i kullanan reusable application/infrastructure şablonları oluşturma.</li>
+      <li>Domain bazlı audit ve lifecycle event setlerini genişletme.</li>
+    </ol>
+
+    <h3>Kademe 3: Security ve Identity Olgunlaştırma</h3>
+    <p class="small">Amaç: Sistemi gerçek kullanıcı ve organizasyon ortamına yaklaştırmak.</p>
+    <ol>
+      <li>Gerçek JWT / identity provider entegrasyonu.</li>
+      <li>Role ve scope matrisi netleştirme.</li>
+      <li>Region/store/company seviyesinde erişim denetimlerini daha sert hale getirme.</li>
+      <li>Audit kayıtlarını güvenlik incelemesi açısından da zenginleştirme.</li>
+    </ol>
+
+    <h3>Kademe 4: Productization ve UI Readiness</h3>
+    <p class="small">Amaç: Backend’i yönetim panelleri ve dashboard’ların doğrudan tüketebileceği seviyeye taşımak.</p>
+    <ol>
+      <li>Dashboard için derived summary endpoint’leri tamamlama.</li>
+      <li>Operational admin ekranları için import/snapshot monitoring contract’larını sabitleme.</li>
+      <li>UI ekipleri için response contract dokümantasyonunu finalize etme.</li>
+      <li>Front-end ekranlarının ihtiyaç duyacağı filtre ve sayfalama standardını son haline getirme.</li>
+    </ol>
+
+    <h3>Kademe 5: Scale ve Operasyonel Sertleştirme</h3>
+    <p class="small">Amaç: Sistemi büyüme ve uzun ömürlü kullanım için sağlamlaştırmak.</p>
+    <ol>
+      <li>Queue throughput, backoff, retry policy ve idempotency gözden geçirme.</li>
+      <li>Performans ve kapasite testleri.</li>
+      <li>Observability ve alerting standardı.</li>
+      <li>Deployment ve runbook dokümantasyonu.</li>
+    </ol>
+
+    <h2>10. Sonuç</h2>
+    <p>
+      Bugün gelinen noktada backend tarafında dağınık bir başlangıç yapısı değil, büyüyebilir bir platform çekirdeği
+      vardır. Bu çekirdek; integration, materialization, reporting, worker, audit ve test omurgasını aynı mimari
+      disiplin içinde bir araya getirmiştir.
+    </p>
+    <p>
+      Kısa tanımıyla mevcut durum, “backend iskeleti” aşamasını geçmiş, “operasyonel olarak kullanılabilir backend
+      platformu” aşamasına ulaşmıştır. Bir sonraki kademe, bunu işletme kalitesi daha yüksek, güvenliği daha olgun ve
+      UI katmanına daha doğrudan hizmet eden bir seviyeye taşımaktır.
+    </p>
+  </main>
+</body>
+</html>

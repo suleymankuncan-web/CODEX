@@ -1,0 +1,769 @@
+import { ConflictException, Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { JobDispatcher } from "../../../shared/jobs/job-dispatcher.interface";
+import { ImportBatchJobPayload } from "../../../shared/jobs/job-payloads";
+import { JOB_DISPATCHER } from "../../../shared/jobs/jobs.constants";
+import { MaterializationService } from "./materialization.service";
+import { IntegrationRepository } from "../infrastructure/integration.repository";
+import {
+  buildCommandResponse,
+  buildListResponse,
+} from "../../../shared/http/response-builders";
+import { mapAuditEvent } from "../../../shared/audit/audit-event.mapper";
+import { logStructuredMessage } from "../../../shared/structured-log";
+
+@Injectable()
+export class IntegrationService {
+  private static readonly IMPORT_STUCK_THRESHOLD_MINUTES = 30;
+  private readonly logger = new Logger(IntegrationService.name);
+
+  constructor(
+    private readonly integrationRepository: IntegrationRepository,
+    private readonly materializationService: MaterializationService,
+    @Inject(JOB_DISPATCHER)
+    private readonly jobDispatcher: JobDispatcher,
+  ) {}
+
+  async createImportBatch(input: {
+    sourceCode: string;
+    entityType:
+      | "employee"
+      | "store"
+      | "kpi"
+      | "assignment"
+      | "position"
+      | "company"
+      | "region";
+    fileReference: string;
+    actorUserId: string;
+    rows?: Record<string, unknown>[];
+  }) {
+    const batch = await this.integrationRepository.createImportBatch(input);
+
+    const job = batch.reused
+      ? { status: "queued" as const, jobType: "import-batch" as const, backend: "reused" }
+      : await this.jobDispatcher.dispatch(
+          "import-batch",
+          { batchId: batch.batchId } satisfies ImportBatchJobPayload,
+          async ({ batchId }: ImportBatchJobPayload) => {
+            await this.materializationService.materializeBatch(batchId);
+          },
+        );
+
+    logStructuredMessage(this.logger, "import_batch.command.accepted", {
+      actorUserId: input.actorUserId,
+      batchId: batch.batchId,
+      jobId: job.jobId ?? null,
+      sourceCode: input.sourceCode,
+      entityType: input.entityType,
+      queueBackend: job.backend,
+      queueName: job.queueName ?? null,
+      reused: batch.reused,
+    });
+
+    return buildCommandResponse({
+      status: job.status,
+      message: batch.reused
+        ? "Existing import batch reused via idempotency key"
+        : "Import batch accepted for async processing",
+      data: {
+        batch,
+      },
+      job: {
+        jobType: job.jobType,
+        backend: job.backend,
+        jobId: job.jobId ?? null,
+        queueName: job.queueName ?? null,
+      },
+    });
+  }
+
+  async listIntegrationSources(input: {
+    limit?: number;
+    offset?: number;
+    entityType?: string;
+    isActive?: boolean;
+  }) {
+    const result = await this.integrationRepository.listIntegrationSources(input);
+
+    return buildListResponse(
+      result.rows.map((item) => this.mapIntegrationSource(item)),
+      { total: result.total, limit: input.limit, offset: input.offset },
+    );
+  }
+
+  async createIntegrationSource(input: {
+    sourceCode: string;
+    sourceName: string;
+    entityType:
+      | "employee"
+      | "store"
+      | "kpi"
+      | "assignment"
+      | "position"
+      | "company"
+      | "region";
+    actorUserId: string;
+  }) {
+    const existing = await this.integrationRepository.getIntegrationSourceByCodeAndEntity(
+      input.sourceCode,
+      input.entityType,
+    );
+    if (existing) {
+      throw new ConflictException(
+        `Integration source already exists for ${input.sourceCode}/${input.entityType}`,
+      );
+    }
+
+    const source = await this.integrationRepository.createIntegrationSource(input);
+
+    return buildCommandResponse({
+      status: "created",
+      message: "Integration source created",
+      data: {
+        source: this.mapIntegrationSource(source),
+      },
+    });
+  }
+
+  async deactivateIntegrationSource(sourceId: string, actorUserId: string) {
+    const activeBatchCount = await this.integrationRepository.countActiveImportBatchesForSource(
+      sourceId,
+    );
+    if (activeBatchCount > 0) {
+      throw new ConflictException(
+        `Integration source ${sourceId} cannot be deactivated while active import batches exist`,
+      );
+    }
+
+    const source = await this.integrationRepository.updateIntegrationSourceActiveState({
+      sourceId,
+      isActive: false,
+      actorUserId,
+    });
+
+    if (!source) {
+      throw new NotFoundException(`Integration source not found: ${sourceId}`);
+    }
+
+    return buildCommandResponse({
+      status: "updated",
+      message: "Integration source deactivated",
+      data: {
+        source: this.mapIntegrationSource(source),
+      },
+    });
+  }
+
+  async reactivateIntegrationSource(sourceId: string, actorUserId: string) {
+    const source = await this.integrationRepository.updateIntegrationSourceActiveState({
+      sourceId,
+      isActive: true,
+      actorUserId,
+    });
+
+    if (!source) {
+      throw new NotFoundException(`Integration source not found: ${sourceId}`);
+    }
+
+    return buildCommandResponse({
+      status: "updated",
+      message: "Integration source reactivated",
+      data: {
+        source: this.mapIntegrationSource(source),
+      },
+    });
+  }
+
+  async getIntegrationLookups() {
+    const activeSources = await this.integrationRepository.listActiveIntegrationSources();
+    const entityTypes = this.getSupportedEntityTypes();
+    const activeSourceOptions = activeSources.map((item) => ({
+      sourceId: item.integration_source_id,
+      sourceCode: item.source_code,
+      sourceName: item.source_name,
+      entityType: item.entity_type,
+    }));
+    const sourcesByEntityType = activeSources.reduce<
+      Record<string, Array<{ sourceId: string; sourceCode: string; sourceName: string }>>
+    >((acc, item) => {
+      if (!acc[item.entity_type]) {
+        acc[item.entity_type] = [];
+      }
+
+      acc[item.entity_type].push({
+        sourceId: item.integration_source_id,
+        sourceCode: item.source_code,
+        sourceName: item.source_name,
+      });
+
+      return acc;
+    }, {});
+
+    return {
+      entityTypes,
+      sourceStats: {
+        totalActiveSources: activeSources.length,
+      },
+      activeSources: activeSourceOptions,
+      sourcesByEntityType,
+      optionGroups: {
+        entityTypes: entityTypes.map((entityType) => ({ value: entityType, label: entityType })),
+        sources: activeSourceOptions.map((item) => ({
+          value: item.sourceId,
+          label: `${item.sourceCode} - ${item.sourceName}`,
+          entityType: item.entityType,
+          sourceCode: item.sourceCode,
+        })),
+      },
+      meta: {
+        totalEntityTypes: entityTypes.length,
+        totalActiveSources: activeSourceOptions.length,
+      },
+    };
+  }
+
+  async getIntegrationSourceAudit(sourceId: string) {
+    const source = await this.integrationRepository.getIntegrationSourceById(sourceId);
+
+    if (!source) {
+      throw new NotFoundException(`Integration source not found: ${sourceId}`);
+    }
+
+    const events = await this.integrationRepository.getIntegrationSourceAudit(sourceId);
+
+    return buildListResponse(
+      events.map((event) => mapAuditEvent(event)),
+      { total: events.length },
+    );
+  }
+
+  async listImportBatches(input: {
+    limit?: number;
+    offset?: number;
+    status?: string;
+    entityType?: string;
+    sourceCode?: string;
+    startedFrom?: string;
+    startedTo?: string;
+  }) {
+    const result = await this.integrationRepository.listImportBatches({
+      limit: input.limit,
+      offset: input.offset,
+      status: input.status,
+      entityType: input.entityType,
+      sourceCode: input.sourceCode,
+      startedFrom: input.startedFrom,
+      startedTo: input.startedTo,
+    });
+
+    return buildListResponse(
+      result.rows.map((batch) => ({
+        batchId: batch.import_batch_id,
+        integrationSourceId: batch.integration_source_id,
+        sourceCode: batch.source_code,
+        sourceName: batch.source_name,
+        entityType: batch.entity_type,
+        startedAt: batch.started_at,
+        finishedAt: batch.finished_at,
+        status: batch.status,
+        fileReference: batch.raw_file_name,
+        recordCount: batch.record_count,
+        errorCount: batch.error_count,
+        retryCount: batch.retry_count,
+        lastRetriedAt: batch.last_retried_at,
+        healthState: this.getListHealthState(
+          batch.status,
+          Number(batch.error_count),
+          batch.started_at,
+        ),
+      })),
+      { total: result.total, limit: input.limit, offset: input.offset },
+    );
+  }
+
+  async getImportBatchSummary(input: {
+    status?: string;
+    entityType?: string;
+    sourceCode?: string;
+    startedFrom?: string;
+    startedTo?: string;
+  }) {
+    const summary = await this.integrationRepository.getImportBatchSummary(input);
+    const [completedBatchId, failedBatchId, inProgressBatchId] = await Promise.all([
+      this.integrationRepository.getLatestImportBatchIdByStatus({
+        ...input,
+        status: "completed",
+      }),
+      this.integrationRepository.getLatestImportBatchIdByStatus({
+        ...input,
+        status: "failed",
+      }),
+      this.integrationRepository.getLatestImportBatchIdByStatus({
+        ...input,
+        status: "processing",
+      }),
+    ]);
+
+    return {
+      totals: {
+        all: summary.all,
+        completed: summary.completed,
+        failed: summary.failed,
+        completedWithErrors: summary.completedWithErrors,
+        pending: summary.pending,
+        queued: summary.queued,
+        processing: summary.processing,
+      },
+      healthTotals: {
+        healthy: summary.completed,
+        inProgress: summary.pending + summary.queued + summary.processing,
+        blocked: 0,
+        retryReady: summary.failed,
+        needsAction: summary.completedWithErrors,
+      },
+      latest: {
+        completedBatchId,
+        failedBatchId,
+        inProgressBatchId,
+      },
+    };
+  }
+
+  async getImportBatchOverview(input: {
+    status?: string;
+    entityType?: string;
+    sourceCode?: string;
+    startedFrom?: string;
+    startedTo?: string;
+  }) {
+    const stuckBefore = this.getImportStuckBeforeIso();
+    const [summary, actionCounts, completedBatchId, failedBatchId, inProgressBatchId, stuckBatchId] =
+      await Promise.all([
+        this.integrationRepository.getImportBatchSummary(input),
+        this.integrationRepository.getImportBatchActionCounts({
+          ...input,
+          stuckBefore,
+        }),
+        this.integrationRepository.getLatestImportBatchIdByStatus({
+          ...input,
+          status: "completed",
+        }),
+        this.integrationRepository.getLatestImportBatchIdByStatus({
+          ...input,
+          status: "failed",
+        }),
+        this.integrationRepository.getLatestImportBatchIdByStatus({
+          ...input,
+          status: "processing",
+        }),
+        this.integrationRepository.getLatestStuckImportBatchId({
+          ...input,
+          stuckBefore,
+        }),
+      ]);
+
+    return {
+      totals: {
+        all: summary.all,
+        completed: summary.completed,
+        failed: summary.failed,
+        completedWithErrors: summary.completedWithErrors,
+        pending: summary.pending,
+        queued: summary.queued,
+        processing: summary.processing,
+      },
+      healthTotals: {
+        healthy: summary.completed,
+        inProgress: Math.max(summary.pending + summary.queued + summary.processing - actionCounts.stuck, 0),
+        blocked: actionCounts.blocked,
+        retryReady: actionCounts.retryReady,
+        needsAction: actionCounts.needsAction,
+        stuck: actionCounts.stuck,
+      },
+      actionTotals: actionCounts,
+      latest: {
+        completedBatchId,
+        failedBatchId,
+        inProgressBatchId,
+        stuckBatchId,
+      },
+    };
+  }
+
+  async getImportBatchNeedsAction(input: {
+    limit?: number;
+    offset?: number;
+    status?: string;
+    entityType?: string;
+    sourceCode?: string;
+    startedFrom?: string;
+    startedTo?: string;
+  }) {
+    const result = await this.integrationRepository.listImportBatchesNeedingAction({
+      ...input,
+      stuckBefore: this.getImportStuckBeforeIso(),
+    });
+
+    const items = await Promise.all(
+      result.rows.map(async (batch) => {
+        let blockedByEntityTypes: string[] = [];
+
+        if (batch.health_state === "blocked") {
+          const dependencySummaryRow =
+            await this.integrationRepository.getImportBatchDependencySummary(
+              batch.import_batch_id,
+              batch.entity_type as
+                | "employee"
+                | "store"
+                | "kpi"
+                | "assignment"
+                | "position"
+                | "company"
+                | "region",
+            );
+
+          blockedByEntityTypes = this.getBlockedByEntityTypes({
+            employee: Number(dependencySummaryRow?.employee_count ?? 0),
+            store: Number(dependencySummaryRow?.store_count ?? 0),
+            position: Number(dependencySummaryRow?.position_count ?? 0),
+            region: Number(dependencySummaryRow?.region_count ?? 0),
+            company: Number(dependencySummaryRow?.company_count ?? 0),
+            manager: Number(dependencySummaryRow?.manager_count ?? 0),
+          });
+        }
+
+        return {
+          batchId: batch.import_batch_id,
+          integrationSourceId: batch.integration_source_id,
+          sourceCode: batch.source_code,
+          sourceName: batch.source_name,
+          entityType: batch.entity_type,
+          startedAt: batch.started_at,
+          finishedAt: batch.finished_at,
+          status: batch.status,
+          fileReference: batch.raw_file_name,
+          recordCount: batch.record_count,
+          errorCount: batch.error_count,
+          retryCount: batch.retry_count,
+          lastRetriedAt: batch.last_retried_at,
+          healthState: batch.health_state,
+          actionReason: batch.action_reason,
+          recommendedAction: batch.recommended_action,
+          blockedByEntityTypes,
+          recommendedNextEntityType: blockedByEntityTypes[0] ?? null,
+          canRetryNow: batch.health_state === "retry_ready",
+          isStuck: batch.is_stuck,
+        };
+      }),
+    );
+
+    return buildListResponse(items, {
+      total: result.total,
+      limit: input.limit,
+      offset: input.offset,
+    });
+  }
+
+  async getImportBatch(batchId: string) {
+    const batch = await this.integrationRepository.getImportBatch(batchId);
+
+    if (!batch) {
+      throw new NotFoundException(`Import batch not found: ${batchId}`);
+    }
+
+    const summaryRows = await this.integrationRepository.getImportBatchRowStatusSummary(
+      batch.import_batch_id,
+      batch.entity_type,
+    );
+    const dependencySummaryRow =
+      await this.integrationRepository.getImportBatchDependencySummary(
+        batch.import_batch_id,
+        batch.entity_type,
+      );
+
+    const rowStatusSummary = {
+      processed: 0,
+      validationFailed: 0,
+      retryableError: 0,
+      pending: 0,
+    };
+
+    for (const row of summaryRows) {
+      if (row.normalized_status === "processed") rowStatusSummary.processed = Number(row.row_count);
+      if (row.normalized_status === "validation_failed") {
+        rowStatusSummary.validationFailed = Number(row.row_count);
+      }
+      if (row.normalized_status === "retryable_error") {
+        rowStatusSummary.retryableError = Number(row.row_count);
+      }
+      if (row.normalized_status === "pending") rowStatusSummary.pending = Number(row.row_count);
+    }
+
+    const dependencySummary = {
+      employee: Number(dependencySummaryRow?.employee_count ?? 0),
+      store: Number(dependencySummaryRow?.store_count ?? 0),
+      position: Number(dependencySummaryRow?.position_count ?? 0),
+      region: Number(dependencySummaryRow?.region_count ?? 0),
+      company: Number(dependencySummaryRow?.company_count ?? 0),
+      manager: Number(dependencySummaryRow?.manager_count ?? 0),
+    };
+    const blockedByEntityTypes = this.getBlockedByEntityTypes(dependencySummary);
+    const recommendedImportOrder = this.getRecommendedImportOrder();
+    const recommendedNextEntityType = blockedByEntityTypes[0] ?? null;
+    const canRetryNow = blockedByEntityTypes.length === 0;
+    const healthState = this.getDetailHealthState({
+      status: batch.status,
+      rowStatusSummary,
+      blockedByEntityTypes,
+      canRetryNow,
+    });
+
+    return {
+      batch: {
+        batchId: batch.import_batch_id,
+        integrationSourceId: batch.integration_source_id,
+        sourceCode: batch.source_code,
+        sourceName: batch.source_name,
+        entityType: batch.entity_type,
+        startedAt: batch.started_at,
+        finishedAt: batch.finished_at,
+        status: batch.status,
+        fileReference: batch.raw_file_name,
+        recordCount: batch.record_count,
+        errorCount: batch.error_count,
+        retryCount: batch.retry_count,
+        lastRetriedAt: batch.last_retried_at,
+        healthState,
+      },
+      rowStatusSummary,
+      dependencySummary,
+      blockedByEntityTypes,
+      recommendedImportOrder,
+      recommendedNextEntityType,
+      canRetryNow,
+      healthState,
+    };
+  }
+
+  async getImportBatchErrors(input: { batchId: string; limit?: number; offset?: number }) {
+    const batch = await this.integrationRepository.getImportBatch(input.batchId);
+
+    if (!batch) {
+      throw new NotFoundException(`Import batch not found: ${input.batchId}`);
+    }
+
+    const result = await this.integrationRepository.getImportBatchErrors({
+      batchId: input.batchId,
+      entityType: batch.entity_type,
+      limit: input.limit,
+      offset: input.offset,
+    });
+
+    return buildListResponse(
+      result.rows.map((row) => ({
+        rowId: row.row_id,
+        sourceRef: row.source_ref,
+        normalizedStatus: row.normalized_status,
+        errorCategory: this.classifyErrorCategory(row.normalized_status, row.validation_error),
+        validationError: row.validation_error,
+        processedAt: row.processed_at,
+      })),
+      { total: result.total, limit: input.limit, offset: input.offset },
+    );
+  }
+
+  async getImportBatchAudit(batchId: string) {
+    const batch = await this.integrationRepository.getImportBatch(batchId);
+
+    if (!batch) {
+      throw new NotFoundException(`Import batch not found: ${batchId}`);
+    }
+
+    const events = await this.integrationRepository.getImportBatchAudit(batchId);
+
+    return buildListResponse(
+      events.map((event) => mapAuditEvent(event)),
+      { total: events.length },
+    );
+  }
+
+  async retryImportBatch(batchId: string, actorUserId: string) {
+    const detail = await this.getImportBatch(batchId);
+
+    if (!["failed", "completed_with_errors"].includes(detail.batch.status)) {
+      throw new ConflictException(`Import batch ${batchId} is not in a retryable status`);
+    }
+
+    if (detail.rowStatusSummary.retryableError === 0) {
+      throw new ConflictException(`Import batch ${batchId} has no retryable rows`);
+    }
+
+    if (!detail.canRetryNow) {
+      throw new ConflictException(`Import batch ${batchId} still has unresolved dependencies`);
+    }
+
+    await this.integrationRepository.markImportBatchPending(batchId);
+    await this.integrationRepository.recordImportBatchRetried({
+      batchId,
+      actorUserId,
+      entityType: detail.batch.entityType,
+      retryCount: detail.batch.retryCount + 1,
+    });
+
+    const job = await this.jobDispatcher.dispatch(
+      "import-batch",
+      { batchId } satisfies ImportBatchJobPayload,
+      async ({ batchId: queuedBatchId }: ImportBatchJobPayload) => {
+        await this.materializationService.materializeBatch(queuedBatchId);
+      },
+    );
+
+    logStructuredMessage(this.logger, "import_batch.retry.accepted", {
+      actorUserId,
+      batchId,
+      jobId: job.jobId ?? null,
+      queueBackend: job.backend,
+      queueName: job.queueName ?? null,
+      retryCount: detail.batch.retryCount + 1,
+    });
+
+    return buildCommandResponse({
+      status: job.status,
+      message: "Import batch requeued for retry",
+      data: {
+        batch: {
+          ...detail.batch,
+          retryCount: detail.batch.retryCount + 1,
+          lastRetriedAt: null,
+        },
+      },
+      job: {
+        jobType: job.jobType,
+        backend: job.backend,
+        jobId: job.jobId ?? null,
+        queueName: job.queueName ?? null,
+      },
+    });
+  }
+
+  private classifyErrorCategory(
+    normalizedStatus: string,
+    validationError: string | null,
+  ): "validation" | "missing_dependency" | "write_failure" {
+    if (normalizedStatus === "validation_failed") {
+      return "validation";
+    }
+
+    const errorMessage = (validationError ?? "").toLowerCase();
+    if (
+      errorMessage.includes("could not be resolved") ||
+      errorMessage.includes("missing dependency")
+    ) {
+      return "missing_dependency";
+    }
+
+    return "write_failure";
+  }
+
+  private getBlockedByEntityTypes(dependencySummary: {
+    employee: number;
+    store: number;
+    position: number;
+    region: number;
+    company: number;
+    manager: number;
+  }): string[] {
+    const blocked = new Set<string>();
+
+    if (dependencySummary.company > 0) blocked.add("company");
+    if (dependencySummary.region > 0) blocked.add("region");
+    if (dependencySummary.store > 0) blocked.add("store");
+    if (dependencySummary.position > 0) blocked.add("position");
+    if (dependencySummary.employee > 0) blocked.add("employee");
+    if (dependencySummary.manager > 0) blocked.add("employee");
+
+    return this.getRecommendedImportOrder().filter((entityType) => blocked.has(entityType));
+  }
+
+  private getRecommendedImportOrder(): string[] {
+    return ["company", "region", "store", "position", "employee", "assignment", "kpi"];
+  }
+
+  private getSupportedEntityTypes() {
+    return ["employee", "store", "kpi", "assignment", "position", "company", "region"];
+  }
+
+  private mapIntegrationSource(item: {
+    integration_source_id: string;
+    source_code: string;
+    source_name: string;
+    entity_type: string;
+    is_active: boolean;
+  }) {
+    return {
+      sourceId: item.integration_source_id,
+      sourceCode: item.source_code,
+      sourceName: item.source_name,
+      entityType: item.entity_type,
+      isActive: item.is_active,
+    };
+  }
+
+  private getListHealthState(status: string, errorCount: number, startedAt: string) {
+    if (status === "completed" && errorCount === 0) return "healthy";
+    if (["pending", "queued", "processing"].includes(status) && this.isImportStuck(startedAt)) {
+      return "stuck";
+    }
+    if (["pending", "queued", "processing"].includes(status)) return "in_progress";
+    return "needs_action";
+  }
+
+  private getDetailHealthState(input: {
+    status: string;
+    rowStatusSummary: {
+      processed: number;
+      validationFailed: number;
+      retryableError: number;
+      pending: number;
+    };
+    blockedByEntityTypes: string[];
+    canRetryNow: boolean;
+  }) {
+    if (input.status === "completed" && input.rowStatusSummary.validationFailed === 0 && input.rowStatusSummary.retryableError === 0) {
+      return "healthy";
+    }
+
+    if (["pending", "queued", "processing"].includes(input.status)) {
+      return "in_progress";
+    }
+
+    if (input.blockedByEntityTypes.length > 0) {
+      return "blocked";
+    }
+
+    if (
+      ["failed", "completed_with_errors"].includes(input.status) &&
+      input.rowStatusSummary.retryableError > 0 &&
+      input.canRetryNow
+    ) {
+      return "retry_ready";
+    }
+
+    return "needs_action";
+  }
+
+  private getImportStuckBeforeIso() {
+    return new Date(
+      Date.now() - IntegrationService.IMPORT_STUCK_THRESHOLD_MINUTES * 60 * 1000,
+    ).toISOString();
+  }
+
+  private isImportStuck(startedAt: string) {
+    const startedAtMs = Date.parse(startedAt);
+    if (Number.isNaN(startedAtMs)) {
+      return false;
+    }
+
+    return Date.now() - startedAtMs >= IntegrationService.IMPORT_STUCK_THRESHOLD_MINUTES * 60 * 1000;
+  }
+}

@@ -1,0 +1,999 @@
+import { Injectable } from "@nestjs/common";
+import { buildRequestAuditMetadata } from "../../shared/audit/audit-metadata.factory";
+import { DatabaseService } from "../../shared/database/database.service";
+
+type RoleAssignmentRow = {
+  user_role_assignment_id: string;
+  user_id: string;
+  username?: string;
+  email?: string;
+  role_code: string;
+  role_name?: string;
+  scope_type: string;
+  company_id: string | null;
+  region_id: string | null;
+  store_id: string | null;
+  start_at: string;
+  end_at: string | null;
+  created_at: string;
+};
+
+type RoleAssignmentAuditRow = {
+  event_log_id: string;
+  occurred_at: string;
+  actor_user_id: string | null;
+  event_type: string;
+  metadata_json: Record<string, unknown>;
+};
+
+type UserAccountRow = {
+  user_id: string;
+  employee_id: string | null;
+  username: string;
+  email: string;
+  auth_provider: string;
+  is_active: boolean;
+  last_login_at: string | null;
+  created_at: string;
+};
+
+type UserAccountAuditRow = {
+  event_log_id: string;
+  occurred_at: string;
+  actor_user_id: string | null;
+  event_type: string;
+  metadata_json: Record<string, unknown>;
+};
+
+type RoleCatalogRow = {
+  role_id: string;
+  role_code: string;
+  role_name: string;
+  role_scope_type: string;
+  description: string | null;
+  is_system_role: boolean;
+  permission_code: string | null;
+  resource_name: string | null;
+  action_name: string | null;
+};
+
+type PermissionCatalogRow = {
+  permission_id: string;
+  permission_code: string;
+  resource_name: string;
+  action_name: string;
+  description: string | null;
+};
+
+type RolePermissionRow = {
+  role_id: string;
+  permission_id: string;
+  role_code: string;
+  permission_code: string;
+  granted_at?: string;
+};
+
+@Injectable()
+export class AuthAdminRepository {
+  constructor(private readonly databaseService: DatabaseService) {}
+
+  async getRoleByCode(roleCode: string) {
+    const result = await this.databaseService.query<{
+      role_id: string;
+      role_code: string;
+      role_scope_type: string;
+      role_name: string;
+    }>(
+      `
+        SELECT r.role_id, r.role_code, r.role_scope_type, r.role_name
+        FROM ops.role r
+        WHERE r.role_code = $1
+      `,
+      [roleCode],
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  async getRoleById(roleId: string) {
+    const result = await this.databaseService.query<{
+      role_id: string;
+      role_code: string;
+      role_scope_type: string;
+      role_name: string;
+    }>(
+      `
+        SELECT r.role_id, r.role_code, r.role_scope_type, r.role_name
+        FROM ops.role r
+        WHERE r.role_id = $1::uuid
+      `,
+      [roleId],
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  async countActiveAssignments(input: {
+    userId: string;
+    roleId: string;
+    scopeType: string;
+    companyId?: string | null;
+    regionId?: string | null;
+    storeId?: string | null;
+  }) {
+    const result = await this.databaseService.query<{ active_assignment_count: string }>(
+      `
+        SELECT COUNT(*)::text AS active_assignment_count
+        FROM ops.user_role_assignment ura
+        WHERE ura.user_id = $1::uuid
+          AND ura.role_id = $2::uuid
+          AND ura.scope_type = $3
+          AND (
+            ($4::uuid IS NULL AND ura.company_id IS NULL) OR ura.company_id = $4::uuid
+          )
+          AND (
+            ($5::uuid IS NULL AND ura.region_id IS NULL) OR ura.region_id = $5::uuid
+          )
+          AND (
+            ($6::uuid IS NULL AND ura.store_id IS NULL) OR ura.store_id = $6::uuid
+          )
+          AND ura.start_at <= NOW()
+          AND (ura.end_at IS NULL OR ura.end_at > NOW())
+      `,
+      [
+        input.userId,
+        input.roleId,
+        input.scopeType,
+        input.companyId ?? null,
+        input.regionId ?? null,
+        input.storeId ?? null,
+      ],
+    );
+
+    return Number(result.rows[0]?.active_assignment_count ?? "0");
+  }
+
+  async createRoleAssignment(input: {
+    userId: string;
+    roleId: string;
+    scopeType: string;
+    companyId?: string | null;
+    regionId?: string | null;
+    storeId?: string | null;
+    effectiveFrom?: string | null;
+    effectiveTo?: string | null;
+    actorUserId: string;
+  }) {
+    return this.databaseService.withTransaction(async (client) => {
+      const result = await client.query<RoleAssignmentRow>(
+        `
+          INSERT INTO ops.user_role_assignment (
+            user_id,
+            role_id,
+            scope_type,
+            company_id,
+            region_id,
+            store_id,
+            start_at,
+            end_at
+          )
+          SELECT
+            $1::uuid,
+            $2::uuid,
+            $3,
+            $4::uuid,
+            $5::uuid,
+            $6::uuid,
+            COALESCE($7::timestamptz, NOW()),
+            $8::timestamptz
+          RETURNING
+            user_role_assignment_id,
+            user_id,
+            (SELECT role_code FROM ops.role WHERE role_id = $2::uuid) AS role_code,
+            scope_type,
+            company_id,
+            region_id,
+            store_id,
+            start_at,
+            end_at,
+            created_at
+        `,
+        [
+          input.userId,
+          input.roleId,
+          input.scopeType,
+          input.companyId ?? null,
+          input.regionId ?? null,
+          input.storeId ?? null,
+          input.effectiveFrom ?? null,
+          input.effectiveTo ?? null,
+        ],
+      );
+
+      const assignment = result.rows[0];
+
+      await client.query(
+        `
+          INSERT INTO audit.event_log (
+            actor_user_id,
+            event_type,
+            entity_name,
+            entity_id,
+            scope_type,
+            company_id,
+            region_id,
+            store_id,
+            metadata_json
+          )
+          VALUES (
+            $1::uuid,
+            'user_role_assignment.created',
+            'ops.user_role_assignment',
+            $2::uuid,
+            $3,
+            $4::uuid,
+            $5::uuid,
+            $6::uuid,
+            $7::jsonb
+          )
+        `,
+        [
+          input.actorUserId,
+          assignment.user_role_assignment_id,
+          input.scopeType,
+          input.companyId ?? null,
+          input.regionId ?? null,
+          input.storeId ?? null,
+          JSON.stringify({
+            ...buildRequestAuditMetadata({
+              sourceContext: {
+                module: "auth-admin",
+                operation: "create-role-assignment",
+              },
+              changedFields: [
+                "roleId",
+                "scopeType",
+                "companyId",
+                "regionId",
+                "storeId",
+                "effectiveFrom",
+                "effectiveTo",
+              ],
+              details: {
+                userId: input.userId,
+                roleId: input.roleId,
+                scopeType: input.scopeType,
+                companyId: input.companyId ?? null,
+                regionId: input.regionId ?? null,
+                storeId: input.storeId ?? null,
+                effectiveFrom: input.effectiveFrom ?? null,
+                effectiveTo: input.effectiveTo ?? null,
+              },
+            }),
+          }),
+        ],
+      );
+
+      return assignment;
+    });
+  }
+
+  async listRoleAssignments(input: {
+    limit?: number;
+    offset?: number;
+    userId?: string;
+    roleCode?: string;
+    scopeType?: string;
+    active?: boolean;
+  }) {
+    const limit = input.limit ?? 50;
+    const offset = input.offset ?? 0;
+    const filters: string[] = [];
+    const params: unknown[] = [];
+
+    if (input.userId) {
+      params.push(input.userId);
+      filters.push(`ura.user_id = $${params.length}::uuid`);
+    }
+
+    if (input.roleCode) {
+      params.push(input.roleCode);
+      filters.push(`r.role_code = $${params.length}`);
+    }
+
+    if (input.scopeType) {
+      params.push(input.scopeType);
+      filters.push(`ura.scope_type = $${params.length}`);
+    }
+
+    if (typeof input.active === "boolean") {
+      params.push(input.active);
+      filters.push(
+        input.active
+          ? `(ura.start_at <= NOW() AND (ura.end_at IS NULL OR ura.end_at > NOW())) = $${params.length}`
+          : `(ura.end_at IS NOT NULL AND ura.end_at <= NOW()) = NOT $${params.length}`,
+      );
+    }
+
+    const whereClause = filters.length > 0 ? `WHERE ${filters.join(" AND ")}` : "";
+
+    const totalResult = await this.databaseService.query<{ total_count: string }>(
+      `
+        SELECT COUNT(*)::text AS total_count
+        FROM ops.user_role_assignment ura
+        INNER JOIN ops.role r ON r.role_id = ura.role_id
+        ${whereClause}
+      `,
+      params,
+    );
+
+    const result = await this.databaseService.query<RoleAssignmentRow>(
+      `
+        SELECT
+          ura.user_role_assignment_id,
+          ura.user_id,
+          ua.username,
+          ua.email,
+          r.role_code,
+          r.role_name,
+          ura.scope_type,
+          ura.company_id,
+          ura.region_id,
+          ura.store_id,
+          ura.start_at,
+          ura.end_at,
+          ura.created_at
+        FROM ops.user_role_assignment ura
+        INNER JOIN ops.user_account ua ON ua.user_id = ura.user_id
+        INNER JOIN ops.role r ON r.role_id = ura.role_id
+        ${whereClause}
+        ORDER BY ura.created_at DESC, ura.user_role_assignment_id DESC
+        LIMIT $${params.length + 1} OFFSET $${params.length + 2}
+      `,
+      [...params, limit, offset],
+    );
+
+    return {
+      rows: result.rows,
+      total: Number(totalResult.rows[0]?.total_count ?? "0"),
+    };
+  }
+
+  async getRoleAssignmentById(assignmentId: string) {
+    const result = await this.databaseService.query<RoleAssignmentRow>(
+      `
+        SELECT
+          ura.user_role_assignment_id,
+          ura.user_id,
+          r.role_code,
+          ura.scope_type,
+          ura.company_id,
+          ura.region_id,
+          ura.store_id,
+          ura.start_at,
+          ura.end_at,
+          ura.created_at
+        FROM ops.user_role_assignment ura
+        INNER JOIN ops.role r ON r.role_id = ura.role_id
+        WHERE ura.user_role_assignment_id = $1::uuid
+      `,
+      [assignmentId],
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  async deactivateRoleAssignment(input: { assignmentId: string; actorUserId: string }) {
+    return this.databaseService.withTransaction(async (client) => {
+      const result = await client.query<RoleAssignmentRow>(
+        `
+          UPDATE ops.user_role_assignment
+          SET end_at = NOW()
+          WHERE user_role_assignment_id = $1::uuid
+            AND (end_at IS NULL OR end_at > NOW())
+          RETURNING
+            user_role_assignment_id,
+            user_id,
+            (SELECT role_code FROM ops.role WHERE role_id = ops.user_role_assignment.role_id) AS role_code,
+            scope_type,
+            company_id,
+            region_id,
+            store_id,
+            start_at,
+            end_at,
+            created_at
+        `,
+        [input.assignmentId],
+      );
+
+      const assignment = result.rows[0] ?? null;
+
+      if (assignment) {
+        await client.query(
+          `
+            INSERT INTO audit.event_log (
+              actor_user_id,
+              event_type,
+              entity_name,
+              entity_id,
+              scope_type,
+              company_id,
+              region_id,
+              store_id,
+              metadata_json
+            )
+            VALUES (
+              $1::uuid,
+              'user_role_assignment.deactivated',
+              'ops.user_role_assignment',
+              $2::uuid,
+              $3,
+              $4::uuid,
+              $5::uuid,
+              $6::uuid,
+              $7::jsonb
+            )
+          `,
+          [
+            input.actorUserId,
+            assignment.user_role_assignment_id,
+            assignment.scope_type,
+            assignment.company_id,
+            assignment.region_id,
+            assignment.store_id,
+            JSON.stringify({
+              ...buildRequestAuditMetadata({
+                sourceContext: {
+                  module: "auth-admin",
+                  operation: "deactivate-role-assignment",
+                },
+                changedFields: ["endAt"],
+                details: {
+                  userId: assignment.user_id,
+                  roleCode: assignment.role_code,
+                  scopeType: assignment.scope_type,
+                  companyId: assignment.company_id,
+                  regionId: assignment.region_id,
+                  storeId: assignment.store_id,
+                  endAt: assignment.end_at,
+                },
+              }),
+            }),
+          ],
+        );
+      }
+
+      return assignment;
+    });
+  }
+
+  async getRoleAssignmentAudit(input: { assignmentId: string; limit?: number; offset?: number }) {
+    const limit = input.limit ?? 50;
+    const offset = input.offset ?? 0;
+
+    const result = await this.databaseService.query<RoleAssignmentAuditRow>(
+      `
+        SELECT
+          event_log_id,
+          occurred_at,
+          actor_user_id,
+          event_type,
+          metadata_json
+        FROM audit.event_log
+        WHERE entity_name = 'ops.user_role_assignment'
+          AND entity_id = $1::uuid
+        ORDER BY occurred_at ASC, event_log_id ASC
+        LIMIT $2 OFFSET $3
+      `,
+      [input.assignmentId, limit, offset],
+    );
+
+    return result.rows;
+  }
+
+  async createUserAccount(input: {
+    employeeId?: string | null;
+    username: string;
+    email: string;
+    authProvider: string;
+    actorUserId: string;
+  }) {
+    return this.databaseService.withTransaction(async (client) => {
+      const result = await client.query<UserAccountRow>(
+        `
+          INSERT INTO ops.user_account (
+            employee_id,
+            username,
+            email,
+            auth_provider
+          )
+          VALUES ($1::uuid, $2, $3, $4)
+          RETURNING
+            user_id,
+            employee_id,
+            username,
+            email,
+            auth_provider,
+            is_active,
+            last_login_at,
+            created_at
+        `,
+        [input.employeeId ?? null, input.username, input.email, input.authProvider],
+      );
+
+      const user = result.rows[0];
+
+      await client.query(
+        `
+          INSERT INTO audit.event_log (
+            actor_user_id,
+            event_type,
+            entity_name,
+            entity_id,
+            scope_type,
+            metadata_json
+          )
+          VALUES ($1::uuid, 'user_account.created', 'ops.user_account', $2::uuid, 'company', $3::jsonb)
+        `,
+        [
+          input.actorUserId,
+          user.user_id,
+          JSON.stringify({
+            ...buildRequestAuditMetadata({
+              sourceContext: {
+                module: "auth-admin",
+                operation: "create-user-account",
+              },
+              changedFields: ["employeeId", "username", "email", "authProvider", "isActive"],
+              details: {
+                employeeId: user.employee_id,
+                username: user.username,
+                email: user.email,
+                authProvider: user.auth_provider,
+                isActive: user.is_active,
+              },
+            }),
+          }),
+        ],
+      );
+
+      return user;
+    });
+  }
+
+  async listUserAccounts(input: {
+    limit?: number;
+    offset?: number;
+    authProvider?: string;
+    isActive?: boolean;
+  }) {
+    const limit = input.limit ?? 50;
+    const offset = input.offset ?? 0;
+    const filters: string[] = [];
+    const params: unknown[] = [];
+
+    if (input.authProvider) {
+      params.push(input.authProvider);
+      filters.push(`ua.auth_provider = $${params.length}`);
+    }
+
+    if (typeof input.isActive === "boolean") {
+      params.push(input.isActive);
+      filters.push(`ua.is_active = $${params.length}`);
+    }
+
+    const whereClause = filters.length > 0 ? `WHERE ${filters.join(" AND ")}` : "";
+
+    const totalResult = await this.databaseService.query<{ total_count: string }>(
+      `
+        SELECT COUNT(*)::text AS total_count
+        FROM ops.user_account ua
+        ${whereClause}
+        LIMIT $${params.length + 1} OFFSET $${params.length + 2}
+      `,
+      [...params, limit, offset],
+    );
+
+    const result = await this.databaseService.query<UserAccountRow>(
+      `
+        SELECT
+          user_id,
+          employee_id,
+          username,
+          email,
+          auth_provider,
+          is_active,
+          last_login_at,
+          created_at
+        FROM ops.user_account ua
+        ${whereClause}
+        ORDER BY created_at DESC, user_id DESC
+        LIMIT $${params.length + 1} OFFSET $${params.length + 2}
+      `,
+      [...params, limit, offset],
+    );
+
+    return {
+      rows: result.rows,
+      total: Number(totalResult.rows[0]?.total_count ?? "0"),
+    };
+  }
+
+  async getUserAccountById(userId: string) {
+    const result = await this.databaseService.query<UserAccountRow>(
+      `
+        SELECT
+          user_id,
+          employee_id,
+          username,
+          email,
+          auth_provider,
+          is_active,
+          last_login_at,
+          created_at
+        FROM ops.user_account
+        WHERE user_id = $1::uuid
+      `,
+      [userId],
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  async deactivateUserAccount(input: { userId: string; actorUserId: string }) {
+    return this.databaseService.withTransaction(async (client) => {
+      const result = await client.query<UserAccountRow>(
+        `
+          UPDATE ops.user_account
+          SET is_active = FALSE
+          WHERE user_id = $1::uuid
+            AND is_active = TRUE
+          RETURNING
+            user_id,
+            employee_id,
+            username,
+            email,
+            auth_provider,
+            is_active,
+            last_login_at,
+            created_at
+        `,
+        [input.userId],
+      );
+
+      const user = result.rows[0] ?? null;
+
+      if (user) {
+        await client.query(
+          `
+            INSERT INTO audit.event_log (
+              actor_user_id,
+              event_type,
+              entity_name,
+              entity_id,
+              scope_type,
+              metadata_json
+            )
+            VALUES ($1::uuid, 'user_account.deactivated', 'ops.user_account', $2::uuid, 'company', $3::jsonb)
+          `,
+          [
+            input.actorUserId,
+            input.userId,
+            JSON.stringify({
+              ...buildRequestAuditMetadata({
+                sourceContext: {
+                  module: "auth-admin",
+                  operation: "deactivate-user-account",
+                },
+                changedFields: ["isActive"],
+                details: {
+                  username: user.username,
+                  email: user.email,
+                  isActive: user.is_active,
+                },
+              }),
+            }),
+          ],
+        );
+      }
+
+      return user;
+    });
+  }
+
+  async reactivateUserAccount(input: { userId: string; actorUserId: string }) {
+    return this.databaseService.withTransaction(async (client) => {
+      const result = await client.query<UserAccountRow>(
+        `
+          UPDATE ops.user_account
+          SET is_active = TRUE
+          WHERE user_id = $1::uuid
+            AND is_active = FALSE
+          RETURNING
+            user_id,
+            employee_id,
+            username,
+            email,
+            auth_provider,
+            is_active,
+            last_login_at,
+            created_at
+        `,
+        [input.userId],
+      );
+
+      const user = result.rows[0] ?? null;
+
+      if (user) {
+        await client.query(
+          `
+            INSERT INTO audit.event_log (
+              actor_user_id,
+              event_type,
+              entity_name,
+              entity_id,
+              scope_type,
+              metadata_json
+            )
+            VALUES ($1::uuid, 'user_account.reactivated', 'ops.user_account', $2::uuid, 'company', $3::jsonb)
+          `,
+          [
+            input.actorUserId,
+            input.userId,
+            JSON.stringify({
+              ...buildRequestAuditMetadata({
+                sourceContext: {
+                  module: "auth-admin",
+                  operation: "reactivate-user-account",
+                },
+                changedFields: ["isActive"],
+                details: {
+                  username: user.username,
+                  email: user.email,
+                  isActive: user.is_active,
+                },
+              }),
+            }),
+          ],
+        );
+      }
+
+      return user;
+    });
+  }
+
+  async getUserAccountAudit(input: { userId: string; limit?: number; offset?: number }) {
+    const limit = input.limit ?? 50;
+    const offset = input.offset ?? 0;
+
+    const result = await this.databaseService.query<UserAccountAuditRow>(
+      `
+        SELECT
+          event_log_id,
+          occurred_at,
+          actor_user_id,
+          event_type,
+          metadata_json
+        FROM audit.event_log
+        WHERE entity_name = 'ops.user_account'
+          AND entity_id = $1::uuid
+        ORDER BY occurred_at ASC, event_log_id ASC
+        LIMIT $2 OFFSET $3
+      `,
+      [input.userId, limit, offset],
+    );
+
+    return result.rows;
+  }
+
+  async listRoles() {
+    const result = await this.databaseService.query<RoleCatalogRow>(
+      `
+        SELECT
+          r.role_id,
+          r.role_code,
+          r.role_name,
+          r.role_scope_type,
+          r.description,
+          r.is_system_role,
+          p.permission_code,
+          p.resource_name,
+          p.action_name
+        FROM ops.role r
+        LEFT JOIN ops.role_permission rp ON rp.role_id = r.role_id
+        LEFT JOIN ops.permission p ON p.permission_id = rp.permission_id
+        ORDER BY r.role_code ASC, p.permission_code ASC NULLS LAST
+      `,
+    );
+
+    return result.rows;
+  }
+
+  async listPermissions() {
+    const result = await this.databaseService.query<PermissionCatalogRow>(
+      `
+        SELECT
+          permission_id,
+          permission_code,
+          resource_name,
+          action_name,
+          description
+        FROM ops.permission
+        ORDER BY permission_code ASC
+      `,
+    );
+
+    return result.rows;
+  }
+
+  async listActiveUserLookups() {
+    const result = await this.databaseService.query<{
+      user_id: string;
+      username: string;
+      email: string;
+      auth_provider: string;
+    }>(
+      `
+        SELECT user_id, username, email, auth_provider
+        FROM ops.user_account
+        WHERE is_active = TRUE
+        ORDER BY username ASC
+        LIMIT 50
+      `,
+    );
+
+    return result.rows;
+  }
+
+  async getPermissionByCode(permissionCode: string) {
+    const result = await this.databaseService.query<{
+      permission_id: string;
+      permission_code: string;
+    }>(
+      `
+        SELECT p.permission_id, p.permission_code
+        FROM ops.permission p
+        WHERE p.permission_code = $1
+      `,
+      [permissionCode],
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  async getRolePermission(input: { roleId: string; permissionId: string }) {
+    const result = await this.databaseService.query<RolePermissionRow>(
+      `
+        SELECT rp.role_id, rp.permission_id
+        FROM ops.role_permission rp
+        WHERE rp.role_id = $1::uuid
+          AND rp.permission_id = $2::uuid
+      `,
+      [input.roleId, input.permissionId],
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  async grantRolePermission(input: {
+    roleId: string;
+    permissionId: string;
+    actorUserId: string;
+  }) {
+    return this.databaseService.withTransaction(async (client) => {
+      const result = await client.query<RolePermissionRow>(
+        `
+          INSERT INTO ops.role_permission (
+            role_id,
+            permission_id
+          )
+          VALUES ($1::uuid, $2::uuid)
+          RETURNING
+            role_id,
+            permission_id,
+            (SELECT role_code FROM ops.role WHERE role_id = $1::uuid) AS role_code,
+            (SELECT permission_code FROM ops.permission WHERE permission_id = $2::uuid) AS permission_code,
+            granted_at
+        `,
+        [input.roleId, input.permissionId],
+      );
+
+      const rolePermission = result.rows[0];
+
+      await client.query(
+        `
+          INSERT INTO audit.event_log (
+            actor_user_id,
+            event_type,
+            entity_name,
+            entity_id,
+            scope_type,
+            metadata_json
+          )
+          VALUES ($1::uuid, 'role_permission.granted', 'ops.role', $2::uuid, 'company', $3::jsonb)
+        `,
+        [
+          input.actorUserId,
+          input.roleId,
+          JSON.stringify({
+            ...buildRequestAuditMetadata({
+              sourceContext: {
+                module: "auth-admin",
+                operation: "grant-role-permission",
+              },
+              changedFields: ["permissionId"],
+              details: {
+                permissionId: input.permissionId,
+                permissionCode: rolePermission.permission_code,
+              },
+            }),
+          }),
+        ],
+      );
+
+      return rolePermission;
+    });
+  }
+
+  async revokeRolePermission(input: {
+    roleId: string;
+    permissionCode: string;
+    actorUserId: string;
+  }) {
+    return this.databaseService.withTransaction(async (client) => {
+      const result = await client.query<RolePermissionRow>(
+        `
+          DELETE FROM ops.role_permission rp
+          USING ops.permission p, ops.role r
+          WHERE rp.permission_id = p.permission_id
+            AND rp.role_id = r.role_id
+            AND rp.role_id = $1::uuid
+            AND p.permission_code = $2
+          RETURNING
+            rp.role_id,
+            rp.permission_id,
+            r.role_code,
+            p.permission_code
+        `,
+        [input.roleId, input.permissionCode],
+      );
+
+      const rolePermission = result.rows[0] ?? null;
+
+      if (rolePermission) {
+        await client.query(
+          `
+            INSERT INTO audit.event_log (
+              actor_user_id,
+              event_type,
+              entity_name,
+              entity_id,
+              scope_type,
+              metadata_json
+            )
+            VALUES ($1::uuid, 'role_permission.revoked', 'ops.role', $2::uuid, 'company', $3::jsonb)
+          `,
+          [
+            input.actorUserId,
+            input.roleId,
+            JSON.stringify({
+              ...buildRequestAuditMetadata({
+                sourceContext: {
+                  module: "auth-admin",
+                  operation: "revoke-role-permission",
+                },
+                changedFields: ["permissionId"],
+                details: {
+                  permissionId: rolePermission.permission_id,
+                  permissionCode: rolePermission.permission_code,
+                },
+              }),
+            }),
+          ],
+        );
+      }
+
+      return rolePermission;
+    });
+  }
+}
