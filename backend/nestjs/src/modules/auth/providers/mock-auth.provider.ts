@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { AuthenticatedUser } from "../auth-context.service";
+import { AuthenticatedUser, buildAuthenticatedUser } from "../auth-context.service";
 import { AuthProvider } from "../interfaces/auth-provider.interface";
 
 @Injectable()
@@ -10,6 +10,10 @@ export class MockAuthProvider implements AuthProvider {
     const storeIdHeader = request.headers["x-store-ids"];
     const regionIdHeader = request.headers["x-region-ids"];
     const companyIdHeader = request.headers["x-company-ids"];
+    const readStoreIdHeader = request.headers["x-read-store-ids"];
+    const readRegionIdHeader = request.headers["x-read-region-ids"];
+    const readCompanyIdHeader = request.headers["x-read-company-ids"];
+    const assignedStoreIdHeader = request.headers["x-assigned-store-ids"];
 
     const parseHeader = (value: string | string[] | undefined): string[] => {
       if (!value) return [];
@@ -20,19 +24,31 @@ export class MockAuthProvider implements AuthProvider {
         .filter(Boolean);
     };
     const roleCodes = parseHeader(request.headers["x-role-codes"]);
+    const legacyStoreIds = parseHeader(storeIdHeader);
+    const readStoreIds =
+      readStoreIdHeader === undefined ? legacyStoreIds : parseHeader(readStoreIdHeader);
+    const readRegionIds =
+      readRegionIdHeader === undefined ? parseHeader(regionIdHeader) : parseHeader(readRegionIdHeader);
+    const readCompanyIds =
+      readCompanyIdHeader === undefined ? parseHeader(companyIdHeader) : parseHeader(readCompanyIdHeader);
+    const assignedStoreIds =
+      assignedStoreIdHeader === undefined ? legacyStoreIds : parseHeader(assignedStoreIdHeader);
 
-    return {
+    return buildAuthenticatedUser({
       userId: (request.headers["x-user-id"] as string | undefined) ??
         "80000000-0000-0000-0000-000000000001",
       employeeId: request.headers["x-employee-id"] as string | undefined,
       roleCodes: roleCodes.length ? roleCodes : ["SUPER_ADMIN"],
-      scope: {
-        companyIds: parseHeader(companyIdHeader).length
-          ? parseHeader(companyIdHeader)
+      readScope: {
+        companyIds: readCompanyIds.length
+          ? readCompanyIds
           : ["00000000-0000-0000-0000-000000000001"],
-        regionIds: parseHeader(regionIdHeader),
-        storeIds: parseHeader(storeIdHeader),
+        regionIds: readRegionIds,
+        storeIds: readStoreIds,
       },
-    };
+      actionScope: {
+        assignedStoreIds,
+      },
+    });
   }
 }

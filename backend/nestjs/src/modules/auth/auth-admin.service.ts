@@ -121,6 +121,105 @@ export class AuthAdminService {
     );
   }
 
+  async createActionStoreAssignment(input: {
+    userId: string;
+    storeId: string;
+    effectiveFrom?: string;
+    effectiveTo?: string;
+    actorUserId: string;
+  }) {
+    const store = await this.authAdminRepository.getStoreLookupById(input.storeId);
+
+    if (!store) {
+      throw new NotFoundException(`Store not found: ${input.storeId}`);
+    }
+
+    const activeAssignmentCount =
+      await this.authAdminRepository.countActiveActionStoreAssignments({
+        userId: input.userId,
+        storeId: input.storeId,
+      });
+
+    if (activeAssignmentCount > 0) {
+      throw new ConflictException("Active action store assignment already exists");
+    }
+
+    const assignment = await this.authAdminRepository.createActionStoreAssignment({
+      userId: input.userId,
+      storeId: input.storeId,
+      effectiveFrom: input.effectiveFrom ?? null,
+      effectiveTo: input.effectiveTo ?? null,
+      actorUserId: input.actorUserId,
+    });
+
+    return buildCommandResponse({
+      status: "created",
+      message: "Action store assignment created",
+      data: {
+        assignment: this.mapActionStoreAssignment(assignment),
+      },
+    });
+  }
+
+  async listActionStoreAssignments(input: {
+    limit?: number;
+    offset?: number;
+    userId?: string;
+    storeId?: string;
+    active?: boolean;
+  }) {
+    const result = await this.authAdminRepository.listActionStoreAssignments(input);
+
+    return buildListResponse(result.rows.map((item) => this.mapActionStoreAssignment(item)), {
+      total: result.total,
+      limit: input.limit,
+      offset: input.offset,
+    });
+  }
+
+  async deactivateActionStoreAssignment(assignmentId: string, actorUserId: string) {
+    const existingAssignment =
+      await this.authAdminRepository.getActionStoreAssignmentById(assignmentId);
+
+    if (!existingAssignment) {
+      throw new NotFoundException(`Action store assignment not found: ${assignmentId}`);
+    }
+
+    const assignment = await this.authAdminRepository.deactivateActionStoreAssignment({
+      assignmentId,
+      actorUserId,
+    });
+
+    if (!assignment) {
+      throw new ConflictException("Action store assignment is already inactive");
+    }
+
+    return buildCommandResponse({
+      status: "updated",
+      message: "Action store assignment deactivated",
+      data: {
+        assignment: this.mapActionStoreAssignment(assignment),
+      },
+    });
+  }
+
+  async getActionStoreAssignmentAudit(input: {
+    assignmentId: string;
+    limit?: number;
+    offset?: number;
+  }) {
+    const rows = await this.authAdminRepository.getActionStoreAssignmentAudit(input);
+
+    return buildListResponse(
+      rows.map((item) => mapAuditEvent(item)),
+      {
+        total: rows.length,
+        limit: input.limit,
+        offset: input.offset,
+      },
+    );
+  }
+
   async createUserAccount(input: {
     employeeId?: string;
     username: string;
@@ -292,10 +391,11 @@ export class AuthAdminService {
   }
 
   async getAuthLookups() {
-    const [users, roles, permissions] = await Promise.all([
+    const [users, roles, permissions, stores] = await Promise.all([
       this.authAdminRepository.listActiveUserLookups(),
       this.authAdminRepository.listRoles(),
       this.authAdminRepository.listPermissions(),
+      this.authAdminRepository.listActiveStoreLookups(),
     ]);
 
     const groupedRoles = new Map<
@@ -328,6 +428,14 @@ export class AuthAdminService {
         resourceName: item.resource_name,
         actionName: item.action_name,
       }));
+    const storeOptions = stores.map((item) => ({
+        storeId: item.store_id,
+        storeCode: item.store_code,
+        storeName: item.store_name,
+        companyId: item.company_id,
+        regionId: item.region_id,
+        regionName: item.region_name,
+      }));
 
     return {
       scopeTypes,
@@ -335,10 +443,12 @@ export class AuthAdminService {
       users: userOptions,
       roles: roleOptions,
       permissions: permissionOptions,
+      stores: storeOptions,
       optionGroups: {
         users: userOptions,
         roles: roleOptions,
         permissions: permissionOptions,
+        stores: storeOptions,
         scopeTypes: scopeTypes.map((scopeType) => ({ value: scopeType, label: scopeType })),
         authProviders: authProviders.map((authProvider) => ({
           value: authProvider,
@@ -349,6 +459,7 @@ export class AuthAdminService {
         totalUsers: userOptions.length,
         totalRoles: roleOptions.length,
         totalPermissions: permissionOptions.length,
+        totalStores: storeOptions.length,
       },
     };
   }
@@ -473,6 +584,39 @@ export class AuthAdminService {
       companyId: item.company_id,
       regionId: item.region_id,
       storeId: item.store_id,
+      effectiveFrom: item.start_at,
+      effectiveTo: item.end_at,
+      createdAt: item.created_at,
+      active: item.end_at === null,
+    };
+  }
+
+  private mapActionStoreAssignment(item: {
+    user_action_store_assignment_id: string;
+    user_id: string;
+    username?: string;
+    email?: string;
+    store_id: string;
+    store_code: string;
+    store_name: string;
+    company_id: string;
+    region_id: string;
+    region_name: string;
+    start_at: string;
+    end_at: string | null;
+    created_at: string;
+  }) {
+    return {
+      assignmentId: item.user_action_store_assignment_id,
+      userId: item.user_id,
+      ...(item.username ? { username: item.username } : {}),
+      ...(item.email ? { email: item.email } : {}),
+      storeId: item.store_id,
+      storeCode: item.store_code,
+      storeName: item.store_name,
+      companyId: item.company_id,
+      regionId: item.region_id,
+      regionName: item.region_name,
       effectiveFrom: item.start_at,
       effectiveTo: item.end_at,
       createdAt: item.created_at,

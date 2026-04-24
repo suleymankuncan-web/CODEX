@@ -1,7 +1,7 @@
 import { Transform, Type } from "class-transformer";
-import { IsBoolean, IsIn, IsInt, IsOptional, IsUUID, Max, Min } from "class-validator";
+import { IsBoolean, IsInt, IsOptional, IsUUID, Max, Min } from "class-validator";
 
-export class ListRoleAssignmentsQueryDto {
+export class ListActionStoreAssignmentsQueryDto {
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -20,21 +20,8 @@ export class ListRoleAssignmentsQueryDto {
   userId?: string;
 
   @IsOptional()
-  @IsIn([
-    "SUPER_ADMIN",
-    "INTEGRATION_ADMIN",
-    "SNAPSHOT_OPERATOR",
-    "REPORT_VIEWER",
-    "AUDITOR",
-    "REGION_MANAGER",
-    "STORE_MANAGER",
-    "STORE_PERSONNEL",
-  ])
-  roleCode?: string;
-
-  @IsOptional()
-  @IsIn(["company", "region", "store"])
-  scopeType?: "company" | "region" | "store";
+  @IsUUID()
+  storeId?: string;
 
   @IsOptional()
   @Transform(({ value }) => {

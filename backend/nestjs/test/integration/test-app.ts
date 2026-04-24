@@ -8,12 +8,26 @@ import { AppConfigService } from "../../src/shared/app-config.service";
 import { BullMqJobDispatcherService } from "../../src/shared/jobs/bullmq-job-dispatcher.service";
 import { JOB_DISPATCHER } from "../../src/shared/jobs/jobs.constants";
 
+function configureDefaultAuthMode() {
+  const explicitJwtTest =
+    process.env.AUTH_MODE === "jwt" && Boolean(process.env.JWT_SECRET);
+
+  if (explicitJwtTest) {
+    return;
+  }
+
+  process.env.AUTH_MODE = "mock";
+  delete process.env.JWT_JWKS_URL;
+}
+
 export async function createIntegrationApp(overrides?: {
   databaseService?: object;
   jobDispatcher?: object;
   authContextService?: object;
   appConfigService?: object;
 }) {
+  configureDefaultAuthMode();
+
   const testingModuleBuilder = Test.createTestingModule({
     imports: [AppModule],
   });

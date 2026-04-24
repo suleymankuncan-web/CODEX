@@ -11,10 +11,11 @@ import { ScopeGuard } from "./guards/scope.guard";
 import { JwtAuthProvider } from "./providers/jwt-auth.provider";
 import { MockAuthProvider } from "./providers/mock-auth.provider";
 import { AuthAdminController } from "./web/auth-admin.controller";
+import { AuthSessionController } from "./web/auth-session.controller";
 
 @Global()
 @Module({
-  controllers: [AuthAdminController],
+  controllers: [AuthAdminController, AuthSessionController],
   providers: [
     AuthAdminRepository,
     AuthAdminService,

@@ -1,9 +1,11 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from "@nestjs/common";
 import { RequireRoles } from "../decorators/roles.decorator";
 import { AuthAdminService } from "../auth-admin.service";
+import { CreateActionStoreAssignmentDto } from "./dto/create-action-store-assignment.dto";
 import { CreateRoleAssignmentDto } from "./dto/create-role-assignment.dto";
 import { CreateUserAccountDto } from "./dto/create-user-account.dto";
 import { GrantRolePermissionDto } from "./dto/grant-role-permission.dto";
+import { ListActionStoreAssignmentsQueryDto } from "./dto/list-action-store-assignments.query";
 import { ListRoleAssignmentAuditQueryDto } from "./dto/list-role-assignment-audit.query";
 import { ListRoleAssignmentsQueryDto } from "./dto/list-role-assignments.query";
 import { ListUserAccountsQueryDto } from "./dto/list-user-accounts.query";
@@ -64,6 +66,61 @@ export class AuthAdminController {
     },
   ) {
     return this.authAdminService.deactivateRoleAssignment(assignmentId, request.user.userId);
+  }
+
+  @Post("action-store-assignments")
+  async createActionStoreAssignment(
+    @Req()
+    request: {
+      user: {
+        userId: string;
+      };
+    },
+    @Body() body: CreateActionStoreAssignmentDto,
+  ) {
+    return this.authAdminService.createActionStoreAssignment({
+      ...body,
+      actorUserId: request.user.userId,
+    });
+  }
+
+  @Get("action-store-assignments")
+  async listActionStoreAssignments(@Query() query: ListActionStoreAssignmentsQueryDto) {
+    return this.authAdminService.listActionStoreAssignments({
+      limit: query.limit,
+      offset: query.offset,
+      userId: query.userId,
+      storeId: query.storeId,
+      active: query.active,
+    });
+  }
+
+  @Get("action-store-assignments/:assignmentId/audit")
+  async getActionStoreAssignmentAudit(
+    @Param("assignmentId") assignmentId: string,
+    @Query() query: ListRoleAssignmentAuditQueryDto,
+  ) {
+    return this.authAdminService.getActionStoreAssignmentAudit({
+      assignmentId,
+      limit: query.limit,
+      offset: query.offset,
+    });
+  }
+
+  @Patch("action-store-assignments/:assignmentId/deactivate")
+  async deactivateActionStoreAssignment(
+    @Param("assignmentId") assignmentId: string,
+    @Req()
+    request: {
+      user: {
+        userId: string;
+      };
+    },
+  ) {
+    return this.authAdminService.deactivateActionStoreAssignment(
+      assignmentId,
+      request.user.userId,
+    );
   }
 
   @Post("users")
