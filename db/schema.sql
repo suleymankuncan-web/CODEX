@@ -626,11 +626,27 @@ CREATE UNIQUE INDEX uq_snapshot_run_idempotency_key
 CREATE INDEX idx_snapshot_run_status_date
     ON rpt.snapshot_run (run_status, snapshot_date, generated_at);
 
+CREATE INDEX IF NOT EXISTS snapshot_run_closed_daily_period_idx
+    ON rpt.snapshot_run (period_start, period_end, generated_at DESC)
+    WHERE snapshot_type = 'daily' AND run_status = 'completed';
+
 CREATE INDEX employee_performance_snapshot_run_store_idx
     ON rpt.employee_performance_snapshot (snapshot_run_id, store_id, score_value DESC);
 
+CREATE INDEX IF NOT EXISTS employee_performance_snapshot_run_score_idx
+    ON rpt.employee_performance_snapshot (snapshot_run_id, score_value DESC, employee_id);
+
+CREATE INDEX IF NOT EXISTS employee_performance_snapshot_run_store_score_idx
+    ON rpt.employee_performance_snapshot (snapshot_run_id, store_id, score_value DESC, employee_id);
+
 CREATE INDEX employee_kpi_snapshot_run_employee_idx
     ON rpt.employee_kpi_snapshot (snapshot_run_id, employee_id, kpi_id);
+
+CREATE INDEX IF NOT EXISTS employee_kpi_snapshot_run_metric_value_idx
+    ON rpt.employee_kpi_snapshot (snapshot_run_id, kpi_id, actual_value DESC, employee_id);
+
+CREATE INDEX IF NOT EXISTS employee_kpi_snapshot_run_store_metric_value_idx
+    ON rpt.employee_kpi_snapshot (snapshot_run_id, store_id, kpi_id, actual_value DESC, employee_id);
 
 CREATE INDEX idx_event_log_entity_date
     ON audit.event_log (entity_name, entity_id, occurred_at);
