@@ -169,6 +169,21 @@ At any point, we should still be able to answer clearly:
 
 If those answers become fuzzy, drift has started.
 
+## Guardrail 16: Localize Deliberately
+Future Turkish/English UI support should be handled as a product-wide localization layer, not as scattered string edits.
+
+Rules:
+- Turkish is the default UI language.
+- English is an optional UI language.
+- Turkish characters must be preserved end to end.
+- route paths, API contracts, role codes, permission codes, enum values, audit event codes, and KPI metric codes stay stable.
+- user-facing labels, validation messages, empty states, table headers, filter labels, export headers, and error display copy are localized.
+- Turkish casing must use locale-aware helpers when text is transformed for display.
+- date, number, percentage, and money formatting must use the active locale.
+
+Companion decision note:
+- [ui-localization-strategy.md](./ui-localization-strategy.md)
+
 ## Related Documents
 Use these guardrails together with:
 - [request-intake-and-decision-policy.md](./request-intake-and-decision-policy.md)
@@ -176,6 +191,7 @@ Use these guardrails together with:
 - [schema-expansion-guidelines.md](./schema-expansion-guidelines.md)
 - [new-module-template.md](./new-module-template.md)
 - [phase-7-shell-boundaries.md](./phase-7-shell-boundaries.md)
+- [ui-localization-strategy.md](./ui-localization-strategy.md)
 
 ## Expected Outcome
 If these guardrails are followed consistently:

@@ -89,6 +89,19 @@ Use it before implementation so new ideas do not get scattered across chat histo
 - Reporting UI: later, in store-facing form
 - Risks / Notes: do not let store features quietly accumulate under `/admin`
 
+### 1B. UI Localization TR/EN
+- Status: `captured`
+- Priority: `P1`
+- Business goal: support a fully Turkish default UI and optional English UI without scattering hard-coded copy
+- User/operator need: Turkish users should see correct Turkish labels and characters, while English can be enabled later for broader use
+- Owning bounded context: frontend platform / UX foundation
+- Related modules: all frontend surfaces, exports, error display, formatting helpers
+- `ops`: none expected
+- `stg`: none expected
+- `rpt`: none expected
+- `audit`: no schema impact; audit event codes stay stable and only display labels localize
+- Reference: [ui-localization-strategy.md](./ui-localization-strategy.md)
+
 ### 2. Incentive / Prim Module
 - Status: `captured`
 - Priority: `P1`

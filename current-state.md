@@ -495,6 +495,18 @@ Backend/frontend guvenlik modeli ana hatta ayrildi; kalici assignment yonetimi, 
 - Plan hafizasi `docs/plans` altinda toplandi: domain blueprint, gap roadmap, guardrails, request intake, backlog ve module template dosyalari artik repo hafizasina dahil.
 - Gecici perf baseline loglari, Keycloak cookie dosyalari, Excel inspect ciktilari ve local reference checkout'lari `.gitignore` ile disarida tutulur.
 
+## Son UI Localization Karar Notu
+
+24 Nisan 2026 itibariyla gelecekteki TR/EN arayuz stratejisi plan hafizasina eklendi.
+
+- Yeni karar notu: `docs/plans/ui-localization-strategy.md`.
+- Urun karari: default arayuz dili Turkce, opsiyonel ikinci dil Ingilizce.
+- Turkce karakterler (`Ç`, `Ş`, `İ`, `ı`, `ğ`, `ü`, `ö`) birinci sinif desteklenecek.
+- Backend/API enum, role, permission, route, audit code ve KPI metric code degerleri cevrilmeyecek; UI label olarak cevrilecek.
+- Tarih, sayi, yuzde, para, search/filter, CSV/Excel export ve hata mesaji kurallari localization stratejisine yazildi.
+- Feature backlog icine `UI Localization TR/EN` captured/P1 olarak eklendi.
+- Project guardrails icine localization deliberate-change kurali eklendi.
+
 ## Son Frontend Release Check
 
 24 Nisan 2026 itibariyla aktif frontend klasorunde release check kapisi eklendi.
@@ -555,6 +567,7 @@ Planlar:
 - `docs/plans/project-gap-analysis-and-roadmap.md`
 - `docs/plans/request-intake-and-decision-policy.md`
 - `docs/plans/project-stability-guardrails.md`
+- `docs/plans/ui-localization-strategy.md`
 
 ## Devam Komutu
 
