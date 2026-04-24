@@ -48,16 +48,14 @@ describe("store-me smoke script", () => {
     const response = buildHealthyResponse({
       metrics: [
         {
-          metricCode: "TARGET_ACHIEVEMENT",
+          code: "TARGET_ACHIEVEMENT",
           actualValue: 98.1,
-          scoreStatus: "scored",
-          dataStatus: "reported",
+          status: "reported",
         },
         {
-          metricCode: "ATV",
+          code: "ATV",
           actualValue: 450,
-          scoreStatus: "scored",
-          dataStatus: "reported",
+          status: "reported",
         },
       ],
     });
@@ -116,6 +114,16 @@ describe("store-me smoke script", () => {
 
     expect(packageJson.scripts?.["smoke:store-me"]).toBe("ts-node scripts/store-me-smoke.ts");
   });
+
+  it("runs the store-me smoke during release rehearsal", () => {
+    const releaseRehearsal = readFileSync(
+      join(process.cwd(), "scripts", "release-rehearsal.ts"),
+      "utf8",
+    );
+
+    expect(releaseRehearsal).toContain('"smoke:release"');
+    expect(releaseRehearsal).toContain('"smoke:store-me"');
+  });
 });
 
 function buildHealthyResponse(overrides: Record<string, unknown> = {}) {
@@ -140,22 +148,19 @@ function buildHealthyResponse(overrides: Record<string, unknown> = {}) {
     },
     metrics: [
       {
-        metricCode: "TARGET_ACHIEVEMENT",
+        code: "TARGET_ACHIEVEMENT",
         actualValue: 98.1,
-        scoreStatus: "scored",
-        dataStatus: "reported",
+        status: "reported",
       },
       {
-        metricCode: "ATV",
+        code: "ATV",
         actualValue: 450,
-        scoreStatus: "scored",
-        dataStatus: "reported",
+        status: "reported",
       },
       {
-        metricCode: "UPT",
+        code: "UPT",
         actualValue: 2.3,
-        scoreStatus: "scored",
-        dataStatus: "reported",
+        status: "reported",
       },
     ],
     ...overrides,

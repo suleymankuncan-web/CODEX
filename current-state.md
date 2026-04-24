@@ -587,8 +587,13 @@ Backend/frontend guvenlik modeli ana hatta ayrildi; kalici assignment yonetimi, 
 - Token verilirse `STORE_ME_SMOKE_TOKEN` / `SMOKE_AUTH_TOKEN` ile bearer auth kullanir.
 - Token yoksa mock auth header'lariyla `STORE_PERSONNEL`, `DEMO-EMP-202`, demo company/region/store scope ve assigned store bilgisini yollar.
 - Response'ta employee identity, live source mode, scored `TARGET_ACHIEVEMENT` / `ATV` / `UPT`, pozitif score, Turkiye rank ve magaza rank yoksa fail eder.
+- `scripts/release-rehearsal.ts` artik Docker-backed seeded rehearsal app acildiktan sonra `smoke:release` ardindan `smoke:store-me` de kosar; CI'da `/store/me` backend kontrati sessizce geri bozulamaz.
+- Smoke script gercek `/my-performance` response formatini okur: metric satirlari icin `code/status` alanlari birinci sinif, eski `metricCode/scoreStatus` formati toleranslidir.
 - Contract test eklendi: `backend/nestjs/src/modules/store-ops/store-me-smoke-script.spec.ts`.
 - Runbook notu eklendi: `docs/backend/live-e2e-runbook.md`.
+- Operational monitoring contract `smoke:store-me` kapisini runtime readiness kriterlerine ekledi.
+- Hedefli smoke contract testi gecti: `npm.cmd test -- --runInBand src/modules/store-ops/store-me-smoke-script.spec.ts` -> 1 suite / 8 test.
+- Uctan uca release rehearsal gecti: `npm.cmd run rehearse:release` -> `check:release`, Docker Postgres/Redis, `smoke:release`, `smoke:store-me`, 24 suite / 170 test, build ve audit temiz.
 
 ## Son Frontend Release Check
 

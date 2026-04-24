@@ -29,6 +29,7 @@ npm run smoke:store-me
 - JWT/staging mode can be run by setting `STORE_ME_SMOKE_TOKEN` or `SMOKE_AUTH_TOKEN`; when a token is present the script sends only `Authorization: Bearer <token>`.
 - The script fails if the live response does not include employee identity, scored `TARGET_ACHIEVEMENT`/`ATV`/`UPT` metrics, positive score, Turkey rank, and store rank.
 - Useful overrides: `STORE_ME_SMOKE_BASE_URL`, `STORE_ME_SMOKE_EMPLOYEE_ID`, `STORE_ME_SMOKE_EXPECTED_EMPLOYEE_ID`, `STORE_ME_SMOKE_COMPANY_ID`, `STORE_ME_SMOKE_REGION_ID`, `STORE_ME_SMOKE_STORE_ID`, `STORE_ME_SMOKE_REQUIRED_METRICS`.
+- `npm run rehearse:release` also runs this smoke against the Docker-backed seeded rehearsal app in `AUTH_MODE=mock`.
 
 ## Ön Koşullar
 - Docker Desktop kurulu olmalı.

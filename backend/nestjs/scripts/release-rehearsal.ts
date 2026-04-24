@@ -243,6 +243,14 @@ async function main() {
         SMOKE_BASE_URL: smokeBaseUrl,
       },
     });
+
+    await runCommand(npmCommand, ["run", "smoke:store-me"], {
+      cwd: backendRoot,
+      env: {
+        ...sharedEnv,
+        SMOKE_BASE_URL: smokeBaseUrl,
+      },
+    });
   } finally {
     await stopManagedProcesses();
 

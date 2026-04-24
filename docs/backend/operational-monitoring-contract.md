@@ -173,6 +173,7 @@ This is the minimum correlation set for incident triage.
 - A deployment is considered operationally ready only if all of the following are true:
   - `npm run check:release` succeeds
   - `GET /api/health` returns `200`
+  - `npm run smoke:store-me` succeeds for a scoped `STORE_PERSONNEL` identity
   - live PostgreSQL and Redis are reachable
   - `npm run test:live` succeeds against real infra
   - at least one snapshot run reaches `completed`
@@ -190,12 +191,20 @@ This is the minimum correlation set for incident triage.
 ## Implemented Smoke Command
 - A release smoke command now exists:
   - `npm run smoke:release`
+- A store personnel self-performance smoke command now exists:
+  - `npm run smoke:store-me`
 - Default assumptions:
   - base URL: `http://localhost:3000/api`
   - smoke user: seeded admin user `80000000-0000-0000-0000-000000000001`
+- Store-me smoke defaults:
+  - base URL: `http://localhost:3000/api`
+  - mock employee claim: `DEMO-EMP-202`
+  - expected internal employee id: `00000000-0000-0000-0000-000000000202`
+  - expected store scope: `00000000-0000-0000-0000-000000000100`
 - Optional overrides:
   - `SMOKE_BASE_URL`
   - `SMOKE_USER_ID`
+  - `STORE_ME_SMOKE_TOKEN` or `SMOKE_AUTH_TOKEN`
   - `REHEARSAL_COMPOSE_PROJECT_NAME`
 
 ## Implemented Release Rehearsal Gate
@@ -206,7 +215,7 @@ This is the minimum correlation set for incident triage.
   - full Jest test suite with `--runInBand`
   - backend build
   - production dependency audit via `npm audit --omit=dev`
-- `npm run rehearse:release` runs this release check before starting the Docker-backed rehearsal and smoke flow.
+- `npm run rehearse:release` runs this release check before starting the Docker-backed rehearsal, generic release smoke, and store-me smoke flow.
 - The rehearsal Docker Compose project defaults to `store-ops-live-rehearsal` so it does not collide with local Keycloak or other infra compose stacks.
 - CI binding:
   - `.github/workflows/release-rehearsal.yml` runs `npm run rehearse:release`

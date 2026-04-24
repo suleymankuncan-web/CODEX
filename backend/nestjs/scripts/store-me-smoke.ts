@@ -126,7 +126,7 @@ export function assertStoreMeSmokeResponse(
   for (const metricCode of config.requiredMetricCodes) {
     const metric = metrics.find(
       (candidate): candidate is JsonObject =>
-        isObject(candidate) && candidate.metricCode === metricCode,
+        isObject(candidate) && readMetricCode(candidate) === metricCode,
     );
     assertCondition(
       metric,
@@ -171,11 +171,7 @@ export function buildStoreMeSmokeSummary(
       storePopulation: readNumber(rankings.storePopulation),
     },
     metrics: metrics
-      .map((metric) =>
-        isObject(metric) && typeof metric.metricCode === "string"
-          ? metric.metricCode
-          : null,
-      )
+      .map((metric) => (isObject(metric) ? readMetricCode(metric) : null))
       .filter((metricCode): metricCode is string =>
         config.requiredMetricCodes.includes(metricCode ?? ""),
       ),
@@ -225,17 +221,21 @@ function parseRequiredMetricCodes(value: string | undefined) {
 }
 
 function assertMetricIsReady(metric: JsonObject, metricCode: string) {
+  const metricStatus = readNullableString(metric.status);
+  const scoreStatus = readNullableString(metric.scoreStatus);
+  const dataStatus = readNullableString(metric.dataStatus);
+
   assertCondition(
     metric.actualValue !== null && metric.actualValue !== undefined,
     `Store-me smoke response ${metricCode} metric did not include actualValue`,
   );
   assertCondition(
-    metric.dataStatus !== "missing",
-    `Store-me smoke response ${metricCode} metric dataStatus was missing`,
+    metricStatus !== "missing" && dataStatus !== "missing",
+    `Store-me smoke response ${metricCode} metric status was missing`,
   );
   assertCondition(
-    metric.scoreStatus === "scored",
-    `Store-me smoke response ${metricCode} metric was not scored`,
+    metricStatus === "reported" || scoreStatus === "scored",
+    `Store-me smoke response ${metricCode} metric was not ready`,
   );
 }
 
@@ -282,6 +282,10 @@ function readNumber(value: unknown) {
 
 function readNullableString(value: unknown) {
   return typeof value === "string" ? value : null;
+}
+
+function readMetricCode(metric: JsonObject) {
+  return readNullableString(metric.code) ?? readNullableString(metric.metricCode);
 }
 
 function isObject(value: unknown): value is JsonObject {
