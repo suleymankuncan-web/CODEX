@@ -16,6 +16,20 @@
 - `backend/nestjs/src/modules/store-ops/demo-performance-seed-contract.spec.ts` protects this alignment.
 - Expected local smoke user: `store.personnel` opens `/store/me` with `DEMO-EMP-202` in store `00000000-0000-0000-0000-000000000100`.
 
+## Store-Me API Smoke
+- `backend/nestjs/scripts/store-me-smoke.ts` checks `GET /api/reports/my-performance?mode=live` without the browser UI layer.
+- NPM command:
+
+```powershell
+Set-Location backend\nestjs
+npm run smoke:store-me
+```
+
+- Default mock-auth scope uses `STORE_PERSONNEL`, `DEMO-EMP-202`, company `00000000-0000-0000-0000-000000000001`, region `00000000-0000-0000-0000-000000000010`, and store `00000000-0000-0000-0000-000000000100`.
+- JWT/staging mode can be run by setting `STORE_ME_SMOKE_TOKEN` or `SMOKE_AUTH_TOKEN`; when a token is present the script sends only `Authorization: Bearer <token>`.
+- The script fails if the live response does not include employee identity, scored `TARGET_ACHIEVEMENT`/`ATV`/`UPT` metrics, positive score, Turkey rank, and store rank.
+- Useful overrides: `STORE_ME_SMOKE_BASE_URL`, `STORE_ME_SMOKE_EMPLOYEE_ID`, `STORE_ME_SMOKE_EXPECTED_EMPLOYEE_ID`, `STORE_ME_SMOKE_COMPANY_ID`, `STORE_ME_SMOKE_REGION_ID`, `STORE_ME_SMOKE_STORE_ID`, `STORE_ME_SMOKE_REQUIRED_METRICS`.
+
 ## Ön Koşullar
 - Docker Desktop kurulu olmalı.
 - WSL 2 backend hazır olmalı.

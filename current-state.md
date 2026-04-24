@@ -578,6 +578,18 @@ Backend/frontend guvenlik modeli ana hatta ayrildi; kalici assignment yonetimi, 
 - `backend/nestjs/src/modules/store-ops/demo-performance-seed-contract.spec.ts` Keycloak fixture, reference seed ve personel score defaultlarini birlikte koruyor.
 - `docs/backend/live-e2e-runbook.md` reference seed ve `/store/me` demo smoke baglantisini acikca not ediyor.
 
+## Son Store-Me API Smoke Script
+
+24 Nisan 2026 itibariyla `/store/me` icin browser UI disinda calisan backend smoke script'i eklendi.
+
+- Yeni komut: `backend/nestjs` icinde `npm.cmd run smoke:store-me`.
+- Script `GET /api/reports/my-performance?mode=live` endpointini kontrol eder.
+- Token verilirse `STORE_ME_SMOKE_TOKEN` / `SMOKE_AUTH_TOKEN` ile bearer auth kullanir.
+- Token yoksa mock auth header'lariyla `STORE_PERSONNEL`, `DEMO-EMP-202`, demo company/region/store scope ve assigned store bilgisini yollar.
+- Response'ta employee identity, live source mode, scored `TARGET_ACHIEVEMENT` / `ATV` / `UPT`, pozitif score, Turkiye rank ve magaza rank yoksa fail eder.
+- Contract test eklendi: `backend/nestjs/src/modules/store-ops/store-me-smoke-script.spec.ts`.
+- Runbook notu eklendi: `docs/backend/live-e2e-runbook.md`.
+
 ## Son Frontend Release Check
 
 24 Nisan 2026 itibariyla aktif frontend klasorunde release check kapisi eklendi.
