@@ -239,47 +239,51 @@ export type StoreKpiHighlightsSummary = {
   metrics: StoreKpiHighlightMetric[]
 }
 
+export type ClosedRankingMetricRank = {
+  code: string
+  label: string
+  actualValue: number | null
+  storeRank: number | null
+  storePopulation: number
+  turkeyRank: number | null
+  turkeyPopulation: number
+}
+
+export type ClosedRankingCoverage = {
+  closedDaysInPeriod: number
+  daysWithPerformance: number
+  minimumRequiredDays: number
+  isEligibleForRanking: boolean
+}
+
+export type ClosedRankingEmployee = {
+  employeeId: string
+  displayName: string
+  storeId: string | null
+  storeName: string | null
+  scoreValue: number
+  rankings: {
+    turkeyRank: number | null
+    turkeyPopulation: number
+    storeRank: number | null
+    storePopulation: number
+  }
+  coverage: ClosedRankingCoverage
+  metricRanks: ClosedRankingMetricRank[]
+}
+
 export type ClosedLeaderboardSummary = {
   source: {
+    mode: 'closed'
+    periodType: 'daily' | 'monthly'
+    state: 'closed' | 'not_closed' | 'no_data'
     snapshotRunId: string | null
     snapshotDate: string | null
     periodStart: string | null
     periodEnd: string | null
   }
-  currentEmployee: {
-    employeeId: string
-    displayName: string
-    storeId: string | null
-    storeName: string | null
-    scoreValue: number
-    turkeyRank: number | null
-    storeRank: number | null
-  } | null
-  currentStore: {
-    storeId: string
-    storeName: string
-    scoreValue: number
-    matchedMetrics: number
-    totalMetrics: number
-    rank: number
-  } | null
-  personnelTop: Array<{
-    employeeId: string
-    displayName: string
-    storeId: string | null
-    storeName: string | null
-    scoreValue: number
-    turkeyRank: number | null
-    storeRank: number | null
-  }>
-  storeTop: Array<{
-    storeId: string
-    storeName: string
-    scoreValue: number
-    matchedMetrics: number
-    totalMetrics: number
-    rank: number
-  }>
+  currentEmployee: ClosedRankingEmployee | null
+  personnelTop: ClosedRankingEmployee[]
 }
 
 export type ChecklistRow = {
@@ -415,10 +419,25 @@ export async function getStoreKpiHighlights(input?: {
   )
 }
 
-export async function getClosedLeaderboard(input?: { snapshotDate?: string; limit?: number }) {
+export async function getClosedLeaderboard(input?: {
+  periodType?: 'daily' | 'monthly'
+  periodStart?: string
+  snapshotDate?: string
+  storeId?: string
+  limit?: number
+}) {
   const params = new URLSearchParams()
+  if (input?.periodType) {
+    params.set('periodType', input.periodType)
+  }
+  if (input?.periodStart) {
+    params.set('periodStart', input.periodStart)
+  }
   if (input?.snapshotDate) {
     params.set('snapshotDate', input.snapshotDate)
+  }
+  if (input?.storeId) {
+    params.set('storeId', input.storeId)
   }
   if (input?.limit) {
     params.set('limit', String(input.limit))
