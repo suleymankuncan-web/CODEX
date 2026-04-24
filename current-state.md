@@ -614,6 +614,21 @@ C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI\admin-web
 - Repo icindeki frontend release check gecti: `npm.cmd run check:release` -> lint, TypeScript/Vite build ve runtime audit (`found 0 vulnerabilities`).
 - Frontend CI baglantisi yapildi: `.github/workflows/frontend-release-check.yml` PR'larda ve `main`/`master` push'larinda `admin-web/**` degisiklikleri icin `npm ci` ve `npm run check:release` calistirir.
 
+## Son Frontend Store UI Smoke Gate
+
+24 Nisan 2026 itibariyla `/store/me` ve `/store/rankings` icin build edilmis frontend uzerinde Playwright smoke kapisi eklendi.
+
+- `admin-web` icine `@playwright/test`, `playwright.config.ts` ve `e2e/store-surfaces.spec.ts` eklendi.
+- Yeni komutlar:
+  - `npm.cmd run test:e2e` -> Playwright testlerini kosar.
+  - `npm.cmd run smoke:ui` -> once frontend build alir, sonra Vite preview uzerinde Chromium smoke kosar.
+- `check:release` artik `lint + smoke:ui + audit --omit=dev` calistirir; `smoke:ui` build adimini kendi icinde yaptigi icin release check build'i de kapsar.
+- Smoke testleri backend/Keycloak'a baglanmaz; `/api/auth/session`, `/api/reports/kpi-config`, `/api/reports/my-performance`, `/api/reports/leaderboards/closed` ve snapshot run endpointleri Playwright route fixture'lariyla sabitlenir.
+- `/store/me` icin Weighted score, Turkey ranking, Store ranking, `TARGET_ACHIEVEMENT`, `ATV`, `UPT` ve hata state yoklugu kontrol edilir.
+- `/store/rankings` icin closed leaderboard, current rank, `TR 1/4`, KPI mini-ranks ve hata state yoklugu kontrol edilir.
+- `.github/workflows/frontend-release-check.yml` artik `npx playwright install --with-deps chromium` adimini kosar; CI release check tarayici bulamama nedeniyle dusmez.
+- Hedefli dogrulama gecti: `npm.cmd run smoke:ui` -> build + 2 Playwright smoke testi.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:

@@ -1,4 +1,33 @@
-# React + TypeScript + Vite
+# Store Ops Admin Web
+
+React + TypeScript + Vite frontend for the Store Ops admin and store-user surfaces.
+
+## Commands
+
+```powershell
+npm.cmd run dev
+npm.cmd run build
+npm.cmd run lint
+npm.cmd run smoke:ui
+npm.cmd run check:release
+```
+
+## UI Smoke Gate
+
+`npm.cmd run smoke:ui` builds the production bundle, starts Vite preview through Playwright, and runs Chromium smoke checks for:
+
+- `/store/me`
+- `/store/rankings`
+
+The smoke tests use Playwright route fixtures for auth and report APIs, so they verify frontend rendering without requiring Keycloak or a live backend. The release gate uses `lint + smoke:ui + audit --omit=dev`.
+
+In CI, `.github/workflows/frontend-release-check.yml` installs Chromium with:
+
+```powershell
+npx playwright install --with-deps chromium
+```
+
+## Original Vite Notes
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

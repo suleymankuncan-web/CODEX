@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
-    "check:release": "npm run lint && npm run build && npm audit --omit=dev",
+    "test:e2e": "playwright test",
+    "smoke:ui": "npm run build && npm run test:e2e",
+    "check:release": "npm run lint && npm run smoke:ui && npm audit --omit=dev",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -19,6 +21,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@playwright/test": "^1.59.1",
     "@types/node": "^24.12.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

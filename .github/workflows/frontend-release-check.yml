@@ -21,7 +21,7 @@ concurrency:
 jobs:
   frontend-release-check:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     permissions:
       contents: read
 
@@ -39,6 +39,10 @@ jobs:
       - name: Install frontend dependencies
         working-directory: admin-web
         run: npm ci
+
+      - name: Install Playwright Chromium
+        working-directory: admin-web
+        run: npx playwright install --with-deps chromium
 
       - name: Run frontend release check
         working-directory: admin-web
