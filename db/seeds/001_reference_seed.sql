@@ -251,6 +251,137 @@ FROM demo_personnel_kpi_actual actual
 JOIN ops.kpi_definition definition ON definition.kpi_code = actual.kpi_code
 ON CONFLICT DO NOTHING;
 
+WITH demo_closed_ranking_runs (snapshot_run_id, closure_date, generated_at) AS (
+    VALUES
+        ('00000000-0000-0000-0000-00000000f322'::uuid, DATE '2026-04-22', TIMESTAMPTZ '2026-04-22 21:00:00+00'),
+        ('00000000-0000-0000-0000-00000000f323'::uuid, DATE '2026-04-23', TIMESTAMPTZ '2026-04-23 21:00:00+00'),
+        ('00000000-0000-0000-0000-00000000f324'::uuid, DATE '2026-04-24', TIMESTAMPTZ '2026-04-24 21:00:00+00')
+)
+INSERT INTO rpt.snapshot_run (
+    snapshot_run_id,
+    snapshot_date,
+    snapshot_type,
+    period_start,
+    period_end,
+    run_status,
+    idempotency_key,
+    generated_at,
+    started_at,
+    finished_at,
+    generated_by,
+    source_batch_no
+)
+SELECT
+    run.snapshot_run_id,
+    run.closure_date,
+    'daily',
+    run.closure_date,
+    run.closure_date,
+    'completed',
+    'demo_closed_ranking_seed:daily:' || run.closure_date::text,
+    run.generated_at,
+    run.generated_at,
+    run.generated_at,
+    'demo_closed_ranking_seed',
+    'demo_closed_ranking_seed'
+FROM demo_closed_ranking_runs run
+ON CONFLICT DO NOTHING;
+
+WITH demo_closed_ranking_runs (snapshot_run_id, closure_date) AS (
+    VALUES
+        ('00000000-0000-0000-0000-00000000f322'::uuid, DATE '2026-04-22'),
+        ('00000000-0000-0000-0000-00000000f323'::uuid, DATE '2026-04-23'),
+        ('00000000-0000-0000-0000-00000000f324'::uuid, DATE '2026-04-24')
+),
+demo_closed_ranking_metric_values (employee_id, store_id, kpi_code, actual_value) AS (
+    VALUES
+        ('00000000-0000-0000-0000-000000000201'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'TARGET_ACHIEVEMENT', 94.0000),
+        ('00000000-0000-0000-0000-000000000201'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'ATV', 88.0000),
+        ('00000000-0000-0000-0000-000000000201'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'UPT', 91.0000),
+        ('00000000-0000-0000-0000-000000000202'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'TARGET_ACHIEVEMENT', 98.0000),
+        ('00000000-0000-0000-0000-000000000202'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'ATV', 96.0000),
+        ('00000000-0000-0000-0000-000000000202'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'UPT', 95.0000),
+        ('00000000-0000-0000-0000-000000000203'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'TARGET_ACHIEVEMENT', 86.0000),
+        ('00000000-0000-0000-0000-000000000203'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'ATV', 84.0000),
+        ('00000000-0000-0000-0000-000000000203'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'UPT', 82.0000),
+        ('00000000-0000-0000-0000-000000000204'::uuid, '00000000-0000-0000-0000-000000000101'::uuid, 'TARGET_ACHIEVEMENT', 99.0000),
+        ('00000000-0000-0000-0000-000000000204'::uuid, '00000000-0000-0000-0000-000000000101'::uuid, 'ATV', 91.0000),
+        ('00000000-0000-0000-0000-000000000204'::uuid, '00000000-0000-0000-0000-000000000101'::uuid, 'UPT', 90.0000)
+)
+INSERT INTO rpt.employee_kpi_snapshot (
+    snapshot_run_id,
+    employee_id,
+    store_id,
+    kpi_id,
+    period_start,
+    period_end,
+    actual_value
+)
+SELECT
+    run.snapshot_run_id,
+    metric.employee_id,
+    metric.store_id,
+    definition.kpi_id,
+    run.closure_date,
+    run.closure_date,
+    metric.actual_value
+FROM demo_closed_ranking_runs run
+CROSS JOIN demo_closed_ranking_metric_values metric
+JOIN ops.kpi_definition definition ON definition.kpi_code = metric.kpi_code
+ON CONFLICT DO NOTHING;
+
+WITH demo_closed_ranking_runs (snapshot_run_id, closure_date) AS (
+    VALUES
+        ('00000000-0000-0000-0000-00000000f322'::uuid, DATE '2026-04-22'),
+        ('00000000-0000-0000-0000-00000000f323'::uuid, DATE '2026-04-23'),
+        ('00000000-0000-0000-0000-00000000f324'::uuid, DATE '2026-04-24')
+),
+demo_closed_ranking_performance (
+    employee_id,
+    store_id,
+    score_value,
+    turkey_rank,
+    turkey_population,
+    store_rank,
+    store_population
+) AS (
+    VALUES
+        ('00000000-0000-0000-0000-000000000202'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 96.5000, 1, 4, 1, 3),
+        ('00000000-0000-0000-0000-000000000204'::uuid, '00000000-0000-0000-0000-000000000101'::uuid, 93.6000, 2, 4, 1, 1),
+        ('00000000-0000-0000-0000-000000000201'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 91.3000, 3, 4, 2, 3),
+        ('00000000-0000-0000-0000-000000000203'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 84.0000, 4, 4, 3, 3)
+)
+INSERT INTO rpt.employee_performance_snapshot (
+    snapshot_run_id,
+    employee_id,
+    store_id,
+    period_start,
+    period_end,
+    score_value,
+    matched_metrics,
+    total_metrics,
+    turkey_rank,
+    turkey_population,
+    store_rank,
+    store_population
+)
+SELECT
+    run.snapshot_run_id,
+    perf.employee_id,
+    perf.store_id,
+    run.closure_date,
+    run.closure_date,
+    perf.score_value,
+    3,
+    3,
+    perf.turkey_rank,
+    perf.turkey_population,
+    perf.store_rank,
+    perf.store_population
+FROM demo_closed_ranking_runs run
+CROSS JOIN demo_closed_ranking_performance perf
+ON CONFLICT DO NOTHING;
+
 INSERT INTO ops.kpi_target (
     kpi_target_id, kpi_id, scope_type, company_id, store_id, period_type, period_start, period_end, target_value, threshold_green, threshold_yellow, threshold_red
 )

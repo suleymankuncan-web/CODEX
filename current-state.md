@@ -641,7 +641,23 @@ C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI\admin-web
 - Dar tarayici gorunumunde store shell yatay scroll ve hero basligi tasmasi temizlendi.
 - Store tasks smoke kapsami genisledi; shared inbox icin Turkce queue etiketleri regression testte korunur.
 - Frontend release check gecti: `npm.cmd run check:release` -> lint, build, 4 Playwright smoke testi ve `npm audit --omit=dev` (`found 0 vulnerabilities`).
-- Bilinen local data notu: gercek local `/store/rankings` daily/monthly aciliyor ama mevcut closure datasinda personel performance row olmadigi icin `no_data` state'i gosteriyor. Bu kod kirigi degil; siradaki veri borcu local closed-ranking fixture/seed hizalamasidir.
+- Kapanan local data notu: `/store/rankings` icin `no_data` sebebi olan closed-ranking fixture/seed eksigi asagidaki fix ile kapatildi.
+
+## Son Store Rankings Closed Fixture Fix
+
+24 Nisan 2026 itibariyla local `/store/rankings` icin `no_data` veri borcu kapatildi.
+
+- Kok neden: local DB'de `daily` tipinde tek bir eski snapshot vardi; `period_start != period_end` oldugu icin gercek gunluk closure degildi ve `rpt.employee_performance_snapshot` / `rpt.employee_kpi_snapshot` satirlari yoktu.
+- `db/seeds/001_reference_seed.sql` artik 22, 23 ve 24 Nisan 2026 icin idempotent closed-ranking demo snapshot runlari uretir.
+- Her gun icin 4 demo personele performance snapshot, her personele `TARGET_ACHIEVEMENT`, `ATV`, `UPT` KPI snapshot satirlari eklenir.
+- `ReportingRepository` daily closure secimlerinde sadece tek gunluk snapshotlari kabul eder; multi-day daily kayitlar latest/monthly ranking hesaplarina karismaz.
+- Closed ranking date alanlari API'ye `YYYY-MM-DD` string olarak doner; UI'da ISO timestamp sizmasi engellendi.
+- Local Postgres'e seed uygulandi; 3 gun, gun basina 4 performance employee ve 12 KPI value dogrulandi.
+- Gercek Keycloak login ile `/store/rankings` browser check gecti: state `closed`, `no_data` yok, `Store Personnel - 1/4`, `TR 1/4`, KPI mini-rank satirlari ve date-only period gorunuyor.
+- Backend release check gecti: `npm.cmd run check:release` -> lint, 25 test suite / 174 test, build, `npm audit --omit=dev` (`found 0 vulnerabilities`).
+- Frontend release check tekrar gecti: `npm.cmd run check:release` -> lint, build, 4 Playwright smoke testi, `npm audit --omit=dev` (`found 0 vulnerabilities`).
+- Not: browser dogrulamasi icin backend 3000 portunda source ustunden `npx ts-node src/main.ts` ile yeniden kaldirildi.
+- Siradaki mantikli adim: closed ranking uzerinden store/region leaderboard varyantlarini planlamak; bolge ligleri icin store ici + Turkiye geneli temelinin ustune bolge kapsamini eklemek.
 
 ## Onemli Dosyalar
 

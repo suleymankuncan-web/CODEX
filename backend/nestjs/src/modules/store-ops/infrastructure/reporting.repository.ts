@@ -92,10 +92,10 @@ export class ReportingRepository {
       `
         SELECT
           sr.snapshot_run_id,
-          sr.snapshot_date,
+          sr.snapshot_date::text AS snapshot_date,
           sr.snapshot_type,
-          sr.period_start,
-          sr.period_end,
+          sr.period_start::text AS period_start,
+          sr.period_end::text AS period_end,
           sr.run_status,
           sr.generated_at,
           sr.generated_by
@@ -123,16 +123,17 @@ export class ReportingRepository {
       `
         SELECT
           sr.snapshot_run_id,
-          sr.snapshot_date,
+          sr.snapshot_date::text AS snapshot_date,
           sr.snapshot_type,
-          sr.period_start,
-          sr.period_end,
+          sr.period_start::text AS period_start,
+          sr.period_end::text AS period_end,
           sr.run_status,
           sr.generated_at,
           sr.generated_by
         FROM rpt.snapshot_run sr
         WHERE sr.run_status = 'completed'
           AND sr.snapshot_type = $1
+          AND ($1 <> 'daily' OR sr.period_start = sr.period_end)
         ORDER BY sr.generated_at DESC
         LIMIT 1
       `,
@@ -160,10 +161,10 @@ export class ReportingRepository {
       `
         SELECT
           sr.snapshot_run_id,
-          sr.snapshot_date,
+          sr.snapshot_date::text AS snapshot_date,
           sr.snapshot_type,
-          sr.period_start,
-          sr.period_end,
+          sr.period_start::text AS period_start,
+          sr.period_end::text AS period_end,
           sr.run_status,
           sr.generated_at,
           sr.generated_by
@@ -195,10 +196,10 @@ export class ReportingRepository {
       `
         SELECT
           sr.snapshot_run_id,
-          sr.snapshot_date,
+          sr.snapshot_date::text AS snapshot_date,
           sr.snapshot_type,
-          sr.period_start,
-          sr.period_end,
+          sr.period_start::text AS period_start,
+          sr.period_end::text AS period_end,
           sr.run_status,
           sr.generated_at,
           sr.generated_by
@@ -1327,12 +1328,13 @@ export class ReportingRepository {
       `
         SELECT
           sr.snapshot_run_id,
-          sr.snapshot_date,
-          sr.period_start,
-          sr.period_end
+          sr.snapshot_date::text AS snapshot_date,
+          sr.period_start::text AS period_start,
+          sr.period_end::text AS period_end
         FROM rpt.snapshot_run sr
         WHERE sr.snapshot_type = 'daily'
           AND sr.run_status = 'completed'
+          AND sr.period_start = sr.period_end
           AND sr.period_start >= $1::date
           AND sr.period_start < ($1::date + INTERVAL '1 month')
         ORDER BY sr.period_start ASC

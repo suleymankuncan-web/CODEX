@@ -83,6 +83,23 @@ describe("demo performance seed contract", () => {
     expect(seedSql).toContain("DATE '2026-04-30'");
   });
 
+  it("seeds closed daily ranking snapshots required by /store/rankings browser checks", () => {
+    expect(seedSql).toContain("demo_closed_ranking_runs");
+    expect(seedSql).toContain("rpt.snapshot_run");
+    expect(seedSql).toContain("rpt.employee_performance_snapshot");
+    expect(seedSql).toContain("rpt.employee_kpi_snapshot");
+
+    for (const closureDate of ["2026-04-22", "2026-04-23", "2026-04-24"]) {
+      expect(seedSql).toContain(`DATE '${closureDate}'`);
+    }
+
+    for (const employee of seededDemoEmployees) {
+      expect(seedSql).toContain(employee.employeeId);
+    }
+
+    expect(seedSql).toContain("demo_closed_ranking_seed");
+  });
+
   it("keeps personnel scoring defaults aligned with the demo self-performance surface", () => {
     const weights = new Map(
       personnelKpiScoreProfile.metrics.map((metric) => [metric.code, metric.weightPercent]),
