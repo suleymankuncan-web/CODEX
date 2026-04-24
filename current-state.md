@@ -552,9 +552,21 @@ Backend/frontend guvenlik modeli ana hatta ayrildi; kalici assignment yonetimi, 
 - Resolver sirasi: UUID claim dogrudan kullanilir; UUID degilse `ops.employee.external_employee_ref` uzerinden internal `employee_id` cozulur; bulunamazsa UUID `userId` icin `ops.user_account.employee_id` fallback'i denenir.
 - Bu resolver hem `/api/reports/leaderboards/closed` hem `/api/reports/my-performance` icin kullaniliyor.
 - Regression testleri eklendi: external employee claim ile closed ranking ve closed personal performance 500 donmemeli.
-- Backend release check gecti: `npm.cmd run check:release` -> lint, 22 suite / 158 test, build ve runtime audit (`found 0 vulnerabilities`).
+- Backend release check gecti: `npm.cmd run check:release` -> lint, 22 suite / 159 test, build ve runtime audit (`found 0 vulnerabilities`).
 - Live browser smoke gecti: `/store/rankings` daily ve monthly modlari 200 dondu; mevcut local veri durumunda UI `no_data` state'i gosteriyor.
-- Yan not: local DB loglarinda `ops.user_action_store_assignment` eksik uyarisi goruluyor. Schema ve migration `db/migrations/020_user_action_store_assignments.sql` dosyasinda mevcut; bu local DB migration uygulama borcu olarak takip edilmeli.
+- Local DB migration borcu kapatildi: `db/migrations/020_user_action_store_assignments.sql` uygulandi ve `ops.user_action_store_assignment` artik mevcut.
+
+## Store My Performance Local Fixture Fix
+
+24 Nisan 2026 itibariyla `/store/me` icin gorulen `Performans yuzeyi acilamadi` state'i kapatildi.
+
+- Kok neden: Keycloak local bootstrap `store.personnel` kullanicisini `employee_id = EMP-200` ve Power BI kaynakli Adana magaza ID'si ile aciyordu; mevcut local performans seed verisi ise `DEMO-EMP-202` ve `00000000-0000-0000-0000-000000000100` IstinyePark Demo Store uzerinde.
+- Kalici fix: `infra/keycloak/store-ops-realm.json` ve `infra/scripts/setup-keycloak.ps1` local demo kullanicilari seeded performans kimliklerine hizalandi.
+- Yeni regression guard: `backend/nestjs/src/modules/auth/role-catalog-contract.spec.ts` Keycloak local bootstrap kullanicilarinin demo performans employee/store claim'lerinden sapmamasini test ediyor.
+- Local runtime fix: `db/migrations/020_user_action_store_assignments.sql` local DB'ye uygulandi; `ops.user_action_store_assignment` artik mevcut.
+- Keycloak realm yeni fixture ile yeniden kuruldu.
+- Browser smoke gecti: `store.personnel` ile login sonrasi `/store/me` acildi; hata state'i yok, `Store Personnel`, Turkey ranking ve store ranking gorunuyor.
+- Backend release check gecti: `npm.cmd run check:release` -> lint, 22 suite / 159 test, build ve runtime audit (`found 0 vulnerabilities`).
 
 ## Son Frontend Release Check
 

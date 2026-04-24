@@ -23,6 +23,37 @@ const expectedKeycloakScopeClaims = [
   "read_store_ids",
   "assigned_store_ids",
 ].sort();
+const demoPerformanceStoreId = "00000000-0000-0000-0000-000000000100";
+const expectedDemoUserBindings = [
+  {
+    username: "store.manager",
+    employeeId: "DEMO-EMP-201",
+    storeIds: [demoPerformanceStoreId],
+    readStoreIds: [demoPerformanceStoreId],
+    assignedStoreIds: [demoPerformanceStoreId],
+  },
+  {
+    username: "store.personnel",
+    employeeId: "DEMO-EMP-202",
+    storeIds: [demoPerformanceStoreId],
+    readStoreIds: [demoPerformanceStoreId],
+    assignedStoreIds: [demoPerformanceStoreId],
+  },
+  {
+    username: "region.manager",
+    employeeId: "DEMO-EMP-203",
+    storeIds: [],
+    readStoreIds: [],
+    assignedStoreIds: [demoPerformanceStoreId],
+  },
+  {
+    username: "admin.operator",
+    employeeId: "DEMO-EMP-201",
+    storeIds: [demoPerformanceStoreId],
+    readStoreIds: [demoPerformanceStoreId],
+    assignedStoreIds: [demoPerformanceStoreId],
+  },
+];
 
 function collectFiles(root: string, predicate: (path: string) => boolean) {
   const files: string[] = [];
@@ -118,12 +149,21 @@ function readKeycloakRealm() {
       attributes?: Record<string, string>;
       protocolMappers?: Array<{ name?: string }>;
     }>;
+    users?: Array<{
+      username?: string;
+      attributes?: Record<string, string[]>;
+    }>;
   };
 }
 
-function collectSetupScriptRoleTokens() {
+function readKeycloakSetupScript() {
   const setupScriptPath = join(process.cwd(), "..", "..", "infra", "scripts", "setup-keycloak.ps1");
-  const setupScript = readFileSync(setupScriptPath, "utf8");
+
+  return readFileSync(setupScriptPath, "utf8");
+}
+
+function collectSetupScriptRoleTokens() {
+  const setupScript = readKeycloakSetupScript();
 
   return new Set(
     [...setupScript.matchAll(/(?:name=|--rolename\s+|")([A-Z][A-Z_]+)(?:"|\s|$)/g)].map(
@@ -133,8 +173,7 @@ function collectSetupScriptRoleTokens() {
 }
 
 function collectSetupScriptMapperTokens() {
-  const setupScriptPath = join(process.cwd(), "..", "..", "infra", "scripts", "setup-keycloak.ps1");
-  const setupScript = readFileSync(setupScriptPath, "utf8");
+  const setupScript = readKeycloakSetupScript();
 
   return new Set(
     [...setupScript.matchAll(/"([a-z]+(?:_[a-z]+)+)"/g)].map((match) => match[1]),
@@ -177,11 +216,28 @@ describe("role catalog contract", () => {
     }
   });
 
+  it("keeps Keycloak local bootstrap users aligned with seeded demo performance identities", () => {
+    const realm = readKeycloakRealm();
+    const setupScript = readKeycloakSetupScript();
+
+    expect(setupScript).toContain(`$storeId = "${demoPerformanceStoreId}"`);
+
+    for (const binding of expectedDemoUserBindings) {
+      const realmUser = realm.users?.find((user) => user.username === binding.username);
+
+      expect(realmUser?.attributes?.employee_id).toEqual([binding.employeeId]);
+      expect(realmUser?.attributes?.store_ids ?? []).toEqual(binding.storeIds);
+      expect(realmUser?.attributes?.read_store_ids ?? []).toEqual(binding.readStoreIds);
+      expect(realmUser?.attributes?.assigned_store_ids ?? []).toEqual(binding.assignedStoreIds);
+      expect(setupScript).toContain(`Username = "${binding.username}"`);
+      expect(setupScript).toContain(`EmployeeId = "${binding.employeeId}"`);
+    }
+  });
+
   it("keeps Keycloak local bootstrap aligned with authorization code + PKCE", () => {
     const realm = readKeycloakRealm();
     const adminClient = realm.clients?.find((client) => client.clientId === "store-ops-admin-web");
-    const setupScriptPath = join(process.cwd(), "..", "..", "infra", "scripts", "setup-keycloak.ps1");
-    const setupScript = readFileSync(setupScriptPath, "utf8");
+    const setupScript = readKeycloakSetupScript();
 
     expect(adminClient?.publicClient).toBe(true);
     expect(adminClient?.standardFlowEnabled).toBe(true);
