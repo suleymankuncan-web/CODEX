@@ -219,10 +219,14 @@ export class ReportingController {
       user: {
         userId: string;
         employeeId?: string;
+        roleCodes: string[];
         scope: {
           companyIds: string[];
           regionIds: string[];
           storeIds: string[];
+        };
+        actionScope?: {
+          assignedStoreIds: string[];
         };
       };
     },
@@ -234,7 +238,12 @@ export class ReportingController {
       companyIds: request.user.scope.companyIds,
       regionIds: request.user.scope.regionIds,
       storeIds: request.user.scope.storeIds,
+      roleCodes: request.user.roleCodes,
+      assignedStoreIds: request.user.actionScope?.assignedStoreIds ?? [],
+      periodType: query.periodType,
+      periodStart: query.periodStart,
       snapshotDate: query.snapshotDate,
+      storeId: query.storeId,
       limit: query.limit,
     });
   }

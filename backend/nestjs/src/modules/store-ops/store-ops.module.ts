@@ -11,6 +11,7 @@ import { WorkforceService } from "./application/workforce.service";
 import { ChecklistService } from "./application/checklist.service";
 import { SnapshotService } from "./application/snapshot.service";
 import { ReportingService } from "./application/reporting.service";
+import { ClosedRankingService } from "./application/closed-ranking.service";
 import { TargetDistributionService } from "./application/target-distribution.service";
 import { WorkflowInboxService } from "./application/workflow-inbox.service";
 import { StoreOpsRepository } from "./infrastructure/store-ops.repository";
@@ -36,6 +37,7 @@ import { KpiConfigRepository } from "./infrastructure/kpi-config.repository";
     ChecklistService,
     SnapshotService,
     ReportingService,
+    ClosedRankingService,
     TargetDistributionService,
     WorkflowInboxService,
     StoreOpsRepository,
@@ -51,6 +53,7 @@ import { KpiConfigRepository } from "./infrastructure/kpi-config.repository";
     ChecklistService,
     SnapshotService,
     ReportingService,
+    ClosedRankingService,
     TargetDistributionService,
     WorkflowInboxService,
     StoreOpsRepository,

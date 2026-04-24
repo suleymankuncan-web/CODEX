@@ -181,6 +181,41 @@ export class ReportingRepository {
     return result.rows[0] ?? null;
   }
 
+  async getCompletedDailySnapshotByDate(input: { periodStart: string }) {
+    const result = await this.databaseService.query<{
+      snapshot_run_id: string;
+      snapshot_date: string;
+      snapshot_type: string;
+      period_start: string;
+      period_end: string;
+      run_status: string;
+      generated_at: string;
+      generated_by: string;
+    }>(
+      `
+        SELECT
+          sr.snapshot_run_id,
+          sr.snapshot_date,
+          sr.snapshot_type,
+          sr.period_start,
+          sr.period_end,
+          sr.run_status,
+          sr.generated_at,
+          sr.generated_by
+        FROM rpt.snapshot_run sr
+        WHERE sr.run_status = 'completed'
+          AND sr.snapshot_type = $1
+          AND sr.period_start = $2::date
+          AND sr.period_end = $2::date
+        ORDER BY sr.generated_at DESC
+        LIMIT 1
+      `,
+      ["daily", input.periodStart],
+    );
+
+    return result.rows[0] ?? null;
+  }
+
   async getSnapshotRowCounts(snapshotRunId: string) {
     const workforceResult = await this.databaseService.query<{ total_count: string }>(
       `
@@ -1093,6 +1128,129 @@ export class ReportingRepository {
         ORDER BY kd.kpi_code ASC
       `,
       [input.snapshotRunId, input.employeeId, input.metricCodes],
+    );
+
+    return result.rows;
+  }
+
+  async listClosedDailyPersonnelRankRows(input: {
+    snapshotRunId: string;
+    companyId?: string;
+    storeId?: string;
+    limit: number;
+  }) {
+    const params: unknown[] = [input.snapshotRunId];
+    const clauses = [`eps.snapshot_run_id = $1::uuid`];
+
+    if (input.companyId) {
+      params.push(input.companyId);
+      clauses.push(`store.company_id = $${params.length}::uuid`);
+    }
+
+    if (input.storeId) {
+      params.push(input.storeId);
+      clauses.push(`eps.store_id = $${params.length}::uuid`);
+    }
+
+    params.push(input.limit);
+
+    const result = await this.databaseService.query<{
+      employee_id: string;
+      first_name: string;
+      last_name: string;
+      store_id: string | null;
+      store_name: string | null;
+      score_value: string;
+      turkey_rank: number | null;
+      turkey_population: number;
+      store_rank: number | null;
+      store_population: number;
+    }>(
+      `
+        /* closed_personnel_daily_rank_rows */
+        SELECT
+          eps.employee_id,
+          e.first_name,
+          e.last_name,
+          eps.store_id,
+          store.store_name,
+          eps.score_value::text AS score_value,
+          eps.turkey_rank,
+          eps.turkey_population,
+          eps.store_rank,
+          eps.store_population
+        FROM rpt.employee_performance_snapshot eps
+        INNER JOIN ops.employee e
+          ON e.employee_id = eps.employee_id
+        LEFT JOIN ops.store store
+          ON store.store_id = eps.store_id
+        WHERE ${clauses.join(" AND ")}
+        ORDER BY eps.turkey_rank ASC NULLS LAST, eps.score_value DESC, eps.employee_id ASC
+        LIMIT $${params.length}
+      `,
+      params,
+    );
+
+    return result.rows;
+  }
+
+  async listClosedDailyMetricRankRows(input: {
+    snapshotRunId: string;
+    employeeIds: string[];
+    storeId?: string;
+  }) {
+    if (input.employeeIds.length === 0) {
+      return [];
+    }
+
+    const result = await this.databaseService.query<{
+      employee_id: string;
+      kpi_code: string;
+      kpi_name: string;
+      actual_value: string | null;
+      store_rank: number | null;
+      store_population: number;
+      turkey_rank: number | null;
+      turkey_population: number;
+    }>(
+      `
+        /* closed_metric_daily_rank_rows */
+        WITH metric_rows AS (
+          SELECT
+            eks.employee_id,
+            eks.store_id,
+            kd.kpi_code,
+            kd.kpi_name,
+            eks.actual_value::text AS actual_value,
+            RANK() OVER (
+              PARTITION BY kd.kpi_code
+              ORDER BY eks.actual_value DESC NULLS LAST, eks.employee_id ASC
+            ) AS turkey_rank,
+            COUNT(*) OVER (PARTITION BY kd.kpi_code) AS turkey_population,
+            RANK() OVER (
+              PARTITION BY kd.kpi_code, eks.store_id
+              ORDER BY eks.actual_value DESC NULLS LAST, eks.employee_id ASC
+            ) AS store_rank,
+            COUNT(*) OVER (PARTITION BY kd.kpi_code, eks.store_id) AS store_population
+          FROM rpt.employee_kpi_snapshot eks
+          INNER JOIN ops.kpi_definition kd
+            ON kd.kpi_id = eks.kpi_id
+          WHERE eks.snapshot_run_id = $1::uuid
+        )
+        SELECT
+          employee_id,
+          kpi_code,
+          kpi_name,
+          actual_value,
+          store_rank,
+          store_population,
+          turkey_rank,
+          turkey_population
+        FROM metric_rows
+        WHERE employee_id = ANY($2::uuid[])
+        ORDER BY employee_id ASC, kpi_code ASC
+      `,
+      [input.snapshotRunId, input.employeeIds],
     );
 
     return result.rows;

@@ -12,12 +12,14 @@ import {
   storeKpiScoreProfile,
 } from "./kpi-config.contract";
 import { KpiConfigRepository } from "../infrastructure/kpi-config.repository";
+import { ClosedRankingService } from "./closed-ranking.service";
 
 @Injectable()
 export class ReportingService {
   constructor(
     private readonly reportingRepository: ReportingRepository,
     private readonly kpiConfigRepository: KpiConfigRepository,
+    private readonly closedRankingService: ClosedRankingService,
   ) {}
 
   private mapSnapshotRun(item: {
@@ -533,99 +535,15 @@ export class ReportingService {
     companyIds: string[];
     regionIds: string[];
     storeIds: string[];
+    roleCodes: string[];
+    assignedStoreIds: string[];
+    periodType?: "daily" | "monthly";
+    periodStart?: string;
     snapshotDate?: string;
+    storeId?: string;
     limit?: number;
   }) {
-    const companyId = input.companyIds[0] ?? undefined;
-    const currentEmployeeId =
-      input.employeeId ??
-      (await this.reportingRepository.getEmployeeIdForUser(input.userId)) ??
-      null;
-    const snapshotRun = input.snapshotDate
-      ? await this.reportingRepository.getCompletedSnapshotRunByTypeAndDate({
-          snapshotType: "daily",
-          periodStart: input.snapshotDate,
-          periodEnd: input.snapshotDate,
-        })
-      : await this.reportingRepository.getLatestCompletedSnapshotRunByType("daily");
-    const limit = input.limit ?? 10;
-    const config = await this.getKpiConfig();
-
-    if (!snapshotRun) {
-      return {
-        source: {
-          snapshotRunId: null,
-          snapshotDate: input.snapshotDate ?? null,
-          periodStart: null,
-          periodEnd: null,
-        },
-        currentEmployee: null,
-        currentStore: null,
-        personnelTop: [],
-        storeTop: [],
-      };
-    }
-
-    const [personnelRows, storeMetricRows, currentEmployeeSnapshot] = await Promise.all([
-      this.reportingRepository.listClosedPersonnelLeaderboard({
-        snapshotRunId: snapshotRun.snapshot_run_id,
-        companyId,
-        limit,
-      }),
-      this.reportingRepository.listClosedStoreLeaderboardRows({
-        snapshotRunId: snapshotRun.snapshot_run_id,
-        companyId,
-      }),
-      currentEmployeeId
-        ? this.reportingRepository.getEmployeePerformanceSnapshot({
-            snapshotRunId: snapshotRun.snapshot_run_id,
-            employeeId: currentEmployeeId,
-          })
-        : Promise.resolve(null),
-    ]);
-
-    const allStoreScoreRows = this.buildClosedStoreLeaderboard(
-      storeMetricRows,
-      config.storeProfile,
-      Number.MAX_SAFE_INTEGER,
-    );
-    const currentStoreId =
-      currentEmployeeSnapshot?.store_id ?? input.storeIds[0] ?? null;
-    const currentStore =
-      currentStoreId
-        ? allStoreScoreRows.find((row) => row.storeId === currentStoreId) ?? null
-        : null;
-
-    return {
-      source: {
-        snapshotRunId: snapshotRun.snapshot_run_id,
-        snapshotDate: snapshotRun.snapshot_date,
-        periodStart: snapshotRun.period_start,
-        periodEnd: snapshotRun.period_end,
-      },
-      currentEmployee: currentEmployeeSnapshot
-        ? {
-            employeeId: currentEmployeeSnapshot.employee_id,
-            displayName: `${currentEmployeeSnapshot.first_name} ${currentEmployeeSnapshot.last_name}`.trim(),
-            storeId: currentEmployeeSnapshot.store_id,
-            storeName: currentEmployeeSnapshot.store_name,
-            scoreValue: Number(currentEmployeeSnapshot.score_value),
-            turkeyRank: currentEmployeeSnapshot.turkey_rank,
-            storeRank: currentEmployeeSnapshot.store_rank,
-          }
-        : null,
-      currentStore,
-      personnelTop: personnelRows.map((row) => ({
-        employeeId: row.employee_id,
-        displayName: `${row.first_name} ${row.last_name}`.trim(),
-        storeId: row.store_id,
-        storeName: row.store_name,
-        scoreValue: Number(row.score_value),
-        turkeyRank: row.turkey_rank,
-        storeRank: row.store_rank,
-      })),
-      storeTop: allStoreScoreRows.slice(0, limit),
-    };
+    return this.closedRankingService.getClosedLeaderboard(input);
   }
 
   private resolveWeightedAchievementRate(input: {
