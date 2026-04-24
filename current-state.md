@@ -524,6 +524,25 @@ Backend/frontend guvenlik modeli ana hatta ayrildi; kalici assignment yonetimi, 
 - Aylik satirlarda data coverage gosterilir: `daysWithPerformance / closedDaysInPeriod`, ornek `25/27 days`.
 - Bolge ligleri, turnuva ve meydan okuma fikri ileride ayri `challenge / league / tournament` modulu olarak ele alinacak.
 
+## Son Daily Closure Ranking Uygulamasi
+
+24 Nisan 2026 itibariyla daily/monthly closed ranking uygulamasi tamamlandi.
+
+- Uygulama plani eklendi: `docs/superpowers/plans/2026-04-24-daily-closure-ranking.md`.
+- Backend closed leaderboard kontrati yenilendi: `mode`, `periodType`, `state`, nested rank population, coverage ve KPI mini-rank alanlari doner.
+- `STORE_PERSONNEL` ve `STORE_MANAGER` icin kapali gun/ay ranking read path eklendi.
+- Gunluk ranking completed daily snapshot'tan okunur.
+- Aylik ranking ay icindeki completed daily snapshot'lardan month-to-date hesaplanir.
+- Magaza ici + Turkiye geneli rank desteklenir.
+- KPI mini-rank detaylari desteklenir.
+- `daysWithPerformance / closedDaysInPeriod` data coverage dondurulur.
+- Eksik gun `0` puan sayilmaz; hesap disi kalir.
+- Resmi aylik ranking icin minimum `3` kapali performans gunu gerekir; altindaki satirlar preview-only olarak rank'siz gosterilir.
+- Read-side index migration eklendi: `db/migrations/021_closed_ranking_read_indexes.sql`.
+- Frontend `/store/rankings` artik gunluk/aylik donem secimi, coverage, eligibility ve KPI mini-rank detaylarini gosterir.
+- Backend release check gecti: `npm.cmd run check:release` -> lint, 22 suite / 156 test, build ve runtime audit (`found 0 vulnerabilities`).
+- Frontend release check gecti: `npm.cmd run check:release` -> lint, TypeScript/Vite build ve runtime audit (`found 0 vulnerabilities`); Vite chunk size warning yok.
+
 ## Son Frontend Release Check
 
 24 Nisan 2026 itibariyla aktif frontend klasorunde release check kapisi eklendi.
