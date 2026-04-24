@@ -92,11 +92,8 @@ export class HealthService {
       if (connection.status !== "end") {
         try {
           await connection.quit();
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          if (!message.includes("Connection is closed")) {
-            throw error;
-          }
+        } catch {
+          // Cleanup failure must not mask the actual dependency health result.
         }
       }
     }

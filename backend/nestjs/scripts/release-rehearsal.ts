@@ -10,6 +10,8 @@ const backendRoot = resolve(workspaceRoot, "backend", "nestjs");
 const infraComposeFile = resolve(workspaceRoot, "infra", "docker-compose.live-e2e.yml");
 const appPort = process.env.REHEARSAL_APP_PORT ?? "3100";
 const smokeBaseUrl = process.env.SMOKE_BASE_URL ?? `http://localhost:${appPort}/api`;
+const composeProjectName =
+  process.env.REHEARSAL_COMPOSE_PROJECT_NAME ?? "store-ops-live-rehearsal";
 const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
 const dockerCommand = process.platform === "win32" ? "docker.exe" : "docker";
 
@@ -197,9 +199,13 @@ async function main() {
   };
 
   try {
-    await runCommand(dockerCommand, ["compose", "-f", infraComposeFile, "up", "-d"], {
-      cwd: workspaceRoot,
-    });
+    await runCommand(
+      dockerCommand,
+      ["compose", "-p", composeProjectName, "-f", infraComposeFile, "up", "-d"],
+      {
+        cwd: workspaceRoot,
+      },
+    );
 
     await resetAndSeedDatabase(sharedEnv.DATABASE_URL);
 
@@ -240,9 +246,13 @@ async function main() {
   } finally {
     await stopManagedProcesses();
 
-    await runCommand(dockerCommand, ["compose", "-f", infraComposeFile, "down", "-v"], {
-      cwd: workspaceRoot,
-    }).catch(() => undefined);
+    await runCommand(
+      dockerCommand,
+      ["compose", "-p", composeProjectName, "-f", infraComposeFile, "down", "-v"],
+      {
+        cwd: workspaceRoot,
+      },
+    ).catch(() => undefined);
   }
 }
 

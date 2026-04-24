@@ -9,47 +9,67 @@
     "build": "nest build",
     "lint": "eslint \"src/**/*.ts\"",
     "test": "jest",
+    "check:release": "npm run lint && npm test -- --runInBand && npm run build && npm audit --omit=dev",
+    "auth:token": "ts-node scripts/generate-local-jwt.ts",
     "test:live": "ts-node test/live/live-e2e.ts",
+    "perf:baseline": "ts-node scripts/performance-baseline.ts",
     "smoke:release": "ts-node scripts/release-smoke.ts",
-    "rehearse:release": "ts-node scripts/release-rehearsal.ts"
+    "rehearse:release": "npm run check:release && ts-node scripts/release-rehearsal.ts"
   },
   "jest": {
-    "moduleFileExtensions": ["js", "json", "ts"],
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
     "rootDir": ".",
     "testRegex": "(/src/.*\\.spec\\.ts$)|(/test/.*\\.(spec|e2e-spec)\\.ts$)",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
+    "moduleNameMapper": {
+      "^uuid$": "<rootDir>/test/jest/uuid.cjs"
+    },
     "testEnvironment": "node"
   },
   "dependencies": {
+    "@e965/xlsx": "^0.20.3",
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/config": "^4.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/platform-express": "^11.0.0",
     "bullmq": "^5.34.10",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "ioredis": "^5.4.2",
     "jose": "^5.9.6",
-    "@nestjs/common": "^11.0.0",
-    "@nestjs/config": "^4.0.0",
-    "@nestjs/core": "^11.0.0",
-    "@nestjs/platform-express": "^11.0.0",
     "pg": "^8.13.1",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "uuid": "^14.0.0"
+  },
+  "overrides": {
+    "bullmq": {
+      "uuid": "14.0.0"
+    }
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.4",
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.0",
-    "@types/pg": "^8.11.10",
     "@types/jest": "^29.5.14",
     "@types/node": "^22.10.2",
+    "@types/pg": "^8.11.10",
     "@types/supertest": "^6.0.3",
     "eslint": "^9.16.0",
+    "globals": "^17.5.0",
     "jest": "^29.7.0",
     "prettier": "^3.4.2",
     "supertest": "^7.1.1",
     "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.59.0"
   }
 }

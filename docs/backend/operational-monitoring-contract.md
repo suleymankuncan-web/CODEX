@@ -142,6 +142,11 @@
 ## Correlation Rules
 - Every admin write should continue to emit audit events.
 - Every HTTP response should return `x-correlation-id`.
+- Inbound `x-correlation-id` is accepted only when it matches the safe request id allowlist:
+  - first character: `A-Z`, `a-z`, or `0-9`
+  - remaining characters: `A-Z`, `a-z`, `0-9`, `.`, `_`, `:`, or `-`
+  - maximum length: 128 characters
+- Empty, whitespace-only, overlong, or unsafe inbound correlation ids are replaced with a generated UUID before the value is echoed to the response.
 - Client-side operational tooling should persist:
   - endpoint called
   - `x-correlation-id`
@@ -152,8 +157,21 @@
 
 This is the minimum correlation set for incident triage.
 
+## Request Log Contract
+- Every completed HTTP request emits one JSON log with:
+  - `event: "http.request.completed"`
+  - `correlationId`
+  - `method`
+  - `path`
+  - `statusCode`
+  - `durationMs`
+  - `actorUserId`
+- `actorUserId` is captured from request context after auth resolution, so protected admin writes can be tied back to the user who triggered them.
+- Audit metadata reads the same request context correlation id, keeping audit events and HTTP completion logs joinable during incident review.
+
 ## Runtime Verification Contract
 - A deployment is considered operationally ready only if all of the following are true:
+  - `npm run check:release` succeeds
   - `GET /api/health` returns `200`
   - live PostgreSQL and Redis are reachable
   - `npm run test:live` succeeds against real infra
@@ -161,14 +179,13 @@ This is the minimum correlation set for incident triage.
   - at least one import batch reaches `completed` or `completed_with_errors`
 
 ## Current Gaps
-- `GET /api/health` is still a shallow liveness endpoint rather than a deep dependency health check.
-- Structured logs and request correlation ids are not yet formalized as a documented runtime contract.
 - No external metrics sink or alert transport is wired in this repo yet.
+- Some older service logs still use direct `Logger` calls instead of the shared structured log helper.
 
 ## Recommended Next Hardening
-1. Expand `/api/health` with dependency probes for PostgreSQL and Redis.
-2. Add structured log fields for `correlationId`, `actorUserId`, `jobId`, `batchId`, and `snapshotRunId`.
-3. Add a lightweight release smoke script that calls `health`, then `summary/overview` surfaces.
+1. Convert remaining direct service logs to the shared structured log helper when touching those modules.
+2. Add an external metrics sink or alert transport for health, import, and snapshot signals.
+3. Extend release smoke evidence with captured correlation ids for the key admin write flows.
 
 ## Implemented Smoke Command
 - A release smoke command now exists:
@@ -179,3 +196,20 @@ This is the minimum correlation set for incident triage.
 - Optional overrides:
   - `SMOKE_BASE_URL`
   - `SMOKE_USER_ID`
+  - `REHEARSAL_COMPOSE_PROJECT_NAME`
+
+## Implemented Release Rehearsal Gate
+- A release check command now exists:
+  - `npm run check:release`
+- It runs, in order:
+  - lint
+  - full Jest test suite with `--runInBand`
+  - backend build
+  - production dependency audit via `npm audit --omit=dev`
+- `npm run rehearse:release` runs this release check before starting the Docker-backed rehearsal and smoke flow.
+- The rehearsal Docker Compose project defaults to `store-ops-live-rehearsal` so it does not collide with local Keycloak or other infra compose stacks.
+- CI binding:
+  - `.github/workflows/release-rehearsal.yml` runs `npm run rehearse:release`
+  - PRs touching backend, database, infra, or the workflow file run the gate automatically
+  - pushes to `main` or `master` touching those paths also run the gate
+  - CI sets `REHEARSAL_COMPOSE_PROJECT_NAME=store-ops-ci-release-rehearsal`
