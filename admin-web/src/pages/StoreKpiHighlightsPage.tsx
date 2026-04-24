@@ -10,6 +10,7 @@ import {
   StatusPill,
 } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
+import { formatDisplayRoles } from '../features/auth/display'
 import {
   getKpiConfig,
   getKpiReport,
@@ -331,7 +332,7 @@ export function StoreKpiHighlightsPage(input: {
               <KeyValue label="Primary store scope" value={primaryStoreId ?? 'No explicit store'} />
               <KeyValue
                 label="Resolved roles"
-                value={input.authSummary?.user.roleCodes.join(', ') || 'none'}
+                value={formatDisplayRoles(input.authSummary?.user.roleCodes)}
               />
             </div>
           </section>
@@ -604,7 +605,7 @@ export function StoreKpiHighlightsPage(input: {
             />
             <KeyValue
               label="Resolved roles"
-              value={input.authSummary?.user.roleCodes.join(', ') || 'none'}
+              value={formatDisplayRoles(input.authSummary?.user.roleCodes)}
             />
           </div>
         </article>

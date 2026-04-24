@@ -11,6 +11,7 @@ import {
   StatusPill,
 } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
+import { formatDisplayRoles } from '../features/auth/display'
 import { getWorkflowInbox } from '../features/workflow/api'
 import {
   formatWorkflowItemType,
@@ -183,7 +184,7 @@ export function StoreTasksPage(input: {
             <KeyValue label="Task hooks" value={taskItems.length > 0 ? 'kpi_exception active' : 'kpi_exception ready'} />
             <KeyValue label="Inbox statuses" value="needs_attention, completed, informational" />
             <KeyValue label="Primary layout" value="stacked rows, mobile-first" />
-            <KeyValue label="Resolved roles" value={input.authSummary?.user.roleCodes.join(', ') || 'none'} />
+            <KeyValue label="Resolved roles" value={formatDisplayRoles(input.authSummary?.user.roleCodes)} />
           </div>
         </article>
 

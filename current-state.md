@@ -629,6 +629,20 @@ C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI\admin-web
 - `.github/workflows/frontend-release-check.yml` artik `npx playwright install --with-deps chromium` adimini kosar; CI release check tarayici bulamama nedeniyle dusmez.
 - Hedefli dogrulama gecti: `npm.cmd run smoke:ui` -> build + 2 Playwright smoke testi.
 
+## Son Store Route Browser UX Sweep
+
+24 Nisan 2026 itibariyla local Keycloak `store.personnel` oturumu ile in-app browser uzerinde store route turu yapildi.
+
+- Gezilen route'lar: `/store/me`, `/store/rankings`, `/store/kpis`, `/store/tasks`.
+- `/store/me` hata state'i gostermeden aciliyor; `Weighted score`, Turkiye siralamasi, magaza siralamasi ve metrikler gorunuyor.
+- `/store/kpis` ve `/store/tasks` store personnel oturumunda preview/rol siniri mesajiyla aciliyor; konsol hata/uyari yok.
+- Store shell route icerigi artik `main` landmark ile sarilir; e2e testi bunu korur.
+- Keycloak teknik rolleri (`offline_access`, `uma_authorization`, `default-roles-*`) store yuzeylerinde kullaniciya gosterilmez; sadece urun rolleri gorunur.
+- Dar tarayici gorunumunde store shell yatay scroll ve hero basligi tasmasi temizlendi.
+- Store tasks smoke kapsami genisledi; shared inbox icin Turkce queue etiketleri regression testte korunur.
+- Frontend release check gecti: `npm.cmd run check:release` -> lint, build, 4 Playwright smoke testi ve `npm audit --omit=dev` (`found 0 vulnerabilities`).
+- Bilinen local data notu: gercek local `/store/rankings` daily/monthly aciliyor ama mevcut closure datasinda personel performance row olmadigi icin `no_data` state'i gosteriyor. Bu kod kirigi degil; siradaki veri borcu local closed-ranking fixture/seed hizalamasidir.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:

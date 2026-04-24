@@ -51,6 +51,7 @@ body,
 body {
   margin: 0;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 button,
@@ -223,6 +224,7 @@ code {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0.75rem;
+  min-width: 0;
 }
 
 .topbar-copy {
@@ -258,6 +260,7 @@ code {
 .page-stack {
   display: grid;
   gap: 1.25rem;
+  min-width: 0;
 }
 
 .hero-panel,
@@ -277,6 +280,7 @@ code {
 .panel,
 .screen-state {
   padding: 1.35rem;
+  min-width: 0;
 }
 
 .hero-panel {
@@ -285,6 +289,15 @@ code {
   background:
     linear-gradient(140deg, rgba(255, 250, 241, 0.96), rgba(235, 245, 241, 0.88)),
     var(--surface);
+}
+
+.hero-panel > div,
+.store-shell-header > div {
+  min-width: 0;
+}
+
+.hero-title {
+  overflow-wrap: anywhere;
 }
 
 .hero-panel-detail {
@@ -329,6 +342,7 @@ code {
   display: grid;
   gap: 1rem;
   grid-template-columns: repeat(5, minmax(0, 1fr));
+  min-width: 0;
 }
 
 .metric-card {
@@ -410,6 +424,7 @@ code {
   display: grid;
   gap: 1rem;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 0;
 }
 
 .panel-heading {
@@ -460,6 +475,7 @@ code {
 .detail-row strong,
 .dependency-card strong {
   display: block;
+  overflow-wrap: anywhere;
   word-break: break-word;
 }
 
@@ -508,6 +524,7 @@ code {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem;
+  min-width: 0;
 }
 
 .control-select select,
@@ -788,6 +805,7 @@ code {
 
 .store-shell {
   min-height: 100vh;
+  overflow-x: hidden;
   padding: 1.5rem;
   background:
     radial-gradient(circle at top left, rgba(47, 111, 83, 0.14), transparent 28rem),
@@ -806,6 +824,19 @@ code {
   background: rgba(255, 253, 248, 0.82);
   box-shadow: var(--shadow);
   padding: 1.35rem 1.4rem;
+}
+
+.store-shell-header h1 {
+  max-width: 17ch;
+  margin: 0;
+  font-size: clamp(1.85rem, 4vw, 2.35rem);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+}
+
+.store-main {
+  display: grid;
+  gap: 1.25rem;
 }
 
 .store-hero-panel {
@@ -961,6 +992,25 @@ code {
 
   .hero-title {
     max-width: none;
+    font-size: 1.72rem;
+    line-height: 1.08;
+    overflow-wrap: anywhere;
+  }
+
+  .store-shell-header {
+    gap: 0.9rem;
+    margin-bottom: 1rem;
+    padding: 1rem;
+  }
+
+  .store-shell-header h1 {
+    max-width: none;
+    font-size: 1.72rem;
+  }
+
+  .store-shell-header .topbar-cluster {
+    justify-content: flex-start;
+    gap: 0.5rem;
   }
 
   .search-field input {

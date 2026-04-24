@@ -10,6 +10,7 @@ import {
   StatusPill,
 } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
+import { formatDisplayRoles } from '../features/auth/display'
 import { getKpiConfig, getMyPerformance, getReportingSnapshotRuns } from '../features/reports/api'
 import { formatPerformanceGrade, resolvePerformanceGrade } from '../features/kpi/grading'
 import { formatDate, formatState, getErrorMessage } from '../lib/format'
@@ -350,7 +351,7 @@ export function StoreMyPerformancePage(input: {
           <div className="key-grid">
             <KeyValue label="User id" value={user?.userId ?? 'Unknown'} />
             <KeyValue label="Employee id" value={performance.employee.employeeId} />
-            <KeyValue label="Roles" value={user?.roleCodes.join(', ') || 'none'} />
+            <KeyValue label="Roles" value={formatDisplayRoles(user?.roleCodes)} />
             <KeyValue label="Store ids" value={user?.scope.storeIds.join(', ') || 'none'} />
             <KeyValue label="Grade" value={formatPerformanceGrade(performanceGrade)} />
             <KeyValue label="Data status" value={performance.partial.isPartial ? 'Partial' : 'Complete'} />

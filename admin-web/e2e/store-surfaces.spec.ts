@@ -33,6 +33,16 @@ test('store self-performance page renders live score, metrics, and ranks', async
   await expect(page.getByText('Performans yuzeyi acilamadi')).toHaveCount(0)
 })
 
+test('store shell exposes a main landmark and hides technical auth roles', async ({ page }) => {
+  await page.goto('/store/me')
+
+  await expect(page.getByRole('main', { name: 'Store workspace' })).toBeVisible()
+  await expect(page.getByText('STORE_PERSONNEL, STORE_MANAGER')).toBeVisible()
+  await expect(page.getByText('offline_access')).toHaveCount(0)
+  await expect(page.getByText('uma_authorization')).toHaveCount(0)
+  await expect(page.getByText('default-roles-store-ops')).toHaveCount(0)
+})
+
 test('store rankings page renders closed leaderboard and metric mini-ranks', async ({ page }) => {
   await page.goto('/store/rankings')
 
@@ -42,6 +52,20 @@ test('store rankings page renders closed leaderboard and metric mini-ranks', asy
   await expect(page.getByText('KPI mini-ranks')).toBeVisible()
   await expect(page.getByText('TR 1/4')).toBeVisible()
   await expect(page.getByText('Siralama yuzeyi acilamadi')).toHaveCount(0)
+})
+
+test('store tasks page renders readable Turkish queue labels', async ({ page }) => {
+  await page.goto('/store/tasks')
+
+  await expect(page.getByRole('heading', { name: /One queue for actionable work/i })).toBeVisible()
+  await expect(page.getByText('Önce bakılması gereken işler.')).toBeVisible()
+  await expect(page.getByText('İş tipi')).toBeVisible()
+  await expect(page.getByText('Aksiyon zamanı')).toBeVisible()
+  await expect(page.getByText('Görev')).toBeVisible()
+  await expect(page.getByText('Detay aç')).toBeVisible()
+  await expect(page.locator('body')).not.toContainText('Ã')
+  await expect(page.locator('body')).not.toContainText('Ä')
+  await expect(page.locator('body')).not.toContainText('Å')
 })
 
 async function routeStoreSurfaceApi(page: Page) {
@@ -85,6 +109,10 @@ async function routeStoreSurfaceApi(page: Page) {
       },
     })
   })
+
+  await page.route('**/api/workflow/inbox', async (route) => {
+    await route.fulfill({ json: workflowInboxFixture })
+  })
 }
 
 const authSessionFixture = {
@@ -93,7 +121,7 @@ const authSessionFixture = {
   user: {
     userId: 'store-me-smoke-user',
     employeeId: demoEmployeeId,
-    roleCodes: ['STORE_PERSONNEL'],
+    roleCodes: ['STORE_PERSONNEL', 'STORE_MANAGER', 'offline_access', 'uma_authorization', 'default-roles-store-ops'],
     scope: {
       companyIds: ['00000000-0000-0000-0000-000000000001'],
       regionIds: ['00000000-0000-0000-0000-000000000010'],
@@ -114,6 +142,36 @@ const authSessionFixture = {
     regionCount: 1,
     storeCount: 1,
     assignedStoreCount: 1,
+  },
+}
+
+const workflowInboxFixture = {
+  items: [
+    {
+      itemType: 'task',
+      sourceType: 'kpi_exception',
+      sourceId: 'snapshot-2026-04-24:store:kpi',
+      title: 'UPT at risk',
+      summary: 'IstinyePark Demo Store icin KPI exception takibi gerekiyor',
+      storeId: demoStoreId,
+      storeName: 'IstinyePark Demo Store',
+      workflowStatus: 'at_risk',
+      inboxStatus: 'needs_attention',
+      urgency: 'high',
+      createdAt: '2026-04-24T08:00:00.000Z',
+      needsAttentionAt: '2026-04-24T08:00:00.000Z',
+      actorRole: 'STORE_MANAGER',
+      primaryActionLabel: 'Open KPI detail',
+      secondaryActionLabel: 'Detay aç',
+      deepLink: '/store/kpis',
+      historyPreview: 'Achievement 84%',
+    },
+  ],
+  meta: {
+    count: 1,
+    total: 1,
+    limit: 30,
+    offset: 0,
   },
 }
 

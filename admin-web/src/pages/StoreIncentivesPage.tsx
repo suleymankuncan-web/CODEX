@@ -8,6 +8,7 @@ import {
   StatusPill,
 } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
+import { formatDisplayRoles } from '../features/auth/display'
 
 function hasStoreShellIntent(authSummary: AuthSessionSummary | null) {
   const roles = authSummary?.user.roleCodes ?? []
@@ -107,7 +108,7 @@ export function StoreIncentivesPage(input: {
           </div>
           <div className="key-grid">
             <KeyValue label="User id" value={user?.userId ?? 'Session not resolved'} />
-            <KeyValue label="Roles" value={user?.roleCodes.join(', ') || 'No resolved roles'} />
+          <KeyValue label="Roles" value={formatDisplayRoles(user?.roleCodes, 'No resolved roles')} />
             <KeyValue label="Store ids" value={user?.scope.storeIds.join(', ') || 'none'} />
             <KeyValue label="Incentive route fit" value={storeIntent ? 'Store shell is the correct visibility surface' : 'Boundary is ready before domain contract'} />
           </div>

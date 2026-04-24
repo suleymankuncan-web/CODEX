@@ -11,6 +11,7 @@ import {
   StatusPill,
 } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
+import { formatDisplayRoles } from '../features/auth/display'
 import {
   canCreateTargetDistributionRequest,
   canListTargetDistributionRequests,
@@ -451,7 +452,7 @@ export function StoreApprovalsPage(input: {
 
           <div className="key-grid">
             <KeyValue label="User id" value={user?.userId ?? 'Session not resolved'} />
-            <KeyValue label="Roles" value={user?.roleCodes.join(', ') || 'No resolved roles'} />
+          <KeyValue label="Roles" value={formatDisplayRoles(user?.roleCodes, 'No resolved roles')} />
             <KeyValue label="Read store ids" value={readStoreIds.join(', ') || 'none'} />
             <KeyValue label="Action store ids" value={assignedStoreIds.join(', ') || 'none'} />
             <KeyValue

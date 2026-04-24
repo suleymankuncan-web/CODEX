@@ -9,6 +9,7 @@ import {
   StatusPill,
 } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
+import { formatDisplayRoles } from '../features/auth/display'
 
 export function StoreShellPreviewPage(input: {
   authSummary: AuthSessionSummary | null
@@ -114,7 +115,7 @@ export function StoreShellPreviewPage(input: {
 
           <div className="key-grid">
             <KeyValue label="User id" value={user?.userId ?? 'Session not resolved'} />
-            <KeyValue label="Roles" value={user?.roleCodes.join(', ') || 'No resolved roles'} />
+            <KeyValue label="Roles" value={formatDisplayRoles(user?.roleCodes, 'No resolved roles')} />
             <KeyValue label="Company ids" value={user?.scope.companyIds.join(', ') || 'none'} />
             <KeyValue label="Store ids" value={user?.scope.storeIds.join(', ') || 'none'} />
           </div>

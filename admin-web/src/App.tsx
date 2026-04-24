@@ -5,6 +5,7 @@ import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'reac
 import { BarChart3, Bell, DatabaseZap, Fingerprint, KeyRound, Layers3, ShieldCheck, SlidersHorizontal, Target } from 'lucide-react'
 import { KeyValue, ScreenState, StatusPill } from './components/dashboard-primitives'
 import { getAuthSession, type AuthSessionSummary } from './features/auth/api'
+import { formatDisplayRoles } from './features/auth/display'
 import { useSession } from './features/session/session-context-value'
 import { describeSessionMode } from './features/session/session-storage'
 import { SESSION_EXPIRED_EVENT, type SessionExpiredDetail, ApiError } from './lib/api'
@@ -177,7 +178,7 @@ function App() {
     )
   }
 
-  const roleSummary = authSummary?.user.roleCodes.join(', ') || 'No resolved roles'
+  const roleSummary = formatDisplayRoles(authSummary?.user.roleCodes, 'No resolved roles')
   const scopeSummary = authSummary
     ? `${authSummary.scopeSummary.companyCount} company · ${authSummary.scopeSummary.regionCount} region · ${authSummary.scopeSummary.storeCount} store`
     : 'Scope resolves after session verification'
@@ -441,57 +442,59 @@ function StoreShell(input: {
         </div>
       </header>
 
-      <Suspense fallback={<RouteLoadingState />}>
-        <Routes>
-          <Route
-            path="/store"
-            element={
-              <StoreShellPreviewPage
-                authSummary={input.authSummary}
-                recommendedLanding={input.firstAllowedPath}
-              />
-            }
-          />
-          <Route
-            path="/store/home"
-            element={
-              <StoreShellPreviewPage
-                authSummary={input.authSummary}
-                recommendedLanding={input.firstAllowedPath}
-              />
-            }
-          />
-          <Route
-            path="/store/checklists"
-            element={<StoreChecklistsPage authSummary={input.authSummary} />}
-          />
-          <Route
-            path="/store/tasks"
-            element={<StoreTasksPage authSummary={input.authSummary} />}
-          />
-          <Route
-            path="/store/kpis"
-            element={<StoreKpiHighlightsPage authSummary={input.authSummary} />}
-          />
-          <Route
-            path="/store/me"
-            element={<StoreMyPerformancePage authSummary={input.authSummary} />}
-          />
-          <Route
-            path="/store/rankings"
-            element={<StoreRankingsPage authSummary={input.authSummary} />}
-          />
-          <Route
-            path="/store/approvals"
-            element={<StoreApprovalsPage authSummary={input.authSummary} />}
-          />
-          <Route
-            path="/store/incentives"
-            element={<StoreIncentivesPage authSummary={input.authSummary} />}
-          />
-          <Route path="*" element={<Navigate to="/store" replace />} />
-        </Routes>
-      </Suspense>
+      <main className="store-main" aria-label="Store workspace">
+        <Suspense fallback={<RouteLoadingState />}>
+          <Routes>
+            <Route
+              path="/store"
+              element={
+                <StoreShellPreviewPage
+                  authSummary={input.authSummary}
+                  recommendedLanding={input.firstAllowedPath}
+                />
+              }
+            />
+            <Route
+              path="/store/home"
+              element={
+                <StoreShellPreviewPage
+                  authSummary={input.authSummary}
+                  recommendedLanding={input.firstAllowedPath}
+                />
+              }
+            />
+            <Route
+              path="/store/checklists"
+              element={<StoreChecklistsPage authSummary={input.authSummary} />}
+            />
+            <Route
+              path="/store/tasks"
+              element={<StoreTasksPage authSummary={input.authSummary} />}
+            />
+            <Route
+              path="/store/kpis"
+              element={<StoreKpiHighlightsPage authSummary={input.authSummary} />}
+            />
+            <Route
+              path="/store/me"
+              element={<StoreMyPerformancePage authSummary={input.authSummary} />}
+            />
+            <Route
+              path="/store/rankings"
+              element={<StoreRankingsPage authSummary={input.authSummary} />}
+            />
+            <Route
+              path="/store/approvals"
+              element={<StoreApprovalsPage authSummary={input.authSummary} />}
+            />
+            <Route
+              path="/store/incentives"
+              element={<StoreIncentivesPage authSummary={input.authSummary} />}
+            />
+            <Route path="*" element={<Navigate to="/store" replace />} />
+          </Routes>
+        </Suspense>
+      </main>
     </div>
   )
 }
