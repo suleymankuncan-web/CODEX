@@ -4,6 +4,7 @@ backend/nestjs/.release-rehearsal-*.log
 backend/nestjs/.release-rehearsal-*.err.log
 backend/nestjs/.smoke-app*.log
 backend/nestjs/.smoke-app*.err.log
+backend/nestjs/.perf-baseline-*.log
 backend/nestjs/coverage/
 backend/nestjs/.env
 backend/nestjs/.env.local
@@ -19,3 +20,7 @@ admin-web/.env.*.local
 .DS_Store
 Thumbs.db
 Yeni Metin Belgesi.txt
+tmp/
+tmp_excel_inspect/
+tmp-keycloak-cookie*.txt
+references/design-md/

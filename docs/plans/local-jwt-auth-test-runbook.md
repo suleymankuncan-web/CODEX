@@ -17,7 +17,7 @@ This path is meant for:
   - `/auth/callback`
 
 ## Backend Env
-In `E:\WEBSÄ°TE Ã‡ALIÅžMASI\backend\nestjs\.env` use:
+In `C:\Users\suley\OneDrive\Masaüstü\WEBSÝTE ÇALIÞMASI\backend\nestjs\.env` use:
 
 ```env
 AUTH_MODE=jwt
@@ -38,7 +38,7 @@ AUTH_POST_LOGOUT_REDIRECT_PATH=/auth/login
 ```
 
 ## Frontend Env
-In `C:\Users\suley\OneDrive\MasaÃ¼stÃ¼\admin-web\.env` use:
+In `C:\Users\suley\OneDrive\Masaüstü\WEBSÝTE ÇALIÞMASI\admin-web\.env` use:
 
 ```env
 VITE_API_BASE_URL=http://localhost:3000/api
@@ -49,13 +49,13 @@ VITE_AUTH_MODE=bearer
 
 ### Backend
 ```powershell
-cd /d "E:\WEBSÄ°TE Ã‡ALIÅžMASI\backend\nestjs"
+cd /d "C:\Users\suley\OneDrive\Masaüstü\WEBSÝTE ÇALIÞMASI\backend\nestjs"
 npm.cmd run start:dev
 ```
 
 ### Frontend
 ```powershell
-cd /d "C:\Users\suley\OneDrive\MasaÃ¼stÃ¼\admin-web"
+cd /d "C:\Users\suley\OneDrive\Masaüstü\WEBSÝTE ÇALIÞMASI\admin-web"
 npm.cmd run dev
 ```
 

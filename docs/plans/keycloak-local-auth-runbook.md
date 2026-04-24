@@ -17,12 +17,12 @@ This is the second step after the local JWT test path.
 
 ## Files
 - compose file:
-  - [docker-compose.keycloak.yml](</E:/WEBSÄ°TE Ã‡ALIÅžMASI/infra/docker-compose.keycloak.yml>)
+  - [docker-compose.keycloak.yml](../../infra/docker-compose.keycloak.yml)
 - realm import:
-  - [store-ops-realm.json](</E:/WEBSÄ°TE Ã‡ALIÅžMASI/infra/keycloak/store-ops-realm.json>)
+  - [store-ops-realm.json](../../infra/keycloak/store-ops-realm.json)
 
 ## Start Keycloak
-In `E:\WEBSÄ°TE Ã‡ALIÅžMASI\infra`:
+In `C:\Users\suley\OneDrive\Masaüstü\WEBSÝTE ÇALIÞMASI\infra`:
 
 ```powershell
 docker compose -f docker-compose.keycloak.yml up -d
@@ -51,7 +51,7 @@ Demo user password:
 - `StoreOps123!`
 
 ## Backend Env
-In `E:\WEBSÄ°TE Ã‡ALIÅžMASI\backend\nestjs\.env` use:
+In `C:\Users\suley\OneDrive\Masaüstü\WEBSÝTE ÇALIÞMASI\backend\nestjs\.env` use:
 
 ```env
 AUTH_MODE=jwt
@@ -97,7 +97,7 @@ The currently working local setup depends on:
 Backend no longer infers roles, scopes, employee ids, or assigned stores from local demo usernames. If a local login lands without access, fix the Keycloak attributes/mappers instead of adding backend demo fallback logic.
 
 ## Frontend Env
-In `C:\Users\suley\OneDrive\MasaÃ¼stÃ¼\admin-web\.env` use:
+In `C:\Users\suley\OneDrive\Masaüstü\WEBSÝTE ÇALIÞMASI\admin-web\.env` use:
 
 ```env
 VITE_API_BASE_URL=http://localhost:3000/api
@@ -110,13 +110,13 @@ Frontend provider config can now come from backend `GET /api/auth/bootstrap`.
 
 ### Backend
 ```powershell
-cd /d "E:\WEBSÄ°TE Ã‡ALIÅžMASI\backend\nestjs"
+cd /d "C:\Users\suley\OneDrive\Masaüstü\WEBSÝTE ÇALIÞMASI\backend\nestjs"
 npm.cmd run start:dev
 ```
 
 ### Frontend
 ```powershell
-cd /d "C:\Users\suley\OneDrive\MasaÃ¼stÃ¼\admin-web"
+cd /d "C:\Users\suley\OneDrive\Masaüstü\WEBSÝTE ÇALIÞMASI\admin-web"
 npm.cmd run dev
 ```
 

@@ -27,7 +27,7 @@ Design it from workflow semantics first.
 The team must treat these terms as distinct:
 
 Reference:
-- [shared-workflow-language.md](</E:/WEBSİTE ÇALIŞMASI/docs/plans/shared-workflow-language.md>)
+- [shared-workflow-language.md](./shared-workflow-language.md)
 
 - `approval`
   - a workflow that requires a decision
