@@ -587,10 +587,11 @@ export class ReportingService {
     const profile = config.personnelProfile;
     const metricCodes = profile.metrics.map((metric) => metric.code);
     const employeeDataMetricCodes = [...new Set([...metricCodes, "NET_SALES"])];
-    const employeeId =
-      input.employeeId ??
-      (await this.reportingRepository.getEmployeeIdForUser(input.userId)) ??
-      null;
+    const employeeId = await this.reportingRepository.resolveEmployeeIdForAuthIdentity({
+      userId: input.userId,
+      employeeId: input.employeeId,
+      companyIds: input.companyIds,
+    });
 
     if (!employeeId) {
       return {
@@ -927,10 +928,11 @@ export class ReportingService {
     const profile = config.personnelProfile;
     const metricCodes = profile.metrics.map((metric) => metric.code);
     const employeeDataMetricCodes = [...new Set([...metricCodes, "NET_SALES"])];
-    const employeeId =
-      input.employeeId ??
-      (await this.reportingRepository.getEmployeeIdForUser(input.userId)) ??
-      null;
+    const employeeId = await this.reportingRepository.resolveEmployeeIdForAuthIdentity({
+      userId: input.userId,
+      employeeId: input.employeeId,
+      companyIds: input.companyIds,
+    });
 
     if (!employeeId) {
       return {

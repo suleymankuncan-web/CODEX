@@ -543,6 +543,19 @@ Backend/frontend guvenlik modeli ana hatta ayrildi; kalici assignment yonetimi, 
 - Backend release check gecti: `npm.cmd run check:release` -> lint, 22 suite / 156 test, build ve runtime audit (`found 0 vulnerabilities`).
 - Frontend release check gecti: `npm.cmd run check:release` -> lint, TypeScript/Vite build ve runtime audit (`found 0 vulnerabilities`); Vite chunk size warning yok.
 
+## Son Store Ranking Live Smoke Fix
+
+24 Nisan 2026 itibariyla `/store/rankings` live browser smoke sirasinda gorulen 500 kapatildi.
+
+- Kök neden: Keycloak store personnel claim'i `employee_id = EMP-200` olarak dis personel referansi tasiyor; yeni closed ranking read path bu degeri UUID sanip `rpt.employee_performance_snapshot.employee_id` sorgusuna veriyordu.
+- Ortak cozum: reporting repository icinde auth employee identity resolver eklendi.
+- Resolver sirasi: UUID claim dogrudan kullanilir; UUID degilse `ops.employee.external_employee_ref` uzerinden internal `employee_id` cozulur; bulunamazsa UUID `userId` icin `ops.user_account.employee_id` fallback'i denenir.
+- Bu resolver hem `/api/reports/leaderboards/closed` hem `/api/reports/my-performance` icin kullaniliyor.
+- Regression testleri eklendi: external employee claim ile closed ranking ve closed personal performance 500 donmemeli.
+- Backend release check gecti: `npm.cmd run check:release` -> lint, 22 suite / 158 test, build ve runtime audit (`found 0 vulnerabilities`).
+- Live browser smoke gecti: `/store/rankings` daily ve monthly modlari 200 dondu; mevcut local veri durumunda UI `no_data` state'i gosteriyor.
+- Yan not: local DB loglarinda `ops.user_action_store_assignment` eksik uyarisi goruluyor. Schema ve migration `db/migrations/020_user_action_store_assignments.sql` dosyasinda mevcut; bu local DB migration uygulama borcu olarak takip edilmeli.
+
 ## Son Frontend Release Check
 
 24 Nisan 2026 itibariyla aktif frontend klasorunde release check kapisi eklendi.

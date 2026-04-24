@@ -644,6 +644,67 @@ export class ReportingRepository {
     return result.rows[0]?.employee_id ?? null;
   }
 
+  async resolveEmployeeIdForAuthIdentity(input: {
+    userId: string;
+    employeeId?: string;
+    companyIds: string[];
+  }) {
+    const employeeClaim = input.employeeId?.trim();
+
+    if (employeeClaim) {
+      if (this.isUuid(employeeClaim)) {
+        return employeeClaim;
+      }
+
+      const resolvedByExternalRef = await this.getEmployeeIdByExternalRef({
+        externalEmployeeRef: employeeClaim,
+        companyIds: input.companyIds,
+      });
+
+      if (resolvedByExternalRef) {
+        return resolvedByExternalRef;
+      }
+    }
+
+    if (!this.isUuid(input.userId)) {
+      return null;
+    }
+
+    return this.getEmployeeIdForUser(input.userId);
+  }
+
+  async getEmployeeIdByExternalRef(input: {
+    externalEmployeeRef: string;
+    companyIds: string[];
+  }) {
+    const params: unknown[] = [input.externalEmployeeRef];
+    const clauses = [`external_employee_ref = $1`];
+
+    if (input.companyIds.length > 0) {
+      params.push(input.companyIds);
+      clauses.push(`company_id = ANY($${params.length}::uuid[])`);
+    }
+
+    const result = await this.databaseService.query<{ employee_id: string }>(
+      `
+        SELECT employee_id
+        FROM ops.employee
+        WHERE ${clauses.join(" AND ")}
+        ORDER BY created_at DESC, employee_id ASC
+        LIMIT 1
+      `,
+      params,
+    );
+
+    return result.rows[0]?.employee_id ?? null;
+  }
+
+  private isUuid(value: string) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      value,
+    );
+  }
+
   async getStoreNameById(storeId: string) {
     const result = await this.databaseService.query<{ store_name: string | null }>(
       `

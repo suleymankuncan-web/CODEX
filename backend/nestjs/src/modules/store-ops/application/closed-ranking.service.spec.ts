@@ -7,6 +7,7 @@ describe("ClosedRankingService", () => {
   function createRepositoryMock(overrides?: Record<string, jest.Mock>) {
     return {
       getEmployeeIdForUser: jest.fn(),
+      resolveEmployeeIdForAuthIdentity: jest.fn(async (input) => input.employeeId ?? null),
       getLatestCompletedSnapshotRunByType: jest.fn(),
       getCompletedDailySnapshotByDate: jest.fn(),
       listClosedDailyPersonnelRankRows: jest.fn(),

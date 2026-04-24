@@ -529,6 +529,186 @@ describe("Reporting read APIs", () => {
     await app.close();
   });
 
+  it("resolves external employee claims before loading current daily closed ranking row", async () => {
+    const resolvedEmployeeId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const query = jest.fn(async (sql: string, params: unknown[] = []) => {
+      if (sql.includes("FROM ops.employee") && sql.includes("external_employee_ref")) {
+        return {
+          rowCount: 1,
+          rows: [{ employee_id: resolvedEmployeeId }],
+        };
+      }
+
+      if (sql.includes("FROM rpt.snapshot_run") && sql.includes("period_start = $2::date")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              snapshot_run_id: "11111111-1111-4111-8111-111111111111",
+              snapshot_date: "2026-04-23",
+              snapshot_type: "daily",
+              period_start: "2026-04-23",
+              period_end: "2026-04-23",
+              run_status: "completed",
+              generated_at: "2026-04-23T22:00:00.000Z",
+              generated_by: "system",
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("closed_personnel_daily_rank_rows")) {
+        return { rowCount: 0, rows: [] };
+      }
+
+      if (sql.includes("FROM rpt.employee_performance_snapshot")) {
+        if (params[1] !== resolvedEmployeeId) {
+          throw new Error(`expected resolved employee UUID, got ${String(params[1])}`);
+        }
+
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              employee_id: resolvedEmployeeId,
+              first_name: "Store",
+              last_name: "Personnel",
+              store_id: "22222222-2222-4222-8222-222222222222",
+              store_name: "Kadikoy",
+              period_start: "2026-04-23",
+              period_end: "2026-04-23",
+              score_value: "72.5000",
+              matched_metrics: 2,
+              total_metrics: 2,
+              turkey_rank: 18,
+              turkey_population: 100,
+              store_rank: 2,
+              store_population: 8,
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("closed_metric_daily_rank_rows")) {
+        return { rowCount: 0, rows: [] };
+      }
+
+      return { rowCount: 0, rows: [] };
+    });
+
+    const app = await createIntegrationApp({
+      databaseService: { query },
+    });
+
+    const response = await request(app.getHttpServer())
+      .get("/api/reports/leaderboards/closed?periodType=daily&periodStart=2026-04-23&limit=10")
+      .set("x-user-id", "user-1")
+      .set("x-employee-id", "EMP-200")
+      .set("x-role-codes", "STORE_PERSONNEL")
+      .set("x-company-ids", "00000000-0000-0000-0000-000000000001")
+      .set("x-store-ids", "22222222-2222-4222-8222-222222222222");
+
+    expect(response.status).toBe(200);
+    expect(response.body.currentEmployee).toEqual(
+      expect.objectContaining({
+        employeeId: resolvedEmployeeId,
+        displayName: "Store Personnel",
+      }),
+    );
+
+    await app.close();
+  });
+
+  it("resolves external employee claims before loading closed personal performance", async () => {
+    const resolvedEmployeeId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const query = jest.fn(async (sql: string, params: unknown[] = []) => {
+      if (sql.includes("FROM ops.employee") && sql.includes("external_employee_ref")) {
+        return {
+          rowCount: 1,
+          rows: [{ employee_id: resolvedEmployeeId }],
+        };
+      }
+
+      if (sql.includes("FROM rpt.snapshot_run") && sql.includes("period_end = $3::date")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              snapshot_run_id: "11111111-1111-4111-8111-111111111111",
+              snapshot_date: "2026-04-23",
+              snapshot_type: "daily",
+              period_start: "2026-04-23",
+              period_end: "2026-04-23",
+              run_status: "completed",
+              generated_at: "2026-04-23T22:00:00.000Z",
+              generated_by: "system",
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("FROM rpt.employee_performance_snapshot")) {
+        if (params[1] !== resolvedEmployeeId) {
+          throw new Error(`expected resolved employee UUID, got ${String(params[1])}`);
+        }
+
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              employee_id: resolvedEmployeeId,
+              first_name: "Store",
+              last_name: "Personnel",
+              store_id: "22222222-2222-4222-8222-222222222222",
+              store_name: "Kadikoy",
+              period_start: "2026-04-23",
+              period_end: "2026-04-23",
+              score_value: "72.5000",
+              matched_metrics: 2,
+              total_metrics: 2,
+              turkey_rank: 18,
+              turkey_population: 100,
+              store_rank: 2,
+              store_population: 8,
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("FROM rpt.employee_kpi_snapshot")) {
+        if (params[1] !== resolvedEmployeeId) {
+          throw new Error(`expected resolved employee UUID, got ${String(params[1])}`);
+        }
+
+        return { rowCount: 0, rows: [] };
+      }
+
+      return { rowCount: 0, rows: [] };
+    });
+
+    const app = await createIntegrationApp({
+      databaseService: { query },
+    });
+
+    const response = await request(app.getHttpServer())
+      .get("/api/reports/my-performance?mode=closed&snapshotDate=2026-04-23")
+      .set("x-user-id", "user-1")
+      .set("x-employee-id", "EMP-200")
+      .set("x-role-codes", "STORE_PERSONNEL")
+      .set("x-company-ids", "00000000-0000-0000-0000-000000000001")
+      .set("x-store-ids", "22222222-2222-4222-8222-222222222222");
+
+    expect(response.status).toBe(200);
+    expect(response.body.employee).toEqual(
+      expect.objectContaining({
+        employeeId: resolvedEmployeeId,
+        displayName: "Store Personnel",
+      }),
+    );
+
+    await app.close();
+  });
+
   it("returns monthly closed ranking from completed daily snapshots", async () => {
     const query = jest.fn(async (sql: string) => {
       if (sql.includes("FROM rpt.snapshot_run") && sql.includes("period_start >= $1::date")) {

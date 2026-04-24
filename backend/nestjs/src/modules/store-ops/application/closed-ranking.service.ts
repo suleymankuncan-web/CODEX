@@ -206,11 +206,11 @@ export class ClosedRankingService {
   }
 
   private async resolveCurrentEmployeeId(input: ClosedRankingInput) {
-    return (
-      input.employeeId ??
-      (await this.reportingRepository.getEmployeeIdForUser(input.userId)) ??
-      null
-    );
+    return this.reportingRepository.resolveEmployeeIdForAuthIdentity({
+      userId: input.userId,
+      employeeId: input.employeeId,
+      companyIds: input.companyIds,
+    });
   }
 
   private resolveStoreFilter(input: ClosedRankingInput) {
