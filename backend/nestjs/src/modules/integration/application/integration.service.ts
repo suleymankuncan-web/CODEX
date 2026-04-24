@@ -4,12 +4,25 @@ import { ImportBatchJobPayload } from "../../../shared/jobs/job-payloads";
 import { JOB_DISPATCHER } from "../../../shared/jobs/jobs.constants";
 import { MaterializationService } from "./materialization.service";
 import { IntegrationRepository } from "../infrastructure/integration.repository";
+import { KpiImportNormalizationService } from "./kpi-import-normalization.service";
+import { IntegrationSchedulerService } from "./integration-scheduler.service";
 import {
   buildCommandResponse,
   buildListResponse,
 } from "../../../shared/http/response-builders";
 import { mapAuditEvent } from "../../../shared/audit/audit-event.mapper";
 import { logStructuredMessage } from "../../../shared/structured-log";
+
+type SupportedEntityType =
+  | "employee"
+  | "store"
+  | "kpi"
+  | "assignment"
+  | "position"
+  | "company"
+  | "region";
+
+type SupportedSourceSystem = "nebim_v3" | "power_bi" | "manual" | "other";
 
 @Injectable()
 export class IntegrationService {
@@ -19,6 +32,8 @@ export class IntegrationService {
   constructor(
     private readonly integrationRepository: IntegrationRepository,
     private readonly materializationService: MaterializationService,
+    private readonly kpiImportNormalizationService: KpiImportNormalizationService,
+    private readonly integrationSchedulerService: IntegrationSchedulerService,
     @Inject(JOB_DISPATCHER)
     private readonly jobDispatcher: JobDispatcher,
   ) {}
@@ -35,9 +50,36 @@ export class IntegrationService {
       | "region";
     fileReference: string;
     actorUserId: string;
+    idempotencyKey?: string;
+    sourceBatchId?: string;
+    sourcePayloadHash?: string;
+    sourceCapturedAt?: string;
+    sourceWindowStartedAt?: string;
+    sourceWindowEndedAt?: string;
     rows?: Record<string, unknown>[];
   }) {
-    const batch = await this.integrationRepository.createImportBatch(input);
+    let rows = input.rows;
+    if (input.entityType === "kpi" && input.rows?.length) {
+      const source = await this.integrationRepository.getIntegrationSourceByCodeAndEntity(
+        input.sourceCode,
+        input.entityType,
+      );
+
+      if (source) {
+        rows = this.kpiImportNormalizationService.normalize({
+          sourceSystem: source.source_system as "nebim_v3" | "power_bi" | "manual" | "other",
+          sourceCapturedAt: input.sourceCapturedAt,
+          sourceWindowStartedAt: input.sourceWindowStartedAt,
+          sourceWindowEndedAt: input.sourceWindowEndedAt,
+          rows: input.rows,
+        });
+      }
+    }
+
+    const batch = await this.integrationRepository.createImportBatch({
+      ...input,
+      rows,
+    });
 
     const job = batch.reused
       ? { status: "queued" as const, jobType: "import-batch" as const, backend: "reused" }
@@ -55,6 +97,8 @@ export class IntegrationService {
       jobId: job.jobId ?? null,
       sourceCode: input.sourceCode,
       entityType: input.entityType,
+      sourceBatchId: input.sourceBatchId ?? null,
+      sourceCapturedAt: input.sourceCapturedAt ?? null,
       queueBackend: job.backend,
       queueName: job.queueName ?? null,
       reused: batch.reused,
@@ -81,6 +125,7 @@ export class IntegrationService {
     limit?: number;
     offset?: number;
     entityType?: string;
+    sourceSystem?: string;
     isActive?: boolean;
   }) {
     const result = await this.integrationRepository.listIntegrationSources(input);
@@ -102,6 +147,13 @@ export class IntegrationService {
       | "position"
       | "company"
       | "region";
+    sourceSystem: "nebim_v3" | "power_bi" | "manual" | "other";
+    stateModel: "latest_state" | "closed_period";
+    pollEnabled?: boolean;
+    pollIntervalMinutes?: number;
+    pollWindowStartLocal?: string;
+    pollWindowEndLocal?: string;
+    pollTimezone?: string;
     actorUserId: string;
   }) {
     const existing = await this.integrationRepository.getIntegrationSourceByCodeAndEntity(
@@ -174,14 +226,136 @@ export class IntegrationService {
     });
   }
 
+  async updateIntegrationSourceSchedule(
+    sourceId: string,
+    input: {
+      pollEnabled?: boolean;
+      pollIntervalMinutes?: number;
+      pollWindowStartLocal?: string;
+      pollWindowEndLocal?: string;
+      pollTimezone?: string;
+    },
+    actorUserId: string,
+  ) {
+    const source = await this.integrationRepository.updateIntegrationSourceSchedule({
+      sourceId,
+      ...input,
+      actorUserId,
+    });
+
+    if (!source) {
+      throw new NotFoundException(`Integration source not found: ${sourceId}`);
+    }
+
+    return buildCommandResponse({
+      status: "updated",
+      message: "Integration source schedule updated",
+      data: {
+        source: this.mapIntegrationSource(source),
+      },
+    });
+  }
+
+  async listDueIntegrationSources(referenceAt?: string) {
+    const rows = await this.integrationSchedulerService.listDueSources(referenceAt);
+    return buildListResponse(rows, { total: rows.length });
+  }
+
+  async getImportPayloadTemplate(input?: {
+    entityType?: SupportedEntityType;
+    sourceSystem?: SupportedSourceSystem;
+  }) {
+    const entityType = input?.entityType ?? "kpi";
+    const sourceSystem = input?.sourceSystem ?? "nebim_v3";
+
+    if (entityType !== "kpi") {
+      return {
+        entityType,
+        sourceSystem,
+        note: "Sample payload templates are currently productized for KPI imports first.",
+        requestBody: {
+          sourceCode: `${sourceSystem}-${entityType}`,
+          entityType,
+          fileReference: `${sourceSystem}-${entityType}-sample.json`,
+          sourceBatchId: `${sourceSystem}-${entityType}-2026-04-22T10:30`,
+          sourceCapturedAt: "2026-04-22T10:30:00.000Z",
+          sourceWindowStartedAt: "2026-04-22T10:00:00.000Z",
+          sourceWindowEndedAt: "2026-04-22T10:30:00.000Z",
+          rows: [],
+        },
+      };
+    }
+
+    const requestBody =
+      sourceSystem === "power_bi"
+        ? {
+            sourceCode: "power-bi-kpi",
+            entityType: "kpi",
+            fileReference: "power-bi-kpi-sample.json",
+            sourceBatchId: "power-bi-kpi-2026-04-22T10:30",
+            sourceCapturedAt: "2026-04-22T10:30:00.000Z",
+            sourceWindowStartedAt: "2026-04-22T10:00:00.000Z",
+            sourceWindowEndedAt: "2026-04-22T10:30:00.000Z",
+            rows: [
+              {
+                sellerCode: "S-100",
+                storeCode: "M-10",
+                atv: 5200,
+                upt: 3.2,
+                netSales: 25000,
+              },
+              {
+                storeCode: "M-10",
+                conversionRate: 0.15,
+              },
+            ],
+          }
+        : {
+            sourceCode: "nebim-kpi",
+            entityType: "kpi",
+            fileReference: "nebim-kpi-sample.json",
+            sourceBatchId: "nebim-kpi-2026-04-22T10:30",
+            sourceCapturedAt: "2026-04-22T10:30:00.000Z",
+            sourceWindowStartedAt: "2026-04-22T10:00:00.000Z",
+            sourceWindowEndedAt: "2026-04-22T10:30:00.000Z",
+            rows: [
+              {
+                saticiKodu: "S-100",
+                magazaKodu: "M-10",
+                atv: 5200,
+                upt: 3.2,
+                netTutar: 25000,
+              },
+              {
+                magazaKodu: "M-10",
+                cr: 0.15,
+              },
+            ],
+          };
+
+    return {
+      entityType,
+      sourceSystem,
+      normalizedBehavior: [
+        "ATV, UPT, NET_SALES employee scope olarak normalize edilir.",
+        "CR store scope olarak normalize edilir.",
+        "sourceBatchId aynı gelirse batch reuse edilir.",
+        "Yeni veri aynı KPI/scope/donem icin gelirse live state overwrite edilir.",
+      ],
+      requestBody,
+    };
+  }
+
   async getIntegrationLookups() {
     const activeSources = await this.integrationRepository.listActiveIntegrationSources();
     const entityTypes = this.getSupportedEntityTypes();
     const activeSourceOptions = activeSources.map((item) => ({
       sourceId: item.integration_source_id,
       sourceCode: item.source_code,
-      sourceName: item.source_name,
-      entityType: item.entity_type,
+        sourceName: item.source_name,
+        entityType: item.entity_type,
+        sourceSystem: item.source_system,
+        stateModel: item.state_model,
     }));
     const sourcesByEntityType = activeSources.reduce<
       Record<string, Array<{ sourceId: string; sourceCode: string; sourceName: string }>>
@@ -213,6 +387,16 @@ export class IntegrationService {
           label: `${item.sourceCode} - ${item.sourceName}`,
           entityType: item.entityType,
           sourceCode: item.sourceCode,
+          sourceSystem: item.sourceSystem,
+          stateModel: item.stateModel,
+        })),
+        sourceSystems: this.getSupportedSourceSystems().map((sourceSystem) => ({
+          value: sourceSystem,
+          label: sourceSystem,
+        })),
+        stateModels: this.getSupportedStateModels().map((stateModel) => ({
+          value: stateModel,
+          label: stateModel,
         })),
       },
       meta: {
@@ -263,6 +447,11 @@ export class IntegrationService {
         sourceCode: batch.source_code,
         sourceName: batch.source_name,
         entityType: batch.entity_type,
+        sourceBatchId: batch.source_batch_id,
+        sourcePayloadHash: batch.source_payload_hash,
+        sourceCapturedAt: batch.source_captured_at,
+        sourceWindowStartedAt: batch.source_window_started_at,
+        sourceWindowEndedAt: batch.source_window_ended_at,
         startedAt: batch.started_at,
         finishedAt: batch.finished_at,
         status: batch.status,
@@ -438,6 +627,11 @@ export class IntegrationService {
           sourceCode: batch.source_code,
           sourceName: batch.source_name,
           entityType: batch.entity_type,
+          sourceBatchId: batch.source_batch_id,
+          sourcePayloadHash: batch.source_payload_hash,
+          sourceCapturedAt: batch.source_captured_at,
+          sourceWindowStartedAt: batch.source_window_started_at,
+          sourceWindowEndedAt: batch.source_window_ended_at,
           startedAt: batch.started_at,
           finishedAt: batch.finished_at,
           status: batch.status,
@@ -525,6 +719,11 @@ export class IntegrationService {
         sourceCode: batch.source_code,
         sourceName: batch.source_name,
         entityType: batch.entity_type,
+        sourceBatchId: batch.source_batch_id,
+        sourcePayloadHash: batch.source_payload_hash,
+        sourceCapturedAt: batch.source_captured_at,
+        sourceWindowStartedAt: batch.source_window_started_at,
+        sourceWindowEndedAt: batch.source_window_ended_at,
         startedAt: batch.started_at,
         finishedAt: batch.finished_at,
         status: batch.status,
@@ -542,6 +741,51 @@ export class IntegrationService {
       recommendedNextEntityType,
       canRetryNow,
       healthState,
+    };
+  }
+
+  async getImportBatchReconciliation(batchId: string) {
+    const detail = await this.getImportBatch(batchId);
+    const totalRows =
+      detail.rowStatusSummary.processed +
+      detail.rowStatusSummary.validationFailed +
+      detail.rowStatusSummary.retryableError +
+      detail.rowStatusSummary.pending;
+    const unaccountedRows = Math.max(detail.batch.recordCount - totalRows, 0);
+    const safeDivide = (value: number, total: number) => (total > 0 ? value / total : 0);
+
+    return {
+      batch: detail.batch,
+      totals: {
+        recordCount: detail.batch.recordCount,
+        accountedRows: totalRows,
+        unaccountedRows,
+        countsMatchRecordCount: totalRows === detail.batch.recordCount,
+      },
+      rowStatusSummary: detail.rowStatusSummary,
+      rates: {
+        processedRate: safeDivide(detail.rowStatusSummary.processed, detail.batch.recordCount),
+        validationFailureRate: safeDivide(
+          detail.rowStatusSummary.validationFailed,
+          detail.batch.recordCount,
+        ),
+        retryableErrorRate: safeDivide(
+          detail.rowStatusSummary.retryableError,
+          detail.batch.recordCount,
+        ),
+        pendingRate: safeDivide(detail.rowStatusSummary.pending, detail.batch.recordCount),
+        accountedRate: safeDivide(totalRows, detail.batch.recordCount),
+      },
+      reconciliation: {
+        hasFailures:
+          detail.rowStatusSummary.validationFailed > 0 ||
+          detail.rowStatusSummary.retryableError > 0,
+        hasPendingRows: detail.rowStatusSummary.pending > 0,
+        hasUnaccountedRows: unaccountedRows > 0,
+        canRetryNow: detail.canRetryNow,
+        blockedByEntityTypes: detail.blockedByEntityTypes,
+        recommendedNextEntityType: detail.recommendedNextEntityType,
+      },
     };
   }
 
@@ -693,11 +937,26 @@ export class IntegrationService {
     return ["employee", "store", "kpi", "assignment", "position", "company", "region"];
   }
 
+  private getSupportedSourceSystems() {
+    return ["nebim_v3", "power_bi", "manual", "other"];
+  }
+
+  private getSupportedStateModels() {
+    return ["latest_state", "closed_period"];
+  }
+
   private mapIntegrationSource(item: {
     integration_source_id: string;
     source_code: string;
     source_name: string;
     entity_type: string;
+    source_system: string;
+    state_model: string;
+    poll_enabled: boolean;
+    poll_interval_minutes: number;
+    poll_window_start_local: string;
+    poll_window_end_local: string;
+    poll_timezone: string;
     is_active: boolean;
   }) {
     return {
@@ -705,6 +964,13 @@ export class IntegrationService {
       sourceCode: item.source_code,
       sourceName: item.source_name,
       entityType: item.entity_type,
+      sourceSystem: item.source_system,
+      stateModel: item.state_model,
+      pollEnabled: item.poll_enabled,
+      pollIntervalMinutes: item.poll_interval_minutes,
+      pollWindowStartLocal: item.poll_window_start_local,
+      pollWindowEndLocal: item.poll_window_end_local,
+      pollTimezone: item.poll_timezone,
       isActive: item.is_active,
     };
   }

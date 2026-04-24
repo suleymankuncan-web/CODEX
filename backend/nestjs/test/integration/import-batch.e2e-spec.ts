@@ -995,6 +995,120 @@ describe("POST /api/integrations/import-batches", () => {
     await app.close();
   });
 
+  it("returns import batch reconciliation totals and rates", async () => {
+    const query = jest.fn(async (sql: string) => {
+      if (sql.includes("FROM stg.import_batch")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              import_batch_id: "batch-rec-1",
+              integration_source_id: "source-1",
+              source_code: "HRIS",
+              source_name: "Corporate HRIS",
+              entity_type: "assignment",
+              started_at: "2026-04-17T09:00:00.000Z",
+              finished_at: "2026-04-17T09:05:00.000Z",
+              status: "completed_with_errors",
+              raw_file_name: "assignments.csv",
+              record_count: 10,
+              error_count: 2,
+              retry_count: 1,
+              last_retried_at: "2026-04-17T09:10:00.000Z",
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("GROUP BY normalized_status") && sql.includes("FROM stg.assignment_raw")) {
+        return {
+          rowCount: 4,
+          rows: [
+            { normalized_status: "processed", row_count: "6" },
+            { normalized_status: "validation_failed", row_count: "2" },
+            { normalized_status: "retryable_error", row_count: "1" },
+            { normalized_status: "pending", row_count: "1" },
+          ],
+        };
+      }
+
+      if (sql.includes("SUM(CASE") && sql.includes("FROM stg.assignment_raw")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              employee_count: "0",
+              store_count: "0",
+              position_count: "1",
+              region_count: "0",
+              company_count: "0",
+              manager_count: "0",
+            },
+          ],
+        };
+      }
+
+      return { rowCount: 0, rows: [] };
+    });
+
+    const app = await createIntegrationApp({
+      databaseService: { query },
+    });
+
+    const response = await request(app.getHttpServer()).get(
+      "/api/integrations/import-batches/batch-rec-1/reconciliation",
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      batch: {
+        batchId: "batch-rec-1",
+        integrationSourceId: "source-1",
+        sourceCode: "HRIS",
+        sourceName: "Corporate HRIS",
+        entityType: "assignment",
+        startedAt: "2026-04-17T09:00:00.000Z",
+        finishedAt: "2026-04-17T09:05:00.000Z",
+        status: "completed_with_errors",
+        fileReference: "assignments.csv",
+        recordCount: 10,
+        errorCount: 2,
+        retryCount: 1,
+        lastRetriedAt: "2026-04-17T09:10:00.000Z",
+        healthState: "blocked",
+      },
+      totals: {
+        recordCount: 10,
+        accountedRows: 10,
+        unaccountedRows: 0,
+        countsMatchRecordCount: true,
+      },
+      rowStatusSummary: {
+        processed: 6,
+        validationFailed: 2,
+        retryableError: 1,
+        pending: 1,
+      },
+      rates: {
+        processedRate: 0.6,
+        validationFailureRate: 0.2,
+        retryableErrorRate: 0.1,
+        pendingRate: 0.1,
+        accountedRate: 1,
+      },
+      reconciliation: {
+        hasFailures: true,
+        hasPendingRows: true,
+        hasUnaccountedRows: false,
+        canRetryNow: false,
+        blockedByEntityTypes: ["position"],
+        recommendedNextEntityType: "position",
+      },
+    });
+
+    await app.close();
+  });
+
   it("returns import batch error rows with pagination metadata", async () => {
     const query = jest.fn(async (sql: string) => {
       if (sql.includes("FROM stg.import_batch")) {
@@ -1150,6 +1264,7 @@ describe("POST /api/integrations/import-batches", () => {
         eventLogId: "evt-1",
         occurredAt: "2026-04-17T10:00:00.000Z",
         actorUserId: "user-1",
+        correlationId: null,
         eventType: "import_batch.created",
         metadata: {
           sourceCode: "HRIS",
@@ -1161,6 +1276,7 @@ describe("POST /api/integrations/import-batches", () => {
         eventLogId: "evt-2",
         occurredAt: "2026-04-17T10:06:00.000Z",
         actorUserId: "user-1",
+        correlationId: null,
         eventType: "import_batch.retried",
         metadata: {
           entityType: "assignment",
@@ -1540,7 +1656,18 @@ describe("POST /api/integrations/import-batches", () => {
       }
 
       if (sql.includes("INSERT INTO stg.integration_source")) {
-        expect(params).toEqual(["HRIS_ASSIGN", "Assignment HRIS", "assignment"]);
+        expect(params).toEqual([
+          "HRIS_ASSIGN",
+          "Assignment HRIS",
+          "assignment",
+          "manual",
+          "latest_state",
+          false,
+          30,
+          "10:30",
+          "00:00",
+          "Europe/Istanbul",
+        ]);
         return {
           rowCount: 1,
           rows: [
@@ -1549,6 +1676,13 @@ describe("POST /api/integrations/import-batches", () => {
               source_code: "HRIS_ASSIGN",
               source_name: "Assignment HRIS",
               entity_type: "assignment",
+              source_system: "manual",
+              state_model: "latest_state",
+              poll_enabled: false,
+              poll_interval_minutes: 30,
+              poll_window_start_local: "10:30",
+              poll_window_end_local: "00:00",
+              poll_timezone: "Europe/Istanbul",
               is_active: true,
             },
           ],
@@ -1590,6 +1724,13 @@ describe("POST /api/integrations/import-batches", () => {
       sourceCode: "HRIS_ASSIGN",
       sourceName: "Assignment HRIS",
       entityType: "assignment",
+      sourceSystem: "manual",
+      stateModel: "latest_state",
+      pollEnabled: false,
+      pollIntervalMinutes: 30,
+      pollWindowStartLocal: "10:30",
+      pollWindowEndLocal: "00:00",
+      pollTimezone: "Europe/Istanbul",
       isActive: true,
     });
 
@@ -1696,6 +1837,8 @@ describe("POST /api/integrations/import-batches", () => {
               source_code: "HRIS_EMP",
               source_name: "Employee HRIS",
               entity_type: "employee",
+              source_system: "manual",
+              state_model: "latest_state",
               is_active: true,
             },
             {
@@ -1703,6 +1846,8 @@ describe("POST /api/integrations/import-batches", () => {
               source_code: "ERP_STORE",
               source_name: "Store ERP",
               entity_type: "store",
+              source_system: "manual",
+              state_model: "latest_state",
               is_active: true,
             },
           ],
@@ -1726,19 +1871,23 @@ describe("POST /api/integrations/import-batches", () => {
         totalActiveSources: 2,
       },
       activeSources: [
-        {
-          sourceId: "source-managed-1",
-          sourceCode: "HRIS_EMP",
-          sourceName: "Employee HRIS",
-          entityType: "employee",
-        },
-        {
-          sourceId: "source-managed-2",
-          sourceCode: "ERP_STORE",
-          sourceName: "Store ERP",
-          entityType: "store",
-        },
-      ],
+          {
+            sourceId: "source-managed-1",
+            sourceCode: "HRIS_EMP",
+            sourceName: "Employee HRIS",
+            entityType: "employee",
+            sourceSystem: "manual",
+            stateModel: "latest_state",
+          },
+          {
+            sourceId: "source-managed-2",
+            sourceCode: "ERP_STORE",
+            sourceName: "Store ERP",
+            entityType: "store",
+            sourceSystem: "manual",
+            stateModel: "latest_state",
+          },
+        ],
       sourcesByEntityType: {
         employee: [
           {
@@ -1771,13 +1920,27 @@ describe("POST /api/integrations/import-batches", () => {
             label: "HRIS_EMP - Employee HRIS",
             entityType: "employee",
             sourceCode: "HRIS_EMP",
+            sourceSystem: "manual",
+            stateModel: "latest_state",
           },
           {
             value: "source-managed-2",
             label: "ERP_STORE - Store ERP",
             entityType: "store",
             sourceCode: "ERP_STORE",
+            sourceSystem: "manual",
+            stateModel: "latest_state",
           },
+        ],
+        sourceSystems: [
+          { value: "nebim_v3", label: "nebim_v3" },
+          { value: "power_bi", label: "power_bi" },
+          { value: "manual", label: "manual" },
+          { value: "other", label: "other" },
+        ],
+        stateModels: [
+          { value: "latest_state", label: "latest_state" },
+          { value: "closed_period", label: "closed_period" },
         ],
       },
       meta: {
@@ -1854,6 +2017,7 @@ describe("POST /api/integrations/import-batches", () => {
         eventLogId: "evt-source-1",
         occurredAt: "2026-04-18T08:00:00.000Z",
         actorUserId: "admin-1",
+        correlationId: null,
         eventType: "integration_source.created",
         metadata: { sourceCode: "ERP_STORE", entityType: "store" },
       },
@@ -1861,6 +2025,7 @@ describe("POST /api/integrations/import-batches", () => {
         eventLogId: "evt-source-2",
         occurredAt: "2026-04-18T09:00:00.000Z",
         actorUserId: "admin-1",
+        correlationId: null,
         eventType: "integration_source.deactivated",
         metadata: { sourceCode: "ERP_STORE", isActive: false },
       },

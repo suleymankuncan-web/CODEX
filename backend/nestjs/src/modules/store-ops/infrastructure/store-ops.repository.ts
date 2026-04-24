@@ -69,6 +69,59 @@ export class StoreOpsRepository {
     return result.rows;
   }
 
+  async listStorePersonnelTargetingRows(input: { storeId: string }) {
+    const result = await this.databaseService.query<{
+      employee_id: string;
+      first_name: string;
+      last_name: string;
+      external_employee_ref: string | null;
+      period_start: string | null;
+      period_end: string | null;
+      net_sales_value: string | null;
+    }>(
+      `
+        WITH latest_period AS (
+          SELECT
+            ka.period_start,
+            ka.period_end
+          FROM ops.kpi_actual ka
+          INNER JOIN ops.kpi_definition kd
+            ON kd.kpi_id = ka.kpi_id
+          WHERE ka.scope_type = 'employee'
+            AND ka.store_id = $1::uuid
+            AND ka.period_type = 'monthly'
+            AND kd.kpi_code = 'NET_SALES'
+          ORDER BY ka.period_start DESC, ka.period_end DESC
+          LIMIT 1
+        )
+        SELECT
+          e.employee_id,
+          e.first_name,
+          e.last_name,
+          e.external_employee_ref,
+          lp.period_start,
+          lp.period_end,
+          ka.actual_value::text AS net_sales_value
+        FROM latest_period lp
+        INNER JOIN ops.kpi_actual ka
+          ON ka.scope_type = 'employee'
+          AND ka.store_id = $1::uuid
+          AND ka.period_type = 'monthly'
+          AND ka.period_start = lp.period_start
+          AND ka.period_end = lp.period_end
+        INNER JOIN ops.kpi_definition kd
+          ON kd.kpi_id = ka.kpi_id
+          AND kd.kpi_code = 'NET_SALES'
+        INNER JOIN ops.employee e
+          ON e.employee_id = ka.employee_id
+        ORDER BY e.first_name ASC, e.last_name ASC, e.employee_id ASC
+      `,
+      [input.storeId],
+    );
+
+    return result.rows;
+  }
+
   async getStoreHeadcountGap(input: {
     storeId: string;
     periodStart: string;

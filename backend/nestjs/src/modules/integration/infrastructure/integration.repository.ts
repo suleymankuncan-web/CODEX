@@ -1,10 +1,32 @@
 import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { PoolClient } from "pg";
 import { RequestContextStore } from "../../../shared/request-context";
 import { DatabaseService } from "../../../shared/database/database.service";
 
 @Injectable()
 export class IntegrationRepository {
   constructor(private readonly databaseService: DatabaseService) {}
+
+  private async resolveAuditActorUserId(
+    actorUserId: string | null | undefined,
+    client?: PoolClient,
+  ) {
+    if (!actorUserId) {
+      return null;
+    }
+
+    const sql = `
+      SELECT user_id
+      FROM ops.user_account
+      WHERE user_id = $1::uuid
+      LIMIT 1
+    `;
+    const result = client
+      ? await client.query<{ user_id: string }>(sql, [actorUserId])
+      : await this.databaseService.query<{ user_id: string }>(sql, [actorUserId]);
+
+    return result.rows[0]?.user_id ?? null;
+  }
 
   private buildImportBatchFilters(
     input: {
@@ -150,9 +172,16 @@ export class IntegrationRepository {
     fileReference: string;
     actorUserId: string;
     idempotencyKey?: string;
+    sourceBatchId?: string;
+    sourcePayloadHash?: string;
+    sourceCapturedAt?: string;
+    sourceWindowStartedAt?: string;
+    sourceWindowEndedAt?: string;
     rows?: Record<string, unknown>[];
   }) {
     return this.databaseService.withTransaction(async (client) => {
+      const auditActorUserId = await this.resolveAuditActorUserId(input.actorUserId, client);
+
       if (input.idempotencyKey) {
         const existing = await client.query<{
           import_batch_id: string;
@@ -225,28 +254,103 @@ export class IntegrationRepository {
 
       const integrationSourceId = sourceResult.rows[0].integration_source_id;
 
+      if (input.sourceBatchId) {
+        const existingBySourceBatch = await client.query<{
+          import_batch_id: string;
+          started_at: string;
+          status: string;
+          integration_source_id: string;
+          record_count: number;
+          source_batch_id: string | null;
+          source_payload_hash: string | null;
+          source_captured_at: string | null;
+          source_window_started_at: string | null;
+          source_window_ended_at: string | null;
+        }>(
+          `
+            SELECT
+              import_batch_id,
+              started_at,
+              status,
+              integration_source_id,
+              record_count,
+              source_batch_id,
+              source_payload_hash,
+              source_captured_at,
+              source_window_started_at,
+              source_window_ended_at
+            FROM stg.import_batch
+            WHERE integration_source_id = $1::uuid
+              AND entity_type = $2
+              AND source_batch_id = $3
+            LIMIT 1
+          `,
+          [integrationSourceId, input.entityType, input.sourceBatchId],
+        );
+
+        if (existingBySourceBatch.rowCount && existingBySourceBatch.rows[0]) {
+          const found = existingBySourceBatch.rows[0];
+          return {
+            batchId: found.import_batch_id,
+            status: found.status,
+            startedAt: found.started_at,
+            integrationSourceId: found.integration_source_id,
+            sourceBatchId: found.source_batch_id,
+            sourcePayloadHash: found.source_payload_hash,
+            sourceCapturedAt: found.source_captured_at,
+            sourceWindowStartedAt: found.source_window_started_at,
+            sourceWindowEndedAt: found.source_window_ended_at,
+            acceptedRowCount: found.record_count,
+            reused: true,
+          };
+        }
+      }
+
       const batchResult = await client.query<{
         import_batch_id: string;
         started_at: string;
         status: string;
+        source_batch_id: string | null;
+        source_payload_hash: string | null;
+        source_captured_at: string | null;
+        source_window_started_at: string | null;
+        source_window_ended_at: string | null;
       }>(
         `
           INSERT INTO stg.import_batch (
             integration_source_id,
             entity_type,
             idempotency_key,
+            source_batch_id,
+            source_payload_hash,
+            source_captured_at,
+            source_window_started_at,
+            source_window_ended_at,
             status,
             raw_file_name,
             record_count,
             error_count
           )
-          VALUES ($1, $2, $3, 'pending', $4, 0, 0)
-          RETURNING import_batch_id, started_at, status
+          VALUES ($1, $2, $3, $4, $5, $6::timestamptz, $7::timestamptz, $8::timestamptz, 'pending', $9, 0, 0)
+          RETURNING
+            import_batch_id,
+            started_at,
+            status,
+            source_batch_id,
+            source_payload_hash,
+            source_captured_at,
+            source_window_started_at,
+            source_window_ended_at
         `,
         [
           integrationSourceId,
           input.entityType,
           input.idempotencyKey ?? null,
+          input.sourceBatchId ?? null,
+          input.sourcePayloadHash ?? null,
+          input.sourceCapturedAt ?? null,
+          input.sourceWindowStartedAt ?? null,
+          input.sourceWindowEndedAt ?? null,
           input.fileReference,
         ],
       );
@@ -266,13 +370,19 @@ export class IntegrationRepository {
           VALUES ($1, 'import_batch.created', 'stg.import_batch', $2::uuid, 'company', $3::jsonb)
         `,
         [
-          input.actorUserId,
+          auditActorUserId,
           batch.import_batch_id,
           JSON.stringify({
             correlationId: RequestContextStore.getCorrelationId(),
+            requestedActorUserId: input.actorUserId,
             sourceCode: input.sourceCode,
             entityType: input.entityType,
             fileReference: input.fileReference,
+            sourceBatchId: input.sourceBatchId ?? null,
+            sourcePayloadHash: input.sourcePayloadHash ?? null,
+            sourceCapturedAt: input.sourceCapturedAt ?? null,
+            sourceWindowStartedAt: input.sourceWindowStartedAt ?? null,
+            sourceWindowEndedAt: input.sourceWindowEndedAt ?? null,
           }),
         ],
       );
@@ -456,6 +566,11 @@ export class IntegrationRepository {
         status: batch.status,
         startedAt: batch.started_at,
         integrationSourceId,
+        sourceBatchId: batch.source_batch_id,
+        sourcePayloadHash: batch.source_payload_hash,
+        sourceCapturedAt: batch.source_captured_at,
+        sourceWindowStartedAt: batch.source_window_started_at,
+        sourceWindowEndedAt: batch.source_window_ended_at,
         acceptedRowCount: input.rows?.length ?? 0,
         reused: false,
       };
@@ -466,6 +581,7 @@ export class IntegrationRepository {
     limit?: number;
     offset?: number;
     entityType?: string;
+    sourceSystem?: string;
     isActive?: boolean;
   }) {
     const conditions: string[] = [];
@@ -474,6 +590,11 @@ export class IntegrationRepository {
     if (input.entityType) {
       params.push(input.entityType);
       conditions.push(`entity_type = $${params.length}`);
+    }
+
+    if (input.sourceSystem) {
+      params.push(input.sourceSystem);
+      conditions.push(`source_system = $${params.length}`);
     }
 
     if (typeof input.isActive === "boolean") {
@@ -497,6 +618,13 @@ export class IntegrationRepository {
       source_code: string;
       source_name: string;
       entity_type: string;
+      source_system: string;
+      state_model: string;
+      poll_enabled: boolean;
+      poll_interval_minutes: number;
+      poll_window_start_local: string;
+      poll_window_end_local: string;
+      poll_timezone: string;
       is_active: boolean;
     }>(
       `
@@ -505,6 +633,13 @@ export class IntegrationRepository {
           source_code,
           source_name,
           entity_type,
+          source_system,
+          state_model,
+          poll_enabled,
+          poll_interval_minutes,
+          poll_window_start_local,
+          poll_window_end_local,
+          poll_timezone,
           is_active
         FROM stg.integration_source
         ${whereClause}
@@ -527,6 +662,13 @@ export class IntegrationRepository {
       source_code: string;
       source_name: string;
       entity_type: string;
+      source_system: string;
+      state_model: string;
+      poll_enabled: boolean;
+      poll_interval_minutes: number;
+      poll_window_start_local: string;
+      poll_window_end_local: string;
+      poll_timezone: string;
       is_active: boolean;
     }>(
       `
@@ -535,6 +677,13 @@ export class IntegrationRepository {
           source_code,
           source_name,
           entity_type,
+          source_system,
+          state_model,
+          poll_enabled,
+          poll_interval_minutes,
+          poll_window_start_local,
+          poll_window_end_local,
+          poll_timezone,
           is_active
         FROM stg.integration_source
         WHERE is_active = TRUE
@@ -551,6 +700,13 @@ export class IntegrationRepository {
       source_code: string;
       source_name: string;
       entity_type: string;
+      source_system: string;
+      state_model: string;
+      poll_enabled: boolean;
+      poll_interval_minutes: number;
+      poll_window_start_local: string;
+      poll_window_end_local: string;
+      poll_timezone: string;
       is_active: boolean;
     }>(
       `
@@ -559,6 +715,13 @@ export class IntegrationRepository {
           source_code,
           source_name,
           entity_type,
+          source_system,
+          state_model,
+          poll_enabled,
+          poll_interval_minutes,
+          poll_window_start_local,
+          poll_window_end_local,
+          poll_timezone,
           is_active
         FROM stg.integration_source
         WHERE source_code = $1
@@ -577,6 +740,13 @@ export class IntegrationRepository {
       source_code: string;
       source_name: string;
       entity_type: string;
+      source_system: string;
+      state_model: string;
+      poll_enabled: boolean;
+      poll_interval_minutes: number;
+      poll_window_start_local: string;
+      poll_window_end_local: string;
+      poll_timezone: string;
       is_active: boolean;
     }>(
       `
@@ -585,6 +755,13 @@ export class IntegrationRepository {
           source_code,
           source_name,
           entity_type,
+          source_system,
+          state_model,
+          poll_enabled,
+          poll_interval_minutes,
+          poll_window_start_local,
+          poll_window_end_local,
+          poll_timezone,
           is_active
         FROM stg.integration_source
         WHERE integration_source_id = $1::uuid
@@ -600,31 +777,72 @@ export class IntegrationRepository {
     sourceCode: string;
     sourceName: string;
     entityType: string;
+    sourceSystem: string;
+    stateModel: string;
+    pollEnabled?: boolean;
+    pollIntervalMinutes?: number;
+    pollWindowStartLocal?: string;
+    pollWindowEndLocal?: string;
+    pollTimezone?: string;
     actorUserId: string;
   }) {
     return this.databaseService.withTransaction(async (client) => {
+      const auditActorUserId = await this.resolveAuditActorUserId(input.actorUserId, client);
+
       const result = await client.query<{
         integration_source_id: string;
         source_code: string;
         source_name: string;
         entity_type: string;
+        source_system: string;
+        state_model: string;
+        poll_enabled: boolean;
+        poll_interval_minutes: number;
+        poll_window_start_local: string;
+        poll_window_end_local: string;
+        poll_timezone: string;
         is_active: boolean;
       }>(
         `
           INSERT INTO stg.integration_source (
             source_code,
             source_name,
-            entity_type
+            entity_type,
+            source_system,
+            state_model,
+            poll_enabled,
+            poll_interval_minutes,
+            poll_window_start_local,
+            poll_window_end_local,
+            poll_timezone
           )
-          VALUES ($1, $2, $3)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8::time, $9::time, $10)
           RETURNING
             integration_source_id,
             source_code,
             source_name,
             entity_type,
+            source_system,
+            state_model,
+            poll_enabled,
+            poll_interval_minutes,
+            poll_window_start_local,
+            poll_window_end_local,
+            poll_timezone,
             is_active
         `,
-        [input.sourceCode, input.sourceName, input.entityType],
+        [
+          input.sourceCode,
+          input.sourceName,
+          input.entityType,
+          input.sourceSystem,
+          input.stateModel,
+          input.pollEnabled ?? false,
+          input.pollIntervalMinutes ?? 30,
+          input.pollWindowStartLocal ?? "10:30",
+          input.pollWindowEndLocal ?? "00:00",
+          input.pollTimezone ?? "Europe/Istanbul",
+        ],
       );
 
       const source = result.rows[0];
@@ -642,13 +860,21 @@ export class IntegrationRepository {
           VALUES ($1::uuid, 'integration_source.created', 'stg.integration_source', $2::uuid, 'company', $3::jsonb)
         `,
         [
-          input.actorUserId,
+          auditActorUserId,
           source.integration_source_id,
           JSON.stringify({
             correlationId: RequestContextStore.getCorrelationId(),
+            requestedActorUserId: input.actorUserId,
             sourceCode: source.source_code,
             sourceName: source.source_name,
             entityType: source.entity_type,
+            sourceSystem: source.source_system,
+            stateModel: source.state_model,
+            pollEnabled: source.poll_enabled,
+            pollIntervalMinutes: source.poll_interval_minutes,
+            pollWindowStartLocal: source.poll_window_start_local,
+            pollWindowEndLocal: source.poll_window_end_local,
+            pollTimezone: source.poll_timezone,
           }),
         ],
       );
@@ -663,11 +889,20 @@ export class IntegrationRepository {
     actorUserId: string;
   }) {
     return this.databaseService.withTransaction(async (client) => {
+      const auditActorUserId = await this.resolveAuditActorUserId(input.actorUserId, client);
+
       const existing = await client.query<{
         integration_source_id: string;
         source_code: string;
         source_name: string;
         entity_type: string;
+        source_system: string;
+        state_model: string;
+        poll_enabled: boolean;
+        poll_interval_minutes: number;
+        poll_window_start_local: string;
+        poll_window_end_local: string;
+        poll_timezone: string;
         is_active: boolean;
       }>(
         `
@@ -676,6 +911,13 @@ export class IntegrationRepository {
             source_code,
             source_name,
             entity_type,
+            source_system,
+            state_model,
+            poll_enabled,
+            poll_interval_minutes,
+            poll_window_start_local,
+            poll_window_end_local,
+            poll_timezone,
             is_active
           FROM stg.integration_source
           WHERE integration_source_id = $1::uuid
@@ -693,6 +935,13 @@ export class IntegrationRepository {
         source_code: string;
         source_name: string;
         entity_type: string;
+        source_system: string;
+        state_model: string;
+        poll_enabled: boolean;
+        poll_interval_minutes: number;
+        poll_window_start_local: string;
+        poll_window_end_local: string;
+        poll_timezone: string;
         is_active: boolean;
       }>(
         `
@@ -704,6 +953,13 @@ export class IntegrationRepository {
             source_code,
             source_name,
             entity_type,
+            source_system,
+            state_model,
+            poll_enabled,
+            poll_interval_minutes,
+            poll_window_start_local,
+            poll_window_end_local,
+            poll_timezone,
             is_active
         `,
         [input.sourceId],
@@ -724,13 +980,21 @@ export class IntegrationRepository {
           VALUES ($1::uuid, $2, 'stg.integration_source', $3::uuid, 'company', $4::jsonb)
         `,
         [
-          input.actorUserId,
+          auditActorUserId,
           input.isActive ? "integration_source.reactivated" : "integration_source.deactivated",
           input.sourceId,
           JSON.stringify({
             correlationId: RequestContextStore.getCorrelationId(),
+            requestedActorUserId: input.actorUserId,
             sourceCode: source.source_code,
             entityType: source.entity_type,
+            sourceSystem: source.source_system,
+            stateModel: source.state_model,
+            pollEnabled: source.poll_enabled,
+            pollIntervalMinutes: source.poll_interval_minutes,
+            pollWindowStartLocal: source.poll_window_start_local,
+            pollWindowEndLocal: source.poll_window_end_local,
+            pollTimezone: source.poll_timezone,
             isActive: source.is_active,
           }),
         ],
@@ -738,6 +1002,153 @@ export class IntegrationRepository {
 
       return source;
     });
+  }
+
+  async updateIntegrationSourceSchedule(input: {
+    sourceId: string;
+    pollEnabled?: boolean;
+    pollIntervalMinutes?: number;
+    pollWindowStartLocal?: string;
+    pollWindowEndLocal?: string;
+    pollTimezone?: string;
+    actorUserId: string;
+  }) {
+    return this.databaseService.withTransaction(async (client) => {
+      const auditActorUserId = await this.resolveAuditActorUserId(input.actorUserId, client);
+
+      const result = await client.query<{
+        integration_source_id: string;
+        source_code: string;
+        source_name: string;
+        entity_type: string;
+        source_system: string;
+        state_model: string;
+        poll_enabled: boolean;
+        poll_interval_minutes: number;
+        poll_window_start_local: string;
+        poll_window_end_local: string;
+        poll_timezone: string;
+        is_active: boolean;
+      }>(
+        `
+          UPDATE stg.integration_source
+          SET
+            poll_enabled = COALESCE($2, poll_enabled),
+            poll_interval_minutes = COALESCE($3, poll_interval_minutes),
+            poll_window_start_local = COALESCE($4::time, poll_window_start_local),
+            poll_window_end_local = COALESCE($5::time, poll_window_end_local),
+            poll_timezone = COALESCE($6, poll_timezone)
+          WHERE integration_source_id = $1::uuid
+          RETURNING
+            integration_source_id,
+            source_code,
+            source_name,
+            entity_type,
+            source_system,
+            state_model,
+            poll_enabled,
+            poll_interval_minutes,
+            poll_window_start_local,
+            poll_window_end_local,
+            poll_timezone,
+            is_active
+        `,
+        [
+          input.sourceId,
+          input.pollEnabled ?? null,
+          input.pollIntervalMinutes ?? null,
+          input.pollWindowStartLocal ?? null,
+          input.pollWindowEndLocal ?? null,
+          input.pollTimezone ?? null,
+        ],
+      );
+
+      const source = result.rows[0];
+      if (!source) {
+        return null;
+      }
+
+      await client.query(
+        `
+          INSERT INTO audit.event_log (
+            actor_user_id,
+            event_type,
+            entity_name,
+            entity_id,
+            scope_type,
+            metadata_json
+          )
+          VALUES ($1::uuid, 'integration_source.schedule_updated', 'stg.integration_source', $2::uuid, 'company', $3::jsonb)
+        `,
+        [
+          auditActorUserId,
+          input.sourceId,
+          JSON.stringify({
+            correlationId: RequestContextStore.getCorrelationId(),
+            requestedActorUserId: input.actorUserId,
+            pollEnabled: source.poll_enabled,
+            pollIntervalMinutes: source.poll_interval_minutes,
+            pollWindowStartLocal: source.poll_window_start_local,
+            pollWindowEndLocal: source.poll_window_end_local,
+            pollTimezone: source.poll_timezone,
+          }),
+        ],
+      );
+
+      return source;
+    });
+  }
+
+  async listScheduledIntegrationSources() {
+    const result = await this.databaseService.query<{
+      integration_source_id: string;
+      source_code: string;
+      source_name: string;
+      entity_type: string;
+      source_system: string;
+      state_model: string;
+      poll_enabled: boolean;
+      poll_interval_minutes: number;
+      poll_window_start_local: string;
+      poll_window_end_local: string;
+      poll_timezone: string;
+      is_active: boolean;
+      last_import_batch_id: string | null;
+      last_import_started_at: string | null;
+      last_import_status: string | null;
+    }>(
+      `
+        SELECT
+          src.integration_source_id,
+          src.source_code,
+          src.source_name,
+          src.entity_type,
+          src.source_system,
+          src.state_model,
+          src.poll_enabled,
+          src.poll_interval_minutes,
+          src.poll_window_start_local,
+          src.poll_window_end_local,
+          src.poll_timezone,
+          src.is_active,
+          latest.import_batch_id AS last_import_batch_id,
+          latest.started_at AS last_import_started_at,
+          latest.status AS last_import_status
+        FROM stg.integration_source src
+        LEFT JOIN LATERAL (
+          SELECT import_batch_id, started_at, status
+          FROM stg.import_batch b
+          WHERE b.integration_source_id = src.integration_source_id
+          ORDER BY started_at DESC
+          LIMIT 1
+        ) latest ON TRUE
+        WHERE src.is_active = TRUE
+          AND src.poll_enabled = TRUE
+        ORDER BY src.source_code ASC, src.entity_type ASC
+      `,
+    );
+
+    return result.rows;
   }
 
   async getIntegrationSourceAudit(sourceId: string) {
@@ -804,6 +1215,11 @@ export class IntegrationRepository {
       source_code: string;
       source_name: string;
       entity_type: string;
+      source_batch_id: string | null;
+      source_payload_hash: string | null;
+      source_captured_at: string | null;
+      source_window_started_at: string | null;
+      source_window_ended_at: string | null;
       started_at: string;
       finished_at: string | null;
       status: string;
@@ -820,6 +1236,11 @@ export class IntegrationRepository {
           src.source_code,
           src.source_name,
           entity_type,
+          source_batch_id,
+          source_payload_hash,
+          source_captured_at,
+          source_window_started_at,
+          source_window_ended_at,
           started_at,
           finished_at,
           status,
@@ -1068,6 +1489,11 @@ export class IntegrationRepository {
           src.source_code,
           src.source_name,
           b.entity_type,
+          b.source_batch_id,
+          b.source_payload_hash,
+          b.source_captured_at,
+          b.source_window_started_at,
+          b.source_window_ended_at,
           b.started_at,
           b.finished_at,
           b.status,
@@ -1091,6 +1517,11 @@ export class IntegrationRepository {
           fb.source_code,
           fb.source_name,
           fb.entity_type,
+          fb.source_batch_id,
+          fb.source_payload_hash,
+          fb.source_captured_at,
+          fb.source_window_started_at,
+          fb.source_window_ended_at,
           fb.started_at,
           fb.finished_at,
           fb.status,
@@ -1116,6 +1547,11 @@ export class IntegrationRepository {
           fb.source_code,
           fb.source_name,
           fb.entity_type,
+          fb.source_batch_id,
+          fb.source_payload_hash,
+          fb.source_captured_at,
+          fb.source_window_started_at,
+          fb.source_window_ended_at,
           fb.started_at,
           fb.finished_at,
           fb.status,
@@ -1132,6 +1568,11 @@ export class IntegrationRepository {
           source_code,
           source_name,
           entity_type,
+          source_batch_id,
+          source_payload_hash,
+          source_captured_at,
+          source_window_started_at,
+          source_window_ended_at,
           started_at,
           finished_at,
           status,
@@ -1189,6 +1630,11 @@ export class IntegrationRepository {
       source_code: string;
       source_name: string;
       entity_type: string;
+      source_batch_id: string | null;
+      source_payload_hash: string | null;
+      source_captured_at: string | null;
+      source_window_started_at: string | null;
+      source_window_ended_at: string | null;
       started_at: string;
       finished_at: string | null;
       status: string;
@@ -1234,6 +1680,11 @@ export class IntegrationRepository {
         | "position"
         | "company"
         | "region";
+      source_batch_id: string | null;
+      source_payload_hash: string | null;
+      source_captured_at: string | null;
+      source_window_started_at: string | null;
+      source_window_ended_at: string | null;
       started_at: string;
       finished_at: string | null;
       status: string;
@@ -1250,6 +1701,11 @@ export class IntegrationRepository {
           src.source_code,
           src.source_name,
           b.entity_type,
+          b.source_batch_id,
+          b.source_payload_hash,
+          b.source_captured_at,
+          b.source_window_started_at,
+          b.source_window_ended_at,
           b.started_at,
           b.finished_at,
           b.status,
@@ -1441,6 +1897,8 @@ export class IntegrationRepository {
     entityType: string;
     retryCount: number;
   }) {
+    const auditActorUserId = await this.resolveAuditActorUserId(input.actorUserId);
+
     await this.databaseService.query(
       `
         INSERT INTO audit.event_log (
@@ -1454,10 +1912,11 @@ export class IntegrationRepository {
         VALUES ($1::uuid, 'import_batch.retried', 'stg.import_batch', $2::uuid, 'company', $3::jsonb)
       `,
       [
-        input.actorUserId,
+        auditActorUserId,
         input.batchId,
         JSON.stringify({
           correlationId: RequestContextStore.getCorrelationId(),
+          requestedActorUserId: input.actorUserId,
           entityType: input.entityType,
           retryCount: input.retryCount,
         }),

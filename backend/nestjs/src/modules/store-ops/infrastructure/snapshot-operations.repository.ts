@@ -188,6 +188,52 @@ export class SnapshotOperationsRepository {
     return result.rows[0]?.snapshot_run_id ?? null;
   }
 
+  async findLatestSnapshotRunByTypeAndPeriod(input: {
+    snapshotType: string;
+    periodStart: string;
+    periodEnd: string;
+  }) {
+    const result = await this.databaseService.query<{
+      snapshot_run_id: string;
+      snapshot_date: string;
+      snapshot_type: string;
+      period_start: string;
+      period_end: string;
+      run_status: string;
+      generated_at: string;
+      generated_by: string;
+      started_at: string | null;
+      finished_at: string | null;
+      failure_reason: string | null;
+      rerun_of_snapshot_run_id: string | null;
+    }>(
+      `
+        SELECT
+          snapshot_run_id,
+          snapshot_date,
+          snapshot_type,
+          period_start,
+          period_end,
+          run_status,
+          generated_at,
+          generated_by,
+          started_at,
+          finished_at,
+          failure_reason,
+          rerun_of_snapshot_run_id
+        FROM rpt.snapshot_run
+        WHERE snapshot_type = $1
+          AND period_start = $2::date
+          AND period_end = $3::date
+        ORDER BY generated_at DESC, snapshot_run_id DESC
+        LIMIT 1
+      `,
+      [input.snapshotType, input.periodStart, input.periodEnd],
+    );
+
+    return result.rows[0] ?? null;
+  }
+
   async getSnapshotRunActionCounts(input: {
     runStatus?: string;
     snapshotType?: string;

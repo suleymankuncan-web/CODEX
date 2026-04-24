@@ -42,6 +42,7 @@ describe("SnapshotService", () => {
       databaseService as never,
       { dispatch } as never,
       snapshotOperationsRepository as never,
+      { getKpiConfigRows: jest.fn(async () => []) } as never,
     );
 
     const result = await service.enqueueSnapshotRun({
@@ -111,6 +112,7 @@ describe("SnapshotService", () => {
       databaseService as never,
       { dispatch } as never,
       snapshotOperationsRepository as never,
+      { getKpiConfigRows: jest.fn(async () => []) } as never,
     );
 
     const result = await service.rerunSnapshotRun("snapshot-old", "user-2");

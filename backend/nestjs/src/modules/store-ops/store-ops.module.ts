@@ -4,14 +4,21 @@ import { WorkforceController } from "./web/workforce.controller";
 import { ChecklistController } from "./web/checklist.controller";
 import { SnapshotController } from "./web/snapshot.controller";
 import { ReportingController } from "./web/reporting.controller";
+import { TargetDistributionController } from "./web/target-distribution.controller";
+import { WorkflowInboxController } from "./web/workflow-inbox.controller";
 import { OrgService } from "./application/org.service";
 import { WorkforceService } from "./application/workforce.service";
 import { ChecklistService } from "./application/checklist.service";
 import { SnapshotService } from "./application/snapshot.service";
 import { ReportingService } from "./application/reporting.service";
+import { TargetDistributionService } from "./application/target-distribution.service";
+import { WorkflowInboxService } from "./application/workflow-inbox.service";
 import { StoreOpsRepository } from "./infrastructure/store-ops.repository";
 import { ReportingRepository } from "./infrastructure/reporting.repository";
 import { SnapshotOperationsRepository } from "./infrastructure/snapshot-operations.repository";
+import { TargetDistributionRepository } from "./infrastructure/target-distribution.repository";
+import { ChecklistAcknowledgementRepository } from "./infrastructure/checklist-acknowledgement.repository";
+import { KpiConfigRepository } from "./infrastructure/kpi-config.repository";
 
 @Module({
   controllers: [
@@ -20,6 +27,8 @@ import { SnapshotOperationsRepository } from "./infrastructure/snapshot-operatio
     ChecklistController,
     SnapshotController,
     ReportingController,
+    TargetDistributionController,
+    WorkflowInboxController,
   ],
   providers: [
     OrgService,
@@ -27,9 +36,14 @@ import { SnapshotOperationsRepository } from "./infrastructure/snapshot-operatio
     ChecklistService,
     SnapshotService,
     ReportingService,
+    TargetDistributionService,
+    WorkflowInboxService,
     StoreOpsRepository,
+    ChecklistAcknowledgementRepository,
+    KpiConfigRepository,
     ReportingRepository,
     SnapshotOperationsRepository,
+    TargetDistributionRepository,
   ],
   exports: [
     OrgService,
@@ -37,9 +51,14 @@ import { SnapshotOperationsRepository } from "./infrastructure/snapshot-operatio
     ChecklistService,
     SnapshotService,
     ReportingService,
+    TargetDistributionService,
+    WorkflowInboxService,
     StoreOpsRepository,
+    ChecklistAcknowledgementRepository,
+    KpiConfigRepository,
     ReportingRepository,
     SnapshotOperationsRepository,
+    TargetDistributionRepository,
   ],
 })
 export class StoreOpsModule {}

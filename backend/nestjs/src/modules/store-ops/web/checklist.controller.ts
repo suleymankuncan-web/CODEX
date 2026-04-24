@@ -1,10 +1,11 @@
 import { Body, Controller, Post, Req } from "@nestjs/common";
 import { RequireRoles } from "../../auth/decorators/roles.decorator";
 import { ChecklistService } from "../application/checklist.service";
-import { RequireScope } from "../../auth/decorators/scope.decorator";
+import { RequireActionScope, RequireScope } from "../../auth/decorators/scope.decorator";
 import { CreateChecklistInstanceDto } from "./dto/create-checklist-instance.dto";
 import { AddChecklistResponseDto } from "./dto/add-checklist-response.dto";
 import { CompleteChecklistInstanceDto } from "./dto/complete-checklist-instance.dto";
+import { AcknowledgeChecklistInstanceDto } from "./dto/acknowledge-checklist-instance.dto";
 
 @Controller("checklists")
 export class ChecklistController {
@@ -12,12 +13,16 @@ export class ChecklistController {
 
   @Post("instances")
   @RequireScope("store")
+  @RequireActionScope("store")
   @RequireRoles("AUDITOR")
   async createChecklistInstance(
     @Req()
     request: {
       user: {
         userId: string;
+        actionScope: {
+          assignedStoreIds: string[];
+        };
       };
     },
     @Body() body: CreateChecklistInstanceDto,
@@ -25,17 +30,21 @@ export class ChecklistController {
     return this.checklistService.createChecklistInstance({
       ...body,
       actorUserId: request.user.userId,
+      actorActionScope: request.user.actionScope,
     });
   }
 
   @Post("instances/:checklistInstanceId/responses")
-  @RequireScope("store")
+  @RequireScope("authenticated")
   @RequireRoles("AUDITOR")
   async addChecklistResponse(
     @Req()
     request: {
       user: {
         userId: string;
+        actionScope: {
+          assignedStoreIds: string[];
+        };
       };
       params: {
         checklistInstanceId: string;
@@ -47,17 +56,21 @@ export class ChecklistController {
       checklistInstanceId: request.params.checklistInstanceId,
       ...body,
       actorUserId: request.user.userId,
+      actorActionScope: request.user.actionScope,
     });
   }
 
   @Post("instances/:checklistInstanceId/complete")
-  @RequireScope("store")
+  @RequireScope("authenticated")
   @RequireRoles("AUDITOR")
   async completeChecklistInstance(
     @Req()
     request: {
       user: {
         userId: string;
+        actionScope: {
+          assignedStoreIds: string[];
+        };
       };
       params: {
         checklistInstanceId: string;
@@ -69,6 +82,53 @@ export class ChecklistController {
       checklistInstanceId: request.params.checklistInstanceId,
       auditorEmployeeId: body.auditorEmployeeId,
       actorUserId: request.user.userId,
+      actorActionScope: request.user.actionScope,
+    });
+  }
+
+  @Post("instances/:checklistInstanceId/acknowledge")
+  @RequireScope("authenticated")
+  @RequireRoles("STORE_MANAGER", "SUPER_ADMIN")
+  async acknowledgeChecklist(
+    @Req()
+    request: {
+      user: {
+        userId: string;
+        actionScope: {
+          assignedStoreIds: string[];
+        };
+      };
+      params: {
+        checklistInstanceId: string;
+      };
+    },
+    @Body() body: AcknowledgeChecklistInstanceDto,
+  ) {
+    return this.checklistService.acknowledgeChecklist({
+      checklistInstanceId: request.params.checklistInstanceId,
+      actorUserId: request.user.userId,
+      actorActionScope: request.user.actionScope,
+      acknowledgementNote: body.acknowledgementNote,
+    });
+  }
+
+  @Post("acknowledgements/list")
+  @RequireScope("authenticated")
+  @RequireRoles("STORE_MANAGER", "SUPER_ADMIN", "REPORT_VIEWER")
+  async listChecklistAcknowledgements(
+    @Req()
+    request: {
+      user: {
+        scope: {
+          companyIds: string[];
+          regionIds: string[];
+          storeIds: string[];
+        };
+      };
+    },
+  ) {
+    return this.checklistService.listChecklistAcknowledgements({
+      actorScope: request.user.scope,
     });
   }
 }

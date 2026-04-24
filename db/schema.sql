@@ -140,6 +140,16 @@ CREATE TABLE ops.user_role_assignment (
     CHECK (end_at IS NULL OR end_at >= start_at)
 );
 
+CREATE TABLE ops.user_action_store_assignment (
+    user_action_store_assignment_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES ops.user_account(user_id),
+    store_id UUID NOT NULL REFERENCES ops.store(store_id),
+    start_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    end_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (end_at IS NULL OR end_at >= start_at)
+);
+
 CREATE TABLE ops.checklist_template (
     checklist_template_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id UUID NOT NULL REFERENCES ops.company(company_id),
@@ -241,9 +251,20 @@ CREATE TABLE ops.kpi_actual (
     period_end DATE NOT NULL,
     actual_value NUMERIC(18,4) NOT NULL,
     calculated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    source_batch_id TEXT,
+    source_payload_hash TEXT,
+    last_synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     source_type TEXT NOT NULL,
     CHECK (period_end >= period_start)
 );
+
+CREATE UNIQUE INDEX kpi_actual_store_live_unique_idx
+    ON ops.kpi_actual (kpi_id, store_id, period_type, period_start, period_end)
+    WHERE scope_type = 'store' AND store_id IS NOT NULL;
+
+CREATE UNIQUE INDEX kpi_actual_employee_live_unique_idx
+    ON ops.kpi_actual (kpi_id, employee_id, period_type, period_start, period_end)
+    WHERE scope_type = 'employee' AND employee_id IS NOT NULL;
 
 CREATE TABLE ops.performance_review_period (
     review_period_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -369,11 +390,45 @@ CREATE TABLE rpt.turnover_snapshot (
     PRIMARY KEY (snapshot_run_id, scope_type, company_id, region_id, store_id)
 );
 
+CREATE TABLE rpt.employee_kpi_snapshot (
+    snapshot_run_id UUID NOT NULL REFERENCES rpt.snapshot_run(snapshot_run_id) ON DELETE CASCADE,
+    employee_id UUID NOT NULL REFERENCES ops.employee(employee_id),
+    store_id UUID REFERENCES ops.store(store_id),
+    kpi_id UUID NOT NULL REFERENCES ops.kpi_definition(kpi_id),
+    period_start DATE NOT NULL,
+    period_end DATE NOT NULL,
+    actual_value NUMERIC(18,4) NOT NULL,
+    PRIMARY KEY (snapshot_run_id, employee_id, kpi_id)
+);
+
+CREATE TABLE rpt.employee_performance_snapshot (
+    snapshot_run_id UUID NOT NULL REFERENCES rpt.snapshot_run(snapshot_run_id) ON DELETE CASCADE,
+    employee_id UUID NOT NULL REFERENCES ops.employee(employee_id),
+    store_id UUID REFERENCES ops.store(store_id),
+    period_start DATE NOT NULL,
+    period_end DATE NOT NULL,
+    score_value NUMERIC(18,4) NOT NULL,
+    matched_metrics INTEGER NOT NULL,
+    total_metrics INTEGER NOT NULL,
+    turkey_rank INTEGER,
+    turkey_population INTEGER NOT NULL,
+    store_rank INTEGER,
+    store_population INTEGER NOT NULL,
+    PRIMARY KEY (snapshot_run_id, employee_id)
+);
+
 CREATE TABLE stg.integration_source (
     integration_source_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     source_code TEXT NOT NULL,
     source_name TEXT NOT NULL,
     entity_type TEXT NOT NULL,
+    source_system TEXT NOT NULL DEFAULT 'manual',
+    state_model TEXT NOT NULL DEFAULT 'latest_state',
+    poll_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    poll_interval_minutes INTEGER NOT NULL DEFAULT 30,
+    poll_window_start_local TIME NOT NULL DEFAULT TIME '10:30',
+    poll_window_end_local TIME NOT NULL DEFAULT TIME '00:00',
+    poll_timezone TEXT NOT NULL DEFAULT 'Europe/Istanbul',
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     UNIQUE (source_code, entity_type)
 );
@@ -383,6 +438,11 @@ CREATE TABLE stg.import_batch (
     integration_source_id UUID NOT NULL REFERENCES stg.integration_source(integration_source_id),
     entity_type TEXT NOT NULL,
     idempotency_key TEXT,
+    source_batch_id TEXT,
+    source_payload_hash TEXT,
+    source_captured_at TIMESTAMPTZ,
+    source_window_started_at TIMESTAMPTZ,
+    source_window_ended_at TIMESTAMPTZ,
     started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     finished_at TIMESTAMPTZ,
     status TEXT NOT NULL DEFAULT 'pending',
@@ -392,6 +452,10 @@ CREATE TABLE stg.import_batch (
     retry_count INTEGER NOT NULL DEFAULT 0,
     last_retried_at TIMESTAMPTZ
 );
+
+CREATE UNIQUE INDEX import_batch_source_batch_unique_idx
+    ON stg.import_batch (integration_source_id, entity_type, source_batch_id)
+    WHERE source_batch_id IS NOT NULL;
 
 CREATE TABLE stg.employee_raw (
     stg_employee_raw_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -526,6 +590,16 @@ CREATE INDEX idx_assignment_store_dates
 CREATE INDEX idx_user_role_scope
     ON ops.user_role_assignment (user_id, scope_type, company_id, region_id, store_id);
 
+CREATE INDEX idx_user_action_store_assignment_user_dates
+    ON ops.user_action_store_assignment (user_id, start_at, end_at);
+
+CREATE INDEX idx_user_action_store_assignment_store_dates
+    ON ops.user_action_store_assignment (store_id, start_at, end_at);
+
+CREATE UNIQUE INDEX uq_user_action_store_assignment_active
+    ON ops.user_action_store_assignment (user_id, store_id)
+    WHERE end_at IS NULL;
+
 CREATE INDEX idx_checklist_instance_store_status
     ON ops.checklist_instance (store_id, status, planned_at);
 
@@ -552,6 +626,12 @@ CREATE UNIQUE INDEX uq_snapshot_run_idempotency_key
 CREATE INDEX idx_snapshot_run_status_date
     ON rpt.snapshot_run (run_status, snapshot_date, generated_at);
 
+CREATE INDEX employee_performance_snapshot_run_store_idx
+    ON rpt.employee_performance_snapshot (snapshot_run_id, store_id, score_value DESC);
+
+CREATE INDEX employee_kpi_snapshot_run_employee_idx
+    ON rpt.employee_kpi_snapshot (snapshot_run_id, employee_id, kpi_id);
+
 CREATE INDEX idx_event_log_entity_date
     ON audit.event_log (entity_name, entity_id, occurred_at);
 
@@ -574,6 +654,14 @@ CREATE TRIGGER trg_turnover_snapshot_immutable
     BEFORE UPDATE OR DELETE ON rpt.turnover_snapshot
     FOR EACH ROW EXECUTE FUNCTION rpt.prevent_snapshot_mutation();
 
+CREATE TRIGGER trg_employee_kpi_snapshot_immutable
+    BEFORE UPDATE OR DELETE ON rpt.employee_kpi_snapshot
+    FOR EACH ROW EXECUTE FUNCTION rpt.prevent_snapshot_mutation();
+
+CREATE TRIGGER trg_employee_performance_snapshot_immutable
+    BEFORE UPDATE OR DELETE ON rpt.employee_performance_snapshot
+    FOR EACH ROW EXECUTE FUNCTION rpt.prevent_snapshot_mutation();
+
 COMMENT ON SCHEMA ops IS 'Operational tables for organization, workforce, checklist and KPI transactions.';
 COMMENT ON SCHEMA rpt IS 'Immutable snapshot reporting tables.';
 COMMENT ON SCHEMA stg IS 'Staging area for external integrations before operational load.';
@@ -581,6 +669,7 @@ COMMENT ON SCHEMA audit IS 'Audit and traceability tables for critical events.';
 
 COMMENT ON TABLE ops.employee_assignment_history IS 'Time-aware employee to store/position assignment history. Core source for active headcount and turnover calculations.';
 COMMENT ON TABLE ops.user_role_assignment IS 'RBAC assignments with scope-limited visibility at company, region or store level.';
+COMMENT ON TABLE ops.user_action_store_assignment IS 'Store-level action grants kept separate from role read scope so regional or audit users can read broadly but act only on assigned stores.';
 COMMENT ON TABLE ops.workforce_norm_plan IS 'Approved planned headcount and FTE targets used for norm vs actual workforce comparison.';
 COMMENT ON TABLE rpt.snapshot_run IS 'Parent record for every immutable reporting snapshot generation run.';
 COMMENT ON TABLE stg.import_batch IS 'Tracks lifecycle of each external data import batch.';

@@ -1,16 +1,36 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UploadedFiles,
+  UseInterceptors,
+} from "@nestjs/common";
+import { FileFieldsInterceptor } from "@nestjs/platform-express";
 import { IntegrationService } from "../application/integration.service";
 import { RequireRoles } from "../../auth/decorators/roles.decorator";
 import { RequireScope } from "../../auth/decorators/scope.decorator";
+import { PowerBiExportUploadService } from "../application/power-bi-export-upload.service";
 import { CreateImportBatchDto } from "./dto/create-import-batch.dto";
 import { CreateIntegrationSourceDto } from "./dto/create-integration-source.dto";
+import { GetImportPayloadTemplateQueryDto } from "./dto/get-import-payload-template.query";
+import { ListDueIntegrationSourcesQueryDto } from "./dto/list-due-integration-sources.query";
 import { ListImportBatchErrorsQueryDto } from "./dto/list-import-batch-errors.query";
 import { ListImportBatchesQueryDto } from "./dto/list-import-batches.query";
 import { ListIntegrationSourcesQueryDto } from "./dto/list-integration-sources.query";
+import { UpdateIntegrationSourceScheduleDto } from "./dto/update-integration-source-schedule.dto";
+import { UploadPowerBiExportDto } from "./dto/upload-power-bi-export.dto";
 
 @Controller("integrations")
 export class IntegrationController {
-  constructor(private readonly integrationService: IntegrationService) {}
+  constructor(
+    private readonly integrationService: IntegrationService,
+    private readonly powerBiExportUploadService: PowerBiExportUploadService,
+  ) {}
 
   @Get("sources")
   @RequireScope("company")
@@ -20,6 +40,7 @@ export class IntegrationController {
       limit: query.limit,
       offset: query.offset,
       entityType: query.entityType,
+      sourceSystem: query.sourceSystem,
       isActive: query.isActive,
     });
   }
@@ -40,6 +61,26 @@ export class IntegrationController {
       ...body,
       actorUserId: request.user.userId,
     });
+  }
+
+  @Patch("sources/:sourceId/schedule")
+  @RequireScope("company")
+  @RequireRoles("INTEGRATION_ADMIN")
+  async updateIntegrationSourceSchedule(
+    @Param("sourceId") sourceId: string,
+    @Body() body: UpdateIntegrationSourceScheduleDto,
+    @Req()
+    request: {
+      user: {
+        userId: string;
+      };
+    },
+  ) {
+    return this.integrationService.updateIntegrationSourceSchedule(
+      sourceId,
+      body,
+      request.user.userId,
+    );
   }
 
   @Patch("sources/:sourceId/deactivate")
@@ -77,6 +118,55 @@ export class IntegrationController {
   @RequireRoles("INTEGRATION_ADMIN")
   async getIntegrationLookups() {
     return this.integrationService.getIntegrationLookups();
+  }
+
+  @Get("sources/due-schedule")
+  @RequireScope("company")
+  @RequireRoles("INTEGRATION_ADMIN")
+  async listDueIntegrationSources(@Query() query: ListDueIntegrationSourcesQueryDto) {
+    return this.integrationService.listDueIntegrationSources(query.referenceAt);
+  }
+
+  @Get("import-payload-templates")
+  @RequireScope("company")
+  @RequireRoles("INTEGRATION_ADMIN")
+  async getImportPayloadTemplate(@Query() query: GetImportPayloadTemplateQueryDto) {
+    return this.integrationService.getImportPayloadTemplate({
+      entityType: query.entityType,
+      sourceSystem: query.sourceSystem,
+    });
+  }
+
+  @Post("power-bi-export-upload")
+  @RequireScope("company")
+  @RequireRoles("INTEGRATION_ADMIN")
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: "personnelFile", maxCount: 1 },
+      { name: "storeFile", maxCount: 1 },
+    ]),
+  )
+  async uploadPowerBiExport(
+    @Body() body: UploadPowerBiExportDto,
+    @UploadedFiles()
+    files: {
+      personnelFile?: Array<{ originalname: string; buffer: Buffer }>;
+      storeFile?: Array<{ originalname: string; buffer: Buffer }>;
+    },
+    @Req()
+    request: {
+      user: {
+        userId: string;
+      };
+    },
+  ) {
+    return this.powerBiExportUploadService.upload({
+      sourceCode: body.sourceCode,
+      periodMonth: body.periodMonth,
+      actorUserId: request.user.userId,
+      personnelFile: files?.personnelFile?.[0] ?? null,
+      storeFile: files?.storeFile?.[0] ?? null,
+    });
   }
 
   @Get("sources/:sourceId/audit")
@@ -172,6 +262,13 @@ export class IntegrationController {
       limit: query.limit,
       offset: query.offset,
     });
+  }
+
+  @Get("import-batches/:batchId/reconciliation")
+  @RequireScope("company")
+  @RequireRoles("INTEGRATION_ADMIN")
+  async getImportBatchReconciliation(@Param("batchId") batchId: string) {
+    return this.integrationService.getImportBatchReconciliation(batchId);
   }
 
   @Get("import-batch-audit/:batchId")

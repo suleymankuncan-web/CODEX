@@ -8,11 +8,15 @@ import { logStructuredMessage } from "../structured-log";
 @Injectable()
 export class BullMqJobDispatcherService implements JobDispatcher, OnModuleDestroy {
   private readonly logger = new Logger(BullMqJobDispatcherService.name);
-  private readonly connection: IORedis;
-  private readonly importQueue: Queue;
-  private readonly snapshotQueue: Queue;
+  private connection: IORedis | null = null;
+  private importQueue: Queue | null = null;
+  private snapshotQueue: Queue | null = null;
 
   constructor(private readonly appConfigService: AppConfigService) {
+    if (this.appConfigService.queueBackend !== "bullmq") {
+      return;
+    }
+
     this.connection = new IORedis(this.appConfigService.redisUrl, {
       maxRetriesPerRequest: null,
       enableReadyCheck: false,
@@ -33,6 +37,10 @@ export class BullMqJobDispatcherService implements JobDispatcher, OnModuleDestro
     _handler: (payload: TPayload) => Promise<void>,
   ): Promise<JobDispatchResult> {
     const queue = type === "import-batch" ? this.importQueue : this.snapshotQueue;
+
+    if (!queue) {
+      throw new Error("BullMQ dispatcher is not active because queue backend is not bullmq");
+    }
 
     const job = await queue.add(type, payload as object, {
       attempts: 3,
@@ -71,9 +79,15 @@ export class BullMqJobDispatcherService implements JobDispatcher, OnModuleDestro
   }
 
   async onModuleDestroy(): Promise<void> {
-    await this.importQueue.close();
-    await this.snapshotQueue.close();
-    if (this.connection.status !== "end") {
+    if (this.importQueue) {
+      await this.importQueue.close();
+    }
+
+    if (this.snapshotQueue) {
+      await this.snapshotQueue.close();
+    }
+
+    if (this.connection && this.connection.status !== "end") {
       try {
         await this.connection.quit();
       } catch (error) {

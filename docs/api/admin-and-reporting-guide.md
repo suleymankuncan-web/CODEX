@@ -87,6 +87,8 @@
   - aksiyon bekleyen batch listesi
 - `GET /api/integrations/import-batches/:batchId`
   - detay, dependency summary, retry readiness
+- `GET /api/integrations/import-batches/:batchId/reconciliation`
+  - batch kayit sayisi ile row status toplamlarini karsilastirir, rate ve accounting gorunurlugu saglar
 - `GET /api/integrations/import-batches/:batchId/errors`
   - row-level hata görünümü
 - `GET /api/integrations/import-batches/:batchId/audit`
@@ -100,6 +102,7 @@
 - `recommendedImportOrder`
 - `recommendedNextEntityType`
 - `canRetryNow`
+- `reconciliation` totals ve rates
 
 Bu alanlar admin UI'da yalnızca veri listelemek için değil, operatöre bir sonraki doğru adımı göstermek için tasarlanmıştır.
 

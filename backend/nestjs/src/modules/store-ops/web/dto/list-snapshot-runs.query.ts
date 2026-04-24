@@ -1,4 +1,4 @@
-import { IsIn, IsOptional } from "class-validator";
+import { IsDateString, IsIn, IsOptional } from "class-validator";
 import { ReportPaginationQueryDto } from "./report-pagination.query";
 
 export class ListSnapshotRunsQueryDto extends ReportPaginationQueryDto {
@@ -9,4 +9,8 @@ export class ListSnapshotRunsQueryDto extends ReportPaginationQueryDto {
   @IsOptional()
   @IsIn(["daily", "weekly", "monthly", "custom"])
   snapshotType?: string;
+
+  @IsOptional()
+  @IsDateString()
+  snapshotDate?: string;
 }

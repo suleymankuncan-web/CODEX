@@ -47,7 +47,11 @@ VALUES
     ('60000000-0000-0000-0000-000000000001', 'SUPER_ADMIN', 'Super Admin', 'company', 'Full access across the company', TRUE),
     ('60000000-0000-0000-0000-000000000002', 'REGION_MANAGER', 'Region Manager', 'region', 'Manages region level operations and performance', TRUE),
     ('60000000-0000-0000-0000-000000000003', 'STORE_MANAGER', 'Store Manager', 'store', 'Manages a single store', TRUE),
-    ('60000000-0000-0000-0000-000000000004', 'AUDITOR', 'Auditor', 'region', 'Executes checklist audits', TRUE)
+    ('60000000-0000-0000-0000-000000000004', 'AUDITOR', 'Auditor', 'region', 'Executes checklist audits', TRUE),
+    ('60000000-0000-0000-0000-000000000005', 'REPORT_VIEWER', 'Report Viewer', 'company', 'Read-only reporting access', TRUE),
+    ('60000000-0000-0000-0000-000000000006', 'INTEGRATION_ADMIN', 'Integration Admin', 'company', 'Manages integration sources and import batches', TRUE),
+    ('60000000-0000-0000-0000-000000000007', 'SNAPSHOT_OPERATOR', 'Snapshot Operator', 'company', 'Runs and reruns reporting snapshots', TRUE),
+    ('60000000-0000-0000-0000-000000000008', 'STORE_PERSONNEL', 'Store Personnel', 'store', 'Reads personal store performance', TRUE)
 ON CONFLICT (role_code) DO NOTHING;
 
 INSERT INTO ops.permission (permission_id, permission_code, resource_name, action_name, description)
@@ -56,7 +60,14 @@ VALUES
     ('70000000-0000-0000-0000-000000000002', 'employee.read', 'employee', 'read', 'Read employee data'),
     ('70000000-0000-0000-0000-000000000003', 'checklist.manage', 'checklist', 'manage', 'Create and complete checklist instances'),
     ('70000000-0000-0000-0000-000000000004', 'kpi.read', 'kpi', 'read', 'Read KPI data'),
-    ('70000000-0000-0000-0000-000000000005', 'snapshot.read', 'snapshot', 'read', 'Read reporting snapshots')
+    ('70000000-0000-0000-0000-000000000005', 'snapshot.read', 'snapshot', 'read', 'Read reporting snapshots'),
+    ('70000000-0000-0000-0000-000000000006', 'reports.read', 'reports', 'read', 'Read reporting surfaces'),
+    ('70000000-0000-0000-0000-000000000007', 'integration.manage', 'integration', 'manage', 'Manage integration sources and import batches'),
+    ('70000000-0000-0000-0000-000000000008', 'snapshot.manage', 'snapshot', 'manage', 'Run and rerun reporting snapshots'),
+    ('70000000-0000-0000-0000-000000000009', 'target_distribution.manage', 'target_distribution', 'manage', 'Create target distribution requests'),
+    ('70000000-0000-0000-0000-000000000010', 'target_distribution.approve', 'target_distribution', 'approve', 'Approve target distribution requests'),
+    ('70000000-0000-0000-0000-000000000011', 'kpi_config.manage', 'kpi_config', 'manage', 'Manage KPI scoring configuration'),
+    ('70000000-0000-0000-0000-000000000012', 'auth.manage', 'auth', 'manage', 'Manage users, roles, and permissions')
 ON CONFLICT (permission_code) DO NOTHING;
 
 INSERT INTO ops.role_permission (role_id, permission_id)
@@ -66,15 +77,33 @@ VALUES
     ('60000000-0000-0000-0000-000000000001', '70000000-0000-0000-0000-000000000003'),
     ('60000000-0000-0000-0000-000000000001', '70000000-0000-0000-0000-000000000004'),
     ('60000000-0000-0000-0000-000000000001', '70000000-0000-0000-0000-000000000005'),
+    ('60000000-0000-0000-0000-000000000001', '70000000-0000-0000-0000-000000000006'),
+    ('60000000-0000-0000-0000-000000000001', '70000000-0000-0000-0000-000000000007'),
+    ('60000000-0000-0000-0000-000000000001', '70000000-0000-0000-0000-000000000008'),
+    ('60000000-0000-0000-0000-000000000001', '70000000-0000-0000-0000-000000000009'),
+    ('60000000-0000-0000-0000-000000000001', '70000000-0000-0000-0000-000000000010'),
+    ('60000000-0000-0000-0000-000000000001', '70000000-0000-0000-0000-000000000011'),
+    ('60000000-0000-0000-0000-000000000001', '70000000-0000-0000-0000-000000000012'),
     ('60000000-0000-0000-0000-000000000002', '70000000-0000-0000-0000-000000000001'),
     ('60000000-0000-0000-0000-000000000002', '70000000-0000-0000-0000-000000000002'),
     ('60000000-0000-0000-0000-000000000002', '70000000-0000-0000-0000-000000000004'),
+    ('60000000-0000-0000-0000-000000000002', '70000000-0000-0000-0000-000000000006'),
+    ('60000000-0000-0000-0000-000000000002', '70000000-0000-0000-0000-000000000010'),
     ('60000000-0000-0000-0000-000000000003', '70000000-0000-0000-0000-000000000001'),
     ('60000000-0000-0000-0000-000000000003', '70000000-0000-0000-0000-000000000002'),
     ('60000000-0000-0000-0000-000000000003', '70000000-0000-0000-0000-000000000003'),
     ('60000000-0000-0000-0000-000000000003', '70000000-0000-0000-0000-000000000004'),
+    ('60000000-0000-0000-0000-000000000003', '70000000-0000-0000-0000-000000000006'),
+    ('60000000-0000-0000-0000-000000000003', '70000000-0000-0000-0000-000000000009'),
     ('60000000-0000-0000-0000-000000000004', '70000000-0000-0000-0000-000000000001'),
-    ('60000000-0000-0000-0000-000000000004', '70000000-0000-0000-0000-000000000003')
+    ('60000000-0000-0000-0000-000000000004', '70000000-0000-0000-0000-000000000003'),
+    ('60000000-0000-0000-0000-000000000004', '70000000-0000-0000-0000-000000000006'),
+    ('60000000-0000-0000-0000-000000000005', '70000000-0000-0000-0000-000000000006'),
+    ('60000000-0000-0000-0000-000000000006', '70000000-0000-0000-0000-000000000007'),
+    ('60000000-0000-0000-0000-000000000007', '70000000-0000-0000-0000-000000000005'),
+    ('60000000-0000-0000-0000-000000000007', '70000000-0000-0000-0000-000000000008'),
+    ('60000000-0000-0000-0000-000000000008', '70000000-0000-0000-0000-000000000004'),
+    ('60000000-0000-0000-0000-000000000008', '70000000-0000-0000-0000-000000000006')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO ops.user_account (user_id, employee_id, username, email, auth_provider, is_active)
@@ -113,7 +142,14 @@ INSERT INTO ops.kpi_definition (
 VALUES
     ('b0000000-0000-0000-0000-000000000001', 'AUDIT_COMPLIANCE', 'Audit Compliance', 'percentage', 'ratio', 'avg', 'store', 'compliant_items / total_items', 'higher_is_better', TRUE),
     ('b0000000-0000-0000-0000-000000000002', 'HEADCOUNT_GAP', 'Headcount Gap', 'difference', 'count', 'sum', 'store', 'planned_headcount - active_headcount', 'lower_is_better', TRUE),
-    ('b0000000-0000-0000-0000-000000000003', 'TURNOVER_RATE', 'Turnover Rate', 'percentage', 'ratio', 'avg', 'store', 'leaver_count / avg_headcount', 'lower_is_better', TRUE)
+    ('b0000000-0000-0000-0000-000000000003', 'TURNOVER_RATE', 'Turnover Rate', 'percentage', 'ratio', 'avg', 'store', 'leaver_count / avg_headcount', 'lower_is_better', TRUE),
+    ('b0000000-0000-0000-0000-000000000010', 'NET_SALES', 'Net Sales', 'currency', 'currency', 'sum', 'multi_scope', NULL, 'higher_is_better', TRUE),
+    ('b0000000-0000-0000-0000-000000000011', 'TARGET_ACHIEVEMENT', 'Target Achievement', 'percentage', 'ratio', 'avg', 'multi_scope', 'net_sales / assigned_target', 'higher_is_better', TRUE),
+    ('b0000000-0000-0000-0000-000000000012', 'CR', 'Conversion Rate', 'percentage', 'ratio', 'avg', 'store', NULL, 'higher_is_better', TRUE),
+    ('b0000000-0000-0000-0000-000000000013', 'ATV', 'Average Ticket Value', 'currency', 'currency', 'avg', 'multi_scope', NULL, 'higher_is_better', TRUE),
+    ('b0000000-0000-0000-0000-000000000014', 'UPT', 'Units Per Ticket', 'ratio', 'count', 'avg', 'multi_scope', NULL, 'higher_is_better', TRUE),
+    ('b0000000-0000-0000-0000-000000000015', 'BM_CHECKLIST', 'BM Checklist', 'percentage', 'ratio', 'avg', 'store', NULL, 'higher_is_better', TRUE),
+    ('b0000000-0000-0000-0000-000000000016', 'VM_CHECKLIST', 'VM Checklist', 'percentage', 'ratio', 'avg', 'store', NULL, 'higher_is_better', TRUE)
 ON CONFLICT (kpi_code) DO NOTHING;
 
 INSERT INTO ops.kpi_target (
@@ -132,8 +168,16 @@ VALUES
     ('c0000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000002', DATE '2026-04-01', DATE '2026-04-30', 2, 2, '80000000-0000-0000-0000-000000000001', NOW())
 ON CONFLICT DO NOTHING;
 
-INSERT INTO stg.integration_source (integration_source_id, source_code, source_name, entity_type, is_active)
+INSERT INTO stg.integration_source (
+    integration_source_id,
+    source_code,
+    source_name,
+    entity_type,
+    source_system,
+    state_model,
+    is_active
+)
 VALUES
-    ('d0000000-0000-0000-0000-000000000001', 'HRIS', 'Corporate HRIS', 'employee', TRUE),
-    ('d0000000-0000-0000-0000-000000000002', 'POS', 'Point of Sale', 'kpi', TRUE)
+    ('d0000000-0000-0000-0000-000000000001', 'HRIS', 'Corporate HRIS', 'employee', 'manual', 'latest_state', TRUE),
+    ('d0000000-0000-0000-0000-000000000002', 'POS', 'Point of Sale', 'kpi', 'manual', 'latest_state', TRUE)
 ON CONFLICT (source_code, entity_type) DO NOTHING;

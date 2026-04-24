@@ -31,7 +31,7 @@ describe("MaterializationService", () => {
   }
 
   it("marks invalid employee rows as validation_failed and completes batch with errors", async () => {
-    const { databaseService, service } = createService(async (sql, params) => {
+    const { databaseService, service } = createService(async (sql, _params) => {
       if (sql.includes("FROM stg.import_batch")) {
         return {
           rowCount: 1,
@@ -96,6 +96,7 @@ describe("MaterializationService", () => {
         "import_batch.started",
         batchId,
         JSON.stringify({
+          correlationId: null,
           entityType: "employee",
         }),
       ],
@@ -107,6 +108,7 @@ describe("MaterializationService", () => {
         "import_batch.completed_with_errors",
         batchId,
         JSON.stringify({
+          correlationId: null,
           entityType: "employee",
           processedCount: 1,
           errorCount: 1,
@@ -253,6 +255,9 @@ describe("MaterializationService", () => {
               import_batch_id: batchId,
               entity_type: "kpi",
               integration_source_id: integrationSourceId,
+              source_batch_id: null,
+              source_payload_hash: null,
+              source_captured_at: null,
             },
           ],
         };
@@ -301,15 +306,16 @@ describe("MaterializationService", () => {
       expect.stringContaining("INSERT INTO ops.kpi_actual"),
       [
         "00000000-0000-0000-0000-000000000351",
-        "store",
         null,
         null,
         "00000000-0000-0000-0000-000000000352",
-        "00000000-0000-0000-0000-000000000353",
         "monthly",
         "2026-04-01",
         "2026-04-30",
         92,
+        null,
+        null,
+        null,
       ],
     );
   });
@@ -367,7 +373,7 @@ describe("MaterializationService", () => {
   });
 
   it("marks infrastructure write failures as retryable_error and fails the batch", async () => {
-    const { databaseService, service } = createService(async (sql, params) => {
+    const { databaseService, service } = createService(async (sql, _params) => {
       if (sql.includes("FROM stg.import_batch")) {
         return {
           rowCount: 1,
@@ -428,6 +434,7 @@ describe("MaterializationService", () => {
         "import_batch.failed",
         batchId,
         JSON.stringify({
+          correlationId: null,
           entityType: "employee",
           processedCount: 0,
           errorCount: 1,
@@ -540,7 +547,7 @@ describe("MaterializationService", () => {
   });
 
   it("marks invalid assignment rows as validation_failed", async () => {
-    const { databaseService, service } = createService(async (sql, params) => {
+    const { databaseService, service } = createService(async (sql, _params) => {
       if (sql.includes("FROM stg.import_batch")) {
         return {
           rowCount: 1,
@@ -589,7 +596,7 @@ describe("MaterializationService", () => {
   });
 
   it("materializes position rows and writes position external id mappings", async () => {
-    const { databaseService, service } = createService(async (sql, params) => {
+    const { databaseService, service } = createService(async (sql, _params) => {
       if (sql.includes("FROM stg.import_batch")) {
         return {
           rowCount: 1,
@@ -728,7 +735,7 @@ describe("MaterializationService", () => {
   });
 
   it("marks invalid position rows as validation_failed", async () => {
-    const { databaseService, service } = createService(async (sql, params) => {
+    const { databaseService, service } = createService(async (sql, _params) => {
       if (sql.includes("FROM stg.import_batch")) {
         return {
           rowCount: 1,

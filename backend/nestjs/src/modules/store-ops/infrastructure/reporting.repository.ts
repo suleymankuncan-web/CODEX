@@ -5,6 +5,62 @@ import { DatabaseService } from "../../../shared/database/database.service";
 export class ReportingRepository {
   constructor(private readonly databaseService: DatabaseService) {}
 
+  private applyStoreAccessScope(
+    clauses: string[],
+    params: unknown[],
+    input: {
+      companyIds: string[];
+      regionIds: string[];
+      storeIds: string[];
+    },
+    storeAlias: string,
+  ) {
+    if (input.storeIds.length > 0) {
+      params.push(input.storeIds);
+      clauses.push(`${storeAlias}.store_id = ANY($${params.length}::uuid[])`);
+      return;
+    }
+
+    if (input.regionIds.length > 0) {
+      params.push(input.regionIds);
+      clauses.push(`${storeAlias}.region_id = ANY($${params.length}::uuid[])`);
+      return;
+    }
+
+    if (input.companyIds.length > 0) {
+      params.push(input.companyIds);
+      clauses.push(`${storeAlias}.company_id = ANY($${params.length}::uuid[])`);
+    }
+  }
+
+  private applyTurnoverAccessScope(
+    clauses: string[],
+    params: unknown[],
+    input: {
+      companyIds: string[];
+      regionIds: string[];
+      storeIds: string[];
+    },
+    turnoverAlias: string,
+  ) {
+    if (input.storeIds.length > 0) {
+      params.push(input.storeIds);
+      clauses.push(`${turnoverAlias}.store_id = ANY($${params.length}::uuid[])`);
+      return;
+    }
+
+    if (input.regionIds.length > 0) {
+      params.push(input.regionIds);
+      clauses.push(`${turnoverAlias}.region_id = ANY($${params.length}::uuid[])`);
+      return;
+    }
+
+    if (input.companyIds.length > 0) {
+      params.push(input.companyIds);
+      clauses.push(`${turnoverAlias}.company_id = ANY($${params.length}::uuid[])`);
+    }
+  }
+
   private async countRows(
     fromClause: string,
     whereClause: string,
@@ -48,6 +104,78 @@ export class ReportingRepository {
         ORDER BY sr.generated_at DESC
         LIMIT 1
       `,
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  async getLatestCompletedSnapshotRunByType(snapshotType: string) {
+    const result = await this.databaseService.query<{
+      snapshot_run_id: string;
+      snapshot_date: string;
+      snapshot_type: string;
+      period_start: string;
+      period_end: string;
+      run_status: string;
+      generated_at: string;
+      generated_by: string;
+    }>(
+      `
+        SELECT
+          sr.snapshot_run_id,
+          sr.snapshot_date,
+          sr.snapshot_type,
+          sr.period_start,
+          sr.period_end,
+          sr.run_status,
+          sr.generated_at,
+          sr.generated_by
+        FROM rpt.snapshot_run sr
+        WHERE sr.run_status = 'completed'
+          AND sr.snapshot_type = $1
+        ORDER BY sr.generated_at DESC
+        LIMIT 1
+      `,
+      [snapshotType],
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  async getCompletedSnapshotRunByTypeAndDate(input: {
+    snapshotType: string;
+    periodStart: string;
+    periodEnd: string;
+  }) {
+    const result = await this.databaseService.query<{
+      snapshot_run_id: string;
+      snapshot_date: string;
+      snapshot_type: string;
+      period_start: string;
+      period_end: string;
+      run_status: string;
+      generated_at: string;
+      generated_by: string;
+    }>(
+      `
+        SELECT
+          sr.snapshot_run_id,
+          sr.snapshot_date,
+          sr.snapshot_type,
+          sr.period_start,
+          sr.period_end,
+          sr.run_status,
+          sr.generated_at,
+          sr.generated_by
+        FROM rpt.snapshot_run sr
+        WHERE sr.run_status = 'completed'
+          AND sr.snapshot_type = $1
+          AND sr.period_start = $2::date
+          AND sr.period_end = $3::date
+        ORDER BY sr.generated_at DESC
+        LIMIT 1
+      `,
+      [input.snapshotType, input.periodStart, input.periodEnd],
     );
 
     return result.rows[0] ?? null;
@@ -98,6 +226,7 @@ export class ReportingRepository {
   async listSnapshotRuns(input: {
     runStatus?: string;
     snapshotType?: string;
+    snapshotDate?: string;
     limit?: number;
     offset?: number;
   }) {
@@ -112,6 +241,11 @@ export class ReportingRepository {
     if (input.snapshotType) {
       params.push(input.snapshotType);
       clauses.push(`sr.snapshot_type = $${params.length}`);
+    }
+
+    if (input.snapshotDate) {
+      params.push(input.snapshotDate);
+      clauses.push(`sr.snapshot_date = $${params.length}::date`);
     }
 
     const whereClause = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
@@ -173,16 +307,8 @@ export class ReportingRepository {
     if (input.storeId) {
       params.push(input.storeId);
       clauses.push(`sws.store_id = $${params.length}::uuid`);
-    } else if (input.storeIds.length > 0) {
-      params.push(input.storeIds);
-      clauses.push(`s.store_id = ANY($${params.length}::uuid[])`);
-    } else if (input.regionIds.length > 0) {
-      params.push(input.regionIds);
-      clauses.push(`s.region_id = ANY($${params.length}::uuid[])`);
-    } else if (input.companyIds.length > 0) {
-      params.push(input.companyIds);
-      clauses.push(`s.company_id = ANY($${params.length}::uuid[])`);
     }
+    this.applyStoreAccessScope(clauses, params, input, "s");
 
     params.push(input.limit ?? 50);
     const limitParam = params.length;
@@ -250,16 +376,8 @@ export class ReportingRepository {
     if (input.storeId) {
       params.push(input.storeId);
       clauses.push(`sks.store_id = $${params.length}::uuid`);
-    } else if (input.storeIds.length > 0) {
-      params.push(input.storeIds);
-      clauses.push(`s.store_id = ANY($${params.length}::uuid[])`);
-    } else if (input.regionIds.length > 0) {
-      params.push(input.regionIds);
-      clauses.push(`s.region_id = ANY($${params.length}::uuid[])`);
-    } else if (input.companyIds.length > 0) {
-      params.push(input.companyIds);
-      clauses.push(`s.company_id = ANY($${params.length}::uuid[])`);
     }
+    this.applyStoreAccessScope(clauses, params, input, "s");
 
     if (input.kpiId) {
       params.push(input.kpiId);
@@ -271,21 +389,25 @@ export class ReportingRepository {
     params.push(input.offset ?? 0);
     const offsetParam = params.length;
 
-    const fromClause = `
+      const fromClause = `
         FROM rpt.store_kpi_snapshot sks
+        INNER JOIN ops.kpi_definition kd
+          ON kd.kpi_id = sks.kpi_id
         INNER JOIN ops.store s
           ON s.store_id = sks.store_id
     `;
 
-    const result = await this.databaseService.query<{
-      snapshot_run_id: string;
-      store_id: string;
-      kpi_id: string;
-      period_start: string;
-      period_end: string;
-      target_value: string | null;
-      actual_value: string | null;
-      achievement_rate: string | null;
+      const result = await this.databaseService.query<{
+        snapshot_run_id: string;
+        store_id: string;
+        kpi_id: string;
+        kpi_code: string;
+        kpi_name: string;
+        period_start: string;
+        period_end: string;
+        target_value: string | null;
+        actual_value: string | null;
+        achievement_rate: string | null;
       status_band: string | null;
     }>(
       `
@@ -293,6 +415,8 @@ export class ReportingRepository {
           sks.snapshot_run_id,
           sks.store_id,
           sks.kpi_id,
+          kd.kpi_code,
+          kd.kpi_name,
           sks.period_start,
           sks.period_end,
           sks.target_value,
@@ -332,16 +456,8 @@ export class ReportingRepository {
     if (input.storeId) {
       params.push(input.storeId);
       clauses.push(`scs.store_id = $${params.length}::uuid`);
-    } else if (input.storeIds.length > 0) {
-      params.push(input.storeIds);
-      clauses.push(`s.store_id = ANY($${params.length}::uuid[])`);
-    } else if (input.regionIds.length > 0) {
-      params.push(input.regionIds);
-      clauses.push(`s.region_id = ANY($${params.length}::uuid[])`);
-    } else if (input.companyIds.length > 0) {
-      params.push(input.companyIds);
-      clauses.push(`s.company_id = ANY($${params.length}::uuid[])`);
     }
+    this.applyStoreAccessScope(clauses, params, input, "s");
 
     if (input.checklistTemplateId) {
       params.push(input.checklistTemplateId);
@@ -423,16 +539,8 @@ export class ReportingRepository {
     } else if (input.companyId) {
       params.push(input.companyId);
       clauses.push(`ts.company_id = $${params.length}::uuid`);
-    } else if (input.storeIds.length > 0) {
-      params.push(input.storeIds);
-      clauses.push(`ts.store_id = ANY($${params.length}::uuid[])`);
-    } else if (input.regionIds.length > 0) {
-      params.push(input.regionIds);
-      clauses.push(`ts.region_id = ANY($${params.length}::uuid[])`);
-    } else if (input.companyIds.length > 0) {
-      params.push(input.companyIds);
-      clauses.push(`ts.company_id = ANY($${params.length}::uuid[])`);
     }
+    this.applyTurnoverAccessScope(clauses, params, input, "ts");
 
     params.push(input.limit ?? 50);
     const limitParam = params.length;
@@ -486,5 +594,594 @@ export class ReportingRepository {
       rows: result.rows,
       total,
     };
+  }
+
+  async getEmployeeIdForUser(userId: string) {
+    const result = await this.databaseService.query<{ employee_id: string | null }>(
+      `
+        SELECT employee_id
+        FROM ops.user_account
+        WHERE user_id = $1::uuid
+      `,
+      [userId],
+    );
+
+    return result.rows[0]?.employee_id ?? null;
+  }
+
+  async getStoreNameById(storeId: string) {
+    const result = await this.databaseService.query<{ store_name: string | null }>(
+      `
+        SELECT store_name
+        FROM ops.store
+        WHERE store_id = $1::uuid
+        LIMIT 1
+      `,
+      [storeId],
+    );
+
+    return result.rows[0]?.store_name ?? null;
+  }
+
+  async getLatestStoreKpiPeriod(input: {
+    storeId: string;
+    metricCodes: string[];
+    periodType?: string;
+    periodStart?: string;
+  }) {
+    const params: unknown[] = [input.storeId, input.metricCodes];
+    const clauses = [
+      `ka.store_id = $1::uuid`,
+      `ka.scope_type = 'store'`,
+      `kd.kpi_code = ANY($2::text[])`,
+    ];
+
+    if (input.periodType) {
+      params.push(input.periodType);
+      clauses.push(`ka.period_type = $${params.length}`);
+    }
+
+    if (input.periodStart) {
+      params.push(input.periodStart);
+      clauses.push(`ka.period_start = $${params.length}::date`);
+    }
+
+    const result = await this.databaseService.query<{
+      period_type: string;
+      period_start: string;
+      period_end: string;
+    }>(
+      `
+        SELECT
+          ka.period_type,
+          ka.period_start,
+          ka.period_end
+        FROM ops.kpi_actual ka
+        INNER JOIN ops.kpi_definition kd
+          ON kd.kpi_id = ka.kpi_id
+        WHERE ${clauses.join(" AND ")}
+        ORDER BY ka.period_end DESC, ka.period_start DESC
+        LIMIT 1
+      `,
+      params,
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  async listStoreKpiPeriods(input: {
+    storeId: string;
+    metricCodes: string[];
+  }) {
+    const result = await this.databaseService.query<{
+      period_type: string;
+      period_start: string;
+      period_end: string;
+    }>(
+      `
+        SELECT DISTINCT
+          ka.period_type,
+          ka.period_start,
+          ka.period_end
+        FROM ops.kpi_actual ka
+        INNER JOIN ops.kpi_definition kd
+          ON kd.kpi_id = ka.kpi_id
+        WHERE ka.store_id = $1::uuid
+          AND ka.scope_type = 'store'
+          AND kd.kpi_code = ANY($2::text[])
+        ORDER BY 3 DESC, 2 DESC
+      `,
+      [input.storeId, input.metricCodes],
+    );
+
+    return result.rows;
+  }
+
+  async getStorePerformanceRows(input: {
+    storeId: string;
+    metricCodes: string[];
+    periodType: string;
+    periodStart: string;
+    periodEnd: string;
+  }) {
+    const result = await this.databaseService.query<{
+      store_id: string;
+      store_name: string;
+      kpi_code: string;
+      kpi_name: string;
+      actual_value: string | null;
+      target_value: string | null;
+    }>(
+      `
+        SELECT
+          store.store_id,
+          store.store_name,
+          kd.kpi_code,
+          kd.kpi_name,
+          ka.actual_value::text AS actual_value,
+          kt.target_value::text AS target_value
+        FROM ops.kpi_actual ka
+        INNER JOIN ops.kpi_definition kd
+          ON kd.kpi_id = ka.kpi_id
+        INNER JOIN ops.store store
+          ON store.store_id = ka.store_id
+        LEFT JOIN ops.kpi_target kt
+          ON kt.kpi_id = ka.kpi_id
+          AND kt.scope_type = 'store'
+          AND kt.store_id = ka.store_id
+          AND kt.period_type = ka.period_type
+          AND kt.period_start = ka.period_start
+          AND kt.period_end = ka.period_end
+        WHERE ka.store_id = $1::uuid
+          AND ka.scope_type = 'store'
+          AND kd.kpi_code = ANY($2::text[])
+          AND ka.period_type = $3
+          AND ka.period_start = $4::date
+          AND ka.period_end = $5::date
+        ORDER BY kd.kpi_code ASC
+      `,
+      [
+        input.storeId,
+        input.metricCodes,
+        input.periodType,
+        input.periodStart,
+        input.periodEnd,
+      ],
+    );
+
+    return result.rows;
+  }
+
+  async getPeerStorePerformanceRows(input: {
+    metricCodes: string[];
+    companyId?: string;
+    periodType: string;
+    periodStart: string;
+    periodEnd: string;
+  }) {
+    const params: unknown[] = [
+      input.metricCodes,
+      input.periodType,
+      input.periodStart,
+      input.periodEnd,
+    ];
+    const clauses = [
+      `ka.scope_type = 'store'`,
+      `kd.kpi_code = ANY($1::text[])`,
+      `ka.period_type = $2`,
+      `ka.period_start = $3::date`,
+      `ka.period_end = $4::date`,
+    ];
+
+    if (input.companyId) {
+      params.push(input.companyId);
+      clauses.push(`ka.company_id = $${params.length}::uuid`);
+    }
+
+    const result = await this.databaseService.query<{
+      store_id: string;
+      kpi_code: string;
+      actual_value: string;
+    }>(
+      `
+        SELECT
+          ka.store_id,
+          kd.kpi_code,
+          ka.actual_value::text AS actual_value
+        FROM ops.kpi_actual ka
+        INNER JOIN ops.kpi_definition kd
+          ON kd.kpi_id = ka.kpi_id
+        WHERE ${clauses.join(" AND ")}
+        ORDER BY ka.store_id ASC, kd.kpi_code ASC
+      `,
+      params,
+    );
+
+    return result.rows;
+  }
+
+  async getLatestEmployeeKpiPeriod(input: {
+    employeeId: string;
+    metricCodes: string[];
+    companyIds: string[];
+    regionIds: string[];
+    storeIds: string[];
+    periodType?: string;
+    periodStart?: string;
+  }) {
+    const params: unknown[] = [input.employeeId, input.metricCodes];
+    const clauses = [
+      `ka.employee_id = $1::uuid`,
+      `ka.scope_type = 'employee'`,
+      `kd.kpi_code = ANY($2::text[])`,
+    ];
+
+    if (input.periodType) {
+      params.push(input.periodType);
+      clauses.push(`ka.period_type = $${params.length}`);
+    }
+
+    if (input.periodStart) {
+      params.push(input.periodStart);
+      clauses.push(`ka.period_start = $${params.length}::date`);
+    }
+
+    if (input.storeIds.length > 0) {
+      params.push(input.storeIds);
+      clauses.push(`ka.store_id = ANY($${params.length}::uuid[])`);
+    } else if (input.regionIds.length > 0) {
+      params.push(input.regionIds);
+      clauses.push(`ka.region_id = ANY($${params.length}::uuid[])`);
+    } else if (input.companyIds.length > 0) {
+      params.push(input.companyIds);
+      clauses.push(`ka.company_id = ANY($${params.length}::uuid[])`);
+    }
+
+    const result = await this.databaseService.query<{
+      period_start: string;
+      period_end: string;
+      store_id: string | null;
+    }>(
+      `
+        SELECT
+          ka.period_start,
+          ka.period_end,
+          ka.store_id
+        FROM ops.kpi_actual ka
+        INNER JOIN ops.kpi_definition kd
+          ON kd.kpi_id = ka.kpi_id
+        WHERE ${clauses.join(" AND ")}
+        ORDER BY ka.period_end DESC, ka.period_start DESC
+        LIMIT 1
+      `,
+      params,
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  async listEmployeeKpiPeriods(input: {
+    employeeId: string;
+    metricCodes: string[];
+    companyIds: string[];
+    regionIds: string[];
+    storeIds: string[];
+  }) {
+    const params: unknown[] = [input.employeeId, input.metricCodes];
+    const clauses = [
+      `ka.employee_id = $1::uuid`,
+      `ka.scope_type = 'employee'`,
+      `kd.kpi_code = ANY($2::text[])`,
+    ];
+
+    if (input.storeIds.length > 0) {
+      params.push(input.storeIds);
+      clauses.push(`ka.store_id = ANY($${params.length}::uuid[])`);
+    } else if (input.regionIds.length > 0) {
+      params.push(input.regionIds);
+      clauses.push(`ka.region_id = ANY($${params.length}::uuid[])`);
+    } else if (input.companyIds.length > 0) {
+      params.push(input.companyIds);
+      clauses.push(`ka.company_id = ANY($${params.length}::uuid[])`);
+    }
+
+    const result = await this.databaseService.query<{
+      period_type: string;
+      period_start: string;
+      period_end: string;
+    }>(
+      `
+        SELECT DISTINCT
+          ka.period_type,
+          ka.period_start,
+          ka.period_end
+        FROM ops.kpi_actual ka
+        INNER JOIN ops.kpi_definition kd
+          ON kd.kpi_id = ka.kpi_id
+        WHERE ${clauses.join(" AND ")}
+        ORDER BY 3 DESC, 2 DESC
+      `,
+      params,
+    );
+
+    return result.rows;
+  }
+
+  async getEmployeePerformanceRows(input: {
+    employeeId: string;
+    metricCodes: string[];
+    periodStart: string;
+    periodEnd: string;
+  }) {
+    const result = await this.databaseService.query<{
+      employee_id: string;
+      first_name: string;
+      last_name: string;
+      store_id: string | null;
+      store_name: string | null;
+      kpi_code: string;
+      kpi_name: string;
+      target_value: string | null;
+      actual_value: string;
+    }>(
+      `
+        SELECT
+          e.employee_id,
+          e.first_name,
+          e.last_name,
+          assignment.store_id,
+          store.store_name,
+          kd.kpi_code,
+          kd.kpi_name,
+          NULL::text AS target_value,
+          ka.actual_value::text AS actual_value
+        FROM ops.kpi_actual ka
+        INNER JOIN ops.kpi_definition kd
+          ON kd.kpi_id = ka.kpi_id
+        INNER JOIN ops.employee e
+          ON e.employee_id = ka.employee_id
+        LEFT JOIN LATERAL (
+          SELECT eah.store_id
+          FROM ops.employee_assignment_history eah
+          WHERE eah.employee_id = e.employee_id
+            AND eah.assignment_status = 'active'
+          ORDER BY eah.start_date DESC
+          LIMIT 1
+        ) assignment ON TRUE
+        LEFT JOIN ops.store store
+          ON store.store_id = assignment.store_id
+        WHERE ka.employee_id = $1::uuid
+          AND ka.scope_type = 'employee'
+          AND kd.kpi_code = ANY($2::text[])
+          AND ka.period_start = $3::date
+          AND ka.period_end = $4::date
+        ORDER BY kd.kpi_code ASC
+      `,
+      [input.employeeId, input.metricCodes, input.periodStart, input.periodEnd],
+    );
+
+    return result.rows;
+  }
+
+  async getPeerEmployeePerformanceRows(input: {
+    metricCodes: string[];
+    companyId?: string;
+    storeId?: string | null;
+    periodStart: string;
+    periodEnd: string;
+  }) {
+    const params: unknown[] = [input.metricCodes, input.periodStart, input.periodEnd];
+    const clauses = [
+      `ka.scope_type = 'employee'`,
+      `kd.kpi_code = ANY($1::text[])`,
+      `ka.period_start = $2::date`,
+      `ka.period_end = $3::date`,
+    ];
+
+    if (input.companyId) {
+      params.push(input.companyId);
+      clauses.push(`ka.company_id = $${params.length}::uuid`);
+    }
+
+    if (input.storeId) {
+      params.push(input.storeId);
+      clauses.push(`ka.store_id = $${params.length}::uuid`);
+    }
+
+    const result = await this.databaseService.query<{
+      employee_id: string;
+      store_id: string | null;
+      kpi_code: string;
+      target_value: string | null;
+      actual_value: string;
+    }>(
+      `
+        SELECT
+          ka.employee_id,
+          ka.store_id,
+          kd.kpi_code,
+          NULL::text AS target_value,
+          ka.actual_value::text AS actual_value
+        FROM ops.kpi_actual ka
+        INNER JOIN ops.kpi_definition kd
+          ON kd.kpi_id = ka.kpi_id
+        WHERE ${clauses.join(" AND ")}
+        ORDER BY ka.employee_id ASC, kd.kpi_code ASC
+      `,
+      params,
+    );
+
+    return result.rows;
+  }
+
+  async getEmployeePerformanceSnapshot(input: {
+    snapshotRunId: string;
+    employeeId: string;
+  }) {
+    const result = await this.databaseService.query<{
+      employee_id: string;
+      first_name: string;
+      last_name: string;
+      store_id: string | null;
+      store_name: string | null;
+      period_start: string;
+      period_end: string;
+      score_value: string;
+      matched_metrics: number;
+      total_metrics: number;
+      turkey_rank: number | null;
+      turkey_population: number;
+      store_rank: number | null;
+      store_population: number;
+    }>(
+      `
+        SELECT
+          eps.employee_id,
+          e.first_name,
+          e.last_name,
+          eps.store_id,
+          store.store_name,
+          eps.period_start,
+          eps.period_end,
+          eps.score_value::text AS score_value,
+          eps.matched_metrics,
+          eps.total_metrics,
+          eps.turkey_rank,
+          eps.turkey_population,
+          eps.store_rank,
+          eps.store_population
+        FROM rpt.employee_performance_snapshot eps
+        INNER JOIN ops.employee e
+          ON e.employee_id = eps.employee_id
+        LEFT JOIN ops.store store
+          ON store.store_id = eps.store_id
+        WHERE eps.snapshot_run_id = $1::uuid
+          AND eps.employee_id = $2::uuid
+        LIMIT 1
+      `,
+      [input.snapshotRunId, input.employeeId],
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  async getEmployeeKpiSnapshotRows(input: {
+    snapshotRunId: string;
+    employeeId: string;
+    metricCodes: string[];
+  }) {
+    const result = await this.databaseService.query<{
+      employee_id: string;
+      store_id: string | null;
+      kpi_code: string;
+      kpi_name: string;
+      actual_value: string;
+    }>(
+      `
+        SELECT
+          eks.employee_id,
+          eks.store_id,
+          kd.kpi_code,
+          kd.kpi_name,
+          eks.actual_value::text AS actual_value
+        FROM rpt.employee_kpi_snapshot eks
+        INNER JOIN ops.kpi_definition kd
+          ON kd.kpi_id = eks.kpi_id
+        WHERE eks.snapshot_run_id = $1::uuid
+          AND eks.employee_id = $2::uuid
+          AND kd.kpi_code = ANY($3::text[])
+        ORDER BY kd.kpi_code ASC
+      `,
+      [input.snapshotRunId, input.employeeId, input.metricCodes],
+    );
+
+    return result.rows;
+  }
+
+  async listClosedPersonnelLeaderboard(input: {
+    snapshotRunId: string;
+    companyId?: string;
+    limit: number;
+  }) {
+    const params: unknown[] = [input.snapshotRunId];
+    const clauses = [`eps.snapshot_run_id = $1::uuid`];
+
+    if (input.companyId) {
+      params.push(input.companyId);
+      clauses.push(`store.company_id = $${params.length}::uuid`);
+    }
+
+    params.push(input.limit);
+
+    const result = await this.databaseService.query<{
+      employee_id: string;
+      first_name: string;
+      last_name: string;
+      store_id: string | null;
+      store_name: string | null;
+      score_value: string;
+      turkey_rank: number | null;
+      store_rank: number | null;
+    }>(
+      `
+        SELECT
+          eps.employee_id,
+          e.first_name,
+          e.last_name,
+          eps.store_id,
+          store.store_name,
+          eps.score_value::text AS score_value,
+          eps.turkey_rank,
+          eps.store_rank
+        FROM rpt.employee_performance_snapshot eps
+        INNER JOIN ops.employee e
+          ON e.employee_id = eps.employee_id
+        LEFT JOIN ops.store store
+          ON store.store_id = eps.store_id
+        WHERE ${clauses.join(" AND ")}
+        ORDER BY eps.turkey_rank ASC NULLS LAST, eps.score_value DESC
+        LIMIT $${params.length}
+      `,
+      params,
+    );
+
+    return result.rows;
+  }
+
+  async listClosedStoreLeaderboardRows(input: {
+    snapshotRunId: string;
+    companyId?: string;
+  }) {
+    const params: unknown[] = [input.snapshotRunId];
+    const clauses = [`sks.snapshot_run_id = $1::uuid`];
+
+    if (input.companyId) {
+      params.push(input.companyId);
+      clauses.push(`store.company_id = $${params.length}::uuid`);
+    }
+
+    const result = await this.databaseService.query<{
+      store_id: string;
+      store_name: string;
+      kpi_code: string;
+      actual_value: string | null;
+    }>(
+      `
+        SELECT
+          sks.store_id,
+          store.store_name,
+          kd.kpi_code,
+          sks.actual_value::text AS actual_value
+        FROM rpt.store_kpi_snapshot sks
+        INNER JOIN ops.store store
+          ON store.store_id = sks.store_id
+        INNER JOIN ops.kpi_definition kd
+          ON kd.kpi_id = sks.kpi_id
+        WHERE ${clauses.join(" AND ")}
+      `,
+      params,
+    );
+
+    return result.rows;
   }
 }

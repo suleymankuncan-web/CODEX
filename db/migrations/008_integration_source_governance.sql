@@ -2,5 +2,17 @@ ALTER TABLE stg.integration_source
 DROP CONSTRAINT IF EXISTS integration_source_source_code_key;
 
 ALTER TABLE stg.integration_source
-ADD CONSTRAINT integration_source_source_code_entity_type_key
-UNIQUE (source_code, entity_type);
+DROP CONSTRAINT IF EXISTS integration_source_source_code_entity_type_key;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'integration_source_source_code_entity_type_key'
+    ) THEN
+        ALTER TABLE stg.integration_source
+        ADD CONSTRAINT integration_source_source_code_entity_type_key
+        UNIQUE (source_code, entity_type);
+    END IF;
+END $$;
