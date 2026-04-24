@@ -528,4 +528,86 @@ describe("Reporting read APIs", () => {
 
     await app.close();
   });
+
+  it("returns monthly closed ranking from completed daily snapshots", async () => {
+    const query = jest.fn(async (sql: string) => {
+      if (sql.includes("FROM rpt.snapshot_run") && sql.includes("period_start >= $1::date")) {
+        return {
+          rowCount: 27,
+          rows: Array.from({ length: 27 }, (_, index) => {
+            const day = String(index + 1).padStart(2, "0");
+            return {
+              snapshot_run_id: `${day}${day}${day}${day}-${day}${day}${day}-${day}${day}${day}-${day}${day}${day}-${day}${day}${day}${day}${day}${day}${day}${day}${day}${day}${day}${day}`,
+              snapshot_date: `2026-04-${day}`,
+              period_start: `2026-04-${day}`,
+              period_end: `2026-04-${day}`,
+            };
+          }),
+        };
+      }
+
+      if (sql.includes("closed_personnel_monthly_rank_rows")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              employee_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              first_name: "Ayse",
+              last_name: "Yilmaz",
+              store_id: "22222222-2222-4222-8222-222222222222",
+              store_name: "Kadikoy",
+              score_value: "88.7500",
+              days_with_performance: "25",
+              turkey_rank: 7,
+              turkey_population: 96,
+              store_rank: 1,
+              store_population: 8,
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("monthly_metric_rows")) {
+        return { rowCount: 0, rows: [] };
+      }
+
+      return { rowCount: 0, rows: [] };
+    });
+
+    const app = await createIntegrationApp({
+      databaseService: { query },
+    });
+
+    const response = await request(app.getHttpServer())
+      .get("/api/reports/leaderboards/closed?periodType=monthly&periodStart=2026-04-01&limit=10")
+      .set("x-user-id", "user-1")
+      .set("x-employee-id", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")
+      .set("x-role-codes", "STORE_PERSONNEL")
+      .set("x-store-ids", "22222222-2222-4222-8222-222222222222");
+
+    expect(response.status).toBe(200);
+    expect(response.body.source).toEqual(
+      expect.objectContaining({
+        mode: "closed",
+        periodType: "monthly",
+        state: "closed",
+        periodStart: "2026-04-01",
+        periodEnd: "2026-04-30",
+      }),
+    );
+    expect(response.body.currentEmployee.coverage).toEqual({
+      closedDaysInPeriod: 27,
+      daysWithPerformance: 25,
+      minimumRequiredDays: 3,
+      isEligibleForRanking: true,
+    });
+    expect(response.body.currentEmployee.rankings).toEqual({
+      turkeyRank: 7,
+      turkeyPopulation: 96,
+      storeRank: 1,
+      storePopulation: 8,
+    });
+
+    await app.close();
+  });
 });

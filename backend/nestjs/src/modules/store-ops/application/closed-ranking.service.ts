@@ -19,13 +19,7 @@ export class ClosedRankingService {
     const periodType = input.periodType ?? "daily";
 
     if (periodType === "monthly") {
-      return this.getEmptyResponse({
-        periodType,
-        state: "not_closed",
-        snapshotDate: null,
-        periodStart: input.periodStart ?? null,
-        periodEnd: null,
-      });
+      return this.getMonthlyClosedLeaderboard(input);
     }
 
     return this.getDailyClosedLeaderboard(input);
@@ -109,6 +103,102 @@ export class ClosedRankingService {
           periodType: "daily",
           closedDaysInPeriod: 1,
           minimumRequiredDays: 1,
+          metricRows: metricRowsByEmployee.get(row.employee_id) ?? [],
+        }),
+      ),
+    };
+  }
+
+  private async getMonthlyClosedLeaderboard(
+    input: ClosedRankingInput,
+  ): Promise<ClosedRankingSummary> {
+    const monthStart = this.resolveMonthStart(input.periodStart ?? input.snapshotDate);
+    const monthEnd = monthStart ? this.resolveMonthEnd(monthStart) : null;
+
+    if (!monthStart) {
+      return this.getEmptyResponse({
+        periodType: "monthly",
+        state: "not_closed",
+        snapshotDate: null,
+        periodStart: null,
+        periodEnd: null,
+      });
+    }
+
+    const currentEmployeeId = await this.resolveCurrentEmployeeId(input);
+    const completedRuns =
+      await this.reportingRepository.listCompletedDailySnapshotsInMonth({
+        monthStart,
+      });
+
+    if (completedRuns.length === 0) {
+      return this.getEmptyResponse({
+        periodType: "monthly",
+        state: "not_closed",
+        snapshotDate: null,
+        periodStart: monthStart,
+        periodEnd: monthEnd,
+      });
+    }
+
+    const limit = input.limit ?? 10;
+    const companyId = input.companyIds[0] ?? undefined;
+    const storeId = this.resolveStoreFilter(input);
+    const snapshotRunIds = completedRuns.map((run) => run.snapshot_run_id);
+    const personnelRows =
+      await this.reportingRepository.listClosedMonthlyPersonnelAggregateRows({
+        snapshotRunIds,
+        companyId,
+        storeId,
+        limit: Math.max(limit, 1000),
+      });
+    const currentRow =
+      currentEmployeeId !== null
+        ? personnelRows.find((row) => row.employee_id === currentEmployeeId) ?? null
+        : null;
+    const employeeIds = this.uniqueEmployeeIds([
+      ...personnelRows.slice(0, limit).map((row) => row.employee_id),
+      currentRow?.employee_id ?? null,
+    ]);
+    const metricRows =
+      employeeIds.length > 0
+        ? await this.reportingRepository.listClosedMonthlyMetricRankRows({
+            snapshotRunIds,
+            employeeIds,
+            storeId,
+          })
+        : [];
+    const metricRowsByEmployee = this.groupMetricRowsByEmployee(metricRows);
+    const state: ClosedRankingState =
+      personnelRows.length > 0 || currentRow ? "closed" : "no_data";
+    const closedDaysInPeriod = completedRuns.length;
+    const minimumRequiredDays = 3;
+
+    return {
+      source: {
+        mode: "closed",
+        periodType: "monthly",
+        state,
+        snapshotRunId: null,
+        snapshotDate: completedRuns[completedRuns.length - 1]?.snapshot_date ?? null,
+        periodStart: monthStart,
+        periodEnd: monthEnd,
+      },
+      currentEmployee: currentRow
+        ? this.mapEmployeeRow({
+            row: currentRow,
+            periodType: "monthly",
+            closedDaysInPeriod,
+            minimumRequiredDays,
+            metricRows: metricRowsByEmployee.get(currentRow.employee_id) ?? [],
+          })
+        : null,
+      personnelTop: personnelRows.slice(0, limit).map((row) =>
+        this.mapEmployeeRow({
+          row,
+          periodType: "monthly",
+          closedDaysInPeriod,
+          minimumRequiredDays,
           metricRows: metricRowsByEmployee.get(row.employee_id) ?? [],
         }),
       ),
@@ -216,6 +306,21 @@ export class ClosedRankingService {
 
   private uniqueEmployeeIds(values: Array<string | null>) {
     return [...new Set(values.filter((value): value is string => Boolean(value)))];
+  }
+
+  private resolveMonthStart(value?: string) {
+    if (!value) {
+      return null;
+    }
+
+    return `${value.slice(0, 7)}-01`;
+  }
+
+  private resolveMonthEnd(monthStart: string) {
+    const year = Number(monthStart.slice(0, 4));
+    const month = Number(monthStart.slice(5, 7));
+    const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    return `${monthStart.slice(0, 7)}-${String(lastDay).padStart(2, "0")}`;
   }
 
   private getEmptyResponse(input: {
