@@ -8,6 +8,13 @@
 - Infra stack: `infra/docker-compose.live-e2e.yml`
 - Env örneği: `backend/nestjs/.env.live-e2e.example`
 - Live test runner: `backend/nestjs/test/live/live-e2e.ts`
+- Reference seed: `db/seeds/001_reference_seed.sql`
+
+## Demo Self-Performance Seed
+- `db/seeds/001_reference_seed.sql` includes the local demo region, stores, employees, assignments, and April 2026 personnel KPI actuals used by `/store/me`.
+- Keycloak local users in `infra/keycloak/store-ops-realm.json` and `infra/scripts/setup-keycloak.ps1` must stay aligned with these seeded `DEMO-EMP-*` external employee refs and demo store IDs.
+- `backend/nestjs/src/modules/store-ops/demo-performance-seed-contract.spec.ts` protects this alignment.
+- Expected local smoke user: `store.personnel` opens `/store/me` with `DEMO-EMP-202` in store `00000000-0000-0000-0000-000000000100`.
 
 ## Ön Koşullar
 - Docker Desktop kurulu olmalı.
@@ -69,7 +76,7 @@ Set-Location ..\..
 
 ## Testin Doğruladığı Akış
 - PostgreSQL bağlantısı açılır.
-- `db/schema.sql` ve `db/jobs/generate_snapshots.sql` uygulanır.
+- `db/schema.sql`, `db/seeds/001_reference_seed.sql` ve `db/jobs/generate_snapshots.sql` uygulanır.
 - Worker context ayağa kalkar.
 - API app ayağa kalkar.
 - `POST /api/snapshots/runs` çağrısı ile snapshot enqueue edilir.

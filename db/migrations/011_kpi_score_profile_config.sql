@@ -79,16 +79,16 @@ VALUES
         {
           "code": "TARGET_ACHIEVEMENT",
           "label": "Hedef gerceklestirme orani",
-          "weightPercent": 0,
+          "weightPercent": 40,
           "ownerRole": "STORE_PERSONNEL",
           "scoreBehavior": "warning_first",
           "aliases": ["STORE_SALES", "SALES_TARGET_ACHIEVEMENT"],
-          "notes": "Weight still needs a business decision, but the metric belongs in the baseline personnel score."
+          "notes": "Primary personnel score driver and strongest coaching signal."
         },
         {
           "code": "ATV",
           "label": "ATV",
-          "weightPercent": 0,
+          "weightPercent": 30,
           "ownerRole": "STORE_PERSONNEL",
           "scoreBehavior": "warning_first",
           "notes": "Useful for coaching and should not inherit store-level weighting by default."
@@ -96,7 +96,7 @@ VALUES
         {
           "code": "UPT",
           "label": "UPT",
-          "weightPercent": 0,
+          "weightPercent": 30,
           "ownerRole": "STORE_PERSONNEL",
           "scoreBehavior": "warning_first",
           "notes": "Belongs in the personnel profile even before task triggers are enabled."

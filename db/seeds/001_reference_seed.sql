@@ -1,13 +1,21 @@
 INSERT INTO ops.company (company_id, company_code, company_name)
 VALUES
     ('00000000-0000-0000-0000-000000000001', 'ACME', 'ACME Retail')
-ON CONFLICT (company_code) DO NOTHING;
+ON CONFLICT DO NOTHING;
 
 INSERT INTO ops.region (region_id, company_id, region_code, region_name)
 VALUES
     ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'MARMARA', 'Marmara'),
     ('10000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000001', 'AEGEAN', 'Aegean')
 ON CONFLICT (company_id, region_code) DO NOTHING;
+
+INSERT INTO ops.region (region_id, company_id, region_code, region_name)
+VALUES
+    ('00000000-0000-0000-0000-000000000010', '00000000-0000-0000-0000-000000000001', 'IST', 'Istanbul Demo Region')
+ON CONFLICT (company_id, region_code) DO UPDATE
+SET
+    region_name = EXCLUDED.region_name,
+    status = 'active';
 
 INSERT INTO ops.store (store_id, company_id, region_id, store_code, store_name, store_type, open_date)
 VALUES
@@ -16,6 +24,18 @@ VALUES
     ('20000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000002', 'IZM-001', 'Izmir Karsiyaka', 'standard', DATE '2023-05-01')
 ON CONFLICT (store_code) DO NOTHING;
 
+INSERT INTO ops.store (store_id, company_id, region_id, store_code, store_name, store_type, open_date, timezone)
+VALUES
+    ('00000000-0000-0000-0000-000000000100', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000010', 'STORE100', 'IstinyePark Demo Store', 'flagship', DATE '2026-04-20', 'Europe/Istanbul'),
+    ('00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000010', 'DEMO-101', 'Demo Store 101', 'standard', DATE '2026-01-01', 'Europe/Istanbul')
+ON CONFLICT (store_code) DO UPDATE
+SET
+    region_id = EXCLUDED.region_id,
+    store_name = EXCLUDED.store_name,
+    store_type = EXCLUDED.store_type,
+    status = 'active',
+    timezone = EXCLUDED.timezone;
+
 INSERT INTO ops.position (position_id, company_id, position_code, position_name, job_family, is_managerial)
 VALUES
     ('30000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'STORE_MANAGER', 'Store Manager', 'operations', TRUE),
@@ -23,6 +43,16 @@ VALUES
     ('30000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000001', 'SALES_ASSOCIATE', 'Sales Associate', 'operations', FALSE),
     ('30000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000001', 'AUDITOR', 'Field Auditor', 'audit', FALSE)
 ON CONFLICT (company_id, position_code) DO NOTHING;
+
+INSERT INTO ops.position (position_id, company_id, position_code, position_name, job_family, is_managerial)
+VALUES
+    ('00000000-0000-0000-0000-000000000301', '00000000-0000-0000-0000-000000000001', 'DEMO_STORE_MANAGER', 'Demo Store Manager', 'operations', TRUE),
+    ('00000000-0000-0000-0000-000000000302', '00000000-0000-0000-0000-000000000001', 'DEMO_STORE_PERSONNEL', 'Demo Store Personnel', 'operations', FALSE)
+ON CONFLICT (company_id, position_code) DO UPDATE
+SET
+    position_name = EXCLUDED.position_name,
+    job_family = EXCLUDED.job_family,
+    is_managerial = EXCLUDED.is_managerial;
 
 INSERT INTO ops.employee (
     employee_id, company_id, external_employee_ref, first_name, last_name, hire_date, employment_status, employment_type
@@ -33,6 +63,22 @@ VALUES
     ('40000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000001', 'EMP-003', 'Zeynep', 'Aydin', DATE '2023-04-15', 'active', 'part_time')
 ON CONFLICT DO NOTHING;
 
+INSERT INTO ops.employee (
+    employee_id, company_id, external_employee_ref, first_name, last_name, hire_date, employment_status, employment_type
+)
+VALUES
+    ('00000000-0000-0000-0000-000000000201', '00000000-0000-0000-0000-000000000001', 'DEMO-EMP-201', 'Store', 'Manager', DATE '2025-01-01', 'active', 'full_time'),
+    ('00000000-0000-0000-0000-000000000202', '00000000-0000-0000-0000-000000000001', 'DEMO-EMP-202', 'Store', 'Personnel', DATE '2025-02-01', 'active', 'full_time'),
+    ('00000000-0000-0000-0000-000000000203', '00000000-0000-0000-0000-000000000001', 'DEMO-EMP-203', 'Second', 'Associate', DATE '2025-03-01', 'active', 'full_time'),
+    ('00000000-0000-0000-0000-000000000204', '00000000-0000-0000-0000-000000000001', 'DEMO-EMP-204', 'Third', 'Associate', DATE '2025-04-01', 'active', 'full_time')
+ON CONFLICT (employee_id) DO UPDATE
+SET
+    external_employee_ref = EXCLUDED.external_employee_ref,
+    first_name = EXCLUDED.first_name,
+    last_name = EXCLUDED.last_name,
+    employment_status = 'active',
+    employment_type = EXCLUDED.employment_type;
+
 INSERT INTO ops.employee_assignment_history (
     assignment_id, employee_id, store_id, region_id, position_id, manager_employee_id, start_date, is_primary_assignment, fte_ratio, assignment_status
 )
@@ -41,6 +87,24 @@ VALUES
     ('50000000-0000-0000-0000-000000000002', '40000000-0000-0000-0000-000000000002', '20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000002', '40000000-0000-0000-0000-000000000001', DATE '2023-02-10', TRUE, 1.00, 'active'),
     ('50000000-0000-0000-0000-000000000003', '40000000-0000-0000-0000-000000000003', '20000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000003', '40000000-0000-0000-0000-000000000002', DATE '2023-04-15', TRUE, 0.50, 'active')
 ON CONFLICT DO NOTHING;
+
+INSERT INTO ops.employee_assignment_history (
+    assignment_id, employee_id, store_id, region_id, position_id, manager_employee_id, start_date, is_primary_assignment, fte_ratio, assignment_status
+)
+VALUES
+    ('00000000-0000-0000-0000-000000000401', '00000000-0000-0000-0000-000000000201', '00000000-0000-0000-0000-000000000100', '00000000-0000-0000-0000-000000000010', '00000000-0000-0000-0000-000000000301', NULL, DATE '2026-01-01', TRUE, 1.00, 'active'),
+    ('00000000-0000-0000-0000-000000000402', '00000000-0000-0000-0000-000000000202', '00000000-0000-0000-0000-000000000100', '00000000-0000-0000-0000-000000000010', '00000000-0000-0000-0000-000000000302', '00000000-0000-0000-0000-000000000201', DATE '2026-01-01', TRUE, 1.00, 'active'),
+    ('00000000-0000-0000-0000-000000000403', '00000000-0000-0000-0000-000000000203', '00000000-0000-0000-0000-000000000100', '00000000-0000-0000-0000-000000000010', '00000000-0000-0000-0000-000000000302', '00000000-0000-0000-0000-000000000201', DATE '2026-01-01', TRUE, 1.00, 'active'),
+    ('00000000-0000-0000-0000-000000000404', '00000000-0000-0000-0000-000000000204', '00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000010', '00000000-0000-0000-0000-000000000302', '00000000-0000-0000-0000-000000000201', DATE '2026-01-01', TRUE, 1.00, 'active')
+ON CONFLICT (assignment_id) DO UPDATE
+SET
+    store_id = EXCLUDED.store_id,
+    region_id = EXCLUDED.region_id,
+    position_id = EXCLUDED.position_id,
+    manager_employee_id = EXCLUDED.manager_employee_id,
+    end_date = NULL,
+    is_primary_assignment = TRUE,
+    assignment_status = 'active';
 
 INSERT INTO ops.role (role_id, role_code, role_name, role_scope_type, description, is_system_role)
 VALUES
@@ -151,6 +215,41 @@ VALUES
     ('b0000000-0000-0000-0000-000000000015', 'BM_CHECKLIST', 'BM Checklist', 'percentage', 'ratio', 'avg', 'store', NULL, 'higher_is_better', TRUE),
     ('b0000000-0000-0000-0000-000000000016', 'VM_CHECKLIST', 'VM Checklist', 'percentage', 'ratio', 'avg', 'store', NULL, 'higher_is_better', TRUE)
 ON CONFLICT (kpi_code) DO NOTHING;
+
+WITH demo_personnel_kpi_actual (employee_id, store_id, kpi_code, actual_value) AS (
+    VALUES
+        ('00000000-0000-0000-0000-000000000201'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'TARGET_ACHIEVEMENT', 94.0000),
+        ('00000000-0000-0000-0000-000000000201'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'ATV', 88.0000),
+        ('00000000-0000-0000-0000-000000000201'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'UPT', 91.0000),
+        ('00000000-0000-0000-0000-000000000202'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'TARGET_ACHIEVEMENT', 98.0000),
+        ('00000000-0000-0000-0000-000000000202'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'ATV', 96.0000),
+        ('00000000-0000-0000-0000-000000000202'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'UPT', 95.0000),
+        ('00000000-0000-0000-0000-000000000203'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'TARGET_ACHIEVEMENT', 86.0000),
+        ('00000000-0000-0000-0000-000000000203'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'ATV', 84.0000),
+        ('00000000-0000-0000-0000-000000000203'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'UPT', 82.0000),
+        ('00000000-0000-0000-0000-000000000204'::uuid, '00000000-0000-0000-0000-000000000101'::uuid, 'TARGET_ACHIEVEMENT', 99.0000),
+        ('00000000-0000-0000-0000-000000000204'::uuid, '00000000-0000-0000-0000-000000000101'::uuid, 'ATV', 91.0000),
+        ('00000000-0000-0000-0000-000000000204'::uuid, '00000000-0000-0000-0000-000000000101'::uuid, 'UPT', 90.0000)
+)
+INSERT INTO ops.kpi_actual (
+    kpi_id, scope_type, company_id, region_id, store_id, employee_id,
+    period_type, period_start, period_end, actual_value, source_type
+)
+SELECT
+    definition.kpi_id,
+    'employee',
+    '00000000-0000-0000-0000-000000000001',
+    '00000000-0000-0000-0000-000000000010',
+    actual.store_id,
+    actual.employee_id,
+    'monthly',
+    DATE '2026-04-01',
+    DATE '2026-04-30',
+    actual.actual_value,
+    'demo_seed'
+FROM demo_personnel_kpi_actual actual
+JOIN ops.kpi_definition definition ON definition.kpi_code = actual.kpi_code
+ON CONFLICT DO NOTHING;
 
 INSERT INTO ops.kpi_target (
     kpi_target_id, kpi_id, scope_type, company_id, store_id, period_type, period_start, period_end, target_value, threshold_green, threshold_yellow, threshold_red

@@ -117,17 +117,17 @@ export const personnelKpiScoreProfile: KpiScoreProfile = {
     {
       code: "TARGET_ACHIEVEMENT",
       label: "Hedef gerceklestirme orani",
-      weightPercent: 0,
+      weightPercent: 40,
       ownerRole: "STORE_PERSONNEL",
       scoreBehavior: "warning_first",
       aliases: ["STORE_SALES", "SALES_TARGET_ACHIEVEMENT"],
       notes:
-        "Weight still needs a business decision, but the metric belongs in the baseline personnel score.",
+        "Primary personnel score driver and strongest coaching signal.",
     },
     {
       code: "ATV",
       label: "ATV",
-      weightPercent: 0,
+      weightPercent: 30,
       ownerRole: "STORE_PERSONNEL",
       scoreBehavior: "warning_first",
       notes:
@@ -136,7 +136,7 @@ export const personnelKpiScoreProfile: KpiScoreProfile = {
     {
       code: "UPT",
       label: "UPT",
-      weightPercent: 0,
+      weightPercent: 30,
       ownerRole: "STORE_PERSONNEL",
       scoreBehavior: "warning_first",
       notes:

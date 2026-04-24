@@ -568,6 +568,16 @@ Backend/frontend guvenlik modeli ana hatta ayrildi; kalici assignment yonetimi, 
 - Browser smoke gecti: `store.personnel` ile login sonrasi `/store/me` acildi; hata state'i yok, `Store Personnel`, Turkey ranking ve store ranking gorunuyor.
 - Backend release check gecti: `npm.cmd run check:release` -> lint, 22 suite / 159 test, build ve runtime audit (`found 0 vulnerabilities`).
 
+## Demo Performance Seed Contract
+
+24 Nisan 2026 itibariyla `/store/me` demo verisi seed ve contract test seviyesine tasindi.
+
+- `db/seeds/001_reference_seed.sql` artik demo region/store/personel assignment ve Nisan 2026 personel KPI actual verisini iceriyor.
+- `store.personnel` icin `DEMO-EMP-202` ve `00000000-0000-0000-0000-000000000100` fresh kurulumda da veri bulacak.
+- `personnel_profile` default agirliklari kalici hale getirildi: TARGET_ACHIEVEMENT 40, ATV 30, UPT 30.
+- `backend/nestjs/src/modules/store-ops/demo-performance-seed-contract.spec.ts` Keycloak fixture, reference seed ve personel score defaultlarini birlikte koruyor.
+- `docs/backend/live-e2e-runbook.md` reference seed ve `/store/me` demo smoke baglantisini acikca not ediyor.
+
 ## Son Frontend Release Check
 
 24 Nisan 2026 itibariyla aktif frontend klasorunde release check kapisi eklendi.

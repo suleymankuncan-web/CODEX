@@ -1,0 +1,97 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { personnelKpiScoreProfile } from "./application/kpi-config.contract";
+
+const projectRoot = join(process.cwd(), "..", "..");
+const seedSql = readFileSync(join(projectRoot, "db", "seeds", "001_reference_seed.sql"), "utf8");
+const keycloakRealm = JSON.parse(
+  readFileSync(join(projectRoot, "infra", "keycloak", "store-ops-realm.json"), "utf8"),
+) as {
+  users?: Array<{
+    username?: string;
+    attributes?: Record<string, string[]>;
+  }>;
+};
+
+const seededDemoStoreIds = [
+  "00000000-0000-0000-0000-000000000100",
+  "00000000-0000-0000-0000-000000000101",
+];
+const seededDemoEmployees = [
+  {
+    employeeId: "00000000-0000-0000-0000-000000000201",
+    externalRef: "DEMO-EMP-201",
+  },
+  {
+    employeeId: "00000000-0000-0000-0000-000000000202",
+    externalRef: "DEMO-EMP-202",
+  },
+  {
+    employeeId: "00000000-0000-0000-0000-000000000203",
+    externalRef: "DEMO-EMP-203",
+  },
+  {
+    employeeId: "00000000-0000-0000-0000-000000000204",
+    externalRef: "DEMO-EMP-204",
+  },
+];
+const seededPersonnelKpiCodes = ["TARGET_ACHIEVEMENT", "ATV", "UPT"];
+const expectedPersonnelWeights = new Map([
+  ["TARGET_ACHIEVEMENT", 40],
+  ["ATV", 30],
+  ["UPT", 30],
+]);
+
+describe("demo performance seed contract", () => {
+  it("keeps Keycloak demo users backed by seeded employees and stores", () => {
+    for (const username of ["store.manager", "store.personnel", "region.manager", "admin.operator"]) {
+      const user = keycloakRealm.users?.find((candidate) => candidate.username === username);
+
+      expect(user?.attributes?.employee_id?.[0]).toBeDefined();
+
+      const employeeRef = user?.attributes?.employee_id?.[0] ?? "";
+      const scopedStoreIds = [
+        ...(user?.attributes?.store_ids ?? []),
+        ...(user?.attributes?.read_store_ids ?? []),
+        ...(user?.attributes?.assigned_store_ids ?? []),
+      ];
+
+      expect(seedSql).toContain(employeeRef);
+
+      for (const storeId of scopedStoreIds) {
+        expect(seedSql).toContain(storeId);
+      }
+    }
+  });
+
+  it("seeds the monthly personnel KPI rows required by /store/me smoke checks", () => {
+    for (const storeId of seededDemoStoreIds) {
+      expect(seedSql).toContain(storeId);
+    }
+
+    for (const employee of seededDemoEmployees) {
+      expect(seedSql).toContain(employee.employeeId);
+      expect(seedSql).toContain(employee.externalRef);
+    }
+
+    for (const kpiCode of seededPersonnelKpiCodes) {
+      expect(seedSql).toContain(kpiCode);
+    }
+
+    expect(seedSql).toContain("demo_seed");
+    expect(seedSql).toContain("DATE '2026-04-01'");
+    expect(seedSql).toContain("DATE '2026-04-30'");
+  });
+
+  it("keeps personnel scoring defaults aligned with the demo self-performance surface", () => {
+    const weights = new Map(
+      personnelKpiScoreProfile.metrics.map((metric) => [metric.code, metric.weightPercent]),
+    );
+
+    for (const [code, expectedWeight] of expectedPersonnelWeights) {
+      expect(weights.get(code)).toBe(expectedWeight);
+    }
+
+    expect([...weights.values()].reduce((sum, weight) => sum + weight, 0)).toBe(100);
+  });
+});
