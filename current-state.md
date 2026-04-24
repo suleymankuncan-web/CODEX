@@ -507,6 +507,23 @@ Backend/frontend guvenlik modeli ana hatta ayrildi; kalici assignment yonetimi, 
 - Feature backlog icine `UI Localization TR/EN` captured/P1 olarak eklendi.
 - Project guardrails icine localization deliberate-change kurali eklendi.
 
+## Son Daily Closure Ranking Karar Notu
+
+24 Nisan 2026 itibariyla daily/monthly closed ranking stratejisi roportajla netlestirildi ve plan hafizasina eklendi.
+
+- Yeni karar notu: `docs/plans/daily-closure-ranking-strategy.md`.
+- Ilk hedef kullanicilar: `STORE_PERSONNEL + STORE_MANAGER`.
+- Zaman kirilimi: gunluk + aylik.
+- Kullanici kapanmis gecmis gun/ay secebilir.
+- Ranking kapsami: magaza ici + Turkiye geneli.
+- Ana siralama: mevcut agirlikli total score.
+- Detay siralama: UPT, ATV, hedef gerceklesme, net satis gibi KPI'larda magaza ici + Turkiye geneli mini-rank.
+- Aylik ranking: ay bitmeden, sadece kapanmis gunlerden month-to-date hesaplanir.
+- Resmi aylik ranking icin minimum `3` kapali performans gunu gerekir.
+- Eksik performans gunu `0` puan sayilmaz; hesap disi kalir.
+- Aylik satirlarda data coverage gosterilir: `daysWithPerformance / closedDaysInPeriod`, ornek `25/27 days`.
+- Bolge ligleri, turnuva ve meydan okuma fikri ileride ayri `challenge / league / tournament` modulu olarak ele alinacak.
+
 ## Son Frontend Release Check
 
 24 Nisan 2026 itibariyla aktif frontend klasorunde release check kapisi eklendi.
@@ -568,6 +585,7 @@ Planlar:
 - `docs/plans/request-intake-and-decision-policy.md`
 - `docs/plans/project-stability-guardrails.md`
 - `docs/plans/ui-localization-strategy.md`
+- `docs/plans/daily-closure-ranking-strategy.md`
 
 ## Devam Komutu
 

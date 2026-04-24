@@ -196,16 +196,25 @@ Exit criteria:
 Goal:
 - separate live operational state from historical truth
 
+Strategy:
+- [daily-closure-ranking-strategy.md](./daily-closure-ranking-strategy.md)
+
 Do:
 - end-of-day closure job
 - closed daily KPI state
 - historical ranking reads from closed data, not live rows
+- store and Turkey-wide closed ranking for `STORE_PERSONNEL` and `STORE_MANAGER`
+- KPI-level mini ranks for UPT, ATV, target achievement, net sales, and similar metrics
+- monthly month-to-date ranking from closed days only
+- data coverage labels such as `25/27 days`
 
 Exit criteria:
 - the same user can see:
   - current live leaderboard
   - yesterday's closed leaderboard
   - monthly closed leaderboard
+- missing daily data is not treated as zero
+- official monthly ranking requires minimum closed performance day coverage
 
 ### Roadmap 3. Productize Score Meaning
 Goal:
@@ -229,6 +238,7 @@ Do:
 - store ranking
 - segment-ready ranking model
 - eligibility rules kept config-driven
+- region league/tournament concepts are kept separate from plain ranking
 
 Exit criteria:
 - store personnel can trust `/store/me` as a real performance and ranking surface

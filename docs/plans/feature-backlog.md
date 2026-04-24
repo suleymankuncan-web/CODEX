@@ -89,7 +89,24 @@ Use it before implementation so new ideas do not get scattered across chat histo
 - Reporting UI: later, in store-facing form
 - Risks / Notes: do not let store features quietly accumulate under `/admin`
 
-### 1B. UI Localization TR/EN
+### 1B. Daily Closure Ranking
+- Status: `planned`
+- Priority: `P1`
+- Business goal: turn live KPI/performance data into trustworthy closed daily/monthly ranking
+- User/operator need: personnel and store managers need reliable historical rank, KPI mini-ranks, and data coverage such as `25/27 days`
+- Owning bounded context: snapshot/reporting read model with store-user surfaces
+- Related modules: `snapshot`, `store-ops reporting`, `kpi`, `auth/scope`, future `challenge / league / tournament`
+- `ops`: read source state and assignments
+- `stg`: no direct first-phase writes
+- `rpt`: closed daily/monthly ranking read models
+- `audit`: closure/recompute traceability
+- API: required for closed daily/monthly ranking reads
+- Admin UI: not first audience
+- Reporting UI: store shell first, admin/region later
+- Risks / Notes: missing data is not zero; official monthly ranking requires at least 3 closed performance days
+- Reference: [daily-closure-ranking-strategy.md](./daily-closure-ranking-strategy.md)
+
+### 1C. UI Localization TR/EN
 - Status: `captured`
 - Priority: `P1`
 - Business goal: support a fully Turkish default UI and optional English UI without scattering hard-coded copy
