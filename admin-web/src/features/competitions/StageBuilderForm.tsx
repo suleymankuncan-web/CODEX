@@ -26,7 +26,9 @@ import {
 } from './api'
 import {
   buildStagePackagePayload,
+  createStagePackageStageDrafts,
   stagePackageOptions,
+  type StagePackageStageDraft,
 } from './stage-packages'
 import {
   buildStagePresetDraft,
@@ -82,6 +84,7 @@ type StagePackageDraft = {
   packageCode: CompetitionStagePackageCode
   firstTemplateId: string
   secondTemplateId: string
+  stageDrafts: StagePackageStageDraft[]
 }
 
 type StageBuilderFormProps = {
@@ -107,6 +110,22 @@ function createInitialDraft(input: { startsOn: string; endsOn: string }): StageD
       { teamCode: 'TEAM_A', teamName: 'Team A', storeIds: [] },
       { teamCode: 'TEAM_B', teamName: 'Team B', storeIds: [] },
     ],
+  }
+}
+
+function createInitialStagePackageDraft(input: {
+  startsOn: string
+  endsOn: string
+}): StagePackageDraft {
+  return {
+    packageCode: 'league_then_final',
+    firstTemplateId: '',
+    secondTemplateId: '',
+    stageDrafts: createStagePackageStageDrafts({
+      competitionStartsOn: input.startsOn,
+      competitionEndsOn: input.endsOn,
+      packageCode: 'league_then_final',
+    }),
   }
 }
 
@@ -208,6 +227,34 @@ function validateStagePackageDraft(
     return 'Stage package templates need at least one store.'
   }
 
+  if (draft.stageDrafts.length < 2) {
+    return 'Stage package needs at least two stage drafts.'
+  }
+
+  const stageCodes = draft.stageDrafts.map((stage) => stage.stageCode.trim())
+  if (new Set(stageCodes).size !== stageCodes.length) {
+    return 'Stage package stage codes must be unique.'
+  }
+
+  const invalidStage = draft.stageDrafts.find((stage) => {
+    const stageOrder = Number(stage.stageOrder)
+
+    return (
+      !stage.stageCode.trim() ||
+      !codePattern.test(stage.stageCode) ||
+      !stage.stageName.trim() ||
+      !Number.isInteger(stageOrder) ||
+      stageOrder < 1 ||
+      !stage.startsOn ||
+      !stage.endsOn ||
+      stage.endsOn < stage.startsOn
+    )
+  })
+
+  if (invalidStage) {
+    return 'Every package stage needs a valid code, name, order, and date range.'
+  }
+
   return null
 }
 
@@ -244,11 +291,12 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
   const [draft, setDraft] = useState(() =>
     createInitialDraft({ startsOn: input.competitionStartsOn, endsOn: input.competitionEndsOn }),
   )
-  const [stagePackageDraft, setStagePackageDraft] = useState<StagePackageDraft>({
-    packageCode: 'league_then_final',
-    firstTemplateId: '',
-    secondTemplateId: '',
-  })
+  const [stagePackageDraft, setStagePackageDraft] = useState(() =>
+    createInitialStagePackageDraft({
+      startsOn: input.competitionStartsOn,
+      endsOn: input.competitionEndsOn,
+    }),
+  )
   const [templateDraft, setTemplateDraft] = useState(createInitialTemplateDraft)
   const [feedback, setFeedback] = useState<string | null>(null)
   const [stagePackageFeedback, setStagePackageFeedback] = useState<string | null>(null)
@@ -381,7 +429,37 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
 
   function updateStagePackageDraft(field: keyof StagePackageDraft, value: string) {
     setStagePackageFeedback(null)
-    setStagePackageDraft((current) => ({ ...current, [field]: value }))
+    setStagePackageDraft((current) => {
+      if (field === 'packageCode') {
+        const packageCode = value as CompetitionStagePackageCode
+
+        return {
+          ...current,
+          packageCode,
+          stageDrafts: createStagePackageStageDrafts({
+            competitionStartsOn: input.competitionStartsOn,
+            competitionEndsOn: input.competitionEndsOn,
+            packageCode,
+          }),
+        }
+      }
+
+      return { ...current, [field]: value }
+    })
+  }
+
+  function updateStagePackageStage(
+    stageIndex: number,
+    field: keyof StagePackageStageDraft,
+    value: string,
+  ) {
+    setStagePackageFeedback(null)
+    setStagePackageDraft((current) => ({
+      ...current,
+      stageDrafts: current.stageDrafts.map((stage, currentIndex) =>
+        currentIndex === stageIndex ? { ...stage, [field]: value } : stage,
+      ),
+    }))
   }
 
   function getSelectedStagePackageTemplates() {
@@ -490,9 +568,8 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
     if (nextValidation) return
 
     const payload = buildStagePackagePayload({
-      competitionStartsOn: input.competitionStartsOn,
-      competitionEndsOn: input.competitionEndsOn,
       packageCode: stagePackageDraft.packageCode,
+      stageDrafts: stagePackageDraft.stageDrafts,
       templates: getSelectedStagePackageTemplates(),
     })
 
@@ -657,6 +734,7 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
         templates={templates}
         validationMessage={stagePackageValidationMessage}
         onSubmit={submitStagePackage}
+        onUpdateStage={updateStagePackageStage}
         onUpdate={updateStagePackageDraft}
       />
 
@@ -751,6 +829,7 @@ function StagePackageBuilderSection(input: {
   templates: CompetitionTeamTemplate[]
   validationMessage: string | null
   onSubmit: () => void
+  onUpdateStage: (stageIndex: number, field: keyof StagePackageStageDraft, value: string) => void
   onUpdate: (field: keyof StagePackageDraft, value: string) => void
 }) {
   return (
@@ -812,6 +891,86 @@ function StagePackageBuilderSection(input: {
       {input.validationMessage ? (
         <p className="validation-copy">{input.validationMessage}</p>
       ) : null}
+
+      <div className="stacked-table">
+        {input.draft.stageDrafts.map((stageDraft, stageIndex) => (
+          <article className="stacked-row stage-package-preview-stage" key={stageDraft.stagePresetCode}>
+            <div className="stacked-row-head">
+              <div>
+                <strong>{`Package stage ${stageIndex + 1}`}</strong>
+                <p className="queue-subtitle">{formatState(stageDraft.stagePresetCode)}</p>
+              </div>
+              <StatusPill tone="accent">{formatState(stageDraft.stageType)}</StatusPill>
+            </div>
+            <div className="form-grid">
+              <label className="field-block">
+                <span>{`Package stage ${stageIndex + 1} code`}</span>
+                <input
+                  value={stageDraft.stageCode}
+                  onChange={(event) =>
+                    input.onUpdateStage(stageIndex, 'stageCode', normalizeCode(event.target.value))
+                  }
+                />
+              </label>
+              <label className="field-block">
+                <span>{`Package stage ${stageIndex + 1} name`}</span>
+                <input
+                  value={stageDraft.stageName}
+                  onChange={(event) =>
+                    input.onUpdateStage(stageIndex, 'stageName', event.target.value)
+                  }
+                />
+              </label>
+              <label className="field-block">
+                <span>{`Package stage ${stageIndex + 1} order`}</span>
+                <input
+                  min="1"
+                  type="number"
+                  value={stageDraft.stageOrder}
+                  onChange={(event) =>
+                    input.onUpdateStage(stageIndex, 'stageOrder', event.target.value)
+                  }
+                />
+              </label>
+              <label className="field-block">
+                <span>{`Package stage ${stageIndex + 1} type`}</span>
+                <select
+                  value={stageDraft.stageType}
+                  onChange={(event) =>
+                    input.onUpdateStage(stageIndex, 'stageType', event.target.value)
+                  }
+                >
+                  {stageTypeOptions.map((stageType) => (
+                    <option key={stageType} value={stageType}>
+                      {formatState(stageType)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field-block">
+                <span>{`Package stage ${stageIndex + 1} starts`}</span>
+                <input
+                  type="date"
+                  value={stageDraft.startsOn}
+                  onChange={(event) =>
+                    input.onUpdateStage(stageIndex, 'startsOn', event.target.value)
+                  }
+                />
+              </label>
+              <label className="field-block">
+                <span>{`Package stage ${stageIndex + 1} ends`}</span>
+                <input
+                  type="date"
+                  value={stageDraft.endsOn}
+                  onChange={(event) =>
+                    input.onUpdateStage(stageIndex, 'endsOn', event.target.value)
+                  }
+                />
+              </label>
+            </div>
+          </article>
+        ))}
+      </div>
 
       <div className="action-cluster">
         <button

@@ -147,6 +147,10 @@ test('admin can create a league then final stage package from templates', async 
   await page.getByLabel('Stage package').selectOption('league_then_final')
   await page.getByLabel('Package team 1 template').selectOption(templateId)
   await page.getByLabel('Package team 2 template').selectOption(secondTemplateId)
+  await expect(page.getByLabel('Package stage 1 code')).toHaveValue('REGION_LEAGUE')
+  await expect(page.getByLabel('Package stage 2 code')).toHaveValue('FINAL_SHOWDOWN')
+  await page.getByLabel('Package stage 2 name').fill('Marmara Final Night')
+  await page.getByLabel('Package stage 2 starts').fill('2026-04-23')
   await page.getByRole('button', { name: 'Create stage package' }).click()
 
   await expect(page.getByText('Competition stage package created')).toBeVisible()
@@ -179,10 +183,10 @@ test('admin can create a league then final stage package from templates', async 
       {
         stagePresetCode: 'final_showdown',
         stageCode: 'FINAL_SHOWDOWN',
-        stageName: 'Final Showdown',
+        stageName: 'Marmara Final Night',
         stageOrder: 2,
         stageType: 'final',
-        startsOn: '2026-04-24',
+        startsOn: '2026-04-23',
         endsOn: '2026-04-24',
       },
     ],

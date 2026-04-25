@@ -1,4 +1,5 @@
 import type {
+  CompetitionStageSummary,
   CompetitionStagePackageCode,
   CompetitionTeamTemplate,
   CreateCompetitionStagePackagePayload,
@@ -11,6 +12,16 @@ export type StagePackageOption = {
   presetCodes: StagePresetCode[]
 }
 
+export type StagePackageStageDraft = {
+  stagePresetCode: StagePresetCode
+  stageCode: string
+  stageName: string
+  stageOrder: string
+  stageType: CompetitionStageSummary['stageType']
+  startsOn: string
+  endsOn: string
+}
+
 export const stagePackageOptions: StagePackageOption[] = [
   {
     code: 'league_then_final',
@@ -19,15 +30,34 @@ export const stagePackageOptions: StagePackageOption[] = [
   },
 ]
 
-export function buildStagePackagePayload(input: {
+export function createStagePackageStageDrafts(input: {
   competitionStartsOn: string
   competitionEndsOn: string
   packageCode: CompetitionStagePackageCode
-  templates: CompetitionTeamTemplate[]
-}): CreateCompetitionStagePackagePayload | null {
+}): StagePackageStageDraft[] {
   const packageOption = stagePackageOptions.find((item) => item.code === input.packageCode)
 
-  if (!packageOption || input.templates.length < 2) {
+  if (!packageOption) return []
+
+  return packageOption.presetCodes.flatMap((presetCode) => {
+    const presetDraft = buildStagePresetDraft({
+      competitionStartsOn: input.competitionStartsOn,
+      competitionEndsOn: input.competitionEndsOn,
+      presetCode,
+    })
+
+    if (!presetDraft) return []
+
+    return [presetDraft]
+  })
+}
+
+export function buildStagePackagePayload(input: {
+  packageCode: CompetitionStagePackageCode
+  stageDrafts: StagePackageStageDraft[]
+  templates: CompetitionTeamTemplate[]
+}): CreateCompetitionStagePackagePayload | null {
+  if (input.stageDrafts.length < 2 || input.templates.length < 2) {
     return null
   }
 
@@ -38,28 +68,14 @@ export function buildStagePackagePayload(input: {
     storeIds: template.stores.map((store) => store.storeId),
   }))
 
-  const stages = []
-
-  for (const presetCode of packageOption.presetCodes) {
-    const stageDraft = buildStagePresetDraft({
-      competitionStartsOn: input.competitionStartsOn,
-      competitionEndsOn: input.competitionEndsOn,
-      presetCode,
-    })
-
-    if (!stageDraft) {
-      return null
-    }
-
-    stages.push({
-      ...stageDraft,
-      stageOrder: Number(stageDraft.stageOrder),
-      teams,
-    })
-  }
-
   return {
     packageCode: input.packageCode,
-    stages,
+    stages: input.stageDrafts.map((stageDraft) => ({
+      ...stageDraft,
+      stageCode: stageDraft.stageCode.trim(),
+      stageName: stageDraft.stageName.trim(),
+      stageOrder: Number(stageDraft.stageOrder),
+      teams,
+    })),
   }
 }
