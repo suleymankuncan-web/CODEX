@@ -998,6 +998,20 @@ C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI\admin-web
 - Onumuzdeki yapilacaklar listesi eklendi: `docs/plans/active-next-actions.md`.
 - Siradaki mantikli adim: package plan source visibility. Clone edilen draft kartinda veya history gorunumunde hangi returned plandan geldigi daha okunur hale getirilmeli.
 
+## Son Package Plan Source Visibility
+
+25 Nisan 2026 itibariyla clone edilen package planlarin hangi returned plandan geldigi gorunur hale getirildi.
+
+- Schema degisikligi yapilmadi; backend `sourcePlan` bilgisini `competition_stage_package_plan.cloned_from_returned` audit metadata'sindan turetir.
+- `GET /api/competitions/:competitionId/stage-package-plans` yanitinda clone draftlar icin `sourcePlan` gelir.
+- Frontend `Package plan library` kartinda clone draft icin `Cloned from ...` metni gosterilir.
+- Clone draft history gorunumunde `Source: ...` metni okunur; kaynak ve clone audit izi birlikte izlenebilir kalir.
+- Hedefli backend dogrulama gecti: `npm.cmd test -- src/modules/store-ops/infrastructure/competition.repository.spec.ts --runInBand` -> 1 suite / 25 test.
+- Hedefli frontend dogrulama gecti: `npm.cmd run build; npm.cmd run test:e2e -- e2e/competition-surfaces.spec.ts -g "reject a submitted stage package plan"` -> 1 Playwright test.
+- Backend release check gecti: `npm.cmd run check:release` -> lint, 28 suite / 227 test, build ve `npm audit --omit=dev` (`found 0 vulnerabilities`).
+- Frontend release check gecti: `npm.cmd run check:release` -> lint, build, 16 Playwright smoke testi ve `npm audit --omit=dev` (`found 0 vulnerabilities`).
+- `docs/plans/active-next-actions.md` guncellendi; tamamlanan kaynak gorunurlugu kaleminden sonra siradaki mantikli adim `Package Plan Pre-Approval Preview`.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:

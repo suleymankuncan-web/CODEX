@@ -386,13 +386,21 @@ function buildStagePackagePlanUpdatePayload(
 
 function formatAuditMetadata(metadata: Record<string, unknown>) {
   const planName = typeof metadata.planName === 'string' ? metadata.planName : null
+  const sourcePlanName =
+    typeof metadata.sourcePlanName === 'string' ? `Source: ${metadata.sourcePlanName}` : null
+  const clonedPlanName =
+    typeof metadata.clonedPlanName === 'string' ? `Clone: ${metadata.clonedPlanName}` : null
   const reviewNote = typeof metadata.reviewNote === 'string' ? metadata.reviewNote : null
   const stageCount = typeof metadata.stageCount === 'number' ? `${metadata.stageCount} stages` : null
   const createdStageCount = Array.isArray(metadata.createdStageIds)
     ? `${metadata.createdStageIds.length} created stages`
     : null
 
-  return [planName, reviewNote, stageCount, createdStageCount].filter(Boolean).join(' - ') || 'Metadata recorded'
+  return (
+    [sourcePlanName, clonedPlanName, planName, reviewNote, stageCount, createdStageCount]
+      .filter(Boolean)
+      .join(' - ') || 'Metadata recorded'
+  )
 }
 
 function validateTemplateDraft(draft: TemplateDraft) {
@@ -1409,7 +1417,14 @@ function StagePackageBuilderSection(input: {
                 <div className="stacked-row-head">
                   <div>
                     <strong>{plan.planName}</strong>
-                    <p className="queue-subtitle">{formatState(plan.packageCode)}</p>
+                    <p className="queue-subtitle">
+                      {[
+                        formatState(plan.packageCode),
+                        plan.sourcePlan ? `Cloned from ${plan.sourcePlan.planName}` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' - ')}
+                    </p>
                   </div>
                   <StatusPill
                     tone={

@@ -652,6 +652,8 @@ describe("CompetitionRepository", () => {
           created_at: "2026-04-25T10:00:00.000Z",
           updated_at: "2026-04-25T10:00:00.000Z",
           executed_at: null,
+          source_plan_id: "44444444-4444-4444-8444-444444444444",
+          source_plan_name: "April regional package",
         },
       ],
     });
@@ -664,11 +666,16 @@ describe("CompetitionRepository", () => {
     const params = databaseService.query.mock.calls[0][1] as unknown[];
     expect(sql).toContain("FROM ops.competition_stage_package_plan");
     expect(sql).toContain("competition_id = $1::uuid");
+    expect(sql).toContain("competition_stage_package_plan.cloned_from_returned");
     expect(params).toEqual(["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]);
     expect(rows).toEqual([
       expect.objectContaining({
         planName: "April regional package",
         planStatus: "draft",
+        sourcePlan: {
+          planId: "44444444-4444-4444-8444-444444444444",
+          planName: "April regional package",
+        },
         stageDrafts: validStagePackageStages,
       }),
     ]);

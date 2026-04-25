@@ -158,6 +158,10 @@ export type CompetitionStagePackagePlan = {
   packageCode: CompetitionStagePackageCode
   planName: string
   planStatus: CompetitionStagePackagePlanStatus
+  sourcePlan: {
+    planId: string
+    planName: string
+  } | null
   stageDrafts: CreateCompetitionStagePayload[]
   createdStageIds: string[]
   submittedByUserId: string | null

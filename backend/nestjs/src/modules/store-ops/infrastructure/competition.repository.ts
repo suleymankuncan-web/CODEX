@@ -80,6 +80,8 @@ type CompetitionStagePackagePlanRow = {
   created_at: string | Date;
   updated_at: string | Date;
   executed_at: string | Date | null;
+  source_plan_id?: string | null;
+  source_plan_name?: string | null;
 };
 
 type CompetitionStagePackagePlanAuditRow = {
@@ -662,24 +664,35 @@ export class CompetitionRepository {
     const result = await this.databaseService.query<CompetitionStagePackagePlanRow>(
       `
         SELECT
-          competition_stage_package_plan_id,
-          competition_id,
-          package_code,
-          plan_name,
-          plan_status,
-          stage_drafts_json,
-          created_stage_ids,
-          submitted_by_user_id,
-          submitted_at,
-          reviewed_by_user_id,
-          reviewed_at,
-          review_note,
-          created_at,
-          updated_at,
-          executed_at
-        FROM ops.competition_stage_package_plan
-        WHERE competition_id = $1::uuid
-        ORDER BY updated_at DESC, created_at DESC
+          plan.competition_stage_package_plan_id,
+          plan.competition_id,
+          plan.package_code,
+          plan.plan_name,
+          plan.plan_status,
+          plan.stage_drafts_json,
+          plan.created_stage_ids,
+          plan.submitted_by_user_id,
+          plan.submitted_at,
+          plan.reviewed_by_user_id,
+          plan.reviewed_at,
+          plan.review_note,
+          plan.created_at,
+          plan.updated_at,
+          plan.executed_at,
+          source_audit.metadata_json ->> 'sourcePlanId' AS source_plan_id,
+          source_audit.metadata_json ->> 'sourcePlanName' AS source_plan_name
+        FROM ops.competition_stage_package_plan plan
+        LEFT JOIN LATERAL (
+          SELECT metadata_json
+          FROM audit.event_log
+          WHERE entity_name = 'ops.competition_stage_package_plan'
+            AND entity_id = plan.competition_stage_package_plan_id
+            AND event_type = 'competition_stage_package_plan.cloned_from_returned'
+          ORDER BY occurred_at ASC, event_log_id ASC
+          LIMIT 1
+        ) source_audit ON TRUE
+        WHERE plan.competition_id = $1::uuid
+        ORDER BY plan.updated_at DESC, plan.created_at DESC
       `,
       [input.competitionId],
     );
@@ -1992,6 +2005,13 @@ function mapStagePackagePlan(
     packageCode: row.package_code,
     planName: row.plan_name,
     planStatus: row.plan_status,
+    sourcePlan:
+      row.source_plan_id && row.source_plan_name
+        ? {
+            planId: row.source_plan_id,
+            planName: row.source_plan_name,
+          }
+        : null,
     stageDrafts: normalizeStageDrafts(row.stage_drafts_json),
     createdStageIds: row.created_stage_ids ?? [],
     submittedByUserId: row.submitted_by_user_id ?? null,

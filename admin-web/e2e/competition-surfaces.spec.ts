@@ -307,7 +307,11 @@ test('admin can reject a submitted stage package plan', async ({ page }) => {
   await expect(page.getByText('Competition stage package plan cloned as draft')).toBeVisible()
   expect(clonedStagePackagePlanSourceId).toBe(stagePackagePlanId)
   await expect(planLibrary.locator('strong').filter({ hasText: 'April regional package revision' })).toBeVisible()
+  await expect(planLibrary.getByText('Cloned from April regional package')).toBeVisible()
   await expect(planLibrary.getByText('draft', { exact: true })).toBeVisible()
+  await planLibrary.getByRole('button', { name: 'Show history April regional package revision' }).click()
+  await expect(planLibrary.getByText('competition_stage_package_plan.cloned_from_returned')).toBeVisible()
+  await expect(planLibrary.getByText('Source: April regional package')).toBeVisible()
   await planLibrary.getByRole('button', { name: 'Show history April regional package', exact: true }).click()
   await expect(planLibrary.getByText('competition_stage_package_plan.rejected')).toBeVisible()
 })
@@ -554,6 +558,7 @@ async function routeCompetitionApi(
         ]
       : []
   })
+  let clonedStagePackagePlanAuditEvents: unknown[] = []
 
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: authSession })
@@ -716,17 +721,19 @@ async function routeCompetitionApi(
       return
     }
 
-    if (
-      request.method() === 'GET' &&
-      pathname.endsWith(`/api/competitions/stage-package-plans/${stagePackagePlanId}/audit`)
-    ) {
+    const planAuditMatch = pathname.match(/\/api\/competitions\/stage-package-plans\/([^/]+)\/audit$/)
+    if (request.method() === 'GET' && planAuditMatch) {
+      const auditEvents =
+        planAuditMatch[1] === clonedStagePackagePlanId
+          ? clonedStagePackagePlanAuditEvents
+          : stagePackagePlanAuditEvents
       await route.fulfill({
         json: {
-          items: stagePackagePlanAuditEvents,
+          items: auditEvents,
           meta: {
-            count: stagePackagePlanAuditEvents.length,
-            total: stagePackagePlanAuditEvents.length,
-            limit: stagePackagePlanAuditEvents.length,
+            count: auditEvents.length,
+            total: auditEvents.length,
+            limit: auditEvents.length,
             offset: 0,
           },
         },
@@ -1002,6 +1009,10 @@ async function routeCompetitionApi(
         planStatus: 'draft',
         stageDrafts: sourcePlan?.stageDrafts ?? [],
         createdStageIds: [],
+        sourcePlan: {
+          planId: stagePackagePlanId,
+          planName: sourcePlan?.planName ?? 'Package plan',
+        },
         submittedByUserId: null,
         submittedAt: null,
         reviewedByUserId: null,
@@ -1023,6 +1034,19 @@ async function routeCompetitionApi(
             planName: sourcePlan?.planName,
             clonedPlanId: clonedStagePackagePlanId,
             clonedPlanName: clonedPlan.planName,
+          },
+        },
+      ]
+      clonedStagePackagePlanAuditEvents = [
+        {
+          eventLogId: '22222222-3333-4444-8555-666666666666',
+          occurredAt: '2026-04-25T10:25:00.000Z',
+          actorUserId: authSession.user.userId,
+          eventType: 'competition_stage_package_plan.cloned_from_returned',
+          metadata: {
+            sourcePlanId: stagePackagePlanId,
+            sourcePlanName: sourcePlan?.planName,
+            planName: clonedPlan.planName,
           },
         },
       ]

@@ -58,6 +58,8 @@ The plan table keeps the current JSON draft payload and adds review metadata:
 
 Audit remains the durable history trail.
 
+Cloned-plan source visibility is derived from audit metadata, not a new plan-table column. The plan list may expose a nullable `sourcePlan` object when the plan has a `competition_stage_package_plan.cloned_from_returned` audit event.
+
 ## API Shape
 
 - `POST /api/competitions/stage-package-plans/:planId/submit`
@@ -93,12 +95,14 @@ Audit remains the durable history trail.
 The existing package plan library grows in place:
 
 - Draft plan: `Edit`, `Cancel`, `Mark ready for decision`, `Show history`.
+- Cloned draft plan: same draft actions, plus card metadata showing `Cloned from ...`.
 - Submitted plan: displayed as `decision ready`, with `Decision note`, `Approve decision`, `Return for revision`, `Show history`.
 - Approved plan: `Execute approved plan`, `Show history`.
 - Rejected plan: displayed as `returned`, with `Clone as new draft`, `Show history`.
 - Executed/cancelled plan: `Show history` only.
 - Rejected plans may be displayed as `returned` in the UI while the API status remains `rejected`.
 - Optional decision note input appears inline for submitted plans.
+- History metadata renders source/clone references in readable language while preserving raw audit event types.
 
 ## Error Handling
 
@@ -109,8 +113,8 @@ The existing package plan library grows in place:
 ## Test Strategy
 
 - Backend service tests cover submit, approve, reject, and execute delegation.
-- Repository tests cover transition guards, SQL updates, audit events, rejected-plan clone, and approved-only execute.
-- Playwright covers draft submit, submitted approval, approved execute, rejected history state, clone-as-draft, and hidden unsafe actions.
+- Repository tests cover transition guards, SQL updates, audit events, rejected-plan clone, audit-derived source visibility, and approved-only execute.
+- Playwright covers draft submit, submitted approval, approved execute, rejected history state, clone-as-draft source visibility, and hidden unsafe actions.
 - Release checks remain the gate: backend `check:release` and frontend `check:release`.
 
 ## Non-Goals
