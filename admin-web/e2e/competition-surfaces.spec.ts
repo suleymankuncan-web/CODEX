@@ -5,6 +5,7 @@ const stageId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
 const teamId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
 const storeId = '00000000-0000-0000-0000-000000000101'
 const secondStoreId = '00000000-0000-0000-0000-000000000102'
+const templateId = '99999999-9999-4999-8999-999999999999'
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -88,6 +89,66 @@ test('admin can create a competition stage with team store assignments', async (
   })
 })
 
+test('admin creates a team template and applies it to a stage team', async ({ page }) => {
+  let createdTemplatePayload: unknown = null
+  let createdStagePayload: unknown = null
+  await page.unroute('**/api/competitions**')
+  await routeCompetitionApi(page, authSessionFixture, competitionDetailFixture, {
+    onCreateTemplate: (payload) => {
+      createdTemplatePayload = payload
+    },
+    onCreateStage: (payload) => {
+      createdStagePayload = payload
+    },
+  })
+
+  await page.goto('/admin/competitions')
+
+  const templateBuilder = page.locator('.stage-template-builder')
+  await templateBuilder.getByLabel('Template code').fill('MARMARA_TEMPLATE_A')
+  await templateBuilder.getByLabel('Template name').fill('Marmara Template A')
+  await templateBuilder.getByLabel('DEMO-101 - Demo Store 101 - Marmara').check()
+  await templateBuilder.getByRole('button', { name: 'Create template' }).click()
+
+  await expect(page.getByText('Competition team template created')).toBeVisible()
+  expect(createdTemplatePayload).toMatchObject({
+    templateCode: 'MARMARA_TEMPLATE_A',
+    templateName: 'Marmara Template A',
+    storeIds: [storeId],
+  })
+
+  await page.getByLabel('Stage code').fill('MAY_TEMPLATE_STAGE')
+  await page.getByLabel('Stage name').fill('May Template Stage')
+  await page.getByLabel('Stage order').fill('2')
+  await page.getByLabel('Stage starts').fill('2026-05-16')
+  await page.getByLabel('Stage ends').fill('2026-05-31')
+  await page.getByLabel('Team 1 template').selectOption(templateId)
+  await page.getByLabel('Team 2 code').fill('MARMARA_B')
+  await page.getByLabel('Team 2 name').fill('Marmara B')
+  const teamTwo = page.locator('.stage-builder-team').filter({ hasText: 'Team 2' })
+  await teamTwo.getByLabel('DEMO-102 - Demo Store 102 - Marmara').check()
+  await page.getByRole('button', { name: 'Create stage' }).click()
+
+  await expect(page.getByText('Competition stage created')).toBeVisible()
+  expect(createdStagePayload).toMatchObject({
+    stageCode: 'MAY_TEMPLATE_STAGE',
+    stageName: 'May Template Stage',
+    teams: [
+      {
+        sourceTemplateId: templateId,
+        teamCode: 'MARMARA_TEMPLATE_A',
+        teamName: 'Marmara Template A',
+        storeIds: [storeId],
+      },
+      {
+        teamCode: 'MARMARA_B',
+        teamName: 'Marmara B',
+        storeIds: [secondStoreId],
+      },
+    ],
+  })
+})
+
 test('region manager competitions surface is read-only and scoped to visible store contributions', async ({ page }) => {
   await page.unroute('**/api/auth/session')
   await page.unroute('**/api/competitions**')
@@ -111,8 +172,11 @@ async function routeCompetitionApi(
   competitionDetail: typeof competitionDetailFixture,
   options?: {
     onCreateStage?: (payload: unknown) => void
+    onCreateTemplate?: (payload: unknown) => void
   },
 ) {
+  let teamTemplates: unknown[] = []
+
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: authSession })
   })
@@ -124,6 +188,47 @@ async function routeCompetitionApi(
   await page.route('**/api/competitions**', async (route) => {
     const request = route.request()
     const pathname = new URL(request.url()).pathname
+
+    if (request.method() === 'GET' && pathname.endsWith('/api/competitions/team-templates')) {
+      await route.fulfill({
+        json: {
+          items: teamTemplates,
+          meta: { count: teamTemplates.length, total: teamTemplates.length, limit: 50, offset: 0 },
+        },
+      })
+      return
+    }
+
+    if (request.method() === 'POST' && pathname.endsWith('/api/competitions/team-templates')) {
+      const payload = request.postDataJSON()
+      options?.onCreateTemplate?.(payload)
+      teamTemplates = [
+        {
+          templateId,
+          templateCode: 'MARMARA_TEMPLATE_A',
+          templateName: 'Marmara Template A',
+          description: null,
+          isActive: true,
+          stores: [
+            {
+              storeId,
+              storeCode: 'DEMO-101',
+              storeName: 'Demo Store 101',
+              regionId: '00000000-0000-0000-0000-000000000010',
+            },
+          ],
+        },
+      ]
+      await route.fulfill({
+        json: {
+          command: { status: 'created', message: 'Competition team template created' },
+          data: {
+            template: teamTemplates[0],
+          },
+        },
+      })
+      return
+    }
 
     if (request.method() === 'GET' && pathname.endsWith('/api/competitions')) {
       await route.fulfill({

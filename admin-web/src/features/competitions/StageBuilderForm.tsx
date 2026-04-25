@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { PlusCircle } from 'lucide-react'
 import {
   EmptyState,
@@ -8,8 +8,11 @@ import {
 } from '../../components/dashboard-primitives'
 import { getAuthLookups, type AuthLookupStore } from '../auth/api'
 import {
+  createCompetitionTeamTemplate,
   createCompetitionStage,
+  listCompetitionTeamTemplates,
   type CompetitionStageSummary,
+  type CreateCompetitionTeamTemplatePayload,
   type CreateCompetitionStagePayload,
 } from './api'
 import { formatState, getErrorMessage } from '../../lib/format'
@@ -27,6 +30,14 @@ const stageTypeOptions: CompetitionStageSummary['stageType'][] = [
 type TeamDraft = {
   teamCode: string
   teamName: string
+  sourceTemplateId?: string
+  storeIds: string[]
+}
+
+type TemplateDraft = {
+  templateCode: string
+  templateName: string
+  description: string
   storeIds: string[]
 }
 
@@ -63,6 +74,15 @@ function createInitialDraft(input: { startsOn: string; endsOn: string }): StageD
       { teamCode: 'TEAM_A', teamName: 'Team A', storeIds: [] },
       { teamCode: 'TEAM_B', teamName: 'Team B', storeIds: [] },
     ],
+  }
+}
+
+function createInitialTemplateDraft(): TemplateDraft {
+  return {
+    templateCode: '',
+    templateName: '',
+    description: '',
+    storeIds: [],
   }
 }
 
@@ -108,11 +128,30 @@ function validateDraft(draft: StageDraft) {
   return null
 }
 
+function validateTemplateDraft(draft: TemplateDraft) {
+  if (!draft.templateCode.trim() || !codePattern.test(draft.templateCode)) {
+    return 'Template code must use uppercase letters, numbers, and underscores.'
+  }
+
+  if (!draft.templateName.trim()) {
+    return 'Template name is required.'
+  }
+
+  if (draft.storeIds.length === 0) {
+    return 'Template needs at least one store.'
+  }
+
+  return null
+}
+
 export function StageBuilderForm(input: StageBuilderFormProps) {
+  const queryClient = useQueryClient()
   const [draft, setDraft] = useState(() =>
     createInitialDraft({ startsOn: input.competitionStartsOn, endsOn: input.competitionEndsOn }),
   )
+  const [templateDraft, setTemplateDraft] = useState(createInitialTemplateDraft)
   const [feedback, setFeedback] = useState<string | null>(null)
+  const [templateFeedback, setTemplateFeedback] = useState<string | null>(null)
 
   const lookupsQuery = useQuery({
     queryKey: ['competition-stage-builder-lookups'],
@@ -128,7 +167,22 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
     [lookupsQuery.data?.stores],
   )
 
+  const templatesQuery = useQuery({
+    queryKey: ['competition-team-templates'],
+    queryFn: listCompetitionTeamTemplates,
+    staleTime: 60_000,
+  })
+
+  const templates = useMemo(
+    () =>
+      [...(templatesQuery.data?.items ?? [])].sort((left, right) =>
+        left.templateCode.localeCompare(right.templateCode),
+      ),
+    [templatesQuery.data?.items],
+  )
+
   const validationMessage = validateDraft(draft)
+  const templateValidationMessage = validateTemplateDraft(templateDraft)
 
   const createMutation = useMutation({
     mutationFn: (payload: CreateCompetitionStagePayload) =>
@@ -136,6 +190,16 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
     onSuccess: async (response) => {
       setFeedback(response.command.message)
       await input.onCreated()
+    },
+  })
+
+  const createTemplateMutation = useMutation({
+    mutationFn: (payload: CreateCompetitionTeamTemplatePayload) =>
+      createCompetitionTeamTemplate(payload),
+    onSuccess: async (response) => {
+      setTemplateFeedback(response.command.message)
+      setTemplateDraft(createInitialTemplateDraft())
+      await queryClient.invalidateQueries({ queryKey: ['competition-team-templates'] })
     },
   })
 
@@ -154,6 +218,11 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
     }))
   }
 
+  function updateTemplateDraft(field: keyof Omit<TemplateDraft, 'storeIds'>, value: string) {
+    setTemplateFeedback(null)
+    setTemplateDraft((current) => ({ ...current, [field]: value }))
+  }
+
   function toggleStore(teamIndex: number, storeId: string) {
     const team = draft.teams[teamIndex]
     const nextStoreIds = team.storeIds.includes(storeId)
@@ -161,6 +230,32 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
       : [...team.storeIds, storeId]
 
     updateTeam(teamIndex, { storeIds: nextStoreIds })
+  }
+
+  function toggleTemplateStore(storeId: string) {
+    setTemplateFeedback(null)
+    setTemplateDraft((current) => ({
+      ...current,
+      storeIds: current.storeIds.includes(storeId)
+        ? current.storeIds.filter((currentStoreId) => currentStoreId !== storeId)
+        : [...current.storeIds, storeId],
+    }))
+  }
+
+  function applyTemplate(teamIndex: number, templateId: string) {
+    const template = templates.find((item) => item.templateId === templateId)
+
+    if (!template) {
+      updateTeam(teamIndex, { sourceTemplateId: undefined })
+      return
+    }
+
+    updateTeam(teamIndex, {
+      sourceTemplateId: template.templateId,
+      teamCode: normalizeCode(template.templateCode),
+      teamName: template.templateName,
+      storeIds: template.stores.map((store) => store.storeId),
+    })
   }
 
   function buildPayload(): CreateCompetitionStagePayload {
@@ -171,11 +266,26 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
       stageType: draft.stageType,
       startsOn: draft.startsOn,
       endsOn: draft.endsOn,
-      teams: draft.teams.map((team) => ({
-        teamCode: team.teamCode.trim(),
-        teamName: team.teamName.trim(),
-        storeIds: team.storeIds,
-      })),
+      teams: draft.teams.map((team) => {
+        const teamPayload = {
+          teamCode: team.teamCode.trim(),
+          teamName: team.teamName.trim(),
+          storeIds: team.storeIds,
+        }
+
+        return team.sourceTemplateId
+          ? { ...teamPayload, sourceTemplateId: team.sourceTemplateId }
+          : teamPayload
+      }),
+    }
+  }
+
+  function buildTemplatePayload(): CreateCompetitionTeamTemplatePayload {
+    return {
+      templateCode: templateDraft.templateCode.trim(),
+      templateName: templateDraft.templateName.trim(),
+      description: templateDraft.description.trim() || undefined,
+      storeIds: templateDraft.storeIds,
     }
   }
 
@@ -183,6 +293,12 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
     const nextValidation = validateDraft(draft)
     if (nextValidation) return
     createMutation.mutate(buildPayload())
+  }
+
+  function submitTemplate() {
+    const nextValidation = validateTemplateDraft(templateDraft)
+    if (nextValidation) return
+    createTemplateMutation.mutate(buildTemplatePayload())
   }
 
   return (
@@ -272,6 +388,26 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
         <EmptyState title="No stores available" copy="Stage teams need at least one store." />
       ) : null}
 
+      <TemplateBuilderSection
+        draft={templateDraft}
+        error={createTemplateMutation.error}
+        feedback={templateFeedback}
+        isPending={createTemplateMutation.isPending}
+        stores={stores}
+        validationMessage={templateValidationMessage}
+        onSubmit={submitTemplate}
+        onToggleStore={toggleTemplateStore}
+        onUpdate={updateTemplateDraft}
+      />
+
+      {templatesQuery.isError ? (
+        <ScreenState
+          title="Team templates could not load"
+          copy={getErrorMessage(templatesQuery.error)}
+          tone="error"
+        />
+      ) : null}
+
       {draft.teams.map((team, teamIndex) => (
         <article className="stacked-row stage-builder-team" key={teamIndex}>
           <div className="stacked-row-head">
@@ -281,6 +417,20 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
             </StatusPill>
           </div>
           <div className="form-grid">
+            <label className="field-block">
+              <span>{`Team ${teamIndex + 1} template`}</span>
+              <select
+                value={team.sourceTemplateId ?? ''}
+                onChange={(event) => applyTemplate(teamIndex, event.target.value)}
+              >
+                <option value="">Manual team</option>
+                {templates.map((template) => (
+                  <option key={template.templateId} value={template.templateId}>
+                    {template.templateCode} - {template.templateName}
+                  </option>
+                ))}
+              </select>
+            </label>
             <label className="field-block">
               <span>{`Team ${teamIndex + 1} code`}</span>
               <input
@@ -338,5 +488,88 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
         />
       ) : null}
     </section>
+  )
+}
+
+function TemplateBuilderSection(input: {
+  draft: TemplateDraft
+  error: unknown
+  feedback: string | null
+  isPending: boolean
+  stores: AuthLookupStore[]
+  validationMessage: string | null
+  onSubmit: () => void
+  onToggleStore: (storeId: string) => void
+  onUpdate: (field: keyof Omit<TemplateDraft, 'storeIds'>, value: string) => void
+}) {
+  return (
+    <article className="stacked-row stage-template-builder">
+      <div className="stacked-row-head">
+        <div>
+          <strong>Team template</strong>
+          <p className="queue-subtitle">Reusable store groups for future stages.</p>
+        </div>
+        <StatusPill tone={input.draft.storeIds.length > 0 ? 'accent' : 'warning'}>
+          {`${input.draft.storeIds.length} stores`}
+        </StatusPill>
+      </div>
+      <div className="form-grid">
+        <label className="field-block">
+          <span>Template code</span>
+          <input
+            value={input.draft.templateCode}
+            onChange={(event) => input.onUpdate('templateCode', normalizeCode(event.target.value))}
+          />
+        </label>
+        <label className="field-block">
+          <span>Template name</span>
+          <input
+            value={input.draft.templateName}
+            onChange={(event) => input.onUpdate('templateName', event.target.value)}
+          />
+        </label>
+        <label className="field-block field-block-full">
+          <span>Template description</span>
+          <input
+            value={input.draft.description}
+            onChange={(event) => input.onUpdate('description', event.target.value)}
+          />
+        </label>
+      </div>
+      <div className="store-checkbox-grid">
+        {input.stores.map((store) => (
+          <label className="store-checkbox" key={`template-${store.storeId}`}>
+            <input
+              type="checkbox"
+              checked={input.draft.storeIds.includes(store.storeId)}
+              onChange={() => input.onToggleStore(store.storeId)}
+            />
+            <span>{storeLabel(store)}</span>
+          </label>
+        ))}
+      </div>
+      {input.validationMessage ? (
+        <p className="validation-copy">{input.validationMessage}</p>
+      ) : null}
+      <div className="action-cluster">
+        <button
+          className="control-button"
+          type="button"
+          disabled={Boolean(input.validationMessage) || input.isPending || input.stores.length === 0}
+          onClick={input.onSubmit}
+        >
+          <PlusCircle size={16} />
+          Create template
+        </button>
+      </div>
+      {input.feedback ? <ScreenState title={input.feedback} copy="Template list is refreshed." /> : null}
+      {input.error ? (
+        <ScreenState
+          title="Template could not be created"
+          copy={getErrorMessage(input.error)}
+          tone="error"
+        />
+      ) : null}
+    </article>
   )
 }

@@ -73,6 +73,20 @@ export type CompetitionStoreContribution = {
   missingKpiCodes: string[]
 }
 
+export type CompetitionTeamTemplate = {
+  templateId: string
+  templateCode: string
+  templateName: string
+  description: string | null
+  isActive: boolean
+  stores: Array<{
+    storeId: string
+    storeCode: string
+    storeName: string
+    regionId: string
+  }>
+}
+
 export type CompetitionWarning = {
   warningId: string
   stageId: string
@@ -121,8 +135,19 @@ export type CreateCompetitionStagePayload = {
   }>
 }
 
+export type CreateCompetitionTeamTemplatePayload = {
+  templateCode: string
+  templateName: string
+  description?: string
+  storeIds: string[]
+}
+
 export async function listCompetitions() {
   return fetchJson<ListResponse<CompetitionSummary>>('/competitions')
+}
+
+export async function listCompetitionTeamTemplates() {
+  return fetchJson<ListResponse<CompetitionTeamTemplate>>('/competitions/team-templates')
 }
 
 export async function getCompetition(competitionId: string) {
@@ -141,6 +166,16 @@ export async function createCompetition(payload: {
     method: 'POST',
     body: payload,
   })
+}
+
+export async function createCompetitionTeamTemplate(payload: CreateCompetitionTeamTemplatePayload) {
+  return sendJson<CommandResponse<{ template: CompetitionTeamTemplate }>>(
+    '/competitions/team-templates',
+    {
+      method: 'POST',
+      body: payload,
+    },
+  )
 }
 
 export async function createCompetitionStage(
