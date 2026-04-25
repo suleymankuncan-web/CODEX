@@ -10,6 +10,7 @@ import { CreateCompetitionTeamTemplateDto } from "./dto/create-competition-team-
 import { FinalizeCompetitionStageDto } from "./dto/finalize-competition-stage.dto";
 import { ListCompetitionTeamTemplatesQueryDto } from "./dto/list-competition-team-templates.query";
 import { ListCompetitionsQueryDto } from "./dto/list-competitions.query";
+import { UpdateCompetitionStagePackagePlanDto } from "./dto/update-competition-stage-package-plan.dto";
 import { UpdateCompetitionTeamTemplateDto } from "./dto/update-competition-team-template.dto";
 
 type CompetitionRequest = {
@@ -189,6 +190,20 @@ export class CompetitionController {
     });
   }
 
+  @Put("stage-package-plans/:planId")
+  @RequireRoles("SUPER_ADMIN", "HR_ADMIN")
+  async updateStagePackagePlan(
+    @Req() request: CompetitionRequest,
+    @Param("planId") planId: string,
+    @Body() body: UpdateCompetitionStagePackagePlanDto,
+  ) {
+    return this.competitionService.updateStagePackagePlan({
+      actorUserId: request.user.userId,
+      planId,
+      ...body,
+    });
+  }
+
   @Post("stage-package-plans/:planId/execute")
   @RequireRoles("SUPER_ADMIN", "HR_ADMIN")
   async executeStagePackagePlan(
@@ -197,6 +212,26 @@ export class CompetitionController {
   ) {
     return this.competitionService.executeStagePackagePlan({
       actorUserId: request.user.userId,
+      planId,
+    });
+  }
+
+  @Patch("stage-package-plans/:planId/cancel")
+  @RequireRoles("SUPER_ADMIN", "HR_ADMIN")
+  async cancelStagePackagePlan(
+    @Req() request: CompetitionRequest,
+    @Param("planId") planId: string,
+  ) {
+    return this.competitionService.cancelStagePackagePlan({
+      actorUserId: request.user.userId,
+      planId,
+    });
+  }
+
+  @Get("stage-package-plans/:planId/audit")
+  @RequireRoles("SUPER_ADMIN", "HR_ADMIN")
+  async listStagePackagePlanAudit(@Param("planId") planId: string) {
+    return this.competitionService.listStagePackagePlanAudit({
       planId,
     });
   }

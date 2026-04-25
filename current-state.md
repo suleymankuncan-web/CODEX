@@ -879,6 +879,39 @@ C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI\admin-web
 - Frontend release check gecti: `npm.cmd run check:release` -> lint, build, 14 Playwright smoke testi ve `npm audit --omit=dev` (`found 0 vulnerabilities`); Vite chunk warning yok.
 - Siradaki mantikli adim: package plan lifecycle V1'i buyutmek. Draft rename/edit/cancel ve audit/history gorunurlugu eklenirse toplantidan once hazirlanan planlar execute edilmeden once daha kontrollu yonetilir.
 
+## Son Competition Stage Package Plan Lifecycle V1
+
+25 Nisan 2026 itibariyla stage package plan lifecycle V1 borcu kapatildi.
+
+- Uygulama plani eklendi: `docs/superpowers/plans/2026-04-25-competition-stage-package-plan-lifecycle-v1.md`.
+- Tasarim notu eklendi: `docs/superpowers/specs/2026-04-25-competition-stage-package-plan-lifecycle-v1-design.md`.
+- Backend kontratina plan update/cancel ve audit event okuma tipleri eklendi.
+- Backend endpointleri eklendi:
+  - `PUT /api/competitions/stage-package-plans/:planId`
+  - `PATCH /api/competitions/stage-package-plans/:planId/cancel`
+  - `GET /api/competitions/stage-package-plans/:planId/audit`
+- Sadece `draft` durumundaki package planlar duzenlenebilir veya iptal edilebilir.
+- `executed` planlar immutable kalir; gercek stage/team kaydi olustugu icin geriye donuk rewrite yoktur.
+- `cancelled` planlar hard-delete edilmez; history icin listede kalir, execute/edit/cancel aksiyonlari kapali olur.
+- Update akisi plan adini, package code'unu ve stage draft JSON'unu transaction icinde gunceller.
+- Cancel akisi `plan_status = 'cancelled'` yazar ve stage olusturmaz.
+- Audit eventleri eklendi:
+  - `competition_stage_package_plan.updated`
+  - `competition_stage_package_plan.cancelled`
+- Audit history `audit.event_log` uzerinden okunur; frontend plan kutusunda `Show history` ile saved/updated/cancelled izini gosterir.
+- Frontend competition API helper'lari eklendi: update, cancel ve audit list.
+- Stage builder `Package plan library` icinde draft plan icin `Edit`, `Cancel`, `Execute` ve tum planlar icin `Show history` aksiyonlari calisir.
+- Plan edit formu plan adi ve package stage code/name/order/type/start/end alanlarini gunceller; mevcut team/template baglari korunur.
+- TDD kirmizi dogrulamasi yapildi:
+  - Backend service testleri `updateStagePackagePlan/cancelStagePackagePlan/listStagePackagePlanAudit` yokken TypeScript fail verdi.
+  - Repository testleri lifecycle persistence metotlari yokken TypeScript fail verdi.
+  - Frontend Playwright testi `Edit April regional package` butonu yokken fail verdi.
+- Hedefli backend dogrulama gecti: `npm.cmd test -- src/modules/store-ops/application/competition.service.spec.ts src/modules/store-ops/infrastructure/competition.repository.spec.ts --runInBand` -> 2 suite / 39 test.
+- Hedefli frontend dogrulama gecti: `npm.cmd run test:e2e -- e2e/competition-surfaces.spec.ts -g "edit, inspect, and cancel"` -> 1 Playwright test.
+- Backend release check gecti: `npm.cmd run check:release` -> lint, 28 suite / 217 test, build ve `npm audit --omit=dev` (`found 0 vulnerabilities`).
+- Frontend release check gecti: `npm.cmd run check:release` -> lint, build, 15 Playwright smoke testi ve `npm audit --omit=dev` (`found 0 vulnerabilities`); Vite chunk warning yok.
+- Siradaki mantikli adim: package planlarini tek competition icinde sadece listelemekten cikarip review/approval akisiyle baglamak. IK hazirlar, toplantidan sonra onayli kisi execute eder yapisina gecerse turnuva planlari daha buyurken de dagilmaz.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:
@@ -902,6 +935,7 @@ Store ops:
 - `backend/nestjs/src/modules/store-ops/web/competition.controller.ts`
 - `backend/nestjs/src/modules/store-ops/web/dto/create-competition-stage-package.dto.ts`
 - `backend/nestjs/src/modules/store-ops/web/dto/create-competition-stage-package-plan.dto.ts`
+- `backend/nestjs/src/modules/store-ops/web/dto/update-competition-stage-package-plan.dto.ts`
 - `backend/nestjs/src/modules/store-ops/web/dto/clone-competition-team-template.dto.ts`
 - `backend/nestjs/src/modules/store-ops/web/dto/list-competition-team-templates.query.ts`
 - `backend/nestjs/src/modules/store-ops/web/dto/update-competition-team-template.dto.ts`
@@ -936,6 +970,8 @@ Planlar:
 - `docs/plans/project-stability-guardrails.md`
 - `docs/plans/ui-localization-strategy.md`
 - `docs/plans/daily-closure-ranking-strategy.md`
+- `docs/superpowers/plans/2026-04-25-competition-stage-package-plan-lifecycle-v1.md`
+- `docs/superpowers/specs/2026-04-25-competition-stage-package-plan-lifecycle-v1-design.md`
 
 ## Devam Komutu
 

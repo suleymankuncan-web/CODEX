@@ -4,6 +4,7 @@ import { CompetitionRepository } from "../infrastructure/competition.repository"
 import {
   CompetitionDetail,
   CompetitionScope,
+  CancelCompetitionStagePackagePlanInput,
   CloneCompetitionTeamTemplateInput,
   CreateCompetitionInput,
   CreateCompetitionStagePackageInput,
@@ -14,6 +15,7 @@ import {
   ExecuteCompetitionStagePackagePlanInput,
   FinalizeCompetitionStageInput,
   RecalculateCompetitionStageInput,
+  UpdateCompetitionStagePackagePlanInput,
   UpdateCompetitionTeamTemplateInput,
 } from "./competition.contract";
 
@@ -225,6 +227,18 @@ export class CompetitionService {
     });
   }
 
+  async updateStagePackagePlan(input: UpdateCompetitionStagePackagePlanInput) {
+    assertValidStagePackageDraft(input);
+
+    const plan = await this.competitionRepository.updateStagePackagePlan(input);
+
+    return buildCommandResponse({
+      status: "updated",
+      message: "Competition stage package plan updated",
+      data: { plan },
+    });
+  }
+
   async executeStagePackagePlan(input: ExecuteCompetitionStagePackagePlanInput) {
     const result = await this.competitionRepository.executeStagePackagePlan(input);
 
@@ -232,6 +246,28 @@ export class CompetitionService {
       status: "executed",
       message: "Competition stage package plan executed",
       data: result,
+    });
+  }
+
+  async cancelStagePackagePlan(input: CancelCompetitionStagePackagePlanInput) {
+    const plan = await this.competitionRepository.cancelStagePackagePlan(input);
+
+    return buildCommandResponse({
+      status: "cancelled",
+      message: "Competition stage package plan cancelled",
+      data: { plan },
+    });
+  }
+
+  async listStagePackagePlanAudit(input: { planId: string }) {
+    const items = await this.competitionRepository.listStagePackagePlanAudit({
+      planId: input.planId,
+    });
+
+    return buildListResponse(items, {
+      total: items.length,
+      limit: items.length,
+      offset: 0,
     });
   }
 

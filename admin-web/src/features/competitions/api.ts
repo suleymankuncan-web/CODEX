@@ -163,6 +163,16 @@ export type CreateCompetitionStagePackagePlanPayload = CreateCompetitionStagePac
   planName: string
 }
 
+export type UpdateCompetitionStagePackagePlanPayload = CreateCompetitionStagePackagePlanPayload
+
+export type CompetitionStagePackagePlanAuditEvent = {
+  eventLogId: string
+  occurredAt: string
+  actorUserId: string | null
+  eventType: string
+  metadata: Record<string, unknown>
+}
+
 export type CreateCompetitionTeamTemplatePayload = {
   templateCode: string
   templateName: string
@@ -303,6 +313,19 @@ export async function createCompetitionStagePackagePlan(
   )
 }
 
+export async function updateCompetitionStagePackagePlan(
+  planId: string,
+  payload: UpdateCompetitionStagePackagePlanPayload,
+) {
+  return sendJson<CommandResponse<{ plan: CompetitionStagePackagePlan }>>(
+    `/competitions/stage-package-plans/${planId}`,
+    {
+      method: 'PUT',
+      body: payload,
+    },
+  )
+}
+
 export async function executeCompetitionStagePackagePlan(planId: string) {
   return sendJson<
     CommandResponse<{
@@ -312,6 +335,21 @@ export async function executeCompetitionStagePackagePlan(planId: string) {
   >(`/competitions/stage-package-plans/${planId}/execute`, {
     method: 'POST',
   })
+}
+
+export async function cancelCompetitionStagePackagePlan(planId: string) {
+  return sendJson<CommandResponse<{ plan: CompetitionStagePackagePlan }>>(
+    `/competitions/stage-package-plans/${planId}/cancel`,
+    {
+      method: 'PATCH',
+    },
+  )
+}
+
+export async function listCompetitionStagePackagePlanAudit(planId: string) {
+  return fetchJson<ListResponse<CompetitionStagePackagePlanAuditEvent>>(
+    `/competitions/stage-package-plans/${planId}/audit`,
+  )
 }
 
 export async function recalculateStage(stageId: string) {

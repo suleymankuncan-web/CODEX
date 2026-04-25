@@ -250,6 +250,53 @@ test('admin can save and execute a stage package plan draft', async ({ page }) =
   })
 })
 
+test('admin can edit, inspect, and cancel a stage package plan draft', async ({ page }) => {
+  let updatedStagePackagePlanPayload: unknown = null
+  let cancelledStagePackagePlanId: string | null = null
+  await page.unroute('**/api/competitions**')
+  await routeCompetitionApi(page, authSessionFixture, competitionDetailFixture, {
+    initialTeamTemplates: [activeTemplateFixture, secondActiveTemplateFixture],
+    initialStagePackagePlans: [createStagePackagePlanFixture()],
+    onUpdateStagePackagePlan: (_planId, payload) => {
+      updatedStagePackagePlanPayload = payload
+    },
+    onCancelStagePackagePlan: (planId) => {
+      cancelledStagePackagePlanId = planId
+    },
+  })
+
+  await page.goto('/admin/competitions')
+
+  const planLibrary = page.locator('.stage-package-plan-library')
+  await planLibrary.getByRole('button', { name: 'Edit April regional package' }).click()
+  await planLibrary.getByLabel('Edit plan name').fill('April regional package revised')
+  await planLibrary.getByLabel('Edit package stage 2 name').fill('Revised Final Showdown')
+  await planLibrary.getByRole('button', { name: 'Save package plan changes' }).click()
+
+  await expect(page.getByText('Competition stage package plan updated')).toBeVisible()
+  await expect(planLibrary.locator('strong').filter({ hasText: 'April regional package revised' })).toBeVisible()
+  expect(updatedStagePackagePlanPayload).toMatchObject({
+    planName: 'April regional package revised',
+    packageCode: 'league_then_final',
+    stages: [
+      { stageName: 'Regional League' },
+      { stageName: 'Revised Final Showdown' },
+    ],
+  })
+
+  await planLibrary.getByRole('button', { name: 'Show history April regional package revised' }).click()
+  await expect(planLibrary.getByText('competition_stage_package_plan.updated')).toBeVisible()
+
+  await planLibrary.getByRole('button', { name: 'Cancel April regional package revised' }).click()
+
+  await expect(page.getByText('Competition stage package plan cancelled')).toBeVisible()
+  expect(cancelledStagePackagePlanId).toBe(stagePackagePlanId)
+  await expect(planLibrary.getByText('cancelled', { exact: true })).toBeVisible()
+  await expect(
+    planLibrary.getByRole('button', { name: 'Execute April regional package revised' }),
+  ).toHaveCount(0)
+})
+
 test('admin creates a team template and applies it to a stage team', async ({ page }) => {
   let createdTemplatePayload: unknown = null
   let createdStagePayload: unknown = null
@@ -417,13 +464,30 @@ async function routeCompetitionApi(
     onCloneTemplate?: (templateId: string, payload: unknown) => void
     onCreateStagePackage?: (payload: unknown) => void
     onCreateStagePackagePlan?: (payload: unknown) => void
+    onUpdateStagePackagePlan?: (planId: string, payload: unknown) => void
     onExecuteStagePackagePlan?: (planId: string) => void
+    onCancelStagePackagePlan?: (planId: string) => void
     initialTeamTemplates?: unknown[]
     initialStagePackagePlans?: unknown[]
   },
 ) {
   let teamTemplates: unknown[] = options?.initialTeamTemplates ?? []
   let stagePackagePlans: unknown[] = options?.initialStagePackagePlans ?? []
+  let stagePackagePlanAuditEvents: unknown[] = stagePackagePlans.flatMap((plan) => {
+    const planRecord = plan as { planId?: string; planName?: string }
+
+    return planRecord.planId === stagePackagePlanId
+      ? [
+          {
+            eventLogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+            occurredAt: '2026-04-25T10:00:00.000Z',
+            actorUserId: authSession.user.userId,
+            eventType: 'competition_stage_package_plan.saved',
+            metadata: { planName: planRecord.planName },
+          },
+        ]
+      : []
+  })
 
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: authSession })
@@ -586,6 +650,24 @@ async function routeCompetitionApi(
       return
     }
 
+    if (
+      request.method() === 'GET' &&
+      pathname.endsWith(`/api/competitions/stage-package-plans/${stagePackagePlanId}/audit`)
+    ) {
+      await route.fulfill({
+        json: {
+          items: stagePackagePlanAuditEvents,
+          meta: {
+            count: stagePackagePlanAuditEvents.length,
+            total: stagePackagePlanAuditEvents.length,
+            limit: stagePackagePlanAuditEvents.length,
+            offset: 0,
+          },
+        },
+      })
+      return
+    }
+
     if (request.method() === 'GET' && pathname.endsWith(`/api/competitions/${competitionId}`)) {
       await route.fulfill({ json: competitionDetail })
       return
@@ -614,6 +696,46 @@ async function routeCompetitionApi(
         json: {
           command: { status: 'created', message: 'Competition stage package plan saved' },
           data: { plan },
+        },
+      })
+      return
+    }
+
+    if (
+      request.method() === 'PUT' &&
+      pathname.endsWith(`/api/competitions/stage-package-plans/${stagePackagePlanId}`)
+    ) {
+      const payload = request.postDataJSON()
+      options?.onUpdateStagePackagePlan?.(stagePackagePlanId, payload)
+      stagePackagePlans = stagePackagePlans.map((plan) =>
+        (plan as { planId?: string }).planId === stagePackagePlanId
+          ? {
+              ...(plan as Record<string, unknown>),
+              packageCode: payload.packageCode,
+              planName: payload.planName,
+              stageDrafts: payload.stages,
+              updatedAt: '2026-04-25T10:10:00.000Z',
+            }
+          : plan,
+      )
+      stagePackagePlanAuditEvents = [
+        ...stagePackagePlanAuditEvents,
+        {
+          eventLogId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+          occurredAt: '2026-04-25T10:10:00.000Z',
+          actorUserId: authSession.user.userId,
+          eventType: 'competition_stage_package_plan.updated',
+          metadata: { planName: payload.planName, stageCount: payload.stages.length },
+        },
+      ]
+      await route.fulfill({
+        json: {
+          command: { status: 'updated', message: 'Competition stage package plan updated' },
+          data: {
+            plan: stagePackagePlans.find(
+              (plan) => (plan as { planId?: string }).planId === stagePackagePlanId,
+            ),
+          },
         },
       })
       return
@@ -671,6 +793,43 @@ async function routeCompetitionApi(
                 finalizationState: null,
               },
             ],
+          },
+        },
+      })
+      return
+    }
+
+    if (
+      request.method() === 'PATCH' &&
+      pathname.endsWith(`/api/competitions/stage-package-plans/${stagePackagePlanId}/cancel`)
+    ) {
+      options?.onCancelStagePackagePlan?.(stagePackagePlanId)
+      stagePackagePlans = stagePackagePlans.map((plan) =>
+        (plan as { planId?: string }).planId === stagePackagePlanId
+          ? {
+              ...(plan as Record<string, unknown>),
+              planStatus: 'cancelled',
+              updatedAt: '2026-04-25T10:12:00.000Z',
+            }
+          : plan,
+      )
+      stagePackagePlanAuditEvents = [
+        ...stagePackagePlanAuditEvents,
+        {
+          eventLogId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+          occurredAt: '2026-04-25T10:12:00.000Z',
+          actorUserId: authSession.user.userId,
+          eventType: 'competition_stage_package_plan.cancelled',
+          metadata: { planName: 'April regional package revised' },
+        },
+      ]
+      await route.fulfill({
+        json: {
+          command: { status: 'cancelled', message: 'Competition stage package plan cancelled' },
+          data: {
+            plan: stagePackagePlans.find(
+              (plan) => (plan as { planId?: string }).planId === stagePackagePlanId,
+            ),
           },
         },
       })
@@ -757,6 +916,49 @@ function storesFromIds(storeIds: string[]) {
       storeName: store.storeName,
       regionId: store.regionId,
     }))
+}
+
+function createStagePackagePlanFixture() {
+  const teams = [activeTemplateFixture, secondActiveTemplateFixture].map((template) => ({
+    sourceTemplateId: template.templateId,
+    teamCode: template.templateCode,
+    teamName: template.templateName,
+    storeIds: template.stores.map((store) => store.storeId),
+  }))
+
+  return {
+    planId: stagePackagePlanId,
+    competitionId,
+    packageCode: 'league_then_final',
+    planName: 'April regional package',
+    planStatus: 'draft',
+    stageDrafts: [
+      {
+        stagePresetCode: 'region_league',
+        stageCode: 'REGION_LEAGUE',
+        stageName: 'Regional League',
+        stageOrder: 1,
+        stageType: 'league',
+        startsOn: '2026-04-22',
+        endsOn: '2026-04-24',
+        teams,
+      },
+      {
+        stagePresetCode: 'final_showdown',
+        stageCode: 'FINAL_SHOWDOWN',
+        stageName: 'Final Showdown',
+        stageOrder: 2,
+        stageType: 'final',
+        startsOn: '2026-04-24',
+        endsOn: '2026-04-24',
+        teams,
+      },
+    ],
+    createdStageIds: [],
+    createdAt: '2026-04-25T10:00:00.000Z',
+    updatedAt: '2026-04-25T10:00:00.000Z',
+    executedAt: null,
+  }
 }
 
 const activeTemplateFixture = {

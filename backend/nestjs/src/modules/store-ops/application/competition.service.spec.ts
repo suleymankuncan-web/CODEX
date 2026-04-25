@@ -16,6 +16,9 @@ const repository = () => ({
   listStagePackagePlans: jest.fn(),
   createStagePackagePlan: jest.fn(),
   executeStagePackagePlan: jest.fn(),
+  updateStagePackagePlan: jest.fn(),
+  cancelStagePackagePlan: jest.fn(),
+  listStagePackagePlanAudit: jest.fn(),
   recalculateStage: jest.fn(),
   listOpenWarnings: jest.fn(),
   finalizeStage: jest.fn(),
@@ -612,6 +615,100 @@ describe("CompetitionService", () => {
     expect(result.data.stages).toHaveLength(2);
     expect(repo.executeStagePackagePlan).toHaveBeenCalledWith({
       actorUserId: "11111111-1111-4111-8111-111111111111",
+      planId: "55555555-5555-4555-8555-555555555555",
+    });
+  });
+
+  it("updates a draft stage package plan through the repository", async () => {
+    const repo = repository();
+    repo.updateStagePackagePlan.mockResolvedValue({
+      planId: "55555555-5555-4555-8555-555555555555",
+      competitionId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      packageCode: "league_then_final",
+      planName: "April regional package revised",
+      planStatus: "draft",
+      stageDrafts: validStagePackageStages,
+      createdStageIds: [],
+      createdAt: "2026-04-25T10:00:00.000Z",
+      updatedAt: "2026-04-25T10:10:00.000Z",
+      executedAt: null,
+    });
+    const service = new CompetitionService(repo as never);
+
+    const result = await service.updateStagePackagePlan({
+      actorUserId: "11111111-1111-4111-8111-111111111111",
+      planId: "55555555-5555-4555-8555-555555555555",
+      packageCode: "league_then_final",
+      planName: "April regional package revised",
+      stages: validStagePackageStages,
+    });
+
+    expect(result.command.status).toBe("updated");
+    expect(result.command.message).toBe("Competition stage package plan updated");
+    expect(result.data.plan.planName).toBe("April regional package revised");
+    expect(repo.updateStagePackagePlan).toHaveBeenCalledWith({
+      actorUserId: "11111111-1111-4111-8111-111111111111",
+      planId: "55555555-5555-4555-8555-555555555555",
+      packageCode: "league_then_final",
+      planName: "April regional package revised",
+      stages: validStagePackageStages,
+    });
+  });
+
+  it("cancels a draft stage package plan through the repository", async () => {
+    const repo = repository();
+    repo.cancelStagePackagePlan.mockResolvedValue({
+      planId: "55555555-5555-4555-8555-555555555555",
+      competitionId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      packageCode: "league_then_final",
+      planName: "April regional package",
+      planStatus: "cancelled",
+      stageDrafts: validStagePackageStages,
+      createdStageIds: [],
+      createdAt: "2026-04-25T10:00:00.000Z",
+      updatedAt: "2026-04-25T10:12:00.000Z",
+      executedAt: null,
+    });
+    const service = new CompetitionService(repo as never);
+
+    const result = await service.cancelStagePackagePlan({
+      actorUserId: "11111111-1111-4111-8111-111111111111",
+      planId: "55555555-5555-4555-8555-555555555555",
+    });
+
+    expect(result.command.status).toBe("cancelled");
+    expect(result.command.message).toBe("Competition stage package plan cancelled");
+    expect(result.data.plan.planStatus).toBe("cancelled");
+    expect(repo.cancelStagePackagePlan).toHaveBeenCalledWith({
+      actorUserId: "11111111-1111-4111-8111-111111111111",
+      planId: "55555555-5555-4555-8555-555555555555",
+    });
+  });
+
+  it("lists stage package plan audit events", async () => {
+    const repo = repository();
+    repo.listStagePackagePlanAudit.mockResolvedValue([
+      {
+        eventLogId: "99999999-9999-4999-8999-999999999999",
+        occurredAt: "2026-04-25T10:00:00.000Z",
+        actorUserId: null,
+        eventType: "competition_stage_package_plan.saved",
+        metadata: { planName: "April regional package" },
+      },
+    ]);
+    const service = new CompetitionService(repo as never);
+
+    const result = await service.listStagePackagePlanAudit({
+      planId: "55555555-5555-4555-8555-555555555555",
+    });
+
+    expect(result.items).toEqual([
+      expect.objectContaining({
+        eventType: "competition_stage_package_plan.saved",
+      }),
+    ]);
+    expect(result.meta.total).toBe(1);
+    expect(repo.listStagePackagePlanAudit).toHaveBeenCalledWith({
       planId: "55555555-5555-4555-8555-555555555555",
     });
   });

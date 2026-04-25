@@ -202,9 +202,29 @@ export type CreateCompetitionStagePackagePlanInput = CreateCompetitionStagePacka
   planName: string;
 };
 
+export type UpdateCompetitionStagePackagePlanInput = Omit<
+  CreateCompetitionStagePackagePlanInput,
+  "competitionId"
+> & {
+  planId: string;
+};
+
 export type ExecuteCompetitionStagePackagePlanInput = {
   actorUserId: string;
   planId: string;
+};
+
+export type CancelCompetitionStagePackagePlanInput = {
+  actorUserId: string;
+  planId: string;
+};
+
+export type CompetitionStagePackagePlanAuditEvent = {
+  eventLogId: string;
+  occurredAt: string;
+  actorUserId: string | null;
+  eventType: string;
+  metadata: Record<string, unknown>;
 };
 
 export type CreateCompetitionTeamTemplateInput = {

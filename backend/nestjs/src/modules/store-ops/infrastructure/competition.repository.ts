@@ -8,11 +8,13 @@ import {
   CompetitionStage,
   CompetitionStageFinalizationState,
   CompetitionStagePackagePlan,
+  CompetitionStagePackagePlanAuditEvent,
   CompetitionStoreContribution,
   CompetitionTeam,
   CompetitionTeamTemplate,
   CompetitionTeamScore,
   CompetitionWarning,
+  CancelCompetitionStagePackagePlanInput,
   CloneCompetitionTeamTemplateInput,
   CreateCompetitionStagePackageInput,
   CreateCompetitionStagePackagePlanInput,
@@ -21,6 +23,7 @@ import {
   DeactivateCompetitionTeamTemplateInput,
   ExecuteCompetitionStagePackagePlanInput,
   RecalculateCompetitionStageInput,
+  UpdateCompetitionStagePackagePlanInput,
   UpdateCompetitionTeamTemplateInput,
 } from "../application/competition.contract";
 
@@ -68,6 +71,14 @@ type CompetitionStagePackagePlanRow = {
   created_at: string | Date;
   updated_at: string | Date;
   executed_at: string | Date | null;
+};
+
+type CompetitionStagePackagePlanAuditRow = {
+  event_log_id: string;
+  occurred_at: string | Date;
+  actor_user_id: string | null;
+  event_type: string;
+  metadata_json: Record<string, unknown>;
 };
 
 type CompetitionTeamStoreRow = {
@@ -719,6 +730,69 @@ export class CompetitionRepository {
     });
   }
 
+  async updateStagePackagePlan(
+    input: UpdateCompetitionStagePackagePlanInput,
+  ): Promise<CompetitionStagePackagePlan> {
+    return this.databaseService.withTransaction(async (client) => {
+      const planRow = await this.getStagePackagePlanForUpdate(client, input.planId);
+
+      if (planRow.plan_status !== "draft") {
+        throw new BadRequestException("Stage package plan is not editable");
+      }
+
+      const result = await client.query<CompetitionStagePackagePlanRow>(
+        `
+          UPDATE ops.competition_stage_package_plan
+          SET
+            package_code = $2,
+            plan_name = $3,
+            stage_drafts_json = $4::jsonb,
+            updated_by_user_id = $5,
+            updated_at = NOW()
+          WHERE competition_stage_package_plan_id = $1::uuid
+          RETURNING
+            competition_stage_package_plan_id,
+            competition_id,
+            package_code,
+            plan_name,
+            plan_status,
+            stage_drafts_json,
+            created_stage_ids,
+            created_at,
+            updated_at,
+            executed_at
+        `,
+        [
+          input.planId,
+          input.packageCode,
+          input.planName,
+          JSON.stringify(input.stages),
+          input.actorUserId,
+        ],
+      );
+
+      const plan = mapStagePackagePlan(result.rows[0]);
+
+      await writeCompetitionAudit(client, {
+        actorUserId: input.actorUserId,
+        eventType: "competition_stage_package_plan.updated",
+        entityName: "ops.competition_stage_package_plan",
+        entityId: input.planId,
+        metadata: {
+          competitionId: plan.competitionId,
+          packageCode: input.packageCode,
+          planName: input.planName,
+          changedFields: ["package_code", "plan_name", "stage_drafts_json"],
+          stageCount: input.stages.length,
+          stageCodes: input.stages.map((stage) => stage.stageCode),
+          stageNames: input.stages.map((stage) => stage.stageName),
+        },
+      });
+
+      return plan;
+    });
+  }
+
   async executeStagePackagePlan(
     input: ExecuteCompetitionStagePackagePlanInput,
   ): Promise<{ plan: CompetitionStagePackagePlan; stages: CompetitionStage[] }> {
@@ -810,6 +884,111 @@ export class CompetitionRepository {
 
       return { plan: executedPlan, stages };
     });
+  }
+
+  async cancelStagePackagePlan(
+    input: CancelCompetitionStagePackagePlanInput,
+  ): Promise<CompetitionStagePackagePlan> {
+    return this.databaseService.withTransaction(async (client) => {
+      const planRow = await this.getStagePackagePlanForUpdate(client, input.planId);
+
+      if (planRow.plan_status !== "draft") {
+        throw new BadRequestException("Stage package plan is not cancellable");
+      }
+
+      const result = await client.query<CompetitionStagePackagePlanRow>(
+        `
+          UPDATE ops.competition_stage_package_plan
+          SET
+            plan_status = 'cancelled',
+            updated_by_user_id = $2,
+            updated_at = NOW()
+          WHERE competition_stage_package_plan_id = $1::uuid
+          RETURNING
+            competition_stage_package_plan_id,
+            competition_id,
+            package_code,
+            plan_name,
+            plan_status,
+            stage_drafts_json,
+            created_stage_ids,
+            created_at,
+            updated_at,
+            executed_at
+        `,
+        [input.planId, input.actorUserId],
+      );
+
+      const plan = mapStagePackagePlan(result.rows[0]);
+
+      await writeCompetitionAudit(client, {
+        actorUserId: input.actorUserId,
+        eventType: "competition_stage_package_plan.cancelled",
+        entityName: "ops.competition_stage_package_plan",
+        entityId: input.planId,
+        metadata: {
+          competitionId: plan.competitionId,
+          packageCode: plan.packageCode,
+          planName: plan.planName,
+        },
+      });
+
+      return plan;
+    });
+  }
+
+  async listStagePackagePlanAudit(input: {
+    planId: string;
+  }): Promise<CompetitionStagePackagePlanAuditEvent[]> {
+    const result = await this.databaseService.query<CompetitionStagePackagePlanAuditRow>(
+      `
+        SELECT
+          event_log_id,
+          occurred_at,
+          actor_user_id,
+          event_type,
+          metadata_json
+        FROM audit.event_log
+        WHERE entity_name = 'ops.competition_stage_package_plan'
+          AND entity_id = $1::uuid
+        ORDER BY occurred_at ASC, event_log_id ASC
+      `,
+      [input.planId],
+    );
+
+    return result.rows.map(mapStagePackagePlanAuditEvent);
+  }
+
+  private async getStagePackagePlanForUpdate(
+    client: Queryable,
+    planId: string,
+  ): Promise<CompetitionStagePackagePlanRow> {
+    const planResult = await client.query<CompetitionStagePackagePlanRow>(
+      `
+        SELECT
+          competition_stage_package_plan_id,
+          competition_id,
+          package_code,
+          plan_name,
+          plan_status,
+          stage_drafts_json,
+          created_stage_ids,
+          created_at,
+          updated_at,
+          executed_at
+        FROM ops.competition_stage_package_plan
+        WHERE competition_stage_package_plan_id = $1::uuid
+        FOR UPDATE
+      `,
+      [planId],
+    );
+
+    const planRow = planResult.rows[0];
+    if (!planRow) {
+      throw new BadRequestException("Stage package plan not found");
+    }
+
+    return planRow;
   }
 
   private async insertStageWithTeams(
@@ -1505,6 +1684,18 @@ function mapStagePackagePlan(
     createdAt: toDateTimeString(row.created_at),
     updatedAt: toDateTimeString(row.updated_at),
     executedAt: row.executed_at ? toDateTimeString(row.executed_at) : null,
+  };
+}
+
+function mapStagePackagePlanAuditEvent(
+  row: CompetitionStagePackagePlanAuditRow,
+): CompetitionStagePackagePlanAuditEvent {
+  return {
+    eventLogId: row.event_log_id,
+    occurredAt: toDateTimeString(row.occurred_at),
+    actorUserId: row.actor_user_id,
+    eventType: row.event_type,
+    metadata: row.metadata_json,
   };
 }
 
