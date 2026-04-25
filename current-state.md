@@ -912,6 +912,54 @@ C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI\admin-web
 - Frontend release check gecti: `npm.cmd run check:release` -> lint, build, 15 Playwright smoke testi ve `npm audit --omit=dev` (`found 0 vulnerabilities`); Vite chunk warning yok.
 - Siradaki mantikli adim: package planlarini tek competition icinde sadece listelemekten cikarip review/approval akisiyle baglamak. IK hazirlar, toplantidan sonra onayli kisi execute eder yapisina gecerse turnuva planlari daha buyurken de dagilmaz.
 
+## Son Competition Stage Package Plan Approval V1
+
+25 Nisan 2026 itibariyla stage package plan approval gate V1 hatti acildi.
+
+- Tasarim notu eklendi: `docs/superpowers/specs/2026-04-25-competition-stage-package-plan-approval-v1-design.md`.
+- Uygulama plani eklendi: `docs/superpowers/plans/2026-04-25-competition-stage-package-plan-approval-v1.md`.
+- Yeni migration eklendi: `db/migrations/024_competition_stage_package_plan_approval.sql`.
+- `ops.competition_stage_package_plan` plan status seti genisledi:
+  - `draft`
+  - `submitted`
+  - `approved`
+  - `rejected`
+  - `executed`
+  - `cancelled`
+- Plan review metadata alanlari eklendi:
+  - `submitted_by_user_id`
+  - `submitted_at`
+  - `reviewed_by_user_id`
+  - `reviewed_at`
+  - `review_note`
+- Backend endpointleri eklendi:
+  - `POST /api/competitions/stage-package-plans/:planId/submit`
+  - `POST /api/competitions/stage-package-plans/:planId/approve`
+  - `POST /api/competitions/stage-package-plans/:planId/reject`
+- Execute guard degisti: package plan artik sadece `approved` durumundayken execute edilebilir.
+- Draft plan dogrudan execute edilemez; once submit, sonra approve gerekir.
+- Submitted plan edit/cancel/execute edilemez; sadece approve/reject edilir.
+- Rejected plan history olarak kalir ve execute edilemez.
+- Audit eventleri eklendi:
+  - `competition_stage_package_plan.submitted`
+  - `competition_stage_package_plan.approved`
+  - `competition_stage_package_plan.rejected`
+- Frontend `Package plan library` status bazli aksiyonlara ayrildi:
+  - Draft: `Edit`, `Cancel`, `Submit`, `Show history`
+  - Submitted: `Approve`, `Reject`, `Show history`
+  - Approved: `Execute`, `Show history`
+  - Rejected/executed/cancelled: sadece `Show history`
+- Submitted plan icin inline review note alani eklendi.
+- TDD kirmizi dogrulamasi yapildi:
+  - Backend service testleri `submitStagePackagePlan/approveStagePackagePlan/rejectStagePackagePlan` yokken TypeScript fail verdi.
+  - Repository testleri transition metotlari yokken TypeScript fail verdi.
+  - Frontend Playwright testi draft planda `Execute` butonu gorunurken ve review note alani yokken fail verdi.
+- Hedefli backend dogrulama gecti: `npm.cmd test -- src/modules/store-ops/application/competition.service.spec.ts src/modules/store-ops/infrastructure/competition.repository.spec.ts --runInBand` -> 2 suite / 46 test.
+- Hedefli frontend dogrulama gecti: `npm.cmd run test:e2e -- e2e/competition-surfaces.spec.ts` -> 11 Playwright test.
+- Backend release check gecti: `npm.cmd run check:release` -> lint, 28 suite / 224 test, build ve `npm audit --omit=dev` (`found 0 vulnerabilities`).
+- Frontend release check gecti: `npm.cmd run check:release` -> lint, build, 16 Playwright smoke testi ve `npm audit --omit=dev` (`found 0 vulnerabilities`); Vite chunk warning yok.
+- Siradaki mantikli adim: approval gate'i daha kontrollu hale getirmek icin submitter ve reviewer ayrimini rol/scope seviyesinde tasarlamak. V1 akisi guvenli, ama ileride IK hazirlayan kisiyle onaylayan kisiyi ayirmak kurumsal kontrolu guclendirir.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:
@@ -935,6 +983,7 @@ Store ops:
 - `backend/nestjs/src/modules/store-ops/web/competition.controller.ts`
 - `backend/nestjs/src/modules/store-ops/web/dto/create-competition-stage-package.dto.ts`
 - `backend/nestjs/src/modules/store-ops/web/dto/create-competition-stage-package-plan.dto.ts`
+- `backend/nestjs/src/modules/store-ops/web/dto/review-competition-stage-package-plan.dto.ts`
 - `backend/nestjs/src/modules/store-ops/web/dto/update-competition-stage-package-plan.dto.ts`
 - `backend/nestjs/src/modules/store-ops/web/dto/clone-competition-team-template.dto.ts`
 - `backend/nestjs/src/modules/store-ops/web/dto/list-competition-team-templates.query.ts`
@@ -972,6 +1021,8 @@ Planlar:
 - `docs/plans/daily-closure-ranking-strategy.md`
 - `docs/superpowers/plans/2026-04-25-competition-stage-package-plan-lifecycle-v1.md`
 - `docs/superpowers/specs/2026-04-25-competition-stage-package-plan-lifecycle-v1-design.md`
+- `docs/superpowers/plans/2026-04-25-competition-stage-package-plan-approval-v1.md`
+- `docs/superpowers/specs/2026-04-25-competition-stage-package-plan-approval-v1-design.md`
 
 ## Devam Komutu
 

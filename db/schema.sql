@@ -203,13 +203,18 @@ CREATE TABLE ops.competition_stage_package_plan (
     stage_drafts_json JSONB NOT NULL,
     created_by_user_id TEXT NOT NULL,
     updated_by_user_id TEXT NOT NULL,
+    submitted_by_user_id TEXT,
+    submitted_at TIMESTAMPTZ,
+    reviewed_by_user_id TEXT,
+    reviewed_at TIMESTAMPTZ,
+    review_note TEXT,
     executed_by_user_id TEXT,
     executed_at TIMESTAMPTZ,
     created_stage_ids UUID[] NOT NULL DEFAULT ARRAY[]::uuid[],
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CHECK (package_code IN ('league_then_final')),
-    CHECK (plan_status IN ('draft', 'executed', 'cancelled')),
+    CHECK (plan_status IN ('draft', 'submitted', 'approved', 'rejected', 'executed', 'cancelled')),
     CHECK (jsonb_typeof(stage_drafts_json) = 'array')
 );
 

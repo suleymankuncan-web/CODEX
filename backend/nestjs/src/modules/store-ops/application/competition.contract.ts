@@ -25,7 +25,13 @@ export type CompetitionStagePresetCode =
 
 export type CompetitionStagePackageCode = "league_then_final";
 
-export type CompetitionStagePackagePlanStatus = "draft" | "executed" | "cancelled";
+export type CompetitionStagePackagePlanStatus =
+  | "draft"
+  | "submitted"
+  | "approved"
+  | "rejected"
+  | "executed"
+  | "cancelled";
 
 export type CompetitionWarningCode =
   | "missing_daily_store_data"
@@ -193,6 +199,11 @@ export type CompetitionStagePackagePlan = {
   planStatus: CompetitionStagePackagePlanStatus;
   stageDrafts: CreateCompetitionStagePackageStageInput[];
   createdStageIds: string[];
+  submittedByUserId: string | null;
+  submittedAt: string | null;
+  reviewedByUserId: string | null;
+  reviewedAt: string | null;
+  reviewNote: string | null;
   createdAt: string;
   updatedAt: string;
   executedAt: string | null;
@@ -212,6 +223,23 @@ export type UpdateCompetitionStagePackagePlanInput = Omit<
 export type ExecuteCompetitionStagePackagePlanInput = {
   actorUserId: string;
   planId: string;
+};
+
+export type SubmitCompetitionStagePackagePlanInput = {
+  actorUserId: string;
+  planId: string;
+};
+
+export type ApproveCompetitionStagePackagePlanInput = {
+  actorUserId: string;
+  planId: string;
+  reviewNote?: string;
+};
+
+export type RejectCompetitionStagePackagePlanInput = {
+  actorUserId: string;
+  planId: string;
+  reviewNote?: string;
 };
 
 export type CancelCompetitionStagePackagePlanInput = {

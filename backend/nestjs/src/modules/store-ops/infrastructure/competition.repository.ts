@@ -14,6 +14,7 @@ import {
   CompetitionTeamTemplate,
   CompetitionTeamScore,
   CompetitionWarning,
+  ApproveCompetitionStagePackagePlanInput,
   CancelCompetitionStagePackagePlanInput,
   CloneCompetitionTeamTemplateInput,
   CreateCompetitionStagePackageInput,
@@ -23,6 +24,8 @@ import {
   DeactivateCompetitionTeamTemplateInput,
   ExecuteCompetitionStagePackagePlanInput,
   RecalculateCompetitionStageInput,
+  RejectCompetitionStagePackagePlanInput,
+  SubmitCompetitionStagePackagePlanInput,
   UpdateCompetitionStagePackagePlanInput,
   UpdateCompetitionTeamTemplateInput,
 } from "../application/competition.contract";
@@ -68,6 +71,11 @@ type CompetitionStagePackagePlanRow = {
   plan_status: CompetitionStagePackagePlan["planStatus"];
   stage_drafts_json: unknown;
   created_stage_ids: string[] | null;
+  submitted_by_user_id?: string | null;
+  submitted_at?: string | Date | null;
+  reviewed_by_user_id?: string | null;
+  reviewed_at?: string | Date | null;
+  review_note?: string | null;
   created_at: string | Date;
   updated_at: string | Date;
   executed_at: string | Date | null;
@@ -660,6 +668,11 @@ export class CompetitionRepository {
           plan_status,
           stage_drafts_json,
           created_stage_ids,
+          submitted_by_user_id,
+          submitted_at,
+          reviewed_by_user_id,
+          reviewed_at,
+          review_note,
           created_at,
           updated_at,
           executed_at
@@ -697,6 +710,11 @@ export class CompetitionRepository {
             plan_status,
             stage_drafts_json,
             created_stage_ids,
+            submitted_by_user_id,
+            submitted_at,
+            reviewed_by_user_id,
+            reviewed_at,
+            review_note,
             created_at,
             updated_at,
             executed_at
@@ -758,6 +776,11 @@ export class CompetitionRepository {
             plan_status,
             stage_drafts_json,
             created_stage_ids,
+            submitted_by_user_id,
+            submitted_at,
+            reviewed_by_user_id,
+            reviewed_at,
+            review_note,
             created_at,
             updated_at,
             executed_at
@@ -793,6 +816,186 @@ export class CompetitionRepository {
     });
   }
 
+  async submitStagePackagePlan(
+    input: SubmitCompetitionStagePackagePlanInput,
+  ): Promise<CompetitionStagePackagePlan> {
+    return this.databaseService.withTransaction(async (client) => {
+      const planRow = await this.getStagePackagePlanForUpdate(client, input.planId);
+
+      if (planRow.plan_status !== "draft") {
+        throw new BadRequestException("Stage package plan is not submittable");
+      }
+
+      const result = await client.query<CompetitionStagePackagePlanRow>(
+        `
+          UPDATE ops.competition_stage_package_plan
+          SET
+            plan_status = 'submitted',
+            submitted_by_user_id = $2,
+            submitted_at = NOW(),
+            updated_by_user_id = $2,
+            updated_at = NOW()
+          WHERE competition_stage_package_plan_id = $1::uuid
+          RETURNING
+            competition_stage_package_plan_id,
+            competition_id,
+            package_code,
+            plan_name,
+            plan_status,
+            stage_drafts_json,
+            created_stage_ids,
+            submitted_by_user_id,
+            submitted_at,
+            reviewed_by_user_id,
+            reviewed_at,
+            review_note,
+            created_at,
+            updated_at,
+            executed_at
+        `,
+        [input.planId, input.actorUserId],
+      );
+
+      const plan = mapStagePackagePlan(result.rows[0]);
+
+      await writeCompetitionAudit(client, {
+        actorUserId: input.actorUserId,
+        eventType: "competition_stage_package_plan.submitted",
+        entityName: "ops.competition_stage_package_plan",
+        entityId: input.planId,
+        metadata: {
+          competitionId: plan.competitionId,
+          packageCode: plan.packageCode,
+          planName: plan.planName,
+        },
+      });
+
+      return plan;
+    });
+  }
+
+  async approveStagePackagePlan(
+    input: ApproveCompetitionStagePackagePlanInput,
+  ): Promise<CompetitionStagePackagePlan> {
+    return this.databaseService.withTransaction(async (client) => {
+      const planRow = await this.getStagePackagePlanForUpdate(client, input.planId);
+
+      if (planRow.plan_status !== "submitted") {
+        throw new BadRequestException("Stage package plan is not reviewable");
+      }
+
+      const reviewNote = input.reviewNote?.trim() || null;
+      const result = await client.query<CompetitionStagePackagePlanRow>(
+        `
+          UPDATE ops.competition_stage_package_plan
+          SET
+            plan_status = 'approved',
+            reviewed_by_user_id = $2,
+            review_note = $3,
+            reviewed_at = NOW(),
+            updated_by_user_id = $2,
+            updated_at = NOW()
+          WHERE competition_stage_package_plan_id = $1::uuid
+          RETURNING
+            competition_stage_package_plan_id,
+            competition_id,
+            package_code,
+            plan_name,
+            plan_status,
+            stage_drafts_json,
+            created_stage_ids,
+            submitted_by_user_id,
+            submitted_at,
+            reviewed_by_user_id,
+            reviewed_at,
+            review_note,
+            created_at,
+            updated_at,
+            executed_at
+        `,
+        [input.planId, input.actorUserId, reviewNote],
+      );
+
+      const plan = mapStagePackagePlan(result.rows[0]);
+
+      await writeCompetitionAudit(client, {
+        actorUserId: input.actorUserId,
+        eventType: "competition_stage_package_plan.approved",
+        entityName: "ops.competition_stage_package_plan",
+        entityId: input.planId,
+        metadata: {
+          competitionId: plan.competitionId,
+          packageCode: plan.packageCode,
+          planName: plan.planName,
+          reviewNote,
+        },
+      });
+
+      return plan;
+    });
+  }
+
+  async rejectStagePackagePlan(
+    input: RejectCompetitionStagePackagePlanInput,
+  ): Promise<CompetitionStagePackagePlan> {
+    return this.databaseService.withTransaction(async (client) => {
+      const planRow = await this.getStagePackagePlanForUpdate(client, input.planId);
+
+      if (planRow.plan_status !== "submitted") {
+        throw new BadRequestException("Stage package plan is not reviewable");
+      }
+
+      const reviewNote = input.reviewNote?.trim() || null;
+      const result = await client.query<CompetitionStagePackagePlanRow>(
+        `
+          UPDATE ops.competition_stage_package_plan
+          SET
+            plan_status = 'rejected',
+            reviewed_by_user_id = $2,
+            review_note = $3,
+            reviewed_at = NOW(),
+            updated_by_user_id = $2,
+            updated_at = NOW()
+          WHERE competition_stage_package_plan_id = $1::uuid
+          RETURNING
+            competition_stage_package_plan_id,
+            competition_id,
+            package_code,
+            plan_name,
+            plan_status,
+            stage_drafts_json,
+            created_stage_ids,
+            submitted_by_user_id,
+            submitted_at,
+            reviewed_by_user_id,
+            reviewed_at,
+            review_note,
+            created_at,
+            updated_at,
+            executed_at
+        `,
+        [input.planId, input.actorUserId, reviewNote],
+      );
+
+      const plan = mapStagePackagePlan(result.rows[0]);
+
+      await writeCompetitionAudit(client, {
+        actorUserId: input.actorUserId,
+        eventType: "competition_stage_package_plan.rejected",
+        entityName: "ops.competition_stage_package_plan",
+        entityId: input.planId,
+        metadata: {
+          competitionId: plan.competitionId,
+          packageCode: plan.packageCode,
+          planName: plan.planName,
+          reviewNote,
+        },
+      });
+
+      return plan;
+    });
+  }
+
   async executeStagePackagePlan(
     input: ExecuteCompetitionStagePackagePlanInput,
   ): Promise<{ plan: CompetitionStagePackagePlan; stages: CompetitionStage[] }> {
@@ -807,6 +1010,11 @@ export class CompetitionRepository {
             plan_status,
             stage_drafts_json,
             created_stage_ids,
+            submitted_by_user_id,
+            submitted_at,
+            reviewed_by_user_id,
+            reviewed_at,
+            review_note,
             created_at,
             updated_at,
             executed_at
@@ -822,7 +1030,7 @@ export class CompetitionRepository {
         throw new BadRequestException("Stage package plan not found");
       }
 
-      if (planRow.plan_status !== "draft") {
+      if (planRow.plan_status !== "approved") {
         throw new BadRequestException("Stage package plan is not executable");
       }
 
@@ -859,6 +1067,11 @@ export class CompetitionRepository {
             plan_status,
             stage_drafts_json,
             created_stage_ids,
+            submitted_by_user_id,
+            submitted_at,
+            reviewed_by_user_id,
+            reviewed_at,
+            review_note,
             created_at,
             updated_at,
             executed_at
@@ -912,6 +1125,11 @@ export class CompetitionRepository {
             plan_status,
             stage_drafts_json,
             created_stage_ids,
+            submitted_by_user_id,
+            submitted_at,
+            reviewed_by_user_id,
+            reviewed_at,
+            review_note,
             created_at,
             updated_at,
             executed_at
@@ -973,6 +1191,11 @@ export class CompetitionRepository {
           plan_status,
           stage_drafts_json,
           created_stage_ids,
+          submitted_by_user_id,
+          submitted_at,
+          reviewed_by_user_id,
+          reviewed_at,
+          review_note,
           created_at,
           updated_at,
           executed_at
@@ -1681,6 +1904,11 @@ function mapStagePackagePlan(
     planStatus: row.plan_status,
     stageDrafts: normalizeStageDrafts(row.stage_drafts_json),
     createdStageIds: row.created_stage_ids ?? [],
+    submittedByUserId: row.submitted_by_user_id ?? null,
+    submittedAt: row.submitted_at ? toDateTimeString(row.submitted_at) : null,
+    reviewedByUserId: row.reviewed_by_user_id ?? null,
+    reviewedAt: row.reviewed_at ? toDateTimeString(row.reviewed_at) : null,
+    reviewNote: row.review_note ?? null,
     createdAt: toDateTimeString(row.created_at),
     updatedAt: toDateTimeString(row.updated_at),
     executedAt: row.executed_at ? toDateTimeString(row.executed_at) : null,

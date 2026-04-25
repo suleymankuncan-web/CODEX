@@ -10,6 +10,7 @@ import { CreateCompetitionTeamTemplateDto } from "./dto/create-competition-team-
 import { FinalizeCompetitionStageDto } from "./dto/finalize-competition-stage.dto";
 import { ListCompetitionTeamTemplatesQueryDto } from "./dto/list-competition-team-templates.query";
 import { ListCompetitionsQueryDto } from "./dto/list-competitions.query";
+import { ReviewCompetitionStagePackagePlanDto } from "./dto/review-competition-stage-package-plan.dto";
 import { UpdateCompetitionStagePackagePlanDto } from "./dto/update-competition-stage-package-plan.dto";
 import { UpdateCompetitionTeamTemplateDto } from "./dto/update-competition-team-template.dto";
 
@@ -213,6 +214,46 @@ export class CompetitionController {
     return this.competitionService.executeStagePackagePlan({
       actorUserId: request.user.userId,
       planId,
+    });
+  }
+
+  @Post("stage-package-plans/:planId/submit")
+  @RequireRoles("SUPER_ADMIN", "HR_ADMIN")
+  async submitStagePackagePlan(
+    @Req() request: CompetitionRequest,
+    @Param("planId") planId: string,
+  ) {
+    return this.competitionService.submitStagePackagePlan({
+      actorUserId: request.user.userId,
+      planId,
+    });
+  }
+
+  @Post("stage-package-plans/:planId/approve")
+  @RequireRoles("SUPER_ADMIN", "HR_ADMIN")
+  async approveStagePackagePlan(
+    @Req() request: CompetitionRequest,
+    @Param("planId") planId: string,
+    @Body() body: ReviewCompetitionStagePackagePlanDto,
+  ) {
+    return this.competitionService.approveStagePackagePlan({
+      actorUserId: request.user.userId,
+      planId,
+      reviewNote: body.reviewNote,
+    });
+  }
+
+  @Post("stage-package-plans/:planId/reject")
+  @RequireRoles("SUPER_ADMIN", "HR_ADMIN")
+  async rejectStagePackagePlan(
+    @Req() request: CompetitionRequest,
+    @Param("planId") planId: string,
+    @Body() body: ReviewCompetitionStagePackagePlanDto,
+  ) {
+    return this.competitionService.rejectStagePackagePlan({
+      actorUserId: request.user.userId,
+      planId,
+      reviewNote: body.reviewNote,
     });
   }
 

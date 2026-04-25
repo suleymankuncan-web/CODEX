@@ -194,14 +194,22 @@ test('admin can create a league then final stage package from templates', async 
   })
 })
 
-test('admin can save and execute a stage package plan draft', async ({ page }) => {
+test('admin can save, submit, approve, and execute a stage package plan', async ({ page }) => {
   let savedStagePackagePlanPayload: unknown = null
+  let submittedStagePackagePlanId: string | null = null
+  let approvedStagePackagePlanId: string | null = null
   let executedStagePackagePlanId: string | null = null
   await page.unroute('**/api/competitions**')
   await routeCompetitionApi(page, authSessionFixture, competitionDetailFixture, {
     initialTeamTemplates: [activeTemplateFixture, secondActiveTemplateFixture],
     onCreateStagePackagePlan: (payload) => {
       savedStagePackagePlanPayload = payload
+    },
+    onSubmitStagePackagePlan: (planId) => {
+      submittedStagePackagePlanId = planId
+    },
+    onApproveStagePackagePlan: (planId) => {
+      approvedStagePackagePlanId = planId
     },
     onExecuteStagePackagePlan: (planId) => {
       executedStagePackagePlanId = planId
@@ -221,7 +229,19 @@ test('admin can save and execute a stage package plan draft', async ({ page }) =
   const planLibrary = page.locator('.stage-package-plan-library')
   await expect(planLibrary.locator('strong').filter({ hasText: 'April regional package' })).toBeVisible()
   await expect(planLibrary.getByText('draft', { exact: true })).toBeVisible()
+  await expect(planLibrary.getByRole('button', { name: 'Execute April regional package' })).toHaveCount(0)
 
+  await planLibrary.getByRole('button', { name: 'Submit April regional package' }).click()
+
+  await expect(page.getByText('Competition stage package plan submitted for review')).toBeVisible()
+  expect(submittedStagePackagePlanId).toBe(stagePackagePlanId)
+  await expect(planLibrary.getByText('submitted', { exact: true })).toBeVisible()
+  await planLibrary.getByLabel('Review note for April regional package').fill('Reviewed in planning meeting.')
+  await planLibrary.getByRole('button', { name: 'Approve April regional package' }).click()
+
+  await expect(page.getByText('Competition stage package plan approved')).toBeVisible()
+  expect(approvedStagePackagePlanId).toBe(stagePackagePlanId)
+  await expect(planLibrary.getByText('approved', { exact: true })).toBeVisible()
   await planLibrary.getByRole('button', { name: 'Execute April regional package' }).click()
 
   await expect(page.getByText('Competition stage package plan executed')).toBeVisible()
@@ -248,6 +268,34 @@ test('admin can save and execute a stage package plan draft', async ({ page }) =
       },
     ],
   })
+})
+
+test('admin can reject a submitted stage package plan', async ({ page }) => {
+  let rejectedStagePackagePlanId: string | null = null
+  await page.unroute('**/api/competitions**')
+  await routeCompetitionApi(page, authSessionFixture, competitionDetailFixture, {
+    initialTeamTemplates: [activeTemplateFixture, secondActiveTemplateFixture],
+    initialStagePackagePlans: [createStagePackagePlanFixture({ planStatus: 'submitted' })],
+    onRejectStagePackagePlan: (planId) => {
+      rejectedStagePackagePlanId = planId
+    },
+  })
+
+  await page.goto('/admin/competitions')
+
+  const planLibrary = page.locator('.stage-package-plan-library')
+  await expect(planLibrary.getByText('submitted', { exact: true })).toBeVisible()
+  await expect(planLibrary.getByRole('button', { name: 'Edit April regional package' })).toHaveCount(0)
+  await expect(planLibrary.getByRole('button', { name: 'Cancel April regional package' })).toHaveCount(0)
+  await planLibrary.getByLabel('Review note for April regional package').fill('Dates need another pass.')
+  await planLibrary.getByRole('button', { name: 'Reject April regional package' }).click()
+
+  await expect(page.getByText('Competition stage package plan rejected')).toBeVisible()
+  expect(rejectedStagePackagePlanId).toBe(stagePackagePlanId)
+  await expect(planLibrary.getByText('rejected', { exact: true })).toBeVisible()
+  await expect(planLibrary.getByRole('button', { name: 'Execute April regional package' })).toHaveCount(0)
+  await planLibrary.getByRole('button', { name: 'Show history April regional package' }).click()
+  await expect(planLibrary.getByText('competition_stage_package_plan.rejected')).toBeVisible()
 })
 
 test('admin can edit, inspect, and cancel a stage package plan draft', async ({ page }) => {
@@ -465,6 +513,9 @@ async function routeCompetitionApi(
     onCreateStagePackage?: (payload: unknown) => void
     onCreateStagePackagePlan?: (payload: unknown) => void
     onUpdateStagePackagePlan?: (planId: string, payload: unknown) => void
+    onSubmitStagePackagePlan?: (planId: string) => void
+    onApproveStagePackagePlan?: (planId: string, payload: unknown) => void
+    onRejectStagePackagePlan?: (planId: string, payload: unknown) => void
     onExecuteStagePackagePlan?: (planId: string) => void
     onCancelStagePackagePlan?: (planId: string) => void
     initialTeamTemplates?: unknown[]
@@ -800,6 +851,127 @@ async function routeCompetitionApi(
     }
 
     if (
+      request.method() === 'POST' &&
+      pathname.endsWith(`/api/competitions/stage-package-plans/${stagePackagePlanId}/submit`)
+    ) {
+      options?.onSubmitStagePackagePlan?.(stagePackagePlanId)
+      stagePackagePlans = stagePackagePlans.map((plan) =>
+        (plan as { planId?: string }).planId === stagePackagePlanId
+          ? {
+              ...(plan as Record<string, unknown>),
+              planStatus: 'submitted',
+              submittedByUserId: authSession.user.userId,
+              submittedAt: '2026-04-25T10:15:00.000Z',
+              updatedAt: '2026-04-25T10:15:00.000Z',
+            }
+          : plan,
+      )
+      stagePackagePlanAuditEvents = [
+        ...stagePackagePlanAuditEvents,
+        {
+          eventLogId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+          occurredAt: '2026-04-25T10:15:00.000Z',
+          actorUserId: authSession.user.userId,
+          eventType: 'competition_stage_package_plan.submitted',
+          metadata: { planName: 'April regional package' },
+        },
+      ]
+      await route.fulfill({
+        json: {
+          command: { status: 'submitted', message: 'Competition stage package plan submitted for review' },
+          data: {
+            plan: stagePackagePlans.find(
+              (plan) => (plan as { planId?: string }).planId === stagePackagePlanId,
+            ),
+          },
+        },
+      })
+      return
+    }
+
+    if (
+      request.method() === 'POST' &&
+      pathname.endsWith(`/api/competitions/stage-package-plans/${stagePackagePlanId}/approve`)
+    ) {
+      const payload = request.postDataJSON()
+      options?.onApproveStagePackagePlan?.(stagePackagePlanId, payload)
+      stagePackagePlans = stagePackagePlans.map((plan) =>
+        (plan as { planId?: string }).planId === stagePackagePlanId
+          ? {
+              ...(plan as Record<string, unknown>),
+              planStatus: 'approved',
+              reviewedByUserId: authSession.user.userId,
+              reviewedAt: '2026-04-25T10:20:00.000Z',
+              reviewNote: payload.reviewNote ?? null,
+              updatedAt: '2026-04-25T10:20:00.000Z',
+            }
+          : plan,
+      )
+      stagePackagePlanAuditEvents = [
+        ...stagePackagePlanAuditEvents,
+        {
+          eventLogId: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+          occurredAt: '2026-04-25T10:20:00.000Z',
+          actorUserId: authSession.user.userId,
+          eventType: 'competition_stage_package_plan.approved',
+          metadata: { planName: 'April regional package', reviewNote: payload.reviewNote },
+        },
+      ]
+      await route.fulfill({
+        json: {
+          command: { status: 'approved', message: 'Competition stage package plan approved' },
+          data: {
+            plan: stagePackagePlans.find(
+              (plan) => (plan as { planId?: string }).planId === stagePackagePlanId,
+            ),
+          },
+        },
+      })
+      return
+    }
+
+    if (
+      request.method() === 'POST' &&
+      pathname.endsWith(`/api/competitions/stage-package-plans/${stagePackagePlanId}/reject`)
+    ) {
+      const payload = request.postDataJSON()
+      options?.onRejectStagePackagePlan?.(stagePackagePlanId, payload)
+      stagePackagePlans = stagePackagePlans.map((plan) =>
+        (plan as { planId?: string }).planId === stagePackagePlanId
+          ? {
+              ...(plan as Record<string, unknown>),
+              planStatus: 'rejected',
+              reviewedByUserId: authSession.user.userId,
+              reviewedAt: '2026-04-25T10:20:00.000Z',
+              reviewNote: payload.reviewNote ?? null,
+              updatedAt: '2026-04-25T10:20:00.000Z',
+            }
+          : plan,
+      )
+      stagePackagePlanAuditEvents = [
+        ...stagePackagePlanAuditEvents,
+        {
+          eventLogId: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
+          occurredAt: '2026-04-25T10:20:00.000Z',
+          actorUserId: authSession.user.userId,
+          eventType: 'competition_stage_package_plan.rejected',
+          metadata: { planName: 'April regional package', reviewNote: payload.reviewNote },
+        },
+      ]
+      await route.fulfill({
+        json: {
+          command: { status: 'rejected', message: 'Competition stage package plan rejected' },
+          data: {
+            plan: stagePackagePlans.find(
+              (plan) => (plan as { planId?: string }).planId === stagePackagePlanId,
+            ),
+          },
+        },
+      })
+      return
+    }
+
+    if (
       request.method() === 'PATCH' &&
       pathname.endsWith(`/api/competitions/stage-package-plans/${stagePackagePlanId}/cancel`)
     ) {
@@ -918,7 +1090,7 @@ function storesFromIds(storeIds: string[]) {
     }))
 }
 
-function createStagePackagePlanFixture() {
+function createStagePackagePlanFixture(input?: { planStatus?: string }) {
   const teams = [activeTemplateFixture, secondActiveTemplateFixture].map((template) => ({
     sourceTemplateId: template.templateId,
     teamCode: template.templateCode,
@@ -931,7 +1103,7 @@ function createStagePackagePlanFixture() {
     competitionId,
     packageCode: 'league_then_final',
     planName: 'April regional package',
-    planStatus: 'draft',
+    planStatus: input?.planStatus ?? 'draft',
     stageDrafts: [
       {
         stagePresetCode: 'region_league',
@@ -955,6 +1127,11 @@ function createStagePackagePlanFixture() {
       },
     ],
     createdStageIds: [],
+    submittedByUserId: input?.planStatus === 'submitted' ? authSessionFixture.user.userId : null,
+    submittedAt: input?.planStatus === 'submitted' ? '2026-04-25T10:15:00.000Z' : null,
+    reviewedByUserId: null,
+    reviewedAt: null,
+    reviewNote: null,
     createdAt: '2026-04-25T10:00:00.000Z',
     updatedAt: '2026-04-25T10:00:00.000Z',
     executedAt: null,

@@ -14,7 +14,10 @@ import {
   DeactivateCompetitionTeamTemplateInput,
   ExecuteCompetitionStagePackagePlanInput,
   FinalizeCompetitionStageInput,
+  ApproveCompetitionStagePackagePlanInput,
   RecalculateCompetitionStageInput,
+  RejectCompetitionStagePackagePlanInput,
+  SubmitCompetitionStagePackagePlanInput,
   UpdateCompetitionStagePackagePlanInput,
   UpdateCompetitionTeamTemplateInput,
 } from "./competition.contract";
@@ -235,6 +238,36 @@ export class CompetitionService {
     return buildCommandResponse({
       status: "updated",
       message: "Competition stage package plan updated",
+      data: { plan },
+    });
+  }
+
+  async submitStagePackagePlan(input: SubmitCompetitionStagePackagePlanInput) {
+    const plan = await this.competitionRepository.submitStagePackagePlan(input);
+
+    return buildCommandResponse({
+      status: "submitted",
+      message: "Competition stage package plan submitted for review",
+      data: { plan },
+    });
+  }
+
+  async approveStagePackagePlan(input: ApproveCompetitionStagePackagePlanInput) {
+    const plan = await this.competitionRepository.approveStagePackagePlan(input);
+
+    return buildCommandResponse({
+      status: "approved",
+      message: "Competition stage package plan approved",
+      data: { plan },
+    });
+  }
+
+  async rejectStagePackagePlan(input: RejectCompetitionStagePackagePlanInput) {
+    const plan = await this.competitionRepository.rejectStagePackagePlan(input);
+
+    return buildCommandResponse({
+      status: "rejected",
+      message: "Competition stage package plan rejected",
       data: { plan },
     });
   }

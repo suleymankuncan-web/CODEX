@@ -15,6 +15,9 @@ const repository = () => ({
   createStagePackage: jest.fn(),
   listStagePackagePlans: jest.fn(),
   createStagePackagePlan: jest.fn(),
+  submitStagePackagePlan: jest.fn(),
+  approveStagePackagePlan: jest.fn(),
+  rejectStagePackagePlan: jest.fn(),
   executeStagePackagePlan: jest.fn(),
   updateStagePackagePlan: jest.fn(),
   cancelStagePackagePlan: jest.fn(),
@@ -652,6 +655,115 @@ describe("CompetitionService", () => {
       packageCode: "league_then_final",
       planName: "April regional package revised",
       stages: validStagePackageStages,
+    });
+  });
+
+  it("submits a draft stage package plan for review", async () => {
+    const repo = repository();
+    repo.submitStagePackagePlan.mockResolvedValue({
+      planId: "55555555-5555-4555-8555-555555555555",
+      competitionId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      packageCode: "league_then_final",
+      planName: "April regional package",
+      planStatus: "submitted",
+      stageDrafts: validStagePackageStages,
+      createdStageIds: [],
+      submittedByUserId: "11111111-1111-4111-8111-111111111111",
+      submittedAt: "2026-04-25T10:15:00.000Z",
+      reviewedByUserId: null,
+      reviewedAt: null,
+      reviewNote: null,
+      createdAt: "2026-04-25T10:00:00.000Z",
+      updatedAt: "2026-04-25T10:15:00.000Z",
+      executedAt: null,
+    });
+    const service = new CompetitionService(repo as never);
+
+    const result = await service.submitStagePackagePlan({
+      actorUserId: "11111111-1111-4111-8111-111111111111",
+      planId: "55555555-5555-4555-8555-555555555555",
+    });
+
+    expect(result.command.status).toBe("submitted");
+    expect(result.command.message).toBe("Competition stage package plan submitted for review");
+    expect(result.data.plan.planStatus).toBe("submitted");
+    expect(repo.submitStagePackagePlan).toHaveBeenCalledWith({
+      actorUserId: "11111111-1111-4111-8111-111111111111",
+      planId: "55555555-5555-4555-8555-555555555555",
+    });
+  });
+
+  it("approves a submitted stage package plan", async () => {
+    const repo = repository();
+    repo.approveStagePackagePlan.mockResolvedValue({
+      planId: "55555555-5555-4555-8555-555555555555",
+      competitionId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      packageCode: "league_then_final",
+      planName: "April regional package",
+      planStatus: "approved",
+      stageDrafts: validStagePackageStages,
+      createdStageIds: [],
+      submittedByUserId: "11111111-1111-4111-8111-111111111111",
+      submittedAt: "2026-04-25T10:15:00.000Z",
+      reviewedByUserId: "22222222-2222-4222-8222-222222222222",
+      reviewedAt: "2026-04-25T10:20:00.000Z",
+      reviewNote: "Reviewed in planning meeting.",
+      createdAt: "2026-04-25T10:00:00.000Z",
+      updatedAt: "2026-04-25T10:20:00.000Z",
+      executedAt: null,
+    });
+    const service = new CompetitionService(repo as never);
+
+    const result = await service.approveStagePackagePlan({
+      actorUserId: "22222222-2222-4222-8222-222222222222",
+      planId: "55555555-5555-4555-8555-555555555555",
+      reviewNote: "Reviewed in planning meeting.",
+    });
+
+    expect(result.command.status).toBe("approved");
+    expect(result.command.message).toBe("Competition stage package plan approved");
+    expect(result.data.plan.planStatus).toBe("approved");
+    expect(repo.approveStagePackagePlan).toHaveBeenCalledWith({
+      actorUserId: "22222222-2222-4222-8222-222222222222",
+      planId: "55555555-5555-4555-8555-555555555555",
+      reviewNote: "Reviewed in planning meeting.",
+    });
+  });
+
+  it("rejects a submitted stage package plan", async () => {
+    const repo = repository();
+    repo.rejectStagePackagePlan.mockResolvedValue({
+      planId: "55555555-5555-4555-8555-555555555555",
+      competitionId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      packageCode: "league_then_final",
+      planName: "April regional package",
+      planStatus: "rejected",
+      stageDrafts: validStagePackageStages,
+      createdStageIds: [],
+      submittedByUserId: "11111111-1111-4111-8111-111111111111",
+      submittedAt: "2026-04-25T10:15:00.000Z",
+      reviewedByUserId: "22222222-2222-4222-8222-222222222222",
+      reviewedAt: "2026-04-25T10:20:00.000Z",
+      reviewNote: "Dates need another pass.",
+      createdAt: "2026-04-25T10:00:00.000Z",
+      updatedAt: "2026-04-25T10:20:00.000Z",
+      executedAt: null,
+    });
+    const service = new CompetitionService(repo as never);
+
+    const result = await service.rejectStagePackagePlan({
+      actorUserId: "22222222-2222-4222-8222-222222222222",
+      planId: "55555555-5555-4555-8555-555555555555",
+      reviewNote: "Dates need another pass.",
+    });
+
+    expect(result.command.status).toBe("rejected");
+    expect(result.command.message).toBe("Competition stage package plan rejected");
+    expect(result.data.plan.planStatus).toBe("rejected");
+    expect(repo.rejectStagePackagePlan).toHaveBeenCalledWith({
+      actorUserId: "22222222-2222-4222-8222-222222222222",
+      planId: "55555555-5555-4555-8555-555555555555",
+      reviewNote: "Dates need another pass.",
     });
   });
 

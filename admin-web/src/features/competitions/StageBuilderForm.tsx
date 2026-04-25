@@ -8,6 +8,7 @@ import {
 } from '../../components/dashboard-primitives'
 import { getAuthLookups, type AuthLookupStore } from '../auth/api'
 import {
+  approveCompetitionStagePackagePlan,
   cancelCompetitionStagePackagePlan,
   cloneCompetitionTeamTemplate,
   createCompetitionStagePackagePlan,
@@ -19,6 +20,8 @@ import {
   listCompetitionStagePackagePlanAudit,
   listCompetitionStagePackagePlans,
   listCompetitionTeamTemplates,
+  rejectCompetitionStagePackagePlan,
+  submitCompetitionStagePackagePlan,
   updateCompetitionStagePackagePlan,
   updateCompetitionTeamTemplate,
   type CloneCompetitionTeamTemplatePayload,
@@ -31,6 +34,7 @@ import {
   type CreateCompetitionStagePackagePayload,
   type CreateCompetitionTeamTemplatePayload,
   type CreateCompetitionStagePayload,
+  type ReviewCompetitionStagePackagePlanPayload,
   type UpdateCompetitionStagePackagePlanPayload,
   type UpdateCompetitionTeamTemplatePayload,
 } from './api'
@@ -375,12 +379,13 @@ function buildStagePackagePlanUpdatePayload(
 
 function formatAuditMetadata(metadata: Record<string, unknown>) {
   const planName = typeof metadata.planName === 'string' ? metadata.planName : null
+  const reviewNote = typeof metadata.reviewNote === 'string' ? metadata.reviewNote : null
   const stageCount = typeof metadata.stageCount === 'number' ? `${metadata.stageCount} stages` : null
   const createdStageCount = Array.isArray(metadata.createdStageIds)
     ? `${metadata.createdStageIds.length} created stages`
     : null
 
-  return [planName, stageCount, createdStageCount].filter(Boolean).join(' - ') || 'Metadata recorded'
+  return [planName, reviewNote, stageCount, createdStageCount].filter(Boolean).join(' - ') || 'Metadata recorded'
 }
 
 function validateTemplateDraft(draft: TemplateDraft) {
@@ -519,6 +524,51 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
       planId: string
       payload: UpdateCompetitionStagePackagePlanPayload
     }) => updateCompetitionStagePackagePlan(request.planId, request.payload),
+    onSuccess: async (response) => {
+      setStagePackageFeedback(response.command.message)
+      await queryClient.invalidateQueries({
+        queryKey: ['competition-stage-package-plans', input.competitionId],
+      })
+      await queryClient.invalidateQueries({
+        queryKey: ['competition-stage-package-plan-audit', stagePackageHistoryPlanId],
+      })
+    },
+  })
+
+  const submitStagePackagePlanMutation = useMutation({
+    mutationFn: submitCompetitionStagePackagePlan,
+    onSuccess: async (response) => {
+      setStagePackageFeedback(response.command.message)
+      await queryClient.invalidateQueries({
+        queryKey: ['competition-stage-package-plans', input.competitionId],
+      })
+      await queryClient.invalidateQueries({
+        queryKey: ['competition-stage-package-plan-audit', stagePackageHistoryPlanId],
+      })
+    },
+  })
+
+  const approveStagePackagePlanMutation = useMutation({
+    mutationFn: (request: {
+      planId: string
+      payload: ReviewCompetitionStagePackagePlanPayload
+    }) => approveCompetitionStagePackagePlan(request.planId, request.payload),
+    onSuccess: async (response) => {
+      setStagePackageFeedback(response.command.message)
+      await queryClient.invalidateQueries({
+        queryKey: ['competition-stage-package-plans', input.competitionId],
+      })
+      await queryClient.invalidateQueries({
+        queryKey: ['competition-stage-package-plan-audit', stagePackageHistoryPlanId],
+      })
+    },
+  })
+
+  const rejectStagePackagePlanMutation = useMutation({
+    mutationFn: (request: {
+      planId: string
+      payload: ReviewCompetitionStagePackagePlanPayload
+    }) => rejectCompetitionStagePackagePlan(request.planId, request.payload),
     onSuccess: async (response) => {
       setStagePackageFeedback(response.command.message)
       await queryClient.invalidateQueries({
@@ -946,6 +996,9 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
           createStagePackageMutation.error ??
           createStagePackagePlanMutation.error ??
           updateStagePackagePlanMutation.error ??
+          submitStagePackagePlanMutation.error ??
+          approveStagePackagePlanMutation.error ??
+          rejectStagePackagePlanMutation.error ??
           cancelStagePackagePlanMutation.error ??
           executeStagePackagePlanMutation.error
         }
@@ -958,6 +1011,9 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
           createStagePackageMutation.isPending ||
           createStagePackagePlanMutation.isPending ||
           updateStagePackagePlanMutation.isPending ||
+          submitStagePackagePlanMutation.isPending ||
+          approveStagePackagePlanMutation.isPending ||
+          rejectStagePackagePlanMutation.isPending ||
           cancelStagePackagePlanMutation.isPending ||
           executeStagePackagePlanMutation.isPending
         }
@@ -965,11 +1021,18 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
         templates={templates}
         planValidationMessage={stagePackagePlanValidationMessage}
         validationMessage={stagePackageValidationMessage}
+        onApprovePlan={(planId, payload) =>
+          approveStagePackagePlanMutation.mutate({ planId, payload })
+        }
         onCancelPlan={(planId) => cancelStagePackagePlanMutation.mutate(planId)}
         onExecutePlan={(planId) => executeStagePackagePlanMutation.mutate(planId)}
+        onRejectPlan={(planId, payload) =>
+          rejectStagePackagePlanMutation.mutate({ planId, payload })
+        }
         onSavePlan={submitStagePackagePlan}
         onShowPlanHistory={(planId) => setStagePackageHistoryPlanId(planId)}
         onSubmit={submitStagePackage}
+        onSubmitPlan={(planId) => submitStagePackagePlanMutation.mutate(planId)}
         onUpdatePlan={(planId, payload) =>
           updateStagePackagePlanMutation.mutate({ planId, payload })
         }
@@ -1073,16 +1136,20 @@ function StagePackageBuilderSection(input: {
   templates: CompetitionTeamTemplate[]
   planValidationMessage: string | null
   validationMessage: string | null
+  onApprovePlan: (planId: string, payload: ReviewCompetitionStagePackagePlanPayload) => void
   onCancelPlan: (planId: string) => void
   onExecutePlan: (planId: string) => void
+  onRejectPlan: (planId: string, payload: ReviewCompetitionStagePackagePlanPayload) => void
   onSavePlan: () => void
   onShowPlanHistory: (planId: string) => void
   onSubmit: () => void
+  onSubmitPlan: (planId: string) => void
   onUpdatePlan: (planId: string, payload: UpdateCompetitionStagePackagePlanPayload) => void
   onUpdateStage: (stageIndex: number, field: keyof StagePackageStageDraft, value: string) => void
   onUpdate: (field: keyof StagePackageDraft, value: string) => void
 }) {
   const [editDraft, setEditDraft] = useState<StagePackagePlanEditDraft | null>(null)
+  const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({})
   const editValidationMessage = editDraft ? validateStagePackagePlanEditDraft(editDraft) : null
 
   function updatePlanEditDraft(field: keyof Omit<StagePackagePlanEditDraft, 'stageDrafts'>, value: string) {
@@ -1111,6 +1178,16 @@ function StagePackageBuilderSection(input: {
 
     input.onUpdatePlan(editDraft.planId, buildStagePackagePlanUpdatePayload(editDraft))
     setEditDraft(null)
+  }
+
+  function updateReviewNote(planId: string, value: string) {
+    setReviewNotes((current) => ({ ...current, [planId]: value }))
+  }
+
+  function getReviewPayload(planId: string): ReviewCompetitionStagePackagePlanPayload {
+    const reviewNote = reviewNotes[planId]?.trim()
+
+    return reviewNote ? { reviewNote } : {}
   }
 
   return (
@@ -1310,7 +1387,17 @@ function StagePackageBuilderSection(input: {
                     <strong>{plan.planName}</strong>
                     <p className="queue-subtitle">{formatState(plan.packageCode)}</p>
                   </div>
-                  <StatusPill tone={plan.planStatus === 'draft' ? 'warning' : 'calm'}>
+                  <StatusPill
+                    tone={
+                      plan.planStatus === 'draft'
+                        ? 'warning'
+                        : plan.planStatus === 'submitted'
+                          ? 'accent'
+                          : plan.planStatus === 'approved'
+                            ? 'calm'
+                            : 'neutral'
+                    }
+                  >
                     {formatState(plan.planStatus)}
                   </StatusPill>
                 </div>
@@ -1491,11 +1578,21 @@ function StagePackageBuilderSection(input: {
                         className="control-button"
                         type="button"
                         disabled={input.isPending}
-                        onClick={() => input.onExecutePlan(plan.planId)}
+                        onClick={() => input.onSubmitPlan(plan.planId)}
                       >
-                        Execute {plan.planName}
+                        Submit {plan.planName}
                       </button>
                     </>
+                  ) : null}
+                  {plan.planStatus === 'approved' ? (
+                    <button
+                      className="control-button"
+                      type="button"
+                      disabled={input.isPending}
+                      onClick={() => input.onExecutePlan(plan.planId)}
+                    >
+                      Execute {plan.planName}
+                    </button>
                   ) : null}
                   <button
                     className="ghost-button"
@@ -1506,6 +1603,36 @@ function StagePackageBuilderSection(input: {
                     Show history {plan.planName}
                   </button>
                 </div>
+
+                {plan.planStatus === 'submitted' ? (
+                  <div className="stacked-row">
+                    <label className="field-block field-block-full">
+                      <span>{`Review note for ${plan.planName}`}</span>
+                      <input
+                        value={reviewNotes[plan.planId] ?? ''}
+                        onChange={(event) => updateReviewNote(plan.planId, event.target.value)}
+                      />
+                    </label>
+                    <div className="action-cluster">
+                      <button
+                        className="control-button"
+                        type="button"
+                        disabled={input.isPending}
+                        onClick={() => input.onApprovePlan(plan.planId, getReviewPayload(plan.planId))}
+                      >
+                        Approve {plan.planName}
+                      </button>
+                      <button
+                        className="ghost-button"
+                        type="button"
+                        disabled={input.isPending}
+                        onClick={() => input.onRejectPlan(plan.planId, getReviewPayload(plan.planId))}
+                      >
+                        Reject {plan.planName}
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
 
                 {input.historyPlanId === plan.planId ? (
                   <div className="action-cluster">

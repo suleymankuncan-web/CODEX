@@ -144,7 +144,13 @@ export type CreateCompetitionStagePackagePayload = {
   stages: CreateCompetitionStagePayload[]
 }
 
-export type CompetitionStagePackagePlanStatus = 'draft' | 'executed' | 'cancelled'
+export type CompetitionStagePackagePlanStatus =
+  | 'draft'
+  | 'submitted'
+  | 'approved'
+  | 'rejected'
+  | 'executed'
+  | 'cancelled'
 
 export type CompetitionStagePackagePlan = {
   planId: string
@@ -154,6 +160,11 @@ export type CompetitionStagePackagePlan = {
   planStatus: CompetitionStagePackagePlanStatus
   stageDrafts: CreateCompetitionStagePayload[]
   createdStageIds: string[]
+  submittedByUserId: string | null
+  submittedAt: string | null
+  reviewedByUserId: string | null
+  reviewedAt: string | null
+  reviewNote: string | null
   createdAt: string
   updatedAt: string
   executedAt: string | null
@@ -171,6 +182,10 @@ export type CompetitionStagePackagePlanAuditEvent = {
   actorUserId: string | null
   eventType: string
   metadata: Record<string, unknown>
+}
+
+export type ReviewCompetitionStagePackagePlanPayload = {
+  reviewNote?: string
 }
 
 export type CreateCompetitionTeamTemplatePayload = {
@@ -335,6 +350,41 @@ export async function executeCompetitionStagePackagePlan(planId: string) {
   >(`/competitions/stage-package-plans/${planId}/execute`, {
     method: 'POST',
   })
+}
+
+export async function submitCompetitionStagePackagePlan(planId: string) {
+  return sendJson<CommandResponse<{ plan: CompetitionStagePackagePlan }>>(
+    `/competitions/stage-package-plans/${planId}/submit`,
+    {
+      method: 'POST',
+    },
+  )
+}
+
+export async function approveCompetitionStagePackagePlan(
+  planId: string,
+  payload: ReviewCompetitionStagePackagePlanPayload,
+) {
+  return sendJson<CommandResponse<{ plan: CompetitionStagePackagePlan }>>(
+    `/competitions/stage-package-plans/${planId}/approve`,
+    {
+      method: 'POST',
+      body: payload,
+    },
+  )
+}
+
+export async function rejectCompetitionStagePackagePlan(
+  planId: string,
+  payload: ReviewCompetitionStagePackagePlanPayload,
+) {
+  return sendJson<CommandResponse<{ plan: CompetitionStagePackagePlan }>>(
+    `/competitions/stage-package-plans/${planId}/reject`,
+    {
+      method: 'POST',
+      body: payload,
+    },
+  )
 }
 
 export async function cancelCompetitionStagePackagePlan(planId: string) {

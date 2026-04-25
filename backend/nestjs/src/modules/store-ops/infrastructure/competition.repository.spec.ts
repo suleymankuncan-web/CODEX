@@ -935,6 +935,249 @@ describe("CompetitionRepository", () => {
     );
   });
 
+  it("submits a draft stage package plan and writes audit metadata", async () => {
+    const { repository, client, executedSql, executedParams } = createRepositoryHarness();
+
+    client.query.mockImplementation(async (sql: string, params: unknown[] = []) => {
+      executedSql.push(sql);
+      executedParams.push(params);
+
+      if (
+        sql.includes("FROM ops.competition_stage_package_plan") &&
+        sql.includes("FOR UPDATE")
+      ) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              competition_stage_package_plan_id:
+                "55555555-5555-4555-8555-555555555555",
+              competition_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              package_code: "league_then_final",
+              plan_name: "April regional package",
+              plan_status: "draft",
+              stage_drafts_json: validStagePackageStages,
+              created_stage_ids: [],
+              created_at: "2026-04-25T10:00:00.000Z",
+              updated_at: "2026-04-25T10:00:00.000Z",
+              executed_at: null,
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("UPDATE ops.competition_stage_package_plan")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              competition_stage_package_plan_id:
+                "55555555-5555-4555-8555-555555555555",
+              competition_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              package_code: "league_then_final",
+              plan_name: "April regional package",
+              plan_status: "submitted",
+              stage_drafts_json: validStagePackageStages,
+              created_stage_ids: [],
+              submitted_by_user_id: "11111111-1111-4111-8111-111111111111",
+              submitted_at: "2026-04-25T10:15:00.000Z",
+              reviewed_by_user_id: null,
+              reviewed_at: null,
+              review_note: null,
+              created_at: "2026-04-25T10:00:00.000Z",
+              updated_at: "2026-04-25T10:15:00.000Z",
+              executed_at: null,
+            },
+          ],
+        };
+      }
+
+      return { rowCount: 1, rows: [] };
+    });
+
+    const plan = await repository.submitStagePackagePlan({
+      actorUserId: "11111111-1111-4111-8111-111111111111",
+      planId: "55555555-5555-4555-8555-555555555555",
+    });
+
+    const sql = executedSql.join("\n");
+    const serializedParams = JSON.stringify(executedParams);
+    expect(sql).toContain("FOR UPDATE");
+    expect(sql).toContain("plan_status = 'submitted'");
+    expect(sql).toContain("submitted_by_user_id = $2");
+    expect(sql).toContain("INSERT INTO audit.event_log");
+    expect(serializedParams).toContain("competition_stage_package_plan.submitted");
+    expect(plan).toEqual(
+      expect.objectContaining({
+        planStatus: "submitted",
+        submittedByUserId: "11111111-1111-4111-8111-111111111111",
+      }),
+    );
+  });
+
+  it("approves a submitted stage package plan and writes audit metadata", async () => {
+    const { repository, client, executedSql, executedParams } = createRepositoryHarness();
+
+    client.query.mockImplementation(async (sql: string, params: unknown[] = []) => {
+      executedSql.push(sql);
+      executedParams.push(params);
+
+      if (
+        sql.includes("FROM ops.competition_stage_package_plan") &&
+        sql.includes("FOR UPDATE")
+      ) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              competition_stage_package_plan_id:
+                "55555555-5555-4555-8555-555555555555",
+              competition_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              package_code: "league_then_final",
+              plan_name: "April regional package",
+              plan_status: "submitted",
+              stage_drafts_json: validStagePackageStages,
+              created_stage_ids: [],
+              submitted_by_user_id: "11111111-1111-4111-8111-111111111111",
+              submitted_at: "2026-04-25T10:15:00.000Z",
+              reviewed_by_user_id: null,
+              reviewed_at: null,
+              review_note: null,
+              created_at: "2026-04-25T10:00:00.000Z",
+              updated_at: "2026-04-25T10:15:00.000Z",
+              executed_at: null,
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("UPDATE ops.competition_stage_package_plan")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              competition_stage_package_plan_id:
+                "55555555-5555-4555-8555-555555555555",
+              competition_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              package_code: "league_then_final",
+              plan_name: "April regional package",
+              plan_status: "approved",
+              stage_drafts_json: validStagePackageStages,
+              created_stage_ids: [],
+              submitted_by_user_id: "11111111-1111-4111-8111-111111111111",
+              submitted_at: "2026-04-25T10:15:00.000Z",
+              reviewed_by_user_id: "22222222-2222-4222-8222-222222222222",
+              reviewed_at: "2026-04-25T10:20:00.000Z",
+              review_note: "Reviewed in planning meeting.",
+              created_at: "2026-04-25T10:00:00.000Z",
+              updated_at: "2026-04-25T10:20:00.000Z",
+              executed_at: null,
+            },
+          ],
+        };
+      }
+
+      return { rowCount: 1, rows: [] };
+    });
+
+    const plan = await repository.approveStagePackagePlan({
+      actorUserId: "22222222-2222-4222-8222-222222222222",
+      planId: "55555555-5555-4555-8555-555555555555",
+      reviewNote: "Reviewed in planning meeting.",
+    });
+
+    const sql = executedSql.join("\n");
+    const serializedParams = JSON.stringify(executedParams);
+    expect(sql).toContain("plan_status = 'approved'");
+    expect(sql).toContain("reviewed_by_user_id = $2");
+    expect(sql).toContain("review_note = $3");
+    expect(serializedParams).toContain("competition_stage_package_plan.approved");
+    expect(plan).toEqual(
+      expect.objectContaining({
+        planStatus: "approved",
+        reviewedByUserId: "22222222-2222-4222-8222-222222222222",
+        reviewNote: "Reviewed in planning meeting.",
+      }),
+    );
+  });
+
+  it("rejects a submitted stage package plan and writes audit metadata", async () => {
+    const { repository, client, executedSql, executedParams } = createRepositoryHarness();
+
+    client.query.mockImplementation(async (sql: string, params: unknown[] = []) => {
+      executedSql.push(sql);
+      executedParams.push(params);
+
+      if (
+        sql.includes("FROM ops.competition_stage_package_plan") &&
+        sql.includes("FOR UPDATE")
+      ) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              competition_stage_package_plan_id:
+                "55555555-5555-4555-8555-555555555555",
+              competition_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              package_code: "league_then_final",
+              plan_name: "April regional package",
+              plan_status: "submitted",
+              stage_drafts_json: validStagePackageStages,
+              created_stage_ids: [],
+              created_at: "2026-04-25T10:00:00.000Z",
+              updated_at: "2026-04-25T10:15:00.000Z",
+              executed_at: null,
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("UPDATE ops.competition_stage_package_plan")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              competition_stage_package_plan_id:
+                "55555555-5555-4555-8555-555555555555",
+              competition_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              package_code: "league_then_final",
+              plan_name: "April regional package",
+              plan_status: "rejected",
+              stage_drafts_json: validStagePackageStages,
+              created_stage_ids: [],
+              reviewed_by_user_id: "22222222-2222-4222-8222-222222222222",
+              reviewed_at: "2026-04-25T10:20:00.000Z",
+              review_note: "Dates need another pass.",
+              created_at: "2026-04-25T10:00:00.000Z",
+              updated_at: "2026-04-25T10:20:00.000Z",
+              executed_at: null,
+            },
+          ],
+        };
+      }
+
+      return { rowCount: 1, rows: [] };
+    });
+
+    const plan = await repository.rejectStagePackagePlan({
+      actorUserId: "22222222-2222-4222-8222-222222222222",
+      planId: "55555555-5555-4555-8555-555555555555",
+      reviewNote: "Dates need another pass.",
+    });
+
+    const sql = executedSql.join("\n");
+    const serializedParams = JSON.stringify(executedParams);
+    expect(sql).toContain("plan_status = 'rejected'");
+    expect(sql).toContain("INSERT INTO audit.event_log");
+    expect(serializedParams).toContain("competition_stage_package_plan.rejected");
+    expect(plan).toEqual(
+      expect.objectContaining({
+        planStatus: "rejected",
+        reviewNote: "Dates need another pass.",
+      }),
+    );
+  });
+
   it("lists stage package plan audit events", async () => {
     const { repository, databaseService } = createRepositoryHarness();
 
@@ -979,7 +1222,50 @@ describe("CompetitionRepository", () => {
     ]);
   });
 
-  it("executes a draft stage package plan once in a transaction", async () => {
+  it("rejects executing a draft stage package plan before approval", async () => {
+    const { repository, client, executedSql } = createRepositoryHarness();
+
+    client.query.mockImplementation(async (sql: string, _params: unknown[] = []) => {
+      executedSql.push(sql);
+
+      if (
+        sql.includes("FROM ops.competition_stage_package_plan") &&
+        sql.includes("FOR UPDATE")
+      ) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              competition_stage_package_plan_id:
+                "55555555-5555-4555-8555-555555555555",
+              competition_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              package_code: "league_then_final",
+              plan_name: "April regional package",
+              plan_status: "draft",
+              stage_drafts_json: validStagePackageStages,
+              created_stage_ids: [],
+              created_at: "2026-04-25T10:00:00.000Z",
+              updated_at: "2026-04-25T10:00:00.000Z",
+              executed_at: null,
+            },
+          ],
+        };
+      }
+
+      return { rowCount: 1, rows: [] };
+    });
+
+    await expect(
+      repository.executeStagePackagePlan({
+        actorUserId: "11111111-1111-4111-8111-111111111111",
+        planId: "55555555-5555-4555-8555-555555555555",
+      }),
+    ).rejects.toThrow("Stage package plan is not executable");
+
+    expect(executedSql.join("\n")).not.toContain("INSERT INTO ops.competition_stage");
+  });
+
+  it("executes an approved stage package plan once in a transaction", async () => {
     const { repository, databaseService, client, executedSql, executedParams } =
       createRepositoryHarness();
     let stageInsertCount = 0;
@@ -1002,11 +1288,16 @@ describe("CompetitionRepository", () => {
               competition_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
               package_code: "league_then_final",
               plan_name: "April regional package",
-              plan_status: "draft",
+              plan_status: "approved",
               stage_drafts_json: validStagePackageStages,
               created_stage_ids: [],
+              submitted_by_user_id: "11111111-1111-4111-8111-111111111111",
+              submitted_at: "2026-04-25T10:15:00.000Z",
+              reviewed_by_user_id: "22222222-2222-4222-8222-222222222222",
+              reviewed_at: "2026-04-25T10:20:00.000Z",
+              review_note: "Reviewed in planning meeting.",
               created_at: "2026-04-25T10:00:00.000Z",
-              updated_at: "2026-04-25T10:00:00.000Z",
+              updated_at: "2026-04-25T10:20:00.000Z",
               executed_at: null,
             },
           ],
