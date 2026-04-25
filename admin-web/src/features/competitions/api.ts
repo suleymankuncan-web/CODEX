@@ -106,6 +106,21 @@ export type CompetitionDetail = {
   storeContributions: CompetitionStoreContribution[]
 }
 
+export type CreateCompetitionStagePayload = {
+  stageCode: string
+  stageName: string
+  stageOrder: number
+  stageType: CompetitionStageSummary['stageType']
+  startsOn: string
+  endsOn: string
+  teams: Array<{
+    teamCode: string
+    teamName: string
+    sourceTemplateId?: string
+    storeIds: string[]
+  }>
+}
+
 export async function listCompetitions() {
   return fetchJson<ListResponse<CompetitionSummary>>('/competitions')
 }
@@ -126,6 +141,19 @@ export async function createCompetition(payload: {
     method: 'POST',
     body: payload,
   })
+}
+
+export async function createCompetitionStage(
+  competitionId: string,
+  payload: CreateCompetitionStagePayload,
+) {
+  return sendJson<CommandResponse<{ stage: CompetitionStageSummary }>>(
+    `/competitions/${competitionId}/stages`,
+    {
+      method: 'POST',
+      body: payload,
+    },
+  )
 }
 
 export async function recalculateStage(stageId: string) {

@@ -17,6 +17,7 @@ import {
   type CompetitionStoreContribution,
   type CompetitionSummary,
 } from '../features/competitions/api'
+import { StageBuilderForm } from '../features/competitions/StageBuilderForm'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { formatDate, formatState, getErrorMessage } from '../lib/format'
 
@@ -277,6 +278,21 @@ export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummar
                     </button>
                   ))}
                 </div>
+              ) : null}
+
+              {canManage ? (
+                <StageBuilderForm
+                  key={selectedCompetition.competitionId}
+                  competitionId={selectedCompetition.competitionId}
+                  competitionStartsOn={selectedCompetition.startsOn}
+                  competitionEndsOn={selectedCompetition.endsOn}
+                  onCreated={async () => {
+                    await queryClient.invalidateQueries({ queryKey: ['competitions'] })
+                    await queryClient.invalidateQueries({
+                      queryKey: ['competition-detail', selectedCompetition.competitionId],
+                    })
+                  }}
+                />
               ) : null}
 
               <ScopedContributionSection contributions={detailQuery.data.storeContributions} />

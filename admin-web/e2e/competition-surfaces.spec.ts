@@ -4,6 +4,7 @@ const competitionId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 const stageId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
 const teamId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
 const storeId = '00000000-0000-0000-0000-000000000101'
+const secondStoreId = '00000000-0000-0000-0000-000000000102'
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -37,6 +38,56 @@ test('admin competitions surface shows live scores and warnings', async ({ page 
   await expect(page.getByRole('button', { name: /Finalize QUALIFIER/ })).toBeVisible()
 })
 
+test('admin can create a competition stage with team store assignments', async ({ page }) => {
+  let createdStagePayload: unknown = null
+  await page.unroute('**/api/competitions**')
+  await routeCompetitionApi(page, authSessionFixture, competitionDetailFixture, {
+    onCreateStage: (payload) => {
+      createdStagePayload = payload
+    },
+  })
+
+  await page.goto('/admin/competitions')
+
+  await page.getByLabel('Stage code').fill('MAY_QUALIFIER')
+  await page.getByLabel('Stage name').fill('May Qualifier')
+  await page.getByLabel('Stage order').fill('1')
+  await page.getByLabel('Stage type').selectOption('qualifier')
+  await page.getByLabel('Stage starts').fill('2026-05-01')
+  await page.getByLabel('Stage ends').fill('2026-05-15')
+  const teamOne = page.locator('.stage-builder-team').filter({ hasText: 'Team 1' })
+  const teamTwo = page.locator('.stage-builder-team').filter({ hasText: 'Team 2' })
+  await page.getByLabel('Team 1 code').fill('MARMARA_A')
+  await page.getByLabel('Team 1 name').fill('Marmara A')
+  await teamOne.getByLabel('DEMO-101 - Demo Store 101 - Marmara').check()
+  await page.getByLabel('Team 2 code').fill('MARMARA_B')
+  await page.getByLabel('Team 2 name').fill('Marmara B')
+  await teamTwo.getByLabel('DEMO-102 - Demo Store 102 - Marmara').check()
+  await page.getByRole('button', { name: 'Create stage' }).click()
+
+  await expect(page.getByText('Competition stage created')).toBeVisible()
+  expect(createdStagePayload).toMatchObject({
+    stageCode: 'MAY_QUALIFIER',
+    stageName: 'May Qualifier',
+    stageOrder: 1,
+    stageType: 'qualifier',
+    startsOn: '2026-05-01',
+    endsOn: '2026-05-15',
+    teams: [
+      {
+        teamCode: 'MARMARA_A',
+        teamName: 'Marmara A',
+        storeIds: [storeId],
+      },
+      {
+        teamCode: 'MARMARA_B',
+        teamName: 'Marmara B',
+        storeIds: [secondStoreId],
+      },
+    ],
+  })
+})
+
 test('region manager competitions surface is read-only and scoped to visible store contributions', async ({ page }) => {
   await page.unroute('**/api/auth/session')
   await page.unroute('**/api/competitions**')
@@ -58,9 +109,16 @@ async function routeCompetitionApi(
   page: Page,
   authSession: typeof authSessionFixture,
   competitionDetail: typeof competitionDetailFixture,
+  options?: {
+    onCreateStage?: (payload: unknown) => void
+  },
 ) {
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: authSession })
+  })
+
+  await page.route('**/api/auth/lookups', async (route) => {
+    await route.fulfill({ json: authLookupsFixture })
   })
 
   await page.route('**/api/competitions**', async (route) => {
@@ -79,6 +137,30 @@ async function routeCompetitionApi(
 
     if (request.method() === 'GET' && pathname.endsWith(`/api/competitions/${competitionId}`)) {
       await route.fulfill({ json: competitionDetail })
+      return
+    }
+
+    if (request.method() === 'POST' && pathname.endsWith(`/api/competitions/${competitionId}/stages`)) {
+      options?.onCreateStage?.(request.postDataJSON())
+      await route.fulfill({
+        json: {
+          command: { status: 'created', message: 'Competition stage created' },
+          data: {
+            stage: {
+              competitionStageId: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+              competitionId,
+              stageCode: 'MAY_QUALIFIER',
+              stageName: 'May Qualifier',
+              stageOrder: 1,
+              stageType: 'qualifier',
+              startsOn: '2026-05-01',
+              endsOn: '2026-05-15',
+              lifecycleState: 'draft',
+              finalizationState: null,
+            },
+          },
+        },
+      })
       return
     }
 
@@ -143,6 +225,53 @@ const regionManagerSessionFixture = {
     regionCount: 1,
     storeCount: 0,
     assignedStoreCount: 0,
+  },
+}
+
+const authLookupsFixture = {
+  scopeTypes: ['company', 'region', 'store'],
+  authProviders: ['mock', 'oidc'],
+  users: [],
+  roles: [],
+  permissions: [],
+  stores: [
+    {
+      storeId,
+      storeCode: 'DEMO-101',
+      storeName: 'Demo Store 101',
+      companyId: '00000000-0000-0000-0000-000000000001',
+      regionId: '00000000-0000-0000-0000-000000000010',
+      regionName: 'Marmara',
+    },
+    {
+      storeId: secondStoreId,
+      storeCode: 'DEMO-102',
+      storeName: 'Demo Store 102',
+      companyId: '00000000-0000-0000-0000-000000000001',
+      regionId: '00000000-0000-0000-0000-000000000010',
+      regionName: 'Marmara',
+    },
+  ],
+  optionGroups: {
+    users: [],
+    roles: [],
+    permissions: [],
+    stores: [],
+    scopeTypes: [
+      { value: 'company', label: 'company' },
+      { value: 'region', label: 'region' },
+      { value: 'store', label: 'store' },
+    ],
+    authProviders: [
+      { value: 'mock', label: 'mock' },
+      { value: 'oidc', label: 'oidc' },
+    ],
+  },
+  meta: {
+    totalUsers: 0,
+    totalRoles: 0,
+    totalPermissions: 0,
+    totalStores: 2,
   },
 }
 
