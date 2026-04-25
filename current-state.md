@@ -823,6 +823,30 @@ C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI\admin-web
 - Frontend release check gecti: `npm.cmd run check:release` -> lint, build, 13 Playwright smoke testi ve `npm audit --omit=dev` (`found 0 vulnerabilities`); Vite chunk warning yok.
 - Siradaki mantikli adim: plan wizard'a submit oncesi preview/duzenleme adimi eklemek. Boylece IK iki stage'in tarih, takim ve template baglarini tek ekranda onaylayip gerekirse paketi gondermeden ince ayar yapabilir.
 
+## Son Competition Plan Wizard Preview V1
+
+25 Nisan 2026 itibariyla competition plan wizard submit oncesi preview/duzenleme hatti acildi.
+
+- Uygulama plani eklendi: `docs/superpowers/plans/2026-04-25-competition-plan-wizard-preview-v1.md`.
+- Backend stage package endpointi degismedi; transaction garantisi aynen korunur.
+- Frontend package helper'i artik once editable stage draft'lari uretir.
+- `Stage package` bolumunde her package stage icin preview/editor alanlari var:
+  - `Package stage N code`
+  - `Package stage N name`
+  - `Package stage N order`
+  - `Package stage N type`
+  - `Package stage N starts`
+  - `Package stage N ends`
+- IK/Admin `league_then_final` paketini olusturmadan once lig ve final stage adlarini/tarihlerini/tiplerini ince ayarlayabilir.
+- Team template secimleri stage alanlarini resetlemez; sadece paket payload'ina iki secili aktif template'in takim/store baglarini ekler.
+- Package validation genisledi: stage draft sayisi, stage code formati, unique stage code, stage name, order ve tarih araligi kontrol edilir.
+- Playwright testi final stage adini ve baslangic tarihini preview uzerinden degistirip API payload'ina yansidigini korur.
+- TDD kirmizi dogrulamasi yapildi: `Package stage 1 code` preview alani yokken Playwright fail verdi.
+- Hedefli frontend dogrulama gecti: `npm.cmd run build; npx.cmd playwright test e2e/competition-surfaces.spec.ts` -> 8 Playwright test.
+- Backend release check gecti: `npm.cmd run check:release` -> lint, 28 suite / 203 test, build ve `npm audit --omit=dev` (`found 0 vulnerabilities`).
+- Frontend release check gecti: `npm.cmd run check:release` -> lint, build, 13 Playwright smoke testi ve `npm audit --omit=dev` (`found 0 vulnerabilities`); Vite chunk warning yok.
+- Siradaki mantikli adim: package planlarini kaydedilebilir taslak haline getirmek. Boylece IK bir turnuva planini bugun hazirlayip toplantidan sonra ayni taslagi publish/execute edebilir; audit ve geri donus izi daha guclu olur.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:
