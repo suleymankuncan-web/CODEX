@@ -146,8 +146,17 @@ export async function listCompetitions() {
   return fetchJson<ListResponse<CompetitionSummary>>('/competitions')
 }
 
-export async function listCompetitionTeamTemplates() {
-  return fetchJson<ListResponse<CompetitionTeamTemplate>>('/competitions/team-templates')
+export async function listCompetitionTeamTemplates(input?: { activeOnly?: boolean }) {
+  const params = new URLSearchParams()
+
+  if (input?.activeOnly !== undefined) {
+    params.set('activeOnly', String(input.activeOnly))
+  }
+
+  const query = params.toString()
+  return fetchJson<ListResponse<CompetitionTeamTemplate>>(
+    `/competitions/team-templates${query ? `?${query}` : ''}`,
+  )
 }
 
 export async function getCompetition(competitionId: string) {
@@ -174,6 +183,15 @@ export async function createCompetitionTeamTemplate(payload: CreateCompetitionTe
     {
       method: 'POST',
       body: payload,
+    },
+  )
+}
+
+export async function deactivateCompetitionTeamTemplate(templateId: string) {
+  return sendJson<CommandResponse<{ template: CompetitionTeamTemplate }>>(
+    `/competitions/team-templates/${templateId}/deactivate`,
+    {
+      method: 'PATCH',
     },
   )
 }

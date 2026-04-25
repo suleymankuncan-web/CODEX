@@ -6,6 +6,7 @@ const teamId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
 const storeId = '00000000-0000-0000-0000-000000000101'
 const secondStoreId = '00000000-0000-0000-0000-000000000102'
 const templateId = '99999999-9999-4999-8999-999999999999'
+const inactiveTemplateId = '88888888-8888-4888-8888-888888888888'
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -149,6 +150,34 @@ test('admin creates a team template and applies it to a stage team', async ({ pa
   })
 })
 
+test('admin can view inactive templates and deactivate active templates', async ({ page }) => {
+  let deactivatedTemplateId: string | null = null
+  await page.unroute('**/api/competitions**')
+  await routeCompetitionApi(page, authSessionFixture, competitionDetailFixture, {
+    initialTeamTemplates: [activeTemplateFixture, inactiveTemplateFixture],
+    onDeactivateTemplate: (nextTemplateId) => {
+      deactivatedTemplateId = nextTemplateId
+    },
+  })
+
+  await page.goto('/admin/competitions')
+
+  const templateLibrary = page.locator('.stage-template-library')
+  const activeTemplateRow = templateLibrary.locator('article').filter({ hasText: 'MARMARA_TEMPLATE_A' })
+  await expect(activeTemplateRow.getByText('MARMARA_TEMPLATE_A', { exact: true })).toBeVisible()
+  await expect(templateLibrary.getByText('OLD_MARMARA_TEMPLATE')).toHaveCount(0)
+
+  await templateLibrary.getByLabel('Show inactive templates').check()
+  await expect(templateLibrary.getByText('OLD_MARMARA_TEMPLATE')).toBeVisible()
+  await expect(templateLibrary.getByText('Inactive', { exact: true })).toBeVisible()
+
+  await templateLibrary.getByRole('button', { name: 'Deactivate MARMARA_TEMPLATE_A' }).click()
+
+  await expect(page.getByText('Competition team template deactivated')).toBeVisible()
+  expect(deactivatedTemplateId).toBe(templateId)
+  await expect(page.getByLabel('Team 1 template')).not.toContainText('MARMARA_TEMPLATE_A')
+})
+
 test('region manager competitions surface is read-only and scoped to visible store contributions', async ({ page }) => {
   await page.unroute('**/api/auth/session')
   await page.unroute('**/api/competitions**')
@@ -173,9 +202,11 @@ async function routeCompetitionApi(
   options?: {
     onCreateStage?: (payload: unknown) => void
     onCreateTemplate?: (payload: unknown) => void
+    onDeactivateTemplate?: (templateId: string) => void
+    initialTeamTemplates?: unknown[]
   },
 ) {
-  let teamTemplates: unknown[] = []
+  let teamTemplates: unknown[] = options?.initialTeamTemplates ?? []
 
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: authSession })
@@ -190,10 +221,14 @@ async function routeCompetitionApi(
     const pathname = new URL(request.url()).pathname
 
     if (request.method() === 'GET' && pathname.endsWith('/api/competitions/team-templates')) {
+      const activeOnly = new URL(request.url()).searchParams.get('activeOnly') !== 'false'
+      const visibleTemplates = activeOnly
+        ? teamTemplates.filter((template) => Boolean((template as { isActive?: boolean }).isActive))
+        : teamTemplates
       await route.fulfill({
         json: {
-          items: teamTemplates,
-          meta: { count: teamTemplates.length, total: teamTemplates.length, limit: 50, offset: 0 },
+          items: visibleTemplates,
+          meta: { count: visibleTemplates.length, total: visibleTemplates.length, limit: 50, offset: 0 },
         },
       })
       return
@@ -224,6 +259,29 @@ async function routeCompetitionApi(
           command: { status: 'created', message: 'Competition team template created' },
           data: {
             template: teamTemplates[0],
+          },
+        },
+      })
+      return
+    }
+
+    if (
+      request.method() === 'PATCH' &&
+      pathname.endsWith(`/api/competitions/team-templates/${templateId}/deactivate`)
+    ) {
+      options?.onDeactivateTemplate?.(templateId)
+      teamTemplates = teamTemplates.map((template) =>
+        (template as { templateId?: string }).templateId === templateId
+          ? { ...(template as Record<string, unknown>), isActive: false }
+          : template,
+      )
+      await route.fulfill({
+        json: {
+          command: { status: 'deactivated', message: 'Competition team template deactivated' },
+          data: {
+            template: teamTemplates.find(
+              (template) => (template as { templateId?: string }).templateId === templateId,
+            ),
           },
         },
       })
@@ -276,6 +334,38 @@ async function routeCompetitionApi(
       },
     })
   })
+}
+
+const activeTemplateFixture = {
+  templateId,
+  templateCode: 'MARMARA_TEMPLATE_A',
+  templateName: 'Marmara Template A',
+  description: null,
+  isActive: true,
+  stores: [
+    {
+      storeId,
+      storeCode: 'DEMO-101',
+      storeName: 'Demo Store 101',
+      regionId: '00000000-0000-0000-0000-000000000010',
+    },
+  ],
+}
+
+const inactiveTemplateFixture = {
+  templateId: inactiveTemplateId,
+  templateCode: 'OLD_MARMARA_TEMPLATE',
+  templateName: 'Old Marmara Template',
+  description: null,
+  isActive: false,
+  stores: [
+    {
+      storeId: secondStoreId,
+      storeCode: 'DEMO-102',
+      storeName: 'Demo Store 102',
+      regionId: '00000000-0000-0000-0000-000000000010',
+    },
+  ],
 }
 
 const authSessionFixture = {

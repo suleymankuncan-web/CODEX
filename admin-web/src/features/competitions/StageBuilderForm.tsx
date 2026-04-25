@@ -10,7 +10,9 @@ import { getAuthLookups, type AuthLookupStore } from '../auth/api'
 import {
   createCompetitionTeamTemplate,
   createCompetitionStage,
+  deactivateCompetitionTeamTemplate,
   listCompetitionTeamTemplates,
+  type CompetitionTeamTemplate,
   type CompetitionStageSummary,
   type CreateCompetitionTeamTemplatePayload,
   type CreateCompetitionStagePayload,
@@ -152,6 +154,8 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
   const [templateDraft, setTemplateDraft] = useState(createInitialTemplateDraft)
   const [feedback, setFeedback] = useState<string | null>(null)
   const [templateFeedback, setTemplateFeedback] = useState<string | null>(null)
+  const [templateLifecycleFeedback, setTemplateLifecycleFeedback] = useState<string | null>(null)
+  const [showInactiveTemplates, setShowInactiveTemplates] = useState(false)
 
   const lookupsQuery = useQuery({
     queryKey: ['competition-stage-builder-lookups'],
@@ -168,8 +172,14 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
   )
 
   const templatesQuery = useQuery({
-    queryKey: ['competition-team-templates'],
-    queryFn: listCompetitionTeamTemplates,
+    queryKey: ['competition-team-templates', 'active'],
+    queryFn: () => listCompetitionTeamTemplates({ activeOnly: true }),
+    staleTime: 60_000,
+  })
+
+  const templateLibraryQuery = useQuery({
+    queryKey: ['competition-team-templates', 'library', showInactiveTemplates],
+    queryFn: () => listCompetitionTeamTemplates({ activeOnly: !showInactiveTemplates }),
     staleTime: 60_000,
   })
 
@@ -199,6 +209,14 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
     onSuccess: async (response) => {
       setTemplateFeedback(response.command.message)
       setTemplateDraft(createInitialTemplateDraft())
+      await queryClient.invalidateQueries({ queryKey: ['competition-team-templates'] })
+    },
+  })
+
+  const deactivateTemplateMutation = useMutation({
+    mutationFn: deactivateCompetitionTeamTemplate,
+    onSuccess: async (response) => {
+      setTemplateLifecycleFeedback(response.command.message)
       await queryClient.invalidateQueries({ queryKey: ['competition-team-templates'] })
     },
   })
@@ -400,6 +418,17 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
         onUpdate={updateTemplateDraft}
       />
 
+      <TemplateLibrarySection
+        error={templateLibraryQuery.error ?? deactivateTemplateMutation.error}
+        feedback={templateLifecycleFeedback}
+        isLoading={templateLibraryQuery.isLoading}
+        isPending={deactivateTemplateMutation.isPending}
+        showInactive={showInactiveTemplates}
+        templates={templateLibraryQuery.data?.items ?? []}
+        onDeactivate={(templateId) => deactivateTemplateMutation.mutate(templateId)}
+        onShowInactiveChange={setShowInactiveTemplates}
+      />
+
       {templatesQuery.isError ? (
         <ScreenState
           title="Team templates could not load"
@@ -488,6 +517,99 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
         />
       ) : null}
     </section>
+  )
+}
+
+function TemplateLibrarySection(input: {
+  error: unknown
+  feedback: string | null
+  isLoading: boolean
+  isPending: boolean
+  showInactive: boolean
+  templates: CompetitionTeamTemplate[]
+  onDeactivate: (templateId: string) => void
+  onShowInactiveChange: (value: boolean) => void
+}) {
+  return (
+    <article className="stacked-row stage-template-library">
+      <div className="stacked-row-head">
+        <div>
+          <strong>Template library</strong>
+          <p className="queue-subtitle">Active templates feed stage team selection.</p>
+        </div>
+        <StatusPill tone={input.showInactive ? 'accent' : 'neutral'}>
+          {input.showInactive ? 'All templates' : 'Active only'}
+        </StatusPill>
+      </div>
+      <label className="store-checkbox template-toggle">
+        <input
+          type="checkbox"
+          checked={input.showInactive}
+          onChange={(event) => input.onShowInactiveChange(event.target.checked)}
+        />
+        <span>Show inactive templates</span>
+      </label>
+
+      {input.isLoading ? (
+        <ScreenState title="Templates are loading" copy="Reusable team templates are loading." />
+      ) : null}
+
+      {!input.isLoading && input.templates.length === 0 ? (
+        <EmptyState title="No templates" copy="Created templates appear in this library." />
+      ) : null}
+
+      {input.templates.length > 0 ? (
+        <div className="stacked-table">
+          {input.templates.map((template) => (
+            <article className="stacked-row" key={template.templateId}>
+              <div className="stacked-row-head">
+                <div>
+                  <strong>{template.templateCode}</strong>
+                  <p className="queue-subtitle">{template.templateName}</p>
+                </div>
+                <StatusPill tone={template.isActive ? 'calm' : 'neutral'}>
+                  {template.isActive ? 'Active' : 'Inactive'}
+                </StatusPill>
+              </div>
+              <div className="key-grid">
+                <div className="key-item">
+                  <span>Stores</span>
+                  <strong>{String(template.stores.length)}</strong>
+                </div>
+                <div className="key-item">
+                  <span>Description</span>
+                  <strong>{template.description ?? '-'}</strong>
+                </div>
+              </div>
+              {template.isActive ? (
+                <div className="action-cluster">
+                  <button
+                    className="control-button"
+                    type="button"
+                    disabled={input.isPending}
+                    onClick={() => input.onDeactivate(template.templateId)}
+                  >
+                    Deactivate {template.templateCode}
+                  </button>
+                </div>
+              ) : null}
+            </article>
+          ))}
+        </div>
+      ) : null}
+
+      {input.feedback ? (
+        <ScreenState title={input.feedback} copy="Template library is refreshed." />
+      ) : null}
+
+      {input.error ? (
+        <ScreenState
+          title="Template library action failed"
+          copy={getErrorMessage(input.error)}
+          tone="error"
+        />
+      ) : null}
+    </article>
   )
 }
 
