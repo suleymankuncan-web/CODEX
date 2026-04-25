@@ -940,6 +940,8 @@ C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI\admin-web
 - Draft plan dogrudan execute edilemez; once submit, sonra approve gerekir.
 - Submitted plan edit/cancel/execute edilemez; sadece approve/reject edilir.
 - Rejected plan history olarak kalir ve execute edilemez.
+- V1 urun karari: ayni yetkili IK/Admin kullanicisi plani submit edip approve edebilir; bu onay gate'i bugun "baska kisiden izin" degil, taslak hazirligi ile resmi karar arasindaki karar kilidi olarak kullanilir.
+- Gelecek delege akisi desteklenir: ileride plani alt ekip uyesi hazirlayip submit edebilir, IK karar sahibi ise `reviewed_by_user_id` ile approve/reject eder. Strict "submitter kendi planini onaylayamaz" kurali V1'de zorunlu degildir, ileride policy olarak eklenebilir.
 - Audit eventleri eklendi:
   - `competition_stage_package_plan.submitted`
   - `competition_stage_package_plan.approved`
@@ -958,7 +960,7 @@ C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI\admin-web
 - Hedefli frontend dogrulama gecti: `npm.cmd run test:e2e -- e2e/competition-surfaces.spec.ts` -> 11 Playwright test.
 - Backend release check gecti: `npm.cmd run check:release` -> lint, 28 suite / 224 test, build ve `npm audit --omit=dev` (`found 0 vulnerabilities`).
 - Frontend release check gecti: `npm.cmd run check:release` -> lint, build, 16 Playwright smoke testi ve `npm audit --omit=dev` (`found 0 vulnerabilities`); Vite chunk warning yok.
-- Siradaki mantikli adim: approval gate'i daha kontrollu hale getirmek icin submitter ve reviewer ayrimini rol/scope seviyesinde tasarlamak. V1 akisi guvenli, ama ileride IK hazirlayan kisiyle onaylayan kisiyi ayirmak kurumsal kontrolu guclendirir.
+- Siradaki mantikli adim: approval gate metinlerini ve UX dilini "karar kilidi" mantigiyla netlestirmek; submit/approve kullaniciya baska kisiden izin gibi degil, hazirliktan resmi karara gecis gibi hissettirmeli.
 
 ## Onemli Dosyalar
 

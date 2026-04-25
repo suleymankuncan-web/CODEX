@@ -32,6 +32,19 @@ Transitions:
 - `approved -> executed`
 - `draft -> cancelled`
 
+## Approval Ownership
+
+V1 intentionally allows the same authorized HR/Admin user to submit and approve a plan. In the current operating model, the approval gate is a decision lock: it separates preparation from the official decision and prevents direct draft execution.
+
+The data model still records both sides of the decision through `submitted_by_user_id` and `reviewed_by_user_id`. This keeps the future delegated workflow ready: a planner can prepare and submit the package plan, while the HR decision owner reviews, approves, or rejects it.
+
+Future policy can add stricter separation without redesigning the lifecycle:
+
+- Keep V1 behavior: same-user approval is allowed.
+- Add delegated approval: submitter and reviewer may differ.
+- Add strict approval: submitter cannot approve their own submitted plan.
+- Add approval policy tiers for larger package types if needed.
+
 ## Data Model
 
 The plan table keeps the current JSON draft payload and adds review metadata:
@@ -93,5 +106,5 @@ The existing package plan library grows in place:
 ## Non-Goals
 
 - No multi-approver chain yet.
-- No role split between submitter and approver yet; V1 keeps existing `SUPER_ADMIN` / `HR_ADMIN` controller roles.
+- No enforced role split between submitter and approver yet; V1 keeps existing `SUPER_ADMIN` / `HR_ADMIN` controller roles and permits same-user approval.
 - No rejected-plan reopen/clone yet.
