@@ -771,6 +771,33 @@ C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI\admin-web
 - Frontend release check gecti: `npm.cmd run check:release` -> lint, build, 11 Playwright smoke testi ve `npm audit --omit=dev` (`found 0 vulnerabilities`); Vite chunk warning yok.
 - Siradaki mantikli adim: stage format presetlerini planlamak. Bolge ligi, ilk 15 gun eleme, final/finalist kapistirma gibi kurgu tiplerini template setleriyle baglayacak yapi artik daha rahat kurulabilir.
 
+## Son Competition Stage Format Presets V1
+
+25 Nisan 2026 itibariyla competition stage format preset V1 hatti acildi.
+
+- Uygulama plani eklendi: `docs/superpowers/plans/2026-04-25-competition-stage-format-presets-v1.md`.
+- Backend stage create kontratina opsiyonel `stagePresetCode` eklendi.
+- Desteklenen preset kodlari: `region_league`, `first_half_qualifier`, `final_showdown`.
+- Backend DTO `stagePresetCode` icin whitelist validation yapar.
+- Repository `advancement_rule_json` alanina preset izini yazar:
+  - `region_league` -> `{ type: "rank_all", presetCode: "region_league" }`
+  - diger presetler -> `{ type: "top_n", count: 1, presetCode }`
+  - preset yoksa eski `{ type: "top_n", count: 1 }` davranisi korunur.
+- Audit metadata artik stage create icin `stagePresetCode` tasir.
+- Frontend `admin-web/src/features/competitions/stage-presets.ts` icinde V1 preset tanimlari eklendi.
+- Stage builder icine `Stage preset` select'i eklendi.
+- `Regional league` preset'i stage code/name/type/order ve competition full date range alanlarini doldurur.
+- `First half qualifier` preset'i competition tarih araliginin ilk yarisini kullanir.
+- `Final showdown` preset'i competition tarih araliginin ikinci yarisini/final kismini kullanir.
+- Preset secimi takim draftlarini korur; sadece stage alanlarini doldurur.
+- Stage create payload'i preset seciliyken `stagePresetCode` gonderir; manual stage eski akisi korur.
+- TDD kirmizi dogrulamasi yapildi: backend `stagePresetCode` contract'ta yokken Jest TypeScript compile fail verdi; frontend `Stage preset` control yokken Playwright fail verdi.
+- Hedefli backend dogrulama gecti: `npm.cmd test -- src/modules/store-ops/application/competition.service.spec.ts src/modules/store-ops/infrastructure/competition.repository.spec.ts --runInBand` -> 2 suite / 23 test.
+- Hedefli frontend dogrulama gecti: `npm.cmd run build; npx.cmd playwright test e2e/competition-surfaces.spec.ts` -> 7 Playwright test.
+- Backend release check gecti: `npm.cmd run check:release` -> lint, 28 suite / 201 test, build ve `npm audit --omit=dev` (`found 0 vulnerabilities`).
+- Frontend release check gecti: `npm.cmd run check:release` -> lint, build, 12 Playwright smoke testi ve `npm audit --omit=dev` (`found 0 vulnerabilities`); Vite chunk warning yok.
+- Siradaki mantikli adim: preset setlerini takim template setleriyle baglayan bir "stage package" veya "competition plan wizard" tasarlamak. Bu, bolge ligi + final gibi cok asamali kurguyu tek tek stage olusturmadan hazirlatir.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:
@@ -806,6 +833,7 @@ Frontend:
 - `admin-web/src/features/auth/api.ts`
 - `admin-web/src/features/competitions/api.ts`
 - `admin-web/src/features/competitions/StageBuilderForm.tsx`
+- `admin-web/src/features/competitions/stage-presets.ts`
 - `admin-web/src/pages/AuthDashboardPage.tsx`
 - `admin-web/src/pages/CompetitionDashboardPage.tsx`
 - `admin-web/src/pages/AuthActionStoreAssignmentAuditPage.tsx`
