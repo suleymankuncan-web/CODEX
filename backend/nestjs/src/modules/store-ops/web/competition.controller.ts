@@ -5,6 +5,7 @@ import { CreateCompetitionDto } from "./dto/create-competition.dto";
 import { CreateCompetitionStageDto } from "./dto/create-competition-stage.dto";
 import { CreateCompetitionTeamTemplateDto } from "./dto/create-competition-team-template.dto";
 import { FinalizeCompetitionStageDto } from "./dto/finalize-competition-stage.dto";
+import { ListCompetitionTeamTemplatesQueryDto } from "./dto/list-competition-team-templates.query";
 import { ListCompetitionsQueryDto } from "./dto/list-competitions.query";
 
 type CompetitionRequest = {
@@ -44,8 +45,10 @@ export class CompetitionController {
 
   @Get("team-templates")
   @RequireRoles("SUPER_ADMIN", "HR_ADMIN")
-  async listTeamTemplates() {
-    return this.competitionService.listTeamTemplates();
+  async listTeamTemplates(@Query() query: ListCompetitionTeamTemplatesQueryDto) {
+    return this.competitionService.listTeamTemplates({
+      activeOnly: query.activeOnly,
+    });
   }
 
   @Get(":competitionId")
@@ -89,6 +92,18 @@ export class CompetitionController {
     return this.competitionService.createTeamTemplate({
       actorUserId: request.user.userId,
       ...body,
+    });
+  }
+
+  @Patch("team-templates/:templateId/deactivate")
+  @RequireRoles("SUPER_ADMIN", "HR_ADMIN")
+  async deactivateTeamTemplate(
+    @Req() request: CompetitionRequest,
+    @Param("templateId") templateId: string,
+  ) {
+    return this.competitionService.deactivateTeamTemplate({
+      actorUserId: request.user.userId,
+      templateId,
     });
   }
 

@@ -7,6 +7,7 @@ import {
   CreateCompetitionInput,
   CreateCompetitionStageInput,
   CreateCompetitionTeamTemplateInput,
+  DeactivateCompetitionTeamTemplateInput,
   FinalizeCompetitionStageInput,
   RecalculateCompetitionStageInput,
 } from "./competition.contract";
@@ -37,8 +38,10 @@ export class CompetitionService {
     });
   }
 
-  async listTeamTemplates() {
-    const items = await this.competitionRepository.listTeamTemplates({ activeOnly: true });
+  async listTeamTemplates(input: { activeOnly?: boolean } = {}) {
+    const items = await this.competitionRepository.listTeamTemplates({
+      activeOnly: input.activeOnly ?? true,
+    });
 
     return buildListResponse(items, {
       total: items.length,
@@ -126,6 +129,16 @@ export class CompetitionService {
     return buildCommandResponse({
       status: "created",
       message: "Competition team template created",
+      data: { template },
+    });
+  }
+
+  async deactivateTeamTemplate(input: DeactivateCompetitionTeamTemplateInput) {
+    const template = await this.competitionRepository.deactivateTeamTemplate(input);
+
+    return buildCommandResponse({
+      status: "deactivated",
+      message: "Competition team template deactivated",
       data: { template },
     });
   }

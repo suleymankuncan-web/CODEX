@@ -101,6 +101,39 @@ describe("CompetitionRepository", () => {
     ]);
   });
 
+  it("can list inactive team templates when active filter is disabled", async () => {
+    const { repository, databaseService } = createRepositoryHarness();
+    databaseService.query.mockResolvedValue({
+      rowCount: 1,
+      rows: [
+        {
+          competition_team_template_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          template_code: "OLD_MARMARA_A",
+          template_name: "Old Marmara A",
+          description: null,
+          is_active: false,
+          store_id: null,
+          store_code: null,
+          store_name: null,
+          region_id: null,
+        },
+      ],
+    });
+
+    const rows = await repository.listTeamTemplates({ activeOnly: false });
+
+    const sql = databaseService.query.mock.calls[0][0] as string;
+    const params = databaseService.query.mock.calls[0][1] as unknown[];
+    expect(sql).toContain("($1::boolean = FALSE OR template.is_active = TRUE)");
+    expect(params).toEqual([false]);
+    expect(rows).toEqual([
+      expect.objectContaining({
+        templateCode: "OLD_MARMARA_A",
+        isActive: false,
+      }),
+    ]);
+  });
+
   it("creates a team template and writes store memberships plus audit", async () => {
     const { repository, client, executedSql, executedParams } = createRepositoryHarness();
     client.query.mockImplementation(async (sql: string, params: unknown[] = []) => {
@@ -159,6 +192,64 @@ describe("CompetitionRepository", () => {
     expect(template).toEqual(
       expect.objectContaining({
         templateCode: "MARMARA_A",
+        stores: [expect.objectContaining({ storeCode: "IST-001" })],
+      }),
+    );
+  });
+
+  it("deactivates a team template and writes audit metadata", async () => {
+    const { repository, client, executedSql, executedParams } = createRepositoryHarness();
+    client.query.mockImplementation(async (sql: string, params: unknown[] = []) => {
+      executedSql.push(sql);
+      executedParams.push(params);
+
+      if (sql.includes("UPDATE ops.competition_team_template")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              competition_team_template_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("FROM ops.competition_team_template template")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              competition_team_template_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              template_code: "MARMARA_A",
+              template_name: "Marmara A",
+              description: null,
+              is_active: false,
+              store_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+              store_code: "IST-001",
+              store_name: "IstinyePark",
+              region_id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+            },
+          ],
+        };
+      }
+
+      return { rowCount: 1, rows: [] };
+    });
+
+    const template = await repository.deactivateTeamTemplate({
+      actorUserId: "11111111-1111-4111-8111-111111111111",
+      templateId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    });
+
+    const sql = executedSql.join("\n");
+    expect(sql).toContain("UPDATE ops.competition_team_template");
+    expect(sql).toContain("is_active = FALSE");
+    expect(sql).toContain("INSERT INTO audit.event_log");
+    expect(JSON.stringify(executedParams)).toContain("competition_team_template.deactivated");
+    expect(template).toEqual(
+      expect.objectContaining({
+        templateCode: "MARMARA_A",
+        isActive: false,
         stores: [expect.objectContaining({ storeCode: "IST-001" })],
       }),
     );

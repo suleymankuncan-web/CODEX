@@ -8,6 +8,7 @@ const repository = () => ({
   listTeamTemplates: jest.fn(),
   createCompetition: jest.fn(),
   createTeamTemplate: jest.fn(),
+  deactivateTeamTemplate: jest.fn(),
   createStageWithTeams: jest.fn(),
   recalculateStage: jest.fn(),
   listOpenWarnings: jest.fn(),
@@ -50,6 +51,31 @@ describe("CompetitionService", () => {
     ]);
     expect(result.meta.total).toBe(1);
     expect(repo.listTeamTemplates).toHaveBeenCalledWith({ activeOnly: true });
+  });
+
+  it("lists inactive competition team templates when requested", async () => {
+    const repo = repository();
+    repo.listTeamTemplates.mockResolvedValue([
+      {
+        templateId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        templateCode: "OLD_MARMARA_A",
+        templateName: "Old Marmara A",
+        description: null,
+        isActive: false,
+        stores: [],
+      },
+    ]);
+    const service = new CompetitionService(repo as never);
+
+    const result = await service.listTeamTemplates({ activeOnly: false });
+
+    expect(result.items).toEqual([
+      expect.objectContaining({
+        templateCode: "OLD_MARMARA_A",
+        isActive: false,
+      }),
+    ]);
+    expect(repo.listTeamTemplates).toHaveBeenCalledWith({ activeOnly: false });
   });
 
   it("rejects team template creation without stores", async () => {
@@ -99,6 +125,38 @@ describe("CompetitionService", () => {
       templateCode: "MARMARA_A",
       templateName: "Marmara A",
       storeIds: ["bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"],
+    });
+  });
+
+  it("deactivates a competition team template", async () => {
+    const repo = repository();
+    repo.deactivateTeamTemplate.mockResolvedValue({
+      templateId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      templateCode: "MARMARA_A",
+      templateName: "Marmara A",
+      description: null,
+      isActive: false,
+      stores: [
+        {
+          storeId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+          storeCode: "IST-001",
+          storeName: "IstinyePark",
+          regionId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        },
+      ],
+    });
+    const service = new CompetitionService(repo as never);
+
+    const result = await service.deactivateTeamTemplate({
+      actorUserId: "11111111-1111-4111-8111-111111111111",
+      templateId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    });
+
+    expect(result.command.status).toBe("deactivated");
+    expect(result.data.template.isActive).toBe(false);
+    expect(repo.deactivateTeamTemplate).toHaveBeenCalledWith({
+      actorUserId: "11111111-1111-4111-8111-111111111111",
+      templateId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     });
   });
 

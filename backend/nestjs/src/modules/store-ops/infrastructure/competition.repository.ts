@@ -14,6 +14,7 @@ import {
   CompetitionWarning,
   CreateCompetitionStageInput,
   CreateCompetitionTeamTemplateInput,
+  DeactivateCompetitionTeamTemplateInput,
   RecalculateCompetitionStageInput,
 } from "../application/competition.contract";
 
@@ -396,6 +397,46 @@ export class CompetitionRepository {
 
       const rows = await this.queryTeamTemplateRows(client, {
         templateId: templateRow.competition_team_template_id,
+        activeOnly: false,
+      });
+
+      return mapTeamTemplates(rows)[0];
+    });
+  }
+
+  async deactivateTeamTemplate(
+    input: DeactivateCompetitionTeamTemplateInput,
+  ): Promise<CompetitionTeamTemplate> {
+    return this.databaseService.withTransaction(async (client) => {
+      const result = await client.query<{
+        competition_team_template_id: string;
+      }>(
+        `
+          UPDATE ops.competition_team_template
+          SET
+            is_active = FALSE,
+            updated_at = NOW()
+          WHERE competition_team_template_id = $1::uuid
+          RETURNING competition_team_template_id
+        `,
+        [input.templateId],
+      );
+
+      const templateId = result.rows[0]?.competition_team_template_id;
+
+      await writeCompetitionAudit(client, {
+        actorUserId: input.actorUserId,
+        eventType: "competition_team_template.deactivated",
+        entityName: "ops.competition_team_template",
+        entityId: input.templateId,
+        metadata: {
+          templateId: input.templateId,
+          changedFields: ["is_active"],
+        },
+      });
+
+      const rows = await this.queryTeamTemplateRows(client, {
+        templateId: templateId ?? input.templateId,
         activeOnly: false,
       });
 
