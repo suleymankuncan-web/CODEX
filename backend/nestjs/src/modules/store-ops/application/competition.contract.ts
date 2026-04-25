@@ -18,6 +18,11 @@ export type CompetitionStageFinalizationState =
   | "warnings_present"
   | "overridden";
 
+export type CompetitionStagePresetCode =
+  | "region_league"
+  | "first_half_qualifier"
+  | "final_showdown";
+
 export type CompetitionWarningCode =
   | "missing_daily_store_data"
   | "missing_bm_checklist"
@@ -149,6 +154,7 @@ export type CreateCompetitionInput = {
 export type CreateCompetitionStageInput = {
   actorUserId: string;
   competitionId: string;
+  stagePresetCode?: CompetitionStagePresetCode;
   stageCode: string;
   stageName: string;
   stageOrder: number;

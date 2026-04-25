@@ -401,6 +401,75 @@ describe("CompetitionRepository", () => {
     );
   });
 
+  it("stores stage preset code in advancement rule and audit metadata", async () => {
+    const { repository, client, executedParams } = createRepositoryHarness();
+    client.query.mockImplementation(async (sql: string, params: unknown[] = []) => {
+      executedParams.push(params);
+
+      if (sql.includes("INSERT INTO ops.competition_stage")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              competition_stage_id: "22222222-2222-4222-8222-222222222222",
+              competition_id: "11111111-1111-4111-8111-111111111111",
+              stage_code: "REGION_LEAGUE",
+              stage_name: "Regional League",
+              stage_order: 1,
+              stage_type: "league",
+              starts_on: "2026-05-01",
+              ends_on: "2026-05-31",
+              lifecycle_state: "active",
+              finalization_state: null,
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("INSERT INTO ops.competition_team ")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              competition_team_id: "33333333-3333-4333-8333-333333333333",
+            },
+          ],
+        };
+      }
+
+      return { rowCount: 1, rows: [] };
+    });
+
+    await repository.createStageWithTeams({
+      actorUserId: "11111111-1111-4111-8111-111111111111",
+      competitionId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      stagePresetCode: "region_league",
+      stageCode: "REGION_LEAGUE",
+      stageName: "Regional League",
+      stageOrder: 1,
+      stageType: "league",
+      startsOn: "2026-05-01",
+      endsOn: "2026-05-31",
+      teams: [
+        {
+          teamCode: "MARMARA_A",
+          teamName: "Marmara A",
+          storeIds: ["bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"],
+        },
+        {
+          teamCode: "MARMARA_B",
+          teamName: "Marmara B",
+          storeIds: ["dddddddd-dddd-4ddd-8ddd-dddddddddddd"],
+        },
+      ],
+    });
+
+    const serializedParams = JSON.stringify(executedParams);
+    expect(serializedParams).toContain("rank_all");
+    expect(serializedParams).toContain("region_league");
+    expect(serializedParams).toContain("stagePresetCode");
+  });
+
   it("recalculates stage scores from completed one-day store snapshots and checklist facts", async () => {
     const { repository, executedSql } = createRepositoryHarness();
 

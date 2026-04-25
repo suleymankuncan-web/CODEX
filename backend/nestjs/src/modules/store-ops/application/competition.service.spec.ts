@@ -269,6 +269,55 @@ describe("CompetitionService", () => {
     });
   });
 
+  it("creates a stage with a format preset code", async () => {
+    const repo = repository();
+    repo.createStageWithTeams.mockResolvedValue({
+      competitionStageId: "22222222-2222-4222-8222-222222222222",
+      competitionId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      stageCode: "REGION_LEAGUE",
+      stageName: "Regional League",
+      stageOrder: 1,
+      stageType: "league",
+      startsOn: "2026-05-01",
+      endsOn: "2026-05-31",
+      lifecycleState: "active",
+      finalizationState: null,
+    });
+    const service = new CompetitionService(repo as never);
+
+    const result = await service.createStage({
+      actorUserId: "11111111-1111-4111-8111-111111111111",
+      competitionId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      stagePresetCode: "region_league",
+      stageCode: "REGION_LEAGUE",
+      stageName: "Regional League",
+      stageOrder: 1,
+      stageType: "league",
+      startsOn: "2026-05-01",
+      endsOn: "2026-05-31",
+      teams: [
+        {
+          teamCode: "MARMARA_A",
+          teamName: "Marmara A",
+          storeIds: ["bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"],
+        },
+        {
+          teamCode: "MARMARA_B",
+          teamName: "Marmara B",
+          storeIds: ["dddddddd-dddd-4ddd-8ddd-dddddddddddd"],
+        },
+      ],
+    });
+
+    expect(result.command.status).toBe("created");
+    expect(repo.createStageWithTeams).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stagePresetCode: "region_league",
+        stageType: "league",
+      }),
+    );
+  });
+
   it("creates a draft competition through the repository", async () => {
     const repo = repository();
     repo.createCompetition.mockResolvedValue({

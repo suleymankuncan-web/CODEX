@@ -616,7 +616,7 @@ export class CompetitionRepository {
           input.stageType,
           input.startsOn,
           input.endsOn,
-          JSON.stringify({ type: "top_n", count: 1 }),
+          JSON.stringify(buildStageAdvancementRule(input.stagePresetCode)),
         ],
       );
 
@@ -667,6 +667,7 @@ export class CompetitionRepository {
         metadata: {
           competitionId: input.competitionId,
           stageCode: input.stageCode,
+          stagePresetCode: input.stagePresetCode ?? null,
           teamCount: input.teams.length,
           storeCount: input.teams.reduce((sum, team) => sum + team.storeIds.length, 0),
         },
@@ -1368,6 +1369,18 @@ function mapStoreContribution(
     hasDailyData: row.has_daily_data,
     missingKpiCodes: row.missing_kpi_codes,
   };
+}
+
+function buildStageAdvancementRule(stagePresetCode?: string) {
+  if (stagePresetCode === "region_league") {
+    return { type: "rank_all", presetCode: stagePresetCode };
+  }
+
+  if (stagePresetCode) {
+    return { type: "top_n", count: 1, presetCode: stagePresetCode };
+  }
+
+  return { type: "top_n", count: 1 };
 }
 
 function toDateString(value: string | Date) {

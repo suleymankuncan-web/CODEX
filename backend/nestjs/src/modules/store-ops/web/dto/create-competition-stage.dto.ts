@@ -52,6 +52,10 @@ export class CreateCompetitionStageDto {
   @IsIn(["qualifier", "league", "quarter_final", "semi_final", "final", "custom"])
   stageType!: "qualifier" | "league" | "quarter_final" | "semi_final" | "final" | "custom";
 
+  @IsOptional()
+  @IsIn(["region_league", "first_half_qualifier", "final_showdown"])
+  stagePresetCode?: "region_league" | "first_half_qualifier" | "final_showdown";
+
   @IsDateString()
   startsOn!: string;
 
