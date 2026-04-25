@@ -11,16 +11,23 @@ import {
   cloneCompetitionTeamTemplate,
   createCompetitionTeamTemplate,
   createCompetitionStage,
+  createCompetitionStagePackage,
   deactivateCompetitionTeamTemplate,
   listCompetitionTeamTemplates,
   updateCompetitionTeamTemplate,
   type CloneCompetitionTeamTemplatePayload,
+  type CompetitionStagePackageCode,
   type CompetitionTeamTemplate,
   type CompetitionStageSummary,
+  type CreateCompetitionStagePackagePayload,
   type CreateCompetitionTeamTemplatePayload,
   type CreateCompetitionStagePayload,
   type UpdateCompetitionTeamTemplatePayload,
 } from './api'
+import {
+  buildStagePackagePayload,
+  stagePackageOptions,
+} from './stage-packages'
 import {
   buildStagePresetDraft,
   stagePresetOptions,
@@ -69,6 +76,12 @@ type StageDraft = {
   startsOn: string
   endsOn: string
   teams: TeamDraft[]
+}
+
+type StagePackageDraft = {
+  packageCode: CompetitionStagePackageCode
+  firstTemplateId: string
+  secondTemplateId: string
 }
 
 type StageBuilderFormProps = {
@@ -167,6 +180,37 @@ function validateDraft(draft: StageDraft) {
   return null
 }
 
+function validateStagePackageDraft(
+  draft: StagePackageDraft,
+  templates: CompetitionTeamTemplate[],
+) {
+  if (!draft.packageCode) {
+    return 'Stage package is required.'
+  }
+
+  if (!draft.firstTemplateId || !draft.secondTemplateId) {
+    return 'Stage package needs two active team templates.'
+  }
+
+  if (draft.firstTemplateId === draft.secondTemplateId) {
+    return 'Stage package team templates must be different.'
+  }
+
+  const selectedTemplates = templates.filter((template) =>
+    [draft.firstTemplateId, draft.secondTemplateId].includes(template.templateId),
+  )
+
+  if (selectedTemplates.length !== 2) {
+    return 'Stage package templates must be active.'
+  }
+
+  if (selectedTemplates.some((template) => template.stores.length === 0)) {
+    return 'Stage package templates need at least one store.'
+  }
+
+  return null
+}
+
 function validateTemplateDraft(draft: TemplateDraft) {
   if (!draft.templateCode.trim() || !codePattern.test(draft.templateCode)) {
     return 'Template code must use uppercase letters, numbers, and underscores.'
@@ -200,8 +244,14 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
   const [draft, setDraft] = useState(() =>
     createInitialDraft({ startsOn: input.competitionStartsOn, endsOn: input.competitionEndsOn }),
   )
+  const [stagePackageDraft, setStagePackageDraft] = useState<StagePackageDraft>({
+    packageCode: 'league_then_final',
+    firstTemplateId: '',
+    secondTemplateId: '',
+  })
   const [templateDraft, setTemplateDraft] = useState(createInitialTemplateDraft)
   const [feedback, setFeedback] = useState<string | null>(null)
+  const [stagePackageFeedback, setStagePackageFeedback] = useState<string | null>(null)
   const [templateFeedback, setTemplateFeedback] = useState<string | null>(null)
   const [templateLifecycleFeedback, setTemplateLifecycleFeedback] = useState<string | null>(null)
   const [showInactiveTemplates, setShowInactiveTemplates] = useState(false)
@@ -241,6 +291,7 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
   )
 
   const validationMessage = validateDraft(draft)
+  const stagePackageValidationMessage = validateStagePackageDraft(stagePackageDraft, templates)
   const templateValidationMessage = validateTemplateDraft(templateDraft)
 
   const createMutation = useMutation({
@@ -248,6 +299,15 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
       createCompetitionStage(input.competitionId, payload),
     onSuccess: async (response) => {
       setFeedback(response.command.message)
+      await input.onCreated()
+    },
+  })
+
+  const createStagePackageMutation = useMutation({
+    mutationFn: (payload: CreateCompetitionStagePackagePayload) =>
+      createCompetitionStagePackage(input.competitionId, payload),
+    onSuccess: async (response) => {
+      setStagePackageFeedback(response.command.message)
       await input.onCreated()
     },
   })
@@ -317,6 +377,18 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
       ...current,
       ...presetDraft,
     }))
+  }
+
+  function updateStagePackageDraft(field: keyof StagePackageDraft, value: string) {
+    setStagePackageFeedback(null)
+    setStagePackageDraft((current) => ({ ...current, [field]: value }))
+  }
+
+  function getSelectedStagePackageTemplates() {
+    return [
+      templates.find((template) => template.templateId === stagePackageDraft.firstTemplateId),
+      templates.find((template) => template.templateId === stagePackageDraft.secondTemplateId),
+    ].filter((template): template is CompetitionTeamTemplate => Boolean(template))
   }
 
   function updateTeam(index: number, patch: Partial<TeamDraft>) {
@@ -411,6 +483,22 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
     const nextValidation = validateTemplateDraft(templateDraft)
     if (nextValidation) return
     createTemplateMutation.mutate(buildTemplatePayload())
+  }
+
+  function submitStagePackage() {
+    const nextValidation = validateStagePackageDraft(stagePackageDraft, templates)
+    if (nextValidation) return
+
+    const payload = buildStagePackagePayload({
+      competitionStartsOn: input.competitionStartsOn,
+      competitionEndsOn: input.competitionEndsOn,
+      packageCode: stagePackageDraft.packageCode,
+      templates: getSelectedStagePackageTemplates(),
+    })
+
+    if (!payload) return
+
+    createStagePackageMutation.mutate(payload)
   }
 
   return (
@@ -561,6 +649,17 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
         />
       ) : null}
 
+      <StagePackageBuilderSection
+        draft={stagePackageDraft}
+        error={createStagePackageMutation.error}
+        feedback={stagePackageFeedback}
+        isPending={createStagePackageMutation.isPending}
+        templates={templates}
+        validationMessage={stagePackageValidationMessage}
+        onSubmit={submitStagePackage}
+        onUpdate={updateStagePackageDraft}
+      />
+
       {draft.teams.map((team, teamIndex) => (
         <article className="stacked-row stage-builder-team" key={teamIndex}>
           <div className="stacked-row-head">
@@ -641,6 +740,104 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
         />
       ) : null}
     </section>
+  )
+}
+
+function StagePackageBuilderSection(input: {
+  draft: StagePackageDraft
+  error: unknown
+  feedback: string | null
+  isPending: boolean
+  templates: CompetitionTeamTemplate[]
+  validationMessage: string | null
+  onSubmit: () => void
+  onUpdate: (field: keyof StagePackageDraft, value: string) => void
+}) {
+  return (
+    <article className="stacked-row stage-package-builder">
+      <div className="stacked-row-head">
+        <div>
+          <strong>Stage package</strong>
+          <p className="queue-subtitle">Create the league and final stages from active templates.</p>
+        </div>
+        <StatusPill tone={input.validationMessage ? 'warning' : 'calm'}>
+          {input.validationMessage ? 'Package incomplete' : 'Ready'}
+        </StatusPill>
+      </div>
+
+      <div className="form-grid">
+        <label className="field-block">
+          <span>Stage package</span>
+          <select
+            value={input.draft.packageCode}
+            onChange={(event) => input.onUpdate('packageCode', event.target.value)}
+          >
+            {stagePackageOptions.map((packageOption) => (
+              <option key={packageOption.code} value={packageOption.code}>
+                {packageOption.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field-block">
+          <span>Package team 1 template</span>
+          <select
+            value={input.draft.firstTemplateId}
+            onChange={(event) => input.onUpdate('firstTemplateId', event.target.value)}
+          >
+            <option value="">Select template</option>
+            {input.templates.map((template) => (
+              <option key={template.templateId} value={template.templateId}>
+                {template.templateCode} - {template.templateName}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field-block">
+          <span>Package team 2 template</span>
+          <select
+            value={input.draft.secondTemplateId}
+            onChange={(event) => input.onUpdate('secondTemplateId', event.target.value)}
+          >
+            <option value="">Select template</option>
+            {input.templates.map((template) => (
+              <option key={template.templateId} value={template.templateId}>
+                {template.templateCode} - {template.templateName}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      {input.validationMessage ? (
+        <p className="validation-copy">{input.validationMessage}</p>
+      ) : null}
+
+      <div className="action-cluster">
+        <button
+          className="control-button"
+          type="button"
+          disabled={Boolean(input.validationMessage) || input.isPending}
+          onClick={input.onSubmit}
+        >
+          <PlusCircle size={16} />
+          Create stage package
+        </button>
+        <StatusPill tone="neutral">2 stages</StatusPill>
+      </div>
+
+      {input.feedback ? (
+        <ScreenState title={input.feedback} copy="Competition detail is refreshed." />
+      ) : null}
+
+      {input.error ? (
+        <ScreenState
+          title="Stage package could not be created"
+          copy={getErrorMessage(input.error)}
+          tone="error"
+        />
+      ) : null}
+    </article>
   )
 }
 

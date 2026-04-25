@@ -6,6 +6,7 @@ const teamId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
 const storeId = '00000000-0000-0000-0000-000000000101'
 const secondStoreId = '00000000-0000-0000-0000-000000000102'
 const templateId = '99999999-9999-4999-8999-999999999999'
+const secondTemplateId = '66666666-6666-4666-8666-666666666666'
 const inactiveTemplateId = '88888888-8888-4888-8888-888888888888'
 const clonedTemplateId = '77777777-7777-4777-8777-777777777777'
 
@@ -66,7 +67,7 @@ test('admin can create a competition stage with team store assignments', async (
   await page.getByLabel('Team 2 code').fill('MARMARA_B')
   await page.getByLabel('Team 2 name').fill('Marmara B')
   await teamTwo.getByLabel('DEMO-102 - Demo Store 102 - Marmara').check()
-  await page.getByRole('button', { name: 'Create stage' }).click()
+  await page.getByRole('button', { name: 'Create stage', exact: true }).click()
 
   await expect(page.getByText('Competition stage created')).toBeVisible()
   expect(createdStagePayload).toMatchObject({
@@ -117,7 +118,7 @@ test('admin can apply a stage format preset before creating a stage', async ({ p
   await page.getByLabel('Team 2 code').fill('MARMARA_B')
   await page.getByLabel('Team 2 name').fill('Marmara B')
   await teamTwo.getByLabel('DEMO-102 - Demo Store 102 - Marmara').check()
-  await page.getByRole('button', { name: 'Create stage' }).click()
+  await page.getByRole('button', { name: 'Create stage', exact: true }).click()
 
   await expect(page.getByText('Competition stage created')).toBeVisible()
   expect(createdStagePayload).toMatchObject({
@@ -128,6 +129,63 @@ test('admin can apply a stage format preset before creating a stage', async ({ p
     stageType: 'league',
     startsOn: '2026-04-22',
     endsOn: '2026-04-24',
+  })
+})
+
+test('admin can create a league then final stage package from templates', async ({ page }) => {
+  let createdStagePackagePayload: unknown = null
+  await page.unroute('**/api/competitions**')
+  await routeCompetitionApi(page, authSessionFixture, competitionDetailFixture, {
+    initialTeamTemplates: [activeTemplateFixture, secondActiveTemplateFixture],
+    onCreateStagePackage: (payload) => {
+      createdStagePackagePayload = payload
+    },
+  })
+
+  await page.goto('/admin/competitions')
+
+  await page.getByLabel('Stage package').selectOption('league_then_final')
+  await page.getByLabel('Package team 1 template').selectOption(templateId)
+  await page.getByLabel('Package team 2 template').selectOption(secondTemplateId)
+  await page.getByRole('button', { name: 'Create stage package' }).click()
+
+  await expect(page.getByText('Competition stage package created')).toBeVisible()
+  expect(createdStagePackagePayload).toMatchObject({
+    packageCode: 'league_then_final',
+    stages: [
+      {
+        stagePresetCode: 'region_league',
+        stageCode: 'REGION_LEAGUE',
+        stageName: 'Regional League',
+        stageOrder: 1,
+        stageType: 'league',
+        startsOn: '2026-04-22',
+        endsOn: '2026-04-24',
+        teams: [
+          {
+            sourceTemplateId: templateId,
+            teamCode: 'MARMARA_TEMPLATE_A',
+            teamName: 'Marmara Template A',
+            storeIds: [storeId],
+          },
+          {
+            sourceTemplateId: secondTemplateId,
+            teamCode: 'MARMARA_TEMPLATE_B',
+            teamName: 'Marmara Template B',
+            storeIds: [secondStoreId],
+          },
+        ],
+      },
+      {
+        stagePresetCode: 'final_showdown',
+        stageCode: 'FINAL_SHOWDOWN',
+        stageName: 'Final Showdown',
+        stageOrder: 2,
+        stageType: 'final',
+        startsOn: '2026-04-24',
+        endsOn: '2026-04-24',
+      },
+    ],
   })
 })
 
@@ -164,12 +222,13 @@ test('admin creates a team template and applies it to a stage team', async ({ pa
   await page.getByLabel('Stage order').fill('2')
   await page.getByLabel('Stage starts').fill('2026-05-16')
   await page.getByLabel('Stage ends').fill('2026-05-31')
-  await page.getByLabel('Team 1 template').selectOption(templateId)
+  const teamOne = page.locator('.stage-builder-team').filter({ hasText: 'Team 1' })
+  await teamOne.getByLabel('Team 1 template').selectOption(templateId)
   await page.getByLabel('Team 2 code').fill('MARMARA_B')
   await page.getByLabel('Team 2 name').fill('Marmara B')
   const teamTwo = page.locator('.stage-builder-team').filter({ hasText: 'Team 2' })
   await teamTwo.getByLabel('DEMO-102 - Demo Store 102 - Marmara').check()
-  await page.getByRole('button', { name: 'Create stage' }).click()
+  await page.getByRole('button', { name: 'Create stage', exact: true }).click()
 
   await expect(page.getByText('Competition stage created')).toBeVisible()
   expect(createdStagePayload).toMatchObject({
@@ -216,7 +275,8 @@ test('admin can view inactive templates and deactivate active templates', async 
 
   await expect(page.getByText('Competition team template deactivated')).toBeVisible()
   expect(deactivatedTemplateId).toBe(templateId)
-  await expect(page.getByLabel('Team 1 template')).not.toContainText('MARMARA_TEMPLATE_A')
+  const teamOne = page.locator('.stage-builder-team').filter({ hasText: 'Team 1' })
+  await expect(teamOne.getByLabel('Team 1 template')).not.toContainText('MARMARA_TEMPLATE_A')
 })
 
 test('admin can update and clone competition team templates', async ({ page }) => {
@@ -294,6 +354,7 @@ async function routeCompetitionApi(
     onDeactivateTemplate?: (templateId: string) => void
     onUpdateTemplate?: (templateId: string, payload: unknown) => void
     onCloneTemplate?: (templateId: string, payload: unknown) => void
+    onCreateStagePackage?: (payload: unknown) => void
     initialTeamTemplates?: unknown[]
   },
 ) {
@@ -447,6 +508,44 @@ async function routeCompetitionApi(
       return
     }
 
+    if (request.method() === 'POST' && pathname.endsWith(`/api/competitions/${competitionId}/stage-packages`)) {
+      options?.onCreateStagePackage?.(request.postDataJSON())
+      await route.fulfill({
+        json: {
+          command: { status: 'created', message: 'Competition stage package created' },
+          data: {
+            stages: [
+              {
+                competitionStageId: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+                competitionId,
+                stageCode: 'REGION_LEAGUE',
+                stageName: 'Regional League',
+                stageOrder: 1,
+                stageType: 'league',
+                startsOn: '2026-04-22',
+                endsOn: '2026-04-24',
+                lifecycleState: 'active',
+                finalizationState: null,
+              },
+              {
+                competitionStageId: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
+                competitionId,
+                stageCode: 'FINAL_SHOWDOWN',
+                stageName: 'Final Showdown',
+                stageOrder: 2,
+                stageType: 'final',
+                startsOn: '2026-04-24',
+                endsOn: '2026-04-24',
+                lifecycleState: 'active',
+                finalizationState: null,
+              },
+            ],
+          },
+        },
+      })
+      return
+    }
+
     if (request.method() === 'POST' && pathname.endsWith(`/api/competitions/${competitionId}/stages`)) {
       options?.onCreateStage?.(request.postDataJSON())
       await route.fulfill({
@@ -502,6 +601,22 @@ const activeTemplateFixture = {
       storeId,
       storeCode: 'DEMO-101',
       storeName: 'Demo Store 101',
+      regionId: '00000000-0000-0000-0000-000000000010',
+    },
+  ],
+}
+
+const secondActiveTemplateFixture = {
+  templateId: secondTemplateId,
+  templateCode: 'MARMARA_TEMPLATE_B',
+  templateName: 'Marmara Template B',
+  description: null,
+  isActive: true,
+  stores: [
+    {
+      storeId: secondStoreId,
+      storeCode: 'DEMO-102',
+      storeName: 'Demo Store 102',
       regionId: '00000000-0000-0000-0000-000000000010',
     },
   ],

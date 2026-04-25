@@ -137,6 +137,13 @@ export type CreateCompetitionStagePayload = {
   }>
 }
 
+export type CompetitionStagePackageCode = 'league_then_final'
+
+export type CreateCompetitionStagePackagePayload = {
+  packageCode: CompetitionStagePackageCode
+  stages: CreateCompetitionStagePayload[]
+}
+
 export type CreateCompetitionTeamTemplatePayload = {
   templateCode: string
   templateName: string
@@ -238,6 +245,19 @@ export async function createCompetitionStage(
 ) {
   return sendJson<CommandResponse<{ stage: CompetitionStageSummary }>>(
     `/competitions/${competitionId}/stages`,
+    {
+      method: 'POST',
+      body: payload,
+    },
+  )
+}
+
+export async function createCompetitionStagePackage(
+  competitionId: string,
+  payload: CreateCompetitionStagePackagePayload,
+) {
+  return sendJson<CommandResponse<{ stages: CompetitionStageSummary[] }>>(
+    `/competitions/${competitionId}/stage-packages`,
     {
       method: 'POST',
       body: payload,
