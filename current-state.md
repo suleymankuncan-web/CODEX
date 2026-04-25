@@ -749,6 +749,28 @@ C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI\admin-web
 - Frontend release check gecti: `npm.cmd run check:release` -> lint, build, 10 Playwright smoke testi ve `npm audit --omit=dev` (`found 0 vulnerabilities`); Vite chunk warning yok.
 - Siradaki mantikli adim: template update/clone akisini eklemek. Bu sayede bolge ligi/final gibi uzun sureli kurgularda eski stage referanslari bozulmadan template'ler cogaltilabilir veya revize edilebilir.
 
+## Son Competition Template Clone/Update V1
+
+25 Nisan 2026 itibariyla competition team template clone/update V1 hatti acildi.
+
+- Uygulama plani eklendi: `docs/superpowers/plans/2026-04-25-competition-template-clone-update-v1.md`.
+- Backend `PUT /api/competitions/team-templates/:templateId` endpointi eklendi.
+- Backend `POST /api/competitions/team-templates/:templateId/clone` endpointi eklendi.
+- Update akisi template code/name/description ve store membership setini gunceller; duplicate store id'leri service seviyesinde tekillestirilir.
+- Clone akisi source template store membership setini yeni aktif template'e kopyalar; yeni template kendi `templateId` ve yeni code/name ile olusur.
+- Eski stage/team `sourceTemplateId` referanslari korunur; update/clone hard-delete veya historical rewrite yapmaz.
+- Audit event `competition_team_template.updated` ve `competition_team_template.cloned` olarak yazilir.
+- Frontend ortak API helper'i `PUT` JSON requestlerini destekleyecek sekilde genisletildi.
+- Stage builder `Template library` icinde `Edit`, `Clone`, `Deactivate` aksiyonlari birlikte calisir.
+- Edit formu template code/name/description ve store secimini gunceller.
+- Clone formu yeni code/name/description alir ve store setini backend source template uzerinden kopyalar.
+- TDD kirmizi dogrulamasi yapildi: backend update/clone metotlari yokken Jest TypeScript compile fail verdi; frontend edit/clone butonlari yokken Playwright fail verdi.
+- Hedefli backend dogrulama gecti: `npm.cmd test -- src/modules/store-ops/application/competition.service.spec.ts src/modules/store-ops/infrastructure/competition.repository.spec.ts --runInBand` -> 2 suite / 21 test.
+- Hedefli frontend dogrulama gecti: `npm.cmd run build; npx.cmd playwright test e2e/competition-surfaces.spec.ts` -> 6 Playwright test.
+- Backend release check gecti: `npm.cmd run check:release` -> lint, 28 suite / 199 test, build ve `npm audit --omit=dev` (`found 0 vulnerabilities`).
+- Frontend release check gecti: `npm.cmd run check:release` -> lint, build, 11 Playwright smoke testi ve `npm audit --omit=dev` (`found 0 vulnerabilities`); Vite chunk warning yok.
+- Siradaki mantikli adim: stage format presetlerini planlamak. Bolge ligi, ilk 15 gun eleme, final/finalist kapistirma gibi kurgu tiplerini template setleriyle baglayacak yapi artik daha rahat kurulabilir.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:
@@ -770,7 +792,9 @@ Store ops:
 - `backend/nestjs/src/modules/store-ops/application/competition.service.ts`
 - `backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.ts`
 - `backend/nestjs/src/modules/store-ops/web/competition.controller.ts`
+- `backend/nestjs/src/modules/store-ops/web/dto/clone-competition-team-template.dto.ts`
 - `backend/nestjs/src/modules/store-ops/web/dto/list-competition-team-templates.query.ts`
+- `backend/nestjs/src/modules/store-ops/web/dto/update-competition-team-template.dto.ts`
 - `backend/nestjs/src/modules/store-ops/web/target-distribution.controller.ts`
 - `backend/nestjs/src/modules/store-ops/application/target-distribution.service.ts`
 - `backend/nestjs/src/modules/store-ops/infrastructure/reporting.repository.ts`
