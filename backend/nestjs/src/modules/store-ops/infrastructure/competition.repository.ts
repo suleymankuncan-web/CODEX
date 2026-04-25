@@ -4,9 +4,10 @@ import { DatabaseService } from "../../../shared/database/database.service";
 import { RequestContextStore } from "../../../shared/request-context";
 import {
   Competition,
-  CompetitionDetail,
+  CompetitionBaseDetail,
   CompetitionStage,
   CompetitionStageFinalizationState,
+  CompetitionStoreContribution,
   CompetitionTeam,
   CompetitionTeamScore,
   CompetitionWarning,
@@ -78,6 +79,23 @@ type CompetitionWarningRow = {
   resolved_at: string | Date | null;
 };
 
+type CompetitionStoreContributionRow = {
+  stage_id: string;
+  team_id: string;
+  team_code: string;
+  team_name: string;
+  store_id: string;
+  store_code: string;
+  store_name: string;
+  region_id: string;
+  snapshot_date: string | Date;
+  score_value: string | number | null;
+  reported_weight_percent: string | number;
+  expected_weight_percent: string | number;
+  has_daily_data: boolean;
+  missing_kpi_codes: string[];
+};
+
 @Injectable()
 export class CompetitionRepository {
   constructor(private readonly databaseService: DatabaseService) {}
@@ -129,7 +147,7 @@ export class CompetitionRepository {
     companyIds: string[];
     regionIds: string[];
     storeIds: string[];
-  }): Promise<CompetitionDetail | null> {
+  }): Promise<CompetitionBaseDetail | null> {
     const competitionResult = await this.databaseService.query<CompetitionRow>(
       `
         SELECT DISTINCT
@@ -178,6 +196,54 @@ export class CompetitionRepository {
       latestScores,
       warnings,
     };
+  }
+
+  async listStoreContributionsForCompetition(input: {
+    competitionId: string;
+    companyIds: string[];
+    regionIds: string[];
+    storeIds: string[];
+  }): Promise<CompetitionStoreContribution[]> {
+    const result = await this.databaseService.query<CompetitionStoreContributionRow>(
+      `
+        SELECT
+          store_score.competition_stage_id AS stage_id,
+          store_score.competition_team_id AS team_id,
+          team.team_code,
+          team.team_name,
+          store.store_id,
+          store.store_code,
+          store.store_name,
+          store.region_id,
+          store_score.snapshot_date,
+          store_score.score_value,
+          store_score.reported_weight_percent,
+          store_score.expected_weight_percent,
+          store_score.has_daily_data,
+          store_score.missing_kpi_codes
+        FROM rpt.competition_stage_store_score_snapshot store_score
+        INNER JOIN ops.competition_stage stage
+          ON stage.competition_stage_id = store_score.competition_stage_id
+        INNER JOIN ops.competition_team team
+          ON team.competition_team_id = store_score.competition_team_id
+        INNER JOIN ops.store store
+          ON store.store_id = store_score.store_id
+        WHERE stage.competition_id = $1::uuid
+          AND (
+            cardinality($2::uuid[]) > 0
+            OR store.region_id = ANY($3::uuid[])
+            OR store.store_id = ANY($4::uuid[])
+          )
+        ORDER BY
+          stage.stage_order ASC,
+          store_score.snapshot_date DESC,
+          team.team_order ASC,
+          store.store_code ASC
+      `,
+      [input.competitionId, input.companyIds, input.regionIds, input.storeIds],
+    );
+
+    return result.rows.map(mapStoreContribution);
   }
 
   async createCompetition(input: {
@@ -936,6 +1002,27 @@ function mapWarning(row: CompetitionWarningRow): CompetitionWarning {
     periodEnd: toDateString(row.period_end),
     message: row.message,
     resolvedAt: row.resolved_at ? toDateTimeString(row.resolved_at) : null,
+  };
+}
+
+function mapStoreContribution(
+  row: CompetitionStoreContributionRow,
+): CompetitionStoreContribution {
+  return {
+    stageId: row.stage_id,
+    teamId: row.team_id,
+    teamCode: row.team_code,
+    teamName: row.team_name,
+    storeId: row.store_id,
+    storeCode: row.store_code,
+    storeName: row.store_name,
+    regionId: row.region_id,
+    snapshotDate: toDateString(row.snapshot_date),
+    scoreValue: row.score_value === null ? null : Number(row.score_value),
+    reportedWeightPercent: Number(row.reported_weight_percent),
+    expectedWeightPercent: Number(row.expected_weight_percent),
+    hasDailyData: row.has_daily_data,
+    missingKpiCodes: row.missing_kpi_codes,
   };
 }
 

@@ -1,7 +1,8 @@
-import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable } from "@nestjs/common";
 import { buildCommandResponse, buildListResponse } from "../../../shared/http/response-builders";
 import { CompetitionRepository } from "../infrastructure/competition.repository";
 import {
+  CompetitionDetail,
   CompetitionScope,
   CreateCompetitionInput,
   CreateCompetitionStageInput,
@@ -39,7 +40,7 @@ export class CompetitionService {
     competitionId: string;
     actorScope: CompetitionScope;
     includeStoreDetails?: boolean;
-  }) {
+  }): Promise<CompetitionDetail> {
     const detail = await this.competitionRepository.getCompetitionDetail({
       competitionId: input.competitionId,
       companyIds: input.actorScope.companyIds,
@@ -51,25 +52,35 @@ export class CompetitionService {
       throw new BadRequestException("Competition not found or outside read scope");
     }
 
-    if (input.includeStoreDetails) {
-      const visibleStoreIds = new Set(input.actorScope.storeIds);
-      const visibleRegionIds = new Set(input.actorScope.regionIds);
-      const canSeeAllStores = input.actorScope.companyIds.length > 0;
-      const hasOutsideStore = detail.teams.some((team) =>
-        team.stores.some(
-          (store) =>
-            !canSeeAllStores &&
-            !visibleStoreIds.has(store.storeId) &&
-            !visibleRegionIds.has(store.regionId),
-        ),
-      );
+    const storeContributions =
+      await this.competitionRepository.listStoreContributionsForCompetition({
+        competitionId: input.competitionId,
+        companyIds: input.actorScope.companyIds,
+        regionIds: input.actorScope.regionIds,
+        storeIds: input.actorScope.storeIds,
+      });
 
-      if (hasOutsideStore) {
-        throw new ForbiddenException("Competition contains store details outside read scope");
-      }
+    const teams = input.includeStoreDetails
+      ? detail.teams.map((team) => ({
+          ...team,
+          stores: team.stores.filter((store) =>
+            isStoreVisibleToScope(store, input.actorScope),
+          ),
+        }))
+      : detail.teams;
+
+    if (input.includeStoreDetails) {
+      return {
+        ...detail,
+        teams,
+        storeContributions,
+      };
     }
 
-    return detail;
+    return {
+      ...detail,
+      storeContributions,
+    };
   }
 
   async createCompetition(input: CreateCompetitionInput) {
@@ -151,4 +162,15 @@ export class CompetitionService {
       data: { stage, unresolvedWarnings: warnings },
     });
   }
+}
+
+function isStoreVisibleToScope(
+  store: { storeId: string; regionId: string },
+  scope: CompetitionScope,
+) {
+  return (
+    scope.companyIds.length > 0 ||
+    scope.storeIds.includes(store.storeId) ||
+    scope.regionIds.includes(store.regionId)
+  );
 }

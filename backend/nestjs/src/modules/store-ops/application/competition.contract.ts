@@ -93,12 +93,33 @@ export type CompetitionTeamScore = {
   rankingPopulation: number;
 };
 
-export type CompetitionDetail = {
+export type CompetitionStoreContribution = {
+  stageId: string;
+  teamId: string;
+  teamCode: string;
+  teamName: string;
+  storeId: string;
+  storeCode: string;
+  storeName: string;
+  regionId: string;
+  snapshotDate: string;
+  scoreValue: number | null;
+  reportedWeightPercent: number;
+  expectedWeightPercent: number;
+  hasDailyData: boolean;
+  missingKpiCodes: string[];
+};
+
+export type CompetitionBaseDetail = {
   competition: Competition;
   stages: CompetitionStage[];
   teams: CompetitionTeam[];
   latestScores: CompetitionTeamScore[];
   warnings: CompetitionWarning[];
+};
+
+export type CompetitionDetail = CompetitionBaseDetail & {
+  storeContributions: CompetitionStoreContribution[];
 };
 
 export type CreateCompetitionInput = {

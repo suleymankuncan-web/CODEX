@@ -1,9 +1,10 @@
-import { BadRequestException, ForbiddenException } from "@nestjs/common";
+import { BadRequestException } from "@nestjs/common";
 import { CompetitionService } from "./competition.service";
 
 const repository = () => ({
   listCompetitions: jest.fn(),
   getCompetitionDetail: jest.fn(),
+  listStoreContributionsForCompetition: jest.fn(),
   createCompetition: jest.fn(),
   createStageWithTeams: jest.fn(),
   recalculateStage: jest.fn(),
@@ -110,7 +111,7 @@ describe("CompetitionService", () => {
     );
   });
 
-  it("blocks region manager store detail reads outside read scope", async () => {
+  it("redacts out-of-scope team stores while returning scoped store contributions", async () => {
     const repo = repository();
     repo.getCompetitionDetail.mockResolvedValue({
       competition: {
@@ -132,25 +133,89 @@ describe("CompetitionService", () => {
           teamOrder: 1,
           stores: [
             {
+              storeId: "visible-store",
+              storeCode: "IST-001",
+              storeName: "Visible Store",
+              regionId: "visible-region",
+            },
+            {
               storeId: "outside-store",
-              storeCode: "IST-999",
-              storeName: "Outside",
+              storeCode: "KRD-001",
+              storeName: "Outside Store",
               regionId: "outside-region",
             },
           ],
         },
       ],
-      latestScores: [],
+      latestScores: [
+        {
+          stageId: "stage-1",
+          teamId: "team-1",
+          teamCode: "MARMARA",
+          teamName: "Marmara",
+          snapshotDate: "2026-04-22",
+          scoreValue: 91.25,
+          validStoreCount: 2,
+          totalStoreCount: 2,
+          coverageRate: 1,
+          rankPosition: 1,
+          rankingPopulation: 2,
+        },
+      ],
       warnings: [],
     });
+    repo.listStoreContributionsForCompetition.mockResolvedValue([
+      {
+        stageId: "stage-1",
+        teamId: "team-1",
+        teamCode: "MARMARA",
+        teamName: "Marmara",
+        storeId: "visible-store",
+        storeCode: "IST-001",
+        storeName: "Visible Store",
+        regionId: "visible-region",
+        snapshotDate: "2026-04-22",
+        scoreValue: 93.5,
+        reportedWeightPercent: 95,
+        expectedWeightPercent: 100,
+        hasDailyData: true,
+        missingKpiCodes: ["BM_CHECKLIST"],
+      },
+    ]);
     const service = new CompetitionService(repo as never);
 
-    await expect(
-      service.getCompetitionDetail({
-        competitionId: "competition-1",
-        actorScope: { companyIds: [], regionIds: [], storeIds: ["inside-store"] },
-        includeStoreDetails: true,
+    const result = await service.getCompetitionDetail({
+      competitionId: "competition-1",
+      actorScope: {
+        companyIds: [],
+        regionIds: ["visible-region"],
+        storeIds: [],
+      },
+      includeStoreDetails: true,
+    });
+
+    expect(result.teams[0].stores).toEqual([
+      {
+        storeId: "visible-store",
+        storeCode: "IST-001",
+        storeName: "Visible Store",
+        regionId: "visible-region",
+      },
+    ]);
+    expect(result.latestScores).toHaveLength(1);
+    expect(result.storeContributions).toEqual([
+      expect.objectContaining({
+        storeId: "visible-store",
+        storeName: "Visible Store",
+        scoreValue: 93.5,
+        missingKpiCodes: ["BM_CHECKLIST"],
       }),
-    ).rejects.toBeInstanceOf(ForbiddenException);
+    ]);
+    expect(repo.listStoreContributionsForCompetition).toHaveBeenCalledWith({
+      competitionId: "competition-1",
+      companyIds: [],
+      regionIds: ["visible-region"],
+      storeIds: [],
+    });
   });
 });
