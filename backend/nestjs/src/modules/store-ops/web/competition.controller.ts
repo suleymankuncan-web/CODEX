@@ -257,6 +257,18 @@ export class CompetitionController {
     });
   }
 
+  @Post("stage-package-plans/:planId/clone")
+  @RequireRoles("SUPER_ADMIN", "HR_ADMIN")
+  async cloneStagePackagePlan(
+    @Req() request: CompetitionRequest,
+    @Param("planId") planId: string,
+  ) {
+    return this.competitionService.cloneStagePackagePlan({
+      actorUserId: request.user.userId,
+      sourcePlanId: planId,
+    });
+  }
+
   @Patch("stage-package-plans/:planId/cancel")
   @RequireRoles("SUPER_ADMIN", "HR_ADMIN")
   async cancelStagePackagePlan(

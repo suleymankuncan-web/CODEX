@@ -10,6 +10,7 @@ const secondTemplateId = '66666666-6666-4666-8666-666666666666'
 const inactiveTemplateId = '88888888-8888-4888-8888-888888888888'
 const clonedTemplateId = '77777777-7777-4777-8777-777777777777'
 const stagePackagePlanId = '55555555-5555-4555-8555-555555555555'
+const clonedStagePackagePlanId = '44444444-4444-4444-8444-444444444444'
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -274,12 +275,16 @@ test('admin can save, submit, approve, and execute a stage package plan', async 
 
 test('admin can reject a submitted stage package plan', async ({ page }) => {
   let rejectedStagePackagePlanId: string | null = null
+  let clonedStagePackagePlanSourceId: string | null = null
   await page.unroute('**/api/competitions**')
   await routeCompetitionApi(page, authSessionFixture, competitionDetailFixture, {
     initialTeamTemplates: [activeTemplateFixture, secondActiveTemplateFixture],
     initialStagePackagePlans: [createStagePackagePlanFixture({ planStatus: 'submitted' })],
     onRejectStagePackagePlan: (planId) => {
       rejectedStagePackagePlanId = planId
+    },
+    onCloneStagePackagePlan: (planId) => {
+      clonedStagePackagePlanSourceId = planId
     },
   })
 
@@ -298,7 +303,12 @@ test('admin can reject a submitted stage package plan', async ({ page }) => {
   await expect(
     planLibrary.getByRole('button', { name: 'Execute approved plan April regional package' }),
   ).toHaveCount(0)
-  await planLibrary.getByRole('button', { name: 'Show history April regional package' }).click()
+  await planLibrary.getByRole('button', { name: 'Clone as new draft April regional package' }).click()
+  await expect(page.getByText('Competition stage package plan cloned as draft')).toBeVisible()
+  expect(clonedStagePackagePlanSourceId).toBe(stagePackagePlanId)
+  await expect(planLibrary.locator('strong').filter({ hasText: 'April regional package revision' })).toBeVisible()
+  await expect(planLibrary.getByText('draft', { exact: true })).toBeVisible()
+  await planLibrary.getByRole('button', { name: 'Show history April regional package', exact: true }).click()
   await expect(planLibrary.getByText('competition_stage_package_plan.rejected')).toBeVisible()
 })
 
@@ -520,6 +530,7 @@ async function routeCompetitionApi(
     onSubmitStagePackagePlan?: (planId: string) => void
     onApproveStagePackagePlan?: (planId: string, payload: unknown) => void
     onRejectStagePackagePlan?: (planId: string, payload: unknown) => void
+    onCloneStagePackagePlan?: (planId: string) => void
     onExecuteStagePackagePlan?: (planId: string) => void
     onCancelStagePackagePlan?: (planId: string) => void
     initialTeamTemplates?: unknown[]
@@ -970,6 +981,55 @@ async function routeCompetitionApi(
               (plan) => (plan as { planId?: string }).planId === stagePackagePlanId,
             ),
           },
+        },
+      })
+      return
+    }
+
+    if (
+      request.method() === 'POST' &&
+      pathname.endsWith(`/api/competitions/stage-package-plans/${stagePackagePlanId}/clone`)
+    ) {
+      options?.onCloneStagePackagePlan?.(stagePackagePlanId)
+      const sourcePlan = stagePackagePlans.find(
+        (plan) => (plan as { planId?: string }).planId === stagePackagePlanId,
+      ) as { packageCode?: string; planName?: string; stageDrafts?: unknown[] } | undefined
+      const clonedPlan = {
+        planId: clonedStagePackagePlanId,
+        competitionId,
+        packageCode: sourcePlan?.packageCode ?? 'league_then_final',
+        planName: `${sourcePlan?.planName ?? 'Package plan'} revision`,
+        planStatus: 'draft',
+        stageDrafts: sourcePlan?.stageDrafts ?? [],
+        createdStageIds: [],
+        submittedByUserId: null,
+        submittedAt: null,
+        reviewedByUserId: null,
+        reviewedAt: null,
+        reviewNote: null,
+        createdAt: '2026-04-25T10:25:00.000Z',
+        updatedAt: '2026-04-25T10:25:00.000Z',
+        executedAt: null,
+      }
+      stagePackagePlans = [clonedPlan, ...stagePackagePlans]
+      stagePackagePlanAuditEvents = [
+        ...stagePackagePlanAuditEvents,
+        {
+          eventLogId: '11111111-2222-4333-8444-555555555555',
+          occurredAt: '2026-04-25T10:25:00.000Z',
+          actorUserId: authSession.user.userId,
+          eventType: 'competition_stage_package_plan.cloned_to_draft',
+          metadata: {
+            planName: sourcePlan?.planName,
+            clonedPlanId: clonedStagePackagePlanId,
+            clonedPlanName: clonedPlan.planName,
+          },
+        },
+      ]
+      await route.fulfill({
+        json: {
+          command: { status: 'created', message: 'Competition stage package plan cloned as draft' },
+          data: { plan: clonedPlan },
         },
       })
       return

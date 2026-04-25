@@ -15,6 +15,7 @@ const repository = () => ({
   createStagePackage: jest.fn(),
   listStagePackagePlans: jest.fn(),
   createStagePackagePlan: jest.fn(),
+  cloneStagePackagePlan: jest.fn(),
   submitStagePackagePlan: jest.fn(),
   approveStagePackagePlan: jest.fn(),
   rejectStagePackagePlan: jest.fn(),
@@ -764,6 +765,52 @@ describe("CompetitionService", () => {
       actorUserId: "22222222-2222-4222-8222-222222222222",
       planId: "55555555-5555-4555-8555-555555555555",
       reviewNote: "Dates need another pass.",
+    });
+  });
+
+  it("clones a rejected stage package plan as a new draft", async () => {
+    const repo = repository();
+    repo.cloneStagePackagePlan.mockResolvedValue({
+      planId: "66666666-6666-4666-8666-666666666666",
+      competitionId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      packageCode: "league_then_final",
+      planName: "April regional package revision",
+      planStatus: "draft",
+      stageDrafts: validStagePackageStages,
+      createdStageIds: [],
+      submittedByUserId: null,
+      submittedAt: null,
+      reviewedByUserId: null,
+      reviewedAt: null,
+      reviewNote: null,
+      createdAt: "2026-04-25T10:25:00.000Z",
+      updatedAt: "2026-04-25T10:25:00.000Z",
+      executedAt: null,
+    });
+    const service = new CompetitionService(repo as never);
+
+    const result = await service.cloneStagePackagePlan({
+      actorUserId: "11111111-1111-4111-8111-111111111111",
+      sourcePlanId: "55555555-5555-4555-8555-555555555555",
+    });
+
+    expect(result.command.status).toBe("created");
+    expect(result.command.message).toBe(
+      "Competition stage package plan cloned as draft",
+    );
+    expect(result.data.plan).toEqual(
+      expect.objectContaining({
+        planId: "66666666-6666-4666-8666-666666666666",
+        planName: "April regional package revision",
+        planStatus: "draft",
+        createdStageIds: [],
+        submittedByUserId: null,
+        reviewedByUserId: null,
+      }),
+    );
+    expect(repo.cloneStagePackagePlan).toHaveBeenCalledWith({
+      actorUserId: "11111111-1111-4111-8111-111111111111",
+      sourcePlanId: "55555555-5555-4555-8555-555555555555",
     });
   });
 

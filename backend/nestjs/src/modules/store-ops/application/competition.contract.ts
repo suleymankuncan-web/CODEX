@@ -247,6 +247,11 @@ export type CancelCompetitionStagePackagePlanInput = {
   planId: string;
 };
 
+export type CloneCompetitionStagePackagePlanInput = {
+  actorUserId: string;
+  sourcePlanId: string;
+};
+
 export type CompetitionStagePackagePlanAuditEvent = {
   eventLogId: string;
   occurredAt: string;

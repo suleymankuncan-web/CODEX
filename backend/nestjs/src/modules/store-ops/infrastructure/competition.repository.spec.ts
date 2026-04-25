@@ -1178,6 +1178,140 @@ describe("CompetitionRepository", () => {
     );
   });
 
+  it("clones a rejected stage package plan as a clean draft and writes audit metadata", async () => {
+    const { repository, client, executedSql, executedParams } = createRepositoryHarness();
+
+    client.query.mockImplementation(async (sql: string, params: unknown[] = []) => {
+      executedSql.push(sql);
+      executedParams.push(params);
+
+      if (
+        sql.includes("FROM ops.competition_stage_package_plan") &&
+        sql.includes("FOR UPDATE")
+      ) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              competition_stage_package_plan_id:
+                "55555555-5555-4555-8555-555555555555",
+              competition_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              package_code: "league_then_final",
+              plan_name: "April regional package",
+              plan_status: "rejected",
+              stage_drafts_json: validStagePackageStages,
+              created_stage_ids: [],
+              submitted_by_user_id: "11111111-1111-4111-8111-111111111111",
+              submitted_at: "2026-04-25T10:15:00.000Z",
+              reviewed_by_user_id: "22222222-2222-4222-8222-222222222222",
+              reviewed_at: "2026-04-25T10:20:00.000Z",
+              review_note: "Dates need another pass.",
+              created_at: "2026-04-25T10:00:00.000Z",
+              updated_at: "2026-04-25T10:20:00.000Z",
+              executed_at: null,
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("INSERT INTO ops.competition_stage_package_plan")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              competition_stage_package_plan_id:
+                "66666666-6666-4666-8666-666666666666",
+              competition_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              package_code: "league_then_final",
+              plan_name: "April regional package revision",
+              plan_status: "draft",
+              stage_drafts_json: validStagePackageStages,
+              created_stage_ids: [],
+              submitted_by_user_id: null,
+              submitted_at: null,
+              reviewed_by_user_id: null,
+              reviewed_at: null,
+              review_note: null,
+              created_at: "2026-04-25T10:25:00.000Z",
+              updated_at: "2026-04-25T10:25:00.000Z",
+              executed_at: null,
+            },
+          ],
+        };
+      }
+
+      return { rowCount: 1, rows: [] };
+    });
+
+    const plan = await repository.cloneStagePackagePlan({
+      actorUserId: "11111111-1111-4111-8111-111111111111",
+      sourcePlanId: "55555555-5555-4555-8555-555555555555",
+    });
+
+    const sql = executedSql.join("\n");
+    const serializedParams = JSON.stringify(executedParams);
+    expect(sql).toContain("FOR UPDATE");
+    expect(sql).toContain("INSERT INTO ops.competition_stage_package_plan");
+    expect(serializedParams).toContain("April regional package revision");
+    expect(serializedParams).toContain("competition_stage_package_plan.cloned_to_draft");
+    expect(serializedParams).toContain("competition_stage_package_plan.cloned_from_returned");
+    expect(plan).toEqual(
+      expect.objectContaining({
+        planId: "66666666-6666-4666-8666-666666666666",
+        planName: "April regional package revision",
+        planStatus: "draft",
+        createdStageIds: [],
+        submittedByUserId: null,
+        reviewedByUserId: null,
+      }),
+    );
+  });
+
+  it("rejects cloning a non-rejected stage package plan", async () => {
+    const { repository, client, executedSql } = createRepositoryHarness();
+
+    client.query.mockImplementation(async (sql: string) => {
+      executedSql.push(sql);
+
+      if (
+        sql.includes("FROM ops.competition_stage_package_plan") &&
+        sql.includes("FOR UPDATE")
+      ) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              competition_stage_package_plan_id:
+                "55555555-5555-4555-8555-555555555555",
+              competition_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              package_code: "league_then_final",
+              plan_name: "April regional package",
+              plan_status: "draft",
+              stage_drafts_json: validStagePackageStages,
+              created_stage_ids: [],
+              created_at: "2026-04-25T10:00:00.000Z",
+              updated_at: "2026-04-25T10:00:00.000Z",
+              executed_at: null,
+            },
+          ],
+        };
+      }
+
+      return { rowCount: 1, rows: [] };
+    });
+
+    await expect(
+      repository.cloneStagePackagePlan({
+        actorUserId: "11111111-1111-4111-8111-111111111111",
+        sourcePlanId: "55555555-5555-4555-8555-555555555555",
+      }),
+    ).rejects.toThrow("Stage package plan is not cloneable");
+
+    expect(executedSql.join("\n")).not.toContain(
+      "INSERT INTO ops.competition_stage_package_plan",
+    );
+  });
+
   it("lists stage package plan audit events", async () => {
     const { repository, databaseService } = createRepositoryHarness();
 

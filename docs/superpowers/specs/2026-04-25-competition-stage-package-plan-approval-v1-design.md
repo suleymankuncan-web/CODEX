@@ -29,6 +29,7 @@ Transitions:
 - `draft -> submitted`
 - `submitted -> approved`
 - `submitted -> rejected`
+- `rejected -> draft copy`
 - `approved -> executed`
 - `draft -> cancelled`
 
@@ -76,6 +77,13 @@ Audit remains the durable history trail.
   - Optional `reviewNote`.
   - Writes `competition_stage_package_plan.rejected`.
 
+- `POST /api/competitions/stage-package-plans/:planId/clone`
+  - Rejected only.
+  - Leaves the source rejected plan immutable.
+  - Creates a new `draft` plan with copied package/stage draft payload and a generated `revision` plan name.
+  - Writes source-plan audit `competition_stage_package_plan.cloned_to_draft`.
+  - Writes new-plan audit `competition_stage_package_plan.cloned_from_returned`.
+
 - Existing execute endpoint changes:
   - Only `approved` plans can execute.
   - Execute still uses `FOR UPDATE` and one transaction for real stage/team creation.
@@ -87,7 +95,8 @@ The existing package plan library grows in place:
 - Draft plan: `Edit`, `Cancel`, `Mark ready for decision`, `Show history`.
 - Submitted plan: displayed as `decision ready`, with `Decision note`, `Approve decision`, `Return for revision`, `Show history`.
 - Approved plan: `Execute approved plan`, `Show history`.
-- Rejected/executed/cancelled plan: `Show history` only.
+- Rejected plan: displayed as `returned`, with `Clone as new draft`, `Show history`.
+- Executed/cancelled plan: `Show history` only.
 - Rejected plans may be displayed as `returned` in the UI while the API status remains `rejected`.
 - Optional decision note input appears inline for submitted plans.
 
@@ -100,12 +109,12 @@ The existing package plan library grows in place:
 ## Test Strategy
 
 - Backend service tests cover submit, approve, reject, and execute delegation.
-- Repository tests cover transition guards, SQL updates, audit events, and approved-only execute.
-- Playwright covers draft submit, submitted approval, approved execute, rejected history state, and hidden unsafe actions.
+- Repository tests cover transition guards, SQL updates, audit events, rejected-plan clone, and approved-only execute.
+- Playwright covers draft submit, submitted approval, approved execute, rejected history state, clone-as-draft, and hidden unsafe actions.
 - Release checks remain the gate: backend `check:release` and frontend `check:release`.
 
 ## Non-Goals
 
 - No multi-approver chain yet.
 - No enforced role split between submitter and approver yet; V1 keeps existing `SUPER_ADMIN` / `HR_ADMIN` controller roles and permits same-user approval.
-- No rejected-plan reopen/clone yet.
+- No rejected-plan reopen in place; corrections use clone-as-new-draft instead.

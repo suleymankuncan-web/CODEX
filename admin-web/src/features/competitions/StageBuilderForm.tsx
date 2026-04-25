@@ -10,6 +10,7 @@ import { getAuthLookups, type AuthLookupStore } from '../auth/api'
 import {
   approveCompetitionStagePackagePlan,
   cancelCompetitionStagePackagePlan,
+  cloneCompetitionStagePackagePlan,
   cloneCompetitionTeamTemplate,
   createCompetitionStagePackagePlan,
   createCompetitionTeamTemplate,
@@ -586,6 +587,19 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
     },
   })
 
+  const cloneStagePackagePlanMutation = useMutation({
+    mutationFn: cloneCompetitionStagePackagePlan,
+    onSuccess: async (response) => {
+      setStagePackageFeedback(response.command.message)
+      await queryClient.invalidateQueries({
+        queryKey: ['competition-stage-package-plans', input.competitionId],
+      })
+      await queryClient.invalidateQueries({
+        queryKey: ['competition-stage-package-plan-audit', stagePackageHistoryPlanId],
+      })
+    },
+  })
+
   const executeStagePackagePlanMutation = useMutation({
     mutationFn: executeCompetitionStagePackagePlan,
     onSuccess: async (response) => {
@@ -1005,6 +1019,7 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
           submitStagePackagePlanMutation.error ??
           approveStagePackagePlanMutation.error ??
           rejectStagePackagePlanMutation.error ??
+          cloneStagePackagePlanMutation.error ??
           cancelStagePackagePlanMutation.error ??
           executeStagePackagePlanMutation.error
         }
@@ -1020,6 +1035,7 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
           submitStagePackagePlanMutation.isPending ||
           approveStagePackagePlanMutation.isPending ||
           rejectStagePackagePlanMutation.isPending ||
+          cloneStagePackagePlanMutation.isPending ||
           cancelStagePackagePlanMutation.isPending ||
           executeStagePackagePlanMutation.isPending
         }
@@ -1031,6 +1047,7 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
           approveStagePackagePlanMutation.mutate({ planId, payload })
         }
         onCancelPlan={(planId) => cancelStagePackagePlanMutation.mutate(planId)}
+        onClonePlan={(planId) => cloneStagePackagePlanMutation.mutate(planId)}
         onExecutePlan={(planId) => executeStagePackagePlanMutation.mutate(planId)}
         onRejectPlan={(planId, payload) =>
           rejectStagePackagePlanMutation.mutate({ planId, payload })
@@ -1144,6 +1161,7 @@ function StagePackageBuilderSection(input: {
   validationMessage: string | null
   onApprovePlan: (planId: string, payload: ReviewCompetitionStagePackagePlanPayload) => void
   onCancelPlan: (planId: string) => void
+  onClonePlan: (planId: string) => void
   onExecutePlan: (planId: string) => void
   onRejectPlan: (planId: string, payload: ReviewCompetitionStagePackagePlanPayload) => void
   onSavePlan: () => void
@@ -1598,6 +1616,16 @@ function StagePackageBuilderSection(input: {
                       onClick={() => input.onExecutePlan(plan.planId)}
                     >
                       Execute approved plan {plan.planName}
+                    </button>
+                  ) : null}
+                  {plan.planStatus === 'rejected' ? (
+                    <button
+                      className="control-button"
+                      type="button"
+                      disabled={input.isPending}
+                      onClick={() => input.onClonePlan(plan.planId)}
+                    >
+                      Clone as new draft {plan.planName}
                     </button>
                   ) : null}
                   <button

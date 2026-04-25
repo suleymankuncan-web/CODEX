@@ -387,6 +387,15 @@ export async function rejectCompetitionStagePackagePlan(
   )
 }
 
+export async function cloneCompetitionStagePackagePlan(planId: string) {
+  return sendJson<CommandResponse<{ plan: CompetitionStagePackagePlan }>>(
+    `/competitions/stage-package-plans/${planId}/clone`,
+    {
+      method: 'POST',
+    },
+  )
+}
+
 export async function cancelCompetitionStagePackagePlan(planId: string) {
   return sendJson<CommandResponse<{ plan: CompetitionStagePackagePlan }>>(
     `/competitions/stage-package-plans/${planId}/cancel`,

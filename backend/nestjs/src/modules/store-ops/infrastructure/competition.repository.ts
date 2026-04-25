@@ -16,6 +16,7 @@ import {
   CompetitionWarning,
   ApproveCompetitionStagePackagePlanInput,
   CancelCompetitionStagePackagePlanInput,
+  CloneCompetitionStagePackagePlanInput,
   CloneCompetitionTeamTemplateInput,
   CreateCompetitionStagePackageInput,
   CreateCompetitionStagePackagePlanInput,
@@ -993,6 +994,95 @@ export class CompetitionRepository {
       });
 
       return plan;
+    });
+  }
+
+  async cloneStagePackagePlan(
+    input: CloneCompetitionStagePackagePlanInput,
+  ): Promise<CompetitionStagePackagePlan> {
+    return this.databaseService.withTransaction(async (client) => {
+      const sourceRow = await this.getStagePackagePlanForUpdate(
+        client,
+        input.sourcePlanId,
+      );
+
+      if (sourceRow.plan_status !== "rejected") {
+        throw new BadRequestException("Stage package plan is not cloneable");
+      }
+
+      const sourcePlan = mapStagePackagePlan(sourceRow);
+      const clonedPlanName = `${sourcePlan.planName} revision`;
+      const result = await client.query<CompetitionStagePackagePlanRow>(
+        `
+          INSERT INTO ops.competition_stage_package_plan (
+            competition_id,
+            package_code,
+            plan_name,
+            plan_status,
+            stage_drafts_json,
+            created_by_user_id,
+            updated_by_user_id
+          )
+          VALUES ($1::uuid, $2, $3, 'draft', $4::jsonb, $5, $5)
+          RETURNING
+            competition_stage_package_plan_id,
+            competition_id,
+            package_code,
+            plan_name,
+            plan_status,
+            stage_drafts_json,
+            created_stage_ids,
+            submitted_by_user_id,
+            submitted_at,
+            reviewed_by_user_id,
+            reviewed_at,
+            review_note,
+            created_at,
+            updated_at,
+            executed_at
+        `,
+        [
+          sourcePlan.competitionId,
+          sourcePlan.packageCode,
+          clonedPlanName,
+          JSON.stringify(sourcePlan.stageDrafts),
+          input.actorUserId,
+        ],
+      );
+
+      const clonedPlan = mapStagePackagePlan(result.rows[0]);
+
+      await writeCompetitionAudit(client, {
+        actorUserId: input.actorUserId,
+        eventType: "competition_stage_package_plan.cloned_to_draft",
+        entityName: "ops.competition_stage_package_plan",
+        entityId: sourcePlan.planId,
+        metadata: {
+          competitionId: sourcePlan.competitionId,
+          packageCode: sourcePlan.packageCode,
+          planName: sourcePlan.planName,
+          clonedPlanId: clonedPlan.planId,
+          clonedPlanName: clonedPlan.planName,
+        },
+      });
+
+      await writeCompetitionAudit(client, {
+        actorUserId: input.actorUserId,
+        eventType: "competition_stage_package_plan.cloned_from_returned",
+        entityName: "ops.competition_stage_package_plan",
+        entityId: clonedPlan.planId,
+        metadata: {
+          sourcePlanId: sourcePlan.planId,
+          sourcePlanName: sourcePlan.planName,
+          competitionId: clonedPlan.competitionId,
+          packageCode: clonedPlan.packageCode,
+          planName: clonedPlan.planName,
+          stageCount: clonedPlan.stageDrafts.length,
+          stageCodes: clonedPlan.stageDrafts.map((stage) => stage.stageCode),
+        },
+      });
+
+      return clonedPlan;
     });
   }
 

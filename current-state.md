@@ -981,6 +981,23 @@ C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI\admin-web
 - Frontend release check gecti: `npm.cmd run check:release` -> lint, build, 16 Playwright smoke testi ve `npm audit --omit=dev` (`found 0 vulnerabilities`).
 - Siradaki mantikli adim: returned/rejected planlar icin "clone as new draft" akisini planlamak. Boylece yanlis paket geri dondugunde sifirdan kurmak yerine kontrollu duzeltme taslagi acilir.
 
+## Son Competition Returned Plan Clone V1
+
+25 Nisan 2026 itibariyla returned/rejected package planlar icin clone-as-new-draft akisi eklendi.
+
+- Backend endpoint eklendi: `POST /api/competitions/stage-package-plans/:planId/clone`.
+- Clone sadece `rejected` plandan yapilir; kaynak plan history olarak immutable kalir.
+- Yeni plan `draft` status'u ile olusur, `created_stage_ids`, submit/review/execution metadata alanlari temiz baslar.
+- Yeni plan adi otomatik kaynak plan adinin sonuna `revision` eklenerek uretilir.
+- Audit izleri:
+  - Kaynak plan: `competition_stage_package_plan.cloned_to_draft`.
+  - Yeni draft: `competition_stage_package_plan.cloned_from_returned`.
+- Frontend `Package plan library` icinde returned planlarda `Clone as new draft` aksiyonu gorunur.
+- Hedefli backend dogrulama gecti: `npm.cmd test -- src/modules/store-ops/application/competition.service.spec.ts src/modules/store-ops/infrastructure/competition.repository.spec.ts --runInBand` -> 2 suite / 49 test.
+- Hedefli frontend dogrulama gecti: `npm.cmd run build; npm.cmd run test:e2e -- e2e/competition-surfaces.spec.ts -g "reject a submitted stage package plan"` -> 1 Playwright test.
+- Onumuzdeki yapilacaklar listesi eklendi: `docs/plans/active-next-actions.md`.
+- Siradaki mantikli adim: package plan source visibility. Clone edilen draft kartinda veya history gorunumunde hangi returned plandan geldigi daha okunur hale getirilmeli.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:
@@ -1038,6 +1055,7 @@ Planlar:
 - `docs/plans/project-gap-analysis-and-roadmap.md`
 - `docs/plans/request-intake-and-decision-policy.md`
 - `docs/plans/project-stability-guardrails.md`
+- `docs/plans/active-next-actions.md`
 - `docs/plans/ui-localization-strategy.md`
 - `docs/plans/daily-closure-ranking-strategy.md`
 - `docs/superpowers/plans/2026-04-25-competition-stage-package-plan-lifecycle-v1.md`

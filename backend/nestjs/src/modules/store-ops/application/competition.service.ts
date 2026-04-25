@@ -5,6 +5,7 @@ import {
   CompetitionDetail,
   CompetitionScope,
   CancelCompetitionStagePackagePlanInput,
+  CloneCompetitionStagePackagePlanInput,
   CloneCompetitionTeamTemplateInput,
   CreateCompetitionInput,
   CreateCompetitionStagePackageInput,
@@ -268,6 +269,16 @@ export class CompetitionService {
     return buildCommandResponse({
       status: "rejected",
       message: "Competition stage package plan rejected",
+      data: { plan },
+    });
+  }
+
+  async cloneStagePackagePlan(input: CloneCompetitionStagePackagePlanInput) {
+    const plan = await this.competitionRepository.cloneStagePackagePlan(input);
+
+    return buildCommandResponse({
+      status: "created",
+      message: "Competition stage package plan cloned as draft",
       data: { plan },
     });
   }
