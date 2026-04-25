@@ -714,6 +714,24 @@ C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI\admin-web
 - Frontend release check gecti: `npm.cmd run check:release` -> lint, build, 8 Playwright smoke testi ve `npm audit --omit=dev` (`found 0 vulnerabilities`); Vite chunk warning yok.
 - Siradaki mantikli adim: team template CRUD ve stage olusturma akisinda hazir takim sablonu kullanma hattini eklemek. Bu sayede her yarismada takimlari sifirdan yazmak zorunda kalmayiz.
 
+## Son Competition Team Template V1
+
+25 Nisan 2026 itibariyla competition team template V1 hatti acildi.
+
+- Uygulama plani eklendi: `docs/superpowers/plans/2026-04-25-competition-team-template-v1.md`.
+- Backend `GET /api/competitions/team-templates` ve `POST /api/competitions/team-templates` endpointleri eklendi.
+- Endpointler `SUPER_ADMIN` ve `HR_ADMIN` ile sinirlidir; read-only roller template yonetimi gormez.
+- Template create akisi `ops.competition_team_template` ve `ops.competition_team_template_store` tablolarina yazar.
+- Template create bos store listesiyle reddedilir; duplicate store id'leri servis seviyesinde tekillestirilir.
+- Audit event `competition_team_template.created` olarak yazilir; metadata icinde `templateCode` ve `storeCount` bulunur.
+- Stage builder icinde kucuk team template formu acildi; store secimi `/api/auth/lookups` store listesine baglidir.
+- Stage builder icinde her takim icin `Team N template` secimi eklendi; template secilince team code/name/storeIds/sourceTemplateId otomatik doldurulur.
+- Stage create payload'i template kullanan takimlarda `sourceTemplateId` tasir; manuel takimlar eski akisi korur.
+- TDD kirmizi dogrulamasi yapildi: backend metotlari yokken Jest compile fail verdi; frontend template controls yokken Playwright `Template code` label'inda fail verdi.
+- Backend release check gecti: `npm.cmd run check:release` -> lint, 28 suite / 190 test, build ve `npm audit --omit=dev` (`found 0 vulnerabilities`).
+- Frontend release check gecti: `npm.cmd run check:release` -> lint, build, 9 Playwright smoke testi ve `npm audit --omit=dev` (`found 0 vulnerabilities`); Vite chunk warning yok.
+- Siradaki mantikli adim: template lifecycle yonetimini buyutmek. Once `is_active` pasiflestirme/guncelleme ve template listesi filtreleri; sonra bolge ligi/final gibi stage formatlarinda template setlerini kullanma.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:
@@ -731,6 +749,10 @@ Store ops:
 
 - `backend/nestjs/src/modules/store-ops/web/checklist.controller.ts`
 - `backend/nestjs/src/modules/store-ops/application/checklist.service.ts`
+- `backend/nestjs/src/modules/store-ops/application/competition.contract.ts`
+- `backend/nestjs/src/modules/store-ops/application/competition.service.ts`
+- `backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.ts`
+- `backend/nestjs/src/modules/store-ops/web/competition.controller.ts`
 - `backend/nestjs/src/modules/store-ops/web/target-distribution.controller.ts`
 - `backend/nestjs/src/modules/store-ops/application/target-distribution.service.ts`
 - `backend/nestjs/src/modules/store-ops/infrastructure/reporting.repository.ts`
