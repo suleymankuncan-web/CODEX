@@ -6,7 +6,7 @@ import {
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '/api'
 
-type JsonMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE'
+type JsonMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
 export class ApiError extends Error {
   status: number

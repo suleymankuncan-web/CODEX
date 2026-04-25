@@ -7,6 +7,7 @@ const storeId = '00000000-0000-0000-0000-000000000101'
 const secondStoreId = '00000000-0000-0000-0000-000000000102'
 const templateId = '99999999-9999-4999-8999-999999999999'
 const inactiveTemplateId = '88888888-8888-4888-8888-888888888888'
+const clonedTemplateId = '77777777-7777-4777-8777-777777777777'
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -168,7 +169,7 @@ test('admin can view inactive templates and deactivate active templates', async 
   await expect(templateLibrary.getByText('OLD_MARMARA_TEMPLATE')).toHaveCount(0)
 
   await templateLibrary.getByLabel('Show inactive templates').check()
-  await expect(templateLibrary.getByText('OLD_MARMARA_TEMPLATE')).toBeVisible()
+  await expect(templateLibrary.locator('strong').filter({ hasText: 'OLD_MARMARA_TEMPLATE' })).toBeVisible()
   await expect(templateLibrary.getByText('Inactive', { exact: true })).toBeVisible()
 
   await templateLibrary.getByRole('button', { name: 'Deactivate MARMARA_TEMPLATE_A' }).click()
@@ -176,6 +177,54 @@ test('admin can view inactive templates and deactivate active templates', async 
   await expect(page.getByText('Competition team template deactivated')).toBeVisible()
   expect(deactivatedTemplateId).toBe(templateId)
   await expect(page.getByLabel('Team 1 template')).not.toContainText('MARMARA_TEMPLATE_A')
+})
+
+test('admin can update and clone competition team templates', async ({ page }) => {
+  let updatedTemplatePayload: unknown = null
+  let clonedTemplatePayload: unknown = null
+  await page.unroute('**/api/competitions**')
+  await routeCompetitionApi(page, authSessionFixture, competitionDetailFixture, {
+    initialTeamTemplates: [activeTemplateFixture],
+    onUpdateTemplate: (_templateId, payload) => {
+      updatedTemplatePayload = payload
+    },
+    onCloneTemplate: (_templateId, payload) => {
+      clonedTemplatePayload = payload
+    },
+  })
+
+  await page.goto('/admin/competitions')
+
+  const templateLibrary = page.locator('.stage-template-library')
+  let activeTemplateRow = templateLibrary.locator('article').filter({ hasText: 'MARMARA_TEMPLATE_A' })
+  await activeTemplateRow.getByRole('button', { name: 'Edit MARMARA_TEMPLATE_A' }).click()
+  await activeTemplateRow.getByLabel('Edit template name').fill('Marmara Template A Revised')
+  await activeTemplateRow.getByLabel('Edit template description').fill('May revision')
+  await activeTemplateRow.getByLabel('DEMO-102 - Demo Store 102 - Marmara').check()
+  await activeTemplateRow.getByRole('button', { name: 'Save template' }).click()
+
+  await expect(page.getByText('Competition team template updated')).toBeVisible()
+  expect(updatedTemplatePayload).toMatchObject({
+    templateCode: 'MARMARA_TEMPLATE_A',
+    templateName: 'Marmara Template A Revised',
+    description: 'May revision',
+    storeIds: [storeId, secondStoreId],
+  })
+
+  activeTemplateRow = templateLibrary.locator('article').filter({ hasText: 'MARMARA_TEMPLATE_A' })
+  await activeTemplateRow.getByRole('button', { name: 'Clone MARMARA_TEMPLATE_A' }).click()
+  await activeTemplateRow.getByLabel('Clone template code').fill('MARMARA_TEMPLATE_A_COPY')
+  await activeTemplateRow.getByLabel('Clone template name').fill('Marmara Template A Copy')
+  await activeTemplateRow.getByLabel('Clone template description').fill('Copy for finals')
+  await activeTemplateRow.getByRole('button', { name: 'Clone template' }).click()
+
+  await expect(page.getByText('Competition team template cloned')).toBeVisible()
+  expect(clonedTemplatePayload).toMatchObject({
+    templateCode: 'MARMARA_TEMPLATE_A_COPY',
+    templateName: 'Marmara Template A Copy',
+    description: 'Copy for finals',
+  })
+  await expect(templateLibrary.locator('strong').filter({ hasText: 'MARMARA_TEMPLATE_A_COPY' })).toBeVisible()
 })
 
 test('region manager competitions surface is read-only and scoped to visible store contributions', async ({ page }) => {
@@ -203,6 +252,8 @@ async function routeCompetitionApi(
     onCreateStage?: (payload: unknown) => void
     onCreateTemplate?: (payload: unknown) => void
     onDeactivateTemplate?: (templateId: string) => void
+    onUpdateTemplate?: (templateId: string, payload: unknown) => void
+    onCloneTemplate?: (templateId: string, payload: unknown) => void
     initialTeamTemplates?: unknown[]
   },
 ) {
@@ -259,6 +310,59 @@ async function routeCompetitionApi(
           command: { status: 'created', message: 'Competition team template created' },
           data: {
             template: teamTemplates[0],
+          },
+        },
+      })
+      return
+    }
+
+    if (request.method() === 'PUT' && pathname.endsWith(`/api/competitions/team-templates/${templateId}`)) {
+      const payload = request.postDataJSON()
+      options?.onUpdateTemplate?.(templateId, payload)
+      teamTemplates = teamTemplates.map((template) =>
+        (template as { templateId?: string }).templateId === templateId
+          ? {
+              ...(template as Record<string, unknown>),
+              templateCode: payload.templateCode,
+              templateName: payload.templateName,
+              description: payload.description ?? null,
+              stores: storesFromIds(payload.storeIds),
+            }
+          : template,
+      )
+      await route.fulfill({
+        json: {
+          command: { status: 'updated', message: 'Competition team template updated' },
+          data: {
+            template: teamTemplates.find(
+              (template) => (template as { templateId?: string }).templateId === templateId,
+            ),
+          },
+        },
+      })
+      return
+    }
+
+    if (request.method() === 'POST' && pathname.endsWith(`/api/competitions/team-templates/${templateId}/clone`)) {
+      const payload = request.postDataJSON()
+      options?.onCloneTemplate?.(templateId, payload)
+      const sourceTemplate = teamTemplates.find(
+        (template) => (template as { templateId?: string }).templateId === templateId,
+      ) as { stores?: unknown[] } | undefined
+      const clonedTemplate = {
+        templateId: clonedTemplateId,
+        templateCode: payload.templateCode,
+        templateName: payload.templateName,
+        description: payload.description ?? null,
+        isActive: true,
+        stores: sourceTemplate?.stores ?? [],
+      }
+      teamTemplates = [...teamTemplates, clonedTemplate]
+      await route.fulfill({
+        json: {
+          command: { status: 'created', message: 'Competition team template cloned' },
+          data: {
+            template: clonedTemplate,
           },
         },
       })
@@ -334,6 +438,17 @@ async function routeCompetitionApi(
       },
     })
   })
+}
+
+function storesFromIds(storeIds: string[]) {
+  return authLookupsFixture.stores
+    .filter((store) => storeIds.includes(store.storeId))
+    .map((store) => ({
+      storeId: store.storeId,
+      storeCode: store.storeCode,
+      storeName: store.storeName,
+      regionId: store.regionId,
+    }))
 }
 
 const activeTemplateFixture = {

@@ -142,6 +142,14 @@ export type CreateCompetitionTeamTemplatePayload = {
   storeIds: string[]
 }
 
+export type UpdateCompetitionTeamTemplatePayload = CreateCompetitionTeamTemplatePayload
+
+export type CloneCompetitionTeamTemplatePayload = {
+  templateCode: string
+  templateName: string
+  description?: string
+}
+
 export async function listCompetitions() {
   return fetchJson<ListResponse<CompetitionSummary>>('/competitions')
 }
@@ -192,6 +200,32 @@ export async function deactivateCompetitionTeamTemplate(templateId: string) {
     `/competitions/team-templates/${templateId}/deactivate`,
     {
       method: 'PATCH',
+    },
+  )
+}
+
+export async function updateCompetitionTeamTemplate(
+  templateId: string,
+  payload: UpdateCompetitionTeamTemplatePayload,
+) {
+  return sendJson<CommandResponse<{ template: CompetitionTeamTemplate }>>(
+    `/competitions/team-templates/${templateId}`,
+    {
+      method: 'PUT',
+      body: payload,
+    },
+  )
+}
+
+export async function cloneCompetitionTeamTemplate(
+  templateId: string,
+  payload: CloneCompetitionTeamTemplatePayload,
+) {
+  return sendJson<CommandResponse<{ template: CompetitionTeamTemplate }>>(
+    `/competitions/team-templates/${templateId}/clone`,
+    {
+      method: 'POST',
+      body: payload,
     },
   )
 }

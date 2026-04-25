@@ -8,14 +8,18 @@ import {
 } from '../../components/dashboard-primitives'
 import { getAuthLookups, type AuthLookupStore } from '../auth/api'
 import {
+  cloneCompetitionTeamTemplate,
   createCompetitionTeamTemplate,
   createCompetitionStage,
   deactivateCompetitionTeamTemplate,
   listCompetitionTeamTemplates,
+  updateCompetitionTeamTemplate,
+  type CloneCompetitionTeamTemplatePayload,
   type CompetitionTeamTemplate,
   type CompetitionStageSummary,
   type CreateCompetitionTeamTemplatePayload,
   type CreateCompetitionStagePayload,
+  type UpdateCompetitionTeamTemplatePayload,
 } from './api'
 import { formatState, getErrorMessage } from '../../lib/format'
 
@@ -41,6 +45,14 @@ type TemplateDraft = {
   templateName: string
   description: string
   storeIds: string[]
+}
+
+type TemplateEditDraft = TemplateDraft & {
+  templateId: string
+}
+
+type TemplateCloneDraft = Omit<TemplateDraft, 'storeIds'> & {
+  sourceTemplateId: string
 }
 
 type StageDraft = {
@@ -85,6 +97,25 @@ function createInitialTemplateDraft(): TemplateDraft {
     templateName: '',
     description: '',
     storeIds: [],
+  }
+}
+
+function createTemplateEditDraft(template: CompetitionTeamTemplate): TemplateEditDraft {
+  return {
+    templateId: template.templateId,
+    templateCode: template.templateCode,
+    templateName: template.templateName,
+    description: template.description ?? '',
+    storeIds: template.stores.map((store) => store.storeId),
+  }
+}
+
+function createTemplateCloneDraft(template: CompetitionTeamTemplate): TemplateCloneDraft {
+  return {
+    sourceTemplateId: template.templateId,
+    templateCode: normalizeCode(`${template.templateCode}_COPY`),
+    templateName: `${template.templateName} Copy`,
+    description: template.description ?? '',
   }
 }
 
@@ -141,6 +172,18 @@ function validateTemplateDraft(draft: TemplateDraft) {
 
   if (draft.storeIds.length === 0) {
     return 'Template needs at least one store.'
+  }
+
+  return null
+}
+
+function validateTemplateCloneDraft(draft: TemplateCloneDraft) {
+  if (!draft.templateCode.trim() || !codePattern.test(draft.templateCode)) {
+    return 'Template code must use uppercase letters, numbers, and underscores.'
+  }
+
+  if (!draft.templateName.trim()) {
+    return 'Template name is required.'
   }
 
   return null
@@ -215,6 +258,28 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
 
   const deactivateTemplateMutation = useMutation({
     mutationFn: deactivateCompetitionTeamTemplate,
+    onSuccess: async (response) => {
+      setTemplateLifecycleFeedback(response.command.message)
+      await queryClient.invalidateQueries({ queryKey: ['competition-team-templates'] })
+    },
+  })
+
+  const updateTemplateMutation = useMutation({
+    mutationFn: (request: {
+      templateId: string
+      payload: UpdateCompetitionTeamTemplatePayload
+    }) => updateCompetitionTeamTemplate(request.templateId, request.payload),
+    onSuccess: async (response) => {
+      setTemplateLifecycleFeedback(response.command.message)
+      await queryClient.invalidateQueries({ queryKey: ['competition-team-templates'] })
+    },
+  })
+
+  const cloneTemplateMutation = useMutation({
+    mutationFn: (request: {
+      templateId: string
+      payload: CloneCompetitionTeamTemplatePayload
+    }) => cloneCompetitionTeamTemplate(request.templateId, request.payload),
     onSuccess: async (response) => {
       setTemplateLifecycleFeedback(response.command.message)
       await queryClient.invalidateQueries({ queryKey: ['competition-team-templates'] })
@@ -419,14 +484,30 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
       />
 
       <TemplateLibrarySection
-        error={templateLibraryQuery.error ?? deactivateTemplateMutation.error}
+        error={
+          templateLibraryQuery.error ??
+          deactivateTemplateMutation.error ??
+          updateTemplateMutation.error ??
+          cloneTemplateMutation.error
+        }
         feedback={templateLifecycleFeedback}
         isLoading={templateLibraryQuery.isLoading}
-        isPending={deactivateTemplateMutation.isPending}
+        isPending={
+          deactivateTemplateMutation.isPending ||
+          updateTemplateMutation.isPending ||
+          cloneTemplateMutation.isPending
+        }
         showInactive={showInactiveTemplates}
+        stores={stores}
         templates={templateLibraryQuery.data?.items ?? []}
+        onClone={(templateId, payload) =>
+          cloneTemplateMutation.mutate({ templateId, payload })
+        }
         onDeactivate={(templateId) => deactivateTemplateMutation.mutate(templateId)}
         onShowInactiveChange={setShowInactiveTemplates}
+        onUpdate={(templateId, payload) =>
+          updateTemplateMutation.mutate({ templateId, payload })
+        }
       />
 
       {templatesQuery.isError ? (
@@ -526,10 +607,62 @@ function TemplateLibrarySection(input: {
   isLoading: boolean
   isPending: boolean
   showInactive: boolean
+  stores: AuthLookupStore[]
   templates: CompetitionTeamTemplate[]
+  onClone: (templateId: string, payload: CloneCompetitionTeamTemplatePayload) => void
   onDeactivate: (templateId: string) => void
   onShowInactiveChange: (value: boolean) => void
+  onUpdate: (templateId: string, payload: UpdateCompetitionTeamTemplatePayload) => void
 }) {
+  const [editDraft, setEditDraft] = useState<TemplateEditDraft | null>(null)
+  const [cloneDraft, setCloneDraft] = useState<TemplateCloneDraft | null>(null)
+  const editValidationMessage = editDraft ? validateTemplateDraft(editDraft) : null
+  const cloneValidationMessage = cloneDraft ? validateTemplateCloneDraft(cloneDraft) : null
+
+  function updateEditDraft(field: keyof Omit<TemplateDraft, 'storeIds'>, value: string) {
+    setEditDraft((current) => (current ? { ...current, [field]: value } : current))
+  }
+
+  function toggleEditStore(storeId: string) {
+    setEditDraft((current) => {
+      if (!current) return current
+
+      return {
+        ...current,
+        storeIds: current.storeIds.includes(storeId)
+          ? current.storeIds.filter((currentStoreId) => currentStoreId !== storeId)
+          : [...current.storeIds, storeId],
+      }
+    })
+  }
+
+  function submitEditDraft() {
+    if (!editDraft || validateTemplateDraft(editDraft)) return
+
+    input.onUpdate(editDraft.templateId, {
+      templateCode: editDraft.templateCode.trim(),
+      templateName: editDraft.templateName.trim(),
+      description: editDraft.description.trim() || undefined,
+      storeIds: editDraft.storeIds,
+    })
+    setEditDraft(null)
+  }
+
+  function updateCloneDraft(field: keyof Omit<TemplateCloneDraft, 'sourceTemplateId'>, value: string) {
+    setCloneDraft((current) => (current ? { ...current, [field]: value } : current))
+  }
+
+  function submitCloneDraft() {
+    if (!cloneDraft || validateTemplateCloneDraft(cloneDraft)) return
+
+    input.onClone(cloneDraft.sourceTemplateId, {
+      templateCode: cloneDraft.templateCode.trim(),
+      templateName: cloneDraft.templateName.trim(),
+      description: cloneDraft.description.trim() || undefined,
+    })
+    setCloneDraft(null)
+  }
+
   return (
     <article className="stacked-row stage-template-library">
       <div className="stacked-row-head">
@@ -581,8 +714,143 @@ function TemplateLibrarySection(input: {
                   <strong>{template.description ?? '-'}</strong>
                 </div>
               </div>
-              {template.isActive ? (
-                <div className="action-cluster">
+
+              {editDraft?.templateId === template.templateId ? (
+                <div className="stacked-row">
+                  <div className="form-grid">
+                    <label className="field-block">
+                      <span>Edit template code</span>
+                      <input
+                        value={editDraft.templateCode}
+                        onChange={(event) =>
+                          updateEditDraft('templateCode', normalizeCode(event.target.value))
+                        }
+                      />
+                    </label>
+                    <label className="field-block">
+                      <span>Edit template name</span>
+                      <input
+                        value={editDraft.templateName}
+                        onChange={(event) => updateEditDraft('templateName', event.target.value)}
+                      />
+                    </label>
+                    <label className="field-block field-block-full">
+                      <span>Edit template description</span>
+                      <input
+                        value={editDraft.description}
+                        onChange={(event) => updateEditDraft('description', event.target.value)}
+                      />
+                    </label>
+                  </div>
+                  <div className="store-checkbox-grid">
+                    {input.stores.map((store) => (
+                      <label className="store-checkbox" key={`edit-${template.templateId}-${store.storeId}`}>
+                        <input
+                          type="checkbox"
+                          checked={editDraft.storeIds.includes(store.storeId)}
+                          onChange={() => toggleEditStore(store.storeId)}
+                        />
+                        <span>{storeLabel(store)}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {editValidationMessage ? (
+                    <p className="validation-copy">{editValidationMessage}</p>
+                  ) : null}
+                  <div className="action-cluster">
+                    <button
+                      className="control-button"
+                      type="button"
+                      disabled={Boolean(editValidationMessage) || input.isPending}
+                      onClick={submitEditDraft}
+                    >
+                      Save template
+                    </button>
+                    <button
+                      className="ghost-button"
+                      type="button"
+                      onClick={() => setEditDraft(null)}
+                    >
+                      Cancel edit
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              {cloneDraft?.sourceTemplateId === template.templateId ? (
+                <div className="stacked-row">
+                  <div className="form-grid">
+                    <label className="field-block">
+                      <span>Clone template code</span>
+                      <input
+                        value={cloneDraft.templateCode}
+                        onChange={(event) =>
+                          updateCloneDraft('templateCode', normalizeCode(event.target.value))
+                        }
+                      />
+                    </label>
+                    <label className="field-block">
+                      <span>Clone template name</span>
+                      <input
+                        value={cloneDraft.templateName}
+                        onChange={(event) => updateCloneDraft('templateName', event.target.value)}
+                      />
+                    </label>
+                    <label className="field-block field-block-full">
+                      <span>Clone template description</span>
+                      <input
+                        value={cloneDraft.description}
+                        onChange={(event) => updateCloneDraft('description', event.target.value)}
+                      />
+                    </label>
+                  </div>
+                  {cloneValidationMessage ? (
+                    <p className="validation-copy">{cloneValidationMessage}</p>
+                  ) : null}
+                  <div className="action-cluster">
+                    <button
+                      className="control-button"
+                      type="button"
+                      disabled={Boolean(cloneValidationMessage) || input.isPending}
+                      onClick={submitCloneDraft}
+                    >
+                      Clone template
+                    </button>
+                    <button
+                      className="ghost-button"
+                      type="button"
+                      onClick={() => setCloneDraft(null)}
+                    >
+                      Cancel clone
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="action-cluster">
+                <button
+                  className="ghost-button"
+                  type="button"
+                  disabled={input.isPending}
+                  onClick={() => {
+                    setCloneDraft(null)
+                    setEditDraft(createTemplateEditDraft(template))
+                  }}
+                >
+                  Edit {template.templateCode}
+                </button>
+                <button
+                  className="ghost-button"
+                  type="button"
+                  disabled={input.isPending}
+                  onClick={() => {
+                    setEditDraft(null)
+                    setCloneDraft(createTemplateCloneDraft(template))
+                  }}
+                >
+                  Clone {template.templateCode}
+                </button>
+                {template.isActive ? (
                   <button
                     className="control-button"
                     type="button"
@@ -591,8 +859,8 @@ function TemplateLibrarySection(input: {
                   >
                     Deactivate {template.templateCode}
                   </button>
-                </div>
-              ) : null}
+                ) : null}
+              </div>
             </article>
           ))}
         </div>
