@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { BarChart3, Bell, DatabaseZap, Fingerprint, KeyRound, Layers3, ShieldCheck, SlidersHorizontal, Target } from 'lucide-react'
+import { BarChart3, Bell, DatabaseZap, Fingerprint, KeyRound, Layers3, ShieldCheck, SlidersHorizontal, Target, Trophy } from 'lucide-react'
 import { KeyValue, ScreenState, StatusPill } from './components/dashboard-primitives'
 import { getAuthSession, type AuthSessionSummary } from './features/auth/api'
 import { formatDisplayRoles } from './features/auth/display'
@@ -21,6 +21,7 @@ const AuthDashboardPage = lazy(() => import('./pages/AuthDashboardPage').then((m
 const AuthLoginPage = lazy(() => import('./pages/AuthLoginPage').then((module) => ({ default: module.AuthLoginPage })))
 const AuthLogoutPage = lazy(() => import('./pages/AuthLogoutPage').then((module) => ({ default: module.AuthLogoutPage })))
 const AuthUserAuditPage = lazy(() => import('./pages/AuthUserAuditPage').then((module) => ({ default: module.AuthUserAuditPage })))
+const CompetitionDashboardPage = lazy(() => import('./pages/CompetitionDashboardPage').then((module) => ({ default: module.CompetitionDashboardPage })))
 const ImportBatchDetailPage = lazy(() => import('./pages/ImportBatchDetailPage').then((module) => ({ default: module.ImportBatchDetailPage })))
 const IntegrationDashboardPage = lazy(() => import('./pages/IntegrationDashboardPage').then((module) => ({ default: module.IntegrationDashboardPage })))
 const ReportsChecklistsPage = lazy(() => import('./pages/ReportsChecklistsPage').then((module) => ({ default: module.ReportsChecklistsPage })))
@@ -67,6 +68,12 @@ const adminNavDefinitions: NavDefinition[] = [
     icon: <Bell size={18} />,
     label: 'Inbox',
     roles: ['SUPER_ADMIN', 'REPORT_VIEWER'],
+  },
+  {
+    to: '/admin/competitions',
+    icon: <Trophy size={18} />,
+    label: 'Competitions',
+    roles: ['SUPER_ADMIN', 'HR_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER'],
   },
   {
     to: '/admin/reports',
@@ -303,6 +310,10 @@ function App() {
             <Route
               path="/admin/inbox"
               element={guardRoute(shellState, authSummary, ['SUPER_ADMIN', 'REPORT_VIEWER'], <AdminInboxPage authSummary={authSummary} />)}
+            />
+            <Route
+              path="/admin/competitions"
+              element={guardRoute(shellState, authSummary, ['SUPER_ADMIN', 'HR_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER'], <CompetitionDashboardPage />)}
             />
             <Route
               path="/admin/reports"
@@ -623,6 +634,10 @@ function resolveLandingPath(authSummary: AuthSessionSummary | null, isReady: boo
 
   if (hasAnyRole(roles, ['SUPER_ADMIN', 'SNAPSHOT_OPERATOR'])) {
     return '/admin/snapshots'
+  }
+
+  if (hasAnyRole(roles, ['HR_ADMIN'])) {
+    return '/admin/competitions'
   }
 
   if (hasAnyRole(roles, ['REGION_MANAGER'])) {

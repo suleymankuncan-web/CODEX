@@ -1,0 +1,136 @@
+import { fetchJson, sendJson } from '../../lib/api'
+
+type ListResponse<T> = {
+  items: T[]
+  meta: {
+    count: number
+    total: number
+    limit: number
+    offset: number
+  }
+}
+
+type CommandResponse<TData> = {
+  command: {
+    status: string
+    message: string
+  }
+  data: TData
+}
+
+export type CompetitionSummary = {
+  competitionId: string
+  competitionCode: string
+  competitionName: string
+  description: string | null
+  competitionType: 'region_challenge' | 'region_league' | 'campaign'
+  lifecycleState: 'draft' | 'published' | 'active' | 'completed' | 'cancelled'
+  startsOn: string
+  endsOn: string
+}
+
+export type CompetitionStageSummary = {
+  competitionStageId: string
+  competitionId: string
+  stageCode: string
+  stageName: string
+  stageOrder: number
+  stageType: 'qualifier' | 'league' | 'quarter_final' | 'semi_final' | 'final' | 'custom'
+  startsOn: string
+  endsOn: string
+  lifecycleState: 'draft' | 'scheduled' | 'active' | 'awaiting_review' | 'finalized' | 'cancelled'
+  finalizationState: 'clean' | 'warnings_present' | 'overridden' | null
+}
+
+export type CompetitionTeamScore = {
+  stageId: string
+  teamId: string
+  teamCode: string
+  teamName: string
+  snapshotDate: string
+  scoreValue: number | null
+  validStoreCount: number
+  totalStoreCount: number
+  coverageRate: number
+  rankPosition: number | null
+  rankingPopulation: number
+}
+
+export type CompetitionWarning = {
+  warningId: string
+  stageId: string
+  teamId: string | null
+  storeId: string | null
+  warningCode: 'missing_daily_store_data' | 'missing_bm_checklist' | 'missing_vm_checklist'
+  warningLevel: 'info' | 'warning' | 'blocker'
+  periodStart: string
+  periodEnd: string
+  message: string
+  resolvedAt: string | null
+}
+
+export type CompetitionDetail = {
+  competition: CompetitionSummary
+  stages: CompetitionStageSummary[]
+  teams: Array<{
+    competitionTeamId: string
+    teamCode: string
+    teamName: string
+    teamOrder: number
+    stores: Array<{
+      storeId: string
+      storeCode: string
+      storeName: string
+      regionId: string
+    }>
+  }>
+  latestScores: CompetitionTeamScore[]
+  warnings: CompetitionWarning[]
+}
+
+export async function listCompetitions() {
+  return fetchJson<ListResponse<CompetitionSummary>>('/competitions')
+}
+
+export async function getCompetition(competitionId: string) {
+  return fetchJson<CompetitionDetail>(`/competitions/${competitionId}`)
+}
+
+export async function createCompetition(payload: {
+  competitionCode: string
+  competitionName: string
+  description?: string
+  competitionType: CompetitionSummary['competitionType']
+  startsOn: string
+  endsOn: string
+}) {
+  return sendJson<CommandResponse<{ competition: CompetitionSummary }>>('/competitions', {
+    method: 'POST',
+    body: payload,
+  })
+}
+
+export async function recalculateStage(stageId: string) {
+  return sendJson<CommandResponse<{ stageId: string }>>(
+    `/competitions/stages/${stageId}/recalculate`,
+    {
+      method: 'POST',
+    },
+  )
+}
+
+export async function finalizeStage(
+  stageId: string,
+  payload: {
+    allowOverride: boolean
+    overrideJustification?: string
+  },
+) {
+  return sendJson<CommandResponse<{ stage: CompetitionStageSummary }>>(
+    `/competitions/stages/${stageId}/finalize`,
+    {
+      method: 'PATCH',
+      body: payload,
+    },
+  )
+}
