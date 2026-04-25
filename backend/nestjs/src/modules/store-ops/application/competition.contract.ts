@@ -1,0 +1,141 @@
+export type CompetitionLifecycleState =
+  | "draft"
+  | "published"
+  | "active"
+  | "completed"
+  | "cancelled";
+
+export type CompetitionStageLifecycleState =
+  | "draft"
+  | "scheduled"
+  | "active"
+  | "awaiting_review"
+  | "finalized"
+  | "cancelled";
+
+export type CompetitionStageFinalizationState =
+  | "clean"
+  | "warnings_present"
+  | "overridden";
+
+export type CompetitionWarningCode =
+  | "missing_daily_store_data"
+  | "missing_bm_checklist"
+  | "missing_vm_checklist";
+
+export type CompetitionScope = {
+  companyIds: string[];
+  regionIds: string[];
+  storeIds: string[];
+};
+
+export type Competition = {
+  competitionId: string;
+  competitionCode: string;
+  competitionName: string;
+  description: string | null;
+  competitionType: "region_challenge" | "region_league" | "campaign";
+  lifecycleState: CompetitionLifecycleState;
+  startsOn: string;
+  endsOn: string;
+};
+
+export type CompetitionStage = {
+  competitionStageId: string;
+  competitionId: string;
+  stageCode: string;
+  stageName: string;
+  stageOrder: number;
+  stageType: "qualifier" | "league" | "quarter_final" | "semi_final" | "final" | "custom";
+  startsOn: string;
+  endsOn: string;
+  lifecycleState: CompetitionStageLifecycleState;
+  finalizationState: CompetitionStageFinalizationState | null;
+};
+
+export type CompetitionTeam = {
+  competitionTeamId: string;
+  teamCode: string;
+  teamName: string;
+  teamOrder: number;
+  stores: Array<{
+    storeId: string;
+    storeCode: string;
+    storeName: string;
+    regionId: string;
+  }>;
+};
+
+export type CompetitionWarning = {
+  warningId: string;
+  stageId: string;
+  teamId: string | null;
+  storeId: string | null;
+  warningCode: CompetitionWarningCode;
+  warningLevel: "info" | "warning" | "blocker";
+  periodStart: string;
+  periodEnd: string;
+  message: string;
+  resolvedAt: string | null;
+};
+
+export type CompetitionTeamScore = {
+  stageId: string;
+  teamId: string;
+  teamCode: string;
+  teamName: string;
+  snapshotDate: string;
+  scoreValue: number | null;
+  validStoreCount: number;
+  totalStoreCount: number;
+  coverageRate: number;
+  rankPosition: number | null;
+  rankingPopulation: number;
+};
+
+export type CompetitionDetail = {
+  competition: Competition;
+  stages: CompetitionStage[];
+  teams: CompetitionTeam[];
+  latestScores: CompetitionTeamScore[];
+  warnings: CompetitionWarning[];
+};
+
+export type CreateCompetitionInput = {
+  actorUserId: string;
+  competitionCode: string;
+  competitionName: string;
+  description?: string;
+  competitionType: "region_challenge" | "region_league" | "campaign";
+  startsOn: string;
+  endsOn: string;
+};
+
+export type CreateCompetitionStageInput = {
+  actorUserId: string;
+  competitionId: string;
+  stageCode: string;
+  stageName: string;
+  stageOrder: number;
+  stageType: "qualifier" | "league" | "quarter_final" | "semi_final" | "final" | "custom";
+  startsOn: string;
+  endsOn: string;
+  teams: Array<{
+    teamCode: string;
+    teamName: string;
+    sourceTemplateId?: string;
+    storeIds: string[];
+  }>;
+};
+
+export type RecalculateCompetitionStageInput = {
+  actorUserId: string;
+  stageId: string;
+};
+
+export type FinalizeCompetitionStageInput = {
+  actorUserId: string;
+  stageId: string;
+  allowOverride: boolean;
+  overrideJustification?: string;
+};
