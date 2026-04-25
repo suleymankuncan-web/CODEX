@@ -12,7 +12,7 @@
 
 ## File Map
 
-- Create: `db/migrations/034_competition_stage_package_plans.sql`
+- Create: `db/migrations/023_competition_stage_package_plans.sql`
 - Modify: `db/schema.sql`
 - Modify: `backend/nestjs/src/modules/store-ops/application/competition.contract.ts`
 - Modify: `backend/nestjs/src/modules/store-ops/application/competition.service.ts`
@@ -86,7 +86,7 @@ Run the same targeted service spec. Expected: PASS.
 ## Task 2: Backend Persistence And API
 
 **Files:**
-- Create: `db/migrations/034_competition_stage_package_plans.sql`
+- Create: `db/migrations/023_competition_stage_package_plans.sql`
 - Modify: `db/schema.sql`
 - Modify: `backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.spec.ts`
 - Modify: `backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.ts`
@@ -243,7 +243,7 @@ Append a section named `Son Competition Stage Package Plan Drafts V1` with chang
 
 ```powershell
 cd "C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI"
-git add docs/superpowers/plans/2026-04-25-competition-stage-package-plan-drafts-v1.md db/migrations/034_competition_stage_package_plans.sql db/schema.sql backend/nestjs/src/modules/store-ops admin-web/src/features/competitions admin-web/e2e/competition-surfaces.spec.ts current-state.md
+git add docs/superpowers/plans/2026-04-25-competition-stage-package-plan-drafts-v1.md db/migrations/023_competition_stage_package_plans.sql db/schema.sql backend/nestjs/src/modules/store-ops admin-web/src/features/competitions admin-web/e2e/competition-surfaces.spec.ts current-state.md
 git commit -m "feat: add competition package plan drafts"
 ```
 

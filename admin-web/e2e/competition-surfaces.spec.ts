@@ -9,6 +9,7 @@ const templateId = '99999999-9999-4999-8999-999999999999'
 const secondTemplateId = '66666666-6666-4666-8666-666666666666'
 const inactiveTemplateId = '88888888-8888-4888-8888-888888888888'
 const clonedTemplateId = '77777777-7777-4777-8777-777777777777'
+const stagePackagePlanId = '55555555-5555-4555-8555-555555555555'
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -193,6 +194,62 @@ test('admin can create a league then final stage package from templates', async 
   })
 })
 
+test('admin can save and execute a stage package plan draft', async ({ page }) => {
+  let savedStagePackagePlanPayload: unknown = null
+  let executedStagePackagePlanId: string | null = null
+  await page.unroute('**/api/competitions**')
+  await routeCompetitionApi(page, authSessionFixture, competitionDetailFixture, {
+    initialTeamTemplates: [activeTemplateFixture, secondActiveTemplateFixture],
+    onCreateStagePackagePlan: (payload) => {
+      savedStagePackagePlanPayload = payload
+    },
+    onExecuteStagePackagePlan: (planId) => {
+      executedStagePackagePlanId = planId
+    },
+  })
+
+  await page.goto('/admin/competitions')
+
+  await page.getByLabel('Stage package').selectOption('league_then_final')
+  await page.getByLabel('Package team 1 template').selectOption(templateId)
+  await page.getByLabel('Package team 2 template').selectOption(secondTemplateId)
+  await page.getByLabel('Package plan name').fill('April regional package')
+  await page.getByLabel('Package stage 2 name').fill('Marmara Final Night')
+  await page.getByRole('button', { name: 'Save package plan' }).click()
+
+  await expect(page.getByText('Competition stage package plan saved')).toBeVisible()
+  const planLibrary = page.locator('.stage-package-plan-library')
+  await expect(planLibrary.locator('strong').filter({ hasText: 'April regional package' })).toBeVisible()
+  await expect(planLibrary.getByText('draft', { exact: true })).toBeVisible()
+
+  await planLibrary.getByRole('button', { name: 'Execute April regional package' }).click()
+
+  await expect(page.getByText('Competition stage package plan executed')).toBeVisible()
+  expect(executedStagePackagePlanId).toBe(stagePackagePlanId)
+  expect(savedStagePackagePlanPayload).toMatchObject({
+    planName: 'April regional package',
+    packageCode: 'league_then_final',
+    stages: [
+      {
+        stagePresetCode: 'region_league',
+        stageCode: 'REGION_LEAGUE',
+        stageName: 'Regional League',
+        stageOrder: 1,
+        stageType: 'league',
+        startsOn: '2026-04-22',
+        endsOn: '2026-04-24',
+      },
+      {
+        stagePresetCode: 'final_showdown',
+        stageCode: 'FINAL_SHOWDOWN',
+        stageName: 'Marmara Final Night',
+        stageOrder: 2,
+        stageType: 'final',
+      },
+    ],
+  })
+})
+
 test('admin creates a team template and applies it to a stage team', async ({ page }) => {
   let createdTemplatePayload: unknown = null
   let createdStagePayload: unknown = null
@@ -359,10 +416,14 @@ async function routeCompetitionApi(
     onUpdateTemplate?: (templateId: string, payload: unknown) => void
     onCloneTemplate?: (templateId: string, payload: unknown) => void
     onCreateStagePackage?: (payload: unknown) => void
+    onCreateStagePackagePlan?: (payload: unknown) => void
+    onExecuteStagePackagePlan?: (planId: string) => void
     initialTeamTemplates?: unknown[]
+    initialStagePackagePlans?: unknown[]
   },
 ) {
   let teamTemplates: unknown[] = options?.initialTeamTemplates ?? []
+  let stagePackagePlans: unknown[] = options?.initialStagePackagePlans ?? []
 
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: authSession })
@@ -507,8 +568,112 @@ async function routeCompetitionApi(
       return
     }
 
+    if (
+      request.method() === 'GET' &&
+      pathname.endsWith(`/api/competitions/${competitionId}/stage-package-plans`)
+    ) {
+      await route.fulfill({
+        json: {
+          items: stagePackagePlans,
+          meta: {
+            count: stagePackagePlans.length,
+            total: stagePackagePlans.length,
+            limit: stagePackagePlans.length,
+            offset: 0,
+          },
+        },
+      })
+      return
+    }
+
     if (request.method() === 'GET' && pathname.endsWith(`/api/competitions/${competitionId}`)) {
       await route.fulfill({ json: competitionDetail })
+      return
+    }
+
+    if (
+      request.method() === 'POST' &&
+      pathname.endsWith(`/api/competitions/${competitionId}/stage-package-plans`)
+    ) {
+      const payload = request.postDataJSON()
+      options?.onCreateStagePackagePlan?.(payload)
+      const plan = {
+        planId: stagePackagePlanId,
+        competitionId,
+        packageCode: payload.packageCode,
+        planName: payload.planName,
+        planStatus: 'draft',
+        stageDrafts: payload.stages,
+        createdStageIds: [],
+        createdAt: '2026-04-25T10:00:00.000Z',
+        updatedAt: '2026-04-25T10:00:00.000Z',
+        executedAt: null,
+      }
+      stagePackagePlans = [plan, ...stagePackagePlans]
+      await route.fulfill({
+        json: {
+          command: { status: 'created', message: 'Competition stage package plan saved' },
+          data: { plan },
+        },
+      })
+      return
+    }
+
+    if (
+      request.method() === 'POST' &&
+      pathname.endsWith(`/api/competitions/stage-package-plans/${stagePackagePlanId}/execute`)
+    ) {
+      options?.onExecuteStagePackagePlan?.(stagePackagePlanId)
+      stagePackagePlans = stagePackagePlans.map((plan) =>
+        (plan as { planId?: string }).planId === stagePackagePlanId
+          ? {
+              ...(plan as Record<string, unknown>),
+              planStatus: 'executed',
+              createdStageIds: [
+                'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+                'ffffffff-ffff-4fff-8fff-ffffffffffff',
+              ],
+              executedAt: '2026-04-25T10:05:00.000Z',
+              updatedAt: '2026-04-25T10:05:00.000Z',
+            }
+          : plan,
+      )
+      await route.fulfill({
+        json: {
+          command: { status: 'executed', message: 'Competition stage package plan executed' },
+          data: {
+            plan: stagePackagePlans.find(
+              (plan) => (plan as { planId?: string }).planId === stagePackagePlanId,
+            ),
+            stages: [
+              {
+                competitionStageId: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+                competitionId,
+                stageCode: 'REGION_LEAGUE',
+                stageName: 'Regional League',
+                stageOrder: 1,
+                stageType: 'league',
+                startsOn: '2026-04-22',
+                endsOn: '2026-04-24',
+                lifecycleState: 'active',
+                finalizationState: null,
+              },
+              {
+                competitionStageId: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
+                competitionId,
+                stageCode: 'FINAL_SHOWDOWN',
+                stageName: 'Marmara Final Night',
+                stageOrder: 2,
+                stageType: 'final',
+                startsOn: '2026-04-24',
+                endsOn: '2026-04-24',
+                lifecycleState: 'active',
+                finalizationState: null,
+              },
+            ],
+          },
+        },
+      })
       return
     }
 

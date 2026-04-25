@@ -5,6 +5,7 @@ import { CloneCompetitionTeamTemplateDto } from "./dto/clone-competition-team-te
 import { CreateCompetitionDto } from "./dto/create-competition.dto";
 import { CreateCompetitionStageDto } from "./dto/create-competition-stage.dto";
 import { CreateCompetitionStagePackageDto } from "./dto/create-competition-stage-package.dto";
+import { CreateCompetitionStagePackagePlanDto } from "./dto/create-competition-stage-package-plan.dto";
 import { CreateCompetitionTeamTemplateDto } from "./dto/create-competition-team-template.dto";
 import { FinalizeCompetitionStageDto } from "./dto/finalize-competition-stage.dto";
 import { ListCompetitionTeamTemplatesQueryDto } from "./dto/list-competition-team-templates.query";
@@ -163,6 +164,40 @@ export class CompetitionController {
       actorUserId: request.user.userId,
       competitionId,
       ...body,
+    });
+  }
+
+  @Get(":competitionId/stage-package-plans")
+  @RequireRoles("SUPER_ADMIN", "HR_ADMIN")
+  async listStagePackagePlans(@Param("competitionId") competitionId: string) {
+    return this.competitionService.listStagePackagePlans({
+      competitionId,
+    });
+  }
+
+  @Post(":competitionId/stage-package-plans")
+  @RequireRoles("SUPER_ADMIN", "HR_ADMIN")
+  async createStagePackagePlan(
+    @Req() request: CompetitionRequest,
+    @Param("competitionId") competitionId: string,
+    @Body() body: CreateCompetitionStagePackagePlanDto,
+  ) {
+    return this.competitionService.createStagePackagePlan({
+      actorUserId: request.user.userId,
+      competitionId,
+      ...body,
+    });
+  }
+
+  @Post("stage-package-plans/:planId/execute")
+  @RequireRoles("SUPER_ADMIN", "HR_ADMIN")
+  async executeStagePackagePlan(
+    @Req() request: CompetitionRequest,
+    @Param("planId") planId: string,
+  ) {
+    return this.competitionService.executeStagePackagePlan({
+      actorUserId: request.user.userId,
+      planId,
     });
   }
 

@@ -847,6 +847,38 @@ C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI\admin-web
 - Frontend release check gecti: `npm.cmd run check:release` -> lint, build, 13 Playwright smoke testi ve `npm audit --omit=dev` (`found 0 vulnerabilities`); Vite chunk warning yok.
 - Siradaki mantikli adim: package planlarini kaydedilebilir taslak haline getirmek. Boylece IK bir turnuva planini bugun hazirlayip toplantidan sonra ayni taslagi publish/execute edebilir; audit ve geri donus izi daha guclu olur.
 
+## Son Competition Stage Package Plan Drafts V1
+
+25 Nisan 2026 itibariyla stage package planlarini kaydedilebilir taslak haline getiren V1 hatti acildi.
+
+- Uygulama plani eklendi: `docs/superpowers/plans/2026-04-25-competition-stage-package-plan-drafts-v1.md`.
+- Yeni DB modeli eklendi: `ops.competition_stage_package_plan`.
+- Yeni migration eklendi: `db/migrations/023_competition_stage_package_plans.sql`.
+- `db/schema.sql` stage package plan tablo ve index tanimlariyla guncellendi.
+- Backend kontratina `CompetitionStagePackagePlan`, `CreateCompetitionStagePackagePlanInput` ve `ExecuteCompetitionStagePackagePlanInput` eklendi.
+- Backend endpointleri eklendi:
+  - `GET /api/competitions/:competitionId/stage-package-plans`
+  - `POST /api/competitions/:competitionId/stage-package-plans`
+  - `POST /api/competitions/stage-package-plans/:planId/execute`
+- Save draft akisi stage olusturmaz; sadece stage draft JSON'unu, plan adini ve audit izini kaydeder.
+- Execute akisi plan satirini `FOR UPDATE` ile kilitler, sadece `draft` durumundaki planlari calistirir, mevcut stage/team insert helper'i ile tum stage'leri tek transaction icinde olusturur.
+- Execute edilen plan `executed` durumuna gecer ve `createdStageIds` alanina olusan stage id'leri yazilir; ayni taslak tekrar execute edilemez.
+- Audit eventleri eklendi:
+  - `competition_stage_package_plan.saved`
+  - `competition_stage_package_plan.executed`
+- Frontend competition API helper'lari eklendi: plan list, save draft ve execute.
+- Stage builder icine `Package plan name`, `Save package plan` ve `Package plan library` eklendi.
+- IK/Admin aktif team template secimleriyle plan kaydedebilir, library uzerinden draft plani execute edebilir.
+- TDD kirmizi dogrulamasi yapildi:
+  - Backend service testleri `listStagePackagePlans/createStagePackagePlan/executeStagePackagePlan` yokken TypeScript fail verdi.
+  - Repository testleri yeni persistence metotlari yokken TypeScript fail verdi.
+  - Frontend Playwright testi `Package plan name` alani yokken fail verdi.
+- Hedefli backend dogrulama gecti: `npm.cmd test -- src/modules/store-ops/application/competition.service.spec.ts src/modules/store-ops/infrastructure/competition.repository.spec.ts --runInBand` -> 2 suite / 32 test.
+- Hedefli frontend dogrulama gecti: `npm.cmd run build; npx.cmd playwright test e2e/competition-surfaces.spec.ts` -> 9 Playwright test.
+- Backend release check gecti: `npm.cmd run check:release` -> lint, 28 suite / 210 test, build ve `npm audit --omit=dev` (`found 0 vulnerabilities`).
+- Frontend release check gecti: `npm.cmd run check:release` -> lint, build, 14 Playwright smoke testi ve `npm audit --omit=dev` (`found 0 vulnerabilities`); Vite chunk warning yok.
+- Siradaki mantikli adim: package plan lifecycle V1'i buyutmek. Draft rename/edit/cancel ve audit/history gorunurlugu eklenirse toplantidan once hazirlanan planlar execute edilmeden once daha kontrollu yonetilir.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:
@@ -869,6 +901,7 @@ Store ops:
 - `backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.ts`
 - `backend/nestjs/src/modules/store-ops/web/competition.controller.ts`
 - `backend/nestjs/src/modules/store-ops/web/dto/create-competition-stage-package.dto.ts`
+- `backend/nestjs/src/modules/store-ops/web/dto/create-competition-stage-package-plan.dto.ts`
 - `backend/nestjs/src/modules/store-ops/web/dto/clone-competition-team-template.dto.ts`
 - `backend/nestjs/src/modules/store-ops/web/dto/list-competition-team-templates.query.ts`
 - `backend/nestjs/src/modules/store-ops/web/dto/update-competition-team-template.dto.ts`

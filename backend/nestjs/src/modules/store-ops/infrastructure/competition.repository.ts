@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable } from "@nestjs/common";
 import { QueryResultRow } from "pg";
 import { DatabaseService } from "../../../shared/database/database.service";
 import { RequestContextStore } from "../../../shared/request-context";
@@ -7,6 +7,7 @@ import {
   CompetitionBaseDetail,
   CompetitionStage,
   CompetitionStageFinalizationState,
+  CompetitionStagePackagePlan,
   CompetitionStoreContribution,
   CompetitionTeam,
   CompetitionTeamTemplate,
@@ -14,9 +15,11 @@ import {
   CompetitionWarning,
   CloneCompetitionTeamTemplateInput,
   CreateCompetitionStagePackageInput,
+  CreateCompetitionStagePackagePlanInput,
   CreateCompetitionStageInput,
   CreateCompetitionTeamTemplateInput,
   DeactivateCompetitionTeamTemplateInput,
+  ExecuteCompetitionStagePackagePlanInput,
   RecalculateCompetitionStageInput,
   UpdateCompetitionTeamTemplateInput,
 } from "../application/competition.contract";
@@ -52,6 +55,19 @@ type CompetitionStageRow = {
   ends_on: string | Date;
   lifecycle_state: CompetitionStage["lifecycleState"];
   finalization_state: CompetitionStageFinalizationState | null;
+};
+
+type CompetitionStagePackagePlanRow = {
+  competition_stage_package_plan_id: string;
+  competition_id: string;
+  package_code: CompetitionStagePackagePlan["packageCode"];
+  plan_name: string;
+  plan_status: CompetitionStagePackagePlan["planStatus"];
+  stage_drafts_json: unknown;
+  created_stage_ids: string[] | null;
+  created_at: string | Date;
+  updated_at: string | Date;
+  executed_at: string | Date | null;
 };
 
 type CompetitionTeamStoreRow = {
@@ -617,6 +633,182 @@ export class CompetitionRepository {
       });
 
       return stages;
+    });
+  }
+
+  async listStagePackagePlans(input: {
+    competitionId: string;
+  }): Promise<CompetitionStagePackagePlan[]> {
+    const result = await this.databaseService.query<CompetitionStagePackagePlanRow>(
+      `
+        SELECT
+          competition_stage_package_plan_id,
+          competition_id,
+          package_code,
+          plan_name,
+          plan_status,
+          stage_drafts_json,
+          created_stage_ids,
+          created_at,
+          updated_at,
+          executed_at
+        FROM ops.competition_stage_package_plan
+        WHERE competition_id = $1::uuid
+        ORDER BY updated_at DESC, created_at DESC
+      `,
+      [input.competitionId],
+    );
+
+    return result.rows.map(mapStagePackagePlan);
+  }
+
+  async createStagePackagePlan(
+    input: CreateCompetitionStagePackagePlanInput,
+  ): Promise<CompetitionStagePackagePlan> {
+    return this.databaseService.withTransaction(async (client) => {
+      const result = await client.query<CompetitionStagePackagePlanRow>(
+        `
+          INSERT INTO ops.competition_stage_package_plan (
+            competition_id,
+            package_code,
+            plan_name,
+            plan_status,
+            stage_drafts_json,
+            created_by_user_id,
+            updated_by_user_id
+          )
+          VALUES ($1::uuid, $2, $3, 'draft', $4::jsonb, $5, $5)
+          RETURNING
+            competition_stage_package_plan_id,
+            competition_id,
+            package_code,
+            plan_name,
+            plan_status,
+            stage_drafts_json,
+            created_stage_ids,
+            created_at,
+            updated_at,
+            executed_at
+        `,
+        [
+          input.competitionId,
+          input.packageCode,
+          input.planName,
+          JSON.stringify(input.stages),
+          input.actorUserId,
+        ],
+      );
+
+      const row = result.rows[0];
+
+      await writeCompetitionAudit(client, {
+        actorUserId: input.actorUserId,
+        eventType: "competition_stage_package_plan.saved",
+        entityName: "ops.competition_stage_package_plan",
+        entityId: row.competition_stage_package_plan_id,
+        metadata: {
+          competitionId: input.competitionId,
+          packageCode: input.packageCode,
+          planName: input.planName,
+          stageCount: input.stages.length,
+          stageCodes: input.stages.map((stage) => stage.stageCode),
+        },
+      });
+
+      return mapStagePackagePlan(row);
+    });
+  }
+
+  async executeStagePackagePlan(
+    input: ExecuteCompetitionStagePackagePlanInput,
+  ): Promise<{ plan: CompetitionStagePackagePlan; stages: CompetitionStage[] }> {
+    return this.databaseService.withTransaction(async (client) => {
+      const planResult = await client.query<CompetitionStagePackagePlanRow>(
+        `
+          SELECT
+            competition_stage_package_plan_id,
+            competition_id,
+            package_code,
+            plan_name,
+            plan_status,
+            stage_drafts_json,
+            created_stage_ids,
+            created_at,
+            updated_at,
+            executed_at
+          FROM ops.competition_stage_package_plan
+          WHERE competition_stage_package_plan_id = $1::uuid
+          FOR UPDATE
+        `,
+        [input.planId],
+      );
+
+      const planRow = planResult.rows[0];
+      if (!planRow) {
+        throw new BadRequestException("Stage package plan not found");
+      }
+
+      if (planRow.plan_status !== "draft") {
+        throw new BadRequestException("Stage package plan is not executable");
+      }
+
+      const stageDrafts = mapStagePackagePlan(planRow).stageDrafts;
+      const stages: CompetitionStage[] = [];
+
+      for (const stageInput of stageDrafts) {
+        const stage = await this.insertStageWithTeams(client, {
+          actorUserId: input.actorUserId,
+          competitionId: planRow.competition_id,
+          ...stageInput,
+        });
+
+        stages.push(stage);
+      }
+
+      const createdStageIds = stages.map((stage) => stage.competitionStageId);
+      const executedPlanResult = await client.query<CompetitionStagePackagePlanRow>(
+        `
+          UPDATE ops.competition_stage_package_plan
+          SET
+            plan_status = 'executed',
+            executed_by_user_id = $2,
+            executed_at = NOW(),
+            updated_by_user_id = $2,
+            updated_at = NOW(),
+            created_stage_ids = $3::uuid[]
+          WHERE competition_stage_package_plan_id = $1::uuid
+          RETURNING
+            competition_stage_package_plan_id,
+            competition_id,
+            package_code,
+            plan_name,
+            plan_status,
+            stage_drafts_json,
+            created_stage_ids,
+            created_at,
+            updated_at,
+            executed_at
+        `,
+        [input.planId, input.actorUserId, createdStageIds],
+      );
+
+      const executedPlan = mapStagePackagePlan(executedPlanResult.rows[0]);
+
+      await writeCompetitionAudit(client, {
+        actorUserId: input.actorUserId,
+        eventType: "competition_stage_package_plan.executed",
+        entityName: "ops.competition_stage_package_plan",
+        entityId: input.planId,
+        metadata: {
+          competitionId: executedPlan.competitionId,
+          packageCode: executedPlan.packageCode,
+          planName: executedPlan.planName,
+          stageCount: stages.length,
+          createdStageIds,
+        },
+      });
+
+      return { plan: executedPlan, stages };
     });
   }
 
@@ -1299,6 +1491,23 @@ function mapStage(row: CompetitionStageRow): CompetitionStage {
   };
 }
 
+function mapStagePackagePlan(
+  row: CompetitionStagePackagePlanRow,
+): CompetitionStagePackagePlan {
+  return {
+    planId: row.competition_stage_package_plan_id,
+    competitionId: row.competition_id,
+    packageCode: row.package_code,
+    planName: row.plan_name,
+    planStatus: row.plan_status,
+    stageDrafts: normalizeStageDrafts(row.stage_drafts_json),
+    createdStageIds: row.created_stage_ids ?? [],
+    createdAt: toDateTimeString(row.created_at),
+    updatedAt: toDateTimeString(row.updated_at),
+    executedAt: row.executed_at ? toDateTimeString(row.executed_at) : null,
+  };
+}
+
 function mapTeams(rows: CompetitionTeamStoreRow[]): CompetitionTeam[] {
   const teams = new Map<string, CompetitionTeam>();
 
@@ -1410,6 +1619,14 @@ function mapStoreContribution(
     hasDailyData: row.has_daily_data,
     missingKpiCodes: row.missing_kpi_codes,
   };
+}
+
+function normalizeStageDrafts(value: unknown): CompetitionStagePackagePlan["stageDrafts"] {
+  if (typeof value === "string") {
+    return JSON.parse(value) as CompetitionStagePackagePlan["stageDrafts"];
+  }
+
+  return value as CompetitionStagePackagePlan["stageDrafts"];
 }
 
 function buildStageAdvancementRule(stagePresetCode?: string) {

@@ -25,6 +25,8 @@ export type CompetitionStagePresetCode =
 
 export type CompetitionStagePackageCode = "league_then_final";
 
+export type CompetitionStagePackagePlanStatus = "draft" | "executed" | "cancelled";
+
 export type CompetitionWarningCode =
   | "missing_daily_store_data"
   | "missing_bm_checklist"
@@ -181,6 +183,28 @@ export type CreateCompetitionStagePackageInput = {
   competitionId: string;
   packageCode: CompetitionStagePackageCode;
   stages: CreateCompetitionStagePackageStageInput[];
+};
+
+export type CompetitionStagePackagePlan = {
+  planId: string;
+  competitionId: string;
+  packageCode: CompetitionStagePackageCode;
+  planName: string;
+  planStatus: CompetitionStagePackagePlanStatus;
+  stageDrafts: CreateCompetitionStagePackageStageInput[];
+  createdStageIds: string[];
+  createdAt: string;
+  updatedAt: string;
+  executedAt: string | null;
+};
+
+export type CreateCompetitionStagePackagePlanInput = CreateCompetitionStagePackageInput & {
+  planName: string;
+};
+
+export type ExecuteCompetitionStagePackagePlanInput = {
+  actorUserId: string;
+  planId: string;
 };
 
 export type CreateCompetitionTeamTemplateInput = {

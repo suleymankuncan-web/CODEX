@@ -13,10 +13,62 @@ const repository = () => ({
   deactivateTeamTemplate: jest.fn(),
   createStageWithTeams: jest.fn(),
   createStagePackage: jest.fn(),
+  listStagePackagePlans: jest.fn(),
+  createStagePackagePlan: jest.fn(),
+  executeStagePackagePlan: jest.fn(),
   recalculateStage: jest.fn(),
   listOpenWarnings: jest.fn(),
   finalizeStage: jest.fn(),
 });
+
+const validStagePackageStages = [
+  {
+    stagePresetCode: "region_league" as const,
+    stageCode: "REGION_LEAGUE",
+    stageName: "Regional League",
+    stageOrder: 1,
+    stageType: "league" as const,
+    startsOn: "2026-05-01",
+    endsOn: "2026-05-31",
+    teams: [
+      {
+        teamCode: "MARMARA_A",
+        teamName: "Marmara A",
+        sourceTemplateId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        storeIds: ["bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"],
+      },
+      {
+        teamCode: "MARMARA_B",
+        teamName: "Marmara B",
+        sourceTemplateId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        storeIds: ["dddddddd-dddd-4ddd-8ddd-dddddddddddd"],
+      },
+    ],
+  },
+  {
+    stagePresetCode: "final_showdown" as const,
+    stageCode: "FINAL_SHOWDOWN",
+    stageName: "Final Showdown",
+    stageOrder: 2,
+    stageType: "final" as const,
+    startsOn: "2026-05-16",
+    endsOn: "2026-05-31",
+    teams: [
+      {
+        teamCode: "MARMARA_A",
+        teamName: "Marmara A",
+        sourceTemplateId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        storeIds: ["bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"],
+      },
+      {
+        teamCode: "MARMARA_B",
+        teamName: "Marmara B",
+        sourceTemplateId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        storeIds: ["dddddddd-dddd-4ddd-8ddd-dddddddddddd"],
+      },
+    ],
+  },
+];
 
 describe("CompetitionService", () => {
   it("lists active competition team templates", async () => {
@@ -415,6 +467,153 @@ describe("CompetitionService", () => {
         ],
       }),
     );
+  });
+
+  it("lists saved stage package plans for a competition", async () => {
+    const repo = repository();
+    repo.listStagePackagePlans.mockResolvedValue([
+      {
+        planId: "55555555-5555-4555-8555-555555555555",
+        competitionId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        packageCode: "league_then_final",
+        planName: "April regional package",
+        planStatus: "draft",
+        stageDrafts: validStagePackageStages,
+        createdStageIds: [],
+        createdAt: "2026-04-25T10:00:00.000Z",
+        updatedAt: "2026-04-25T10:00:00.000Z",
+        executedAt: null,
+      },
+    ]);
+    const service = new CompetitionService(repo as never);
+
+    const result = await service.listStagePackagePlans({
+      competitionId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    });
+
+    expect(result.items).toEqual([
+      expect.objectContaining({
+        planName: "April regional package",
+        planStatus: "draft",
+      }),
+    ]);
+    expect(result.meta.total).toBe(1);
+    expect(repo.listStagePackagePlans).toHaveBeenCalledWith({
+      competitionId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    });
+  });
+
+  it("saves a stage package plan draft without creating stages", async () => {
+    const repo = repository();
+    repo.createStagePackagePlan.mockResolvedValue({
+      planId: "55555555-5555-4555-8555-555555555555",
+      competitionId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      packageCode: "league_then_final",
+      planName: "April regional package",
+      planStatus: "draft",
+      stageDrafts: validStagePackageStages,
+      createdStageIds: [],
+      createdAt: "2026-04-25T10:00:00.000Z",
+      updatedAt: "2026-04-25T10:00:00.000Z",
+      executedAt: null,
+    });
+    const service = new CompetitionService(repo as never);
+
+    const result = await service.createStagePackagePlan({
+      actorUserId: "11111111-1111-4111-8111-111111111111",
+      competitionId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      packageCode: "league_then_final",
+      planName: "April regional package",
+      stages: validStagePackageStages,
+    });
+
+    expect(result.command.status).toBe("created");
+    expect(result.command.message).toBe("Competition stage package plan saved");
+    expect(result.data.plan).toEqual(
+      expect.objectContaining({
+        planName: "April regional package",
+        planStatus: "draft",
+        createdStageIds: [],
+      }),
+    );
+    expect(repo.createStagePackagePlan).toHaveBeenCalledWith({
+      actorUserId: "11111111-1111-4111-8111-111111111111",
+      competitionId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      packageCode: "league_then_final",
+      planName: "April regional package",
+      stages: validStagePackageStages,
+    });
+    expect(repo.createStagePackage).not.toHaveBeenCalled();
+  });
+
+  it("executes a saved stage package plan through the repository", async () => {
+    const repo = repository();
+    repo.executeStagePackagePlan.mockResolvedValue({
+      plan: {
+        planId: "55555555-5555-4555-8555-555555555555",
+        competitionId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        packageCode: "league_then_final",
+        planName: "April regional package",
+        planStatus: "executed",
+        stageDrafts: validStagePackageStages,
+        createdStageIds: [
+          "22222222-2222-4222-8222-222222222222",
+          "33333333-3333-4333-8333-333333333333",
+        ],
+        createdAt: "2026-04-25T10:00:00.000Z",
+        updatedAt: "2026-04-25T10:05:00.000Z",
+        executedAt: "2026-04-25T10:05:00.000Z",
+      },
+      stages: [
+        {
+          competitionStageId: "22222222-2222-4222-8222-222222222222",
+          competitionId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          stageCode: "REGION_LEAGUE",
+          stageName: "Regional League",
+          stageOrder: 1,
+          stageType: "league",
+          startsOn: "2026-05-01",
+          endsOn: "2026-05-31",
+          lifecycleState: "active",
+          finalizationState: null,
+        },
+        {
+          competitionStageId: "33333333-3333-4333-8333-333333333333",
+          competitionId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          stageCode: "FINAL_SHOWDOWN",
+          stageName: "Final Showdown",
+          stageOrder: 2,
+          stageType: "final",
+          startsOn: "2026-05-16",
+          endsOn: "2026-05-31",
+          lifecycleState: "active",
+          finalizationState: null,
+        },
+      ],
+    });
+    const service = new CompetitionService(repo as never);
+
+    const result = await service.executeStagePackagePlan({
+      actorUserId: "11111111-1111-4111-8111-111111111111",
+      planId: "55555555-5555-4555-8555-555555555555",
+    });
+
+    expect(result.command.status).toBe("executed");
+    expect(result.command.message).toBe("Competition stage package plan executed");
+    expect(result.data.plan).toEqual(
+      expect.objectContaining({
+        planStatus: "executed",
+        createdStageIds: [
+          "22222222-2222-4222-8222-222222222222",
+          "33333333-3333-4333-8333-333333333333",
+        ],
+      }),
+    );
+    expect(result.data.stages).toHaveLength(2);
+    expect(repo.executeStagePackagePlan).toHaveBeenCalledWith({
+      actorUserId: "11111111-1111-4111-8111-111111111111",
+      planId: "55555555-5555-4555-8555-555555555555",
+    });
   });
 
   it("creates a draft competition through the repository", async () => {

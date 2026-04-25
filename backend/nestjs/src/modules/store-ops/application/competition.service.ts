@@ -7,9 +7,11 @@ import {
   CloneCompetitionTeamTemplateInput,
   CreateCompetitionInput,
   CreateCompetitionStagePackageInput,
+  CreateCompetitionStagePackagePlanInput,
   CreateCompetitionStageInput,
   CreateCompetitionTeamTemplateInput,
   DeactivateCompetitionTeamTemplateInput,
+  ExecuteCompetitionStagePackagePlanInput,
   FinalizeCompetitionStageInput,
   RecalculateCompetitionStageInput,
   UpdateCompetitionTeamTemplateInput,
@@ -44,6 +46,18 @@ export class CompetitionService {
   async listTeamTemplates(input: { activeOnly?: boolean } = {}) {
     const items = await this.competitionRepository.listTeamTemplates({
       activeOnly: input.activeOnly ?? true,
+    });
+
+    return buildListResponse(items, {
+      total: items.length,
+      limit: items.length,
+      offset: 0,
+    });
+  }
+
+  async listStagePackagePlans(input: { competitionId: string }) {
+    const items = await this.competitionRepository.listStagePackagePlans({
+      competitionId: input.competitionId,
     });
 
     return buildListResponse(items, {
@@ -188,20 +202,7 @@ export class CompetitionService {
   }
 
   async createStagePackage(input: CreateCompetitionStagePackageInput) {
-    if (input.stages.length < 2) {
-      throw new BadRequestException("Stage package must include at least two stages");
-    }
-
-    const stageCodes = input.stages.map((stage) => stage.stageCode);
-    const uniqueStageCodes = new Set(stageCodes);
-
-    if (uniqueStageCodes.size !== stageCodes.length) {
-      throw new BadRequestException("Stage package must not include duplicate stage codes");
-    }
-
-    for (const stage of input.stages) {
-      assertValidStageDraft(stage);
-    }
+    assertValidStagePackageDraft(input);
 
     const stages = await this.competitionRepository.createStagePackage(input);
 
@@ -209,6 +210,28 @@ export class CompetitionService {
       status: "created",
       message: "Competition stage package created",
       data: { stages },
+    });
+  }
+
+  async createStagePackagePlan(input: CreateCompetitionStagePackagePlanInput) {
+    assertValidStagePackageDraft(input);
+
+    const plan = await this.competitionRepository.createStagePackagePlan(input);
+
+    return buildCommandResponse({
+      status: "created",
+      message: "Competition stage package plan saved",
+      data: { plan },
+    });
+  }
+
+  async executeStagePackagePlan(input: ExecuteCompetitionStagePackagePlanInput) {
+    const result = await this.competitionRepository.executeStagePackagePlan(input);
+
+    return buildCommandResponse({
+      status: "executed",
+      message: "Competition stage package plan executed",
+      data: result,
     });
   }
 
@@ -261,6 +284,23 @@ function isStoreVisibleToScope(
     scope.storeIds.includes(store.storeId) ||
     scope.regionIds.includes(store.regionId)
   );
+}
+
+function assertValidStagePackageDraft(input: Pick<CreateCompetitionStagePackageInput, "stages">) {
+  if (input.stages.length < 2) {
+    throw new BadRequestException("Stage package must include at least two stages");
+  }
+
+  const stageCodes = input.stages.map((stage) => stage.stageCode);
+  const uniqueStageCodes = new Set(stageCodes);
+
+  if (uniqueStageCodes.size !== stageCodes.length) {
+    throw new BadRequestException("Stage package must not include duplicate stage codes");
+  }
+
+  for (const stage of input.stages) {
+    assertValidStageDraft(stage);
+  }
 }
 
 function assertValidStageDraft(input: Pick<CreateCompetitionStageInput, "startsOn" | "endsOn" | "teams">) {

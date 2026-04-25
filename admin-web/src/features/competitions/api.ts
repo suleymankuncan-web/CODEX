@@ -144,6 +144,25 @@ export type CreateCompetitionStagePackagePayload = {
   stages: CreateCompetitionStagePayload[]
 }
 
+export type CompetitionStagePackagePlanStatus = 'draft' | 'executed' | 'cancelled'
+
+export type CompetitionStagePackagePlan = {
+  planId: string
+  competitionId: string
+  packageCode: CompetitionStagePackageCode
+  planName: string
+  planStatus: CompetitionStagePackagePlanStatus
+  stageDrafts: CreateCompetitionStagePayload[]
+  createdStageIds: string[]
+  createdAt: string
+  updatedAt: string
+  executedAt: string | null
+}
+
+export type CreateCompetitionStagePackagePlanPayload = CreateCompetitionStagePackagePayload & {
+  planName: string
+}
+
 export type CreateCompetitionTeamTemplatePayload = {
   templateCode: string
   templateName: string
@@ -263,6 +282,36 @@ export async function createCompetitionStagePackage(
       body: payload,
     },
   )
+}
+
+export async function listCompetitionStagePackagePlans(competitionId: string) {
+  return fetchJson<ListResponse<CompetitionStagePackagePlan>>(
+    `/competitions/${competitionId}/stage-package-plans`,
+  )
+}
+
+export async function createCompetitionStagePackagePlan(
+  competitionId: string,
+  payload: CreateCompetitionStagePackagePlanPayload,
+) {
+  return sendJson<CommandResponse<{ plan: CompetitionStagePackagePlan }>>(
+    `/competitions/${competitionId}/stage-package-plans`,
+    {
+      method: 'POST',
+      body: payload,
+    },
+  )
+}
+
+export async function executeCompetitionStagePackagePlan(planId: string) {
+  return sendJson<
+    CommandResponse<{
+      plan: CompetitionStagePackagePlan
+      stages: CompetitionStageSummary[]
+    }>
+  >(`/competitions/stage-package-plans/${planId}/execute`, {
+    method: 'POST',
+  })
 }
 
 export async function recalculateStage(stageId: string) {

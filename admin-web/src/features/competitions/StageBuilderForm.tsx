@@ -9,16 +9,21 @@ import {
 import { getAuthLookups, type AuthLookupStore } from '../auth/api'
 import {
   cloneCompetitionTeamTemplate,
+  createCompetitionStagePackagePlan,
   createCompetitionTeamTemplate,
   createCompetitionStage,
   createCompetitionStagePackage,
   deactivateCompetitionTeamTemplate,
+  executeCompetitionStagePackagePlan,
+  listCompetitionStagePackagePlans,
   listCompetitionTeamTemplates,
   updateCompetitionTeamTemplate,
   type CloneCompetitionTeamTemplatePayload,
+  type CompetitionStagePackagePlan,
   type CompetitionStagePackageCode,
   type CompetitionTeamTemplate,
   type CompetitionStageSummary,
+  type CreateCompetitionStagePackagePlanPayload,
   type CreateCompetitionStagePackagePayload,
   type CreateCompetitionTeamTemplatePayload,
   type CreateCompetitionStagePayload,
@@ -82,6 +87,7 @@ type StageDraft = {
 
 type StagePackageDraft = {
   packageCode: CompetitionStagePackageCode
+  planName: string
   firstTemplateId: string
   secondTemplateId: string
   stageDrafts: StagePackageStageDraft[]
@@ -119,6 +125,7 @@ function createInitialStagePackageDraft(input: {
 }): StagePackageDraft {
   return {
     packageCode: 'league_then_final',
+    planName: '',
     firstTemplateId: '',
     secondTemplateId: '',
     stageDrafts: createStagePackageStageDrafts({
@@ -258,6 +265,20 @@ function validateStagePackageDraft(
   return null
 }
 
+function validateStagePackagePlanDraft(
+  draft: StagePackageDraft,
+  templates: CompetitionTeamTemplate[],
+) {
+  const packageValidation = validateStagePackageDraft(draft, templates)
+  if (packageValidation) return packageValidation
+
+  if (!draft.planName.trim()) {
+    return 'Package plan name is required.'
+  }
+
+  return null
+}
+
 function validateTemplateDraft(draft: TemplateDraft) {
   if (!draft.templateCode.trim() || !codePattern.test(draft.templateCode)) {
     return 'Template code must use uppercase letters, numbers, and underscores.'
@@ -330,6 +351,12 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
     staleTime: 60_000,
   })
 
+  const stagePackagePlansQuery = useQuery({
+    queryKey: ['competition-stage-package-plans', input.competitionId],
+    queryFn: () => listCompetitionStagePackagePlans(input.competitionId),
+    staleTime: 60_000,
+  })
+
   const templates = useMemo(
     () =>
       [...(templatesQuery.data?.items ?? [])].sort((left, right) =>
@@ -340,6 +367,10 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
 
   const validationMessage = validateDraft(draft)
   const stagePackageValidationMessage = validateStagePackageDraft(stagePackageDraft, templates)
+  const stagePackagePlanValidationMessage = validateStagePackagePlanDraft(
+    stagePackageDraft,
+    templates,
+  )
   const templateValidationMessage = validateTemplateDraft(templateDraft)
 
   const createMutation = useMutation({
@@ -356,6 +387,28 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
       createCompetitionStagePackage(input.competitionId, payload),
     onSuccess: async (response) => {
       setStagePackageFeedback(response.command.message)
+      await input.onCreated()
+    },
+  })
+
+  const createStagePackagePlanMutation = useMutation({
+    mutationFn: (payload: CreateCompetitionStagePackagePlanPayload) =>
+      createCompetitionStagePackagePlan(input.competitionId, payload),
+    onSuccess: async (response) => {
+      setStagePackageFeedback(response.command.message)
+      await queryClient.invalidateQueries({
+        queryKey: ['competition-stage-package-plans', input.competitionId],
+      })
+    },
+  })
+
+  const executeStagePackagePlanMutation = useMutation({
+    mutationFn: executeCompetitionStagePackagePlan,
+    onSuccess: async (response) => {
+      setStagePackageFeedback(response.command.message)
+      await queryClient.invalidateQueries({
+        queryKey: ['competition-stage-package-plans', input.competitionId],
+      })
       await input.onCreated()
     },
   })
@@ -563,19 +616,37 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
     createTemplateMutation.mutate(buildTemplatePayload())
   }
 
-  function submitStagePackage() {
-    const nextValidation = validateStagePackageDraft(stagePackageDraft, templates)
-    if (nextValidation) return
-
-    const payload = buildStagePackagePayload({
+  function buildStagePackagePayloadFromDraft() {
+    return buildStagePackagePayload({
       packageCode: stagePackageDraft.packageCode,
       stageDrafts: stagePackageDraft.stageDrafts,
       templates: getSelectedStagePackageTemplates(),
     })
+  }
+
+  function submitStagePackage() {
+    const nextValidation = validateStagePackageDraft(stagePackageDraft, templates)
+    if (nextValidation) return
+
+    const payload = buildStagePackagePayloadFromDraft()
 
     if (!payload) return
 
     createStagePackageMutation.mutate(payload)
+  }
+
+  function submitStagePackagePlan() {
+    const nextValidation = validateStagePackagePlanDraft(stagePackageDraft, templates)
+    if (nextValidation) return
+
+    const payload = buildStagePackagePayloadFromDraft()
+
+    if (!payload) return
+
+    createStagePackagePlanMutation.mutate({
+      ...payload,
+      planName: stagePackageDraft.planName.trim(),
+    })
   }
 
   return (
@@ -728,11 +799,25 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
 
       <StagePackageBuilderSection
         draft={stagePackageDraft}
-        error={createStagePackageMutation.error}
+        error={
+          stagePackagePlansQuery.error ??
+          createStagePackageMutation.error ??
+          createStagePackagePlanMutation.error ??
+          executeStagePackagePlanMutation.error
+        }
         feedback={stagePackageFeedback}
-        isPending={createStagePackageMutation.isPending}
+        isLoadingPlans={stagePackagePlansQuery.isLoading}
+        isPending={
+          createStagePackageMutation.isPending ||
+          createStagePackagePlanMutation.isPending ||
+          executeStagePackagePlanMutation.isPending
+        }
+        plans={stagePackagePlansQuery.data?.items ?? []}
         templates={templates}
+        planValidationMessage={stagePackagePlanValidationMessage}
         validationMessage={stagePackageValidationMessage}
+        onExecutePlan={(planId) => executeStagePackagePlanMutation.mutate(planId)}
+        onSavePlan={submitStagePackagePlan}
         onSubmit={submitStagePackage}
         onUpdateStage={updateStagePackageStage}
         onUpdate={updateStagePackageDraft}
@@ -825,9 +910,14 @@ function StagePackageBuilderSection(input: {
   draft: StagePackageDraft
   error: unknown
   feedback: string | null
+  isLoadingPlans: boolean
   isPending: boolean
+  plans: CompetitionStagePackagePlan[]
   templates: CompetitionTeamTemplate[]
+  planValidationMessage: string | null
   validationMessage: string | null
+  onExecutePlan: (planId: string) => void
+  onSavePlan: () => void
   onSubmit: () => void
   onUpdateStage: (stageIndex: number, field: keyof StagePackageStageDraft, value: string) => void
   onUpdate: (field: keyof StagePackageDraft, value: string) => void
@@ -857,6 +947,13 @@ function StagePackageBuilderSection(input: {
               </option>
             ))}
           </select>
+        </label>
+        <label className="field-block">
+          <span>Package plan name</span>
+          <input
+            value={input.draft.planName}
+            onChange={(event) => input.onUpdate('planName', event.target.value)}
+          />
         </label>
         <label className="field-block">
           <span>Package team 1 template</span>
@@ -890,6 +987,9 @@ function StagePackageBuilderSection(input: {
 
       {input.validationMessage ? (
         <p className="validation-copy">{input.validationMessage}</p>
+      ) : null}
+      {!input.validationMessage && input.planValidationMessage ? (
+        <p className="validation-copy">{input.planValidationMessage}</p>
       ) : null}
 
       <div className="stacked-table">
@@ -974,6 +1074,14 @@ function StagePackageBuilderSection(input: {
 
       <div className="action-cluster">
         <button
+          className="ghost-button"
+          type="button"
+          disabled={Boolean(input.planValidationMessage) || input.isPending}
+          onClick={input.onSavePlan}
+        >
+          Save package plan
+        </button>
+        <button
           className="control-button"
           type="button"
           disabled={Boolean(input.validationMessage) || input.isPending}
@@ -985,13 +1093,75 @@ function StagePackageBuilderSection(input: {
         <StatusPill tone="neutral">2 stages</StatusPill>
       </div>
 
+      <article className="stacked-row stage-package-plan-library">
+        <div className="stacked-row-head">
+          <div>
+            <strong>Package plan library</strong>
+            <p className="queue-subtitle">Saved plans can be executed after approval.</p>
+          </div>
+          <StatusPill tone="neutral">{`${input.plans.length} plans`}</StatusPill>
+        </div>
+
+        {input.isLoadingPlans ? (
+          <ScreenState title="Package plans are loading" copy="Saved package plans are loading." />
+        ) : null}
+
+        {!input.isLoadingPlans && input.plans.length === 0 ? (
+          <EmptyState title="No package plans" copy="Saved package plans appear here." />
+        ) : null}
+
+        {input.plans.length > 0 ? (
+          <div className="stacked-table">
+            {input.plans.map((plan) => (
+              <article className="stacked-row" key={plan.planId}>
+                <div className="stacked-row-head">
+                  <div>
+                    <strong>{plan.planName}</strong>
+                    <p className="queue-subtitle">{formatState(plan.packageCode)}</p>
+                  </div>
+                  <StatusPill tone={plan.planStatus === 'draft' ? 'warning' : 'calm'}>
+                    {formatState(plan.planStatus)}
+                  </StatusPill>
+                </div>
+                <div className="key-grid">
+                  <div className="key-item">
+                    <span>Stages</span>
+                    <strong>{String(plan.stageDrafts.length)}</strong>
+                  </div>
+                  <div className="key-item">
+                    <span>Created stages</span>
+                    <strong>{String(plan.createdStageIds.length)}</strong>
+                  </div>
+                  <div className="key-item">
+                    <span>Updated</span>
+                    <strong>{plan.updatedAt.slice(0, 10)}</strong>
+                  </div>
+                </div>
+                {plan.planStatus === 'draft' ? (
+                  <div className="action-cluster">
+                    <button
+                      className="control-button"
+                      type="button"
+                      disabled={input.isPending}
+                      onClick={() => input.onExecutePlan(plan.planId)}
+                    >
+                      Execute {plan.planName}
+                    </button>
+                  </div>
+                ) : null}
+              </article>
+            ))}
+          </div>
+        ) : null}
+      </article>
+
       {input.feedback ? (
         <ScreenState title={input.feedback} copy="Competition detail is refreshed." />
       ) : null}
 
       {input.error ? (
         <ScreenState
-          title="Stage package could not be created"
+          title="Stage package action failed"
           copy={getErrorMessage(input.error)}
           tone="error"
         />
