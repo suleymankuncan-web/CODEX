@@ -962,6 +962,25 @@ C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI\admin-web
 - Frontend release check gecti: `npm.cmd run check:release` -> lint, build, 16 Playwright smoke testi ve `npm audit --omit=dev` (`found 0 vulnerabilities`); Vite chunk warning yok.
 - Siradaki mantikli adim: approval gate metinlerini ve UX dilini "karar kilidi" mantigiyla netlestirmek; submit/approve kullaniciya baska kisiden izin gibi degil, hazirliktan resmi karara gecis gibi hissettirmeli.
 
+## Son Competition Package Plan Decision-Lock UX
+
+25 Nisan 2026 itibariyla package plan approval gate UI dili karar kilidi mantigiyla netlestirildi.
+
+- Backend/API status degerleri degismedi; `submitted`, `approved`, `rejected` audit ve kontrat uyumu icin aynen kalir.
+- Frontend insan dili guncellendi:
+  - `submitted` status'u UI'da `decision ready` olarak gosterilir.
+  - `rejected` status'u UI'da `returned` olarak gosterilir.
+  - Draft aksiyonu `Submit` yerine `Mark ready for decision`.
+  - Submitted aksiyonlari `Approve decision` ve `Return for revision`.
+  - Review input label'i `Decision note`.
+  - Approved execute aksiyonu `Execute approved plan`.
+- Hedefli TDD dogrulamasi:
+  - Ilk kirmizi: `npm.cmd run test:e2e -- e2e/competition-surfaces.spec.ts -g "stage package plan"` build yenilenmeden eski UI metinlerinde fail verdi.
+  - Yesil: `npm.cmd run build; npm.cmd run test:e2e -- e2e/competition-surfaces.spec.ts -g "stage package plan"` -> 3 Playwright test.
+- Not: Frontend Playwright config'i `vite preview` kullandigi icin source degisikliginden sonra hedefli E2E oncesi build almak gerekir.
+- Frontend release check gecti: `npm.cmd run check:release` -> lint, build, 16 Playwright smoke testi ve `npm audit --omit=dev` (`found 0 vulnerabilities`).
+- Siradaki mantikli adim: returned/rejected planlar icin "clone as new draft" akisini planlamak. Boylece yanlis paket geri dondugunde sifirdan kurmak yerine kontrollu duzeltme taslagi acilir.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:

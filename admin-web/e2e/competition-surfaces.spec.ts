@@ -229,20 +229,22 @@ test('admin can save, submit, approve, and execute a stage package plan', async 
   const planLibrary = page.locator('.stage-package-plan-library')
   await expect(planLibrary.locator('strong').filter({ hasText: 'April regional package' })).toBeVisible()
   await expect(planLibrary.getByText('draft', { exact: true })).toBeVisible()
-  await expect(planLibrary.getByRole('button', { name: 'Execute April regional package' })).toHaveCount(0)
+  await expect(
+    planLibrary.getByRole('button', { name: 'Execute approved plan April regional package' }),
+  ).toHaveCount(0)
 
-  await planLibrary.getByRole('button', { name: 'Submit April regional package' }).click()
+  await planLibrary.getByRole('button', { name: 'Mark ready for decision April regional package' }).click()
 
   await expect(page.getByText('Competition stage package plan submitted for review')).toBeVisible()
   expect(submittedStagePackagePlanId).toBe(stagePackagePlanId)
-  await expect(planLibrary.getByText('submitted', { exact: true })).toBeVisible()
-  await planLibrary.getByLabel('Review note for April regional package').fill('Reviewed in planning meeting.')
-  await planLibrary.getByRole('button', { name: 'Approve April regional package' }).click()
+  await expect(planLibrary.getByText('decision ready', { exact: true })).toBeVisible()
+  await planLibrary.getByLabel('Decision note for April regional package').fill('Reviewed in planning meeting.')
+  await planLibrary.getByRole('button', { name: 'Approve decision April regional package' }).click()
 
   await expect(page.getByText('Competition stage package plan approved')).toBeVisible()
   expect(approvedStagePackagePlanId).toBe(stagePackagePlanId)
   await expect(planLibrary.getByText('approved', { exact: true })).toBeVisible()
-  await planLibrary.getByRole('button', { name: 'Execute April regional package' }).click()
+  await planLibrary.getByRole('button', { name: 'Execute approved plan April regional package' }).click()
 
   await expect(page.getByText('Competition stage package plan executed')).toBeVisible()
   expect(executedStagePackagePlanId).toBe(stagePackagePlanId)
@@ -284,16 +286,18 @@ test('admin can reject a submitted stage package plan', async ({ page }) => {
   await page.goto('/admin/competitions')
 
   const planLibrary = page.locator('.stage-package-plan-library')
-  await expect(planLibrary.getByText('submitted', { exact: true })).toBeVisible()
+  await expect(planLibrary.getByText('decision ready', { exact: true })).toBeVisible()
   await expect(planLibrary.getByRole('button', { name: 'Edit April regional package' })).toHaveCount(0)
   await expect(planLibrary.getByRole('button', { name: 'Cancel April regional package' })).toHaveCount(0)
-  await planLibrary.getByLabel('Review note for April regional package').fill('Dates need another pass.')
-  await planLibrary.getByRole('button', { name: 'Reject April regional package' }).click()
+  await planLibrary.getByLabel('Decision note for April regional package').fill('Dates need another pass.')
+  await planLibrary.getByRole('button', { name: 'Return for revision April regional package' }).click()
 
   await expect(page.getByText('Competition stage package plan rejected')).toBeVisible()
   expect(rejectedStagePackagePlanId).toBe(stagePackagePlanId)
-  await expect(planLibrary.getByText('rejected', { exact: true })).toBeVisible()
-  await expect(planLibrary.getByRole('button', { name: 'Execute April regional package' })).toHaveCount(0)
+  await expect(planLibrary.getByText('returned', { exact: true })).toBeVisible()
+  await expect(
+    planLibrary.getByRole('button', { name: 'Execute approved plan April regional package' }),
+  ).toHaveCount(0)
   await planLibrary.getByRole('button', { name: 'Show history April regional package' }).click()
   await expect(planLibrary.getByText('competition_stage_package_plan.rejected')).toBeVisible()
 })
@@ -341,7 +345,7 @@ test('admin can edit, inspect, and cancel a stage package plan draft', async ({ 
   expect(cancelledStagePackagePlanId).toBe(stagePackagePlanId)
   await expect(planLibrary.getByText('cancelled', { exact: true })).toBeVisible()
   await expect(
-    planLibrary.getByRole('button', { name: 'Execute April regional package revised' }),
+    planLibrary.getByRole('button', { name: 'Execute approved plan April regional package revised' }),
   ).toHaveCount(0)
 })
 

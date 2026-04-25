@@ -84,11 +84,12 @@ Audit remains the durable history trail.
 
 The existing package plan library grows in place:
 
-- Draft plan: `Edit`, `Cancel`, `Submit for review`, `Show history`.
-- Submitted plan: `Approve`, `Reject`, `Show history`.
-- Approved plan: `Execute`, `Show history`.
+- Draft plan: `Edit`, `Cancel`, `Mark ready for decision`, `Show history`.
+- Submitted plan: displayed as `decision ready`, with `Decision note`, `Approve decision`, `Return for revision`, `Show history`.
+- Approved plan: `Execute approved plan`, `Show history`.
 - Rejected/executed/cancelled plan: `Show history` only.
-- Optional review note input appears inline for submitted plans.
+- Rejected plans may be displayed as `returned` in the UI while the API status remains `rejected`.
+- Optional decision note input appears inline for submitted plans.
 
 ## Error Handling
 

@@ -61,6 +61,12 @@ const stageTypeOptions: CompetitionStageSummary['stageType'][] = [
   'custom',
 ]
 
+function formatPlanStatus(status: CompetitionStagePackagePlan['planStatus']) {
+  if (status === 'submitted') return 'decision ready'
+  if (status === 'rejected') return 'returned'
+  return formatState(status)
+}
+
 type TeamDraft = {
   teamCode: string
   teamName: string
@@ -1365,7 +1371,7 @@ function StagePackageBuilderSection(input: {
         <div className="stacked-row-head">
           <div>
             <strong>Package plan library</strong>
-            <p className="queue-subtitle">Saved plans can be executed after approval.</p>
+            <p className="queue-subtitle">Drafts are locked as decision-ready before execution.</p>
           </div>
           <StatusPill tone="neutral">{`${input.plans.length} plans`}</StatusPill>
         </div>
@@ -1398,7 +1404,7 @@ function StagePackageBuilderSection(input: {
                             : 'neutral'
                     }
                   >
-                    {formatState(plan.planStatus)}
+                    {formatPlanStatus(plan.planStatus)}
                   </StatusPill>
                 </div>
                 <div className="key-grid">
@@ -1580,7 +1586,7 @@ function StagePackageBuilderSection(input: {
                         disabled={input.isPending}
                         onClick={() => input.onSubmitPlan(plan.planId)}
                       >
-                        Submit {plan.planName}
+                        Mark ready for decision {plan.planName}
                       </button>
                     </>
                   ) : null}
@@ -1591,7 +1597,7 @@ function StagePackageBuilderSection(input: {
                       disabled={input.isPending}
                       onClick={() => input.onExecutePlan(plan.planId)}
                     >
-                      Execute {plan.planName}
+                      Execute approved plan {plan.planName}
                     </button>
                   ) : null}
                   <button
@@ -1607,7 +1613,7 @@ function StagePackageBuilderSection(input: {
                 {plan.planStatus === 'submitted' ? (
                   <div className="stacked-row">
                     <label className="field-block field-block-full">
-                      <span>{`Review note for ${plan.planName}`}</span>
+                      <span>{`Decision note for ${plan.planName}`}</span>
                       <input
                         value={reviewNotes[plan.planId] ?? ''}
                         onChange={(event) => updateReviewNote(plan.planId, event.target.value)}
@@ -1620,7 +1626,7 @@ function StagePackageBuilderSection(input: {
                         disabled={input.isPending}
                         onClick={() => input.onApprovePlan(plan.planId, getReviewPayload(plan.planId))}
                       >
-                        Approve {plan.planName}
+                        Approve decision {plan.planName}
                       </button>
                       <button
                         className="ghost-button"
@@ -1628,7 +1634,7 @@ function StagePackageBuilderSection(input: {
                         disabled={input.isPending}
                         onClick={() => input.onRejectPlan(plan.planId, getReviewPayload(plan.planId))}
                       >
-                        Reject {plan.planName}
+                        Return for revision {plan.planName}
                       </button>
                     </div>
                   </div>
