@@ -679,6 +679,24 @@ C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI\admin-web
 - Frontend release check gecti: `npm.cmd run check:release` -> lint, build, 5 Playwright smoke testi ve `npm audit --omit=dev` (`found 0 vulnerabilities`); Vite chunk warning yok.
 - Siradaki mantikli adim: store ve region manager competition read yuzeylerini scoped contribution detaylariyla acmak.
 
+## Son Competition Scoped Read Surfaces
+
+25 Nisan 2026 itibariyla store ve region manager competition read yuzeyleri scoped contribution detaylariyla acildi.
+
+- Uygulama plani eklendi: `docs/superpowers/plans/2026-04-25-competition-scoped-read-surfaces.md`.
+- Backend competition detail kontratina `storeContributions` eklendi.
+- Store contribution satirlari `companyIds`, `regionIds` ve `storeIds` read scope filtresiyle okunur.
+- Non-company kullanicilar icin `teams[].stores` artik forbidden vermek yerine scope disi magazalari redakte eder.
+- Aggregate takim skorlari gorunur kalir; magazaya ait contribution satirlari sadece yetkili scope icinden gelir.
+- Admin competition yuzeyi role-aware hale geldi: `SUPER_ADMIN` ve `HR_ADMIN` disindaki roller create/recalculate/finalize butonlarini gormez.
+- `REGION_MANAGER` `/admin/competitions` uzerinden read-only standing ve scoped contribution detaylarini gorebilir.
+- Store shell icine `/store/competitions` read-only route'u eklendi.
+- Store competition smoke testi store kullanicisinin sadece kendi scoped contribution satirlarini gordugunu ve write aksiyonlarini gormedigini korur.
+- Frontend smoke kapsami 5 testten 7 teste cikarildi.
+- Backend release check gecti: `npm.cmd run check:release` -> lint, 28 suite / 185 test, build ve `npm audit --omit=dev` (`found 0 vulnerabilities`).
+- Frontend release check gecti: `npm.cmd run check:release` -> lint, build, 7 Playwright smoke testi ve `npm audit --omit=dev` (`found 0 vulnerabilities`); Vite chunk warning yok.
+- Siradaki mantikli adim: IK/Admin icin stage/team template olusturma ekranini gercek form akisina cevirmek; DB/API var ama UI tarafindaki yonetim hatti henuz tam kapanmadi.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:
