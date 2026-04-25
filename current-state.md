@@ -659,6 +659,26 @@ C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI\admin-web
 - Not: browser dogrulamasi icin backend 3000 portunda source ustunden `npx ts-node src/main.ts` ile yeniden kaldirildi.
 - Siradaki mantikli adim: closed ranking uzerinden store/region leaderboard varyantlarini planlamak; bolge ligleri icin store ici + Turkiye geneli temelinin ustune bolge kapsamini eklemek.
 
+## Son Competition Stage Foundation
+
+25 Nisan 2026 itibariyla Competition + Stage foundation uygulandi.
+
+- Uygulama plani eklendi: `docs/superpowers/plans/2026-04-25-competition-stage-foundation.md`.
+- `HR_ADMIN` rolu ve `competition.read` / `competition.manage` permission'lari eklendi.
+- Keycloak realm ve setup script role/scope katalog sozlesmesiyle hizalandi.
+- Competition, stage, team template, team membership, store score snapshot, team score snapshot ve warning tablolari eklendi.
+- V1 skor modeli kapali store KPI snapshot kaynaklarindan hesaplanir.
+- Takim skoru stage icindeki valid store-day skorlarinin ortalamasidir.
+- Eksik gunluk magaza verisi ve eksik BM/VM checklist verisi uyaridir; sifir puan yazilmaz.
+- Checklist agirligi baska metriklere dagitilmaz.
+- IK/Admin finalization warning varken yazili override gerekcesi ister ve audit yazar.
+- Backend API eklendi: `/api/competitions`, stage create, recalculate ve finalize endpointleri.
+- Admin frontend `/admin/competitions` yuzeyi eklendi; `HR_ADMIN` landing bu yuzeye yonlenir.
+- Frontend smoke kapsami `/admin/competitions` icin genisledi.
+- Backend release check gecti: `npm.cmd run check:release` -> lint, 28 suite / 184 test, build ve `npm audit --omit=dev` (`found 0 vulnerabilities`).
+- Frontend release check gecti: `npm.cmd run check:release` -> lint, build, 5 Playwright smoke testi ve `npm audit --omit=dev` (`found 0 vulnerabilities`); Vite chunk warning yok.
+- Siradaki mantikli adim: store ve region manager competition read yuzeylerini scoped contribution detaylariyla acmak.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:
