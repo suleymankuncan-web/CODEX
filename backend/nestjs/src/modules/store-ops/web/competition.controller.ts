@@ -4,6 +4,7 @@ import { CompetitionService } from "../application/competition.service";
 import { CloneCompetitionTeamTemplateDto } from "./dto/clone-competition-team-template.dto";
 import { CreateCompetitionDto } from "./dto/create-competition.dto";
 import { CreateCompetitionStageDto } from "./dto/create-competition-stage.dto";
+import { CreateCompetitionStagePackageDto } from "./dto/create-competition-stage-package.dto";
 import { CreateCompetitionTeamTemplateDto } from "./dto/create-competition-team-template.dto";
 import { FinalizeCompetitionStageDto } from "./dto/finalize-competition-stage.dto";
 import { ListCompetitionTeamTemplatesQueryDto } from "./dto/list-competition-team-templates.query";
@@ -145,6 +146,20 @@ export class CompetitionController {
     @Body() body: CreateCompetitionStageDto,
   ) {
     return this.competitionService.createStage({
+      actorUserId: request.user.userId,
+      competitionId,
+      ...body,
+    });
+  }
+
+  @Post(":competitionId/stage-packages")
+  @RequireRoles("SUPER_ADMIN", "HR_ADMIN")
+  async createStagePackage(
+    @Req() request: CompetitionRequest,
+    @Param("competitionId") competitionId: string,
+    @Body() body: CreateCompetitionStagePackageDto,
+  ) {
+    return this.competitionService.createStagePackage({
       actorUserId: request.user.userId,
       competitionId,
       ...body,

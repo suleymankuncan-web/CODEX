@@ -13,6 +13,7 @@ import {
   CompetitionTeamScore,
   CompetitionWarning,
   CloneCompetitionTeamTemplateInput,
+  CreateCompetitionStagePackageInput,
   CreateCompetitionStageInput,
   CreateCompetitionTeamTemplateInput,
   DeactivateCompetitionTeamTemplateInput,
@@ -582,99 +583,139 @@ export class CompetitionRepository {
 
   async createStageWithTeams(input: CreateCompetitionStageInput): Promise<CompetitionStage> {
     return this.databaseService.withTransaction(async (client) => {
-      const stageResult = await client.query<CompetitionStageRow>(
-        `
-          INSERT INTO ops.competition_stage (
-            competition_id,
-            stage_code,
-            stage_name,
-            stage_order,
-            stage_type,
-            starts_on,
-            ends_on,
-            lifecycle_state,
-            advancement_rule_json
-          )
-          VALUES ($1::uuid, $2, $3, $4::int, $5, $6::date, $7::date, 'active', $8::jsonb)
-          RETURNING
-            competition_stage_id,
-            competition_id,
-            stage_code,
-            stage_name,
-            stage_order,
-            stage_type,
-            starts_on,
-            ends_on,
-            lifecycle_state,
-            finalization_state
-        `,
-        [
-          input.competitionId,
-          input.stageCode,
-          input.stageName,
-          input.stageOrder,
-          input.stageType,
-          input.startsOn,
-          input.endsOn,
-          JSON.stringify(buildStageAdvancementRule(input.stagePresetCode)),
-        ],
-      );
+      return this.insertStageWithTeams(client, input);
+    });
+  }
 
-      const stage = stageResult.rows[0];
+  async createStagePackage(
+    input: CreateCompetitionStagePackageInput,
+  ): Promise<CompetitionStage[]> {
+    return this.databaseService.withTransaction(async (client) => {
+      const stages: CompetitionStage[] = [];
 
-      for (let index = 0; index < input.teams.length; index += 1) {
-        const team = input.teams[index];
-        const teamResult = await client.query<{ competition_team_id: string }>(
-          `
-            INSERT INTO ops.competition_team (
-              competition_stage_id,
-              source_template_id,
-              team_code,
-              team_name,
-              team_order
-            )
-            VALUES ($1::uuid, $2::uuid, $3, $4, $5::int)
-            RETURNING competition_team_id
-          `,
-          [
-            stage.competition_stage_id,
-            team.sourceTemplateId ?? null,
-            team.teamCode,
-            team.teamName,
-            index + 1,
-          ],
-        );
+      for (const stageInput of input.stages) {
+        const stage = await this.insertStageWithTeams(client, {
+          actorUserId: input.actorUserId,
+          competitionId: input.competitionId,
+          ...stageInput,
+        });
 
-        await client.query(
-          `
-            INSERT INTO ops.competition_team_store (
-              competition_team_id,
-              store_id,
-              added_manually
-            )
-            SELECT $1::uuid, unnest($2::uuid[]), TRUE
-            ON CONFLICT DO NOTHING
-          `,
-          [teamResult.rows[0].competition_team_id, team.storeIds],
-        );
+        stages.push(stage);
       }
 
       await writeCompetitionAudit(client, {
         actorUserId: input.actorUserId,
-        eventType: "competition_stage.created",
-        entityName: "ops.competition_stage",
-        entityId: stage.competition_stage_id,
+        eventType: "competition_stage_package.created",
+        entityName: "ops.competition",
+        entityId: input.competitionId,
         metadata: {
           competitionId: input.competitionId,
-          stageCode: input.stageCode,
-          stagePresetCode: input.stagePresetCode ?? null,
-          teamCount: input.teams.length,
-          storeCount: input.teams.reduce((sum, team) => sum + team.storeIds.length, 0),
+          packageCode: input.packageCode,
+          stageCount: stages.length,
+          stageCodes: stages.map((stage) => stage.stageCode),
         },
       });
 
-      return mapStage(stage);
+      return stages;
     });
+  }
+
+  private async insertStageWithTeams(
+    client: Queryable,
+    input: CreateCompetitionStageInput,
+  ): Promise<CompetitionStage> {
+    const stageResult = await client.query<CompetitionStageRow>(
+      `
+        INSERT INTO ops.competition_stage (
+          competition_id,
+          stage_code,
+          stage_name,
+          stage_order,
+          stage_type,
+          starts_on,
+          ends_on,
+          lifecycle_state,
+          advancement_rule_json
+        )
+        VALUES ($1::uuid, $2, $3, $4::int, $5, $6::date, $7::date, 'active', $8::jsonb)
+        RETURNING
+          competition_stage_id,
+          competition_id,
+          stage_code,
+          stage_name,
+          stage_order,
+          stage_type,
+          starts_on,
+          ends_on,
+          lifecycle_state,
+          finalization_state
+      `,
+      [
+        input.competitionId,
+        input.stageCode,
+        input.stageName,
+        input.stageOrder,
+        input.stageType,
+        input.startsOn,
+        input.endsOn,
+        JSON.stringify(buildStageAdvancementRule(input.stagePresetCode)),
+      ],
+    );
+
+    const stage = stageResult.rows[0];
+
+    for (let index = 0; index < input.teams.length; index += 1) {
+      const team = input.teams[index];
+      const teamResult = await client.query<{ competition_team_id: string }>(
+        `
+          INSERT INTO ops.competition_team (
+            competition_stage_id,
+            source_template_id,
+            team_code,
+            team_name,
+            team_order
+          )
+          VALUES ($1::uuid, $2::uuid, $3, $4, $5::int)
+          RETURNING competition_team_id
+        `,
+        [
+          stage.competition_stage_id,
+          team.sourceTemplateId ?? null,
+          team.teamCode,
+          team.teamName,
+          index + 1,
+        ],
+      );
+
+      await client.query(
+        `
+          INSERT INTO ops.competition_team_store (
+            competition_team_id,
+            store_id,
+            added_manually
+          )
+          SELECT $1::uuid, unnest($2::uuid[]), TRUE
+          ON CONFLICT DO NOTHING
+        `,
+        [teamResult.rows[0].competition_team_id, team.storeIds],
+      );
+    }
+
+    await writeCompetitionAudit(client, {
+      actorUserId: input.actorUserId,
+      eventType: "competition_stage.created",
+      entityName: "ops.competition_stage",
+      entityId: stage.competition_stage_id,
+      metadata: {
+        competitionId: input.competitionId,
+        stageCode: input.stageCode,
+        stagePresetCode: input.stagePresetCode ?? null,
+        teamCount: input.teams.length,
+        storeCount: input.teams.reduce((sum, team) => sum + team.storeIds.length, 0),
+      },
+    });
+
+    return mapStage(stage);
   }
 
   async recalculateStage(input: RecalculateCompetitionStageInput) {

@@ -6,6 +6,7 @@ import {
   CompetitionScope,
   CloneCompetitionTeamTemplateInput,
   CreateCompetitionInput,
+  CreateCompetitionStagePackageInput,
   CreateCompetitionStageInput,
   CreateCompetitionTeamTemplateInput,
   DeactivateCompetitionTeamTemplateInput,
@@ -175,19 +176,7 @@ export class CompetitionService {
   }
 
   async createStage(input: CreateCompetitionStageInput) {
-    if (input.endsOn < input.startsOn) {
-      throw new BadRequestException("Stage end date must be on or after start date");
-    }
-
-    if (input.teams.length < 2) {
-      throw new BadRequestException("At least two teams are required for a competition stage");
-    }
-
-    for (const team of input.teams) {
-      if (team.storeIds.length === 0) {
-        throw new BadRequestException(`Team ${team.teamCode} must include at least one store`);
-      }
-    }
+    assertValidStageDraft(input);
 
     const stage = await this.competitionRepository.createStageWithTeams(input);
 
@@ -195,6 +184,31 @@ export class CompetitionService {
       status: "created",
       message: "Competition stage created",
       data: { stage },
+    });
+  }
+
+  async createStagePackage(input: CreateCompetitionStagePackageInput) {
+    if (input.stages.length < 2) {
+      throw new BadRequestException("Stage package must include at least two stages");
+    }
+
+    const stageCodes = input.stages.map((stage) => stage.stageCode);
+    const uniqueStageCodes = new Set(stageCodes);
+
+    if (uniqueStageCodes.size !== stageCodes.length) {
+      throw new BadRequestException("Stage package must not include duplicate stage codes");
+    }
+
+    for (const stage of input.stages) {
+      assertValidStageDraft(stage);
+    }
+
+    const stages = await this.competitionRepository.createStagePackage(input);
+
+    return buildCommandResponse({
+      status: "created",
+      message: "Competition stage package created",
+      data: { stages },
     });
   }
 
@@ -247,4 +261,20 @@ function isStoreVisibleToScope(
     scope.storeIds.includes(store.storeId) ||
     scope.regionIds.includes(store.regionId)
   );
+}
+
+function assertValidStageDraft(input: Pick<CreateCompetitionStageInput, "startsOn" | "endsOn" | "teams">) {
+  if (input.endsOn < input.startsOn) {
+    throw new BadRequestException("Stage end date must be on or after start date");
+  }
+
+  if (input.teams.length < 2) {
+    throw new BadRequestException("At least two teams are required for a competition stage");
+  }
+
+  for (const team of input.teams) {
+    if (team.storeIds.length === 0) {
+      throw new BadRequestException(`Team ${team.teamCode} must include at least one store`);
+    }
+  }
 }

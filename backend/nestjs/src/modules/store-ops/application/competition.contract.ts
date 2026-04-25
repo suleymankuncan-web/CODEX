@@ -23,6 +23,8 @@ export type CompetitionStagePresetCode =
   | "first_half_qualifier"
   | "final_showdown";
 
+export type CompetitionStagePackageCode = "league_then_final";
+
 export type CompetitionWarningCode =
   | "missing_daily_store_data"
   | "missing_bm_checklist"
@@ -167,6 +169,18 @@ export type CreateCompetitionStageInput = {
     sourceTemplateId?: string;
     storeIds: string[];
   }>;
+};
+
+export type CreateCompetitionStagePackageStageInput = Omit<
+  CreateCompetitionStageInput,
+  "actorUserId" | "competitionId"
+>;
+
+export type CreateCompetitionStagePackageInput = {
+  actorUserId: string;
+  competitionId: string;
+  packageCode: CompetitionStagePackageCode;
+  stages: CreateCompetitionStagePackageStageInput[];
 };
 
 export type CreateCompetitionTeamTemplateInput = {

@@ -470,6 +470,123 @@ describe("CompetitionRepository", () => {
     expect(serializedParams).toContain("stagePresetCode");
   });
 
+  it("creates package stages in one transaction and writes package audit metadata", async () => {
+    const { repository, databaseService, client, executedSql, executedParams } =
+      createRepositoryHarness();
+    let stageInsertCount = 0;
+    let teamInsertCount = 0;
+
+    client.query.mockImplementation(async (sql: string, params: unknown[] = []) => {
+      executedSql.push(sql);
+      executedParams.push(params);
+
+      if (sql.includes("INSERT INTO ops.competition_stage")) {
+        stageInsertCount += 1;
+        const isFinal = stageInsertCount === 2;
+
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              competition_stage_id: isFinal
+                ? "33333333-3333-4333-8333-333333333333"
+                : "22222222-2222-4222-8222-222222222222",
+              competition_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              stage_code: isFinal ? "FINAL_SHOWDOWN" : "REGION_LEAGUE",
+              stage_name: isFinal ? "Final Showdown" : "Regional League",
+              stage_order: isFinal ? 2 : 1,
+              stage_type: isFinal ? "final" : "league",
+              starts_on: isFinal ? "2026-05-16" : "2026-05-01",
+              ends_on: "2026-05-31",
+              lifecycle_state: "active",
+              finalization_state: null,
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("INSERT INTO ops.competition_team ")) {
+        teamInsertCount += 1;
+
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              competition_team_id: `44444444-4444-4444-8444-44444444444${teamInsertCount}`,
+            },
+          ],
+        };
+      }
+
+      return { rowCount: 1, rows: [] };
+    });
+
+    const stages = await repository.createStagePackage({
+      actorUserId: "11111111-1111-4111-8111-111111111111",
+      competitionId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      packageCode: "league_then_final",
+      stages: [
+        {
+          stagePresetCode: "region_league",
+          stageCode: "REGION_LEAGUE",
+          stageName: "Regional League",
+          stageOrder: 1,
+          stageType: "league",
+          startsOn: "2026-05-01",
+          endsOn: "2026-05-31",
+          teams: [
+            {
+              teamCode: "MARMARA_A",
+              teamName: "Marmara A",
+              sourceTemplateId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              storeIds: ["bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"],
+            },
+            {
+              teamCode: "MARMARA_B",
+              teamName: "Marmara B",
+              sourceTemplateId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+              storeIds: ["dddddddd-dddd-4ddd-8ddd-dddddddddddd"],
+            },
+          ],
+        },
+        {
+          stagePresetCode: "final_showdown",
+          stageCode: "FINAL_SHOWDOWN",
+          stageName: "Final Showdown",
+          stageOrder: 2,
+          stageType: "final",
+          startsOn: "2026-05-16",
+          endsOn: "2026-05-31",
+          teams: [
+            {
+              teamCode: "MARMARA_A",
+              teamName: "Marmara A",
+              sourceTemplateId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              storeIds: ["bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"],
+            },
+            {
+              teamCode: "MARMARA_B",
+              teamName: "Marmara B",
+              sourceTemplateId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+              storeIds: ["dddddddd-dddd-4ddd-8ddd-dddddddddddd"],
+            },
+          ],
+        },
+      ],
+    });
+
+    const serializedParams = JSON.stringify(executedParams);
+
+    expect(databaseService.withTransaction).toHaveBeenCalledTimes(1);
+    expect(stageInsertCount).toBe(2);
+    expect(stages).toHaveLength(2);
+    expect(executedSql.join("\n")).toContain("INSERT INTO audit.event_log");
+    expect(serializedParams).toContain("competition_stage_package.created");
+    expect(serializedParams).toContain("league_then_final");
+    expect(serializedParams).toContain("REGION_LEAGUE");
+    expect(serializedParams).toContain("FINAL_SHOWDOWN");
+  });
+
   it("recalculates stage scores from completed one-day store snapshots and checklist facts", async () => {
     const { repository, executedSql } = createRepositoryHarness();
 
