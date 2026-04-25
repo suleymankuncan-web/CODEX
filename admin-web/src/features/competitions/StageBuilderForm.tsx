@@ -21,6 +21,11 @@ import {
   type CreateCompetitionStagePayload,
   type UpdateCompetitionTeamTemplatePayload,
 } from './api'
+import {
+  buildStagePresetDraft,
+  stagePresetOptions,
+  type StagePresetCode,
+} from './stage-presets'
 import { formatState, getErrorMessage } from '../../lib/format'
 
 const codePattern = /^[A-Z0-9_]+$/
@@ -56,6 +61,7 @@ type TemplateCloneDraft = Omit<TemplateDraft, 'storeIds'> & {
 }
 
 type StageDraft = {
+  stagePresetCode?: StagePresetCode
   stageCode: string
   stageName: string
   stageOrder: string
@@ -291,6 +297,28 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
     setDraft((current) => ({ ...current, [field]: value }))
   }
 
+  function applyStagePreset(presetCode: string) {
+    setFeedback(null)
+
+    if (!presetCode) {
+      setDraft((current) => ({ ...current, stagePresetCode: undefined }))
+      return
+    }
+
+    const presetDraft = buildStagePresetDraft({
+      competitionStartsOn: input.competitionStartsOn,
+      competitionEndsOn: input.competitionEndsOn,
+      presetCode: presetCode as StagePresetCode,
+    })
+
+    if (!presetDraft) return
+
+    setDraft((current) => ({
+      ...current,
+      ...presetDraft,
+    }))
+  }
+
   function updateTeam(index: number, patch: Partial<TeamDraft>) {
     setFeedback(null)
     setDraft((current) => ({
@@ -343,6 +371,7 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
 
   function buildPayload(): CreateCompetitionStagePayload {
     return {
+      ...(draft.stagePresetCode ? { stagePresetCode: draft.stagePresetCode } : {}),
       stageCode: draft.stageCode.trim(),
       stageName: draft.stageName.trim(),
       stageOrder: Number(draft.stageOrder),
@@ -398,6 +427,20 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
 
       <article className="stacked-row">
         <div className="form-grid">
+          <label className="field-block">
+            <span>Stage preset</span>
+            <select
+              value={draft.stagePresetCode ?? ''}
+              onChange={(event) => applyStagePreset(event.target.value)}
+            >
+              <option value="">Manual stage</option>
+              {stagePresetOptions.map((preset) => (
+                <option key={preset.code} value={preset.code}>
+                  {preset.label}
+                </option>
+              ))}
+            </select>
+          </label>
           <label className="field-block">
             <span>Stage code</span>
             <input

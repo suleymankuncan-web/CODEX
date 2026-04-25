@@ -1,4 +1,5 @@
 import { fetchJson, sendJson } from '../../lib/api'
+import type { StagePresetCode } from './stage-presets'
 
 type ListResponse<T> = {
   items: T[]
@@ -121,6 +122,7 @@ export type CompetitionDetail = {
 }
 
 export type CreateCompetitionStagePayload = {
+  stagePresetCode?: StagePresetCode
   stageCode: string
   stageName: string
   stageOrder: number

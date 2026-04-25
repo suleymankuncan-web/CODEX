@@ -91,6 +91,46 @@ test('admin can create a competition stage with team store assignments', async (
   })
 })
 
+test('admin can apply a stage format preset before creating a stage', async ({ page }) => {
+  let createdStagePayload: unknown = null
+  await page.unroute('**/api/competitions**')
+  await routeCompetitionApi(page, authSessionFixture, competitionDetailFixture, {
+    onCreateStage: (payload) => {
+      createdStagePayload = payload
+    },
+  })
+
+  await page.goto('/admin/competitions')
+
+  await page.getByLabel('Stage preset').selectOption('region_league')
+  await expect(page.getByLabel('Stage code')).toHaveValue('REGION_LEAGUE')
+  await expect(page.getByLabel('Stage name')).toHaveValue('Regional League')
+  await expect(page.getByLabel('Stage type')).toHaveValue('league')
+  await expect(page.getByLabel('Stage starts')).toHaveValue('2026-04-22')
+  await expect(page.getByLabel('Stage ends')).toHaveValue('2026-04-24')
+
+  const teamOne = page.locator('.stage-builder-team').filter({ hasText: 'Team 1' })
+  const teamTwo = page.locator('.stage-builder-team').filter({ hasText: 'Team 2' })
+  await page.getByLabel('Team 1 code').fill('MARMARA_A')
+  await page.getByLabel('Team 1 name').fill('Marmara A')
+  await teamOne.getByLabel('DEMO-101 - Demo Store 101 - Marmara').check()
+  await page.getByLabel('Team 2 code').fill('MARMARA_B')
+  await page.getByLabel('Team 2 name').fill('Marmara B')
+  await teamTwo.getByLabel('DEMO-102 - Demo Store 102 - Marmara').check()
+  await page.getByRole('button', { name: 'Create stage' }).click()
+
+  await expect(page.getByText('Competition stage created')).toBeVisible()
+  expect(createdStagePayload).toMatchObject({
+    stagePresetCode: 'region_league',
+    stageCode: 'REGION_LEAGUE',
+    stageName: 'Regional League',
+    stageOrder: 1,
+    stageType: 'league',
+    startsOn: '2026-04-22',
+    endsOn: '2026-04-24',
+  })
+})
+
 test('admin creates a team template and applies it to a stage team', async ({ page }) => {
   let createdTemplatePayload: unknown = null
   let createdStagePayload: unknown = null
