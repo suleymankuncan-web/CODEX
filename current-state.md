@@ -798,6 +798,31 @@ C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI\admin-web
 - Frontend release check gecti: `npm.cmd run check:release` -> lint, build, 12 Playwright smoke testi ve `npm audit --omit=dev` (`found 0 vulnerabilities`); Vite chunk warning yok.
 - Siradaki mantikli adim: preset setlerini takim template setleriyle baglayan bir "stage package" veya "competition plan wizard" tasarlamak. Bu, bolge ligi + final gibi cok asamali kurguyu tek tek stage olusturmadan hazirlatir.
 
+## Son Competition Plan Wizard V1
+
+25 Nisan 2026 itibariyla competition plan wizard / stage package V1 hatti acildi.
+
+- Uygulama plani eklendi: `docs/superpowers/plans/2026-04-25-competition-plan-wizard-v1.md`.
+- Backend `POST /api/competitions/:competitionId/stage-packages` endpointi eklendi.
+- V1 paket kodu: `league_then_final`.
+- Paket iki stage tasir:
+  - `region_league` / `REGION_LEAGUE`
+  - `final_showdown` / `FINAL_SHOWDOWN`
+- Backend paket create akisi tum stage'leri tek DB transaction icinde olusturur; ikinci stage veya team insert patlarsa ilk stage DB'de tek basina kalmaz.
+- Tekil stage olusturma davranisi korundu; `createStageWithTeams` ic insert helper'a tasindi ve eski endpoint ayni sozlesmeyle calisir.
+- Service validation ortaklastirildi: stage date araligi, minimum iki takim, takim basina en az bir store kontrolu hem tek stage hem paket icin gecerlidir.
+- Paket icinde duplicate `stageCode` reddedilir.
+- Audit event eklendi: `competition_stage_package.created`; metadata icinde `packageCode`, `stageCount` ve `stageCodes` bulunur.
+- Frontend `admin-web/src/features/competitions/stage-packages.ts` helper'i eklendi; mevcut stage preset tarih mantigini kullanarak package payload'i uretir.
+- Stage builder icine `Stage package` bolumu eklendi; HR/Admin iki aktif team template secer ve `Create stage package` ile lig + final stage'lerini tek komutla olusturur.
+- Playwright competition smoke testi paket payload'inda `region_league` ve `final_showdown` stage'lerinin birlikte gonderildigini korur.
+- TDD kirmizi dogrulamasi yapildi: backend `createStagePackage` yokken Jest TypeScript compile fail verdi; frontend `Stage package` kontrolu yokken Playwright fail verdi.
+- Hedefli backend dogrulama gecti: `npm.cmd test -- src/modules/store-ops/application/competition.service.spec.ts src/modules/store-ops/infrastructure/competition.repository.spec.ts --runInBand` -> 2 suite / 25 test.
+- Hedefli frontend dogrulama gecti: `npm.cmd run build; npx.cmd playwright test e2e/competition-surfaces.spec.ts` -> 8 Playwright test.
+- Backend release check gecti: `npm.cmd run check:release` -> lint, 28 suite / 203 test, build ve `npm audit --omit=dev` (`found 0 vulnerabilities`).
+- Frontend release check gecti: `npm.cmd run check:release` -> lint, build, 13 Playwright smoke testi ve `npm audit --omit=dev` (`found 0 vulnerabilities`); Vite chunk warning yok.
+- Siradaki mantikli adim: plan wizard'a submit oncesi preview/duzenleme adimi eklemek. Boylece IK iki stage'in tarih, takim ve template baglarini tek ekranda onaylayip gerekirse paketi gondermeden ince ayar yapabilir.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:
@@ -819,6 +844,7 @@ Store ops:
 - `backend/nestjs/src/modules/store-ops/application/competition.service.ts`
 - `backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.ts`
 - `backend/nestjs/src/modules/store-ops/web/competition.controller.ts`
+- `backend/nestjs/src/modules/store-ops/web/dto/create-competition-stage-package.dto.ts`
 - `backend/nestjs/src/modules/store-ops/web/dto/clone-competition-team-template.dto.ts`
 - `backend/nestjs/src/modules/store-ops/web/dto/list-competition-team-templates.query.ts`
 - `backend/nestjs/src/modules/store-ops/web/dto/update-competition-team-template.dto.ts`
@@ -833,6 +859,7 @@ Frontend:
 - `admin-web/src/features/auth/api.ts`
 - `admin-web/src/features/competitions/api.ts`
 - `admin-web/src/features/competitions/StageBuilderForm.tsx`
+- `admin-web/src/features/competitions/stage-packages.ts`
 - `admin-web/src/features/competitions/stage-presets.ts`
 - `admin-web/src/pages/AuthDashboardPage.tsx`
 - `admin-web/src/pages/CompetitionDashboardPage.tsx`
