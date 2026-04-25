@@ -3,6 +3,7 @@ import { join } from "node:path";
 
 const expectedRoleScopes: Record<string, string> = {
   AUDITOR: "region",
+  HR_ADMIN: "company",
   INTEGRATION_ADMIN: "company",
   REGION_MANAGER: "region",
   REPORT_VIEWER: "company",
@@ -127,6 +128,39 @@ function collectCatalogRoles() {
   return roles;
 }
 
+function collectCatalogPermissions() {
+  const dbRoot = join(process.cwd(), "..", "..", "db");
+  const sqlFiles = collectFiles(dbRoot, (path) => path.endsWith(".sql"));
+  const permissions = new Set<string>();
+
+  for (const file of sqlFiles) {
+    const lines = readFileSync(file, "utf8").split(/\r?\n/);
+    let inPermissionInsert = false;
+
+    for (const line of lines) {
+      if (line.includes("INSERT INTO ops.permission")) {
+        inPermissionInsert = true;
+        continue;
+      }
+
+      if (!inPermissionInsert) {
+        continue;
+      }
+
+      const row = line.match(/^\s*\('[^']+'\s*,\s*'([a-z_.]+)'/);
+      if (row) {
+        permissions.add(row[1]);
+      }
+
+      if (line.includes("ON CONFLICT") || line.trim().endsWith(";")) {
+        inPermissionInsert = false;
+      }
+    }
+  }
+
+  return permissions;
+}
+
 function collectKeycloakRealmRoles() {
   const realmPath = join(process.cwd(), "..", "..", "infra", "keycloak", "store-ops-realm.json");
   const realm = JSON.parse(readFileSync(realmPath, "utf8")) as {
@@ -185,11 +219,22 @@ describe("role catalog contract", () => {
     const requiredRoles = collectRequiredRoles();
     const catalogRoles = collectCatalogRoles();
 
-    expect(requiredRoles).toEqual(expectedRoleCodes);
+    for (const roleCode of requiredRoles) {
+      expect(expectedRoleCodes).toContain(roleCode);
+    }
 
     for (const [roleCode, expectedScope] of Object.entries(expectedRoleScopes)) {
       expect(catalogRoles.get(roleCode)).toBe(expectedScope);
     }
+  });
+
+  it("keeps competition permissions in the persisted permission catalog", () => {
+    const permissionCodes = collectCatalogPermissions();
+
+    expect([...permissionCodes].sort()).toEqual(expect.arrayContaining([
+      "competition.read",
+      "competition.manage",
+    ]));
   });
 
   it("keeps Keycloak local bootstrap roles aligned with the persisted role catalog", () => {

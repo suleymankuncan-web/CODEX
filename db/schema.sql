@@ -150,6 +150,87 @@ CREATE TABLE ops.user_action_store_assignment (
     CHECK (end_at IS NULL OR end_at >= start_at)
 );
 
+CREATE TABLE ops.competition (
+    competition_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    competition_code TEXT NOT NULL UNIQUE,
+    competition_name TEXT NOT NULL,
+    description TEXT,
+    competition_type TEXT NOT NULL,
+    lifecycle_state TEXT NOT NULL DEFAULT 'draft',
+    owner_user_id TEXT NOT NULL,
+    starts_on DATE NOT NULL,
+    ends_on DATE NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (competition_type IN ('region_challenge', 'region_league', 'campaign')),
+    CHECK (lifecycle_state IN ('draft', 'published', 'active', 'completed', 'cancelled')),
+    CHECK (ends_on >= starts_on)
+);
+
+CREATE TABLE ops.competition_stage (
+    competition_stage_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    competition_id UUID NOT NULL REFERENCES ops.competition(competition_id) ON DELETE CASCADE,
+    stage_code TEXT NOT NULL,
+    stage_name TEXT NOT NULL,
+    stage_order INTEGER NOT NULL,
+    stage_type TEXT NOT NULL,
+    starts_on DATE NOT NULL,
+    ends_on DATE NOT NULL,
+    lifecycle_state TEXT NOT NULL DEFAULT 'draft',
+    score_rule TEXT NOT NULL DEFAULT 'average_daily_store_score',
+    advancement_rule_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    finalized_by_user_id TEXT,
+    finalized_at TIMESTAMPTZ,
+    finalization_state TEXT,
+    finalization_note TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (competition_id, stage_code),
+    UNIQUE (competition_id, stage_order),
+    CHECK (stage_type IN ('qualifier', 'league', 'quarter_final', 'semi_final', 'final', 'custom')),
+    CHECK (lifecycle_state IN ('draft', 'scheduled', 'active', 'awaiting_review', 'finalized', 'cancelled')),
+    CHECK (score_rule = 'average_daily_store_score'),
+    CHECK (finalization_state IS NULL OR finalization_state IN ('clean', 'warnings_present', 'overridden')),
+    CHECK (ends_on >= starts_on)
+);
+
+CREATE TABLE ops.competition_team_template (
+    competition_team_template_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    template_code TEXT NOT NULL UNIQUE,
+    template_name TEXT NOT NULL,
+    description TEXT,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE ops.competition_team_template_store (
+    competition_team_template_id UUID NOT NULL REFERENCES ops.competition_team_template(competition_team_template_id) ON DELETE CASCADE,
+    store_id UUID NOT NULL REFERENCES ops.store(store_id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (competition_team_template_id, store_id)
+);
+
+CREATE TABLE ops.competition_team (
+    competition_team_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    competition_stage_id UUID NOT NULL REFERENCES ops.competition_stage(competition_stage_id) ON DELETE CASCADE,
+    source_template_id UUID REFERENCES ops.competition_team_template(competition_team_template_id),
+    team_code TEXT NOT NULL,
+    team_name TEXT NOT NULL,
+    team_order INTEGER NOT NULL DEFAULT 1,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (competition_stage_id, team_code)
+);
+
+CREATE TABLE ops.competition_team_store (
+    competition_team_id UUID NOT NULL REFERENCES ops.competition_team(competition_team_id) ON DELETE CASCADE,
+    store_id UUID NOT NULL REFERENCES ops.store(store_id),
+    added_manually BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (competition_team_id, store_id)
+);
+
 CREATE TABLE ops.checklist_template (
     checklist_template_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id UUID NOT NULL REFERENCES ops.company(company_id),
@@ -417,6 +498,51 @@ CREATE TABLE rpt.employee_performance_snapshot (
     PRIMARY KEY (snapshot_run_id, employee_id)
 );
 
+CREATE TABLE rpt.competition_stage_store_score_snapshot (
+    competition_stage_id UUID NOT NULL REFERENCES ops.competition_stage(competition_stage_id) ON DELETE CASCADE,
+    competition_team_id UUID NOT NULL REFERENCES ops.competition_team(competition_team_id) ON DELETE CASCADE,
+    store_id UUID NOT NULL REFERENCES ops.store(store_id),
+    snapshot_date DATE NOT NULL,
+    score_value NUMERIC(18,4),
+    reported_weight_percent NUMERIC(8,4) NOT NULL DEFAULT 0,
+    expected_weight_percent NUMERIC(8,4) NOT NULL DEFAULT 100,
+    has_daily_data BOOLEAN NOT NULL DEFAULT FALSE,
+    missing_kpi_codes TEXT[] NOT NULL DEFAULT ARRAY[]::text[],
+    generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (competition_stage_id, competition_team_id, store_id, snapshot_date)
+);
+
+CREATE TABLE rpt.competition_stage_score_snapshot (
+    competition_stage_id UUID NOT NULL REFERENCES ops.competition_stage(competition_stage_id) ON DELETE CASCADE,
+    competition_team_id UUID NOT NULL REFERENCES ops.competition_team(competition_team_id) ON DELETE CASCADE,
+    snapshot_date DATE NOT NULL,
+    score_value NUMERIC(18,4),
+    valid_store_count INTEGER NOT NULL DEFAULT 0,
+    total_store_count INTEGER NOT NULL DEFAULT 0,
+    coverage_rate NUMERIC(8,4) NOT NULL DEFAULT 0,
+    rank_position INTEGER,
+    ranking_population INTEGER NOT NULL DEFAULT 0,
+    generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (competition_stage_id, competition_team_id, snapshot_date)
+);
+
+CREATE TABLE rpt.competition_stage_warning (
+    competition_stage_warning_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    competition_stage_id UUID NOT NULL REFERENCES ops.competition_stage(competition_stage_id) ON DELETE CASCADE,
+    competition_team_id UUID REFERENCES ops.competition_team(competition_team_id) ON DELETE CASCADE,
+    store_id UUID REFERENCES ops.store(store_id),
+    warning_code TEXT NOT NULL,
+    warning_level TEXT NOT NULL,
+    period_start DATE NOT NULL,
+    period_end DATE NOT NULL,
+    message TEXT NOT NULL,
+    resolved_at TIMESTAMPTZ,
+    generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (warning_code IN ('missing_daily_store_data', 'missing_bm_checklist', 'missing_vm_checklist')),
+    CHECK (warning_level IN ('info', 'warning', 'blocker')),
+    CHECK (period_end >= period_start)
+);
+
 CREATE TABLE stg.integration_source (
     integration_source_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     source_code TEXT NOT NULL,
@@ -600,6 +726,15 @@ CREATE UNIQUE INDEX uq_user_action_store_assignment_active
     ON ops.user_action_store_assignment (user_id, store_id)
     WHERE end_at IS NULL;
 
+CREATE INDEX competition_stage_competition_state_idx
+    ON ops.competition_stage (competition_id, lifecycle_state, starts_on, ends_on);
+
+CREATE INDEX competition_team_stage_idx
+    ON ops.competition_team (competition_stage_id, team_order);
+
+CREATE INDEX competition_team_store_store_idx
+    ON ops.competition_team_store (store_id, competition_team_id);
+
 CREATE INDEX idx_checklist_instance_store_status
     ON ops.checklist_instance (store_id, status, planned_at);
 
@@ -647,6 +782,16 @@ CREATE INDEX IF NOT EXISTS employee_kpi_snapshot_run_metric_value_idx
 
 CREATE INDEX IF NOT EXISTS employee_kpi_snapshot_run_store_metric_value_idx
     ON rpt.employee_kpi_snapshot (snapshot_run_id, store_id, kpi_id, actual_value DESC, employee_id);
+
+CREATE INDEX competition_stage_store_score_date_idx
+    ON rpt.competition_stage_store_score_snapshot (competition_stage_id, snapshot_date, score_value DESC);
+
+CREATE INDEX competition_stage_score_rank_idx
+    ON rpt.competition_stage_score_snapshot (competition_stage_id, snapshot_date, rank_position);
+
+CREATE INDEX competition_stage_warning_open_idx
+    ON rpt.competition_stage_warning (competition_stage_id, warning_code, warning_level)
+    WHERE resolved_at IS NULL;
 
 CREATE INDEX idx_event_log_entity_date
     ON audit.event_log (entity_name, entity_id, occurred_at);

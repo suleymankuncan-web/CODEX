@@ -115,7 +115,8 @@ VALUES
     ('60000000-0000-0000-0000-000000000005', 'REPORT_VIEWER', 'Report Viewer', 'company', 'Read-only reporting access', TRUE),
     ('60000000-0000-0000-0000-000000000006', 'INTEGRATION_ADMIN', 'Integration Admin', 'company', 'Manages integration sources and import batches', TRUE),
     ('60000000-0000-0000-0000-000000000007', 'SNAPSHOT_OPERATOR', 'Snapshot Operator', 'company', 'Runs and reruns reporting snapshots', TRUE),
-    ('60000000-0000-0000-0000-000000000008', 'STORE_PERSONNEL', 'Store Personnel', 'store', 'Reads personal store performance', TRUE)
+    ('60000000-0000-0000-0000-000000000008', 'STORE_PERSONNEL', 'Store Personnel', 'store', 'Reads personal store performance', TRUE),
+    ('60000000-0000-0000-0000-000000000009', 'HR_ADMIN', 'HR Admin', 'company', 'Manages HR owned competitions and score review workflows', TRUE)
 ON CONFLICT (role_code) DO NOTHING;
 
 INSERT INTO ops.permission (permission_id, permission_code, resource_name, action_name, description)
@@ -131,7 +132,9 @@ VALUES
     ('70000000-0000-0000-0000-000000000009', 'target_distribution.manage', 'target_distribution', 'manage', 'Create target distribution requests'),
     ('70000000-0000-0000-0000-000000000010', 'target_distribution.approve', 'target_distribution', 'approve', 'Approve target distribution requests'),
     ('70000000-0000-0000-0000-000000000011', 'kpi_config.manage', 'kpi_config', 'manage', 'Manage KPI scoring configuration'),
-    ('70000000-0000-0000-0000-000000000012', 'auth.manage', 'auth', 'manage', 'Manage users, roles, and permissions')
+    ('70000000-0000-0000-0000-000000000012', 'auth.manage', 'auth', 'manage', 'Manage users, roles, and permissions'),
+    ('70000000-0000-0000-0000-000000000013', 'competition.read', 'competition', 'read', 'Read competition standings and stage results'),
+    ('70000000-0000-0000-0000-000000000014', 'competition.manage', 'competition', 'manage', 'Create, recalculate, and finalize competitions')
 ON CONFLICT (permission_code) DO NOTHING;
 
 INSERT INTO ops.role_permission (role_id, permission_id)
@@ -167,7 +170,38 @@ VALUES
     ('60000000-0000-0000-0000-000000000007', '70000000-0000-0000-0000-000000000005'),
     ('60000000-0000-0000-0000-000000000007', '70000000-0000-0000-0000-000000000008'),
     ('60000000-0000-0000-0000-000000000008', '70000000-0000-0000-0000-000000000004'),
-    ('60000000-0000-0000-0000-000000000008', '70000000-0000-0000-0000-000000000006')
+    ('60000000-0000-0000-0000-000000000008', '70000000-0000-0000-0000-000000000006'),
+    ('60000000-0000-0000-0000-000000000001', '70000000-0000-0000-0000-000000000013'),
+    ('60000000-0000-0000-0000-000000000001', '70000000-0000-0000-0000-000000000014'),
+    ('60000000-0000-0000-0000-000000000002', '70000000-0000-0000-0000-000000000013'),
+    ('60000000-0000-0000-0000-000000000003', '70000000-0000-0000-0000-000000000013'),
+    ('60000000-0000-0000-0000-000000000005', '70000000-0000-0000-0000-000000000013'),
+    ('60000000-0000-0000-0000-000000000008', '70000000-0000-0000-0000-000000000013'),
+    ('60000000-0000-0000-0000-000000000009', '70000000-0000-0000-0000-000000000013'),
+    ('60000000-0000-0000-0000-000000000009', '70000000-0000-0000-0000-000000000014')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO ops.competition_team_template (
+    competition_team_template_id,
+    template_code,
+    template_name,
+    description,
+    is_active
+)
+VALUES
+    ('90000000-0000-0000-0000-000000000001', 'MARMARA_DEMO', 'Marmara Demo', 'Demo challenge team for Istanbul stores', TRUE),
+    ('90000000-0000-0000-0000-000000000002', 'KARADENIZ_DEMO', 'Karadeniz Demo', 'Demo challenge team for comparison stores', TRUE)
+ON CONFLICT (template_code) DO UPDATE
+SET
+    template_name = EXCLUDED.template_name,
+    description = EXCLUDED.description,
+    is_active = EXCLUDED.is_active,
+    updated_at = NOW();
+
+INSERT INTO ops.competition_team_template_store (competition_team_template_id, store_id)
+VALUES
+    ('90000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000100'),
+    ('90000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000101')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO ops.user_account (user_id, employee_id, username, email, auth_provider, is_active)
@@ -285,6 +319,49 @@ SELECT
     'demo_closed_ranking_seed',
     'demo_closed_ranking_seed'
 FROM demo_closed_ranking_runs run
+ON CONFLICT DO NOTHING;
+
+WITH demo_store_kpi_values (snapshot_run_id, store_id, kpi_code, period_start, period_end, actual_value, achievement_rate) AS (
+    VALUES
+        ('00000000-0000-0000-0000-00000000f322'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'TARGET_ACHIEVEMENT', DATE '2026-04-22', DATE '2026-04-22', 96.0000, 0.9600),
+        ('00000000-0000-0000-0000-00000000f322'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'CR', DATE '2026-04-22', DATE '2026-04-22', 88.0000, 0.8800),
+        ('00000000-0000-0000-0000-00000000f322'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'ATV', DATE '2026-04-22', DATE '2026-04-22', 92.0000, 0.9200),
+        ('00000000-0000-0000-0000-00000000f322'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'UPT', DATE '2026-04-22', DATE '2026-04-22', 91.0000, 0.9100),
+        ('00000000-0000-0000-0000-00000000f322'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'BM_CHECKLIST', DATE '2026-04-01', DATE '2026-04-30', 95.0000, 0.9500),
+        ('00000000-0000-0000-0000-00000000f322'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'VM_CHECKLIST', DATE '2026-04-01', DATE '2026-04-30', 93.0000, 0.9300),
+        ('00000000-0000-0000-0000-00000000f322'::uuid, '00000000-0000-0000-0000-000000000101'::uuid, 'TARGET_ACHIEVEMENT', DATE '2026-04-22', DATE '2026-04-22', 94.0000, 0.9400),
+        ('00000000-0000-0000-0000-00000000f322'::uuid, '00000000-0000-0000-0000-000000000101'::uuid, 'CR', DATE '2026-04-22', DATE '2026-04-22', 84.0000, 0.8400),
+        ('00000000-0000-0000-0000-00000000f322'::uuid, '00000000-0000-0000-0000-000000000101'::uuid, 'ATV', DATE '2026-04-22', DATE '2026-04-22', 90.0000, 0.9000),
+        ('00000000-0000-0000-0000-00000000f322'::uuid, '00000000-0000-0000-0000-000000000101'::uuid, 'UPT', DATE '2026-04-22', DATE '2026-04-22', 89.0000, 0.8900),
+        ('00000000-0000-0000-0000-00000000f322'::uuid, '00000000-0000-0000-0000-000000000101'::uuid, 'VM_CHECKLIST', DATE '2026-04-01', DATE '2026-04-30', 90.0000, 0.9000)
+)
+INSERT INTO rpt.store_kpi_snapshot (
+    snapshot_run_id,
+    store_id,
+    kpi_id,
+    period_start,
+    period_end,
+    target_value,
+    actual_value,
+    achievement_rate,
+    status_band
+)
+SELECT
+    value.snapshot_run_id,
+    value.store_id,
+    definition.kpi_id,
+    value.period_start,
+    value.period_end,
+    100.0000,
+    value.actual_value,
+    value.achievement_rate,
+    CASE
+        WHEN value.achievement_rate >= 0.95 THEN 'green'
+        WHEN value.achievement_rate >= 0.85 THEN 'yellow'
+        ELSE 'red'
+    END
+FROM demo_store_kpi_values value
+INNER JOIN ops.kpi_definition definition ON definition.kpi_code = value.kpi_code
 ON CONFLICT DO NOTHING;
 
 WITH demo_closed_ranking_runs (snapshot_run_id, closure_date) AS (

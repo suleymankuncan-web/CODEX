@@ -30,6 +30,9 @@
         "name": "AUDITOR"
       },
       {
+        "name": "HR_ADMIN"
+      },
+      {
         "name": "INTEGRATION_ADMIN"
       },
       {
