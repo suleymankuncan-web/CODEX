@@ -1,12 +1,14 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Put, Query, Req } from "@nestjs/common";
 import { RequireRoles } from "../../auth/decorators/roles.decorator";
 import { CompetitionService } from "../application/competition.service";
+import { CloneCompetitionTeamTemplateDto } from "./dto/clone-competition-team-template.dto";
 import { CreateCompetitionDto } from "./dto/create-competition.dto";
 import { CreateCompetitionStageDto } from "./dto/create-competition-stage.dto";
 import { CreateCompetitionTeamTemplateDto } from "./dto/create-competition-team-template.dto";
 import { FinalizeCompetitionStageDto } from "./dto/finalize-competition-stage.dto";
 import { ListCompetitionTeamTemplatesQueryDto } from "./dto/list-competition-team-templates.query";
 import { ListCompetitionsQueryDto } from "./dto/list-competitions.query";
+import { UpdateCompetitionTeamTemplateDto } from "./dto/update-competition-team-template.dto";
 
 type CompetitionRequest = {
   user: {
@@ -104,6 +106,34 @@ export class CompetitionController {
     return this.competitionService.deactivateTeamTemplate({
       actorUserId: request.user.userId,
       templateId,
+    });
+  }
+
+  @Put("team-templates/:templateId")
+  @RequireRoles("SUPER_ADMIN", "HR_ADMIN")
+  async updateTeamTemplate(
+    @Req() request: CompetitionRequest,
+    @Param("templateId") templateId: string,
+    @Body() body: UpdateCompetitionTeamTemplateDto,
+  ) {
+    return this.competitionService.updateTeamTemplate({
+      actorUserId: request.user.userId,
+      templateId,
+      ...body,
+    });
+  }
+
+  @Post("team-templates/:templateId/clone")
+  @RequireRoles("SUPER_ADMIN", "HR_ADMIN")
+  async cloneTeamTemplate(
+    @Req() request: CompetitionRequest,
+    @Param("templateId") templateId: string,
+    @Body() body: CloneCompetitionTeamTemplateDto,
+  ) {
+    return this.competitionService.cloneTeamTemplate({
+      actorUserId: request.user.userId,
+      sourceTemplateId: templateId,
+      ...body,
     });
   }
 

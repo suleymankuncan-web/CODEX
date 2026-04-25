@@ -4,12 +4,14 @@ import { CompetitionRepository } from "../infrastructure/competition.repository"
 import {
   CompetitionDetail,
   CompetitionScope,
+  CloneCompetitionTeamTemplateInput,
   CreateCompetitionInput,
   CreateCompetitionStageInput,
   CreateCompetitionTeamTemplateInput,
   DeactivateCompetitionTeamTemplateInput,
   FinalizeCompetitionStageInput,
   RecalculateCompetitionStageInput,
+  UpdateCompetitionTeamTemplateInput,
 } from "./competition.contract";
 
 @Injectable()
@@ -139,6 +141,35 @@ export class CompetitionService {
     return buildCommandResponse({
       status: "deactivated",
       message: "Competition team template deactivated",
+      data: { template },
+    });
+  }
+
+  async updateTeamTemplate(input: UpdateCompetitionTeamTemplateInput) {
+    const uniqueStoreIds = [...new Set(input.storeIds)];
+
+    if (uniqueStoreIds.length === 0) {
+      throw new BadRequestException("Team template must include at least one store");
+    }
+
+    const template = await this.competitionRepository.updateTeamTemplate({
+      ...input,
+      storeIds: uniqueStoreIds,
+    });
+
+    return buildCommandResponse({
+      status: "updated",
+      message: "Competition team template updated",
+      data: { template },
+    });
+  }
+
+  async cloneTeamTemplate(input: CloneCompetitionTeamTemplateInput) {
+    const template = await this.competitionRepository.cloneTeamTemplate(input);
+
+    return buildCommandResponse({
+      status: "created",
+      message: "Competition team template cloned",
       data: { template },
     });
   }

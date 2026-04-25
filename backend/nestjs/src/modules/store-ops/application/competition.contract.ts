@@ -171,6 +171,23 @@ export type CreateCompetitionTeamTemplateInput = {
   storeIds: string[];
 };
 
+export type UpdateCompetitionTeamTemplateInput = {
+  actorUserId: string;
+  templateId: string;
+  templateCode: string;
+  templateName: string;
+  description?: string;
+  storeIds: string[];
+};
+
+export type CloneCompetitionTeamTemplateInput = {
+  actorUserId: string;
+  sourceTemplateId: string;
+  templateCode: string;
+  templateName: string;
+  description?: string;
+};
+
 export type DeactivateCompetitionTeamTemplateInput = {
   actorUserId: string;
   templateId: string;

@@ -255,6 +255,152 @@ describe("CompetitionRepository", () => {
     );
   });
 
+  it("updates a team template and replaces store memberships with audit metadata", async () => {
+    const { repository, client, executedSql, executedParams } = createRepositoryHarness();
+    client.query.mockImplementation(async (sql: string, params: unknown[] = []) => {
+      executedSql.push(sql);
+      executedParams.push(params);
+
+      if (sql.includes("UPDATE ops.competition_team_template")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              competition_team_template_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("FROM ops.competition_team_template template")) {
+        return {
+          rowCount: 2,
+          rows: [
+            {
+              competition_team_template_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              template_code: "MARMARA_A_REV",
+              template_name: "Marmara A Revised",
+              description: "Rebalanced stores",
+              is_active: true,
+              store_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+              store_code: "IST-001",
+              store_name: "IstinyePark",
+              region_id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+            },
+            {
+              competition_team_template_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              template_code: "MARMARA_A_REV",
+              template_name: "Marmara A Revised",
+              description: "Rebalanced stores",
+              is_active: true,
+              store_id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+              store_code: "IST-002",
+              store_name: "Kadikoy",
+              region_id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+            },
+          ],
+        };
+      }
+
+      return { rowCount: 1, rows: [] };
+    });
+
+    const template = await repository.updateTeamTemplate({
+      actorUserId: "11111111-1111-4111-8111-111111111111",
+      templateId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      templateCode: "MARMARA_A_REV",
+      templateName: "Marmara A Revised",
+      description: "Rebalanced stores",
+      storeIds: [
+        "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      ],
+    });
+
+    const sql = executedSql.join("\n");
+    expect(sql).toContain("UPDATE ops.competition_team_template");
+    expect(sql).toContain("DELETE FROM ops.competition_team_template_store");
+    expect(sql).toContain("INSERT INTO ops.competition_team_template_store");
+    expect(sql).toContain("INSERT INTO audit.event_log");
+    expect(JSON.stringify(executedParams)).toContain("competition_team_template.updated");
+    expect(JSON.stringify(executedParams)).toContain("changedFields");
+    expect(template).toEqual(
+      expect.objectContaining({
+        templateCode: "MARMARA_A_REV",
+        templateName: "Marmara A Revised",
+        stores: [
+          expect.objectContaining({ storeCode: "IST-001" }),
+          expect.objectContaining({ storeCode: "IST-002" }),
+        ],
+      }),
+    );
+  });
+
+  it("clones a team template with source stores and audit metadata", async () => {
+    const { repository, client, executedSql, executedParams } = createRepositoryHarness();
+    client.query.mockImplementation(async (sql: string, params: unknown[] = []) => {
+      executedSql.push(sql);
+      executedParams.push(params);
+
+      if (sql.includes("INSERT INTO ops.competition_team_template ")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              competition_team_template_id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+              template_code: "MARMARA_A_COPY",
+              template_name: "Marmara A Copy",
+              description: "Copy for May",
+              is_active: true,
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("FROM ops.competition_team_template template")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              competition_team_template_id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+              template_code: "MARMARA_A_COPY",
+              template_name: "Marmara A Copy",
+              description: "Copy for May",
+              is_active: true,
+              store_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+              store_code: "IST-001",
+              store_name: "IstinyePark",
+              region_id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+            },
+          ],
+        };
+      }
+
+      return { rowCount: 1, rows: [] };
+    });
+
+    const template = await repository.cloneTeamTemplate({
+      actorUserId: "11111111-1111-4111-8111-111111111111",
+      sourceTemplateId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      templateCode: "MARMARA_A_COPY",
+      templateName: "Marmara A Copy",
+      description: "Copy for May",
+    });
+
+    const sql = executedSql.join("\n");
+    expect(sql).toContain("INSERT INTO ops.competition_team_template");
+    expect(sql).toContain("SELECT $1::uuid, source_store.store_id");
+    expect(sql).toContain("INSERT INTO audit.event_log");
+    expect(JSON.stringify(executedParams)).toContain("competition_team_template.cloned");
+    expect(JSON.stringify(executedParams)).toContain("sourceTemplateId");
+    expect(template).toEqual(
+      expect.objectContaining({
+        templateCode: "MARMARA_A_COPY",
+        stores: [expect.objectContaining({ storeCode: "IST-001" })],
+      }),
+    );
+  });
+
   it("recalculates stage scores from completed one-day store snapshots and checklist facts", async () => {
     const { repository, executedSql } = createRepositoryHarness();
 
