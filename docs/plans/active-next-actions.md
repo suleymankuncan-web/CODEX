@@ -41,15 +41,17 @@ As of 26 April 2026, the competition package planning flow has:
   - preview includes plan window, stage count, team template count, stage dates, and store assignment count
   - verification is covered by the existing save/submit/approve/execute Playwright flow
 
-### 1. Stage Package Template Variants
+### 1. Competition Format Registry V1
 - Priority: `P1`
-- Why: league + final is only the first tournament structure.
+- Why: league + final is only the first tournament structure, and future contests need controlled format definitions before execution.
 - Scope:
-  - configurable stage package presets
-  - first-half league / second-half final style packages
-  - longer open-ended tournament plans later
+  - code-owned format registry
+  - keep `league_then_final` executable
+  - add `best_upt_store` as a selectable, preview-only pilot format
+  - prepare schema for store, employee, region, and team competitions
+  - keep future category-specific contests, such as women's group sales, data-gated
 - Gate:
-  - run feature intake interview before implementation
+  - design spec: `docs/superpowers/specs/2026-04-26-competition-format-registry-v1-design.md`
 
 ### 2. Store/Region Competition Experience Polish
 - Priority: `P1`
@@ -92,4 +94,4 @@ As of 26 April 2026, the competition package planning flow has:
 
 ## Recommended Next Move
 
-Do the `Stage Package Template Variants` intake next. It is the first item in this list that needs the feature interview because it expands tournament structure beyond the current league-then-final package.
+Write the implementation plan for `Competition Format Registry V1`. The intake decision is to add `best_upt_store` as selectable and previewable only, with live execute/publish intentionally disabled until scoring and participant-facing surfaces are designed.
