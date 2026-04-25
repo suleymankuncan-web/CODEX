@@ -68,6 +68,18 @@ test('store tasks page renders readable Turkish queue labels', async ({ page }) 
   await expect(page.locator('body')).not.toContainText('Å')
 })
 
+test('store competitions page renders scoped contribution details', async ({ page }) => {
+  await page.goto('/store/competitions')
+
+  await expect(page.getByRole('heading', { name: /Store competitions/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'April Region Challenge' })).toBeVisible()
+  await expect(page.getByText('Scoped contributions')).toBeVisible()
+  await expect(page.getByText('IstinyePark Demo Store')).toBeVisible()
+  await expect(page.getByText('93.50')).toBeVisible()
+  await expect(page.getByText('Outside Region Store')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /Recalculate/ })).toHaveCount(0)
+})
+
 async function routeStoreSurfaceApi(page: Page) {
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: authSessionFixture })
@@ -112,6 +124,34 @@ async function routeStoreSurfaceApi(page: Page) {
 
   await page.route('**/api/workflow/inbox', async (route) => {
     await route.fulfill({ json: workflowInboxFixture })
+  })
+
+  await page.route('**/api/competitions**', async (route) => {
+    const request = route.request()
+    const pathname = new URL(request.url()).pathname
+
+    if (request.method() === 'GET' && pathname.endsWith('/api/competitions')) {
+      await route.fulfill({
+        json: {
+          items: [competitionFixture],
+          meta: { count: 1, total: 1, limit: 50, offset: 0 },
+        },
+      })
+      return
+    }
+
+    if (
+      request.method() === 'GET' &&
+      pathname.endsWith(`/api/competitions/${competitionFixture.competitionId}`)
+    ) {
+      await route.fulfill({ json: competitionDetailFixture })
+      return
+    }
+
+    await route.fulfill({
+      status: 403,
+      json: { message: 'Store competition surface is read-only' },
+    })
   })
 }
 
@@ -403,6 +443,85 @@ const closedLeaderboardFixture = {
         isEligibleForRanking: true,
       },
       metricRanks: [],
+    },
+  ],
+}
+
+const competitionFixture = {
+  competitionId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  competitionCode: 'APRIL_REGION_CHALLENGE',
+  competitionName: 'April Region Challenge',
+  description: null,
+  competitionType: 'region_challenge',
+  lifecycleState: 'active',
+  startsOn: '2026-04-22',
+  endsOn: '2026-04-24',
+}
+
+const competitionDetailFixture = {
+  competition: competitionFixture,
+  stages: [
+    {
+      competitionStageId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      competitionId: competitionFixture.competitionId,
+      stageCode: 'QUALIFIER',
+      stageName: 'Qualifier',
+      stageOrder: 1,
+      stageType: 'qualifier',
+      startsOn: '2026-04-22',
+      endsOn: '2026-04-24',
+      lifecycleState: 'active',
+      finalizationState: null,
+    },
+  ],
+  teams: [
+    {
+      competitionTeamId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+      teamCode: 'MARMARA_DEMO',
+      teamName: 'Marmara Demo',
+      teamOrder: 1,
+      stores: [
+        {
+          storeId: demoStoreId,
+          storeCode: 'DEMO-100',
+          storeName: 'IstinyePark Demo Store',
+          regionId: '00000000-0000-0000-0000-000000000010',
+        },
+      ],
+    },
+  ],
+  latestScores: [
+    {
+      stageId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      teamId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+      teamCode: 'MARMARA_DEMO',
+      teamName: 'Marmara Demo',
+      snapshotDate: '2026-04-22',
+      scoreValue: 92.45,
+      validStoreCount: 1,
+      totalStoreCount: 1,
+      coverageRate: 1,
+      rankPosition: 1,
+      rankingPopulation: 2,
+    },
+  ],
+  warnings: [],
+  storeContributions: [
+    {
+      stageId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      teamId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+      teamCode: 'MARMARA_DEMO',
+      teamName: 'Marmara Demo',
+      storeId: demoStoreId,
+      storeCode: 'DEMO-100',
+      storeName: 'IstinyePark Demo Store',
+      regionId: '00000000-0000-0000-0000-000000000010',
+      snapshotDate: '2026-04-22',
+      scoreValue: 93.5,
+      reportedWeightPercent: 95,
+      expectedWeightPercent: 100,
+      hasDailyData: true,
+      missingKpiCodes: ['BM_CHECKLIST'],
     },
   ],
 }

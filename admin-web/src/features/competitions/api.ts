@@ -56,6 +56,23 @@ export type CompetitionTeamScore = {
   rankingPopulation: number
 }
 
+export type CompetitionStoreContribution = {
+  stageId: string
+  teamId: string
+  teamCode: string
+  teamName: string
+  storeId: string
+  storeCode: string
+  storeName: string
+  regionId: string
+  snapshotDate: string
+  scoreValue: number | null
+  reportedWeightPercent: number
+  expectedWeightPercent: number
+  hasDailyData: boolean
+  missingKpiCodes: string[]
+}
+
 export type CompetitionWarning = {
   warningId: string
   stageId: string
@@ -86,6 +103,7 @@ export type CompetitionDetail = {
   }>
   latestScores: CompetitionTeamScore[]
   warnings: CompetitionWarning[]
+  storeContributions: CompetitionStoreContribution[]
 }
 
 export async function listCompetitions() {

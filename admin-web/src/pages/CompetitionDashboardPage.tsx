@@ -14,8 +14,10 @@ import {
   getCompetition,
   listCompetitions,
   recalculateStage,
+  type CompetitionStoreContribution,
   type CompetitionSummary,
 } from '../features/competitions/api'
+import type { AuthSessionSummary } from '../features/auth/api'
 import { formatDate, formatState, getErrorMessage } from '../lib/format'
 
 function nextDraftPayload() {
@@ -42,10 +44,20 @@ function stateTone(state: string) {
   return 'neutral'
 }
 
-export function CompetitionDashboardPage() {
+function canManageCompetitions(authSummary: AuthSessionSummary | null) {
+  const roles = authSummary?.user.roleCodes ?? []
+  return roles.includes('SUPER_ADMIN') || roles.includes('HR_ADMIN')
+}
+
+function formatScore(value: number | null) {
+  return value === null ? 'Partial' : value.toFixed(2)
+}
+
+export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummary | null }) {
   const queryClient = useQueryClient()
   const [selectedCompetitionId, setSelectedCompetitionId] = useState<string | null>(null)
   const [overrideJustification, setOverrideJustification] = useState('')
+  const canManage = canManageCompetitions(input.authSummary)
 
   const competitionsQuery = useQuery({
     queryKey: ['competitions'],
@@ -140,15 +152,19 @@ export function CompetitionDashboardPage() {
             <div className="eyebrow">Competition List</div>
             <h3>Active and draft containers</h3>
           </div>
-          <button
-            className="control-button"
-            type="button"
-            disabled={createMutation.isPending}
-            onClick={() => createMutation.mutate()}
-          >
-            <Trophy size={16} />
-            New draft
-          </button>
+          {canManage ? (
+            <button
+              className="control-button"
+              type="button"
+              disabled={createMutation.isPending}
+              onClick={() => createMutation.mutate()}
+            >
+              <Trophy size={16} />
+              New draft
+            </button>
+          ) : (
+            <StatusPill tone="neutral">Read only</StatusPill>
+          )}
         </div>
 
         {createMutation.isError ? (
@@ -232,9 +248,7 @@ export function CompetitionDashboardPage() {
                       <div className="metric-icon">
                         <Trophy size={18} />
                       </div>
-                      <div className="metric-value">
-                        {score.scoreValue === null ? '-' : score.scoreValue.toFixed(2)}
-                      </div>
+                      <div className="metric-value">{formatScore(score.scoreValue)}</div>
                       <h3>{score.teamName}</h3>
                       <p>
                         Rank {score.rankPosition ?? '-'} / {score.rankingPopulation} on{' '}
@@ -248,20 +262,24 @@ export function CompetitionDashboardPage() {
                 )}
               </div>
 
-              <div className="action-cluster">
-                {detailQuery.data.stages.map((stage) => (
-                  <button
-                    className="control-button"
-                    key={`recalc-${stage.competitionStageId}`}
-                    type="button"
-                    disabled={recalcMutation.isPending}
-                    onClick={() => recalcMutation.mutate(stage.competitionStageId)}
-                  >
-                    <RefreshCw size={16} />
-                    Recalculate {stage.stageCode}
-                  </button>
-                ))}
-              </div>
+              {canManage ? (
+                <div className="action-cluster">
+                  {detailQuery.data.stages.map((stage) => (
+                    <button
+                      className="control-button"
+                      key={`recalc-${stage.competitionStageId}`}
+                      type="button"
+                      disabled={recalcMutation.isPending}
+                      onClick={() => recalcMutation.mutate(stage.competitionStageId)}
+                    >
+                      <RefreshCw size={16} />
+                      Recalculate {stage.stageCode}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+
+              <ScopedContributionSection contributions={detailQuery.data.storeContributions} />
 
               <section className="stacked-table">
                 {detailQuery.data.warnings.length === 0 ? (
@@ -290,7 +308,7 @@ export function CompetitionDashboardPage() {
                 )}
               </section>
 
-              {activeStage ? (
+              {canManage && activeStage ? (
                 <article className="stacked-row">
                   <div className="panel-heading">
                     <div>
@@ -332,6 +350,63 @@ export function CompetitionDashboardPage() {
           ) : null}
         </section>
       ) : null}
+    </section>
+  )
+}
+
+function ScopedContributionSection(input: { contributions: CompetitionStoreContribution[] }) {
+  return (
+    <section className="stacked-table" aria-label="Scoped competition store contributions">
+      <div className="panel-heading">
+        <div>
+          <div className="eyebrow">Read Scope</div>
+          <h3>Scoped contributions</h3>
+        </div>
+        <StatusPill tone={input.contributions.length > 0 ? 'accent' : 'neutral'}>
+          {`${input.contributions.length} rows`}
+        </StatusPill>
+      </div>
+      {input.contributions.length === 0 ? (
+        <EmptyState
+          title="No scoped contribution rows"
+          copy="This session can see the competition, but no store contribution snapshot is available inside its read scope."
+        />
+      ) : (
+        input.contributions.map((contribution) => (
+          <article
+            className="stacked-row"
+            key={`${contribution.stageId}-${contribution.storeId}-${contribution.snapshotDate}`}
+          >
+            <div className="stacked-row-head">
+              <div>
+                <strong>{contribution.storeName}</strong>
+                <p className="queue-subtitle">
+                  {contribution.teamName} / {contribution.storeCode}
+                </p>
+              </div>
+              <StatusPill tone={contribution.hasDailyData ? 'calm' : 'warning'}>
+                {formatScore(contribution.scoreValue)}
+              </StatusPill>
+            </div>
+            <div className="key-grid">
+              <KeyValue label="Snapshot" value={formatDate(contribution.snapshotDate)} />
+              <KeyValue
+                label="Reported weight"
+                value={`${contribution.reportedWeightPercent}/${contribution.expectedWeightPercent}`}
+              />
+              <KeyValue
+                label="Missing KPIs"
+                value={
+                  contribution.missingKpiCodes.length > 0
+                    ? contribution.missingKpiCodes.map(formatState).join(', ')
+                    : 'None'
+                }
+              />
+              <KeyValue label="Team" value={contribution.teamCode} />
+            </div>
+          </article>
+        ))
+      )}
     </section>
   )
 }

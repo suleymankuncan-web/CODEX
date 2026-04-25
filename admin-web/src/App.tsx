@@ -35,6 +35,7 @@ const SnapshotRunDetailPage = lazy(() => import('./pages/SnapshotRunDetailPage')
 const SnapshotsDashboardPage = lazy(() => import('./pages/SnapshotsDashboardPage').then((module) => ({ default: module.SnapshotsDashboardPage })))
 const StoreApprovalsPage = lazy(() => import('./pages/StoreApprovalsPage').then((module) => ({ default: module.StoreApprovalsPage })))
 const StoreChecklistsPage = lazy(() => import('./pages/StoreChecklistsPage').then((module) => ({ default: module.StoreChecklistsPage })))
+const StoreCompetitionsPage = lazy(() => import('./pages/StoreCompetitionsPage').then((module) => ({ default: module.StoreCompetitionsPage })))
 const StoreIncentivesPage = lazy(() => import('./pages/StoreIncentivesPage').then((module) => ({ default: module.StoreIncentivesPage })))
 const StoreKpiHighlightsPage = lazy(() => import('./pages/StoreKpiHighlightsPage').then((module) => ({ default: module.StoreKpiHighlightsPage })))
 const StoreMyPerformancePage = lazy(() => import('./pages/StoreMyPerformancePage').then((module) => ({ default: module.StoreMyPerformancePage })))
@@ -313,7 +314,7 @@ function App() {
             />
             <Route
               path="/admin/competitions"
-              element={guardRoute(shellState, authSummary, ['SUPER_ADMIN', 'HR_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER'], <CompetitionDashboardPage />)}
+              element={guardRoute(shellState, authSummary, ['SUPER_ADMIN', 'HR_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER'], <CompetitionDashboardPage authSummary={authSummary} />)}
             />
             <Route
               path="/admin/reports"
@@ -450,6 +451,9 @@ function StoreShell(input: {
           <NavLink to="/admin/reports" className="control-button store-shell-link">
             Admin reports
           </NavLink>
+          <NavLink to="/store/competitions" className="control-button store-shell-link">
+            Competitions
+          </NavLink>
         </div>
       </header>
 
@@ -493,6 +497,10 @@ function StoreShell(input: {
             <Route
               path="/store/rankings"
               element={<StoreRankingsPage authSummary={input.authSummary} />}
+            />
+            <Route
+              path="/store/competitions"
+              element={<StoreCompetitionsPage authSummary={input.authSummary} />}
             />
             <Route
               path="/store/approvals"

@@ -19,7 +19,7 @@ test.beforeEach(async ({ page }) => {
     )
   })
 
-  await routeCompetitionApi(page)
+  await routeCompetitionApi(page, authSessionFixture, competitionDetailFixture)
 })
 
 test('admin competitions surface shows live scores and warnings', async ({ page }) => {
@@ -28,16 +28,39 @@ test('admin competitions surface shows live scores and warnings', async ({ page 
   await expect(page.getByRole('link', { name: /Competitions/ })).toBeVisible()
   await expect(page.getByRole('heading', { name: /Region challenge stages/i })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'April Region Challenge' })).toBeVisible()
-  await expect(page.getByText('Marmara Demo')).toBeVisible()
-  await expect(page.getByText('92.45')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Marmara Demo' })).toBeVisible()
+  await expect(
+    page.locator('article').filter({ has: page.getByRole('heading', { name: 'Marmara Demo' }) }).getByText('92.45'),
+  ).toBeVisible()
   await expect(page.getByText('missing bm checklist')).toBeVisible()
   await expect(page.getByRole('button', { name: /Recalculate QUALIFIER/ })).toBeVisible()
   await expect(page.getByRole('button', { name: /Finalize QUALIFIER/ })).toBeVisible()
 })
 
-async function routeCompetitionApi(page: Page) {
+test('region manager competitions surface is read-only and scoped to visible store contributions', async ({ page }) => {
+  await page.unroute('**/api/auth/session')
+  await page.unroute('**/api/competitions**')
+  await routeCompetitionApi(page, regionManagerSessionFixture, scopedCompetitionDetailFixture)
+
+  await page.goto('/admin/competitions')
+
+  await expect(page.getByRole('heading', { name: /Region challenge stages/i })).toBeVisible()
+  await expect(page.getByText('Scoped contributions')).toBeVisible()
+  await expect(page.getByText('Visible Region Store')).toBeVisible()
+  await expect(page.getByText('93.50')).toBeVisible()
+  await expect(page.getByText('Outside Region Store')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /New draft/ })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /Recalculate QUALIFIER/ })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /Finalize QUALIFIER/ })).toHaveCount(0)
+})
+
+async function routeCompetitionApi(
+  page: Page,
+  authSession: typeof authSessionFixture,
+  competitionDetail: typeof competitionDetailFixture,
+) {
   await page.route('**/api/auth/session', async (route) => {
-    await route.fulfill({ json: authSessionFixture })
+    await route.fulfill({ json: authSession })
   })
 
   await page.route('**/api/competitions**', async (route) => {
@@ -55,7 +78,7 @@ async function routeCompetitionApi(page: Page) {
     }
 
     if (request.method() === 'GET' && pathname.endsWith(`/api/competitions/${competitionId}`)) {
-      await route.fulfill({ json: competitionDetailFixture })
+      await route.fulfill({ json: competitionDetail })
       return
     }
 
@@ -93,6 +116,31 @@ const authSessionFixture = {
   scopeSummary: {
     companyCount: 1,
     regionCount: 0,
+    storeCount: 0,
+    assignedStoreCount: 0,
+  },
+}
+
+const regionManagerSessionFixture = {
+  ...authSessionFixture,
+  user: {
+    ...authSessionFixture.user,
+    userId: 'region-manager-smoke-user',
+    roleCodes: ['REGION_MANAGER'],
+    scope: {
+      companyIds: [],
+      regionIds: ['00000000-0000-0000-0000-000000000010'],
+      storeIds: [],
+    },
+    readScope: {
+      companyIds: [],
+      regionIds: ['00000000-0000-0000-0000-000000000010'],
+      storeIds: [],
+    },
+  },
+  scopeSummary: {
+    companyCount: 0,
+    regionCount: 1,
     storeCount: 0,
     assignedStoreCount: 0,
   },
@@ -168,6 +216,62 @@ const competitionDetailFixture = {
       periodEnd: '2026-04-22',
       message: 'missing_bm_checklist for store DEMO-101 on 2026-04-22',
       resolvedAt: null,
+    },
+  ],
+  storeContributions: [
+    {
+      stageId,
+      teamId,
+      teamCode: 'MARMARA_DEMO',
+      teamName: 'Marmara Demo',
+      storeId,
+      storeCode: 'DEMO-101',
+      storeName: 'Demo Store 101',
+      regionId: '00000000-0000-0000-0000-000000000010',
+      snapshotDate: '2026-04-22',
+      scoreValue: 92.45,
+      reportedWeightPercent: 95,
+      expectedWeightPercent: 100,
+      hasDailyData: true,
+      missingKpiCodes: ['BM_CHECKLIST'],
+    },
+  ],
+}
+
+const scopedCompetitionDetailFixture = {
+  ...competitionDetailFixture,
+  teams: [
+    {
+      competitionTeamId: teamId,
+      teamCode: 'MARMARA_DEMO',
+      teamName: 'Marmara Demo',
+      teamOrder: 1,
+      stores: [
+        {
+          storeId,
+          storeCode: 'DEMO-101',
+          storeName: 'Visible Region Store',
+          regionId: '00000000-0000-0000-0000-000000000010',
+        },
+      ],
+    },
+  ],
+  storeContributions: [
+    {
+      stageId,
+      teamId,
+      teamCode: 'MARMARA_DEMO',
+      teamName: 'Marmara Demo',
+      storeId,
+      storeCode: 'DEMO-101',
+      storeName: 'Visible Region Store',
+      regionId: '00000000-0000-0000-0000-000000000010',
+      snapshotDate: '2026-04-22',
+      scoreValue: 93.5,
+      reportedWeightPercent: 95,
+      expectedWeightPercent: 100,
+      hasDailyData: true,
+      missingKpiCodes: ['BM_CHECKLIST'],
     },
   ],
 }
