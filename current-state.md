@@ -732,6 +732,23 @@ C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI\admin-web
 - Frontend release check gecti: `npm.cmd run check:release` -> lint, build, 9 Playwright smoke testi ve `npm audit --omit=dev` (`found 0 vulnerabilities`); Vite chunk warning yok.
 - Siradaki mantikli adim: template lifecycle yonetimini buyutmek. Once `is_active` pasiflestirme/guncelleme ve template listesi filtreleri; sonra bolge ligi/final gibi stage formatlarinda template setlerini kullanma.
 
+## Son Competition Template Lifecycle V1
+
+25 Nisan 2026 itibariyla competition team template lifecycle V1 hatti acildi.
+
+- Uygulama plani eklendi: `docs/superpowers/plans/2026-04-25-competition-template-lifecycle-v1.md`.
+- Backend `GET /api/competitions/team-templates?activeOnly=false` filtresini destekler; default davranis sadece aktif template listesidir.
+- Backend `PATCH /api/competitions/team-templates/:templateId/deactivate` endpointi eklendi.
+- Deactivate hard-delete yapmaz; `is_active = FALSE` yazar ve eski stage/team `sourceTemplateId` referanslarini korur.
+- Audit event `competition_team_template.deactivated` olarak yazilir; metadata `templateId` ve `changedFields` tasir.
+- Stage builder team select sadece aktif template query'sini kullanir.
+- Stage builder icinde `Template library` eklendi; `Show inactive templates` toggle ile pasif template'ler gorunur.
+- Aktif template'ler library uzerinden pasiflestirilebilir; basarili aksiyon aktif team select listesinden dusurur.
+- TDD kirmizi dogrulamasi yapildi: backend lifecycle metotlari yokken Jest compile fail verdi; frontend library yokken Playwright `.stage-template-library` fail verdi.
+- Backend release check gecti: `npm.cmd run check:release` -> lint, 28 suite / 194 test, build ve `npm audit --omit=dev` (`found 0 vulnerabilities`).
+- Frontend release check gecti: `npm.cmd run check:release` -> lint, build, 10 Playwright smoke testi ve `npm audit --omit=dev` (`found 0 vulnerabilities`); Vite chunk warning yok.
+- Siradaki mantikli adim: template update/clone akisini eklemek. Bu sayede bolge ligi/final gibi uzun sureli kurgularda eski stage referanslari bozulmadan template'ler cogaltilabilir veya revize edilebilir.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:
@@ -753,6 +770,7 @@ Store ops:
 - `backend/nestjs/src/modules/store-ops/application/competition.service.ts`
 - `backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.ts`
 - `backend/nestjs/src/modules/store-ops/web/competition.controller.ts`
+- `backend/nestjs/src/modules/store-ops/web/dto/list-competition-team-templates.query.ts`
 - `backend/nestjs/src/modules/store-ops/web/target-distribution.controller.ts`
 - `backend/nestjs/src/modules/store-ops/application/target-distribution.service.ts`
 - `backend/nestjs/src/modules/store-ops/infrastructure/reporting.repository.ts`
