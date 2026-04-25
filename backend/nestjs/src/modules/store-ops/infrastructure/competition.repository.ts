@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { PoolClient } from "pg";
+import { QueryResultRow } from "pg";
 import { DatabaseService } from "../../../shared/database/database.service";
 import { RequestContextStore } from "../../../shared/request-context";
 import {
@@ -9,13 +9,22 @@ import {
   CompetitionStageFinalizationState,
   CompetitionStoreContribution,
   CompetitionTeam,
+  CompetitionTeamTemplate,
   CompetitionTeamScore,
   CompetitionWarning,
   CreateCompetitionStageInput,
+  CreateCompetitionTeamTemplateInput,
   RecalculateCompetitionStageInput,
 } from "../application/competition.contract";
 
-type Queryable = Pick<PoolClient, "query">;
+type Queryable = {
+  query<T extends QueryResultRow = QueryResultRow>(
+    sql: string,
+    params?: unknown[],
+  ): Promise<{
+    rows: T[];
+  }>;
+};
 
 type CompetitionRow = {
   competition_id: string;
@@ -46,6 +55,18 @@ type CompetitionTeamStoreRow = {
   team_code: string;
   team_name: string;
   team_order: number;
+  store_id: string | null;
+  store_code: string | null;
+  store_name: string | null;
+  region_id: string | null;
+};
+
+type CompetitionTeamTemplateStoreRow = {
+  competition_team_template_id: string;
+  template_code: string;
+  template_name: string;
+  description: string | null;
+  is_active: boolean;
   store_id: string | null;
   store_code: string | null;
   store_name: string | null;
@@ -246,6 +267,16 @@ export class CompetitionRepository {
     return result.rows.map(mapStoreContribution);
   }
 
+  async listTeamTemplates(input: {
+    activeOnly?: boolean;
+  } = {}): Promise<CompetitionTeamTemplate[]> {
+    const rows = await this.queryTeamTemplateRows(this.databaseService, {
+      activeOnly: input.activeOnly ?? true,
+    });
+
+    return mapTeamTemplates(rows);
+  }
+
   async createCompetition(input: {
     actorUserId: string;
     ownerUserId: string;
@@ -306,6 +337,69 @@ export class CompetitionRepository {
       });
 
       return mapCompetition(row);
+    });
+  }
+
+  async createTeamTemplate(
+    input: CreateCompetitionTeamTemplateInput,
+  ): Promise<CompetitionTeamTemplate> {
+    return this.databaseService.withTransaction(async (client) => {
+      const templateResult = await client.query<{
+        competition_team_template_id: string;
+        template_code: string;
+        template_name: string;
+        description: string | null;
+        is_active: boolean;
+      }>(
+        `
+          INSERT INTO ops.competition_team_template (
+            template_code,
+            template_name,
+            description,
+            is_active
+          )
+          VALUES ($1, $2, $3, TRUE)
+          RETURNING
+            competition_team_template_id,
+            template_code,
+            template_name,
+            description,
+            is_active
+        `,
+        [input.templateCode, input.templateName, input.description ?? null],
+      );
+
+      const templateRow = templateResult.rows[0];
+
+      await client.query(
+        `
+          INSERT INTO ops.competition_team_template_store (
+            competition_team_template_id,
+            store_id
+          )
+          SELECT $1::uuid, unnest($2::uuid[])
+          ON CONFLICT DO NOTHING
+        `,
+        [templateRow.competition_team_template_id, input.storeIds],
+      );
+
+      await writeCompetitionAudit(client, {
+        actorUserId: input.actorUserId,
+        eventType: "competition_team_template.created",
+        entityName: "ops.competition_team_template",
+        entityId: templateRow.competition_team_template_id,
+        metadata: {
+          templateCode: input.templateCode,
+          storeCount: input.storeIds.length,
+        },
+      });
+
+      const rows = await this.queryTeamTemplateRows(client, {
+        templateId: templateRow.competition_team_template_id,
+        activeOnly: false,
+      });
+
+      return mapTeamTemplates(rows)[0];
     });
   }
 
@@ -873,6 +967,47 @@ export class CompetitionRepository {
 
     return result.rows.map(mapWarning);
   }
+
+  private async queryTeamTemplateRows(
+    queryable: Queryable,
+    input: {
+      templateId?: string;
+      activeOnly: boolean;
+    },
+  ): Promise<CompetitionTeamTemplateStoreRow[]> {
+    const params: unknown[] = [input.activeOnly];
+    const clauses = ["($1::boolean = FALSE OR template.is_active = TRUE)"];
+
+    if (input.templateId) {
+      params.push(input.templateId);
+      clauses.push(`template.competition_team_template_id = $${params.length}::uuid`);
+    }
+
+    const result = await queryable.query<CompetitionTeamTemplateStoreRow>(
+      `
+        SELECT
+          template.competition_team_template_id,
+          template.template_code,
+          template.template_name,
+          template.description,
+          template.is_active,
+          store.store_id,
+          store.store_code,
+          store.store_name,
+          store.region_id
+        FROM ops.competition_team_template template
+        LEFT JOIN ops.competition_team_template_store template_store
+          ON template_store.competition_team_template_id = template.competition_team_template_id
+        LEFT JOIN ops.store store
+          ON store.store_id = template_store.store_id
+        WHERE ${clauses.join(" AND ")}
+        ORDER BY template.template_code ASC, store.store_code ASC
+      `,
+      params,
+    );
+
+    return result.rows;
+  }
 }
 
 async function writeCompetitionAudit(
@@ -972,6 +1107,38 @@ function mapTeams(rows: CompetitionTeamStoreRow[]): CompetitionTeam[] {
   }
 
   return [...teams.values()];
+}
+
+function mapTeamTemplates(
+  rows: CompetitionTeamTemplateStoreRow[],
+): CompetitionTeamTemplate[] {
+  const templates = new Map<string, CompetitionTeamTemplate>();
+
+  for (const row of rows) {
+    const template =
+      templates.get(row.competition_team_template_id) ??
+      {
+        templateId: row.competition_team_template_id,
+        templateCode: row.template_code,
+        templateName: row.template_name,
+        description: row.description,
+        isActive: row.is_active,
+        stores: [],
+      };
+
+    if (row.store_id && row.store_code && row.store_name && row.region_id) {
+      template.stores.push({
+        storeId: row.store_id,
+        storeCode: row.store_code,
+        storeName: row.store_name,
+        regionId: row.region_id,
+      });
+    }
+
+    templates.set(row.competition_team_template_id, template);
+  }
+
+  return [...templates.values()];
 }
 
 function mapScore(row: CompetitionTeamScoreRow): CompetitionTeamScore {

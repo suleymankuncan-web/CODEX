@@ -6,6 +6,7 @@ import {
   CompetitionScope,
   CreateCompetitionInput,
   CreateCompetitionStageInput,
+  CreateCompetitionTeamTemplateInput,
   FinalizeCompetitionStageInput,
   RecalculateCompetitionStageInput,
 } from "./competition.contract";
@@ -33,6 +34,16 @@ export class CompetitionService {
       total: items.length,
       limit,
       offset,
+    });
+  }
+
+  async listTeamTemplates() {
+    const items = await this.competitionRepository.listTeamTemplates({ activeOnly: true });
+
+    return buildListResponse(items, {
+      total: items.length,
+      limit: items.length,
+      offset: 0,
     });
   }
 
@@ -97,6 +108,25 @@ export class CompetitionService {
       status: "created",
       message: "Competition draft created",
       data: { competition },
+    });
+  }
+
+  async createTeamTemplate(input: CreateCompetitionTeamTemplateInput) {
+    const uniqueStoreIds = [...new Set(input.storeIds)];
+
+    if (uniqueStoreIds.length === 0) {
+      throw new BadRequestException("Team template must include at least one store");
+    }
+
+    const template = await this.competitionRepository.createTeamTemplate({
+      ...input,
+      storeIds: uniqueStoreIds,
+    });
+
+    return buildCommandResponse({
+      status: "created",
+      message: "Competition team template created",
+      data: { template },
     });
   }
 

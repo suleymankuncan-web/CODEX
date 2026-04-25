@@ -66,6 +66,20 @@ export type CompetitionTeam = {
   }>;
 };
 
+export type CompetitionTeamTemplate = {
+  templateId: string;
+  templateCode: string;
+  templateName: string;
+  description: string | null;
+  isActive: boolean;
+  stores: Array<{
+    storeId: string;
+    storeCode: string;
+    storeName: string;
+    regionId: string;
+  }>;
+};
+
 export type CompetitionWarning = {
   warningId: string;
   stageId: string;
@@ -147,6 +161,14 @@ export type CreateCompetitionStageInput = {
     sourceTemplateId?: string;
     storeIds: string[];
   }>;
+};
+
+export type CreateCompetitionTeamTemplateInput = {
+  actorUserId: string;
+  templateCode: string;
+  templateName: string;
+  description?: string;
+  storeIds: string[];
 };
 
 export type RecalculateCompetitionStageInput = {

@@ -3,6 +3,7 @@ import { RequireRoles } from "../../auth/decorators/roles.decorator";
 import { CompetitionService } from "../application/competition.service";
 import { CreateCompetitionDto } from "./dto/create-competition.dto";
 import { CreateCompetitionStageDto } from "./dto/create-competition-stage.dto";
+import { CreateCompetitionTeamTemplateDto } from "./dto/create-competition-team-template.dto";
 import { FinalizeCompetitionStageDto } from "./dto/finalize-competition-stage.dto";
 import { ListCompetitionsQueryDto } from "./dto/list-competitions.query";
 
@@ -41,6 +42,12 @@ export class CompetitionController {
     });
   }
 
+  @Get("team-templates")
+  @RequireRoles("SUPER_ADMIN", "HR_ADMIN")
+  async listTeamTemplates() {
+    return this.competitionService.listTeamTemplates();
+  }
+
   @Get(":competitionId")
   @RequireRoles(
     "SUPER_ADMIN",
@@ -68,6 +75,18 @@ export class CompetitionController {
     @Body() body: CreateCompetitionDto,
   ) {
     return this.competitionService.createCompetition({
+      actorUserId: request.user.userId,
+      ...body,
+    });
+  }
+
+  @Post("team-templates")
+  @RequireRoles("SUPER_ADMIN", "HR_ADMIN")
+  async createTeamTemplate(
+    @Req() request: CompetitionRequest,
+    @Body() body: CreateCompetitionTeamTemplateDto,
+  ) {
+    return this.competitionService.createTeamTemplate({
       actorUserId: request.user.userId,
       ...body,
     });

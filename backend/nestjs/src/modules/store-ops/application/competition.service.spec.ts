@@ -5,7 +5,9 @@ const repository = () => ({
   listCompetitions: jest.fn(),
   getCompetitionDetail: jest.fn(),
   listStoreContributionsForCompetition: jest.fn(),
+  listTeamTemplates: jest.fn(),
   createCompetition: jest.fn(),
+  createTeamTemplate: jest.fn(),
   createStageWithTeams: jest.fn(),
   recalculateStage: jest.fn(),
   listOpenWarnings: jest.fn(),
@@ -13,6 +15,93 @@ const repository = () => ({
 });
 
 describe("CompetitionService", () => {
+  it("lists active competition team templates", async () => {
+    const repo = repository();
+    repo.listTeamTemplates.mockResolvedValue([
+      {
+        templateId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        templateCode: "MARMARA_A",
+        templateName: "Marmara A",
+        description: "Marmara challenge stores",
+        isActive: true,
+        stores: [
+          {
+            storeId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+            storeCode: "IST-001",
+            storeName: "IstinyePark",
+            regionId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          },
+        ],
+      },
+    ]);
+    const service = new CompetitionService(repo as never);
+
+    const result = await service.listTeamTemplates();
+
+    expect(result.items).toEqual([
+      expect.objectContaining({
+        templateCode: "MARMARA_A",
+        stores: [
+          expect.objectContaining({
+            storeCode: "IST-001",
+          }),
+        ],
+      }),
+    ]);
+    expect(result.meta.total).toBe(1);
+    expect(repo.listTeamTemplates).toHaveBeenCalledWith({ activeOnly: true });
+  });
+
+  it("rejects team template creation without stores", async () => {
+    const repo = repository();
+    const service = new CompetitionService(repo as never);
+
+    await expect(
+      service.createTeamTemplate({
+        actorUserId: "11111111-1111-4111-8111-111111111111",
+        templateCode: "EMPTY_TEMPLATE",
+        templateName: "Empty Template",
+        storeIds: [],
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it("creates a reusable competition team template", async () => {
+    const repo = repository();
+    repo.createTeamTemplate.mockResolvedValue({
+      templateId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      templateCode: "MARMARA_A",
+      templateName: "Marmara A",
+      description: null,
+      isActive: true,
+      stores: [
+        {
+          storeId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+          storeCode: "IST-001",
+          storeName: "IstinyePark",
+          regionId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        },
+      ],
+    });
+    const service = new CompetitionService(repo as never);
+
+    const result = await service.createTeamTemplate({
+      actorUserId: "11111111-1111-4111-8111-111111111111",
+      templateCode: "MARMARA_A",
+      templateName: "Marmara A",
+      storeIds: ["bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"],
+    });
+
+    expect(result.command.status).toBe("created");
+    expect(result.data.template.templateCode).toBe("MARMARA_A");
+    expect(repo.createTeamTemplate).toHaveBeenCalledWith({
+      actorUserId: "11111111-1111-4111-8111-111111111111",
+      templateCode: "MARMARA_A",
+      templateName: "Marmara A",
+      storeIds: ["bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"],
+    });
+  });
+
   it("creates a draft competition through the repository", async () => {
     const repo = repository();
     repo.createCompetition.mockResolvedValue({
