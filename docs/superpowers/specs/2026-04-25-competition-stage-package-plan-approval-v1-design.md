@@ -97,6 +97,7 @@ The existing package plan library grows in place:
 - Draft plan: `Edit`, `Cancel`, `Mark ready for decision`, `Show history`.
 - Cloned draft plan: same draft actions, plus card metadata showing `Cloned from ...`.
 - Submitted plan: displayed as `decision ready`, with `Decision note`, `Approve decision`, `Return for revision`, `Show history`.
+- Submitted plan also shows a `Decision preview` before approval. The preview is derived from `stageDrafts` and includes plan window, stage count, team template count, stage date rows, and store assignment totals.
 - Approved plan: `Execute approved plan`, `Show history`.
 - Rejected plan: displayed as `returned`, with `Clone as new draft`, `Show history`.
 - Executed/cancelled plan: `Show history` only.
@@ -114,7 +115,7 @@ The existing package plan library grows in place:
 
 - Backend service tests cover submit, approve, reject, and execute delegation.
 - Repository tests cover transition guards, SQL updates, audit events, rejected-plan clone, audit-derived source visibility, and approved-only execute.
-- Playwright covers draft submit, submitted approval, approved execute, rejected history state, clone-as-draft source visibility, and hidden unsafe actions.
+- Playwright covers draft submit, submitted pre-approval preview, submitted approval, approved execute, rejected history state, clone-as-draft source visibility, and hidden unsafe actions.
 - Release checks remain the gate: backend `check:release` and frontend `check:release`.
 
 ## Non-Goals

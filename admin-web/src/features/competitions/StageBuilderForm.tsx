@@ -68,6 +68,10 @@ function formatPlanStatus(status: CompetitionStagePackagePlan['planStatus']) {
   return formatState(status)
 }
 
+function formatCount(value: number, singular: string, plural: string) {
+  return `${value} ${value === 1 ? singular : plural}`
+}
+
 type TeamDraft = {
   teamCode: string
   teamName: string
@@ -400,6 +404,91 @@ function formatAuditMetadata(metadata: Record<string, unknown>) {
     [sourcePlanName, clonedPlanName, planName, reviewNote, stageCount, createdStageCount]
       .filter(Boolean)
       .join(' - ') || 'Metadata recorded'
+  )
+}
+
+function buildStagePackagePlanDecisionPreview(plan: CompetitionStagePackagePlan) {
+  const startsOn = plan.stageDrafts.map((stage) => stage.startsOn).filter(Boolean).sort()[0] ?? null
+  const endsOn =
+    plan.stageDrafts
+      .map((stage) => stage.endsOn)
+      .filter(Boolean)
+      .sort()
+      .at(-1) ?? null
+  const teamTemplateLabels = Array.from(
+    new Map(
+      plan.stageDrafts
+        .flatMap((stage) => stage.teams)
+        .map((team) => [team.sourceTemplateId ?? team.teamCode, `${team.teamCode} - ${team.teamName}`]),
+    ).values(),
+  )
+  const storeAssignmentCount = plan.stageDrafts.reduce(
+    (stageTotal, stage) =>
+      stageTotal +
+      stage.teams.reduce((teamTotal, team) => teamTotal + team.storeIds.length, 0),
+    0,
+  )
+
+  return {
+    dateRange: startsOn && endsOn ? `${startsOn} - ${endsOn}` : 'Dates missing',
+    storeAssignmentCount,
+    teamTemplateLabels,
+  }
+}
+
+function StagePackagePlanDecisionPreview(input: { plan: CompetitionStagePackagePlan }) {
+  const preview = buildStagePackagePlanDecisionPreview(input.plan)
+
+  return (
+    <div className="stacked-row">
+      <div className="stacked-row-head">
+        <div>
+          <strong>Decision preview</strong>
+          <p className="queue-subtitle">Review the package shape before approval.</p>
+        </div>
+        <StatusPill tone="accent">
+          {formatCount(preview.storeAssignmentCount, 'store assignment', 'store assignments')}
+        </StatusPill>
+      </div>
+      <div className="key-grid">
+        <div className="key-item">
+          <span>Plan window</span>
+          <strong>{preview.dateRange}</strong>
+        </div>
+        <div className="key-item">
+          <span>Stages</span>
+          <strong>{formatCount(input.plan.stageDrafts.length, 'stage', 'stages')}</strong>
+        </div>
+        <div className="key-item">
+          <span>Team templates</span>
+          <strong>{String(preview.teamTemplateLabels.length)}</strong>
+        </div>
+      </div>
+      <div className="stacked-table">
+        {input.plan.stageDrafts.map((stage) => (
+          <article className="stacked-row" key={`${input.plan.planId}-${stage.stageCode}`}>
+            <div className="stacked-row-head">
+              <div>
+                <strong>{stage.stageName}</strong>
+                <p className="queue-subtitle">{`${stage.startsOn} - ${stage.endsOn}`}</p>
+              </div>
+              <StatusPill tone="neutral">{formatState(stage.stageType)}</StatusPill>
+            </div>
+            <p className="queue-subtitle">
+              {[
+                formatCount(stage.teams.length, 'team', 'teams'),
+                formatCount(
+                  stage.teams.reduce((total, team) => total + team.storeIds.length, 0),
+                  'store assignment',
+                  'store assignments',
+                ),
+              ].join(' - ')}
+            </p>
+          </article>
+        ))}
+      </div>
+      <p className="queue-subtitle">{preview.teamTemplateLabels.join(', ')}</p>
+    </div>
   )
 }
 
@@ -1655,6 +1744,7 @@ function StagePackageBuilderSection(input: {
 
                 {plan.planStatus === 'submitted' ? (
                   <div className="stacked-row">
+                    <StagePackagePlanDecisionPreview plan={plan} />
                     <label className="field-block field-block-full">
                       <span>{`Decision note for ${plan.planName}`}</span>
                       <input

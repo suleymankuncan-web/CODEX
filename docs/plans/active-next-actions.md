@@ -6,7 +6,7 @@ This is the short working list for the next practical steps. It keeps the projec
 
 ## Current Position
 
-As of 25 April 2026, the competition package planning flow has:
+As of 26 April 2026, the competition package planning flow has:
 
 - saved drafts
 - edit/cancel/history
@@ -15,6 +15,7 @@ As of 25 April 2026, the competition package planning flow has:
 - approved-only execute
 - returned-plan clone as new draft
 - cloned-plan source visibility from audit metadata
+- submitted-plan pre-approval decision preview
 - backend and frontend release checks
 
 ## Rules For Picking The Next Item
@@ -33,18 +34,14 @@ As of 25 April 2026, the competition package planning flow has:
   - clone history displays the source plan name
   - backend derives source plan info from audit metadata without a schema change
 
-### 1. Package Plan Pre-Approval Preview
-- Priority: `P1`
-- Why: before approval, HR should see a compact final decision summary.
-- Scope:
-  - stage dates
-  - team templates
-  - store counts
-  - warnings/coverage if available
-- Suggested verification:
-  - Playwright decision-ready UI test
+### Completed: Package Plan Pre-Approval Preview
+- Completed: 26 April 2026
+- Result:
+  - decision-ready plans show a compact `Decision preview`
+  - preview includes plan window, stage count, team template count, stage dates, and store assignment count
+  - verification is covered by the existing save/submit/approve/execute Playwright flow
 
-### 2. Stage Package Template Variants
+### 1. Stage Package Template Variants
 - Priority: `P1`
 - Why: league + final is only the first tournament structure.
 - Scope:
@@ -54,7 +51,7 @@ As of 25 April 2026, the competition package planning flow has:
 - Gate:
   - run feature intake interview before implementation
 
-### 3. Store/Region Competition Experience Polish
+### 2. Store/Region Competition Experience Polish
 - Priority: `P1`
 - Why: admin can build competitions; store and region users need clearer read experiences.
 - Scope:
@@ -65,7 +62,7 @@ As of 25 April 2026, the competition package planning flow has:
   - store competition Playwright smoke
   - region read-only smoke
 
-### 4. Turkish UI Localization Foundation
+### 3. Turkish UI Localization Foundation
 - Priority: `P1`
 - Why: product default will be Turkish, and current competition UI copy is still English.
 - Scope:
@@ -75,7 +72,7 @@ As of 25 April 2026, the competition package planning flow has:
 - Reference:
   - `docs/plans/ui-localization-strategy.md`
 
-### 5. Real IdP Staging Evidence
+### 4. Real IdP Staging Evidence
 - Priority: `P1`
 - Why: auth is stable locally, but production confidence needs real provider evidence.
 - Scope:
@@ -86,7 +83,7 @@ As of 25 April 2026, the competition package planning flow has:
   - `docs/plans/phase-7-provider-readiness-checklist.md`
   - `docs/plans/phase-7-auth-evidence-template.md`
 
-### 6. Global Audit Feed Consideration
+### 5. Global Audit Feed Consideration
 - Priority: `P2`
 - Why: audit trails exist per feature, but operators may later need one cross-module feed.
 - Scope:
@@ -95,4 +92,4 @@ As of 25 April 2026, the competition package planning flow has:
 
 ## Recommended Next Move
 
-Do `Package Plan Pre-Approval Preview` next. It is still inside the package-plan control surface and helps HR make the final decision before approving execution.
+Do the `Stage Package Template Variants` intake next. It is the first item in this list that needs the feature interview because it expands tournament structure beyond the current league-then-final package.

@@ -1012,6 +1012,24 @@ C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI\admin-web
 - Frontend release check gecti: `npm.cmd run check:release` -> lint, build, 16 Playwright smoke testi ve `npm audit --omit=dev` (`found 0 vulnerabilities`).
 - `docs/plans/active-next-actions.md` guncellendi; tamamlanan kaynak gorunurlugu kaleminden sonra siradaki mantikli adim `Package Plan Pre-Approval Preview`.
 
+## Son Package Plan Pre-Approval Preview
+
+26 Nisan 2026 itibariyla decision-ready package planlar icin onay oncesi karar ozeti eklendi.
+
+- Backend/API degisikligi yapilmadi; preview mevcut `stageDrafts` verisinden frontend tarafinda turetilir.
+- Submitted/decision-ready plan kartinda `Decision preview` bolumu gorunur.
+- Preview icerigi:
+  - plan tarih araligi
+  - stage sayisi
+  - team template sayisi
+  - stage bazli tarih ve store assignment sayisi
+  - toplam store assignment sayisi
+- TDD kirmizi dogrulamasi yapildi: `npm.cmd run build; npm.cmd run test:e2e -- e2e/competition-surfaces.spec.ts -g "save, submit, approve, and execute"` once `Decision preview` bulunamadigi icin fail verdi.
+- Hedefli frontend dogrulama gecti: `npm.cmd run build; npm.cmd run test:e2e -- e2e/competition-surfaces.spec.ts -g "save, submit, approve, and execute"` -> 1 Playwright test.
+- Backend release check gecti: `npm.cmd run check:release` -> lint, 28 suite / 227 test, build ve `npm audit --omit=dev` (`found 0 vulnerabilities`).
+- Frontend release check gecti: `npm.cmd run check:release` -> lint, build, 16 Playwright smoke testi ve `npm audit --omit=dev` (`found 0 vulnerabilities`).
+- `docs/plans/active-next-actions.md` guncellendi; siradaki mantikli adim `Stage Package Template Variants` icin feature intake roportaji.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:

@@ -239,6 +239,11 @@ test('admin can save, submit, approve, and execute a stage package plan', async 
   await expect(page.getByText('Competition stage package plan submitted for review')).toBeVisible()
   expect(submittedStagePackagePlanId).toBe(stagePackagePlanId)
   await expect(planLibrary.getByText('decision ready', { exact: true })).toBeVisible()
+  await expect(planLibrary.getByText('Decision preview')).toBeVisible()
+  await expect(planLibrary.getByText('2026-04-22 - 2026-04-24').first()).toBeVisible()
+  await expect(planLibrary.getByText('4 store assignments')).toBeVisible()
+  await expect(planLibrary.getByText('MARMARA_TEMPLATE_A - Marmara Template A')).toBeVisible()
+  await expect(planLibrary.getByText('MARMARA_TEMPLATE_B - Marmara Template B')).toBeVisible()
   await planLibrary.getByLabel('Decision note for April regional package').fill('Reviewed in planning meeting.')
   await planLibrary.getByRole('button', { name: 'Approve decision April regional package' }).click()
 
