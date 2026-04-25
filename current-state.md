@@ -697,6 +697,23 @@ C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI\admin-web
 - Frontend release check gecti: `npm.cmd run check:release` -> lint, build, 7 Playwright smoke testi ve `npm audit --omit=dev` (`found 0 vulnerabilities`); Vite chunk warning yok.
 - Siradaki mantikli adim: IK/Admin icin stage/team template olusturma ekranini gercek form akisina cevirmek; DB/API var ama UI tarafindaki yonetim hatti henuz tam kapanmadi.
 
+## Son Competition Stage Builder UI
+
+25 Nisan 2026 itibariyla IK/Admin competition stage builder UI borcu kapatildi.
+
+- Uygulama plani eklendi: `docs/superpowers/plans/2026-04-25-competition-stage-builder-ui.md`.
+- `/admin/competitions` icinde `SUPER_ADMIN` ve `HR_ADMIN` icin stage olusturma formu acildi.
+- Form mevcut `POST /api/competitions/:competitionId/stages` API sozlesmesini kullanir; backend kontrati degismedi.
+- Store secenekleri `/api/auth/lookups` store listesinden gelir.
+- V1 form iki takimla baslar; her takim valid code/name ve en az bir magaza secimi olmadan submit acilmaz.
+- `stageCode` ve `teamCode` UI tarafinda uppercase/underscore formatina normalize edilir.
+- Basarili kayit sonrasi competition listesi ve detail query'leri invalidate edilir.
+- `REGION_MANAGER`, store rolleri ve diger read-only roller stage builder/create aksiyonunu gormez.
+- Playwright smoke kapsami 7 testten 8 teste cikarildi; yeni test create stage POST payload'inde iki takim ve magaza atamalarini dogrular.
+- TDD kirmizi dogrulamasi yapildi: test once `Stage code` label'i yokken fail verdi, implementasyon sonrasi targeted competition smoke gecti.
+- Frontend release check gecti: `npm.cmd run check:release` -> lint, build, 8 Playwright smoke testi ve `npm audit --omit=dev` (`found 0 vulnerabilities`); Vite chunk warning yok.
+- Siradaki mantikli adim: team template CRUD ve stage olusturma akisinda hazir takim sablonu kullanma hattini eklemek. Bu sayede her yarismada takimlari sifirdan yazmak zorunda kalmayiz.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:
@@ -723,7 +740,10 @@ Frontend:
 
 - `admin-web/src/App.tsx`
 - `admin-web/src/features/auth/api.ts`
+- `admin-web/src/features/competitions/api.ts`
+- `admin-web/src/features/competitions/StageBuilderForm.tsx`
 - `admin-web/src/pages/AuthDashboardPage.tsx`
+- `admin-web/src/pages/CompetitionDashboardPage.tsx`
 - `admin-web/src/pages/AuthActionStoreAssignmentAuditPage.tsx`
 - `admin-web/src/pages/StoreMyPerformancePage.tsx`
 - `admin-web/src/pages/StoreKpiHighlightsPage.tsx`
