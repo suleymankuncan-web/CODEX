@@ -1,4 +1,4 @@
-name: Frontend Release Check
+name: Release Check
 
 on:
   push:
@@ -7,21 +7,31 @@ on:
       - master
     paths:
       - "admin-web/**"
-      - ".github/workflows/frontend-release-check.yml"
+      - "backend/nestjs/**"
+      - "db/**"
+      - "infra/**"
+      - "package.json"
+      - "scripts/**"
+      - ".github/workflows/release-check.yml"
   pull_request:
     paths:
       - "admin-web/**"
-      - ".github/workflows/frontend-release-check.yml"
+      - "backend/nestjs/**"
+      - "db/**"
+      - "infra/**"
+      - "package.json"
+      - "scripts/**"
+      - ".github/workflows/release-check.yml"
   workflow_dispatch:
 
 concurrency:
-  group: frontend-release-check-${{ github.ref }}
+  group: release-check-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  frontend-release-check:
+  release-check:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 35
     permissions:
       contents: read
 
@@ -34,7 +44,13 @@ jobs:
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: admin-web/package-lock.json
+          cache-dependency-path: |
+            backend/nestjs/package-lock.json
+            admin-web/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend/nestjs
+        run: npm ci
 
       - name: Install frontend dependencies
         working-directory: admin-web
@@ -44,6 +60,5 @@ jobs:
         working-directory: admin-web
         run: npx playwright install --with-deps chromium
 
-      - name: Run frontend release check
-        working-directory: admin-web
+      - name: Run official release gate
         run: npm run check:release

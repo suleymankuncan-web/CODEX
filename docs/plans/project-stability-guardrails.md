@@ -148,6 +148,14 @@ After meaningful changes, keep lightweight discipline:
 
 The project should not depend on one giant cleanup phase later.
 
+Release readiness uses the official root gate:
+
+```powershell
+npm.cmd run check:release
+```
+
+This delegates to backend and frontend module-owned release checks, including production dependency audit with `npm audit --omit=dev`.
+
 ## Guardrail 14: Design For Future Integration Without Overbuilding
 Assume future integration with:
 - KPIs
@@ -183,6 +191,7 @@ Rules:
 
 Companion decision note:
 - [ui-localization-strategy.md](./ui-localization-strategy.md)
+- [release-check-gate.md](./release-check-gate.md)
 
 ## Related Documents
 Use these guardrails together with:

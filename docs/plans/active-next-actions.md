@@ -27,6 +27,8 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 - canonical schema coverage for target distribution action tables
 - backend web DTO PostgreSQL UUID validation contract
 - explicit staging auth smoke guard and runbook
+- official root release check gate
+- staging auth evidence operator checklist
 - backend and frontend release checks
 
 ## Rules For Picking The Next Item
@@ -142,6 +144,27 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
   - `npm.cmd run smoke:auth:staging:action` exists for real staging IdP plus seeded positive/negative action evidence
   - staging mode fails fast before network calls when local URLs, local demo credentials, missing issuer, missing JWKS URL, or missing action store IDs are used
   - frontend release now runs script contract tests through `npm.cmd run test:scripts`
+- Reference:
+  - `docs/plans/phase-7-staging-auth-smoke-runbook.md`
+
+### Completed: Official Release Check Gate
+- Completed: 26 April 2026
+- Result:
+  - workspace root now exposes `npm.cmd run check:release`
+  - root gate runs backend release check first, then frontend release check
+  - backend and frontend retain module-owned lint/test/build/audit behavior
+  - `.github/workflows/release-check.yml` delegates to the same root gate on Node.js 24
+  - root script contract tests guard the release command, workflow, order, and production audit requirement
+- Reference:
+  - `docs/plans/release-check-gate.md`
+
+### Completed: Staging Auth Evidence Operator Checklist
+- Completed: 26 April 2026
+- Result:
+  - staging auth smoke runbook now defines prepared/executed/reviewed/approved responsibilities
+  - operator checklist covers environment preparation, preflight review, smoke execution, evidence review, and approval decision
+  - sign-off states are explicit: Go, Conditional Go, No-Go
+  - root script contract tests guard that the runbook remains an operational checklist and preserves security evidence rules
 - Reference:
   - `docs/plans/phase-7-staging-auth-smoke-runbook.md`
 

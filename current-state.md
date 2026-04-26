@@ -350,6 +350,75 @@ Dogrulama:
 
 Siradaki mantikli adim: real staging IdP registration bilgileri ve seeded staging DB hazir oldugunda `npm.cmd run smoke:auth:staging:action` ile kanit toplamak. Bu adim credential/ortam olmadan tamamlanmis sayilmayacak.
 
+## Son Official Release Check Gate
+
+26 Nisan 2026 itibariyla backend ve frontend kalite kapilari root seviyesinde tek resmi release komutuna baglandi.
+
+Eklenenler:
+
+- Root `package.json`:
+  - `npm.cmd run check:release`
+  - `npm.cmd run test:scripts`
+- Root release runner:
+  - `scripts/check-release.mjs`
+- Root kontrat testleri:
+  - `scripts/release-gate-contract.test.mjs`
+  - `scripts/auth-evidence-runbook-contract.test.mjs`
+- Birlesik GitHub workflow:
+  - `.github/workflows/release-check.yml`
+- Dokuman:
+  - `docs/plans/release-check-gate.md`
+
+Kurallar:
+
+- Root gate once root script kontrat testlerini calistirir.
+- Root gate once backend `npm run check:release`, sonra frontend `npm run check:release` calistirir.
+- Backend/frontend module-owned release zincirleri korunur.
+- Production dependency audit `npm audit --omit=dev` olarak kalir.
+- CI root gate Node.js 24 ile calisir.
+- Mevcut ayri frontend/backend workflow runtime'lari Node.js 24'e hizalandi.
+
+Dogrulama:
+
+- Kirmizi test izlendi: root `package.json`, root runner ve `.github/workflows/release-check.yml` yokken `node --test scripts/release-gate-contract.test.mjs` fail verdi.
+- Kirmizi test izlendi: root `check:release` root kontrat testlerini calistirmediginde `node --test scripts/release-gate-contract.test.mjs` fail verdi.
+- Hedefli root kontrat testi gecti: `node --test scripts/release-gate-contract.test.mjs` -> 5 Node test.
+- Resmi root release gate gecti: `npm.cmd run check:release` -> 8 root Node test, backend lint + 32 suite / 248 test + build + audit, frontend lint + 3 Node script test + build + 21 Playwright smoke test + audit.
+
+## Son Staging Auth Evidence Operator Checklist
+
+26 Nisan 2026 itibariyla staging auth smoke runbook'u ekip kullanimi icin operasyonel checklist'e cevrildi.
+
+Eklenenler:
+
+- `docs/plans/phase-7-staging-auth-smoke-runbook.md` icinde roller:
+  - Prepared by
+  - Executed by
+  - Reviewed by
+  - Approved by
+- Operator checklist:
+  - environment preparation
+  - preflight review
+  - smoke execution
+  - evidence review
+  - approval decision
+- Sign-off durumlari:
+  - Go
+  - Conditional Go
+  - No-Go
+
+Guvenlik kurallari:
+
+- Raw bearer token, id token, refresh token, authorization code, PKCE verifier, client secret, cookie veya session dump evidence'a yapistirilmez.
+- Raw secret material yakalanirsa evidence silinir, ilgili secret/session rotate edilir ve kanit sanitize sekilde yeniden uretilir.
+
+Dogrulama:
+
+- Kirmizi test izlendi: runbook sadece komut notuyken `node --test scripts/auth-evidence-runbook-contract.test.mjs` fail verdi.
+- Hedefli runbook kontrat testi gecti: `node --test scripts/auth-evidence-runbook-contract.test.mjs` -> 3 Node test.
+
+Siradaki mantikli adim: root `npm.cmd run check:release` komutunu tam calistirip backend+frontend resmi release kapisini uc uca dogrulamak; bu gectikten sonra staging credential bekleme moduna gecilebilir.
+
 ## Mevcut Roller ve Test Kullanicilari
 
 Keycloak local kullanicilari:

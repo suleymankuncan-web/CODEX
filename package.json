@@ -1,0 +1,8 @@
+{
+  "name": "store-ops-workspace",
+  "private": true,
+  "scripts": {
+    "check:release": "npm run test:scripts && node scripts/check-release.mjs",
+    "test:scripts": "node --test scripts/*.test.mjs"
+  }
+}
