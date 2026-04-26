@@ -17,6 +17,7 @@ import {
   type AuditEvent,
   type KpiConfig,
   type KpiConfigEditorState,
+  type KpiConfigVersionMetadata,
   type KpiGradingBand,
   type KpiOwnershipMatrixRow,
   type KpiOwnerRole,
@@ -61,6 +62,7 @@ export function AdminKpiConfigPage() {
   })
   const draft = draftOverride ?? configQuery.data?.draftConfig ?? null
   const published = publishedOverride ?? configQuery.data?.publishedConfig ?? null
+  const latestPublishedVersion = configQuery.data?.latestPublishedVersion ?? null
 
   const saveMutation = useMutation({
     mutationFn: updateKpiConfigDraft,
@@ -230,11 +232,27 @@ export function AdminKpiConfigPage() {
             label="Grading diff"
             value={formatDiffSummary(governancePreview.gradingBands)}
           />
-          <KeyValue label="Versioned schema" value="Not active yet" />
-          <KeyValue label="Snapshot anchoring" value="Required before admin-editable interpretation changes" />
+          <KeyValue
+            label="Versioned schema"
+            value={latestPublishedVersion?.versionNo ? 'Active' : 'Pre-governance'}
+          />
+          <KeyValue
+            label="Latest version"
+            value={formatKpiConfigVersion(latestPublishedVersion)}
+          />
+          <KeyValue
+            label="Published at"
+            value={
+              latestPublishedVersion?.publishedAt
+                ? formatDateTime(latestPublishedVersion.publishedAt)
+                : 'Not published yet'
+            }
+          />
+          <KeyValue label="Rollback" value="Rollback not active in V1" />
+          <KeyValue label="Snapshot anchoring" value="Active for new snapshot runs" />
         </div>
         <p className="queue-subtitle">
-          Snapshot anchoring is required before interpretation changes become admin-editable.
+          Snapshot anchoring is active for new runs; pre-governance snapshots remain readable.
         </p>
       </section>
 
@@ -751,6 +769,10 @@ function formatDiffSummary(input: { added?: unknown; removed?: unknown; changed?
   const changed = Array.isArray(input.changed) ? input.changed.length : 0
 
   return `+${added} / ~${changed} / -${removed}`
+}
+
+function formatKpiConfigVersion(input: KpiConfigVersionMetadata | null | undefined) {
+  return input?.versionNo ? `v${input.versionNo}` : 'No published version'
 }
 
 function ProfileEditor(input: {

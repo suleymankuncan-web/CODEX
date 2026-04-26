@@ -28,9 +28,11 @@ test('admin KPI config page explains publish governance preview', async ({ page 
   await expect(page.getByText('Grading diff')).toBeVisible()
   await expect(page.getByText('+0 / ~1 / -0')).toBeVisible()
   await expect(page.getByText('Versioned schema')).toBeVisible()
-  await expect(page.getByText('Not active yet')).toBeVisible()
+  await expect(page.getByText('Active', { exact: true })).toBeVisible()
+  await expect(page.getByText('Latest version')).toBeVisible()
+  await expect(page.getByText('v3')).toBeVisible()
   await expect(
-    page.getByText('Snapshot anchoring is required before interpretation changes become admin-editable.'),
+    page.getByText('Snapshot anchoring is active for new runs; pre-governance snapshots remain readable.'),
   ).toBeVisible()
 })
 
@@ -179,4 +181,12 @@ const kpiConfigEditorFixture = {
   draftConfig,
   publishedConfig,
   hasUnpublishedChanges: true,
+  latestPublishedVersion: {
+    kpiConfigVersionId: '33333333-3333-4333-8333-333333333333',
+    versionNo: 3,
+    effectiveFrom: '2026-04-26T00:00:00.000Z',
+    effectiveTo: null,
+    publishedAt: '2026-04-26T08:00:00.000Z',
+    publishedBy: 'super-admin-kpi-config-user',
+  },
 }

@@ -47,6 +47,13 @@ export type ReportingSnapshotRun = {
   runStatus: string
   generatedAt: string
   generatedBy: string
+  kpiConfigVersion?: SnapshotKpiConfigVersion | null
+}
+
+export type SnapshotKpiConfigVersion = {
+  kpiConfigVersionId: string | null
+  versionNo: number | null
+  state: 'versioned' | 'pre_governance'
 }
 
 export type WorkforceRow = {
@@ -126,10 +133,24 @@ export type KpiConfig = {
   gradingBands: KpiGradingBand[]
 }
 
+export type KpiConfigVersionMetadata = {
+  kpiConfigVersionId: string | null
+  versionNo: number | null
+  effectiveFrom: string | null
+  effectiveTo: string | null
+  publishedAt: string | null
+  publishedBy: string | null
+}
+
+export type KpiConfigResponse = KpiConfig & {
+  metadata: KpiConfigVersionMetadata
+}
+
 export type KpiConfigEditorState = {
   draftConfig: KpiConfig
   publishedConfig: KpiConfig
   hasUnpublishedChanges: boolean
+  latestPublishedVersion: KpiConfigVersionMetadata
 }
 
 export type MyPerformanceMetric = {
@@ -359,7 +380,7 @@ export async function getKpiReport(snapshotRunId: string) {
 }
 
 export async function getKpiConfig() {
-  return fetchJson<KpiConfig>('/reports/kpi-config')
+  return fetchJson<KpiConfigResponse>('/reports/kpi-config')
 }
 
 export async function getKpiConfigEditor() {

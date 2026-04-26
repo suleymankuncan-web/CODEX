@@ -104,6 +104,10 @@ export function SnapshotRunDetailPage() {
           <MetricAccent label="Total report rows" value={String(totalRows)} />
           <MetricAccent label="Can rerun" value={detail.canRerun ? 'Yes' : 'No'} />
           <MetricAccent label="Rerun allowed" value={detail.rerunAllowed ? 'Yes' : 'No'} />
+          <MetricAccent
+            label="KPI config"
+            value={formatSnapshotKpiConfigVersion(detail.snapshotRun.kpiConfigVersion)}
+          />
         </div>
       </section>
 
@@ -126,6 +130,7 @@ export function SnapshotRunDetailPage() {
               ['Run status', detail.snapshotRun.runStatus],
               ['Health state', detail.snapshotRun.healthState],
               ['Period', `${formatDate(detail.snapshotRun.periodStart)} -> ${formatDate(detail.snapshotRun.periodEnd)}`],
+              ['KPI config version', formatSnapshotKpiConfigVersion(detail.snapshotRun.kpiConfigVersion)],
               ['Generated at', formatDateTime(detail.snapshotRun.generatedAt)],
               ['Started at', detail.snapshotRun.startedAt ? formatDateTime(detail.snapshotRun.startedAt) : 'Not started'],
               ['Finished at', detail.snapshotRun.finishedAt ? formatDateTime(detail.snapshotRun.finishedAt) : 'Not finished'],
@@ -331,4 +336,15 @@ export function SnapshotRunDetailPage() {
       </section>
     </section>
   )
+}
+
+function formatSnapshotKpiConfigVersion(input: {
+  versionNo: number | null
+  state: 'versioned' | 'pre_governance'
+} | null | undefined) {
+  if (input?.state === 'versioned' && input.versionNo) {
+    return `v${input.versionNo}`
+  }
+
+  return 'Pre-governance snapshot'
 }

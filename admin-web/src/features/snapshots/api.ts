@@ -10,6 +10,12 @@ type ListResponse<T> = {
   }
 }
 
+export type SnapshotKpiConfigVersion = {
+  kpiConfigVersionId: string | null
+  versionNo: number | null
+  state: 'versioned' | 'pre_governance'
+}
+
 export type SnapshotOverview = {
   totals: {
     all: number
@@ -51,6 +57,7 @@ export type SnapshotNeedsActionItem = {
   finishedAt: string | null
   failureReason: string | null
   rerunOfSnapshotRunId: string | null
+  kpiConfigVersion?: SnapshotKpiConfigVersion | null
   actionReason: string
   recommendedAction: string
   canRerun: boolean
@@ -74,6 +81,7 @@ export type SnapshotRunDetail = {
     finishedAt: string | null
     failureReason: string | null
     rerunOfSnapshotRunId: string | null
+    kpiConfigVersion?: SnapshotKpiConfigVersion | null
   }
   cards: {
     workforceRows: number
