@@ -224,6 +224,33 @@ Dogrulama:
 
 Siradaki mantikli adim: Turkish UI Localization Foundation. UI default Turkce olacaksa bunu daginik string editleriyle degil, typed label/i18n temeliyle yapmak gerekiyor.
 
+## Son Turkish UI Localization Foundation V1
+
+26 Nisan 2026 itibariyla frontend icin ilk kontrollu localization temeli baglandi.
+
+Eklenenler:
+
+- `admin-web/src/lib/i18n.ts` artik locale normalize eder, default `tr` tutar ve browser localStorage tercihini okur/yazar.
+- `admin-web/src/features/localization/dictionary.ts` typed `tr/en` label sozlugu tasir.
+- `admin-web/src/features/localization/LocalizationProvider.tsx` React context ile `locale`, `setLocale` ve `t(key)` saglar.
+- `admin-web/src/features/localization/LanguageToggle.tsx` admin ve store shell icinde `TR / EN` segmented dil secici olarak gorunur.
+- `/store/competitions` ve `/admin/competitions` read-summary/contribution/warning copy'leri locale uzerinden gelir.
+- Default dil Turkce; kullanici EN secerse tercih reload sonrasinda browser localStorage ile korunur.
+
+Sinir:
+
+- Tum uygulama tek seferde cevrilmedi.
+- Backend enum, audit code, role code, warning code ve API contract degerleri cevrilmedi; stabil teknik kimlik olarak kaldi.
+- User-profile bazli dil tercihi, translator workflow ve tum ekranlar icin genis sozluk V1 disinda birakildi.
+
+Dogrulama:
+
+- Kirmizi test izlendi: yeni Playwright testi once `Okuma özeti` bulunamadigi icin fail verdi.
+- Hedefli localization smoke gecti: `npm.cmd run test:e2e -- store-surfaces.spec.ts --grep "language toggle localizes competition read labels"` -> 1 Playwright test.
+- Frontend release gecti: `npm.cmd run check:release` -> lint, build, 21 Playwright smoke testi ve `npm audit --omit=dev`.
+
+Siradaki mantikli adim: Real IdP Staging Evidence. Lokal auth akisi iyi durumda; artik staging/gercek provider uzerinde PKCE login/logout evidence toplayip production guvenini artirmak mantikli.
+
 ## Mevcut Roller ve Test Kullanicilari
 
 Keycloak local kullanicilari:

@@ -6,6 +6,7 @@ import { BarChart3, Bell, DatabaseZap, Fingerprint, KeyRound, Layers3, Megaphone
 import { KeyValue, ScreenState, StatusPill } from './components/dashboard-primitives'
 import { getAuthSession, type AuthSessionSummary } from './features/auth/api'
 import { formatDisplayRoles } from './features/auth/display'
+import { LanguageToggle } from './features/localization/LanguageToggle'
 import { useSession } from './features/session/session-context-value'
 import { describeSessionMode } from './features/session/session-storage'
 import { SESSION_EXPIRED_EVENT, type SessionExpiredDetail, ApiError } from './lib/api'
@@ -239,6 +240,7 @@ function App() {
             </p>
           </div>
           <div className="topbar-cluster">
+            <LanguageToggle />
             <div className={`env-chip${isReady ? '' : ' env-chip-warning'}`}>
               Session: {describeSessionMode(session.mode)} {isReady ? 'configured' : 'needs setup'}
             </div>
@@ -456,6 +458,7 @@ function StoreShell(input: {
           </p>
         </div>
         <div className="topbar-cluster">
+          <LanguageToggle />
           <StatusPill tone="accent">Preview</StatusPill>
           <NavLink to="/auth/login" className="control-button store-shell-link">
             Real login

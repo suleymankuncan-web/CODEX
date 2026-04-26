@@ -6,7 +6,7 @@ This is the short working list for the next practical steps. It keeps the projec
 
 ## Current Position
 
-As of 26 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, and competition read polish have:
+As of 26 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, and Turkish UI Localization Foundation V1 have:
 
 - saved drafts
 - edit/cancel/history
@@ -20,6 +20,7 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 - store-visible pinned feed preview
 - documented `DM`, `CONFIG`, `JOB`, and `API/BFF` ownership boundaries
 - store/region competition read summaries, contribution health, and warning explanations
+- Turkish-default `tr/en` UI localization foundation with browser-persisted language toggle
 - backend and frontend release checks
 
 ## Rules For Picking The Next Item
@@ -92,17 +93,20 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
   - region manager read-only behavior remains locked
   - frontend release check passes
 
-### 1. Turkish UI Localization Foundation
-- Priority: `P1`
-- Why: product default will be Turkish, and current competition UI copy is still English.
-- Scope:
-  - typed frontend label dictionary or selected i18n foundation
-  - start with competition/store surfaces
-  - keep API enum/audit codes untranslated
-- Reference:
+### Completed: Turkish UI Localization Foundation V1
+- Completed: 26 April 2026
+- Result:
+  - default UI locale is Turkish (`tr`)
+  - English (`en`) can be selected from the shell language toggle
+  - preference persists in browser localStorage
+  - competition read summary, contribution health, and warning labels use typed frontend translations
+  - API enum/audit/status codes remain untranslated and stable
+- References:
   - `docs/plans/ui-localization-strategy.md`
+  - `docs/superpowers/specs/2026-04-26-ui-localization-foundation-design.md`
+  - `docs/superpowers/plans/2026-04-26-ui-localization-foundation.md`
 
-### 2. Real IdP Staging Evidence
+### 1. Real IdP Staging Evidence
 - Priority: `P1`
 - Why: auth is stable locally, but production confidence needs real provider evidence.
 - Scope:
@@ -113,7 +117,7 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
   - `docs/plans/phase-7-provider-readiness-checklist.md`
   - `docs/plans/phase-7-auth-evidence-template.md`
 
-### 3. Global Audit Feed Consideration
+### 2. Global Audit Feed Consideration
 - Priority: `P2`
 - Why: audit trails exist per feature, but operators may later need one cross-module feed.
 - Scope:
@@ -122,4 +126,4 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 
 ## Recommended Next Move
 
-Start the Turkish UI Localization Foundation next. The product default will be Turkish, and the current surfaces still mix English operational copy with a few Turkish labels; a typed label foundation keeps the cleanup controlled instead of turning it into scattered string edits.
+Start Real IdP Staging Evidence next. The local auth and shell behavior are stable; collecting sanitized PKCE login/logout evidence from the real provider is the next confidence-building step before production-facing rollout.

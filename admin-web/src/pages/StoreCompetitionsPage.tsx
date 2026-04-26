@@ -22,15 +22,17 @@ import {
   describeCompetitionWarning,
   type CompetitionReadSummary,
 } from '../features/competitions/readability'
+import { useLocalization } from '../features/localization/useLocalization'
 import { formatDate, formatState, getErrorMessage } from '../lib/format'
+import type { AppLocale } from '../lib/i18n'
 
 function canUseStoreCompetitions(authSummary: AuthSessionSummary | null) {
   const roles = authSummary?.user.roleCodes ?? []
   return roles.includes('STORE_MANAGER') || roles.includes('STORE_PERSONNEL')
 }
 
-function formatScore(value: number | null) {
-  return value === null ? 'Partial' : value.toFixed(2)
+function formatScore(value: number | null, locale: AppLocale) {
+  return value === null ? (locale === 'tr' ? 'Kısmi' : 'Partial') : value.toFixed(2)
 }
 
 function formatRank(rank: number | null, population: number) {
@@ -40,6 +42,7 @@ function formatRank(rank: number | null, population: number) {
 export function StoreCompetitionsPage(input: {
   authSummary: AuthSessionSummary | null
 }) {
+  const { locale, t } = useLocalization()
   const enabled = canUseStoreCompetitions(input.authSummary)
   const [selectedCompetitionId, setSelectedCompetitionId] = useState<string | null>(null)
   const primaryStoreId = input.authSummary?.user.scope.storeIds[0] ?? 'No store scope'
@@ -171,7 +174,9 @@ export function StoreCompetitionsPage(input: {
               <h3>{selectedCompetition.competitionName}</h3>
             </div>
             <StatusPill tone={detailQuery.data?.warnings.length ? 'warning' : 'calm'}>
-              {detailQuery.data?.warnings.length ? `${detailQuery.data.warnings.length} warnings` : 'Clean'}
+              {detailQuery.data?.warnings.length
+                ? `${detailQuery.data.warnings.length} warnings`
+                : t('competition.clean')}
             </StatusPill>
           </div>
 
@@ -189,7 +194,7 @@ export function StoreCompetitionsPage(input: {
 
           {detailQuery.data ? (
             <div className="page-stack">
-              <CompetitionReadSummaryPanel summary={buildCompetitionReadSummary(detailQuery.data)} />
+              <CompetitionReadSummaryPanel summary={buildCompetitionReadSummary(detailQuery.data, locale)} />
 
               <section className="metric-grid store-metric-grid">
                 <MetricCard
@@ -237,7 +242,7 @@ export function StoreCompetitionsPage(input: {
                         </StatusPill>
                       </div>
                       <div className="key-grid">
-                        <KeyValue label="Score" value={formatScore(score.scoreValue)} />
+                        <KeyValue label="Score" value={formatScore(score.scoreValue, locale)} />
                         <KeyValue
                           label="Coverage"
                           value={`${score.validStoreCount}/${score.totalStoreCount}`}
@@ -260,21 +265,23 @@ export function StoreCompetitionsPage(input: {
 }
 
 function CompetitionReadSummaryPanel(input: { summary: CompetitionReadSummary }) {
+  const { t } = useLocalization()
+
   return (
     <section className="stacked-table" aria-label="Store competition read summary">
       <div className="panel-heading">
         <div>
-          <div className="eyebrow">Read Scope</div>
-          <h3>Read summary</h3>
+          <div className="eyebrow">{t('competition.readScope')}</div>
+          <h3>{t('competition.readSummary')}</h3>
         </div>
         <StatusPill tone={input.summary.tone}>{input.summary.attentionLabel}</StatusPill>
       </div>
       <article className="stacked-row">
         <p className="queue-subtitle">{input.summary.explanation}</p>
         <div className="key-grid">
-          <KeyValue label="Best visible rank" value={input.summary.bestRankLabel} />
-          <KeyValue label="Team coverage" value={input.summary.teamCoverageLabel} />
-          <KeyValue label="Contribution coverage" value={input.summary.contributionCoverageLabel} />
+          <KeyValue label={t('competition.bestVisibleRank')} value={input.summary.bestRankLabel} />
+          <KeyValue label={t('competition.teamCoverage')} value={input.summary.teamCoverageLabel} />
+          <KeyValue label={t('competition.contributionCoverage')} value={input.summary.contributionCoverageLabel} />
         </div>
       </article>
     </section>
@@ -282,19 +289,21 @@ function CompetitionReadSummaryPanel(input: { summary: CompetitionReadSummary })
 }
 
 function ScopedContributionSection(input: { contributions: CompetitionStoreContribution[] }) {
+  const { locale, t } = useLocalization()
+
   return (
     <section className="stacked-table" aria-label="Scoped store competition contributions">
       <div className="panel-heading">
         <div>
-          <div className="eyebrow">Read Scope</div>
-          <h3>Scoped contributions</h3>
+          <div className="eyebrow">{t('competition.readScope')}</div>
+          <h3>{t('competition.scopedContributions')}</h3>
         </div>
       </div>
       {input.contributions.length === 0 ? (
-        <EmptyState copy="No scoped store contribution rows are available for this selection." />
+        <EmptyState copy={t('competition.noScopedStoreContributionRowsCopy')} />
       ) : (
         input.contributions.map((contribution) => {
-          const readability = describeCompetitionContribution(contribution)
+          const readability = describeCompetitionContribution(contribution, locale)
 
           return (
             <article
@@ -310,17 +319,17 @@ function ScopedContributionSection(input: { contributions: CompetitionStoreContr
                 </div>
                 <div className="action-cluster">
                   <StatusPill tone={contribution.hasDailyData ? 'calm' : 'warning'}>
-                    {formatScore(contribution.scoreValue)}
+                    {formatScore(contribution.scoreValue, locale)}
                   </StatusPill>
                   <StatusPill tone={readability.tone}>{readability.statusLabel}</StatusPill>
                 </div>
               </div>
               <div className="key-grid">
-                <KeyValue label="Snapshot" value={formatDate(contribution.snapshotDate)} />
-                <KeyValue label="Contribution health" value={readability.statusLabel} />
-                <KeyValue label="Coverage" value={readability.coverageLabel} />
-                <KeyValue label="Missing KPIs" value={readability.missingLabel} />
-                <KeyValue label="Why it matters" value={readability.explanation} />
+                <KeyValue label={t('competition.snapshot')} value={formatDate(contribution.snapshotDate)} />
+                <KeyValue label={t('competition.contributionHealth')} value={readability.statusLabel} />
+                <KeyValue label={t('competition.coverage')} value={readability.coverageLabel} />
+                <KeyValue label={t('competition.missingKpis')} value={readability.missingLabel} />
+                <KeyValue label={t('competition.whyItMatters')} value={readability.explanation} />
               </div>
             </article>
           )
@@ -331,22 +340,24 @@ function ScopedContributionSection(input: { contributions: CompetitionStoreContr
 }
 
 function ScopedWarningsSection(input: { warnings: CompetitionWarning[] }) {
+  const { locale, t } = useLocalization()
+
   return (
     <section className="stacked-table" aria-label="Scoped store competition warnings">
       <div className="panel-heading">
         <div>
-          <div className="eyebrow">Data Quality</div>
-          <h3>Scoped warnings</h3>
+          <div className="eyebrow">{t('competition.dataQuality')}</div>
+          <h3>{t('competition.scopedWarnings')}</h3>
         </div>
         <StatusPill tone={input.warnings.length > 0 ? 'warning' : 'calm'}>
-          {input.warnings.length > 0 ? `${input.warnings.length} warnings` : 'Clean'}
+          {input.warnings.length > 0 ? `${input.warnings.length} warnings` : t('competition.clean')}
         </StatusPill>
       </div>
       {input.warnings.length === 0 ? (
-        <EmptyState title="No open warnings" copy="No scoped data quality warnings are open." />
+        <EmptyState title={t('competition.noOpenWarnings')} copy={t('competition.noScopedWarningsCopy')} />
       ) : (
         input.warnings.map((warning) => {
-          const readability = describeCompetitionWarning(warning)
+          const readability = describeCompetitionWarning(warning, locale)
 
           return (
             <article className="stacked-row" key={warning.warningId}>
@@ -358,9 +369,9 @@ function ScopedWarningsSection(input: { warnings: CompetitionWarning[] }) {
                 <StatusPill tone={readability.tone}>{formatState(warning.warningLevel)}</StatusPill>
               </div>
               <div className="key-grid">
-                <KeyValue label="Warning code" value={formatState(warning.warningCode)} />
-                <KeyValue label="Period start" value={formatDate(warning.periodStart)} />
-                <KeyValue label="Period end" value={formatDate(warning.periodEnd)} />
+                <KeyValue label={t('competition.warningCode')} value={formatState(warning.warningCode)} />
+                <KeyValue label={t('competition.periodStart')} value={formatDate(warning.periodStart)} />
+                <KeyValue label={t('competition.periodEnd')} value={formatDate(warning.periodEnd)} />
               </div>
             </article>
           )

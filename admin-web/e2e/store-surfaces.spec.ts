@@ -75,16 +75,44 @@ test('store competitions page renders scoped contribution details', async ({ pag
   await expect(page.getByRole('heading', { name: 'April Region Challenge' })).toBeVisible()
   const readSummary = page.getByLabel('Store competition read summary')
   const contributionRows = page.getByLabel('Scoped store competition contributions')
-  await expect(readSummary.getByText('Read summary')).toBeVisible()
-  await expect(readSummary.getByText('95% contribution coverage')).toBeVisible()
-  await expect(contributionRows.getByText('Contribution health')).toBeVisible()
-  await expect(contributionRows.getByText('Partial contribution').first()).toBeVisible()
+  await expect(readSummary.getByText('Okuma özeti')).toBeVisible()
+  await expect(readSummary.getByText('95% katkı kapsamı')).toBeVisible()
+  await expect(contributionRows.getByText('Katkı sağlığı')).toBeVisible()
+  await expect(contributionRows.getByText('Kısmi katkı').first()).toBeVisible()
   await expect(contributionRows.getByText('BM checklist', { exact: true })).toBeVisible()
-  await expect(page.getByText('Scoped contributions')).toBeVisible()
+  await expect(page.getByText('Kapsamdaki katkılar')).toBeVisible()
   await expect(page.getByText('IstinyePark Demo Store')).toBeVisible()
   await expect(page.getByText('93.50')).toBeVisible()
   await expect(page.getByText('Outside Region Store')).toHaveCount(0)
   await expect(page.getByRole('button', { name: /Recalculate/ })).toHaveCount(0)
+})
+
+test('language toggle localizes competition read labels and persists preference', async ({ page }) => {
+  await page.goto('/store/competitions')
+
+  const readSummary = page.getByLabel('Store competition read summary')
+  const contributionRows = page.getByLabel('Scoped store competition contributions')
+
+  await expect(readSummary.getByRole('heading', { name: 'Okuma özeti' })).toBeVisible()
+  await expect(readSummary.getByText('95% katkı kapsamı')).toBeVisible()
+  await expect(contributionRows.getByText('Katkı sağlığı')).toBeVisible()
+  await expect(contributionRows.getByText('Kısmi katkı').first()).toBeVisible()
+
+  await page.getByRole('button', { name: 'İngilizceye geç' }).click()
+
+  await expect(readSummary.getByRole('heading', { name: 'Read summary' })).toBeVisible()
+  await expect(readSummary.getByText('95% contribution coverage')).toBeVisible()
+  await expect(contributionRows.getByText('Contribution health')).toBeVisible()
+  await expect(contributionRows.getByText('Partial contribution').first()).toBeVisible()
+
+  await page.reload()
+
+  await expect(readSummary.getByRole('heading', { name: 'Read summary' })).toBeVisible()
+  await expect(contributionRows.getByText('Contribution health')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Switch language to Turkish' })).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  )
 })
 
 async function routeStoreSurfaceApi(page: Page) {
