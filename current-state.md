@@ -1619,6 +1619,54 @@ Debt ledger:
 
 Siradaki mantikli adim: KPI interpretation versioning / config governance planning. Score ve threshold yorumlari ileride admin-editable olmadan once effective date/version ile izlenebilir hale gelmeli.
 
+## Son KPI Interpretation Governance V1
+
+26 Nisan 2026 itibariyla KPI yorum/threshold governance plani eklendi.
+
+Yeni dokuman:
+
+- `docs/plans/kpi-interpretation-governance-v1.md`
+
+Karar:
+
+- Simdilik yeni `dm` veya `config` schema yok.
+- Mevcut `ops.kpi_score_profile_config` module-owned data config olarak kalir.
+- KPI yorum/threshold dili admin-editable olmadan once version/effective-date/snapshot anchoring gereklidir.
+- Audit publish olayini anlatir ama tek basina historical interpretation icin yeterli degildir.
+- `rpt` snapshotlari ileride hangi KPI config version ile uretildigini tasimadan gecmis yorum tam guvenli sayilmaz.
+
+Planlanan hedef model:
+
+- versioned published config
+- interpretation packs
+- snapshot anchoring
+- effective date
+- rollback
+- config metadata iceren API response
+- frontend interpretation helper'larinin metadata-aware hale gelmesi
+
+Sinir:
+
+- DB schema degismedi.
+- Migration yok.
+- Backend contract degismedi.
+- Score formulu degismedi.
+- Frontend davranisi degismedi.
+- Bu adim implementation degil, governance karar kilididir.
+
+Dogrulama:
+
+- Dokuman self-review yapildi: placeholder yok, kapsam bilincli olarak plan seviyesinde.
+- Resmi release gate gecti: `npm.cmd run check:release` -> root script tests, backend lint/test/build/audit, frontend lint/script/build/23 Playwright/audit.
+
+Debt ledger:
+
+- Closed active debts: 17
+- Strategic investment backlog: 6
+- Silent untracked quality debt in the active gate: 0
+
+Siradaki mantikli adim: KPI config editor governance preview. Mevcut admin KPI config draft/publish yuzeyi, publish oncesi neyin degisecegini daha okunur gostermeli; versioned schema henuz acilmadan decision preview guclendirilmeli.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:

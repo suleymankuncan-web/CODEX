@@ -6,7 +6,7 @@ This is the short working list for the next practical steps. It keeps the projec
 
 ## Current Position
 
-As of 26 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, and Store Score Threshold Language V1 have:
+As of 26 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, and KPI Interpretation Governance V1 have:
 
 - saved drafts
 - edit/cancel/history
@@ -34,6 +34,7 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 - personnel score meaning and confidence copy
 - KPI source semantics for imported, derived, checklist-fed, pending normalization, and missing values
 - store weighted-score threshold and action interpretation copy
+- KPI interpretation versioning, effective-date, audit, and snapshot-anchoring governance plan
 - project debt ledger
 - backend and frontend release checks
 
@@ -41,7 +42,7 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 
 Reference: `docs/plans/project-debt-ledger.md`
 
-- Closed active debts: 16
+- Closed active debts: 17
 - Superseded before overbuilding: 1
 - Blocked external dependency: 1
 - Watchlist decision item: 1
@@ -56,7 +57,8 @@ Interpretation:
 - Score Meaning V1 now explains the personnel weighted score on `/store/me`.
 - KPI Source Semantics V1 now explains imported, derived, checklist-fed, pending normalization, and missing KPI values on store-facing KPI rows.
 - Store Score Threshold Language V1 now explains store weighted score bands, score confidence, and action language on `/store/kpis`.
-- KPI interpretation versioning remains planned investment.
+- KPI Interpretation Governance V1 now defines when interpretation/version/effective-date work must become a technical implementation.
+- Versioned config implementation remains planned investment.
 - The debt ledger itself is an accounting artifact and is not counted as a separate closed active debt item.
 
 ## Rules For Picking The Next Item
@@ -260,6 +262,17 @@ Interpretation:
 - Reference:
   - `docs/plans/store-score-threshold-language-v1.md`
 
+### Completed: KPI Interpretation Governance V1
+- Completed: 26 April 2026
+- Result:
+  - current KPI config ownership is documented around `ops.kpi_score_profile_config`
+  - version/effective-date/snapshot-anchoring requirements are defined before interpretation becomes admin-editable
+  - target governance model covers versioned published config, interpretation packs, rollback, audit, and API metadata
+  - explicit do-not-build-yet guard prevents premature `dm`/`config` schema split
+  - no DB schema, migration, backend contract, score math, or frontend behavior changed
+- Reference:
+  - `docs/plans/kpi-interpretation-governance-v1.md`
+
 ### 1. Real IdP Staging Evidence
 - Priority: `P1`
 - Why: local provider and action mechanics are proven, but production confidence still needs real staging IdP and seeded staging action evidence.
@@ -284,4 +297,4 @@ Interpretation:
 
 If staging IdP and seeded staging DB values are available, start real staging evidence.
 
-If staging values are not available, start KPI interpretation versioning / config governance planning. The next local product step is to make score and threshold interpretation changes traceable by effective date or version before these explanations become admin-editable.
+If staging values are not available, start KPI config editor governance preview. The next local product step is to make the existing admin KPI config draft/publish surface explain what would change before publish, without adding versioned schema yet.
