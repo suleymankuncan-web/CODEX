@@ -417,7 +417,38 @@ Dogrulama:
 - Kirmizi test izlendi: runbook sadece komut notuyken `node --test scripts/auth-evidence-runbook-contract.test.mjs` fail verdi.
 - Hedefli runbook kontrat testi gecti: `node --test scripts/auth-evidence-runbook-contract.test.mjs` -> 3 Node test.
 
-Siradaki mantikli adim: root `npm.cmd run check:release` komutunu tam calistirip backend+frontend resmi release kapisini uc uca dogrulamak; bu gectikten sonra staging credential bekleme moduna gecilebilir.
+## Son Staging Auth Evidence JSON Guard
+
+26 Nisan 2026 itibariyla staging auth evidence onayi icin sanitize JSON guard eklendi.
+
+Eklenenler:
+
+- `admin-web/scripts/auth-evidence-guard.mjs`
+- `admin-web/scripts/auth-evidence-guard.test.mjs`
+- `admin-web` script'i: `npm.cmd run guard:auth:evidence`
+
+Guard davranisi:
+
+- Smoke JSON evidence shape'ini kontrol eder.
+- Raw compact JWT materyalini reddeder.
+- `code`, `code_challenge`, `state`, `id_token_hint`, `refresh_token`, `client_secret`, cookie ve benzeri sensitive URL parametreleri redacted degilse reddeder.
+- Secret-like field'lar raw string tasiyorsa reddeder.
+- Action smoke evidence icin assigned-store `201`, unassigned-store `403`, `dbWriteExpected=false` kosullarini zorunlu tutar.
+
+Runbook baglantisi:
+
+```powershell
+cd "<workspace-root>\admin-web"
+npm.cmd run --silent smoke:auth:staging:action | npm.cmd run --silent guard:auth:evidence -- --stdin
+```
+
+Dogrulama:
+
+- Kirmizi test izlendi: `auth-evidence-guard.mjs` yokken `npm.cmd run test:scripts` 4 yeni guard testinde fail verdi.
+- Hedefli frontend script testi gecti: `npm.cmd run test:scripts` -> 7 Node test.
+- Resmi root release gate gecti: `npm.cmd run check:release` -> 9 root Node test, backend lint + 32 suite / 248 test + build + audit, frontend lint + 7 Node script test + build + 21 Playwright smoke test + audit.
+
+Siradaki mantikli adim: real staging IdP registration bilgileri ve seeded staging DB hazir oldugunda guard'li komutla `smoke:auth:staging:action` evidence toplamak; credential/ortam gelmeden bu adim tamamlanmis sayilmayacak.
 
 ## Mevcut Roller ve Test Kullanicilari
 

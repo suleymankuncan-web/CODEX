@@ -85,6 +85,12 @@ Recommended command for staging provider plus seeded positive/negative action ev
 npm.cmd run smoke:auth:staging:action
 ```
 
+Recommended guarded command before approving evidence:
+
+```powershell
+npm.cmd run --silent smoke:auth:staging:action | npm.cmd run --silent guard:auth:evidence -- --stdin
+```
+
 Expected:
 - `authMode` is `jwt`
 - `provider.configured` is `true`

@@ -54,6 +54,7 @@ test('staging smoke requires explicit issuer and JWKS evidence metadata', () => 
 test('package exposes explicit staging auth smoke scripts', () => {
   const packageJson = JSON.parse(readFileSync(join(appRoot, 'package.json'), 'utf8'))
 
+  assert.equal(packageJson.scripts['guard:auth:evidence'], 'node scripts/auth-evidence-guard.mjs')
   assert.equal(packageJson.scripts['smoke:auth:staging'], 'node scripts/auth-live-smoke.mjs --staging')
   assert.equal(
     packageJson.scripts['smoke:auth:staging:action'],

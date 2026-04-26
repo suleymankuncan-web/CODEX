@@ -41,3 +41,9 @@ test('staging auth runbook defines clear sign-off states', () => {
   assert.match(runbook, /No-Go/)
   assert.match(runbook, /Conditional Go/)
 })
+
+test('staging auth runbook requires guarded evidence before approval', () => {
+  assert.match(runbook, /guard:auth:evidence/)
+  assert.match(runbook, /--stdin/)
+  assert.match(runbook, /Evidence guard passes before the note is approved/)
+})

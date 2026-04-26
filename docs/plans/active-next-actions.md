@@ -29,6 +29,7 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 - explicit staging auth smoke guard and runbook
 - official root release check gate
 - staging auth evidence operator checklist
+- staging auth evidence JSON guard
 - backend and frontend release checks
 
 ## Rules For Picking The Next Item
@@ -166,6 +167,18 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
   - sign-off states are explicit: Go, Conditional Go, No-Go
   - root script contract tests guard that the runbook remains an operational checklist and preserves security evidence rules
 - Reference:
+  - `docs/plans/phase-7-staging-auth-smoke-runbook.md`
+
+### Completed: Staging Auth Evidence JSON Guard
+- Completed: 26 April 2026
+- Result:
+  - `admin-web` exposes `npm.cmd run guard:auth:evidence`
+  - evidence guard validates smoke JSON shape before approval
+  - evidence guard rejects raw compact JWTs, unredacted sensitive URL parameters, and secret-like fields
+  - action evidence must prove assigned-store `201` and unassigned-store `403`
+  - frontend script tests cover accepted sanitized evidence and rejected unsafe evidence
+- Reference:
+  - `admin-web/scripts/auth-evidence-guard.mjs`
   - `docs/plans/phase-7-staging-auth-smoke-runbook.md`
 
 ### 1. Real IdP Staging Evidence

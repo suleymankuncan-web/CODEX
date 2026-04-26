@@ -57,7 +57,14 @@ cd "<workspace-root>\admin-web"
 npm.cmd run smoke:auth:staging:action
 ```
 
-The script writes sanitized JSON evidence to stdout. Paste only the sanitized output into a dated evidence note copied from:
+Run the evidence guard before storing the final evidence:
+
+```powershell
+cd "<workspace-root>\admin-web"
+npm.cmd run --silent smoke:auth:staging:action | npm.cmd run --silent guard:auth:evidence -- --stdin
+```
+
+The smoke script writes sanitized JSON evidence to stdout. The guard checks that the JSON evidence shape is complete, contains no raw token/code/verifier/secret/cookie material, and proves assigned-store success plus unassigned-store `403` for action smoke. Paste only guarded sanitized output into a dated evidence note copied from:
 
 - `docs/plans/phase-7-auth-evidence-template.md`
 
@@ -129,6 +136,7 @@ The staging script fails before any network request if:
 
 - [ ] Export all required environment variables.
 - [ ] Run `npm.cmd run smoke:auth:staging:action`.
+- [ ] Run `npm.cmd run --silent smoke:auth:staging:action | npm.cmd run --silent guard:auth:evidence -- --stdin`.
 - [ ] Confirm the command did not use local fallback URLs or local demo credentials.
 - [ ] Confirm provider redirect uses `response_type=code`.
 - [ ] Confirm provider redirect uses `code_challenge_method=S256`.
@@ -150,6 +158,7 @@ The staging script fails before any network request if:
 - [ ] Evidence contains negative `403` action result.
 - [ ] Evidence contains logout result.
 - [ ] Evidence contains expired-token result.
+- [ ] Evidence guard passes before the note is approved.
 - [ ] Evidence contains no raw bearer token, id token, refresh token, code, verifier, cookie, client secret, private key, or session storage dump.
 
 ### 5. Approval Decision
