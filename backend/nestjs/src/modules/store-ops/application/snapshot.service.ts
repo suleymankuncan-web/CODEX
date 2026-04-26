@@ -64,6 +64,7 @@ export class SnapshotService {
         };
       }
 
+      const latestKpiConfigVersion = await this.getLatestKpiConfigVersion(client);
       const run = await this.snapshotOperationsRepository.createSnapshotRun(
         {
           snapshotType: input.snapshotType,
@@ -71,6 +72,7 @@ export class SnapshotService {
           periodEnd: input.periodEnd,
           actorUserId: input.actorUserId,
           idempotencyKey,
+          kpiConfigVersionId: latestKpiConfigVersion?.kpi_config_version_id ?? null,
         },
         client,
       );
@@ -84,6 +86,8 @@ export class SnapshotService {
             snapshotType: input.snapshotType,
             periodStart: input.periodStart,
             periodEnd: input.periodEnd,
+            kpiConfigVersionId: latestKpiConfigVersion?.kpi_config_version_id ?? null,
+            versionNo: latestKpiConfigVersion?.version_no ?? null,
           },
         },
         client,
@@ -486,6 +490,13 @@ export class SnapshotService {
     }
 
     const rerun = await this.databaseService.withTransaction(async (client) => {
+      const latestKpiConfigVersion = existing.kpi_config_version_id
+        ? null
+        : await this.getLatestKpiConfigVersion(client);
+      const kpiConfigVersionId =
+        existing.kpi_config_version_id ?? latestKpiConfigVersion?.kpi_config_version_id ?? null;
+      const versionNo =
+        existing.kpi_config_version_no ?? latestKpiConfigVersion?.version_no ?? null;
       const newRun = await this.snapshotOperationsRepository.createSnapshotRun(
         {
           snapshotType: existing.snapshot_type,
@@ -494,6 +505,7 @@ export class SnapshotService {
           actorUserId,
           idempotencyKey: `${snapshotRunId}:rerun:${new Date().toISOString()}`,
           rerunOfSnapshotRunId: snapshotRunId,
+          kpiConfigVersionId,
         },
         client,
       );
@@ -508,6 +520,8 @@ export class SnapshotService {
             periodStart: existing.period_start,
             periodEnd: existing.period_end,
             rerunOfSnapshotRunId: snapshotRunId,
+            kpiConfigVersionId,
+            versionNo,
           },
         },
         client,
@@ -520,6 +534,8 @@ export class SnapshotService {
           snapshotRunId,
           metadata: {
             newSnapshotRunId: newRun.snapshot_run_id,
+            kpiConfigVersionId,
+            versionNo,
           },
         },
         client,
@@ -576,7 +592,7 @@ export class SnapshotService {
       const snapshotRun =
         await this.snapshotOperationsRepository.findSnapshotRunById(snapshotRunId);
       const personnelProfile = snapshotRun?.snapshot_type === "daily"
-        ? await this.getPublishedPersonnelProfile()
+        ? await this.getPersonnelProfileForSnapshotRun(snapshotRun)
         : null;
 
       logStructuredMessage(this.logger, "snapshot_run.execution.started", {
@@ -653,6 +669,8 @@ export class SnapshotService {
     finished_at: string | null;
     failure_reason: string | null;
     rerun_of_snapshot_run_id: string | null;
+    kpi_config_version_id?: string | null;
+    kpi_config_version_no?: number | null;
   }) {
     return {
       snapshotRunId: item.snapshot_run_id,
@@ -668,6 +686,11 @@ export class SnapshotService {
       finishedAt: item.finished_at,
       failureReason: item.failure_reason,
       rerunOfSnapshotRunId: item.rerun_of_snapshot_run_id,
+      kpiConfigVersion: {
+        kpiConfigVersionId: item.kpi_config_version_id ?? null,
+        versionNo: item.kpi_config_version_no ?? null,
+        state: item.kpi_config_version_id ? "versioned" : "pre_governance",
+      },
     };
   }
 
@@ -696,8 +719,28 @@ export class SnapshotService {
     return Date.now() - generatedAtMs >= SnapshotService.SNAPSHOT_STUCK_THRESHOLD_MINUTES * 60 * 1000;
   }
 
-  private async getPublishedPersonnelProfile() {
+  private async getLatestKpiConfigVersion(client?: SnapshotClient) {
     try {
+      return await this.kpiConfigRepository.getLatestPublishedKpiConfigVersion(client);
+    } catch {
+      return null;
+    }
+  }
+
+  private async getPersonnelProfileForSnapshotRun(snapshotRun: {
+    kpi_config_version_id?: string | null;
+  }) {
+    try {
+      if (snapshotRun.kpi_config_version_id) {
+        const version = await this.kpiConfigRepository.getKpiConfigVersionById(
+          snapshotRun.kpi_config_version_id,
+        );
+        const profile = version?.config_payload?.personnelProfile;
+        if (profile) {
+          return profile as KpiScoreProfile;
+        }
+      }
+
       const rows = await this.kpiConfigRepository.getKpiConfigRows();
       const profileRow = rows.find((row) => row.config_key === "personnel_profile");
       if (profileRow) {
