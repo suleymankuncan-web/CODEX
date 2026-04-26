@@ -66,6 +66,7 @@ As of 26 April 2026, the competition package planning flow has:
   - no comments, likes, images, push notifications, or new leaderboard in V1
 - Gate:
   - design spec: `docs/superpowers/specs/2026-04-26-operational-feed-v1-design.md`
+  - implementation plan: `docs/superpowers/plans/2026-04-26-operational-feed-v1.md`
 
 ### 2. Store/Region Competition Experience Polish
 - Priority: `P1`
@@ -108,4 +109,4 @@ As of 26 April 2026, the competition package planning flow has:
 
 ## Recommended Next Move
 
-Review and approve the `Operational Feed V1` design, then write the implementation plan. The intake decision is to keep challenges as scoped feed posts that link to existing ranking/profile surfaces, not as a new scoring engine.
+Execute `docs/superpowers/plans/2026-04-26-operational-feed-v1.md` task-by-task. The intake decision is locked: challenges are scoped feed posts that link to existing ranking/profile surfaces, not a new scoring engine.

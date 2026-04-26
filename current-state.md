@@ -123,6 +123,14 @@ Yeni karar:
 Referans:
 
 - `docs/superpowers/specs/2026-04-26-operational-feed-v1-design.md`
+- `docs/superpowers/plans/2026-04-26-operational-feed-v1.md`
+
+Son plan durumu:
+
+- Operational Feed V1 uygulama plani yazildi.
+- Plan DB, backend contract/service/repository/controller, admin feed, store feed, store home pinned preview, Playwright ve release check adimlarini kapsar.
+- Planin kritik siniri: feed challenge postlari duyuru ve linktir; skor hesaplama, leaderboard materialization ve competition stage/package mutasyonu yapmaz.
+- Siradaki mantikli adim: `docs/superpowers/plans/2026-04-26-operational-feed-v1.md` dosyasini task task execute etmek.
 
 ## Mevcut Roller ve Test Kullanicilari
 
