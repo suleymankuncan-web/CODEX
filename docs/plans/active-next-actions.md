@@ -6,7 +6,7 @@ This is the short working list for the next practical steps. It keeps the projec
 
 ## Current Position
 
-As of 26 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, and KPI Config Editor Governance Preview V1 have:
+As of 26 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, and Ranking Completeness Segment Readiness V1 have:
 
 - saved drafts
 - edit/cancel/history
@@ -36,6 +36,7 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 - store weighted-score threshold and action interpretation copy
 - KPI interpretation versioning, effective-date, audit, and snapshot-anchoring governance plan
 - admin KPI config publish-governance preview and draft/live diff counts
+- ranking scope readiness for Turkey-wide, store-level, metric mini-rank, and future segment use
 - project debt ledger
 - backend and frontend release checks
 
@@ -43,11 +44,11 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 
 Reference: `docs/plans/project-debt-ledger.md`
 
-- Closed active debts: 18
+- Closed active debts: 19
 - Superseded before overbuilding: 1
 - Blocked external dependency: 1
 - Watchlist decision item: 1
-- Strategic investment backlog: 5
+- Strategic investment backlog: 4
 - Silent untracked quality debt in the active gate: 0
 
 Interpretation:
@@ -60,6 +61,7 @@ Interpretation:
 - Store Score Threshold Language V1 now explains store weighted score bands, score confidence, and action language on `/store/kpis`.
 - KPI Interpretation Governance V1 now defines when interpretation/version/effective-date work must become a technical implementation.
 - KPI Config Editor Governance Preview V1 now makes `/admin/kpi-config` show publish-impact diffs before live interpretation changes.
+- Ranking Completeness Segment Readiness V1 now makes `/store/rankings` explain Turkey-wide, store-level, metric mini-rank, and segment readiness without opening a new ranking engine.
 - Versioned config implementation remains planned investment.
 - The debt ledger itself is an accounting artifact and is not counted as a separate closed active debt item.
 
@@ -288,6 +290,17 @@ Interpretation:
 - Reference:
   - `docs/plans/kpi-config-editor-governance-preview-v1.md`
 
+### Completed: Ranking Completeness Segment Readiness V1
+- Completed: 26 April 2026
+- Result:
+  - `/store/rankings` now shows `Siralama kapsam olgunlugu`
+  - Turkey-wide readiness, store-level readiness, metric mini-rank readiness, and segment readiness are visible
+  - future UPT/ATV/target challenges are framed as scope rules over the existing closed ranking model
+  - no backend contract, DB schema, migration, score math, region league, tournament, or new ranking engine changed
+  - official root release gate passes after the change
+- Reference:
+  - `docs/plans/ranking-completeness-segment-readiness-v1.md`
+
 ### 1. Real IdP Staging Evidence
 - Priority: `P1`
 - Why: local provider and action mechanics are proven, but production confidence still needs real staging IdP and seeded staging action evidence.
@@ -312,4 +325,4 @@ Interpretation:
 
 If staging IdP and seeded staging DB values are available, start real staging evidence.
 
-If staging values are not available, start Ranking completeness / segment-ready behavior. The next local product step is to make Turkey-wide, store, and metric mini-ranks clearer before opening deeper KPI config versioning.
+If staging values are not available, start Shared Inbox maturity. The next local product step is to make inbox items easier to inspect and govern with detail views, due dates, escalation language, and stronger source actions.

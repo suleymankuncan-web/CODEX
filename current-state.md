@@ -1712,6 +1712,46 @@ Debt ledger:
 
 Siradaki mantikli adim: Ranking completeness / segment-ready behavior. Turkey-wide, store ve metric mini-rank gorunumleri, daha derin KPI config versioning acilmadan once netlestirilmeli.
 
+## Son Ranking Completeness Segment Readiness V1
+
+26 Nisan 2026 itibariyla `/store/rankings` icin siralama kapsam olgunlugu paneli eklendi.
+
+Yeni dokuman:
+
+- `docs/plans/ranking-completeness-segment-readiness-v1.md`
+
+Eklenenler:
+
+- `Siralama kapsam olgunlugu` paneli.
+- `Turkiye geneli` readiness satiri.
+- `Magaza ici` readiness satiri.
+- `Metrik mini-rank` readiness satiri.
+- `Segment hazirligi` readiness satiri.
+- Segmentlerin ileride yeni skor motoru acmadan, mevcut kapali snapshot + period + metric code modeliyle baglanabilecegini anlatan urun dili.
+
+Sinir:
+
+- Backend contract degismedi.
+- API response degismedi.
+- DB schema veya migration yok.
+- Score formulu degismedi.
+- Yeni ranking engine yok.
+- Region league, tournament veya reward davranisi yok.
+
+Dogrulama:
+
+- Kirmizi test izlendi: `Siralama kapsam olgunlugu` yokken store rankings Playwright testi fail verdi.
+- Hedefli frontend dogrulama gecti: `npm.cmd run build; if ($LASTEXITCODE -eq 0) { npm.cmd run test:e2e -- e2e/store-surfaces.spec.ts -g "store rankings page renders closed leaderboard and metric mini-ranks" }` -> 1 Playwright test.
+- Resmi root release gate gecti: `npm.cmd run check:release` -> root script tests, backend lint/test/build/audit, frontend lint/script/build/24 Playwright/audit.
+
+Debt ledger:
+
+- Closed active debts: 19
+- Strategic investment backlog: 4
+- Silent untracked quality debt in the active gate: 0
+
+Siradaki mantikli adim: Shared Inbox maturity. Inbox item detaylari, due date, escalation dili ve kaynak aksiyonlari netlestirilmeli.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:
@@ -1774,6 +1814,7 @@ Planlar:
 - `docs/plans/ui-localization-strategy.md`
 - `docs/plans/daily-closure-ranking-strategy.md`
 - `docs/plans/daily-closure-ranking-v2-intake.md`
+- `docs/plans/ranking-completeness-segment-readiness-v1.md`
 - `docs/superpowers/plans/2026-04-26-daily-closure-ranking-v2-explainability.md`
 - `docs/superpowers/plans/2026-04-25-competition-stage-package-plan-lifecycle-v1.md`
 - `docs/superpowers/specs/2026-04-25-competition-stage-package-plan-lifecycle-v1-design.md`

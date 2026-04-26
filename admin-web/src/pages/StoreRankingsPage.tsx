@@ -12,7 +12,7 @@ import {
 import type { AuthSessionSummary } from '../features/auth/api'
 import { formatPerformanceGrade, resolvePerformanceGrade } from '../features/kpi/grading'
 import { getClosedLeaderboard, getKpiConfig } from '../features/reports/api'
-import type { ClosedRankingEmployee } from '../features/reports/api'
+import type { ClosedLeaderboardSummary, ClosedRankingEmployee } from '../features/reports/api'
 import { formatDate, getErrorMessage } from '../lib/format'
 
 function canUseRankings(authSummary: AuthSessionSummary | null) {
@@ -93,6 +93,52 @@ function resolveEmptyState(state: 'closed' | 'not_closed' | 'no_data') {
   return null
 }
 
+function resolveRankingScopeReadiness(leaderboard?: ClosedLeaderboardSummary) {
+  const employee = leaderboard?.currentEmployee ?? null
+  const isOfficial = employee?.rankingStatus === 'official'
+  const hasTurkeyPopulation = Boolean(employee && employee.rankings.turkeyPopulation > 0)
+  const hasStorePopulation = Boolean(employee && employee.rankings.storePopulation > 0)
+  const hasMetricRanks = Boolean(employee?.metricRanks.length)
+  const hasClosedSource = leaderboard?.source.state === 'closed'
+
+  return [
+    {
+      label: 'Turkiye geneli',
+      status: isOfficial && employee?.rankings.turkeyRank ? 'Hazir' : 'On izleme',
+      tone: isOfficial && employee?.rankings.turkeyRank ? 'calm' : 'warning',
+      scope: hasTurkeyPopulation
+        ? formatRank(employee?.rankings.turkeyRank ?? null, employee?.rankings.turkeyPopulation ?? 0)
+        : 'Populasyon yok',
+      note: isOfficial
+        ? 'Kapali snapshot icindeki ulke geneli personel sirasi.'
+        : 'Resmi siralama icin kapali performans gunu esigi bekleniyor.',
+    },
+    {
+      label: 'Magaza ici',
+      status: isOfficial && employee?.rankings.storeRank ? 'Hazir' : 'On izleme',
+      tone: isOfficial && employee?.rankings.storeRank ? 'calm' : 'warning',
+      scope: hasStorePopulation
+        ? formatRank(employee?.rankings.storeRank ?? null, employee?.rankings.storePopulation ?? 0)
+        : 'Populasyon yok',
+      note: 'Ayni store icindeki personel karsilastirmasi mevcut read modelden okunur.',
+    },
+    {
+      label: 'Metrik mini-rank',
+      status: hasMetricRanks ? 'Hazir' : 'Veri bekliyor',
+      tone: hasMetricRanks ? 'accent' : 'neutral',
+      scope: hasMetricRanks ? `${employee?.metricRanks.length ?? 0} metrik` : 'Mini-rank yok',
+      note: 'UPT, ATV ve hedef gibi tekil KPI yarislari icin temel sinyal hazir.',
+    },
+    {
+      label: 'Segment hazirligi',
+      status: hasClosedSource && hasMetricRanks ? 'Segment kuralina hazir' : 'Segment icin veri bekliyor',
+      tone: hasClosedSource && hasMetricRanks ? 'accent' : 'neutral',
+      scope: leaderboard?.source.periodType === 'monthly' ? 'Aylik segmentlenebilir' : 'Gunluk segmentlenebilir',
+      note: 'Bolge, challenge veya metrik segmenti ileride yeni skor motoru acmadan ayni kapanis modeline baglanabilir.',
+    },
+  ] as const
+}
+
 export function StoreRankingsPage(input: {
   authSummary: AuthSessionSummary | null
 }) {
@@ -151,6 +197,7 @@ export function StoreRankingsPage(input: {
     ? resolvePerformanceGrade(leaderboard.currentEmployee.scoreValue, configQuery.data?.gradingBands)
     : null
   const rankingExplanation = resolveRankingExplanation(leaderboard?.currentEmployee)
+  const scopeReadiness = resolveRankingScopeReadiness(leaderboard)
   const emptyState = leaderboard ? resolveEmptyState(leaderboard.source.state) : null
   const selectedInputValue =
     periodType === 'monthly' && periodStart ? periodStart.slice(0, 7) : periodStart
@@ -353,6 +400,35 @@ export function StoreRankingsPage(input: {
             <EmptyState title="Aktif employee bulunamadi" copy="Bu oturum icin employee map kaydi yoksa sadece genel siralamalar gorunur." />
           )}
         </article>
+      </section>
+
+      <section className="panel" aria-label="Ranking scope readiness">
+        <div className="panel-heading">
+          <div>
+            <div className="eyebrow">Kapsam okunurlugu</div>
+            <h3>Siralama kapsam olgunlugu</h3>
+          </div>
+          <StatusPill tone={leaderboard?.source.state === 'closed' ? 'calm' : 'warning'}>
+            {leaderboard?.source.state === 'closed' ? 'Kapali kaynak' : 'Kisitli kaynak'}
+          </StatusPill>
+        </div>
+        <p className="queue-subtitle">
+          Turkiye, magaza ve metrik siralari ayni kapali snapshot kaynagindan okunur; segmentler icin yeni skor motoru degil kapsam kurali gerekir.
+        </p>
+        <div className="stacked-table">
+          {scopeReadiness.map((item) => (
+            <article className="stacked-row" key={item.label}>
+              <div className="stacked-row-head">
+                <strong>{item.label}</strong>
+                <StatusPill tone={item.tone}>{item.status}</StatusPill>
+              </div>
+              <div className="key-grid">
+                <KeyValue label="Kapsam" value={item.scope} />
+                <KeyValue label="Not" value={item.note} />
+              </div>
+            </article>
+          ))}
+        </div>
       </section>
 
       <section className="two-up-grid">
