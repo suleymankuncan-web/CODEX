@@ -68,6 +68,7 @@ Interpretation:
 - Store UX TR-First Copy V1 now closes the first coherent store-facing copy pass for shell, tasks, workflow details, feed, and pinned feed preview.
 - Versioned config implementation remains planned investment.
 - Full production UI/design-system and complete EN/TR localization expansion remain planned investments, not silent release debt.
+- Production UI/design-system is intentionally deferred into reversible pilots while backend/data foundations remain the priority.
 - The debt ledger itself is an accounting artifact and is not counted as a separate closed active debt item.
 
 ## Rules For Picking The Next Item
@@ -331,6 +332,18 @@ Interpretation:
 - Reference:
   - `docs/plans/store-ux-tr-first-copy-v1.md`
 
+### Decision Note: Production UI / Design-System Strategy
+- Recorded: 26 April 2026
+- Decision:
+  - current UI may remain a working draft while backend foundations mature
+  - broad visual redesign is not the immediate priority
+  - future UI work should happen through small reversible pilots
+  - admin shell should stay dense/desktop-first
+  - store shell should stay mobile-first/task-first
+  - full EN/TR localization remains a planned product layer, not a rushed patch
+- Reference:
+  - `docs/plans/production-ui-design-system-strategy.md`
+
 ### 1. Real IdP Staging Evidence
 - Priority: `P1`
 - Why: local provider and action mechanics are proven, but production confidence still needs real staging IdP and seeded staging action evidence.
@@ -355,4 +368,4 @@ Interpretation:
 
 If staging IdP and seeded staging DB values are available, start real staging evidence.
 
-If staging values are not available, start the production UI/design-system plan. Store-facing copy has a coherent V1 now; the next local product step should decide layout density, color/typography direction, mobile polish, and complete EN/TR localization boundaries before broad visual changes.
+If staging values are not available, start backend/data intake for the real ingest connector and payload contract. If real external payload details are not available yet, move to KPI config governance implementation planning.

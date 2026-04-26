@@ -121,6 +121,12 @@ These are important future product investments. They are not counted as hidden d
 2. KPI config governance implementation: versioned config, effective dates, rollback, snapshot anchoring
 3. Full production UI/design-system pass and complete EN/TR localization expansion
 
+UI status note:
+
+- A production UI/design-system strategy note now exists.
+- Broad UI redesign is intentionally deferred.
+- Future UI changes should be small reversible pilots until the backend/data foundation is stronger.
+
 ## Repo Hygiene Note
 
 Current repo hygiene is not counted as active debt in this ledger because:
@@ -154,4 +160,4 @@ Those have been actively reduced. The remaining work is mostly planned product d
 
 If staging provider and seeded DB values are available, run the guarded staging action smoke.
 
-If they are not available, the next local step should be chosen from strategic investments through the feature intake gate. The strongest local candidate is now the production UI/design-system plan, because store-facing copy has a first coherent V1 but the screens are still working drafts visually.
+If they are not available, the next local step should be chosen from strategic investments through the feature intake gate. Because broad UI polish is intentionally deferred, the strongest local backend candidate is now real ingest connector and payload contract intake. If real payload details are unavailable, move to KPI config governance implementation planning.

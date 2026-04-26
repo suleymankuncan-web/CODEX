@@ -1864,7 +1864,38 @@ Debt ledger:
 - Strategic investment backlog: 3
 - Silent untracked quality debt in the active gate: 0
 
-Siradaki mantikli adim: Production UI/design-system plan. Artik store copy daha tutarli; genis gorsel degisikliklerden once layout yogunlugu, renk/typography, mobil polish ve tam EN/TR localization siniri planlanmali.
+Siradaki mantikli adim artik backend/data odagi: real ingest connector ve payload contract intake. UI tarafinda genis redesign bilincli olarak ertelendi; gelecekte UI iyilestirmeleri kucuk, geri alinabilir pilotlarla ilerlemeli.
+
+## Production UI / Design-System Karari
+
+26 Nisan 2026 itibariyla UI stratejisi plan notu olarak kaydedildi.
+
+Yeni dokuman:
+
+- `docs/plans/production-ui-design-system-strategy.md`
+
+Karar:
+
+- Mevcut UI su an calisan taslak olarak kalabilir.
+- Product owner UI konusunda heyecanli, ama acelesi yok.
+- Geniş visual redesign simdilik oncelik degil.
+- UI iyilestirmeleri ileride kucuk pilotlarla yapilmali:
+  - begenilmezse kolayca revize edilebilmeli
+  - backend contract degistirmemeli
+  - release gate korunmali
+- Admin shell dense/desktop-first kalmali.
+- Store shell mobile-first/task-first kalmali.
+- Tam EN/TR localization ve production design-system planli yatirim olarak duruyor.
+
+CODEX DÜRÜST YORUM:
+
+- Bu dogru karar. Su anda en buyuk urun riski renklerin final olmamasi degil; zayif veri kontrati, belirsiz ingest ownership veya auditlenemeyen KPI/config degisiklikleri olur.
+- UI ihmal edilmeyecek, ama backend/data temeli guclenirken kontrollu pilotlarla ilerleyecek.
+
+Yeni siradaki mantikli adim:
+
+- Real ingest connector ve payload contract icin feature intake interview.
+- Eger gercek external payload detaylari henuz yoksa fallback: KPI config governance implementation planning.
 
 ## Onemli Dosyalar
 
