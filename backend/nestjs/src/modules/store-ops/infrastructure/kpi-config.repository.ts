@@ -9,6 +9,10 @@ type ConfigRows = {
   gradingBands: unknown;
 };
 
+type Queryable = {
+  query: <T>(sql: string, params?: unknown[]) => Promise<{ rowCount: number; rows: T[] }>;
+};
+
 const publishedConfigKeys = {
   storeProfile: "store_profile",
   personnelProfile: "personnel_profile",
@@ -40,6 +44,78 @@ export class KpiConfigRepository {
       ...Object.values(publishedConfigKeys),
       ...Object.values(draftConfigKeys),
     ]);
+  }
+
+  async getLatestPublishedKpiConfigVersion(client?: Queryable) {
+    const runner: Queryable = client ?? (this.databaseService as unknown as Queryable);
+    const result = await runner.query<{
+      kpi_config_version_id: string;
+      version_no: number;
+      effective_from: string;
+      effective_to: string | null;
+      published_at: string;
+      published_by: string | null;
+      config_payload: {
+        storeProfile?: unknown;
+        personnelProfile?: unknown;
+        ownershipMatrix?: unknown;
+        gradingBands?: unknown;
+      };
+    }>(
+      `
+        SELECT
+          kpi_config_version_id,
+          version_no,
+          effective_from,
+          effective_to,
+          published_at,
+          published_by,
+          config_payload
+        FROM ops.kpi_config_version
+        WHERE lifecycle_state = 'published'
+          AND effective_from <= NOW()
+          AND (effective_to IS NULL OR effective_to > NOW())
+        ORDER BY version_no DESC
+        LIMIT 1
+      `,
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  async getKpiConfigVersionById(kpiConfigVersionId: string, client?: Queryable) {
+    const runner: Queryable = client ?? (this.databaseService as unknown as Queryable);
+    const result = await runner.query<{
+      kpi_config_version_id: string;
+      version_no: number;
+      effective_from: string;
+      effective_to: string | null;
+      published_at: string;
+      published_by: string | null;
+      config_payload: {
+        storeProfile?: unknown;
+        personnelProfile?: unknown;
+        ownershipMatrix?: unknown;
+        gradingBands?: unknown;
+      };
+    }>(
+      `
+        SELECT
+          kpi_config_version_id,
+          version_no,
+          effective_from,
+          effective_to,
+          published_at,
+          published_by,
+          config_payload
+        FROM ops.kpi_config_version
+        WHERE kpi_config_version_id = $1::uuid
+        LIMIT 1
+      `,
+      [kpiConfigVersionId],
+    );
+
+    return result.rows[0] ?? null;
   }
 
   private async getConfigRowsByKeys(configKeys: string[]) {
@@ -196,7 +272,7 @@ export class KpiConfigRepository {
   }
 
   async publishKpiConfigDraft(actorUserId: string) {
-    await this.databaseService.withTransaction(async (client) => {
+    return this.databaseService.withTransaction(async (client) => {
       const existingRows = await client.query<{
         config_key: string;
         config_payload: unknown;
@@ -213,6 +289,24 @@ export class KpiConfigRepository {
 
       const publishedConfig = buildConfigRows(existingRows.rows, publishedConfigKeys);
       const draftConfig = buildConfigRows(existingRows.rows, draftConfigKeys);
+      const diffSummary = {
+        storeProfile: summarizeMetricDiff(
+          publishedConfig.storeProfile,
+          draftConfig.storeProfile,
+        ),
+        personnelProfile: summarizeMetricDiff(
+          publishedConfig.personnelProfile,
+          draftConfig.personnelProfile,
+        ),
+        ownershipMatrix: summarizeOwnershipDiff(
+          publishedConfig.ownershipMatrix,
+          draftConfig.ownershipMatrix,
+        ),
+        gradingBands: summarizeGradingBandDiff(
+          publishedConfig.gradingBands,
+          draftConfig.gradingBands,
+        ),
+      };
 
       await client.query(
         `
@@ -234,6 +328,54 @@ export class KpiConfigRepository {
           JSON.stringify(draftConfig.gradingBands),
         ],
       );
+
+      const versionResult = await client.query<{
+        kpi_config_version_id: string;
+        version_no: number;
+        effective_from: string;
+        effective_to: string | null;
+        published_at: string;
+        published_by: string | null;
+      }>(
+        `
+          INSERT INTO ops.kpi_config_version (
+            version_no,
+            lifecycle_state,
+            effective_from,
+            published_at,
+            published_by,
+            change_summary,
+            config_payload
+          )
+          VALUES (
+            COALESCE((SELECT MAX(version_no) + 1 FROM ops.kpi_config_version), 1),
+            'published',
+            NOW(),
+            NOW(),
+            $1::uuid,
+            $2::jsonb,
+            $3::jsonb
+          )
+          RETURNING
+            kpi_config_version_id,
+            version_no,
+            effective_from,
+            effective_to,
+            published_at,
+            published_by
+        `,
+        [
+          actorUserId,
+          JSON.stringify(diffSummary),
+          JSON.stringify({
+            storeProfile: draftConfig.storeProfile,
+            personnelProfile: draftConfig.personnelProfile,
+            ownershipMatrix: draftConfig.ownershipMatrix,
+            gradingBands: draftConfig.gradingBands,
+          }),
+        ],
+      );
+      const version = versionResult.rows[0] ?? null;
 
       await client.query(
         `
@@ -263,6 +405,8 @@ export class KpiConfigRepository {
           JSON.stringify({
             correlationId: RequestContextStore.getCorrelationId(),
             actorUserId,
+            kpiConfigVersionId: version?.kpi_config_version_id ?? null,
+            versionNo: version?.version_no ?? null,
             publishedMetricCount: Array.isArray((draftConfig.storeProfile as { metrics?: unknown[] })?.metrics)
               ? (draftConfig.storeProfile as { metrics: unknown[] }).metrics.length
               : null,
@@ -277,27 +421,12 @@ export class KpiConfigRepository {
             publishedGradingBandCount: Array.isArray(draftConfig.gradingBands)
               ? draftConfig.gradingBands.length
               : null,
-            diffSummary: {
-              storeProfile: summarizeMetricDiff(
-                publishedConfig.storeProfile,
-                draftConfig.storeProfile,
-              ),
-              personnelProfile: summarizeMetricDiff(
-                publishedConfig.personnelProfile,
-                draftConfig.personnelProfile,
-              ),
-              ownershipMatrix: summarizeOwnershipDiff(
-                publishedConfig.ownershipMatrix,
-                draftConfig.ownershipMatrix,
-              ),
-              gradingBands: summarizeGradingBandDiff(
-                publishedConfig.gradingBands,
-                draftConfig.gradingBands,
-              ),
-            },
+            diffSummary,
           }),
         ],
       );
+
+      return version;
     });
   }
 }

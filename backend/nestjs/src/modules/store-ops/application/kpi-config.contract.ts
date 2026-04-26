@@ -243,3 +243,30 @@ export const kpiGradingBands: KpiGradingBand[] = [
     minScore: 0,
   },
 ];
+
+export type KpiConfigPackage = {
+  storeProfile: KpiScoreProfile;
+  personnelProfile: KpiScoreProfile;
+  ownershipMatrix: KpiOwnershipMatrixRow[];
+  gradingBands: KpiGradingBand[];
+};
+
+export type KpiConfigVersionMetadata = {
+  kpiConfigVersionId: string | null;
+  versionNo: number | null;
+  effectiveFrom: string | null;
+  effectiveTo: string | null;
+  publishedAt: string | null;
+  publishedBy: string | null;
+};
+
+export type KpiConfigResponse = KpiConfigPackage & {
+  metadata: KpiConfigVersionMetadata;
+};
+
+export type KpiConfigEditorResponse = {
+  draftConfig: KpiConfigPackage;
+  publishedConfig: KpiConfigPackage;
+  hasUnpublishedChanges: boolean;
+  latestPublishedVersion: KpiConfigVersionMetadata;
+};

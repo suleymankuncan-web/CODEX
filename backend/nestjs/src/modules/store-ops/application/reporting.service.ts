@@ -202,18 +202,30 @@ export class ReportingService {
 
   async getKpiConfig() {
     try {
-      const rows = await this.kpiConfigRepository.getKpiConfigRows();
-      return this.resolveKpiConfigFromRows(rows);
+      const [rows, latestVersion] = await Promise.all([
+        this.kpiConfigRepository.getKpiConfigRows(),
+        this.kpiConfigRepository.getLatestPublishedKpiConfigVersion(),
+      ]);
+      return {
+        ...this.resolveKpiConfigFromRows(rows),
+        metadata: this.mapKpiConfigVersionMetadata(latestVersion),
+      };
     } catch {
       // Fall back to in-code defaults until local or prod config table is populated.
     }
 
-    return this.getDefaultKpiConfig();
+    return {
+      ...this.getDefaultKpiConfig(),
+      metadata: this.mapKpiConfigVersionMetadata(null),
+    };
   }
 
   async getKpiConfigEditor() {
-    const publishedRows = await this.kpiConfigRepository.getKpiConfigRows();
-    const draftRows = await this.kpiConfigRepository.getDraftKpiConfigRows();
+    const [publishedRows, draftRows, latestVersion] = await Promise.all([
+      this.kpiConfigRepository.getKpiConfigRows(),
+      this.kpiConfigRepository.getDraftKpiConfigRows(),
+      this.kpiConfigRepository.getLatestPublishedKpiConfigVersion(),
+    ]);
     const publishedConfig = this.resolveKpiConfigFromRows(publishedRows);
     const draftConfig =
       draftRows.length > 0 ? this.resolveKpiConfigFromRows(draftRows) : publishedConfig;
@@ -223,6 +235,7 @@ export class ReportingService {
       publishedConfig,
       hasUnpublishedChanges:
         JSON.stringify(draftConfig) !== JSON.stringify(publishedConfig),
+      latestPublishedVersion: this.mapKpiConfigVersionMetadata(latestVersion),
     };
   }
 
@@ -1127,6 +1140,24 @@ export class ReportingService {
     }
 
     return this.getDefaultKpiConfig();
+  }
+
+  private mapKpiConfigVersionMetadata(version: {
+    kpi_config_version_id: string;
+    version_no: number;
+    effective_from: string;
+    effective_to: string | null;
+    published_at: string;
+    published_by: string | null;
+  } | null) {
+    return {
+      kpiConfigVersionId: version?.kpi_config_version_id ?? null,
+      versionNo: version?.version_no ?? null,
+      effectiveFrom: version?.effective_from ?? null,
+      effectiveTo: version?.effective_to ?? null,
+      publishedAt: version?.published_at ?? null,
+      publishedBy: version?.published_by ?? null,
+    };
   }
 
   private getDefaultKpiConfig() {
