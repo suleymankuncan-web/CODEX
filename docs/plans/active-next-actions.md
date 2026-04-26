@@ -24,6 +24,9 @@ As of 26 April 2026, the competition package planning flow has:
 - Prefer the smallest next feature that strengthens the current module.
 - Do not open a large new module if the current module has an unfinished control surface.
 - Keep API status/audit codes stable; improve UI language through labels.
+- Keep the boundary between `Operational Feed` and `Competitions` explicit:
+  - feed challenge posts announce and link; they do not calculate score or create stages
+  - competitions manage staged/approved/executable competitions; they do not own company announcement streams
 
 ## Ordered List
 

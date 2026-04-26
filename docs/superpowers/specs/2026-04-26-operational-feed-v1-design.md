@@ -60,6 +60,50 @@ Product distinction:
 - `Duyurular`: company, region, and store communication stream.
 - `Competitions`: staged competition administration and score finalization.
 
+## Module Boundary Rule
+
+Operational Feed and Competitions must stay separate.
+
+Operational Feed owns:
+
+- announcements
+- challenge/focus posts
+- pinning
+- publishing scope
+- links to existing product surfaces
+- feed post audit events
+
+Operational Feed must not own:
+
+- score calculation
+- leaderboard materialization
+- competition stage creation
+- team advancement rules
+- finalization or override behavior
+
+Competitions owns:
+
+- staged competitions
+- stage packages
+- team templates
+- approval and execution for real stages
+- score finalization and competition warnings
+
+Competitions must not own:
+
+- company-wide announcement streams
+- social feed behavior
+- pinned communication posts
+- simple UPT/ATV/CR focus announcements
+
+Bridge rule:
+
+- A feed `challenge` post may link to `/store/rankings`, `/store/me`, or a future competition detail page.
+- A feed `challenge` post must not create or mutate competition stage packages in V1.
+- A competition may later emit a feed announcement only through an explicit integration spec, not as hidden side effect.
+
+This boundary prevents two ranking sources and keeps the feed from becoming a second competition engine.
+
 ## Roles And Publishing Permissions
 
 V1 writer permissions:

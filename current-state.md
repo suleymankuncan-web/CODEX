@@ -114,6 +114,8 @@ Yeni karar:
 - Store shell icinde `Duyurular` birinci sinif route olmali; store home icinde sabit duyuru ozetleri gosterilebilir.
 - `announcement` ve `challenge` post tipleri olacak.
 - `challenge` postu skor hesaplamaz; mevcut `/store/me`, `/store/rankings` veya ilerideki ozet yuzeylerine yonlendirir.
+- Modül siniri net: Operational Feed duyuru/challenge postu, pinleme, scope ve linkleri sahiplenir; Competition modülü staged competition, stage package, team template, approval/execute ve finalization alaninda kalir.
+- Feed challenge postu V1'de competition stage/package olusturamaz veya mutate edemez. Competition modülü de sirket duyuru akisini sahiplenemez.
 - `SUPER_ADMIN` ve `HR_ADMIN` genis kapsamda yayin yapabilir.
 - `REGION_MANAGER` V1'de sadece kendi bolgesine yayin yapabilir; Turkiye geneli yayin HR/Super Admin'de kalir.
 - Gorsel, yorum, begeni, push notification ve yeni leaderboard V1 disidir; gorsel/attachment ileride eklenebilir sekilde tasarlanir.
