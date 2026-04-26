@@ -251,6 +251,43 @@ Dogrulama:
 
 Siradaki mantikli adim: Real IdP Staging Evidence. Lokal auth akisi iyi durumda; artik staging/gercek provider uzerinde PKCE login/logout evidence toplayip production guvenini artirmak mantikli.
 
+## Son Local Keycloak Real-Provider Evidence
+
+26 Nisan 2026 itibariyla local Keycloak uzerinde production-shaped OIDC authorization code + PKCE smoke kaniti alindi. Bu staging sign-off degildir; staging IdP henuz tanimli olmadigi icin local real-provider evidence olarak kaydedildi.
+
+Eklenenler:
+
+- `admin-web` icin `npm.cmd run smoke:auth:live` script'i eklendi.
+- Script browser ile `/auth/login?returnTo=/store` uzerinden Keycloak'a gider.
+- `code_challenge_method=S256`, `state` ve `code_challenge` varligini dogrular.
+- `store.manager` ile callback/token exchange akisini tamamlar.
+- Ham token, authorization code, verifier veya id token kaydetmeden sanitize evidence JSON uretir.
+- `/api/auth/session` yanitinda app role/scope/action scope'u dogrular.
+- `/auth/logout` uzerinden provider logout URL'ini ve local session temizligini dogrular.
+- Sentetik expired JWT ile expired bearer token'in API header'a gitmeden temizlendigini dogrular.
+- Evidence dosyasi: `docs/plans/phase-7-auth-evidence-local-keycloak-2026-04-26.md`.
+
+Ek hardening:
+
+- Backend JWT role extraction artik sadece uygulama rol katalog kodlarini kabul eder.
+- Keycloak default rolleri (`offline_access`, `uma_authorization`, `default-roles-store-ops`) access token payload'inda gorunse bile `/api/auth/session` icindeki `roleCodes` alanina tasinmaz.
+
+Sinir:
+
+- Staging IdP registration kaniti henuz yok.
+- DB-backed pozitif aksiyon smoke henuz yok.
+- Unassigned store negatif `403` aksiyon kaniti henuz yok.
+
+Dogrulama:
+
+- Kirmizi test izlendi: `JwtAuthProvider` default provider rollerini filtrelemedigi icin test fail verdi.
+- Hedefli backend test gecti: `npm.cmd test -- src/modules/auth/providers/jwt-auth.provider.spec.ts --runInBand` -> 1 suite / 10 test.
+- Local live auth smoke gecti: `npm.cmd run smoke:auth:live`.
+- Backend release gecti: `npm.cmd run check:release` -> lint, 30 suite / 243 test, build, `npm audit --omit=dev`.
+- Frontend release gecti: `npm.cmd run check:release` -> lint, build, 21 Playwright smoke testi, `npm audit --omit=dev`.
+
+Siradaki mantikli adim: seeded staging/action evidence hazirlamak. Artik local OIDC mekanigi saglam; sonraki borc, gercek staging IdP bilgisi ve DB seed ile pozitif/negatif aksiyon kanitlarini toplamak.
+
 ## Mevcut Roller ve Test Kullanicilari
 
 Keycloak local kullanicilari:

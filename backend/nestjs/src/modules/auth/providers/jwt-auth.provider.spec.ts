@@ -243,6 +243,41 @@ describe("JwtAuthProvider", () => {
     });
   });
 
+  it("filters provider default roles from keycloak role claims", async () => {
+    const provider = new JwtAuthProvider({
+      jwtSecret: "top-secret",
+      jwtIssuer: "http://localhost:8080/realms/store-ops",
+      jwtAudience: "store-ops-api",
+      jwtJwksUrl: undefined,
+      authClientId: "store-ops-admin-web",
+    } as never);
+
+    const token = await new SignJWT({
+      roles: [
+        "offline_access",
+        "STORE_MANAGER",
+        "uma_authorization",
+        "default-roles-store-ops",
+      ],
+      realm_access: {
+        roles: ["default-roles-store-ops", "STORE_MANAGER"],
+      },
+    })
+      .setProtectedHeader({ alg: "HS256" })
+      .setSubject("user-3")
+      .setIssuer("http://localhost:8080/realms/store-ops")
+      .setAudience("account")
+      .sign(new TextEncoder().encode("top-secret"));
+
+    const user = await provider.resolveUser({
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    });
+
+    expect(user?.roleCodes).toEqual(["STORE_MANAGER"]);
+  });
+
   it("uses explicit role and scope claims from local Keycloak tokens", async () => {
     const provider = new JwtAuthProvider({
       jwtSecret: "top-secret",

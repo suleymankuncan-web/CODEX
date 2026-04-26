@@ -1,9 +1,9 @@
 # Phase 7 Provider Readiness Checklist
 
 ## Metadata
-- Status: Draft until a real staging or production IdP is selected.
+- Status: Draft until a real staging or production IdP is selected. Local Keycloak smoke evidence exists.
 - Owner: Backend/frontend auth integration.
-- Last updated: 2026-04-24.
+- Last updated: 2026-04-26.
 - Purpose: Define the provider-side go/no-go contract before staging PKCE login smoke tests start.
 
 ## Decision Rule
@@ -247,6 +247,30 @@ The evidence note must include:
 - known P1 limitations
 
 Do not attach raw bearer tokens, id tokens, refresh tokens, client secrets, private keys, or screenshots that expose secrets.
+
+## Local Provider Smoke Evidence
+
+Latest local evidence:
+
+- `docs/plans/phase-7-auth-evidence-local-keycloak-2026-04-26.md`
+
+Result:
+
+- Local Keycloak OIDC authorization code + PKCE login passed.
+- `GET /api/auth/bootstrap` returned `authMode=jwt` and provider `configured=true`.
+- Login redirect included `response_type=code`, `state`, `code_challenge`, and `code_challenge_method=S256`.
+- Callback exchanged the authorization code successfully.
+- Store manager reached `/store`.
+- `GET /api/auth/session` returned `STORE_MANAGER`, read scope, and assigned action store.
+- Logout sent provider logout params and returned to `/auth/login`.
+- Expired bearer token was cleared before API authorization headers were sent.
+
+Remaining staging blockers:
+
+- A real staging IdP registration is not yet provided.
+- Positive action smoke in a seeded DB-backed environment is not yet captured.
+- Negative unassigned-store `403` evidence is not yet captured.
+- Local Keycloak access tokens still contain provider default role names; backend session role extraction filters these to app catalog roles, but staging provider mappers should also avoid emitting provider defaults.
 
 ## Out Of Scope
 - Choosing the final IdP vendor.

@@ -6,7 +6,7 @@ This is the short working list for the next practical steps. It keeps the projec
 
 ## Current Position
 
-As of 26 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, and Turkish UI Localization Foundation V1 have:
+As of 26 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, and Local Keycloak real-provider smoke have:
 
 - saved drafts
 - edit/cancel/history
@@ -21,6 +21,8 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 - documented `DM`, `CONFIG`, `JOB`, and `API/BFF` ownership boundaries
 - store/region competition read summaries, contribution health, and warning explanations
 - Turkish-default `tr/en` UI localization foundation with browser-persisted language toggle
+- local OIDC authorization code + PKCE login/logout smoke evidence
+- backend filtering of provider default roles from app-facing JWT session roleCodes
 - backend and frontend release checks
 
 ## Rules For Picking The Next Item
@@ -106,12 +108,24 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
   - `docs/superpowers/specs/2026-04-26-ui-localization-foundation-design.md`
   - `docs/superpowers/plans/2026-04-26-ui-localization-foundation.md`
 
+### Completed: Local Keycloak Real-Provider Evidence
+- Completed: 26 April 2026
+- Result:
+  - `npm.cmd run smoke:auth:live` exists for browser-driven local provider smoke
+  - local Keycloak PKCE login, callback exchange, `/api/auth/session`, logout, and expired-token clearing passed
+  - evidence is stored without raw tokens/codes/verifiers
+  - backend JWT provider filters non-app provider default roles out of session `roleCodes`
+- Reference:
+  - `docs/plans/phase-7-auth-evidence-local-keycloak-2026-04-26.md`
+
 ### 1. Real IdP Staging Evidence
 - Priority: `P1`
-- Why: auth is stable locally, but production confidence needs real provider evidence.
+- Why: local provider mechanics are proven, but production confidence still needs real staging IdP and seeded action evidence.
 - Scope:
-  - fill provider readiness checklist
-  - run PKCE login/logout smoke
+  - fill real staging provider registration values
+  - run PKCE login/logout smoke against staging
+  - run positive action smoke on assigned store
+  - run negative action smoke proving unassigned store returns `403`
   - store sanitized evidence only
 - References:
   - `docs/plans/phase-7-provider-readiness-checklist.md`
@@ -126,4 +140,4 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 
 ## Recommended Next Move
 
-Start Real IdP Staging Evidence next. The local auth and shell behavior are stable; collecting sanitized PKCE login/logout evidence from the real provider is the next confidence-building step before production-facing rollout.
+Start seeded staging/action evidence next. The local OIDC mechanics are proven; the remaining confidence gap is a real staging IdP plus DB-backed positive/negative action smoke.

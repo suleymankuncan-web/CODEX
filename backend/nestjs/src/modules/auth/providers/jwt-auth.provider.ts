@@ -4,6 +4,18 @@ import { AppConfigService } from "../../../shared/app-config.service";
 import { AuthenticatedUser, buildAuthenticatedUser } from "../auth-context.service";
 import { AuthProvider } from "../interfaces/auth-provider.interface";
 
+const APP_ROLE_CODES = new Set([
+  "AUDITOR",
+  "HR_ADMIN",
+  "INTEGRATION_ADMIN",
+  "REGION_MANAGER",
+  "REPORT_VIEWER",
+  "SNAPSHOT_OPERATOR",
+  "STORE_MANAGER",
+  "STORE_PERSONNEL",
+  "SUPER_ADMIN",
+]);
+
 @Injectable()
 export class JwtAuthProvider implements AuthProvider {
   private readonly logger = new Logger(JwtAuthProvider.name);
@@ -64,7 +76,8 @@ export class JwtAuthProvider implements AuthProvider {
             )
           : [];
 
-      return [...new Set([...explicitRoles, ...realmRoles, ...resourceRoles])];
+      return [...new Set([...explicitRoles, ...realmRoles, ...resourceRoles])]
+        .filter((role) => APP_ROLE_CODES.has(role));
     };
 
     const roleCodes = parseKeycloakRoles();
