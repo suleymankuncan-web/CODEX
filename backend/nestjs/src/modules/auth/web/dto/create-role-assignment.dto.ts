@@ -1,7 +1,8 @@
-import { IsDateString, IsIn, IsOptional, IsUUID } from "class-validator";
+import { IsDateString, IsIn, IsOptional } from "class-validator";
+import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 
 export class CreateRoleAssignmentDto {
-  @IsUUID()
+  @IsPostgresUuid()
   userId!: string;
 
   @IsIn([
@@ -20,15 +21,15 @@ export class CreateRoleAssignmentDto {
   scopeType!: "company" | "region" | "store";
 
   @IsOptional()
-  @IsUUID()
+  @IsPostgresUuid()
   companyId?: string;
 
   @IsOptional()
-  @IsUUID()
+  @IsPostgresUuid()
   regionId?: string;
 
   @IsOptional()
-  @IsUUID()
+  @IsPostgresUuid()
   storeId?: string;
 
   @IsOptional()

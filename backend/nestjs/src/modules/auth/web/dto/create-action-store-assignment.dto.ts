@@ -1,10 +1,11 @@
-import { IsDateString, IsOptional, IsUUID } from "class-validator";
+import { IsDateString, IsOptional } from "class-validator";
+import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 
 export class CreateActionStoreAssignmentDto {
-  @IsUUID()
+  @IsPostgresUuid()
   userId!: string;
 
-  @IsUUID()
+  @IsPostgresUuid()
   storeId!: string;
 
   @IsOptional()

@@ -1,5 +1,6 @@
 import { Transform, Type } from "class-transformer";
-import { IsBoolean, IsInt, IsOptional, IsUUID, Max, Min } from "class-validator";
+import { IsBoolean, IsInt, IsOptional, Max, Min } from "class-validator";
+import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 
 export class ListActionStoreAssignmentsQueryDto {
   @IsOptional()
@@ -16,11 +17,11 @@ export class ListActionStoreAssignmentsQueryDto {
   offset?: number;
 
   @IsOptional()
-  @IsUUID()
+  @IsPostgresUuid()
   userId?: string;
 
   @IsOptional()
-  @IsUUID()
+  @IsPostgresUuid()
   storeId?: string;
 
   @IsOptional()

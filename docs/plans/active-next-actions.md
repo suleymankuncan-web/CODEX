@@ -25,6 +25,7 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 - local seeded assigned-store `201` and unassigned-store `403` action smoke evidence
 - backend filtering of provider default roles from app-facing JWT session roleCodes
 - canonical schema coverage for target distribution action tables
+- backend web DTO PostgreSQL UUID validation contract
 - backend and frontend release checks
 
 ## Rules For Picking The Next Item
@@ -124,6 +125,14 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
   - `ops.target_distribution_request` is present in canonical `db/schema.sql`
 - Reference:
   - `docs/plans/phase-7-auth-evidence-local-keycloak-2026-04-26.md`
+
+### Completed: PostgreSQL UUID DTO Validation Contract
+- Completed: 26 April 2026
+- Result:
+  - auth and store-ops web DTOs now use shared `IsPostgresUuid` validation for DB UUID fields
+  - deterministic seeded IDs such as `00000000-0000-0000-0000-000000000100` are accepted consistently
+  - a backend contract test fails if `IsUUID` is reintroduced in module web DTOs
+  - target distribution seeded UUID integration coverage remains in place
 
 ### 1. Real IdP Staging Evidence
 - Priority: `P1`

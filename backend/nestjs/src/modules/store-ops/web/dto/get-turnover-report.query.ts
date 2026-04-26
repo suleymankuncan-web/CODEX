@@ -1,8 +1,9 @@
-import { IsIn, IsOptional, IsUUID } from "class-validator";
+import { IsIn, IsOptional } from "class-validator";
+import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 import { ReportPaginationQueryDto } from "./report-pagination.query";
 
 export class GetTurnoverReportQueryDto extends ReportPaginationQueryDto {
-  @IsUUID()
+  @IsPostgresUuid()
   snapshotRunId!: string;
 
   @IsOptional()
@@ -10,14 +11,14 @@ export class GetTurnoverReportQueryDto extends ReportPaginationQueryDto {
   scopeType?: string;
 
   @IsOptional()
-  @IsUUID()
+  @IsPostgresUuid()
   companyId?: string;
 
   @IsOptional()
-  @IsUUID()
+  @IsPostgresUuid()
   regionId?: string;
 
   @IsOptional()
-  @IsUUID()
+  @IsPostgresUuid()
   storeId?: string;
 }

@@ -1,6 +1,6 @@
-import { IsUUID } from "class-validator";
+import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 
 export class CompleteChecklistInstanceDto {
-  @IsUUID()
+  @IsPostgresUuid()
   auditorEmployeeId!: string;
 }

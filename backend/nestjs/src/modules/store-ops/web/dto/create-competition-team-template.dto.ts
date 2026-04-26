@@ -3,10 +3,10 @@ import {
   IsArray,
   IsOptional,
   IsString,
-  IsUUID,
   Length,
   Matches,
 } from "class-validator";
+import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 
 export class CreateCompetitionTeamTemplateDto {
   @IsString()
@@ -25,6 +25,6 @@ export class CreateCompetitionTeamTemplateDto {
 
   @IsArray()
   @ArrayMinSize(1)
-  @IsUUID(undefined, { each: true })
+  @IsPostgresUuid({ each: true })
   storeIds!: string[];
 }

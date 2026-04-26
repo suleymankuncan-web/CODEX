@@ -299,6 +299,26 @@ Dogrulama:
 
 Siradaki mantikli adim: real staging IdP + seeded staging action evidence. Artik local OIDC ve local DB-backed action mekanigi saglam; sonraki borc, gercek staging IdP bilgisi ile ayni pozitif/negatif aksiyon kanitlarini staging ortaminda toplamak.
 
+## Son PostgreSQL UUID DTO Validation Contract
+
+26 Nisan 2026 itibariyla seeded UUID validation borcu kalici kalite kapisina baglandi.
+
+Eklenenler:
+
+- Auth ve store-ops web DTO'lari database UUID alanlari icin `class-validator` raw `IsUUID` yerine ortak `IsPostgresUuid` validator'unu kullanir.
+- Array alanlarda da `IsPostgresUuid({ each: true })` kullanilir.
+- Yeni kontrat testi: `backend/nestjs/src/shared/validation/postgres-uuid-dto-contract.spec.ts`.
+- Kontrat testi module web DTO'larinda `IsUUID` tekrar gorurse fail verir.
+
+Dogrulama:
+
+- Kirmizi test izlendi: `npm.cmd test -- src/shared/validation/postgres-uuid-dto-contract.spec.ts --runInBand` once 20 DTO dosyasini offender olarak listeledi.
+- Hedefli backend test gecti: `npm.cmd test -- src/shared/validation/postgres-uuid-dto-contract.spec.ts src/shared/validation/postgres-uuid.spec.ts --runInBand` -> 2 suite / 3 test.
+- Hedefli integration test gecti: `npm.cmd test -- test/integration/auth-scope.e2e-spec.ts --runInBand -t "accepts seeded PostgreSQL UUID"` -> 1 test.
+- Backend release gecti: `npm.cmd run check:release` -> lint, 32 suite / 248 test, build, `npm audit --omit=dev`.
+
+Siradaki mantikli adim: real staging IdP + seeded staging action evidence. Local ve seeded validation/action borcu kapandi; staging provider bilgisi geldiginde ayni pozitif/negatif action smoke'u gercek IdP uzerinde kosmak gerekiyor.
+
 ## Mevcut Roller ve Test Kullanicilari
 
 Keycloak local kullanicilari:

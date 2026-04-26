@@ -1,8 +1,9 @@
-import { IsEmail, IsIn, IsOptional, IsString, IsUUID, MinLength } from "class-validator";
+import { IsEmail, IsIn, IsOptional, IsString, MinLength } from "class-validator";
+import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 
 export class CreateUserAccountDto {
   @IsOptional()
-  @IsUUID()
+  @IsPostgresUuid()
   employeeId?: string;
 
   @IsString()

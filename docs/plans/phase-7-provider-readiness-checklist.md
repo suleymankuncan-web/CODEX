@@ -24,6 +24,8 @@ The backend is deliberately fail-closed in production for identity essentials:
 
 The frontend keeps bearer tokens in `sessionStorage`, stores provider `id_token` only for logout, clears expired bearer JWTs before API headers are built, and uses `GET /api/auth/session` as the canonical role/scope gate.
 
+Backend web DTOs validate database UUID inputs with the shared PostgreSQL UUID validator instead of `class-validator`'s versioned `IsUUID` decorator. This keeps deterministic seeded IDs and production PostgreSQL UUID values under one validation contract.
+
 ## Provider Registration Checklist
 
 ### P0 Required
@@ -127,6 +129,7 @@ The preferred provider-portable contract is still direct top-level `roles` plus 
 - [ ] `assigned_store_ids` defines which stores the user can act on.
 - [ ] Store action endpoints must reject actions outside `assigned_store_ids`.
 - [ ] DB role assignments, when present, remain canonical over token role/scope context.
+- [x] Module web DTOs use shared PostgreSQL UUID validation for database UUID fields; raw `IsUUID` reintroduction is guarded by a backend contract test.
 
 ## Sanitized Token Payload Examples
 

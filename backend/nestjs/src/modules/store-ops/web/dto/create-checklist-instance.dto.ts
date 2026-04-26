@@ -1,13 +1,14 @@
-import { IsOptional, IsUUID } from "class-validator";
+import { IsOptional } from "class-validator";
+import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 
 export class CreateChecklistInstanceDto {
-  @IsUUID()
+  @IsPostgresUuid()
   templateId!: string;
 
-  @IsUUID()
+  @IsPostgresUuid()
   storeId!: string;
 
   @IsOptional()
-  @IsUUID()
+  @IsPostgresUuid()
   assignedEmployeeId?: string;
 }

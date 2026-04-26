@@ -334,6 +334,22 @@ Result:
 - [x] Pass
 - [ ] Fail
 
+## Validation Hardening Evidence
+
+- [x] Auth and store-ops web DTOs use shared `IsPostgresUuid` validation for database UUID fields.
+- [x] Deterministic seeded PostgreSQL UUID values are accepted consistently across action/reporting DTOs.
+- [x] Backend contract test fails if raw `IsUUID` is reintroduced in module web DTOs.
+
+Command:
+
+```powershell
+npm.cmd test -- src/shared/validation/postgres-uuid-dto-contract.spec.ts src/shared/validation/postgres-uuid.spec.ts --runInBand
+```
+
+Result:
+
+- [x] Pass
+
 ## P1 Limitations
 
 ```text

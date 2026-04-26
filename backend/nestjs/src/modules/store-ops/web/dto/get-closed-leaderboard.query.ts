@@ -1,5 +1,6 @@
-import { IsDateString, IsIn, IsInt, IsOptional, IsUUID, Max, Min } from "class-validator";
 import { Type } from "class-transformer";
+import { IsDateString, IsIn, IsInt, IsOptional, Max, Min } from "class-validator";
+import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 
 export class GetClosedLeaderboardQueryDto {
   @IsOptional()
@@ -15,7 +16,7 @@ export class GetClosedLeaderboardQueryDto {
   snapshotDate?: string;
 
   @IsOptional()
-  @IsUUID()
+  @IsPostgresUuid()
   storeId?: string;
 
   @IsOptional()
