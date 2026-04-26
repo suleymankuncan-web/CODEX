@@ -6,7 +6,7 @@ This is the short working list for the next practical steps. It keeps the projec
 
 ## Current Position
 
-As of 26 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, and Daily Closure Ranking V2 Explainability have:
+As of 26 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, and Score Meaning V1 have:
 
 - saved drafts
 - edit/cancel/history
@@ -31,6 +31,7 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 - staging auth evidence operator checklist
 - staging auth evidence JSON guard
 - daily/monthly closed ranking trust explanations
+- personnel score meaning and confidence copy
 - project debt ledger
 - backend and frontend release checks
 
@@ -38,7 +39,7 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 
 Reference: `docs/plans/project-debt-ledger.md`
 
-- Closed active debts: 13
+- Closed active debts: 14
 - Superseded before overbuilding: 1
 - Blocked external dependency: 1
 - Watchlist decision item: 1
@@ -49,7 +50,8 @@ Interpretation:
 
 - The local project is not carrying a known silent release-quality debt right now.
 - Real IdP staging evidence is not counted as done because it requires outside staging IdP and seeded DB values.
-- Daily Closure / Historical Ranking V2 explainability now exists over the existing read model; the strongest local product investment is now score meaning and interpretation.
+- Daily Closure / Historical Ranking V2 explainability now exists over the existing read model.
+- Score Meaning V1 now explains the personnel weighted score on `/store/me`; broader KPI source semantics and store-score threshold language remain planned investment.
 - The debt ledger itself is an accounting artifact and is not included in the 12 closed active debt items.
 
 ## Rules For Picking The Next Item
@@ -217,6 +219,19 @@ Interpretation:
   - `docs/plans/project-forward-preview-2026-04-26.md`
   - `docs/superpowers/plans/2026-04-26-daily-closure-ranking-v2-explainability.md`
 
+### Completed: Score Meaning V1
+- Completed: 26 April 2026
+- Result:
+  - `/store/me` now shows a `Skor yorumu` panel for the weighted personnel score
+  - grade codes map to simple product language: strong, healthy, follow-up, critical
+  - score confidence copy shows how many metrics were scored
+  - partial scores are treated as lower-trust interpretations
+  - no backend contract, score math, grading threshold, DB schema, or config schema changed
+  - Playwright self-performance smoke protects the visible interpretation
+  - official root release gate passes after the change
+- Reference:
+  - `docs/plans/score-meaning-v1.md`
+
 ### 1. Real IdP Staging Evidence
 - Priority: `P1`
 - Why: local provider and action mechanics are proven, but production confidence still needs real staging IdP and seeded staging action evidence.
@@ -241,4 +256,4 @@ Interpretation:
 
 If staging IdP and seeded staging DB values are available, start real staging evidence.
 
-If staging values are not available, start Score Meaning / Grade Interpretation. The next local product step is to explain what the weighted score means, not only where the person ranks.
+If staging values are not available, start KPI Source Semantics V1. The next local product step is to explain whether each KPI value is imported, derived, checklist-fed, pending normalization, or missing.

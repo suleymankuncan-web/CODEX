@@ -12,7 +12,11 @@ import {
 import type { AuthSessionSummary } from '../features/auth/api'
 import { formatDisplayRoles } from '../features/auth/display'
 import { getKpiConfig, getMyPerformance, getReportingSnapshotRuns } from '../features/reports/api'
-import { formatPerformanceGrade, resolvePerformanceGrade } from '../features/kpi/grading'
+import {
+  formatPerformanceGrade,
+  resolvePerformanceGrade,
+  resolvePerformanceScoreMeaning,
+} from '../features/kpi/grading'
 import { formatDate, formatState, getErrorMessage } from '../lib/format'
 
 function canUseSelfPerformance(authSummary: AuthSessionSummary | null) {
@@ -165,6 +169,12 @@ export function StoreMyPerformancePage(input: {
     performance.score.value,
     configQuery.data?.gradingBands,
   )
+  const scoreMeaning = resolvePerformanceScoreMeaning({
+    grade: performanceGrade,
+    matchedMetrics: performance.score.matchedMetrics,
+    totalMetrics: performance.score.totalMetrics,
+    isPartial: performance.partial.isPartial,
+  })
 
   return (
     <section className="page-stack">
@@ -337,6 +347,27 @@ export function StoreMyPerformancePage(input: {
           icon={<UserRound size={18} />}
           tone="calm"
         />
+      </section>
+
+      <section className="panel" aria-label="Score meaning">
+        <div className="panel-heading">
+          <div>
+            <div className="eyebrow">Skor yorumu</div>
+            <h3>{scoreMeaning.title}</h3>
+          </div>
+          <StatusPill tone={scoreMeaning.tone}>{performanceGrade.code}</StatusPill>
+        </div>
+        <p className="queue-subtitle">{scoreMeaning.summary}</p>
+        <div className="key-grid">
+          <KeyValue label="Odak" value={scoreMeaning.focus} />
+          <KeyValue label="Grade" value={formatPerformanceGrade(performanceGrade)} />
+          <KeyValue label="Skor" value={performance.score.value.toFixed(1)} />
+          <KeyValue
+            label="Kaynak"
+            value={performance.source.mode === 'closed' ? 'Kapanmis snapshot' : 'Canli donem'}
+          />
+        </div>
+        <p className="queue-subtitle">{scoreMeaning.confidence}</p>
       </section>
 
       <section className="two-up-grid">

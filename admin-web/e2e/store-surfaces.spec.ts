@@ -25,11 +25,14 @@ test('store self-performance page renders live score, metrics, and ranks', async
 
   await expect(page.getByRole('heading', { name: /Store personnel icin/i })).toBeVisible()
   await expect(page.getByText('Weighted score')).toBeVisible()
+  await expect(page.getByText('Skor yorumu')).toBeVisible()
+  await expect(page.getByText('Guclu performans')).toBeVisible()
+  await expect(page.getByText('Veri guveni: 3/3 metrik skorlandi.')).toBeVisible()
   await expect(page.getByText('Turkey ranking')).toBeVisible()
   await expect(page.getByText('Store ranking')).toBeVisible()
   await expect(page.getByText('TARGET_ACHIEVEMENT')).toBeVisible()
-  await expect(page.getByText('ATV')).toBeVisible()
-  await expect(page.getByText('UPT')).toBeVisible()
+  await expect(page.getByText('ATV', { exact: true })).toBeVisible()
+  await expect(page.getByText('UPT', { exact: true })).toBeVisible()
   await expect(page.getByText('Performans yuzeyi acilamadi')).toHaveCount(0)
 })
 

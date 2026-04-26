@@ -1495,6 +1495,46 @@ Debt ledger:
 
 Siradaki mantikli adim: Score Meaning / Grade Interpretation. Weighted score artik gorunuyor ve siralama aciklaniyor; siradaki en degerli is, skorun ne anlama geldigini grade band, esik ve is diliyle kullaniciya anlatmak.
 
+## Son Score Meaning V1
+
+26 Nisan 2026 itibariyla `/store/me` icin personel weighted score yorum katmani eklendi.
+
+Yeni dokuman:
+
+- `docs/plans/score-meaning-v1.md`
+
+Eklenenler:
+
+- `admin-web/src/features/kpi/grading.ts` icinde `PerformanceScoreMeaning` ve `resolvePerformanceScoreMeaning`.
+- `/store/me` icinde `Skor yorumu` paneli.
+- Grade kodlari icin sade is dili:
+  - `A`: Guclu performans
+  - `B`: Saglikli performans
+  - `C`: Takip gerekli
+  - `D`: Kritik takip
+- Skor yorumunda veri guveni metni: kac metrik skorlandi, yorum tam mi on izleme mi.
+
+Sinir:
+
+- Backend contract degismedi.
+- Score formulu degismedi.
+- Grade threshold degerleri degismedi.
+- Yeni DB, migration veya config schema yok.
+- Bu V1 personel self-performance skor anlamlandirmasidir; store-score threshold dili ve KPI source semantics henuz ayri yatirimdir.
+
+Dogrulama:
+
+- Kirmizi test izlendi: `Skor yorumu` yokken self-performance Playwright testi fail verdi.
+- Hedefli frontend dogrulama gecti: `npm.cmd run build; npm.cmd run test:e2e -- e2e/store-surfaces.spec.ts -g "self-performance"` -> 1 Playwright test.
+- Resmi root release gate gecti: `npm.cmd run check:release` -> root script tests, backend lint/test/build/audit, frontend lint/script/build/22 Playwright/audit.
+
+Debt ledger:
+
+- Closed active debts: 14
+- Silent untracked quality debt in the active gate: 0
+
+Siradaki mantikli adim: KPI Source Semantics V1. Her KPI degerinin imported, derived, checklist-fed, pending normalization veya missing oldugunu kullaniciya anlatmak.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:
