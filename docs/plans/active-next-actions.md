@@ -358,6 +358,18 @@ Interpretation:
   - `docs/plans/real-ingest-connector-contract-intake.md`
   - `docs/plans/nebim-ingestion-and-normalization-plan.md`
 
+### Design: KPI Config Versioning V1
+- Recorded: 26 April 2026
+- Status: `approved_for_planning`
+- Decision:
+  - keep `ops.kpi_score_profile_config` as the current draft/live owner
+  - add immutable KPI config version history in `ops`
+  - anchor new `rpt.snapshot_run` rows to the active KPI config version
+  - keep legacy snapshots readable as pre-governance snapshots
+  - defer rollback UI, future effective scheduling, approval workflow, and DB-managed interpretation copy
+- Reference:
+  - `docs/superpowers/specs/2026-04-26-kpi-config-versioning-v1-design.md`
+
 ### 1. Real IdP Staging Evidence
 - Priority: `P1`
 - Why: local provider and action mechanics are proven, but production confidence still needs real staging IdP and seeded staging action evidence.

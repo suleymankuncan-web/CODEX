@@ -1941,6 +1941,35 @@ CODEX DÜRÜST YORUM:
 - Proje zemin olarak hazir; eksik olan dis kaynak kontrati.
 - Siradaki yerel backend adimi, external source bilgisi gelene kadar KPI config governance implementation planning olmali.
 
+## Son KPI Config Versioning V1 Design
+
+26 Nisan 2026 itibariyla KPI config versioning V1 tasarimi onaylandi ve spec olarak yazildi.
+
+Yeni dokuman:
+
+- `docs/superpowers/specs/2026-04-26-kpi-config-versioning-v1-design.md`
+
+Karar:
+
+- Mevcut `ops.kpi_score_profile_config` draft/publish modeli korunacak.
+- Yeni `ops.kpi_config_version` tablosu ile her publish immutable version olarak kaydedilecek.
+- Yeni snapshot run'lar `rpt.snapshot_run.kpi_config_version_id` ile aktif KPI config version'a baglanacak.
+- Eski snapshot'lar `null` version ile `pre_governance` olarak okunacak.
+- Yeni `dm` veya global `config` schema acilmayacak.
+- Rollback UI, future effective scheduling, approval workflow ve DB-managed interpretation copy V1 disi kalacak.
+
+Ne ise yarar:
+
+- Gecmis raporlar bugunku KPI kuraliyla yanlis yorumlanmaz.
+- "Bu skor hangi config ile uretildi?" sorusu cevaplanabilir.
+- KPI agirliklari/threshold'lari degistikce guven ve audit korunur.
+- Ileride prim, yarisma, bolge ligi ve score interpretation buyurken zemin dagilmaz.
+
+Siradaki mantikli adim:
+
+- Bu spec'e gore implementation plan yazmak.
+- Plan onayindan sonra TDD ile migration, backend publish/version metadata, snapshot anchoring ve admin UI metadata adimlarini uygulamak.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:
