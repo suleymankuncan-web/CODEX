@@ -6,6 +6,12 @@ const username = process.env.AUTH_SMOKE_USERNAME ?? 'store.manager'
 const password = process.env.AUTH_SMOKE_PASSWORD ?? 'StoreOps123!'
 const expectedRole = process.env.AUTH_SMOKE_EXPECTED_ROLE ?? 'STORE_MANAGER'
 const expectedLandingPath = process.env.AUTH_SMOKE_EXPECTED_LANDING ?? '/store'
+const includeActionSmoke = process.argv.includes('--include-action-smoke')
+const assignedActionStoreId =
+  process.env.AUTH_SMOKE_ASSIGNED_STORE_ID ?? '00000000-0000-0000-0000-000000000100'
+const unassignedActionStoreId =
+  process.env.AUTH_SMOKE_UNASSIGNED_STORE_ID ?? '00000000-0000-0000-0000-000000000999'
+const actionRequestMonth = process.env.AUTH_SMOKE_ACTION_REQUEST_MONTH ?? '2026-04-01'
 
 function assert(condition, message) {
   if (!condition) {
@@ -93,6 +99,105 @@ function makeExpiredJwt() {
   return `${header}.${payload}.`
 }
 
+async function maybeReadJson(response) {
+  const text = await response.text()
+  if (!text) {
+    return null
+  }
+
+  try {
+    return JSON.parse(text)
+  } catch {
+    return { raw: '<non-json-response-redacted>' }
+  }
+}
+
+function sanitizeActionResponse(body) {
+  return {
+    command: body?.command,
+    request: body?.data?.request
+      ? {
+          requestId: body.data.request.requestId,
+          storeId: body.data.request.storeId,
+          requestMonth: body.data.request.requestMonth,
+          targetLabel: body.data.request.targetLabel,
+          totalTargetValue: body.data.request.totalTargetValue,
+          allocationCount: body.data.request.allocationCount,
+          status: body.data.request.status,
+        }
+      : null,
+  }
+}
+
+async function runActionSmoke(sessionRequest) {
+  const positiveTargetLabel = `Auth Smoke Assigned Store ${Date.now()}`
+  const negativeTargetLabel = `Auth Smoke Unassigned Store ${Date.now()}`
+  const positivePayload = {
+    storeId: assignedActionStoreId,
+    requestMonth: actionRequestMonth,
+    targetLabel: positiveTargetLabel,
+    totalTargetValue: 1000,
+    requestReason: 'Auth action scope positive smoke',
+    allocations: [
+      {
+        assigneeLabel: 'Auth smoke assignee',
+        targetValue: 1000,
+      },
+    ],
+  }
+
+  const positiveResponse = await sessionRequest.post(`${apiBaseUrl}/target-distributions/requests`, {
+    data: positivePayload,
+  })
+  const positiveBody = await maybeReadJson(positiveResponse)
+  assert(
+    positiveResponse.ok(),
+    `assigned-store action smoke returned ${positiveResponse.status()}: ${JSON.stringify(
+      sanitizeActionResponse(positiveBody),
+    )}`,
+  )
+  assert(
+    positiveBody?.command?.status === 'submitted',
+    'assigned-store action smoke did not submit a request',
+  )
+  assert(
+    positiveBody?.data?.request?.storeId === assignedActionStoreId,
+    'assigned-store action smoke returned an unexpected storeId',
+  )
+
+  const negativePayload = {
+    ...positivePayload,
+    storeId: unassignedActionStoreId,
+    targetLabel: negativeTargetLabel,
+    requestReason: 'Auth action scope negative smoke',
+  }
+  const negativeResponse = await sessionRequest.post(`${apiBaseUrl}/target-distributions/requests`, {
+    data: negativePayload,
+  })
+  const negativeBody = await maybeReadJson(negativeResponse)
+  assert(
+    negativeResponse.status() === 403,
+    `unassigned-store action smoke returned ${negativeResponse.status()} instead of 403: ${JSON.stringify(
+      negativeBody,
+    )}`,
+  )
+
+  return {
+    operation: 'target-distribution-request-create',
+    assignedStore: {
+      status: positiveResponse.status(),
+      storeId: assignedActionStoreId,
+      result: sanitizeActionResponse(positiveBody),
+    },
+    unassignedStore: {
+      status: negativeResponse.status(),
+      storeId: unassignedActionStoreId,
+      message: negativeBody?.message ?? null,
+      dbWriteExpected: false,
+    },
+  }
+}
+
 async function main() {
   const apiRequest = await request.newContext()
   const bootstrapResponse = await apiRequest.get(`${apiBaseUrl}/auth/bootstrap`)
@@ -162,6 +267,8 @@ async function main() {
   assert(session.user?.readScope?.companyIds?.length > 0, 'session read company scope is empty')
   assert(session.user?.actionScope?.assignedStoreIds?.length > 0, 'session action scope is empty')
 
+  const actionSmoke = includeActionSmoke ? await runActionSmoke(sessionRequest) : null
+
   await page.goto('/auth/logout')
   await page.waitForURL((url) => url.origin === new URL(baseUrl).origin && url.pathname === '/auth/login', {
     timeout: 30_000,
@@ -216,7 +323,9 @@ async function main() {
   await sessionRequest.dispose()
 
   const evidence = {
-    evidenceStatus: 'local-provider-smoke-passed',
+    evidenceStatus: includeActionSmoke
+      ? 'local-provider-action-smoke-passed'
+      : 'local-provider-smoke-passed',
     environment: 'local-keycloak',
     evidenceDate: new Date().toISOString(),
     frontendOrigin: baseUrl,
@@ -258,6 +367,7 @@ async function main() {
     accessTokenPayload: sanitizedPayload,
     idTokenStoredForLogout: idTokenStored,
     session: sanitizeSession(session),
+    actionSmoke,
     logout: {
       sanitizedObservedLogoutUrl: logoutRequests[0] ?? null,
       returnedToLogin: page.url().startsWith(`${baseUrl}/auth/login`),
@@ -274,7 +384,9 @@ async function main() {
     },
     limitations: [
       'This is local Keycloak real-provider smoke evidence, not staging IdP sign-off.',
-      'Positive and negative DB-backed action smoke remain pending for a seeded staging environment.',
+      includeActionSmoke
+        ? 'Positive and negative DB-backed action smoke passed locally; seeded staging action smoke remains pending.'
+        : 'Positive and negative DB-backed action smoke remain pending for a seeded staging environment.',
     ],
   }
 

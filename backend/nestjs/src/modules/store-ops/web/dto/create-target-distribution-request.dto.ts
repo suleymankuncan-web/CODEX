@@ -5,11 +5,11 @@ import {
   IsNumber,
   IsOptional,
   IsString,
-  IsUUID,
   Min,
   ValidateNested,
 } from "class-validator";
 import { Type } from "class-transformer";
+import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 
 class TargetDistributionAllocationDto {
   @IsString()
@@ -26,7 +26,7 @@ class TargetDistributionAllocationDto {
 }
 
 export class CreateTargetDistributionRequestDto {
-  @IsUUID()
+  @IsPostgresUuid()
   storeId!: string;
 
   @IsDateString()

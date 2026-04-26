@@ -6,7 +6,7 @@ This is the short working list for the next practical steps. It keeps the projec
 
 ## Current Position
 
-As of 26 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, and Local Keycloak real-provider smoke have:
+As of 26 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, and Local Keycloak real-provider/action smoke have:
 
 - saved drafts
 - edit/cancel/history
@@ -22,7 +22,9 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 - store/region competition read summaries, contribution health, and warning explanations
 - Turkish-default `tr/en` UI localization foundation with browser-persisted language toggle
 - local OIDC authorization code + PKCE login/logout smoke evidence
+- local seeded assigned-store `201` and unassigned-store `403` action smoke evidence
 - backend filtering of provider default roles from app-facing JWT session roleCodes
+- canonical schema coverage for target distribution action tables
 - backend and frontend release checks
 
 ## Rules For Picking The Next Item
@@ -108,19 +110,24 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
   - `docs/superpowers/specs/2026-04-26-ui-localization-foundation-design.md`
   - `docs/superpowers/plans/2026-04-26-ui-localization-foundation.md`
 
-### Completed: Local Keycloak Real-Provider Evidence
+### Completed: Local Keycloak Real-Provider And Action Evidence
 - Completed: 26 April 2026
 - Result:
   - `npm.cmd run smoke:auth:live` exists for browser-driven local provider smoke
+  - `npm.cmd run smoke:auth:action` exists for browser-driven local provider + DB-backed action smoke
   - local Keycloak PKCE login, callback exchange, `/api/auth/session`, logout, and expired-token clearing passed
+  - assigned-store target distribution create returned `201` and `submitted`
+  - unassigned-store target distribution create returned `403`
   - evidence is stored without raw tokens/codes/verifiers
   - backend JWT provider filters non-app provider default roles out of session `roleCodes`
+  - seeded PostgreSQL UUID store ids pass target distribution validation
+  - `ops.target_distribution_request` is present in canonical `db/schema.sql`
 - Reference:
   - `docs/plans/phase-7-auth-evidence-local-keycloak-2026-04-26.md`
 
 ### 1. Real IdP Staging Evidence
 - Priority: `P1`
-- Why: local provider mechanics are proven, but production confidence still needs real staging IdP and seeded action evidence.
+- Why: local provider and action mechanics are proven, but production confidence still needs real staging IdP and seeded staging action evidence.
 - Scope:
   - fill real staging provider registration values
   - run PKCE login/logout smoke against staging
@@ -140,4 +147,4 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 
 ## Recommended Next Move
 
-Start seeded staging/action evidence next. The local OIDC mechanics are proven; the remaining confidence gap is a real staging IdP plus DB-backed positive/negative action smoke.
+Start real staging IdP + seeded staging action evidence next. The local OIDC and local DB-backed action mechanics are proven; the remaining confidence gap is the same sanitized evidence against a real staging provider and seeded staging database.

@@ -606,6 +606,88 @@ describe("Auth scope integration", () => {
     await app.close();
   });
 
+  it("accepts seeded PostgreSQL UUID store ids for target distribution creation", async () => {
+    const seededStoreId = "00000000-0000-0000-0000-000000000100";
+    const query = jest.fn(async (sql: string) => {
+      if (sql.includes("INSERT INTO ops.target_distribution_request")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              target_distribution_request_id: "33333333-3333-4333-8333-333333333333",
+              company_id: "00000000-0000-0000-0000-000000000001",
+              region_id: "00000000-0000-0000-0000-000000000010",
+              store_id: seededStoreId,
+              request_month: "2026-04-01",
+              target_label: "Net Sales",
+              total_target_value: "1000.00",
+              allocation_count: 1,
+              request_status: "submitted",
+              request_reason: null,
+              allocation_json: [],
+              submitted_by_user_id: "user-1",
+              approved_by_user_id: null,
+              approved_at: null,
+              approval_note: null,
+              created_at: "2026-04-01T00:00:00.000Z",
+              updated_at: "2026-04-01T00:00:00.000Z",
+            },
+          ],
+        };
+      }
+
+      return { rowCount: 1, rows: [] };
+    });
+    const app = await createIntegrationApp({
+      authContextService: {
+        resolveUser: jest.fn(async () => ({
+          userId: "user-1",
+          roleCodes: ["STORE_MANAGER"],
+          scope: {
+            companyIds: ["00000000-0000-0000-0000-000000000001"],
+            regionIds: ["00000000-0000-0000-0000-000000000010"],
+            storeIds: [seededStoreId],
+          },
+          readScope: {
+            companyIds: ["00000000-0000-0000-0000-000000000001"],
+            regionIds: ["00000000-0000-0000-0000-000000000010"],
+            storeIds: [seededStoreId],
+          },
+          actionScope: {
+            assignedStoreIds: [seededStoreId],
+          },
+          assignedStoreIds: [seededStoreId],
+        })),
+      },
+      databaseService: {
+        query,
+        withTransaction: async <T>(work: (client: { query: typeof query }) => Promise<T>) =>
+          work({ query }),
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .post("/api/target-distributions/requests")
+      .send({
+        storeId: seededStoreId,
+        requestMonth: "2026-04-01",
+        targetLabel: "Net Sales",
+        totalTargetValue: 1000,
+        allocations: [
+          {
+            assigneeLabel: "Sales Associate",
+            targetValue: 1000,
+          },
+        ],
+      });
+
+    expect(response.status).toBe(201);
+    expect(response.body.command.status).toBe("submitted");
+    expect(response.body.data.request.storeId).toBe(seededStoreId);
+
+    await app.close();
+  });
+
   it("rejects target distribution creation outside assigned action stores even with broad read scope", async () => {
     const assignedStoreId = "11111111-1111-4111-8111-111111111111";
     const requestedStoreId = "22222222-2222-4222-8222-222222222222";

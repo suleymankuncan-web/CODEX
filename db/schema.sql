@@ -150,6 +150,26 @@ CREATE TABLE ops.user_action_store_assignment (
     CHECK (end_at IS NULL OR end_at >= start_at)
 );
 
+CREATE TABLE ops.target_distribution_request (
+    target_distribution_request_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL REFERENCES ops.company(company_id),
+    region_id UUID NOT NULL REFERENCES ops.region(region_id),
+    store_id UUID NOT NULL REFERENCES ops.store(store_id),
+    request_month DATE NOT NULL,
+    target_label TEXT NOT NULL,
+    total_target_value NUMERIC(18,4) NOT NULL,
+    allocation_count INTEGER NOT NULL DEFAULT 0,
+    request_status TEXT NOT NULL DEFAULT 'pending_region_approval',
+    request_reason TEXT,
+    allocation_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    submitted_by_user_id TEXT NOT NULL,
+    approved_by_user_id TEXT,
+    approved_at TIMESTAMPTZ,
+    approval_note TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE ops.competition (
     competition_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     competition_code TEXT NOT NULL UNIQUE,
@@ -786,6 +806,9 @@ CREATE UNIQUE INDEX uq_user_action_store_assignment_active
     ON ops.user_action_store_assignment (user_id, store_id)
     WHERE end_at IS NULL;
 
+CREATE INDEX idx_target_distribution_request_scope_status
+    ON ops.target_distribution_request (company_id, region_id, store_id, request_status, request_month);
+
 CREATE INDEX competition_stage_competition_state_idx
     ON ops.competition_stage (competition_id, lifecycle_state, starts_on, ends_on);
 
@@ -900,6 +923,7 @@ COMMENT ON SCHEMA audit IS 'Audit and traceability tables for critical events.';
 COMMENT ON TABLE ops.employee_assignment_history IS 'Time-aware employee to store/position assignment history. Core source for active headcount and turnover calculations.';
 COMMENT ON TABLE ops.user_role_assignment IS 'RBAC assignments with scope-limited visibility at company, region or store level.';
 COMMENT ON TABLE ops.user_action_store_assignment IS 'Store-level action grants kept separate from role read scope so regional or audit users can read broadly but act only on assigned stores.';
+COMMENT ON TABLE ops.target_distribution_request IS 'Store-level target distribution requests that are submitted by store managers and approved by region-level oversight.';
 COMMENT ON TABLE ops.feed_post IS 'Scoped operational announcements and challenge posts. Challenge posts announce focus windows but do not calculate scores.';
 COMMENT ON TABLE ops.kpi_score_profile_config IS 'Data-driven KPI scoring configuration for store/personnel score profiles, ownership matrix and grading bands.';
 COMMENT ON TABLE ops.workforce_norm_plan IS 'Approved planned headcount and FTE targets used for norm vs actual workforce comparison.';

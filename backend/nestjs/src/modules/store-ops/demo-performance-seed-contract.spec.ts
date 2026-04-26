@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { personnelKpiScoreProfile } from "./application/kpi-config.contract";
 
 const projectRoot = join(process.cwd(), "..", "..");
+const schemaSql = readFileSync(join(projectRoot, "db", "schema.sql"), "utf8");
 const seedSql = readFileSync(join(projectRoot, "db", "seeds", "001_reference_seed.sql"), "utf8");
 const keycloakRealm = JSON.parse(
   readFileSync(join(projectRoot, "infra", "keycloak", "store-ops-realm.json"), "utf8"),
@@ -98,6 +99,11 @@ describe("demo performance seed contract", () => {
     }
 
     expect(seedSql).toContain("demo_closed_ranking_seed");
+  });
+
+  it("keeps target distribution action tables in the canonical schema", () => {
+    expect(schemaSql).toContain("CREATE TABLE ops.target_distribution_request");
+    expect(schemaSql).toContain("idx_target_distribution_request_scope_status");
   });
 
   it("keeps personnel scoring defaults aligned with the demo self-performance surface", () => {

@@ -2,9 +2,9 @@
 
 ## Metadata
 
-- Evidence status: Local provider smoke passed; staging sign-off not claimed.
+- Evidence status: Local provider + seeded action smoke passed; staging sign-off not claimed.
 - Environment: `local-keycloak`
-- Evidence date: 2026-04-26 11:08 Europe/Istanbul
+- Evidence date: 2026-04-26 11:44 Europe/Istanbul
 - Evidence owner: Codex-assisted local validation
 - Reviewer: Pending
 - Related checklist: `docs/plans/phase-7-provider-readiness-checklist.md`
@@ -211,31 +211,76 @@ Result:
 
 ## Positive Action Smoke Evidence
 
-Result:
+Command:
 
-- [ ] Pass
-- [ ] Fail
-- [x] Not executed in this local provider smoke.
+```powershell
+npm.cmd run smoke:auth:action
+```
 
-Reason:
+Action tested:
+
+- [x] target distribution create
+
+Target store id:
 
 ```text
-This smoke focused on OIDC/PKCE/session/logout behavior without a seeded DB-backed action workflow. Positive action smoke must be run against a seeded staging environment.
+00000000-0000-0000-0000-000000000100
 ```
+
+Sanitized result:
+
+```json
+{
+  "status": 201,
+  "operation": "target-distribution-request-create",
+  "storeId": "00000000-0000-0000-0000-000000000100",
+  "commandStatus": "submitted",
+  "requestStatus": "pending_region_approval",
+  "allocationCount": 1,
+  "actorRole": "STORE_MANAGER"
+}
+```
+
+Result:
+
+- [x] Pass
+- [ ] Fail
 
 ## Negative Action Smoke Evidence
 
-Result:
+Command:
 
-- [ ] Pass
-- [ ] Fail
-- [x] Not executed in this local provider smoke.
+```powershell
+npm.cmd run smoke:auth:action
+```
 
-Reason:
+Action tested:
+
+- [x] target distribution create
+
+Target store id:
 
 ```text
-403 action evidence requires a seeded staging environment with one assigned store and one unassigned target store.
+00000000-0000-0000-0000-000000000999
 ```
+
+Sanitized result:
+
+```json
+{
+  "status": 403,
+  "operation": "target-distribution-request-create",
+  "storeId": "00000000-0000-0000-0000-000000000999",
+  "actorRole": "STORE_MANAGER",
+  "message": "Out-of-scope store action",
+  "dbWriteExpected": false
+}
+```
+
+Result:
+
+- [x] Pass
+- [ ] Fail
 
 ## Logout Evidence
 
@@ -293,7 +338,7 @@ Result:
 
 ```text
 This is local Keycloak real-provider smoke evidence, not staging IdP sign-off.
-Positive and negative DB-backed action smoke remain pending for a seeded staging environment.
+Positive and negative DB-backed action smoke passed locally; seeded staging action smoke remains pending.
 The local Keycloak access token still contains provider default role names, but backend session roleCodes now filter to app catalog roles only.
 ```
 
@@ -311,8 +356,8 @@ First real IdP smoke uses re-login after access-token expiry. Browser refresh to
 - [x] Access token direct `sub` and `aud` checks passed.
 - [x] Role/read/action claims passed for local smoke.
 - [x] `/api/auth/session` passed.
-- [ ] Positive action smoke passed.
-- [ ] Negative `403` action smoke passed.
+- [x] Positive action smoke passed.
+- [x] Negative `403` action smoke passed.
 - [x] Logout smoke passed.
 - [x] Expired-token behavior passed.
 - [x] No refresh token was requested, stored, logged, or attached by the browser flow.
@@ -320,12 +365,12 @@ First real IdP smoke uses re-login after access-token expiry. Browser refresh to
 
 Decision:
 
-- [x] Local provider smoke Go
+- [x] Local provider + action smoke Go
 - [ ] Staging Go
-- [x] Staging No-Go until a real staging IdP and seeded action smoke are available
+- [x] Staging No-Go until a real staging IdP and seeded staging action smoke are available
 
 Reviewer notes:
 
 ```text
-Local OIDC/PKCE mechanics are healthy. The next evidence step is not another local login run; it is staging provider registration plus positive/negative action smoke in a seeded environment.
+Local OIDC/PKCE mechanics and seeded local action-scope behavior are healthy. The next evidence step is not another local run; it is real staging provider registration plus the same positive/negative action smoke in a seeded staging environment.
 ```

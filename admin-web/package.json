@@ -9,6 +9,7 @@
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "test:e2e": "playwright test",
     "smoke:auth:live": "node scripts/auth-live-smoke.mjs",
+    "smoke:auth:action": "node scripts/auth-live-smoke.mjs --include-action-smoke",
     "smoke:ui": "npm run build && npm run test:e2e",
     "check:release": "npm run lint && npm run smoke:ui && npm audit --omit=dev",
     "preview": "vite preview"

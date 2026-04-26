@@ -262,14 +262,17 @@ Result:
 - Callback exchanged the authorization code successfully.
 - Store manager reached `/store`.
 - `GET /api/auth/session` returned `STORE_MANAGER`, read scope, and assigned action store.
+- `npm.cmd run smoke:auth:action` passed against a seeded local DB.
+- Assigned-store target distribution create returned `201` and `submitted`.
+- Unassigned-store target distribution create returned `403` with no write expected.
 - Logout sent provider logout params and returned to `/auth/login`.
 - Expired bearer token was cleared before API authorization headers were sent.
 
 Remaining staging blockers:
 
 - A real staging IdP registration is not yet provided.
-- Positive action smoke in a seeded DB-backed environment is not yet captured.
-- Negative unassigned-store `403` evidence is not yet captured.
+- Positive action smoke in a seeded staging DB-backed environment is not yet captured.
+- Negative unassigned-store `403` staging evidence is not yet captured.
 - Local Keycloak access tokens still contain provider default role names; backend session role extraction filters these to app catalog roles, but staging provider mappers should also avoid emitting provider defaults.
 
 ## Out Of Scope

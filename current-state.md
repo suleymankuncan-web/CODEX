@@ -258,6 +258,7 @@ Siradaki mantikli adim: Real IdP Staging Evidence. Lokal auth akisi iyi durumda;
 Eklenenler:
 
 - `admin-web` icin `npm.cmd run smoke:auth:live` script'i eklendi.
+- `admin-web` icin `npm.cmd run smoke:auth:action` script'i eklendi; ayni browser login akisini DB-backed action smoke ile genisletir.
 - Script browser ile `/auth/login?returnTo=/store` uzerinden Keycloak'a gider.
 - `code_challenge_method=S256`, `state` ve `code_challenge` varligini dogrular.
 - `store.manager` ile callback/token exchange akisini tamamlar.
@@ -265,28 +266,38 @@ Eklenenler:
 - `/api/auth/session` yanitinda app role/scope/action scope'u dogrular.
 - `/auth/logout` uzerinden provider logout URL'ini ve local session temizligini dogrular.
 - Sentetik expired JWT ile expired bearer token'in API header'a gitmeden temizlendigini dogrular.
+- `smoke:auth:action` atanmis store icin target distribution create aksiyonunu dener ve `201/submitted` bekler.
+- `smoke:auth:action` atanmamis store icin ayni aksiyonda `403` bekler.
 - Evidence dosyasi: `docs/plans/phase-7-auth-evidence-local-keycloak-2026-04-26.md`.
 
 Ek hardening:
 
 - Backend JWT role extraction artik sadece uygulama rol katalog kodlarini kabul eder.
 - Keycloak default rolleri (`offline_access`, `uma_authorization`, `default-roles-store-ops`) access token payload'inda gorunse bile `/api/auth/session` icindeki `roleCodes` alanina tasinmaz.
+- `CreateTargetDistributionRequestDto` artik deterministic PostgreSQL UUID formatindaki seeded store id'lerini kabul eder.
+- `db/schema.sql` canonical schema'sina `ops.target_distribution_request` tablosu ve index'i eklendi; seeded DB action smoke schema eksiginden dusmez.
 
 Sinir:
 
 - Staging IdP registration kaniti henuz yok.
-- DB-backed pozitif aksiyon smoke henuz yok.
-- Unassigned store negatif `403` aksiyon kaniti henuz yok.
+- DB-backed pozitif/negatif aksiyon smoke local seeded ortamda var.
+- Staging ortaminda ayni pozitif/negatif aksiyon kaniti henuz yok.
 
 Dogrulama:
 
 - Kirmizi test izlendi: `JwtAuthProvider` default provider rollerini filtrelemedigi icin test fail verdi.
+- Kirmizi test izlendi: seeded store id `00000000-0000-0000-0000-000000000100` target distribution DTO validation'da `400` uretirken fail verdi.
+- Kirmizi test izlendi: canonical `db/schema.sql` icinde `ops.target_distribution_request` yokken schema contract testi fail verdi.
 - Hedefli backend test gecti: `npm.cmd test -- src/modules/auth/providers/jwt-auth.provider.spec.ts --runInBand` -> 1 suite / 10 test.
+- Hedefli backend test gecti: `npm.cmd test -- src/shared/validation/postgres-uuid.spec.ts --runInBand` -> 1 suite / 2 test.
+- Hedefli backend test gecti: `npm.cmd test -- test/integration/auth-scope.e2e-spec.ts --runInBand -t "accepts seeded PostgreSQL UUID"` -> 1 test.
+- Hedefli backend test gecti: `npm.cmd test -- src/modules/store-ops/demo-performance-seed-contract.spec.ts --runInBand -t "target distribution action tables"` -> 1 test.
 - Local live auth smoke gecti: `npm.cmd run smoke:auth:live`.
-- Backend release gecti: `npm.cmd run check:release` -> lint, 30 suite / 243 test, build, `npm audit --omit=dev`.
+- Local seeded action smoke gecti: `npm.cmd run smoke:auth:action` -> assigned store `201`, unassigned store `403`.
+- Backend release gecti: `npm.cmd run check:release` -> lint, 31 suite / 247 test, build, `npm audit --omit=dev`.
 - Frontend release gecti: `npm.cmd run check:release` -> lint, build, 21 Playwright smoke testi, `npm audit --omit=dev`.
 
-Siradaki mantikli adim: seeded staging/action evidence hazirlamak. Artik local OIDC mekanigi saglam; sonraki borc, gercek staging IdP bilgisi ve DB seed ile pozitif/negatif aksiyon kanitlarini toplamak.
+Siradaki mantikli adim: real staging IdP + seeded staging action evidence. Artik local OIDC ve local DB-backed action mekanigi saglam; sonraki borc, gercek staging IdP bilgisi ile ayni pozitif/negatif aksiyon kanitlarini staging ortaminda toplamak.
 
 ## Mevcut Roller ve Test Kullanicilari
 
