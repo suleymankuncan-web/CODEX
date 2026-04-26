@@ -8,48 +8,15 @@ import { buildCommandResponse, buildListResponse } from "../../../shared/http/re
 import {
   CreateFeedPostInput,
   FeedActor,
-  FeedPost,
-  FeedPublishStatus,
   FeedVisibilityScopeType,
   isInternalFeedRoute,
   UpdateFeedPostInput,
 } from "./feed.contract";
-
-type FeedRepositoryCreateInput = CreateFeedPostInput & {
-  visibilityScopeIds: string[];
-  isPinned: boolean;
-  publishStatus: FeedPublishStatus;
-};
-
-type FeedRepositoryUpdateInput = UpdateFeedPostInput & {
-  visibilityScopeType?: FeedVisibilityScopeType;
-  visibilityScopeIds?: string[];
-};
-
-type FeedRepositoryPort = {
-  listVisibleFeedPosts(input: {
-    actorScope: FeedActor["actorScope"];
-    limit: number;
-    offset: number;
-  }): Promise<FeedPost[]>;
-  listManageableFeedPosts(input: {
-    actorRoles: string[];
-    actorScope: FeedActor["actorScope"];
-    limit: number;
-    offset: number;
-  }): Promise<FeedPost[]>;
-  getFeedPost(feedPostId: string): Promise<FeedPost | null>;
-  createFeedPost(input: FeedRepositoryCreateInput): Promise<FeedPost>;
-  updateFeedPost(input: FeedRepositoryUpdateInput): Promise<FeedPost>;
-  publishFeedPost(input: FeedActor & { feedPostId: string }): Promise<FeedPost>;
-  pinFeedPost(input: FeedActor & { feedPostId: string }): Promise<FeedPost>;
-  unpinFeedPost(input: FeedActor & { feedPostId: string }): Promise<FeedPost>;
-  archiveFeedPost(input: FeedActor & { feedPostId: string }): Promise<FeedPost>;
-};
+import { FeedRepository } from "../infrastructure/feed.repository";
 
 @Injectable()
 export class FeedService {
-  constructor(private readonly feedRepository: FeedRepositoryPort) {}
+  constructor(private readonly feedRepository: FeedRepository) {}
 
   async listVisibleFeedPosts(input: FeedActor & { limit?: number; offset?: number }) {
     const limit = this.normalizeLimit(input.limit);
