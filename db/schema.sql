@@ -401,6 +401,12 @@ CREATE UNIQUE INDEX kpi_actual_employee_live_unique_idx
     ON ops.kpi_actual (kpi_id, employee_id, period_type, period_start, period_end)
     WHERE scope_type = 'employee' AND employee_id IS NOT NULL;
 
+CREATE TABLE ops.kpi_score_profile_config (
+    config_key TEXT PRIMARY KEY,
+    config_payload JSONB NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE ops.performance_review_period (
     review_period_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id UUID NOT NULL REFERENCES ops.company(company_id),
@@ -895,6 +901,7 @@ COMMENT ON TABLE ops.employee_assignment_history IS 'Time-aware employee to stor
 COMMENT ON TABLE ops.user_role_assignment IS 'RBAC assignments with scope-limited visibility at company, region or store level.';
 COMMENT ON TABLE ops.user_action_store_assignment IS 'Store-level action grants kept separate from role read scope so regional or audit users can read broadly but act only on assigned stores.';
 COMMENT ON TABLE ops.feed_post IS 'Scoped operational announcements and challenge posts. Challenge posts announce focus windows but do not calculate scores.';
+COMMENT ON TABLE ops.kpi_score_profile_config IS 'Data-driven KPI scoring configuration for store/personnel score profiles, ownership matrix and grading bands.';
 COMMENT ON TABLE ops.workforce_norm_plan IS 'Approved planned headcount and FTE targets used for norm vs actual workforce comparison.';
 COMMENT ON TABLE rpt.snapshot_run IS 'Parent record for every immutable reporting snapshot generation run.';
 COMMENT ON TABLE stg.import_batch IS 'Tracks lifecycle of each external data import batch.';

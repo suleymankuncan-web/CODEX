@@ -153,6 +153,41 @@ Dogrulama:
 
 Siradaki mantikli adim: `DM/CONFIG Boundary Note` yazmak. Mevcut `ops/stg/rpt/audit`, servis icindeki is kurallari, DB config tablolari, job/orchestration ve API/BFF sinirlari dokumante edilmeli; hemen yeni `dm` veya `config` schema acmadan once hangi ihtiyac dogarsa o sinirin tasinacagi netlesmeli.
 
+## Son DM/CONFIG Boundary Strategy
+
+26 Nisan 2026 itibariyla DM/CONFIG mimari siniri proje defterine baglandi.
+
+Yeni dokuman:
+
+- `docs/plans/dm-config-boundary-strategy.md`
+
+Karar:
+
+- Simdilik yeni `dm` schema yok.
+- Simdilik yeni `config` schema yok.
+- Mevcut fiziksel schema modeli korunuyor: `ops`, `stg`, `rpt`, `audit`.
+- `DM` su an "domain model / decision model" olarak application service, typed contract, repository query ve testlerde yasayan kavramsal is kurali siniri.
+- `CONFIG` uce ayrildi:
+  - runtime/env config: `AppConfigService`
+  - module-owned data config: ornegin `ops.kpi_score_profile_config`, `stg.integration_source` schedule alanlari, `ops.role/permission`
+  - UI/localization config: ileride label dictionary/i18n katmani
+- `JOB` su an `shared/jobs`, BullMQ/in-memory dispatcher, worker host ve scheduler kod katmani; ayri job schema gerekmiyor.
+- `API/BFF` su an Nest controller + frontend feature API helper katmani; standalone BFF icin henuz tekrarli aggregation ihtiyaci yok.
+
+Ek hizalama:
+
+- `ops.kpi_score_profile_config` migration ve backend tarafinda kullaniliyordu; canonical `db/schema.sql` icine de eklendi.
+
+Gelecekte `dm` veya `config` schema acma tetikleri:
+
+- kural/config birden fazla modul tarafindan kullaniliyorsa
+- draft/publish veya approval lifecycle gerekiyorsa
+- audit "hangi rule/config version sonucu uretti" sorusunu cevaplamaliysa
+- is kullanicisi UI'dan duzenleyecekse
+- simulation, rollback veya version karsilastirma gerekiyorsa
+
+Siradaki mantikli adim: Store/Region competition read experience polish. Admin tarafinda planlama guclendi; store ve bolge kullanicilari icin contribution, warning, ranking ve coverage aciklamalari daha okunur hale getirilmeli.
+
 ## Mevcut Roller ve Test Kullanicilari
 
 Keycloak local kullanicilari:

@@ -6,7 +6,7 @@ This is the short working list for the next practical steps. It keeps the projec
 
 ## Current Position
 
-As of 26 April 2026, the competition package planning flow and Operational Feed V1 have:
+As of 26 April 2026, the competition package planning flow, Operational Feed V1, and DM/CONFIG boundary decision have:
 
 - saved drafts
 - edit/cancel/history
@@ -18,6 +18,7 @@ As of 26 April 2026, the competition package planning flow and Operational Feed 
 - submitted-plan pre-approval decision preview
 - controlled company/region/store feed posts
 - store-visible pinned feed preview
+- documented `DM`, `CONFIG`, `JOB`, and `API/BFF` ownership boundaries
 - backend and frontend release checks
 
 ## Rules For Picking The Next Item
@@ -69,19 +70,19 @@ As of 26 April 2026, the competition package planning flow and Operational Feed 
   - design spec: `docs/superpowers/specs/2026-04-26-operational-feed-v1-design.md`
   - implementation plan: `docs/superpowers/plans/2026-04-26-operational-feed-v1.md`
 
-### 1. DM/CONFIG Boundary Note
-- Priority: `P1`
-- Why: the project is growing into rules, jobs, reporting, feed, competition, auth, and import layers; before adding more feature weight, the business-rule boundary should be written down.
-- Scope:
-  - document current `OPS/STG/RPT/AUDIT` schemas
-  - document where `DM`, `CONFIG`, `JOB`, and `API/BFF` currently live
-  - decide what stays as service/config code now
-  - define when a future `dm` or `config` schema becomes worth it
-  - avoid schema churn unless a real rule-versioning need appears
-- Suggested output:
+### Completed: DM/CONFIG Boundary Note
+- Completed: 26 April 2026
+- Result:
+  - current `ops`, `stg`, `rpt`, and `audit` schema ownership is documented
+  - `DM` is defined as a conceptual rule boundary for now, not a new schema
+  - `CONFIG` is split into runtime config, module-owned data config, and future UI/localization config
+  - `JOB` remains a backend orchestration layer until durable cross-module job state is needed
+  - `API/BFF` remains controllers plus frontend feature API helpers until repeated aggregation justifies a BFF
+  - `ops.kpi_score_profile_config` was restored to canonical `db/schema.sql`
+- Reference:
   - `docs/plans/dm-config-boundary-strategy.md`
 
-### 2. Store/Region Competition Experience Polish
+### 1. Store/Region Competition Experience Polish
 - Priority: `P1`
 - Why: admin can build competitions; store and region users need clearer read experiences.
 - Scope:
@@ -92,7 +93,7 @@ As of 26 April 2026, the competition package planning flow and Operational Feed 
   - store competition Playwright smoke
   - region read-only smoke
 
-### 3. Turkish UI Localization Foundation
+### 2. Turkish UI Localization Foundation
 - Priority: `P1`
 - Why: product default will be Turkish, and current competition UI copy is still English.
 - Scope:
@@ -102,7 +103,7 @@ As of 26 April 2026, the competition package planning flow and Operational Feed 
 - Reference:
   - `docs/plans/ui-localization-strategy.md`
 
-### 4. Real IdP Staging Evidence
+### 3. Real IdP Staging Evidence
 - Priority: `P1`
 - Why: auth is stable locally, but production confidence needs real provider evidence.
 - Scope:
@@ -113,7 +114,7 @@ As of 26 April 2026, the competition package planning flow and Operational Feed 
   - `docs/plans/phase-7-provider-readiness-checklist.md`
   - `docs/plans/phase-7-auth-evidence-template.md`
 
-### 5. Global Audit Feed Consideration
+### 4. Global Audit Feed Consideration
 - Priority: `P2`
 - Why: audit trails exist per feature, but operators may later need one cross-module feed.
 - Scope:
@@ -122,4 +123,4 @@ As of 26 April 2026, the competition package planning flow and Operational Feed 
 
 ## Recommended Next Move
 
-Write the `DM/CONFIG Boundary Note` before opening another heavy feature. This keeps business rules, dynamic config, jobs, API/BFF surfaces, and reporting ownership clear while the product keeps growing.
+Polish the Store/Region competition read experience next. Admin can build controlled competition plans now; store and region users need clearer contribution, warning, ranking and coverage explanations before the module grows further.
