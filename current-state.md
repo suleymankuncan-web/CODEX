@@ -1939,7 +1939,7 @@ CODEX DÜRÜST YORUM:
 
 - Bu adim dogru yerde durduruldu. Payload bilinmeden connector yazmak KPI, ranking ve reporting altina gizli varsayim gomerdi.
 - Proje zemin olarak hazir; eksik olan dis kaynak kontrati.
-- Siradaki yerel backend adimi, external source bilgisi gelene kadar KPI config governance implementation planning olmali.
+- Siradaki yerel backend adimi artik external source bilgisi gelene kadar source-agnostic ingest contract hardening gibi kontrollu bir adim olarak secilmeli; source-specific connector hala gercek payload bekler.
 
 ## Son KPI Config Versioning V1 Design
 
@@ -1966,10 +1966,54 @@ Ne ise yarar:
 - KPI agirliklari/threshold'lari degistikce guven ve audit korunur.
 - Ileride prim, yarisma, bolge ligi ve score interpretation buyurken zemin dagilmaz.
 
-Siradaki mantikli adim:
+Durum:
 
-- Implementation plan kullanici review/onayindan sonra TDD ile uygulanacak.
-- Uygulama sirasi: migration/schema contract, backend publish/version metadata, snapshot anchoring/anchored execution, admin UI metadata, docs/release verification.
+- Tasarim uygulandi; asagidaki `Son KPI Config Versioning V1` bolumu kanonik implementation sonucudur.
+
+## Son KPI Config Versioning V1
+
+26 Nisan 2026 itibariyla KPI Config Versioning V1 uygulandi.
+
+Eklenenler:
+
+- `ops.kpi_config_version` immutable published KPI config version history tutar.
+- `rpt.snapshot_run.kpi_config_version_id` yeni snapshot run'lari aktif KPI config version'a baglar.
+- KPI config publish akisi her publish icin yeni immutable version row olusturur.
+- Config API response'lari additive version metadata tasir.
+- Daily snapshot execution, version varsa anchored config payload icindeki personnel profile'i kullanir.
+- Failed snapshot rerun akisi parent snapshot'in KPI config version'ini korur.
+- Legacy/null-version snapshot'lar `pre_governance` olarak okunur.
+- `/admin/kpi-config` latest published version, published time ve rollback V1 sinirini gosterir.
+- `/admin/reports/snapshot-runs` ve snapshot detail yuzeyi version/pre-governance context gosterir.
+
+Sinir:
+
+- Yeni `dm` veya global `config` schema acilmadi.
+- Rollback UI, future effective scheduling, approval workflow ve DB-managed interpretation copy V1 disi kaldi.
+- Score formulu degismedi.
+- Eski snapshot'lar geriye donuk bozulmadi; null version bilincli olarak pre-governance anlamina gelir.
+
+Dogrulama:
+
+- Kirmizi backend test izlendi: snapshot create/rerun henuz `kpiConfigVersionId` tasimazken fail verdi.
+- Kirmizi frontend test izlendi: admin KPI config ve snapshot runs yuzeyleri version metadata gostermedigi icin fail verdi.
+- Hedefli backend test gecti: `npm.cmd test -- src/modules/store-ops/application/snapshot.service.spec.ts src/modules/store-ops/application/reporting.service.kpi-config-versioning.spec.ts src/modules/store-ops/kpi-config-versioning-schema-contract.spec.ts --runInBand` -> 3 suite / 9 test.
+- Backend build gecti: `npm.cmd run build`.
+- Frontend build gecti: `npm.cmd run build`.
+- Hedefli frontend e2e gecti: `npx.cmd playwright test e2e/kpi-config-versioning.spec.ts e2e/admin-kpi-config.spec.ts` -> 3 Playwright test.
+- Frontend lint gecti: `npm.cmd run lint`.
+- Resmi root release gate gecti: `npm.cmd run check:release` -> root script tests, backend lint + 34 suite / 255 test + build + audit, frontend lint + 7 script test + build + 27 Playwright test + audit.
+
+Debt ledger:
+
+- Closed active debts: 22
+- Superseded before overbuilding: 1
+- Blocked external dependency: 2
+- Watchlist decision item: 1
+- Strategic investment backlog: 2
+- Silent untracked quality debt in the active gate: 0
+
+Siradaki mantikli adim: staging IdP veya Nebim/source bilgisi yoksa yeni is, feature intake ile secilecek kontrollu local backend/data adimi olmali; source-specific connector icin hala gercek payload beklenmeli.
 
 ## Onemli Dosyalar
 

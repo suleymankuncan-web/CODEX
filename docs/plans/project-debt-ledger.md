@@ -17,11 +17,11 @@ Date: 26 April 2026
 
 Current count:
 
-- Closed active debts: 21
+- Closed active debts: 22
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 1
-- Strategic investment backlog: 3
+- Strategic investment backlog: 2
 - Silent untracked quality debt in the active gate: 0
 
 ## Closed Active Debts
@@ -49,6 +49,7 @@ These are counted as paid because they have implementation or documentation evid
 19. Ranking Completeness Segment Readiness V1
 20. Shared Inbox Maturity V1
 21. Store UX TR-First Copy V1
+22. KPI Config Versioning V1
 
 ## Superseded Before Overbuilding
 
@@ -158,8 +159,9 @@ Trigger to promote:
 These are important future product investments. They are not counted as hidden debt today because the current system is still deliberately growing from controlled foundations.
 
 1. Source-agnostic ingest contract implementation and eventual real source adapter
-2. KPI config governance implementation: versioned config, effective dates, rollback, snapshot anchoring
-3. Full production UI/design-system pass and complete EN/TR localization expansion
+2. Full production UI/design-system pass and complete EN/TR localization expansion
+
+KPI config version history, publish metadata, snapshot anchoring, and pre-governance visibility are implemented in V1. Rollback UI, future effective scheduling, approval workflow, and DB-managed interpretation copy remain future depth, not active hidden debt.
 
 UI status note:
 
@@ -202,4 +204,4 @@ If staging provider and seeded DB values are available, run the guarded staging 
 
 If they are not available, check whether real source ingest details are available. If source delivery details or a sample payload are unavailable, do not write a source-specific connector yet.
 
-The next local backend candidate should then be KPI config governance implementation planning.
+The next local backend candidate should be chosen through the intake gate. If no external source or staging inputs exist, prefer a controlled source-agnostic ingest contract hardening step over a source-specific connector.

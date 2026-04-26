@@ -6,7 +6,7 @@ This is the short working list for the next practical steps. It keeps the projec
 
 ## Current Position
 
-As of 26 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, and Store UX TR-First Copy V1 have:
+As of 26 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, Store UX TR-First Copy V1, and KPI Config Versioning V1 have:
 
 - saved drafts
 - edit/cancel/history
@@ -39,6 +39,10 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 - ranking scope readiness for Turkey-wide, store-level, metric mini-rank, and future segment use
 - shared inbox row detail, due, escalation, and source action interpretation
 - Turkish-first store shell, store home, store task queue, workflow row details, and store feed labels
+- immutable published KPI config version history
+- snapshot-run anchoring to the active KPI config version
+- pre-governance visibility for legacy snapshots
+- admin KPI config and snapshot report version metadata
 - project debt ledger
 - backend and frontend release checks
 
@@ -46,11 +50,11 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 
 Reference: `docs/plans/project-debt-ledger.md`
 
-- Closed active debts: 21
+- Closed active debts: 22
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 1
-- Strategic investment backlog: 3
+- Strategic investment backlog: 2
 - Silent untracked quality debt in the active gate: 0
 
 Interpretation:
@@ -68,7 +72,7 @@ Interpretation:
 - Shared Inbox Maturity V1 now makes store/admin inbox rows explain detail, due signal, escalation, and source action without opening a new workflow state machine.
 - Store UX TR-First Copy V1 now closes the first coherent store-facing copy pass for shell, tasks, workflow details, feed, and pinned feed preview.
 - Real ingest local foundation exists, but the actual source-specific connector is blocked until external source evidence exists.
-- Versioned config implementation remains planned investment.
+- KPI Config Versioning V1 is implemented; rollback UI, future effective scheduling, approval workflow, and DB-managed interpretation copy remain future depth, not silent debt.
 - Full production UI/design-system and complete EN/TR localization expansion remain planned investments, not silent release debt.
 - Production UI/design-system is intentionally deferred into reversible pilots while backend/data foundations remain the priority.
 - The debt ledger itself is an accounting artifact and is not counted as a separate closed active debt item.
@@ -358,15 +362,18 @@ Interpretation:
   - `docs/plans/real-ingest-connector-contract-intake.md`
   - `docs/plans/nebim-ingestion-and-normalization-plan.md`
 
-### Design: KPI Config Versioning V1
-- Recorded: 26 April 2026
-- Status: `approved_for_planning`
-- Decision:
-  - keep `ops.kpi_score_profile_config` as the current draft/live owner
-  - add immutable KPI config version history in `ops`
-  - anchor new `rpt.snapshot_run` rows to the active KPI config version
-  - keep legacy snapshots readable as pre-governance snapshots
-  - defer rollback UI, future effective scheduling, approval workflow, and DB-managed interpretation copy
+### Completed: KPI Config Versioning V1
+- Completed: 26 April 2026
+- Result:
+  - `ops.kpi_config_version` stores immutable published KPI config versions
+  - publishing a KPI config draft creates a new immutable version row
+  - new `rpt.snapshot_run` rows store `kpi_config_version_id`
+  - daily snapshot execution reads the anchored config version when present
+  - failed snapshot reruns reuse the parent config version when present
+  - legacy/null-version snapshots remain readable as pre-governance snapshots
+  - `/admin/kpi-config` shows latest published version metadata
+  - `/admin/reports/snapshot-runs` and snapshot detail surfaces show version/pre-governance context
+  - rollback UI, future effective scheduling, approval workflow, and DB-managed interpretation copy remain outside V1
 - Reference:
   - `docs/superpowers/specs/2026-04-26-kpi-config-versioning-v1-design.md`
   - `docs/superpowers/plans/2026-04-26-kpi-config-versioning-v1.md`
@@ -397,4 +404,4 @@ If staging IdP and seeded staging DB values are available, start real staging ev
 
 If Nebim/source delivery details, sample payload, or official field list become available, start source mapping specification.
 
-If neither staging values nor source ingest details are available, move to KPI config governance implementation planning.
+If neither staging values nor source ingest details are available, choose the next controlled local backend/data step through the intake gate; prefer source-agnostic ingest contract hardening over a source-specific connector.
