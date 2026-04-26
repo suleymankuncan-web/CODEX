@@ -6,7 +6,7 @@ This is the short working list for the next practical steps. It keeps the projec
 
 ## Current Position
 
-As of 26 April 2026, the competition package planning flow, Operational Feed V1, and DM/CONFIG boundary decision have:
+As of 26 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, and competition read polish have:
 
 - saved drafts
 - edit/cancel/history
@@ -19,6 +19,7 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 - controlled company/region/store feed posts
 - store-visible pinned feed preview
 - documented `DM`, `CONFIG`, `JOB`, and `API/BFF` ownership boundaries
+- store/region competition read summaries, contribution health, and warning explanations
 - backend and frontend release checks
 
 ## Rules For Picking The Next Item
@@ -82,18 +83,16 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 - Reference:
   - `docs/plans/dm-config-boundary-strategy.md`
 
-### 1. Store/Region Competition Experience Polish
-- Priority: `P1`
-- Why: admin can build competitions; store and region users need clearer read experiences.
-- Scope:
-  - scoped competition detail readability
-  - contribution explanations
-  - ranking/coverage copy
-- Suggested verification:
-  - store competition Playwright smoke
-  - region read-only smoke
+### Completed: Store/Region Competition Experience Polish
+- Completed: 26 April 2026
+- Result:
+  - store and admin/region competition detail surfaces show `Read summary`
+  - contribution rows explain `Contribution health`, coverage, missing KPI labels, and why partial rows matter
+  - scoped warnings show human-readable titles and explanations while preserving audit/status codes
+  - region manager read-only behavior remains locked
+  - frontend release check passes
 
-### 2. Turkish UI Localization Foundation
+### 1. Turkish UI Localization Foundation
 - Priority: `P1`
 - Why: product default will be Turkish, and current competition UI copy is still English.
 - Scope:
@@ -103,7 +102,7 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 - Reference:
   - `docs/plans/ui-localization-strategy.md`
 
-### 3. Real IdP Staging Evidence
+### 2. Real IdP Staging Evidence
 - Priority: `P1`
 - Why: auth is stable locally, but production confidence needs real provider evidence.
 - Scope:
@@ -114,7 +113,7 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
   - `docs/plans/phase-7-provider-readiness-checklist.md`
   - `docs/plans/phase-7-auth-evidence-template.md`
 
-### 4. Global Audit Feed Consideration
+### 3. Global Audit Feed Consideration
 - Priority: `P2`
 - Why: audit trails exist per feature, but operators may later need one cross-module feed.
 - Scope:
@@ -123,4 +122,4 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 
 ## Recommended Next Move
 
-Polish the Store/Region competition read experience next. Admin can build controlled competition plans now; store and region users need clearer contribution, warning, ranking and coverage explanations before the module grows further.
+Start the Turkish UI Localization Foundation next. The product default will be Turkish, and the current surfaces still mix English operational copy with a few Turkish labels; a typed label foundation keeps the cleanup controlled instead of turning it into scattered string edits.

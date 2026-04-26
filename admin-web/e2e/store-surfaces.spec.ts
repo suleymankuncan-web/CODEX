@@ -73,6 +73,13 @@ test('store competitions page renders scoped contribution details', async ({ pag
 
   await expect(page.getByRole('heading', { name: /Store competitions/i })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'April Region Challenge' })).toBeVisible()
+  const readSummary = page.getByLabel('Store competition read summary')
+  const contributionRows = page.getByLabel('Scoped store competition contributions')
+  await expect(readSummary.getByText('Read summary')).toBeVisible()
+  await expect(readSummary.getByText('95% contribution coverage')).toBeVisible()
+  await expect(contributionRows.getByText('Contribution health')).toBeVisible()
+  await expect(contributionRows.getByText('Partial contribution').first()).toBeVisible()
+  await expect(contributionRows.getByText('BM checklist', { exact: true })).toBeVisible()
   await expect(page.getByText('Scoped contributions')).toBeVisible()
   await expect(page.getByText('IstinyePark Demo Store')).toBeVisible()
   await expect(page.getByText('93.50')).toBeVisible()

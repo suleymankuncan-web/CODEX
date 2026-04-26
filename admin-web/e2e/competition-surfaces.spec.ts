@@ -35,11 +35,19 @@ test('admin competitions surface shows live scores and warnings', async ({ page 
   await expect(page.getByRole('link', { name: /Competitions/ })).toBeVisible()
   await expect(page.getByRole('heading', { name: /Region challenge stages/i })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'April Region Challenge' })).toBeVisible()
+  const adminReadSummary = page.getByLabel('Admin competition read summary')
+  await expect(adminReadSummary.getByText('Read summary')).toBeVisible()
+  await expect(adminReadSummary.getByText('95% contribution coverage')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Marmara Demo' })).toBeVisible()
   await expect(
     page.locator('article').filter({ has: page.getByRole('heading', { name: 'Marmara Demo' }) }).getByText('92.45'),
   ).toBeVisible()
-  await expect(page.getByText('missing bm checklist')).toBeVisible()
+  await expect(
+    page.getByLabel('Scoped competition warnings').getByText('Missing BM checklist', { exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByLabel('Scoped competition warnings').getByText('missing bm checklist', { exact: true }),
+  ).toBeVisible()
   await expect(page.getByRole('button', { name: /Recalculate QUALIFIER/ })).toBeVisible()
   await expect(page.getByRole('button', { name: /Finalize QUALIFIER/ })).toBeVisible()
 })
@@ -514,6 +522,12 @@ test('region manager competitions surface is read-only and scoped to visible sto
   await page.goto('/admin/competitions')
 
   await expect(page.getByRole('heading', { name: /Region challenge stages/i })).toBeVisible()
+  const regionReadSummary = page.getByLabel('Admin competition read summary')
+  const regionContributionRows = page.getByLabel('Scoped competition store contributions')
+  await expect(regionReadSummary.getByText('Read summary')).toBeVisible()
+  await expect(regionReadSummary.getByText('95% contribution coverage')).toBeVisible()
+  await expect(regionContributionRows.getByText('Contribution health')).toBeVisible()
+  await expect(regionContributionRows.getByText('Partial contribution').first()).toBeVisible()
   await expect(page.getByText('Scoped contributions')).toBeVisible()
   await expect(page.getByText('Visible Region Store')).toBeVisible()
   await expect(page.getByText('93.50')).toBeVisible()

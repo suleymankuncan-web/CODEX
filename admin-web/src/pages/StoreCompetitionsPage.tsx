@@ -14,7 +14,14 @@ import {
   getCompetition,
   listCompetitions,
   type CompetitionStoreContribution,
+  type CompetitionWarning,
 } from '../features/competitions/api'
+import {
+  buildCompetitionReadSummary,
+  describeCompetitionContribution,
+  describeCompetitionWarning,
+  type CompetitionReadSummary,
+} from '../features/competitions/readability'
 import { formatDate, formatState, getErrorMessage } from '../lib/format'
 
 function canUseStoreCompetitions(authSummary: AuthSessionSummary | null) {
@@ -182,6 +189,8 @@ export function StoreCompetitionsPage(input: {
 
           {detailQuery.data ? (
             <div className="page-stack">
+              <CompetitionReadSummaryPanel summary={buildCompetitionReadSummary(detailQuery.data)} />
+
               <section className="metric-grid store-metric-grid">
                 <MetricCard
                   title="Teams"
@@ -241,10 +250,33 @@ export function StoreCompetitionsPage(input: {
               </section>
 
               <ScopedContributionSection contributions={detailQuery.data.storeContributions} />
+              <ScopedWarningsSection warnings={detailQuery.data.warnings} />
             </div>
           ) : null}
         </section>
       ) : null}
+    </section>
+  )
+}
+
+function CompetitionReadSummaryPanel(input: { summary: CompetitionReadSummary }) {
+  return (
+    <section className="stacked-table" aria-label="Store competition read summary">
+      <div className="panel-heading">
+        <div>
+          <div className="eyebrow">Read Scope</div>
+          <h3>Read summary</h3>
+        </div>
+        <StatusPill tone={input.summary.tone}>{input.summary.attentionLabel}</StatusPill>
+      </div>
+      <article className="stacked-row">
+        <p className="queue-subtitle">{input.summary.explanation}</p>
+        <div className="key-grid">
+          <KeyValue label="Best visible rank" value={input.summary.bestRankLabel} />
+          <KeyValue label="Team coverage" value={input.summary.teamCoverageLabel} />
+          <KeyValue label="Contribution coverage" value={input.summary.contributionCoverageLabel} />
+        </div>
+      </article>
     </section>
   )
 }
@@ -261,39 +293,78 @@ function ScopedContributionSection(input: { contributions: CompetitionStoreContr
       {input.contributions.length === 0 ? (
         <EmptyState copy="No scoped store contribution rows are available for this selection." />
       ) : (
-        input.contributions.map((contribution) => (
-          <article
-            className="stacked-row"
-            key={`${contribution.stageId}-${contribution.storeId}-${contribution.snapshotDate}`}
-          >
-            <div className="stacked-row-head">
-              <div>
-                <strong>{contribution.storeName}</strong>
-                <p className="queue-subtitle">
-                  {contribution.teamName} / {contribution.storeCode}
-                </p>
+        input.contributions.map((contribution) => {
+          const readability = describeCompetitionContribution(contribution)
+
+          return (
+            <article
+              className="stacked-row"
+              key={`${contribution.stageId}-${contribution.storeId}-${contribution.snapshotDate}`}
+            >
+              <div className="stacked-row-head">
+                <div>
+                  <strong>{contribution.storeName}</strong>
+                  <p className="queue-subtitle">
+                    {contribution.teamName} / {contribution.storeCode}
+                  </p>
+                </div>
+                <div className="action-cluster">
+                  <StatusPill tone={contribution.hasDailyData ? 'calm' : 'warning'}>
+                    {formatScore(contribution.scoreValue)}
+                  </StatusPill>
+                  <StatusPill tone={readability.tone}>{readability.statusLabel}</StatusPill>
+                </div>
               </div>
-              <StatusPill tone={contribution.hasDailyData ? 'calm' : 'warning'}>
-                {formatScore(contribution.scoreValue)}
-              </StatusPill>
-            </div>
-            <div className="key-grid">
-              <KeyValue label="Snapshot" value={formatDate(contribution.snapshotDate)} />
-              <KeyValue
-                label="Reported weight"
-                value={`${contribution.reportedWeightPercent}/${contribution.expectedWeightPercent}`}
-              />
-              <KeyValue
-                label="Missing KPIs"
-                value={
-                  contribution.missingKpiCodes.length > 0
-                    ? contribution.missingKpiCodes.map(formatState).join(', ')
-                    : 'None'
-                }
-              />
-            </div>
-          </article>
-        ))
+              <div className="key-grid">
+                <KeyValue label="Snapshot" value={formatDate(contribution.snapshotDate)} />
+                <KeyValue label="Contribution health" value={readability.statusLabel} />
+                <KeyValue label="Coverage" value={readability.coverageLabel} />
+                <KeyValue label="Missing KPIs" value={readability.missingLabel} />
+                <KeyValue label="Why it matters" value={readability.explanation} />
+              </div>
+            </article>
+          )
+        })
+      )}
+    </section>
+  )
+}
+
+function ScopedWarningsSection(input: { warnings: CompetitionWarning[] }) {
+  return (
+    <section className="stacked-table" aria-label="Scoped store competition warnings">
+      <div className="panel-heading">
+        <div>
+          <div className="eyebrow">Data Quality</div>
+          <h3>Scoped warnings</h3>
+        </div>
+        <StatusPill tone={input.warnings.length > 0 ? 'warning' : 'calm'}>
+          {input.warnings.length > 0 ? `${input.warnings.length} warnings` : 'Clean'}
+        </StatusPill>
+      </div>
+      {input.warnings.length === 0 ? (
+        <EmptyState title="No open warnings" copy="No scoped data quality warnings are open." />
+      ) : (
+        input.warnings.map((warning) => {
+          const readability = describeCompetitionWarning(warning)
+
+          return (
+            <article className="stacked-row" key={warning.warningId}>
+              <div className="stacked-row-head">
+                <div>
+                  <strong>{readability.title}</strong>
+                  <p className="queue-subtitle">{readability.explanation}</p>
+                </div>
+                <StatusPill tone={readability.tone}>{formatState(warning.warningLevel)}</StatusPill>
+              </div>
+              <div className="key-grid">
+                <KeyValue label="Warning code" value={formatState(warning.warningCode)} />
+                <KeyValue label="Period start" value={formatDate(warning.periodStart)} />
+                <KeyValue label="Period end" value={formatDate(warning.periodEnd)} />
+              </div>
+            </article>
+          )
+        })
       )}
     </section>
   )

@@ -188,6 +188,42 @@ Gelecekte `dm` veya `config` schema acma tetikleri:
 
 Siradaki mantikli adim: Store/Region competition read experience polish. Admin tarafinda planlama guclendi; store ve bolge kullanicilari icin contribution, warning, ranking ve coverage aciklamalari daha okunur hale getirilmeli.
 
+## Son Store/Region Competition Read Polish
+
+26 Nisan 2026 itibariyla store ve region/admin competition okuma deneyimi guclendirildi.
+
+Eklenenler:
+
+- Frontend helper: `admin-web/src/features/competitions/readability.ts`.
+- `/store/competitions` icinde `Read summary` paneli eklendi.
+- `/admin/competitions` icinde HR/admin ve region manager read-only gorunumleri icin `Read summary` paneli eklendi.
+- Contribution satirlari artik sunlari aciklar:
+  - `Contribution health`
+  - contribution coverage yuzdesi
+  - eksik KPI label'i
+  - partial score'un neden partial kaldigi
+- Warning satirlari artik insan okunur baslik ve aciklama tasir:
+  - `Missing BM checklist`
+  - `Missing VM checklist`
+  - `Missing daily store data`
+- Region manager icin read-only kilidi korunur; `New draft`, `Recalculate`, `Finalize` aksiyonlari gorunmez.
+
+Sinir:
+
+- Yeni backend endpoint yok.
+- Yeni DB veya schema yok.
+- Skor hesaplama degismedi.
+- Competition sadece mevcut score/contribution/warning verisini daha okunur anlatir.
+
+Dogrulama:
+
+- Kirmizi test izlendi: store competition smoke once `Read summary` bulunamadigi icin fail verdi.
+- Hedefli store smoke gecti: `npm.cmd run test:e2e -- e2e/store-surfaces.spec.ts -g "store competitions"` -> 1 Playwright test.
+- Hedefli admin/region smoke gecti: `npm.cmd run test:e2e -- e2e/competition-surfaces.spec.ts -g "admin competitions surface|region manager competitions surface"` -> 2 Playwright test.
+- Frontend release gecti: `npm.cmd run check:release` -> lint, build, 20 Playwright smoke testi ve `npm audit --omit=dev`.
+
+Siradaki mantikli adim: Turkish UI Localization Foundation. UI default Turkce olacaksa bunu daginik string editleriyle degil, typed label/i18n temeliyle yapmak gerekiyor.
+
 ## Mevcut Roller ve Test Kullanicilari
 
 Keycloak local kullanicilari:
