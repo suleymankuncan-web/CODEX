@@ -19,7 +19,7 @@ Current count:
 
 - Closed active debts: 21
 - Superseded before overbuilding: 1
-- Blocked external dependency: 1
+- Blocked external dependency: 2
 - Watchlist decision item: 1
 - Strategic investment backlog: 3
 - Silent untracked quality debt in the active gate: 0
@@ -98,6 +98,46 @@ Exit criteria:
 - unassigned-store action returns `403`.
 - guarded evidence passes and is stored sanitized.
 
+### Real Nebim / Source Ingest Evidence
+
+Status: `blocked_external`
+
+Why it is not counted as completed:
+
+- Real source access method is unknown.
+- Real payload fields are unknown.
+- Source cadence is unknown.
+- Source authentication model is unknown.
+- Store/personnel identity fields are unknown.
+- Return/refund and latest-state/additive-event behavior are unknown.
+
+What is already ready locally:
+
+- `stg.integration_source`
+- `stg.import_batch`
+- `stg.kpi_raw`
+- `stg.external_id_map`
+- import scheduler, normalization, and materialization services
+- source-agnostic ingest planning
+
+Required external inputs:
+
+- delivery type: API, database view, file, SFTP, manual upload, Power BI export, or intermediary service
+- one sanitized sample payload or official field list
+- authentication and access model
+- cadence and late-correction behavior
+- store identity key
+- personnel/seller identity key
+- business date and timezone rule
+- return/refund behavior
+
+Exit criteria:
+
+- sample payload maps into the canonical raw KPI contract
+- idempotency key is defined
+- source-specific adapter can be implemented without guessing
+- imported metrics and platform-derived metrics are separated
+
 ## Watchlist Decision Item
 
 ### Global Audit Feed Consideration
@@ -117,7 +157,7 @@ Trigger to promote:
 
 These are important future product investments. They are not counted as hidden debt today because the current system is still deliberately growing from controlled foundations.
 
-1. Real ingest connector and real payload contract
+1. Source-agnostic ingest contract implementation and eventual real source adapter
 2. KPI config governance implementation: versioned config, effective dates, rollback, snapshot anchoring
 3. Full production UI/design-system pass and complete EN/TR localization expansion
 
@@ -154,10 +194,12 @@ The dangerous kind of debt would be:
 - raw auth evidence handling
 - store-facing mixed-language trust gaps
 
-Those have been actively reduced. The remaining work is mostly planned product depth, one real external staging proof, and a future coordinated visual/localization investment. That is a healthy place to be.
+Those have been actively reduced. The remaining work is mostly planned product depth, real external staging proof, real source ingest evidence, and a future coordinated visual/localization investment. That is a healthy place to be.
 
 ## Next Logical Step
 
 If staging provider and seeded DB values are available, run the guarded staging action smoke.
 
-If they are not available, the next local step should be chosen from strategic investments through the feature intake gate. Because broad UI polish is intentionally deferred, the strongest local backend candidate is now real ingest connector and payload contract intake. If real payload details are unavailable, move to KPI config governance implementation planning.
+If they are not available, check whether real source ingest details are available. If source delivery details or a sample payload are unavailable, do not write a source-specific connector yet.
+
+The next local backend candidate should then be KPI config governance implementation planning.

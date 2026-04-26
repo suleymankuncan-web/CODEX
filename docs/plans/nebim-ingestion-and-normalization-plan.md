@@ -3,13 +3,21 @@
 ## Purpose
 Turn the Nebim V3 KPI feed into a stable live-performance model without over-preserving noisy intraday history.
 
-## Confirmed Source Reality
-- Nebim data will be pulled every `30 minutes`
-- first pull target: `10:30`
-- last pull target: `00:00`
-- the feed should be treated as the latest current state, not as additive deltas
-- returns and refunds must reduce the current sales truth
-- seller code is the canonical personnel matching key
+## Status Correction
+
+As of 26 April 2026, the product owner has no confirmed external detail about the real Nebim data access method, payload fields, cadence, or authentication model.
+
+This document should therefore be read as a working modeling plan, not as vendor-confirmed source truth.
+
+Do not implement a Nebim-specific connector from this document alone. Use `docs/plans/real-ingest-connector-contract-intake.md` as the current gate for real source discovery.
+
+## Working Source Assumptions, Not External Confirmation
+- Nebim data may be pulled on a schedule such as every `30 minutes`
+- a possible first pull target is `10:30`
+- a possible last pull target is `00:00`
+- the feed should preferably be treated as the latest current state, not as additive deltas, if the real source supports that model
+- returns and refunds must reduce the current sales truth, but the source-specific representation is not confirmed
+- seller code is the preferred personnel matching key, but the real external identity field is not confirmed
 
 Example:
 - `14:00` pull shows personnel net sales `30000`

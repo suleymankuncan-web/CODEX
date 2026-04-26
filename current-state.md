@@ -507,7 +507,7 @@ V2 karari:
 - V2A hedefi: official / preview-only / not-closed / no-data / missing-day-needed hallerini daha acik anlatan explainability ve Turkish-first UI copy.
 - Region league, tournament, challenge, reward ve attendance/worked-day truth V2A disinda.
 
-CODEX DURUST YORUM:
+CODEX DÜRÜST YORUM:
 
 - Bu modul backlog'un ima ettiginden daha iyi durumda.
 - Risk ranking'in olmamasi degil; kullanicinin rank'in resmi mi, preview-only mi, yoksa veri eksigi nedeniyle mi olmadigini anlamamasi.
@@ -1896,6 +1896,50 @@ Yeni siradaki mantikli adim:
 
 - Real ingest connector ve payload contract icin feature intake interview.
 - Eger gercek external payload detaylari henuz yoksa fallback: KPI config governance implementation planning.
+
+## Son Real Ingest Connector Contract Intake
+
+26 Nisan 2026 itibariyla real ingest connector icin kaynak bilgisizligi netlestirildi.
+
+Yeni dokuman:
+
+- `docs/plans/real-ingest-connector-contract-intake.md`
+
+Guncellenen dokuman:
+
+- `docs/plans/nebim-ingestion-and-normalization-plan.md`
+
+Karar:
+
+- Product owner su anda Nebim tarafindan verinin nasil cekilecegini bilmiyor.
+- Bu nedenle Nebim'e ozel connector kodu yazilmayacak.
+- Mevcut Nebim cadence/payload notlari vendor-confirmed truth degil, working assumption olarak okunacak.
+- Gercek connector ancak sample payload, resmi kolon listesi veya source access modeli gelince yazilacak.
+- Simdilik dogru sinir `stg.integration_source`, `stg.import_batch`, `stg.kpi_raw`, `stg.external_id_map`, normalization ve materialization uzerinden source-agnostic ingest contract.
+
+Dis kaynaktan beklenenler:
+
+- delivery type: API, DB view, file, SFTP, manual upload, Power BI export veya intermediary service
+- authentication/access modeli
+- sanitized sample payload veya resmi field list
+- cadence ve late correction davranisi
+- store identity key
+- personnel/seller identity key
+- business date/timezone kurali
+- return/refund davranisi
+
+Debt ledger:
+
+- Blocked external dependency sayisi artik 2:
+  - Real IdP Staging Evidence
+  - Real Nebim / Source Ingest Evidence
+- Bu borc yerel kod eksigi degil; dis kaynak kontrati bekleyen kontrollu blokajdir.
+
+CODEX DÜRÜST YORUM:
+
+- Bu adim dogru yerde durduruldu. Payload bilinmeden connector yazmak KPI, ranking ve reporting altina gizli varsayim gomerdi.
+- Proje zemin olarak hazir; eksik olan dis kaynak kontrati.
+- Siradaki yerel backend adimi, external source bilgisi gelene kadar KPI config governance implementation planning olmali.
 
 ## Onemli Dosyalar
 

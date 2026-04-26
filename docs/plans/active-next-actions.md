@@ -48,7 +48,7 @@ Reference: `docs/plans/project-debt-ledger.md`
 
 - Closed active debts: 21
 - Superseded before overbuilding: 1
-- Blocked external dependency: 1
+- Blocked external dependency: 2
 - Watchlist decision item: 1
 - Strategic investment backlog: 3
 - Silent untracked quality debt in the active gate: 0
@@ -57,6 +57,7 @@ Interpretation:
 
 - The local project is not carrying a known silent release-quality debt right now.
 - Real IdP staging evidence is not counted as done because it requires outside staging IdP and seeded DB values.
+- Real Nebim/source ingest evidence is not counted as done because source access method, payload fields, cadence, auth, and identity semantics are not available yet.
 - Daily Closure / Historical Ranking V2 explainability now exists over the existing read model.
 - Score Meaning V1 now explains the personnel weighted score on `/store/me`.
 - KPI Source Semantics V1 now explains imported, derived, checklist-fed, pending normalization, and missing KPI values on store-facing KPI rows.
@@ -66,6 +67,7 @@ Interpretation:
 - Ranking Completeness Segment Readiness V1 now makes `/store/rankings` explain Turkey-wide, store-level, metric mini-rank, and segment readiness without opening a new ranking engine.
 - Shared Inbox Maturity V1 now makes store/admin inbox rows explain detail, due signal, escalation, and source action without opening a new workflow state machine.
 - Store UX TR-First Copy V1 now closes the first coherent store-facing copy pass for shell, tasks, workflow details, feed, and pinned feed preview.
+- Real ingest local foundation exists, but the actual source-specific connector is blocked until external source evidence exists.
 - Versioned config implementation remains planned investment.
 - Full production UI/design-system and complete EN/TR localization expansion remain planned investments, not silent release debt.
 - Production UI/design-system is intentionally deferred into reversible pilots while backend/data foundations remain the priority.
@@ -344,6 +346,18 @@ Interpretation:
 - Reference:
   - `docs/plans/production-ui-design-system-strategy.md`
 
+### Intake: Real Ingest Connector And Payload Contract
+- Recorded: 26 April 2026
+- Status: `external_source_unknown`
+- Decision:
+  - do not build a Nebim-specific connector without real source evidence
+  - treat existing Nebim cadence/payload notes as working assumptions, not vendor-confirmed facts
+  - keep the ingest boundary source-agnostic through `stg.integration_source`, `stg.import_batch`, canonical raw KPI rows, normalization, and materialization
+  - require a sanitized sample payload or official field list before source-specific adapter code
+- Reference:
+  - `docs/plans/real-ingest-connector-contract-intake.md`
+  - `docs/plans/nebim-ingestion-and-normalization-plan.md`
+
 ### 1. Real IdP Staging Evidence
 - Priority: `P1`
 - Why: local provider and action mechanics are proven, but production confidence still needs real staging IdP and seeded staging action evidence.
@@ -368,4 +382,6 @@ Interpretation:
 
 If staging IdP and seeded staging DB values are available, start real staging evidence.
 
-If staging values are not available, start backend/data intake for the real ingest connector and payload contract. If real external payload details are not available yet, move to KPI config governance implementation planning.
+If Nebim/source delivery details, sample payload, or official field list become available, start source mapping specification.
+
+If neither staging values nor source ingest details are available, move to KPI config governance implementation planning.
