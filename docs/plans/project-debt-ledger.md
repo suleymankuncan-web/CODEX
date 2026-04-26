@@ -109,7 +109,7 @@ Trigger to promote:
 These are important future product investments. They are not counted as hidden debt today because the current system is still deliberately growing from controlled foundations.
 
 1. Real ingest connector and real payload contract
-2. Daily closure plus historical ranking read path
+2. Daily Closure Ranking V2 explainability and trust polish
 3. KPI score meaning: grade bands, interpretation, threshold language
 4. Ranking completeness: Turkey-wide, store, metric mini-ranks, segment-ready behavior
 5. KPI source semantics: imported, derived, checklist-fed, presentation-only
@@ -149,4 +149,4 @@ Those have been actively reduced. The remaining work is mostly planned product d
 
 If staging provider and seeded DB values are available, run the guarded staging action smoke.
 
-If they are not available, the next local step should be chosen from strategic investments through the feature intake gate, with Daily Closure / Historical Ranking still the strongest product candidate.
+If they are not available, the next local step should be chosen from strategic investments through the feature intake gate, with Daily Closure Ranking V2 explainability still the strongest product candidate.

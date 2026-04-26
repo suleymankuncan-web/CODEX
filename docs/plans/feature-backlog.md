@@ -90,7 +90,7 @@ Use it before implementation so new ideas do not get scattered across chat histo
 - Risks / Notes: do not let store features quietly accumulate under `/admin`
 
 ### 1B. Daily Closure Ranking
-- Status: `planned`
+- Status: `done`
 - Priority: `P1`
 - Business goal: turn live KPI/performance data into trustworthy closed daily/monthly ranking
 - User/operator need: personnel and store managers need reliable historical rank, KPI mini-ranks, and data coverage such as `25/27 days`
@@ -105,6 +105,9 @@ Use it before implementation so new ideas do not get scattered across chat histo
 - Reporting UI: store shell first, admin/region later
 - Risks / Notes: missing data is not zero; official monthly ranking requires at least 3 closed performance days
 - Reference: [daily-closure-ranking-strategy.md](./daily-closure-ranking-strategy.md)
+- V1 result: daily/monthly closed ranking, store/Turkey rank, KPI mini-ranks, and coverage exist.
+- V2 shaping: improve official/preview/no-data explanation and Turkish-first ranking copy.
+- V2 reference: [daily-closure-ranking-v2-intake.md](./daily-closure-ranking-v2-intake.md)
 
 ### 1C. UI Localization TR/EN
 - Status: `captured`

@@ -476,6 +476,45 @@ Yorum:
 
 Siradaki mantikli adim: staging bilgileri yoksa Daily Closure / Historical Ranking icin feature intake gate'i acmak; staging bilgileri varsa once guard'li staging auth action smoke'u kosmak.
 
+## Son Daily Closure Ranking V2 Intake
+
+26 Nisan 2026 itibariyla Daily Closure / Historical Ranking icin V2 intake gate acildi.
+
+Onemli tespit:
+
+- Daily Closure / Historical Ranking sifirdan yapilacak bir is degil.
+- V1 zaten mevcut:
+  - backend closed ranking service/contract
+  - `GET /api/reports/leaderboards/closed`
+  - `rpt.employee_performance_snapshot`
+  - `rpt.employee_kpi_snapshot`
+  - daily/monthly mode
+  - store/Turkiye rank
+  - KPI mini-rank
+  - `daysWithPerformance / closedDaysInPeriod`
+  - minimum 3 kapali performans gunu official monthly eligibility
+  - `/store/rankings`
+
+Yeni dokuman:
+
+- `docs/plans/daily-closure-ranking-v2-intake.md`
+
+V2 karari:
+
+- Yeni ranking engine yok.
+- Yeni schema ilk adimda yok.
+- Mevcut closed ranking read model guclendirilecek.
+- V2A hedefi: official / preview-only / not-closed / no-data / missing-day-needed hallerini daha acik anlatan explainability ve Turkish-first UI copy.
+- Region league, tournament, challenge, reward ve attendance/worked-day truth V2A disinda.
+
+CODEX DURUST YORUM:
+
+- Bu modul backlog'un ima ettiginden daha iyi durumda.
+- Risk ranking'in olmamasi degil; kullanicinin rank'in resmi mi, preview-only mi, yoksa veri eksigi nedeniyle mi olmadigini anlamamasi.
+- Dogru adim mevcut V1'i guclendirmek; ikinci kaynak veya ikinci skor motoru acmak degil.
+
+Siradaki mantikli adim: `rankingStatus` / `eligibilityReason` ve `/store/rankings` Turkce aciklama polish'i icin V2 implementation plan yazmak.
+
 ## Mevcut Roller ve Test Kullanicilari
 
 Keycloak local kullanicilari:

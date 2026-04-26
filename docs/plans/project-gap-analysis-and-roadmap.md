@@ -41,7 +41,7 @@ What is missing:
 Why it matters:
 - most KPI, ranking, and score work still depends on demo-shaped data
 
-### 2. Daily closure is not implemented yet
+### 2. Daily closure V1 exists; explainability is the next gap
 What exists:
 - design decision for `live state + daily closed snapshot`
 - daily closure status + queue surface for the previous local day
@@ -49,14 +49,21 @@ What exists:
 - config-driven automation backbone for daily closure polling
 - daily employee performance snapshot tables
 - `/store/me` can read `live` or `closed` mode
+- `/store/rankings` can read daily and monthly closed leaderboards
+- store rank and Turkey rank are supported
+- KPI mini-ranks are supported
+- month-to-date ranking uses completed daily snapshots
+- monthly coverage exposes `daysWithPerformance / closedDaysInPeriod`
+- official monthly rank requires at least 3 closed performance days
 
 What is missing:
-- daily closed KPI snapshot read path specialized for ranking
-- historical recompute path for day/week/month ranking
-- wider closed historical surfaces beyond self-performance
+- stronger official vs preview-only vs no-data explanation in the API/UI
+- clearer Turkish-first copy for coverage and missing-day states
+- wider admin/region historical views
+- historical recompute explanation surfaced to operators
 
 Why it matters:
-- live leaderboard and historical leaderboard are still conceptually separated, but not yet fully implemented as separate persistence behavior
+- the ranking data exists, but user trust depends on explaining when a rank is official, preview-only, not closed, or absent because of missing performance data
 
 ### 3. KPI grading model is defined in product language, not in code yet
 What exists:
@@ -192,29 +199,23 @@ Do:
 Exit criteria:
 - one real source can feed live KPI state end to end
 
-### Roadmap 2. Implement Daily Closure
+### Roadmap 2. Daily Closure Ranking V2 Explainability
 Goal:
-- separate live operational state from historical truth
+- make closed ranking trustworthy and understandable to store users
 
 Strategy:
 - [daily-closure-ranking-strategy.md](./daily-closure-ranking-strategy.md)
+- [daily-closure-ranking-v2-intake.md](./daily-closure-ranking-v2-intake.md)
 
 Do:
-- end-of-day closure job
-- closed daily KPI state
-- historical ranking reads from closed data, not live rows
-- store and Turkey-wide closed ranking for `STORE_PERSONNEL` and `STORE_MANAGER`
-- KPI-level mini ranks for UPT, ATV, target achievement, net sales, and similar metrics
-- monthly month-to-date ranking from closed days only
-- data coverage labels such as `25/27 days`
+- keep current closed ranking read path as the source of truth
+- explain official vs preview-only monthly ranking
+- explain not-closed and no-data states in Turkish-first copy
+- show how many more closed performance days are needed
+- keep missing data out of score averages
 
 Exit criteria:
-- the same user can see:
-  - current live leaderboard
-  - yesterday's closed leaderboard
-  - monthly closed leaderboard
-- missing daily data is not treated as zero
-- official monthly ranking requires minimum closed performance day coverage
+- store personnel and store managers can tell whether a closed rank is official, preview-only, not closed, or missing performance data without reading technical terms
 
 ### Roadmap 3. Productize Score Meaning
 Goal:
