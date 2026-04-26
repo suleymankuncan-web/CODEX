@@ -427,6 +427,22 @@ CREATE TABLE ops.kpi_score_profile_config (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE ops.kpi_config_version (
+    kpi_config_version_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    version_no INTEGER NOT NULL,
+    lifecycle_state TEXT NOT NULL DEFAULT 'published',
+    effective_from TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    effective_to TIMESTAMPTZ,
+    published_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    published_by UUID REFERENCES ops.user_account(user_id),
+    change_summary JSONB NOT NULL DEFAULT '{}'::jsonb,
+    config_payload JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (version_no),
+    CHECK (lifecycle_state IN ('published', 'retired')),
+    CHECK (effective_to IS NULL OR effective_to > effective_from)
+);
+
 CREATE TABLE ops.performance_review_period (
     review_period_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id UUID NOT NULL REFERENCES ops.company(company_id),
@@ -495,6 +511,7 @@ CREATE TABLE rpt.snapshot_run (
     rerun_of_snapshot_run_id UUID REFERENCES rpt.snapshot_run(snapshot_run_id),
     generated_by TEXT NOT NULL,
     source_batch_no TEXT,
+    kpi_config_version_id UUID REFERENCES ops.kpi_config_version(kpi_config_version_id),
     CHECK (period_end >= period_start)
 );
 
@@ -853,6 +870,9 @@ CREATE UNIQUE INDEX uq_snapshot_run_idempotency_key
 CREATE INDEX idx_snapshot_run_status_date
     ON rpt.snapshot_run (run_status, snapshot_date, generated_at);
 
+CREATE INDEX snapshot_run_kpi_config_version_idx
+    ON rpt.snapshot_run (kpi_config_version_id);
+
 CREATE INDEX IF NOT EXISTS snapshot_run_closed_daily_period_idx
     ON rpt.snapshot_run (period_start, period_end, generated_at DESC)
     WHERE snapshot_type = 'daily' AND run_status = 'completed';
@@ -926,6 +946,7 @@ COMMENT ON TABLE ops.user_action_store_assignment IS 'Store-level action grants 
 COMMENT ON TABLE ops.target_distribution_request IS 'Store-level target distribution requests that are submitted by store managers and approved by region-level oversight.';
 COMMENT ON TABLE ops.feed_post IS 'Scoped operational announcements and challenge posts. Challenge posts announce focus windows but do not calculate scores.';
 COMMENT ON TABLE ops.kpi_score_profile_config IS 'Data-driven KPI scoring configuration for store/personnel score profiles, ownership matrix and grading bands.';
+COMMENT ON TABLE ops.kpi_config_version IS 'Immutable published KPI score configuration versions used to anchor reporting snapshots.';
 COMMENT ON TABLE ops.workforce_norm_plan IS 'Approved planned headcount and FTE targets used for norm vs actual workforce comparison.';
 COMMENT ON TABLE rpt.snapshot_run IS 'Parent record for every immutable reporting snapshot generation run.';
 COMMENT ON TABLE stg.import_batch IS 'Tracks lifecycle of each external data import batch.';
