@@ -46,6 +46,7 @@ Calisma notu:
 
 - Yeni islerde ilgili yerel skill dosyalari kontrol edilmeli ve uygun olanlar kullanilmali.
 - Anlamli yeni feature/workflow/data/permission islerinde once `docs/plans/request-intake-and-decision-policy.md` icindeki 6 soruluk Feature Intake Interview Gate uygulanmali; auth/scope, veri, audit, reporting, import/KPI ve test etkisi netlesmeden dogrudan kodlanmamali.
+- Yeni anlamli modül veya feature kararlarinda `CODEX DÜRÜST YORUM` basligi altinda urun hissi, dogru modül siniri, ikinci kaynak riski, teknik borc, V1 siniri ve devam/sekillendir/erteleyelim tavsiyesi acikca yazilmali.
 - Her is tamamlandiginda kisa sekilde siradaki mantikli adim belirtilmeli.
 
 ## Calistirma Komutlari

@@ -96,6 +96,24 @@ Before implementation starts, the working note should be clear enough to answer:
 
 If these answers are not known, stop and ask the user more questions before coding.
 
+## CODEX DÜRÜST YORUM
+
+For every meaningful new module, feature, workflow, data model, route, permission, or integration, include a short section titled `CODEX DÜRÜST YORUM` before implementation starts.
+
+This section is not a motivational summary. It is the explicit product and engineering risk opinion.
+
+It should answer:
+
+- does this feature belong in the product now?
+- is the proposed module boundary the right one?
+- are we accidentally building a second source of truth?
+- are we solving the real user need or only the first suggested implementation?
+- will this create avoidable technical debt?
+- what should stay out of V1 so the module does not sprawl?
+- would Codex recommend continuing, reshaping, postponing, or rejecting the idea?
+
+The comment should be candid. If the current direction feels technically possible but product-wrong, say so before code is written.
+
 ## Standing Instruction
 
 For this project, the preferred behavior is:
@@ -168,6 +186,7 @@ When a new feature request comes in:
 
 - first explain the interpreted request and likely impact area
 - ask the feature intake interview questions that are still unknown
+- include a `CODEX DÜRÜST YORUM` section for meaningful module or feature decisions
 - then outline the most appropriate implementation direction
 - then implement
 
