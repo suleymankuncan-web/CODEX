@@ -1,5 +1,7 @@
 export type ClosedRankingPeriodType = "daily" | "monthly";
 export type ClosedRankingState = "closed" | "not_closed" | "no_data";
+export type ClosedRankingStatus = "official" | "preview_only";
+export type ClosedRankingEligibilityReason = "eligible" | "needs_more_closed_days";
 
 export type ClosedRankingMetricRank = {
   code: string;
@@ -24,6 +26,9 @@ export type ClosedRankingEmployee = {
   storeId: string | null;
   storeName: string | null;
   scoreValue: number;
+  rankingStatus: ClosedRankingStatus;
+  eligibilityReason: ClosedRankingEligibilityReason;
+  neededPerformanceDays: number;
   rankings: {
     turkeyRank: number | null;
     turkeyPopulation: number;

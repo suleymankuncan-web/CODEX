@@ -256,12 +256,18 @@ export type ClosedRankingCoverage = {
   isEligibleForRanking: boolean
 }
 
+export type ClosedRankingStatus = 'official' | 'preview_only'
+export type ClosedRankingEligibilityReason = 'eligible' | 'needs_more_closed_days'
+
 export type ClosedRankingEmployee = {
   employeeId: string
   displayName: string
   storeId: string | null
   storeName: string | null
   scoreValue: number
+  rankingStatus: ClosedRankingStatus
+  eligibilityReason: ClosedRankingEligibilityReason
+  neededPerformanceDays: number
   rankings: {
     turkeyRank: number | null
     turkeyPopulation: number

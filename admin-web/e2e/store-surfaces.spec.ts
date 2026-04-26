@@ -46,11 +46,23 @@ test('store shell exposes a main landmark and hides technical auth roles', async
 test('store rankings page renders closed leaderboard and metric mini-ranks', async ({ page }) => {
   await page.goto('/store/rankings')
 
-  await expect(page.getByRole('heading', { name: /Gunluk ve aylik closure ranking/i })).toBeVisible()
-  await expect(page.getByText('Current rank')).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Gunluk ve aylik kapanis siralamasi/i })).toBeVisible()
+  await expect(page.getByText('Mevcut siralama')).toBeVisible()
   await expect(page.getByText('Store Personnel - 1/4')).toBeVisible()
-  await expect(page.getByText('KPI mini-ranks')).toBeVisible()
+  await expect(page.getByText('KPI mini siralari')).toBeVisible()
   await expect(page.getByText('TR 1/4')).toBeVisible()
+  await expect(page.getByText('Siralama yuzeyi acilamadi')).toHaveCount(0)
+})
+
+test('store rankings page explains monthly preview-only ranking', async ({ page }) => {
+  await page.goto('/store/rankings')
+  await page.getByRole('button', { name: 'Aylik' }).click()
+
+  const rankingExplanation = page.getByLabel('Ranking explanation')
+  await expect(rankingExplanation.getByText('On izleme')).toBeVisible()
+  await expect(rankingExplanation.getByText('1 kapali performans gunu daha gerekiyor')).toBeVisible()
+  await expect(page.getByText('Siralama yok').first()).toBeVisible()
+  await expect(page.getByText('2/2 kapali gun').first()).toBeVisible()
   await expect(page.getByText('Siralama yuzeyi acilamadi')).toHaveCount(0)
 })
 
@@ -129,7 +141,13 @@ async function routeStoreSurfaceApi(page: Page) {
   })
 
   await page.route('**/api/reports/leaderboards/closed**', async (route) => {
-    await route.fulfill({ json: closedLeaderboardFixture })
+    const requestUrl = new URL(route.request().url())
+    await route.fulfill({
+      json:
+        requestUrl.searchParams.get('periodType') === 'monthly'
+          ? closedLeaderboardMonthlyPreviewFixture
+          : closedLeaderboardFixture,
+    })
   })
 
   await page.route('**/api/reports/snapshot-runs**', async (route) => {
@@ -428,6 +446,9 @@ const closedLeaderboardFixture = {
       minimumRequiredDays: 1,
       isEligibleForRanking: true,
     },
+    rankingStatus: 'official',
+    eligibilityReason: 'eligible',
+    neededPerformanceDays: 0,
     metricRanks: [
       {
         code: 'TARGET_ACHIEVEMENT',
@@ -477,7 +498,60 @@ const closedLeaderboardFixture = {
         minimumRequiredDays: 1,
         isEligibleForRanking: true,
       },
+      rankingStatus: 'official',
+      eligibilityReason: 'eligible',
+      neededPerformanceDays: 0,
       metricRanks: [],
+    },
+  ],
+}
+
+const closedLeaderboardMonthlyPreviewFixture = {
+  ...closedLeaderboardFixture,
+  source: {
+    ...closedLeaderboardFixture.source,
+    periodType: 'monthly',
+    snapshotRunId: null,
+    snapshotDate: '2026-04-02',
+    periodStart: '2026-04-01',
+    periodEnd: '2026-04-30',
+  },
+  currentEmployee: {
+    ...closedLeaderboardFixture.currentEmployee,
+    rankings: {
+      turkeyRank: null,
+      turkeyPopulation: 4,
+      storeRank: null,
+      storePopulation: 3,
+    },
+    coverage: {
+      closedDaysInPeriod: 2,
+      daysWithPerformance: 2,
+      minimumRequiredDays: 3,
+      isEligibleForRanking: false,
+    },
+    rankingStatus: 'preview_only',
+    eligibilityReason: 'needs_more_closed_days',
+    neededPerformanceDays: 1,
+  },
+  personnelTop: [
+    {
+      ...closedLeaderboardFixture.personnelTop[0],
+      rankings: {
+        turkeyRank: null,
+        turkeyPopulation: 4,
+        storeRank: null,
+        storePopulation: 3,
+      },
+      coverage: {
+        closedDaysInPeriod: 2,
+        daysWithPerformance: 2,
+        minimumRequiredDays: 3,
+        isEligibleForRanking: false,
+      },
+      rankingStatus: 'preview_only',
+      eligibilityReason: 'needs_more_closed_days',
+      neededPerformanceDays: 1,
     },
   ],
 }

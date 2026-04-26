@@ -17,11 +17,11 @@ Date: 26 April 2026
 
 Current count:
 
-- Closed active debts: 12
+- Closed active debts: 13
 - Superseded before overbuilding: 1
 - Blocked external dependency: 1
 - Watchlist decision item: 1
-- Strategic investment backlog: 8
+- Strategic investment backlog: 7
 - Silent untracked quality debt in the active gate: 0
 
 ## Closed Active Debts
@@ -40,6 +40,7 @@ These are counted as paid because they have implementation or documentation evid
 10. Official Release Check Gate
 11. Staging Auth Evidence Operator Checklist
 12. Staging Auth Evidence JSON Guard
+13. Daily Closure Ranking V2 Explainability
 
 ## Superseded Before Overbuilding
 
@@ -109,13 +110,12 @@ Trigger to promote:
 These are important future product investments. They are not counted as hidden debt today because the current system is still deliberately growing from controlled foundations.
 
 1. Real ingest connector and real payload contract
-2. Daily Closure Ranking V2 explainability and trust polish
-3. KPI score meaning: grade bands, interpretation, threshold language
-4. Ranking completeness: Turkey-wide, store, metric mini-ranks, segment-ready behavior
-5. KPI source semantics: imported, derived, checklist-fed, presentation-only
-6. KPI config governance: effective dates, rollback, impact comparison
-7. Shared inbox maturity: detail views, due dates, escalation, stronger source actions
-8. Store UX polish and broader TR-first copy rollout
+2. KPI score meaning: grade bands, interpretation, threshold language
+3. Ranking completeness: Turkey-wide, store, metric mini-ranks, segment-ready behavior
+4. KPI source semantics: imported, derived, checklist-fed, presentation-only
+5. KPI config governance: effective dates, rollback, impact comparison
+6. Shared inbox maturity: detail views, due dates, escalation, stronger source actions
+7. Store UX polish and broader TR-first copy rollout
 
 ## Repo Hygiene Note
 
@@ -149,4 +149,4 @@ Those have been actively reduced. The remaining work is mostly planned product d
 
 If staging provider and seeded DB values are available, run the guarded staging action smoke.
 
-If they are not available, the next local step should be chosen from strategic investments through the feature intake gate, with Daily Closure Ranking V2 explainability still the strongest product candidate.
+If they are not available, the next local step should be chosen from strategic investments through the feature intake gate, with KPI score meaning / grade interpretation now the strongest product candidate.

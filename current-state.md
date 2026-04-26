@@ -1450,6 +1450,51 @@ C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI\admin-web
 - Frontend release check gecti: `npm.cmd run check:release` -> lint, build, 16 Playwright smoke testi ve `npm audit --omit=dev` (`found 0 vulnerabilities`).
 - `docs/plans/active-next-actions.md` guncellendi; siradaki mantikli adim `Stage Package Template Variants` icin feature intake roportaji.
 
+## Son Project Forward Preview And Daily Closure Ranking V2 Explainability
+
+26 Nisan 2026 itibariyla proje icin ileri yol onizlemesi yazildi ve Daily Closure Ranking V2 Explainability uygulandi.
+
+Yeni dokumanlar:
+
+- `docs/plans/project-forward-preview-2026-04-26.md`
+- `docs/superpowers/plans/2026-04-26-daily-closure-ranking-v2-explainability.md`
+
+Project forward preview sonucu:
+
+- Mevcut durum "production-ready" degil, ama foundation-healthy olarak degerlendirildi.
+- En guclu taraf kontrol: auth/scope, release gate, feed/competition ayrimi, staging evidence guard ve debt ledger.
+- Ana riskler real source data, real staging IdP kaniti, UI/UX polish'in gec kalmasi ve score anlaminin kullaniciya yeterince anlatilmamasi.
+- Tavsiye edilen rota: Daily Closure V2, score meaning, real KPI ingest, real staging evidence, store UX polish, config governance, design-system pass.
+
+Daily Closure V2 sonucu:
+
+- Mevcut `GET /api/reports/leaderboards/closed` endpoint'i ve `rpt` read modeli korundu.
+- Yeni DB schema, skor formulu, region league, challenge leaderboard veya ikinci ranking engine acilmadi.
+- Backend closed-ranking contract'ina employee-level alanlar eklendi:
+  - `rankingStatus`
+  - `eligibilityReason`
+  - `neededPerformanceDays`
+- Gunluk kapali satirlar resmi siralama olarak isaretlenir.
+- Aylik satirlar 3 kapali performans gunune ulasmadiysa preview-only olarak isaretlenir.
+- `/store/rankings` icinde rank, coverage, donem durumu ve preview-only aciklamalari Turkish-first copy ile gosterilir.
+- Aylik preview durumunda kullanici kac kapali performans gunu daha gerektigini gorur.
+
+Dogrulama:
+
+- Backend kirmizi test izlendi: explainability alanlari yokken `closed-ranking.service.spec.ts` fail verdi.
+- Frontend kirmizi test izlendi: `On izleme` aciklamasi yokken Playwright fail verdi.
+- Hedefli backend test gecti: `npm.cmd test -- src/modules/store-ops/application/closed-ranking.service.spec.ts --runInBand` -> 1 suite / 4 test.
+- Hedefli frontend dogrulama gecti: `npm.cmd run build; npm.cmd run test:e2e -- e2e/store-surfaces.spec.ts -g "store rankings"` -> 2 Playwright test.
+- Resmi root release gate gecti: `npm.cmd run check:release` -> root script tests, backend lint/test/build/audit, frontend lint/script/build/22 Playwright/audit.
+
+Debt ledger:
+
+- Closed active debts: 13
+- Strategic investment backlog: 7
+- Silent untracked quality debt in the active gate: 0
+
+Siradaki mantikli adim: Score Meaning / Grade Interpretation. Weighted score artik gorunuyor ve siralama aciklaniyor; siradaki en degerli is, skorun ne anlama geldigini grade band, esik ve is diliyle kullaniciya anlatmak.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:
@@ -1508,8 +1553,11 @@ Planlar:
 - `docs/plans/request-intake-and-decision-policy.md`
 - `docs/plans/project-stability-guardrails.md`
 - `docs/plans/active-next-actions.md`
+- `docs/plans/project-forward-preview-2026-04-26.md`
 - `docs/plans/ui-localization-strategy.md`
 - `docs/plans/daily-closure-ranking-strategy.md`
+- `docs/plans/daily-closure-ranking-v2-intake.md`
+- `docs/superpowers/plans/2026-04-26-daily-closure-ranking-v2-explainability.md`
 - `docs/superpowers/plans/2026-04-25-competition-stage-package-plan-lifecycle-v1.md`
 - `docs/superpowers/specs/2026-04-25-competition-stage-package-plan-lifecycle-v1-design.md`
 - `docs/superpowers/plans/2026-04-25-competition-stage-package-plan-approval-v1.md`

@@ -12,6 +12,7 @@ import {
 import type { AuthSessionSummary } from '../features/auth/api'
 import { formatPerformanceGrade, resolvePerformanceGrade } from '../features/kpi/grading'
 import { getClosedLeaderboard, getKpiConfig } from '../features/reports/api'
+import type { ClosedRankingEmployee } from '../features/reports/api'
 import { formatDate, getErrorMessage } from '../lib/format'
 
 function canUseRankings(authSummary: AuthSessionSummary | null) {
@@ -24,7 +25,7 @@ function getCurrentMonthStart() {
 }
 
 function formatRank(rank: number | null, population: number) {
-  return rank !== null ? `${rank}/${population}` : 'No rank'
+  return rank !== null ? `${rank}/${population}` : 'Siralama yok'
 }
 
 function formatCoverage(input?: {
@@ -32,24 +33,60 @@ function formatCoverage(input?: {
   closedDaysInPeriod: number
 }) {
   if (!input || input.closedDaysInPeriod === 0) {
-    return 'No data'
+    return 'Veri yok'
   }
 
-  return `${input.daysWithPerformance}/${input.closedDaysInPeriod} days`
+  return `${input.daysWithPerformance}/${input.closedDaysInPeriod} kapali gun`
+}
+
+function formatSourceState(state?: 'closed' | 'not_closed' | 'no_data') {
+  if (state === 'closed') {
+    return 'Kapandi'
+  }
+
+  if (state === 'not_closed') {
+    return 'Henuz kapanmadi'
+  }
+
+  return 'Veri yok'
+}
+
+function formatPeriodType(periodType?: 'daily' | 'monthly') {
+  return periodType === 'monthly' ? 'Aylik' : 'Gunluk'
+}
+
+function resolveRankingExplanation(employee?: ClosedRankingEmployee | null) {
+  if (!employee) {
+    return null
+  }
+
+  if (employee.rankingStatus === 'preview_only') {
+    return {
+      label: 'On izleme',
+      copy: `${employee.neededPerformanceDays} kapali performans gunu daha gerekiyor`,
+      tone: 'warning' as const,
+    }
+  }
+
+  return {
+    label: 'Resmi siralama',
+    copy: 'Bu sonuc kapanmis performans verisiyle resmi siralamaya dahildir.',
+    tone: 'calm' as const,
+  }
 }
 
 function resolveEmptyState(state: 'closed' | 'not_closed' | 'no_data') {
   if (state === 'not_closed') {
     return {
-      title: 'This period is not closed yet',
-      copy: 'Ranking appears after the selected day or month has completed closure data.',
+      title: 'Secili donem henuz kapanmadi',
+      copy: 'Siralama, secili gun veya ay icin kapanis verisi tamamlandiktan sonra gorunur.',
     }
   }
 
   if (state === 'no_data') {
     return {
-      title: 'No closed performance data exists for this period',
-      copy: 'The closure exists, but no personnel performance rows were produced for this selection.',
+      title: 'Bu donem icin kapali performans verisi yok',
+      copy: 'Kapanis var; ancak bu secim icin personel performans satiri uretilmemis.',
     }
   }
 
@@ -113,6 +150,7 @@ export function StoreRankingsPage(input: {
   const currentEmployeeGrade = leaderboard?.currentEmployee
     ? resolvePerformanceGrade(leaderboard.currentEmployee.scoreValue, configQuery.data?.gradingBands)
     : null
+  const rankingExplanation = resolveRankingExplanation(leaderboard?.currentEmployee)
   const emptyState = leaderboard ? resolveEmptyState(leaderboard.source.state) : null
   const selectedInputValue =
     periodType === 'monthly' && periodStart ? periodStart.slice(0, 7) : periodStart
@@ -122,24 +160,24 @@ export function StoreRankingsPage(input: {
       <section className="hero-panel store-hero-panel">
         <div>
           <div className="eyebrow">Kapanmis Siralamalar</div>
-          <h2 className="hero-title">Gunluk ve aylik closure ranking.</h2>
+          <h2 className="hero-title">Gunluk ve aylik kapanis siralamasi.</h2>
           <p className="hero-copy">
             Bu yuzey canli degil. Tamamlanmis gun kapanislarindan okur; aylik mod ay icindeki kapanmis gunleri toplar.
           </p>
         </div>
         <div className="hero-metrics">
-          <MetricAccent label="Mode" value={periodType === 'daily' ? 'Daily' : 'Monthly'} />
-          <MetricAccent label="State" value={leaderboard?.source.state ?? 'No data'} />
+          <MetricAccent label="Mod" value={formatPeriodType(periodType)} />
+          <MetricAccent label="Durum" value={formatSourceState(leaderboard?.source.state)} />
           <MetricAccent
-            label="Period"
+            label="Donem"
             value={
               leaderboard?.source.periodStart
                 ? `${leaderboard.source.periodStart} / ${leaderboard.source.periodEnd ?? '-'}`
-                : 'Latest closed'
+                : 'Son kapanis'
             }
           />
           <MetricAccent
-            label="Coverage"
+            label="Kapsam"
             value={formatCoverage(leaderboard?.currentEmployee?.coverage)}
           />
         </div>
@@ -152,7 +190,7 @@ export function StoreRankingsPage(input: {
             <h3>Hangi kapanmis gun veya ayi gormek istiyorsun</h3>
           </div>
           <StatusPill tone={periodStart ? 'accent' : 'neutral'}>
-            {periodStart ? 'Filtered' : 'Latest'}
+            {periodStart ? 'Filtreli' : 'Son kapanis'}
           </StatusPill>
         </div>
         <div className="toolbar-cluster" role="group" aria-label="Ranking period controls">
@@ -203,14 +241,14 @@ export function StoreRankingsPage(input: {
 
       <section className="metric-grid store-metric-grid">
         <MetricCard
-          title="Personnel top"
+          title="Personel ilk 10"
           value={leaderboard?.personnelTop.length ?? 0}
           note="Secili closure kapsamindaki personel listesi."
           icon={<Trophy size={18} />}
           tone="accent"
         />
         <MetricCard
-          title="Current rank"
+          title="Mevcut siralama"
           value={leaderboard?.currentEmployee?.rankings.turkeyRank ?? 0}
           note={
             leaderboard?.currentEmployee
@@ -224,7 +262,7 @@ export function StoreRankingsPage(input: {
           tone={currentEmployeeGrade?.tone ?? 'neutral'}
         />
         <MetricCard
-          title="Coverage"
+          title="Kapsam"
           value={leaderboard?.currentEmployee?.coverage.daysWithPerformance ?? 0}
           note={formatCoverage(leaderboard?.currentEmployee?.coverage)}
           icon={<CalendarDays size={18} />}
@@ -240,26 +278,26 @@ export function StoreRankingsPage(input: {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Snapshot context</div>
+              <div className="eyebrow">Kapanis baglami</div>
               <h3>Bu ranking neye gore hesaplandi</h3>
             </div>
             <StatusPill tone={leaderboard?.source.state === 'closed' ? 'calm' : 'warning'}>
-              {leaderboard?.source.periodType === 'monthly' ? 'Monthly' : 'Daily'}
+              {formatPeriodType(leaderboard?.source.periodType)}
             </StatusPill>
           </div>
           <div className="key-grid">
             <KeyValue
-              label="Snapshot date"
-              value={leaderboard?.source.snapshotDate ? formatDate(leaderboard.source.snapshotDate) : 'No snapshot'}
+              label="Snapshot tarihi"
+              value={leaderboard?.source.snapshotDate ? formatDate(leaderboard.source.snapshotDate) : 'Snapshot yok'}
             />
             <KeyValue
-              label="Period"
+              label="Donem"
               value={`${leaderboard?.source.periodStart ?? 'n/a'} -> ${leaderboard?.source.periodEnd ?? 'n/a'}`}
             />
-            <KeyValue label="State" value={leaderboard?.source.state ?? 'No data'} />
+            <KeyValue label="Durum" value={formatSourceState(leaderboard?.source.state)} />
             <KeyValue
-              label="Current employee"
-              value={leaderboard?.currentEmployee?.displayName ?? 'No employee'}
+              label="Aktif personel"
+              value={leaderboard?.currentEmployee?.displayName ?? 'Personel yok'}
             />
           </div>
         </article>
@@ -267,44 +305,50 @@ export function StoreRankingsPage(input: {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Current position</div>
+              <div className="eyebrow">Mevcut konum</div>
               <h3>Aktif kullanici nerede duruyor</h3>
             </div>
-            {leaderboard?.currentEmployee?.coverage.isEligibleForRanking === false ? (
-              <StatusPill tone="warning">
-                {`${leaderboard.currentEmployee.coverage.daysWithPerformance}/${leaderboard.currentEmployee.coverage.minimumRequiredDays} days`}
-              </StatusPill>
+            {rankingExplanation ? (
+              <StatusPill tone={rankingExplanation.tone}>{rankingExplanation.label}</StatusPill>
             ) : null}
           </div>
           {leaderboard?.currentEmployee ? (
-            <div className="key-grid">
-              <KeyValue
-                label="Turkey rank"
-                value={formatRank(
-                  leaderboard.currentEmployee.rankings.turkeyRank,
-                  leaderboard.currentEmployee.rankings.turkeyPopulation,
-                )}
-              />
-              <KeyValue
-                label="Store rank"
-                value={formatRank(
-                  leaderboard.currentEmployee.rankings.storeRank,
-                  leaderboard.currentEmployee.rankings.storePopulation,
-                )}
-              />
-              <KeyValue label="Score" value={leaderboard.currentEmployee.scoreValue.toFixed(2)} />
-              <KeyValue
-                label="Grade"
-                value={
-                  currentEmployeeGrade ? formatPerformanceGrade(currentEmployeeGrade) : 'No grade'
-                }
-              />
-              <KeyValue label="Store" value={leaderboard.currentEmployee.storeName ?? 'Unknown'} />
-              <KeyValue
-                label="Data coverage"
-                value={formatCoverage(leaderboard.currentEmployee.coverage)}
-              />
-            </div>
+            <>
+              {rankingExplanation ? (
+                <div className="queue-meta" aria-label="Ranking explanation">
+                  <StatusPill tone={rankingExplanation.tone}>{rankingExplanation.label}</StatusPill>
+                  <span>{rankingExplanation.copy}</span>
+                </div>
+              ) : null}
+              <div className="key-grid">
+                <KeyValue
+                  label="Turkiye sirasi"
+                  value={formatRank(
+                    leaderboard.currentEmployee.rankings.turkeyRank,
+                    leaderboard.currentEmployee.rankings.turkeyPopulation,
+                  )}
+                />
+                <KeyValue
+                  label="Magaza sirasi"
+                  value={formatRank(
+                    leaderboard.currentEmployee.rankings.storeRank,
+                    leaderboard.currentEmployee.rankings.storePopulation,
+                  )}
+                />
+                <KeyValue label="Skor" value={leaderboard.currentEmployee.scoreValue.toFixed(2)} />
+                <KeyValue
+                  label="Derece"
+                  value={
+                    currentEmployeeGrade ? formatPerformanceGrade(currentEmployeeGrade) : 'Derece yok'
+                  }
+                />
+                <KeyValue label="Magaza" value={leaderboard.currentEmployee.storeName ?? 'Bilinmiyor'} />
+                <KeyValue
+                  label="Veri kapsami"
+                  value={formatCoverage(leaderboard.currentEmployee.coverage)}
+                />
+              </div>
+            </>
           ) : (
             <EmptyState title="Aktif employee bulunamadi" copy="Bu oturum icin employee map kaydi yoksa sadece genel siralamalar gorunur." />
           )}
@@ -315,7 +359,7 @@ export function StoreRankingsPage(input: {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Personnel top</div>
+              <div className="eyebrow">Personel ilk 10</div>
               <h3>Secili kapsamda ilk 10 personel</h3>
             </div>
           </div>
@@ -335,13 +379,13 @@ export function StoreRankingsPage(input: {
                       </StatusPill>
                     </div>
                     <div className="key-grid">
-                      <KeyValue label="Score" value={item.scoreValue.toFixed(2)} />
-                      <KeyValue label="Grade" value={formatPerformanceGrade(grade)} />
+                      <KeyValue label="Skor" value={item.scoreValue.toFixed(2)} />
+                      <KeyValue label="Derece" value={formatPerformanceGrade(grade)} />
                       <KeyValue
-                        label="Store rank"
+                        label="Magaza sirasi"
                         value={formatRank(item.rankings.storeRank, item.rankings.storePopulation)}
                       />
-                      <KeyValue label="Coverage" value={formatCoverage(item.coverage)} />
+                      <KeyValue label="Kapsam" value={formatCoverage(item.coverage)} />
                     </div>
                   </article>
                 )
@@ -355,7 +399,7 @@ export function StoreRankingsPage(input: {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">KPI mini-ranks</div>
+              <div className="eyebrow">KPI mini siralari</div>
               <h3>Aktif personelin metrik bazli konumu</h3>
             </div>
           </div>
@@ -369,15 +413,15 @@ export function StoreRankingsPage(input: {
                   </div>
                   <div className="key-grid">
                     <KeyValue
-                      label="Value"
-                      value={metric.actualValue !== null ? metric.actualValue.toFixed(2) : 'No data'}
+                      label="Deger"
+                      value={metric.actualValue !== null ? metric.actualValue.toFixed(2) : 'Veri yok'}
                     />
                     <KeyValue
-                      label="Store rank"
+                      label="Magaza sirasi"
                       value={formatRank(metric.storeRank, metric.storePopulation)}
                     />
                     <KeyValue
-                      label="Turkey rank"
+                      label="Turkiye sirasi"
                       value={formatRank(metric.turkeyRank, metric.turkeyPopulation)}
                     />
                   </div>
@@ -388,7 +432,7 @@ export function StoreRankingsPage(input: {
             )}
             {leaderboard?.source.periodType === 'monthly' &&
             leaderboard.currentEmployee?.coverage.isEligibleForRanking === false ? (
-              <EmptyState copy="Official monthly ranking starts after 3 closed performance days." />
+              <EmptyState copy="Aylik siralamanin resmi sayilmasi icin en az 3 kapali performans gunu gerekir." />
             ) : null}
           </div>
         </article>

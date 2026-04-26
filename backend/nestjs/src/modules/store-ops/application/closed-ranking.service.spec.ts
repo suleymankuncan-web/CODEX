@@ -129,6 +129,9 @@ describe("ClosedRankingService", () => {
       expect.objectContaining({
         employeeId: currentEmployeeId,
         displayName: "Ayse Yilmaz",
+        rankingStatus: "official",
+        eligibilityReason: "eligible",
+        neededPerformanceDays: 0,
         coverage: {
           closedDaysInPeriod: 1,
           daysWithPerformance: 1,
@@ -288,5 +291,12 @@ describe("ClosedRankingService", () => {
       storeRank: null,
       storePopulation: 5,
     });
+    expect(result.currentEmployee).toEqual(
+      expect.objectContaining({
+        rankingStatus: "preview_only",
+        eligibilityReason: "needs_more_closed_days",
+        neededPerformanceDays: 1,
+      }),
+    );
   });
 });

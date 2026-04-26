@@ -6,7 +6,7 @@ This is the short working list for the next practical steps. It keeps the projec
 
 ## Current Position
 
-As of 26 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, and Local Keycloak real-provider/action smoke have:
+As of 26 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, and Daily Closure Ranking V2 Explainability have:
 
 - saved drafts
 - edit/cancel/history
@@ -30,6 +30,7 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 - official root release check gate
 - staging auth evidence operator checklist
 - staging auth evidence JSON guard
+- daily/monthly closed ranking trust explanations
 - project debt ledger
 - backend and frontend release checks
 
@@ -37,18 +38,18 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 
 Reference: `docs/plans/project-debt-ledger.md`
 
-- Closed active debts: 12
+- Closed active debts: 13
 - Superseded before overbuilding: 1
 - Blocked external dependency: 1
 - Watchlist decision item: 1
-- Strategic investment backlog: 8
+- Strategic investment backlog: 7
 - Silent untracked quality debt in the active gate: 0
 
 Interpretation:
 
 - The local project is not carrying a known silent release-quality debt right now.
 - Real IdP staging evidence is not counted as done because it requires outside staging IdP and seeded DB values.
-- Daily Closure / Historical Ranking V1 exists; the strongest local product investment is now V2 explainability and trust polish over the existing read model.
+- Daily Closure / Historical Ranking V2 explainability now exists over the existing read model; the strongest local product investment is now score meaning and interpretation.
 - The debt ledger itself is an accounting artifact and is not included in the 12 closed active debt items.
 
 ## Rules For Picking The Next Item
@@ -200,24 +201,21 @@ Interpretation:
   - `admin-web/scripts/auth-evidence-guard.mjs`
   - `docs/plans/phase-7-staging-auth-smoke-runbook.md`
 
-### Shaping: Daily Closure Ranking V2 Explainability
-- Priority: `P1`
-- Why:
-  - Daily/monthly closed ranking V1 already exists, but users need clearer trust language around official vs preview-only vs no-data states.
-  - This improves an existing high-value surface without opening a new ranking engine.
-- Scope:
-  - keep existing closed ranking endpoint and `rpt` read models
-  - add or derive `rankingStatus` / `eligibilityReason` style explanations
-  - improve Turkish-first `/store/rankings` copy for coverage, official monthly rank, preview-only state, not-closed state, and no-data state
-  - protect store personnel and store manager scope boundaries
-- Out of scope:
-  - region leagues
-  - tournament/challenge ranking
-  - rewards
-  - attendance/worked-day truth
-  - new score formula
-- Reference:
+### Completed: Daily Closure Ranking V2 Explainability
+- Completed: 26 April 2026
+- Result:
+  - existing closed ranking endpoint remains the source of truth
+  - backend adds employee-level `rankingStatus`, `eligibilityReason`, and `neededPerformanceDays`
+  - daily rows are official when a closed row exists
+  - monthly rows with at least 3 performance days are official
+  - monthly rows below 3 performance days are preview-only and explain how many closed performance days are still needed
+  - `/store/rankings` now uses Turkish-first trust copy for rank, coverage, period state, and preview-only explanations
+  - no DB schema, score formula, region league, challenge leaderboard, or new ranking engine was introduced
+  - official root release gate passes after the change
+- References:
   - `docs/plans/daily-closure-ranking-v2-intake.md`
+  - `docs/plans/project-forward-preview-2026-04-26.md`
+  - `docs/superpowers/plans/2026-04-26-daily-closure-ranking-v2-explainability.md`
 
 ### 1. Real IdP Staging Evidence
 - Priority: `P1`
@@ -243,4 +241,4 @@ Interpretation:
 
 If staging IdP and seeded staging DB values are available, start real staging evidence.
 
-If staging values are not available, start Daily Closure Ranking V2 Explainability from `docs/plans/daily-closure-ranking-v2-intake.md`.
+If staging values are not available, start Score Meaning / Grade Interpretation. The next local product step is to explain what the weighted score means, not only where the person ranks.

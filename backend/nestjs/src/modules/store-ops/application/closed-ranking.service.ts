@@ -264,6 +264,14 @@ export class ClosedRankingService {
         ? 1
         : Number(input.row.days_with_performance ?? 0);
     const isEligibleForRanking = daysWithPerformance >= input.minimumRequiredDays;
+    const neededPerformanceDays = Math.max(
+      input.minimumRequiredDays - daysWithPerformance,
+      0,
+    );
+    const rankingStatus = isEligibleForRanking ? "official" : "preview_only";
+    const eligibilityReason = isEligibleForRanking
+      ? "eligible"
+      : "needs_more_closed_days";
 
     return {
       employeeId: input.row.employee_id,
@@ -271,6 +279,9 @@ export class ClosedRankingService {
       storeId: input.row.store_id,
       storeName: input.row.store_name,
       scoreValue: Number(input.row.score_value),
+      rankingStatus,
+      eligibilityReason,
+      neededPerformanceDays,
       rankings: {
         turkeyRank: isEligibleForRanking ? input.row.turkey_rank : null,
         turkeyPopulation: input.row.turkey_population,
