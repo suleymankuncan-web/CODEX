@@ -183,6 +183,26 @@ When a new snapshot run is created:
 
 If no version exists, create the snapshot with `null` version id and expose that as `pre_governance` in UI copy.
 
+### Snapshot Run Execution
+
+When a snapshot run executes, score materialization must use the config version anchored to that snapshot run.
+
+Rule:
+
+- if `rpt.snapshot_run.kpi_config_version_id` is present, load personnel/store score config from that immutable version payload
+- if it is null, fall back to the current published config and treat the run as pre-governance
+
+This prevents a queued snapshot from being created under one config version but calculated under a later publish.
+
+### Snapshot Rerun Behavior
+
+When rerunning a failed snapshot:
+
+- if the parent snapshot has a `kpi_config_version_id`, the rerun must reuse that same version
+- if the parent snapshot has no version, the rerun may use the latest active published config and remain marked as pre-governance only if no version exists
+
+This keeps reruns faithful to the original reporting context when version metadata exists.
+
 ## Frontend Behavior
 
 ### Admin KPI Config
@@ -244,6 +264,8 @@ Backend tests:
 - service test proves publish creates a new version and returns metadata
 - service test proves snapshot run creation anchors the latest config version
 - service test proves snapshot run creation still works when no version exists
+- service test proves daily snapshot execution reads the anchored config version instead of latest config
+- service test proves reruns reuse the parent snapshot's config version when one exists
 - audit test proves publish metadata includes version id and version number
 
 Frontend tests:

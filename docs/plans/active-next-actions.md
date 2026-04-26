@@ -369,6 +369,7 @@ Interpretation:
   - defer rollback UI, future effective scheduling, approval workflow, and DB-managed interpretation copy
 - Reference:
   - `docs/superpowers/specs/2026-04-26-kpi-config-versioning-v1-design.md`
+  - `docs/superpowers/plans/2026-04-26-kpi-config-versioning-v1.md`
 
 ### 1. Real IdP Staging Evidence
 - Priority: `P1`

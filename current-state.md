@@ -1948,6 +1948,7 @@ CODEX DÜRÜST YORUM:
 Yeni dokuman:
 
 - `docs/superpowers/specs/2026-04-26-kpi-config-versioning-v1-design.md`
+- `docs/superpowers/plans/2026-04-26-kpi-config-versioning-v1.md`
 
 Karar:
 
@@ -1967,8 +1968,8 @@ Ne ise yarar:
 
 Siradaki mantikli adim:
 
-- Bu spec'e gore implementation plan yazmak.
-- Plan onayindan sonra TDD ile migration, backend publish/version metadata, snapshot anchoring ve admin UI metadata adimlarini uygulamak.
+- Implementation plan kullanici review/onayindan sonra TDD ile uygulanacak.
+- Uygulama sirasi: migration/schema contract, backend publish/version metadata, snapshot anchoring/anchored execution, admin UI metadata, docs/release verification.
 
 ## Onemli Dosyalar
 
