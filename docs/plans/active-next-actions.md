@@ -6,7 +6,7 @@ This is the short working list for the next practical steps. It keeps the projec
 
 ## Current Position
 
-As of 26 April 2026, the competition package planning flow has:
+As of 26 April 2026, the competition package planning flow and Operational Feed V1 have:
 
 - saved drafts
 - edit/cancel/history
@@ -16,6 +16,8 @@ As of 26 April 2026, the competition package planning flow has:
 - returned-plan clone as new draft
 - cloned-plan source visibility from audit metadata
 - submitted-plan pre-approval decision preview
+- controlled company/region/store feed posts
+- store-visible pinned feed preview
 - backend and frontend release checks
 
 ## Rules For Picking The Next Item
@@ -53,20 +55,31 @@ As of 26 April 2026, the competition package planning flow has:
   - superseded design: `docs/superpowers/specs/2026-04-26-competition-format-registry-v1-design.md`
   - superseded plan: `docs/superpowers/plans/2026-04-26-competition-format-registry-v1.md`
 
-### 1. Operational Feed V1
-- Priority: `P1`
-- Why: the product needs a controlled company/region/store communication surface before building heavier social or competition engines.
-- Scope:
-  - `/admin/feed` management surface
-  - `/store/feed` read surface
-  - post types: announcement and challenge
-  - scoped visibility: company, region, store
-  - pinned posts
+### Completed: Operational Feed V1
+- Completed: 26 April 2026
+- Result:
+  - `/admin/feed` management surface exists for `SUPER_ADMIN`, `HR_ADMIN`, and scoped `REGION_MANAGER`
+  - `/store/feed` read surface exists for store users
+  - store home shows pinned feed preview
+  - post types are `announcement` and `challenge`
+  - visibility supports company, region, and store scope
   - challenge posts link to existing profile/ranking surfaces instead of owning score
-  - no comments, likes, images, push notifications, or new leaderboard in V1
-- Gate:
+  - backend/frontend release checks pass
+- References:
   - design spec: `docs/superpowers/specs/2026-04-26-operational-feed-v1-design.md`
   - implementation plan: `docs/superpowers/plans/2026-04-26-operational-feed-v1.md`
+
+### 1. DM/CONFIG Boundary Note
+- Priority: `P1`
+- Why: the project is growing into rules, jobs, reporting, feed, competition, auth, and import layers; before adding more feature weight, the business-rule boundary should be written down.
+- Scope:
+  - document current `OPS/STG/RPT/AUDIT` schemas
+  - document where `DM`, `CONFIG`, `JOB`, and `API/BFF` currently live
+  - decide what stays as service/config code now
+  - define when a future `dm` or `config` schema becomes worth it
+  - avoid schema churn unless a real rule-versioning need appears
+- Suggested output:
+  - `docs/plans/dm-config-boundary-strategy.md`
 
 ### 2. Store/Region Competition Experience Polish
 - Priority: `P1`
@@ -109,4 +122,4 @@ As of 26 April 2026, the competition package planning flow has:
 
 ## Recommended Next Move
 
-Execute `docs/superpowers/plans/2026-04-26-operational-feed-v1.md` task-by-task. The intake decision is locked: challenges are scoped feed posts that link to existing ranking/profile surfaces, not a new scoring engine.
+Write the `DM/CONFIG Boundary Note` before opening another heavy feature. This keeps business rules, dynamic config, jobs, API/BFF surfaces, and reporting ownership clear while the product keeps growing.

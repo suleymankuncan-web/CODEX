@@ -96,41 +96,62 @@ Ana prensip:
 - `STORE_PERSONNEL` sadece kendi performansini ve kisisel alanini gorur.
 - `REGION_MANAGER` hedef onaylari ve ileride kendi atanmis magazalari uzerinde saha aksiyonlari icin ayrildi.
 
-## Son Urun Yonu: Operational Feed V1
+## Son Operational Feed V1
 
-26 Nisan 2026 itibariyla `Competition Format Registry V1` yonu bilincli olarak superseded edildi.
+26 Nisan 2026 itibariyla `Operational Feed V1` tamamlandi. `Competition Format Registry V1` yonu bilincli olarak superseded edildi; UPT/ATV/total score gibi odak yarislari V1'de yeni bir skor motoru degil, duyuru/challenge postu olarak ele aliniyor.
 
-Sebep:
+Eklenenler:
 
-- UPT gibi challenge fikirleri V1'de yeni bir skor/ranking motoru gerektirmiyor.
-- Personel ve magaza zaten profil, ozet ve ranking yuzeylerinden siralamayi takip edebiliyor.
-- Daha dogru ilk modül `Operational Feed V1`: duyuru ve challenge postlariyla sirket/bölge/magaza gündemini tasiyan, mevcut ranking/profil ekranlarina link veren kontrollü bir operasyon akisidir.
+- DB: `ops.feed_post` tablosu ve `db/migrations/025_operational_feed_posts.sql`.
+- Backend:
+  - `GET /api/feed`
+  - `GET /api/admin/feed`
+  - `POST /api/admin/feed`
+  - `PUT /api/admin/feed/:feedPostId`
+  - `POST /api/admin/feed/:feedPostId/publish`
+  - `POST /api/admin/feed/:feedPostId/pin`
+  - `POST /api/admin/feed/:feedPostId/unpin`
+  - `POST /api/admin/feed/:feedPostId/archive`
+- Frontend:
+  - `/admin/feed` yonetim yuzeyi
+  - `/store/feed` okuma yuzeyi
+  - `/store` ana sayfasinda pinned duyuru preview
+  - admin nav icinde `Duyurular`, `Inbox` ile `Competitions` arasinda
+  - store shell icinde `Duyurular` birinci sinif route
 
-Yeni karar:
+Kurallar:
 
-- Admin/yonetim route'u: `/admin/feed`.
-- Store/user route'u: `/store/feed`.
-- Admin nav icinde `Duyurular`, `Inbox` ile `Competitions` arasinda konumlanmali.
-- Store shell icinde `Duyurular` birinci sinif route olmali; store home icinde sabit duyuru ozetleri gosterilebilir.
-- `announcement` ve `challenge` post tipleri olacak.
-- `challenge` postu skor hesaplamaz; mevcut `/store/me`, `/store/rankings` veya ilerideki ozet yuzeylerine yonlendirir.
-- Modül siniri net: Operational Feed duyuru/challenge postu, pinleme, scope ve linkleri sahiplenir; Competition modülü staged competition, stage package, team template, approval/execute ve finalization alaninda kalir.
-- Feed challenge postu V1'de competition stage/package olusturamaz veya mutate edemez. Competition modülü de sirket duyuru akisini sahiplenemez.
-- `SUPER_ADMIN` ve `HR_ADMIN` genis kapsamda yayin yapabilir.
-- `REGION_MANAGER` V1'de sadece kendi bolgesine yayin yapabilir; Turkiye geneli yayin HR/Super Admin'de kalir.
-- Gorsel, yorum, begeni, push notification ve yeni leaderboard V1 disidir; gorsel/attachment ileride eklenebilir sekilde tasarlanir.
+- Post tipleri: `announcement`, `challenge`.
+- Visibility scope: `company`, `region`, `store`.
+- `SUPER_ADMIN` ve `HR_ADMIN` company/region/store kapsaminda yayin yapabilir.
+- `REGION_MANAGER` V1'de sadece kendi bolgesine, tek region scope ile yayin yapabilir.
+- Store kullanicilari sadece yayinlanmis ve scope'una gorunur postlari okur.
+- Store-scoped kullanici company postlarini, kendi store postlarini ve store'unun bagli oldugu region postlarini gorebilir.
+- Pinned postlar once siralanir; expired yayinlar store feed'den dusurulur.
+- Audit eventleri: `feed_post.created`, `feed_post.updated`, `feed_post.published`, `feed_post.pinned`, `feed_post.unpinned`, `feed_post.archived`, `feed_post.scope_changed`.
+
+Sinir:
+
+- Feed challenge postu skor hesaplamaz.
+- Feed challenge postu leaderboard materialize etmez.
+- Feed challenge postu competition stage, team, package plan, snapshot veya warning olusturmaz/mutate etmez.
+- Competition modulu staged competition, stage package, team template, approval/execute ve finalization alani olarak kalir.
+- Gorsel, yorum, begeni, push notification ve yeni leaderboard V1 disidir; ileride attachment/push eklenebilir.
 
 Referans:
 
 - `docs/superpowers/specs/2026-04-26-operational-feed-v1-design.md`
 - `docs/superpowers/plans/2026-04-26-operational-feed-v1.md`
 
-Son plan durumu:
+Dogrulama:
 
-- Operational Feed V1 uygulama plani yazildi.
-- Plan DB, backend contract/service/repository/controller, admin feed, store feed, store home pinned preview, Playwright ve release check adimlarini kapsar.
-- Planin kritik siniri: feed challenge postlari duyuru ve linktir; skor hesaplama, leaderboard materialization ve competition stage/package mutasyonu yapmaz.
-- Siradaki mantikli adim: `docs/superpowers/plans/2026-04-26-operational-feed-v1.md` dosyasini task task execute etmek.
+- Backend targeted: `npm.cmd test -- src/modules/store-ops/application/feed.service.spec.ts src/modules/store-ops/infrastructure/feed.repository.spec.ts --runInBand` -> 2 suite / 15 test.
+- Frontend targeted: `npm.cmd run build`; `npm.cmd run test:e2e -- e2e/feed-surfaces.spec.ts` -> 4 Playwright test.
+- Backend release: `npm.cmd run check:release` -> lint, 30 suite / 242 test, build, `npm audit --omit=dev`.
+- Frontend release: `npm.cmd run check:release` -> lint, build, 20 Playwright test, `npm audit --omit=dev`.
+- Frontend buildde Vite chunk size warning'i yok.
+
+Siradaki mantikli adim: `DM/CONFIG Boundary Note` yazmak. Mevcut `ops/stg/rpt/audit`, servis icindeki is kurallari, DB config tablolari, job/orchestration ve API/BFF sinirlari dokumante edilmeli; hemen yeni `dm` veya `config` schema acmadan once hangi ihtiyac dogarsa o sinirin tasinacagi netlesmeli.
 
 ## Mevcut Roller ve Test Kullanicilari
 
