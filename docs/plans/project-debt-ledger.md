@@ -17,10 +17,10 @@ Date: 26 April 2026
 
 Current count:
 
-- Closed active debts: 25
+- Closed active debts: 26
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
-- Watchlist decision item: 1
+- Watchlist decision item: 0
 - Strategic investment backlog: 2
 - Silent untracked quality debt in the active gate: 0
 
@@ -53,6 +53,7 @@ These are counted as paid because they have implementation or documentation evid
 23. Source-Agnostic Ingest Contract Hardening V1
 24. KPI Raw Row Lineage Persistence V1
 25. Import Lineage Evidence Surface V1
+26. Audit Event Taxonomy Guard V1
 
 ## Superseded Before Overbuilding
 
@@ -145,16 +146,18 @@ Exit criteria:
 - source-specific adapter can be implemented without guessing
 - imported metrics and platform-derived metrics are separated
 
-## Watchlist Decision Item
+## Resolved Watchlist Decisions
 
 ### Global Audit Feed Consideration
 
-Status: `watchlist`
+Status: `resolved_guarded`
 
 Decision:
 
 - Do not build a global audit feed until an operator workflow proves it is needed.
 - Existing feature-level audit trails are enough for current delivery.
+- Audit Event Taxonomy Guard V1 now keeps emitted backend audit event types cataloged.
+- Future global feed work must start from the catalog instead of reverse-engineering scattered strings.
 
 Trigger to promote:
 
@@ -170,6 +173,8 @@ These are important future product investments. They are not counted as hidden d
 KPI config version history, publish metadata, snapshot anchoring, and pre-governance visibility are implemented in V1. Rollback UI, future effective scheduling, approval workflow, and DB-managed interpretation copy remain future depth, not active hidden debt.
 
 Source-agnostic KPI ingest contract hardening is implemented in V1, KPI raw row lineage is persisted as first-class staging columns, and admin import detail now surfaces KPI lineage evidence. Real source adapter work remains blocked until external source evidence exists.
+
+Audit event taxonomy guard is implemented in V1. A global audit feed remains intentionally unbuilt until a real operator workflow requires it, but the backend now has a catalog and contract test that prevents new audit event strings from drifting silently.
 
 UI status note:
 
@@ -205,6 +210,7 @@ The dangerous kind of debt would be:
 - store-facing mixed-language trust gaps
 - source row lineage hidden only inside JSON payloads
 - persisted source row lineage hidden from admin import detail
+- uncataloged audit event strings blocking a future coherent audit stream
 
 Those have been actively reduced. The remaining work is mostly planned product depth, real external staging proof, real source ingest evidence/adapter work, and a future coordinated visual/localization investment. That is a healthy place to be.
 

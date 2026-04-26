@@ -6,7 +6,7 @@ This is the short working list for the next practical steps. It keeps the projec
 
 ## Current Position
 
-As of 26 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, Store UX TR-First Copy V1, KPI Config Versioning V1, Source-Agnostic Ingest Contract Hardening V1, KPI Raw Row Lineage Persistence V1, and Import Lineage Evidence Surface V1 have:
+As of 26 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, Store UX TR-First Copy V1, KPI Config Versioning V1, Source-Agnostic Ingest Contract Hardening V1, KPI Raw Row Lineage Persistence V1, Import Lineage Evidence Surface V1, and Audit Event Taxonomy Guard V1 have:
 
 - saved drafts
 - edit/cancel/history
@@ -46,6 +46,7 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 - deterministic KPI import row hashes and readable raw row references
 - first-class `stg.kpi_raw` row hash and raw row reference persistence
 - admin import detail visibility for KPI row lineage evidence
+- backend-owned audit event catalog and drift guard
 - payload-template canonical KPI contract metadata
 - project debt ledger
 - backend and frontend release checks
@@ -54,10 +55,10 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 
 Reference: `docs/plans/project-debt-ledger.md`
 
-- Closed active debts: 25
+- Closed active debts: 26
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
-- Watchlist decision item: 1
+- Watchlist decision item: 0
 - Strategic investment backlog: 2
 - Silent untracked quality debt in the active gate: 0
 
@@ -80,6 +81,7 @@ Interpretation:
 - Source-Agnostic Ingest Contract Hardening V1 is implemented; real source adapter work remains blocked until external source evidence exists.
 - KPI Raw Row Lineage Persistence V1 is implemented; reconciliation can query staging lineage columns without parsing raw JSON.
 - Import Lineage Evidence Surface V1 is implemented; admin import detail now exposes KPI lineage counts and row-level evidence where available.
+- Audit Event Taxonomy Guard V1 is implemented; global audit feed remains intentionally unbuilt, but emitted audit events now have a backend-owned catalog and drift guard.
 - Full production UI/design-system and complete EN/TR localization expansion remain planned investments, not silent release debt.
 - Production UI/design-system is intentionally deferred into reversible pilots while backend/data foundations remain the priority.
 - The debt ledger itself is an accounting artifact and is not counted as a separate closed active debt item.
@@ -407,6 +409,19 @@ Interpretation:
 - Reference:
   - `docs/plans/import-lineage-evidence-surface-v1.md`
 
+### Completed: Audit Event Taxonomy Guard V1
+- Completed: 26 April 2026
+- Result:
+  - backend shared audit code now owns `AUDIT_EVENT_CATALOG`
+  - every backend module audit event literal must be represented in the catalog
+  - catalog entries carry event type, audited entity, owner module, audit stream readiness, and description
+  - a backend contract test fails on uncataloged audit event drift, duplicate events, invalid event naming, invalid entity naming, missing owner metadata, or missing readiness metadata
+  - global audit feed endpoint/UI remains intentionally unbuilt until a real operator workflow requires it
+  - official root release gate passes after the change
+  - no DB schema, migration, audit event rename, existing audit endpoint change, or global feed surface was introduced
+- Reference:
+  - `docs/plans/audit-event-taxonomy-guard-v1.md`
+
 ### Completed: KPI Config Versioning V1
 - Completed: 26 April 2026
 - Result:
@@ -436,17 +451,10 @@ Interpretation:
   - `docs/plans/phase-7-provider-readiness-checklist.md`
   - `docs/plans/phase-7-auth-evidence-template.md`
 
-### 2. Global Audit Feed Consideration
-- Priority: `P2`
-- Why: audit trails exist per feature, but operators may later need one cross-module feed.
-- Scope:
-  - decide if global audit feed is needed
-  - avoid building until a real operator workflow requires it
-
 ## Recommended Next Move
 
 If staging IdP and seeded staging DB values are available, start real staging evidence.
 
 If Nebim/source delivery details, sample payload, or official field list become available, start source mapping specification.
 
-If neither staging values nor source ingest details are available, choose the next controlled local backend/data step through the intake gate. Source-agnostic KPI ingest contract hardening, KPI raw row lineage persistence, and admin lineage evidence visibility are now done; the next local step should strengthen an existing backend/data surface without guessing external source behavior.
+If neither staging values nor source ingest details are available, choose the next controlled local backend/data step through the intake gate. Source-agnostic KPI ingest contract hardening, KPI raw row lineage persistence, admin lineage evidence visibility, and audit event taxonomy guard are now done; the next local step should strengthen an existing backend/data surface without guessing external source behavior.

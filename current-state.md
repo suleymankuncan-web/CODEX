@@ -2160,6 +2160,52 @@ Debt ledger:
 
 Siradaki mantikli adim: external source bilgisi gelirse source mapping spec'e donmek; gelmezse intake ile mevcut backend/data yuzeylerinden dis kaynak varsayimi gerektirmeyen bir sonraki kontrollu adimi secmek.
 
+## Son Audit Event Taxonomy Guard V1
+
+26 Nisan 2026 itibariyla global audit feed watchlist'i yeni feed UI/API acmadan kontrollu sekilde kapatildi.
+
+Yeni dokuman:
+
+- `docs/plans/audit-event-taxonomy-guard-v1.md`
+
+Eklenenler:
+
+- `backend/nestjs/src/shared/audit/audit-event-catalog.ts`.
+- `backend/nestjs/src/shared/audit/audit-event-catalog.spec.ts`.
+- Backend audit event katalogu event type, entity name, owner module, audit stream readiness ve kisa aciklama tasir.
+- Kontrat testi backend module source icindeki audit event literal'larini tarar ve katalogda olmayan audit event gorurse fail verir.
+- Kontrat testi event type naming, entity naming, owner metadata, readiness metadata, duplicate event ve lookup davranisini korur.
+
+Karar:
+
+- Global audit feed endpoint/UI simdilik acilmadi.
+- Mevcut feature-level audit endpointleri yeterli kabul edildi.
+- Ileride HR/Admin gercek cross-module incident/support timeline isterse global feed bu katalog uzerinden tasarlanacak.
+
+Sinir:
+
+- DB schema veya migration yok.
+- Existing audit event isimleri rename edilmedi.
+- Mevcut audit endpoint contract'lari degismedi.
+- Structured log-only eventler audit event sayilmadi.
+
+Dogrulama:
+
+- Kirmizi backend test izlendi: `audit-event-catalog.spec.ts` `./audit-event-catalog` olmadigi icin fail verdi.
+- Hedefli backend test gecti: `npm.cmd test -- src/shared/audit/audit-event-catalog.spec.ts --runInBand` -> 1 suite / 3 test.
+- Resmi root release gate gecti: `npm.cmd run check:release` -> root script tests, backend lint + 36 suite / 264 test + build + audit, frontend lint + 7 script test + build + 28 Playwright test + audit.
+
+Debt ledger:
+
+- Closed active debts: 26
+- Superseded before overbuilding: 1
+- Blocked external dependency: 2
+- Watchlist decision item: 0
+- Strategic investment backlog: 2
+- Silent untracked quality debt in the active gate: 0
+
+Siradaki mantikli adim: staging/provider degerleri veya source payload bilgisi gelirse evidence adimina donmek; gelmezse intake ile dis kaynak varsayimi gerektirmeyen kucuk backend/data guard secmek.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:
@@ -2172,6 +2218,13 @@ Backend auth / scope:
 - `backend/nestjs/src/modules/auth/auth-admin.service.ts`
 - `backend/nestjs/src/modules/auth/web/auth-admin.controller.ts`
 - `db/migrations/020_user_action_store_assignments.sql`
+
+Backend audit:
+
+- `backend/nestjs/src/shared/audit/audit-event-catalog.ts`
+- `backend/nestjs/src/shared/audit/audit-event-catalog.spec.ts`
+- `backend/nestjs/src/shared/audit/audit-event.mapper.ts`
+- `backend/nestjs/src/shared/audit/audit-metadata.factory.ts`
 
 Store ops:
 
@@ -2246,6 +2299,7 @@ Planlar:
 - `docs/plans/source-agnostic-ingest-contract-hardening-v1.md`
 - `docs/plans/kpi-raw-row-lineage-persistence-v1.md`
 - `docs/plans/import-lineage-evidence-surface-v1.md`
+- `docs/plans/audit-event-taxonomy-guard-v1.md`
 - `docs/superpowers/plans/2026-04-26-daily-closure-ranking-v2-explainability.md`
 - `docs/superpowers/plans/2026-04-25-competition-stage-package-plan-lifecycle-v1.md`
 - `docs/superpowers/specs/2026-04-25-competition-stage-package-plan-lifecycle-v1-design.md`
