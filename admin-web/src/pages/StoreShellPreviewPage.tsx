@@ -1,21 +1,36 @@
 import type { ReactNode } from 'react'
-import { ArrowRight, BadgeCheck, ClipboardList, ReceiptText, Store, Target } from 'lucide-react'
+import { useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { ArrowRight, BadgeCheck, ClipboardList, Megaphone, ReceiptText, Store, Target } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import {
   EmptyState,
   KeyValue,
   MetricAccent,
   MetricCard,
+  ScreenState,
   StatusPill,
 } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { formatDisplayRoles } from '../features/auth/display'
+import { getVisibleFeedPosts } from '../features/feed/api'
+import { formatFeedPostType } from '../features/feed/contracts'
+import { getErrorMessage } from '../lib/format'
 
 export function StoreShellPreviewPage(input: {
   authSummary: AuthSessionSummary | null
   recommendedLanding: string
 }) {
   const user = input.authSummary?.user
+  const feedQuery = useQuery({
+    queryKey: ['visible-feed', 'home-preview'],
+    queryFn: getVisibleFeedPosts,
+    retry: false,
+  })
+  const pinnedPosts = useMemo(
+    () => (feedQuery.data?.items ?? []).filter((post) => post.isPinned).slice(0, 3),
+    [feedQuery.data?.items],
+  )
 
   return (
     <section className="page-stack">
@@ -60,6 +75,42 @@ export function StoreShellPreviewPage(input: {
           tone="warning"
         />
       </section>
+
+      {feedQuery.isError ? (
+        <ScreenState
+          title="Pinned announcements unavailable"
+          copy={getErrorMessage(feedQuery.error)}
+          tone="error"
+        />
+      ) : pinnedPosts.length > 0 ? (
+        <section className="panel">
+          <div className="panel-heading">
+            <div>
+              <div className="eyebrow">Pinned Duyurular</div>
+              <h3>Company focus before daily work</h3>
+            </div>
+            <Link className="control-button store-shell-link" to="/store/feed">
+              All announcements
+            </Link>
+          </div>
+          <div className="stacked-table">
+            {pinnedPosts.map((post) => (
+              <div className="stacked-row" key={post.feedPostId}>
+                <div className="stacked-row-head">
+                  <strong>{post.title}</strong>
+                  <div className="action-cluster">
+                    <StatusPill tone={post.postType === 'challenge' ? 'accent' : 'neutral'}>
+                      {formatFeedPostType(post.postType)}
+                    </StatusPill>
+                    <Megaphone size={16} />
+                  </div>
+                </div>
+                <p>{post.body}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section className="two-up-grid">
         <article className="panel">

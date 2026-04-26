@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { BarChart3, Bell, DatabaseZap, Fingerprint, KeyRound, Layers3, ShieldCheck, SlidersHorizontal, Target, Trophy } from 'lucide-react'
+import { BarChart3, Bell, DatabaseZap, Fingerprint, KeyRound, Layers3, Megaphone, ShieldCheck, SlidersHorizontal, Target, Trophy } from 'lucide-react'
 import { KeyValue, ScreenState, StatusPill } from './components/dashboard-primitives'
 import { getAuthSession, type AuthSessionSummary } from './features/auth/api'
 import { formatDisplayRoles } from './features/auth/display'
@@ -11,6 +11,7 @@ import { describeSessionMode } from './features/session/session-storage'
 import { SESSION_EXPIRED_EVENT, type SessionExpiredDetail, ApiError } from './lib/api'
 
 const AuditCenterPage = lazy(() => import('./pages/AuditCenterPage').then((module) => ({ default: module.AuditCenterPage })))
+const AdminFeedPage = lazy(() => import('./pages/AdminFeedPage').then((module) => ({ default: module.AdminFeedPage })))
 const AdminKpiConfigPage = lazy(() => import('./pages/AdminKpiConfigPage').then((module) => ({ default: module.AdminKpiConfigPage })))
 const AdminInboxPage = lazy(() => import('./pages/AdminInboxPage').then((module) => ({ default: module.AdminInboxPage })))
 const AuthActionStoreAssignmentAuditPage = lazy(() => import('./pages/AuthActionStoreAssignmentAuditPage').then((module) => ({ default: module.AuthActionStoreAssignmentAuditPage })))
@@ -36,6 +37,7 @@ const SnapshotsDashboardPage = lazy(() => import('./pages/SnapshotsDashboardPage
 const StoreApprovalsPage = lazy(() => import('./pages/StoreApprovalsPage').then((module) => ({ default: module.StoreApprovalsPage })))
 const StoreChecklistsPage = lazy(() => import('./pages/StoreChecklistsPage').then((module) => ({ default: module.StoreChecklistsPage })))
 const StoreCompetitionsPage = lazy(() => import('./pages/StoreCompetitionsPage').then((module) => ({ default: module.StoreCompetitionsPage })))
+const StoreFeedPage = lazy(() => import('./pages/StoreFeedPage').then((module) => ({ default: module.StoreFeedPage })))
 const StoreIncentivesPage = lazy(() => import('./pages/StoreIncentivesPage').then((module) => ({ default: module.StoreIncentivesPage })))
 const StoreKpiHighlightsPage = lazy(() => import('./pages/StoreKpiHighlightsPage').then((module) => ({ default: module.StoreKpiHighlightsPage })))
 const StoreMyPerformancePage = lazy(() => import('./pages/StoreMyPerformancePage').then((module) => ({ default: module.StoreMyPerformancePage })))
@@ -69,6 +71,12 @@ const adminNavDefinitions: NavDefinition[] = [
     icon: <Bell size={18} />,
     label: 'Inbox',
     roles: ['SUPER_ADMIN', 'REPORT_VIEWER'],
+  },
+  {
+    to: '/admin/feed',
+    icon: <Megaphone size={18} />,
+    label: 'Duyurular',
+    roles: ['SUPER_ADMIN', 'HR_ADMIN', 'REGION_MANAGER'],
   },
   {
     to: '/admin/competitions',
@@ -313,6 +321,10 @@ function App() {
               element={guardRoute(shellState, authSummary, ['SUPER_ADMIN', 'REPORT_VIEWER'], <AdminInboxPage authSummary={authSummary} />)}
             />
             <Route
+              path="/admin/feed"
+              element={guardRoute(shellState, authSummary, ['SUPER_ADMIN', 'HR_ADMIN', 'REGION_MANAGER'], <AdminFeedPage authSummary={authSummary} />)}
+            />
+            <Route
               path="/admin/competitions"
               element={guardRoute(shellState, authSummary, ['SUPER_ADMIN', 'HR_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER'], <CompetitionDashboardPage authSummary={authSummary} />)}
             />
@@ -451,6 +463,9 @@ function StoreShell(input: {
           <NavLink to="/admin/reports" className="control-button store-shell-link">
             Admin reports
           </NavLink>
+          <NavLink to="/store/feed" className="control-button store-shell-link">
+            Duyurular
+          </NavLink>
           <NavLink to="/store/competitions" className="control-button store-shell-link">
             Competitions
           </NavLink>
@@ -497,6 +512,10 @@ function StoreShell(input: {
             <Route
               path="/store/rankings"
               element={<StoreRankingsPage authSummary={input.authSummary} />}
+            />
+            <Route
+              path="/store/feed"
+              element={<StoreFeedPage authSummary={input.authSummary} />}
             />
             <Route
               path="/store/competitions"
