@@ -2206,6 +2206,66 @@ Debt ledger:
 
 Siradaki mantikli adim: staging/provider degerleri veya source payload bilgisi gelirse evidence adimina donmek; gelmezse intake ile dis kaynak varsayimi gerektirmeyen kucuk backend/data guard secmek.
 
+## Son Data Quality Guard V1
+
+26 Nisan 2026 itibariyla import hata satirlari icin source-agnostic data quality guard eklendi.
+
+Yeni dokuman:
+
+- `docs/plans/data-quality-guard-v1.md`
+
+Eklenenler:
+
+- `backend/nestjs/src/modules/integration/application/import-data-quality.ts`.
+- `backend/nestjs/src/modules/integration/application/import-data-quality.spec.ts`.
+- Backend import data quality katalogu issue code, owner, severity, label ve aciklama tasir.
+- Import batch error response artik additive `qualityIssueCode` dondurur.
+- Mevcut `errorCategory` alani korunur.
+- `GET /api/integrations/import-payload-templates` canonical KPI contract icinde `dataQualityIssueCodes` dondurur.
+- Frontend integration API tipleri additive contract alanlariyla hizalandi.
+
+Ilk kalite kodlari:
+
+- `missing_identity`
+- `unmapped_store`
+- `unmapped_employee`
+- `unmapped_position`
+- `unmapped_region`
+- `unmapped_company`
+- `invalid_metric`
+- `duplicate_source_row`
+- `late_correction_candidate`
+- `schema_mismatch`
+- `system_write_failure`
+- `unknown_quality_issue`
+
+Sinir:
+
+- Nebim-specific connector yazilmadi.
+- Source API/file/SFTP payload varsayimi eklenmedi.
+- DB schema veya migration yok.
+- Score, ranking, snapshot veya materialization davranisi degismedi.
+- Yeni admin UI yuzeyi acilmadi.
+
+Dogrulama:
+
+- Kirmizi backend test izlendi: data quality katalog module'u yokken fail verdi.
+- Kirmizi backend test izlendi: canonical KPI contract `dataQualityIssueCodes` dondurmedigi icin fail verdi.
+- Kirmizi backend test izlendi: import batch error rows `qualityIssueCode` dondurmedigi icin fail verdi.
+- Hedefli backend test gecti: `npm.cmd test -- src/modules/integration/application/import-data-quality.spec.ts test/integration/import-batch.e2e-spec.ts --runInBand -t "data quality|source-agnostic canonical KPI payload contract template|returns import batch error rows|returns KPI import batch error row lineage"` -> 2 suite / 13 test.
+- Resmi root release gate gecti: `npm.cmd run check:release` -> 9 root Node test, backend lint + 37 suite / 274 test + build + audit, frontend lint + 7 script test + build + 28 Playwright test + audit.
+
+Debt ledger:
+
+- Closed active debts: 27
+- Superseded before overbuilding: 1
+- Blocked external dependency: 2
+- Watchlist decision item: 0
+- Strategic investment backlog: 2
+- Silent untracked quality debt in the active gate: 0
+
+Siradaki mantikli adim: staging/provider degerleri veya source payload bilgisi gelirse evidence/spec adimina donmek; gelmezse dis kaynak varsayimi gerektirmeyen kucuk backend/data guard secmek.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:
@@ -2248,6 +2308,8 @@ Store ops:
 
 Backend integration / ingest:
 
+- `backend/nestjs/src/modules/integration/application/import-data-quality.ts`
+- `backend/nestjs/src/modules/integration/application/import-data-quality.spec.ts`
 - `backend/nestjs/src/modules/integration/application/integration.service.ts`
 - `backend/nestjs/src/modules/integration/application/kpi-import-normalization.service.ts`
 - `backend/nestjs/src/modules/integration/application/materialization.service.ts`
@@ -2300,6 +2362,7 @@ Planlar:
 - `docs/plans/kpi-raw-row-lineage-persistence-v1.md`
 - `docs/plans/import-lineage-evidence-surface-v1.md`
 - `docs/plans/audit-event-taxonomy-guard-v1.md`
+- `docs/plans/data-quality-guard-v1.md`
 - `docs/superpowers/plans/2026-04-26-daily-closure-ranking-v2-explainability.md`
 - `docs/superpowers/plans/2026-04-25-competition-stage-package-plan-lifecycle-v1.md`
 - `docs/superpowers/specs/2026-04-25-competition-stage-package-plan-lifecycle-v1-design.md`

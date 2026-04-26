@@ -35,6 +35,15 @@ export type ImportOverview = {
 export type ImportPayloadTemplate = {
   entityType: string
   sourceSystem: string
+  canonicalContract?: {
+    envelopeFields: string[]
+    canonicalKpiRowFields: string[]
+    importedMetricCodes: string[]
+    derivedMetricCodes: string[]
+    checklistMetricCodes: string[]
+    dataQualityIssueCodes: string[]
+    rules: string[]
+  }
   normalizedBehavior?: string[]
   note?: string
   requestBody: Record<string, unknown>
@@ -198,6 +207,7 @@ export type ImportBatchError = {
   rawRowReference?: string | null
   normalizedStatus: string
   errorCategory: 'validation' | 'missing_dependency' | 'write_failure'
+  qualityIssueCode?: string
   validationError: string | null
   processedAt: string | null
 }

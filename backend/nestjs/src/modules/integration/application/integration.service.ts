@@ -12,6 +12,10 @@ import {
 } from "../../../shared/http/response-builders";
 import { mapAuditEvent } from "../../../shared/audit/audit-event.mapper";
 import { logStructuredMessage } from "../../../shared/structured-log";
+import {
+  classifyImportDataQualityIssue,
+  IMPORT_DATA_QUALITY_ISSUES,
+} from "./import-data-quality";
 
 type SupportedEntityType =
   | "employee"
@@ -380,6 +384,7 @@ export class IntegrationService {
       importedMetricCodes: ["NET_SALES", "TICKET_COUNT", "ITEM_COUNT", "UPT", "ATV", "CR"],
       derivedMetricCodes: ["TARGET_ACHIEVEMENT", "WEIGHTED_PERSONNEL_SCORE", "WEIGHTED_STORE_SCORE"],
       checklistMetricCodes: ["BM_CHECKLIST", "VM_CHECKLIST"],
+      dataQualityIssueCodes: IMPORT_DATA_QUALITY_ISSUES.map((issue) => issue.code),
       rules: [
         "employeeExternalRef can be empty only for store-scoped metrics",
         "source adapters map external fields into canonical rows before scoring",
@@ -873,6 +878,10 @@ export class IntegrationService {
           ...lineage,
           normalizedStatus: row.normalized_status,
           errorCategory: this.classifyErrorCategory(row.normalized_status, row.validation_error),
+          qualityIssueCode: classifyImportDataQualityIssue({
+            normalizedStatus: row.normalized_status,
+            validationError: row.validation_error,
+          }),
           validationError: row.validation_error,
           processedAt: row.processed_at,
         };
