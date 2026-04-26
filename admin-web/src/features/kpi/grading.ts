@@ -18,6 +18,14 @@ export type PerformanceScoreMeaning = {
   tone: Tone
 }
 
+export type StoreScoreThresholdMeaning = {
+  title: string
+  summary: string
+  action: string
+  confidence: string
+  tone: Tone
+}
+
 export const defaultGradingBands: KpiGradingBand[] = [
   { code: 'A', label: 'Mukemmel', emoji: '🏆', tone: 'calm', minScore: 1 },
   { code: 'B', label: 'Iyi', emoji: '🙂', tone: 'accent', minScore: 0.85 },
@@ -94,6 +102,65 @@ export function resolvePerformanceScoreMeaning(input: {
     title: 'Kritik takip',
     summary: 'Skor kritik bantta. Bu sonuc hizli takip ve net aksiyon gerektiren performans riski oldugunu anlatir.',
     focus: 'Once eksik veya dusuk katkili metrikleri ayir; ardindan hedef ve satis davranisini birlikte ele al.',
+    confidence,
+    tone: 'danger',
+  }
+}
+
+function formatCoveredWeight(input: number) {
+  if (!Number.isFinite(input)) {
+    return '0'
+  }
+
+  return Number.isInteger(input) ? String(input) : input.toFixed(1)
+}
+
+export function resolveStoreScoreThresholdMeaning(input: {
+  grade: PerformanceGrade
+  coveredWeight: number
+  missingWeight: number
+  matchedMetrics: number
+  totalMetrics: number
+}): StoreScoreThresholdMeaning {
+  const confidence =
+    input.missingWeight > 0 || input.matchedMetrics < input.totalMetrics
+      ? `Skor guveni: ${formatCoveredWeight(input.coveredWeight)}% agirlik kapsandi; ${formatCoveredWeight(input.missingWeight)}% eksik agirlik yorumu on izleme yapar.`
+      : `Skor guveni: ${formatCoveredWeight(input.coveredWeight)}% agirlik kapsandi.`
+
+  if (input.grade.code === 'A') {
+    return {
+      title: 'Guclu store skoru',
+      summary: 'Store score ust bantta. Mevcut donemde KPI katkisi saglikli ve aksiyon dili koruma ritmidir.',
+      action: "Aksiyon: ritmi koru; dusuk katkili ilk KPI'yi gunluk izle.",
+      confidence,
+      tone: input.missingWeight > 0 ? 'warning' : input.grade.tone,
+    }
+  }
+
+  if (input.grade.code === 'B') {
+    return {
+      title: 'Saglikli store skoru',
+      summary: 'Store score iyi bantta. Temel performans saglikli, ama ust banda cikmak icin net firsat var.',
+      action: 'Aksiyon: en dusuk katkili KPI icin kisa takip plani belirle.',
+      confidence,
+      tone: input.missingWeight > 0 ? 'warning' : input.grade.tone,
+    }
+  }
+
+  if (input.grade.code === 'C') {
+    return {
+      title: 'Store takip bandi',
+      summary: 'Store score takip bandinda. Bu seviye magaza muduru icin erken uyari dili uretir.',
+      action: 'Aksiyon: dusuk katkili KPI icin neden ve sahiplik netlestir.',
+      confidence,
+      tone: 'warning',
+    }
+  }
+
+  return {
+    title: 'Kritik store skoru',
+    summary: 'Store score kritik bantta. Bu seviye hizli aksiyon ve yakin takip gerektirir.',
+    action: 'Aksiyon: once eksik veya dusuk KPI satirlarini ayir; sonra operasyon aksiyonunu netlestir.',
     confidence,
     tone: 'danger',
   }

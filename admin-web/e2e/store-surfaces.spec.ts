@@ -43,6 +43,10 @@ test('store KPI highlights page explains metric source semantics', async ({ page
   await page.goto('/store/kpis')
 
   await expect(page.getByText('Weighted Score Summary')).toBeVisible()
+  await expect(page.getByText('Store skor yorumu')).toBeVisible()
+  await expect(page.getByText('Guclu store skoru')).toBeVisible()
+  await expect(page.getByText('Aksiyon: ritmi koru; dusuk katkili ilk KPI')).toBeVisible()
+  await expect(page.getByText('Skor guveni: 100% agirlik kapsandi.')).toBeVisible()
   await expect(page.getByText('Veri kaynagi').first()).toBeVisible()
   await expect(page.getByText('Derived score signal')).toBeVisible()
   await expect(page.getByText('Imported operational data').first()).toBeVisible()
@@ -298,14 +302,14 @@ const kpiConfigFixture = {
       {
         code: 'TARGET_ACHIEVEMENT',
         label: 'Target Achievement',
-        weightPercent: 35,
+        weightPercent: 70,
         ownerRole: 'STORE_MANAGER',
         scoreBehavior: 'score_only',
       },
       {
         code: 'UPT',
         label: 'Units Per Ticket',
-        weightPercent: 25,
+        weightPercent: 30,
         ownerRole: 'STORE_MANAGER',
         scoreBehavior: 'score_only',
       },
@@ -347,14 +351,14 @@ const kpiConfigFixture = {
       label: 'Excellent',
       emoji: 'A',
       tone: 'calm',
-      minScore: 90,
+      minScore: 1,
     },
     {
       code: 'B',
       label: 'Healthy',
       emoji: 'B',
       tone: 'accent',
-      minScore: 75,
+      minScore: 0.85,
     },
   ],
 }

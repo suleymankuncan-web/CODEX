@@ -1577,6 +1577,48 @@ Debt ledger:
 
 Siradaki mantikli adim: Store-score threshold language. Store weighted score bandlari kullaniciya "iyi/kritik/takip" seviyesinde ne ifade ediyor, ne zaman action/warning diline donmeli, bunu hesaplamayi degistirmeden anlatmak.
 
+## Son Store Score Threshold Language V1
+
+26 Nisan 2026 itibariyla `/store/kpis` icin store weighted score yorum katmani eklendi.
+
+Yeni dokuman:
+
+- `docs/plans/store-score-threshold-language-v1.md`
+
+Eklenenler:
+
+- `admin-web/src/features/kpi/grading.ts` icinde `StoreScoreThresholdMeaning` ve `resolveStoreScoreThresholdMeaning`.
+- `/store/kpis` icinde `Store skor yorumu` paneli.
+- Store grade kodlari icin is dili:
+  - `A`: Guclu store skoru
+  - `B`: Saglikli store skoru
+  - `C`: Store takip bandi
+  - `D`: Kritik store skoru
+- Skor guveni metni: kapsanan agirlik ve eksik agirlik varsa on izleme uyarisi.
+- Aksiyon dili: score'dan task uretmeden, kullaniciya nasil okunacagini anlatan kisa yonlendirme.
+
+Sinir:
+
+- Backend contract degismedi.
+- Score formulu degismedi.
+- Grade threshold config degismedi.
+- DB schema veya migration yok.
+- Task/action yaratma yok.
+- Interpretation versioning henuz yok; bu siradaki mimari adaydir.
+
+Dogrulama:
+
+- Kirmizi test izlendi: store KPI Playwright testi `Store skor yorumu` yokken fail verdi.
+- Hedefli frontend dogrulama gecti: `npm.cmd run build; if ($LASTEXITCODE -eq 0) { npm.cmd run test:e2e -- e2e/store-surfaces.spec.ts -g "store KPI highlights" }` -> 1 Playwright test.
+
+Debt ledger:
+
+- Closed active debts: 16
+- Strategic investment backlog: 6
+- Silent untracked quality debt in the active gate: 0
+
+Siradaki mantikli adim: KPI interpretation versioning / config governance planning. Score ve threshold yorumlari ileride admin-editable olmadan once effective date/version ile izlenebilir hale gelmeli.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:

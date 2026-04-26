@@ -26,6 +26,7 @@ import {
 import {
   formatPerformanceGrade,
   resolvePerformanceGrade,
+  resolveStoreScoreThresholdMeaning,
 } from '../features/kpi/grading'
 import { resolveKpiSourceSemantics } from '../features/kpi/source-semantics'
 
@@ -296,6 +297,13 @@ export function StoreKpiHighlightsPage(input: {
     weightedScore.scoreValue,
     configQuery.data?.gradingBands,
   )
+  const storeScoreMeaning = resolveStoreScoreThresholdMeaning({
+    grade: storeGrade,
+    coveredWeight: weightedScore.coveredWeight,
+    missingWeight: weightedScore.missingWeight,
+    matchedMetrics: matchedMetricCount,
+    totalMetrics: weightedScore.contributions.length,
+  })
   const personnelWeightsReady =
     (personnelKpiScoreProfile?.metrics ?? []).length > 0 &&
     (personnelKpiScoreProfile?.metrics ?? []).every(
@@ -678,6 +686,24 @@ export function StoreKpiHighlightsPage(input: {
           </div>
         </section>
       ) : null}
+
+      <section className="panel" aria-label="Store score meaning">
+        <div className="panel-heading">
+          <div>
+            <div className="eyebrow">Store skor yorumu</div>
+            <h3>{storeScoreMeaning.title}</h3>
+          </div>
+          <StatusPill tone={storeScoreMeaning.tone}>{storeGrade.code}</StatusPill>
+        </div>
+        <p className="queue-subtitle">{storeScoreMeaning.summary}</p>
+        <div className="key-grid">
+          <KeyValue label="Skor bandi" value={formatPerformanceGrade(storeGrade)} />
+          <KeyValue label="Skor" value={formatPercent(weightedScore.scoreValue)} />
+          <KeyValue label="Kapsanan agirlik" value={`${weightedScore.coveredWeight}%`} />
+          <KeyValue label="Aksiyon dili" value={storeScoreMeaning.action} />
+        </div>
+        <p className="queue-subtitle">{storeScoreMeaning.confidence}</p>
+      </section>
 
       <section className="panel">
         <div className="panel-heading">
