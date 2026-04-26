@@ -45,6 +45,8 @@ The project already has the right local bones for real ingest:
 - KPI import normalization service
 - materialization service
 - live sync metadata on KPI actuals
+- source-agnostic KPI contract metadata from `GET /api/integrations/import-payload-templates`
+- deterministic KPI row `rowHash` and readable `rawRowReference`
 
 This means the local project is not starting from zero. The missing part is the real external contract.
 
@@ -172,7 +174,7 @@ Use these states when discussing the source:
 
 Allowed now:
 
-- document the source-agnostic contract
+- document and expose the source-agnostic contract
 - keep existing `stg` import model as the ingest boundary
 - prepare future mapping questions
 - avoid false certainty in Nebim-specific planning docs
@@ -192,12 +194,12 @@ This is the right place to slow down.
 
 Writing connector code without a real sample payload would create exactly the kind of technical debt this project is trying to avoid: hidden assumptions under KPI, ranking, score, and reporting behavior.
 
-The platform is in a healthy place because it already has `stg` import boundaries, batch metadata, normalization, and materialization concepts. The next safe move is not a fake Nebim connector. The next safe move is a source-agnostic contract and an external discovery checklist.
+The platform is in a healthy place because it already has `stg` import boundaries, batch metadata, normalization, materialization concepts, and now canonical KPI row lineage metadata. The next safe move is not a fake Nebim connector. The next safe move is a real source mapping spec only after external evidence exists.
 
-Recommendation: continue with contract-first planning now, and move actual connector implementation only after real source evidence exists.
+Recommendation: keep the current source-agnostic contract, and move actual connector implementation only after real source evidence exists.
 
 ## Next Logical Step
 
 If a real Nebim/API/file sample becomes available, convert it into a source mapping spec and then implement only the adapter layer.
 
-If no external source detail is available yet, move the local backend work to KPI config governance implementation planning, because that is still fully within project control.
+If no external source detail is available yet, do not repeat ingest hardening as busywork. Pick the next local backend/data step only if it strengthens an existing behavior without guessing source details.

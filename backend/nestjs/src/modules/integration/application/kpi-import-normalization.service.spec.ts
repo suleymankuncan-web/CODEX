@@ -31,6 +31,45 @@ describe("KpiImportNormalizationService", () => {
     ]);
   });
 
+  it("adds deterministic source lineage to canonical KPI rows", () => {
+    const firstRows = service.normalize({
+      sourceSystem: "other",
+      sourceCapturedAt: "2026-04-22T10:30:00.000Z",
+      rows: [
+        {
+          kpiCode: "UPT",
+          actualValue: 3.2,
+          storeExternalRef: "M-10",
+          employeeExternalRef: "S-100",
+          periodStart: "2026-04-22",
+          periodEnd: "2026-04-22",
+        },
+      ],
+    });
+    const secondRows = service.normalize({
+      sourceSystem: "other",
+      sourceCapturedAt: "2026-04-22T10:30:00.000Z",
+      rows: [
+        {
+          employeeExternalRef: "S-100",
+          periodEnd: "2026-04-22",
+          actualValue: 3.2,
+          periodStart: "2026-04-22",
+          storeExternalRef: "M-10",
+          kpiCode: "UPT",
+        },
+      ],
+    });
+
+    expect(firstRows[0]).toEqual(
+      expect.objectContaining({
+        rowHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+        rawRowReference: "other:UPT:daily:2026-04-22:2026-04-22:M-10:S-100",
+      }),
+    );
+    expect(firstRows[0]["rowHash"]).toBe(secondRows[0]["rowHash"]);
+  });
+
   it("explodes Nebim-style KPI columns into multiple canonical metric rows", () => {
     const rows = service.normalize({
       sourceSystem: "nebim_v3",
@@ -42,6 +81,8 @@ describe("KpiImportNormalizationService", () => {
           magazaKodu: "M-10",
           atv: 5200,
           upt: 3.2,
+          ticketCount: 14,
+          itemCount: 45,
           netTutar: 30000,
         },
       ],
@@ -74,6 +115,20 @@ describe("KpiImportNormalizationService", () => {
           scopeType: "employee",
           employeeExternalRef: "S-100",
           storeExternalRef: "M-10",
+        }),
+        expect.objectContaining({
+          kpiCode: "TICKET_COUNT",
+          sourceMetricId: "TICKET_COUNT",
+          actualValue: 14,
+          scopeType: "employee",
+          rawRowReference: "nebim_v3:TICKET_COUNT:daily:2026-04-22:2026-04-22:M-10:S-100",
+        }),
+        expect.objectContaining({
+          kpiCode: "ITEM_COUNT",
+          sourceMetricId: "ITEM_COUNT",
+          actualValue: 45,
+          scopeType: "employee",
+          rowHash: expect.stringMatching(/^[a-f0-9]{64}$/),
         }),
       ]),
     );

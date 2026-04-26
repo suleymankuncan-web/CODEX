@@ -2,6 +2,62 @@ import * as request from "supertest";
 import { createIntegrationApp } from "./test-app";
 
 describe("POST /api/integrations/import-batches", () => {
+  it("returns a source-agnostic canonical KPI payload contract template", async () => {
+    const app = await createIntegrationApp({
+      databaseService: {
+        query: jest.fn(async () => ({ rowCount: 0, rows: [] })),
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .get("/api/integrations/import-payload-templates?entityType=kpi&sourceSystem=other")
+      .set("x-user-id", "admin-1")
+      .set("x-role-codes", "INTEGRATION_ADMIN");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      entityType: "kpi",
+      sourceSystem: "other",
+      canonicalContract: {
+        envelopeFields: expect.arrayContaining([
+          "sourceCode",
+          "sourceBatchId",
+          "sourcePayloadHash",
+          "sourceCapturedAt",
+          "sourceWindowStartedAt",
+          "sourceWindowEndedAt",
+        ]),
+        canonicalKpiRowFields: expect.arrayContaining([
+          "kpiCode",
+          "sourceMetricId",
+          "scopeType",
+          "storeExternalRef",
+          "employeeExternalRef",
+          "actualValue",
+          "periodStart",
+          "periodEnd",
+          "rowHash",
+          "rawRowReference",
+        ]),
+        importedMetricCodes: expect.arrayContaining([
+          "NET_SALES",
+          "TICKET_COUNT",
+          "ITEM_COUNT",
+          "UPT",
+          "ATV",
+          "CR",
+        ]),
+        derivedMetricCodes: expect.arrayContaining(["TARGET_ACHIEVEMENT"]),
+        rules: expect.arrayContaining([
+          "employeeExternalRef can be empty only for store-scoped metrics",
+          "source adapters map external fields into canonical rows before scoring",
+        ]),
+      },
+    });
+
+    await app.close();
+  });
+
   it("lists import batches with pagination metadata and filters", async () => {
     const query = jest.fn(async (sql: string) => {
       if (sql.includes("COUNT(*)::text AS total_count") && sql.includes("FROM stg.import_batch")) {

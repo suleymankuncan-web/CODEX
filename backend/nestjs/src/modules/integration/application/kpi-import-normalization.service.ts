@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { createHash } from "node:crypto";
 
 type KpiImportSourceSystem = "nebim_v3" | "power_bi" | "manual" | "other";
 
@@ -25,6 +26,16 @@ const KPI_METRIC_CANDIDATES: MetricCandidate[] = [
   {
     code: "UPT",
     aliases: ["upt", "unitsPerTicket", "averageUnitPerTicket", "ortalamaUrunAdedi"],
+    defaultScopeType: "employee",
+  },
+  {
+    code: "TICKET_COUNT",
+    aliases: ["ticketCount", "receiptCount", "transactionCount", "fisSayisi", "faturaSayisi"],
+    defaultScopeType: "employee",
+  },
+  {
+    code: "ITEM_COUNT",
+    aliases: ["itemCount", "unitCount", "unitsSold", "urunAdedi", "adet"],
     defaultScopeType: "employee",
   },
   {
@@ -89,7 +100,7 @@ export class KpiImportNormalizationService {
       this.getString(row, ["scopeType"]) ??
       (this.hasValue(this.resolveEmployeeExternalRef(row)) ? "employee" : "store");
 
-    return {
+    const normalizedRow = {
       ...row,
       kpiCode,
       sourceMetricId,
@@ -111,6 +122,8 @@ export class KpiImportNormalizationService {
       sourceSystem: input.sourceSystem,
       sourceCapturedAt: row["sourceCapturedAt"] ?? input.sourceCapturedAt ?? null,
     };
+
+    return this.withSourceLineage(normalizedRow, row);
   }
 
   private expandMetricColumns(
@@ -130,23 +143,72 @@ export class KpiImportNormalizationService {
       }
 
       const scopeType = metric.defaultScopeType === "employee" && employeeExternalRef ? "employee" : "store";
-      return [
-        {
-          kpiCode: metric.code,
-          sourceMetricId: metric.code,
-          actualValue: metricValue,
-          scopeType,
-          storeExternalRef,
-          employeeExternalRef: scopeType === "employee" ? employeeExternalRef : null,
-          periodType,
-          periodStart,
-          periodEnd,
-          sourceSystem: input.sourceSystem,
-          sourceCapturedAt: input.sourceCapturedAt ?? null,
-          sourceRow: row,
-        },
-      ];
+      const normalizedRow = {
+        kpiCode: metric.code,
+        sourceMetricId: metric.code,
+        actualValue: metricValue,
+        scopeType,
+        storeExternalRef,
+        employeeExternalRef: scopeType === "employee" ? employeeExternalRef : null,
+        periodType,
+        periodStart,
+        periodEnd,
+        sourceSystem: input.sourceSystem,
+        sourceCapturedAt: input.sourceCapturedAt ?? null,
+        sourceRow: row,
+      };
+
+      return [this.withSourceLineage(normalizedRow, { metricCode: metric.code, sourceRow: row })];
     });
+  }
+
+  private withSourceLineage(
+    row: Record<string, unknown>,
+    hashInput: Record<string, unknown>,
+  ): Record<string, unknown> {
+    const rowHash = this.getString(row, ["rowHash"]) ?? this.hashStable(hashInput);
+    const rawRowReference =
+      this.getString(row, ["rawRowReference"]) ?? this.buildRawRowReference(row);
+
+    return {
+      ...row,
+      rowHash,
+      rawRowReference,
+    };
+  }
+
+  private buildRawRowReference(row: Record<string, unknown>) {
+    const employeeExternalRef = this.getString(row, ["employeeExternalRef"]);
+    return [
+      this.getString(row, ["sourceSystem"]) ?? "unknown_source",
+      this.getString(row, ["sourceMetricId", "kpiCode"]) ?? "unknown_metric",
+      this.getString(row, ["periodType"]) ?? "daily",
+      this.getString(row, ["periodStart"]) ?? "unknown_start",
+      this.getString(row, ["periodEnd"]) ?? "unknown_end",
+      this.getString(row, ["storeExternalRef"]) ?? "unknown_store",
+      employeeExternalRef ?? "store",
+    ].join(":");
+  }
+
+  private hashStable(value: unknown) {
+    return createHash("sha256").update(this.stableStringify(value)).digest("hex");
+  }
+
+  private stableStringify(value: unknown): string {
+    if (Array.isArray(value)) {
+      return `[${value.map((item) => this.stableStringify(item)).join(",")}]`;
+    }
+
+    if (value && typeof value === "object") {
+      const entries = Object.entries(value as Record<string, unknown>).sort(([left], [right]) =>
+        left.localeCompare(right),
+      );
+      return `{${entries
+        .map(([key, entryValue]) => `${JSON.stringify(key)}:${this.stableStringify(entryValue)}`)
+        .join(",")}}`;
+    }
+
+    return JSON.stringify(value);
   }
 
   private resolveMetricCode(row: Record<string, unknown>) {

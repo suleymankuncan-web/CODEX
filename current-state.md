@@ -2006,7 +2006,7 @@ Dogrulama:
 
 Debt ledger:
 
-- Closed active debts: 22
+- Closed active debts: 23
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 1
@@ -2014,6 +2014,58 @@ Debt ledger:
 - Silent untracked quality debt in the active gate: 0
 
 Siradaki mantikli adim: staging IdP veya Nebim/source bilgisi yoksa yeni is, feature intake ile secilecek kontrollu local backend/data adimi olmali; source-specific connector icin hala gercek payload beklenmeli.
+
+## Son Source-Agnostic Ingest Contract Hardening V1
+
+26 Nisan 2026 itibariyla source-specific connector yazmadan KPI ingest kontrati guclendirildi.
+
+Yeni dokuman:
+
+- `docs/plans/source-agnostic-ingest-contract-hardening-v1.md`
+
+Eklenenler:
+
+- KPI normalization artik canonical KPI satirlarina deterministic `rowHash` ekler.
+- KPI normalization artik readable `rawRowReference` ekler.
+- `rowHash` stable source row payload uzerinden uretilir; ayni satir farkli key sirasi ile gelse ayni hash'i verir.
+- Metric-column normalization artik `TICKET_COUNT` ve `ITEM_COUNT` metriklerini de tanir.
+- `GET /api/integrations/import-payload-templates` artik `canonicalContract` metadata'si dondurur.
+- Contract metadata:
+  - import batch envelope fields
+  - canonical KPI row fields
+  - imported metric codes
+  - derived metric codes
+  - checklist metric codes
+  - adapter/scoring boundary rules
+
+Sinir:
+
+- Nebim-specific connector yazilmadi.
+- Fake API client yazilmadi.
+- Source cadence varsayilmadi.
+- Score formulu degismedi.
+- DB schema degismedi.
+- Snapshot veya ranking davranisi degismedi.
+
+Dogrulama:
+
+- Kirmizi backend test izlendi: KPI normalization `rowHash` / `rawRowReference` uretmedigi icin fail verdi.
+- Kirmizi backend test izlendi: payload template endpoint `canonicalContract` dondurmedigi icin fail verdi.
+- Hedefli backend test gecti: `npm.cmd test -- src/modules/integration/application/kpi-import-normalization.service.spec.ts src/modules/integration/application/materialization.service.spec.ts src/modules/integration/application/power-bi-export-upload.service.spec.ts test/integration/import-batch.e2e-spec.ts --runInBand` -> 4 suite / 45 test.
+- Backend lint gecti: `npm.cmd run lint`.
+- Backend build gecti: `npm.cmd run build`.
+- Resmi root release gate gecti: `npm.cmd run check:release` -> root script tests, backend lint + 34 suite / 257 test + build + audit, frontend lint + 7 script test + build + 27 Playwright test + audit.
+
+Debt ledger:
+
+- Closed active debts: 23
+- Superseded before overbuilding: 1
+- Blocked external dependency: 2
+- Watchlist decision item: 1
+- Strategic investment backlog: 2
+- Silent untracked quality debt in the active gate: 0
+
+Siradaki mantikli adim: gercek kaynak bilgisi gelirse source mapping spec'e donmek; gelmezse mevcut backend/data yuzeylerinden dis kaynak varsayimi gerektirmeyen bir sonraki kontrollu adimi secmek.
 
 ## Onemli Dosyalar
 
@@ -2047,6 +2099,14 @@ Store ops:
 - `backend/nestjs/src/modules/store-ops/application/target-distribution.service.ts`
 - `backend/nestjs/src/modules/store-ops/infrastructure/reporting.repository.ts`
 - `backend/nestjs/src/modules/store-ops/infrastructure/store-ops.repository.ts`
+
+Backend integration / ingest:
+
+- `backend/nestjs/src/modules/integration/application/integration.service.ts`
+- `backend/nestjs/src/modules/integration/application/kpi-import-normalization.service.ts`
+- `backend/nestjs/src/modules/integration/application/materialization.service.ts`
+- `backend/nestjs/src/modules/integration/infrastructure/integration.repository.ts`
+- `backend/nestjs/src/modules/integration/web/integration.controller.ts`
 
 Frontend:
 
@@ -2083,6 +2143,7 @@ Planlar:
 - `docs/plans/daily-closure-ranking-v2-intake.md`
 - `docs/plans/ranking-completeness-segment-readiness-v1.md`
 - `docs/plans/shared-inbox-maturity-v1.md`
+- `docs/plans/source-agnostic-ingest-contract-hardening-v1.md`
 - `docs/superpowers/plans/2026-04-26-daily-closure-ranking-v2-explainability.md`
 - `docs/superpowers/plans/2026-04-25-competition-stage-package-plan-lifecycle-v1.md`
 - `docs/superpowers/specs/2026-04-25-competition-stage-package-plan-lifecycle-v1-design.md`

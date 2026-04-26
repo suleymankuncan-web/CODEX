@@ -17,7 +17,7 @@ Date: 26 April 2026
 
 Current count:
 
-- Closed active debts: 22
+- Closed active debts: 23
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 1
@@ -50,6 +50,7 @@ These are counted as paid because they have implementation or documentation evid
 20. Shared Inbox Maturity V1
 21. Store UX TR-First Copy V1
 22. KPI Config Versioning V1
+23. Source-Agnostic Ingest Contract Hardening V1
 
 ## Superseded Before Overbuilding
 
@@ -120,6 +121,8 @@ What is already ready locally:
 - `stg.external_id_map`
 - import scheduler, normalization, and materialization services
 - source-agnostic ingest planning
+- canonical KPI contract metadata on the payload template endpoint
+- deterministic KPI import `rowHash` and readable `rawRowReference`
 
 Required external inputs:
 
@@ -158,10 +161,12 @@ Trigger to promote:
 
 These are important future product investments. They are not counted as hidden debt today because the current system is still deliberately growing from controlled foundations.
 
-1. Source-agnostic ingest contract implementation and eventual real source adapter
+1. Eventual real source adapter after real source evidence
 2. Full production UI/design-system pass and complete EN/TR localization expansion
 
 KPI config version history, publish metadata, snapshot anchoring, and pre-governance visibility are implemented in V1. Rollback UI, future effective scheduling, approval workflow, and DB-managed interpretation copy remain future depth, not active hidden debt.
+
+Source-agnostic KPI ingest contract hardening is implemented in V1. Real source adapter work remains blocked until external source evidence exists.
 
 UI status note:
 
@@ -196,7 +201,7 @@ The dangerous kind of debt would be:
 - raw auth evidence handling
 - store-facing mixed-language trust gaps
 
-Those have been actively reduced. The remaining work is mostly planned product depth, real external staging proof, real source ingest evidence, and a future coordinated visual/localization investment. That is a healthy place to be.
+Those have been actively reduced. The remaining work is mostly planned product depth, real external staging proof, real source ingest evidence/adapter work, and a future coordinated visual/localization investment. That is a healthy place to be.
 
 ## Next Logical Step
 
@@ -204,4 +209,4 @@ If staging provider and seeded DB values are available, run the guarded staging 
 
 If they are not available, check whether real source ingest details are available. If source delivery details or a sample payload are unavailable, do not write a source-specific connector yet.
 
-The next local backend candidate should be chosen through the intake gate. If no external source or staging inputs exist, prefer a controlled source-agnostic ingest contract hardening step over a source-specific connector.
+The next local backend candidate should be chosen through the intake gate. Source-agnostic KPI ingest contract hardening is now done, so do not repeat it as busywork; pick a nearby backend/data surface only if it strengthens existing behavior without guessing external source details.

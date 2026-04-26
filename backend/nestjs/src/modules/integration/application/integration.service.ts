@@ -272,6 +272,7 @@ export class IntegrationService {
       return {
         entityType,
         sourceSystem,
+        canonicalContract: this.getCanonicalKpiContract(),
         note: "Sample payload templates are currently productized for KPI imports first.",
         requestBody: {
           sourceCode: `${sourceSystem}-${entityType}`,
@@ -336,6 +337,7 @@ export class IntegrationService {
     return {
       entityType,
       sourceSystem,
+      canonicalContract: this.getCanonicalKpiContract(),
       normalizedBehavior: [
         "ATV, UPT, NET_SALES employee scope olarak normalize edilir.",
         "CR store scope olarak normalize edilir.",
@@ -343,6 +345,47 @@ export class IntegrationService {
         "Yeni veri aynı KPI/scope/donem icin gelirse live state overwrite edilir.",
       ],
       requestBody,
+    };
+  }
+
+  private getCanonicalKpiContract() {
+    return {
+      envelopeFields: [
+        "sourceCode",
+        "entityType",
+        "fileReference",
+        "idempotencyKey",
+        "sourceBatchId",
+        "sourcePayloadHash",
+        "sourceCapturedAt",
+        "sourceWindowStartedAt",
+        "sourceWindowEndedAt",
+      ],
+      canonicalKpiRowFields: [
+        "kpiCode",
+        "sourceMetricId",
+        "scopeType",
+        "storeExternalRef",
+        "employeeExternalRef",
+        "actualValue",
+        "targetValue",
+        "periodType",
+        "periodStart",
+        "periodEnd",
+        "sourceCapturedAt",
+        "rowHash",
+        "rawRowReference",
+        "sourceRow",
+      ],
+      importedMetricCodes: ["NET_SALES", "TICKET_COUNT", "ITEM_COUNT", "UPT", "ATV", "CR"],
+      derivedMetricCodes: ["TARGET_ACHIEVEMENT", "WEIGHTED_PERSONNEL_SCORE", "WEIGHTED_STORE_SCORE"],
+      checklistMetricCodes: ["BM_CHECKLIST", "VM_CHECKLIST"],
+      rules: [
+        "employeeExternalRef can be empty only for store-scoped metrics",
+        "source adapters map external fields into canonical rows before scoring",
+        "rowHash is generated from the stable source row payload when the adapter does not provide one",
+        "rawRowReference is a readable sourceSystem/metric/period/store/personnel trace key",
+      ],
     };
   }
 
