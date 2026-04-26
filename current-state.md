@@ -450,6 +450,32 @@ Dogrulama:
 
 Siradaki mantikli adim: real staging IdP registration bilgileri ve seeded staging DB hazir oldugunda guard'li komutla `smoke:auth:staging:action` evidence toplamak; credential/ortam gelmeden bu adim tamamlanmis sayilmayacak.
 
+## Son Project Debt Ledger
+
+26 Nisan 2026 itibariyla borc sayimi kanonik dokumana baglandi.
+
+Yeni dokuman:
+
+- `docs/plans/project-debt-ledger.md`
+
+Sayim:
+
+- Closed active debts: 12
+- Superseded before overbuilding: 1
+- Blocked external dependency: 1
+- Watchlist decision item: 1
+- Strategic investment backlog: 8
+- Silent untracked quality debt in the active gate: 0
+
+Yorum:
+
+- Real IdP staging evidence dis staging IdP/credential/seeded DB bilgisi olmadan tamamlandi sayilmiyor.
+- Global audit feed simdilik watchlist; gercek operator workflow kanitlanmadan kodlanmayacak.
+- Daily Closure / Historical Ranking, staging bilgileri hazir degilse en guclu local urun yatirimi olarak duruyor.
+- `.gitignore` mevcut; `node_modules`, `dist` ve local `.env` dosyalari ignored durumda, tracked kalite borcu olarak sayilmiyor.
+
+Siradaki mantikli adim: staging bilgileri yoksa Daily Closure / Historical Ranking icin feature intake gate'i acmak; staging bilgileri varsa once guard'li staging auth action smoke'u kosmak.
+
 ## Mevcut Roller ve Test Kullanicilari
 
 Keycloak local kullanicilari:

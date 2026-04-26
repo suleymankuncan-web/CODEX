@@ -30,7 +30,26 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 - official root release check gate
 - staging auth evidence operator checklist
 - staging auth evidence JSON guard
+- project debt ledger
 - backend and frontend release checks
+
+## Debt Count
+
+Reference: `docs/plans/project-debt-ledger.md`
+
+- Closed active debts: 12
+- Superseded before overbuilding: 1
+- Blocked external dependency: 1
+- Watchlist decision item: 1
+- Strategic investment backlog: 8
+- Silent untracked quality debt in the active gate: 0
+
+Interpretation:
+
+- The local project is not carrying a known silent release-quality debt right now.
+- Real IdP staging evidence is not counted as done because it requires outside staging IdP and seeded DB values.
+- Daily Closure / Historical Ranking remains the strongest local product investment if staging values are not ready.
+- The debt ledger itself is an accounting artifact and is not included in the 12 closed active debt items.
 
 ## Rules For Picking The Next Item
 
