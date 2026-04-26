@@ -440,10 +440,12 @@ export class IntegrationRepository {
                   period_start,
                   period_end,
                   payload_json,
+                  row_hash,
+                  raw_row_reference,
                   normalized_status,
                   processed_flag
                 )
-                VALUES ($1::uuid, $2, $3, $4, $5::date, $6::date, $7::jsonb, 'pending', FALSE)
+                VALUES ($1::uuid, $2, $3, $4, $5::date, $6::date, $7::jsonb, $8, $9, 'pending', FALSE)
               `,
               [
                 batch.import_batch_id,
@@ -453,6 +455,8 @@ export class IntegrationRepository {
                 row["periodStart"] ? String(row["periodStart"]) : null,
                 row["periodEnd"] ? String(row["periodEnd"]) : null,
                 JSON.stringify(row),
+                row["rowHash"] ? String(row["rowHash"]) : null,
+                row["rawRowReference"] ? String(row["rawRowReference"]) : null,
               ],
             );
           }

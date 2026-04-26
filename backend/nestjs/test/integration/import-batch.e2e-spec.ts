@@ -649,6 +649,117 @@ describe("POST /api/integrations/import-batches", () => {
     await app.close();
   });
 
+  it("stages KPI import row lineage as first-class raw columns", async () => {
+    const query = jest.fn(async (sql: string, params?: unknown[]) => {
+      if (
+        sql.includes("FROM stg.integration_source") &&
+        sql.includes("WHERE source_code = $1") &&
+        sql.includes("entity_type = $2")
+      ) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              integration_source_id: "source-kpi-1",
+              source_code: "kpi-feed",
+              source_name: "KPI Feed",
+              entity_type: "kpi",
+              source_system: "other",
+              state_model: "latest_state",
+              is_active: true,
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("SELECT integration_source_id") && sql.includes("AND is_active = TRUE")) {
+        return {
+          rowCount: 1,
+          rows: [{ integration_source_id: "source-kpi-1" }],
+        };
+      }
+
+      if (sql.includes("INSERT INTO stg.import_batch")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              import_batch_id: "batch-kpi-lineage-1",
+              started_at: "2026-04-17T00:00:00.000Z",
+              status: "pending",
+              source_batch_id: null,
+              source_payload_hash: null,
+              source_captured_at: null,
+              source_window_started_at: null,
+              source_window_ended_at: null,
+            },
+          ],
+        };
+      }
+
+      return { rowCount: 1, rows: [] };
+    });
+    const dispatch = jest.fn(async () => ({
+      status: "queued" as const,
+      jobType: "import-batch" as const,
+      backend: "test",
+      jobId: "job-kpi-lineage-1",
+      queueName: "store-ops-import",
+    }));
+
+    const app = await createIntegrationApp({
+      databaseService: {
+        query,
+        withTransaction: async <T>(work: (client: { query: typeof query }) => Promise<T>) =>
+          work({ query }),
+      },
+      jobDispatcher: { dispatch },
+    });
+
+    const response = await request(app.getHttpServer())
+      .post("/api/integrations/import-batches")
+      .set("x-user-id", "user-1")
+      .set("x-role-codes", "INTEGRATION_ADMIN")
+      .send({
+        sourceCode: "kpi-feed",
+        entityType: "kpi",
+        fileReference: "kpis.json",
+        rows: [
+          {
+            kpiCode: "UPT",
+            actualValue: 3.2,
+            storeExternalRef: "M-10",
+            employeeExternalRef: "S-100",
+            periodStart: "2026-04-22",
+            periodEnd: "2026-04-22",
+          },
+        ],
+      });
+
+    expect(response.status).toBe(201);
+    const kpiRawInsert = query.mock.calls.find(
+      ([sql]) => typeof sql === "string" && sql.includes("INSERT INTO stg.kpi_raw"),
+    );
+    expect(kpiRawInsert?.[0]).toContain(
+      "payload_json,\n                  row_hash,\n                  raw_row_reference",
+    );
+    expect(kpiRawInsert?.[0]).toContain("row_hash");
+    expect(kpiRawInsert?.[0]).toContain("raw_row_reference");
+    expect(kpiRawInsert?.[1]).toEqual([
+      "batch-kpi-lineage-1",
+      "UPT",
+      "M-10",
+      "S-100",
+      "2026-04-22",
+      "2026-04-22",
+      expect.stringContaining('"rowHash"'),
+      expect.stringMatching(/^[a-f0-9]{64}$/),
+      "other:UPT:daily:2026-04-22:2026-04-22:M-10:S-100",
+    ]);
+
+    await app.close();
+  });
+
   it("accepts assignment import batches and stages assignment rows", async () => {
     const query = jest.fn(async (sql: string) => {
       if (sql.includes("SELECT integration_source_id")) {

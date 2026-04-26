@@ -710,6 +710,8 @@ CREATE TABLE stg.kpi_raw (
     employee_external_ref TEXT,
     period_start DATE,
     period_end DATE,
+    row_hash TEXT,
+    raw_row_reference TEXT,
     payload_json JSONB NOT NULL,
     normalized_status TEXT NOT NULL DEFAULT 'pending',
     validation_error TEXT,
@@ -858,6 +860,14 @@ CREATE INDEX idx_turnover_event_scope_date
 
 CREATE INDEX idx_import_batch_source_status
     ON stg.import_batch (integration_source_id, status, started_at);
+
+CREATE INDEX kpi_raw_row_hash_idx
+    ON stg.kpi_raw (row_hash)
+    WHERE row_hash IS NOT NULL;
+
+CREATE INDEX kpi_raw_reference_idx
+    ON stg.kpi_raw (raw_row_reference)
+    WHERE raw_row_reference IS NOT NULL;
 
 CREATE UNIQUE INDEX uq_import_batch_idempotency_key
     ON stg.import_batch (idempotency_key)

@@ -2067,6 +2067,53 @@ Debt ledger:
 
 Siradaki mantikli adim: gercek kaynak bilgisi gelirse source mapping spec'e donmek; gelmezse mevcut backend/data yuzeylerinden dis kaynak varsayimi gerektirmeyen bir sonraki kontrollu adimi secmek.
 
+## Son KPI Raw Row Lineage Persistence V1
+
+26 Nisan 2026 itibariyla source-agnostic KPI satir izi `payload_json` icinde kalmakla yetinmeyip `stg.kpi_raw` seviyesinde first-class kolonlara tasindi.
+
+Yeni dokuman:
+
+- `docs/plans/kpi-raw-row-lineage-persistence-v1.md`
+
+Eklenenler:
+
+- `db/migrations/027_kpi_raw_lineage_columns.sql`.
+- `stg.kpi_raw.row_hash`.
+- `stg.kpi_raw.raw_row_reference`.
+- `kpi_raw_row_hash_idx`.
+- `kpi_raw_reference_idx`.
+- Canonical `db/schema.sql` bu kolon ve indexlerle hizalandi.
+- KPI import staging insert artik `rowHash` ve `rawRowReference` degerlerini raw kolonlara yazar.
+- Schema contract testi migration/schema kolonlarini korur.
+- Import batch integration testi KPI raw lineage kolonlarinin insert edildigini dogrular.
+
+Sinir:
+
+- Nebim-specific connector yazilmadi.
+- Fake source adapter yazilmadi.
+- Source cadence varsayilmadi.
+- Score formulu degismedi.
+- Materialization, snapshot veya ranking davranisi degismedi.
+
+Dogrulama:
+
+- Kirmizi backend test izlendi: canonical schema/migration icinde KPI raw lineage kolonlari yokken schema contract fail verdi.
+- Kirmizi backend test izlendi: KPI import staging insert `row_hash` ve `raw_row_reference` yazmadigi icin integration test fail verdi.
+- Hedefli backend test gecti: `npm.cmd test -- src/modules/integration/source-agnostic-ingest-schema-contract.spec.ts src/modules/integration/application/kpi-import-normalization.service.spec.ts test/integration/import-batch.e2e-spec.ts --runInBand` -> 3 suite / 32 test.
+- Backend build gecti: `npm.cmd run build`.
+- Resmi root release gate gecti: `npm.cmd run check:release` -> root script tests, backend lint + 35 suite / 259 test + build + audit, frontend lint + 7 script test + build + 27 Playwright test + audit.
+
+Debt ledger:
+
+- Closed active debts: 24
+- Superseded before overbuilding: 1
+- Blocked external dependency: 2
+- Watchlist decision item: 1
+- Strategic investment backlog: 2
+- Silent untracked quality debt in the active gate: 0
+
+Siradaki mantikli adim: external source bilgisi gelirse source mapping spec'e donmek; gelmezse intake ile mevcut backend/data yuzeylerinden dis kaynak varsayimi gerektirmeyen bir sonraki kontrollu adimi secmek.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:
@@ -2106,7 +2153,10 @@ Backend integration / ingest:
 - `backend/nestjs/src/modules/integration/application/kpi-import-normalization.service.ts`
 - `backend/nestjs/src/modules/integration/application/materialization.service.ts`
 - `backend/nestjs/src/modules/integration/infrastructure/integration.repository.ts`
+- `backend/nestjs/src/modules/integration/source-agnostic-ingest-schema-contract.spec.ts`
 - `backend/nestjs/src/modules/integration/web/integration.controller.ts`
+- `db/migrations/027_kpi_raw_lineage_columns.sql`
+- `db/schema.sql`
 
 Frontend:
 
@@ -2144,6 +2194,7 @@ Planlar:
 - `docs/plans/ranking-completeness-segment-readiness-v1.md`
 - `docs/plans/shared-inbox-maturity-v1.md`
 - `docs/plans/source-agnostic-ingest-contract-hardening-v1.md`
+- `docs/plans/kpi-raw-row-lineage-persistence-v1.md`
 - `docs/superpowers/plans/2026-04-26-daily-closure-ranking-v2-explainability.md`
 - `docs/superpowers/plans/2026-04-25-competition-stage-package-plan-lifecycle-v1.md`
 - `docs/superpowers/specs/2026-04-25-competition-stage-package-plan-lifecycle-v1-design.md`

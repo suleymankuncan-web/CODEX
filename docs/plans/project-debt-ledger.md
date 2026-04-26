@@ -17,7 +17,7 @@ Date: 26 April 2026
 
 Current count:
 
-- Closed active debts: 23
+- Closed active debts: 24
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 1
@@ -51,6 +51,7 @@ These are counted as paid because they have implementation or documentation evid
 21. Store UX TR-First Copy V1
 22. KPI Config Versioning V1
 23. Source-Agnostic Ingest Contract Hardening V1
+24. KPI Raw Row Lineage Persistence V1
 
 ## Superseded Before Overbuilding
 
@@ -123,6 +124,7 @@ What is already ready locally:
 - source-agnostic ingest planning
 - canonical KPI contract metadata on the payload template endpoint
 - deterministic KPI import `rowHash` and readable `rawRowReference`
+- first-class `stg.kpi_raw.row_hash` and `stg.kpi_raw.raw_row_reference` staging columns
 
 Required external inputs:
 
@@ -166,7 +168,7 @@ These are important future product investments. They are not counted as hidden d
 
 KPI config version history, publish metadata, snapshot anchoring, and pre-governance visibility are implemented in V1. Rollback UI, future effective scheduling, approval workflow, and DB-managed interpretation copy remain future depth, not active hidden debt.
 
-Source-agnostic KPI ingest contract hardening is implemented in V1. Real source adapter work remains blocked until external source evidence exists.
+Source-agnostic KPI ingest contract hardening is implemented in V1, and KPI raw row lineage is now persisted as first-class staging columns. Real source adapter work remains blocked until external source evidence exists.
 
 UI status note:
 
@@ -200,6 +202,7 @@ The dangerous kind of debt would be:
 - unclear feed vs competition ownership
 - raw auth evidence handling
 - store-facing mixed-language trust gaps
+- source row lineage hidden only inside JSON payloads
 
 Those have been actively reduced. The remaining work is mostly planned product depth, real external staging proof, real source ingest evidence/adapter work, and a future coordinated visual/localization investment. That is a healthy place to be.
 
@@ -209,4 +212,4 @@ If staging provider and seeded DB values are available, run the guarded staging 
 
 If they are not available, check whether real source ingest details are available. If source delivery details or a sample payload are unavailable, do not write a source-specific connector yet.
 
-The next local backend candidate should be chosen through the intake gate. Source-agnostic KPI ingest contract hardening is now done, so do not repeat it as busywork; pick a nearby backend/data surface only if it strengthens existing behavior without guessing external source details.
+The next local backend candidate should be chosen through the intake gate. Source-agnostic KPI ingest contract hardening and KPI raw row lineage persistence are now done, so do not repeat them as busywork; pick a nearby backend/data surface only if it strengthens existing behavior without guessing external source details.
