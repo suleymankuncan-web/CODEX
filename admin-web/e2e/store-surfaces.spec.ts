@@ -28,12 +28,25 @@ test('store self-performance page renders live score, metrics, and ranks', async
   await expect(page.getByText('Skor yorumu')).toBeVisible()
   await expect(page.getByText('Guclu performans')).toBeVisible()
   await expect(page.getByText('Veri guveni: 3/3 metrik skorlandi.')).toBeVisible()
+  await expect(page.getByText('Veri kaynagi').first()).toBeVisible()
+  await expect(page.getByText('Derived score signal')).toBeVisible()
+  await expect(page.getByText('Imported operational data').first()).toBeVisible()
   await expect(page.getByText('Turkey ranking')).toBeVisible()
   await expect(page.getByText('Store ranking')).toBeVisible()
   await expect(page.getByText('TARGET_ACHIEVEMENT')).toBeVisible()
   await expect(page.getByText('ATV', { exact: true })).toBeVisible()
   await expect(page.getByText('UPT', { exact: true })).toBeVisible()
   await expect(page.getByText('Performans yuzeyi acilamadi')).toHaveCount(0)
+})
+
+test('store KPI highlights page explains metric source semantics', async ({ page }) => {
+  await page.goto('/store/kpis')
+
+  await expect(page.getByText('Weighted Score Summary')).toBeVisible()
+  await expect(page.getByText('Veri kaynagi').first()).toBeVisible()
+  await expect(page.getByText('Derived score signal')).toBeVisible()
+  await expect(page.getByText('Imported operational data').first()).toBeVisible()
+  await expect(page.getByText('KPI rows unavailable')).toHaveCount(0)
 })
 
 test('store shell exposes a main landmark and hides technical auth roles', async ({ page }) => {
@@ -141,6 +154,10 @@ async function routeStoreSurfaceApi(page: Page) {
 
   await page.route('**/api/reports/my-performance**', async (route) => {
     await route.fulfill({ json: myPerformanceFixture })
+  })
+
+  await page.route('**/api/reports/store-kpi-highlights**', async (route) => {
+    await route.fulfill({ json: storeKpiHighlightsFixture })
   })
 
   await page.route('**/api/reports/leaderboards/closed**', async (route) => {
@@ -285,6 +302,13 @@ const kpiConfigFixture = {
         ownerRole: 'STORE_MANAGER',
         scoreBehavior: 'score_only',
       },
+      {
+        code: 'UPT',
+        label: 'Units Per Ticket',
+        weightPercent: 25,
+        ownerRole: 'STORE_MANAGER',
+        scoreBehavior: 'score_only',
+      },
     ],
   },
   personnelProfile: {
@@ -417,6 +441,66 @@ const myPerformanceFixture = {
       dataStatus: 'reported',
       scoreStatus: 'scored',
       status: 'reported',
+    },
+  ],
+}
+
+const storeKpiHighlightsFixture = {
+  source: {
+    mode: 'live',
+    snapshotRunId: null,
+    snapshotDate: null,
+    periodType: 'monthly',
+  },
+  store: {
+    storeId: demoStoreId,
+    storeName: 'IstinyePark Demo Store',
+  },
+  period: {
+    periodStart: '2026-04-01',
+    periodEnd: '2026-04-30',
+  },
+  score: {
+    value: 91.5,
+    matchedMetrics: 2,
+    totalMetrics: 2,
+  },
+  availablePeriods: [
+    {
+      periodType: 'monthly',
+      periodStart: '2026-04-01',
+      periodEnd: '2026-04-30',
+    },
+  ],
+  partial: {
+    isPartial: false,
+    missingMetricCodes: [],
+    missingMetricLabels: [],
+    pendingNormalizationCodes: [],
+    pendingNormalizationLabels: [],
+  },
+  metrics: [
+    {
+      code: 'TARGET_ACHIEVEMENT',
+      label: 'Target Achievement',
+      weightPercent: 35,
+      actualValue: 0.98,
+      targetValue: null,
+      achievementRate: 0.98,
+      statusBand: 'exceeded',
+      dataStatus: 'reported',
+      scoreStatus: 'scored',
+    },
+    {
+      code: 'UPT',
+      label: 'Units Per Ticket',
+      weightPercent: 25,
+      actualValue: 95,
+      targetValue: null,
+      achievementRate: 95,
+      statusBand: 'on_track',
+      dataStatus: 'reported',
+      scoreStatus: 'scored',
     },
   ],
 }

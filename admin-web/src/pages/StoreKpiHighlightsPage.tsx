@@ -27,6 +27,7 @@ import {
   formatPerformanceGrade,
   resolvePerformanceGrade,
 } from '../features/kpi/grading'
+import { resolveKpiSourceSemantics } from '../features/kpi/source-semantics'
 
 type DisplayKpiRow = {
   storeId: string
@@ -705,55 +706,65 @@ export function StoreKpiHighlightsPage(input: {
           />
         </div>
         <div className="stacked-table">
-          {weightedScore.contributions.map((item) => (
-            <article className="stacked-row" key={item.metric.code}>
-              <div className="stacked-row-head">
-                <div>
-                  <strong>{item.metric.label}</strong>
-                  <span className="queue-subtitle">
-                    {item.matchingRow ? item.matchingRow.kpiCode : 'Waiting for KPI row'}
-                  </span>
+          {weightedScore.contributions.map((item) => {
+            const sourceSemantics = resolveKpiSourceSemantics({
+              code: item.matchingRow?.kpiCode ?? item.metric.code,
+              actualValue: item.matchingRow?.actualValue ?? null,
+              scoreStatus: item.matchingRow?.scoreStatus ?? 'missing',
+            })
+
+            return (
+              <article className="stacked-row" key={item.metric.code}>
+                <div className="stacked-row-head">
+                  <div>
+                    <strong>{item.metric.label}</strong>
+                    <span className="queue-subtitle">
+                      {item.matchingRow ? item.matchingRow.kpiCode : 'Waiting for KPI row'}
+                    </span>
+                  </div>
+                  <StatusPill
+                    tone={
+                      item.matchingRow?.scoreStatus === 'scored'
+                        ? 'accent'
+                        : item.matchingRow?.scoreStatus === 'pending_normalization'
+                          ? 'warning'
+                          : 'neutral'
+                    }
+                  >
+                    {`${item.metric.weightPercent}%`}
+                  </StatusPill>
                 </div>
-                <StatusPill
-                  tone={
-                    item.matchingRow?.scoreStatus === 'scored'
-                      ? 'accent'
-                      : item.matchingRow?.scoreStatus === 'pending_normalization'
-                        ? 'warning'
-                        : 'neutral'
-                  }
-                >
-                  {`${item.metric.weightPercent}%`}
-                </StatusPill>
-              </div>
-              <div className="key-grid">
-                <KeyValue
-                  label="Target"
-                  value={formatMetricValue(item.matchingRow?.targetValue ?? null, item.matchingRow?.kpiCode)}
-                />
-                <KeyValue
-                  label="Actual"
-                  value={formatMetricValue(item.matchingRow?.actualValue ?? null, item.matchingRow?.kpiCode)}
-                />
-                <KeyValue
-                  label="Achievement"
-                  value={
-                    item.matchingRow
-                      ? formatAchievementValue(item.matchingRow)
-                      : 'No data'
-                  }
-                />
-                <KeyValue
-                  label="Weighted contribution"
-                  value={formatPercent(item.weightedContribution)}
-                />
-                <KeyValue
-                  label="Behavior"
-                  value={formatState(item.metric.scoreBehavior)}
-                />
-              </div>
-            </article>
-          ))}
+                <div className="key-grid">
+                  <KeyValue
+                    label="Target"
+                    value={formatMetricValue(item.matchingRow?.targetValue ?? null, item.matchingRow?.kpiCode)}
+                  />
+                  <KeyValue
+                    label="Actual"
+                    value={formatMetricValue(item.matchingRow?.actualValue ?? null, item.matchingRow?.kpiCode)}
+                  />
+                  <KeyValue
+                    label="Achievement"
+                    value={
+                      item.matchingRow
+                        ? formatAchievementValue(item.matchingRow)
+                        : 'No data'
+                    }
+                  />
+                  <KeyValue
+                    label="Weighted contribution"
+                    value={formatPercent(item.weightedContribution)}
+                  />
+                  <KeyValue
+                    label="Behavior"
+                    value={formatState(item.metric.scoreBehavior)}
+                  />
+                  <KeyValue label="Kaynak tipi" value={sourceSemantics.label} />
+                  <KeyValue label="Veri kaynagi" value={sourceSemantics.summary} />
+                </div>
+              </article>
+            )
+          })}
         </div>
       </section>
 
@@ -812,31 +823,41 @@ export function StoreKpiHighlightsPage(input: {
           />
         ) : (
           <div className="stacked-table">
-            {needsAttention.map((row) => (
-              <article className="stacked-row" key={`${row.storeId}:${row.kpiCode}`}>
-                <div className="stacked-row-head">
-                  <div>
-                    <strong>{row.kpiName}</strong>
-                    <span className="queue-subtitle">{row.kpiCode}</span>
+            {needsAttention.map((row) => {
+              const sourceSemantics = resolveKpiSourceSemantics({
+                code: row.kpiCode,
+                actualValue: row.actualValue,
+                scoreStatus: row.scoreStatus,
+              })
+
+              return (
+                <article className="stacked-row" key={`${row.storeId}:${row.kpiCode}`}>
+                  <div className="stacked-row-head">
+                    <div>
+                      <strong>{row.kpiName}</strong>
+                      <span className="queue-subtitle">{row.kpiCode}</span>
+                    </div>
+                    <StatusPill tone={row.statusBand === 'off_track' ? 'danger' : 'warning'}>
+                      {row.statusBand ?? 'unknown'}
+                    </StatusPill>
                   </div>
-                  <StatusPill tone={row.statusBand === 'off_track' ? 'danger' : 'warning'}>
-                    {row.statusBand ?? 'unknown'}
-                  </StatusPill>
-                </div>
-                <div className="key-grid">
-                  <KeyValue label="Target" value={formatMetricValue(row.targetValue, row.kpiCode)} />
-                  <KeyValue label="Actual" value={formatMetricValue(row.actualValue, row.kpiCode)} />
-                  <KeyValue
-                    label="Achievement"
-                    value={formatAchievementValue(row)}
-                  />
-                  <KeyValue
-                    label="Period"
-                    value={`${formatDate(row.periodStart)} - ${formatDate(row.periodEnd)}`}
-                  />
-                </div>
-              </article>
-            ))}
+                  <div className="key-grid">
+                    <KeyValue label="Target" value={formatMetricValue(row.targetValue, row.kpiCode)} />
+                    <KeyValue label="Actual" value={formatMetricValue(row.actualValue, row.kpiCode)} />
+                    <KeyValue
+                      label="Achievement"
+                      value={formatAchievementValue(row)}
+                    />
+                    <KeyValue
+                      label="Period"
+                      value={`${formatDate(row.periodStart)} - ${formatDate(row.periodEnd)}`}
+                    />
+                    <KeyValue label="Kaynak tipi" value={sourceSemantics.label} />
+                    <KeyValue label="Veri kaynagi" value={sourceSemantics.summary} />
+                  </div>
+                </article>
+              )
+            })}
           </div>
         )}
       </section>

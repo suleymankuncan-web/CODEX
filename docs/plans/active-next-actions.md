@@ -6,7 +6,7 @@ This is the short working list for the next practical steps. It keeps the projec
 
 ## Current Position
 
-As of 26 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, and Score Meaning V1 have:
+As of 26 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, and KPI Source Semantics V1 have:
 
 - saved drafts
 - edit/cancel/history
@@ -32,6 +32,7 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 - staging auth evidence JSON guard
 - daily/monthly closed ranking trust explanations
 - personnel score meaning and confidence copy
+- KPI source semantics for imported, derived, checklist-fed, pending normalization, and missing values
 - project debt ledger
 - backend and frontend release checks
 
@@ -39,11 +40,11 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 
 Reference: `docs/plans/project-debt-ledger.md`
 
-- Closed active debts: 14
+- Closed active debts: 15
 - Superseded before overbuilding: 1
 - Blocked external dependency: 1
 - Watchlist decision item: 1
-- Strategic investment backlog: 7
+- Strategic investment backlog: 6
 - Silent untracked quality debt in the active gate: 0
 
 Interpretation:
@@ -51,8 +52,10 @@ Interpretation:
 - The local project is not carrying a known silent release-quality debt right now.
 - Real IdP staging evidence is not counted as done because it requires outside staging IdP and seeded DB values.
 - Daily Closure / Historical Ranking V2 explainability now exists over the existing read model.
-- Score Meaning V1 now explains the personnel weighted score on `/store/me`; broader KPI source semantics and store-score threshold language remain planned investment.
-- The debt ledger itself is an accounting artifact and is not included in the 12 closed active debt items.
+- Score Meaning V1 now explains the personnel weighted score on `/store/me`.
+- KPI Source Semantics V1 now explains imported, derived, checklist-fed, pending normalization, and missing KPI values on store-facing KPI rows.
+- Store-score threshold language remains planned investment.
+- The debt ledger itself is an accounting artifact and is not counted as a separate closed active debt item.
 
 ## Rules For Picking The Next Item
 
@@ -232,6 +235,17 @@ Interpretation:
 - Reference:
   - `docs/plans/score-meaning-v1.md`
 
+### Completed: KPI Source Semantics V1
+- Completed: 26 April 2026
+- Result:
+  - `/store/me` metric rows show `Kaynak tipi` and `Veri kaynagi`
+  - `/store/kpis` weighted-score and priority follow-up rows show the same source semantics
+  - source labels cover imported, derived, checklist-fed, pending normalization, and missing states
+  - no backend contract, score math, DB schema, migration, or config schema changed
+  - Playwright store-surface smoke protects the visible explanation
+- Reference:
+  - `docs/plans/kpi-source-semantics-v1.md`
+
 ### 1. Real IdP Staging Evidence
 - Priority: `P1`
 - Why: local provider and action mechanics are proven, but production confidence still needs real staging IdP and seeded staging action evidence.
@@ -256,4 +270,4 @@ Interpretation:
 
 If staging IdP and seeded staging DB values are available, start real staging evidence.
 
-If staging values are not available, start KPI Source Semantics V1. The next local product step is to explain whether each KPI value is imported, derived, checklist-fed, pending normalization, or missing.
+If staging values are not available, start store-score threshold language. The next local product step is to explain what store weighted score bands mean and when a score should become warning/action language.

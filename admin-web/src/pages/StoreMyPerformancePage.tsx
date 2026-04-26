@@ -17,6 +17,7 @@ import {
   resolvePerformanceGrade,
   resolvePerformanceScoreMeaning,
 } from '../features/kpi/grading'
+import { resolveKpiSourceSemantics } from '../features/kpi/source-semantics'
 import { formatDate, formatState, getErrorMessage } from '../lib/format'
 
 function canUseSelfPerformance(authSummary: AuthSessionSummary | null) {
@@ -425,43 +426,49 @@ export function StoreMyPerformancePage(input: {
           Bu yuzey bireysel KPI metric degerlerini, score katkisini ve ranking sonucunu tek yerde gosterir.
         </p>
         <div className="stacked-table">
-          {performance.metrics.map((metric) => (
-            <article className="stacked-row" key={metric.code}>
-              <div className="stacked-row-head">
-                <div>
-                  <strong>{metric.label}</strong>
-                  <span className="queue-subtitle">{metric.code}</span>
-                </div>
-                <StatusPill
-                  tone={
-                    metric.scoreStatus === 'scored'
-                      ? 'accent'
+          {performance.metrics.map((metric) => {
+            const sourceSemantics = resolveKpiSourceSemantics(metric)
+
+            return (
+              <article className="stacked-row" key={metric.code}>
+                <div className="stacked-row-head">
+                  <div>
+                    <strong>{metric.label}</strong>
+                    <span className="queue-subtitle">{metric.code}</span>
+                  </div>
+                  <StatusPill
+                    tone={
+                      metric.scoreStatus === 'scored'
+                        ? 'accent'
+                        : metric.scoreStatus === 'pending_normalization'
+                          ? 'warning'
+                          : 'danger'
+                    }
+                  >
+                    {metric.scoreStatus === 'scored'
+                      ? `${metric.weightPercent}%`
                       : metric.scoreStatus === 'pending_normalization'
-                        ? 'warning'
-                        : 'danger'
-                  }
-                >
-                  {metric.scoreStatus === 'scored'
-                    ? `${metric.weightPercent}%`
-                    : metric.scoreStatus === 'pending_normalization'
-                      ? 'Pending'
-                      : 'Missing'}
-                </StatusPill>
-              </div>
-              <div className="key-grid">
-                <KeyValue
-                  label="Actual"
-                  value={formatMetricValue(metric.actualValue, metric.code)}
-                />
-                <KeyValue label="Achievement" value={formatAchievementValue(metric)} />
-                <KeyValue label="Contribution" value={`${metric.contributionValue.toFixed(2)}%`} />
-                <KeyValue
-                  label="Status"
-                  value={formatState(metric.scoreStatus ?? metric.status ?? 'missing')}
-                />
-              </div>
-            </article>
-          ))}
+                        ? 'Pending'
+                        : 'Missing'}
+                  </StatusPill>
+                </div>
+                <div className="key-grid">
+                  <KeyValue
+                    label="Actual"
+                    value={formatMetricValue(metric.actualValue, metric.code)}
+                  />
+                  <KeyValue label="Achievement" value={formatAchievementValue(metric)} />
+                  <KeyValue label="Contribution" value={`${metric.contributionValue.toFixed(2)}%`} />
+                  <KeyValue
+                    label="Status"
+                    value={formatState(metric.scoreStatus ?? metric.status ?? 'missing')}
+                  />
+                  <KeyValue label="Kaynak tipi" value={sourceSemantics.label} />
+                  <KeyValue label="Veri kaynagi" value={sourceSemantics.summary} />
+                </div>
+              </article>
+            )
+          })}
         </div>
       </section>
     </section>

@@ -17,11 +17,11 @@ Date: 26 April 2026
 
 Current count:
 
-- Closed active debts: 14
+- Closed active debts: 15
 - Superseded before overbuilding: 1
 - Blocked external dependency: 1
 - Watchlist decision item: 1
-- Strategic investment backlog: 7
+- Strategic investment backlog: 6
 - Silent untracked quality debt in the active gate: 0
 
 ## Closed Active Debts
@@ -42,6 +42,7 @@ These are counted as paid because they have implementation or documentation evid
 12. Staging Auth Evidence JSON Guard
 13. Daily Closure Ranking V2 Explainability
 14. Score Meaning V1
+15. KPI Source Semantics V1
 
 ## Superseded Before Overbuilding
 
@@ -111,12 +112,11 @@ Trigger to promote:
 These are important future product investments. They are not counted as hidden debt today because the current system is still deliberately growing from controlled foundations.
 
 1. Real ingest connector and real payload contract
-2. KPI source semantics and score meaning expansion: imported/derived/checklist-fed labels, store-score threshold language, interpretation versioning
+2. Store-score threshold language and interpretation versioning
 3. Ranking completeness: Turkey-wide, store, metric mini-ranks, segment-ready behavior
-4. KPI source semantics: imported, derived, checklist-fed, presentation-only
-5. KPI config governance: effective dates, rollback, impact comparison
-6. Shared inbox maturity: detail views, due dates, escalation, stronger source actions
-7. Store UX polish and broader TR-first copy rollout
+4. KPI config governance: effective dates, rollback, impact comparison
+5. Shared inbox maturity: detail views, due dates, escalation, stronger source actions
+6. Store UX polish and broader TR-first copy rollout
 
 ## Repo Hygiene Note
 
@@ -150,4 +150,4 @@ Those have been actively reduced. The remaining work is mostly planned product d
 
 If staging provider and seeded DB values are available, run the guarded staging action smoke.
 
-If they are not available, the next local step should be chosen from strategic investments through the feature intake gate, with KPI source semantics now the strongest product candidate.
+If they are not available, the next local step should be chosen from strategic investments through the feature intake gate, with store-score threshold language now the strongest product candidate.

@@ -1520,7 +1520,8 @@ Sinir:
 - Score formulu degismedi.
 - Grade threshold degerleri degismedi.
 - Yeni DB, migration veya config schema yok.
-- Bu V1 personel self-performance skor anlamlandirmasidir; store-score threshold dili ve KPI source semantics henuz ayri yatirimdir.
+- Bu V1 personel self-performance skor anlamlandirmasidir; store-score threshold dili henuz ayri yatirimdir.
+- KPI source semantics V1 daha sonra ayri katman olarak eklendi.
 
 Dogrulama:
 
@@ -1533,7 +1534,48 @@ Debt ledger:
 - Closed active debts: 14
 - Silent untracked quality debt in the active gate: 0
 
-Siradaki mantikli adim: KPI Source Semantics V1. Her KPI degerinin imported, derived, checklist-fed, pending normalization veya missing oldugunu kullaniciya anlatmak.
+Siradaki mantikli adim artik tamamlandi: KPI Source Semantics V1.
+
+## Son KPI Source Semantics V1
+
+26 Nisan 2026 itibariyla store-facing KPI satirlarina kaynak anlamlandirmasi eklendi.
+
+Yeni dokuman:
+
+- `docs/plans/kpi-source-semantics-v1.md`
+
+Eklenenler:
+
+- `admin-web/src/features/kpi/source-semantics.ts` helper'i.
+- `/store/me` personel metrik satirlarinda `Kaynak tipi` ve `Veri kaynagi`.
+- `/store/kpis` weighted-score katkisi ve priority follow-up satirlarinda ayni kaynak dili.
+- Kaynak tipleri:
+  - `Imported operational data`
+  - `Derived score signal`
+  - `Checklist-fed`
+  - `Pending normalization`
+  - `Missing`
+
+Sinir:
+
+- Backend contract degismedi.
+- Score formulu degismedi.
+- DB schema veya migration yok.
+- Gercek import connector/source-lineage metadata'si henuz eklenmedi.
+- Bu V1 presentation-only semantics katmanidir.
+
+Dogrulama:
+
+- Kirmizi test izlendi: self-performance ve store KPI Playwright testleri `Veri kaynagi` yokken fail verdi.
+- Hedefli frontend dogrulama gecti: `npm.cmd run build; if ($LASTEXITCODE -eq 0) { npm.cmd run test:e2e -- e2e/store-surfaces.spec.ts -g "self-performance|store KPI highlights" }` -> 2 Playwright test.
+
+Debt ledger:
+
+- Closed active debts: 15
+- Strategic investment backlog: 6
+- Silent untracked quality debt in the active gate: 0
+
+Siradaki mantikli adim: Store-score threshold language. Store weighted score bandlari kullaniciya "iyi/kritik/takip" seviyesinde ne ifade ediyor, ne zaman action/warning diline donmeli, bunu hesaplamayi degistirmeden anlatmak.
 
 ## Onemli Dosyalar
 
