@@ -36,41 +36,41 @@ export function StoreShellPreviewPage(input: {
     <section className="page-stack">
       <section className="hero-panel store-hero-panel">
         <div>
-          <div className="eyebrow">Store Home Phase 1</div>
+          <div className="eyebrow">Mağaza ana sayfa Faz 1</div>
           <h2 className="hero-title">
-            A task-first home for store users, separate from the admin control plane.
+            Mağaza kullanıcısı için admin panelinden ayrılmış görev odaklı ana sayfa.
           </h2>
           <p className="hero-copy">
-            This screen defines how future checklist, KPI, approval, and incentive work should
-            arrive for store-scoped users: as focused daily action, not as admin reporting clutter.
+            Checklist, KPI, onay ve prim işleri mağaza kapsamlı kullanıcıya rapor kalabalığı
+            olarak değil, odaklı günlük aksiyon olarak gelmeli.
           </p>
         </div>
         <div className="hero-metrics">
-          <MetricAccent label="Shell" value="/store" />
-          <MetricAccent label="Current landing" value={input.recommendedLanding} />
-          <MetricAccent label="Intent" value="Task-first" />
+          <MetricAccent label="Alan" value="/store" />
+          <MetricAccent label="Geçerli açılış" value={input.recommendedLanding} />
+          <MetricAccent label="Amaç" value="Görev odaklı" />
         </div>
       </section>
 
       <section className="metric-grid store-metric-grid">
         <MetricCard
-          title="Tasks today"
+          title="Bugünkü işler"
           value={3}
-          note="Checklist follow-up, approvals, and incentive-related reviews should start here."
+          note="Checklist takibi, onaylar ve primle ilgili gözden geçirmeler burada başlamalı."
           icon={<ClipboardList size={18} />}
           tone="accent"
         />
         <MetricCard
-          title="Store focus"
+          title="Mağaza odağı"
           value={1}
-          note="Store users should see only the slice that matters to their own scope."
+          note="Mağaza kullanıcısı yalnızca kendi kapsamını ilgilendiren parçayı görmeli."
           icon={<Store size={18} />}
           tone="calm"
         />
         <MetricCard
-          title="Shared auth"
+          title="Ortak yetki"
           value={1}
-          note="The shell is separate, but auth, scope, and audit foundations remain shared."
+          note="Yüzey ayrı; auth, kapsam ve audit temelleri ortak kalır."
           icon={<BadgeCheck size={18} />}
           tone="warning"
         />
@@ -78,7 +78,7 @@ export function StoreShellPreviewPage(input: {
 
       {feedQuery.isError ? (
         <ScreenState
-          title="Pinned announcements unavailable"
+          title="Sabit duyurular açılamadı"
           copy={getErrorMessage(feedQuery.error)}
           tone="error"
         />
@@ -86,11 +86,11 @@ export function StoreShellPreviewPage(input: {
         <section className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Pinned Duyurular</div>
-              <h3>Company focus before daily work</h3>
+              <div className="eyebrow">Sabit duyurular</div>
+              <h3>Günlük işlerden önce şirket odağı</h3>
             </div>
             <Link className="control-button store-shell-link" to="/store/feed">
-              All announcements
+              Tüm duyurular
             </Link>
           </div>
           <div className="stacked-table">
@@ -116,41 +116,40 @@ export function StoreShellPreviewPage(input: {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Store Home</div>
-              <h3>What the store user should reach first</h3>
+              <div className="eyebrow">Mağaza ana sayfası</div>
+              <h3>Mağaza kullanıcısı önce nereye ulaşmalı</h3>
             </div>
-            <StatusPill tone="accent">Phase 1</StatusPill>
+            <StatusPill tone="accent">Faz 1</StatusPill>
           </div>
 
           <div className="stacked-table">
             <div className="stacked-row">
               <div className="stacked-row-head">
-                <strong>Today's tasks</strong>
-                <StatusPill tone="warning">Priority</StatusPill>
+                <strong>Bugünkü işler</strong>
+                <StatusPill tone="warning">Öncelik</StatusPill>
               </div>
               <p>
-                Checklist completions, outstanding approvals, and items requiring immediate store
-                action.
+                Checklist tamamlamaları, bekleyen onaylar ve mağazada hemen aksiyon gerektiren işler.
               </p>
             </div>
             <div className="stacked-row">
               <div className="stacked-row-head">
-                <strong>KPI highlights</strong>
-                <StatusPill tone="calm">Visibility</StatusPill>
+                <strong>KPI özetleri</strong>
+                <StatusPill tone="calm">Görünürlük</StatusPill>
               </div>
               <p>
-                Store-scoped summary cards and trends, not admin-style reporting grids as the
-                default entry.
+                Varsayılan giriş admin tipi rapor tabloları değil, mağaza kapsamlı özet kartlar ve
+                hızlı trendler olmalı.
               </p>
             </div>
             <div className="stacked-row">
               <div className="stacked-row-head">
-                <strong>Incentive snapshot</strong>
-                <StatusPill tone="accent">Later</StatusPill>
+                <strong>Prim özeti</strong>
+                <StatusPill tone="accent">Sonra</StatusPill>
               </div>
               <p>
-                Future `prim` visibility should live here for the store shell, while configuration
-                and investigation remain in admin.
+                Gelecekte prim görünürlüğü mağaza alanında okunmalı; konfigürasyon ve inceleme
+                admin tarafında kalmalı.
               </p>
             </div>
           </div>
@@ -159,27 +158,27 @@ export function StoreShellPreviewPage(input: {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Resolved Session</div>
-              <h3>What the current user brings into the store shell</h3>
+              <div className="eyebrow">Çözülen oturum</div>
+              <h3>Mevcut kullanıcı mağaza alanına hangi kapsamla geliyor</h3>
             </div>
           </div>
 
           <div className="key-grid">
-            <KeyValue label="User id" value={user?.userId ?? 'Session not resolved'} />
-            <KeyValue label="Roles" value={formatDisplayRoles(user?.roleCodes, 'No resolved roles')} />
-            <KeyValue label="Company ids" value={user?.scope.companyIds.join(', ') || 'none'} />
-            <KeyValue label="Store ids" value={user?.scope.storeIds.join(', ') || 'none'} />
+            <KeyValue label="Kullanıcı id" value={user?.userId ?? 'Oturum çözülmedi'} />
+            <KeyValue label="Roller" value={formatDisplayRoles(user?.roleCodes, 'Çözülen rol yok')} />
+            <KeyValue label="Şirket idleri" value={user?.scope.companyIds.join(', ') || 'yok'} />
+            <KeyValue label="Mağaza idleri" value={user?.scope.storeIds.join(', ') || 'yok'} />
           </div>
 
           <div className="action-cluster">
             <Link className="control-button store-shell-link" to="/store/tasks">
-              Store tasks
+              Mağaza işleri
             </Link>
             <Link className="control-button store-shell-link" to="/store/checklists">
-              Store checklists
+              Mağaza checklistleri
             </Link>
             <Link className="control-button store-shell-link" to="/store/kpis">
-              Store KPI highlights
+              Mağaza KPI özetleri
             </Link>
             <Link className="control-button store-shell-link" to="/store/me">
               Benim performansim
@@ -188,13 +187,13 @@ export function StoreShellPreviewPage(input: {
               Siralamalar
             </Link>
             <Link className="control-button store-shell-link" to="/store/approvals">
-              Store approvals
+              Mağaza onayları
             </Link>
             <Link className="control-button store-shell-link" to="/store/incentives">
-              Store incentives
+              Mağaza primleri
             </Link>
             <Link className="control-button store-shell-link" to="/admin/reports">
-              Admin reports
+              Admin raporları
             </Link>
           </div>
         </article>
@@ -203,51 +202,51 @@ export function StoreShellPreviewPage(input: {
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Route Skeleton</div>
-            <h3>Where future store-facing work should land</h3>
+            <div className="eyebrow">Rota iskeleti</div>
+            <h3>Gelecek mağaza işleri nereye oturmalı</h3>
           </div>
         </div>
 
         <div className="store-route-grid">
           <RoutePreviewCard
             route="/store/tasks"
-            title="Task queue"
-            copy="Daily action queue for checklist follow-up, pending requests, and future store actions."
+            title="İş kuyruğu"
+            copy="Checklist takibi, bekleyen talepler ve gelecek mağaza aksiyonları için günlük kuyruk."
             icon={<ClipboardList size={18} />}
             tone="accent"
           />
           <RoutePreviewCard
             route="/store/checklists"
             title="Checklists"
-            copy="Store execution surface, completion progress, and checklist follow-up."
+            copy="Mağaza uygulama yüzeyi, tamamlama ilerlemesi ve checklist takibi."
             icon={<BadgeCheck size={18} />}
             tone="calm"
           />
           <RoutePreviewCard
             route="/store/kpis"
-            title="KPI highlights"
-            copy="Store-focused KPI cards and quick trend visibility."
+            title="KPI özetleri"
+            copy="Mağaza odaklı KPI kartları ve hızlı trend görünürlüğü."
             icon={<Target size={18} />}
             tone="warning"
           />
           <RoutePreviewCard
             route="/store/me"
             title="Benim performansim"
-            copy="Magaza personeli icin bireysel KPI, score ve siralama yuzeyi."
+            copy="Mağaza personeli için bireysel KPI, skor ve sıralama yüzeyi."
             icon={<BadgeCheck size={18} />}
             tone="calm"
           />
           <RoutePreviewCard
             route="/store/rankings"
             title="Siralamalar"
-            copy="Kapanmis gun snapshot'larindan gelen historical personel ve magaza leaderboard."
+            copy="Kapanmış gün snapshotlarından gelen personel ve mağaza sıralamaları."
             icon={<Target size={18} />}
             tone="warning"
           />
           <RoutePreviewCard
             route="/store/approvals"
-            title="Approvals"
-            copy="Future inbox for store-level approvals and acknowledgements."
+            title="Onaylar"
+            copy="Mağaza seviyesindeki onay ve kabul işleri için gelecek kutusu."
             icon={<ReceiptText size={18} />}
             tone="accent"
           />
@@ -258,32 +257,32 @@ export function StoreShellPreviewPage(input: {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">What Belongs Here</div>
-              <h3>Store-shell ownership</h3>
+              <div className="eyebrow">Buraya ne ait</div>
+              <h3>Mağaza alanı sahipliği</h3>
             </div>
           </div>
           <div className="stacked-table">
             <div className="stacked-row">
               <div className="stacked-row-head">
-                <strong>Checklist action</strong>
+                <strong>Checklist aksiyonu</strong>
                 <ArrowRight size={16} />
               </div>
-              <p>Execution, completion, and follow-up that is scoped to a store team.</p>
+              <p>Mağaza ekibine bağlı uygulama, tamamlama ve takip işleri.</p>
             </div>
             <div className="stacked-row">
               <div className="stacked-row-head">
-                <strong>Store KPI visibility</strong>
+                <strong>Mağaza KPI görünürlüğü</strong>
                 <ArrowRight size={16} />
               </div>
-              <p>Fast signal and trend visibility that helps action, not platform governance.</p>
+              <p>Platform yönetimi değil, aksiyon almayı kolaylaştıran hızlı sinyal ve trend görünürlüğü.</p>
             </div>
             <div className="stacked-row">
               <div className="stacked-row-head">
-                <strong>Incentive and approval consumption</strong>
+                <strong>Prim ve onay tüketimi</strong>
                 <ArrowRight size={16} />
               </div>
               <p>
-                Store users consume and act here; admin config and investigation stay elsewhere.
+                Mağaza kullanıcısı burada okur ve aksiyon alır; admin konfigürasyon ve inceleme başka yerde kalır.
               </p>
             </div>
           </div>
@@ -292,13 +291,13 @@ export function StoreShellPreviewPage(input: {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">What Stays In Admin</div>
-              <h3>Do not leak these into `/store`</h3>
+              <div className="eyebrow">Admin'de ne kalır</div>
+              <h3>Bunları `/store` içine taşırma</h3>
             </div>
           </div>
           <EmptyState
-            title="Governance remains admin-first"
-            copy="Import operations, snapshot orchestration, auth management, audit investigation, and cross-store platform controls should stay inside the admin shell even when they support store users indirectly."
+            title="Yönetişim admin öncelikli kalır"
+            copy="Import operasyonları, snapshot orkestrasyonu, auth yönetimi, audit incelemesi ve mağazalar arası platform kontrolleri mağaza kullanıcılarını desteklese bile admin alanında kalmalı."
           />
         </article>
       </section>

@@ -62,10 +62,10 @@ test('store feed renders pinned challenge posts with ranking link', async ({ pag
 
   await page.goto('/store/feed')
 
-  await expect(page.getByRole('heading', { name: 'Visible announcements' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Görünen duyurular' })).toBeVisible()
   const postRow = page.locator('.stacked-row').filter({ hasText: 'May UPT Challenge' })
   await expect(postRow).toBeVisible()
-  await expect(postRow.getByText('Pinned', { exact: true })).toBeVisible()
+  await expect(postRow.getByText('Sabit', { exact: true })).toBeVisible()
   await expect(postRow.getByText('UPT', { exact: true })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Open rankings' })).toHaveAttribute('href', '/store/rankings')
 })
@@ -76,9 +76,9 @@ test('store home shows pinned feed preview', async ({ page }) => {
 
   await page.goto('/store')
 
-  await expect(page.getByText('Pinned Duyurular')).toBeVisible()
+  await expect(page.getByText('Sabit duyurular')).toBeVisible()
   await expect(page.getByText('May UPT Challenge')).toBeVisible()
-  await expect(page.getByRole('link', { name: 'All announcements' })).toHaveAttribute('href', '/store/feed')
+  await expect(page.getByRole('link', { name: 'Tüm duyurular' })).toHaveAttribute('href', '/store/feed')
 })
 
 async function seedMockSession(page: Page, roleCodes: string, userId: string) {

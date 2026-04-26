@@ -53,14 +53,18 @@ test('store KPI highlights page explains metric source semantics', async ({ page
   await expect(page.getByText('KPI rows unavailable')).toHaveCount(0)
 })
 
-test('store shell exposes a main landmark and hides technical auth roles', async ({ page }) => {
+test('store shell exposes Turkish-first chrome and hides technical auth roles', async ({ page }) => {
   await page.goto('/store/me')
 
   await expect(page.getByRole('main', { name: 'Store workspace' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Mağaza kapsamlı işler için/i })).toBeVisible()
+  await expect(page.getByText('Ön izleme', { exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Yarışmalar' })).toBeVisible()
   await expect(page.getByText('STORE_PERSONNEL, STORE_MANAGER')).toBeVisible()
   await expect(page.getByText('offline_access')).toHaveCount(0)
   await expect(page.getByText('uma_authorization')).toHaveCount(0)
   await expect(page.getByText('default-roles-store-ops')).toHaveCount(0)
+  await expect(page.getByText('Task-first preview for store-scoped work.')).toHaveCount(0)
 })
 
 test('store rankings page renders closed leaderboard and metric mini-ranks', async ({ page }) => {
@@ -95,18 +99,21 @@ test('store rankings page explains monthly preview-only ranking', async ({ page 
 test('store tasks page renders readable Turkish queue labels', async ({ page }) => {
   await page.goto('/store/tasks')
 
-  await expect(page.getByText('Detay ozeti')).toBeVisible()
-  await expect(page.getByText('Due sinyali')).toBeVisible()
-  await expect(page.getByText('Escalation', { exact: true })).toBeVisible()
-  await expect(page.getByLabel('Inbox governance signals').getByText('Escalation aday')).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Aksiyon gerektiren işler/i })).toBeVisible()
+  await expect(page.getByText('Detay ozeti')).toHaveCount(0)
+  await expect(page.getByText('Detay özeti')).toBeVisible()
+  await expect(page.getByText('Zaman sinyali')).toBeVisible()
+  await expect(page.getByText('Yükseltme', { exact: true })).toBeVisible()
+  await expect(page.getByLabel('Inbox governance signals').getByText('Yükseltme adayı')).toBeVisible()
   await expect(page.getByText('Kaynak aksiyonu')).toBeVisible()
-  await expect(page.getByText('KPI detayina git')).toBeVisible()
-  await expect(page.getByRole('heading', { name: /One queue for actionable work/i })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'KPI detayına git' })).toBeVisible()
   await expect(page.getByText('Önce bakılması gereken işler.')).toBeVisible()
+  await expect(page.getByText('Kuyruk bağlamı')).toBeVisible()
+  await expect(page.getByText('Bugünün kuyruğu')).toBeVisible()
   await expect(page.getByText('İş tipi')).toBeVisible()
   await expect(page.getByText('Aksiyon zamanı')).toBeVisible()
-  await expect(page.getByText('Görev')).toBeVisible()
-  await expect(page.getByText('Detay aç')).toBeVisible()
+  await expect(page.getByText('Görev', { exact: true })).toBeVisible()
+  await expect(page.getByText('Sapmayı incele')).toBeVisible()
   await expect(page.locator('body')).not.toContainText('Ã')
   await expect(page.locator('body')).not.toContainText('Ä')
   await expect(page.locator('body')).not.toContainText('Å')

@@ -1793,11 +1793,78 @@ Dogrulama:
 
 Debt ledger:
 
-- Closed active debts: 20
+- Closed active debts: 21
 - Strategic investment backlog: 3
 - Silent untracked quality debt in the active gate: 0
 
-Siradaki mantikli adim: Store UX polish and broader TR-first copy rollout. Store-facing ekranlarda kalan mixed-language/copy pürüzleri azaltmak, daha derin backend yatirimlarindan once iyi olur.
+Bu adim Store UX TR-First Copy V1 ile kapatildi; store-facing mixed-language/copy puruzleri icin ilk kontrollu pass tamamlandi.
+
+## Son Store UX TR-First Copy V1
+
+26 Nisan 2026 itibariyla store-facing copy icin ilk tutarli TR-first pass eklendi.
+
+Yeni dokuman:
+
+- `docs/plans/store-ux-tr-first-copy-v1.md`
+
+Eklenenler:
+
+- Store shell chrome:
+  - `Mağaza alanı`
+  - `Mağaza kapsamlı işler için görev odaklı ön izleme.`
+  - `Gerçek giriş`
+  - `Admin raporları`
+  - `Yarışmalar`
+- `/store` home preview Turkce-first hale getirildi:
+  - sabit duyurular
+  - bugunku isler
+  - KPI ozetleri
+  - prim ozeti
+  - rota sahipligi
+  - admin siniri
+- `/store/tasks` artik Turkce-first kuyruk dili tasir:
+  - `Aksiyon gerektiren işler`
+  - `Aksiyon bekleyenler`
+  - `Yüksek öncelik`
+  - `Kuyruk bağlamı`
+  - `Bugünün kuyruğu`
+  - `İş tipi`
+  - `Aksiyon zamanı`
+- Workflow detail dili guncellendi:
+  - `Detay özeti`
+  - `Zaman sinyali`
+  - `Yükseltme`
+  - `Kaynak aksiyonu`
+- `/store/feed` ve store home pinned duyuru preview TR-first etiketlere cekildi.
+
+Sinir:
+
+- Backend contract degismedi.
+- API response degismedi.
+- DB schema veya migration yok.
+- Audit/status/enum kodlari degismedi.
+- Score, ranking, competition veya workflow state machine davranisi degismedi.
+- Bu tam prod gorsel tasarim pass'i degil; ekranlar hala calisan taslak. Renk, layout, typography, mobil polish ve tam EN/TR localization ileride koordineli ele alinmali.
+
+Dogrulama:
+
+- Kirmizi test izlendi:
+  - store shell yeni Turkce heading yokken fail verdi.
+  - store tasks yeni Turkce queue heading yokken fail verdi.
+- Hedefli frontend dogrulama gecti:
+  - `npm.cmd run build`
+  - `npm.cmd run test:e2e -- e2e/store-surfaces.spec.ts -g "store shell exposes Turkish-first chrome|store tasks page renders readable Turkish queue labels"` -> 2 Playwright test.
+  - `npm.cmd run test:e2e -- e2e/feed-surfaces.spec.ts -g "store feed renders pinned challenge posts with ranking link|store home shows pinned feed preview"` -> 2 Playwright test.
+  - `npm.cmd run test:e2e -- e2e/admin-inbox.spec.ts` -> 1 Playwright test.
+- Resmi root release gate gecti: `npm.cmd run check:release` -> root script tests, backend lint/test/build/audit, frontend lint/script/build/25 Playwright/audit.
+
+Debt ledger:
+
+- Closed active debts: 21
+- Strategic investment backlog: 3
+- Silent untracked quality debt in the active gate: 0
+
+Siradaki mantikli adim: Production UI/design-system plan. Artik store copy daha tutarli; genis gorsel degisikliklerden once layout yogunlugu, renk/typography, mobil polish ve tam EN/TR localization siniri planlanmali.
 
 ## Onemli Dosyalar
 
@@ -1843,6 +1910,9 @@ Frontend:
 - `admin-web/src/pages/AuthDashboardPage.tsx`
 - `admin-web/src/pages/CompetitionDashboardPage.tsx`
 - `admin-web/src/pages/AuthActionStoreAssignmentAuditPage.tsx`
+- `admin-web/src/pages/StoreShellPreviewPage.tsx`
+- `admin-web/src/pages/StoreTasksPage.tsx`
+- `admin-web/src/pages/StoreFeedPage.tsx`
 - `admin-web/src/pages/StoreMyPerformancePage.tsx`
 - `admin-web/src/pages/StoreKpiHighlightsPage.tsx`
 - `admin-web/src/pages/StoreApprovalsPage.tsx`

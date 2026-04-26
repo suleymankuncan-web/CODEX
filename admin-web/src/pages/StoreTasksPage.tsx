@@ -32,7 +32,7 @@ export function StoreTasksPage(input: {
   authSummary: AuthSessionSummary | null
 }) {
   const inboxEnabled = canUseWorkflowInbox(input.authSummary)
-  const primaryStoreId = input.authSummary?.user.scope.storeIds[0] ?? 'No store scope'
+  const primaryStoreId = input.authSummary?.user.scope.storeIds[0] ?? 'Mağaza kapsamı yok'
   const inboxQuery = useQuery({
     queryKey: ['workflow-inbox'],
     queryFn: getWorkflowInbox,
@@ -79,17 +79,17 @@ export function StoreTasksPage(input: {
       <section className="page-stack">
         <section className="hero-panel store-hero-panel">
           <div>
-            <div className="eyebrow">Store Tasks</div>
-            <h2 className="hero-title">Shared workflow inbox needs a resolved operational role before it can open.</h2>
+            <div className="eyebrow">Mağaza işleri</div>
+            <h2 className="hero-title">Ortak iş kuyruğu açılmadan önce operasyon rolü netleşmeli.</h2>
             <p className="hero-copy">
-              The Phase 3 queue is now contract-based, but this session still needs a role that can
-              consume approvals, acknowledgements, or reporting-backed work.
+              Faz 3 kuyruğu artık kontrat tabanlı; bu oturumun onay, kabul veya rapor destekli
+              işleri okuyabilecek bir mağaza rolüyle açılması gerekiyor.
             </p>
           </div>
           <div className="hero-metrics">
-            <MetricAccent label="Route" value="/store/tasks" />
-            <MetricAccent label="Store scope" value={primaryStoreId} />
-            <MetricAccent label="State" value="Preview" />
+            <MetricAccent label="Rota" value="/store/tasks" />
+            <MetricAccent label="Mağaza kapsamı" value={primaryStoreId} />
+            <MetricAccent label="Durum" value="Ön izleme" />
           </div>
         </section>
       </section>
@@ -99,8 +99,8 @@ export function StoreTasksPage(input: {
   if (inboxQuery.isLoading) {
     return (
       <ScreenState
-        title="Loading shared inbox"
-        copy="Pulling approval and acknowledgement work into one mobile-friendly queue."
+        title="İş kuyruğu yükleniyor"
+        copy="Onay ve kabul işleri mobil kullanıma uygun tek kuyruğa alınıyor."
       />
     )
   }
@@ -108,7 +108,7 @@ export function StoreTasksPage(input: {
   if (inboxQuery.isError) {
     return (
       <ScreenState
-        title="Shared inbox unavailable"
+        title="İş kuyruğu açılamadı"
         copy={getErrorMessage(inboxQuery.error)}
         tone="error"
       />
@@ -119,54 +119,53 @@ export function StoreTasksPage(input: {
     <section className="page-stack">
       <section className="hero-panel store-hero-panel">
         <div>
-          <div className="eyebrow">Shared Inbox</div>
-          <h2 className="hero-title">One queue for actionable work across approvals and acknowledgements.</h2>
+          <div className="eyebrow">Ortak iş kuyruğu</div>
+          <h2 className="hero-title">Aksiyon gerektiren işler tek mağaza kuyruğunda.</h2>
           <p className="hero-copy">
-            This is the first concrete Phase 3 surface. It keeps workflow types distinct, but gives
-            store-facing work one shared queue language, one urgency model, and one mobile-first
-            reading pattern.
+            Onay, kabul ve KPI takipleri anlamını korur; mağaza tarafında ise tek dil, tek öncelik
+            modeli ve mobil öncelikli okuma düzeniyle görünür.
           </p>
         </div>
         <div className="hero-metrics">
-          <MetricAccent label="Route" value="/store/tasks" />
-          <MetricAccent label="Store scope" value={primaryStoreId} />
-          <MetricAccent label="Queue items" value={String(items.length)} />
+          <MetricAccent label="Rota" value="/store/tasks" />
+          <MetricAccent label="Mağaza kapsamı" value={primaryStoreId} />
+          <MetricAccent label="Kuyruk öğesi" value={String(items.length)} />
         </div>
       </section>
 
       <section className="metric-grid store-metric-grid">
         <MetricCard
-          title="Needs attention"
+          title="Aksiyon bekleyenler"
           value={pendingItems.length}
-          note="Items that still require an action from the current role set."
+          note="Mevcut rol setinden aksiyon bekleyen işler."
           icon={<Bell size={18} />}
           tone={pendingItems.length > 0 ? 'warning' : 'calm'}
         />
         <MetricCard
-          title="High urgency"
+          title="Yüksek öncelik"
           value={items.filter((item) => item.urgency === 'high').length}
           note="Önce bakılması gereken işler."
           icon={<TrendingUp size={18} />}
           tone={items.some((item) => item.urgency === 'high') ? 'danger' : 'neutral'}
         />
         <MetricCard
-          title="Approvals"
+          title="Onaylar"
           value={approvalItems.length}
-          note="Decision-based workflow items coming from target distribution."
+          note="Hedef dağıtımı gibi karar gerektiren işler."
           icon={<ReceiptText size={18} />}
           tone={approvalItems.length > 0 ? 'accent' : 'neutral'}
         />
         <MetricCard
-          title="Acknowledgements"
+          title="Kabul bekleyenler"
           value={acknowledgementItems.length}
-          note="Receipt-style work that confirms checklist visibility and acceptance."
+          note="Checklist görünürlüğünü ve kabulünü kayıt altına alan işler."
           icon={<ClipboardList size={18} />}
           tone={acknowledgementItems.length > 0 ? 'accent' : 'neutral'}
         />
         <MetricCard
-          title="KPI tasks"
+          title="KPI takipleri"
           value={taskItems.length}
-          note="Exception-based work elevated from KPI performance signals."
+          note="KPI performans sinyallerinden yükselen takip işleri."
           icon={<TrendingUp size={18} />}
           tone={taskItems.length > 0 ? 'warning' : 'neutral'}
         />
@@ -176,40 +175,40 @@ export function StoreTasksPage(input: {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Queue Context</div>
-              <h3>What this inbox normalizes</h3>
+              <div className="eyebrow">Kuyruk bağlamı</div>
+              <h3>Bu ekran neleri ortaklaştırır</h3>
             </div>
           </div>
           <div className="key-grid">
-            <KeyValue label="Workflow types" value="approval, acknowledgement" />
-            <KeyValue label="Task hooks" value={taskItems.length > 0 ? 'kpi_exception active' : 'kpi_exception ready'} />
-            <KeyValue label="Inbox statuses" value="needs_attention, completed, informational" />
-            <KeyValue label="Primary layout" value="stacked rows, mobile-first" />
-            <KeyValue label="Resolved roles" value={formatDisplayRoles(input.authSummary?.user.roleCodes)} />
+            <KeyValue label="İş tipleri" value="onay, kabul, görev" />
+            <KeyValue label="KPI bağlantısı" value={taskItems.length > 0 ? 'KPI takibi aktif' : 'KPI takibine hazır'} />
+            <KeyValue label="Kuyruk durumları" value="aksiyon bekliyor, tamamlandı, bilgilendirme" />
+            <KeyValue label="Ana düzen" value="mobil öncelikli satırlar" />
+            <KeyValue label="Çözülen roller" value={formatDisplayRoles(input.authSummary?.user.roleCodes)} />
           </div>
         </article>
 
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Guardrail</div>
-              <h3>What this queue does not do</h3>
+              <div className="eyebrow">Kontrol sınırı</div>
+              <h3>Bu kuyruk neleri karıştırmaz</h3>
             </div>
           </div>
           <div className="stacked-table">
             <div className="stacked-row">
               <div className="stacked-row-head">
-                <strong>It does not merge workflow meanings</strong>
+                <strong>İş anlamlarını birleştirmez</strong>
                 <CheckCircle2 size={16} />
               </div>
-              <p>Approvals still require decisions. Acknowledgements still confirm receipt. Shared inbox does not flatten them into one status machine.</p>
+              <p>Onay karar ister. Kabul işi görünürlüğü doğrular. Ortak kuyruk bunları tek statü makinesine düzlemez.</p>
             </div>
             <div className="stacked-row">
               <div className="stacked-row-head">
-                <strong>It does not require desktop tables</strong>
+                <strong>Geniş masaüstü tablosu gerektirmez</strong>
                 <CheckCircle2 size={16} />
               </div>
-              <p>Each row carries urgency, title, summary, and one primary action path without needing wide grids.</p>
+              <p>Her satır öncelik, başlık, özet ve birincil aksiyon yolunu dar ekranda da taşır.</p>
             </div>
           </div>
         </article>
@@ -218,15 +217,15 @@ export function StoreTasksPage(input: {
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Today&apos;s Queue</div>
-            <h3>Actionable work in a shared contract</h3>
+            <div className="eyebrow">Bugünün kuyruğu</div>
+            <h3>Ortak kontrata bağlı aksiyonlar</h3>
           </div>
         </div>
 
         {items.length === 0 ? (
           <EmptyState
-            title="No actionable items right now"
-            copy="Approvals, acknowledgements, and future KPI exceptions will appear here once they enter the shared workflow queue."
+            title="Şu anda aksiyon gerektiren iş yok"
+            copy="Onaylar, kabuller ve ilerideki KPI sapmaları ortak iş kuyruğuna düştüğünde burada görünür."
           />
         ) : (
           <div className="stacked-table">
@@ -239,10 +238,10 @@ export function StoreTasksPage(input: {
 
       <div className="action-cluster">
         <Link className="control-button store-shell-link" to="/store/checklists">
-          Store checklists
+          Mağaza checklistleri
         </Link>
         <Link className="control-button store-shell-link" to="/store/approvals">
-          Store approvals
+          Mağaza onayları
         </Link>
       </div>
     </section>
@@ -260,21 +259,21 @@ function WorkflowInboxRow(input: { item: WorkflowInboxItem }) {
         <div className="action-cluster">
           <StatusPill tone="accent">{formatWorkflowSourceType(input.item.sourceType)}</StatusPill>
           <StatusPill tone={mapInboxStatusTone(input.item.inboxStatus)}>
-            {formatState(input.item.inboxStatus)}
+            {formatWorkflowInboxStatusLabel(input.item.inboxStatus)}
           </StatusPill>
           <StatusPill tone={mapWorkflowUrgencyTone(input.item.urgency)}>
-            {formatState(input.item.urgency)}
+            {formatWorkflowUrgencyLabel(input.item.urgency)}
           </StatusPill>
         </div>
       </div>
 
       <div className="key-grid">
         <KeyValue label="İş tipi" value={formatWorkflowItemType(input.item.itemType)} />
-        <KeyValue label="Actor role" value={formatState(input.item.actorRole)} />
-        <KeyValue label="Store" value={input.item.storeName || input.item.storeId} />
+        <KeyValue label="Aktör rolü" value={formatState(input.item.actorRole)} />
+        <KeyValue label="Mağaza" value={input.item.storeName || input.item.storeId} />
         <KeyValue
           label="Aksiyon zamanı"
-          value={input.item.needsAttentionAt ? formatDateTime(input.item.needsAttentionAt) : 'Now'}
+          value={input.item.needsAttentionAt ? formatDateTime(input.item.needsAttentionAt) : 'Şimdi'}
         />
       </div>
 
@@ -284,12 +283,64 @@ function WorkflowInboxRow(input: { item: WorkflowInboxItem }) {
 
       <div className="action-cluster">
         <Link className="control-button store-shell-link" to={input.item.deepLink}>
-          {input.item.primaryActionLabel}
+          {formatWorkflowPrimaryActionLabel(input.item)}
         </Link>
         <span className="queue-subtitle">
-          {input.item.secondaryActionLabel ?? 'Detay aç'}
+          {formatWorkflowSecondaryActionLabel(input.item)}
         </span>
       </div>
     </article>
   )
+}
+
+function formatWorkflowPrimaryActionLabel(item: WorkflowInboxItem) {
+  switch (item.sourceType) {
+    case 'target_distribution_request':
+      return item.inboxStatus === 'needs_attention' ? 'Talebi onayla' : 'Geçmişi incele'
+    case 'checklist_receipt':
+      return item.inboxStatus === 'needs_attention' ? 'Kabul ediyorum' : 'Kabul kaydını gör'
+    case 'kpi_exception':
+      return 'KPI detayına git'
+    default:
+      return item.primaryActionLabel
+  }
+}
+
+function formatWorkflowSecondaryActionLabel(item: WorkflowInboxItem) {
+  switch (item.sourceType) {
+    case 'target_distribution_request':
+      return 'Detayı aç'
+    case 'checklist_receipt':
+      return 'Checklist sonucunu aç'
+    case 'kpi_exception':
+      return 'Sapmayı incele'
+    default:
+      return item.secondaryActionLabel ?? 'Detayı aç'
+  }
+}
+
+function formatWorkflowInboxStatusLabel(status: WorkflowInboxItem['inboxStatus']) {
+  switch (status) {
+    case 'needs_attention':
+      return 'Aksiyon bekliyor'
+    case 'completed':
+      return 'Tamamlandı'
+    case 'informational':
+      return 'Bilgilendirme'
+    default:
+      return formatState(status)
+  }
+}
+
+function formatWorkflowUrgencyLabel(urgency: WorkflowInboxItem['urgency']) {
+  switch (urgency) {
+    case 'high':
+      return 'Yüksek'
+    case 'medium':
+      return 'Orta'
+    case 'low':
+      return 'Düşük'
+    default:
+      return formatState(urgency)
+  }
 }

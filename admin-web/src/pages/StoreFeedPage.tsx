@@ -28,10 +28,10 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
   const posts = useMemo(() => feedQuery.data?.items ?? [], [feedQuery.data?.items])
   const pinnedPosts = posts.filter((post) => post.isPinned)
   const challengePosts = posts.filter((post) => post.postType === 'challenge')
-  const scopeLabel = input.authSummary?.user.readScope.storeIds[0] ?? input.authSummary?.user.scope.storeIds[0] ?? 'No store scope'
+  const scopeLabel = input.authSummary?.user.readScope.storeIds[0] ?? input.authSummary?.user.scope.storeIds[0] ?? 'Mağaza kapsamı yok'
 
   if (feedQuery.isLoading) {
-    return <ScreenState title="Loading announcements" copy="Store feed hazırlanıyor." />
+    return <ScreenState title="Duyurular yükleniyor" copy="Mağaza akışı hazırlanıyor." />
   }
 
   if (feedQuery.isError) {
@@ -49,36 +49,36 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
       <section className="hero-panel store-hero-panel">
         <div>
           <div className="eyebrow">Duyurular</div>
-          <h2 className="hero-title">Company, region, and store announcements in one feed.</h2>
+          <h2 className="hero-title">Şirket, bölge ve mağaza duyuruları tek akışta.</h2>
           <p className="hero-copy">
-            Challenge postları burada duyurulur; skor ve sıralama takibi mevcut performans
+            Yarışma duyuruları burada görünür; skor ve sıralama takibi mevcut performans
             yüzeylerinden yapılır.
           </p>
         </div>
         <div className="hero-metrics">
-          <MetricAccent label="Route" value="/store/feed" />
-          <MetricAccent label="Visible posts" value={String(posts.length)} />
-          <MetricAccent label="Store scope" value={scopeLabel} />
+          <MetricAccent label="Rota" value="/store/feed" />
+          <MetricAccent label="Görünen post" value={String(posts.length)} />
+          <MetricAccent label="Mağaza kapsamı" value={scopeLabel} />
         </div>
       </section>
 
       <section className="metric-grid store-metric-grid">
         <MetricCard
-          title="Visible posts"
+          title="Görünen postlar"
           value={posts.length}
-          note="Scope ile eşleşen yayınlanmış duyurular."
+          note="Kapsamla eşleşen yayınlanmış duyurular."
           icon={<Megaphone size={18} />}
           tone="accent"
         />
         <MetricCard
-          title="Pinned"
+          title="Sabitlenenler"
           value={pinnedPosts.length}
           note="Ana sayfada öne çıkabilecek duyurular."
           icon={<Pin size={18} />}
           tone={pinnedPosts.length > 0 ? 'warning' : 'neutral'}
         />
         <MetricCard
-          title="Challenges"
+          title="Yarışma duyuruları"
           value={challengePosts.length}
           note="Sıralama veya profil yüzeylerine yönlenen odak postları."
           icon={<Trophy size={18} />}
@@ -89,15 +89,15 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Feed</div>
-            <h3>Visible announcements</h3>
+            <div className="eyebrow">Akış</div>
+            <h3>Görünen duyurular</h3>
           </div>
         </div>
 
         {posts.length === 0 ? (
           <EmptyState
-            title="No announcements available for your scope."
-            copy="Şirket, bölge veya mağaza scope'una uygun yayın geldiğinde burada görünecek."
+            title="Kapsamına uygun duyuru yok"
+            copy="Şirket, bölge veya mağaza kapsamına uygun yayın geldiğinde burada görünür."
           />
         ) : (
           <div className="stacked-table">
@@ -126,28 +126,28 @@ function StoreFeedPostRow(input: { post: FeedPost }) {
             {formatFeedPostType(input.post.postType)}
           </StatusPill>
           <StatusPill tone="neutral">{formatFeedScope(input.post.visibilityScopeType)}</StatusPill>
-          {input.post.isPinned ? <StatusPill tone="warning">Pinned</StatusPill> : null}
+          {input.post.isPinned ? <StatusPill tone="warning">Sabit</StatusPill> : null}
         </div>
       </div>
 
       <div className="key-grid">
-        <KeyValue label="Published" value={input.post.publishedAt ? formatDateTime(input.post.publishedAt) : 'Live'} />
-        <KeyValue label="Metric" value={input.post.metricLabel ?? 'No metric'} />
+        <KeyValue label="Yayın" value={input.post.publishedAt ? formatDateTime(input.post.publishedAt) : 'Canlı'} />
+        <KeyValue label="Metrik" value={input.post.metricLabel ?? 'Metrik yok'} />
         <KeyValue
-          label="Challenge window"
+          label="Yarışma aralığı"
           value={
             input.post.challengeStartsOn && input.post.challengeEndsOn
               ? `${formatDate(input.post.challengeStartsOn)} - ${formatDate(input.post.challengeEndsOn)}`
-              : 'No challenge window'
+              : 'Yarışma aralığı yok'
           }
         />
-        <KeyValue label="Destination" value={destination ?? 'No link'} />
+        <KeyValue label="Hedef" value={destination ?? 'Link yok'} />
       </div>
 
       {destination ? (
         <div className="action-cluster">
           <Link className="control-button store-shell-link" to={destination}>
-            {input.post.linkLabel ?? 'Open detail'}
+            {input.post.linkLabel ?? 'Detayı aç'}
           </Link>
         </div>
       ) : null}

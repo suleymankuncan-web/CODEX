@@ -17,7 +17,7 @@ Date: 26 April 2026
 
 Current count:
 
-- Closed active debts: 20
+- Closed active debts: 21
 - Superseded before overbuilding: 1
 - Blocked external dependency: 1
 - Watchlist decision item: 1
@@ -48,6 +48,7 @@ These are counted as paid because they have implementation or documentation evid
 18. KPI Config Editor Governance Preview V1
 19. Ranking Completeness Segment Readiness V1
 20. Shared Inbox Maturity V1
+21. Store UX TR-First Copy V1
 
 ## Superseded Before Overbuilding
 
@@ -118,7 +119,7 @@ These are important future product investments. They are not counted as hidden d
 
 1. Real ingest connector and real payload contract
 2. KPI config governance implementation: versioned config, effective dates, rollback, snapshot anchoring
-3. Store UX polish and broader TR-first copy rollout
+3. Full production UI/design-system pass and complete EN/TR localization expansion
 
 ## Repo Hygiene Note
 
@@ -145,11 +146,12 @@ The dangerous kind of debt would be:
 - second scoring engine
 - unclear feed vs competition ownership
 - raw auth evidence handling
+- store-facing mixed-language trust gaps
 
-Those have been actively reduced. The remaining work is mostly planned product depth and one real external staging proof. That is a healthy place to be.
+Those have been actively reduced. The remaining work is mostly planned product depth, one real external staging proof, and a future coordinated visual/localization investment. That is a healthy place to be.
 
 ## Next Logical Step
 
 If staging provider and seeded DB values are available, run the guarded staging action smoke.
 
-If they are not available, the next local step should be chosen from strategic investments through the feature intake gate, with Store UX polish and broader TR-first copy rollout now the strongest product candidate.
+If they are not available, the next local step should be chosen from strategic investments through the feature intake gate. The strongest local candidate is now the production UI/design-system plan, because store-facing copy has a first coherent V1 but the screens are still working drafts visually.

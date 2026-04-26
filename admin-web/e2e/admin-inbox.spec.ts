@@ -22,12 +22,12 @@ test('admin inbox renders item detail, due, escalation, and source action signal
 
   await expect(page.getByRole('heading', { name: 'Shared workflow contract in admin shell' })).toBeVisible()
   await expect(page.getByText('April Target Distribution')).toBeVisible()
-  await expect(page.getByText('Detay ozeti')).toBeVisible()
-  await expect(page.getByText('Due sinyali')).toBeVisible()
-  await expect(page.getByText('Escalation', { exact: true })).toBeVisible()
+  await expect(page.getByText('Detay özeti')).toBeVisible()
+  await expect(page.getByText('Zaman sinyali')).toBeVisible()
+  await expect(page.getByText('Yükseltme', { exact: true })).toBeVisible()
   await expect(page.getByLabel('Inbox governance signals').getByText('Takipte tut')).toBeVisible()
   await expect(page.getByText('Kaynak aksiyonu')).toBeVisible()
-  await expect(page.getByText('Karar ekranina git')).toBeVisible()
+  await expect(page.getByText('Karar ekranına git')).toBeVisible()
   await expect(page.getByText('Admin inbox unavailable')).toHaveCount(0)
 })
 

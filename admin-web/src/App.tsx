@@ -430,8 +430,8 @@ function StoreShell(input: {
   if (input.shellState.mode === 'verifying') {
     return (
       <ScreenState
-        title="Preparing store shell"
-        copy="The app is verifying the current session before it opens the store-user preview surface."
+        title="Mağaza alanı hazırlanıyor"
+        copy="Uygulama mağaza kullanıcı yüzeyini açmadan önce mevcut oturumu doğruluyor."
       />
     )
   }
@@ -439,8 +439,8 @@ function StoreShell(input: {
   if (input.shellState.mode === 'rejected') {
     return (
       <ScreenState
-        title="Store shell unavailable"
-        copy={input.shellState.notice ?? input.shellState.errorCopy ?? 'The session could not be resolved for the store shell preview.'}
+        title="Mağaza alanı açılamadı"
+        copy={input.shellState.notice ?? input.shellState.errorCopy ?? 'Oturum mağaza ön izleme alanı için çözülemedi.'}
         tone="error"
       />
     )
@@ -450,27 +450,27 @@ function StoreShell(input: {
     <div className="store-shell">
       <header className="store-shell-header">
         <div>
-          <div className="eyebrow">Store Shell</div>
-          <h1>Task-first preview for store-scoped work.</h1>
+          <div className="eyebrow">Mağaza alanı</div>
+          <h1>Mağaza kapsamlı işler için görev odaklı ön izleme.</h1>
           <p className="topbar-copy">
-            This is the separate surface where future store-facing checklist, KPI, approval, and
-            incentive workflows should land.
+            Checklist, KPI, onay ve prim akışlarının mağaza kullanıcısına ayrı ve sade bir yüzeyden
+            gelmesi gereken alan burası.
           </p>
         </div>
         <div className="topbar-cluster">
           <LanguageToggle />
-          <StatusPill tone="accent">Preview</StatusPill>
+          <StatusPill tone="accent">Ön izleme</StatusPill>
           <NavLink to="/auth/login" className="control-button store-shell-link">
-            Real login
+            Gerçek giriş
           </NavLink>
           <NavLink to="/admin/reports" className="control-button store-shell-link">
-            Admin reports
+            Admin raporları
           </NavLink>
           <NavLink to="/store/feed" className="control-button store-shell-link">
             Duyurular
           </NavLink>
           <NavLink to="/store/competitions" className="control-button store-shell-link">
-            Competitions
+            Yarışmalar
           </NavLink>
         </div>
       </header>

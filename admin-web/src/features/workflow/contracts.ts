@@ -106,8 +106,8 @@ export function toTargetApprovalInboxItem(
     createdAt: item.createdAt,
     needsAttentionAt: needsAttention ? item.createdAt : item.approvedAt,
     actorRole: 'REGION_APPROVER',
-    primaryActionLabel: needsAttention ? 'Approve request' : 'Review history',
-    secondaryActionLabel: 'Open detail',
+    primaryActionLabel: needsAttention ? 'Talebi onayla' : 'Geçmişi incele',
+    secondaryActionLabel: 'Detayı aç',
     deepLink,
     historyPreview: item.approvalNote ?? item.requestReason ?? undefined,
   }
@@ -133,8 +133,8 @@ export function toChecklistAcknowledgementInboxItem(
     createdAt: item.completedAt,
     needsAttentionAt: needsAttention ? item.completedAt : item.acknowledgement?.acknowledgedAt,
     actorRole: 'STORE_MANAGER',
-    primaryActionLabel: needsAttention ? 'Kabul ediyorum' : 'View acknowledgement',
-    secondaryActionLabel: 'Open checklist receipt',
+    primaryActionLabel: needsAttention ? 'Kabul ediyorum' : 'Kabul kaydını gör',
+    secondaryActionLabel: 'Checklist sonucunu aç',
     deepLink,
     historyPreview: item.acknowledgement?.acknowledgementNote ?? undefined,
   }
@@ -168,12 +168,12 @@ export function toKpiExceptionInboxItem(input: {
     createdAt: input.periodEnd,
     needsAttentionAt: input.periodEnd,
     actorRole: 'STORE_MANAGER',
-    primaryActionLabel: 'Open KPI detail',
-    secondaryActionLabel: 'Review exception',
+    primaryActionLabel: 'KPI detayına git',
+    secondaryActionLabel: 'Sapmayı incele',
     deepLink: '/store/kpis',
     historyPreview:
       input.achievementRate !== null
-        ? `Achievement ${Math.round(Number(input.achievementRate) * 100)}%`
+        ? `Gerçekleşme ${Math.round(Number(input.achievementRate) * 100)}%`
         : undefined,
   }
 }

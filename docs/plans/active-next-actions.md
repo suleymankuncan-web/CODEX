@@ -6,7 +6,7 @@ This is the short working list for the next practical steps. It keeps the projec
 
 ## Current Position
 
-As of 26 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, and Shared Inbox Maturity V1 have:
+As of 26 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, and Store UX TR-First Copy V1 have:
 
 - saved drafts
 - edit/cancel/history
@@ -38,6 +38,7 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 - admin KPI config publish-governance preview and draft/live diff counts
 - ranking scope readiness for Turkey-wide, store-level, metric mini-rank, and future segment use
 - shared inbox row detail, due, escalation, and source action interpretation
+- Turkish-first store shell, store home, store task queue, workflow row details, and store feed labels
 - project debt ledger
 - backend and frontend release checks
 
@@ -45,7 +46,7 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 
 Reference: `docs/plans/project-debt-ledger.md`
 
-- Closed active debts: 20
+- Closed active debts: 21
 - Superseded before overbuilding: 1
 - Blocked external dependency: 1
 - Watchlist decision item: 1
@@ -64,7 +65,9 @@ Interpretation:
 - KPI Config Editor Governance Preview V1 now makes `/admin/kpi-config` show publish-impact diffs before live interpretation changes.
 - Ranking Completeness Segment Readiness V1 now makes `/store/rankings` explain Turkey-wide, store-level, metric mini-rank, and segment readiness without opening a new ranking engine.
 - Shared Inbox Maturity V1 now makes store/admin inbox rows explain detail, due signal, escalation, and source action without opening a new workflow state machine.
+- Store UX TR-First Copy V1 now closes the first coherent store-facing copy pass for shell, tasks, workflow details, feed, and pinned feed preview.
 - Versioned config implementation remains planned investment.
+- Full production UI/design-system and complete EN/TR localization expansion remain planned investments, not silent release debt.
 - The debt ledger itself is an accounting artifact and is not counted as a separate closed active debt item.
 
 ## Rules For Picking The Next Item
@@ -306,13 +309,27 @@ Interpretation:
 ### Completed: Shared Inbox Maturity V1
 - Completed: 26 April 2026
 - Result:
-  - store and admin inbox rows now show `Detay ozeti`, `Due sinyali`, `Escalation`, and `Kaynak aksiyonu`
+  - store and admin inbox rows now show detail summary, due/time signal, escalation/yükseltme signal, and source action meaning
   - source action language is derived from existing source type
   - escalation language is derived from existing inbox status and urgency
   - no backend contract, DB schema, migration, workflow state machine, notification, or escalation execution changed
   - official root release gate passes after the change
 - Reference:
   - `docs/plans/shared-inbox-maturity-v1.md`
+
+### Completed: Store UX TR-First Copy V1
+- Completed: 26 April 2026
+- Result:
+  - store shell chrome now uses Turkish-first labels for the mağaza alanı, preview status, real login, admin reports, announcements, and competitions
+  - `/store` home preview explains pinned announcements, daily tasks, KPI summaries, incentive preview, route ownership, and admin boundaries in Turkish-first language
+  - `/store/tasks` now uses Turkish-first queue labels, metric cards, guardrails, row labels, and action labels
+  - workflow row details now show `Detay özeti`, `Zaman sinyali`, `Yükseltme`, and Turkish source action copy
+  - `/store/feed` and pinned feed preview now use Turkish-first labels for visible announcements, pinned posts, challenge windows, metrics, and empty state
+  - no backend contract, DB schema, audit/status code, score math, ranking behavior, or workflow state machine changed
+  - targeted frontend checks passed for store shell/tasks and store feed/home
+  - official root release gate passes after the change
+- Reference:
+  - `docs/plans/store-ux-tr-first-copy-v1.md`
 
 ### 1. Real IdP Staging Evidence
 - Priority: `P1`
@@ -338,4 +355,4 @@ Interpretation:
 
 If staging IdP and seeded staging DB values are available, start real staging evidence.
 
-If staging values are not available, start Store UX polish and broader TR-first copy rollout. The next local product step is to reduce remaining mixed-language roughness and make store-facing screens feel more coherent before deeper backend investments.
+If staging values are not available, start the production UI/design-system plan. Store-facing copy has a coherent V1 now; the next local product step should decide layout density, color/typography direction, mobile polish, and complete EN/TR localization boundaries before broad visual changes.
