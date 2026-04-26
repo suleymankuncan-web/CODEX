@@ -1,6 +1,18 @@
 import * as request from "supertest";
 import { createIntegrationApp } from "./test-app";
 
+const hasSnapshotRunIdPredicate = (sql: string) =>
+  sql.includes("WHERE snapshot_run_id = $1::uuid") ||
+  sql.includes("WHERE rpt.snapshot_run.snapshot_run_id = $1::uuid");
+
+const hasGeneratedAtDescOrder = (sql: string) =>
+  sql.includes("ORDER BY generated_at DESC") ||
+  sql.includes("ORDER BY rpt.snapshot_run.generated_at DESC");
+
+const hasFailedRunStatusPredicate = (sql: string) =>
+  sql.includes("WHERE run_status = 'failed'") ||
+  sql.includes("WHERE rpt.snapshot_run.run_status = 'failed'");
+
 describe("Snapshot run operations", () => {
   it("creates a snapshot run and dispatches snapshot generation", async () => {
     const query = jest.fn(async (sql: string) => {
@@ -164,7 +176,7 @@ describe("Snapshot run operations", () => {
 
   it("returns snapshot run detail with cards and rerun state", async () => {
     const query = jest.fn(async (sql: string) => {
-      if (sql.includes("FROM rpt.snapshot_run") && sql.includes("WHERE snapshot_run_id = $1::uuid")) {
+      if (sql.includes("FROM rpt.snapshot_run") && hasSnapshotRunIdPredicate(sql)) {
         return {
           rowCount: 1,
           rows: [
@@ -186,19 +198,19 @@ describe("Snapshot run operations", () => {
         };
       }
 
-      if (sql.includes("WHERE snapshot_run_id = $1::uuid") && sql.includes("store_workforce_snapshot")) {
+      if (hasSnapshotRunIdPredicate(sql) && sql.includes("store_workforce_snapshot")) {
         return { rowCount: 1, rows: [{ row_count: "4" }] };
       }
 
-      if (sql.includes("WHERE snapshot_run_id = $1::uuid") && sql.includes("store_kpi_snapshot")) {
+      if (hasSnapshotRunIdPredicate(sql) && sql.includes("store_kpi_snapshot")) {
         return { rowCount: 1, rows: [{ row_count: "5" }] };
       }
 
-      if (sql.includes("WHERE snapshot_run_id = $1::uuid") && sql.includes("store_checklist_snapshot")) {
+      if (hasSnapshotRunIdPredicate(sql) && sql.includes("store_checklist_snapshot")) {
         return { rowCount: 1, rows: [{ row_count: "3" }] };
       }
 
-      if (sql.includes("WHERE snapshot_run_id = $1::uuid") && sql.includes("turnover_snapshot")) {
+      if (hasSnapshotRunIdPredicate(sql) && sql.includes("turnover_snapshot")) {
         return { rowCount: 1, rows: [{ row_count: "2" }] };
       }
 
@@ -241,7 +253,7 @@ describe("Snapshot run operations", () => {
 
   it("returns snapshot run audit events", async () => {
     const query = jest.fn(async (sql: string) => {
-      if (sql.includes("FROM rpt.snapshot_run") && sql.includes("WHERE snapshot_run_id = $1::uuid")) {
+      if (sql.includes("FROM rpt.snapshot_run") && hasSnapshotRunIdPredicate(sql)) {
         return {
           rowCount: 1,
           rows: [
@@ -359,7 +371,7 @@ describe("Snapshot run operations", () => {
       }
 
       if (
-        sql.includes("ORDER BY generated_at DESC") &&
+        hasGeneratedAtDescOrder(sql) &&
         Array.isArray(params) &&
         params[1] === "completed"
       ) {
@@ -367,7 +379,7 @@ describe("Snapshot run operations", () => {
       }
 
       if (
-        sql.includes("ORDER BY generated_at DESC") &&
+        hasGeneratedAtDescOrder(sql) &&
         Array.isArray(params) &&
         params[1] === "failed"
       ) {
@@ -375,7 +387,7 @@ describe("Snapshot run operations", () => {
       }
 
       if (
-        sql.includes("ORDER BY generated_at DESC") &&
+        hasGeneratedAtDescOrder(sql) &&
         Array.isArray(params) &&
         params[1] === "running"
       ) {
@@ -455,7 +467,7 @@ describe("Snapshot run operations", () => {
       }
 
       if (
-        sql.includes("ORDER BY generated_at DESC") &&
+        hasGeneratedAtDescOrder(sql) &&
         Array.isArray(params) &&
         params[1] === "completed"
       ) {
@@ -463,7 +475,7 @@ describe("Snapshot run operations", () => {
       }
 
       if (
-        sql.includes("ORDER BY generated_at DESC") &&
+        hasGeneratedAtDescOrder(sql) &&
         Array.isArray(params) &&
         params[1] === "failed"
       ) {
@@ -471,7 +483,7 @@ describe("Snapshot run operations", () => {
       }
 
       if (
-        sql.includes("ORDER BY generated_at DESC") &&
+        hasGeneratedAtDescOrder(sql) &&
         Array.isArray(params) &&
         params[1] === "running"
       ) {
@@ -617,6 +629,11 @@ describe("Snapshot run operations", () => {
         finishedAt: "2026-04-17T10:01:10.000Z",
         failureReason: "db timeout",
         rerunOfSnapshotRunId: null,
+        kpiConfigVersion: {
+          kpiConfigVersionId: null,
+          versionNo: null,
+          state: "pre_governance",
+        },
         healthState: "retry_ready",
         actionReason: "Snapshot run failed and can be rerun",
         recommendedAction: "Trigger a rerun after verifying the failure cause",
@@ -638,6 +655,11 @@ describe("Snapshot run operations", () => {
         finishedAt: null,
         failureReason: null,
         rerunOfSnapshotRunId: null,
+        kpiConfigVersion: {
+          kpiConfigVersionId: null,
+          versionNo: null,
+          state: "pre_governance",
+        },
         healthState: "stuck",
         actionReason: "Snapshot run has exceeded the in-progress time threshold",
         recommendedAction: "Inspect worker execution before requesting another rerun",
@@ -653,7 +675,7 @@ describe("Snapshot run operations", () => {
 
   it("reruns a failed snapshot by creating a new snapshot run", async () => {
     const query = jest.fn(async (sql: string) => {
-      if (sql.includes("FROM rpt.snapshot_run") && sql.includes("WHERE snapshot_run_id = $1::uuid")) {
+      if (sql.includes("FROM rpt.snapshot_run") && hasSnapshotRunIdPredicate(sql)) {
         return {
           rowCount: 1,
           rows: [
@@ -764,7 +786,7 @@ describe("Snapshot run operations", () => {
         return { rowCount: 0, rows: [] };
       }
 
-      if (sql.includes("FROM rpt.snapshot_run") && sql.includes("WHERE run_status = 'failed'")) {
+      if (sql.includes("FROM rpt.snapshot_run") && hasFailedRunStatusPredicate(sql)) {
         return {
           rowCount: 1,
           rows: [
@@ -843,7 +865,7 @@ describe("Snapshot run operations", () => {
 
   it("returns rerun governance in snapshot detail and blocks duplicate active reruns", async () => {
     const query = jest.fn(async (sql: string) => {
-      if (sql.includes("FROM rpt.snapshot_run") && sql.includes("WHERE snapshot_run_id = $1::uuid")) {
+      if (sql.includes("FROM rpt.snapshot_run") && hasSnapshotRunIdPredicate(sql)) {
         return {
           rowCount: 1,
           rows: [
@@ -869,19 +891,19 @@ describe("Snapshot run operations", () => {
         return { rowCount: 1, rows: [{ active_rerun_count: "1" }] };
       }
 
-      if (sql.includes("WHERE snapshot_run_id = $1::uuid") && sql.includes("store_workforce_snapshot")) {
+      if (hasSnapshotRunIdPredicate(sql) && sql.includes("store_workforce_snapshot")) {
         return { rowCount: 1, rows: [{ row_count: "0" }] };
       }
 
-      if (sql.includes("WHERE snapshot_run_id = $1::uuid") && sql.includes("store_kpi_snapshot")) {
+      if (hasSnapshotRunIdPredicate(sql) && sql.includes("store_kpi_snapshot")) {
         return { rowCount: 1, rows: [{ row_count: "0" }] };
       }
 
-      if (sql.includes("WHERE snapshot_run_id = $1::uuid") && sql.includes("store_checklist_snapshot")) {
+      if (hasSnapshotRunIdPredicate(sql) && sql.includes("store_checklist_snapshot")) {
         return { rowCount: 1, rows: [{ row_count: "0" }] };
       }
 
-      if (sql.includes("WHERE snapshot_run_id = $1::uuid") && sql.includes("turnover_snapshot")) {
+      if (hasSnapshotRunIdPredicate(sql) && sql.includes("turnover_snapshot")) {
         return { rowCount: 1, rows: [{ row_count: "0" }] };
       }
 
@@ -914,7 +936,7 @@ describe("Snapshot run operations", () => {
 
   it("rejects rerun when an active rerun already exists", async () => {
     const query = jest.fn(async (sql: string) => {
-      if (sql.includes("FROM rpt.snapshot_run") && sql.includes("WHERE snapshot_run_id = $1::uuid")) {
+      if (sql.includes("FROM rpt.snapshot_run") && hasSnapshotRunIdPredicate(sql)) {
         return {
           rowCount: 1,
           rows: [
@@ -964,7 +986,7 @@ describe("Snapshot run operations", () => {
 
   it("returns snapshot run dependencies", async () => {
     const query = jest.fn(async (sql: string) => {
-      if (sql.includes("FROM rpt.snapshot_run") && sql.includes("WHERE snapshot_run_id = $1::uuid")) {
+      if (sql.includes("FROM rpt.snapshot_run") && hasSnapshotRunIdPredicate(sql)) {
         return {
           rowCount: 1,
           rows: [
@@ -1027,7 +1049,7 @@ describe("Snapshot run operations", () => {
     const query = jest.fn(async (sql: string, params?: unknown[]) => {
       if (
         sql.includes("FROM rpt.snapshot_run") &&
-        sql.includes("WHERE snapshot_run_id = $1::uuid") &&
+        hasSnapshotRunIdPredicate(sql) &&
         !sql.includes("rerun_of_snapshot_run_id = $1::uuid") &&
         (!Array.isArray(params) || params[0] !== "snapshot-lineage-1")
       ) {
@@ -1081,7 +1103,7 @@ describe("Snapshot run operations", () => {
 
       if (
         sql.includes("FROM rpt.snapshot_run") &&
-        sql.includes("WHERE snapshot_run_id = $1::uuid") &&
+        hasSnapshotRunIdPredicate(sql) &&
         Array.isArray(params) &&
         params[0] === "snapshot-lineage-1"
       ) {
