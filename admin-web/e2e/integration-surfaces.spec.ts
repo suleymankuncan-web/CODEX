@@ -29,6 +29,14 @@ test('admin import batch detail explains KPI row lineage evidence', async ({ pag
   const rowLineage = page.getByLabel('Row lineage evidence', { exact: true })
   await expect(rowLineage.getByText('other:UPT:daily:2026-04-22:2026-04-22:M-10:S-100')).toBeVisible()
   await expect(rowLineage.getByText('bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb')).toBeVisible()
+
+  const qualityPanel = page.getByLabel('Import data quality summary')
+  await expect(qualityPanel.getByRole('heading', { name: 'Data quality summary' })).toBeVisible()
+  await expect(qualityPanel.getByText('Issue rows')).toBeVisible()
+  await expect(qualityPanel.getByText('High severity rows')).toBeVisible()
+  await expect(qualityPanel.getByText('Unmapped store')).toBeVisible()
+  await expect(qualityPanel.getByText('mapping / high / 1 row')).toBeVisible()
+  await expect(page.getByText('quality issue unmapped_store')).toBeVisible()
   await expect(page.getByText('Batch detail unavailable')).toHaveCount(0)
 })
 
@@ -114,6 +122,20 @@ const detailFixture = {
     company: 0,
     manager: 0,
   },
+  qualityIssueSummary: {
+    totalIssueRows: 1,
+    highSeverityRows: 1,
+    items: [
+      {
+        code: 'unmapped_store',
+        label: 'Unmapped store',
+        owner: 'mapping',
+        severity: 'high',
+        description: 'The row references a store that is not mapped to an internal store.',
+        count: 1,
+      },
+    ],
+  },
   lineageSummary: {
     supported: true,
     rowHashCount: 2,
@@ -163,6 +185,7 @@ const errorsFixture = {
       rawRowReference: 'other:UPT:daily:2026-04-22:2026-04-22:M-10:S-100',
       normalizedStatus: 'retryable_error',
       errorCategory: 'missing_dependency',
+      qualityIssueCode: 'unmapped_store',
       validationError: 'store reference could not be resolved',
       processedAt: null,
     },

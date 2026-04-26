@@ -1780,6 +1780,40 @@ export class IntegrationRepository {
     return result.rows[0] ?? null;
   }
 
+  async getImportBatchQualityIssueRows(
+    batchId: string,
+    entityType:
+      | "employee"
+      | "store"
+      | "kpi"
+      | "assignment"
+      | "position"
+      | "company"
+      | "region",
+  ) {
+    const metadata = this.getRawTableMetadata(entityType);
+    const result = await this.databaseService.query<{
+      normalized_status: string;
+      validation_error: string | null;
+      row_count: string;
+    }>(
+      `
+        SELECT
+          normalized_status,
+          validation_error,
+          COUNT(*)::text AS row_count
+        FROM ${metadata.tableName}
+        WHERE import_batch_id = $1
+          AND normalized_status IN ('validation_failed', 'retryable_error')
+        GROUP BY validation_error, normalized_status
+        ORDER BY COUNT(*) DESC, normalized_status ASC, validation_error ASC
+      `,
+      [batchId],
+    );
+
+    return result.rows;
+  }
+
   async getImportBatchErrors(input: {
     batchId: string;
     entityType:

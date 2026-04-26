@@ -13,7 +13,10 @@ import {
 import { mapAuditEvent } from "../../../shared/audit/audit-event.mapper";
 import { logStructuredMessage } from "../../../shared/structured-log";
 import {
+  type ImportDataQualityIssue,
+  type ImportDataQualityIssueCode,
   classifyImportDataQualityIssue,
+  getImportDataQualityIssue,
   IMPORT_DATA_QUALITY_ISSUES,
 } from "./import-data-quality";
 
@@ -726,6 +729,10 @@ export class IntegrationService {
       batch.entity_type === "kpi"
         ? await this.integrationRepository.getImportBatchLineageSummary(batch.import_batch_id)
         : null;
+    const qualityIssueRows = await this.integrationRepository.getImportBatchQualityIssueRows(
+      batch.import_batch_id,
+      batch.entity_type,
+    );
 
     const rowStatusSummary = {
       processed: 0,
@@ -793,6 +800,7 @@ export class IntegrationService {
       recommendedNextEntityType,
       canRetryNow,
       healthState,
+      qualityIssueSummary: this.getQualityIssueSummary(qualityIssueRows),
       lineageSummary: {
         supported: batch.entity_type === "kpi",
         rowHashCount: Number(lineageSummaryRow?.row_hash_count ?? 0),
@@ -981,6 +989,58 @@ export class IntegrationService {
     }
 
     return "write_failure";
+  }
+
+  private getQualityIssueSummary(
+    rows: Array<{
+      normalized_status: string;
+      validation_error: string | null;
+      row_count: string;
+    }>,
+  ) {
+    const issueCounts = new Map<ImportDataQualityIssueCode, number>();
+
+    for (const row of rows) {
+      const code = classifyImportDataQualityIssue({
+        normalizedStatus: row.normalized_status,
+        validationError: row.validation_error,
+      });
+      const count = Number(row.row_count ?? 0);
+      issueCounts.set(code, (issueCounts.get(code) ?? 0) + count);
+    }
+
+    const items = Array.from(issueCounts.entries())
+      .map(([code, count]) => {
+        const issue = getImportDataQualityIssue(code) ?? getImportDataQualityIssue("unknown_quality_issue");
+        return {
+          code,
+          label: issue?.label ?? "Unknown quality issue",
+          owner: issue?.owner ?? "system",
+          severity: issue?.severity ?? "low",
+          description: issue?.description ?? "The row failed without a recognized data quality issue pattern.",
+          count,
+        };
+      })
+      .sort((left, right) => {
+        const severityDelta = this.getSeverityRank(left) - this.getSeverityRank(right);
+        if (severityDelta !== 0) return severityDelta;
+        if (right.count !== left.count) return right.count - left.count;
+        return left.code.localeCompare(right.code);
+      });
+
+    return {
+      totalIssueRows: items.reduce((sum, item) => sum + item.count, 0),
+      highSeverityRows: items
+        .filter((item) => item.severity === "high")
+        .reduce((sum, item) => sum + item.count, 0),
+      items,
+    };
+  }
+
+  private getSeverityRank(issue: Pick<ImportDataQualityIssue, "severity">) {
+    if (issue.severity === "high") return 0;
+    if (issue.severity === "medium") return 1;
+    return 2;
   }
 
   private getBlockedByEntityTypes(dependencySummary: {

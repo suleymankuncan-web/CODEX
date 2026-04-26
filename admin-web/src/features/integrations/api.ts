@@ -156,6 +156,18 @@ export type ImportBatchDetail = {
     company: number
     manager: number
   }
+  qualityIssueSummary?: {
+    totalIssueRows: number
+    highSeverityRows: number
+    items: Array<{
+      code: string
+      label: string
+      owner: string
+      severity: string
+      description: string
+      count: number
+    }>
+  }
   blockedByEntityTypes: string[]
   recommendedImportOrder: string[]
   recommendedNextEntityType: string | null

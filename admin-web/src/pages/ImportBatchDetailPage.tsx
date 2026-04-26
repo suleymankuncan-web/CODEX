@@ -76,6 +76,7 @@ export function ImportBatchDetailPage() {
   const reconciliation = reconciliationQuery.data
   const errors = errorsQuery.data?.items ?? []
   const auditItems = auditQuery.data?.items ?? []
+  const qualityIssueItems = detail.qualityIssueSummary?.items ?? []
 
   return (
     <section className="page-stack">
@@ -161,6 +162,48 @@ export function ImportBatchDetailPage() {
             />
           </div>
         </article>
+      </section>
+
+      <section className="panel" aria-label="Import data quality summary">
+        <div className="panel-heading">
+          <div>
+            <div className="eyebrow">Quality guard</div>
+            <h3>Data quality summary</h3>
+          </div>
+        </div>
+        <p className="panel-copy">
+          Failed rows are grouped by stable quality issue codes so operators can see the dominant cleanup work before opening every row.
+        </p>
+        <div className="reconciliation-grid">
+          <ReconciliationStat
+            label="Issue rows"
+            value={String(detail.qualityIssueSummary?.totalIssueRows ?? 0)}
+          />
+          <ReconciliationStat
+            label="High severity rows"
+            value={String(detail.qualityIssueSummary?.highSeverityRows ?? 0)}
+          />
+        </div>
+        {qualityIssueItems.length === 0 ? (
+          <EmptyState copy="No data quality issues were classified for this batch." />
+        ) : (
+          <div className="stacked-table">
+            {qualityIssueItems.map((issue) => (
+              <div className="stacked-row" key={issue.code}>
+                <div className="stacked-row-head">
+                  <strong>{issue.label}</strong>
+                  <span className={`status-pill status-pill-${mapQualitySeverityTone(issue.severity)}`}>
+                    {issue.code}
+                  </span>
+                </div>
+                <p>{issue.description}</p>
+                <span>
+                  {issue.owner} / {issue.severity} / {formatRowCount(issue.count)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="panel" aria-label="Import row lineage evidence">
@@ -262,12 +305,21 @@ export function ImportBatchDetailPage() {
               onClick={() =>
                 downloadCsv({
                   filename: `import-batch-errors-${batchId}.csv`,
-                  columns: ['rowId', 'sourceRef', 'normalizedStatus', 'errorCategory', 'validationError', 'processedAt'],
+                  columns: [
+                    'rowId',
+                    'sourceRef',
+                    'normalizedStatus',
+                    'errorCategory',
+                    'qualityIssueCode',
+                    'validationError',
+                    'processedAt',
+                  ],
                   rows: errors.map((error) => [
                     error.rowId,
                     error.sourceRef,
                     error.normalizedStatus,
                     error.errorCategory,
+                    error.qualityIssueCode ?? '',
                     error.validationError,
                     error.processedAt,
                   ]),
@@ -289,6 +341,11 @@ export function ImportBatchDetailPage() {
                     <span className={`status-pill status-pill-${mapErrorTone(error.errorCategory)}`}>
                       {error.errorCategory.replaceAll('_', ' ')}
                     </span>
+                    {error.qualityIssueCode ? (
+                      <span className="status-pill status-pill-accent">
+                        quality issue {error.qualityIssueCode}
+                      </span>
+                    ) : null}
                   </div>
                   <p>{error.validationError ?? 'No validation message available'}</p>
                   {error.rawRowReference || error.rowHash ? (
@@ -392,6 +449,16 @@ function ReconciliationStat(input: { label: string; value: string }) {
       <strong>{input.value}</strong>
     </div>
   )
+}
+
+function formatRowCount(count: number) {
+  return `${count} ${count === 1 ? 'row' : 'rows'}`
+}
+
+function mapQualitySeverityTone(severity: string) {
+  if (severity === 'high') return 'danger'
+  if (severity === 'medium') return 'warning'
+  return 'accent'
 }
 
 function mapErrorTone(category: string) {

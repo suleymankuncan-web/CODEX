@@ -1103,6 +1103,24 @@ describe("POST /api/integrations/import-batches", () => {
           };
         }
 
+        if (sql.includes("validation_error") && sql.includes("COUNT(*)::text AS row_count")) {
+          return {
+            rowCount: 2,
+            rows: [
+              {
+                normalized_status: "validation_failed",
+                validation_error: "position reference is required",
+                row_count: "1",
+              },
+              {
+                normalized_status: "retryable_error",
+                validation_error: "employee reference could not be resolved",
+                row_count: "1",
+              },
+            ],
+          };
+        }
+
         return {
           rowCount: 3,
           rows: [
@@ -1155,6 +1173,28 @@ describe("POST /api/integrations/import-batches", () => {
       manager: 0,
     });
     expect(response.body.blockedByEntityTypes).toEqual(["position", "employee"]);
+    expect(response.body.qualityIssueSummary).toEqual({
+      totalIssueRows: 2,
+      highSeverityRows: 2,
+      items: [
+        {
+          code: "missing_identity",
+          label: "Missing identity",
+          owner: "source_data",
+          severity: "high",
+          description: "A required source, business, or mapping identity is absent from the row.",
+          count: 1,
+        },
+        {
+          code: "unmapped_employee",
+          label: "Unmapped employee",
+          owner: "mapping",
+          severity: "high",
+          description: "The row references an employee that is not mapped to an internal employee.",
+          count: 1,
+        },
+      ],
+    });
     expect(response.body.recommendedImportOrder).toEqual([
       "company",
       "region",

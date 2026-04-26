@@ -2266,6 +2266,52 @@ Debt ledger:
 
 Siradaki mantikli adim: staging/provider degerleri veya source payload bilgisi gelirse evidence/spec adimina donmek; gelmezse dis kaynak varsayimi gerektirmeyen kucuk backend/data guard secmek.
 
+## Son Import Batch Quality Summary V1
+
+26 Nisan 2026 itibariyla import data quality kodlari batch detay seviyesinde ozetlenir hale getirildi.
+
+Yeni dokuman:
+
+- `docs/plans/import-batch-quality-summary-v1.md`
+
+Eklenenler:
+
+- `GET /api/integrations/import-batches/:batchId` artik additive `qualityIssueSummary` dondurur.
+- Summary failed row'lari stable data quality issue code'a gore gruplar.
+- Summary item alanlari: `code`, `label`, `owner`, `severity`, `description`, `count`.
+- Summary toplam alanlari: `totalIssueRows`, `highSeverityRows`.
+- `/admin/integrations/:batchId` icinde `Data quality summary` paneli eklendi.
+- Error-row CSV export artik `qualityIssueCode` kolonunu tasir.
+- Error-row kartlari varsa row-level quality issue code'u gosterir.
+
+Sinir:
+
+- DB schema veya migration yok.
+- Nebim-specific connector davranisi yok.
+- Source payload/cadence varsayimi yok.
+- Score, ranking, snapshot veya materialization davranisi degismedi.
+- Retry karar mantigi degismedi.
+- Yeni global data quality dashboard acilmadi.
+
+Dogrulama:
+
+- Kirmizi backend test izlendi: batch detail response `qualityIssueSummary` dondurmedigi icin fail verdi.
+- Kirmizi frontend test izlendi: import detail page `Data quality summary` panelini gostermedigi icin fail verdi.
+- Hedefli backend test gecti: `npm.cmd test -- test/integration/import-batch.e2e-spec.ts --runInBand -t "returns import batch detail with row status summary|returns KPI import batch lineage summary|returns import batch error rows|returns KPI import batch error row lineage"` -> 1 suite / 4 test.
+- Hedefli frontend test gecti: `npx.cmd playwright test e2e/integration-surfaces.spec.ts` -> 1 Playwright test.
+- Resmi root release gate gecti: `npm.cmd run check:release` -> 9 root Node test, backend lint + 37 suite / 274 test + build + audit, frontend lint + 7 script test + build + 28 Playwright test + audit.
+
+Debt ledger:
+
+- Closed active debts: 28
+- Superseded before overbuilding: 1
+- Blocked external dependency: 2
+- Watchlist decision item: 0
+- Strategic investment backlog: 2
+- Silent untracked quality debt in the active gate: 0
+
+Siradaki mantikli adim: staging/provider degerleri veya source payload bilgisi gelirse evidence/spec adimina donmek; gelmezse import/data yuzeyinde yeni varsayim uretmeyen en kucuk guard'i secmek.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:
@@ -2363,6 +2409,7 @@ Planlar:
 - `docs/plans/import-lineage-evidence-surface-v1.md`
 - `docs/plans/audit-event-taxonomy-guard-v1.md`
 - `docs/plans/data-quality-guard-v1.md`
+- `docs/plans/import-batch-quality-summary-v1.md`
 - `docs/superpowers/plans/2026-04-26-daily-closure-ranking-v2-explainability.md`
 - `docs/superpowers/plans/2026-04-25-competition-stage-package-plan-lifecycle-v1.md`
 - `docs/superpowers/specs/2026-04-25-competition-stage-package-plan-lifecycle-v1-design.md`

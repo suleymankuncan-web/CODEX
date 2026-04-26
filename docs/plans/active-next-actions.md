@@ -6,7 +6,7 @@ This is the short working list for the next practical steps. It keeps the projec
 
 ## Current Position
 
-As of 26 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, Store UX TR-First Copy V1, KPI Config Versioning V1, Source-Agnostic Ingest Contract Hardening V1, KPI Raw Row Lineage Persistence V1, Import Lineage Evidence Surface V1, Audit Event Taxonomy Guard V1, and Data Quality Guard V1 have:
+As of 26 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, Store UX TR-First Copy V1, KPI Config Versioning V1, Source-Agnostic Ingest Contract Hardening V1, KPI Raw Row Lineage Persistence V1, Import Lineage Evidence Surface V1, Audit Event Taxonomy Guard V1, Data Quality Guard V1, and Import Batch Quality Summary V1 have:
 
 - saved drafts
 - edit/cancel/history
@@ -49,6 +49,7 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 - backend-owned audit event catalog and drift guard
 - payload-template canonical KPI contract metadata
 - import data quality issue catalog and additive `qualityIssueCode`
+- batch-level import data quality summary on import detail
 - project debt ledger
 - backend and frontend release checks
 
@@ -56,7 +57,7 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 
 Reference: `docs/plans/project-debt-ledger.md`
 
-- Closed active debts: 27
+- Closed active debts: 28
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -84,6 +85,7 @@ Interpretation:
 - Import Lineage Evidence Surface V1 is implemented; admin import detail now exposes KPI lineage counts and row-level evidence where available.
 - Audit Event Taxonomy Guard V1 is implemented; global audit feed remains intentionally unbuilt, but emitted audit events now have a backend-owned catalog and drift guard.
 - Data Quality Guard V1 is implemented; import error rows now expose stable `qualityIssueCode` while keeping the old `errorCategory` contract.
+- Import Batch Quality Summary V1 is implemented; batch detail now summarizes failed rows by stable quality issue code.
 - Full production UI/design-system and complete EN/TR localization expansion remain planned investments, not silent release debt.
 - Production UI/design-system is intentionally deferred into reversible pilots while backend/data foundations remain the priority.
 - The debt ledger itself is an accounting artifact and is not counted as a separate closed active debt item.
@@ -438,6 +440,18 @@ Interpretation:
 - Reference:
   - `docs/plans/data-quality-guard-v1.md`
 
+### Completed: Import Batch Quality Summary V1
+- Completed: 26 April 2026
+- Result:
+  - import batch detail API exposes additive `qualityIssueSummary`
+  - failed rows are grouped by stable quality issue code
+  - summary items show code, label, owner, severity, description, and count
+  - `/admin/integrations/:batchId` shows a `Data quality summary` panel
+  - error row CSV export includes `qualityIssueCode`
+  - no DB schema, migration, source connector, source payload assumption, score math, ranking, snapshot, retry policy, or global dashboard was introduced
+- Reference:
+  - `docs/plans/import-batch-quality-summary-v1.md`
+
 ### Completed: KPI Config Versioning V1
 - Completed: 26 April 2026
 - Result:
@@ -473,4 +487,4 @@ If staging IdP and seeded staging DB values are available, start real staging ev
 
 If Nebim/source delivery details, sample payload, or official field list become available, start source mapping specification.
 
-If neither staging values nor source ingest details are available, choose the next controlled local backend/data step through the intake gate. Source-agnostic KPI ingest contract hardening, KPI raw row lineage persistence, admin lineage evidence visibility, audit event taxonomy guard, and data quality guard are now done; the next local step should strengthen an existing backend/data surface without guessing external source behavior.
+If neither staging values nor source ingest details are available, choose the next controlled local backend/data step through the intake gate. Source-agnostic KPI ingest contract hardening, KPI raw row lineage persistence, admin lineage evidence visibility, audit event taxonomy guard, data quality guard, and import batch quality summary are now done; the next local step should strengthen an existing backend/data surface without guessing external source behavior.
