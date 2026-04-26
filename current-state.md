@@ -1752,6 +1752,53 @@ Debt ledger:
 
 Siradaki mantikli adim: Shared Inbox maturity. Inbox item detaylari, due date, escalation dili ve kaynak aksiyonlari netlestirilmeli.
 
+## Son Shared Inbox Maturity V1
+
+26 Nisan 2026 itibariyla store ve admin inbox satirlarina ortak detay/governance okunurlugu eklendi.
+
+Yeni dokuman:
+
+- `docs/plans/shared-inbox-maturity-v1.md`
+
+Eklenenler:
+
+- `admin-web/src/features/workflow/WorkflowInboxDetail.tsx`
+- `/store/tasks` satirlarinda:
+  - `Detay ozeti`
+  - `Due sinyali`
+  - `Escalation`
+  - `Kaynak aksiyonu`
+- `/admin/inbox` satirlarinda ayni ortak detay dili.
+- Source action dili:
+  - `target_distribution_request` -> `Karar ekranina git`
+  - `checklist_receipt` -> `Checklist receipt ac`
+  - `kpi_exception` -> `KPI detayina git`
+- Escalation dili mevcut `inboxStatus` + `urgency` alanlarindan turetilir.
+
+Sinir:
+
+- Backend contract degismedi.
+- API response degismedi.
+- DB schema veya migration yok.
+- Yeni workflow state machine yok.
+- Gercek persisted due date, SLA transition, notification veya escalation execution yok.
+
+Dogrulama:
+
+- Kirmizi test izlendi: `Detay ozeti` yokken store tasks Playwright testi fail verdi.
+- Hedefli frontend dogrulama gecti:
+  - `npm.cmd run test:e2e -- e2e/store-surfaces.spec.ts -g "store tasks page renders readable Turkish queue labels"` -> 1 Playwright test.
+  - `npm.cmd run test:e2e -- e2e/admin-inbox.spec.ts` -> 1 Playwright test.
+- Resmi root release gate gecti: `npm.cmd run check:release` -> root script tests, backend lint/test/build/audit, frontend lint/script/build/25 Playwright/audit.
+
+Debt ledger:
+
+- Closed active debts: 20
+- Strategic investment backlog: 3
+- Silent untracked quality debt in the active gate: 0
+
+Siradaki mantikli adim: Store UX polish and broader TR-first copy rollout. Store-facing ekranlarda kalan mixed-language/copy pürüzleri azaltmak, daha derin backend yatirimlarindan once iyi olur.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:
@@ -1799,6 +1846,7 @@ Frontend:
 - `admin-web/src/pages/StoreMyPerformancePage.tsx`
 - `admin-web/src/pages/StoreKpiHighlightsPage.tsx`
 - `admin-web/src/pages/StoreApprovalsPage.tsx`
+- `admin-web/src/features/workflow/WorkflowInboxDetail.tsx`
 
 Planlar:
 
@@ -1815,6 +1863,7 @@ Planlar:
 - `docs/plans/daily-closure-ranking-strategy.md`
 - `docs/plans/daily-closure-ranking-v2-intake.md`
 - `docs/plans/ranking-completeness-segment-readiness-v1.md`
+- `docs/plans/shared-inbox-maturity-v1.md`
 - `docs/superpowers/plans/2026-04-26-daily-closure-ranking-v2-explainability.md`
 - `docs/superpowers/plans/2026-04-25-competition-stage-package-plan-lifecycle-v1.md`
 - `docs/superpowers/specs/2026-04-25-competition-stage-package-plan-lifecycle-v1-design.md`

@@ -95,6 +95,12 @@ test('store rankings page explains monthly preview-only ranking', async ({ page 
 test('store tasks page renders readable Turkish queue labels', async ({ page }) => {
   await page.goto('/store/tasks')
 
+  await expect(page.getByText('Detay ozeti')).toBeVisible()
+  await expect(page.getByText('Due sinyali')).toBeVisible()
+  await expect(page.getByText('Escalation', { exact: true })).toBeVisible()
+  await expect(page.getByLabel('Inbox governance signals').getByText('Escalation aday')).toBeVisible()
+  await expect(page.getByText('Kaynak aksiyonu')).toBeVisible()
+  await expect(page.getByText('KPI detayina git')).toBeVisible()
   await expect(page.getByRole('heading', { name: /One queue for actionable work/i })).toBeVisible()
   await expect(page.getByText('Önce bakılması gereken işler.')).toBeVisible()
   await expect(page.getByText('İş tipi')).toBeVisible()

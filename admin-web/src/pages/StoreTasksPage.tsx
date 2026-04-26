@@ -12,6 +12,7 @@ import {
 } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { formatDisplayRoles } from '../features/auth/display'
+import { WorkflowInboxDetail } from '../features/workflow/WorkflowInboxDetail'
 import { getWorkflowInbox } from '../features/workflow/api'
 import {
   formatWorkflowItemType,
@@ -278,6 +279,8 @@ function WorkflowInboxRow(input: { item: WorkflowInboxItem }) {
       </div>
 
       {input.item.historyPreview ? <p className="queue-subtitle">{input.item.historyPreview}</p> : null}
+
+      <WorkflowInboxDetail item={input.item} />
 
       <div className="action-cluster">
         <Link className="control-button store-shell-link" to={input.item.deepLink}>

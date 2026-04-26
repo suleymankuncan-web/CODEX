@@ -6,7 +6,7 @@ This is the short working list for the next practical steps. It keeps the projec
 
 ## Current Position
 
-As of 26 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, and Ranking Completeness Segment Readiness V1 have:
+As of 26 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, and Shared Inbox Maturity V1 have:
 
 - saved drafts
 - edit/cancel/history
@@ -37,6 +37,7 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 - KPI interpretation versioning, effective-date, audit, and snapshot-anchoring governance plan
 - admin KPI config publish-governance preview and draft/live diff counts
 - ranking scope readiness for Turkey-wide, store-level, metric mini-rank, and future segment use
+- shared inbox row detail, due, escalation, and source action interpretation
 - project debt ledger
 - backend and frontend release checks
 
@@ -44,11 +45,11 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 
 Reference: `docs/plans/project-debt-ledger.md`
 
-- Closed active debts: 19
+- Closed active debts: 20
 - Superseded before overbuilding: 1
 - Blocked external dependency: 1
 - Watchlist decision item: 1
-- Strategic investment backlog: 4
+- Strategic investment backlog: 3
 - Silent untracked quality debt in the active gate: 0
 
 Interpretation:
@@ -62,6 +63,7 @@ Interpretation:
 - KPI Interpretation Governance V1 now defines when interpretation/version/effective-date work must become a technical implementation.
 - KPI Config Editor Governance Preview V1 now makes `/admin/kpi-config` show publish-impact diffs before live interpretation changes.
 - Ranking Completeness Segment Readiness V1 now makes `/store/rankings` explain Turkey-wide, store-level, metric mini-rank, and segment readiness without opening a new ranking engine.
+- Shared Inbox Maturity V1 now makes store/admin inbox rows explain detail, due signal, escalation, and source action without opening a new workflow state machine.
 - Versioned config implementation remains planned investment.
 - The debt ledger itself is an accounting artifact and is not counted as a separate closed active debt item.
 
@@ -301,6 +303,17 @@ Interpretation:
 - Reference:
   - `docs/plans/ranking-completeness-segment-readiness-v1.md`
 
+### Completed: Shared Inbox Maturity V1
+- Completed: 26 April 2026
+- Result:
+  - store and admin inbox rows now show `Detay ozeti`, `Due sinyali`, `Escalation`, and `Kaynak aksiyonu`
+  - source action language is derived from existing source type
+  - escalation language is derived from existing inbox status and urgency
+  - no backend contract, DB schema, migration, workflow state machine, notification, or escalation execution changed
+  - official root release gate passes after the change
+- Reference:
+  - `docs/plans/shared-inbox-maturity-v1.md`
+
 ### 1. Real IdP Staging Evidence
 - Priority: `P1`
 - Why: local provider and action mechanics are proven, but production confidence still needs real staging IdP and seeded staging action evidence.
@@ -325,4 +338,4 @@ Interpretation:
 
 If staging IdP and seeded staging DB values are available, start real staging evidence.
 
-If staging values are not available, start Shared Inbox maturity. The next local product step is to make inbox items easier to inspect and govern with detail views, due dates, escalation language, and stronger source actions.
+If staging values are not available, start Store UX polish and broader TR-first copy rollout. The next local product step is to reduce remaining mixed-language roughness and make store-facing screens feel more coherent before deeper backend investments.

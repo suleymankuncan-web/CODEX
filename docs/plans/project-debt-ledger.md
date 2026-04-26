@@ -17,11 +17,11 @@ Date: 26 April 2026
 
 Current count:
 
-- Closed active debts: 19
+- Closed active debts: 20
 - Superseded before overbuilding: 1
 - Blocked external dependency: 1
 - Watchlist decision item: 1
-- Strategic investment backlog: 4
+- Strategic investment backlog: 3
 - Silent untracked quality debt in the active gate: 0
 
 ## Closed Active Debts
@@ -47,6 +47,7 @@ These are counted as paid because they have implementation or documentation evid
 17. KPI Interpretation Governance V1
 18. KPI Config Editor Governance Preview V1
 19. Ranking Completeness Segment Readiness V1
+20. Shared Inbox Maturity V1
 
 ## Superseded Before Overbuilding
 
@@ -117,8 +118,7 @@ These are important future product investments. They are not counted as hidden d
 
 1. Real ingest connector and real payload contract
 2. KPI config governance implementation: versioned config, effective dates, rollback, snapshot anchoring
-3. Shared inbox maturity: detail views, due dates, escalation, stronger source actions
-4. Store UX polish and broader TR-first copy rollout
+3. Store UX polish and broader TR-first copy rollout
 
 ## Repo Hygiene Note
 
@@ -152,4 +152,4 @@ Those have been actively reduced. The remaining work is mostly planned product d
 
 If staging provider and seeded DB values are available, run the guarded staging action smoke.
 
-If they are not available, the next local step should be chosen from strategic investments through the feature intake gate, with Shared Inbox maturity now the strongest product candidate.
+If they are not available, the next local step should be chosen from strategic investments through the feature intake gate, with Store UX polish and broader TR-first copy rollout now the strongest product candidate.

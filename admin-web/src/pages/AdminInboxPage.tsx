@@ -11,6 +11,7 @@ import {
   StatusPill,
 } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
+import { WorkflowInboxDetail } from '../features/workflow/WorkflowInboxDetail'
 import { getWorkflowInbox } from '../features/workflow/api'
 import {
   formatWorkflowItemType,
@@ -191,6 +192,8 @@ function AdminInboxRow(input: { item: WorkflowInboxItem }) {
       </div>
 
       {input.item.historyPreview ? <p className="queue-subtitle">{input.item.historyPreview}</p> : null}
+
+      <WorkflowInboxDetail item={input.item} />
 
       <div className="action-cluster">
         <Link className="control-button" to={input.item.deepLink}>
