@@ -1,5 +1,9 @@
 # Competition Format Registry V1 Design
 
+> Status: Superseded on 26 April 2026 by `docs/superpowers/specs/2026-04-26-operational-feed-v1-design.md`.
+>
+> Reason: the immediate product need is not a second competition/ranking format engine. UPT-style challenges should first be represented as scoped operational feed posts that point to existing profile/ranking surfaces.
+
 ## Goal
 
 Introduce a controlled competition format registry so HR/Admin users can plan more than one kind of competition package without turning the current stage package flow into a free-form builder too early.

@@ -1,5 +1,9 @@
 # Competition Format Registry V1 Implementation Plan
 
+> Status: Superseded on 26 April 2026 by `docs/superpowers/specs/2026-04-26-operational-feed-v1-design.md`.
+>
+> Do not execute this implementation plan unless the product direction changes back to a dedicated competition format engine. The current direction is Operational Feed V1: challenge posts announce focus areas and link to existing ranking/profile surfaces.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add a controlled competition format registry, keep `league_then_final` executable, and add `best_upt_store` as a selectable and previewable format with live execution disabled.

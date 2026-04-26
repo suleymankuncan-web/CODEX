@@ -41,17 +41,28 @@ As of 26 April 2026, the competition package planning flow has:
   - preview includes plan window, stage count, team template count, stage dates, and store assignment count
   - verification is covered by the existing save/submit/approve/execute Playwright flow
 
-### 1. Competition Format Registry V1
+### Superseded: Competition Format Registry V1
+- Superseded: 26 April 2026
+- Reason:
+  - UPT-style challenges do not need a second scoring/ranking engine in V1.
+  - The better immediate product shape is an operational feed post that announces a challenge and links to existing ranking/profile surfaces.
+- References:
+  - superseded design: `docs/superpowers/specs/2026-04-26-competition-format-registry-v1-design.md`
+  - superseded plan: `docs/superpowers/plans/2026-04-26-competition-format-registry-v1.md`
+
+### 1. Operational Feed V1
 - Priority: `P1`
-- Why: league + final is only the first tournament structure, and future contests need controlled format definitions before execution.
+- Why: the product needs a controlled company/region/store communication surface before building heavier social or competition engines.
 - Scope:
-  - code-owned format registry
-  - keep `league_then_final` executable
-  - add `best_upt_store` as a selectable, preview-only pilot format
-  - prepare schema for store, employee, region, and team competitions
-  - keep future category-specific contests, such as women's group sales, data-gated
+  - `/admin/feed` management surface
+  - `/store/feed` read surface
+  - post types: announcement and challenge
+  - scoped visibility: company, region, store
+  - pinned posts
+  - challenge posts link to existing profile/ranking surfaces instead of owning score
+  - no comments, likes, images, push notifications, or new leaderboard in V1
 - Gate:
-  - design spec: `docs/superpowers/specs/2026-04-26-competition-format-registry-v1-design.md`
+  - design spec: `docs/superpowers/specs/2026-04-26-operational-feed-v1-design.md`
 
 ### 2. Store/Region Competition Experience Polish
 - Priority: `P1`
@@ -94,4 +105,4 @@ As of 26 April 2026, the competition package planning flow has:
 
 ## Recommended Next Move
 
-Write the implementation plan for `Competition Format Registry V1`. The intake decision is to add `best_upt_store` as selectable and previewable only, with live execute/publish intentionally disabled until scoring and participant-facing surfaces are designed.
+Review and approve the `Operational Feed V1` design, then write the implementation plan. The intake decision is to keep challenges as scoped feed posts that link to existing ranking/profile surfaces, not as a new scoring engine.

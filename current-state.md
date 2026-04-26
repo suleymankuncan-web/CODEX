@@ -96,6 +96,32 @@ Ana prensip:
 - `STORE_PERSONNEL` sadece kendi performansini ve kisisel alanini gorur.
 - `REGION_MANAGER` hedef onaylari ve ileride kendi atanmis magazalari uzerinde saha aksiyonlari icin ayrildi.
 
+## Son Urun Yonu: Operational Feed V1
+
+26 Nisan 2026 itibariyla `Competition Format Registry V1` yonu bilincli olarak superseded edildi.
+
+Sebep:
+
+- UPT gibi challenge fikirleri V1'de yeni bir skor/ranking motoru gerektirmiyor.
+- Personel ve magaza zaten profil, ozet ve ranking yuzeylerinden siralamayi takip edebiliyor.
+- Daha dogru ilk modül `Operational Feed V1`: duyuru ve challenge postlariyla sirket/bölge/magaza gündemini tasiyan, mevcut ranking/profil ekranlarina link veren kontrollü bir operasyon akisidir.
+
+Yeni karar:
+
+- Admin/yonetim route'u: `/admin/feed`.
+- Store/user route'u: `/store/feed`.
+- Admin nav icinde `Duyurular`, `Inbox` ile `Competitions` arasinda konumlanmali.
+- Store shell icinde `Duyurular` birinci sinif route olmali; store home icinde sabit duyuru ozetleri gosterilebilir.
+- `announcement` ve `challenge` post tipleri olacak.
+- `challenge` postu skor hesaplamaz; mevcut `/store/me`, `/store/rankings` veya ilerideki ozet yuzeylerine yonlendirir.
+- `SUPER_ADMIN` ve `HR_ADMIN` genis kapsamda yayin yapabilir.
+- `REGION_MANAGER` V1'de sadece kendi bolgesine yayin yapabilir; Turkiye geneli yayin HR/Super Admin'de kalir.
+- Gorsel, yorum, begeni, push notification ve yeni leaderboard V1 disidir; gorsel/attachment ileride eklenebilir sekilde tasarlanir.
+
+Referans:
+
+- `docs/superpowers/specs/2026-04-26-operational-feed-v1-design.md`
+
 ## Mevcut Roller ve Test Kullanicilari
 
 Keycloak local kullanicilari:
