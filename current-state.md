@@ -2114,6 +2114,52 @@ Debt ledger:
 
 Siradaki mantikli adim: external source bilgisi gelirse source mapping spec'e donmek; gelmezse intake ile mevcut backend/data yuzeylerinden dis kaynak varsayimi gerektirmeyen bir sonraki kontrollu adimi secmek.
 
+## Son Import Lineage Evidence Surface V1
+
+26 Nisan 2026 itibariyla KPI raw row lineage bilgisi admin import detay yuzeyinde operator tarafindan gorulebilir hale getirildi.
+
+Yeni dokuman:
+
+- `docs/plans/import-lineage-evidence-surface-v1.md`
+
+Eklenenler:
+
+- `GET /api/integrations/import-batches/:batchId` artik `lineageSummary` dondurur.
+- KPI batch detail icinde lineage destegi, row hash sayisi, raw row reference sayisi, sample row hash ve sample raw row reference gorunur.
+- `GET /api/integrations/import-batches/:batchId/errors` KPI hata satirlari icin varsa `rowHash` ve `rawRowReference` dondurur.
+- `/admin/integrations/:batchId` icinde `Source row lineage` paneli eklendi.
+- KPI error row satirlari raw reference ve row hash bilgisini gosterir.
+- Uzun hash/reference degerleri UI'da wrap olur.
+
+Sinir:
+
+- Nebim-specific connector yazilmadi.
+- Fake adapter yazilmadi.
+- Source cadence varsayilmadi.
+- Score formulu degismedi.
+- Materialization, snapshot, ranking veya external source davranisi degismedi.
+- Non-KPI importlar icin sahte lineage uretilmedi.
+
+Dogrulama:
+
+- Kirmizi backend test izlendi: batch detail `lineageSummary` dondurmedigi icin fail verdi.
+- Kirmizi backend test izlendi: KPI error row `rowHash` / `rawRowReference` dondurmedigi icin fail verdi.
+- Kirmizi frontend test izlendi: admin import detail `Source row lineage` panelini gostermedigi icin fail verdi.
+- Hedefli backend test gecti: `npm.cmd test -- test/integration/import-batch.e2e-spec.ts --runInBand -t "lineage"` -> 3 test.
+- Hedefli frontend test gecti: `npm.cmd run build; if ($LASTEXITCODE -eq 0) { npx.cmd playwright test e2e/integration-surfaces.spec.ts }` -> 1 Playwright test.
+- Resmi root release gate gecti: `npm.cmd run check:release` -> root script tests, backend lint + 35 suite / 261 test + build + audit, frontend lint + 7 script test + build + 28 Playwright test + audit.
+
+Debt ledger:
+
+- Closed active debts: 25
+- Superseded before overbuilding: 1
+- Blocked external dependency: 2
+- Watchlist decision item: 1
+- Strategic investment backlog: 2
+- Silent untracked quality debt in the active gate: 0
+
+Siradaki mantikli adim: external source bilgisi gelirse source mapping spec'e donmek; gelmezse intake ile mevcut backend/data yuzeylerinden dis kaynak varsayimi gerektirmeyen bir sonraki kontrollu adimi secmek.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:
@@ -2155,6 +2201,7 @@ Backend integration / ingest:
 - `backend/nestjs/src/modules/integration/infrastructure/integration.repository.ts`
 - `backend/nestjs/src/modules/integration/source-agnostic-ingest-schema-contract.spec.ts`
 - `backend/nestjs/src/modules/integration/web/integration.controller.ts`
+- `backend/nestjs/test/integration/import-batch.e2e-spec.ts`
 - `db/migrations/027_kpi_raw_lineage_columns.sql`
 - `db/schema.sql`
 
@@ -2168,7 +2215,10 @@ Frontend:
 - `admin-web/src/features/competitions/stage-presets.ts`
 - `admin-web/src/pages/AuthDashboardPage.tsx`
 - `admin-web/src/pages/CompetitionDashboardPage.tsx`
+- `admin-web/src/pages/ImportBatchDetailPage.tsx`
 - `admin-web/src/pages/AuthActionStoreAssignmentAuditPage.tsx`
+- `admin-web/src/features/integrations/api.ts`
+- `admin-web/e2e/integration-surfaces.spec.ts`
 - `admin-web/src/pages/StoreShellPreviewPage.tsx`
 - `admin-web/src/pages/StoreTasksPage.tsx`
 - `admin-web/src/pages/StoreFeedPage.tsx`
@@ -2195,6 +2245,7 @@ Planlar:
 - `docs/plans/shared-inbox-maturity-v1.md`
 - `docs/plans/source-agnostic-ingest-contract-hardening-v1.md`
 - `docs/plans/kpi-raw-row-lineage-persistence-v1.md`
+- `docs/plans/import-lineage-evidence-surface-v1.md`
 - `docs/superpowers/plans/2026-04-26-daily-closure-ranking-v2-explainability.md`
 - `docs/superpowers/plans/2026-04-25-competition-stage-package-plan-lifecycle-v1.md`
 - `docs/superpowers/specs/2026-04-25-competition-stage-package-plan-lifecycle-v1-design.md`

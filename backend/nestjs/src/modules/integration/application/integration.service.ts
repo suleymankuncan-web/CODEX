@@ -717,6 +717,10 @@ export class IntegrationService {
         batch.import_batch_id,
         batch.entity_type,
       );
+    const lineageSummaryRow =
+      batch.entity_type === "kpi"
+        ? await this.integrationRepository.getImportBatchLineageSummary(batch.import_batch_id)
+        : null;
 
     const rowStatusSummary = {
       processed: 0,
@@ -784,6 +788,13 @@ export class IntegrationService {
       recommendedNextEntityType,
       canRetryNow,
       healthState,
+      lineageSummary: {
+        supported: batch.entity_type === "kpi",
+        rowHashCount: Number(lineageSummaryRow?.row_hash_count ?? 0),
+        rawRowReferenceCount: Number(lineageSummaryRow?.raw_row_reference_count ?? 0),
+        sampleRowHash: lineageSummaryRow?.sample_row_hash ?? null,
+        sampleRawRowReference: lineageSummaryRow?.sample_raw_row_reference ?? null,
+      },
     };
   }
 
@@ -847,14 +858,25 @@ export class IntegrationService {
     });
 
     return buildListResponse(
-      result.rows.map((row) => ({
-        rowId: row.row_id,
-        sourceRef: row.source_ref,
-        normalizedStatus: row.normalized_status,
-        errorCategory: this.classifyErrorCategory(row.normalized_status, row.validation_error),
-        validationError: row.validation_error,
-        processedAt: row.processed_at,
-      })),
+      result.rows.map((row) => {
+        const lineage =
+          row.row_hash || row.raw_row_reference
+            ? {
+                rowHash: row.row_hash ?? null,
+                rawRowReference: row.raw_row_reference ?? null,
+              }
+            : {};
+
+        return {
+          rowId: row.row_id,
+          sourceRef: row.source_ref,
+          ...lineage,
+          normalizedStatus: row.normalized_status,
+          errorCategory: this.classifyErrorCategory(row.normalized_status, row.validation_error),
+          validationError: row.validation_error,
+          processedAt: row.processed_at,
+        };
+      }),
       { total: result.total, limit: input.limit, offset: input.offset },
     );
   }

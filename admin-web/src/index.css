@@ -817,6 +817,30 @@ code {
   margin: 0.4rem 0 0;
 }
 
+.lineage-chip-list {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.lineage-chip {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.lineage-chip span {
+  color: var(--surface-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.lineage-code {
+  display: block;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .timeline-item {
   position: relative;
   padding-left: 1.35rem;

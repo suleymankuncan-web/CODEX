@@ -1162,6 +1162,91 @@ describe("POST /api/integrations/import-batches", () => {
     await app.close();
   });
 
+  it("returns KPI import batch lineage summary for source evidence review", async () => {
+    const query = jest.fn(async (sql: string) => {
+      if (sql.includes("FROM stg.import_batch")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              import_batch_id: "batch-kpi-lineage-detail-1",
+              integration_source_id: "source-kpi-1",
+              source_code: "KPI",
+              source_name: "KPI Feed",
+              entity_type: "kpi",
+              started_at: "2026-04-22T10:00:00.000Z",
+              finished_at: "2026-04-22T10:05:00.000Z",
+              status: "completed",
+              raw_file_name: "kpis.json",
+              record_count: 2,
+              error_count: 0,
+              retry_count: 0,
+              last_retried_at: null,
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("row_hash_count") && sql.includes("FROM stg.kpi_raw")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              row_hash_count: "2",
+              raw_row_reference_count: "2",
+              sample_row_hash: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              sample_raw_row_reference: "other:UPT:daily:2026-04-22:2026-04-22:M-10:S-100",
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("GROUP BY normalized_status") && sql.includes("FROM stg.kpi_raw")) {
+        return {
+          rowCount: 1,
+          rows: [{ normalized_status: "processed", row_count: "2" }],
+        };
+      }
+
+      if (sql.includes("SUM(CASE") && sql.includes("FROM stg.kpi_raw")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              employee_count: "0",
+              store_count: "0",
+              position_count: "0",
+              region_count: "0",
+              company_count: "0",
+              manager_count: "0",
+            },
+          ],
+        };
+      }
+
+      return { rowCount: 0, rows: [] };
+    });
+
+    const app = await createIntegrationApp({
+      databaseService: { query },
+    });
+
+    const response = await request(app.getHttpServer()).get(
+      "/api/integrations/import-batches/batch-kpi-lineage-detail-1",
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body.lineageSummary).toEqual({
+      supported: true,
+      rowHashCount: 2,
+      rawRowReferenceCount: 2,
+      sampleRowHash: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      sampleRawRowReference: "other:UPT:daily:2026-04-22:2026-04-22:M-10:S-100",
+    });
+
+    await app.close();
+  });
+
   it("returns import batch reconciliation totals and rates", async () => {
     const query = jest.fn(async (sql: string) => {
       if (sql.includes("FROM stg.import_batch")) {
@@ -1350,6 +1435,67 @@ describe("POST /api/integrations/import-batches", () => {
       limit: 20,
       offset: 0,
     });
+
+    await app.close();
+  });
+
+  it("returns KPI import batch error row lineage for reconciliation", async () => {
+    const query = jest.fn(async (sql: string) => {
+      if (sql.includes("FROM stg.import_batch")) {
+        return {
+          rowCount: 1,
+          rows: [{ entity_type: "kpi" }],
+        };
+      }
+
+      if (sql.includes("COUNT(*)::text AS total_count") && sql.includes("FROM stg.kpi_raw")) {
+        return {
+          rowCount: 1,
+          rows: [{ total_count: "1" }],
+        };
+      }
+
+      if (sql.includes("FROM stg.kpi_raw")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              row_id: "kpi-row-1",
+              source_ref: "UPT",
+              row_hash: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              raw_row_reference: "other:UPT:daily:2026-04-22:2026-04-22:M-10:S-100",
+              normalized_status: "retryable_error",
+              validation_error: "store reference could not be resolved",
+              processed_at: null,
+            },
+          ],
+        };
+      }
+
+      return { rowCount: 0, rows: [] };
+    });
+
+    const app = await createIntegrationApp({
+      databaseService: { query },
+    });
+
+    const response = await request(app.getHttpServer()).get(
+      "/api/integrations/import-batches/batch-kpi-lineage-errors-1/errors?limit=20&offset=0",
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body.items).toEqual([
+      {
+        rowId: "kpi-row-1",
+        sourceRef: "UPT",
+        rowHash: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        rawRowReference: "other:UPT:daily:2026-04-22:2026-04-22:M-10:S-100",
+        normalizedStatus: "retryable_error",
+        errorCategory: "missing_dependency",
+        validationError: "store reference could not be resolved",
+        processedAt: null,
+      },
+    ]);
 
     await app.close();
   });

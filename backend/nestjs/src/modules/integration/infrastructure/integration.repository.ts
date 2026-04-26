@@ -1758,6 +1758,28 @@ export class IntegrationRepository {
     return result.rows;
   }
 
+  async getImportBatchLineageSummary(batchId: string) {
+    const result = await this.databaseService.query<{
+      row_hash_count: string;
+      raw_row_reference_count: string;
+      sample_row_hash: string | null;
+      sample_raw_row_reference: string | null;
+    }>(
+      `
+        SELECT
+          COUNT(*) FILTER (WHERE row_hash IS NOT NULL)::text AS row_hash_count,
+          COUNT(*) FILTER (WHERE raw_row_reference IS NOT NULL)::text AS raw_row_reference_count,
+          MIN(row_hash) FILTER (WHERE row_hash IS NOT NULL) AS sample_row_hash,
+          MIN(raw_row_reference) FILTER (WHERE raw_row_reference IS NOT NULL) AS sample_raw_row_reference
+        FROM stg.kpi_raw
+        WHERE import_batch_id = $1
+      `,
+      [batchId],
+    );
+
+    return result.rows[0] ?? null;
+  }
+
   async getImportBatchErrors(input: {
     batchId: string;
     entityType:
@@ -1790,6 +1812,8 @@ export class IntegrationRepository {
     const result = await this.databaseService.query<{
       row_id: string;
       source_ref: string;
+      row_hash: string | null;
+      raw_row_reference: string | null;
       normalized_status: string;
       validation_error: string | null;
       processed_at: string | null;
@@ -1798,6 +1822,8 @@ export class IntegrationRepository {
         SELECT
           ${metadata.rowIdColumn} AS row_id,
           ${metadata.sourceRefColumn} AS source_ref,
+          ${input.entityType === "kpi" ? "row_hash" : "NULL::text"} AS row_hash,
+          ${input.entityType === "kpi" ? "raw_row_reference" : "NULL::text"} AS raw_row_reference,
           normalized_status,
           validation_error,
           processed_at

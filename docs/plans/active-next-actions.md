@@ -6,7 +6,7 @@ This is the short working list for the next practical steps. It keeps the projec
 
 ## Current Position
 
-As of 26 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, Store UX TR-First Copy V1, KPI Config Versioning V1, Source-Agnostic Ingest Contract Hardening V1, and KPI Raw Row Lineage Persistence V1 have:
+As of 26 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, Store UX TR-First Copy V1, KPI Config Versioning V1, Source-Agnostic Ingest Contract Hardening V1, KPI Raw Row Lineage Persistence V1, and Import Lineage Evidence Surface V1 have:
 
 - saved drafts
 - edit/cancel/history
@@ -45,6 +45,7 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 - admin KPI config and snapshot report version metadata
 - deterministic KPI import row hashes and readable raw row references
 - first-class `stg.kpi_raw` row hash and raw row reference persistence
+- admin import detail visibility for KPI row lineage evidence
 - payload-template canonical KPI contract metadata
 - project debt ledger
 - backend and frontend release checks
@@ -53,7 +54,7 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 
 Reference: `docs/plans/project-debt-ledger.md`
 
-- Closed active debts: 24
+- Closed active debts: 25
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 1
@@ -78,6 +79,7 @@ Interpretation:
 - KPI Config Versioning V1 is implemented; rollback UI, future effective scheduling, approval workflow, and DB-managed interpretation copy remain future depth, not silent debt.
 - Source-Agnostic Ingest Contract Hardening V1 is implemented; real source adapter work remains blocked until external source evidence exists.
 - KPI Raw Row Lineage Persistence V1 is implemented; reconciliation can query staging lineage columns without parsing raw JSON.
+- Import Lineage Evidence Surface V1 is implemented; admin import detail now exposes KPI lineage counts and row-level evidence where available.
 - Full production UI/design-system and complete EN/TR localization expansion remain planned investments, not silent release debt.
 - Production UI/design-system is intentionally deferred into reversible pilots while backend/data foundations remain the priority.
 - The debt ledger itself is an accounting artifact and is not counted as a separate closed active debt item.
@@ -392,6 +394,19 @@ Interpretation:
 - Reference:
   - `docs/plans/kpi-raw-row-lineage-persistence-v1.md`
 
+### Completed: Import Lineage Evidence Surface V1
+- Completed: 26 April 2026
+- Result:
+  - import batch detail API exposes `lineageSummary`
+  - KPI detail responses report row hash coverage, raw row reference coverage, and sample evidence
+  - KPI import error rows expose `rowHash` and `rawRowReference` when available
+  - `/admin/integrations/:batchId` shows a `Source row lineage` panel
+  - KPI error rows show row-level lineage evidence in the admin UI
+  - official root release gate passes after the change
+  - no source-specific connector, fake adapter, cadence assumption, score change, materialization change, snapshot change, or ranking change was introduced
+- Reference:
+  - `docs/plans/import-lineage-evidence-surface-v1.md`
+
 ### Completed: KPI Config Versioning V1
 - Completed: 26 April 2026
 - Result:
@@ -434,4 +449,4 @@ If staging IdP and seeded staging DB values are available, start real staging ev
 
 If Nebim/source delivery details, sample payload, or official field list become available, start source mapping specification.
 
-If neither staging values nor source ingest details are available, choose the next controlled local backend/data step through the intake gate. Source-agnostic KPI ingest contract hardening and KPI raw row lineage persistence are now done; the next local step should strengthen an existing backend/data surface without guessing external source behavior.
+If neither staging values nor source ingest details are available, choose the next controlled local backend/data step through the intake gate. Source-agnostic KPI ingest contract hardening, KPI raw row lineage persistence, and admin lineage evidence visibility are now done; the next local step should strengthen an existing backend/data surface without guessing external source behavior.

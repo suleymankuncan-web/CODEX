@@ -163,6 +163,43 @@ export function ImportBatchDetailPage() {
         </article>
       </section>
 
+      <section className="panel" aria-label="Import row lineage evidence">
+        <div className="panel-heading">
+          <div>
+            <div className="eyebrow">Source evidence</div>
+            <h3>Source row lineage</h3>
+          </div>
+        </div>
+        {detail.lineageSummary?.supported ? (
+          <>
+            <p className="panel-copy">
+              KPI rows keep a stable hash and a readable source reference for future reconciliation.
+            </p>
+            <div className="reconciliation-grid">
+              <ReconciliationStat
+                label="Trace-ready rows"
+                value={`${detail.lineageSummary.rowHashCount} / ${detail.batch.recordCount}`}
+              />
+              <ReconciliationStat
+                label="Readable references"
+                value={`${detail.lineageSummary.rawRowReferenceCount} / ${detail.batch.recordCount}`}
+              />
+            </div>
+            <DetailList
+              items={[
+                ['Sample row hash', detail.lineageSummary.sampleRowHash ?? 'No sample yet'],
+                [
+                  'Sample raw row reference',
+                  detail.lineageSummary.sampleRawRowReference ?? 'No sample yet',
+                ],
+              ]}
+            />
+          </>
+        ) : (
+          <EmptyState copy="Source row lineage is currently available for KPI raw rows." />
+        )}
+      </section>
+
       <section className="two-up-grid">
         <article className="panel">
           <div className="panel-heading">
@@ -254,6 +291,22 @@ export function ImportBatchDetailPage() {
                     </span>
                   </div>
                   <p>{error.validationError ?? 'No validation message available'}</p>
+                  {error.rawRowReference || error.rowHash ? (
+                    <div className="lineage-chip-list" aria-label="Row lineage evidence">
+                      {error.rawRowReference ? (
+                        <div className="lineage-chip">
+                          <span>Raw reference</span>
+                          <code className="lineage-code">{error.rawRowReference}</code>
+                        </div>
+                      ) : null}
+                      {error.rowHash ? (
+                        <div className="lineage-chip">
+                          <span>Row hash</span>
+                          <code className="lineage-code">{error.rowHash}</code>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
               ))}
             </div>

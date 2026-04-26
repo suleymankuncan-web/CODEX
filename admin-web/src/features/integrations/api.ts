@@ -152,6 +152,13 @@ export type ImportBatchDetail = {
   recommendedNextEntityType: string | null
   canRetryNow: boolean
   healthState: string
+  lineageSummary?: {
+    supported: boolean
+    rowHashCount: number
+    rawRowReferenceCount: number
+    sampleRowHash: string | null
+    sampleRawRowReference: string | null
+  }
 }
 
 export type ImportBatchReconciliation = {
@@ -187,6 +194,8 @@ export type ImportBatchReconciliation = {
 export type ImportBatchError = {
   rowId: string
   sourceRef: string
+  rowHash?: string | null
+  rawRowReference?: string | null
   normalizedStatus: string
   errorCategory: 'validation' | 'missing_dependency' | 'write_failure'
   validationError: string | null
