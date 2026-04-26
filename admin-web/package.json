@@ -8,10 +8,13 @@
     "build": "tsc -b && vite build",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "test:e2e": "playwright test",
+    "test:scripts": "node --test scripts/*.test.mjs",
     "smoke:auth:live": "node scripts/auth-live-smoke.mjs",
     "smoke:auth:action": "node scripts/auth-live-smoke.mjs --include-action-smoke",
+    "smoke:auth:staging": "node scripts/auth-live-smoke.mjs --staging",
+    "smoke:auth:staging:action": "node scripts/auth-live-smoke.mjs --staging --include-action-smoke",
     "smoke:ui": "npm run build && npm run test:e2e",
-    "check:release": "npm run lint && npm run smoke:ui && npm audit --omit=dev",
+    "check:release": "npm run lint && npm run test:scripts && npm run smoke:ui && npm audit --omit=dev",
     "preview": "vite preview"
   },
   "dependencies": {

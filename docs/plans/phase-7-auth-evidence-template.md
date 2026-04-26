@@ -73,6 +73,18 @@ Command or browser step:
 GET /api/auth/bootstrap
 ```
 
+Recommended command for staging provider-only evidence:
+
+```powershell
+npm.cmd run smoke:auth:staging
+```
+
+Recommended command for staging provider plus seeded positive/negative action evidence:
+
+```powershell
+npm.cmd run smoke:auth:staging:action
+```
+
 Expected:
 - `authMode` is `jwt`
 - `provider.configured` is `true`

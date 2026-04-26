@@ -319,6 +319,37 @@ Dogrulama:
 
 Siradaki mantikli adim: real staging IdP + seeded staging action evidence. Local ve seeded validation/action borcu kapandi; staging provider bilgisi geldiginde ayni pozitif/negatif action smoke'u gercek IdP uzerinde kosmak gerekiyor.
 
+## Son Staging Auth Smoke Guard And Runbook
+
+26 Nisan 2026 itibariyla real staging IdP evidence adimi calistirmaya hazir hale getirildi; staging gecildi diye isaretlenmedi.
+
+Eklenenler:
+
+- Frontend scriptleri:
+  - `npm.cmd run smoke:auth:staging`
+  - `npm.cmd run smoke:auth:staging:action`
+- Yeni script testi:
+  - `admin-web/scripts/auth-smoke-config.test.mjs`
+- Yeni runbook:
+  - `docs/plans/phase-7-staging-auth-smoke-runbook.md`
+
+Guard kurallari:
+
+- Staging modunda local URL veya HTTP URL kabul edilmez.
+- Staging modunda local demo credential default'lari kabul edilmez.
+- `AUTH_SMOKE_PROVIDER_ISSUER`, `AUTH_SMOKE_JWKS_URL`, provider name ve accepted audience acik env olarak zorunludur.
+- Action smoke istenirse assigned/unassigned seeded store ID'leri acik env olarak zorunludur.
+- Guard eksikse script network request atmadan fail-fast verir.
+
+Dogrulama:
+
+- Kirmizi test izlendi: staging scriptleri yokken ve guard yokken `npm.cmd run test:scripts` fail verdi.
+- Kirmizi test izlendi: issuer/JWKS guard yokken script staging API host'una gitmeye calisti; test fail verdi.
+- Hedefli frontend script testi gecti: `npm.cmd run test:scripts` -> 3 Node test.
+- Frontend release gecti: `npm.cmd run check:release` -> lint, 3 Node script test, build, 21 Playwright smoke testi, `npm audit --omit=dev`.
+
+Siradaki mantikli adim: real staging IdP registration bilgileri ve seeded staging DB hazir oldugunda `npm.cmd run smoke:auth:staging:action` ile kanit toplamak. Bu adim credential/ortam olmadan tamamlanmis sayilmayacak.
+
 ## Mevcut Roller ve Test Kullanicilari
 
 Keycloak local kullanicilari:

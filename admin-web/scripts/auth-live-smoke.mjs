@@ -1,22 +1,143 @@
 import { chromium, request } from '@playwright/test'
 
-const baseUrl = process.env.AUTH_SMOKE_BASE_URL ?? 'http://localhost:5173'
-const apiBaseUrl = process.env.AUTH_SMOKE_API_BASE_URL ?? `${baseUrl}/api`
-const username = process.env.AUTH_SMOKE_USERNAME ?? 'store.manager'
-const password = process.env.AUTH_SMOKE_PASSWORD ?? 'StoreOps123!'
-const expectedRole = process.env.AUTH_SMOKE_EXPECTED_ROLE ?? 'STORE_MANAGER'
-const expectedLandingPath = process.env.AUTH_SMOKE_EXPECTED_LANDING ?? '/store'
-const includeActionSmoke = process.argv.includes('--include-action-smoke')
+const args = process.argv.slice(2)
+const includeActionSmoke = args.includes('--include-action-smoke')
+const stagingMode = args.includes('--staging')
+const baseUrl = envValue('AUTH_SMOKE_BASE_URL', 'http://localhost:5173')
+const apiBaseUrl = envValue('AUTH_SMOKE_API_BASE_URL', `${baseUrl}/api`)
+const username = envValue('AUTH_SMOKE_USERNAME', 'store.manager')
+const password = envValue('AUTH_SMOKE_PASSWORD', 'StoreOps123!')
+const expectedRole = envValue('AUTH_SMOKE_EXPECTED_ROLE', 'STORE_MANAGER')
+const expectedLandingPath = envValue('AUTH_SMOKE_EXPECTED_LANDING', '/store')
+const smokeEnvironment = envValue('AUTH_SMOKE_ENVIRONMENT', stagingMode ? 'staging' : 'local-keycloak')
+const providerName = envValue('AUTH_SMOKE_PROVIDER_NAME', stagingMode ? 'Staging IdP' : 'Keycloak local')
+const providerIssuer = envValue('AUTH_SMOKE_PROVIDER_ISSUER', '')
+const providerJwksUrl = envValue('AUTH_SMOKE_JWKS_URL', '')
+const acceptedAudience = envValue('AUTH_SMOKE_ACCEPTED_AUDIENCE', stagingMode ? '' : 'account')
 const assignedActionStoreId =
-  process.env.AUTH_SMOKE_ASSIGNED_STORE_ID ?? '00000000-0000-0000-0000-000000000100'
+  envValue('AUTH_SMOKE_ASSIGNED_STORE_ID', '00000000-0000-0000-0000-000000000100')
 const unassignedActionStoreId =
-  process.env.AUTH_SMOKE_UNASSIGNED_STORE_ID ?? '00000000-0000-0000-0000-000000000999'
-const actionRequestMonth = process.env.AUTH_SMOKE_ACTION_REQUEST_MONTH ?? '2026-04-01'
+  envValue('AUTH_SMOKE_UNASSIGNED_STORE_ID', '00000000-0000-0000-0000-000000000999')
+const actionRequestMonth = envValue('AUTH_SMOKE_ACTION_REQUEST_MONTH', '2026-04-01')
 
 function assert(condition, message) {
   if (!condition) {
     throw new Error(message)
   }
+}
+
+function envValue(name, fallback) {
+  const value = process.env[name]
+  return typeof value === 'string' && value.trim() ? value.trim() : fallback
+}
+
+function hasExplicitEnv(name) {
+  return typeof process.env[name] === 'string' && process.env[name].trim().length > 0
+}
+
+function parseUrl(value, message) {
+  try {
+    return new URL(value)
+  } catch {
+    throw new Error(message)
+  }
+}
+
+function isLocalHost(hostname) {
+  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1'
+}
+
+function assertHttpsNonLocalUrl(envName, value) {
+  assert(hasExplicitEnv(envName), `staging smoke requires ${envName} to be set`)
+  const parsed = parseUrl(value, `staging smoke requires ${envName} to be a valid URL`)
+
+  assert(
+    parsed.protocol === 'https:' && !isLocalHost(parsed.hostname),
+    `staging smoke requires ${envName} to be a non-local HTTPS URL`,
+  )
+}
+
+function assertExplicitStagingValue(envName) {
+  assert(hasExplicitEnv(envName), `staging smoke requires ${envName} to be set`)
+}
+
+function assertStagingConfig() {
+  if (!stagingMode) {
+    return
+  }
+
+  assertHttpsNonLocalUrl('AUTH_SMOKE_BASE_URL', baseUrl)
+  assertHttpsNonLocalUrl('AUTH_SMOKE_API_BASE_URL', apiBaseUrl)
+  assertExplicitStagingValue('AUTH_SMOKE_USERNAME')
+  assertExplicitStagingValue('AUTH_SMOKE_PASSWORD')
+  assert(username !== 'store.manager', 'staging smoke requires a non-local AUTH_SMOKE_USERNAME')
+  assert(password !== 'StoreOps123!', 'staging smoke requires a non-local AUTH_SMOKE_PASSWORD')
+  assertExplicitStagingValue('AUTH_SMOKE_EXPECTED_ROLE')
+  assertExplicitStagingValue('AUTH_SMOKE_ENVIRONMENT')
+  assertExplicitStagingValue('AUTH_SMOKE_PROVIDER_NAME')
+  assertExplicitStagingValue('AUTH_SMOKE_PROVIDER_ISSUER')
+  assertHttpsNonLocalUrl('AUTH_SMOKE_PROVIDER_ISSUER', providerIssuer)
+  assertExplicitStagingValue('AUTH_SMOKE_JWKS_URL')
+  assertHttpsNonLocalUrl('AUTH_SMOKE_JWKS_URL', providerJwksUrl)
+  assertExplicitStagingValue('AUTH_SMOKE_ACCEPTED_AUDIENCE')
+
+  if (includeActionSmoke) {
+    assertExplicitStagingValue('AUTH_SMOKE_ASSIGNED_STORE_ID')
+    assertExplicitStagingValue('AUTH_SMOKE_UNASSIGNED_STORE_ID')
+    assertExplicitStagingValue('AUTH_SMOKE_ACTION_REQUEST_MONTH')
+  }
+}
+
+function evidenceStatus() {
+  if (stagingMode) {
+    return includeActionSmoke
+      ? 'staging-provider-action-smoke-passed'
+      : 'staging-provider-smoke-passed'
+  }
+
+  return includeActionSmoke ? 'local-provider-action-smoke-passed' : 'local-provider-smoke-passed'
+}
+
+function evidenceLimitations() {
+  if (stagingMode) {
+    return includeActionSmoke
+      ? ['Staging IdP and seeded staging DB-backed positive/negative action smoke passed.']
+      : ['Staging IdP smoke passed; seeded staging DB-backed action smoke remains pending.']
+  }
+
+  return [
+    'This is local Keycloak real-provider smoke evidence, not staging IdP sign-off.',
+    includeActionSmoke
+      ? 'Positive and negative DB-backed action smoke passed locally; seeded staging action smoke remains pending.'
+      : 'Positive and negative DB-backed action smoke remain pending for a seeded staging environment.',
+  ]
+}
+
+function isProviderLogoutRequest(inputUrl, providerLogoutUrl) {
+  if (!providerLogoutUrl) {
+    return inputUrl.includes('/protocol/openid-connect/logout')
+  }
+
+  try {
+    const observed = new URL(inputUrl)
+    const expected = new URL(providerLogoutUrl)
+
+    return observed.origin === expected.origin && observed.pathname === expected.pathname
+  } catch {
+    return false
+  }
+}
+
+function deriveKeycloakIssuer(authorizationUrl) {
+  return authorizationUrl.replace('/protocol/openid-connect/auth', '')
+}
+
+function evidenceIssuer(authorizationUrl) {
+  return providerIssuer || deriveKeycloakIssuer(authorizationUrl)
+}
+
+function evidenceJwksUrl(authorizationUrl) {
+  return providerJwksUrl || `${deriveKeycloakIssuer(authorizationUrl)}/protocol/openid-connect/certs`
 }
 
 function decodeJwtPayload(token) {
@@ -75,7 +196,18 @@ function sanitizeSession(session) {
 function sanitizeUrl(inputUrl) {
   const url = new URL(inputUrl)
 
-  for (const sensitive of ['code', 'state', 'code_challenge', 'code_verifier', 'id_token_hint']) {
+  for (const sensitive of [
+    'access_token',
+    'client_secret',
+    'code',
+    'code_challenge',
+    'code_verifier',
+    'id_token_hint',
+    'refresh_token',
+    'session_state',
+    'state',
+    'token',
+  ]) {
     if (url.searchParams.has(sensitive)) {
       url.searchParams.set(sensitive, '<present-redacted>')
     }
@@ -199,6 +331,8 @@ async function runActionSmoke(sessionRequest) {
 }
 
 async function main() {
+  assertStagingConfig()
+
   const apiRequest = await request.newContext()
   const bootstrapResponse = await apiRequest.get(`${apiBaseUrl}/auth/bootstrap`)
   assert(bootstrapResponse.ok(), `GET /auth/bootstrap returned ${bootstrapResponse.status()}`)
@@ -216,7 +350,7 @@ async function main() {
 
   page.on('request', (requestEvent) => {
     const url = requestEvent.url()
-    if (url.includes('/protocol/openid-connect/logout')) {
+    if (isProviderLogoutRequest(url, bootstrap.provider.logoutUrl)) {
       logoutRequests.push(sanitizeUrl(url))
     }
   })
@@ -323,22 +457,20 @@ async function main() {
   await sessionRequest.dispose()
 
   const evidence = {
-    evidenceStatus: includeActionSmoke
-      ? 'local-provider-action-smoke-passed'
-      : 'local-provider-smoke-passed',
-    environment: 'local-keycloak',
+    evidenceStatus: evidenceStatus(),
+    environment: smokeEnvironment,
     evidenceDate: new Date().toISOString(),
     frontendOrigin: baseUrl,
     apiBaseUrl,
     provider: {
-      name: 'Keycloak local',
-      issuer: bootstrap.provider.authorizationUrl.replace('/protocol/openid-connect/auth', ''),
+      name: providerName,
+      issuer: evidenceIssuer(bootstrap.provider.authorizationUrl),
       clientId: bootstrap.provider.clientId,
-      jwksUrl: `${bootstrap.provider.authorizationUrl.replace('/protocol/openid-connect/auth', '')}/protocol/openid-connect/certs`,
+      jwksUrl: evidenceJwksUrl(bootstrap.provider.authorizationUrl),
       authorizationUrl: bootstrap.provider.authorizationUrl,
       tokenUrl: bootstrap.provider.tokenUrl,
       logoutUrl: bootstrap.provider.logoutUrl,
-      acceptedAudience: 'account',
+      acceptedAudience,
       pkceMethod: authorizationUrl.searchParams.get('code_challenge_method'),
       refreshTokenRequested: false,
     },
@@ -382,12 +514,7 @@ async function main() {
       landingRoute: new URL(expiredPage.url()).pathname,
       browserRefreshTokenUsed: false,
     },
-    limitations: [
-      'This is local Keycloak real-provider smoke evidence, not staging IdP sign-off.',
-      includeActionSmoke
-        ? 'Positive and negative DB-backed action smoke passed locally; seeded staging action smoke remains pending.'
-        : 'Positive and negative DB-backed action smoke remain pending for a seeded staging environment.',
-    ],
+    limitations: evidenceLimitations(),
   }
 
   console.log(JSON.stringify(evidence, null, 2))

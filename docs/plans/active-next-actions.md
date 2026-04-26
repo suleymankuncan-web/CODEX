@@ -26,6 +26,7 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 - backend filtering of provider default roles from app-facing JWT session roleCodes
 - canonical schema coverage for target distribution action tables
 - backend web DTO PostgreSQL UUID validation contract
+- explicit staging auth smoke guard and runbook
 - backend and frontend release checks
 
 ## Rules For Picking The Next Item
@@ -133,6 +134,16 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
   - deterministic seeded IDs such as `00000000-0000-0000-0000-000000000100` are accepted consistently
   - a backend contract test fails if `IsUUID` is reintroduced in module web DTOs
   - target distribution seeded UUID integration coverage remains in place
+
+### Completed: Staging Auth Smoke Guard And Runbook
+- Completed: 26 April 2026
+- Result:
+  - `npm.cmd run smoke:auth:staging` exists for real staging IdP login/logout evidence
+  - `npm.cmd run smoke:auth:staging:action` exists for real staging IdP plus seeded positive/negative action evidence
+  - staging mode fails fast before network calls when local URLs, local demo credentials, missing issuer, missing JWKS URL, or missing action store IDs are used
+  - frontend release now runs script contract tests through `npm.cmd run test:scripts`
+- Reference:
+  - `docs/plans/phase-7-staging-auth-smoke-runbook.md`
 
 ### 1. Real IdP Staging Evidence
 - Priority: `P1`

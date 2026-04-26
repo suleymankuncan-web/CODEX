@@ -180,6 +180,18 @@ Use this shape to verify broad read scope with narrower action scope.
 
 ## Staging Smoke Checklist
 
+Use the staging runbook before collecting evidence:
+
+- `docs/plans/phase-7-staging-auth-smoke-runbook.md`
+
+Available commands:
+
+```powershell
+cd "C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI\admin-web"
+npm.cmd run smoke:auth:staging
+npm.cmd run smoke:auth:staging:action
+```
+
 ### P0 Required
 - [ ] `GET /api/auth/bootstrap` returns `authMode=jwt`.
 - [ ] `GET /api/auth/bootstrap` returns provider `configured=true`.
