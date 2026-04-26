@@ -6,7 +6,7 @@ This is the short working list for the next practical steps. It keeps the projec
 
 ## Current Position
 
-As of 26 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, and KPI Interpretation Governance V1 have:
+As of 26 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, and KPI Config Editor Governance Preview V1 have:
 
 - saved drafts
 - edit/cancel/history
@@ -35,6 +35,7 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 - KPI source semantics for imported, derived, checklist-fed, pending normalization, and missing values
 - store weighted-score threshold and action interpretation copy
 - KPI interpretation versioning, effective-date, audit, and snapshot-anchoring governance plan
+- admin KPI config publish-governance preview and draft/live diff counts
 - project debt ledger
 - backend and frontend release checks
 
@@ -42,11 +43,11 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 
 Reference: `docs/plans/project-debt-ledger.md`
 
-- Closed active debts: 17
+- Closed active debts: 18
 - Superseded before overbuilding: 1
 - Blocked external dependency: 1
 - Watchlist decision item: 1
-- Strategic investment backlog: 6
+- Strategic investment backlog: 5
 - Silent untracked quality debt in the active gate: 0
 
 Interpretation:
@@ -58,6 +59,7 @@ Interpretation:
 - KPI Source Semantics V1 now explains imported, derived, checklist-fed, pending normalization, and missing KPI values on store-facing KPI rows.
 - Store Score Threshold Language V1 now explains store weighted score bands, score confidence, and action language on `/store/kpis`.
 - KPI Interpretation Governance V1 now defines when interpretation/version/effective-date work must become a technical implementation.
+- KPI Config Editor Governance Preview V1 now makes `/admin/kpi-config` show publish-impact diffs before live interpretation changes.
 - Versioned config implementation remains planned investment.
 - The debt ledger itself is an accounting artifact and is not counted as a separate closed active debt item.
 
@@ -273,6 +275,19 @@ Interpretation:
 - Reference:
   - `docs/plans/kpi-interpretation-governance-v1.md`
 
+### Completed: KPI Config Editor Governance Preview V1
+- Completed: 26 April 2026
+- Result:
+  - `/admin/kpi-config` now shows `Governance preview` and `Publish decision preview`
+  - draft/live diff counts are visible for store profile, personnel profile, ownership matrix, and grading bands
+  - unpublished changes are explicitly marked as review-before-publish
+  - versioned schema is shown as not active yet
+  - snapshot anchoring is called out before interpretation changes become admin-editable
+  - no backend contract, DB schema, migration, score math, or publish behavior changed
+  - official root release gate passes after the change
+- Reference:
+  - `docs/plans/kpi-config-editor-governance-preview-v1.md`
+
 ### 1. Real IdP Staging Evidence
 - Priority: `P1`
 - Why: local provider and action mechanics are proven, but production confidence still needs real staging IdP and seeded staging action evidence.
@@ -297,4 +312,4 @@ Interpretation:
 
 If staging IdP and seeded staging DB values are available, start real staging evidence.
 
-If staging values are not available, start KPI config editor governance preview. The next local product step is to make the existing admin KPI config draft/publish surface explain what would change before publish, without adding versioned schema yet.
+If staging values are not available, start Ranking completeness / segment-ready behavior. The next local product step is to make Turkey-wide, store, and metric mini-ranks clearer before opening deeper KPI config versioning.

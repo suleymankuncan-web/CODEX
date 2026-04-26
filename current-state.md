@@ -1667,6 +1667,51 @@ Debt ledger:
 
 Siradaki mantikli adim: KPI config editor governance preview. Mevcut admin KPI config draft/publish yuzeyi, publish oncesi neyin degisecegini daha okunur gostermeli; versioned schema henuz acilmadan decision preview guclendirilmeli.
 
+## Son KPI Config Editor Governance Preview V1
+
+26 Nisan 2026 itibariyla `/admin/kpi-config` icin publish-oncesi governance preview eklendi.
+
+Yeni dokuman:
+
+- `docs/plans/kpi-config-editor-governance-preview-v1.md`
+
+Eklenenler:
+
+- `Governance preview` paneli.
+- `Publish decision preview` basligi.
+- Draft/live diff sayilari:
+  - store profile
+  - personnel profile
+  - ownership matrix
+  - grading bands
+- Unpublished change durumunda `Review before publish` status dili.
+- `Versioned schema: Not active yet` hatirlatmasi.
+- Snapshot anchoring gerekliligi icin acik uyari.
+- `admin-web/e2e/admin-kpi-config.spec.ts` ile Playwright korumasi.
+
+Sinir:
+
+- Backend contract degismedi.
+- API response degismedi.
+- DB schema veya migration yok.
+- Score formulu degismedi.
+- Publish davranisi degismedi.
+- Versioned config implementation henuz acilmadi.
+
+Dogrulama:
+
+- Kirmizi test izlendi: `Publish decision preview` yokken admin KPI config Playwright testi fail verdi.
+- Hedefli frontend dogrulama gecti: `npm.cmd run build; if ($LASTEXITCODE -eq 0) { npm.cmd run test:e2e -- e2e/admin-kpi-config.spec.ts }` -> 1 Playwright test.
+- Resmi root release gate gecti: `npm.cmd run check:release` -> root script tests, backend lint/test/build/audit, frontend lint/script/build/24 Playwright/audit.
+
+Debt ledger:
+
+- Closed active debts: 18
+- Strategic investment backlog: 5
+- Silent untracked quality debt in the active gate: 0
+
+Siradaki mantikli adim: Ranking completeness / segment-ready behavior. Turkey-wide, store ve metric mini-rank gorunumleri, daha derin KPI config versioning acilmadan once netlestirilmeli.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:

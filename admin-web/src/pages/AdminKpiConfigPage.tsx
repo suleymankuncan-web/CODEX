@@ -25,6 +25,12 @@ import {
 } from '../features/reports/api'
 import { formatDateTime, getErrorMessage } from '../lib/format'
 
+type KpiConfigDiffSummary = {
+  added: string[]
+  removed: string[]
+  changed: string[]
+}
+
 const ownerRoleOptions: KpiOwnerRole[] = [
   'DEPUTY_GM',
   'REGION_MANAGER',
@@ -111,6 +117,11 @@ export function AdminKpiConfigPage() {
     (sum, metric) => sum + metric.weightPercent,
     0,
   ) ?? 0
+  const governancePreview = buildGovernancePreview({
+    draft,
+    published,
+    hasUnpublishedChanges: Boolean(configQuery.data?.hasUnpublishedChanges),
+  })
 
   return (
     <section className="page-stack">
@@ -191,6 +202,40 @@ export function AdminKpiConfigPage() {
           <KeyValue label="Draft grading bands" value={String(draft.gradingBands.length)} />
           <KeyValue label="Live grading bands" value={String(published?.gradingBands.length ?? 0)} />
         </div>
+      </section>
+
+      <section className="panel" aria-label="KPI config governance preview">
+        <div className="panel-heading">
+          <div>
+            <div className="eyebrow">Governance preview</div>
+            <h3>Publish decision preview</h3>
+          </div>
+          <StatusPill tone={governancePreview.tone}>{governancePreview.statusLabel}</StatusPill>
+        </div>
+        <p className="queue-subtitle">{governancePreview.summary}</p>
+        <div className="key-grid">
+          <KeyValue
+            label="Store profile diff"
+            value={formatDiffSummary(governancePreview.storeProfile)}
+          />
+          <KeyValue
+            label="Personnel profile diff"
+            value={formatDiffSummary(governancePreview.personnelProfile)}
+          />
+          <KeyValue
+            label="Ownership diff"
+            value={formatDiffSummary(governancePreview.ownershipMatrix)}
+          />
+          <KeyValue
+            label="Grading diff"
+            value={formatDiffSummary(governancePreview.gradingBands)}
+          />
+          <KeyValue label="Versioned schema" value="Not active yet" />
+          <KeyValue label="Snapshot anchoring" value="Required before admin-editable interpretation changes" />
+        </div>
+        <p className="queue-subtitle">
+          Snapshot anchoring is required before interpretation changes become admin-editable.
+        </p>
       </section>
 
       <ProfileEditor
@@ -577,6 +622,76 @@ export function AdminKpiConfigPage() {
       </section>
     </section>
   )
+}
+
+function buildGovernancePreview(input: {
+  draft: KpiConfig
+  published: KpiConfig | null
+  hasUnpublishedChanges: boolean
+}) {
+  const published = input.published ?? createEmptyKpiConfig()
+  const storeProfile = diffByCode(input.draft.storeProfile.metrics, published.storeProfile.metrics)
+  const personnelProfile = diffByCode(
+    input.draft.personnelProfile.metrics,
+    published.personnelProfile.metrics,
+  )
+  const ownershipMatrix = diffByCode(input.draft.ownershipMatrix, published.ownershipMatrix)
+  const gradingBands = diffByCode(input.draft.gradingBands, published.gradingBands)
+
+  return {
+    storeProfile,
+    personnelProfile,
+    ownershipMatrix,
+    gradingBands,
+    statusLabel: input.hasUnpublishedChanges ? 'Review before publish' : 'No draft delta',
+    summary: input.hasUnpublishedChanges
+      ? 'Draft changes affect live KPI interpretation.'
+      : 'Draft matches live KPI interpretation.',
+    tone: input.hasUnpublishedChanges ? 'warning' : 'calm',
+  } as const
+}
+
+function createEmptyKpiConfig(): KpiConfig {
+  return {
+    storeProfile: {
+      profileCode: 'store',
+      title: '',
+      summary: '',
+      metrics: [],
+      futureMetricRule: '',
+    },
+    personnelProfile: {
+      profileCode: 'personnel',
+      title: '',
+      summary: '',
+      metrics: [],
+      futureMetricRule: '',
+    },
+    ownershipMatrix: [],
+    gradingBands: [],
+  }
+}
+
+function diffByCode<T extends { code: string }>(
+  draftRows: T[],
+  publishedRows: T[],
+): KpiConfigDiffSummary {
+  const draftByCode = new Map(draftRows.map((row) => [row.code, row]))
+  const publishedByCode = new Map(publishedRows.map((row) => [row.code, row]))
+  const added = draftRows
+    .filter((row) => !publishedByCode.has(row.code))
+    .map((row) => row.code)
+  const removed = publishedRows
+    .filter((row) => !draftByCode.has(row.code))
+    .map((row) => row.code)
+  const changed = draftRows
+    .filter((row) => {
+      const publishedRow = publishedByCode.get(row.code)
+      return publishedRow ? JSON.stringify(row) !== JSON.stringify(publishedRow) : false
+    })
+    .map((row) => row.code)
+
+  return { added, removed, changed }
 }
 
 function KpiConfigAuditRow(input: { item: AuditEvent }) {
