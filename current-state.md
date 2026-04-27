@@ -2537,7 +2537,42 @@ Debt ledger:
 - Strategic investment backlog: 2
 - Silent untracked quality debt in the active gate: 0
 
-Siradaki mantikli adim: JSON sample payload gelirse source mapping spec'e gecmek; staging/hosting bilgileri gelirse runbook'u target-specific fill-in note'a cevirmek. Hicbiri yoksa daha fazla paperwork yerine kucuk bir environment drift guard dusunulebilir.
+Siradaki mantikli adim tamamlandi: Environment Drift Guard V1.
+
+## Son Environment Drift Guard V1
+
+27 Nisan 2026 itibariyla env inventory ve `.env.example` dosyalarinin koddan sessizce kopmamasi icin dinamik root script guard eklendi.
+
+Degisenler:
+
+- `scripts/deployment-runbook-contract.test.mjs` artik backend env isimlerini `AppConfigService` uzerinden cikarir.
+- Ayni test frontend env isimlerini `admin-web/src` altindaki `import.meta.env` kullanimlarindan cikarir.
+- Ayni test auth smoke env isimlerini `admin-web/scripts/auth-live-smoke.mjs` icindeki `AUTH_SMOKE_*` kullanimlarindan cikarir.
+- Backend/frontend env isimleri hem ilgili `.env.example` dosyasinda hem de `docs/plans/environment-variable-inventory.md` icinde olmak zorundadir.
+- Auth smoke env isimleri `docs/plans/environment-variable-inventory.md` icinde olmak zorundadir.
+- `docs/plans/environment-variable-inventory.md` icine `Drift Guard` bakim sozlesmesi eklendi.
+
+Karar:
+
+- Bu adim runtime davranisi, DB schema, source adapter, score math veya auth flow degistirmez.
+- Yeni env eklenirse dokuman ve example hizasi root `test:scripts` kapisinda zorunlu hale gelir.
+
+Dogrulama:
+
+- Kirmizi root script testi izlendi: `Drift Guard` dokuman bolumu yokken `npm.cmd run test:scripts` fail verdi.
+- Hedefli root script testi gecti: `npm.cmd run test:scripts` -> 23 Node test.
+- Resmi root release gate gecti: `npm.cmd run check:release` -> 23 root Node test, backend lint + 41 suite / 288 test + build + audit, frontend lint + 7 script test + build + 28 Playwright test + audit.
+
+Debt ledger:
+
+- Closed active debts: 33
+- Superseded before overbuilding: 1
+- Blocked external dependency: 2
+- Watchlist decision item: 0
+- Strategic investment backlog: 2
+- Silent untracked quality debt in the active gate: 0
+
+Siradaki mantikli adim: JSON sample payload gelirse source mapping spec'e gecmek; staging/hosting bilgileri gelirse runbook'u target-specific fill-in note'a cevirmek. Hicbiri yoksa production/staging incident response skeleton auth/import/deploy hatalari icin mantikli bir geri plan adimi olabilir.
 
 ## Onemli Dosyalar
 

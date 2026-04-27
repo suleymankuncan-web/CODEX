@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { test } from 'node:test'
 
@@ -17,6 +17,61 @@ const inventory = readText('docs/plans/environment-variable-inventory.md')
 const runbook = readText('docs/plans/deployment-runbook-skeleton.md')
 const backendEnvExample = readText('backend/nestjs/.env.example')
 const frontendEnvExample = readText('admin-web/.env.example')
+const appConfigService = readText('backend/nestjs/src/shared/app-config.service.ts')
+const authLiveSmokeScript = readText('admin-web/scripts/auth-live-smoke.mjs')
+
+function uniqueSorted(values) {
+  return [...new Set(values)].sort()
+}
+
+function extractMatches(text, regex) {
+  return uniqueSorted([...text.matchAll(regex)].map((match) => match[1]))
+}
+
+function listFiles(directory, predicate) {
+  const absoluteDirectory = join(workspaceRoot, directory)
+  const entries = readdirSync(absoluteDirectory)
+  const files = []
+
+  for (const entry of entries) {
+    const absoluteEntry = join(absoluteDirectory, entry)
+    const relativeEntry = `${directory}/${entry}`.replaceAll('\\', '/')
+    const stats = statSync(absoluteEntry)
+
+    if (stats.isDirectory()) {
+      files.push(...listFiles(relativeEntry, predicate))
+    } else if (predicate(relativeEntry)) {
+      files.push(relativeEntry)
+    }
+  }
+
+  return files
+}
+
+function readEnvExampleValue(example, variable) {
+  const line = example.split(/\r?\n/).find((entry) => entry.startsWith(`${variable}=`))
+
+  assert.ok(line, `${variable} must be present in example env`)
+
+  return line.slice(variable.length + 1).trim()
+}
+
+function isSecretLike(variable) {
+  return /SECRET|PASSWORD|PRIVATE_KEY|API_KEY|CLIENT_SECRET|(^|_)TOKEN$|ACCESS_TOKEN|REFRESH_TOKEN/.test(variable)
+}
+
+function isPlaceholderValue(value) {
+  return value === '' || /^(change-me|placeholder|example|dummy|test|dev|local|mock|not-set)$/i.test(value)
+}
+
+function requireEnvMentionedEverywhere(variable, docs, example, context) {
+  requireText(docs, `\`${variable}\``)
+  const exampleValue = readEnvExampleValue(example, variable)
+
+  if (isSecretLike(variable)) {
+    assert.ok(isPlaceholderValue(exampleValue), `${context} ${variable} must be placeholder-only in example env`)
+  }
+}
 
 test('environment variable inventory keeps required sections', () => {
   for (const heading of [
@@ -112,4 +167,49 @@ test('env examples expose production-relevant variables and PKCE response type',
 
   requireText(frontendEnvExample, 'VITE_OIDC_RESPONSE_TYPE=code')
   requireText(frontendEnvExample, 'VITE_OIDC_TOKEN_URL=')
+})
+
+test('backend env inventory and example stay aligned with AppConfigService', () => {
+  const backendVariables = uniqueSorted([
+    ...extractMatches(appConfigService, /readString\("([A-Z0-9_]+)"/g),
+    ...extractMatches(appConfigService, /readOptionalString\("([A-Z0-9_]+)"/g),
+    ...extractMatches(appConfigService, /configService\.get<string>\("([A-Z0-9_]+)"/g),
+  ])
+
+  assert.ok(backendVariables.length > 0, 'AppConfigService env extraction returned no variables')
+
+  for (const variable of backendVariables) {
+    requireEnvMentionedEverywhere(variable, inventory, backendEnvExample, 'backend')
+  }
+})
+
+test('frontend env inventory and example stay aligned with import.meta.env usage', () => {
+  const frontendVariables = uniqueSorted(
+    listFiles('admin-web/src', (path) => /\.(ts|tsx)$/.test(path))
+      .flatMap((path) => extractMatches(readText(path), /import\.meta\.env\.([A-Z0-9_]+)/g))
+      .filter((variable) => variable.startsWith('VITE_')),
+  )
+
+  assert.ok(frontendVariables.length > 0, 'frontend env extraction returned no VITE variables')
+
+  for (const variable of frontendVariables) {
+    requireEnvMentionedEverywhere(variable, inventory, frontendEnvExample, 'frontend')
+  }
+})
+
+test('auth smoke env inventory stays aligned with smoke script usage', () => {
+  const smokeVariables = extractMatches(authLiveSmokeScript, /envValue\('([A-Z0-9_]+)'/g)
+
+  assert.ok(smokeVariables.length > 0, 'auth smoke env extraction returned no variables')
+
+  for (const variable of smokeVariables) {
+    requireText(inventory, `\`${variable}\``)
+  }
+})
+
+test('environment drift guard is documented as the maintenance contract', () => {
+  requireText(inventory, '## Drift Guard')
+  requireText(inventory, 'AppConfigService')
+  requireText(inventory, 'import.meta.env')
+  requireText(inventory, 'AUTH_SMOKE_*')
 })

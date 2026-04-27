@@ -140,6 +140,32 @@ These values are read by `admin-web/scripts/auth-live-smoke.mjs`.
 - [ ] Assigned and unassigned store ids are seeded and approved.
 - [ ] Evidence is piped through `npm.cmd run guard:auth:evidence`.
 
+## Drift Guard
+
+Root script tests keep this inventory aligned with code and committed env examples.
+
+The guard reads env names from:
+
+- `backend/nestjs/src/shared/app-config.service.ts` via `AppConfigService`.
+- `admin-web/src` via `import.meta.env` usage.
+- `admin-web/scripts/auth-live-smoke.mjs` via `AUTH_SMOKE_*` usage.
+
+Maintenance rule:
+
+- When a backend runtime variable is added to `AppConfigService`, also add it to `backend/nestjs/.env.example` and this inventory.
+- When a frontend build-time variable is added through `import.meta.env`, also add it to `admin-web/.env.example` and this inventory.
+- When an auth smoke variable is added through `AUTH_SMOKE_*`, also add it to this inventory.
+- Keep `.env.example` values placeholder-only; do not add real secrets.
+
+Verification:
+
+```powershell
+cd "C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI"
+npm.cmd run test:scripts
+```
+
+If this command fails on env drift, update the inventory and committed examples before continuing.
+
 ## CODEX Dürüst Yorum
 
 This inventory is useful because it turns "we will configure it later" into a checklist with owners and risk level. The project already has strong release gates; the remaining production risk is mostly environment drift, secret handling, and real provider/source values. This document reduces that drift without pretending the real values are known today.

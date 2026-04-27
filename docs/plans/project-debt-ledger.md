@@ -17,7 +17,7 @@ Date: 27 April 2026
 
 Current count:
 
-- Closed active debts: 32
+- Closed active debts: 33
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -60,6 +60,7 @@ These are counted as paid because they have implementation or documentation evid
 30. No-Empty-Scope Repository Contract Pass V1
 31. Production Environment Readiness Checklist V1
 32. Environment Variable Inventory + Deployment Runbook Skeleton V1
+33. Environment Drift Guard V1
 
 ## Superseded Before Overbuilding
 
@@ -197,6 +198,8 @@ Production Environment Readiness Checklist V1 is implemented. Environment values
 
 Environment Variable Inventory + Deployment Runbook Skeleton V1 is implemented. Backend runtime, frontend build-time, and auth smoke variables are documented; deployment order now covers preflight, release gate, migration, backend deploy, frontend deploy, smoke evidence, rollback, and sign-off. Root script tests guard the critical sections and env example alignment.
 
+Environment Drift Guard V1 is implemented. Root script tests now extract backend env usage from `AppConfigService`, frontend env usage from `import.meta.env`, and auth smoke env usage from `AUTH_SMOKE_*` code paths, then compare the result with committed examples and the env inventory.
+
 UI status note:
 
 - A production UI/design-system strategy note now exists.
@@ -214,6 +217,7 @@ Current repo hygiene is not counted as active debt in this ledger because:
 - the 27 April 2026 no-empty-scope pass hardened remaining actor-scoped store/region/company list surfaces found in store-ops repositories.
 - the 27 April 2026 production readiness checklist added a guarded operator gate for environment, secret, migration, evidence, backup, audit, and JSON source readiness.
 - the 27 April 2026 env/deployment runbook pass aligned committed env examples with production-relevant variables and PKCE response type.
+- the 27 April 2026 environment drift guard made env inventory/example alignment dynamic instead of relying only on a static checklist.
 
 Still monitor:
 
@@ -249,8 +253,8 @@ If staging provider and seeded DB values are available, run the guarded staging 
 
 If they are not available, check whether real JSON source ingest details are available. If JSON source delivery details or a sample payload are unavailable, do not write a source-specific connector yet.
 
-The next local backend candidate should be chosen through the intake gate. Source-agnostic KPI ingest contract hardening, KPI raw row lineage persistence, admin lineage evidence visibility, audit event taxonomy guard, data quality guard, import batch quality summary, the first project-wide scope/auth guard scan, the no-empty-scope repository contract pass, production environment readiness checklist, and env/deployment runbook skeleton are now done, so do not repeat them as busywork; pick a nearby backend/data surface only if it strengthens existing behavior without guessing external source details.
+The next local backend candidate should be chosen through the intake gate. Source-agnostic KPI ingest contract hardening, KPI raw row lineage persistence, admin lineage evidence visibility, audit event taxonomy guard, data quality guard, import batch quality summary, the first project-wide scope/auth guard scan, the no-empty-scope repository contract pass, production environment readiness checklist, env/deployment runbook skeleton, and environment drift guard are now done, so do not repeat them as busywork; pick a nearby backend/data surface only if it strengthens existing behavior without guessing external source details.
 
 Recommended local candidate if external evidence is still unavailable:
 
-- Environment drift guard that checks critical runtime/config docs stay aligned, or wait for real staging/JSON source details before opening more local production paperwork.
+- Production/staging incident response skeleton for auth/import/deploy failures, or wait for real staging/JSON source details before opening more local production paperwork.
