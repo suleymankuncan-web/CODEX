@@ -5,11 +5,11 @@ Turn the Nebim V3 KPI feed into a stable live-performance model without over-pre
 
 ## Status Correction
 
-As of 26 April 2026, the product owner has no confirmed external detail about the real Nebim data access method, payload fields, cadence, or authentication model.
+As of 27 April 2026, the active integration target is no longer Nebim-specific. The product owner now expects external performance data to arrive as JSON, and will provide a sample payload or official field list when available.
 
-This document should therefore be read as a working modeling plan, not as vendor-confirmed source truth.
+This document should therefore be read as a superseded modeling note, not as the active source truth.
 
-Do not implement a Nebim-specific connector from this document alone. Use `docs/plans/real-ingest-connector-contract-intake.md` as the current gate for real source discovery.
+Do not implement a Nebim-specific connector from this document. Use `docs/plans/real-ingest-connector-contract-intake.md` and `docs/plans/production-environment-readiness-checklist.md` as the current gates for JSON source discovery.
 
 ## Working Source Assumptions, Not External Confirmation
 - Nebim data may be pulled on a schedule such as every `30 minutes`

@@ -1932,7 +1932,7 @@ Debt ledger:
 
 - Blocked external dependency sayisi artik 2:
   - Real IdP Staging Evidence
-  - Real Nebim / Source Ingest Evidence
+  - Real JSON Source Ingest Evidence
 - Bu borc yerel kod eksigi degil; dis kaynak kontrati bekleyen kontrollu blokajdir.
 
 CODEX DÜRÜST YORUM:
@@ -2013,7 +2013,7 @@ Debt ledger:
 - Strategic investment backlog: 2
 - Silent untracked quality debt in the active gate: 0
 
-Siradaki mantikli adim: staging IdP veya Nebim/source bilgisi yoksa yeni is, feature intake ile secilecek kontrollu local backend/data adimi olmali; source-specific connector icin hala gercek payload beklenmeli.
+Siradaki mantikli adim: staging IdP veya JSON source bilgisi yoksa yeni is, feature intake ile secilecek kontrollu local backend/data adimi olmali; source-specific connector icin hala gercek payload beklenmeli.
 
 ## Son Source-Agnostic Ingest Contract Hardening V1
 
@@ -2437,7 +2437,53 @@ Debt ledger:
 - Strategic investment backlog: 2
 - Silent untracked quality debt in the active gate: 0
 
-Siradaki mantikli adim: official root release gate'i kosup bu pass'i commit etmek. Sonraki yerel aday, dis kaynak bilgisi yoksa production environment readiness checklist olmali.
+Siradaki mantikli adim tamamlandi: Production Environment Readiness Checklist V1.
+
+## Son Production Environment Readiness Checklist V1
+
+27 Nisan 2026 itibariyla production/staging hazirlik kapisi tek operator checklist'i olarak dokumante edildi ve root script testiyle korumaya alindi.
+
+Yeni dokuman:
+
+- `docs/plans/production-environment-readiness-checklist.md`
+
+Yeni kontrat testi:
+
+- `scripts/production-readiness-checklist-contract.test.mjs`
+
+Kapsam:
+
+- environment ve secret kontrolu
+- real IdP registration ve PKCE smoke kontrolu
+- database migration order ve backup kontrolu
+- audit retention ve restore drill sahipligi
+- sanitized smoke evidence kurallari
+- Go / Conditional Go / No-Go kararlari
+- JSON source readiness holding area
+
+Karar:
+
+- Nebim-specific varsayim artik ilerletilmiyor.
+- Kaynak tarafinda beklenen sey, gercek JSON sample payload veya resmi alan listesi.
+- Source-specific adapter, JSON payload kaniti gelene kadar blocked_external olarak kalir.
+- Checklist runtime davranisi, DB schema, auth flow, skor hesaplama veya import adapter kodu degistirmez.
+
+Dogrulama:
+
+- Kirmizi root script testi izlendi: checklist dokumani yokken `npm.cmd run test:scripts` fail verdi.
+- Hedefli root script testi gecti: `npm.cmd run test:scripts` -> 13 Node test.
+- Resmi root release gate gecti: `npm.cmd run check:release` -> 13 root Node test, backend lint + 41 suite / 288 test + build + audit, frontend lint + 7 script test + build + 28 Playwright test + audit.
+
+Debt ledger:
+
+- Closed active debts: 31
+- Superseded before overbuilding: 1
+- Blocked external dependency: 2
+- Watchlist decision item: 0
+- Strategic investment backlog: 2
+- Silent untracked quality debt in the active gate: 0
+
+Siradaki mantikli adim: JSON sample payload gelirse source mapping spec'e gecmek. Payload gelmezse local tarafta production readiness'i derinlestiren "environment variable inventory + deployment runbook skeleton" adimi mantikli aday.
 
 ## Onemli Dosyalar
 
@@ -2550,6 +2596,8 @@ Planlar:
 - `docs/plans/import-batch-quality-summary-v1.md`
 - `docs/plans/project-wide-scan-2026-04-27.md`
 - `docs/plans/no-empty-scope-repository-contract-pass-2026-04-27.md`
+- `docs/plans/production-environment-readiness-checklist.md`
+- `scripts/production-readiness-checklist-contract.test.mjs`
 - `docs/superpowers/plans/2026-04-26-daily-closure-ranking-v2-explainability.md`
 - `docs/superpowers/plans/2026-04-25-competition-stage-package-plan-lifecycle-v1.md`
 - `docs/superpowers/specs/2026-04-25-competition-stage-package-plan-lifecycle-v1-design.md`

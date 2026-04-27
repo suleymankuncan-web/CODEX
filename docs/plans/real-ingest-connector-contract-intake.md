@@ -6,17 +6,17 @@ Status: `external_source_unknown`
 
 ## Purpose
 
-Prevent the project from coding a Nebim-specific connector against imagined data.
+Prevent the project from coding a source-specific JSON connector against imagined data.
 
 The safe goal is to keep the platform ready for real operational data while making the connector shape source-agnostic until the real source contract is known.
 
 ## Current User Answer
 
-The product owner currently has no confirmed information about how data will be pulled from Nebim.
+The product owner confirmed that the external data should be treated as JSON, but the real sample payload and delivery method are not available yet.
 
 Unknown today:
 
-- whether the source is API, database view, file export, SFTP, Excel/CSV, Power BI, or an intermediary service
+- whether JSON arrives by pull API, push endpoint, file upload, SFTP, scheduled export, manual import, or an intermediary service
 - authentication model
 - payload fields
 - cadence
@@ -27,7 +27,7 @@ Unknown today:
 
 ## Decision
 
-Do not build a Nebim-specific connector yet.
+Do not build a source-specific JSON connector yet.
 
 Build or document only the source-agnostic contract boundary until at least one real sample payload or official field list is available.
 
@@ -144,7 +144,7 @@ Rule:
 
 Before coding a real connector, collect:
 
-1. Delivery type: API, DB view, file, SFTP, manual upload, Power BI export, or intermediary service.
+1. Delivery type: pull API, push endpoint, file upload, SFTP, scheduled export, manual import, or intermediary service.
 2. Authentication/access model.
 3. One sanitized sample payload or official field list.
 4. Source cadence and late-correction behavior.
@@ -177,13 +177,13 @@ Allowed now:
 - document and expose the source-agnostic contract
 - keep existing `stg` import model as the ingest boundary
 - prepare future mapping questions
-- avoid false certainty in Nebim-specific planning docs
+- avoid false certainty in old Nebim-specific planning docs
 
 Not allowed yet:
 
-- hard-code a Nebim field map
-- write a fake Nebim API client
-- assume 30-minute cadence is vendor-confirmed
+- hard-code a source field map before the JSON sample arrives
+- write a fake source API client
+- assume cadence is vendor-confirmed
 - assume return/refund semantics
 - treat blank personnel rows as employee performance
 - calculate new score behavior from unverified source fields
@@ -194,12 +194,12 @@ This is the right place to slow down.
 
 Writing connector code without a real sample payload would create exactly the kind of technical debt this project is trying to avoid: hidden assumptions under KPI, ranking, score, and reporting behavior.
 
-The platform is in a healthy place because it already has `stg` import boundaries, batch metadata, normalization, materialization concepts, and now canonical KPI row lineage metadata. The next safe move is not a fake Nebim connector. The next safe move is a real source mapping spec only after external evidence exists.
+The platform is in a healthy place because it already has `stg` import boundaries, batch metadata, normalization, materialization concepts, and canonical KPI row lineage metadata. The next safe move is not a fake source connector. The next safe move is a real JSON source mapping spec only after external evidence exists.
 
 Recommendation: keep the current source-agnostic contract, and move actual connector implementation only after real source evidence exists.
 
 ## Next Logical Step
 
-If a real Nebim/API/file sample becomes available, convert it into a source mapping spec and then implement only the adapter layer.
+If a real JSON sample payload or official field list becomes available, convert it into a source mapping spec and then implement only the adapter layer.
 
 If no external source detail is available yet, do not repeat ingest hardening as busywork. Pick the next local backend/data step only if it strengthens an existing behavior without guessing source details.

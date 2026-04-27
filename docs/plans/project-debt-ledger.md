@@ -17,7 +17,7 @@ Date: 27 April 2026
 
 Current count:
 
-- Closed active debts: 30
+- Closed active debts: 31
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -58,6 +58,7 @@ These are counted as paid because they have implementation or documentation evid
 28. Import Batch Quality Summary V1
 29. Project-Wide Scope/Auth Guard Scan V1
 30. No-Empty-Scope Repository Contract Pass V1
+31. Production Environment Readiness Checklist V1
 
 ## Superseded Before Overbuilding
 
@@ -107,13 +108,13 @@ Exit criteria:
 - unassigned-store action returns `403`.
 - guarded evidence passes and is stored sanitized.
 
-### Real Nebim / Source Ingest Evidence
+### Real JSON Source Ingest Evidence
 
 Status: `blocked_external`
 
 Why it is not counted as completed:
 
-- Real source access method is unknown.
+- Real JSON delivery method is unknown.
 - Real payload fields are unknown.
 - Source cadence is unknown.
 - Source authentication model is unknown.
@@ -137,7 +138,7 @@ What is already ready locally:
 
 Required external inputs:
 
-- delivery type: API, database view, file, SFTP, manual upload, Power BI export, or intermediary service
+- delivery type: pull API, push endpoint, file upload, SFTP, scheduled export, manual import, or intermediary service
 - one sanitized sample payload or official field list
 - authentication and access model
 - cadence and late-correction behavior
@@ -191,6 +192,8 @@ Project-Wide Scope/Auth Guard Scan V1 is implemented. The scan found and closed 
 
 No-Empty-Scope Repository Contract Pass V1 is implemented. Reporting, checklist acknowledgement, competition read, and visible feed repository surfaces now fail closed when actor read scope has no company, region, or store IDs. Empty scope returns no data without querying, and tests lock the behavior.
 
+Production Environment Readiness Checklist V1 is implemented. Environment values, secrets, real IdP registration, database migration order, audit retention, backup assumptions, smoke evidence, and JSON source readiness now have one guarded operator checklist. Root script tests keep the checklist from quietly losing required sections or no-secret evidence rules.
+
 UI status note:
 
 - A production UI/design-system strategy note now exists.
@@ -206,6 +209,7 @@ Current repo hygiene is not counted as active debt in this ledger because:
 - module and root release gates pass.
 - the 27 April 2026 project-wide scan found no tracked `.env`, no critical committed secret, and no unsafe frontend DOM sink pattern.
 - the 27 April 2026 no-empty-scope pass hardened remaining actor-scoped store/region/company list surfaces found in store-ops repositories.
+- the 27 April 2026 production readiness checklist added a guarded operator gate for environment, secret, migration, evidence, backup, audit, and JSON source readiness.
 
 Still monitor:
 
@@ -239,10 +243,10 @@ Those have been actively reduced. The remaining work is mostly planned product d
 
 If staging provider and seeded DB values are available, run the guarded staging action smoke.
 
-If they are not available, check whether real source ingest details are available. If source delivery details or a sample payload are unavailable, do not write a source-specific connector yet.
+If they are not available, check whether real JSON source ingest details are available. If JSON source delivery details or a sample payload are unavailable, do not write a source-specific connector yet.
 
-The next local backend candidate should be chosen through the intake gate. Source-agnostic KPI ingest contract hardening, KPI raw row lineage persistence, admin lineage evidence visibility, audit event taxonomy guard, data quality guard, import batch quality summary, the first project-wide scope/auth guard scan, and the no-empty-scope repository contract pass are now done, so do not repeat them as busywork; pick a nearby backend/data surface only if it strengthens existing behavior without guessing external source details.
+The next local backend candidate should be chosen through the intake gate. Source-agnostic KPI ingest contract hardening, KPI raw row lineage persistence, admin lineage evidence visibility, audit event taxonomy guard, data quality guard, import batch quality summary, the first project-wide scope/auth guard scan, the no-empty-scope repository contract pass, and the production environment readiness checklist are now done, so do not repeat them as busywork; pick a nearby backend/data surface only if it strengthens existing behavior without guessing external source details.
 
 Recommended local candidate if external evidence is still unavailable:
 
-- Production environment readiness checklist covering required env values, secrets, IdP registration, database migration order, audit retention, backup assumptions, and smoke evidence.
+- Environment variable inventory and deployment runbook skeleton, using the production readiness checklist as the acceptance source.

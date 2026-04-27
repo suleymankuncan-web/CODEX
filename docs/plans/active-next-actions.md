@@ -6,7 +6,7 @@ This is the short working list for the next practical steps. It keeps the projec
 
 ## Current Position
 
-As of 27 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, Store UX TR-First Copy V1, KPI Config Versioning V1, Source-Agnostic Ingest Contract Hardening V1, KPI Raw Row Lineage Persistence V1, Import Lineage Evidence Surface V1, Audit Event Taxonomy Guard V1, Data Quality Guard V1, Import Batch Quality Summary V1, Project-Wide Scope/Auth Guard Scan V1, and No-Empty-Scope Repository Contract Pass V1 have:
+As of 27 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, Store UX TR-First Copy V1, KPI Config Versioning V1, Source-Agnostic Ingest Contract Hardening V1, KPI Raw Row Lineage Persistence V1, Import Lineage Evidence Surface V1, Audit Event Taxonomy Guard V1, Data Quality Guard V1, Import Batch Quality Summary V1, Project-Wide Scope/Auth Guard Scan V1, No-Empty-Scope Repository Contract Pass V1, and Production Environment Readiness Checklist V1 have:
 
 - saved drafts
 - edit/cancel/history
@@ -54,6 +54,7 @@ As of 27 April 2026, the competition package planning flow, Operational Feed V1,
 - production JWT default-secret fallback guard
 - no-empty-scope guards for store listing and target-distribution request listing
 - no-empty-scope guards for reporting, checklist acknowledgement, competition read, and visible feed repository surfaces
+- production environment readiness checklist guarded by root script tests
 - project debt ledger
 - backend and frontend release checks
 
@@ -61,7 +62,7 @@ As of 27 April 2026, the competition package planning flow, Operational Feed V1,
 
 Reference: `docs/plans/project-debt-ledger.md`
 
-- Closed active debts: 30
+- Closed active debts: 31
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -72,7 +73,7 @@ Interpretation:
 
 - The local project is not carrying a known silent release-quality debt right now.
 - Real IdP staging evidence is not counted as done because it requires outside staging IdP and seeded DB values.
-- Real Nebim/source ingest evidence is not counted as done because source access method, payload fields, cadence, auth, and identity semantics are not available yet.
+- Real JSON source ingest evidence is not counted as done because delivery method, payload fields, cadence, auth, and identity semantics are not available yet.
 - Daily Closure / Historical Ranking V2 explainability now exists over the existing read model.
 - Score Meaning V1 now explains the personnel weighted score on `/store/me`.
 - KPI Source Semantics V1 now explains imported, derived, checklist-fed, pending normalization, and missing KPI values on store-facing KPI rows.
@@ -92,6 +93,7 @@ Interpretation:
 - Import Batch Quality Summary V1 is implemented; batch detail now summarizes failed rows by stable quality issue code.
 - Project-Wide Scope/Auth Guard Scan V1 is implemented; production JWT fallback and two scope-widening repository paths are now guarded by tests.
 - No-Empty-Scope Repository Contract Pass V1 is implemented; remaining actor-scoped store/region/company read surfaces found in store-ops repositories now fail closed on empty scope.
+- Production Environment Readiness Checklist V1 is implemented; environment, secrets, IdP, DB migration, audit/backup, smoke evidence, and JSON source readiness are now one guarded operator checklist.
 - Full production UI/design-system and complete EN/TR localization expansion remain planned investments, not silent release debt.
 - Production UI/design-system is intentionally deferred into reversible pilots while backend/data foundations remain the priority.
 - The debt ledger itself is an accounting artifact and is not counted as a separate closed active debt item.
@@ -373,10 +375,10 @@ Interpretation:
 - Recorded: 26 April 2026
 - Status: `external_source_unknown`
 - Decision:
-  - do not build a Nebim-specific connector without real source evidence
-  - treat existing Nebim cadence/payload notes as working assumptions, not vendor-confirmed facts
+  - do not build a source-specific JSON connector without real source evidence
+  - treat existing Nebim cadence/payload notes as superseded working assumptions, not the active integration target
   - keep the ingest boundary source-agnostic through `stg.integration_source`, `stg.import_batch`, canonical raw KPI rows, normalization, and materialization
-  - require a sanitized sample payload or official field list before source-specific adapter code
+  - require a sanitized JSON sample payload or official field list before source-specific adapter code
 - Reference:
   - `docs/plans/real-ingest-connector-contract-intake.md`
   - `docs/plans/nebim-ingestion-and-normalization-plan.md`
@@ -389,7 +391,7 @@ Interpretation:
   - metric-column normalization recognizes `TICKET_COUNT` and `ITEM_COUNT` in addition to existing KPI metrics
   - `/api/integrations/import-payload-templates` exposes `canonicalContract` metadata
   - adapter/scoring boundary rules are visible from the contract response
-  - no Nebim-specific connector, fake API client, cadence assumption, score change, DB schema change, snapshot change, or ranking change was introduced
+  - no source-specific JSON connector, fake API client, cadence assumption, score change, DB schema change, snapshot change, or ranking change was introduced
 - Reference:
   - `docs/plans/source-agnostic-ingest-contract-hardening-v1.md`
 
@@ -402,7 +404,7 @@ Interpretation:
   - KPI import batch staging writes lineage columns directly from normalized `rowHash` and `rawRowReference`
   - schema contract and import-batch integration coverage guard the behavior
   - official root release gate passes after the change
-  - no Nebim-specific connector, fake adapter, cadence assumption, score change, materialization change, snapshot change, or ranking change was introduced
+  - no source-specific JSON connector, fake adapter, cadence assumption, score change, materialization change, snapshot change, or ranking change was introduced
 - Reference:
   - `docs/plans/kpi-raw-row-lineage-persistence-v1.md`
 
@@ -485,6 +487,18 @@ Interpretation:
 - Reference:
   - `docs/plans/no-empty-scope-repository-contract-pass-2026-04-27.md`
 
+### Completed: Production Environment Readiness Checklist V1
+- Completed: 27 April 2026
+- Result:
+  - production/staging readiness now has a single operator checklist
+  - checklist covers environment values, secrets, IdP registration, DB migration order, audit retention, backup assumptions, smoke evidence, and Go / No-Go criteria
+  - JSON source work is explicitly held until a real sample payload or official field list arrives
+  - no source-specific adapter, runtime behavior, DB schema, auth flow, or scoring behavior changed
+  - root script tests guard that the checklist keeps required sections, no-secret evidence rules, release/smoke commands, and JSON-source blocking language
+  - official root release gate passes after the change
+- Reference:
+  - `docs/plans/production-environment-readiness-checklist.md`
+
 ### Completed: KPI Config Versioning V1
 - Completed: 26 April 2026
 - Result:
@@ -518,10 +532,10 @@ Interpretation:
 
 If staging IdP and seeded staging DB values are available, start real staging evidence.
 
-If Nebim/source delivery details, sample payload, or official field list become available, start source mapping specification.
+If JSON source delivery details, sample payload, or official field list become available, start source mapping specification.
 
-If neither staging values nor source ingest details are available, choose the next controlled local backend/data step through the intake gate. Source-agnostic KPI ingest contract hardening, KPI raw row lineage persistence, admin lineage evidence visibility, audit event taxonomy guard, data quality guard, import batch quality summary, the first project-wide scope/auth guard scan, and the no-empty-scope repository contract pass are now done; the next local step should strengthen an existing backend/data surface without guessing external source behavior.
+If neither staging values nor source ingest details are available, choose the next controlled local backend/data step through the intake gate. Source-agnostic KPI ingest contract hardening, KPI raw row lineage persistence, admin lineage evidence visibility, audit event taxonomy guard, data quality guard, import batch quality summary, the first project-wide scope/auth guard scan, the no-empty-scope repository contract pass, and the production environment readiness checklist are now done; the next local step should strengthen an existing backend/data surface without guessing external source behavior.
 
 Recommended local candidate:
 
-- Production environment readiness checklist covering required env values, secrets, IdP registration, database migration order, audit retention, backup assumptions, and smoke evidence.
+- Environment variable inventory and deployment runbook skeleton, using the production readiness checklist as the acceptance source.
