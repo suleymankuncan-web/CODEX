@@ -13,11 +13,11 @@ Rule:
 
 ## Snapshot
 
-Date: 26 April 2026
+Date: 27 April 2026
 
 Current count:
 
-- Closed active debts: 28
+- Closed active debts: 29
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -56,6 +56,7 @@ These are counted as paid because they have implementation or documentation evid
 26. Audit Event Taxonomy Guard V1
 27. Data Quality Guard V1
 28. Import Batch Quality Summary V1
+29. Project-Wide Scope/Auth Guard Scan V1
 
 ## Superseded Before Overbuilding
 
@@ -185,6 +186,8 @@ Data Quality Guard V1 is implemented. Import error rows now expose stable `quali
 
 Import Batch Quality Summary V1 is implemented. Batch detail now summarizes failed rows by stable quality issue code, and the admin import detail surface shows the dominant cleanup categories without creating a new workflow or dashboard too early.
 
+Project-Wide Scope/Auth Guard Scan V1 is implemented. The scan found and closed two concrete backend risks: production JWT default-secret fallback is now rejected unless JWKS is configured, and empty/foreign actor scope paths in store listing and target-distribution request listing are now guarded by no-access and narrowest-scope contract tests.
+
 UI status note:
 
 - A production UI/design-system strategy note now exists.
@@ -198,6 +201,7 @@ Current repo hygiene is not counted as active debt in this ledger because:
 - `.gitignore` exists.
 - generated `node_modules` and `dist` directories are ignored, not tracked.
 - module and root release gates pass.
+- the 27 April 2026 project-wide scan found no tracked `.env`, no critical committed secret, and no unsafe frontend DOM sink pattern.
 
 Still monitor:
 
@@ -222,6 +226,8 @@ The dangerous kind of debt would be:
 - uncataloged audit event strings blocking a future coherent audit stream
 - generic import errors without stable data quality codes
 - row-level quality codes without a batch-level operator summary
+- production auth fallback accepting default secrets
+- empty actor scope widening into full-data list access
 
 Those have been actively reduced. The remaining work is mostly planned product depth, real external staging proof, real source ingest evidence/adapter work, and a future coordinated visual/localization investment. That is a healthy place to be.
 
@@ -231,4 +237,8 @@ If staging provider and seeded DB values are available, run the guarded staging 
 
 If they are not available, check whether real source ingest details are available. If source delivery details or a sample payload are unavailable, do not write a source-specific connector yet.
 
-The next local backend candidate should be chosen through the intake gate. Source-agnostic KPI ingest contract hardening, KPI raw row lineage persistence, admin lineage evidence visibility, audit event taxonomy guard, data quality guard, and import batch quality summary are now done, so do not repeat them as busywork; pick a nearby backend/data surface only if it strengthens existing behavior without guessing external source details.
+The next local backend candidate should be chosen through the intake gate. Source-agnostic KPI ingest contract hardening, KPI raw row lineage persistence, admin lineage evidence visibility, audit event taxonomy guard, data quality guard, import batch quality summary, and the first project-wide scope/auth guard scan are now done, so do not repeat them as busywork; pick a nearby backend/data surface only if it strengthens existing behavior without guessing external source details.
+
+Recommended local candidate if external evidence is still unavailable:
+
+- Broaden the no-empty-scope repository contract pass to remaining list/query surfaces, carefully and with tests, so empty actor scope can never silently become full data access.

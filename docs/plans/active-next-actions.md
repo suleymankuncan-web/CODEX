@@ -6,7 +6,7 @@ This is the short working list for the next practical steps. It keeps the projec
 
 ## Current Position
 
-As of 26 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, Store UX TR-First Copy V1, KPI Config Versioning V1, Source-Agnostic Ingest Contract Hardening V1, KPI Raw Row Lineage Persistence V1, Import Lineage Evidence Surface V1, Audit Event Taxonomy Guard V1, Data Quality Guard V1, and Import Batch Quality Summary V1 have:
+As of 27 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, Store UX TR-First Copy V1, KPI Config Versioning V1, Source-Agnostic Ingest Contract Hardening V1, KPI Raw Row Lineage Persistence V1, Import Lineage Evidence Surface V1, Audit Event Taxonomy Guard V1, Data Quality Guard V1, Import Batch Quality Summary V1, and Project-Wide Scope/Auth Guard Scan V1 have:
 
 - saved drafts
 - edit/cancel/history
@@ -50,6 +50,9 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 - payload-template canonical KPI contract metadata
 - import data quality issue catalog and additive `qualityIssueCode`
 - batch-level import data quality summary on import detail
+- project-wide scope/auth scan evidence
+- production JWT default-secret fallback guard
+- no-empty-scope guards for store listing and target-distribution request listing
 - project debt ledger
 - backend and frontend release checks
 
@@ -57,7 +60,7 @@ As of 26 April 2026, the competition package planning flow, Operational Feed V1,
 
 Reference: `docs/plans/project-debt-ledger.md`
 
-- Closed active debts: 28
+- Closed active debts: 29
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -86,6 +89,7 @@ Interpretation:
 - Audit Event Taxonomy Guard V1 is implemented; global audit feed remains intentionally unbuilt, but emitted audit events now have a backend-owned catalog and drift guard.
 - Data Quality Guard V1 is implemented; import error rows now expose stable `qualityIssueCode` while keeping the old `errorCategory` contract.
 - Import Batch Quality Summary V1 is implemented; batch detail now summarizes failed rows by stable quality issue code.
+- Project-Wide Scope/Auth Guard Scan V1 is implemented; production JWT fallback and two scope-widening repository paths are now guarded by tests.
 - Full production UI/design-system and complete EN/TR localization expansion remain planned investments, not silent release debt.
 - Production UI/design-system is intentionally deferred into reversible pilots while backend/data foundations remain the priority.
 - The debt ledger itself is an accounting artifact and is not counted as a separate closed active debt item.
@@ -452,6 +456,19 @@ Interpretation:
 - Reference:
   - `docs/plans/import-batch-quality-summary-v1.md`
 
+### Completed: Project-Wide Scope/Auth Guard Scan V1
+- Completed: 27 April 2026
+- Result:
+  - project-wide scan covered root scripts, backend, frontend, docs, package scripts, `.gitignore`, auth/scope, release gates, unsafe frontend patterns, and secret hygiene
+  - no tracked `.env`, no critical committed secret, and no unsafe frontend DOM sink pattern was found
+  - production JWT fallback now rejects missing/default `JWT_SECRET` unless JWKS verification is configured
+  - store listing now applies actor scope first and requested filters only as additional constraints
+  - target-distribution request listing now uses narrowest actor scope and `WHERE FALSE` for empty access scope
+  - new backend tests lock the fixed behavior
+  - backend and official root release gates pass after the change
+- Reference:
+  - `docs/plans/project-wide-scan-2026-04-27.md`
+
 ### Completed: KPI Config Versioning V1
 - Completed: 26 April 2026
 - Result:
@@ -487,4 +504,8 @@ If staging IdP and seeded staging DB values are available, start real staging ev
 
 If Nebim/source delivery details, sample payload, or official field list become available, start source mapping specification.
 
-If neither staging values nor source ingest details are available, choose the next controlled local backend/data step through the intake gate. Source-agnostic KPI ingest contract hardening, KPI raw row lineage persistence, admin lineage evidence visibility, audit event taxonomy guard, data quality guard, and import batch quality summary are now done; the next local step should strengthen an existing backend/data surface without guessing external source behavior.
+If neither staging values nor source ingest details are available, choose the next controlled local backend/data step through the intake gate. Source-agnostic KPI ingest contract hardening, KPI raw row lineage persistence, admin lineage evidence visibility, audit event taxonomy guard, data quality guard, import batch quality summary, and the first project-wide scope/auth guard scan are now done; the next local step should strengthen an existing backend/data surface without guessing external source behavior.
+
+Recommended local candidate:
+
+- Broaden the no-empty-scope repository contract pass to remaining list/query surfaces, carefully and with tests, so empty actor scope can never silently become full data access.

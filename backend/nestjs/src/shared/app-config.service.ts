@@ -15,6 +15,16 @@ export class AppConfigService {
     return value;
   }
 
+  private readOptionalString(key: string): string | undefined {
+    const value = this.configService.get<string>(key);
+
+    if (!value || value === "undefined" || value === "null") {
+      return undefined;
+    }
+
+    return value;
+  }
+
   get port(): number {
     return Number(this.readString("APP_PORT", "3000"));
   }
@@ -61,7 +71,19 @@ export class AppConfigService {
   }
 
   get jwtSecret(): string {
-    return this.readString("JWT_SECRET", "change-me");
+    const value = this.readOptionalString("JWT_SECRET");
+
+    if (
+      this.isProduction &&
+      !this.jwtJwksUrl &&
+      (!value || value === "change-me")
+    ) {
+      throw new Error(
+        "JWT_SECRET must be configured when JWT_JWKS_URL is not set in production",
+      );
+    }
+
+    return value ?? "change-me";
   }
 
   get jwtJwksUrl(): string | undefined {

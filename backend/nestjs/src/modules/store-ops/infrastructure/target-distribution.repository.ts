@@ -189,19 +189,17 @@ export class TargetDistributionRepository {
     const params: unknown[] = [];
     const clauses: string[] = [];
 
-    if (input.companyIds.length > 0) {
-      params.push(input.companyIds);
-      clauses.push(`tdr.company_id = ANY($${params.length}::uuid[])`);
-    }
-
-    if (input.regionIds.length > 0) {
-      params.push(input.regionIds);
-      clauses.push(`tdr.region_id = ANY($${params.length}::uuid[])`);
-    }
-
     if (input.storeIds.length > 0) {
       params.push(input.storeIds);
       clauses.push(`tdr.store_id = ANY($${params.length}::uuid[])`);
+    } else if (input.regionIds.length > 0) {
+      params.push(input.regionIds);
+      clauses.push(`tdr.region_id = ANY($${params.length}::uuid[])`);
+    } else if (input.companyIds.length > 0) {
+      params.push(input.companyIds);
+      clauses.push(`tdr.company_id = ANY($${params.length}::uuid[])`);
+    } else {
+      clauses.push("FALSE");
     }
 
     if (input.statuses && input.statuses.length > 0) {
@@ -209,7 +207,7 @@ export class TargetDistributionRepository {
       clauses.push(`tdr.request_status = ANY($${params.length}::text[])`);
     }
 
-    const whereClause = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
+    const whereClause = `WHERE ${clauses.join(" AND ")}`;
     const limit = input.limit ?? 50;
     const offset = input.offset ?? 0;
     params.push(limit);

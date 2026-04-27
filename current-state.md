@@ -2312,11 +2312,72 @@ Debt ledger:
 
 Siradaki mantikli adim: staging/provider degerleri veya source payload bilgisi gelirse evidence/spec adimina donmek; gelmezse import/data yuzeyinde yeni varsayim uretmeyen en kucuk guard'i secmek.
 
+## Son Project-Wide Scope/Auth Guard Scan V1
+
+27 Nisan 2026 itibariyla proje geneli kontrol scan'i yapildi ve iki somut backend riski testle kapatildi.
+
+Yeni dokuman:
+
+- `docs/plans/project-wide-scan-2026-04-27.md`
+
+Scan kapsami:
+
+- root scriptleri ve official release gate
+- backend auth/scope/config/repository yuzeyleri
+- frontend unsafe DOM ve browser storage kullanimlari
+- secret hygiene, `.gitignore`, package scriptleri ve audit kapilari
+- dokumanlar ve handoff dosyalari
+
+Bulgu ozeti:
+
+- Tracked `.env` bulunmadi.
+- Kritik committed secret bulunmadi.
+- Frontend icinde `dangerouslySetInnerHTML`, `eval`, `new Function` veya direkt `document.cookie` kullanimi bulunmadi.
+- Backend global auth/role/scope guardlari ve validation pipe yapisi yerinde.
+
+Kapatilan riskler:
+
+- Production ortaminda `JWT_JWKS_URL` yoksa ve `JWT_SECRET` eksik/default `change-me` ise artik fail-fast calisir.
+- Store listing actor scope'u once uygular; requested company/region/store filtreleri sadece ek kisit olur.
+- Target-distribution request listing empty actor scope icin `WHERE FALSE` uygular ve narrowest scope onceligini kullanir.
+
+Eklenen / degisen dosyalar:
+
+- `backend/nestjs/src/shared/app-config.service.ts`
+- `backend/nestjs/src/shared/app-config.service.spec.ts`
+- `backend/nestjs/src/modules/store-ops/infrastructure/store-ops.repository.ts`
+- `backend/nestjs/src/modules/store-ops/infrastructure/store-ops.repository.spec.ts`
+- `backend/nestjs/src/modules/store-ops/infrastructure/target-distribution.repository.ts`
+- `backend/nestjs/src/modules/store-ops/infrastructure/target-distribution.repository.spec.ts`
+- `docs/plans/project-wide-scan-2026-04-27.md`
+- `docs/plans/project-debt-ledger.md`
+- `docs/plans/active-next-actions.md`
+
+Dogrulama:
+
+- Hedefli backend testler kirmizi/yesil ilerletildi.
+- Hedefli backend testler gecti: 3 suite / 7 test.
+- Backend release gecti: lint, 40 suite / 281 test, build, `npm audit --omit=dev`.
+- Official root release gecti: root 9 script test, backend lint + 40 suite / 281 test + build + audit, frontend lint + 7 script test + build + 28 Playwright test + audit.
+
+Debt ledger:
+
+- Closed active debts: 29
+- Superseded before overbuilding: 1
+- Blocked external dependency: 2
+- Watchlist decision item: 0
+- Strategic investment backlog: 2
+- Silent untracked quality debt in the active gate: 0
+
+Siradaki mantikli adim: scan/fix commit'ini kapatmak. Sonraki yerel teknik aday, dis kaynak varsayimi gerektirmeyen "no-empty-scope repository contract pass" olmali.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:
 
 - `backend/nestjs/src/modules/auth/providers/jwt-auth.provider.ts`
+- `backend/nestjs/src/shared/app-config.service.ts`
+- `backend/nestjs/src/shared/app-config.service.spec.ts`
 - `backend/nestjs/src/modules/auth/decorators/roles.decorator.ts`
 - `backend/nestjs/src/modules/auth/decorators/scope.decorator.ts`
 - `backend/nestjs/src/modules/auth/auth-authorization.repository.ts`
@@ -2351,6 +2412,9 @@ Store ops:
 - `backend/nestjs/src/modules/store-ops/application/target-distribution.service.ts`
 - `backend/nestjs/src/modules/store-ops/infrastructure/reporting.repository.ts`
 - `backend/nestjs/src/modules/store-ops/infrastructure/store-ops.repository.ts`
+- `backend/nestjs/src/modules/store-ops/infrastructure/store-ops.repository.spec.ts`
+- `backend/nestjs/src/modules/store-ops/infrastructure/target-distribution.repository.ts`
+- `backend/nestjs/src/modules/store-ops/infrastructure/target-distribution.repository.spec.ts`
 
 Backend integration / ingest:
 
@@ -2410,6 +2474,7 @@ Planlar:
 - `docs/plans/audit-event-taxonomy-guard-v1.md`
 - `docs/plans/data-quality-guard-v1.md`
 - `docs/plans/import-batch-quality-summary-v1.md`
+- `docs/plans/project-wide-scan-2026-04-27.md`
 - `docs/superpowers/plans/2026-04-26-daily-closure-ranking-v2-explainability.md`
 - `docs/superpowers/plans/2026-04-25-competition-stage-package-plan-lifecycle-v1.md`
 - `docs/superpowers/specs/2026-04-25-competition-stage-package-plan-lifecycle-v1-design.md`

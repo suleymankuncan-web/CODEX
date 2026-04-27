@@ -17,31 +17,35 @@ export class StoreOpsRepository {
     const clauses: string[] = [];
     const params: unknown[] = [];
 
-    if (input.requestedCompanyId) {
-      params.push(input.requestedCompanyId);
-      clauses.push(`s.company_id = $${params.length}`);
+    if (input.storeIds.length > 0) {
+      params.push(input.storeIds);
+      clauses.push(`s.store_id = ANY($${params.length}::uuid[])`);
+    } else if (input.regionIds.length > 0) {
+      params.push(input.regionIds);
+      clauses.push(`s.region_id = ANY($${params.length}::uuid[])`);
     } else if (input.companyIds.length > 0) {
       params.push(input.companyIds);
       clauses.push(`s.company_id = ANY($${params.length}::uuid[])`);
+    } else {
+      clauses.push("FALSE");
+    }
+
+    if (input.requestedCompanyId) {
+      params.push(input.requestedCompanyId);
+      clauses.push(`s.company_id = $${params.length}`);
     }
 
     if (input.requestedRegionId) {
       params.push(input.requestedRegionId);
       clauses.push(`s.region_id = $${params.length}`);
-    } else if (input.regionIds.length > 0) {
-      params.push(input.regionIds);
-      clauses.push(`s.region_id = ANY($${params.length}::uuid[])`);
     }
 
     if (input.requestedStoreId) {
       params.push(input.requestedStoreId);
       clauses.push(`s.store_id = $${params.length}`);
-    } else if (input.storeIds.length > 0) {
-      params.push(input.storeIds);
-      clauses.push(`s.store_id = ANY($${params.length}::uuid[])`);
     }
 
-    const whereClause = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
+    const whereClause = `WHERE ${clauses.join(" AND ")}`;
 
     const result = await this.databaseService.query<{
       store_id: string;
