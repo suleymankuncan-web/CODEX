@@ -83,6 +83,7 @@ Allowed sign-off states:
 
 - `docs/plans/environment-variable-inventory.md`
 - `docs/plans/deployment-runbook-skeleton.md`
+- `docs/plans/production-staging-incident-response-skeleton.md`
 - `docs/plans/phase-7-provider-readiness-checklist.md`
 - `docs/plans/phase-7-staging-auth-smoke-runbook.md`
 - `docs/plans/phase-7-auth-evidence-template.md`

@@ -17,7 +17,7 @@ Date: 27 April 2026
 
 Current count:
 
-- Closed active debts: 33
+- Closed active debts: 34
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -61,6 +61,7 @@ These are counted as paid because they have implementation or documentation evid
 31. Production Environment Readiness Checklist V1
 32. Environment Variable Inventory + Deployment Runbook Skeleton V1
 33. Environment Drift Guard V1
+34. Production/Staging Incident Response Skeleton V1
 
 ## Superseded Before Overbuilding
 
@@ -200,6 +201,8 @@ Environment Variable Inventory + Deployment Runbook Skeleton V1 is implemented. 
 
 Environment Drift Guard V1 is implemented. Root script tests now extract backend env usage from `AppConfigService`, frontend env usage from `import.meta.env`, and auth smoke env usage from `AUTH_SMOKE_*` code paths, then compare the result with committed examples and the env inventory.
 
+Production/Staging Incident Response Skeleton V1 is implemented. Auth, import/data quality, and deploy/release failures now have a guarded operator skeleton covering severity, ownership, triage, sanitized evidence, rollback/forward-fix/No-Go decisions, JSON source holding rules, incident notes, and post-incident review.
+
 UI status note:
 
 - A production UI/design-system strategy note now exists.
@@ -218,6 +221,7 @@ Current repo hygiene is not counted as active debt in this ledger because:
 - the 27 April 2026 production readiness checklist added a guarded operator gate for environment, secret, migration, evidence, backup, audit, and JSON source readiness.
 - the 27 April 2026 env/deployment runbook pass aligned committed env examples with production-relevant variables and PKCE response type.
 - the 27 April 2026 environment drift guard made env inventory/example alignment dynamic instead of relying only on a static checklist.
+- the 27 April 2026 incident response skeleton linked auth/import/deploy failures to severity, evidence, rollback, and No-Go decisions before real staging pressure exists.
 
 Still monitor:
 
@@ -233,6 +237,7 @@ The dangerous kind of debt would be:
 
 - hidden auth assumptions
 - unguarded release process
+- improvised incident handling under staging/production pressure
 - second scoring engine
 - unclear feed vs competition ownership
 - raw auth evidence handling
@@ -253,8 +258,8 @@ If staging provider and seeded DB values are available, run the guarded staging 
 
 If they are not available, check whether real JSON source ingest details are available. If JSON source delivery details or a sample payload are unavailable, do not write a source-specific connector yet.
 
-The next local backend candidate should be chosen through the intake gate. Source-agnostic KPI ingest contract hardening, KPI raw row lineage persistence, admin lineage evidence visibility, audit event taxonomy guard, data quality guard, import batch quality summary, the first project-wide scope/auth guard scan, the no-empty-scope repository contract pass, production environment readiness checklist, env/deployment runbook skeleton, and environment drift guard are now done, so do not repeat them as busywork; pick a nearby backend/data surface only if it strengthens existing behavior without guessing external source details.
+The next local backend candidate should be chosen through the intake gate. Source-agnostic KPI ingest contract hardening, KPI raw row lineage persistence, admin lineage evidence visibility, audit event taxonomy guard, data quality guard, import batch quality summary, the first project-wide scope/auth guard scan, the no-empty-scope repository contract pass, production environment readiness checklist, env/deployment runbook skeleton, environment drift guard, and production/staging incident response skeleton are now done, so do not repeat them as busywork; pick a nearby backend/data surface only if it strengthens existing behavior without guessing external source details.
 
 Recommended local candidate if external evidence is still unavailable:
 
-- Production/staging incident response skeleton for auth/import/deploy failures, or wait for real staging/JSON source details before opening more local production paperwork.
+- If external evidence is still unavailable, consider an evidence index skeleton for sanitized release/smoke/incident notes; otherwise wait for real staging/JSON source details before opening more local production paperwork.

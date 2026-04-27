@@ -2572,7 +2572,59 @@ Debt ledger:
 - Strategic investment backlog: 2
 - Silent untracked quality debt in the active gate: 0
 
-Siradaki mantikli adim: JSON sample payload gelirse source mapping spec'e gecmek; staging/hosting bilgileri gelirse runbook'u target-specific fill-in note'a cevirmek. Hicbiri yoksa production/staging incident response skeleton auth/import/deploy hatalari icin mantikli bir geri plan adimi olabilir.
+Siradaki mantikli adim tamamlandi: Production/Staging Incident Response Skeleton V1.
+
+## Son Production/Staging Incident Response Skeleton V1
+
+27 Nisan 2026 itibariyla staging/production baskisi altinda auth, import/data quality ve deploy/release hatalarinda dogaclama yapmamak icin incident response skeleton baglandi.
+
+Yeni dokuman:
+
+- `docs/plans/production-staging-incident-response-skeleton.md`
+
+Yeni kontrat testi:
+
+- `scripts/incident-response-skeleton-contract.test.mjs`
+
+Kapsam:
+
+- incident severity: P0/P1/P2
+- incident lead, release operator, backend/frontend/data owner ve business approver sorumluluklari
+- triage flow
+- auth incident playbook
+- import and data quality incident playbook
+- deploy and release incident playbook
+- sanitized evidence rules
+- incident note template
+- post-incident review
+
+Baglantilar:
+
+- `docs/plans/deployment-runbook-skeleton.md` rollback bolumu incident skeleton'a baglandi.
+- `docs/plans/production-environment-readiness-checklist.md` reference listesine incident skeleton eklendi.
+
+Karar:
+
+- Bu adim runtime davranisi, DB schema, source adapter, score math, auth flow veya UI davranisi degistirmez.
+- Incident aninda JSON source-specific adapter uretilmez; real JSON sample payload ve source mapping spec beklenir.
+- Olayin sonucu tek karara baglanir: Rollback / Forward-fix / No-Go.
+
+Dogrulama:
+
+- Kirmizi root script testi izlendi: incident skeleton dokumani yokken `npm.cmd run test:scripts` fail verdi.
+- Hedefli root script testi gecti: `npm.cmd run test:scripts` -> 28 Node test.
+- Resmi root release gate gecti: `npm.cmd run check:release` -> 28 root Node test, backend lint + 41 suite / 288 test + build + audit, frontend lint + 7 script test + build + 28 Playwright test + audit.
+
+Debt ledger:
+
+- Closed active debts: 34
+- Superseded before overbuilding: 1
+- Blocked external dependency: 2
+- Watchlist decision item: 0
+- Strategic investment backlog: 2
+- Silent untracked quality debt in the active gate: 0
+
+Siradaki mantikli adim: JSON sample payload gelirse source mapping spec'e gecmek; staging/hosting bilgileri gelirse runbook'u target-specific fill-in note'a cevirmek. Hicbiri yoksa sanitized release/smoke/incident evidence index skeleton dusunulebilir, ama yeni paperwork acmadan once gercek ihtiyac var mi diye kontrol edilmeli.
 
 ## Onemli Dosyalar
 
@@ -2690,6 +2742,8 @@ Planlar:
 - `docs/plans/environment-variable-inventory.md`
 - `docs/plans/deployment-runbook-skeleton.md`
 - `scripts/deployment-runbook-contract.test.mjs`
+- `docs/plans/production-staging-incident-response-skeleton.md`
+- `scripts/incident-response-skeleton-contract.test.mjs`
 - `docs/superpowers/plans/2026-04-26-daily-closure-ranking-v2-explainability.md`
 - `docs/superpowers/plans/2026-04-25-competition-stage-package-plan-lifecycle-v1.md`
 - `docs/superpowers/specs/2026-04-25-competition-stage-package-plan-lifecycle-v1-design.md`

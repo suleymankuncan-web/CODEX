@@ -209,6 +209,10 @@ Evidence rules:
 - [ ] Post-rollback health check recorded.
 - [ ] Follow-up issue or plan recorded.
 
+Reference incident skeleton:
+
+- `docs/plans/production-staging-incident-response-skeleton.md`
+
 ## 8. Sign-Off Record
 
 Use this block in the deployment note:

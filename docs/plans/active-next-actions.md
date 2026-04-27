@@ -6,7 +6,7 @@ This is the short working list for the next practical steps. It keeps the projec
 
 ## Current Position
 
-As of 27 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, Store UX TR-First Copy V1, KPI Config Versioning V1, Source-Agnostic Ingest Contract Hardening V1, KPI Raw Row Lineage Persistence V1, Import Lineage Evidence Surface V1, Audit Event Taxonomy Guard V1, Data Quality Guard V1, Import Batch Quality Summary V1, Project-Wide Scope/Auth Guard Scan V1, No-Empty-Scope Repository Contract Pass V1, Production Environment Readiness Checklist V1, Environment Variable Inventory + Deployment Runbook Skeleton V1, and Environment Drift Guard V1 have:
+As of 27 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, Store UX TR-First Copy V1, KPI Config Versioning V1, Source-Agnostic Ingest Contract Hardening V1, KPI Raw Row Lineage Persistence V1, Import Lineage Evidence Surface V1, Audit Event Taxonomy Guard V1, Data Quality Guard V1, Import Batch Quality Summary V1, Project-Wide Scope/Auth Guard Scan V1, No-Empty-Scope Repository Contract Pass V1, Production Environment Readiness Checklist V1, Environment Variable Inventory + Deployment Runbook Skeleton V1, Environment Drift Guard V1, and Production/Staging Incident Response Skeleton V1 have:
 
 - saved drafts
 - edit/cancel/history
@@ -57,6 +57,7 @@ As of 27 April 2026, the competition package planning flow, Operational Feed V1,
 - production environment readiness checklist guarded by root script tests
 - environment variable inventory and deployment runbook skeleton guarded by root script tests
 - dynamic environment drift guard for backend, frontend, and auth smoke env surfaces
+- production/staging incident response skeleton for auth, import/data quality, and deploy/release failures
 - project debt ledger
 - backend and frontend release checks
 
@@ -64,7 +65,7 @@ As of 27 April 2026, the competition package planning flow, Operational Feed V1,
 
 Reference: `docs/plans/project-debt-ledger.md`
 
-- Closed active debts: 33
+- Closed active debts: 34
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -98,6 +99,7 @@ Interpretation:
 - Production Environment Readiness Checklist V1 is implemented; environment, secrets, IdP, DB migration, audit/backup, smoke evidence, and JSON source readiness are now one guarded operator checklist.
 - Environment Variable Inventory + Deployment Runbook Skeleton V1 is implemented; backend/frontend/smoke env names, secret rules, release/migration/deploy/smoke/rollback order, and env examples are now guarded by root script tests.
 - Environment Drift Guard V1 is implemented; root script tests now extract env usage from `AppConfigService`, `import.meta.env`, and `AUTH_SMOKE_*` code paths and fail when inventory/examples drift.
+- Production/Staging Incident Response Skeleton V1 is implemented; auth, import/data quality, deploy/release, sanitized evidence, rollback/forward-fix/No-Go, and JSON-source holding rules are now guarded by root script tests.
 - Full production UI/design-system and complete EN/TR localization expansion remain planned investments, not silent release debt.
 - Production UI/design-system is intentionally deferred into reversible pilots while backend/data foundations remain the priority.
 - The debt ledger itself is an accounting artifact and is not counted as a separate closed active debt item.
@@ -531,6 +533,19 @@ Interpretation:
   - `scripts/deployment-runbook-contract.test.mjs`
   - `docs/plans/environment-variable-inventory.md`
 
+### Completed: Production/Staging Incident Response Skeleton V1
+- Completed: 27 April 2026
+- Result:
+  - `docs/plans/production-staging-incident-response-skeleton.md` defines severity, ownership, triage, auth incident, import/data quality incident, deploy/release incident, sanitized evidence, incident note, and post-incident review sections
+  - auth incidents are tied to `smoke:auth:staging:action`, `guard:auth:evidence`, assigned-store action success, and unassigned-store `403`
+  - import incidents explicitly pause import/materialization jobs and keep JSON source-specific adapter work blocked until real sample evidence and a source mapping spec exist
+  - deploy incidents are tied to `npm.cmd run check:release`, health/smoke evidence, rollback options, and no skipped tests
+  - deployment runbook and production readiness checklist now link to the incident skeleton
+  - no runtime behavior, DB schema, source adapter, score math, auth flow, or UI behavior changed
+- Reference:
+  - `docs/plans/production-staging-incident-response-skeleton.md`
+  - `scripts/incident-response-skeleton-contract.test.mjs`
+
 ### Completed: KPI Config Versioning V1
 - Completed: 26 April 2026
 - Result:
@@ -566,8 +581,8 @@ If staging IdP and seeded staging DB values are available, start real staging ev
 
 If JSON source delivery details, sample payload, or official field list become available, start source mapping specification.
 
-If neither staging values nor source ingest details are available, choose the next controlled local backend/data step through the intake gate. Source-agnostic KPI ingest contract hardening, KPI raw row lineage persistence, admin lineage evidence visibility, audit event taxonomy guard, data quality guard, import batch quality summary, the first project-wide scope/auth guard scan, the no-empty-scope repository contract pass, production environment readiness checklist, env/deployment runbook skeleton, and environment drift guard are now done; the next local step should strengthen an existing backend/data surface without guessing external source behavior.
+If neither staging values nor source ingest details are available, choose the next controlled local backend/data step through the intake gate. Source-agnostic KPI ingest contract hardening, KPI raw row lineage persistence, admin lineage evidence visibility, audit event taxonomy guard, data quality guard, import batch quality summary, the first project-wide scope/auth guard scan, the no-empty-scope repository contract pass, production environment readiness checklist, env/deployment runbook skeleton, environment drift guard, and production/staging incident response skeleton are now done; the next local step should strengthen an existing backend/data surface without guessing external source behavior.
 
 Recommended local candidate:
 
-- Production/staging incident response skeleton for auth/import/deploy failures, or wait for real staging/JSON source details before opening more local production paperwork.
+- If external details are still unavailable, consider an evidence index skeleton for sanitized release/smoke/incident notes; otherwise wait for real staging/JSON source details before opening more local production paperwork.
