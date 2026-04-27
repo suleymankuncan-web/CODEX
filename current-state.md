@@ -2483,7 +2483,61 @@ Debt ledger:
 - Strategic investment backlog: 2
 - Silent untracked quality debt in the active gate: 0
 
-Siradaki mantikli adim: JSON sample payload gelirse source mapping spec'e gecmek. Payload gelmezse local tarafta production readiness'i derinlestiren "environment variable inventory + deployment runbook skeleton" adimi mantikli aday.
+Siradaki mantikli adim tamamlandi: Environment Variable Inventory + Deployment Runbook Skeleton V1.
+
+## Son Environment Variable Inventory + Deployment Runbook Skeleton V1
+
+27 Nisan 2026 itibariyla production readiness checklist'in altindaki env ve deploy isletim akisi somut dokumanlara ayrildi ve root script testiyle korumaya alindi.
+
+Yeni dokumanlar:
+
+- `docs/plans/environment-variable-inventory.md`
+- `docs/plans/deployment-runbook-skeleton.md`
+
+Yeni kontrat testi:
+
+- `scripts/deployment-runbook-contract.test.mjs`
+
+Ek hizalama:
+
+- `backend/nestjs/.env.example` artik `ALLOW_MOCK_AUTH`, `JWT_JWKS_URL`, `DAILY_CLOSURE_AUTOMATION_ENABLED`, `DAILY_CLOSURE_POLL_MINUTES` ve `DAILY_CLOSURE_ACTOR_USER_ID` degerlerini gosterir.
+- `admin-web/.env.example` artik PKCE icin `VITE_OIDC_RESPONSE_TYPE=code` kullanir ve `VITE_OIDC_TOKEN_URL` alanini gosterir.
+
+Kapsam:
+
+- backend runtime env inventory
+- frontend build-time env inventory
+- auth smoke evidence env inventory
+- secret handling kurallari
+- deployment preflight
+- release gate
+- database migration sirasi
+- backend/frontend deploy sirasi
+- staging auth smoke evidence
+- rollback ve sign-off kaydi
+
+Karar:
+
+- Bu adim runtime davranisi, DB schema, source adapter, score math veya auth flow degistirmez.
+- Real environment komutlari hedef hosting/IdP secilmeden doldurulmayacak.
+- JSON source adapter hala gercek JSON sample payload veya resmi alan listesi bekler.
+
+Dogrulama:
+
+- Kirmizi root script testi izlendi: env inventory dokumani yokken `npm.cmd run test:scripts` fail verdi.
+- Hedefli root script testi gecti: `npm.cmd run test:scripts` -> 19 Node test.
+- Resmi root release gate gecti: `npm.cmd run check:release` -> 19 root Node test, backend lint + 41 suite / 288 test + build + audit, frontend lint + 7 script test + build + 28 Playwright test + audit.
+
+Debt ledger:
+
+- Closed active debts: 32
+- Superseded before overbuilding: 1
+- Blocked external dependency: 2
+- Watchlist decision item: 0
+- Strategic investment backlog: 2
+- Silent untracked quality debt in the active gate: 0
+
+Siradaki mantikli adim: JSON sample payload gelirse source mapping spec'e gecmek; staging/hosting bilgileri gelirse runbook'u target-specific fill-in note'a cevirmek. Hicbiri yoksa daha fazla paperwork yerine kucuk bir environment drift guard dusunulebilir.
 
 ## Onemli Dosyalar
 
@@ -2598,6 +2652,9 @@ Planlar:
 - `docs/plans/no-empty-scope-repository-contract-pass-2026-04-27.md`
 - `docs/plans/production-environment-readiness-checklist.md`
 - `scripts/production-readiness-checklist-contract.test.mjs`
+- `docs/plans/environment-variable-inventory.md`
+- `docs/plans/deployment-runbook-skeleton.md`
+- `scripts/deployment-runbook-contract.test.mjs`
 - `docs/superpowers/plans/2026-04-26-daily-closure-ranking-v2-explainability.md`
 - `docs/superpowers/plans/2026-04-25-competition-stage-package-plan-lifecycle-v1.md`
 - `docs/superpowers/specs/2026-04-25-competition-stage-package-plan-lifecycle-v1-design.md`

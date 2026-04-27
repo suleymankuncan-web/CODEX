@@ -32,6 +32,7 @@ Allowed sign-off states:
 
 ### P0 Required
 
+- [ ] `docs/plans/environment-variable-inventory.md` is reviewed for the target environment.
 - [ ] Target environment name is explicit: local, staging, pilot, or production.
 - [ ] `NODE_ENV=production` is used for production backend runtime.
 - [ ] Backend and frontend public origins are final for the target environment.
@@ -80,6 +81,8 @@ Allowed sign-off states:
 
 ### References
 
+- `docs/plans/environment-variable-inventory.md`
+- `docs/plans/deployment-runbook-skeleton.md`
 - `docs/plans/phase-7-provider-readiness-checklist.md`
 - `docs/plans/phase-7-staging-auth-smoke-runbook.md`
 - `docs/plans/phase-7-auth-evidence-template.md`
@@ -220,4 +223,4 @@ My recommendation is to keep this checklist as a gate, not as decoration. If an 
 
 When the JSON sample payload arrives, create a source mapping specification before writing adapter code.
 
-If the JSON sample does not arrive yet, the next local step should be a small production-readiness depth item, such as an environment variable inventory or deployment runbook skeleton, without changing runtime behavior.
+If the JSON sample does not arrive yet, the next local step should be a small environment-drift guard or a target-specific staging fill-in note after the hosting/IdP details are known.
