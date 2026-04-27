@@ -86,11 +86,23 @@ const feedPostColumns = `
 export class FeedRepository {
   constructor(private readonly databaseService: DatabaseService) {}
 
+  private hasVisibleScope(actorScope: FeedActor["actorScope"]) {
+    return (
+      actorScope.companyIds.length > 0 ||
+      actorScope.regionIds.length > 0 ||
+      actorScope.storeIds.length > 0
+    );
+  }
+
   async listVisibleFeedPosts(input: {
     actorScope: FeedActor["actorScope"];
     limit: number;
     offset: number;
   }) {
+    if (!this.hasVisibleScope(input.actorScope)) {
+      return [];
+    }
+
     const result = await this.databaseService.query<FeedPostRow>(
       `
         WITH actor_store_regions AS (
@@ -109,8 +121,7 @@ export class FeedRepository {
           AND (fp.starts_at IS NULL OR fp.starts_at <= NOW())
           AND (fp.ends_at IS NULL OR fp.ends_at >= NOW())
           AND (
-            fp.visibility_scope_type = 'company'
-            OR $1::boolean = TRUE
+            ($1::boolean = TRUE AND fp.visibility_scope_type = 'company')
             OR (
               fp.visibility_scope_type = 'region'
               AND (
@@ -128,7 +139,7 @@ export class FeedRepository {
         OFFSET $5::int
       `,
       [
-        input.actorScope.companyIds.length > 0,
+        this.hasVisibleScope(input.actorScope),
         input.actorScope.regionIds,
         input.actorScope.storeIds,
         input.limit,

@@ -23,6 +23,18 @@ type ChecklistAcknowledgementRow = {
 export class ChecklistAcknowledgementRepository {
   constructor(private readonly databaseService: DatabaseService) {}
 
+  private hasStoreAccessScope(input: {
+    companyIds: string[];
+    regionIds: string[];
+    storeIds: string[];
+  }) {
+    return (
+      input.companyIds.length > 0 ||
+      input.regionIds.length > 0 ||
+      input.storeIds.length > 0
+    );
+  }
+
   async getChecklistInstanceScope(checklistInstanceId: string) {
     const result = await this.databaseService.query<{
       checklist_instance_id: string;
@@ -50,22 +62,22 @@ export class ChecklistAcknowledgementRepository {
     regionIds: string[];
     storeIds: string[];
   }) {
+    if (!this.hasStoreAccessScope(input)) {
+      return [];
+    }
+
     const clauses: string[] = [];
     const params: unknown[] = [];
-
-    if (input.companyIds.length > 0) {
-      params.push(input.companyIds);
-      clauses.push(`s.company_id = ANY($${params.length}::uuid[])`);
-    }
-
-    if (input.regionIds.length > 0) {
-      params.push(input.regionIds);
-      clauses.push(`s.region_id = ANY($${params.length}::uuid[])`);
-    }
 
     if (input.storeIds.length > 0) {
       params.push(input.storeIds);
       clauses.push(`ci.store_id = ANY($${params.length}::uuid[])`);
+    } else if (input.regionIds.length > 0) {
+      params.push(input.regionIds);
+      clauses.push(`s.region_id = ANY($${params.length}::uuid[])`);
+    } else if (input.companyIds.length > 0) {
+      params.push(input.companyIds);
+      clauses.push(`s.company_id = ANY($${params.length}::uuid[])`);
     }
 
     clauses.push(`ci.status = 'completed'`);

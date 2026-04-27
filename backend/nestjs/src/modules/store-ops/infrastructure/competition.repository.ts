@@ -163,6 +163,18 @@ type CompetitionStoreContributionRow = {
 export class CompetitionRepository {
   constructor(private readonly databaseService: DatabaseService) {}
 
+  private hasReadScope(input: {
+    companyIds: string[];
+    regionIds: string[];
+    storeIds: string[];
+  }) {
+    return (
+      input.companyIds.length > 0 ||
+      input.regionIds.length > 0 ||
+      input.storeIds.length > 0
+    );
+  }
+
   async listCompetitions(input: {
     companyIds: string[];
     regionIds: string[];
@@ -170,6 +182,10 @@ export class CompetitionRepository {
     limit: number;
     offset: number;
   }): Promise<Competition[]> {
+    if (!this.hasReadScope(input)) {
+      return [];
+    }
+
     const result = await this.databaseService.query<CompetitionRow>(
       `
         SELECT DISTINCT
@@ -191,10 +207,10 @@ export class CompetitionRepository {
         LEFT JOIN ops.store store
           ON store.store_id = team_store.store_id
         WHERE
-          cardinality($1::uuid[]) > 0
+          store.company_id = ANY($1::uuid[])
           OR store.region_id = ANY($2::uuid[])
           OR store.store_id = ANY($3::uuid[])
-          OR team_store.store_id IS NULL
+          OR (cardinality($1::uuid[]) > 0 AND team_store.store_id IS NULL)
         ORDER BY competition.starts_on DESC, competition.competition_code ASC
         LIMIT $4::int
         OFFSET $5::int
@@ -211,6 +227,10 @@ export class CompetitionRepository {
     regionIds: string[];
     storeIds: string[];
   }): Promise<CompetitionBaseDetail | null> {
+    if (!this.hasReadScope(input)) {
+      return null;
+    }
+
     const competitionResult = await this.databaseService.query<CompetitionRow>(
       `
         SELECT DISTINCT
@@ -233,10 +253,10 @@ export class CompetitionRepository {
           ON store.store_id = team_store.store_id
         WHERE competition.competition_id = $1::uuid
           AND (
-            cardinality($2::uuid[]) > 0
+            store.company_id = ANY($2::uuid[])
             OR store.region_id = ANY($3::uuid[])
             OR store.store_id = ANY($4::uuid[])
-            OR team_store.store_id IS NULL
+            OR (cardinality($2::uuid[]) > 0 AND team_store.store_id IS NULL)
           )
       `,
       [input.competitionId, input.companyIds, input.regionIds, input.storeIds],
@@ -267,6 +287,10 @@ export class CompetitionRepository {
     regionIds: string[];
     storeIds: string[];
   }): Promise<CompetitionStoreContribution[]> {
+    if (!this.hasReadScope(input)) {
+      return [];
+    }
+
     const result = await this.databaseService.query<CompetitionStoreContributionRow>(
       `
         SELECT
@@ -293,7 +317,7 @@ export class CompetitionRepository {
           ON store.store_id = store_score.store_id
         WHERE stage.competition_id = $1::uuid
           AND (
-            cardinality($2::uuid[]) > 0
+            store.company_id = ANY($2::uuid[])
             OR store.region_id = ANY($3::uuid[])
             OR store.store_id = ANY($4::uuid[])
           )
@@ -1851,6 +1875,10 @@ export class CompetitionRepository {
     regionIds: string[];
     storeIds: string[];
   }): Promise<CompetitionWarning[]> {
+    if (!this.hasReadScope(input)) {
+      return [];
+    }
+
     const result = await this.databaseService.query<CompetitionWarningRow>(
       `
         SELECT
@@ -1871,10 +1899,10 @@ export class CompetitionRepository {
           ON store.store_id = warning.store_id
         WHERE stage.competition_id = $1::uuid
           AND (
-            cardinality($2::uuid[]) > 0
+            store.company_id = ANY($2::uuid[])
             OR store.region_id = ANY($3::uuid[])
             OR store.store_id = ANY($4::uuid[])
-            OR warning.store_id IS NULL
+            OR (cardinality($2::uuid[]) > 0 AND warning.store_id IS NULL)
           )
         ORDER BY warning.warning_level DESC, warning.period_start ASC, warning.warning_code ASC
       `,

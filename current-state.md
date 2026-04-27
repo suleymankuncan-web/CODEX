@@ -2371,6 +2371,74 @@ Debt ledger:
 
 Siradaki mantikli adim: scan/fix commit'ini kapatmak. Sonraki yerel teknik aday, dis kaynak varsayimi gerektirmeyen "no-empty-scope repository contract pass" olmali.
 
+## Son No-Empty-Scope Repository Contract Pass V1
+
+27 Nisan 2026 itibariyla actor read scope'u bos olan kullanicilarin store/region/company operasyonel listelerde veri gorememesi icin repository seviyesinde fail-closed kontrat genisletildi.
+
+Yeni dokuman:
+
+- `docs/plans/no-empty-scope-repository-contract-pass-2026-04-27.md`
+
+Kapatilan yuzeyler:
+
+- Reporting:
+  - workforce report
+  - KPI report
+  - checklist report
+  - turnover report
+  - employee KPI latest period lookup
+  - employee KPI period list
+  - external employee reference resolution
+- Checklist acknowledgement:
+  - completed checklist acknowledgement list
+- Competition:
+  - competition list
+  - competition detail
+  - store contribution rows
+  - warning rows
+- Operational Feed:
+  - visible feed list
+
+Yeni davranis:
+
+- Bos company/region/store scope icin listeler `[]` dondurur.
+- Bos scope icin paged report metodlari `{ rows: [], total: 0 }` dondurur.
+- Bos scope icin single lookup metodlari `null` dondurur.
+- Bos scope branch'lerinde DB query atilmaz.
+- Competition company-scope okumalari artik `store.company_id` uzerinden filtrelenir; herhangi bir company scope global bypass gibi davranmaz.
+- Feed company postlari scope'u olan kullanicilara gorunmeye devam eder, ama company visibility tum region/store postlarini acan bir `OR` gibi davranmaz.
+
+Degisen / eklenen dosyalar:
+
+- `backend/nestjs/src/modules/store-ops/infrastructure/reporting.repository.ts`
+- `backend/nestjs/src/modules/store-ops/infrastructure/reporting.repository.spec.ts`
+- `backend/nestjs/src/modules/store-ops/infrastructure/checklist-acknowledgement.repository.ts`
+- `backend/nestjs/src/modules/store-ops/infrastructure/checklist-acknowledgement.repository.spec.ts`
+- `backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.ts`
+- `backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.spec.ts`
+- `backend/nestjs/src/modules/store-ops/infrastructure/feed.repository.ts`
+- `backend/nestjs/src/modules/store-ops/infrastructure/feed.repository.spec.ts`
+- `docs/plans/no-empty-scope-repository-contract-pass-2026-04-27.md`
+- `docs/plans/project-debt-ledger.md`
+- `docs/plans/active-next-actions.md`
+
+Dogrulama:
+
+- Kirmizi test izlendi: reporting/checklist/competition/feed empty-scope testleri eski davranista fail verdi.
+- Hedefli backend test gecti: 4 suite / 43 test.
+- Backend release gecti: lint, 41 suite / 288 test, build, `npm audit --omit=dev`.
+
+Debt ledger:
+
+- Closed active debts: 30
+- Superseded before overbuilding: 1
+- Blocked external dependency: 2
+- Watchlist decision item: 0
+- Strategic investment backlog: 2
+- Silent untracked quality debt in the active gate: 0
+
+Siradaki mantikli adim: official root release gate'i kosup bu pass'i commit etmek. Sonraki yerel aday, dis kaynak bilgisi yoksa production environment readiness checklist olmali.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:
@@ -2397,9 +2465,12 @@ Store ops:
 
 - `backend/nestjs/src/modules/store-ops/web/checklist.controller.ts`
 - `backend/nestjs/src/modules/store-ops/application/checklist.service.ts`
+- `backend/nestjs/src/modules/store-ops/infrastructure/checklist-acknowledgement.repository.ts`
+- `backend/nestjs/src/modules/store-ops/infrastructure/checklist-acknowledgement.repository.spec.ts`
 - `backend/nestjs/src/modules/store-ops/application/competition.contract.ts`
 - `backend/nestjs/src/modules/store-ops/application/competition.service.ts`
 - `backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.ts`
+- `backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.spec.ts`
 - `backend/nestjs/src/modules/store-ops/web/competition.controller.ts`
 - `backend/nestjs/src/modules/store-ops/web/dto/create-competition-stage-package.dto.ts`
 - `backend/nestjs/src/modules/store-ops/web/dto/create-competition-stage-package-plan.dto.ts`
@@ -2411,6 +2482,9 @@ Store ops:
 - `backend/nestjs/src/modules/store-ops/web/target-distribution.controller.ts`
 - `backend/nestjs/src/modules/store-ops/application/target-distribution.service.ts`
 - `backend/nestjs/src/modules/store-ops/infrastructure/reporting.repository.ts`
+- `backend/nestjs/src/modules/store-ops/infrastructure/reporting.repository.spec.ts`
+- `backend/nestjs/src/modules/store-ops/infrastructure/feed.repository.ts`
+- `backend/nestjs/src/modules/store-ops/infrastructure/feed.repository.spec.ts`
 - `backend/nestjs/src/modules/store-ops/infrastructure/store-ops.repository.ts`
 - `backend/nestjs/src/modules/store-ops/infrastructure/store-ops.repository.spec.ts`
 - `backend/nestjs/src/modules/store-ops/infrastructure/target-distribution.repository.ts`
@@ -2475,6 +2549,7 @@ Planlar:
 - `docs/plans/data-quality-guard-v1.md`
 - `docs/plans/import-batch-quality-summary-v1.md`
 - `docs/plans/project-wide-scan-2026-04-27.md`
+- `docs/plans/no-empty-scope-repository-contract-pass-2026-04-27.md`
 - `docs/superpowers/plans/2026-04-26-daily-closure-ranking-v2-explainability.md`
 - `docs/superpowers/plans/2026-04-25-competition-stage-package-plan-lifecycle-v1.md`
 - `docs/superpowers/specs/2026-04-25-competition-stage-package-plan-lifecycle-v1-design.md`

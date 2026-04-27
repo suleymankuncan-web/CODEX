@@ -6,7 +6,7 @@ This is the short working list for the next practical steps. It keeps the projec
 
 ## Current Position
 
-As of 27 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, Store UX TR-First Copy V1, KPI Config Versioning V1, Source-Agnostic Ingest Contract Hardening V1, KPI Raw Row Lineage Persistence V1, Import Lineage Evidence Surface V1, Audit Event Taxonomy Guard V1, Data Quality Guard V1, Import Batch Quality Summary V1, and Project-Wide Scope/Auth Guard Scan V1 have:
+As of 27 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, Store UX TR-First Copy V1, KPI Config Versioning V1, Source-Agnostic Ingest Contract Hardening V1, KPI Raw Row Lineage Persistence V1, Import Lineage Evidence Surface V1, Audit Event Taxonomy Guard V1, Data Quality Guard V1, Import Batch Quality Summary V1, Project-Wide Scope/Auth Guard Scan V1, and No-Empty-Scope Repository Contract Pass V1 have:
 
 - saved drafts
 - edit/cancel/history
@@ -53,6 +53,7 @@ As of 27 April 2026, the competition package planning flow, Operational Feed V1,
 - project-wide scope/auth scan evidence
 - production JWT default-secret fallback guard
 - no-empty-scope guards for store listing and target-distribution request listing
+- no-empty-scope guards for reporting, checklist acknowledgement, competition read, and visible feed repository surfaces
 - project debt ledger
 - backend and frontend release checks
 
@@ -60,7 +61,7 @@ As of 27 April 2026, the competition package planning flow, Operational Feed V1,
 
 Reference: `docs/plans/project-debt-ledger.md`
 
-- Closed active debts: 29
+- Closed active debts: 30
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -90,6 +91,7 @@ Interpretation:
 - Data Quality Guard V1 is implemented; import error rows now expose stable `qualityIssueCode` while keeping the old `errorCategory` contract.
 - Import Batch Quality Summary V1 is implemented; batch detail now summarizes failed rows by stable quality issue code.
 - Project-Wide Scope/Auth Guard Scan V1 is implemented; production JWT fallback and two scope-widening repository paths are now guarded by tests.
+- No-Empty-Scope Repository Contract Pass V1 is implemented; remaining actor-scoped store/region/company read surfaces found in store-ops repositories now fail closed on empty scope.
 - Full production UI/design-system and complete EN/TR localization expansion remain planned investments, not silent release debt.
 - Production UI/design-system is intentionally deferred into reversible pilots while backend/data foundations remain the priority.
 - The debt ledger itself is an accounting artifact and is not counted as a separate closed active debt item.
@@ -469,6 +471,20 @@ Interpretation:
 - Reference:
   - `docs/plans/project-wide-scan-2026-04-27.md`
 
+### Completed: No-Empty-Scope Repository Contract Pass V1
+- Completed: 27 April 2026
+- Result:
+  - reporting report lists return `{ rows: [], total: 0 }` without querying when actor scope is empty
+  - employee KPI period lookups return `null` or `[]` without querying when actor scope is empty
+  - external employee reference resolution now requires company scope
+  - checklist acknowledgement list returns `[]` without querying when actor scope is empty
+  - competition list/detail/contribution/warning read surfaces return no data without querying when actor scope is empty
+  - visible feed returns `[]` without querying when actor scope is empty
+  - company-scope competition reads now filter through store company ownership instead of treating any company scope as a global bypass
+  - targeted repository tests and backend release gate pass
+- Reference:
+  - `docs/plans/no-empty-scope-repository-contract-pass-2026-04-27.md`
+
 ### Completed: KPI Config Versioning V1
 - Completed: 26 April 2026
 - Result:
@@ -504,8 +520,8 @@ If staging IdP and seeded staging DB values are available, start real staging ev
 
 If Nebim/source delivery details, sample payload, or official field list become available, start source mapping specification.
 
-If neither staging values nor source ingest details are available, choose the next controlled local backend/data step through the intake gate. Source-agnostic KPI ingest contract hardening, KPI raw row lineage persistence, admin lineage evidence visibility, audit event taxonomy guard, data quality guard, import batch quality summary, and the first project-wide scope/auth guard scan are now done; the next local step should strengthen an existing backend/data surface without guessing external source behavior.
+If neither staging values nor source ingest details are available, choose the next controlled local backend/data step through the intake gate. Source-agnostic KPI ingest contract hardening, KPI raw row lineage persistence, admin lineage evidence visibility, audit event taxonomy guard, data quality guard, import batch quality summary, the first project-wide scope/auth guard scan, and the no-empty-scope repository contract pass are now done; the next local step should strengthen an existing backend/data surface without guessing external source behavior.
 
 Recommended local candidate:
 
-- Broaden the no-empty-scope repository contract pass to remaining list/query surfaces, carefully and with tests, so empty actor scope can never silently become full data access.
+- Production environment readiness checklist covering required env values, secrets, IdP registration, database migration order, audit retention, backup assumptions, and smoke evidence.

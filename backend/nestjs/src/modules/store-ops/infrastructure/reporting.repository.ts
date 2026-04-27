@@ -5,6 +5,18 @@ import { DatabaseService } from "../../../shared/database/database.service";
 export class ReportingRepository {
   constructor(private readonly databaseService: DatabaseService) {}
 
+  private hasStoreAccessScope(input: {
+    companyIds: string[];
+    regionIds: string[];
+    storeIds: string[];
+  }) {
+    return (
+      input.companyIds.length > 0 ||
+      input.regionIds.length > 0 ||
+      input.storeIds.length > 0
+    );
+  }
+
   private applyStoreAccessScope(
     clauses: string[],
     params: unknown[],
@@ -30,7 +42,10 @@ export class ReportingRepository {
     if (input.companyIds.length > 0) {
       params.push(input.companyIds);
       clauses.push(`${storeAlias}.company_id = ANY($${params.length}::uuid[])`);
+      return;
     }
+
+    clauses.push("FALSE");
   }
 
   private applyTurnoverAccessScope(
@@ -58,7 +73,10 @@ export class ReportingRepository {
     if (input.companyIds.length > 0) {
       params.push(input.companyIds);
       clauses.push(`${turnoverAlias}.company_id = ANY($${params.length}::uuid[])`);
+      return;
     }
+
+    clauses.push("FALSE");
   }
 
   private async countRows(
@@ -337,6 +355,10 @@ export class ReportingRepository {
     limit?: number;
     offset?: number;
   }) {
+    if (!this.hasStoreAccessScope(input)) {
+      return { rows: [], total: 0 };
+    }
+
     const params: unknown[] = [input.snapshotRunId];
     const clauses = [`sws.snapshot_run_id = $1::uuid`];
 
@@ -406,6 +428,10 @@ export class ReportingRepository {
     limit?: number;
     offset?: number;
   }) {
+    if (!this.hasStoreAccessScope(input)) {
+      return { rows: [], total: 0 };
+    }
+
     const params: unknown[] = [input.snapshotRunId];
     const clauses = [`sks.snapshot_run_id = $1::uuid`];
 
@@ -486,6 +512,10 @@ export class ReportingRepository {
     limit?: number;
     offset?: number;
   }) {
+    if (!this.hasStoreAccessScope(input)) {
+      return { rows: [], total: 0 };
+    }
+
     const params: unknown[] = [input.snapshotRunId];
     const clauses = [`scs.snapshot_run_id = $1::uuid`];
 
@@ -558,6 +588,10 @@ export class ReportingRepository {
     limit?: number;
     offset?: number;
   }) {
+    if (!this.hasStoreAccessScope(input)) {
+      return { rows: [], total: 0 };
+    }
+
     const params: unknown[] = [input.snapshotRunId];
     const clauses = [`ts.snapshot_run_id = $1::uuid`];
 
@@ -678,6 +712,10 @@ export class ReportingRepository {
     externalEmployeeRef: string;
     companyIds: string[];
   }) {
+    if (input.companyIds.length === 0) {
+      return null;
+    }
+
     const params: unknown[] = [input.externalEmployeeRef];
     const clauses = [`external_employee_ref = $1`];
 
@@ -906,6 +944,10 @@ export class ReportingRepository {
     periodType?: string;
     periodStart?: string;
   }) {
+    if (!this.hasStoreAccessScope(input)) {
+      return null;
+    }
+
     const params: unknown[] = [input.employeeId, input.metricCodes];
     const clauses = [
       `ka.employee_id = $1::uuid`,
@@ -964,6 +1006,10 @@ export class ReportingRepository {
     regionIds: string[];
     storeIds: string[];
   }) {
+    if (!this.hasStoreAccessScope(input)) {
+      return [];
+    }
+
     const params: unknown[] = [input.employeeId, input.metricCodes];
     const clauses = [
       `ka.employee_id = $1::uuid`,

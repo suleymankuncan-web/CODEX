@@ -1667,4 +1667,43 @@ describe("CompetitionRepository", () => {
       }),
     ]);
   });
+
+  it("returns no competitions without querying when actor scope is empty", async () => {
+    const { repository, databaseService } = createRepositoryHarness();
+
+    await expect(
+      repository.listCompetitions({
+        companyIds: [],
+        regionIds: [],
+        storeIds: [],
+        limit: 50,
+        offset: 0,
+      }),
+    ).resolves.toEqual([]);
+
+    expect(databaseService.query).not.toHaveBeenCalled();
+  });
+
+  it("returns no competition detail or contribution rows without querying when actor scope is empty", async () => {
+    const { repository, databaseService } = createRepositoryHarness();
+
+    await expect(
+      repository.getCompetitionDetail({
+        competitionId: "11111111-1111-4111-8111-111111111111",
+        companyIds: [],
+        regionIds: [],
+        storeIds: [],
+      }),
+    ).resolves.toBeNull();
+    await expect(
+      repository.listStoreContributionsForCompetition({
+        competitionId: "11111111-1111-4111-8111-111111111111",
+        companyIds: [],
+        regionIds: [],
+        storeIds: [],
+      }),
+    ).resolves.toEqual([]);
+
+    expect(databaseService.query).not.toHaveBeenCalled();
+  });
 });

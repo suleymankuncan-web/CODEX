@@ -222,4 +222,18 @@ describe("FeedRepository", () => {
     expect(sql).toContain("fp.starts_at IS NULL OR fp.starts_at <= NOW()");
     expect(sql).toContain("fp.ends_at IS NULL OR fp.ends_at >= NOW()");
   });
+
+  it("returns no visible posts without querying when actor scope is empty", async () => {
+    const { repository, databaseQueryMock } = createRepositoryHarness();
+
+    await expect(
+      repository.listVisibleFeedPosts({
+        actorScope: { companyIds: [], regionIds: [], storeIds: [] },
+        limit: 50,
+        offset: 0,
+      }),
+    ).resolves.toEqual([]);
+
+    expect(databaseQueryMock).not.toHaveBeenCalled();
+  });
 });

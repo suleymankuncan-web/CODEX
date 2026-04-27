@@ -17,7 +17,7 @@ Date: 27 April 2026
 
 Current count:
 
-- Closed active debts: 29
+- Closed active debts: 30
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -57,6 +57,7 @@ These are counted as paid because they have implementation or documentation evid
 27. Data Quality Guard V1
 28. Import Batch Quality Summary V1
 29. Project-Wide Scope/Auth Guard Scan V1
+30. No-Empty-Scope Repository Contract Pass V1
 
 ## Superseded Before Overbuilding
 
@@ -188,6 +189,8 @@ Import Batch Quality Summary V1 is implemented. Batch detail now summarizes fail
 
 Project-Wide Scope/Auth Guard Scan V1 is implemented. The scan found and closed two concrete backend risks: production JWT default-secret fallback is now rejected unless JWKS is configured, and empty/foreign actor scope paths in store listing and target-distribution request listing are now guarded by no-access and narrowest-scope contract tests.
 
+No-Empty-Scope Repository Contract Pass V1 is implemented. Reporting, checklist acknowledgement, competition read, and visible feed repository surfaces now fail closed when actor read scope has no company, region, or store IDs. Empty scope returns no data without querying, and tests lock the behavior.
+
 UI status note:
 
 - A production UI/design-system strategy note now exists.
@@ -202,6 +205,7 @@ Current repo hygiene is not counted as active debt in this ledger because:
 - generated `node_modules` and `dist` directories are ignored, not tracked.
 - module and root release gates pass.
 - the 27 April 2026 project-wide scan found no tracked `.env`, no critical committed secret, and no unsafe frontend DOM sink pattern.
+- the 27 April 2026 no-empty-scope pass hardened remaining actor-scoped store/region/company list surfaces found in store-ops repositories.
 
 Still monitor:
 
@@ -237,8 +241,8 @@ If staging provider and seeded DB values are available, run the guarded staging 
 
 If they are not available, check whether real source ingest details are available. If source delivery details or a sample payload are unavailable, do not write a source-specific connector yet.
 
-The next local backend candidate should be chosen through the intake gate. Source-agnostic KPI ingest contract hardening, KPI raw row lineage persistence, admin lineage evidence visibility, audit event taxonomy guard, data quality guard, import batch quality summary, and the first project-wide scope/auth guard scan are now done, so do not repeat them as busywork; pick a nearby backend/data surface only if it strengthens existing behavior without guessing external source details.
+The next local backend candidate should be chosen through the intake gate. Source-agnostic KPI ingest contract hardening, KPI raw row lineage persistence, admin lineage evidence visibility, audit event taxonomy guard, data quality guard, import batch quality summary, the first project-wide scope/auth guard scan, and the no-empty-scope repository contract pass are now done, so do not repeat them as busywork; pick a nearby backend/data surface only if it strengthens existing behavior without guessing external source details.
 
 Recommended local candidate if external evidence is still unavailable:
 
-- Broaden the no-empty-scope repository contract pass to remaining list/query surfaces, carefully and with tests, so empty actor scope can never silently become full data access.
+- Production environment readiness checklist covering required env values, secrets, IdP registration, database migration order, audit retention, backup assumptions, and smoke evidence.
