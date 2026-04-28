@@ -6,6 +6,7 @@ import {
   RequireScope,
 } from "../../auth/decorators/scope.decorator";
 import { ChecklistService } from "../application/checklist.service";
+import { AcknowledgeChecklistInstanceDto } from "./dto/acknowledge-checklist-instance.dto";
 import { MobileChecklistInstanceParamsDto } from "./dto/mobile-checklist-instance-params.dto";
 import { SaveMobileChecklistResponseDto } from "./dto/save-mobile-checklist-response.dto";
 import { StartMobileChecklistInstanceDto } from "./dto/start-mobile-checklist-instance.dto";
@@ -84,6 +85,25 @@ export class MobileChecklistController {
       checklistInstanceId: params.checklistInstanceId,
       actorUserId: request.user.userId,
       actorActionScope: request.user.actionScope,
+    });
+  }
+
+  @Post("instances/:checklistInstanceId/acknowledge")
+  @RequireScope("authenticated")
+  @RequireRoles("STORE_MANAGER", "SUPER_ADMIN")
+  async acknowledge(
+    @Param() params: MobileChecklistInstanceParamsDto,
+    @Req()
+    request: {
+      user: AuthenticatedUser;
+    },
+    @Body() body: AcknowledgeChecklistInstanceDto,
+  ) {
+    return this.checklistService.acknowledgeChecklist({
+      checklistInstanceId: params.checklistInstanceId,
+      actorUserId: request.user.userId,
+      actorActionScope: request.user.actionScope,
+      acknowledgementNote: body.acknowledgementNote,
     });
   }
 }

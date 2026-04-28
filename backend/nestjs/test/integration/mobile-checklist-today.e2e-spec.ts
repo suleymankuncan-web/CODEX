@@ -279,4 +279,65 @@ describe("Mobile checklist today flow", () => {
 
     await app.close();
   });
+
+  it("lets store managers acknowledge assigned checklist results only", async () => {
+    const query = jest.fn(async (sql: string) => {
+      if (sql.includes("SELECT checklist_instance_id, store_id")) {
+        return {
+          rows: [
+            {
+              checklist_instance_id: "33333333-3333-4333-8333-333333333333",
+              store_id: storeId,
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("INSERT INTO ops.checklist_acknowledgement")) {
+        return {
+          rows: [
+            {
+              checklist_acknowledgement_id: "ack-1",
+              acknowledged_by_user_id: "store-manager-1",
+              acknowledgement_note: "Kabul ettim",
+              acknowledged_at: "2026-04-28T11:00:00.000Z",
+            },
+          ],
+        };
+      }
+
+      return { rows: [] };
+    });
+    const app = await createIntegrationApp({
+      databaseService: {
+        query,
+        withTransaction: async <T>(work: (client: { query: typeof query }) => Promise<T>) =>
+          work({ query }),
+      },
+    });
+
+    const allowed = await request(app.getHttpServer())
+      .post("/api/mobile/checklists/instances/33333333-3333-4333-8333-333333333333/acknowledge")
+      .set("x-user-id", "store-manager-1")
+      .set("x-role-codes", "STORE_MANAGER")
+      .set("x-store-ids", storeId)
+      .set("x-assigned-store-ids", storeId)
+      .send({ acknowledgementNote: "Kabul ettim" });
+
+    expect(allowed.status).toBe(201);
+    expect(allowed.body.command.status).toBe("acknowledged");
+    expect(allowed.body.data.acknowledgement.acknowledgementNote).toBe("Kabul ettim");
+
+    const forbidden = await request(app.getHttpServer())
+      .post("/api/mobile/checklists/instances/33333333-3333-4333-8333-333333333333/acknowledge")
+      .set("x-user-id", "store-manager-1")
+      .set("x-role-codes", "STORE_MANAGER")
+      .set("x-store-ids", otherStoreId)
+      .set("x-assigned-store-ids", otherStoreId)
+      .send({ acknowledgementNote: "Kabul ettim" });
+
+    expect(forbidden.status).toBe(403);
+
+    await app.close();
+  });
 });
