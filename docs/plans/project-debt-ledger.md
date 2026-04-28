@@ -17,7 +17,7 @@ Date: 28 April 2026
 
 Current count:
 
-- Closed active debts: 41
+- Closed active debts: 42
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -69,12 +69,15 @@ These are counted as paid because they have implementation or documentation evid
 39. Production-Ready Migration System V1
 40. Production Security Gate V1-A
 41. Mobile Auth/Session V1 P0
+42. Mobile API/BFF Endpoint Inventory V1
 
 Production-Ready Migration System V1 is counted as paid because SQL migrations are tracked in `audit.schema_migration`, checksum drift is rejected, failed runs are recorded with error evidence, the HTTP migration endpoint is disabled in production, and `npm.cmd run db:migrate` is the approved CLI/CI migration path.
 
 Production Security Gate V1-A is counted as paid because CORS allowlist, production CORS fail-fast, in-memory rate limit, and standard stack-free error responses are implemented and guarded by backend security e2e tests.
 
 Mobile Auth/Session V1 P0 is counted as paid because `ops.mobile_device_session`, session create/resume/list/revoke/logout endpoints, active mobile session guard, and auth session audit events are implemented and guarded by backend unit/e2e tests. Backend-owned refresh tokens, Mobile BFF, and push token storage remain future phases by design.
+
+Mobile API/BFF Endpoint Inventory V1 is counted as paid because the existing mobile-relevant API surface is mapped, broad Mobile BFF creation is intentionally blocked, first aggregate candidates are named, and root script tests guard the boundary. Reference: `docs/plans/mobile-api-bff-endpoint-inventory-v1.md`.
 
 ## Superseded Before Overbuilding
 
@@ -251,6 +254,7 @@ Current repo hygiene is not counted as active debt in this ledger because:
 - the 28 April 2026 Excel KPI Import Operator Runbook V1 made the real Excel import process repeatable and guarded by root script tests before pilot use.
 - the 28 April 2026 Production Security Gate V1-A added CORS allowlist, production CORS fail-fast, in-memory rate limit, and standard stack-free error responses.
 - the 28 April 2026 Mobile Auth/Session V1 P0 added backend-owned mobile device sessions without taking refresh-token ownership from the IdP.
+- the 28 April 2026 Mobile API/BFF Endpoint Inventory V1 documented endpoint reuse and stopped a broad mobile BFF from opening before a real screen contract exists.
 
 Still monitor:
 
@@ -293,4 +297,4 @@ The next local backend candidate should be chosen through the intake gate. Sourc
 
 Recommended local candidate if external evidence is still unavailable:
 
-- Plan Mobile API/BFF inventory before growing mobile screens: identify reusable existing endpoints, only add aggregation endpoints where mobile would otherwise over-fetch, and keep auth/session separate from BFF.
+- Choose the first mobile pilot read surface. If dashboard/home comes first, plan Mobile Home Summary V1 around a small payload. If daily operation comes first, interview and plan Mobile Checklist Today V1 before coding.

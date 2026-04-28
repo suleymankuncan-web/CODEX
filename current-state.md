@@ -3048,6 +3048,33 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: Mobile API/BFF endpoint envanteri cikarmak; Home, magaza performansi, checklist, personel performansi, ranking/feed/profil ekranlari icin mevcut endpoint yetiyor mu, yoksa az sayida mobil aggregate endpoint mi gerekiyor bunu koddan once netlestirmek.
 
+## Son Mobile API/BFF Endpoint Inventory V1
+
+28 Nisan 2026 itibariyla Mobile API/BFF endpoint envanteri yazildi ve mobil BFF siniri koddan once netlestirildi.
+
+Yeni dokumanlar:
+
+- `docs/plans/mobile-api-bff-endpoint-inventory-v1.md`
+- `docs/superpowers/plans/2026-04-28-mobile-api-bff-endpoint-inventory-v1.md`
+
+Kararlar:
+
+- Broad Mobile BFF simdilik acilmiyor.
+- Mobile Auth/Session V1 P0, Mobile BFF'ten ayri kalmaya devam ediyor.
+- Feed, workflow inbox, personal performance, rankings, competitions ve workforce onaylari ilk pilotta mevcut endpointlerden kullanilabilir.
+- `GET /api/mobile/home` sadece mobil home kartlari netlesince P1 aggregate adayi.
+- `GET /api/mobile/store-performance` store KPI mobil ekrani web gibi birden fazla rapor cagrisi gerektirirse P1 aggregate adayi.
+- `GET /api/mobile/checklists/today` checklist mobil is akisi netlesmeden kodlanmayacak; mevcut checklist API'leri action/report agirlikli oldugu icin once read-model karari gerekiyor.
+- Yeni `/api/mobile/*` endpoint acmadan once ekran ihtiyaci, mevcut cagrilar, business logic riski, rol/scope kurallari, response kontrati, source-of-truth servis ve scope-widening testi sorulacak.
+
+CODEX durust yorum:
+
+- Mobil BFF dogru yerde cok faydali olacak, ama bugun genis bir BFF acmak erken olur.
+- Backend'in mevcut endpoint kapsami pilot icin yeterli seviyede; asil dikkat edilmesi gereken nokta checklist'in mobil "today" read modelidir.
+- En guvenli siralama: mevcut endpointlerle pilotu sekillendir, sonra ya Mobile Home Summary V1 ya da Mobile Checklist Today V1 icin dar bir planla ilerle.
+
+Siradaki mantikli adim: ilk mobil pilot read surface'i secmek. Dashboard/home ile baslanacaksa Mobile Home Summary V1 kartlari netlestirilmeli; operasyonel checklist onceyse Mobile Checklist Today V1 icin ayri interview yapilmali.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:
@@ -3179,9 +3206,11 @@ Planlar:
 - `docs/plans/import-batch-quality-summary-v1.md`
 - `docs/plans/excel-kpi-import-v1.md`
 - `docs/plans/excel-kpi-import-operator-runbook.md`
+- `docs/plans/mobile-api-bff-endpoint-inventory-v1.md`
 - `docs/superpowers/plans/2026-04-28-production-ready-migration-system-v1.md`
 - `docs/superpowers/specs/2026-04-28-mobile-auth-session-v1-design.md`
 - `docs/superpowers/plans/2026-04-28-mobile-auth-session-v1.md`
+- `docs/superpowers/plans/2026-04-28-mobile-api-bff-endpoint-inventory-v1.md`
 - `docs/plans/project-wide-scan-2026-04-27.md`
 - `docs/plans/project-mvp-focus-map-2026-04-28.md`
 - `docs/plans/no-empty-scope-repository-contract-pass-2026-04-27.md`
