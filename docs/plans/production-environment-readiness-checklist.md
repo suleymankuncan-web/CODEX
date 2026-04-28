@@ -38,6 +38,9 @@ Allowed sign-off states:
 - [ ] Backend and frontend public origins are final for the target environment.
 - [ ] `JWT_JWKS_URL` is configured for real IdP verification, or production has an explicit non-default `JWT_SECRET` only for an approved non-JWKS mode.
 - [ ] Production never uses `JWT_SECRET=change-me`.
+- [ ] `CORS_ALLOWED_ORIGINS` is explicitly configured and contains only approved frontend origins.
+- [ ] `RATE_LIMIT_WINDOW_MS` and `RATE_LIMIT_MAX` are explicitly configured for the environment.
+- [ ] Error responses do not expose stack traces or raw exception details.
 - [ ] `DATABASE_URL` points to the target database and is not shared with local development.
 - [ ] Database user has the minimum permissions needed for the application runtime.
 - [ ] Migration user and runtime user are separated if the hosting model supports it.

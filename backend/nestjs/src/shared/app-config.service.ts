@@ -25,6 +25,26 @@ export class AppConfigService {
     return value;
   }
 
+  private readPositiveNumber(key: string, fallback: string): number {
+    const value = Number(this.readString(key, fallback));
+
+    if (!Number.isFinite(value) || value <= 0) {
+      throw new Error(`${key} must be a positive number`);
+    }
+
+    return value;
+  }
+
+  private readRequiredProductionNumber(key: string, fallback: string): number {
+    const value = this.readOptionalString(key);
+
+    if (this.isProduction && !value) {
+      throw new Error(`${key} must be configured in production`);
+    }
+
+    return this.readPositiveNumber(key, fallback);
+  }
+
   get port(): number {
     return Number(this.readString("APP_PORT", "3000"));
   }
@@ -49,6 +69,27 @@ export class AppConfigService {
     }
 
     return this.readString("MIGRATIONS_HTTP_ENABLED", "true") !== "false";
+  }
+
+  get corsAllowedOrigins(): string[] {
+    const value = this.readOptionalString("CORS_ALLOWED_ORIGINS");
+
+    if (this.isProduction && !value) {
+      throw new Error("CORS_ALLOWED_ORIGINS must be configured in production");
+    }
+
+    return (value ?? "http://localhost:5173")
+      .split(",")
+      .map((origin) => origin.trim())
+      .filter(Boolean);
+  }
+
+  get rateLimitWindowMs(): number {
+    return this.readRequiredProductionNumber("RATE_LIMIT_WINDOW_MS", "60000");
+  }
+
+  get rateLimitMax(): number {
+    return this.readRequiredProductionNumber("RATE_LIMIT_MAX", "120");
   }
 
   get isProduction(): boolean {

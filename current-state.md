@@ -2936,6 +2936,36 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: Production Security Gate V1 planina gecmek; CORS, rate limit, request logging, error response standardi ve mobil auth/session kararlarini koddan once netlestirmek.
 
+## Son Production Security Gate V1-A
+
+28 Nisan 2026 itibariyla ilk production security gate uygulandi.
+
+Eklenenler:
+
+- CORS allowlist: local default `http://localhost:5173`, production `CORS_ALLOWED_ORIGINS` zorunlu.
+- Comma-separated origin destegi.
+- In-memory V1 rate limit: `RATE_LIMIT_WINDOW_MS`, `RATE_LIMIT_MAX`.
+- Standart global error response: `correlationId`, `statusCode`, `errorCode`, `message`, `path`, `timestamp`.
+- Stack trace response'a donmez.
+- Rate limit asiminda `429 RATE_LIMIT_EXCEEDED`.
+- Validation hatasinda `400 VALIDATION_ERROR`.
+- Unexpected error'da `500 INTERNAL_SERVER_ERROR`.
+- Runtime bootstrap `configureHttpSecurity(...)` ile tek noktadan baglandi.
+
+Dogrulama:
+
+- Backend targeted config/security e2e tests passed.
+- Root script tests passed.
+- Backend `npm.cmd run check:release` passed: 48 suite / 331 test, build, audit.
+- Root `npm.cmd run check:release` passed.
+
+CODEX durust yorum:
+
+- Bu V1-A iyi sinirlandi; mobile auth/session bilincli olarak disarida.
+- Rate limit in-memory oldugu icin multi-instance prod'da Redis/WAF/gateway'e tasinacak future risk olarak kalir; su an MVP/pilot icin uygun.
+
+Siradaki mantikli adim: Mobile Auth/Session V1 planina gecmek; access token, refresh token, device session, logout/revoke, push token storage ve mobile BFF siniri koddan once netlestirilmeli.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:
@@ -2961,6 +2991,15 @@ Backend database / migration:
 - `backend/nestjs/src/shared/database/migration-schema-contract.spec.ts`
 - `backend/nestjs/scripts/run-migrations.ts`
 - `db/migrations/035_schema_migration_tracking.sql`
+
+Backend security / http:
+
+- `backend/nestjs/src/shared/http/configure-http-security.ts`
+- `backend/nestjs/src/shared/http/cors-allowlist.middleware.ts`
+- `backend/nestjs/src/shared/http/rate-limit.middleware.ts`
+- `backend/nestjs/src/shared/http/standard-error.filter.ts`
+- `backend/nestjs/src/shared/http/standard-error-response.ts`
+- `backend/nestjs/test/integration/production-security-gate.e2e-spec.ts`
 
 Backend audit:
 

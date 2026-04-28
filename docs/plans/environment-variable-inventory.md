@@ -28,6 +28,9 @@ These values are read by `backend/nestjs/src/shared/app-config.service.ts`.
 | `AUTH_MODE` | P0 | Must be `jwt` for real environments. | Local may use `mock`. |
 | `ALLOW_MOCK_AUTH` | P0 | Must be `false` or unset in production. | Production must not allow mock auth. |
 | `MIGRATIONS_HTTP_ENABLED` | P0 | Forced disabled when `NODE_ENV=production`. | Enables the legacy HTTP migration endpoint only for local/non-production controlled use; production must use CLI/CI migration execution. |
+| `CORS_ALLOWED_ORIGINS` | P0 | Required in production. | Comma-separated browser origins; local default is `http://localhost:5173`. |
+| `RATE_LIMIT_WINDOW_MS` | P0 | Required in production. | In-memory V1 request window; local default is `60000`. |
+| `RATE_LIMIT_MAX` | P0 | Required in production. | In-memory V1 max requests per client/window; local default is `120`. |
 | `JWT_AUDIENCE` | P0 | Must match accepted access token audience. | Defaults to `store-ops-api`. |
 | `JWT_ISSUER` | P0 | Must exactly match provider issuer. | Production rejects issuer mismatch. |
 | `JWT_JWKS_URL` | P0 | Required for real IdP JWT verification. | Preferred over shared secret verification. |
@@ -120,6 +123,8 @@ These values are read by `admin-web/scripts/auth-live-smoke.mjs`.
 - [ ] `AUTH_MODE=jwt`
 - [ ] `ALLOW_MOCK_AUTH=false` or unset with production fail-closed behavior verified.
 - [ ] `DATABASE_URL` points to production DB.
+- [ ] `CORS_ALLOWED_ORIGINS` lists only approved frontend origins.
+- [ ] `RATE_LIMIT_WINDOW_MS` and `RATE_LIMIT_MAX` are explicitly set for the environment.
 - [ ] `JWT_ISSUER`, `JWT_AUDIENCE`, and `JWT_JWKS_URL` match real provider.
 - [ ] `JWT_SECRET` is empty when JWKS is used, or explicitly approved for non-JWKS mode.
 - [ ] Provider authorize/token/logout URLs are filled.

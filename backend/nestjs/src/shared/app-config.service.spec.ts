@@ -60,4 +60,62 @@ describe("AppConfigService", () => {
       }).httpMigrationEndpointEnabled,
     ).toBe(false);
   });
+
+  it("uses localhost as the default CORS origin outside production", () => {
+    const config = createConfig({
+      NODE_ENV: "development",
+    });
+
+    expect(config.corsAllowedOrigins).toEqual(["http://localhost:5173"]);
+  });
+
+  it("parses comma-separated CORS origins", () => {
+    const config = createConfig({
+      CORS_ALLOWED_ORIGINS:
+        "https://admin.example.com, https://store.example.com",
+      NODE_ENV: "production",
+      RATE_LIMIT_MAX: "200",
+      RATE_LIMIT_WINDOW_MS: "60000",
+    });
+
+    expect(config.corsAllowedOrigins).toEqual([
+      "https://admin.example.com",
+      "https://store.example.com",
+    ]);
+  });
+
+  it("requires explicit CORS origins in production", () => {
+    const config = createConfig({
+      NODE_ENV: "production",
+      RATE_LIMIT_MAX: "200",
+      RATE_LIMIT_WINDOW_MS: "60000",
+    });
+
+    expect(() => config.corsAllowedOrigins).toThrow(
+      "CORS_ALLOWED_ORIGINS must be configured in production",
+    );
+  });
+
+  it("uses local rate limit defaults outside production", () => {
+    const config = createConfig({
+      NODE_ENV: "development",
+    });
+
+    expect(config.rateLimitWindowMs).toBe(60000);
+    expect(config.rateLimitMax).toBe(120);
+  });
+
+  it("requires explicit rate limit settings in production", () => {
+    const config = createConfig({
+      CORS_ALLOWED_ORIGINS: "https://admin.example.com",
+      NODE_ENV: "production",
+    });
+
+    expect(() => config.rateLimitWindowMs).toThrow(
+      "RATE_LIMIT_WINDOW_MS must be configured in production",
+    );
+    expect(() => config.rateLimitMax).toThrow(
+      "RATE_LIMIT_MAX must be configured in production",
+    );
+  });
 });

@@ -6,7 +6,7 @@ This is the short working list for the next practical steps. It keeps the projec
 
 ## Current Position
 
-As of 28 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, Store UX TR-First Copy V1, KPI Config Versioning V1, Source-Agnostic Ingest Contract Hardening V1, KPI Raw Row Lineage Persistence V1, Import Lineage Evidence Surface V1, Audit Event Taxonomy Guard V1, Data Quality Guard V1, Import Batch Quality Summary V1, Project-Wide Scope/Auth Guard Scan V1, No-Empty-Scope Repository Contract Pass V1, Production Environment Readiness Checklist V1, Environment Variable Inventory + Deployment Runbook Skeleton V1, Environment Drift Guard V1, Production/Staging Incident Response Skeleton V1, Personnel Management V1, Personnel Request Return/Resubmit V1, Personnel Master Data Bootstrap V1 planning, Project MVP Focus Map, Excel KPI Import V1, Excel KPI Import Operator Runbook V1, and Production-Ready Migration System V1 have:
+As of 28 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, Store UX TR-First Copy V1, KPI Config Versioning V1, Source-Agnostic Ingest Contract Hardening V1, KPI Raw Row Lineage Persistence V1, Import Lineage Evidence Surface V1, Audit Event Taxonomy Guard V1, Data Quality Guard V1, Import Batch Quality Summary V1, Project-Wide Scope/Auth Guard Scan V1, No-Empty-Scope Repository Contract Pass V1, Production Environment Readiness Checklist V1, Environment Variable Inventory + Deployment Runbook Skeleton V1, Environment Drift Guard V1, Production/Staging Incident Response Skeleton V1, Personnel Management V1, Personnel Request Return/Resubmit V1, Personnel Master Data Bootstrap V1 planning, Project MVP Focus Map, Excel KPI Import V1, Excel KPI Import Operator Runbook V1, Production-Ready Migration System V1, and Production Security Gate V1-A have:
 
 - saved drafts
 - edit/cancel/history
@@ -70,6 +70,7 @@ As of 28 April 2026, the competition package planning flow, Operational Feed V1,
 - admin monthly/daily/custom Excel upload period controls and reconciliation summary
 - repeatable Excel import operator runbook for upload, summary, mapping, reconciliation, retry, materialization, and evidence
 - production-ready migration tracking, checksum drift protection, failed-run evidence, CLI execution, and production HTTP endpoint guard
+- production security gate for CORS allowlist, production CORS fail-fast, in-memory rate limit, and standard stack-free error responses
 - project debt ledger
 - backend and frontend release checks
 
@@ -77,7 +78,7 @@ As of 28 April 2026, the competition package planning flow, Operational Feed V1,
 
 Reference: `docs/plans/project-debt-ledger.md`
 
-- Closed active debts: 39
+- Closed active debts: 40
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -120,6 +121,7 @@ Interpretation:
 - Excel KPI Import V1 is implemented; backend targeted tests, frontend build/e2e, and root `check:release` pass.
 - Excel KPI Import Operator Runbook V1 is implemented and guarded by root script tests.
 - Production-Ready Migration System V1 is implemented; SQL migrations are tracked in `audit.schema_migration`, checksum drift is rejected, failed runs are recorded, the HTTP migration endpoint is disabled in production, and `npm.cmd run db:migrate` is the approved CLI/CI migration path.
+- Production Security Gate V1-A is implemented; CORS allowlist, production CORS fail-fast, in-memory rate limit, and standard stack-free error response are guarded by backend tests.
 - Full production UI/design-system and complete EN/TR localization expansion remain planned investments, not silent release debt.
 - Production UI/design-system is intentionally deferred into reversible pilots while backend/data foundations remain the priority.
 - The debt ledger itself is an accounting artifact and is not counted as a separate closed active debt item.
@@ -700,6 +702,25 @@ Interpretation:
 - Reference:
   - `docs/superpowers/plans/2026-04-28-production-ready-migration-system-v1.md`
 
+### Completed: Production Security Gate V1-A
+- Completed: 28 April 2026
+- Result:
+  - CORS allowlist is applied from one bootstrap helper
+  - local default origin is `http://localhost:5173`
+  - production fails fast when `CORS_ALLOWED_ORIGINS` is missing
+  - comma-separated CORS origins are supported
+  - V1 in-memory rate limit is controlled by `RATE_LIMIT_WINDOW_MS` and `RATE_LIMIT_MAX`
+  - validation, CORS, rate-limit, and unexpected failures return the standard error response shape
+  - stack traces are not returned in responses
+- Verification:
+  - backend targeted config/security e2e tests passed
+  - root script tests passed
+  - backend `npm.cmd run check:release` passed
+  - root `npm.cmd run check:release` passed
+- Note:
+  - mobile auth/session was not implemented in this pass
+  - rate limit is in-memory V1; Redis/WAF/gateway remains the future production scaling move
+
 ### 1. Real IdP Staging Evidence
 - Priority: `P1`
 - Why: local provider and action mechanics are proven, but production confidence still needs real staging IdP and seeded staging action evidence.
@@ -723,4 +744,4 @@ If neither staging values nor source ingest details are available, do not open s
 
 Recommended local candidate:
 
-- Plan Production Security Gate V1: CORS, rate limiting, request logging, error response standard, and mobile auth/session decision points.
+- Plan Mobile Auth/Session V1: access token, refresh token, device session, logout/revoke, push token storage, and mobile BFF boundary.

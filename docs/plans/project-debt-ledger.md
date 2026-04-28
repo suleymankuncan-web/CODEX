@@ -17,7 +17,7 @@ Date: 28 April 2026
 
 Current count:
 
-- Closed active debts: 39
+- Closed active debts: 40
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -67,8 +67,11 @@ These are counted as paid because they have implementation or documentation evid
 37. Excel KPI Import V1
 38. Excel KPI Import Operator Runbook V1
 39. Production-Ready Migration System V1
+40. Production Security Gate V1-A
 
 Production-Ready Migration System V1 is counted as paid because SQL migrations are tracked in `audit.schema_migration`, checksum drift is rejected, failed runs are recorded with error evidence, the HTTP migration endpoint is disabled in production, and `npm.cmd run db:migrate` is the approved CLI/CI migration path.
+
+Production Security Gate V1-A is counted as paid because CORS allowlist, production CORS fail-fast, in-memory rate limit, and standard stack-free error responses are implemented and guarded by backend security e2e tests. Mobile auth/session remains outside this count.
 
 ## Superseded Before Overbuilding
 
@@ -243,6 +246,7 @@ Current repo hygiene is not counted as active debt in this ledger because:
 - the 27 April 2026 incident response skeleton linked auth/import/deploy failures to severity, evidence, rollback, and No-Go decisions before real staging pressure exists.
 - the 28 April 2026 Excel KPI Import V1 implementation added gross-personnel/net-store import behavior, scoped store import gating, reconciliation evidence, and duplicate-safe upload identity.
 - the 28 April 2026 Excel KPI Import Operator Runbook V1 made the real Excel import process repeatable and guarded by root script tests before pilot use.
+- the 28 April 2026 Production Security Gate V1-A added CORS allowlist, production CORS fail-fast, in-memory rate limit, and standard stack-free error responses.
 
 Still monitor:
 
@@ -265,6 +269,8 @@ The dangerous kind of debt would be:
 - store-facing mixed-language trust gaps
 - source row lineage hidden only inside JSON payloads
 - persisted source row lineage hidden from admin import detail
+- stack traces or inconsistent error payloads leaking to clients
+- production CORS origin assumptions staying implicit
 - uncataloged audit event strings blocking a future coherent audit stream
 - generic import errors without stable data quality codes
 - row-level quality codes without a batch-level operator summary
@@ -283,4 +289,4 @@ The next local backend candidate should be chosen through the intake gate. Sourc
 
 Recommended local candidate if external evidence is still unavailable:
 
-- Run the first March Excel import as a controlled pilot only after store import scope is reviewed, using the operator runbook to capture summary, mapping, reconciliation, retry/materialization, and known-limitations evidence.
+- Plan Mobile Auth/Session V1 before growing mobile/social surfaces: access token, refresh token, device session, logout/revoke, push token storage, and mobile BFF boundary.

@@ -102,6 +102,8 @@ Rules:
 - [ ] `JWT_JWKS_URL` is configured for real IdP verification.
 - [ ] `JWT_SECRET` is not `change-me`.
 - [ ] `ALLOW_MOCK_AUTH=false` or unset with production fail-closed behavior verified.
+- [ ] `CORS_ALLOWED_ORIGINS` contains only approved frontend origins.
+- [ ] `RATE_LIMIT_WINDOW_MS` and `RATE_LIMIT_MAX` are explicitly set.
 
 ### Deploy
 
@@ -115,6 +117,8 @@ Target-specific command:
 
 - [ ] Backend process starts.
 - [ ] Health endpoint responds.
+- [ ] A disallowed browser origin does not receive CORS allow headers.
+- [ ] Rate limit evidence is understood for the target environment.
 - [ ] `/api/auth/bootstrap` returns `authMode=jwt`.
 - [ ] `/api/auth/bootstrap` returns provider `configured=true`.
 
