@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { DatabaseService } from "../../../shared/database/database.service";
 import {
   ChecklistTemplateDraftForPublish,
@@ -249,6 +249,50 @@ export class ChecklistRepository {
       effectiveFrom: template.effective_from,
       effectiveTo: template.effective_to,
     };
+  }
+
+  async startMobileChecklistInstance(input: {
+    checklistTemplateId: string;
+    storeId: string;
+    actorUserId: string;
+  }) {
+    const result = await this.databaseService.query<{
+      checklist_instance_id: string;
+      status: string;
+      created_at: string;
+    }>(
+      `
+        INSERT INTO ops.checklist_instance (
+          checklist_template_id,
+          store_id,
+          started_by_user_id,
+          started_at,
+          status
+        )
+        SELECT
+          ct.checklist_template_id,
+          s.store_id,
+          $3,
+          NOW(),
+          'in_progress'
+        FROM ops.checklist_template ct
+        INNER JOIN ops.store s
+          ON s.store_id = $2::uuid
+         AND s.company_id = ct.company_id
+        WHERE ct.checklist_template_id = $1::uuid
+          AND ct.status = 'published'
+          AND ct.effective_from <= CURRENT_DATE
+          AND (ct.effective_to IS NULL OR ct.effective_to >= CURRENT_DATE)
+        RETURNING checklist_instance_id, status, created_at
+      `,
+      [input.checklistTemplateId, input.storeId, input.actorUserId],
+    );
+
+    if (!result.rows[0]) {
+      throw new BadRequestException("Checklist template is not available for this store");
+    }
+
+    return result.rows[0];
   }
 
   async getMobileChecklistToday(input: {

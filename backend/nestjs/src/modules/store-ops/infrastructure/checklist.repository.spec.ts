@@ -149,6 +149,57 @@ describe("ChecklistRepository", () => {
     );
   });
 
+  it("starts a mobile checklist instance with the actor user as starter", async () => {
+    const query = jest.fn().mockResolvedValueOnce({
+      rows: [
+        {
+          checklist_instance_id: "instance-1",
+          status: "in_progress",
+          created_at: "2026-04-28T10:00:00.000Z",
+        },
+      ],
+    });
+    const repository = new ChecklistRepository({ query } as never);
+
+    await expect(
+      repository.startMobileChecklistInstance({
+        checklistTemplateId: "template-1",
+        storeId: "store-1",
+        actorUserId: "user-1",
+      }),
+    ).resolves.toEqual({
+      checklist_instance_id: "instance-1",
+      status: "in_progress",
+      created_at: "2026-04-28T10:00:00.000Z",
+    });
+
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining("started_by_user_id"),
+      ["template-1", "store-1", "user-1"],
+    );
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining("ct.status = 'published'"),
+      expect.any(Array),
+    );
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining("s.company_id = ct.company_id"),
+      expect.any(Array),
+    );
+  });
+
+  it("rejects starting a mobile checklist when the template is not available for the store", async () => {
+    const query = jest.fn().mockResolvedValueOnce({ rows: [] });
+    const repository = new ChecklistRepository({ query } as never);
+
+    await expect(
+      repository.startMobileChecklistInstance({
+        checklistTemplateId: "template-1",
+        storeId: "store-1",
+        actorUserId: "user-1",
+      }),
+    ).rejects.toThrow("Checklist template is not available for this store");
+  });
+
   it("returns no mobile today rows when actor has no assigned stores", async () => {
     const query = jest.fn();
     const repository = new ChecklistRepository({ query } as never);

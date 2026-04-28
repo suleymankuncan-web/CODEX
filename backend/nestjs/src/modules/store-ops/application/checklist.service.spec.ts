@@ -25,6 +25,7 @@ describe("ChecklistService", () => {
     getDraftTemplateForPublish?: jest.Mock;
     publishTemplate?: jest.Mock;
     createTemplate?: jest.Mock;
+    startMobileChecklistInstance?: jest.Mock;
   }) {
     return new ChecklistService(
       storeOpsRepository as never,
@@ -260,5 +261,54 @@ describe("ChecklistService", () => {
     ).rejects.toThrow("Checklist template company is outside actor scope");
 
     expect(checklistRepository.createTemplate).not.toHaveBeenCalled();
+  });
+
+  it("starts a mobile checklist instance for an assigned store", async () => {
+    const checklistRepository = {
+      startMobileChecklistInstance: jest.fn().mockResolvedValue({
+        checklist_instance_id: "instance-1",
+        status: "in_progress",
+      }),
+    };
+    const service = createService(checklistRepository);
+
+    const result = await service.startMobileChecklistInstance({
+      checklistTemplateId: "template-1",
+      storeId: "store-1",
+      actorUserId: "user-1",
+      actorActionScope: {
+        assignedStoreIds: ["store-1"],
+      },
+    });
+
+    expect(result.command.status).toBe("created");
+    expect(checklistRepository.startMobileChecklistInstance).toHaveBeenCalledWith({
+      checklistTemplateId: "template-1",
+      storeId: "store-1",
+      actorUserId: "user-1",
+      actorActionScope: {
+        assignedStoreIds: ["store-1"],
+      },
+    });
+  });
+
+  it("rejects starting a mobile checklist instance outside assigned stores", async () => {
+    const checklistRepository = {
+      startMobileChecklistInstance: jest.fn(),
+    };
+    const service = createService(checklistRepository);
+
+    await expect(
+      service.startMobileChecklistInstance({
+        checklistTemplateId: "template-1",
+        storeId: "store-2",
+        actorUserId: "user-1",
+        actorActionScope: {
+          assignedStoreIds: ["store-1"],
+        },
+      }),
+    ).rejects.toThrow("Requested store is outside assigned action stores");
+
+    expect(checklistRepository.startMobileChecklistInstance).not.toHaveBeenCalled();
   });
 });

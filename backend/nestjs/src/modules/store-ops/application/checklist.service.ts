@@ -58,6 +58,29 @@ export class ChecklistService {
     });
   }
 
+  async startMobileChecklistInstance(input: {
+    checklistTemplateId: string;
+    storeId: string;
+    actorUserId: string;
+    actorActionScope?: {
+      assignedStoreIds: string[];
+    };
+  }) {
+    this.assertCanActOnStore(
+      input.actorActionScope,
+      input.storeId,
+      "Requested store is outside assigned action stores",
+    );
+
+    return buildCommandResponse({
+      status: "created",
+      message: "Checklist visit started",
+      data: {
+        checklistInstance: await this.checklistRepository.startMobileChecklistInstance(input),
+      },
+    });
+  }
+
   async createChecklistInstance(input: {
     templateId: string;
     storeId: string;

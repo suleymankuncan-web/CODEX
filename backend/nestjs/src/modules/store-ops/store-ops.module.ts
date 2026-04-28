@@ -3,6 +3,7 @@ import { OrgController } from "./web/org.controller";
 import { WorkforceController } from "./web/workforce.controller";
 import { ChecklistController } from "./web/checklist.controller";
 import { AdminChecklistTemplateController } from "./web/admin-checklist-template.controller";
+import { MobileChecklistController } from "./web/mobile-checklist.controller";
 import { SnapshotController } from "./web/snapshot.controller";
 import { ReportingController } from "./web/reporting.controller";
 import { TargetDistributionController } from "./web/target-distribution.controller";
@@ -35,6 +36,7 @@ import { FeedRepository } from "./infrastructure/feed.repository";
     WorkforceController,
     ChecklistController,
     AdminChecklistTemplateController,
+    MobileChecklistController,
     SnapshotController,
     ReportingController,
     TargetDistributionController,
