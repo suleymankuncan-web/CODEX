@@ -559,8 +559,35 @@ export class ChecklistRepository {
     actorUserId: string;
     assignedStoreIds: string[];
     readStoreIds: string[];
+    readRegionIds?: string[];
+    readCompanyIds?: string[];
   }): Promise<MobileChecklistToday> {
-    const storeIds = input.assignedStoreIds.length > 0 ? input.assignedStoreIds : input.readStoreIds;
+    const explicitStoreIds =
+      input.assignedStoreIds.length > 0 ? input.assignedStoreIds : input.readStoreIds;
+    const readRegionIds = input.readRegionIds ?? [];
+    const readCompanyIds = input.readCompanyIds ?? [];
+
+    if (
+      explicitStoreIds.length === 0 &&
+      readRegionIds.length === 0 &&
+      readCompanyIds.length === 0
+    ) {
+      return {
+        stores: [],
+        templates: [],
+        activeInstances: [],
+        completedThisMonth: [],
+        pendingAcknowledgements: [],
+        monthlySummaries: [],
+      };
+    }
+
+    const stores = await this.queryMobileChecklistStores({
+      explicitStoreIds,
+      readRegionIds,
+      readCompanyIds,
+    });
+    const storeIds = stores.rows.map((row) => row.store_id);
 
     if (storeIds.length === 0) {
       return {
@@ -572,16 +599,6 @@ export class ChecklistRepository {
         monthlySummaries: [],
       };
     }
-
-    const stores = await this.databaseService.query<{ store_id: string; store_name: string }>(
-      `
-        SELECT s.store_id, s.store_name
-        FROM ops.store s
-        WHERE s.store_id = ANY($1::uuid[])
-        ORDER BY s.store_name ASC
-      `,
-      [storeIds],
-    );
 
     const templates = await this.databaseService.query<{
       checklist_template_id: string;
@@ -714,5 +731,45 @@ export class ChecklistRepository {
         averageScore: row.average_score === null ? null : Number(row.average_score),
       })),
     };
+  }
+
+  private async queryMobileChecklistStores(input: {
+    explicitStoreIds: string[];
+    readRegionIds: string[];
+    readCompanyIds: string[];
+  }) {
+    if (input.explicitStoreIds.length > 0) {
+      return this.databaseService.query<{ store_id: string; store_name: string }>(
+        `
+          SELECT s.store_id, s.store_name
+          FROM ops.store s
+          WHERE s.store_id = ANY($1::uuid[])
+          ORDER BY s.store_name ASC
+        `,
+        [input.explicitStoreIds],
+      );
+    }
+
+    if (input.readRegionIds.length > 0) {
+      return this.databaseService.query<{ store_id: string; store_name: string }>(
+        `
+          SELECT s.store_id, s.store_name
+          FROM ops.store s
+          WHERE s.region_id = ANY($1::uuid[])
+          ORDER BY s.store_name ASC
+        `,
+        [input.readRegionIds],
+      );
+    }
+
+    return this.databaseService.query<{ store_id: string; store_name: string }>(
+      `
+        SELECT s.store_id, s.store_name
+        FROM ops.store s
+        WHERE s.company_id = ANY($1::uuid[])
+        ORDER BY s.store_name ASC
+      `,
+      [input.readCompanyIds],
+    );
   }
 }

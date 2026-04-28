@@ -30,6 +30,7 @@ describe("ChecklistService", () => {
     saveMobileChecklistResponse?: jest.Mock;
     calculateMobileChecklistCompletion?: jest.Mock;
     completeMobileChecklistInstance?: jest.Mock;
+    getMobileChecklistToday?: jest.Mock;
   }) {
     return new ChecklistService(
       storeOpsRepository as never,
@@ -314,6 +315,41 @@ describe("ChecklistService", () => {
     ).rejects.toThrow("Requested store is outside assigned action stores");
 
     expect(checklistRepository.startMobileChecklistInstance).not.toHaveBeenCalled();
+  });
+
+  it("returns mobile checklist today from assigned stores before read stores", async () => {
+    const today = {
+      stores: [{ storeId: "store-1", storeName: "Marmara Park" }],
+      templates: [],
+      activeInstances: [],
+      completedThisMonth: [],
+      pendingAcknowledgements: [],
+      monthlySummaries: [],
+    };
+    const checklistRepository = {
+      getMobileChecklistToday: jest.fn().mockResolvedValue(today),
+    };
+    const service = createService(checklistRepository);
+
+    await expect(
+      service.getMobileChecklistToday({
+        actorUserId: "user-1",
+        actorScope: {
+          storeIds: ["read-store-1"],
+        },
+        actorActionScope: {
+          assignedStoreIds: ["store-1"],
+        },
+      }),
+    ).resolves.toEqual({ data: today });
+
+    expect(checklistRepository.getMobileChecklistToday).toHaveBeenCalledWith({
+      actorUserId: "user-1",
+      assignedStoreIds: ["store-1"],
+      readStoreIds: ["read-store-1"],
+      readRegionIds: [],
+      readCompanyIds: [],
+    });
   });
 
   it("rejects saving responses on completed mobile checklist instances", async () => {

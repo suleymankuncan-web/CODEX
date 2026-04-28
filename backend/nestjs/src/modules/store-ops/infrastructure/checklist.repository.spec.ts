@@ -440,8 +440,34 @@ describe("ChecklistRepository", () => {
     ]);
   });
 
+  it("resolves region scope to stores when actor has no explicit store ids", async () => {
+    const query = createQueryMock({
+      stores: [{ store_id: "region-store-1", store_name: "Forum Istanbul" }],
+    });
+    const repository = new ChecklistRepository({ query } as never);
+
+    await repository.getMobileChecklistToday({
+      actorUserId: "region-user-1",
+      assignedStoreIds: [],
+      readStoreIds: [],
+      readRegionIds: ["region-1"],
+      readCompanyIds: ["company-1"],
+    });
+
+    expect(query).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining("s.region_id = ANY($1::uuid[])"),
+      [["region-1"]],
+    );
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining("SELECT DISTINCT s.company_id"),
+      [["region-store-1"]],
+    );
+  });
+
   it("scopes templates to companies for the effective store ids", async () => {
     const query = createQueryMock({
+      stores: [{ store_id: "store-1", store_name: "Marmara Park" }],
       templates: [
         {
           checklist_template_id: "template-1",
@@ -478,7 +504,9 @@ describe("ChecklistRepository", () => {
   });
 
   it("excludes completed checklist rows without total scores", async () => {
-    const query = createQueryMock();
+    const query = createQueryMock({
+      stores: [{ store_id: "store-1", store_name: "Marmara Park" }],
+    });
     const repository = new ChecklistRepository({ query } as never);
 
     await repository.getMobileChecklistToday({

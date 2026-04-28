@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Patch, Post, Req } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Req } from "@nestjs/common";
 import { AuthenticatedUser } from "../../auth/auth-context.service";
 import { RequireRoles } from "../../auth/decorators/roles.decorator";
 import {
@@ -13,6 +13,22 @@ import { StartMobileChecklistInstanceDto } from "./dto/start-mobile-checklist-in
 @Controller("mobile/checklists")
 export class MobileChecklistController {
   constructor(private readonly checklistService: ChecklistService) {}
+
+  @Get("today")
+  @RequireScope("authenticated")
+  @RequireRoles("REGION_MANAGER", "STORE_MANAGER", "SUPER_ADMIN")
+  async getToday(
+    @Req()
+    request: {
+      user: AuthenticatedUser;
+    },
+  ) {
+    return this.checklistService.getMobileChecklistToday({
+      actorUserId: request.user.userId,
+      actorScope: request.user.scope,
+      actorActionScope: request.user.actionScope,
+    });
+  }
 
   @Post("instances")
   @RequireScope("store")

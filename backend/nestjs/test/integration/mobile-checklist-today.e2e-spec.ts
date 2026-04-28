@@ -4,7 +4,90 @@ import { createIntegrationApp } from "./test-app";
 describe("Mobile checklist today flow", () => {
   const storeId = "11111111-1111-4111-8111-111111111111";
   const otherStoreId = "99999999-9999-4999-8999-999999999999";
+  const regionId = "12121212-1212-4121-8121-121212121212";
   const templateId = "22222222-2222-4222-8222-222222222222";
+
+  it("returns mobile today payload with monthly visit average", async () => {
+    const query = jest.fn(async (sql: string) => {
+      if (sql.includes("FROM ops.store s") && sql.includes("ORDER BY s.store_name ASC")) {
+        return {
+          rows: [{ store_id: storeId, store_name: "Marmara Park" }],
+        };
+      }
+
+      if (sql.includes("FROM ops.checklist_template ct")) {
+        return {
+          rows: [
+            {
+              checklist_template_id: templateId,
+              template_code: "BM_VISIT_V1",
+              template_type: "BM_STORE_VISIT",
+              template_name: "BM Visit",
+              version_no: 1,
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("GROUP BY ci.store_id, ci.checklist_template_id")) {
+        return {
+          rows: [
+            {
+              store_id: storeId,
+              checklist_template_id: templateId,
+              month_start: "2026-04-01",
+              completed_count: "2",
+              average_score: "86.00",
+            },
+          ],
+        };
+      }
+
+      return { rows: [] };
+    });
+    const app = await createIntegrationApp({
+      databaseService: {
+        query,
+        withTransaction: async <T>(work: (client: { query: typeof query }) => Promise<T>) =>
+          work({ query }),
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .get("/api/mobile/checklists/today")
+      .set("x-user-id", "region-user-1")
+      .set("x-role-codes", "REGION_MANAGER")
+      .set("x-region-ids", regionId)
+      .set("x-read-company-ids", "");
+
+    expect(response.status).toBe(200);
+    expect(response.body.data).toEqual({
+      stores: [{ storeId, storeName: "Marmara Park" }],
+      templates: [
+        {
+          checklistTemplateId: templateId,
+          templateCode: "BM_VISIT_V1",
+          templateType: "BM_STORE_VISIT",
+          templateName: "BM Visit",
+          versionNo: 1,
+        },
+      ],
+      activeInstances: [],
+      completedThisMonth: [],
+      pendingAcknowledgements: [],
+      monthlySummaries: [
+        {
+          storeId,
+          checklistTemplateId: templateId,
+          monthStart: "2026-04-01",
+          completedCount: 2,
+          averageScore: 86,
+        },
+      ],
+    });
+
+    await app.close();
+  });
 
   it("lets region managers start a checklist only for assigned stores", async () => {
     const query = jest.fn(async (sql: string) => {

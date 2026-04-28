@@ -81,6 +81,28 @@ export class ChecklistService {
     });
   }
 
+  async getMobileChecklistToday(input: {
+    actorUserId: string;
+    actorScope: {
+      companyIds?: string[];
+      regionIds?: string[];
+      storeIds: string[];
+    };
+    actorActionScope?: {
+      assignedStoreIds: string[];
+    };
+  }) {
+    return {
+      data: await this.checklistRepository.getMobileChecklistToday({
+        actorUserId: input.actorUserId,
+        assignedStoreIds: input.actorActionScope?.assignedStoreIds ?? [],
+        readStoreIds: input.actorScope.storeIds,
+        readRegionIds: input.actorScope.regionIds ?? [],
+        readCompanyIds: input.actorScope.companyIds ?? [],
+      }),
+    };
+  }
+
   async saveMobileChecklistResponse(input: {
     checklistInstanceId: string;
     templateItemId: string;
