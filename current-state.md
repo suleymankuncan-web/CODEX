@@ -2909,6 +2909,33 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: plan onayliysa Task 1 ile kirmizi migration service testlerini yazmak; henuz production migration kodu uygulanmadi.
 
+## Son Production-Ready Migration System V1 Implementation Result
+
+28 Nisan 2026 itibariyla migration sistemi production hazirligi icin guvenli hale getirildi.
+
+Eklenenler:
+
+- `audit.schema_migration` tracking tablosu canonical schema ve `035_schema_migration_tracking.sql` migration dosyasina eklendi.
+- `MigrationService` artik root `db/migrations` yolunu `backend/nestjs` calisma dizininden dogru cozer.
+- Basarili migration dosyalari checksum eslesirse skip edilir.
+- Basarili migration dosyasinin checksum'u degisirse migration calistirilmadan hata verilir.
+- Failed migration status ve error evidence transaction disinda kaydedilir.
+- `/api/admin/migrations/run` production ortaminda `404` ile gizlenir.
+- CLI/CI migration yolu eklendi: `npm.cmd run db:migrate`.
+
+Dogrulama:
+
+- Backend targeted migration/config/controller/CLI tests passed.
+- Root script tests passed.
+- Backend `npm.cmd run check:release` passed: 47 suite / 320 test, build, audit.
+
+CODEX durust yorum:
+
+- Bu adim teknik borc kapatti; gosterisli degil ama production veri guvenligi icin cok degerli.
+- Mevcut migration setinde `001` dosyasinin `schema.sql` include etmesi tarihsel bir mimari risk olarak izlenmeli; V1 bunu daha guvenli izlenebilir hale getirdi ama ileride migration baseline/immutability stratejisi ayrica netlestirilmeli.
+
+Siradaki mantikli adim: Production Security Gate V1 planina gecmek; CORS, rate limit, request logging, error response standardi ve mobil auth/session kararlarini koddan once netlestirmek.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:
@@ -2923,6 +2950,17 @@ Backend auth / scope:
 - `backend/nestjs/src/modules/auth/auth-admin.service.ts`
 - `backend/nestjs/src/modules/auth/web/auth-admin.controller.ts`
 - `db/migrations/020_user_action_store_assignments.sql`
+
+Backend database / migration:
+
+- `backend/nestjs/src/shared/database/migration.service.ts`
+- `backend/nestjs/src/shared/database/migration.service.spec.ts`
+- `backend/nestjs/src/shared/database/migrations.controller.ts`
+- `backend/nestjs/src/shared/database/migrations.controller.spec.ts`
+- `backend/nestjs/src/shared/database/migration-cli-contract.spec.ts`
+- `backend/nestjs/src/shared/database/migration-schema-contract.spec.ts`
+- `backend/nestjs/scripts/run-migrations.ts`
+- `db/migrations/035_schema_migration_tracking.sql`
 
 Backend audit:
 

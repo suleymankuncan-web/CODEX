@@ -96,6 +96,9 @@ Allowed sign-off states:
 - [ ] Migration order is documented and matches `db/migrations`.
 - [ ] Canonical schema `db/schema.sql` reflects the migration set used for the target environment.
 - [ ] Migration execution is run by an authorized operator or automated deployment job.
+- [ ] `npm.cmd run db:migrate` is the approved migration execution command.
+- [ ] `/api/admin/migrations/run` is disabled in production by `MIGRATIONS_HTTP_ENABLED=false` or production default behavior.
+- [ ] `audit.schema_migration` contains succeeded records for applied migration files.
 - [ ] Failed migration recovery plan is written before running production migrations.
 - [ ] Runtime app starts after migrations without requiring schema write privileges.
 - [ ] Seed data needed for auth/action smoke is present or intentionally excluded with a No-Go/Conditional Go decision.

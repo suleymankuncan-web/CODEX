@@ -74,11 +74,13 @@ No-Go:
 Target-specific command:
 
 ```powershell
-# Fill with approved migration command for the target environment.
+cd "<workspace-root>\backend\nestjs"
+npm.cmd run db:migrate
 ```
 
 Rules:
 
+- Production migrations must be run through `npm.cmd run db:migrate` or the approved CI/CD step, not through `/api/admin/migrations/run`.
 - Do not run production migrations from an unreviewed local shell.
 - Do not run against a partially verified database URL.
 - Do not start the backend if migration status is unknown.

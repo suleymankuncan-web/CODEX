@@ -27,6 +27,7 @@ These values are read by `backend/nestjs/src/shared/app-config.service.ts`.
 | `DB_SSL_MODE` | P0 | Use provider-required SSL mode. | Local default is `disable`; production should be reviewed. |
 | `AUTH_MODE` | P0 | Must be `jwt` for real environments. | Local may use `mock`. |
 | `ALLOW_MOCK_AUTH` | P0 | Must be `false` or unset in production. | Production must not allow mock auth. |
+| `MIGRATIONS_HTTP_ENABLED` | P0 | Forced disabled when `NODE_ENV=production`. | Enables the legacy HTTP migration endpoint only for local/non-production controlled use; production must use CLI/CI migration execution. |
 | `JWT_AUDIENCE` | P0 | Must match accepted access token audience. | Defaults to `store-ops-api`. |
 | `JWT_ISSUER` | P0 | Must exactly match provider issuer. | Production rejects issuer mismatch. |
 | `JWT_JWKS_URL` | P0 | Required for real IdP JWT verification. | Preferred over shared secret verification. |

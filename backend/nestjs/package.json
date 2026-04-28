@@ -6,6 +6,7 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:workers": "ts-node src/workers.ts",
+    "db:migrate": "ts-node scripts/run-migrations.ts",
     "build": "nest build",
     "lint": "eslint \"src/**/*.ts\"",
     "test": "jest",

@@ -43,6 +43,14 @@ export class AppConfigService {
     return value === "true" || (!this.isProduction && value !== "false");
   }
 
+  get httpMigrationEndpointEnabled(): boolean {
+    if (this.isProduction) {
+      return false;
+    }
+
+    return this.readString("MIGRATIONS_HTTP_ENABLED", "true") !== "false";
+  }
+
   get isProduction(): boolean {
     return this.readString("NODE_ENV", "development") === "production";
   }

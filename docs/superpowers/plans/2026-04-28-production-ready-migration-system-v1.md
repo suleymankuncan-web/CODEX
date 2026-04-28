@@ -118,6 +118,10 @@ Behavior rules:
 - If migration fails, update row to `failed`, store `error_message`, then rethrow.
 - Do not record failed status inside the same transaction that rolls back the migration SQL.
 
+Implementation note:
+
+- The implemented checksum is based on the migration file text, while execution still resolves `\i` include directives. This avoids false checksum drift from the legacy `001` migration referencing mutable `db/schema.sql`.
+
 ## Return Contract
 
 `MigrationService.runMigrations()` should return:

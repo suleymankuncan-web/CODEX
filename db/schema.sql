@@ -889,6 +889,20 @@ CREATE TABLE audit.entity_change_log (
     after_json JSONB
 );
 
+CREATE TABLE IF NOT EXISTS audit.schema_migration (
+    migration_name TEXT PRIMARY KEY,
+    migration_checksum TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('running', 'succeeded', 'failed')),
+    attempt_count INTEGER NOT NULL DEFAULT 0,
+    started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    finished_at TIMESTAMPTZ,
+    duration_ms INTEGER,
+    applied_by TEXT NOT NULL DEFAULT CURRENT_USER,
+    error_message TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE INDEX idx_assignment_employee_dates
     ON ops.employee_assignment_history (employee_id, start_date, end_date);
 
@@ -1004,6 +1018,9 @@ CREATE INDEX idx_event_log_entity_date
 CREATE INDEX idx_event_log_scope_date
     ON audit.event_log (scope_type, company_id, region_id, store_id, occurred_at);
 
+CREATE INDEX IF NOT EXISTS idx_schema_migration_status
+    ON audit.schema_migration (status, started_at DESC);
+
 CREATE TRIGGER trg_store_workforce_snapshot_immutable
     BEFORE UPDATE OR DELETE ON rpt.store_workforce_snapshot
     FOR EACH ROW EXECUTE FUNCTION rpt.prevent_snapshot_mutation();
@@ -1044,3 +1061,4 @@ COMMENT ON TABLE ops.workforce_norm_plan IS 'Approved planned headcount and FTE 
 COMMENT ON TABLE rpt.snapshot_run IS 'Parent record for every immutable reporting snapshot generation run.';
 COMMENT ON TABLE stg.import_batch IS 'Tracks lifecycle of each external data import batch.';
 COMMENT ON TABLE audit.event_log IS 'Mandatory audit trail for critical business operations.';
+COMMENT ON TABLE audit.schema_migration IS 'Tracks SQL migration execution, checksums, status, and failure evidence.';

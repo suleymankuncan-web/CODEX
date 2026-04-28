@@ -17,7 +17,7 @@ Date: 28 April 2026
 
 Current count:
 
-- Closed active debts: 38
+- Closed active debts: 39
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -66,6 +66,9 @@ These are counted as paid because they have implementation or documentation evid
 36. Personnel Request Return/Resubmit V1
 37. Excel KPI Import V1
 38. Excel KPI Import Operator Runbook V1
+39. Production-Ready Migration System V1
+
+Production-Ready Migration System V1 is counted as paid because SQL migrations are tracked in `audit.schema_migration`, checksum drift is rejected, failed runs are recorded with error evidence, the HTTP migration endpoint is disabled in production, and `npm.cmd run db:migrate` is the approved CLI/CI migration path.
 
 ## Superseded Before Overbuilding
 

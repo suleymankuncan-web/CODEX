@@ -33,4 +33,31 @@ describe("AppConfigService", () => {
 
     expect(config.jwtSecret).toBe("change-me");
   });
+
+  it("allows HTTP migration endpoint by default only outside production", () => {
+    expect(createConfig({ NODE_ENV: "development" }).httpMigrationEndpointEnabled).toBe(
+      true,
+    );
+    expect(createConfig({ NODE_ENV: "production" }).httpMigrationEndpointEnabled).toBe(
+      false,
+    );
+  });
+
+  it("allows disabling HTTP migration endpoint explicitly outside production", () => {
+    expect(
+      createConfig({
+        MIGRATIONS_HTTP_ENABLED: "false",
+        NODE_ENV: "development",
+      }).httpMigrationEndpointEnabled,
+    ).toBe(false);
+  });
+
+  it("does not allow enabling HTTP migration endpoint in production", () => {
+    expect(
+      createConfig({
+        MIGRATIONS_HTTP_ENABLED: "true",
+        NODE_ENV: "production",
+      }).httpMigrationEndpointEnabled,
+    ).toBe(false);
+  });
 });
