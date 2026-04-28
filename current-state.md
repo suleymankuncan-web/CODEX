@@ -3005,6 +3005,49 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: onay verilirse Mobile Auth/Session V1 P0 Task 1 ile schema contract testinden baslamak; refresh token broker ve Mobile BFF simdilik acilmamali.
 
+## Son Mobile Auth/Session V1 P0 Implementation Result
+
+28 Nisan 2026 itibariyla Mobile Auth/Session V1 P0 backend tarafinda uygulandi.
+
+Eklenenler:
+
+- DB: `ops.mobile_device_session` canonical schema ve `db/migrations/036_mobile_device_sessions.sql`.
+- Backend:
+  - `POST /api/mobile/auth/sessions`
+  - `GET /api/mobile/auth/session`
+  - `GET /api/mobile/auth/sessions`
+  - `POST /api/mobile/auth/logout`
+  - `DELETE /api/mobile/auth/sessions/:sessionId`
+- `MobileSessionGuard`: mobil session okuma/logout gibi mobil-only endpointlerde bearer auth'a ek olarak `x-mobile-session-id` ister.
+- `MobileSessionService`: raw `deviceId` saklamaz, SHA-256 hash ile aktif device session'i bulur veya olusturur.
+- Audit eventleri: `mobile_device_session.created`, `mobile_device_session.revoked`.
+
+Korunan sinirlar:
+
+- Refresh token backend'de tutulmuyor; IdP-owned kaldi.
+- Backend refresh endpointi acilmadi.
+- Mobile BFF acilmadi.
+- Push token storage P0 disinda kaldi.
+- Admin-web PKCE/auth akisi degistirilmedi.
+- Store/feed/workforce/competition modullerine dokunulmadi.
+
+Dogrulama:
+
+- Schema contract: `npm.cmd test -- src/modules/auth/mobile-session-schema-contract.spec.ts --runInBand`.
+- Repository/service/guard: `npm.cmd test -- src/modules/auth/mobile-session.service.spec.ts src/modules/auth/mobile-session.repository.spec.ts src/modules/auth/guards/mobile-session.guard.spec.ts --runInBand`.
+- Mobile auth e2e: `npm.cmd test -- test/integration/mobile-auth-session.e2e-spec.ts --runInBand`.
+- Audit catalog: `npm.cmd test -- src/shared/audit/audit-event-catalog.spec.ts --runInBand`.
+- Backend build: `npm.cmd run build`.
+- Backend release: `npm.cmd run check:release` -> lint, 53 suite / 344 test, build, `npm audit --omit=dev`.
+- Root release: `npm.cmd run check:release` -> 32 root script test, backend release, frontend lint/script/build/e2e 34 Playwright test, audits.
+
+CODEX durust yorum:
+
+- Bu dogru sertlikte bir P0 oldu: mobil uygulama icin logout/revoke ve cihaz oturum zemini var, ama backend'i ikinci IdP'ye cevirecek refresh-token broker acilmadi.
+- Sira Mobile BFF yazmakta degil; once mobil ekranlar icin hangi mevcut endpointlerin yettigi, hangi noktalarda gercek aggregation gerektigi envanterlenmeli.
+
+Siradaki mantikli adim: Mobile API/BFF endpoint envanteri cikarmak; Home, magaza performansi, checklist, personel performansi, ranking/feed/profil ekranlari icin mevcut endpoint yetiyor mu, yoksa az sayida mobil aggregate endpoint mi gerekiyor bunu koddan once netlestirmek.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:

@@ -28,6 +28,18 @@ export const AUDIT_EVENT_CATALOG = [
   auditEvent("user_account.reactivated", "ops.user_account", "auth", "User account was reactivated."),
   auditEvent("role_permission.granted", "ops.role", "auth", "Role permission was granted."),
   auditEvent("role_permission.revoked", "ops.role", "auth", "Role permission was revoked."),
+  auditEvent(
+    "mobile_device_session.created",
+    "ops.mobile_device_session",
+    "auth",
+    "Mobile app device session was registered.",
+  ),
+  auditEvent(
+    "mobile_device_session.revoked",
+    "ops.mobile_device_session",
+    "auth",
+    "Mobile app device session was revoked.",
+  ),
 
   auditEvent("import_batch.created", "stg.import_batch", "integration", "Import batch was created."),
   auditEvent("import_batch.started", "stg.import_batch", "integration", "Import batch materialization started."),

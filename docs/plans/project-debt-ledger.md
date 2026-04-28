@@ -17,7 +17,7 @@ Date: 28 April 2026
 
 Current count:
 
-- Closed active debts: 40
+- Closed active debts: 41
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -68,10 +68,13 @@ These are counted as paid because they have implementation or documentation evid
 38. Excel KPI Import Operator Runbook V1
 39. Production-Ready Migration System V1
 40. Production Security Gate V1-A
+41. Mobile Auth/Session V1 P0
 
 Production-Ready Migration System V1 is counted as paid because SQL migrations are tracked in `audit.schema_migration`, checksum drift is rejected, failed runs are recorded with error evidence, the HTTP migration endpoint is disabled in production, and `npm.cmd run db:migrate` is the approved CLI/CI migration path.
 
-Production Security Gate V1-A is counted as paid because CORS allowlist, production CORS fail-fast, in-memory rate limit, and standard stack-free error responses are implemented and guarded by backend security e2e tests. Mobile auth/session remains outside this count.
+Production Security Gate V1-A is counted as paid because CORS allowlist, production CORS fail-fast, in-memory rate limit, and standard stack-free error responses are implemented and guarded by backend security e2e tests.
+
+Mobile Auth/Session V1 P0 is counted as paid because `ops.mobile_device_session`, session create/resume/list/revoke/logout endpoints, active mobile session guard, and auth session audit events are implemented and guarded by backend unit/e2e tests. Backend-owned refresh tokens, Mobile BFF, and push token storage remain future phases by design.
 
 ## Superseded Before Overbuilding
 
@@ -247,6 +250,7 @@ Current repo hygiene is not counted as active debt in this ledger because:
 - the 28 April 2026 Excel KPI Import V1 implementation added gross-personnel/net-store import behavior, scoped store import gating, reconciliation evidence, and duplicate-safe upload identity.
 - the 28 April 2026 Excel KPI Import Operator Runbook V1 made the real Excel import process repeatable and guarded by root script tests before pilot use.
 - the 28 April 2026 Production Security Gate V1-A added CORS allowlist, production CORS fail-fast, in-memory rate limit, and standard stack-free error responses.
+- the 28 April 2026 Mobile Auth/Session V1 P0 added backend-owned mobile device sessions without taking refresh-token ownership from the IdP.
 
 Still monitor:
 
@@ -289,4 +293,4 @@ The next local backend candidate should be chosen through the intake gate. Sourc
 
 Recommended local candidate if external evidence is still unavailable:
 
-- Plan Mobile Auth/Session V1 before growing mobile/social surfaces: access token, refresh token, device session, logout/revoke, push token storage, and mobile BFF boundary.
+- Plan Mobile API/BFF inventory before growing mobile screens: identify reusable existing endpoints, only add aggregation endpoints where mobile would otherwise over-fetch, and keep auth/session separate from BFF.

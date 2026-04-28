@@ -88,7 +88,7 @@ Do not modify:
 - Modify: `db/schema.sql`
 - Test: `backend/nestjs/src/modules/auth/mobile-session-schema-contract.spec.ts`
 
-- [ ] **Step 1: Write failing schema contract test**
+- [x] **Step 1: Write failing schema contract test**
 
 Create a test that reads `db/schema.sql` and asserts:
 
@@ -109,7 +109,7 @@ npm.cmd test -- src/modules/auth/mobile-session-schema-contract.spec.ts --runInB
 
 Expected: FAIL because table does not exist.
 
-- [ ] **Step 2: Add migration and canonical schema**
+- [x] **Step 2: Add migration and canonical schema**
 
 Add `ops.mobile_device_session` to migration and `db/schema.sql`.
 
@@ -121,7 +121,7 @@ Important SQL rules:
 - add indexes for `user_id/status/last_seen_at` and `mobile_device_session_id/user_id/status`
 - add partial unique index for active `(user_id, device_id_hash)`
 
-- [ ] **Step 3: Run schema contract test**
+- [x] **Step 3: Run schema contract test**
 
 Expected: PASS.
 
@@ -132,7 +132,7 @@ Expected: PASS.
 - Create: `backend/nestjs/src/modules/auth/mobile-session.repository.ts`
 - Test: `backend/nestjs/src/modules/auth/mobile-session.repository.spec.ts`
 
-- [ ] **Step 1: Write repository tests**
+- [x] **Step 1: Write repository tests**
 
 Cover:
 
@@ -143,7 +143,7 @@ Cover:
 - reject cross-user revoke by returning null/empty result.
 - list sessions by user id.
 
-- [ ] **Step 2: Implement repository**
+- [x] **Step 2: Implement repository**
 
 Repository methods:
 
@@ -157,7 +157,7 @@ Repository methods:
 
 Use `DatabaseService.query` and `withTransaction` patterns already used in auth repositories.
 
-- [ ] **Step 3: Run repository test**
+- [x] **Step 3: Run repository test**
 
 Expected: PASS.
 
@@ -168,7 +168,7 @@ Expected: PASS.
 - Create: `backend/nestjs/src/modules/auth/mobile-session.service.ts`
 - Test: `backend/nestjs/src/modules/auth/mobile-session.service.spec.ts`
 
-- [ ] **Step 1: Write service tests**
+- [x] **Step 1: Write service tests**
 
 Cover:
 
@@ -178,7 +178,7 @@ Cover:
 - user cannot revoke another user's session.
 - returned session payload never includes token material.
 
-- [ ] **Step 2: Implement service**
+- [x] **Step 2: Implement service**
 
 Service responsibilities:
 
@@ -190,7 +190,7 @@ Service responsibilities:
 
 No new package needed.
 
-- [ ] **Step 3: Run service test**
+- [x] **Step 3: Run service test**
 
 Expected: PASS.
 
@@ -201,7 +201,7 @@ Expected: PASS.
 - Create: `backend/nestjs/src/modules/auth/guards/mobile-session.guard.ts`
 - Test: `backend/nestjs/src/modules/auth/guards/mobile-session.guard.spec.ts`
 
-- [ ] **Step 1: Write guard tests**
+- [x] **Step 1: Write guard tests**
 
 Cover:
 
@@ -210,7 +210,7 @@ Cover:
 - revoked/expired/missing session rejects.
 - session belonging to different user rejects.
 
-- [ ] **Step 2: Implement guard**
+- [x] **Step 2: Implement guard**
 
 Guard should run after `AuthGuard`.
 
@@ -223,7 +223,7 @@ Expected behavior:
 
 Use standard Nest exceptions so Security Gate V1-A formats errors globally.
 
-- [ ] **Step 3: Register guard only where needed**
+- [x] **Step 3: Register guard only where needed**
 
 Do not make it global in V1.
 
@@ -238,7 +238,7 @@ Use it only on mobile auth/session endpoints that require an existing mobile ses
 - Modify: `backend/nestjs/src/modules/auth/auth.module.ts`
 - Test: `backend/nestjs/test/integration/mobile-auth-session.e2e-spec.ts`
 
-- [ ] **Step 1: Write e2e tests**
+- [x] **Step 1: Write e2e tests**
 
 Cover:
 
@@ -248,7 +248,7 @@ Cover:
 - revoked session cannot access `GET /api/mobile/auth/session`.
 - DB assignment scope remains canonical in returned session.
 
-- [ ] **Step 2: Add DTO**
+- [x] **Step 2: Add DTO**
 
 Fields:
 
@@ -264,7 +264,7 @@ Validation:
 - enum platform
 - optional string metadata
 
-- [ ] **Step 3: Add controller**
+- [x] **Step 3: Add controller**
 
 Endpoints:
 
@@ -278,7 +278,7 @@ All endpoints require existing `AuthGuard` through module global guard.
 
 Endpoints except session registration must require active mobile session guard.
 
-- [ ] **Step 4: Register controller/provider**
+- [x] **Step 4: Register controller/provider**
 
 Update `AuthModule` with controller and service/repository/guard providers.
 
@@ -289,7 +289,7 @@ Update `AuthModule` with controller and service/repository/guard providers.
 - Modify: `backend/nestjs/src/shared/audit/audit-event-catalog.ts`
 - Modify/Test: `backend/nestjs/src/shared/audit/audit-event-catalog.spec.ts`
 
-- [ ] **Step 1: Add audit event catalog expectations**
+- [x] **Step 1: Add audit event catalog expectations**
 
 Events:
 
@@ -304,7 +304,7 @@ Optional P1 future:
 - `mobile_push_token.revoked`
 - `mobile_refresh_token.reused`
 
-- [ ] **Step 2: Ensure no sensitive metadata**
+- [x] **Step 2: Ensure no sensitive metadata**
 
 Tests should assert catalog exists. Service tests should assert no raw token/device id appears in audit metadata.
 
@@ -318,7 +318,7 @@ Tests should assert catalog exists. Service tests should assert no raw token/dev
 - Modify: `docs/plans/active-next-actions.md`
 - Modify: `docs/plans/project-debt-ledger.md`
 
-- [ ] **Step 1: Add mobile auth V1 status**
+- [x] **Step 1: Add mobile auth V1 status**
 
 Document:
 
@@ -327,7 +327,7 @@ Document:
 - Mobile BFF is out of scope.
 - push token registration is P1 unless implemented.
 
-- [ ] **Step 2: Debt ledger accounting**
+- [x] **Step 2: Debt ledger accounting**
 
 Only count as closed active debt after implementation and release gates pass.
 
@@ -337,7 +337,7 @@ If only docs are written, do not increment closed debt count.
 
 **Files:** no code changes beyond prior tasks.
 
-- [ ] **Step 1: Run targeted backend tests**
+- [x] **Step 1: Run targeted backend tests**
 
 ```powershell
 cd "C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI\backend\nestjs"
@@ -346,7 +346,7 @@ npm.cmd test -- src/modules/auth/mobile-session-schema-contract.spec.ts src/modu
 
 Expected: all targeted tests pass.
 
-- [ ] **Step 2: Run backend release gate**
+- [x] **Step 2: Run backend release gate**
 
 ```powershell
 cd "C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI\backend\nestjs"
@@ -355,7 +355,7 @@ npm.cmd run check:release
 
 Expected: lint, tests, build, audit pass.
 
-- [ ] **Step 3: Run root release gate**
+- [x] **Step 3: Run root release gate**
 
 ```powershell
 cd "C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI"

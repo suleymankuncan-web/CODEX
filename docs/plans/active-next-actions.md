@@ -6,7 +6,7 @@ This is the short working list for the next practical steps. It keeps the projec
 
 ## Current Position
 
-As of 28 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, Store UX TR-First Copy V1, KPI Config Versioning V1, Source-Agnostic Ingest Contract Hardening V1, KPI Raw Row Lineage Persistence V1, Import Lineage Evidence Surface V1, Audit Event Taxonomy Guard V1, Data Quality Guard V1, Import Batch Quality Summary V1, Project-Wide Scope/Auth Guard Scan V1, No-Empty-Scope Repository Contract Pass V1, Production Environment Readiness Checklist V1, Environment Variable Inventory + Deployment Runbook Skeleton V1, Environment Drift Guard V1, Production/Staging Incident Response Skeleton V1, Personnel Management V1, Personnel Request Return/Resubmit V1, Personnel Master Data Bootstrap V1 planning, Project MVP Focus Map, Excel KPI Import V1, Excel KPI Import Operator Runbook V1, Production-Ready Migration System V1, and Production Security Gate V1-A have:
+As of 28 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, Store UX TR-First Copy V1, KPI Config Versioning V1, Source-Agnostic Ingest Contract Hardening V1, KPI Raw Row Lineage Persistence V1, Import Lineage Evidence Surface V1, Audit Event Taxonomy Guard V1, Data Quality Guard V1, Import Batch Quality Summary V1, Project-Wide Scope/Auth Guard Scan V1, No-Empty-Scope Repository Contract Pass V1, Production Environment Readiness Checklist V1, Environment Variable Inventory + Deployment Runbook Skeleton V1, Environment Drift Guard V1, Production/Staging Incident Response Skeleton V1, Personnel Management V1, Personnel Request Return/Resubmit V1, Personnel Master Data Bootstrap V1 planning, Project MVP Focus Map, Excel KPI Import V1, Excel KPI Import Operator Runbook V1, Production-Ready Migration System V1, Production Security Gate V1-A, and Mobile Auth/Session V1 P0 have:
 
 - saved drafts
 - edit/cancel/history
@@ -71,7 +71,8 @@ As of 28 April 2026, the competition package planning flow, Operational Feed V1,
 - repeatable Excel import operator runbook for upload, summary, mapping, reconciliation, retry, materialization, and evidence
 - production-ready migration tracking, checksum drift protection, failed-run evidence, CLI execution, and production HTTP endpoint guard
 - production security gate for CORS allowlist, production CORS fail-fast, in-memory rate limit, and standard stack-free error responses
-- approved Mobile Auth/Session V1 design and implementation plan, with Mobile BFF and backend-owned refresh tokens kept out of P0
+- backend-owned mobile device session registry, create/resume/list/revoke/logout endpoints, active mobile session guard, and audit catalog events
+- Mobile BFF and backend-owned refresh tokens kept out of P0 by design
 - project debt ledger
 - backend and frontend release checks
 
@@ -79,7 +80,7 @@ As of 28 April 2026, the competition package planning flow, Operational Feed V1,
 
 Reference: `docs/plans/project-debt-ledger.md`
 
-- Closed active debts: 40
+- Closed active debts: 41
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -123,7 +124,7 @@ Interpretation:
 - Excel KPI Import Operator Runbook V1 is implemented and guarded by root script tests.
 - Production-Ready Migration System V1 is implemented; SQL migrations are tracked in `audit.schema_migration`, checksum drift is rejected, failed runs are recorded, the HTTP migration endpoint is disabled in production, and `npm.cmd run db:migrate` is the approved CLI/CI migration path.
 - Production Security Gate V1-A is implemented; CORS allowlist, production CORS fail-fast, in-memory rate limit, and standard stack-free error response are guarded by backend tests.
-- Mobile Auth/Session V1 is planned, not yet implemented; refresh token remains IdP-owned in V1, mobile device session becomes backend-owned, and Mobile BFF remains a separate future phase.
+- Mobile Auth/Session V1 P0 is implemented; refresh token remains IdP-owned in V1, mobile device session is backend-owned, and Mobile BFF remains a separate future phase.
 - Full production UI/design-system and complete EN/TR localization expansion remain planned investments, not silent release debt.
 - Production UI/design-system is intentionally deferred into reversible pilots while backend/data foundations remain the priority.
 - The debt ledger itself is an accounting artifact and is not counted as a separate closed active debt item.
@@ -723,21 +724,23 @@ Interpretation:
   - mobile auth/session was not implemented in this pass
   - rate limit is in-memory V1; Redis/WAF/gateway remains the future production scaling move
 
-### Planned: Mobile Auth/Session V1
-- Status: `decision_ready`
-- Decision:
-  - refresh token remains IdP-owned in V1
-  - backend does not implement refresh endpoint in V1
-  - backend records mobile device session lifecycle
-  - mobile-only endpoints require bearer token plus active mobile session id
-  - DB role/read/action assignments remain canonical
-  - Mobile BFF is explicitly outside this phase
-- P0 Scope:
-  - `ops.mobile_device_session`
-  - mobile session create/resume/list/revoke/logout endpoints
-  - active mobile session guard
-  - audit event catalog entries
-  - targeted backend tests and release gates
+### Completed: Mobile Auth/Session V1 P0
+- Completed: 28 April 2026
+- Result:
+  - `ops.mobile_device_session` exists in canonical schema and migration `036_mobile_device_sessions.sql`
+  - backend registers/resumes mobile device sessions without storing raw device ids or refresh tokens
+  - mobile-only session reads and logout require bearer auth plus `x-mobile-session-id`
+  - session list, own-session revoke, and current-session logout endpoints exist under `/api/mobile/auth`
+  - DB role/read/action assignments remain canonical through the existing auth context
+  - audit catalog includes `mobile_device_session.created` and `mobile_device_session.revoked`
+- Still out of P0:
+  - backend-owned refresh tokens
+  - Mobile BFF
+  - push token storage and delivery
+- Verification:
+  - targeted mobile auth tests passed: 6 suite / 16 test
+  - backend `npm.cmd run check:release` passed: lint, 53 suite / 344 test, build, audit
+  - root `npm.cmd run check:release` passed: root script tests, backend release, frontend build/e2e 34 Playwright test, audits
 - References:
   - `docs/superpowers/specs/2026-04-28-mobile-auth-session-v1-design.md`
   - `docs/superpowers/plans/2026-04-28-mobile-auth-session-v1.md`
@@ -765,4 +768,4 @@ If neither staging values nor source ingest details are available, do not open s
 
 Recommended local candidate:
 
-- Implement Mobile Auth/Session V1 P0 from Task 1: start with the schema contract test for `ops.mobile_device_session`, then add repository/service/guard/controller in order.
+- Plan Mobile API/BFF inventory before building mobile screens: list existing endpoints the app can safely reuse, identify only the few aggregation endpoints that are truly needed, and keep auth/session separate from BFF.

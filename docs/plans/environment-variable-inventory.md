@@ -4,7 +4,7 @@
 
 - Status: V1 deployment inventory.
 - Owner: Platform, backend, frontend, and release operator.
-- Last updated: 2026-04-27.
+- Last updated: 2026-04-28.
 - Purpose: Keep environment variables visible before staging, pilot, or production deployment.
 
 ## Decision Rule
@@ -51,6 +51,12 @@ These values are read by `backend/nestjs/src/shared/app-config.service.ts`.
 | `DAILY_CLOSURE_AUTOMATION_ENABLED` | P1 | Keep `false` until closure schedule is approved. | Enables automated closure polling. |
 | `DAILY_CLOSURE_POLL_MINUTES` | P1 | Approved polling interval. | Defaults to `15`. |
 | `DAILY_CLOSURE_ACTOR_USER_ID` | P0 conditional | Required if daily closure automation is enabled. | Must be a real service/operator actor id. |
+
+Mobile Auth/Session V1 P0 note:
+
+- No new backend environment variable was added for mobile device sessions.
+- Mobile session endpoints rely on the existing JWT/JWKS, CORS, rate-limit, and database variables above.
+- Refresh tokens remain IdP-owned in V1; do not add backend refresh-token secrets or committed examples until a separate broker phase is explicitly approved.
 
 ## Frontend Build-Time Variables
 

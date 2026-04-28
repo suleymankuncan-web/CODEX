@@ -67,6 +67,7 @@ Allowed sign-off states:
 ### P0 Required
 
 - [ ] Real provider registration uses authorization code flow with PKCE `S256`.
+- [ ] Mobile clients also use authorization code flow with PKCE; backend remains a resource server, not a refresh-token broker.
 - [ ] Implicit flow is disabled for the production browser client.
 - [ ] Allowed callback URL exactly matches `/auth/callback` on the target frontend origin.
 - [ ] Allowed post-logout URL exactly matches `/auth/login` on the target frontend origin.
@@ -102,6 +103,7 @@ Allowed sign-off states:
 - [ ] `npm.cmd run db:migrate` is the approved migration execution command.
 - [ ] `/api/admin/migrations/run` is disabled in production by `MIGRATIONS_HTTP_ENABLED=false` or production default behavior.
 - [ ] `audit.schema_migration` contains succeeded records for applied migration files.
+- [ ] `036_mobile_device_sessions.sql` is applied before mobile app pilot users are enabled.
 - [ ] Failed migration recovery plan is written before running production migrations.
 - [ ] Runtime app starts after migrations without requiring schema write privileges.
 - [ ] Seed data needed for auth/action smoke is present or intentionally excluded with a No-Go/Conditional Go decision.
@@ -119,7 +121,7 @@ Allowed sign-off states:
 
 ### P0 Required
 
-- [ ] Audit events remain enabled for auth, approvals, feed, import, KPI config, target distribution, and competition operations.
+- [ ] Audit events remain enabled for auth, mobile sessions, approvals, feed, import, KPI config, target distribution, and competition operations.
 - [ ] Audit event catalog drift guard passes through backend release tests.
 - [ ] Audit retention owner is defined.
 - [ ] Backup cadence is defined for the target database.
@@ -144,6 +146,7 @@ Allowed sign-off states:
 - [ ] `GET /api/auth/session` returned expected role codes.
 - [ ] `GET /api/auth/session` returned expected read scope.
 - [ ] `GET /api/auth/session` returned expected action scope.
+- [ ] Mobile session smoke can create a session, read it with `x-mobile-session-id`, and logout/revoke it without exposing refresh tokens.
 - [ ] assigned-store action returns success.
 - [ ] unassigned-store action returns `403`.
 - [ ] Store-facing smoke confirms a store user sees only authorized store data.
