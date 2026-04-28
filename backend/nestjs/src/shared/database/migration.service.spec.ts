@@ -82,6 +82,32 @@ describe("MigrationService", () => {
     );
   });
 
+  it("creates migration tracking schema before reading or writing migration records", async () => {
+    const project = createProjectWithMigrations({
+      "001_first.sql": "SELECT 1;",
+    });
+    const { calls, databaseService } = createDatabaseMock();
+    const service = new MigrationService(databaseService as never);
+
+    await service.runMigrations(project.backendNestjs);
+
+    const bootstrapIndex = calls.findIndex(
+      (call) =>
+        call.sql.includes("CREATE SCHEMA IF NOT EXISTS audit") &&
+        call.sql.includes("CREATE TABLE IF NOT EXISTS audit.schema_migration"),
+    );
+    const readIndex = calls.findIndex((call) =>
+      call.sql.includes("FROM audit.schema_migration"),
+    );
+    const insertIndex = calls.findIndex((call) =>
+      call.sql.includes("INSERT INTO audit.schema_migration"),
+    );
+
+    expect(bootstrapIndex).toBe(0);
+    expect(readIndex).toBeGreaterThan(bootstrapIndex);
+    expect(insertIndex).toBeGreaterThan(bootstrapIndex);
+  });
+
   it("skips succeeded migrations when checksum matches", async () => {
     const project = createProjectWithMigrations({
       "001_first.sql": "SELECT 1;",
