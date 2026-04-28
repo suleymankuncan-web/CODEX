@@ -17,7 +17,7 @@ Date: 28 April 2026
 
 Current count:
 
-- Closed active debts: 44
+- Closed active debts: 45
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -72,6 +72,7 @@ These are counted as paid because they have implementation or documentation evid
 42. Mobile API/BFF Endpoint Inventory V1
 43. Checklist Acknowledgement Canonical Schema Alignment V1
 44. Mobile Checklist Today V1 Design
+45. Mobile Checklist Today V1
 
 Production-Ready Migration System V1 is counted as paid because SQL migrations are tracked in `audit.schema_migration`, checksum drift is rejected, failed runs are recorded with error evidence, the HTTP migration endpoint is disabled in production, and `npm.cmd run db:migrate` is the approved CLI/CI migration path.
 
@@ -85,7 +86,7 @@ Checklist Acknowledgement Canonical Schema Alignment V1 is counted as paid becau
 
 Mobile Checklist Today V1 Design is counted as paid because HR template ownership, region-manager scoring, store-manager acknowledgement, multiple monthly visits, weighted scoring, completed-lock behavior, and future cancel-with-reason boundary are documented and guarded by root script tests. Reference: `docs/superpowers/specs/2026-04-28-mobile-checklist-today-v1-design.md`.
 
-Mobile Checklist Today V1 implementation is planned, not counted as paid yet. The implementation plan is now written and guarded, but the actual backend/frontend workflow, migration, and release gates must pass before it can become a closed active debt. Reference: `docs/superpowers/plans/2026-04-28-mobile-checklist-today-v1.md`.
+Mobile Checklist Today V1 is counted as paid because HR template versioning, weight publish guard, region-manager assigned-store visit scoring, completed-lock behavior, store-manager acknowledgement, multi-visit monthly averaging, frontend pilot routes, targeted backend/frontend checks, and root `check:release` are implemented and verified. Reference: `docs/superpowers/plans/2026-04-28-mobile-checklist-today-v1.md`.
 
 ## Superseded Before Overbuilding
 
@@ -265,7 +266,7 @@ Current repo hygiene is not counted as active debt in this ledger because:
 - the 28 April 2026 Mobile API/BFF Endpoint Inventory V1 documented endpoint reuse and stopped a broad mobile BFF from opening before a real screen contract exists.
 - the 28 April 2026 Checklist Acknowledgement Canonical Schema Alignment V1 aligned the existing checklist acknowledgement migration/code path with canonical schema before mobile checklist expansion.
 - the 28 April 2026 Mobile Checklist Today V1 Design locked HR template versioning, region-manager visit scoring, store-manager acknowledgement, multi-visit monthly averaging, and completed-lock behavior before implementation.
-- the 28 April 2026 Mobile Checklist Today V1 Implementation Plan turned the approved design into a task-by-task implementation path without counting the implementation as complete.
+- the 28 April 2026 Mobile Checklist Today V1 implementation added HR-owned versioned templates, region-manager visit scoring, store-manager acknowledgement, completed-lock behavior, monthly multi-visit averaging, and frontend pilot surfaces behind targeted and root release gates.
 
 Still monitor:
 
@@ -308,4 +309,4 @@ The next local backend candidate should be chosen through the intake gate. Sourc
 
 Recommended local candidate if external evidence is still unavailable:
 
-- If the Mobile Checklist Today V1 Implementation Plan is approved, execute it in order. Start with backend contract tests for template weights, region-manager assigned-store scope, draft/resume/complete lock, store-manager acknowledgement, and monthly average behavior.
+- Decide how completed checklist scores should feed store KPI/config interpretation. This should be an intake-gated decision before code: metric weight, snapshot timing, retroactive behavior, missing-checklist warning language, and store score explanation must be agreed first.

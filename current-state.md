@@ -3153,16 +3153,69 @@ Kapsam:
 
 Not:
 
-- Mobile Checklist Today V1 implementation is planned, not counted as paid yet.
-- Kod uygulamasi, migration ve release gate henuz yapilmadi.
-- Borc sayisi bu adimda artmadi; uygulama + test + release gate gecince kapatilacak.
+- Bu plan sonrasinda uygulandi ve alttaki `Son Mobile Checklist Today V1 Implementation` bolumunde kapatildi.
+- Implementation plan artik tarihsel yol haritasi olarak duruyor; aktif borc sayiminda tamamlanan uygulama dikkate aliniyor.
 
 CODEX durust yorum:
 
 - Plan dogru sirada: once schema/contract, sonra repository/service, sonra mobil read model ve UI pilot.
 - En riskli yerler tamamlanmis checklist'in kilitlenmesi ve ayni ay coklu ziyaret ortalamasinin sessizce bozulmamasi; plan bunlari ilk gunden testle yakalatacak sekilde yazildi.
 
-Siradaki mantikli adim: uygulama modunu secmek. Onerilen yol subagent-driven implementation; alternatif inline execution. Secimden sonra Task 1 schema contract testleriyle kirmizi-yesil ilerlenmeli.
+Siradaki mantikli adim tamamlandi: Mobile Checklist Today V1 uygulandi ve release kapilarindan gecti.
+
+## Son Mobile Checklist Today V1 Implementation
+
+28 Nisan 2026 itibariyla Mobile Checklist Today V1 backend ve frontend pilot yuzeyiyle uygulandi.
+
+Eklenenler:
+
+- DB: `db/migrations/037_mobile_checklist_today_v1.sql` ve canonical `db/schema.sql` checklist template versioning, instance lifecycle, completed-lock ve monthly-summary indexleriyle hizalandi.
+- Backend:
+  - HR template draft/publish akisi ve agirlik toplami `100` publish guard'i.
+  - `GET /api/mobile/checklists/today`.
+  - `POST /api/mobile/checklists/instances`.
+  - `PATCH /api/mobile/checklists/instances/:checklistInstanceId/responses`.
+  - `POST /api/mobile/checklists/instances/:checklistInstanceId/complete`.
+  - `POST /api/mobile/checklists/instances/:checklistInstanceId/acknowledge`.
+- Region manager akisi:
+  - sadece atanmis action store uzerinde checklist baslatir
+  - yanit kaydeder
+  - planned kaydi `in_progress` durumuna tasir
+  - tamamladiginda weighted score hesaplanir
+  - tamamlanan instance `locked_at` ile kilitlenir
+- Store manager akisi:
+  - tamamlanmis sonucu `Kabul ettim` olarak isaretler
+  - acknowledgement skorun gecerli olmasini geciktirmez
+- Aylik ozet:
+  - ayni magazaya ayni ay birden fazla tamamlanmis ziyaret serbesttir
+  - `monthlySummaries` completed visit count ve average score verir
+- Frontend pilot:
+  - `/store/checklists` bolge muduru icin atanmis magaza ziyaret akisini gosterir
+  - `/store/checklists` magaza muduru icin acknowledgement dilini korur
+  - `/admin/checklists` HR/SUPER_ADMIN icin template route iskeletini acar
+
+Korunan sinirlar:
+
+- Completed checklist V1'de duzenlenmez veya silinmez.
+- Cancel-with-reason, tam form editoru, attachment, push notification ve offline sync V1 disinda kaldi.
+- Mobile BFF acilmadi.
+- Store/feed/workforce/competition modullerinin is mantigi degistirilmedi.
+
+Dogrulama:
+
+- Backend targeted checklist tests: `npm.cmd test -- src/modules/store-ops/checklist-mobile-workflow-schema-contract.spec.ts src/modules/store-ops/infrastructure/checklist.repository.spec.ts src/modules/store-ops/application/checklist.service.spec.ts test/integration/mobile-checklist-today.e2e-spec.ts --runInBand` -> 4 suite / 36 test.
+- Backend release: `npm.cmd run check:release` -> lint, 58 suite / 381 test, build, `npm audit --omit=dev`.
+- Frontend release: `npm.cmd run check:release` -> lint, 7 Node script test, build, 36 Playwright test, `npm audit --omit=dev`.
+- Root release: `npm.cmd run check:release` -> 46 root script test, backend release, frontend release, audits.
+- Not: root release ilk kosuda eski feed preview Playwright testi tek seferlik dustu; izole hedefli test ve full frontend e2e tekrar gecti, ardindan root release tekrar exit 0 verdi.
+
+CODEX durust yorum:
+
+- Bu parca dogru yerden buyudu: checklist artik sadece rapor/acknowledgement degil, saha ziyareti skoru uretebilen kontrollu bir workflow.
+- En kritik kazanc, gecmis skoru sessizce degistirmemek icin completed-lock davranisinin testlerle kilitlenmesi.
+- UI hala pilot; asil deger backend lifecycle, scope ve score davranisinin dogru oturmasinda.
+
+Siradaki mantikli adim: checklist skorunun store KPI/config tarafina hangi agirlikla girecegini ayri karar olarak netlestirmek. Bu karar koddan once KPI config, snapshot etkisi, geriye donuk skor ve magaza performans yorumuna etkisiyle ele alinmali.
 
 ## Onemli Dosyalar
 
@@ -3209,8 +3262,14 @@ Backend audit:
 Store ops:
 
 - `backend/nestjs/src/modules/store-ops/web/checklist.controller.ts`
+- `backend/nestjs/src/modules/store-ops/web/mobile-checklist.controller.ts`
+- `backend/nestjs/src/modules/store-ops/web/admin-checklist-template.controller.ts`
 - `backend/nestjs/src/modules/store-ops/application/checklist.service.ts`
+- `backend/nestjs/src/modules/store-ops/application/checklist.contract.ts`
 - `backend/nestjs/src/modules/store-ops/checklist-acknowledgement-schema-contract.spec.ts`
+- `backend/nestjs/src/modules/store-ops/checklist-mobile-workflow-schema-contract.spec.ts`
+- `backend/nestjs/src/modules/store-ops/infrastructure/checklist.repository.ts`
+- `backend/nestjs/src/modules/store-ops/infrastructure/checklist.repository.spec.ts`
 - `backend/nestjs/src/modules/store-ops/infrastructure/checklist-acknowledgement.repository.ts`
 - `backend/nestjs/src/modules/store-ops/infrastructure/checklist-acknowledgement.repository.spec.ts`
 - `backend/nestjs/src/modules/store-ops/application/competition.contract.ts`
