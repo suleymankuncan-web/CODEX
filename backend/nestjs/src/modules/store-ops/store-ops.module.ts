@@ -19,6 +19,7 @@ import { WorkflowInboxService } from "./application/workflow-inbox.service";
 import { CompetitionService } from "./application/competition.service";
 import { FeedService } from "./application/feed.service";
 import { StoreOpsRepository } from "./infrastructure/store-ops.repository";
+import { ChecklistRepository } from "./infrastructure/checklist.repository";
 import { ReportingRepository } from "./infrastructure/reporting.repository";
 import { SnapshotOperationsRepository } from "./infrastructure/snapshot-operations.repository";
 import { TargetDistributionRepository } from "./infrastructure/target-distribution.repository";
@@ -51,6 +52,7 @@ import { FeedRepository } from "./infrastructure/feed.repository";
     CompetitionService,
     FeedService,
     StoreOpsRepository,
+    ChecklistRepository,
     ChecklistAcknowledgementRepository,
     KpiConfigRepository,
     ReportingRepository,
@@ -71,6 +73,7 @@ import { FeedRepository } from "./infrastructure/feed.repository";
     CompetitionService,
     FeedService,
     StoreOpsRepository,
+    ChecklistRepository,
     ChecklistAcknowledgementRepository,
     KpiConfigRepository,
     ReportingRepository,
