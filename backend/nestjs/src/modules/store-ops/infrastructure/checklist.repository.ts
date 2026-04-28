@@ -1,10 +1,255 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { DatabaseService } from "../../../shared/database/database.service";
-import { MobileChecklistToday } from "../application/checklist.contract";
+import {
+  ChecklistTemplateDraftForPublish,
+  ChecklistTemplateResponseType,
+  ChecklistTemplateSummary,
+  CreateChecklistTemplateInput,
+  MobileChecklistToday,
+  PublishChecklistTemplateInput,
+} from "../application/checklist.contract";
 
 @Injectable()
 export class ChecklistRepository {
   constructor(private readonly databaseService: DatabaseService) {}
+
+  async createTemplate(input: CreateChecklistTemplateInput): Promise<ChecklistTemplateSummary> {
+    return this.databaseService.withTransaction(async (client) => {
+      await client.query(
+        `
+          SELECT pg_advisory_xact_lock(hashtext($1)::bigint)
+        `,
+        [input.templateCode],
+      );
+
+      const versionResult = await client.query<{ version_no: number }>(
+        `
+          SELECT COALESCE(MAX(version_no), 0) + 1 AS version_no
+          FROM ops.checklist_template
+          WHERE template_code = $1
+        `,
+        [input.templateCode],
+      );
+      const versionNo = Number(versionResult.rows[0]?.version_no ?? 1);
+
+      const templateResult = await client.query<{
+        checklist_template_id: string;
+        company_id: string;
+        template_code: string;
+        template_type: string;
+        template_name: string;
+        category: string;
+        version_no: number;
+        status: string;
+        effective_from: string;
+        effective_to: string | null;
+      }>(
+        `
+          INSERT INTO ops.checklist_template (
+            company_id,
+            template_code,
+            template_type,
+            template_name,
+            category,
+            version_no,
+            status,
+            effective_from,
+            effective_to,
+            created_by
+          )
+          VALUES (
+            $1::uuid,
+            $2,
+            $3,
+            $4,
+            $5,
+            $6,
+            'draft',
+            $7::date,
+            $8::date,
+            $9::uuid
+          )
+          RETURNING
+            checklist_template_id,
+            company_id,
+            template_code,
+            template_type,
+            template_name,
+            category,
+            version_no,
+            status,
+            effective_from,
+            effective_to
+        `,
+        [
+          input.companyId,
+          input.templateCode,
+          input.templateType,
+          input.templateName,
+          input.category,
+          versionNo,
+          input.effectiveFrom,
+          input.effectiveTo ?? null,
+          input.actorUserId,
+        ],
+      );
+      const template = templateResult.rows[0];
+
+      const items = [];
+      for (const item of input.items) {
+        const itemResult = await client.query<{
+          template_item_id: string;
+          section_name: string;
+          item_no: number;
+          item_text: string;
+          response_type: string;
+          weight: string;
+          max_score: string;
+          expected_value: string | null;
+        }>(
+          `
+            INSERT INTO ops.checklist_template_item (
+              checklist_template_id,
+              section_name,
+              item_no,
+              item_text,
+              response_type,
+              weight,
+              max_score,
+              expected_value
+            )
+            VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING
+              template_item_id,
+              section_name,
+              item_no,
+              item_text,
+              response_type,
+              weight,
+              max_score,
+              expected_value
+          `,
+          [
+            template.checklist_template_id,
+            item.sectionName,
+            item.itemNo,
+            item.itemText,
+            item.responseType,
+            item.weight,
+            item.maxScore,
+            item.expectedValue ?? null,
+          ],
+        );
+        const row = itemResult.rows[0];
+        items.push({
+          templateItemId: row.template_item_id,
+          sectionName: row.section_name,
+          itemNo: Number(row.item_no),
+          itemText: row.item_text,
+          responseType: row.response_type as ChecklistTemplateResponseType,
+          weight: Number(row.weight),
+          maxScore: Number(row.max_score),
+          expectedValue: row.expected_value ?? undefined,
+        });
+      }
+
+      return {
+        checklistTemplateId: template.checklist_template_id,
+        companyId: template.company_id,
+        templateCode: template.template_code,
+        templateType: template.template_type,
+        templateName: template.template_name,
+        category: template.category,
+        versionNo: Number(template.version_no),
+        status: template.status,
+        effectiveFrom: template.effective_from,
+        effectiveTo: template.effective_to,
+        items,
+      };
+    });
+  }
+
+  async getDraftTemplateForPublish(
+    checklistTemplateId: string,
+  ): Promise<ChecklistTemplateDraftForPublish> {
+    const templateResult = await this.databaseService.query<{
+      checklist_template_id: string;
+      company_id: string;
+      effective_from: string;
+      effective_to: string | null;
+    }>(
+      `
+        SELECT checklist_template_id, company_id, effective_from, effective_to
+        FROM ops.checklist_template
+        WHERE checklist_template_id = $1::uuid
+          AND status = 'draft'
+      `,
+      [checklistTemplateId],
+    );
+
+    if (!templateResult.rows[0]) {
+      throw new NotFoundException("Draft checklist template not found");
+    }
+
+    const result = await this.databaseService.query<{
+      template_item_id: string;
+      weight: string;
+    }>(
+      `
+        SELECT cti.template_item_id, cti.weight
+        FROM ops.checklist_template_item cti
+        WHERE cti.checklist_template_id = $1::uuid
+        ORDER BY cti.item_no ASC
+      `,
+      [checklistTemplateId],
+    );
+
+    return {
+      checklistTemplateId: templateResult.rows[0].checklist_template_id,
+      companyId: templateResult.rows[0].company_id,
+      effectiveFrom: templateResult.rows[0].effective_from,
+      effectiveTo: templateResult.rows[0].effective_to,
+      items: result.rows.map((row) => ({
+        templateItemId: row.template_item_id,
+        weight: Number(row.weight),
+      })),
+    };
+  }
+
+  async publishTemplate(input: PublishChecklistTemplateInput): Promise<ChecklistTemplateSummary> {
+    const result = await this.databaseService.query<{
+      checklist_template_id: string;
+      company_id: string;
+      status: string;
+      effective_from: string;
+      effective_to: string | null;
+    }>(
+      `
+        UPDATE ops.checklist_template
+        SET
+          status = 'published',
+          effective_from = COALESCE($2::date, effective_from),
+          effective_to = COALESCE($3::date, effective_to)
+        WHERE checklist_template_id = $1::uuid
+          AND status = 'draft'
+        RETURNING checklist_template_id, company_id, status, effective_from, effective_to
+      `,
+      [input.checklistTemplateId, input.effectiveFrom ?? null, input.effectiveTo ?? null],
+    );
+
+    const template = result.rows[0];
+    if (!template) {
+      throw new NotFoundException("Draft checklist template not found");
+    }
+
+    return {
+      checklistTemplateId: template.checklist_template_id,
+      companyId: template.company_id,
+      status: template.status,
+      effectiveFrom: template.effective_from,
+      effectiveTo: template.effective_to,
+    };
+  }
 
   async getMobileChecklistToday(input: {
     actorUserId: string;

@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { OrgController } from "./web/org.controller";
 import { WorkforceController } from "./web/workforce.controller";
 import { ChecklistController } from "./web/checklist.controller";
+import { AdminChecklistTemplateController } from "./web/admin-checklist-template.controller";
 import { SnapshotController } from "./web/snapshot.controller";
 import { ReportingController } from "./web/reporting.controller";
 import { TargetDistributionController } from "./web/target-distribution.controller";
@@ -33,6 +34,7 @@ import { FeedRepository } from "./infrastructure/feed.repository";
     OrgController,
     WorkforceController,
     ChecklistController,
+    AdminChecklistTemplateController,
     SnapshotController,
     ReportingController,
     TargetDistributionController,

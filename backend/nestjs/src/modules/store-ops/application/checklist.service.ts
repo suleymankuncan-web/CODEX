@@ -1,15 +1,62 @@
-import { ForbiddenException, Injectable } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/common";
 import { StoreOpsRepository } from "../infrastructure/store-ops.repository";
 import { buildCommandResponse } from "../../../shared/http/response-builders";
 import { buildListResponse } from "../../../shared/http/response-builders";
 import { ChecklistAcknowledgementRepository } from "../infrastructure/checklist-acknowledgement.repository";
+import { ChecklistRepository } from "../infrastructure/checklist.repository";
+import {
+  ChecklistTemplateActorScope,
+  CreateChecklistTemplateInput,
+  PublishChecklistTemplateInput,
+} from "./checklist.contract";
 
 @Injectable()
 export class ChecklistService {
   constructor(
     private readonly storeOpsRepository: StoreOpsRepository,
     private readonly checklistAcknowledgementRepository: ChecklistAcknowledgementRepository,
+    private readonly checklistRepository: ChecklistRepository,
   ) {}
+
+  async createChecklistTemplate(input: CreateChecklistTemplateInput) {
+    this.assertCanManageTemplateCompany(input.companyId, input);
+    this.assertValidEffectiveDateRange(input);
+
+    return buildCommandResponse({
+      status: "created",
+      message: "Checklist template draft created",
+      data: {
+        checklistTemplate: await this.checklistRepository.createTemplate(input),
+      },
+    });
+  }
+
+  async publishChecklistTemplate(input: PublishChecklistTemplateInput) {
+    const draftTemplate = await this.checklistRepository.getDraftTemplateForPublish(
+      input.checklistTemplateId,
+    );
+    this.assertCanManageTemplateCompany(draftTemplate.companyId, input);
+
+    const totalWeight = draftTemplate.items.reduce((sum, item) => sum + item.weight, 0);
+    const totalWeightCents = Math.round(totalWeight * 100);
+
+    if (totalWeightCents !== 10_000) {
+      throw new BadRequestException("Checklist template item weights must total 100");
+    }
+
+    this.assertValidEffectiveDateRange({
+      effectiveFrom: input.effectiveFrom ?? draftTemplate.effectiveFrom,
+      effectiveTo: input.effectiveTo ?? draftTemplate.effectiveTo ?? undefined,
+    });
+
+    return buildCommandResponse({
+      status: "published",
+      message: "Checklist template published",
+      data: {
+        checklistTemplate: await this.checklistRepository.publishTemplate(input),
+      },
+    });
+  }
 
   async createChecklistInstance(input: {
     templateId: string;
@@ -166,6 +213,34 @@ export class ChecklistService {
   ) {
     if (!actionScope?.assignedStoreIds.includes(storeId)) {
       throw new ForbiddenException(message);
+    }
+  }
+
+  private assertCanManageTemplateCompany(
+    companyId: string,
+    actorScope: ChecklistTemplateActorScope,
+  ) {
+    if (actorScope.actorRoleCodes?.includes("SUPER_ADMIN")) {
+      return;
+    }
+
+    if (!actorScope.actorReadScope?.companyIds.includes(companyId)) {
+      throw new ForbiddenException("Checklist template company is outside actor scope");
+    }
+  }
+
+  private assertValidEffectiveDateRange(input: {
+    effectiveFrom?: string;
+    effectiveTo?: string;
+  }) {
+    if (
+      input.effectiveFrom &&
+      input.effectiveTo &&
+      new Date(input.effectiveTo).getTime() < new Date(input.effectiveFrom).getTime()
+    ) {
+      throw new BadRequestException(
+        "Checklist template effectiveTo must be on or after effectiveFrom",
+      );
     }
   }
 }
