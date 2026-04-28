@@ -17,7 +17,7 @@ Date: 28 April 2026
 
 Current count:
 
-- Closed active debts: 42
+- Closed active debts: 43
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -70,6 +70,7 @@ These are counted as paid because they have implementation or documentation evid
 40. Production Security Gate V1-A
 41. Mobile Auth/Session V1 P0
 42. Mobile API/BFF Endpoint Inventory V1
+43. Checklist Acknowledgement Canonical Schema Alignment V1
 
 Production-Ready Migration System V1 is counted as paid because SQL migrations are tracked in `audit.schema_migration`, checksum drift is rejected, failed runs are recorded with error evidence, the HTTP migration endpoint is disabled in production, and `npm.cmd run db:migrate` is the approved CLI/CI migration path.
 
@@ -78,6 +79,8 @@ Production Security Gate V1-A is counted as paid because CORS allowlist, product
 Mobile Auth/Session V1 P0 is counted as paid because `ops.mobile_device_session`, session create/resume/list/revoke/logout endpoints, active mobile session guard, and auth session audit events are implemented and guarded by backend unit/e2e tests. Backend-owned refresh tokens, Mobile BFF, and push token storage remain future phases by design.
 
 Mobile API/BFF Endpoint Inventory V1 is counted as paid because the existing mobile-relevant API surface is mapped, broad Mobile BFF creation is intentionally blocked, first aggregate candidates are named, and root script tests guard the boundary. Reference: `docs/plans/mobile-api-bff-endpoint-inventory-v1.md`.
+
+Checklist Acknowledgement Canonical Schema Alignment V1 is counted as paid because the existing `ops.checklist_acknowledgement` migration and backend repository usage are now represented in canonical `db/schema.sql`, and a backend schema contract test guards against drift.
 
 ## Superseded Before Overbuilding
 
@@ -255,6 +258,7 @@ Current repo hygiene is not counted as active debt in this ledger because:
 - the 28 April 2026 Production Security Gate V1-A added CORS allowlist, production CORS fail-fast, in-memory rate limit, and standard stack-free error responses.
 - the 28 April 2026 Mobile Auth/Session V1 P0 added backend-owned mobile device sessions without taking refresh-token ownership from the IdP.
 - the 28 April 2026 Mobile API/BFF Endpoint Inventory V1 documented endpoint reuse and stopped a broad mobile BFF from opening before a real screen contract exists.
+- the 28 April 2026 Checklist Acknowledgement Canonical Schema Alignment V1 aligned the existing checklist acknowledgement migration/code path with canonical schema before mobile checklist expansion.
 
 Still monitor:
 

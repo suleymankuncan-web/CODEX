@@ -3075,6 +3075,34 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: ilk mobil pilot read surface'i secmek. Dashboard/home ile baslanacaksa Mobile Home Summary V1 kartlari netlestirilmeli; operasyonel checklist onceyse Mobile Checklist Today V1 icin ayri interview yapilmali.
 
+## Son Checklist Acknowledgement Canonical Schema Alignment V1
+
+28 Nisan 2026 itibariyla checklist acknowledgement tablosu canonical `db/schema.sql` ile tekrar hizalandi.
+
+Bulgu:
+
+- `ops.checklist_acknowledgement` migration `010_checklist_acknowledgements.sql` icinde ve backend repository kodunda kullaniliyordu.
+- Canonical `db/schema.sql` icinde tablo/index eksikti.
+- Mobil checklist read modeline gecmeden once bu drift kapatildi.
+
+Eklenenler:
+
+- `db/schema.sql` icine `ops.checklist_acknowledgement` tablo tanimi.
+- `db/schema.sql` icine `idx_checklist_acknowledgement_store_acknowledged_at` index tanimi.
+- `backend/nestjs/src/modules/store-ops/checklist-acknowledgement-schema-contract.spec.ts` schema contract testi.
+
+Dogrulama:
+
+- Kirmizi test izlendi: schema contract once canonical schema'da `ops.checklist_acknowledgement` olmadigi icin fail verdi.
+- Hedefli test gecti: `npm.cmd test -- src/modules/store-ops/checklist-acknowledgement-schema-contract.spec.ts --runInBand`.
+
+CODEX durust yorum:
+
+- Bu kucuk ama dogru zamanda yakalanmis bir borctu. Mobil checklist'i buyutmeden once canonical schema'nin mevcut checklist acknowledgement akisini temsil etmesi gerekiyor.
+- Yeni feature acilmadi; var olan migration/kod/DB gercegi canonical schema ile hizalandi.
+
+Siradaki mantikli adim: Mobile Checklist Today V1 icin urun kararini netlestirmek. Ilk soru: mobilde checklist'i kim "yapar", kim sadece "tamamlanan sonucu onaylar"?
+
 ## Onemli Dosyalar
 
 Backend auth / scope:
@@ -3121,6 +3149,7 @@ Store ops:
 
 - `backend/nestjs/src/modules/store-ops/web/checklist.controller.ts`
 - `backend/nestjs/src/modules/store-ops/application/checklist.service.ts`
+- `backend/nestjs/src/modules/store-ops/checklist-acknowledgement-schema-contract.spec.ts`
 - `backend/nestjs/src/modules/store-ops/infrastructure/checklist-acknowledgement.repository.ts`
 - `backend/nestjs/src/modules/store-ops/infrastructure/checklist-acknowledgement.repository.spec.ts`
 - `backend/nestjs/src/modules/store-ops/application/competition.contract.ts`
@@ -3157,6 +3186,7 @@ Backend integration / ingest:
 - `backend/nestjs/src/modules/integration/source-agnostic-ingest-schema-contract.spec.ts`
 - `backend/nestjs/src/modules/integration/web/integration.controller.ts`
 - `backend/nestjs/test/integration/import-batch.e2e-spec.ts`
+- `db/migrations/010_checklist_acknowledgements.sql`
 - `db/migrations/027_kpi_raw_lineage_columns.sql`
 - `db/schema.sql`
 

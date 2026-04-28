@@ -465,6 +465,17 @@ CREATE TABLE ops.checklist_response (
     UNIQUE (checklist_instance_id, template_item_id)
 );
 
+CREATE TABLE IF NOT EXISTS ops.checklist_acknowledgement (
+    checklist_acknowledgement_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    checklist_instance_id UUID NOT NULL REFERENCES ops.checklist_instance(checklist_instance_id) ON DELETE CASCADE,
+    store_id UUID NOT NULL REFERENCES ops.store(store_id),
+    acknowledged_by_user_id TEXT NOT NULL,
+    acknowledgement_note TEXT,
+    acknowledged_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (checklist_instance_id)
+);
+
 CREATE TABLE ops.kpi_definition (
     kpi_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     kpi_code TEXT NOT NULL UNIQUE,
@@ -977,6 +988,9 @@ CREATE INDEX competition_team_store_store_idx
 CREATE INDEX idx_checklist_instance_store_status
     ON ops.checklist_instance (store_id, status, planned_at);
 
+CREATE INDEX IF NOT EXISTS idx_checklist_acknowledgement_store_acknowledged_at
+    ON ops.checklist_acknowledgement (store_id, acknowledged_at DESC);
+
 CREATE INDEX idx_kpi_actual_scope_period
     ON ops.kpi_actual (kpi_id, scope_type, company_id, region_id, store_id, employee_id, period_start, period_end);
 
@@ -1087,6 +1101,7 @@ COMMENT ON TABLE ops.user_action_store_assignment IS 'Store-level action grants 
 COMMENT ON TABLE ops.mobile_device_session IS 'Mobile device session registry for active/revoked app sessions. Refresh tokens remain IdP-owned in V1.';
 COMMENT ON TABLE ops.target_distribution_request IS 'Store-level target distribution requests that are submitted by store managers and approved by region-level oversight.';
 COMMENT ON TABLE ops.feed_post IS 'Scoped operational announcements and challenge posts. Challenge posts announce focus windows but do not calculate scores.';
+COMMENT ON TABLE ops.checklist_acknowledgement IS 'Store acknowledgement evidence for completed checklist instances.';
 COMMENT ON TABLE ops.kpi_score_profile_config IS 'Data-driven KPI scoring configuration for store/personnel score profiles, ownership matrix and grading bands.';
 COMMENT ON TABLE ops.kpi_config_version IS 'Immutable published KPI score configuration versions used to anchor reporting snapshots.';
 COMMENT ON TABLE ops.workforce_norm_plan IS 'Approved planned headcount and FTE targets used for norm vs actual workforce comparison.';
