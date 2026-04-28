@@ -2876,7 +2876,38 @@ CODEX durust yorum:
 - Bu runbook dogru sirada geldi. Parser calisiyor ama asil risk yanlis donem, yanlis store scope veya name-only employee identity'yi erken resmi veri sanmakti.
 - Runbook, importu tek seferlik deneme olmaktan cikarip tekrar edilebilir operasyon haline getiriyor.
 
-Siradaki mantikli adim: Ilk Mart Excel importunu kontrollu pilot olarak calistirmak; once store import scope/mapping kontrol edilecek, sonra runbook evidence template ile upload summary, unmapped identity, reconciliation delta ve materialization karari kaydedilecek.
+Siradaki mantikli adim tamamlandi: Production-ready backend yolunda ilk P0 teknik risk olan migration sisteminin implementation plani yazildi.
+
+## Son Production-Ready Migration System V1 Implementation Plan
+
+28 Nisan 2026 itibariyla migration sistemi icin koddan once uygulanabilir guvenlik plani hazirlandi.
+
+Yeni dokuman:
+
+- `docs/superpowers/plans/2026-04-28-production-ready-migration-system-v1.md`
+
+Plan kapsami:
+
+- `audit.schema_migration` tracking tablosu.
+- migration checksum drift guard.
+- failed migration status/error evidence.
+- backend/nestjs calisma yolundan root `db/migrations` cozumleme.
+- production ortaminda HTTP migration endpoint guard.
+- CLI/CI migration runner: `npm.cmd run db:migrate`.
+
+Karar:
+
+- Mevcut NestJS + PostgreSQL + raw SQL yaklasimi korunacak.
+- ORM eklenmeyecek.
+- Mevcut `001` - `034` migration dosyalari yeniden yazilmayacak.
+- Once red tests, sonra schema/tracking, sonra CLI ve production endpoint guard ilerleyecek.
+
+CODEX durust yorum:
+
+- Bu is gosterisli degil ama production guvenligi icin dogru ilk adim.
+- Migration tracking bitmeden mobil auth/session, CORS/rate limit ve sosyal/topluluk tarafini buyutmek teknik riski artirir.
+
+Siradaki mantikli adim: plan onayliysa Task 1 ile kirmizi migration service testlerini yazmak; henuz production migration kodu uygulanmadi.
 
 ## Onemli Dosyalar
 
@@ -2989,6 +3020,7 @@ Planlar:
 - `docs/plans/import-batch-quality-summary-v1.md`
 - `docs/plans/excel-kpi-import-v1.md`
 - `docs/plans/excel-kpi-import-operator-runbook.md`
+- `docs/superpowers/plans/2026-04-28-production-ready-migration-system-v1.md`
 - `docs/plans/project-wide-scan-2026-04-27.md`
 - `docs/plans/project-mvp-focus-map-2026-04-28.md`
 - `docs/plans/no-empty-scope-repository-contract-pass-2026-04-27.md`

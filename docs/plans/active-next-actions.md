@@ -6,7 +6,7 @@ This is the short working list for the next practical steps. It keeps the projec
 
 ## Current Position
 
-As of 28 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, Store UX TR-First Copy V1, KPI Config Versioning V1, Source-Agnostic Ingest Contract Hardening V1, KPI Raw Row Lineage Persistence V1, Import Lineage Evidence Surface V1, Audit Event Taxonomy Guard V1, Data Quality Guard V1, Import Batch Quality Summary V1, Project-Wide Scope/Auth Guard Scan V1, No-Empty-Scope Repository Contract Pass V1, Production Environment Readiness Checklist V1, Environment Variable Inventory + Deployment Runbook Skeleton V1, Environment Drift Guard V1, Production/Staging Incident Response Skeleton V1, Personnel Management V1, Personnel Request Return/Resubmit V1, Personnel Master Data Bootstrap V1 planning, Project MVP Focus Map, Excel KPI Import V1, and Excel KPI Import Operator Runbook V1 have:
+As of 28 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, Store UX TR-First Copy V1, KPI Config Versioning V1, Source-Agnostic Ingest Contract Hardening V1, KPI Raw Row Lineage Persistence V1, Import Lineage Evidence Surface V1, Audit Event Taxonomy Guard V1, Data Quality Guard V1, Import Batch Quality Summary V1, Project-Wide Scope/Auth Guard Scan V1, No-Empty-Scope Repository Contract Pass V1, Production Environment Readiness Checklist V1, Environment Variable Inventory + Deployment Runbook Skeleton V1, Environment Drift Guard V1, Production/Staging Incident Response Skeleton V1, Personnel Management V1, Personnel Request Return/Resubmit V1, Personnel Master Data Bootstrap V1 planning, Project MVP Focus Map, Excel KPI Import V1, Excel KPI Import Operator Runbook V1, and Production-Ready Migration System V1 planning have:
 
 - saved drafts
 - edit/cancel/history
@@ -69,6 +69,7 @@ As of 28 April 2026, the competition package planning flow, Operational Feed V1,
 - deterministic Excel upload source batch ids for duplicate-safe re-upload
 - admin monthly/daily/custom Excel upload period controls and reconciliation summary
 - repeatable Excel import operator runbook for upload, summary, mapping, reconciliation, retry, materialization, and evidence
+- production-ready migration system implementation plan for tracking, checksum drift protection, failed-run evidence, CLI execution, and production HTTP endpoint guard
 - project debt ledger
 - backend and frontend release checks
 
@@ -681,6 +682,19 @@ Interpretation:
   - `docs/plans/excel-kpi-import-operator-runbook.md`
   - `scripts/excel-import-runbook-contract.test.mjs`
 
+### Planned: Production-Ready Migration System V1
+- Status: `ready_to_execute`
+- Why: the project now has enough backend/data surface that SQL migration execution must become auditable before mobile auth/session, CORS/rate-limit, or social/community expansion.
+- Scope:
+  - create `audit.schema_migration` tracking metadata
+  - add checksum drift protection for already-applied SQL files
+  - record failed migration status and error evidence
+  - resolve root `db/migrations` correctly from `backend/nestjs`
+  - disable the HTTP migration endpoint in production
+  - add CLI/CI migration command `npm.cmd run db:migrate`
+- Reference:
+  - `docs/superpowers/plans/2026-04-28-production-ready-migration-system-v1.md`
+
 ### 1. Real IdP Staging Evidence
 - Priority: `P1`
 - Why: local provider and action mechanics are proven, but production confidence still needs real staging IdP and seeded staging action evidence.
@@ -704,4 +718,4 @@ If neither staging values nor source ingest details are available, do not open s
 
 Recommended local candidate:
 
-- Run the first March Excel import as a controlled pilot only after store import scope is reviewed. Use `docs/plans/excel-kpi-import-operator-runbook.md` to record upload summary, unmapped identities, reconciliation delta, retry/materialization decision, and known limitations.
+- Execute Production-Ready Migration System V1 Task 1 first: write the red migration service tests for path resolution, tracking, skip, checksum drift, and failure evidence before touching runtime migration code.
