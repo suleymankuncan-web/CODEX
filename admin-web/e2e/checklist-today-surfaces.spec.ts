@@ -1,0 +1,159 @@
+import { expect, test, type Page } from '@playwright/test'
+
+const storeId = '11111111-1111-4111-8111-111111111111'
+const templateId = '22222222-2222-4222-8222-222222222222'
+
+test('region manager checklist surface shows assigned store visit workflow', async ({ page }) => {
+  await setupChecklistPage(page, ['REGION_MANAGER'])
+  await page.goto('/store/checklists')
+
+  await expect(page.getByText('Checklist yap')).toBeVisible()
+  await expect(page.getByText('Taslak')).toBeVisible()
+  await expect(page.getByText('Tamamla')).toBeVisible()
+})
+
+test('store manager checklist surface keeps acknowledgement language', async ({ page }) => {
+  await setupChecklistPage(page, ['STORE_MANAGER'])
+  await page.goto('/store/checklists')
+
+  await expect(page.getByText('Kabul ettim')).toBeVisible()
+})
+
+async function setupChecklistPage(page: Page, roleCodes: string[]) {
+  const roleCodeHeader = roleCodes.join(',')
+  await page.addInitScript((roles) => {
+    window.localStorage.setItem(
+      'store-ops-admin-session',
+      JSON.stringify({
+        mode: 'mock',
+        mockUserId: 'checklist-surface-user',
+        mockRoleCodes: roles,
+        mockCompanyIds: '00000000-0000-0000-0000-000000000001',
+        bearerToken: '',
+      }),
+    )
+  }, roleCodeHeader)
+
+  await routeChecklistApi(page, roleCodes)
+}
+
+async function routeChecklistApi(page: Page, roleCodes: string[]) {
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({ json: createAuthSessionFixture(roleCodes) })
+  })
+
+  await page.route('**/api/mobile/checklists/today', async (route) => {
+    await route.fulfill({ json: mobileChecklistTodayFixture })
+  })
+
+  await page.route('**/api/checklists/acknowledgements/list', async (route) => {
+    await route.fulfill({ json: checklistAcknowledgementsFixture })
+  })
+
+  await page.route('**/api/mobile/checklists/instances', async (route) => {
+    await route.fulfill({
+      status: 201,
+      json: {
+        command: { status: 'created', message: 'Checklist visit started' },
+        data: {
+          checklistInstance: {
+            checklist_instance_id: '33333333-3333-4333-8333-333333333333',
+            status: 'in_progress',
+            created_at: '2026-04-28T10:00:00.000Z',
+          },
+        },
+      },
+    })
+  })
+}
+
+function createAuthSessionFixture(roleCodes: string[]) {
+  return {
+    authMode: 'mock',
+    authenticated: true,
+    user: {
+      userId: 'checklist-surface-user',
+      roleCodes,
+      scope: {
+        companyIds: ['00000000-0000-0000-0000-000000000001'],
+        regionIds: ['12121212-1212-4121-8121-121212121212'],
+        storeIds: [storeId],
+      },
+      readScope: {
+        companyIds: ['00000000-0000-0000-0000-000000000001'],
+        regionIds: ['12121212-1212-4121-8121-121212121212'],
+        storeIds: [storeId],
+      },
+      actionScope: {
+        assignedStoreIds: [storeId],
+      },
+      assignedStoreIds: [storeId],
+    },
+    scopeSummary: {
+      companyCount: 1,
+      regionCount: 1,
+      storeCount: 1,
+      assignedStoreCount: 1,
+    },
+  }
+}
+
+const mobileChecklistTodayFixture = {
+  data: {
+    stores: [{ storeId, storeName: 'Marmara Park' }],
+    templates: [
+      {
+        checklistTemplateId: templateId,
+        templateCode: 'BM_VISIT_V1',
+        templateType: 'BM_STORE_VISIT',
+        templateName: 'BM Visit',
+        versionNo: 1,
+      },
+    ],
+    activeInstances: [
+      {
+        checklistInstanceId: '33333333-3333-4333-8333-333333333333',
+        checklistTemplateId: templateId,
+        storeId,
+        status: 'in_progress',
+        startedAt: '2026-04-28T10:00:00.000Z',
+        updatedAt: '2026-04-28T10:00:00.000Z',
+      },
+    ],
+    completedThisMonth: [],
+    pendingAcknowledgements: [],
+    monthlySummaries: [
+      {
+        storeId,
+        checklistTemplateId: templateId,
+        monthStart: '2026-04-01',
+        completedCount: 2,
+        averageScore: 86,
+      },
+    ],
+  },
+}
+
+const checklistAcknowledgementsFixture = {
+  items: [
+    {
+      checklistInstanceId: '44444444-4444-4444-8444-444444444444',
+      checklistTemplateId: templateId,
+      templateName: 'BM Visit',
+      category: 'BM',
+      storeId,
+      storeName: 'Marmara Park',
+      completedAt: '2026-04-28T09:00:00.000Z',
+      status: 'completed',
+      totalScore: 86,
+      complianceRate: 1,
+      acknowledgement: null,
+    },
+  ],
+  meta: {
+    count: 1,
+    total: 1,
+    limit: 50,
+    offset: 0,
+  },
+}

@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { BarChart3, Bell, DatabaseZap, Fingerprint, KeyRound, Layers3, Megaphone, ShieldCheck, SlidersHorizontal, Target, Trophy } from 'lucide-react'
+import { BarChart3, Bell, ClipboardList, DatabaseZap, Fingerprint, KeyRound, Layers3, Megaphone, ShieldCheck, SlidersHorizontal, Target, Trophy } from 'lucide-react'
 import { KeyValue, ScreenState, StatusPill } from './components/dashboard-primitives'
 import { getAuthSession, type AuthSessionSummary } from './features/auth/api'
 import { formatDisplayRoles } from './features/auth/display'
@@ -13,6 +13,7 @@ import { SESSION_EXPIRED_EVENT, type SessionExpiredDetail, ApiError } from './li
 
 const AuditCenterPage = lazy(() => import('./pages/AuditCenterPage').then((module) => ({ default: module.AuditCenterPage })))
 const AdminFeedPage = lazy(() => import('./pages/AdminFeedPage').then((module) => ({ default: module.AdminFeedPage })))
+const AdminChecklistTemplatesPage = lazy(() => import('./pages/AdminChecklistTemplatesPage').then((module) => ({ default: module.AdminChecklistTemplatesPage })))
 const AdminKpiConfigPage = lazy(() => import('./pages/AdminKpiConfigPage').then((module) => ({ default: module.AdminKpiConfigPage })))
 const AdminInboxPage = lazy(() => import('./pages/AdminInboxPage').then((module) => ({ default: module.AdminInboxPage })))
 const AuthActionStoreAssignmentAuditPage = lazy(() => import('./pages/AuthActionStoreAssignmentAuditPage').then((module) => ({ default: module.AuthActionStoreAssignmentAuditPage })))
@@ -78,6 +79,12 @@ const adminNavDefinitions: NavDefinition[] = [
     icon: <Megaphone size={18} />,
     label: 'Duyurular',
     roles: ['SUPER_ADMIN', 'HR_ADMIN', 'REGION_MANAGER'],
+  },
+  {
+    to: '/admin/checklists',
+    icon: <ClipboardList size={18} />,
+    label: 'Checklistler',
+    roles: ['SUPER_ADMIN', 'HR_ADMIN'],
   },
   {
     to: '/admin/competitions',
@@ -325,6 +332,10 @@ function App() {
             <Route
               path="/admin/feed"
               element={guardRoute(shellState, authSummary, ['SUPER_ADMIN', 'HR_ADMIN', 'REGION_MANAGER'], <AdminFeedPage authSummary={authSummary} />)}
+            />
+            <Route
+              path="/admin/checklists"
+              element={guardRoute(shellState, authSummary, ['SUPER_ADMIN', 'HR_ADMIN'], <AdminChecklistTemplatesPage />)}
             />
             <Route
               path="/admin/competitions"
