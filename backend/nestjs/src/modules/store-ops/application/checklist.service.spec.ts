@@ -26,6 +26,10 @@ describe("ChecklistService", () => {
     publishTemplate?: jest.Mock;
     createTemplate?: jest.Mock;
     startMobileChecklistInstance?: jest.Mock;
+    getMobileChecklistInstanceScope?: jest.Mock;
+    saveMobileChecklistResponse?: jest.Mock;
+    calculateMobileChecklistCompletion?: jest.Mock;
+    completeMobileChecklistInstance?: jest.Mock;
   }) {
     return new ChecklistService(
       storeOpsRepository as never,
@@ -310,5 +314,86 @@ describe("ChecklistService", () => {
     ).rejects.toThrow("Requested store is outside assigned action stores");
 
     expect(checklistRepository.startMobileChecklistInstance).not.toHaveBeenCalled();
+  });
+
+  it("rejects saving responses on completed mobile checklist instances", async () => {
+    const checklistRepository = {
+      getMobileChecklistInstanceScope: jest.fn().mockResolvedValue({
+        checklistInstanceId: "instance-1",
+        storeId: "store-1",
+        status: "completed",
+      }),
+      saveMobileChecklistResponse: jest.fn(),
+    };
+    const service = createService(checklistRepository);
+
+    await expect(
+      service.saveMobileChecklistResponse({
+        checklistInstanceId: "instance-1",
+        templateItemId: "item-1",
+        scoreValue: 8,
+        actorUserId: "user-1",
+        actorActionScope: {
+          assignedStoreIds: ["store-1"],
+        },
+      }),
+    ).rejects.toThrow("Completed checklist instances are locked");
+
+    expect(checklistRepository.saveMobileChecklistResponse).not.toHaveBeenCalled();
+  });
+
+  it("rejects completing a mobile checklist when mandatory responses are missing", async () => {
+    const checklistRepository = {
+      getMobileChecklistInstanceScope: jest.fn().mockResolvedValue({
+        checklistInstanceId: "instance-1",
+        storeId: "store-1",
+        status: "in_progress",
+      }),
+      completeMobileChecklistInstance: jest
+        .fn()
+        .mockRejectedValue(new BadRequestException("Mandatory checklist responses are missing")),
+    };
+    const service = createService(checklistRepository);
+
+    await expect(
+      service.completeMobileChecklistInstance({
+        checklistInstanceId: "instance-1",
+        actorUserId: "user-1",
+        actorActionScope: {
+          assignedStoreIds: ["store-1"],
+        },
+      }),
+    ).rejects.toThrow("Mandatory checklist responses are missing");
+  });
+
+  it("completes a mobile checklist with calculated score and compliance rate", async () => {
+    const checklistRepository = {
+      getMobileChecklistInstanceScope: jest.fn().mockResolvedValue({
+        checklistInstanceId: "instance-1",
+        storeId: "store-1",
+        status: "in_progress",
+      }),
+      completeMobileChecklistInstance: jest.fn().mockResolvedValue({
+        checklist_instance_id: "instance-1",
+        status: "completed",
+        total_score: "86.00",
+        compliance_rate: "1.0000",
+      }),
+    };
+    const service = createService(checklistRepository);
+
+    const result = await service.completeMobileChecklistInstance({
+      checklistInstanceId: "instance-1",
+      actorUserId: "user-1",
+      actorActionScope: {
+        assignedStoreIds: ["store-1"],
+      },
+    });
+
+    expect(result.command.status).toBe("completed");
+    expect(checklistRepository.completeMobileChecklistInstance).toHaveBeenCalledWith({
+      checklistInstanceId: "instance-1",
+      actorUserId: "user-1",
+    });
   });
 });

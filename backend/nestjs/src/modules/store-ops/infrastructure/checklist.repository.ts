@@ -295,6 +295,266 @@ export class ChecklistRepository {
     return result.rows[0];
   }
 
+  async getMobileChecklistInstanceScope(checklistInstanceId: string) {
+    const result = await this.databaseService.query<{
+      checklist_instance_id: string;
+      store_id: string;
+      status: string;
+    }>(
+      `
+        SELECT checklist_instance_id, store_id, status
+        FROM ops.checklist_instance
+        WHERE checklist_instance_id = $1::uuid
+      `,
+      [checklistInstanceId],
+    );
+
+    const row = result.rows[0];
+    return row
+      ? {
+          checklistInstanceId: row.checklist_instance_id,
+          storeId: row.store_id,
+          status: row.status,
+        }
+      : null;
+  }
+
+  async saveMobileChecklistResponse(input: {
+    checklistInstanceId: string;
+    templateItemId: string;
+    scoreValue: number;
+    commentText?: string;
+    actorUserId: string;
+  }) {
+    return this.databaseService.withTransaction(async (client) => {
+      const guardResult = await client.query<{
+        checklist_instance_id: string;
+        store_id: string;
+        status: string;
+        max_score: string;
+      }>(
+        `
+          SELECT
+            ci.checklist_instance_id,
+            ci.store_id,
+            ci.status,
+            cti.max_score
+          FROM ops.checklist_instance ci
+          INNER JOIN ops.checklist_template_item cti
+            ON cti.checklist_template_id = ci.checklist_template_id
+           AND cti.template_item_id = $2::uuid
+          WHERE ci.checklist_instance_id = $1::uuid
+          FOR UPDATE OF ci
+        `,
+        [input.checklistInstanceId, input.templateItemId],
+      );
+      const guard = guardResult.rows[0];
+
+      if (!guard) {
+        throw new BadRequestException(
+          "Checklist template item is not available for this instance",
+        );
+      }
+
+      if (guard.status === "completed") {
+        throw new BadRequestException("Completed checklist instances are locked");
+      }
+
+      if (input.scoreValue > Number(guard.max_score)) {
+        throw new BadRequestException("Checklist score exceeds item max score");
+      }
+
+      const responseResult = await client.query<{
+        response_id: string;
+        responded_at: string;
+      }>(
+        `
+          INSERT INTO ops.checklist_response (
+            checklist_instance_id,
+            template_item_id,
+            score_value,
+            comment_text
+          )
+          VALUES ($1::uuid, $2::uuid, $3::numeric, $4)
+          ON CONFLICT (checklist_instance_id, template_item_id) DO UPDATE
+          SET
+            score_value = EXCLUDED.score_value,
+            comment_text = EXCLUDED.comment_text,
+            responded_at = NOW()
+          RETURNING response_id, responded_at
+        `,
+        [
+          input.checklistInstanceId,
+          input.templateItemId,
+          input.scoreValue,
+          input.commentText ?? null,
+        ],
+      );
+
+      await client.query(
+        `
+          UPDATE ops.checklist_instance
+          SET
+            status = 'in_progress',
+            started_at = COALESCE(started_at, NOW()),
+            started_by_user_id = COALESCE(started_by_user_id, $2)
+          WHERE checklist_instance_id = $1::uuid
+            AND status = 'planned'
+        `,
+        [input.checklistInstanceId, input.actorUserId],
+      );
+
+      return responseResult.rows[0];
+    });
+  }
+
+  async calculateMobileChecklistCompletion(checklistInstanceId: string) {
+    const result = await this.databaseService.query<{
+      total_score: string;
+      compliance_rate: string;
+      missing_mandatory_count: string;
+    }>(
+      `
+        SELECT
+          COALESCE(SUM((COALESCE(cr.score_value, 0) / NULLIF(cti.max_score, 0)) * cti.weight), 0)::numeric(12,2)::text AS total_score,
+          COALESCE(AVG(CASE WHEN COALESCE(cr.score_value, 0) > 0 THEN 1 ELSE 0 END), 0)::numeric(7,4)::text AS compliance_rate,
+          COUNT(*) FILTER (WHERE cti.is_mandatory = TRUE AND cr.response_id IS NULL)::text AS missing_mandatory_count
+        FROM ops.checklist_template_item cti
+        LEFT JOIN ops.checklist_response cr
+          ON cr.template_item_id = cti.template_item_id
+         AND cr.checklist_instance_id = $1::uuid
+        INNER JOIN ops.checklist_instance ci
+          ON ci.checklist_template_id = cti.checklist_template_id
+        WHERE ci.checklist_instance_id = $1::uuid
+      `,
+      [checklistInstanceId],
+    );
+    const row = result.rows[0] ?? {
+      total_score: "0.00",
+      compliance_rate: "0.0000",
+      missing_mandatory_count: "0",
+    };
+
+    return {
+      totalScore: row.total_score,
+      complianceRate: row.compliance_rate,
+      missingMandatoryCount: Number(row.missing_mandatory_count),
+    };
+  }
+
+  async completeMobileChecklistInstance(input: {
+    checklistInstanceId: string;
+    actorUserId: string;
+  }) {
+    return this.databaseService.withTransaction(async (client) => {
+      const instanceResult = await client.query<{
+        checklist_instance_id: string;
+        store_id: string;
+        status: string;
+      }>(
+        `
+          SELECT checklist_instance_id, store_id, status
+          FROM ops.checklist_instance
+          WHERE checklist_instance_id = $1::uuid
+          FOR UPDATE
+        `,
+        [input.checklistInstanceId],
+      );
+      const instance = instanceResult.rows[0];
+
+      if (!instance) {
+        throw new BadRequestException("Checklist instance cannot be completed");
+      }
+
+      if (instance.status === "completed") {
+        throw new BadRequestException("Completed checklist instances are locked");
+      }
+
+      const completion = await this.calculateMobileChecklistCompletionWithClient(
+        client,
+        input.checklistInstanceId,
+      );
+
+      if (completion.missingMandatoryCount > 0) {
+        throw new BadRequestException("Mandatory checklist responses are missing");
+      }
+
+      const result = await client.query<{
+        checklist_instance_id: string;
+        status: string;
+        total_score: string;
+        compliance_rate: string;
+        completed_at: string;
+        locked_at: string;
+      }>(
+        `
+          UPDATE ops.checklist_instance
+          SET
+            completed_by_user_id = $2,
+            completed_at = NOW(),
+            locked_at = NOW(),
+            status = 'completed',
+            total_score = $3::numeric,
+            compliance_rate = $4::numeric
+          WHERE checklist_instance_id = $1::uuid
+            AND status IN ('planned', 'in_progress')
+          RETURNING checklist_instance_id, status, total_score, compliance_rate, completed_at, locked_at
+        `,
+        [
+          input.checklistInstanceId,
+          input.actorUserId,
+          completion.totalScore,
+          completion.complianceRate,
+        ],
+      );
+
+      if (!result.rows[0]) {
+        throw new BadRequestException("Checklist instance cannot be completed");
+      }
+
+      return result.rows[0];
+    });
+  }
+
+  private async calculateMobileChecklistCompletionWithClient(
+    client: {
+      query: DatabaseService["query"];
+    },
+    checklistInstanceId: string,
+  ) {
+    const result = await client.query<{
+      total_score: string;
+      compliance_rate: string;
+      missing_mandatory_count: string;
+    }>(
+      `
+        SELECT
+          COALESCE(SUM((COALESCE(cr.score_value, 0) / NULLIF(cti.max_score, 0)) * cti.weight), 0)::numeric(12,2)::text AS total_score,
+          COALESCE(AVG(CASE WHEN COALESCE(cr.score_value, 0) > 0 THEN 1 ELSE 0 END), 0)::numeric(7,4)::text AS compliance_rate,
+          COUNT(*) FILTER (WHERE cti.is_mandatory = TRUE AND cr.response_id IS NULL)::text AS missing_mandatory_count
+        FROM ops.checklist_template_item cti
+        LEFT JOIN ops.checklist_response cr
+          ON cr.template_item_id = cti.template_item_id
+         AND cr.checklist_instance_id = $1::uuid
+        INNER JOIN ops.checklist_instance ci
+          ON ci.checklist_template_id = cti.checklist_template_id
+        WHERE ci.checklist_instance_id = $1::uuid
+      `,
+      [checklistInstanceId],
+    );
+    const row = result.rows[0] ?? {
+      total_score: "0.00",
+      compliance_rate: "0.0000",
+      missing_mandatory_count: "0",
+    };
+
+    return {
+      totalScore: row.total_score,
+      complianceRate: row.compliance_rate,
+      missingMandatoryCount: Number(row.missing_mandatory_count),
+    };
+  }
+
   async getMobileChecklistToday(input: {
     actorUserId: string;
     assignedStoreIds: string[];

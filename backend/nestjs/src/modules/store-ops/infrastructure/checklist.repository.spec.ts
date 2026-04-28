@@ -200,6 +200,184 @@ describe("ChecklistRepository", () => {
     ).rejects.toThrow("Checklist template is not available for this store");
   });
 
+  it("saves a mobile checklist response and keeps planned instances in progress", async () => {
+    const { client, databaseService, repository } = createTransactionHarness();
+    client.query
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            checklist_instance_id: "instance-1",
+            store_id: "store-1",
+            status: "in_progress",
+            max_score: "10.00",
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            response_id: "response-1",
+            responded_at: "2026-04-28T10:05:00.000Z",
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [] });
+
+    await expect(
+      repository.saveMobileChecklistResponse({
+        checklistInstanceId: "instance-1",
+        templateItemId: "item-1",
+        scoreValue: 8,
+        commentText: "Good",
+        actorUserId: "user-1",
+      }),
+    ).resolves.toEqual({
+      response_id: "response-1",
+      responded_at: "2026-04-28T10:05:00.000Z",
+    });
+
+    expect(databaseService.withTransaction).toHaveBeenCalledTimes(1);
+    expect(client.query).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining("FOR UPDATE OF ci"),
+      ["instance-1", "item-1"],
+    );
+    expect(client.query).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining("ON CONFLICT (checklist_instance_id, template_item_id)"),
+      ["instance-1", "item-1", 8, "Good"],
+    );
+    expect(client.query).toHaveBeenNthCalledWith(
+      3,
+      expect.stringContaining("status = 'in_progress'"),
+      ["instance-1", "user-1"],
+    );
+  });
+
+  it("rejects saving a response when the item is not on the instance template", async () => {
+    const { client, repository } = createTransactionHarness();
+    client.query.mockResolvedValueOnce({ rows: [] });
+
+    await expect(
+      repository.saveMobileChecklistResponse({
+        checklistInstanceId: "instance-1",
+        templateItemId: "item-1",
+        scoreValue: 8,
+        actorUserId: "user-1",
+      }),
+    ).rejects.toThrow("Checklist template item is not available for this instance");
+
+    expect(client.query).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects saving a response above the item max score", async () => {
+    const { client, repository } = createTransactionHarness();
+    client.query.mockResolvedValueOnce({
+      rows: [
+        {
+          checklist_instance_id: "instance-1",
+          store_id: "store-1",
+          status: "in_progress",
+          max_score: "5.00",
+        },
+      ],
+    });
+
+    await expect(
+      repository.saveMobileChecklistResponse({
+        checklistInstanceId: "instance-1",
+        templateItemId: "item-1",
+        scoreValue: 8,
+        actorUserId: "user-1",
+      }),
+    ).rejects.toThrow("Checklist score exceeds item max score");
+
+    expect(client.query).toHaveBeenCalledTimes(1);
+  });
+
+  it("calculates mobile checklist completion score and missing mandatory count", async () => {
+    const query = jest.fn().mockResolvedValueOnce({
+      rows: [
+        {
+          total_score: "86.00",
+          compliance_rate: "1.0000",
+          missing_mandatory_count: "0",
+        },
+      ],
+    });
+    const repository = new ChecklistRepository({ query } as never);
+
+    await expect(repository.calculateMobileChecklistCompletion("instance-1")).resolves.toEqual({
+      totalScore: "86.00",
+      complianceRate: "1.0000",
+      missingMandatoryCount: 0,
+    });
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining("missing_mandatory_count"),
+      ["instance-1"],
+    );
+  });
+
+  it("completes and locks a mobile checklist instance", async () => {
+    const { client, databaseService, repository } = createTransactionHarness();
+    client.query
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            checklist_instance_id: "instance-1",
+            store_id: "store-1",
+            status: "in_progress",
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            total_score: "86.00",
+            compliance_rate: "1.0000",
+            missing_mandatory_count: "0",
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+      rows: [
+        {
+          checklist_instance_id: "instance-1",
+          status: "completed",
+          total_score: "86.00",
+          compliance_rate: "1.0000",
+          completed_at: "2026-04-28T10:10:00.000Z",
+          locked_at: "2026-04-28T10:10:00.000Z",
+        },
+      ],
+    });
+
+    await expect(
+      repository.completeMobileChecklistInstance({
+        checklistInstanceId: "instance-1",
+        actorUserId: "user-1",
+      }),
+    ).resolves.toEqual({
+      checklist_instance_id: "instance-1",
+      status: "completed",
+      total_score: "86.00",
+      compliance_rate: "1.0000",
+      completed_at: "2026-04-28T10:10:00.000Z",
+      locked_at: "2026-04-28T10:10:00.000Z",
+    });
+    expect(databaseService.withTransaction).toHaveBeenCalledTimes(1);
+    expect(client.query).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining("FOR UPDATE"),
+      ["instance-1"],
+    );
+    expect(client.query).toHaveBeenNthCalledWith(
+      3,
+      expect.stringContaining("locked_at = NOW()"),
+      ["instance-1", "user-1", "86.00", "1.0000"],
+    );
+  });
+
   it("returns no mobile today rows when actor has no assigned stores", async () => {
     const query = jest.fn();
     const repository = new ChecklistRepository({ query } as never);

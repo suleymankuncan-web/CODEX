@@ -81,6 +81,54 @@ export class ChecklistService {
     });
   }
 
+  async saveMobileChecklistResponse(input: {
+    checklistInstanceId: string;
+    templateItemId: string;
+    scoreValue: number;
+    commentText?: string;
+    actorUserId: string;
+    actorActionScope?: {
+      assignedStoreIds: string[];
+    };
+  }) {
+    await this.assertCanActOnMobileChecklistInstance(
+      input.checklistInstanceId,
+      input.actorActionScope,
+    );
+
+    return buildCommandResponse({
+      status: "saved",
+      message: "Checklist response saved",
+      data: {
+        checklistResponse: await this.checklistRepository.saveMobileChecklistResponse(input),
+      },
+    });
+  }
+
+  async completeMobileChecklistInstance(input: {
+    checklistInstanceId: string;
+    actorUserId: string;
+    actorActionScope?: {
+      assignedStoreIds: string[];
+    };
+  }) {
+    await this.assertCanActOnMobileChecklistInstance(
+      input.checklistInstanceId,
+      input.actorActionScope,
+    );
+
+    return buildCommandResponse({
+      status: "completed",
+      message: "Checklist instance completed",
+      data: {
+        checklistInstance: await this.checklistRepository.completeMobileChecklistInstance({
+          checklistInstanceId: input.checklistInstanceId,
+          actorUserId: input.actorUserId,
+        }),
+      },
+    });
+  }
+
   async createChecklistInstance(input: {
     templateId: string;
     storeId: string;
@@ -227,6 +275,31 @@ export class ChecklistService {
       instanceScope.storeId,
       "Checklist instance is outside assigned action stores",
     );
+  }
+
+  private async assertCanActOnMobileChecklistInstance(
+    checklistInstanceId: string,
+    actionScope: { assignedStoreIds: string[] } | undefined,
+  ) {
+    const instanceScope =
+      await this.checklistRepository.getMobileChecklistInstanceScope(checklistInstanceId);
+
+    if (!instanceScope) {
+      throw new ForbiddenException("Checklist instance is outside assigned action stores");
+    }
+
+    this.assertNotCompleted(instanceScope.status);
+    this.assertCanActOnStore(
+      actionScope,
+      instanceScope.storeId,
+      "Checklist instance is outside assigned action stores",
+    );
+  }
+
+  private assertNotCompleted(status: string) {
+    if (status === "completed") {
+      throw new BadRequestException("Completed checklist instances are locked");
+    }
   }
 
   private assertCanActOnStore(
