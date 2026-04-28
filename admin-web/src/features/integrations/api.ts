@@ -75,13 +75,34 @@ export type PowerBiExportUploadResponse = {
       status: string
     }
     summary: {
-      periodMonth: string
+      periodMonth: string | null
+      periodType: 'daily' | 'weekly' | 'monthly' | 'custom'
+      periodStart: string
+      periodEnd: string
       personnelRowsRead: number
       storeRowsRead: number
       canonicalRowCount: number
+      personnelGrossSalesRows: number
+      negativePersonnelRowsIgnored: number
       ignoredPersonnelRows: number
       ignoredStoreRows: number
-      temporaryMappingMode: string
+      scopeExcludedPersonnelRows: number
+      scopeExcludedStoreRows: number
+      reconciliation: {
+        comparedStoreCount: number
+        balancedStoreCount: number
+        warningStoreCount: number
+        items: Array<{
+          storeExternalRef: string
+          storeNetSales: number
+          personnelPositiveSales: number
+          personnelNegativeMovements: number
+          personnelNetMovement: number
+          reconciliationDelta: number
+          status: 'balanced' | 'warning'
+        }>
+      }
+      mappingMode: string
     }
   }
   job?: {
@@ -220,8 +241,43 @@ export type ImportBatchError = {
   normalizedStatus: string
   errorCategory: 'validation' | 'missing_dependency' | 'write_failure'
   qualityIssueCode?: string
+  mappingCandidate?: {
+    integrationSourceId: string
+    entityType: 'employee' | 'store'
+    externalId: string
+    internalTableName: string
+  }
   validationError: string | null
   processedAt: string | null
+}
+
+export type ExternalIdMapCandidate = {
+  entityType: 'employee' | 'store'
+  internalId: string
+  label: string
+  secondaryLabel: string
+  internalTableName: string
+}
+
+export type StoreMasterItem = {
+  storeId: string
+  storeCode: string
+  storeName: string
+  storeType: 'company' | 'franchise' | 'operator' | string
+  status: 'active' | 'inactive' | 'closed' | string
+  kpiImportEnabled: boolean
+  regionId: string | null
+  regionName: string | null
+}
+
+export type StoreMasterLookups = {
+  storeTypes: Array<{ value: 'company' | 'franchise' | 'operator'; label: string }>
+  statuses: Array<{ value: 'active' | 'inactive' | 'closed'; label: string }>
+  regions: Array<{
+    regionId: string
+    regionCode: string
+    regionName: string
+  }>
 }
 
 export type AuditEvent = {
@@ -318,6 +374,100 @@ export async function retryImportBatch(batchId: string) {
   )
 }
 
+export async function getExternalIdMapCandidates(input: {
+  entityType: 'employee' | 'store'
+  q?: string
+  limit?: number
+}) {
+  const params = new URLSearchParams({
+    entityType: input.entityType,
+    limit: String(input.limit ?? 25),
+  })
+  const search = input.q?.trim()
+  if (search) {
+    params.set('q', search)
+  }
+
+  return fetchJson<ListResponse<ExternalIdMapCandidate>>(
+    `/integrations/external-id-map-candidates?${params.toString()}`,
+  )
+}
+
+export async function approveExternalIdMap(input: {
+  integrationSourceId: string
+  entityType: 'employee' | 'store'
+  externalId: string
+  internalId: string
+  internalTableName?: string
+}) {
+  return sendJson<
+    CommandResponse<{
+      mapping: {
+        integrationSourceId: string
+        entityType: 'employee' | 'store'
+        externalId: string
+        internalId: string
+        internalTableName: string
+      }
+    }>
+  >('/integrations/external-id-maps', {
+    method: 'POST',
+    body: input,
+  })
+}
+
+export async function getStoreMasterData(input?: {
+  q?: string
+  enabled?: boolean
+  status?: 'active' | 'inactive' | 'closed'
+  limit?: number
+  offset?: number
+}) {
+  const params = new URLSearchParams({
+    limit: String(input?.limit ?? 50),
+    offset: String(input?.offset ?? 0),
+  })
+  const search = input?.q?.trim()
+  if (search) {
+    params.set('q', search)
+  }
+  if (typeof input?.enabled === 'boolean') {
+    params.set('enabled', String(input.enabled))
+  }
+  if (input?.status) {
+    params.set('status', input.status)
+  }
+
+  return fetchJson<ListResponse<StoreMasterItem>>(
+    `/integrations/store-master?${params.toString()}`,
+  )
+}
+
+export async function getStoreMasterLookups() {
+  return fetchJson<StoreMasterLookups>('/integrations/store-master-lookups')
+}
+
+export async function updateStoreMasterData(input: {
+  storeId: string
+  storeType: 'company' | 'franchise' | 'operator'
+  regionId: string
+  status: 'active' | 'inactive' | 'closed'
+  kpiImportEnabled: boolean
+}) {
+  return sendJson<CommandResponse<{ storeMaster: StoreMasterItem }>>(
+    `/integrations/store-master/${input.storeId}`,
+    {
+      method: 'PATCH',
+      body: {
+        storeType: input.storeType,
+        regionId: input.regionId,
+        status: input.status,
+        kpiImportEnabled: input.kpiImportEnabled,
+      },
+    },
+  )
+}
+
 export async function getImportPayloadTemplate(input?: {
   entityType?: string
   sourceSystem?: string
@@ -346,13 +496,27 @@ export async function createImportBatch(input: CreateImportBatchBody) {
 
 export async function uploadPowerBiExport(input: {
   sourceCode: string
-  periodMonth: string
+  periodMonth?: string
+  periodType?: 'daily' | 'weekly' | 'monthly' | 'custom'
+  periodStart?: string
+  periodEnd?: string
   personnelFile?: File | null
   storeFile?: File | null
 }) {
   const formData = new FormData()
   formData.set('sourceCode', input.sourceCode)
-  formData.set('periodMonth', input.periodMonth)
+  if (input.periodMonth) {
+    formData.set('periodMonth', input.periodMonth)
+  }
+  if (input.periodType) {
+    formData.set('periodType', input.periodType)
+  }
+  if (input.periodStart) {
+    formData.set('periodStart', input.periodStart)
+  }
+  if (input.periodEnd) {
+    formData.set('periodEnd', input.periodEnd)
+  }
 
   if (input.personnelFile) {
     formData.set('personnelFile', input.personnelFile)

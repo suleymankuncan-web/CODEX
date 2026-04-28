@@ -37,12 +37,99 @@ test('admin import batch detail explains KPI row lineage evidence', async ({ pag
   await expect(qualityPanel.getByText('Unmapped store')).toBeVisible()
   await expect(qualityPanel.getByText('mapping / high / 1 row')).toBeVisible()
   await expect(page.getByText('quality issue unmapped_store')).toBeVisible()
+
+  const mappingPanel = page.getByLabel('External ID mapping approval')
+  await expect(mappingPanel.getByText('External store')).toBeVisible()
+  await expect(mappingPanel.getByRole('textbox', { name: 'Search internal store candidates' })).toBeVisible()
+  await expect(mappingPanel.getByRole('combobox', { name: 'Map to internal store' })).toBeVisible()
+  await mappingPanel.getByRole('textbox', { name: 'Search internal store candidates' }).fill('Marmara')
+  await mappingPanel
+    .getByRole('combobox', { name: 'Map to internal store' })
+    .selectOption({ label: 'Marmara Park - MP001 / active' })
+  await mappingPanel.getByRole('button', { name: 'Approve mapping' }).click()
+  await expect(page.getByText('External ID mapping approved')).toBeVisible()
   await expect(page.getByText('Batch detail unavailable')).toHaveCount(0)
+})
+
+test('admin dashboard manages store master data import controls', async ({ page }) => {
+  await page.goto('/admin/integrations')
+
+  const scopePanel = page.getByLabel('Store master data')
+  await expect(scopePanel.getByRole('heading', { name: 'Store master data' })).toBeVisible()
+  await expect(scopePanel.getByText('Marmara Park')).toBeVisible()
+  await expect(scopePanel.getByText('MP001 / Marmara / company')).toBeVisible()
+
+  const scopeToggle = scopePanel.getByRole('checkbox', { name: 'Marmara Park KPI import enabled' })
+  await expect(scopeToggle).toBeChecked()
+  await scopePanel.getByRole('combobox', { name: 'Marmara Park store type' }).selectOption('franchise')
+
+  await expect(page.getByText('Store master data updated')).toBeVisible()
+})
+
+test('admin dashboard exposes Power BI period controls', async ({ page }) => {
+  await page.goto('/admin/integrations')
+
+  await expect(page.getByLabel('Donem tipi')).toBeVisible()
+  await page.getByLabel('Donem tipi').selectOption('daily')
+  await expect(page.getByLabel('Baslangic')).toBeVisible()
+  await expect(page.getByLabel('Bitis')).toBeDisabled()
+
+  await page.getByLabel('Donem tipi').selectOption('custom')
+  await expect(page.getByLabel('Bitis')).toBeEnabled()
 })
 
 async function routeIntegrationApi(page: Page) {
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: authSessionFixture })
+  })
+
+  await page.route('**/api/integrations/import-batches/overview', async (route) => {
+    await route.fulfill({ json: overviewFixture })
+  })
+
+  await page.route('**/api/integrations/import-batches/needs-action**', async (route) => {
+    await route.fulfill({ json: needsActionFixture })
+  })
+
+  await page.route('**/api/integrations/lookups', async (route) => {
+    await route.fulfill({ json: lookupsFixture })
+  })
+
+  await page.route('**/api/integrations/import-payload-templates**', async (route) => {
+    await route.fulfill({ json: importPayloadTemplateFixture })
+  })
+
+  await page.route('**/api/integrations/store-master-lookups', async (route) => {
+    await route.fulfill({ json: storeMasterLookupsFixture })
+  })
+
+  await page.route('**/api/integrations/store-master**', async (route) => {
+    if (route.request().method() === 'PATCH') {
+      const body = route.request().postDataJSON()
+      expect(body).toEqual({
+        storeType: 'franchise',
+        regionId: '22222222-2222-4222-8222-222222222222',
+        status: 'active',
+        kpiImportEnabled: true,
+      })
+      await route.fulfill({
+        json: {
+          command: {
+            status: 'updated',
+            message: 'Store master data updated',
+          },
+          data: {
+            storeMaster: {
+              ...storeMasterFixture.items[0],
+              storeType: 'franchise',
+            },
+          },
+        },
+      })
+      return
+    }
+
+    await route.fulfill({ json: storeMasterFixture })
   })
 
   await page.route('**/api/integrations/import-batches/batch-kpi-lineage-ui-1/reconciliation', async (route) => {
@@ -55,6 +142,34 @@ async function routeIntegrationApi(page: Page) {
 
   await page.route('**/api/integrations/import-batches/batch-kpi-lineage-ui-1/audit**', async (route) => {
     await route.fulfill({ json: auditFixture })
+  })
+
+  await page.route('**/api/integrations/external-id-map-candidates**', async (route) => {
+    await route.fulfill({ json: externalIdMapCandidatesFixture })
+  })
+
+  await page.route('**/api/integrations/external-id-maps', async (route) => {
+    const body = route.request().postDataJSON()
+    expect(body).toMatchObject({
+      integrationSourceId: '11111111-1111-4111-8111-111111111111',
+      entityType: 'store',
+      externalId: 'powerbi:MARMARA PARK',
+      internalId: '44444444-4444-4444-8444-444444444444',
+    })
+    await route.fulfill({
+      json: {
+        command: {
+          status: 'updated',
+          message: 'External ID mapping approved',
+        },
+        data: {
+          mapping: {
+            ...body,
+            internalTableName: 'ops.store',
+          },
+        },
+      },
+    })
   })
 
   await page.route('**/api/integrations/import-batches/batch-kpi-lineage-ui-1', async (route) => {
@@ -88,6 +203,132 @@ const authSessionFixture = {
     regionCount: 0,
     storeCount: 0,
     assignedStoreCount: 0,
+  },
+}
+
+const overviewFixture = {
+  totals: {
+    all: 3,
+    completed: 1,
+    failed: 0,
+    completedWithErrors: 1,
+    pending: 0,
+    queued: 1,
+    processing: 0,
+  },
+  healthTotals: {
+    healthy: 1,
+    inProgress: 1,
+    blocked: 0,
+    retryReady: 1,
+    needsAction: 0,
+    stuck: 0,
+  },
+  actionTotals: {
+    blocked: 0,
+    retryReady: 1,
+    needsAction: 0,
+    stuck: 0,
+  },
+  latest: {
+    completedBatchId: 'batch-completed-1',
+    failedBatchId: null,
+    inProgressBatchId: 'batch-queued-1',
+    stuckBatchId: null,
+  },
+}
+
+const needsActionFixture = {
+  items: [],
+  meta: {
+    count: 0,
+    total: 0,
+    limit: 12,
+    offset: 0,
+  },
+}
+
+const lookupsFixture = {
+  activeSources: [
+    {
+      sourceId: 'source-kpi-1',
+      sourceCode: 'power-bi-kpi',
+      sourceName: 'Power BI KPI',
+      entityType: 'kpi',
+      sourceSystem: 'power_bi',
+      stateModel: 'closed_period',
+    },
+  ],
+  meta: {
+    totalEntityTypes: 7,
+    totalActiveSources: 1,
+  },
+}
+
+const importPayloadTemplateFixture = {
+  entityType: 'kpi',
+  sourceSystem: 'power_bi',
+  requestBody: {
+    sourceCode: 'power-bi-kpi',
+    entityType: 'kpi',
+    fileReference: 'sample.json',
+    rows: [],
+  },
+}
+
+const storeMasterLookupsFixture = {
+  storeTypes: [
+    { value: 'company', label: 'Company' },
+    { value: 'franchise', label: 'Franchise' },
+    { value: 'operator', label: 'Operator' },
+  ],
+  statuses: [
+    { value: 'active', label: 'Active' },
+    { value: 'inactive', label: 'Inactive' },
+    { value: 'closed', label: 'Closed' },
+  ],
+  regions: [
+    {
+      regionId: '22222222-2222-4222-8222-222222222222',
+      regionCode: 'MARMARA',
+      regionName: 'Marmara',
+    },
+    {
+      regionId: '66666666-6666-4666-8666-666666666666',
+      regionCode: 'KARADENIZ',
+      regionName: 'Karadeniz',
+    },
+  ],
+}
+
+const storeMasterFixture = {
+  items: [
+    {
+      storeId: '44444444-4444-4444-8444-444444444444',
+      storeCode: 'MP001',
+      storeName: 'Marmara Park',
+      storeType: 'company',
+      status: 'active',
+      kpiImportEnabled: true,
+      regionId: '22222222-2222-4222-8222-222222222222',
+      regionName: 'Marmara',
+    },
+    {
+      storeId: '55555555-5555-4555-8555-555555555555',
+      storeCode: 'GAR001',
+      storeName: 'Garaj Outlet',
+      storeType: 'company',
+      status: 'active',
+      kpiImportEnabled: false,
+      regionId: '22222222-2222-4222-8222-222222222222',
+      regionName: 'Marmara',
+    },
+  ],
+  meta: {
+    count: 2,
+    total: 2,
+    limit: 50,
+    offset: 0,
   },
 }
 
@@ -186,6 +427,12 @@ const errorsFixture = {
       normalizedStatus: 'retryable_error',
       errorCategory: 'missing_dependency',
       qualityIssueCode: 'unmapped_store',
+      mappingCandidate: {
+        integrationSourceId: '11111111-1111-4111-8111-111111111111',
+        entityType: 'store',
+        externalId: 'powerbi:MARMARA PARK',
+        internalTableName: 'ops.store',
+      },
       validationError: 'store reference could not be resolved',
       processedAt: null,
     },
@@ -194,6 +441,24 @@ const errorsFixture = {
     count: 1,
     total: 1,
     limit: 20,
+    offset: 0,
+  },
+}
+
+const externalIdMapCandidatesFixture = {
+  items: [
+    {
+      entityType: 'store',
+      internalId: '44444444-4444-4444-8444-444444444444',
+      label: 'Marmara Park',
+      secondaryLabel: 'MP001 / active',
+      internalTableName: 'ops.store',
+    },
+  ],
+  meta: {
+    count: 1,
+    total: 1,
+    limit: 25,
     offset: 0,
   },
 }

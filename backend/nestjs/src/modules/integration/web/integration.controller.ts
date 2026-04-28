@@ -15,14 +15,18 @@ import { IntegrationService } from "../application/integration.service";
 import { RequireRoles } from "../../auth/decorators/roles.decorator";
 import { RequireScope } from "../../auth/decorators/scope.decorator";
 import { PowerBiExportUploadService } from "../application/power-bi-export-upload.service";
+import { ApproveExternalIdMapDto } from "./dto/approve-external-id-map.dto";
 import { CreateImportBatchDto } from "./dto/create-import-batch.dto";
 import { CreateIntegrationSourceDto } from "./dto/create-integration-source.dto";
 import { GetImportPayloadTemplateQueryDto } from "./dto/get-import-payload-template.query";
 import { ListDueIntegrationSourcesQueryDto } from "./dto/list-due-integration-sources.query";
+import { ListExternalIdMapCandidatesQueryDto } from "./dto/list-external-id-map-candidates.query";
 import { ListImportBatchErrorsQueryDto } from "./dto/list-import-batch-errors.query";
 import { ListImportBatchesQueryDto } from "./dto/list-import-batches.query";
 import { ListIntegrationSourcesQueryDto } from "./dto/list-integration-sources.query";
+import { ListKpiImportStoreScopeQueryDto } from "./dto/list-kpi-import-store-scope.query";
 import { UpdateIntegrationSourceScheduleDto } from "./dto/update-integration-source-schedule.dto";
+import { UpdateKpiImportStoreScopeDto } from "./dto/update-kpi-import-store-scope.dto";
 import { UploadPowerBiExportDto } from "./dto/upload-power-bi-export.dto";
 
 @Controller("integrations")
@@ -120,6 +124,119 @@ export class IntegrationController {
     return this.integrationService.getIntegrationLookups();
   }
 
+  @Get("external-id-map-candidates")
+  @RequireScope("company")
+  @RequireRoles("INTEGRATION_ADMIN")
+  async listExternalIdMapCandidates(
+    @Query() query: ListExternalIdMapCandidatesQueryDto,
+  ) {
+    return this.integrationService.listExternalIdMapCandidates({
+      entityType: query.entityType,
+      q: query.q,
+      limit: query.limit,
+    });
+  }
+
+  @Post("external-id-maps")
+  @RequireScope("company")
+  @RequireRoles("INTEGRATION_ADMIN")
+  async approveExternalIdMap(
+    @Body() body: ApproveExternalIdMapDto,
+    @Req()
+    request: {
+      user: {
+        userId: string;
+      };
+    },
+  ) {
+    return this.integrationService.approveExternalIdMapping({
+      integrationSourceId: body.integrationSourceId,
+      entityType: body.entityType,
+      externalId: body.externalId,
+      internalId: body.internalId,
+      actorUserId: request.user.userId,
+    });
+  }
+
+  @Get("kpi-import-store-scope")
+  @RequireScope("company")
+  @RequireRoles("INTEGRATION_ADMIN")
+  async listKpiImportStoreScope(@Query() query: ListKpiImportStoreScopeQueryDto) {
+    return this.integrationService.listStoreMaster({
+      q: query.q,
+      enabled: query.enabled,
+      status: query.status,
+      limit: query.limit,
+      offset: query.offset,
+    });
+  }
+
+  @Get("store-master")
+  @RequireScope("company")
+  @RequireRoles("INTEGRATION_ADMIN")
+  async listStoreMaster(@Query() query: ListKpiImportStoreScopeQueryDto) {
+    return this.integrationService.listStoreMaster({
+      q: query.q,
+      enabled: query.enabled,
+      status: query.status,
+      limit: query.limit,
+      offset: query.offset,
+    });
+  }
+
+  @Get("store-master-lookups")
+  @RequireScope("company")
+  @RequireRoles("INTEGRATION_ADMIN")
+  async getStoreMasterLookups() {
+    return this.integrationService.getStoreMasterLookups();
+  }
+
+  @Patch("kpi-import-store-scope/:storeId")
+  @RequireScope("company")
+  @RequireRoles("INTEGRATION_ADMIN")
+  async updateKpiImportStoreScope(
+    @Param("storeId") storeId: string,
+    @Body() body: UpdateKpiImportStoreScopeDto,
+    @Req()
+    request: {
+      user: {
+        userId: string;
+      };
+    },
+  ) {
+    return this.integrationService.updateStoreMaster({
+      storeId,
+      storeType: body.storeType,
+      regionId: body.regionId,
+      status: body.status,
+      kpiImportEnabled: body.kpiImportEnabled,
+      actorUserId: request.user.userId,
+    });
+  }
+
+  @Patch("store-master/:storeId")
+  @RequireScope("company")
+  @RequireRoles("INTEGRATION_ADMIN")
+  async updateStoreMaster(
+    @Param("storeId") storeId: string,
+    @Body() body: UpdateKpiImportStoreScopeDto,
+    @Req()
+    request: {
+      user: {
+        userId: string;
+      };
+    },
+  ) {
+    return this.integrationService.updateStoreMaster({
+      storeId,
+      storeType: body.storeType,
+      regionId: body.regionId,
+      status: body.status,
+      kpiImportEnabled: body.kpiImportEnabled,
+      actorUserId: request.user.userId,
+    });
+  }
+
   @Get("sources/due-schedule")
   @RequireScope("company")
   @RequireRoles("INTEGRATION_ADMIN")
@@ -163,6 +280,9 @@ export class IntegrationController {
     return this.powerBiExportUploadService.upload({
       sourceCode: body.sourceCode,
       periodMonth: body.periodMonth,
+      periodType: body.periodType,
+      periodStart: body.periodStart,
+      periodEnd: body.periodEnd,
       actorUserId: request.user.userId,
       personnelFile: files?.personnelFile?.[0] ?? null,
       storeFile: files?.storeFile?.[0] ?? null,

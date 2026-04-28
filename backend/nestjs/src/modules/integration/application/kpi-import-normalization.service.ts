@@ -39,6 +39,11 @@ const KPI_METRIC_CANDIDATES: MetricCandidate[] = [
     defaultScopeType: "employee",
   },
   {
+    code: "FF",
+    aliases: ["ff", "footfall", "visitorCount", "trafficCount", "musteriGiris"],
+    defaultScopeType: "store",
+  },
+  {
     code: "CR",
     aliases: ["cr", "conversionRate", "customerConversionRate", "donusumOrani"],
     defaultScopeType: "store",

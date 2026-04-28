@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 
 const demoStoreId = '00000000-0000-0000-0000-000000000100'
 const demoEmployeeId = '00000000-0000-0000-0000-000000000202'
+const demoPositionId = '44444444-4444-4444-8444-444444444444'
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -138,6 +139,218 @@ test('store competitions page renders scoped contribution details', async ({ pag
   await expect(page.getByRole('button', { name: /Recalculate/ })).toHaveCount(0)
 })
 
+test('store approvals page lets store managers submit seller code requests', async ({ page }) => {
+  let capturedPayload: unknown = null
+
+  await page.route('**/api/workforce/seller-code-requests', async (route) => {
+    capturedPayload = route.request().postDataJSON()
+    expect(route.request().method()).toBe('POST')
+    expect(capturedPayload).toEqual({
+      storeId: demoStoreId,
+      requestType: 'create_code',
+      firstName: 'Ayse',
+      lastName: 'Yilmaz',
+      nationalId: '12345678901',
+      phoneNumber: '05551234567',
+      hireDate: '2026-05-01',
+      requestedPositionId: demoPositionId,
+      employmentType: 'full_time',
+      requestReason: 'Yeni personel',
+    })
+
+    await route.fulfill({
+      json: {
+        command: {
+          status: 'accepted',
+          message: 'Seller code request submitted for HR approval',
+        },
+        data: {
+          request: sellerCodeRequestFixture,
+        },
+      },
+    })
+  })
+
+  await page.goto('/store/approvals')
+
+  const sellerCodeForm = page.getByLabel('Seller code request form')
+  await expect(sellerCodeForm.getByRole('heading', { name: 'Satici kodu talebi' })).toBeVisible()
+  await expect(sellerCodeForm.getByLabel('Seller code', { exact: true })).toHaveCount(0)
+  await sellerCodeForm.getByLabel('First name').fill('Ayse')
+  await sellerCodeForm.getByLabel('Last name').fill('Yilmaz')
+  await sellerCodeForm.getByLabel('TC kimlik no').fill('12345678901')
+  await sellerCodeForm.getByLabel('Phone number').fill('05551234567')
+  await sellerCodeForm.getByLabel('Hire date').fill('2026-05-01')
+  await expect(sellerCodeForm.getByLabel('Position', { exact: true })).toContainText('Sales Consultant')
+  await sellerCodeForm.getByLabel('Position', { exact: true }).selectOption(demoPositionId)
+  await sellerCodeForm.getByLabel('Request reason').fill('Yeni personel')
+  await sellerCodeForm.getByRole('button', { name: 'Submit seller code request' }).click()
+
+  await expect(page.getByText('Seller code request submitted for HR approval')).toBeVisible()
+  expect(capturedPayload).not.toBeNull()
+})
+
+test('store approvals page lets store managers submit offboarding requests', async ({ page }) => {
+  let capturedPayload: unknown = null
+
+  await page.route('**/api/workforce/offboarding-requests', async (route) => {
+    capturedPayload = route.request().postDataJSON()
+    expect(route.request().method()).toBe('POST')
+    expect(capturedPayload).toEqual({
+      storeId: demoStoreId,
+      employeeId: demoEmployeeId,
+      terminationDate: '2026-05-10',
+      terminationReason: 'resignation',
+      requestReason: 'Personel istifa etti',
+    })
+
+    await route.fulfill({
+      json: {
+        command: {
+          status: 'accepted',
+          message: 'Offboarding request submitted for HR approval',
+        },
+        data: {
+          request: offboardingRequestFixture,
+        },
+      },
+    })
+  })
+
+  await page.goto('/store/approvals')
+
+  const offboardingForm = page.getByLabel('Offboarding request form')
+  await expect(offboardingForm.getByRole('heading', { name: 'Personel cikis talebi' })).toBeVisible()
+  await expect(offboardingForm.getByLabel('Employee')).toContainText('Store Personnel')
+  await offboardingForm.getByLabel('Employee').selectOption(demoEmployeeId)
+  await offboardingForm.getByLabel('Termination date').fill('2026-05-10')
+  await offboardingForm.getByLabel('Termination reason').fill('resignation')
+  await offboardingForm.getByLabel('Request reason').fill('Personel istifa etti')
+  await offboardingForm.getByRole('button', { name: 'Submit offboarding request' }).click()
+
+  await expect(page.getByText('Offboarding request submitted for HR approval')).toBeVisible()
+  expect(capturedPayload).not.toBeNull()
+})
+
+test('store approvals page lets store managers edit and resubmit returned workforce requests', async ({ page }) => {
+  const capturedSellerPayloads: unknown[] = []
+  const capturedOffboardingPayloads: unknown[] = []
+
+  await page.route('**/api/workforce/seller-code-requests**', async (route) => {
+    const request = route.request()
+    const pathname = new URL(request.url()).pathname
+
+    if (request.method() === 'PATCH' && pathname.endsWith('/resubmit')) {
+      const body = request.postDataJSON()
+      capturedSellerPayloads.push(body)
+      expect(body).toEqual({
+        firstName: 'Ayse',
+        lastName: 'Yilmaz',
+        nationalId: '12345678902',
+        phoneNumber: '05551234567',
+        hireDate: '2026-05-02',
+        requestedPositionId: demoPositionId,
+        employmentType: 'full_time',
+        requestReason: 'TC guncellendi',
+      })
+      await route.fulfill({
+        json: {
+          command: {
+            status: 'resubmitted',
+            message: 'Seller code request resubmitted for HR approval',
+          },
+          data: {
+            request: {
+              ...rejectedSellerCodeRequestFixture,
+              status: 'pending_hr_approval',
+              nationalIdLast4: '8902',
+              hireDate: '2026-05-02',
+              reviewNote: null,
+            },
+          },
+        },
+      })
+      return
+    }
+
+    await route.fulfill({
+      json: {
+        items: [rejectedSellerCodeRequestFixture],
+        meta: { count: 1, total: 1, limit: 50, offset: 0 },
+      },
+    })
+  })
+
+  await page.route('**/api/workforce/offboarding-requests**', async (route) => {
+    const request = route.request()
+    const pathname = new URL(request.url()).pathname
+
+    if (request.method() === 'PATCH' && pathname.endsWith('/resubmit')) {
+      const body = request.postDataJSON()
+      capturedOffboardingPayloads.push(body)
+      expect(body).toEqual({
+        employeeId: demoEmployeeId,
+        terminationDate: '2026-05-12',
+        terminationReason: 'transfer',
+        requestReason: 'Tarih ve sebep guncellendi',
+      })
+      await route.fulfill({
+        json: {
+          command: {
+            status: 'resubmitted',
+            message: 'Offboarding request resubmitted for HR approval',
+          },
+          data: {
+            request: {
+              ...rejectedOffboardingRequestFixture,
+              status: 'pending_hr_approval',
+              terminationDate: '2026-05-12',
+              terminationReason: 'transfer',
+              requestReason: 'Tarih ve sebep guncellendi',
+              reviewNote: null,
+            },
+          },
+        },
+      })
+      return
+    }
+
+    await route.fulfill({
+      json: {
+        items: [rejectedOffboardingRequestFixture],
+        meta: { count: 1, total: 1, limit: 50, offset: 0 },
+      },
+    })
+  })
+
+  await page.goto('/store/approvals')
+
+  const returnedPanel = page.getByLabel('Returned workforce requests')
+  await expect(returnedPanel.getByText('TC numarasi tekrar kontrol edilmeli')).toBeVisible()
+  await expect(returnedPanel.getByText('Cikis tarihi tekrar kontrol edilmeli')).toBeVisible()
+
+  await returnedPanel.getByRole('button', { name: 'Edit seller code request' }).click()
+  const sellerCodeForm = page.getByLabel('Seller code request form')
+  await expect(sellerCodeForm.getByLabel('First name')).toHaveValue('Ayse')
+  await expect(sellerCodeForm.getByLabel('Last name')).toHaveValue('Yilmaz')
+  await sellerCodeForm.getByLabel('TC kimlik no').fill('12345678902')
+  await sellerCodeForm.getByLabel('Hire date').fill('2026-05-02')
+  await sellerCodeForm.getByLabel('Request reason').fill('TC guncellendi')
+  await sellerCodeForm.getByRole('button', { name: 'Resubmit seller code request' }).click()
+  await expect(page.getByText('Seller code request resubmitted for HR approval')).toBeVisible()
+
+  await returnedPanel.getByRole('button', { name: 'Edit offboarding request' }).click()
+  const offboardingForm = page.getByLabel('Offboarding request form')
+  await offboardingForm.getByLabel('Termination date').fill('2026-05-12')
+  await offboardingForm.getByLabel('Termination reason').fill('transfer')
+  await offboardingForm.getByLabel('Request reason').fill('Tarih ve sebep guncellendi')
+  await offboardingForm.getByRole('button', { name: 'Resubmit offboarding request' }).click()
+  await expect(page.getByText('Offboarding request resubmitted for HR approval')).toBeVisible()
+
+  expect(capturedSellerPayloads).toHaveLength(1)
+  expect(capturedOffboardingPayloads).toHaveLength(1)
+})
+
 test('language toggle localizes competition read labels and persists preference', async ({ page }) => {
   await page.goto('/store/competitions')
 
@@ -220,6 +433,48 @@ async function routeStoreSurfaceApi(page: Page) {
 
   await page.route('**/api/workflow/inbox', async (route) => {
     await route.fulfill({ json: workflowInboxFixture })
+  })
+
+  await page.route('**/api/target-distributions/requests**', async (route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({ json: targetDistributionRequestsFixture })
+      return
+    }
+
+    await route.fulfill({
+      status: 403,
+      json: { message: 'Target distribution write route is not mocked in this surface test.' },
+    })
+  })
+
+  await page.route('**/api/target-distributions/store-personnel**', async (route) => {
+    await route.fulfill({ json: storeTargetingPersonnelFixture })
+  })
+
+  await page.route('**/api/workforce/position-options**', async (route) => {
+    await route.fulfill({ json: positionOptionsFixture })
+  })
+
+  await page.route('**/api/workforce/store-employees**', async (route) => {
+    await route.fulfill({ json: storeEmployeesFixture })
+  })
+
+  await page.route('**/api/workforce/seller-code-requests**', async (route) => {
+    await route.fulfill({
+      json: {
+        items: [],
+        meta: { count: 0, total: 0, limit: 50, offset: 0 },
+      },
+    })
+  })
+
+  await page.route('**/api/workforce/offboarding-requests**', async (route) => {
+    await route.fulfill({
+      json: {
+        items: [],
+        meta: { count: 0, total: 0, limit: 50, offset: 0 },
+      },
+    })
   })
 
   await page.route('**/api/competitions**', async (route) => {
@@ -675,6 +930,155 @@ const competitionFixture = {
   lifecycleState: 'active',
   startsOn: '2026-04-22',
   endsOn: '2026-04-24',
+}
+
+const targetDistributionRequestsFixture = {
+  items: [],
+  meta: {
+    count: 0,
+    total: 0,
+    limit: 30,
+    offset: 0,
+  },
+}
+
+const storeTargetingPersonnelFixture = {
+  items: [
+    {
+      employeeId: demoEmployeeId,
+      displayName: 'Store Personnel',
+      externalEmployeeRef: 'FM8001',
+      periodStart: '2026-04-01',
+      periodEnd: '2026-04-30',
+      netSalesValue: 145000,
+    },
+  ],
+  meta: {
+    count: 1,
+    total: 1,
+    limit: 30,
+    offset: 0,
+  },
+}
+
+const sellerCodeRequestFixture = {
+  requestId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+  companyId: '00000000-0000-0000-0000-000000000001',
+  regionId: '00000000-0000-0000-0000-000000000010',
+  storeId: demoStoreId,
+  storeCode: 'DEMO-100',
+  storeName: 'IstinyePark Demo Store',
+  storeType: 'franchise',
+  requestType: 'create_code',
+  status: 'pending_hr_approval',
+  firstName: 'Ayse',
+  lastName: 'Yilmaz',
+  nationalIdLast4: '8901',
+  phoneNumber: '05551234567',
+  hireDate: '2026-05-01',
+  requestedPositionId: demoPositionId,
+  positionCode: 'SALES_CONSULTANT',
+  positionName: 'Sales Consultant',
+  employmentType: 'full_time',
+  requestedSellerCode: null,
+  approvedSellerCode: null,
+  lastReferenceSellerCode: null,
+  submittedByUserId: 'store-me-smoke-user',
+  reviewedByUserId: null,
+  reviewedAt: null,
+  reviewNote: null,
+  employeeId: null,
+  createdAt: '2026-04-27T09:00:00.000Z',
+  updatedAt: '2026-04-27T09:00:00.000Z',
+}
+
+const offboardingRequestFixture = {
+  requestId: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+  companyId: '00000000-0000-0000-0000-000000000001',
+  regionId: '00000000-0000-0000-0000-000000000010',
+  storeId: demoStoreId,
+  storeCode: 'DEMO-100',
+  storeName: 'IstinyePark Demo Store',
+  employeeId: demoEmployeeId,
+  displayName: 'Store Personnel',
+  externalEmployeeRef: 'FM8001',
+  positionCode: 'SALES_CONSULTANT',
+  positionName: 'Sales Consultant',
+  status: 'pending_hr_approval',
+  terminationDate: '2026-05-10',
+  terminationReason: 'resignation',
+  requestReason: 'Personel istifa etti',
+  submittedByUserId: 'store-me-smoke-user',
+  reviewedByUserId: null,
+  reviewedAt: null,
+  reviewNote: null,
+  createdAt: '2026-04-27T09:00:00.000Z',
+  updatedAt: '2026-04-27T09:00:00.000Z',
+}
+
+const rejectedSellerCodeRequestFixture = {
+  ...sellerCodeRequestFixture,
+  status: 'rejected',
+  reviewedByUserId: 'hr-admin-user',
+  reviewedAt: '2026-04-27T10:00:00.000Z',
+  reviewNote: 'TC numarasi tekrar kontrol edilmeli',
+  updatedAt: '2026-04-27T10:00:00.000Z',
+}
+
+const rejectedOffboardingRequestFixture = {
+  ...offboardingRequestFixture,
+  status: 'rejected',
+  reviewedByUserId: 'hr-admin-user',
+  reviewedAt: '2026-04-27T10:00:00.000Z',
+  reviewNote: 'Cikis tarihi tekrar kontrol edilmeli',
+  updatedAt: '2026-04-27T10:00:00.000Z',
+}
+
+const storeEmployeesFixture = {
+  items: [
+    {
+      employeeId: demoEmployeeId,
+      displayName: 'Store Personnel',
+      externalEmployeeRef: 'FM8001',
+      storeId: demoStoreId,
+      positionId: demoPositionId,
+      positionCode: 'SALES_CONSULTANT',
+      positionName: 'Sales Consultant',
+      assignmentStartDate: '2026-04-01',
+      employmentStatus: 'active',
+    },
+  ],
+  meta: {
+    count: 1,
+    total: 1,
+    limit: 1,
+    offset: 0,
+  },
+}
+
+const positionOptionsFixture = {
+  items: [
+    {
+      positionId: demoPositionId,
+      positionCode: 'SALES_CONSULTANT',
+      positionName: 'Sales Consultant',
+      jobFamily: 'store',
+      isManagerial: false,
+    },
+    {
+      positionId: '44444444-4444-4444-9444-444444444444',
+      positionCode: 'ASSISTANT_MANAGER',
+      positionName: 'Assistant Store Manager',
+      jobFamily: 'store',
+      isManagerial: true,
+    },
+  ],
+  meta: {
+    count: 2,
+    total: 2,
+    limit: 2,
+    offset: 0,
+  },
 }
 
 const competitionDetailFixture = {

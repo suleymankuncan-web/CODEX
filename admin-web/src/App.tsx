@@ -71,7 +71,7 @@ const adminNavDefinitions: NavDefinition[] = [
     to: '/admin/inbox',
     icon: <Bell size={18} />,
     label: 'Inbox',
-    roles: ['SUPER_ADMIN', 'REPORT_VIEWER'],
+    roles: ['SUPER_ADMIN', 'REPORT_VIEWER', 'HR_ADMIN'],
   },
   {
     to: '/admin/feed',

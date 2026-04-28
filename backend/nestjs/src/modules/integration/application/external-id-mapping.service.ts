@@ -113,7 +113,10 @@ export class ExternalIdMappingService {
         )
         VALUES ($1::uuid, $2, $3, $4::uuid, $5, TRUE)
         ON CONFLICT (integration_source_id, entity_type, external_id) DO UPDATE
-        SET internal_id = EXCLUDED.internal_id, is_active = TRUE
+        SET
+          internal_id = EXCLUDED.internal_id,
+          internal_table_name = EXCLUDED.internal_table_name,
+          is_active = TRUE
       `,
       [
         input.integrationSourceId,

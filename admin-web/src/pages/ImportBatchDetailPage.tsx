@@ -11,6 +11,8 @@ import {
 } from '../components/dashboard-primitives'
 import { downloadCsv } from '../lib/download-csv'
 import {
+  approveExternalIdMap,
+  getExternalIdMapCandidates,
   getImportBatchAudit,
   getImportBatchDetail,
   getImportBatchErrors,
@@ -23,6 +25,11 @@ export function ImportBatchDetailPage() {
   const params = useParams()
   const batchId = params.batchId ?? ''
   const [feedback, setFeedback] = useState<string | null>(null)
+  const [mappingInputs, setMappingInputs] = useState<Record<string, string>>({})
+  const [mappingSearchInputs, setMappingSearchInputs] = useState({
+    employee: '',
+    store: '',
+  })
   const queryClient = useQueryClient()
 
   const detailQuery = useQuery({
@@ -45,6 +52,35 @@ export function ImportBatchDetailPage() {
     queryFn: () => getImportBatchAudit(batchId),
     enabled: Boolean(batchId),
   })
+  const errorItems = errorsQuery.data?.items ?? []
+  const hasStoreMapping = errorItems.some(
+    (error) => error.mappingCandidate?.entityType === 'store',
+  )
+  const hasEmployeeMapping = errorItems.some(
+    (error) => error.mappingCandidate?.entityType === 'employee',
+  )
+  const storeCandidateSearch = mappingSearchInputs.store.trim()
+  const employeeCandidateSearch = mappingSearchInputs.employee.trim()
+  const storeCandidatesQuery = useQuery({
+    queryKey: ['external-id-map-candidates', 'store', storeCandidateSearch],
+    queryFn: () =>
+      getExternalIdMapCandidates({
+        entityType: 'store',
+        q: storeCandidateSearch || undefined,
+        limit: 25,
+      }),
+    enabled: hasStoreMapping,
+  })
+  const employeeCandidatesQuery = useQuery({
+    queryKey: ['external-id-map-candidates', 'employee', employeeCandidateSearch],
+    queryFn: () =>
+      getExternalIdMapCandidates({
+        entityType: 'employee',
+        q: employeeCandidateSearch || undefined,
+        limit: 25,
+      }),
+    enabled: hasEmployeeMapping,
+  })
   const retryMutation = useMutation({
     mutationFn: retryImportBatch,
     onSuccess: async (response) => {
@@ -54,6 +90,38 @@ export function ImportBatchDetailPage() {
         queryClient.invalidateQueries({ queryKey: ['import-batch-reconciliation', batchId] }),
         queryClient.invalidateQueries({ queryKey: ['import-batch-errors', batchId] }),
         queryClient.invalidateQueries({ queryKey: ['import-batch-audit', batchId] }),
+        queryClient.invalidateQueries({ queryKey: ['integration-needs-action'] }),
+        queryClient.invalidateQueries({ queryKey: ['integration-overview'] }),
+      ])
+    },
+  })
+  const mappingMutation = useMutation({
+    mutationFn: (input: {
+      rowId: string
+      integrationSourceId: string
+      entityType: 'employee' | 'store'
+      externalId: string
+      internalId: string
+      internalTableName?: string
+    }) =>
+      approveExternalIdMap({
+        integrationSourceId: input.integrationSourceId,
+        entityType: input.entityType,
+        externalId: input.externalId,
+        internalId: input.internalId,
+        internalTableName: input.internalTableName,
+      }),
+    onSuccess: async (response, variables) => {
+      setFeedback(response.command.message)
+      setMappingInputs((current) => {
+        const next = { ...current }
+        delete next[variables.rowId]
+        return next
+      })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['import-batch-detail', batchId] }),
+        queryClient.invalidateQueries({ queryKey: ['import-batch-reconciliation', batchId] }),
+        queryClient.invalidateQueries({ queryKey: ['import-batch-errors', batchId] }),
         queryClient.invalidateQueries({ queryKey: ['integration-needs-action'] }),
         queryClient.invalidateQueries({ queryKey: ['integration-overview'] }),
       ])
@@ -74,7 +142,7 @@ export function ImportBatchDetailPage() {
 
   const detail = detailQuery.data
   const reconciliation = reconciliationQuery.data
-  const errors = errorsQuery.data?.items ?? []
+  const errors = errorItems
   const auditItems = auditQuery.data?.items ?? []
   const qualityIssueItems = detail.qualityIssueSummary?.items ?? []
 
@@ -311,6 +379,7 @@ export function ImportBatchDetailPage() {
                     'normalizedStatus',
                     'errorCategory',
                     'qualityIssueCode',
+                    'mappingExternalId',
                     'validationError',
                     'processedAt',
                   ],
@@ -320,6 +389,7 @@ export function ImportBatchDetailPage() {
                     error.normalizedStatus,
                     error.errorCategory,
                     error.qualityIssueCode ?? '',
+                    error.mappingCandidate?.externalId ?? '',
                     error.validationError,
                     error.processedAt,
                   ]),
@@ -362,6 +432,99 @@ export function ImportBatchDetailPage() {
                           <code className="lineage-code">{error.rowHash}</code>
                         </div>
                       ) : null}
+                    </div>
+                  ) : null}
+                  {error.mappingCandidate ? (
+                    <div className="mapping-action" aria-label="External ID mapping approval">
+                      {(() => {
+                        const entityType = error.mappingCandidate.entityType
+                        const candidateQuery =
+                          entityType === 'store' ? storeCandidatesQuery : employeeCandidatesQuery
+                        const candidates = candidateQuery.data?.items ?? []
+
+                        return (
+                          <>
+                      <div className="mapping-targets">
+                        <div className="lineage-chip">
+                          <span>External {error.mappingCandidate.entityType}</span>
+                          <code className="lineage-code">{error.mappingCandidate.externalId}</code>
+                        </div>
+                        <div className="lineage-chip">
+                          <span>Target table</span>
+                          <code className="lineage-code">{error.mappingCandidate.internalTableName}</code>
+                        </div>
+                      </div>
+                      <div className="mapping-controls">
+                        <input
+                          className="control-input mapping-input"
+                          type="text"
+                          aria-label={`Search internal ${entityType} candidates`}
+                          value={mappingSearchInputs[entityType]}
+                          placeholder={`Search internal ${entityType} candidates`}
+                          onChange={(event) =>
+                            setMappingSearchInputs((current) => ({
+                              ...current,
+                              [entityType]: event.target.value,
+                            }))
+                          }
+                        />
+                        <select
+                          className="control-input mapping-select"
+                          aria-label={`Map to internal ${entityType}`}
+                          value={mappingInputs[error.rowId] ?? ''}
+                          disabled={candidateQuery.isLoading || candidates.length === 0}
+                          onChange={(event) =>
+                            setMappingInputs((current) => ({
+                              ...current,
+                              [error.rowId]: event.target.value,
+                            }))
+                          }
+                        >
+                          <option value="">Select internal {entityType}</option>
+                          {candidates.map((candidate) => (
+                            <option key={candidate.internalId} value={candidate.internalId}>
+                              {candidate.label} - {candidate.secondaryLabel}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          className="control-button"
+                          type="button"
+                          disabled={
+                            !mappingInputs[error.rowId]?.trim() ||
+                            (mappingMutation.isPending &&
+                              mappingMutation.variables?.rowId === error.rowId)
+                          }
+                          onClick={() =>
+                            mappingMutation.mutate({
+                              rowId: error.rowId,
+                              integrationSourceId: error.mappingCandidate!.integrationSourceId,
+                              entityType: error.mappingCandidate!.entityType,
+                              externalId: error.mappingCandidate!.externalId,
+                              internalTableName: error.mappingCandidate!.internalTableName,
+                              internalId: mappingInputs[error.rowId]?.trim() ?? '',
+                            })
+                          }
+                        >
+                          {mappingMutation.isPending && mappingMutation.variables?.rowId === error.rowId
+                            ? 'Approving...'
+                            : 'Approve mapping'}
+                        </button>
+                        {candidateQuery.isLoading ? (
+                          <span className="mapping-helper">Loading internal candidates...</span>
+                        ) : null}
+                        {candidateQuery.isError ? (
+                          <span className="mapping-helper mapping-helper-error">
+                            Candidate list unavailable: {getErrorMessage(candidateQuery.error)}
+                          </span>
+                        ) : null}
+                        {!candidateQuery.isLoading && !candidateQuery.isError && candidates.length === 0 ? (
+                          <span className="mapping-helper">No candidates found for this search.</span>
+                        ) : null}
+                      </div>
+                          </>
+                        )
+                      })()}
                     </div>
                   ) : null}
                 </div>

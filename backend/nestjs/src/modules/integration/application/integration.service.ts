@@ -6,6 +6,7 @@ import { MaterializationService } from "./materialization.service";
 import { IntegrationRepository } from "../infrastructure/integration.repository";
 import { KpiImportNormalizationService } from "./kpi-import-normalization.service";
 import { IntegrationSchedulerService } from "./integration-scheduler.service";
+import { ExternalIdMappingService } from "./external-id-mapping.service";
 import {
   buildCommandResponse,
   buildListResponse,
@@ -41,6 +42,7 @@ export class IntegrationService {
     private readonly materializationService: MaterializationService,
     private readonly kpiImportNormalizationService: KpiImportNormalizationService,
     private readonly integrationSchedulerService: IntegrationSchedulerService,
+    private readonly externalIdMappingService: ExternalIdMappingService,
     @Inject(JOB_DISPATCHER)
     private readonly jobDispatcher: JobDispatcher,
   ) {}
@@ -384,7 +386,7 @@ export class IntegrationService {
         "rawRowReference",
         "sourceRow",
       ],
-      importedMetricCodes: ["NET_SALES", "TICKET_COUNT", "ITEM_COUNT", "UPT", "ATV", "CR"],
+      importedMetricCodes: ["NET_SALES", "TICKET_COUNT", "ITEM_COUNT", "FF", "UPT", "ATV", "CR"],
       derivedMetricCodes: ["TARGET_ACHIEVEMENT", "WEIGHTED_PERSONNEL_SCORE", "WEIGHTED_STORE_SCORE"],
       checklistMetricCodes: ["BM_CHECKLIST", "VM_CHECKLIST"],
       dataQualityIssueCodes: IMPORT_DATA_QUALITY_ISSUES.map((issue) => issue.code),
@@ -403,10 +405,10 @@ export class IntegrationService {
     const activeSourceOptions = activeSources.map((item) => ({
       sourceId: item.integration_source_id,
       sourceCode: item.source_code,
-        sourceName: item.source_name,
-        entityType: item.entity_type,
-        sourceSystem: item.source_system,
-        stateModel: item.state_model,
+      sourceName: item.source_name,
+      entityType: item.entity_type,
+      sourceSystem: item.source_system,
+      stateModel: item.state_model,
     }));
     const sourcesByEntityType = activeSources.reduce<
       Record<string, Array<{ sourceId: string; sourceCode: string; sourceName: string }>>
@@ -455,6 +457,100 @@ export class IntegrationService {
         totalActiveSources: activeSourceOptions.length,
       },
     };
+  }
+
+  async listExternalIdMapCandidates(input: {
+    entityType: "employee" | "store";
+    q?: string;
+    limit?: number;
+  }) {
+    const limit = input.limit ?? 10;
+    const result = await this.integrationRepository.listExternalIdMapCandidates({
+      entityType: input.entityType,
+      q: input.q,
+      limit,
+    });
+    const internalTableName = this.getExternalIdInternalTableName(input.entityType);
+
+    return buildListResponse(
+      result.map((item) => ({
+        entityType: input.entityType,
+        internalId: item.internal_id,
+        label: item.label,
+        secondaryLabel: item.secondary_label,
+        internalTableName,
+      })),
+      { total: result.length, limit, offset: 0 },
+    );
+  }
+
+  async listStoreMaster(input: {
+    q?: string;
+    enabled?: boolean;
+    status?: "active" | "inactive" | "closed";
+    limit?: number;
+    offset?: number;
+  }) {
+    const result = await this.integrationRepository.listKpiImportStoreScope(input);
+
+    return buildListResponse(
+      result.rows.map((item) => this.mapStoreMaster(item)),
+      { total: result.total, limit: input.limit, offset: input.offset },
+    );
+  }
+
+  async getStoreMasterLookups() {
+    const regions = await this.integrationRepository.listStoreMasterRegions();
+
+    return {
+      storeTypes: [
+        { value: "company", label: "Company" },
+        { value: "franchise", label: "Franchise" },
+        { value: "operator", label: "Operator" },
+      ],
+      statuses: [
+        { value: "active", label: "Active" },
+        { value: "inactive", label: "Inactive" },
+        { value: "closed", label: "Closed" },
+      ],
+      regions: regions.map((item) => ({
+        regionId: item.region_id,
+        regionCode: item.region_code,
+        regionName: item.region_name,
+      })),
+    };
+  }
+
+  async updateStoreMaster(input: {
+    storeId: string;
+    storeType: "company" | "franchise" | "operator";
+    regionId: string;
+    status: "active" | "inactive" | "closed";
+    kpiImportEnabled: boolean;
+    actorUserId: string;
+  }) {
+    const storeScope = await this.integrationRepository.updateKpiImportStoreScope(input);
+
+    if (!storeScope) {
+      throw new NotFoundException(`Store or region not found: ${input.storeId}`);
+    }
+
+    logStructuredMessage(this.logger, "store_master_data.updated", {
+      actorUserId: input.actorUserId,
+      storeId: input.storeId,
+      storeType: input.storeType,
+      regionId: input.regionId,
+      status: input.status,
+      kpiImportEnabled: input.kpiImportEnabled,
+    });
+
+    return buildCommandResponse({
+      status: "updated",
+      message: "Store master data updated",
+      data: {
+        storeMaster: this.mapStoreMaster(storeScope),
+      },
+    });
   }
 
   async getIntegrationSourceAudit(sourceId: string) {
@@ -872,6 +968,10 @@ export class IntegrationService {
 
     return buildListResponse(
       result.rows.map((row) => {
+        const qualityIssueCode = classifyImportDataQualityIssue({
+          normalizedStatus: row.normalized_status,
+          validationError: row.validation_error,
+        });
         const lineage =
           row.row_hash || row.raw_row_reference
             ? {
@@ -879,6 +979,11 @@ export class IntegrationService {
                 rawRowReference: row.raw_row_reference ?? null,
               }
             : {};
+        const mappingCandidate = this.getMappingCandidate({
+          integrationSourceId: batch.integration_source_id,
+          qualityIssueCode,
+          row,
+        });
 
         return {
           rowId: row.row_id,
@@ -886,16 +991,74 @@ export class IntegrationService {
           ...lineage,
           normalizedStatus: row.normalized_status,
           errorCategory: this.classifyErrorCategory(row.normalized_status, row.validation_error),
-          qualityIssueCode: classifyImportDataQualityIssue({
-            normalizedStatus: row.normalized_status,
-            validationError: row.validation_error,
-          }),
+          qualityIssueCode,
+          ...(mappingCandidate ? { mappingCandidate } : {}),
           validationError: row.validation_error,
           processedAt: row.processed_at,
         };
       }),
       { total: result.total, limit: input.limit, offset: input.offset },
     );
+  }
+
+  async approveExternalIdMapping(input: {
+    integrationSourceId: string;
+    entityType: "employee" | "store";
+    externalId: string;
+    internalId: string;
+    actorUserId: string;
+  }) {
+    const source = await this.integrationRepository.getIntegrationSourceById(input.integrationSourceId);
+
+    if (!source) {
+      throw new NotFoundException(`Integration source not found: ${input.integrationSourceId}`);
+    }
+
+    if (!source.is_active) {
+      throw new ConflictException(`Integration source ${input.integrationSourceId} is inactive`);
+    }
+
+    const internalTableName = this.getExternalIdInternalTableName(input.entityType);
+
+    await this.externalIdMappingService.upsertMapping({
+      integrationSourceId: input.integrationSourceId,
+      entityType: input.entityType,
+      externalId: input.externalId,
+      internalId: input.internalId,
+      internalTableName,
+    });
+    await this.integrationRepository.recordExternalIdMappingApproved({
+      actorUserId: input.actorUserId,
+      integrationSourceId: input.integrationSourceId,
+      entityType: input.entityType,
+      externalId: input.externalId,
+      internalId: input.internalId,
+      internalTableName,
+    });
+
+    logStructuredMessage(this.logger, "external_id_mapping.approved", {
+      actorUserId: input.actorUserId,
+      integrationSourceId: input.integrationSourceId,
+      sourceCode: source.source_code,
+      entityType: input.entityType,
+      externalId: input.externalId,
+      internalId: input.internalId,
+      internalTableName,
+    });
+
+    return buildCommandResponse({
+      status: "updated",
+      message: "External ID mapping approved",
+      data: {
+        mapping: {
+          integrationSourceId: input.integrationSourceId,
+          entityType: input.entityType,
+          externalId: input.externalId,
+          internalId: input.internalId,
+          internalTableName,
+        },
+      },
+    });
   }
 
   async getImportBatchAudit(batchId: string) {
@@ -989,6 +1152,67 @@ export class IntegrationService {
     }
 
     return "write_failure";
+  }
+
+  private getMappingCandidate(input: {
+    integrationSourceId: string;
+    qualityIssueCode: ImportDataQualityIssueCode;
+    row: {
+      store_external_ref: string | null;
+      employee_external_ref: string | null;
+      payload_json: Record<string, unknown> | null;
+    };
+  }) {
+    const payload = input.row.payload_json ?? {};
+    if (input.qualityIssueCode === "unmapped_store") {
+      const externalId = this.firstNonEmptyString([
+        input.row.store_external_ref,
+        payload["storeExternalRef"],
+        payload["sourceStoreId"],
+      ]);
+
+      return externalId
+        ? {
+            integrationSourceId: input.integrationSourceId,
+            entityType: "store" as const,
+            externalId,
+            internalTableName: this.getExternalIdInternalTableName("store"),
+          }
+        : null;
+    }
+
+    if (input.qualityIssueCode === "unmapped_employee") {
+      const externalId = this.firstNonEmptyString([
+        input.row.employee_external_ref,
+        payload["employeeExternalRef"],
+        payload["sourceEmployeeId"],
+      ]);
+
+      return externalId
+        ? {
+            integrationSourceId: input.integrationSourceId,
+            entityType: "employee" as const,
+            externalId,
+            internalTableName: this.getExternalIdInternalTableName("employee"),
+          }
+        : null;
+    }
+
+    return null;
+  }
+
+  private getExternalIdInternalTableName(entityType: "employee" | "store") {
+    return entityType === "employee" ? "ops.employee" : "ops.store";
+  }
+
+  private firstNonEmptyString(values: unknown[]) {
+    for (const value of values) {
+      if (typeof value === "string" && value.trim().length > 0) {
+        return value;
+      }
+    }
+
+    return null;
   }
 
   private getQualityIssueSummary(
@@ -1106,6 +1330,28 @@ export class IntegrationService {
       pollWindowEndLocal: item.poll_window_end_local,
       pollTimezone: item.poll_timezone,
       isActive: item.is_active,
+    };
+  }
+
+  private mapStoreMaster(item: {
+    store_id: string;
+    store_code: string;
+    store_name: string;
+    store_type: string;
+    status: string;
+    kpi_import_enabled: boolean;
+    region_id: string | null;
+    region_name: string | null;
+  }) {
+    return {
+      storeId: item.store_id,
+      storeCode: item.store_code,
+      storeName: item.store_name,
+      storeType: item.store_type,
+      status: item.status,
+      kpiImportEnabled: item.kpi_import_enabled,
+      regionId: item.region_id,
+      regionName: item.region_name,
     };
   }
 

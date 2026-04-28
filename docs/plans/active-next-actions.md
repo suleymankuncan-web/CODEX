@@ -6,7 +6,7 @@ This is the short working list for the next practical steps. It keeps the projec
 
 ## Current Position
 
-As of 27 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, Store UX TR-First Copy V1, KPI Config Versioning V1, Source-Agnostic Ingest Contract Hardening V1, KPI Raw Row Lineage Persistence V1, Import Lineage Evidence Surface V1, Audit Event Taxonomy Guard V1, Data Quality Guard V1, Import Batch Quality Summary V1, Project-Wide Scope/Auth Guard Scan V1, No-Empty-Scope Repository Contract Pass V1, Production Environment Readiness Checklist V1, Environment Variable Inventory + Deployment Runbook Skeleton V1, Environment Drift Guard V1, and Production/Staging Incident Response Skeleton V1 have:
+As of 28 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, Store UX TR-First Copy V1, KPI Config Versioning V1, Source-Agnostic Ingest Contract Hardening V1, KPI Raw Row Lineage Persistence V1, Import Lineage Evidence Surface V1, Audit Event Taxonomy Guard V1, Data Quality Guard V1, Import Batch Quality Summary V1, Project-Wide Scope/Auth Guard Scan V1, No-Empty-Scope Repository Contract Pass V1, Production Environment Readiness Checklist V1, Environment Variable Inventory + Deployment Runbook Skeleton V1, Environment Drift Guard V1, Production/Staging Incident Response Skeleton V1, Personnel Management V1, Personnel Request Return/Resubmit V1, Personnel Master Data Bootstrap V1 planning, Project MVP Focus Map, and Excel KPI Import V1 have:
 
 - saved drafts
 - edit/cancel/history
@@ -58,6 +58,16 @@ As of 27 April 2026, the competition package planning flow, Operational Feed V1,
 - environment variable inventory and deployment runbook skeleton guarded by root script tests
 - dynamic environment drift guard for backend, frontend, and auth smoke env surfaces
 - production/staging incident response skeleton for auth, import/data quality, and deploy/release failures
+- store-originated personnel activation and offboarding requests with HR/Admin approval
+- seller-code approval creating employee and active assignment records
+- offboarding approval terminating employee, closing active assignment, and creating turnover event evidence
+- HR/Admin return notes and same-request resubmission for seller-code/offboarding corrections
+- controlled store/personnel baseline plan before any direct master-data import
+- consolidation decision: do not restart, narrow to MVP and real-data proof
+- Excel KPI Import V1 gross-personnel/net-store split
+- first-class `FF` base metric and recomputed period `ATV`, `UPT`, and `CR`
+- deterministic Excel upload source batch ids for duplicate-safe re-upload
+- admin monthly/daily/custom Excel upload period controls and reconciliation summary
 - project debt ledger
 - backend and frontend release checks
 
@@ -65,7 +75,7 @@ As of 27 April 2026, the competition package planning flow, Operational Feed V1,
 
 Reference: `docs/plans/project-debt-ledger.md`
 
-- Closed active debts: 34
+- Closed active debts: 37
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -100,6 +110,12 @@ Interpretation:
 - Environment Variable Inventory + Deployment Runbook Skeleton V1 is implemented; backend/frontend/smoke env names, secret rules, release/migration/deploy/smoke/rollback order, and env examples are now guarded by root script tests.
 - Environment Drift Guard V1 is implemented; root script tests now extract env usage from `AppConfigService`, `import.meta.env`, and `AUTH_SMOKE_*` code paths and fail when inventory/examples drift.
 - Production/Staging Incident Response Skeleton V1 is implemented; auth, import/data quality, deploy/release, sanitized evidence, rollback/forward-fix/No-Go, and JSON-source holding rules are now guarded by root script tests.
+- Personnel Management V1 is implemented; store managers can request seller-code activation and offboarding from assigned stores, while HR/Admin remains the official approval point for employee/assignment mutation.
+- Personnel Request Return/Resubmit V1 is implemented; HR/Admin can return seller-code and offboarding requests with a required note, and store managers can edit and resubmit the same request id.
+- Personnel Master Data Bootstrap V1 is planned; stores should be baselined before personnel, and rows should pass through staging/review/promote instead of direct Excel-to-live-table mutation.
+- Project MVP Focus Map is recorded; the project should consolidate around Excel KPI Import V1, store/personnel performance, personnel lifecycle, import quality visibility, and release evidence instead of restarting from zero.
+- Excel KPI Import V1 formula decision is locked; period ATV, UPT, and CR must be recomputed from summed base metrics, not averaged from daily ratios.
+- Excel KPI Import V1 is implemented; backend targeted tests, frontend build/e2e, and root `check:release` pass.
 - Full production UI/design-system and complete EN/TR localization expansion remain planned investments, not silent release debt.
 - Production UI/design-system is intentionally deferred into reversible pilots while backend/data foundations remain the priority.
 - The debt ledger itself is an accounting artifact and is not counted as a separate closed active debt item.
@@ -546,6 +562,34 @@ Interpretation:
   - `docs/plans/production-staging-incident-response-skeleton.md`
   - `scripts/incident-response-skeleton-contract.test.mjs`
 
+### Completed: Personnel Management V1
+- Completed: 27 April 2026
+- Result:
+  - store managers can create seller-code/new-personnel requests from `/store/approvals`
+  - HR/Admin approves seller-code requests from `/admin/inbox`
+  - approval creates `ops.employee` and an active `ops.employee_assignment_history` row
+  - store managers can create employee offboarding requests from `/store/approvals`
+  - HR/Admin approves offboarding requests from `/admin/inbox`
+  - approval terminates `ops.employee`, closes the active assignment, and creates `ops.turnover_event`
+  - request rows remain workflow/evidence records, not a second live personnel source
+  - official root release gate passes after the change
+- Reference:
+  - `docs/plans/personnel-management-v1.md`
+
+### Completed: Personnel Request Return/Resubmit V1
+- Completed: 27 April 2026
+- Result:
+  - HR/Admin can return seller-code requests from `/admin/inbox` with a required note
+  - HR/Admin can return offboarding requests from `/admin/inbox` with a required note
+  - return does not mutate `ops.employee`, assignments, or turnover events
+  - store managers see returned workforce requests on `/store/approvals`
+  - returned seller-code requests load into the original seller-code form and require full TC re-entry
+  - returned offboarding requests load into the original offboarding form
+  - resubmission keeps the same request id and moves the row back to `pending_hr_approval`
+  - audit catalog includes rejected and resubmitted workforce events
+- Reference:
+  - `docs/plans/personnel-management-v1.md`
+
 ### Completed: KPI Config Versioning V1
 - Completed: 26 April 2026
 - Result:
@@ -561,6 +605,67 @@ Interpretation:
 - Reference:
   - `docs/superpowers/specs/2026-04-26-kpi-config-versioning-v1-design.md`
   - `docs/superpowers/plans/2026-04-26-kpi-config-versioning-v1.md`
+
+### Planned: Personnel Master Data Bootstrap V1
+- Status: `decision_ready`
+- Why: the system now has personnel request/offboarding flows, but existing store/personnel/seller-code baseline data must enter the platform before KPI imports and future norm kadro work can fully rely on official identity.
+- Scope:
+  - baseline stores before personnel
+  - map store types as `Sirket -> company`, `Franchise -> franchise`, `Isletme -> operator`
+  - use `ops.store.kpi_import_enabled` as the store KPI import scope gate
+  - use `ops.employee.external_employee_ref` as the official seller code identity
+  - stage, validate, review, and promote baseline rows instead of direct Excel-to-live-table mutation
+  - keep unknown store/personnel rows as review evidence, not scored data
+- Reference:
+  - `docs/plans/personnel-master-data-bootstrap-v1.md`
+
+### Decision Note: Project MVP Focus Map
+- Recorded: 28 April 2026
+- Decision:
+  - do not restart the project from zero
+  - treat the current discomfort as focus overload, not architectural collapse
+  - consolidate around MVP readiness and real-data proof
+  - keep UI as a draft until backend/data workflows are proven
+  - avoid broad new modules unless they directly serve MVP
+- MVP focus:
+  - Excel KPI Import V1 from the inspected March files
+  - store/personnel performance surfaces
+  - personnel lifecycle V1
+  - import quality and lineage visibility
+  - root release gate evidence
+- Reference:
+  - `docs/plans/project-mvp-focus-map-2026-04-28.md`
+
+### Decision Note: Excel KPI Import V1 Formula Rules
+- Recorded: 28 April 2026
+- Decision:
+  - period ATV is recalculated as total sales amount / total invoice count
+  - period UPT is recalculated as total sales quantity / total invoice count
+  - period CR% is recalculated as total invoice count / total FF x 100
+  - daily ratio values are not averaged for official period KPI
+  - same source/period/scope/metric re-upload must replace/update, not add a duplicate
+  - custom range uploads are not split into daily facts unless the file contains daily row dates
+- Reference:
+  - `docs/plans/excel-kpi-import-v1.md`
+
+### Completed: Excel KPI Import V1
+- Completed: 28 April 2026
+- Result:
+  - add `FF` as first-class KPI base metric
+  - recompute store `ATV`, `UPT`, and `CR` from summed base values
+  - import personnel KPI from positive gross sales only
+  - keep personnel negative rows as reconciliation evidence
+  - use enabled local stores as the Excel import scope gate
+  - keep unresolved store/personnel identities in mapping review
+  - make same-payload re-upload deterministic and duplicate-safe
+  - add monthly/daily/custom upload period controls
+- Verification:
+  - backend targeted tests passed
+  - frontend build and targeted Playwright tests passed
+  - root `npm.cmd run check:release` passed
+- Reference:
+  - `docs/plans/excel-kpi-import-v1.md`
+  - `docs/superpowers/plans/2026-04-28-excel-kpi-import-v1.md`
 
 ### 1. Real IdP Staging Evidence
 - Priority: `P1`
@@ -581,8 +686,8 @@ If staging IdP and seeded staging DB values are available, start real staging ev
 
 If JSON source delivery details, sample payload, or official field list become available, start source mapping specification.
 
-If neither staging values nor source ingest details are available, choose the next controlled local backend/data step through the intake gate. Source-agnostic KPI ingest contract hardening, KPI raw row lineage persistence, admin lineage evidence visibility, audit event taxonomy guard, data quality guard, import batch quality summary, the first project-wide scope/auth guard scan, the no-empty-scope repository contract pass, production environment readiness checklist, env/deployment runbook skeleton, environment drift guard, and production/staging incident response skeleton are now done; the next local step should strengthen an existing backend/data surface without guessing external source behavior.
+If neither staging values nor source ingest details are available, do not open source-specific adapter work yet. Excel KPI Import V1 is now local implementation-complete, and the inspected March files remain KPI snapshot files, not master-data baseline files, so do not start personnel/store bootstrap until a true baseline list with store codes and seller codes exists.
 
 Recommended local candidate:
 
-- If external details are still unavailable, consider an evidence index skeleton for sanitized release/smoke/incident notes; otherwise wait for real staging/JSON source details before opening more local production paperwork.
+- Write the Excel KPI Import operator runbook: upload monthly/daily/custom file, inspect summary/reconciliation, resolve unmapped identities, retry/materialize safely, and store sanitized evidence for future periods.

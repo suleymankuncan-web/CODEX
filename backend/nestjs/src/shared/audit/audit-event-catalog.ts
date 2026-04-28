@@ -32,6 +32,18 @@ export const AUDIT_EVENT_CATALOG = [
   auditEvent("import_batch.created", "stg.import_batch", "integration", "Import batch was created."),
   auditEvent("import_batch.started", "stg.import_batch", "integration", "Import batch materialization started."),
   auditEvent("import_batch.retried", "stg.import_batch", "integration", "Import batch retry was requested."),
+  auditEvent(
+    "external_id_mapping.approved",
+    "stg.external_id_map",
+    "integration",
+    "External source identity mapping was approved.",
+  ),
+  auditEvent(
+    "store_master_data.updated",
+    "ops.store",
+    "integration",
+    "Store master data was updated.",
+  ),
   auditEvent("integration_source.created", "stg.integration_source", "integration", "Integration source was created."),
   auditEvent(
     "integration_source.deactivated",
@@ -77,6 +89,54 @@ export const AUDIT_EVENT_CATALOG = [
     "ops.target_distribution_request",
     "store_ops",
     "Target distribution request was approved.",
+  ),
+  auditEvent(
+    "seller_code_request.created",
+    "ops.seller_code_request",
+    "store_ops",
+    "Seller code request was submitted.",
+  ),
+  auditEvent(
+    "seller_code_request.approved",
+    "ops.seller_code_request",
+    "store_ops",
+    "Seller code request was approved.",
+  ),
+  auditEvent(
+    "seller_code_request.rejected",
+    "ops.seller_code_request",
+    "store_ops",
+    "Seller code request was returned to the store.",
+  ),
+  auditEvent(
+    "seller_code_request.resubmitted",
+    "ops.seller_code_request",
+    "store_ops",
+    "Seller code request was edited and resubmitted.",
+  ),
+  auditEvent(
+    "employee_offboarding_request.created",
+    "ops.employee_offboarding_request",
+    "store_ops",
+    "Employee offboarding request was submitted.",
+  ),
+  auditEvent(
+    "employee_offboarding_request.approved",
+    "ops.employee_offboarding_request",
+    "store_ops",
+    "Employee offboarding request was approved.",
+  ),
+  auditEvent(
+    "employee_offboarding_request.rejected",
+    "ops.employee_offboarding_request",
+    "store_ops",
+    "Employee offboarding request was returned to the store.",
+  ),
+  auditEvent(
+    "employee_offboarding_request.resubmitted",
+    "ops.employee_offboarding_request",
+    "store_ops",
+    "Employee offboarding request was edited and resubmitted.",
   ),
 
   auditEvent("competition.created", "ops.competition", "competition", "Competition was created."),

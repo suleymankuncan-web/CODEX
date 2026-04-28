@@ -698,6 +698,295 @@ export class IntegrationRepository {
     return result.rows;
   }
 
+  async listExternalIdMapCandidates(input: {
+    entityType: "employee" | "store";
+    q?: string;
+    limit: number;
+  }) {
+    const search = `%${(input.q ?? "").trim()}%`;
+
+    if (input.entityType === "store") {
+      const result = await this.databaseService.query<{
+        internal_id: string;
+        label: string;
+        secondary_label: string;
+      }>(
+        `
+          SELECT
+            store_id::text AS internal_id,
+            store_name AS label,
+            CONCAT(store_code, ' / ', status) AS secondary_label
+          FROM ops.store
+          WHERE status = 'active'
+            AND (
+              $1 = '%%'
+              OR store_name ILIKE $1
+              OR store_code ILIKE $1
+            )
+          ORDER BY store_name ASC, store_code ASC
+          LIMIT $2
+        `,
+        [search, input.limit],
+      );
+
+      return result.rows;
+    }
+
+    const result = await this.databaseService.query<{
+      internal_id: string;
+      label: string;
+      secondary_label: string;
+    }>(
+      `
+        SELECT
+          employee_id::text AS internal_id,
+          TRIM(CONCAT(first_name, ' ', last_name)) AS label,
+          CONCAT(COALESCE(external_employee_ref, 'no external ref'), ' / ', employment_status)
+            AS secondary_label
+        FROM ops.employee
+        WHERE employment_status = 'active'
+          AND (
+            $1 = '%%'
+            OR first_name ILIKE $1
+            OR last_name ILIKE $1
+            OR external_employee_ref ILIKE $1
+            OR CONCAT(first_name, ' ', last_name) ILIKE $1
+          )
+        ORDER BY first_name ASC, last_name ASC, employee_id ASC
+        LIMIT $2
+      `,
+      [search, input.limit],
+    );
+
+    return result.rows;
+  }
+
+  async listKpiImportStoreExternalRefs(integrationSourceId: string) {
+    const result = await this.databaseService.query<{ external_ref: string }>(
+      `
+        SELECT DISTINCT external_ref
+        FROM (
+          SELECT s.store_name AS external_ref
+          FROM ops.store s
+          WHERE s.status = 'active'
+            AND s.kpi_import_enabled = TRUE
+
+          UNION
+
+          SELECT s.store_code AS external_ref
+          FROM ops.store s
+          WHERE s.status = 'active'
+            AND s.kpi_import_enabled = TRUE
+
+          UNION
+
+          SELECT map.external_id AS external_ref
+          FROM stg.external_id_map map
+          INNER JOIN ops.store s
+            ON s.store_id = map.internal_id
+          WHERE map.integration_source_id = $1::uuid
+            AND map.entity_type = 'store'
+            AND map.is_active = TRUE
+            AND s.status = 'active'
+            AND s.kpi_import_enabled = TRUE
+        ) refs
+        WHERE external_ref IS NOT NULL
+          AND BTRIM(external_ref) <> ''
+        ORDER BY external_ref ASC
+      `,
+      [integrationSourceId],
+    );
+
+    return result.rows;
+  }
+
+  async listKpiImportStoreScope(input: {
+    q?: string;
+    enabled?: boolean;
+    status?: "active" | "inactive" | "closed";
+    limit?: number;
+    offset?: number;
+  }) {
+    const conditions: string[] = [];
+    const params: unknown[] = [];
+
+    const search = input.q?.trim();
+    if (search) {
+      params.push(`%${search}%`);
+      conditions.push(`(
+        s.store_name ILIKE $${params.length}
+        OR s.store_code ILIKE $${params.length}
+        OR r.region_name ILIKE $${params.length}
+      )`);
+    }
+
+    if (typeof input.enabled === "boolean") {
+      params.push(input.enabled);
+      conditions.push(`s.kpi_import_enabled = $${params.length}`);
+    }
+
+    if (input.status) {
+      params.push(input.status);
+      conditions.push(`s.status = $${params.length}`);
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+    const totalResult = await this.databaseService.query<{ total_count: string }>(
+      `
+        SELECT COUNT(*)::text AS total_count
+        FROM ops.store s
+        LEFT JOIN ops.region r
+          ON r.region_id = s.region_id
+        ${whereClause}
+      `,
+      params,
+    );
+
+    const limit = input.limit ?? 50;
+    const offset = input.offset ?? 0;
+    const listParams = [...params, limit, offset];
+    const result = await this.databaseService.query<{
+      store_id: string;
+      store_code: string;
+      store_name: string;
+      store_type: string;
+      status: string;
+      kpi_import_enabled: boolean;
+      region_id: string | null;
+      region_name: string | null;
+    }>(
+      `
+        SELECT
+          s.store_id::text AS store_id,
+          s.store_code,
+          s.store_name,
+          s.store_type,
+          s.status,
+          s.kpi_import_enabled,
+          r.region_id::text AS region_id,
+          r.region_name
+        FROM ops.store s
+        LEFT JOIN ops.region r
+          ON r.region_id = s.region_id
+        ${whereClause}
+        ORDER BY s.store_name ASC, s.store_code ASC
+        LIMIT $${params.length + 1}
+        OFFSET $${params.length + 2}
+      `,
+      listParams,
+    );
+
+    return {
+      rows: result.rows,
+      total: Number(totalResult.rows[0]?.total_count ?? 0),
+    };
+  }
+
+  async listStoreMasterRegions() {
+    const result = await this.databaseService.query<{
+      region_id: string;
+      region_code: string;
+      region_name: string;
+    }>(
+      `
+        SELECT
+          r.region_id::text AS region_id,
+          r.region_code,
+          r.region_name
+        FROM ops.region r
+        WHERE r.status = 'active'
+        ORDER BY r.region_name ASC, r.region_code ASC
+      `,
+    );
+
+    return result.rows;
+  }
+
+  async updateKpiImportStoreScope(input: {
+    storeId: string;
+    storeType: "company" | "franchise" | "operator";
+    regionId: string;
+    status: "active" | "inactive" | "closed";
+    kpiImportEnabled: boolean;
+    actorUserId: string;
+  }) {
+    return this.databaseService.withTransaction(async (client) => {
+      const auditActorUserId = await this.resolveAuditActorUserId(input.actorUserId, client);
+      const result = await client.query<{
+        store_id: string;
+        store_code: string;
+        store_name: string;
+        store_type: string;
+        status: string;
+        kpi_import_enabled: boolean;
+        region_id: string | null;
+        region_name: string | null;
+      }>(
+        `
+          UPDATE ops.store s
+          SET
+            store_type = $2,
+            region_id = $3::uuid,
+            status = $4,
+            kpi_import_enabled = $5
+          FROM ops.region r
+          WHERE s.store_id = $1::uuid
+            AND r.region_id = $3::uuid
+            AND r.status = 'active'
+          RETURNING
+            s.store_id::text AS store_id,
+            s.store_code,
+            s.store_name,
+            s.store_type,
+            s.status,
+            s.kpi_import_enabled,
+            r.region_id::text AS region_id,
+            r.region_name
+        `,
+        [
+          input.storeId,
+          input.storeType,
+          input.regionId,
+          input.status,
+          input.kpiImportEnabled,
+        ],
+      );
+
+      const store = result.rows[0] ?? null;
+      if (!store) {
+        return null;
+      }
+
+      await client.query(
+        `
+          INSERT INTO audit.event_log (
+            actor_user_id,
+            event_type,
+            entity_name,
+            entity_id,
+            scope_type,
+            metadata_json
+          )
+          VALUES ($1::uuid, 'store_master_data.updated', 'ops.store', $2::uuid, 'company', $3::jsonb)
+        `,
+        [
+          auditActorUserId,
+          input.storeId,
+          JSON.stringify({
+            correlationId: RequestContextStore.getCorrelationId(),
+            requestedActorUserId: input.actorUserId,
+            storeType: input.storeType,
+            regionId: input.regionId,
+            status: input.status,
+            kpiImportEnabled: input.kpiImportEnabled,
+          }),
+        ],
+      );
+
+      return store;
+    });
+  }
+
   async getIntegrationSourceByCodeAndEntity(sourceCode: string, entityType: string) {
     const result = await this.databaseService.query<{
       integration_source_id: string;
@@ -1846,6 +2135,9 @@ export class IntegrationRepository {
     const result = await this.databaseService.query<{
       row_id: string;
       source_ref: string;
+      store_external_ref: string | null;
+      employee_external_ref: string | null;
+      payload_json: Record<string, unknown> | null;
       row_hash: string | null;
       raw_row_reference: string | null;
       normalized_status: string;
@@ -1856,6 +2148,9 @@ export class IntegrationRepository {
         SELECT
           ${metadata.rowIdColumn} AS row_id,
           ${metadata.sourceRefColumn} AS source_ref,
+          ${input.entityType === "kpi" ? "store_external_ref" : "NULL::text"} AS store_external_ref,
+          ${input.entityType === "kpi" ? "employee_external_ref" : "NULL::text"} AS employee_external_ref,
+          payload_json,
           ${input.entityType === "kpi" ? "row_hash" : "NULL::text"} AS row_hash,
           ${input.entityType === "kpi" ? "raw_row_reference" : "NULL::text"} AS raw_row_reference,
           normalized_status,
@@ -1983,6 +2278,43 @@ export class IntegrationRepository {
           requestedActorUserId: input.actorUserId,
           entityType: input.entityType,
           retryCount: input.retryCount,
+        }),
+      ],
+    );
+  }
+
+  async recordExternalIdMappingApproved(input: {
+    actorUserId: string;
+    integrationSourceId: string;
+    entityType: string;
+    externalId: string;
+    internalId: string;
+    internalTableName: string;
+  }) {
+    const auditActorUserId = await this.resolveAuditActorUserId(input.actorUserId);
+
+    await this.databaseService.query(
+      `
+        INSERT INTO audit.event_log (
+          actor_user_id,
+          event_type,
+          entity_name,
+          entity_id,
+          scope_type,
+          metadata_json
+        )
+        VALUES ($1::uuid, 'external_id_mapping.approved', 'stg.external_id_map', NULL, 'company', $2::jsonb)
+      `,
+      [
+        auditActorUserId,
+        JSON.stringify({
+          correlationId: RequestContextStore.getCorrelationId(),
+          requestedActorUserId: input.actorUserId,
+          integrationSourceId: input.integrationSourceId,
+          entityType: input.entityType,
+          externalId: input.externalId,
+          internalId: input.internalId,
+          internalTableName: input.internalTableName,
         }),
       ],
     );

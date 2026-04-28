@@ -83,6 +83,7 @@ describe("KpiImportNormalizationService", () => {
           upt: 3.2,
           ticketCount: 14,
           itemCount: 45,
+          ff: 120,
           netTutar: 30000,
         },
       ],
@@ -129,6 +130,14 @@ describe("KpiImportNormalizationService", () => {
           actualValue: 45,
           scopeType: "employee",
           rowHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+        }),
+        expect.objectContaining({
+          kpiCode: "FF",
+          sourceMetricId: "FF",
+          actualValue: 120,
+          scopeType: "store",
+          employeeExternalRef: null,
+          storeExternalRef: "M-10",
         }),
       ]),
     );

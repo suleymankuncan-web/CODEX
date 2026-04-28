@@ -19,12 +19,34 @@ import {
   getIntegrationLookups,
   getNeedsAction,
   getImportPayloadTemplate,
+  getStoreMasterData,
+  getStoreMasterLookups,
   retryImportBatch,
+  updateStoreMasterData,
   uploadPowerBiExport,
 } from '../features/integrations/api'
+import type { StoreMasterItem } from '../features/integrations/api'
 import { formatState, getErrorMessage, mapHealthTone } from '../lib/format'
 
 const PAGE_SIZE = 12
+type StoreMasterType = 'company' | 'franchise' | 'operator'
+type StoreMasterStatus = 'active' | 'inactive' | 'closed'
+
+function normalizeStoreType(value: string): StoreMasterType {
+  if (value === 'franchise' || value === 'operator') {
+    return value
+  }
+
+  return 'company'
+}
+
+function normalizeStoreStatus(value: string): StoreMasterStatus {
+  if (value === 'inactive' || value === 'closed') {
+    return value
+  }
+
+  return 'active'
+}
 
 export function IntegrationDashboardPage() {
   const [search, setSearch] = useState('')
@@ -39,10 +61,18 @@ export function IntegrationDashboardPage() {
   const [templateSourceSystem, setTemplateSourceSystem] = useState<'nebim_v3' | 'power_bi'>('nebim_v3')
   const [selectedTemplateSourceCode, setSelectedTemplateSourceCode] = useState('')
   const [powerBiSourceCode, setPowerBiSourceCode] = useState('')
+  const [powerBiPeriodType, setPowerBiPeriodType] = useState<'daily' | 'monthly' | 'custom'>('monthly')
   const [powerBiPeriodMonth, setPowerBiPeriodMonth] = useState(new Date().toISOString().slice(0, 7))
+  const [powerBiPeriodStart, setPowerBiPeriodStart] = useState(new Date().toISOString().slice(0, 10))
+  const [powerBiPeriodEnd, setPowerBiPeriodEnd] = useState(new Date().toISOString().slice(0, 10))
   const [personnelFile, setPersonnelFile] = useState<File | null>(null)
   const [storeFile, setStoreFile] = useState<File | null>(null)
+  const [storeMasterSearch, setStoreMasterSearch] = useState('')
+  const [storeMasterEnabledFilter, setStoreMasterEnabledFilter] = useState<'all' | 'enabled' | 'disabled'>('all')
+  const [storeMasterStatusFilter, setStoreMasterStatusFilter] = useState<'all' | StoreMasterStatus>('all')
+  const [storeMasterFeedback, setStoreMasterFeedback] = useState<string | null>(null)
   const deferredSearch = useDeferredValue(search)
+  const deferredStoreMasterSearch = useDeferredValue(storeMasterSearch)
   const queryClient = useQueryClient()
 
   const overviewQuery = useQuery({
@@ -70,6 +100,29 @@ export function IntegrationDashboardPage() {
   const lookupsQuery = useQuery({
     queryKey: ['integration-lookups'],
     queryFn: getIntegrationLookups,
+  })
+  const storeMasterQuery = useQuery({
+    queryKey: [
+      'store-master',
+      deferredStoreMasterSearch,
+      storeMasterEnabledFilter,
+      storeMasterStatusFilter,
+    ],
+    queryFn: () =>
+      getStoreMasterData({
+        q: deferredStoreMasterSearch || undefined,
+        enabled:
+          storeMasterEnabledFilter === 'all'
+            ? undefined
+            : storeMasterEnabledFilter === 'enabled',
+        status: storeMasterStatusFilter === 'all' ? undefined : storeMasterStatusFilter,
+        limit: 200,
+        offset: 0,
+      }),
+  })
+  const storeMasterLookupsQuery = useQuery({
+    queryKey: ['store-master-lookups'],
+    queryFn: getStoreMasterLookups,
   })
   const retryMutation = useMutation({
     mutationFn: retryImportBatch,
@@ -108,6 +161,41 @@ export function IntegrationDashboardPage() {
       setUploadedBatchId(null)
     },
   })
+  const updateStoreMasterMutation = useMutation({
+    mutationFn: updateStoreMasterData,
+    onSuccess: async (response) => {
+      setStoreMasterFeedback(response.command.message)
+      await queryClient.invalidateQueries({ queryKey: ['store-master'] })
+    },
+    onError: (error) => {
+      setStoreMasterFeedback(getErrorMessage(error))
+    },
+  })
+
+  const submitStoreMasterUpdate = (
+    store: StoreMasterItem,
+    patch: Partial<{
+      storeType: StoreMasterType
+      regionId: string
+      status: StoreMasterStatus
+      kpiImportEnabled: boolean
+    }>,
+  ) => {
+    const regionId = patch.regionId ?? store.regionId
+
+    if (!regionId) {
+      setStoreMasterFeedback('Store must have a region before it can be updated.')
+      return
+    }
+
+    updateStoreMasterMutation.mutate({
+      storeId: store.storeId,
+      storeType: patch.storeType ?? normalizeStoreType(store.storeType),
+      regionId,
+      status: patch.status ?? normalizeStoreStatus(store.status),
+      kpiImportEnabled: patch.kpiImportEnabled ?? store.kpiImportEnabled,
+    })
+  }
 
   const compatibleSources = useMemo(() => {
     return (lookupsQuery.data?.activeSources ?? []).filter(
@@ -194,6 +282,21 @@ export function IntegrationDashboardPage() {
   const meta = needsActionQuery.data?.meta
   const canGoBack = offset > 0
   const canGoForward = meta ? offset + PAGE_SIZE < meta.total : false
+  const storeTypeOptions = storeMasterLookupsQuery.data?.storeTypes ?? [
+    { value: 'company' as const, label: 'Company' },
+    { value: 'franchise' as const, label: 'Franchise' },
+    { value: 'operator' as const, label: 'Operator' },
+  ]
+  const storeStatusOptions = storeMasterLookupsQuery.data?.statuses ?? [
+    { value: 'active' as const, label: 'Active' },
+    { value: 'inactive' as const, label: 'Inactive' },
+    { value: 'closed' as const, label: 'Closed' },
+  ]
+  const regionOptions = storeMasterLookupsQuery.data?.regions ?? []
+  const isPowerBiPeriodValid =
+    powerBiPeriodType === 'monthly'
+      ? Boolean(powerBiPeriodMonth)
+      : Boolean(powerBiPeriodStart && powerBiPeriodEnd && powerBiPeriodEnd >= powerBiPeriodStart)
 
   return (
     <section className="page-stack">
@@ -370,6 +473,161 @@ export function IntegrationDashboardPage() {
         ) : null}
       </section>
 
+      <section className="panel" aria-label="Store master data">
+        <div className="panel-heading panel-heading-spread">
+          <div>
+            <div className="eyebrow">Master data</div>
+            <h3>Store master data</h3>
+            <p className="panel-copy">
+              Store type, region, status, and Excel KPI import scope are managed from one controlled surface.
+            </p>
+          </div>
+          <div className="toolbar-cluster">
+            <label className="search-field">
+              <span className="sr-only">Search stores</span>
+              <input
+                value={storeMasterSearch}
+                onChange={(event) => setStoreMasterSearch(event.target.value)}
+                placeholder="Search store or region"
+              />
+            </label>
+            <label className="control-select">
+              <span className="sr-only">Filter store import scope</span>
+              <select
+                value={storeMasterEnabledFilter}
+                onChange={(event) =>
+                  setStoreMasterEnabledFilter(event.target.value as 'all' | 'enabled' | 'disabled')
+                }
+              >
+                <option value="all">All stores</option>
+                <option value="enabled">Included</option>
+                <option value="disabled">Excluded</option>
+              </select>
+            </label>
+            <label className="control-select">
+              <span className="sr-only">Filter store status</span>
+              <select
+                value={storeMasterStatusFilter}
+                onChange={(event) =>
+                  setStoreMasterStatusFilter(event.target.value as 'all' | StoreMasterStatus)
+                }
+              >
+                <option value="all">All statuses</option>
+                {storeStatusOptions.map((status) => (
+                  <option key={status.value} value={status.value}>
+                    {status.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </div>
+
+        {storeMasterFeedback ? (
+          <div className="inline-state inline-state-accent">{storeMasterFeedback}</div>
+        ) : null}
+
+        {storeMasterQuery.isLoading || storeMasterLookupsQuery.isLoading ? (
+          <div className="inline-state inline-state-neutral">Loading store master data...</div>
+        ) : storeMasterQuery.isError ? (
+          <div className="inline-state inline-state-danger">{getErrorMessage(storeMasterQuery.error)}</div>
+        ) : storeMasterLookupsQuery.isError ? (
+          <div className="inline-state inline-state-danger">{getErrorMessage(storeMasterLookupsQuery.error)}</div>
+        ) : (storeMasterQuery.data?.items.length ?? 0) === 0 ? (
+          <EmptyState title="No stores matched this master data filter." copy="Clear the filters to inspect the store list." />
+        ) : (
+          <div className="scope-list">
+            {storeMasterQuery.data?.items.map((store) => (
+              <div className="scope-row" key={store.storeId}>
+                <div>
+                  <div className="queue-title">{store.storeName}</div>
+                  <div className="queue-meta">
+                    <span>
+                      {store.storeCode} / {store.regionName ?? 'No region'} / {normalizeStoreType(store.storeType)}
+                    </span>
+                    <span>{store.status}</span>
+                  </div>
+                </div>
+                <div className="scope-controls">
+                  <label className="field-block compact-field">
+                    <span>Type</span>
+                    <select
+                      aria-label={`${store.storeName} store type`}
+                      value={normalizeStoreType(store.storeType)}
+                      disabled={updateStoreMasterMutation.isPending}
+                      onChange={(event) =>
+                        submitStoreMasterUpdate(store, {
+                          storeType: event.target.value as StoreMasterType,
+                        })
+                      }
+                    >
+                      {storeTypeOptions.map((type) => (
+                        <option key={type.value} value={type.value}>
+                          {type.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="field-block compact-field">
+                    <span>Region</span>
+                    <select
+                      aria-label={`${store.storeName} region`}
+                      value={store.regionId ?? ''}
+                      disabled={updateStoreMasterMutation.isPending || regionOptions.length === 0}
+                      onChange={(event) =>
+                        submitStoreMasterUpdate(store, {
+                          regionId: event.target.value,
+                        })
+                      }
+                    >
+                      {regionOptions.length === 0 ? <option value="">No active regions</option> : null}
+                      {regionOptions.map((region) => (
+                        <option key={region.regionId} value={region.regionId}>
+                          {region.regionName}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="field-block compact-field">
+                    <span>Status</span>
+                    <select
+                      aria-label={`${store.storeName} status`}
+                      value={normalizeStoreStatus(store.status)}
+                      disabled={updateStoreMasterMutation.isPending}
+                      onChange={(event) =>
+                        submitStoreMasterUpdate(store, {
+                          status: event.target.value as StoreMasterStatus,
+                        })
+                      }
+                    >
+                      {storeStatusOptions.map((status) => (
+                        <option key={status.value} value={status.value}>
+                          {status.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="scope-toggle">
+                    <input
+                      aria-label={`${store.storeName} KPI import enabled`}
+                      type="checkbox"
+                      checked={store.kpiImportEnabled}
+                      disabled={updateStoreMasterMutation.isPending}
+                      onChange={(event) =>
+                        submitStoreMasterUpdate(store, {
+                          kpiImportEnabled: event.target.checked,
+                        })
+                      }
+                    />
+                    <span>{store.kpiImportEnabled ? 'Included' : 'Excluded'}</span>
+                  </label>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
       <section className="panel">
         <div className="panel-heading panel-heading-spread">
           <div>
@@ -399,13 +657,57 @@ export function IntegrationDashboardPage() {
           </label>
 
           <label className="field-block">
-            <span>Donem ayi</span>
-            <input
-              type="month"
-              value={powerBiPeriodMonth}
-              onChange={(event) => setPowerBiPeriodMonth(event.target.value)}
-            />
+            <span>Donem tipi</span>
+            <select
+              aria-label="Donem tipi"
+              value={powerBiPeriodType}
+              onChange={(event) =>
+                setPowerBiPeriodType(event.target.value as 'daily' | 'monthly' | 'custom')
+              }
+            >
+              <option value="monthly">Aylik snapshot</option>
+              <option value="daily">Gunluk veri</option>
+              <option value="custom">Ozel tarih araligi</option>
+            </select>
           </label>
+
+          {powerBiPeriodType === 'monthly' ? (
+            <label className="field-block">
+              <span>Donem ayi</span>
+              <input
+                type="month"
+                value={powerBiPeriodMonth}
+                onChange={(event) => setPowerBiPeriodMonth(event.target.value)}
+              />
+            </label>
+          ) : (
+            <>
+              <label className="field-block">
+                <span>Baslangic</span>
+                <input
+                  aria-label="Baslangic"
+                  type="date"
+                  value={powerBiPeriodStart}
+                  onChange={(event) => {
+                    setPowerBiPeriodStart(event.target.value)
+                    if (powerBiPeriodType === 'daily') {
+                      setPowerBiPeriodEnd(event.target.value)
+                    }
+                  }}
+                />
+              </label>
+              <label className="field-block">
+                <span>Bitis</span>
+                <input
+                  aria-label="Bitis"
+                  type="date"
+                  value={powerBiPeriodType === 'daily' ? powerBiPeriodStart : powerBiPeriodEnd}
+                  disabled={powerBiPeriodType === 'daily'}
+                  onChange={(event) => setPowerBiPeriodEnd(event.target.value)}
+                />
+              </label>
+            </>
+          )}
 
           <label className="field-block">
             <span>Personel export</span>
@@ -434,12 +736,21 @@ export function IntegrationDashboardPage() {
               uploadPowerBiMutation.isPending ||
               powerBiSources.length === 0 ||
               (!personnelFile && !storeFile) ||
-              !resolvedPowerBiSourceCode
+              !resolvedPowerBiSourceCode ||
+              !isPowerBiPeriodValid
             }
             onClick={() =>
               uploadPowerBiMutation.mutate({
                 sourceCode: resolvedPowerBiSourceCode,
-                periodMonth: powerBiPeriodMonth,
+                periodType: powerBiPeriodType,
+                periodMonth: powerBiPeriodType === 'monthly' ? powerBiPeriodMonth : undefined,
+                periodStart: powerBiPeriodType === 'monthly' ? undefined : powerBiPeriodStart,
+                periodEnd:
+                  powerBiPeriodType === 'monthly'
+                    ? undefined
+                    : powerBiPeriodType === 'daily'
+                      ? powerBiPeriodStart
+                      : powerBiPeriodEnd,
                 personnelFile,
                 storeFile,
               })
@@ -448,7 +759,7 @@ export function IntegrationDashboardPage() {
             {uploadPowerBiMutation.isPending ? 'Yukleniyor...' : 'Power BI export yukle'}
           </button>
           <span className="inline-state inline-state-neutral">
-            Garaj / e-store filtreleri henüz uygulanmıyor. Bu geçici upload ham veriyi olduğu gibi içeri alır.
+            Personel pozitif satış brüt performans, mağaza cirosu net hedef performansı olarak işlenir.
           </span>
         </div>
 
@@ -464,10 +775,14 @@ export function IntegrationDashboardPage() {
         ) : null}
 
         {uploadPowerBiMutation.data?.data.summary ? (
-          <div className="key-grid">
+          <>
+            <div className="key-grid">
             <div className="key-item">
               <span>Donem</span>
-              <strong>{uploadPowerBiMutation.data.data.summary.periodMonth}</strong>
+              <strong>
+                {uploadPowerBiMutation.data.data.summary.periodMonth ??
+                  `${uploadPowerBiMutation.data.data.summary.periodStart} / ${uploadPowerBiMutation.data.data.summary.periodEnd}`}
+              </strong>
             </div>
             <div className="key-item">
               <span>Canonical KPI satiri</span>
@@ -482,14 +797,54 @@ export function IntegrationDashboardPage() {
               <strong>{uploadPowerBiMutation.data.data.summary.ignoredPersonnelRows}</strong>
             </div>
             <div className="key-item">
+              <span>Kapsam disi personel satiri</span>
+              <strong>{uploadPowerBiMutation.data.data.summary.scopeExcludedPersonnelRows}</strong>
+            </div>
+            <div className="key-item">
+              <span>Pozitif personel satis satiri</span>
+              <strong>{uploadPowerBiMutation.data.data.summary.personnelGrossSalesRows}</strong>
+            </div>
+            <div className="key-item">
+              <span>Eksi personel satiri</span>
+              <strong>{uploadPowerBiMutation.data.data.summary.negativePersonnelRowsIgnored}</strong>
+            </div>
+            <div className="key-item">
               <span>Okunan magaza satiri</span>
               <strong>{uploadPowerBiMutation.data.data.summary.storeRowsRead}</strong>
             </div>
             <div className="key-item">
-              <span>Mapping modu</span>
-              <strong>{uploadPowerBiMutation.data.data.summary.temporaryMappingMode}</strong>
+              <span>Kapsam disi magaza satiri</span>
+              <strong>{uploadPowerBiMutation.data.data.summary.scopeExcludedStoreRows}</strong>
             </div>
-          </div>
+            <div className="key-item">
+              <span>Mapping modu</span>
+              <strong>{uploadPowerBiMutation.data.data.summary.mappingMode}</strong>
+            </div>
+            </div>
+
+            {uploadPowerBiMutation.data.data.summary.reconciliation.items.length > 0 ? (
+              <div className="key-grid" aria-label="Power BI reconciliation summary">
+                <div className="key-item">
+                  <span>Karsilastirilan magaza</span>
+                  <strong>
+                    {uploadPowerBiMutation.data.data.summary.reconciliation.comparedStoreCount}
+                  </strong>
+                </div>
+                <div className="key-item">
+                  <span>Dengeli magaza</span>
+                  <strong>
+                    {uploadPowerBiMutation.data.data.summary.reconciliation.balancedStoreCount}
+                  </strong>
+                </div>
+                <div className="key-item">
+                  <span>Uyari veren magaza</span>
+                  <strong>
+                    {uploadPowerBiMutation.data.data.summary.reconciliation.warningStoreCount}
+                  </strong>
+                </div>
+              </div>
+            ) : null}
+          </>
         ) : null}
       </section>
 

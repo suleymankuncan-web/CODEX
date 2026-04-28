@@ -13,11 +13,11 @@ Rule:
 
 ## Snapshot
 
-Date: 27 April 2026
+Date: 28 April 2026
 
 Current count:
 
-- Closed active debts: 34
+- Closed active debts: 37
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -62,6 +62,9 @@ These are counted as paid because they have implementation or documentation evid
 32. Environment Variable Inventory + Deployment Runbook Skeleton V1
 33. Environment Drift Guard V1
 34. Production/Staging Incident Response Skeleton V1
+35. Personnel Management V1
+36. Personnel Request Return/Resubmit V1
+37. Excel KPI Import V1
 
 ## Superseded Before Overbuilding
 
@@ -203,6 +206,16 @@ Environment Drift Guard V1 is implemented. Root script tests now extract backend
 
 Production/Staging Incident Response Skeleton V1 is implemented. Auth, import/data quality, and deploy/release failures now have a guarded operator skeleton covering severity, ownership, triage, sanitized evidence, rollback/forward-fix/No-Go decisions, JSON source holding rules, incident notes, and post-incident review.
 
+Personnel Management V1 is implemented. Store managers can submit seller-code/new-personnel requests and offboarding requests from assigned stores, while HR/Admin remains the official approval point. Seller-code approval creates employee and active assignment records. Offboarding approval terminates the employee, closes the active assignment, and writes turnover event evidence. The canonical plan is `docs/plans/personnel-management-v1.md`.
+
+Personnel Request Return/Resubmit V1 is implemented. HR/Admin can return seller-code and offboarding requests with a required note, store managers can edit the returned request on `/store/approvals`, and resubmission keeps the same request id while moving the row back to `pending_hr_approval`. Return/resubmit does not mutate employee, assignment, or turnover records; audit events record rejected and resubmitted transitions.
+
+Personnel Master Data Bootstrap V1 is now planned, but not counted as a closed active debt until implementation and verification exist. The decision is to baseline stores first, then personnel, using staging/review/promote and not direct Excel-to-live-table mutation. Reference: `docs/plans/personnel-master-data-bootstrap-v1.md`.
+
+Project MVP Focus Map is recorded as a consolidation decision, not a new closed debt item. The decision is to keep the project, avoid restarting, narrow near-term work to MVP readiness, and prioritize Excel KPI Import V1 as the next local real-data proof. Reference: `docs/plans/project-mvp-focus-map-2026-04-28.md`.
+
+Excel KPI Import V1 is implemented and verified. Personnel KPI uses positive gross sales only, store KPI uses scoped store net sales, `FF` is a first-class base metric, period `ATV`, `UPT`, and `CR` are recomputed from summed base metrics, negative personnel rows stay as reconciliation evidence, and duplicate-safe re-upload uses deterministic source batch ids. References: `docs/plans/excel-kpi-import-v1.md`, `docs/superpowers/plans/2026-04-28-excel-kpi-import-v1.md`.
+
 UI status note:
 
 - A production UI/design-system strategy note now exists.
@@ -222,6 +235,7 @@ Current repo hygiene is not counted as active debt in this ledger because:
 - the 27 April 2026 env/deployment runbook pass aligned committed env examples with production-relevant variables and PKCE response type.
 - the 27 April 2026 environment drift guard made env inventory/example alignment dynamic instead of relying only on a static checklist.
 - the 27 April 2026 incident response skeleton linked auth/import/deploy failures to severity, evidence, rollback, and No-Go decisions before real staging pressure exists.
+- the 28 April 2026 Excel KPI Import V1 implementation added gross-personnel/net-store import behavior, scoped store import gating, reconciliation evidence, and duplicate-safe upload identity.
 
 Still monitor:
 
@@ -262,4 +276,4 @@ The next local backend candidate should be chosen through the intake gate. Sourc
 
 Recommended local candidate if external evidence is still unavailable:
 
-- If external evidence is still unavailable, consider an evidence index skeleton for sanitized release/smoke/incident notes; otherwise wait for real staging/JSON source details before opening more local production paperwork.
+- Write the Excel KPI Import operator runbook so monthly/daily/custom uploads, reconciliation review, unmapped identity cleanup, retry/materialize decisions, and sanitized evidence capture are repeatable before more periods are imported.

@@ -19,15 +19,15 @@ SET
 
 INSERT INTO ops.store (store_id, company_id, region_id, store_code, store_name, store_type, open_date)
 VALUES
-    ('20000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'IST-001', 'Istanbul Kadikoy', 'flagship', DATE '2023-01-01'),
-    ('20000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'IST-002', 'Istanbul Besiktas', 'standard', DATE '2023-03-01'),
-    ('20000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000002', 'IZM-001', 'Izmir Karsiyaka', 'standard', DATE '2023-05-01')
+    ('20000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'IST-001', 'Istanbul Kadikoy', 'company', DATE '2023-01-01'),
+    ('20000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'IST-002', 'Istanbul Besiktas', 'company', DATE '2023-03-01'),
+    ('20000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000002', 'IZM-001', 'Izmir Karsiyaka', 'company', DATE '2023-05-01')
 ON CONFLICT (store_code) DO NOTHING;
 
 INSERT INTO ops.store (store_id, company_id, region_id, store_code, store_name, store_type, open_date, timezone)
 VALUES
-    ('00000000-0000-0000-0000-000000000100', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000010', 'STORE100', 'IstinyePark Demo Store', 'flagship', DATE '2026-04-20', 'Europe/Istanbul'),
-    ('00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000010', 'DEMO-101', 'Demo Store 101', 'standard', DATE '2026-01-01', 'Europe/Istanbul')
+    ('00000000-0000-0000-0000-000000000100', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000010', 'STORE100', 'IstinyePark Demo Store', 'company', DATE '2026-04-20', 'Europe/Istanbul'),
+    ('00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000010', 'DEMO-101', 'Demo Store 101', 'company', DATE '2026-01-01', 'Europe/Istanbul')
 ON CONFLICT (store_code) DO UPDATE
 SET
     region_id = EXCLUDED.region_id,
@@ -247,7 +247,10 @@ VALUES
     ('b0000000-0000-0000-0000-000000000013', 'ATV', 'Average Ticket Value', 'currency', 'currency', 'avg', 'multi_scope', NULL, 'higher_is_better', TRUE),
     ('b0000000-0000-0000-0000-000000000014', 'UPT', 'Units Per Ticket', 'ratio', 'count', 'avg', 'multi_scope', NULL, 'higher_is_better', TRUE),
     ('b0000000-0000-0000-0000-000000000015', 'BM_CHECKLIST', 'BM Checklist', 'percentage', 'ratio', 'avg', 'store', NULL, 'higher_is_better', TRUE),
-    ('b0000000-0000-0000-0000-000000000016', 'VM_CHECKLIST', 'VM Checklist', 'percentage', 'ratio', 'avg', 'store', NULL, 'higher_is_better', TRUE)
+    ('b0000000-0000-0000-0000-000000000016', 'VM_CHECKLIST', 'VM Checklist', 'percentage', 'ratio', 'avg', 'store', NULL, 'higher_is_better', TRUE),
+    ('b0000000-0000-0000-0000-000000000017', 'ITEM_COUNT', 'Item Count', 'count', 'count', 'sum', 'multi_scope', NULL, 'higher_is_better', TRUE),
+    ('b0000000-0000-0000-0000-000000000018', 'TICKET_COUNT', 'Ticket Count', 'count', 'count', 'sum', 'multi_scope', NULL, 'higher_is_better', TRUE),
+    ('b0000000-0000-0000-0000-000000000019', 'FF', 'Footfall', 'count', 'count', 'sum', 'store', NULL, 'higher_is_better', TRUE)
 ON CONFLICT (kpi_code) DO NOTHING;
 
 WITH demo_personnel_kpi_actual (employee_id, store_id, kpi_code, actual_value) AS (

@@ -2617,7 +2617,7 @@ Dogrulama:
 
 Debt ledger:
 
-- Closed active debts: 34
+- Closed active debts: 36
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -2625,6 +2625,216 @@ Debt ledger:
 - Silent untracked quality debt in the active gate: 0
 
 Siradaki mantikli adim: JSON sample payload gelirse source mapping spec'e gecmek; staging/hosting bilgileri gelirse runbook'u target-specific fill-in note'a cevirmek. Hicbiri yoksa sanitized release/smoke/incident evidence index skeleton dusunulebilir, ama yeni paperwork acmadan once gercek ihtiyac var mi diye kontrol edilmeli.
+
+## Son Personnel Management V1
+
+27 Nisan 2026 itibariyla personel master-data yasam dongusunun ilk kontrollu V1 zemini tamamlandi ve dokumante edildi.
+
+Yeni dokuman:
+
+- `docs/plans/personnel-management-v1.md`
+
+Kapsam:
+
+- Store manager satici kodu / yeni personel talebi acar.
+- HR/Admin onay ekraninda resmi satici kodunu girer.
+- Onay `ops.employee` ve aktif `ops.employee_assignment_history` olusturur.
+- Store manager aktif personel icin cikis/offboarding talebi acar.
+- HR/Admin offboarding talebini onaylar.
+- Onay `ops.employee.employment_status = terminated`, `termination_date`, assignment `end_date`, assignment `inactive` ve `ops.turnover_event` kaydini olusturur.
+- HR/Admin satici kodu ve offboarding taleplerini zorunlu not ile iade edebilir.
+- Store manager iade edilen talebi `/store/approvals` uzerinden forma yukleyip ayni request id ile tekrar gonderebilir.
+- Resubmit talebi tekrar `pending_hr_approval` durumuna alir.
+
+Guvenlik ve sahiplik kurallari:
+
+- Store manager resmi satici kodu veya resmi employee status alanini direkt mutate etmez.
+- Store manager sadece `actionScope.assignedStoreIds` icindeki magazalar icin talep acar.
+- HR/Admin resmi karar noktasi olarak kalir.
+- TC tam hali response'a geri donmez; sistem hash ve son 4 hane yaklasimini kullanir.
+- Request tablolari workflow/evidence kaydidir; canli personel kaydi `ops.employee` ve assignment history uzerindedir.
+- Return/resubmit employee, assignment veya turnover kaydi mutate etmez.
+- Seller-code resubmit tam TC bilgisini yeniden ister; tam TC sistemden geri dondurulmez.
+
+V1 disi:
+
+- store transfer akisi
+- bulk personel operasyonlari
+- external HR/source sync
+- belge yukleme ve bordro sureci
+
+Dogrulama:
+
+- Backend targeted offboarding testi gecti: `test/integration/workforce-offboarding.e2e-spec.ts` -> 5 test.
+- Seller-code targeted testi gecti: `test/integration/workforce-seller-code.e2e-spec.ts` -> 7 test.
+- Frontend targeted admin/store workforce testi gecti: `admin-inbox.spec.ts` + `store-surfaces.spec.ts` -> 13 Playwright test.
+- Official root release gate gecti: root 28 script test, backend 43 suite / 306 test, frontend 33 Playwright test, buildler ve `npm audit --omit=dev`.
+
+Siradaki mantikli adim tamamlandi: Elimizdeki mevcut magaza/personel listeleri ve satici kodlari icin kontrollu master-data bootstrap/import plani hazirlandi.
+
+## Son Personnel Master Data Bootstrap V1 Plan
+
+27 Nisan 2026 itibariyla mevcut magaza/personel listeleri ve satici kodlari icin kontrollu baslangic veri yukleme karari dokumante edildi.
+
+Yeni dokuman:
+
+- `docs/plans/personnel-master-data-bootstrap-v1.md`
+
+Karar:
+
+- Bu is gunluk KPI/satis importu degil; resmi magaza/personel kimliklerini sisteme ilk kez kontrollu alma isidir.
+- Once magaza baseline, sonra personel baseline ilerlenir.
+- `ops.store.store_type` is etiketleri `Sirket`, `Franchise`, `Isletme`; teknik degerler `company`, `franchise`, `operator` olarak kalir.
+- `ops.store.kpi_import_enabled` hangi magazalarin KPI import kapsaminda oldugunu belirleyen ana kontrol alanidir.
+- `ops.employee.external_employee_ref` resmi satici kodu kimligi olarak kullanilir.
+- `ops.employee_assignment_history` aktif magaza/pozisyon atamasinin kaynagidir.
+- Excel veya liste satirlari direkt canli tabloya basilmamalidir; staging/review/promote akisi kullanilmalidir.
+- Garaj/cadir/ilgilenilmeyen magazalar tanimli/aktif import kapsaminda degilse skorlanmaz.
+- Bilinmeyen magaza/personel satirlari `unmapped_store` / `unmapped_employee` gibi review kategorilerine dusmeli, yanlis skor yazmamalidir.
+
+CODEX durust yorum:
+
+- Bu adim gosterisli degil ama projenin omurgasidir.
+- En buyuk risk kirli ilk veriyi resmi tabloya hizlica yazip ileride KPI, prim, ranking, turnover ve request akisini bozmaktir.
+- Saglam yol staging, validation, admin review ve audit evidence ile promote etmektir.
+
+Siradaki mantikli adim: Gercek baseline dosya seklini inceleyip V1 store baseline staging + validation icin en kucuk implementasyon planini cikarmak.
+
+## Son Mart Excel Dosya Inceleme Notu
+
+27 Nisan 2026 itibariyla kullanicinin ilettigi iki Excel dosyasi incelendi:
+
+- `C:\Users\suley\Downloads\MAĞAZA TABLO.xlsx`
+- `C:\Users\suley\Downloads\PERSONEL TABLO.xlsx`
+
+Sonuc:
+
+- Bu dosyalar master-data baseline dosyasi degil; Mart KPI snapshot dosyalari.
+- `MAĞAZA TABLO.xlsx` kolonlari: magaza adi, hedef, ciro, gerceklesen %, satis adedi, FF, CR, ATV, fatura sayisi, UPT, OSF, gecen yil ciro, ciro artis.
+- `PERSONEL TABLO.xlsx` kolonlari: adi, magaza adi, P. satis adeti, satis tutari, ciro payi, magaza cirosu, P.ATV, P.UPT.
+- Dosyalarda magaza kodu, bolge, magaza tipi, KPI import enabled flag, satici kodu, pozisyon, ise giris tarihi ve employment status yok.
+- Bu nedenle bu dosyalar `ops.store` / `ops.employee` resmi master-data bootstrap icin yeterli degildir.
+- Bu dosyalar Excel KPI Import V1 icin kullanilabilir.
+- 185 ortak magaza adinda personel dosyasi net satisi ile magaza dosyasi ciro degeri birebir reconcile oluyor.
+- Marmara Park acceptance case dogrulandi: personel pozitif satis toplami + personel negatif hareketler = magaza net ciro.
+- Is kuralı korunmali: personel KPI pozitif brut satistan beslenir; magaza KPI magaza tablosundaki net cirodan beslenir; personel eksi satirlari magazaya ikinci kez dusulmez.
+
+Siradaki mantikli adim: Excel KPI Import V1 mapping/guard implementasyon planina gecmek. Master-data bootstrap ise gercek store/personnel baseline listesi gelene kadar beklemeli.
+
+## Son Project MVP Focus Map
+
+28 Nisan 2026 itibariyla proje icin sifirdan baslama yerine konsolidasyon karari dokumante edildi.
+
+Yeni dokuman:
+
+- `docs/plans/project-mvp-focus-map-2026-04-28.md`
+
+Karar:
+
+- Proje sifirdan baslatilmamali.
+- Mevcut rahatsizlik mimari cokme degil; cok fazla alanin ayni anda gorunur hale gelmesinden dogan odak kalabaligi.
+- Dogru hamle yeni buyuk modul acmak degil, MVP odagina daralmak.
+- Korumaya alinacak cekirdek: auth/scope, action scope, release gate, KPI/import lineage, data quality, snapshot/config versioning, personnel workflows, operational feed.
+- MVP odagi: gercek Excel KPI Import V1, store/personnel performans ekranlari, personnel lifecycle V1, admin import kalite gorunurlugu, root release gate.
+- Bekletilecekler: full UI redesign, full EN/TR sweep, tournament derinligi, push/social ozellikleri, global audit feed.
+- Dis bagimlilikta kalanlar: real staging IdP evidence ve real JSON source adapter.
+
+CODEX durust yorum:
+
+- Restart duygusal olarak temiz hissettirebilir ama teknik olarak israf olur.
+- Proje iyi durumda oldugu icin degil, kanit ve sinir tutmayi ogrendigi icin devam etmeye deger.
+- Sonraki 2-4 hafta hiz degil, keskin odak donemi olmali.
+
+Siradaki mantikli adim: Excel KPI Import V1 implementasyon planini Mart dosyalari uzerinden hazirlamak.
+
+## Son Excel KPI Import V1 Formula Decision
+
+28 Nisan 2026 itibariyla Excel KPI Import V1 icin donemsel oran hesaplama kurali kilitlendi.
+
+Yeni dokuman:
+
+- `docs/plans/excel-kpi-import-v1.md`
+
+Kullanici mevcut sirket sisteminden 1 Mart, 2 Mart ve iki gunluk filtre degerlerini kontrol etti. Sonuc:
+
+- Sistem gunluk ATV/UPT degerlerinin duz ortalamasini almiyor.
+- Donem ATV ve UPT degerlerini toplam baz metriklerden yeniden hesapliyor.
+- CR is kurali: `Fatura Sayisi / FF x 100`.
+
+Kilitli formuller:
+
+- `ATV = toplam satis tutari / toplam fatura sayisi`
+- `UPT = toplam satis adedi / toplam fatura sayisi`
+- `CR% = toplam fatura sayisi / toplam FF x 100`
+
+Import/donem kurallari:
+
+- Gunluk upload ayni gun icin `periodStart = periodEnd` olur.
+- 4 gunluk upload `custom` period olarak saklanir; dosyada gun kirilimi yoksa gunluk kayitlara bolunmez.
+- Gunluk ranking/closure gunluk upload'lardan beslenmelidir.
+- Ayni source/period/scope/metric tekrar yuklenirse eklenmez; onceki deger update/replace edilir.
+- Donem gorunumunde additive metrikler toplanir; ATV/UPT/CR toplam baz metriklerden yeniden hesaplanir.
+- Gunluk oran ortalamasi ancak acikca "daily average" olarak etiketlenirse ayri bir gorunum olabilir; resmi donem KPI degildir.
+
+Siradaki mantikli adim tamamlandi: Excel KPI Import V1 implementasyon plani bu karar uzerinden yazildi.
+
+## Son Excel KPI Import V1 Implementation Plan
+
+28 Nisan 2026 itibariyla Excel KPI Import V1 icin uygulanabilir kod plani hazirlandi.
+
+Yeni dokuman:
+
+- `docs/superpowers/plans/2026-04-28-excel-kpi-import-v1.md`
+
+Plan kapsami:
+
+- `FF` KPI metrigini birinci sinif base metric yapmak.
+- Store Excel parserini enabled local store scope ile sinirlamak.
+- Store `NET_SALES`, `ITEM_COUNT`, `TICKET_COUNT`, `FF`, `ATV`, `UPT`, `CR`, `TARGET_ACHIEVEMENT` canonical satirlarini uretmek.
+- Store `ATV`, `UPT`, `CR` degerlerini kaynak oran kolonlarini ortalamadan base toplamlar uzerinden yeniden hesaplamak.
+- Personnel Excel tarafinda sadece pozitif `Satis Tutari` satirlarini employee gross sales olarak almak.
+- Negatif personnel satirlarini employee performansindan dusmeden reconciliation evidence olarak tutmak.
+- Unknown store/personnel kimliklerini gecici kayit acmadan external-id mapping review akimina dusurmek.
+- Deterministic exact-payload `sourceBatchId`/`idempotencyKey` ile ayni dosya tekrar yuklemede cift sayimi engellemek.
+- Admin upload UI icin monthly/daily/custom period kontrollerini eklemek.
+- Backend targeted tests, frontend build/e2e, backend/frontend/root `check:release` kapilarini final kabul sarti yapmak.
+
+CODEX durust yorum:
+
+- Bu plan dogru next step. Excel parsingden daha kritik olan sey store/personnel skor semantigini bozmamak.
+- Plan isimden resmi employee/store yaratmiyor; isimleri sadece mapping candidate olarak tutuyor.
+- Store net satis ile personnel brut satis ayrimini korudugu icin prim/hedef mantigi karismaz.
+
+Siradaki mantikli adim tamamlandi: Excel KPI Import V1 implementasyonu tamamlandi ve root release gate gecti.
+
+## Son Excel KPI Import V1 Implementation Result
+
+28 Nisan 2026 itibariyla Excel KPI Import V1 kodu tamamlandi.
+
+Eklenenler:
+
+- `FF` first-class KPI base metric olarak eklendi.
+- `db/migrations/034_ff_kpi_definition.sql` eklendi.
+- Store Excel import artik local master datada KPI import enabled olan magazalarla sinirli.
+- Store canonical KPI satirlari: `NET_SALES`, `ITEM_COUNT`, `TICKET_COUNT`, `FF`, `ATV`, `UPT`, `CR`, `TARGET_ACHIEVEMENT`.
+- Store `ATV`, `UPT`, `CR` artik kaynak oran kolonlarindan kopyalanmiyor; base toplamlar uzerinden yeniden hesaplaniyor.
+- Personnel KPI satirlari sadece pozitif brut satislardan uretiliyor.
+- Personnel negatif satirlari employee performansindan dusulmuyor.
+- Personnel negatif satirlari reconciliation evidence icinde tutuluyor.
+- Personnel `TICKET_COUNT`, `ATV`, `UPT` sadece `P.ATV` ve `P.UPT` denominator hesabi tutarliysa uretiliyor.
+- Marmara Park acceptance case testte kilitlendi: personnel pozitif satis + personnel negatif hareketler = store net ciro.
+- Re-upload icin deterministic exact-payload `sourceBatchId` ve `idempotencyKey` eklendi.
+- Admin Excel upload UI monthly/daily/custom period secimini destekliyor.
+
+Dogrulama:
+
+- Backend targeted: `npm.cmd test -- src/modules/integration/application/power-bi-export-upload.service.spec.ts src/modules/integration/application/kpi-import-normalization.service.spec.ts test/integration/import-batch.e2e-spec.ts --runInBand` -> 3 suite / 43 test.
+- Frontend targeted: `npm.cmd run build`; `npm.cmd run test:e2e -- e2e/integration-surfaces.spec.ts` -> build + 3 Playwright test.
+- Root release: `npm.cmd run check:release` -> root script tests, backend lint/test/build/audit, frontend lint/script/build/e2e/audit.
+- Backend full test sonucu: 43 suite / 309 test.
+- Frontend full e2e sonucu: 34 Playwright test.
+
+Siradaki mantikli adim: Gercek Mart dosyalari yuklenmeden once import operator runbookunu yazmak: upload -> summary kontrol -> unmapped store/personnel mapping -> retry/materialize -> reconciliation kontrol. Bu, veri yukleme isini tek seferlik deneme degil tekrar edilebilir surec yapar.
 
 ## Onemli Dosyalar
 
@@ -2735,8 +2945,11 @@ Planlar:
 - `docs/plans/audit-event-taxonomy-guard-v1.md`
 - `docs/plans/data-quality-guard-v1.md`
 - `docs/plans/import-batch-quality-summary-v1.md`
+- `docs/plans/excel-kpi-import-v1.md`
 - `docs/plans/project-wide-scan-2026-04-27.md`
+- `docs/plans/project-mvp-focus-map-2026-04-28.md`
 - `docs/plans/no-empty-scope-repository-contract-pass-2026-04-27.md`
+- `docs/plans/personnel-master-data-bootstrap-v1.md`
 - `docs/plans/production-environment-readiness-checklist.md`
 - `scripts/production-readiness-checklist-contract.test.mjs`
 - `docs/plans/environment-variable-inventory.md`
