@@ -3103,6 +3103,36 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: Mobile Checklist Today V1 icin urun kararini netlestirmek. Ilk soru: mobilde checklist'i kim "yapar", kim sadece "tamamlanan sonucu onaylar"?
 
+## Son Mobile Checklist Today V1 Design
+
+28 Nisan 2026 itibariyla Mobile Checklist Today V1 tasarim kararlari kilitlendi.
+
+Yeni dokuman:
+
+- `docs/superpowers/specs/2026-04-28-mobile-checklist-today-v1-design.md`
+
+Kararlar:
+
+- `HR_ADMIN` checklist sablonunu ve agirliklarini yonetir.
+- Sablon/item/agirlik degisirse yeni template version yayinlanir; gecmis tamamlanmis checklist skorlarina geriye donuk etki etmez.
+- Agirlik toplami `100` olmak zorunda.
+- V1 aktif kullanimda bolge muduru maddeleri `0-10` puanlar; response type gelecekte esnek kalir.
+- `REGION_MANAGER` kendisine atanmis magazalar icin checklist baslatir, taslak kaydeder, devam eder ve tamamlar.
+- Durum modeli: `planned`/Taslak, `in_progress`/Devam ediyor, `completed`/Tamamlandi, future `cancelled`/cancel with reason.
+- `REGION_MANAGER` tamamla dedigi anda skor gecerlidir ve aylik skora dahil olur.
+- `STORE_MANAGER` sadece `Kabul ettim / Gordum` acknowledgement verir; skor onayi, red veya bekletme yetkisi yoktur.
+- Ayni magazaya ayni ay icinde birden fazla checklist yapilabilir.
+- Aylik checklist sonucu, o ay tamamlanan ziyaret skorlarinin aritmetik ortalamasidir ve visit count gorunur.
+- Completed checklist kilitlidir; V1'de duzenleme/silme yoktur. Hata olursa yeni ziyaret kaydi acilir; future `cancel with reason` ayri fazdir.
+
+CODEX durust yorum:
+
+- Bu akista en dogru ayrim scoring authority ile acknowledgement authority'nin ayrilmasi. Bolge muduru saha skorunu verir; magaza muduru sonucu teslim alir.
+- Coklu ziyaret serbestligi saha gercegine uygun; aylik ortalama ve ziyaret sayisi bunu dagitmadan raporlar.
+- Completed-lock karari gecmis skorlarin sessizce degismesini engeller.
+
+Siradaki mantikli adim: Kullanici bu yazili spec'i onaylarsa Mobile Checklist Today V1 implementation planini yazmak. Plan backend contract testleriyle baslamali: template weight total `100`, region-manager assigned-store scope, draft/resume/complete lock, store-manager acknowledgement ve monthly average.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:
@@ -3239,6 +3269,7 @@ Planlar:
 - `docs/plans/mobile-api-bff-endpoint-inventory-v1.md`
 - `docs/superpowers/plans/2026-04-28-production-ready-migration-system-v1.md`
 - `docs/superpowers/specs/2026-04-28-mobile-auth-session-v1-design.md`
+- `docs/superpowers/specs/2026-04-28-mobile-checklist-today-v1-design.md`
 - `docs/superpowers/plans/2026-04-28-mobile-auth-session-v1.md`
 - `docs/superpowers/plans/2026-04-28-mobile-api-bff-endpoint-inventory-v1.md`
 - `docs/plans/project-wide-scan-2026-04-27.md`

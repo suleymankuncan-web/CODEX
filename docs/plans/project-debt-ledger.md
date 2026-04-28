@@ -17,7 +17,7 @@ Date: 28 April 2026
 
 Current count:
 
-- Closed active debts: 43
+- Closed active debts: 44
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -71,6 +71,7 @@ These are counted as paid because they have implementation or documentation evid
 41. Mobile Auth/Session V1 P0
 42. Mobile API/BFF Endpoint Inventory V1
 43. Checklist Acknowledgement Canonical Schema Alignment V1
+44. Mobile Checklist Today V1 Design
 
 Production-Ready Migration System V1 is counted as paid because SQL migrations are tracked in `audit.schema_migration`, checksum drift is rejected, failed runs are recorded with error evidence, the HTTP migration endpoint is disabled in production, and `npm.cmd run db:migrate` is the approved CLI/CI migration path.
 
@@ -81,6 +82,8 @@ Mobile Auth/Session V1 P0 is counted as paid because `ops.mobile_device_session`
 Mobile API/BFF Endpoint Inventory V1 is counted as paid because the existing mobile-relevant API surface is mapped, broad Mobile BFF creation is intentionally blocked, first aggregate candidates are named, and root script tests guard the boundary. Reference: `docs/plans/mobile-api-bff-endpoint-inventory-v1.md`.
 
 Checklist Acknowledgement Canonical Schema Alignment V1 is counted as paid because the existing `ops.checklist_acknowledgement` migration and backend repository usage are now represented in canonical `db/schema.sql`, and a backend schema contract test guards against drift.
+
+Mobile Checklist Today V1 Design is counted as paid because HR template ownership, region-manager scoring, store-manager acknowledgement, multiple monthly visits, weighted scoring, completed-lock behavior, and future cancel-with-reason boundary are documented and guarded by root script tests. Reference: `docs/superpowers/specs/2026-04-28-mobile-checklist-today-v1-design.md`.
 
 ## Superseded Before Overbuilding
 
@@ -259,6 +262,7 @@ Current repo hygiene is not counted as active debt in this ledger because:
 - the 28 April 2026 Mobile Auth/Session V1 P0 added backend-owned mobile device sessions without taking refresh-token ownership from the IdP.
 - the 28 April 2026 Mobile API/BFF Endpoint Inventory V1 documented endpoint reuse and stopped a broad mobile BFF from opening before a real screen contract exists.
 - the 28 April 2026 Checklist Acknowledgement Canonical Schema Alignment V1 aligned the existing checklist acknowledgement migration/code path with canonical schema before mobile checklist expansion.
+- the 28 April 2026 Mobile Checklist Today V1 Design locked HR template versioning, region-manager visit scoring, store-manager acknowledgement, multi-visit monthly averaging, and completed-lock behavior before implementation.
 
 Still monitor:
 
@@ -301,4 +305,4 @@ The next local backend candidate should be chosen through the intake gate. Sourc
 
 Recommended local candidate if external evidence is still unavailable:
 
-- Choose the first mobile pilot read surface. If dashboard/home comes first, plan Mobile Home Summary V1 around a small payload. If daily operation comes first, interview and plan Mobile Checklist Today V1 before coding.
+- If the Mobile Checklist Today V1 written spec is approved, write the implementation plan. Start implementation later with backend contract tests for template weights, region-manager assigned-store scope, draft/resume/complete lock, store-manager acknowledgement, and monthly average behavior.
