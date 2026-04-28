@@ -2966,6 +2966,45 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: Mobile Auth/Session V1 planina gecmek; access token, refresh token, device session, logout/revoke, push token storage ve mobile BFF siniri koddan once netlestirilmeli.
 
+## Son Mobile Auth/Session V1 Design And Plan
+
+28 Nisan 2026 itibariyla Mobile Auth/Session V1 icin koddan once tasarim ve implementation plan hazirlandi.
+
+Yeni dokumanlar:
+
+- `docs/superpowers/specs/2026-04-28-mobile-auth-session-v1-design.md`
+- `docs/superpowers/plans/2026-04-28-mobile-auth-session-v1.md`
+
+Kararlar:
+
+- Mobile BFF bu fazin disinda kalacak.
+- Refresh token V1'de backend tarafinda tutulmayacak; IdP-owned kalacak.
+- Backend refresh token broker ileride gerekirse sadece token hash saklayacak, plaintext tutmayacak.
+- Refresh token reuse detection ileride backend broker fazina girerse security event sayilacak ve default karar tum mobil session'lari revoke etmek olacak.
+- Backend mobile device session kaydi tutacak.
+- Token claim'e tek basina guvenilmeyecek; DB role/read/action assignment kontrolu devam edecek.
+- Push token ayri tabloya baglanacak; P0 icin zorunlu degil, P1 olarak planlandi.
+- Admin-web PKCE/login akisi V1'de bozulmayacak.
+
+Planlanan P0:
+
+- `ops.mobile_device_session` tablosu.
+- `POST /api/mobile/auth/sessions`.
+- `GET /api/mobile/auth/session`.
+- `POST /api/mobile/auth/logout`.
+- `GET /api/mobile/auth/sessions`.
+- `DELETE /api/mobile/auth/sessions/:sessionId`.
+- active mobile session guard.
+- audit event catalog entryleri.
+- targeted backend tests + backend/root release gate.
+
+CODEX durust yorum:
+
+- Bu plan dogru sirada. Migration ve Security Gate kapilari kapanmadan mobile session'a gecmek riskli olurdu; simdi kapinin ustune cihaz oturumu eklemek mantikli.
+- Backend'i ikinci IdP'ye cevirmemek dogru karar. Once cihaz session/revoke ve DB scope guveni, sonra Mobile BFF.
+
+Siradaki mantikli adim: onay verilirse Mobile Auth/Session V1 P0 Task 1 ile schema contract testinden baslamak; refresh token broker ve Mobile BFF simdilik acilmamali.
+
 ## Onemli Dosyalar
 
 Backend auth / scope:
@@ -3098,6 +3137,8 @@ Planlar:
 - `docs/plans/excel-kpi-import-v1.md`
 - `docs/plans/excel-kpi-import-operator-runbook.md`
 - `docs/superpowers/plans/2026-04-28-production-ready-migration-system-v1.md`
+- `docs/superpowers/specs/2026-04-28-mobile-auth-session-v1-design.md`
+- `docs/superpowers/plans/2026-04-28-mobile-auth-session-v1.md`
 - `docs/plans/project-wide-scan-2026-04-27.md`
 - `docs/plans/project-mvp-focus-map-2026-04-28.md`
 - `docs/plans/no-empty-scope-repository-contract-pass-2026-04-27.md`
