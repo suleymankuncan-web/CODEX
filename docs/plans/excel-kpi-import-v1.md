@@ -394,4 +394,6 @@ Result: root release gate passed; backend 43 suites / 309 tests, frontend 34 Pla
 
 ## Next Logical Step
 
-Use the implemented import path with the real March files after local store mapping/scope is ready. The next nearby product step is an operator import runbook for "upload -> inspect summary -> map unresolved identities -> retry/materialize" so the process is repeatable when more Excel periods arrive.
+Operator runbook is now available at `docs/plans/excel-kpi-import-operator-runbook.md`.
+
+Use the implemented import path with the real March files after local store mapping/scope is ready. The next nearby product step is the first controlled March import pilot: upload the files, inspect summary/reconciliation, resolve or document unmapped identities, decide retry/materialization, and record evidence through the runbook template.

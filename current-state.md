@@ -2834,7 +2834,49 @@ Dogrulama:
 - Backend full test sonucu: 43 suite / 309 test.
 - Frontend full e2e sonucu: 34 Playwright test.
 
-Siradaki mantikli adim: Gercek Mart dosyalari yuklenmeden once import operator runbookunu yazmak: upload -> summary kontrol -> unmapped store/personnel mapping -> retry/materialize -> reconciliation kontrol. Bu, veri yukleme isini tek seferlik deneme degil tekrar edilebilir surec yapar.
+Siradaki mantikli adim tamamlandi: Excel KPI Import operator runbooku yazildi ve root script testleriyle korumaya alindi.
+
+## Son Excel KPI Import Operator Runbook V1
+
+28 Nisan 2026 itibariyla Excel KPI Import icin operasyonel yukleme runbooku tamamlandi.
+
+Yeni dokuman:
+
+- `docs/plans/excel-kpi-import-operator-runbook.md`
+
+Yeni guard testi:
+
+- `scripts/excel-import-runbook-contract.test.mjs`
+
+Runbook kapsami:
+
+- backend/frontend/local Keycloak preflight komutlari
+- KPI dosya preflight kontrolu
+- store import scope kontrolu
+- monthly/daily/custom upload adimlari
+- upload summary review
+- `unmapped_store` ve `unmapped_employee` mapping review
+- store net satis ile personnel pozitif/negatif hareket reconciliation kontrolu
+- retry/re-upload kurallari
+- materialization ve score trust karari
+- evidence note template
+- Go / Conditional Go / No-Go kararlari
+
+Korunan is kurallari:
+
+- Store performansi store net satisindan beslenir.
+- Personnel performansi sadece pozitif brut satistan beslenir.
+- Negative personnel satirlari employee KPI dusurmez.
+- Negative personnel satirlari reconciliation evidence olarak kalir.
+- `ATV`, `UPT`, `CR` donemde base toplamlar uzerinden yeniden hesaplanir.
+- Name-only Excel satirlarindan gecici/resmi store veya employee uretilmez.
+
+CODEX durust yorum:
+
+- Bu runbook dogru sirada geldi. Parser calisiyor ama asil risk yanlis donem, yanlis store scope veya name-only employee identity'yi erken resmi veri sanmakti.
+- Runbook, importu tek seferlik deneme olmaktan cikarip tekrar edilebilir operasyon haline getiriyor.
+
+Siradaki mantikli adim: Ilk Mart Excel importunu kontrollu pilot olarak calistirmak; once store import scope/mapping kontrol edilecek, sonra runbook evidence template ile upload summary, unmapped identity, reconciliation delta ve materialization karari kaydedilecek.
 
 ## Onemli Dosyalar
 
@@ -2946,6 +2988,7 @@ Planlar:
 - `docs/plans/data-quality-guard-v1.md`
 - `docs/plans/import-batch-quality-summary-v1.md`
 - `docs/plans/excel-kpi-import-v1.md`
+- `docs/plans/excel-kpi-import-operator-runbook.md`
 - `docs/plans/project-wide-scan-2026-04-27.md`
 - `docs/plans/project-mvp-focus-map-2026-04-28.md`
 - `docs/plans/no-empty-scope-repository-contract-pass-2026-04-27.md`

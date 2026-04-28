@@ -17,7 +17,7 @@ Date: 28 April 2026
 
 Current count:
 
-- Closed active debts: 37
+- Closed active debts: 38
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -65,6 +65,7 @@ These are counted as paid because they have implementation or documentation evid
 35. Personnel Management V1
 36. Personnel Request Return/Resubmit V1
 37. Excel KPI Import V1
+38. Excel KPI Import Operator Runbook V1
 
 ## Superseded Before Overbuilding
 
@@ -216,6 +217,8 @@ Project MVP Focus Map is recorded as a consolidation decision, not a new closed 
 
 Excel KPI Import V1 is implemented and verified. Personnel KPI uses positive gross sales only, store KPI uses scoped store net sales, `FF` is a first-class base metric, period `ATV`, `UPT`, and `CR` are recomputed from summed base metrics, negative personnel rows stay as reconciliation evidence, and duplicate-safe re-upload uses deterministic source batch ids. References: `docs/plans/excel-kpi-import-v1.md`, `docs/superpowers/plans/2026-04-28-excel-kpi-import-v1.md`.
 
+Excel KPI Import Operator Runbook V1 is implemented and guarded. The runbook turns Excel uploads into a repeatable operator process: environment preflight, file preflight, store scope review, upload, summary review, identity mapping, reconciliation, retry/re-upload, materialization decision, sanitized evidence, and Go / Conditional Go / No-Go. Reference: `docs/plans/excel-kpi-import-operator-runbook.md`.
+
 UI status note:
 
 - A production UI/design-system strategy note now exists.
@@ -236,6 +239,7 @@ Current repo hygiene is not counted as active debt in this ledger because:
 - the 27 April 2026 environment drift guard made env inventory/example alignment dynamic instead of relying only on a static checklist.
 - the 27 April 2026 incident response skeleton linked auth/import/deploy failures to severity, evidence, rollback, and No-Go decisions before real staging pressure exists.
 - the 28 April 2026 Excel KPI Import V1 implementation added gross-personnel/net-store import behavior, scoped store import gating, reconciliation evidence, and duplicate-safe upload identity.
+- the 28 April 2026 Excel KPI Import Operator Runbook V1 made the real Excel import process repeatable and guarded by root script tests before pilot use.
 
 Still monitor:
 
@@ -276,4 +280,4 @@ The next local backend candidate should be chosen through the intake gate. Sourc
 
 Recommended local candidate if external evidence is still unavailable:
 
-- Write the Excel KPI Import operator runbook so monthly/daily/custom uploads, reconciliation review, unmapped identity cleanup, retry/materialize decisions, and sanitized evidence capture are repeatable before more periods are imported.
+- Run the first March Excel import as a controlled pilot only after store import scope is reviewed, using the operator runbook to capture summary, mapping, reconciliation, retry/materialization, and known-limitations evidence.

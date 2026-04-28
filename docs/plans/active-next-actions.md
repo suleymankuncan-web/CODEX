@@ -6,7 +6,7 @@ This is the short working list for the next practical steps. It keeps the projec
 
 ## Current Position
 
-As of 28 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, Store UX TR-First Copy V1, KPI Config Versioning V1, Source-Agnostic Ingest Contract Hardening V1, KPI Raw Row Lineage Persistence V1, Import Lineage Evidence Surface V1, Audit Event Taxonomy Guard V1, Data Quality Guard V1, Import Batch Quality Summary V1, Project-Wide Scope/Auth Guard Scan V1, No-Empty-Scope Repository Contract Pass V1, Production Environment Readiness Checklist V1, Environment Variable Inventory + Deployment Runbook Skeleton V1, Environment Drift Guard V1, Production/Staging Incident Response Skeleton V1, Personnel Management V1, Personnel Request Return/Resubmit V1, Personnel Master Data Bootstrap V1 planning, Project MVP Focus Map, and Excel KPI Import V1 have:
+As of 28 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, Store UX TR-First Copy V1, KPI Config Versioning V1, Source-Agnostic Ingest Contract Hardening V1, KPI Raw Row Lineage Persistence V1, Import Lineage Evidence Surface V1, Audit Event Taxonomy Guard V1, Data Quality Guard V1, Import Batch Quality Summary V1, Project-Wide Scope/Auth Guard Scan V1, No-Empty-Scope Repository Contract Pass V1, Production Environment Readiness Checklist V1, Environment Variable Inventory + Deployment Runbook Skeleton V1, Environment Drift Guard V1, Production/Staging Incident Response Skeleton V1, Personnel Management V1, Personnel Request Return/Resubmit V1, Personnel Master Data Bootstrap V1 planning, Project MVP Focus Map, Excel KPI Import V1, and Excel KPI Import Operator Runbook V1 have:
 
 - saved drafts
 - edit/cancel/history
@@ -68,6 +68,7 @@ As of 28 April 2026, the competition package planning flow, Operational Feed V1,
 - first-class `FF` base metric and recomputed period `ATV`, `UPT`, and `CR`
 - deterministic Excel upload source batch ids for duplicate-safe re-upload
 - admin monthly/daily/custom Excel upload period controls and reconciliation summary
+- repeatable Excel import operator runbook for upload, summary, mapping, reconciliation, retry, materialization, and evidence
 - project debt ledger
 - backend and frontend release checks
 
@@ -75,7 +76,7 @@ As of 28 April 2026, the competition package planning flow, Operational Feed V1,
 
 Reference: `docs/plans/project-debt-ledger.md`
 
-- Closed active debts: 37
+- Closed active debts: 38
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -116,6 +117,7 @@ Interpretation:
 - Project MVP Focus Map is recorded; the project should consolidate around Excel KPI Import V1, store/personnel performance, personnel lifecycle, import quality visibility, and release evidence instead of restarting from zero.
 - Excel KPI Import V1 formula decision is locked; period ATV, UPT, and CR must be recomputed from summed base metrics, not averaged from daily ratios.
 - Excel KPI Import V1 is implemented; backend targeted tests, frontend build/e2e, and root `check:release` pass.
+- Excel KPI Import Operator Runbook V1 is implemented and guarded by root script tests.
 - Full production UI/design-system and complete EN/TR localization expansion remain planned investments, not silent release debt.
 - Production UI/design-system is intentionally deferred into reversible pilots while backend/data foundations remain the priority.
 - The debt ledger itself is an accounting artifact and is not counted as a separate closed active debt item.
@@ -667,6 +669,18 @@ Interpretation:
   - `docs/plans/excel-kpi-import-v1.md`
   - `docs/superpowers/plans/2026-04-28-excel-kpi-import-v1.md`
 
+### Completed: Excel KPI Import Operator Runbook V1
+- Completed: 28 April 2026
+- Result:
+  - operator flow is documented from environment preflight through upload, summary review, identity mapping, reconciliation, retry/re-upload, materialization, and evidence capture
+  - runbook preserves the gross-personnel/net-store business rule
+  - runbook preserves no-temporary-identity and store import scope guardrails
+  - runbook defines Go / Conditional Go / No-Go decisions for pilot imports
+  - root script tests guard that the runbook keeps its core sections and project handoff links
+- Reference:
+  - `docs/plans/excel-kpi-import-operator-runbook.md`
+  - `scripts/excel-import-runbook-contract.test.mjs`
+
 ### 1. Real IdP Staging Evidence
 - Priority: `P1`
 - Why: local provider and action mechanics are proven, but production confidence still needs real staging IdP and seeded staging action evidence.
@@ -690,4 +704,4 @@ If neither staging values nor source ingest details are available, do not open s
 
 Recommended local candidate:
 
-- Write the Excel KPI Import operator runbook: upload monthly/daily/custom file, inspect summary/reconciliation, resolve unmapped identities, retry/materialize safely, and store sanitized evidence for future periods.
+- Run the first March Excel import as a controlled pilot only after store import scope is reviewed. Use `docs/plans/excel-kpi-import-operator-runbook.md` to record upload summary, unmapped identities, reconciliation delta, retry/materialization decision, and known limitations.
