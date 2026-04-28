@@ -412,7 +412,8 @@ CREATE TABLE ops.competition_team_store (
 CREATE TABLE ops.checklist_template (
     checklist_template_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id UUID NOT NULL REFERENCES ops.company(company_id),
-    template_code TEXT NOT NULL UNIQUE,
+    template_code TEXT NOT NULL,
+    template_type TEXT NOT NULL DEFAULT 'BM_STORE_VISIT',
     template_name TEXT NOT NULL,
     category TEXT NOT NULL,
     version_no INTEGER NOT NULL,
@@ -421,6 +422,7 @@ CREATE TABLE ops.checklist_template (
     effective_to DATE,
     created_by UUID NOT NULL REFERENCES ops.user_account(user_id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT checklist_template_code_version_unique UNIQUE (template_code, version_no),
     CHECK (effective_to IS NULL OR effective_to >= effective_from)
 );
 
@@ -444,13 +446,17 @@ CREATE TABLE ops.checklist_instance (
     store_id UUID NOT NULL REFERENCES ops.store(store_id),
     assigned_employee_id UUID REFERENCES ops.employee(employee_id),
     auditor_employee_id UUID REFERENCES ops.employee(employee_id),
+    started_by_user_id TEXT,
+    completed_by_user_id TEXT,
     planned_at TIMESTAMPTZ,
     started_at TIMESTAMPTZ,
     completed_at TIMESTAMPTZ,
+    locked_at TIMESTAMPTZ,
     status TEXT NOT NULL DEFAULT 'planned',
     total_score NUMERIC(12,2),
     compliance_rate NUMERIC(7,4),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (status IN ('planned', 'in_progress', 'completed', 'cancelled'))
 );
 
 CREATE TABLE ops.checklist_response (
@@ -987,6 +993,13 @@ CREATE INDEX competition_team_store_store_idx
 
 CREATE INDEX idx_checklist_instance_store_status
     ON ops.checklist_instance (store_id, status, planned_at);
+
+CREATE INDEX IF NOT EXISTS idx_checklist_instance_mobile_today
+    ON ops.checklist_instance (store_id, status, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_checklist_instance_monthly_completed
+    ON ops.checklist_instance (store_id, checklist_template_id, completed_at DESC)
+    WHERE status = 'completed';
 
 CREATE INDEX IF NOT EXISTS idx_checklist_acknowledgement_store_acknowledged_at
     ON ops.checklist_acknowledgement (store_id, acknowledged_at DESC);
