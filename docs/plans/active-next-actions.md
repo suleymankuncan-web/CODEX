@@ -6,7 +6,7 @@ This is the short working list for the next practical steps. It keeps the projec
 
 ## Current Position
 
-As of 28 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, Store UX TR-First Copy V1, KPI Config Versioning V1, Source-Agnostic Ingest Contract Hardening V1, KPI Raw Row Lineage Persistence V1, Import Lineage Evidence Surface V1, Audit Event Taxonomy Guard V1, Data Quality Guard V1, Import Batch Quality Summary V1, Project-Wide Scope/Auth Guard Scan V1, No-Empty-Scope Repository Contract Pass V1, Production Environment Readiness Checklist V1, Environment Variable Inventory + Deployment Runbook Skeleton V1, Environment Drift Guard V1, Production/Staging Incident Response Skeleton V1, Personnel Management V1, Personnel Request Return/Resubmit V1, Personnel Master Data Bootstrap V1 planning, Project MVP Focus Map, Excel KPI Import V1, Excel KPI Import Operator Runbook V1, Production-Ready Migration System V1, Production Security Gate V1-A, Mobile Auth/Session V1 P0, Mobile API/BFF Endpoint Inventory V1, Checklist Acknowledgement Canonical Schema Alignment V1, and Mobile Checklist Today V1 Design have:
+As of 28 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, Store UX TR-First Copy V1, KPI Config Versioning V1, Source-Agnostic Ingest Contract Hardening V1, KPI Raw Row Lineage Persistence V1, Import Lineage Evidence Surface V1, Audit Event Taxonomy Guard V1, Data Quality Guard V1, Import Batch Quality Summary V1, Project-Wide Scope/Auth Guard Scan V1, No-Empty-Scope Repository Contract Pass V1, Production Environment Readiness Checklist V1, Environment Variable Inventory + Deployment Runbook Skeleton V1, Environment Drift Guard V1, Production/Staging Incident Response Skeleton V1, Personnel Management V1, Personnel Request Return/Resubmit V1, Personnel Master Data Bootstrap V1 planning, Project MVP Focus Map, Excel KPI Import V1, Excel KPI Import Operator Runbook V1, Production-Ready Migration System V1, Production Security Gate V1-A, Mobile Auth/Session V1 P0, Mobile API/BFF Endpoint Inventory V1, Checklist Acknowledgement Canonical Schema Alignment V1, Mobile Checklist Today V1 Design, and Mobile Checklist Today V1 Implementation Plan have:
 
 - saved drafts
 - edit/cancel/history
@@ -76,6 +76,7 @@ As of 28 April 2026, the competition package planning flow, Operational Feed V1,
 - mobile endpoint reuse/BFF boundary, first aggregate candidates, and no-broad-BFF decision gate
 - checklist acknowledgement migration/code path aligned with canonical schema and guarded by backend schema contract test
 - mobile checklist HR template ownership, region-manager scoring, store-manager acknowledgement, multi-visit averaging, and completed-lock design
+- a task-by-task Mobile Checklist Today V1 implementation plan guarded by root script tests
 - project debt ledger
 - backend and frontend release checks
 
@@ -131,6 +132,7 @@ Interpretation:
 - Mobile API/BFF Endpoint Inventory V1 is documented; existing feed/workflow/reporting/competition/workforce endpoints should be reused first, broad Mobile BFF stays closed, and only `GET /api/mobile/home`, `GET /api/mobile/store-performance`, or `GET /api/mobile/checklists/today` should be planned when a real mobile screen contract proves the need.
 - Checklist Acknowledgement Canonical Schema Alignment V1 is implemented; canonical `db/schema.sql` now includes the existing acknowledgement table/index and a backend schema contract prevents drift.
 - Mobile Checklist Today V1 Design is documented; HR owns versioned templates/weights, region managers score assigned-store visits, store managers acknowledge completed results, multiple monthly visits average into the monthly score, and completed records lock.
+- Mobile Checklist Today V1 Implementation Plan is documented; `docs/superpowers/plans/2026-04-28-mobile-checklist-today-v1.md` defines schema, backend, mobile read model, acknowledgement, frontend pilot, release verification, and handoff tasks. Mobile Checklist Today V1 implementation is planned, not counted as paid yet.
 - Full production UI/design-system and complete EN/TR localization expansion remain planned investments, not silent release debt.
 - Production UI/design-system is intentionally deferred into reversible pilots while backend/data foundations remain the priority.
 - The debt ledger itself is an accounting artifact and is not counted as a separate closed active debt item.
@@ -784,6 +786,15 @@ Interpretation:
 - Reference:
   - `docs/superpowers/specs/2026-04-28-mobile-checklist-today-v1-design.md`
 
+### Planned: Mobile Checklist Today V1 Implementation Plan
+- Planned: 28 April 2026
+- Result:
+  - implementation is split into schema contract/migration, checklist repository/service, HR template publish, region-manager draft/resume/complete, monthly summary, store-manager acknowledgement, frontend pilot, release verification, and handoff tasks
+  - backend contract tests lead the work before UI surfaces
+  - completed implementation will only be counted as paid after backend/frontend/root release gates pass
+- Reference:
+  - `docs/superpowers/plans/2026-04-28-mobile-checklist-today-v1.md`
+
 ### 1. Real IdP Staging Evidence
 - Priority: `P1`
 - Why: local provider and action mechanics are proven, but production confidence still needs real staging IdP and seeded staging action evidence.
@@ -807,4 +818,4 @@ If neither staging values nor source ingest details are available, do not open s
 
 Recommended local candidate:
 
-- If the Mobile Checklist Today V1 written spec is approved, write the implementation plan. Start implementation later with backend contract tests for template weights, region-manager assigned-store scope, draft/resume/complete lock, store-manager acknowledgement, and monthly average behavior.
+- If the Mobile Checklist Today V1 Implementation Plan is approved, choose execution mode and start with backend contract tests for template weights, region-manager assigned-store scope, draft/resume/complete lock, store-manager acknowledgement, and monthly average behavior.

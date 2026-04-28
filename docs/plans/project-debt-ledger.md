@@ -85,6 +85,8 @@ Checklist Acknowledgement Canonical Schema Alignment V1 is counted as paid becau
 
 Mobile Checklist Today V1 Design is counted as paid because HR template ownership, region-manager scoring, store-manager acknowledgement, multiple monthly visits, weighted scoring, completed-lock behavior, and future cancel-with-reason boundary are documented and guarded by root script tests. Reference: `docs/superpowers/specs/2026-04-28-mobile-checklist-today-v1-design.md`.
 
+Mobile Checklist Today V1 implementation is planned, not counted as paid yet. The implementation plan is now written and guarded, but the actual backend/frontend workflow, migration, and release gates must pass before it can become a closed active debt. Reference: `docs/superpowers/plans/2026-04-28-mobile-checklist-today-v1.md`.
+
 ## Superseded Before Overbuilding
 
 1. Competition Format Registry V1
@@ -263,6 +265,7 @@ Current repo hygiene is not counted as active debt in this ledger because:
 - the 28 April 2026 Mobile API/BFF Endpoint Inventory V1 documented endpoint reuse and stopped a broad mobile BFF from opening before a real screen contract exists.
 - the 28 April 2026 Checklist Acknowledgement Canonical Schema Alignment V1 aligned the existing checklist acknowledgement migration/code path with canonical schema before mobile checklist expansion.
 - the 28 April 2026 Mobile Checklist Today V1 Design locked HR template versioning, region-manager visit scoring, store-manager acknowledgement, multi-visit monthly averaging, and completed-lock behavior before implementation.
+- the 28 April 2026 Mobile Checklist Today V1 Implementation Plan turned the approved design into a task-by-task implementation path without counting the implementation as complete.
 
 Still monitor:
 
@@ -305,4 +308,4 @@ The next local backend candidate should be chosen through the intake gate. Sourc
 
 Recommended local candidate if external evidence is still unavailable:
 
-- If the Mobile Checklist Today V1 written spec is approved, write the implementation plan. Start implementation later with backend contract tests for template weights, region-manager assigned-store scope, draft/resume/complete lock, store-manager acknowledgement, and monthly average behavior.
+- If the Mobile Checklist Today V1 Implementation Plan is approved, execute it in order. Start with backend contract tests for template weights, region-manager assigned-store scope, draft/resume/complete lock, store-manager acknowledgement, and monthly average behavior.

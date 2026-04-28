@@ -3131,7 +3131,38 @@ CODEX durust yorum:
 - Coklu ziyaret serbestligi saha gercegine uygun; aylik ortalama ve ziyaret sayisi bunu dagitmadan raporlar.
 - Completed-lock karari gecmis skorlarin sessizce degismesini engeller.
 
-Siradaki mantikli adim: Kullanici bu yazili spec'i onaylarsa Mobile Checklist Today V1 implementation planini yazmak. Plan backend contract testleriyle baslamali: template weight total `100`, region-manager assigned-store scope, draft/resume/complete lock, store-manager acknowledgement ve monthly average.
+Siradaki mantikli adim tamamlandi: Mobile Checklist Today V1 implementation plani yazildi.
+
+## Son Mobile Checklist Today V1 Implementation Plan
+
+28 Nisan 2026 itibariyla Mobile Checklist Today V1 Implementation Plan hazirlandi.
+
+Yeni dokuman:
+
+- `docs/superpowers/plans/2026-04-28-mobile-checklist-today-v1.md`
+
+Kapsam:
+
+- Backend schema contract ve additive migration adimlari.
+- HR template draft/publish ve agirlik toplami `100` guard'i.
+- Region-manager assigned-store start/save/resume/complete akisi.
+- Completed-lock ve weighted score hesaplama.
+- Store-manager acknowledgement'in bilgilendirme olarak kalmasi.
+- Coklu aylik ziyaretlerin `monthlySummaries` icinde ortalama ve visit count ile raporlanmasi.
+- Frontend pilot yuzeyleri ve backend/frontend/root release dogrulamalari.
+
+Not:
+
+- Mobile Checklist Today V1 implementation is planned, not counted as paid yet.
+- Kod uygulamasi, migration ve release gate henuz yapilmadi.
+- Borc sayisi bu adimda artmadi; uygulama + test + release gate gecince kapatilacak.
+
+CODEX durust yorum:
+
+- Plan dogru sirada: once schema/contract, sonra repository/service, sonra mobil read model ve UI pilot.
+- En riskli yerler tamamlanmis checklist'in kilitlenmesi ve ayni ay coklu ziyaret ortalamasinin sessizce bozulmamasi; plan bunlari ilk gunden testle yakalatacak sekilde yazildi.
+
+Siradaki mantikli adim: uygulama modunu secmek. Onerilen yol subagent-driven implementation; alternatif inline execution. Secimden sonra Task 1 schema contract testleriyle kirmizi-yesil ilerlenmeli.
 
 ## Onemli Dosyalar
 
@@ -3270,6 +3301,7 @@ Planlar:
 - `docs/superpowers/plans/2026-04-28-production-ready-migration-system-v1.md`
 - `docs/superpowers/specs/2026-04-28-mobile-auth-session-v1-design.md`
 - `docs/superpowers/specs/2026-04-28-mobile-checklist-today-v1-design.md`
+- `docs/superpowers/plans/2026-04-28-mobile-checklist-today-v1.md`
 - `docs/superpowers/plans/2026-04-28-mobile-auth-session-v1.md`
 - `docs/superpowers/plans/2026-04-28-mobile-api-bff-endpoint-inventory-v1.md`
 - `docs/plans/project-wide-scan-2026-04-27.md`
