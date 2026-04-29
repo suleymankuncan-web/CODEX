@@ -14,9 +14,12 @@ import {
 import { KpiConfigRepository } from "../infrastructure/kpi-config.repository";
 import { ClosedRankingService } from "./closed-ranking.service";
 import { StoreScoreBlendService } from "./store-score-blend.service";
+import { KpiBenchmarkScoringService } from "./kpi-benchmark-scoring.service";
 
 @Injectable()
 export class ReportingService {
+  private readonly kpiBenchmarkScoringService = new KpiBenchmarkScoringService();
+
   constructor(
     private readonly reportingRepository: ReportingRepository,
     private readonly kpiConfigRepository: KpiConfigRepository,
@@ -380,32 +383,26 @@ export class ReportingService {
       periodStart: latestPeriod.period_start,
       periodEnd: latestPeriod.period_end,
     });
-    let peerRows = await this.reportingRepository.getPeerStorePerformanceRows({
-      metricCodes,
+    let benchmarkRows = await this.reportingRepository.getStoreTurkeyBenchmarkValues({
       companyId: input.companyIds[0] ?? undefined,
       periodType: latestPeriod.period_type,
       periodStart: latestPeriod.period_start,
       periodEnd: latestPeriod.period_end,
     });
 
-    if (peerRows.length === 0) {
-      peerRows = await this.reportingRepository.getPeerStorePerformanceRows({
-        metricCodes,
+    if (benchmarkRows.length === 0) {
+      benchmarkRows = await this.reportingRepository.getStoreTurkeyBenchmarkValues({
         companyId: undefined,
         periodType: latestPeriod.period_type,
         periodStart: latestPeriod.period_start,
         periodEnd: latestPeriod.period_end,
       });
     }
-    const nationalAverages = peerRows.reduce(
-      (map, row) => {
-        const current = map.get(row.kpi_code) ?? { total: 0, count: 0 };
-        current.total += Number(row.actual_value);
-        current.count += 1;
-        map.set(row.kpi_code, current);
-        return map;
-      },
-      new Map<string, { total: number; count: number }>(),
+    const benchmarkLookup = new Map(
+      benchmarkRows.map((row) => [
+        row.kpi_code,
+        row.benchmark_value !== null ? Number(row.benchmark_value) : null,
+      ]),
     );
 
     const rowLookup = new Map(liveRows.map((row) => [row.kpi_code, row]));
@@ -414,34 +411,31 @@ export class ReportingService {
       const row = matchingCodes
         .map((code) => rowLookup.get(code))
         .find((value) => Boolean(value));
-      const actualValue = row?.actual_value ? Number(row.actual_value) : null;
-      const targetValue = row?.target_value ? Number(row.target_value) : null;
-      const averageSource = row ? nationalAverages.get(row.kpi_code) : null;
-      const averageValue =
-        averageSource && averageSource.count > 0
-          ? averageSource.total / averageSource.count
+      const actualValue =
+        row?.actual_value !== null && row?.actual_value !== undefined
+          ? Number(row.actual_value)
           : null;
-      const achievementRate = (() => {
-        if (
-          actualValue !== null &&
-          targetValue !== null &&
-          Number.isFinite(targetValue) &&
-          targetValue !== 0
-        ) {
-          return Number((actualValue / targetValue).toFixed(4));
-        }
-
-        if (
-          actualValue !== null &&
-          averageValue !== null &&
-          Number.isFinite(averageValue) &&
-          averageValue !== 0
-        ) {
-          return Number((actualValue / averageValue).toFixed(4));
-        }
-
-        return null;
-      })();
+      const targetValue =
+        row?.target_value !== null && row?.target_value !== undefined
+          ? Number(row.target_value)
+          : null;
+      const benchmarkSource =
+        metric.benchmarkSource ?? (targetValue !== null ? "TARGET" : "TURKEY_AVERAGE");
+      const benchmarkValue =
+        benchmarkSource === "TURKEY_AVERAGE" && row
+          ? benchmarkLookup.get(row.kpi_code) ?? null
+          : null;
+      const metricScore = this.kpiBenchmarkScoringService.scoreMetric({
+        metricCode: metric.code,
+        actualValue,
+        benchmarkValue,
+        targetValue,
+        weightPercent: metric.weightPercent,
+        direction: metric.direction ?? "HIGHER_IS_BETTER",
+        benchmarkSource,
+        capRatio: metric.capRatio ?? 1.2,
+      });
+      const achievementRate = metricScore.actualRatio;
       const statusBand =
         achievementRate === null
           ? null
@@ -452,11 +446,9 @@ export class ReportingService {
               : "off_track";
       const dataStatus = actualValue !== null ? "reported" : "missing";
       const scoreStatus =
-        achievementRate !== null
-          ? "scored"
-          : actualValue !== null
-            ? "pending_normalization"
-            : "missing";
+        metricScore.scoreStatus === "missing_actual"
+          ? "missing"
+          : metricScore.scoreStatus;
 
       return {
         code: metric.code,
@@ -464,7 +456,15 @@ export class ReportingService {
         weightPercent: metric.weightPercent,
         actualValue,
         targetValue,
+        benchmarkValue,
+        benchmarkSource,
         achievementRate,
+        actualRatio: metricScore.actualRatio,
+        scoredRatio: metricScore.scoredRatio,
+        capRatio: metricScore.capRatio,
+        isCapped: metricScore.isCapped,
+        scoreContribution: metricScore.scoreContribution,
+        missingReason: metricScore.missingReason,
         statusBand,
         dataStatus,
         scoreStatus,
@@ -475,7 +475,7 @@ export class ReportingService {
       mappedMetrics
         .filter((metric) => metric.scoreStatus === "scored" && metric.achievementRate !== null)
         .reduce(
-          (sum, metric) => sum + ((metric.achievementRate ?? 0) * metric.weightPercent) / 100,
+          (sum, metric) => sum + ((metric.scoreContribution ?? 0) / 100),
           0,
         )
         .toFixed(2),
@@ -792,6 +792,21 @@ export class ReportingService {
       periodStart: latestPeriod.period_start,
       periodEnd: latestPeriod.period_end,
     });
+    let benchmarkRows = await this.reportingRepository.getEmployeeTurkeyBenchmarkValues({
+      companyId: input.companyIds[0] ?? undefined,
+      periodType: input.periodType,
+      periodStart: latestPeriod.period_start,
+      periodEnd: latestPeriod.period_end,
+    });
+
+    if (benchmarkRows.length === 0) {
+      benchmarkRows = await this.reportingRepository.getEmployeeTurkeyBenchmarkValues({
+        companyId: undefined,
+        periodType: input.periodType,
+        periodStart: latestPeriod.period_start,
+        periodEnd: latestPeriod.period_end,
+      });
+    }
     let turkeyRows = await this.reportingRepository.getPeerEmployeePerformanceRows({
       metricCodes,
       companyId: input.companyIds[0] ?? undefined,
@@ -810,15 +825,11 @@ export class ReportingService {
       });
     }
 
-    const nationalAverages = turkeyRows.reduce(
-      (map, row) => {
-        const current = map.get(row.kpi_code) ?? { total: 0, count: 0 };
-        current.total += Number(row.actual_value);
-        current.count += 1;
-        map.set(row.kpi_code, current);
-        return map;
-      },
-      new Map<string, { total: number; count: number }>(),
+    const benchmarkLookup = new Map(
+      benchmarkRows.map((row) => [
+        row.kpi_code,
+        row.benchmark_value !== null ? Number(row.benchmark_value) : null,
+      ]),
     );
 
     const metricLookup = new Map(employeeRows.map((row) => [row.kpi_code, row]));
@@ -829,27 +840,33 @@ export class ReportingService {
         .map((code) => metricLookup.get(code))
         .find((value) => Boolean(value));
       const actualValue = row ? Number(row.actual_value) : null;
-      const targetValue = row?.target_value ? Number(row.target_value) : null;
-      const averageSource = row ? nationalAverages.get(row.kpi_code) : null;
-      const averageValue =
-        averageSource && averageSource.count > 0
-          ? averageSource.total / averageSource.count
+      const targetValue =
+        row?.target_value !== null && row?.target_value !== undefined
+          ? Number(row.target_value)
           : null;
-      const achievementRate = this.resolveWeightedAchievementRate({
+      const benchmarkSource =
+        metric.benchmarkSource ?? (targetValue !== null ? "TARGET" : "TURKEY_AVERAGE");
+      const benchmarkValue =
+        benchmarkSource === "TURKEY_AVERAGE" && row
+          ? benchmarkLookup.get(row.kpi_code) ?? null
+          : null;
+      const metricScore = this.kpiBenchmarkScoringService.scoreMetric({
+        metricCode: metric.code,
         actualValue,
+        benchmarkValue,
         targetValue,
-        averageValue,
+        weightPercent: metric.weightPercent,
+        direction: metric.direction ?? "HIGHER_IS_BETTER",
+        benchmarkSource,
+        capRatio: metric.capRatio ?? 1.2,
       });
+      const achievementRate = metricScore.actualRatio;
       const contributionValue =
-        achievementRate !== null
-          ? Number(((achievementRate * metric.weightPercent) / 100).toFixed(2))
-          : 0;
+        metricScore.scoreContribution !== null ? metricScore.scoreContribution : 0;
       const scoreStatus =
-        achievementRate !== null
-          ? "scored"
-          : actualValue !== null
-            ? "pending_normalization"
-            : "missing";
+        metricScore.scoreStatus === "missing_actual"
+          ? "missing"
+          : metricScore.scoreStatus;
 
       return {
         code: metric.code,
@@ -857,7 +874,14 @@ export class ReportingService {
         weightPercent: metric.weightPercent,
         actualValue,
         targetValue,
+        benchmarkValue,
+        benchmarkSource,
         achievementRate,
+        actualRatio: metricScore.actualRatio,
+        scoredRatio: metricScore.scoredRatio,
+        capRatio: metricScore.capRatio,
+        isCapped: metricScore.isCapped,
+        missingReason: metricScore.missingReason,
         contributionValue,
         dataStatus: actualValue !== null ? "reported" : "missing",
         scoreStatus,
@@ -906,6 +930,7 @@ export class ReportingService {
       const scoreRows = [...byEmployee.entries()].map(([peerEmployeeId, values]) => {
         const score = profile.metrics.reduce((sum, metric) => {
           const matchingCodes = [metric.code, ...(metric.aliases ?? [])];
+          const matchedCode = matchingCodes.find((code) => values[code]);
           const matchedMetric = matchingCodes
             .map((code) => values[code])
             .find((value) => typeof value?.actualValue === "number");
@@ -914,24 +939,29 @@ export class ReportingService {
             return sum;
           }
 
-          const averageSource = nationalAverages.get(
-            matchingCodes.find((code) => values[code]) ?? metric.code,
-          );
-          const averageValue =
-            averageSource && averageSource.count > 0
-              ? averageSource.total / averageSource.count
+          const benchmarkSource =
+            metric.benchmarkSource ??
+            (matchedMetric.targetValue !== null ? "TARGET" : "TURKEY_AVERAGE");
+          const benchmarkValue =
+            benchmarkSource === "TURKEY_AVERAGE" && matchedCode
+              ? benchmarkLookup.get(matchedCode) ?? null
               : null;
-          const achievementRate = this.resolveWeightedAchievementRate({
+          const metricScore = this.kpiBenchmarkScoringService.scoreMetric({
+            metricCode: metric.code,
             actualValue: matchedMetric.actualValue,
+            benchmarkValue,
             targetValue: matchedMetric.targetValue,
-            averageValue,
+            weightPercent: metric.weightPercent,
+            direction: metric.direction ?? "HIGHER_IS_BETTER",
+            benchmarkSource,
+            capRatio: metric.capRatio ?? 1.2,
           });
 
-          if (achievementRate === null) {
+          if (metricScore.scoreContribution === null) {
             return sum;
           }
 
-          return sum + (achievementRate * metric.weightPercent) / 100;
+          return sum + metricScore.scoreContribution;
         }, 0);
 
         return {
