@@ -63,6 +63,9 @@ export type TargetCoverageRow = {
   externalEmployeeRef: string | null
   targetReferenceId: string | null
   targetValue: number | null
+  pendingRequestId: string | null
+  pendingTargetValue: number | null
+  staleTargetReferenceId: string | null
   targetStatus: string
 }
 
@@ -71,6 +74,10 @@ export type TargetCoverageSummary = {
   totalEmployees: number
   coveredEmployees: number
   missingEmployees: number
+  pendingEmployees: number
+  conflictEmployees: number
+  staleEmployees: number
+  uncoveredEmployees: number
   coverageRate: number
 }
 

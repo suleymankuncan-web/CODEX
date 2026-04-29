@@ -315,7 +315,36 @@ CODEX durust yorum:
 - En buyuk kazanc, gecmis snapshotlarin hangi hedef referansina gore hesaplandiginin izlenebilir hale gelmesi ve eksik hedeflerde sistemin puan uydurmamasi.
 - Admin coverage paneli pilot UI seviyesinde; asil degeri operasyonun eksik hedefleri skor bozulmadan once gorebilmesidir.
 
-Siradaki mantikli adim: dis kaynak yoksa yeni adapter yazmamak; gercek store/personel baseline listesi gelirse Personnel Master Data Bootstrap V1'e gecmek. Baseline yoksa hedef coverage V1-B icin pending/stale/conflict sayaclarini intake ile netlestirmek.
+Bu siradaki adim tamamlandi: `Target Coverage V1-B Readiness Signals` uygulandi.
+
+## Son Target Coverage V1-B Readiness Signals
+
+29 Nisan 2026 itibariyla hedef coverage yuzeyi approved/missing ikilisinden operator-ready durum sinyallerine genisletildi.
+
+Eklenenler:
+
+- Backend `GET /api/target-distributions/coverage` artik active personel icin `approved`, `pending_region_approval`, `pending_change_conflict`, `stale_reference` ve `missing` durumlarini ayirir.
+- `pending_region_approval`: aktif personelde onayli hedef yok ama ayni ay/magaza/personel icin bolge onayi bekleyen dagitim talebi var.
+- `pending_change_conflict`: onayli hedef var ama ayni ay/magaza/personel icin yeni bekleyen hedef talebi de var; skor hala onayli referansi okur.
+- `stale_reference`: personelin ayni ay onayli hedefi baska magazada kalmis; mevcut aktif magaza hedefsiz gorunur.
+- Summary artik covered, uncovered, missing, pending, conflict ve stale sayaclarini birlikte dondurur.
+- Admin `/admin/targets` paneli bu sinyalleri ayri kart/satir olarak gosterir; skor motoruna veya approved-reference okuma kuralina dokunulmadi.
+
+Dogrulama:
+
+- Backend targeted target-distribution repository/service tests: 2 suite / 6 test.
+- Backend build: `npm.cmd run build`.
+- Frontend build: `npm.cmd run build`.
+- Frontend lint: `npm.cmd run lint`.
+- Frontend targeted e2e: `admin-targets.spec.ts` -> 1 Playwright test.
+- Root release gate: `npm.cmd run check:release` -> 46 root script test, backend lint + 68 suite / 413 test + build + audit, frontend lint + 7 script test + build + 40 Playwright test + audit.
+
+CODEX durust yorum:
+
+- Bu adim kucuk gorunur ama kontrol kaybini engeller. Artik eksik hedef, onay bekleyen hedef, degisiklik cakismasi ve yanlis magazada kalmis hedef ayni "missing" torbasina dusmuyor.
+- En onemli sinir dogru korundu: skor sadece onayli referansi okuyor; pending/stale/conflict operator sinyali olarak kaliyor.
+
+Siradaki mantikli adim: master data baseline gelirse Personnel Master Data Bootstrap V1'i staging/review/promote modeliyle baslatmak; gelmezse yeni adapter yazmadan mevcut import/target yuzeylerinde sadece gercek operator ihtiyaci olan kucuk guard'lari secmek.
 
 ## Son Operational Feed V1
 

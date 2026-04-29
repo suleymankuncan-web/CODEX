@@ -8,6 +8,7 @@ import {
   MetricCard,
   ScreenState,
   StatusPill,
+  type Tone,
 } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
 import {
@@ -79,9 +80,9 @@ export function TargetApprovalQueuePage(input: {
   const approvedCount = inboxItems.filter((item) => item.inboxStatus === 'completed').length
   const coverageRows = coverageQuery.data?.items ?? []
   const coverageSummary = coverageQuery.data?.summary ?? createEmptyCoverageSummary(currentRequestMonth)
-  const missingCoverageRows = coverageRows
-    .filter((item) => item.targetStatus === 'missing')
-    .slice(0, 5)
+  const attentionCoverageRows = coverageRows
+    .filter((item) => item.targetStatus !== 'approved')
+    .slice(0, 8)
   const regionScope = input.authSummary?.user.readScope.regionIds.join(', ') || 'No resolved region scope'
   const assignedStoreScope = getAssignedStoreIds(input.authSummary)
 
@@ -140,8 +141,8 @@ export function TargetApprovalQueuePage(input: {
             <div className="eyebrow">Target Reference Coverage</div>
             <h3>Approved personnel target readiness</h3>
           </div>
-          <StatusPill tone={coverageSummary.missingEmployees > 0 ? 'warning' : 'calm'}>
-            {coverageSummary.missingEmployees > 0 ? 'Missing targets' : 'Complete'}
+          <StatusPill tone={mapCoverageSummaryTone(coverageSummary)}>
+            {coverageSummary.uncoveredEmployees > 0 ? 'Needs review' : 'Complete'}
           </StatusPill>
         </div>
 
@@ -153,20 +154,23 @@ export function TargetApprovalQueuePage(input: {
           <>
             <div className="key-grid">
               <KeyValue label="Covered personnel" value={String(coverageSummary.coveredEmployees)} />
+              <KeyValue label="Pending approval" value={String(coverageSummary.pendingEmployees)} />
+              <KeyValue label="Pending changes" value={String(coverageSummary.conflictEmployees)} />
+              <KeyValue label="Stale references" value={String(coverageSummary.staleEmployees)} />
               <KeyValue label="Missing targets" value={String(coverageSummary.missingEmployees)} />
               <KeyValue label="Coverage rate" value={formatCoverageRate(coverageSummary.coverageRate)} />
               <KeyValue label="Personnel in scope" value={String(coverageSummary.totalEmployees)} />
             </div>
 
-            {missingCoverageRows.length === 0 ? (
+            {attentionCoverageRows.length === 0 ? (
               <EmptyState
-                title="No missing target references"
-                copy="Approved personnel target references cover the current month for every active person in scope."
+                title="No target coverage issues"
+                copy="Approved personnel target references cover the current month without pending or stale items."
               />
             ) : (
               <div className="stacked-table">
-                {missingCoverageRows.map((item) => (
-                  <TargetCoverageMissingRow key={`${item.storeId}-${item.employeeId}`} item={item} />
+                {attentionCoverageRows.map((item) => (
+                  <TargetCoverageAttentionRow key={`${item.storeId}-${item.employeeId}`} item={item} />
                 ))}
               </div>
             )}
@@ -278,17 +282,24 @@ export function TargetApprovalQueuePage(input: {
   )
 }
 
-function TargetCoverageMissingRow(input: { item: TargetCoverageRow }) {
+function TargetCoverageAttentionRow(input: { item: TargetCoverageRow }) {
   return (
     <article className="stacked-row">
       <div className="stacked-row-head">
         <strong>{input.item.displayName}</strong>
-        <StatusPill tone="warning">Missing target</StatusPill>
+        <StatusPill tone={mapTargetCoverageStatusTone(input.item.targetStatus)}>
+          {formatTargetCoverageStatus(input.item.targetStatus)}
+        </StatusPill>
       </div>
       <p>{input.item.storeName || input.item.storeId}</p>
       <div className="key-grid">
         <KeyValue label="Seller code" value={input.item.externalEmployeeRef ?? 'Unknown'} />
-        <KeyValue label="Employee" value={input.item.employeeId} />
+        <KeyValue label="Approved target" value={formatTargetValue(input.item.targetValue)} />
+        <KeyValue label="Pending target" value={formatTargetValue(input.item.pendingTargetValue)} />
+        <KeyValue
+          label="Reference state"
+          value={formatTargetCoverageReferenceState(input.item)}
+        />
       </div>
     </article>
   )
@@ -393,6 +404,10 @@ function createEmptyCoverageSummary(requestMonth: string) {
     totalEmployees: 0,
     coveredEmployees: 0,
     missingEmployees: 0,
+    pendingEmployees: 0,
+    conflictEmployees: 0,
+    staleEmployees: 0,
+    uncoveredEmployees: 0,
     coverageRate: 0,
   }
 }
@@ -403,4 +418,78 @@ function formatCoverageRate(rate: number) {
   }
 
   return `${Math.round(rate * 100)}%`
+}
+
+function mapCoverageSummaryTone(summary: {
+  missingEmployees: number
+  pendingEmployees: number
+  conflictEmployees: number
+  staleEmployees: number
+  uncoveredEmployees: number
+}): Tone {
+  if (summary.conflictEmployees > 0 || summary.staleEmployees > 0) {
+    return 'danger'
+  }
+
+  if (
+    summary.missingEmployees > 0 ||
+    summary.pendingEmployees > 0 ||
+    summary.uncoveredEmployees > 0
+  ) {
+    return 'warning'
+  }
+
+  return 'calm'
+}
+
+function formatTargetCoverageStatus(status: string) {
+  switch (status) {
+    case 'pending_region_approval':
+      return 'Pending approval'
+    case 'pending_change_conflict':
+      return 'Pending change'
+    case 'stale_reference':
+      return 'Stale reference'
+    case 'missing':
+      return 'Missing target'
+    case 'approved':
+      return 'Approved'
+    default:
+      return formatState(status)
+  }
+}
+
+function mapTargetCoverageStatusTone(status: string): Tone {
+  switch (status) {
+    case 'pending_change_conflict':
+    case 'stale_reference':
+      return 'danger'
+    case 'pending_region_approval':
+    case 'missing':
+      return 'warning'
+    case 'approved':
+      return 'calm'
+    default:
+      return 'neutral'
+  }
+}
+
+function formatTargetValue(value: number | null) {
+  return value === null ? 'None' : String(value)
+}
+
+function formatTargetCoverageReferenceState(item: TargetCoverageRow) {
+  if (item.staleTargetReferenceId) {
+    return 'Store mismatch'
+  }
+
+  if (item.targetReferenceId) {
+    return 'Approved reference'
+  }
+
+  if (item.pendingRequestId) {
+    return 'Waiting approval'
+  }
+
+  return 'No approved reference'
 }

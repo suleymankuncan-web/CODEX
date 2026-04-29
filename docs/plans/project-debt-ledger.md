@@ -17,7 +17,7 @@ Date: 29 April 2026
 
 Current count:
 
-- Closed active debts: 48
+- Closed active debts: 49
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -76,6 +76,7 @@ These are counted as paid because they have implementation or documentation evid
 46. Checklist Store Score Integration V1
 47. KPI Benchmark Scoring V1
 48. Target Reference Control Surface V1
+49. Target Coverage V1-B Readiness Signals
 
 Production-Ready Migration System V1 is counted as paid because SQL migrations are tracked in `audit.schema_migration`, checksum drift is rejected, failed runs are recorded with error evidence, the HTTP migration endpoint is disabled in production, and `npm.cmd run db:migrate` is the approved CLI/CI migration path.
 
@@ -96,6 +97,8 @@ Checklist Store Score Integration V1 is counted as paid because completed BM che
 KPI Benchmark Scoring V1 is counted as paid because store/personnel KPI metrics now score against target or same-period Turkey-average references, preserve actual ratios, cap score contribution at `%120`, expose capped and missing-reference explanations in API/UI, and employee performance snapshots use the same scoring engine. Targeted backend/frontend checks plus root `check:release` pass. Reference: `docs/superpowers/plans/2026-04-29-kpi-benchmark-scoring-v1.md`.
 
 Target Reference Control Surface V1 is counted as paid because approved personnel target references now have a canonical table, target allocations require real `employeeId`, region approval promotes allocations into approved target references, live reporting and employee snapshots read/anchor those references, missing targets stay explicit instead of guessed, and `/admin/targets` exposes target coverage readiness. Targeted backend/frontend checks plus root `check:release` pass. Reference: `docs/superpowers/plans/2026-04-29-target-reference-control-surface-v1.md`.
+
+Target Coverage V1-B Readiness Signals is counted as paid because target coverage now separates `approved`, `pending_region_approval`, `pending_change_conflict`, `stale_reference`, and `missing` states without changing scoring. Admin `/admin/targets` exposes those operator signals, while live/snapshot scoring continues to read only approved target references. Targeted backend/frontend checks plus root `check:release` pass.
 
 ## Superseded Before Overbuilding
 
@@ -277,6 +280,7 @@ Current repo hygiene is not counted as active debt in this ledger because:
 - the 28 April 2026 Mobile Checklist Today V1 Design locked HR template versioning, region-manager visit scoring, store-manager acknowledgement, multi-visit monthly averaging, and completed-lock behavior before implementation.
 - the 28 April 2026 Mobile Checklist Today V1 implementation added HR-owned versioned templates, region-manager visit scoring, store-manager acknowledgement, completed-lock behavior, monthly multi-visit averaging, and frontend pilot surfaces behind targeted and root release gates.
 - the 29 April 2026 Target Reference Control Surface V1 implementation made approved personnel target references queryable, anchored them into live/snapshot scoring, and added an admin coverage panel behind targeted and root release gates.
+- the 29 April 2026 Target Coverage V1-B implementation split missing target coverage into approved, pending, conflict, stale, and missing operator signals without changing scoring semantics.
 
 Still monitor:
 
@@ -320,4 +324,4 @@ The next local backend candidate should be chosen through the intake gate. Sourc
 Recommended local candidate if external evidence is still unavailable:
 
 - If a true store/personnel baseline list with store codes and seller codes is available, start Personnel Master Data Bootstrap V1 through the intake gate.
-- If no baseline/source evidence exists, keep source-specific adapter work closed and consider only a small Target Coverage V1-B intake for pending, stale, and conflict counters.
+- If no baseline/source evidence exists, keep source-specific adapter work closed and choose the next small guard only through the intake gate.

@@ -106,10 +106,26 @@ export class TargetDistributionService {
       externalEmployeeRef: row.external_employee_ref,
       targetReferenceId: row.personnel_target_reference_id,
       targetValue: row.target_value !== null ? Number(row.target_value) : null,
+      pendingRequestId: row.pending_request_id,
+      pendingTargetValue:
+        row.pending_target_value !== null ? Number(row.pending_target_value) : null,
+      staleTargetReferenceId: row.stale_target_reference_id,
       targetStatus: row.target_status,
     }));
     const coveredEmployees = items.filter(
-      (item) => item.targetStatus === "approved",
+      (item) => item.targetReferenceId !== null,
+    ).length;
+    const pendingEmployees = items.filter(
+      (item) => item.targetStatus === "pending_region_approval",
+    ).length;
+    const conflictEmployees = items.filter(
+      (item) => item.targetStatus === "pending_change_conflict",
+    ).length;
+    const staleEmployees = items.filter(
+      (item) => item.targetStatus === "stale_reference",
+    ).length;
+    const missingEmployees = items.filter(
+      (item) => item.targetStatus === "missing",
     ).length;
     const totalEmployees = items.length;
 
@@ -123,7 +139,11 @@ export class TargetDistributionService {
         requestMonth: input.requestMonth,
         totalEmployees,
         coveredEmployees,
-        missingEmployees: totalEmployees - coveredEmployees,
+        missingEmployees,
+        pendingEmployees,
+        conflictEmployees,
+        staleEmployees,
+        uncoveredEmployees: totalEmployees - coveredEmployees,
         coverageRate:
           totalEmployees > 0
             ? Number((coveredEmployees / totalEmployees).toFixed(4))

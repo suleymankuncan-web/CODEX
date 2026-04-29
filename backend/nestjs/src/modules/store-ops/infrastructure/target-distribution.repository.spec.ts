@@ -64,12 +64,39 @@ describe("TargetDistributionRepository", () => {
     );
     expect(sql).toContain("ptr.target_type = 'monthly_sales_target'");
     expect(sql).toContain("ptr.status = 'approved'");
-    expect(sql).toContain("CASE WHEN ptr.personnel_target_reference_id IS NULL");
+    expect(sql).toContain("WHEN ptr.personnel_target_reference_id IS NOT NULL");
     expect(query).toHaveBeenCalledWith(expect.any(String), [
       "2026-03-01",
       ["00000000-0000-0000-0000-000000000001"],
       "00000000-0000-0000-0000-000000000201",
     ]);
+  });
+
+  it("classifies pending, conflict, stale, missing, and approved target coverage states", async () => {
+    const query = jest.fn().mockResolvedValue({ rows: [] });
+    const repository = new TargetDistributionRepository({ query } as never);
+
+    await repository.listTargetCoverage({
+      companyIds: ["00000000-0000-0000-0000-000000000001"],
+      regionIds: [],
+      storeIds: [],
+      requestMonth: "2026-03-01",
+    });
+
+    const sql = String(query.mock.calls[0][0]);
+    expect(sql).toContain("pending_allocations AS");
+    expect(sql).toContain("jsonb_array_elements(tdr.allocation_json)");
+    expect(sql).toContain("tdr.request_status = 'pending_region_approval'");
+    expect(sql).toContain("stale_targets AS");
+    expect(sql).toContain("stale_targets.store_id <> ap.store_id");
+    expect(sql).toContain("WHEN ptr.personnel_target_reference_id IS NOT NULL");
+    expect(sql).toContain("AND pa.pending_request_id IS NOT NULL");
+    expect(sql).toContain("THEN 'pending_change_conflict'");
+    expect(sql).toContain("WHEN pa.pending_request_id IS NOT NULL");
+    expect(sql).toContain("THEN 'pending_region_approval'");
+    expect(sql).toContain("WHEN stale_targets.personnel_target_reference_id IS NOT NULL");
+    expect(sql).toContain("THEN 'stale_reference'");
+    expect(sql).toContain("ELSE 'missing'");
   });
 
   it("promotes approved allocations into personnel target references", async () => {

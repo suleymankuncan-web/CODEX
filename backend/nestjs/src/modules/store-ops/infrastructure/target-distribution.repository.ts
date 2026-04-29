@@ -39,7 +39,15 @@ type TargetCoverageRow = {
   external_employee_ref: string | null;
   personnel_target_reference_id: string | null;
   target_value: string | null;
-  target_status: "approved" | "missing";
+  pending_request_id: string | null;
+  pending_target_value: string | null;
+  stale_target_reference_id: string | null;
+  target_status:
+    | "approved"
+    | "pending_region_approval"
+    | "pending_change_conflict"
+    | "stale_reference"
+    | "missing";
 };
 
 function parseTargetDistributionAllocations(
@@ -363,6 +371,34 @@ export class TargetDistributionRepository {
             AND e.employment_status = 'active'
             AND ${clauses.join(" AND ")}
           ORDER BY eah.employee_id, eah.store_id, eah.start_date DESC
+        ),
+        pending_allocations AS (
+          SELECT DISTINCT ON (tdr.store_id, (allocation.value ->> 'employeeId'))
+            tdr.target_distribution_request_id::text AS pending_request_id,
+            tdr.store_id,
+            (allocation.value ->> 'employeeId')::uuid AS employee_id,
+            NULLIF(allocation.value ->> 'targetValue', '')::numeric AS pending_target_value
+          FROM ops.target_distribution_request tdr
+          CROSS JOIN LATERAL jsonb_array_elements(tdr.allocation_json) AS allocation(value)
+          WHERE tdr.request_status = 'pending_region_approval'
+            AND tdr.request_month = $1::date
+          ORDER BY
+            tdr.store_id,
+            (allocation.value ->> 'employeeId'),
+            tdr.created_at DESC,
+            tdr.target_distribution_request_id DESC
+        ),
+        stale_targets AS (
+          SELECT DISTINCT ON (ptr.employee_id)
+            ptr.employee_id,
+            ptr.store_id,
+            ptr.personnel_target_reference_id::text AS personnel_target_reference_id
+          FROM ops.personnel_target_reference ptr
+          WHERE ptr.period_start = $1::date
+            AND ptr.period_end = ($1::date + INTERVAL '1 month' - INTERVAL '1 day')::date
+            AND ptr.target_type = 'monthly_sales_target'
+            AND ptr.status = 'approved'
+          ORDER BY ptr.employee_id, ptr.approved_at DESC NULLS LAST, ptr.created_at DESC
         )
         SELECT
           ap.store_id,
@@ -373,9 +409,20 @@ export class TargetDistributionRepository {
           ap.external_employee_ref,
           ptr.personnel_target_reference_id::text AS personnel_target_reference_id,
           ptr.target_value::text AS target_value,
-          CASE WHEN ptr.personnel_target_reference_id IS NULL
-            THEN 'missing'
-            ELSE 'approved'
+          pa.pending_request_id,
+          pa.pending_target_value::text AS pending_target_value,
+          stale_targets.personnel_target_reference_id AS stale_target_reference_id,
+          CASE
+            WHEN ptr.personnel_target_reference_id IS NOT NULL
+              AND pa.pending_request_id IS NOT NULL
+              THEN 'pending_change_conflict'
+            WHEN ptr.personnel_target_reference_id IS NOT NULL
+              THEN 'approved'
+            WHEN pa.pending_request_id IS NOT NULL
+              THEN 'pending_region_approval'
+            WHEN stale_targets.personnel_target_reference_id IS NOT NULL
+              THEN 'stale_reference'
+            ELSE 'missing'
           END AS target_status
         FROM active_personnel ap
         LEFT JOIN ops.personnel_target_reference ptr
@@ -385,6 +432,12 @@ export class TargetDistributionRepository {
          AND ptr.period_end = ($1::date + INTERVAL '1 month' - INTERVAL '1 day')::date
          AND ptr.target_type = 'monthly_sales_target'
          AND ptr.status = 'approved'
+        LEFT JOIN pending_allocations pa
+          ON pa.employee_id = ap.employee_id
+         AND pa.store_id = ap.store_id
+        LEFT JOIN stale_targets
+          ON stale_targets.employee_id = ap.employee_id
+         AND stale_targets.store_id <> ap.store_id
         ORDER BY ap.store_name ASC, ap.first_name ASC, ap.last_name ASC, ap.employee_id ASC
       `,
       params,
