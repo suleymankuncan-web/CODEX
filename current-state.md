@@ -3804,6 +3804,33 @@ Planlar:
 - `docs/superpowers/plans/2026-04-25-competition-stage-package-plan-approval-v1.md`
 - `docs/superpowers/specs/2026-04-25-competition-stage-package-plan-approval-v1-design.md`
 
+## Son User Account / Role Assignment V1 Implementation
+
+29 Nisan 2026 itibariyla pilot kullanici hesabi, rol ve store scope baglama akisi uygulandi.
+
+Eklenenler:
+
+- `ops.user_account.provider_subject` provider-subject mapping alani eklendi.
+- JWT `sub` degeri internal app user lookup ile `ops.user_account.user_id` kaydina cozulur.
+- `VISUAL_MERCHANDISER` store-scoped rol olarak eklendi.
+- `REGION_MANAGER` pilotta store-scoped dar role assignment ile iki magazaya indirgenebilir hale geldi.
+- HR/Admin `POST /api/auth/pilot-user-bindings` ile employee, provider subject, tek rol ve store scope baglar.
+- Admin auth yuzeyinde pilot user binding paneli eklendi.
+
+Dogrulama:
+
+- Backend targeted auth/checklist tests: 6 suite, 53 test passed.
+- Backend lint/build passed.
+- Frontend lint/build passed.
+- Frontend targeted Playwright auth admin test passed.
+- Root `npm.cmd run check:release` passed.
+
+CODEX durust yorum:
+
+Bu parca pilotu guvenli acacak kapidir. Keycloak kimlik kapisi olarak kaldi; yetki ve scope bizim DB tarafinda izlenebilir hale geldi.
+
+Siradaki mantikli adim: gercek pilot kullanicilari Keycloak'ta manuel olusturup HR_ADMIN yuzeyinden 1 bolge muduru, 2 magaza muduru ve 1 visual merchandiser baglama smoke'u yapmak.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:

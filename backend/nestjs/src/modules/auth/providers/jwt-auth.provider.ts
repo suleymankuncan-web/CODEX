@@ -14,6 +14,7 @@ const APP_ROLE_CODES = new Set([
   "STORE_MANAGER",
   "STORE_PERSONNEL",
   "SUPER_ADMIN",
+  "VISUAL_MERCHANDISER",
 ]);
 
 @Injectable()

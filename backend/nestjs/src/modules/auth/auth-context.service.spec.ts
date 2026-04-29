@@ -7,9 +7,19 @@ describe("AuthContextService", () => {
       ReturnType<AuthAuthorizationRepository["getActiveRoleAssignments"]>
     >;
     actionStoreAssignments?: Array<{ store_id: string }>;
+    mappedProviderUser?: {
+      user_id: string;
+      employee_id: string | null;
+      username: string;
+      email: string;
+      is_active: boolean;
+    } | null;
     throwOnRoleAssignments?: boolean;
   } = {}) {
     return {
+      getUserAccountByProviderSubject: jest.fn(
+        async () => input.mappedProviderUser ?? null,
+      ),
       getActiveRoleAssignments: jest.fn(async () => {
         if (input.throwOnRoleAssignments) {
           throw new Error("connect ECONNREFUSED 127.0.0.1:5432");
@@ -210,6 +220,95 @@ describe("AuthContextService", () => {
       },
       assignedStoreIds: ["store-1", "store-2"],
     });
+  });
+
+  it("maps JWT subject to internal user account before DB role lookup", async () => {
+    const repository = buildAuthorizationRepository({
+      mappedProviderUser: {
+        user_id: "90000000-0000-4000-8000-000000000010",
+        employee_id: "70000000-0000-4000-8000-000000000010",
+        username: "store.manager",
+        email: "store.manager@example.com",
+        is_active: true,
+      },
+      roleAssignments: [
+        {
+          role_code: "STORE_MANAGER",
+          scope_type: "store",
+          company_id: null,
+          region_id: null,
+          store_id: "10000000-0000-4000-8000-000000000021",
+        },
+      ],
+      actionStoreAssignments: [
+        { store_id: "10000000-0000-4000-8000-000000000021" },
+      ],
+    });
+
+    const service = new AuthContextService(
+      { authMode: "jwt", allowMockAuth: false, isProduction: false } as never,
+      repository,
+      { resolveUser: jest.fn() } as never,
+      {
+        resolveUser: jest.fn(async () => ({
+          userId: "2f7b9d1e-8a41-4c7e-9d63-0d6b3c9a5f22",
+          roleCodes: [],
+          readScope: { companyIds: [], regionIds: [], storeIds: [] },
+          actionScope: { assignedStoreIds: [] },
+        })),
+      } as never,
+    );
+
+    const user = await service.resolveUser({
+      headers: { authorization: "Bearer token" },
+    });
+
+    expect(repository.getUserAccountByProviderSubject).toHaveBeenCalledWith({
+      authProvider: "oidc",
+      providerSubject: "2f7b9d1e-8a41-4c7e-9d63-0d6b3c9a5f22",
+    });
+    expect(repository.getActiveRoleAssignments).toHaveBeenCalledWith(
+      "90000000-0000-4000-8000-000000000010",
+    );
+    expect(user?.userId).toBe("90000000-0000-4000-8000-000000000010");
+    expect(user?.employeeId).toBe("70000000-0000-4000-8000-000000000010");
+    expect(user?.roleCodes).toEqual(["STORE_MANAGER"]);
+  });
+
+  it("rejects inactive mapped JWT user accounts without provider fallback", async () => {
+    const service = new AuthContextService(
+      { authMode: "jwt", allowMockAuth: false, isProduction: false } as never,
+      buildAuthorizationRepository({
+        mappedProviderUser: {
+          user_id: "90000000-0000-4000-8000-000000000010",
+          employee_id: "70000000-0000-4000-8000-000000000010",
+          username: "store.manager",
+          email: "store.manager@example.com",
+          is_active: false,
+        },
+      }),
+      { resolveUser: jest.fn() } as never,
+      {
+        resolveUser: jest.fn(async () => ({
+          userId: "2f7b9d1e-8a41-4c7e-9d63-0d6b3c9a5f22",
+          roleCodes: ["STORE_MANAGER"],
+          readScope: {
+            companyIds: [],
+            regionIds: [],
+            storeIds: ["10000000-0000-4000-8000-000000000021"],
+          },
+          actionScope: {
+            assignedStoreIds: ["10000000-0000-4000-8000-000000000021"],
+          },
+        })),
+      } as never,
+    );
+
+    await expect(
+      service.resolveUser({
+        headers: { authorization: "Bearer token" },
+      }),
+    ).rejects.toThrow("User account is inactive");
   });
 
   it("falls back to provider roles and scopes when no DB role assignments exist", async () => {

@@ -68,7 +68,7 @@ Exec-Keycloak "/opt/keycloak/bin/kcadm.sh create realms -s realm=$realm -s enabl
 Exec-Keycloak "/opt/keycloak/bin/kcadm.sh update users/profile -r $realm -s unmanagedAttributePolicy=ENABLED" | Out-Null
 
 Write-Host "Creating realm roles..."
-foreach ($role in @("SUPER_ADMIN","REPORT_VIEWER","STORE_MANAGER","STORE_PERSONNEL","REGION_MANAGER","AUDITOR","HR_ADMIN","INTEGRATION_ADMIN","SNAPSHOT_OPERATOR")) {
+foreach ($role in @("SUPER_ADMIN","REPORT_VIEWER","STORE_MANAGER","STORE_PERSONNEL","REGION_MANAGER","AUDITOR","HR_ADMIN","INTEGRATION_ADMIN","SNAPSHOT_OPERATOR","VISUAL_MERCHANDISER")) {
   Exec-Keycloak "/opt/keycloak/bin/kcadm.sh create roles -r $realm -s name=$role" | Out-Null
 }
 

@@ -5,6 +5,35 @@ import { DatabaseService } from "../../shared/database/database.service";
 export class AuthAuthorizationRepository {
   constructor(private readonly databaseService: DatabaseService) {}
 
+  async getUserAccountByProviderSubject(input: {
+    authProvider: string;
+    providerSubject: string;
+  }) {
+    const result = await this.databaseService.query<{
+      user_id: string;
+      employee_id: string | null;
+      username: string;
+      email: string;
+      is_active: boolean;
+    }>(
+      `
+        SELECT
+          ua.user_id,
+          ua.employee_id,
+          ua.username,
+          ua.email,
+          ua.is_active
+        FROM ops.user_account ua
+        WHERE ua.auth_provider = $1
+          AND ua.provider_subject = $2
+        LIMIT 1
+      `,
+      [input.authProvider, input.providerSubject],
+    );
+
+    return result.rows[0] ?? null;
+  }
+
   async getActiveRoleAssignments(userId: string) {
     if (!isUuid(userId)) {
       return [];

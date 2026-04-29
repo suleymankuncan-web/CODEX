@@ -23,6 +23,7 @@ import {
   getUserAccounts,
   reactivateUserAccount,
 } from '../features/auth/api'
+import { PilotUserBindingPanel } from '../features/auth/PilotUserBindingPanel'
 import { formatDateTime, getErrorMessage } from '../lib/format'
 
 type RoleScopeType = 'company' | 'region' | 'store'
@@ -390,6 +391,8 @@ export function AuthDashboardPage() {
           <div className="inline-state inline-state-danger">{errorFeedback}</div>
         </section>
       ) : null}
+
+      <PilotUserBindingPanel stores={lookups.stores} />
 
       <section className="two-up-grid">
         <article className="panel">

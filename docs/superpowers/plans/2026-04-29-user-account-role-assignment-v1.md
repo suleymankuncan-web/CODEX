@@ -1904,6 +1904,17 @@ Expected:
 working tree clean except pre-existing untracked outputs/
 ```
 
+## Execution Status
+
+Implemented on 29 April 2026.
+
+- Provider subject mapping, JWT subject resolution, `VISUAL_MERCHANDISER`, region-manager store-scope narrowing, HR/Admin pilot binding backend command, VM checklist read-only boundary, and admin-web pilot binding surface are complete.
+- Targeted backend auth/checklist tests passed: 6 suites, 53 tests.
+- Backend lint/build passed.
+- Frontend lint/build passed.
+- Frontend targeted Playwright auth-admin surface passed.
+- Root `npm.cmd run check:release` passed.
+
 ## Self-Review
 
 - Spec coverage: identity binding, Keycloak manual user creation, pilot users, single role, store scope, VM boundary, deactivation, audit, backend and frontend surfaces are mapped to tasks.

@@ -17,7 +17,7 @@ export class MobileChecklistController {
 
   @Get("today")
   @RequireScope("authenticated")
-  @RequireRoles("REGION_MANAGER", "STORE_MANAGER", "SUPER_ADMIN")
+  @RequireRoles("REGION_MANAGER", "STORE_MANAGER", "VISUAL_MERCHANDISER", "SUPER_ADMIN")
   async getToday(
     @Req()
     request: {

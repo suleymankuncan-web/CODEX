@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from "@
 import { RequireRoles } from "../decorators/roles.decorator";
 import { AuthAdminService } from "../auth-admin.service";
 import { CreateActionStoreAssignmentDto } from "./dto/create-action-store-assignment.dto";
+import { CreatePilotUserBindingDto } from "./dto/create-pilot-user-binding.dto";
 import { CreateRoleAssignmentDto } from "./dto/create-role-assignment.dto";
 import { CreateUserAccountDto } from "./dto/create-user-account.dto";
 import { GrantRolePermissionDto } from "./dto/grant-role-permission.dto";
@@ -134,6 +135,23 @@ export class AuthAdminController {
     @Body() body: CreateUserAccountDto,
   ) {
     return this.authAdminService.createUserAccount({
+      ...body,
+      actorUserId: request.user.userId,
+    });
+  }
+
+  @Post("pilot-user-bindings")
+  @RequireRoles("SUPER_ADMIN", "HR_ADMIN")
+  async createPilotUserBinding(
+    @Req()
+    request: {
+      user: {
+        userId: string;
+      };
+    },
+    @Body() body: CreatePilotUserBindingDto,
+  ) {
+    return this.authAdminService.createPilotUserBinding({
       ...body,
       actorUserId: request.user.userId,
     });

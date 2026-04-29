@@ -17,7 +17,7 @@ Date: 29 April 2026
 
 Current count:
 
-- Closed active debts: 57
+- Closed active debts: 58
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -85,6 +85,7 @@ These are counted as paid because they have implementation or documentation evid
 55. Master Data Bootstrap Store Promotion V1
 56. Master Data Bootstrap Personnel Promotion V1
 57. Master Data Bootstrap Admin Review Surface V1
+58. User Account / Role Assignment V1
 
 Production-Ready Migration System V1 is counted as paid because SQL migrations are tracked in `audit.schema_migration`, checksum drift is rejected, failed runs are recorded with error evidence, the HTTP migration endpoint is disabled in production, and `npm.cmd run db:migrate` is the approved CLI/CI migration path.
 
@@ -107,6 +108,8 @@ Master Data Bootstrap Store Promotion V1 is counted as paid because readiness-ap
 Master Data Bootstrap Personnel Promotion V1 is counted as paid because readiness-approved personnel bootstrap rows can now be promoted into `ops.employee` and one active primary `ops.employee_assignment_history` through a scoped HR/Admin command, staged rows keep employee `promoted_entity_id` evidence, batch counters are refreshed, already-promoted rows are skipped, and user account/role creation remains a future slice.
 
 Master Data Bootstrap Admin Review Surface V1 is counted as paid because HR/Admin can now open `/admin/master-data`, list bootstrap batches, inspect readiness counters and row-level resolved/promoted evidence, run validation, and trigger the correct store/personnel promotion command without adding a second promotion decision engine or opening user account creation.
+
+User Account / Role Assignment V1 is counted as paid because HR/Admin can link selected pilot employees to existing Keycloak/OIDC provider subjects, assign one primary role, grant exact pilot store scope, use `VISUAL_MERCHANDISER` as a bounded store-scoped role, and resolve JWT subject claims to internal app users before DB role/scope authorization. Targeted backend/frontend checks plus root `check:release` pass.
 
 Checklist Acknowledgement Canonical Schema Alignment V1 is counted as paid because the existing `ops.checklist_acknowledgement` migration and backend repository usage are now represented in canonical `db/schema.sql`, and a backend schema contract test guards against drift.
 

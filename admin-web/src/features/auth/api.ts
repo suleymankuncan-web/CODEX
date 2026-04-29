@@ -73,6 +73,7 @@ export type UserAccount = {
   username: string
   email: string
   authProvider: string
+  providerSubject: string | null
   isActive: boolean
   lastLoginAt: string | null
   createdAt: string
@@ -110,6 +111,21 @@ export type ActionStoreAssignment = {
   effectiveTo: string | null
   createdAt: string
   active: boolean
+}
+
+export type PilotUserBinding = {
+  user: UserAccount
+  roleAssignments: RoleAssignment[]
+  actionStoreAssignments: ActionStoreAssignment[]
+  employee: {
+    employeeId: string
+    employeeCode: string | null
+    firstName: string
+    lastName: string
+    storeId: string
+    storeCode: string
+    storeName: string
+  }
 }
 
 export type RoleCatalogItem = {
@@ -334,8 +350,24 @@ export async function createUserAccount(input: {
   username: string
   email: string
   authProvider: 'local' | 'oidc' | 'sso'
+  providerSubject?: string
 }) {
   return sendJson<CommandResponse<{ user: UserAccount }>>('/auth/users', {
+    method: 'POST',
+    body: input,
+  })
+}
+
+export async function createPilotUserBinding(input: {
+  employeeId: string
+  authProvider: 'oidc'
+  providerSubject: string
+  username: string
+  email: string
+  roleCode: 'REGION_MANAGER' | 'STORE_MANAGER' | 'VISUAL_MERCHANDISER'
+  storeIds: string[]
+}) {
+  return sendJson<CommandResponse<{ binding: PilotUserBinding }>>('/auth/pilot-user-bindings', {
     method: 'POST',
     body: input,
   })

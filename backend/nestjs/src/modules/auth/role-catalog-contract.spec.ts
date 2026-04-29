@@ -11,6 +11,7 @@ const expectedRoleScopes: Record<string, string> = {
   STORE_MANAGER: "store",
   STORE_PERSONNEL: "store",
   SUPER_ADMIN: "company",
+  VISUAL_MERCHANDISER: "store",
 };
 
 const expectedRoleCodes = Object.keys(expectedRoleScopes).sort();

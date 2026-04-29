@@ -14,6 +14,7 @@ export class CreateRoleAssignmentDto {
     "REGION_MANAGER",
     "STORE_MANAGER",
     "STORE_PERSONNEL",
+    "VISUAL_MERCHANDISER",
   ])
   roleCode!: string;
 

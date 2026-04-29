@@ -101,6 +101,7 @@ export class AuthContextService {
     }
 
     const providerUser = buildAuthenticatedUser(user);
+    let appUser = providerUser;
 
     let assignments: Awaited<
       ReturnType<AuthAuthorizationRepository["getActiveRoleAssignments"]>
@@ -110,10 +111,37 @@ export class AuthContextService {
     > = [];
 
     try {
-      assignments = await this.authAuthorizationRepository.getActiveRoleAssignments(user.userId);
+      if (
+        this.appConfigService.authMode === "jwt" &&
+        providerUser.userId !== "unknown-user"
+      ) {
+        const mappedUser =
+          await this.authAuthorizationRepository.getUserAccountByProviderSubject({
+            authProvider: "oidc",
+            providerSubject: providerUser.userId,
+          });
+
+        if (mappedUser) {
+          if (!mappedUser.is_active) {
+            throw new UnauthorizedException("User account is inactive");
+          }
+
+          appUser = buildAuthenticatedUser({
+            ...providerUser,
+            userId: mappedUser.user_id,
+            employeeId: mappedUser.employee_id ?? providerUser.employeeId,
+          });
+        }
+      }
+
+      assignments = await this.authAuthorizationRepository.getActiveRoleAssignments(appUser.userId);
       actionStoreAssignments =
-        await this.authAuthorizationRepository.getActiveActionStoreAssignments(user.userId);
+        await this.authAuthorizationRepository.getActiveActionStoreAssignments(appUser.userId);
     } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+
       if (this.appConfigService.isProduction) {
         this.logger.error(
           `Failing closed because authorization lookup failed for user ${providerUser.userId}: ${
@@ -141,14 +169,14 @@ export class AuthContextService {
     if (assignments.length === 0) {
       if (assignedStoreIds.length > 0) {
         return buildAuthenticatedUser({
-          ...providerUser,
+          ...appUser,
           actionScope: {
             assignedStoreIds,
           },
         });
       }
 
-      return providerUser;
+      return appUser;
     }
 
     const readScope = {
@@ -176,7 +204,7 @@ export class AuthContextService {
     };
 
     return buildAuthenticatedUser({
-      ...providerUser,
+      ...appUser,
       roleCodes: [...new Set(assignments.map((assignment) => assignment.role_code))],
       readScope,
       actionScope: {

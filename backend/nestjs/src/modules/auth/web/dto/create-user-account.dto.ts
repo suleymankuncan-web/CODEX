@@ -15,4 +15,9 @@ export class CreateUserAccountDto {
 
   @IsIn(["local", "oidc", "sso"])
   authProvider!: "local" | "oidc" | "sso";
+
+  @IsOptional()
+  @IsString()
+  @MinLength(8)
+  providerSubject?: string;
 }

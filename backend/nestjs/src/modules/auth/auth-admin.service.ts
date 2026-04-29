@@ -1,6 +1,7 @@
 import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { buildCommandResponse, buildListResponse } from "../../shared/http/response-builders";
 import { mapAuditEvent } from "../../shared/audit/audit-event.mapper";
+import { semanticValidation } from "../../shared/http/api-errors";
 import { AuthAdminRepository } from "./auth-admin.repository";
 import { AuthRoleScopePolicyService } from "./auth-role-scope-policy.service";
 
@@ -30,7 +31,11 @@ export class AuthAdminService {
       throw new NotFoundException(`Role not found: ${input.roleCode}`);
     }
 
-    this.authRoleScopePolicyService.validateRoleScope(role.role_scope_type, input.scopeType);
+    this.authRoleScopePolicyService.validateRoleScope({
+      roleCode: role.role_code,
+      roleScopeType: role.role_scope_type,
+      assignmentScopeType: input.scopeType,
+    });
 
     const activeAssignmentCount = await this.authAdminRepository.countActiveAssignments({
       userId: input.userId,
@@ -225,6 +230,7 @@ export class AuthAdminService {
     username: string;
     email: string;
     authProvider: "local" | "oidc" | "sso";
+    providerSubject?: string;
     actorUserId: string;
   }) {
     const user = await this.authAdminRepository.createUserAccount({
@@ -232,6 +238,7 @@ export class AuthAdminService {
       username: input.username,
       email: input.email,
       authProvider: input.authProvider,
+      providerSubject: input.providerSubject?.trim() || null,
       actorUserId: input.actorUserId,
     });
 
@@ -240,6 +247,108 @@ export class AuthAdminService {
       message: "User account created",
       data: {
         user: this.mapUser(user),
+      },
+    });
+  }
+
+  async createPilotUserBinding(input: {
+    employeeId: string;
+    authProvider: "oidc";
+    providerSubject: string;
+    username: string;
+    email: string;
+    roleCode: "REGION_MANAGER" | "STORE_MANAGER" | "VISUAL_MERCHANDISER";
+    storeIds: string[];
+    actorUserId: string;
+  }) {
+    const uniqueStoreIds = [...new Set(input.storeIds)];
+
+    if (uniqueStoreIds.length !== input.storeIds.length) {
+      throw semanticValidation("Pilot store scope contains duplicate stores");
+    }
+
+    if (input.storeIds.length === 0 || input.storeIds.length > 5) {
+      throw semanticValidation("Pilot user binding must target between 1 and 5 stores");
+    }
+
+    const providerSubject = input.providerSubject.trim();
+    const existingProviderUser = await this.authAdminRepository.getUserAccountByProviderSubject({
+      authProvider: input.authProvider,
+      providerSubject,
+    });
+
+    if (existingProviderUser) {
+      throw new ConflictException("Provider subject is already linked to a user account");
+    }
+
+    const employee = await this.authAdminRepository.getActiveEmployeeAccessContext(
+      input.employeeId,
+    );
+
+    if (!employee) {
+      throw new NotFoundException(`Active employee assignment not found: ${input.employeeId}`);
+    }
+
+    if (input.roleCode === "STORE_MANAGER" && uniqueStoreIds.length !== 1) {
+      throw semanticValidation("STORE_MANAGER pilot binding must target exactly one store");
+    }
+
+    if (input.roleCode === "STORE_MANAGER" && uniqueStoreIds[0] !== employee.store_id) {
+      throw semanticValidation("STORE_MANAGER pilot binding must use the employee active store");
+    }
+
+    const role = await this.authAdminRepository.getRoleByCode(input.roleCode);
+
+    if (!role) {
+      throw new NotFoundException(`Role not found: ${input.roleCode}`);
+    }
+
+    this.authRoleScopePolicyService.validateRoleScope({
+      roleCode: role.role_code,
+      roleScopeType: role.role_scope_type,
+      assignmentScopeType: "store",
+    });
+
+    const stores = await this.authAdminRepository.listActiveStoresByIds(uniqueStoreIds);
+
+    if (stores.length !== uniqueStoreIds.length) {
+      throw semanticValidation("Pilot user binding contains an inactive or unknown store");
+    }
+
+    const binding = await this.authAdminRepository.createPilotUserBinding({
+      employeeId: input.employeeId,
+      authProvider: input.authProvider,
+      providerSubject,
+      username: input.username.trim(),
+      email: input.email.trim(),
+      role,
+      stores,
+      employee,
+      actorUserId: input.actorUserId,
+    });
+
+    return buildCommandResponse({
+      status: "created",
+      message: "Pilot user binding created",
+      data: {
+        binding: {
+          user: this.mapUser(binding.user),
+          roleAssignments: binding.roleAssignments.map((assignment) =>
+            this.mapAssignment(assignment),
+          ),
+          actionStoreAssignments: binding.actionStoreAssignments.map((assignment) =>
+            this.mapActionStoreAssignment(assignment),
+          ),
+          employee: {
+            employeeId: binding.employee.employee_id,
+            employeeCode: binding.employee.external_employee_ref,
+            firstName: binding.employee.first_name,
+            lastName: binding.employee.last_name,
+            storeId: binding.employee.store_id,
+            storeCode: binding.employee.store_code,
+            storeName: binding.employee.store_name,
+          },
+        },
       },
     });
   }
@@ -630,6 +739,7 @@ export class AuthAdminService {
     username: string;
     email: string;
     auth_provider: string;
+    provider_subject?: string | null;
     is_active: boolean;
     last_login_at: string | null;
     created_at: string;
@@ -640,6 +750,7 @@ export class AuthAdminService {
       username: item.username,
       email: item.email,
       authProvider: item.auth_provider,
+      providerSubject: item.provider_subject ?? null,
       isActive: item.is_active,
       lastLoginAt: item.last_login_at,
       createdAt: item.created_at,

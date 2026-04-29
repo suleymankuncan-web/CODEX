@@ -89,6 +89,60 @@ describe("Mobile checklist today flow", () => {
     await app.close();
   });
 
+  it("allows visual merchandisers to read today but blocks BM checklist mutations", async () => {
+    const query = jest.fn(async (sql: string) => {
+      if (sql.includes("FROM ops.store s") && sql.includes("ORDER BY s.store_name ASC")) {
+        return {
+          rows: [{ store_id: storeId, store_name: "Marmara Park" }],
+        };
+      }
+
+      if (sql.includes("FROM ops.checklist_template ct")) {
+        return {
+          rows: [
+            {
+              checklist_template_id: templateId,
+              template_code: "BM_VISIT_V1",
+              template_type: "BM_STORE_VISIT",
+              template_name: "BM Visit",
+              version_no: 1,
+            },
+          ],
+        };
+      }
+
+      return { rows: [] };
+    });
+    const app = await createIntegrationApp({
+      databaseService: {
+        query,
+        withTransaction: async <T>(work: (client: { query: typeof query }) => Promise<T>) =>
+          work({ query }),
+      },
+    });
+
+    const todayResponse = await request(app.getHttpServer())
+      .get("/api/mobile/checklists/today")
+      .set("x-user-id", "vm-user-1")
+      .set("x-role-codes", "VISUAL_MERCHANDISER")
+      .set("x-store-ids", storeId)
+      .set("x-assigned-store-ids", storeId);
+
+    expect(todayResponse.status).toBe(200);
+
+    const startBmChecklistResponse = await request(app.getHttpServer())
+      .post("/api/mobile/checklists/instances")
+      .set("x-user-id", "vm-user-1")
+      .set("x-role-codes", "VISUAL_MERCHANDISER")
+      .set("x-store-ids", storeId)
+      .set("x-assigned-store-ids", storeId)
+      .send({ checklistTemplateId: templateId, storeId });
+
+    expect(startBmChecklistResponse.status).toBe(403);
+
+    await app.close();
+  });
+
   it("lets region managers start a checklist only for assigned stores", async () => {
     const query = jest.fn(async (sql: string) => {
       if (sql.includes("INSERT INTO ops.checklist_instance")) {

@@ -26,6 +26,12 @@ export const AUDIT_EVENT_CATALOG = [
   auditEvent("user_account.created", "ops.user_account", "auth", "User account was created."),
   auditEvent("user_account.deactivated", "ops.user_account", "auth", "User account was deactivated."),
   auditEvent("user_account.reactivated", "ops.user_account", "auth", "User account was reactivated."),
+  auditEvent(
+    "pilot_user_binding.created",
+    "ops.user_account",
+    "auth",
+    "Pilot user account, role, and store scope binding was created.",
+  ),
   auditEvent("role_permission.granted", "ops.role", "auth", "Role permission was granted."),
   auditEvent("role_permission.revoked", "ops.role", "auth", "Role permission was revoked."),
   auditEvent(
