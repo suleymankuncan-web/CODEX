@@ -4049,6 +4049,35 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: VM score contribution activation tasarimini yazmak; KPI `%90`, BM `%5`, VM `%5` aylik blend davranisini migration/test/rapor etkileriyle kilitlemek.
 
+## Son VM Score Contribution Activation V1 Design
+
+29 Nisan 2026 itibariyla VM score contribution activation icin tasarim dokumani yazildi.
+
+Dosya:
+
+- `docs/superpowers/specs/2026-04-29-vm-score-contribution-activation-v1-design.md`
+
+Kilitlenen karar:
+
+- VM skor etkisi yalniz aylik store score icin olacak.
+- Aktif tam blend: KPI `%90`, BM `%5`, VM `%5`.
+- Eksik BM veya VM checklist sifir sayilmayacak.
+- Eksik checklist agirligi KPI tarafina geri donecek.
+- BM var VM yoksa KPI `%95`, BM `%5`, VM `%0`.
+- BM yok VM varsa KPI `%95`, BM `%0`, VM `%5`.
+- Ikisi de yoksa KPI `%100`.
+- Completed low checklist skora kucuk agirlikla yansir; aksi halde checklistin skor anlami kalmaz.
+- Store manager acknowledgement score inclusion gate degildir.
+- Configured ve effective weights API'da acik gosterilmeli.
+
+CODEX durust yorum:
+
+- Bu karar checklist yapilmayan magazayi cezalandirmiyor, ama checklist yapilan magazadaki kalite kanitini de anlamsizlastirmiyor.
+- Risk kullanici algisinda; bu yuzden UI mutlaka katkida neyin dahil/neye geri dondugunu gostermeli.
+- Bu faz kucuk ama kritik: skora guven icin matematik kadar aciklama da gerekiyor.
+
+Siradaki mantikli adim: bu tasarimi implementation plan'a cevirmek; once store-score-blend contract testleriyle kirmizi-yesil ilerlemek.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
