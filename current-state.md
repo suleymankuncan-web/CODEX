@@ -4223,6 +4223,43 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: Store KPI snapshot option metinlerini ve kapali/live copy'sini tamamen urun diline cekmek; ardindan bu snapshot secim desenini `/store/me` ve `/store/rankings` gibi kapali veri secen ekranlara da kontrollu yaymak.
 
+## Son Store KPI Snapshot Option Copy V1
+
+29 Nisan 2026 itibariyla Store KPI kapali snapshot secim metinleri urun diline cekildi.
+
+Eklenenler:
+
+- Snapshot option metni teknik tarih araligi yerine kullanici diliyle yaziliyor.
+- Ornekler:
+  - `24 Nis 2026 kapanisi - gunluk snapshot`
+  - `20 Nis 2026 kapanisi - Nisan aylik snapshot`
+- Tek gunluk snapshot'lar `gunluk snapshot` olarak etiketleniyor.
+- Tam ay snapshot'lari ay adiyla `Nisan aylik snapshot` gibi etiketleniyor.
+- ISO/UTC tarih alanlari local date-only normalize edilerek okundu; boylece `2026-03-31T21:00:00.000Z` gibi DB kaynakli degerler UI'da onceki gune kaymiyor.
+- Fallback olarak karmasik araliklar hala `baslangic - bitis snapshot` seklinde gosteriliyor.
+
+Dogrulama:
+
+- TDD kirmizi test: yeni option label beklentisi once mevcut UI'da dustu.
+- Frontend targeted explainability e2e: 4 test passed.
+- Frontend `npm.cmd run check:release` passed:
+  - lint,
+  - script tests 7/7,
+  - build,
+  - 45 Playwright test,
+  - audit 0 vulnerability.
+- In-app browser smoke:
+  - `pilot.store.manager.100` ile `/store/kpis` acildi.
+  - Kapali mod combobox'unda `24 Nis 2026 kapanisi - gunluk snapshot`, `23 Nis 2026 kapanisi - gunluk snapshot`, `22 Nis 2026 kapanisi - gunluk snapshot`, `20 Nis 2026 kapanisi - Nisan aylik snapshot` goruldu.
+
+CODEX durust yorum:
+
+- Bu is kucuk gorunuyor ama kullanici guveni icin degerli; tarih araligi okumak yerine kapanis tipini anliyor.
+- UTC/local tarih kaymasini burada yakalamak iyi oldu; aksi halde aylik snapshot UI'da yanlis ay gibi gorunebilirdi.
+- Simdilik helper sayfa icinde tutuldu; ayni desen `/store/me` ve `/store/rankings` tarafina yayilmadan once ortak helper'a cekmek daha temiz olur.
+
+Siradaki mantikli adim: Snapshot label/selection helper'ini ortak bir frontend utility haline getirip, ayni kapali snapshot secim desenini once `/store/me`, sonra `/store/rankings` ekranina kontrollu yaymak.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:

@@ -49,6 +49,11 @@ test('store KPI closed view lets users choose a closed snapshot from the list', 
   await page.goto('/store/kpis')
 
   await page.getByRole('button', { name: 'Kapanmis gun' }).click()
+  await expect(
+    page.getByRole('option', {
+      name: '20 Nis 2026 kapanışı - Nisan aylık snapshot',
+    }),
+  ).toBeAttached()
   await page
     .getByLabel('Kapanmis KPI snapshot secimi')
     .selectOption('snapshot-2026-04-20')
