@@ -1255,6 +1255,7 @@ export class ReportingRepository {
       kpi_code: string;
       kpi_name: string;
       target_value: string | null;
+      personnel_target_reference_id: string | null;
       actual_value: string;
     }>(
       `
@@ -1266,11 +1267,19 @@ export class ReportingRepository {
           store.store_name,
           kd.kpi_code,
           kd.kpi_name,
-          NULL::text AS target_value,
+          ptr.target_value::text AS target_value,
+          ptr.personnel_target_reference_id::text AS personnel_target_reference_id,
           ka.actual_value::text AS actual_value
         FROM ops.kpi_actual ka
         INNER JOIN ops.kpi_definition kd
           ON kd.kpi_id = ka.kpi_id
+        LEFT JOIN ops.personnel_target_reference ptr
+          ON ptr.employee_id = ka.employee_id
+         AND ptr.period_start = ka.period_start
+         AND ptr.period_end = ka.period_end
+         AND ptr.target_type = 'monthly_sales_target'
+         AND ptr.status = 'approved'
+         AND kd.kpi_code = 'TARGET_ACHIEVEMENT'
         INNER JOIN ops.employee e
           ON e.employee_id = ka.employee_id
         LEFT JOIN LATERAL (
@@ -1326,6 +1335,7 @@ export class ReportingRepository {
       store_id: string | null;
       kpi_code: string;
       target_value: string | null;
+      personnel_target_reference_id: string | null;
       actual_value: string;
     }>(
       `
@@ -1333,11 +1343,19 @@ export class ReportingRepository {
           ka.employee_id,
           ka.store_id,
           kd.kpi_code,
-          NULL::text AS target_value,
+          ptr.target_value::text AS target_value,
+          ptr.personnel_target_reference_id::text AS personnel_target_reference_id,
           ka.actual_value::text AS actual_value
         FROM ops.kpi_actual ka
         INNER JOIN ops.kpi_definition kd
           ON kd.kpi_id = ka.kpi_id
+        LEFT JOIN ops.personnel_target_reference ptr
+          ON ptr.employee_id = ka.employee_id
+         AND ptr.period_start = ka.period_start
+         AND ptr.period_end = ka.period_end
+         AND ptr.target_type = 'monthly_sales_target'
+         AND ptr.status = 'approved'
+         AND kd.kpi_code = 'TARGET_ACHIEVEMENT'
         WHERE ${clauses.join(" AND ")}
         ORDER BY ka.employee_id ASC, kd.kpi_code ASC
       `,

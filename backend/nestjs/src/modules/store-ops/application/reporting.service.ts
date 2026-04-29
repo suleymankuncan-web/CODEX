@@ -867,6 +867,11 @@ export class ReportingService {
         metricScore.scoreStatus === "missing_actual"
           ? "missing"
           : metricScore.scoreStatus;
+      const missingReason =
+        metric.code === "TARGET_ACHIEVEMENT" &&
+        metricScore.missingReason === "benchmark_missing"
+          ? "personnel_target_missing"
+          : metricScore.missingReason;
 
       return {
         code: metric.code,
@@ -881,7 +886,7 @@ export class ReportingService {
         scoredRatio: metricScore.scoredRatio,
         capRatio: metricScore.capRatio,
         isCapped: metricScore.isCapped,
-        missingReason: metricScore.missingReason,
+        missingReason,
         contributionValue,
         dataStatus: actualValue !== null ? "reported" : "missing",
         scoreStatus,
