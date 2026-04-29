@@ -294,11 +294,20 @@ export type StoreScoreBreakdownComponent = {
   missingReason?: string
 }
 
+export type StoreScoreWeights = {
+  kpiPerformanceWeight: number
+  bmChecklistWeight: number
+  vmChecklistWeight: number
+}
+
 export type StoreMonthlyScoreBreakdown = {
   snapshotRunId: string
   storeId: string
   scoreStatus: 'preview' | 'final'
   totalScore: number | null
+  missingWeightPolicy: 'return_missing_weight_to_kpi'
+  configuredWeights: StoreScoreWeights
+  effectiveWeights: StoreScoreWeights
   components: {
     kpi: StoreScoreBreakdownComponent
     bmChecklist: StoreScoreBreakdownComponent & {
@@ -306,7 +315,6 @@ export type StoreMonthlyScoreBreakdown = {
     }
     vmChecklist: StoreScoreBreakdownComponent & {
       visitCount: number
-      status: 'future_inactive' | string
     }
   }
 }

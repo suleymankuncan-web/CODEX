@@ -536,7 +536,7 @@ export class ReportingService {
       );
     }
 
-    const [config, kpiRows, bmChecklist] = await Promise.all([
+    const [config, kpiRows, bmChecklist, vmChecklist] = await Promise.all([
       this.getKpiConfig(),
       this.reportingRepository.getStoreKpiSnapshotRowsForScore({
         snapshotRunId: input.snapshotRunId,
@@ -546,6 +546,11 @@ export class ReportingService {
         snapshotRunId: input.snapshotRunId,
         storeId: input.storeId,
         templateType: "BM_STORE_VISIT",
+      }),
+      this.reportingRepository.getStoreChecklistSnapshotForScore({
+        snapshotRunId: input.snapshotRunId,
+        storeId: input.storeId,
+        templateType: "VM_STORE_VISIT",
       }),
     ]);
     const storeMetricWeights = config.storeProfile.metrics.filter(
@@ -579,6 +584,16 @@ export class ReportingService {
         : null;
 
     const blendService = new StoreScoreBlendService();
+    const mapChecklistSnapshot = (
+      checklist: { avg_score: string | null; audit_count: number } | null,
+    ) =>
+      checklist?.avg_score !== null && checklist?.avg_score !== undefined
+        ? {
+            score: Number(checklist.avg_score),
+            visitCount: Number(checklist.audit_count),
+          }
+        : null;
+
     return {
       snapshotRunId: input.snapshotRunId,
       storeId: input.storeId,
@@ -588,17 +603,13 @@ export class ReportingService {
           kpiScore !== null && Number.isFinite(kpiScore)
             ? Number(kpiScore.toFixed(2))
             : null,
-        bmChecklist:
-          bmChecklist?.avg_score !== null && bmChecklist?.avg_score !== undefined
-            ? {
-                score: Number(bmChecklist.avg_score),
-                visitCount: Number(bmChecklist.audit_count),
-              }
-            : null,
+        bmChecklist: mapChecklistSnapshot(bmChecklist),
+        vmChecklist: mapChecklistSnapshot(vmChecklist),
         config: {
-          kpiPerformanceWeight: 95,
+          kpiPerformanceWeight: 90,
           bmChecklistWeight: 5,
-          vmChecklistWeight: 0,
+          vmChecklistWeight: 5,
+          missingWeightPolicy: "return_missing_weight_to_kpi",
         },
       }),
     };

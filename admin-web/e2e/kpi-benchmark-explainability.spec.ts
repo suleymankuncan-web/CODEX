@@ -33,6 +33,18 @@ test('my performance explains missing benchmark or target', async ({ page }) => 
   await expect(page.getByText('Eksik referans: benchmark_missing')).toBeVisible()
 })
 
+test('store KPI closed view explains effective BM and VM checklist weights', async ({ page }) => {
+  await page.goto('/store/kpis')
+
+  await page.getByRole('button', { name: 'Kapanmis gun' }).click()
+
+  await expect(page.getByText('VM checklist: bu donem skora dahil edilmedi')).toBeVisible()
+  await expect(page.getByText('VM payi KPI tarafinda kaldi')).toBeVisible()
+  await expect(page.getByText('BM checklist katkisi')).toBeVisible()
+  await expect(page.getByText('Configured 90/5/5')).toBeVisible()
+  await expect(page.getByText('Effective 95/5/0')).toBeVisible()
+})
+
 async function routeBenchmarkExplainabilityApi(page: Page) {
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: authSessionFixture })
@@ -44,6 +56,18 @@ async function routeBenchmarkExplainabilityApi(page: Page) {
 
   await page.route('**/api/reports/store-kpi-highlights**', async (route) => {
     await route.fulfill({ json: storeKpiHighlightsFixture })
+  })
+
+  await page.route('**/api/reports/snapshot-runs**', async (route) => {
+    await route.fulfill({ json: snapshotRunsFixture })
+  })
+
+  await page.route('**/api/reports/kpis**', async (route) => {
+    await route.fulfill({ json: kpiRowsFixture })
+  })
+
+  await page.route('**/api/reports/store-score-breakdown**', async (route) => {
+    await route.fulfill({ json: storeScoreBreakdownFixture })
   })
 
   await page.route('**/api/reports/my-performance**', async (route) => {
@@ -245,4 +269,83 @@ const myPerformanceFixture = {
       status: 'reported',
     },
   ],
+}
+
+const snapshotRunsFixture = {
+  items: [
+    {
+      snapshotRunId: 'snapshot-1',
+      snapshotDate: '2026-03-31',
+      snapshotType: 'daily',
+      periodStart: '2026-03-31',
+      periodEnd: '2026-03-31',
+      runStatus: 'completed',
+      generatedAt: '2026-04-01T00:00:00.000Z',
+      generatedBy: 'system',
+    },
+  ],
+  meta: { count: 1, total: 1, limit: 1, offset: 0 },
+}
+
+const kpiRowsFixture = {
+  items: [
+    {
+      snapshotRunId: 'snapshot-1',
+      storeId: demoStoreId,
+      kpiId: 'kpi-1',
+      kpiCode: 'TARGET_ACHIEVEMENT',
+      kpiName: 'Target Achievement',
+      periodStart: '2026-03-31',
+      periodEnd: '2026-03-31',
+      targetValue: '100',
+      actualValue: '100',
+      achievementRate: '1',
+      statusBand: 'on_track',
+    },
+  ],
+  meta: { count: 1, total: 1, limit: 50, offset: 0 },
+}
+
+const storeScoreBreakdownFixture = {
+  snapshotRunId: 'snapshot-1',
+  storeId: demoStoreId,
+  scoreStatus: 'final',
+  totalScore: 99,
+  missingWeightPolicy: 'return_missing_weight_to_kpi',
+  configuredWeights: {
+    kpiPerformanceWeight: 90,
+    bmChecklistWeight: 5,
+    vmChecklistWeight: 5,
+  },
+  effectiveWeights: {
+    kpiPerformanceWeight: 95,
+    bmChecklistWeight: 5,
+    vmChecklistWeight: 0,
+  },
+  components: {
+    kpi: {
+      included: true,
+      score: 100,
+      weight: 95,
+      contribution: 95,
+      status: 'included',
+    },
+    bmChecklist: {
+      included: true,
+      score: 80,
+      weight: 5,
+      contribution: 4,
+      visitCount: 1,
+      status: 'included',
+    },
+    vmChecklist: {
+      included: false,
+      score: null,
+      weight: 0,
+      contribution: null,
+      visitCount: 0,
+      status: 'not_included',
+      missingReason: 'vm_checklist_not_completed_for_period',
+    },
+  },
 }

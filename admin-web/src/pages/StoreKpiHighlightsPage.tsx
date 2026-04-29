@@ -65,6 +65,38 @@ function formatMetric(input: number) {
   }).format(input)
 }
 
+function formatChecklistStatus(input: {
+  label: 'BM' | 'VM'
+  included: boolean
+  visitCount: number
+}) {
+  if (input.included) {
+    return input.visitCount === 1
+      ? `1 ${input.label} checklist yapildi`
+      : `${input.visitCount} ${input.label} checklist yapildi`
+  }
+
+  return `${input.label} checklist: bu donem skora dahil edilmedi`
+}
+
+function formatChecklistContribution(input: {
+  label: 'BM' | 'VM'
+  contribution: number | null
+}) {
+  if (input.contribution !== null && input.contribution !== undefined) {
+    return `${input.label} checklist katkisi ${formatMetric(input.contribution)}`
+  }
+
+  return 'Katki yok'
+}
+
+function formatChecklistMissingNote(input: {
+  label: 'BM' | 'VM'
+  included: boolean
+}) {
+  return input.included ? null : `${input.label} payi KPI tarafinda kaldi`
+}
+
 function formatPercent(input: number) {
   return `${formatMetric(input * 100)}%`
 }
@@ -343,15 +375,42 @@ export function StoreKpiHighlightsPage(input: {
     }
   }, [rows, storeKpiScoreProfile])
   const closedScoreBreakdown = scoreBreakdownQuery.data ?? null
-  const bmChecklistStatusLabel =
-    closedScoreBreakdown?.components.bmChecklist.included
-      ? `${closedScoreBreakdown.components.bmChecklist.visitCount} checklist yapildi`
-      : 'Bu donem skora dahil edilmedi'
-  const bmChecklistContributionLabel =
-    closedScoreBreakdown?.components.bmChecklist.contribution !== null &&
-    closedScoreBreakdown?.components.bmChecklist.contribution !== undefined
-      ? formatMetric(closedScoreBreakdown.components.bmChecklist.contribution)
-      : 'Katki yok'
+  const bmChecklist = closedScoreBreakdown?.components.bmChecklist ?? null
+  const vmChecklist = closedScoreBreakdown?.components.vmChecklist ?? null
+  const bmChecklistStatusLabel = bmChecklist
+    ? formatChecklistStatus({
+        label: 'BM',
+        included: bmChecklist.included,
+        visitCount: bmChecklist.visitCount,
+      })
+    : 'BM checklist: bu donem skora dahil edilmedi'
+  const vmChecklistStatusLabel = vmChecklist
+    ? formatChecklistStatus({
+        label: 'VM',
+        included: vmChecklist.included,
+        visitCount: vmChecklist.visitCount,
+      })
+    : 'VM checklist: bu donem skora dahil edilmedi'
+  const bmChecklistContributionLabel = bmChecklist
+    ? formatChecklistContribution({
+        label: 'BM',
+        contribution: bmChecklist.contribution,
+      })
+    : 'Katki yok'
+  const vmChecklistContributionLabel = vmChecklist
+    ? formatChecklistContribution({
+        label: 'VM',
+        contribution: vmChecklist.contribution,
+      })
+    : 'Katki yok'
+  const bmChecklistMissingNote = formatChecklistMissingNote({
+    label: 'BM',
+    included: bmChecklist?.included ?? false,
+  })
+  const vmChecklistMissingNote = formatChecklistMissingNote({
+    label: 'VM',
+    included: vmChecklist?.included ?? false,
+  })
 
   const matchedMetricCount = weightedScore.contributions.filter(
     (item) => item.matchingRow?.scoreStatus === 'scored',
@@ -684,13 +743,36 @@ export function StoreKpiHighlightsPage(input: {
           <KeyValue label="BM katkisi" value={bmChecklistContributionLabel} />
           <KeyValue
             label="VM checklist"
-            value="Gelecek faz; V1 skorunu dusurmez"
+            value={vmChecklistStatusLabel}
+          />
+          <KeyValue label="VM katkisi" value={vmChecklistContributionLabel} />
+          <KeyValue
+            label="Configured blend"
+            value={
+              closedScoreBreakdown
+                ? `Configured ${closedScoreBreakdown.configuredWeights.kpiPerformanceWeight}/${closedScoreBreakdown.configuredWeights.bmChecklistWeight}/${closedScoreBreakdown.configuredWeights.vmChecklistWeight}`
+                : 'Configured 90/5/5'
+            }
+          />
+          <KeyValue
+            label="Effective blend"
+            value={
+              closedScoreBreakdown
+                ? `Effective ${closedScoreBreakdown.effectiveWeights.kpiPerformanceWeight}/${closedScoreBreakdown.effectiveWeights.bmChecklistWeight}/${closedScoreBreakdown.effectiveWeights.vmChecklistWeight}`
+                : 'Canli on izleme'
+            }
           />
         </div>
         <p className="helper-text">
-          BM checklist tamamlanan aylik ziyaret varsa %5 katkida kullanilir. Ziyaret yoksa
-          magaza ceza yemez ve KPI skoru normalize okunur.
+          BM ve VM checklist tamamlanan aylik ziyaret varsa kucuk agirlikla skora katilir.
+          Ziyaret yoksa magaza ceza yemez; eksik checklist payi KPI tarafinda kalir.
         </p>
+        {bmChecklistMissingNote ? (
+          <p className="helper-text">{bmChecklistMissingNote}</p>
+        ) : null}
+        {vmChecklistMissingNote ? (
+          <p className="helper-text">{vmChecklistMissingNote}</p>
+        ) : null}
       </section>
 
       <section className="two-up-grid">

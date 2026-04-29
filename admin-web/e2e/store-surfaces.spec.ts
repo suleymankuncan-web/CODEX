@@ -49,7 +49,7 @@ test('store KPI highlights page explains metric source semantics', async ({ page
   await expect(page.getByText('Aksiyon: ritmi koru; dusuk katkili ilk KPI')).toBeVisible()
   await expect(page.getByText('Skor guveni: 100% agirlik kapsandi.')).toBeVisible()
   await expect(page.getByText('BM checklist', { exact: true })).toBeVisible()
-  await expect(page.getByText('Bu donem skora dahil edilmedi')).toBeVisible()
+  await expect(page.getByText('BM checklist: bu donem skora dahil edilmedi')).toBeVisible()
   await expect(page.getByText('Veri kaynagi').first()).toBeVisible()
   await expect(page.getByText('Derived score signal')).toBeVisible()
   await expect(page.getByText('Imported operational data').first()).toBeVisible()

@@ -4109,6 +4109,40 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: implementation'a gecmek; once `store-score-blend.service.spec.ts` kirmizi testleri yazip saf skor motorunu yesile almak.
 
+## Son VM Score Contribution Activation V1 Implementation
+
+29 Nisan 2026 itibariyla VM checklist skoru aylik store score breakdown icine aktif baglandi.
+
+Eklenenler:
+
+- Aylik store score configured blend KPI `%90`, BM `%5`, VM `%5` oldu.
+- Eksik BM veya VM checklist sifir sayilmiyor.
+- Eksik checklist agirligi KPI tarafina geri donuyor.
+- BM ve VM checklist snapshotlari template type ile ayri okunuyor.
+- Backend score breakdown `missingWeightPolicy`, configured/effective weights ve missing reason donuyor.
+- Store KPI kapali snapshot yuzeyi BM/VM katkisini, configured/effective blend bilgisini ve eksik payin KPI tarafinda kaldigini acikliyor.
+- Store surface regresyon testi BM ve VM eksik checklist metinlerini ayri okuyacak sekilde netlestirildi.
+
+Dogrulama:
+
+- Backend targeted score tests: 2 suite / 8 test passed.
+- Backend build passed.
+- Frontend targeted KPI explainability e2e: 3 test passed.
+- Frontend store surface e2e: 12 test passed.
+- Frontend build passed.
+- Root `npm.cmd run check:release` passed:
+  - root script tests: 46/46,
+  - backend: lint + 73 suite / 467 test + build + audit 0 vulnerability,
+  - frontend: lint + script tests + build + 44 Playwright test + audit 0 vulnerability.
+
+CODEX durust yorum:
+
+- Bu adim checklisti cezaya cevirmeden skora anlamli sekilde bagladi.
+- En kritik kazanc, magaza kullanicisinin configured ve effective agirligi ayni ekranda gorebilmesi.
+- Bundan sonra asil risk matematik degil, UI dilinin kullanicida yanlis ceza algisi yaratmasidir; bu yuzden copy sade tutuldu.
+
+Siradaki mantikli adim: pilot veride BM/VM checklist olan ve olmayan magazalarla tarayici smoke yapmak; skor kiriliminin kullanici tarafinda anlasilir olup olmadigini gozle kontrol etmek.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
