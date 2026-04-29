@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/common";
 import { ReportingRepository } from "../infrastructure/reporting.repository";
 import { buildListResponse } from "../../../shared/http/response-builders";
 import { mapAuditEvent } from "../../../shared/audit/audit-event.mapper";
@@ -13,6 +13,7 @@ import {
 } from "./kpi-config.contract";
 import { KpiConfigRepository } from "../infrastructure/kpi-config.repository";
 import { ClosedRankingService } from "./closed-ranking.service";
+import { StoreScoreBlendService } from "./store-score-blend.service";
 
 @Injectable()
 export class ReportingService {
@@ -521,6 +522,85 @@ export class ReportingService {
         pendingNormalizationLabels: pendingNormalizationMetrics.map((metric) => metric.label),
       },
       metrics: mappedMetrics,
+    };
+  }
+
+  async getStoreMonthlyScoreBreakdown(input: {
+    snapshotRunId: string;
+    storeId: string;
+    storeIds: string[];
+  }) {
+    if (!input.storeIds.includes(input.storeId)) {
+      throw new ForbiddenException(
+        "Store score breakdown is outside current store scope.",
+      );
+    }
+
+    const [config, kpiRows, bmChecklist] = await Promise.all([
+      this.getKpiConfig(),
+      this.reportingRepository.getStoreKpiSnapshotRowsForScore({
+        snapshotRunId: input.snapshotRunId,
+        storeId: input.storeId,
+      }),
+      this.reportingRepository.getStoreChecklistSnapshotForScore({
+        snapshotRunId: input.snapshotRunId,
+        storeId: input.storeId,
+        templateType: "BM_STORE_VISIT",
+      }),
+    ]);
+    const storeMetricWeights = config.storeProfile.metrics.filter(
+      (metric) => !["BM_CHECKLIST", "VM_CHECKLIST"].includes(metric.code),
+    );
+    const kpiWeightTotal = storeMetricWeights.reduce(
+      (sum, metric) => sum + metric.weightPercent,
+      0,
+    );
+    const kpiScore =
+      kpiWeightTotal > 0
+        ? storeMetricWeights.reduce((sum, metric) => {
+            const row = kpiRows.find((item) => {
+              const matchingCodes = [metric.code, ...(metric.aliases ?? [])];
+              return matchingCodes.includes(item.kpi_code);
+            });
+            const achievementRate =
+              row?.achievement_rate !== null && row?.achievement_rate !== undefined
+                ? Number(row.achievement_rate)
+                : null;
+
+            if (
+              achievementRate === null ||
+              !Number.isFinite(achievementRate)
+            ) {
+              return sum;
+            }
+
+            return sum + achievementRate * (metric.weightPercent / kpiWeightTotal) * 100;
+          }, 0)
+        : null;
+
+    const blendService = new StoreScoreBlendService();
+    return {
+      snapshotRunId: input.snapshotRunId,
+      storeId: input.storeId,
+      scoreStatus: "final" as const,
+      ...blendService.calculateMonthlyStoreScore({
+        monthlyKpiScore:
+          kpiScore !== null && Number.isFinite(kpiScore)
+            ? Number(kpiScore.toFixed(2))
+            : null,
+        bmChecklist:
+          bmChecklist?.avg_score !== null && bmChecklist?.avg_score !== undefined
+            ? {
+                score: Number(bmChecklist.avg_score),
+                visitCount: Number(bmChecklist.audit_count),
+              }
+            : null,
+        config: {
+          kpiPerformanceWeight: 95,
+          bmChecklistWeight: 5,
+          vmChecklistWeight: 0,
+        },
+      }),
     };
   }
 

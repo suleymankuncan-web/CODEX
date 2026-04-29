@@ -210,6 +210,31 @@ export class ReportingController {
     });
   }
 
+  @Get("store-score-breakdown")
+  @RequireScope("authenticated")
+  @RequireRoles("STORE_MANAGER")
+  async getStoreScoreBreakdown(
+    @Req()
+    request: {
+      user: {
+        scope: {
+          storeIds: string[];
+        };
+      };
+    },
+    @Query()
+    query: {
+      snapshotRunId: string;
+      storeId: string;
+    },
+  ) {
+    return this.reportingService.getStoreMonthlyScoreBreakdown({
+      snapshotRunId: query.snapshotRunId,
+      storeId: query.storeId,
+      storeIds: request.user.scope.storeIds,
+    });
+  }
+
   @Get("leaderboards/closed")
   @RequireScope("authenticated")
   @RequireRoles("STORE_MANAGER", "STORE_PERSONNEL")
