@@ -17,7 +17,7 @@ Date: 29 April 2026
 
 Current count:
 
-- Closed active debts: 46
+- Closed active debts: 47
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -74,6 +74,7 @@ These are counted as paid because they have implementation or documentation evid
 44. Mobile Checklist Today V1 Design
 45. Mobile Checklist Today V1
 46. Checklist Store Score Integration V1
+47. KPI Benchmark Scoring V1
 
 Production-Ready Migration System V1 is counted as paid because SQL migrations are tracked in `audit.schema_migration`, checksum drift is rejected, failed runs are recorded with error evidence, the HTTP migration endpoint is disabled in production, and `npm.cmd run db:migrate` is the approved CLI/CI migration path.
 
@@ -90,6 +91,8 @@ Mobile Checklist Today V1 Design is counted as paid because HR template ownershi
 Mobile Checklist Today V1 is counted as paid because HR template versioning, weight publish guard, region-manager assigned-store visit scoring, completed-lock behavior, store-manager acknowledgement, multi-visit monthly averaging, frontend pilot routes, targeted backend/frontend checks, and root `check:release` are implemented and verified. Reference: `docs/superpowers/plans/2026-04-28-mobile-checklist-today-v1.md`.
 
 Checklist Store Score Integration V1 is counted as paid because completed BM checklist visits now feed monthly store score at `%5`, missing BM checklist is represented as `not_included` instead of a penalty, VM checklist remains future inactive, backend exposes a scoped score breakdown endpoint, store KPI highlights explain the breakdown, and targeted backend/frontend checks plus root `check:release` pass. Reference: `docs/superpowers/plans/2026-04-29-checklist-store-score-integration-v1.md`.
+
+KPI Benchmark Scoring V1 is counted as paid because store/personnel KPI metrics now score against target or same-period Turkey-average references, preserve actual ratios, cap score contribution at `%120`, expose capped and missing-reference explanations in API/UI, and employee performance snapshots use the same scoring engine. Targeted backend/frontend checks plus root `check:release` pass. Reference: `docs/superpowers/plans/2026-04-29-kpi-benchmark-scoring-v1.md`.
 
 ## Superseded Before Overbuilding
 

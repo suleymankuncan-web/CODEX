@@ -119,6 +119,7 @@ Kararlar:
 Referans:
 
 - `docs/superpowers/specs/2026-04-29-kpi-benchmark-scoring-v1-design.md`
+- `docs/superpowers/plans/2026-04-29-kpi-benchmark-scoring-v1.md`
 
 ## Son Checklist Store Score Integration V1 Kararlari
 
@@ -184,7 +185,36 @@ Dogrulama:
 - Frontend targeted smoke: `store KPI highlights page explains metric source semantics`.
 - Root release gate: `npm.cmd run check:release`.
 
-Siradaki mantikli adim: `KPI Benchmark Scoring V1` planini uygulamak. Store/personel KPI metrikleri hedef veya ayni donem Turkiye ortalamasiyla puanlanacak, gercek oran saklanacak, skor katkisi `%120` cap ile sinirlanacak ve eksik referanslarda puan uydurulmayacak.
+Bu siradaki adim tamamlandi: `KPI Benchmark Scoring V1` uygulandi ve release kapilarindan gecti.
+
+## Son KPI Benchmark Scoring V1 Implementation
+
+29 Nisan 2026 itibariyla KPI Benchmark Scoring V1 backend ve store-facing UI tarafinda uygulandi.
+
+Eklenenler:
+
+- Pure scoring engine, hedef veya benchmark referansina gore `actualRatio`, `scoredRatio`, `scoreContribution`, `isCapped` ve `missing_reference` sonucunu uretir.
+- KPI config defaults artik metric direction, benchmark source ve V1 `%120` cap bilgisini tasir.
+- Store `CR`, `ATV`, `UPT` benchmarklari ayni donem Turkiye ortalamasindan hesaplanir; oranlar gunluk duz ortalama degil toplam pay/toplam payda formuludur.
+- Personel `ATV` ve `UPT` benchmarklari ayni donem Turkiye personel ortalamasindan hesaplanir.
+- Store/personel live reporting artik benchmark degeri, gercek oran, skorlanan oran, cap durumu ve eksik referans nedenini API'da dondurur.
+- Employee performance snapshot score artik benchmark scoring engine ile hesaplanir; eksik hedef/benchmark varsa puan uydurmaz.
+- `/store/kpis` ve `/store/me` benchmark, `%120+` cap aciklamasi ve `Eksik referans` bilgisini kullaniciya gosterir.
+
+Dogrulama:
+
+- Backend targeted benchmark tests: 4 suite / 17 test.
+- Backend build: `npm.cmd run build`.
+- Frontend targeted e2e: `kpi-benchmark-explainability.spec.ts` -> 2 test.
+- Root release gate: `npm.cmd run check:release` -> 46 root script test, backend lint + 65 suite / 400 test + build + audit, frontend lint + 7 script test + build + 38 Playwright test + audit.
+
+CODEX durust yorum:
+
+- Bu parca skorun guvenilirligini ciddi sekilde artirdi. Sistem artik yuksek/dusuk KPI'yi yalniz sayi olarak degil, hangi referansa gore ve hangi cap ile okudugunu anlatabiliyor.
+- En kritik kazanc, eksik hedef veya eksik benchmark durumunda puan uydurmayip bunu acikca `missing_reference` olarak gostermesi.
+- Siradaki risk skor motoru degil, hedef referanslarinin operasyonel olarak eksik kalmasi. Target achievement dogru puanlanacaksa hedef giris/onay ve eksik hedef gorunurlugu bir sonraki kontrollu is olmali.
+
+Siradaki mantikli adim: Personel ve magaza hedef referanslarini skor motoruna temiz veri verecek sekilde netlestirmek. Yani hedef giris/onay akisi, HR_ADMIN eksik hedef gorunurlugu ve hedefi olmayan satirlarda `missing_reference` listesini yonetilebilir hale getirmek.
 
 ## Son Operational Feed V1
 
@@ -3376,6 +3406,13 @@ Store ops:
 - `backend/nestjs/src/modules/store-ops/web/dto/update-competition-team-template.dto.ts`
 - `backend/nestjs/src/modules/store-ops/web/target-distribution.controller.ts`
 - `backend/nestjs/src/modules/store-ops/application/target-distribution.service.ts`
+- `backend/nestjs/src/modules/store-ops/application/kpi-benchmark-scoring.contract.ts`
+- `backend/nestjs/src/modules/store-ops/application/kpi-benchmark-scoring.service.ts`
+- `backend/nestjs/src/modules/store-ops/application/kpi-benchmark-scoring.service.spec.ts`
+- `backend/nestjs/src/modules/store-ops/application/reporting.service.ts`
+- `backend/nestjs/src/modules/store-ops/application/reporting.service.kpi-benchmark-scoring.spec.ts`
+- `backend/nestjs/src/modules/store-ops/application/snapshot.service.ts`
+- `backend/nestjs/src/modules/store-ops/application/snapshot.service.kpi-benchmark-scoring.spec.ts`
 - `backend/nestjs/src/modules/store-ops/infrastructure/reporting.repository.ts`
 - `backend/nestjs/src/modules/store-ops/infrastructure/reporting.repository.spec.ts`
 - `backend/nestjs/src/modules/store-ops/infrastructure/feed.repository.ts`
@@ -3419,6 +3456,10 @@ Frontend:
 - `admin-web/src/pages/StoreFeedPage.tsx`
 - `admin-web/src/pages/StoreMyPerformancePage.tsx`
 - `admin-web/src/pages/StoreKpiHighlightsPage.tsx`
+- `admin-web/src/features/kpi/grading.ts`
+- `admin-web/src/features/kpi/source-semantics.ts`
+- `admin-web/src/features/reports/api.ts`
+- `admin-web/e2e/kpi-benchmark-explainability.spec.ts`
 - `admin-web/src/pages/StoreApprovalsPage.tsx`
 - `admin-web/src/features/workflow/WorkflowInboxDetail.tsx`
 
@@ -3451,6 +3492,10 @@ Planlar:
 - `docs/superpowers/specs/2026-04-28-mobile-auth-session-v1-design.md`
 - `docs/superpowers/specs/2026-04-28-mobile-checklist-today-v1-design.md`
 - `docs/superpowers/plans/2026-04-28-mobile-checklist-today-v1.md`
+- `docs/superpowers/specs/2026-04-29-checklist-store-score-integration-v1-design.md`
+- `docs/superpowers/plans/2026-04-29-checklist-store-score-integration-v1.md`
+- `docs/superpowers/specs/2026-04-29-kpi-benchmark-scoring-v1-design.md`
+- `docs/superpowers/plans/2026-04-29-kpi-benchmark-scoring-v1.md`
 - `docs/superpowers/plans/2026-04-28-mobile-auth-session-v1.md`
 - `docs/superpowers/plans/2026-04-28-mobile-api-bff-endpoint-inventory-v1.md`
 - `docs/plans/project-wide-scan-2026-04-27.md`

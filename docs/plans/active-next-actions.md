@@ -6,7 +6,7 @@ This is the short working list for the next practical steps. It keeps the projec
 
 ## Current Position
 
-As of 29 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, Store UX TR-First Copy V1, KPI Config Versioning V1, Source-Agnostic Ingest Contract Hardening V1, KPI Raw Row Lineage Persistence V1, Import Lineage Evidence Surface V1, Audit Event Taxonomy Guard V1, Data Quality Guard V1, Import Batch Quality Summary V1, Project-Wide Scope/Auth Guard Scan V1, No-Empty-Scope Repository Contract Pass V1, Production Environment Readiness Checklist V1, Environment Variable Inventory + Deployment Runbook Skeleton V1, Environment Drift Guard V1, Production/Staging Incident Response Skeleton V1, Personnel Management V1, Personnel Request Return/Resubmit V1, Personnel Master Data Bootstrap V1 planning, Project MVP Focus Map, Excel KPI Import V1, Excel KPI Import Operator Runbook V1, Production-Ready Migration System V1, Production Security Gate V1-A, Mobile Auth/Session V1 P0, Mobile API/BFF Endpoint Inventory V1, Checklist Acknowledgement Canonical Schema Alignment V1, Mobile Checklist Today V1 Design, Mobile Checklist Today V1, and Checklist Store Score Integration V1 have:
+As of 29 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, Store UX TR-First Copy V1, KPI Config Versioning V1, Source-Agnostic Ingest Contract Hardening V1, KPI Raw Row Lineage Persistence V1, Import Lineage Evidence Surface V1, Audit Event Taxonomy Guard V1, Data Quality Guard V1, Import Batch Quality Summary V1, Project-Wide Scope/Auth Guard Scan V1, No-Empty-Scope Repository Contract Pass V1, Production Environment Readiness Checklist V1, Environment Variable Inventory + Deployment Runbook Skeleton V1, Environment Drift Guard V1, Production/Staging Incident Response Skeleton V1, Personnel Management V1, Personnel Request Return/Resubmit V1, Personnel Master Data Bootstrap V1 planning, Project MVP Focus Map, Excel KPI Import V1, Excel KPI Import Operator Runbook V1, Production-Ready Migration System V1, Production Security Gate V1-A, Mobile Auth/Session V1 P0, Mobile API/BFF Endpoint Inventory V1, Checklist Acknowledgement Canonical Schema Alignment V1, Mobile Checklist Today V1 Design, Mobile Checklist Today V1, Checklist Store Score Integration V1, and KPI Benchmark Scoring V1 have:
 
 - saved drafts
 - edit/cancel/history
@@ -78,6 +78,7 @@ As of 29 April 2026, the competition package planning flow, Operational Feed V1,
 - mobile checklist HR template ownership, region-manager scoring, store-manager acknowledgement, multi-visit averaging, and completed-lock design
 - Mobile Checklist Today V1 backend workflow, mobile today read model, store-manager acknowledgement endpoint, and frontend pilot surfaces
 - completed BM checklist monthly snapshot aggregation, 95/5 KPI/BM store score blending, and store-visible score breakdown copy
+- target/Turkey-average KPI benchmark scoring, `%120+` cap explainability, missing-reference handling, and employee snapshot scoring
 - project debt ledger
 - backend and frontend release checks
 
@@ -85,7 +86,7 @@ As of 29 April 2026, the competition package planning flow, Operational Feed V1,
 
 Reference: `docs/plans/project-debt-ledger.md`
 
-- Closed active debts: 46
+- Closed active debts: 47
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -135,6 +136,7 @@ Interpretation:
 - Mobile Checklist Today V1 Design is documented; HR owns versioned templates/weights, region managers score assigned-store visits, store managers acknowledge completed results, multiple monthly visits average into the monthly score, and completed records lock.
 - Mobile Checklist Today V1 is implemented; HR template versioning, region-manager assigned-store start/save/complete, completed-lock, store-manager acknowledgement, monthly visit averaging, and pilot frontend routes are guarded by targeted backend/frontend checks and root `check:release`.
 - Checklist Store Score Integration V1 is implemented; completed BM checklist visits now feed monthly store score transparently at `%5`, missing BM checklist is `not_included` instead of a penalty, and store-facing KPI highlights explain the breakdown.
+- KPI Benchmark Scoring V1 is implemented; store/personnel KPI scores now use target or same-period Turkey-average references, preserve real ratios, cap scored contribution at `%120`, expose capped/missing-reference explanations, and score employee snapshots through the same engine.
 - Full production UI/design-system and complete EN/TR localization expansion remain planned investments, not silent release debt.
 - Production UI/design-system is intentionally deferred into reversible pilots while backend/data foundations remain the priority.
 - The debt ledger itself is an accounting artifact and is not counted as a separate closed active debt item.
@@ -819,19 +821,16 @@ Interpretation:
   - `docs/superpowers/specs/2026-04-29-checklist-store-score-integration-v1-design.md`
   - `docs/superpowers/plans/2026-04-29-checklist-store-score-integration-v1.md`
 
-### Planned: KPI Benchmark Scoring V1
-- Planned: 29 April 2026
-- Why:
-  - Uploaded KPI values need an explicit reference model so the system can explain what is high, low, capped, or missing.
-  - Store/personnel score trust depends on showing actual value, Turkey average/target, actual ratio, scored ratio, and cap state.
-- Scope:
-  - add pure KPI benchmark scoring engine
-  - score store target achievement from store target
-  - score store `CR`, `ATV`, `UPT` from same-period Turkey averages
-  - score personnel target achievement from approved personnel target
-  - score personnel `ATV`, `UPT` from same-period Turkey personnel averages
-  - preserve actual ratio while capping score contribution at `%120`
-  - show missing target/benchmark as `missing_reference`, not fake score
+### Completed: KPI Benchmark Scoring V1
+- Completed: 29 April 2026
+- Result:
+  - pure benchmark scoring engine returns actual ratio, scored ratio, cap state, score contribution, and missing-reference reason
+  - store target achievement uses target reference while store `CR`, `ATV`, and `UPT` use same-period Turkey-average references
+  - personnel target achievement uses target reference while personnel `ATV` and `UPT` use same-period Turkey personnel averages
+  - Turkey benchmark formulas use summed base metrics instead of averaging daily ratios
+  - employee performance snapshots use the same benchmark scoring engine
+  - `/store/kpis` and `/store/me` expose benchmark value, `%120+` cap copy, and `Eksik referans` copy
+  - targeted backend/frontend checks and root `check:release` pass
 - References:
   - `docs/superpowers/specs/2026-04-29-kpi-benchmark-scoring-v1-design.md`
   - `docs/superpowers/plans/2026-04-29-kpi-benchmark-scoring-v1.md`
@@ -859,5 +858,5 @@ If neither staging values nor source ingest details are available, do not open s
 
 Recommended local candidate:
 
-- Execute `KPI Benchmark Scoring V1` next.
-- Do not start a separate VM checklist, region-specific benchmark, or source-specific JSON adapter until these two score foundations are clean.
+- Plan the target reference control surface next: store/personnel target entry, region-manager approval, HR_ADMIN missing-target visibility, and how unresolved `missing_reference` rows are reviewed.
+- Do not start a separate VM checklist, region-specific benchmark, or source-specific JSON adapter until target references are operationally clean.
