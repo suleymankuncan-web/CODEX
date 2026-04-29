@@ -3939,6 +3939,42 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: VM Checklist V1 design dokumanini onaylayip implementation plan yazmak; ilk kod fazi sadece `VM_STORE_VISIT` template/action guard, checklist-only VM yuzeyi ve assigned-store coverage olmali.
 
+## Son VM Checklist V1 Implementation Plan
+
+29 Nisan 2026 itibariyla VM Checklist V1 icin implementation plan yazildi.
+
+Dosya:
+
+- `docs/superpowers/plans/2026-04-29-vm-checklist-v1.md`
+
+Plan siniri:
+
+- Bu plan sadece VM checklist action enablement fazidir.
+- Skor katkisini KPI `%90`, BM `%5`, VM `%5` olarak aktif etmek bu fazda yoktur.
+- Migration beklenmiyor; mevcut checklist engine `template_type` ile VM'yi tasiyacak.
+
+Planlanan teknik isler:
+
+- Backend mobile checklist mutasyonlarina `VISUAL_MERCHANDISER` role girisi acilacak.
+- Her mutasyon backend'de 3 kapidan gececek:
+  - role,
+  - checklist template type,
+  - assigned store scope.
+- `VISUAL_MERCHANDISER` yalniz `VM_STORE_VISIT` mutasyonu yapabilecek.
+- `REGION_MANAGER` V1'de yalniz `BM_STORE_VISIT` mutasyonu yapabilecek.
+- Mobile checklist read model role gore BM/VM template type filtreleyecek.
+- Frontend store shell VM icin checklist-only davranacak.
+- `/store/checklists` VM icin assigned-store coverage ve missing VM checklist durumunu gosterecek.
+- Store manager tamamlanmis VM checklist sonucunu acknowledgement olarak gorebilecek.
+
+CODEX durust yorum:
+
+- Kontrol burada backend permission tarafinda; UI gizlemek tek basina guvenlik degil.
+- Bu plan VM'yi ayri module cevirmeden mevcut checklist motoruna bagliyor, bu dogru ve borcsuz yol.
+- Skor katkisini ikinci faza birakmak pilot kanitini gormemizi saglar.
+
+Siradaki mantikli adim: bu plan onaylandiktan sonra implementation'a gecmek; once backend role/type/scope testleri kirmizi-yesil kapatilacak, sonra frontend checklist-only VM yuzeyi eklenecek.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
