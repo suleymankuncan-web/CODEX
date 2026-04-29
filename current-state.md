@@ -3903,6 +3903,42 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: VM Checklist V1 icin hemen kodlamaya girmeden tasarim-intake yapmak; template type, role action, score katkisi, store manager gorunurlugu ve audit siniri netlestirilmeli.
 
+## Son VM Checklist V1 Design
+
+29 Nisan 2026 itibariyla VM Checklist V1 icin tasarim dokumani yazildi.
+
+Dosya:
+
+- `docs/superpowers/specs/2026-04-29-vm-checklist-v1-design.md`
+
+Kilitlenen kararlar:
+
+- VM kullanicilari personel-backed app user gibi dusunulecek.
+- V1'de VM kullanicilari sadece checklist ile ilgili yuzeyleri gorecek.
+- Pilot scope: 1 VM kullanicisi ve 2 atanmis magaza.
+- Ileri asamada VM kullanicilarina tum magazalar atanabilir, ama kod tarafinda yine explicit assigned-store scope kullanilacak.
+- VM checklist mevcut checklist motorunun icinde yeni template type olarak ilerleyecek: `VM_STORE_VISIT`.
+- BM checklist type ayri kalacak: `BM_STORE_VISIT`.
+- `VISUAL_MERCHANDISER`, atanmis magazalarda VM checklist baslatabilir, kaydedebilir, tamamlayabilir.
+- `VISUAL_MERCHANDISER`, BM checklist baslatamaz/tamamlayamaz.
+- `REGION_MANAGER`, V1'de VM checklist baslatamaz/tamamlayamaz.
+- Store manager tamamlanmis VM checklist sonucunu gorur ve acknowledgement yapabilir.
+- Store manager acknowledgement skora/reporting gecerliligine gate olmayacak.
+- VM kullanicisi atanmis magazalarda hangi ay hangi magazaya VM checklist yapilmadi bilgisini gorebilecek.
+- Eksik VM checklist otomatik 0 puan olmayacak; coverage gap olarak gorunecek.
+- VM score katkisi aktif edildiginde hedef aylik blend: KPI `%90`, BM `%5`, VM `%5`.
+- Tavsiye edilen uygulama siniri iki adim:
+  - once VM checklist action enablement,
+  - sonra VM score contribution activation.
+
+CODEX durust yorum:
+
+- Bu modulu ayri VM performans sistemi gibi buyutmek dagitir. En saglam yol checklist engine icinde role/type permission ile buyutmek.
+- VM'ye genis admin/store erisimi vermeden sadece checklist aksiyonlari acmak dogru guvenlik siniri.
+- Skor etkisini hemen acmak yerine once VM checklist kanitini pilotta gormek daha kontrollu olur.
+
+Siradaki mantikli adim: VM Checklist V1 design dokumanini onaylayip implementation plan yazmak; ilk kod fazi sadece `VM_STORE_VISIT` template/action guard, checklist-only VM yuzeyi ve assigned-store coverage olmali.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
