@@ -172,6 +172,24 @@ Personnel validation now marks seller-code/national-id mismatches against existi
 
 The preflight only updates staged row review state and does not write to `ops.store`, `ops.employee`, or `ops.employee_assignment_history`.
 
+## Completed Slice: V1-C4 Promotion Readiness Contract
+
+- [x] **Step 1: Add read-only readiness endpoint**
+
+Added `GET /api/integrations/master-data-bootstrap/batches/:batchId/promotion-readiness` for HR/Admin review of future promotion readiness.
+
+- [x] **Step 2: Add row readiness classifications**
+
+Rows are now classified as `needs_validation`, `needs_review`, `blocked`, `waiting_batch`, `ready`, or `already_promoted`.
+
+- [x] **Step 3: Add batch readiness summary**
+
+The readiness response exposes counts, `canPromote`, and `nextAction` so future promotion code has one contract to follow.
+
+- [x] **Step 4: Keep promotion closed**
+
+The readiness contract is read-only and does not write to `ops.store`, `ops.employee`, or `ops.employee_assignment_history`.
+
 ## Next Slice: V1-D Store Promotion
 
 - [ ] **Step 1: Write store promotion tests**

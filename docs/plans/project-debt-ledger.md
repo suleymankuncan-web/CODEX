@@ -17,7 +17,7 @@ Date: 29 April 2026
 
 Current count:
 
-- Closed active debts: 53
+- Closed active debts: 54
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -81,6 +81,7 @@ These are counted as paid because they have implementation or documentation evid
 51. Personnel Master Data Bootstrap Validation Read Model V1
 52. Master Data Bootstrap Review Queue V1
 53. Master Data Bootstrap Duplicate/Conflict Preflight V1
+54. Master Data Bootstrap Promotion Readiness Contract V1
 
 Production-Ready Migration System V1 is counted as paid because SQL migrations are tracked in `audit.schema_migration`, checksum drift is rejected, failed runs are recorded with error evidence, the HTTP migration endpoint is disabled in production, and `npm.cmd run db:migrate` is the approved CLI/CI migration path.
 
@@ -95,6 +96,8 @@ Personnel Master Data Bootstrap Validation Read Model V1 is counted as paid beca
 Master Data Bootstrap Review Queue V1 is counted as paid because HR/Admin can list staged bootstrap batches, derive readiness and next action, and review problematic rows through scoped read-only endpoints while promotion into live `ops.*` tables remains closed.
 
 Master Data Bootstrap Duplicate/Conflict Preflight V1 is counted as paid because staged validation now catches normalized duplicate store codes, duplicate personnel seller codes, duplicate national id evidence, and existing employee identity conflicts before any live `ops.*` promotion path is opened.
+
+Master Data Bootstrap Promotion Readiness Contract V1 is counted as paid because HR/Admin can now read a scoped promotion-readiness summary for staged bootstrap batches, see row-level readiness reasons, and verify idempotent already-promoted evidence before any live promotion code is opened.
 
 Checklist Acknowledgement Canonical Schema Alignment V1 is counted as paid because the existing `ops.checklist_acknowledgement` migration and backend repository usage are now represented in canonical `db/schema.sql`, and a backend schema contract test guards against drift.
 
@@ -297,6 +300,7 @@ Current repo hygiene is not counted as active debt in this ledger because:
 - the 29 April 2026 Personnel Master Data Bootstrap Validation Read Model V1 implementation added staged row validation, issue codes, resolved reference evidence, batch counters, and a review endpoint while keeping live promotion closed.
 - the 29 April 2026 Master Data Bootstrap Review Queue V1 implementation added scoped batch and row review endpoints so staged baseline data can be inspected without live promotion.
 - the 29 April 2026 Master Data Bootstrap Duplicate/Conflict Preflight V1 implementation added duplicate and identity conflict guards before any live promotion path is opened.
+- the 29 April 2026 Master Data Bootstrap Promotion Readiness Contract V1 implementation added a scoped read-only readiness endpoint that explains which staged rows can be promoted later and which rows block promotion.
 
 Still monitor:
 

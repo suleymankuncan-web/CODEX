@@ -346,6 +346,28 @@ export class IntegrationController {
     });
   }
 
+  @Get("master-data-bootstrap/batches/:batchId/promotion-readiness")
+  @RequireScope("company")
+  @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")
+  async getMasterDataBootstrapPromotionReadiness(
+    @Param("batchId") batchId: string,
+    @Req()
+    request: {
+      user: {
+        scope: {
+          companyIds: string[];
+        };
+      };
+    },
+  ) {
+    return this.masterDataBootstrapService.getBootstrapPromotionReadiness({
+      actorScope: {
+        companyIds: request.user.scope.companyIds,
+      },
+      batchId,
+    });
+  }
+
   @Get("master-data-bootstrap/batches/:batchId")
   @RequireScope("company")
   @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")

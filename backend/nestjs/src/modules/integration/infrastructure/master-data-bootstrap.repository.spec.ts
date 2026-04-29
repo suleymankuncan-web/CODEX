@@ -237,6 +237,50 @@ describe("MasterDataBootstrapRepository", () => {
     );
   });
 
+  it("maps promoted entity evidence when listing bootstrap rows", async () => {
+    const query = jest.fn().mockResolvedValueOnce({
+      rows: [
+        {
+          master_data_bootstrap_row_id: "row-promoted",
+          master_data_bootstrap_batch_id: "batch-promoted",
+          row_number: 3,
+          row_hash: "hash-promoted",
+          source_store_code: "SM140",
+          source_employee_code: "FM8375",
+          raw_payload_json: { storeCode: "SM140" },
+          normalized_payload_json: { normalizedStoreCode: "SM140" },
+          validation_status: "promoted",
+          issue_code: null,
+          issue_message: null,
+          resolved_company_id: "00000000-0000-4000-8000-000000000001",
+          resolved_region_id: "00000000-0000-4000-8000-000000000240",
+          resolved_store_id: "00000000-0000-4000-8000-000000000140",
+          resolved_employee_id: "00000000-0000-4000-8000-000000008375",
+          resolved_position_id: "00000000-0000-4000-8000-000000000501",
+          promoted_entity_id: "00000000-0000-4000-8000-000000008375",
+          created_at: "2026-04-29T12:00:00.000Z",
+          updated_at: "2026-04-29T12:01:00.000Z",
+        },
+      ],
+    });
+    const repository = new MasterDataBootstrapRepository({ query } as never);
+
+    const result = await repository.listBootstrapRows("batch-promoted");
+
+    const sql = query.mock.calls.map(([statement]) => String(statement)).join("\n");
+    expect(sql).toContain("promoted_entity_id");
+    expect(sql).toContain("FROM stg.master_data_bootstrap_row");
+    expect(sql).not.toContain("INSERT INTO ops.store");
+    expect(sql).not.toContain("UPDATE ops.employee");
+    expect(result[0]).toEqual(
+      expect.objectContaining({
+        rowId: "row-promoted",
+        validationStatus: "promoted",
+        promotedEntityId: "00000000-0000-4000-8000-000000008375",
+      }),
+    );
+  });
+
   it("resolves employee identity by national id hash without mutating live master data", async () => {
     const query = jest.fn().mockResolvedValueOnce({
       rows: [

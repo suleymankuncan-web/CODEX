@@ -45,6 +45,7 @@ type BootstrapStagedRowRecord = {
   resolved_store_id: string | null;
   resolved_employee_id: string | null;
   resolved_position_id: string | null;
+  promoted_entity_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -88,6 +89,7 @@ export type BootstrapStagedRow = {
   resolvedStoreId: string | null;
   resolvedEmployeeId: string | null;
   resolvedPositionId: string | null;
+  promotedEntityId: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -361,6 +363,7 @@ export class MasterDataBootstrapRepository {
           resolved_store_id,
           resolved_employee_id,
           resolved_position_id,
+          promoted_entity_id,
           created_at,
           updated_at
         FROM stg.master_data_bootstrap_row
@@ -442,6 +445,7 @@ export class MasterDataBootstrapRepository {
           r.resolved_store_id,
           r.resolved_employee_id,
           r.resolved_position_id,
+          r.promoted_entity_id,
           r.created_at,
           r.updated_at
         ${fromSql}
@@ -696,6 +700,7 @@ function mapBootstrapStagedRow(row: BootstrapStagedRowRecord): BootstrapStagedRo
     resolvedStoreId: row.resolved_store_id,
     resolvedEmployeeId: row.resolved_employee_id,
     resolvedPositionId: row.resolved_position_id,
+    promotedEntityId: row.promoted_entity_id ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
