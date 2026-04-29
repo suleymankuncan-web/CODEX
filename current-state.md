@@ -141,6 +141,28 @@ Referans:
 
 - `docs/superpowers/specs/2026-04-29-checklist-store-score-integration-v1-design.md`
 
+## Son Implementation Plan Sirasi
+
+29 Nisan 2026 itibariyla iki buyuk skor isi icin implementation plan sirasina karar verildi.
+
+Plan sirasi:
+
+1. Checklist Store Score Integration V1
+   - Once checklist snapshot aggregation tamamlanmis instance ve `completed_at` uzerinden duzeltilecek.
+   - BM checklist aylik store score icine `%5` olarak baglanacak.
+   - Missing BM checklist ceza degil `not_included` olacak.
+   - Store score breakdown API/UI tarafinda KPI ve BM katkisini aciklayacak.
+2. KPI Benchmark Scoring V1
+   - Checklist isi release check ile temiz kapandiktan sonra baslayacak.
+   - Store/personel KPI metrikleri hedef veya ayni donem Turkiye ortalamasina gore puanlanacak.
+   - Gercek oran saklanacak, skor katkisi `%120` cap ile sinirlanacak.
+   - Eksik hedef/benchmark puan uydurmayacak; `missing_reference` olarak gorunecek.
+
+Plan dokumanlari:
+
+- `docs/superpowers/plans/2026-04-29-checklist-store-score-integration-v1.md`
+- `docs/superpowers/plans/2026-04-29-kpi-benchmark-scoring-v1.md`
+
 ## Son Operational Feed V1
 
 26 Nisan 2026 itibariyla `Operational Feed V1` tamamlandi. `Competition Format Registry V1` yonu bilincli olarak superseded edildi; UPT/ATV/total score gibi odak yarislari V1'de yeni bir skor motoru degil, duyuru/challenge postu olarak ele aliniyor.

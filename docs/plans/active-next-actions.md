@@ -804,6 +804,38 @@ Interpretation:
 - Reference:
   - `docs/superpowers/plans/2026-04-28-mobile-checklist-today-v1.md`
 
+### Planned: Checklist Store Score Integration V1
+- Planned: 29 April 2026
+- Why:
+  - Mobile Checklist Today V1 captures completed BM visit scores, but monthly store score still needs an explicit contribution contract.
+  - Missing BM visits must not accidentally become a store penalty.
+- Scope:
+  - make checklist snapshots use completed checklist instances and `completed_at`
+  - blend monthly KPI score with BM checklist at KPI `%95` / BM `%5`
+  - exclude missing BM checklist instead of scoring it as zero
+  - expose store score breakdown with KPI contribution, BM contribution, visit count, and `not_included` status
+  - keep VM checklist future inactive
+- References:
+  - `docs/superpowers/specs/2026-04-29-checklist-store-score-integration-v1-design.md`
+  - `docs/superpowers/plans/2026-04-29-checklist-store-score-integration-v1.md`
+
+### Planned: KPI Benchmark Scoring V1
+- Planned: 29 April 2026
+- Why:
+  - Uploaded KPI values need an explicit reference model so the system can explain what is high, low, capped, or missing.
+  - Store/personnel score trust depends on showing actual value, Turkey average/target, actual ratio, scored ratio, and cap state.
+- Scope:
+  - add pure KPI benchmark scoring engine
+  - score store target achievement from store target
+  - score store `CR`, `ATV`, `UPT` from same-period Turkey averages
+  - score personnel target achievement from approved personnel target
+  - score personnel `ATV`, `UPT` from same-period Turkey personnel averages
+  - preserve actual ratio while capping score contribution at `%120`
+  - show missing target/benchmark as `missing_reference`, not fake score
+- References:
+  - `docs/superpowers/specs/2026-04-29-kpi-benchmark-scoring-v1-design.md`
+  - `docs/superpowers/plans/2026-04-29-kpi-benchmark-scoring-v1.md`
+
 ### 1. Real IdP Staging Evidence
 - Priority: `P1`
 - Why: local provider and action mechanics are proven, but production confidence still needs real staging IdP and seeded staging action evidence.
@@ -827,4 +859,6 @@ If neither staging values nor source ingest details are available, do not open s
 
 Recommended local candidate:
 
-- Decide how completed checklist scores enter store KPI/config interpretation. Do this through the intake gate before coding: target metric, weight, snapshot timing, retroactive behavior, missing-checklist warning language, and store score explanation must be clear first.
+- Execute `Checklist Store Score Integration V1` first.
+- After backend/frontend release checks pass for checklist score integration, execute `KPI Benchmark Scoring V1`.
+- Do not start a separate VM checklist, region-specific benchmark, or source-specific JSON adapter until these two score foundations are clean.
