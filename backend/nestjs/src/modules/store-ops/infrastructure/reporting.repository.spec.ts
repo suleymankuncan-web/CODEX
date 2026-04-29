@@ -172,3 +172,53 @@ describe("ReportingRepository store monthly score breakdown queries", () => {
     );
   });
 });
+
+describe("ReportingRepository benchmark queries", () => {
+  function createRepository() {
+    const query = jest.fn(async (_sql: string, _params?: unknown[]) => ({
+      rowCount: 0,
+      rows: [],
+    }));
+    const repository = new ReportingRepository({ query } as never);
+
+    return { query, repository };
+  }
+
+  it("calculates store ATV UPT CR benchmarks from weighted totals", async () => {
+    const { query, repository } = createRepository();
+
+    await repository.getStoreTurkeyBenchmarkValues({
+      periodType: "daily",
+      periodStart: "2026-03-01",
+      periodEnd: "2026-03-01",
+      companyId: "00000000-0000-4000-8000-000000000001",
+    });
+
+    const sql = String(query.mock.calls[0][0]);
+    expect(sql).toContain(
+      "SUM(net_sales.actual_value) / NULLIF(SUM(ticket_count.actual_value), 0)",
+    );
+    expect(sql).toContain(
+      "SUM(item_count.actual_value) / NULLIF(SUM(ticket_count.actual_value), 0)",
+    );
+    expect(sql).toContain(
+      "(SUM(ticket_count.actual_value) / NULLIF(SUM(ff.actual_value), 0)) * 100",
+    );
+  });
+
+  it("calculates personnel ATV UPT benchmarks for the same period", async () => {
+    const { query, repository } = createRepository();
+
+    await repository.getEmployeeTurkeyBenchmarkValues({
+      periodStart: "2026-03-01",
+      periodEnd: "2026-03-31",
+      companyId: "00000000-0000-4000-8000-000000000001",
+    });
+
+    const sql = String(query.mock.calls[0][0]);
+    expect(sql).toContain("scope_type = 'employee'");
+    expect(sql).toContain(
+      "SUM(net_sales.actual_value) / NULLIF(SUM(ticket_count.actual_value), 0)",
+    );
+  });
+});

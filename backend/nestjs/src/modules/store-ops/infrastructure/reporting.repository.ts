@@ -994,6 +994,137 @@ export class ReportingRepository {
     return result.rows;
   }
 
+  async getStoreTurkeyBenchmarkValues(input: {
+    periodType: string;
+    periodStart: string;
+    periodEnd: string;
+    companyId?: string;
+  }) {
+    const params: unknown[] = [
+      input.periodType,
+      input.periodStart,
+      input.periodEnd,
+    ];
+    const companyClause = input.companyId
+      ? (() => {
+          params.push(input.companyId);
+          return `AND store.company_id = $${params.length}::uuid`;
+        })()
+      : "";
+
+    const result = await this.databaseService.query<{
+      kpi_code: string;
+      benchmark_value: string | null;
+    }>(
+      `
+        WITH scoped_actual AS (
+          SELECT
+            ka.store_id,
+            kd.kpi_code,
+            SUM(ka.actual_value) AS actual_value
+          FROM ops.kpi_actual ka
+          INNER JOIN ops.kpi_definition kd
+            ON kd.kpi_id = ka.kpi_id
+          INNER JOIN ops.store store
+            ON store.store_id = ka.store_id
+          WHERE ka.scope_type = 'store'
+            AND ka.period_type = $1
+            AND ka.period_start >= $2::date
+            AND ka.period_end <= $3::date
+            ${companyClause}
+          GROUP BY ka.store_id, kd.kpi_code
+        )
+        SELECT 'ATV' AS kpi_code,
+               (SUM(net_sales.actual_value) / NULLIF(SUM(ticket_count.actual_value), 0))::text AS benchmark_value
+        FROM scoped_actual net_sales
+        INNER JOIN scoped_actual ticket_count
+          ON ticket_count.store_id = net_sales.store_id
+          AND ticket_count.kpi_code = 'TICKET_COUNT'
+        WHERE net_sales.kpi_code = 'NET_SALES'
+        UNION ALL
+        SELECT 'UPT' AS kpi_code,
+               (SUM(item_count.actual_value) / NULLIF(SUM(ticket_count.actual_value), 0))::text AS benchmark_value
+        FROM scoped_actual item_count
+        INNER JOIN scoped_actual ticket_count
+          ON ticket_count.store_id = item_count.store_id
+          AND ticket_count.kpi_code = 'TICKET_COUNT'
+        WHERE item_count.kpi_code = 'ITEM_COUNT'
+        UNION ALL
+        SELECT 'CR' AS kpi_code,
+               ((SUM(ticket_count.actual_value) / NULLIF(SUM(ff.actual_value), 0)) * 100)::text AS benchmark_value
+        FROM scoped_actual ticket_count
+        INNER JOIN scoped_actual ff
+          ON ff.store_id = ticket_count.store_id
+          AND ff.kpi_code = 'FF'
+        WHERE ticket_count.kpi_code = 'TICKET_COUNT'
+      `,
+      params,
+    );
+
+    return result.rows;
+  }
+
+  async getEmployeeTurkeyBenchmarkValues(input: {
+    periodStart: string;
+    periodEnd: string;
+    companyId?: string;
+    periodType?: string;
+  }) {
+    const params: unknown[] = [input.periodStart, input.periodEnd];
+    const clauses = [
+      `ka.scope_type = 'employee'`,
+      `ka.period_start >= $1::date`,
+      `ka.period_end <= $2::date`,
+    ];
+
+    if (input.periodType) {
+      params.push(input.periodType);
+      clauses.push(`ka.period_type = $${params.length}`);
+    }
+
+    if (input.companyId) {
+      params.push(input.companyId);
+      clauses.push(`ka.company_id = $${params.length}::uuid`);
+    }
+
+    const result = await this.databaseService.query<{
+      kpi_code: string;
+      benchmark_value: string | null;
+    }>(
+      `
+        WITH scoped_actual AS (
+          SELECT
+            ka.employee_id,
+            kd.kpi_code,
+            SUM(ka.actual_value) AS actual_value
+          FROM ops.kpi_actual ka
+          INNER JOIN ops.kpi_definition kd
+            ON kd.kpi_id = ka.kpi_id
+          WHERE ${clauses.join(" AND ")}
+          GROUP BY ka.employee_id, kd.kpi_code
+        )
+        SELECT 'ATV' AS kpi_code,
+               (SUM(net_sales.actual_value) / NULLIF(SUM(ticket_count.actual_value), 0))::text AS benchmark_value
+        FROM scoped_actual net_sales
+        INNER JOIN scoped_actual ticket_count
+          ON ticket_count.employee_id = net_sales.employee_id
+          AND ticket_count.kpi_code = 'TICKET_COUNT'
+        WHERE net_sales.kpi_code = 'NET_SALES'
+        UNION ALL
+        SELECT 'UPT' AS kpi_code,
+               (SUM(item_count.actual_value) / NULLIF(SUM(ticket_count.actual_value), 0))::text AS benchmark_value
+        FROM scoped_actual item_count
+        INNER JOIN scoped_actual ticket_count
+          ON ticket_count.employee_id = item_count.employee_id
+          AND ticket_count.kpi_code = 'TICKET_COUNT'
+        WHERE item_count.kpi_code = 'ITEM_COUNT'
+      `,
+      params,
+    );
+
+    return result.rows;
+  }
+
   async getLatestEmployeeKpiPeriod(input: {
     employeeId: string;
     metricCodes: string[];
