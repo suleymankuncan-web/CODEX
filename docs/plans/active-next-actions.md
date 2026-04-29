@@ -87,7 +87,7 @@ As of 29 April 2026, the competition package planning flow, Operational Feed V1,
 
 Reference: `docs/plans/project-debt-ledger.md`
 
-- Closed active debts: 48
+- Closed active debts: 57
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0

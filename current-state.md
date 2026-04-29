@@ -3553,7 +3553,45 @@ CODEX durust yorum:
 - Bu yuzey seksi bir ekran degil ama master data icin guven verir: hangi satir canliya yazildi, hangi entity id olustu, hangi batch hala blokta net gorunur.
 - Hala V1 pilot seviyesinde. Row editing, Excel upload, auth user creation ve role assignment ayri intake ister.
 
-Siradaki mantikli adim: user account / role assignment slice'i icin once tasarim-intake yapmak; personel kaydi canliya alindiktan sonra hangi kullanici hesabinin, hangi role ve hangi scope ile acilacagi kesinlesmeden kod yazmamak.
+Bu siradaki adim tamamlandi: `User Account / Role Assignment V1` icin tasarim-intake yapildi ve tasarim dokumani yazildi.
+
+## Son User Account / Role Assignment V1 Design
+
+29 Nisan 2026 itibariyla master data promotion sonrasi pilot kullanici hesabi, rol ve magaza scope baglama kararlarinin tasarimi yazildi.
+
+Kararlar:
+
+- V1 toplu kullanici acma degildir.
+- Pilot kapsam: `1 REGION_MANAGER`, `2 STORE_MANAGER`, `1 VISUAL_MERCHANDISER` ve mevcut `HR_ADMIN` / `SUPER_ADMIN`.
+- `STORE_PERSONNEL` hesaplari V1 disinda kalir.
+- Keycloak kimlik saglayici olarak kalir; Keycloak kullanicilari V1'de manuel/hazir olusturulur.
+- HR_ADMIN hazir Keycloak kullanicisini canli `employeeId` kaydina baglar.
+- Teknik eslestirme isim soyisimle degil `employeeId + authProvider + providerSubject` ile yapilmalidir.
+- Email/username gorunum ve kontrol kanitidir; canonical matching key degildir.
+- HR_ADMIN pilot hesaplari ikinci onay olmadan aktif edebilir; audit zorunludur.
+- V1'de kullanici basina tek ana rol vardir; multi-role yoktur.
+- `VISUAL_MERCHANDISER` yeni rol kodu olarak kabul edildi ve VM kullanicisi bolge muduru yetkisi almayacak sekilde sinirlanmalidir.
+- `STORE_MANAGER` yalniz kendi magazasini gorur/yonetir.
+- `REGION_MANAGER` ve `VISUAL_MERCHANDISER` pilotta iki pilot magazayla sinirlanir.
+- Is cikisi, kapsamdan cikarma veya transfer durumunda iki katmanli kapatma hedeflenir: backend user/role/scope kapatma + Keycloak manuel disable.
+
+Onemli teknik not:
+
+- Mevcut `ops.user_account` tablosunda `employee_id` vardir ama Keycloak `sub/providerSubject` icin kalici alan henuz yoktur.
+- Uygulama planinda token `sub` degerini ic `user_id` ile ayni varsaymak yerine provider subject -> app user lookup yolu netlestirilmelidir.
+- `REGION_MANAGER` icin iki magazalik pilot read/action scope davranisi implementation oncesi dogrulanmalidir; mevcut model role read scope ve action-store scope'u ayri tutar.
+
+Referans:
+
+- `docs/superpowers/specs/2026-04-29-user-account-role-assignment-v1-design.md`
+
+CODEX durust yorum:
+
+- Bu is yeni bir daginik modul degil; master data promotion sonrasi dogal guvenlik halkasi.
+- Keycloak'i degistirmek veya otomatik user provisioning acmak simdilik yanlis olurdu. Dogru V1, hazir Keycloak kullanicisini canli employee kaydina, tek role ve acik store scope'a baglamaktir.
+- En kritik risk `REGION_MANAGER` iki magazalik pilot scope'unu fazla genisletmeden cozmektir. Bu uygulama planinda ilk dogrulanacak konudur.
+
+Siradaki mantikli adim: bu tasarim dokumanini kullanarak `User Account / Role Assignment V1` implementation plani cikarmak; once schema/auth-resolution contract'i ve `VISUAL_MERCHANDISER` rol siniri netlestirilmeli.
 
 ## Onemli Dosyalar
 
