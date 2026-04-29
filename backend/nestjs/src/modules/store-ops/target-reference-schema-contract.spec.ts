@@ -1,0 +1,60 @@
+import { readFileSync } from "fs";
+import { join } from "path";
+
+const root = join(__dirname, "../../../../..");
+const schemaSql = readFileSync(join(root, "db/schema.sql"), "utf8");
+const migrationSql = readFileSync(
+  join(root, "db/migrations/039_target_reference_control_surface_v1.sql"),
+  "utf8",
+);
+const combinedSql = `${schemaSql}\n${migrationSql}`;
+
+describe("target reference schema contract", () => {
+  it("defines approved personnel target references", () => {
+    expect(combinedSql).toContain(
+      "CREATE TABLE IF NOT EXISTS ops.personnel_target_reference",
+    );
+    expect(combinedSql).toContain(
+      "personnel_target_reference_id UUID PRIMARY KEY DEFAULT gen_random_uuid()",
+    );
+    expect(combinedSql).toContain(
+      "source_request_id UUID NOT NULL REFERENCES ops.target_distribution_request(target_distribution_request_id)",
+    );
+    expect(combinedSql).toContain(
+      "employee_id UUID NOT NULL REFERENCES ops.employee(employee_id)",
+    );
+    expect(combinedSql).toContain(
+      "target_type TEXT NOT NULL DEFAULT 'monthly_sales_target'",
+    );
+    expect(combinedSql).toContain("status TEXT NOT NULL DEFAULT 'approved'");
+    expect(combinedSql).toContain(
+      "CHECK (status IN ('approved', 'superseded', 'voided_future'))",
+    );
+    expect(combinedSql).toContain(
+      "supersedes_target_reference_id UUID REFERENCES ops.personnel_target_reference(personnel_target_reference_id)",
+    );
+  });
+
+  it("guards lookup and active uniqueness indexes", () => {
+    expect(combinedSql).toContain(
+      "CREATE INDEX IF NOT EXISTS idx_personnel_target_reference_employee_period",
+    );
+    expect(combinedSql).toContain(
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_personnel_target_reference_active_unique",
+    );
+    expect(combinedSql).toContain("WHERE status = 'approved'");
+  });
+
+  it("anchors employee KPI snapshots to the personnel target reference used", () => {
+    expect(combinedSql).toContain("ALTER TABLE rpt.employee_kpi_snapshot");
+    expect(combinedSql).toContain(
+      "ADD COLUMN IF NOT EXISTS personnel_target_reference_id UUID REFERENCES ops.personnel_target_reference(personnel_target_reference_id)",
+    );
+  });
+
+  it("documents the scoring boundary", () => {
+    expect(combinedSql).toContain(
+      "COMMENT ON TABLE ops.personnel_target_reference IS 'Approved personnel target references promoted from region-approved target distribution requests for scoring.'",
+    );
+  });
+});

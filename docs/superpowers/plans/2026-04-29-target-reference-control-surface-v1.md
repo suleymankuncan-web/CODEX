@@ -15,11 +15,11 @@
 Backend schema and migrations:
 
 - Create `backend/nestjs/src/modules/store-ops/target-reference-schema-contract.spec.ts`
-  - Guards canonical `db/schema.sql` and migration `038_target_reference_control_surface_v1.sql`.
-- Create `db/migrations/038_target_reference_control_surface_v1.sql`
+  - Guards canonical `db/schema.sql` and migration `039_target_reference_control_surface_v1.sql`.
+- Create `db/migrations/039_target_reference_control_surface_v1.sql`
   - Adds approved personnel target references and snapshot anchoring column.
 - Modify `db/schema.sql`
-  - Keeps canonical schema aligned with migration `038`.
+  - Keeps canonical schema aligned with migration `039`.
 
 Backend target workflow:
 
@@ -101,10 +101,10 @@ Create the file with this complete content:
 import { readFileSync } from "fs";
 import { join } from "path";
 
-const repoRoot = join(__dirname, "../../../../../..");
-const schemaSql = readFileSync(join(repoRoot, "db/schema.sql"), "utf8");
+const root = join(__dirname, "../../../../..");
+const schemaSql = readFileSync(join(root, "db/schema.sql"), "utf8");
 const migrationSql = readFileSync(
-  join(repoRoot, "db/migrations/038_target_reference_control_surface_v1.sql"),
+  join(root, "db/migrations/039_target_reference_control_surface_v1.sql"),
   "utf8",
 );
 const combinedSql = `${schemaSql}\n${migrationSql}`;
@@ -151,7 +151,7 @@ Expected:
 
 ```text
 FAIL target reference schema contract
-ENOENT: no such file or directory, open 'db\migrations\038_target_reference_control_surface_v1.sql'
+ENOENT: no such file or directory, open 'db\migrations\039_target_reference_control_surface_v1.sql'
 ```
 
 - [ ] **Step 3: Commit the red contract**
@@ -170,12 +170,12 @@ git commit -m "test: add target reference schema contract"
 
 **Files:**
 
-- Create: `db/migrations/038_target_reference_control_surface_v1.sql`
+- Create: `db/migrations/039_target_reference_control_surface_v1.sql`
 - Modify: `db/schema.sql`
 
-- [ ] **Step 1: Add migration `038`**
+- [ ] **Step 1: Add migration `039`**
 
-Create `db/migrations/038_target_reference_control_surface_v1.sql` with this content:
+Create `db/migrations/039_target_reference_control_surface_v1.sql` with this content:
 
 ```sql
 CREATE TABLE IF NOT EXISTS ops.personnel_target_reference (
@@ -213,7 +213,7 @@ COMMENT ON TABLE ops.personnel_target_reference IS 'Approved personnel target re
 
 - [ ] **Step 2: Mirror the schema in `db/schema.sql`**
 
-Add the same table, indexes, snapshot column, and comment to `db/schema.sql` near the target distribution and employee KPI snapshot definitions. Keep the SQL identical to migration `038` for the strings guarded by `target-reference-schema-contract.spec.ts`.
+Add the same table, indexes, snapshot column, and comment to `db/schema.sql` near the target distribution and employee KPI snapshot definitions. Keep the SQL identical to migration `039` for the strings guarded by `target-reference-schema-contract.spec.ts`.
 
 - [ ] **Step 3: Run the schema contract**
 
@@ -236,7 +236,7 @@ Run:
 
 ```powershell
 cd "C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI"
-git add db/migrations/038_target_reference_control_surface_v1.sql db/schema.sql backend/nestjs/src/modules/store-ops/target-reference-schema-contract.spec.ts
+git add db/migrations/039_target_reference_control_surface_v1.sql db/schema.sql backend/nestjs/src/modules/store-ops/target-reference-schema-contract.spec.ts
 git commit -m "feat: add personnel target reference schema"
 ```
 

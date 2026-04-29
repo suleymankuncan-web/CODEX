@@ -274,6 +274,26 @@ CREATE TABLE ops.target_distribution_request (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE ops.personnel_target_reference (
+    personnel_target_reference_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    source_request_id UUID NOT NULL REFERENCES ops.target_distribution_request(target_distribution_request_id),
+    company_id UUID NOT NULL REFERENCES ops.company(company_id),
+    region_id UUID NOT NULL REFERENCES ops.region(region_id),
+    store_id UUID NOT NULL REFERENCES ops.store(store_id),
+    employee_id UUID NOT NULL REFERENCES ops.employee(employee_id),
+    period_start DATE NOT NULL,
+    period_end DATE NOT NULL,
+    target_value NUMERIC(18,4) NOT NULL CHECK (target_value > 0),
+    target_type TEXT NOT NULL DEFAULT 'monthly_sales_target',
+    status TEXT NOT NULL DEFAULT 'approved',
+    approved_by_user_id TEXT NOT NULL,
+    approved_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    supersedes_target_reference_id UUID REFERENCES ops.personnel_target_reference(personnel_target_reference_id),
+    CHECK (period_end >= period_start),
+    CHECK (status IN ('approved', 'superseded', 'voided_future'))
+);
+
 CREATE TABLE ops.competition (
     competition_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     competition_code TEXT NOT NULL UNIQUE,
@@ -697,6 +717,7 @@ CREATE TABLE rpt.employee_kpi_snapshot (
     period_start DATE NOT NULL,
     period_end DATE NOT NULL,
     actual_value NUMERIC(18,4) NOT NULL,
+    personnel_target_reference_id UUID REFERENCES ops.personnel_target_reference(personnel_target_reference_id),
     PRIMARY KEY (snapshot_run_id, employee_id, kpi_id)
 );
 
@@ -973,6 +994,13 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_mobile_device_session_active_device
 CREATE INDEX idx_target_distribution_request_scope_status
     ON ops.target_distribution_request (company_id, region_id, store_id, request_status, request_month);
 
+CREATE INDEX IF NOT EXISTS idx_personnel_target_reference_employee_period
+    ON ops.personnel_target_reference (employee_id, period_start, period_end, status);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_personnel_target_reference_active_unique
+    ON ops.personnel_target_reference (employee_id, period_start, period_end, target_type)
+    WHERE status = 'approved';
+
 CREATE INDEX competition_stage_competition_state_idx
     ON ops.competition_stage (competition_id, lifecycle_state, starts_on, ends_on);
 
@@ -1113,6 +1141,7 @@ COMMENT ON TABLE ops.user_role_assignment IS 'RBAC assignments with scope-limite
 COMMENT ON TABLE ops.user_action_store_assignment IS 'Store-level action grants kept separate from role read scope so regional or audit users can read broadly but act only on assigned stores.';
 COMMENT ON TABLE ops.mobile_device_session IS 'Mobile device session registry for active/revoked app sessions. Refresh tokens remain IdP-owned in V1.';
 COMMENT ON TABLE ops.target_distribution_request IS 'Store-level target distribution requests that are submitted by store managers and approved by region-level oversight.';
+COMMENT ON TABLE ops.personnel_target_reference IS 'Approved personnel target references promoted from region-approved target distribution requests for scoring.';
 COMMENT ON TABLE ops.feed_post IS 'Scoped operational announcements and challenge posts. Challenge posts announce focus windows but do not calculate scores.';
 COMMENT ON TABLE ops.checklist_acknowledgement IS 'Store acknowledgement evidence for completed checklist instances.';
 COMMENT ON TABLE ops.kpi_score_profile_config IS 'Data-driven KPI scoring configuration for store/personnel score profiles, ownership matrix and grading bands.';
