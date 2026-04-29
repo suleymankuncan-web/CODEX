@@ -41,6 +41,37 @@ describe("TargetDistributionRepository", () => {
     );
   });
 
+  it("lists target coverage from active personnel and approved target references", async () => {
+    const query = jest.fn().mockResolvedValue({ rows: [] });
+    const repository = new TargetDistributionRepository({ query } as never);
+
+    await repository.listTargetCoverage({
+      companyIds: ["00000000-0000-0000-0000-000000000001"],
+      regionIds: [],
+      storeIds: [],
+      requestMonth: "2026-03-01",
+      storeId: "00000000-0000-0000-0000-000000000201",
+    });
+
+    const sql = String(query.mock.calls[0][0]);
+    expect(sql).toContain("FROM ops.employee_assignment_history eah");
+    expect(sql).toContain("eah.assignment_status = 'active'");
+    expect(sql).toContain("e.employment_status = 'active'");
+    expect(sql).toContain("LEFT JOIN ops.personnel_target_reference ptr");
+    expect(sql).toContain("ptr.period_start = $1::date");
+    expect(sql).toContain(
+      "ptr.period_end = ($1::date + INTERVAL '1 month' - INTERVAL '1 day')::date",
+    );
+    expect(sql).toContain("ptr.target_type = 'monthly_sales_target'");
+    expect(sql).toContain("ptr.status = 'approved'");
+    expect(sql).toContain("CASE WHEN ptr.personnel_target_reference_id IS NULL");
+    expect(query).toHaveBeenCalledWith(expect.any(String), [
+      "2026-03-01",
+      ["00000000-0000-0000-0000-000000000001"],
+      "00000000-0000-0000-0000-000000000201",
+    ]);
+  });
+
   it("promotes approved allocations into personnel target references", async () => {
     const allocations = [
       {

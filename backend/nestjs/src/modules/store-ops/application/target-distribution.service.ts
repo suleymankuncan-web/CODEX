@@ -82,6 +82,56 @@ export class TargetDistributionService {
     });
   }
 
+  async getTargetCoverage(input: {
+    actorScope: {
+      companyIds: string[];
+      regionIds: string[];
+      storeIds: string[];
+    };
+    requestMonth: string;
+    storeId?: string;
+  }) {
+    const rows = await this.targetDistributionRepository.listTargetCoverage({
+      companyIds: input.actorScope.companyIds,
+      regionIds: input.actorScope.regionIds,
+      storeIds: input.actorScope.storeIds,
+      requestMonth: input.requestMonth,
+      storeId: input.storeId,
+    });
+    const items = rows.map((row) => ({
+      storeId: row.store_id,
+      storeName: row.store_name,
+      employeeId: row.employee_id,
+      displayName: `${row.first_name} ${row.last_name}`.trim(),
+      externalEmployeeRef: row.external_employee_ref,
+      targetReferenceId: row.personnel_target_reference_id,
+      targetValue: row.target_value !== null ? Number(row.target_value) : null,
+      targetStatus: row.target_status,
+    }));
+    const coveredEmployees = items.filter(
+      (item) => item.targetStatus === "approved",
+    ).length;
+    const totalEmployees = items.length;
+
+    return {
+      ...buildListResponse(items, {
+        total: totalEmployees,
+        limit: 50,
+        offset: 0,
+      }),
+      summary: {
+        requestMonth: input.requestMonth,
+        totalEmployees,
+        coveredEmployees,
+        missingEmployees: totalEmployees - coveredEmployees,
+        coverageRate:
+          totalEmployees > 0
+            ? Number((coveredEmployees / totalEmployees).toFixed(4))
+            : 0,
+      },
+    };
+  }
+
   async approveRequest(input: {
     actorUserId: string;
     actorActionScope?: {

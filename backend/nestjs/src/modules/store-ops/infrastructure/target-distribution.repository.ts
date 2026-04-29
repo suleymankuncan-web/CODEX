@@ -30,6 +30,18 @@ type TargetDistributionAllocation = {
   note?: string;
 };
 
+type TargetCoverageRow = {
+  store_id: string;
+  store_name: string;
+  employee_id: string;
+  first_name: string;
+  last_name: string;
+  external_employee_ref: string | null;
+  personnel_target_reference_id: string | null;
+  target_value: string | null;
+  target_status: "approved" | "missing";
+};
+
 function parseTargetDistributionAllocations(
   value: unknown,
 ): TargetDistributionAllocation[] {
@@ -301,6 +313,84 @@ export class TargetDistributionRepository {
     );
 
     return result.rows.map((row) => this.mapRequest(row));
+  }
+
+  async listTargetCoverage(input: {
+    companyIds: string[];
+    regionIds: string[];
+    storeIds: string[];
+    requestMonth: string;
+    storeId?: string;
+  }) {
+    const params: unknown[] = [input.requestMonth];
+    const clauses: string[] = [];
+
+    if (input.storeIds.length > 0) {
+      params.push(input.storeIds);
+      clauses.push(`eah.store_id = ANY($${params.length}::uuid[])`);
+    } else if (input.regionIds.length > 0) {
+      params.push(input.regionIds);
+      clauses.push(`eah.region_id = ANY($${params.length}::uuid[])`);
+    } else if (input.companyIds.length > 0) {
+      params.push(input.companyIds);
+      clauses.push(`s.company_id = ANY($${params.length}::uuid[])`);
+    } else {
+      clauses.push("FALSE");
+    }
+
+    if (input.storeId) {
+      params.push(input.storeId);
+      clauses.push(`eah.store_id = $${params.length}::uuid`);
+    }
+
+    const result = await this.databaseService.query<TargetCoverageRow>(
+      `
+        WITH active_personnel AS (
+          SELECT DISTINCT ON (eah.employee_id, eah.store_id)
+            eah.store_id,
+            s.store_name,
+            e.employee_id,
+            e.first_name,
+            e.last_name,
+            e.external_employee_ref
+          FROM ops.employee_assignment_history eah
+          INNER JOIN ops.employee e
+            ON e.employee_id = eah.employee_id
+          INNER JOIN ops.store s
+            ON s.store_id = eah.store_id
+          WHERE eah.assignment_status = 'active'
+            AND eah.end_date IS NULL
+            AND e.employment_status = 'active'
+            AND ${clauses.join(" AND ")}
+          ORDER BY eah.employee_id, eah.store_id, eah.start_date DESC
+        )
+        SELECT
+          ap.store_id,
+          ap.store_name,
+          ap.employee_id,
+          ap.first_name,
+          ap.last_name,
+          ap.external_employee_ref,
+          ptr.personnel_target_reference_id::text AS personnel_target_reference_id,
+          ptr.target_value::text AS target_value,
+          CASE WHEN ptr.personnel_target_reference_id IS NULL
+            THEN 'missing'
+            ELSE 'approved'
+          END AS target_status
+        FROM active_personnel ap
+        LEFT JOIN ops.personnel_target_reference ptr
+          ON ptr.employee_id = ap.employee_id
+         AND ptr.store_id = ap.store_id
+         AND ptr.period_start = $1::date
+         AND ptr.period_end = ($1::date + INTERVAL '1 month' - INTERVAL '1 day')::date
+         AND ptr.target_type = 'monthly_sales_target'
+         AND ptr.status = 'approved'
+        ORDER BY ap.store_name ASC, ap.first_name ASC, ap.last_name ASC, ap.employee_id ASC
+      `,
+      params,
+    );
+
+    return result.rows;
   }
 
   async approveRequest(input: {

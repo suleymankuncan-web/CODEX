@@ -5,6 +5,7 @@ import { TargetDistributionService } from "../application/target-distribution.se
 import { CreateTargetDistributionRequestDto } from "./dto/create-target-distribution-request.dto";
 import { ApproveTargetDistributionRequestDto } from "./dto/approve-target-distribution-request.dto";
 import { ListTargetDistributionRequestsQueryDto } from "./dto/list-target-distribution-requests.query";
+import { ListTargetCoverageQueryDto } from "./dto/list-target-coverage.query";
 
 @Controller("target-distributions")
 export class TargetDistributionController {
@@ -57,6 +58,28 @@ export class TargetDistributionController {
     return this.targetDistributionService.listRequests({
       actorScope: request.user.scope,
       statuses: query.status ? [query.status] : undefined,
+    });
+  }
+
+  @Get("coverage")
+  @RequireRoles("STORE_MANAGER", "SUPER_ADMIN", "HR_ADMIN", "REPORT_VIEWER", "REGION_MANAGER")
+  async getTargetCoverage(
+    @Req()
+    request: {
+      user: {
+        scope: {
+          companyIds: string[];
+          regionIds: string[];
+          storeIds: string[];
+        };
+      };
+    },
+    @Query() query: ListTargetCoverageQueryDto,
+  ) {
+    return this.targetDistributionService.getTargetCoverage({
+      actorScope: request.user.scope,
+      requestMonth: query.requestMonth,
+      storeId: query.storeId,
     });
   }
 
