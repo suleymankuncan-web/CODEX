@@ -2,7 +2,7 @@
 
 Date: 29 April 2026
 
-Status: `draft_for_review`
+Status: `approved_for_planning`
 
 ## Goal
 
