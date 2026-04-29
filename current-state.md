@@ -96,6 +96,30 @@ Ana prensip:
 - `STORE_PERSONNEL` sadece kendi performansini ve kisisel alanini gorur.
 - `REGION_MANAGER` hedef onaylari ve ileride kendi atanmis magazalari uzerinde saha aksiyonlari icin ayrildi.
 
+## Son KPI Benchmark Scoring V1 Kararlari
+
+29 Nisan 2026 itibariyla KPI skorlamanin referans mantigi urun karari olarak netlesti.
+
+Kararlar:
+
+- Magaza hedef gerceklesme magaza hedefinden puanlanir.
+- Magaza `CR`, `ATV`, `UPT` ayni donem Turkiye ortalamasina gore puanlanir.
+- Gunluk veri yuklendiyse o gunun Turkiye ortalamasi referans alinir.
+- Cok gunluk/aylik veri yuklendiyse ayni tarih araliginin Turkiye ortalamasi referans alinir.
+- `ATV`, `UPT`, `CR` gunluk oranlarin duz ortalamasi ile degil, toplam pay/toplam payda formulleriyle hesaplanir.
+- Personel hedef gerceklesme magaza muduru tarafindan girilen ve bolge muduru tarafindan onaylanan personel hedefinden puanlanir.
+- HR_ADMIN eksik, taslak veya onaysiz personel hedeflerini gorebilmelidir.
+- Personel `ATV` ve `UPT` ayni donem Turkiye personel ortalamasina gore puanlanir.
+- Checklistler Turkiye ortalamasina gore puanlanmaz; kendi checklist puani skora katkida bulunur.
+- V1 cap `120%` olarak kabul edildi.
+- Gercek oran her zaman saklanir ve gosterilir; skor katkisi sadece `120%` cap ile sinirlanir.
+- Cap ustu degerlerde UI yalnizca `120%` gostermemeli; ornegin `148% performans, skor limiti 120%+` gibi aciklamali gostermelidir.
+- Eksik hedef veya eksik benchmark varsa sistem puan uydurmaz; `missing_reference` mantigi ile aciklar.
+
+Referans:
+
+- `docs/superpowers/specs/2026-04-29-kpi-benchmark-scoring-v1-design.md`
+
 ## Son Operational Feed V1
 
 26 Nisan 2026 itibariyla `Operational Feed V1` tamamlandi. `Competition Format Registry V1` yonu bilincli olarak superseded edildi; UPT/ATV/total score gibi odak yarislari V1'de yeni bir skor motoru degil, duyuru/challenge postu olarak ele aliniyor.
