@@ -4010,6 +4010,45 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: pilot VM kullanicisi ile tarayici smoke yapmak; sonra VM score contribution activation icin KPI `%90`, BM `%5`, VM `%5` blend planina gecmek.
 
+## Son VM Checklist Browser Smoke
+
+29 Nisan 2026 itibariyla `pilot.vm` kullanicisi ile gercek Keycloak login uzerinden VM checklist tarayici smoke'u yapildi.
+
+Hazirlik:
+
+- Lokal DB'de `pilot.vm` iki magazaya atanmis durumda dogrulandi:
+  - `IST-002` / Istanbul Besiktas,
+  - `STORE100` / IstinyePark Demo Store.
+- Lokal DB'de yayinlanmis `VM_STORE_VISIT` sablonu olmadigi icin sadece smoke amacli idempotent `VM_VISIT_SMOKE_V1` sablonu olusturuldu.
+- Bu bir kod degisikligi degil; lokal pilot veri hazirligidir.
+
+Kontrol edilenler:
+
+- `pilot.vm` gercek PKCE login ile `/store/checklists` yuzeyine dustu.
+- Oturum `VISUAL_MERCHANDISER` rolunu ve 2 store scope'u dogru cozdu.
+- VM store shell genis linkleri gostermedi: admin raporlari, duyurular ve yarismalar yok.
+- `/store` dogrudan acildiginda `/store/checklists` yuzeyine yonlendi.
+- `/store/feed` dogrudan acildiginda `Route not available for this role` verdi.
+- `/admin/targets` dogrudan acildiginda `Route not available for this role` verdi.
+- Istanbul Besiktas icin VM checklist baslatildi.
+- Tek VM puan maddesi `5/5` olarak kaydedildi.
+- Checklist tamamlandi ve ekranda `1 VM checklist tamamlandi`, `1 ziyaret / 100 ort.` gorundu.
+- DB kaniti:
+  - `template_code`: `VM_VISIT_SMOKE_V1`,
+  - `template_type`: `VM_STORE_VISIT`,
+  - `status`: `completed`,
+  - `total_score`: `100.00`,
+  - `compliance_rate`: `1.0000`,
+  - `response_count`: `1`.
+
+CODEX durust yorum:
+
+- VM Checklist V1 gercek tarayici + gercek Keycloak + gercek DB zincirinde calisti.
+- Kod tarafindaki izin siniri dogru: VM kullanici checklist disindaki store/admin yuzeylerine gecemiyor.
+- Eksik kalan bilincli faz: VM checklist skoru henuz magaza skor blend'ine bagli degil. Bu sonraki kontrollu plan olmali.
+
+Siradaki mantikli adim: VM score contribution activation tasarimini yazmak; KPI `%90`, BM `%5`, VM `%5` aylik blend davranisini migration/test/rapor etkileriyle kilitlemek.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
