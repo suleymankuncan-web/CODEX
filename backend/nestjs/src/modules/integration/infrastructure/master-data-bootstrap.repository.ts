@@ -128,6 +128,14 @@ export type BootstrapStorePromotionSummary = BootstrapValidationSummary & {
   }>;
 };
 
+export type BootstrapPersonnelPromotionSummary = BootstrapValidationSummary & {
+  promotedRows: Array<{
+    rowId: string;
+    promotedEntityId: string;
+    assignmentId: string;
+  }>;
+};
+
 export type BootstrapBatchQueueItem = BootstrapBatch & {
   pendingCount: number;
 };
@@ -812,6 +820,272 @@ export class MasterDataBootstrapRepository {
       const batch = batchResult.rows[0];
       if (!batch) {
         throw new Error(`Store bootstrap batch was not refreshed: ${input.batchId}`);
+      }
+
+      return {
+        batchId: batch.master_data_bootstrap_batch_id,
+        batchStatus: batch.batch_status,
+        rowCount: batch.row_count,
+        validCount: batch.valid_count,
+        needsReviewCount: batch.needs_review_count,
+        invalidCount: batch.invalid_count,
+        promotedCount: batch.promoted_count,
+        promotedRows,
+      };
+    });
+  }
+
+  async promotePersonnelBootstrapRows(input: {
+    batchId: string;
+    rows: Array<{
+      rowId: string;
+      companyId: string;
+      storeId: string;
+      regionId: string;
+      positionId: string;
+      employeeId: string | null;
+      employeeCode: string;
+      firstName: string;
+      lastName: string;
+      nationalIdHash: string;
+      hireDate: string;
+      employmentType: string;
+    }>;
+  }): Promise<BootstrapPersonnelPromotionSummary> {
+    return this.databaseService.withTransaction(async (client) => {
+      const promotedRows: Array<{
+        rowId: string;
+        promotedEntityId: string;
+        assignmentId: string;
+      }> = [];
+
+      for (const row of input.rows) {
+        const employeeResult = await client.query<{ employee_id: string }>(
+          `
+            WITH existing_employee AS (
+              SELECT employee_id
+              FROM ops.employee
+              WHERE company_id = $1::uuid
+                AND UPPER(REGEXP_REPLACE(COALESCE(external_employee_ref, ''), '[\\s-]', '', 'g')) = $2
+              ORDER BY employee_id
+              LIMIT 1
+            ),
+            target_employee AS (
+              SELECT COALESCE($8::uuid, (SELECT employee_id FROM existing_employee)) AS employee_id
+            ),
+            updated_employee AS (
+              UPDATE ops.employee
+              SET
+                external_employee_ref = $2,
+                first_name = $3,
+                last_name = $4,
+                national_id_hash = $5,
+                hire_date = $6::date,
+                termination_date = NULL,
+                employment_status = 'active',
+                employment_type = $7
+              WHERE employee_id = (SELECT employee_id FROM target_employee)
+              RETURNING employee_id::text AS employee_id
+            ),
+            inserted_employee AS (
+              INSERT INTO ops.employee (
+                company_id,
+                external_employee_ref,
+                first_name,
+                last_name,
+                national_id_hash,
+                hire_date,
+                employment_status,
+                employment_type
+              )
+              SELECT $1::uuid, $2, $3, $4, $5, $6::date, 'active', $7
+              WHERE (SELECT employee_id FROM target_employee) IS NULL
+              RETURNING employee_id::text AS employee_id
+            )
+            SELECT employee_id FROM updated_employee
+            UNION ALL
+            SELECT employee_id FROM inserted_employee
+          `,
+          [
+            row.companyId,
+            row.employeeCode,
+            row.firstName,
+            row.lastName,
+            row.nationalIdHash,
+            row.hireDate,
+            row.employmentType,
+            row.employeeId,
+          ],
+        );
+        const promotedEntityId = employeeResult.rows[0]?.employee_id;
+        if (!promotedEntityId) {
+          throw new Error(
+            `Personnel bootstrap employee was not upserted: ${row.rowId}`,
+          );
+        }
+
+        await client.query(
+          `
+            UPDATE ops.employee_assignment_history
+            SET
+              end_date = GREATEST(start_date, $5::date),
+              assignment_status = 'inactive'
+            WHERE employee_id = $1::uuid
+              AND is_primary_assignment = TRUE
+              AND assignment_status = 'active'
+              AND end_date IS NULL
+              AND (store_id <> $2::uuid OR position_id <> $4::uuid)
+          `,
+          [
+            promotedEntityId,
+            row.storeId,
+            row.regionId,
+            row.positionId,
+            row.hireDate,
+          ],
+        );
+
+        const assignmentResult = await client.query<{ assignment_id: string }>(
+          `
+            WITH existing_assignment AS (
+              SELECT assignment_id
+              FROM ops.employee_assignment_history
+              WHERE employee_id = $1::uuid
+                AND store_id = $2::uuid
+                AND position_id = $4::uuid
+                AND is_primary_assignment = TRUE
+                AND assignment_status = 'active'
+                AND end_date IS NULL
+              ORDER BY start_date DESC, assignment_id
+              LIMIT 1
+            ),
+            updated_assignment AS (
+              UPDATE ops.employee_assignment_history
+              SET
+                region_id = $3::uuid,
+                start_date = LEAST(start_date, $5::date),
+                is_primary_assignment = TRUE,
+                fte_ratio = 1.00,
+                assignment_status = 'active'
+              WHERE assignment_id = (SELECT assignment_id FROM existing_assignment)
+              RETURNING assignment_id::text AS assignment_id
+            ),
+            inserted_assignment AS (
+              INSERT INTO ops.employee_assignment_history (
+                employee_id,
+                store_id,
+                region_id,
+                position_id,
+                start_date,
+                is_primary_assignment,
+                fte_ratio,
+                assignment_status
+              )
+              SELECT $1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::date, TRUE, 1.00, 'active'
+              WHERE NOT EXISTS (SELECT 1 FROM updated_assignment)
+              RETURNING assignment_id::text AS assignment_id
+            )
+            SELECT assignment_id FROM updated_assignment
+            UNION ALL
+            SELECT assignment_id FROM inserted_assignment
+          `,
+          [
+            promotedEntityId,
+            row.storeId,
+            row.regionId,
+            row.positionId,
+            row.hireDate,
+          ],
+        );
+        const assignmentId = assignmentResult.rows[0]?.assignment_id;
+        if (!assignmentId) {
+          throw new Error(
+            `Personnel bootstrap assignment was not upserted: ${row.rowId}`,
+          );
+        }
+
+        const rowUpdateResult = await client.query(
+          `
+            UPDATE stg.master_data_bootstrap_row
+            SET
+              validation_status = 'promoted',
+              promoted_entity_id = $3::uuid,
+              updated_at = NOW()
+            WHERE master_data_bootstrap_row_id = $1::uuid
+              AND master_data_bootstrap_batch_id = $2::uuid
+              AND validation_status = 'valid'
+          `,
+          [row.rowId, input.batchId, promotedEntityId],
+        );
+        if (rowUpdateResult.rowCount !== 1) {
+          throw new Error(
+            `Personnel bootstrap row was not marked promoted: ${row.rowId}`,
+          );
+        }
+
+        promotedRows.push({
+          rowId: row.rowId,
+          promotedEntityId,
+          assignmentId,
+        });
+      }
+
+      const batchResult = await client.query<{
+        master_data_bootstrap_batch_id: string;
+        batch_status: string;
+        row_count: number;
+        valid_count: number;
+        needs_review_count: number;
+        invalid_count: number;
+        promoted_count: number;
+      }>(
+        `
+          WITH row_counts AS (
+            SELECT
+              COUNT(*)::integer AS row_count,
+              COUNT(*) FILTER (WHERE validation_status = 'valid')::integer AS valid_count,
+              COUNT(*) FILTER (WHERE validation_status = 'needs_review')::integer AS needs_review_count,
+              COUNT(*) FILTER (WHERE validation_status = 'invalid')::integer AS invalid_count,
+              COUNT(*) FILTER (WHERE validation_status = 'promoted')::integer AS promoted_count
+            FROM stg.master_data_bootstrap_row
+            WHERE master_data_bootstrap_batch_id = $1::uuid
+          )
+          UPDATE stg.master_data_bootstrap_batch b
+          SET
+            batch_status = CASE
+              WHEN row_counts.row_count = row_counts.promoted_count
+              THEN 'promoted'
+              ELSE 'ready_to_promote'
+            END,
+            row_count = row_counts.row_count,
+            valid_count = row_counts.valid_count,
+            needs_review_count = row_counts.needs_review_count,
+            invalid_count = row_counts.invalid_count,
+            promoted_count = row_counts.promoted_count,
+            promoted_at = CASE
+              WHEN row_counts.row_count = row_counts.promoted_count
+              THEN NOW()
+              ELSE b.promoted_at
+            END
+          FROM row_counts
+          WHERE b.master_data_bootstrap_batch_id = $1::uuid
+          RETURNING
+            b.master_data_bootstrap_batch_id,
+            b.batch_status,
+            b.row_count,
+            b.valid_count,
+            b.needs_review_count,
+            b.invalid_count,
+            b.promoted_count
+        `,
+        [input.batchId],
+      );
+
+      const batch = batchResult.rows[0];
+      if (!batch) {
+        throw new Error(
+          `Personnel bootstrap batch was not refreshed: ${input.batchId}`,
+        );
       }
 
       return {

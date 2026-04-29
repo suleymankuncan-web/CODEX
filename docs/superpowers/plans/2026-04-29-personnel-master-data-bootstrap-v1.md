@@ -214,21 +214,28 @@ POST /api/integrations/master-data-bootstrap/batches/:batchId/promote-stores
 
 Personnel promotion remains closed until V1-E.
 
-## Next Slice: V1-E Personnel Promotion
+## Completed Slice: V1-E Personnel Promotion
 
-- [ ] **Step 1: Write personnel promotion tests**
+- [x] **Step 1: Write personnel promotion tests**
 
 Acceptance:
 
-- valid personnel row promotes to `ops.employee`
+- valid personnel rows promote to `ops.employee`
 - valid active assignment promotes to `ops.employee_assignment_history`
-- duplicate seller code blocks promotion
-- unknown store or position blocks promotion
-- re-promoting same row does not duplicate employees or assignments
+- duplicate seller code blocks promotion during preflight
+- unknown store or position blocks promotion during validation
+- re-promoting already promoted rows does not duplicate employees or assignments
+- store batches cannot use the personnel promotion command
 
-- [ ] **Step 2: Implement personnel promotion**
+- [x] **Step 2: Implement personnel promotion**
 
-Promotion must create/update employee identity and one active primary assignment, but only from `valid` rows.
+Promotion creates or updates employee identity, maintains one active primary assignment, keeps `promoted_entity_id` on staged rows, refreshes batch counters, and exposes:
+
+```text
+POST /api/integrations/master-data-bootstrap/batches/:batchId/promote-personnel
+```
+
+User account creation and auth role assignment remain future slices.
 
 ## Verification Gate
 

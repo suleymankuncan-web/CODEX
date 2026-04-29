@@ -3494,7 +3494,36 @@ CODEX durust yorum:
 - En kritik kazanc, gecmis skoru sessizce degistirmemek icin completed-lock davranisinin testlerle kilitlenmesi.
 - UI hala pilot; asil deger backend lifecycle, scope ve score davranisinin dogru oturmasinda.
 
-Siradaki mantikli adim: dis kaynak yoksa yeni adapter yazmamak; gercek store/personel baseline listesi gelirse Personnel Master Data Bootstrap V1'e gecmek. Baseline yoksa hedef coverage V1-B icin pending/stale/conflict sayaclarini intake ile netlestirmek.
+Bu siradaki adim tamamlandi: Personnel Master Data Bootstrap V1 staging, validation, review queue, duplicate/conflict preflight, promotion readiness, store promotion ve personnel promotion slice'lariyla release kapilarindan gecti.
+
+## Son Master Data Bootstrap Personnel Promotion V1
+
+29 Nisan 2026 itibariyla reviewed personnel bootstrap rows icin canli employee ve assignment promotion yolu acildi.
+
+Eklenenler:
+
+- HR/Admin scoped endpoint: `POST /api/integrations/master-data-bootstrap/batches/:batchId/promote-personnel`.
+- Promotion yalniz `ready_to_promote` personnel batch ve readiness `ready` satirlar icin calisir.
+- Personnel staging artik live-write icin gerekli first name, last name, national id hash, hire date ve employment type metadata'sini validate eder.
+- Promotion `ops.employee` kaydini create/update eder.
+- Promotion ayni employee icin tek active primary assignment'i koruyarak `ops.employee_assignment_history` kaydini create/update eder.
+- Staged row `promoted` olur ve employee `promoted_entity_id` kaniti saklanir.
+- Store promotion path'i ve personnel promotion path'i ayri tutuldu; user account/role creation V1 disinda kaldi.
+
+Dogrulama:
+
+- Targeted bootstrap tests: `npm.cmd test -- master-data-bootstrap --runInBand` -> 3 suite / 39 test.
+- Backend lint: `npm.cmd run lint` -> pass.
+- Backend build: `npm.cmd run build` -> pass.
+- Root release: `npm.cmd run check:release` -> 46 root script test, backend 71 suite / 452 test, frontend 40 Playwright test, audits.
+
+CODEX durust yorum:
+
+- Bu borc temiz kapandi: personel master data artik dosyadan dogrudan live tabloya ziplayan riskli bir yol degil; staging, review, readiness ve promotion kapilarindan geciyor.
+- En kritik sinir korundu: personel identity/assignment canliya alinabilir, ama kullanici hesabi ve auth role binding ayri ve daha kontrollu bir slice olarak kalir.
+- UI hala operator pilot seviyesinde tutulmali; asil deger backend'in yanlis satiri yanlis personele yazmamasinda.
+
+Siradaki mantikli adim: master data promotion sonucunu admin yuzeyinde kullanilabilir hale getirmek veya user account/role assignment slice'i icin once tasarim/intake yapmak; auth role creation'a dogrudan atlamamak.
 
 ## Onemli Dosyalar
 

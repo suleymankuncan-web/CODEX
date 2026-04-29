@@ -20,6 +20,11 @@ import {
 } from "../infrastructure/master-data-bootstrap.repository";
 
 const ALLOWED_STORE_TYPES = new Set(["company", "franchise", "operator"]);
+const ALLOWED_EMPLOYMENT_TYPES = new Set([
+  "full_time",
+  "part_time",
+  "temporary",
+]);
 
 type BootstrapReadiness =
   | "needs_validation"
@@ -336,6 +341,59 @@ export class MasterDataBootstrapService {
     });
   }
 
+  async promotePersonnelBootstrapBatch(input: {
+    actorScope: {
+      companyIds: string[];
+    };
+    batchId: string;
+  }) {
+    const batch = await this.getScopedBootstrapBatch({
+      batchId: input.batchId,
+      companyIds: input.actorScope.companyIds,
+    });
+
+    if (batch.bootstrapEntity !== "personnel") {
+      throw new BadRequestException(
+        "Personnel bootstrap promotion only supports personnel batches",
+      );
+    }
+
+    if (batch.batchStatus !== "ready_to_promote") {
+      throw new BadRequestException(
+        "Personnel bootstrap batch must be ready_to_promote before promotion",
+      );
+    }
+
+    const rows = await this.masterDataBootstrapRepository.listBootstrapRows(
+      input.batchId,
+    );
+    const promotionRows = rows
+      .filter(
+        (row) =>
+          classifyBootstrapPromotionRow(batch, row).promotionReadiness === "ready",
+      )
+      .map((row) => buildPersonnelPromotionRow(batch, row));
+
+    if (promotionRows.length === 0) {
+      throw new BadRequestException("Personnel bootstrap batch has no ready rows");
+    }
+
+    const promotedBatch =
+      await this.masterDataBootstrapRepository.promotePersonnelBootstrapRows({
+        batchId: input.batchId,
+        rows: promotionRows,
+      });
+
+    return buildCommandResponse({
+      status: "promoted",
+      message: "Personnel bootstrap rows promoted",
+      data: {
+        batch: promotedBatch,
+        promotedRows: promotedBatch.promotedRows,
+      },
+    });
+  }
+
   async getBootstrapBatchDetail(input: {
     actorScope: {
       companyIds: string[];
@@ -555,6 +613,80 @@ export class MasterDataBootstrapService {
       });
     }
 
+    const firstName = readNormalizedString(
+      row.normalizedPayload,
+      "normalizedFirstName",
+    );
+    if (!firstName) {
+      return buildValidationResult(row, {
+        validationStatus: "invalid",
+        issueCode: "missing_first_name",
+        issueMessage: "First name is required before personnel promotion",
+        ...buildStoreResolution(batch.companyId, resolvedStore),
+      });
+    }
+
+    const lastName = readNormalizedString(
+      row.normalizedPayload,
+      "normalizedLastName",
+    );
+    if (!lastName) {
+      return buildValidationResult(row, {
+        validationStatus: "invalid",
+        issueCode: "missing_last_name",
+        issueMessage: "Last name is required before personnel promotion",
+        ...buildStoreResolution(batch.companyId, resolvedStore),
+      });
+    }
+
+    const nationalIdHash = readNormalizedString(
+      row.normalizedPayload,
+      "normalizedNationalIdHash",
+    );
+    if (!nationalIdHash) {
+      return buildValidationResult(row, {
+        validationStatus: "invalid",
+        issueCode: "missing_national_id",
+        issueMessage: "National id evidence is required before personnel promotion",
+        ...buildStoreResolution(batch.companyId, resolvedStore),
+      });
+    }
+
+    const hireDate = readNormalizedString(
+      row.normalizedPayload,
+      "normalizedHireDate",
+    );
+    if (!hireDate) {
+      return buildValidationResult(row, {
+        validationStatus: "invalid",
+        issueCode: "missing_hire_date",
+        issueMessage: "Hire date is required before personnel promotion",
+        ...buildStoreResolution(batch.companyId, resolvedStore),
+      });
+    }
+
+    if (!isValidIsoDate(hireDate)) {
+      return buildValidationResult(row, {
+        validationStatus: "invalid",
+        issueCode: "invalid_hire_date",
+        issueMessage: "Hire date must use YYYY-MM-DD format",
+        ...buildStoreResolution(batch.companyId, resolvedStore),
+      });
+    }
+
+    const employmentType =
+      readNormalizedString(row.normalizedPayload, "normalizedEmploymentType") ??
+      "full_time";
+    if (!ALLOWED_EMPLOYMENT_TYPES.has(employmentType)) {
+      return buildValidationResult(row, {
+        validationStatus: "invalid",
+        issueCode: "unknown_employment_type",
+        issueMessage:
+          "Employment type must be one of full_time, part_time, or temporary",
+        ...buildStoreResolution(batch.companyId, resolvedStore),
+      });
+    }
+
     const [resolvedEmployeeId, resolvedPositionId] = await Promise.all([
       this.masterDataBootstrapRepository.resolveEmployeeByCode(
         batch.companyId,
@@ -566,16 +698,11 @@ export class MasterDataBootstrapService {
       ),
     ]);
 
-    const nationalIdHash = readNormalizedString(
-      row.normalizedPayload,
-      "normalizedNationalIdHash",
-    );
-    const resolvedNationalIdEmployeeId = nationalIdHash
-      ? await this.masterDataBootstrapRepository.resolveEmployeeByNationalIdHash(
-          batch.companyId,
-          nationalIdHash,
-        )
-      : null;
+    const resolvedNationalIdEmployeeId =
+      await this.masterDataBootstrapRepository.resolveEmployeeByNationalIdHash(
+        batch.companyId,
+        nationalIdHash,
+      );
 
     if (
       resolvedNationalIdEmployeeId &&
@@ -688,6 +815,64 @@ function buildStorePromotionRow(batch: BootstrapBatch, row: BootstrapStagedRow) 
     storeType,
     status,
     kpiImportEnabled,
+  };
+}
+
+function buildPersonnelPromotionRow(
+  batch: BootstrapBatch,
+  row: BootstrapStagedRow,
+) {
+  const employeeCode =
+    readNormalizedString(row.normalizedPayload, "normalizedEmployeeCode") ??
+    row.sourceEmployeeCode;
+  const firstName = readNormalizedString(
+    row.normalizedPayload,
+    "normalizedFirstName",
+  );
+  const lastName = readNormalizedString(
+    row.normalizedPayload,
+    "normalizedLastName",
+  );
+  const nationalIdHash = readNormalizedString(
+    row.normalizedPayload,
+    "normalizedNationalIdHash",
+  );
+  const hireDate = readNormalizedString(
+    row.normalizedPayload,
+    "normalizedHireDate",
+  );
+  const employmentType =
+    readNormalizedString(row.normalizedPayload, "normalizedEmploymentType") ??
+    "full_time";
+
+  if (
+    !employeeCode ||
+    !firstName ||
+    !lastName ||
+    !nationalIdHash ||
+    !hireDate ||
+    !row.resolvedStoreId ||
+    !row.resolvedRegionId ||
+    !row.resolvedPositionId
+  ) {
+    throw new BadRequestException(
+      `Ready personnel row is missing promotion evidence: ${row.rowId}`,
+    );
+  }
+
+  return {
+    rowId: row.rowId,
+    companyId: batch.companyId,
+    storeId: row.resolvedStoreId,
+    regionId: row.resolvedRegionId,
+    positionId: row.resolvedPositionId,
+    employeeId: row.resolvedEmployeeId,
+    employeeCode,
+    firstName,
+    lastName,
+    nationalIdHash,
+    hireDate,
+    employmentType,
   };
 }
 
@@ -1029,6 +1214,24 @@ function normalizeBootstrapPayload(
   if (bootstrapEntity === "personnel") {
     normalized.normalizedEmployeeCode = readNormalizedEmployeeCode(row);
     normalized.normalizedPositionCode = readNormalizedPositionCode(row);
+    const firstName = readNormalizedFirstName(row);
+    if (firstName) {
+      normalized.normalizedFirstName = firstName;
+    }
+    const lastName = readNormalizedLastName(row);
+    if (lastName) {
+      normalized.normalizedLastName = lastName;
+    }
+    const hireDate = readNormalizedHireDate(row);
+    if (hireDate) {
+      normalized.normalizedHireDate = hireDate;
+    }
+    const employmentType = normalizeEmploymentType(
+      readString(row, "employmentType") || readString(row, "employment_type"),
+    );
+    if (employmentType) {
+      normalized.normalizedEmploymentType = employmentType;
+    }
     const normalizedNationalIdHash = readNormalizedNationalIdHash(row);
     if (normalizedNationalIdHash) {
       normalized.normalizedNationalIdHash = normalizedNationalIdHash;
@@ -1080,6 +1283,34 @@ function readNormalizedPositionCode(row: Record<string, unknown>) {
   const value = readString(row, "positionCode") || readString(row, "position");
 
   return value ? value.replace(/\s/g, "_").toUpperCase() : null;
+}
+
+function readNormalizedFirstName(row: Record<string, unknown>) {
+  return (
+    readString(row, "firstName") ||
+    readString(row, "first_name") ||
+    readString(row, "givenName") ||
+    readString(row, "ad")
+  );
+}
+
+function readNormalizedLastName(row: Record<string, unknown>) {
+  return (
+    readString(row, "lastName") ||
+    readString(row, "last_name") ||
+    readString(row, "surname") ||
+    readString(row, "soyad")
+  );
+}
+
+function readNormalizedHireDate(row: Record<string, unknown>) {
+  return (
+    readScalarString(row, "hireDate") ||
+    readScalarString(row, "hire_date") ||
+    readScalarString(row, "startDate") ||
+    readScalarString(row, "employmentStartDate") ||
+    readScalarString(row, "iseGirisTarihi")
+  );
 }
 
 function readNormalizedStoreName(row: Record<string, unknown>) {
@@ -1168,6 +1399,36 @@ function normalizeStoreStatus(value: string | null) {
   }
 
   return normalized;
+}
+
+function normalizeEmploymentType(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const normalized = value.trim().toLowerCase().replace(/[\s-]+/g, "_");
+  if (["full_time", "fulltime", "tam_zamanli"].includes(normalized)) {
+    return "full_time";
+  }
+
+  if (["part_time", "parttime", "yari_zamanli"].includes(normalized)) {
+    return "part_time";
+  }
+
+  if (["temporary", "temp", "gecici"].includes(normalized)) {
+    return "temporary";
+  }
+
+  return normalized;
+}
+
+function isValidIsoDate(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
 
 function normalizeBoolean(value: unknown) {

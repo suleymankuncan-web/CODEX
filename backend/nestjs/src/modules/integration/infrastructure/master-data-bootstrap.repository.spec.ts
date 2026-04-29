@@ -440,4 +440,137 @@ describe("MasterDataBootstrapRepository", () => {
       }),
     ).rejects.toThrow("Store bootstrap row was not marked promoted");
   });
+
+  it("promotes personnel bootstrap rows by upserting employees and active assignments", async () => {
+    const query = jest
+      .fn()
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            employee_id: "00000000-0000-4000-8000-000000008375",
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [], rowCount: 1 })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            assignment_id: "00000000-0000-4000-8000-000000009375",
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [], rowCount: 1 })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            master_data_bootstrap_batch_id: "batch-personnel",
+            batch_status: "promoted",
+            row_count: 1,
+            valid_count: 0,
+            needs_review_count: 0,
+            invalid_count: 0,
+            promoted_count: 1,
+          },
+        ],
+      });
+    const withTransaction = jest.fn(async (callback) => callback({ query }));
+    const repository = new MasterDataBootstrapRepository({
+      withTransaction,
+    } as never);
+
+    const result = await repository.promotePersonnelBootstrapRows({
+      batchId: "batch-personnel",
+      rows: [
+        {
+          rowId: "row-personnel",
+          companyId: "00000000-0000-4000-8000-000000000001",
+          storeId: "00000000-0000-4000-8000-000000000140",
+          regionId: "00000000-0000-4000-8000-000000000240",
+          positionId: "00000000-0000-4000-8000-000000000501",
+          employeeId: null,
+          employeeCode: "FM8375",
+          firstName: "Ada",
+          lastName: "Kaya",
+          nationalIdHash:
+            "1111111111111111111111111111111111111111111111111111111111111111",
+          hireDate: "2026-04-01",
+          employmentType: "full_time",
+        },
+      ],
+    });
+
+    const sql = query.mock.calls.map(([statement]) => String(statement)).join("\n");
+    expect(sql).toContain("INSERT INTO ops.employee");
+    expect(sql).toContain("UPDATE ops.employee");
+    expect(sql).toContain("UPDATE ops.employee_assignment_history");
+    expect(sql).toContain("INSERT INTO ops.employee_assignment_history");
+    expect(sql).toContain("UPDATE stg.master_data_bootstrap_row");
+    expect(sql).toContain("UPDATE stg.master_data_bootstrap_batch");
+    expect(sql).not.toContain("INSERT INTO ops.store");
+    expect(sql).not.toContain("UPDATE ops.store");
+    expect(result).toEqual({
+      batchId: "batch-personnel",
+      batchStatus: "promoted",
+      rowCount: 1,
+      validCount: 0,
+      needsReviewCount: 0,
+      invalidCount: 0,
+      promotedCount: 1,
+      promotedRows: [
+        {
+          rowId: "row-personnel",
+          promotedEntityId: "00000000-0000-4000-8000-000000008375",
+          assignmentId: "00000000-0000-4000-8000-000000009375",
+        },
+      ],
+    });
+  });
+
+  it("fails personnel promotion when the staged row is no longer valid", async () => {
+    const query = jest
+      .fn()
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            employee_id: "00000000-0000-4000-8000-000000008375",
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [], rowCount: 1 })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            assignment_id: "00000000-0000-4000-8000-000000009375",
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 });
+    const withTransaction = jest.fn(async (callback) => callback({ query }));
+    const repository = new MasterDataBootstrapRepository({
+      withTransaction,
+    } as never);
+
+    await expect(
+      repository.promotePersonnelBootstrapRows({
+        batchId: "batch-personnel",
+        rows: [
+          {
+            rowId: "row-personnel",
+            companyId: "00000000-0000-4000-8000-000000000001",
+            storeId: "00000000-0000-4000-8000-000000000140",
+            regionId: "00000000-0000-4000-8000-000000000240",
+            positionId: "00000000-0000-4000-8000-000000000501",
+            employeeId: null,
+            employeeCode: "FM8375",
+            firstName: "Ada",
+            lastName: "Kaya",
+            nationalIdHash:
+              "1111111111111111111111111111111111111111111111111111111111111111",
+            hireDate: "2026-04-01",
+            employmentType: "full_time",
+          },
+        ],
+      }),
+    ).rejects.toThrow("Personnel bootstrap row was not marked promoted");
+  });
 });
