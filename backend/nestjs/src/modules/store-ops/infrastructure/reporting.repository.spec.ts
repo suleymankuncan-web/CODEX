@@ -247,8 +247,8 @@ describe("ReportingRepository personnel target reference queries", () => {
     const sql = String(query.mock.calls[0][0]);
     expect(sql).toContain("LEFT JOIN ops.personnel_target_reference ptr");
     expect(sql).toContain("ptr.employee_id = ka.employee_id");
-    expect(sql).toContain("ptr.period_start = ka.period_start");
-    expect(sql).toContain("ptr.period_end = ka.period_end");
+    expect(sql).toContain("ptr.period_start <= ka.period_start");
+    expect(sql).toContain("ptr.period_end >= ka.period_end");
     expect(sql).toContain("ptr.target_type = 'monthly_sales_target'");
     expect(sql).toContain("ptr.status = 'approved'");
     expect(sql).toContain("kd.kpi_code = 'TARGET_ACHIEVEMENT'");
@@ -272,8 +272,8 @@ describe("ReportingRepository personnel target reference queries", () => {
     const sql = String(query.mock.calls[0][0]);
     expect(sql).toContain("LEFT JOIN ops.personnel_target_reference ptr");
     expect(sql).toContain("ptr.employee_id = ka.employee_id");
-    expect(sql).toContain("ptr.period_start = ka.period_start");
-    expect(sql).toContain("ptr.period_end = ka.period_end");
+    expect(sql).toContain("ptr.period_start <= ka.period_start");
+    expect(sql).toContain("ptr.period_end >= ka.period_end");
     expect(sql).toContain("ptr.target_type = 'monthly_sales_target'");
     expect(sql).toContain("ptr.status = 'approved'");
     expect(sql).toContain("kd.kpi_code = 'TARGET_ACHIEVEMENT'");

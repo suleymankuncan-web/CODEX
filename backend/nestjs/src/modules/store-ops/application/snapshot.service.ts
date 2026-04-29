@@ -773,6 +773,8 @@ export class SnapshotService {
       kpi_id: string;
       kpi_code: string;
       actual_value: string;
+      target_value: string | null;
+      personnel_target_reference_id: string | null;
     }>(
       `
         SELECT
@@ -780,15 +782,30 @@ export class SnapshotService {
           ka.store_id,
           kd.kpi_id,
           kd.kpi_code,
-          SUM(ka.actual_value)::text AS actual_value
+          SUM(ka.actual_value)::text AS actual_value,
+          ptr.target_value::text AS target_value,
+          ptr.personnel_target_reference_id::text AS personnel_target_reference_id
         FROM ops.kpi_actual ka
         INNER JOIN ops.kpi_definition kd
           ON kd.kpi_id = ka.kpi_id
+        LEFT JOIN ops.personnel_target_reference ptr
+          ON ptr.employee_id = ka.employee_id
+         AND ptr.period_start <= ka.period_start
+         AND ptr.period_end >= ka.period_end
+         AND ptr.target_type = 'monthly_sales_target'
+         AND ptr.status = 'approved'
+         AND kd.kpi_code = 'TARGET_ACHIEVEMENT'
         WHERE ka.scope_type = 'employee'
           AND kd.kpi_code = ANY($1::text[])
           AND ka.period_start >= $2::date
           AND ka.period_end <= $3::date
-        GROUP BY ka.employee_id, ka.store_id, kd.kpi_id, kd.kpi_code
+        GROUP BY
+          ka.employee_id,
+          ka.store_id,
+          kd.kpi_id,
+          kd.kpi_code,
+          ptr.target_value,
+          ptr.personnel_target_reference_id
       `,
       [metricCodes, periodStart, periodEnd],
     );
@@ -859,9 +876,19 @@ export class SnapshotService {
             kpi_id,
             period_start,
             period_end,
-            actual_value
+            actual_value,
+            personnel_target_reference_id
           )
-          VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::date, $6::date, $7::numeric)
+          VALUES (
+            $1::uuid,
+            $2::uuid,
+            $3::uuid,
+            $4::uuid,
+            $5::date,
+            $6::date,
+            $7::numeric,
+            $8::uuid
+          )
         `,
         [
           snapshotRunId,
@@ -871,6 +898,7 @@ export class SnapshotService {
           periodStart,
           periodEnd,
           row.actual_value,
+          row.personnel_target_reference_id ?? null,
         ],
       );
     }
@@ -879,7 +907,7 @@ export class SnapshotService {
       string,
       {
         storeId: string | null;
-        values: Record<string, number>;
+        values: Record<string, { actualValue: number; targetValue: number | null }>;
       }
     >();
 
@@ -889,7 +917,13 @@ export class SnapshotService {
         values: {},
       };
       current.storeId = current.storeId ?? row.store_id;
-      current.values[row.kpi_code] = Number(row.actual_value);
+      current.values[row.kpi_code] = {
+        actualValue: Number(row.actual_value),
+        targetValue:
+          row.target_value !== null && row.target_value !== undefined
+            ? Number(row.target_value)
+            : null,
+      };
       metricLookupByEmployee.set(row.employee_id, current);
     });
 
@@ -897,9 +931,11 @@ export class SnapshotService {
       const score = profile.metrics.reduce((sum, metric) => {
         const matchingCodes = [metric.code, ...(metric.aliases ?? [])];
         const matchedCode = matchingCodes.find(
-          (code) => typeof value.values[code] === "number",
+          (code) => value.values[code] !== undefined,
         );
-        const actualValue = matchedCode ? value.values[matchedCode] : null;
+        const matchedMetric = matchedCode ? value.values[matchedCode] : null;
+        const actualValue = matchedMetric?.actualValue ?? null;
+        const targetValue = matchedMetric?.targetValue ?? null;
         const benchmarkSource =
           metric.benchmarkSource ??
           (metric.code === "TARGET_ACHIEVEMENT" ? "TARGET" : "TURKEY_AVERAGE");
@@ -911,7 +947,7 @@ export class SnapshotService {
           metricCode: metric.code,
           actualValue,
           benchmarkValue,
-          targetValue: null,
+          targetValue,
           weightPercent: metric.weightPercent,
           direction: metric.direction ?? "HIGHER_IS_BETTER",
           benchmarkSource,
@@ -924,9 +960,11 @@ export class SnapshotService {
       const matchedMetrics = profile.metrics.filter((metric) => {
         const matchingCodes = [metric.code, ...(metric.aliases ?? [])];
         const matchedCode = matchingCodes.find(
-          (code) => typeof value.values[code] === "number",
+          (code) => value.values[code] !== undefined,
         );
-        const actualValue = matchedCode ? value.values[matchedCode] : null;
+        const matchedMetric = matchedCode ? value.values[matchedCode] : null;
+        const actualValue = matchedMetric?.actualValue ?? null;
+        const targetValue = matchedMetric?.targetValue ?? null;
         const benchmarkSource =
           metric.benchmarkSource ??
           (metric.code === "TARGET_ACHIEVEMENT" ? "TARGET" : "TURKEY_AVERAGE");
@@ -940,7 +978,7 @@ export class SnapshotService {
             metricCode: metric.code,
             actualValue,
             benchmarkValue,
-            targetValue: null,
+            targetValue,
             weightPercent: metric.weightPercent,
             direction: metric.direction ?? "HIGHER_IS_BETTER",
             benchmarkSource,

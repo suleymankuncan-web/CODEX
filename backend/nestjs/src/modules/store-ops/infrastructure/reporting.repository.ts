@@ -1275,8 +1275,8 @@ export class ReportingRepository {
           ON kd.kpi_id = ka.kpi_id
         LEFT JOIN ops.personnel_target_reference ptr
           ON ptr.employee_id = ka.employee_id
-         AND ptr.period_start = ka.period_start
-         AND ptr.period_end = ka.period_end
+         AND ptr.period_start <= ka.period_start
+         AND ptr.period_end >= ka.period_end
          AND ptr.target_type = 'monthly_sales_target'
          AND ptr.status = 'approved'
          AND kd.kpi_code = 'TARGET_ACHIEVEMENT'
@@ -1351,8 +1351,8 @@ export class ReportingRepository {
           ON kd.kpi_id = ka.kpi_id
         LEFT JOIN ops.personnel_target_reference ptr
           ON ptr.employee_id = ka.employee_id
-         AND ptr.period_start = ka.period_start
-         AND ptr.period_end = ka.period_end
+         AND ptr.period_start <= ka.period_start
+         AND ptr.period_end >= ka.period_end
          AND ptr.target_type = 'monthly_sales_target'
          AND ptr.status = 'approved'
          AND kd.kpi_code = 'TARGET_ACHIEVEMENT'
