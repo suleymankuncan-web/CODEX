@@ -267,6 +267,50 @@ export class IntegrationController {
     });
   }
 
+  @Post("master-data-bootstrap/batches/:batchId/validate")
+  @RequireScope("company")
+  @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")
+  async validateMasterDataBootstrapBatch(
+    @Param("batchId") batchId: string,
+    @Req()
+    request: {
+      user: {
+        scope: {
+          companyIds: string[];
+        };
+      };
+    },
+  ) {
+    return this.masterDataBootstrapService.validateBootstrapBatch({
+      actorScope: {
+        companyIds: request.user.scope.companyIds,
+      },
+      batchId,
+    });
+  }
+
+  @Get("master-data-bootstrap/batches/:batchId")
+  @RequireScope("company")
+  @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")
+  async getMasterDataBootstrapBatch(
+    @Param("batchId") batchId: string,
+    @Req()
+    request: {
+      user: {
+        scope: {
+          companyIds: string[];
+        };
+      };
+    },
+  ) {
+    return this.masterDataBootstrapService.getBootstrapBatchDetail({
+      actorScope: {
+        companyIds: request.user.scope.companyIds,
+      },
+      batchId,
+    });
+  }
+
   @Get("sources/due-schedule")
   @RequireScope("company")
   @RequireRoles("INTEGRATION_ADMIN")

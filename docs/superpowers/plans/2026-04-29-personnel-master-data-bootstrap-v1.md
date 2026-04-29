@@ -106,9 +106,9 @@ npm.cmd test -- src/modules/integration/application/master-data-bootstrap.servic
 
 Expected result: 2 suites / 2 tests passing.
 
-## Next Slice: V1-C Validation Read Model
+## Completed Slice: V1-C Validation Read Model
 
-- [ ] **Step 1: Write validation service tests**
+- [x] **Step 1: Write validation service tests**
 
 Add tests for:
 
@@ -118,11 +118,11 @@ Add tests for:
 - unknown position code in personnel row -> `needs_review`
 - known store/personnel references resolve to `resolved_*_id`
 
-- [ ] **Step 2: Implement validation update path**
+- [x] **Step 2: Implement validation update path**
 
 Create a validation method that reads pending rows, fills `normalized_payload_json`, sets `validation_status`, `issue_code`, `issue_message`, and batch counters.
 
-- [ ] **Step 3: Expose review endpoint**
+- [x] **Step 3: Expose review endpoint**
 
 Add:
 
@@ -131,6 +131,14 @@ GET /api/integrations/master-data-bootstrap/batches/:batchId
 ```
 
 Return batch summary, row status counts, and review rows.
+
+Also added:
+
+```text
+POST /api/integrations/master-data-bootstrap/batches/:batchId/validate
+```
+
+This validates staged rows only. It does not promote data into `ops.store`, `ops.employee`, or `ops.employee_assignment_history`.
 
 ## Next Slice: V1-D Store Promotion
 
@@ -179,4 +187,3 @@ Expected result:
 - root script tests pass
 - backend lint/test/build/audit pass
 - frontend lint/script/build/e2e/audit pass
-

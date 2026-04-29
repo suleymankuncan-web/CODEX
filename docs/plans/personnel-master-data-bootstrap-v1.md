@@ -276,6 +276,24 @@ Do not implement direct Excel-to-live-table mutation.
 
 Do not expand this into a full HRIS.
 
+## Implementation Status
+
+As of 29 April 2026:
+
+- V1-A staging foundation is implemented.
+- V1-B HR/Admin batch staging API is implemented.
+- V1-C validation read model is implemented.
+- Store/personnel promotion remains intentionally closed.
+- Staged validation writes only to `stg.master_data_bootstrap_row` and `stg.master_data_bootstrap_batch`.
+
+Current validation behavior:
+
+- missing store code -> `invalid` / `missing_store_code`
+- unknown store type -> `needs_review` / `unknown_store_type`
+- unknown personnel store reference -> `needs_review` / `unmapped_store`
+- unknown position code -> `needs_review` / `unmapped_position`
+- known references populate `resolved_company_id`, `resolved_region_id`, `resolved_store_id`, `resolved_employee_id`, and `resolved_position_id` where available
+
 ## File Inspection Note: Mart KPI Excel Files
 
 Inspected on 27 April 2026:
@@ -390,6 +408,6 @@ Personnel/store master-data bootstrap still needs a separate baseline file or sh
 
 ## Next Logical Step
 
-Because the inspected March Excel files are KPI snapshot files, not baseline master files, the next implementation step should focus on Excel KPI Import V1 mapping and guards.
+Because staging and validation are now available, the next implementation step is Store Promotion V1-D only after a true store baseline list is ready.
 
-Personnel Master Data Bootstrap V1 should wait for a true store/personnel baseline list that contains store codes and seller codes.
+Until then, keep promotion closed. Do not create live stores or personnel from KPI snapshot files.
