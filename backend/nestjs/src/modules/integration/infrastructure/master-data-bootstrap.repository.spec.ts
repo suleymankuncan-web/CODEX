@@ -68,7 +68,7 @@ describe("MasterDataBootstrapRepository", () => {
   it("updates bootstrap validation state and counters only in staging tables", async () => {
     const query = jest
       .fn()
-      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [], rowCount: 1 })
       .mockResolvedValueOnce({
         rows: [
           {
@@ -307,5 +307,137 @@ describe("MasterDataBootstrapRepository", () => {
       "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
     ]);
     expect(result).toBe("00000000-0000-4000-8000-000000008999");
+  });
+
+  it("resolves region identity by normalized region code", async () => {
+    const query = jest.fn().mockResolvedValueOnce({
+      rows: [
+        {
+          region_id: "00000000-0000-4000-8000-000000000240",
+        },
+      ],
+    });
+    const repository = new MasterDataBootstrapRepository({ query } as never);
+
+    const result = await repository.resolveRegionByCode(
+      "00000000-0000-4000-8000-000000000001",
+      "MARMARA",
+    );
+
+    const sql = query.mock.calls.map(([statement]) => String(statement)).join("\n");
+    expect(sql).toContain("FROM ops.region");
+    expect(sql).toContain("UPPER(REGEXP_REPLACE(region_code");
+    expect(sql).not.toContain("INSERT INTO ops.region");
+    expect(sql).not.toContain("UPDATE ops.region");
+    expect(query.mock.calls[0][1]).toEqual([
+      "00000000-0000-4000-8000-000000000001",
+      "MARMARA",
+    ]);
+    expect(result).toBe("00000000-0000-4000-8000-000000000240");
+  });
+
+  it("promotes store bootstrap rows by upserting stores and marking staged rows", async () => {
+    const query = jest
+      .fn()
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            store_id: "00000000-0000-4000-8000-000000000140",
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [], rowCount: 1 })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            master_data_bootstrap_batch_id: "batch-store",
+            batch_status: "promoted",
+            row_count: 1,
+            valid_count: 0,
+            needs_review_count: 0,
+            invalid_count: 0,
+            promoted_count: 1,
+          },
+        ],
+      });
+    const withTransaction = jest.fn(async (callback) => callback({ query }));
+    const repository = new MasterDataBootstrapRepository({
+      withTransaction,
+    } as never);
+
+    const result = await repository.promoteStoreBootstrapRows({
+      batchId: "batch-store",
+      rows: [
+        {
+          rowId: "row-store",
+          companyId: "00000000-0000-4000-8000-000000000001",
+          regionId: "00000000-0000-4000-8000-000000000240",
+          storeCode: "SM140",
+          storeName: "Marmara Park",
+          storeType: "company",
+          status: "active",
+          kpiImportEnabled: true,
+        },
+      ],
+    });
+
+    const sql = query.mock.calls.map(([statement]) => String(statement)).join("\n");
+    expect(sql).toContain("INSERT INTO ops.store");
+    expect(sql).toContain("ON CONFLICT (store_code) DO UPDATE");
+    expect(sql).toContain("UPDATE stg.master_data_bootstrap_row");
+    expect(sql).toContain("UPDATE stg.master_data_bootstrap_batch");
+    expect(sql).not.toContain("INSERT INTO ops.employee");
+    expect(sql).not.toContain("UPDATE ops.employee");
+    expect(sql).not.toContain("employee_assignment_history");
+    expect(result).toEqual({
+      batchId: "batch-store",
+      batchStatus: "promoted",
+      rowCount: 1,
+      validCount: 0,
+      needsReviewCount: 0,
+      invalidCount: 0,
+      promotedCount: 1,
+      promotedRows: [
+        {
+          rowId: "row-store",
+          promotedEntityId: "00000000-0000-4000-8000-000000000140",
+        },
+      ],
+    });
+  });
+
+  it("fails store promotion when the staged row is no longer valid", async () => {
+    const query = jest
+      .fn()
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            store_id: "00000000-0000-4000-8000-000000000140",
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 });
+    const withTransaction = jest.fn(async (callback) => callback({ query }));
+    const repository = new MasterDataBootstrapRepository({
+      withTransaction,
+    } as never);
+
+    await expect(
+      repository.promoteStoreBootstrapRows({
+        batchId: "batch-store",
+        rows: [
+          {
+            rowId: "row-store",
+            companyId: "00000000-0000-4000-8000-000000000001",
+            regionId: "00000000-0000-4000-8000-000000000240",
+            storeCode: "SM140",
+            storeName: "Marmara Park",
+            storeType: "company",
+            status: "active",
+            kpiImportEnabled: true,
+          },
+        ],
+      }),
+    ).rejects.toThrow("Store bootstrap row was not marked promoted");
   });
 });

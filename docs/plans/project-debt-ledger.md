@@ -17,7 +17,7 @@ Date: 29 April 2026
 
 Current count:
 
-- Closed active debts: 54
+- Closed active debts: 55
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -82,6 +82,7 @@ These are counted as paid because they have implementation or documentation evid
 52. Master Data Bootstrap Review Queue V1
 53. Master Data Bootstrap Duplicate/Conflict Preflight V1
 54. Master Data Bootstrap Promotion Readiness Contract V1
+55. Master Data Bootstrap Store Promotion V1
 
 Production-Ready Migration System V1 is counted as paid because SQL migrations are tracked in `audit.schema_migration`, checksum drift is rejected, failed runs are recorded with error evidence, the HTTP migration endpoint is disabled in production, and `npm.cmd run db:migrate` is the approved CLI/CI migration path.
 
@@ -98,6 +99,8 @@ Master Data Bootstrap Review Queue V1 is counted as paid because HR/Admin can li
 Master Data Bootstrap Duplicate/Conflict Preflight V1 is counted as paid because staged validation now catches normalized duplicate store codes, duplicate personnel seller codes, duplicate national id evidence, and existing employee identity conflicts before any live `ops.*` promotion path is opened.
 
 Master Data Bootstrap Promotion Readiness Contract V1 is counted as paid because HR/Admin can now read a scoped promotion-readiness summary for staged bootstrap batches, see row-level readiness reasons, and verify idempotent already-promoted evidence before any live promotion code is opened.
+
+Master Data Bootstrap Store Promotion V1 is counted as paid because readiness-approved store bootstrap rows can now be promoted into `ops.store` through a scoped HR/Admin command, staged rows keep `promoted_entity_id` evidence, batch counters are refreshed, already-promoted rows are skipped, and personnel promotion remains closed.
 
 Checklist Acknowledgement Canonical Schema Alignment V1 is counted as paid because the existing `ops.checklist_acknowledgement` migration and backend repository usage are now represented in canonical `db/schema.sql`, and a backend schema contract test guards against drift.
 
@@ -259,7 +262,7 @@ Personnel Management V1 is implemented. Store managers can submit seller-code/ne
 
 Personnel Request Return/Resubmit V1 is implemented. HR/Admin can return seller-code and offboarding requests with a required note, store managers can edit the returned request on `/store/approvals`, and resubmission keeps the same request id while moving the row back to `pending_hr_approval`. Return/resubmit does not mutate employee, assignment, or turnover records; audit events record rejected and resubmitted transitions.
 
-Personnel Master Data Bootstrap V1 is now planned, but not counted as a closed active debt until implementation and verification exist. The decision is to baseline stores first, then personnel, using staging/review/promote and not direct Excel-to-live-table mutation. Reference: `docs/plans/personnel-master-data-bootstrap-v1.md`.
+Personnel Master Data Bootstrap V1 is being closed in guarded slices instead of as one risky mega-feature. Staging, validation, review queue, duplicate/conflict preflight, promotion readiness, and store promotion are now counted above; personnel promotion remains the next intentionally closed slice. Reference: `docs/superpowers/plans/2026-04-29-personnel-master-data-bootstrap-v1.md`.
 
 Project MVP Focus Map is recorded as a consolidation decision, not a new closed debt item. The decision is to keep the project, avoid restarting, narrow near-term work to MVP readiness, and prioritize Excel KPI Import V1 as the next local real-data proof. Reference: `docs/plans/project-mvp-focus-map-2026-04-28.md`.
 
@@ -301,6 +304,7 @@ Current repo hygiene is not counted as active debt in this ledger because:
 - the 29 April 2026 Master Data Bootstrap Review Queue V1 implementation added scoped batch and row review endpoints so staged baseline data can be inspected without live promotion.
 - the 29 April 2026 Master Data Bootstrap Duplicate/Conflict Preflight V1 implementation added duplicate and identity conflict guards before any live promotion path is opened.
 - the 29 April 2026 Master Data Bootstrap Promotion Readiness Contract V1 implementation added a scoped read-only readiness endpoint that explains which staged rows can be promoted later and which rows block promotion.
+- the 29 April 2026 Master Data Bootstrap Store Promotion V1 implementation opened only the reviewed store promotion path, upserts stores with staged evidence, and keeps personnel promotion closed for a later guarded slice.
 
 Still monitor:
 

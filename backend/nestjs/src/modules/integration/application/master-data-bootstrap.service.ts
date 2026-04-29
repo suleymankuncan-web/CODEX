@@ -1,4 +1,9 @@
-import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { createHash } from "node:crypto";
 import {
   buildCommandResponse,
@@ -278,6 +283,59 @@ export class MasterDataBootstrapService {
     };
   }
 
+  async promoteStoreBootstrapBatch(input: {
+    actorScope: {
+      companyIds: string[];
+    };
+    batchId: string;
+  }) {
+    const batch = await this.getScopedBootstrapBatch({
+      batchId: input.batchId,
+      companyIds: input.actorScope.companyIds,
+    });
+
+    if (batch.bootstrapEntity !== "store") {
+      throw new BadRequestException(
+        "Store bootstrap promotion only supports store batches",
+      );
+    }
+
+    if (batch.batchStatus !== "ready_to_promote") {
+      throw new BadRequestException(
+        "Store bootstrap batch must be ready_to_promote before promotion",
+      );
+    }
+
+    const rows = await this.masterDataBootstrapRepository.listBootstrapRows(
+      input.batchId,
+    );
+    const promotionRows = rows
+      .filter(
+        (row) =>
+          classifyBootstrapPromotionRow(batch, row).promotionReadiness === "ready",
+      )
+      .map((row) => buildStorePromotionRow(batch, row));
+
+    if (promotionRows.length === 0) {
+      throw new BadRequestException("Store bootstrap batch has no ready rows");
+    }
+
+    const promotedBatch =
+      await this.masterDataBootstrapRepository.promoteStoreBootstrapRows({
+        batchId: input.batchId,
+        rows: promotionRows,
+      });
+
+    return buildCommandResponse({
+      status: "promoted",
+      message: "Store bootstrap rows promoted",
+      data: {
+        batch: promotedBatch,
+        promotedRows: promotedBatch.promotedRows,
+      },
+    });
+  }
+
   async getBootstrapBatchDetail(input: {
     actorScope: {
       companyIds: string[];
@@ -374,6 +432,10 @@ export class MasterDataBootstrapService {
       row.normalizedPayload,
       "normalizedStoreType",
     );
+    const storeName = readNormalizedString(
+      row.normalizedPayload,
+      "normalizedStoreName",
+    );
     const resolvedStore =
       await this.masterDataBootstrapRepository.resolveStoreByCode(
         batch.companyId,
@@ -391,11 +453,59 @@ export class MasterDataBootstrapService {
       });
     }
 
+    if (!storeName) {
+      return buildValidationResult(row, {
+        validationStatus: "invalid",
+        issueCode: "missing_store_name",
+        issueMessage: "Store name is required before promotion",
+        ...resolution,
+      });
+    }
+
+    if (resolvedStore) {
+      return buildValidationResult(row, {
+        validationStatus: "valid",
+        issueCode: null,
+        issueMessage: null,
+        ...resolution,
+      });
+    }
+
+    const regionCode = readNormalizedString(
+      row.normalizedPayload,
+      "normalizedRegionCode",
+    );
+    if (!regionCode) {
+      return buildValidationResult(row, {
+        validationStatus: "needs_review",
+        issueCode: "missing_region_code",
+        issueMessage: "Region code is required for new store promotion",
+        resolvedCompanyId: batch.companyId,
+      });
+    }
+
+    const resolvedRegionId =
+      await this.masterDataBootstrapRepository.resolveRegionByCode(
+        batch.companyId,
+        regionCode,
+      );
+    if (!resolvedRegionId) {
+      return buildValidationResult(row, {
+        validationStatus: "needs_review",
+        issueCode: "unmapped_region",
+        issueMessage:
+          "Region code is not active in master data; define the region before promotion",
+        resolvedCompanyId: batch.companyId,
+      });
+    }
+
     return buildValidationResult(row, {
       validationStatus: "valid",
       issueCode: null,
       issueMessage: null,
-      ...resolution,
+      resolvedCompanyId: batch.companyId,
+      resolvedRegionId,
+      resolvedStoreId: null,
     });
   }
 
@@ -541,6 +651,43 @@ function buildBootstrapPromotionReadinessItem(
     resolvedEmployeeId: row.resolvedEmployeeId,
     resolvedPositionId: row.resolvedPositionId,
     promotedEntityId: row.promotedEntityId,
+  };
+}
+
+function buildStorePromotionRow(batch: BootstrapBatch, row: BootstrapStagedRow) {
+  const storeCode =
+    readNormalizedString(row.normalizedPayload, "normalizedStoreCode") ??
+    row.sourceStoreCode;
+  const storeName = readNormalizedString(
+    row.normalizedPayload,
+    "normalizedStoreName",
+  );
+  const storeType = readNormalizedString(
+    row.normalizedPayload,
+    "normalizedStoreType",
+  );
+  const status =
+    readNormalizedString(row.normalizedPayload, "normalizedStoreStatus") ?? "active";
+  const kpiImportEnabled =
+    typeof row.normalizedPayload.kpiImportEnabled === "boolean"
+      ? row.normalizedPayload.kpiImportEnabled
+      : true;
+
+  if (!storeCode || !storeName || !storeType || !row.resolvedRegionId) {
+    throw new BadRequestException(
+      `Ready store row is missing promotion evidence: ${row.rowId}`,
+    );
+  }
+
+  return {
+    rowId: row.rowId,
+    companyId: batch.companyId,
+    regionId: row.resolvedRegionId,
+    storeCode,
+    storeName,
+    storeType,
+    status,
+    kpiImportEnabled,
   };
 }
 
@@ -890,6 +1037,11 @@ function normalizeBootstrapPayload(
 
   if (bootstrapEntity === "store") {
     normalized.normalizedStoreType = normalizeStoreType(readString(row, "storeType"));
+    normalized.normalizedStoreName = readNormalizedStoreName(row);
+    normalized.normalizedRegionCode = readNormalizedRegionCode(row);
+    normalized.normalizedStoreStatus = normalizeStoreStatus(
+      readString(row, "storeStatus") || readString(row, "status"),
+    );
     normalized.kpiImportEnabled = normalizeBoolean(readValue(row, "kpiImportEnabled"));
   }
 
@@ -930,6 +1082,27 @@ function readNormalizedPositionCode(row: Record<string, unknown>) {
   return value ? value.replace(/\s/g, "_").toUpperCase() : null;
 }
 
+function readNormalizedStoreName(row: Record<string, unknown>) {
+  return (
+    readString(row, "storeName") ||
+    readString(row, "store_name") ||
+    readString(row, "name") ||
+    readString(row, "magazaAdi") ||
+    readString(row, "mağazaAdı")
+  );
+}
+
+function readNormalizedRegionCode(row: Record<string, unknown>) {
+  const value =
+    readString(row, "regionCode") ||
+    readString(row, "region_code") ||
+    readString(row, "sourceRegionId") ||
+    readString(row, "regionExternalRef") ||
+    readString(row, "region");
+
+  return value ? value.replace(/[\s-]+/g, "_").toUpperCase() : null;
+}
+
 function readNormalizedNationalIdHash(row: Record<string, unknown>) {
   const hashValue =
     readScalarString(row, "nationalIdHash") ||
@@ -961,7 +1134,7 @@ function normalizeStoreType(value: string | null) {
   }
 
   const normalized = value.trim().toLowerCase();
-  if (["sirket", "company"].includes(normalized)) {
+  if (["sirket", "şirket", "company"].includes(normalized)) {
     return "company";
   }
 
@@ -969,8 +1142,29 @@ function normalizeStoreType(value: string | null) {
     return "franchise";
   }
 
-  if (["isletme", "operator"].includes(normalized)) {
+  if (["isletme", "işletme", "operator"].includes(normalized)) {
     return "operator";
+  }
+
+  return normalized;
+}
+
+function normalizeStoreStatus(value: string | null) {
+  if (!value) {
+    return "active";
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (["active", "aktif"].includes(normalized)) {
+    return "active";
+  }
+
+  if (["inactive", "pasif"].includes(normalized)) {
+    return "inactive";
+  }
+
+  if (["closed", "kapali", "kapalı"].includes(normalized)) {
+    return "closed";
   }
 
   return normalized;

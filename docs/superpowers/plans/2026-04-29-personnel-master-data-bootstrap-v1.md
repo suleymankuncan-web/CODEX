@@ -190,22 +190,29 @@ The readiness response exposes counts, `canPromote`, and `nextAction` so future 
 
 The readiness contract is read-only and does not write to `ops.store`, `ops.employee`, or `ops.employee_assignment_history`.
 
-## Next Slice: V1-D Store Promotion
+## Completed Slice: V1-D Store Promotion
 
-- [ ] **Step 1: Write store promotion tests**
+- [x] **Step 1: Write store promotion tests**
 
 Acceptance:
 
-- valid store row promotes to `ops.store`
+- readiness-approved store rows promote to `ops.store`
 - `Sirket` maps to `company`
 - `Franchise` maps to `franchise`
 - `Isletme` maps to `operator`
-- re-promoting same row is idempotent
-- rows with `needs_review` or `invalid` cannot promote
+- already-promoted rows are skipped
+- rows with `needs_review`, `invalid`, or a non-ready batch cannot promote
+- personnel batches cannot use the store promotion command
 
-- [ ] **Step 2: Implement store promotion**
+- [x] **Step 2: Implement store promotion**
 
-Promotion must write `ops.store` only after review-ready validation and keep `promoted_entity_id` on the row.
+Promotion writes `ops.store` only after review-ready validation, keeps `promoted_entity_id` on staged rows, refreshes batch counters, and exposes:
+
+```text
+POST /api/integrations/master-data-bootstrap/batches/:batchId/promote-stores
+```
+
+Personnel promotion remains closed until V1-E.
 
 ## Next Slice: V1-E Personnel Promotion
 

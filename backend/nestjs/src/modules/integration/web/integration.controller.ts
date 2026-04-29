@@ -368,6 +368,28 @@ export class IntegrationController {
     });
   }
 
+  @Post("master-data-bootstrap/batches/:batchId/promote-stores")
+  @RequireScope("company")
+  @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")
+  async promoteMasterDataBootstrapStores(
+    @Param("batchId") batchId: string,
+    @Req()
+    request: {
+      user: {
+        scope: {
+          companyIds: string[];
+        };
+      };
+    },
+  ) {
+    return this.masterDataBootstrapService.promoteStoreBootstrapBatch({
+      actorScope: {
+        companyIds: request.user.scope.companyIds,
+      },
+      batchId,
+    });
+  }
+
   @Get("master-data-bootstrap/batches/:batchId")
   @RequireScope("company")
   @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")

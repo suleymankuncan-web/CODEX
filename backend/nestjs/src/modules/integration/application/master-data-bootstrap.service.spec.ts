@@ -132,6 +132,62 @@ describe("MasterDataBootstrapService", () => {
     );
   });
 
+  it("stages store rows with normalized promotion metadata", async () => {
+    const masterDataBootstrapRepository = {
+      createBootstrapBatch: jest.fn(async (input) => ({
+        batchId: "00000000-0000-4000-8000-000000000908",
+        companyId: input.companyId,
+        bootstrapEntity: input.bootstrapEntity,
+        sourceLabel: input.sourceLabel,
+        fileReference: input.fileReference,
+        uploadedByUserId: input.uploadedByUserId,
+        batchStatus: "uploaded",
+        rowCount: input.rows.length,
+        validCount: 0,
+        needsReviewCount: 0,
+        invalidCount: 0,
+        promotedCount: 0,
+        createdAt: "2026-04-29T12:00:00.000Z",
+      })),
+    };
+    const service = new MasterDataBootstrapService(
+      masterDataBootstrapRepository as never,
+    );
+
+    await service.createBootstrapBatch({
+      actorUserId: "hr-admin-user",
+      actorScope: {
+        companyIds: ["00000000-0000-4000-8000-000000000001"],
+      },
+      bootstrapEntity: "store",
+      sourceLabel: "April store baseline",
+      fileReference: "store-master-data-april.xlsx",
+      rows: [
+        {
+          storeCode: "SM-140",
+          storeName: "Marmara Park",
+          storeType: "Şirket",
+          regionCode: "MARMARA",
+          storeStatus: "Aktif",
+          kpiImportEnabled: "evet",
+        },
+      ],
+    });
+
+    const stagedRow =
+      masterDataBootstrapRepository.createBootstrapBatch.mock.calls[0][0].rows[0];
+    expect(stagedRow.normalizedPayload).toEqual(
+      expect.objectContaining({
+        normalizedStoreCode: "SM140",
+        normalizedStoreName: "Marmara Park",
+        normalizedStoreType: "company",
+        normalizedRegionCode: "MARMARA",
+        normalizedStoreStatus: "active",
+        kpiImportEnabled: true,
+      }),
+    );
+  });
+
   it("validates personnel rows without promoting staged data", async () => {
     const masterDataBootstrapRepository = {
       getBootstrapBatchForActor: jest.fn(async () => ({
@@ -414,6 +470,174 @@ describe("MasterDataBootstrapService", () => {
           rowId: "row-unknown-type",
           validationStatus: "needs_review",
           issueCode: "unknown_store_type",
+        }),
+      ],
+    });
+  });
+
+  it("marks new store rows without region code as review rows", async () => {
+    const masterDataBootstrapRepository = {
+      getBootstrapBatchForActor: jest.fn(async () =>
+        buildBootstrapBatch({ bootstrapEntity: "store", batchId: "batch-store" }),
+      ),
+      listBootstrapRows: jest.fn(async () => [
+        buildStoreRow({
+          rowId: "row-missing-region",
+          rowNumber: 1,
+          normalizedPayload: {
+            normalizedStoreCode: "SM140",
+            normalizedStoreName: "Marmara Park",
+            normalizedStoreType: "company",
+          },
+        }),
+      ]),
+      resolveStoreByCode: jest.fn(async () => null),
+      resolveRegionByCode: jest.fn(async () => null),
+      updateBootstrapRowValidationResults: jest.fn(async () => ({
+        batchId: "batch-store",
+        batchStatus: "validated",
+        rowCount: 1,
+        validCount: 0,
+        needsReviewCount: 1,
+        invalidCount: 0,
+        promotedCount: 0,
+      })),
+    };
+    const service = new MasterDataBootstrapService(
+      masterDataBootstrapRepository as never,
+    );
+
+    await service.validateBootstrapBatch({
+      actorScope: {
+        companyIds: ["00000000-0000-4000-8000-000000000001"],
+      },
+      batchId: "batch-store",
+    });
+
+    expect(
+      masterDataBootstrapRepository.updateBootstrapRowValidationResults,
+    ).toHaveBeenCalledWith({
+      batchId: "batch-store",
+      results: [
+        expect.objectContaining({
+          rowId: "row-missing-region",
+          validationStatus: "needs_review",
+          issueCode: "missing_region_code",
+        }),
+      ],
+    });
+  });
+
+  it("marks new store rows with unknown region code as review rows", async () => {
+    const masterDataBootstrapRepository = {
+      getBootstrapBatchForActor: jest.fn(async () =>
+        buildBootstrapBatch({ bootstrapEntity: "store", batchId: "batch-store" }),
+      ),
+      listBootstrapRows: jest.fn(async () => [
+        buildStoreRow({
+          rowId: "row-unmapped-region",
+          rowNumber: 1,
+          normalizedPayload: {
+            normalizedStoreCode: "SM140",
+            normalizedStoreName: "Marmara Park",
+            normalizedStoreType: "company",
+            normalizedRegionCode: "MARMARA",
+          },
+        }),
+      ]),
+      resolveStoreByCode: jest.fn(async () => null),
+      resolveRegionByCode: jest.fn(async () => null),
+      updateBootstrapRowValidationResults: jest.fn(async () => ({
+        batchId: "batch-store",
+        batchStatus: "validated",
+        rowCount: 1,
+        validCount: 0,
+        needsReviewCount: 1,
+        invalidCount: 0,
+        promotedCount: 0,
+      })),
+    };
+    const service = new MasterDataBootstrapService(
+      masterDataBootstrapRepository as never,
+    );
+
+    await service.validateBootstrapBatch({
+      actorScope: {
+        companyIds: ["00000000-0000-4000-8000-000000000001"],
+      },
+      batchId: "batch-store",
+    });
+
+    expect(masterDataBootstrapRepository.resolveRegionByCode).toHaveBeenCalledWith(
+      "00000000-0000-4000-8000-000000000001",
+      "MARMARA",
+    );
+    expect(
+      masterDataBootstrapRepository.updateBootstrapRowValidationResults,
+    ).toHaveBeenCalledWith({
+      batchId: "batch-store",
+      results: [
+        expect.objectContaining({
+          rowId: "row-unmapped-region",
+          validationStatus: "needs_review",
+          issueCode: "unmapped_region",
+        }),
+      ],
+    });
+  });
+
+  it("validates new store rows when region code resolves", async () => {
+    const masterDataBootstrapRepository = {
+      getBootstrapBatchForActor: jest.fn(async () =>
+        buildBootstrapBatch({ bootstrapEntity: "store", batchId: "batch-store" }),
+      ),
+      listBootstrapRows: jest.fn(async () => [
+        buildStoreRow({
+          rowId: "row-valid-new-store",
+          rowNumber: 1,
+          normalizedPayload: {
+            normalizedStoreCode: "SM140",
+            normalizedStoreName: "Marmara Park",
+            normalizedStoreType: "company",
+            normalizedRegionCode: "MARMARA",
+          },
+        }),
+      ]),
+      resolveStoreByCode: jest.fn(async () => null),
+      resolveRegionByCode: jest.fn(
+        async () => "00000000-0000-4000-8000-000000000240",
+      ),
+      updateBootstrapRowValidationResults: jest.fn(async () => ({
+        batchId: "batch-store",
+        batchStatus: "ready_to_promote",
+        rowCount: 1,
+        validCount: 1,
+        needsReviewCount: 0,
+        invalidCount: 0,
+        promotedCount: 0,
+      })),
+    };
+    const service = new MasterDataBootstrapService(
+      masterDataBootstrapRepository as never,
+    );
+
+    await service.validateBootstrapBatch({
+      actorScope: {
+        companyIds: ["00000000-0000-4000-8000-000000000001"],
+      },
+      batchId: "batch-store",
+    });
+
+    expect(
+      masterDataBootstrapRepository.updateBootstrapRowValidationResults,
+    ).toHaveBeenCalledWith({
+      batchId: "batch-store",
+      results: [
+        expect.objectContaining({
+          rowId: "row-valid-new-store",
+          validationStatus: "valid",
+          issueCode: null,
+          resolvedRegionId: "00000000-0000-4000-8000-000000000240",
         }),
       ],
     });
@@ -1170,6 +1394,146 @@ describe("MasterDataBootstrapService", () => {
       }),
     );
   });
+
+  it("rejects personnel batch store promotion", async () => {
+    const masterDataBootstrapRepository = {
+      getBootstrapBatchForActor: jest.fn(async () =>
+        buildBootstrapBatch({
+          bootstrapEntity: "personnel",
+          batchId: "batch-personnel",
+          batchStatus: "ready_to_promote",
+        }),
+      ),
+    };
+    const service = new MasterDataBootstrapService(
+      masterDataBootstrapRepository as never,
+    );
+
+    await expect(
+      service.promoteStoreBootstrapBatch({
+        actorScope: {
+          companyIds: ["00000000-0000-4000-8000-000000000001"],
+        },
+        batchId: "batch-personnel",
+      }),
+    ).rejects.toThrow("Store bootstrap promotion only supports store batches");
+  });
+
+  it("rejects store promotion before the batch is ready", async () => {
+    const masterDataBootstrapRepository = {
+      getBootstrapBatchForActor: jest.fn(async () =>
+        buildBootstrapBatch({
+          bootstrapEntity: "store",
+          batchId: "batch-store",
+          batchStatus: "validated",
+        }),
+      ),
+    };
+    const service = new MasterDataBootstrapService(
+      masterDataBootstrapRepository as never,
+    );
+
+    await expect(
+      service.promoteStoreBootstrapBatch({
+        actorScope: {
+          companyIds: ["00000000-0000-4000-8000-000000000001"],
+        },
+        batchId: "batch-store",
+      }),
+    ).rejects.toThrow("Store bootstrap batch must be ready_to_promote");
+  });
+
+  it("promotes only ready store rows and skips already promoted rows", async () => {
+    const masterDataBootstrapRepository = {
+      getBootstrapBatchForActor: jest.fn(async () =>
+        buildBootstrapBatch({
+          bootstrapEntity: "store",
+          batchId: "batch-store",
+          batchStatus: "ready_to_promote",
+          rowCount: 2,
+          validCount: 1,
+          promotedCount: 1,
+        }),
+      ),
+      listBootstrapRows: jest.fn(async () => [
+        buildStoreRow({
+          rowId: "row-ready-store",
+          rowNumber: 1,
+          validationStatus: "valid",
+          resolvedRegionId: "00000000-0000-4000-8000-000000000240",
+          normalizedPayload: {
+            normalizedStoreCode: "SM140",
+            normalizedStoreName: "Marmara Park",
+            normalizedStoreType: "company",
+            normalizedRegionCode: "MARMARA",
+            normalizedStoreStatus: "active",
+            kpiImportEnabled: true,
+          },
+        }),
+        buildStoreRow({
+          rowId: "row-promoted-store",
+          rowNumber: 2,
+          validationStatus: "promoted",
+          resolvedRegionId: "00000000-0000-4000-8000-000000000240",
+          promotedEntityId: "00000000-0000-4000-8000-000000000141",
+          normalizedPayload: {
+            normalizedStoreCode: "SM141",
+            normalizedStoreName: "Existing Store",
+            normalizedStoreType: "franchise",
+          },
+        }),
+      ]),
+      promoteStoreBootstrapRows: jest.fn(async () => ({
+        batchId: "batch-store",
+        batchStatus: "promoted",
+        rowCount: 2,
+        validCount: 0,
+        needsReviewCount: 0,
+        invalidCount: 0,
+        promotedCount: 2,
+        promotedRows: [
+          {
+            rowId: "row-ready-store",
+            promotedEntityId: "00000000-0000-4000-8000-000000000140",
+          },
+        ],
+      })),
+    };
+    const service = new MasterDataBootstrapService(
+      masterDataBootstrapRepository as never,
+    );
+
+    const result = await service.promoteStoreBootstrapBatch({
+      actorScope: {
+        companyIds: ["00000000-0000-4000-8000-000000000001"],
+      },
+      batchId: "batch-store",
+    });
+
+    expect(masterDataBootstrapRepository.promoteStoreBootstrapRows).toHaveBeenCalledWith({
+      batchId: "batch-store",
+      rows: [
+        {
+          rowId: "row-ready-store",
+          companyId: "00000000-0000-4000-8000-000000000001",
+          regionId: "00000000-0000-4000-8000-000000000240",
+          storeCode: "SM140",
+          storeName: "Marmara Park",
+          storeType: "company",
+          status: "active",
+          kpiImportEnabled: true,
+        },
+      ],
+    });
+    expect(result.command.status).toBe("promoted");
+    expect(result.data.batch.promotedCount).toBe(2);
+    expect(result.data.promotedRows).toEqual([
+      {
+        rowId: "row-ready-store",
+        promotedEntityId: "00000000-0000-4000-8000-000000000140",
+      },
+    ]);
+  });
 });
 
 function buildPersonnelRow(
@@ -1204,6 +1568,76 @@ function buildPersonnelRow(
     resolvedStoreId: null,
     resolvedEmployeeId: null,
     resolvedPositionId: null,
+    promotedEntityId: null,
+    createdAt: "2026-04-29T12:00:00.000Z",
+    updatedAt: "2026-04-29T12:00:00.000Z",
+  };
+}
+
+function buildBootstrapBatch(input: {
+  batchId: string;
+  bootstrapEntity: "store" | "personnel";
+  batchStatus?: string;
+  rowCount?: number;
+  validCount?: number;
+  needsReviewCount?: number;
+  invalidCount?: number;
+  promotedCount?: number;
+}) {
+  return {
+    batchId: input.batchId,
+    companyId: "00000000-0000-4000-8000-000000000001",
+    bootstrapEntity: input.bootstrapEntity,
+    sourceLabel: "Bootstrap baseline",
+    fileReference: "bootstrap.xlsx",
+    uploadedByUserId: "hr-admin-user",
+    batchStatus: input.batchStatus ?? "uploaded",
+    rowCount: input.rowCount ?? 1,
+    validCount: input.validCount ?? 0,
+    needsReviewCount: input.needsReviewCount ?? 0,
+    invalidCount: input.invalidCount ?? 0,
+    promotedCount: input.promotedCount ?? 0,
+    createdAt: "2026-04-29T12:00:00.000Z",
+    validatedAt: null,
+    promotedAt: null,
+  };
+}
+
+function buildStoreRow(input: {
+  rowId: string;
+  rowNumber: number;
+  validationStatus?: "pending" | "valid" | "needs_review" | "invalid" | "promoted";
+  normalizedPayload: Record<string, unknown>;
+  resolvedRegionId?: string | null;
+  resolvedStoreId?: string | null;
+  promotedEntityId?: string | null;
+}) {
+  return {
+    rowId: input.rowId,
+    batchId: "batch-store",
+    rowNumber: input.rowNumber,
+    rowHash: `hash-store-${input.rowNumber}`,
+    sourceStoreCode:
+      typeof input.normalizedPayload.normalizedStoreCode === "string"
+        ? input.normalizedPayload.normalizedStoreCode
+        : null,
+    sourceEmployeeCode: null,
+    rawPayload: {
+      storeCode: input.normalizedPayload.normalizedStoreCode,
+      storeName: input.normalizedPayload.normalizedStoreName,
+      storeType: input.normalizedPayload.normalizedStoreType,
+      regionCode: input.normalizedPayload.normalizedRegionCode,
+    },
+    normalizedPayload: input.normalizedPayload,
+    validationStatus: input.validationStatus ?? "pending",
+    issueCode: null,
+    issueMessage: null,
+    resolvedCompanyId: "00000000-0000-4000-8000-000000000001",
+    resolvedRegionId: input.resolvedRegionId ?? null,
+    resolvedStoreId: input.resolvedStoreId ?? null,
+    resolvedEmployeeId: null,
+    resolvedPositionId: null,
+    promotedEntityId: input.promotedEntityId ?? null,
     createdAt: "2026-04-29T12:00:00.000Z",
     updatedAt: "2026-04-29T12:00:00.000Z",
   };

@@ -121,6 +121,13 @@ export type BootstrapValidationSummary = {
   promotedCount: number;
 };
 
+export type BootstrapStorePromotionSummary = BootstrapValidationSummary & {
+  promotedRows: Array<{
+    rowId: string;
+    promotedEntityId: string;
+  }>;
+};
+
 export type BootstrapBatchQueueItem = BootstrapBatch & {
   pendingCount: number;
 };
@@ -496,6 +503,24 @@ export class MasterDataBootstrapRepository {
     return row ? { storeId: row.store_id, regionId: row.region_id } : null;
   }
 
+  async resolveRegionByCode(
+    companyId: string,
+    normalizedRegionCode: string,
+  ): Promise<string | null> {
+    const result = await this.databaseService.query<{ region_id: string }>(
+      `
+        SELECT region_id::text AS region_id
+        FROM ops.region
+        WHERE company_id = $1::uuid
+          AND UPPER(REGEXP_REPLACE(region_code, '[\\s-]+', '_', 'g')) = $2
+        LIMIT 1
+      `,
+      [companyId, normalizedRegionCode],
+    );
+
+    return result.rows[0]?.region_id ?? null;
+  }
+
   async resolveEmployeeByCode(
     companyId: string,
     normalizedEmployeeCode: string,
@@ -649,6 +674,156 @@ export class MasterDataBootstrapRepository {
             promotedCount: batch.promoted_count,
           }
         : null;
+    });
+  }
+
+  async promoteStoreBootstrapRows(input: {
+    batchId: string;
+    rows: Array<{
+      rowId: string;
+      companyId: string;
+      regionId: string;
+      storeCode: string;
+      storeName: string;
+      storeType: string;
+      status: string;
+      kpiImportEnabled: boolean;
+    }>;
+  }): Promise<BootstrapStorePromotionSummary> {
+    return this.databaseService.withTransaction(async (client) => {
+      const promotedRows: Array<{ rowId: string; promotedEntityId: string }> = [];
+
+      for (const row of input.rows) {
+        const storeResult = await client.query<{ store_id: string }>(
+          `
+            INSERT INTO ops.store (
+              company_id,
+              region_id,
+              store_code,
+              store_name,
+              store_type,
+              status,
+              kpi_import_enabled
+            )
+            VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7::boolean)
+            ON CONFLICT (store_code) DO UPDATE
+            SET
+              region_id = EXCLUDED.region_id,
+              store_name = EXCLUDED.store_name,
+              store_type = EXCLUDED.store_type,
+              status = EXCLUDED.status,
+              kpi_import_enabled = EXCLUDED.kpi_import_enabled
+            WHERE ops.store.company_id = EXCLUDED.company_id
+            RETURNING store_id::text AS store_id
+          `,
+          [
+            row.companyId,
+            row.regionId,
+            row.storeCode,
+            row.storeName,
+            row.storeType,
+            row.status,
+            row.kpiImportEnabled,
+          ],
+        );
+        const promotedEntityId = storeResult.rows[0]?.store_id;
+        if (!promotedEntityId) {
+          throw new Error(
+            `Store code conflict belongs to another company: ${row.storeCode}`,
+          );
+        }
+
+        const rowUpdateResult = await client.query(
+          `
+            UPDATE stg.master_data_bootstrap_row
+            SET
+              validation_status = 'promoted',
+              promoted_entity_id = $3::uuid,
+              updated_at = NOW()
+            WHERE master_data_bootstrap_row_id = $1::uuid
+              AND master_data_bootstrap_batch_id = $2::uuid
+              AND validation_status = 'valid'
+          `,
+          [row.rowId, input.batchId, promotedEntityId],
+        );
+        if (rowUpdateResult.rowCount !== 1) {
+          throw new Error(
+            `Store bootstrap row was not marked promoted: ${row.rowId}`,
+          );
+        }
+
+        promotedRows.push({
+          rowId: row.rowId,
+          promotedEntityId,
+        });
+      }
+
+      const batchResult = await client.query<{
+        master_data_bootstrap_batch_id: string;
+        batch_status: string;
+        row_count: number;
+        valid_count: number;
+        needs_review_count: number;
+        invalid_count: number;
+        promoted_count: number;
+      }>(
+        `
+          WITH row_counts AS (
+            SELECT
+              COUNT(*)::integer AS row_count,
+              COUNT(*) FILTER (WHERE validation_status = 'valid')::integer AS valid_count,
+              COUNT(*) FILTER (WHERE validation_status = 'needs_review')::integer AS needs_review_count,
+              COUNT(*) FILTER (WHERE validation_status = 'invalid')::integer AS invalid_count,
+              COUNT(*) FILTER (WHERE validation_status = 'promoted')::integer AS promoted_count
+            FROM stg.master_data_bootstrap_row
+            WHERE master_data_bootstrap_batch_id = $1::uuid
+          )
+          UPDATE stg.master_data_bootstrap_batch b
+          SET
+            batch_status = CASE
+              WHEN row_counts.row_count = row_counts.promoted_count
+              THEN 'promoted'
+              ELSE 'ready_to_promote'
+            END,
+            row_count = row_counts.row_count,
+            valid_count = row_counts.valid_count,
+            needs_review_count = row_counts.needs_review_count,
+            invalid_count = row_counts.invalid_count,
+            promoted_count = row_counts.promoted_count,
+            promoted_at = CASE
+              WHEN row_counts.row_count = row_counts.promoted_count
+              THEN NOW()
+              ELSE b.promoted_at
+            END
+          FROM row_counts
+          WHERE b.master_data_bootstrap_batch_id = $1::uuid
+          RETURNING
+            b.master_data_bootstrap_batch_id,
+            b.batch_status,
+            b.row_count,
+            b.valid_count,
+            b.needs_review_count,
+            b.invalid_count,
+            b.promoted_count
+        `,
+        [input.batchId],
+      );
+
+      const batch = batchResult.rows[0];
+      if (!batch) {
+        throw new Error(`Store bootstrap batch was not refreshed: ${input.batchId}`);
+      }
+
+      return {
+        batchId: batch.master_data_bootstrap_batch_id,
+        batchStatus: batch.batch_status,
+        rowCount: batch.row_count,
+        validCount: batch.valid_count,
+        needsReviewCount: batch.needs_review_count,
+        invalidCount: batch.invalid_count,
+        promotedCount: batch.promoted_count,
+        promotedRows,
+      };
     });
   }
 }
