@@ -510,6 +510,24 @@ export class MasterDataBootstrapRepository {
     return result.rows[0]?.employee_id ?? null;
   }
 
+  async resolveEmployeeByNationalIdHash(
+    companyId: string,
+    normalizedNationalIdHash: string,
+  ): Promise<string | null> {
+    const result = await this.databaseService.query<{ employee_id: string }>(
+      `
+        SELECT employee_id::text AS employee_id
+        FROM ops.employee
+        WHERE company_id = $1::uuid
+          AND national_id_hash = $2
+        LIMIT 1
+      `,
+      [companyId, normalizedNationalIdHash],
+    );
+
+    return result.rows[0]?.employee_id ?? null;
+  }
+
   async resolvePositionByCode(
     companyId: string,
     normalizedPositionCode: string,

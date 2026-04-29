@@ -154,6 +154,24 @@ Added `GET /api/integrations/master-data-bootstrap/batches/:batchId/rows` for fi
 
 The queue is read-only and does not write to `ops.store`, `ops.employee`, or `ops.employee_assignment_history`.
 
+## Completed Slice: V1-C3 Duplicate/Conflict Preflight
+
+- [x] **Step 1: Add national id comparison evidence**
+
+Personnel bootstrap staging now stores `normalizedNationalIdHash` when a raw national id or national id hash alias is present.
+
+- [x] **Step 2: Add batch duplicate preflight**
+
+Validation now marks normalized duplicate store codes, duplicate personnel seller codes, and duplicate national id hashes as `needs_review` rows.
+
+- [x] **Step 3: Add existing employee identity conflict guard**
+
+Personnel validation now marks seller-code/national-id mismatches against existing employees as `employee_identity_conflict`.
+
+- [x] **Step 4: Keep promotion closed**
+
+The preflight only updates staged row review state and does not write to `ops.store`, `ops.employee`, or `ops.employee_assignment_history`.
+
 ## Next Slice: V1-D Store Promotion
 
 - [ ] **Step 1: Write store promotion tests**

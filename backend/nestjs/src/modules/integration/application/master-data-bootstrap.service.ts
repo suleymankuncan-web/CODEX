@@ -29,6 +29,11 @@ type BootstrapNextAction =
   | "wait_for_promotion_decision"
   | "closed";
 
+type BootstrapPreflightIssue = Pick<
+  BootstrapValidationResult,
+  "validationStatus" | "issueCode" | "issueMessage"
+>;
+
 @Injectable()
 export class MasterDataBootstrapService {
   constructor(
@@ -191,8 +196,20 @@ export class MasterDataBootstrapService {
       input.batchId,
     );
     const results: BootstrapValidationResult[] = [];
+    const preflightIssues = buildBootstrapPreflightIssueMap(batch, rows);
 
     for (const row of rows) {
+      const preflightIssue = preflightIssues.get(row.rowId);
+      if (preflightIssue) {
+        results.push(
+          buildValidationResult(row, {
+            ...preflightIssue,
+            resolvedCompanyId: batch.companyId,
+          }),
+        );
+        continue;
+      }
+
       results.push(await this.validateBootstrapRow(batch, row));
     }
 
@@ -394,6 +411,32 @@ export class MasterDataBootstrapService {
       ),
     ]);
 
+    const nationalIdHash = readNormalizedString(
+      row.normalizedPayload,
+      "normalizedNationalIdHash",
+    );
+    const resolvedNationalIdEmployeeId = nationalIdHash
+      ? await this.masterDataBootstrapRepository.resolveEmployeeByNationalIdHash(
+          batch.companyId,
+          nationalIdHash,
+        )
+      : null;
+
+    if (
+      resolvedNationalIdEmployeeId &&
+      (!resolvedEmployeeId || resolvedNationalIdEmployeeId !== resolvedEmployeeId)
+    ) {
+      return buildValidationResult(row, {
+        validationStatus: "needs_review",
+        issueCode: "employee_identity_conflict",
+        issueMessage:
+          "Seller code and national id evidence point to different employee identities",
+        ...buildStoreResolution(batch.companyId, resolvedStore),
+        resolvedEmployeeId: resolvedEmployeeId ?? resolvedNationalIdEmployeeId,
+        resolvedPositionId,
+      });
+    }
+
     if (!resolvedPositionId) {
       return buildValidationResult(row, {
         validationStatus: "needs_review",
@@ -430,6 +473,105 @@ function countValidationStatuses(rows: BootstrapStagedRow[]) {
       promoted: 0,
     },
   );
+}
+
+function buildBootstrapPreflightIssueMap(
+  batch: BootstrapBatch,
+  rows: BootstrapStagedRow[],
+) {
+  const issues = new Map<string, BootstrapPreflightIssue>();
+
+  if (batch.bootstrapEntity === "store") {
+    addDuplicatePreflightIssues({
+      rows,
+      issues,
+      valueOf: (row) =>
+        readNormalizedString(row.normalizedPayload, "normalizedStoreCode") ??
+        row.sourceStoreCode,
+      issueCode: "duplicate_store_code_in_batch",
+      issueMessage:
+        "Store code appears more than once in this bootstrap batch after normalization",
+    });
+
+    return issues;
+  }
+
+  const duplicateEligibleRows = rows.filter(isPersonnelPreflightEligible);
+
+  addDuplicatePreflightIssues({
+    rows: duplicateEligibleRows,
+    issues,
+    valueOf: (row) =>
+      readNormalizedString(row.normalizedPayload, "normalizedEmployeeCode") ??
+      row.sourceEmployeeCode,
+    issueCode: "duplicate_employee_code_in_batch",
+    issueMessage:
+      "Employee seller code appears more than once in this bootstrap batch after normalization",
+  });
+  addDuplicatePreflightIssues({
+    rows: duplicateEligibleRows,
+    issues,
+    valueOf: (row) =>
+      readNormalizedString(row.normalizedPayload, "normalizedNationalIdHash"),
+    issueCode: "duplicate_national_id_in_batch",
+    issueMessage:
+      "National id evidence appears more than once in this bootstrap batch",
+  });
+
+  return issues;
+}
+
+function isPersonnelPreflightEligible(row: BootstrapStagedRow) {
+  return Boolean(
+    readNormalizedString(row.normalizedPayload, "normalizedStoreCode") ??
+      row.sourceStoreCode,
+  ) &&
+    Boolean(
+      readNormalizedString(row.normalizedPayload, "normalizedEmployeeCode") ??
+        row.sourceEmployeeCode,
+    ) &&
+    Boolean(readNormalizedString(row.normalizedPayload, "normalizedPositionCode"));
+}
+
+function addDuplicatePreflightIssues(input: {
+  rows: BootstrapStagedRow[];
+  issues: Map<string, BootstrapPreflightIssue>;
+  valueOf: (row: BootstrapStagedRow) => string | null;
+  issueCode:
+    | "duplicate_store_code_in_batch"
+    | "duplicate_employee_code_in_batch"
+    | "duplicate_national_id_in_batch";
+  issueMessage: string;
+}) {
+  const rowsByValue = new Map<string, BootstrapStagedRow[]>();
+
+  for (const row of input.rows) {
+    const value = input.valueOf(row);
+    if (!value) {
+      continue;
+    }
+
+    const normalizedValue = value.trim().toUpperCase();
+    rowsByValue.set(normalizedValue, [...(rowsByValue.get(normalizedValue) ?? []), row]);
+  }
+
+  for (const duplicateRows of rowsByValue.values()) {
+    if (duplicateRows.length < 2) {
+      continue;
+    }
+
+    for (const row of duplicateRows) {
+      if (input.issues.has(row.rowId)) {
+        continue;
+      }
+
+      input.issues.set(row.rowId, {
+        validationStatus: "needs_review",
+        issueCode: input.issueCode,
+        issueMessage: input.issueMessage,
+      });
+    }
+  }
 }
 
 function deriveBootstrapReadiness(input: {
@@ -535,6 +677,10 @@ function normalizeBootstrapPayload(
   if (bootstrapEntity === "personnel") {
     normalized.normalizedEmployeeCode = readNormalizedEmployeeCode(row);
     normalized.normalizedPositionCode = readNormalizedPositionCode(row);
+    const normalizedNationalIdHash = readNormalizedNationalIdHash(row);
+    if (normalizedNationalIdHash) {
+      normalized.normalizedNationalIdHash = normalizedNationalIdHash;
+    }
   }
 
   if (bootstrapEntity === "store") {
@@ -577,6 +723,31 @@ function readNormalizedPositionCode(row: Record<string, unknown>) {
   const value = readString(row, "positionCode") || readString(row, "position");
 
   return value ? value.replace(/\s/g, "_").toUpperCase() : null;
+}
+
+function readNormalizedNationalIdHash(row: Record<string, unknown>) {
+  const hashValue =
+    readScalarString(row, "nationalIdHash") ||
+    readScalarString(row, "nationalIDHash") ||
+    readScalarString(row, "national_id_hash");
+
+  if (hashValue) {
+    const normalizedHash = hashValue.trim().toLowerCase();
+    return /^[a-f0-9]{64}$/.test(normalizedHash) ? normalizedHash : null;
+  }
+
+  const nationalIdValue =
+    readScalarString(row, "nationalId") ||
+    readScalarString(row, "nationalID") ||
+    readScalarString(row, "national_id") ||
+    readScalarString(row, "tcKimlikNo") ||
+    readScalarString(row, "tcNo") ||
+    readScalarString(row, "tckn");
+  const nationalIdDigits = nationalIdValue?.replace(/\D/g, "") ?? "";
+
+  return nationalIdDigits
+    ? createHash("sha256").update(`national_id:${nationalIdDigits}`).digest("hex")
+    : null;
 }
 
 function normalizeStoreType(value: string | null) {
@@ -622,6 +793,19 @@ function normalizeBoolean(value: unknown) {
 function readString(row: Record<string, unknown>, key: string) {
   const value = readValue(row, key);
   return typeof value === "string" ? value.trim() : null;
+}
+
+function readScalarString(row: Record<string, unknown>, key: string) {
+  const value = readValue(row, key);
+  if (typeof value === "string") {
+    return value.trim();
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value);
+  }
+
+  return null;
 }
 
 function readValue(row: Record<string, unknown>, key: string) {

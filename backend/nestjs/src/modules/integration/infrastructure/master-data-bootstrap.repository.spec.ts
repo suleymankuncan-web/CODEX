@@ -236,4 +236,32 @@ describe("MasterDataBootstrapRepository", () => {
       }),
     );
   });
+
+  it("resolves employee identity by national id hash without mutating live master data", async () => {
+    const query = jest.fn().mockResolvedValueOnce({
+      rows: [
+        {
+          employee_id: "00000000-0000-4000-8000-000000008999",
+        },
+      ],
+    });
+    const repository = new MasterDataBootstrapRepository({ query } as never);
+
+    const result = await repository.resolveEmployeeByNationalIdHash(
+      "00000000-0000-4000-8000-000000000001",
+      "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    );
+
+    const sql = query.mock.calls.map(([statement]) => String(statement)).join("\n");
+    expect(sql).toContain("FROM ops.employee");
+    expect(sql).toContain("national_id_hash = $2");
+    expect(sql).not.toContain("INSERT INTO ops.employee");
+    expect(sql).not.toContain("UPDATE ops.employee");
+    expect(sql).not.toContain("DELETE FROM ops.employee");
+    expect(query.mock.calls[0][1]).toEqual([
+      "00000000-0000-4000-8000-000000000001",
+      "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    ]);
+    expect(result).toBe("00000000-0000-4000-8000-000000008999");
+  });
 });

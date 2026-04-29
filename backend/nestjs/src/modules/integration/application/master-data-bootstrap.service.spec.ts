@@ -77,6 +77,61 @@ describe("MasterDataBootstrapService", () => {
     expect(result.data.batch.rowCount).toBe(1);
   });
 
+  it("normalizes personnel national id evidence into a hash for preflight checks", async () => {
+    const masterDataBootstrapRepository = {
+      createBootstrapBatch: jest.fn(async (input) => ({
+        batchId: "00000000-0000-4000-8000-000000000903",
+        companyId: input.companyId,
+        bootstrapEntity: input.bootstrapEntity,
+        sourceLabel: input.sourceLabel,
+        fileReference: input.fileReference,
+        uploadedByUserId: input.uploadedByUserId,
+        batchStatus: "uploaded",
+        rowCount: input.rows.length,
+        validCount: 0,
+        needsReviewCount: 0,
+        invalidCount: 0,
+        promotedCount: 0,
+        createdAt: "2026-04-29T12:00:00.000Z",
+      })),
+    };
+    const service = new MasterDataBootstrapService(
+      masterDataBootstrapRepository as never,
+    );
+
+    await service.createBootstrapBatch({
+      actorUserId: "hr-admin-user",
+      actorScope: {
+        companyIds: ["00000000-0000-4000-8000-000000000001"],
+      },
+      bootstrapEntity: "personnel",
+      sourceLabel: "April personnel baseline",
+      fileReference: "personel-master-data-april.xlsx",
+      rows: [
+        {
+          storeCode: "SM-140",
+          sellerCode: "fm8375",
+          nationalId: "123 456 789 01",
+          positionCode: "Sales Advisor",
+        },
+      ],
+    });
+
+    const stagedRow =
+      masterDataBootstrapRepository.createBootstrapBatch.mock.calls[0][0].rows[0];
+    expect(stagedRow.normalizedPayload).toEqual(
+      expect.objectContaining({
+        normalizedStoreCode: "SM140",
+        normalizedEmployeeCode: "FM8375",
+        normalizedPositionCode: "SALES_ADVISOR",
+        normalizedNationalIdHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+      }),
+    );
+    expect(stagedRow.normalizedPayload.normalizedNationalIdHash).not.toBe(
+      "12345678901",
+    );
+  });
+
   it("validates personnel rows without promoting staged data", async () => {
     const masterDataBootstrapRepository = {
       getBootstrapBatchForActor: jest.fn(async () => ({
@@ -364,6 +419,326 @@ describe("MasterDataBootstrapService", () => {
     });
   });
 
+  it("marks normalized duplicate store codes as review issues before store promotion", async () => {
+    const masterDataBootstrapRepository = {
+      getBootstrapBatchForActor: jest.fn(async () => ({
+        batchId: "00000000-0000-4000-8000-000000000904",
+        companyId: "00000000-0000-4000-8000-000000000001",
+        bootstrapEntity: "store",
+        sourceLabel: "April store baseline",
+        fileReference: "store-master-data-april.xlsx",
+        uploadedByUserId: "hr-admin-user",
+        batchStatus: "uploaded",
+        rowCount: 2,
+        validCount: 0,
+        needsReviewCount: 0,
+        invalidCount: 0,
+        promotedCount: 0,
+        createdAt: "2026-04-29T12:00:00.000Z",
+        validatedAt: null,
+        promotedAt: null,
+      })),
+      listBootstrapRows: jest.fn(async () => [
+        {
+          rowId: "row-store-1",
+          batchId: "00000000-0000-4000-8000-000000000904",
+          rowNumber: 1,
+          rowHash: "hash-store-1",
+          sourceStoreCode: "SM140",
+          sourceEmployeeCode: null,
+          rawPayload: { storeCode: "SM-140", storeType: "company" },
+          normalizedPayload: {
+            normalizedStoreCode: "SM140",
+            normalizedStoreType: "company",
+          },
+          validationStatus: "pending",
+          issueCode: null,
+          issueMessage: null,
+          resolvedCompanyId: null,
+          resolvedRegionId: null,
+          resolvedStoreId: null,
+          resolvedEmployeeId: null,
+          resolvedPositionId: null,
+          createdAt: "2026-04-29T12:00:00.000Z",
+          updatedAt: "2026-04-29T12:00:00.000Z",
+        },
+        {
+          rowId: "row-store-2",
+          batchId: "00000000-0000-4000-8000-000000000904",
+          rowNumber: 2,
+          rowHash: "hash-store-2",
+          sourceStoreCode: "SM140",
+          sourceEmployeeCode: null,
+          rawPayload: { storeCode: "SM140", storeType: "franchise" },
+          normalizedPayload: {
+            normalizedStoreCode: "SM140",
+            normalizedStoreType: "franchise",
+          },
+          validationStatus: "pending",
+          issueCode: null,
+          issueMessage: null,
+          resolvedCompanyId: null,
+          resolvedRegionId: null,
+          resolvedStoreId: null,
+          resolvedEmployeeId: null,
+          resolvedPositionId: null,
+          createdAt: "2026-04-29T12:00:00.000Z",
+          updatedAt: "2026-04-29T12:00:00.000Z",
+        },
+      ]),
+      resolveStoreByCode: jest.fn(async () => null),
+      resolveEmployeeByCode: jest.fn(async () => null),
+      resolvePositionByCode: jest.fn(async () => null),
+      updateBootstrapRowValidationResults: jest.fn(async () => ({
+        batchId: "00000000-0000-4000-8000-000000000904",
+        batchStatus: "validated",
+        rowCount: 2,
+        validCount: 0,
+        needsReviewCount: 2,
+        invalidCount: 0,
+        promotedCount: 0,
+      })),
+    };
+    const service = new MasterDataBootstrapService(
+      masterDataBootstrapRepository as never,
+    );
+
+    await service.validateBootstrapBatch({
+      actorScope: {
+        companyIds: ["00000000-0000-4000-8000-000000000001"],
+      },
+      batchId: "00000000-0000-4000-8000-000000000904",
+    });
+
+    expect(masterDataBootstrapRepository.resolveStoreByCode).not.toHaveBeenCalled();
+    expect(
+      masterDataBootstrapRepository.updateBootstrapRowValidationResults,
+    ).toHaveBeenCalledWith({
+      batchId: "00000000-0000-4000-8000-000000000904",
+      results: [
+        expect.objectContaining({
+          rowId: "row-store-1",
+          validationStatus: "needs_review",
+          issueCode: "duplicate_store_code_in_batch",
+        }),
+        expect.objectContaining({
+          rowId: "row-store-2",
+          validationStatus: "needs_review",
+          issueCode: "duplicate_store_code_in_batch",
+        }),
+      ],
+    });
+  });
+
+  it("marks normalized duplicate personnel seller codes as review issues", async () => {
+    const masterDataBootstrapRepository = {
+      getBootstrapBatchForActor: jest.fn(async () => ({
+        batchId: "00000000-0000-4000-8000-000000000905",
+        companyId: "00000000-0000-4000-8000-000000000001",
+        bootstrapEntity: "personnel",
+        sourceLabel: "April personnel baseline",
+        fileReference: "personnel-master-data-april.xlsx",
+        uploadedByUserId: "hr-admin-user",
+        batchStatus: "uploaded",
+        rowCount: 2,
+        validCount: 0,
+        needsReviewCount: 0,
+        invalidCount: 0,
+        promotedCount: 0,
+        createdAt: "2026-04-29T12:00:00.000Z",
+        validatedAt: null,
+        promotedAt: null,
+      })),
+      listBootstrapRows: jest.fn(async () => [
+        buildPersonnelRow("row-personnel-1", 1, "FM8375"),
+        buildPersonnelRow("row-personnel-2", 2, "FM8375"),
+      ]),
+      resolveStoreByCode: jest.fn(async () => null),
+      resolveEmployeeByCode: jest.fn(async () => null),
+      resolvePositionByCode: jest.fn(async () => null),
+      updateBootstrapRowValidationResults: jest.fn(async () => ({
+        batchId: "00000000-0000-4000-8000-000000000905",
+        batchStatus: "validated",
+        rowCount: 2,
+        validCount: 0,
+        needsReviewCount: 2,
+        invalidCount: 0,
+        promotedCount: 0,
+      })),
+    };
+    const service = new MasterDataBootstrapService(
+      masterDataBootstrapRepository as never,
+    );
+
+    await service.validateBootstrapBatch({
+      actorScope: {
+        companyIds: ["00000000-0000-4000-8000-000000000001"],
+      },
+      batchId: "00000000-0000-4000-8000-000000000905",
+    });
+
+    expect(masterDataBootstrapRepository.resolveStoreByCode).not.toHaveBeenCalled();
+    expect(
+      masterDataBootstrapRepository.updateBootstrapRowValidationResults,
+    ).toHaveBeenCalledWith({
+      batchId: "00000000-0000-4000-8000-000000000905",
+      results: [
+        expect.objectContaining({
+          rowId: "row-personnel-1",
+          validationStatus: "needs_review",
+          issueCode: "duplicate_employee_code_in_batch",
+        }),
+        expect.objectContaining({
+          rowId: "row-personnel-2",
+          validationStatus: "needs_review",
+          issueCode: "duplicate_employee_code_in_batch",
+        }),
+      ],
+    });
+  });
+
+  it("marks duplicate personnel national id hashes as review issues", async () => {
+    const nationalIdHash =
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    const masterDataBootstrapRepository = {
+      getBootstrapBatchForActor: jest.fn(async () => ({
+        batchId: "00000000-0000-4000-8000-000000000906",
+        companyId: "00000000-0000-4000-8000-000000000001",
+        bootstrapEntity: "personnel",
+        sourceLabel: "April personnel baseline",
+        fileReference: "personnel-master-data-april.xlsx",
+        uploadedByUserId: "hr-admin-user",
+        batchStatus: "uploaded",
+        rowCount: 2,
+        validCount: 0,
+        needsReviewCount: 0,
+        invalidCount: 0,
+        promotedCount: 0,
+        createdAt: "2026-04-29T12:00:00.000Z",
+        validatedAt: null,
+        promotedAt: null,
+      })),
+      listBootstrapRows: jest.fn(async () => [
+        buildPersonnelRow("row-personnel-1", 1, "FM8375", nationalIdHash),
+        buildPersonnelRow("row-personnel-2", 2, "FM8376", nationalIdHash),
+      ]),
+      resolveStoreByCode: jest.fn(async () => null),
+      resolveEmployeeByCode: jest.fn(async () => null),
+      resolvePositionByCode: jest.fn(async () => null),
+      updateBootstrapRowValidationResults: jest.fn(async () => ({
+        batchId: "00000000-0000-4000-8000-000000000906",
+        batchStatus: "validated",
+        rowCount: 2,
+        validCount: 0,
+        needsReviewCount: 2,
+        invalidCount: 0,
+        promotedCount: 0,
+      })),
+    };
+    const service = new MasterDataBootstrapService(
+      masterDataBootstrapRepository as never,
+    );
+
+    await service.validateBootstrapBatch({
+      actorScope: {
+        companyIds: ["00000000-0000-4000-8000-000000000001"],
+      },
+      batchId: "00000000-0000-4000-8000-000000000906",
+    });
+
+    expect(masterDataBootstrapRepository.resolveStoreByCode).not.toHaveBeenCalled();
+    expect(
+      masterDataBootstrapRepository.updateBootstrapRowValidationResults,
+    ).toHaveBeenCalledWith({
+      batchId: "00000000-0000-4000-8000-000000000906",
+      results: [
+        expect.objectContaining({
+          rowId: "row-personnel-1",
+          validationStatus: "needs_review",
+          issueCode: "duplicate_national_id_in_batch",
+        }),
+        expect.objectContaining({
+          rowId: "row-personnel-2",
+          validationStatus: "needs_review",
+          issueCode: "duplicate_national_id_in_batch",
+        }),
+      ],
+    });
+  });
+
+  it("marks existing employee seller code and national id mismatches as review issues", async () => {
+    const nationalIdHash =
+      "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    const masterDataBootstrapRepository = {
+      getBootstrapBatchForActor: jest.fn(async () => ({
+        batchId: "00000000-0000-4000-8000-000000000907",
+        companyId: "00000000-0000-4000-8000-000000000001",
+        bootstrapEntity: "personnel",
+        sourceLabel: "April personnel baseline",
+        fileReference: "personnel-master-data-april.xlsx",
+        uploadedByUserId: "hr-admin-user",
+        batchStatus: "uploaded",
+        rowCount: 1,
+        validCount: 0,
+        needsReviewCount: 0,
+        invalidCount: 0,
+        promotedCount: 0,
+        createdAt: "2026-04-29T12:00:00.000Z",
+        validatedAt: null,
+        promotedAt: null,
+      })),
+      listBootstrapRows: jest.fn(async () => [
+        buildPersonnelRow("row-personnel-conflict", 1, "FM8375", nationalIdHash),
+      ]),
+      resolveStoreByCode: jest.fn(async () => ({
+        storeId: "00000000-0000-4000-8000-000000000140",
+        regionId: "00000000-0000-4000-8000-000000000240",
+      })),
+      resolveEmployeeByCode: jest.fn(
+        async () => "00000000-0000-4000-8000-000000008375",
+      ),
+      resolveEmployeeByNationalIdHash: jest.fn(
+        async () => "00000000-0000-4000-8000-000000008999",
+      ),
+      resolvePositionByCode: jest.fn(
+        async () => "00000000-0000-4000-8000-000000000501",
+      ),
+      updateBootstrapRowValidationResults: jest.fn(async () => ({
+        batchId: "00000000-0000-4000-8000-000000000907",
+        batchStatus: "validated",
+        rowCount: 1,
+        validCount: 0,
+        needsReviewCount: 1,
+        invalidCount: 0,
+        promotedCount: 0,
+      })),
+    };
+    const service = new MasterDataBootstrapService(
+      masterDataBootstrapRepository as never,
+    );
+
+    await service.validateBootstrapBatch({
+      actorScope: {
+        companyIds: ["00000000-0000-4000-8000-000000000001"],
+      },
+      batchId: "00000000-0000-4000-8000-000000000907",
+    });
+
+    expect(
+      masterDataBootstrapRepository.updateBootstrapRowValidationResults,
+    ).toHaveBeenCalledWith({
+      batchId: "00000000-0000-4000-8000-000000000907",
+      results: [
+        expect.objectContaining({
+          rowId: "row-personnel-conflict",
+          validationStatus: "needs_review",
+          issueCode: "employee_identity_conflict",
+          resolvedEmployeeId: "00000000-0000-4000-8000-000000008375",
+        }),
+      ],
+    });
+  });
+
   it("lists bootstrap batches with derived readiness and next action", async () => {
     const masterDataBootstrapRepository = {
       listBootstrapBatches: jest.fn(async () => ({
@@ -547,3 +922,40 @@ describe("MasterDataBootstrapService", () => {
     expect(result.meta).toEqual({ count: 1, total: 1, limit: 10, offset: 0 });
   });
 });
+
+function buildPersonnelRow(
+  rowId: string,
+  rowNumber: number,
+  employeeCode: string,
+  nationalIdHash?: string,
+) {
+  return {
+    rowId,
+    batchId: "00000000-0000-4000-8000-000000000905",
+    rowNumber,
+    rowHash: `hash-${rowNumber}`,
+    sourceStoreCode: "SM140",
+    sourceEmployeeCode: employeeCode,
+    rawPayload: {
+      storeCode: "SM140",
+      sellerCode: employeeCode,
+      positionCode: "SALES",
+    },
+    normalizedPayload: {
+      normalizedStoreCode: "SM140",
+      normalizedEmployeeCode: employeeCode,
+      normalizedPositionCode: "SALES",
+      ...(nationalIdHash ? { normalizedNationalIdHash: nationalIdHash } : {}),
+    },
+    validationStatus: "pending",
+    issueCode: null,
+    issueMessage: null,
+    resolvedCompanyId: null,
+    resolvedRegionId: null,
+    resolvedStoreId: null,
+    resolvedEmployeeId: null,
+    resolvedPositionId: null,
+    createdAt: "2026-04-29T12:00:00.000Z",
+    updatedAt: "2026-04-29T12:00:00.000Z",
+  };
+}
