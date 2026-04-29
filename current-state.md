@@ -3831,6 +3831,43 @@ Bu parca pilotu guvenli acacak kapidir. Keycloak kimlik kapisi olarak kaldi; yet
 
 Siradaki mantikli adim: gercek pilot kullanicilari Keycloak'ta manuel olusturup HR_ADMIN yuzeyinden 1 bolge muduru, 2 magaza muduru ve 1 visual merchandiser baglama smoke'u yapmak.
 
+## Son Pilot User Binding Smoke
+
+29 Nisan 2026 itibariyla gercek lokal Keycloak kullanicilariyla pilot binding smoke'u yapildi.
+
+Yapilanlar:
+
+- Lokal DB migration seviyesi smoke oncesi duzeltildi; `audit.schema_migration` tracking 42 succeeded / 0 failed duruma getirildi.
+- `024_competition_stage_package_plan_approval.sql` icindeki PostgreSQL reserved alias problemi giderildi.
+- Keycloak'ta pilot kullanicilar olusturuldu/guncellendi:
+  - `pilot.region.manager`
+  - `pilot.store.manager.100`
+  - `pilot.store.manager.ist002`
+  - `pilot.vm`
+- `admin.operator` Keycloak kullanicisi lokal DB'de `oidc/provider_subject` ile SUPER_ADMIN hesaba baglandi.
+- HR/Admin pilot binding endpoint'i ile 4 binding olusturuldu.
+- Audit kaniti: `pilot_user_binding.created` event sayisi 4.
+- Pilot session smoke:
+  - `pilot.region.manager`: 2 magaza scope.
+  - `pilot.store.manager.100`: 1 magaza scope.
+  - `pilot.store.manager.ist002`: 1 magaza scope.
+  - `pilot.vm`: 2 magaza scope ve `VISUAL_MERCHANDISER` rol.
+- Smoke icin gecici acilan Keycloak direct access grant tekrar kapatildi.
+
+Dogrulama:
+
+- `npm.cmd run db:migrate` -> tum migrationlar skip, failed yok.
+- `/api/auth/pilot-user-bindings` -> 4 pilot binding created.
+- `/api/auth/session` -> 4 pilot kullanicida provider subject internal user'a dogru cozuldu.
+
+CODEX durust yorum:
+
+- Bu smoke cok degerliydi; testlerde gecen akisin lokal gercek Keycloak + DB + audit kombinasyonunda da calistigini gosterdi.
+- Yakalanan asil ders: lokal/prod benzeri auth smoke'larda token scope ve actor DB mapping mutlaka kontrol edilmeli. Aksi halde route yetkisi gecse bile audit FK katmaninda patlayabilir.
+- UI'dan manuel smoke sonraki adim olabilir ama backend guvenlik zinciri artik pilot hesap acmak icin daha guvenilir.
+
+Siradaki mantikli adim: admin-web uzerinden bu 4 pilot kullaniciyla tarayici smoke'u yapmak; ozellikle store manager store kisitlari, region manager 2-magaza gorunumu ve VM read-only checklist siniri gozle kontrol edilmeli.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:

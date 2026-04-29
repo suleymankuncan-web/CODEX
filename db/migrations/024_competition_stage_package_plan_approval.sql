@@ -9,12 +9,12 @@ DO $$
 DECLARE
     existing_constraint_name TEXT;
 BEGIN
-    SELECT constraint.conname
+    SELECT pg_constraint_row.conname
     INTO existing_constraint_name
-    FROM pg_constraint constraint
-    WHERE constraint.conrelid = 'ops.competition_stage_package_plan'::regclass
-      AND constraint.contype = 'c'
-      AND pg_get_constraintdef(constraint.oid) LIKE '%plan_status%'
+    FROM pg_constraint pg_constraint_row
+    WHERE pg_constraint_row.conrelid = 'ops.competition_stage_package_plan'::regclass
+      AND pg_constraint_row.contype = 'c'
+      AND pg_get_constraintdef(pg_constraint_row.oid) LIKE '%plan_status%'
     LIMIT 1;
 
     IF existing_constraint_name IS NOT NULL THEN
