@@ -27,6 +27,7 @@ const AuthUserAuditPage = lazy(() => import('./pages/AuthUserAuditPage').then((m
 const CompetitionDashboardPage = lazy(() => import('./pages/CompetitionDashboardPage').then((module) => ({ default: module.CompetitionDashboardPage })))
 const ImportBatchDetailPage = lazy(() => import('./pages/ImportBatchDetailPage').then((module) => ({ default: module.ImportBatchDetailPage })))
 const IntegrationDashboardPage = lazy(() => import('./pages/IntegrationDashboardPage').then((module) => ({ default: module.IntegrationDashboardPage })))
+const MasterDataBootstrapPage = lazy(() => import('./pages/MasterDataBootstrapPage').then((module) => ({ default: module.MasterDataBootstrapPage })))
 const ReportsChecklistsPage = lazy(() => import('./pages/ReportsChecklistsPage').then((module) => ({ default: module.ReportsChecklistsPage })))
 const ReportsKpisPage = lazy(() => import('./pages/ReportsKpisPage').then((module) => ({ default: module.ReportsKpisPage })))
 const ReportsSnapshotRunsPage = lazy(() => import('./pages/ReportsSnapshotRunsPage').then((module) => ({ default: module.ReportsSnapshotRunsPage })))
@@ -61,6 +62,12 @@ const adminNavDefinitions: NavDefinition[] = [
     icon: <DatabaseZap size={18} />,
     label: 'Integrations',
     roles: ['SUPER_ADMIN', 'INTEGRATION_ADMIN'],
+  },
+  {
+    to: '/admin/master-data',
+    icon: <DatabaseZap size={18} />,
+    label: 'Master Data',
+    roles: ['SUPER_ADMIN', 'HR_ADMIN', 'INTEGRATION_ADMIN'],
   },
   {
     to: '/admin/snapshots',
@@ -316,6 +323,14 @@ function App() {
             <Route
               path="/admin/integrations/:batchId"
               element={guardRoute(shellState, authSummary, ['SUPER_ADMIN', 'INTEGRATION_ADMIN'], <ImportBatchDetailPage />)}
+            />
+            <Route
+              path="/admin/master-data"
+              element={guardRoute(shellState, authSummary, ['SUPER_ADMIN', 'HR_ADMIN', 'INTEGRATION_ADMIN'], <MasterDataBootstrapPage />)}
+            />
+            <Route
+              path="/admin/master-data/:batchId"
+              element={guardRoute(shellState, authSummary, ['SUPER_ADMIN', 'HR_ADMIN', 'INTEGRATION_ADMIN'], <MasterDataBootstrapPage />)}
             />
             <Route
               path="/admin/snapshots"

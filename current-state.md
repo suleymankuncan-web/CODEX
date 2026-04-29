@@ -3523,7 +3523,37 @@ CODEX durust yorum:
 - En kritik sinir korundu: personel identity/assignment canliya alinabilir, ama kullanici hesabi ve auth role binding ayri ve daha kontrollu bir slice olarak kalir.
 - UI hala operator pilot seviyesinde tutulmali; asil deger backend'in yanlis satiri yanlis personele yazmamasinda.
 
-Siradaki mantikli adim: master data promotion sonucunu admin yuzeyinde kullanilabilir hale getirmek veya user account/role assignment slice'i icin once tasarim/intake yapmak; auth role creation'a dogrudan atlamamak.
+Bu siradaki adim tamamlandi: master data promotion sonucu admin yuzeyinde kullanilabilir hale getirildi.
+
+## Son Master Data Bootstrap Admin Review Surface V1
+
+29 Nisan 2026 itibariyla HR/Admin icin master data bootstrap review yuzeyi eklendi.
+
+Eklenenler:
+
+- Yeni frontend route: `/admin/master-data`.
+- Yeni frontend route: `/admin/master-data/:batchId`.
+- Admin nav icinde `Master Data` girisi eklendi.
+- Yetkili roller: `SUPER_ADMIN`, `HR_ADMIN`, `INTEGRATION_ADMIN`.
+- Yuzey mevcut backend endpointlerini kullanir; yeni backend promotion mantigi eklenmedi.
+- Batch listesi readiness, status, row count, promoted count ve source/file evidence gosterir.
+- Batch detayinda readiness counters, next action, validate action, promote action ve row-level resolved/promoted evidence gorunur.
+- Personnel batch promote aksiyonu `promote-personnel`, store batch promote aksiyonu `promote-stores` endpointine gider.
+- UI promotion eligibility hesaplamaz; backend `canPromote` kararini render eder.
+
+Dogrulama:
+
+- RED acceptance: `/admin/master-data/bootstrap-batch-personnel-1` route/yuzey yokken Playwright testi dustu.
+- Frontend targeted: `npm.cmd run lint`, `npm.cmd run build`, `npm.cmd run test:e2e -- e2e/integration-surfaces.spec.ts` -> pass.
+- Root release: `npm.cmd run check:release` -> 46 root script test, backend 71 suite / 452 test, frontend 41 Playwright test, audits.
+
+CODEX durust yorum:
+
+- Bu dogru siradaki adimdi. Backend promotion acilmisti; operator kaniti gormeden user account/auth role creation'a gecmek kontrol kaybi yaratirdi.
+- Bu yuzey seksi bir ekran degil ama master data icin guven verir: hangi satir canliya yazildi, hangi entity id olustu, hangi batch hala blokta net gorunur.
+- Hala V1 pilot seviyesinde. Row editing, Excel upload, auth user creation ve role assignment ayri intake ister.
+
+Siradaki mantikli adim: user account / role assignment slice'i icin once tasarim-intake yapmak; personel kaydi canliya alindiktan sonra hangi kullanici hesabinin, hangi role ve hangi scope ile acilacagi kesinlesmeden kod yazmamak.
 
 ## Onemli Dosyalar
 

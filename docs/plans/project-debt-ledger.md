@@ -17,7 +17,7 @@ Date: 29 April 2026
 
 Current count:
 
-- Closed active debts: 56
+- Closed active debts: 57
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -84,6 +84,7 @@ These are counted as paid because they have implementation or documentation evid
 54. Master Data Bootstrap Promotion Readiness Contract V1
 55. Master Data Bootstrap Store Promotion V1
 56. Master Data Bootstrap Personnel Promotion V1
+57. Master Data Bootstrap Admin Review Surface V1
 
 Production-Ready Migration System V1 is counted as paid because SQL migrations are tracked in `audit.schema_migration`, checksum drift is rejected, failed runs are recorded with error evidence, the HTTP migration endpoint is disabled in production, and `npm.cmd run db:migrate` is the approved CLI/CI migration path.
 
@@ -104,6 +105,8 @@ Master Data Bootstrap Promotion Readiness Contract V1 is counted as paid because
 Master Data Bootstrap Store Promotion V1 is counted as paid because readiness-approved store bootstrap rows can now be promoted into `ops.store` through a scoped HR/Admin command, staged rows keep `promoted_entity_id` evidence, batch counters are refreshed, already-promoted rows are skipped, and personnel promotion remains closed.
 
 Master Data Bootstrap Personnel Promotion V1 is counted as paid because readiness-approved personnel bootstrap rows can now be promoted into `ops.employee` and one active primary `ops.employee_assignment_history` through a scoped HR/Admin command, staged rows keep employee `promoted_entity_id` evidence, batch counters are refreshed, already-promoted rows are skipped, and user account/role creation remains a future slice.
+
+Master Data Bootstrap Admin Review Surface V1 is counted as paid because HR/Admin can now open `/admin/master-data`, list bootstrap batches, inspect readiness counters and row-level resolved/promoted evidence, run validation, and trigger the correct store/personnel promotion command without adding a second promotion decision engine or opening user account creation.
 
 Checklist Acknowledgement Canonical Schema Alignment V1 is counted as paid because the existing `ops.checklist_acknowledgement` migration and backend repository usage are now represented in canonical `db/schema.sql`, and a backend schema contract test guards against drift.
 
@@ -265,7 +268,7 @@ Personnel Management V1 is implemented. Store managers can submit seller-code/ne
 
 Personnel Request Return/Resubmit V1 is implemented. HR/Admin can return seller-code and offboarding requests with a required note, store managers can edit the returned request on `/store/approvals`, and resubmission keeps the same request id while moving the row back to `pending_hr_approval`. Return/resubmit does not mutate employee, assignment, or turnover records; audit events record rejected and resubmitted transitions.
 
-Personnel Master Data Bootstrap V1 is being closed in guarded slices instead of as one risky mega-feature. Staging, validation, review queue, duplicate/conflict preflight, promotion readiness, store promotion, and personnel promotion are now counted above. User account creation and auth role assignment remain future slices. Reference: `docs/superpowers/plans/2026-04-29-personnel-master-data-bootstrap-v1.md`.
+Personnel Master Data Bootstrap V1 is being closed in guarded slices instead of as one risky mega-feature. Staging, validation, review queue, duplicate/conflict preflight, promotion readiness, store promotion, personnel promotion, and admin review visibility are now counted above. User account creation and auth role assignment remain future slices. Reference: `docs/superpowers/plans/2026-04-29-personnel-master-data-bootstrap-v1.md`.
 
 Project MVP Focus Map is recorded as a consolidation decision, not a new closed debt item. The decision is to keep the project, avoid restarting, narrow near-term work to MVP readiness, and prioritize Excel KPI Import V1 as the next local real-data proof. Reference: `docs/plans/project-mvp-focus-map-2026-04-28.md`.
 
@@ -309,6 +312,7 @@ Current repo hygiene is not counted as active debt in this ledger because:
 - the 29 April 2026 Master Data Bootstrap Promotion Readiness Contract V1 implementation added a scoped read-only readiness endpoint that explains which staged rows can be promoted later and which rows block promotion.
 - the 29 April 2026 Master Data Bootstrap Store Promotion V1 implementation opened only the reviewed store promotion path, upserts stores with staged evidence, and kept personnel promotion closed for a later guarded slice.
 - the 29 April 2026 Master Data Bootstrap Personnel Promotion V1 implementation opened only the reviewed personnel promotion path, upserts employee identity plus one active primary assignment, and keeps user account/role creation outside V1.
+- the 29 April 2026 Master Data Bootstrap Admin Review Surface V1 implementation exposed bootstrap batch readiness, row evidence, promoted entity ids, and guarded validate/promote actions in `/admin/master-data` behind frontend and root release gates.
 
 Still monitor:
 

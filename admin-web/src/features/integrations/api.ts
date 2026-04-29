@@ -280,6 +280,129 @@ export type StoreMasterLookups = {
   }>
 }
 
+export type MasterDataBootstrapEntity = 'store' | 'personnel'
+
+export type MasterDataBootstrapBatchStatus =
+  | 'uploaded'
+  | 'validated'
+  | 'ready_to_promote'
+  | 'promoted'
+  | 'rejected'
+
+export type MasterDataBootstrapReadiness =
+  | 'needs_validation'
+  | 'needs_review'
+  | 'ready_to_promote'
+  | 'closed'
+
+export type MasterDataBootstrapPromotionReadiness =
+  | 'needs_validation'
+  | 'needs_review'
+  | 'blocked'
+  | 'waiting_batch'
+  | 'ready'
+  | 'already_promoted'
+
+export type MasterDataBootstrapBatchItem = {
+  batchId: string
+  companyId: string
+  bootstrapEntity: MasterDataBootstrapEntity
+  sourceLabel: string
+  fileReference: string | null
+  batchStatus: MasterDataBootstrapBatchStatus | string
+  rowCount: number
+  pendingCount: number
+  validCount: number
+  needsReviewCount: number
+  invalidCount: number
+  promotedCount: number
+  createdByUserId: string | null
+  createdAt: string
+  updatedAt: string
+  promotedAt: string | null
+  readiness?: MasterDataBootstrapReadiness
+  nextAction?: string
+}
+
+export type MasterDataBootstrapRow = {
+  rowId: string
+  batchId?: string
+  rowNumber: number
+  sourceStoreCode: string | null
+  sourceEmployeeCode: string | null
+  validationStatus: 'pending' | 'valid' | 'needs_review' | 'invalid' | 'promoted' | string
+  issueCode: string | null
+  issueMessage: string | null
+  resolvedCompanyId: string | null
+  resolvedRegionId: string | null
+  resolvedStoreId: string | null
+  resolvedEmployeeId: string | null
+  resolvedPositionId: string | null
+  promotedEntityId: string | null
+  rawPayload: Record<string, unknown>
+  normalizedPayload: Record<string, unknown>
+  updatedAt?: string
+}
+
+export type MasterDataBootstrapBatchDetail = {
+  summary: MasterDataBootstrapBatchItem & {
+    statusCounts: {
+      pending: number
+      valid: number
+      needsReview: number
+      invalid: number
+      promoted: number
+    }
+  }
+  rows: ListResponse<MasterDataBootstrapRow>
+}
+
+export type MasterDataBootstrapPromotionReadinessResponse = {
+  summary: {
+    batchId: string
+    bootstrapEntity: MasterDataBootstrapEntity
+    batchStatus: string
+    rowCount: number
+    readyCount: number
+    waitingBatchCount: number
+    needsValidationCount: number
+    needsReviewCount: number
+    blockedCount: number
+    alreadyPromotedCount: number
+    canPromote: boolean
+    nextAction: string
+  }
+  rows: ListResponse<
+    Pick<
+      MasterDataBootstrapRow,
+      | 'rowId'
+      | 'rowNumber'
+      | 'sourceStoreCode'
+      | 'sourceEmployeeCode'
+      | 'validationStatus'
+      | 'promotedEntityId'
+    > & {
+      promotionReadiness: MasterDataBootstrapPromotionReadiness
+      blockReason: string | null
+    }
+  >
+}
+
+export type MasterDataBootstrapPromotionResponse = CommandResponse<{
+  batch: MasterDataBootstrapBatchItem & {
+    promotedRows?: Array<{
+      rowId: string
+      promotedEntityId: string
+      assignmentId?: string
+    }>
+  }
+  promotedRows: Array<{
+    rowId: string
+    promotedEntityId: string
+    assignmentId?: string
+  }>
+}>
+
 export type AuditEvent = {
   eventLogId: string
   occurredAt: string
@@ -465,6 +588,70 @@ export async function updateStoreMasterData(input: {
         kpiImportEnabled: input.kpiImportEnabled,
       },
     },
+  )
+}
+
+export async function getMasterDataBootstrapBatches(input?: {
+  bootstrapEntity?: MasterDataBootstrapEntity
+  batchStatus?: string
+  readiness?: MasterDataBootstrapReadiness
+  q?: string
+  limit?: number
+  offset?: number
+}) {
+  const params = new URLSearchParams({
+    limit: String(input?.limit ?? 20),
+    offset: String(input?.offset ?? 0),
+  })
+  if (input?.bootstrapEntity) {
+    params.set('bootstrapEntity', input.bootstrapEntity)
+  }
+  if (input?.batchStatus) {
+    params.set('batchStatus', input.batchStatus)
+  }
+  if (input?.readiness) {
+    params.set('readiness', input.readiness)
+  }
+  const search = input?.q?.trim()
+  if (search) {
+    params.set('q', search)
+  }
+
+  return fetchJson<ListResponse<MasterDataBootstrapBatchItem>>(
+    `/integrations/master-data-bootstrap/batches?${params.toString()}`,
+  )
+}
+
+export async function getMasterDataBootstrapBatchDetail(batchId: string) {
+  return fetchJson<MasterDataBootstrapBatchDetail>(
+    `/integrations/master-data-bootstrap/batches/${batchId}`,
+  )
+}
+
+export async function getMasterDataBootstrapPromotionReadiness(batchId: string) {
+  return fetchJson<MasterDataBootstrapPromotionReadinessResponse>(
+    `/integrations/master-data-bootstrap/batches/${batchId}/promotion-readiness`,
+  )
+}
+
+export async function validateMasterDataBootstrapBatch(batchId: string) {
+  return sendJson<CommandResponse<{ batch: MasterDataBootstrapBatchItem }>>(
+    `/integrations/master-data-bootstrap/batches/${batchId}/validate`,
+    { method: 'POST' },
+  )
+}
+
+export async function promoteMasterDataBootstrapStores(batchId: string) {
+  return sendJson<MasterDataBootstrapPromotionResponse>(
+    `/integrations/master-data-bootstrap/batches/${batchId}/promote-stores`,
+    { method: 'POST' },
+  )
+}
+
+export async function promoteMasterDataBootstrapPersonnel(batchId: string) {
+  return sendJson<MasterDataBootstrapPromotionResponse>(
+    `/integrations/master-data-bootstrap/batches/${batchId}/promote-personnel`,
+    { method: 'POST' },
   )
 }
 

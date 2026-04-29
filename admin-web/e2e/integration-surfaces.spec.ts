@@ -78,6 +78,20 @@ test('admin dashboard exposes Power BI period controls', async ({ page }) => {
   await expect(page.getByLabel('Bitis')).toBeEnabled()
 })
 
+test('admin master data bootstrap surface exposes personnel promotion evidence', async ({ page }) => {
+  await page.goto('/admin/master-data/bootstrap-batch-personnel-1')
+
+  await expect(page.getByRole('heading', { name: 'Master data bootstrap' })).toBeVisible()
+  await expect(page.getByText('ready_to_promote').first()).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Promoted rows', exact: true })).toBeVisible()
+  await expect(page.getByText('1 / 2').first()).toBeVisible()
+  await expect(page.getByText('employee-live-1').first()).toBeVisible()
+
+  await page.getByRole('button', { name: 'Promote personnel' }).click()
+  await expect(page.getByText('Personnel bootstrap rows promoted')).toBeVisible()
+  await expect(page.getByText('assignment-live-1')).toBeVisible()
+})
+
 async function routeIntegrationApi(page: Page) {
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: authSessionFixture })
@@ -175,6 +189,39 @@ async function routeIntegrationApi(page: Page) {
   await page.route('**/api/integrations/import-batches/batch-kpi-lineage-ui-1', async (route) => {
     await route.fulfill({ json: detailFixture })
   })
+
+  await page.route('**/api/integrations/master-data-bootstrap/batches?**', async (route) => {
+    await route.fulfill({ json: masterDataBootstrapBatchesFixture })
+  })
+
+  await page.route(
+    '**/api/integrations/master-data-bootstrap/batches/bootstrap-batch-personnel-1/promotion-readiness',
+    async (route) => {
+      await route.fulfill({ json: masterDataBootstrapReadinessFixture })
+    },
+  )
+
+  await page.route(
+    '**/api/integrations/master-data-bootstrap/batches/bootstrap-batch-personnel-1/promote-personnel',
+    async (route) => {
+      expect(route.request().method()).toBe('POST')
+      await route.fulfill({ json: masterDataBootstrapPromotionFixture })
+    },
+  )
+
+  await page.route(
+    '**/api/integrations/master-data-bootstrap/batches/bootstrap-batch-personnel-1/promote-stores',
+    async () => {
+      throw new Error('Personnel batch must not call store promotion endpoint')
+    },
+  )
+
+  await page.route(
+    '**/api/integrations/master-data-bootstrap/batches/bootstrap-batch-personnel-1',
+    async (route) => {
+      await route.fulfill({ json: masterDataBootstrapDetailFixture })
+    },
+  )
 }
 
 const authSessionFixture = {
@@ -470,5 +517,195 @@ const auditFixture = {
     total: 0,
     limit: 20,
     offset: 0,
+  },
+}
+
+const masterDataBootstrapBatchSummary = {
+  batchId: 'bootstrap-batch-personnel-1',
+  companyId: '00000000-0000-4000-8000-000000000001',
+  bootstrapEntity: 'personnel',
+  sourceLabel: 'March personnel baseline',
+  fileReference: 'PERSONEL TABLO.xlsx',
+  batchStatus: 'ready_to_promote',
+  rowCount: 2,
+  pendingCount: 0,
+  validCount: 1,
+  needsReviewCount: 0,
+  invalidCount: 0,
+  promotedCount: 1,
+  createdByUserId: 'integration-lineage-user',
+  createdAt: '2026-04-29T08:00:00.000Z',
+  updatedAt: '2026-04-29T09:00:00.000Z',
+  promotedAt: null,
+}
+
+const masterDataBootstrapBatchesFixture = {
+  items: [
+    {
+      ...masterDataBootstrapBatchSummary,
+      readiness: 'ready_to_promote',
+      nextAction: 'wait_for_promotion_decision',
+    },
+  ],
+  meta: {
+    count: 1,
+    total: 1,
+    limit: 20,
+    offset: 0,
+  },
+}
+
+const masterDataBootstrapDetailFixture = {
+  summary: {
+    ...masterDataBootstrapBatchSummary,
+    statusCounts: {
+      pending: 0,
+      valid: 1,
+      needsReview: 0,
+      invalid: 0,
+      promoted: 1,
+    },
+  },
+  rows: {
+    items: [
+      {
+        rowId: 'personnel-row-ready-1',
+        rowNumber: 1,
+        sourceStoreCode: 'SM140',
+        sourceEmployeeCode: 'FM8375',
+        validationStatus: 'valid',
+        issueCode: null,
+        issueMessage: null,
+        resolvedCompanyId: '00000000-0000-4000-8000-000000000001',
+        resolvedRegionId: 'region-live-1',
+        resolvedStoreId: 'store-live-1',
+        resolvedEmployeeId: null,
+        resolvedPositionId: 'position-live-1',
+        promotedEntityId: null,
+        rawPayload: {
+          firstName: 'Ayse',
+          lastName: 'Yilmaz',
+        },
+        normalizedPayload: {
+          normalizedFirstName: 'Ayse',
+          normalizedLastName: 'Yilmaz',
+          normalizedEmployeeCode: 'FM8375',
+          normalizedStoreCode: 'SM140',
+          normalizedPositionCode: 'SALES_ASSOCIATE',
+          normalizedHireDate: '2026-03-01',
+          normalizedEmploymentType: 'full_time',
+        },
+      },
+      {
+        rowId: 'personnel-row-promoted-1',
+        rowNumber: 2,
+        sourceStoreCode: 'SM140',
+        sourceEmployeeCode: 'FM8374',
+        validationStatus: 'promoted',
+        issueCode: null,
+        issueMessage: null,
+        resolvedCompanyId: '00000000-0000-4000-8000-000000000001',
+        resolvedRegionId: 'region-live-1',
+        resolvedStoreId: 'store-live-1',
+        resolvedEmployeeId: 'employee-live-1',
+        resolvedPositionId: 'position-live-1',
+        promotedEntityId: 'employee-live-1',
+        rawPayload: {
+          firstName: 'Fatma',
+          lastName: 'Demir',
+        },
+        normalizedPayload: {
+          normalizedFirstName: 'Fatma',
+          normalizedLastName: 'Demir',
+          normalizedEmployeeCode: 'FM8374',
+          normalizedStoreCode: 'SM140',
+          normalizedPositionCode: 'SALES_ASSOCIATE',
+          normalizedHireDate: '2026-03-01',
+          normalizedEmploymentType: 'full_time',
+        },
+      },
+    ],
+    meta: {
+      count: 2,
+      total: 2,
+      limit: 2,
+      offset: 0,
+    },
+  },
+}
+
+const masterDataBootstrapReadinessFixture = {
+  summary: {
+    batchId: 'bootstrap-batch-personnel-1',
+    bootstrapEntity: 'personnel',
+    batchStatus: 'ready_to_promote',
+    rowCount: 2,
+    readyCount: 1,
+    waitingBatchCount: 0,
+    needsValidationCount: 0,
+    needsReviewCount: 0,
+    blockedCount: 0,
+    alreadyPromotedCount: 1,
+    canPromote: true,
+    nextAction: 'promote_ready_rows',
+  },
+  rows: {
+    items: [
+      {
+        rowId: 'personnel-row-ready-1',
+        rowNumber: 1,
+        sourceStoreCode: 'SM140',
+        sourceEmployeeCode: 'FM8375',
+        validationStatus: 'valid',
+        promotedEntityId: null,
+        promotionReadiness: 'ready',
+        blockReason: null,
+      },
+      {
+        rowId: 'personnel-row-promoted-1',
+        rowNumber: 2,
+        sourceStoreCode: 'SM140',
+        sourceEmployeeCode: 'FM8374',
+        validationStatus: 'promoted',
+        promotedEntityId: 'employee-live-1',
+        promotionReadiness: 'already_promoted',
+        blockReason: 'already_promoted',
+      },
+    ],
+    meta: {
+      count: 2,
+      total: 2,
+      limit: 2,
+      offset: 0,
+    },
+  },
+}
+
+const masterDataBootstrapPromotionFixture = {
+  command: {
+    status: 'promoted',
+    message: 'Personnel bootstrap rows promoted',
+  },
+  data: {
+    batch: {
+      ...masterDataBootstrapBatchSummary,
+      batchStatus: 'promoted',
+      validCount: 0,
+      promotedCount: 2,
+      promotedRows: [
+        {
+          rowId: 'personnel-row-ready-1',
+          promotedEntityId: 'employee-live-2',
+          assignmentId: 'assignment-live-1',
+        },
+      ],
+    },
+    promotedRows: [
+      {
+        rowId: 'personnel-row-ready-1',
+        promotedEntityId: 'employee-live-2',
+        assignmentId: 'assignment-live-1',
+      },
+    ],
   },
 }
