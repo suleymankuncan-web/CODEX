@@ -163,6 +163,29 @@ Plan dokumanlari:
 - `docs/superpowers/plans/2026-04-29-checklist-store-score-integration-v1.md`
 - `docs/superpowers/plans/2026-04-29-kpi-benchmark-scoring-v1.md`
 
+## Son Checklist Store Score Integration V1 Implementation
+
+29 Nisan 2026 itibariyla Checklist Store Score Integration V1 uygulandi ve release kapilarindan gecti.
+
+Eklenenler:
+
+- `rpt.generate_store_checklist_snapshot` artik yalnizca `completed` durumundaki ve `completed_at` donem araligina dusen checklist instance'larini aylik snapshot'a alir.
+- BM checklist aylik magaza skoruna `%5` agirlikla baglandi.
+- BM checklist eksikse magaza ceza yemez; KPI skoru normalize edilerek aylik skor kalir ve BM durumu `not_included` aciklanir.
+- VM checklist V1'de `future_inactive` olarak tutulur; aylik skoru dusurmez.
+- Backend `GET /api/reports/store-score-breakdown` store manager scope'u icinde KPI, BM ve VM katkisini dondurur.
+- Store KPI ekraninda aylik skor kirilimi, BM checklist durumu, katkisi ve V1 siniri kullaniciya aciklanir.
+
+Dogrulama:
+
+- Backend targeted: 5 suite / 16 test.
+- Backend build: `npm.cmd run build`.
+- Frontend build: `npm.cmd run build`.
+- Frontend targeted smoke: `store KPI highlights page explains metric source semantics`.
+- Root release gate: `npm.cmd run check:release`.
+
+Siradaki mantikli adim: `KPI Benchmark Scoring V1` planini uygulamak. Store/personel KPI metrikleri hedef veya ayni donem Turkiye ortalamasiyla puanlanacak, gercek oran saklanacak, skor katkisi `%120` cap ile sinirlanacak ve eksik referanslarda puan uydurulmayacak.
+
 ## Son Operational Feed V1
 
 26 Nisan 2026 itibariyla `Operational Feed V1` tamamlandi. `Competition Format Registry V1` yonu bilincli olarak superseded edildi; UPT/ATV/total score gibi odak yarislari V1'de yeni bir skor motoru degil, duyuru/challenge postu olarak ele aliniyor.
