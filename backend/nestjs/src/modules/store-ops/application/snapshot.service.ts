@@ -15,6 +15,7 @@ import {
   KpiScoreProfile,
   personnelKpiScoreProfile,
 } from "./kpi-config.contract";
+import { KpiBenchmarkScoringService } from "./kpi-benchmark-scoring.service";
 
 type SnapshotClient = {
   query: <T>(sql: string, params?: unknown[]) => Promise<{ rowCount: number; rows: T[] }>;
@@ -24,6 +25,7 @@ type SnapshotClient = {
 export class SnapshotService {
   private static readonly SNAPSHOT_STUCK_THRESHOLD_MINUTES = 60;
   private readonly logger = new Logger(SnapshotService.name);
+  private readonly kpiBenchmarkScoringService = new KpiBenchmarkScoringService();
 
   constructor(
     private readonly databaseService: DatabaseService,
@@ -804,6 +806,49 @@ export class SnapshotService {
       return;
     }
 
+    const benchmarkRows = await client.query<{
+      kpi_code: string;
+      benchmark_value: string | null;
+    }>(
+      `
+        WITH scoped_actual AS (
+          SELECT
+            ka.employee_id,
+            kd.kpi_code,
+            SUM(ka.actual_value) AS actual_value
+          FROM ops.kpi_actual ka
+          INNER JOIN ops.kpi_definition kd
+            ON kd.kpi_id = ka.kpi_id
+          WHERE ka.scope_type = 'employee'
+            AND ka.period_start >= $1::date
+            AND ka.period_end <= $2::date
+          GROUP BY ka.employee_id, kd.kpi_code
+        )
+        SELECT 'ATV' AS kpi_code,
+               (SUM(net_sales.actual_value) / NULLIF(SUM(ticket_count.actual_value), 0))::text AS benchmark_value
+        FROM scoped_actual net_sales
+        INNER JOIN scoped_actual ticket_count
+          ON ticket_count.employee_id = net_sales.employee_id
+          AND ticket_count.kpi_code = 'TICKET_COUNT'
+        WHERE net_sales.kpi_code = 'NET_SALES'
+        UNION ALL
+        SELECT 'UPT' AS kpi_code,
+               (SUM(item_count.actual_value) / NULLIF(SUM(ticket_count.actual_value), 0))::text AS benchmark_value
+        FROM scoped_actual item_count
+        INNER JOIN scoped_actual ticket_count
+          ON ticket_count.employee_id = item_count.employee_id
+          AND ticket_count.kpi_code = 'TICKET_COUNT'
+        WHERE item_count.kpi_code = 'ITEM_COUNT'
+      `,
+      [periodStart, periodEnd],
+    );
+    const benchmarkLookup = new Map(
+      benchmarkRows.rows.map((row) => [
+        row.kpi_code,
+        row.benchmark_value !== null ? Number(row.benchmark_value) : null,
+      ]),
+    );
+
     for (const row of rows.rows) {
       await client.query(
         `
@@ -851,15 +896,57 @@ export class SnapshotService {
     const scoreRows = [...metricLookupByEmployee.entries()].map(([employeeId, value]) => {
       const score = profile.metrics.reduce((sum, metric) => {
         const matchingCodes = [metric.code, ...(metric.aliases ?? [])];
-        const matchedValue = matchingCodes
-          .map((code) => value.values[code])
-          .find((candidate) => typeof candidate === "number");
-        return sum + (((matchedValue ?? 0) * metric.weightPercent) / 100);
+        const matchedCode = matchingCodes.find(
+          (code) => typeof value.values[code] === "number",
+        );
+        const actualValue = matchedCode ? value.values[matchedCode] : null;
+        const benchmarkSource =
+          metric.benchmarkSource ??
+          (metric.code === "TARGET_ACHIEVEMENT" ? "TARGET" : "TURKEY_AVERAGE");
+        const benchmarkValue =
+          benchmarkSource === "TURKEY_AVERAGE" && matchedCode
+            ? benchmarkLookup.get(matchedCode) ?? null
+            : null;
+        const metricScore = this.kpiBenchmarkScoringService.scoreMetric({
+          metricCode: metric.code,
+          actualValue,
+          benchmarkValue,
+          targetValue: null,
+          weightPercent: metric.weightPercent,
+          direction: metric.direction ?? "HIGHER_IS_BETTER",
+          benchmarkSource,
+          capRatio: metric.capRatio ?? 1.2,
+        });
+
+        return sum + (metricScore.scoreContribution ?? 0);
       }, 0);
 
       const matchedMetrics = profile.metrics.filter((metric) => {
         const matchingCodes = [metric.code, ...(metric.aliases ?? [])];
-        return matchingCodes.some((code) => typeof value.values[code] === "number");
+        const matchedCode = matchingCodes.find(
+          (code) => typeof value.values[code] === "number",
+        );
+        const actualValue = matchedCode ? value.values[matchedCode] : null;
+        const benchmarkSource =
+          metric.benchmarkSource ??
+          (metric.code === "TARGET_ACHIEVEMENT" ? "TARGET" : "TURKEY_AVERAGE");
+        const benchmarkValue =
+          benchmarkSource === "TURKEY_AVERAGE" && matchedCode
+            ? benchmarkLookup.get(matchedCode) ?? null
+            : null;
+
+        return (
+          this.kpiBenchmarkScoringService.scoreMetric({
+            metricCode: metric.code,
+            actualValue,
+            benchmarkValue,
+            targetValue: null,
+            weightPercent: metric.weightPercent,
+            direction: metric.direction ?? "HIGHER_IS_BETTER",
+            benchmarkSource,
+            capRatio: metric.capRatio ?? 1.2,
+          }).scoreStatus === "scored"
+        );
       }).length;
 
       return {
