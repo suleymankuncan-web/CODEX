@@ -137,6 +137,7 @@ Interpretation:
 - Mobile Checklist Today V1 is implemented; HR template versioning, region-manager assigned-store start/save/complete, completed-lock, store-manager acknowledgement, monthly visit averaging, and pilot frontend routes are guarded by targeted backend/frontend checks and root `check:release`.
 - Checklist Store Score Integration V1 is implemented; completed BM checklist visits now feed monthly store score transparently at `%5`, missing BM checklist is `not_included` instead of a penalty, and store-facing KPI highlights explain the breakdown.
 - KPI Benchmark Scoring V1 is implemented; store/personnel KPI scores now use target or same-period Turkey-average references, preserve real ratios, cap scored contribution at `%120`, expose capped/missing-reference explanations, and score employee snapshots through the same engine.
+- KPI Benchmark Source Policy V1 is documented; system-calculated scoped benchmarks are the scoring source, while PowerBI-provided Turkey-average rows are reconciliation evidence.
 - Full production UI/design-system and complete EN/TR localization expansion remain planned investments, not silent release debt.
 - Production UI/design-system is intentionally deferred into reversible pilots while backend/data foundations remain the priority.
 - The debt ledger itself is an accounting artifact and is not counted as a separate closed active debt item.
@@ -834,6 +835,17 @@ Interpretation:
 - References:
   - `docs/superpowers/specs/2026-04-29-kpi-benchmark-scoring-v1-design.md`
   - `docs/superpowers/plans/2026-04-29-kpi-benchmark-scoring-v1.md`
+
+### Decision Note: KPI Benchmark Source Policy V1
+- Recorded: 29 April 2026
+- Decision:
+  - system-calculated scoped Turkey benchmark is the authoritative scoring source
+  - PowerBI-provided Turkey-average/general-total rows are not store/personnel facts
+  - provided benchmark rows can be stored later as reconciliation evidence with lineage
+  - scoring must not silently fall back to PowerBI reference rows when system benchmark is missing
+  - import summary should warn if system benchmark and provided reference differ beyond tolerance
+- Reference:
+  - `docs/superpowers/specs/2026-04-29-kpi-benchmark-source-policy-v1-design.md`
 
 ### 1. Real IdP Staging Evidence
 - Priority: `P1`

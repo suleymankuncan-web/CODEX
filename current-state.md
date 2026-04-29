@@ -216,6 +216,29 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: Personel ve magaza hedef referanslarini skor motoruna temiz veri verecek sekilde netlestirmek. Yani hedef giris/onay akisi, HR_ADMIN eksik hedef gorunurlugu ve hedefi olmayan satirlarda `missing_reference` listesini yonetilebilir hale getirmek.
 
+## Son KPI Benchmark Source Policy V1 Karari
+
+29 Nisan 2026 itibariyla Turkiye ortalamasi benchmark kaynagi netlestirildi.
+
+Karar:
+
+- Asil skor benchmarki sistemin aktif kapsam icindeki magaza/personel verisinden hesaplanir.
+- PowerBI export icindeki `Turkiye ortalamasi`, `Genel toplam` veya benzeri alt ozet satirlari magaza/personel satiri gibi islenmez.
+- Bu ozet satirlar ileride `provided benchmark` kontrol kaniti olarak lineage ile saklanabilir.
+- Skorlama default olarak sistemin kendi hesapladigi benchmark ile yapilir.
+- PowerBI referansi ile sistem benchmarki farkliysa import ozetinde operator uyarisi verilmelidir.
+- Sistem benchmarki hesaplanamiyorsa PowerBI satirina sessiz fallback yapilmaz; skor `missing_reference` kalir.
+
+Neden:
+
+- Garaj, cadir, pop-up veya kapsam disi magazalar aktif kapsamda degilse benchmark hesabina girmemelidir.
+- PowerBI satirinin hangi filtrelerle olustugunu sistem garanti edemez.
+- Bu karar Excel pilotundan JSON/API kaynagina gecildiginde skor modelinin bozulmadan devam etmesini saglar.
+
+Referans:
+
+- `docs/superpowers/specs/2026-04-29-kpi-benchmark-source-policy-v1-design.md`
+
 ## Son Operational Feed V1
 
 26 Nisan 2026 itibariyla `Operational Feed V1` tamamlandi. `Competition Format Registry V1` yonu bilincli olarak superseded edildi; UPT/ATV/total score gibi odak yarislari V1'de yeni bir skor motoru degil, duyuru/challenge postu olarak ele aliniyor.
@@ -3496,6 +3519,7 @@ Planlar:
 - `docs/superpowers/plans/2026-04-29-checklist-store-score-integration-v1.md`
 - `docs/superpowers/specs/2026-04-29-kpi-benchmark-scoring-v1-design.md`
 - `docs/superpowers/plans/2026-04-29-kpi-benchmark-scoring-v1.md`
+- `docs/superpowers/specs/2026-04-29-kpi-benchmark-source-policy-v1-design.md`
 - `docs/superpowers/plans/2026-04-28-mobile-auth-session-v1.md`
 - `docs/superpowers/plans/2026-04-28-mobile-api-bff-endpoint-inventory-v1.md`
 - `docs/plans/project-wide-scan-2026-04-27.md`
