@@ -239,6 +239,31 @@ Referans:
 
 - `docs/superpowers/specs/2026-04-29-kpi-benchmark-source-policy-v1-design.md`
 
+## Son Target Reference Control Surface V1 Design
+
+29 Nisan 2026 itibariyla hedef referans kontrol yuzeyi icin tasarim notu yazildi.
+
+Kararlar:
+
+- Mevcut `ops.target_distribution_request` workflow/audit objesi olarak kalacak.
+- Skor motorunun okuyacagi hedef, onaylanmis ve query edilebilir target reference katmani olmalidir.
+- Magaza hedefi V1'de ayni donem store KPI/import hedefinden gelir; eksik veya sifirsa `missing_reference`.
+- Personel hedefi V1'de magaza muduru tarafindan girilir, bolge muduru tarafindan onaylanir ve onaydan sonra skor referansina terfi eder.
+- Personel target allocation yalniz `assigneeLabel` ile skorlanmamalidir; skor referansi icin gercek `employeeId` gereklidir.
+- HR_ADMIN hedefleri sessizce override etmez; V1'de eksik, pending, stale ve source conflict durumlarini gorebilen readiness/coverage yuzeyine sahip olur.
+- Closed snapshotlar kullandigi target reference id/version ile anchor edilmelidir; sonradan gelen duzeltmeler gecmisi sessizce degistirmez.
+
+CODEX durust yorum:
+
+- Hedef talebi ile skor referansini ayirmak kritik. Talep JSON'u workflow icin iyi; scoring icin temiz, onayli ve sorgulanabilir hedef referansi gerekiyor.
+- Bu adim gosterisli bir ekran degil ama performans skorunun ileride tartisilmasini engelleyen ana kolonlardan biri.
+
+Referans:
+
+- `docs/superpowers/specs/2026-04-29-target-reference-control-surface-v1-design.md`
+
+Siradaki mantikli adim: bu tasarim onaylanirsa implementation plan yazmak. Ilk kod adimi muhtemelen approved personnel target reference schema/contract ve mevcut target approval akisini bu referansa promote edecek dar backend plani olmali.
+
 ## Son Operational Feed V1
 
 26 Nisan 2026 itibariyla `Operational Feed V1` tamamlandi. `Competition Format Registry V1` yonu bilincli olarak superseded edildi; UPT/ATV/total score gibi odak yarislari V1'de yeni bir skor motoru degil, duyuru/challenge postu olarak ele aliniyor.
@@ -3520,6 +3545,7 @@ Planlar:
 - `docs/superpowers/specs/2026-04-29-kpi-benchmark-scoring-v1-design.md`
 - `docs/superpowers/plans/2026-04-29-kpi-benchmark-scoring-v1.md`
 - `docs/superpowers/specs/2026-04-29-kpi-benchmark-source-policy-v1-design.md`
+- `docs/superpowers/specs/2026-04-29-target-reference-control-surface-v1-design.md`
 - `docs/superpowers/plans/2026-04-28-mobile-auth-session-v1.md`
 - `docs/superpowers/plans/2026-04-28-mobile-api-bff-endpoint-inventory-v1.md`
 - `docs/plans/project-wide-scan-2026-04-27.md`

@@ -138,6 +138,7 @@ Interpretation:
 - Checklist Store Score Integration V1 is implemented; completed BM checklist visits now feed monthly store score transparently at `%5`, missing BM checklist is `not_included` instead of a penalty, and store-facing KPI highlights explain the breakdown.
 - KPI Benchmark Scoring V1 is implemented; store/personnel KPI scores now use target or same-period Turkey-average references, preserve real ratios, cap scored contribution at `%120`, expose capped/missing-reference explanations, and score employee snapshots through the same engine.
 - KPI Benchmark Source Policy V1 is documented; system-calculated scoped benchmarks are the scoring source, while PowerBI-provided Turkey-average rows are reconciliation evidence.
+- Target Reference Control Surface V1 is documented; target requests stay workflow/audit objects while approved target references become the future scoring source.
 - Full production UI/design-system and complete EN/TR localization expansion remain planned investments, not silent release debt.
 - Production UI/design-system is intentionally deferred into reversible pilots while backend/data foundations remain the priority.
 - The debt ledger itself is an accounting artifact and is not counted as a separate closed active debt item.
@@ -847,6 +848,17 @@ Interpretation:
 - Reference:
   - `docs/superpowers/specs/2026-04-29-kpi-benchmark-source-policy-v1-design.md`
 
+### Design Note: Target Reference Control Surface V1
+- Recorded: 29 April 2026
+- Decision:
+  - `ops.target_distribution_request` remains the request/workflow/audit object
+  - scoring should read approved target reference rows, not request JSON
+  - personnel target references require resolved `employeeId`, period, target value, source request, and approval evidence
+  - HR_ADMIN gets coverage/readiness visibility for missing, pending, stale, and conflicting targets
+  - closed snapshots must anchor target reference id/version and avoid silent retroactive mutation
+- Reference:
+  - `docs/superpowers/specs/2026-04-29-target-reference-control-surface-v1-design.md`
+
 ### 1. Real IdP Staging Evidence
 - Priority: `P1`
 - Why: local provider and action mechanics are proven, but production confidence still needs real staging IdP and seeded staging action evidence.
@@ -870,5 +882,5 @@ If neither staging values nor source ingest details are available, do not open s
 
 Recommended local candidate:
 
-- Plan the target reference control surface next: store/personnel target entry, region-manager approval, HR_ADMIN missing-target visibility, and how unresolved `missing_reference` rows are reviewed.
+- If this design is approved, write the implementation plan for Target Reference Control Surface V1.
 - Do not start a separate VM checklist, region-specific benchmark, or source-specific JSON adapter until target references are operationally clean.
