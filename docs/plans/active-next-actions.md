@@ -6,7 +6,7 @@ This is the short working list for the next practical steps. It keeps the projec
 
 ## Current Position
 
-As of 29 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, Store UX TR-First Copy V1, KPI Config Versioning V1, Source-Agnostic Ingest Contract Hardening V1, KPI Raw Row Lineage Persistence V1, Import Lineage Evidence Surface V1, Audit Event Taxonomy Guard V1, Data Quality Guard V1, Import Batch Quality Summary V1, Project-Wide Scope/Auth Guard Scan V1, No-Empty-Scope Repository Contract Pass V1, Production Environment Readiness Checklist V1, Environment Variable Inventory + Deployment Runbook Skeleton V1, Environment Drift Guard V1, Production/Staging Incident Response Skeleton V1, Personnel Management V1, Personnel Request Return/Resubmit V1, Personnel Master Data Bootstrap V1 planning, Project MVP Focus Map, Excel KPI Import V1, Excel KPI Import Operator Runbook V1, Production-Ready Migration System V1, Production Security Gate V1-A, Mobile Auth/Session V1 P0, Mobile API/BFF Endpoint Inventory V1, Checklist Acknowledgement Canonical Schema Alignment V1, Mobile Checklist Today V1 Design, Mobile Checklist Today V1, Checklist Store Score Integration V1, KPI Benchmark Scoring V1, Target Reference Control Surface V1, and Target Coverage V1-B Readiness Signals have:
+As of 29 April 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, Store UX TR-First Copy V1, KPI Config Versioning V1, Source-Agnostic Ingest Contract Hardening V1, KPI Raw Row Lineage Persistence V1, Import Lineage Evidence Surface V1, Audit Event Taxonomy Guard V1, Data Quality Guard V1, Import Batch Quality Summary V1, Project-Wide Scope/Auth Guard Scan V1, No-Empty-Scope Repository Contract Pass V1, Production Environment Readiness Checklist V1, Environment Variable Inventory + Deployment Runbook Skeleton V1, Environment Drift Guard V1, Production/Staging Incident Response Skeleton V1, Personnel Management V1, Personnel Request Return/Resubmit V1, Personnel Master Data Bootstrap V1 planning, Project MVP Focus Map, Excel KPI Import V1, Excel KPI Import Operator Runbook V1, Production-Ready Migration System V1, Production Security Gate V1-A, Mobile Auth/Session V1 P0, Mobile API/BFF Endpoint Inventory V1, Checklist Acknowledgement Canonical Schema Alignment V1, Mobile Checklist Today V1 Design, Mobile Checklist Today V1, Checklist Store Score Integration V1, KPI Benchmark Scoring V1, Target Reference Control Surface V1, Target Coverage V1-B Readiness Signals, and Personnel Master Data Bootstrap Staging Foundation V1 have:
 
 - saved drafts
 - edit/cancel/history
@@ -141,6 +141,7 @@ Interpretation:
 - KPI Benchmark Source Policy V1 is documented; system-calculated scoped benchmarks are the scoring source, while PowerBI-provided Turkey-average rows are reconciliation evidence.
 - Target Reference Control Surface V1 is implemented; target requests stay workflow/audit objects while approved personnel target references become the live/snapshot scoring source, and admin target coverage readiness exposes missing references.
 - Target Coverage V1-B Readiness Signals is implemented; target coverage now separates approved, pending approval, pending change conflict, stale reference, and missing states without changing scoring semantics.
+- Personnel Master Data Bootstrap Staging Foundation V1 is implemented; master-data rows can now be staged with raw/normalized payloads and row hashes without promoting into live operational tables.
 - Full production UI/design-system and complete EN/TR localization expansion remain planned investments, not silent release debt.
 - Production UI/design-system is intentionally deferred into reversible pilots while backend/data foundations remain the priority.
 - The debt ledger itself is an accounting artifact and is not counted as a separate closed active debt item.
@@ -884,6 +885,19 @@ Interpretation:
   - frontend `admin-targets.spec.ts` passed
   - root `npm.cmd run check:release` passed
 
+### Completed: Personnel Master Data Bootstrap Staging Foundation V1
+- Completed: 29 April 2026
+- Result:
+  - `stg.master_data_bootstrap_batch` and `stg.master_data_bootstrap_row` are in canonical schema and migration `040`
+  - rows keep raw payload, normalized payload, source store/employee codes, row hash, review status, resolved references, and future promotion evidence
+  - `POST /api/integrations/master-data-bootstrap/batches` stages store/personnel rows for HR/Admin review
+  - staging normalizes `SM-140`-style store codes to `SM140` and seller codes to trimmed uppercase values
+  - no live `ops.store`, `ops.employee`, or assignment writes happen in this slice
+- Verification:
+  - backend schema contract passed: 1 suite / 1 test
+  - backend targeted service/repository tests passed: 2 suite / 2 test
+  - root `npm.cmd run check:release` passed
+
 ### 1. Real IdP Staging Evidence
 - Priority: `P1`
 - Why: local provider and action mechanics are proven, but production confidence still needs real staging IdP and seeded staging action evidence.
@@ -907,6 +921,6 @@ If neither staging values nor source ingest details are available, do not open s
 
 Recommended local candidate:
 
-- If a true store/personnel baseline list with store codes and seller codes is available, start Personnel Master Data Bootstrap V1 through the intake gate.
+- Continue Personnel Master Data Bootstrap V1 with validation/read model before adding any promotion flow.
 - If no baseline/source evidence exists, keep source-specific adapter work closed and choose the next small guard only through the intake gate.
 - Do not start a separate VM checklist, region-specific benchmark, or source-specific JSON adapter until the needed real data or operator workflow exists.

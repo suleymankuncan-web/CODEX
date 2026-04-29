@@ -15,8 +15,10 @@ import { IntegrationService } from "../application/integration.service";
 import { RequireRoles } from "../../auth/decorators/roles.decorator";
 import { RequireScope } from "../../auth/decorators/scope.decorator";
 import { PowerBiExportUploadService } from "../application/power-bi-export-upload.service";
+import { MasterDataBootstrapService } from "../application/master-data-bootstrap.service";
 import { ApproveExternalIdMapDto } from "./dto/approve-external-id-map.dto";
 import { CreateImportBatchDto } from "./dto/create-import-batch.dto";
+import { CreateMasterDataBootstrapBatchDto } from "./dto/create-master-data-bootstrap-batch.dto";
 import { CreateIntegrationSourceDto } from "./dto/create-integration-source.dto";
 import { GetImportPayloadTemplateQueryDto } from "./dto/get-import-payload-template.query";
 import { ListDueIntegrationSourcesQueryDto } from "./dto/list-due-integration-sources.query";
@@ -34,6 +36,7 @@ export class IntegrationController {
   constructor(
     private readonly integrationService: IntegrationService,
     private readonly powerBiExportUploadService: PowerBiExportUploadService,
+    private readonly masterDataBootstrapService: MasterDataBootstrapService,
   ) {}
 
   @Get("sources")
@@ -234,6 +237,33 @@ export class IntegrationController {
       status: body.status,
       kpiImportEnabled: body.kpiImportEnabled,
       actorUserId: request.user.userId,
+    });
+  }
+
+  @Post("master-data-bootstrap/batches")
+  @RequireScope("company")
+  @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")
+  async createMasterDataBootstrapBatch(
+    @Req()
+    request: {
+      user: {
+        userId: string;
+        scope: {
+          companyIds: string[];
+        };
+      };
+    },
+    @Body() body: CreateMasterDataBootstrapBatchDto,
+  ) {
+    return this.masterDataBootstrapService.createBootstrapBatch({
+      actorUserId: request.user.userId,
+      actorScope: {
+        companyIds: request.user.scope.companyIds,
+      },
+      bootstrapEntity: body.bootstrapEntity,
+      sourceLabel: body.sourceLabel,
+      fileReference: body.fileReference,
+      rows: body.rows,
     });
   }
 

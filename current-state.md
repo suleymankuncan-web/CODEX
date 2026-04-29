@@ -346,6 +346,35 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: master data baseline gelirse Personnel Master Data Bootstrap V1'i staging/review/promote modeliyle baslatmak; gelmezse yeni adapter yazmadan mevcut import/target yuzeylerinde sadece gercek operator ihtiyaci olan kucuk guard'lari secmek.
 
+Bu siradaki adim baslatildi: `Personnel Master Data Bootstrap V1-A/B` staging foundation ve batch staging API uygulandi.
+
+## Son Personnel Master Data Bootstrap V1-A/B
+
+29 Nisan 2026 itibariyla master data icin dogrudan Excel-to-live-table yerine kontrollu bootstrap zemini eklendi.
+
+Eklenenler:
+
+- `stg.master_data_bootstrap_batch` ve `stg.master_data_bootstrap_row` canonical staging tablolari eklendi.
+- Yeni migration: `db/migrations/040_master_data_bootstrap_foundation.sql`.
+- Batch/row tablolari ham payload, normalize payload, row hash, review durumu, resolved store/employee/position referanslari ve gelecekteki promote kanitini tutar.
+- Backend `POST /api/integrations/master-data-bootstrap/batches` endpoint'i eklendi.
+- Yetki: `HR_ADMIN`, `SUPER_ADMIN`, `INTEGRATION_ADMIN`.
+- Endpoint satirlari staging'e alir, store kodunu `SM-140` -> `SM140` gibi normalize eder, seller code'u trim/uppercase yapar ve SHA-256 row hash uretir.
+- Bu adim bilincli olarak `ops.store`, `ops.employee` veya `ops.employee_assignment_history` tablolarina veri yazmaz.
+
+Dogrulama:
+
+- Schema contract red/green: `master-data-bootstrap-schema-contract.spec.ts` -> 1 suite / 1 test.
+- Backend targeted staging tests: service + repository -> 2 suite / 2 test.
+- Root release gate: `npm.cmd run check:release` -> 46 root script test, backend lint + 71 suite / 416 test + build + audit, frontend lint + 7 script test + build + 40 Playwright test + audit.
+
+CODEX durust yorum:
+
+- Bu, master data icin dogru ilk kolon. Artik "dosyayi yukledim, sistem canli tabloya basti" gibi tehlikeli bir yol acilmiyor.
+- Henuz full bootstrap bitmedi; siradaki teknik borc validation/read model ve sonra promote akisi. Ama en kritik sinir, yani staging ile live arasindaki kapı, artik schema ve API seviyesinde ayrildi.
+
+Siradaki mantikli adim: V1-C validation read model. Batch satirlari eksik store code, bilinmeyen store type, bilinmeyen position ve duplicate row durumlarina gore `valid`, `needs_review`, `invalid` olarak siniflandirilmeli; promote hala kapali kalmali.
+
 ## Son Operational Feed V1
 
 26 Nisan 2026 itibariyla `Operational Feed V1` tamamlandi. `Competition Format Registry V1` yonu bilincli olarak superseded edildi; UPT/ATV/total score gibi odak yarislari V1'de yeni bir skor motoru degil, duyuru/challenge postu olarak ele aliniyor.

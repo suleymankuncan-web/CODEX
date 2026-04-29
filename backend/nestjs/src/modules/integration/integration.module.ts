@@ -7,6 +7,8 @@ import { ExternalIdMappingService } from "./application/external-id-mapping.serv
 import { KpiImportNormalizationService } from "./application/kpi-import-normalization.service";
 import { IntegrationSchedulerService } from "./application/integration-scheduler.service";
 import { PowerBiExportUploadService } from "./application/power-bi-export-upload.service";
+import { MasterDataBootstrapService } from "./application/master-data-bootstrap.service";
+import { MasterDataBootstrapRepository } from "./infrastructure/master-data-bootstrap.repository";
 
 @Module({
   controllers: [IntegrationController],
@@ -18,6 +20,8 @@ import { PowerBiExportUploadService } from "./application/power-bi-export-upload
     KpiImportNormalizationService,
     IntegrationSchedulerService,
     PowerBiExportUploadService,
+    MasterDataBootstrapService,
+    MasterDataBootstrapRepository,
   ],
   exports: [
     IntegrationService,
@@ -27,6 +31,8 @@ import { PowerBiExportUploadService } from "./application/power-bi-export-upload
     KpiImportNormalizationService,
     IntegrationSchedulerService,
     PowerBiExportUploadService,
+    MasterDataBootstrapService,
+    MasterDataBootstrapRepository,
   ],
 })
 export class IntegrationModule {}
