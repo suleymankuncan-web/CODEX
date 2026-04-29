@@ -19,7 +19,32 @@ test('store manager checklist surface keeps acknowledgement language', async ({ 
   await expect(page.getByText('Kabul ettim')).toBeVisible()
 })
 
-async function setupChecklistPage(page: Page, roleCodes: string[]) {
+test('visual merchandiser sees checklist-only VM coverage and no broad store links', async ({ page }) => {
+  await setupChecklistPage(page, ['VISUAL_MERCHANDISER'], {
+    templateType: 'VM_STORE_VISIT',
+    templateCode: 'VM_VISIT_V1',
+    templateName: 'VM Visit',
+    activeInstances: [],
+    monthlySummaries: [],
+  })
+  await page.goto('/store/checklists')
+
+  await expect(page.getByText('VM checklist yapilmadi')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Checklist yap' })).toBeVisible()
+  await expect(page.locator('a[href="/admin/reports"]')).toHaveCount(0)
+  await expect(page.locator('a[href="/store/feed"]')).toHaveCount(0)
+  await expect(page.locator('a[href="/store/competitions"]')).toHaveCount(0)
+})
+
+type ChecklistFixtureOptions = {
+  templateType?: string
+  templateCode?: string
+  templateName?: string
+  activeInstances?: typeof mobileChecklistTodayFixture.data.activeInstances
+  monthlySummaries?: typeof mobileChecklistTodayFixture.data.monthlySummaries
+}
+
+async function setupChecklistPage(page: Page, roleCodes: string[], options: ChecklistFixtureOptions = {}) {
   const roleCodeHeader = roleCodes.join(',')
   await page.addInitScript((roles) => {
     window.localStorage.setItem(
@@ -34,16 +59,16 @@ async function setupChecklistPage(page: Page, roleCodes: string[]) {
     )
   }, roleCodeHeader)
 
-  await routeChecklistApi(page, roleCodes)
+  await routeChecklistApi(page, roleCodes, options)
 }
 
-async function routeChecklistApi(page: Page, roleCodes: string[]) {
+async function routeChecklistApi(page: Page, roleCodes: string[], options: ChecklistFixtureOptions) {
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: createAuthSessionFixture(roleCodes) })
   })
 
   await page.route('**/api/mobile/checklists/today', async (route) => {
-    await route.fulfill({ json: mobileChecklistTodayFixture })
+    await route.fulfill({ json: createMobileChecklistTodayFixture(options) })
   })
 
   await page.route('**/api/checklists/acknowledgements/list', async (route) => {
@@ -98,19 +123,35 @@ function createAuthSessionFixture(roleCodes: string[]) {
   }
 }
 
-const mobileChecklistTodayFixture = {
+function createMobileChecklistTodayFixture(options: ChecklistFixtureOptions = {}) {
+  const templateType = options.templateType ?? 'BM_STORE_VISIT'
+  const templateCode = options.templateCode ?? 'BM_VISIT_V1'
+  const templateName = options.templateName ?? 'BM Visit'
+
+  return {
   data: {
     stores: [{ storeId, storeName: 'Marmara Park' }],
     templates: [
       {
         checklistTemplateId: templateId,
-        templateCode: 'BM_VISIT_V1',
-        templateType: 'BM_STORE_VISIT',
-        templateName: 'BM Visit',
+        templateCode,
+        templateType,
+        templateName,
         versionNo: 1,
+        items: [
+          {
+            templateItemId: '55555555-5555-4555-8555-555555555555',
+            sectionName: 'Gorsel duzen',
+            itemNo: 1,
+            itemText: 'Vitrin standartlara uygun',
+            responseType: 'score',
+            weight: 100,
+            maxScore: 10,
+          },
+        ],
       },
     ],
-    activeInstances: [
+    activeInstances: options.activeInstances ?? [
       {
         checklistInstanceId: '33333333-3333-4333-8333-333333333333',
         checklistTemplateId: templateId,
@@ -122,7 +163,7 @@ const mobileChecklistTodayFixture = {
     ],
     completedThisMonth: [],
     pendingAcknowledgements: [],
-    monthlySummaries: [
+    monthlySummaries: options.monthlySummaries ?? [
       {
         storeId,
         checklistTemplateId: templateId,
@@ -132,6 +173,7 @@ const mobileChecklistTodayFixture = {
       },
     ],
   },
+}
 }
 
 const checklistAcknowledgementsFixture = {

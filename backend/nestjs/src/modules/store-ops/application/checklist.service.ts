@@ -62,6 +62,7 @@ export class ChecklistService {
     checklistTemplateId: string;
     storeId: string;
     actorUserId: string;
+    actorRoleCodes?: string[];
     actorActionScope?: {
       assignedStoreIds: string[];
     };
@@ -71,6 +72,17 @@ export class ChecklistService {
       input.storeId,
       "Requested store is outside assigned action stores",
     );
+
+    const template = await this.checklistRepository.getPublishedTemplateForStore({
+      checklistTemplateId: input.checklistTemplateId,
+      storeId: input.storeId,
+    });
+
+    if (!template) {
+      throw new BadRequestException("Checklist template is not available for this store");
+    }
+
+    this.assertCanMutateTemplateType(input.actorRoleCodes ?? [], template.templateType);
 
     return buildCommandResponse({
       status: "created",
@@ -88,10 +100,13 @@ export class ChecklistService {
       regionIds?: string[];
       storeIds: string[];
     };
+    actorRoleCodes?: string[];
     actorActionScope?: {
       assignedStoreIds: string[];
     };
   }) {
+    const allowedTemplateTypes = this.resolveReadableTemplateTypes(input.actorRoleCodes ?? []);
+
     return {
       data: await this.checklistRepository.getMobileChecklistToday({
         actorUserId: input.actorUserId,
@@ -99,6 +114,7 @@ export class ChecklistService {
         readStoreIds: input.actorScope.storeIds,
         readRegionIds: input.actorScope.regionIds ?? [],
         readCompanyIds: input.actorScope.companyIds ?? [],
+        allowedTemplateTypes,
       }),
     };
   }
@@ -109,6 +125,7 @@ export class ChecklistService {
     scoreValue: number;
     commentText?: string;
     actorUserId: string;
+    actorRoleCodes?: string[];
     actorActionScope?: {
       assignedStoreIds: string[];
     };
@@ -116,6 +133,7 @@ export class ChecklistService {
     await this.assertCanActOnMobileChecklistInstance(
       input.checklistInstanceId,
       input.actorActionScope,
+      input.actorRoleCodes ?? [],
     );
 
     return buildCommandResponse({
@@ -130,6 +148,7 @@ export class ChecklistService {
   async completeMobileChecklistInstance(input: {
     checklistInstanceId: string;
     actorUserId: string;
+    actorRoleCodes?: string[];
     actorActionScope?: {
       assignedStoreIds: string[];
     };
@@ -137,6 +156,7 @@ export class ChecklistService {
     await this.assertCanActOnMobileChecklistInstance(
       input.checklistInstanceId,
       input.actorActionScope,
+      input.actorRoleCodes ?? [],
     );
 
     return buildCommandResponse({
@@ -302,6 +322,7 @@ export class ChecklistService {
   private async assertCanActOnMobileChecklistInstance(
     checklistInstanceId: string,
     actionScope: { assignedStoreIds: string[] } | undefined,
+    roleCodes: string[],
   ) {
     const instanceScope =
       await this.checklistRepository.getMobileChecklistInstanceScope(checklistInstanceId);
@@ -311,6 +332,7 @@ export class ChecklistService {
     }
 
     this.assertNotCompleted(instanceScope.status);
+    this.assertCanMutateTemplateType(roleCodes, instanceScope.templateType);
     this.assertCanActOnStore(
       actionScope,
       instanceScope.storeId,
@@ -322,6 +344,42 @@ export class ChecklistService {
     if (status === "completed") {
       throw new BadRequestException("Completed checklist instances are locked");
     }
+  }
+
+  private assertCanMutateTemplateType(roleCodes: string[], templateType: string) {
+    if (roleCodes.includes("SUPER_ADMIN")) {
+      return;
+    }
+
+    if (templateType === "BM_STORE_VISIT" && roleCodes.includes("REGION_MANAGER")) {
+      return;
+    }
+
+    if (templateType === "VM_STORE_VISIT" && roleCodes.includes("VISUAL_MERCHANDISER")) {
+      return;
+    }
+
+    throw new ForbiddenException("Checklist template type is not available for this role");
+  }
+
+  private resolveReadableTemplateTypes(roleCodes: string[]) {
+    if (roleCodes.includes("SUPER_ADMIN")) {
+      return ["BM_STORE_VISIT", "VM_STORE_VISIT"];
+    }
+
+    if (roleCodes.includes("VISUAL_MERCHANDISER")) {
+      return ["VM_STORE_VISIT"];
+    }
+
+    if (roleCodes.includes("REGION_MANAGER")) {
+      return ["BM_STORE_VISIT"];
+    }
+
+    if (roleCodes.includes("STORE_MANAGER")) {
+      return ["BM_STORE_VISIT", "VM_STORE_VISIT"];
+    }
+
+    return [];
   }
 
   private assertCanActOnStore(

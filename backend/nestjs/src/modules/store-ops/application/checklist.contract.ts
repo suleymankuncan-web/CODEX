@@ -76,6 +76,15 @@ export type MobileChecklistToday = {
     templateType: ChecklistTemplateType;
     templateName: string;
     versionNo: number;
+    items: Array<{
+      templateItemId: string;
+      sectionName: string;
+      itemNo: number;
+      itemText: string;
+      responseType: ChecklistTemplateResponseType;
+      weight: number;
+      maxScore: number;
+    }>;
   }>;
   activeInstances: Array<{
     checklistInstanceId: string;

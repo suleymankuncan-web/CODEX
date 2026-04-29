@@ -6,6 +6,8 @@ describe("Mobile checklist today flow", () => {
   const otherStoreId = "99999999-9999-4999-8999-999999999999";
   const regionId = "12121212-1212-4121-8121-121212121212";
   const templateId = "22222222-2222-4222-8222-222222222222";
+  const vmTemplateId = "77777777-7777-4777-8777-777777777777";
+  const templateItemId = "55555555-5555-4555-8555-555555555555";
 
   it("returns mobile today payload with monthly visit average", async () => {
     const query = jest.fn(async (sql: string) => {
@@ -15,7 +17,25 @@ describe("Mobile checklist today flow", () => {
         };
       }
 
+      if (sql.includes("FROM ops.checklist_template_item cti")) {
+        return {
+          rows: [
+            {
+              checklist_template_id: templateId,
+              template_item_id: templateItemId,
+              section_name: "Standart",
+              item_no: 1,
+              item_text: "Magaza ziyareti standardi",
+              response_type: "score",
+              weight: "100.00",
+              max_score: "10.00",
+            },
+          ],
+        };
+      }
+
       if (sql.includes("FROM ops.checklist_template ct")) {
+        expect(sql).toContain("ct.template_type = ANY");
         return {
           rows: [
             {
@@ -70,6 +90,17 @@ describe("Mobile checklist today flow", () => {
           templateType: "BM_STORE_VISIT",
           templateName: "BM Visit",
           versionNo: 1,
+          items: [
+            {
+              templateItemId,
+              sectionName: "Standart",
+              itemNo: 1,
+              itemText: "Magaza ziyareti standardi",
+              responseType: "score",
+              weight: 100,
+              maxScore: 10,
+            },
+          ],
         },
       ],
       activeInstances: [],
@@ -89,7 +120,7 @@ describe("Mobile checklist today flow", () => {
     await app.close();
   });
 
-  it("allows visual merchandisers to read today but blocks BM checklist mutations", async () => {
+  it("filters VM checklist today payload to VM templates for visual merchandisers", async () => {
     const query = jest.fn(async (sql: string) => {
       if (sql.includes("FROM ops.store s") && sql.includes("ORDER BY s.store_name ASC")) {
         return {
@@ -97,14 +128,32 @@ describe("Mobile checklist today flow", () => {
         };
       }
 
-      if (sql.includes("FROM ops.checklist_template ct")) {
+      if (sql.includes("FROM ops.checklist_template_item cti")) {
         return {
           rows: [
             {
-              checklist_template_id: templateId,
-              template_code: "BM_VISIT_V1",
-              template_type: "BM_STORE_VISIT",
-              template_name: "BM Visit",
+              checklist_template_id: vmTemplateId,
+              template_item_id: templateItemId,
+              section_name: "Gorsel duzen",
+              item_no: 1,
+              item_text: "Vitrin standartlara uygun",
+              response_type: "score",
+              weight: "100.00",
+              max_score: "10.00",
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("FROM ops.checklist_template ct")) {
+        expect(sql).toContain("ct.template_type = ANY");
+        return {
+          rows: [
+            {
+              checklist_template_id: vmTemplateId,
+              template_code: "VM_VISIT_V1",
+              template_type: "VM_STORE_VISIT",
+              template_name: "VM Visit",
               version_no: 1,
             },
           ],
@@ -129,6 +178,101 @@ describe("Mobile checklist today flow", () => {
       .set("x-assigned-store-ids", storeId);
 
     expect(todayResponse.status).toBe(200);
+    expect(todayResponse.body.data.templates).toEqual([
+      {
+        checklistTemplateId: vmTemplateId,
+        templateCode: "VM_VISIT_V1",
+        templateType: "VM_STORE_VISIT",
+        templateName: "VM Visit",
+        versionNo: 1,
+        items: [
+          {
+            templateItemId,
+            sectionName: "Gorsel duzen",
+            itemNo: 1,
+            itemText: "Vitrin standartlara uygun",
+            responseType: "score",
+            weight: 100,
+            maxScore: 10,
+          },
+        ],
+      },
+    ]);
+
+    await app.close();
+  });
+
+  it("lets visual merchandisers start VM checklists for assigned stores", async () => {
+    const query = jest.fn(async (sql: string) => {
+      if (sql.includes("SELECT ct.checklist_template_id") && sql.includes("ct.template_type")) {
+        return {
+          rows: [
+            {
+              checklist_template_id: vmTemplateId,
+              template_type: "VM_STORE_VISIT",
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("INSERT INTO ops.checklist_instance")) {
+        return {
+          rows: [
+            {
+              checklist_instance_id: "33333333-3333-4333-8333-333333333333",
+              status: "in_progress",
+              created_at: "2026-04-29T10:00:00.000Z",
+            },
+          ],
+        };
+      }
+
+      return { rows: [] };
+    });
+    const app = await createIntegrationApp({
+      databaseService: {
+        query,
+        withTransaction: async <T>(work: (client: { query: typeof query }) => Promise<T>) =>
+          work({ query }),
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .post("/api/mobile/checklists/instances")
+      .set("x-user-id", "vm-user-1")
+      .set("x-role-codes", "VISUAL_MERCHANDISER")
+      .set("x-store-ids", storeId)
+      .set("x-assigned-store-ids", storeId)
+      .send({ checklistTemplateId: vmTemplateId, storeId });
+
+    expect(response.status).toBe(201);
+    expect(response.body.command.status).toBe("created");
+
+    await app.close();
+  });
+
+  it("blocks visual merchandisers from starting BM checklists", async () => {
+    const query = jest.fn(async (sql: string) => {
+      if (sql.includes("SELECT ct.checklist_template_id") && sql.includes("ct.template_type")) {
+        return {
+          rows: [
+            {
+              checklist_template_id: templateId,
+              template_type: "BM_STORE_VISIT",
+            },
+          ],
+        };
+      }
+
+      return { rows: [] };
+    });
+    const app = await createIntegrationApp({
+      databaseService: {
+        query,
+        withTransaction: async <T>(work: (client: { query: typeof query }) => Promise<T>) =>
+          work({ query }),
+      },
+    });
 
     const startBmChecklistResponse = await request(app.getHttpServer())
       .post("/api/mobile/checklists/instances")
@@ -143,8 +287,55 @@ describe("Mobile checklist today flow", () => {
     await app.close();
   });
 
+  it("blocks region managers from starting VM checklists in V1", async () => {
+    const query = jest.fn(async (sql: string) => {
+      if (sql.includes("SELECT ct.checklist_template_id") && sql.includes("ct.template_type")) {
+        return {
+          rows: [
+            {
+              checklist_template_id: vmTemplateId,
+              template_type: "VM_STORE_VISIT",
+            },
+          ],
+        };
+      }
+
+      return { rows: [] };
+    });
+    const app = await createIntegrationApp({
+      databaseService: {
+        query,
+        withTransaction: async <T>(work: (client: { query: typeof query }) => Promise<T>) =>
+          work({ query }),
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .post("/api/mobile/checklists/instances")
+      .set("x-user-id", "region-user-1")
+      .set("x-role-codes", "REGION_MANAGER")
+      .set("x-store-ids", storeId)
+      .set("x-assigned-store-ids", storeId)
+      .send({ checklistTemplateId: vmTemplateId, storeId });
+
+    expect(response.status).toBe(403);
+
+    await app.close();
+  });
+
   it("lets region managers start a checklist only for assigned stores", async () => {
     const query = jest.fn(async (sql: string) => {
+      if (sql.includes("SELECT ct.checklist_template_id") && sql.includes("ct.template_type")) {
+        return {
+          rows: [
+            {
+              checklist_template_id: templateId,
+              template_type: "BM_STORE_VISIT",
+            },
+          ],
+        };
+      }
+
       if (sql.includes("INSERT INTO ops.checklist_instance")) {
         return {
           rows: [
@@ -179,6 +370,10 @@ describe("Mobile checklist today flow", () => {
     expect(allowed.body.data.checklistInstance.status).toBe("in_progress");
     expect(query).toHaveBeenCalledWith(
       expect.stringContaining("ct.status = 'published'"),
+      [templateId, storeId],
+    );
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO ops.checklist_instance"),
       [templateId, storeId, "region-user-1"],
     );
 
@@ -234,13 +429,17 @@ describe("Mobile checklist today flow", () => {
         };
       }
 
-      if (sql.includes("SELECT checklist_instance_id, store_id, status")) {
+      if (
+        sql.includes("SELECT ci.checklist_instance_id, ci.store_id, ci.status") ||
+        sql.includes("SELECT checklist_instance_id, store_id, status")
+      ) {
         return {
           rows: [
             {
               checklist_instance_id: "33333333-3333-4333-8333-333333333333",
               store_id: storeId,
               status: "in_progress",
+              template_type: "BM_STORE_VISIT",
             },
           ],
         };

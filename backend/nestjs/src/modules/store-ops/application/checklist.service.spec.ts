@@ -25,6 +25,7 @@ describe("ChecklistService", () => {
     getDraftTemplateForPublish?: jest.Mock;
     publishTemplate?: jest.Mock;
     createTemplate?: jest.Mock;
+    getPublishedTemplateForStore?: jest.Mock;
     startMobileChecklistInstance?: jest.Mock;
     getMobileChecklistInstanceScope?: jest.Mock;
     saveMobileChecklistResponse?: jest.Mock;
@@ -270,6 +271,9 @@ describe("ChecklistService", () => {
 
   it("starts a mobile checklist instance for an assigned store", async () => {
     const checklistRepository = {
+      getPublishedTemplateForStore: jest.fn().mockResolvedValue({
+        templateType: "BM_STORE_VISIT",
+      }),
       startMobileChecklistInstance: jest.fn().mockResolvedValue({
         checklist_instance_id: "instance-1",
         status: "in_progress",
@@ -281,6 +285,7 @@ describe("ChecklistService", () => {
       checklistTemplateId: "template-1",
       storeId: "store-1",
       actorUserId: "user-1",
+      actorRoleCodes: ["REGION_MANAGER"],
       actorActionScope: {
         assignedStoreIds: ["store-1"],
       },
@@ -291,6 +296,7 @@ describe("ChecklistService", () => {
       checklistTemplateId: "template-1",
       storeId: "store-1",
       actorUserId: "user-1",
+      actorRoleCodes: ["REGION_MANAGER"],
       actorActionScope: {
         assignedStoreIds: ["store-1"],
       },
@@ -337,6 +343,7 @@ describe("ChecklistService", () => {
         actorScope: {
           storeIds: ["read-store-1"],
         },
+        actorRoleCodes: ["REGION_MANAGER"],
         actorActionScope: {
           assignedStoreIds: ["store-1"],
         },
@@ -349,6 +356,7 @@ describe("ChecklistService", () => {
       readStoreIds: ["read-store-1"],
       readRegionIds: [],
       readCompanyIds: [],
+      allowedTemplateTypes: ["BM_STORE_VISIT"],
     });
   });
 
@@ -384,6 +392,7 @@ describe("ChecklistService", () => {
         checklistInstanceId: "instance-1",
         storeId: "store-1",
         status: "in_progress",
+        templateType: "BM_STORE_VISIT",
       }),
       completeMobileChecklistInstance: jest
         .fn()
@@ -395,6 +404,7 @@ describe("ChecklistService", () => {
       service.completeMobileChecklistInstance({
         checklistInstanceId: "instance-1",
         actorUserId: "user-1",
+        actorRoleCodes: ["REGION_MANAGER"],
         actorActionScope: {
           assignedStoreIds: ["store-1"],
         },
@@ -408,6 +418,7 @@ describe("ChecklistService", () => {
         checklistInstanceId: "instance-1",
         storeId: "store-1",
         status: "in_progress",
+        templateType: "BM_STORE_VISIT",
       }),
       completeMobileChecklistInstance: jest.fn().mockResolvedValue({
         checklist_instance_id: "instance-1",
@@ -421,6 +432,7 @@ describe("ChecklistService", () => {
     const result = await service.completeMobileChecklistInstance({
       checklistInstanceId: "instance-1",
       actorUserId: "user-1",
+      actorRoleCodes: ["REGION_MANAGER"],
       actorActionScope: {
         assignedStoreIds: ["store-1"],
       },

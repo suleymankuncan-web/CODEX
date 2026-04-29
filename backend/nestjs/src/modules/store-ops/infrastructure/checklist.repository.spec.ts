@@ -3,6 +3,7 @@ import { ChecklistRepository } from "./checklist.repository";
 function createQueryMock(overrides?: {
   stores?: Record<string, unknown>[];
   templates?: Record<string, unknown>[];
+  templateItems?: Record<string, unknown>[];
   activeInstances?: Record<string, unknown>[];
   completedThisMonth?: Record<string, unknown>[];
   monthlySummaries?: Record<string, unknown>[];
@@ -11,6 +12,7 @@ function createQueryMock(overrides?: {
     .fn()
     .mockResolvedValueOnce({ rows: overrides?.stores ?? [] })
     .mockResolvedValueOnce({ rows: overrides?.templates ?? [] })
+    .mockResolvedValueOnce({ rows: overrides?.templateItems ?? [] })
     .mockResolvedValueOnce({ rows: overrides?.activeInstances ?? [] })
     .mockResolvedValueOnce({ rows: overrides?.completedThisMonth ?? [] })
     .mockResolvedValueOnce({ rows: overrides?.monthlySummaries ?? [] });
@@ -386,6 +388,7 @@ describe("ChecklistRepository", () => {
       actorUserId: "region-user-1",
       assignedStoreIds: [],
       readStoreIds: [],
+      allowedTemplateTypes: ["BM_STORE_VISIT"],
     });
 
     expect(result).toEqual({
@@ -409,6 +412,7 @@ describe("ChecklistRepository", () => {
       actorUserId: "region-user-1",
       assignedStoreIds: ["assigned-store-1"],
       readStoreIds: ["read-store-1"],
+      allowedTemplateTypes: ["BM_STORE_VISIT"],
     });
 
     expect(query).toHaveBeenCalledWith(expect.stringContaining("s.store_id = ANY($1::uuid[])"), [
@@ -416,7 +420,7 @@ describe("ChecklistRepository", () => {
     ]);
     expect(query).toHaveBeenCalledWith(
       expect.stringContaining("SELECT DISTINCT s.company_id"),
-      [["assigned-store-1"]],
+      [["assigned-store-1"], ["BM_STORE_VISIT"]],
     );
   });
 
@@ -430,6 +434,7 @@ describe("ChecklistRepository", () => {
       actorUserId: "region-user-1",
       assignedStoreIds: [],
       readStoreIds: ["read-store-1"],
+      allowedTemplateTypes: ["BM_STORE_VISIT"],
     });
 
     expect(query).toHaveBeenCalledWith(expect.stringContaining("s.store_id = ANY($1::uuid[])"), [
@@ -437,6 +442,7 @@ describe("ChecklistRepository", () => {
     ]);
     expect(query).toHaveBeenCalledWith(expect.stringContaining("SELECT DISTINCT s.company_id"), [
       ["read-store-1"],
+      ["BM_STORE_VISIT"],
     ]);
   });
 
@@ -452,6 +458,7 @@ describe("ChecklistRepository", () => {
       readStoreIds: [],
       readRegionIds: ["region-1"],
       readCompanyIds: ["company-1"],
+      allowedTemplateTypes: ["BM_STORE_VISIT"],
     });
 
     expect(query).toHaveBeenNthCalledWith(
@@ -461,7 +468,7 @@ describe("ChecklistRepository", () => {
     );
     expect(query).toHaveBeenCalledWith(
       expect.stringContaining("SELECT DISTINCT s.company_id"),
-      [["region-store-1"]],
+      [["region-store-1"], ["BM_STORE_VISIT"]],
     );
   });
 
@@ -477,6 +484,18 @@ describe("ChecklistRepository", () => {
           version_no: 3,
         },
       ],
+      templateItems: [
+        {
+          checklist_template_id: "template-1",
+          template_item_id: "item-1",
+          section_name: "Sales floor",
+          item_no: 1,
+          item_text: "Review presentation",
+          response_type: "score",
+          weight: "100.00",
+          max_score: "5.00",
+        },
+      ],
     });
     const repository = new ChecklistRepository({ query } as never);
 
@@ -484,6 +503,7 @@ describe("ChecklistRepository", () => {
       actorUserId: "region-user-1",
       assignedStoreIds: ["store-1"],
       readStoreIds: ["read-store-1"],
+      allowedTemplateTypes: ["BM_STORE_VISIT"],
     });
 
     const [templateSql, templateParams] = query.mock.calls[1];
@@ -491,7 +511,7 @@ describe("ChecklistRepository", () => {
     expect(templateSql).toContain("ct.company_id IN");
     expect(templateSql).toContain("SELECT DISTINCT s.company_id");
     expect(templateSql).toContain("s.store_id = ANY($1::uuid[])");
-    expect(templateParams).toEqual([["store-1"]]);
+    expect(templateParams).toEqual([["store-1"], ["BM_STORE_VISIT"]]);
     expect(result.templates).toEqual([
       {
         checklistTemplateId: "template-1",
@@ -499,6 +519,17 @@ describe("ChecklistRepository", () => {
         templateType: "BM_STORE_VISIT",
         templateName: "BM Visit",
         versionNo: 3,
+        items: [
+          {
+            templateItemId: "item-1",
+            sectionName: "Sales floor",
+            itemNo: 1,
+            itemText: "Review presentation",
+            responseType: "score",
+            weight: 100,
+            maxScore: 5,
+          },
+        ],
       },
     ]);
   });
@@ -513,6 +544,7 @@ describe("ChecklistRepository", () => {
       actorUserId: "region-user-1",
       assignedStoreIds: ["store-1"],
       readStoreIds: [],
+      allowedTemplateTypes: ["BM_STORE_VISIT"],
     });
 
     const completedSql = query.mock.calls[3][0] as string;

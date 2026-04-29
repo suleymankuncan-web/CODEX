@@ -27,6 +27,7 @@ export class MobileChecklistController {
     return this.checklistService.getMobileChecklistToday({
       actorUserId: request.user.userId,
       actorScope: request.user.scope,
+      actorRoleCodes: request.user.roleCodes,
       actorActionScope: request.user.actionScope,
     });
   }
@@ -34,7 +35,7 @@ export class MobileChecklistController {
   @Post("instances")
   @RequireScope("store")
   @RequireActionScope("store")
-  @RequireRoles("REGION_MANAGER", "SUPER_ADMIN")
+  @RequireRoles("REGION_MANAGER", "VISUAL_MERCHANDISER", "SUPER_ADMIN")
   async startInstance(
     @Req()
     request: {
@@ -46,13 +47,14 @@ export class MobileChecklistController {
       checklistTemplateId: body.checklistTemplateId,
       storeId: body.storeId,
       actorUserId: request.user.userId,
+      actorRoleCodes: request.user.roleCodes,
       actorActionScope: request.user.actionScope,
     });
   }
 
   @Patch("instances/:checklistInstanceId/responses")
   @RequireScope("authenticated")
-  @RequireRoles("REGION_MANAGER", "SUPER_ADMIN")
+  @RequireRoles("REGION_MANAGER", "VISUAL_MERCHANDISER", "SUPER_ADMIN")
   async saveResponse(
     @Param() params: MobileChecklistInstanceParamsDto,
     @Req()
@@ -67,13 +69,14 @@ export class MobileChecklistController {
       scoreValue: body.scoreValue,
       commentText: body.commentText,
       actorUserId: request.user.userId,
+      actorRoleCodes: request.user.roleCodes,
       actorActionScope: request.user.actionScope,
     });
   }
 
   @Post("instances/:checklistInstanceId/complete")
   @RequireScope("authenticated")
-  @RequireRoles("REGION_MANAGER", "SUPER_ADMIN")
+  @RequireRoles("REGION_MANAGER", "VISUAL_MERCHANDISER", "SUPER_ADMIN")
   async completeInstance(
     @Param() params: MobileChecklistInstanceParamsDto,
     @Req()
@@ -84,6 +87,7 @@ export class MobileChecklistController {
     return this.checklistService.completeMobileChecklistInstance({
       checklistInstanceId: params.checklistInstanceId,
       actorUserId: request.user.userId,
+      actorRoleCodes: request.user.roleCodes,
       actorActionScope: request.user.actionScope,
     });
   }

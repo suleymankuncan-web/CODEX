@@ -45,6 +45,15 @@ export type MobileChecklistToday = {
     templateType: string
     templateName: string
     versionNo: number
+    items: Array<{
+      templateItemId: string
+      sectionName: string
+      itemNo: number
+      itemText: string
+      responseType: string
+      weight: number
+      maxScore: number
+    }>
   }>
   activeInstances: Array<{
     checklistInstanceId: string
@@ -97,6 +106,37 @@ export async function startMobileChecklistInstance(input: {
     {
       method: 'POST',
       body: input,
+    },
+  )
+}
+
+export async function saveMobileChecklistResponse(input: {
+  checklistInstanceId: string
+  templateItemId: string
+  scoreValue: number
+  commentText?: string
+}) {
+  return sendJson<CommandResponse<{ checklistResponse: { response_id: string; responded_at: string } }>>(
+    `/mobile/checklists/instances/${input.checklistInstanceId}/responses`,
+    {
+      method: 'PATCH',
+      body: {
+        templateItemId: input.templateItemId,
+        scoreValue: input.scoreValue,
+        commentText: input.commentText,
+      },
+    },
+  )
+}
+
+export async function completeMobileChecklistInstance(input: {
+  checklistInstanceId: string
+}) {
+  return sendJson<CommandResponse<{ checklistInstance: { checklist_instance_id: string; status: string } }>>(
+    `/mobile/checklists/instances/${input.checklistInstanceId}/complete`,
+    {
+      method: 'POST',
+      body: {},
     },
   )
 }

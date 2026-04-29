@@ -449,6 +449,8 @@ function StoreShell(input: {
   authSummary: AuthSessionSummary | null
   firstAllowedPath: string
 }) {
+  const checklistOnly = isVisualMerchandiserOnly(input.authSummary)
+
   if (input.shellState.mode === 'setup-required') {
     return <Navigate to="/auth/login" replace />
   }
@@ -489,6 +491,8 @@ function StoreShell(input: {
           <NavLink to="/auth/login" className="control-button store-shell-link">
             Gerçek giriş
           </NavLink>
+          {!checklistOnly ? (
+            <>
           <NavLink to="/admin/reports" className="control-button store-shell-link">
             Admin raporları
           </NavLink>
@@ -498,6 +502,8 @@ function StoreShell(input: {
           <NavLink to="/store/competitions" className="control-button store-shell-link">
             Yarışmalar
           </NavLink>
+            </>
+          ) : null}
         </div>
       </header>
 
@@ -506,57 +512,61 @@ function StoreShell(input: {
           <Routes>
             <Route
               path="/store"
-              element={
+              element={checklistOnly ? (
+                <Navigate to="/store/checklists" replace />
+              ) : (
                 <StoreShellPreviewPage
                   authSummary={input.authSummary}
                   recommendedLanding={input.firstAllowedPath}
                 />
-              }
+              )}
             />
             <Route
               path="/store/home"
-              element={
+              element={checklistOnly ? (
+                <Navigate to="/store/checklists" replace />
+              ) : (
                 <StoreShellPreviewPage
                   authSummary={input.authSummary}
                   recommendedLanding={input.firstAllowedPath}
                 />
-              }
+              )}
             />
             <Route
               path="/store/checklists"
-              element={<StoreChecklistsPage authSummary={input.authSummary} />}
+              element={guardStoreRoute(input.authSummary, <StoreChecklistsPage authSummary={input.authSummary} />, { allowVm: true })}
             />
             <Route
               path="/store/tasks"
-              element={<StoreTasksPage authSummary={input.authSummary} />}
+              element={guardStoreRoute(input.authSummary, <StoreTasksPage authSummary={input.authSummary} />)}
             />
             <Route
               path="/store/kpis"
-              element={<StoreKpiHighlightsPage authSummary={input.authSummary} />}
+              element={guardStoreRoute(input.authSummary, <StoreKpiHighlightsPage authSummary={input.authSummary} />)}
             />
             <Route
               path="/store/me"
-              element={<StoreMyPerformancePage authSummary={input.authSummary} />}
+              element={guardStoreRoute(input.authSummary, <StoreMyPerformancePage authSummary={input.authSummary} />)}
             />
             <Route
               path="/store/rankings"
-              element={<StoreRankingsPage authSummary={input.authSummary} />}
+              element={guardStoreRoute(input.authSummary, <StoreRankingsPage authSummary={input.authSummary} />)}
             />
             <Route
               path="/store/feed"
-              element={<StoreFeedPage authSummary={input.authSummary} />}
+              element={guardStoreRoute(input.authSummary, <StoreFeedPage authSummary={input.authSummary} />)}
             />
             <Route
               path="/store/competitions"
-              element={<StoreCompetitionsPage authSummary={input.authSummary} />}
+              element={guardStoreRoute(input.authSummary, <StoreCompetitionsPage authSummary={input.authSummary} />)}
             />
             <Route
               path="/store/approvals"
-              element={<StoreApprovalsPage authSummary={input.authSummary} />}
+              element={guardStoreRoute(input.authSummary, <StoreApprovalsPage authSummary={input.authSummary} />)}
             />
             <Route
               path="/store/incentives"
-              element={<StoreIncentivesPage authSummary={input.authSummary} />}
+              element={guardStoreRoute(input.authSummary, <StoreIncentivesPage authSummary={input.authSummary} />)}
             />
             <Route path="*" element={<Navigate to="/store" replace />} />
           </Routes>
@@ -568,6 +578,18 @@ function StoreShell(input: {
 
 function RouteLoadingState() {
   return <ScreenState title="Loading route" copy="Preparing the requested surface." />
+}
+
+function guardStoreRoute(
+  authSummary: AuthSessionSummary | null,
+  element: ReactNode,
+  options?: { allowVm?: boolean },
+) {
+  if (isVisualMerchandiserOnly(authSummary) && !options?.allowVm) {
+    return <ForbiddenRoute firstAllowedPath="/store/checklists" />
+  }
+
+  return <>{element}</>
 }
 
 function SessionGate(input: { shellState: ShellState; firstAllowedPath: string }) {
@@ -712,6 +734,10 @@ function resolveLandingPath(authSummary: AuthSessionSummary | null, isReady: boo
     return '/admin/auth'
   }
 
+  if (hasAnyRole(roles, ['VISUAL_MERCHANDISER'])) {
+    return '/store/checklists'
+  }
+
   return '/store'
 }
 
@@ -739,6 +765,12 @@ function isNavAllowed(item: NavDefinition, authSummary: AuthSessionSummary | nul
   }
 
   return hasAnyRole(authSummary?.user.roleCodes ?? [], item.roles)
+}
+
+function isVisualMerchandiserOnly(authSummary: AuthSessionSummary | null) {
+  const roles = authSummary?.user.roleCodes ?? []
+  const broadRoles = ['SUPER_ADMIN', 'HR_ADMIN', 'REGION_MANAGER', 'STORE_MANAGER']
+  return roles.includes('VISUAL_MERCHANDISER') && !hasAnyRole(roles, broadRoles)
 }
 
 function hasAnyRole(userRoles: string[], requiredRoles: string[]) {

@@ -3975,6 +3975,41 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: bu plan onaylandiktan sonra implementation'a gecmek; once backend role/type/scope testleri kirmizi-yesil kapatilacak, sonra frontend checklist-only VM yuzeyi eklenecek.
 
+## Son VM Checklist V1 Implementation
+
+29 Nisan 2026 itibariyla VM Checklist V1 action enablement uygulandi.
+
+Eklenenler:
+
+- `VISUAL_MERCHANDISER` checklist-only store yuzeyine yonlenir.
+- VM kullanicisi atanmis magazalarda `VM_STORE_VISIT` checklist baslatabilir, kaydedebilir ve tamamlayabilir.
+- VM kullanicisi `BM_STORE_VISIT` mutasyonu yapamaz.
+- `REGION_MANAGER` V1'de `VM_STORE_VISIT` mutasyonu yapamaz.
+- Mobile checklist read model role gore BM/VM template type filtreler.
+- Store manager tamamlanmis VM checklist sonucunu acknowledgement olarak gorebilir.
+- `/store/checklists` VM icin atanmis magaza x VM template coverage satirlarini ve yapilmadi durumunu gosterir.
+
+Dogrulama:
+
+- Backend targeted mobile/auth/repository testleri gecti: 53/53.
+- Backend checklist service unit testi gecti: 14/14.
+- Backend build gecti.
+- Frontend build gecti.
+- Frontend checklist e2e gecti: 3/3.
+- Root `check:release` gecti:
+  - script testleri: 46/46,
+  - backend: 73 suite / 464 test,
+  - frontend e2e: 43/43,
+  - audit: 0 vulnerability.
+
+CODEX durust yorum:
+
+- VM checklist dogru sekilde mevcut checklist motoruna baglandi; ayri modul borcu acilmadi.
+- Guvenlik siniri backend role/type/scope katmaninda kilitlendi, UI sadece bunun gorunur yuzeyi oldu.
+- Skor katkisi bilincli olarak ikinci fazda bekletildi. Once pilotta VM checklist kaniti gorecegiz.
+
+Siradaki mantikli adim: pilot VM kullanicisi ile tarayici smoke yapmak; sonra VM score contribution activation icin KPI `%90`, BM `%5`, VM `%5` blend planina gecmek.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:

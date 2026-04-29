@@ -18,8 +18,10 @@ import {
 } from '../features/auth/authorization'
 import {
   acknowledgeChecklist,
+  completeMobileChecklistInstance,
   getChecklistAcknowledgements,
   getMobileChecklistToday,
+  saveMobileChecklistResponse,
   startMobileChecklistInstance,
   type ChecklistAcknowledgementItem,
 } from '../features/checklists/api'
@@ -36,7 +38,13 @@ export function StoreChecklistsPage(input: {
   const queryClient = useQueryClient()
   const [ackNotes, setAckNotes] = useState<Record<string, string>>({})
   const [ackNotice, setAckNotice] = useState<string | null>(null)
-  const canManageVisits = hasAnyRole(input.authSummary, ['REGION_MANAGER', 'SUPER_ADMIN'])
+  const [scores, setScores] = useState<Record<string, number>>({})
+  const [comments, setComments] = useState<Record<string, string>>({})
+  const canManageVisits = hasAnyRole(input.authSummary, [
+    'REGION_MANAGER',
+    'VISUAL_MERCHANDISER',
+    'SUPER_ADMIN',
+  ])
   const canUseAcknowledgements = hasAnyRole(input.authSummary, ['STORE_MANAGER', 'SUPER_ADMIN'])
   const checklistsQuery = useQuery({
     queryKey: ['checklist-acknowledgements'],
@@ -64,6 +72,20 @@ export function StoreChecklistsPage(input: {
       setAckNotice(result.command.message)
     },
   })
+  const saveResponseMutation = useMutation({
+    mutationFn: saveMobileChecklistResponse,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['mobile-checklists-today'] })
+      setAckNotice('Checklist cevabi kaydedildi')
+    },
+  })
+  const completeVisitMutation = useMutation({
+    mutationFn: completeMobileChecklistInstance,
+    onSuccess: (result) => {
+      void queryClient.invalidateQueries({ queryKey: ['mobile-checklists-today'] })
+      setAckNotice(result.command.message)
+    },
+  })
 
   if (
     (canUseAcknowledgements && checklistsQuery.isLoading) ||
@@ -71,8 +93,8 @@ export function StoreChecklistsPage(input: {
   ) {
     return (
       <ScreenState
-        title="Loading checklist acknowledgements"
-        copy="Pulling checklist visit and acknowledgement work for this store scope."
+        title="Checklist alani hazirlaniyor"
+        copy="Atanmis magaza checklistleri ve acknowledgement sirasi yukleniyor."
       />
     )
   }
@@ -83,7 +105,7 @@ export function StoreChecklistsPage(input: {
   ) {
     return (
       <ScreenState
-        title="Checklist acknowledgement queue unavailable"
+        title="Checklist alani acilamadi"
         copy={getErrorMessage(checklistsQuery.error ?? mobileTodayQuery.error)}
         tone="error"
       />
@@ -97,11 +119,29 @@ export function StoreChecklistsPage(input: {
   const acknowledgedItems = items.filter((item) => item.acknowledgement !== null).slice(0, 5)
   const assignedStoreIds = getAssignedStoreIds(input.authSummary)
   const primaryStoreId = assignedStoreIds[0] ?? 'No action store'
-  const firstStore = mobileToday?.stores[0]
-  const firstTemplate = mobileToday?.templates[0]
-  const activeVisit = mobileToday?.activeInstances[0]
-  const monthlySummary = mobileToday?.monthlySummaries[0]
-  const canStartFirstStore = firstStore ? assignedStoreIds.includes(firstStore.storeId) : false
+  const coverageRows = (mobileToday?.stores ?? []).flatMap((store) =>
+    (mobileToday?.templates ?? []).map((template) => {
+      const active = mobileToday?.activeInstances.find(
+        (item) =>
+          item.storeId === store.storeId &&
+          item.checklistTemplateId === template.checklistTemplateId,
+      )
+      const summary = mobileToday?.monthlySummaries.find(
+        (item) =>
+          item.storeId === store.storeId &&
+          item.checklistTemplateId === template.checklistTemplateId,
+      )
+
+      return {
+        store,
+        template,
+        active,
+        summary,
+        completedCount: summary?.completedCount ?? 0,
+      }
+    }),
+  )
+  const activeVisitCount = coverageRows.filter((row) => row.active).length
 
   return (
     <section className="page-stack">
@@ -109,17 +149,17 @@ export function StoreChecklistsPage(input: {
         <div>
           <div className="eyebrow">Store Checklists</div>
           <h2 className="hero-title">
-            Completed field checklists should arrive here as acknowledgement work, not as approval.
+            Checklist sonuclari onay degil, goruldu bilgisi olarak akar.
           </h2>
           <p className="hero-copy">
-            This is the first real acknowledgement flow. Store managers do not reject these items;
-            they confirm they have seen and accepted the checklist outcome.
+            BM ve VM ziyaretleri ayni checklist motorunda kalir; rol, sablon tipi ve magaza
+            kapsami backend tarafinda korunur.
           </p>
         </div>
         <div className="hero-metrics">
           <MetricAccent label="Route" value="/store/checklists" />
           <MetricAccent label="Store scope" value={primaryStoreId} />
-          <MetricAccent label="Mode" value="Acknowledgement" />
+          <MetricAccent label="Mode" value={canManageVisits ? 'Visit' : 'Acknowledgement'} />
         </div>
       </section>
 
@@ -141,7 +181,7 @@ export function StoreChecklistsPage(input: {
         <MetricCard
           title="Action model"
           value={1}
-          note="This flow confirms receipt instead of requesting an approval decision."
+          note="Checklist result confirmation stays separate from approval."
           icon={<ShieldAlert size={18} />}
           tone="accent"
         />
@@ -151,69 +191,170 @@ export function StoreChecklistsPage(input: {
         <section className="panel" aria-label="Assigned store checklist visits">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Ziyaret Akışı</div>
-              <h3>Atanmış mağaza checklist ziyaretleri</h3>
+              <div className="eyebrow">Ziyaret Akisi</div>
+              <h3>Atanmis magaza checklist ziyaretleri</h3>
             </div>
-            <StatusPill tone={activeVisit ? 'warning' : 'accent'}>
-              {activeVisit ? 'Taslak' : 'Hazır'}
+            <StatusPill tone={activeVisitCount > 0 ? 'warning' : 'accent'}>
+              {activeVisitCount > 0 ? 'Devam ediyor' : 'Hazir'}
             </StatusPill>
           </div>
 
-          <div className="key-grid">
-            <KeyValue label="Mağaza" value={firstStore?.storeName ?? primaryStoreId} />
-            <KeyValue label="Şablon" value={firstTemplate?.templateName ?? 'Aktif şablon yok'} />
-            <KeyValue
-              label="Bu ay"
-              value={
-                monthlySummary
-                  ? `${monthlySummary.completedCount} ziyaret / ${monthlySummary.averageScore ?? 0} ort.`
-                  : 'Ziyaret yok'
-              }
+          {coverageRows.length === 0 ? (
+            <EmptyState
+              title="Aktif checklist bulunamadi"
+              copy="Atanmis magaza ve yayinlanmis checklist sablonu geldiginde ziyaret akisi burada gorunur."
             />
-            <KeyValue label="Durum" value={activeVisit ? formatState(activeVisit.status) : 'Yeni ziyaret'} />
-          </div>
-
-          {activeVisit ? (
-            <div className="stacked-table">
-              <article className="stacked-row">
-                <div className="stacked-row-head">
-                  <strong>{firstTemplate?.templateName ?? activeVisit.checklistTemplateId}</strong>
-                  <StatusPill tone="warning">Ziyaret taslağı</StatusPill>
-                </div>
-                <p>
-                  {firstStore?.storeName ?? activeVisit.storeId} -{' '}
-                  {activeVisit.startedAt ? formatDateTime(activeVisit.startedAt) : 'başladı'}
-                </p>
-                <div className="action-cluster">
-                  <button className="control-button" type="button" disabled>
-                    Checklist yap
-                  </button>
-                  <button className="control-button" type="button" disabled>
-                    Tamamla
-                  </button>
-                </div>
-              </article>
-            </div>
           ) : (
-            <div className="action-cluster">
-              <button
-                className="control-button"
-                type="button"
-                disabled={!firstStore || !firstTemplate || !canStartFirstStore || startVisitMutation.isPending}
-                onClick={() => {
-                  if (!firstStore || !firstTemplate) return
-                  startVisitMutation.mutate({
-                    storeId: firstStore.storeId,
-                    checklistTemplateId: firstTemplate.checklistTemplateId,
-                  })
-                }}
-              >
-                {startVisitMutation.isPending ? 'Başlatılıyor...' : 'Checklist yap'}
-              </button>
+            <div className="stacked-table">
+              {coverageRows.map((row) => {
+                const active = row.active
+                return (
+                  <article
+                    className="stacked-row"
+                    key={`${row.store.storeId}:${row.template.checklistTemplateId}`}
+                  >
+                    <div className="stacked-row-head">
+                      <strong>{row.store.storeName}</strong>
+                      <StatusPill
+                        tone={active ? 'warning' : row.completedCount > 0 ? 'calm' : 'danger'}
+                      >
+                        {describeChecklistCoverage(row)}
+                      </StatusPill>
+                    </div>
+                    <p>{row.template.templateName}</p>
+                    <div className="key-grid">
+                      <KeyValue label="Sablon tipi" value={row.template.templateType} />
+                      <KeyValue
+                        label="Bu ay"
+                        value={
+                          row.summary
+                            ? `${row.summary.completedCount} ziyaret / ${row.summary.averageScore ?? 0} ort.`
+                            : 'Ziyaret yok'
+                        }
+                      />
+                      <KeyValue
+                        label="Durum"
+                        value={active ? formatState(active.status) : 'Yeni ziyaret'}
+                      />
+                      <KeyValue label="Magaza" value={row.store.storeId} />
+                    </div>
+
+                    {active ? (
+                      <div className="stacked-table">
+                        {row.template.items.map((item) => (
+                          <article className="stacked-row" key={item.templateItemId}>
+                            <div className="stacked-row-head">
+                              <strong>{item.itemText}</strong>
+                              <StatusPill tone="accent">{`${item.weight}%`}</StatusPill>
+                            </div>
+                            <div className="key-grid">
+                              <KeyValue label="Bolum" value={item.sectionName} />
+                              <KeyValue label="Maksimum" value={String(item.maxScore)} />
+                            </div>
+                            <label className="eyebrow" htmlFor={`score-${item.templateItemId}`}>
+                              Puan
+                            </label>
+                            <input
+                              id={`score-${item.templateItemId}`}
+                              type="number"
+                              min={0}
+                              max={item.maxScore}
+                              value={scores[item.templateItemId] ?? 0}
+                              onChange={(event) =>
+                                setScores((current) => ({
+                                  ...current,
+                                  [item.templateItemId]: Number(event.target.value),
+                                }))
+                              }
+                            />
+                            <label className="eyebrow" htmlFor={`comment-${item.templateItemId}`}>
+                              Not
+                            </label>
+                            <textarea
+                              id={`comment-${item.templateItemId}`}
+                              rows={2}
+                              value={comments[item.templateItemId] ?? ''}
+                              onChange={(event) =>
+                                setComments((current) => ({
+                                  ...current,
+                                  [item.templateItemId]: event.target.value,
+                                }))
+                              }
+                            />
+                            <div className="action-cluster">
+                              <button
+                                className="control-button"
+                                type="button"
+                                disabled={saveResponseMutation.isPending}
+                                onClick={() =>
+                                  saveResponseMutation.mutate({
+                                    checklistInstanceId: active.checklistInstanceId,
+                                    templateItemId: item.templateItemId,
+                                    scoreValue: scores[item.templateItemId] ?? 0,
+                                    commentText: comments[item.templateItemId] || undefined,
+                                  })
+                                }
+                              >
+                                Kaydet
+                              </button>
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    <div className="action-cluster">
+                      {!active ? (
+                        <button
+                          className="control-button"
+                          type="button"
+                          disabled={
+                            !assignedStoreIds.includes(row.store.storeId) ||
+                            startVisitMutation.isPending
+                          }
+                          onClick={() =>
+                            startVisitMutation.mutate({
+                              storeId: row.store.storeId,
+                              checklistTemplateId: row.template.checklistTemplateId,
+                            })
+                          }
+                        >
+                          {startVisitMutation.isPending ? 'Baslatiliyor...' : 'Checklist yap'}
+                        </button>
+                      ) : (
+                        <>
+                        <button className="control-button" type="button" disabled>
+                          Checklist yap
+                        </button>
+                        <button
+                          className="control-button"
+                          type="button"
+                          disabled={completeVisitMutation.isPending}
+                          onClick={() =>
+                            completeVisitMutation.mutate({
+                              checklistInstanceId: active.checklistInstanceId,
+                            })
+                          }
+                        >
+                          Tamamla
+                        </button>
+                        </>
+                      )}
+                    </div>
+                  </article>
+                )
+              })}
             </div>
           )}
+
           {startVisitMutation.isError ? (
             <p className="queue-subtitle">{getErrorMessage(startVisitMutation.error)}</p>
+          ) : null}
+          {saveResponseMutation.isError ? (
+            <p className="queue-subtitle">{getErrorMessage(saveResponseMutation.error)}</p>
+          ) : null}
+          {completeVisitMutation.isError ? (
+            <p className="queue-subtitle">{getErrorMessage(completeVisitMutation.error)}</p>
           ) : null}
         </section>
       ) : null}
@@ -349,6 +490,19 @@ export function StoreChecklistsPage(input: {
       </div>
     </section>
   )
+}
+
+function describeChecklistCoverage(input: {
+  active?: { status: string }
+  completedCount: number
+  template: { templateType: string }
+}) {
+  const prefix = input.template.templateType === 'VM_STORE_VISIT' ? 'VM checklist' : 'BM checklist'
+
+  if (input.active) return 'Taslak'
+  if (input.completedCount > 1) return `${input.completedCount} ${prefix} tamamlandi`
+  if (input.completedCount === 1) return `1 ${prefix} tamamlandi`
+  return `${prefix} yapilmadi`
 }
 
 function AcknowledgedChecklistRow(input: { item: ChecklistAcknowledgementItem }) {
