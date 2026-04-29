@@ -23,6 +23,60 @@ type TargetDistributionRow = {
   updated_at: string;
 };
 
+type TargetDistributionAllocation = {
+  employeeId: string;
+  assigneeLabel: string;
+  targetValue: number;
+  note?: string;
+};
+
+function parseTargetDistributionAllocations(
+  value: unknown,
+): TargetDistributionAllocation[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object") {
+        return null;
+      }
+
+      const allocation = item as Record<string, unknown>;
+      const employeeId =
+        typeof allocation.employeeId === "string" ? allocation.employeeId : "";
+      const assigneeLabel =
+        typeof allocation.assigneeLabel === "string"
+          ? allocation.assigneeLabel
+          : "";
+      const targetValue = Number(allocation.targetValue);
+      const note = typeof allocation.note === "string" ? allocation.note : undefined;
+
+      if (
+        !employeeId ||
+        !assigneeLabel ||
+        !Number.isFinite(targetValue) ||
+        targetValue <= 0
+      ) {
+        return null;
+      }
+
+      const parsed: TargetDistributionAllocation = {
+        employeeId,
+        assigneeLabel,
+        targetValue,
+      };
+
+      if (note !== undefined) {
+        parsed.note = note;
+      }
+
+      return parsed;
+    })
+    .filter((item): item is TargetDistributionAllocation => item !== null);
+}
+
 @Injectable()
 export class TargetDistributionRepository {
   constructor(private readonly databaseService: DatabaseService) {}
@@ -288,6 +342,63 @@ export class TargetDistributionRepository {
       );
 
       const request = result.rows[0];
+      const allocations = parseTargetDistributionAllocations(request.allocation_json);
+
+      for (const allocation of allocations) {
+        await client.query(
+          `
+            INSERT INTO ops.personnel_target_reference (
+              source_request_id,
+              company_id,
+              region_id,
+              store_id,
+              employee_id,
+              period_start,
+              period_end,
+              target_value,
+              target_type,
+              status,
+              approved_by_user_id,
+              approved_at
+            )
+            VALUES (
+              $1::uuid,
+              $2::uuid,
+              $3::uuid,
+              $4::uuid,
+              $5::uuid,
+              $6::date,
+              ($6::date + INTERVAL '1 month' - INTERVAL '1 day')::date,
+              $7::numeric,
+              'monthly_sales_target',
+              'approved',
+              $8,
+              $9::timestamptz
+            )
+            ON CONFLICT (employee_id, period_start, period_end, target_type)
+            WHERE status = 'approved'
+            DO UPDATE SET
+              source_request_id = EXCLUDED.source_request_id,
+              company_id = EXCLUDED.company_id,
+              region_id = EXCLUDED.region_id,
+              store_id = EXCLUDED.store_id,
+              target_value = EXCLUDED.target_value,
+              approved_by_user_id = EXCLUDED.approved_by_user_id,
+              approved_at = EXCLUDED.approved_at
+          `,
+          [
+            request.target_distribution_request_id,
+            request.company_id,
+            request.region_id,
+            request.store_id,
+            allocation.employeeId,
+            request.request_month,
+            allocation.targetValue,
+            input.approverUserId,
+            request.approved_at,
+          ],
+        );
+      }
 
       await client.query(
         `
@@ -323,6 +434,7 @@ export class TargetDistributionRepository {
             correlationId: RequestContextStore.getCorrelationId(),
             actorUserId: input.approverUserId,
             approvalNote: input.approvalNote ?? null,
+            promotedTargetReferenceCount: allocations.length,
           }),
         ],
       );
