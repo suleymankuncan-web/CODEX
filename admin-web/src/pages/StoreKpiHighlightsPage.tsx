@@ -15,6 +15,7 @@ import {
   getKpiConfig,
   getKpiReport,
   getReportingSnapshotRuns,
+  getStoreScoreBreakdown,
   getStoreKpiHighlights,
 } from '../features/reports/api'
 import { formatDate, formatState, getErrorMessage } from '../lib/format'
@@ -157,6 +158,21 @@ export function StoreKpiHighlightsPage(input: {
     retry: false,
   })
 
+  const scoreBreakdownQuery = useQuery({
+    queryKey: ['store-score-breakdown', snapshotRunId || 'no-run', primaryStoreId ?? 'no-store'],
+    queryFn: () =>
+      getStoreScoreBreakdown({
+        snapshotRunId,
+        storeId: primaryStoreId ?? '',
+      }),
+    enabled:
+      reportingAllowed &&
+      viewMode === 'closed' &&
+      Boolean(snapshotRunId) &&
+      Boolean(primaryStoreId),
+    retry: false,
+  })
+
   const liveRows = useMemo<DisplayKpiRow[]>(() => {
     return (
       liveKpiQuery.data?.metrics.map((metric) => ({
@@ -289,6 +305,16 @@ export function StoreKpiHighlightsPage(input: {
       missingWeight: Math.max(0, 100 - coveredWeight),
     }
   }, [rows, storeKpiScoreProfile])
+  const closedScoreBreakdown = scoreBreakdownQuery.data ?? null
+  const bmChecklistStatusLabel =
+    closedScoreBreakdown?.components.bmChecklist.included
+      ? `${closedScoreBreakdown.components.bmChecklist.visitCount} checklist yapildi`
+      : 'Bu donem skora dahil edilmedi'
+  const bmChecklistContributionLabel =
+    closedScoreBreakdown?.components.bmChecklist.contribution !== null &&
+    closedScoreBreakdown?.components.bmChecklist.contribution !== undefined
+      ? formatMetric(closedScoreBreakdown.components.bmChecklist.contribution)
+      : 'Katki yok'
 
   const matchedMetricCount = weightedScore.contributions.filter(
     (item) => item.matchingRow?.scoreStatus === 'scored',
@@ -595,6 +621,39 @@ export function StoreKpiHighlightsPage(input: {
           icon={<TrendingUp size={18} />}
           tone={storeGrade.tone}
         />
+      </section>
+
+      <section className="panel">
+        <div className="panel-heading">
+          <div>
+            <div className="eyebrow">Aylik skor kirilimi</div>
+            <h3>Checklist etkisi</h3>
+          </div>
+          <StatusPill tone={viewMode === 'closed' ? 'calm' : 'neutral'}>
+            {viewMode === 'closed' ? 'Final snapshot' : 'Canli on izleme'}
+          </StatusPill>
+        </div>
+        <div className="key-grid">
+          <KeyValue
+            label="KPI katkisi"
+            value={
+              closedScoreBreakdown?.components.kpi.contribution !== null &&
+              closedScoreBreakdown?.components.kpi.contribution !== undefined
+                ? formatMetric(closedScoreBreakdown.components.kpi.contribution)
+                : `${formatMetric(weightedScore.scoreValue * 100)} puan`
+            }
+          />
+          <KeyValue label="BM checklist" value={bmChecklistStatusLabel} />
+          <KeyValue label="BM katkisi" value={bmChecklistContributionLabel} />
+          <KeyValue
+            label="VM checklist"
+            value="Gelecek faz; V1 skorunu dusurmez"
+          />
+        </div>
+        <p className="helper-text">
+          BM checklist tamamlanan aylik ziyaret varsa %5 katkida kullanilir. Ziyaret yoksa
+          magaza ceza yemez ve KPI skoru normalize okunur.
+        </p>
       </section>
 
       <section className="two-up-grid">

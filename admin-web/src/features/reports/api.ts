@@ -260,6 +260,32 @@ export type StoreKpiHighlightsSummary = {
   metrics: StoreKpiHighlightMetric[]
 }
 
+export type StoreScoreBreakdownComponent = {
+  included: boolean
+  score: number | null
+  weight: number
+  contribution: number | null
+  status: string
+  missingReason?: string
+}
+
+export type StoreMonthlyScoreBreakdown = {
+  snapshotRunId: string
+  storeId: string
+  scoreStatus: 'preview' | 'final'
+  totalScore: number | null
+  components: {
+    kpi: StoreScoreBreakdownComponent
+    bmChecklist: StoreScoreBreakdownComponent & {
+      visitCount: number
+    }
+    vmChecklist: StoreScoreBreakdownComponent & {
+      visitCount: number
+      status: 'future_inactive' | string
+    }
+  }
+}
+
 export type ClosedRankingMetricRank = {
   code: string
   label: string
@@ -443,6 +469,20 @@ export async function getStoreKpiHighlights(input?: {
   const query = params.toString()
   return fetchJson<StoreKpiHighlightsSummary>(
     `/reports/store-kpi-highlights${query ? `?${query}` : ''}`,
+  )
+}
+
+export async function getStoreScoreBreakdown(input: {
+  snapshotRunId: string
+  storeId: string
+}) {
+  const params = new URLSearchParams({
+    snapshotRunId: input.snapshotRunId,
+    storeId: input.storeId,
+  })
+
+  return fetchJson<StoreMonthlyScoreBreakdown>(
+    `/reports/store-score-breakdown?${params.toString()}`,
   )
 }
 
