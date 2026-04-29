@@ -4143,6 +4143,47 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: pilot veride BM/VM checklist olan ve olmayan magazalarla tarayici smoke yapmak; skor kiriliminin kullanici tarafinda anlasilir olup olmadigini gozle kontrol etmek.
 
+## Son VM Score Contribution Pilot Smoke
+
+29 Nisan 2026 itibariyla VM score contribution icin pilot smoke yapildi.
+
+Hazirlik:
+
+- `rpt.generate_store_checklist_snapshot('00000000-0000-0000-0000-00000000f301', '2026-04-01', '2026-04-30')` lokal Nisan snapshot'i icin calistirildi.
+- `rpt.store_checklist_snapshot` kaniti:
+  - `STORE100`: BM checklist `audit_count=2`, `avg_score=90.00`.
+  - `IST-002`: VM checklist `audit_count=1`, `avg_score=100.00`.
+- Tarayicida gercek Keycloak login ile `pilot.store.manager.100` acildi; rol `STORE_MANAGER`, store scope yalniz `STORE100` olarak gorundu.
+- In-app browser date input siniri nedeniyle f301 secimi UI'da tam otomatiklestirilemedi; API smoke gercek JWT ile tamamlandi.
+- Smoke icin Keycloak direct access grant kisa sureli acilip token alindi, her denemeden sonra tekrar `directAccessGrantsEnabled=false` durumuna kapatildi.
+
+Dogrulanan acceptance'lar:
+
+- `pilot.store.manager.100` + `STORE100`:
+  - total score `34.9`.
+  - configured weights `90/5/5`.
+  - effective weights `95/5/0`.
+  - KPI score `32`, KPI contribution `30.4`.
+  - BM checklist dahil: score `90`, visit count `2`, contribution `4.5`.
+  - VM checklist dahil degil: missing reason `vm_checklist_not_completed_for_period`.
+- `pilot.store.manager.ist002` + `IST-002`:
+  - total score `5`.
+  - configured weights `90/5/5`.
+  - effective weights `95/0/5`.
+  - VM checklist dahil: score `100`, visit count `1`, contribution `5`.
+  - BM checklist dahil degil: missing reason `bm_checklist_not_completed_for_period`.
+- Scope guard:
+  - `pilot.store.manager.ist002` ile `STORE100` skor kirilimi okunmaya calisildiginda `403 FORBIDDEN` dondu.
+  - Error message: `Store score breakdown is outside current store scope.`
+
+CODEX durust yorum:
+
+- Matematik ve scope kapisi pilot veride calisiyor; STORE100 ve IST-002 iki farkli checklist senaryosunu net kanitladi.
+- UI tarafinda date input otomasyon siniri canli kullanici hatasi degil, in-app browser runtime siniri gibi duruyor; yine de ileride kapali snapshot secimini daha belirgin select/list yapisina almak UX'i guclendirir.
+- Bu smoke sonrasi VM score contribution borcu teknik olarak kapanmis sayilir; kalan iyilestirme, skor kiriliminin son kullanici dilini pilot geri bildirimle parlatmak.
+
+Siradaki mantikli adim: Store KPI kapali snapshot secim UX'ini sade bir snapshot listesi/select yapisina cevirmeyi planlamak; boylece kullanici date yazmak zorunda kalmadan kapanmis gun/ay secip skor kirilimini gorebilir.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
