@@ -76,7 +76,7 @@ export function StoreApprovalsPage(input: {
   const [offboardingNotice, setOffboardingNotice] = useState<string | null>(null)
   const [editingOffboardingRequestId, setEditingOffboardingRequestId] = useState<string | null>(null)
   const [allocations, setAllocations] = useState<Array<TargetDistributionAllocation>>([
-    { assigneeLabel: '', targetValue: 0, note: '' },
+    { employeeId: '', assigneeLabel: '', targetValue: 0, note: '' },
   ])
 
   const requestsQuery = useQuery({
@@ -117,7 +117,7 @@ export function StoreApprovalsPage(input: {
       setTargetLabel('Aylik personel hedef dagitimi')
       setTotalTargetValue('0')
       setRequestReason('')
-      setAllocations([{ assigneeLabel: '', targetValue: 0, note: '' }])
+      setAllocations([{ employeeId: '', assigneeLabel: '', targetValue: 0, note: '' }])
       setSubmissionNotice(result.command.message)
     },
   })
@@ -187,6 +187,7 @@ export function StoreApprovalsPage(input: {
       personnel.length > 0 &&
       allocations.every(
         (item) =>
+          !item.employeeId.trim() &&
           !item.assigneeLabel.trim() &&
           Number(item.targetValue) === 0 &&
           !(item.note ?? '').trim(),
@@ -197,16 +198,17 @@ export function StoreApprovalsPage(input: {
     }
 
     return personnel.map((person) => ({
+      employeeId: person.employeeId,
       assigneeLabel: person.displayName,
       targetValue: 0,
       note: '',
     }))
   }, [allocations, personnelQuery.data?.items])
 
-  const personnelByName = useMemo(
+  const personnelById = useMemo(
     () =>
       new Map(
-        (personnelQuery.data?.items ?? []).map((person) => [person.displayName, person] as const),
+        (personnelQuery.data?.items ?? []).map((person) => [person.employeeId, person] as const),
       ),
     [personnelQuery.data?.items],
   )
@@ -273,7 +275,9 @@ export function StoreApprovalsPage(input: {
     Boolean(targetLabel.trim()) &&
     Number(totalTargetValue) > 0 &&
     totalsAligned &&
-    activeAllocations.every((item) => item.assigneeLabel.trim() && Number(item.targetValue) > 0)
+    activeAllocations.every(
+      (item) => item.employeeId.trim() && item.assigneeLabel.trim() && Number(item.targetValue) > 0,
+    )
   const canSubmitSellerCodeRequest =
     canCreateForStore &&
     Boolean(storeId) &&
@@ -432,7 +436,7 @@ export function StoreApprovalsPage(input: {
       </section>
 
       <section className="two-up-grid">
-        <article className="panel">
+        <article className="panel" aria-label="Target distribution request form">
           <div className="panel-heading">
             <div>
               <div className="eyebrow">Future Inbox</div>
@@ -558,82 +562,98 @@ export function StoreApprovalsPage(input: {
                 ) : null}
 
                 <div className="stacked-table">
-                  {activeAllocations.map((allocation, index) => (
-                    <div className="stacked-row" key={`allocation-${index}`}>
-                      {personnelByName.has(allocation.assigneeLabel) ? (
-                        <div className="key-grid">
-                          <KeyValue label="Personel" value={allocation.assigneeLabel || 'Unassigned'} />
-                          <KeyValue
-                            label="Mevcut satis"
-                            value={
-                              personnelByName.get(allocation.assigneeLabel)?.netSalesValue !== null &&
-                              personnelByName.get(allocation.assigneeLabel)?.netSalesValue !== undefined
-                                ? new Intl.NumberFormat('tr-TR', {
-                                    style: 'currency',
-                                    currency: 'TRY',
-                                    maximumFractionDigits: 0,
-                                  }).format(personnelByName.get(allocation.assigneeLabel)?.netSalesValue ?? 0)
-                                : 'Veri yok'
-                            }
-                          />
-                        </div>
-                      ) : (
+                  {activeAllocations.map((allocation, index) => {
+                    const selectedPerson = personnelById.get(allocation.employeeId)
+
+                    return (
+                      <div className="stacked-row" key={`allocation-${allocation.employeeId || index}`}>
+                        {selectedPerson ? (
+                          <div className="key-grid">
+                            <KeyValue label="Personel" value={allocation.assigneeLabel || 'Unassigned'} />
+                            <KeyValue
+                              label="Mevcut satis"
+                              value={
+                                selectedPerson.netSalesValue !== null &&
+                                selectedPerson.netSalesValue !== undefined
+                                  ? new Intl.NumberFormat('tr-TR', {
+                                      style: 'currency',
+                                      currency: 'TRY',
+                                      maximumFractionDigits: 0,
+                                    }).format(selectedPerson.netSalesValue)
+                                  : 'Veri yok'
+                              }
+                            />
+                          </div>
+                        ) : (
+                          <select
+                            value={allocation.employeeId}
+                            onChange={(event) => {
+                              const selected = personnelById.get(event.target.value)
+                              setSubmissionNotice(null)
+                              setAllocations(
+                                activeAllocations.map((item, itemIndex) =>
+                                  itemIndex === index
+                                    ? {
+                                        ...item,
+                                        employeeId: event.target.value,
+                                        assigneeLabel: selected?.displayName ?? '',
+                                      }
+                                    : item,
+                                ),
+                              )
+                            }}
+                          >
+                            <option value="">Personel sec</option>
+                            {(personnelQuery.data?.items ?? []).map((person) => (
+                              <option key={person.employeeId} value={person.employeeId}>
+                                {person.displayName}
+                              </option>
+                            ))}
+                          </select>
+                        )}
                         <input
-                          value={allocation.assigneeLabel}
+                          aria-label="Personel target value"
+                          type="number"
+                          min="0"
+                          value={allocation.targetValue}
                           onChange={(event) => {
                             setSubmissionNotice(null)
                             setAllocations(
                               activeAllocations.map((item, itemIndex) =>
                                 itemIndex === index
-                                  ? { ...item, assigneeLabel: event.target.value }
+                                  ? { ...item, targetValue: Number(event.target.value) }
                                   : item,
                               ),
                             )
                           }}
-                          placeholder="Personel veya rol etiketi"
+                          placeholder="Hedef degeri"
                         />
-                      )}
-                      <input
-                        type="number"
-                        min="0"
-                        value={allocation.targetValue}
-                        onChange={(event) => {
-                          setSubmissionNotice(null)
-                          setAllocations(
-                            activeAllocations.map((item, itemIndex) =>
-                              itemIndex === index
-                                ? { ...item, targetValue: Number(event.target.value) }
-                                : item,
-                            ),
-                          )
-                        }}
-                        placeholder="Hedef degeri"
-                      />
-                      <input
-                        value={allocation.note ?? ''}
-                        onChange={(event) => {
-                          setSubmissionNotice(null)
-                          setAllocations(
-                            activeAllocations.map((item, itemIndex) =>
-                              itemIndex === index ? { ...item, note: event.target.value } : item,
-                            ),
-                          )
-                        }}
-                        placeholder="Opsiyonel not"
-                      />
-                      {activeAllocations.length > 1 ? (
-                        <button
-                          className="control-button"
-                          type="button"
-                          onClick={() =>
-                            setAllocations(activeAllocations.filter((_, itemIndex) => itemIndex !== index))
-                          }
-                        >
-                          Remove
-                        </button>
-                      ) : null}
-                    </div>
-                  ))}
+                        <input
+                          value={allocation.note ?? ''}
+                          onChange={(event) => {
+                            setSubmissionNotice(null)
+                            setAllocations(
+                              activeAllocations.map((item, itemIndex) =>
+                                itemIndex === index ? { ...item, note: event.target.value } : item,
+                              ),
+                            )
+                          }}
+                          placeholder="Opsiyonel not"
+                        />
+                        {activeAllocations.length > 1 ? (
+                          <button
+                            className="control-button"
+                            type="button"
+                            onClick={() =>
+                              setAllocations(activeAllocations.filter((_, itemIndex) => itemIndex !== index))
+                            }
+                          >
+                            Remove
+                          </button>
+                        ) : null}
+                      </div>
+                    )
+                  })}
                 </div>
 
                 {!totalsAligned ? (
@@ -651,7 +671,7 @@ export function StoreApprovalsPage(input: {
                     setSubmissionNotice(null)
                     setAllocations([
                       ...activeAllocations,
-                      { assigneeLabel: `Ek satir ${activeAllocations.length + 1}`, targetValue: 0, note: '' },
+                      { employeeId: '', assigneeLabel: '', targetValue: 0, note: '' },
                     ])
                   }}
                 >

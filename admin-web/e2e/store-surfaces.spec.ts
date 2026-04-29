@@ -192,6 +192,87 @@ test('store approvals page lets store managers submit seller code requests', asy
   expect(capturedPayload).not.toBeNull()
 })
 
+test('store approvals page submits target distribution allocations with employee ids', async ({ page }) => {
+  let capturedPayload: unknown = null
+
+  await page.route('**/api/target-distributions/requests**', async (route) => {
+    const request = route.request()
+
+    if (request.method() === 'GET') {
+      await route.fulfill({ json: targetDistributionRequestsFixture })
+      return
+    }
+
+    capturedPayload = request.postDataJSON()
+    expect(capturedPayload).toEqual({
+      storeId: demoStoreId,
+      requestMonth: '2026-04-01',
+      targetLabel: 'Aylik personel hedef dagitimi',
+      totalTargetValue: 100000,
+      allocations: [
+        {
+          employeeId: demoEmployeeId,
+          assigneeLabel: 'Store Personnel',
+          targetValue: 100000,
+          note: '',
+        },
+      ],
+    })
+
+    await route.fulfill({
+      json: {
+        command: {
+          status: 'submitted',
+          message: 'Target distribution request submitted for region approval',
+        },
+        data: {
+          request: {
+            requestId: '00000000-0000-0000-0000-000000000777',
+            companyId: '00000000-0000-0000-0000-000000000001',
+            regionId: '00000000-0000-0000-0000-000000000010',
+            storeId: demoStoreId,
+            storeName: 'IstinyePark Demo Store',
+            requestMonth: '2026-04-01',
+            targetLabel: 'Aylik personel hedef dagitimi',
+            totalTargetValue: 100000,
+            allocationCount: 1,
+            status: 'pending_region_approval',
+            requestReason: null,
+            allocations: [
+              {
+                employeeId: demoEmployeeId,
+                assigneeLabel: 'Store Personnel',
+                targetValue: 100000,
+                note: '',
+              },
+            ],
+            submittedByUserId: 'store-me-smoke-user',
+            approvedByUserId: null,
+            approvedAt: null,
+            approvalNote: null,
+            createdAt: '2026-04-29T10:00:00.000Z',
+            updatedAt: '2026-04-29T10:00:00.000Z',
+          },
+        },
+      },
+    })
+  })
+
+  await page.goto('/store/approvals')
+
+  const targetHeading = page.getByRole('heading', { name: 'Submit a target distribution request' })
+  await expect(targetHeading).toBeVisible()
+  const targetForm = targetHeading.locator('xpath=ancestor::article[1]')
+  await expect(targetForm.getByText('Store Personnel')).toBeVisible()
+  await targetForm.getByLabel('Request month').fill('2026-04')
+  await targetForm.getByLabel('Total target value').fill('100000')
+  await targetForm.getByLabel('Personel target value').fill('100000')
+  await targetForm.getByRole('button', { name: 'Submit for region approval' }).click()
+
+  await expect(page.getByText('Target distribution request submitted for region approval')).toBeVisible()
+  expect(capturedPayload).not.toBeNull()
+})
+
 test('store approvals page lets store managers submit offboarding requests', async ({ page }) => {
   let capturedPayload: unknown = null
 

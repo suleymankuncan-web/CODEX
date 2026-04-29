@@ -19,6 +19,7 @@ type CommandResponse<T> = {
 }
 
 export type TargetDistributionAllocation = {
+  employeeId: string
   assigneeLabel: string
   targetValue: number
   note?: string

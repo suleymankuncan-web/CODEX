@@ -12,6 +12,9 @@ import { Type } from "class-transformer";
 import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 
 class TargetDistributionAllocationDto {
+  @IsPostgresUuid()
+  employeeId!: string;
+
   @IsString()
   assigneeLabel!: string;
 

@@ -26,6 +26,7 @@ export class TargetDistributionService {
     totalTargetValue: number;
     requestReason?: string;
     allocations: Array<{
+      employeeId: string;
       assigneeLabel: string;
       targetValue: number;
       note?: string;
