@@ -4078,6 +4078,37 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: bu tasarimi implementation plan'a cevirmek; once store-score-blend contract testleriyle kirmizi-yesil ilerlemek.
 
+## Son VM Score Contribution Activation V1 Implementation Plan
+
+29 Nisan 2026 itibariyla VM score contribution activation icin implementation plani yazildi.
+
+Dosya:
+
+- `docs/superpowers/plans/2026-04-29-vm-score-contribution-activation-v1.md`
+
+Plan siniri:
+
+- Bu plan VM checklist skorunu aylik store score breakdown icine aktif baglar.
+- Full configured blend KPI `%90`, BM `%5`, VM `%5` olur.
+- Eksik BM/VM checklist sifir sayilmaz; eksik pay KPI tarafina geri doner.
+- Backend configured/effective weights ve missing reason doner.
+- Frontend backend sonucunu gosterir; skor hesabini frontend yapmaz.
+- Migration, auth/session, checklist permission ve daily score yuzeylerine dokunulmaz.
+
+Planlanan teknik isler:
+
+- `StoreScoreBlendService` contract ve unit testleri VM aktif hale getirilecek.
+- Reporting service BM ve VM checklist snapshotlarini template type ile ayri okuyacak.
+- Store KPI kapali snapshot yuzeyi BM/VM katkisini ve eksik payin KPI tarafinda kaldigini aciklayacak.
+- Targeted backend/frontend testleri, build ve root `check:release` release kapisi olacak.
+
+CODEX durust yorum:
+
+- Plan dogru sirada: once saf skor matematigi, sonra reporting entegrasyonu, en son UI aciklamasi.
+- Bu is kucuk gorunur ama skor guveni icin kritik; kullaniciya configured ve effective agirliklari gostermeden bu ozelligi acmak yanlis anlasilma riski yaratirdi.
+
+Siradaki mantikli adim: implementation'a gecmek; once `store-score-blend.service.spec.ts` kirmizi testleri yazip saf skor motorunu yesile almak.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
