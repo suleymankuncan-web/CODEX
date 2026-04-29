@@ -90,6 +90,13 @@ export type KpiOwnerRole =
   | 'VISUAL_TEAM'
 
 export type KpiScoreBehavior = 'score_only' | 'warning_first' | 'task_candidate'
+export type KpiMetricDirection = 'HIGHER_IS_BETTER' | 'LOWER_IS_BETTER' | 'TARGET_BAND'
+export type KpiBenchmarkSource = 'TARGET' | 'TURKEY_AVERAGE' | 'CHECKLIST_SCORE'
+export type KpiMetricScoreStatus =
+  | 'scored'
+  | 'pending_normalization'
+  | 'missing_reference'
+  | 'missing'
 
 export type KpiScoreProfileMetric = {
   code: string
@@ -97,6 +104,9 @@ export type KpiScoreProfileMetric = {
   weightPercent: number
   ownerRole: KpiOwnerRole
   scoreBehavior: KpiScoreBehavior
+  direction?: KpiMetricDirection
+  benchmarkSource?: KpiBenchmarkSource
+  capRatio?: number
   aliases?: string[]
   notes?: string
 }
@@ -160,9 +170,16 @@ export type MyPerformanceMetric = {
   actualValue: number | null
   targetValue?: number | null
   achievementRate?: number | null
+  benchmarkValue?: number | null
+  benchmarkSource?: KpiBenchmarkSource
+  actualRatio?: number | null
+  scoredRatio?: number | null
+  capRatio?: number | null
+  isCapped?: boolean
+  missingReason?: string | null
   contributionValue: number
   dataStatus?: 'reported' | 'missing'
-  scoreStatus?: 'scored' | 'pending_normalization' | 'missing'
+  scoreStatus?: KpiMetricScoreStatus
   status?: 'reported' | 'missing'
 }
 
@@ -220,9 +237,17 @@ export type StoreKpiHighlightMetric = {
   actualValue: number | null
   targetValue: number | null
   achievementRate: number | null
+  benchmarkValue?: number | null
+  benchmarkSource?: KpiBenchmarkSource
+  actualRatio?: number | null
+  scoredRatio?: number | null
+  capRatio?: number | null
+  isCapped?: boolean
+  scoreContribution?: number | null
+  missingReason?: string | null
   statusBand: string | null
   dataStatus: 'reported' | 'missing'
-  scoreStatus: 'scored' | 'pending_normalization' | 'missing'
+  scoreStatus: KpiMetricScoreStatus
 }
 
 export type StoreKpiHighlightsSummary = {

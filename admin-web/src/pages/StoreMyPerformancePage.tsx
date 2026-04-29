@@ -13,6 +13,7 @@ import type { AuthSessionSummary } from '../features/auth/api'
 import { formatDisplayRoles } from '../features/auth/display'
 import { getKpiConfig, getMyPerformance, getReportingSnapshotRuns } from '../features/reports/api'
 import {
+  describeBenchmarkCap,
   formatPerformanceGrade,
   resolvePerformanceGrade,
   resolvePerformanceScoreMeaning,
@@ -64,7 +65,12 @@ function formatAchievementValue(metric: {
   targetValue?: number | null
   achievementRate?: number | null
   actualValue: number | null
+  scoreStatus?: string
 }) {
+  if (metric.scoreStatus === 'missing_reference') {
+    return 'Eksik referans'
+  }
+
   if (metric.achievementRate === null || metric.achievementRate === undefined) {
     return metric.actualValue !== null ? 'Pending normalization' : 'Veri yok'
   }
@@ -440,7 +446,8 @@ export function StoreMyPerformancePage(input: {
                     tone={
                       metric.scoreStatus === 'scored'
                         ? 'accent'
-                        : metric.scoreStatus === 'pending_normalization'
+                        : metric.scoreStatus === 'pending_normalization' ||
+                            metric.scoreStatus === 'missing_reference'
                           ? 'warning'
                           : 'danger'
                     }
@@ -449,6 +456,8 @@ export function StoreMyPerformancePage(input: {
                       ? `${metric.weightPercent}%`
                       : metric.scoreStatus === 'pending_normalization'
                         ? 'Pending'
+                        : metric.scoreStatus === 'missing_reference'
+                          ? 'Referans eksik'
                         : 'Missing'}
                   </StatusPill>
                 </div>
@@ -458,6 +467,10 @@ export function StoreMyPerformancePage(input: {
                     value={formatMetricValue(metric.actualValue, metric.code)}
                   />
                   <KeyValue label="Achievement" value={formatAchievementValue(metric)} />
+                  <KeyValue
+                    label="Benchmark"
+                    value={formatMetricValue(metric.benchmarkValue ?? null, metric.code)}
+                  />
                   <KeyValue label="Contribution" value={`${metric.contributionValue.toFixed(2)}%`} />
                   <KeyValue
                     label="Status"
@@ -466,6 +479,20 @@ export function StoreMyPerformancePage(input: {
                   <KeyValue label="Kaynak tipi" value={sourceSemantics.label} />
                   <KeyValue label="Veri kaynagi" value={sourceSemantics.summary} />
                 </div>
+                {metric.isCapped ? (
+                  <p className="queue-subtitle">
+                    {describeBenchmarkCap({
+                      actualRatio: metric.actualRatio,
+                      scoredRatio: metric.scoredRatio,
+                      isCapped: metric.isCapped,
+                    })}
+                  </p>
+                ) : null}
+                {metric.scoreStatus === 'missing_reference' ? (
+                  <p className="queue-subtitle">
+                    Eksik referans: {metric.missingReason ?? 'reference_missing'}
+                  </p>
+                ) : null}
               </article>
             )
           })}

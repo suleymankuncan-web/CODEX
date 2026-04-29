@@ -25,6 +25,7 @@ import {
   matchesKpiMetricCode,
 } from '../features/kpi/score-profiles'
 import {
+  describeBenchmarkCap,
   formatPerformanceGrade,
   resolvePerformanceGrade,
   resolveStoreScoreThresholdMeaning,
@@ -40,8 +41,16 @@ type DisplayKpiRow = {
   targetValue: string | null
   actualValue: string | null
   achievementRate: string | null
+  benchmarkValue?: string | null
+  benchmarkSource?: string
+  actualRatio?: number | null
+  scoredRatio?: number | null
+  capRatio?: number | null
+  isCapped?: boolean
+  scoreContribution?: number | null
+  missingReason?: string | null
   statusBand: string | null
-  scoreStatus: 'scored' | 'pending_normalization' | 'missing'
+  scoreStatus: 'scored' | 'pending_normalization' | 'missing_reference' | 'missing'
 }
 
 function toNumber(input: string | null) {
@@ -74,6 +83,10 @@ function formatMetricValue(input: string | null, kpiCode?: string) {
 }
 
 function formatAchievementValue(row: DisplayKpiRow) {
+  if (row.scoreStatus === 'missing_reference') {
+    return 'Eksik referans'
+  }
+
   if (row.achievementRate === null) {
     return row.actualValue !== null ? 'Pending normalization' : 'No data'
   }
@@ -187,6 +200,17 @@ export function StoreKpiHighlightsPage(input: {
           metric.actualValue !== null ? String(metric.actualValue) : null,
         achievementRate:
           metric.achievementRate !== null ? String(metric.achievementRate) : null,
+        benchmarkValue:
+          metric.benchmarkValue !== null && metric.benchmarkValue !== undefined
+            ? String(metric.benchmarkValue)
+            : null,
+        benchmarkSource: metric.benchmarkSource,
+        actualRatio: metric.actualRatio,
+        scoredRatio: metric.scoredRatio,
+        capRatio: metric.capRatio,
+        isCapped: metric.isCapped,
+        scoreContribution: metric.scoreContribution,
+        missingReason: metric.missingReason,
         statusBand: metric.statusBand,
         scoreStatus: metric.scoreStatus,
       })) ?? []
@@ -208,6 +232,14 @@ export function StoreKpiHighlightsPage(input: {
       targetValue: row.targetValue,
       actualValue: row.actualValue,
       achievementRate: row.achievementRate,
+      benchmarkValue: null,
+      benchmarkSource: undefined,
+      actualRatio: row.achievementRate ? toNumber(row.achievementRate) : null,
+      scoredRatio: row.achievementRate ? clampScore(toNumber(row.achievementRate)) : null,
+      capRatio: 1.2,
+      isCapped: row.achievementRate ? toNumber(row.achievementRate) > 1.2 : false,
+      scoreContribution: null,
+      missingReason: null,
       statusBand: row.statusBand,
       scoreStatus: row.achievementRate ? 'scored' : 'missing',
     }))
@@ -280,7 +312,12 @@ export function StoreKpiHighlightsPage(input: {
           ? clampScore(toNumber(matchingRow.achievementRate))
           : null
       const weightedContribution =
-        achievementRate === null ? 0 : (achievementRate * metric.weightPercent) / 100
+        matchingRow?.scoreContribution !== null &&
+        matchingRow?.scoreContribution !== undefined
+          ? matchingRow.scoreContribution / 100
+          : achievementRate === null
+            ? 0
+            : (achievementRate * metric.weightPercent) / 100
 
       return {
         metric,
@@ -811,7 +848,8 @@ export function StoreKpiHighlightsPage(input: {
                     tone={
                       item.matchingRow?.scoreStatus === 'scored'
                         ? 'accent'
-                        : item.matchingRow?.scoreStatus === 'pending_normalization'
+                        : item.matchingRow?.scoreStatus === 'pending_normalization' ||
+                            item.matchingRow?.scoreStatus === 'missing_reference'
                           ? 'warning'
                           : 'neutral'
                     }
@@ -837,6 +875,10 @@ export function StoreKpiHighlightsPage(input: {
                     }
                   />
                   <KeyValue
+                    label="Benchmark"
+                    value={formatMetricValue(item.matchingRow?.benchmarkValue ?? null, item.matchingRow?.kpiCode)}
+                  />
+                  <KeyValue
                     label="Weighted contribution"
                     value={formatPercent(item.weightedContribution)}
                   />
@@ -847,6 +889,20 @@ export function StoreKpiHighlightsPage(input: {
                   <KeyValue label="Kaynak tipi" value={sourceSemantics.label} />
                   <KeyValue label="Veri kaynagi" value={sourceSemantics.summary} />
                 </div>
+                {item.matchingRow?.isCapped ? (
+                  <p className="queue-subtitle">
+                    {describeBenchmarkCap({
+                      actualRatio: item.matchingRow.actualRatio,
+                      scoredRatio: item.matchingRow.scoredRatio,
+                      isCapped: item.matchingRow.isCapped,
+                    })}
+                  </p>
+                ) : null}
+                {item.matchingRow?.scoreStatus === 'missing_reference' ? (
+                  <p className="queue-subtitle">
+                    Eksik referans: {item.matchingRow.missingReason ?? 'reference_missing'}
+                  </p>
+                ) : null}
               </article>
             )
           })}

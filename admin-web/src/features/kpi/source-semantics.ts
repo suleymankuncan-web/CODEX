@@ -5,6 +5,7 @@ export type KpiSourceKind =
   | 'derived'
   | 'checklist_fed'
   | 'pending_normalization'
+  | 'missing_reference'
   | 'missing'
 
 export type KpiSourceSemantics = {
@@ -18,7 +19,7 @@ type SourceInput = {
   code: string
   actualValue?: number | string | null
   dataStatus?: 'reported' | 'missing'
-  scoreStatus?: 'scored' | 'pending_normalization' | 'missing'
+  scoreStatus?: 'scored' | 'pending_normalization' | 'missing_reference' | 'missing'
   status?: 'reported' | 'missing'
 }
 
@@ -34,6 +35,15 @@ export function resolveKpiSourceSemantics(input: SourceInput): KpiSourceSemantic
       kind: 'pending_normalization',
       label: 'Pending normalization',
       summary: 'Deger geldi, score icin normalizasyon bekliyor.',
+      tone: 'warning',
+    }
+  }
+
+  if (input.scoreStatus === 'missing_reference') {
+    return {
+      kind: 'missing_reference',
+      label: 'Eksik referans',
+      summary: 'Deger geldi, ancak hedef veya benchmark referansi eksik.',
       tone: 'warning',
     }
   }

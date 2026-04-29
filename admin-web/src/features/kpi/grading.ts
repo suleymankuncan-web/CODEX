@@ -165,3 +165,26 @@ export function resolveStoreScoreThresholdMeaning(input: {
     tone: 'danger',
   }
 }
+
+export function formatBenchmarkRatio(ratio: number | null | undefined, placement: 'prefix' | 'suffix' = 'suffix') {
+  if (ratio === null || ratio === undefined || !Number.isFinite(ratio)) {
+    return '-'
+  }
+
+  const value = Math.round(ratio * 100)
+  return placement === 'prefix' ? `%${value}` : `${value}%`
+}
+
+export function describeBenchmarkCap(input: {
+  actualRatio?: number | null
+  scoredRatio?: number | null
+  isCapped?: boolean
+}) {
+  if (!input.isCapped || !input.actualRatio || !input.scoredRatio) {
+    return null
+  }
+
+  return `Gercek oran ${formatBenchmarkRatio(input.actualRatio, 'prefix')}. Skor limiti ${formatBenchmarkRatio(
+    input.scoredRatio,
+  )}+ ile hesaplandi.`
+}
