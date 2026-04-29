@@ -1,3 +1,8 @@
+import {
+  KpiBenchmarkSource,
+  KpiMetricDirection,
+} from "./kpi-benchmark-scoring.contract";
+
 export type KpiOwnerRole =
   | "DEPUTY_GM"
   | "REGION_MANAGER"
@@ -16,6 +21,9 @@ export type KpiScoreProfileMetric = {
   weightPercent: number;
   ownerRole: KpiOwnerRole;
   scoreBehavior: KpiScoreBehavior;
+  direction?: KpiMetricDirection;
+  benchmarkSource?: KpiBenchmarkSource;
+  capRatio?: number;
   aliases?: string[];
   notes?: string;
 };
@@ -57,6 +65,9 @@ export const storeKpiScoreProfile: KpiScoreProfile = {
       weightPercent: 40,
       ownerRole: "STORE_MANAGER",
       scoreBehavior: "task_candidate",
+      direction: "HIGHER_IS_BETTER",
+      benchmarkSource: "TARGET",
+      capRatio: 1.2,
       aliases: ["STORE_SALES", "SALES_TARGET_ACHIEVEMENT"],
       notes: "Primary store score driver and strongest workflow candidate.",
     },
@@ -66,6 +77,9 @@ export const storeKpiScoreProfile: KpiScoreProfile = {
       weightPercent: 20,
       ownerRole: "STORE_MANAGER",
       scoreBehavior: "task_candidate",
+      direction: "HIGHER_IS_BETTER",
+      benchmarkSource: "TURKEY_AVERAGE",
+      capRatio: 1.2,
       notes: "Conversion health should remain visible and action-oriented.",
     },
     {
@@ -74,6 +88,9 @@ export const storeKpiScoreProfile: KpiScoreProfile = {
       weightPercent: 15,
       ownerRole: "STORE_MANAGER",
       scoreBehavior: "warning_first",
+      direction: "HIGHER_IS_BETTER",
+      benchmarkSource: "TURKEY_AVERAGE",
+      capRatio: 1.2,
       notes:
         "Useful in score immediately; promote to tasks only if signal quality stays high.",
     },
@@ -83,6 +100,9 @@ export const storeKpiScoreProfile: KpiScoreProfile = {
       weightPercent: 15,
       ownerRole: "STORE_MANAGER",
       scoreBehavior: "warning_first",
+      direction: "HIGHER_IS_BETTER",
+      benchmarkSource: "TURKEY_AVERAGE",
+      capRatio: 1.2,
       notes: "Operationally important but should avoid inbox noise early.",
     },
     {
@@ -120,6 +140,9 @@ export const personnelKpiScoreProfile: KpiScoreProfile = {
       weightPercent: 40,
       ownerRole: "STORE_PERSONNEL",
       scoreBehavior: "warning_first",
+      direction: "HIGHER_IS_BETTER",
+      benchmarkSource: "TARGET",
+      capRatio: 1.2,
       aliases: ["STORE_SALES", "SALES_TARGET_ACHIEVEMENT"],
       notes:
         "Primary personnel score driver and strongest coaching signal.",
@@ -130,6 +153,9 @@ export const personnelKpiScoreProfile: KpiScoreProfile = {
       weightPercent: 30,
       ownerRole: "STORE_PERSONNEL",
       scoreBehavior: "warning_first",
+      direction: "HIGHER_IS_BETTER",
+      benchmarkSource: "TURKEY_AVERAGE",
+      capRatio: 1.2,
       notes:
         "Useful for coaching and should not inherit store-level weighting by default.",
     },
@@ -139,6 +165,9 @@ export const personnelKpiScoreProfile: KpiScoreProfile = {
       weightPercent: 30,
       ownerRole: "STORE_PERSONNEL",
       scoreBehavior: "warning_first",
+      direction: "HIGHER_IS_BETTER",
+      benchmarkSource: "TURKEY_AVERAGE",
+      capRatio: 1.2,
       notes:
         "Belongs in the personnel profile even before task triggers are enabled.",
     },
