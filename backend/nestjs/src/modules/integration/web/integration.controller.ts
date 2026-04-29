@@ -27,6 +27,8 @@ import { ListImportBatchErrorsQueryDto } from "./dto/list-import-batch-errors.qu
 import { ListImportBatchesQueryDto } from "./dto/list-import-batches.query";
 import { ListIntegrationSourcesQueryDto } from "./dto/list-integration-sources.query";
 import { ListKpiImportStoreScopeQueryDto } from "./dto/list-kpi-import-store-scope.query";
+import { ListMasterDataBootstrapBatchesQueryDto } from "./dto/list-master-data-bootstrap-batches.query";
+import { ListMasterDataBootstrapRowsQueryDto } from "./dto/list-master-data-bootstrap-rows.query";
 import { UpdateIntegrationSourceScheduleDto } from "./dto/update-integration-source-schedule.dto";
 import { UpdateKpiImportStoreScopeDto } from "./dto/update-kpi-import-store-scope.dto";
 import { UploadPowerBiExportDto } from "./dto/upload-power-bi-export.dto";
@@ -194,6 +196,33 @@ export class IntegrationController {
     return this.integrationService.getStoreMasterLookups();
   }
 
+  @Get("master-data-bootstrap/batches")
+  @RequireScope("company")
+  @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")
+  async listMasterDataBootstrapBatches(
+    @Query() query: ListMasterDataBootstrapBatchesQueryDto,
+    @Req()
+    request: {
+      user: {
+        scope: {
+          companyIds: string[];
+        };
+      };
+    },
+  ) {
+    return this.masterDataBootstrapService.listBootstrapBatches({
+      actorScope: {
+        companyIds: request.user.scope.companyIds,
+      },
+      bootstrapEntity: query.bootstrapEntity,
+      batchStatus: query.batchStatus,
+      readiness: query.readiness,
+      q: query.q,
+      limit: query.limit,
+      offset: query.offset,
+    });
+  }
+
   @Patch("kpi-import-store-scope/:storeId")
   @RequireScope("company")
   @RequireRoles("INTEGRATION_ADMIN")
@@ -286,6 +315,34 @@ export class IntegrationController {
         companyIds: request.user.scope.companyIds,
       },
       batchId,
+    });
+  }
+
+  @Get("master-data-bootstrap/batches/:batchId/rows")
+  @RequireScope("company")
+  @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")
+  async listMasterDataBootstrapRows(
+    @Param("batchId") batchId: string,
+    @Query() query: ListMasterDataBootstrapRowsQueryDto,
+    @Req()
+    request: {
+      user: {
+        scope: {
+          companyIds: string[];
+        };
+      };
+    },
+  ) {
+    return this.masterDataBootstrapService.listBootstrapRowsForReview({
+      actorScope: {
+        companyIds: request.user.scope.companyIds,
+      },
+      batchId,
+      validationStatus: query.validationStatus,
+      issueCode: query.issueCode,
+      q: query.q,
+      limit: query.limit,
+      offset: query.offset,
     });
   }
 

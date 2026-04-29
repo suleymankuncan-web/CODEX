@@ -29,7 +29,7 @@
 - Modify: `backend/nestjs/src/modules/integration/application/master-data-bootstrap.service.spec.ts`
 - Modify: `backend/nestjs/src/modules/integration/application/master-data-bootstrap.service.ts`
 
-- [ ] **Step 1: Write failing queue service tests**
+- [x] **Step 1: Write failing queue service tests**
 
 Add tests to `MasterDataBootstrapService` that call `listBootstrapBatches` and assert derived readiness and next action.
 
@@ -140,7 +140,7 @@ Use this exact test shape inside the existing `describe("MasterDataBootstrapServ
   });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run:
 
@@ -154,7 +154,7 @@ Expected result:
 Property 'listBootstrapBatches' does not exist on type 'MasterDataBootstrapService'
 ```
 
-- [ ] **Step 3: Implement minimal service queue method**
+- [x] **Step 3: Implement minimal service queue method**
 
 In `master-data-bootstrap.service.ts`, add:
 
@@ -275,7 +275,7 @@ function deriveBootstrapNextAction(
 }
 ```
 
-- [ ] **Step 4: Run service test to verify it passes**
+- [x] **Step 4: Run service test to verify it passes**
 
 Run:
 
@@ -296,7 +296,7 @@ PASS src/modules/integration/application/master-data-bootstrap.service.spec.ts
 - Modify: `backend/nestjs/src/modules/integration/infrastructure/master-data-bootstrap.repository.spec.ts`
 - Modify: `backend/nestjs/src/modules/integration/infrastructure/master-data-bootstrap.repository.ts`
 
-- [ ] **Step 1: Write failing repository tests**
+- [x] **Step 1: Write failing repository tests**
 
 Add two tests to `MasterDataBootstrapRepository`:
 
@@ -405,7 +405,7 @@ Add two tests to `MasterDataBootstrapRepository`:
   });
 ```
 
-- [ ] **Step 2: Run repository tests to verify they fail**
+- [x] **Step 2: Run repository tests to verify they fail**
 
 Run:
 
@@ -420,7 +420,7 @@ Property 'listBootstrapBatches' does not exist on type 'MasterDataBootstrapRepos
 Property 'listBootstrapRowsForReview' does not exist on type 'MasterDataBootstrapRepository'
 ```
 
-- [ ] **Step 3: Implement repository queue types and mapper**
+- [x] **Step 3: Implement repository queue types and mapper**
 
 In `master-data-bootstrap.repository.ts`, add:
 
@@ -453,7 +453,7 @@ function mapBootstrapBatchQueueItem(
 }
 ```
 
-- [ ] **Step 4: Implement `listBootstrapBatches`**
+- [x] **Step 4: Implement `listBootstrapBatches`**
 
 Add this repository method:
 
@@ -572,7 +572,7 @@ function buildBootstrapReadinessSql(readiness?: BootstrapReadinessFilter) {
 }
 ```
 
-- [ ] **Step 5: Implement `listBootstrapRowsForReview`**
+- [x] **Step 5: Implement `listBootstrapRowsForReview`**
 
 Add this repository method:
 
@@ -673,7 +673,7 @@ Add this repository method:
   }
 ```
 
-- [ ] **Step 6: Run repository tests**
+- [x] **Step 6: Run repository tests**
 
 Run:
 
@@ -697,7 +697,7 @@ PASS src/modules/integration/infrastructure/master-data-bootstrap.repository.spe
 - Modify: `backend/nestjs/src/modules/integration/application/master-data-bootstrap.service.ts`
 - Modify: `backend/nestjs/src/modules/integration/web/integration.controller.ts`
 
-- [ ] **Step 1: Write failing service row review test**
+- [x] **Step 1: Write failing service row review test**
 
 Add this test to `master-data-bootstrap.service.spec.ts`:
 
@@ -783,7 +783,7 @@ Add this test to `master-data-bootstrap.service.spec.ts`:
   });
 ```
 
-- [ ] **Step 2: Run service tests to verify row review fails**
+- [x] **Step 2: Run service tests to verify row review fails**
 
 Run:
 
@@ -797,7 +797,7 @@ Expected result:
 Property 'listBootstrapRowsForReview' does not exist on type 'MasterDataBootstrapService'
 ```
 
-- [ ] **Step 3: Add query DTOs**
+- [x] **Step 3: Add query DTOs**
 
 Create `list-master-data-bootstrap-batches.query.ts`:
 
@@ -871,7 +871,7 @@ export class ListMasterDataBootstrapRowsQueryDto {
 }
 ```
 
-- [ ] **Step 4: Implement service row review method**
+- [x] **Step 4: Implement service row review method**
 
 Add this method to `MasterDataBootstrapService`:
 
@@ -931,7 +931,7 @@ Add this method to `MasterDataBootstrapService`:
   }
 ```
 
-- [ ] **Step 5: Add controller endpoints**
+- [x] **Step 5: Add controller endpoints**
 
 In `integration.controller.ts`, import the DTOs:
 
@@ -1003,7 +1003,7 @@ Add the rows endpoint before `@Get("master-data-bootstrap/batches/:batchId")`:
   }
 ```
 
-- [ ] **Step 6: Run targeted backend tests**
+- [x] **Step 6: Run targeted backend tests**
 
 Run:
 
@@ -1027,7 +1027,7 @@ PASS src/modules/integration/master-data-bootstrap-schema-contract.spec.ts
 - Modify: `docs/plans/project-debt-ledger.md`
 - Modify: `docs/superpowers/plans/2026-04-29-master-data-bootstrap-review-queue-v1.md`
 
-- [ ] **Step 1: Update bootstrap implementation plan**
+- [x] **Step 1: Update bootstrap implementation plan**
 
 In `docs/superpowers/plans/2026-04-29-personnel-master-data-bootstrap-v1.md`, add a completed slice after V1-C:
 
@@ -1047,7 +1047,7 @@ Added `GET /api/integrations/master-data-bootstrap/batches/:batchId/rows` for fi
 The queue is read-only and does not write to `ops.store`, `ops.employee`, or `ops.employee_assignment_history`.
 ```
 
-- [ ] **Step 2: Update debt ledger only after tests pass**
+- [x] **Step 2: Update debt ledger only after tests pass**
 
 In `docs/plans/project-debt-ledger.md`:
 
@@ -1065,7 +1065,7 @@ Master Data Bootstrap Review Queue V1 is counted as paid because HR/Admin can li
 - the 29 April 2026 Master Data Bootstrap Review Queue V1 implementation added scoped batch and row review endpoints so staged baseline data can be inspected without live promotion.
 ```
 
-- [ ] **Step 3: Run verification**
+- [x] **Step 3: Run verification**
 
 Run:
 
@@ -1098,7 +1098,7 @@ frontend release check passes
 audits report 0 vulnerabilities
 ```
 
-- [ ] **Step 4: Confirm working tree and stage only related files**
+- [x] **Step 4: Confirm working tree and stage only related files**
 
 Run:
 
@@ -1131,7 +1131,7 @@ git add -- `
   docs/superpowers/plans/2026-04-29-master-data-bootstrap-review-queue-v1.md
 ```
 
-- [ ] **Step 5: Commit implementation**
+- [x] **Step 5: Commit implementation**
 
 Run:
 

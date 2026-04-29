@@ -140,6 +140,20 @@ POST /api/integrations/master-data-bootstrap/batches/:batchId/validate
 
 This validates staged rows only. It does not promote data into `ops.store`, `ops.employee`, or `ops.employee_assignment_history`.
 
+## Completed Slice: V1-C2 Review Queue Read Model
+
+- [x] **Step 1: Add scoped batch queue**
+
+Added `GET /api/integrations/master-data-bootstrap/batches` for HR/Admin review of staged bootstrap batches.
+
+- [x] **Step 2: Add paginated row review**
+
+Added `GET /api/integrations/master-data-bootstrap/batches/:batchId/rows` for filtered review of invalid, needs-review, pending, valid, and promoted rows.
+
+- [x] **Step 3: Keep promotion closed**
+
+The queue is read-only and does not write to `ops.store`, `ops.employee`, or `ops.employee_assignment_history`.
+
 ## Next Slice: V1-D Store Promotion
 
 - [ ] **Step 1: Write store promotion tests**

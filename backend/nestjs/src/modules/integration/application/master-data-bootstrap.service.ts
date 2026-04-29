@@ -9,11 +9,25 @@ import {
   type BootstrapEntity,
   type BootstrapResolvedStore,
   type BootstrapStagedRow,
+  type BootstrapValidationStatus,
   type BootstrapValidationResult,
   MasterDataBootstrapRepository,
 } from "../infrastructure/master-data-bootstrap.repository";
 
 const ALLOWED_STORE_TYPES = new Set(["company", "franchise", "operator"]);
+
+type BootstrapReadiness =
+  | "needs_validation"
+  | "needs_review"
+  | "ready_to_promote"
+  | "closed";
+
+type BootstrapNextAction =
+  | "validate_batch"
+  | "review_invalid_rows"
+  | "review_needs_review_rows"
+  | "wait_for_promotion_decision"
+  | "closed";
 
 @Injectable()
 export class MasterDataBootstrapService {
@@ -65,6 +79,102 @@ export class MasterDataBootstrapService {
         batch,
       },
     });
+  }
+
+  async listBootstrapBatches(input: {
+    actorScope: {
+      companyIds: string[];
+    };
+    bootstrapEntity?: BootstrapEntity;
+    batchStatus?: string;
+    readiness?: BootstrapReadiness;
+    q?: string;
+    limit?: number;
+    offset?: number;
+  }) {
+    if (input.actorScope.companyIds.length === 0) {
+      throw new ForbiddenException("Master data bootstrap requires company scope");
+    }
+
+    const result = await this.masterDataBootstrapRepository.listBootstrapBatches({
+      companyIds: input.actorScope.companyIds,
+      bootstrapEntity: input.bootstrapEntity,
+      batchStatus: input.batchStatus,
+      readiness: input.readiness,
+      q: input.q,
+      limit: input.limit ?? 50,
+      offset: input.offset ?? 0,
+    });
+
+    return buildListResponse(
+      result.rows.map((batch) => {
+        const readiness = deriveBootstrapReadiness(batch);
+        return {
+          ...batch,
+          readiness,
+          nextAction: deriveBootstrapNextAction(batch, readiness),
+        };
+      }),
+      {
+        total: result.total,
+        limit: input.limit ?? 50,
+        offset: input.offset ?? 0,
+      },
+    );
+  }
+
+  async listBootstrapRowsForReview(input: {
+    actorScope: {
+      companyIds: string[];
+    };
+    batchId: string;
+    validationStatus?: BootstrapValidationStatus;
+    issueCode?: string;
+    q?: string;
+    limit?: number;
+    offset?: number;
+  }) {
+    await this.getScopedBootstrapBatch({
+      batchId: input.batchId,
+      companyIds: input.actorScope.companyIds,
+    });
+
+    const result =
+      await this.masterDataBootstrapRepository.listBootstrapRowsForReview({
+        batchId: input.batchId,
+        companyIds: input.actorScope.companyIds,
+        validationStatus: input.validationStatus,
+        issueCode: input.issueCode,
+        q: input.q,
+        limit: input.limit ?? 50,
+        offset: input.offset ?? 0,
+      });
+
+    return buildListResponse(
+      result.rows.map((row) => ({
+        rowId: row.rowId,
+        batchId: row.batchId,
+        rowNumber: row.rowNumber,
+        sourceStoreCode: row.sourceStoreCode,
+        sourceEmployeeCode: row.sourceEmployeeCode,
+        validationStatus: row.validationStatus,
+        issueCode: row.issueCode,
+        issueMessage: row.issueMessage,
+        resolvedCompanyId: row.resolvedCompanyId,
+        resolvedRegionId: row.resolvedRegionId,
+        resolvedStoreId: row.resolvedStoreId,
+        resolvedEmployeeId: row.resolvedEmployeeId,
+        resolvedPositionId: row.resolvedPositionId,
+        rawPayload: row.rawPayload,
+        normalizedPayload: row.normalizedPayload,
+        updatedAt: row.updatedAt,
+      })),
+      {
+        total: result.total,
+        limit: input.limit ?? 50,
+        offset: input.offset ?? 0,
+      },
+    );
   }
 
   async validateBootstrapBatch(input: {
@@ -320,6 +430,57 @@ function countValidationStatuses(rows: BootstrapStagedRow[]) {
       promoted: 0,
     },
   );
+}
+
+function deriveBootstrapReadiness(input: {
+  batchStatus: string;
+  pendingCount: number;
+  invalidCount: number;
+  needsReviewCount: number;
+}): BootstrapReadiness {
+  if (["promoted", "rejected"].includes(input.batchStatus)) {
+    return "closed";
+  }
+
+  if (input.batchStatus === "ready_to_promote") {
+    return "ready_to_promote";
+  }
+
+  if (input.batchStatus === "uploaded" || input.pendingCount > 0) {
+    return "needs_validation";
+  }
+
+  if (input.invalidCount > 0 || input.needsReviewCount > 0) {
+    return "needs_review";
+  }
+
+  return "ready_to_promote";
+}
+
+function deriveBootstrapNextAction(
+  input: {
+    invalidCount: number;
+    needsReviewCount: number;
+  },
+  readiness: BootstrapReadiness,
+): BootstrapNextAction {
+  if (readiness === "needs_validation") {
+    return "validate_batch";
+  }
+
+  if (readiness === "needs_review" && input.invalidCount > 0) {
+    return "review_invalid_rows";
+  }
+
+  if (readiness === "needs_review" && input.needsReviewCount > 0) {
+    return "review_needs_review_rows";
+  }
+
+  if (readiness === "ready_to_promote") {
+    return "wait_for_promotion_decision";
+  }
+
+  return "closed";
 }
 
 function buildStoreResolution(

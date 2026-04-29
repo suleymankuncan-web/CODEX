@@ -49,6 +49,10 @@ type BootstrapStagedRowRecord = {
   updated_at: string;
 };
 
+type BootstrapBatchQueueRecord = BootstrapBatchRow & {
+  pending_count: number;
+};
+
 export type BootstrapBatch = {
   batchId: string;
   companyId: string;
@@ -114,6 +118,16 @@ export type BootstrapValidationSummary = {
   invalidCount: number;
   promotedCount: number;
 };
+
+export type BootstrapBatchQueueItem = BootstrapBatch & {
+  pendingCount: number;
+};
+
+export type BootstrapReadinessFilter =
+  | "needs_validation"
+  | "needs_review"
+  | "ready_to_promote"
+  | "closed";
 
 @Injectable()
 export class MasterDataBootstrapRepository {
@@ -241,6 +255,92 @@ export class MasterDataBootstrapRepository {
     return result.rows[0] ? mapBootstrapBatch(result.rows[0]) : null;
   }
 
+  async listBootstrapBatches(input: {
+    companyIds: string[];
+    bootstrapEntity?: BootstrapEntity;
+    batchStatus?: string;
+    readiness?: BootstrapReadinessFilter;
+    q?: string;
+    limit: number;
+    offset: number;
+  }): Promise<{ rows: BootstrapBatchQueueItem[]; total: number }> {
+    if (input.companyIds.length === 0) {
+      return { rows: [], total: 0 };
+    }
+
+    const params: unknown[] = [input.companyIds];
+    const filters = ["company_id = ANY($1::uuid[])"];
+
+    if (input.bootstrapEntity) {
+      params.push(input.bootstrapEntity);
+      filters.push(`bootstrap_entity = $${params.length}`);
+    }
+
+    if (input.batchStatus) {
+      params.push(input.batchStatus);
+      filters.push(`batch_status = $${params.length}`);
+    }
+
+    if (input.q) {
+      params.push(`%${input.q.trim()}%`);
+      filters.push(
+        `(source_label ILIKE $${params.length} OR file_reference ILIKE $${params.length})`,
+      );
+    }
+
+    const readinessClause = buildBootstrapReadinessSql(input.readiness);
+    if (readinessClause) {
+      filters.push(readinessClause);
+    }
+
+    const whereClause = `WHERE ${filters.join(" AND ")}`;
+    const selectSql = `
+      SELECT
+        master_data_bootstrap_batch_id,
+        company_id,
+        bootstrap_entity,
+        source_label,
+        file_reference,
+        uploaded_by_user_id,
+        batch_status,
+        row_count,
+        valid_count,
+        needs_review_count,
+        invalid_count,
+        promoted_count,
+        GREATEST(
+          row_count - valid_count - needs_review_count - invalid_count - promoted_count,
+          0
+        )::integer AS pending_count,
+        created_at,
+        validated_at,
+        promoted_at
+      FROM stg.master_data_bootstrap_batch
+      ${whereClause}
+    `;
+
+    const totalResult = await this.databaseService.query<{ total_count: string }>(
+      `SELECT COUNT(*)::text AS total_count FROM (${selectSql}) batches`,
+      params,
+    );
+
+    params.push(input.limit, input.offset);
+    const result = await this.databaseService.query<BootstrapBatchQueueRecord>(
+      `
+        ${selectSql}
+        ORDER BY created_at DESC, master_data_bootstrap_batch_id DESC
+        LIMIT $${params.length - 1}
+        OFFSET $${params.length}
+      `,
+      params,
+    );
+
+    return {
+      rows: result.rows.map(mapBootstrapBatchQueueItem),
+      total: Number(totalResult.rows[0]?.total_count ?? 0),
+    };
+  }
+
   async listBootstrapRows(batchId: string): Promise<BootstrapStagedRow[]> {
     const result = await this.databaseService.query<BootstrapStagedRowRecord>(
       `
@@ -271,6 +371,101 @@ export class MasterDataBootstrapRepository {
     );
 
     return result.rows.map(mapBootstrapStagedRow);
+  }
+
+  async listBootstrapRowsForReview(input: {
+    batchId: string;
+    companyIds: string[];
+    validationStatus?: BootstrapValidationStatus;
+    issueCode?: string;
+    q?: string;
+    limit: number;
+    offset: number;
+  }): Promise<{ rows: BootstrapStagedRow[]; total: number }> {
+    if (input.companyIds.length === 0) {
+      return { rows: [], total: 0 };
+    }
+
+    const params: unknown[] = [input.batchId, input.companyIds];
+    const filters = [
+      "r.master_data_bootstrap_batch_id = $1::uuid",
+      "b.company_id = ANY($2::uuid[])",
+    ];
+
+    if (input.validationStatus) {
+      params.push(input.validationStatus);
+      filters.push(`r.validation_status = $${params.length}`);
+    }
+
+    if (input.issueCode) {
+      params.push(input.issueCode);
+      filters.push(`r.issue_code = $${params.length}`);
+    }
+
+    if (input.q) {
+      params.push(`%${input.q.trim()}%`);
+      filters.push(
+        `(r.source_store_code ILIKE $${params.length} OR r.source_employee_code ILIKE $${params.length})`,
+      );
+    }
+
+    const whereClause = `WHERE ${filters.join(" AND ")}`;
+    const fromSql = `
+      FROM stg.master_data_bootstrap_row r
+      INNER JOIN stg.master_data_bootstrap_batch b
+        ON b.master_data_bootstrap_batch_id = r.master_data_bootstrap_batch_id
+      ${whereClause}
+    `;
+
+    const totalResult = await this.databaseService.query<{ total_count: string }>(
+      `SELECT COUNT(*)::text AS total_count ${fromSql}`,
+      params,
+    );
+
+    params.push(input.limit, input.offset);
+    const result = await this.databaseService.query<BootstrapStagedRowRecord>(
+      `
+        SELECT
+          r.master_data_bootstrap_row_id,
+          r.master_data_bootstrap_batch_id,
+          r.row_number,
+          r.row_hash,
+          r.source_store_code,
+          r.source_employee_code,
+          r.raw_payload_json,
+          r.normalized_payload_json,
+          r.validation_status,
+          r.issue_code,
+          r.issue_message,
+          r.resolved_company_id,
+          r.resolved_region_id,
+          r.resolved_store_id,
+          r.resolved_employee_id,
+          r.resolved_position_id,
+          r.created_at,
+          r.updated_at
+        ${fromSql}
+        ORDER BY
+          CASE r.validation_status
+            WHEN 'invalid' THEN 1
+            WHEN 'needs_review' THEN 2
+            WHEN 'pending' THEN 3
+            WHEN 'valid' THEN 4
+            WHEN 'promoted' THEN 5
+            ELSE 6
+          END ASC,
+          r.row_number ASC,
+          r.master_data_bootstrap_row_id ASC
+        LIMIT $${params.length - 1}
+        OFFSET $${params.length}
+      `,
+      params,
+    );
+
+    return {
+      rows: result.rows.map(mapBootstrapStagedRow),
+      total: Number(totalResult.rows[0]?.total_count ?? 0),
+    };
   }
 
   async resolveStoreByCode(
@@ -456,6 +651,15 @@ function mapBootstrapBatch(row: BootstrapBatchRow): BootstrapBatch {
   };
 }
 
+function mapBootstrapBatchQueueItem(
+  row: BootstrapBatchQueueRecord,
+): BootstrapBatchQueueItem {
+  return {
+    ...mapBootstrapBatch(row),
+    pendingCount: row.pending_count,
+  };
+}
+
 function mapBootstrapStagedRow(row: BootstrapStagedRowRecord): BootstrapStagedRow {
   return {
     rowId: row.master_data_bootstrap_row_id,
@@ -477,4 +681,27 @@ function mapBootstrapStagedRow(row: BootstrapStagedRowRecord): BootstrapStagedRo
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+function buildBootstrapReadinessSql(readiness?: BootstrapReadinessFilter) {
+  if (!readiness) {
+    return null;
+  }
+
+  const pendingExpression =
+    "GREATEST(row_count - valid_count - needs_review_count - invalid_count - promoted_count, 0)";
+
+  if (readiness === "needs_validation") {
+    return `(batch_status = 'uploaded' OR ${pendingExpression} > 0)`;
+  }
+
+  if (readiness === "needs_review") {
+    return "(invalid_count > 0 OR needs_review_count > 0)";
+  }
+
+  if (readiness === "ready_to_promote") {
+    return "batch_status = 'ready_to_promote'";
+  }
+
+  return "batch_status IN ('promoted', 'rejected')";
 }
