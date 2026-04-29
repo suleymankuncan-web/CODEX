@@ -262,7 +262,31 @@ Referans:
 
 - `docs/superpowers/specs/2026-04-29-target-reference-control-surface-v1-design.md`
 
-Siradaki mantikli adim: bu tasarim onaylanirsa implementation plan yazmak. Ilk kod adimi muhtemelen approved personnel target reference schema/contract ve mevcut target approval akisini bu referansa promote edecek dar backend plani olmali.
+## Son Target Reference Control Surface V1 Implementation Plan
+
+29 Nisan 2026 itibariyla hedef referans kontrol yuzeyi icin implementation plani yazildi.
+
+Yeni dokuman:
+
+- `docs/superpowers/plans/2026-04-29-target-reference-control-surface-v1.md`
+
+Plan sirasi:
+
+1. Schema contract red.
+2. `ops.personnel_target_reference` migration ve canonical schema alignment.
+3. Target allocation payloadlarina gercek `employeeId` zorunlulugu.
+4. Region manager approval sonrasi request allocation satirlarini approved target reference satirlarina promote etme.
+5. Live personnel `TARGET_ACHIEVEMENT` reporting'in approved target reference okumasini saglama.
+6. Closed employee snapshotlarinda `personnel_target_reference_id` anchor'i.
+7. HR/Admin target coverage/readiness yuzeyi.
+8. Backend/frontend/root release gate ve handoff kapamasi.
+
+CODEX durust yorum:
+
+- Bu plan flashy UI degil, skor guvenilirligi altyapisi. Target request workflow kanit olarak kalir; scoring ise temiz, onayli ve query edilebilir target reference satirlarini okur.
+- Siradaki kod adimi schema contract ve migration ile baslamali; VM checklist, bolge benchmark veya JSON adapter bu referans zemini temizlenmeden buyutulmamali.
+
+Siradaki mantikli adim: Target Reference Control Surface V1 planini uygulamaya almak. Ilk uygulanacak parca `ops.personnel_target_reference` schema contract + migration olmali.
 
 ## Son Operational Feed V1
 
