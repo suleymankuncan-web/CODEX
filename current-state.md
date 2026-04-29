@@ -3591,7 +3591,32 @@ CODEX durust yorum:
 - Keycloak'i degistirmek veya otomatik user provisioning acmak simdilik yanlis olurdu. Dogru V1, hazir Keycloak kullanicisini canli employee kaydina, tek role ve acik store scope'a baglamaktir.
 - En kritik risk `REGION_MANAGER` iki magazalik pilot scope'unu fazla genisletmeden cozmektir. Bu uygulama planinda ilk dogrulanacak konudur.
 
-Siradaki mantikli adim: bu tasarim dokumanini kullanarak `User Account / Role Assignment V1` implementation plani cikarmak; once schema/auth-resolution contract'i ve `VISUAL_MERCHANDISER` rol siniri netlestirilmeli.
+Bu siradaki adim tamamlandi: `User Account / Role Assignment V1` implementation plani yazildi.
+
+## Son User Account / Role Assignment V1 Implementation Plan
+
+29 Nisan 2026 itibariyla pilot kullanici hesabi, rol ve magaza scope baglama isinin implementation plani hazirlandi.
+
+Plan karari:
+
+- `REGION_MANAGER` pilotta genis bolge read scope ile acilmayacak.
+- Bunun yerine plan, `REGION_MANAGER` rolunun store-scoped dar assignment alabilmesi icin kontrollu scope-policy istisnasi onerir.
+- Boylece 1 bolge muduru iki pilot magaza uzerinde gercek read/action scope ile test edilebilir.
+- `VISUAL_MERCHANDISER` store-scoped yeni rol olarak eklenecek; V1'de VM checklist read siniri acilir ama BM/region-manager checklist mutation yetkisi verilmez.
+- `ops.user_account.provider_subject` eklenerek Keycloak/OIDC `sub` degeri ic app `user_id` kaydina cozulur.
+- HR_ADMIN icin `POST /api/auth/pilot-user-bindings` tek komutta employee, provider subject, rol ve store scope baglama akisi olarak planlandi.
+
+Referans:
+
+- `docs/superpowers/plans/2026-04-29-user-account-role-assignment-v1.md`
+
+CODEX durust yorum:
+
+- Plan dogru yerde duruyor: en riskli kisim olan region manager iki-magaza scope'u genisletilmeden cozuluyor.
+- User account isi tek tek mevcut auth-admin cagri setiyle operatora birakilsa hata riski olurdu; tek HR/Admin binding command daha guvenli.
+- Uygulama sirasinda ilk kirmizi test provider subject schema/auth resolution olmali; Keycloak automation, bulk rollout ve store personnel hesaplari hala kapali kalmali.
+
+Siradaki mantikli adim: bu plani inline TDD ile uygulamak; once `provider_subject` schema contract ve JWT `sub` -> internal `user_account` cozumleme adimi ile baslamak.
 
 ## Onemli Dosyalar
 
