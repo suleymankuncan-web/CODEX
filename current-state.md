@@ -4184,6 +4184,45 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: Store KPI kapali snapshot secim UX'ini sade bir snapshot listesi/select yapisina cevirmeyi planlamak; boylece kullanici date yazmak zorunda kalmadan kapanmis gun/ay secip skor kirilimini gorebilir.
 
+## Son Store KPI Snapshot Selector UX V1
+
+29 Nisan 2026 itibariyla Store KPI kapali snapshot secimi date input'tan snapshot listesine alindi.
+
+Eklenenler:
+
+- `/store/kpis` kapali mod artik daily snapshot run listesini `limit=30` ile ceker.
+- Kullanici tarih yazmak yerine `Kapanmis KPI snapshot secimi` combobox'undan kapanmis snapshot secer.
+- Varsayilan gorunum en guncel snapshot run'dir.
+- Secilen snapshot'in `snapshotRunId` degeri hem KPI rows hem store score breakdown sorgusunda kullanilir.
+- `Son kapanmis gune don` butonu secimi temizleyip en guncel snapshot'a geri dondurur.
+- Eski date input ve tarih bazli no-snapshot state kaldirildi.
+
+Dogrulama:
+
+- TDD kirmizi test: yeni snapshot combobox testi once beklenen sekilde dustu.
+- Frontend targeted explainability e2e: 4 test passed.
+- Frontend lint passed.
+- Frontend store surface e2e: 12 test passed.
+- Frontend `npm.cmd run check:release` passed:
+  - lint,
+  - script tests 7/7,
+  - build,
+  - 45 Playwright test,
+  - audit 0 vulnerability.
+- In-app browser smoke:
+  - `pilot.store.manager.100` ile gercek Keycloak login acildi.
+  - `/store/kpis` kapali modda snapshot combobox gorundu.
+  - `20 Nis 2026 - 1 Nis 2026 / 30 Nis 2026` snapshot'i secildi.
+  - STORE100 BM checklist katkisi gorundu: `2 BM checklist yapildi`, `BM checklist katkisi 4,50`, `Effective 95/5/0`.
+
+CODEX durust yorum:
+
+- Bu ufak UX degisikligi teknik olarak onemli: kullanici artik tarih formatini tahmin etmiyor, sistemin gercek kapanmis snapshot kaydini seciyor.
+- Score breakdown tarafinda yanlis run'a bakma riski azaldi; f301 gibi aylik gorunumlu daily snapshot'lar da kullaniciya secilebilir oldu.
+- Sonraki UI iyilestirmesinde option metnini daha urun diliyle yazmak iyi olur: `20 Nis kapanisi - Nisan aylik snapshot` gibi.
+
+Siradaki mantikli adim: Store KPI snapshot option metinlerini ve kapali/live copy'sini tamamen urun diline cekmek; ardindan bu snapshot secim desenini `/store/me` ve `/store/rankings` gibi kapali veri secen ekranlara da kontrollu yaymak.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:

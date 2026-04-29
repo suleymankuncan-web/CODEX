@@ -45,6 +45,19 @@ test('store KPI closed view explains effective BM and VM checklist weights', asy
   await expect(page.getByText('Effective 95/5/0')).toBeVisible()
 })
 
+test('store KPI closed view lets users choose a closed snapshot from the list', async ({ page }) => {
+  await page.goto('/store/kpis')
+
+  await page.getByRole('button', { name: 'Kapanmis gun' }).click()
+  await page
+    .getByLabel('Kapanmis KPI snapshot secimi')
+    .selectOption('snapshot-2026-04-20')
+
+  await expect(page.getByText('1 VM checklist yapildi')).toBeVisible()
+  await expect(page.getByText('VM checklist katkisi 5')).toBeVisible()
+  await expect(page.getByText('Effective 95/0/5')).toBeVisible()
+})
+
 async function routeBenchmarkExplainabilityApi(page: Page) {
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: authSessionFixture })
@@ -63,11 +76,23 @@ async function routeBenchmarkExplainabilityApi(page: Page) {
   })
 
   await page.route('**/api/reports/kpis**', async (route) => {
-    await route.fulfill({ json: kpiRowsFixture })
+    const requestUrl = new URL(route.request().url())
+    await route.fulfill({
+      json:
+        requestUrl.searchParams.get('snapshotRunId') === 'snapshot-2026-04-20'
+          ? kpiRowsFixtureForVmSnapshot
+          : kpiRowsFixture,
+    })
   })
 
   await page.route('**/api/reports/store-score-breakdown**', async (route) => {
-    await route.fulfill({ json: storeScoreBreakdownFixture })
+    const requestUrl = new URL(route.request().url())
+    await route.fulfill({
+      json:
+        requestUrl.searchParams.get('snapshotRunId') === 'snapshot-2026-04-20'
+          ? storeScoreBreakdownVmFixture
+          : storeScoreBreakdownFixture,
+    })
   })
 
   await page.route('**/api/reports/my-performance**', async (route) => {
@@ -283,8 +308,18 @@ const snapshotRunsFixture = {
       generatedAt: '2026-04-01T00:00:00.000Z',
       generatedBy: 'system',
     },
+    {
+      snapshotRunId: 'snapshot-2026-04-20',
+      snapshotDate: '2026-04-20',
+      snapshotType: 'daily',
+      periodStart: '2026-04-01',
+      periodEnd: '2026-04-30',
+      runStatus: 'completed',
+      generatedAt: '2026-04-20T21:00:00.000Z',
+      generatedBy: 'system',
+    },
   ],
-  meta: { count: 1, total: 1, limit: 1, offset: 0 },
+  meta: { count: 2, total: 2, limit: 30, offset: 0 },
 }
 
 const kpiRowsFixture = {
@@ -301,6 +336,25 @@ const kpiRowsFixture = {
       actualValue: '100',
       achievementRate: '1',
       statusBand: 'on_track',
+    },
+  ],
+  meta: { count: 1, total: 1, limit: 50, offset: 0 },
+}
+
+const kpiRowsFixtureForVmSnapshot = {
+  items: [
+    {
+      snapshotRunId: 'snapshot-2026-04-20',
+      storeId: demoStoreId,
+      kpiId: 'kpi-1',
+      kpiCode: 'TARGET_ACHIEVEMENT',
+      kpiName: 'Target Achievement',
+      periodStart: '2026-04-01',
+      periodEnd: '2026-04-30',
+      targetValue: '100',
+      actualValue: '0',
+      achievementRate: '0',
+      statusBand: 'off_track',
     },
   ],
   meta: { count: 1, total: 1, limit: 50, offset: 0 },
@@ -346,6 +400,50 @@ const storeScoreBreakdownFixture = {
       visitCount: 0,
       status: 'not_included',
       missingReason: 'vm_checklist_not_completed_for_period',
+    },
+  },
+}
+
+const storeScoreBreakdownVmFixture = {
+  snapshotRunId: 'snapshot-2026-04-20',
+  storeId: demoStoreId,
+  scoreStatus: 'final',
+  totalScore: 5,
+  missingWeightPolicy: 'return_missing_weight_to_kpi',
+  configuredWeights: {
+    kpiPerformanceWeight: 90,
+    bmChecklistWeight: 5,
+    vmChecklistWeight: 5,
+  },
+  effectiveWeights: {
+    kpiPerformanceWeight: 95,
+    bmChecklistWeight: 0,
+    vmChecklistWeight: 5,
+  },
+  components: {
+    kpi: {
+      included: true,
+      score: 0,
+      weight: 95,
+      contribution: 0,
+      status: 'included',
+    },
+    bmChecklist: {
+      included: false,
+      score: null,
+      weight: 0,
+      contribution: null,
+      visitCount: 0,
+      status: 'not_included',
+      missingReason: 'bm_checklist_not_completed_for_period',
+    },
+    vmChecklist: {
+      included: true,
+      score: 100,
+      weight: 5,
+      contribution: 5,
+      visitCount: 1,
+      status: 'included',
     },
   },
 }

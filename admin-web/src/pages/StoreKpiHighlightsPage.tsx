@@ -160,7 +160,7 @@ export function StoreKpiHighlightsPage(input: {
   const primaryStoreId = input.authSummary?.user.scope.storeIds[0] ?? undefined
   const storeShellIntent = hasStoreShellIntent(input.authSummary)
   const [viewMode, setViewMode] = useState<'live' | 'closed'>('live')
-  const [snapshotDateFilter, setSnapshotDateFilter] = useState('')
+  const [selectedSnapshotRunId, setSelectedSnapshotRunId] = useState('')
   const [livePeriodStart, setLivePeriodStart] = useState('')
 
   const configQuery = useQuery({
@@ -182,19 +182,22 @@ export function StoreKpiHighlightsPage(input: {
   })
 
   const dailySnapshotQuery = useQuery({
-    queryKey: ['store-kpis-snapshot-runs', snapshotDateFilter || 'latest'],
+    queryKey: ['store-kpis-snapshot-runs', 'daily-list'],
     queryFn: () =>
       getReportingSnapshotRuns({
         snapshotType: 'daily',
-        snapshotDate: snapshotDateFilter || undefined,
-        limit: 1,
+        limit: 30,
         offset: 0,
       }),
     enabled: reportingAllowed && viewMode === 'closed',
     retry: false,
   })
 
-  const activeSnapshotRun = dailySnapshotQuery.data?.items[0] ?? null
+  const availableSnapshotRuns = dailySnapshotQuery.data?.items ?? []
+  const activeSnapshotRun =
+    availableSnapshotRuns.find((run) => run.snapshotRunId === selectedSnapshotRunId) ??
+    availableSnapshotRuns[0] ??
+    null
   const snapshotRunId = activeSnapshotRun?.snapshotRunId ?? ''
   const closedKpiQuery = useQuery({
     queryKey: ['store-kpis-closed', snapshotRunId || 'no-run'],
@@ -514,35 +517,14 @@ export function StoreKpiHighlightsPage(input: {
   if (viewMode === 'closed' && dailySnapshotQuery.isError) {
     return (
       <ScreenState
-        title="KPI tarih filtresi acilamadi"
+        title="KPI snapshot listesi acilamadi"
         copy={getErrorMessage(dailySnapshotQuery.error)}
         tone="error"
       />
     )
   }
 
-  if (viewMode === 'closed' && snapshotDateFilter && !activeSnapshotRun) {
-    return (
-      <section className="page-stack">
-        <section className="hero-panel store-hero-panel">
-          <div>
-            <div className="eyebrow">Store KPI Highlights</div>
-            <h2 className="hero-title">Secilen tarih icin kapanmis snapshot bulunamadi.</h2>
-            <p className="hero-copy">
-              Baska bir gun sec veya filtreyi temizleyip son kapanmis gun verisine don.
-            </p>
-          </div>
-          <div className="hero-metrics">
-            <MetricAccent label="Route" value="/store/kpis" />
-            <MetricAccent label="Requested date" value={snapshotDateFilter} />
-            <MetricAccent label="State" value="No snapshot" />
-          </div>
-        </section>
-      </section>
-    )
-  }
-
-  if (viewMode === 'closed' && !snapshotDateFilter && !activeSnapshotRun) {
+  if (viewMode === 'closed' && !activeSnapshotRun) {
     return (
       <ScreenState
         title="Kapanmis KPI gunu hazir degil"
@@ -669,20 +651,26 @@ export function StoreKpiHighlightsPage(input: {
           </div>
         ) : (
           <div className="toolbar-cluster">
-            <input
+            <select
               className="control-input"
-              type="date"
-              value={snapshotDateFilter}
-              onChange={(event) => setSnapshotDateFilter(event.target.value)}
-              aria-label="KPI snapshot date"
-            />
+              value={activeSnapshotRun?.snapshotRunId ?? ''}
+              onChange={(event) => setSelectedSnapshotRunId(event.target.value)}
+              aria-label="Kapanmis KPI snapshot secimi"
+            >
+              {activeSnapshotRun ? null : <option value="">Snapshot yok</option>}
+              {availableSnapshotRuns.map((run) => (
+                <option key={run.snapshotRunId} value={run.snapshotRunId}>
+                  {`${formatDate(run.snapshotDate)} - ${formatDate(run.periodStart)} / ${formatDate(run.periodEnd)}`}
+                </option>
+              ))}
+            </select>
             <button
               className="control-button"
               type="button"
-              onClick={() => setSnapshotDateFilter('')}
-              disabled={!snapshotDateFilter}
+              onClick={() => setSelectedSnapshotRunId('')}
+              disabled={!selectedSnapshotRunId}
             >
-              Filtreyi temizle
+              Son kapanmis gune don
             </button>
           </div>
         )}
