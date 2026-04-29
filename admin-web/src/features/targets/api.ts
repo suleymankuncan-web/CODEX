@@ -55,10 +55,41 @@ export type StoreTargetingPerson = {
   netSalesValue: number | null
 }
 
+export type TargetCoverageRow = {
+  storeId: string
+  storeName: string
+  employeeId: string
+  displayName: string
+  externalEmployeeRef: string | null
+  targetReferenceId: string | null
+  targetValue: number | null
+  targetStatus: string
+}
+
+export type TargetCoverageSummary = {
+  requestMonth: string
+  totalEmployees: number
+  coveredEmployees: number
+  missingEmployees: number
+  coverageRate: number
+}
+
 export async function getStoreTargetingPersonnel(storeId: string) {
   const params = new URLSearchParams({ storeId })
   return fetchJson<ListResponse<StoreTargetingPerson>>(
     `/target-distributions/store-personnel?${params.toString()}`,
+  )
+}
+
+export async function getTargetCoverage(input: { requestMonth: string; storeId?: string }) {
+  const params = new URLSearchParams({ requestMonth: input.requestMonth })
+
+  if (input.storeId) {
+    params.set('storeId', input.storeId)
+  }
+
+  return fetchJson<ListResponse<TargetCoverageRow> & { summary: TargetCoverageSummary }>(
+    `/target-distributions/coverage?${params.toString()}`,
   )
 }
 

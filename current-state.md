@@ -286,7 +286,36 @@ CODEX durust yorum:
 - Bu plan flashy UI degil, skor guvenilirligi altyapisi. Target request workflow kanit olarak kalir; scoring ise temiz, onayli ve query edilebilir target reference satirlarini okur.
 - Siradaki kod adimi schema contract ve migration ile baslamali; VM checklist, bolge benchmark veya JSON adapter bu referans zemini temizlenmeden buyutulmamali.
 
-Siradaki mantikli adim: Target Reference Control Surface V1 planini uygulamaya almak. Ilk uygulanacak parca `ops.personnel_target_reference` schema contract + migration olmali.
+Bu siradaki adim tamamlandi: `Target Reference Control Surface V1` uygulandi ve release kapilarindan gecti.
+
+## Son Target Reference Control Surface V1 Implementation
+
+29 Nisan 2026 itibariyla Target Reference Control Surface V1 backend, reporting, snapshot ve admin coverage yuzeyiyle uygulandi.
+
+Eklenenler:
+
+- `ops.personnel_target_reference` onaylanmis personel hedeflerini skor motorunun okuyabilecegi canonical referans satiri olarak eklendi.
+- Target distribution allocation payloadlari artik gercek `employeeId` ister; `assigneeLabel` yalniz gorunum/kanit olarak kalir.
+- Region manager onayi sonrasi allocation satirlari approved monthly personnel target reference satirlarina promote edilir.
+- Live personel `TARGET_ACHIEVEMENT` reporting artik approved target reference okur; aylik hedef referansi gunluk/MTD KPI periodlarini kapsayabilir.
+- Employee KPI snapshotlari `personnel_target_reference_id` ile anchor edilir; sonradan gelen duzeltmeler gecmisi sessizce degistirmez.
+- Eksik hedef varsa sistem hedef uydurmaz; scoring sonucu `personnel_target_missing` / `missing_reference` olarak aciklar.
+- Backend `GET /api/target-distributions/coverage` active personel scope'u icin approved/missing hedef kapsamasini dondurur.
+- Admin `/admin/targets` yuzeyinde hedef kapsama paneli eklendi; HR/Admin/region tarafinda eksik hedefler gorunur hale geldi.
+
+Dogrulama:
+
+- Backend targeted target-reference tests: repository/service/reporting/snapshot/DTO coverage.
+- Frontend targeted e2e: `admin-targets.spec.ts` -> 1 Playwright test.
+- Root release gate: `npm.cmd run check:release` -> 46 root script test, backend lint + 68 suite / 412 test + build + audit, frontend lint + 7 script test + build + 40 Playwright test + audit.
+
+CODEX durust yorum:
+
+- Bu is skor sisteminin en kritik tartisma noktasini kapatti: personel hedefi artik talep JSON'undan degil, onayli ve sorgulanabilir referans satirindan okunuyor.
+- En buyuk kazanc, gecmis snapshotlarin hangi hedef referansina gore hesaplandiginin izlenebilir hale gelmesi ve eksik hedeflerde sistemin puan uydurmamasi.
+- Admin coverage paneli pilot UI seviyesinde; asil degeri operasyonun eksik hedefleri skor bozulmadan once gorebilmesidir.
+
+Siradaki mantikli adim: dis kaynak yoksa yeni adapter yazmamak; gercek store/personel baseline listesi gelirse Personnel Master Data Bootstrap V1'e gecmek. Baseline yoksa hedef coverage V1-B icin pending/stale/conflict sayaclarini intake ile netlestirmek.
 
 ## Son Operational Feed V1
 
@@ -3407,7 +3436,7 @@ CODEX durust yorum:
 - En kritik kazanc, gecmis skoru sessizce degistirmemek icin completed-lock davranisinin testlerle kilitlenmesi.
 - UI hala pilot; asil deger backend lifecycle, scope ve score davranisinin dogru oturmasinda.
 
-Siradaki mantikli adim: checklist skorunun store KPI/config tarafina hangi agirlikla girecegini ayri karar olarak netlestirmek. Bu karar koddan once KPI config, snapshot etkisi, geriye donuk skor ve magaza performans yorumuna etkisiyle ele alinmali.
+Siradaki mantikli adim: dis kaynak yoksa yeni adapter yazmamak; gercek store/personel baseline listesi gelirse Personnel Master Data Bootstrap V1'e gecmek. Baseline yoksa hedef coverage V1-B icin pending/stale/conflict sayaclarini intake ile netlestirmek.
 
 ## Onemli Dosyalar
 
@@ -3477,6 +3506,7 @@ Store ops:
 - `backend/nestjs/src/modules/store-ops/web/dto/list-competition-team-templates.query.ts`
 - `backend/nestjs/src/modules/store-ops/web/dto/update-competition-team-template.dto.ts`
 - `backend/nestjs/src/modules/store-ops/web/target-distribution.controller.ts`
+- `backend/nestjs/src/modules/store-ops/web/dto/list-target-coverage.query.ts`
 - `backend/nestjs/src/modules/store-ops/application/target-distribution.service.ts`
 - `backend/nestjs/src/modules/store-ops/application/kpi-benchmark-scoring.contract.ts`
 - `backend/nestjs/src/modules/store-ops/application/kpi-benchmark-scoring.service.ts`
@@ -3493,6 +3523,7 @@ Store ops:
 - `backend/nestjs/src/modules/store-ops/infrastructure/store-ops.repository.spec.ts`
 - `backend/nestjs/src/modules/store-ops/infrastructure/target-distribution.repository.ts`
 - `backend/nestjs/src/modules/store-ops/infrastructure/target-distribution.repository.spec.ts`
+- `backend/nestjs/src/modules/store-ops/target-reference-schema-contract.spec.ts`
 
 Backend integration / ingest:
 
@@ -3507,12 +3538,14 @@ Backend integration / ingest:
 - `backend/nestjs/test/integration/import-batch.e2e-spec.ts`
 - `db/migrations/010_checklist_acknowledgements.sql`
 - `db/migrations/027_kpi_raw_lineage_columns.sql`
+- `db/migrations/039_target_reference_control_surface_v1.sql`
 - `db/schema.sql`
 
 Frontend:
 
 - `admin-web/src/App.tsx`
 - `admin-web/src/features/auth/api.ts`
+- `admin-web/src/features/targets/api.ts`
 - `admin-web/src/features/competitions/api.ts`
 - `admin-web/src/features/competitions/StageBuilderForm.tsx`
 - `admin-web/src/features/competitions/stage-packages.ts`
@@ -3528,9 +3561,11 @@ Frontend:
 - `admin-web/src/pages/StoreFeedPage.tsx`
 - `admin-web/src/pages/StoreMyPerformancePage.tsx`
 - `admin-web/src/pages/StoreKpiHighlightsPage.tsx`
+- `admin-web/src/pages/TargetApprovalQueuePage.tsx`
 - `admin-web/src/features/kpi/grading.ts`
 - `admin-web/src/features/kpi/source-semantics.ts`
 - `admin-web/src/features/reports/api.ts`
+- `admin-web/e2e/admin-targets.spec.ts`
 - `admin-web/e2e/kpi-benchmark-explainability.spec.ts`
 - `admin-web/src/pages/StoreApprovalsPage.tsx`
 - `admin-web/src/features/workflow/WorkflowInboxDetail.tsx`

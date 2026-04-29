@@ -16,7 +16,9 @@ import {
 } from '../features/auth/authorization'
 import {
   approveTargetDistributionRequest,
+  getTargetCoverage,
   getTargetDistributionRequests,
+  type TargetCoverageRow,
   type TargetDistributionRequest,
 } from '../features/targets/api'
 import {
@@ -32,14 +34,20 @@ export function TargetApprovalQueuePage(input: {
   const queryClient = useQueryClient()
   const [approvalNotes, setApprovalNotes] = useState<Record<string, string>>({})
   const [approvalNotice, setApprovalNotice] = useState<string | null>(null)
+  const currentRequestMonth = getCurrentRequestMonth()
   const approvalsQuery = useQuery({
     queryKey: ['target-distribution-requests', 'approval-queue'],
     queryFn: () => getTargetDistributionRequests(),
+  })
+  const coverageQuery = useQuery({
+    queryKey: ['target-distribution-coverage', currentRequestMonth],
+    queryFn: () => getTargetCoverage({ requestMonth: currentRequestMonth }),
   })
   const approveMutation = useMutation({
     mutationFn: approveTargetDistributionRequest,
     onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: ['target-distribution-requests'] })
+      void queryClient.invalidateQueries({ queryKey: ['target-distribution-coverage'] })
       setApprovalNotice(result.command.message)
     },
   })
@@ -69,6 +77,11 @@ export function TargetApprovalQueuePage(input: {
   const approvedItems = items.filter((item) => item.status === 'approved').slice(0, 5)
   const pendingCount = inboxItems.filter((item) => item.inboxStatus === 'needs_attention').length
   const approvedCount = inboxItems.filter((item) => item.inboxStatus === 'completed').length
+  const coverageRows = coverageQuery.data?.items ?? []
+  const coverageSummary = coverageQuery.data?.summary ?? createEmptyCoverageSummary(currentRequestMonth)
+  const missingCoverageRows = coverageRows
+    .filter((item) => item.targetStatus === 'missing')
+    .slice(0, 5)
   const regionScope = input.authSummary?.user.readScope.regionIds.join(', ') || 'No resolved region scope'
   const assignedStoreScope = getAssignedStoreIds(input.authSummary)
 
@@ -119,6 +132,46 @@ export function TargetApprovalQueuePage(input: {
           icon={<TimerReset size={18} />}
           tone="accent"
         />
+      </section>
+
+      <section className="panel" aria-label="Target reference coverage">
+        <div className="panel-heading">
+          <div>
+            <div className="eyebrow">Target Reference Coverage</div>
+            <h3>Approved personnel target readiness</h3>
+          </div>
+          <StatusPill tone={coverageSummary.missingEmployees > 0 ? 'warning' : 'calm'}>
+            {coverageSummary.missingEmployees > 0 ? 'Missing targets' : 'Complete'}
+          </StatusPill>
+        </div>
+
+        {coverageQuery.isLoading ? (
+          <p className="queue-subtitle">Loading target coverage...</p>
+        ) : coverageQuery.isError ? (
+          <p className="queue-subtitle">{getErrorMessage(coverageQuery.error)}</p>
+        ) : (
+          <>
+            <div className="key-grid">
+              <KeyValue label="Covered personnel" value={String(coverageSummary.coveredEmployees)} />
+              <KeyValue label="Missing targets" value={String(coverageSummary.missingEmployees)} />
+              <KeyValue label="Coverage rate" value={formatCoverageRate(coverageSummary.coverageRate)} />
+              <KeyValue label="Personnel in scope" value={String(coverageSummary.totalEmployees)} />
+            </div>
+
+            {missingCoverageRows.length === 0 ? (
+              <EmptyState
+                title="No missing target references"
+                copy="Approved personnel target references cover the current month for every active person in scope."
+              />
+            ) : (
+              <div className="stacked-table">
+                {missingCoverageRows.map((item) => (
+                  <TargetCoverageMissingRow key={`${item.storeId}-${item.employeeId}`} item={item} />
+                ))}
+              </div>
+            )}
+          </>
+        )}
       </section>
 
       <section className="panel">
@@ -225,6 +278,22 @@ export function TargetApprovalQueuePage(input: {
   )
 }
 
+function TargetCoverageMissingRow(input: { item: TargetCoverageRow }) {
+  return (
+    <article className="stacked-row">
+      <div className="stacked-row-head">
+        <strong>{input.item.displayName}</strong>
+        <StatusPill tone="warning">Missing target</StatusPill>
+      </div>
+      <p>{input.item.storeName || input.item.storeId}</p>
+      <div className="key-grid">
+        <KeyValue label="Seller code" value={input.item.externalEmployeeRef ?? 'Unknown'} />
+        <KeyValue label="Employee" value={input.item.employeeId} />
+      </div>
+    </article>
+  )
+}
+
 function TargetApprovalRow(input: {
   item: TargetDistributionRequest
   approvalNote: string
@@ -309,4 +378,29 @@ function TargetApprovalRow(input: {
       ) : null}
     </article>
   )
+}
+
+function getCurrentRequestMonth() {
+  const now = new Date()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+
+  return `${now.getFullYear()}-${month}-01`
+}
+
+function createEmptyCoverageSummary(requestMonth: string) {
+  return {
+    requestMonth,
+    totalEmployees: 0,
+    coveredEmployees: 0,
+    missingEmployees: 0,
+    coverageRate: 0,
+  }
+}
+
+function formatCoverageRate(rate: number) {
+  if (!Number.isFinite(rate)) {
+    return '0%'
+  }
+
+  return `${Math.round(rate * 100)}%`
 }

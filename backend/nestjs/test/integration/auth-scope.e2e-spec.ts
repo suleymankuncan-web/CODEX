@@ -675,6 +675,7 @@ describe("Auth scope integration", () => {
         totalTargetValue: 1000,
         allocations: [
           {
+            employeeId: "00000000-0000-4000-8000-000000000501",
             assigneeLabel: "Sales Associate",
             targetValue: 1000,
           },
@@ -758,6 +759,7 @@ describe("Auth scope integration", () => {
         totalTargetValue: 1000,
         allocations: [
           {
+            employeeId: "00000000-0000-4000-8000-000000000501",
             assigneeLabel: "Sales Associate",
             targetValue: 1000,
           },
