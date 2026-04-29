@@ -3868,6 +3868,41 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: admin-web uzerinden bu 4 pilot kullaniciyla tarayici smoke'u yapmak; ozellikle store manager store kisitlari, region manager 2-magaza gorunumu ve VM read-only checklist siniri gozle kontrol edilmeli.
 
+## Son Pilot Browser Smoke
+
+29 Nisan 2026 itibariyla admin-web uzerinden gercek Keycloak login akisiyle pilot tarayici smoke'u yapildi.
+
+Kontrol edilenler:
+
+- `pilot.store.manager.100`
+  - Gercek PKCE login ile `/store` acildi.
+  - Rol `STORE_MANAGER` olarak cozuldu.
+  - Magaza scope yalniz `STORE100` (`00000000-0000-0000-0000-000000000100`) geldi.
+  - `/admin/reports` dogrudan acilmaya calisildiginda `Route not available for this role` verdi.
+- `pilot.region.manager`
+  - Rol `REGION_MANAGER` olarak cozuldu.
+  - Store preview icinde 2 magaza scope gorundu.
+  - Landing `/admin/targets` olarak cozuldu.
+  - `/admin/targets` yuzeyi acildi; action stores sayisi 2 olarak gorundu.
+- `pilot.vm`
+  - Rol `VISUAL_MERCHANDISER` olarak cozuldu.
+  - Store preview icinde 2 magaza scope gorundu.
+  - `/store/checklists` okuma/acknowledgement yuzeyi acildi.
+  - BM checklist baslat/tamamla gibi mutation aksiyonlari gorunmedi.
+  - `/admin/targets` dogrudan acilmaya calisildiginda `Route not available for this role` verdi.
+- `pilot.store.manager.ist002`
+  - Rol `STORE_MANAGER` olarak cozuldu.
+  - Magaza scope yalniz `IST-002` (`20000000-0000-0000-0000-000000000002`) geldi.
+  - `STORE100` bu oturumda gorunmedi.
+
+CODEX durust yorum:
+
+- Pilot auth/scope zinciri tarayicida da dogru calisiyor. DB smoke ile UI smoke birbirini dogruladi.
+- V1 icin asil risk artik auth binding degil; store yuzeylerinin role gore hangi aksiyonlari gosterecegini daha net UI kontratlarina baglamak.
+- VM icin okuma siniri dogru, ama VM checklist fazina gecmeden once `BM checklist` ve `VM checklist` template/action ayrimini tasarim dokumaniyla kilitlemek gerekir.
+
+Siradaki mantikli adim: VM Checklist V1 icin hemen kodlamaya girmeden tasarim-intake yapmak; template type, role action, score katkisi, store manager gorunurlugu ve audit siniri netlestirilmeli.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
