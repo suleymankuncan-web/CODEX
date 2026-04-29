@@ -120,6 +120,27 @@ Referans:
 
 - `docs/superpowers/specs/2026-04-29-kpi-benchmark-scoring-v1-design.md`
 
+## Son Checklist Store Score Integration V1 Kararlari
+
+29 Nisan 2026 itibariyla BM checklist skorunun aylik magaza skoruna etkisi dokumante edildi.
+
+Kararlar:
+
+- Checklist etkisi gunluk skorlara girmeyecek; yalnizca aylik store score icin kullanilacak.
+- V1 aylik magaza skoru: KPI performansi `%95`, BM checklist `%5`.
+- VM checklist ileride eklendiginde hedef blend: KPI `%90`, BM `%5`, VM `%5`.
+- BM checklist yapilmadiysa magaza ceza yemeyecek; KPI skoru normalize sekilde aylik skor olarak kalacak.
+- Eksik BM checklist UI'da `bu donem skora dahil edilmedi` gibi aciklanacak.
+- Bir ayda birden fazla tamamlanmis BM checklist varsa aylik BM checklist skoru tamamlanan ziyaretlerin aritmetik ortalamasi olacak.
+- Draft/in-progress checklistler skora etki etmeyecek.
+- Store manager acknowledgement skora dahil olma kosulu degil; region manager `Tamamla` dediginde checklist reporting icin gecerlilik kazanir.
+- Checklist score blend agirliklari `HR_ADMIN` / `SUPER_ADMIN` tarafindan konfigurasyonla yonetilmeli ve versioned olmalidir.
+- V1'de bolge, magaza tipi veya magaza bazli farkli checklist score agirligi yok.
+
+Referans:
+
+- `docs/superpowers/specs/2026-04-29-checklist-store-score-integration-v1-design.md`
+
 ## Son Operational Feed V1
 
 26 Nisan 2026 itibariyla `Operational Feed V1` tamamlandi. `Competition Format Registry V1` yonu bilincli olarak superseded edildi; UPT/ATV/total score gibi odak yarislari V1'de yeni bir skor motoru degil, duyuru/challenge postu olarak ele aliniyor.
