@@ -40,6 +40,11 @@ Decision:
 - Do not refactor them only because they are large.
 - Pick one only when a concrete feature or defect touches a clear boundary.
 - Any split should be planned as a small domain slice with targeted tests and root `check:release`.
+- `integration.repository.ts` has now been reviewed separately and is treated as a planned investment, not an active refactor target.
+
+Reference:
+
+- `docs/plans/integration-repository-risk-review-2026-04-30.md`
 
 ### 2. Large Frontend Files
 
@@ -140,6 +145,6 @@ If no external evidence is available, choose the next small guard through the in
 
 The best local candidates to consider next are:
 
-1. backend repository boundary risk review for one large repository file,
+1. backend repository boundary risk review for `store-ops.repository.ts`,
 2. real staging/source/master-data evidence if it becomes available,
 3. targeted cleanup of ignored local generated files if the user wants workspace hygiene.
