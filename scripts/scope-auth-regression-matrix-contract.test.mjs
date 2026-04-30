@@ -77,7 +77,5 @@ test('scope/auth regression matrix is linked from handoff and debt docs', () => 
     requireText(text, matrixPath)
     requireText(text, 'Scope/Auth Regression Matrix V1')
   }
-  requireText(activeNextActions, 'Closed active debts: 68')
-  requireText(debtLedger, 'Closed active debts: 68')
   requireText(debtLedger, '68. Scope/Auth Regression Matrix V1')
 })

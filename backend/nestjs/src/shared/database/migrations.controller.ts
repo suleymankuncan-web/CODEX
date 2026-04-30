@@ -1,4 +1,4 @@
-import { Controller, NotFoundException, Post } from "@nestjs/common";
+import { Controller, Get, NotFoundException, Post } from "@nestjs/common";
 import { RequireRoles } from "../../modules/auth/decorators/roles.decorator";
 import { RequireScope } from "../../modules/auth/decorators/scope.decorator";
 import { AppConfigService } from "../app-config.service";
@@ -20,5 +20,10 @@ export class MigrationsController {
     }
 
     return this.migrationService.runMigrations(process.cwd());
+  }
+
+  @Get("status")
+  async getMigrationStatus() {
+    return this.migrationService.getMigrationStatus(process.cwd());
   }
 }

@@ -4828,12 +4828,56 @@ CODEX durust yorum:
 - Scope/auth davranisi zaten testlerde vardi ama bilgi daginikti; artik hangi yuzeyin hangi testle korundugu tek yerde.
 - En kritik cizgi net: okuma yetkisi islem yetkisi degil, `assignedStoreIds` store aksiyonlari icin ayri korunacak.
 
-Siradaki mantikli adim: P0-3 DB health and migration evidence adimina gecmek.
+Bu siradaki adim tamamlandi: P0-3 DB health and migration evidence adimi uygulandi ve guard'a baglandi.
+
+## Son DB Health And Migration Evidence V1
+
+30 Nisan 2026 itibariyla DB health ve migration status gozlemlenebilirligi guclendirildi.
+
+Referans:
+
+- `docs/plans/db-health-migration-evidence-v1.md`
+- `scripts/db-health-migration-evidence-contract.test.mjs`
+- `backend/nestjs/src/shared/health.service.ts`
+- `backend/nestjs/src/shared/database/migration.service.ts`
+- `backend/nestjs/src/shared/database/migrations.controller.ts`
+
+Eklenenler:
+
+- `MigrationService.getMigrationStatus` migration dosyalarini ve `audit.schema_migration` tracking satirlarini salt-okuma evidence olarak karsilastirir.
+- `GET /api/admin/migrations/status` authenticated `SUPER_ADMIN` migration status evidence dondurur.
+- Status response `trackingTable`, `totalFiles`, `appliedCount`, `pending`, `failed` ve `checksumMismatches` alanlarini tasir.
+- Status endpoint `runMigrations` cagirmadan calisir; SQL migration dosyalarini execute etmez.
+- Mevcut `POST /api/admin/migrations/run` endpoint'i ayri guard'li kalir.
+- Public `GET /api/health` dependency error mesajlarinda URL/credential tarzı detaylari `[redacted-url]` / `[redacted]` olarak maskeler.
+
+Kilitlenen sinir:
+
+- Migration sistemi degistirilmedi.
+- Yeni migration dosyasi veya destructive DB davranisi eklenmedi.
+- CLI/CI migration yolu `npm.cmd run db:migrate` olarak kalir.
+- Public health response connection string, password veya raw DB URL dondurmemeli.
+
+Dogrulama:
+
+- TDD kirmizi test: migration status metod/endpoint eksikken backend targeted testler beklenen sekilde dustu.
+- TDD kirmizi test: health error redaction yokken secret URL response icinde gorundu.
+- TDD kirmizi test: `docs/plans/db-health-migration-evidence-v1.md` yokken root guard beklenen sekilde dustu.
+- Targeted backend tests passed.
+- Targeted guard test passed.
+- Root `npm.cmd run check:release` passed.
+
+CODEX durust yorum:
+
+- Bu is gosterisli degil ama production akli. Deploy oncesi migration status ve fail evidence gorulebiliyor, public health ise baglanti detaylarini disari vermiyor.
+- En onemli cizgi korundu: status sadece okuma; migration calistirma yine CLI/CI ve ayri guard'li run endpoint sinirinda.
+
+Siradaki mantikli adim: P0-4 Operator evidence consistency pass adimina gecmek.
 
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
 
 ```text
-current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. readScope/actionScope ayrimi ve assignedStoreIds modeli korunuyor. Siradaki mantikli adim P0-3 DB health and migration evidence.
+current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. readScope/actionScope ayrimi ve assignedStoreIds modeli korunuyor. Siradaki mantikli adim P0-4 Operator evidence consistency pass.
 ```

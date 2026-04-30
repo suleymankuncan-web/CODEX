@@ -43,6 +43,22 @@ function createDatabaseMock(options?: {
         return { rowCount: row ? 1 : 0, rows: row ? [row] : [] };
       }
 
+      if (sql.includes("FROM audit.schema_migration")) {
+        return {
+          rowCount: Object.keys(rows).length,
+          rows: Object.entries(rows).map(([migration_name, row]) => ({
+            attempt_count: 1,
+            duration_ms: null,
+            error_message:
+              row.status === "failed" ? `Failed migration ${migration_name}` : null,
+            finished_at: null,
+            migration_name,
+            ...row,
+            started_at: null,
+          })),
+        };
+      }
+
       if (options?.failOnSql && sql.includes(options.failOnSql)) {
         throw new Error("migration exploded");
       }
@@ -159,5 +175,40 @@ describe("MigrationService", () => {
     expect(calls.some((call) => call.params.includes("migration exploded"))).toBe(
       true,
     );
+  });
+
+  it("reports migration status without executing pending SQL files", async () => {
+    const project = createProjectWithMigrations({
+      "001_first.sql": "SELECT 1;",
+      "002_pending.sql": "CREATE TABLE should_not_run (id uuid);",
+      "003_failed.sql": "SELECT will_not_run;",
+    });
+    const checksum = computeChecksum("SELECT 1;");
+    const { calls, databaseService } = createDatabaseMock({
+      existingRows: {
+        "001_first.sql": { migration_checksum: checksum, status: "succeeded" },
+        "003_failed.sql": {
+          migration_checksum: "failed-checksum",
+          status: "failed",
+        },
+      },
+    });
+    const service = new MigrationService(databaseService as never);
+
+    const status = await service.getMigrationStatus(project.backendNestjs);
+
+    expect(status.trackingTable).toBe("present");
+    expect(status.totalFiles).toBe(3);
+    expect(status.appliedCount).toBe(1);
+    expect(status.pending).toEqual(["002_pending.sql"]);
+    expect(status.failed).toEqual([
+      expect.objectContaining({
+        migrationName: "003_failed.sql",
+        status: "failed",
+      }),
+    ]);
+    expect(status.checksumMismatches).toEqual(["003_failed.sql"]);
+    expect(calls.some((call) => call.sql.includes("should_not_run"))).toBe(false);
+    expect(calls.some((call) => call.sql.includes("will_not_run"))).toBe(false);
   });
 });

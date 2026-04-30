@@ -83,4 +83,36 @@ describe("HealthController (integration)", () => {
       await app.close();
     }
   });
+
+  it("redacts dependency error messages before returning health details", async () => {
+    const app = await createIntegrationApp({
+      databaseService: {
+        query: jest
+          .fn()
+          .mockRejectedValue(
+            new Error(
+              "connection failed for postgres://store_ops:secret-pass@db.example.com:5432/store_ops and connect ECONNREFUSED db.example.com:5432 password=secret-pass",
+            ),
+          ),
+      },
+      appConfigService: {
+        appName: "store-ops-backend",
+        queueBackend: "in-memory",
+        redisUrl: "redis://localhost:6379",
+      },
+    });
+
+    try {
+      const response = await request(app.getHttpServer()).get("/api/health");
+
+      expect(response.status).toBe(503);
+      expect(response.body.checks.database.status).toBe("error");
+      expect(response.body.checks.database.message).toContain("[redacted-url]");
+      expect(response.body.checks.database.message).toContain("[redacted-host]");
+      expect(JSON.stringify(response.body)).not.toContain("secret-pass");
+      expect(JSON.stringify(response.body)).not.toContain("db.example.com");
+    } finally {
+      await app.close();
+    }
+  });
 });

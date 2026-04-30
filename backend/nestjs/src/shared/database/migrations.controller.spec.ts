@@ -26,6 +26,7 @@ describe("MigrationsController", () => {
   it("hides HTTP migration endpoint when disabled", async () => {
     const migrationService = {
       runMigrations: jest.fn(),
+      getMigrationStatus: jest.fn(),
     };
     const controller = new MigrationsController(
       migrationService as never,
@@ -34,5 +35,34 @@ describe("MigrationsController", () => {
 
     await expect(controller.runMigrations()).rejects.toBeInstanceOf(NotFoundException);
     expect(migrationService.runMigrations).not.toHaveBeenCalled();
+  });
+
+  it("keeps migration status observable when HTTP run endpoint is disabled", async () => {
+    const migrationService = {
+      runMigrations: jest.fn(),
+      getMigrationStatus: jest.fn().mockResolvedValue({
+        appliedCount: 1,
+        checksumMismatches: [],
+        failed: [],
+        pending: ["002.sql"],
+        totalFiles: 2,
+        trackingTable: "present",
+      }),
+    };
+    const controller = new MigrationsController(
+      migrationService as never,
+      { httpMigrationEndpointEnabled: false } as never,
+    );
+
+    await expect(controller.getMigrationStatus()).resolves.toEqual({
+      appliedCount: 1,
+      checksumMismatches: [],
+      failed: [],
+      pending: ["002.sql"],
+      totalFiles: 2,
+      trackingTable: "present",
+    });
+    expect(migrationService.runMigrations).not.toHaveBeenCalled();
+    expect(migrationService.getMigrationStatus).toHaveBeenCalledWith(process.cwd());
   });
 });

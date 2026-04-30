@@ -13,14 +13,120 @@ export type MigrationRunResult = {
   }>;
 };
 
+export type MigrationStatusResult = {
+  trackingTable: "present" | "missing";
+  totalFiles: number;
+  appliedCount: number;
+  pending: string[];
+  failed: Array<{
+    migrationName: string;
+    status: "failed";
+    attemptCount: number;
+    startedAt: Date | string | null;
+    finishedAt: Date | string | null;
+    durationMs: number | null;
+    errorMessage: string | null;
+  }>;
+  checksumMismatches: string[];
+};
+
 type ExistingMigrationRow = {
   migration_checksum: string;
   status: "running" | "succeeded" | "failed";
 };
 
+type MigrationStatusRow = ExistingMigrationRow & {
+  migration_name: string;
+  attempt_count: number;
+  started_at: Date | string | null;
+  finished_at: Date | string | null;
+  duration_ms: number | null;
+  error_message: string | null;
+};
+
 @Injectable()
 export class MigrationService {
   constructor(private readonly databaseService: DatabaseService) {}
+
+  async getMigrationStatus(basePath = process.cwd()): Promise<MigrationStatusResult> {
+    const migrationsPath = this.resolveMigrationsPath(basePath);
+    const files = existsSync(migrationsPath)
+      ? readdirSync(migrationsPath)
+          .filter((file) => file.endsWith(".sql"))
+          .sort()
+      : [];
+    const checksums = new Map(
+      files.map((file) => [
+        file,
+        computeChecksum(readFileSync(join(migrationsPath, file), "utf8")),
+      ]),
+    );
+
+    let rows: MigrationStatusRow[];
+    try {
+      const result = await this.databaseService.query<MigrationStatusRow>(`
+        SELECT
+          migration_name,
+          migration_checksum,
+          status,
+          attempt_count,
+          started_at,
+          finished_at,
+          duration_ms,
+          error_message
+        FROM audit.schema_migration
+        ORDER BY migration_name ASC
+      `);
+      rows = result.rows;
+    } catch (error) {
+      if (isMissingMigrationTrackingTableError(error)) {
+        return {
+          appliedCount: 0,
+          checksumMismatches: [],
+          failed: [],
+          pending: files,
+          totalFiles: files.length,
+          trackingTable: "missing",
+        };
+      }
+
+      throw error;
+    }
+
+    const rowsByName = new Map(rows.map((row) => [row.migration_name, row]));
+    const checksumMismatches = files.filter((file) => {
+      const row = rowsByName.get(file);
+      return row ? row.migration_checksum !== checksums.get(file) : false;
+    });
+    const pending = files.filter((file) => {
+      const row = rowsByName.get(file);
+      return !row || row.status === "running";
+    });
+    const appliedCount = files.filter((file) => {
+      const row = rowsByName.get(file);
+      return row?.status === "succeeded";
+    }).length;
+    const failed = rows
+      .filter((row) => row.status === "failed")
+      .map((row) => ({
+        attemptCount: row.attempt_count,
+        durationMs: row.duration_ms,
+        errorMessage: row.error_message,
+        finishedAt: row.finished_at,
+        migrationName: row.migration_name,
+        startedAt: row.started_at,
+        status: "failed" as const,
+      }));
+
+    return {
+      appliedCount,
+      checksumMismatches,
+      failed,
+      pending,
+      totalFiles: files.length,
+      trackingTable: "present",
+    };
+  }
 
   async runMigrations(basePath = process.cwd()): Promise<MigrationRunResult> {
     const migrationsPath = this.resolveMigrationsPath(basePath);
@@ -201,4 +307,13 @@ export class MigrationService {
 
 function computeChecksum(sql: string): string {
   return createHash("sha256").update(sql).digest("hex");
+}
+
+function isMissingMigrationTrackingTableError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const code = "code" in error ? String(error.code) : "";
+  return code === "42P01" || code === "3F000";
 }
