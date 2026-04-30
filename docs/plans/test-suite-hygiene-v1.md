@@ -328,4 +328,10 @@ The risk becomes real only if we start inventing clever helpers, rewriting asser
 
 ## Next Logical Step
 
-After the auth action-scope split, pause Test Suite Hygiene V1 unless another oversized file has a clearly mechanical boundary. Do not split master-data until that work has its own explicit plan.
+After the auth action-scope split, pause Test Suite Hygiene V1 unless another oversized file has a clearly mechanical boundary.
+
+Master-data now has its own explicit plan:
+
+- `docs/plans/master-data-bootstrap-test-hygiene-v1.md`
+
+Do not implement that plan by starting with a split. The first approved implementation step must be the guard-only task that freezes all 29 current master-data bootstrap service test names before any test block moves.

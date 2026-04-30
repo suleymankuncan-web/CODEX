@@ -5264,10 +5264,28 @@ Kapanis notu:
 
 Siradaki mantikli adim: Test Suite Hygiene V1'i burada durdurmak; yeni bir buyuk dosya bolunecekse once ayri risk analizi yapmak. Master-data tarafina hala ayri plan olmadan girilmez.
 
+## Son Master Data Bootstrap Test Hygiene Ayrı Planı
+
+30 Nisan 2026 itibariyla master-data test dosyasina kod yazmadan once ayri plan cikarildi.
+
+Referans:
+
+- `docs/plans/master-data-bootstrap-test-hygiene-v1.md`
+
+Karar:
+
+- `master-data-bootstrap.service.spec.ts` anlamli ama buyuk bir dosya; 2159 fiziksel satir ve 29 test tasiyor.
+- Master-data tarafinda ilk implementasyon split degil, guard-only is olacak.
+- Guard once 29 test adinin tam 1 kez kaldigini donduracak.
+- Sonra yalnizca staging/normalization testleri en dusuk riskli ilk parca olarak bolunebilir.
+- Validation ve promotion safety testleri V1'de aceleyle bolunmeyecek; canli master-data yazimina yakin olduklari icin ayri plan ister.
+
+Siradaki mantikli adim: Onay verilirse once sadece `scripts/test-suite-hygiene-contract.test.mjs` icine master-data 29-test guard eklemek; test tasima isine guard gecmeden baslamamak.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
 
 ```text
-current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. readScope/actionScope ayrimi ve assignedStoreIds modeli korunuyor. Test Suite Hygiene V1 auth split kapandi; Import Batch Source Test Split V1, Import Batch Evidence Test Split V1, Competition Repository Test Split V1, Competition Stage Package Plan Test Split V1, Snapshot Run Read Model Test Split V1, Competition Service Team Template Test Split V1 ve Auth Action Scope Test Split V1 kapandi. Import/integration e2e kapsaminda production code degismeden 32 test adi uc dosyada korunuyor: import-batch, import-batch-evidence, integration-sources. Competition repository kapsaminda production code degismeden 27 test adi uc dosyada korunuyor: competition.repository, competition-stage-package-plan.repository, competition-team-template.repository. Snapshot run e2e kapsaminda production code degismeden 13 test adi iki dosyada korunuyor: snapshot-run, snapshot-run-read-models. Competition service kapsaminda production code degismeden 24 test adi iki dosyada korunuyor: competition.service, competition-team-template.service. Auth scope integration kapsaminda production code degismeden 18 test adi iki dosyada korunuyor: auth-scope, auth-action-scope. Operator Evidence Consistency Pass V1 kapandi. Backup Restore Drill Runbook V1 kapandi. Backup Restore Local Drill Evidence alindi; prod DB'ye dokunulmadi; bos disposable DB migration 42/42 succeeded ve restore proof source/restore schema counts matched. Migration Fresh DB Smoke V1 eklendi ve local Docker PostgreSQL uzerinde 42/42 succeeded, failed=0, audit=3, ops=39, rpt=10, stg=12 kaniti alindi. Migration Smoke Release Preflight Policy V1 karari: Docker-dependent smoke mandatory check:release icinde degil, DB schema/migration degisirse manuel preflight veya written Conditional Go zorunlu. Siradaki mantikli adim Test Suite Hygiene V1'i burada durdurmak; yeni bir buyuk dosya bolunecekse once ayri risk analizi yapmak. Master-data tarafina ayri plan olmadan girilmez.
+current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. readScope/actionScope ayrimi ve assignedStoreIds modeli korunuyor. Test Suite Hygiene V1 auth split kapandi; Import Batch Source Test Split V1, Import Batch Evidence Test Split V1, Competition Repository Test Split V1, Competition Stage Package Plan Test Split V1, Snapshot Run Read Model Test Split V1, Competition Service Team Template Test Split V1 ve Auth Action Scope Test Split V1 kapandi. Import/integration e2e kapsaminda production code degismeden 32 test adi uc dosyada korunuyor: import-batch, import-batch-evidence, integration-sources. Competition repository kapsaminda production code degismeden 27 test adi uc dosyada korunuyor: competition.repository, competition-stage-package-plan.repository, competition-team-template.repository. Snapshot run e2e kapsaminda production code degismeden 13 test adi iki dosyada korunuyor: snapshot-run, snapshot-run-read-models. Competition service kapsaminda production code degismeden 24 test adi iki dosyada korunuyor: competition.service, competition-team-template.service. Auth scope integration kapsaminda production code degismeden 18 test adi iki dosyada korunuyor: auth-scope, auth-action-scope. Operator Evidence Consistency Pass V1 kapandi. Backup Restore Drill Runbook V1 kapandi. Backup Restore Local Drill Evidence alindi; prod DB'ye dokunulmadi; bos disposable DB migration 42/42 succeeded ve restore proof source/restore schema counts matched. Migration Fresh DB Smoke V1 eklendi ve local Docker PostgreSQL uzerinde 42/42 succeeded, failed=0, audit=3, ops=39, rpt=10, stg=12 kaniti alindi. Migration Smoke Release Preflight Policy V1 karari: Docker-dependent smoke mandatory check:release icinde degil, DB schema/migration degisirse manuel preflight veya written Conditional Go zorunlu. Master-data test dosyasi icin ayri plan `docs/plans/master-data-bootstrap-test-hygiene-v1.md` olarak yazildi; ilk implementasyon split degil, 29 test adini donduran guard-only is olacak. Guard gecmeden master-data test tasima isine baslama.
 ```
