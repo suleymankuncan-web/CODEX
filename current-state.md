@@ -4578,6 +4578,44 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: gercek baseline veya JSON sample gelene kadar yeni buyuk akis acmadan kucuk veri guvenligi adimlariyla ilerlemek; bir sonraki aday import mapping/operator smoke veya admin review dry-run kaniti olabilir.
 
+## Son Source-Agnostic Import Boundary V1
+
+30 Nisan 2026 itibariyla Excel bugunku aktif kaynak, JSON ise gelecekteki kanitli kaynak olacak sekilde import siniri kilitlendi.
+
+Referans:
+
+- `docs/plans/source-agnostic-import-boundary-v1.md`
+- `scripts/source-agnostic-import-boundary-contract.test.mjs`
+
+Kilitlenen kararlar:
+
+- Excel KPI Import V1 aktif lokal kaynak yoludur.
+- JSON real sample payload veya resmi field list gelene kadar future-only kalir.
+- Tahmini veriye dayanarak JSON adapter, endpoint, scheduled job veya field map yazilmaz.
+- JSON gercek oldugunda Excel ile ayni canonical import boundary icinden gecer.
+- Source adapter sadece parsing/field mapping/evidence sorumludur; scoring, ranking, checklist, materialization ve master-data promotion karari vermez.
+- Canonical payload `sourceCode`, `sourceBatchId`, `sourceRowReference`, `rowHash`, `rawPayload`, `storeExternalRef`, `employeeExternalRef`, `periodStart`, `periodEnd`, `metricCode`, `actualValue` gibi kanit alanlarini tasir.
+- Source adapter store/personel master data auto-create edemez.
+- `unmapped_store`, `unmapped_employee`, exact-first mapping, normalized fallback ve ambiguous reject kurallari korunur.
+- PowerBI Turkiye ortalamasi satirlari skor kaynagi degil, reconciliation evidence olarak kalir.
+
+Dogrulama:
+
+- TDD kirmizi test: `docs/plans/source-agnostic-import-boundary-v1.md` yokken guard beklenen sekilde dustu.
+- Targeted guard test passed: `scripts/source-agnostic-import-boundary-contract.test.mjs` 5/5.
+- Root `npm.cmd run check:release` passed:
+  - root script tests 55/55,
+  - backend release gate passed: lint, 74 test suite / 472 test, build, audit 0 vulnerability,
+  - frontend release gate passed: lint, script tests, build, 46 Playwright test, audit 0 vulnerability.
+
+CODEX durust yorum:
+
+- Bu adim JSON'u bugunden yazmiyor; ileride JSON gelince projeyi iki farkli ingest dunyasina bolmemeyi garanti ediyor.
+- Defterin temiz kalmasi icin dogru yer burasi: karar siniri testli, runtime davranisi tahmine dayali degil.
+- Gercek sample gelmeden adapter yazmamak zayiflik degil, production akli.
+
+Siradaki mantikli adim: gercek JSON sample/field list gelirse mapping spec yazmak; gelmezse source-specific adapter acmadan sadece mevcut Excel/import/master-data hattini guclendiren kucuk guard veya operator smoke adimlariyla ilerlemek.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:

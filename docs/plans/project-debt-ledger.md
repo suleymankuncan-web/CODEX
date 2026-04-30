@@ -17,7 +17,7 @@ Date: 30 April 2026
 
 Current count:
 
-- Closed active debts: 63
+- Closed active debts: 64
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -91,6 +91,7 @@ These are counted as paid because they have implementation or documentation evid
 61. Ranking Score Explanation Copy V1
 62. Master Data Bootstrap Promotion Safety Guard V1
 63. External ID Code Normalization Guard V1
+64. Source-Agnostic Import Boundary V1
 
 Ranking Included Snapshot Contract V1 is counted as paid because `GET /reports/leaderboards/closed` now returns `includedSnapshotRuns`, daily ranking returns the included closed snapshot, monthly ranking returns every completed daily snapshot included in the month calculation, and `/store/rankings` uses that backend contract instead of frontend inference.
 
@@ -99,6 +100,8 @@ Monthly Ranking Score Source Contract V1 is counted as paid because store/person
 Ranking Score Explanation Copy V1 is counted as paid because `/store/rankings` and `/store/kpis` now expose the locked source rules in the user-facing surface. Personnel ranking explains total-score averaging, target/Turkey-average metric sources, checklist exclusion, and monthly evidence. Store KPI explains target, CR/ATV/UPT, checklist fallback, cap behavior, and imported summary-row reconciliation boundary without changing scoring math.
 
 External ID Code Normalization Guard V1 is counted as paid because import/materialization external-id resolution now keeps exact mapping precedence, safely resolves normalized code variants such as `SM-140` / `SM140`, and rejects ambiguous normalized matches instead of choosing silently.
+
+Source-Agnostic Import Boundary V1 is counted as paid because Excel is locked as the active source path, JSON remains future-only until a real sample or official field list exists, and Excel/JSON/future sources must enter through the same canonical import payload before mapping, validation, data quality, lineage, materialization, snapshotting, scoring, or reporting. Reference: `docs/plans/source-agnostic-import-boundary-v1.md`.
 
 Production-Ready Migration System V1 is counted as paid because SQL migrations are tracked in `audit.schema_migration`, checksum drift is rejected, failed runs are recorded with error evidence, the HTTP migration endpoint is disabled in production, and `npm.cmd run db:migrate` is the approved CLI/CI migration path.
 
@@ -211,6 +214,7 @@ What is already ready locally:
 - `stg.external_id_map`
 - import scheduler, normalization, and materialization services
 - source-agnostic ingest planning
+- source-agnostic import boundary guard
 - canonical KPI contract metadata on the payload template endpoint
 - deterministic KPI import `rowHash` and readable `rawRowReference`
 - first-class `stg.kpi_raw.row_hash` and `stg.kpi_raw.raw_row_reference` staging columns
@@ -262,7 +266,7 @@ These are important future product investments. They are not counted as hidden d
 
 KPI config version history, publish metadata, snapshot anchoring, and pre-governance visibility are implemented in V1. Rollback UI, future effective scheduling, approval workflow, and DB-managed interpretation copy remain future depth, not active hidden debt.
 
-Source-agnostic KPI ingest contract hardening is implemented in V1, KPI raw row lineage is persisted as first-class staging columns, and admin import detail now surfaces KPI lineage evidence. Real source adapter work remains blocked until external source evidence exists.
+Source-agnostic KPI ingest contract hardening is implemented in V1, Source-Agnostic Import Boundary V1 keeps Excel/JSON/future sources behind one canonical import payload, KPI raw row lineage is persisted as first-class staging columns, and admin import detail now surfaces KPI lineage evidence. Real source adapter work remains blocked until external source evidence exists.
 
 Audit event taxonomy guard is implemented in V1. A global audit feed remains intentionally unbuilt until a real operator workflow requires it, but the backend now has a catalog and contract test that prevents new audit event strings from drifting silently.
 
