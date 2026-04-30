@@ -44,7 +44,7 @@ Decision:
 - `integration.repository.ts` has now been reviewed separately and is treated as a planned investment, not an active refactor target.
 - `store-ops.repository.ts` has now been reviewed separately; the workforce request slice was extracted into `WorkforceRequestRepository`, while remaining checklist/read boundaries are treated as planned investments, not active refactor targets.
 - `reporting.repository.ts` has now been reviewed separately; it remains a monitored read-model boundary, while closed-ranking/performance/snapshot-report splits and query/index work wait for concrete reporting changes or measured pilot data.
-- `auth-admin.repository.ts` has now been reviewed separately; one user-account pagination count defect was fixed, while auth-admin repository splits and role-assignment DB uniqueness hardening remain planned follow-ups.
+- `auth-admin.repository.ts` has now been reviewed separately; one user-account pagination count defect was fixed, and role-assignment DB uniqueness now has a dedicated implementation plan before broad rollout.
 
 Reference:
 
@@ -52,6 +52,7 @@ Reference:
 - `docs/plans/store-ops-repository-risk-review-2026-04-30.md`
 - `docs/plans/reporting-repository-risk-review-2026-04-30.md`
 - `docs/plans/auth-admin-repository-risk-review-2026-04-30.md`
+- `docs/superpowers/plans/2026-04-30-auth-role-assignment-active-uniqueness-v1.md`
 
 ### 2. Large Frontend Files
 
@@ -153,6 +154,6 @@ If no external evidence is available, choose the next small guard through the in
 The best local candidates to consider next are:
 
 1. real staging/source/master-data evidence if it becomes available,
-2. role assignment active uniqueness design if local auth hardening continues,
+2. role assignment active uniqueness implementation if local auth hardening continues,
 3. reporting service boundary review if a concrete reporting API/UI change appears,
 4. targeted cleanup of ignored local generated files if the user wants workspace hygiene.

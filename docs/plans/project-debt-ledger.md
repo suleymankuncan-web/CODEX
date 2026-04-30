@@ -325,7 +325,7 @@ These are important future product investments. They are not counted as hidden d
 5. IntegrationRepository boundary split and raw import index review after real import volume or source-adapter evidence
 6. Remaining StoreOpsRepository legacy checklist/read boundary review after a concrete checklist, workforce reporting, or org-scope change
 7. ReportingRepository closed-ranking/performance/snapshot-report split and reporting query/index review after a concrete reporting/ranking change or measured pilot slow-query evidence
-8. AuthAdminRepository boundary split, role-assignment DB active uniqueness, and searchable auth-admin lookups before broad user rollout
+8. AuthAdminRepository boundary split, role-assignment DB active uniqueness implementation, and searchable auth-admin lookups before broad user rollout
 
 KPI config version history, publish metadata, snapshot anchoring, and pre-governance visibility are implemented in V1. Rollback UI, future effective scheduling, approval workflow, and DB-managed interpretation copy remain future depth, not active hidden debt.
 
@@ -347,7 +347,7 @@ StoreOpsRepository workforce request boundary split is implemented. Seller-code 
 
 ReportingRepository split and reporting query/index review is a planned investment, not active debt. The repository owns snapshot report read models, live KPI performance reads, Turkey benchmark aggregations, store score breakdown inputs, closed rankings, leaderboards, and identity-to-employee lookup helpers. Future work should split only when a concrete reporting/ranking change touches a clean read family or measured pilot data proves a slow query. Reference: `docs/plans/reporting-repository-risk-review-2026-04-30.md`.
 
-AuthAdminRepository boundary split, role-assignment DB active uniqueness, and searchable auth-admin lookups are planned investments, not active hidden debt today. The current pilot path is guarded, but broader user rollout should harden active role assignment uniqueness at the database level and avoid dropdown-only lookup limits. Reference: `docs/plans/auth-admin-repository-risk-review-2026-04-30.md`.
+AuthAdminRepository boundary split, role-assignment DB active uniqueness implementation, and searchable auth-admin lookups are planned investments, not active hidden debt today. The current pilot path is guarded, but broader user rollout should harden active role assignment uniqueness at the database level and avoid dropdown-only lookup limits. The role-assignment uniqueness design plan now exists and should be implemented with schema contract, duplicate preflight, nullable-scope unique index, and fresh DB smoke before broad auth rollout. References: `docs/plans/auth-admin-repository-risk-review-2026-04-30.md`, `docs/superpowers/plans/2026-04-30-auth-role-assignment-active-uniqueness-v1.md`.
 
 Project-Wide Scope/Auth Guard Scan V1 is implemented. The scan found and closed two concrete backend risks: production JWT default-secret fallback is now rejected unless JWKS is configured, and empty/foreign actor scope paths in store listing and target-distribution request listing are now guarded by no-access and narrowest-scope contract tests.
 
