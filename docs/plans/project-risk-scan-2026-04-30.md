@@ -25,11 +25,12 @@ No production behavior was changed by this scan.
 
 Observed largest backend source files:
 
-- `backend/nestjs/src/modules/integration/infrastructure/integration.repository.ts` - 2180 lines
-- `backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.ts` - 2042 lines
-- `backend/nestjs/src/modules/store-ops/infrastructure/store-ops.repository.ts` - 1912 lines
-- `backend/nestjs/src/modules/store-ops/infrastructure/reporting.repository.ts` - 1737 lines
-- `backend/nestjs/src/modules/auth/auth-admin.repository.ts` - 1647 lines
+- `backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.ts` - 2215 lines
+- `backend/nestjs/src/modules/store-ops/infrastructure/reporting.repository.ts` - 1897 lines
+- `backend/nestjs/src/modules/auth/auth-admin.repository.ts` - 1769 lines
+- `backend/nestjs/src/modules/integration/infrastructure/integration.repository.ts` - 1713 lines
+- `backend/nestjs/src/modules/store-ops/infrastructure/workforce-request.repository.ts` - 1623 lines
+- `backend/nestjs/src/modules/store-ops/application/reporting.service.ts` - 1533 lines
 
 Risk:
 
@@ -42,11 +43,13 @@ Decision:
 - Any split should be planned as a small domain slice with targeted tests and root `check:release`.
 - `integration.repository.ts` has now been reviewed separately and is treated as a planned investment, not an active refactor target.
 - `store-ops.repository.ts` has now been reviewed separately; the workforce request slice was extracted into `WorkforceRequestRepository`, while remaining checklist/read boundaries are treated as planned investments, not active refactor targets.
+- `reporting.repository.ts` has now been reviewed separately; it remains a monitored read-model boundary, while closed-ranking/performance/snapshot-report splits and query/index work wait for concrete reporting changes or measured pilot data.
 
 Reference:
 
 - `docs/plans/integration-repository-risk-review-2026-04-30.md`
 - `docs/plans/store-ops-repository-risk-review-2026-04-30.md`
+- `docs/plans/reporting-repository-risk-review-2026-04-30.md`
 
 ### 2. Large Frontend Files
 
@@ -147,6 +150,7 @@ If no external evidence is available, choose the next small guard through the in
 
 The best local candidates to consider next are:
 
-1. backend repository boundary risk review for `store-ops.repository.ts`,
-2. real staging/source/master-data evidence if it becomes available,
-3. targeted cleanup of ignored local generated files if the user wants workspace hygiene.
+1. real staging/source/master-data evidence if it becomes available,
+2. backend repository boundary risk review for `auth-admin.repository.ts` if local review work continues,
+3. reporting service boundary review if a concrete reporting API/UI change appears,
+4. targeted cleanup of ignored local generated files if the user wants workspace hygiene.
