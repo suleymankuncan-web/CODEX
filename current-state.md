@@ -4931,10 +4931,43 @@ Kapanis notu:
 
 Siradaki mantikli adim: yeni modul acmadan once intake gate ile secim yapmak; dis kanit yoksa P1 backup/restore drill veya performans/index review icin ortam/veri beklemek.
 
+## Son Backup Restore Drill Runbook V1
+
+30 Nisan 2026 itibariyla Backup Restore Drill Runbook V1 yazildi ve guard'a baglandi.
+
+Referans:
+
+- `docs/plans/backup-restore-drill-runbook-v1.md`
+- `scripts/backup-restore-drill-runbook-contract.test.mjs`
+
+Kilitlenen sinir:
+
+- Drill yalnizca local veya staging icindir.
+- Production restore komutu calistirilmaz.
+- V1 runbook production backup/restore automation onayi degildir.
+- Restore hedefi acikca disposable olarak onaylanmadan destructive komut yoktur.
+- Evidence raw `DATABASE_URL`, sifre, token veya personel/musteri kisisel veri ornegi tasimaz.
+
+Kilitlenen akış:
+
+- `pg_dump` ile backup al.
+- `store_ops_restore_drill` gibi disposable restore hedefini onayla.
+- `dropdb --if-exists` ve `createdb` sadece disposable hedefte kullan.
+- `pg_restore` ile backup'i restore hedefe yukle.
+- `psql` read-only restore proof ile schema/table ve `audit.schema_migration` kanitini al.
+- Karari `Go`, `Conditional Go`, veya `No-Go` olarak sanitized evidence ile kaydet.
+
+Kapanis notu:
+
+- Bu is gercek restore drill'in kendisi degil, runbook + guard hazirligidir.
+- Gercek local/staging DB hazir oldugunda drill manuel calistirilip sanitized evidence ayrica tutulmali.
+
+Siradaki mantikli adim: gercek local/staging DB hazirsa bu runbook'u uygulamak; degilse performans/index review icin gercek veri hacmini beklemek veya kucuk test hygiene dilimi secmek.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
 
 ```text
-current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. readScope/actionScope ayrimi ve assignedStoreIds modeli korunuyor. Test Suite Hygiene V1 ilk slice kapandi. Operator Evidence Consistency Pass V1 kapandi. Siradaki mantikli adim yeni modul acmadan intake gate ile secim yapmak.
+current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. readScope/actionScope ayrimi ve assignedStoreIds modeli korunuyor. Test Suite Hygiene V1 ilk slice kapandi. Operator Evidence Consistency Pass V1 kapandi. Backup Restore Drill Runbook V1 kapandi. Siradaki mantikli adim gercek local/staging DB hazirsa runbook'u uygulamak; degilse yeni modul acmadan intake gate ile secim yapmak.
 ```

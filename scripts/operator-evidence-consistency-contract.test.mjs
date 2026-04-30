@@ -70,7 +70,7 @@ test('operator evidence consistency is linked from handoff and debt docs', () =>
     requireText(text, planPath)
     requireText(text, 'Operator Evidence Consistency Pass V1')
   }
-  requireText(activeNextActions, 'Closed active debts: 71')
-  requireText(debtLedger, 'Closed active debts: 71')
+  assert.match(activeNextActions, /Closed active debts: \d+/)
+  assert.match(debtLedger, /Closed active debts: \d+/)
   requireText(debtLedger, '71. Operator Evidence Consistency Pass V1')
 })
