@@ -17,7 +17,7 @@ Date: 30 April 2026
 
 Current count:
 
-- Closed active debts: 87
+- Closed active debts: 88
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -115,6 +115,7 @@ These are counted as paid because they have implementation or documentation evid
 85. Auth Admin Searchable Lookups V1
 86. Auth Admin Searchable Lookups Frontend Wiring V1
 87. Project Debt Ledger Consistency Guard V1
+88. Repo Hygiene Guard V1
 
 Ranking Included Snapshot Contract V1 is counted as paid because `GET /reports/leaderboards/closed` now returns `includedSnapshotRuns`, daily ranking returns the included closed snapshot, monthly ranking returns every completed daily snapshot included in the month calculation, and `/store/rankings` uses that backend contract instead of frontend inference.
 
@@ -143,6 +144,8 @@ Auth Admin Searchable Lookups V1 is counted as paid because auth-admin now has c
 Auth Admin Searchable Lookups Frontend Wiring V1 is counted as paid because `/admin/auth` now uses the backend searchable user/store endpoints for role assignment and action-store assignment workflows. Selected store search results fill the role-assignment company/region/store scope fields, bundled lookup fallback remains compatible, pilot binding was intentionally left unchanged, and the slice is guarded by frontend build, targeted Playwright, and root release gates.
 
 Project Debt Ledger Consistency Guard V1 is counted as paid because root script tests now verify that the project debt ledger snapshot count matches the numbered closed-debt list, `active-next-actions.md` mirrors the ledger snapshot counts, and the latest `current-state.md` debt ledger block matches the canonical ledger. This prevents quiet count drift when a future slice is closed.
+
+Repo Hygiene Guard V1 is counted as paid because root script tests now reject tracked generated folders and local secret env files, verify representative generated/env paths are ignored, and keep the `outputs/` scratch folder explicitly ignored. This protects the release gate from accidental generated or local-only file commits.
 
 Operator Evidence Consistency Pass V1 is counted as paid because existing import and master-data operator surfaces now use the same `Go / Conditional Go / No-Go`, row evidence, dry-run evidence, sanitized evidence, retry evidence, and dependency mapping language without adding backend endpoints, workflows, scoring behavior, import behavior, or promotion behavior. Reference: `docs/plans/operator-evidence-consistency-pass-v1.md`.
 
@@ -402,7 +405,7 @@ UI status note:
 Current repo hygiene is not counted as active debt in this ledger because:
 
 - `.gitignore` exists.
-- generated `node_modules` and `dist` directories are ignored, not tracked.
+- generated `node_modules`, `dist`, `test-results`, `coverage`, `tmp`, and `outputs/` directories are ignored, not tracked.
 - module and root release gates pass.
 - the 27 April 2026 project-wide scan found no tracked `.env`, no critical committed secret, and no unsafe frontend DOM sink pattern.
 - the 27 April 2026 no-empty-scope pass hardened remaining actor-scoped store/region/company list surfaces found in store-ops repositories.

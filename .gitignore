@@ -22,5 +22,6 @@ Thumbs.db
 Yeni Metin Belgesi.txt
 tmp/
 tmp_excel_inspect/
+outputs/
 tmp-keycloak-cookie*.txt
 references/design-md/

@@ -5731,10 +5731,45 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: Hala dis source/master-data/staging kaniti yoksa yeni feature acmadan once auth-admin veya reporting tarafinda sadece gercek pilot akisinda operatoru zorlayacak somut bir ihtiyac secmek.
 
+Bu siradaki adim tamamlandi: Repo Hygiene Guard V1 uygulandi.
+
+## Son Repo Hygiene Guard V1
+
+30 Nisan 2026 itibariyla repo hygiene release kapisina baglandi.
+
+Eklenenler:
+
+- Yeni root script testi: `scripts/repo-hygiene-contract.test.mjs`.
+- Test, tracked dosyalar icinde `node_modules`, `dist`, `dist-ssr`, `test-results`, `coverage`, `outputs` veya local `.env` dosyasi olursa fail eder.
+- Test, temsilci generated/env path'lerinin Git tarafindan ignore edildigini kontrol eder.
+- Root `.gitignore` icine `outputs/` eklendi; `outputs/` artik local scratch olarak ignore edilir.
+- Product davranisi, backend, frontend, DB, auth policy, import, scoring ve UI degismedi.
+
+Dogrulama:
+
+- TDD RED: targeted test once `outputs/` ignore edilmedigi ve guard dokumanlarda kayitli olmadigi icin fail etti.
+- Targeted: `node --test scripts\repo-hygiene-contract.test.mjs` gecti, 4/4.
+- root: `node --test scripts\*.test.mjs` gecti, 108/108.
+- root: `npm.cmd run check:release` gecti; backend 89 suite / 486 test, frontend Playwright 47/47, audit 0 vulnerability.
+- root: `git diff --check` gecti; yalniz CRLF uyarilari geldi.
+
+Debt ledger:
+
+- Closed active debts: 88
+- Strategic investment backlog: 8
+- Silent untracked quality debt in the active gate: 0
+
+CODEX durust yorum:
+
+- Bu da seksi degil ama iyi borc kapatma. `outputs/` gibi yerel calisma ciktisi artik hem ignore edildi hem de benzer generated/secret dosyalar track edilirse release oncesi yakalanacak.
+- En dogru sinir korundu: yeni feature acmadik, sadece repo zeminine kalite kilidi koyduk.
+
+Siradaki mantikli adim: Dis source/master-data/staging kaniti gelirse ona oncelik vermek; yoksa yeni product davranisi acmadan once sadece mevcut pilot akisinda gercek operator ihtiyaci olan kucuk guard secmek.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
 
 ```text
-current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. Auth Role Assignment Active Uniqueness V1 kapandi; fresh DB smoke 43/43 ve root check:release gecti. Searchable auth-admin lookup backend endpointleri ve frontend wiring kapandi: /admin/auth role assignment ve action store assignment user/store search endpointlerini kullaniyor. Project Debt Ledger Consistency Guard V1 kapandi; debt ledger count, active-next-actions count ve current-state son debt ledger blogu root script testleriyle ayni kalmak zorunda. Son root check:release gecti; root script 104/104, backend 89 suite / 486 test, frontend Playwright 47/47, audit 0 vulnerability. Closed active debts: 87. Siradaki mantikli adim: dis source/master-data/staging kaniti gelirse ona oncelik vermek; gelmezse yeni feature acmadan sadece pilot akisinda gercek ihtiyac olan kucuk guard'i secmek.
+current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. Auth Role Assignment Active Uniqueness V1 kapandi; fresh DB smoke 43/43 ve root check:release gecti. Searchable auth-admin lookup backend endpointleri ve frontend wiring kapandi. Project Debt Ledger Consistency Guard V1 kapandi. Repo Hygiene Guard V1 kapandi; outputs/ root .gitignore icinde ignore ediliyor ve root script testleri tracked generated folder/local env dosyalarini reddediyor. Son root check:release gecti; root script 108/108, backend 89 suite / 486 test, frontend Playwright 47/47, audit 0 vulnerability. Closed active debts: 88. Siradaki mantikli adim: dis source/master-data/staging kaniti gelirse ona oncelik vermek; yoksa yeni product davranisi acmadan sadece mevcut pilot akisinda gercek ihtiyac olan kucuk guard'i secmek.
 ```

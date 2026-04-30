@@ -93,12 +93,13 @@ As of 30 April 2026, the competition package planning flow, Operational Feed V1,
 - auth-admin searchable active user/store backend lookup endpoints with capped query validation and LIKE wildcard escaping
 - auth-admin frontend role/action-store assignment search wiring using the backend user/store lookup endpoints
 - project debt ledger consistency guard that keeps canonical debt counts aligned across handoff docs
+- repo hygiene guard that rejects tracked generated folders/local env files and keeps `outputs/` ignored
 
 ## Debt Count
 
 Reference: `docs/plans/project-debt-ledger.md`
 
-- Closed active debts: 87
+- Closed active debts: 88
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -1083,6 +1084,19 @@ Interpretation:
   - TDD red failed first because the guard was not recorded in the handoff docs
   - targeted `node --test scripts\project-debt-ledger-consistency-contract.test.mjs` passed: 4/4
   - root script guard passed: 104/104
+  - root `npm.cmd run check:release` passed
+
+### Completed: Repo Hygiene Guard V1
+- Completed: 30 April 2026
+- Result:
+  - root script tests now reject tracked `node_modules`, `dist`, `dist-ssr`, `test-results`, `coverage`, `outputs`, and local `.env` paths
+  - representative generated folders and local env files must be ignored by Git
+  - `outputs/` is now explicitly listed in root `.gitignore`
+  - release hygiene remains a guard, not a product behavior change
+- Verification:
+  - TDD red failed first because `outputs/` was not ignored and the guard was not recorded in handoff docs
+  - targeted `node --test scripts\repo-hygiene-contract.test.mjs` passed: 4/4
+  - root script guard passed: 108/108
   - root `npm.cmd run check:release` passed
 
 ### 1. Real IdP Staging Evidence
