@@ -17,7 +17,7 @@ Date: 30 April 2026
 
 Current count:
 
-- Closed active debts: 65
+- Closed active debts: 66
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -93,6 +93,7 @@ These are counted as paid because they have implementation or documentation evid
 63. External ID Code Normalization Guard V1
 64. Source-Agnostic Import Boundary V1
 65. Master Data Bootstrap Admin Dry-Run Evidence V1
+66. Master Data Bootstrap Pilot Smoke Runbook V1
 
 Ranking Included Snapshot Contract V1 is counted as paid because `GET /reports/leaderboards/closed` now returns `includedSnapshotRuns`, daily ranking returns the included closed snapshot, monthly ranking returns every completed daily snapshot included in the month calculation, and `/store/rankings` uses that backend contract instead of frontend inference.
 
@@ -105,6 +106,8 @@ External ID Code Normalization Guard V1 is counted as paid because import/materi
 Source-Agnostic Import Boundary V1 is counted as paid because Excel is locked as the active source path, JSON remains future-only until a real sample or official field list exists, and Excel/JSON/future sources must enter through the same canonical import payload before mapping, validation, data quality, lineage, materialization, snapshotting, scoring, or reporting. Reference: `docs/plans/source-agnostic-import-boundary-v1.md`.
 
 Master Data Bootstrap Admin Dry-Run Evidence V1 is counted as paid because `/admin/master-data/:batchId` now exposes backend promotion-readiness row evidence before any live promotion command is executed. Operators can see ready/already-promoted/blocked row state, promoted entity evidence, and block reasons while promotion commands remain explicit and unchanged. Reference: `docs/plans/master-data-bootstrap-admin-dry-run-evidence-v1.md`.
+
+Master Data Bootstrap Pilot Smoke Runbook V1 is counted as paid because the first real baseline promotion path is now an operator-controlled smoke with stage, validate, row evidence review, promotion dry-run review, scoped pilot promotion, sanitized evidence, and Go / Conditional Go / No-Go rules. Reference: `docs/plans/master-data-bootstrap-pilot-smoke-runbook.md`.
 
 Production-Ready Migration System V1 is counted as paid because SQL migrations are tracked in `audit.schema_migration`, checksum drift is rejected, failed runs are recorded with error evidence, the HTTP migration endpoint is disabled in production, and `npm.cmd run db:migrate` is the approved CLI/CI migration path.
 
@@ -296,6 +299,8 @@ Personnel Request Return/Resubmit V1 is implemented. HR/Admin can return seller-
 Personnel Master Data Bootstrap V1 is being closed in guarded slices instead of as one risky mega-feature. Staging, validation, review queue, duplicate/conflict preflight, promotion readiness, store promotion, personnel promotion, and admin review visibility are now counted above. User account creation and auth role assignment remain future slices. Reference: `docs/superpowers/plans/2026-04-29-personnel-master-data-bootstrap-v1.md`.
 
 Master Data Bootstrap Admin Dry-Run Evidence V1 is implemented. The admin review surface now shows backend promotion-readiness row evidence before live promotion, which makes the already-existing backend dry-run useful to operators without changing the promotion command or opening a new automation path.
+
+Master Data Bootstrap Pilot Smoke Runbook V1 is implemented. The first true baseline promotion now has a guarded operator sequence: stage the scoped baseline, validate, inspect row evidence, inspect dry-run evidence, promote only the approved pilot batch, and capture sanitized evidence.
 
 Project MVP Focus Map is recorded as a consolidation decision, not a new closed debt item. The decision is to keep the project, avoid restarting, narrow near-term work to MVP readiness, and prioritize Excel KPI Import V1 as the next local real-data proof. Reference: `docs/plans/project-mvp-focus-map-2026-04-28.md`.
 

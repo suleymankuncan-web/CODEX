@@ -4654,6 +4654,50 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: gercek store/personnel baseline hazir olunca staging/admin review smoke yapmak; yoksa yeni veri kaynagi tahmin etmeden mevcut import/master-data hattindaki kucuk kanit ve kontrol noktalarina devam etmek.
 
+## Son Master Data Bootstrap Pilot Smoke Runbook V1
+
+30 Nisan 2026 itibariyla ilk gercek store/personnel baseline denemesi icin operator smoke runbook'u yazildi ve root script guard'a baglandi.
+
+Referans:
+
+- `docs/plans/master-data-bootstrap-pilot-smoke-runbook.md`
+- `scripts/master-data-bootstrap-pilot-smoke-runbook-contract.test.mjs`
+
+Kilitlenen akış:
+
+- true baseline batch stage edilir,
+- batch validate edilir,
+- row evidence incelenir,
+- promotion dry-run evidence incelenir,
+- yalniz onayli scoped pilot batch promote edilir,
+- sanitized evidence kaydedilir.
+
+Kilitlenen guvenlik sinirlari:
+
+- KPI snapshot Excel dosyalari master-data baseline olarak kullanilmaz.
+- Full company baseline ilk smoke olarak promote edilmez.
+- Fake store/personnel satiri icat edilmez.
+- Live `ops.*` tablolari manuel editlenmez.
+- Backend readiness temiz olmadan promotion kapali kalir.
+- Dry-run panel promote yapmaz; sadece backend promotion-readiness kanitini gosterir.
+
+Dogrulama:
+
+- TDD kirmizi test: `docs/plans/master-data-bootstrap-pilot-smoke-runbook.md` yokken guard beklenen sekilde dustu.
+- Targeted guard test passed: 4/4.
+- Root `npm.cmd run check:release` passed:
+  - root script tests 59/59,
+  - backend release gate passed: lint, 74 test suite / 472 test, build, audit 0 vulnerability,
+  - frontend release gate passed: lint, script tests, build, 46 Playwright test, audit 0 vulnerability.
+
+CODEX durust yorum:
+
+- Bu, gercek veri gelmeden kod sisirmek degil; gercek veri geldiginde nasil guvenli calisacagimizi simdiden kilitlemek.
+- Master data tarafinda en tehlikeli an "ilk promote" anidir; bu runbook o ani kucuk scope, dry-run evidence ve Go/No-Go karariyla kontrol altina aliyor.
+- Defter acisindan bu iyi borc kapatma: sahaya cikmadan once operator adimlari net.
+
+Siradaki mantikli adim: gercek baseline dosyalari hazir olana kadar master-data promotion kapali kalsin; yeni adim gerekiyorsa mevcut import/master-data evidence yuzeylerinden birini kucuk ve testli guclendirelim.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
