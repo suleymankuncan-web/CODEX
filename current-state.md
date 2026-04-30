@@ -5291,10 +5291,39 @@ Bu planin guvenli adimlari uygulandi:
 
 Siradaki mantikli adim: Master Data Bootstrap Test Hygiene V1'i burada durdurmak. Validation ve promotion safety tarafini yalnizca yeni acik plan ve onayla ele almak.
 
+## Son Project Risk Scan
+
+30 Nisan 2026 itibariyla proje risk taramasi kayda alindi.
+
+Referans:
+
+- `docs/plans/project-risk-scan-2026-04-30.md`
+
+Bulgular:
+
+- Son root `check:release` gecti.
+- Backend 88 suite / 476 test gecti.
+- Frontend Playwright 46/46 gecti.
+- Tracked `node_modules`, `dist`, `test-results`, `outputs` veya `.env` bulunmadi.
+- Taranan kaynak/test/script/doc yollarinda `TODO`, `FIXME`, `HACK`, `XXX`, `test.only`, `debugger`, `console.log` bulunmadi.
+- En buyuk yeni risk aktif bug degil, buyuk dosya bakim maliyeti ve dis kanit eksikligi.
+- Master-data validation/promotion split aktif borc degil, strategic investment backlog'a planli yatirim olarak eklendi.
+
+Izleme listesi:
+
+- buyuk backend repository dosyalari
+- `admin-web/src/features/competitions/StageBuilderForm.tsx`
+- real staging IdP evidence
+- true store/personnel baseline files
+- real JSON/source sample evidence
+- realistic data volume olmadan speculative DB index eklememek
+
+Siradaki mantikli adim: Yeni modül acmadan, buyuk dosyalardan birini ancak net bir sinir ve intake gate ile ele almak. Dis veri/IdP/baseline kaniti yoksa source-specific adapter veya master-data promotion genisletmesi baslatmamak.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
 
 ```text
-current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. readScope/actionScope ayrimi ve assignedStoreIds modeli korunuyor. Test Suite Hygiene V1 auth split kapandi; Import Batch Source Test Split V1, Import Batch Evidence Test Split V1, Competition Repository Test Split V1, Competition Stage Package Plan Test Split V1, Snapshot Run Read Model Test Split V1, Competition Service Team Template Test Split V1 ve Auth Action Scope Test Split V1 kapandi. Import/integration e2e kapsaminda production code degismeden 32 test adi uc dosyada korunuyor: import-batch, import-batch-evidence, integration-sources. Competition repository kapsaminda production code degismeden 27 test adi uc dosyada korunuyor: competition.repository, competition-stage-package-plan.repository, competition-team-template.repository. Snapshot run e2e kapsaminda production code degismeden 13 test adi iki dosyada korunuyor: snapshot-run, snapshot-run-read-models. Competition service kapsaminda production code degismeden 24 test adi iki dosyada korunuyor: competition.service, competition-team-template.service. Auth scope integration kapsaminda production code degismeden 18 test adi iki dosyada korunuyor: auth-scope, auth-action-scope. Operator Evidence Consistency Pass V1 kapandi. Backup Restore Drill Runbook V1 kapandi. Backup Restore Local Drill Evidence alindi; prod DB'ye dokunulmadi; bos disposable DB migration 42/42 succeeded ve restore proof source/restore schema counts matched. Migration Fresh DB Smoke V1 eklendi ve local Docker PostgreSQL uzerinde 42/42 succeeded, failed=0, audit=3, ops=39, rpt=10, stg=12 kaniti alindi. Migration Smoke Release Preflight Policy V1 karari: Docker-dependent smoke mandatory check:release icinde degil, DB schema/migration degisirse manuel preflight veya written Conditional Go zorunlu. Master-data test dosyasi icin ayri plan `docs/plans/master-data-bootstrap-test-hygiene-v1.md` olarak yazildi. Master-data bootstrap service 29-test guard eklendi; Bucket A staging/normalization testleri `master-data-bootstrap-staging.service.spec.ts` dosyasina, Bucket C read-model/readiness testleri `master-data-bootstrap-read-models.service.spec.ts` dosyasina tasindi. Validation ve promotion safety tarafina dokunulmadi. Siradaki mantikli adim Master Data Bootstrap Test Hygiene V1'i burada durdurmak; validation/promotion safety icin yeni acik plan olmadan is yapma.
+current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. readScope/actionScope ayrimi ve assignedStoreIds modeli korunuyor. Test Suite Hygiene V1 auth split kapandi; Import Batch Source Test Split V1, Import Batch Evidence Test Split V1, Competition Repository Test Split V1, Competition Stage Package Plan Test Split V1, Snapshot Run Read Model Test Split V1, Competition Service Team Template Test Split V1 ve Auth Action Scope Test Split V1 kapandi. Import/integration e2e kapsaminda production code degismeden 32 test adi uc dosyada korunuyor: import-batch, import-batch-evidence, integration-sources. Competition repository kapsaminda production code degismeden 27 test adi uc dosyada korunuyor: competition.repository, competition-stage-package-plan.repository, competition-team-template.repository. Snapshot run e2e kapsaminda production code degismeden 13 test adi iki dosyada korunuyor: snapshot-run, snapshot-run-read-models. Competition service kapsaminda production code degismeden 24 test adi iki dosyada korunuyor: competition.service, competition-team-template.service. Auth scope integration kapsaminda production code degismeden 18 test adi iki dosyada korunuyor: auth-scope, auth-action-scope. Operator Evidence Consistency Pass V1 kapandi. Backup Restore Drill Runbook V1 kapandi. Backup Restore Local Drill Evidence alindi; prod DB'ye dokunulmadi; bos disposable DB migration 42/42 succeeded ve restore proof source/restore schema counts matched. Migration Fresh DB Smoke V1 eklendi ve local Docker PostgreSQL uzerinde 42/42 succeeded, failed=0, audit=3, ops=39, rpt=10, stg=12 kaniti alindi. Migration Smoke Release Preflight Policy V1 karari: Docker-dependent smoke mandatory check:release icinde degil, DB schema/migration degisirse manuel preflight veya written Conditional Go zorunlu. Master-data test dosyasi icin ayri plan `docs/plans/master-data-bootstrap-test-hygiene-v1.md` olarak yazildi. Master-data bootstrap service 29-test guard eklendi; Bucket A staging/normalization testleri `master-data-bootstrap-staging.service.spec.ts` dosyasina, Bucket C read-model/readiness testleri `master-data-bootstrap-read-models.service.spec.ts` dosyasina tasindi. Validation ve promotion safety tarafina dokunulmadi. Project risk scan `docs/plans/project-risk-scan-2026-04-30.md` olarak kaydedildi; validation/promotion split aktif borc degil strategic investment backlog'ta planli yatirim. Siradaki mantikli adim yeni modul acmadan buyuk dosya veya dis kanit risklerinden birini intake gate ile secmek.
 ```
