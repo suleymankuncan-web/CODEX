@@ -161,4 +161,5 @@ The best local candidates to consider next are:
 Note:
 
 - Searchable auth-admin lookup V1 now has a design spec at `docs/superpowers/specs/2026-04-30-auth-admin-searchable-lookups-v1-design.md`.
-- No endpoint, frontend, schema, or repository behavior has been changed by that spec.
+- Searchable auth-admin lookup V1 now also has a backend-first implementation plan at `docs/superpowers/plans/2026-04-30-auth-admin-searchable-lookups-v1.md`.
+- No endpoint, frontend, schema, or repository behavior has been changed by those planning documents.
