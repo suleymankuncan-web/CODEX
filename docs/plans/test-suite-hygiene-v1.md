@@ -335,3 +335,30 @@ Master-data now has its own explicit plan:
 - `docs/plans/master-data-bootstrap-test-hygiene-v1.md`
 
 Do not implement that plan by starting with a split. The first approved implementation step must be the guard-only task that freezes all 29 current master-data bootstrap service test names before any test block moves.
+
+## Ninth Safe Slice
+
+Ninth safe slice: split master-data bootstrap staging and normalization tests out of `backend/nestjs/src/modules/integration/application/master-data-bootstrap.service.spec.ts`.
+
+Target files:
+
+- `backend/nestjs/src/modules/integration/application/master-data-bootstrap.service.spec.ts`
+- `backend/nestjs/src/modules/integration/application/master-data-bootstrap-staging.service.spec.ts`
+
+Expected behavior:
+
+- The same 29 master-data bootstrap service tests still run across the two files.
+- The 4 staging and normalization tests move to `master-data-bootstrap-staging.service.spec.ts`.
+- Validation, read-model/readiness, and promotion safety tests remain in `master-data-bootstrap.service.spec.ts`.
+- Test names remain unchanged.
+- Production code is not changed.
+
+Reason:
+
+- Staging/normalization is the cleanest mechanical boundary.
+- This reduces the largest master-data service test file without touching validation or live promotion safety evidence.
+
+Deferred after this slice:
+
+- Do not split validation or promotion in the same pass.
+- Consider read-model/readiness only after this slice passes targeted tests, guard, and release.

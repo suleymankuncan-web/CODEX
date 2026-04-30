@@ -193,6 +193,7 @@ const authActionScopeExpectedTestNames = [
 ]
 const masterDataBootstrapServiceFiles = [
   'backend/nestjs/src/modules/integration/application/master-data-bootstrap.service.spec.ts',
+  'backend/nestjs/src/modules/integration/application/master-data-bootstrap-staging.service.spec.ts',
 ]
 const masterDataBootstrapServiceExpectedTestNames = [
   'stages bootstrap rows with normalized references and stable row hashes',
