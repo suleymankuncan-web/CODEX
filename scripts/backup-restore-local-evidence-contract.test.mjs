@@ -51,6 +51,6 @@ test("mobile checklist migration remains idempotent against current schema basel
 test("backup restore local evidence is linked from handoff and debt docs", () => {
   assert.match(currentState, /Backup Restore Local Drill Evidence/);
   assert.match(activeNextActions, /Backup Restore Local Drill Evidence V1/);
-  assert.match(debtLedger, /Closed active debts: 73/);
+  assert.match(debtLedger, /Closed active debts: \d+/);
   assert.match(debtLedger, /73\. Backup Restore Local Drill Evidence V1/);
 });

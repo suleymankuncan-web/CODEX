@@ -5006,10 +5006,54 @@ Kapanis notu:
 
 Siradaki mantikli adim: yeni modul acmadan once intake gate ile kucuk backend saglamlastirma veya real staging evidence secmek.
 
+## Son Migration Fresh DB Smoke V1
+
+30 Nisan 2026 itibariyla Migration Fresh DB Smoke V1 eklendi ve local Docker PostgreSQL uzerinde calistirildi.
+
+Referans:
+
+- `docs/plans/migration-fresh-db-smoke-v1.md`
+- `scripts/migration-fresh-db-smoke.mjs`
+- `scripts/migration-fresh-db-smoke-contract.test.mjs`
+
+Kilitlenen sinir:
+
+- Production database hedef olamaz.
+- Script `NODE_ENV=production` ortaminda calismayi reddeder.
+- Script yalnizca local host kabul eder.
+- Script yalnizca `store_ops_fresh_migration_smoke` veya ayni isimle baslayan disposable suffix'li DB isimlerini kabul eder.
+- Script `infra/docker-compose.live-e2e.yml` icindeki local Docker PostgreSQL servisini kullanir.
+
+Kilitlenen akış:
+
+- Local Docker PostgreSQL'i ayaga kaldir.
+- `store_ops_fresh_migration_smoke` disposable DB'sini drop/create ile sifirla.
+- Backend `npm run db:migrate` komutunu bu DB'ye karsi calistir.
+- `audit.schema_migration` satir sayisi, succeeded count, failed count ve core schema table count kanitini al.
+- Sanitized JSON evidence yazdir; raw DB URL veya sifre yazdirma.
+
+Kapanis notu:
+
+- Bu smoke, bos DB'den migration setinin ayaga kalkabildigini kanitlamak icindir.
+- Production migration runner degildir.
+- Managed production DB backup/restore politikasinin yerine gecmez.
+
+Kanıt:
+
+- Command: `npm.cmd run smoke:migration:fresh-db`
+- Disposable DB: `store_ops_fresh_migration_smoke`
+- Migration files: 42
+- Migration rows: 42
+- Succeeded rows: 42
+- Failed rows: 0
+- Core schema table counts: audit=3, ops=39, rpt=10, stg=12
+
+Siradaki mantikli adim: release gate ile commit etmek; sonra yeni modul acmadan once intake gate ile kucuk backend saglamlastirma veya real staging evidence secmek.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
 
 ```text
-current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. readScope/actionScope ayrimi ve assignedStoreIds modeli korunuyor. Test Suite Hygiene V1 ilk slice kapandi. Operator Evidence Consistency Pass V1 kapandi. Backup Restore Drill Runbook V1 kapandi. Backup Restore Local Drill Evidence alindi; prod DB'ye dokunulmadi; bos disposable DB migration 42/42 succeeded ve restore proof source/restore schema counts matched. Siradaki mantikli adim yeni modul acmadan intake gate ile kucuk backend saglamlastirma veya real staging evidence secmek.
+current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. readScope/actionScope ayrimi ve assignedStoreIds modeli korunuyor. Test Suite Hygiene V1 ilk slice kapandi. Operator Evidence Consistency Pass V1 kapandi. Backup Restore Drill Runbook V1 kapandi. Backup Restore Local Drill Evidence alindi; prod DB'ye dokunulmadi; bos disposable DB migration 42/42 succeeded ve restore proof source/restore schema counts matched. Migration Fresh DB Smoke V1 eklendi ve local Docker PostgreSQL uzerinde 42/42 succeeded, failed=0, audit=3, ops=39, rpt=10, stg=12 kaniti alindi. Siradaki mantikli adim release gate ile commit etmek; sonra yeni modul acmadan intake gate ile secim yapmak.
 ```
