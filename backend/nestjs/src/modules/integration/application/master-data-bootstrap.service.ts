@@ -314,12 +314,14 @@ export class MasterDataBootstrapService {
     const rows = await this.masterDataBootstrapRepository.listBootstrapRows(
       input.batchId,
     );
-    const promotionRows = rows
-      .filter(
-        (row) =>
-          classifyBootstrapPromotionRow(batch, row).promotionReadiness === "ready",
-      )
-      .map((row) => buildStorePromotionRow(batch, row));
+    const promotionReadiness = rows.map((row) => ({
+      row,
+      ...classifyBootstrapPromotionRow(batch, row),
+    }));
+    assertBootstrapPromotionRowsArePromotable("Store", promotionReadiness);
+    const promotionRows = promotionReadiness
+      .filter((item) => item.promotionReadiness === "ready")
+      .map((item) => buildStorePromotionRow(batch, item.row));
 
     if (promotionRows.length === 0) {
       throw new BadRequestException("Store bootstrap batch has no ready rows");
@@ -367,12 +369,14 @@ export class MasterDataBootstrapService {
     const rows = await this.masterDataBootstrapRepository.listBootstrapRows(
       input.batchId,
     );
-    const promotionRows = rows
-      .filter(
-        (row) =>
-          classifyBootstrapPromotionRow(batch, row).promotionReadiness === "ready",
-      )
-      .map((row) => buildPersonnelPromotionRow(batch, row));
+    const promotionReadiness = rows.map((row) => ({
+      row,
+      ...classifyBootstrapPromotionRow(batch, row),
+    }));
+    assertBootstrapPromotionRowsArePromotable("Personnel", promotionReadiness);
+    const promotionRows = promotionReadiness
+      .filter((item) => item.promotionReadiness === "ready")
+      .map((item) => buildPersonnelPromotionRow(batch, item.row));
 
     if (promotionRows.length === 0) {
       throw new BadRequestException("Personnel bootstrap batch has no ready rows");
@@ -779,6 +783,33 @@ function buildBootstrapPromotionReadinessItem(
     resolvedPositionId: row.resolvedPositionId,
     promotedEntityId: row.promotedEntityId,
   };
+}
+
+function assertBootstrapPromotionRowsArePromotable(
+  entityLabel: "Store" | "Personnel",
+  rows: Array<{
+    row: BootstrapStagedRow;
+    promotionReadiness: BootstrapPromotionReadiness;
+    blockReason: string | null;
+  }>,
+) {
+  const blockedRow = rows.find(
+    (item) =>
+      item.promotionReadiness !== "ready" &&
+      item.promotionReadiness !== "already_promoted",
+  );
+
+  if (!blockedRow) {
+    return;
+  }
+
+  const reason = blockedRow.blockReason
+    ? ` (${blockedRow.blockReason})`
+    : "";
+
+  throw new BadRequestException(
+    `${entityLabel} bootstrap batch has non-promotable rows; review promotion readiness before promotion: row ${blockedRow.row.rowNumber} ${blockedRow.row.rowId} is ${blockedRow.promotionReadiness}${reason}`,
+  );
 }
 
 function buildStorePromotionRow(batch: BootstrapBatch, row: BootstrapStagedRow) {

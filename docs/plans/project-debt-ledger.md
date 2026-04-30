@@ -17,7 +17,7 @@ Date: 30 April 2026
 
 Current count:
 
-- Closed active debts: 61
+- Closed active debts: 62
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -89,6 +89,7 @@ These are counted as paid because they have implementation or documentation evid
 59. Ranking Included Snapshot Contract V1
 60. Monthly Ranking Score Source Contract V1
 61. Ranking Score Explanation Copy V1
+62. Master Data Bootstrap Promotion Safety Guard V1
 
 Ranking Included Snapshot Contract V1 is counted as paid because `GET /reports/leaderboards/closed` now returns `includedSnapshotRuns`, daily ranking returns the included closed snapshot, monthly ranking returns every completed daily snapshot included in the month calculation, and `/store/rankings` uses that backend contract instead of frontend inference.
 
@@ -115,6 +116,8 @@ Master Data Bootstrap Promotion Readiness Contract V1 is counted as paid because
 Master Data Bootstrap Store Promotion V1 is counted as paid because readiness-approved store bootstrap rows can now be promoted into `ops.store` through a scoped HR/Admin command, staged rows keep `promoted_entity_id` evidence, batch counters are refreshed, already-promoted rows are skipped, and personnel promotion remains closed.
 
 Master Data Bootstrap Personnel Promotion V1 is counted as paid because readiness-approved personnel bootstrap rows can now be promoted into `ops.employee` and one active primary `ops.employee_assignment_history` through a scoped HR/Admin command, staged rows keep employee `promoted_entity_id` evidence, batch counters are refreshed, already-promoted rows are skipped, and user account/role creation remains a future slice.
+
+Master Data Bootstrap Promotion Safety Guard V1 is counted as paid because store/personnel promotion now classifies every staged row before live-write repository calls, allows only `ready` plus `already_promoted` evidence, and rejects stale or inconsistent `ready_to_promote` batches before any live `ops.*` mutation.
 
 Master Data Bootstrap Admin Review Surface V1 is counted as paid because HR/Admin can now open `/admin/master-data`, list bootstrap batches, inspect readiness counters and row-level resolved/promoted evidence, run validation, and trigger the correct store/personnel promotion command without adding a second promotion decision engine or opening user account creation.
 

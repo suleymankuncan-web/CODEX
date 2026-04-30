@@ -1699,6 +1699,69 @@ describe("MasterDataBootstrapService", () => {
     ]);
   });
 
+  it("rejects stale store promotion when any non-promoted row is not ready", async () => {
+    const masterDataBootstrapRepository = {
+      getBootstrapBatchForActor: jest.fn(async () =>
+        buildBootstrapBatch({
+          bootstrapEntity: "store",
+          batchId: "batch-store",
+          batchStatus: "ready_to_promote",
+          rowCount: 2,
+          validCount: 1,
+          needsReviewCount: 1,
+        }),
+      ),
+      listBootstrapRows: jest.fn(async () => [
+        buildStoreRow({
+          rowId: "row-ready-store",
+          rowNumber: 1,
+          validationStatus: "valid",
+          resolvedRegionId: "00000000-0000-4000-8000-000000000240",
+          normalizedPayload: {
+            normalizedStoreCode: "SM140",
+            normalizedStoreName: "Marmara Park",
+            normalizedStoreType: "company",
+          },
+        }),
+        buildStoreRow({
+          rowId: "row-needs-review-store",
+          rowNumber: 2,
+          validationStatus: "needs_review",
+          normalizedPayload: {
+            normalizedStoreCode: "SM141",
+            normalizedStoreName: "Needs Review Store",
+            normalizedStoreType: "franchise",
+          },
+        }),
+      ]),
+      promoteStoreBootstrapRows: jest.fn(async () => ({
+        batchId: "batch-store",
+        batchStatus: "ready_to_promote",
+        rowCount: 2,
+        validCount: 1,
+        needsReviewCount: 1,
+        invalidCount: 0,
+        promotedCount: 0,
+        promotedRows: [],
+      })),
+    };
+    const service = new MasterDataBootstrapService(
+      masterDataBootstrapRepository as never,
+    );
+
+    await expect(
+      service.promoteStoreBootstrapBatch({
+        actorScope: {
+          companyIds: ["00000000-0000-4000-8000-000000000001"],
+        },
+        batchId: "batch-store",
+      }),
+    ).rejects.toThrow("Store bootstrap batch has non-promotable rows");
+    expect(
+      masterDataBootstrapRepository.promoteStoreBootstrapRows,
+    ).not.toHaveBeenCalled();
+  });
+
   it("rejects store batch personnel promotion", async () => {
     const masterDataBootstrapRepository = {
       getBootstrapBatchForActor: jest.fn(async () =>
@@ -1835,6 +1898,61 @@ describe("MasterDataBootstrapService", () => {
         assignmentId: "00000000-0000-4000-8000-000000009375",
       },
     ]);
+  });
+
+  it("rejects stale personnel promotion when any non-promoted row is not ready", async () => {
+    const masterDataBootstrapRepository = {
+      getBootstrapBatchForActor: jest.fn(async () =>
+        buildBootstrapBatch({
+          bootstrapEntity: "personnel",
+          batchId: "batch-personnel",
+          batchStatus: "ready_to_promote",
+          rowCount: 2,
+          validCount: 1,
+          invalidCount: 1,
+        }),
+      ),
+      listBootstrapRows: jest.fn(async () => [
+        buildPersonnelRow("row-ready-personnel", 1, "FM8375", undefined, {
+          validationStatus: "valid",
+          resolvedStoreId: "00000000-0000-4000-8000-000000000140",
+          resolvedRegionId: "00000000-0000-4000-8000-000000000240",
+          resolvedEmployeeId: null,
+          resolvedPositionId: "00000000-0000-4000-8000-000000000501",
+        }),
+        buildPersonnelRow("row-invalid-personnel", 2, "FM8376", undefined, {
+          validationStatus: "invalid",
+          resolvedStoreId: "00000000-0000-4000-8000-000000000140",
+          resolvedRegionId: "00000000-0000-4000-8000-000000000240",
+          resolvedPositionId: "00000000-0000-4000-8000-000000000501",
+        }),
+      ]),
+      promotePersonnelBootstrapRows: jest.fn(async () => ({
+        batchId: "batch-personnel",
+        batchStatus: "ready_to_promote",
+        rowCount: 2,
+        validCount: 1,
+        needsReviewCount: 0,
+        invalidCount: 1,
+        promotedCount: 0,
+        promotedRows: [],
+      })),
+    };
+    const service = new MasterDataBootstrapService(
+      masterDataBootstrapRepository as never,
+    );
+
+    await expect(
+      service.promotePersonnelBootstrapBatch({
+        actorScope: {
+          companyIds: ["00000000-0000-4000-8000-000000000001"],
+        },
+        batchId: "batch-personnel",
+      }),
+    ).rejects.toThrow("Personnel bootstrap batch has non-promotable rows");
+    expect(
+      masterDataBootstrapRepository.promotePersonnelBootstrapRows,
+    ).not.toHaveBeenCalled();
   });
 
   it("rejects ready personnel promotion when required evidence is missing", async () => {

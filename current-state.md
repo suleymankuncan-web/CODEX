@@ -4507,6 +4507,41 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: bu aciklama dilini tam localization sistemi icin anahtar adaylarina ayirmak yerine simdilik bekletmek; yeni backend temeli olarak master data bootstrap promotion/readiness tarafina devam etmek daha degerli.
 
+## Son Master Data Bootstrap Promotion Safety Guard V1
+
+30 Nisan 2026 itibariyla master data bootstrap promotion yolu stale/inconsistent batch durumlarina karsi guclendirildi.
+
+Referans:
+
+- `docs/plans/master-data-bootstrap-promotion-safety-guard-v1.md`
+
+Kilitlenen davranis:
+
+- Store/personnel promotion halen yalniz `ready_to_promote` batch icin calisir.
+- `ready` satirlar promotion'a gider.
+- `already_promoted` satirlar skip edilir ve evidence olarak kalir.
+- Batch hazir gorunse bile icinde `needs_validation`, `needs_review`, `blocked` veya `waiting_batch` satir varsa repository live-write komutu calismadan islem reddedilir.
+- Reddedilen cevap ilk bloklayan satirin row number, row id, readiness state ve block reason bilgisini tasir.
+
+Dogrulama:
+
+- TDD kirmizi test: stale store promotion once resolve olup repository promotion cagirisina gidiyordu.
+- TDD kirmizi test: stale personnel promotion once resolve olup repository promotion cagirisina gidiyordu.
+- Targeted service test passed: 29/29.
+- Targeted master-data bootstrap tests passed: 3 suite / 41 test.
+- Root `npm.cmd run check:release` passed:
+  - root script tests 50/50,
+  - backend release gate passed: lint, 73 test suite / 469 test, build, audit 0 vulnerability,
+  - frontend release gate passed: lint, script tests, build, 46 Playwright test, audit 0 vulnerability.
+
+CODEX durust yorum:
+
+- Bu kucuk ama kritik bir guvenlik kapisi: normal akista gorunmeyen, ama production'da veri guvenini bozabilecek "batch hazir gorundu ama satirlar hazir degildi" riskini kapatti.
+- Schema, migration, endpoint veya yeni karar motoru acilmadi; sadece promotion komutunun canli yazmadan once daha sert kontrol yapmasi saglandi.
+- Master data tarafinda defter daha temiz: baseline verisi geldiginde store/personnel promotion akisi daha guvenilir olacak.
+
+Siradaki mantikli adim: gercek master store/personnel baseline gelene kadar master data tarafinda buyuk yeni akisa girmemek; ihtiyac olursa sadece admin review smoke veya import resolver guard gibi kucuk koruyucu adimlarla ilerlemek.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
