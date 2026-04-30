@@ -320,6 +320,7 @@ These are important future product investments. They are not counted as hidden d
 3. Master-data validation/promotion test split after a separate explicit plan
 4. StageBuilderForm competition admin UI split after a concrete competition UI change
 5. IntegrationRepository boundary split and raw import index review after real import volume or source-adapter evidence
+6. StoreOpsRepository workforce request boundary split after a concrete workforce/personnel or checklist change
 
 KPI config version history, publish metadata, snapshot anchoring, and pre-governance visibility are implemented in V1. Rollback UI, future effective scheduling, approval workflow, and DB-managed interpretation copy remain future depth, not active hidden debt.
 
@@ -336,6 +337,8 @@ Master-data validation/promotion test split is a planned investment, not active 
 StageBuilderForm competition admin UI split is a planned investment, not active debt. The current file is large because it owns several tested competition admin workflows; it should not be refactored only for line count. Future work should split template and package-plan sections only when a concrete competition UI change touches them. Reference: `docs/plans/stage-builder-form-risk-review-2026-04-30.md`.
 
 IntegrationRepository boundary split and raw import index review is a planned investment, not active debt. The repository owns source governance, raw staging writes, import evidence, retry/action queues, store import scope, and audit evidence. Future work should split it only when a concrete integration change touches one of those boundaries, and raw table indexes should wait for real row volume or measured local staging evidence. Reference: `docs/plans/integration-repository-risk-review-2026-04-30.md`.
+
+StoreOpsRepository workforce request boundary split is a planned investment, not active debt. The repository owns seller-code and offboarding request lifecycles, store scope listing, target personnel reads, headcount gap, and legacy checklist writes. Future work should first extract a `WorkforceRequestRepository` only when concrete workforce/personnel work touches the boundary, and region queue indexes should wait for measured pilot volume. Reference: `docs/plans/store-ops-repository-risk-review-2026-04-30.md`.
 
 Project-Wide Scope/Auth Guard Scan V1 is implemented. The scan found and closed two concrete backend risks: production JWT default-secret fallback is now rejected unless JWKS is configured, and empty/foreign actor scope paths in store listing and target-distribution request listing are now guarded by no-access and narrowest-scope contract tests.
 

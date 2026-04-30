@@ -41,10 +41,12 @@ Decision:
 - Pick one only when a concrete feature or defect touches a clear boundary.
 - Any split should be planned as a small domain slice with targeted tests and root `check:release`.
 - `integration.repository.ts` has now been reviewed separately and is treated as a planned investment, not an active refactor target.
+- `store-ops.repository.ts` has now been reviewed separately and is treated as a planned investment, not an active refactor target.
 
 Reference:
 
 - `docs/plans/integration-repository-risk-review-2026-04-30.md`
+- `docs/plans/store-ops-repository-risk-review-2026-04-30.md`
 
 ### 2. Large Frontend Files
 
