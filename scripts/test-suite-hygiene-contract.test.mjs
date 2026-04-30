@@ -112,6 +112,27 @@ const competitionTeamTemplateExpectedTestNames = [
   'updates a team template and replaces store memberships with audit metadata',
   'clones a team template with source stores and audit metadata',
 ]
+const snapshotRunSplitFiles = [
+  'backend/nestjs/test/integration/snapshot-run.e2e-spec.ts',
+  'backend/nestjs/test/integration/snapshot-run-read-models.e2e-spec.ts',
+]
+const snapshotRunCommandExpectedTestNames = [
+  'creates a snapshot run and dispatches snapshot generation',
+  'reruns a failed snapshot by creating a new snapshot run',
+  'returns rerun governance in snapshot detail and blocks duplicate active reruns',
+  'rejects rerun when an active rerun already exists',
+]
+const snapshotRunReadModelExpectedTestNames = [
+  'lists snapshot runs with health state and pagination metadata',
+  'returns snapshot run detail with cards and rerun state',
+  'returns snapshot run audit events',
+  'returns snapshot run summary with latest critical pointers',
+  'returns snapshot run overview with action totals and stuck pointers',
+  'returns snapshot needs-action queue with retry-ready and stuck runs',
+  'returns snapshot lookups',
+  'returns snapshot run dependencies',
+  'returns snapshot run lineage',
+]
 
 test('test suite hygiene keeps the no-coverage-loss boundary', () => {
   for (const phrase of [
@@ -241,5 +262,36 @@ test('competition repository tests are split without dropping package or templat
   assert.ok(
     largestLineCount < 1500,
     `largest split competition repository test file has ${largestLineCount} lines`,
+  )
+})
+
+test('snapshot run e2e tests are split without dropping read-model or command coverage', () => {
+  let totalTests = 0
+  let largestLineCount = 0
+  let combinedText = ''
+
+  for (const file of snapshotRunSplitFiles) {
+    assert.equal(existsSync(join(workspaceRoot, file)), true, `${file} must exist`)
+    const text = readText(file)
+    const testCount = [...text.matchAll(/\bit\s*\(/g)].length
+    totalTests += testCount
+    largestLineCount = Math.max(largestLineCount, text.split('\n').length)
+    combinedText += `\n${text}`
+  }
+
+  assert.equal(totalTests, 13)
+  assert.equal([...readText(snapshotRunSplitFiles[0]).matchAll(/\bit\s*\(/g)].length, 4)
+  assert.equal([...readText(snapshotRunSplitFiles[1]).matchAll(/\bit\s*\(/g)].length, 9)
+  for (const testName of snapshotRunCommandExpectedTestNames) {
+    const exactOccurrences = [...combinedText.matchAll(new RegExp(`it\\("${testName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'g'))].length
+    assert.equal(exactOccurrences, 1, `${testName} must appear exactly once`)
+  }
+  for (const testName of snapshotRunReadModelExpectedTestNames) {
+    const exactOccurrences = [...combinedText.matchAll(new RegExp(`it\\("${testName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'g'))].length
+    assert.equal(exactOccurrences, 1, `${testName} must appear exactly once`)
+  }
+  assert.ok(
+    largestLineCount < 1500,
+    `largest split snapshot run test file has ${largestLineCount} lines`,
   )
 })

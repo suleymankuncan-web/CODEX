@@ -5186,10 +5186,36 @@ Kapanis notu:
 
 Siradaki mantikli adim: kalan buyuk backend spec adaylarini tekrar tartmak; en olasi dusuk risk adaylari `competition.service.spec.ts`, `snapshot-run.e2e-spec.ts` ve `auth-scope.e2e-spec.ts`.
 
+## Son Snapshot Run Read Model Test Split V1
+
+30 Nisan 2026 itibariyla Test Suite Hygiene V1 altinci guvenli dilimi uygulandi.
+
+Referans:
+
+- `docs/plans/test-suite-hygiene-v1.md`
+- `scripts/test-suite-hygiene-contract.test.mjs`
+- `backend/nestjs/test/integration/snapshot-run.e2e-spec.ts`
+- `backend/nestjs/test/integration/snapshot-run-read-models.e2e-spec.ts`
+
+Degisen test yapisi:
+
+- Snapshot run list/detail/audit/summary/overview/needs-action/lookups/dependencies/lineage testleri `snapshot-run-read-models.e2e-spec.ts` dosyasina tasindi.
+- `snapshot-run.e2e-spec.ts` command/rerun governance testlerini tasimaya devam eder.
+- Toplam 13 snapshot run e2e test adi korunur.
+- Production code degismedi.
+
+Kapanis notu:
+
+- `snapshot-run.e2e-spec.ts` 317 satira indi.
+- `snapshot-run-read-models.e2e-spec.ts` 851 satir.
+- Guard iki dosyada toplam 13 testin, command/rerun test adlarinin ve read-model test adlarinin tam 1 kez kaldigini kontrol eder.
+
+Siradaki mantikli adim: kalan buyuk backend spec adaylarini tekrar tartmak; en olasi dusuk risk adaylari `competition.service.spec.ts` ve `auth-scope.e2e-spec.ts`. Master-data tarafina hala ayri plan olmadan girilmez.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
 
 ```text
-current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. readScope/actionScope ayrimi ve assignedStoreIds modeli korunuyor. Test Suite Hygiene V1 auth split kapandi; Import Batch Source Test Split V1, Import Batch Evidence Test Split V1, Competition Repository Test Split V1 ve Competition Stage Package Plan Test Split V1 kapandi. Import/integration e2e kapsaminda production code degismeden 32 test adi uc dosyada korunuyor: import-batch, import-batch-evidence, integration-sources. Competition repository kapsaminda production code degismeden 27 test adi uc dosyada korunuyor: competition.repository, competition-stage-package-plan.repository, competition-team-template.repository. Operator Evidence Consistency Pass V1 kapandi. Backup Restore Drill Runbook V1 kapandi. Backup Restore Local Drill Evidence alindi; prod DB'ye dokunulmadi; bos disposable DB migration 42/42 succeeded ve restore proof source/restore schema counts matched. Migration Fresh DB Smoke V1 eklendi ve local Docker PostgreSQL uzerinde 42/42 succeeded, failed=0, audit=3, ops=39, rpt=10, stg=12 kaniti alindi. Migration Smoke Release Preflight Policy V1 karari: Docker-dependent smoke mandatory check:release icinde degil, DB schema/migration degisirse manuel preflight veya written Conditional Go zorunlu. Siradaki mantikli adim kalan buyuk backend spec adaylarini tekrar tartmak; en olasi dusuk risk adaylari competition.service, snapshot-run ve auth-scope.
+current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. readScope/actionScope ayrimi ve assignedStoreIds modeli korunuyor. Test Suite Hygiene V1 auth split kapandi; Import Batch Source Test Split V1, Import Batch Evidence Test Split V1, Competition Repository Test Split V1, Competition Stage Package Plan Test Split V1 ve Snapshot Run Read Model Test Split V1 kapandi. Import/integration e2e kapsaminda production code degismeden 32 test adi uc dosyada korunuyor: import-batch, import-batch-evidence, integration-sources. Competition repository kapsaminda production code degismeden 27 test adi uc dosyada korunuyor: competition.repository, competition-stage-package-plan.repository, competition-team-template.repository. Snapshot run e2e kapsaminda production code degismeden 13 test adi iki dosyada korunuyor: snapshot-run, snapshot-run-read-models. Operator Evidence Consistency Pass V1 kapandi. Backup Restore Drill Runbook V1 kapandi. Backup Restore Local Drill Evidence alindi; prod DB'ye dokunulmadi; bos disposable DB migration 42/42 succeeded ve restore proof source/restore schema counts matched. Migration Fresh DB Smoke V1 eklendi ve local Docker PostgreSQL uzerinde 42/42 succeeded, failed=0, audit=3, ops=39, rpt=10, stg=12 kaniti alindi. Migration Smoke Release Preflight Policy V1 karari: Docker-dependent smoke mandatory check:release icinde degil, DB schema/migration degisirse manuel preflight veya written Conditional Go zorunlu. Siradaki mantikli adim kalan buyuk backend spec adaylarini tekrar tartmak; en olasi dusuk risk adaylari competition.service ve auth-scope. Master-data tarafina ayri plan olmadan girilmez.
 ```

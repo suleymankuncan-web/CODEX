@@ -179,6 +179,33 @@ Deferred after this slice:
 - Do not split master-data until a separate, mechanical boundary is proven.
 - Next low-risk candidates remain `competition.service.spec.ts`, `snapshot-run.e2e-spec.ts`, and `auth-scope.e2e-spec.ts`.
 
+## Sixth Safe Slice
+
+Sixth safe slice: split snapshot run read-model tests out of `backend/nestjs/test/integration/snapshot-run.e2e-spec.ts`.
+
+Target files:
+
+- `backend/nestjs/test/integration/snapshot-run.e2e-spec.ts`
+- `backend/nestjs/test/integration/snapshot-run-read-models.e2e-spec.ts`
+
+Expected behavior:
+
+- The same 13 snapshot run e2e tests still run across the two files.
+- The 4 command/rerun governance tests remain in `snapshot-run.e2e-spec.ts`.
+- The 9 list/detail/audit/summary/overview/needs-action/lookups/dependencies/lineage read-model tests move to `snapshot-run-read-models.e2e-spec.ts`.
+- Test names remain unchanged.
+- Production code is not changed.
+
+Reason:
+
+- Snapshot run commands and snapshot run read models are a clean mechanical boundary.
+- This reduces the command file to the paths that create/rerun or block reruns, while keeping screen/read evidence together.
+
+Deferred after this slice:
+
+- Do not split master-data until a separate, mechanical boundary is proven.
+- Next low-risk candidates remain `competition.service.spec.ts` and `auth-scope.e2e-spec.ts`.
+
 ## Verification
 
 Targeted:
@@ -200,6 +227,13 @@ Competition repository split:
 ```powershell
 cd "C:\Users\suley\OneDrive\MasaÃ¼stÃ¼\WEBSÄ°TE Ã‡ALIÅMASI\backend\nestjs"
 npm.cmd test -- --runInBand src/modules/store-ops/infrastructure/competition.repository.spec.ts src/modules/store-ops/infrastructure/competition-stage-package-plan.repository.spec.ts src/modules/store-ops/infrastructure/competition-team-template.repository.spec.ts
+```
+
+Snapshot run split:
+
+```powershell
+cd "C:\Users\suley\OneDrive\MasaÃƒÂ¼stÃƒÂ¼\WEBSÃ„Â°TE Ãƒâ€¡ALIÃ…ÂMASI\backend\nestjs"
+npm.cmd test -- --runInBand test/integration/snapshot-run.e2e-spec.ts test/integration/snapshot-run-read-models.e2e-spec.ts
 ```
 
 Guard:
@@ -226,4 +260,4 @@ The risk becomes real only if we start inventing clever helpers, rewriting asser
 
 ## Next Logical Step
 
-After the competition stage package plan split, review remaining large backend specs by risk. The next candidate should be chosen from `competition.service.spec.ts`, `snapshot-run.e2e-spec.ts`, or `auth-scope.e2e-spec.ts` only if the boundary is mechanical. Do not split master-data until that work has its own explicit plan.
+After the snapshot run read-model split, review remaining large backend specs by risk. The next candidate should be chosen from `competition.service.spec.ts` or `auth-scope.e2e-spec.ts` only if the boundary is mechanical. Do not split master-data until that work has its own explicit plan.
