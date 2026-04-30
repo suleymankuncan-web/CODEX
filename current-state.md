@@ -5101,10 +5101,39 @@ Kapanis notu:
 
 Siradaki mantikli adim: kalan `import-batch.e2e-spec.ts` icinde mapping/reconciliation/retry evidence icin ayri bir kucuk sub-slice secmek; master-data testlerine ayni pass icinde dokunmamak.
 
+## Son Import Batch Evidence Test Split V1
+
+30 Nisan 2026 itibariyla Test Suite Hygiene V1 ucuncu guvenli dilimi uygulandi.
+
+Referans:
+
+- `docs/plans/test-suite-hygiene-v1.md`
+- `scripts/test-suite-hygiene-contract.test.mjs`
+- `backend/nestjs/test/integration/import-batch.e2e-spec.ts`
+- `backend/nestjs/test/integration/import-batch-evidence.e2e-spec.ts`
+- `backend/nestjs/test/integration/integration-sources.e2e-spec.ts`
+
+Degisen test yapisi:
+
+- Batch detail, KPI lineage, reconciliation, error row, external mapping, audit ve retry testleri `import-batch-evidence.e2e-spec.ts` dosyasina tasindi.
+- `import-batch.e2e-spec.ts` artik payload template, list/summary/admin overview, needs-action ve staging/creation testlerini tasir.
+- `integration-sources.e2e-spec.ts` integration source yonetimi testlerini tasimaya devam eder.
+- Toplam 32 import/integration e2e test adi korunur.
+- Production code degismedi.
+
+Kapanis notu:
+
+- `import-batch.e2e-spec.ts` 1064 satira indi.
+- `import-batch-evidence.e2e-spec.ts` 1295 satir.
+- `integration-sources.e2e-spec.ts` 656 satir.
+- Guard uc dosyada toplam 32 testin, evidence test adlarinin ve integration source test adlarinin tam 1 kez kaldigini kontrol eder.
+
+Siradaki mantikli adim: kalan buyuk backend spec adaylarini risk sirasiyla tartmak; master-data tarafina ancak ayri ve mekanik bolme guvenliyse girmek.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
 
 ```text
-current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. readScope/actionScope ayrimi ve assignedStoreIds modeli korunuyor. Test Suite Hygiene V1 auth split kapandi; Import Batch Source Test Split V1 ile integration source testleri import-batch dosyasindan ayrildi, production code degismedi ve 32 import/integration e2e test adi korunuyor. Operator Evidence Consistency Pass V1 kapandi. Backup Restore Drill Runbook V1 kapandi. Backup Restore Local Drill Evidence alindi; prod DB'ye dokunulmadi; bos disposable DB migration 42/42 succeeded ve restore proof source/restore schema counts matched. Migration Fresh DB Smoke V1 eklendi ve local Docker PostgreSQL uzerinde 42/42 succeeded, failed=0, audit=3, ops=39, rpt=10, stg=12 kaniti alindi. Migration Smoke Release Preflight Policy V1 karari: Docker-dependent smoke mandatory check:release icinde degil, DB schema/migration degisirse manuel preflight veya written Conditional Go zorunlu. Siradaki mantikli adim kalan import-batch dosyasinda mapping/reconciliation/retry evidence icin kucuk sub-slice secmek; master-data testlerine ayni pass icinde dokunmamak.
+current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. readScope/actionScope ayrimi ve assignedStoreIds modeli korunuyor. Test Suite Hygiene V1 auth split kapandi; Import Batch Source Test Split V1 ve Import Batch Evidence Test Split V1 kapandi. Import/integration e2e kapsaminda production code degismeden 32 test adi uc dosyada korunuyor: import-batch, import-batch-evidence, integration-sources. Operator Evidence Consistency Pass V1 kapandi. Backup Restore Drill Runbook V1 kapandi. Backup Restore Local Drill Evidence alindi; prod DB'ye dokunulmadi; bos disposable DB migration 42/42 succeeded ve restore proof source/restore schema counts matched. Migration Fresh DB Smoke V1 eklendi ve local Docker PostgreSQL uzerinde 42/42 succeeded, failed=0, audit=3, ops=39, rpt=10, stg=12 kaniti alindi. Migration Smoke Release Preflight Policy V1 karari: Docker-dependent smoke mandatory check:release icinde degil, DB schema/migration degisirse manuel preflight veya written Conditional Go zorunlu. Siradaki mantikli adim kalan buyuk backend spec adaylarini risk sirasiyla tartmak; master-data tarafina ancak ayri ve mekanik bolme guvenliyse girmek.
 ```

@@ -58,7 +58,23 @@ const authExpectedTestNames = [
 ]
 const importSplitFiles = [
   'backend/nestjs/test/integration/import-batch.e2e-spec.ts',
+  'backend/nestjs/test/integration/import-batch-evidence.e2e-spec.ts',
   'backend/nestjs/test/integration/integration-sources.e2e-spec.ts',
+]
+const importEvidenceExpectedTestNames = [
+  'returns import batch detail with row status summary',
+  'returns KPI import batch lineage summary for source evidence review',
+  'returns import batch reconciliation totals and rates',
+  'returns import batch error rows with pagination metadata',
+  'returns KPI import batch error row lineage for reconciliation',
+  'approves an external employee mapping without accepting a client-supplied table name',
+  'lists controlled store and employee candidates for external ID mapping',
+  'lists and updates store master data for import controls',
+  'returns import batch audit events',
+  'returns import batch audit events from the nested audit route',
+  'requeues import batches that no longer have blocking dependencies',
+  'does not requeue import batches with unresolved blocking dependencies',
+  'does not requeue completed import batches without retryable rows',
 ]
 const integrationSourceExpectedTestNames = [
   'lists integration sources with filters and pagination metadata',
@@ -141,7 +157,7 @@ test('auth admin integration tests are split without dropping test cases', () =>
   assert.ok(largestLineCount < 1500, `largest split auth test file has ${largestLineCount} lines`)
 })
 
-test('import batch e2e starts with a safe integration source split', () => {
+test('import batch e2e is split without dropping evidence coverage', () => {
   let totalTests = 0
   let largestLineCount = 0
   let combinedText = ''
@@ -156,10 +172,16 @@ test('import batch e2e starts with a safe integration source split', () => {
   }
 
   assert.equal(totalTests, 32)
-  assert.equal([...readText(importSplitFiles[1]).matchAll(/\bit\s*\(/g)].length, 8)
+  assert.equal([...readText(importSplitFiles[0]).matchAll(/\bit\s*\(/g)].length, 11)
+  assert.equal([...readText(importSplitFiles[1]).matchAll(/\bit\s*\(/g)].length, 13)
+  assert.equal([...readText(importSplitFiles[2]).matchAll(/\bit\s*\(/g)].length, 8)
+  for (const testName of importEvidenceExpectedTestNames) {
+    const exactOccurrences = [...combinedText.matchAll(new RegExp(`it\\("${testName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'g'))].length
+    assert.equal(exactOccurrences, 1, `${testName} must appear exactly once`)
+  }
   for (const testName of integrationSourceExpectedTestNames) {
     const exactOccurrences = [...combinedText.matchAll(new RegExp(`it\\("${testName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'g'))].length
     assert.equal(exactOccurrences, 1, `${testName} must appear exactly once`)
   }
-  assert.ok(largestLineCount < 2500, `largest split import test file has ${largestLineCount} lines`)
+  assert.ok(largestLineCount < 1500, `largest split import test file has ${largestLineCount} lines`)
 })
