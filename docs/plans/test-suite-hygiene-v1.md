@@ -233,6 +233,33 @@ Deferred after this slice:
 - Do not split master-data until a separate, mechanical boundary is proven.
 - Next candidate is `auth-scope.e2e-spec.ts` only if its scope surfaces can be split without weakening security evidence.
 
+## Eighth Safe Slice
+
+Eighth safe slice: split action-scope authorization tests out of `backend/nestjs/test/integration/auth-scope.e2e-spec.ts`.
+
+Target files:
+
+- `backend/nestjs/test/integration/auth-scope.e2e-spec.ts`
+- `backend/nestjs/test/integration/auth-action-scope.e2e-spec.ts`
+
+Expected behavior:
+
+- The same 18 auth scope integration tests still run across the two files.
+- The 12 read-scope, role, session, and JWT tests remain in `auth-scope.e2e-spec.ts`.
+- The 6 target-distribution and checklist action-scope tests move to `auth-action-scope.e2e-spec.ts`.
+- Test names remain unchanged.
+- Production code is not changed.
+
+Reason:
+
+- Action-scope tests guard write/action surfaces, not general read/session scope.
+- This keeps the security evidence complete while separating assigned-store action checks from the broader auth matrix.
+
+Deferred after this slice:
+
+- Do not split master-data until a separate, mechanical boundary is proven.
+- Test Suite Hygiene V1 should pause unless another oversized file has a clearly mechanical boundary.
+
 ## Verification
 
 Targeted:
@@ -270,6 +297,13 @@ cd "C:\Users\suley\OneDrive\MasaÃƒÆ’Ã‚Â¼stÃƒÆ’Ã‚Â¼\WEBSÃƒ�
 npm.cmd test -- --runInBand src/modules/store-ops/application/competition.service.spec.ts src/modules/store-ops/application/competition-team-template.service.spec.ts
 ```
 
+Auth scope split:
+
+```powershell
+cd "C:\Users\suley\OneDrive\MasaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼stÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¼\WEBSÃƒÆ’Ã¢â‚¬ÂÃƒâ€šÃ‚Â°TE ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¡ALIÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚ÂMASI\backend\nestjs"
+npm.cmd test -- --runInBand test/integration/auth-scope.e2e-spec.ts test/integration/auth-action-scope.e2e-spec.ts
+```
+
 Guard:
 
 ```powershell
@@ -294,4 +328,4 @@ The risk becomes real only if we start inventing clever helpers, rewriting asser
 
 ## Next Logical Step
 
-After the competition service team-template split, review `auth-scope.e2e-spec.ts` by risk before changing it. It is the likely next candidate, but only if the split keeps security evidence complete and mechanical. Do not split master-data until that work has its own explicit plan.
+After the auth action-scope split, pause Test Suite Hygiene V1 unless another oversized file has a clearly mechanical boundary. Do not split master-data until that work has its own explicit plan.

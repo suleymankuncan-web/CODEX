@@ -165,6 +165,32 @@ const competitionServiceCoreExpectedTestNames = [
   'finalizes with overridden state when warnings exist and justification is present',
   'redacts out-of-scope team stores while returning scoped store contributions',
 ]
+const authScopeSplitFiles = [
+  'backend/nestjs/test/integration/auth-scope.e2e-spec.ts',
+  'backend/nestjs/test/integration/auth-action-scope.e2e-spec.ts',
+]
+const authScopeReadAndSessionExpectedTestNames = [
+  'allows company-scoped access to store headcount gap',
+  'allows store-scoped access to headcount gap for the assigned store',
+  'rejects import batch creation when authenticated user lacks integration role',
+  'rejects snapshot run creation when authenticated user lacks snapshot role',
+  'rejects migration runs when authenticated user lacks super admin role',
+  'allows reporting reads for report viewer role',
+  'allows reporting reads with JWT auth mode',
+  'returns authenticated mock session context',
+  'returns authenticated JWT session context',
+  'keeps region scope restrictions on workforce reporting even with explicit store filter',
+  'keeps region scope restrictions on turnover reporting even with explicit store filter',
+  'rejects invalid JWT tokens with 401',
+]
+const authActionScopeExpectedTestNames = [
+  'rejects checklist creation when authenticated user is out of store scope',
+  'accepts seeded PostgreSQL UUID store ids for target distribution creation',
+  'rejects target distribution creation outside assigned action stores even with broad read scope',
+  'rejects target distribution approval for report viewer role',
+  'rejects target distribution approval outside assigned action stores',
+  'rejects checklist acknowledgement outside assigned action stores',
+]
 
 test('test suite hygiene keeps the no-coverage-loss boundary', () => {
   for (const phrase of [
@@ -356,5 +382,36 @@ test('competition service tests are split without dropping team-template or core
   assert.ok(
     largestLineCount < 1500,
     `largest split competition service test file has ${largestLineCount} lines`,
+  )
+})
+
+test('auth scope integration tests are split without dropping read/session or action-scope coverage', () => {
+  let totalTests = 0
+  let largestLineCount = 0
+  let combinedText = ''
+
+  for (const file of authScopeSplitFiles) {
+    assert.equal(existsSync(join(workspaceRoot, file)), true, `${file} must exist`)
+    const text = readText(file)
+    const testCount = [...text.matchAll(/\bit\s*\(/g)].length
+    totalTests += testCount
+    largestLineCount = Math.max(largestLineCount, text.split('\n').length)
+    combinedText += `\n${text}`
+  }
+
+  assert.equal(totalTests, 18)
+  assert.equal([...readText(authScopeSplitFiles[0]).matchAll(/\bit\s*\(/g)].length, 12)
+  assert.equal([...readText(authScopeSplitFiles[1]).matchAll(/\bit\s*\(/g)].length, 6)
+  for (const testName of authScopeReadAndSessionExpectedTestNames) {
+    const exactOccurrences = [...combinedText.matchAll(new RegExp(`it\\("${testName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'g'))].length
+    assert.equal(exactOccurrences, 1, `${testName} must appear exactly once`)
+  }
+  for (const testName of authActionScopeExpectedTestNames) {
+    const exactOccurrences = [...combinedText.matchAll(new RegExp(`it\\("${testName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'g'))].length
+    assert.equal(exactOccurrences, 1, `${testName} must appear exactly once`)
+  }
+  assert.ok(
+    largestLineCount < 1500,
+    `largest split auth scope test file has ${largestLineCount} lines`,
   )
 })
