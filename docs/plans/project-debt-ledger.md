@@ -13,11 +13,11 @@ Rule:
 
 ## Snapshot
 
-Date: 29 April 2026
+Date: 30 April 2026
 
 Current count:
 
-- Closed active debts: 58
+- Closed active debts: 60
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -86,6 +86,12 @@ These are counted as paid because they have implementation or documentation evid
 56. Master Data Bootstrap Personnel Promotion V1
 57. Master Data Bootstrap Admin Review Surface V1
 58. User Account / Role Assignment V1
+59. Ranking Included Snapshot Contract V1
+60. Monthly Ranking Score Source Contract V1
+
+Ranking Included Snapshot Contract V1 is counted as paid because `GET /reports/leaderboards/closed` now returns `includedSnapshotRuns`, daily ranking returns the included closed snapshot, monthly ranking returns every completed daily snapshot included in the month calculation, and `/store/rankings` uses that backend contract instead of frontend inference.
+
+Monthly Ranking Score Source Contract V1 is counted as paid because store/personnel monthly ranking source rules are documented and guarded by root script tests. It locks `includedSnapshotRuns` as the official monthly evidence source, `TARGET` and `TURKEY_AVERAGE` metric sources, `CHECKLIST_SCORE` behavior, `%120+` cap semantics, and the boundary that imported Turkey-average rows remain reconciliation evidence. Reference: `docs/plans/monthly-ranking-score-source-contract-v1.md`.
 
 Production-Ready Migration System V1 is counted as paid because SQL migrations are tracked in `audit.schema_migration`, checksum drift is rejected, failed runs are recorded with error evidence, the HTTP migration endpoint is disabled in production, and `npm.cmd run db:migrate` is the approved CLI/CI migration path.
 

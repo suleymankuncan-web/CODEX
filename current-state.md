@@ -4428,6 +4428,42 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: aylik ranking icin store/personel skor kurallarini ayni resmi kaynaklardan belgelemek; ozellikle hangi metriklerin Turkiye ortalamasi, hedef ve checklist kaynagindan skorlandigini tek yerde toplamak.
 
+## Son Monthly Ranking Score Source Contract V1
+
+30 Nisan 2026 itibariyla aylik ranking ve aylik score kaynak kurallari tek dokumanda toplandi.
+
+Referans:
+
+- `docs/plans/monthly-ranking-score-source-contract-v1.md`
+
+Kilitlenen kararlar:
+
+- `GET /reports/leaderboards/closed` ve `includedSnapshotRuns` aylik ranking kanitinin resmi kaynagidir.
+- Frontend snapshot listesi ay secimi icin kullanilabilir, ancak ay icine dahil edilen gunleri tahmin edemez.
+- Personel aylik ana skoru `rpt.employee_performance_snapshot.score_value` uzerinden kapanmis gun ortalamasidir.
+- Personel hedef skoru `TARGET`, ATV ve UPT ise `TURKEY_AVERAGE` kaynagindan skorlanir.
+- Personel ranking V1 checklist metriği icermez.
+- Store score hedef, CR, ATV, UPT, BM checklist ve VM checklist kaynaklarini tek tabloda aciklar.
+- BM/VM checklist eksikse `missingWeightPolicy: return_missing_weight_to_kpi` davranisi ile eksik checklist store'u cezalandirmaz.
+- PowerBI Turkiye ortalamasi satirlari skor kaynagi degil, reconciliation evidence olarak kalir.
+
+Dogrulama:
+
+- TDD kirmizi test: `scripts/monthly-ranking-score-source-contract.test.mjs` once dokuman olmadigi icin beklenen sekilde dustu.
+- Targeted guard test passed: `scripts/monthly-ranking-score-source-contract.test.mjs` 4/4.
+- Root `npm.cmd run check:release` passed:
+  - root script tests 50/50,
+  - backend release gate passed: lint, 73 test suite / 467 test, build, audit 0 vulnerability,
+  - frontend release gate passed: lint, script tests, build, 46 Playwright test, audit 0 vulnerability.
+
+CODEX durust yorum:
+
+- Bu adim yeni koddan cok kontrol kaybi riskini kapatti.
+- Artik skorun nereden geldigini ekran ekran anlatmak yerine tek resmi karar dosyasina baglayabiliriz.
+- Bu, ileride mobil BFF, VM checklist aktivasyonu ve turnuva/challenge skor kurgulari icin dagilmayi azaltir.
+
+Siradaki mantikli adim: bu kontrati store ranking ve KPI aciklama metinlerine referans olacak sekilde kullanmak; skor matematigini degistirmeden kullaniciya "bu puan nereden geldi" dilini sade tutmak.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
