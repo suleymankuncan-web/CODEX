@@ -56,6 +56,20 @@ const authExpectedTestNames = [
   'returns not found when revoking a missing role permission',
   'returns auth lookups',
 ]
+const importSplitFiles = [
+  'backend/nestjs/test/integration/import-batch.e2e-spec.ts',
+  'backend/nestjs/test/integration/integration-sources.e2e-spec.ts',
+]
+const integrationSourceExpectedTestNames = [
+  'lists integration sources with filters and pagination metadata',
+  'creates an integration source',
+  'deactivates and reactivates an integration source',
+  'returns integration lookups',
+  'returns integration source audit events',
+  'allows reusing source code across different entity types but rejects duplicate source code within the same entity type',
+  'fails import creation with a clear error when the integration source is inactive',
+  'rejects deactivating an integration source when active import batches exist',
+]
 
 test('test suite hygiene keeps the no-coverage-loss boundary', () => {
   for (const phrase of [
@@ -125,4 +139,27 @@ test('auth admin integration tests are split without dropping test cases', () =>
     assert.equal(exactOccurrences, 1, `${testName} must appear exactly once`)
   }
   assert.ok(largestLineCount < 1500, `largest split auth test file has ${largestLineCount} lines`)
+})
+
+test('import batch e2e starts with a safe integration source split', () => {
+  let totalTests = 0
+  let largestLineCount = 0
+  let combinedText = ''
+
+  for (const file of importSplitFiles) {
+    assert.equal(existsSync(join(workspaceRoot, file)), true, `${file} must exist`)
+    const text = readText(file)
+    const testCount = [...text.matchAll(/\bit\s*\(/g)].length
+    totalTests += testCount
+    largestLineCount = Math.max(largestLineCount, text.split('\n').length)
+    combinedText += `\n${text}`
+  }
+
+  assert.equal(totalTests, 32)
+  assert.equal([...readText(importSplitFiles[1]).matchAll(/\bit\s*\(/g)].length, 8)
+  for (const testName of integrationSourceExpectedTestNames) {
+    const exactOccurrences = [...combinedText.matchAll(new RegExp(`it\\("${testName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'g'))].length
+    assert.equal(exactOccurrences, 1, `${testName} must appear exactly once`)
+  }
+  assert.ok(largestLineCount < 2500, `largest split import test file has ${largestLineCount} lines`)
 })

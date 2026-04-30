@@ -17,7 +17,7 @@ Date: 30 April 2026
 
 Current count:
 
-- Closed active debts: 75
+- Closed active debts: 76
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -103,6 +103,7 @@ These are counted as paid because they have implementation or documentation evid
 73. Backup Restore Local Drill Evidence V1
 74. Migration Fresh DB Smoke V1
 75. Migration Smoke Release Preflight Policy V1
+76. Import Batch Source Test Split V1
 
 Ranking Included Snapshot Contract V1 is counted as paid because `GET /reports/leaderboards/closed` now returns `includedSnapshotRuns`, daily ranking returns the included closed snapshot, monthly ranking returns every completed daily snapshot included in the month calculation, and `/store/rankings` uses that backend contract instead of frontend inference.
 
@@ -135,6 +136,8 @@ Backup Restore Local Drill Evidence V1 is counted as paid because a disposable l
 Migration Fresh DB Smoke V1 is counted as paid because `npm run smoke:migration:fresh-db` now creates only the local disposable `store_ops_fresh_migration_smoke` database, runs backend migrations from empty state, verifies `audit.schema_migration` success counts and core schema table counts, refuses production/non-local targets, and is guarded by root script tests. Reference: `docs/plans/migration-fresh-db-smoke-v1.md`.
 
 Migration Smoke Release Preflight Policy V1 is counted as paid because the release gate now explicitly keeps Docker-dependent fresh DB smoke out of mandatory `check:release`, while production readiness requires `npm.cmd run smoke:migration:fresh-db` or a written Conditional Go whenever DB schema or migration files changed. Reference: `docs/plans/release-check-gate.md`.
+
+Import Batch Source Test Split V1 is counted as paid because integration source CRUD, lookup, audit, duplicate-source, inactive-source, and deactivate-guard tests were moved from `import-batch.e2e-spec.ts` into `integration-sources.e2e-spec.ts` without changing production code, test names, or the 32 guarded import/integration source e2e cases. Reference: `docs/plans/test-suite-hygiene-v1.md`.
 
 Production-Ready Migration System V1 is counted as paid because SQL migrations are tracked in `audit.schema_migration`, checksum drift is rejected, failed runs are recorded with error evidence, the HTTP migration endpoint is disabled in production, and `npm.cmd run db:migrate` is the approved CLI/CI migration path.
 
