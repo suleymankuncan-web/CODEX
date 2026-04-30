@@ -4,6 +4,7 @@ import { ImportBatchJobPayload } from "../../../shared/jobs/job-payloads";
 import { JOB_DISPATCHER } from "../../../shared/jobs/jobs.constants";
 import { MaterializationService } from "./materialization.service";
 import { IntegrationRepository } from "../infrastructure/integration.repository";
+import { IntegrationSourceRepository } from "../infrastructure/integration-source.repository";
 import { KpiImportNormalizationService } from "./kpi-import-normalization.service";
 import { IntegrationSchedulerService } from "./integration-scheduler.service";
 import { ExternalIdMappingService } from "./external-id-mapping.service";
@@ -39,6 +40,7 @@ export class IntegrationService {
 
   constructor(
     private readonly integrationRepository: IntegrationRepository,
+    private readonly integrationSourceRepository: IntegrationSourceRepository,
     private readonly materializationService: MaterializationService,
     private readonly kpiImportNormalizationService: KpiImportNormalizationService,
     private readonly integrationSchedulerService: IntegrationSchedulerService,
@@ -69,7 +71,7 @@ export class IntegrationService {
   }) {
     let rows = input.rows;
     if (input.entityType === "kpi" && input.rows?.length) {
-      const source = await this.integrationRepository.getIntegrationSourceByCodeAndEntity(
+      const source = await this.integrationSourceRepository.getIntegrationSourceByCodeAndEntity(
         input.sourceCode,
         input.entityType,
       );
@@ -137,7 +139,7 @@ export class IntegrationService {
     sourceSystem?: string;
     isActive?: boolean;
   }) {
-    const result = await this.integrationRepository.listIntegrationSources(input);
+    const result = await this.integrationSourceRepository.listIntegrationSources(input);
 
     return buildListResponse(
       result.rows.map((item) => this.mapIntegrationSource(item)),
@@ -165,7 +167,7 @@ export class IntegrationService {
     pollTimezone?: string;
     actorUserId: string;
   }) {
-    const existing = await this.integrationRepository.getIntegrationSourceByCodeAndEntity(
+    const existing = await this.integrationSourceRepository.getIntegrationSourceByCodeAndEntity(
       input.sourceCode,
       input.entityType,
     );
@@ -175,7 +177,7 @@ export class IntegrationService {
       );
     }
 
-    const source = await this.integrationRepository.createIntegrationSource(input);
+    const source = await this.integrationSourceRepository.createIntegrationSource(input);
 
     return buildCommandResponse({
       status: "created",
@@ -187,7 +189,7 @@ export class IntegrationService {
   }
 
   async deactivateIntegrationSource(sourceId: string, actorUserId: string) {
-    const activeBatchCount = await this.integrationRepository.countActiveImportBatchesForSource(
+    const activeBatchCount = await this.integrationSourceRepository.countActiveImportBatchesForSource(
       sourceId,
     );
     if (activeBatchCount > 0) {
@@ -196,7 +198,7 @@ export class IntegrationService {
       );
     }
 
-    const source = await this.integrationRepository.updateIntegrationSourceActiveState({
+    const source = await this.integrationSourceRepository.updateIntegrationSourceActiveState({
       sourceId,
       isActive: false,
       actorUserId,
@@ -216,7 +218,7 @@ export class IntegrationService {
   }
 
   async reactivateIntegrationSource(sourceId: string, actorUserId: string) {
-    const source = await this.integrationRepository.updateIntegrationSourceActiveState({
+    const source = await this.integrationSourceRepository.updateIntegrationSourceActiveState({
       sourceId,
       isActive: true,
       actorUserId,
@@ -246,7 +248,7 @@ export class IntegrationService {
     },
     actorUserId: string,
   ) {
-    const source = await this.integrationRepository.updateIntegrationSourceSchedule({
+    const source = await this.integrationSourceRepository.updateIntegrationSourceSchedule({
       sourceId,
       ...input,
       actorUserId,
@@ -400,7 +402,7 @@ export class IntegrationService {
   }
 
   async getIntegrationLookups() {
-    const activeSources = await this.integrationRepository.listActiveIntegrationSources();
+    const activeSources = await this.integrationSourceRepository.listActiveIntegrationSources();
     const entityTypes = this.getSupportedEntityTypes();
     const activeSourceOptions = activeSources.map((item) => ({
       sourceId: item.integration_source_id,
@@ -554,13 +556,13 @@ export class IntegrationService {
   }
 
   async getIntegrationSourceAudit(sourceId: string) {
-    const source = await this.integrationRepository.getIntegrationSourceById(sourceId);
+    const source = await this.integrationSourceRepository.getIntegrationSourceById(sourceId);
 
     if (!source) {
       throw new NotFoundException(`Integration source not found: ${sourceId}`);
     }
 
-    const events = await this.integrationRepository.getIntegrationSourceAudit(sourceId);
+    const events = await this.integrationSourceRepository.getIntegrationSourceAudit(sourceId);
 
     return buildListResponse(
       events.map((event) => mapAuditEvent(event)),
@@ -1008,7 +1010,7 @@ export class IntegrationService {
     internalId: string;
     actorUserId: string;
   }) {
-    const source = await this.integrationRepository.getIntegrationSourceById(input.integrationSourceId);
+    const source = await this.integrationSourceRepository.getIntegrationSourceById(input.integrationSourceId);
 
     if (!source) {
       throw new NotFoundException(`Integration source not found: ${input.integrationSourceId}`);

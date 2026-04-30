@@ -10,6 +10,7 @@ import { DatabaseService } from "../../../shared/database/database.service";
 import { buildCommandResponse } from "../../../shared/http/response-builders";
 import { logStructuredError } from "../../../shared/structured-log";
 import { IntegrationRepository } from "../infrastructure/integration.repository";
+import { IntegrationSourceRepository } from "../infrastructure/integration-source.repository";
 import { IntegrationService } from "./integration.service";
 
 type UploadFile = {
@@ -79,6 +80,7 @@ export class PowerBiExportUploadService {
   constructor(
     _databaseService: DatabaseService,
     private readonly integrationRepository: IntegrationRepository,
+    private readonly integrationSourceRepository: IntegrationSourceRepository,
     private readonly integrationService: IntegrationService,
   ) {}
 
@@ -97,7 +99,7 @@ export class PowerBiExportUploadService {
         throw new BadRequestException("En az bir Power BI export dosyasi yuklenmeli");
       }
 
-      const source = await this.integrationRepository.getIntegrationSourceByCodeAndEntity(
+      const source = await this.integrationSourceRepository.getIntegrationSourceByCodeAndEntity(
         input.sourceCode,
         "kpi",
       );

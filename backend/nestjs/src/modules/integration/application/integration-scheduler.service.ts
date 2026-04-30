@@ -1,13 +1,13 @@
 import { Injectable } from "@nestjs/common";
-import { IntegrationRepository } from "../infrastructure/integration.repository";
+import { IntegrationSourceRepository } from "../infrastructure/integration-source.repository";
 
 @Injectable()
 export class IntegrationSchedulerService {
-  constructor(private readonly integrationRepository: IntegrationRepository) {}
+  constructor(private readonly integrationSourceRepository: IntegrationSourceRepository) {}
 
   async listDueSources(referenceAt?: string) {
     const now = referenceAt ? new Date(referenceAt) : new Date();
-    const sources = await this.integrationRepository.listScheduledIntegrationSources();
+    const sources = await this.integrationSourceRepository.listScheduledIntegrationSources();
 
     return sources.map((source) => {
       const localMinutes = this.getLocalMinutesOfDay(now, source.poll_timezone);

@@ -176,6 +176,27 @@ This repository is a real pressure point, but not an urgent refactor target.
 
 The correct near-term rule is: do not keep adding unrelated import/source/evidence behavior here without a boundary decision. The first actual split should happen only when a concrete integration change touches one of the named boundaries.
 
+## Implementation Update - 30 April 2026
+
+`IntegrationSourceRepository` Split V1 was implemented as a small mechanical boundary split after this review.
+
+Changed:
+
+- source list/create/update/schedule/audit/read persistence moved to `backend/nestjs/src/modules/integration/infrastructure/integration-source.repository.ts`,
+- `IntegrationService`, `IntegrationSchedulerService`, and `PowerBiExportUploadService` now use the new source repository for source-governance calls,
+- raw staging writes, import batch evidence, retry/action queue, external mapping audit, KPI import store scope, materialization, scoring, master-data, schema, and migrations were not changed.
+
+Verification:
+
+- backend targeted scheduler and Power BI upload tests passed,
+- integration source/import/evidence e2e tests passed,
+- root script guard passed,
+- root `check:release` passed.
+
+Remaining planned investment:
+
+- raw staging writer split, evidence repository split, retry/action queue split, and raw import index review remain future-only and require separate evidence or a separate implementation plan.
+
 ## CODEX DURUST YORUM
 
 This file is important enough to respect and dangerous enough not to casually refactor.

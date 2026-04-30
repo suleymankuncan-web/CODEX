@@ -8,6 +8,8 @@
 
 **Tech Stack:** NestJS, TypeScript, PostgreSQL via existing `DatabaseService`, Jest e2e/unit tests, root script guards.
 
+**Implementation status:** Completed on 30 April 2026. `PowerBiExportUploadService` was also updated because build verification found a remaining source-governance read call there. No schema, migration, raw staging, evidence, retry, materialization, scoring, master-data, controller, DTO, or auth behavior was changed.
+
 ---
 
 ## Scope
@@ -92,7 +94,7 @@ Keep these methods in `IntegrationRepository`:
 - Create: `backend/nestjs/src/modules/integration/infrastructure/integration-source.repository.ts`
 - Modify: `backend/nestjs/src/modules/integration/infrastructure/integration.repository.ts`
 
-- [ ] **Step 1: Create the new repository shell**
+- [x] **Step 1: Create the new repository shell**
 
 Create `integration-source.repository.ts` with:
 
@@ -129,19 +131,19 @@ export class IntegrationSourceRepository {
 }
 ```
 
-- [ ] **Step 2: Move source-governance methods**
+- [x] **Step 2: Move source-governance methods**
 
 Move the exact method bodies listed in "Methods To Move" into `IntegrationSourceRepository`.
 
 Keep SQL strings, return values, exception behavior, event names, and metadata fields identical.
 
-- [ ] **Step 3: Remove moved methods from IntegrationRepository**
+- [x] **Step 3: Remove moved methods from IntegrationRepository**
 
 Remove the moved methods from `IntegrationRepository`.
 
 Keep `resolveAuditActorUserId` inside `IntegrationRepository` because import batch, store-scope, retry, and mapping audit writes still use it.
 
-- [ ] **Step 4: Run TypeScript compile check**
+- [x] **Step 4: Run TypeScript compile check**
 
 Run:
 
@@ -163,7 +165,7 @@ Expected:
 - Modify: `backend/nestjs/src/modules/integration/application/integration-scheduler.service.ts`
 - Modify: `backend/nestjs/src/modules/integration/integration.module.ts`
 
-- [ ] **Step 1: Inject IntegrationSourceRepository into IntegrationService**
+- [x] **Step 1: Inject IntegrationSourceRepository into IntegrationService**
 
 Update imports:
 
@@ -187,7 +189,7 @@ Update constructor:
   ) {}
 ```
 
-- [ ] **Step 2: Move source-governance calls in IntegrationService**
+- [x] **Step 2: Move source-governance calls in IntegrationService**
 
 Replace these call sites:
 
@@ -225,7 +227,7 @@ this.integrationRepository.listExternalIdMapCandidates(...)
 this.integrationRepository.recordExternalIdMappingApproved(...)
 ```
 
-- [ ] **Step 3: Inject IntegrationSourceRepository into IntegrationSchedulerService**
+- [x] **Step 3: Inject IntegrationSourceRepository into IntegrationSchedulerService**
 
 Update imports:
 
@@ -245,7 +247,7 @@ Update source read:
 const sources = await this.integrationSourceRepository.listScheduledIntegrationSources();
 ```
 
-- [ ] **Step 4: Register provider in IntegrationModule**
+- [x] **Step 4: Register provider in IntegrationModule**
 
 Update imports:
 
@@ -255,7 +257,7 @@ import { IntegrationSourceRepository } from "./infrastructure/integration-source
 
 Add `IntegrationSourceRepository` to `providers` and `exports` beside `IntegrationRepository`.
 
-- [ ] **Step 5: Run build**
+- [x] **Step 5: Run build**
 
 Run:
 
@@ -274,7 +276,7 @@ Expected:
 
 - No planned production changes.
 
-- [ ] **Step 1: Run scheduler unit tests**
+- [x] **Step 1: Run scheduler unit tests**
 
 Run:
 
@@ -287,7 +289,7 @@ Expected:
 
 - PASS.
 
-- [ ] **Step 2: Run integration source and import batch e2e tests**
+- [x] **Step 2: Run integration source and import batch e2e tests**
 
 Run:
 
@@ -303,7 +305,7 @@ Expected:
 - Integration source list/create/deactivate/reactivate/audit behavior still works.
 - External mapping, store import scope, retry, lineage, and reconciliation evidence still works.
 
-- [ ] **Step 3: Run script guard tests**
+- [x] **Step 3: Run script guard tests**
 
 Run:
 
@@ -316,7 +318,7 @@ Expected:
 
 - PASS.
 
-- [ ] **Step 4: Run root release gate**
+- [x] **Step 4: Run root release gate**
 
 Run:
 
@@ -336,7 +338,7 @@ Expected:
 - Modify: `current-state.md`
 - Optional modify: `docs/plans/integration-repository-risk-review-2026-04-30.md`
 
-- [ ] **Step 1: Update current-state**
+- [x] **Step 1: Update current-state**
 
 Add a short section:
 
@@ -355,7 +357,7 @@ Sinir:
 - Yeni repository yalniz integration source list/create/update/schedule/audit/read sorumlulugunu alacak.
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 Run:
 

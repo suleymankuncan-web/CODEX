@@ -27,15 +27,17 @@ function createService() {
     }),
   };
   const integrationRepository = {
+    listKpiImportStoreExternalRefs: jest.fn().mockResolvedValue([
+      { external_ref: "Kadikoy" },
+      { external_ref: "Istanbul Marmara Park Avm" },
+    ]),
+  };
+  const integrationSourceRepository = {
     getIntegrationSourceByCodeAndEntity: jest.fn().mockResolvedValue({
       integration_source_id: "00000000-0000-0000-0000-000000000010",
       is_active: true,
       source_system: "power_bi",
     }),
-    listKpiImportStoreExternalRefs: jest.fn().mockResolvedValue([
-      { external_ref: "Kadikoy" },
-      { external_ref: "Istanbul Marmara Park Avm" },
-    ]),
   };
   const integrationService = {
     createImportBatch: jest.fn().mockResolvedValue({
@@ -47,12 +49,14 @@ function createService() {
   const service = new PowerBiExportUploadService(
     databaseService as never,
     integrationRepository as never,
+    integrationSourceRepository as never,
     integrationService as never,
   );
 
   return {
     databaseService,
     integrationRepository,
+    integrationSourceRepository,
     integrationService,
     service,
   };

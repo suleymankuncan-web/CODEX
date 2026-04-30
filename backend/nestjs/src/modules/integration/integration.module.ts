@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { IntegrationController } from "./web/integration.controller";
 import { IntegrationService } from "./application/integration.service";
 import { IntegrationRepository } from "./infrastructure/integration.repository";
+import { IntegrationSourceRepository } from "./infrastructure/integration-source.repository";
 import { MaterializationService } from "./application/materialization.service";
 import { ExternalIdMappingService } from "./application/external-id-mapping.service";
 import { KpiImportNormalizationService } from "./application/kpi-import-normalization.service";
@@ -15,6 +16,7 @@ import { MasterDataBootstrapRepository } from "./infrastructure/master-data-boot
   providers: [
     IntegrationService,
     IntegrationRepository,
+    IntegrationSourceRepository,
     MaterializationService,
     ExternalIdMappingService,
     KpiImportNormalizationService,
@@ -26,6 +28,7 @@ import { MasterDataBootstrapRepository } from "./infrastructure/master-data-boot
   exports: [
     IntegrationService,
     IntegrationRepository,
+    IntegrationSourceRepository,
     MaterializationService,
     ExternalIdMappingService,
     KpiImportNormalizationService,

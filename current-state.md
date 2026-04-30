@@ -5356,26 +5356,36 @@ Bulgular:
 
 Siradaki mantikli adim: Dis kanit yoksa `store-ops.repository.ts` icin boundary risk review yapmak; dis staging/source/master-data kaniti gelirse onu onceliklendirmek.
 
-## Son IntegrationSourceRepository Split V1 Plan
+## Son IntegrationSourceRepository Split V1
 
-30 Nisan 2026 itibariyla `IntegrationRepository` icinden yalniz source-governance persistence boundary'sini cikarmak icin implementation plan yazildi.
+30 Nisan 2026 itibariyla `IntegrationRepository` icinden yalniz source-governance persistence boundary'si ayrildi.
 
 Referans:
 
 - `docs/superpowers/plans/2026-04-30-integration-source-repository-split-v1.md`
 
-Sinir:
+Degisenler:
 
-- Raw staging write, import batch evidence, retry/action queue, external mapping audit, KPI import store scope ve materialization davranisi degismeyecek.
-- Yeni repository yalniz integration source list/create/update/schedule/audit/read sorumlulugunu alacak.
-- Bu is full repository refactor degil; tek mekanik boundary split olarak uygulanacak.
+- Yeni `IntegrationSourceRepository` source list/create/update/schedule/audit/read sorumlulugunu aldi.
+- `IntegrationRepository` raw staging write, import batch evidence, retry/action queue, external mapping audit, KPI import store scope ve materialization disi import persistence sorumluluklarini tasimaya devam eder.
+- `IntegrationService`, `IntegrationSchedulerService` ve `PowerBiExportUploadService` source-governance okuma/yazma cagirilari icin yeni repository'yi kullanir.
+- DB schema, migration, DTO/controller/auth, materialization, scoring ve master-data davranisi degismedi.
 
-Siradaki mantikli adim: Bu plan onaylanirsa `IntegrationSourceRepository` split'ini uygulamak; uygulamada targeted import/integration tests ve root `check:release` kapisini calistirmak.
+Dogrulama:
+
+- `backend/nestjs`: `npm.cmd run build` gecti.
+- `backend/nestjs`: `npm.cmd test -- --runInBand src/modules/integration/application/power-bi-export-upload.service.spec.ts src/modules/integration/application/integration-scheduler.service.spec.ts` gecti, 9/9.
+- `backend/nestjs`: `npm.cmd test -- --runInBand test/integration/integration-sources.e2e-spec.ts test/integration/import-batch.e2e-spec.ts test/integration/import-batch-evidence.e2e-spec.ts` gecti, 32/32.
+- root: `node --test scripts\*.test.mjs` gecti, 100/100.
+- root: `npm.cmd run check:release` gecti; backend 88 suite / 476 test, frontend Playwright 46/46, audit 0 vulnerability.
+- root: `git diff --check` gecti; yalniz Windows LF -> CRLF uyarilari var.
+
+Siradaki mantikli adim: Dis staging/source/master-data kaniti yoksa yeni modul acmadan `store-ops.repository.ts` boundary risk review yapmak; dis kanit gelirse onu onceliklendirmek.
 
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
 
 ```text
-current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. readScope/actionScope ayrimi ve assignedStoreIds modeli korunuyor. Test Suite Hygiene V1 auth split kapandi; Import Batch Source Test Split V1, Import Batch Evidence Test Split V1, Competition Repository Test Split V1, Competition Stage Package Plan Test Split V1, Snapshot Run Read Model Test Split V1, Competition Service Team Template Test Split V1 ve Auth Action Scope Test Split V1 kapandi. Import/integration e2e kapsaminda production code degismeden 32 test adi uc dosyada korunuyor: import-batch, import-batch-evidence, integration-sources. Competition repository kapsaminda production code degismeden 27 test adi uc dosyada korunuyor: competition.repository, competition-stage-package-plan.repository, competition-team-template.repository. Snapshot run e2e kapsaminda production code degismeden 13 test adi iki dosyada korunuyor: snapshot-run, snapshot-run-read-models. Competition service kapsaminda production code degismeden 24 test adi iki dosyada korunuyor: competition.service, competition-team-template.service. Auth scope integration kapsaminda production code degismeden 18 test adi iki dosyada korunuyor: auth-scope, auth-action-scope. Operator Evidence Consistency Pass V1 kapandi. Backup Restore Drill Runbook V1 kapandi. Backup Restore Local Drill Evidence alindi; prod DB'ye dokunulmadi; bos disposable DB migration 42/42 succeeded ve restore proof source/restore schema counts matched. Migration Fresh DB Smoke V1 eklendi ve local Docker PostgreSQL uzerinde 42/42 succeeded, failed=0, audit=3, ops=39, rpt=10, stg=12 kaniti alindi. Migration Smoke Release Preflight Policy V1 karari: Docker-dependent smoke mandatory check:release icinde degil, DB schema/migration degisirse manuel preflight veya written Conditional Go zorunlu. Master-data test dosyasi icin ayri plan `docs/plans/master-data-bootstrap-test-hygiene-v1.md` olarak yazildi. Master-data bootstrap service 29-test guard eklendi; Bucket A staging/normalization testleri `master-data-bootstrap-staging.service.spec.ts` dosyasina, Bucket C read-model/readiness testleri `master-data-bootstrap-read-models.service.spec.ts` dosyasina tasindi. Validation ve promotion safety tarafina dokunulmadi. Project risk scan `docs/plans/project-risk-scan-2026-04-30.md` olarak kaydedildi; validation/promotion split aktif borc degil strategic investment backlog'ta planli yatirim. StageBuilderForm ve IntegrationRepository risk review dokumanlari eklendi; ikisi de aktif refactor borcu degil planli yatirim. IntegrationSourceRepository Split V1 plan dokumani `docs/superpowers/plans/2026-04-30-integration-source-repository-split-v1.md`; uygulanirsa yalniz source-governance persistence tasinacak, raw staging/import evidence/retry/materialization degismeyecek. Siradaki mantikli adim bu split'i onayla ve uygula veya dis staging/source/master-data kaniti gelirse onu onceliklendir.
+current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. readScope/actionScope ayrimi ve assignedStoreIds modeli korunuyor. Test Suite Hygiene V1 auth split kapandi; Import Batch Source Test Split V1, Import Batch Evidence Test Split V1, Competition Repository Test Split V1, Competition Stage Package Plan Test Split V1, Snapshot Run Read Model Test Split V1, Competition Service Team Template Test Split V1 ve Auth Action Scope Test Split V1 kapandi. Import/integration e2e kapsaminda production code degismeden 32 test adi uc dosyada korunuyor: import-batch, import-batch-evidence, integration-sources. Competition repository kapsaminda production code degismeden 27 test adi uc dosyada korunuyor: competition.repository, competition-stage-package-plan.repository, competition-team-template.repository. Snapshot run e2e kapsaminda production code degismeden 13 test adi iki dosyada korunuyor: snapshot-run, snapshot-run-read-models. Competition service kapsaminda production code degismeden 24 test adi iki dosyada korunuyor: competition.service, competition-team-template.service. Auth scope integration kapsaminda production code degismeden 18 test adi iki dosyada korunuyor: auth-scope, auth-action-scope. Operator Evidence Consistency Pass V1 kapandi. Backup Restore Drill Runbook V1 kapandi. Backup Restore Local Drill Evidence alindi; prod DB'ye dokunulmadi; bos disposable DB migration 42/42 succeeded ve restore proof source/restore schema counts matched. Migration Fresh DB Smoke V1 eklendi ve local Docker PostgreSQL uzerinde 42/42 succeeded, failed=0, audit=3, ops=39, rpt=10, stg=12 kaniti alindi. Migration Smoke Release Preflight Policy V1 karari: Docker-dependent smoke mandatory check:release icinde degil, DB schema/migration degisirse manuel preflight veya written Conditional Go zorunlu. Master-data test dosyasi icin ayri plan `docs/plans/master-data-bootstrap-test-hygiene-v1.md` olarak yazildi. Master-data bootstrap service 29-test guard eklendi; Bucket A staging/normalization testleri `master-data-bootstrap-staging.service.spec.ts` dosyasina, Bucket C read-model/readiness testleri `master-data-bootstrap-read-models.service.spec.ts` dosyasina tasindi. Validation ve promotion safety tarafina dokunulmadi. Project risk scan `docs/plans/project-risk-scan-2026-04-30.md` olarak kaydedildi; validation/promotion split aktif borc degil strategic investment backlog'ta planli yatirim. StageBuilderForm ve IntegrationRepository risk review dokumanlari eklendi; ikisi de aktif refactor borcu degil planli yatirim. IntegrationSourceRepository Split V1 uygulandi; source-governance persistence `backend/nestjs/src/modules/integration/infrastructure/integration-source.repository.ts` dosyasina tasindi, raw staging/import evidence/retry/materialization degismedi, root `check:release` gecti. Siradaki mantikli adim dis staging/source/master-data kaniti yoksa `store-ops.repository.ts` boundary risk review yapmak; dis kanit gelirse onu onceliklendirmek.
 ```
