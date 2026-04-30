@@ -191,6 +191,40 @@ const authActionScopeExpectedTestNames = [
   'rejects target distribution approval outside assigned action stores',
   'rejects checklist acknowledgement outside assigned action stores',
 ]
+const masterDataBootstrapServiceFiles = [
+  'backend/nestjs/src/modules/integration/application/master-data-bootstrap.service.spec.ts',
+]
+const masterDataBootstrapServiceExpectedTestNames = [
+  'stages bootstrap rows with normalized references and stable row hashes',
+  'normalizes personnel national id evidence into a hash for preflight checks',
+  'stages personnel rows with normalized promotion metadata',
+  'stages store rows with normalized promotion metadata',
+  'validates personnel rows without promoting staged data',
+  'marks personnel rows with missing live-write metadata as invalid',
+  'marks unknown store types as review rows for store bootstrap batches',
+  'marks new store rows without region code as review rows',
+  'marks new store rows with unknown region code as review rows',
+  'validates new store rows when region code resolves',
+  'marks normalized duplicate store codes as review issues before store promotion',
+  'marks normalized duplicate personnel seller codes as review issues',
+  'marks duplicate personnel national id hashes as review issues',
+  'marks existing employee seller code and national id mismatches as review issues',
+  'lists bootstrap batches with derived readiness and next action',
+  'lists bootstrap rows for review after checking scoped batch access',
+  'reports pending rows as needing validation before promotion',
+  'reports invalid and needs-review rows as blocking promotion',
+  'reports ready rows when the batch is ready to promote',
+  'reports promoted rows as already promoted and not ready again',
+  'rejects personnel batch store promotion',
+  'rejects store promotion before the batch is ready',
+  'promotes only ready store rows and skips already promoted rows',
+  'rejects stale store promotion when any non-promoted row is not ready',
+  'rejects store batch personnel promotion',
+  'rejects personnel promotion before the batch is ready',
+  'promotes only ready personnel rows and skips already promoted rows',
+  'rejects stale personnel promotion when any non-promoted row is not ready',
+  'rejects ready personnel promotion when required evidence is missing',
+]
 
 test('test suite hygiene keeps the no-coverage-loss boundary', () => {
   for (const phrase of [
@@ -414,4 +448,22 @@ test('auth scope integration tests are split without dropping read/session or ac
     largestLineCount < 1500,
     `largest split auth scope test file has ${largestLineCount} lines`,
   )
+})
+
+test('master data bootstrap service coverage is frozen before split', () => {
+  let totalTests = 0
+  let combinedText = ''
+
+  for (const file of masterDataBootstrapServiceFiles) {
+    assert.equal(existsSync(join(workspaceRoot, file)), true, `${file} must exist`)
+    const text = readText(file)
+    totalTests += [...text.matchAll(/\bit\s*\(/g)].length
+    combinedText += `\n${text}`
+  }
+
+  assert.equal(totalTests, 29)
+  for (const testName of masterDataBootstrapServiceExpectedTestNames) {
+    const exactOccurrences = [...combinedText.matchAll(new RegExp(`it\\("${testName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'g'))].length
+    assert.equal(exactOccurrences, 1, `${testName} must appear exactly once`)
+  }
 })
