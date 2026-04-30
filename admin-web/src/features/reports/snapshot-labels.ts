@@ -6,6 +6,11 @@ export type SnapshotRunLabelInput = {
   periodEnd: string
 }
 
+export type SnapshotMonthLabelInput = {
+  monthStart: string
+  latestSnapshotDate: string
+}
+
 function parseDateOnly(input: string) {
   if (input.includes('T')) {
     const date = new Date(input)
@@ -27,6 +32,20 @@ function isSameDay(left: Date, right: Date) {
 function isLastDayOfMonth(date: Date) {
   const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
   return date.getDate() === lastDay
+}
+
+export function getSnapshotMonthStart(input: string) {
+  const date = parseDateOnly(input)
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`
+}
+
+function formatMonthYear(input: string) {
+  const date = parseDateOnly(input)
+  const monthName = new Intl.DateTimeFormat('tr-TR', { month: 'long' }).format(
+    date,
+  )
+  const formattedMonth = `${monthName[0]?.toLocaleUpperCase('tr-TR')}${monthName.slice(1)}`
+  return `${formattedMonth} ${date.getFullYear()}`
 }
 
 export function formatSnapshotPeriodLabel(run: SnapshotRunLabelInput) {
@@ -54,4 +73,8 @@ export function formatSnapshotPeriodLabel(run: SnapshotRunLabelInput) {
 
 export function formatSnapshotOptionLabel(run: SnapshotRunLabelInput) {
   return `${formatDate(run.snapshotDate)} kapanışı - ${formatSnapshotPeriodLabel(run)}`
+}
+
+export function formatSnapshotMonthOptionLabel(input: SnapshotMonthLabelInput) {
+  return `${formatMonthYear(input.monthStart)} aylık kapanış - son kapanış ${formatDate(input.latestSnapshotDate)}`
 }

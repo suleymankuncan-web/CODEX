@@ -4295,6 +4295,49 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: `/store/rankings` icin aylik snapshot secimini ayri ele almak; once backend'in aylik leaderboard kaynagini periodStart mi snapshotRunId mi uzerinden kilitleyecegimize karar verip sonra UI'yi yaymak.
 
+## Son Ranking Monthly Snapshot Selector V1
+
+30 Nisan 2026 itibariyla `/store/rankings` aylik secim deseni netlestirildi.
+
+Karar:
+
+- Aylik ranking tek bir `snapshotRunId` uzerinden kilitlenmeyecek.
+- Backend mevcut tasarimi geregi aylik ranking'i secilen ay icindeki tamamlanmis gunluk snapshot'lardan topluyor.
+- Bu yuzden UI'da aylik mod, manuel month input yerine "kapanisi olan ay" select'i kullanacak.
+
+Eklenenler:
+
+- Snapshot label helper'a ay bazli fonksiyonlar eklendi:
+  - `getSnapshotMonthStart`
+  - `formatSnapshotMonthOptionLabel`
+- `/store/rankings` snapshot run listesini gunluk ve aylik mod icin ortak okuyor.
+- Gunluk mod mevcut snapshot select davranisini koruyor.
+- Aylik mod artik kapanisi olan ay listesi gosteriyor.
+- Ornek option: `Nisan 2026 aylik kapanis - son kapanis 24 Nis 2026`.
+- Aylik leaderboard cagrisi `periodStart=YYYY-MM-01` ile yapiliyor; backend o ayin tamamlanmis gunluk snapshot'larini topluyor.
+- `Bu ay` butonu yerine `Son aylik kapanisa don` davranisi eklendi.
+
+Dogrulama:
+
+- TDD kirmizi test: aylik snapshot option beklentisi once mevcut UI'da dustu.
+- Frontend build passed.
+- Frontend targeted store surface e2e: 13 test passed.
+- Frontend `npm.cmd run check:release` passed:
+  - lint,
+  - script tests 7/7,
+  - build,
+  - 46 Playwright test,
+  - audit 0 vulnerability.
+- Ilk release kosusunda lint warning goruldu; `availableSnapshotRuns` referansi `useMemo` ile sabitlenerek tekrar kosuldu ve warning kapandi.
+
+CODEX durust yorum:
+
+- Bu karar dogru: aylik ranking bir snapshot secimi degil, "ay icindeki kapanmis gunler" okumasidir.
+- UI artik backend matematigini kullaniciya daha dogru temsil ediyor; elle ay yazma riski azaldi.
+- Henuz yapmadigimiz kisim: aylik secimde hangi gunlerin dahil oldugunu tek tek gosteren "kapanis gunleri kaniti" paneli.
+
+Siradaki mantikli adim: `/store/rankings` aylik gorunumune dahil edilen kapanis gunleri kaniti eklemek; kullanici ay skorunun hangi gunlerden geldigini gorebilsin.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:

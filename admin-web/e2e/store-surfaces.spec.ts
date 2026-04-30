@@ -107,6 +107,13 @@ test('store rankings page explains monthly preview-only ranking', async ({ page 
   await page.goto('/store/rankings')
   await page.getByRole('button', { name: 'Aylik' }).click()
 
+  await expect(
+    page.getByRole('option', {
+      name: /Nisan 2026 ayl.*24 Nis 2026/,
+    }),
+  ).toBeAttached()
+  await expect(page.getByLabel('Ranking month snapshot secimi')).toHaveValue('2026-04-01')
+
   const rankingExplanation = page.getByLabel('Ranking explanation')
   await expect(rankingExplanation.getByText('On izleme')).toBeVisible()
   await expect(rankingExplanation.getByText('1 kapali performans gunu daha gerekiyor')).toBeVisible()
