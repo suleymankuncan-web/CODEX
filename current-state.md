@@ -4901,10 +4901,40 @@ Kapanis notu:
 
 Siradaki mantikli adim: P0-4 Operator evidence consistency pass adimina gecmek; test hygiene tarafinda ikinci dosya bolme ancak ayri planla yapilmali.
 
+## Son Operator Evidence Consistency Pass V1
+
+30 Nisan 2026 itibariyla P0-4 Operator evidence consistency pass uygulandi.
+
+Referans:
+
+- `docs/plans/operator-evidence-consistency-pass-v1.md`
+- `scripts/operator-evidence-consistency-contract.test.mjs`
+- `admin-web/src/pages/ImportBatchDetailPage.tsx`
+- `admin-web/src/pages/MasterDataBootstrapPage.tsx`
+- `admin-web/e2e/integration-surfaces.spec.ts`
+
+Kilitlenen sozluk:
+
+- `Go / Conditional Go / No-Go`
+- `row evidence`
+- `dry-run evidence`
+- `sanitized evidence`
+- `retry evidence`
+- `dependency mapping`
+
+Kapanis notu:
+
+- Yeni workflow acilmadi.
+- Yeni backend endpoint eklenmedi.
+- Import, mapping, materialization, promotion, scoring veya auth davranisi degismedi.
+- Import batch detail ve master-data bootstrap ekranlari ayni operator evidence dilini kullanacak sekilde copy seviyesinde netlestirildi.
+
+Siradaki mantikli adim: yeni modul acmadan once intake gate ile secim yapmak; dis kanit yoksa P1 backup/restore drill veya performans/index review icin ortam/veri beklemek.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
 
 ```text
-current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. readScope/actionScope ayrimi ve assignedStoreIds modeli korunuyor. Test Suite Hygiene V1 ilk slice kapandi; siradaki mantikli adim P0-4 Operator evidence consistency pass.
+current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. readScope/actionScope ayrimi ve assignedStoreIds modeli korunuyor. Test Suite Hygiene V1 ilk slice kapandi. Operator Evidence Consistency Pass V1 kapandi. Siradaki mantikli adim yeni modul acmadan intake gate ile secim yapmak.
 ```

@@ -22,13 +22,18 @@ test('admin import batch detail explains KPI row lineage evidence', async ({ pag
 
   const decisionPanel = page.getByLabel('Import decision evidence')
   await expect(decisionPanel.getByRole('heading', { name: 'Operator decision evidence' })).toBeVisible()
-  await expect(decisionPanel.getByText('Conditional Go')).toBeVisible()
-  await expect(decisionPanel.getByText('Fix quality issues, unresolved mappings, or retryable rows before treating this batch as clean.')).toBeVisible()
-  await expect(decisionPanel.getByText('Row accounting')).toBeVisible()
+  await expect(decisionPanel.getByText('Go / Conditional Go / No-Go')).toBeVisible()
+  await expect(decisionPanel.getByText('Conditional Go', { exact: true })).toBeVisible()
+  await expect(
+    decisionPanel.getByText(
+      'Conditional Go: review row evidence, quality guard, retry evidence, and dependency mapping before treating this batch as clean.',
+    ),
+  ).toBeVisible()
+  await expect(decisionPanel.getByText('Row accounting', { exact: true })).toBeVisible()
   await expect(decisionPanel.getByText('Accounted and matched')).toBeVisible()
-  await expect(decisionPanel.getByText('Quality guard')).toBeVisible()
+  await expect(decisionPanel.getByText('Quality guard', { exact: true })).toBeVisible()
   await expect(decisionPanel.getByText('1 high severity row')).toBeVisible()
-  await expect(decisionPanel.getByText('Retry evidence')).toBeVisible()
+  await expect(decisionPanel.getByText('Retry evidence', { exact: true })).toBeVisible()
   await expect(decisionPanel.getByText('Retry available')).toBeVisible()
 
   const lineagePanel = page.getByLabel('Import row lineage evidence')
@@ -93,6 +98,9 @@ test('admin master data bootstrap surface exposes personnel promotion evidence',
   await page.goto('/admin/master-data/bootstrap-batch-personnel-1')
 
   await expect(page.getByRole('heading', { name: 'Master data bootstrap' })).toBeVisible()
+  await expect(
+    page.getByText('Open a batch to inspect row evidence, dry-run evidence, readiness counters, and promotion state.'),
+  ).toBeVisible()
   await expect(page.getByText('ready_to_promote').first()).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Promoted rows', exact: true })).toBeVisible()
   await expect(page.getByText('1 / 2').first()).toBeVisible()
@@ -103,7 +111,9 @@ test('admin master data bootstrap surface exposes personnel promotion evidence',
     dryRunPanel.getByRole('heading', { name: 'Promotion dry-run evidence' }),
   ).toBeVisible()
   await expect(
-    dryRunPanel.getByText('Backend readiness only. No rows are promoted from this panel.'),
+    dryRunPanel.getByText(
+      'Dry-run evidence only. No rows are promoted from this panel; promotion still requires the explicit command.',
+    ),
   ).toBeVisible()
   await expect(dryRunPanel.getByText('#1 FM8375')).toBeVisible()
   await expect(dryRunPanel.getByText('ready', { exact: true })).toBeVisible()

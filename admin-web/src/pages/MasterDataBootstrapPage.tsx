@@ -119,7 +119,7 @@ export function MasterDataBootstrapPage() {
           <h2 className="hero-title">Master data bootstrap</h2>
           <p className="hero-copy">
             Review staged store and personnel baseline files before they become live master data.
-            Promotion evidence stays visible after the command runs.
+            Row evidence and sanitized promotion evidence stay visible after the command runs.
           </p>
         </div>
         <div className="hero-metrics">
@@ -154,7 +154,7 @@ export function MasterDataBootstrapPage() {
             <div className="eyebrow">Review queue</div>
             <h3>Bootstrap batches</h3>
             <p className="panel-copy">
-              Open a batch to inspect row evidence, readiness counters, and promotion state.
+              Open a batch to inspect row evidence, dry-run evidence, readiness counters, and promotion state.
             </p>
           </div>
           <div className="toolbar-cluster">
@@ -375,8 +375,8 @@ function BatchDetailPanel(input: {
             </div>
           </div>
           <p className="panel-copy">
-            This page does not calculate eligibility. It renders backend readiness and calls the
-            existing command endpoint for the selected entity type.
+            This page does not calculate eligibility. It renders backend readiness, row evidence,
+            and dry-run evidence before calling the existing command endpoint for the selected entity type.
           </p>
           <div className="toolbar-cluster">
             <button
@@ -410,7 +410,7 @@ function BatchDetailPanel(input: {
             <div className="eyebrow">Dry-run</div>
             <h3>Promotion dry-run evidence</h3>
             <p className="panel-copy">
-              Backend readiness only. No rows are promoted from this panel.
+              Dry-run evidence only. No rows are promoted from this panel; promotion still requires the explicit command.
             </p>
           </div>
         </div>

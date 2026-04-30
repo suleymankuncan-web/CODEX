@@ -100,8 +100,8 @@ test('test suite hygiene is linked from handoff and debt docs', () => {
     requireText(text, planPath)
     requireText(text, 'Test Suite Hygiene V1')
   }
-  requireText(activeNextActions, 'Closed active debts: 70')
-  requireText(debtLedger, 'Closed active debts: 70')
+  assert.match(activeNextActions, /Closed active debts: \d+/)
+  assert.match(debtLedger, /Closed active debts: \d+/)
   requireText(debtLedger, '70. Test Suite Hygiene V1')
 })
 

@@ -187,6 +187,9 @@ export function ImportBatchDetailPage() {
           <div>
             <div className="eyebrow">Operator gate</div>
             <h3>Operator decision evidence</h3>
+            <p className="panel-copy">
+              Uses the shared operator language: Go / Conditional Go / No-Go.
+            </p>
           </div>
           <span className={`status-pill status-pill-${importDecision.tone}`}>
             {importDecision.label}
@@ -689,20 +692,21 @@ function buildImportDecisionEvidence(input: {
 
   let label: ImportDecisionLabel = 'Go'
   let tone: Tone = 'calm'
-  let summary = 'Batch evidence is clean: accounted rows match, no quality issues, no retryable rows.'
+  let summary = 'Go: row evidence is clean; accounted rows match, no quality issues, no retryable rows.'
 
   if (!reconciliation) {
     label = 'Conditional Go'
     tone = 'warning'
-    summary = 'Waiting for reconciliation evidence before treating this batch as clean.'
+    summary = 'Conditional Go: waiting for reconciliation evidence before treating this batch as clean.'
   } else if (hasRowAccountingFailure || hasPendingRows || blockedByEntityTypes.length > 0 || isStoppedState) {
     label = 'No-Go'
     tone = 'danger'
-    summary = 'Stop: fix row accounting, pending rows, blocked dependencies, or stuck status before proceeding.'
+    summary = 'No-Go: stop until row accounting, pending rows, dependency mapping, or stuck status is resolved.'
   } else if (hasConditionalEvidence) {
     label = 'Conditional Go'
     tone = 'warning'
-    summary = 'Fix quality issues, unresolved mappings, or retryable rows before treating this batch as clean.'
+    summary =
+      'Conditional Go: review row evidence, quality guard, retry evidence, and dependency mapping before treating this batch as clean.'
   }
 
   return {
