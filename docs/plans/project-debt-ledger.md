@@ -302,6 +302,8 @@ Master Data Bootstrap Admin Dry-Run Evidence V1 is implemented. The admin review
 
 Master Data Bootstrap Pilot Smoke Runbook V1 is implemented. The first true baseline promotion now has a guarded operator sequence: stage the scoped baseline, validate, inspect row evidence, inspect dry-run evidence, promote only the approved pilot batch, and capture sanitized evidence.
 
+Backend Foundation Hardening Plan V1 is a planning/control artifact and is not counted as a closed active debt item. It records the no-new-module hardening order for existing backend, data, auth, import, and operator evidence surfaces. Reference: `docs/plans/backend-foundation-hardening-plan-v1.md`.
+
 Project MVP Focus Map is recorded as a consolidation decision, not a new closed debt item. The decision is to keep the project, avoid restarting, narrow near-term work to MVP readiness, and prioritize Excel KPI Import V1 as the next local real-data proof. Reference: `docs/plans/project-mvp-focus-map-2026-04-28.md`.
 
 Excel KPI Import V1 is implemented and verified. Personnel KPI uses positive gross sales only, store KPI uses scoped store net sales, `FF` is a first-class base metric, period `ATV`, `UPT`, and `CR` are recomputed from summed base metrics, negative personnel rows stay as reconciliation evidence, and duplicate-safe re-upload uses deterministic source batch ids. References: `docs/plans/excel-kpi-import-v1.md`, `docs/superpowers/plans/2026-04-28-excel-kpi-import-v1.md`.

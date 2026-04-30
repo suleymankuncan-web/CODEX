@@ -4698,6 +4698,49 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: gercek baseline dosyalari hazir olana kadar master-data promotion kapali kalsin; yeni adim gerekiyorsa mevcut import/master-data evidence yuzeylerinden birini kucuk ve testli guclendirelim.
 
+## Son Backend Foundation Hardening Plan V1
+
+30 Nisan 2026 itibariyla yeni modul acmadan arka zemini guclendirme plani yazildi ve root script guard'a baglandi.
+
+Referans:
+
+- `docs/plans/backend-foundation-hardening-plan-v1.md`
+- `scripts/backend-foundation-hardening-plan-contract.test.mjs`
+
+Kilitlenen sinir:
+
+- Yeni product module acilmiyor.
+- Tahmini external source / JSON adapter isi acilmiyor.
+- Yeni scoring engine acilmiyor.
+- Broad UI redesign bu plana dahil degil.
+- Oncelik mevcut backend, data, auth, import ve operator evidence yuzeylerini guclendirmek.
+
+Planin sirasi:
+
+1. Import decision evidence.
+2. Scope/auth regression matrix.
+3. DB health and migration evidence.
+4. Operator evidence consistency pass.
+5. Backup/restore drill, environment hazir olunca.
+6. Performance/index review, real data volume olunca.
+
+Dogrulama:
+
+- TDD kirmizi test: `docs/plans/backend-foundation-hardening-plan-v1.md` yokken guard beklenen sekilde dustu.
+- Targeted guard test passed: 4/4.
+- Root `npm.cmd run check:release` passed:
+  - root script tests 63/63,
+  - backend release gate passed: lint, 74 test suite / 472 test, build, audit 0 vulnerability,
+  - frontend release gate passed: lint, script tests, build, 46 Playwright test, audit 0 vulnerability.
+
+CODEX durust yorum:
+
+- Bu plan borc sayisini sisirmek icin degil, sirayi kaybetmemek icin yazildi.
+- Projenin su an ihtiyaci yeni modul degil; mevcut guven, kanit, scope, DB ve operator karar yuzeylerinin daha da keskinlesmesi.
+- Sıradaki en mantikli kucuk is `Import decision evidence`: scoring veya materialization degistirmeden admin import detail tarafinda Go / Conditional Go / No-Go dilini netlestirmek.
+
+Siradaki mantikli adim: `docs/plans/backend-foundation-hardening-plan-v1.md` icindeki P0-1 Import decision evidence adimini planlayip kucuk bir slice olarak uygulamak.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:

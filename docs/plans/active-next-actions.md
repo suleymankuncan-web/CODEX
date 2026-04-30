@@ -51,6 +51,7 @@ As of 30 April 2026, the competition package planning flow, Operational Feed V1,
 - Excel/JSON/future-source import boundary guarded through one canonical payload contract
 - master-data promotion dry-run row evidence in admin review before live write
 - guarded pilot baseline smoke sequence for stage, validate, dry-run, scoped promotion, and sanitized evidence
+- backend foundation hardening control map for no-new-module P0/P1/P2 work
 - import data quality issue catalog and additive `qualityIssueCode`
 - batch-level import data quality summary on import detail
 - project-wide scope/auth scan evidence
@@ -153,6 +154,7 @@ Interpretation:
 - Source-Agnostic Import Boundary V1 is documented and guarded; Excel remains the active source, JSON remains future-only until real evidence exists, and both must pass through the same canonical import boundary.
 - Master Data Bootstrap Admin Dry-Run Evidence V1 is implemented; admin review now shows backend promotion-readiness row evidence before any live promotion command is executed.
 - Master Data Bootstrap Pilot Smoke Runbook V1 is documented and guarded; the first real baseline promotion must follow stage, validate, row evidence, dry-run evidence, scoped pilot promotion, and sanitized evidence steps.
+- Backend Foundation Hardening Plan V1 is documented and guarded as a control map; it does not increment closed active debt and keeps near-term work focused on existing backend/data/auth/import/operator evidence surfaces.
 - Full production UI/design-system and complete EN/TR localization expansion remain planned investments, not silent release debt.
 - Production UI/design-system is intentionally deferred into reversible pilots while backend/data foundations remain the priority.
 - The debt ledger itself is an accounting artifact and is not counted as a separate closed active debt item.
@@ -1041,6 +1043,7 @@ If neither staging values nor source ingest details are available, do not open s
 
 Recommended local candidate:
 
+- Follow `docs/plans/backend-foundation-hardening-plan-v1.md`; start with P0-1 Import decision evidence.
 - When true baseline master data exists, run a controlled store/personnel bootstrap dry-run and admin review smoke before promotion.
 - If no baseline/source evidence exists, keep source-specific adapter work closed and choose the next small guard only through the intake gate.
 - Do not start a separate VM checklist, region-specific benchmark, or source-specific JSON adapter until the needed real data or operator workflow exists.
