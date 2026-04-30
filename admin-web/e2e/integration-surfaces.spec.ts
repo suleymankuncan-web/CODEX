@@ -87,6 +87,19 @@ test('admin master data bootstrap surface exposes personnel promotion evidence',
   await expect(page.getByText('1 / 2').first()).toBeVisible()
   await expect(page.getByText('employee-live-1').first()).toBeVisible()
 
+  const dryRunPanel = page.getByLabel('Master data promotion dry-run evidence')
+  await expect(
+    dryRunPanel.getByRole('heading', { name: 'Promotion dry-run evidence' }),
+  ).toBeVisible()
+  await expect(
+    dryRunPanel.getByText('Backend readiness only. No rows are promoted from this panel.'),
+  ).toBeVisible()
+  await expect(dryRunPanel.getByText('#1 FM8375')).toBeVisible()
+  await expect(dryRunPanel.getByText('ready', { exact: true })).toBeVisible()
+  await expect(dryRunPanel.getByText('#2 FM8374')).toBeVisible()
+  await expect(dryRunPanel.getByText('already_promoted').first()).toBeVisible()
+  await expect(dryRunPanel.getByText('employee-live-1')).toBeVisible()
+
   await page.getByRole('button', { name: 'Promote personnel' }).click()
   await expect(page.getByText('Personnel bootstrap rows promoted')).toBeVisible()
   await expect(page.getByText('assignment-live-1')).toBeVisible()

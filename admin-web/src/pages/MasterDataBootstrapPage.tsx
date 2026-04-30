@@ -93,6 +93,7 @@ export function MasterDataBootstrapPage() {
   const batches = useMemo(() => batchesQuery.data?.items ?? [], [batchesQuery.data?.items])
   const summary = detailQuery.data?.summary ?? null
   const readiness = readinessQuery.data?.summary ?? null
+  const readinessRows = readinessQuery.data?.rows.items ?? []
   const rows = detailQuery.data?.rows.items ?? []
   const selectedBatch = useMemo(() => {
     if (summary) {
@@ -255,6 +256,7 @@ export function MasterDataBootstrapPage() {
           readinessIsError={readinessQuery.isError}
           summary={summary}
           readiness={readiness}
+          readinessRows={readinessRows}
           rows={rows}
           validating={validateMutation.isPending}
           promoting={promoteMutation.isPending}
@@ -284,6 +286,7 @@ function BatchDetailPanel(input: {
   readinessIsError: boolean
   summary: MasterDataBootstrapBatchDetail['summary'] | null
   readiness: MasterDataBootstrapPromotionReadinessResponse['summary'] | null
+  readinessRows: MasterDataBootstrapPromotionReadinessResponse['rows']['items']
   rows: MasterDataBootstrapRow[]
   validating: boolean
   promoting: boolean
@@ -401,6 +404,40 @@ function BatchDetailPanel(input: {
         </article>
       </section>
 
+      <section className="panel" aria-label="Master data promotion dry-run evidence">
+        <div className="panel-heading">
+          <div>
+            <div className="eyebrow">Dry-run</div>
+            <h3>Promotion dry-run evidence</h3>
+            <p className="panel-copy">
+              Backend readiness only. No rows are promoted from this panel.
+            </p>
+          </div>
+        </div>
+        {input.readinessRows.length === 0 ? (
+          <EmptyState copy="No promotion readiness rows returned for this bootstrap batch." />
+        ) : (
+          <div className="stacked-table">
+            {input.readinessRows.map((row) => (
+              <div className="stacked-row" key={row.rowId}>
+                <div className="stacked-row-head">
+                  <strong>#{row.rowNumber} {resolveDryRunRowLabel(row)}</strong>
+                  <StatusPill tone={mapPromotionReadinessTone(row.promotionReadiness)}>
+                    {row.promotionReadiness}
+                  </StatusPill>
+                </div>
+                <div className="lineage-chip-list">
+                  <EvidenceChip label="Store code" value={row.sourceStoreCode} />
+                  <EvidenceChip label="Employee code" value={row.sourceEmployeeCode} />
+                  <EvidenceChip label="Promoted entity" value={row.promotedEntityId} />
+                  <EvidenceChip label="Block reason" value={row.blockReason} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
       <section className="panel" aria-label="Master data bootstrap row evidence">
         <div className="panel-heading">
           <div>
@@ -464,6 +501,29 @@ function resolveRowName(row: MasterDataBootstrapRow) {
 function readPayloadString(payload: Record<string, unknown>, key: string) {
   const value = payload[key]
   return typeof value === 'string' && value.trim() ? value : null
+}
+
+function resolveDryRunRowLabel(
+  row: MasterDataBootstrapPromotionReadinessResponse['rows']['items'][number],
+) {
+  return row.sourceEmployeeCode ?? row.sourceStoreCode ?? row.rowId
+}
+
+function mapPromotionReadinessTone(value: string) {
+  if (value === 'ready') {
+    return 'accent'
+  }
+  if (value === 'already_promoted') {
+    return 'calm'
+  }
+  if (value === 'needs_validation' || value === 'needs_review' || value === 'waiting_batch') {
+    return 'warning'
+  }
+  if (value === 'blocked') {
+    return 'danger'
+  }
+
+  return 'neutral'
 }
 
 function mapReadinessTone(value: string) {

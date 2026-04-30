@@ -4616,6 +4616,44 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: gercek JSON sample/field list gelirse mapping spec yazmak; gelmezse source-specific adapter acmadan sadece mevcut Excel/import/master-data hattini guclendiren kucuk guard veya operator smoke adimlariyla ilerlemek.
 
+## Son Master Data Bootstrap Admin Dry-Run Evidence V1
+
+30 Nisan 2026 itibariyla master-data promotion oncesi backend dry-run kaniti admin review ekraninda gorunur hale getirildi.
+
+Referans:
+
+- `docs/plans/master-data-bootstrap-admin-dry-run-evidence-v1.md`
+
+Degisen yuzey:
+
+- `/admin/master-data/:batchId`
+
+Kilitlenen davranis:
+
+- Backend `promotion-readiness` cevabindaki satirlar artik admin review ekraninda `Promotion dry-run evidence` panelinde gosterilir.
+- Panel row number, store code, employee code, promotion readiness, promoted entity ve block reason kanitini gosterir.
+- Panel canli promote yapmaz; sadece backend readiness sonucunu okur.
+- Promote komutu yine mevcut `Promote stores` / `Promote personnel` butonundan ayrica calisir.
+- Backend endpoint, migration, scoring, import, materialization ve promotion command davranisina dokunulmadi.
+
+Dogrulama:
+
+- TDD kirmizi test: panel yokken `admin master data bootstrap surface exposes personnel promotion evidence` Playwright testi beklenen sekilde dustu.
+- Frontend build passed.
+- Targeted Playwright passed: 1/1.
+- Root `npm.cmd run check:release` passed:
+  - root script tests 55/55,
+  - backend release gate passed: lint, 74 test suite / 472 test, build, audit 0 vulnerability,
+  - frontend release gate passed: lint, script tests, build, 46 Playwright test, audit 0 vulnerability.
+
+CODEX durust yorum:
+
+- Bu adim dogru bir kucuk kontrol yatirimi: canli tabloya yazmadan once operator artik backend'in satir bazli sonucunu goruyor.
+- Yeni karar motoru acilmadi; mevcut backend truth sadece gorunur hale geldi.
+- Gercek baseline gelene kadar fake automation yazmak yerine bu tarz kontrol yuzeylerini guclendirmek projeyi saglam tutar.
+
+Siradaki mantikli adim: gercek store/personnel baseline hazir olunca staging/admin review smoke yapmak; yoksa yeni veri kaynagi tahmin etmeden mevcut import/master-data hattindaki kucuk kanit ve kontrol noktalarina devam etmek.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
