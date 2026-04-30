@@ -158,7 +158,7 @@ export function StoreRankingsPage(input: {
     queryFn: () =>
       getReportingSnapshotRuns({
         snapshotType: 'daily',
-        limit: 30,
+        limit: 90,
         offset: 0,
       }),
     enabled,
@@ -200,6 +200,15 @@ export function StoreRankingsPage(input: {
         null
       : null
   const selectedMonthlyPeriodStart = activeMonthlySnapshotOption?.monthStart ?? ''
+  const monthlyClosureEvidenceRuns = useMemo(() => {
+    if (periodType !== 'monthly' || !selectedMonthlyPeriodStart) {
+      return []
+    }
+
+    return availableSnapshotRuns
+      .filter((run) => getSnapshotMonthStart(run.periodStart) === selectedMonthlyPeriodStart)
+      .sort((left, right) => left.periodStart.localeCompare(right.periodStart))
+  }, [availableSnapshotRuns, periodType, selectedMonthlyPeriodStart])
   const activeSnapshotRun =
     periodType === 'daily'
       ? availableSnapshotRuns.find((run) => run.snapshotRunId === selectedSnapshotRunId) ??
@@ -431,6 +440,46 @@ export function StoreRankingsPage(input: {
           }
         />
       </section>
+
+      {periodType === 'monthly' ? (
+        <section className="panel" aria-label="Monthly closure evidence">
+          <div className="panel-heading">
+            <div>
+              <div className="eyebrow">Aylik Kanit</div>
+              <h3>Aylik kapanis gunleri kaniti</h3>
+            </div>
+            <StatusPill tone={monthlyClosureEvidenceRuns.length ? 'calm' : 'warning'}>
+              {`${monthlyClosureEvidenceRuns.length} kapanmis gun dahil`}
+            </StatusPill>
+          </div>
+          <p className="queue-subtitle">
+            Bu ay siralamasi tek bir snapshot degil, secili ay icindeki tamamlanmis gunluk kapanislarin toplamindan okunur.
+          </p>
+          {monthlyClosureEvidenceRuns.length ? (
+            <div className="stacked-table">
+              {monthlyClosureEvidenceRuns.map((run) => (
+                <article className="stacked-row" key={run.snapshotRunId}>
+                  <div className="stacked-row-head">
+                    <strong>{formatDate(run.snapshotDate)}</strong>
+                    <StatusPill tone="calm">Dahil</StatusPill>
+                  </div>
+                  <div className="key-grid">
+                    <KeyValue label="Snapshot run" value={run.snapshotRunId} />
+                    <KeyValue label="Donem" value={`${run.periodStart} -> ${run.periodEnd}`} />
+                    <KeyValue label="Durum" value={run.runStatus} />
+                    <KeyValue label="Ureten" value={run.generatedBy} />
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              title="Bu ay icin kapanis kaniti yok"
+              copy="Aylik siralama, secili ay icin tamamlanmis gunluk snapshot buldugunda kanit listesi gosterir."
+            />
+          )}
+        </section>
+      ) : null}
 
       <section className="two-up-grid">
         <article className="panel">

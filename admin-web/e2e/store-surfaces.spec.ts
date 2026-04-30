@@ -113,6 +113,10 @@ test('store rankings page explains monthly preview-only ranking', async ({ page 
     }),
   ).toBeAttached()
   await expect(page.getByLabel('Ranking month snapshot secimi')).toHaveValue('2026-04-01')
+  await expect(page.getByRole('heading', { name: 'Aylik kapanis gunleri kaniti' })).toBeVisible()
+  await expect(page.getByLabel('Monthly closure evidence').getByText('2 kapanmis gun dahil')).toBeVisible()
+  await expect(page.getByLabel('Monthly closure evidence').getByText('23 Nis 2026')).toBeVisible()
+  await expect(page.getByLabel('Monthly closure evidence').getByText('24 Nis 2026')).toBeVisible()
 
   const rankingExplanation = page.getByLabel('Ranking explanation')
   await expect(rankingExplanation.getByText('On izleme')).toBeVisible()
@@ -526,10 +530,20 @@ async function routeStoreSurfaceApi(page: Page) {
             generatedAt: '2026-04-24T08:00:00.000Z',
             generatedBy: 'release-smoke',
           },
+          {
+            snapshotRunId: 'snapshot-2026-04-23',
+            snapshotDate: '2026-04-23',
+            snapshotType: 'daily',
+            periodStart: '2026-04-23',
+            periodEnd: '2026-04-23',
+            runStatus: 'completed',
+            generatedAt: '2026-04-23T08:00:00.000Z',
+            generatedBy: 'release-smoke',
+          },
         ],
         meta: {
-          count: 1,
-          total: 1,
+          count: 2,
+          total: 2,
           limit: 30,
           offset: 0,
         },

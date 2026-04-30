@@ -4338,6 +4338,44 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: `/store/rankings` aylik gorunumune dahil edilen kapanis gunleri kaniti eklemek; kullanici ay skorunun hangi gunlerden geldigini gorebilsin.
 
+## Son Ranking Monthly Closure Evidence V1
+
+30 Nisan 2026 itibariyla `/store/rankings` aylik gorunumune kapanis gunleri kanit paneli eklendi.
+
+Eklenenler:
+
+- Aylik ranking modunda `Aylik kapanis gunleri kaniti` paneli gorunuyor.
+- Panel secili ay icindeki tamamlanmis gunluk snapshot run'lari listeliyor.
+- Her gun icin:
+  - snapshot tarihi,
+  - snapshot run id,
+  - donem,
+  - run status,
+  - generatedBy bilgisi gosteriliyor.
+- Panel o ay icin kac kapanmis gunun dahil oldugunu yaziyor.
+- `/store/rankings` snapshot run listesi `limit=90` ile cekiliyor; boylece aylik kanit paneli tek aya sikismadan daha fazla kapanis gunu gorebiliyor.
+- Store surface fixture Nisan icin iki kapanmis gunle guncellendi: `23 Nis 2026` ve `24 Nis 2026`.
+
+Dogrulama:
+
+- TDD kirmizi test: aylik kanit paneli beklentisi once mevcut UI'da dustu.
+- Frontend build passed.
+- Frontend targeted store surface e2e: 13 test passed.
+- Frontend `npm.cmd run check:release` passed:
+  - lint,
+  - script tests 7/7,
+  - build,
+  - 46 Playwright test,
+  - audit 0 vulnerability.
+
+CODEX durust yorum:
+
+- Bu panel aylik ranking guvenini ciddi artiriyor; kullanici artik "bu ay skoru nereden geldi" sorusunun cevabini ekranda goruyor.
+- Hala frontend tarafindaki snapshot run listesine dayaniyor; daha ileri asamada backend response'a `includedSnapshotRuns` gibi resmi bir alan eklemek daha da saglam olur.
+- Su an icin V1 yeterince kontrollu: yeni skor motoru yok, yeni matematik yok, sadece mevcut kaynagin kaniti var.
+
+Siradaki mantikli adim: aylik ranking kanitini backend contract seviyesine tasimayi planlamak; `GET /reports/leaderboards/closed` response'una dahil edilen snapshot gunlerini resmi alan olarak ekleyip frontend tahminini kaldirmak.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
