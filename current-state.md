@@ -5320,6 +5320,24 @@ Izleme listesi:
 
 Siradaki mantikli adim: Yeni modül acmadan, buyuk dosyalardan birini ancak net bir sinir ve intake gate ile ele almak. Dis veri/IdP/baseline kaniti yoksa source-specific adapter veya master-data promotion genisletmesi baslatmamak.
 
+## Son StageBuilderForm Risk Review
+
+30 Nisan 2026 itibariyla `admin-web/src/features/competitions/StageBuilderForm.tsx` icin frontend risk incelemesi kayda alindi.
+
+Referans:
+
+- `docs/plans/stage-builder-form-risk-review-2026-04-30.md`
+
+Bulgular:
+
+- Dosya 2009 satir ve stage, stage package plan, template library, plan review/execute ve audit history akisini birlikte tasiyor.
+- Bu bir aktif bug degil; competition admin yuzeyi icin bakim yogunlugu riski.
+- Dosyada `TODO`, `FIXME`, `HACK`, `console.log`, `debugger`, `test.only` veya `as any` marker'i bulunmadi.
+- Competition e2e kapsami stage create, preset, package, plan save/submit/approve/execute/reject/cancel/edit, template create/update/clone/deactivate ve scoped read-only yuzeyleri kapsiyor.
+- Karar: simdi refactor yok. `StageBuilderForm` split'i planli yatirim; yalnizca somut competition UI degisikligi geldiginde kucuk guarded slice ile ele alinacak.
+
+Siradaki mantikli adim: Dis kanit yoksa yeni modul acmadan bir buyuk backend repository boundary risk review secmek; dis staging/source/master-data kaniti gelirse onu onceliklendirmek.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:

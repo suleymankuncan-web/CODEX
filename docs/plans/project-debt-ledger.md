@@ -21,7 +21,7 @@ Current count:
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
-- Strategic investment backlog: 2
+- Strategic investment backlog: 4
 - Silent untracked quality debt in the active gate: 0
 
 ## Closed Active Debts
@@ -318,6 +318,7 @@ These are important future product investments. They are not counted as hidden d
 1. Eventual real source adapter after real source evidence
 2. Full production UI/design-system pass and complete EN/TR localization expansion
 3. Master-data validation/promotion test split after a separate explicit plan
+4. StageBuilderForm competition admin UI split after a concrete competition UI change
 
 KPI config version history, publish metadata, snapshot anchoring, and pre-governance visibility are implemented in V1. Rollback UI, future effective scheduling, approval workflow, and DB-managed interpretation copy remain future depth, not active hidden debt.
 
@@ -330,6 +331,8 @@ Data Quality Guard V1 is implemented. Import error rows now expose stable `quali
 Import Batch Quality Summary V1 is implemented. Batch detail now summarizes failed rows by stable quality issue code, and the admin import detail surface shows the dominant cleanup categories without creating a new workflow or dashboard too early.
 
 Master-data validation/promotion test split is a planned investment, not active debt. Staging/normalization and read-model/readiness tests are already split and guarded; validation and promotion safety still protect live master-data write behavior in one focused file. Future work must start with a separate explicit plan and a stronger validation/promotion test-name guard before moving those tests. Reference: `docs/plans/project-risk-scan-2026-04-30.md`.
+
+StageBuilderForm competition admin UI split is a planned investment, not active debt. The current file is large because it owns several tested competition admin workflows; it should not be refactored only for line count. Future work should split template and package-plan sections only when a concrete competition UI change touches them. Reference: `docs/plans/stage-builder-form-risk-review-2026-04-30.md`.
 
 Project-Wide Scope/Auth Guard Scan V1 is implemented. The scan found and closed two concrete backend risks: production JWT default-secret fallback is now rejected unless JWKS is configured, and empty/foreign actor scope paths in store listing and target-distribution request listing are now guarded by no-access and narrowest-scope contract tests.
 

@@ -60,7 +60,11 @@ Decision:
 
 - Keep broad UI redesign deferred.
 - When UI work starts, split by reversible pilot surfaces, not by a full visual rewrite.
-- `StageBuilderForm.tsx` is the first frontend candidate if competition UI behavior is touched again.
+- `StageBuilderForm.tsx` has now been reviewed separately and is treated as a planned investment, not an active refactor target.
+
+Reference:
+
+- `docs/plans/stage-builder-form-risk-review-2026-04-30.md`
 
 ### 3. Master Data Validation/Promotion Test Split
 
@@ -136,6 +140,6 @@ If no external evidence is available, choose the next small guard through the in
 
 The best local candidates to consider next are:
 
-1. large frontend file risk review for `StageBuilderForm.tsx` without redesigning it,
-2. backend repository boundary risk review for one large repository file,
-3. targeted cleanup of ignored local placeholder files if the user wants workspace hygiene.
+1. backend repository boundary risk review for one large repository file,
+2. real staging/source/master-data evidence if it becomes available,
+3. targeted cleanup of ignored local generated files if the user wants workspace hygiene.
