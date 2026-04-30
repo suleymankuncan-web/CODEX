@@ -10,14 +10,15 @@ No production behavior was changed by this scan.
 
 ## Green Signals
 
-- Latest root `npm.cmd run check:release` passed after Auth Admin Searchable Lookups Frontend Wiring V1.
+- Latest root `npm.cmd run check:release` passed after Project Debt Ledger Consistency Guard V1.
 - Backend release check passed with 89 suites and 486 tests.
 - Frontend Playwright passed with 47 tests.
-- Root script tests passed with 100 tests.
+- Root script tests passed with 104 tests.
 - No tracked `node_modules`, `dist`, `test-results`, or `outputs` paths were found.
 - No tracked `.env` file was found.
 - No `TODO`, `FIXME`, `HACK`, `XXX`, `test.only`, `describe.only`, `it.only`, `debugger`, or `console.log` markers were found in tracked source/test/script/doc paths scanned.
 - `outputs/` remains untracked and intentionally ignored by the current work.
+- Project debt ledger snapshot counts are now guarded against drift across `project-debt-ledger.md`, `active-next-actions.md`, and the latest `current-state.md` debt ledger block.
 
 ## Watchlist
 

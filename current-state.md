@@ -5696,10 +5696,45 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: Dis staging/source/master-data kaniti gelirse ona oncelik vermek; gelmezse yeni auth UI buyutmesi yapmadan sadece pilot HR akisini zorlayan somut operator ihtiyacini secmek.
 
+Bu siradaki adim tamamlandi: dis kanit gelmedigi icin yeni modul acmadan project debt ledger consistency guard uygulandi.
+
+## Son Project Debt Ledger Consistency Guard V1
+
+30 Nisan 2026 itibariyla borc defteri sayim drift'i root script kapisina baglandi.
+
+Eklenenler:
+
+- Yeni root script testi: `scripts/project-debt-ledger-consistency-contract.test.mjs`.
+- Test, `docs/plans/project-debt-ledger.md` icindeki `Closed active debts` sayisinin numarali closed-debt listesiyle ayni olmasini zorunlu kilar.
+- Test, `docs/plans/active-next-actions.md` debt count satirlarinin kanonik ledger snapshot'i ile ayni kalmasini zorunlu kilar.
+- Test, `current-state.md` icindeki en son `Debt ledger:` blogunun kanonik ledger sayimiyla ayni kalmasini zorunlu kilar.
+- Product davranisi, backend, frontend, DB, auth policy, import, scoring ve UI degismedi.
+
+Dogrulama:
+
+- TDD RED: yeni guard dokumanlarda kayitli degilken targeted test beklenen sekilde fail etti.
+- Targeted: `node --test scripts\project-debt-ledger-consistency-contract.test.mjs` gecti, 4/4.
+- root: `node --test scripts\*.test.mjs` gecti, 104/104.
+- root: `npm.cmd run check:release` gecti; backend 89 suite / 486 test, frontend Playwright 47/47, audit 0 vulnerability.
+- root: `git diff --check` gecti; yalniz CRLF uyarilari geldi.
+
+Debt ledger:
+
+- Closed active debts: 87
+- Strategic investment backlog: 8
+- Silent untracked quality debt in the active gate: 0
+
+CODEX durust yorum:
+
+- Bu is gosterisli degil ama kontrol kaybini azaltir. Artik defter sayisi, aktif aksiyon listesi ve handoff ozetindeki son borc sayimi birbirinden sessizce koparsa release oncesi yakalanacak.
+- En dogru sinir korundu: yeni modul, yeni ekran veya veri davranisi acmadik; sadece proje yonetim kanitini kalite kapisina bagladik.
+
+Siradaki mantikli adim: Hala dis source/master-data/staging kaniti yoksa yeni feature acmadan once auth-admin veya reporting tarafinda sadece gercek pilot akisinda operatoru zorlayacak somut bir ihtiyac secmek.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
 
 ```text
-current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. Auth Role Assignment Active Uniqueness V1 kapandi; fresh DB smoke 43/43 ve root check:release gecti. Searchable auth-admin lookup backend endpointleri ve frontend wiring kapandi: /admin/auth role assignment ve action store assignment user/store search endpointlerini kullaniyor. Existing GET /api/auth/lookups uyumlu kaldi; query minimum 2 karakter, limit maksimum 50. Schema/index/runtime auth/Keycloak degismedi. Son root check:release gecti; backend 89 suite / 486 test, frontend Playwright 47/47, audit 0 vulnerability. Siradaki mantikli adim: dis source/master-data/staging kaniti gelirse ona oncelik vermek; gelmezse yeni auth UI buyutmesi yapmadan sadece pilot HR akisinda gercek ihtiyac olan kucuk guard'i secmek.
+current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. Auth Role Assignment Active Uniqueness V1 kapandi; fresh DB smoke 43/43 ve root check:release gecti. Searchable auth-admin lookup backend endpointleri ve frontend wiring kapandi: /admin/auth role assignment ve action store assignment user/store search endpointlerini kullaniyor. Project Debt Ledger Consistency Guard V1 kapandi; debt ledger count, active-next-actions count ve current-state son debt ledger blogu root script testleriyle ayni kalmak zorunda. Son root check:release gecti; root script 104/104, backend 89 suite / 486 test, frontend Playwright 47/47, audit 0 vulnerability. Closed active debts: 87. Siradaki mantikli adim: dis source/master-data/staging kaniti gelirse ona oncelik vermek; gelmezse yeni feature acmadan sadece pilot akisinda gercek ihtiyac olan kucuk guard'i secmek.
 ```

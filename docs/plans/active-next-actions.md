@@ -92,12 +92,13 @@ As of 30 April 2026, the competition package planning flow, Operational Feed V1,
 - release policy that keeps Docker-dependent fresh DB smoke out of mandatory `check:release` while requiring it as manual preflight when DB schema or migration files changed
 - auth-admin searchable active user/store backend lookup endpoints with capped query validation and LIKE wildcard escaping
 - auth-admin frontend role/action-store assignment search wiring using the backend user/store lookup endpoints
+- project debt ledger consistency guard that keeps canonical debt counts aligned across handoff docs
 
 ## Debt Count
 
 Reference: `docs/plans/project-debt-ledger.md`
 
-- Closed active debts: 86
+- Closed active debts: 87
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -1069,6 +1070,19 @@ Interpretation:
   - frontend `npm.cmd run build` passed
   - targeted `npm.cmd run test:e2e -- auth-admin-surfaces.spec.ts` passed: 2/2
   - root script guard passed: 100/100
+  - root `npm.cmd run check:release` passed
+
+### Completed: Project Debt Ledger Consistency Guard V1
+- Completed: 30 April 2026
+- Result:
+  - root script tests now compare the canonical debt ledger snapshot with the numbered closed-debt list
+  - `docs/plans/active-next-actions.md` debt counts must mirror `docs/plans/project-debt-ledger.md`
+  - the latest `current-state.md` debt ledger block must mirror the canonical ledger count
+  - future closed-debt increments cannot quietly leave the working handoff docs behind
+- Verification:
+  - TDD red failed first because the guard was not recorded in the handoff docs
+  - targeted `node --test scripts\project-debt-ledger-consistency-contract.test.mjs` passed: 4/4
+  - root script guard passed: 104/104
   - root `npm.cmd run check:release` passed
 
 ### 1. Real IdP Staging Evidence

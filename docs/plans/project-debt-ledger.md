@@ -17,7 +17,7 @@ Date: 30 April 2026
 
 Current count:
 
-- Closed active debts: 86
+- Closed active debts: 87
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -114,6 +114,7 @@ These are counted as paid because they have implementation or documentation evid
 84. Auth Role Assignment Active Uniqueness V1
 85. Auth Admin Searchable Lookups V1
 86. Auth Admin Searchable Lookups Frontend Wiring V1
+87. Project Debt Ledger Consistency Guard V1
 
 Ranking Included Snapshot Contract V1 is counted as paid because `GET /reports/leaderboards/closed` now returns `includedSnapshotRuns`, daily ranking returns the included closed snapshot, monthly ranking returns every completed daily snapshot included in the month calculation, and `/store/rankings` uses that backend contract instead of frontend inference.
 
@@ -140,6 +141,8 @@ Test Suite Hygiene V1 is counted as paid because the oversized auth-admin integr
 Auth Admin Searchable Lookups V1 is counted as paid because auth-admin now has capped searchable backend lookup endpoints for active users and active stores, while the bundled `/api/auth/lookups` contract remains compatible. The implementation avoids schema/index migration and broad auth-admin refactor, treats `%` and `_` as literal search input, and is guarded by targeted auth lookup tests plus root release gates.
 
 Auth Admin Searchable Lookups Frontend Wiring V1 is counted as paid because `/admin/auth` now uses the backend searchable user/store endpoints for role assignment and action-store assignment workflows. Selected store search results fill the role-assignment company/region/store scope fields, bundled lookup fallback remains compatible, pilot binding was intentionally left unchanged, and the slice is guarded by frontend build, targeted Playwright, and root release gates.
+
+Project Debt Ledger Consistency Guard V1 is counted as paid because root script tests now verify that the project debt ledger snapshot count matches the numbered closed-debt list, `active-next-actions.md` mirrors the ledger snapshot counts, and the latest `current-state.md` debt ledger block matches the canonical ledger. This prevents quiet count drift when a future slice is closed.
 
 Operator Evidence Consistency Pass V1 is counted as paid because existing import and master-data operator surfaces now use the same `Go / Conditional Go / No-Go`, row evidence, dry-run evidence, sanitized evidence, retry evidence, and dependency mapping language without adding backend endpoints, workflows, scoring behavior, import behavior, or promotion behavior. Reference: `docs/plans/operator-evidence-consistency-pass-v1.md`.
 
