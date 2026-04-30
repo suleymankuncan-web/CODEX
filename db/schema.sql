@@ -1018,6 +1018,17 @@ CREATE INDEX idx_assignment_store_dates
 CREATE INDEX idx_user_role_scope
     ON ops.user_role_assignment (user_id, scope_type, company_id, region_id, store_id);
 
+CREATE UNIQUE INDEX IF NOT EXISTS uq_user_role_assignment_active_scope
+    ON ops.user_role_assignment (
+        user_id,
+        role_id,
+        scope_type,
+        COALESCE(company_id, '00000000-0000-0000-0000-000000000000'::uuid),
+        COALESCE(region_id, '00000000-0000-0000-0000-000000000000'::uuid),
+        COALESCE(store_id, '00000000-0000-0000-0000-000000000000'::uuid)
+    )
+    WHERE end_at IS NULL;
+
 CREATE UNIQUE INDEX IF NOT EXISTS uq_user_account_auth_provider_subject
     ON ops.user_account (auth_provider, provider_subject)
     WHERE provider_subject IS NOT NULL;

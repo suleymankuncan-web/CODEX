@@ -107,7 +107,7 @@ Do not modify:
 
 - Create: `backend/nestjs/src/modules/auth/user-role-assignment-active-uniqueness-schema-contract.spec.ts`
 
-- [ ] **Step 1: Assert migration exists**
+- [x] **Step 1: Assert migration exists**
 
 The test must require:
 
@@ -118,7 +118,7 @@ The test must require:
 - `COALESCE(region_id, '00000000-0000-0000-0000-000000000000'::uuid)`
 - `COALESCE(store_id, '00000000-0000-0000-0000-000000000000'::uuid)`
 
-- [ ] **Step 2: Assert duplicate preflight exists**
+- [x] **Step 2: Assert duplicate preflight exists**
 
 The test must require:
 
@@ -127,7 +127,7 @@ The test must require:
 - grouping by `user_id`, `role_id`, `scope_type`, and normalized scope ids
 - `WHERE end_at IS NULL`
 
-- [ ] **Step 3: Assert canonical schema stays aligned**
+- [x] **Step 3: Assert canonical schema stays aligned**
 
 The test must require `db/schema.sql` to contain the same index name and normalized nullable scope expression.
 
@@ -141,7 +141,7 @@ Expected:
 
 - Create: `db/migrations/043_user_role_assignment_active_uniqueness.sql`
 
-- [ ] **Step 1: Add duplicate preflight DO block**
+- [x] **Step 1: Add duplicate preflight DO block**
 
 Before creating the index, detect duplicate open-ended active rows:
 
@@ -168,11 +168,11 @@ END $$;
 
 Do not deactivate, delete, or choose a winning row automatically.
 
-- [ ] **Step 2: Create unique partial functional index**
+- [x] **Step 2: Create unique partial functional index**
 
 Create `uq_user_role_assignment_active_scope` exactly as defined in the Decision section.
 
-- [ ] **Step 3: Add comment**
+- [x] **Step 3: Add comment**
 
 Add a short SQL comment explaining that this protects open-ended active role grants and does not model future scheduled overlap.
 
@@ -182,11 +182,11 @@ Add a short SQL comment explaining that this protects open-ended active role gra
 
 - Modify: `db/schema.sql`
 
-- [ ] **Step 1: Add the same unique index to schema**
+- [x] **Step 1: Add the same unique index to schema**
 
 Add `uq_user_role_assignment_active_scope` near the existing `idx_user_role_scope` / auth indexes.
 
-- [ ] **Step 2: Keep existing non-unique index unless proven redundant**
+- [x] **Step 2: Keep existing non-unique index unless proven redundant**
 
 Do not remove `idx_user_role_scope` in this slice. Removing it would be a separate query/index review.
 
@@ -196,7 +196,7 @@ Do not remove `idx_user_role_scope` in this slice. Removing it would be a separa
 
 - No production code changes expected.
 
-- [ ] **Step 1: Run schema contract**
+- [x] **Step 1: Run schema contract**
 
 ```powershell
 cd "C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI\backend\nestjs"
@@ -207,7 +207,7 @@ Expected:
 
 - schema contract passes.
 
-- [ ] **Step 2: Run auth role assignment regression tests**
+- [x] **Step 2: Run auth role assignment regression tests**
 
 ```powershell
 cd "C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI\backend\nestjs"
@@ -218,7 +218,7 @@ Expected:
 
 - existing role assignment behavior remains unchanged.
 
-- [ ] **Step 3: Run backend build**
+- [x] **Step 3: Run backend build**
 
 ```powershell
 cd "C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI\backend\nestjs"
@@ -229,7 +229,7 @@ Expected:
 
 - build passes.
 
-- [ ] **Step 4: Run root script guards**
+- [x] **Step 4: Run root script guards**
 
 ```powershell
 cd "C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI"
@@ -240,7 +240,7 @@ Expected:
 
 - all root script guards pass.
 
-- [ ] **Step 5: Run fresh DB migration smoke**
+- [x] **Step 5: Run fresh DB migration smoke**
 
 Because this changes DB migration/schema files, run:
 
@@ -257,7 +257,7 @@ Expected:
 
 If Docker/local PostgreSQL is unavailable, record a written Conditional Go before merging.
 
-- [ ] **Step 6: Run root release gate**
+- [x] **Step 6: Run root release gate**
 
 ```powershell
 cd "C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI"
@@ -270,7 +270,7 @@ Expected:
 - frontend lint/build/e2e/audit passes,
 - only existing non-failing Vite chunk warning may appear.
 
-- [ ] **Step 7: Run whitespace diff check**
+- [x] **Step 7: Run whitespace diff check**
 
 ```powershell
 cd "C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI"
@@ -292,11 +292,11 @@ Expected:
 - Modify: `docs/plans/project-risk-scan-2026-04-30.md`
 - Modify: `docs/superpowers/plans/2026-04-30-auth-role-assignment-active-uniqueness-v1.md`
 
-- [ ] **Step 1: Update this plan checklist**
+- [x] **Step 1: Update this plan checklist**
 
 Mark completed steps with `[x]` after implementation and verification.
 
-- [ ] **Step 2: Update handoff docs**
+- [x] **Step 2: Update handoff docs**
 
 Record:
 
@@ -305,7 +305,7 @@ Record:
 - future scheduled/finite overlap remains a future slice,
 - fresh DB migration smoke result.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```powershell
 cd "C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI"
@@ -324,6 +324,29 @@ Expected:
 
 - commit succeeds,
 - untracked `outputs/` remains uncommitted.
+
+## Execution Evidence
+
+Completed on 30 April 2026.
+
+TDD red:
+
+- `backend/nestjs`: `npm.cmd test -- --runInBand src/modules/auth/user-role-assignment-active-uniqueness-schema-contract.spec.ts` failed as expected before migration/schema existed.
+
+Verification:
+
+- `backend/nestjs`: `npm.cmd test -- --runInBand src/modules/auth/user-role-assignment-active-uniqueness-schema-contract.spec.ts` passed, 3/3.
+- `backend/nestjs`: `npm.cmd test -- --runInBand test/integration/auth-role-assignments.e2e-spec.ts` passed, 9/9.
+- `backend/nestjs`: `npm.cmd run build` passed.
+- root: `node --test scripts\*.test.mjs` passed, 100/100.
+- root: `npm.cmd run smoke:migration:fresh-db` passed; disposable local DB migration succeeded 43/43, failed=0, audit=3, ops=39, rpt=10, stg=12.
+- root: `npm.cmd run check:release` passed; backend 89 suites / 480 tests, frontend Playwright 46/46, audit 0 vulnerabilities.
+
+Implementation notes:
+
+- `idx_user_role_scope` was intentionally kept.
+- `AuthAdminService`, `AuthAdminRepository`, auth DTO/controller code, runtime auth, and frontend files were intentionally not modified.
+- Future scheduled or finite overlapping role assignment semantics remain outside V1.
 
 ## Self-Review
 

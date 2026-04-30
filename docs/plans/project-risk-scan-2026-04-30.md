@@ -10,8 +10,8 @@ No production behavior was changed by this scan.
 
 ## Green Signals
 
-- Latest root `npm.cmd run check:release` passed after the master-data read-model split.
-- Backend release check passed with 88 suites and 476 tests.
+- Latest root `npm.cmd run check:release` passed after Auth Role Assignment Active Uniqueness V1.
+- Backend release check passed with 89 suites and 480 tests.
 - Frontend Playwright passed with 46 tests.
 - Root script tests passed with 100 tests.
 - No tracked `node_modules`, `dist`, `test-results`, or `outputs` paths were found.
@@ -44,7 +44,7 @@ Decision:
 - `integration.repository.ts` has now been reviewed separately and is treated as a planned investment, not an active refactor target.
 - `store-ops.repository.ts` has now been reviewed separately; the workforce request slice was extracted into `WorkforceRequestRepository`, while remaining checklist/read boundaries are treated as planned investments, not active refactor targets.
 - `reporting.repository.ts` has now been reviewed separately; it remains a monitored read-model boundary, while closed-ranking/performance/snapshot-report splits and query/index work wait for concrete reporting changes or measured pilot data.
-- `auth-admin.repository.ts` has now been reviewed separately; one user-account pagination count defect was fixed, and role-assignment DB uniqueness now has a dedicated implementation plan before broad rollout.
+- `auth-admin.repository.ts` has now been reviewed separately; one user-account pagination count defect was fixed, and open-ended active role-assignment DB uniqueness is now implemented with nullable-scope-safe index protection.
 
 Reference:
 
@@ -154,6 +154,6 @@ If no external evidence is available, choose the next small guard through the in
 The best local candidates to consider next are:
 
 1. real staging/source/master-data evidence if it becomes available,
-2. role assignment active uniqueness implementation if local auth hardening continues,
+2. searchable auth-admin lookup design if broad user rollout approaches,
 3. reporting service boundary review if a concrete reporting API/UI change appears,
 4. targeted cleanup of ignored local generated files if the user wants workspace hygiene.
