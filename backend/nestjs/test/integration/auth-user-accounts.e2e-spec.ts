@@ -94,7 +94,7 @@ describe("Auth user accounts", () => {
       }
 
       if (sql.includes("FROM ops.user_account ua") && sql.includes("COUNT(*)::text AS total_count")) {
-        expect(params).toEqual(["oidc", true, 20, 0]);
+        expect(params).toEqual(["oidc", true]);
         return {
           rowCount: 1,
           rows: [{ total_count: "1" }],
@@ -151,6 +151,56 @@ describe("Auth user accounts", () => {
       total: 1,
       limit: 20,
       offset: 0,
+    });
+
+    await app.close();
+  });
+
+  it("keeps user account total count independent from pagination offset", async () => {
+    const query = jest.fn(async (sql: string, params?: unknown[]) => {
+      if (
+        sql.includes("FROM ops.user_account ua") &&
+        sql.includes("INNER JOIN ops.user_role_assignment")
+      ) {
+        return { rowCount: 0, rows: [] };
+      }
+
+      if (sql.includes("FROM ops.user_account ua") && sql.includes("COUNT(*)::text AS total_count")) {
+        expect(params).toEqual(["oidc", true]);
+        expect(sql).not.toContain("LIMIT");
+        expect(sql).not.toContain("OFFSET");
+        return {
+          rowCount: 1,
+          rows: [{ total_count: "42" }],
+        };
+      }
+
+      if (sql.includes("FROM ops.user_account ua")) {
+        expect(params).toEqual(["oidc", true, 20, 20]);
+        return {
+          rowCount: 0,
+          rows: [],
+        };
+      }
+
+      return { rowCount: 0, rows: [] };
+    });
+
+    const app = await createIntegrationApp({
+      databaseService: { query },
+    });
+
+    const response = await request(app.getHttpServer())
+      .get("/api/auth/users?limit=20&offset=20&authProvider=oidc&isActive=true")
+      .set("x-user-id", adminUserId)
+      .set("x-role-codes", "SUPER_ADMIN");
+
+    expect(response.status).toBe(200);
+    expect(response.body.meta).toEqual({
+      count: 0,
+      total: 42,
+      limit: 20,
+      offset: 20,
     });
 
     await app.close();

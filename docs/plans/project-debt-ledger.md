@@ -17,11 +17,11 @@ Date: 30 April 2026
 
 Current count:
 
-- Closed active debts: 82
+- Closed active debts: 83
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
-- Strategic investment backlog: 7
+- Strategic investment backlog: 8
 - Silent untracked quality debt in the active gate: 0
 
 ## Closed Active Debts
@@ -110,6 +110,7 @@ These are counted as paid because they have implementation or documentation evid
 80. Snapshot Run Read Model Test Split V1
 81. Competition Service Team Template Test Split V1
 82. Auth Action Scope Test Split V1
+83. Auth User Account Pagination Count Fix V1
 
 Ranking Included Snapshot Contract V1 is counted as paid because `GET /reports/leaderboards/closed` now returns `includedSnapshotRuns`, daily ranking returns the included closed snapshot, monthly ranking returns every completed daily snapshot included in the month calculation, and `/store/rankings` uses that backend contract instead of frontend inference.
 
@@ -156,6 +157,8 @@ Snapshot Run Read Model Test Split V1 is counted as paid because snapshot run li
 Competition Service Team Template Test Split V1 is counted as paid because team-template list/create/update/deactivate/clone service tests were moved from `competition.service.spec.ts` into `competition-team-template.service.spec.ts` without changing production code, test names, or the 24 guarded competition service cases. Reference: `docs/plans/test-suite-hygiene-v1.md`.
 
 Auth Action Scope Test Split V1 is counted as paid because target-distribution and checklist action-scope authorization tests were moved from `auth-scope.e2e-spec.ts` into `auth-action-scope.e2e-spec.ts` without changing production code, test names, or the 18 guarded auth scope integration cases. Reference: `docs/plans/test-suite-hygiene-v1.md`.
+
+Auth User Account Pagination Count Fix V1 is counted as paid because `/api/auth/users` count metadata now uses only filter parameters and no longer couples the count query to `LIMIT/OFFSET`. A second-page regression test guards the fix. Reference: `docs/plans/auth-admin-repository-risk-review-2026-04-30.md`.
 
 Production-Ready Migration System V1 is counted as paid because SQL migrations are tracked in `audit.schema_migration`, checksum drift is rejected, failed runs are recorded with error evidence, the HTTP migration endpoint is disabled in production, and `npm.cmd run db:migrate` is the approved CLI/CI migration path.
 
@@ -322,6 +325,7 @@ These are important future product investments. They are not counted as hidden d
 5. IntegrationRepository boundary split and raw import index review after real import volume or source-adapter evidence
 6. Remaining StoreOpsRepository legacy checklist/read boundary review after a concrete checklist, workforce reporting, or org-scope change
 7. ReportingRepository closed-ranking/performance/snapshot-report split and reporting query/index review after a concrete reporting/ranking change or measured pilot slow-query evidence
+8. AuthAdminRepository boundary split, role-assignment DB active uniqueness, and searchable auth-admin lookups before broad user rollout
 
 KPI config version history, publish metadata, snapshot anchoring, and pre-governance visibility are implemented in V1. Rollback UI, future effective scheduling, approval workflow, and DB-managed interpretation copy remain future depth, not active hidden debt.
 
@@ -342,6 +346,8 @@ IntegrationRepository boundary split and raw import index review is a planned in
 StoreOpsRepository workforce request boundary split is implemented. Seller-code and offboarding request lifecycles now live in `WorkforceRequestRepository`; `StoreOpsRepository` keeps store scope listing, target personnel reads, headcount gap, and legacy checklist writes. Remaining future work should focus only on concrete checklist, workforce reporting, org-scope, or measured queue-performance evidence. Region queue indexes still wait for measured pilot volume. Reference: `docs/plans/store-ops-repository-risk-review-2026-04-30.md`.
 
 ReportingRepository split and reporting query/index review is a planned investment, not active debt. The repository owns snapshot report read models, live KPI performance reads, Turkey benchmark aggregations, store score breakdown inputs, closed rankings, leaderboards, and identity-to-employee lookup helpers. Future work should split only when a concrete reporting/ranking change touches a clean read family or measured pilot data proves a slow query. Reference: `docs/plans/reporting-repository-risk-review-2026-04-30.md`.
+
+AuthAdminRepository boundary split, role-assignment DB active uniqueness, and searchable auth-admin lookups are planned investments, not active hidden debt today. The current pilot path is guarded, but broader user rollout should harden active role assignment uniqueness at the database level and avoid dropdown-only lookup limits. Reference: `docs/plans/auth-admin-repository-risk-review-2026-04-30.md`.
 
 Project-Wide Scope/Auth Guard Scan V1 is implemented. The scan found and closed two concrete backend risks: production JWT default-secret fallback is now rejected unless JWKS is configured, and empty/foreign actor scope paths in store listing and target-distribution request listing are now guarded by no-access and narrowest-scope contract tests.
 

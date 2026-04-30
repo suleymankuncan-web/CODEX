@@ -1330,9 +1330,8 @@ export class AuthAdminRepository {
         SELECT COUNT(*)::text AS total_count
         FROM ops.user_account ua
         ${whereClause}
-        LIMIT $${params.length + 1} OFFSET $${params.length + 2}
       `,
-      [...params, limit, offset],
+      params,
     );
 
     const result = await this.databaseService.query<UserAccountRow>(
