@@ -573,6 +573,47 @@ export class AuthAdminService {
     };
   }
 
+  async searchAuthUsers(input: { query: string; limit: number }) {
+    const rows = await this.authAdminRepository.searchActiveUserLookups(input);
+    const items = rows.map((item) => ({
+      userId: item.user_id,
+      username: item.username,
+      email: item.email,
+      authProvider: item.auth_provider,
+      providerSubject: item.provider_subject,
+    }));
+
+    return {
+      items,
+      meta: {
+        query: input.query,
+        count: items.length,
+        limit: input.limit,
+      },
+    };
+  }
+
+  async searchAuthStores(input: { query: string; limit: number }) {
+    const rows = await this.authAdminRepository.searchActiveStoreLookups(input);
+    const items = rows.map((item) => ({
+      storeId: item.store_id,
+      storeCode: item.store_code,
+      storeName: item.store_name,
+      companyId: item.company_id,
+      regionId: item.region_id,
+      regionName: item.region_name,
+    }));
+
+    return {
+      items,
+      meta: {
+        query: input.query,
+        count: items.length,
+        limit: input.limit,
+      },
+    };
+  }
+
   async grantRolePermission(input: {
     roleId: string;
     permissionCode: string;

@@ -56,6 +56,12 @@ const authExpectedTestNames = [
   'revokes a permission from a role',
   'returns not found when revoking a missing role permission',
   'returns auth lookups',
+  'searches active auth users by username email or provider subject',
+  'escapes wildcard characters in auth user lookup queries',
+  'rejects too-short auth user lookup queries',
+  'rejects above-max auth user lookup limits',
+  'searches active stores by code name or region',
+  'rejects too-short store lookup queries',
 ]
 const importSplitFiles = [
   'backend/nestjs/test/integration/import-batch.e2e-spec.ts',
@@ -291,7 +297,7 @@ test('auth admin integration tests are split without dropping test cases', () =>
     combinedText += `\n${text}`
   }
 
-  assert.equal(totalTests, 29)
+  assert.equal(totalTests, 35)
   for (const testName of authExpectedTestNames) {
     const exactOccurrences = [...combinedText.matchAll(new RegExp(`it\\("${testName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'g'))].length
     assert.equal(exactOccurrences, 1, `${testName} must appear exactly once`)

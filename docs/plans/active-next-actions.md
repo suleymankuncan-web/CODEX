@@ -90,12 +90,13 @@ As of 30 April 2026, the competition package planning flow, Operational Feed V1,
 - local disposable PostgreSQL backup/restore proof with 42/42 migration tracking, matching source/restore schema counts, and no production DB access
 - local disposable fresh database migration smoke with `audit.schema_migration` proof and core schema table counts
 - release policy that keeps Docker-dependent fresh DB smoke out of mandatory `check:release` while requiring it as manual preflight when DB schema or migration files changed
+- auth-admin searchable active user/store backend lookup endpoints with capped query validation and LIKE wildcard escaping
 
 ## Debt Count
 
 Reference: `docs/plans/project-debt-ledger.md`
 
-- Closed active debts: 82
+- Closed active debts: 85
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -1036,6 +1037,23 @@ Interpretation:
   - root `npm.cmd run check:release` passed
 - Reference:
   - `docs/plans/master-data-bootstrap-pilot-smoke-runbook.md`
+
+### Completed: Auth Admin Searchable Lookups V1
+- Completed: 30 April 2026
+- Result:
+  - `GET /api/auth/lookups/users/search` searches active users by username, email, and provider subject
+  - `GET /api/auth/lookups/stores/search` searches active stores by code, name, and region
+  - existing `GET /api/auth/lookups` remains compatible
+  - query minimum is 2 characters and max limit is 50
+  - no schema, migration, frontend, runtime auth, Keycloak, or auth policy behavior changed
+- Verification:
+  - targeted auth lookup tests passed: 7/7
+  - auth role assignment regression passed: 9/9
+  - backend build passed
+  - root script guard passed: 100/100
+  - root `npm.cmd run check:release` passed
+- Reference:
+  - `docs/superpowers/plans/2026-04-30-auth-admin-searchable-lookups-v1.md`
 
 ### 1. Real IdP Staging Evidence
 - Priority: `P1`

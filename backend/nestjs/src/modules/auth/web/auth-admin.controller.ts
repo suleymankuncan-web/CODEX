@@ -10,6 +10,7 @@ import { ListActionStoreAssignmentsQueryDto } from "./dto/list-action-store-assi
 import { ListRoleAssignmentAuditQueryDto } from "./dto/list-role-assignment-audit.query";
 import { ListRoleAssignmentsQueryDto } from "./dto/list-role-assignments.query";
 import { ListUserAccountsQueryDto } from "./dto/list-user-accounts.query";
+import { SearchAuthLookupQueryDto } from "./dto/search-auth-lookup.query";
 
 @Controller("auth")
 @RequireRoles("SUPER_ADMIN")
@@ -218,6 +219,22 @@ export class AuthAdminController {
   @Get("lookups")
   async getAuthLookups() {
     return this.authAdminService.getAuthLookups();
+  }
+
+  @Get("lookups/users/search")
+  async searchAuthUsers(@Query() query: SearchAuthLookupQueryDto) {
+    return this.authAdminService.searchAuthUsers({
+      query: query.q,
+      limit: query.limit,
+    });
+  }
+
+  @Get("lookups/stores/search")
+  async searchAuthStores(@Query() query: SearchAuthLookupQueryDto) {
+    return this.authAdminService.searchAuthStores({
+      query: query.q,
+      limit: query.limit,
+    });
   }
 
   @Post("roles/:roleId/permissions")

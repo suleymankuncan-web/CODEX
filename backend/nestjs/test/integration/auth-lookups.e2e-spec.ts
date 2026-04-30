@@ -210,4 +210,196 @@ describe("Auth lookups", () => {
 
     await app.close();
   });
+
+  it("searches active auth users by username email or provider subject", async () => {
+    const query = jest.fn(async (sql: string, params?: unknown[]) => {
+      if (
+        sql.includes("FROM ops.user_account") &&
+        sql.includes("provider_subject") &&
+        sql.includes("ILIKE")
+      ) {
+        expect(sql).toContain("ESCAPE");
+        expect(params).toEqual(["%manager%", 20]);
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              user_id: pilotUserId,
+              username: "store.manager",
+              email: "store.manager@example.com",
+              auth_provider: "oidc",
+              provider_subject: pilotProviderSubject,
+            },
+          ],
+        };
+      }
+
+      return { rowCount: 0, rows: [] };
+    });
+
+    const app = await createIntegrationApp({ databaseService: { query } });
+
+    const response = await request(app.getHttpServer())
+      .get("/api/auth/lookups/users/search?q= manager &limit=20")
+      .set("x-user-id", adminUserId)
+      .set("x-role-codes", "SUPER_ADMIN");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      items: [
+        {
+          userId: pilotUserId,
+          username: "store.manager",
+          email: "store.manager@example.com",
+          authProvider: "oidc",
+          providerSubject: pilotProviderSubject,
+        },
+      ],
+      meta: {
+        query: "manager",
+        count: 1,
+        limit: 20,
+      },
+    });
+
+    await app.close();
+  });
+
+  it("escapes wildcard characters in auth user lookup queries", async () => {
+    const query = jest.fn(async (sql: string, params?: unknown[]) => {
+      if (
+        sql.includes("FROM ops.user_account") &&
+        sql.includes("provider_subject") &&
+        sql.includes("ILIKE")
+      ) {
+        expect(sql).toContain("ESCAPE");
+        expect(params).toEqual(["%\\%\\_%", 20]);
+        return { rowCount: 0, rows: [] };
+      }
+
+      return { rowCount: 0, rows: [] };
+    });
+
+    const app = await createIntegrationApp({ databaseService: { query } });
+
+    const response = await request(app.getHttpServer())
+      .get("/api/auth/lookups/users/search?q=%25_&limit=20")
+      .set("x-user-id", adminUserId)
+      .set("x-role-codes", "SUPER_ADMIN");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      items: [],
+      meta: {
+        query: "%_",
+        count: 0,
+        limit: 20,
+      },
+    });
+
+    await app.close();
+  });
+
+  it("rejects too-short auth user lookup queries", async () => {
+    const app = await createIntegrationApp({
+      databaseService: {
+        query: jest.fn(async () => ({ rowCount: 0, rows: [] })),
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .get("/api/auth/lookups/users/search?q=a")
+      .set("x-user-id", adminUserId)
+      .set("x-role-codes", "SUPER_ADMIN");
+
+    expect(response.status).toBe(400);
+
+    await app.close();
+  });
+
+  it("rejects above-max auth user lookup limits", async () => {
+    const app = await createIntegrationApp({
+      databaseService: {
+        query: jest.fn(async () => ({ rowCount: 0, rows: [] })),
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .get("/api/auth/lookups/users/search?q=manager&limit=51")
+      .set("x-user-id", adminUserId)
+      .set("x-role-codes", "SUPER_ADMIN");
+
+    expect(response.status).toBe(400);
+
+    await app.close();
+  });
+
+  it("searches active stores by code name or region", async () => {
+    const query = jest.fn(async (sql: string, params?: unknown[]) => {
+      if (sql.includes("FROM ops.store s") && sql.includes("ILIKE")) {
+        expect(sql).toContain("ESCAPE");
+        expect(params).toEqual(["%marmara%", 20]);
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              store_id: storeId,
+              store_code: "SM140",
+              store_name: "Marmara Park",
+              company_id: companyId,
+              region_id: regionId,
+              region_name: "Marmara",
+            },
+          ],
+        };
+      }
+
+      return { rowCount: 0, rows: [] };
+    });
+
+    const app = await createIntegrationApp({ databaseService: { query } });
+
+    const response = await request(app.getHttpServer())
+      .get("/api/auth/lookups/stores/search?q=marmara&limit=20")
+      .set("x-user-id", adminUserId)
+      .set("x-role-codes", "SUPER_ADMIN");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      items: [
+        {
+          storeId,
+          storeCode: "SM140",
+          storeName: "Marmara Park",
+          companyId,
+          regionId,
+          regionName: "Marmara",
+        },
+      ],
+      meta: {
+        query: "marmara",
+        count: 1,
+        limit: 20,
+      },
+    });
+
+    await app.close();
+  });
+
+  it("rejects too-short store lookup queries", async () => {
+    const app = await createIntegrationApp({
+      databaseService: {
+        query: jest.fn(async () => ({ rowCount: 0, rows: [] })),
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .get("/api/auth/lookups/stores/search?q=s")
+      .set("x-user-id", adminUserId)
+      .set("x-role-codes", "SUPER_ADMIN");
+
+    expect(response.status).toBe(400);
+
+    await app.close();
+  });
 });

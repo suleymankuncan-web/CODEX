@@ -118,6 +118,10 @@ type PilotUserBindingRow = {
   employee: ActiveEmployeeAccessContextRow;
 };
 
+function escapePostgresLikePattern(value: string) {
+  return value.replace(/[\\%_]/g, "\\$&");
+}
+
 @Injectable()
 export class AuthAdminRepository {
   constructor(private readonly databaseService: DatabaseService) {}
@@ -1593,6 +1597,33 @@ export class AuthAdminRepository {
     return result.rows;
   }
 
+  async searchActiveUserLookups(input: { query: string; limit: number }) {
+    const searchTerm = `%${escapePostgresLikePattern(input.query)}%`;
+    const result = await this.databaseService.query<{
+      user_id: string;
+      username: string;
+      email: string;
+      auth_provider: string;
+      provider_subject: string | null;
+    }>(
+      `
+        SELECT user_id, username, email, auth_provider, provider_subject
+        FROM ops.user_account
+        WHERE is_active = TRUE
+          AND (
+            username ILIKE $1 ESCAPE '\\'
+            OR email ILIKE $1 ESCAPE '\\'
+            OR provider_subject ILIKE $1 ESCAPE '\\'
+          )
+        ORDER BY username ASC, user_id ASC
+        LIMIT $2
+      `,
+      [searchTerm, input.limit],
+    );
+
+    return result.rows;
+  }
+
   async listActiveStoreLookups() {
     const result = await this.databaseService.query<StoreLookupRow>(
       `
@@ -1609,6 +1640,34 @@ export class AuthAdminRepository {
         ORDER BY s.store_code ASC, s.store_id ASC
         LIMIT 200
       `,
+    );
+
+    return result.rows;
+  }
+
+  async searchActiveStoreLookups(input: { query: string; limit: number }) {
+    const searchTerm = `%${escapePostgresLikePattern(input.query)}%`;
+    const result = await this.databaseService.query<StoreLookupRow>(
+      `
+        SELECT
+          s.store_id,
+          s.store_code,
+          s.store_name,
+          s.company_id,
+          s.region_id,
+          r.region_name
+        FROM ops.store s
+        INNER JOIN ops.region r ON r.region_id = s.region_id
+        WHERE s.status = 'active'
+          AND (
+            s.store_code ILIKE $1 ESCAPE '\\'
+            OR s.store_name ILIKE $1 ESCAPE '\\'
+            OR r.region_name ILIKE $1 ESCAPE '\\'
+          )
+        ORDER BY s.store_code ASC, s.store_id ASC
+        LIMIT $2
+      `,
+      [searchTerm, input.limit],
     );
 
     return result.rows;

@@ -5620,12 +5620,51 @@ CODEX durust yorum:
 
 - Plan kucuk ve dogru sinirda. Geniş auth-admin refactor degil; operatorun kullanici/magaza secimini genis rollout oncesi guvenilir hale getiren backend search slice.
 
-Siradaki mantikli adim: Onaylanirsa TDD ile backend searchable lookup endpointlerini uygulamak; frontend wiring'i ancak backend temiz kapandiktan sonra ayri karar olarak almak.
+Siradaki mantikli adim tamamlandi: TDD ile backend searchable lookup endpointleri uygulandi; frontend wiring'i backend temiz kapandigi icin artik ihtiyac aninda ayri kucuk karar olarak alinabilir.
+
+## Son Auth Admin Searchable Lookups V1
+
+30 Nisan 2026 itibariyla backend searchable auth-admin lookup endpointleri eklendi.
+
+Eklenenler:
+
+- `GET /api/auth/lookups/users/search?q=<text>&limit=20`
+- `GET /api/auth/lookups/stores/search?q=<text>&limit=20`
+- Existing `GET /api/auth/lookups` compatible kaldi.
+- Query en az 2 karakter ister; `limit > 50` validation error dondurur.
+- User search active users icinde `username`, `email`, `provider_subject` arar ve `providerSubject` kanitini dondurur.
+- Store search active stores icinde `store_code`, `store_name`, `region_name` arar.
+- `%` ve `_` LIKE wildcard karakterleri literal arama olarak escape edilir; `%_` gibi query'ler ilk 20 kaydi genis fallback olarak dondurmez.
+- Schema/index migration, frontend wiring, runtime auth, Keycloak/OIDC ve auth policy degismedi.
+- Test suite hygiene guard auth-admin integration kapsaminda 35 test adini koruyacak sekilde guncellendi.
+
+Dogrulama:
+
+- TDD RED: yeni search route testleri implementation yokken 404 ile fail etti.
+- `backend/nestjs`: `npm.cmd test -- --runInBand test/integration/auth-lookups.e2e-spec.ts` gecti, 7/7.
+- `backend/nestjs`: `npm.cmd test -- --runInBand test/integration/auth-role-assignments.e2e-spec.ts` gecti, 9/9.
+- `backend/nestjs`: `npm.cmd run build` gecti.
+- root: `node --test scripts\*.test.mjs` gecti, 100/100.
+- root: `npm.cmd run check:release` gecti; backend 89 suite / 486 test, frontend Playwright 46/46, audit 0 vulnerability.
+- root: `git diff --check` gecti; yalniz CRLF uyarilari geldi.
+
+Debt ledger:
+
+- Closed active debts: 85
+- Strategic investment backlog: 8
+- Silent untracked quality debt in the active gate: 0
+
+CODEX durust yorum:
+
+- Bu guzel bir borc kapatma: pilot genisleyince HR admin ekraninda user/store dropdown sisligi operator hatasina donmeden backend arama kapisi hazir oldu.
+- Dogru sinir korundu; schema/index ve frontend buyutmesi acilmadi. Index ihtiyaci ancak gercek veri hacmi veya measured slow-query kanitiyle ele alinacak.
+
+Siradaki mantikli adim: root `check:release` ve `git diff --check` ile kapatip commit'lemek; sonra ihtiyac olursa auth-admin frontend arama wiring'ini ayri ve kucuk bir slice olarak planlamak.
 
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
 
 ```text
-current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. readScope/actionScope ayrimi ve assignedStoreIds modeli korunuyor. Test Suite Hygiene V1 auth split kapandi; Import Batch Source Test Split V1, Import Batch Evidence Test Split V1, Competition Repository Test Split V1, Competition Stage Package Plan Test Split V1, Snapshot Run Read Model Test Split V1, Competition Service Team Template Test Split V1 ve Auth Action Scope Test Split V1 kapandi. Import/integration e2e kapsaminda production code degismeden 32 test adi uc dosyada korunuyor: import-batch, import-batch-evidence, integration-sources. Competition repository kapsaminda production code degismeden 27 test adi uc dosyada korunuyor: competition.repository, competition-stage-package-plan.repository, competition-team-template.repository. Snapshot run e2e kapsaminda production code degismeden 13 test adi iki dosyada korunuyor: snapshot-run, snapshot-run-read-models. Competition service kapsaminda production code degismeden 24 test adi iki dosyada korunuyor: competition.service, competition-team-template.service. Auth scope integration kapsaminda production code degismeden 18 test adi iki dosyada korunuyor: auth-scope, auth-action-scope. Operator Evidence Consistency Pass V1 kapandi. Backup Restore Drill Runbook V1 kapandi. Backup Restore Local Drill Evidence alindi; prod DB'ye dokunulmadi; bos disposable DB migration 42/42 succeeded ve restore proof source/restore schema counts matched. Migration Fresh DB Smoke V1 eklendi ve local Docker PostgreSQL uzerinde 42/42 succeeded, failed=0, audit=3, ops=39, rpt=10, stg=12 kaniti alindi. Migration Smoke Release Preflight Policy V1 karari: Docker-dependent smoke mandatory check:release icinde degil, DB schema/migration degisirse manuel preflight veya written Conditional Go zorunlu. Master-data test dosyasi icin ayri plan `docs/plans/master-data-bootstrap-test-hygiene-v1.md` olarak yazildi. Master-data bootstrap service 29-test guard eklendi; Bucket A staging/normalization testleri `master-data-bootstrap-staging.service.spec.ts` dosyasina, Bucket C read-model/readiness testleri `master-data-bootstrap-read-models.service.spec.ts` dosyasina tasindi. Validation ve promotion safety tarafina dokunulmadi. Project risk scan `docs/plans/project-risk-scan-2026-04-30.md` olarak kaydedildi; validation/promotion split aktif borc degil strategic investment backlog'ta planli yatirim. StageBuilderForm, IntegrationRepository, StoreOpsRepository, ReportingRepository ve AuthAdminRepository risk review dokumanlari eklendi. IntegrationSourceRepository Split V1 uygulandi; source-governance persistence `backend/nestjs/src/modules/integration/infrastructure/integration-source.repository.ts` dosyasina tasindi, raw staging/import evidence/retry/materialization degismedi, root `check:release` gecti. WorkforceRequestRepository Split V1 uygulandi; seller-code/offboarding persistence `backend/nestjs/src/modules/store-ops/infrastructure/workforce-request.repository.ts` dosyasina tasindi, StoreOpsRepository store scope/target rows/headcount/legacy checklist sinirinda kaldi, root `check:release` gecti. ReportingRepository risk review sonucunda simdi refactor yok karari verildi; closed-ranking/performance/snapshot-report splitleri ve reporting query/index review yalniz concrete reporting/ranking degisikligi veya measured pilot slow-query kaniti ile acilacak. AuthAdminRepository risk review sonucunda `listUserAccounts` count pagination kusuru TDD ile kapandi ve role assignment active uniqueness DB seviyesinde `uq_user_role_assignment_active_scope` ile uygulandi; fresh DB smoke 43/43 succeeded ve root `check:release` backend 89 suite / 480 test, frontend 46/46 gecti. Dis source/master-data/staging kaniti henuz yok; searchable auth-admin lookup design spec ve backend-first implementation plan yazildi: `docs/superpowers/specs/2026-04-30-auth-admin-searchable-lookups-v1-design.md`, `docs/superpowers/plans/2026-04-30-auth-admin-searchable-lookups-v1.md`. Genis auth-admin split yok; onaylanirsa backend searchable user/store lookup endpointleri TDD ile uygulanacak.
+current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. Auth Role Assignment Active Uniqueness V1 kapandi; fresh DB smoke 43/43 ve root check:release gecti. Searchable auth-admin lookup design/spec ve backend-first plan kapandi. Backend searchable endpointleri TDD ile uygulandi: GET /api/auth/lookups/users/search ve GET /api/auth/lookups/stores/search. Existing GET /api/auth/lookups uyumlu kaldi; query minimum 2 karakter, limit maksimum 50. Schema/index/frontend/runtime auth degismedi. Siradaki mantikli adim: gerekirse auth-admin frontend arama wiring'ini ayri kucuk slice olarak planlamak; dis source/master-data/staging kaniti gelirse ona oncelik vermek.
 ```

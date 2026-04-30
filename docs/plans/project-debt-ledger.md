@@ -17,7 +17,7 @@ Date: 30 April 2026
 
 Current count:
 
-- Closed active debts: 84
+- Closed active debts: 85
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -112,6 +112,7 @@ These are counted as paid because they have implementation or documentation evid
 82. Auth Action Scope Test Split V1
 83. Auth User Account Pagination Count Fix V1
 84. Auth Role Assignment Active Uniqueness V1
+85. Auth Admin Searchable Lookups V1
 
 Ranking Included Snapshot Contract V1 is counted as paid because `GET /reports/leaderboards/closed` now returns `includedSnapshotRuns`, daily ranking returns the included closed snapshot, monthly ranking returns every completed daily snapshot included in the month calculation, and `/store/rankings` uses that backend contract instead of frontend inference.
 
@@ -133,7 +134,9 @@ Scope/Auth Regression Matrix V1 is counted as paid because existing read-scope, 
 
 DB Health And Migration Evidence V1 is counted as paid because migration status can now be checked through a read-only `GET /api/admin/migrations/status` surface without executing SQL migration files, failed migration evidence and checksum mismatches remain visible, public health redacts dependency URL/credential details, and CLI/CI migration execution remains `npm.cmd run db:migrate`. Reference: `docs/plans/db-health-migration-evidence-v1.md`.
 
-Test Suite Hygiene V1 is counted as paid because the oversized auth-admin integration file was split into six domain-focused e2e specs without deleting behavior coverage, changing production code, or changing the 28 guarded test names. Reference: `docs/plans/test-suite-hygiene-v1.md`.
+Test Suite Hygiene V1 is counted as paid because the oversized auth-admin integration file was split into six domain-focused e2e specs without deleting behavior coverage or changing production code. Its guard now preserves 35 auth-admin integration test names after searchable lookup coverage was added. Reference: `docs/plans/test-suite-hygiene-v1.md`.
+
+Auth Admin Searchable Lookups V1 is counted as paid because auth-admin now has capped searchable backend lookup endpoints for active users and active stores, while the bundled `/api/auth/lookups` contract remains compatible. The implementation avoids schema/index migration and broad auth-admin refactor, treats `%` and `_` as literal search input, and is guarded by targeted auth lookup tests plus root release gates.
 
 Operator Evidence Consistency Pass V1 is counted as paid because existing import and master-data operator surfaces now use the same `Go / Conditional Go / No-Go`, row evidence, dry-run evidence, sanitized evidence, retry evidence, and dependency mapping language without adding backend endpoints, workflows, scoring behavior, import behavior, or promotion behavior. Reference: `docs/plans/operator-evidence-consistency-pass-v1.md`.
 
@@ -328,7 +331,7 @@ These are important future product investments. They are not counted as hidden d
 5. IntegrationRepository boundary split and raw import index review after real import volume or source-adapter evidence
 6. Remaining StoreOpsRepository legacy checklist/read boundary review after a concrete checklist, workforce reporting, or org-scope change
 7. ReportingRepository closed-ranking/performance/snapshot-report split and reporting query/index review after a concrete reporting/ranking change or measured pilot slow-query evidence
-8. AuthAdminRepository boundary split and searchable auth-admin lookups before broad user rollout
+8. AuthAdminRepository boundary split before broad user rollout
 
 KPI config version history, publish metadata, snapshot anchoring, and pre-governance visibility are implemented in V1. Rollback UI, future effective scheduling, approval workflow, and DB-managed interpretation copy remain future depth, not active hidden debt.
 
@@ -350,7 +353,7 @@ StoreOpsRepository workforce request boundary split is implemented. Seller-code 
 
 ReportingRepository split and reporting query/index review is a planned investment, not active debt. The repository owns snapshot report read models, live KPI performance reads, Turkey benchmark aggregations, store score breakdown inputs, closed rankings, leaderboards, and identity-to-employee lookup helpers. Future work should split only when a concrete reporting/ranking change touches a clean read family or measured pilot data proves a slow query. Reference: `docs/plans/reporting-repository-risk-review-2026-04-30.md`.
 
-AuthAdminRepository boundary split and searchable auth-admin lookups are planned investments, not active hidden debt today. The current pilot path is guarded, and active role assignment uniqueness is now protected at the database level. Broader user rollout should still avoid dropdown-only lookup limits and should split auth-admin persistence only when a concrete auth-admin change touches a clean family of operations. References: `docs/plans/auth-admin-repository-risk-review-2026-04-30.md`, `docs/superpowers/plans/2026-04-30-auth-role-assignment-active-uniqueness-v1.md`.
+AuthAdminRepository boundary split is a planned investment, not active hidden debt today. The current pilot path is guarded, active role assignment uniqueness is protected at the database level, and searchable user/store lookup endpoints now avoid dropdown-only limits before broader rollout. Future auth-admin persistence split should happen only when a concrete auth-admin change touches a clean family of operations. References: `docs/plans/auth-admin-repository-risk-review-2026-04-30.md`, `docs/superpowers/plans/2026-04-30-auth-role-assignment-active-uniqueness-v1.md`, `docs/superpowers/plans/2026-04-30-auth-admin-searchable-lookups-v1.md`.
 
 Project-Wide Scope/Auth Guard Scan V1 is implemented. The scan found and closed two concrete backend risks: production JWT default-secret fallback is now rejected unless JWKS is configured, and empty/foreign actor scope paths in store listing and target-distribution request listing are now guarded by no-access and narrowest-scope contract tests.
 

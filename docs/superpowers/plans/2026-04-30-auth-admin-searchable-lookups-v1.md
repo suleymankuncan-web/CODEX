@@ -22,6 +22,7 @@ Locked decisions:
 - V1 adds backend search only for users and stores.
 - Invalid or above-max limit is rejected, not clamped.
 - `providerSubject` is returned for user lookup evidence.
+- `%` and `_` LIKE wildcard characters are escaped as literal search text.
 - Frontend wiring is not included in this implementation plan.
 - No schema/index migration is included.
 
@@ -118,7 +119,7 @@ Response:
 
 - Create: `backend/nestjs/src/modules/auth/web/dto/search-auth-lookup.query.ts`
 
-- [ ] **Step 1: Write the DTO**
+- [x] **Step 1: Write the DTO**
 
 Create the file:
 
@@ -147,7 +148,7 @@ Notes:
 - `limit > 50` must fail validation.
 - Do not add default offset or pagination in V1.
 
-- [ ] **Step 2: Run build to catch DTO import issues after wiring**
+- [x] **Step 2: Run build to catch DTO import issues after wiring**
 
 Do not run yet if no files import this DTO. Build is part of Task 4 after controller wiring.
 
@@ -157,7 +158,7 @@ Do not run yet if no files import this DTO. Build is part of Task 4 after contro
 
 - Modify: `backend/nestjs/test/integration/auth-lookups.e2e-spec.ts`
 
-- [ ] **Step 1: Add user search success test**
+- [x] **Step 1: Add user search success test**
 
 Append this test inside `describe("Auth lookups", () => { ... })`:
 
@@ -212,7 +213,7 @@ Append this test inside `describe("Auth lookups", () => { ... })`:
   });
 ```
 
-- [ ] **Step 2: Add user search validation test**
+- [x] **Step 2: Add user search validation test**
 
 Append:
 
@@ -235,7 +236,7 @@ Append:
   });
 ```
 
-- [ ] **Step 3: Add user limit validation test**
+- [x] **Step 3: Add user limit validation test**
 
 Append:
 
@@ -258,7 +259,7 @@ Append:
   });
 ```
 
-- [ ] **Step 4: Add store search success test**
+- [x] **Step 4: Add store search success test**
 
 Append:
 
@@ -315,7 +316,7 @@ Append:
   });
 ```
 
-- [ ] **Step 5: Add store search validation test**
+- [x] **Step 5: Add store search validation test**
 
 Append:
 
@@ -338,7 +339,7 @@ Append:
   });
 ```
 
-- [ ] **Step 6: Run tests and verify RED**
+- [x] **Step 6: Run tests and verify RED**
 
 Run:
 
@@ -360,7 +361,7 @@ Expected:
 - Modify: `backend/nestjs/src/modules/auth/web/auth-admin.controller.ts`
 - Modify: `backend/nestjs/src/modules/auth/auth-admin.service.ts`
 
-- [ ] **Step 1: Import the query DTO**
+- [x] **Step 1: Import the query DTO**
 
 In `auth-admin.controller.ts`, add:
 
@@ -368,7 +369,7 @@ In `auth-admin.controller.ts`, add:
 import { SearchAuthLookupQueryDto } from "./dto/search-auth-lookup.query";
 ```
 
-- [ ] **Step 2: Add controller routes below `getAuthLookups`**
+- [x] **Step 2: Add controller routes below `getAuthLookups`**
 
 Add:
 
@@ -392,7 +393,7 @@ Add:
 
 Do not alter `@RequireRoles("SUPER_ADMIN")`.
 
-- [ ] **Step 3: Add service methods below `getAuthLookups`**
+- [x] **Step 3: Add service methods below `getAuthLookups`**
 
 In `auth-admin.service.ts`, add:
 
@@ -447,7 +448,7 @@ Do not change existing `getAuthLookups()`.
 
 - Modify: `backend/nestjs/src/modules/auth/auth-admin.repository.ts`
 
-- [ ] **Step 1: Add user search method after `listActiveUserLookups`**
+- [x] **Step 1: Add user search method after `listActiveUserLookups`**
 
 Add:
 
@@ -484,7 +485,7 @@ Security note:
 
 - Do not select `password_hash`, `last_login_at`, or inactive users.
 
-- [ ] **Step 2: Add store search method after `listActiveStoreLookups`**
+- [x] **Step 2: Add store search method after `listActiveStoreLookups`**
 
 Add:
 
@@ -523,7 +524,7 @@ Security note:
 - Do not return inactive stores.
 - Do not add DB indexes or migrations in this task.
 
-- [ ] **Step 3: Run targeted auth lookup test and verify GREEN**
+- [x] **Step 3: Run targeted auth lookup test and verify GREEN**
 
 Run:
 
@@ -542,7 +543,7 @@ Expected:
 
 - No code changes expected.
 
-- [ ] **Step 1: Run auth lookup tests**
+- [x] **Step 1: Run auth lookup tests**
 
 ```powershell
 cd "C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI\backend\nestjs"
@@ -553,7 +554,7 @@ Expected:
 
 - bundled lookup and searchable lookup tests pass.
 
-- [ ] **Step 2: Run auth role assignment regression**
+- [x] **Step 2: Run auth role assignment regression**
 
 ```powershell
 cd "C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI\backend\nestjs"
@@ -564,7 +565,7 @@ Expected:
 
 - role assignment behavior remains unchanged.
 
-- [ ] **Step 3: Run backend build**
+- [x] **Step 3: Run backend build**
 
 ```powershell
 cd "C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI\backend\nestjs"
@@ -575,7 +576,7 @@ Expected:
 
 - build passes.
 
-- [ ] **Step 4: Run root script guards**
+- [x] **Step 4: Run root script guards**
 
 ```powershell
 cd "C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI"
@@ -586,7 +587,7 @@ Expected:
 
 - 100/100 script guard tests pass.
 
-- [ ] **Step 5: Run root release gate**
+- [x] **Step 5: Run root release gate**
 
 ```powershell
 cd "C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI"
@@ -600,7 +601,7 @@ Expected:
 - no new audit vulnerabilities,
 - existing non-failing Vite chunk warning is acceptable.
 
-- [ ] **Step 6: Run diff check**
+- [x] **Step 6: Run diff check**
 
 ```powershell
 cd "C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI"
@@ -621,11 +622,11 @@ Expected:
 - Modify: `docs/plans/project-risk-scan-2026-04-30.md`
 - Modify: `docs/superpowers/plans/2026-04-30-auth-admin-searchable-lookups-v1.md`
 
-- [ ] **Step 1: Update this plan checklist**
+- [x] **Step 1: Update this plan checklist**
 
 Mark completed implementation and verification steps with `[x]`.
 
-- [ ] **Step 2: Update current-state**
+- [x] **Step 2: Update current-state**
 
 Add a section:
 
@@ -653,7 +654,7 @@ Dogrulama:
 - root check:release.
 ```
 
-- [ ] **Step 3: Update debt ledger**
+- [x] **Step 3: Update debt ledger**
 
 Increment closed active debt count by one and add:
 
@@ -663,11 +664,11 @@ Auth Admin Searchable Lookups V1 is counted as paid because auth-admin now has c
 
 Remove searchable auth-admin lookup from strategic backlog if present.
 
-- [ ] **Step 4: Update risk scan**
+- [x] **Step 4: Update risk scan**
 
 Record that auth-admin lookup scale now has backend V1 endpoints and the next step is optional frontend wiring only when needed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Run:
 
