@@ -4741,6 +4741,47 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: `docs/plans/backend-foundation-hardening-plan-v1.md` icindeki P0-1 Import decision evidence adimini planlayip kucuk bir slice olarak uygulamak.
 
+## Son Import Decision Evidence V1
+
+30 Nisan 2026 itibariyla admin import batch detail ekranina operator karar kaniti eklendi.
+
+Referans:
+
+- `docs/plans/import-decision-evidence-v1.md`
+- `admin-web/src/pages/ImportBatchDetailPage.tsx`
+- `admin-web/e2e/integration-surfaces.spec.ts`
+
+Kilitlenen davranis:
+
+- Ekran mevcut batch detail, data quality, reconciliation, retry ve mapping evidence verisinden tek bir operator karari uretir.
+- Karar dili `Go`, `Conditional Go`, `No-Go` olarak gorunur.
+- Panel row accounting, quality guard, retry evidence ve dependency mapping gerekcesini gosterir.
+- Backend endpoint, import, retry, mapping, materialization ve scoring davranisina dokunulmadi.
+
+Karar siniri:
+
+- `Go`: satir muhasebesi temiz, quality issue yok, retryable row yok, dependency block yok.
+- `Conditional Go`: evidence incelenebilir ama quality issue, retryable row, mapping ihtiyaci veya reconciliation bekleme durumu var.
+- `No-Go`: row accounting mismatch, unaccounted/pending row, blocked dependency veya failed/stuck state var.
+
+Dogrulama:
+
+- TDD kirmizi test: karar paneli yokken `admin import batch detail explains KPI row lineage evidence` Playwright testi beklenen sekilde dustu.
+- Frontend build passed.
+- Targeted Playwright passed: 1/1.
+- Root `npm.cmd run check:release` passed:
+  - root script tests 63/63,
+  - backend release gate passed: lint, 74 test suite / 472 test, build, audit 0 vulnerability,
+  - frontend release gate passed: lint, script tests, build, 46 Playwright test, audit 0 vulnerability.
+
+CODEX durust yorum:
+
+- Bu tam olmasi gereken tipte bir zemin guclendirme: yeni motor acmadan mevcut kaniti karar diline cevirdik.
+- Operator artik "bu batch ile ilerleyebilir miyim?" sorusunu quality/reconciliation/error tablolarina tek tek dagilmadan gorebilir.
+- En kritik sey panelin sadece ozet kalmasi; backend truth yine import rows, reconciliation, mapping, retry ve materialization hattinda.
+
+Siradaki mantikli adim: P0-2 Scope/auth regression matrix adimina gecmek.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:

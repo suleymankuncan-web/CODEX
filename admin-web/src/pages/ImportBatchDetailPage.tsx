@@ -8,6 +8,7 @@ import {
   MetricAccent,
   ScreenState,
   StatusBar,
+  type Tone,
 } from '../components/dashboard-primitives'
 import { downloadCsv } from '../lib/download-csv'
 import {
@@ -17,6 +18,9 @@ import {
   getImportBatchDetail,
   getImportBatchErrors,
   getImportBatchReconciliation,
+  type ImportBatchDetail,
+  type ImportBatchError,
+  type ImportBatchReconciliation,
   retryImportBatch,
 } from '../features/integrations/api'
 import { formatDateTime, getErrorMessage, mapHealthTone } from '../lib/format'
@@ -145,6 +149,7 @@ export function ImportBatchDetailPage() {
   const errors = errorItems
   const auditItems = auditQuery.data?.items ?? []
   const qualityIssueItems = detail.qualityIssueSummary?.items ?? []
+  const importDecision = buildImportDecisionEvidence({ detail, reconciliation, errors })
 
   return (
     <section className="page-stack">
@@ -176,6 +181,24 @@ export function ImportBatchDetailPage() {
           <div className="inline-state inline-state-accent">{feedback}</div>
         </section>
       ) : null}
+
+      <section className="panel" aria-label="Import decision evidence">
+        <div className="panel-heading">
+          <div>
+            <div className="eyebrow">Operator gate</div>
+            <h3>Operator decision evidence</h3>
+          </div>
+          <span className={`status-pill status-pill-${importDecision.tone}`}>
+            {importDecision.label}
+          </span>
+        </div>
+        <p className="panel-copy">{importDecision.summary}</p>
+        <div className="reconciliation-grid">
+          {importDecision.factors.map(([label, value]) => (
+            <ReconciliationStat key={label} label={label} value={value} />
+          ))}
+        </div>
+      </section>
 
       <section className="two-up-grid">
         <article className="panel">
@@ -616,6 +639,109 @@ function ReconciliationStat(input: { label: string; value: string }) {
 
 function formatRowCount(count: number) {
   return `${count} ${count === 1 ? 'row' : 'rows'}`
+}
+
+type ImportDecisionLabel = 'Go' | 'Conditional Go' | 'No-Go'
+
+type ImportDecisionEvidence = {
+  label: ImportDecisionLabel
+  tone: Tone
+  summary: string
+  factors: [string, string][]
+}
+
+function buildImportDecisionEvidence(input: {
+  detail: ImportBatchDetail
+  reconciliation?: ImportBatchReconciliation
+  errors: ImportBatchError[]
+}): ImportDecisionEvidence {
+  const { detail, reconciliation, errors } = input
+  const highSeverityRows = detail.qualityIssueSummary?.highSeverityRows ?? 0
+  const totalIssueRows = detail.qualityIssueSummary?.totalIssueRows ?? 0
+  const retryableRows = Math.max(
+    detail.rowStatusSummary.retryableError,
+    reconciliation?.rowStatusSummary.retryableError ?? 0,
+  )
+  const mappingRows = errors.filter((error) => error.mappingCandidate).length
+  const blockedByEntityTypes = Array.from(
+    new Set([
+      ...detail.blockedByEntityTypes,
+      ...(reconciliation?.reconciliation.blockedByEntityTypes ?? []),
+    ]),
+  )
+  const rowAccounting = getRowAccountingStatus(reconciliation)
+  const hasRowAccountingFailure =
+    reconciliation !== undefined &&
+    (!reconciliation.totals.countsMatchRecordCount || reconciliation.totals.unaccountedRows > 0)
+  const hasPendingRows =
+    detail.rowStatusSummary.pending > 0 || (reconciliation?.reconciliation.hasPendingRows ?? false)
+  const isStoppedState =
+    detail.batch.status === 'failed' ||
+    detail.batch.healthState === 'stuck' ||
+    detail.healthState === 'stuck'
+  const hasFailures = reconciliation?.reconciliation.hasFailures ?? detail.batch.errorCount > 0
+  const hasConditionalEvidence =
+    highSeverityRows > 0 ||
+    totalIssueRows > 0 ||
+    retryableRows > 0 ||
+    mappingRows > 0 ||
+    hasFailures
+
+  let label: ImportDecisionLabel = 'Go'
+  let tone: Tone = 'calm'
+  let summary = 'Batch evidence is clean: accounted rows match, no quality issues, no retryable rows.'
+
+  if (!reconciliation) {
+    label = 'Conditional Go'
+    tone = 'warning'
+    summary = 'Waiting for reconciliation evidence before treating this batch as clean.'
+  } else if (hasRowAccountingFailure || hasPendingRows || blockedByEntityTypes.length > 0 || isStoppedState) {
+    label = 'No-Go'
+    tone = 'danger'
+    summary = 'Stop: fix row accounting, pending rows, blocked dependencies, or stuck status before proceeding.'
+  } else if (hasConditionalEvidence) {
+    label = 'Conditional Go'
+    tone = 'warning'
+    summary = 'Fix quality issues, unresolved mappings, or retryable rows before treating this batch as clean.'
+  }
+
+  return {
+    label,
+    tone,
+    summary,
+    factors: [
+      ['Row accounting', rowAccounting],
+      ['Quality guard', formatQualityGuardStatus(highSeverityRows, totalIssueRows)],
+      ['Retry evidence', formatRetryEvidenceStatus(retryableRows, detail.canRetryNow)],
+      ['Dependency mapping', formatDependencyMappingStatus(blockedByEntityTypes, mappingRows)],
+    ],
+  }
+}
+
+function getRowAccountingStatus(reconciliation?: ImportBatchReconciliation) {
+  if (!reconciliation) return 'Waiting for reconciliation'
+  if (reconciliation.totals.unaccountedRows > 0) {
+    return `${formatRowCount(reconciliation.totals.unaccountedRows)} unaccounted`
+  }
+  if (!reconciliation.totals.countsMatchRecordCount) return 'Record count mismatch'
+  return 'Accounted and matched'
+}
+
+function formatQualityGuardStatus(highSeverityRows: number, totalIssueRows: number) {
+  if (highSeverityRows > 0) return `${highSeverityRows} high severity ${highSeverityRows === 1 ? 'row' : 'rows'}`
+  if (totalIssueRows > 0) return `${formatRowCount(totalIssueRows)} classified`
+  return 'No classified issues'
+}
+
+function formatRetryEvidenceStatus(retryableRows: number, canRetryNow: boolean) {
+  if (retryableRows === 0) return 'No retry needed'
+  return canRetryNow ? 'Retry available' : 'Retry blocked'
+}
+
+function formatDependencyMappingStatus(blockedByEntityTypes: string[], mappingRows: number) {
+  if (blockedByEntityTypes.length > 0) return `Blocked by ${blockedByEntityTypes.join(', ')}`
+  if (mappingRows > 0) return `${mappingRows} mapping ${mappingRows === 1 ? 'row' : 'rows'} pending`
+  return 'No dependency block'
 }
 
 function mapQualitySeverityTone(severity: string) {

@@ -20,6 +20,17 @@ test.beforeEach(async ({ page }) => {
 test('admin import batch detail explains KPI row lineage evidence', async ({ page }) => {
   await page.goto('/admin/integrations/batch-kpi-lineage-ui-1')
 
+  const decisionPanel = page.getByLabel('Import decision evidence')
+  await expect(decisionPanel.getByRole('heading', { name: 'Operator decision evidence' })).toBeVisible()
+  await expect(decisionPanel.getByText('Conditional Go')).toBeVisible()
+  await expect(decisionPanel.getByText('Fix quality issues, unresolved mappings, or retryable rows before treating this batch as clean.')).toBeVisible()
+  await expect(decisionPanel.getByText('Row accounting')).toBeVisible()
+  await expect(decisionPanel.getByText('Accounted and matched')).toBeVisible()
+  await expect(decisionPanel.getByText('Quality guard')).toBeVisible()
+  await expect(decisionPanel.getByText('1 high severity row')).toBeVisible()
+  await expect(decisionPanel.getByText('Retry evidence')).toBeVisible()
+  await expect(decisionPanel.getByText('Retry available')).toBeVisible()
+
   const lineagePanel = page.getByLabel('Import row lineage evidence')
   await expect(lineagePanel.getByRole('heading', { name: 'Source row lineage' })).toBeVisible()
   await expect(lineagePanel.getByText('Trace-ready rows')).toBeVisible()

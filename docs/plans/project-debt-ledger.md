@@ -17,7 +17,7 @@ Date: 30 April 2026
 
 Current count:
 
-- Closed active debts: 66
+- Closed active debts: 67
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -94,6 +94,7 @@ These are counted as paid because they have implementation or documentation evid
 64. Source-Agnostic Import Boundary V1
 65. Master Data Bootstrap Admin Dry-Run Evidence V1
 66. Master Data Bootstrap Pilot Smoke Runbook V1
+67. Import Decision Evidence V1
 
 Ranking Included Snapshot Contract V1 is counted as paid because `GET /reports/leaderboards/closed` now returns `includedSnapshotRuns`, daily ranking returns the included closed snapshot, monthly ranking returns every completed daily snapshot included in the month calculation, and `/store/rankings` uses that backend contract instead of frontend inference.
 
@@ -108,6 +109,8 @@ Source-Agnostic Import Boundary V1 is counted as paid because Excel is locked as
 Master Data Bootstrap Admin Dry-Run Evidence V1 is counted as paid because `/admin/master-data/:batchId` now exposes backend promotion-readiness row evidence before any live promotion command is executed. Operators can see ready/already-promoted/blocked row state, promoted entity evidence, and block reasons while promotion commands remain explicit and unchanged. Reference: `docs/plans/master-data-bootstrap-admin-dry-run-evidence-v1.md`.
 
 Master Data Bootstrap Pilot Smoke Runbook V1 is counted as paid because the first real baseline promotion path is now an operator-controlled smoke with stage, validate, row evidence review, promotion dry-run review, scoped pilot promotion, sanitized evidence, and Go / Conditional Go / No-Go rules. Reference: `docs/plans/master-data-bootstrap-pilot-smoke-runbook.md`.
+
+Import Decision Evidence V1 is counted as paid because `/admin/integrations/:batchId` now summarizes existing batch detail, quality, reconciliation, retry, and mapping evidence into an operator-visible `Go`, `Conditional Go`, or `No-Go` decision without changing backend import, scoring, materialization, mapping, retry, or endpoint behavior. Reference: `docs/plans/import-decision-evidence-v1.md`.
 
 Production-Ready Migration System V1 is counted as paid because SQL migrations are tracked in `audit.schema_migration`, checksum drift is rejected, failed runs are recorded with error evidence, the HTTP migration endpoint is disabled in production, and `npm.cmd run db:migrate` is the approved CLI/CI migration path.
 
