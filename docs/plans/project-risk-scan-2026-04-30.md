@@ -154,6 +154,11 @@ If no external evidence is available, choose the next small guard through the in
 The best local candidates to consider next are:
 
 1. real staging/source/master-data evidence if it becomes available,
-2. searchable auth-admin lookup design if broad user rollout approaches,
+2. searchable auth-admin lookup implementation plan if broad user rollout approaches,
 3. reporting service boundary review if a concrete reporting API/UI change appears,
 4. targeted cleanup of ignored local generated files if the user wants workspace hygiene.
+
+Note:
+
+- Searchable auth-admin lookup V1 now has a design spec at `docs/superpowers/specs/2026-04-30-auth-admin-searchable-lookups-v1-design.md`.
+- No endpoint, frontend, schema, or repository behavior has been changed by that spec.
