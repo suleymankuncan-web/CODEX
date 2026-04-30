@@ -150,6 +150,35 @@ Deferred after this slice:
 - Do not split master-data until a separate, mechanical boundary is proven.
 - Review `competition.service.spec.ts`, `snapshot-run.e2e-spec.ts`, and `auth-scope.e2e-spec.ts` as lower-risk future candidates.
 
+## Fifth Safe Slice
+
+Fifth safe slice: split competition stage package plan repository tests out of `backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.spec.ts`.
+
+Target files:
+
+- `backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.spec.ts`
+- `backend/nestjs/src/modules/store-ops/infrastructure/competition-stage-package-plan.repository.spec.ts`
+- `backend/nestjs/src/modules/store-ops/infrastructure/competition-team-template.repository.spec.ts`
+
+Expected behavior:
+
+- The same 27 competition repository tests still run across the three files.
+- The 10 stage creation, execution, finalization, score, and scope tests remain in `competition.repository.spec.ts`.
+- The 11 stage package plan draft/review/clone/audit tests move to `competition-stage-package-plan.repository.spec.ts`.
+- The 6 team template CRUD/clone/list tests remain in `competition-team-template.repository.spec.ts`.
+- Test names remain unchanged.
+- Production code is not changed.
+
+Reason:
+
+- Stage package plan lifecycle is a natural boundary from stage execution/finalization and team template management.
+- This keeps the repository tests small enough to scan without extracting broad shared helpers.
+
+Deferred after this slice:
+
+- Do not split master-data until a separate, mechanical boundary is proven.
+- Next low-risk candidates remain `competition.service.spec.ts`, `snapshot-run.e2e-spec.ts`, and `auth-scope.e2e-spec.ts`.
+
 ## Verification
 
 Targeted:
@@ -170,7 +199,7 @@ Competition repository split:
 
 ```powershell
 cd "C:\Users\suley\OneDrive\MasaÃ¼stÃ¼\WEBSÄ°TE Ã‡ALIÅMASI\backend\nestjs"
-npm.cmd test -- --runInBand src/modules/store-ops/infrastructure/competition.repository.spec.ts src/modules/store-ops/infrastructure/competition-team-template.repository.spec.ts
+npm.cmd test -- --runInBand src/modules/store-ops/infrastructure/competition.repository.spec.ts src/modules/store-ops/infrastructure/competition-stage-package-plan.repository.spec.ts src/modules/store-ops/infrastructure/competition-team-template.repository.spec.ts
 ```
 
 Guard:
@@ -197,4 +226,4 @@ The risk becomes real only if we start inventing clever helpers, rewriting asser
 
 ## Next Logical Step
 
-After the competition repository split, review remaining large backend specs by risk. The next candidate should be chosen from `competition.service.spec.ts`, `snapshot-run.e2e-spec.ts`, or `auth-scope.e2e-spec.ts` only if the boundary is mechanical. Do not split master-data until that work has its own explicit plan.
+After the competition stage package plan split, review remaining large backend specs by risk. The next candidate should be chosen from `competition.service.spec.ts`, `snapshot-run.e2e-spec.ts`, or `auth-scope.e2e-spec.ts` only if the boundary is mechanical. Do not split master-data until that work has its own explicit plan.

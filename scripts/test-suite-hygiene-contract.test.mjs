@@ -88,7 +88,21 @@ const integrationSourceExpectedTestNames = [
 ]
 const competitionRepositorySplitFiles = [
   'backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.spec.ts',
+  'backend/nestjs/src/modules/store-ops/infrastructure/competition-stage-package-plan.repository.spec.ts',
   'backend/nestjs/src/modules/store-ops/infrastructure/competition-team-template.repository.spec.ts',
+]
+const competitionStagePackagePlanExpectedTestNames = [
+  'lists stage package plan drafts for a competition',
+  'saves a stage package plan draft and writes audit metadata',
+  'updates a draft stage package plan and writes audit metadata',
+  'rejects updating an executed stage package plan',
+  'cancels a draft stage package plan and writes audit metadata',
+  'submits a draft stage package plan and writes audit metadata',
+  'approves a submitted stage package plan and writes audit metadata',
+  'rejects a submitted stage package plan and writes audit metadata',
+  'clones a rejected stage package plan as a clean draft and writes audit metadata',
+  'rejects cloning a non-rejected stage package plan',
+  'lists stage package plan audit events',
 ]
 const competitionTeamTemplateExpectedTestNames = [
   'lists active team templates with store memberships',
@@ -198,7 +212,7 @@ test('import batch e2e is split without dropping evidence coverage', () => {
   assert.ok(largestLineCount < 1500, `largest split import test file has ${largestLineCount} lines`)
 })
 
-test('competition repository tests are split without dropping team template coverage', () => {
+test('competition repository tests are split without dropping package or template coverage', () => {
   let totalTests = 0
   let largestLineCount = 0
   let combinedText = ''
@@ -213,8 +227,13 @@ test('competition repository tests are split without dropping team template cove
   }
 
   assert.equal(totalTests, 27)
-  assert.equal([...readText(competitionRepositorySplitFiles[0]).matchAll(/\bit\s*\(/g)].length, 21)
-  assert.equal([...readText(competitionRepositorySplitFiles[1]).matchAll(/\bit\s*\(/g)].length, 6)
+  assert.equal([...readText(competitionRepositorySplitFiles[0]).matchAll(/\bit\s*\(/g)].length, 10)
+  assert.equal([...readText(competitionRepositorySplitFiles[1]).matchAll(/\bit\s*\(/g)].length, 11)
+  assert.equal([...readText(competitionRepositorySplitFiles[2]).matchAll(/\bit\s*\(/g)].length, 6)
+  for (const testName of competitionStagePackagePlanExpectedTestNames) {
+    const exactOccurrences = [...combinedText.matchAll(new RegExp(`it\\("${testName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'g'))].length
+    assert.equal(exactOccurrences, 1, `${testName} must appear exactly once`)
+  }
   for (const testName of competitionTeamTemplateExpectedTestNames) {
     const exactOccurrences = [...combinedText.matchAll(new RegExp(`it\\("${testName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'g'))].length
     assert.equal(exactOccurrences, 1, `${testName} must appear exactly once`)
