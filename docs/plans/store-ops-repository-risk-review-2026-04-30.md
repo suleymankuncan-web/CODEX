@@ -220,6 +220,40 @@ Status: `planned_investment`
 
 The correct near-term rule is: do not keep adding unrelated personnel, checklist, and org behavior here without a boundary decision. The first actual split should happen only when a concrete workforce/personnel or checklist change touches one of the named boundaries.
 
+## Implementation Update - 30 April 2026
+
+`WorkforceRequestRepository` Split V1 was implemented as a controlled architecture cleanup after explicit approval.
+
+Changed:
+
+- seller-code and offboarding request lifecycle persistence moved to `backend/nestjs/src/modules/store-ops/infrastructure/workforce-request.repository.ts`,
+- `WorkforceService` now uses the new repository for seller-code and offboarding calls,
+- `StoreOpsRepository` keeps store scope listing, target personnel rows, headcount gap, and legacy checklist instance writes.
+
+Not changed:
+
+- DB schema, migrations, indexes,
+- DTOs, controllers, route paths,
+- authorization guards and action-scope behavior,
+- checklist behavior,
+- target distribution behavior,
+- org/store scope behavior,
+- headcount gap behavior,
+- master-data promotion behavior,
+- audit event names and metadata keys.
+
+Verification:
+
+- targeted workforce seller-code and offboarding e2e tests passed,
+- `store-ops.repository.spec.ts` passed,
+- backend build passed,
+- root script guard passed,
+- root `check:release` passed.
+
+Remaining planned investment:
+
+- legacy checklist write relocation, region queue indexes, pagination, audit actor-column normalization, and global audit feed remain future-only and require separate evidence or a separate plan.
+
 ## CODEX DURUST YORUM
 
 This file is not a mess; it is an older operational hub that now deserves boundaries because the project has grown up around it.

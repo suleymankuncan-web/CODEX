@@ -41,7 +41,7 @@ Decision:
 - Pick one only when a concrete feature or defect touches a clear boundary.
 - Any split should be planned as a small domain slice with targeted tests and root `check:release`.
 - `integration.repository.ts` has now been reviewed separately and is treated as a planned investment, not an active refactor target.
-- `store-ops.repository.ts` has now been reviewed separately and is treated as a planned investment, not an active refactor target.
+- `store-ops.repository.ts` has now been reviewed separately; the workforce request slice was extracted into `WorkforceRequestRepository`, while remaining checklist/read boundaries are treated as planned investments, not active refactor targets.
 
 Reference:
 

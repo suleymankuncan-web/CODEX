@@ -2,10 +2,14 @@ import { createHash } from "node:crypto";
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { buildCommandResponse, buildListResponse } from "../../../shared/http/response-builders";
 import { StoreOpsRepository } from "../infrastructure/store-ops.repository";
+import { WorkforceRequestRepository } from "../infrastructure/workforce-request.repository";
 
 @Injectable()
 export class WorkforceService {
-  constructor(private readonly storeOpsRepository: StoreOpsRepository) {}
+  constructor(
+    private readonly storeOpsRepository: StoreOpsRepository,
+    private readonly workforceRequestRepository: WorkforceRequestRepository,
+  ) {}
 
   async getStoreHeadcountGap(input: {
     storeId: string;
@@ -16,7 +20,7 @@ export class WorkforceService {
   }
 
   async getSellerCodeReference(storeType: "franchise") {
-    const lastSellerCode = await this.storeOpsRepository.getLatestFranchiseSellerCode();
+    const lastSellerCode = await this.workforceRequestRepository.getLatestFranchiseSellerCode();
 
     return {
       storeType,
@@ -40,7 +44,7 @@ export class WorkforceService {
     const actorStoreIds = input.actorActionScope?.assignedStoreIds?.length
       ? input.actorActionScope.assignedStoreIds
       : input.actorScope.storeIds;
-    const rows = await this.storeOpsRepository.listSellerCodeRequests({
+    const rows = await this.workforceRequestRepository.listSellerCodeRequests({
       companyIds: input.actorScope.companyIds,
       regionIds: input.actorScope.regionIds,
       storeIds: input.actorScope.companyIds.length > 0 || input.actorScope.regionIds.length > 0 ? [] : actorStoreIds,
@@ -70,7 +74,7 @@ export class WorkforceService {
       throw new ForbiddenException("Requested store is outside assigned action stores");
     }
 
-    const rows = await this.storeOpsRepository.listPositionOptionsForStore({
+    const rows = await this.workforceRequestRepository.listPositionOptionsForStore({
       storeId: input.storeId,
     });
 
@@ -103,7 +107,7 @@ export class WorkforceService {
       throw new ForbiddenException("Requested store is outside assigned action stores");
     }
 
-    const rows = await this.storeOpsRepository.listActiveStoreEmployees({
+    const rows = await this.workforceRequestRepository.listActiveStoreEmployees({
       storeId: input.storeId,
     });
 
@@ -153,17 +157,17 @@ export class WorkforceService {
       throw new ForbiddenException("Requested store is outside assigned action stores");
     }
 
-    const store = await this.storeOpsRepository.getStoreForSellerCodeRequest(input.storeId);
+    const store = await this.workforceRequestRepository.getStoreForSellerCodeRequest(input.storeId);
     if (!store) {
       throw new NotFoundException(`Store not found: ${input.storeId}`);
     }
 
     const lastReferenceSellerCode =
       store.store_type === "franchise"
-        ? await this.storeOpsRepository.getLatestFranchiseSellerCode()
+        ? await this.workforceRequestRepository.getLatestFranchiseSellerCode()
         : null;
 
-    const request = await this.storeOpsRepository.createSellerCodeRequest({
+    const request = await this.workforceRequestRepository.createSellerCodeRequest({
       companyId: store.company_id,
       regionId: store.region_id,
       storeId: store.store_id,
@@ -197,7 +201,7 @@ export class WorkforceService {
     sellerCode: string;
     reviewNote?: string;
   }) {
-    const existing = await this.storeOpsRepository.getSellerCodeRequestById(input.requestId);
+    const existing = await this.workforceRequestRepository.getSellerCodeRequestById(input.requestId);
     if (!existing) {
       throw new NotFoundException(`Seller code request not found: ${input.requestId}`);
     }
@@ -211,12 +215,12 @@ export class WorkforceService {
       throw new BadRequestException("Franchise seller code must use FM followed by digits");
     }
 
-    const duplicateCount = await this.storeOpsRepository.countSellerCodeDuplicates(sellerCode);
+    const duplicateCount = await this.workforceRequestRepository.countSellerCodeDuplicates(sellerCode);
     if (duplicateCount > 0) {
       throw new BadRequestException(`Seller code already exists: ${sellerCode}`);
     }
 
-    const request = await this.storeOpsRepository.approveSellerCodeRequest({
+    const request = await this.workforceRequestRepository.approveSellerCodeRequest({
       request: existing,
       sellerCode,
       actorUserId: input.actorUserId,
@@ -237,7 +241,7 @@ export class WorkforceService {
     requestId: string;
     reviewNote: string;
   }) {
-    const existing = await this.storeOpsRepository.getSellerCodeRequestById(input.requestId);
+    const existing = await this.workforceRequestRepository.getSellerCodeRequestById(input.requestId);
     if (!existing) {
       throw new NotFoundException(`Seller code request not found: ${input.requestId}`);
     }
@@ -251,7 +255,7 @@ export class WorkforceService {
       throw new BadRequestException("Review note is required when returning a seller code request");
     }
 
-    const request = await this.storeOpsRepository.rejectSellerCodeRequest({
+    const request = await this.workforceRequestRepository.rejectSellerCodeRequest({
       request: existing,
       actorUserId: input.actorUserId,
       reviewNote,
@@ -286,7 +290,7 @@ export class WorkforceService {
     employmentType: "full_time" | "part_time" | "temporary";
     requestReason?: string;
   }) {
-    const existing = await this.storeOpsRepository.getSellerCodeRequestById(input.requestId);
+    const existing = await this.workforceRequestRepository.getSellerCodeRequestById(input.requestId);
     if (!existing) {
       throw new NotFoundException(`Seller code request not found: ${input.requestId}`);
     }
@@ -301,10 +305,10 @@ export class WorkforceService {
 
     const lastReferenceSellerCode =
       existing.store_type === "franchise"
-        ? await this.storeOpsRepository.getLatestFranchiseSellerCode()
+        ? await this.workforceRequestRepository.getLatestFranchiseSellerCode()
         : null;
 
-    const request = await this.storeOpsRepository.resubmitSellerCodeRequest({
+    const request = await this.workforceRequestRepository.resubmitSellerCodeRequest({
       request: existing,
       firstName: input.firstName.trim(),
       lastName: input.lastName.trim(),
@@ -342,7 +346,7 @@ export class WorkforceService {
     const actorStoreIds = input.actorActionScope?.assignedStoreIds?.length
       ? input.actorActionScope.assignedStoreIds
       : input.actorScope.storeIds;
-    const rows = await this.storeOpsRepository.listOffboardingRequests({
+    const rows = await this.workforceRequestRepository.listOffboardingRequests({
       companyIds: input.actorScope.companyIds,
       regionIds: input.actorScope.regionIds,
       storeIds: input.actorScope.companyIds.length > 0 || input.actorScope.regionIds.length > 0 ? [] : actorStoreIds,
@@ -379,7 +383,7 @@ export class WorkforceService {
       throw new ForbiddenException("Requested store is outside assigned action stores");
     }
 
-    const employee = await this.storeOpsRepository.getActiveStoreEmployeeForOffboarding({
+    const employee = await this.workforceRequestRepository.getActiveStoreEmployeeForOffboarding({
       storeId: input.storeId,
       employeeId: input.employeeId,
     });
@@ -387,7 +391,7 @@ export class WorkforceService {
       throw new NotFoundException(`Active employee not found for store: ${input.employeeId}`);
     }
 
-    const request = await this.storeOpsRepository.createOffboardingRequest({
+    const request = await this.workforceRequestRepository.createOffboardingRequest({
       companyId: employee.company_id,
       regionId: employee.region_id,
       storeId: employee.store_id,
@@ -412,7 +416,7 @@ export class WorkforceService {
     requestId: string;
     reviewNote?: string;
   }) {
-    const existing = await this.storeOpsRepository.getOffboardingRequestById(input.requestId);
+    const existing = await this.workforceRequestRepository.getOffboardingRequestById(input.requestId);
     if (!existing) {
       throw new NotFoundException(`Offboarding request not found: ${input.requestId}`);
     }
@@ -421,7 +425,7 @@ export class WorkforceService {
       throw new BadRequestException("Offboarding request is not pending HR approval");
     }
 
-    const request = await this.storeOpsRepository.approveOffboardingRequest({
+    const request = await this.workforceRequestRepository.approveOffboardingRequest({
       request: existing,
       actorUserId: input.actorUserId,
       reviewNote: input.reviewNote?.trim(),
@@ -441,7 +445,7 @@ export class WorkforceService {
     requestId: string;
     reviewNote: string;
   }) {
-    const existing = await this.storeOpsRepository.getOffboardingRequestById(input.requestId);
+    const existing = await this.workforceRequestRepository.getOffboardingRequestById(input.requestId);
     if (!existing) {
       throw new NotFoundException(`Offboarding request not found: ${input.requestId}`);
     }
@@ -455,7 +459,7 @@ export class WorkforceService {
       throw new BadRequestException("Review note is required when returning an offboarding request");
     }
 
-    const request = await this.storeOpsRepository.rejectOffboardingRequest({
+    const request = await this.workforceRequestRepository.rejectOffboardingRequest({
       request: existing,
       actorUserId: input.actorUserId,
       reviewNote,
@@ -486,7 +490,7 @@ export class WorkforceService {
     terminationReason: string;
     requestReason: string;
   }) {
-    const existing = await this.storeOpsRepository.getOffboardingRequestById(input.requestId);
+    const existing = await this.workforceRequestRepository.getOffboardingRequestById(input.requestId);
     if (!existing) {
       throw new NotFoundException(`Offboarding request not found: ${input.requestId}`);
     }
@@ -499,7 +503,7 @@ export class WorkforceService {
       throw new ForbiddenException("Requested store is outside assigned action stores");
     }
 
-    const employee = await this.storeOpsRepository.getActiveStoreEmployeeForOffboarding({
+    const employee = await this.workforceRequestRepository.getActiveStoreEmployeeForOffboarding({
       storeId: existing.store_id,
       employeeId: input.employeeId,
     });
@@ -507,7 +511,7 @@ export class WorkforceService {
       throw new NotFoundException(`Active employee not found for store: ${input.employeeId}`);
     }
 
-    const request = await this.storeOpsRepository.resubmitOffboardingRequest({
+    const request = await this.workforceRequestRepository.resubmitOffboardingRequest({
       request: existing,
       companyId: employee.company_id,
       regionId: employee.region_id,
