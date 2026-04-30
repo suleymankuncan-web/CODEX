@@ -45,6 +45,39 @@ npm run check:release
 
 CI uses Node.js 24 to match the current local runtime family used by the project scripts.
 
+## Fresh DB Migration Smoke Policy
+
+Docker-dependent fresh DB smoke is intentionally not part of the mandatory root `check:release` gate.
+
+Reason:
+
+- the smoke needs local Docker PostgreSQL,
+- CI and lightweight review environments may not have Docker/PostgreSQL available,
+- release readiness should not fail just because that optional local service is unavailable.
+
+The smoke command remains available:
+
+```powershell
+npm.cmd run smoke:migration:fresh-db
+```
+
+Run this smoke as a manual release preflight when DB schema or migration files changed, especially when touching:
+
+- `db/schema.sql`
+- `db/migrations/*.sql`
+- migration runner code
+- database bootstrap or migration tracking behavior
+
+The required evidence is sanitized command output showing:
+
+- migration file count,
+- `audit.schema_migration` row count,
+- succeeded migration count,
+- failed migration count,
+- core schema table counts for `audit`, `ops`, `rpt`, and `stg`.
+
+If Docker/local PostgreSQL is unavailable, record a written Conditional Go with owner/date instead of pretending the smoke ran.
+
 ## Rule
 
 Do not claim release readiness unless the official root gate passes, or a narrower targeted check is explicitly documented as a non-release verification.

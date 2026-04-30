@@ -134,6 +134,21 @@ Sanitized result:
 }
 ```
 
+## Release Gate Policy
+
+Docker-dependent fresh DB smoke is intentionally not part of the mandatory root `check:release` gate.
+
+Run `npm.cmd run smoke:migration:fresh-db` as a manual release preflight when DB schema or migration files changed.
+
+Examples:
+
+- `db/schema.sql`
+- `db/migrations/*.sql`
+- migration runner code
+- database bootstrap or migration tracking behavior
+
+If Docker/local PostgreSQL is unavailable, record a written Conditional Go with owner/date. Do not silently skip the smoke when migration behavior changed.
+
 ## Next Logical Step
 
 Keep this smoke as the first local database confidence check before larger backend/data changes. Real staging evidence remains a separate step when real staging credentials and seeded data exist.

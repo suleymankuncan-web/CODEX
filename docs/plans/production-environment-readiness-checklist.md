@@ -103,6 +103,7 @@ Allowed sign-off states:
 - [ ] `npm.cmd run db:migrate` is the approved migration execution command.
 - [ ] `/api/admin/migrations/run` is disabled in production by `MIGRATIONS_HTTP_ENABLED=false` or production default behavior.
 - [ ] `audit.schema_migration` contains succeeded records for applied migration files.
+- [ ] If DB schema or migration files changed, `npm.cmd run smoke:migration:fresh-db` has passed locally or has a written Conditional Go with owner/date because Docker/local PostgreSQL was unavailable.
 - [ ] `036_mobile_device_sessions.sql` is applied before mobile app pilot users are enabled.
 - [ ] Failed migration recovery plan is written before running production migrations.
 - [ ] Runtime app starts after migrations without requiring schema write privileges.

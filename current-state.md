@@ -5050,10 +5050,35 @@ Kanıt:
 
 Siradaki mantikli adim: release gate ile commit etmek; sonra yeni modul acmadan once intake gate ile kucuk backend saglamlastirma veya real staging evidence secmek.
 
+## Son Migration Smoke Release Preflight Policy V1
+
+30 Nisan 2026 itibariyla Migration Fresh DB Smoke V1 release kararina baglandi.
+
+Referans:
+
+- `docs/plans/release-check-gate.md`
+- `docs/plans/production-environment-readiness-checklist.md`
+- `docs/plans/migration-fresh-db-smoke-v1.md`
+- `scripts/release-gate-contract.test.mjs`
+
+Kilitlenen karar:
+
+- Docker-dependent fresh DB smoke mandatory root `check:release` gate icine alinmadi.
+- `npm.cmd run check:release` backend + frontend release gate olarak kalir.
+- `npm.cmd run smoke:migration:fresh-db`, DB schema veya migration files degistiginde manuel release preflight olarak zorunludur.
+- Docker/local PostgreSQL yoksa sessiz gecis yoktur; owner/date iceren written Conditional Go gerekir.
+
+Kapanis notu:
+
+- Bu karar release gate'i ortam bagimliligiyle kirmaz.
+- Ayni zamanda DB/migration degisikligini smoke kaniti olmadan sessizce gecirmez.
+
+Siradaki mantikli adim: target guard ve root release gate ile commit etmek; sonra yeni modul acmadan intake gate ile kucuk backend saglamlastirma veya real staging evidence secmek.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
 
 ```text
-current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. readScope/actionScope ayrimi ve assignedStoreIds modeli korunuyor. Test Suite Hygiene V1 ilk slice kapandi. Operator Evidence Consistency Pass V1 kapandi. Backup Restore Drill Runbook V1 kapandi. Backup Restore Local Drill Evidence alindi; prod DB'ye dokunulmadi; bos disposable DB migration 42/42 succeeded ve restore proof source/restore schema counts matched. Migration Fresh DB Smoke V1 eklendi ve local Docker PostgreSQL uzerinde 42/42 succeeded, failed=0, audit=3, ops=39, rpt=10, stg=12 kaniti alindi. Siradaki mantikli adim release gate ile commit etmek; sonra yeni modul acmadan intake gate ile secim yapmak.
+current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. readScope/actionScope ayrimi ve assignedStoreIds modeli korunuyor. Test Suite Hygiene V1 ilk slice kapandi. Operator Evidence Consistency Pass V1 kapandi. Backup Restore Drill Runbook V1 kapandi. Backup Restore Local Drill Evidence alindi; prod DB'ye dokunulmadi; bos disposable DB migration 42/42 succeeded ve restore proof source/restore schema counts matched. Migration Fresh DB Smoke V1 eklendi ve local Docker PostgreSQL uzerinde 42/42 succeeded, failed=0, audit=3, ops=39, rpt=10, stg=12 kaniti alindi. Migration Smoke Release Preflight Policy V1 karari: Docker-dependent smoke mandatory check:release icinde degil, DB schema/migration degisirse manuel preflight veya written Conditional Go zorunlu. Siradaki mantikli adim target guard ve release gate ile commit etmek; sonra yeni modul acmadan intake gate ile secim yapmak.
 ```

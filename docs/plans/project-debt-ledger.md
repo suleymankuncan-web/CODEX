@@ -17,7 +17,7 @@ Date: 30 April 2026
 
 Current count:
 
-- Closed active debts: 74
+- Closed active debts: 75
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -102,6 +102,7 @@ These are counted as paid because they have implementation or documentation evid
 72. Backup Restore Drill Runbook V1
 73. Backup Restore Local Drill Evidence V1
 74. Migration Fresh DB Smoke V1
+75. Migration Smoke Release Preflight Policy V1
 
 Ranking Included Snapshot Contract V1 is counted as paid because `GET /reports/leaderboards/closed` now returns `includedSnapshotRuns`, daily ranking returns the included closed snapshot, monthly ranking returns every completed daily snapshot included in the month calculation, and `/store/rankings` uses that backend contract instead of frontend inference.
 
@@ -132,6 +133,8 @@ Backup Restore Drill Runbook V1 is counted as paid because a guarded local/stagi
 Backup Restore Local Drill Evidence V1 is counted as paid because a disposable local Docker PostgreSQL source database migrated from empty state with 42 succeeded migrations, a backup file was produced, that backup restored into the separate disposable `store_ops_restore_drill` database, source and restore schema/table counts matched, migration tracking matched 42 succeeded and 0 failed rows, no production database was touched, and the 037 checklist migration idempotency issue was fixed and guarded. Reference: `docs/plans/backup-restore-drill-local-evidence-2026-04-30.md`.
 
 Migration Fresh DB Smoke V1 is counted as paid because `npm run smoke:migration:fresh-db` now creates only the local disposable `store_ops_fresh_migration_smoke` database, runs backend migrations from empty state, verifies `audit.schema_migration` success counts and core schema table counts, refuses production/non-local targets, and is guarded by root script tests. Reference: `docs/plans/migration-fresh-db-smoke-v1.md`.
+
+Migration Smoke Release Preflight Policy V1 is counted as paid because the release gate now explicitly keeps Docker-dependent fresh DB smoke out of mandatory `check:release`, while production readiness requires `npm.cmd run smoke:migration:fresh-db` or a written Conditional Go whenever DB schema or migration files changed. Reference: `docs/plans/release-check-gate.md`.
 
 Production-Ready Migration System V1 is counted as paid because SQL migrations are tracked in `audit.schema_migration`, checksum drift is rejected, failed runs are recorded with error evidence, the HTTP migration endpoint is disabled in production, and `npm.cmd run db:migrate` is the approved CLI/CI migration path.
 

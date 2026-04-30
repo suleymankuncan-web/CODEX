@@ -63,3 +63,22 @@ test('github release workflow delegates to the root release gate on Node 24', ()
   assert.match(workflow, /working-directory:\s*admin-web\s*\n\s*run:\s*npx playwright install --with-deps chromium/)
   assert.match(workflow, /run:\s*npm run check:release/)
 })
+
+test('fresh migration db smoke is a manual release preflight, not a docker-dependent root gate step', () => {
+  const packageJson = readJson('package.json')
+  const releaseGate = readText('docs/plans/release-check-gate.md')
+  const productionReadiness = readText(
+    'docs/plans/production-environment-readiness-checklist.md',
+  )
+
+  assert.equal(
+    packageJson.scripts['smoke:migration:fresh-db'],
+    'node scripts/migration-fresh-db-smoke.mjs',
+  )
+  assert.doesNotMatch(packageJson.scripts['check:release'], /smoke:migration:fresh-db/)
+  assert.match(releaseGate, /Docker-dependent fresh DB smoke/)
+  assert.match(releaseGate, /not part of the mandatory root `check:release` gate/)
+  assert.match(releaseGate, /DB schema or migration files changed/)
+  assert.match(productionReadiness, /DB schema or migration files changed/)
+  assert.match(productionReadiness, /npm\.cmd run smoke:migration:fresh-db/)
+})
