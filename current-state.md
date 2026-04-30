@@ -4780,12 +4780,60 @@ CODEX durust yorum:
 - Operator artik "bu batch ile ilerleyebilir miyim?" sorusunu quality/reconciliation/error tablolarina tek tek dagilmadan gorebilir.
 - En kritik sey panelin sadece ozet kalmasi; backend truth yine import rows, reconciliation, mapping, retry ve materialization hattinda.
 
-Siradaki mantikli adim: P0-2 Scope/auth regression matrix adimina gecmek.
+Bu siradaki adim tamamlandi: P0-2 Scope/auth regression matrix adimi dokumante edildi ve guard'a baglandi.
+
+## Son Scope/Auth Regression Matrix V1
+
+30 Nisan 2026 itibariyla mevcut auth/scope korumalari tek regression matrix dokumaninda toplandi.
+
+Referans:
+
+- `docs/plans/scope-auth-regression-matrix-v1.md`
+- `scripts/scope-auth-regression-matrix-contract.test.mjs`
+
+Kilitlenen sinir:
+
+- Matrix yeni auth modeli eklemez; mevcut korunan yuzeyleri ve test kanitlarini listeler.
+- `readScope` action scope degildir.
+- Token claim'leri tek basina yeterli degildir; DB assignment/action kontrolleri devam eder.
+- `assignedStoreIds` store create/approve/complete/acknowledge/mutate islemleri icin ayri korunur.
+- Empty scope full-data access'e acilmaz; no data veya forbidden davranisiyla kapanir.
+- Foreign explicit filter, actor scope disina veri genisletemez.
+- Rol semantigi degistirilmedi.
+
+Matrix kapsamindaki kanit yuzeyleri:
+
+- `backend/nestjs/test/integration/auth-scope.e2e-spec.ts`
+- `backend/nestjs/src/modules/auth/auth-context.service.spec.ts`
+- `backend/nestjs/src/modules/auth/auth-role-scope-policy.service.spec.ts`
+- `backend/nestjs/src/modules/store-ops/infrastructure/store-ops.repository.spec.ts`
+- `backend/nestjs/src/modules/store-ops/infrastructure/reporting.repository.spec.ts`
+- `backend/nestjs/src/modules/store-ops/infrastructure/checklist.repository.spec.ts`
+- `backend/nestjs/src/modules/store-ops/infrastructure/feed.repository.spec.ts`
+- `backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.spec.ts`
+- `backend/nestjs/src/modules/store-ops/infrastructure/target-distribution.repository.spec.ts`
+- `backend/nestjs/test/integration/workforce-seller-code.e2e-spec.ts`
+- `backend/nestjs/test/integration/workforce-offboarding.e2e-spec.ts`
+
+Dogrulama:
+
+- TDD kirmizi test: `docs/plans/scope-auth-regression-matrix-v1.md` yokken guard beklenen sekilde dustu.
+- Targeted guard test passed: `scripts/scope-auth-regression-matrix-contract.test.mjs`.
+- Backend targeted scope/auth tests passed.
+- Root `npm.cmd run check:release` passed.
+
+CODEX durust yorum:
+
+- Bu yeni feature degil, dagilmayi engelleyen harita.
+- Scope/auth davranisi zaten testlerde vardi ama bilgi daginikti; artik hangi yuzeyin hangi testle korundugu tek yerde.
+- En kritik cizgi net: okuma yetkisi islem yetkisi degil, `assignedStoreIds` store aksiyonlari icin ayri korunacak.
+
+Siradaki mantikli adim: P0-3 DB health and migration evidence adimina gecmek.
 
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
 
 ```text
-current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. readScope/actionScope ayrimini ve assignedStoreIds modelini uygulamaya devam et.
+current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. readScope/actionScope ayrimi ve assignedStoreIds modeli korunuyor. Siradaki mantikli adim P0-3 DB health and migration evidence.
 ```
