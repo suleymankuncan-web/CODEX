@@ -4542,6 +4542,42 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: gercek master store/personnel baseline gelene kadar master data tarafinda buyuk yeni akisa girmemek; ihtiyac olursa sadece admin review smoke veya import resolver guard gibi kucuk koruyucu adimlarla ilerlemek.
 
+## Son External ID Code Normalization Guard V1
+
+30 Nisan 2026 itibariyla import/materialization external id mapping resolver'i kod format varyasyonlarina karsi guclendirildi.
+
+Referans:
+
+- `docs/plans/external-id-code-normalization-guard-v1.md`
+
+Kilitlenen davranis:
+
+- Exact `stg.external_id_map.external_id` eslesmesi halen ilk onceliktir.
+- Exact eslesme yoksa source external id trim/uppercase/space-hyphen removal ile normalize edilir.
+- Fallback, ayni integration source ve entity type icindeki stored `external_id` degerlerini ayni normalizasyonla arar.
+- Fallback tek distinct `internal_id` bulursa mapping cozulur.
+- Fallback birden fazla distinct `internal_id` bulursa sistem sessiz secim yapmaz; ambiguous mapping hatasi verir.
+- Direct internal id alanlari normalize edilmez ve mevcut davranis korunur.
+
+Dogrulama:
+
+- TDD kirmizi test: `SM-140` exact mapping yokken normalized fallback ile cozulmuyordu.
+- TDD kirmizi test: ambiguous normalized mapping sessizce `null` donuyordu.
+- Targeted resolver test passed: 3/3.
+- Targeted resolver + materialization tests passed: 2 suite / 17 test.
+- Root `npm.cmd run check:release` passed:
+  - root script tests 50/50,
+  - backend release gate passed: lint, 74 test suite / 472 test, build, audit 0 vulnerability,
+  - frontend release gate passed: lint, script tests, build, 46 Playwright test, audit 0 vulnerability.
+
+CODEX durust yorum:
+
+- Bu sahadaki gercek veri davranisina dogrudan cevap veriyor: `SM-140` / `SM140` ve benzeri farklar gereksiz `unmapped_*` temizligi uretmemeli.
+- En onemli kisim ambiguous guard: iki farkli internal kayda giden normalize kod varsa sistem tahmin etmiyor.
+- Yeni schema, endpoint veya UI acilmadi; mevcut import/mapping hattinin guvenilirligi arttirildi.
+
+Siradaki mantikli adim: gercek baseline veya JSON sample gelene kadar yeni buyuk akis acmadan kucuk veri guvenligi adimlariyla ilerlemek; bir sonraki aday import mapping/operator smoke veya admin review dry-run kaniti olabilir.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:

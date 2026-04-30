@@ -91,7 +91,38 @@ export class ExternalIdMappingService {
       [integrationSourceId, entityType, externalId],
     );
 
-    return result.rows[0]?.internal_id ?? null;
+    const exactMatch = result.rows[0]?.internal_id;
+    if (exactMatch) {
+      return exactMatch;
+    }
+
+    const normalizedExternalId = normalizeExternalMappingKey(externalId);
+    if (!normalizedExternalId) {
+      return null;
+    }
+
+    const normalizedResult = await this.databaseService.query<{
+      internal_id: string;
+    }>(
+      `
+        SELECT DISTINCT internal_id
+        FROM stg.external_id_map
+        WHERE integration_source_id = $1::uuid
+          AND entity_type = $2
+          AND UPPER(REGEXP_REPLACE(COALESCE(external_id, ''), '[\\s-]', '', 'g')) = $3
+          AND is_active = TRUE
+        LIMIT 2
+      `,
+      [integrationSourceId, entityType, normalizedExternalId],
+    );
+
+    if (normalizedResult.rows.length > 1) {
+      throw new Error(
+        `Ambiguous external id mapping for ${entityType}: ${externalId}`,
+      );
+    }
+
+    return normalizedResult.rows[0]?.internal_id ?? null;
   }
 
   async upsertMapping(input: {
@@ -127,4 +158,8 @@ export class ExternalIdMappingService {
       ],
     );
   }
+}
+
+function normalizeExternalMappingKey(value: string) {
+  return value.trim().toUpperCase().replace(/[\s-]/g, "");
 }
