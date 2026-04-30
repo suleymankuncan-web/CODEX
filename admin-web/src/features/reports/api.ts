@@ -358,6 +358,17 @@ export type ClosedRankingEmployee = {
   metricRanks: ClosedRankingMetricRank[]
 }
 
+export type ClosedRankingIncludedSnapshotRun = {
+  snapshotRunId: string
+  snapshotDate: string
+  snapshotType: string
+  periodStart: string
+  periodEnd: string
+  runStatus: string
+  generatedAt: string
+  generatedBy: string
+}
+
 export type ClosedLeaderboardSummary = {
   source: {
     mode: 'closed'
@@ -368,6 +379,7 @@ export type ClosedLeaderboardSummary = {
     periodStart: string | null
     periodEnd: string | null
   }
+  includedSnapshotRuns: ClosedRankingIncludedSnapshotRun[]
   currentEmployee: ClosedRankingEmployee | null
   personnelTop: ClosedRankingEmployee[]
 }

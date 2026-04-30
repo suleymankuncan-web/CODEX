@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { ReportingRepository } from "../infrastructure/reporting.repository";
 import {
   ClosedRankingEmployee,
+  ClosedRankingIncludedSnapshotRun,
   ClosedRankingInput,
   ClosedRankingMetricRankRow,
   ClosedRankingPeriodType,
@@ -88,6 +89,7 @@ export class ClosedRankingService {
         periodStart: snapshotRun.period_start,
         periodEnd: snapshotRun.period_end,
       },
+      includedSnapshotRuns: [this.mapIncludedSnapshotRun(snapshotRun)],
       currentEmployee: currentRow
         ? this.mapEmployeeRow({
             row: currentRow,
@@ -184,6 +186,9 @@ export class ClosedRankingService {
         periodStart: monthStart,
         periodEnd: monthEnd,
       },
+      includedSnapshotRuns: completedRuns.map((run) =>
+        this.mapIncludedSnapshotRun(run),
+      ),
       currentEmployee: currentRow
         ? this.mapEmployeeRow({
             row: currentRow,
@@ -306,6 +311,21 @@ export class ClosedRankingService {
     };
   }
 
+  private mapIncludedSnapshotRun(
+    row: ClosedRankingSnapshotRunRow,
+  ): ClosedRankingIncludedSnapshotRun {
+    return {
+      snapshotRunId: row.snapshot_run_id,
+      snapshotDate: row.snapshot_date,
+      snapshotType: row.snapshot_type,
+      periodStart: row.period_start,
+      periodEnd: row.period_end,
+      runStatus: row.run_status,
+      generatedAt: row.generated_at,
+      generatedBy: row.generated_by,
+    };
+  }
+
   private groupMetricRowsByEmployee(rows: ClosedRankingMetricRankRow[]) {
     return rows.reduce((map, row) => {
       const current = map.get(row.employee_id) ?? [];
@@ -351,6 +371,7 @@ export class ClosedRankingService {
         periodStart: input.periodStart,
         periodEnd: input.periodEnd,
       },
+      includedSnapshotRuns: [],
       currentEmployee: null,
       personnelTop: [],
     };

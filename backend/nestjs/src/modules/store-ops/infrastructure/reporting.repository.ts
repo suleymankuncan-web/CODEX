@@ -1576,15 +1576,23 @@ export class ReportingRepository {
     const result = await this.databaseService.query<{
       snapshot_run_id: string;
       snapshot_date: string;
+      snapshot_type: string;
       period_start: string;
       period_end: string;
+      run_status: string;
+      generated_at: string;
+      generated_by: string;
     }>(
       `
         SELECT
           sr.snapshot_run_id,
           sr.snapshot_date::text AS snapshot_date,
+          sr.snapshot_type,
           sr.period_start::text AS period_start,
-          sr.period_end::text AS period_end
+          sr.period_end::text AS period_end,
+          sr.run_status,
+          sr.generated_at,
+          sr.generated_by
         FROM rpt.snapshot_run sr
         WHERE sr.snapshot_type = 'daily'
           AND sr.run_status = 'completed'

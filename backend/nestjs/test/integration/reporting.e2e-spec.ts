@@ -719,8 +719,12 @@ describe("Reporting read APIs", () => {
             return {
               snapshot_run_id: `${day}${day}${day}${day}-${day}${day}${day}-${day}${day}${day}-${day}${day}${day}-${day}${day}${day}${day}${day}${day}${day}${day}${day}${day}${day}${day}`,
               snapshot_date: `2026-04-${day}`,
+              snapshot_type: "daily",
               period_start: `2026-04-${day}`,
               period_end: `2026-04-${day}`,
+              run_status: "completed",
+              generated_at: `2026-04-${day}T08:00:00.000Z`,
+              generated_by: "ranking-closure-job",
             };
           }),
         };
@@ -787,6 +791,24 @@ describe("Reporting read APIs", () => {
       storeRank: 1,
       storePopulation: 8,
     });
+    expect(response.body.includedSnapshotRuns).toHaveLength(27);
+    expect(response.body.includedSnapshotRuns[0]).toEqual({
+      snapshotRunId: expect.any(String),
+      snapshotDate: "2026-04-01",
+      snapshotType: "daily",
+      periodStart: "2026-04-01",
+      periodEnd: "2026-04-01",
+      runStatus: "completed",
+      generatedAt: "2026-04-01T08:00:00.000Z",
+      generatedBy: "ranking-closure-job",
+    });
+    expect(response.body.includedSnapshotRuns[26]).toEqual(
+      expect.objectContaining({
+        snapshotDate: "2026-04-27",
+        periodStart: "2026-04-27",
+        periodEnd: "2026-04-27",
+      }),
+    );
 
     await app.close();
   });

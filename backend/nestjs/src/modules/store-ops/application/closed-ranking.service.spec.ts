@@ -48,6 +48,7 @@ describe("ClosedRankingService", () => {
         periodStart: "2026-04-23",
         periodEnd: "2026-04-23",
       },
+      includedSnapshotRuns: [],
       currentEmployee: null,
       personnelTop: [],
     });
@@ -125,6 +126,18 @@ describe("ClosedRankingService", () => {
         snapshotRunId: "11111111-1111-4111-8111-111111111111",
       }),
     );
+    expect(result.includedSnapshotRuns).toEqual([
+      {
+        snapshotRunId: "11111111-1111-4111-8111-111111111111",
+        snapshotDate: "2026-04-23",
+        snapshotType: "daily",
+        periodStart: "2026-04-23",
+        periodEnd: "2026-04-23",
+        runStatus: "completed",
+        generatedAt: "2026-04-24T00:10:00.000Z",
+        generatedBy: "system",
+      },
+    ]);
     expect(result.currentEmployee).toEqual(
       expect.objectContaining({
         employeeId: currentEmployeeId,
@@ -158,20 +171,32 @@ describe("ClosedRankingService", () => {
         {
           snapshot_run_id: "11111111-1111-4111-8111-111111111111",
           snapshot_date: "2026-04-01",
+          snapshot_type: "daily",
           period_start: "2026-04-01",
           period_end: "2026-04-01",
+          run_status: "completed",
+          generated_at: "2026-04-01T08:00:00.000Z",
+          generated_by: "ranking-closure-job",
         },
         {
           snapshot_run_id: "22222222-2222-4222-8222-222222222222",
           snapshot_date: "2026-04-02",
+          snapshot_type: "daily",
           period_start: "2026-04-02",
           period_end: "2026-04-02",
+          run_status: "completed",
+          generated_at: "2026-04-02T08:00:00.000Z",
+          generated_by: "ranking-closure-job",
         },
         {
           snapshot_run_id: "33333333-3333-4333-8333-333333333333",
           snapshot_date: "2026-04-03",
+          snapshot_type: "daily",
           period_start: "2026-04-03",
           period_end: "2026-04-03",
+          run_status: "completed",
+          generated_at: "2026-04-03T08:00:00.000Z",
+          generated_by: "ranking-closure-job",
         },
       ]),
       listClosedMonthlyPersonnelAggregateRows: jest.fn(async () => [
@@ -229,6 +254,11 @@ describe("ClosedRankingService", () => {
       minimumRequiredDays: 3,
       isEligibleForRanking: true,
     });
+    expect(result.includedSnapshotRuns.map((run) => run.snapshotDate)).toEqual([
+      "2026-04-01",
+      "2026-04-02",
+      "2026-04-03",
+    ]);
   });
 
   it("marks 1-2 day monthly rows as preview-only", async () => {
@@ -237,14 +267,22 @@ describe("ClosedRankingService", () => {
         {
           snapshot_run_id: "11111111-1111-4111-8111-111111111111",
           snapshot_date: "2026-04-01",
+          snapshot_type: "daily",
           period_start: "2026-04-01",
           period_end: "2026-04-01",
+          run_status: "completed",
+          generated_at: "2026-04-01T08:00:00.000Z",
+          generated_by: "ranking-closure-job",
         },
         {
           snapshot_run_id: "22222222-2222-4222-8222-222222222222",
           snapshot_date: "2026-04-02",
+          snapshot_type: "daily",
           period_start: "2026-04-02",
           period_end: "2026-04-02",
+          run_status: "completed",
+          generated_at: "2026-04-02T08:00:00.000Z",
+          generated_by: "ranking-closure-job",
         },
       ]),
       listClosedMonthlyPersonnelAggregateRows: jest.fn(async () => [

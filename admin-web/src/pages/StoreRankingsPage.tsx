@@ -200,15 +200,6 @@ export function StoreRankingsPage(input: {
         null
       : null
   const selectedMonthlyPeriodStart = activeMonthlySnapshotOption?.monthStart ?? ''
-  const monthlyClosureEvidenceRuns = useMemo(() => {
-    if (periodType !== 'monthly' || !selectedMonthlyPeriodStart) {
-      return []
-    }
-
-    return availableSnapshotRuns
-      .filter((run) => getSnapshotMonthStart(run.periodStart) === selectedMonthlyPeriodStart)
-      .sort((left, right) => left.periodStart.localeCompare(right.periodStart))
-  }, [availableSnapshotRuns, periodType, selectedMonthlyPeriodStart])
   const activeSnapshotRun =
     periodType === 'daily'
       ? availableSnapshotRuns.find((run) => run.snapshotRunId === selectedSnapshotRunId) ??
@@ -273,6 +264,8 @@ export function StoreRankingsPage(input: {
   }
 
   const leaderboard = leaderboardQuery.data
+  const monthlyClosureEvidenceRuns =
+    periodType === 'monthly' ? leaderboard?.includedSnapshotRuns ?? [] : []
   const currentEmployeeGrade = leaderboard?.currentEmployee
     ? resolvePerformanceGrade(leaderboard.currentEmployee.scoreValue, configQuery.data?.gradingBands)
     : null

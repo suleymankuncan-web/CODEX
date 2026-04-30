@@ -4376,6 +4376,58 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: aylik ranking kanitini backend contract seviyesine tasimayi planlamak; `GET /reports/leaderboards/closed` response'una dahil edilen snapshot gunlerini resmi alan olarak ekleyip frontend tahminini kaldirmak.
 
+## Son Ranking Included Snapshot Contract V1
+
+30 Nisan 2026 itibariyla aylik ranking kaniti backend kontratina tasindi.
+
+Eklenenler:
+
+- `GET /reports/leaderboards/closed` cevabina `includedSnapshotRuns` alani eklendi.
+- Gunluk ranking cevabi 1 adet kapanmis snapshot kaniti donuyor.
+- Aylik ranking cevabi secili ay icinde hesaplamaya dahil edilen tum tamamlanmis gunluk snapshot'lari donuyor.
+- `includedSnapshotRuns` alaninda:
+  - snapshot run id,
+  - snapshot tarihi,
+  - snapshot type,
+  - donem,
+  - run status,
+  - generatedAt,
+  - generatedBy bilgisi var.
+- `/store/rankings` aylik kanit paneli artik frontend'in snapshot listesinden tahmin yapmiyor; resmi leaderboard response alanini okuyor.
+- E2E fixture bilerek snapshot listesinde sadece son gunu birakti, backend response icinde 2 gun dondu; boylece UI'nin resmi kontrata baglandigi testlendi.
+
+Dogrulama:
+
+- Backend TDD kirmizi test: `includedSnapshotRuns` alan yokken `reporting.e2e-spec.ts` beklenen sekilde dustu.
+- Backend targeted reporting e2e passed: 10 test passed.
+- Backend build passed.
+- Frontend TDD kirmizi test: snapshot listesinde tek gun varken aylik kanit 2 gun bekledigi icin mevcut UI beklenen sekilde dustu.
+- Frontend build passed.
+- Frontend targeted store surface e2e passed: 13 test passed.
+- Backend `npm.cmd run check:release` passed:
+  - lint,
+  - 73 test suite / 467 test,
+  - build,
+  - audit 0 vulnerability.
+- Frontend `npm.cmd run check:release` passed:
+  - lint,
+  - script tests 7/7,
+  - build,
+  - 46 Playwright test,
+  - audit 0 vulnerability.
+- Root `npm.cmd run check:release` passed:
+  - root script tests 46/46,
+  - backend release gate,
+  - frontend release gate.
+
+CODEX durust yorum:
+
+- Bu borc kapandi: aylik ranking kaniti artik UI varsayimi degil, backend'in resmi aciklamasi.
+- Bu, ileride mobil BFF ve raporlama ekranlari icin de daha saglam bir kontrat demek.
+- Release kapilari temiz: bu adimdan sonra bilerek acik test veya build borcu birakilmadi.
+
+Siradaki mantikli adim: aylik ranking icin store/personel skor kurallarini ayni resmi kaynaklardan belgelemek; ozellikle hangi metriklerin Turkiye ortalamasi, hedef ve checklist kaynagindan skorlandigini tek yerde toplamak.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:

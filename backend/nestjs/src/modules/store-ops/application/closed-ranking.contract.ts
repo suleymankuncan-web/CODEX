@@ -39,6 +39,17 @@ export type ClosedRankingEmployee = {
   metricRanks: ClosedRankingMetricRank[];
 };
 
+export type ClosedRankingIncludedSnapshotRun = {
+  snapshotRunId: string;
+  snapshotDate: string;
+  snapshotType: string;
+  periodStart: string;
+  periodEnd: string;
+  runStatus: string;
+  generatedAt: string;
+  generatedBy: string;
+};
+
 export type ClosedRankingSummary = {
   source: {
     mode: "closed";
@@ -49,6 +60,7 @@ export type ClosedRankingSummary = {
     periodStart: string | null;
     periodEnd: string | null;
   };
+  includedSnapshotRuns: ClosedRankingIncludedSnapshotRun[];
   currentEmployee: ClosedRankingEmployee | null;
   personnelTop: ClosedRankingEmployee[];
 };
