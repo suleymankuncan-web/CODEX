@@ -4874,10 +4874,37 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: P0-4 Operator evidence consistency pass adimina gecmek.
 
+## Son Test Suite Hygiene V1
+
+30 Nisan 2026 itibariyla Test Suite Hygiene V1 ilk guvenli dilimi uygulandi.
+
+Referans:
+
+- `docs/plans/test-suite-hygiene-v1.md`
+- `scripts/test-suite-hygiene-contract.test.mjs`
+
+Degisen test yapisi:
+
+- `backend/nestjs/test/integration/auth-pilot-user-bindings.e2e-spec.ts`
+- `backend/nestjs/test/integration/auth-role-assignments.e2e-spec.ts`
+- `backend/nestjs/test/integration/auth-action-store-assignments.e2e-spec.ts`
+- `backend/nestjs/test/integration/auth-user-accounts.e2e-spec.ts`
+- `backend/nestjs/test/integration/auth-role-permissions.e2e-spec.ts`
+- `backend/nestjs/test/integration/auth-lookups.e2e-spec.ts`
+
+Kapanis notu:
+
+- Uretim kodu degismedi.
+- Auth-admin entegrasyon kapsamindaki 28 test ismi korunarak dosyalar domain bazli bolundu.
+- Guard, 6 split dosyasini, toplam 28 testi ve her test adinin tam 1 kez kaldigini kontrol eder.
+- Proje dagilma riski bu slice icin dusuk: sadece test bakimi yapildi, davranis mantigi yeniden yazilmadi.
+
+Siradaki mantikli adim: P0-4 Operator evidence consistency pass adimina gecmek; test hygiene tarafinda ikinci dosya bolme ancak ayri planla yapilmali.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
 
 ```text
-current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. readScope/actionScope ayrimi ve assignedStoreIds modeli korunuyor. Siradaki mantikli adim P0-4 Operator evidence consistency pass.
+current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. readScope/actionScope ayrimi ve assignedStoreIds modeli korunuyor. Test Suite Hygiene V1 ilk slice kapandi; siradaki mantikli adim P0-4 Operator evidence consistency pass.
 ```

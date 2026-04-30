@@ -17,7 +17,7 @@ Date: 30 April 2026
 
 Current count:
 
-- Closed active debts: 69
+- Closed active debts: 70
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -97,6 +97,7 @@ These are counted as paid because they have implementation or documentation evid
 67. Import Decision Evidence V1
 68. Scope/Auth Regression Matrix V1
 69. DB Health And Migration Evidence V1
+70. Test Suite Hygiene V1
 
 Ranking Included Snapshot Contract V1 is counted as paid because `GET /reports/leaderboards/closed` now returns `includedSnapshotRuns`, daily ranking returns the included closed snapshot, monthly ranking returns every completed daily snapshot included in the month calculation, and `/store/rankings` uses that backend contract instead of frontend inference.
 
@@ -117,6 +118,8 @@ Import Decision Evidence V1 is counted as paid because `/admin/integrations/:bat
 Scope/Auth Regression Matrix V1 is counted as paid because existing read-scope, assigned-store action-scope, role/scope, feed, competition, reporting, checklist, target distribution, and workforce lifecycle regression tests are mapped into one guarded matrix. It keeps `readScope` separate from action scope, preserves DB assignment/action checks, and changes no role semantics. Reference: `docs/plans/scope-auth-regression-matrix-v1.md`.
 
 DB Health And Migration Evidence V1 is counted as paid because migration status can now be checked through a read-only `GET /api/admin/migrations/status` surface without executing SQL migration files, failed migration evidence and checksum mismatches remain visible, public health redacts dependency URL/credential details, and CLI/CI migration execution remains `npm.cmd run db:migrate`. Reference: `docs/plans/db-health-migration-evidence-v1.md`.
+
+Test Suite Hygiene V1 is counted as paid because the oversized auth-admin integration file was split into six domain-focused e2e specs without deleting behavior coverage, changing production code, or changing the 28 guarded test names. Reference: `docs/plans/test-suite-hygiene-v1.md`.
 
 Production-Ready Migration System V1 is counted as paid because SQL migrations are tracked in `audit.schema_migration`, checksum drift is rejected, failed runs are recorded with error evidence, the HTTP migration endpoint is disabled in production, and `npm.cmd run db:migrate` is the approved CLI/CI migration path.
 
