@@ -206,6 +206,33 @@ Deferred after this slice:
 - Do not split master-data until a separate, mechanical boundary is proven.
 - Next low-risk candidates remain `competition.service.spec.ts` and `auth-scope.e2e-spec.ts`.
 
+## Seventh Safe Slice
+
+Seventh safe slice: split competition service team-template tests out of `backend/nestjs/src/modules/store-ops/application/competition.service.spec.ts`.
+
+Target files:
+
+- `backend/nestjs/src/modules/store-ops/application/competition.service.spec.ts`
+- `backend/nestjs/src/modules/store-ops/application/competition-team-template.service.spec.ts`
+
+Expected behavior:
+
+- The same 24 competition service tests still run across the two files.
+- The 8 list/create/update/deactivate/clone team-template service tests move to `competition-team-template.service.spec.ts`.
+- The 16 stage, package, plan, finalization, and scoped detail tests remain in `competition.service.spec.ts`.
+- Test names remain unchanged.
+- Production code is not changed.
+
+Reason:
+
+- Team-template service behavior is a natural boundary from stage package planning and competition finalization.
+- This is lower risk than starting with `auth-scope.e2e-spec.ts`, because auth-scope is a security matrix and should be split only after an even tighter boundary is chosen.
+
+Deferred after this slice:
+
+- Do not split master-data until a separate, mechanical boundary is proven.
+- Next candidate is `auth-scope.e2e-spec.ts` only if its scope surfaces can be split without weakening security evidence.
+
 ## Verification
 
 Targeted:
@@ -236,6 +263,13 @@ cd "C:\Users\suley\OneDrive\MasaÃƒÂ¼stÃƒÂ¼\WEBSÃ„Â°TE Ãƒâ€¡AL
 npm.cmd test -- --runInBand test/integration/snapshot-run.e2e-spec.ts test/integration/snapshot-run-read-models.e2e-spec.ts
 ```
 
+Competition service split:
+
+```powershell
+cd "C:\Users\suley\OneDrive\MasaÃƒÆ’Ã‚Â¼stÃƒÆ’Ã‚Â¼\WEBSÃƒâ€Ã‚Â°TE ÃƒÆ’Ã¢â‚¬Â¡ALIÃƒâ€¦Ã‚ÂMASI\backend\nestjs"
+npm.cmd test -- --runInBand src/modules/store-ops/application/competition.service.spec.ts src/modules/store-ops/application/competition-team-template.service.spec.ts
+```
+
 Guard:
 
 ```powershell
@@ -260,4 +294,4 @@ The risk becomes real only if we start inventing clever helpers, rewriting asser
 
 ## Next Logical Step
 
-After the snapshot run read-model split, review remaining large backend specs by risk. The next candidate should be chosen from `competition.service.spec.ts` or `auth-scope.e2e-spec.ts` only if the boundary is mechanical. Do not split master-data until that work has its own explicit plan.
+After the competition service team-template split, review `auth-scope.e2e-spec.ts` by risk before changing it. It is the likely next candidate, but only if the split keeps security evidence complete and mechanical. Do not split master-data until that work has its own explicit plan.

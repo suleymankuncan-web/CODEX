@@ -133,6 +133,38 @@ const snapshotRunReadModelExpectedTestNames = [
   'returns snapshot run dependencies',
   'returns snapshot run lineage',
 ]
+const competitionServiceSplitFiles = [
+  'backend/nestjs/src/modules/store-ops/application/competition.service.spec.ts',
+  'backend/nestjs/src/modules/store-ops/application/competition-team-template.service.spec.ts',
+]
+const competitionServiceTeamTemplateExpectedTestNames = [
+  'lists active competition team templates',
+  'lists inactive competition team templates when requested',
+  'rejects team template creation without stores',
+  'creates a reusable competition team template',
+  'deactivates a competition team template',
+  'updates a competition team template with unique store membership',
+  'rejects team template update without stores',
+  'clones a competition team template',
+]
+const competitionServiceCoreExpectedTestNames = [
+  'creates a stage with a format preset code',
+  'creates a stage package through the repository',
+  'lists saved stage package plans for a competition',
+  'saves a stage package plan draft without creating stages',
+  'executes a saved stage package plan through the repository',
+  'updates a draft stage package plan through the repository',
+  'submits a draft stage package plan for review',
+  'approves a submitted stage package plan',
+  'rejects a submitted stage package plan',
+  'clones a rejected stage package plan as a new draft',
+  'cancels a draft stage package plan through the repository',
+  'lists stage package plan audit events',
+  'creates a draft competition through the repository',
+  'rejects finalization with open warnings unless override justification is written',
+  'finalizes with overridden state when warnings exist and justification is present',
+  'redacts out-of-scope team stores while returning scoped store contributions',
+]
 
 test('test suite hygiene keeps the no-coverage-loss boundary', () => {
   for (const phrase of [
@@ -293,5 +325,36 @@ test('snapshot run e2e tests are split without dropping read-model or command co
   assert.ok(
     largestLineCount < 1500,
     `largest split snapshot run test file has ${largestLineCount} lines`,
+  )
+})
+
+test('competition service tests are split without dropping team-template or core coverage', () => {
+  let totalTests = 0
+  let largestLineCount = 0
+  let combinedText = ''
+
+  for (const file of competitionServiceSplitFiles) {
+    assert.equal(existsSync(join(workspaceRoot, file)), true, `${file} must exist`)
+    const text = readText(file)
+    const testCount = [...text.matchAll(/\bit\s*\(/g)].length
+    totalTests += testCount
+    largestLineCount = Math.max(largestLineCount, text.split('\n').length)
+    combinedText += `\n${text}`
+  }
+
+  assert.equal(totalTests, 24)
+  assert.equal([...readText(competitionServiceSplitFiles[0]).matchAll(/\bit\s*\(/g)].length, 16)
+  assert.equal([...readText(competitionServiceSplitFiles[1]).matchAll(/\bit\s*\(/g)].length, 8)
+  for (const testName of competitionServiceTeamTemplateExpectedTestNames) {
+    const exactOccurrences = [...combinedText.matchAll(new RegExp(`it\\("${testName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'g'))].length
+    assert.equal(exactOccurrences, 1, `${testName} must appear exactly once`)
+  }
+  for (const testName of competitionServiceCoreExpectedTestNames) {
+    const exactOccurrences = [...combinedText.matchAll(new RegExp(`it\\("${testName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'g'))].length
+    assert.equal(exactOccurrences, 1, `${testName} must appear exactly once`)
+  }
+  assert.ok(
+    largestLineCount < 1500,
+    `largest split competition service test file has ${largestLineCount} lines`,
   )
 })
