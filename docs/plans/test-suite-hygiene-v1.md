@@ -362,3 +362,33 @@ Deferred after this slice:
 
 - Do not split validation or promotion in the same pass.
 - Consider read-model/readiness only after this slice passes targeted tests, guard, and release.
+
+## Tenth Safe Slice
+
+Tenth safe slice: split master-data bootstrap read-model and readiness tests out of `backend/nestjs/src/modules/integration/application/master-data-bootstrap.service.spec.ts`.
+
+Target files:
+
+- `backend/nestjs/src/modules/integration/application/master-data-bootstrap.service.spec.ts`
+- `backend/nestjs/src/modules/integration/application/master-data-bootstrap-staging.service.spec.ts`
+- `backend/nestjs/src/modules/integration/application/master-data-bootstrap-read-models.service.spec.ts`
+
+Expected behavior:
+
+- The same 29 master-data bootstrap service tests still run across the three files.
+- The 19 validation and promotion safety tests remain in `master-data-bootstrap.service.spec.ts`.
+- The 4 staging and normalization tests remain in `master-data-bootstrap-staging.service.spec.ts`.
+- The 6 list/review/readiness tests move to `master-data-bootstrap-read-models.service.spec.ts`.
+- `buildBootstrapReadinessRow` moves with the read-model/readiness tests because it is exclusive to that bucket.
+- Test names remain unchanged.
+- Production code is not changed.
+
+Reason:
+
+- Read-model/readiness tests are a clean boundary from validation and promotion write safety.
+- This keeps promotion safety evidence in the original service spec while making admin/readiness evidence easier to scan.
+
+Deferred after this slice:
+
+- Stop Master Data Bootstrap Test Hygiene V1 here unless a new explicit plan is approved.
+- Do not split validation or promotion safety just because the file is still large.
