@@ -4964,10 +4964,52 @@ Kapanis notu:
 
 Siradaki mantikli adim: gercek local/staging DB hazirsa bu runbook'u uygulamak; degilse performans/index review icin gercek veri hacmini beklemek veya kucuk test hygiene dilimi secmek.
 
+## Son Backup Restore Local Drill Evidence
+
+30 Nisan 2026 itibariyla Backup Restore Drill Runbook V1 lokal Docker PostgreSQL uzerinde uygulandi.
+
+Referans:
+
+- `docs/plans/backup-restore-drill-runbook-v1.md`
+- `docs/plans/backup-restore-drill-local-evidence-2026-04-30.md`
+- `db/migrations/037_mobile_checklist_today_v1.sql`
+
+Kilitlenen sinir:
+
+- Production database kullanilmadi.
+- Kaynak DB `store_ops_drill_source` olarak disposable lokal DB secildi.
+- Restore hedefi `store_ops_restore_drill` olarak disposable lokal DB secildi.
+- Raw `DATABASE_URL`, sifre, token, musteri veya personel kisisel veri ornegi evidence icine alinmadi.
+
+Kapanan teknik bulgu:
+
+- Bos disposable DB migration denemesinde `037_mobile_checklist_today_v1.sql` ayni unique constraint'i tekrar eklemeye calistigi icin fail oldu.
+- Kok neden: `db/schema.sql` zaten `checklist_template_code_version_unique` constraint'ini current baseline olarak iceriyor.
+- Duzeltme: `037_mobile_checklist_today_v1.sql`, constraint varsa once `DROP CONSTRAINT IF EXISTS checklist_template_code_version_unique` ile kaldirip ayni unique constraint'i yeniden ekler.
+- Bu davranis `backend/nestjs/src/shared/database/migration-schema-contract.spec.ts` ile guard'a baglandi.
+
+Kanıt:
+
+- Fresh disposable source DB migration: 42 applied, 0 failed, 0 skipped.
+- Backup file: `/tmp/store_ops_backup_drill.dump`
+- Backup size: 218864 bytes.
+- Restore target: `store_ops_restore_drill`
+- Source schema/table counts: audit=3, ops=39, rpt=10, stg=12.
+- Restore schema/table counts: audit=3, ops=39, rpt=10, stg=12.
+- Source migration tracking: 42 succeeded, 0 failed.
+- Restore migration tracking: 42 succeeded, 0 failed.
+
+Kapanis notu:
+
+- Local backup/restore mekanigi kanitlandi.
+- Bu kanit production hosting backup policy, retention, encryption, access ownership veya managed DB restore davranisini kanitlamaz.
+
+Siradaki mantikli adim: yeni modul acmadan once intake gate ile kucuk backend saglamlastirma veya real staging evidence secmek.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
 
 ```text
-current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. readScope/actionScope ayrimi ve assignedStoreIds modeli korunuyor. Test Suite Hygiene V1 ilk slice kapandi. Operator Evidence Consistency Pass V1 kapandi. Backup Restore Drill Runbook V1 kapandi. Siradaki mantikli adim gercek local/staging DB hazirsa runbook'u uygulamak; degilse yeni modul acmadan intake gate ile secim yapmak.
+current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. readScope/actionScope ayrimi ve assignedStoreIds modeli korunuyor. Test Suite Hygiene V1 ilk slice kapandi. Operator Evidence Consistency Pass V1 kapandi. Backup Restore Drill Runbook V1 kapandi. Backup Restore Local Drill Evidence alindi; prod DB'ye dokunulmadi; bos disposable DB migration 42/42 succeeded ve restore proof source/restore schema counts matched. Siradaki mantikli adim yeni modul acmadan intake gate ile kucuk backend saglamlastirma veya real staging evidence secmek.
 ```

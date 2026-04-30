@@ -5,6 +5,9 @@ ALTER TABLE ops.checklist_template
     DROP CONSTRAINT IF EXISTS checklist_template_template_code_key;
 
 ALTER TABLE ops.checklist_template
+    DROP CONSTRAINT IF EXISTS checklist_template_code_version_unique;
+
+ALTER TABLE ops.checklist_template
     ADD CONSTRAINT checklist_template_code_version_unique UNIQUE (template_code, version_no);
 
 ALTER TABLE ops.checklist_instance

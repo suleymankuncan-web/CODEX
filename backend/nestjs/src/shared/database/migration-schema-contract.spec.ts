@@ -10,6 +10,10 @@ const migrationPath = join(
   "035_schema_migration_tracking.sql",
 );
 const migrationSql = existsSync(migrationPath) ? readFileSync(migrationPath, "utf8") : "";
+const mobileChecklistMigrationSql = readFileSync(
+  join(projectRoot, "db", "migrations", "037_mobile_checklist_today_v1.sql"),
+  "utf8",
+);
 
 describe("migration tracking schema contract", () => {
   it("keeps schema migration tracking in canonical schema and migration file", () => {
@@ -22,5 +26,15 @@ describe("migration tracking schema contract", () => {
       expect(sql).toContain("error_message TEXT");
       expect(sql).toContain("idx_schema_migration_status");
     }
+  });
+
+  it("keeps mobile checklist migration idempotent against the current schema baseline", () => {
+    expect(schemaSql).toContain("checklist_template_code_version_unique");
+    expect(mobileChecklistMigrationSql).toContain(
+      "DROP CONSTRAINT IF EXISTS checklist_template_code_version_unique",
+    );
+    expect(mobileChecklistMigrationSql).toContain(
+      "ADD CONSTRAINT checklist_template_code_version_unique UNIQUE (template_code, version_no)",
+    );
   });
 });

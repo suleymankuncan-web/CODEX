@@ -17,7 +17,7 @@ Date: 30 April 2026
 
 Current count:
 
-- Closed active debts: 72
+- Closed active debts: 73
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -100,6 +100,7 @@ These are counted as paid because they have implementation or documentation evid
 70. Test Suite Hygiene V1
 71. Operator Evidence Consistency Pass V1
 72. Backup Restore Drill Runbook V1
+73. Backup Restore Local Drill Evidence V1
 
 Ranking Included Snapshot Contract V1 is counted as paid because `GET /reports/leaderboards/closed` now returns `includedSnapshotRuns`, daily ranking returns the included closed snapshot, monthly ranking returns every completed daily snapshot included in the month calculation, and `/store/rankings` uses that backend contract instead of frontend inference.
 
@@ -126,6 +127,8 @@ Test Suite Hygiene V1 is counted as paid because the oversized auth-admin integr
 Operator Evidence Consistency Pass V1 is counted as paid because existing import and master-data operator surfaces now use the same `Go / Conditional Go / No-Go`, row evidence, dry-run evidence, sanitized evidence, retry evidence, and dependency mapping language without adding backend endpoints, workflows, scoring behavior, import behavior, or promotion behavior. Reference: `docs/plans/operator-evidence-consistency-pass-v1.md`.
 
 Backup Restore Drill Runbook V1 is counted as paid because a guarded local/staging-only PostgreSQL recovery drill now documents `pg_dump`, disposable restore target recreation, `pg_restore`, restore proof checks, sanitized evidence, and Go / Conditional Go / No-Go states without approving production automation or destructive production restore behavior. Reference: `docs/plans/backup-restore-drill-runbook-v1.md`.
+
+Backup Restore Local Drill Evidence V1 is counted as paid because a disposable local Docker PostgreSQL source database migrated from empty state with 42 succeeded migrations, a backup file was produced, that backup restored into the separate disposable `store_ops_restore_drill` database, source and restore schema/table counts matched, migration tracking matched 42 succeeded and 0 failed rows, no production database was touched, and the 037 checklist migration idempotency issue was fixed and guarded. Reference: `docs/plans/backup-restore-drill-local-evidence-2026-04-30.md`.
 
 Production-Ready Migration System V1 is counted as paid because SQL migrations are tracked in `audit.schema_migration`, checksum drift is rejected, failed runs are recorded with error evidence, the HTTP migration endpoint is disabled in production, and `npm.cmd run db:migrate` is the approved CLI/CI migration path.
 

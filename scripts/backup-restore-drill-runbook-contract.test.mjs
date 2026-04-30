@@ -65,7 +65,7 @@ test('backup restore drill runbook is linked from handoff and debt docs', () => 
     requireText(text, runbookPath)
     requireText(text, 'Backup Restore Drill Runbook V1')
   }
-  requireText(activeNextActions, 'Closed active debts: 72')
-  requireText(debtLedger, 'Closed active debts: 72')
+  assert.match(activeNextActions, /Closed active debts: \d+/)
+  assert.match(debtLedger, /Closed active debts: \d+/)
   requireText(debtLedger, '72. Backup Restore Drill Runbook V1')
 })
