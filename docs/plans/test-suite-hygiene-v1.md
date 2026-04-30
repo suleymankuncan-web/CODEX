@@ -123,6 +123,33 @@ Deferred after this slice:
 - Do not introduce shared helper abstractions until repeated setup becomes the real maintenance problem.
 - Review remaining large backend specs by risk, not by line count alone.
 
+## Fourth Safe Slice
+
+Fourth safe slice: split competition team template repository tests out of `backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.spec.ts`.
+
+Target files:
+
+- `backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.spec.ts`
+- `backend/nestjs/src/modules/store-ops/infrastructure/competition-team-template.repository.spec.ts`
+
+Expected behavior:
+
+- The same 27 competition repository tests still run across the two files.
+- The 21 stage, package plan, finalization, score, and scope tests remain in `competition.repository.spec.ts`.
+- The 6 team template CRUD/clone/list tests move to `competition-team-template.repository.spec.ts`.
+- Test names remain unchanged.
+- Production code is not changed.
+
+Reason:
+
+- Team template management is a natural repository boundary and does not require changing competition package, finalization, score, or scope assertions.
+- Master-data remains deliberately deferred because its business rules are denser and should not be split merely because it is the largest file.
+
+Deferred after this slice:
+
+- Do not split master-data until a separate, mechanical boundary is proven.
+- Review `competition.service.spec.ts`, `snapshot-run.e2e-spec.ts`, and `auth-scope.e2e-spec.ts` as lower-risk future candidates.
+
 ## Verification
 
 Targeted:
@@ -137,6 +164,13 @@ Import split:
 ```powershell
 cd "C:\Users\suley\OneDrive\MasaÃ¼stÃ¼\WEBSÄ°TE Ã‡ALIÅMASI\backend\nestjs"
 npm.cmd test -- --runInBand test/integration/import-batch.e2e-spec.ts test/integration/import-batch-evidence.e2e-spec.ts test/integration/integration-sources.e2e-spec.ts
+```
+
+Competition repository split:
+
+```powershell
+cd "C:\Users\suley\OneDrive\MasaÃ¼stÃ¼\WEBSÄ°TE Ã‡ALIÅMASI\backend\nestjs"
+npm.cmd test -- --runInBand src/modules/store-ops/infrastructure/competition.repository.spec.ts src/modules/store-ops/infrastructure/competition-team-template.repository.spec.ts
 ```
 
 Guard:
@@ -163,4 +197,4 @@ The risk becomes real only if we start inventing clever helpers, rewriting asser
 
 ## Next Logical Step
 
-After the import evidence split, review remaining large backend specs by risk. The next candidate should be chosen from remaining oversized files only after checking whether their repeated setup can be split mechanically without hiding assertions. Do not split master-data in the same pass.
+After the competition repository split, review remaining large backend specs by risk. The next candidate should be chosen from `competition.service.spec.ts`, `snapshot-run.e2e-spec.ts`, or `auth-scope.e2e-spec.ts` only if the boundary is mechanical. Do not split master-data until that work has its own explicit plan.

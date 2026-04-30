@@ -86,6 +86,18 @@ const integrationSourceExpectedTestNames = [
   'fails import creation with a clear error when the integration source is inactive',
   'rejects deactivating an integration source when active import batches exist',
 ]
+const competitionRepositorySplitFiles = [
+  'backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.spec.ts',
+  'backend/nestjs/src/modules/store-ops/infrastructure/competition-team-template.repository.spec.ts',
+]
+const competitionTeamTemplateExpectedTestNames = [
+  'lists active team templates with store memberships',
+  'can list inactive team templates when active filter is disabled',
+  'creates a team template and writes store memberships plus audit',
+  'deactivates a team template and writes audit metadata',
+  'updates a team template and replaces store memberships with audit metadata',
+  'clones a team template with source stores and audit metadata',
+]
 
 test('test suite hygiene keeps the no-coverage-loss boundary', () => {
   for (const phrase of [
@@ -184,4 +196,31 @@ test('import batch e2e is split without dropping evidence coverage', () => {
     assert.equal(exactOccurrences, 1, `${testName} must appear exactly once`)
   }
   assert.ok(largestLineCount < 1500, `largest split import test file has ${largestLineCount} lines`)
+})
+
+test('competition repository tests are split without dropping team template coverage', () => {
+  let totalTests = 0
+  let largestLineCount = 0
+  let combinedText = ''
+
+  for (const file of competitionRepositorySplitFiles) {
+    assert.equal(existsSync(join(workspaceRoot, file)), true, `${file} must exist`)
+    const text = readText(file)
+    const testCount = [...text.matchAll(/\bit\s*\(/g)].length
+    totalTests += testCount
+    largestLineCount = Math.max(largestLineCount, text.split('\n').length)
+    combinedText += `\n${text}`
+  }
+
+  assert.equal(totalTests, 27)
+  assert.equal([...readText(competitionRepositorySplitFiles[0]).matchAll(/\bit\s*\(/g)].length, 21)
+  assert.equal([...readText(competitionRepositorySplitFiles[1]).matchAll(/\bit\s*\(/g)].length, 6)
+  for (const testName of competitionTeamTemplateExpectedTestNames) {
+    const exactOccurrences = [...combinedText.matchAll(new RegExp(`it\\("${testName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'g'))].length
+    assert.equal(exactOccurrences, 1, `${testName} must appear exactly once`)
+  }
+  assert.ok(
+    largestLineCount < 1500,
+    `largest split competition repository test file has ${largestLineCount} lines`,
+  )
 })

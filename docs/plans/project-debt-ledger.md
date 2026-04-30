@@ -17,7 +17,7 @@ Date: 30 April 2026
 
 Current count:
 
-- Closed active debts: 77
+- Closed active debts: 78
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -105,6 +105,7 @@ These are counted as paid because they have implementation or documentation evid
 75. Migration Smoke Release Preflight Policy V1
 76. Import Batch Source Test Split V1
 77. Import Batch Evidence Test Split V1
+78. Competition Repository Test Split V1
 
 Ranking Included Snapshot Contract V1 is counted as paid because `GET /reports/leaderboards/closed` now returns `includedSnapshotRuns`, daily ranking returns the included closed snapshot, monthly ranking returns every completed daily snapshot included in the month calculation, and `/store/rankings` uses that backend contract instead of frontend inference.
 
@@ -141,6 +142,8 @@ Migration Smoke Release Preflight Policy V1 is counted as paid because the relea
 Import Batch Source Test Split V1 is counted as paid because integration source CRUD, lookup, audit, duplicate-source, inactive-source, and deactivate-guard tests were moved from `import-batch.e2e-spec.ts` into `integration-sources.e2e-spec.ts` without changing production code, test names, or the 32 guarded import/integration source e2e cases. Reference: `docs/plans/test-suite-hygiene-v1.md`.
 
 Import Batch Evidence Test Split V1 is counted as paid because batch detail, lineage, reconciliation, error row, mapping, audit, and retry e2e tests were moved from `import-batch.e2e-spec.ts` into `import-batch-evidence.e2e-spec.ts` without changing production code, test names, or the 32 guarded import/integration source e2e cases. Reference: `docs/plans/test-suite-hygiene-v1.md`.
+
+Competition Repository Test Split V1 is counted as paid because team template repository tests were moved from `competition.repository.spec.ts` into `competition-team-template.repository.spec.ts` without changing production code, test names, or the 27 guarded competition repository cases. Reference: `docs/plans/test-suite-hygiene-v1.md`.
 
 Production-Ready Migration System V1 is counted as paid because SQL migrations are tracked in `audit.schema_migration`, checksum drift is rejected, failed runs are recorded with error evidence, the HTTP migration endpoint is disabled in production, and `npm.cmd run db:migrate` is the approved CLI/CI migration path.
 
