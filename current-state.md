@@ -4464,6 +4464,49 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: bu kontrati store ranking ve KPI aciklama metinlerine referans olacak sekilde kullanmak; skor matematigini degistirmeden kullaniciya "bu puan nereden geldi" dilini sade tutmak.
 
+## Son Ranking Score Explanation Copy V1
+
+30 Nisan 2026 itibariyla aylik ranking skor kaynak kontrati store yuzeylerine kullanici dili olarak baglandi.
+
+Degisen frontend yuzeyleri:
+
+- `/store/rankings`
+- `/store/kpis`
+
+Kilitlenen gorunur dil:
+
+- Personel ana skoru kapanmis gunlerdeki total score ortalamasidir.
+- Personel hedefi `TARGET`, ATV ve UPT ise `TURKEY_AVERAGE` kaynagindan puanlanir.
+- Checklist personel ranking V1 icinde puan kaynagi degildir.
+- Aylik kanit backend `includedSnapshotRuns` alanindan gelir.
+- Magaza hedefi `TARGET`, CR/ATV/UPT `TURKEY_AVERAGE`, BM/VM checklist ise `CHECKLIST_SCORE` mantigina baglidir.
+- BM/VM checklist tamamlanmadiysa magaza ceza yemez; pay KPI tarafinda kalir.
+- Gercek oran `%120` uzerinde olsa da skor katkisi `%120` cap ile hesaplanir.
+- Import edilen Turkiye ortalamasi/ozet satirlari kontrol kanitidir; skor referansini sistem kendi kapsamindan hesaplar.
+
+Dogrulama:
+
+- TDD kirmizi test: `admin-web/e2e/store-surfaces.spec.ts` uc beklentide once metin yok diye dustu.
+- Targeted Playwright passed: 3/3.
+- Frontend `npm.cmd run check:release` passed:
+  - lint,
+  - script tests 7/7,
+  - build,
+  - Playwright 46/46,
+  - audit 0 vulnerability.
+- Root `npm.cmd run check:release` passed:
+  - root script tests 50/50,
+  - backend release gate passed: lint, 73 test suite / 467 test, build, audit 0 vulnerability,
+  - frontend release gate passed: lint, script tests, build, 46 Playwright test, audit 0 vulnerability.
+
+CODEX durust yorum:
+
+- Bu adim skor matematigine dokunmadi; sadece karar verdigimiz kuralin ekranda dagilmasini engelledi.
+- Kullanici artik "bu puan nereden geldi" sorusuna store ve ranking yuzeylerinde daha net cevap alir.
+- Bu, ileride mobil BFF ve tam TR/EN localization gelince ceviri anahtarlarina tasinmasi gereken bir adaydir.
+
+Siradaki mantikli adim: bu aciklama dilini tam localization sistemi icin anahtar adaylarina ayirmak yerine simdilik bekletmek; yeni backend temeli olarak master data bootstrap promotion/readiness tarafina devam etmek daha degerli.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:

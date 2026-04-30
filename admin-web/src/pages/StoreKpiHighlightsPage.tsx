@@ -764,6 +764,37 @@ export function StoreKpiHighlightsPage(input: {
         ) : null}
       </section>
 
+      <section className="panel" aria-label="Store score source explanation">
+        <div className="panel-heading">
+          <div>
+            <div className="eyebrow">Skor Kontrati</div>
+            <h3>Magaza skor kaynaklari</h3>
+          </div>
+          <StatusPill tone="accent">Resmi kural</StatusPill>
+        </div>
+        <p className="queue-subtitle">
+          Magaza skoru hedef, Turkiye ortalamasi KPI sinyalleri ve tamamlanan checklist kanitlarindan okunur.
+        </p>
+        <div className="key-grid">
+          <KeyValue
+            label="KPI kaynaklari"
+            value="Hedef TARGET kaynagindan; CR, ATV ve UPT Turkiye ortalamasindan puanlanir."
+          />
+          <KeyValue
+            label="Checklist payi"
+            value="BM ve VM checklist tamamlanmadiysa magaza ceza yemez; pay KPI tarafinda kalir."
+          />
+          <KeyValue
+            label="Cap dili"
+            value="Gercek oran %120 uzerinde olsa da skor katkisi %120 cap ile hesaplanir."
+          />
+          <KeyValue
+            label="Turkiye ortalamasi"
+            value="Import edilen ozet satirlar kontrol kanitidir; skor referansini sistem kendi kapsamindan hesaplar."
+          />
+        </div>
+      </section>
+
       <section className="two-up-grid">
         <article className="panel">
           <div className="panel-heading">

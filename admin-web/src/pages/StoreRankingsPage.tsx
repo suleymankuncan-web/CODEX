@@ -448,6 +448,9 @@ export function StoreRankingsPage(input: {
           <p className="queue-subtitle">
             Bu ay siralamasi tek bir snapshot degil, secili ay icindeki tamamlanmis gunluk kapanislarin toplamindan okunur.
           </p>
+          <p className="helper-text">
+            Aylik kanit includedSnapshotRuns alanindan gelir.
+          </p>
           {monthlyClosureEvidenceRuns.length ? (
             <div className="stacked-table">
               {monthlyClosureEvidenceRuns.map((run) => (
@@ -473,6 +476,37 @@ export function StoreRankingsPage(input: {
           )}
         </section>
       ) : null}
+
+      <section className="panel" aria-label="Ranking score source explanation">
+        <div className="panel-heading">
+          <div>
+            <div className="eyebrow">Skor Kontrati</div>
+            <h3>Skor kaynaklari</h3>
+          </div>
+          <StatusPill tone="accent">Resmi kural</StatusPill>
+        </div>
+        <p className="queue-subtitle">
+          Personel siralamasi, kapatilmis performans gunlerinin resmi score kaydina baglidir.
+        </p>
+        <div className="key-grid">
+          <KeyValue
+            label="Ana skor"
+            value="Personel ana skoru kapanmis gunlerdeki total score ortalamasidir."
+          />
+          <KeyValue
+            label="KPI kaynaklari"
+            value="Hedef TARGET kaynagindan; ATV ve UPT Turkiye ortalamasindan puanlanir."
+          />
+          <KeyValue
+            label="Checklist"
+            value="Checklist personel ranking V1 icinde puan kaynagi degildir."
+          />
+          <KeyValue
+            label="Mini siralar"
+            value="ATV ve UPT mini siralari aciklayicidir; ana siralama weighted total score ile kalir."
+          />
+        </div>
+      </section>
 
       <section className="two-up-grid">
         <article className="panel">
