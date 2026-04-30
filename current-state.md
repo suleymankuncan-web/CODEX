@@ -4260,6 +4260,41 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: Snapshot label/selection helper'ini ortak bir frontend utility haline getirip, ayni kapali snapshot secim desenini once `/store/me`, sonra `/store/rankings` ekranina kontrollu yaymak.
 
+## Son Snapshot Selector Pattern Yayilimi V1
+
+30 Nisan 2026 itibariyla kapali snapshot secim deseni `/store/me` ve `/store/rankings` ekranlarina yayildi.
+
+Eklenenler:
+
+- Snapshot option metni `admin-web/src/features/reports/snapshot-labels.ts` icinde ortak helper'a alindi.
+- `/store/kpis` artik ayni ortak helper'i kullaniyor; sayfa icindeki tekrar eden tarih/period label kodu kaldirildi.
+- `/store/me` kapali modda ham tarih secmek yerine snapshot run listesinden okunur label gosteriyor.
+- `/store/me` secimi UI'da `snapshotRunId` ile tutuluyor, backend `my-performance` cagrisi icin ilgili `snapshotDate` gonderiliyor.
+- `/store/rankings` gunluk modda manuel date input yerine snapshot select kullaniyor.
+- `/store/rankings` aylik mod mevcut month input davranisini koruyor; gunluk snapshot listesi hata verirse aylik modu gereksiz yere dusurmeyecek sekilde izole edildi.
+- E2E testleri `/store/me` ve `/store/rankings` icin okunur snapshot option label beklentisini ekledi.
+
+Dogrulama:
+
+- TDD kirmizi test: `/store/me` ve `/store/rankings` snapshot label beklentileri once beklenen sekilde dustu.
+- Frontend build passed.
+- Frontend targeted store surface e2e: 13 test passed.
+- Frontend targeted KPI explainability e2e: 4 test passed.
+- Frontend `npm.cmd run check:release` passed:
+  - lint,
+  - script tests 7/7,
+  - build,
+  - 46 Playwright test,
+  - audit 0 vulnerability.
+
+CODEX durust yorum:
+
+- Bu yayilim UI'nin goz alici tarafindan cok, guven tarafini guclendirdi; kullanici artik kapanmis veride elle tarih tahmin etmiyor.
+- Ranking aylik modunu simdilik bozmadik; aylik snapshot secimini ayri tasarlamak daha dogru olur.
+- Ortak helper sayesinde bundan sonra snapshot label metnini tek yerden degistirebiliriz.
+
+Siradaki mantikli adim: `/store/rankings` icin aylik snapshot secimini ayri ele almak; once backend'in aylik leaderboard kaynagini periodStart mi snapshotRunId mi uzerinden kilitleyecegimize karar verip sonra UI'yi yaymak.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:

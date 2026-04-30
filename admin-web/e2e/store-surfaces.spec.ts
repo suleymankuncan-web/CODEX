@@ -40,6 +40,17 @@ test('store self-performance page renders live score, metrics, and ranks', async
   await expect(page.getByText('Performans yuzeyi acilamadi')).toHaveCount(0)
 })
 
+test('store self-performance closed mode uses readable snapshot labels', async ({ page }) => {
+  await page.goto('/store/me')
+  await page.getByRole('button', { name: 'Kapanmis gun' }).click()
+
+  await expect(
+    page.getByRole('option', {
+      name: /24 Nis 2026 kapan.*snapshot/,
+    }),
+  ).toBeAttached()
+})
+
 test('store KPI highlights page explains metric source semantics', async ({ page }) => {
   await page.goto('/store/kpis')
 
@@ -74,6 +85,11 @@ test('store rankings page renders closed leaderboard and metric mini-ranks', asy
   await page.goto('/store/rankings')
 
   await expect(page.getByRole('heading', { name: /Gunluk ve aylik kapanis siralamasi/i })).toBeVisible()
+  await expect(
+    page.getByRole('option', {
+      name: /24 Nis 2026 kapan.*snapshot/,
+    }),
+  ).toBeAttached()
   await expect(page.getByText('Mevcut siralama')).toBeVisible()
   await expect(page.getByText('Store Personnel - 1/4')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Siralama kapsam olgunlugu' })).toBeVisible()

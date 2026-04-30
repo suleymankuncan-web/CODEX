@@ -17,8 +17,8 @@ import {
   getReportingSnapshotRuns,
   getStoreScoreBreakdown,
   getStoreKpiHighlights,
-  type ReportingSnapshotRun,
 } from '../features/reports/api'
+import { formatSnapshotOptionLabel } from '../features/reports/snapshot-labels'
 import { formatDate, formatState, getErrorMessage } from '../lib/format'
 import { ApiError } from '../lib/api'
 import {
@@ -64,56 +64,6 @@ function formatMetric(input: number) {
     minimumFractionDigits: Number.isInteger(input) ? 0 : 2,
     maximumFractionDigits: 2,
   }).format(input)
-}
-
-function parseDateOnly(input: string) {
-  if (input.includes('T')) {
-    const date = new Date(input)
-    return new Date(date.getFullYear(), date.getMonth(), date.getDate())
-  }
-
-  const [year, month, day] = input.slice(0, 10).split('-').map(Number)
-  return new Date(year, month - 1, day)
-}
-
-function isSameDay(left: Date, right: Date) {
-  return (
-    left.getFullYear() === right.getFullYear() &&
-    left.getMonth() === right.getMonth() &&
-    left.getDate() === right.getDate()
-  )
-}
-
-function isLastDayOfMonth(date: Date) {
-  const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
-  return date.getDate() === lastDay
-}
-
-function formatSnapshotPeriodLabel(run: ReportingSnapshotRun) {
-  const periodStart = parseDateOnly(run.periodStart)
-  const periodEnd = parseDateOnly(run.periodEnd)
-
-  if (isSameDay(periodStart, periodEnd)) {
-    return 'günlük snapshot'
-  }
-
-  if (
-    periodStart.getFullYear() === periodEnd.getFullYear() &&
-    periodStart.getMonth() === periodEnd.getMonth() &&
-    periodStart.getDate() === 1 &&
-    isLastDayOfMonth(periodEnd)
-  ) {
-    const monthName = new Intl.DateTimeFormat('tr-TR', { month: 'long' }).format(
-      periodStart,
-    )
-    return `${monthName[0]?.toLocaleUpperCase('tr-TR')}${monthName.slice(1)} aylık snapshot`
-  }
-
-  return `${formatDate(run.periodStart)} - ${formatDate(run.periodEnd)} snapshot`
-}
-
-function formatSnapshotOptionLabel(run: ReportingSnapshotRun) {
-  return `${formatDate(run.snapshotDate)} kapanışı - ${formatSnapshotPeriodLabel(run)}`
 }
 
 function formatChecklistStatus(input: {

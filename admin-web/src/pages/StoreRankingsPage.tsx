@@ -11,8 +11,9 @@ import {
 } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { formatPerformanceGrade, resolvePerformanceGrade } from '../features/kpi/grading'
-import { getClosedLeaderboard, getKpiConfig } from '../features/reports/api'
+import { getClosedLeaderboard, getKpiConfig, getReportingSnapshotRuns } from '../features/reports/api'
 import type { ClosedLeaderboardSummary, ClosedRankingEmployee } from '../features/reports/api'
+import { formatSnapshotOptionLabel } from '../features/reports/snapshot-labels'
 import { formatDate, getErrorMessage } from '../lib/format'
 
 function canUseRankings(authSummary: AuthSessionSummary | null) {
@@ -145,18 +146,46 @@ export function StoreRankingsPage(input: {
   const enabled = canUseRankings(input.authSummary)
   const [periodType, setPeriodType] = useState<'daily' | 'monthly'>('daily')
   const [periodStart, setPeriodStart] = useState('')
+  const [selectedSnapshotRunId, setSelectedSnapshotRunId] = useState('')
   const configQuery = useQuery({
     queryKey: ['store-rankings-kpi-config'],
     queryFn: getKpiConfig,
     enabled,
     retry: false,
   })
+  const snapshotRunsQuery = useQuery({
+    queryKey: ['store-rankings-snapshot-runs', 'daily-list'],
+    queryFn: () =>
+      getReportingSnapshotRuns({
+        snapshotType: 'daily',
+        limit: 30,
+        offset: 0,
+      }),
+    enabled: enabled && periodType === 'daily',
+    retry: false,
+  })
+  const availableSnapshotRuns = snapshotRunsQuery.data?.items ?? []
+  const activeSnapshotRun =
+    periodType === 'daily'
+      ? availableSnapshotRuns.find((run) => run.snapshotRunId === selectedSnapshotRunId) ??
+        availableSnapshotRuns[0] ??
+        null
+      : null
   const leaderboardQuery = useQuery({
-    queryKey: ['closed-leaderboard', periodType, periodStart || 'latest'],
+    queryKey: [
+      'closed-leaderboard',
+      periodType,
+      periodStart || 'latest',
+      activeSnapshotRun?.snapshotDate ?? 'latest-snapshot',
+    ],
     queryFn: () =>
       getClosedLeaderboard({
         periodType,
-        periodStart: periodStart || undefined,
+        periodStart: periodType === 'monthly' ? periodStart || undefined : undefined,
+        snapshotDate:
+          periodType === 'daily' && activeSnapshotRun?.snapshotDate
+            ? activeSnapshotRun.snapshotDate
+            : undefined,
         limit: 10,
       }),
     enabled,
@@ -173,7 +202,11 @@ export function StoreRankingsPage(input: {
     )
   }
 
-  if (leaderboardQuery.isLoading || configQuery.isLoading) {
+  if (
+    leaderboardQuery.isLoading ||
+    configQuery.isLoading ||
+    (periodType === 'daily' && snapshotRunsQuery.isLoading)
+  ) {
     return (
       <ScreenState
         title="Kapanmis siralama hazirlaniyor"
@@ -182,11 +215,13 @@ export function StoreRankingsPage(input: {
     )
   }
 
-  if (leaderboardQuery.isError || configQuery.isError) {
+  const snapshotRunsError = periodType === 'daily' && snapshotRunsQuery.isError
+
+  if (leaderboardQuery.isError || configQuery.isError || snapshotRunsError) {
     return (
       <ScreenState
         title="Siralama yuzeyi acilamadi"
-        copy={getErrorMessage(leaderboardQuery.error ?? configQuery.error)}
+        copy={getErrorMessage(leaderboardQuery.error ?? configQuery.error ?? snapshotRunsQuery.error)}
         tone="error"
       />
     )
@@ -247,6 +282,7 @@ export function StoreRankingsPage(input: {
             onClick={() => {
               setPeriodType('daily')
               setPeriodStart('')
+              setSelectedSnapshotRunId('')
             }}
           >
             Gunluk
@@ -257,27 +293,61 @@ export function StoreRankingsPage(input: {
             onClick={() => {
               setPeriodType('monthly')
               setPeriodStart(getCurrentMonthStart())
+              setSelectedSnapshotRunId('')
             }}
           >
             Aylik
           </button>
-          <input
-            className="control-input"
-            type={periodType === 'daily' ? 'date' : 'month'}
-            value={selectedInputValue}
-            onChange={(event) => {
-              const nextValue = event.target.value
-              setPeriodStart(periodType === 'monthly' && nextValue ? `${nextValue}-01` : nextValue)
-            }}
-            aria-label={periodType === 'daily' ? 'Ranking snapshot date' : 'Ranking month'}
-          />
+          {periodType === 'daily' ? (
+            <label className="control-field">
+              <span>Kapanmis siralama snapshot secimi</span>
+              <select
+                value={
+                  selectedSnapshotRunId ||
+                  activeSnapshotRun?.snapshotRunId ||
+                  ''
+                }
+                onChange={(event) => setSelectedSnapshotRunId(event.target.value)}
+                aria-label="Ranking snapshot secimi"
+              >
+                <option value="">Son kapanmis snapshot</option>
+                {availableSnapshotRuns.map((run) => (
+                  <option key={run.snapshotRunId} value={run.snapshotRunId}>
+                    {formatSnapshotOptionLabel(run)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <input
+              className="control-input"
+              type="month"
+              value={selectedInputValue}
+              onChange={(event) => {
+                const nextValue = event.target.value
+                setPeriodStart(nextValue ? `${nextValue}-01` : nextValue)
+              }}
+              aria-label="Ranking month"
+            />
+          )}
           <button
             className="control-button"
             type="button"
-            onClick={() => setPeriodStart(periodType === 'monthly' ? getCurrentMonthStart() : '')}
-            disabled={!periodStart && periodType === 'daily'}
+            onClick={() => {
+              if (periodType === 'monthly') {
+                setPeriodStart(getCurrentMonthStart())
+                return
+              }
+
+              setSelectedSnapshotRunId('')
+            }}
+            disabled={
+              periodType === 'daily'
+                ? !selectedSnapshotRunId
+                : periodStart === getCurrentMonthStart()
+            }
           >
-            {periodType === 'monthly' ? 'Bu ay' : 'Filtreyi temizle'}
+            {periodType === 'monthly' ? 'Bu ay' : 'Son kapanmis gune don'}
           </button>
         </div>
       </section>

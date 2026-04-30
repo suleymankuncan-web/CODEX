@@ -12,6 +12,7 @@ import {
 import type { AuthSessionSummary } from '../features/auth/api'
 import { formatDisplayRoles } from '../features/auth/display'
 import { getKpiConfig, getMyPerformance, getReportingSnapshotRuns } from '../features/reports/api'
+import { formatSnapshotOptionLabel } from '../features/reports/snapshot-labels'
 import {
   describeBenchmarkCap,
   formatPerformanceGrade,
@@ -88,7 +89,7 @@ export function StoreMyPerformancePage(input: {
   const enabled = canUseSelfPerformance(input.authSummary)
   const [sourceMode, setSourceMode] = useState<'live' | 'closed'>('live')
   const [selectedLivePeriodStart, setSelectedLivePeriodStart] = useState('')
-  const [selectedClosedSnapshotDate, setSelectedClosedSnapshotDate] = useState('')
+  const [selectedClosedSnapshotRunId, setSelectedClosedSnapshotRunId] = useState('')
 
   const configQuery = useQuery({
     queryKey: ['store-me-kpi-config'],
@@ -97,19 +98,6 @@ export function StoreMyPerformancePage(input: {
     retry: false,
   })
 
-  const performanceQuery = useQuery({
-    queryKey: ['my-performance', sourceMode, selectedLivePeriodStart, selectedClosedSnapshotDate],
-    queryFn: () =>
-      getMyPerformance({
-        mode: sourceMode,
-        periodType: sourceMode === 'live' && selectedLivePeriodStart ? 'monthly' : undefined,
-        periodStart: sourceMode === 'live' && selectedLivePeriodStart ? selectedLivePeriodStart : undefined,
-        snapshotDate:
-          sourceMode === 'closed' && selectedClosedSnapshotDate ? selectedClosedSnapshotDate : undefined,
-      }),
-    enabled,
-    retry: false,
-  })
   const closedRunsQuery = useQuery({
     queryKey: ['store-me-closed-snapshot-runs'],
     queryFn: () =>
@@ -122,15 +110,34 @@ export function StoreMyPerformancePage(input: {
     retry: false,
   })
 
+  const availableClosedSnapshotRuns = closedRunsQuery.data?.items ?? []
+  const activeClosedSnapshotRun =
+    availableClosedSnapshotRuns.find(
+      (run) => run.snapshotRunId === selectedClosedSnapshotRunId,
+    ) ??
+    availableClosedSnapshotRuns[0] ??
+    null
+  const selectedClosedSnapshotDate = activeClosedSnapshotRun?.snapshotDate ?? ''
+
+  const performanceQuery = useQuery({
+    queryKey: ['my-performance', sourceMode, selectedLivePeriodStart, selectedClosedSnapshotDate],
+    queryFn: () =>
+      getMyPerformance({
+        mode: sourceMode,
+        periodType: sourceMode === 'live' && selectedLivePeriodStart ? 'monthly' : undefined,
+        periodStart: sourceMode === 'live' && selectedLivePeriodStart ? selectedLivePeriodStart : undefined,
+        snapshotDate:
+          sourceMode === 'closed' && selectedClosedSnapshotDate ? selectedClosedSnapshotDate : undefined,
+      }),
+    enabled: enabled && (sourceMode === 'live' || !closedRunsQuery.isLoading),
+    retry: false,
+  })
+
   const performance = performanceQuery.data
   const user = input.authSummary?.user
   const availableLivePeriods = useMemo(
     () => (performance?.availablePeriods ?? []).filter((period) => period.periodType === 'monthly'),
     [performance?.availablePeriods],
-  )
-  const availableClosedDates = useMemo(
-    () => closedRunsQuery.data?.items.map((item) => item.snapshotDate) ?? [],
-    [closedRunsQuery.data?.items],
   )
 
   if (!enabled) {
@@ -236,17 +243,21 @@ export function StoreMyPerformancePage(input: {
               </select>
             </label>
           ) : null}
-          {sourceMode === 'closed' && availableClosedDates.length > 0 ? (
+          {sourceMode === 'closed' && availableClosedSnapshotRuns.length > 0 ? (
             <label className="control-field">
-              <span>Kapanmis gun</span>
+              <span>Kapanmis performans snapshot secimi</span>
               <select
-                value={selectedClosedSnapshotDate}
-                onChange={(event) => setSelectedClosedSnapshotDate(event.target.value)}
+                value={
+                  selectedClosedSnapshotRunId ||
+                  activeClosedSnapshotRun?.snapshotRunId ||
+                  ''
+                }
+                onChange={(event) => setSelectedClosedSnapshotRunId(event.target.value)}
               >
-                <option value="">Son kapanmis gun</option>
-                {availableClosedDates.map((snapshotDate) => (
-                  <option key={snapshotDate} value={snapshotDate}>
-                    {formatDate(snapshotDate)}
+                <option value="">Son kapanmis snapshot</option>
+                {availableClosedSnapshotRuns.map((run) => (
+                  <option key={run.snapshotRunId} value={run.snapshotRunId}>
+                    {formatSnapshotOptionLabel(run)}
                   </option>
                 ))}
               </select>
