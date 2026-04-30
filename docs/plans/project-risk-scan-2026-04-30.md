@@ -10,9 +10,9 @@ No production behavior was changed by this scan.
 
 ## Green Signals
 
-- Latest root `npm.cmd run check:release` passed after Auth Admin Searchable Lookups V1.
+- Latest root `npm.cmd run check:release` passed after Auth Admin Searchable Lookups Frontend Wiring V1.
 - Backend release check passed with 89 suites and 486 tests.
-- Frontend Playwright passed with 46 tests.
+- Frontend Playwright passed with 47 tests.
 - Root script tests passed with 100 tests.
 - No tracked `node_modules`, `dist`, `test-results`, or `outputs` paths were found.
 - No tracked `.env` file was found.
@@ -44,7 +44,7 @@ Decision:
 - `integration.repository.ts` has now been reviewed separately and is treated as a planned investment, not an active refactor target.
 - `store-ops.repository.ts` has now been reviewed separately; the workforce request slice was extracted into `WorkforceRequestRepository`, while remaining checklist/read boundaries are treated as planned investments, not active refactor targets.
 - `reporting.repository.ts` has now been reviewed separately; it remains a monitored read-model boundary, while closed-ranking/performance/snapshot-report splits and query/index work wait for concrete reporting changes or measured pilot data.
-- `auth-admin.repository.ts` has now been reviewed separately; one user-account pagination count defect was fixed, open-ended active role-assignment DB uniqueness is now implemented with nullable-scope-safe index protection, and searchable active user/store lookup endpoints are implemented with literal wildcard escaping and without schema/index migration.
+- `auth-admin.repository.ts` has now been reviewed separately; one user-account pagination count defect was fixed, open-ended active role-assignment DB uniqueness is now implemented with nullable-scope-safe index protection, searchable active user/store lookup endpoints are implemented with literal wildcard escaping and without schema/index migration, and `/admin/auth` now uses those endpoints for role/action-store assignment selection.
 
 Reference:
 
@@ -155,7 +155,7 @@ If no external evidence is available, choose the next small guard through the in
 The best local candidates to consider next are:
 
 1. real staging/source/master-data evidence if it becomes available,
-2. optional auth-admin frontend search wiring if pilot admin selection needs the backend search endpoints,
+2. targeted auth-admin UI changes only if pilot admin operation proves a concrete need,
 3. reporting service boundary review if a concrete reporting API/UI change appears,
 4. targeted cleanup of ignored local generated files if the user wants workspace hygiene.
 
@@ -163,4 +163,4 @@ Note:
 
 - Searchable auth-admin lookup V1 has a design spec at `docs/superpowers/specs/2026-04-30-auth-admin-searchable-lookups-v1-design.md`.
 - Searchable auth-admin lookup V1 has a backend-first implementation plan at `docs/superpowers/plans/2026-04-30-auth-admin-searchable-lookups-v1.md`.
-- Backend endpoints are now implemented for active user and active store search. Frontend wiring, schema/index work, and broad auth-admin repository split remain future optional slices.
+- Backend endpoints are implemented for active user and active store search, and frontend wiring is implemented for role/action-store assignment. Schema/index work and broad auth-admin repository split remain future optional slices that need measured evidence or a concrete auth-admin workflow.

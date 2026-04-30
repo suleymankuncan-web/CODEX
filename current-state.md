@@ -5659,12 +5659,47 @@ CODEX durust yorum:
 - Bu guzel bir borc kapatma: pilot genisleyince HR admin ekraninda user/store dropdown sisligi operator hatasina donmeden backend arama kapisi hazir oldu.
 - Dogru sinir korundu; schema/index ve frontend buyutmesi acilmadi. Index ihtiyaci ancak gercek veri hacmi veya measured slow-query kanitiyle ele alinacak.
 
-Siradaki mantikli adim: root `check:release` ve `git diff --check` ile kapatip commit'lemek; sonra ihtiyac olursa auth-admin frontend arama wiring'ini ayri ve kucuk bir slice olarak planlamak.
+Bu siradaki adim tamamlandi: auth-admin frontend arama wiring'i kucuk bir slice olarak uygulandi.
+
+## Son Auth Admin Searchable Lookups Frontend Wiring V1
+
+30 Nisan 2026 itibariyla backend searchable auth-admin lookup endpointleri admin yuzeyinde kullanilir hale geldi.
+
+Eklenenler:
+
+- `/admin/auth` role assignment formu artik user aramasinda `GET /api/auth/lookups/users/search` kullanir.
+- Store scope role assignment seciminde `GET /api/auth/lookups/stores/search` kullanilir.
+- Secilen store, role assignment formunda `companyId`, `regionId` ve `storeId` alanlarini birlikte doldurur.
+- Action store assignment formu user ve store aramasinda ayni backend search endpointlerini kullanir.
+- Bundled `GET /api/auth/lookups` fallback olarak kalir; secili user/store arama sonucu kaybolmasin diye local option listesine pinlenir.
+- Pilot binding multi-store selector bilincli olarak degistirilmedi.
+- Backend schema, migration, auth policy, runtime auth ve Keycloak/OIDC davranisi degismedi.
+
+Dogrulama:
+
+- Frontend targeted build: `admin-web` `npm.cmd run build` gecti.
+- Frontend targeted e2e: `npm.cmd run test:e2e -- auth-admin-surfaces.spec.ts` gecti, 2/2.
+- root: `node --test scripts\*.test.mjs` gecti, 100/100.
+- root: `npm.cmd run check:release` gecti; backend 89 suite / 486 test, frontend Playwright 47/47, audit 0 vulnerability.
+- root: `git diff --check` gecti; yalniz CRLF uyarilari geldi.
+
+Debt ledger:
+
+- Closed active debts: 86
+- Strategic investment backlog: 8
+- Silent untracked quality debt in the active gate: 0
+
+CODEX durust yorum:
+
+- Bu backend search borcunun operator tarafindaki karsiligini kapatti. Artik HR/Admin genis pilotta user veya store secmek icin ilk 20 dropdown sonucuna mahkum degil.
+- Dogru sinir korundu: auth policy, schema/index, Keycloak ve repository split acilmadi. Buyutme gerekiyorsa artik gercek pilot kullanimi veya slow-query kanitiyle planlanmali.
+
+Siradaki mantikli adim: Dis staging/source/master-data kaniti gelirse ona oncelik vermek; gelmezse yeni auth UI buyutmesi yapmadan sadece pilot HR akisini zorlayan somut operator ihtiyacini secmek.
 
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
 
 ```text
-current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. Auth Role Assignment Active Uniqueness V1 kapandi; fresh DB smoke 43/43 ve root check:release gecti. Searchable auth-admin lookup design/spec ve backend-first plan kapandi. Backend searchable endpointleri TDD ile uygulandi: GET /api/auth/lookups/users/search ve GET /api/auth/lookups/stores/search. Existing GET /api/auth/lookups uyumlu kaldi; query minimum 2 karakter, limit maksimum 50. Schema/index/frontend/runtime auth degismedi. Siradaki mantikli adim: gerekirse auth-admin frontend arama wiring'ini ayri kucuk slice olarak planlamak; dis source/master-data/staging kaniti gelirse ona oncelik vermek.
+current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. Auth Role Assignment Active Uniqueness V1 kapandi; fresh DB smoke 43/43 ve root check:release gecti. Searchable auth-admin lookup backend endpointleri ve frontend wiring kapandi: /admin/auth role assignment ve action store assignment user/store search endpointlerini kullaniyor. Existing GET /api/auth/lookups uyumlu kaldi; query minimum 2 karakter, limit maksimum 50. Schema/index/runtime auth/Keycloak degismedi. Son root check:release gecti; backend 89 suite / 486 test, frontend Playwright 47/47, audit 0 vulnerability. Siradaki mantikli adim: dis source/master-data/staging kaniti gelirse ona oncelik vermek; gelmezse yeni auth UI buyutmesi yapmadan sadece pilot HR akisinda gercek ihtiyac olan kucuk guard'i secmek.
 ```

@@ -91,16 +91,17 @@ As of 30 April 2026, the competition package planning flow, Operational Feed V1,
 - local disposable fresh database migration smoke with `audit.schema_migration` proof and core schema table counts
 - release policy that keeps Docker-dependent fresh DB smoke out of mandatory `check:release` while requiring it as manual preflight when DB schema or migration files changed
 - auth-admin searchable active user/store backend lookup endpoints with capped query validation and LIKE wildcard escaping
+- auth-admin frontend role/action-store assignment search wiring using the backend user/store lookup endpoints
 
 ## Debt Count
 
 Reference: `docs/plans/project-debt-ledger.md`
 
-- Closed active debts: 85
+- Closed active debts: 86
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
-- Strategic investment backlog: 2
+- Strategic investment backlog: 8
 - Silent untracked quality debt in the active gate: 0
 
 Interpretation:
@@ -1054,6 +1055,21 @@ Interpretation:
   - root `npm.cmd run check:release` passed
 - Reference:
   - `docs/superpowers/plans/2026-04-30-auth-admin-searchable-lookups-v1.md`
+
+### Completed: Auth Admin Searchable Lookups Frontend Wiring V1
+- Completed: 30 April 2026
+- Result:
+  - `/admin/auth` role assignment user search uses `GET /api/auth/lookups/users/search`
+  - store-scope role assignment store search uses `GET /api/auth/lookups/stores/search`
+  - selected store search results fill company, region, and store scope ids
+  - action store assignment user/store selectors use the same backend search endpoints
+  - bundled lookup fallback remains compatible and selected search results stay available in the local option list
+  - pilot binding multi-store selection, backend auth policy, schema, migration, runtime auth, and Keycloak behavior did not change
+- Verification:
+  - frontend `npm.cmd run build` passed
+  - targeted `npm.cmd run test:e2e -- auth-admin-surfaces.spec.ts` passed: 2/2
+  - root script guard passed: 100/100
+  - root `npm.cmd run check:release` passed
 
 ### 1. Real IdP Staging Evidence
 - Priority: `P1`

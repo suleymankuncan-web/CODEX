@@ -72,6 +72,112 @@ test('HR admin can submit a pilot user binding', async ({ page }) => {
   expect(requestBody?.storeIds).toEqual(['10000000-0000-4000-8000-000000000021'])
 })
 
+test('HR admin can search auth users and stores while creating assignments', async ({ page }) => {
+  const userId = '90000000-0000-4000-8000-000000000201'
+  const storeId = '10000000-0000-4000-8000-000000000021'
+  const companyId = '10000000-0000-4000-8000-000000000001'
+  const regionId = '10000000-0000-4000-8000-000000000011'
+  let roleAssignmentBody: Record<string, unknown> | null = null
+  let actionStoreBody: Record<string, unknown> | null = null
+
+  await page.route('**/api/auth/lookups/users/search?**', async (route) => {
+    const url = new URL(route.request().url())
+    expect(url.searchParams.get('q')?.length).toBeGreaterThanOrEqual(2)
+    await route.fulfill({
+      json: {
+        items: [
+          {
+            userId,
+            username: 'store.manager',
+            email: 'store.manager@example.com',
+            authProvider: 'oidc',
+            providerSubject: 'provider-subject-201',
+          },
+        ],
+        meta: { query: url.searchParams.get('q'), count: 1, limit: 20 },
+      },
+    })
+  })
+
+  await page.route('**/api/auth/lookups/stores/search?**', async (route) => {
+    const url = new URL(route.request().url())
+    expect(url.searchParams.get('q')?.length).toBeGreaterThanOrEqual(2)
+    await route.fulfill({
+      json: {
+        items: [
+          {
+            storeId,
+            storeCode: 'SM140',
+            storeName: 'Marmara Park',
+            companyId,
+            regionId,
+            regionName: 'Marmara',
+          },
+        ],
+        meta: { query: url.searchParams.get('q'), count: 1, limit: 20 },
+      },
+    })
+  })
+
+  await page.route('**/api/auth/role-assignments', async (route) => {
+    roleAssignmentBody = route.request().postDataJSON()
+    await route.fulfill({
+      status: 201,
+      json: {
+        command: { status: 'created', message: 'Role assignment created' },
+        data: { assignment: { assignmentId: 'assignment-1' } },
+      },
+    })
+  })
+
+  await page.route('**/api/auth/action-store-assignments', async (route) => {
+    actionStoreBody = route.request().postDataJSON()
+    await route.fulfill({
+      status: 201,
+      json: {
+        command: { status: 'created', message: 'Action store assignment created' },
+        data: { assignment: { assignmentId: 'action-store-assignment-1' } },
+      },
+    })
+  })
+
+  await page.goto('/admin/auth')
+
+  await page.getByLabel('Search users for role grant').fill('manager')
+  await expect(page.getByLabel('Role assignment user')).toContainText('store.manager')
+  await page.getByLabel('Role assignment user').selectOption(userId)
+  await page.getByLabel('Role assignment role').selectOption('STORE_MANAGER')
+  await page.getByLabel('Role assignment scope type').selectOption('store')
+  await page.getByLabel('Search stores for role grant').fill('marmara')
+  await expect(page.getByLabel('Role assignment store')).toContainText('SM140')
+  await page.getByLabel('Role assignment store').selectOption(storeId)
+  await page.getByRole('button', { name: 'Create assignment' }).click()
+
+  await expect(page.getByText('Role assignment created')).toBeVisible()
+  expect(roleAssignmentBody).toMatchObject({
+    userId,
+    roleCode: 'STORE_MANAGER',
+    scopeType: 'store',
+    companyId,
+    regionId,
+    storeId,
+  })
+
+  await page.getByLabel('Search users for action access').fill('manager')
+  await expect(page.getByLabel('Action access user')).toContainText('store.manager')
+  await page.getByLabel('Action access user').selectOption(userId)
+  await page.getByLabel('Search stores for action access').fill('marmara')
+  await expect(page.getByLabel('Action store')).toContainText('SM140')
+  await page.getByLabel('Action store').selectOption(storeId)
+  await page.getByRole('button', { name: 'Assign action store' }).click()
+
+  await expect(page.getByText('Action store assignment created')).toBeVisible()
+  expect(actionStoreBody).toMatchObject({
+    userId,
+    storeId,
+  })
+})
+
 async function routeAuthAdminApi(page: Page) {
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: authSessionFixture })

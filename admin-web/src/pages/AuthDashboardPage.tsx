@@ -22,6 +22,10 @@ import {
   getRoleAssignments,
   getUserAccounts,
   reactivateUserAccount,
+  searchAuthStores,
+  searchAuthUsers,
+  type AuthLookupStore,
+  type AuthLookupUser,
 } from '../features/auth/api'
 import { PilotUserBindingPanel } from '../features/auth/PilotUserBindingPanel'
 import { formatDateTime, getErrorMessage } from '../lib/format'
@@ -29,8 +33,40 @@ import { formatDateTime, getErrorMessage } from '../lib/format'
 type RoleScopeType = 'company' | 'region' | 'store'
 type AuthProvider = 'local' | 'oidc' | 'sso'
 
+function mergeAuthUsers(...groups: Array<Array<AuthLookupUser | null | undefined>>) {
+  const byId = new Map<string, AuthLookupUser>()
+  for (const group of groups) {
+    for (const user of group) {
+      if (user) {
+        byId.set(user.userId, user)
+      }
+    }
+  }
+  return Array.from(byId.values())
+}
+
+function mergeAuthStores(...groups: Array<Array<AuthLookupStore | null | undefined>>) {
+  const byId = new Map<string, AuthLookupStore>()
+  for (const group of groups) {
+    for (const store of group) {
+      if (store) {
+        byId.set(store.storeId, store)
+      }
+    }
+  }
+  return Array.from(byId.values())
+}
+
 export function AuthDashboardPage() {
   const [search, setSearch] = useState('')
+  const [assignmentUserSearch, setAssignmentUserSearch] = useState('')
+  const [assignmentStoreSearch, setAssignmentStoreSearch] = useState('')
+  const [actionStoreUserSearch, setActionStoreUserSearch] = useState('')
+  const [actionStoreSearch, setActionStoreSearch] = useState('')
+  const [selectedAssignmentUser, setSelectedAssignmentUser] = useState<AuthLookupUser | null>(null)
+  const [selectedAssignmentStore, setSelectedAssignmentStore] = useState<AuthLookupStore | null>(null)
+  const [selectedActionStoreUser, setSelectedActionStoreUser] = useState<AuthLookupUser | null>(null)
+  const [selectedActionStore, setSelectedActionStore] = useState<AuthLookupStore | null>(null)
   const [feedback, setFeedback] = useState<string | null>(null)
   const [errorFeedback, setErrorFeedback] = useState<string | null>(null)
   const [userForm, setUserForm] = useState<{
@@ -75,11 +111,43 @@ export function AuthDashboardPage() {
     effectiveTo: '',
   })
   const deferredSearch = useDeferredValue(search)
+  const deferredAssignmentUserSearch = useDeferredValue(assignmentUserSearch)
+  const deferredAssignmentStoreSearch = useDeferredValue(assignmentStoreSearch)
+  const deferredActionStoreUserSearch = useDeferredValue(actionStoreUserSearch)
+  const deferredActionStoreSearch = useDeferredValue(actionStoreSearch)
   const queryClient = useQueryClient()
+  const assignmentUserSearchText = deferredAssignmentUserSearch.trim()
+  const assignmentStoreSearchText = deferredAssignmentStoreSearch.trim()
+  const actionStoreUserSearchText = deferredActionStoreUserSearch.trim()
+  const actionStoreSearchText = deferredActionStoreSearch.trim()
+  const assignmentUserSearchEnabled = assignmentUserSearchText.length >= 2
+  const assignmentStoreSearchEnabled = assignmentStoreSearchText.length >= 2
+  const actionStoreUserSearchEnabled = actionStoreUserSearchText.length >= 2
+  const actionStoreSearchEnabled = actionStoreSearchText.length >= 2
 
   const lookupsQuery = useQuery({
     queryKey: ['auth-lookups'],
     queryFn: getAuthLookups,
+  })
+  const assignmentUserSearchQuery = useQuery({
+    queryKey: ['auth-lookups', 'users', 'search', assignmentUserSearchText],
+    queryFn: () => searchAuthUsers({ query: assignmentUserSearchText }),
+    enabled: assignmentUserSearchEnabled,
+  })
+  const assignmentStoreSearchQuery = useQuery({
+    queryKey: ['auth-lookups', 'stores', 'search', assignmentStoreSearchText],
+    queryFn: () => searchAuthStores({ query: assignmentStoreSearchText }),
+    enabled: assignmentStoreSearchEnabled,
+  })
+  const actionStoreUserSearchQuery = useQuery({
+    queryKey: ['auth-lookups', 'users', 'search', actionStoreUserSearchText],
+    queryFn: () => searchAuthUsers({ query: actionStoreUserSearchText }),
+    enabled: actionStoreUserSearchEnabled,
+  })
+  const actionStoreSearchQuery = useQuery({
+    queryKey: ['auth-lookups', 'stores', 'search', actionStoreSearchText],
+    queryFn: () => searchAuthStores({ query: actionStoreSearchText }),
+    enabled: actionStoreSearchEnabled,
   })
   const usersQuery = useQuery({
     queryKey: ['auth-users'],
@@ -135,6 +203,10 @@ export function AuthDashboardPage() {
         effectiveFrom: '',
         effectiveTo: '',
       })
+      setAssignmentUserSearch('')
+      setAssignmentStoreSearch('')
+      setSelectedAssignmentUser(null)
+      setSelectedAssignmentStore(null)
       await refreshAuthData()
     },
     onError: (error) => {
@@ -152,6 +224,10 @@ export function AuthDashboardPage() {
         effectiveFrom: '',
         effectiveTo: '',
       })
+      setActionStoreUserSearch('')
+      setActionStoreSearch('')
+      setSelectedActionStoreUser(null)
+      setSelectedActionStore(null)
       await refreshAuthData()
     },
     onError: (error) => {
@@ -204,6 +280,62 @@ export function AuthDashboardPage() {
   })
   const lookups = lookupsQuery.data ?? null
   const users = useMemo(() => usersQuery.data?.items ?? [], [usersQuery.data?.items])
+  const assignmentUserOptions = useMemo(
+    () =>
+      mergeAuthUsers(
+        lookups?.users ?? [],
+        assignmentUserSearchEnabled ? assignmentUserSearchQuery.data?.items ?? [] : [],
+        [selectedAssignmentUser],
+      ),
+    [
+      assignmentUserSearchEnabled,
+      assignmentUserSearchQuery.data?.items,
+      lookups?.users,
+      selectedAssignmentUser,
+    ],
+  )
+  const assignmentStoreOptions = useMemo(
+    () =>
+      mergeAuthStores(
+        lookups?.stores ?? [],
+        assignmentStoreSearchEnabled ? assignmentStoreSearchQuery.data?.items ?? [] : [],
+        [selectedAssignmentStore],
+      ),
+    [
+      assignmentStoreSearchEnabled,
+      assignmentStoreSearchQuery.data?.items,
+      lookups?.stores,
+      selectedAssignmentStore,
+    ],
+  )
+  const actionStoreUserOptions = useMemo(
+    () =>
+      mergeAuthUsers(
+        lookups?.users ?? [],
+        actionStoreUserSearchEnabled ? actionStoreUserSearchQuery.data?.items ?? [] : [],
+        [selectedActionStoreUser],
+      ),
+    [
+      actionStoreUserSearchEnabled,
+      actionStoreUserSearchQuery.data?.items,
+      lookups?.users,
+      selectedActionStoreUser,
+    ],
+  )
+  const actionStoreOptions = useMemo(
+    () =>
+      mergeAuthStores(
+        lookups?.stores ?? [],
+        actionStoreSearchEnabled ? actionStoreSearchQuery.data?.items ?? [] : [],
+        [selectedActionStore],
+      ),
+    [
+      actionStoreSearchEnabled,
+      actionStoreSearchQuery.data?.items,
+      lookups?.stores,
+      selectedActionStore,
+    ],
+  )
   const assignments = useMemo(
     () => assignmentsQuery.data?.items ?? [],
     [assignmentsQuery.data?.items],
@@ -315,6 +447,35 @@ export function AuthDashboardPage() {
     value: (typeof actionStoreForm)[K],
   ) {
     setActionStoreForm((current) => ({ ...current, [key]: value }))
+  }
+
+  function selectAssignmentUser(userId: string) {
+    const user = assignmentUserOptions.find((item) => item.userId === userId) ?? null
+    setSelectedAssignmentUser(user)
+    updateAssignmentForm('userId', userId)
+  }
+
+  function selectAssignmentStore(storeId: string) {
+    const store = assignmentStoreOptions.find((item) => item.storeId === storeId) ?? null
+    setSelectedAssignmentStore(store)
+    setAssignmentForm((current) => ({
+      ...current,
+      storeId,
+      companyId: store?.companyId ?? current.companyId,
+      regionId: store?.regionId ?? current.regionId,
+    }))
+  }
+
+  function selectActionStoreUser(userId: string) {
+    const user = actionStoreUserOptions.find((item) => item.userId === userId) ?? null
+    setSelectedActionStoreUser(user)
+    updateActionStoreForm('userId', userId)
+  }
+
+  function selectActionStore(storeId: string) {
+    const store = actionStoreOptions.find((item) => item.storeId === storeId) ?? null
+    setSelectedActionStore(store)
+    updateActionStoreForm('storeId', storeId)
   }
 
   function submitUserForm() {
@@ -450,10 +611,23 @@ export function AuthDashboardPage() {
           </div>
           <div className="form-grid">
             <label className="field-block">
-              <span>User</span>
-              <select value={assignmentForm.userId} onChange={(event) => updateAssignmentForm('userId', event.target.value)}>
+              <span>Search users for role grant</span>
+              <input
+                aria-label="Search users for role grant"
+                value={assignmentUserSearch}
+                onChange={(event) => setAssignmentUserSearch(event.target.value)}
+                placeholder="Type 2+ chars: username, email, provider subject"
+              />
+            </label>
+            <label className="field-block">
+              <span>Role assignment user</span>
+              <select
+                aria-label="Role assignment user"
+                value={assignmentForm.userId}
+                onChange={(event) => selectAssignmentUser(event.target.value)}
+              >
                 <option value="">Select user</option>
-                {lookups.users.map((user) => (
+                {assignmentUserOptions.map((user) => (
                   <option key={user.userId} value={user.userId}>
                     {user.username} - {user.email}
                   </option>
@@ -461,8 +635,12 @@ export function AuthDashboardPage() {
               </select>
             </label>
             <label className="field-block">
-              <span>Role</span>
-              <select value={assignmentForm.roleCode} onChange={(event) => updateAssignmentForm('roleCode', event.target.value)}>
+              <span>Role assignment role</span>
+              <select
+                aria-label="Role assignment role"
+                value={assignmentForm.roleCode}
+                onChange={(event) => updateAssignmentForm('roleCode', event.target.value)}
+              >
                 <option value="">Select role</option>
                 {lookups.roles.map((role) => (
                   <option key={role.roleId} value={role.roleCode}>
@@ -472,11 +650,16 @@ export function AuthDashboardPage() {
               </select>
             </label>
             <label className="field-block">
-              <span>Scope type</span>
+              <span>Role assignment scope type</span>
               <select
+                aria-label="Role assignment scope type"
                 value={assignmentForm.scopeType}
                 onChange={(event) => {
                   const scopeType = event.target.value as RoleScopeType
+                  if (scopeType !== 'store') {
+                    setAssignmentStoreSearch('')
+                    setSelectedAssignmentStore(null)
+                  }
                   setAssignmentForm((current) => ({
                     ...current,
                     scopeType,
@@ -503,10 +686,32 @@ export function AuthDashboardPage() {
               </label>
             ) : null}
             {assignmentForm.scopeType === 'store' ? (
-              <label className="field-block">
-                <span>Store id</span>
-                <input value={assignmentForm.storeId} onChange={(event) => updateAssignmentForm('storeId', event.target.value)} placeholder="required for store scope" />
-              </label>
+              <>
+                <label className="field-block">
+                  <span>Search stores for role grant</span>
+                  <input
+                    aria-label="Search stores for role grant"
+                    value={assignmentStoreSearch}
+                    onChange={(event) => setAssignmentStoreSearch(event.target.value)}
+                    placeholder="Type 2+ chars: store code, name, region"
+                  />
+                </label>
+                <label className="field-block">
+                  <span>Role assignment store</span>
+                  <select
+                    aria-label="Role assignment store"
+                    value={assignmentForm.storeId}
+                    onChange={(event) => selectAssignmentStore(event.target.value)}
+                  >
+                    <option value="">Select store</option>
+                    {assignmentStoreOptions.map((store) => (
+                      <option key={store.storeId} value={store.storeId}>
+                        {store.storeCode} - {store.storeName} - {store.regionName}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </>
             ) : null}
             <label className="field-block">
               <span>Effective from</span>
@@ -522,7 +727,14 @@ export function AuthDashboardPage() {
               className="control-button"
               type="button"
               onClick={submitAssignmentForm}
-              disabled={mutationBusy || !assignmentForm.userId || !assignmentForm.roleCode || !assignmentForm.companyId.trim()}
+              disabled={
+                mutationBusy ||
+                !assignmentForm.userId ||
+                !assignmentForm.roleCode ||
+                !assignmentForm.companyId.trim() ||
+                (assignmentForm.scopeType !== 'company' && !assignmentForm.regionId.trim()) ||
+                (assignmentForm.scopeType === 'store' && !assignmentForm.storeId.trim())
+              }
             >
               {createAssignmentMutation.isPending ? 'Creating...' : 'Create assignment'}
             </button>
@@ -540,10 +752,23 @@ export function AuthDashboardPage() {
           </div>
           <div className="form-grid">
             <label className="field-block">
-              <span>User</span>
-              <select value={actionStoreForm.userId} onChange={(event) => updateActionStoreForm('userId', event.target.value)}>
+              <span>Search users for action access</span>
+              <input
+                aria-label="Search users for action access"
+                value={actionStoreUserSearch}
+                onChange={(event) => setActionStoreUserSearch(event.target.value)}
+                placeholder="Type 2+ chars: username, email, provider subject"
+              />
+            </label>
+            <label className="field-block">
+              <span>Action access user</span>
+              <select
+                aria-label="Action access user"
+                value={actionStoreForm.userId}
+                onChange={(event) => selectActionStoreUser(event.target.value)}
+              >
                 <option value="">Select user</option>
-                {lookups.users.map((user) => (
+                {actionStoreUserOptions.map((user) => (
                   <option key={user.userId} value={user.userId}>
                     {user.username} - {user.email}
                   </option>
@@ -551,10 +776,23 @@ export function AuthDashboardPage() {
               </select>
             </label>
             <label className="field-block">
-              <span>Store</span>
-              <select value={actionStoreForm.storeId} onChange={(event) => updateActionStoreForm('storeId', event.target.value)}>
+              <span>Search stores for action access</span>
+              <input
+                aria-label="Search stores for action access"
+                value={actionStoreSearch}
+                onChange={(event) => setActionStoreSearch(event.target.value)}
+                placeholder="Type 2+ chars: store code, name, region"
+              />
+            </label>
+            <label className="field-block">
+              <span>Action store</span>
+              <select
+                aria-label="Action store"
+                value={actionStoreForm.storeId}
+                onChange={(event) => selectActionStore(event.target.value)}
+              >
                 <option value="">Select store</option>
-                {lookups.stores.map((store) => (
+                {actionStoreOptions.map((store) => (
                   <option key={store.storeId} value={store.storeId}>
                     {store.storeCode} - {store.storeName} - {store.regionName}
                   </option>

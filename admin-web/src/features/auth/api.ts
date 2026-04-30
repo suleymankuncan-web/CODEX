@@ -21,6 +21,11 @@ export type AuthLookupUser = {
   email: string
 }
 
+export type AuthLookupUserSearchResult = AuthLookupUser & {
+  authProvider: string
+  providerSubject: string | null
+}
+
 export type AuthLookupRole = {
   roleId: string
   roleCode: string
@@ -64,6 +69,15 @@ export type AuthLookups = {
     totalRoles: number
     totalPermissions: number
     totalStores: number
+  }
+}
+
+export type AuthLookupSearchResponse<T> = {
+  items: T[]
+  meta: {
+    query: string
+    count: number
+    limit: number
   }
 }
 
@@ -224,6 +238,28 @@ type CommandResponse<T> = {
 
 export async function getAuthLookups() {
   return fetchJson<AuthLookups>('/auth/lookups')
+}
+
+export async function searchAuthUsers(input: { query: string; limit?: number }) {
+  const params = new URLSearchParams({
+    q: input.query,
+    limit: String(input.limit ?? 20),
+  })
+
+  return fetchJson<AuthLookupSearchResponse<AuthLookupUserSearchResult>>(
+    `/auth/lookups/users/search?${params.toString()}`,
+  )
+}
+
+export async function searchAuthStores(input: { query: string; limit?: number }) {
+  const params = new URLSearchParams({
+    q: input.query,
+    limit: String(input.limit ?? 20),
+  })
+
+  return fetchJson<AuthLookupSearchResponse<AuthLookupStore>>(
+    `/auth/lookups/stores/search?${params.toString()}`,
+  )
 }
 
 export async function getAuthSession() {
