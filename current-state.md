@@ -5766,10 +5766,54 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: Dis source/master-data/staging kaniti gelirse ona oncelik vermek; yoksa yeni product davranisi acmadan once sadece mevcut pilot akisinda gercek operator ihtiyaci olan kucuk guard secmek.
 
+Bu siradaki adim tamamlandi: Pilot Readiness Gate V1 dokumante edildi ve root script guard'a baglandi.
+
+## Son Pilot Readiness Gate V1
+
+1 Mayis 2026 itibariyla pilot acilis karari duyguya degil, kanit kapisina baglandi.
+
+Yeni dokuman:
+
+- `docs/plans/pilot-readiness-gate-v1.md`
+
+Eklenenler:
+
+- Pilot icin `Go`, `Conditional Go` ve `No-Go` karar kurallari yazildi.
+- Staging auth kaniti, true store/personnel baseline kaniti, gercek KPI import smoke kaniti, pilot user/scope kaniti ve release/migration kaniti ayri P0 basliklari olarak kilitlendi.
+- Mevcut runbooklar referans alindi:
+  - `docs/plans/phase-7-staging-auth-smoke-runbook.md`
+  - `docs/plans/phase-7-auth-evidence-template.md`
+  - `docs/plans/master-data-bootstrap-pilot-smoke-runbook.md`
+  - `docs/plans/excel-kpi-import-operator-runbook.md`
+  - `docs/plans/import-decision-evidence-v1.md`
+- Production rollout, JSON adapter, UI redesign, score math degisikligi ve manuel `ops.*` editleri pilot gate disinda birakildi.
+- Yeni root script testi: `scripts/pilot-readiness-gate-contract.test.mjs`.
+
+Dogrulama:
+
+- TDD RED: targeted test once `docs/plans/pilot-readiness-gate-v1.md` bulunmadigi icin fail etti.
+- Targeted: `node --test scripts\pilot-readiness-gate-contract.test.mjs` gecti, 5/5.
+- root: `node --test scripts\*.test.mjs` gecti, 113/113.
+- root: `npm.cmd run check:release` gecti; backend 89 suite / 486 test, frontend Playwright 47/47, audit 0 vulnerability.
+- root: `git diff --check` gecti; yalniz CRLF uyarilari geldi.
+
+Debt ledger:
+
+- Closed active debts: 89
+- Strategic investment backlog: 8
+- Silent untracked quality debt in the active gate: 0
+
+CODEX durust yorum:
+
+- Uygulama temeli saglam ama pilot onayi ayri bir kapidir. Bu gate, "local testler geciyor" ile "gercek kullaniciya acabiliriz" arasindaki farki net tutuyor.
+- En dogru sinir korundu: yeni feature veya adapter acilmadi; sadece pilot icin gereken kanitlari tek karar yuzeyine topladik.
+
+Siradaki mantikli adim: Staging IdP, true baseline veya gercek KPI dosyasi hazirsa Pilot Readiness Gate V1'i kanitla doldurmak; hazir degilse yeni product davranisi acmadan mevcut pilot yolundaki kucuk risk guard'larini secmek.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
 
 ```text
-current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. Auth Role Assignment Active Uniqueness V1 kapandi; fresh DB smoke 43/43 ve root check:release gecti. Searchable auth-admin lookup backend endpointleri ve frontend wiring kapandi. Project Debt Ledger Consistency Guard V1 kapandi. Repo Hygiene Guard V1 kapandi; outputs/ root .gitignore icinde ignore ediliyor ve root script testleri tracked generated folder/local env dosyalarini reddediyor. Son root check:release gecti; root script 108/108, backend 89 suite / 486 test, frontend Playwright 47/47, audit 0 vulnerability. Closed active debts: 88. Siradaki mantikli adim: dis source/master-data/staging kaniti gelirse ona oncelik vermek; yoksa yeni product davranisi acmadan sadece mevcut pilot akisinda gercek ihtiyac olan kucuk guard'i secmek.
+current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. Auth Role Assignment Active Uniqueness V1 kapandi; fresh DB smoke 43/43 ve root check:release gecti. Searchable auth-admin lookup backend endpointleri ve frontend wiring kapandi. Project Debt Ledger Consistency Guard V1 kapandi. Repo Hygiene Guard V1 kapandi. Pilot Readiness Gate V1 kapandi; pilot Go / Conditional Go / No-Go artik staging auth, true baseline, gercek KPI import smoke, pilot user/scope ve release/migration evidence ile belirleniyor. Son root check:release gecti; root script 113/113, backend 89 suite / 486 test, frontend Playwright 47/47, audit 0 vulnerability. Closed active debts: 89. Siradaki mantikli adim: staging IdP, true baseline veya gercek KPI dosyasi hazirsa Pilot Readiness Gate V1'i kanitla doldurmak; degilse yeni product davranisi acmadan mevcut pilot yolundaki kucuk risk guard'larini secmek.
 ```

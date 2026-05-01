@@ -17,7 +17,7 @@ Date: 30 April 2026
 
 Current count:
 
-- Closed active debts: 88
+- Closed active debts: 89
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -116,6 +116,7 @@ These are counted as paid because they have implementation or documentation evid
 86. Auth Admin Searchable Lookups Frontend Wiring V1
 87. Project Debt Ledger Consistency Guard V1
 88. Repo Hygiene Guard V1
+89. Pilot Readiness Gate V1
 
 Ranking Included Snapshot Contract V1 is counted as paid because `GET /reports/leaderboards/closed` now returns `includedSnapshotRuns`, daily ranking returns the included closed snapshot, monthly ranking returns every completed daily snapshot included in the month calculation, and `/store/rankings` uses that backend contract instead of frontend inference.
 
@@ -146,6 +147,8 @@ Auth Admin Searchable Lookups Frontend Wiring V1 is counted as paid because `/ad
 Project Debt Ledger Consistency Guard V1 is counted as paid because root script tests now verify that the project debt ledger snapshot count matches the numbered closed-debt list, `active-next-actions.md` mirrors the ledger snapshot counts, and the latest `current-state.md` debt ledger block matches the canonical ledger. This prevents quiet count drift when a future slice is closed.
 
 Repo Hygiene Guard V1 is counted as paid because root script tests now reject tracked generated folders and local secret env files, verify representative generated/env paths are ignored, and keep the `outputs/` scratch folder explicitly ignored. This protects the release gate from accidental generated or local-only file commits.
+
+Pilot Readiness Gate V1 is counted as paid because pilot approval is now documented as an evidence gate rather than a feeling. It ties real staging IdP evidence, true store/personnel baseline evidence, real KPI import smoke evidence, scoped pilot user evidence, and release/migration evidence into one Go / Conditional Go / No-Go checklist guarded by root script tests. Reference: `docs/plans/pilot-readiness-gate-v1.md`.
 
 Operator Evidence Consistency Pass V1 is counted as paid because existing import and master-data operator surfaces now use the same `Go / Conditional Go / No-Go`, row evidence, dry-run evidence, sanitized evidence, retry evidence, and dependency mapping language without adding backend endpoints, workflows, scoring behavior, import behavior, or promotion behavior. Reference: `docs/plans/operator-evidence-consistency-pass-v1.md`.
 

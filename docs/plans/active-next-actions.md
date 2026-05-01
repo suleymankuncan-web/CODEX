@@ -94,12 +94,13 @@ As of 30 April 2026, the competition package planning flow, Operational Feed V1,
 - auth-admin frontend role/action-store assignment search wiring using the backend user/store lookup endpoints
 - project debt ledger consistency guard that keeps canonical debt counts aligned across handoff docs
 - repo hygiene guard that rejects tracked generated folders/local env files and keeps `outputs/` ignored
+- pilot readiness gate that keeps pilot approval tied to real staging, baseline, KPI import, user/scope, and release evidence
 
 ## Debt Count
 
 Reference: `docs/plans/project-debt-ledger.md`
 
-- Closed active debts: 88
+- Closed active debts: 89
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -1097,6 +1098,19 @@ Interpretation:
   - TDD red failed first because `outputs/` was not ignored and the guard was not recorded in handoff docs
   - targeted `node --test scripts\repo-hygiene-contract.test.mjs` passed: 4/4
   - root script guard passed: 108/108
+  - root `npm.cmd run check:release` passed
+
+### Completed: Pilot Readiness Gate V1
+- Completed: 1 May 2026
+- Result:
+  - `docs/plans/pilot-readiness-gate-v1.md` now defines pilot Go / Conditional Go / No-Go evidence
+  - required evidence is separated into staging auth, true baseline master data, real KPI import smoke, pilot user/scope, and release/migration proof
+  - existing runbooks are referenced instead of inventing a second pilot flow
+  - production rollout, JSON adapter work, broad UI redesign, score-math changes, and manual `ops.*` edits remain outside this gate
+- Verification:
+  - TDD red failed first because the pilot readiness gate document did not exist
+  - targeted `node --test scripts\pilot-readiness-gate-contract.test.mjs` passed: 5/5
+  - root script guard passed: 113/113
   - root `npm.cmd run check:release` passed
 
 ### 1. Real IdP Staging Evidence
