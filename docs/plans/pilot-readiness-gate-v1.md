@@ -201,6 +201,10 @@ fresh DB smoke, if needed:
 Final decision: Go / Conditional Go / No-Go
 ```
 
+## Current Evidence Notes
+
+- `docs/evidence/pilot-readiness/2026-05-01-preflight-no-go.md` records the first pilot preflight as `No-Go` because staging IdP values, true baseline master data, real KPI import smoke evidence, and pilot user/scope evidence are not available yet.
+
 ## CODEX DURUST YORUM
 
 The application foundation is healthy, but pilot readiness is not a feeling.

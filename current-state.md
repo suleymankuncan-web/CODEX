@@ -5810,10 +5810,49 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: Staging IdP, true baseline veya gercek KPI dosyasi hazirsa Pilot Readiness Gate V1'i kanitla doldurmak; hazir degilse yeni product davranisi acmadan mevcut pilot yolundaki kucuk risk guard'larini secmek.
 
+Bu siradaki adim kismen tamamlandi: Pilot Readiness Preflight No-Go Evidence kaydi eklendi.
+
+## Son Pilot Readiness Preflight No-Go Evidence
+
+1 Mayis 2026 itibariyla pilot gate'in ilk preflight kaydi `No-Go` olarak yazildi.
+
+Yeni kanit kaydi:
+
+- `docs/evidence/pilot-readiness/2026-05-01-preflight-no-go.md`
+
+Eklenenler:
+
+- Kanit notu, bunun pilot onayi olmadigini acikca yazar.
+- Staging IdP kaniti, true baseline master data, gercek KPI import smoke ve pilot user/scope kaniti eksik oldugu icin final karar `No-Go` olarak kayitlidir.
+- `AUTH_SMOKE_*` staging env degerleri mevcut shell'de bulunmadigi icin staging auth smoke calistirilmadi.
+- Master-data promotion, KPI import, staging auth smoke, JSON/source adapter, score math ve auth policy degismedi.
+- Pilot gate dokumani bu No-Go evidence notuna baglandi.
+- Yeni root script testi: `scripts/pilot-evidence-preflight-contract.test.mjs`.
+
+Dogrulama:
+
+- TDD RED: targeted test once `docs/evidence/pilot-readiness/2026-05-01-preflight-no-go.md` bulunmadigi icin fail etti.
+- Targeted: `node --test scripts\pilot-evidence-preflight-contract.test.mjs` gecti, 4/4.
+- root: `node --test scripts\*.test.mjs` gecti, 117/117.
+- root: `npm.cmd run check:release` gecti; backend 89 suite / 486 test, frontend Playwright 47/47, audit 0 vulnerability.
+
+Debt ledger:
+
+- Closed active debts: 89
+- Strategic investment backlog: 8
+- Silent untracked quality debt in the active gate: 0
+
+CODEX durust yorum:
+
+- Bu bir ilerleme freni degil, kontrol freni. Pilot kapisinin calistigini kanitliyor: eksik dis kanit varken sistem kendini hazir ilan etmiyor.
+- En dogru sinir korundu: yeni feature acilmadi, sadece pilot kanit zincirinde eksik olan gercek dunya girdileri gorunur hale getirildi.
+
+Siradaki mantikli adim: Staging IdP bilgileri gelirse auth smoke kanitini almak; true baseline dosyalari gelirse master-data pilot smoke'a gecmek. Ikisi de yoksa mevcut pilot yolunu guclendiren kucuk guard disina cikmamak.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
 
 ```text
-current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. Auth Role Assignment Active Uniqueness V1 kapandi; fresh DB smoke 43/43 ve root check:release gecti. Searchable auth-admin lookup backend endpointleri ve frontend wiring kapandi. Project Debt Ledger Consistency Guard V1 kapandi. Repo Hygiene Guard V1 kapandi. Pilot Readiness Gate V1 kapandi; pilot Go / Conditional Go / No-Go artik staging auth, true baseline, gercek KPI import smoke, pilot user/scope ve release/migration evidence ile belirleniyor. Son root check:release gecti; root script 113/113, backend 89 suite / 486 test, frontend Playwright 47/47, audit 0 vulnerability. Closed active debts: 89. Siradaki mantikli adim: staging IdP, true baseline veya gercek KPI dosyasi hazirsa Pilot Readiness Gate V1'i kanitla doldurmak; degilse yeni product davranisi acmadan mevcut pilot yolundaki kucuk risk guard'larini secmek.
+current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. Auth Role Assignment Active Uniqueness V1 kapandi; fresh DB smoke 43/43 ve root check:release gecti. Searchable auth-admin lookup backend endpointleri ve frontend wiring kapandi. Project Debt Ledger Consistency Guard V1 kapandi. Repo Hygiene Guard V1 kapandi. Pilot Readiness Gate V1 kapandi; pilot Go / Conditional Go / No-Go artik staging auth, true baseline, gercek KPI import smoke, pilot user/scope ve release/migration evidence ile belirleniyor. Pilot Readiness Preflight No-Go Evidence eklendi; `docs/evidence/pilot-readiness/2026-05-01-preflight-no-go.md` pilotun henuz onayli olmadigini, staging IdP/true baseline/KPI smoke/user-scope kanitlarinin eksik oldugunu kayit altina alir. Son root check:release gecti; root script 117/117, backend 89 suite / 486 test, frontend Playwright 47/47, audit 0 vulnerability. Closed active debts: 89. Siradaki mantikli adim: staging IdP bilgileri gelirse auth smoke kanitini almak; true baseline dosyalari gelirse master-data pilot smoke'a gecmek. Ikisi de yoksa mevcut pilot yolunu guclendiren kucuk guard disina cikmamak.
 ```

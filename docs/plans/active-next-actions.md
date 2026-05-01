@@ -1113,6 +1113,19 @@ Interpretation:
   - root script guard passed: 113/113
   - root `npm.cmd run check:release` passed
 
+### Completed: Pilot Readiness Preflight No-Go Evidence
+- Completed: 1 May 2026
+- Result:
+  - `docs/evidence/pilot-readiness/2026-05-01-preflight-no-go.md` records that pilot remains blocked
+  - the note explicitly says it is not pilot approval
+  - missing staging IdP, true baseline master data, real KPI import smoke, and pilot user/scope evidence are visible
+  - no product module, backend behavior, frontend behavior, import flow, score math, or auth policy changed
+- Verification:
+  - TDD red failed first because the preflight evidence note did not exist
+  - targeted `node --test scripts\pilot-evidence-preflight-contract.test.mjs` passed: 4/4
+  - root script guard passed: 117/117
+  - root `npm.cmd run check:release` passed
+
 ### 1. Real IdP Staging Evidence
 - Priority: `P1`
 - Why: local provider and action mechanics are proven, but production confidence still needs real staging IdP and seeded staging action evidence.
