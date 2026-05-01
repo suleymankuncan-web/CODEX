@@ -1126,6 +1126,21 @@ Interpretation:
   - root script guard passed: 117/117
   - root `npm.cmd run check:release` passed
 
+### Recorded: Project Health Snapshot 2026-05-01
+- Status: control note, not a closed active debt item
+- Reference:
+  - `docs/plans/project-health-snapshot-2026-05-01.md`
+- Result:
+  - local foundation is recorded as healthy enough for controlled hardening
+  - pilot remains explicitly not approved
+  - missing external evidence is separated from codebase health
+  - next path is staging auth smoke, master-data pilot smoke, or KPI import smoke depending on which real input arrives first
+- Verification:
+  - TDD red failed first because the project health snapshot did not exist
+  - targeted `node --test scripts\project-health-snapshot-contract.test.mjs` passed: 5/5
+  - root script guard passed: 122/122
+  - root `npm.cmd run check:release` passed
+
 ### 1. Real IdP Staging Evidence
 - Priority: `P1`
 - Why: local provider and action mechanics are proven, but production confidence still needs real staging IdP and seeded staging action evidence.

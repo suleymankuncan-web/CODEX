@@ -5849,10 +5849,50 @@ CODEX durust yorum:
 
 Siradaki mantikli adim: Staging IdP bilgileri gelirse auth smoke kanitini almak; true baseline dosyalari gelirse master-data pilot smoke'a gecmek. Ikisi de yoksa mevcut pilot yolunu guclendiren kucuk guard disina cikmamak.
 
+Bu siradaki adim kayda baglandi: Project Health Snapshot 2026-05-01 eklendi.
+
+## Son Project Health Snapshot 2026-05-01
+
+1 Mayis 2026 itibariyla proje sagligi ile pilot onayi ayrildi.
+
+Yeni kontrol notu:
+
+- `docs/plans/project-health-snapshot-2026-05-01.md`
+
+Ozet:
+
+- Local foundation status: healthy enough to continue controlled hardening.
+- Pilot status: not approved.
+- Proje kod karmasasi nedeniyle bloklu degil; eksik dis kanit nedeniyle pilot kapisi bloklu.
+- Snapshot bir closed active debt item degil, kontrol notudur.
+
+Kayitli son dogrulama:
+
+- root script guard: 122/122
+- backend: 89/89 suite ve 486/486 test
+- frontend Playwright: 47/47
+- audit: 0 vulnerabilities
+- closed active debts: 89
+
+Hala bekleyen dis kanitlar:
+
+- real staging IdP values and seeded staging DB evidence
+- true store/personnel baseline master-data files
+- real KPI import smoke evidence
+- pilot user/scope evidence
+- realistic data volume for measured DB performance/index review
+
+CODEX durust yorum:
+
+- Proje dagilmis degil. Bence saglikli kisimlar artik yerinde: release gate, test genisligi, auth/scope kontrolu, import semantigi, master-data staging ve operator evidence zinciri var.
+- Pilot icin risk, kodun dagilmis olmasi degil; gercek staging/data kaniti gelmeden pilot acmaya calismak.
+
+Siradaki mantikli adim: Gercek staging IdP bilgileri gelirse auth smoke, true baseline gelirse master-data pilot smoke, real KPI pilot file gelirse Excel KPI import smoke. Bunlar yoksa sadece mevcut pilot yolunu guclendiren kucuk guard'larla devam.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
 
 ```text
-current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. Auth Role Assignment Active Uniqueness V1 kapandi; fresh DB smoke 43/43 ve root check:release gecti. Searchable auth-admin lookup backend endpointleri ve frontend wiring kapandi. Project Debt Ledger Consistency Guard V1 kapandi. Repo Hygiene Guard V1 kapandi. Pilot Readiness Gate V1 kapandi; pilot Go / Conditional Go / No-Go artik staging auth, true baseline, gercek KPI import smoke, pilot user/scope ve release/migration evidence ile belirleniyor. Pilot Readiness Preflight No-Go Evidence eklendi; `docs/evidence/pilot-readiness/2026-05-01-preflight-no-go.md` pilotun henuz onayli olmadigini, staging IdP/true baseline/KPI smoke/user-scope kanitlarinin eksik oldugunu kayit altina alir. Son root check:release gecti; root script 117/117, backend 89 suite / 486 test, frontend Playwright 47/47, audit 0 vulnerability. Closed active debts: 89. Siradaki mantikli adim: staging IdP bilgileri gelirse auth smoke kanitini almak; true baseline dosyalari gelirse master-data pilot smoke'a gecmek. Ikisi de yoksa mevcut pilot yolunu guclendiren kucuk guard disina cikmamak.
+current-state.md oku; aktif proje yolu masaustundeki WEBSİTE ÇALIŞMASI. Eski E:\ yolunu kullanma. Auth Role Assignment Active Uniqueness V1 kapandi; fresh DB smoke 43/43 ve root check:release gecti. Searchable auth-admin lookup backend endpointleri ve frontend wiring kapandi. Project Debt Ledger Consistency Guard V1 kapandi. Repo Hygiene Guard V1 kapandi. Pilot Readiness Gate V1 kapandi; pilot Go / Conditional Go / No-Go artik staging auth, true baseline, gercek KPI import smoke, pilot user/scope ve release/migration evidence ile belirleniyor. Pilot Readiness Preflight No-Go Evidence eklendi; `docs/evidence/pilot-readiness/2026-05-01-preflight-no-go.md` pilotun henuz onayli olmadigini, staging IdP/true baseline/KPI smoke/user-scope kanitlarinin eksik oldugunu kayit altina alir. Project Health Snapshot 2026-05-01 eklendi; `docs/plans/project-health-snapshot-2026-05-01.md` local foundation'i saglikli, pilotu ise dis kanit eksigi nedeniyle onaysiz olarak ayirir. Son root check:release gecti; root script 122/122, backend 89 suite / 486 test, frontend Playwright 47/47, audit 0 vulnerability. Closed active debts: 89. Siradaki mantikli adim: staging IdP bilgileri gelirse auth smoke kanitini almak; true baseline dosyalari gelirse master-data pilot smoke'a gecmek; real KPI pilot file gelirse Excel KPI import smoke'a gecmek. Bunlar yoksa mevcut pilot yolunu guclendiren kucuk guard disina cikmamak.
 ```

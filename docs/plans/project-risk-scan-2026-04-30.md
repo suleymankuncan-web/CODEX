@@ -13,7 +13,7 @@ No production behavior was changed by this scan.
 - Latest root `npm.cmd run check:release` passed after Pilot Readiness Gate V1.
 - Backend release check passed with 89 suites and 486 tests.
 - Frontend Playwright passed with 47 tests.
-- Root script tests passed with 113 tests.
+- Root script tests passed with 122 tests after Project Health Snapshot 2026-05-01.
 - No tracked `node_modules`, `dist`, `test-results`, or `outputs` paths were found.
 - No tracked `.env` file was found.
 - No `TODO`, `FIXME`, `HACK`, `XXX`, `test.only`, `describe.only`, `it.only`, `debugger`, or `console.log` markers were found in tracked source/test/script/doc paths scanned.
@@ -21,6 +21,7 @@ No production behavior was changed by this scan.
 - Project debt ledger snapshot counts are now guarded against drift across `project-debt-ledger.md`, `active-next-actions.md`, and the latest `current-state.md` debt ledger block.
 - Repo Hygiene Guard V1 rejects tracked generated folders and local secret env files through root script tests.
 - Pilot readiness is now an explicit Go / Conditional Go / No-Go evidence gate, not an informal confidence statement.
+- Project health snapshot is recorded at `docs/plans/project-health-snapshot-2026-05-01.md`; it separates healthy local foundation from missing external pilot evidence.
 
 ## Watchlist
 
