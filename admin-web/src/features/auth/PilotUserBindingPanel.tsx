@@ -4,6 +4,7 @@ import { getErrorMessage } from '../../lib/format'
 import { createPilotUserBinding, type AuthLookupStore } from './api'
 
 type PilotRole = 'REGION_MANAGER' | 'STORE_MANAGER' | 'VISUAL_MERCHANDISER'
+type PilotAuthProvider = 'oidc' | 'clerk'
 
 export function PilotUserBindingPanel({ stores }: { stores: AuthLookupStore[] }) {
   const queryClient = useQueryClient()
@@ -11,6 +12,7 @@ export function PilotUserBindingPanel({ stores }: { stores: AuthLookupStore[] })
   const [providerSubject, setProviderSubject] = useState('')
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
+  const [authProvider, setAuthProvider] = useState<PilotAuthProvider>('clerk')
   const [roleCode, setRoleCode] = useState<PilotRole>('STORE_MANAGER')
   const [storeIds, setStoreIds] = useState<string[]>([])
   const [feedback, setFeedback] = useState<string | null>(null)
@@ -60,6 +62,17 @@ export function PilotUserBindingPanel({ stores }: { stores: AuthLookupStore[] })
             value={providerSubject}
             onChange={(event) => setProviderSubject(event.target.value)}
           />
+        </label>
+        <label className="field-block">
+          <span>Pilot auth provider</span>
+          <select
+            aria-label="Pilot auth provider"
+            value={authProvider}
+            onChange={(event) => setAuthProvider(event.target.value as PilotAuthProvider)}
+          >
+            <option value="clerk">clerk</option>
+            <option value="oidc">oidc</option>
+          </select>
         </label>
         <label className="field-block">
           <span>Pilot username</span>
@@ -124,7 +137,7 @@ export function PilotUserBindingPanel({ stores }: { stores: AuthLookupStore[] })
             setErrorFeedback(null)
             mutation.mutate({
               employeeId: employeeId.trim(),
-              authProvider: 'oidc',
+              authProvider,
               providerSubject: providerSubject.trim(),
               username: username.trim(),
               email: email.trim(),

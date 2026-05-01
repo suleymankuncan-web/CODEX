@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -23,43 +24,63 @@ export function SessionProvider(input: { children: ReactNode }) {
     persistClientSession(session)
   }, [session])
 
+  const saveSession = useCallback((next: SessionState) => {
+    setSession(normalizeSession(next))
+  }, [])
+
+  const resetSession = useCallback(() => {
+    setSession(defaultSession)
+  }, [])
+
+  const expireSession = useCallback(() => {
+    setSession((current) =>
+      normalizeSession({
+        ...current,
+        bearerToken: '',
+      }),
+    )
+  }, [])
+
+  const startBearerSession = useCallback((token: string, providerIdToken?: string | null) => {
+    writeClientBearerSession(token, providerIdToken)
+    setSession((current) =>
+      normalizeSession({
+        ...current,
+        mode: 'bearer',
+        bearerToken: token,
+      }),
+    )
+  }, [])
+
+  const clearToBearerMode = useCallback(() => {
+    clearClientBearerSession()
+    setSession((current) =>
+      normalizeSession({
+        ...current,
+        mode: 'bearer',
+        bearerToken: '',
+      }),
+    )
+  }, [])
+
   const value = useMemo<SessionContextValue>(
     () => ({
       session,
       isReady: isSessionReady(session),
-      saveSession: (next) => setSession(normalizeSession(next)),
-      resetSession: () => setSession(defaultSession),
-      expireSession: () =>
-        setSession((current) =>
-          normalizeSession({
-            ...current,
-            bearerToken: '',
-          }),
-        ),
-      startBearerSession: (token, providerIdToken) =>
-        {
-          writeClientBearerSession(token, providerIdToken)
-          setSession((current) =>
-            normalizeSession({
-              ...current,
-              mode: 'bearer',
-              bearerToken: token,
-            }),
-          )
-        },
-      clearToBearerMode: () =>
-        {
-          clearClientBearerSession()
-          setSession((current) =>
-            normalizeSession({
-              ...current,
-              mode: 'bearer',
-              bearerToken: '',
-            }),
-          )
-        },
+      saveSession,
+      resetSession,
+      expireSession,
+      startBearerSession,
+      clearToBearerMode,
     }),
-    [session],
+    [
+      clearToBearerMode,
+      expireSession,
+      resetSession,
+      saveSession,
+      session,
+      startBearerSession,
+    ],
   )
 
   return <SessionContext.Provider value={value}>{input.children}</SessionContext.Provider>

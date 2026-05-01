@@ -5,6 +5,8 @@ import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { MetricAccent, MetricCard, StatusPill } from '../components/dashboard-primitives'
 import { getAuthBootstrap } from '../features/auth/api'
 import { buildProviderLoginUrl, hasProviderLoginConfig } from '../features/auth/auth-flow'
+import { isClerkSessionProviderAvailable } from '../features/auth/clerk-config'
+import { ClerkLoginActions } from '../features/auth/clerk-session'
 
 export function AuthLoginPage() {
   const location = useLocation()
@@ -17,7 +19,8 @@ export function AuthLoginPage() {
     retry: false,
   })
   const returnTo = searchParams.get('returnTo') ?? location.state?.returnTo ?? '/store'
-  const providerReady = hasProviderLoginConfig(bootstrapQuery.data)
+  const clerkReady = isClerkSessionProviderAvailable()
+  const providerReady = clerkReady || hasProviderLoginConfig(bootstrapQuery.data)
 
   useEffect(() => {
     let cancelled = false
@@ -48,9 +51,8 @@ export function AuthLoginPage() {
           <div className="eyebrow">Auth Entry</div>
           <h2 className="hero-title">Real login will enter here before the app opens admin or store shells.</h2>
           <p className="hero-copy">
-            This route is the Phase 7 entry point for a future OIDC or SSO redirect. For now it
-            acts as the visible home for the real-auth path instead of relying only on manual
-            session setup.
+            This route is the Phase 7 entry point for real authentication. Clerk can now create
+            the browser session, while the backend still decides the real HR Axis roles and scope.
           </p>
         </div>
         <div className="hero-metrics">
@@ -102,8 +104,10 @@ export function AuthLoginPage() {
               </div>
               <p>
                 {providerReady
-                  ? 'OIDC-style provider settings are present, so this route can hand the user off to the configured authorization endpoint.'
-                  : 'The provider contract is wired, but it still needs backend bootstrap config or local env-backed authorization settings before this route can redirect for real.'}
+                  ? clerkReady
+                    ? 'Clerk is configured, so this route can open the hosted Clerk sign-in flow and sync the resulting session token into the backend bearer contract.'
+                    : 'OIDC-style provider settings are present, so this route can hand the user off to the configured authorization endpoint.'
+                  : 'The provider contract is wired, but it still needs Clerk publishable key or OIDC env-backed authorization settings before this route can redirect for real.'}
               </p>
             </div>
             <div className="stacked-row">
@@ -123,7 +127,9 @@ export function AuthLoginPage() {
             </div>
           </div>
           <div className="action-cluster">
-            {providerLoginUrl ? (
+            {clerkReady ? (
+              <ClerkLoginActions returnTo={returnTo} />
+            ) : providerLoginUrl ? (
               <a className="control-button auth-flow-link" href={providerLoginUrl}>
                 Start provider login
               </a>
@@ -141,7 +147,9 @@ export function AuthLoginPage() {
           <p className="panel-copy">
             {providerLoginError
               ? `Provider login is not ready: ${providerLoginError}`
-              : providerReady
+              : clerkReady
+                ? 'Clerk signs the user in, the frontend stores the Clerk session token as the current bearer token, and /api/auth/session resolves the actual DB role and scope.'
+                : providerReady
                 ? 'Provider login will return through /auth/callback, exchange the code with PKCE, and let the verified session decide whether /admin or /store is the right landing shell.'
               : 'Add backend auth bootstrap config or the OIDC env values before using this page as the primary login handoff.'}
           </p>

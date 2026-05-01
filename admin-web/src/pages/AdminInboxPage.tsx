@@ -28,6 +28,7 @@ import {
   getSellerCodeRequests,
   rejectOffboardingRequest,
   rejectSellerCodeRequest,
+  type OffboardingAccessClosure,
 } from '../features/workforce/api'
 import { formatDateTime, formatState, getErrorMessage } from '../lib/format'
 
@@ -39,6 +40,18 @@ function canUseAdminInbox(authSummary: AuthSessionSummary | null) {
 function canUseSellerCodeQueue(authSummary: AuthSessionSummary | null) {
   const roles = authSummary?.user.roleCodes ?? []
   return roles.includes('SUPER_ADMIN') || roles.includes('HR_ADMIN')
+}
+
+function formatOffboardingAccessClosure(closure?: OffboardingAccessClosure | null) {
+  if (!closure) {
+    return null
+  }
+
+  if (!closure.userAccessClosed) {
+    return 'No linked user account was found. Employee record was terminated.'
+  }
+
+  return `User access closed: ${closure.closedRoleAssignments} role grants, ${closure.closedActionStoreAssignments} action store grants, ${closure.revokedMobileSessions} mobile sessions.`
 }
 
 export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }) {
@@ -88,7 +101,12 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
   const approveOffboardingMutation = useMutation({
     mutationFn: approveOffboardingRequest,
     onSuccess: async (response) => {
-      setSellerCodeNotice(response.command.message)
+      const accessClosureCopy = formatOffboardingAccessClosure(response.data.accessClosure)
+      setSellerCodeNotice(
+        accessClosureCopy
+          ? `${response.command.message}. ${accessClosureCopy}`
+          : response.command.message,
+      )
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['offboarding-requests'] }),
         queryClient.invalidateQueries({ queryKey: ['workforce-store-employees'] }),

@@ -1,0 +1,73 @@
+services:
+  caddy:
+    image: caddy:2.9-alpine
+    restart: unless-stopped
+    depends_on:
+      - frontend
+      - backend
+    environment:
+      STAGING_FRONTEND_HOST: ${STAGING_FRONTEND_HOST}
+      STAGING_API_HOST: ${STAGING_API_HOST}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+  backend:
+    build:
+      context: ../..
+      dockerfile: backend/nestjs/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      APP_NAME: ${APP_NAME:-hr-axis-staging-api}
+      APP_PORT: ${APP_PORT:-3000}
+      DATABASE_URL: ${DATABASE_URL}
+      DB_POOL_MAX: ${DB_POOL_MAX:-20}
+      DB_SSL_MODE: ${DB_SSL_MODE:-require}
+      AUTH_MODE: ${AUTH_MODE:-jwt}
+      AUTH_PROVIDER_KEY: ${AUTH_PROVIDER_KEY:-clerk}
+      ALLOW_MOCK_AUTH: ${ALLOW_MOCK_AUTH:-false}
+      JWT_ISSUER: ${JWT_ISSUER}
+      JWT_JWKS_URL: ${JWT_JWKS_URL}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-hr-axis-api}
+      AUTH_CLIENT_ID: ${AUTH_CLIENT_ID:-}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://staging.hr-axis.com}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-120}
+      QUEUE_BACKEND: ${QUEUE_BACKEND:-in-memory}
+      REDIS_URL: ${REDIS_URL:-}
+      DAILY_CLOSURE_AUTOMATION_ENABLED: ${DAILY_CLOSURE_AUTOMATION_ENABLED:-false}
+    expose:
+      - "3000"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  frontend:
+    build:
+      context: ../..
+      dockerfile: admin-web/Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+        VITE_AUTH_MODE: ${VITE_AUTH_MODE:-bearer}
+        VITE_AUTH_PROVIDER: ${VITE_AUTH_PROVIDER:-clerk}
+        VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY}
+        VITE_CLERK_JWT_TEMPLATE: ${VITE_CLERK_JWT_TEMPLATE:-}
+    restart: unless-stopped
+    expose:
+      - "80"
+
+volumes:
+  caddy_data:
+  caddy_config:

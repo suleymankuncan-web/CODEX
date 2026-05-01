@@ -117,7 +117,7 @@ export class AuthContextService {
       ) {
         const mappedUser =
           await this.authAuthorizationRepository.getUserAccountByProviderSubject({
-            authProvider: "oidc",
+            authProvider: this.appConfigService.authProviderKey ?? "oidc",
             providerSubject: providerUser.userId,
           });
 

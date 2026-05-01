@@ -425,7 +425,7 @@ export class WorkforceService {
       throw new BadRequestException("Offboarding request is not pending HR approval");
     }
 
-    const request = await this.workforceRequestRepository.approveOffboardingRequest({
+    const approval = await this.workforceRequestRepository.approveOffboardingRequest({
       request: existing,
       actorUserId: input.actorUserId,
       reviewNote: input.reviewNote?.trim(),
@@ -435,7 +435,8 @@ export class WorkforceService {
       status: "approved",
       message: "Offboarding request approved",
       data: {
-        request: this.mapOffboardingRequest(request),
+        request: this.mapOffboardingRequest(approval.request),
+        accessClosure: approval.accessClosure,
       },
     });
   }

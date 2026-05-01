@@ -1,0 +1,171 @@
+# Copy this file to .do/app.yaml only after replacing every CHANGE_ME value.
+# Do not commit real DATABASE_URL or Clerk values.
+name: hr-axis-staging
+region: fra
+features:
+  - buildpack-stack=ubuntu-22
+
+alerts:
+  - rule: DEPLOYMENT_FAILED
+  - rule: DOMAIN_FAILED
+
+services:
+  - name: hr-axis-api
+    environment_slug: node-js
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-1gb-fixed
+    source_dir: backend/nestjs
+    github:
+      repo: CHANGE_ME_OWNER/CHANGE_ME_REPO
+      branch: main
+      deploy_on_push: true
+    build_command: npm ci && npm run build
+    run_command: node dist/main.js
+    http_port: 3000
+    health_check:
+      initial_delay_seconds: 20
+      period_seconds: 30
+      timeout_seconds: 10
+      success_threshold: 1
+      failure_threshold: 3
+      http_path: /api/health
+      port: 3000
+    envs:
+      - key: NODE_ENV
+        value: production
+        scope: RUN_TIME
+        type: GENERAL
+      - key: APP_NAME
+        value: hr-axis-staging-api
+        scope: RUN_TIME
+        type: GENERAL
+      - key: APP_PORT
+        value: "3000"
+        scope: RUN_TIME
+        type: GENERAL
+      - key: DATABASE_URL
+        value: CHANGE_ME_DATABASE_URL
+        scope: RUN_TIME
+        type: SECRET
+      - key: DB_POOL_MAX
+        value: "20"
+        scope: RUN_TIME
+        type: GENERAL
+      - key: DB_SSL_MODE
+        value: require
+        scope: RUN_TIME
+        type: GENERAL
+      - key: AUTH_MODE
+        value: jwt
+        scope: RUN_TIME
+        type: GENERAL
+      - key: AUTH_PROVIDER_KEY
+        value: clerk
+        scope: RUN_TIME
+        type: GENERAL
+      - key: ALLOW_MOCK_AUTH
+        value: "false"
+        scope: RUN_TIME
+        type: GENERAL
+      - key: JWT_ISSUER
+        value: CHANGE_ME_CLERK_ISSUER
+        scope: RUN_TIME
+        type: GENERAL
+      - key: JWT_JWKS_URL
+        value: CHANGE_ME_CLERK_JWKS_URL
+        scope: RUN_TIME
+        type: GENERAL
+      - key: JWT_AUDIENCE
+        value: hr-axis-api
+        scope: RUN_TIME
+        type: GENERAL
+      - key: AUTH_CLIENT_ID
+        value: CHANGE_ME_CLERK_CLIENT_ID_OR_PUBLISHABLE_KEY
+        scope: RUN_TIME
+        type: GENERAL
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://staging.hr-axis.com
+        scope: RUN_TIME
+        type: GENERAL
+      - key: RATE_LIMIT_WINDOW_MS
+        value: "60000"
+        scope: RUN_TIME
+        type: GENERAL
+      - key: RATE_LIMIT_MAX
+        value: "120"
+        scope: RUN_TIME
+        type: GENERAL
+      - key: QUEUE_BACKEND
+        value: in-memory
+        scope: RUN_TIME
+        type: GENERAL
+      - key: DAILY_CLOSURE_AUTOMATION_ENABLED
+        value: "false"
+        scope: RUN_TIME
+        type: GENERAL
+
+static_sites:
+  - name: hr-axis-web
+    environment_slug: node-js
+    source_dir: admin-web
+    github:
+      repo: CHANGE_ME_OWNER/CHANGE_ME_REPO
+      branch: main
+      deploy_on_push: true
+    build_command: npm ci && npm run build
+    output_dir: dist
+    index_document: index.html
+    catchall_document: index.html
+    envs:
+      - key: VITE_API_BASE_URL
+        value: https://api-staging.hr-axis.com/api
+        scope: BUILD_TIME
+        type: GENERAL
+      - key: VITE_AUTH_MODE
+        value: bearer
+        scope: BUILD_TIME
+        type: GENERAL
+      - key: VITE_AUTH_PROVIDER
+        value: clerk
+        scope: BUILD_TIME
+        type: GENERAL
+      - key: VITE_CLERK_PUBLISHABLE_KEY
+        value: CHANGE_ME_CLERK_PUBLISHABLE_KEY
+        scope: BUILD_TIME
+        type: GENERAL
+      - key: VITE_CLERK_JWT_TEMPLATE
+        value: hr-axis-api
+        scope: BUILD_TIME
+        type: GENERAL
+
+domains:
+  - domain: staging.hr-axis.com
+    type: PRIMARY
+    minimum_tls_version: "1.2"
+  - domain: api-staging.hr-axis.com
+    type: ALIAS
+    minimum_tls_version: "1.2"
+
+ingress:
+  rules:
+    - match:
+        authority:
+          exact: api-staging.hr-axis.com
+        path:
+          prefix: /
+      component:
+        name: hr-axis-api
+        preserve_path_prefix: true
+    - match:
+        authority:
+          exact: staging.hr-axis.com
+        path:
+          prefix: /
+      component:
+        name: hr-axis-web
+    - match:
+        path:
+          prefix: /
+      component:
+        name: hr-axis-web
+

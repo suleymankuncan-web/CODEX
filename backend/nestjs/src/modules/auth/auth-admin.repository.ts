@@ -73,6 +73,10 @@ type UserAccountRow = {
   is_active: boolean;
   last_login_at: string | null;
   created_at: string;
+  deactivated_at?: string | null;
+  deactivation_reason?: string | null;
+  deactivated_by_user_id?: string | null;
+  employee_status?: string | null;
 };
 
 type UserAccountAuditRow = {
@@ -1341,18 +1345,24 @@ export class AuthAdminRepository {
     const result = await this.databaseService.query<UserAccountRow>(
       `
         SELECT
-          user_id,
-          employee_id,
-          username,
-          email,
-          auth_provider,
-          provider_subject,
-          is_active,
-          last_login_at,
-          created_at
+          ua.user_id,
+          ua.employee_id,
+          ua.username,
+          ua.email,
+          ua.auth_provider,
+          ua.provider_subject,
+          ua.is_active,
+          ua.last_login_at,
+          ua.created_at,
+          ua.deactivated_at,
+          ua.deactivation_reason,
+          ua.deactivated_by_user_id,
+          e.employment_status AS employee_status
         FROM ops.user_account ua
+        LEFT JOIN ops.employee e
+          ON e.employee_id = ua.employee_id
         ${whereClause}
-        ORDER BY created_at DESC, user_id DESC
+        ORDER BY ua.created_at DESC, ua.user_id DESC
         LIMIT $${params.length + 1} OFFSET $${params.length + 2}
       `,
       [...params, limit, offset],
@@ -1368,86 +1378,28 @@ export class AuthAdminRepository {
     const result = await this.databaseService.query<UserAccountRow>(
       `
         SELECT
-          user_id,
-          employee_id,
-          username,
-          email,
-          auth_provider,
-          provider_subject,
-          is_active,
-          last_login_at,
-          created_at
-        FROM ops.user_account
+          ua.user_id,
+          ua.employee_id,
+          ua.username,
+          ua.email,
+          ua.auth_provider,
+          ua.provider_subject,
+          ua.is_active,
+          ua.last_login_at,
+          ua.created_at,
+          ua.deactivated_at,
+          ua.deactivation_reason,
+          ua.deactivated_by_user_id,
+          e.employment_status AS employee_status
+        FROM ops.user_account ua
+        LEFT JOIN ops.employee e
+          ON e.employee_id = ua.employee_id
         WHERE user_id = $1::uuid
       `,
       [userId],
     );
 
     return result.rows[0] ?? null;
-  }
-
-  async deactivateUserAccount(input: { userId: string; actorUserId: string }) {
-    return this.databaseService.withTransaction(async (client) => {
-      const result = await client.query<UserAccountRow>(
-        `
-          UPDATE ops.user_account
-          SET is_active = FALSE,
-              updated_at = NOW(),
-              deactivated_at = NOW()
-          WHERE user_id = $1::uuid
-            AND is_active = TRUE
-          RETURNING
-            user_id,
-            employee_id,
-            username,
-            email,
-            auth_provider,
-            provider_subject,
-            is_active,
-            last_login_at,
-            created_at
-        `,
-        [input.userId],
-      );
-
-      const user = result.rows[0] ?? null;
-
-      if (user) {
-        await client.query(
-          `
-            INSERT INTO audit.event_log (
-              actor_user_id,
-              event_type,
-              entity_name,
-              entity_id,
-              scope_type,
-              metadata_json
-            )
-            VALUES ($1::uuid, 'user_account.deactivated', 'ops.user_account', $2::uuid, 'company', $3::jsonb)
-          `,
-          [
-            input.actorUserId,
-            input.userId,
-            JSON.stringify({
-              ...buildRequestAuditMetadata({
-                sourceContext: {
-                  module: "auth-admin",
-                  operation: "deactivate-user-account",
-                },
-                changedFields: ["isActive"],
-                details: {
-                  username: user.username,
-                  email: user.email,
-                  isActive: user.is_active,
-                },
-              }),
-            }),
-          ],
-        );
-      }
-
-      return user;
-    });
   }
 
   async reactivateUserAccount(input: { userId: string; actorUserId: string }) {
@@ -1457,7 +1409,9 @@ export class AuthAdminRepository {
           UPDATE ops.user_account
           SET is_active = TRUE,
               updated_at = NOW(),
-              deactivated_at = NULL
+              deactivated_at = NULL,
+              deactivation_reason = NULL,
+              deactivated_by_user_id = NULL
           WHERE user_id = $1::uuid
             AND is_active = FALSE
           RETURNING

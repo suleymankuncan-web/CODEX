@@ -34,6 +34,23 @@ describe("AppConfigService", () => {
     expect(config.jwtSecret).toBe("change-me");
   });
 
+  it("uses oidc as the default auth provider key for JWT user mapping", () => {
+    const config = createConfig({
+      NODE_ENV: "development",
+    });
+
+    expect(config.authProviderKey).toBe("oidc");
+  });
+
+  it("allows overriding the auth provider key for Clerk mapping", () => {
+    const config = createConfig({
+      AUTH_PROVIDER_KEY: "clerk",
+      NODE_ENV: "development",
+    });
+
+    expect(config.authProviderKey).toBe("clerk");
+  });
+
   it("allows HTTP migration endpoint by default only outside production", () => {
     expect(createConfig({ NODE_ENV: "development" }).httpMigrationEndpointEnabled).toBe(
       true,

@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { RequestContextStore } from "../../../shared/request-context";
 import { DatabaseService } from "../../../shared/database/database.service";
+import { AccessLifecycleRepository } from "../../auth/access-lifecycle.repository";
 
 type StoreForSellerCodeRequestRow = {
   store_id: string;
@@ -92,9 +93,20 @@ type EmployeeOffboardingRequestRow = {
   updated_at: string;
 };
 
+type OffboardingAccessClosure = {
+  userAccessClosed: boolean;
+  closedUserId: string | null;
+  closedRoleAssignments: number;
+  closedActionStoreAssignments: number;
+  revokedMobileSessions: number;
+};
+
 @Injectable()
 export class WorkforceRequestRepository {
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly accessLifecycleRepository: AccessLifecycleRepository,
+  ) {}
 
   async getLatestFranchiseSellerCode() {
     const result = await this.databaseService.query<{ seller_code: string }>(
@@ -1269,6 +1281,49 @@ export class WorkforceRequestRepository {
         ],
       );
 
+      const linkedUserResult = await client.query<{ user_id: string }>(
+        `
+          /* offboarding_linked_user_account */
+          SELECT user_id
+          FROM ops.user_account
+          WHERE employee_id = $1::uuid
+            AND is_active = TRUE
+          ORDER BY created_at DESC, user_id DESC
+          LIMIT 1
+        `,
+        [input.request.employee_id],
+      );
+
+      let accessClosure: OffboardingAccessClosure = {
+        userAccessClosed: false,
+        closedUserId: null,
+        closedRoleAssignments: 0,
+        closedActionStoreAssignments: 0,
+        revokedMobileSessions: 0,
+      };
+
+      const linkedUserId = linkedUserResult.rows[0]?.user_id;
+      if (linkedUserId) {
+        const accessLifecycleResult =
+          await this.accessLifecycleRepository.deactivateUserAccessInTransaction(client, {
+            userId: linkedUserId,
+            actorUserId: input.actorUserId,
+            reason: "employee_offboarding",
+            sourceEntity: {
+              entityName: "ops.employee_offboarding_request",
+              entityId: input.request.offboarding_request_id,
+            },
+          });
+
+        accessClosure = {
+          userAccessClosed: Boolean(accessLifecycleResult.user),
+          closedUserId: accessLifecycleResult.user?.user_id ?? null,
+          closedRoleAssignments: accessLifecycleResult.closedRoleAssignments,
+          closedActionStoreAssignments: accessLifecycleResult.closedActionStoreAssignments,
+          revokedMobileSessions: accessLifecycleResult.revokedMobileSessions,
+        };
+      }
+
       const result = await client.query<EmployeeOffboardingRequestRow>(
         `
           WITH updated AS (
@@ -1371,7 +1426,10 @@ export class WorkforceRequestRepository {
         ],
       );
 
-      return request;
+      return {
+        request,
+        accessClosure,
+      };
     });
   }
 

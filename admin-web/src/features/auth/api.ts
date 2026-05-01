@@ -91,6 +91,16 @@ export type UserAccount = {
   isActive: boolean
   lastLoginAt: string | null
   createdAt: string
+  deactivatedAt?: string | null
+  deactivationReason?: string | null
+  deactivatedByUserId?: string | null
+  employeeStatus?: string | null
+}
+
+export type UserAccessClosure = {
+  closedRoleAssignments: number
+  closedActionStoreAssignments: number
+  revokedMobileSessions: number
 }
 
 export type RoleAssignment = {
@@ -370,9 +380,12 @@ export async function deactivateActionStoreAssignment(assignmentId: string) {
 }
 
 export async function deactivateUserAccount(userId: string) {
-  return sendJson<CommandResponse<{ user: UserAccount }>>(`/auth/users/${userId}/deactivate`, {
-    method: 'PATCH',
-  })
+  return sendJson<CommandResponse<{ user: UserAccount; accessClosure: UserAccessClosure }>>(
+    `/auth/users/${userId}/deactivate`,
+    {
+      method: 'PATCH',
+    },
+  )
 }
 
 export async function reactivateUserAccount(userId: string) {
@@ -385,7 +398,7 @@ export async function createUserAccount(input: {
   employeeId?: string
   username: string
   email: string
-  authProvider: 'local' | 'oidc' | 'sso'
+  authProvider: 'local' | 'oidc' | 'sso' | 'clerk'
   providerSubject?: string
 }) {
   return sendJson<CommandResponse<{ user: UserAccount }>>('/auth/users', {
@@ -396,7 +409,7 @@ export async function createUserAccount(input: {
 
 export async function createPilotUserBinding(input: {
   employeeId: string
-  authProvider: 'oidc'
+  authProvider: 'oidc' | 'clerk'
   providerSubject: string
   username: string
   email: string

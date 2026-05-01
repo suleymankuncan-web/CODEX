@@ -58,6 +58,10 @@ export class AppConfigService {
     return this.readString("AUTH_MODE", fallback);
   }
 
+  get authProviderKey(): string {
+    return this.readString("AUTH_PROVIDER_KEY", "oidc");
+  }
+
   get allowMockAuth(): boolean {
     const value = this.configService.get<string>("ALLOW_MOCK_AUTH");
     return value === "true" || (!this.isProduction && value !== "false");

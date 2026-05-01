@@ -102,6 +102,14 @@ export type OffboardingRequest = {
   updatedAt: string
 }
 
+export type OffboardingAccessClosure = {
+  userAccessClosed: boolean
+  closedUserId: string | null
+  closedRoleAssignments: number
+  closedActionStoreAssignments: number
+  revokedMobileSessions: number
+}
+
 export async function getSellerCodeReference() {
   return fetchJson<SellerCodeReference>('/workforce/seller-code-reference?storeType=franchise')
 }
@@ -244,7 +252,9 @@ export async function approveOffboardingRequest(input: {
   requestId: string
   reviewNote?: string
 }) {
-  return sendJson<CommandResponse<{ request: OffboardingRequest }>>(
+  return sendJson<
+    CommandResponse<{ request: OffboardingRequest; accessClosure: OffboardingAccessClosure }>
+  >(
     `/workforce/offboarding-requests/${input.requestId}/approve`,
     {
       method: 'PATCH',

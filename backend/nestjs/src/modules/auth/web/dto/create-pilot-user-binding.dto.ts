@@ -5,8 +5,8 @@ export class CreatePilotUserBindingDto {
   @IsPostgresUuid()
   employeeId!: string;
 
-  @IsIn(["oidc"])
-  authProvider!: "oidc";
+  @IsIn(["oidc", "clerk"])
+  authProvider!: "oidc" | "clerk";
 
   @IsString()
   @MinLength(8)

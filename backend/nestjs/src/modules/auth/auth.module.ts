@@ -1,5 +1,7 @@
 import { Global, Module } from "@nestjs/common";
 import { APP_GUARD } from "@nestjs/core";
+import { AccessLifecycleRepository } from "./access-lifecycle.repository";
+import { AccessLifecycleService } from "./access-lifecycle.service";
 import { AuthAdminRepository } from "./auth-admin.repository";
 import { AuthAdminService } from "./auth-admin.service";
 import { AuthAuthorizationRepository } from "./auth-authorization.repository";
@@ -21,6 +23,8 @@ import { MobileAuthController } from "./web/mobile-auth.controller";
 @Module({
   controllers: [AuthAdminController, AuthSessionController, MobileAuthController],
   providers: [
+    AccessLifecycleRepository,
+    AccessLifecycleService,
     AuthAdminRepository,
     AuthAdminService,
     AuthRoleScopePolicyService,
@@ -44,6 +48,11 @@ import { MobileAuthController } from "./web/mobile-auth.controller";
       useClass: ScopeGuard,
     },
   ],
-  exports: [AuthContextService, AuthAuthorizationRepository],
+  exports: [
+    AccessLifecycleRepository,
+    AccessLifecycleService,
+    AuthContextService,
+    AuthAuthorizationRepository,
+  ],
 })
 export class AuthModule {}

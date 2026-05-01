@@ -275,6 +275,61 @@ describe("AuthContextService", () => {
     expect(user?.roleCodes).toEqual(["STORE_MANAGER"]);
   });
 
+  it("uses configured auth provider key when mapping Clerk JWT subjects", async () => {
+    const repository = buildAuthorizationRepository({
+      mappedProviderUser: {
+        user_id: "90000000-0000-4000-8000-000000000011",
+        employee_id: "70000000-0000-4000-8000-000000000011",
+        username: "hr.admin",
+        email: "hr.admin@example.com",
+        is_active: true,
+      },
+      roleAssignments: [
+        {
+          role_code: "HR_ADMIN",
+          scope_type: "company",
+          company_id: "00000000-0000-0000-0000-000000000001",
+          region_id: null,
+          store_id: null,
+        },
+      ],
+    });
+
+    const service = new AuthContextService(
+      {
+        authMode: "jwt",
+        authProviderKey: "clerk",
+        allowMockAuth: false,
+        isProduction: false,
+      } as never,
+      repository,
+      { resolveUser: jest.fn() } as never,
+      {
+        resolveUser: jest.fn(async () => ({
+          userId: "user_31clerkSubject",
+          roleCodes: [],
+          readScope: { companyIds: [], regionIds: [], storeIds: [] },
+          actionScope: { assignedStoreIds: [] },
+        })),
+      } as never,
+    );
+
+    const user = await service.resolveUser({
+      headers: { authorization: "Bearer clerk-token" },
+    });
+
+    expect(repository.getUserAccountByProviderSubject).toHaveBeenCalledWith({
+      authProvider: "clerk",
+      providerSubject: "user_31clerkSubject",
+    });
+    expect(repository.getActiveRoleAssignments).toHaveBeenCalledWith(
+      "90000000-0000-4000-8000-000000000011",
+    );
+    expect(user?.userId).toBe("90000000-0000-4000-8000-000000000011");
+    expect(user?.employeeId).toBe("70000000-0000-4000-8000-000000000011");
+    expect(user?.roleCodes).toEqual(["HR_ADMIN"]);
+  });
+
   it("rejects inactive mapped JWT user accounts without provider fallback", async () => {
     const service = new AuthContextService(
       { authMode: "jwt", allowMockAuth: false, isProduction: false } as never,

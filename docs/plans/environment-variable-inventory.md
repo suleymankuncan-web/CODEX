@@ -26,6 +26,7 @@ These values are read by `backend/nestjs/src/shared/app-config.service.ts`.
 | `DB_POOL_MAX` | P1 | Size for hosting tier. | Defaults to `20`. |
 | `DB_SSL_MODE` | P0 | Use provider-required SSL mode. | Local default is `disable`; production should be reviewed. |
 | `AUTH_MODE` | P0 | Must be `jwt` for real environments. | Local may use `mock`. |
+| `AUTH_PROVIDER_KEY` | P0 | Must match the provider subject namespace, such as `clerk` for Clerk staging. | Default `oidc`; used when mapping JWT `sub` to `ops.user_account.auth_provider/provider_subject`. |
 | `ALLOW_MOCK_AUTH` | P0 | Must be `false` or unset in production. | Production must not allow mock auth. |
 | `MIGRATIONS_HTTP_ENABLED` | P0 | Forced disabled when `NODE_ENV=production`. | Enables the legacy HTTP migration endpoint only for local/non-production controlled use; production must use CLI/CI migration execution. |
 | `CORS_ALLOWED_ORIGINS` | P0 | Required in production. | Comma-separated browser origins; local default is `http://localhost:5173`. |
@@ -66,10 +67,13 @@ These values are read by `admin-web/src`.
 | --- | --- | --- | --- |
 | `VITE_API_BASE_URL` | P0 | Points to production backend `/api`. | Public value, not secret. |
 | `VITE_AUTH_MODE` | P0 | Must be `bearer` for real environments. | Local can use `mock`. |
+| `VITE_AUTH_PROVIDER` | P0 | Use `clerk` when Clerk owns browser authentication. | Enables Clerk frontend bridge; authorization remains in HR Axis DB. |
 | `VITE_USER_ID` | P1 local-only | Do not use for production auth. | Mock-session helper only. |
 | `VITE_ROLE_CODES` | P1 local-only | Do not use for production auth. | Mock-session helper only. |
 | `VITE_COMPANY_IDS` | P1 local-only | Do not use for production auth. | Mock-session helper only. |
 | `VITE_BEARER_TOKEN` | P0 local-only | Must be empty in committed examples and production. | Never put real tokens in env files. |
+| `VITE_CLERK_PUBLISHABLE_KEY` | P0 conditional | Required when `VITE_AUTH_PROVIDER=clerk`. | Public Clerk publishable key only; never store Clerk secret key in frontend env. |
+| `VITE_CLERK_JWT_TEMPLATE` | P1 conditional | Set to the Clerk JWT template used for the backend API audience when required. | Leave empty to use the default Clerk session token. |
 | `VITE_OIDC_AUTHORIZATION_URL` | P0 fallback | Real provider authorize URL if bootstrap is unavailable. | Backend bootstrap is preferred. |
 | `VITE_OIDC_CLIENT_ID` | P0 fallback | Real public client id if bootstrap is unavailable. | Public, not secret. |
 | `VITE_OIDC_SCOPE` | P0 fallback | Includes `openid profile email`. | Match backend/provider registration. |
@@ -127,6 +131,7 @@ These values are read by `admin-web/scripts/auth-live-smoke.mjs`.
 
 - [ ] `NODE_ENV=production`
 - [ ] `AUTH_MODE=jwt`
+- [ ] `AUTH_PROVIDER_KEY` matches the real provider namespace, for example `clerk`.
 - [ ] `ALLOW_MOCK_AUTH=false` or unset with production fail-closed behavior verified.
 - [ ] `DATABASE_URL` points to production DB.
 - [ ] `CORS_ALLOWED_ORIGINS` lists only approved frontend origins.
@@ -141,6 +146,9 @@ These values are read by `admin-web/scripts/auth-live-smoke.mjs`.
 
 - [ ] `VITE_API_BASE_URL` points to production API.
 - [ ] `VITE_AUTH_MODE=bearer`.
+- [ ] `VITE_AUTH_PROVIDER` matches the browser auth provider, for example `clerk`.
+- [ ] `VITE_CLERK_PUBLISHABLE_KEY` is set only when Clerk is enabled.
+- [ ] `VITE_CLERK_JWT_TEMPLATE` is set only when backend audience verification requires a Clerk JWT template.
 - [ ] `VITE_OIDC_RESPONSE_TYPE=code` if frontend fallback provider env is used.
 - [ ] `VITE_BEARER_TOKEN` is empty.
 - [ ] No `VITE_*` value contains a secret.

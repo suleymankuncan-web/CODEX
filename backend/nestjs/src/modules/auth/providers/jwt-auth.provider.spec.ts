@@ -191,6 +191,81 @@ describe("JwtAuthProvider", () => {
     });
   });
 
+  it("resolves Clerk-style JWKS tokens without inferring HR Axis roles or scopes", async () => {
+    const { privateKey, publicKey } = await generateKeyPair("RS256");
+    const jwk = await exportJWK(publicKey);
+    jwksServer = createServer((request, response) => {
+      if (request.url !== "/.well-known/jwks.json") {
+        response.writeHead(404);
+        response.end();
+        return;
+      }
+
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(
+        JSON.stringify({
+          keys: [{ ...jwk, use: "sig", alg: "RS256", kid: "clerk-kid-1" }],
+        }),
+      );
+    });
+
+    const address = await new Promise<{ port: number }>((resolve, reject) => {
+      jwksServer?.listen(0, "127.0.0.1", () => {
+        const serverAddress = jwksServer?.address();
+        if (!serverAddress || typeof serverAddress === "string") {
+          reject(new Error("failed to bind JWKS server"));
+          return;
+        }
+
+        resolve({ port: serverAddress.port });
+      });
+    });
+
+    const provider = new JwtAuthProvider({
+      jwtSecret: "unused-secret",
+      jwtIssuer: "https://clerk.hr-axis.test",
+      jwtAudience: "hr-axis-api",
+      jwtJwksUrl: `http://127.0.0.1:${address.port}/.well-known/jwks.json`,
+      authClientId: undefined,
+    } as never);
+
+    const token = await new SignJWT({
+      azp: "https://staging.hr-axis.com",
+      email: "hr.admin@example.com",
+    })
+      .setProtectedHeader({ alg: "RS256", kid: "clerk-kid-1" })
+      .setSubject("user_31clerkSubject")
+      .setIssuer("https://clerk.hr-axis.test")
+      .setAudience("hr-axis-api")
+      .sign(privateKey);
+
+    const user = await provider.resolveUser({
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    });
+
+    expect(user).toEqual({
+      userId: "user_31clerkSubject",
+      employeeId: undefined,
+      roleCodes: [],
+      scope: {
+        companyIds: [],
+        regionIds: [],
+        storeIds: [],
+      },
+      readScope: {
+        companyIds: [],
+        regionIds: [],
+        storeIds: [],
+      },
+      actionScope: {
+        assignedStoreIds: [],
+      },
+      assignedStoreIds: [],
+    });
+  });
+
   it("accepts keycloak-style audience and role claims", async () => {
     const provider = new JwtAuthProvider({
       jwtSecret: "top-secret",

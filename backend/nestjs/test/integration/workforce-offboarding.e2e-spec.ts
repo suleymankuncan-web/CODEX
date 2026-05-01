@@ -10,6 +10,7 @@ describe("Workforce offboarding requests", () => {
   const assignmentId = "88888888-8888-4888-8888-888888888888";
   const requestId = "55555555-5555-4555-8555-555555555555";
   const actorUserId = "66666666-6666-4666-8666-666666666666";
+  const linkedUserId = "99999999-9999-4999-8999-999999999999";
   const terminationDate = "2026-05-10";
 
   const activeEmployeeRow = {
@@ -193,6 +194,7 @@ describe("Workforce offboarding requests", () => {
   });
 
   it("lets HR approve an offboarding request and closes employee assignment", async () => {
+    const lifecycleQueries: string[] = [];
     const query = jest.fn(async (sql: string, params?: unknown[]) => {
       if (
         sql.includes("FROM ops.employee_offboarding_request eor") &&
@@ -229,6 +231,98 @@ describe("Workforce offboarding requests", () => {
           assignmentId,
         ]);
         return { rowCount: 1, rows: [] };
+      }
+
+      if (sql.includes("/* offboarding_linked_user_account */")) {
+        expect(params).toEqual([employeeId]);
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              user_id: linkedUserId,
+              employee_id: employeeId,
+              username: "ayse.yilmaz",
+              email: "ayse.yilmaz@example.com",
+              auth_provider: "clerk",
+              provider_subject: "user_31employee",
+              is_active: true,
+              last_login_at: null,
+              created_at: "2026-04-27T10:00:00.000Z",
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("/* access_lifecycle_lock_user */")) {
+        lifecycleQueries.push("lock-user");
+        expect(params).toEqual([linkedUserId]);
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              user_id: linkedUserId,
+              employee_id: employeeId,
+              username: "ayse.yilmaz",
+              email: "ayse.yilmaz@example.com",
+              auth_provider: "clerk",
+              provider_subject: "user_31employee",
+              is_active: true,
+              last_login_at: null,
+              created_at: "2026-04-27T10:00:00.000Z",
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("/* access_lifecycle_deactivate_user */")) {
+        lifecycleQueries.push("deactivate-user");
+        expect(params).toEqual([linkedUserId, actorUserId, "employee_offboarding"]);
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              user_id: linkedUserId,
+              employee_id: employeeId,
+              username: "ayse.yilmaz",
+              email: "ayse.yilmaz@example.com",
+              auth_provider: "clerk",
+              provider_subject: "user_31employee",
+              is_active: false,
+              last_login_at: null,
+              created_at: "2026-04-27T10:00:00.000Z",
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("/* access_lifecycle_close_role_assignments */")) {
+        lifecycleQueries.push("close-roles");
+        expect(params).toEqual([linkedUserId]);
+        return {
+          rowCount: 2,
+          rows: [
+            { user_role_assignment_id: "11111111-1111-4111-8111-111111111111" },
+            { user_role_assignment_id: "22222222-2222-4222-8222-222222222222" },
+          ],
+        };
+      }
+
+      if (sql.includes("/* access_lifecycle_close_action_store_assignments */")) {
+        lifecycleQueries.push("close-action-stores");
+        expect(params).toEqual([linkedUserId]);
+        return {
+          rowCount: 1,
+          rows: [{ user_action_store_assignment_id: "33333333-3333-4333-8333-333333333333" }],
+        };
+      }
+
+      if (sql.includes("/* access_lifecycle_revoke_mobile_sessions */")) {
+        lifecycleQueries.push("revoke-mobile-sessions");
+        expect(params).toEqual([linkedUserId, actorUserId, "employee_offboarding"]);
+        return {
+          rowCount: 1,
+          rows: [{ mobile_device_session_id: "44444444-4444-4444-8444-444444444444" }],
+        };
       }
 
       if (sql.includes("UPDATE ops.employee_offboarding_request")) {
@@ -283,6 +377,20 @@ describe("Workforce offboarding requests", () => {
       reviewedByUserId: actorUserId,
       reviewNote: "Cikis onaylandi",
     });
+    expect(response.body.data.accessClosure).toEqual({
+      userAccessClosed: true,
+      closedUserId: linkedUserId,
+      closedRoleAssignments: 2,
+      closedActionStoreAssignments: 1,
+      revokedMobileSessions: 1,
+    });
+    expect(lifecycleQueries).toEqual([
+      "lock-user",
+      "deactivate-user",
+      "close-roles",
+      "close-action-stores",
+      "revoke-mobile-sessions",
+    ]);
     expect(
       query.mock.calls.some(
         (call) =>

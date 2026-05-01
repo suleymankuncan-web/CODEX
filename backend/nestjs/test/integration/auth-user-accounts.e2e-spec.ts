@@ -207,9 +207,86 @@ describe("Auth user accounts", () => {
   });
 
   it("deactivates a user account", async () => {
-    const query = jest.fn(async (sql: string) => {
+    const lifecycleQueries: string[] = [];
+    const query = jest.fn(async (sql: string, params?: unknown[]) => {
       if (sql.includes("FROM ops.user_account ua") && sql.includes("INNER JOIN ops.user_role_assignment")) {
         return { rowCount: 0, rows: [] };
+      }
+
+      if (sql.includes("/* access_lifecycle_lock_user */")) {
+        lifecycleQueries.push("lock-user");
+        expect(params).toEqual([createdUserId]);
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              user_id: createdUserId,
+              employee_id: null,
+              username: "new.admin",
+              email: "new.admin@example.com",
+              auth_provider: "oidc",
+              provider_subject: null,
+              is_active: true,
+              last_login_at: null,
+              created_at: "2026-04-17T22:15:00.000Z",
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("/* access_lifecycle_deactivate_user */")) {
+        lifecycleQueries.push("deactivate-user");
+        expect(params).toEqual([
+          createdUserId,
+          adminUserId,
+          "manual_admin_deactivation",
+        ]);
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              user_id: createdUserId,
+              employee_id: null,
+              username: "new.admin",
+              email: "new.admin@example.com",
+              auth_provider: "oidc",
+              provider_subject: null,
+              is_active: false,
+              last_login_at: null,
+              created_at: "2026-04-17T22:15:00.000Z",
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("/* access_lifecycle_close_role_assignments */")) {
+        lifecycleQueries.push("close-roles");
+        expect(params).toEqual([createdUserId]);
+        return {
+          rowCount: 2,
+          rows: [
+            { user_role_assignment_id: assignmentId },
+            { user_role_assignment_id: secondAssignmentId },
+          ],
+        };
+      }
+
+      if (sql.includes("/* access_lifecycle_close_action_store_assignments */")) {
+        lifecycleQueries.push("close-action-stores");
+        expect(params).toEqual([createdUserId]);
+        return {
+          rowCount: 1,
+          rows: [{ user_action_store_assignment_id: actionStoreAssignmentId }],
+        };
+      }
+
+      if (sql.includes("/* access_lifecycle_revoke_mobile_sessions */")) {
+        lifecycleQueries.push("revoke-mobile-sessions");
+        expect(params).toEqual([createdUserId, adminUserId, "manual_admin_deactivation"]);
+        return {
+          rowCount: 1,
+          rows: [{ mobile_device_session_id: "44444444-4444-4444-8444-444444444444" }],
+        };
       }
 
       if (sql.includes("FROM ops.user_account") && sql.includes("WHERE user_id = $1::uuid")) {
@@ -222,6 +299,7 @@ describe("Auth user accounts", () => {
               username: "new.admin",
               email: "new.admin@example.com",
               auth_provider: "oidc",
+              provider_subject: null,
               is_active: true,
               last_login_at: null,
               created_at: "2026-04-17T22:15:00.000Z",
@@ -240,6 +318,7 @@ describe("Auth user accounts", () => {
               username: "new.admin",
               email: "new.admin@example.com",
               auth_provider: "oidc",
+              provider_subject: null,
               is_active: false,
               last_login_at: null,
               created_at: "2026-04-17T22:15:00.000Z",
@@ -284,6 +363,18 @@ describe("Auth user accounts", () => {
       lastLoginAt: null,
       createdAt: "2026-04-17T22:15:00.000Z",
     });
+    expect(response.body.data.accessClosure).toEqual({
+      closedRoleAssignments: 2,
+      closedActionStoreAssignments: 1,
+      revokedMobileSessions: 1,
+    });
+    expect(lifecycleQueries).toEqual([
+      "lock-user",
+      "deactivate-user",
+      "close-roles",
+      "close-action-stores",
+      "revoke-mobile-sessions",
+    ]);
 
     await app.close();
   });
@@ -313,6 +404,8 @@ describe("Auth user accounts", () => {
       }
 
       if (sql.includes("UPDATE ops.user_account") && sql.includes("SET is_active = TRUE")) {
+        expect(sql).toContain("deactivation_reason = NULL");
+        expect(sql).toContain("deactivated_by_user_id = NULL");
         return {
           rowCount: 1,
           rows: [
@@ -366,6 +459,16 @@ describe("Auth user accounts", () => {
       lastLoginAt: null,
       createdAt: "2026-04-17T22:15:00.000Z",
     });
+    expect(
+      query.mock.calls.some(([sql]) =>
+        String(sql).includes("UPDATE ops.user_role_assignment"),
+      ),
+    ).toBe(false);
+    expect(
+      query.mock.calls.some(([sql]) =>
+        String(sql).includes("UPDATE ops.user_action_store_assignment"),
+      ),
+    ).toBe(false);
 
     await app.close();
   });

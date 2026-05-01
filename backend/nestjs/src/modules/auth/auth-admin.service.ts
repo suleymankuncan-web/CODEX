@@ -2,6 +2,7 @@ import { ConflictException, Injectable, NotFoundException } from "@nestjs/common
 import { buildCommandResponse, buildListResponse } from "../../shared/http/response-builders";
 import { mapAuditEvent } from "../../shared/audit/audit-event.mapper";
 import { semanticValidation } from "../../shared/http/api-errors";
+import { AccessLifecycleService } from "./access-lifecycle.service";
 import { AuthAdminRepository } from "./auth-admin.repository";
 import { AuthRoleScopePolicyService } from "./auth-role-scope-policy.service";
 
@@ -10,6 +11,7 @@ export class AuthAdminService {
   constructor(
     private readonly authAdminRepository: AuthAdminRepository,
     private readonly authRoleScopePolicyService: AuthRoleScopePolicyService,
+    private readonly accessLifecycleService: AccessLifecycleService,
   ) {}
 
   async createRoleAssignment(input: {
@@ -229,7 +231,7 @@ export class AuthAdminService {
     employeeId?: string;
     username: string;
     email: string;
-    authProvider: "local" | "oidc" | "sso";
+    authProvider: "local" | "oidc" | "sso" | "clerk";
     providerSubject?: string;
     actorUserId: string;
   }) {
@@ -253,7 +255,7 @@ export class AuthAdminService {
 
   async createPilotUserBinding(input: {
     employeeId: string;
-    authProvider: "oidc";
+    authProvider: "oidc" | "clerk";
     providerSubject: string;
     username: string;
     email: string;
@@ -356,7 +358,7 @@ export class AuthAdminService {
   async listUserAccounts(input: {
     limit?: number;
     offset?: number;
-    authProvider?: "local" | "oidc" | "sso";
+    authProvider?: "local" | "oidc" | "sso" | "clerk";
     isActive?: boolean;
   }) {
     const result = await this.authAdminRepository.listUserAccounts(input);
@@ -375,20 +377,22 @@ export class AuthAdminService {
       throw new NotFoundException(`User account not found: ${userId}`);
     }
 
-    const user = await this.authAdminRepository.deactivateUserAccount({
+    const accessClosure = await this.accessLifecycleService.deactivateUserAccess({
       userId,
       actorUserId,
+      reason: "manual_admin_deactivation",
     });
-
-    if (!user) {
-      throw new ConflictException("User account is already inactive");
-    }
 
     return buildCommandResponse({
       status: "updated",
       message: "User account deactivated",
       data: {
-        user: this.mapUser(user),
+        user: this.mapUser(accessClosure.user),
+        accessClosure: {
+          closedRoleAssignments: accessClosure.closedRoleAssignments,
+          closedActionStoreAssignments: accessClosure.closedActionStoreAssignments,
+          revokedMobileSessions: accessClosure.revokedMobileSessions,
+        },
       },
     });
   }
@@ -784,8 +788,12 @@ export class AuthAdminService {
     is_active: boolean;
     last_login_at: string | null;
     created_at: string;
+    deactivated_at?: string | null;
+    deactivation_reason?: string | null;
+    deactivated_by_user_id?: string | null;
+    employee_status?: string | null;
   }) {
-    return {
+    const mapped = {
       userId: item.user_id,
       employeeId: item.employee_id,
       username: item.username,
@@ -795,6 +803,18 @@ export class AuthAdminService {
       isActive: item.is_active,
       lastLoginAt: item.last_login_at,
       createdAt: item.created_at,
+    };
+
+    return {
+      ...mapped,
+      ...("deactivated_at" in item ? { deactivatedAt: item.deactivated_at ?? null } : {}),
+      ...("deactivation_reason" in item
+        ? { deactivationReason: item.deactivation_reason ?? null }
+        : {}),
+      ...("deactivated_by_user_id" in item
+        ? { deactivatedByUserId: item.deactivated_by_user_id ?? null }
+        : {}),
+      ...("employee_status" in item ? { employeeStatus: item.employee_status ?? null } : {}),
     };
   }
 }

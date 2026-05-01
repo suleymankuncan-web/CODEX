@@ -13,8 +13,8 @@ export class CreateUserAccountDto {
   @IsEmail()
   email!: string;
 
-  @IsIn(["local", "oidc", "sso"])
-  authProvider!: "local" | "oidc" | "sso";
+  @IsIn(["local", "oidc", "sso", "clerk"])
+  authProvider!: "local" | "oidc" | "sso" | "clerk";
 
   @IsOptional()
   @IsString()

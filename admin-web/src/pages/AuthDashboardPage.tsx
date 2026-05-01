@@ -31,7 +31,7 @@ import { PilotUserBindingPanel } from '../features/auth/PilotUserBindingPanel'
 import { formatDateTime, getErrorMessage } from '../lib/format'
 
 type RoleScopeType = 'company' | 'region' | 'store'
-type AuthProvider = 'local' | 'oidc' | 'sso'
+type AuthProvider = 'local' | 'oidc' | 'sso' | 'clerk'
 
 function mergeAuthUsers(...groups: Array<Array<AuthLookupUser | null | undefined>>) {
   const byId = new Map<string, AuthLookupUser>()
@@ -259,7 +259,10 @@ export function AuthDashboardPage() {
   const deactivateUserMutation = useMutation({
     mutationFn: deactivateUserAccount,
     onSuccess: async (response) => {
-      setFeedback(response.command.message)
+      const closure = response.data.accessClosure
+      setFeedback(
+        `${response.command.message}. Closed ${closure.closedRoleAssignments} role grants, ${closure.closedActionStoreAssignments} action store grants, and ${closure.revokedMobileSessions} mobile sessions.`,
+      )
       setErrorFeedback(null)
       await refreshAuthData()
     },
@@ -429,7 +432,9 @@ export function AuthDashboardPage() {
     deactivateActionStoreAssignmentMutation.isPending ||
     deactivateUserMutation.isPending ||
     reactivateUserMutation.isPending
-  const providerOptions = Array.from(new Set<AuthProvider>(['local', 'oidc', 'sso', ...lookups.authProviders as AuthProvider[]]))
+  const providerOptions = Array.from(
+    new Set<AuthProvider>(['local', 'oidc', 'sso', 'clerk', ...(lookups.authProviders as AuthProvider[])]),
+  )
 
   function updateUserForm<K extends keyof typeof userForm>(key: K, value: (typeof userForm)[K]) {
     setUserForm((current) => ({ ...current, [key]: value }))
@@ -915,6 +920,15 @@ export function AuthDashboardPage() {
                   <div className="key-grid">
                     <KeyValue label="Provider" value={user.authProvider} />
                     <KeyValue label="Created" value={formatDateTime(user.createdAt)} />
+                    <KeyValue label="Employee status" value={user.employeeStatus ?? 'Unlinked'} />
+                    <KeyValue
+                      label="Deactivated"
+                      value={user.deactivatedAt ? formatDateTime(user.deactivatedAt) : 'No'}
+                    />
+                    <KeyValue
+                      label="Deactivation reason"
+                      value={user.deactivationReason ?? 'None'}
+                    />
                   </div>
                   <div className="action-cluster">
                     <Link className="back-link" to={`/admin/auth/users/${user.userId}/audit`}>
@@ -924,7 +938,14 @@ export function AuthDashboardPage() {
                       <button
                         className="control-button"
                         type="button"
-                        onClick={() => deactivateUserMutation.mutate(user.userId)}
+                        onClick={() => {
+                          const confirmed = window.confirm(
+                            'Deactivate this user and close active role grants, action store grants, and mobile sessions?',
+                          )
+                          if (confirmed) {
+                            deactivateUserMutation.mutate(user.userId)
+                          }
+                        }}
                         disabled={mutationBusy}
                       >
                         {deactivateUserMutation.isPending ? 'Updating...' : 'Deactivate user'}

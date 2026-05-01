@@ -209,6 +209,8 @@ CREATE TABLE ops.user_account (
     last_login_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deactivation_reason TEXT,
+    deactivated_by_user_id UUID REFERENCES ops.user_account(user_id),
     deactivated_at TIMESTAMPTZ
 );
 
@@ -1035,6 +1037,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_user_account_auth_provider_subject
 
 CREATE INDEX IF NOT EXISTS idx_user_account_employee_active
     ON ops.user_account (employee_id, is_active);
+
+CREATE INDEX IF NOT EXISTS idx_user_account_active_employee
+    ON ops.user_account (is_active, employee_id);
 
 CREATE INDEX idx_user_action_store_assignment_user_dates
     ON ops.user_action_store_assignment (user_id, start_at, end_at);

@@ -47,6 +47,7 @@ test('admin inbox renders item detail, due, escalation, and source action signal
   await expect(offboardingQueue.getByText('resignation')).toBeVisible()
   await offboardingQueue.getByRole('button', { name: 'Approve offboarding' }).click()
   await expect(page.getByText('Offboarding request approved')).toBeVisible()
+  await expect(page.getByText('User access closed: 2 role grants, 1 action store grants, 1 mobile sessions.')).toBeVisible()
   await expect(page.getByText('Admin inbox unavailable')).toHaveCount(0)
 })
 
@@ -171,6 +172,13 @@ async function routeAdminInboxApi(page: Page) {
               status: 'approved',
               reviewedByUserId: 'super-admin-inbox-user',
               reviewNote: 'Approved from admin inbox',
+            },
+            accessClosure: {
+              userAccessClosed: true,
+              closedUserId: 'auth-user-for-offboarding',
+              closedRoleAssignments: 2,
+              closedActionStoreAssignments: 1,
+              revokedMobileSessions: 1,
             },
           },
         },
