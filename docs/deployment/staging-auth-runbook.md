@@ -31,12 +31,13 @@ Bu runbook, `hr-axis.com` icin gercek internette calisan staging ortamini kurmak
 
 3. Hosting
    - Ana yol frontend: Vercel.
-   - Ana yol database: Supabase Postgres.
-   - Backend hosting: pending decision.
+   - Backend + DB ayni platform adayi: Koyeb Web Service + Koyeb PostgreSQL.
+   - Alternatif database: Supabase Postgres.
    - B plani: DigitalOcean App Platform veya DigitalOcean Basic Droplet + Docker Compose.
 
 Repo icindeki hazir deploy paketi: `infra/staging/README.md`.
 Aktif Supabase + Vercel kurulumu: `docs/deployment/supabase-vercel-staging.md`.
+Koyeb backend + DB kurulumu: `docs/deployment/koyeb-staging.md`.
 App Platform B plani: `docs/deployment/digitalocean-app-platform-staging.md`.
 
 ## Cloudflare DNS

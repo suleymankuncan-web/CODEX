@@ -15,7 +15,7 @@ Authorization: HR Axis DB
 Backend hosting: pending
 ```
 
-Backend hosting bilerek pending kalir. NestJS backend uzun sureli Node process olarak calisir; Vercel serverless'a tasimak ayri adapter/refactor ister. Bu yuzden once frontend + DB + auth parcasi netlestirilir, sonra backend icin Render/Fly/Railway/DigitalOcean alternatiflerinden biri secilir.
+Backend hosting icin Koyeb degerlendirmesi ayrica yazildi: `docs/deployment/koyeb-staging.md`. NestJS backend uzun sureli Node process olarak calisir; Vercel serverless'a tasimak ayri adapter/refactor ister.
 
 ## Satin Alma ve Uyelik Listesi
 
@@ -43,8 +43,8 @@ Backend hosting bilerek pending kalir. NestJS backend uzun sureli Node process o
    - Output directory: `dist`.
 
 5. Backend hosting
-   - Pending decision.
-   - Adaylar: Render, Fly.io, Railway, DigitalOcean App Platform, Droplet + Docker Compose.
+   - Aktif aday: Koyeb Web Service.
+   - Diger adaylar: Render, Fly.io, Railway, DigitalOcean App Platform, Droplet + Docker Compose.
    - Secim kriteri: persistent Node service, custom domain, HTTPS, env secrets, uygun free/low-cost plan.
 
 ## Supabase Ayarlari
@@ -177,4 +177,3 @@ Sonra:
 - Unassigned store smoke 403 veya bos sonuc doner.
 - HR admin deactivate smoke access'i kapatir.
 - Offboarding approval smoke bagli user access'i kapatir.
-
