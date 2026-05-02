@@ -46,7 +46,11 @@ export class AppConfigService {
   }
 
   get port(): number {
-    return Number(this.readString("APP_PORT", "3000"));
+    return Number(
+      this.readOptionalString("APP_PORT") ??
+        this.readOptionalString("PORT") ??
+        "3000",
+    );
   }
 
   get appName(): string {

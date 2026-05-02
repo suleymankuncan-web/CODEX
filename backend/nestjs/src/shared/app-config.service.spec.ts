@@ -15,6 +15,23 @@ describe("AppConfigService", () => {
     expect(config.jwtSecret).toBe("change-me");
   });
 
+  it("uses platform PORT when APP_PORT is not configured", () => {
+    const config = createConfig({
+      PORT: "4173",
+    });
+
+    expect(config.port).toBe(4173);
+  });
+
+  it("lets APP_PORT override platform PORT", () => {
+    const config = createConfig({
+      APP_PORT: "3000",
+      PORT: "4173",
+    });
+
+    expect(config.port).toBe(3000);
+  });
+
   it("rejects the default JWT secret in production when JWKS is not configured", () => {
     const config = createConfig({
       NODE_ENV: "production",

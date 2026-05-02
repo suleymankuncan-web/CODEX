@@ -1,8 +1,10 @@
-# HR Axis Koyeb Staging
+# HR Axis Koyeb Staging No-Go
 
 Tarih: 2026-05-02
 
-Bu rota backend hosting ve Postgres DB'yi ayni platformda tutmak icindir. Frontend icin Vercel Free kullanilir; Koyeb free web service hakki backend'e ayrilir.
+Bu rota backend hosting ve Postgres DB'yi ayni platformda tutmak icin degerlendirildi. Koyeb dashboard bu hesapta Pro plan / kart dogrulama akisi gosterdiği icin aktif staging rotasi olmaktan cikarildi.
+
+Aktif rota: `docs/deployment/render-supabase-vercel-staging.md`.
 
 ## Secilen Stack
 
@@ -174,4 +176,3 @@ https://staging.hr-axis.com
 ```
 
 Smoke tamamlanmadan pilot gate acilmaz.
-

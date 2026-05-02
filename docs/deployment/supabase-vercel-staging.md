@@ -15,7 +15,7 @@ Authorization: HR Axis DB
 Backend hosting: pending
 ```
 
-Backend hosting icin Koyeb degerlendirmesi ayrica yazildi: `docs/deployment/koyeb-staging.md`. NestJS backend uzun sureli Node process olarak calisir; Vercel serverless'a tasimak ayri adapter/refactor ister.
+Backend hosting icin aktif yol Render'dir: `docs/deployment/render-supabase-vercel-staging.md`. Koyeb degerlendirmesi no-go olarak ayrica yazildi: `docs/deployment/koyeb-staging.md`. NestJS backend uzun sureli Node process olarak calisir; Vercel serverless'a tasimak ayri adapter/refactor ister.
 
 ## Satin Alma ve Uyelik Listesi
 
@@ -43,8 +43,9 @@ Backend hosting icin Koyeb degerlendirmesi ayrica yazildi: `docs/deployment/koye
    - Output directory: `dist`.
 
 5. Backend hosting
-   - Aktif aday: Koyeb Web Service.
-   - Diger adaylar: Render, Fly.io, Railway, DigitalOcean App Platform, Droplet + Docker Compose.
+   - Aktif yol: Render Web Service.
+   - Koyeb bu hesapta Pro plan zorunlulugu gosterdigi icin no-go.
+   - Diger adaylar: Fly.io, Railway, DigitalOcean App Platform, Droplet + Docker Compose.
    - Secim kriteri: persistent Node service, custom domain, HTTPS, env secrets, uygun free/low-cost plan.
 
 ## Supabase Ayarlari
@@ -110,7 +111,6 @@ Backend hangi provider'a giderse gitsin minimum runtime env:
 ```env
 NODE_ENV=production
 APP_NAME=hr-axis-staging-api
-APP_PORT=3000
 DATABASE_URL=<Supabase session pooler URI>
 DB_POOL_MAX=5
 DB_SSL_MODE=require

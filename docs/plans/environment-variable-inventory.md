@@ -19,7 +19,8 @@ These values are read by `backend/nestjs/src/shared/app-config.service.ts`.
 
 | Variable | P0/P1 | Production rule | Notes |
 | --- | --- | --- | --- |
-| `APP_PORT` | P1 | Set by hosting platform or explicit runtime env. | Defaults to `3000`. |
+| `APP_PORT` | P1 | Explicit app port when the hosting platform does not inject `PORT`. | Overrides `PORT`; defaults to `3000`. |
+| `PORT` | P1 | Hosting platform injected port. | Used when `APP_PORT` is empty; Render/Koyeb-style platforms may set this automatically. |
 | `APP_NAME` | P1 | Stable service name. | Defaults to `store-ops-backend`. |
 | `NODE_ENV` | P0 | Must be `production` in production. | Controls production auth fail-closed behavior. |
 | `DATABASE_URL` | P0 | Must point to target DB, never local development. | Secret-bearing connection string. |
