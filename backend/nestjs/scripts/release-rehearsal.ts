@@ -217,7 +217,7 @@ async function main() {
     startManagedProcess({
       name: "release-rehearsal-worker",
       command: "node",
-      args: ["dist/workers"],
+      args: ["dist/src/workers.js"],
       cwd: backendRoot,
       env: sharedEnv,
       stdoutPath: resolve(backendRoot, ".release-rehearsal-worker.log"),
@@ -227,7 +227,7 @@ async function main() {
     startManagedProcess({
       name: "release-rehearsal-app",
       command: "node",
-      args: ["--enable-source-maps", "dist/main"],
+      args: ["--enable-source-maps", "dist/src/main.js"],
       cwd: backendRoot,
       env: sharedEnv,
       stdoutPath: resolve(backendRoot, ".release-rehearsal-app.log"),

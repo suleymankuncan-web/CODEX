@@ -124,6 +124,18 @@ describe("store-me smoke script", () => {
     expect(releaseRehearsal).toContain('"smoke:release"');
     expect(releaseRehearsal).toContain('"smoke:store-me"');
   });
+
+  it("starts the compiled Nest entrypoints during release rehearsal", () => {
+    const releaseRehearsal = readFileSync(
+      join(process.cwd(), "scripts", "release-rehearsal.ts"),
+      "utf8",
+    );
+
+    expect(releaseRehearsal).toContain('"dist/src/workers.js"');
+    expect(releaseRehearsal).toContain('"dist/src/main.js"');
+    expect(releaseRehearsal).not.toContain('"dist/workers"');
+    expect(releaseRehearsal).not.toContain('"dist/main"');
+  });
 });
 
 function buildHealthyResponse(overrides: Record<string, unknown> = {}) {
