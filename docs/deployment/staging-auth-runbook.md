@@ -10,6 +10,7 @@ Bu runbook, `hr-axis.com` icin gercek internette calisan staging ortamini kurmak
 - Staging frontend: `https://staging.hr-axis.com`
 - Staging API: `https://api-staging.hr-axis.com`
 - Authentication: Clerk
+- Database: Supabase Postgres
 - Authorization: HR Axis Postgres DB (`ops.user_account`, role/scope assignment tablolari)
 - Backend auth mode: JWT + remote JWKS
 - Packaging: Docker image veya platform build. Docker kalici paketleme standardidir; ileride App Platform, Droplet, Kubernetes veya baska hosta tasinsa bile image contract korunur.
@@ -29,13 +30,14 @@ Bu runbook, `hr-axis.com` icin gercek internette calisan staging ortamini kurmak
    - Clerk Organizations V1'de kullanilmayacak; yetki HR Axis DB'de.
 
 3. Hosting
-   - Ana yol: DigitalOcean App Platform.
-   - B plani: DigitalOcean Basic Droplet + Docker Compose.
-   - Veri guvenligi icin onerilen: DigitalOcean Managed Postgres staging DB.
-   - Butce cok kisiksa: staging Postgres Docker volume ile baslanabilir, ama pilot kaniti icin yedekleme/restore riski not edilir.
+   - Ana yol frontend: Vercel.
+   - Ana yol database: Supabase Postgres.
+   - Backend hosting: pending decision.
+   - B plani: DigitalOcean App Platform veya DigitalOcean Basic Droplet + Docker Compose.
 
 Repo icindeki hazir deploy paketi: `infra/staging/README.md`.
-App Platform klik-klik kurulumu: `docs/deployment/digitalocean-app-platform-staging.md`.
+Aktif Supabase + Vercel kurulumu: `docs/deployment/supabase-vercel-staging.md`.
+App Platform B plani: `docs/deployment/digitalocean-app-platform-staging.md`.
 
 ## Cloudflare DNS
 

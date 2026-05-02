@@ -1,8 +1,10 @@
-# HR Axis DigitalOcean App Platform Staging
+# HR Axis DigitalOcean App Platform Staging B Plani
 
 Tarih: 2026-05-01
 
-Bu yol Droplet yolu degildir. Bos Linux sunucu kiralamiyoruz; DigitalOcean App Platform frontend ve backend component'lerini GitHub'dan build edip calistirir. Docker/Caddy dosyalari B planidir.
+Bu dosya artik aktif staging rotasi degildir. Aktif rota `docs/deployment/supabase-vercel-staging.md` icindeki Supabase Postgres + Vercel frontend yoludur.
+
+Bu yol Droplet yolu degildir. Bos Linux sunucu kiralamiyoruz; DigitalOcean App Platform frontend ve backend component'lerini GitHub'dan build edip calistirir. Docker/Caddy dosyalari diger B planidir.
 
 ## Neyi Satin Alacagiz?
 
@@ -199,14 +201,13 @@ Smoke kullanicisi Clerk'te login olur, DB'deki `ops.user_account.provider_subjec
 Ana yol:
 
 ```text
-App Platform + Managed Postgres + Clerk
+Supabase Postgres + Vercel frontend + Clerk
 ```
 
 B plani:
 
 ```text
-Droplet + Docker Compose + Caddy
+DigitalOcean App Platform veya Droplet + Docker Compose + Caddy
 ```
 
 Bugun Droplet acmiyoruz.
-
