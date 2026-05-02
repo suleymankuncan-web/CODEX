@@ -5910,10 +5910,184 @@ CODEX durust yorum:
 - Bu tasima dogru hamle. OneDrive izleme yukunu ve Turkce/bosluklu path kaynakli terminal riskini azaltir.
 - Bundan sonra yeni pencerede aktif yol olarak `D:\store-ops-workspace` kullanilmali.
 
+## Son HR Axis Staging Deployment Evidence
+
+2 Mayis 2026 itibariyla proje ilk gercek internet staging hattina tasindi.
+
+Marka/domain:
+
+- Uygulama adi: HR Axis.
+- Domain Cloudflare uzerinden alindi: `hr-axis.com`.
+- Cloudflare registrar privacy/WHOIS redaction varsayilan olarak aktif.
+- Auto-renew acik.
+
+Canli staging yuzeyleri:
+
+- Frontend staging domain: `https://staging.hr-axis.com`.
+- Store route: `https://staging.hr-axis.com/store`.
+- Backend Render service: `https://hr-axis-api.onrender.com/api`.
+- Backend custom domain hedefi: `https://api-staging.hr-axis.com/api`.
+
+Mevcut aktif runtime karari:
+
+- Frontend Vercel uzerinde `staging.hr-axis.com` domaini ile calisiyor.
+- Vercel `VITE_API_BASE_URL` gecici olarak `https://hr-axis-api.onrender.com/api`.
+- `api-staging.hr-axis.com` Render tarafinda verified/certificate issued oldu; public DNS `CNAME api-staging -> hr-axis-api.onrender.com` olarak dogru.
+- Ancak kullanicinin tarayici/yerel DNS tarafinda `api-staging.hr-axis.com` henuz cozulmedigi icin frontend gecici olarak Render'in kendi domainine geri alindi.
+- DNS tamamen oturunca `VITE_API_BASE_URL` tekrar `https://api-staging.hr-axis.com/api` yapilacak ve Vercel redeploy edilecek.
+
+Backend/DB/auth durumu:
+
+- Backend Render uzerinde NestJS web service olarak canli.
+- DB Supabase Free Postgres.
+- `db/seeds/001_reference_seed.sql` staging DB uzerinde tamamlandi.
+- Backend health DB check `ok` verdi.
+- Queue backend staging icin `in-memory`; Redis check bu nedenle skipped.
+- Render `CORS_ALLOWED_ORIGINS` degeri yeni frontend domainini icerir:
+  - `https://hr-axis-staging.vercel.app`
+  - `https://staging.hr-axis.com`
+- Clerk authentication aktif.
+- Frontend bearer mode aktif.
+- Clerk JWT template: `hr-axis-api`.
+- Authorization uygulama DB'sinde kalmaya devam ediyor.
+
+Alinan kanitlar:
+
+- `https://staging.hr-axis.com/store` canli sayfa olarak acildi.
+- Frontend bundle icinde gecici API base `https://hr-axis-api.onrender.com/api` olarak dogrulandi.
+- Eski custom API base `api-staging.hr-axis.com` bundle icinde kalmadi.
+- Render CORS preflight, `Origin: https://staging.hr-axis.com` icin `204 No Content` ve `access-control-allow-origin: https://staging.hr-axis.com` dondu.
+- Backend health direct Render domaininde `{"status":"ok","service":"hr-axis-staging-api"}` dondu.
+- Backend custom domain public DNS ve forced TLS testinde health `ok` dondu; sorun sadece yerel DNS/cache yayilimi.
+- Clerk login daha once calisti.
+- Clerk user DB authorization'a maplendi:
+  - DB user id: `80000000-0000-0000-0000-000000000900`
+  - Resolved roles: `SUPER_ADMIN, STORE_MANAGER`
+  - Resolved scope: `1 company / 1 region / 1 store`
+- `codex/fix-auth-seed-uuid` ve `codex/fix-reporting-seed-uuid` fixleri main'e merge edilip Render main redeploy sonrasi store auth/scope ve `/store/me` seed UUID kaynakli hatalari kapatti.
+
+Staging smoke checklist:
+
+- `https://staging.hr-axis.com/store` acilir.
+- Clerk ile giris yapilir.
+- Store shell'de resolved roles/scope beklenen degerleri gostermeli.
+- Tekrar kontrol edilecek route'lar:
+  - `/store`
+  - `/store/me`
+  - `/store/kpis`
+  - `/store/approvals`
+- `api-staging.hr-axis.com/api/health/live` kullanici tarayicisinda acilinca Vercel API base custom domain'e geri alinacak.
+
+Guvenlik notu:
+
+- Repo public oldugu fark edildi ve private'a alindi.
+- Ilk manuel secret scan'de tracked gercek `.env` bulunmadi.
+- `backend/nestjs/.env` local dosya olarak var ama tracked degil ve git history'de gorunmedi.
+- Bulunan secret benzeri degerler docs/example/test placeholder olarak gorundu.
+- Buna ragmen ileride GitHub secret scanning veya `gitleaks` gibi dedicated scanner kosulmasi mantikli.
+- Her yeni provider secret'i yalnizca platform secret/env alanlarina girilmeli; repo, issue, chat veya screenshot icine yazilmamali.
+
+Pilot kapisi etkisi:
+
+- Bu adim staging auth/deploy kanitini ciddi sekilde ilerletti ama pilot `Go` degildir.
+- Hala ayrica true store/personnel baseline kaniti, real KPI import smoke kaniti, pilot user/scope kaniti ve migration/release evidence tamamlanmali.
+
+Siradaki mantikli adim:
+
+- Kisa vadede staging smoke checklist tekrar kosulsun.
+- `api-staging.hr-axis.com` kullanici tarayicisinda acilinca Vercel `VITE_API_BASE_URL` custom API domain'e geri alinsin.
+- Sonra Pilot Readiness Gate V1 icin eldeki staging auth evidence kayda baglansin; true baseline ve KPI import kanitlari gelmeden pilot onayi verilmesin.
+
+## Son Staging Smoke Recheck Evidence
+
+2 Mayis 2026 15:10 +03 itibariyla staging public smoke tekrar kosuldu ve sanitized evidence olarak kayda baglandi.
+
+Yeni kanit kaydi:
+
+- `docs/evidence/pilot-readiness/2026-05-02-staging-smoke-recheck.md`
+
+Kosulan kontroller:
+
+- DNS:
+  - `staging.hr-axis.com` Vercel DNS uzerinden cozundu.
+  - `api-staging.hr-axis.com` artik bu workspace'ten `hr-axis-api.onrender.com` hedefine cozunuyor.
+  - `hr-axis-api.onrender.com` Render origin uzerinden cozundu.
+- Frontend HTTP:
+  - `/`, `/store`, `/store/me`, `/store/kpis`, `/store/approvals` route'lari `200` HTML dondu.
+- Backend health:
+  - Render direct `https://hr-axis-api.onrender.com/api/health/live` `200 ok` dondu.
+  - Render direct `https://hr-axis-api.onrender.com/api/health` `200 ok`, database `ok`, Redis `skipped`, queue backend `in-memory` dondu.
+  - Custom API `https://api-staging.hr-axis.com/api/health/live` `200 ok` dondu.
+  - Custom API `https://api-staging.hr-axis.com/api/health` `200 ok`, database `ok`, Redis `skipped`, queue backend `in-memory` dondu.
+- Auth/CORS:
+  - `/api/auth/session` bearer token olmadan iki API domaininde de `403` dondu.
+  - `OPTIONS /api/auth/session`, `Origin: https://staging.hr-axis.com` icin iki API domaininde de `204` dondu.
+  - `access-control-allow-origin` degeri `https://staging.hr-axis.com`.
+- Browser route smoke:
+  - Chromium ile `/`, `/store`, `/store/me`, `/store/kpis`, `/store/approvals` acildi.
+  - Unauthenticated store route'lar `/auth/login` kapisina dustu.
+  - Console error ve request failure gorulmedi.
+  - Login ekrani Clerk provider flow'u configured olarak gosterdi.
+- Frontend bundle:
+  - Deployed bundle hala gecici `https://hr-axis-api.onrender.com/api` base'ini iceriyor.
+  - Deployed bundle henuz `https://api-staging.hr-axis.com/api` base'ini icermiyor.
+  - Clerk JWT template marker `hr-axis-api` bundle icinde mevcut.
+
+Vercel custom API base redeploy durumu:
+
+- Custom API domain bu workspace'ten artik health/CORS seviyesinde calisiyor.
+- Lokal workspace'te `.vercel` link dizini, `vercel` CLI veya `VERCEL_*` token/env bulunmadi.
+- Bu nedenle Vercel `VITE_API_BASE_URL` bu turda otomatik custom API domain'e alinip redeploy edilemedi.
+
+Pilot kapisi etkisi:
+
+- Bu public staging smoke iyi bir ara kanittir ama pilot `Go` degildir.
+- Authenticated Clerk login, real bearer ile `/api/auth/session`, store shell resolved role/scope, assigned-store positive action ve unassigned-store negative scope smoke bu turda kosulmadi.
+- True baseline master data, real KPI import smoke, pilot user/scope ve release/migration evidence hala zorunlu.
+
+CODEX durust yorum:
+
+- Staging hattinin dis kabugu artik saglikli gorunuyor: custom API domain de calisiyor, backend DB health ok, CORS dogru, protected route'lar login kapisina temiz dusuyor.
+- Asil pilot riski artik DNS degil; otomasyonla kanitlanmamis authenticated Clerk session ve gercek data/scope kaniti.
+- Vercel API base custom domain'e gecmeye teknik olarak hazir gorunuyor, ama bu workspace'te Vercel deploy yetkisi olmadigi icin aksiyon dashboard/CLI yetkisi olan tarafta tamamlanmali.
+
+## Son Clerk Token Refresh Shell Stability Fix
+
+2 Mayis 2026 itibariyla staging frontend'de kullanici sayfada beklerken tam 45 saniyede bir gorunen otomatik yenilenme hissinin root cause'u bulundu ve fixlendi.
+
+Root cause:
+
+- `ClerkSessionBridge` her 45 saniyede Clerk token sync calistiriyor.
+- Token string'i yenilendiginde `startBearerSession(token)` React session state'ini guncelliyordu.
+- `App.tsx` shell session query key'i raw `session.bearerToken` degerini iceriyordu.
+- Bu nedenle her Clerk token refresh'i `GET /auth/session` shell verification query'sini yeni query gibi tetikliyor, store shell'i tekrar verifying/yol secimi moduna sokuyordu.
+
+Fix:
+
+- `admin-web/src/App.tsx` icinde shell session query key'i raw bearer token yerine yalnizca `token-present` / `token-missing` readiness bilgisini kullanacak sekilde degistirildi.
+- Token refresh hala sessionStorage'a en guncel token'i yazar; API request header'lari zaten request aninda sessionStorage'dan okundugu icin authorization tazeligini kaybetmez.
+- 45 saniyelik Clerk token refresh artik shell query key'i degistirmez; sayfa/store shell gereksiz verification state'e dusmez.
+
+Regression guard:
+
+- Yeni root script testi: `scripts/frontend-auth-refresh-contract.test.mjs`.
+- Guard, shell session query key icinde raw `session.bearerToken` tekrar kullanilirsa fail eder.
+
+Dogrulama:
+
+- TDD RED: `node --test scripts\frontend-auth-refresh-contract.test.mjs` once raw bearer token query key'de oldugu icin fail etti.
+- GREEN: targeted guard gecti.
+- Frontend build: `admin-web` `npm.cmd run build` gecti.
+
+CODEX durust yorum:
+
+- Bu dogru kucuk fix. Clerk token'in yenilenmesi guvenlik icin gerekli; sorun token'in kendisini UI shell query kimligi yapmaktaydi.
+- Yetki tazeligi korunuyor, ama kullanici artik 45 saniyede bir sayfa yenileniyor gibi bir deneyim yasamamalidir.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
 
 ```text
-current-state.md oku; aktif proje yolu artik D:\store-ops-workspace. OneDrive altindaki eski masaustu kopyasini kullanma. Eski E:\ yolunu da kullanma. Workspace Relocation To D Drive tamamlandi; eski kopya silinmedi, D tarafinda admin-web ve backend\nestjs dependency kurulumlari `npm.cmd ci` ile yapildi ve `npm.cmd run check:release` gecti. Auth Role Assignment Active Uniqueness V1 kapandi; fresh DB smoke 43/43 ve root check:release gecti. Searchable auth-admin lookup backend endpointleri ve frontend wiring kapandi. Project Debt Ledger Consistency Guard V1 kapandi. Repo Hygiene Guard V1 kapandi. Pilot Readiness Gate V1 kapandi; pilot Go / Conditional Go / No-Go artik staging auth, true baseline, gercek KPI import smoke, pilot user/scope ve release/migration evidence ile belirleniyor. Pilot Readiness Preflight No-Go Evidence eklendi; `docs/evidence/pilot-readiness/2026-05-01-preflight-no-go.md` pilotun henuz onayli olmadigini, staging IdP/true baseline/KPI smoke/user-scope kanitlarinin eksik oldugunu kayit altina alir. Project Health Snapshot 2026-05-01 eklendi; `docs/plans/project-health-snapshot-2026-05-01.md` local foundation'i saglikli, pilotu ise dis kanit eksigi nedeniyle onaysiz olarak ayirir. Son root check:release D:\store-ops-workspace icinde gecti; root script 122/122, backend 89 suite / 486 test, frontend Playwright 47/47, audit 0 vulnerability. Closed active debts: 89. Siradaki mantikli adim: staging IdP bilgileri gelirse auth smoke kanitini almak; true baseline dosyalari gelirse master-data pilot smoke'a gecmek; real KPI pilot file gelirse Excel KPI import smoke'a gecmek. Bunlar yoksa mevcut pilot yolunu guclendiren kucuk guard disina cikmamak.
+current-state.md oku; aktif proje yolu artik D:\store-ops-workspace. OneDrive altindaki eski masaustu kopyasini kullanma. Eski E:\ yolunu da kullanma. HR Axis staging hatti canli: frontend https://staging.hr-axis.com, backend Render service https://hr-axis-api.onrender.com/api, custom API https://api-staging.hr-axis.com/api, DB Supabase Free Postgres, auth Clerk, authorization uygulama DB'sinde. 2026-05-02 public staging smoke recheck kaydi `docs/evidence/pilot-readiness/2026-05-02-staging-smoke-recheck.md`: custom API domain bu workspace'ten cozuluyor ve health/CORS ok; frontend /store, /store/me, /store/kpis, /store/approvals 200 HTML donuyor; Chromium'da unauthenticated store route'lar /auth/login kapisina temiz dusuyor; console/request failure yok; /api/auth/session bearer olmadan 403. Deployed Vercel bundle hala gecici VITE_API_BASE_URL=https://hr-axis-api.onrender.com/api kullaniyor ve henuz https://api-staging.hr-axis.com/api icermiyor. Lokal workspace'te `.vercel` link, `vercel` CLI veya `VERCEL_*` token olmadigi icin Vercel env/redeploy otomatik yapilamadi. 45 saniyelik otomatik yenilenme hissinin root cause'u shell session query key'in raw `session.bearerToken` kullanmasiydi; `admin-web/src/App.tsx` artik bearer token value yerine `token-present` / `token-missing` readiness key'i kullaniyor ve `scripts/frontend-auth-refresh-contract.test.mjs` guard olarak eklendi. Vercel yetkisi olan tarafta API base custom domain'e alinip redeploy edilmeli, sonra authenticated Clerk smoke tekrar kosulmali. Pilot Readiness Gate V1 hala gecerli: public staging smoke iyi ara kanit ama pilot Go degil; authenticated Clerk session, real bearer /api/auth/session, store shell resolved roles/scope, assigned/unassigned scope smoke, true baseline master data, real KPI import smoke, pilot user/scope ve release/migration evidence tamamlanmadan pilot onayi verilmesin.
 ```

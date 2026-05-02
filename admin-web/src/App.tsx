@@ -141,15 +141,18 @@ function App() {
   const navigate = useNavigate()
   const { session, isReady, expireSession } = useSession()
   const [sessionNotice, setSessionNotice] = useState<string | null>(null)
+  const bearerTokenReadiness = session.bearerToken.trim() ? 'token-present' : 'token-missing'
   const sessionQuery = useQuery({
-    queryKey: [
-      'shell-session',
-      session.mode,
-      session.mockUserId,
-      session.mockRoleCodes,
-      session.mockCompanyIds,
-      session.bearerToken,
-    ],
+    queryKey:
+      session.mode === 'bearer'
+        ? ['shell-session', session.mode, bearerTokenReadiness]
+        : [
+            'shell-session',
+            session.mode,
+            session.mockUserId,
+            session.mockRoleCodes,
+            session.mockCompanyIds,
+          ],
     queryFn: getAuthSession,
     enabled: isReady,
     retry: false,
