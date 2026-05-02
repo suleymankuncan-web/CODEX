@@ -253,20 +253,32 @@ VALUES
     ('b0000000-0000-0000-0000-000000000019', 'FF', 'Footfall', 'count', 'count', 'sum', 'store', NULL, 'higher_is_better', TRUE)
 ON CONFLICT (kpi_code) DO NOTHING;
 
-WITH demo_personnel_kpi_actual (employee_id, store_id, kpi_code, actual_value) AS (
+WITH demo_live_personnel_scoring_actual (employee_id, store_id, kpi_code, actual_value) AS (
     VALUES
         ('00000000-0000-0000-0000-000000000201'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'TARGET_ACHIEVEMENT', 94.0000),
         ('00000000-0000-0000-0000-000000000201'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'ATV', 88.0000),
         ('00000000-0000-0000-0000-000000000201'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'UPT', 91.0000),
+        ('00000000-0000-0000-0000-000000000201'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'NET_SALES', 8800.0000),
+        ('00000000-0000-0000-0000-000000000201'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'TICKET_COUNT', 100.0000),
+        ('00000000-0000-0000-0000-000000000201'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'ITEM_COUNT', 9100.0000),
         ('00000000-0000-0000-0000-000000000202'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'TARGET_ACHIEVEMENT', 98.0000),
         ('00000000-0000-0000-0000-000000000202'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'ATV', 96.0000),
         ('00000000-0000-0000-0000-000000000202'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'UPT', 95.0000),
+        ('00000000-0000-0000-0000-000000000202'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'NET_SALES', 9600.0000),
+        ('00000000-0000-0000-0000-000000000202'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'TICKET_COUNT', 100.0000),
+        ('00000000-0000-0000-0000-000000000202'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'ITEM_COUNT', 9500.0000),
         ('00000000-0000-0000-0000-000000000203'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'TARGET_ACHIEVEMENT', 86.0000),
         ('00000000-0000-0000-0000-000000000203'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'ATV', 84.0000),
         ('00000000-0000-0000-0000-000000000203'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'UPT', 82.0000),
+        ('00000000-0000-0000-0000-000000000203'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'NET_SALES', 8400.0000),
+        ('00000000-0000-0000-0000-000000000203'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'TICKET_COUNT', 100.0000),
+        ('00000000-0000-0000-0000-000000000203'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 'ITEM_COUNT', 8200.0000),
         ('00000000-0000-0000-0000-000000000204'::uuid, '00000000-0000-0000-0000-000000000101'::uuid, 'TARGET_ACHIEVEMENT', 99.0000),
         ('00000000-0000-0000-0000-000000000204'::uuid, '00000000-0000-0000-0000-000000000101'::uuid, 'ATV', 91.0000),
-        ('00000000-0000-0000-0000-000000000204'::uuid, '00000000-0000-0000-0000-000000000101'::uuid, 'UPT', 90.0000)
+        ('00000000-0000-0000-0000-000000000204'::uuid, '00000000-0000-0000-0000-000000000101'::uuid, 'UPT', 90.0000),
+        ('00000000-0000-0000-0000-000000000204'::uuid, '00000000-0000-0000-0000-000000000101'::uuid, 'NET_SALES', 9100.0000),
+        ('00000000-0000-0000-0000-000000000204'::uuid, '00000000-0000-0000-0000-000000000101'::uuid, 'TICKET_COUNT', 100.0000),
+        ('00000000-0000-0000-0000-000000000204'::uuid, '00000000-0000-0000-0000-000000000101'::uuid, 'ITEM_COUNT', 9000.0000)
 )
 INSERT INTO ops.kpi_actual (
     kpi_id, scope_type, company_id, region_id, store_id, employee_id,
@@ -284,8 +296,110 @@ SELECT
     DATE '2026-04-30',
     actual.actual_value,
     'demo_seed'
-FROM demo_personnel_kpi_actual actual
+FROM demo_live_personnel_scoring_actual actual
 JOIN ops.kpi_definition definition ON definition.kpi_code = actual.kpi_code
+ON CONFLICT DO NOTHING;
+
+INSERT INTO ops.target_distribution_request (
+    target_distribution_request_id,
+    company_id,
+    region_id,
+    store_id,
+    request_month,
+    target_label,
+    total_target_value,
+    allocation_count,
+    request_status,
+    request_reason,
+    allocation_json,
+    submitted_by_user_id,
+    approved_by_user_id,
+    approved_at
+)
+VALUES
+    (
+        '00000000-0000-0000-0000-000000000701',
+        '00000000-0000-0000-0000-000000000001',
+        '00000000-0000-0000-0000-000000000010',
+        '00000000-0000-0000-0000-000000000100',
+        DATE '2026-04-01',
+        'Demo live scoring monthly target',
+        300.0000,
+        3,
+        'approved',
+        'demo_live_target_distribution_request_store100',
+        '[
+          {"employeeId":"00000000-0000-0000-0000-000000000201","targetValue":100},
+          {"employeeId":"00000000-0000-0000-0000-000000000202","targetValue":100},
+          {"employeeId":"00000000-0000-0000-0000-000000000203","targetValue":100}
+        ]'::jsonb,
+        'demo_seed',
+        'demo_seed',
+        TIMESTAMPTZ '2026-04-01 09:00:00+00'
+    ),
+    (
+        '00000000-0000-0000-0000-000000000702',
+        '00000000-0000-0000-0000-000000000001',
+        '00000000-0000-0000-0000-000000000010',
+        '00000000-0000-0000-0000-000000000101',
+        DATE '2026-04-01',
+        'Demo live scoring monthly target',
+        100.0000,
+        1,
+        'approved',
+        'demo_live_target_distribution_request_store101',
+        '[
+          {"employeeId":"00000000-0000-0000-0000-000000000204","targetValue":100}
+        ]'::jsonb,
+        'demo_seed',
+        'demo_seed',
+        TIMESTAMPTZ '2026-04-01 09:00:00+00'
+    )
+ON CONFLICT DO NOTHING;
+
+WITH demo_live_personnel_target_reference (
+    personnel_target_reference_id,
+    source_request_id,
+    employee_id,
+    store_id,
+    target_value
+) AS (
+    VALUES
+        ('00000000-0000-0000-0000-000000000721'::uuid, '00000000-0000-0000-0000-000000000701'::uuid, '00000000-0000-0000-0000-000000000201'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 100.0000),
+        ('00000000-0000-0000-0000-000000000722'::uuid, '00000000-0000-0000-0000-000000000701'::uuid, '00000000-0000-0000-0000-000000000202'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 100.0000),
+        ('00000000-0000-0000-0000-000000000723'::uuid, '00000000-0000-0000-0000-000000000701'::uuid, '00000000-0000-0000-0000-000000000203'::uuid, '00000000-0000-0000-0000-000000000100'::uuid, 100.0000),
+        ('00000000-0000-0000-0000-000000000724'::uuid, '00000000-0000-0000-0000-000000000702'::uuid, '00000000-0000-0000-0000-000000000204'::uuid, '00000000-0000-0000-0000-000000000101'::uuid, 100.0000)
+)
+INSERT INTO ops.personnel_target_reference (
+    personnel_target_reference_id,
+    source_request_id,
+    company_id,
+    region_id,
+    store_id,
+    employee_id,
+    period_start,
+    period_end,
+    target_value,
+    target_type,
+    status,
+    approved_by_user_id,
+    approved_at
+)
+SELECT
+    target.personnel_target_reference_id,
+    target.source_request_id,
+    '00000000-0000-0000-0000-000000000001',
+    '00000000-0000-0000-0000-000000000010',
+    target.store_id,
+    target.employee_id,
+    DATE '2026-04-01',
+    DATE '2026-04-30',
+    target.target_value,
+    'monthly_sales_target',
+    'approved',
+    'demo_seed',
+    TIMESTAMPTZ '2026-04-01 09:00:00+00'
+FROM demo_live_personnel_target_reference target
 ON CONFLICT DO NOTHING;
 
 WITH demo_closed_ranking_runs (snapshot_run_id, closure_date, generated_at) AS (

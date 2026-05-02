@@ -84,6 +84,18 @@ describe("demo performance seed contract", () => {
     expect(seedSql).toContain("DATE '2026-04-30'");
   });
 
+  it("seeds live scoring references required by /store/me smoke checks", () => {
+    expect(seedSql).toContain("demo_live_personnel_scoring_actual");
+    expect(seedSql).toContain("INSERT INTO ops.target_distribution_request");
+    expect(seedSql).toContain("demo_live_target_distribution_request");
+    expect(seedSql).toContain("INSERT INTO ops.personnel_target_reference");
+    expect(seedSql).toContain("demo_live_personnel_target_reference");
+
+    for (const primitiveMetricCode of ["NET_SALES", "TICKET_COUNT", "ITEM_COUNT"]) {
+      expect(seedSql).toContain(`'${primitiveMetricCode}',`);
+    }
+  });
+
   it("seeds closed daily ranking snapshots required by /store/rankings browser checks", () => {
     expect(seedSql).toContain("demo_closed_ranking_runs");
     expect(seedSql).toContain("rpt.snapshot_run");
