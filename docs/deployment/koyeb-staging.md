@@ -91,7 +91,7 @@ Branch: codex/clerk-auth-db-lifecycle
 Root directory: backend/nestjs
 Builder: Buildpack veya Dockerfile
 Build command: npm ci && npm run build
-Run command: node dist/main.js
+Run command: node dist/src/main.js
 Exposed/Public port: 3000
 Instance type: free
 Service name: hr-axis-api

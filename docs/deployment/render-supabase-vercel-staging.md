@@ -80,7 +80,7 @@ Region: Frankfurt
 Plan: Free
 Root Directory: backend/nestjs
 Build Command: npm ci --include=dev && npm run build
-Start Command: node dist/main.js
+Start Command: node dist/src/main.js
 Health Check Path: /api/health
 Auto Deploy: Off
 ```

@@ -91,7 +91,7 @@ Type: Web Service
 Name: hr-axis-api
 Source directory: backend/nestjs
 Build command: npm ci && npm run build
-Run command: node dist/main.js
+Run command: node dist/src/main.js
 HTTP port: 3000
 Health check path: /api/health
 Instance size: apps-s-1vcpu-1gb-fixed

@@ -20,7 +20,7 @@ services:
       branch: main
       deploy_on_push: true
     build_command: npm ci && npm run build
-    run_command: node dist/main.js
+    run_command: node dist/src/main.js
     http_port: 3000
     health_check:
       initial_delay_seconds: 20
@@ -168,4 +168,3 @@ ingress:
           prefix: /
       component:
         name: hr-axis-web
-
