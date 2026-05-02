@@ -79,7 +79,7 @@ Runtime: Node
 Region: Frankfurt
 Plan: Free
 Root Directory: backend/nestjs
-Build Command: npm ci && npm run build
+Build Command: npm ci --include=dev && npm run build
 Start Command: node dist/main.js
 Health Check Path: /api/health
 Auto Deploy: Off
@@ -90,6 +90,9 @@ Port notu:
 - Render runtime `PORT` env'i verir.
 - Backend `APP_PORT` yoksa `PORT` degerine duserek dinler.
 - Render'da `APP_PORT` set etmeye gerek yoktur.
+- Render env degerleri build asamasinda da goruldugu icin `NODE_ENV=production`
+  devDependencies kurulumunu etkileyebilir. Bu nedenle build command
+  `npm ci --include=dev && npm run build` olmalidir.
 
 ## 3. Backend Env
 
@@ -173,4 +176,3 @@ https://api-staging.hr-axis.com/api/auth/session
 ```
 
 Smoke tamamlanmadan pilot gate acilmaz.
-

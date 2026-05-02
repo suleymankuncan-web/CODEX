@@ -6,7 +6,7 @@ services:
     region: frankfurt
     rootDir: backend/nestjs
     branch: codex/clerk-auth-db-lifecycle
-    buildCommand: npm ci && npm run build
+    buildCommand: npm ci --include=dev && npm run build
     startCommand: node dist/main.js
     healthCheckPath: /api/health
     autoDeployTrigger: off
@@ -45,4 +45,3 @@ services:
         value: in-memory
       - key: DAILY_CLOSURE_AUTOMATION_ENABLED
         value: "false"
-
