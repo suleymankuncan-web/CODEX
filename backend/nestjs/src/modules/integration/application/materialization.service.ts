@@ -32,9 +32,18 @@ export class MaterializationService {
         | "company"
         | "region";
       integration_source_id: string;
+      source_batch_id: string | null;
+      source_payload_hash: string | null;
+      source_captured_at: string | null;
     }>(
       `
-        SELECT import_batch_id, entity_type, integration_source_id
+        SELECT
+          import_batch_id,
+          entity_type,
+          integration_source_id,
+          source_batch_id,
+          source_payload_hash,
+          source_captured_at
         FROM stg.import_batch
         WHERE import_batch_id = $1::uuid
         LIMIT 1
@@ -69,7 +78,11 @@ export class MaterializationService {
     }
 
     if (batch.entity_type === "kpi") {
-      stats = await this.materializeKpis(batch.import_batch_id, batch.integration_source_id);
+      stats = await this.materializeKpis(batch.import_batch_id, batch.integration_source_id, {
+        sourceBatchId: batch.source_batch_id,
+        sourcePayloadHash: batch.source_payload_hash,
+        sourceCapturedAt: batch.source_captured_at,
+      });
     }
 
     if (batch.entity_type === "assignment") {
@@ -356,6 +369,11 @@ export class MaterializationService {
   private async materializeKpis(
     batchId: string,
     integrationSourceId: string,
+    batchEnvelope: {
+      sourceBatchId: string | null;
+      sourcePayloadHash: string | null;
+      sourceCapturedAt: string | null;
+    },
   ): Promise<MaterializationStats> {
     const rows = await this.databaseService.query<{
       stg_kpi_raw_id: string;
@@ -391,6 +409,7 @@ export class MaterializationService {
       }
 
       try {
+        const kpiId = await this.resolveKpiDefinitionId(payload);
         const companyId = await this.externalIdMappingService.resolveOptionalInternalId({
           payload,
           integrationSourceId,
@@ -419,7 +438,7 @@ export class MaterializationService {
           directKeys: ["employeeId", "internalEmployeeId"],
           externalKeys: ["employeeExternalRef", "sourceEmployeeId"],
         });
-        const scopeType = String(payload["scopeType"] ?? "store");
+        const scopeType = String(payload["scopeType"] ?? (employeeId ? "employee" : "store"));
 
         if (scopeType === "store" && !storeId) {
           throw new Error("store reference could not be resolved");
@@ -428,51 +447,218 @@ export class MaterializationService {
         if (scopeType === "employee" && !employeeId) {
           throw new Error("employee reference could not be resolved");
         }
+        const periodType = String(payload["periodType"] ?? "monthly");
+        const periodStart = String(payload["periodStart"]);
+        const periodEnd = String(payload["periodEnd"]);
+        const actualValue = Number(payload["actualValue"] ?? 0);
+        const employeeIdToPersist = scopeType === "employee" ? employeeId : null;
+        const targetValue =
+          payload["targetValue"] === null || payload["targetValue"] === undefined
+            ? null
+            : Number(payload["targetValue"]);
 
-        await this.databaseService.query(
-          `
-            INSERT INTO ops.kpi_actual (
-              kpi_actual_id,
-              kpi_id,
-              scope_type,
-              company_id,
-              region_id,
-              store_id,
-              employee_id,
-              period_type,
-              period_start,
-              period_end,
-              actual_value,
-              source_type
-            )
-            VALUES (
-              gen_random_uuid(),
-              $1::uuid,
-              $2,
-              $3::uuid,
-              $4::uuid,
-              $5::uuid,
-              $6::uuid,
-              $7,
-              $8::date,
-              $9::date,
-              $10::numeric,
-              'integration'
-            )
-          `,
-          [
-            String(payload["kpiId"]),
-            scopeType,
-            companyId,
-            regionId,
-            storeId,
-            employeeId,
-            String(payload["periodType"] ?? "monthly"),
-            String(payload["periodStart"]),
-            String(payload["periodEnd"]),
-            Number(payload["actualValue"] ?? 0),
-          ],
-        );
+        if (scopeType === "store") {
+          await this.databaseService.query(
+            `
+              INSERT INTO ops.kpi_actual (
+                kpi_actual_id,
+                kpi_id,
+                scope_type,
+                company_id,
+                region_id,
+                store_id,
+                employee_id,
+                period_type,
+                period_start,
+                period_end,
+                actual_value,
+                calculated_at,
+                source_batch_id,
+                source_payload_hash,
+                last_synced_at,
+                source_type
+              )
+              VALUES (
+                gen_random_uuid(),
+                $1::uuid,
+                'store',
+                $2::uuid,
+                $3::uuid,
+                $4::uuid,
+                NULL,
+                $5,
+                $6::date,
+                $7::date,
+                $8::numeric,
+                NOW(),
+                $9,
+                $10,
+                COALESCE($11::timestamptz, NOW()),
+                'integration'
+              )
+              ON CONFLICT (kpi_id, store_id, period_type, period_start, period_end)
+              WHERE scope_type = 'store' AND store_id IS NOT NULL
+              DO UPDATE SET
+                company_id = EXCLUDED.company_id,
+                region_id = EXCLUDED.region_id,
+                actual_value = EXCLUDED.actual_value,
+                calculated_at = NOW(),
+                source_batch_id = EXCLUDED.source_batch_id,
+                source_payload_hash = EXCLUDED.source_payload_hash,
+                last_synced_at = EXCLUDED.last_synced_at,
+                source_type = EXCLUDED.source_type
+            `,
+            [
+              kpiId,
+              companyId,
+              regionId,
+              storeId,
+              periodType,
+              periodStart,
+              periodEnd,
+              actualValue,
+              batchEnvelope.sourceBatchId,
+              batchEnvelope.sourcePayloadHash,
+              batchEnvelope.sourceCapturedAt,
+            ],
+          );
+
+          if (targetValue !== null && Number.isFinite(targetValue) && targetValue > 0) {
+            const thresholdGreen = targetValue;
+            const thresholdYellow = Number((targetValue * 0.85).toFixed(4));
+            const thresholdRed = Number((targetValue * 0.75).toFixed(4));
+
+            await this.databaseService.query(
+              `
+                DELETE FROM ops.kpi_target
+                WHERE kpi_id = $1::uuid
+                  AND scope_type = 'store'
+                  AND store_id = $2::uuid
+                  AND period_type = $3
+                  AND period_start = $4::date
+                  AND period_end = $5::date
+              `,
+              [kpiId, storeId, periodType, periodStart, periodEnd],
+            );
+
+            await this.databaseService.query(
+              `
+                INSERT INTO ops.kpi_target (
+                  kpi_target_id,
+                  kpi_id,
+                  scope_type,
+                  company_id,
+                  region_id,
+                  store_id,
+                  position_id,
+                  period_type,
+                  period_start,
+                  period_end,
+                  target_value,
+                  threshold_green,
+                  threshold_yellow,
+                  threshold_red
+                )
+                VALUES (
+                  gen_random_uuid(),
+                  $1::uuid,
+                  'store',
+                  $2::uuid,
+                  $3::uuid,
+                  $4::uuid,
+                  NULL,
+                  $5,
+                  $6::date,
+                  $7::date,
+                  $8::numeric,
+                  $9::numeric,
+                  $10::numeric,
+                  $11::numeric
+                )
+              `,
+              [
+                kpiId,
+                companyId,
+                regionId,
+                storeId,
+                periodType,
+                periodStart,
+                periodEnd,
+                targetValue,
+                thresholdGreen,
+                thresholdYellow,
+                thresholdRed,
+              ],
+            );
+          }
+        } else {
+          await this.databaseService.query(
+            `
+              INSERT INTO ops.kpi_actual (
+                kpi_actual_id,
+                kpi_id,
+                scope_type,
+                company_id,
+                region_id,
+                store_id,
+                employee_id,
+                period_type,
+                period_start,
+                period_end,
+                actual_value,
+                calculated_at,
+                source_batch_id,
+                source_payload_hash,
+                last_synced_at,
+                source_type
+              )
+              VALUES (
+                gen_random_uuid(),
+                $1::uuid,
+                'employee',
+                $2::uuid,
+                $3::uuid,
+                $4::uuid,
+                $5::uuid,
+                $6,
+                $7::date,
+                $8::date,
+                $9::numeric,
+                NOW(),
+                $10,
+                $11,
+                COALESCE($12::timestamptz, NOW()),
+                'integration'
+              )
+              ON CONFLICT (kpi_id, employee_id, period_type, period_start, period_end)
+              WHERE scope_type = 'employee' AND employee_id IS NOT NULL
+              DO UPDATE SET
+                company_id = EXCLUDED.company_id,
+                region_id = EXCLUDED.region_id,
+                store_id = EXCLUDED.store_id,
+                actual_value = EXCLUDED.actual_value,
+                calculated_at = NOW(),
+                source_batch_id = EXCLUDED.source_batch_id,
+                source_payload_hash = EXCLUDED.source_payload_hash,
+                last_synced_at = EXCLUDED.last_synced_at,
+                source_type = EXCLUDED.source_type
+            `,
+            [
+              kpiId,
+              companyId,
+              regionId,
+              storeId,
+              employeeIdToPersist,
+              periodType,
+              periodStart,
+              periodEnd,
+              actualValue,
+              batchEnvelope.sourceBatchId,
+              batchEnvelope.sourcePayloadHash,
+              batchEnvelope.sourceCapturedAt,
+            ],
+          );
+        }
 
         await this.markRawRowProcessed("stg.kpi_raw", "stg_kpi_raw_id", row.stg_kpi_raw_id);
         stats.processedCount += 1;
@@ -971,8 +1157,8 @@ export class MaterializationService {
   }
 
   private validateKpiPayload(payload: Record<string, unknown>): string | null {
-    if (!payload["kpiId"]) {
-      return "kpiId is required";
+    if (!payload["kpiId"] && !payload["kpiCode"] && !payload["sourceMetricId"]) {
+      return "kpiId, kpiCode, or sourceMetricId is required";
     }
 
     if (!payload["periodStart"]) {
@@ -984,6 +1170,34 @@ export class MaterializationService {
     }
 
     return null;
+  }
+
+  private async resolveKpiDefinitionId(payload: Record<string, unknown>): Promise<string> {
+    if (payload["kpiId"]) {
+      return String(payload["kpiId"]);
+    }
+
+    const kpiCode = payload["kpiCode"] ?? payload["sourceMetricId"];
+    if (!kpiCode) {
+      throw new Error("kpi definition could not be resolved");
+    }
+
+    const result = await this.databaseService.query<{ kpi_id: string }>(
+      `
+        SELECT kpi_id
+        FROM ops.kpi_definition
+        WHERE kpi_code = $1
+          AND is_active = TRUE
+        LIMIT 1
+      `,
+      [String(kpiCode)],
+    );
+
+    if (result.rowCount === 0) {
+      throw new Error(`kpi definition could not be resolved for code: ${String(kpiCode)}`);
+    }
+
+    return result.rows[0].kpi_id;
   }
 
   private validateAssignmentPayload(payload: Record<string, unknown>): string | null {

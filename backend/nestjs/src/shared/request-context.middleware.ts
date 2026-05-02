@@ -2,6 +2,18 @@ import { Injectable, Logger, NestMiddleware } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import { RequestContextStore } from "./request-context";
 
+const CORRELATION_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
+
+function resolveCorrelationId(headerValue: string | string[] | undefined): string {
+  const candidate = (Array.isArray(headerValue) ? headerValue[0] : headerValue)?.trim();
+
+  if (!candidate || !CORRELATION_ID_PATTERN.test(candidate)) {
+    return randomUUID();
+  }
+
+  return candidate;
+}
+
 @Injectable()
 export class RequestContextMiddleware implements NestMiddleware {
   private readonly logger = new Logger("HttpRequest");
@@ -22,12 +34,10 @@ export class RequestContextMiddleware implements NestMiddleware {
     },
     next: () => void,
   ) {
-    const requestCorrelationId = req.headers["x-correlation-id"];
-    const correlationId =
-      (Array.isArray(requestCorrelationId) ? requestCorrelationId[0] : requestCorrelationId) ??
-      randomUUID();
+    const correlationId = resolveCorrelationId(req.headers["x-correlation-id"]);
+    const requestContext = { correlationId, actorUserId: req.user?.userId ?? null };
 
-    RequestContextStore.run({ correlationId, actorUserId: req.user?.userId ?? null }, () => {
+    RequestContextStore.run(requestContext, () => {
       req.correlationId = correlationId;
       res.setHeader("x-correlation-id", correlationId);
 
@@ -41,7 +51,7 @@ export class RequestContextMiddleware implements NestMiddleware {
             path: req.originalUrl ?? req.url ?? "",
             statusCode: res.statusCode,
             durationMs: Date.now() - startedAt,
-            actorUserId: req.user?.userId ?? null,
+            actorUserId: requestContext.actorUserId ?? req.user?.userId ?? null,
           }),
         );
       });

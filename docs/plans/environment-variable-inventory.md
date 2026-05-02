@@ -1,0 +1,196 @@
+# Environment Variable Inventory
+
+## Metadata
+
+- Status: V1 deployment inventory.
+- Owner: Platform, backend, frontend, and release operator.
+- Last updated: 2026-04-28.
+- Purpose: Keep environment variables visible before staging, pilot, or production deployment.
+
+## Decision Rule
+
+No target environment should be approved until every P0 variable in this document is either filled, intentionally unused, or covered by a written Conditional Go note.
+
+Do not store real values in this document. Store only names, owners, purpose, required status, and source of truth.
+
+## Backend Runtime Variables
+
+These values are read by `backend/nestjs/src/shared/app-config.service.ts`.
+
+| Variable | P0/P1 | Production rule | Notes |
+| --- | --- | --- | --- |
+| `APP_PORT` | P1 | Explicit app port when the hosting platform does not inject `PORT`. | Overrides `PORT`; defaults to `3000`. |
+| `PORT` | P1 | Hosting platform injected port. | Used when `APP_PORT` is empty; Render/Koyeb-style platforms may set this automatically. |
+| `APP_NAME` | P1 | Stable service name. | Defaults to `store-ops-backend`. |
+| `NODE_ENV` | P0 | Must be `production` in production. | Controls production auth fail-closed behavior. |
+| `DATABASE_URL` | P0 | Must point to target DB, never local development. | Secret-bearing connection string. |
+| `DB_POOL_MAX` | P1 | Size for hosting tier. | Defaults to `20`. |
+| `DB_SSL_MODE` | P0 | Use provider-required SSL mode. | Local default is `disable`; production should be reviewed. |
+| `AUTH_MODE` | P0 | Must be `jwt` for real environments. | Local may use `mock`. |
+| `AUTH_PROVIDER_KEY` | P0 | Must match the provider subject namespace, such as `clerk` for Clerk staging. | Default `oidc`; used when mapping JWT `sub` to `ops.user_account.auth_provider/provider_subject`. |
+| `ALLOW_MOCK_AUTH` | P0 | Must be `false` or unset in production. | Production must not allow mock auth. |
+| `MIGRATIONS_HTTP_ENABLED` | P0 | Forced disabled when `NODE_ENV=production`. | Enables the legacy HTTP migration endpoint only for local/non-production controlled use; production must use CLI/CI migration execution. |
+| `CORS_ALLOWED_ORIGINS` | P0 | Required in production. | Comma-separated browser origins; local default is `http://localhost:5173`. |
+| `RATE_LIMIT_WINDOW_MS` | P0 | Required in production. | In-memory V1 request window; local default is `60000`. |
+| `RATE_LIMIT_MAX` | P0 | Required in production. | In-memory V1 max requests per client/window; local default is `120`. |
+| `JWT_AUDIENCE` | P0 | Must match accepted access token audience. | Defaults to `store-ops-api`. |
+| `JWT_ISSUER` | P0 | Must exactly match provider issuer. | Production rejects issuer mismatch. |
+| `JWT_JWKS_URL` | P0 | Required for real IdP JWT verification. | Preferred over shared secret verification. |
+| `JWT_SECRET` | P0 conditional | Empty with JWKS; non-default only for approved non-JWKS mode. | Must never be `change-me` in production without JWKS. |
+| `AUTH_AUTHORIZATION_URL` | P0 | Real provider authorize URL. | Used by `/api/auth/bootstrap`. |
+| `AUTH_CLIENT_ID` | P0 | Real public browser client id. | No client secret in frontend. |
+| `AUTH_SCOPE` | P0 | Includes `openid profile email`. | Add provider-specific role scope only if required. |
+| `AUTH_RESPONSE_TYPE` | P0 | Must be `code`. | PKCE login expects authorization code. |
+| `AUTH_TOKEN_URL` | P0 | Real provider token URL. | Required for PKCE code exchange. |
+| `AUTH_AUDIENCE_OVERRIDE` | P1 conditional | Set only if provider requires `audience` auth param. | Leave empty otherwise. |
+| `AUTH_CALLBACK_PATH` | P0 | `/auth/callback` unless route changes. | Must match provider callback registration. |
+| `AUTH_LOGOUT_URL` | P1 | Provider logout endpoint when supported. | Needed for provider logout smoke. |
+| `AUTH_POST_LOGOUT_REDIRECT_PATH` | P0 | `/auth/login` unless route changes. | Must match provider post-logout registration. |
+| `QUEUE_BACKEND` | P0 | `bullmq` when durable worker queue is required. | Local default is `in-memory`. |
+| `REDIS_URL` | P0 conditional | Required when `QUEUE_BACKEND=bullmq`. | Secret-bearing if provider uses credentials. |
+| `QUEUE_IMPORT_NAME` | P1 | Stable import queue name. | Defaults to `store-ops-import`. |
+| `QUEUE_SNAPSHOT_NAME` | P1 | Stable snapshot queue name. | Defaults to `store-ops-snapshot`. |
+| `DAILY_CLOSURE_AUTOMATION_ENABLED` | P1 | Keep `false` until closure schedule is approved. | Enables automated closure polling. |
+| `DAILY_CLOSURE_POLL_MINUTES` | P1 | Approved polling interval. | Defaults to `15`. |
+| `DAILY_CLOSURE_ACTOR_USER_ID` | P0 conditional | Required if daily closure automation is enabled. | Must be a real service/operator actor id. |
+
+Mobile Auth/Session V1 P0 note:
+
+- No new backend environment variable was added for mobile device sessions.
+- Mobile session endpoints rely on the existing JWT/JWKS, CORS, rate-limit, and database variables above.
+- Refresh tokens remain IdP-owned in V1; do not add backend refresh-token secrets or committed examples until a separate broker phase is explicitly approved.
+
+## Frontend Build-Time Variables
+
+These values are read by `admin-web/src`.
+
+| Variable | P0/P1 | Production rule | Notes |
+| --- | --- | --- | --- |
+| `VITE_API_BASE_URL` | P0 | Points to production backend `/api`. | Public value, not secret. |
+| `VITE_AUTH_MODE` | P0 | Must be `bearer` for real environments. | Local can use `mock`. |
+| `VITE_AUTH_PROVIDER` | P0 | Use `clerk` when Clerk owns browser authentication. | Enables Clerk frontend bridge; authorization remains in HR Axis DB. |
+| `VITE_USER_ID` | P1 local-only | Do not use for production auth. | Mock-session helper only. |
+| `VITE_ROLE_CODES` | P1 local-only | Do not use for production auth. | Mock-session helper only. |
+| `VITE_COMPANY_IDS` | P1 local-only | Do not use for production auth. | Mock-session helper only. |
+| `VITE_BEARER_TOKEN` | P0 local-only | Must be empty in committed examples and production. | Never put real tokens in env files. |
+| `VITE_CLERK_PUBLISHABLE_KEY` | P0 conditional | Required when `VITE_AUTH_PROVIDER=clerk`. | Public Clerk publishable key only; never store Clerk secret key in frontend env. |
+| `VITE_CLERK_JWT_TEMPLATE` | P1 conditional | Set to the Clerk JWT template used for the backend API audience when required. | Leave empty to use the default Clerk session token. |
+| `VITE_OIDC_AUTHORIZATION_URL` | P0 fallback | Real provider authorize URL if bootstrap is unavailable. | Backend bootstrap is preferred. |
+| `VITE_OIDC_CLIENT_ID` | P0 fallback | Real public client id if bootstrap is unavailable. | Public, not secret. |
+| `VITE_OIDC_SCOPE` | P0 fallback | Includes `openid profile email`. | Match backend/provider registration. |
+| `VITE_OIDC_RESPONSE_TYPE` | P0 fallback | Must be `code` for PKCE. | Do not use `token` in production examples. |
+| `VITE_OIDC_AUDIENCE` | P1 conditional | Set only if provider requires audience. | Public request parameter. |
+| `VITE_OIDC_CALLBACK_PATH` | P0 fallback | `/auth/callback`. | Must match provider registration. |
+| `VITE_OIDC_TOKEN_URL` | P0 fallback | Real provider token URL if bootstrap is unavailable. | Needed for PKCE exchange. |
+| `VITE_OIDC_LOGOUT_URL` | P1 fallback | Real provider logout URL if bootstrap is unavailable. | Used for provider logout. |
+| `VITE_POST_LOGOUT_REDIRECT_PATH` | P0 fallback | `/auth/login`. | Must match provider registration. |
+
+Production preference:
+
+- The backend `/api/auth/bootstrap` response should supply provider values.
+- Frontend `VITE_OIDC_*` values remain a fallback and local configuration aid.
+- No frontend variable may contain a client secret, raw token, refresh token, PKCE verifier, or private key.
+
+## Auth Smoke Evidence Variables
+
+These values are read by `admin-web/scripts/auth-live-smoke.mjs`.
+
+| Variable | P0/P1 | Staging rule | Notes |
+| --- | --- | --- | --- |
+| `AUTH_SMOKE_BASE_URL` | P0 | Non-local HTTPS frontend URL. | Required in staging mode. |
+| `AUTH_SMOKE_API_BASE_URL` | P0 | Non-local HTTPS backend `/api` URL. | Required in staging mode. |
+| `AUTH_SMOKE_USERNAME` | P0 | Real staging smoke user. | Do not commit real username if sensitive. |
+| `AUTH_SMOKE_PASSWORD` | P0 | Secret. | Never commit or paste into evidence. |
+| `AUTH_SMOKE_EXPECTED_ROLE` | P0 | Expected app role code. | Example: `STORE_MANAGER`. |
+| `AUTH_SMOKE_EXPECTED_LANDING` | P1 | Expected post-login route. | Defaults to `/store`. |
+| `AUTH_SMOKE_ENVIRONMENT` | P0 | Target evidence name. | Example: `staging`. |
+| `AUTH_SMOKE_PROVIDER_NAME` | P0 | Human-readable provider name. | Evidence metadata. |
+| `AUTH_SMOKE_PROVIDER_ISSUER` | P0 | Non-local HTTPS issuer. | Must match `JWT_ISSUER`. |
+| `AUTH_SMOKE_JWKS_URL` | P0 | Non-local HTTPS JWKS URL. | Must match backend verification. |
+| `AUTH_SMOKE_ACCEPTED_AUDIENCE` | P0 | Expected token audience. | Must satisfy `JWT_AUDIENCE`. |
+| `AUTH_SMOKE_ASSIGNED_STORE_ID` | P0 action smoke | Store id where action should succeed. | Required for staging action smoke. |
+| `AUTH_SMOKE_UNASSIGNED_STORE_ID` | P0 action smoke | Store id where action should return `403`. | Required for negative action smoke. |
+| `AUTH_SMOKE_ACTION_REQUEST_MONTH` | P0 action smoke | Request month for target-distribution action. | Format `YYYY-MM-01`. |
+
+## Secret Handling Rules
+
+- Do not commit `.env` files.
+- Do not paste raw bearer tokens.
+- Do not paste raw id tokens.
+- Do not paste refresh tokens.
+- Do not paste authorization codes.
+- Do not paste PKCE `code_verifier` values.
+- Do not paste client secrets.
+- Do not store production credentials in screenshots.
+- Keep committed `.env.example` files placeholder-only.
+- Store real secrets in the hosting environment or secret manager.
+- Rotate any value that appears in chat, issue comments, screenshots, or logs.
+
+## Production Fill-In Checklist
+
+### Backend
+
+- [ ] `NODE_ENV=production`
+- [ ] `AUTH_MODE=jwt`
+- [ ] `AUTH_PROVIDER_KEY` matches the real provider namespace, for example `clerk`.
+- [ ] `ALLOW_MOCK_AUTH=false` or unset with production fail-closed behavior verified.
+- [ ] `DATABASE_URL` points to production DB.
+- [ ] `CORS_ALLOWED_ORIGINS` lists only approved frontend origins.
+- [ ] `RATE_LIMIT_WINDOW_MS` and `RATE_LIMIT_MAX` are explicitly set for the environment.
+- [ ] `JWT_ISSUER`, `JWT_AUDIENCE`, and `JWT_JWKS_URL` match real provider.
+- [ ] `JWT_SECRET` is empty when JWKS is used, or explicitly approved for non-JWKS mode.
+- [ ] Provider authorize/token/logout URLs are filled.
+- [ ] Queue backend and Redis are filled if durable workers are enabled.
+- [ ] Daily closure automation remains disabled until approved.
+
+### Frontend
+
+- [ ] `VITE_API_BASE_URL` points to production API.
+- [ ] `VITE_AUTH_MODE=bearer`.
+- [ ] `VITE_AUTH_PROVIDER` matches the browser auth provider, for example `clerk`.
+- [ ] `VITE_CLERK_PUBLISHABLE_KEY` is set only when Clerk is enabled.
+- [ ] `VITE_CLERK_JWT_TEMPLATE` is set only when backend audience verification requires a Clerk JWT template.
+- [ ] `VITE_OIDC_RESPONSE_TYPE=code` if frontend fallback provider env is used.
+- [ ] `VITE_BEARER_TOKEN` is empty.
+- [ ] No `VITE_*` value contains a secret.
+
+### Smoke
+
+- [ ] Staging smoke variables are supplied through local shell or CI secret store.
+- [ ] `AUTH_SMOKE_PASSWORD` is not written to docs.
+- [ ] Assigned and unassigned store ids are seeded and approved.
+- [ ] Evidence is piped through `npm.cmd run guard:auth:evidence`.
+
+## Drift Guard
+
+Root script tests keep this inventory aligned with code and committed env examples.
+
+The guard reads env names from:
+
+- `backend/nestjs/src/shared/app-config.service.ts` via `AppConfigService`.
+- `admin-web/src` via `import.meta.env` usage.
+- `admin-web/scripts/auth-live-smoke.mjs` via `AUTH_SMOKE_*` usage.
+
+Maintenance rule:
+
+- When a backend runtime variable is added to `AppConfigService`, also add it to `backend/nestjs/.env.example` and this inventory.
+- When a frontend build-time variable is added through `import.meta.env`, also add it to `admin-web/.env.example` and this inventory.
+- When an auth smoke variable is added through `AUTH_SMOKE_*`, also add it to this inventory.
+- Keep `.env.example` values placeholder-only; do not add real secrets.
+
+Verification:
+
+```powershell
+cd "C:\Users\suley\OneDrive\Masaüstü\WEBSİTE ÇALIŞMASI"
+npm.cmd run test:scripts
+```
+
+If this command fails on env drift, update the inventory and committed examples before continuing.
+
+## CODEX Dürüst Yorum
+
+This inventory is useful because it turns "we will configure it later" into a checklist with owners and risk level. The project already has strong release gates; the remaining production risk is mostly environment drift, secret handling, and real provider/source values. This document reduces that drift without pretending the real values are known today.
+
+## Next Logical Step
+
+Use `docs/plans/deployment-runbook-skeleton.md` as the operator flow for the first staging or pilot deploy rehearsal.

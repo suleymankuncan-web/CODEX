@@ -1,15 +1,16 @@
-import { IsOptional, IsUUID } from "class-validator";
+import { IsOptional } from "class-validator";
+import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 
 export class ListStoresQueryDto {
   @IsOptional()
-  @IsUUID()
+  @IsPostgresUuid()
   companyId?: string;
 
   @IsOptional()
-  @IsUUID()
+  @IsPostgresUuid()
   regionId?: string;
 
   @IsOptional()
-  @IsUUID()
+  @IsPostgresUuid()
   storeId?: string;
 }

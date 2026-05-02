@@ -143,19 +143,16 @@ SELECT
     p_snapshot_run_id,
     ci.store_id,
     ci.checklist_template_id,
-    COUNT(*)::INTEGER AS audit_count,
+    COUNT(DISTINCT ci.checklist_instance_id)::INTEGER AS audit_count,
     AVG(ci.total_score)::NUMERIC(12,2) AS avg_score,
     AVG(ci.compliance_rate)::NUMERIC(7,4) AS compliance_rate,
-    COALESCE(SUM(
-      CASE
-        WHEN cr.is_non_compliant = TRUE THEN 1
-        ELSE 0
-      END
-    ), 0)::INTEGER AS critical_issue_count
+    COALESCE(COUNT(cr.response_id) FILTER (WHERE cr.is_non_compliant = TRUE), 0)::INTEGER AS critical_issue_count
 FROM ops.checklist_instance ci
 LEFT JOIN ops.checklist_response cr
   ON cr.checklist_instance_id = ci.checklist_instance_id
-WHERE ci.created_at::date BETWEEN p_period_start AND p_period_end
+WHERE ci.status = 'completed'
+  AND ci.completed_at IS NOT NULL
+  AND ci.completed_at::date BETWEEN p_period_start AND p_period_end
 GROUP BY ci.store_id, ci.checklist_template_id;
 $$;
 

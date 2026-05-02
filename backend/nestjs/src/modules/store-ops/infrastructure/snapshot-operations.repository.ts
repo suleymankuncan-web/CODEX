@@ -6,6 +6,23 @@ type Queryable = {
   query: <T>(sql: string, params?: unknown[]) => Promise<{ rowCount: number; rows: T[] }>;
 };
 
+type SnapshotRunRow = {
+  snapshot_run_id: string;
+  snapshot_date: string;
+  snapshot_type: string;
+  period_start: string;
+  period_end: string;
+  run_status: string;
+  generated_at: string;
+  generated_by: string;
+  started_at: string | null;
+  finished_at: string | null;
+  failure_reason: string | null;
+  rerun_of_snapshot_run_id: string | null;
+  kpi_config_version_id: string | null;
+  kpi_config_version_no: number | null;
+};
+
 @Injectable()
 export class SnapshotOperationsRepository {
   constructor(private readonly databaseService: DatabaseService) {}
@@ -35,36 +52,27 @@ export class SnapshotOperationsRepository {
   }
 
   async findSnapshotRunById(snapshotRunId: string) {
-    const result = await this.databaseService.query<{
-      snapshot_run_id: string;
-      snapshot_date: string;
-      snapshot_type: string;
-      period_start: string;
-      period_end: string;
-      run_status: string;
-      generated_at: string;
-      generated_by: string;
-      started_at: string | null;
-      finished_at: string | null;
-      failure_reason: string | null;
-      rerun_of_snapshot_run_id: string | null;
-    }>(
+    const result = await this.databaseService.query<SnapshotRunRow>(
       `
         SELECT
-          snapshot_run_id,
-          snapshot_date,
-          snapshot_type,
-          period_start,
-          period_end,
-          run_status,
-          generated_at,
-          generated_by,
-          started_at,
-          finished_at,
-          failure_reason,
-          rerun_of_snapshot_run_id
+          rpt.snapshot_run.snapshot_run_id,
+          rpt.snapshot_run.snapshot_date,
+          rpt.snapshot_run.snapshot_type,
+          rpt.snapshot_run.period_start,
+          rpt.snapshot_run.period_end,
+          rpt.snapshot_run.run_status,
+          rpt.snapshot_run.generated_at,
+          rpt.snapshot_run.generated_by,
+          rpt.snapshot_run.started_at,
+          rpt.snapshot_run.finished_at,
+          rpt.snapshot_run.failure_reason,
+          rpt.snapshot_run.rerun_of_snapshot_run_id,
+          rpt.snapshot_run.kpi_config_version_id,
+          version.version_no AS kpi_config_version_no
         FROM rpt.snapshot_run
-        WHERE snapshot_run_id = $1::uuid
+        LEFT JOIN ops.kpi_config_version version
+          ON version.kpi_config_version_id = rpt.snapshot_run.kpi_config_version_id
+        WHERE rpt.snapshot_run.snapshot_run_id = $1::uuid
         LIMIT 1
       `,
       [snapshotRunId],
@@ -83,37 +91,28 @@ export class SnapshotOperationsRepository {
     const limit = input.limit ?? 50;
     const offset = input.offset ?? 0;
 
-    const rows = await this.databaseService.query<{
-      snapshot_run_id: string;
-      snapshot_date: string;
-      snapshot_type: string;
-      period_start: string;
-      period_end: string;
-      run_status: string;
-      generated_at: string;
-      generated_by: string;
-      started_at: string | null;
-      finished_at: string | null;
-      failure_reason: string | null;
-      rerun_of_snapshot_run_id: string | null;
-    }>(
+    const rows = await this.databaseService.query<SnapshotRunRow>(
       `
         SELECT
-          snapshot_run_id,
-          snapshot_date,
-          snapshot_type,
-          period_start,
-          period_end,
-          run_status,
-          generated_at,
-          generated_by,
-          started_at,
-          finished_at,
-          failure_reason,
-          rerun_of_snapshot_run_id
+          rpt.snapshot_run.snapshot_run_id,
+          rpt.snapshot_run.snapshot_date,
+          rpt.snapshot_run.snapshot_type,
+          rpt.snapshot_run.period_start,
+          rpt.snapshot_run.period_end,
+          rpt.snapshot_run.run_status,
+          rpt.snapshot_run.generated_at,
+          rpt.snapshot_run.generated_by,
+          rpt.snapshot_run.started_at,
+          rpt.snapshot_run.finished_at,
+          rpt.snapshot_run.failure_reason,
+          rpt.snapshot_run.rerun_of_snapshot_run_id,
+          rpt.snapshot_run.kpi_config_version_id,
+          version.version_no AS kpi_config_version_no
         FROM rpt.snapshot_run
+        LEFT JOIN ops.kpi_config_version version
+          ON version.kpi_config_version_id = rpt.snapshot_run.kpi_config_version_id
         ${whereClause}
-        ORDER BY generated_at DESC
+        ORDER BY rpt.snapshot_run.generated_at DESC
         LIMIT $${params.length + 1}
         OFFSET $${params.length + 2}
       `,
@@ -176,16 +175,53 @@ export class SnapshotOperationsRepository {
 
     const result = await this.databaseService.query<{ snapshot_run_id: string }>(
       `
-        SELECT snapshot_run_id
+        SELECT rpt.snapshot_run.snapshot_run_id
         FROM rpt.snapshot_run
         ${whereClause}
-        ORDER BY generated_at DESC, snapshot_run_id DESC
+        ORDER BY rpt.snapshot_run.generated_at DESC, rpt.snapshot_run.snapshot_run_id DESC
         LIMIT 1
       `,
       params,
     );
 
     return result.rows[0]?.snapshot_run_id ?? null;
+  }
+
+  async findLatestSnapshotRunByTypeAndPeriod(input: {
+    snapshotType: string;
+    periodStart: string;
+    periodEnd: string;
+  }) {
+    const result = await this.databaseService.query<SnapshotRunRow>(
+      `
+        SELECT
+          rpt.snapshot_run.snapshot_run_id,
+          rpt.snapshot_run.snapshot_date,
+          rpt.snapshot_run.snapshot_type,
+          rpt.snapshot_run.period_start,
+          rpt.snapshot_run.period_end,
+          rpt.snapshot_run.run_status,
+          rpt.snapshot_run.generated_at,
+          rpt.snapshot_run.generated_by,
+          rpt.snapshot_run.started_at,
+          rpt.snapshot_run.finished_at,
+          rpt.snapshot_run.failure_reason,
+          rpt.snapshot_run.rerun_of_snapshot_run_id,
+          rpt.snapshot_run.kpi_config_version_id,
+          version.version_no AS kpi_config_version_no
+        FROM rpt.snapshot_run
+        LEFT JOIN ops.kpi_config_version version
+          ON version.kpi_config_version_id = rpt.snapshot_run.kpi_config_version_id
+        WHERE rpt.snapshot_run.snapshot_type = $1
+          AND rpt.snapshot_run.period_start = $2::date
+          AND rpt.snapshot_run.period_end = $3::date
+        ORDER BY rpt.snapshot_run.generated_at DESC, rpt.snapshot_run.snapshot_run_id DESC
+        LIMIT 1
+      `,
+      [input.snapshotType, input.periodStart, input.periodEnd],
+    );
+
+    return result.rows[0] ?? null;
   }
 
   async getSnapshotRunActionCounts(input: {
@@ -204,11 +240,11 @@ export class SnapshotOperationsRepository {
         WITH action_totals AS (
           SELECT
             COUNT(*) FILTER (
-              WHERE run_status = 'failed'
+              WHERE rpt.snapshot_run.run_status = 'failed'
             )::text AS retry_ready_count,
             COUNT(*) FILTER (
-              WHERE run_status IN ('queued', 'running')
-                AND generated_at < $${params.length}::timestamptz
+              WHERE rpt.snapshot_run.run_status IN ('queued', 'running')
+                AND rpt.snapshot_run.generated_at < $${params.length}::timestamptz
             )::text AS stuck_count
           FROM rpt.snapshot_run
           ${whereClause}
@@ -237,10 +273,10 @@ export class SnapshotOperationsRepository {
 
     const result = await this.databaseService.query<{ snapshot_run_id: string }>(
       `
-        SELECT /* latest_stuck_snapshot_run */ snapshot_run_id
+        SELECT /* latest_stuck_snapshot_run */ rpt.snapshot_run.snapshot_run_id
         FROM rpt.snapshot_run
         ${whereClause}
-        ORDER BY generated_at DESC, snapshot_run_id DESC
+        ORDER BY rpt.snapshot_run.generated_at DESC, rpt.snapshot_run.snapshot_run_id DESC
         LIMIT 1
       `,
       params,
@@ -262,38 +298,42 @@ export class SnapshotOperationsRepository {
     const baseCte = `
       WITH action_queue AS (
         SELECT
-          snapshot_run_id,
-          snapshot_date,
-          snapshot_type,
-          period_start,
-          period_end,
-          run_status,
-          generated_at,
-          generated_by,
-          started_at,
-          finished_at,
-          failure_reason,
-          rerun_of_snapshot_run_id,
+          rpt.snapshot_run.snapshot_run_id,
+          rpt.snapshot_run.snapshot_date,
+          rpt.snapshot_run.snapshot_type,
+          rpt.snapshot_run.period_start,
+          rpt.snapshot_run.period_end,
+          rpt.snapshot_run.run_status,
+          rpt.snapshot_run.generated_at,
+          rpt.snapshot_run.generated_by,
+          rpt.snapshot_run.started_at,
+          rpt.snapshot_run.finished_at,
+          rpt.snapshot_run.failure_reason,
+          rpt.snapshot_run.rerun_of_snapshot_run_id,
+          rpt.snapshot_run.kpi_config_version_id,
+          version.version_no AS kpi_config_version_no,
           CASE
-            WHEN run_status IN ('queued', 'running') AND generated_at < $${params.length}::timestamptz THEN 'stuck'
-            WHEN run_status = 'failed' THEN 'retry_ready'
+            WHEN rpt.snapshot_run.run_status IN ('queued', 'running') AND rpt.snapshot_run.generated_at < $${params.length}::timestamptz THEN 'stuck'
+            WHEN rpt.snapshot_run.run_status = 'failed' THEN 'retry_ready'
             ELSE NULL
           END AS health_state,
           CASE
-            WHEN run_status IN ('queued', 'running') AND generated_at < $${params.length}::timestamptz THEN 'Snapshot run has exceeded the in-progress time threshold'
-            WHEN run_status = 'failed' THEN 'Snapshot run failed and can be rerun'
+            WHEN rpt.snapshot_run.run_status IN ('queued', 'running') AND rpt.snapshot_run.generated_at < $${params.length}::timestamptz THEN 'Snapshot run has exceeded the in-progress time threshold'
+            WHEN rpt.snapshot_run.run_status = 'failed' THEN 'Snapshot run failed and can be rerun'
             ELSE NULL
           END AS action_reason,
           CASE
-            WHEN run_status IN ('queued', 'running') AND generated_at < $${params.length}::timestamptz THEN 'Inspect worker execution before requesting another rerun'
-            WHEN run_status = 'failed' THEN 'Trigger a rerun after verifying the failure cause'
+            WHEN rpt.snapshot_run.run_status IN ('queued', 'running') AND rpt.snapshot_run.generated_at < $${params.length}::timestamptz THEN 'Inspect worker execution before requesting another rerun'
+            WHEN rpt.snapshot_run.run_status = 'failed' THEN 'Trigger a rerun after verifying the failure cause'
             ELSE NULL
           END AS recommended_action,
           CASE
-            WHEN run_status IN ('queued', 'running') AND generated_at < $${params.length}::timestamptz THEN TRUE
-            ELSE FALSE
+            WHEN rpt.snapshot_run.run_status IN ('queued', 'running') AND rpt.snapshot_run.generated_at < $${params.length}::timestamptz THEN TRUE
+          ELSE FALSE
           END AS is_stuck
         FROM rpt.snapshot_run
+        LEFT JOIN ops.kpi_config_version version
+          ON version.kpi_config_version_id = rpt.snapshot_run.kpi_config_version_id
         ${whereClause}
       )
     `;
@@ -411,37 +451,28 @@ export class SnapshotOperationsRepository {
   }
 
   async listRerunChildren(snapshotRunId: string) {
-    const result = await this.databaseService.query<{
-      snapshot_run_id: string;
-      snapshot_date: string;
-      snapshot_type: string;
-      period_start: string;
-      period_end: string;
-      run_status: string;
-      generated_at: string;
-      generated_by: string;
-      started_at: string | null;
-      finished_at: string | null;
-      failure_reason: string | null;
-      rerun_of_snapshot_run_id: string | null;
-    }>(
+    const result = await this.databaseService.query<SnapshotRunRow>(
       `
         SELECT
-          snapshot_run_id,
-          snapshot_date,
-          snapshot_type,
-          period_start,
-          period_end,
-          run_status,
-          generated_at,
-          generated_by,
-          started_at,
-          finished_at,
-          failure_reason,
-          rerun_of_snapshot_run_id
+          rpt.snapshot_run.snapshot_run_id,
+          rpt.snapshot_run.snapshot_date,
+          rpt.snapshot_run.snapshot_type,
+          rpt.snapshot_run.period_start,
+          rpt.snapshot_run.period_end,
+          rpt.snapshot_run.run_status,
+          rpt.snapshot_run.generated_at,
+          rpt.snapshot_run.generated_by,
+          rpt.snapshot_run.started_at,
+          rpt.snapshot_run.finished_at,
+          rpt.snapshot_run.failure_reason,
+          rpt.snapshot_run.rerun_of_snapshot_run_id,
+          rpt.snapshot_run.kpi_config_version_id,
+          version.version_no AS kpi_config_version_no
         FROM rpt.snapshot_run
-        WHERE rerun_of_snapshot_run_id = $1::uuid
-        ORDER BY generated_at ASC, snapshot_run_id ASC
+        LEFT JOIN ops.kpi_config_version version
+          ON version.kpi_config_version_id = rpt.snapshot_run.kpi_config_version_id
+        WHERE rpt.snapshot_run.rerun_of_snapshot_run_id = $1::uuid
+        ORDER BY rpt.snapshot_run.generated_at ASC, rpt.snapshot_run.snapshot_run_id ASC
       `,
       [snapshotRunId],
     );
@@ -464,37 +495,28 @@ export class SnapshotOperationsRepository {
   }
 
   async listFailedSnapshotRunsForLookup() {
-    const result = await this.databaseService.query<{
-      snapshot_run_id: string;
-      snapshot_date: string;
-      snapshot_type: string;
-      period_start: string;
-      period_end: string;
-      run_status: string;
-      generated_at: string;
-      generated_by: string;
-      started_at: string | null;
-      finished_at: string | null;
-      failure_reason: string | null;
-      rerun_of_snapshot_run_id: string | null;
-    }>(
+    const result = await this.databaseService.query<SnapshotRunRow>(
       `
         SELECT
-          snapshot_run_id,
-          snapshot_date,
-          snapshot_type,
-          period_start,
-          period_end,
-          run_status,
-          generated_at,
-          generated_by,
-          started_at,
-          finished_at,
-          failure_reason,
-          rerun_of_snapshot_run_id
+          rpt.snapshot_run.snapshot_run_id,
+          rpt.snapshot_run.snapshot_date,
+          rpt.snapshot_run.snapshot_type,
+          rpt.snapshot_run.period_start,
+          rpt.snapshot_run.period_end,
+          rpt.snapshot_run.run_status,
+          rpt.snapshot_run.generated_at,
+          rpt.snapshot_run.generated_by,
+          rpt.snapshot_run.started_at,
+          rpt.snapshot_run.finished_at,
+          rpt.snapshot_run.failure_reason,
+          rpt.snapshot_run.rerun_of_snapshot_run_id,
+          rpt.snapshot_run.kpi_config_version_id,
+          version.version_no AS kpi_config_version_no
         FROM rpt.snapshot_run
-        WHERE run_status = 'failed'
-        ORDER BY generated_at DESC
+        LEFT JOIN ops.kpi_config_version version
+          ON version.kpi_config_version_id = rpt.snapshot_run.kpi_config_version_id
+        WHERE rpt.snapshot_run.run_status = 'failed'
+        ORDER BY rpt.snapshot_run.generated_at DESC
         LIMIT 20
       `,
     );
@@ -510,6 +532,7 @@ export class SnapshotOperationsRepository {
       actorUserId: string;
       idempotencyKey: string | null;
       rerunOfSnapshotRunId?: string | null;
+      kpiConfigVersionId?: string | null;
     },
     client?: Queryable,
   ) {
@@ -523,6 +546,8 @@ export class SnapshotOperationsRepository {
       finished_at: string | null;
       failure_reason: string | null;
       rerun_of_snapshot_run_id: string | null;
+      kpi_config_version_id: string | null;
+      kpi_config_version_no: number | null;
     }>(
       `
         INSERT INTO rpt.snapshot_run (
@@ -533,9 +558,10 @@ export class SnapshotOperationsRepository {
           run_status,
           idempotency_key,
           generated_by,
-          rerun_of_snapshot_run_id
+          rerun_of_snapshot_run_id,
+          kpi_config_version_id
         )
-        VALUES (CURRENT_DATE, $1, $2::date, $3::date, 'queued', $4, $5, $6::uuid)
+        VALUES (CURRENT_DATE, $1, $2::date, $3::date, 'queued', $4, $5, $6::uuid, $7::uuid)
         RETURNING
           snapshot_run_id,
           snapshot_date,
@@ -544,7 +570,13 @@ export class SnapshotOperationsRepository {
           started_at,
           finished_at,
           failure_reason,
-          rerun_of_snapshot_run_id
+          rerun_of_snapshot_run_id,
+          kpi_config_version_id,
+          (
+            SELECT version_no
+            FROM ops.kpi_config_version
+            WHERE kpi_config_version_id = $7::uuid
+          ) AS kpi_config_version_no
       `,
       [
         input.snapshotType,
@@ -553,6 +585,7 @@ export class SnapshotOperationsRepository {
         input.idempotencyKey,
         input.actorUserId,
         input.rerunOfSnapshotRunId ?? null,
+        input.kpiConfigVersionId ?? null,
       ],
     );
 

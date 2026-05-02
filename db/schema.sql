@@ -42,8 +42,11 @@ CREATE TABLE ops.store (
     open_date DATE,
     close_date DATE,
     status TEXT NOT NULL DEFAULT 'active',
+    kpi_import_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     timezone TEXT NOT NULL DEFAULT 'Europe/Istanbul',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT ops_store_store_type_allowed_check CHECK (store_type IN ('company', 'franchise', 'operator')),
+    CONSTRAINT ops_store_status_allowed_check CHECK (status IN ('active', 'inactive', 'closed'))
 );
 
 CREATE TABLE ops.position (
@@ -89,6 +92,86 @@ CREATE TABLE ops.employee_assignment_history (
     CHECK (fte_ratio > 0 AND fte_ratio <= 1.00)
 );
 
+CREATE TABLE ops.seller_code_request (
+    seller_code_request_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL REFERENCES ops.company(company_id),
+    region_id UUID NOT NULL REFERENCES ops.region(region_id),
+    store_id UUID NOT NULL REFERENCES ops.store(store_id),
+    store_type TEXT NOT NULL,
+    employee_id UUID REFERENCES ops.employee(employee_id),
+    request_type TEXT NOT NULL,
+    request_status TEXT NOT NULL DEFAULT 'pending_hr_approval',
+    first_name TEXT NOT NULL,
+    last_name TEXT NOT NULL,
+    national_id_hash TEXT NOT NULL,
+    national_id_last4 TEXT NOT NULL,
+    phone_number TEXT NOT NULL,
+    requested_hire_date DATE NOT NULL,
+    requested_position_id UUID NOT NULL REFERENCES ops.position(position_id),
+    employment_type TEXT NOT NULL,
+    requested_seller_code TEXT,
+    approved_seller_code TEXT,
+    last_reference_seller_code TEXT,
+    request_reason TEXT,
+    submitted_by_user_id TEXT NOT NULL,
+    reviewed_by_user_id TEXT,
+    reviewed_at TIMESTAMPTZ,
+    review_note TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT seller_code_request_store_type_check CHECK (store_type IN ('company', 'franchise', 'operator')),
+    CONSTRAINT seller_code_request_type_check CHECK (request_type IN ('create_code')),
+    CONSTRAINT seller_code_request_status_check CHECK (request_status IN ('pending_hr_approval', 'approved', 'rejected')),
+    CONSTRAINT seller_code_request_employment_type_check CHECK (employment_type IN ('full_time', 'part_time', 'temporary')),
+    CONSTRAINT seller_code_request_review_check CHECK (
+        (request_status = 'pending_hr_approval' AND reviewed_at IS NULL)
+        OR (request_status <> 'pending_hr_approval' AND reviewed_at IS NOT NULL)
+    )
+);
+
+CREATE INDEX idx_seller_code_request_store_status
+    ON ops.seller_code_request (store_id, request_status, created_at DESC);
+
+CREATE INDEX idx_seller_code_request_company_status
+    ON ops.seller_code_request (company_id, request_status, created_at DESC);
+
+CREATE UNIQUE INDEX idx_seller_code_request_approved_code_unique
+    ON ops.seller_code_request (UPPER(approved_seller_code))
+    WHERE approved_seller_code IS NOT NULL AND request_status = 'approved';
+
+CREATE TABLE ops.employee_offboarding_request (
+    offboarding_request_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL REFERENCES ops.company(company_id),
+    region_id UUID NOT NULL REFERENCES ops.region(region_id),
+    store_id UUID NOT NULL REFERENCES ops.store(store_id),
+    employee_id UUID NOT NULL REFERENCES ops.employee(employee_id),
+    request_status TEXT NOT NULL DEFAULT 'pending_hr_approval',
+    requested_termination_date DATE NOT NULL,
+    termination_reason TEXT NOT NULL,
+    request_reason TEXT,
+    submitted_by_user_id TEXT NOT NULL,
+    reviewed_by_user_id TEXT,
+    reviewed_at TIMESTAMPTZ,
+    review_note TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT employee_offboarding_request_status_check CHECK (request_status IN ('pending_hr_approval', 'approved', 'rejected')),
+    CONSTRAINT employee_offboarding_request_review_check CHECK (
+        (request_status = 'pending_hr_approval' AND reviewed_at IS NULL)
+        OR (request_status <> 'pending_hr_approval' AND reviewed_at IS NOT NULL)
+    )
+);
+
+CREATE INDEX idx_employee_offboarding_request_store_status
+    ON ops.employee_offboarding_request (store_id, request_status, created_at DESC);
+
+CREATE INDEX idx_employee_offboarding_request_company_status
+    ON ops.employee_offboarding_request (company_id, request_status, created_at DESC);
+
+CREATE UNIQUE INDEX idx_employee_offboarding_request_pending_employee
+    ON ops.employee_offboarding_request (employee_id)
+    WHERE request_status = 'pending_hr_approval';
+
 CREATE TABLE ops.role (
     role_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     role_code TEXT NOT NULL UNIQUE,
@@ -121,9 +204,14 @@ CREATE TABLE ops.user_account (
     email TEXT NOT NULL UNIQUE,
     password_hash TEXT,
     auth_provider TEXT NOT NULL DEFAULT 'local',
+    provider_subject TEXT,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     last_login_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deactivation_reason TEXT,
+    deactivated_by_user_id UUID REFERENCES ops.user_account(user_id),
+    deactivated_at TIMESTAMPTZ
 );
 
 CREATE TABLE ops.user_role_assignment (
@@ -140,10 +228,217 @@ CREATE TABLE ops.user_role_assignment (
     CHECK (end_at IS NULL OR end_at >= start_at)
 );
 
+CREATE TABLE ops.user_action_store_assignment (
+    user_action_store_assignment_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES ops.user_account(user_id),
+    store_id UUID NOT NULL REFERENCES ops.store(store_id),
+    start_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    end_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (end_at IS NULL OR end_at >= start_at)
+);
+
+CREATE TABLE IF NOT EXISTS ops.mobile_device_session (
+    mobile_device_session_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES ops.user_account(user_id),
+    provider_subject TEXT NOT NULL,
+    device_id_hash TEXT NOT NULL,
+    platform TEXT NOT NULL,
+    device_name TEXT,
+    app_version TEXT,
+    os_version TEXT,
+    status TEXT NOT NULL DEFAULT 'active',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires_at TIMESTAMPTZ,
+    revoked_at TIMESTAMPTZ,
+    revoked_by_user_id UUID REFERENCES ops.user_account(user_id),
+    revocation_reason TEXT,
+    CHECK (platform IN ('ios', 'android')),
+    CHECK (status IN ('active', 'revoked', 'expired')),
+    CHECK (status <> 'revoked' OR revoked_at IS NOT NULL)
+);
+
+CREATE TABLE ops.target_distribution_request (
+    target_distribution_request_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL REFERENCES ops.company(company_id),
+    region_id UUID NOT NULL REFERENCES ops.region(region_id),
+    store_id UUID NOT NULL REFERENCES ops.store(store_id),
+    request_month DATE NOT NULL,
+    target_label TEXT NOT NULL,
+    total_target_value NUMERIC(18,4) NOT NULL,
+    allocation_count INTEGER NOT NULL DEFAULT 0,
+    request_status TEXT NOT NULL DEFAULT 'pending_region_approval',
+    request_reason TEXT,
+    allocation_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    submitted_by_user_id TEXT NOT NULL,
+    approved_by_user_id TEXT,
+    approved_at TIMESTAMPTZ,
+    approval_note TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE ops.personnel_target_reference (
+    personnel_target_reference_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    source_request_id UUID NOT NULL REFERENCES ops.target_distribution_request(target_distribution_request_id),
+    company_id UUID NOT NULL REFERENCES ops.company(company_id),
+    region_id UUID NOT NULL REFERENCES ops.region(region_id),
+    store_id UUID NOT NULL REFERENCES ops.store(store_id),
+    employee_id UUID NOT NULL REFERENCES ops.employee(employee_id),
+    period_start DATE NOT NULL,
+    period_end DATE NOT NULL,
+    target_value NUMERIC(18,4) NOT NULL CHECK (target_value > 0),
+    target_type TEXT NOT NULL DEFAULT 'monthly_sales_target',
+    status TEXT NOT NULL DEFAULT 'approved',
+    approved_by_user_id TEXT NOT NULL,
+    approved_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    supersedes_target_reference_id UUID REFERENCES ops.personnel_target_reference(personnel_target_reference_id),
+    CHECK (period_end >= period_start),
+    CHECK (status IN ('approved', 'superseded', 'voided_future'))
+);
+
+CREATE TABLE ops.competition (
+    competition_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    competition_code TEXT NOT NULL UNIQUE,
+    competition_name TEXT NOT NULL,
+    description TEXT,
+    competition_type TEXT NOT NULL,
+    lifecycle_state TEXT NOT NULL DEFAULT 'draft',
+    owner_user_id TEXT NOT NULL,
+    starts_on DATE NOT NULL,
+    ends_on DATE NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (competition_type IN ('region_challenge', 'region_league', 'campaign')),
+    CHECK (lifecycle_state IN ('draft', 'published', 'active', 'completed', 'cancelled')),
+    CHECK (ends_on >= starts_on)
+);
+
+CREATE TABLE ops.competition_stage (
+    competition_stage_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    competition_id UUID NOT NULL REFERENCES ops.competition(competition_id) ON DELETE CASCADE,
+    stage_code TEXT NOT NULL,
+    stage_name TEXT NOT NULL,
+    stage_order INTEGER NOT NULL,
+    stage_type TEXT NOT NULL,
+    starts_on DATE NOT NULL,
+    ends_on DATE NOT NULL,
+    lifecycle_state TEXT NOT NULL DEFAULT 'draft',
+    score_rule TEXT NOT NULL DEFAULT 'average_daily_store_score',
+    advancement_rule_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    finalized_by_user_id TEXT,
+    finalized_at TIMESTAMPTZ,
+    finalization_state TEXT,
+    finalization_note TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (competition_id, stage_code),
+    UNIQUE (competition_id, stage_order),
+    CHECK (stage_type IN ('qualifier', 'league', 'quarter_final', 'semi_final', 'final', 'custom')),
+    CHECK (lifecycle_state IN ('draft', 'scheduled', 'active', 'awaiting_review', 'finalized', 'cancelled')),
+    CHECK (score_rule = 'average_daily_store_score'),
+    CHECK (finalization_state IS NULL OR finalization_state IN ('clean', 'warnings_present', 'overridden')),
+    CHECK (ends_on >= starts_on)
+);
+
+CREATE TABLE ops.competition_stage_package_plan (
+    competition_stage_package_plan_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    competition_id UUID NOT NULL REFERENCES ops.competition(competition_id) ON DELETE CASCADE,
+    package_code TEXT NOT NULL,
+    plan_name TEXT NOT NULL,
+    plan_status TEXT NOT NULL DEFAULT 'draft',
+    stage_drafts_json JSONB NOT NULL,
+    created_by_user_id TEXT NOT NULL,
+    updated_by_user_id TEXT NOT NULL,
+    submitted_by_user_id TEXT,
+    submitted_at TIMESTAMPTZ,
+    reviewed_by_user_id TEXT,
+    reviewed_at TIMESTAMPTZ,
+    review_note TEXT,
+    executed_by_user_id TEXT,
+    executed_at TIMESTAMPTZ,
+    created_stage_ids UUID[] NOT NULL DEFAULT ARRAY[]::uuid[],
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (package_code IN ('league_then_final')),
+    CHECK (plan_status IN ('draft', 'submitted', 'approved', 'rejected', 'executed', 'cancelled')),
+    CHECK (jsonb_typeof(stage_drafts_json) = 'array')
+);
+
+CREATE TABLE ops.feed_post (
+    feed_post_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    post_type TEXT NOT NULL,
+    title TEXT NOT NULL,
+    body TEXT NOT NULL,
+    link_label TEXT,
+    link_url TEXT,
+    visibility_scope_type TEXT NOT NULL,
+    visibility_scope_ids UUID[] NOT NULL DEFAULT ARRAY[]::uuid[],
+    is_pinned BOOLEAN NOT NULL DEFAULT FALSE,
+    publish_status TEXT NOT NULL DEFAULT 'draft',
+    published_at TIMESTAMPTZ,
+    starts_at TIMESTAMPTZ,
+    ends_at TIMESTAMPTZ,
+    metric_code TEXT,
+    metric_label TEXT,
+    challenge_starts_on DATE,
+    challenge_ends_on DATE,
+    target_route TEXT,
+    created_by_user_id UUID NOT NULL REFERENCES ops.user_account(user_id),
+    updated_by_user_id UUID NOT NULL REFERENCES ops.user_account(user_id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (post_type IN ('announcement', 'challenge')),
+    CHECK (visibility_scope_type IN ('company', 'region', 'store')),
+    CHECK (publish_status IN ('draft', 'published', 'archived')),
+    CHECK (ends_at IS NULL OR starts_at IS NULL OR ends_at >= starts_at),
+    CHECK (challenge_ends_on IS NULL OR challenge_starts_on IS NULL OR challenge_ends_on >= challenge_starts_on)
+);
+
+CREATE TABLE ops.competition_team_template (
+    competition_team_template_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    template_code TEXT NOT NULL UNIQUE,
+    template_name TEXT NOT NULL,
+    description TEXT,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE ops.competition_team_template_store (
+    competition_team_template_id UUID NOT NULL REFERENCES ops.competition_team_template(competition_team_template_id) ON DELETE CASCADE,
+    store_id UUID NOT NULL REFERENCES ops.store(store_id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (competition_team_template_id, store_id)
+);
+
+CREATE TABLE ops.competition_team (
+    competition_team_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    competition_stage_id UUID NOT NULL REFERENCES ops.competition_stage(competition_stage_id) ON DELETE CASCADE,
+    source_template_id UUID REFERENCES ops.competition_team_template(competition_team_template_id),
+    team_code TEXT NOT NULL,
+    team_name TEXT NOT NULL,
+    team_order INTEGER NOT NULL DEFAULT 1,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (competition_stage_id, team_code)
+);
+
+CREATE TABLE ops.competition_team_store (
+    competition_team_id UUID NOT NULL REFERENCES ops.competition_team(competition_team_id) ON DELETE CASCADE,
+    store_id UUID NOT NULL REFERENCES ops.store(store_id),
+    added_manually BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (competition_team_id, store_id)
+);
+
 CREATE TABLE ops.checklist_template (
     checklist_template_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id UUID NOT NULL REFERENCES ops.company(company_id),
-    template_code TEXT NOT NULL UNIQUE,
+    template_code TEXT NOT NULL,
+    template_type TEXT NOT NULL DEFAULT 'BM_STORE_VISIT',
     template_name TEXT NOT NULL,
     category TEXT NOT NULL,
     version_no INTEGER NOT NULL,
@@ -152,6 +447,7 @@ CREATE TABLE ops.checklist_template (
     effective_to DATE,
     created_by UUID NOT NULL REFERENCES ops.user_account(user_id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT checklist_template_code_version_unique UNIQUE (template_code, version_no),
     CHECK (effective_to IS NULL OR effective_to >= effective_from)
 );
 
@@ -175,13 +471,17 @@ CREATE TABLE ops.checklist_instance (
     store_id UUID NOT NULL REFERENCES ops.store(store_id),
     assigned_employee_id UUID REFERENCES ops.employee(employee_id),
     auditor_employee_id UUID REFERENCES ops.employee(employee_id),
+    started_by_user_id TEXT,
+    completed_by_user_id TEXT,
     planned_at TIMESTAMPTZ,
     started_at TIMESTAMPTZ,
     completed_at TIMESTAMPTZ,
+    locked_at TIMESTAMPTZ,
     status TEXT NOT NULL DEFAULT 'planned',
     total_score NUMERIC(12,2),
     compliance_rate NUMERIC(7,4),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (status IN ('planned', 'in_progress', 'completed', 'cancelled'))
 );
 
 CREATE TABLE ops.checklist_response (
@@ -194,6 +494,17 @@ CREATE TABLE ops.checklist_response (
     comment_text TEXT,
     responded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE (checklist_instance_id, template_item_id)
+);
+
+CREATE TABLE IF NOT EXISTS ops.checklist_acknowledgement (
+    checklist_acknowledgement_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    checklist_instance_id UUID NOT NULL REFERENCES ops.checklist_instance(checklist_instance_id) ON DELETE CASCADE,
+    store_id UUID NOT NULL REFERENCES ops.store(store_id),
+    acknowledged_by_user_id TEXT NOT NULL,
+    acknowledgement_note TEXT,
+    acknowledged_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (checklist_instance_id)
 );
 
 CREATE TABLE ops.kpi_definition (
@@ -241,8 +552,41 @@ CREATE TABLE ops.kpi_actual (
     period_end DATE NOT NULL,
     actual_value NUMERIC(18,4) NOT NULL,
     calculated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    source_batch_id TEXT,
+    source_payload_hash TEXT,
+    last_synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     source_type TEXT NOT NULL,
     CHECK (period_end >= period_start)
+);
+
+CREATE UNIQUE INDEX kpi_actual_store_live_unique_idx
+    ON ops.kpi_actual (kpi_id, store_id, period_type, period_start, period_end)
+    WHERE scope_type = 'store' AND store_id IS NOT NULL;
+
+CREATE UNIQUE INDEX kpi_actual_employee_live_unique_idx
+    ON ops.kpi_actual (kpi_id, employee_id, period_type, period_start, period_end)
+    WHERE scope_type = 'employee' AND employee_id IS NOT NULL;
+
+CREATE TABLE ops.kpi_score_profile_config (
+    config_key TEXT PRIMARY KEY,
+    config_payload JSONB NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE ops.kpi_config_version (
+    kpi_config_version_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    version_no INTEGER NOT NULL,
+    lifecycle_state TEXT NOT NULL DEFAULT 'published',
+    effective_from TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    effective_to TIMESTAMPTZ,
+    published_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    published_by UUID REFERENCES ops.user_account(user_id),
+    change_summary JSONB NOT NULL DEFAULT '{}'::jsonb,
+    config_payload JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (version_no),
+    CHECK (lifecycle_state IN ('published', 'retired')),
+    CHECK (effective_to IS NULL OR effective_to > effective_from)
 );
 
 CREATE TABLE ops.performance_review_period (
@@ -313,6 +657,7 @@ CREATE TABLE rpt.snapshot_run (
     rerun_of_snapshot_run_id UUID REFERENCES rpt.snapshot_run(snapshot_run_id),
     generated_by TEXT NOT NULL,
     source_batch_no TEXT,
+    kpi_config_version_id UUID REFERENCES ops.kpi_config_version(kpi_config_version_id),
     CHECK (period_end >= period_start)
 );
 
@@ -369,11 +714,91 @@ CREATE TABLE rpt.turnover_snapshot (
     PRIMARY KEY (snapshot_run_id, scope_type, company_id, region_id, store_id)
 );
 
+CREATE TABLE rpt.employee_kpi_snapshot (
+    snapshot_run_id UUID NOT NULL REFERENCES rpt.snapshot_run(snapshot_run_id) ON DELETE CASCADE,
+    employee_id UUID NOT NULL REFERENCES ops.employee(employee_id),
+    store_id UUID REFERENCES ops.store(store_id),
+    kpi_id UUID NOT NULL REFERENCES ops.kpi_definition(kpi_id),
+    period_start DATE NOT NULL,
+    period_end DATE NOT NULL,
+    actual_value NUMERIC(18,4) NOT NULL,
+    personnel_target_reference_id UUID REFERENCES ops.personnel_target_reference(personnel_target_reference_id),
+    PRIMARY KEY (snapshot_run_id, employee_id, kpi_id)
+);
+
+CREATE TABLE rpt.employee_performance_snapshot (
+    snapshot_run_id UUID NOT NULL REFERENCES rpt.snapshot_run(snapshot_run_id) ON DELETE CASCADE,
+    employee_id UUID NOT NULL REFERENCES ops.employee(employee_id),
+    store_id UUID REFERENCES ops.store(store_id),
+    period_start DATE NOT NULL,
+    period_end DATE NOT NULL,
+    score_value NUMERIC(18,4) NOT NULL,
+    matched_metrics INTEGER NOT NULL,
+    total_metrics INTEGER NOT NULL,
+    turkey_rank INTEGER,
+    turkey_population INTEGER NOT NULL,
+    store_rank INTEGER,
+    store_population INTEGER NOT NULL,
+    PRIMARY KEY (snapshot_run_id, employee_id)
+);
+
+CREATE TABLE rpt.competition_stage_store_score_snapshot (
+    competition_stage_id UUID NOT NULL REFERENCES ops.competition_stage(competition_stage_id) ON DELETE CASCADE,
+    competition_team_id UUID NOT NULL REFERENCES ops.competition_team(competition_team_id) ON DELETE CASCADE,
+    store_id UUID NOT NULL REFERENCES ops.store(store_id),
+    snapshot_date DATE NOT NULL,
+    score_value NUMERIC(18,4),
+    reported_weight_percent NUMERIC(8,4) NOT NULL DEFAULT 0,
+    expected_weight_percent NUMERIC(8,4) NOT NULL DEFAULT 100,
+    has_daily_data BOOLEAN NOT NULL DEFAULT FALSE,
+    missing_kpi_codes TEXT[] NOT NULL DEFAULT ARRAY[]::text[],
+    generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (competition_stage_id, competition_team_id, store_id, snapshot_date)
+);
+
+CREATE TABLE rpt.competition_stage_score_snapshot (
+    competition_stage_id UUID NOT NULL REFERENCES ops.competition_stage(competition_stage_id) ON DELETE CASCADE,
+    competition_team_id UUID NOT NULL REFERENCES ops.competition_team(competition_team_id) ON DELETE CASCADE,
+    snapshot_date DATE NOT NULL,
+    score_value NUMERIC(18,4),
+    valid_store_count INTEGER NOT NULL DEFAULT 0,
+    total_store_count INTEGER NOT NULL DEFAULT 0,
+    coverage_rate NUMERIC(8,4) NOT NULL DEFAULT 0,
+    rank_position INTEGER,
+    ranking_population INTEGER NOT NULL DEFAULT 0,
+    generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (competition_stage_id, competition_team_id, snapshot_date)
+);
+
+CREATE TABLE rpt.competition_stage_warning (
+    competition_stage_warning_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    competition_stage_id UUID NOT NULL REFERENCES ops.competition_stage(competition_stage_id) ON DELETE CASCADE,
+    competition_team_id UUID REFERENCES ops.competition_team(competition_team_id) ON DELETE CASCADE,
+    store_id UUID REFERENCES ops.store(store_id),
+    warning_code TEXT NOT NULL,
+    warning_level TEXT NOT NULL,
+    period_start DATE NOT NULL,
+    period_end DATE NOT NULL,
+    message TEXT NOT NULL,
+    resolved_at TIMESTAMPTZ,
+    generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (warning_code IN ('missing_daily_store_data', 'missing_bm_checklist', 'missing_vm_checklist')),
+    CHECK (warning_level IN ('info', 'warning', 'blocker')),
+    CHECK (period_end >= period_start)
+);
+
 CREATE TABLE stg.integration_source (
     integration_source_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     source_code TEXT NOT NULL,
     source_name TEXT NOT NULL,
     entity_type TEXT NOT NULL,
+    source_system TEXT NOT NULL DEFAULT 'manual',
+    state_model TEXT NOT NULL DEFAULT 'latest_state',
+    poll_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    poll_interval_minutes INTEGER NOT NULL DEFAULT 30,
+    poll_window_start_local TIME NOT NULL DEFAULT TIME '10:30',
+    poll_window_end_local TIME NOT NULL DEFAULT TIME '00:00',
+    poll_timezone TEXT NOT NULL DEFAULT 'Europe/Istanbul',
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     UNIQUE (source_code, entity_type)
 );
@@ -383,6 +808,11 @@ CREATE TABLE stg.import_batch (
     integration_source_id UUID NOT NULL REFERENCES stg.integration_source(integration_source_id),
     entity_type TEXT NOT NULL,
     idempotency_key TEXT,
+    source_batch_id TEXT,
+    source_payload_hash TEXT,
+    source_captured_at TIMESTAMPTZ,
+    source_window_started_at TIMESTAMPTZ,
+    source_window_ended_at TIMESTAMPTZ,
     started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     finished_at TIMESTAMPTZ,
     status TEXT NOT NULL DEFAULT 'pending',
@@ -392,6 +822,10 @@ CREATE TABLE stg.import_batch (
     retry_count INTEGER NOT NULL DEFAULT 0,
     last_retried_at TIMESTAMPTZ
 );
+
+CREATE UNIQUE INDEX import_batch_source_batch_unique_idx
+    ON stg.import_batch (integration_source_id, entity_type, source_batch_id)
+    WHERE source_batch_id IS NOT NULL;
 
 CREATE TABLE stg.employee_raw (
     stg_employee_raw_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -423,6 +857,8 @@ CREATE TABLE stg.kpi_raw (
     employee_external_ref TEXT,
     period_start DATE,
     period_end DATE,
+    row_hash TEXT,
+    raw_row_reference TEXT,
     payload_json JSONB NOT NULL,
     normalized_status TEXT NOT NULL DEFAULT 'pending',
     validation_error TEXT,
@@ -478,6 +914,50 @@ CREATE TABLE stg.region_raw (
     processed_at TIMESTAMPTZ
 );
 
+CREATE TABLE IF NOT EXISTS stg.master_data_bootstrap_batch (
+    master_data_bootstrap_batch_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL REFERENCES ops.company(company_id),
+    bootstrap_entity TEXT NOT NULL,
+    source_label TEXT NOT NULL,
+    file_reference TEXT,
+    uploaded_by_user_id TEXT NOT NULL,
+    batch_status TEXT NOT NULL DEFAULT 'uploaded',
+    row_count INTEGER NOT NULL DEFAULT 0 CHECK (row_count >= 0),
+    valid_count INTEGER NOT NULL DEFAULT 0 CHECK (valid_count >= 0),
+    needs_review_count INTEGER NOT NULL DEFAULT 0 CHECK (needs_review_count >= 0),
+    invalid_count INTEGER NOT NULL DEFAULT 0 CHECK (invalid_count >= 0),
+    promoted_count INTEGER NOT NULL DEFAULT 0 CHECK (promoted_count >= 0),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    validated_at TIMESTAMPTZ,
+    promoted_at TIMESTAMPTZ,
+    CHECK (bootstrap_entity IN ('store', 'personnel')),
+    CHECK (batch_status IN ('uploaded', 'validated', 'ready_to_promote', 'promoted', 'rejected'))
+);
+
+CREATE TABLE IF NOT EXISTS stg.master_data_bootstrap_row (
+    master_data_bootstrap_row_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    master_data_bootstrap_batch_id UUID NOT NULL REFERENCES stg.master_data_bootstrap_batch(master_data_bootstrap_batch_id) ON DELETE CASCADE,
+    row_number INTEGER NOT NULL CHECK (row_number > 0),
+    row_hash TEXT NOT NULL,
+    source_store_code TEXT,
+    source_employee_code TEXT,
+    raw_payload_json JSONB NOT NULL,
+    normalized_payload_json JSONB NOT NULL DEFAULT '{}'::JSONB,
+    validation_status TEXT NOT NULL DEFAULT 'pending',
+    issue_code TEXT,
+    issue_message TEXT,
+    resolved_company_id UUID REFERENCES ops.company(company_id),
+    resolved_region_id UUID REFERENCES ops.region(region_id),
+    resolved_store_id UUID REFERENCES ops.store(store_id),
+    resolved_employee_id UUID REFERENCES ops.employee(employee_id),
+    resolved_position_id UUID REFERENCES ops.position(position_id),
+    promoted_entity_id UUID,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (validation_status IN ('pending', 'valid', 'needs_review', 'invalid', 'promoted')),
+    CHECK (validation_status NOT IN ('needs_review', 'invalid') OR issue_code IS NOT NULL)
+);
+
 CREATE TABLE stg.external_id_map (
     external_id_map_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     integration_source_id UUID NOT NULL REFERENCES stg.integration_source(integration_source_id),
@@ -517,6 +997,20 @@ CREATE TABLE audit.entity_change_log (
     after_json JSONB
 );
 
+CREATE TABLE IF NOT EXISTS audit.schema_migration (
+    migration_name TEXT PRIMARY KEY,
+    migration_checksum TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('running', 'succeeded', 'failed')),
+    attempt_count INTEGER NOT NULL DEFAULT 0,
+    started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    finished_at TIMESTAMPTZ,
+    duration_ms INTEGER,
+    applied_by TEXT NOT NULL DEFAULT CURRENT_USER,
+    error_message TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE INDEX idx_assignment_employee_dates
     ON ops.employee_assignment_history (employee_id, start_date, end_date);
 
@@ -526,8 +1020,87 @@ CREATE INDEX idx_assignment_store_dates
 CREATE INDEX idx_user_role_scope
     ON ops.user_role_assignment (user_id, scope_type, company_id, region_id, store_id);
 
+CREATE UNIQUE INDEX IF NOT EXISTS uq_user_role_assignment_active_scope
+    ON ops.user_role_assignment (
+        user_id,
+        role_id,
+        scope_type,
+        COALESCE(company_id, '00000000-0000-0000-0000-000000000000'::uuid),
+        COALESCE(region_id, '00000000-0000-0000-0000-000000000000'::uuid),
+        COALESCE(store_id, '00000000-0000-0000-0000-000000000000'::uuid)
+    )
+    WHERE end_at IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_user_account_auth_provider_subject
+    ON ops.user_account (auth_provider, provider_subject)
+    WHERE provider_subject IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_user_account_employee_active
+    ON ops.user_account (employee_id, is_active);
+
+CREATE INDEX IF NOT EXISTS idx_user_account_active_employee
+    ON ops.user_account (is_active, employee_id);
+
+CREATE INDEX idx_user_action_store_assignment_user_dates
+    ON ops.user_action_store_assignment (user_id, start_at, end_at);
+
+CREATE INDEX idx_user_action_store_assignment_store_dates
+    ON ops.user_action_store_assignment (store_id, start_at, end_at);
+
+CREATE UNIQUE INDEX uq_user_action_store_assignment_active
+    ON ops.user_action_store_assignment (user_id, store_id)
+    WHERE end_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_mobile_device_session_user_status
+    ON ops.mobile_device_session (user_id, status, last_seen_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_mobile_device_session_active_lookup
+    ON ops.mobile_device_session (mobile_device_session_id, user_id, status);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_mobile_device_session_active_device
+    ON ops.mobile_device_session (user_id, device_id_hash)
+    WHERE status = 'active';
+
+CREATE INDEX idx_target_distribution_request_scope_status
+    ON ops.target_distribution_request (company_id, region_id, store_id, request_status, request_month);
+
+CREATE INDEX IF NOT EXISTS idx_personnel_target_reference_employee_period
+    ON ops.personnel_target_reference (employee_id, period_start, period_end, status);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_personnel_target_reference_active_unique
+    ON ops.personnel_target_reference (employee_id, period_start, period_end, target_type)
+    WHERE status = 'approved';
+
+CREATE INDEX competition_stage_competition_state_idx
+    ON ops.competition_stage (competition_id, lifecycle_state, starts_on, ends_on);
+
+CREATE INDEX competition_stage_package_plan_competition_idx
+    ON ops.competition_stage_package_plan (competition_id, plan_status, updated_at DESC);
+
+CREATE INDEX feed_post_status_window_idx
+    ON ops.feed_post (publish_status, is_pinned DESC, published_at DESC, updated_at DESC);
+
+CREATE INDEX feed_post_scope_ids_idx
+    ON ops.feed_post USING GIN (visibility_scope_ids);
+
+CREATE INDEX competition_team_stage_idx
+    ON ops.competition_team (competition_stage_id, team_order);
+
+CREATE INDEX competition_team_store_store_idx
+    ON ops.competition_team_store (store_id, competition_team_id);
+
 CREATE INDEX idx_checklist_instance_store_status
     ON ops.checklist_instance (store_id, status, planned_at);
+
+CREATE INDEX IF NOT EXISTS idx_checklist_instance_mobile_today
+    ON ops.checklist_instance (store_id, status, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_checklist_instance_monthly_completed
+    ON ops.checklist_instance (store_id, checklist_template_id, completed_at DESC)
+    WHERE status = 'completed';
+
+CREATE INDEX IF NOT EXISTS idx_checklist_acknowledgement_store_acknowledged_at
+    ON ops.checklist_acknowledgement (store_id, acknowledged_at DESC);
 
 CREATE INDEX idx_kpi_actual_scope_period
     ON ops.kpi_actual (kpi_id, scope_type, company_id, region_id, store_id, employee_id, period_start, period_end);
@@ -541,6 +1114,23 @@ CREATE INDEX idx_turnover_event_scope_date
 CREATE INDEX idx_import_batch_source_status
     ON stg.import_batch (integration_source_id, status, started_at);
 
+CREATE INDEX kpi_raw_row_hash_idx
+    ON stg.kpi_raw (row_hash)
+    WHERE row_hash IS NOT NULL;
+
+CREATE INDEX kpi_raw_reference_idx
+    ON stg.kpi_raw (raw_row_reference)
+    WHERE raw_row_reference IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_master_data_bootstrap_row_hash
+    ON stg.master_data_bootstrap_row (master_data_bootstrap_batch_id, row_hash);
+
+CREATE INDEX IF NOT EXISTS idx_master_data_bootstrap_batch_status
+    ON stg.master_data_bootstrap_batch (company_id, bootstrap_entity, batch_status, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_master_data_bootstrap_row_review
+    ON stg.master_data_bootstrap_row (master_data_bootstrap_batch_id, validation_status, row_number);
+
 CREATE UNIQUE INDEX uq_import_batch_idempotency_key
     ON stg.import_batch (idempotency_key)
     WHERE idempotency_key IS NOT NULL;
@@ -552,11 +1142,49 @@ CREATE UNIQUE INDEX uq_snapshot_run_idempotency_key
 CREATE INDEX idx_snapshot_run_status_date
     ON rpt.snapshot_run (run_status, snapshot_date, generated_at);
 
+CREATE INDEX snapshot_run_kpi_config_version_idx
+    ON rpt.snapshot_run (kpi_config_version_id);
+
+CREATE INDEX IF NOT EXISTS snapshot_run_closed_daily_period_idx
+    ON rpt.snapshot_run (period_start, period_end, generated_at DESC)
+    WHERE snapshot_type = 'daily' AND run_status = 'completed';
+
+CREATE INDEX employee_performance_snapshot_run_store_idx
+    ON rpt.employee_performance_snapshot (snapshot_run_id, store_id, score_value DESC);
+
+CREATE INDEX IF NOT EXISTS employee_performance_snapshot_run_score_idx
+    ON rpt.employee_performance_snapshot (snapshot_run_id, score_value DESC, employee_id);
+
+CREATE INDEX IF NOT EXISTS employee_performance_snapshot_run_store_score_idx
+    ON rpt.employee_performance_snapshot (snapshot_run_id, store_id, score_value DESC, employee_id);
+
+CREATE INDEX employee_kpi_snapshot_run_employee_idx
+    ON rpt.employee_kpi_snapshot (snapshot_run_id, employee_id, kpi_id);
+
+CREATE INDEX IF NOT EXISTS employee_kpi_snapshot_run_metric_value_idx
+    ON rpt.employee_kpi_snapshot (snapshot_run_id, kpi_id, actual_value DESC, employee_id);
+
+CREATE INDEX IF NOT EXISTS employee_kpi_snapshot_run_store_metric_value_idx
+    ON rpt.employee_kpi_snapshot (snapshot_run_id, store_id, kpi_id, actual_value DESC, employee_id);
+
+CREATE INDEX competition_stage_store_score_date_idx
+    ON rpt.competition_stage_store_score_snapshot (competition_stage_id, snapshot_date, score_value DESC);
+
+CREATE INDEX competition_stage_score_rank_idx
+    ON rpt.competition_stage_score_snapshot (competition_stage_id, snapshot_date, rank_position);
+
+CREATE INDEX competition_stage_warning_open_idx
+    ON rpt.competition_stage_warning (competition_stage_id, warning_code, warning_level)
+    WHERE resolved_at IS NULL;
+
 CREATE INDEX idx_event_log_entity_date
     ON audit.event_log (entity_name, entity_id, occurred_at);
 
 CREATE INDEX idx_event_log_scope_date
     ON audit.event_log (scope_type, company_id, region_id, store_id, occurred_at);
+
+CREATE INDEX IF NOT EXISTS idx_schema_migration_status
+    ON audit.schema_migration (status, started_at DESC);
 
 CREATE TRIGGER trg_store_workforce_snapshot_immutable
     BEFORE UPDATE OR DELETE ON rpt.store_workforce_snapshot
@@ -574,6 +1202,14 @@ CREATE TRIGGER trg_turnover_snapshot_immutable
     BEFORE UPDATE OR DELETE ON rpt.turnover_snapshot
     FOR EACH ROW EXECUTE FUNCTION rpt.prevent_snapshot_mutation();
 
+CREATE TRIGGER trg_employee_kpi_snapshot_immutable
+    BEFORE UPDATE OR DELETE ON rpt.employee_kpi_snapshot
+    FOR EACH ROW EXECUTE FUNCTION rpt.prevent_snapshot_mutation();
+
+CREATE TRIGGER trg_employee_performance_snapshot_immutable
+    BEFORE UPDATE OR DELETE ON rpt.employee_performance_snapshot
+    FOR EACH ROW EXECUTE FUNCTION rpt.prevent_snapshot_mutation();
+
 COMMENT ON SCHEMA ops IS 'Operational tables for organization, workforce, checklist and KPI transactions.';
 COMMENT ON SCHEMA rpt IS 'Immutable snapshot reporting tables.';
 COMMENT ON SCHEMA stg IS 'Staging area for external integrations before operational load.';
@@ -581,7 +1217,18 @@ COMMENT ON SCHEMA audit IS 'Audit and traceability tables for critical events.';
 
 COMMENT ON TABLE ops.employee_assignment_history IS 'Time-aware employee to store/position assignment history. Core source for active headcount and turnover calculations.';
 COMMENT ON TABLE ops.user_role_assignment IS 'RBAC assignments with scope-limited visibility at company, region or store level.';
+COMMENT ON TABLE ops.user_action_store_assignment IS 'Store-level action grants kept separate from role read scope so regional or audit users can read broadly but act only on assigned stores.';
+COMMENT ON TABLE ops.mobile_device_session IS 'Mobile device session registry for active/revoked app sessions. Refresh tokens remain IdP-owned in V1.';
+COMMENT ON TABLE ops.target_distribution_request IS 'Store-level target distribution requests that are submitted by store managers and approved by region-level oversight.';
+COMMENT ON TABLE ops.personnel_target_reference IS 'Approved personnel target references promoted from region-approved target distribution requests for scoring.';
+COMMENT ON TABLE ops.feed_post IS 'Scoped operational announcements and challenge posts. Challenge posts announce focus windows but do not calculate scores.';
+COMMENT ON TABLE ops.checklist_acknowledgement IS 'Store acknowledgement evidence for completed checklist instances.';
+COMMENT ON TABLE ops.kpi_score_profile_config IS 'Data-driven KPI scoring configuration for store/personnel score profiles, ownership matrix and grading bands.';
+COMMENT ON TABLE ops.kpi_config_version IS 'Immutable published KPI score configuration versions used to anchor reporting snapshots.';
 COMMENT ON TABLE ops.workforce_norm_plan IS 'Approved planned headcount and FTE targets used for norm vs actual workforce comparison.';
 COMMENT ON TABLE rpt.snapshot_run IS 'Parent record for every immutable reporting snapshot generation run.';
 COMMENT ON TABLE stg.import_batch IS 'Tracks lifecycle of each external data import batch.';
+COMMENT ON TABLE stg.master_data_bootstrap_batch IS 'Controlled store/personnel master-data bootstrap batches. Rows must be reviewed before live promotion.';
+COMMENT ON TABLE stg.master_data_bootstrap_row IS 'Raw and normalized master-data bootstrap rows with validation state, resolution evidence, and future promotion trace.';
 COMMENT ON TABLE audit.event_log IS 'Mandatory audit trail for critical business operations.';
+COMMENT ON TABLE audit.schema_migration IS 'Tracks SQL migration execution, checksums, status, and failure evidence.';

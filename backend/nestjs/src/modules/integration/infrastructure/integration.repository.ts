@@ -1,10 +1,32 @@
 import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { PoolClient } from "pg";
 import { RequestContextStore } from "../../../shared/request-context";
 import { DatabaseService } from "../../../shared/database/database.service";
 
 @Injectable()
 export class IntegrationRepository {
   constructor(private readonly databaseService: DatabaseService) {}
+
+  private async resolveAuditActorUserId(
+    actorUserId: string | null | undefined,
+    client?: PoolClient,
+  ) {
+    if (!actorUserId) {
+      return null;
+    }
+
+    const sql = `
+      SELECT user_id
+      FROM ops.user_account
+      WHERE user_id = $1::uuid
+      LIMIT 1
+    `;
+    const result = client
+      ? await client.query<{ user_id: string }>(sql, [actorUserId])
+      : await this.databaseService.query<{ user_id: string }>(sql, [actorUserId]);
+
+    return result.rows[0]?.user_id ?? null;
+  }
 
   private buildImportBatchFilters(
     input: {
@@ -150,9 +172,16 @@ export class IntegrationRepository {
     fileReference: string;
     actorUserId: string;
     idempotencyKey?: string;
+    sourceBatchId?: string;
+    sourcePayloadHash?: string;
+    sourceCapturedAt?: string;
+    sourceWindowStartedAt?: string;
+    sourceWindowEndedAt?: string;
     rows?: Record<string, unknown>[];
   }) {
     return this.databaseService.withTransaction(async (client) => {
+      const auditActorUserId = await this.resolveAuditActorUserId(input.actorUserId, client);
+
       if (input.idempotencyKey) {
         const existing = await client.query<{
           import_batch_id: string;
@@ -225,28 +254,103 @@ export class IntegrationRepository {
 
       const integrationSourceId = sourceResult.rows[0].integration_source_id;
 
+      if (input.sourceBatchId) {
+        const existingBySourceBatch = await client.query<{
+          import_batch_id: string;
+          started_at: string;
+          status: string;
+          integration_source_id: string;
+          record_count: number;
+          source_batch_id: string | null;
+          source_payload_hash: string | null;
+          source_captured_at: string | null;
+          source_window_started_at: string | null;
+          source_window_ended_at: string | null;
+        }>(
+          `
+            SELECT
+              import_batch_id,
+              started_at,
+              status,
+              integration_source_id,
+              record_count,
+              source_batch_id,
+              source_payload_hash,
+              source_captured_at,
+              source_window_started_at,
+              source_window_ended_at
+            FROM stg.import_batch
+            WHERE integration_source_id = $1::uuid
+              AND entity_type = $2
+              AND source_batch_id = $3
+            LIMIT 1
+          `,
+          [integrationSourceId, input.entityType, input.sourceBatchId],
+        );
+
+        if (existingBySourceBatch.rowCount && existingBySourceBatch.rows[0]) {
+          const found = existingBySourceBatch.rows[0];
+          return {
+            batchId: found.import_batch_id,
+            status: found.status,
+            startedAt: found.started_at,
+            integrationSourceId: found.integration_source_id,
+            sourceBatchId: found.source_batch_id,
+            sourcePayloadHash: found.source_payload_hash,
+            sourceCapturedAt: found.source_captured_at,
+            sourceWindowStartedAt: found.source_window_started_at,
+            sourceWindowEndedAt: found.source_window_ended_at,
+            acceptedRowCount: found.record_count,
+            reused: true,
+          };
+        }
+      }
+
       const batchResult = await client.query<{
         import_batch_id: string;
         started_at: string;
         status: string;
+        source_batch_id: string | null;
+        source_payload_hash: string | null;
+        source_captured_at: string | null;
+        source_window_started_at: string | null;
+        source_window_ended_at: string | null;
       }>(
         `
           INSERT INTO stg.import_batch (
             integration_source_id,
             entity_type,
             idempotency_key,
+            source_batch_id,
+            source_payload_hash,
+            source_captured_at,
+            source_window_started_at,
+            source_window_ended_at,
             status,
             raw_file_name,
             record_count,
             error_count
           )
-          VALUES ($1, $2, $3, 'pending', $4, 0, 0)
-          RETURNING import_batch_id, started_at, status
+          VALUES ($1, $2, $3, $4, $5, $6::timestamptz, $7::timestamptz, $8::timestamptz, 'pending', $9, 0, 0)
+          RETURNING
+            import_batch_id,
+            started_at,
+            status,
+            source_batch_id,
+            source_payload_hash,
+            source_captured_at,
+            source_window_started_at,
+            source_window_ended_at
         `,
         [
           integrationSourceId,
           input.entityType,
           input.idempotencyKey ?? null,
+          input.sourceBatchId ?? null,
+          input.sourcePayloadHash ?? null,
+          input.sourceCapturedAt ?? null,
+          input.sourceWindowStartedAt ?? null,
+          input.sourceWindowEndedAt ?? null,
           input.fileReference,
         ],
       );
@@ -266,13 +370,19 @@ export class IntegrationRepository {
           VALUES ($1, 'import_batch.created', 'stg.import_batch', $2::uuid, 'company', $3::jsonb)
         `,
         [
-          input.actorUserId,
+          auditActorUserId,
           batch.import_batch_id,
           JSON.stringify({
             correlationId: RequestContextStore.getCorrelationId(),
+            requestedActorUserId: input.actorUserId,
             sourceCode: input.sourceCode,
             entityType: input.entityType,
             fileReference: input.fileReference,
+            sourceBatchId: input.sourceBatchId ?? null,
+            sourcePayloadHash: input.sourcePayloadHash ?? null,
+            sourceCapturedAt: input.sourceCapturedAt ?? null,
+            sourceWindowStartedAt: input.sourceWindowStartedAt ?? null,
+            sourceWindowEndedAt: input.sourceWindowEndedAt ?? null,
           }),
         ],
       );
@@ -330,10 +440,12 @@ export class IntegrationRepository {
                   period_start,
                   period_end,
                   payload_json,
+                  row_hash,
+                  raw_row_reference,
                   normalized_status,
                   processed_flag
                 )
-                VALUES ($1::uuid, $2, $3, $4, $5::date, $6::date, $7::jsonb, 'pending', FALSE)
+                VALUES ($1::uuid, $2, $3, $4, $5::date, $6::date, $7::jsonb, $8, $9, 'pending', FALSE)
               `,
               [
                 batch.import_batch_id,
@@ -343,6 +455,8 @@ export class IntegrationRepository {
                 row["periodStart"] ? String(row["periodStart"]) : null,
                 row["periodEnd"] ? String(row["periodEnd"]) : null,
                 JSON.stringify(row),
+                row["rowHash"] ? String(row["rowHash"]) : null,
+                row["rawRowReference"] ? String(row["rawRowReference"]) : null,
               ],
             );
           }
@@ -456,63 +570,193 @@ export class IntegrationRepository {
         status: batch.status,
         startedAt: batch.started_at,
         integrationSourceId,
+        sourceBatchId: batch.source_batch_id,
+        sourcePayloadHash: batch.source_payload_hash,
+        sourceCapturedAt: batch.source_captured_at,
+        sourceWindowStartedAt: batch.source_window_started_at,
+        sourceWindowEndedAt: batch.source_window_ended_at,
         acceptedRowCount: input.rows?.length ?? 0,
         reused: false,
       };
     });
   }
 
-  async listIntegrationSources(input: {
+  async listExternalIdMapCandidates(input: {
+    entityType: "employee" | "store";
+    q?: string;
+    limit: number;
+  }) {
+    const search = `%${(input.q ?? "").trim()}%`;
+
+    if (input.entityType === "store") {
+      const result = await this.databaseService.query<{
+        internal_id: string;
+        label: string;
+        secondary_label: string;
+      }>(
+        `
+          SELECT
+            store_id::text AS internal_id,
+            store_name AS label,
+            CONCAT(store_code, ' / ', status) AS secondary_label
+          FROM ops.store
+          WHERE status = 'active'
+            AND (
+              $1 = '%%'
+              OR store_name ILIKE $1
+              OR store_code ILIKE $1
+            )
+          ORDER BY store_name ASC, store_code ASC
+          LIMIT $2
+        `,
+        [search, input.limit],
+      );
+
+      return result.rows;
+    }
+
+    const result = await this.databaseService.query<{
+      internal_id: string;
+      label: string;
+      secondary_label: string;
+    }>(
+      `
+        SELECT
+          employee_id::text AS internal_id,
+          TRIM(CONCAT(first_name, ' ', last_name)) AS label,
+          CONCAT(COALESCE(external_employee_ref, 'no external ref'), ' / ', employment_status)
+            AS secondary_label
+        FROM ops.employee
+        WHERE employment_status = 'active'
+          AND (
+            $1 = '%%'
+            OR first_name ILIKE $1
+            OR last_name ILIKE $1
+            OR external_employee_ref ILIKE $1
+            OR CONCAT(first_name, ' ', last_name) ILIKE $1
+          )
+        ORDER BY first_name ASC, last_name ASC, employee_id ASC
+        LIMIT $2
+      `,
+      [search, input.limit],
+    );
+
+    return result.rows;
+  }
+
+  async listKpiImportStoreExternalRefs(integrationSourceId: string) {
+    const result = await this.databaseService.query<{ external_ref: string }>(
+      `
+        SELECT DISTINCT external_ref
+        FROM (
+          SELECT s.store_name AS external_ref
+          FROM ops.store s
+          WHERE s.status = 'active'
+            AND s.kpi_import_enabled = TRUE
+
+          UNION
+
+          SELECT s.store_code AS external_ref
+          FROM ops.store s
+          WHERE s.status = 'active'
+            AND s.kpi_import_enabled = TRUE
+
+          UNION
+
+          SELECT map.external_id AS external_ref
+          FROM stg.external_id_map map
+          INNER JOIN ops.store s
+            ON s.store_id = map.internal_id
+          WHERE map.integration_source_id = $1::uuid
+            AND map.entity_type = 'store'
+            AND map.is_active = TRUE
+            AND s.status = 'active'
+            AND s.kpi_import_enabled = TRUE
+        ) refs
+        WHERE external_ref IS NOT NULL
+          AND BTRIM(external_ref) <> ''
+        ORDER BY external_ref ASC
+      `,
+      [integrationSourceId],
+    );
+
+    return result.rows;
+  }
+
+  async listKpiImportStoreScope(input: {
+    q?: string;
+    enabled?: boolean;
+    status?: "active" | "inactive" | "closed";
     limit?: number;
     offset?: number;
-    entityType?: string;
-    isActive?: boolean;
   }) {
     const conditions: string[] = [];
     const params: unknown[] = [];
 
-    if (input.entityType) {
-      params.push(input.entityType);
-      conditions.push(`entity_type = $${params.length}`);
+    const search = input.q?.trim();
+    if (search) {
+      params.push(`%${search}%`);
+      conditions.push(`(
+        s.store_name ILIKE $${params.length}
+        OR s.store_code ILIKE $${params.length}
+        OR r.region_name ILIKE $${params.length}
+      )`);
     }
 
-    if (typeof input.isActive === "boolean") {
-      params.push(input.isActive);
-      conditions.push(`is_active = $${params.length}`);
+    if (typeof input.enabled === "boolean") {
+      params.push(input.enabled);
+      conditions.push(`s.kpi_import_enabled = $${params.length}`);
+    }
+
+    if (input.status) {
+      params.push(input.status);
+      conditions.push(`s.status = $${params.length}`);
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
-
     const totalResult = await this.databaseService.query<{ total_count: string }>(
       `
         SELECT COUNT(*)::text AS total_count
-        FROM stg.integration_source
+        FROM ops.store s
+        LEFT JOIN ops.region r
+          ON r.region_id = s.region_id
         ${whereClause}
       `,
       params,
     );
 
+    const limit = input.limit ?? 50;
+    const offset = input.offset ?? 0;
+    const listParams = [...params, limit, offset];
     const result = await this.databaseService.query<{
-      integration_source_id: string;
-      source_code: string;
-      source_name: string;
-      entity_type: string;
-      is_active: boolean;
+      store_id: string;
+      store_code: string;
+      store_name: string;
+      store_type: string;
+      status: string;
+      kpi_import_enabled: boolean;
+      region_id: string | null;
+      region_name: string | null;
     }>(
       `
         SELECT
-          integration_source_id,
-          source_code,
-          source_name,
-          entity_type,
-          is_active
-        FROM stg.integration_source
+          s.store_id::text AS store_id,
+          s.store_code,
+          s.store_name,
+          s.store_type,
+          s.status,
+          s.kpi_import_enabled,
+          r.region_id::text AS region_id,
+          r.region_name
+        FROM ops.store s
+        LEFT JOIN ops.region r
+          ON r.region_id = s.region_id
         ${whereClause}
-        ORDER BY source_code ASC
+        ORDER BY s.store_name ASC, s.store_code ASC
         LIMIT $${params.length + 1}
         OFFSET $${params.length + 2}
       `,
-      [...params, input.limit ?? 50, input.offset ?? 0],
+      listParams,
     );
 
     return {
@@ -521,196 +765,81 @@ export class IntegrationRepository {
     };
   }
 
-  async listActiveIntegrationSources() {
+  async listStoreMasterRegions() {
     const result = await this.databaseService.query<{
-      integration_source_id: string;
-      source_code: string;
-      source_name: string;
-      entity_type: string;
-      is_active: boolean;
+      region_id: string;
+      region_code: string;
+      region_name: string;
     }>(
       `
         SELECT
-          integration_source_id,
-          source_code,
-          source_name,
-          entity_type,
-          is_active
-        FROM stg.integration_source
-        WHERE is_active = TRUE
-        ORDER BY source_code ASC
+          r.region_id::text AS region_id,
+          r.region_code,
+          r.region_name
+        FROM ops.region r
+        WHERE r.status = 'active'
+        ORDER BY r.region_name ASC, r.region_code ASC
       `,
     );
 
     return result.rows;
   }
 
-  async getIntegrationSourceByCodeAndEntity(sourceCode: string, entityType: string) {
-    const result = await this.databaseService.query<{
-      integration_source_id: string;
-      source_code: string;
-      source_name: string;
-      entity_type: string;
-      is_active: boolean;
-    }>(
-      `
-        SELECT
-          integration_source_id,
-          source_code,
-          source_name,
-          entity_type,
-          is_active
-        FROM stg.integration_source
-        WHERE source_code = $1
-          AND entity_type = $2
-        LIMIT 1
-      `,
-      [sourceCode, entityType],
-    );
-
-    return result.rows[0] ?? null;
-  }
-
-  async getIntegrationSourceById(sourceId: string) {
-    const result = await this.databaseService.query<{
-      integration_source_id: string;
-      source_code: string;
-      source_name: string;
-      entity_type: string;
-      is_active: boolean;
-    }>(
-      `
-        SELECT
-          integration_source_id,
-          source_code,
-          source_name,
-          entity_type,
-          is_active
-        FROM stg.integration_source
-        WHERE integration_source_id = $1::uuid
-        LIMIT 1
-      `,
-      [sourceId],
-    );
-
-    return result.rows[0] ?? null;
-  }
-
-  async createIntegrationSource(input: {
-    sourceCode: string;
-    sourceName: string;
-    entityType: string;
+  async updateKpiImportStoreScope(input: {
+    storeId: string;
+    storeType: "company" | "franchise" | "operator";
+    regionId: string;
+    status: "active" | "inactive" | "closed";
+    kpiImportEnabled: boolean;
     actorUserId: string;
   }) {
     return this.databaseService.withTransaction(async (client) => {
+      const auditActorUserId = await this.resolveAuditActorUserId(input.actorUserId, client);
       const result = await client.query<{
-        integration_source_id: string;
-        source_code: string;
-        source_name: string;
-        entity_type: string;
-        is_active: boolean;
+        store_id: string;
+        store_code: string;
+        store_name: string;
+        store_type: string;
+        status: string;
+        kpi_import_enabled: boolean;
+        region_id: string | null;
+        region_name: string | null;
       }>(
         `
-          INSERT INTO stg.integration_source (
-            source_code,
-            source_name,
-            entity_type
-          )
-          VALUES ($1, $2, $3)
+          UPDATE ops.store s
+          SET
+            store_type = $2,
+            region_id = $3::uuid,
+            status = $4,
+            kpi_import_enabled = $5
+          FROM ops.region r
+          WHERE s.store_id = $1::uuid
+            AND r.region_id = $3::uuid
+            AND r.status = 'active'
           RETURNING
-            integration_source_id,
-            source_code,
-            source_name,
-            entity_type,
-            is_active
-        `,
-        [input.sourceCode, input.sourceName, input.entityType],
-      );
-
-      const source = result.rows[0];
-
-      await client.query(
-        `
-          INSERT INTO audit.event_log (
-            actor_user_id,
-            event_type,
-            entity_name,
-            entity_id,
-            scope_type,
-            metadata_json
-          )
-          VALUES ($1::uuid, 'integration_source.created', 'stg.integration_source', $2::uuid, 'company', $3::jsonb)
+            s.store_id::text AS store_id,
+            s.store_code,
+            s.store_name,
+            s.store_type,
+            s.status,
+            s.kpi_import_enabled,
+            r.region_id::text AS region_id,
+            r.region_name
         `,
         [
-          input.actorUserId,
-          source.integration_source_id,
-          JSON.stringify({
-            correlationId: RequestContextStore.getCorrelationId(),
-            sourceCode: source.source_code,
-            sourceName: source.source_name,
-            entityType: source.entity_type,
-          }),
+          input.storeId,
+          input.storeType,
+          input.regionId,
+          input.status,
+          input.kpiImportEnabled,
         ],
       );
 
-      return source;
-    });
-  }
-
-  async updateIntegrationSourceActiveState(input: {
-    sourceId: string;
-    isActive: boolean;
-    actorUserId: string;
-  }) {
-    return this.databaseService.withTransaction(async (client) => {
-      const existing = await client.query<{
-        integration_source_id: string;
-        source_code: string;
-        source_name: string;
-        entity_type: string;
-        is_active: boolean;
-      }>(
-        `
-          SELECT
-            integration_source_id,
-            source_code,
-            source_name,
-            entity_type,
-            is_active
-          FROM stg.integration_source
-          WHERE integration_source_id = $1::uuid
-          LIMIT 1
-        `,
-        [input.sourceId],
-      );
-
-      if (existing.rowCount === 0) {
+      const store = result.rows[0] ?? null;
+      if (!store) {
         return null;
       }
 
-      const result = await client.query<{
-        integration_source_id: string;
-        source_code: string;
-        source_name: string;
-        entity_type: string;
-        is_active: boolean;
-      }>(
-        `
-          UPDATE stg.integration_source
-          SET is_active = ${input.isActive ? "TRUE" : "FALSE"}
-          WHERE integration_source_id = $1::uuid
-          RETURNING
-            integration_source_id,
-            source_code,
-            source_name,
-            entity_type,
-            is_active
-        `,
-        [input.sourceId],
-      );
-
-      const source = result.rows[0];
-
       await client.query(
         `
           INSERT INTO audit.event_log (
@@ -721,58 +850,24 @@ export class IntegrationRepository {
             scope_type,
             metadata_json
           )
-          VALUES ($1::uuid, $2, 'stg.integration_source', $3::uuid, 'company', $4::jsonb)
+          VALUES ($1::uuid, 'store_master_data.updated', 'ops.store', $2::uuid, 'company', $3::jsonb)
         `,
         [
-          input.actorUserId,
-          input.isActive ? "integration_source.reactivated" : "integration_source.deactivated",
-          input.sourceId,
+          auditActorUserId,
+          input.storeId,
           JSON.stringify({
             correlationId: RequestContextStore.getCorrelationId(),
-            sourceCode: source.source_code,
-            entityType: source.entity_type,
-            isActive: source.is_active,
+            requestedActorUserId: input.actorUserId,
+            storeType: input.storeType,
+            regionId: input.regionId,
+            status: input.status,
+            kpiImportEnabled: input.kpiImportEnabled,
           }),
         ],
       );
 
-      return source;
+      return store;
     });
-  }
-
-  async getIntegrationSourceAudit(sourceId: string) {
-    const result = await this.databaseService.query<{
-      event_log_id: string;
-      occurred_at: string;
-      actor_user_id: string | null;
-      event_type: string;
-      metadata_json: Record<string, unknown>;
-    }>(
-      `
-        SELECT event_log_id, occurred_at, actor_user_id, event_type, metadata_json
-        FROM audit.event_log
-        WHERE entity_name = 'stg.integration_source'
-          AND entity_id = $1::uuid
-        ORDER BY occurred_at ASC, event_log_id ASC
-      `,
-      [sourceId],
-    );
-
-    return result.rows;
-  }
-
-  async countActiveImportBatchesForSource(sourceId: string) {
-    const result = await this.databaseService.query<{ active_batch_count: string }>(
-      `
-        SELECT COUNT(*)::text AS active_batch_count
-        FROM stg.import_batch
-        WHERE integration_source_id = $1::uuid
-          AND status IN ('pending', 'queued', 'processing')
-      `,
-      [sourceId],
-    );
-
-    return Number(result.rows[0]?.active_batch_count ?? 0);
   }
 
   async listImportBatches(input: {
@@ -804,6 +899,11 @@ export class IntegrationRepository {
       source_code: string;
       source_name: string;
       entity_type: string;
+      source_batch_id: string | null;
+      source_payload_hash: string | null;
+      source_captured_at: string | null;
+      source_window_started_at: string | null;
+      source_window_ended_at: string | null;
       started_at: string;
       finished_at: string | null;
       status: string;
@@ -820,6 +920,11 @@ export class IntegrationRepository {
           src.source_code,
           src.source_name,
           entity_type,
+          source_batch_id,
+          source_payload_hash,
+          source_captured_at,
+          source_window_started_at,
+          source_window_ended_at,
           started_at,
           finished_at,
           status,
@@ -1068,6 +1173,11 @@ export class IntegrationRepository {
           src.source_code,
           src.source_name,
           b.entity_type,
+          b.source_batch_id,
+          b.source_payload_hash,
+          b.source_captured_at,
+          b.source_window_started_at,
+          b.source_window_ended_at,
           b.started_at,
           b.finished_at,
           b.status,
@@ -1091,6 +1201,11 @@ export class IntegrationRepository {
           fb.source_code,
           fb.source_name,
           fb.entity_type,
+          fb.source_batch_id,
+          fb.source_payload_hash,
+          fb.source_captured_at,
+          fb.source_window_started_at,
+          fb.source_window_ended_at,
           fb.started_at,
           fb.finished_at,
           fb.status,
@@ -1116,6 +1231,11 @@ export class IntegrationRepository {
           fb.source_code,
           fb.source_name,
           fb.entity_type,
+          fb.source_batch_id,
+          fb.source_payload_hash,
+          fb.source_captured_at,
+          fb.source_window_started_at,
+          fb.source_window_ended_at,
           fb.started_at,
           fb.finished_at,
           fb.status,
@@ -1132,6 +1252,11 @@ export class IntegrationRepository {
           source_code,
           source_name,
           entity_type,
+          source_batch_id,
+          source_payload_hash,
+          source_captured_at,
+          source_window_started_at,
+          source_window_ended_at,
           started_at,
           finished_at,
           status,
@@ -1189,6 +1314,11 @@ export class IntegrationRepository {
       source_code: string;
       source_name: string;
       entity_type: string;
+      source_batch_id: string | null;
+      source_payload_hash: string | null;
+      source_captured_at: string | null;
+      source_window_started_at: string | null;
+      source_window_ended_at: string | null;
       started_at: string;
       finished_at: string | null;
       status: string;
@@ -1234,6 +1364,11 @@ export class IntegrationRepository {
         | "position"
         | "company"
         | "region";
+      source_batch_id: string | null;
+      source_payload_hash: string | null;
+      source_captured_at: string | null;
+      source_window_started_at: string | null;
+      source_window_ended_at: string | null;
       started_at: string;
       finished_at: string | null;
       status: string;
@@ -1250,6 +1385,11 @@ export class IntegrationRepository {
           src.source_code,
           src.source_name,
           b.entity_type,
+          b.source_batch_id,
+          b.source_payload_hash,
+          b.source_captured_at,
+          b.source_window_started_at,
+          b.source_window_ended_at,
           b.started_at,
           b.finished_at,
           b.status,
@@ -1298,6 +1438,62 @@ export class IntegrationRepository {
     return result.rows;
   }
 
+  async getImportBatchLineageSummary(batchId: string) {
+    const result = await this.databaseService.query<{
+      row_hash_count: string;
+      raw_row_reference_count: string;
+      sample_row_hash: string | null;
+      sample_raw_row_reference: string | null;
+    }>(
+      `
+        SELECT
+          COUNT(*) FILTER (WHERE row_hash IS NOT NULL)::text AS row_hash_count,
+          COUNT(*) FILTER (WHERE raw_row_reference IS NOT NULL)::text AS raw_row_reference_count,
+          MIN(row_hash) FILTER (WHERE row_hash IS NOT NULL) AS sample_row_hash,
+          MIN(raw_row_reference) FILTER (WHERE raw_row_reference IS NOT NULL) AS sample_raw_row_reference
+        FROM stg.kpi_raw
+        WHERE import_batch_id = $1
+      `,
+      [batchId],
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  async getImportBatchQualityIssueRows(
+    batchId: string,
+    entityType:
+      | "employee"
+      | "store"
+      | "kpi"
+      | "assignment"
+      | "position"
+      | "company"
+      | "region",
+  ) {
+    const metadata = this.getRawTableMetadata(entityType);
+    const result = await this.databaseService.query<{
+      normalized_status: string;
+      validation_error: string | null;
+      row_count: string;
+    }>(
+      `
+        SELECT
+          normalized_status,
+          validation_error,
+          COUNT(*)::text AS row_count
+        FROM ${metadata.tableName}
+        WHERE import_batch_id = $1
+          AND normalized_status IN ('validation_failed', 'retryable_error')
+        GROUP BY validation_error, normalized_status
+        ORDER BY COUNT(*) DESC, normalized_status ASC, validation_error ASC
+      `,
+      [batchId],
+    );
+
+    return result.rows;
+  }
+
   async getImportBatchErrors(input: {
     batchId: string;
     entityType:
@@ -1330,6 +1526,11 @@ export class IntegrationRepository {
     const result = await this.databaseService.query<{
       row_id: string;
       source_ref: string;
+      store_external_ref: string | null;
+      employee_external_ref: string | null;
+      payload_json: Record<string, unknown> | null;
+      row_hash: string | null;
+      raw_row_reference: string | null;
       normalized_status: string;
       validation_error: string | null;
       processed_at: string | null;
@@ -1338,6 +1539,11 @@ export class IntegrationRepository {
         SELECT
           ${metadata.rowIdColumn} AS row_id,
           ${metadata.sourceRefColumn} AS source_ref,
+          ${input.entityType === "kpi" ? "store_external_ref" : "NULL::text"} AS store_external_ref,
+          ${input.entityType === "kpi" ? "employee_external_ref" : "NULL::text"} AS employee_external_ref,
+          payload_json,
+          ${input.entityType === "kpi" ? "row_hash" : "NULL::text"} AS row_hash,
+          ${input.entityType === "kpi" ? "raw_row_reference" : "NULL::text"} AS raw_row_reference,
           normalized_status,
           validation_error,
           processed_at
@@ -1441,6 +1647,8 @@ export class IntegrationRepository {
     entityType: string;
     retryCount: number;
   }) {
+    const auditActorUserId = await this.resolveAuditActorUserId(input.actorUserId);
+
     await this.databaseService.query(
       `
         INSERT INTO audit.event_log (
@@ -1454,12 +1662,50 @@ export class IntegrationRepository {
         VALUES ($1::uuid, 'import_batch.retried', 'stg.import_batch', $2::uuid, 'company', $3::jsonb)
       `,
       [
-        input.actorUserId,
+        auditActorUserId,
         input.batchId,
         JSON.stringify({
           correlationId: RequestContextStore.getCorrelationId(),
+          requestedActorUserId: input.actorUserId,
           entityType: input.entityType,
           retryCount: input.retryCount,
+        }),
+      ],
+    );
+  }
+
+  async recordExternalIdMappingApproved(input: {
+    actorUserId: string;
+    integrationSourceId: string;
+    entityType: string;
+    externalId: string;
+    internalId: string;
+    internalTableName: string;
+  }) {
+    const auditActorUserId = await this.resolveAuditActorUserId(input.actorUserId);
+
+    await this.databaseService.query(
+      `
+        INSERT INTO audit.event_log (
+          actor_user_id,
+          event_type,
+          entity_name,
+          entity_id,
+          scope_type,
+          metadata_json
+        )
+        VALUES ($1::uuid, 'external_id_mapping.approved', 'stg.external_id_map', NULL, 'company', $2::jsonb)
+      `,
+      [
+        auditActorUserId,
+        JSON.stringify({
+          correlationId: RequestContextStore.getCorrelationId(),
+          requestedActorUserId: input.actorUserId,
+          integrationSourceId: input.integrationSourceId,
+          entityType: input.entityType,
+          externalId: input.externalId,
+          internalId: input.internalId,
+          internalTableName: input.internalTableName,
         }),
       ],
     );

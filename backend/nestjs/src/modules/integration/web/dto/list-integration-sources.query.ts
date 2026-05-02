@@ -20,6 +20,10 @@ export class ListIntegrationSourcesQueryDto {
   entityType?: string;
 
   @IsOptional()
+  @IsIn(["nebim_v3", "power_bi", "manual", "other"])
+  sourceSystem?: string;
+
+  @IsOptional()
   @Type(() => Boolean)
   @IsBoolean()
   isActive?: boolean;

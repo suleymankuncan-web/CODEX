@@ -17,31 +17,35 @@ export class StoreOpsRepository {
     const clauses: string[] = [];
     const params: unknown[] = [];
 
-    if (input.requestedCompanyId) {
-      params.push(input.requestedCompanyId);
-      clauses.push(`s.company_id = $${params.length}`);
+    if (input.storeIds.length > 0) {
+      params.push(input.storeIds);
+      clauses.push(`s.store_id = ANY($${params.length}::uuid[])`);
+    } else if (input.regionIds.length > 0) {
+      params.push(input.regionIds);
+      clauses.push(`s.region_id = ANY($${params.length}::uuid[])`);
     } else if (input.companyIds.length > 0) {
       params.push(input.companyIds);
       clauses.push(`s.company_id = ANY($${params.length}::uuid[])`);
+    } else {
+      clauses.push("FALSE");
+    }
+
+    if (input.requestedCompanyId) {
+      params.push(input.requestedCompanyId);
+      clauses.push(`s.company_id = $${params.length}`);
     }
 
     if (input.requestedRegionId) {
       params.push(input.requestedRegionId);
       clauses.push(`s.region_id = $${params.length}`);
-    } else if (input.regionIds.length > 0) {
-      params.push(input.regionIds);
-      clauses.push(`s.region_id = ANY($${params.length}::uuid[])`);
     }
 
     if (input.requestedStoreId) {
       params.push(input.requestedStoreId);
       clauses.push(`s.store_id = $${params.length}`);
-    } else if (input.storeIds.length > 0) {
-      params.push(input.storeIds);
-      clauses.push(`s.store_id = ANY($${params.length}::uuid[])`);
     }
 
-    const whereClause = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
+    const whereClause = `WHERE ${clauses.join(" AND ")}`;
 
     const result = await this.databaseService.query<{
       store_id: string;
@@ -64,6 +68,59 @@ export class StoreOpsRepository {
         ORDER BY s.store_name ASC
       `,
       params,
+    );
+
+    return result.rows;
+  }
+
+  async listStorePersonnelTargetingRows(input: { storeId: string }) {
+    const result = await this.databaseService.query<{
+      employee_id: string;
+      first_name: string;
+      last_name: string;
+      external_employee_ref: string | null;
+      period_start: string | null;
+      period_end: string | null;
+      net_sales_value: string | null;
+    }>(
+      `
+        WITH latest_period AS (
+          SELECT
+            ka.period_start,
+            ka.period_end
+          FROM ops.kpi_actual ka
+          INNER JOIN ops.kpi_definition kd
+            ON kd.kpi_id = ka.kpi_id
+          WHERE ka.scope_type = 'employee'
+            AND ka.store_id = $1::uuid
+            AND ka.period_type = 'monthly'
+            AND kd.kpi_code = 'NET_SALES'
+          ORDER BY ka.period_start DESC, ka.period_end DESC
+          LIMIT 1
+        )
+        SELECT
+          e.employee_id,
+          e.first_name,
+          e.last_name,
+          e.external_employee_ref,
+          lp.period_start,
+          lp.period_end,
+          ka.actual_value::text AS net_sales_value
+        FROM latest_period lp
+        INNER JOIN ops.kpi_actual ka
+          ON ka.scope_type = 'employee'
+          AND ka.store_id = $1::uuid
+          AND ka.period_type = 'monthly'
+          AND ka.period_start = lp.period_start
+          AND ka.period_end = lp.period_end
+        INNER JOIN ops.kpi_definition kd
+          ON kd.kpi_id = ka.kpi_id
+          AND kd.kpi_code = 'NET_SALES'
+        INNER JOIN ops.employee e
+          ON e.employee_id = ka.employee_id
+        ORDER BY e.first_name ASC, e.last_name ASC, e.employee_id ASC
+      `,
+      [input.storeId],
     );
 
     return result.rows;

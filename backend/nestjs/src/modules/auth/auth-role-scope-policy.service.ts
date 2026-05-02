@@ -54,7 +54,22 @@ export class AuthRoleScopePolicyService {
     }
   }
 
-  validateRoleScope(roleScopeType: string, assignmentScopeType: ScopeType) {
+  validateRoleScope(input: {
+    roleCode: string;
+    roleScopeType: string;
+    assignmentScopeType: ScopeType;
+  }) {
+    if (
+      input.roleCode === "REGION_MANAGER" &&
+      input.roleScopeType === "region" &&
+      input.assignmentScopeType === "store"
+    ) {
+      return;
+    }
+
+    const roleScopeType = input.roleScopeType;
+    const assignmentScopeType = input.assignmentScopeType;
+
     if (roleScopeType !== assignmentScopeType) {
       throw semanticValidation("Role scope type does not match assignment scope");
     }

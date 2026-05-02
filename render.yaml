@@ -1,0 +1,47 @@
+services:
+  - type: web
+    name: hr-axis-api
+    runtime: node
+    plan: free
+    region: frankfurt
+    rootDir: backend/nestjs
+    branch: codex/clerk-auth-db-lifecycle
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: node dist/src/main.js
+    healthCheckPath: /api/health/live
+    autoDeployTrigger: off
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: APP_NAME
+        value: hr-axis-staging-api
+      - key: DATABASE_URL
+        sync: false
+      - key: DB_POOL_MAX
+        value: "5"
+      - key: DB_SSL_MODE
+        value: require
+      - key: AUTH_MODE
+        value: jwt
+      - key: AUTH_PROVIDER_KEY
+        value: clerk
+      - key: ALLOW_MOCK_AUTH
+        value: "false"
+      - key: JWT_ISSUER
+        value: https://relative-gazelle-47.clerk.accounts.dev
+      - key: JWT_JWKS_URL
+        value: https://relative-gazelle-47.clerk.accounts.dev/.well-known/jwks.json
+      - key: JWT_AUDIENCE
+        value: hr-axis-api
+      - key: AUTH_CLIENT_ID
+        value: pk_test_cmVsYXRpdmUtZ2F6ZWxsZS00Ny5jbGVyay5hY2NvdW50cy5kZXYk
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://staging.hr-axis.com
+      - key: RATE_LIMIT_WINDOW_MS
+        value: "60000"
+      - key: RATE_LIMIT_MAX
+        value: "120"
+      - key: QUEUE_BACKEND
+        value: in-memory
+      - key: DAILY_CLOSURE_AUTOMATION_ENABLED
+        value: "false"

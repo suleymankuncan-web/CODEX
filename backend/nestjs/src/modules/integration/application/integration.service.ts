@@ -4,12 +4,34 @@ import { ImportBatchJobPayload } from "../../../shared/jobs/job-payloads";
 import { JOB_DISPATCHER } from "../../../shared/jobs/jobs.constants";
 import { MaterializationService } from "./materialization.service";
 import { IntegrationRepository } from "../infrastructure/integration.repository";
+import { IntegrationSourceRepository } from "../infrastructure/integration-source.repository";
+import { KpiImportNormalizationService } from "./kpi-import-normalization.service";
+import { IntegrationSchedulerService } from "./integration-scheduler.service";
+import { ExternalIdMappingService } from "./external-id-mapping.service";
 import {
   buildCommandResponse,
   buildListResponse,
 } from "../../../shared/http/response-builders";
 import { mapAuditEvent } from "../../../shared/audit/audit-event.mapper";
 import { logStructuredMessage } from "../../../shared/structured-log";
+import {
+  type ImportDataQualityIssue,
+  type ImportDataQualityIssueCode,
+  classifyImportDataQualityIssue,
+  getImportDataQualityIssue,
+  IMPORT_DATA_QUALITY_ISSUES,
+} from "./import-data-quality";
+
+type SupportedEntityType =
+  | "employee"
+  | "store"
+  | "kpi"
+  | "assignment"
+  | "position"
+  | "company"
+  | "region";
+
+type SupportedSourceSystem = "nebim_v3" | "power_bi" | "manual" | "other";
 
 @Injectable()
 export class IntegrationService {
@@ -18,7 +40,11 @@ export class IntegrationService {
 
   constructor(
     private readonly integrationRepository: IntegrationRepository,
+    private readonly integrationSourceRepository: IntegrationSourceRepository,
     private readonly materializationService: MaterializationService,
+    private readonly kpiImportNormalizationService: KpiImportNormalizationService,
+    private readonly integrationSchedulerService: IntegrationSchedulerService,
+    private readonly externalIdMappingService: ExternalIdMappingService,
     @Inject(JOB_DISPATCHER)
     private readonly jobDispatcher: JobDispatcher,
   ) {}
@@ -35,9 +61,36 @@ export class IntegrationService {
       | "region";
     fileReference: string;
     actorUserId: string;
+    idempotencyKey?: string;
+    sourceBatchId?: string;
+    sourcePayloadHash?: string;
+    sourceCapturedAt?: string;
+    sourceWindowStartedAt?: string;
+    sourceWindowEndedAt?: string;
     rows?: Record<string, unknown>[];
   }) {
-    const batch = await this.integrationRepository.createImportBatch(input);
+    let rows = input.rows;
+    if (input.entityType === "kpi" && input.rows?.length) {
+      const source = await this.integrationSourceRepository.getIntegrationSourceByCodeAndEntity(
+        input.sourceCode,
+        input.entityType,
+      );
+
+      if (source) {
+        rows = this.kpiImportNormalizationService.normalize({
+          sourceSystem: source.source_system as "nebim_v3" | "power_bi" | "manual" | "other",
+          sourceCapturedAt: input.sourceCapturedAt,
+          sourceWindowStartedAt: input.sourceWindowStartedAt,
+          sourceWindowEndedAt: input.sourceWindowEndedAt,
+          rows: input.rows,
+        });
+      }
+    }
+
+    const batch = await this.integrationRepository.createImportBatch({
+      ...input,
+      rows,
+    });
 
     const job = batch.reused
       ? { status: "queued" as const, jobType: "import-batch" as const, backend: "reused" }
@@ -55,6 +108,8 @@ export class IntegrationService {
       jobId: job.jobId ?? null,
       sourceCode: input.sourceCode,
       entityType: input.entityType,
+      sourceBatchId: input.sourceBatchId ?? null,
+      sourceCapturedAt: input.sourceCapturedAt ?? null,
       queueBackend: job.backend,
       queueName: job.queueName ?? null,
       reused: batch.reused,
@@ -81,9 +136,10 @@ export class IntegrationService {
     limit?: number;
     offset?: number;
     entityType?: string;
+    sourceSystem?: string;
     isActive?: boolean;
   }) {
-    const result = await this.integrationRepository.listIntegrationSources(input);
+    const result = await this.integrationSourceRepository.listIntegrationSources(input);
 
     return buildListResponse(
       result.rows.map((item) => this.mapIntegrationSource(item)),
@@ -102,9 +158,16 @@ export class IntegrationService {
       | "position"
       | "company"
       | "region";
+    sourceSystem: "nebim_v3" | "power_bi" | "manual" | "other";
+    stateModel: "latest_state" | "closed_period";
+    pollEnabled?: boolean;
+    pollIntervalMinutes?: number;
+    pollWindowStartLocal?: string;
+    pollWindowEndLocal?: string;
+    pollTimezone?: string;
     actorUserId: string;
   }) {
-    const existing = await this.integrationRepository.getIntegrationSourceByCodeAndEntity(
+    const existing = await this.integrationSourceRepository.getIntegrationSourceByCodeAndEntity(
       input.sourceCode,
       input.entityType,
     );
@@ -114,7 +177,7 @@ export class IntegrationService {
       );
     }
 
-    const source = await this.integrationRepository.createIntegrationSource(input);
+    const source = await this.integrationSourceRepository.createIntegrationSource(input);
 
     return buildCommandResponse({
       status: "created",
@@ -126,7 +189,7 @@ export class IntegrationService {
   }
 
   async deactivateIntegrationSource(sourceId: string, actorUserId: string) {
-    const activeBatchCount = await this.integrationRepository.countActiveImportBatchesForSource(
+    const activeBatchCount = await this.integrationSourceRepository.countActiveImportBatchesForSource(
       sourceId,
     );
     if (activeBatchCount > 0) {
@@ -135,7 +198,7 @@ export class IntegrationService {
       );
     }
 
-    const source = await this.integrationRepository.updateIntegrationSourceActiveState({
+    const source = await this.integrationSourceRepository.updateIntegrationSourceActiveState({
       sourceId,
       isActive: false,
       actorUserId,
@@ -155,7 +218,7 @@ export class IntegrationService {
   }
 
   async reactivateIntegrationSource(sourceId: string, actorUserId: string) {
-    const source = await this.integrationRepository.updateIntegrationSourceActiveState({
+    const source = await this.integrationSourceRepository.updateIntegrationSourceActiveState({
       sourceId,
       isActive: true,
       actorUserId,
@@ -174,14 +237,180 @@ export class IntegrationService {
     });
   }
 
+  async updateIntegrationSourceSchedule(
+    sourceId: string,
+    input: {
+      pollEnabled?: boolean;
+      pollIntervalMinutes?: number;
+      pollWindowStartLocal?: string;
+      pollWindowEndLocal?: string;
+      pollTimezone?: string;
+    },
+    actorUserId: string,
+  ) {
+    const source = await this.integrationSourceRepository.updateIntegrationSourceSchedule({
+      sourceId,
+      ...input,
+      actorUserId,
+    });
+
+    if (!source) {
+      throw new NotFoundException(`Integration source not found: ${sourceId}`);
+    }
+
+    return buildCommandResponse({
+      status: "updated",
+      message: "Integration source schedule updated",
+      data: {
+        source: this.mapIntegrationSource(source),
+      },
+    });
+  }
+
+  async listDueIntegrationSources(referenceAt?: string) {
+    const rows = await this.integrationSchedulerService.listDueSources(referenceAt);
+    return buildListResponse(rows, { total: rows.length });
+  }
+
+  async getImportPayloadTemplate(input?: {
+    entityType?: SupportedEntityType;
+    sourceSystem?: SupportedSourceSystem;
+  }) {
+    const entityType = input?.entityType ?? "kpi";
+    const sourceSystem = input?.sourceSystem ?? "nebim_v3";
+
+    if (entityType !== "kpi") {
+      return {
+        entityType,
+        sourceSystem,
+        canonicalContract: this.getCanonicalKpiContract(),
+        note: "Sample payload templates are currently productized for KPI imports first.",
+        requestBody: {
+          sourceCode: `${sourceSystem}-${entityType}`,
+          entityType,
+          fileReference: `${sourceSystem}-${entityType}-sample.json`,
+          sourceBatchId: `${sourceSystem}-${entityType}-2026-04-22T10:30`,
+          sourceCapturedAt: "2026-04-22T10:30:00.000Z",
+          sourceWindowStartedAt: "2026-04-22T10:00:00.000Z",
+          sourceWindowEndedAt: "2026-04-22T10:30:00.000Z",
+          rows: [],
+        },
+      };
+    }
+
+    const requestBody =
+      sourceSystem === "power_bi"
+        ? {
+            sourceCode: "power-bi-kpi",
+            entityType: "kpi",
+            fileReference: "power-bi-kpi-sample.json",
+            sourceBatchId: "power-bi-kpi-2026-04-22T10:30",
+            sourceCapturedAt: "2026-04-22T10:30:00.000Z",
+            sourceWindowStartedAt: "2026-04-22T10:00:00.000Z",
+            sourceWindowEndedAt: "2026-04-22T10:30:00.000Z",
+            rows: [
+              {
+                sellerCode: "S-100",
+                storeCode: "M-10",
+                atv: 5200,
+                upt: 3.2,
+                netSales: 25000,
+              },
+              {
+                storeCode: "M-10",
+                conversionRate: 0.15,
+              },
+            ],
+          }
+        : {
+            sourceCode: "nebim-kpi",
+            entityType: "kpi",
+            fileReference: "nebim-kpi-sample.json",
+            sourceBatchId: "nebim-kpi-2026-04-22T10:30",
+            sourceCapturedAt: "2026-04-22T10:30:00.000Z",
+            sourceWindowStartedAt: "2026-04-22T10:00:00.000Z",
+            sourceWindowEndedAt: "2026-04-22T10:30:00.000Z",
+            rows: [
+              {
+                saticiKodu: "S-100",
+                magazaKodu: "M-10",
+                atv: 5200,
+                upt: 3.2,
+                netTutar: 25000,
+              },
+              {
+                magazaKodu: "M-10",
+                cr: 0.15,
+              },
+            ],
+          };
+
+    return {
+      entityType,
+      sourceSystem,
+      canonicalContract: this.getCanonicalKpiContract(),
+      normalizedBehavior: [
+        "ATV, UPT, NET_SALES employee scope olarak normalize edilir.",
+        "CR store scope olarak normalize edilir.",
+        "sourceBatchId aynı gelirse batch reuse edilir.",
+        "Yeni veri aynı KPI/scope/donem icin gelirse live state overwrite edilir.",
+      ],
+      requestBody,
+    };
+  }
+
+  private getCanonicalKpiContract() {
+    return {
+      envelopeFields: [
+        "sourceCode",
+        "entityType",
+        "fileReference",
+        "idempotencyKey",
+        "sourceBatchId",
+        "sourcePayloadHash",
+        "sourceCapturedAt",
+        "sourceWindowStartedAt",
+        "sourceWindowEndedAt",
+      ],
+      canonicalKpiRowFields: [
+        "kpiCode",
+        "sourceMetricId",
+        "scopeType",
+        "storeExternalRef",
+        "employeeExternalRef",
+        "actualValue",
+        "targetValue",
+        "periodType",
+        "periodStart",
+        "periodEnd",
+        "sourceCapturedAt",
+        "rowHash",
+        "rawRowReference",
+        "sourceRow",
+      ],
+      importedMetricCodes: ["NET_SALES", "TICKET_COUNT", "ITEM_COUNT", "FF", "UPT", "ATV", "CR"],
+      derivedMetricCodes: ["TARGET_ACHIEVEMENT", "WEIGHTED_PERSONNEL_SCORE", "WEIGHTED_STORE_SCORE"],
+      checklistMetricCodes: ["BM_CHECKLIST", "VM_CHECKLIST"],
+      dataQualityIssueCodes: IMPORT_DATA_QUALITY_ISSUES.map((issue) => issue.code),
+      rules: [
+        "employeeExternalRef can be empty only for store-scoped metrics",
+        "source adapters map external fields into canonical rows before scoring",
+        "rowHash is generated from the stable source row payload when the adapter does not provide one",
+        "rawRowReference is a readable sourceSystem/metric/period/store/personnel trace key",
+      ],
+    };
+  }
+
   async getIntegrationLookups() {
-    const activeSources = await this.integrationRepository.listActiveIntegrationSources();
+    const activeSources = await this.integrationSourceRepository.listActiveIntegrationSources();
     const entityTypes = this.getSupportedEntityTypes();
     const activeSourceOptions = activeSources.map((item) => ({
       sourceId: item.integration_source_id,
       sourceCode: item.source_code,
       sourceName: item.source_name,
       entityType: item.entity_type,
+      sourceSystem: item.source_system,
+      stateModel: item.state_model,
     }));
     const sourcesByEntityType = activeSources.reduce<
       Record<string, Array<{ sourceId: string; sourceCode: string; sourceName: string }>>
@@ -213,6 +442,16 @@ export class IntegrationService {
           label: `${item.sourceCode} - ${item.sourceName}`,
           entityType: item.entityType,
           sourceCode: item.sourceCode,
+          sourceSystem: item.sourceSystem,
+          stateModel: item.stateModel,
+        })),
+        sourceSystems: this.getSupportedSourceSystems().map((sourceSystem) => ({
+          value: sourceSystem,
+          label: sourceSystem,
+        })),
+        stateModels: this.getSupportedStateModels().map((stateModel) => ({
+          value: stateModel,
+          label: stateModel,
         })),
       },
       meta: {
@@ -222,14 +461,108 @@ export class IntegrationService {
     };
   }
 
+  async listExternalIdMapCandidates(input: {
+    entityType: "employee" | "store";
+    q?: string;
+    limit?: number;
+  }) {
+    const limit = input.limit ?? 10;
+    const result = await this.integrationRepository.listExternalIdMapCandidates({
+      entityType: input.entityType,
+      q: input.q,
+      limit,
+    });
+    const internalTableName = this.getExternalIdInternalTableName(input.entityType);
+
+    return buildListResponse(
+      result.map((item) => ({
+        entityType: input.entityType,
+        internalId: item.internal_id,
+        label: item.label,
+        secondaryLabel: item.secondary_label,
+        internalTableName,
+      })),
+      { total: result.length, limit, offset: 0 },
+    );
+  }
+
+  async listStoreMaster(input: {
+    q?: string;
+    enabled?: boolean;
+    status?: "active" | "inactive" | "closed";
+    limit?: number;
+    offset?: number;
+  }) {
+    const result = await this.integrationRepository.listKpiImportStoreScope(input);
+
+    return buildListResponse(
+      result.rows.map((item) => this.mapStoreMaster(item)),
+      { total: result.total, limit: input.limit, offset: input.offset },
+    );
+  }
+
+  async getStoreMasterLookups() {
+    const regions = await this.integrationRepository.listStoreMasterRegions();
+
+    return {
+      storeTypes: [
+        { value: "company", label: "Company" },
+        { value: "franchise", label: "Franchise" },
+        { value: "operator", label: "Operator" },
+      ],
+      statuses: [
+        { value: "active", label: "Active" },
+        { value: "inactive", label: "Inactive" },
+        { value: "closed", label: "Closed" },
+      ],
+      regions: regions.map((item) => ({
+        regionId: item.region_id,
+        regionCode: item.region_code,
+        regionName: item.region_name,
+      })),
+    };
+  }
+
+  async updateStoreMaster(input: {
+    storeId: string;
+    storeType: "company" | "franchise" | "operator";
+    regionId: string;
+    status: "active" | "inactive" | "closed";
+    kpiImportEnabled: boolean;
+    actorUserId: string;
+  }) {
+    const storeScope = await this.integrationRepository.updateKpiImportStoreScope(input);
+
+    if (!storeScope) {
+      throw new NotFoundException(`Store or region not found: ${input.storeId}`);
+    }
+
+    logStructuredMessage(this.logger, "store_master_data.updated", {
+      actorUserId: input.actorUserId,
+      storeId: input.storeId,
+      storeType: input.storeType,
+      regionId: input.regionId,
+      status: input.status,
+      kpiImportEnabled: input.kpiImportEnabled,
+    });
+
+    return buildCommandResponse({
+      status: "updated",
+      message: "Store master data updated",
+      data: {
+        storeMaster: this.mapStoreMaster(storeScope),
+      },
+    });
+  }
+
   async getIntegrationSourceAudit(sourceId: string) {
-    const source = await this.integrationRepository.getIntegrationSourceById(sourceId);
+    const source = await this.integrationSourceRepository.getIntegrationSourceById(sourceId);
 
     if (!source) {
       throw new NotFoundException(`Integration source not found: ${sourceId}`);
     }
 
-    const events = await this.integrationRepository.getIntegrationSourceAudit(sourceId);
+    const events = await this.integrationSourceRepository.getIntegrationSourceAudit(sourceId);
 
     return buildListResponse(
       events.map((event) => mapAuditEvent(event)),
@@ -263,6 +596,11 @@ export class IntegrationService {
         sourceCode: batch.source_code,
         sourceName: batch.source_name,
         entityType: batch.entity_type,
+        sourceBatchId: batch.source_batch_id,
+        sourcePayloadHash: batch.source_payload_hash,
+        sourceCapturedAt: batch.source_captured_at,
+        sourceWindowStartedAt: batch.source_window_started_at,
+        sourceWindowEndedAt: batch.source_window_ended_at,
         startedAt: batch.started_at,
         finishedAt: batch.finished_at,
         status: batch.status,
@@ -438,6 +776,11 @@ export class IntegrationService {
           sourceCode: batch.source_code,
           sourceName: batch.source_name,
           entityType: batch.entity_type,
+          sourceBatchId: batch.source_batch_id,
+          sourcePayloadHash: batch.source_payload_hash,
+          sourceCapturedAt: batch.source_captured_at,
+          sourceWindowStartedAt: batch.source_window_started_at,
+          sourceWindowEndedAt: batch.source_window_ended_at,
           startedAt: batch.started_at,
           finishedAt: batch.finished_at,
           status: batch.status,
@@ -480,6 +823,14 @@ export class IntegrationService {
         batch.import_batch_id,
         batch.entity_type,
       );
+    const lineageSummaryRow =
+      batch.entity_type === "kpi"
+        ? await this.integrationRepository.getImportBatchLineageSummary(batch.import_batch_id)
+        : null;
+    const qualityIssueRows = await this.integrationRepository.getImportBatchQualityIssueRows(
+      batch.import_batch_id,
+      batch.entity_type,
+    );
 
     const rowStatusSummary = {
       processed: 0,
@@ -525,6 +876,11 @@ export class IntegrationService {
         sourceCode: batch.source_code,
         sourceName: batch.source_name,
         entityType: batch.entity_type,
+        sourceBatchId: batch.source_batch_id,
+        sourcePayloadHash: batch.source_payload_hash,
+        sourceCapturedAt: batch.source_captured_at,
+        sourceWindowStartedAt: batch.source_window_started_at,
+        sourceWindowEndedAt: batch.source_window_ended_at,
         startedAt: batch.started_at,
         finishedAt: batch.finished_at,
         status: batch.status,
@@ -542,6 +898,59 @@ export class IntegrationService {
       recommendedNextEntityType,
       canRetryNow,
       healthState,
+      qualityIssueSummary: this.getQualityIssueSummary(qualityIssueRows),
+      lineageSummary: {
+        supported: batch.entity_type === "kpi",
+        rowHashCount: Number(lineageSummaryRow?.row_hash_count ?? 0),
+        rawRowReferenceCount: Number(lineageSummaryRow?.raw_row_reference_count ?? 0),
+        sampleRowHash: lineageSummaryRow?.sample_row_hash ?? null,
+        sampleRawRowReference: lineageSummaryRow?.sample_raw_row_reference ?? null,
+      },
+    };
+  }
+
+  async getImportBatchReconciliation(batchId: string) {
+    const detail = await this.getImportBatch(batchId);
+    const totalRows =
+      detail.rowStatusSummary.processed +
+      detail.rowStatusSummary.validationFailed +
+      detail.rowStatusSummary.retryableError +
+      detail.rowStatusSummary.pending;
+    const unaccountedRows = Math.max(detail.batch.recordCount - totalRows, 0);
+    const safeDivide = (value: number, total: number) => (total > 0 ? value / total : 0);
+
+    return {
+      batch: detail.batch,
+      totals: {
+        recordCount: detail.batch.recordCount,
+        accountedRows: totalRows,
+        unaccountedRows,
+        countsMatchRecordCount: totalRows === detail.batch.recordCount,
+      },
+      rowStatusSummary: detail.rowStatusSummary,
+      rates: {
+        processedRate: safeDivide(detail.rowStatusSummary.processed, detail.batch.recordCount),
+        validationFailureRate: safeDivide(
+          detail.rowStatusSummary.validationFailed,
+          detail.batch.recordCount,
+        ),
+        retryableErrorRate: safeDivide(
+          detail.rowStatusSummary.retryableError,
+          detail.batch.recordCount,
+        ),
+        pendingRate: safeDivide(detail.rowStatusSummary.pending, detail.batch.recordCount),
+        accountedRate: safeDivide(totalRows, detail.batch.recordCount),
+      },
+      reconciliation: {
+        hasFailures:
+          detail.rowStatusSummary.validationFailed > 0 ||
+          detail.rowStatusSummary.retryableError > 0,
+        hasPendingRows: detail.rowStatusSummary.pending > 0,
+        hasUnaccountedRows: unaccountedRows > 0,
+        canRetryNow: detail.canRetryNow,
+        blockedByEntityTypes: detail.blockedByEntityTypes,
+        recommendedNextEntityType: detail.recommendedNextEntityType,
+      },
     };
   }
 
@@ -560,16 +969,98 @@ export class IntegrationService {
     });
 
     return buildListResponse(
-      result.rows.map((row) => ({
-        rowId: row.row_id,
-        sourceRef: row.source_ref,
-        normalizedStatus: row.normalized_status,
-        errorCategory: this.classifyErrorCategory(row.normalized_status, row.validation_error),
-        validationError: row.validation_error,
-        processedAt: row.processed_at,
-      })),
+      result.rows.map((row) => {
+        const qualityIssueCode = classifyImportDataQualityIssue({
+          normalizedStatus: row.normalized_status,
+          validationError: row.validation_error,
+        });
+        const lineage =
+          row.row_hash || row.raw_row_reference
+            ? {
+                rowHash: row.row_hash ?? null,
+                rawRowReference: row.raw_row_reference ?? null,
+              }
+            : {};
+        const mappingCandidate = this.getMappingCandidate({
+          integrationSourceId: batch.integration_source_id,
+          qualityIssueCode,
+          row,
+        });
+
+        return {
+          rowId: row.row_id,
+          sourceRef: row.source_ref,
+          ...lineage,
+          normalizedStatus: row.normalized_status,
+          errorCategory: this.classifyErrorCategory(row.normalized_status, row.validation_error),
+          qualityIssueCode,
+          ...(mappingCandidate ? { mappingCandidate } : {}),
+          validationError: row.validation_error,
+          processedAt: row.processed_at,
+        };
+      }),
       { total: result.total, limit: input.limit, offset: input.offset },
     );
+  }
+
+  async approveExternalIdMapping(input: {
+    integrationSourceId: string;
+    entityType: "employee" | "store";
+    externalId: string;
+    internalId: string;
+    actorUserId: string;
+  }) {
+    const source = await this.integrationSourceRepository.getIntegrationSourceById(input.integrationSourceId);
+
+    if (!source) {
+      throw new NotFoundException(`Integration source not found: ${input.integrationSourceId}`);
+    }
+
+    if (!source.is_active) {
+      throw new ConflictException(`Integration source ${input.integrationSourceId} is inactive`);
+    }
+
+    const internalTableName = this.getExternalIdInternalTableName(input.entityType);
+
+    await this.externalIdMappingService.upsertMapping({
+      integrationSourceId: input.integrationSourceId,
+      entityType: input.entityType,
+      externalId: input.externalId,
+      internalId: input.internalId,
+      internalTableName,
+    });
+    await this.integrationRepository.recordExternalIdMappingApproved({
+      actorUserId: input.actorUserId,
+      integrationSourceId: input.integrationSourceId,
+      entityType: input.entityType,
+      externalId: input.externalId,
+      internalId: input.internalId,
+      internalTableName,
+    });
+
+    logStructuredMessage(this.logger, "external_id_mapping.approved", {
+      actorUserId: input.actorUserId,
+      integrationSourceId: input.integrationSourceId,
+      sourceCode: source.source_code,
+      entityType: input.entityType,
+      externalId: input.externalId,
+      internalId: input.internalId,
+      internalTableName,
+    });
+
+    return buildCommandResponse({
+      status: "updated",
+      message: "External ID mapping approved",
+      data: {
+        mapping: {
+          integrationSourceId: input.integrationSourceId,
+          entityType: input.entityType,
+          externalId: input.externalId,
+          internalId: input.internalId,
+          internalTableName,
+        },
+      },
+    });
   }
 
   async getImportBatchAudit(batchId: string) {
@@ -665,6 +1156,119 @@ export class IntegrationService {
     return "write_failure";
   }
 
+  private getMappingCandidate(input: {
+    integrationSourceId: string;
+    qualityIssueCode: ImportDataQualityIssueCode;
+    row: {
+      store_external_ref: string | null;
+      employee_external_ref: string | null;
+      payload_json: Record<string, unknown> | null;
+    };
+  }) {
+    const payload = input.row.payload_json ?? {};
+    if (input.qualityIssueCode === "unmapped_store") {
+      const externalId = this.firstNonEmptyString([
+        input.row.store_external_ref,
+        payload["storeExternalRef"],
+        payload["sourceStoreId"],
+      ]);
+
+      return externalId
+        ? {
+            integrationSourceId: input.integrationSourceId,
+            entityType: "store" as const,
+            externalId,
+            internalTableName: this.getExternalIdInternalTableName("store"),
+          }
+        : null;
+    }
+
+    if (input.qualityIssueCode === "unmapped_employee") {
+      const externalId = this.firstNonEmptyString([
+        input.row.employee_external_ref,
+        payload["employeeExternalRef"],
+        payload["sourceEmployeeId"],
+      ]);
+
+      return externalId
+        ? {
+            integrationSourceId: input.integrationSourceId,
+            entityType: "employee" as const,
+            externalId,
+            internalTableName: this.getExternalIdInternalTableName("employee"),
+          }
+        : null;
+    }
+
+    return null;
+  }
+
+  private getExternalIdInternalTableName(entityType: "employee" | "store") {
+    return entityType === "employee" ? "ops.employee" : "ops.store";
+  }
+
+  private firstNonEmptyString(values: unknown[]) {
+    for (const value of values) {
+      if (typeof value === "string" && value.trim().length > 0) {
+        return value;
+      }
+    }
+
+    return null;
+  }
+
+  private getQualityIssueSummary(
+    rows: Array<{
+      normalized_status: string;
+      validation_error: string | null;
+      row_count: string;
+    }>,
+  ) {
+    const issueCounts = new Map<ImportDataQualityIssueCode, number>();
+
+    for (const row of rows) {
+      const code = classifyImportDataQualityIssue({
+        normalizedStatus: row.normalized_status,
+        validationError: row.validation_error,
+      });
+      const count = Number(row.row_count ?? 0);
+      issueCounts.set(code, (issueCounts.get(code) ?? 0) + count);
+    }
+
+    const items = Array.from(issueCounts.entries())
+      .map(([code, count]) => {
+        const issue = getImportDataQualityIssue(code) ?? getImportDataQualityIssue("unknown_quality_issue");
+        return {
+          code,
+          label: issue?.label ?? "Unknown quality issue",
+          owner: issue?.owner ?? "system",
+          severity: issue?.severity ?? "low",
+          description: issue?.description ?? "The row failed without a recognized data quality issue pattern.",
+          count,
+        };
+      })
+      .sort((left, right) => {
+        const severityDelta = this.getSeverityRank(left) - this.getSeverityRank(right);
+        if (severityDelta !== 0) return severityDelta;
+        if (right.count !== left.count) return right.count - left.count;
+        return left.code.localeCompare(right.code);
+      });
+
+    return {
+      totalIssueRows: items.reduce((sum, item) => sum + item.count, 0),
+      highSeverityRows: items
+        .filter((item) => item.severity === "high")
+        .reduce((sum, item) => sum + item.count, 0),
+      items,
+    };
+  }
+
+  private getSeverityRank(issue: Pick<ImportDataQualityIssue, "severity">) {
+    if (issue.severity === "high") return 0;
+    if (issue.severity === "medium") return 1;
+    return 2;
+  }
+
   private getBlockedByEntityTypes(dependencySummary: {
     employee: number;
     store: number;
@@ -693,11 +1297,26 @@ export class IntegrationService {
     return ["employee", "store", "kpi", "assignment", "position", "company", "region"];
   }
 
+  private getSupportedSourceSystems() {
+    return ["nebim_v3", "power_bi", "manual", "other"];
+  }
+
+  private getSupportedStateModels() {
+    return ["latest_state", "closed_period"];
+  }
+
   private mapIntegrationSource(item: {
     integration_source_id: string;
     source_code: string;
     source_name: string;
     entity_type: string;
+    source_system: string;
+    state_model: string;
+    poll_enabled: boolean;
+    poll_interval_minutes: number;
+    poll_window_start_local: string;
+    poll_window_end_local: string;
+    poll_timezone: string;
     is_active: boolean;
   }) {
     return {
@@ -705,7 +1324,36 @@ export class IntegrationService {
       sourceCode: item.source_code,
       sourceName: item.source_name,
       entityType: item.entity_type,
+      sourceSystem: item.source_system,
+      stateModel: item.state_model,
+      pollEnabled: item.poll_enabled,
+      pollIntervalMinutes: item.poll_interval_minutes,
+      pollWindowStartLocal: item.poll_window_start_local,
+      pollWindowEndLocal: item.poll_window_end_local,
+      pollTimezone: item.poll_timezone,
       isActive: item.is_active,
+    };
+  }
+
+  private mapStoreMaster(item: {
+    store_id: string;
+    store_code: string;
+    store_name: string;
+    store_type: string;
+    status: string;
+    kpi_import_enabled: boolean;
+    region_id: string | null;
+    region_name: string | null;
+  }) {
+    return {
+      storeId: item.store_id,
+      storeCode: item.store_code,
+      storeName: item.store_name,
+      storeType: item.store_type,
+      status: item.status,
+      kpiImportEnabled: item.kpi_import_enabled,
+      regionId: item.region_id,
+      regionName: item.region_name,
     };
   }
 

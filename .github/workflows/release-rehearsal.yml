@@ -1,6 +1,15 @@
 name: Release Rehearsal
 
 on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - "backend/nestjs/**"
+      - "db/**"
+      - "infra/**"
+      - ".github/workflows/release-rehearsal.yml"
   pull_request:
     paths:
       - "backend/nestjs/**"
@@ -9,19 +18,25 @@ on:
       - ".github/workflows/release-rehearsal.yml"
   workflow_dispatch:
 
+concurrency:
+  group: release-rehearsal-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   release-rehearsal:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
           cache-dependency-path: backend/nestjs/package-lock.json
 
@@ -32,6 +47,8 @@ jobs:
       - name: Verify Docker Compose
         run: docker compose version
 
-      - name: Run release rehearsal gate
+      - name: Run backend release check and Docker rehearsal
         working-directory: backend/nestjs
+        env:
+          REHEARSAL_COMPOSE_PROJECT_NAME: store-ops-ci-release-rehearsal
         run: npm run rehearse:release

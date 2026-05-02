@@ -8,6 +8,28 @@
 - Infra stack: `infra/docker-compose.live-e2e.yml`
 - Env örneği: `backend/nestjs/.env.live-e2e.example`
 - Live test runner: `backend/nestjs/test/live/live-e2e.ts`
+- Reference seed: `db/seeds/001_reference_seed.sql`
+
+## Demo Self-Performance Seed
+- `db/seeds/001_reference_seed.sql` includes the local demo region, stores, employees, assignments, and April 2026 personnel KPI actuals used by `/store/me`.
+- Keycloak local users in `infra/keycloak/store-ops-realm.json` and `infra/scripts/setup-keycloak.ps1` must stay aligned with these seeded `DEMO-EMP-*` external employee refs and demo store IDs.
+- `backend/nestjs/src/modules/store-ops/demo-performance-seed-contract.spec.ts` protects this alignment.
+- Expected local smoke user: `store.personnel` opens `/store/me` with `DEMO-EMP-202` in store `00000000-0000-0000-0000-000000000100`.
+
+## Store-Me API Smoke
+- `backend/nestjs/scripts/store-me-smoke.ts` checks `GET /api/reports/my-performance?mode=live` without the browser UI layer.
+- NPM command:
+
+```powershell
+Set-Location backend\nestjs
+npm run smoke:store-me
+```
+
+- Default mock-auth scope uses `STORE_PERSONNEL`, `DEMO-EMP-202`, company `00000000-0000-0000-0000-000000000001`, region `00000000-0000-0000-0000-000000000010`, and store `00000000-0000-0000-0000-000000000100`.
+- JWT/staging mode can be run by setting `STORE_ME_SMOKE_TOKEN` or `SMOKE_AUTH_TOKEN`; when a token is present the script sends only `Authorization: Bearer <token>`.
+- The script fails if the live response does not include employee identity, scored `TARGET_ACHIEVEMENT`/`ATV`/`UPT` metrics, positive score, Turkey rank, and store rank.
+- Useful overrides: `STORE_ME_SMOKE_BASE_URL`, `STORE_ME_SMOKE_EMPLOYEE_ID`, `STORE_ME_SMOKE_EXPECTED_EMPLOYEE_ID`, `STORE_ME_SMOKE_COMPANY_ID`, `STORE_ME_SMOKE_REGION_ID`, `STORE_ME_SMOKE_STORE_ID`, `STORE_ME_SMOKE_REQUIRED_METRICS`.
+- `npm run rehearse:release` also runs this smoke against the Docker-backed seeded rehearsal app in `AUTH_MODE=mock`.
 
 ## Ön Koşullar
 - Docker Desktop kurulu olmalı.
@@ -69,7 +91,7 @@ Set-Location ..\..
 
 ## Testin Doğruladığı Akış
 - PostgreSQL bağlantısı açılır.
-- `db/schema.sql` ve `db/jobs/generate_snapshots.sql` uygulanır.
+- `db/schema.sql`, `db/seeds/001_reference_seed.sql` ve `db/jobs/generate_snapshots.sql` uygulanır.
 - Worker context ayağa kalkar.
 - API app ayağa kalkar.
 - `POST /api/snapshots/runs` çağrısı ile snapshot enqueue edilir.

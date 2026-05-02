@@ -1,4 +1,4 @@
-import { IsArray, IsIn, IsOptional, IsString, MinLength } from "class-validator";
+import { IsArray, IsDateString, IsIn, IsOptional, IsString, MinLength } from "class-validator";
 
 export class CreateImportBatchDto {
   @IsString()
@@ -16,6 +16,28 @@ export class CreateImportBatchDto {
   @IsString()
   @MinLength(6)
   idempotencyKey?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  sourceBatchId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(8)
+  sourcePayloadHash?: string;
+
+  @IsOptional()
+  @IsDateString()
+  sourceCapturedAt?: string;
+
+  @IsOptional()
+  @IsDateString()
+  sourceWindowStartedAt?: string;
+
+  @IsOptional()
+  @IsDateString()
+  sourceWindowEndedAt?: string;
 
   @IsOptional()
   @IsArray()

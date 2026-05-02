@@ -7,13 +7,29 @@ import { DatabaseService } from "../../src/shared/database/database.service";
 import { AppConfigService } from "../../src/shared/app-config.service";
 import { BullMqJobDispatcherService } from "../../src/shared/jobs/bullmq-job-dispatcher.service";
 import { JOB_DISPATCHER } from "../../src/shared/jobs/jobs.constants";
+import { StandardErrorFilter } from "../../src/shared/http/standard-error.filter";
+
+function configureDefaultAuthMode() {
+  const explicitJwtTest =
+    process.env.AUTH_MODE === "jwt" && Boolean(process.env.JWT_SECRET);
+
+  if (explicitJwtTest) {
+    return;
+  }
+
+  process.env.AUTH_MODE = "mock";
+  delete process.env.JWT_JWKS_URL;
+}
 
 export async function createIntegrationApp(overrides?: {
   databaseService?: object;
   jobDispatcher?: object;
   authContextService?: object;
   appConfigService?: object;
+  standardErrorFilter?: boolean;
 }) {
+  configureDefaultAuthMode();
+
   const testingModuleBuilder = Test.createTestingModule({
     imports: [AppModule],
   });
@@ -57,6 +73,10 @@ export async function createIntegrationApp(overrides?: {
       forbidNonWhitelisted: true,
     }),
   );
+
+  if (overrides?.standardErrorFilter) {
+    app.useGlobalFilters(new StandardErrorFilter());
+  }
 
   await app.init();
 

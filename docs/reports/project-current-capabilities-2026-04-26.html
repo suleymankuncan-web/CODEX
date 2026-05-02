@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <title>Store Ops Platform - Mevcut Kabiliyet Özeti</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 13mm 12mm 14mm;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: #17202a;
+      background: #f5f7fb;
+      font-family: "Segoe UI", Arial, sans-serif;
+      font-size: 9.6pt;
+      line-height: 1.38;
+    }
+
+    main {
+      max-width: 980px;
+      margin: 0 auto;
+      background: #ffffff;
+    }
+
+    .cover {
+      padding: 28px 34px 24px;
+      background: linear-gradient(135deg, #0f2f4f 0%, #245d6d 58%, #e2f1ed 100%);
+      color: #ffffff;
+      min-height: 210px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      page-break-after: avoid;
+    }
+
+    .eyebrow {
+      color: #6b7a8c;
+      font-size: 8.5pt;
+      font-weight: 700;
+      letter-spacing: 0;
+      text-transform: uppercase;
+      margin: 0 0 6px;
+    }
+
+    .cover .eyebrow {
+      color: #cce7e5;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 25pt;
+      line-height: 1.05;
+      letter-spacing: 0;
+      max-width: 760px;
+    }
+
+    .subtitle {
+      margin: 14px 0 0;
+      max-width: 760px;
+      font-size: 11pt;
+      color: #edf7f5;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 28px;
+    }
+
+    .meta span {
+      padding: 7px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.32);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+      font-size: 9pt;
+    }
+
+    section {
+      padding: 18px 34px 0;
+    }
+
+    h2 {
+      margin: 0 0 11px;
+      color: #16324f;
+      font-size: 14.5pt;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 0 0 7px;
+      color: #1d3e53;
+      font-size: 11pt;
+    }
+
+    p {
+      margin: 0 0 9px;
+    }
+
+    .lead {
+      color: #354457;
+      font-size: 10.4pt;
+      max-width: 820px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .grid.four {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .grid.two {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .stat {
+      border: 1px solid #d9e2ea;
+      border-left: 4px solid #2b7a78;
+      border-radius: 8px;
+      padding: 9px 10px;
+      background: #fbfdfe;
+      min-height: 68px;
+    }
+
+    .stat strong {
+      display: block;
+      color: #102b3f;
+      font-size: 16pt;
+      line-height: 1.05;
+      margin-bottom: 4px;
+    }
+
+    .stat span {
+      color: #526173;
+      font-size: 9pt;
+    }
+
+    .callout {
+      border: 1px solid #cfe2df;
+      border-radius: 8px;
+      background: #eef8f6;
+      padding: 10px 12px;
+      color: #214a48;
+      margin-top: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 9px 0 2px;
+      page-break-inside: auto;
+    }
+
+    th {
+      text-align: left;
+      background: #173a59;
+      color: #ffffff;
+      padding: 7px 8px;
+      font-size: 8.7pt;
+      font-weight: 700;
+    }
+
+    td {
+      border: 1px solid #dce4ec;
+      padding: 7px 8px;
+      vertical-align: top;
+      color: #253546;
+    }
+
+    tr {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    tr:nth-child(even) td {
+      background: #f8fafc;
+    }
+
+    .status {
+      display: inline-block;
+      padding: 3px 7px;
+      border-radius: 999px;
+      background: #e7f4ef;
+      color: #1d604f;
+      font-weight: 700;
+      font-size: 8.5pt;
+      white-space: nowrap;
+    }
+
+    .status.planned {
+      background: #fff2d9;
+      color: #7a5300;
+    }
+
+    ul {
+      margin: 5px 0 0 18px;
+      padding: 0;
+    }
+
+    li {
+      margin: 4px 0;
+    }
+
+    .module-card {
+      border: 1px solid #dfe7ee;
+      border-radius: 8px;
+      padding: 10px 11px;
+      background: #ffffff;
+      page-break-inside: avoid;
+    }
+
+    .module-card + .module-card {
+      margin-top: 8px;
+    }
+
+    .module-card h3 {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .footer-note {
+      padding: 12px 34px 20px;
+      color: #677386;
+      font-size: 8.5pt;
+    }
+
+    .page-break {
+      page-break-before: always;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="cover">
+      <div>
+        <p class="eyebrow">Store Ops Platform</p>
+        <h1>Mevcut Kabiliyet Özeti</h1>
+        <p class="subtitle">
+          Projenin bugün itibarıyla ne yapabildiğini, hangi alanlarda sağlamlaştığını ve hangi sınırların bilinçli olarak korunduğunu özetleyen yönetim raporu.
+        </p>
+      </div>
+      <div class="meta">
+        <span>Tarih: 26 Nisan 2026</span>
+        <span>Workspace: WEBSİTE ÇALIŞMASI</span>
+        <span>Durum: Kontrollü büyüyen V1 platform</span>
+      </div>
+    </div>
+
+    <section>
+      <h2>Yönetici Özeti</h2>
+      <p class="lead">
+        Proje bugün yalnızca bir raporlama ekranı değil; mağaza operasyonu, rol ve kapsam güvenliği, KPI/performans görünürlüğü, checklist, onay, duyuru, yarışma planlama ve kalite kapıları olan bir operasyon platformuna evrilmiş durumda.
+      </p>
+      <div class="grid four">
+        <div class="stat">
+          <strong>21</strong>
+          <span>Kapatılmış aktif borç kalemi</span>
+        </div>
+        <div class="stat">
+          <strong>0</strong>
+          <span>Aktif gate içinde sessiz kalite borcu</span>
+        </div>
+        <div class="stat">
+          <strong>25</strong>
+          <span>Frontend Playwright release smoke testi</span>
+        </div>
+        <div class="stat">
+          <strong>248</strong>
+          <span>Backend release test kapsamı</span>
+        </div>
+      </div>
+      <div class="callout">
+        <strong>Kısa yorum:</strong> Zemin şu anda kontrollü. En büyük değer, özelliklerin gelişi güzel büyümemesi; auth/scope, audit, release gate, snapshot, workflow sınırları ve “önce karar, sonra kod” yaklaşımı birlikte korunuyor.
+      </div>
+    </section>
+
+    <section>
+      <h2>Şu An Yapabildiğimiz Ana İşler</h2>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 24%;">Alan</th>
+            <th>Bugünkü kabiliyet</th>
+            <th style="width: 18%;">Durum</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Auth, rol ve scope</td>
+            <td>Kullanıcının rolüne, şirket/bölge/mağaza kapsamına ve action scope’una göre ekran ve işlem erişimi ayrılıyor. Store kullanıcıları kendi kapsamına, admin/HR daha geniş yönetime bağlanıyor.</td>
+            <td><span class="status">Çalışıyor</span></td>
+          </tr>
+          <tr>
+            <td>Mağaza alanı</td>
+            <td>Mağaza kullanıcıları için admin’den ayrılmış görev odaklı store shell mevcut. Store home, store tasks, feed, KPI, kişisel performans, sıralama, checklist, onay ve prim rotaları ayrışmış durumda.</td>
+            <td><span class="status">Çalışıyor</span></td>
+          </tr>
+          <tr>
+            <td>KPI ve performans</td>
+            <td>Mağaza ve personel skorları, weighted score yorumları, veri kaynağı açıklamaları, güçlü/zayıf KPI sinyalleri ve güven yorumları store yüzeylerinde görülebiliyor.</td>
+            <td><span class="status">Çalışıyor</span></td>
+          </tr>
+          <tr>
+            <td>Sıralamalar</td>
+            <td>Günlük/aylık kapalı snapshot mantığıyla personel sıralaması, mağaza içi/Türkiye geneli ayrımı, metrik mini-rank ve segment hazırlığı açıklanıyor.</td>
+            <td><span class="status">Çalışıyor</span></td>
+          </tr>
+          <tr>
+            <td>Checklist ve kabul</td>
+            <td>Checklist sonuçları store tarafında okunuyor; kabul/acknowledgement işleri ortak workflow kuyruğuna taşınabiliyor.</td>
+            <td><span class="status">Çalışıyor</span></td>
+          </tr>
+          <tr>
+            <td>Onay ve hedef dağıtımı</td>
+            <td>Hedef dağıtım talepleri, bölge onayı, action scope kontrolü, assigned-store pozitif ve unassigned-store negatif kanıtları ile destekleniyor.</td>
+            <td><span class="status">Çalışıyor</span></td>
+          </tr>
+          <tr>
+            <td>Shared inbox</td>
+            <td>Onay, kabul ve KPI takip işleri ortak kuyrukta; detay özeti, zaman sinyali, yükseltme sinyali ve kaynak aksiyonu okunur hale getirildi.</td>
+            <td><span class="status">Çalışıyor</span></td>
+          </tr>
+          <tr>
+            <td>Duyurular ve challenge postları</td>
+            <td>Admin/HR/company, region ve store scope’larına göre duyuru yayınlayabiliyor. Store kullanıcıları sadece görünür/published postları okuyor. Challenge postları skor motoru kurmadan mevcut performans yüzeylerine yönlendiriyor.</td>
+            <td><span class="status">Çalışıyor</span></td>
+          </tr>
+          <tr>
+            <td>Yarışma planlama</td>
+            <td>Competition stage, team template, stage package plan, save/submit/approve/return/execute akışları mevcut. Region manager read-only ve scope kontrollü görüyor.</td>
+            <td><span class="status">Çalışıyor</span></td>
+          </tr>
+          <tr>
+            <td>Import, staging ve snapshot</td>
+            <td>Dış veri doğrudan ana rapor tablolarına yazılmadan staging/import mantığıyla ele alınıyor. Snapshot ve import ayrımı proje prensibi olarak oturmuş durumda.</td>
+            <td><span class="status">Temel var</span></td>
+          </tr>
+          <tr>
+            <td>Release ve kalite kapısı</td>
+            <td>Tek komutla backend lint/test/build/audit ve frontend lint/script/build/e2e/audit çalışıyor. GitHub release workflow aynı gate’e bağlandı.</td>
+            <td><span class="status">Çalışıyor</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="page-break">
+      <h2>Modül Bazında Detaylı Özet</h2>
+
+      <div class="module-card">
+        <h3>1. Kullanıcı, Rol ve Yetki Yönetimi <span class="status">Güvenlik zemini</span></h3>
+        <p>
+          Sistem kullanıcıyı yalnızca giriş yapmış kabul etmiyor; rol kodları, read scope, action scope ve assigned store ayrımını birlikte değerlendiriyor. Bu sayede bir kullanıcı mağaza verisini görebilirken, operasyonel işlem yapma yetkisi ayrıca kontrol ediliyor.
+        </p>
+        <ul>
+          <li>Provider default rolleri uygulama rolü gibi gösterilmiyor.</li>
+          <li>Store personnel, store manager, region manager, HR admin ve super admin ayrımları şekillenmiş durumda.</li>
+          <li>Yerel Keycloak ile PKCE login/logout ve action smoke kanıtı alındı.</li>
+        </ul>
+      </div>
+
+      <div class="module-card">
+        <h3>2. Mağaza Kullanıcı Alanı <span class="status">TR-first V1</span></h3>
+        <p>
+          Store shell artık admin panelinin kopyası değil; mağaza kullanıcısına görev odaklı ayrı bir alan sunuyor. Son TR-first copy pass ile store shell, store home, store tasks ve store feed daha güven veren Türkçe bir yüzeye çekildi.
+        </p>
+        <ul>
+          <li>Store home pinned duyuruları ve günlük iş odağını gösteriyor.</li>
+          <li>Store tasks ortak iş kuyruğu mantığıyla onay, kabul ve KPI takiplerini bir araya getiriyor.</li>
+          <li>Store feed şirket/bölge/mağaza duyurularını kullanıcının scope’una göre okuyor.</li>
+        </ul>
+      </div>
+
+      <div class="module-card">
+        <h3>3. KPI, Skor ve Performans <span class="status">Okunabilir V1</span></h3>
+        <p>
+          Sistem yalnızca skor göstermiyor; skorun ne anlama geldiğini, hangi metriklerden beslendiğini, veri güveninin ne olduğunu ve aksiyon dilini de açıklıyor.
+        </p>
+        <ul>
+          <li>Personel weighted score ve mağaza weighted score yorumları var.</li>
+          <li>ATV, UPT, target achievement gibi metrikler kaynak semantiğiyle anlatılıyor.</li>
+          <li>Eksik veri, pending normalization, imported data, derived score gibi durumlar kullanıcıya açıklanabiliyor.</li>
+        </ul>
+      </div>
+
+      <div class="module-card">
+        <h3>4. Sıralama ve Kapanış Mantığı <span class="status">Güven açıklaması var</span></h3>
+        <p>
+          Günlük ve aylık sıralama yaklaşımı kapalı snapshot verisi üzerinden açıklanıyor. Sistem kullanıcıya sadece bir liste vermiyor; o sıralamanın resmi mi, ön izleme mi, kaç günlük veriyle oluştuğu ve segmentlere ileride nasıl bağlanabileceği anlatılıyor.
+        </p>
+        <ul>
+          <li>Türkiye geneli ve mağaza içi kapsam ayrımı görünür.</li>
+          <li>Metrik mini-rank için UPT/ATV gibi alanlara hazırlık var.</li>
+          <li>Segment readiness, ileride bölge ligi ve özel yarışmalar için yeni ranking engine açmadan büyüyebilecek şekilde düşünülmüş durumda.</li>
+        </ul>
+      </div>
+
+      <div class="module-card">
+        <h3>5. Duyurular ve Yarışma Duyuruları <span class="status">Feed V1</span></h3>
+        <p>
+          Turnuva modülünün erken aşamada gereğinden fazla büyümesi engellendi. UPT/ATV odaklı yarışma duyuruları için ikinci bir skor motoru yerine Operational Feed kullanılıyor.
+        </p>
+        <ul>
+          <li>HR/Admin şirket, bölge veya mağaza kapsamına yayın yapabiliyor.</li>
+          <li>Region manager V1’de kendi bölgesine yayın yapabiliyor.</li>
+          <li>Store kullanıcısı yalnızca kendisine görünür published postları okuyor.</li>
+        </ul>
+      </div>
+
+      <div class="module-card">
+        <h3>6. Yarışma ve Paket Planlama <span class="status">Kontrollü admin akışı</span></h3>
+        <p>
+          Büyük turnuva fikirleri doğrudan skor motoruna çevrilmedi; kontrollü stage/package/plan yaklaşımı kuruldu. Admin tarafında draft, karar, onay, return, clone ve execute sınırları netleşti.
+        </p>
+        <ul>
+          <li>Stage preset, team template ve store assignment desteği var.</li>
+          <li>Planlar save, submit, approve, return ve execute akışından geçiyor.</li>
+          <li>Approved-only execute yaklaşımı plansız operasyon riskini azaltıyor.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section>
+      <h2>Teknik ve Operasyonel Sağlık</h2>
+      <div class="grid two">
+        <div class="module-card">
+          <h3>Kalite Kapısı</h3>
+          <p>Root release gate tek komutla backend ve frontend kalite kapılarını çalıştırıyor.</p>
+          <ul>
+            <li>Backend: lint, 32 test suite / 248 test, build, production audit.</li>
+            <li>Frontend: lint, script tests, build, 25 Playwright e2e, production audit.</li>
+            <li>Son doğrulama: 0 audit vulnerability.</li>
+          </ul>
+        </div>
+        <div class="module-card">
+          <h3>Borç Defteri</h3>
+          <p>Aktif borçlar kapatılmış, kalan işler planlı yatırım olarak tutuluyor.</p>
+          <ul>
+            <li>Kapalı aktif borç: 21.</li>
+            <li>Sessiz kalite borcu: 0.</li>
+            <li>Dış bağımlılık: gerçek staging IdP evidence.</li>
+            <li>Stratejik backlog: 3 planlı yatırım.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Bilinçli Sınırlar ve Henüz Yapmadıklarımız</h2>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 32%;">Konu</th>
+            <th>Durum</th>
+            <th style="width: 20%;">Yorum</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Gerçek staging IdP kanıtı</td>
+            <td>Yerel Keycloak kanıtı var; gerçek staging için dış credential, provider değerleri ve seeded DB bilgisi gerekiyor.</td>
+            <td><span class="status planned">Dış bağımlılık</span></td>
+          </tr>
+          <tr>
+            <td>Gerçek ingest connector</td>
+            <td>Import/staging prensibi var; gerçek HR/ERP/satış sistemi payload kontratı hâlâ planlı yatırım.</td>
+            <td><span class="status planned">Planlı yatırım</span></td>
+          </tr>
+          <tr>
+            <td>KPI config governance implementation</td>
+            <td>Version, effective date, rollback ve snapshot anchoring planı hazır; tam uygulama henüz açılmadı.</td>
+            <td><span class="status planned">Planlı yatırım</span></td>
+          </tr>
+          <tr>
+            <td>Production UI/design-system</td>
+            <td>Store copy TR-first hale geldi; ancak ekranlar hâlâ çalışan taslak. Görsel sistem, renk, typography, layout ve mobil polish sonraki büyük adım.</td>
+            <td><span class="status planned">Planlı yatırım</span></td>
+          </tr>
+          <tr>
+            <td>Global audit feed</td>
+            <td>Feature-level audit izleri var; tek global audit feed ancak gerçek operatör ihtiyacı kanıtlanırsa açılmalı.</td>
+            <td><span class="status planned">Watchlist</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>CODEX Dürüst Yorum</h2>
+      <p>
+        Proje şu an iyi bir yerde: borcu sıfır sanan bir rahatlıkta değiliz, ama borcu kontrol eden bir düzende ilerliyoruz. En sağlıklı tarafı, fikirlerin doğrudan kodlanmaması; önce modül sınırı, veri etkisi, auth/scope, audit, reporting, test ve ileride büyüme şekli konuşuluyor.
+      </p>
+      <p>
+        Bugünkü sistem bir demo kabuğundan fazlası. Auth/scope zemini, release gate, store kullanıcı alanı, KPI açıklamaları, ranking explainability, operational feed, shared inbox ve competition planning birlikte gerçek bir platform omurgası oluşturuyor.
+      </p>
+      <p>
+        En büyük risk, görsel tasarım ve yeni fikirler hızlanınca mimari disiplini kaybetmek olur. Bu yüzden sıradaki doğru adım, geniş UI değişikliklerine başlamadan production UI/design-system planını çıkarmak. Böyle gidersek proje büyürken dağılma ihtimali düşer.
+      </p>
+    </section>
+
+    <section>
+      <h2>Sıradaki Mantıklı Adım</h2>
+      <div class="callout">
+        <strong>Production UI/design-system plan:</strong> Store copy artık daha tutarlı. Şimdi renk, typography, layout yoğunluğu, mobil davranış, component sınırları ve tam EN/TR localization genişlemesini planlayıp sonra uygulamak en doğru yol.
+      </div>
+    </section>
+
+    <div class="footer-note">
+      Kaynaklar: current-state.md, docs/plans/project-debt-ledger.md, docs/plans/active-next-actions.md. Bu rapor 26 Nisan 2026 itibarıyla yerel workspace durumuna göre hazırlanmıştır.
+    </div>
+  </main>
+</body>
+</html>

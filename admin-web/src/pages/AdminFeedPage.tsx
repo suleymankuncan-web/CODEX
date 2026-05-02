@@ -1,0 +1,574 @@
+import { useMemo, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Megaphone, Pin, Send, Trophy } from 'lucide-react'
+import {
+  EmptyState,
+  KeyValue,
+  MetricAccent,
+  MetricCard,
+  ScreenState,
+  StatusPill,
+  type Tone,
+} from '../components/dashboard-primitives'
+import { getAuthLookups, type AuthLookupStore, type AuthSessionSummary } from '../features/auth/api'
+import {
+  archiveFeedPost,
+  createFeedPost,
+  getAdminFeedPosts,
+  pinFeedPost,
+  publishFeedPost,
+  unpinFeedPost,
+} from '../features/feed/api'
+import {
+  challengeMetricOptions,
+  feedTargetRouteOptions,
+  formatFeedPostType,
+  formatFeedScope,
+  type FeedPost,
+  type FeedPostType,
+  type FeedPublishStatus,
+  type FeedVisibilityScopeType,
+} from '../features/feed/contracts'
+import { formatDate, formatDateTime, formatState, getErrorMessage } from '../lib/format'
+
+type FeedFormState = {
+  postType: FeedPostType
+  title: string
+  body: string
+  linkLabel: string
+  linkUrl: string
+  visibilityScopeType: FeedVisibilityScopeType
+  scopeId: string
+  isPinned: boolean
+  startsAt: string
+  endsAt: string
+  metricCode: string
+  targetRoute: string
+  challengeStartsOn: string
+  challengeEndsOn: string
+}
+
+export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null }) {
+  const roles = input.authSummary?.user.roleCodes ?? []
+  const isGlobalWriter = roles.includes('SUPER_ADMIN') || roles.includes('HR_ADMIN')
+  const isRegionManagerOnly = !isGlobalWriter && roles.includes('REGION_MANAGER')
+  const defaultRegionId = input.authSummary?.user.readScope.regionIds[0] ?? ''
+  const queryClient = useQueryClient()
+  const [notice, setNotice] = useState<string | null>(null)
+  const [errorNotice, setErrorNotice] = useState<string | null>(null)
+  const [form, setForm] = useState<FeedFormState>(() => createInitialForm(isRegionManagerOnly, defaultRegionId))
+
+  const feedQuery = useQuery({
+    queryKey: ['admin-feed'],
+    queryFn: getAdminFeedPosts,
+    retry: false,
+  })
+  const lookupsQuery = useQuery({
+    queryKey: ['auth-lookups'],
+    queryFn: getAuthLookups,
+    retry: false,
+  })
+
+  const stores = useMemo(() => lookupsQuery.data?.stores ?? [], [lookupsQuery.data?.stores])
+  const regionOptions = useMemo(() => buildRegionOptions(stores), [stores])
+  const posts = useMemo(() => feedQuery.data?.items ?? [], [feedQuery.data?.items])
+
+  const refreshFeed = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['admin-feed'] })
+    await queryClient.invalidateQueries({ queryKey: ['visible-feed'] })
+  }
+
+  const createMutation = useMutation({
+    mutationFn: createFeedPost,
+    onSuccess: async (response) => {
+      setNotice(response.command.message)
+      setErrorNotice(null)
+      setForm(createInitialForm(isRegionManagerOnly, defaultRegionId))
+      await refreshFeed()
+    },
+    onError: (error) => {
+      setErrorNotice(getErrorMessage(error))
+    },
+  })
+  const publishMutation = useMutation({
+    mutationFn: publishFeedPost,
+    onSuccess: async (response) => {
+      setNotice(response.command.message)
+      setErrorNotice(null)
+      await refreshFeed()
+    },
+    onError: (error) => setErrorNotice(getErrorMessage(error)),
+  })
+  const pinMutation = useMutation({
+    mutationFn: pinFeedPost,
+    onSuccess: async (response) => {
+      setNotice(response.command.message)
+      setErrorNotice(null)
+      await refreshFeed()
+    },
+    onError: (error) => setErrorNotice(getErrorMessage(error)),
+  })
+  const unpinMutation = useMutation({
+    mutationFn: unpinFeedPost,
+    onSuccess: async (response) => {
+      setNotice(response.command.message)
+      setErrorNotice(null)
+      await refreshFeed()
+    },
+    onError: (error) => setErrorNotice(getErrorMessage(error)),
+  })
+  const archiveMutation = useMutation({
+    mutationFn: archiveFeedPost,
+    onSuccess: async (response) => {
+      setNotice(response.command.message)
+      setErrorNotice(null)
+      await refreshFeed()
+    },
+    onError: (error) => setErrorNotice(getErrorMessage(error)),
+  })
+
+  if (!isGlobalWriter && !isRegionManagerOnly) {
+    return (
+      <ScreenState
+        title="Duyurular unavailable"
+        copy="Bu yüzey HR admin, super admin veya bölge yöneticisi rolü gerektirir."
+        tone="error"
+      />
+    )
+  }
+
+  if (isRegionManagerOnly && !defaultRegionId) {
+    return (
+      <ScreenState
+        title="Region scope missing"
+        copy="Bölge yöneticisi duyuru yayınlamak için token/read scope içinde en az bir region id taşımalı."
+        tone="error"
+      />
+    )
+  }
+
+  if (feedQuery.isLoading) {
+    return <ScreenState title="Loading feed" copy="Duyuru kütüphanesi hazırlanıyor." />
+  }
+
+  if (feedQuery.isError) {
+    return (
+      <ScreenState
+        title="Duyurular açılamadı"
+        copy={getErrorMessage(feedQuery.error)}
+        tone="error"
+      />
+    )
+  }
+
+  const pinnedCount = posts.filter((post) => post.isPinned).length
+  const publishedCount = posts.filter((post) => post.publishStatus === 'published').length
+  const challengeCount = posts.filter((post) => post.postType === 'challenge').length
+
+  function submitPost(publishStatus: FeedPublishStatus) {
+    const selectedMetric = challengeMetricOptions.find((metric) => metric.metricCode === form.metricCode)
+    createMutation.mutate({
+      postType: form.postType,
+      title: form.title,
+      body: form.body,
+      linkLabel: form.linkLabel || undefined,
+      linkUrl: form.linkUrl || undefined,
+      visibilityScopeType: form.visibilityScopeType,
+      visibilityScopeIds: form.visibilityScopeType === 'company' ? [] : [form.scopeId],
+      isPinned: form.isPinned,
+      publishStatus,
+      startsAt: form.startsAt || undefined,
+      endsAt: form.endsAt || undefined,
+      metricCode: form.postType === 'challenge' ? selectedMetric?.metricCode : undefined,
+      metricLabel: form.postType === 'challenge' ? selectedMetric?.metricLabel : undefined,
+      challengeStartsOn: form.postType === 'challenge' ? form.challengeStartsOn : undefined,
+      challengeEndsOn: form.postType === 'challenge' ? form.challengeEndsOn : undefined,
+      targetRoute: form.postType === 'challenge' ? form.targetRoute : undefined,
+    })
+  }
+
+  return (
+    <section className="page-stack">
+      <section className="hero-panel">
+        <div>
+          <div className="eyebrow">Duyurular</div>
+          <h2 className="hero-title">Company and region announcements in one controlled feed.</h2>
+          <p className="hero-copy">
+            Challenge postları mevcut performans ve sıralama yüzeylerine link verir; skor veya stage
+            üretmez.
+          </p>
+        </div>
+        <div className="hero-metrics">
+          <MetricAccent label="Route" value="/admin/feed" />
+          <MetricAccent label="Posts" value={String(posts.length)} />
+          <MetricAccent label="Published" value={String(publishedCount)} />
+        </div>
+      </section>
+
+      <section className="metric-grid">
+        <MetricCard title="Total posts" value={posts.length} note="Draft, published ve archived toplamı." icon={<Megaphone size={18} />} tone="accent" />
+        <MetricCard title="Pinned" value={pinnedCount} note="Store home üzerinde öne çıkan duyurular." icon={<Pin size={18} />} tone={pinnedCount > 0 ? 'warning' : 'neutral'} />
+        <MetricCard title="Challenges" value={challengeCount} note="Sadece duyuru ve yönlendirme; skor motoru değil." icon={<Trophy size={18} />} tone="calm" />
+        <MetricCard title="Published" value={publishedCount} note="Store feed tarafından okunabilir kayıtlar." icon={<Send size={18} />} tone="accent" />
+      </section>
+
+      {notice ? <div className="shell-notice">{notice}</div> : null}
+      {errorNotice ? <div className="shell-notice shell-notice-warning">{errorNotice}</div> : null}
+
+      <section className="two-up-grid">
+        <article className="panel">
+          <div className="panel-heading">
+            <div>
+              <div className="eyebrow">Composer</div>
+              <h3>Create feed post</h3>
+            </div>
+            <StatusPill tone={form.postType === 'challenge' ? 'accent' : 'neutral'}>
+              {formatFeedPostType(form.postType)}
+            </StatusPill>
+          </div>
+
+          <div className="form-grid">
+            <label>
+              Type
+              <select
+                className="control-input"
+                value={form.postType}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    postType: event.target.value as FeedPostType,
+                    linkUrl: event.target.value === 'challenge' ? '' : current.linkUrl,
+                  }))
+                }
+              >
+                <option value="announcement">Announcement</option>
+                <option value="challenge">Challenge</option>
+              </select>
+            </label>
+            <label>
+              Title
+              <input
+                className="control-input"
+                value={form.title}
+                onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
+              />
+            </label>
+            <label>
+              Body
+              <textarea
+                className="control-input"
+                rows={4}
+                value={form.body}
+                onChange={(event) => setForm((current) => ({ ...current, body: event.target.value }))}
+              />
+            </label>
+            <label>
+              Scope
+              <select
+                className="control-input"
+                value={form.visibilityScopeType}
+                disabled={isRegionManagerOnly}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    visibilityScopeType: event.target.value as FeedVisibilityScopeType,
+                    scopeId: '',
+                  }))
+                }
+              >
+                {isGlobalWriter ? <option value="company">Company</option> : null}
+                <option value="region">Region</option>
+                {isGlobalWriter ? <option value="store">Store</option> : null}
+              </select>
+            </label>
+            {form.visibilityScopeType !== 'company' ? (
+              <label>
+                {formatFeedScope(form.visibilityScopeType)} id
+                <select
+                  className="control-input"
+                  value={form.scopeId}
+                  disabled={isRegionManagerOnly}
+                  onChange={(event) => setForm((current) => ({ ...current, scopeId: event.target.value }))}
+                >
+                  <option value="">Select scope</option>
+                  {form.visibilityScopeType === 'region'
+                    ? regionOptions.map((option) => (
+                        <option key={option.regionId} value={option.regionId}>
+                          {option.regionName} - {option.regionId}
+                        </option>
+                      ))
+                    : stores.map((option) => (
+                        <option key={option.storeId} value={option.storeId}>
+                          {option.storeCode} - {option.storeName}
+                        </option>
+                      ))}
+                </select>
+              </label>
+            ) : null}
+            <label>
+              Link label
+              <input
+                className="control-input"
+                value={form.linkLabel}
+                onChange={(event) => setForm((current) => ({ ...current, linkLabel: event.target.value }))}
+              />
+            </label>
+            {form.postType === 'announcement' ? (
+              <label>
+                Link URL
+                <input
+                  className="control-input"
+                  value={form.linkUrl}
+                  onChange={(event) => setForm((current) => ({ ...current, linkUrl: event.target.value }))}
+                  placeholder="/store/tasks"
+                />
+              </label>
+            ) : null}
+            <label>
+              Starts at
+              <input
+                className="control-input"
+                type="datetime-local"
+                value={form.startsAt}
+                onChange={(event) => setForm((current) => ({ ...current, startsAt: event.target.value }))}
+              />
+            </label>
+            <label>
+              Ends at
+              <input
+                className="control-input"
+                type="datetime-local"
+                value={form.endsAt}
+                onChange={(event) => setForm((current) => ({ ...current, endsAt: event.target.value }))}
+              />
+            </label>
+            <label className="checkbox-line">
+              <input
+                type="checkbox"
+                checked={form.isPinned}
+                onChange={(event) => setForm((current) => ({ ...current, isPinned: event.target.checked }))}
+              />
+              Pin post
+            </label>
+          </div>
+
+          {form.postType === 'challenge' ? (
+            <div className="form-grid">
+              <label>
+                Metric
+                <select
+                  className="control-input"
+                  value={form.metricCode}
+                  onChange={(event) => setForm((current) => ({ ...current, metricCode: event.target.value }))}
+                >
+                  {challengeMetricOptions.map((metric) => (
+                    <option key={metric.metricCode} value={metric.metricCode}>
+                      {metric.metricLabel}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Target route
+                <select
+                  className="control-input"
+                  value={form.targetRoute}
+                  onChange={(event) => setForm((current) => ({ ...current, targetRoute: event.target.value }))}
+                >
+                  {feedTargetRouteOptions.map((option) => (
+                    <option key={option.route} value={option.route}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Challenge starts
+                <input
+                  className="control-input"
+                  type="date"
+                  value={form.challengeStartsOn}
+                  onChange={(event) => setForm((current) => ({ ...current, challengeStartsOn: event.target.value }))}
+                />
+              </label>
+              <label>
+                Challenge ends
+                <input
+                  className="control-input"
+                  type="date"
+                  value={form.challengeEndsOn}
+                  onChange={(event) => setForm((current) => ({ ...current, challengeEndsOn: event.target.value }))}
+                />
+              </label>
+            </div>
+          ) : null}
+
+          <div className="action-cluster">
+            <button
+              className="control-button"
+              type="button"
+              disabled={createMutation.isPending}
+              onClick={() => submitPost('draft')}
+            >
+              Save draft
+            </button>
+            <button
+              className="control-button primary-control"
+              type="button"
+              disabled={createMutation.isPending}
+              onClick={() => submitPost('published')}
+            >
+              Publish post
+            </button>
+          </div>
+        </article>
+
+        <article className="panel">
+          <div className="panel-heading">
+            <div>
+              <div className="eyebrow">Guardrail</div>
+              <h3>Feed is not a scoring engine</h3>
+            </div>
+          </div>
+          <div className="key-grid">
+            <KeyValue label="Challenge target" value="/store/rankings or /store/me" />
+            <KeyValue label="Score ownership" value="Performance/ranking modules" />
+            <KeyValue label="Competition stages" value="No mutation from feed" />
+            <KeyValue label="Region manager" value="Own region only" />
+          </div>
+        </article>
+      </section>
+
+      <section className="panel">
+        <div className="panel-heading">
+          <div>
+            <div className="eyebrow">Post library</div>
+            <h3>Managed feed posts</h3>
+          </div>
+        </div>
+
+        {posts.length === 0 ? (
+          <EmptyState title="No feed posts yet" copy="İlk duyuru veya challenge postu oluşturulduğunda burada görünecek." />
+        ) : (
+          <div className="stacked-table">
+            {posts.map((post) => (
+              <FeedAdminRow
+                key={post.feedPostId}
+                post={post}
+                onPublish={() => publishMutation.mutate(post.feedPostId)}
+                onPin={() => pinMutation.mutate(post.feedPostId)}
+                onUnpin={() => unpinMutation.mutate(post.feedPostId)}
+                onArchive={() => archiveMutation.mutate(post.feedPostId)}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+    </section>
+  )
+}
+
+function FeedAdminRow(input: {
+  post: FeedPost
+  onPublish: () => void
+  onPin: () => void
+  onUnpin: () => void
+  onArchive: () => void
+}) {
+  return (
+    <article className="stacked-row">
+      <div className="stacked-row-head">
+        <div>
+          <strong>{input.post.title}</strong>
+          <p className="queue-subtitle">{input.post.body}</p>
+        </div>
+        <div className="action-cluster">
+          <StatusPill tone={input.post.postType === 'challenge' ? 'accent' : 'neutral'}>
+            {formatFeedPostType(input.post.postType)}
+          </StatusPill>
+          <StatusPill tone={mapStatusTone(input.post.publishStatus)}>
+            {formatState(input.post.publishStatus)}
+          </StatusPill>
+          {input.post.isPinned ? <StatusPill tone="warning">Pinned</StatusPill> : null}
+        </div>
+      </div>
+
+      <div className="key-grid">
+        <KeyValue label="Scope" value={`${formatFeedScope(input.post.visibilityScopeType)} ${input.post.visibilityScopeIds.join(', ')}`} />
+        <KeyValue label="Updated" value={formatDateTime(input.post.updatedAt)} />
+        <KeyValue label="Published" value={input.post.publishedAt ? formatDateTime(input.post.publishedAt) : 'Draft'} />
+        <KeyValue label="Metric" value={input.post.metricLabel ?? 'No metric'} />
+        <KeyValue
+          label="Challenge window"
+          value={
+            input.post.challengeStartsOn && input.post.challengeEndsOn
+              ? `${formatDate(input.post.challengeStartsOn)} - ${formatDate(input.post.challengeEndsOn)}`
+              : 'No challenge window'
+          }
+        />
+        <KeyValue label="Link" value={input.post.targetRoute ?? input.post.linkUrl ?? 'No link'} />
+      </div>
+
+      <div className="action-cluster">
+        {input.post.publishStatus === 'draft' ? (
+          <button className="control-button" type="button" onClick={input.onPublish}>
+            Publish
+          </button>
+        ) : null}
+        {input.post.publishStatus !== 'archived' && !input.post.isPinned ? (
+          <button className="control-button" type="button" onClick={input.onPin}>
+            Pin
+          </button>
+        ) : null}
+        {input.post.publishStatus !== 'archived' && input.post.isPinned ? (
+          <button className="control-button" type="button" onClick={input.onUnpin}>
+            Unpin
+          </button>
+        ) : null}
+        {input.post.publishStatus !== 'archived' ? (
+          <button className="control-button" type="button" onClick={input.onArchive}>
+            Archive
+          </button>
+        ) : null}
+      </div>
+    </article>
+  )
+}
+
+function createInitialForm(isRegionManagerOnly: boolean, defaultRegionId: string): FeedFormState {
+  return {
+    postType: 'announcement',
+    title: '',
+    body: '',
+    linkLabel: '',
+    linkUrl: '',
+    visibilityScopeType: isRegionManagerOnly ? 'region' : 'company',
+    scopeId: isRegionManagerOnly ? defaultRegionId : '',
+    isPinned: false,
+    startsAt: '',
+    endsAt: '',
+    metricCode: 'upt',
+    targetRoute: '/store/rankings',
+    challengeStartsOn: '',
+    challengeEndsOn: '',
+  }
+}
+
+function buildRegionOptions(stores: AuthLookupStore[]) {
+  const regions = new Map<string, { regionId: string; regionName: string }>()
+
+  for (const store of stores) {
+    regions.set(store.regionId, {
+      regionId: store.regionId,
+      regionName: store.regionName,
+    })
+  }
+
+  return [...regions.values()]
+}
+
+function mapStatusTone(status: FeedPublishStatus): Tone {
+  if (status === 'published') return 'calm'
+  if (status === 'archived') return 'neutral'
+  return 'warning'
+}

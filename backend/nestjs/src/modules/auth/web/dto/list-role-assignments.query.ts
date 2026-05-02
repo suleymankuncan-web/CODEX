@@ -1,5 +1,6 @@
 import { Transform, Type } from "class-transformer";
-import { IsBoolean, IsIn, IsInt, IsOptional, IsUUID, Max, Min } from "class-validator";
+import { IsBoolean, IsIn, IsInt, IsOptional, Max, Min } from "class-validator";
+import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 
 export class ListRoleAssignmentsQueryDto {
   @IsOptional()
@@ -16,11 +17,20 @@ export class ListRoleAssignmentsQueryDto {
   offset?: number;
 
   @IsOptional()
-  @IsUUID()
+  @IsPostgresUuid()
   userId?: string;
 
   @IsOptional()
-  @IsIn(["SUPER_ADMIN", "INTEGRATION_ADMIN", "SNAPSHOT_OPERATOR", "REPORT_VIEWER", "AUDITOR"])
+  @IsIn([
+    "SUPER_ADMIN",
+    "INTEGRATION_ADMIN",
+    "SNAPSHOT_OPERATOR",
+    "REPORT_VIEWER",
+    "AUDITOR",
+    "REGION_MANAGER",
+    "STORE_MANAGER",
+    "STORE_PERSONNEL",
+  ])
   roleCode?: string;
 
   @IsOptional()

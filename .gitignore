@@ -4,10 +4,24 @@ backend/nestjs/.release-rehearsal-*.log
 backend/nestjs/.release-rehearsal-*.err.log
 backend/nestjs/.smoke-app*.log
 backend/nestjs/.smoke-app*.err.log
+backend/nestjs/.perf-baseline-*.log
 backend/nestjs/coverage/
 backend/nestjs/.env
 backend/nestjs/.env.local
 backend/nestjs/.env.*.local
+admin-web/node_modules/
+admin-web/dist/
+admin-web/dist-ssr/
+admin-web/*.log
+admin-web/.env
+admin-web/.env.local
+admin-web/.env.*.local
 .git/
 .DS_Store
 Thumbs.db
+Yeni Metin Belgesi.txt
+tmp/
+tmp_excel_inspect/
+outputs/
+tmp-keycloak-cookie*.txt
+references/design-md/

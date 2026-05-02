@@ -1,0 +1,29 @@
+FROM node:24-bookworm-slim AS build
+
+WORKDIR /app
+COPY admin-web/package*.json ./
+RUN npm ci
+
+COPY admin-web/ ./
+
+ARG VITE_API_BASE_URL
+ARG VITE_AUTH_MODE=bearer
+ARG VITE_AUTH_PROVIDER=clerk
+ARG VITE_CLERK_PUBLISHABLE_KEY
+ARG VITE_CLERK_JWT_TEMPLATE
+
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ENV VITE_AUTH_MODE=$VITE_AUTH_MODE
+ENV VITE_AUTH_PROVIDER=$VITE_AUTH_PROVIDER
+ENV VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY
+ENV VITE_CLERK_JWT_TEMPLATE=$VITE_CLERK_JWT_TEMPLATE
+
+RUN npm run build
+
+FROM nginx:1.27-alpine AS runtime
+
+COPY admin-web/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/dist /usr/share/nginx/html
+
+EXPOSE 80
+

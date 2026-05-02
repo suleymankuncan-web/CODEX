@@ -1,7 +1,8 @@
-import { IsDateString, IsUUID } from "class-validator";
+import { IsDateString } from "class-validator";
+import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 
 export class HeadcountGapQueryDto {
-  @IsUUID()
+  @IsPostgresUuid()
   storeId!: string;
 
   @IsDateString()

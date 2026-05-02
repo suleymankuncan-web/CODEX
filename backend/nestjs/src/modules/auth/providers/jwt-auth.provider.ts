@@ -1,11 +1,25 @@
-import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { Injectable, Logger, UnauthorizedException } from "@nestjs/common";
 import { createRemoteJWKSet, jwtVerify, JWTVerifyGetKey } from "jose";
 import { AppConfigService } from "../../../shared/app-config.service";
-import { AuthenticatedUser } from "../auth-context.service";
+import { AuthenticatedUser, buildAuthenticatedUser } from "../auth-context.service";
 import { AuthProvider } from "../interfaces/auth-provider.interface";
+
+const APP_ROLE_CODES = new Set([
+  "AUDITOR",
+  "HR_ADMIN",
+  "INTEGRATION_ADMIN",
+  "REGION_MANAGER",
+  "REPORT_VIEWER",
+  "SNAPSHOT_OPERATOR",
+  "STORE_MANAGER",
+  "STORE_PERSONNEL",
+  "SUPER_ADMIN",
+  "VISUAL_MERCHANDISER",
+]);
 
 @Injectable()
 export class JwtAuthProvider implements AuthProvider {
+  private readonly logger = new Logger(JwtAuthProvider.name);
   private jwksResolver: JWTVerifyGetKey | null = null;
   private jwksUrl: string | null = null;
 
@@ -25,6 +39,14 @@ export class JwtAuthProvider implements AuthProvider {
     const verification = await this.verifyToken(token);
 
     const payload = verification.payload;
+    if (
+      this.appConfigService.isProduction &&
+      (typeof payload.sub !== "string" || payload.sub.length === 0)
+    ) {
+      throw new UnauthorizedException("JWT subject claim is required");
+    }
+
+    const userInfo = await this.resolveUserInfo(token, payload);
 
     const parseScope = (field: unknown): string[] => {
       if (!field) return [];
@@ -37,32 +59,153 @@ export class JwtAuthProvider implements AuthProvider {
         .filter(Boolean);
     };
 
-    return {
-      userId: String(payload.sub),
-      employeeId: payload["employee_id"] ? String(payload["employee_id"]) : undefined,
-      roleCodes: parseScope(payload["roles"]),
-      scope: {
-        companyIds: parseScope(payload["company_ids"]),
-        regionIds: parseScope(payload["region_ids"]),
-        storeIds: parseScope(payload["store_ids"]),
-      },
+    const parseKeycloakRoles = (): string[] => {
+      const explicitRoles = parseScope(payload["roles"]);
+      const realmRoles =
+        typeof payload["realm_access"] === "object" && payload["realm_access"] !== null
+          ? parseScope((payload["realm_access"] as Record<string, unknown>).roles)
+          : [];
+      const clientId = this.appConfigService.authClientId;
+      const resourceRoles =
+        clientId &&
+        typeof payload["resource_access"] === "object" &&
+        payload["resource_access"] !== null
+          ? parseScope(
+              ((payload["resource_access"] as Record<string, unknown>)[clientId] as
+                | Record<string, unknown>
+                | undefined)?.roles,
+            )
+          : [];
+
+      return [...new Set([...explicitRoles, ...realmRoles, ...resourceRoles])]
+        .filter((role) => APP_ROLE_CODES.has(role));
     };
+
+    const roleCodes = parseKeycloakRoles();
+    const parseReadScopeClaim = (newField: string, legacyField: string): string[] =>
+      payload[newField] === undefined ? parseScope(payload[legacyField]) : parseScope(payload[newField]);
+    const companyIds = parseReadScopeClaim("read_company_ids", "company_ids");
+    const regionIds = parseReadScopeClaim("read_region_ids", "region_ids");
+    const storeIds = parseReadScopeClaim("read_store_ids", "store_ids");
+    const assignedStoreIds =
+      payload["assigned_store_ids"] === undefined
+        ? parseScope(payload["store_ids"])
+        : parseScope(payload["assigned_store_ids"]);
+    const resolvedUserId =
+      typeof payload.sub === "string"
+        ? payload.sub
+        : userInfo?.sub ?? userInfo?.preferredUsername ?? "unknown-user";
+
+    return buildAuthenticatedUser({
+      userId: resolvedUserId,
+      employeeId: payload["employee_id"] ? String(payload["employee_id"]) : undefined,
+      roleCodes,
+      readScope: {
+        companyIds,
+        regionIds,
+        storeIds,
+      },
+      actionScope: {
+        assignedStoreIds,
+      },
+    });
   }
 
   private async verifyToken(token: string) {
     try {
+      const audiences = [
+        this.appConfigService.jwtAudience,
+        this.appConfigService.authClientId,
+        "account",
+      ].filter((value, index, list): value is string => Boolean(value) && list.indexOf(value) === index);
+
       const options = {
         issuer: this.appConfigService.jwtIssuer,
-        audience: this.appConfigService.jwtAudience,
       };
 
-      if (this.appConfigService.jwtJwksUrl) {
-        return await jwtVerify(token, this.getRemoteJwksResolver(), options);
+      const [, payloadSegment] = token.split(".");
+      const decodedPayload =
+        payloadSegment && payloadSegment.length > 0
+          ? JSON.parse(Buffer.from(payloadSegment, "base64url").toString("utf8")) as {
+              aud?: string | string[];
+            }
+          : {};
+
+      if (this.appConfigService.isProduction && decodedPayload.aud === undefined) {
+        throw new Error("JWT audience claim is required in production");
       }
 
-      return await jwtVerify(token, new TextEncoder().encode(this.appConfigService.jwtSecret), options);
-    } catch {
+      const verificationOptions =
+        decodedPayload.aud === undefined
+          ? options
+          : {
+              ...options,
+              audience: audiences,
+            };
+
+      if (this.appConfigService.jwtJwksUrl) {
+        return await jwtVerify(token, this.getRemoteJwksResolver(), verificationOptions);
+      }
+
+      return await jwtVerify(
+        token,
+        new TextEncoder().encode(this.appConfigService.jwtSecret),
+        verificationOptions,
+      );
+    } catch (error) {
+      this.logger.warn(
+        `JWT verification failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
       throw new UnauthorizedException("Invalid JWT");
+    }
+  }
+
+  private async resolveUserInfo(
+    token: string,
+    payload: { iss?: unknown; sub?: unknown; preferred_username?: unknown },
+  ): Promise<{ sub?: string; preferredUsername?: string } | null> {
+    if (
+      typeof payload.sub === "string" &&
+      payload.sub.length > 0 &&
+      typeof payload.preferred_username === "string" &&
+      payload.preferred_username.length > 0
+    ) {
+      return {
+        sub: payload.sub,
+        preferredUsername: payload.preferred_username,
+      };
+    }
+
+    if (typeof payload.iss !== "string" || payload.iss.length === 0) {
+      return null;
+    }
+
+    try {
+      const response = await fetch(`${payload.iss}/protocol/openid-connect/userinfo`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const userInfo = (await response.json()) as {
+        sub?: unknown;
+        preferred_username?: unknown;
+      };
+
+      return {
+        sub: typeof userInfo.sub === "string" ? userInfo.sub : undefined,
+        preferredUsername:
+          typeof userInfo.preferred_username === "string"
+            ? userInfo.preferred_username
+            : undefined,
+      };
+    } catch {
+      return null;
     }
   }
 

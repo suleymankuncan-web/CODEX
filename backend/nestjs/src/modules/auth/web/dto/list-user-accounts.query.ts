@@ -16,8 +16,8 @@ export class ListUserAccountsQueryDto {
   offset?: number;
 
   @IsOptional()
-  @IsIn(["local", "oidc", "sso"])
-  authProvider?: "local" | "oidc" | "sso";
+  @IsIn(["local", "oidc", "sso", "clerk"])
+  authProvider?: "local" | "oidc" | "sso" | "clerk";
 
   @IsOptional()
   @Transform(({ value }) => {
