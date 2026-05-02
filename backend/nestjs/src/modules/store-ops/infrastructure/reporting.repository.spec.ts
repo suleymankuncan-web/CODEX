@@ -123,6 +123,20 @@ describe("ReportingRepository access scope contract", () => {
 
     expect(query).not.toHaveBeenCalled();
   });
+
+  it("accepts deterministic seed employee UUIDs without resolving them as external refs", async () => {
+    const { query, repository } = createRepository();
+
+    await expect(
+      repository.resolveEmployeeIdForAuthIdentity({
+        userId: "80000000-0000-0000-0000-000000000900",
+        employeeId: "00000000-0000-0000-0000-000000000201",
+        companyIds: ["00000000-0000-0000-0000-000000000001"],
+      }),
+    ).resolves.toBe("00000000-0000-0000-0000-000000000201");
+
+    expect(query).not.toHaveBeenCalled();
+  });
 });
 
 describe("ReportingRepository store monthly score breakdown queries", () => {
