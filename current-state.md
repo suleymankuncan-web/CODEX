@@ -6176,10 +6176,47 @@ Pilot kapisi etkisi:
 - Data kaniti hala dis input bekliyor.
 - Pilot hala `Go` degil; true store/personnel baseline ve real KPI import dosyalari gelmeden data smoke yapilamaz.
 
+## Son KPI File Preflight Evidence
+
+3 Mayis 2026 00:11 +03 itibariyla kullanicinin sagladigi iki Excel dosyasinin master-data degil KPI snapshot dosyalari oldugu netlesti ve local file preflight kayda baglandi.
+
+Yeni kanit kaydi:
+
+- `docs/evidence/pilot-readiness/2026-05-03-kpi-file-preflight.md`
+
+Dosyalar:
+
+- `MAĞAZA TABLO.xlsx`
+- `PERSONEL TABLO.xlsx`
+
+Sonuc:
+
+- Store KPI dosyasi backend Excel parser ile `271` satir okundu; `268` data row ve `266` distinct store gorundu.
+- Store dosyasi beklenen KPI kolonlarini tasiyor: `Mağaza Adı`, `Hedef`, `Ciro`, `Satış Adedi`, `FF`, `CR`, `ATV`, `Fatura Sayısı`, `UPT`.
+- Personnel KPI dosyasi backend Excel parser ile `2940` satir okundu; `2924` data row gorundu.
+- Personnel dosyasi beklenen KPI kolonlarini tasiyor: `Adı`, `Mağaza Adı`, `P. Satış Adeti`, `Satış Tutarı`, `P.ATV`, `P.UPT`.
+- Personnel dosyasinda `768` pozitif satis satiri, `2017` negatif hareket satiri, `86` e-store satiri ve `0` ATV/UPT denominator conflict satiri gorundu.
+- Eslesen store/personel reconciliation preflight'i `185` store icin kosuldu: `171` balanced, `14` warning.
+- Karsilastirilan store net satis toplamı `626147496.48`; personel pozitif gross toplamı `633690591.37`; personel negatif hareket toplamı `-7466810.41`; toplam reconciliation delta `-76284.48`.
+
+Sinir:
+
+- Bu kayit authenticated staging upload degildir.
+- Import batch olusturulmadi.
+- Official KPI data materialize edilmedi.
+- Master-data bootstrap/promotion kosulmadi.
+- Dosyalardaki secili raporlama donemi workbook header/filename icinde kanitli degil; operator period bilgisini vermeli.
+- Staging KPI import store scope henuz review edilmedi.
+
+Pilot kapisi etkisi:
+
+- Real KPI file preflight kapisi ilerledi; dosyalar KPI snapshot olarak uygun gorunuyor.
+- Official KPI import/materialization hala `No-Go`; period, staging import scope, authenticated upload, batch id/source batch id, unmapped counts ve backend reconciliation evidence tamamlanmali.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
 
 ```text
-current-state.md oku; aktif proje yolu artik D:\store-ops-workspace. OneDrive altindaki eski masaustu kopyasini kullanma. Eski E:\ yolunu da kullanma. HR Axis staging hatti canli: frontend https://staging.hr-axis.com, backend custom API https://api-staging.hr-axis.com/api, DB Supabase Free Postgres, auth Clerk, authorization uygulama DB'sinde. 2026-05-02 public staging smoke recheck kaydi `docs/evidence/pilot-readiness/2026-05-02-staging-smoke-recheck.md`. 45 saniyelik otomatik yenilenme fix'i main'e pushlandi ve staging bundle'da `token-present` / `token-missing` marker'lari goruldu. 2026-05-02 Vercel custom API base redeploy kaydi `docs/evidence/pilot-readiness/2026-05-02-vercel-custom-api-base-redeploy.md`: Vercel production `VITE_API_BASE_URL` artik `https://api-staging.hr-axis.com/api`; deploy id `dpl_Gu9gKJbuMPD7f3QVmruvnR6ZHppK`; staging bundle artik custom API base iceriyor ve Render direct API base icermiyor; custom API health/CORS ok; unauthenticated /store -> /auth/login clean. 2026-05-02 manuel authenticated Clerk store smoke kaydi `docs/evidence/pilot-readiness/2026-05-02-authenticated-clerk-store-smoke.md`: kullanici browser'da `/store`, `/store/me`, `/store/kpis`, `/store/approvals` route'larinin acildigini ve 45 saniye yenileme olmadigini dogruladi. 2026-05-02 data input preflight no-go kaydi `docs/evidence/pilot-readiness/2026-05-02-data-input-preflight-no-go.md`: workspace icinde `.xlsx/.xls/.csv/.tsv` aday dosya bulunmadi; Master Data Bootstrap Pilot Smoke ve Excel KPI Import Operator Smoke kosulmadi. Pilot Readiness Gate V1 hala gecerli: raw/sanitized backend session role/scope evidence, assigned/unassigned scope smoke, true baseline master data, real KPI import smoke, pilot user/scope ve release/migration evidence tamamlanmadan pilot onayi verilmesin.
+current-state.md oku; aktif proje yolu artik D:\store-ops-workspace. OneDrive altindaki eski masaustu kopyasini kullanma. Eski E:\ yolunu da kullanma. HR Axis staging hatti canli: frontend https://staging.hr-axis.com, backend custom API https://api-staging.hr-axis.com/api, DB Supabase Free Postgres, auth Clerk, authorization uygulama DB'sinde. 2026-05-02 public staging smoke recheck kaydi `docs/evidence/pilot-readiness/2026-05-02-staging-smoke-recheck.md`. 45 saniyelik otomatik yenilenme fix'i main'e pushlandi ve staging bundle'da `token-present` / `token-missing` marker'lari goruldu. 2026-05-02 Vercel custom API base redeploy kaydi `docs/evidence/pilot-readiness/2026-05-02-vercel-custom-api-base-redeploy.md`: Vercel production `VITE_API_BASE_URL` artik `https://api-staging.hr-axis.com/api`; deploy id `dpl_Gu9gKJbuMPD7f3QVmruvnR6ZHppK`; staging bundle artik custom API base iceriyor ve Render direct API base icermiyor; custom API health/CORS ok; unauthenticated /store -> /auth/login clean. 2026-05-02 manuel authenticated Clerk store smoke kaydi `docs/evidence/pilot-readiness/2026-05-02-authenticated-clerk-store-smoke.md`: kullanici browser'da `/store`, `/store/me`, `/store/kpis`, `/store/approvals` route'larinin acildigini ve 45 saniye yenileme olmadigini dogruladi. 2026-05-02 data input preflight no-go kaydi `docs/evidence/pilot-readiness/2026-05-02-data-input-preflight-no-go.md`: workspace icinde `.xlsx/.xls/.csv/.tsv` aday dosya bulunmadi; Master Data Bootstrap Pilot Smoke ve Excel KPI Import Operator Smoke kosulmadi. 2026-05-03 KPI file preflight kaydi `docs/evidence/pilot-readiness/2026-05-03-kpi-file-preflight.md`: kullanicinin `MAĞAZA TABLO.xlsx` ve `PERSONEL TABLO.xlsx` dosyalari master-data degil KPI snapshot olarak okundu; store/personel kolonlari uygun, local reconciliation preflight 185 store icin 171 balanced / 14 warning verdi; official upload henuz kosulmadi cunku raporlama donemi, staging KPI import scope, authenticated upload ve backend batch evidence eksik. Pilot Readiness Gate V1 hala gecerli: raw/sanitized backend session role/scope evidence, assigned/unassigned scope smoke, true baseline master data, official real KPI import smoke, pilot user/scope ve release/migration evidence tamamlanmadan pilot onayi verilmesin.
 ```
