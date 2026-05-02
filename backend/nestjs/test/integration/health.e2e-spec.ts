@@ -59,6 +59,31 @@ describe("HealthController (integration)", () => {
     }
   });
 
+  it("preserves dependency details when the standard error filter is installed", async () => {
+    const app = await createIntegrationApp({
+      databaseService: {
+        query: jest.fn().mockRejectedValue(new Error("database unavailable")),
+      },
+      appConfigService: {
+        appName: "store-ops-backend",
+        queueBackend: "in-memory",
+        redisUrl: "redis://localhost:6379",
+      },
+      standardErrorFilter: true,
+    });
+
+    try {
+      const response = await request(app.getHttpServer()).get("/api/health");
+
+      expect(response.status).toBe(503);
+      expect(response.body.status).toBe("error");
+      expect(response.body.checks.database.status).toBe("error");
+      expect(response.body.checks.database.message).toContain("database unavailable");
+    } finally {
+      await app.close();
+    }
+  });
+
   it("returns live health without checking dependencies", async () => {
     const app = await createIntegrationApp({
       databaseService: {

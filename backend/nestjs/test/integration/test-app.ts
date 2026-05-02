@@ -7,6 +7,7 @@ import { DatabaseService } from "../../src/shared/database/database.service";
 import { AppConfigService } from "../../src/shared/app-config.service";
 import { BullMqJobDispatcherService } from "../../src/shared/jobs/bullmq-job-dispatcher.service";
 import { JOB_DISPATCHER } from "../../src/shared/jobs/jobs.constants";
+import { StandardErrorFilter } from "../../src/shared/http/standard-error.filter";
 
 function configureDefaultAuthMode() {
   const explicitJwtTest =
@@ -25,6 +26,7 @@ export async function createIntegrationApp(overrides?: {
   jobDispatcher?: object;
   authContextService?: object;
   appConfigService?: object;
+  standardErrorFilter?: boolean;
 }) {
   configureDefaultAuthMode();
 
@@ -71,6 +73,10 @@ export async function createIntegrationApp(overrides?: {
       forbidNonWhitelisted: true,
     }),
   );
+
+  if (overrides?.standardErrorFilter) {
+    app.useGlobalFilters(new StandardErrorFilter());
+  }
 
   await app.init();
 
