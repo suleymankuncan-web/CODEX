@@ -6,6 +6,12 @@ import { HealthService } from "./health.service";
 export class HealthController {
   constructor(private readonly healthService: HealthService) {}
 
+  @Get("live")
+  @Public()
+  getLiveHealth() {
+    return this.healthService.getLiveHealth();
+  }
+
   @Get()
   @Public()
   async getHealth() {

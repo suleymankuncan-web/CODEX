@@ -16,6 +16,13 @@ export class HealthService {
     private readonly databaseService: DatabaseService,
   ) {}
 
+  getLiveHealth() {
+    return {
+      status: "ok",
+      service: this.appConfigService.appName,
+    };
+  }
+
   async getHealth() {
     const [database, redis] = await Promise.all([
       this.checkDatabase(),

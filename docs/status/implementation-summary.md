@@ -26,7 +26,7 @@
 | Live E2E runbook | `docs/backend/live-e2e-runbook.md` | Done | Docker-backed runtime verification steps, prerequisites, and known blockers are now documented |
 | Operational monitoring contract | `docs/backend/operational-monitoring-contract.md` | Done | Monitoring expectations for health, import, snapshot, audit, and alert interpretation are now explicit |
 | Release readiness pass | `docs/status/release-readiness-2026-04-18.md` | Done | Live Docker/Redis/PostgreSQL readiness pass and runtime findings are documented with outcomes |
-| Dependency-aware health check | `backend/nestjs/src/shared/health.*`, `backend/nestjs/src/modules/auth/decorators/public.decorator.ts`, `backend/nestjs/test/integration/health.e2e-spec.ts` | Done | `/api/health` now probes PostgreSQL and Redis and returns `503` on required dependency failure |
+| Dependency-aware health check | `backend/nestjs/src/shared/health.*`, `backend/nestjs/src/modules/auth/decorators/public.decorator.ts`, `backend/nestjs/test/integration/health.e2e-spec.ts` | Done | `/api/health/live` is process liveness for hosts; `/api/health` probes PostgreSQL and Redis and returns `503` on required dependency failure |
 | Release smoke script | `backend/nestjs/scripts/release-smoke.ts`, `backend/nestjs/package.json` | Done | A reusable smoke command now checks health, import overview, snapshot overview, and reporting summary |
 | DTO validation layer | `backend/nestjs/src/modules/**/dto/*` | Done | Query/body validation for current API surface |
 | EF Core skeleton | `backend/dotnet/StoreOps.Infrastructure/*` | Done | DbContext and base entities |

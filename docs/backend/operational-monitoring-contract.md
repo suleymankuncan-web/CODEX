@@ -7,6 +7,25 @@
 ## Monitoring Layers
 
 ### 1. Process liveness
+- `GET /api/health/live`
+- Current contract:
+  - returns `200` when the NestJS HTTP process is booted and reachable
+  - does not probe PostgreSQL or Redis
+  - intended for hosting-platform health checks
+  - body:
+
+```json
+{
+  "status": "ok",
+  "service": "store-ops-backend"
+}
+```
+
+- Operational meaning:
+  - app process is booted
+  - Nest HTTP surface is reachable
+
+### 2. Dependency readiness
 - `GET /api/health`
 - Current contract:
   - returns `200` when app and required dependencies are healthy
@@ -41,7 +60,7 @@
 - Notes:
   - when `QUEUE_BACKEND` is not `bullmq`, Redis check is returned as `skipped`
 
-### 2. Queue-backed command acceptance
+### 3. Queue-backed command acceptance
 - Import and snapshot command endpoints must return command envelopes with `job` metadata.
 - Required command surfaces:
   - `POST /api/integrations/import-batches`
@@ -61,7 +80,7 @@
   - request was accepted or reused
   - async backend can be correlated to queue activity
 
-### 3. Import monitoring surface
+### 4. Import monitoring surface
 - Core endpoints:
   - `GET /api/integrations/import-batches/summary`
   - `GET /api/integrations/import-batches/overview`
@@ -90,7 +109,7 @@
   - `needs_action`
   - `stuck`
 
-### 4. Snapshot monitoring surface
+### 5. Snapshot monitoring surface
 - Core endpoints:
   - `GET /api/snapshots/runs/summary`
   - `GET /api/snapshots/runs/overview`
@@ -172,6 +191,7 @@ This is the minimum correlation set for incident triage.
 ## Runtime Verification Contract
 - A deployment is considered operationally ready only if all of the following are true:
   - `npm run check:release` succeeds
+  - `GET /api/health/live` returns `200`
   - `GET /api/health` returns `200`
   - `npm run smoke:store-me` succeeds for a scoped `STORE_PERSONNEL` identity
   - live PostgreSQL and Redis are reachable

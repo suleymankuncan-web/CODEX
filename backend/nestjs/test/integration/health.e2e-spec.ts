@@ -59,6 +59,31 @@ describe("HealthController (integration)", () => {
     }
   });
 
+  it("returns live health without checking dependencies", async () => {
+    const app = await createIntegrationApp({
+      databaseService: {
+        query: jest.fn().mockRejectedValue(new Error("database unavailable")),
+      },
+      appConfigService: {
+        appName: "store-ops-backend",
+        queueBackend: "in-memory",
+        redisUrl: "redis://localhost:6379",
+      },
+    });
+
+    try {
+      const response = await request(app.getHttpServer()).get("/api/health/live");
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        status: "ok",
+        service: "store-ops-backend",
+      });
+    } finally {
+      await app.close();
+    }
+  });
+
   it("does not echo invalid inbound correlation ids", async () => {
     const app = await createIntegrationApp({
       databaseService: {

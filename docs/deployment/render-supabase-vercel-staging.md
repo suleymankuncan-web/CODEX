@@ -81,7 +81,7 @@ Plan: Free
 Root Directory: backend/nestjs
 Build Command: npm ci --include=dev && npm run build
 Start Command: node dist/src/main.js
-Health Check Path: /api/health
+Health Check Path: /api/health/live
 Auto Deploy: Off
 ```
 
@@ -170,9 +170,15 @@ Ilk dogrulamada Cloudflare proxy `DNS only` kalabilir.
 ## 7. Smoke
 
 ```text
+https://api-staging.hr-axis.com/api/health/live
 https://api-staging.hr-axis.com/api/health
 https://staging.hr-axis.com
 https://api-staging.hr-axis.com/api/auth/session
 ```
+
+`/api/health/live` sadece NestJS process'inin cevap verdigini gosterir ve Render
+deploy health check'i icin kullanilir. `/api/health` PostgreSQL/Redis gibi
+bagimliliklari da kontrol eder; staging smoke ve DB kaniti icin asil hazirlik
+kontrolu budur.
 
 Smoke tamamlanmadan pilot gate acilmaz.
