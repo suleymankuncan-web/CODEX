@@ -11,6 +11,14 @@ Files reviewed:
 - `MAĞAZA TABLO.xlsx`
 - `PERSONEL TABLO.xlsx`
 
+Confirmed reporting period:
+
+- Period type: `monthly`
+- Period month: `2026-03`
+- Period start: `2026-03-01`
+- Period end: `2026-03-31`
+- Source: operator confirmation on 2026-05-03.
+
 Purpose:
 
 - Confirm the supplied files are KPI snapshot exports, not master-data baseline files.
@@ -105,13 +113,13 @@ Largest review deltas:
 
 ## Blockers Before Official Upload
 
-- The selected reporting period is not present in the workbook headers or filenames and must be supplied by the operator.
 - Authenticated staging upload was not run in this capture.
 - Staging KPI import store scope was not reviewed in this capture.
+- The frontend admin integrations route allows `SUPER_ADMIN` / `INTEGRATION_ADMIN`, but the backend Power BI upload endpoint requires `INTEGRATION_ADMIN`; the staging operator role must be verified before upload.
 - Official import-batch id, source batch id, unmapped store/employee counts, and backend reconciliation evidence are still missing.
 
 ## Decision
 
 File-format preflight: Conditional Go.
 
-Official KPI import/materialization: No-Go until the operator confirms the period, staging KPI import scope is reviewed, and authenticated staging upload evidence is captured.
+Official KPI import/materialization: No-Go until staging KPI import scope is reviewed, an `INTEGRATION_ADMIN`-authorized upload is run, and authenticated backend import-batch evidence is captured.
