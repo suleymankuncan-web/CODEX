@@ -223,7 +223,7 @@ INSERT INTO ops.checklist_template (
 )
 VALUES
     ('a0000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'OPENING_AUDIT_V1', 'Opening Audit', 'operations', 1, 'active', DATE '2024-01-01', '80000000-0000-0000-0000-000000000001')
-ON CONFLICT (template_code) DO NOTHING;
+ON CONFLICT (template_code, version_no) DO NOTHING;
 
 INSERT INTO ops.checklist_template_item (
     template_item_id, checklist_template_id, section_name, item_no, item_text, response_type, is_mandatory, weight, max_score
