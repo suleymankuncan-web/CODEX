@@ -297,6 +297,14 @@ export function IntegrationDashboardPage() {
     powerBiPeriodType === 'monthly'
       ? Boolean(powerBiPeriodMonth)
       : Boolean(powerBiPeriodStart && powerBiPeriodEnd && powerBiPeriodEnd >= powerBiPeriodStart)
+  const powerBiUploadBlockers = [
+    powerBiSources.length === 0 ? 'Aktif Power BI KPI source yok.' : null,
+    !personnelFile && !storeFile ? 'Personel veya mağaza Excel dosyası seç.' : null,
+    powerBiSources.length > 0 && !resolvedPowerBiSourceCode ? 'Power BI KPI source seç.' : null,
+    !isPowerBiPeriodValid ? 'Dönem bilgisi eksik veya geçersiz.' : null,
+  ].filter((item): item is string => Boolean(item))
+  const isPowerBiUploadDisabled =
+    uploadPowerBiMutation.isPending || powerBiUploadBlockers.length > 0
 
   return (
     <section className="page-stack">
@@ -732,13 +740,7 @@ export function IntegrationDashboardPage() {
           <button
             className="control-button"
             type="button"
-            disabled={
-              uploadPowerBiMutation.isPending ||
-              powerBiSources.length === 0 ||
-              (!personnelFile && !storeFile) ||
-              !resolvedPowerBiSourceCode ||
-              !isPowerBiPeriodValid
-            }
+            disabled={isPowerBiUploadDisabled}
             onClick={() =>
               uploadPowerBiMutation.mutate({
                 sourceCode: resolvedPowerBiSourceCode,
@@ -758,9 +760,15 @@ export function IntegrationDashboardPage() {
           >
             {uploadPowerBiMutation.isPending ? 'Yukleniyor...' : 'Power BI export yukle'}
           </button>
-          <span className="inline-state inline-state-neutral">
-            Personel pozitif satış brüt performans, mağaza cirosu net hedef performansı olarak işlenir.
-          </span>
+          {powerBiUploadBlockers.length > 0 ? (
+            <span className="inline-state inline-state-warning" role="status">
+              <strong>Power BI upload hazır değil</strong>: {powerBiUploadBlockers.join(' ')}
+            </span>
+          ) : (
+            <span className="inline-state inline-state-neutral">
+              Personel pozitif satış brüt performans, mağaza cirosu net hedef performansı olarak işlenir.
+            </span>
+          )}
         </div>
 
         {uploadFeedback ? (

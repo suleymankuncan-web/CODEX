@@ -603,5 +603,6 @@ INSERT INTO stg.integration_source (
 )
 VALUES
     ('d0000000-0000-0000-0000-000000000001', 'HRIS', 'Corporate HRIS', 'employee', 'manual', 'latest_state', TRUE),
-    ('d0000000-0000-0000-0000-000000000002', 'POS', 'Point of Sale', 'kpi', 'manual', 'latest_state', TRUE)
+    ('d0000000-0000-0000-0000-000000000002', 'POS', 'Point of Sale', 'kpi', 'manual', 'latest_state', TRUE),
+    ('d0000000-0000-0000-0000-000000000003', 'power-bi-kpi', 'Power BI KPI', 'kpi', 'power_bi', 'closed_period', TRUE)
 ON CONFLICT (source_code, entity_type) DO NOTHING;

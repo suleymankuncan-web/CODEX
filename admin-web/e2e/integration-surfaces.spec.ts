@@ -94,6 +94,20 @@ test('admin dashboard exposes Power BI period controls', async ({ page }) => {
   await expect(page.getByLabel('Bitis')).toBeEnabled()
 })
 
+test('admin dashboard explains why Power BI export upload is unavailable', async ({ page }) => {
+  await page.unroute('**/api/integrations/lookups')
+  await page.route('**/api/integrations/lookups', async (route) => {
+    await route.fulfill({ json: noPowerBiSourceLookupsFixture })
+  })
+
+  await page.goto('/admin/integrations')
+
+  await expect(page.getByRole('button', { name: 'Power BI export yukle' })).toBeDisabled()
+  await expect(page.getByText('Power BI upload hazır değil')).toBeVisible()
+  await expect(page.getByText('Aktif Power BI KPI source yok.')).toBeVisible()
+  await expect(page.getByText('Personel veya mağaza Excel dosyası seç.')).toBeVisible()
+})
+
 test('admin master data bootstrap surface exposes personnel promotion evidence', async ({ page }) => {
   await page.goto('/admin/master-data/bootstrap-batch-personnel-1')
 
@@ -343,6 +357,14 @@ const lookupsFixture = {
   meta: {
     totalEntityTypes: 7,
     totalActiveSources: 1,
+  },
+}
+
+const noPowerBiSourceLookupsFixture = {
+  activeSources: [],
+  meta: {
+    totalEntityTypes: 7,
+    totalActiveSources: 0,
   },
 }
 

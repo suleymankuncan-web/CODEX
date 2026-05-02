@@ -6207,17 +6207,69 @@ Sinir:
 - Official KPI data materialize edilmedi.
 - Master-data bootstrap/promotion kosulmadi.
 - Staging KPI import store scope henuz review edilmedi.
-- Frontend `/admin/integrations` route'u `SUPER_ADMIN` / `INTEGRATION_ADMIN` kabul ediyor, ancak backend `POST /api/integrations/power-bi-export-upload` endpoint'i `INTEGRATION_ADMIN` istiyor; staging operator rolu upload oncesi dogrulanmali.
+- Backend `RoleGuard` `SUPER_ADMIN` icin global bypass verdigi icin `INTEGRATION_ADMIN` role satiri tek basina upload blocker degildir.
 
 Pilot kapisi etkisi:
 
 - Real KPI file preflight kapisi ilerledi; dosyalar KPI snapshot olarak uygun gorunuyor.
-- Official KPI import/materialization hala `No-Go`; staging import scope, `INTEGRATION_ADMIN` yetkili authenticated upload, batch id/source batch id, unmapped counts ve backend reconciliation evidence tamamlanmali.
+- Official KPI import/materialization hala `No-Go`; staging import scope, authenticated upload, batch id/source batch id, unmapped counts ve backend reconciliation evidence tamamlanmali.
+
+## Son Power BI Export Upload Unblock
+
+3 Mayis 2026 itibariyla `/admin/integrations` uzerinde `Power BI export yukle` butonunun "tikliyorum ama hareket yok" hissi icin root cause ve urun fix'i eklendi.
+
+Yeni kanit kaydi:
+
+- `docs/evidence/pilot-readiness/2026-05-03-power-bi-upload-unblock.md`
+
+Root cause:
+
+- Upload butonu missing prerequisite durumunda disabled kaliyordu.
+- UI buton yaninda disabled nedenini gostermedigi icin operator bunu no-op gibi goruyordu.
+- Reference seed'de `power_bi` / `kpi` source yoktu; sadece `HRIS` ve `POS` source'lari vardi.
+- Backend role mismatch root cause degil: `RoleGuard` `SUPER_ADMIN` icin global bypass veriyor.
+
+Fix:
+
+- Yeni migration: `db/migrations/045_power_bi_kpi_source_seed.sql`.
+- Seed'e default active `power-bi-kpi` source eklendi:
+  - `source_system=power_bi`
+  - `entity_type=kpi`
+  - `state_model=closed_period`
+- `/admin/integrations` upload alanina readiness mesajlari eklendi:
+  - aktif Power BI KPI source yok
+  - personel veya magaza Excel dosyasi secilmedi
+  - source secimi yok
+  - donem bilgisi gecersiz
+- Regression guard eklendi:
+  - `scripts/default-power-bi-source-contract.test.mjs`
+  - `admin-web/e2e/integration-surfaces.spec.ts` disabled upload explanation testi
+
+Dogrulama:
+
+- TDD RED: default Power BI source kontrati seed/migration yokken fail etti.
+- TDD RED: Power BI upload disabled explanation Playwright testi UI mesaji yokken fail etti.
+- GREEN: default Power BI source kontrati gecti.
+- GREEN: `admin-web` build gecti.
+- GREEN: targeted Playwright upload explanation testi gecti.
+- Wider: root script tests `124/124` gecti.
+- Wider: integrations Playwright surface `5/5` gecti.
+- `git diff --check` gecti; yalniz line-ending warning'leri var.
+- `npm.cmd run smoke:migration:fresh-db` kosulamadi; Docker Desktop daemon kapali oldugu icin Postgres image alinamadi.
+
+Sinir:
+
+- Staging DB migration bu turda uygulanmadi.
+- Staging frontend/backend deploy bu kayitla kanitlanmadi.
+- Official authenticated Power BI upload smoke hala kosulmadi.
+- Batch id/source batch id, unmapped count, reconciliation ve materialization evidence hala eksik.
+
+Siradaki mantikli adim: Backend/frontend deploy + staging migration uygulaninca `/admin/integrations` uzerinde Mart 2026 aylik Power BI Excel upload smoke kosulup batch evidence kayda baglanmali.
 
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
 
 ```text
-current-state.md oku; aktif proje yolu artik D:\store-ops-workspace. OneDrive altindaki eski masaustu kopyasini kullanma. Eski E:\ yolunu da kullanma. HR Axis staging hatti canli: frontend https://staging.hr-axis.com, backend custom API https://api-staging.hr-axis.com/api, DB Supabase Free Postgres, auth Clerk, authorization uygulama DB'sinde. 2026-05-02 public staging smoke recheck kaydi `docs/evidence/pilot-readiness/2026-05-02-staging-smoke-recheck.md`. 45 saniyelik otomatik yenilenme fix'i main'e pushlandi ve staging bundle'da `token-present` / `token-missing` marker'lari goruldu. 2026-05-02 Vercel custom API base redeploy kaydi `docs/evidence/pilot-readiness/2026-05-02-vercel-custom-api-base-redeploy.md`: Vercel production `VITE_API_BASE_URL` artik `https://api-staging.hr-axis.com/api`; deploy id `dpl_Gu9gKJbuMPD7f3QVmruvnR6ZHppK`; staging bundle artik custom API base iceriyor ve Render direct API base icermiyor; custom API health/CORS ok; unauthenticated /store -> /auth/login clean. 2026-05-02 manuel authenticated Clerk store smoke kaydi `docs/evidence/pilot-readiness/2026-05-02-authenticated-clerk-store-smoke.md`: kullanici browser'da `/store`, `/store/me`, `/store/kpis`, `/store/approvals` route'larinin acildigini ve 45 saniye yenileme olmadigini dogruladi. 2026-05-02 data input preflight no-go kaydi `docs/evidence/pilot-readiness/2026-05-02-data-input-preflight-no-go.md`: workspace icinde `.xlsx/.xls/.csv/.tsv` aday dosya bulunmadi; Master Data Bootstrap Pilot Smoke ve Excel KPI Import Operator Smoke kosulmadi. 2026-05-03 KPI file preflight kaydi `docs/evidence/pilot-readiness/2026-05-03-kpi-file-preflight.md`: kullanicinin `MAĞAZA TABLO.xlsx` ve `PERSONEL TABLO.xlsx` dosyalari master-data degil KPI snapshot olarak okundu; dosya donemi monthly Mart 2026 (`2026-03-01`/`2026-03-31`) olarak teyit edildi; store/personel kolonlari uygun, local reconciliation preflight 185 store icin 171 balanced / 14 warning verdi; official upload henuz kosulmadi cunku staging KPI import scope, `INTEGRATION_ADMIN` yetkili authenticated upload ve backend batch evidence eksik. Pilot Readiness Gate V1 hala gecerli: raw/sanitized backend session role/scope evidence, assigned/unassigned scope smoke, true baseline master data, official real KPI import smoke, pilot user/scope ve release/migration evidence tamamlanmadan pilot onayi verilmesin.
+current-state.md oku; aktif proje yolu artik D:\store-ops-workspace. OneDrive altindaki eski masaustu kopyasini kullanma. Eski E:\ yolunu da kullanma. HR Axis staging hatti canli: frontend https://staging.hr-axis.com, backend custom API https://api-staging.hr-axis.com/api, DB Supabase Free Postgres, auth Clerk, authorization uygulama DB'sinde. 2026-05-02 public staging smoke recheck kaydi `docs/evidence/pilot-readiness/2026-05-02-staging-smoke-recheck.md`. 45 saniyelik otomatik yenilenme fix'i main'e pushlandi ve staging bundle'da `token-present` / `token-missing` marker'lari goruldu. 2026-05-02 Vercel custom API base redeploy kaydi `docs/evidence/pilot-readiness/2026-05-02-vercel-custom-api-base-redeploy.md`: Vercel production `VITE_API_BASE_URL` artik `https://api-staging.hr-axis.com/api`; deploy id `dpl_Gu9gKJbuMPD7f3QVmruvnR6ZHppK`; staging bundle artik custom API base iceriyor ve Render direct API base icermiyor; custom API health/CORS ok; unauthenticated /store -> /auth/login clean. 2026-05-02 manuel authenticated Clerk store smoke kaydi `docs/evidence/pilot-readiness/2026-05-02-authenticated-clerk-store-smoke.md`: kullanici browser'da `/store`, `/store/me`, `/store/kpis`, `/store/approvals` route'larinin acildigini ve 45 saniye yenileme olmadigini dogruladi. 2026-05-03 KPI file preflight kaydi `docs/evidence/pilot-readiness/2026-05-03-kpi-file-preflight.md`: kullanicinin `MAĞAZA TABLO.xlsx` ve `PERSONEL TABLO.xlsx` dosyalari master-data degil KPI snapshot olarak okundu; dosya donemi monthly Mart 2026 (`2026-03-01`/`2026-03-31`) olarak teyit edildi; local reconciliation preflight 185 store icin 171 balanced / 14 warning verdi. 2026-05-03 Power BI upload unblock kaydi `docs/evidence/pilot-readiness/2026-05-03-power-bi-upload-unblock.md`: `/admin/integrations` upload butonu disabled nedenlerini gosteriyor, seed ve migration default `power-bi-kpi` source ekliyor; staging migration/deploy ve official upload smoke henuz kosulmadi. Pilot Readiness Gate V1 hala gecerli: raw/sanitized backend session role/scope evidence, assigned/unassigned scope smoke, true baseline master data, official real KPI import smoke, pilot user/scope ve release/migration evidence tamamlanmadan pilot onayi verilmesin.
 ```
