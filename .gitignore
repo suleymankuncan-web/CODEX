@@ -25,3 +25,5 @@ tmp_excel_inspect/
 outputs/
 tmp-keycloak-cookie*.txt
 references/design-md/
+
+.vercel
