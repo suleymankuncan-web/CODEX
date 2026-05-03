@@ -6313,10 +6313,59 @@ Sinir:
 
 Siradaki mantikli adim: Kullanici authenticated staging oturumunda Mart 2026 aylik dosyalarla upload'u tekrar dener; import response/detail ekranindan sanitized batch evidence kayda baglanir.
 
+## Son Staging Role/Scope DB Evidence
+
+3 Mayis 2026 09:53 +03 itibariyla staging DB uzerinde Clerk-backed pilot kullanicinin sanitized role/scope kaniti kayda baglandi.
+
+Yeni kanit kaydi:
+
+- `docs/evidence/pilot-readiness/2026-05-03-staging-role-scope-db-evidence.md`
+
+Supabase staging sonucu:
+
+- Project: `hr-axis-staging`
+- User id: `80000000-0000-0000-0000-000000000900`
+- Username: `suleyman.kuncan`
+- Auth provider: `clerk`
+- Active: `true`
+- Active roles:
+  - `STORE_MANAGER`, `scope_type=store`, `company_code=ACME`, `region_code=IST`, `store_code=STORE100`
+  - `SUPER_ADMIN`, `scope_type=company`, `company_code=ACME`
+- Scope summary:
+  - `company_count=1`
+  - `region_count=1`
+  - `store_count=1`
+  - `assigned_store_count=1`
+- Assigned action store:
+  - `STORE100` / `IstinyePark Demo Store` / `active`
+- Unassigned active negative-smoke candidates:
+  - `DEMO-101`
+  - `IST-001`
+  - `IST-002`
+  - `IZM-001`
+
+Kod guard cross-check:
+
+- `RoleGuard` `SUPER_ADMIN` icin role requirement'i global karsilar.
+- `ScopeGuard` `RequireActionScope("store")` endpointlerinde `request.user.actionScope.assignedStoreIds` kontrolunu ayrica uygular ve `SUPER_ADMIN` icin action-store bypass yapmaz.
+- Bu yuzden negatif API smoke, `RequireActionScope("store")` olan bir endpointte atanmis olmayan store id ile kosulmalidir.
+
+Sinir:
+
+- Bu DB configuration evidence'dir.
+- Live authenticated `/api/auth/session` payload evidence, assigned-store positive API action smoke ve unassigned-store negative API denial henuz kosulmadi.
+- Bu workspace'te reusable Clerk bearer token veya staging login automation credential yok.
+- True baseline master data ve official real KPI import smoke hala eksik.
+
+Pilot kapisi etkisi:
+
+- Pilot kullanici DB role/scope binding kaniti kapandi.
+- Pilot hala `Go` degil; authenticated session evidence, assigned/unassigned action-scope API smoke, true baseline master data ve official real KPI import evidence tamamlanmali.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
 
 ```text
-current-state.md oku; aktif proje yolu artik D:\store-ops-workspace. OneDrive altindaki eski masaustu kopyasini kullanma. Eski E:\ yolunu da kullanma. HR Axis staging hatti canli: frontend https://staging.hr-axis.com, backend custom API https://api-staging.hr-axis.com/api, DB Supabase Free Postgres, auth Clerk, authorization uygulama DB'sinde. 2026-05-02 public staging smoke recheck kaydi `docs/evidence/pilot-readiness/2026-05-02-staging-smoke-recheck.md`. 45 saniyelik otomatik yenilenme fix'i main'e pushlandi ve staging bundle'da `token-present` / `token-missing` marker'lari goruldu. 2026-05-02 Vercel custom API base redeploy kaydi `docs/evidence/pilot-readiness/2026-05-02-vercel-custom-api-base-redeploy.md`: Vercel production `VITE_API_BASE_URL` artik `https://api-staging.hr-axis.com/api`; deploy id `dpl_Gu9gKJbuMPD7f3QVmruvnR6ZHppK`; staging bundle artik custom API base iceriyor ve Render direct API base icermiyor; custom API health/CORS ok; unauthenticated /store -> /auth/login clean. 2026-05-02 manuel authenticated Clerk store smoke kaydi `docs/evidence/pilot-readiness/2026-05-02-authenticated-clerk-store-smoke.md`: kullanici browser'da `/store`, `/store/me`, `/store/kpis`, `/store/approvals` route'larinin acildigini ve 45 saniye yenileme olmadigini dogruladi. 2026-05-03 KPI file preflight kaydi `docs/evidence/pilot-readiness/2026-05-03-kpi-file-preflight.md`: kullanicinin `MAĞAZA TABLO.xlsx` ve `PERSONEL TABLO.xlsx` dosyalari master-data degil KPI snapshot olarak okundu; dosya donemi monthly Mart 2026 (`2026-03-01`/`2026-03-31`) olarak teyit edildi; local reconciliation preflight 185 store icin 171 balanced / 14 warning verdi. 2026-05-03 Power BI upload unblock kaydi `docs/evidence/pilot-readiness/2026-05-03-power-bi-upload-unblock.md`: `/admin/integrations` upload butonu disabled nedenlerini gosteriyor, seed ve migration default `power-bi-kpi` source ekliyor. 2026-05-03 Power BI upload staging deploy kaydi `docs/evidence/pilot-readiness/2026-05-03-power-bi-upload-staging-deploy.md`: Vercel deploy `dpl_BppD5H6QP3uAdSEoDXde39tjktp3` READY ve `staging.hr-axis.com` aliaslandi; Supabase staging DB'de `power-bi-kpi` source active ve app migration tracking `045_power_bi_kpi_source_seed.sql` succeeded. Official authenticated upload smoke henuz kosulmadi. Pilot Readiness Gate V1 hala gecerli: raw/sanitized backend session role/scope evidence, assigned/unassigned scope smoke, true baseline master data, official real KPI import smoke, pilot user/scope ve release/migration evidence tamamlanmadan pilot onayi verilmesin.
+current-state.md oku; aktif proje yolu artik D:\store-ops-workspace. OneDrive altindaki eski masaustu kopyasini kullanma. Eski E:\ yolunu da kullanma. HR Axis staging hatti canli: frontend https://staging.hr-axis.com, backend custom API https://api-staging.hr-axis.com/api, DB Supabase Free Postgres, auth Clerk, authorization uygulama DB'sinde. 2026-05-02 public staging smoke recheck kaydi `docs/evidence/pilot-readiness/2026-05-02-staging-smoke-recheck.md`. 45 saniyelik otomatik yenilenme fix'i main'e pushlandi ve staging bundle'da `token-present` / `token-missing` marker'lari goruldu. 2026-05-02 Vercel custom API base redeploy kaydi `docs/evidence/pilot-readiness/2026-05-02-vercel-custom-api-base-redeploy.md`: Vercel production `VITE_API_BASE_URL` artik `https://api-staging.hr-axis.com/api`; deploy id `dpl_Gu9gKJbuMPD7f3QVmruvnR6ZHppK`; staging bundle artik custom API base iceriyor ve Render direct API base icermiyor; custom API health/CORS ok; unauthenticated /store -> /auth/login clean. 2026-05-02 manuel authenticated Clerk store smoke kaydi `docs/evidence/pilot-readiness/2026-05-02-authenticated-clerk-store-smoke.md`: kullanici browser'da `/store`, `/store/me`, `/store/kpis`, `/store/approvals` route'larinin acildigini ve 45 saniye yenileme olmadigini dogruladi. 2026-05-03 KPI file preflight kaydi `docs/evidence/pilot-readiness/2026-05-03-kpi-file-preflight.md`: kullanicinin `MAĞAZA TABLO.xlsx` ve `PERSONEL TABLO.xlsx` dosyalari master-data degil KPI snapshot olarak okundu; dosya donemi monthly Mart 2026 (`2026-03-01`/`2026-03-31`) olarak teyit edildi; local reconciliation preflight 185 store icin 171 balanced / 14 warning verdi. 2026-05-03 Power BI upload unblock kaydi `docs/evidence/pilot-readiness/2026-05-03-power-bi-upload-unblock.md`: `/admin/integrations` upload butonu disabled nedenlerini gosteriyor, seed ve migration default `power-bi-kpi` source ekliyor. 2026-05-03 Power BI upload staging deploy kaydi `docs/evidence/pilot-readiness/2026-05-03-power-bi-upload-staging-deploy.md`: Vercel deploy `dpl_BppD5H6QP3uAdSEoDXde39tjktp3` READY ve `staging.hr-axis.com` aliaslandi; Supabase staging DB'de `power-bi-kpi` source active ve app migration tracking `045_power_bi_kpi_source_seed.sql` succeeded. 2026-05-03 staging role/scope DB evidence kaydi `docs/evidence/pilot-readiness/2026-05-03-staging-role-scope-db-evidence.md`: Clerk-backed `suleyman.kuncan` active, roles `STORE_MANAGER` + `SUPER_ADMIN`, read scope `1 company / 1 region / 1 store`, action scope `STORE100`; unassigned candidates `DEMO-101`, `IST-001`, `IST-002`, `IZM-001`; `ScopeGuard` action-store bypass yapmiyor. Official authenticated upload smoke, live `/api/auth/session` payload evidence ve assigned/unassigned action-scope API smoke henuz kosulmadi. Pilot Readiness Gate V1 hala gecerli: authenticated session evidence, assigned/unassigned scope smoke, true baseline master data, official real KPI import smoke ve release/migration evidence tamamlanmadan pilot onayi verilmesin.
 ```
