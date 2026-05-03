@@ -14,6 +14,7 @@
     "smoke:auth:action": "node scripts/auth-live-smoke.mjs --include-action-smoke",
     "smoke:auth:staging": "node scripts/auth-live-smoke.mjs --staging",
     "smoke:auth:staging:action": "node scripts/auth-live-smoke.mjs --staging --include-action-smoke",
+    "smoke:auth:staging:token-scope": "node scripts/auth-token-scope-smoke.mjs --staging",
     "smoke:ui": "npm run build && npm run test:e2e",
     "check:release": "npm run lint && npm run test:scripts && npm run smoke:ui && npm audit --omit=dev",
     "preview": "vite preview"
