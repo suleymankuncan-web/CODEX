@@ -31,7 +31,10 @@ import {
   resolvePerformanceGrade,
   resolveStoreScoreThresholdMeaning,
 } from '../features/kpi/grading'
-import { resolveKpiSourceSemantics } from '../features/kpi/source-semantics'
+import {
+  resolveKpiScoreReference,
+  resolveKpiSourceSemantics,
+} from '../features/kpi/source-semantics'
 
 type DisplayKpiRow = {
   storeId: string
@@ -773,12 +776,12 @@ export function StoreKpiHighlightsPage(input: {
           <StatusPill tone="accent">Resmi kural</StatusPill>
         </div>
         <p className="queue-subtitle">
-          Magaza skoru hedef, Turkiye ortalamasi KPI sinyalleri ve tamamlanan checklist kanitlarindan okunur.
+          Magaza skoru girilen hedef, Turkiye ortalamasi KPI sinyalleri ve tamamlanan checklist kanitlarindan okunur.
         </p>
         <div className="key-grid">
           <KeyValue
             label="KPI kaynaklari"
-            value="Hedef TARGET kaynagindan; CR, ATV ve UPT Turkiye ortalamasindan puanlanir."
+            value="Satis hedefi girilen hedeften; CR, ATV ve UPT Turkiye ortalamasindan puanlanir."
           />
           <KeyValue
             label="Checklist payi"
@@ -879,7 +882,7 @@ export function StoreKpiHighlightsPage(input: {
             />
             <KeyValue
               label="Not"
-              value="Target bazli KPI'lar hedefe, CR/ATV/UPT ise Turkiye ortalamasina gore puanlanir."
+              value="Satis hedefi girilen hedefe, CR/ATV/UPT ise Turkiye ortalamasina gore puanlanir."
             />
           </div>
         </section>
@@ -936,6 +939,11 @@ export function StoreKpiHighlightsPage(input: {
               actualValue: item.matchingRow?.actualValue ?? null,
               scoreStatus: item.matchingRow?.scoreStatus ?? 'missing',
             })
+            const scoreReference = resolveKpiScoreReference({
+              targetValue: item.matchingRow?.targetValue ?? null,
+              benchmarkValue: item.matchingRow?.benchmarkValue ?? null,
+              benchmarkSource: item.matchingRow?.benchmarkSource ?? null,
+            })
 
             return (
               <article className="stacked-row" key={item.metric.code}>
@@ -961,8 +969,8 @@ export function StoreKpiHighlightsPage(input: {
                 </div>
                 <div className="key-grid">
                   <KeyValue
-                    label="Target"
-                    value={formatMetricValue(item.matchingRow?.targetValue ?? null, item.matchingRow?.kpiCode)}
+                    label="Skor hedefi"
+                    value={formatMetricValue(scoreReference.value, item.matchingRow?.kpiCode)}
                   />
                   <KeyValue
                     label="Actual"
@@ -977,8 +985,8 @@ export function StoreKpiHighlightsPage(input: {
                     }
                   />
                   <KeyValue
-                    label="Benchmark"
-                    value={formatMetricValue(item.matchingRow?.benchmarkValue ?? null, item.matchingRow?.kpiCode)}
+                    label="Hedef kaynagi"
+                    value={scoreReference.sourceLabel}
                   />
                   <KeyValue
                     label="Weighted contribution"
@@ -1085,7 +1093,7 @@ export function StoreKpiHighlightsPage(input: {
                     </StatusPill>
                   </div>
                   <div className="key-grid">
-                    <KeyValue label="Target" value={formatMetricValue(row.targetValue, row.kpiCode)} />
+                    <KeyValue label="Skor hedefi" value={formatMetricValue(row.targetValue, row.kpiCode)} />
                     <KeyValue label="Actual" value={formatMetricValue(row.actualValue, row.kpiCode)} />
                     <KeyValue
                       label="Achievement"

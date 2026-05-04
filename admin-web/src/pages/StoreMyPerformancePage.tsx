@@ -19,7 +19,10 @@ import {
   resolvePerformanceGrade,
   resolvePerformanceScoreMeaning,
 } from '../features/kpi/grading'
-import { resolveKpiSourceSemantics } from '../features/kpi/source-semantics'
+import {
+  resolveKpiScoreReference,
+  resolveKpiSourceSemantics,
+} from '../features/kpi/source-semantics'
 import { formatDate, formatState, getErrorMessage } from '../lib/format'
 
 function canUseSelfPerformance(authSummary: AuthSessionSummary | null) {
@@ -445,6 +448,11 @@ export function StoreMyPerformancePage(input: {
         <div className="stacked-table">
           {performance.metrics.map((metric) => {
             const sourceSemantics = resolveKpiSourceSemantics(metric)
+            const scoreReference = resolveKpiScoreReference({
+              targetValue: metric.targetValue ?? null,
+              benchmarkValue: metric.benchmarkValue ?? null,
+              benchmarkSource: metric.benchmarkSource ?? null,
+            })
 
             return (
               <article className="stacked-row" key={metric.code}>
@@ -479,9 +487,10 @@ export function StoreMyPerformancePage(input: {
                   />
                   <KeyValue label="Achievement" value={formatAchievementValue(metric)} />
                   <KeyValue
-                    label="Benchmark"
-                    value={formatMetricValue(metric.benchmarkValue ?? null, metric.code)}
+                    label="Skor hedefi"
+                    value={formatMetricValue(scoreReference.value, metric.code)}
                   />
+                  <KeyValue label="Hedef kaynagi" value={scoreReference.sourceLabel} />
                   <KeyValue label="Contribution" value={`${metric.contributionValue.toFixed(2)}%`} />
                   <KeyValue
                     label="Status"
