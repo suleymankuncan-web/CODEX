@@ -9,7 +9,6 @@ import {
 } from "./kpi-config.contract";
 import {
   PersonnelRankingRow,
-  RankingFilterOption,
   RankingMetricValue,
   RankingPeriodType,
   RankingResponse,
