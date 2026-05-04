@@ -14,6 +14,7 @@ import { OrgService } from "./application/org.service";
 import { WorkforceService } from "./application/workforce.service";
 import { ChecklistService } from "./application/checklist.service";
 import { SnapshotService } from "./application/snapshot.service";
+import { RankingService } from "./application/ranking.service";
 import { ReportingService } from "./application/reporting.service";
 import { ClosedRankingService } from "./application/closed-ranking.service";
 import { TargetDistributionService } from "./application/target-distribution.service";
@@ -50,6 +51,7 @@ import { FeedRepository } from "./infrastructure/feed.repository";
     WorkforceService,
     ChecklistService,
     SnapshotService,
+    RankingService,
     ReportingService,
     ClosedRankingService,
     TargetDistributionService,
@@ -72,6 +74,7 @@ import { FeedRepository } from "./infrastructure/feed.repository";
     WorkforceService,
     ChecklistService,
     SnapshotService,
+    RankingService,
     ReportingService,
     ClosedRankingService,
     TargetDistributionService,
