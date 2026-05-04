@@ -879,7 +879,7 @@ export class MasterDataBootstrapRepository {
                 external_employee_ref = $2,
                 first_name = $3,
                 last_name = $4,
-                national_id_hash = $5,
+                national_id_hash = $5::text,
                 hire_date = $6::date,
                 termination_date = NULL,
                 employment_status = 'active',
@@ -898,7 +898,7 @@ export class MasterDataBootstrapRepository {
                 employment_status,
                 employment_type
               )
-              SELECT $1::uuid, $2, $3, $4, $5, $6::date, 'active', $7
+              SELECT $1::uuid, $2, $3, $4, $5::text, $6::date, 'active', $7
               WHERE (SELECT employee_id FROM target_employee) IS NULL
               RETURNING employee_id::text AS employee_id
             )
