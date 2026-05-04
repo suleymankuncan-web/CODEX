@@ -47,8 +47,8 @@ export function ImportBatchDetailPage() {
     enabled: Boolean(batchId),
   })
   const errorsQuery = useQuery({
-    queryKey: ['import-batch-errors', batchId],
-    queryFn: () => getImportBatchErrors(batchId),
+    queryKey: ['import-batch-errors', batchId, { limit: 200 }],
+    queryFn: () => getImportBatchErrors(batchId, { limit: 200, offset: 0 }),
     enabled: Boolean(batchId),
   })
   const auditQuery = useQuery({
@@ -150,6 +150,10 @@ export function ImportBatchDetailPage() {
   const auditItems = auditQuery.data?.items ?? []
   const qualityIssueItems = detail.qualityIssueSummary?.items ?? []
   const importDecision = buildImportDecisionEvidence({ detail, reconciliation, errors })
+  const kpiReviewEvidence = buildKpiReviewEvidence({
+    errors,
+    totalErrorRows: errorsQuery.data?.meta.total ?? errors.length,
+  })
 
   return (
     <section className="page-stack">
@@ -299,6 +303,119 @@ export function ImportBatchDetailPage() {
           </div>
         )}
       </section>
+
+      {detail.batch.entityType === 'kpi' ? (
+        <section className="panel" aria-label="KPI match review queue">
+          <div className="panel-heading">
+            <div>
+              <div className="eyebrow">KPI Review Queue</div>
+              <h3>Eslesmeyen ve supheli satirlar</h3>
+              <p className="panel-copy">{kpiReviewEvidence.summary}</p>
+            </div>
+            <div className="heading-action-cluster">
+              <span className={`status-pill status-pill-${kpiReviewEvidence.tone}`}>
+                {kpiReviewEvidence.label}
+              </span>
+              <button
+                className="control-button"
+                type="button"
+                onClick={() =>
+                  downloadCsv({
+                    filename: `kpi-review-rows-${batchId}.csv`,
+                    columns: [
+                      'rowId',
+                      'category',
+                      'sourceRef',
+                      'externalRef',
+                      'qualityIssueCode',
+                      'validationError',
+                      'rawRowReference',
+                      'rowHash',
+                    ],
+                    rows: kpiReviewEvidence.items.map((item) => [
+                      item.rowId,
+                      item.categoryLabel,
+                      item.sourceRef,
+                      item.externalRef ?? '',
+                      item.issueCode ?? '',
+                      item.message,
+                      item.rawRowReference ?? '',
+                      item.rowHash ?? '',
+                    ]),
+                  })
+                }
+                disabled={kpiReviewEvidence.items.length === 0}
+              >
+                Export review rows
+              </button>
+            </div>
+          </div>
+          <div className="reconciliation-grid">
+            <ReconciliationStat
+              label="Personel eslesmesi"
+              value={formatRowCount(kpiReviewEvidence.employeeMatchRows)}
+            />
+            <ReconciliationStat
+              label="Magaza eslesmesi"
+              value={formatRowCount(kpiReviewEvidence.storeMatchRows)}
+            />
+            <ReconciliationStat
+              label="Supheli satir"
+              value={formatRowCount(kpiReviewEvidence.suspiciousRows)}
+            />
+            <ReconciliationStat
+              label="Gorunen / toplam hata"
+              value={`${kpiReviewEvidence.visibleErrorRows} / ${kpiReviewEvidence.totalErrorRows}`}
+            />
+          </div>
+          {kpiReviewEvidence.items.length === 0 ? (
+            <EmptyState copy="Bu KPI batch icin review'a dusen eslesme veya supheli satir yok." />
+          ) : (
+            <div className="stacked-table">
+              {kpiReviewEvidence.items.map((item) => (
+                <div className="stacked-row" key={item.rowId}>
+                  <div className="stacked-row-head">
+                    <strong>{item.sourceRef}</strong>
+                    <span className={`status-pill status-pill-${item.tone}`}>
+                      {item.categoryLabel}
+                    </span>
+                    <span className="status-pill status-pill-neutral">
+                      {item.actionLabel}
+                    </span>
+                  </div>
+                  <p>{item.message}</p>
+                  <div className="lineage-chip-list" aria-label="KPI review row evidence">
+                    {item.externalRef ? (
+                      <div className="lineage-chip">
+                        <span>External ref</span>
+                        <code className="lineage-code">{item.externalRef}</code>
+                      </div>
+                    ) : null}
+                    {item.issueCode ? (
+                      <div className="lineage-chip">
+                        <span>Issue</span>
+                        <code className="lineage-code">{item.issueCode}</code>
+                      </div>
+                    ) : null}
+                    {item.rawRowReference ? (
+                      <div className="lineage-chip">
+                        <span>Raw reference</span>
+                        <code className="lineage-code">{item.rawRowReference}</code>
+                      </div>
+                    ) : null}
+                    {item.rowHash ? (
+                      <div className="lineage-chip">
+                        <span>Row hash</span>
+                        <code className="lineage-code">{item.rowHash}</code>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : null}
 
       <section className="panel" aria-label="Import row lineage evidence">
         <div className="panel-heading">
@@ -653,6 +770,38 @@ type ImportDecisionEvidence = {
   factors: [string, string][]
 }
 
+type KpiReviewCategory =
+  | 'employee_match'
+  | 'store_match'
+  | 'suspicious_row'
+  | 'system_retry'
+
+type KpiReviewItem = {
+  rowId: string
+  sourceRef: string
+  category: KpiReviewCategory
+  categoryLabel: string
+  actionLabel: string
+  tone: Tone
+  externalRef: string | null
+  issueCode: string | null
+  message: string
+  rawRowReference: string | null
+  rowHash: string | null
+}
+
+type KpiReviewEvidence = {
+  label: string
+  tone: Tone
+  summary: string
+  employeeMatchRows: number
+  storeMatchRows: number
+  suspiciousRows: number
+  visibleErrorRows: number
+  totalErrorRows: number
+  items: KpiReviewItem[]
+}
+
 function buildImportDecisionEvidence(input: {
   detail: ImportBatchDetail
   reconciliation?: ImportBatchReconciliation
@@ -720,6 +869,152 @@ function buildImportDecisionEvidence(input: {
       ['Dependency mapping', formatDependencyMappingStatus(blockedByEntityTypes, mappingRows)],
     ],
   }
+}
+
+function buildKpiReviewEvidence(input: {
+  errors: ImportBatchError[]
+  totalErrorRows: number
+}): KpiReviewEvidence {
+  const items = input.errors
+    .map(toKpiReviewItem)
+    .filter((item): item is KpiReviewItem => item !== null)
+  const employeeMatchRows = items.filter(
+    (item) => item.category === 'employee_match',
+  ).length
+  const storeMatchRows = items.filter((item) => item.category === 'store_match').length
+  const suspiciousRows = items.filter(
+    (item) => item.category === 'suspicious_row',
+  ).length
+  const mappingRows = employeeMatchRows + storeMatchRows
+  const totalReviewRows = mappingRows + suspiciousRows
+  const hiddenErrorRows = Math.max(input.totalErrorRows - input.errors.length, 0)
+
+  if (mappingRows > 0) {
+    return {
+      label: 'Review required',
+      tone: 'danger',
+      summary:
+        hiddenErrorRows > 0
+          ? `KPI importunda eslesmeyen magaza/personel satirlari var; ilk ${input.errors.length} / ${input.totalErrorRows} hata satiri gosteriliyor.`
+          : 'KPI importunda eslesmeyen magaza/personel satirlari var; once bu eslesmeler netlestirilmeli.',
+      employeeMatchRows,
+      storeMatchRows,
+      suspiciousRows,
+      visibleErrorRows: input.errors.length,
+      totalErrorRows: input.totalErrorRows,
+      items,
+    }
+  }
+
+  if (totalReviewRows > 0) {
+    return {
+      label: 'Needs check',
+      tone: 'warning',
+      summary:
+        hiddenErrorRows > 0
+          ? `Eslesme bloku yok, ama supheli KPI satirlari var; ilk ${input.errors.length} / ${input.totalErrorRows} hata satiri gosteriliyor.`
+          : 'Eslesme bloku yok, ama duplicate/metric/period gibi supheli KPI satirlari kontrol edilmeli.',
+      employeeMatchRows,
+      storeMatchRows,
+      suspiciousRows,
+      visibleErrorRows: input.errors.length,
+      totalErrorRows: input.totalErrorRows,
+      items,
+    }
+  }
+
+  return {
+    label: 'Clear',
+    tone: 'calm',
+    summary: 'KPI importunda review gerektiren magaza/personel eslesmesi veya supheli satir gorunmuyor.',
+    employeeMatchRows,
+    storeMatchRows,
+    suspiciousRows,
+    visibleErrorRows: input.errors.length,
+    totalErrorRows: input.totalErrorRows,
+    items,
+  }
+}
+
+function toKpiReviewItem(error: ImportBatchError): KpiReviewItem | null {
+  const issueCode = error.qualityIssueCode ?? null
+  const externalRef = error.mappingCandidate?.externalId ?? null
+
+  if (error.mappingCandidate?.entityType === 'employee' || issueCode === 'unmapped_employee') {
+    return {
+      rowId: error.rowId,
+      sourceRef: error.sourceRef,
+      category: 'employee_match',
+      categoryLabel: 'Personel eslesmesi',
+      actionLabel: 'Map employee',
+      tone: 'danger',
+      externalRef,
+      issueCode,
+      message: error.validationError ?? 'Personel referansi cozumlenemedi.',
+      rawRowReference: error.rawRowReference ?? null,
+      rowHash: error.rowHash ?? null,
+    }
+  }
+
+  if (error.mappingCandidate?.entityType === 'store' || issueCode === 'unmapped_store') {
+    return {
+      rowId: error.rowId,
+      sourceRef: error.sourceRef,
+      category: 'store_match',
+      categoryLabel: 'Magaza eslesmesi',
+      actionLabel: 'Map store',
+      tone: 'danger',
+      externalRef,
+      issueCode,
+      message: error.validationError ?? 'Magaza referansi cozumlenemedi.',
+      rawRowReference: error.rawRowReference ?? null,
+      rowHash: error.rowHash ?? null,
+    }
+  }
+
+  if (isSuspiciousKpiIssue(issueCode)) {
+    return {
+      rowId: error.rowId,
+      sourceRef: error.sourceRef,
+      category: 'suspicious_row',
+      categoryLabel: 'Supheli satir',
+      actionLabel: 'Manual check',
+      tone: 'warning',
+      externalRef,
+      issueCode,
+      message: error.validationError ?? 'KPI satiri manuel kontrol gerektiriyor.',
+      rawRowReference: error.rawRowReference ?? null,
+      rowHash: error.rowHash ?? null,
+    }
+  }
+
+  if (error.errorCategory === 'write_failure' || error.normalizedStatus === 'retryable_error') {
+    return {
+      rowId: error.rowId,
+      sourceRef: error.sourceRef,
+      category: 'system_retry',
+      categoryLabel: 'Retry satiri',
+      actionLabel: 'Retry batch',
+      tone: 'danger',
+      externalRef,
+      issueCode,
+      message: error.validationError ?? 'Sistem yazma hatasi veya retry gerektiren satir.',
+      rawRowReference: error.rawRowReference ?? null,
+      rowHash: error.rowHash ?? null,
+    }
+  }
+
+  return null
+}
+
+function isSuspiciousKpiIssue(issueCode: string | null) {
+  return (
+    issueCode === 'duplicate_source_row' ||
+    issueCode === 'late_correction_candidate' ||
+    issueCode === 'schema_mismatch' ||
+    issueCode === 'invalid_metric' ||
+    issueCode === 'missing_identity'
+  )
 }
 
 function getRowAccountingStatus(reconciliation?: ImportBatchReconciliation) {

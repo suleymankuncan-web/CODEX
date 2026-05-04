@@ -478,9 +478,17 @@ export async function getImportBatchReconciliation(batchId: string) {
   )
 }
 
-export async function getImportBatchErrors(batchId: string) {
+export async function getImportBatchErrors(
+  batchId: string,
+  input?: { limit?: number; offset?: number },
+) {
+  const params = new URLSearchParams({
+    limit: String(input?.limit ?? 20),
+    offset: String(input?.offset ?? 0),
+  })
+
   return fetchJson<ListResponse<ImportBatchError>>(
-    `/integrations/import-batches/${batchId}/errors?limit=20&offset=0`,
+    `/integrations/import-batches/${batchId}/errors?${params.toString()}`,
   )
 }
 
