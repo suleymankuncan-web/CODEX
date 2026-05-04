@@ -238,6 +238,57 @@ describe("ReportingRepository benchmark queries", () => {
   });
 });
 
+describe("ReportingRepository ranking source filters", () => {
+  function createRepository() {
+    const query = jest.fn(async (_sql: string, _params?: unknown[]) => ({
+      rowCount: 0,
+      rows: [],
+    }));
+    const repository = new ReportingRepository({ query } as never);
+
+    return { query, repository };
+  }
+
+  it("excludes demo seed KPI rows from ranking period selection and lists", async () => {
+    const { query, repository } = createRepository();
+
+    await repository.getLatestMonthlyRankingPeriod({
+      metricCodes: ["ATV"],
+    });
+    await repository.listRankingAvailablePeriods({
+      metricCodes: ["ATV"],
+    });
+    await repository.listRankingStoreKpiRows({
+      metricCodes: ["ATV"],
+      companyIds: [],
+      periodType: "monthly",
+      periodStart: "2026-03-01",
+      periodEnd: "2026-03-31",
+    });
+    await repository.listRankingPersonnelKpiRows({
+      metricCodes: ["ATV"],
+      companyIds: [],
+      periodType: "monthly",
+      periodStart: "2026-03-01",
+      periodEnd: "2026-03-31",
+    });
+    await repository.listRankingFilterOptions({
+      companyIds: [],
+      periodType: "monthly",
+      periodStart: "2026-03-01",
+      periodEnd: "2026-03-31",
+    });
+
+    for (const [sql] of query.mock.calls) {
+      if (!String(sql).includes("ops.kpi_actual ka")) {
+        continue;
+      }
+
+      expect(String(sql)).toContain("COALESCE(ka.source_type, '') <> 'demo_seed'");
+    }
+  });
+});
+
 describe("ReportingRepository personnel target reference queries", () => {
   function createRepository() {
     const query = jest.fn(async (_sql: string, _params?: unknown[]) => ({
