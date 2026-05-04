@@ -40,9 +40,13 @@ function formatCoverage(input?: {
   return `${input.daysWithPerformance}/${input.closedDaysInPeriod} kapali gun`
 }
 
-function formatSourceState(state?: 'closed' | 'not_closed' | 'no_data') {
+function formatSourceState(state?: 'closed' | 'live' | 'not_closed' | 'no_data') {
   if (state === 'closed') {
     return 'Kapandi'
+  }
+
+  if (state === 'live') {
+    return 'Canli veri'
   }
 
   if (state === 'not_closed') {
@@ -56,9 +60,24 @@ function formatPeriodType(periodType?: 'daily' | 'monthly') {
   return periodType === 'monthly' ? 'Aylik' : 'Gunluk'
 }
 
-function resolveRankingExplanation(employee?: ClosedRankingEmployee | null) {
+function formatSourceMode(mode?: 'closed' | 'live') {
+  return mode === 'live' ? 'Canli KPI' : 'Kapanis'
+}
+
+function resolveRankingExplanation(
+  employee?: ClosedRankingEmployee | null,
+  sourceMode?: 'closed' | 'live',
+) {
   if (!employee) {
     return null
+  }
+
+  if (sourceMode === 'live') {
+    return {
+      label: 'Canli KPI',
+      copy: 'Bu sonuc Power BI importundan gelen aylik KPI verisine gore hesaplandi.',
+      tone: 'calm' as const,
+    }
   }
 
   if (employee.rankingStatus === 'preview_only') {
@@ -76,7 +95,7 @@ function resolveRankingExplanation(employee?: ClosedRankingEmployee | null) {
   }
 }
 
-function resolveEmptyState(state: 'closed' | 'not_closed' | 'no_data') {
+function resolveEmptyState(state: 'closed' | 'live' | 'not_closed' | 'no_data') {
   if (state === 'not_closed') {
     return {
       title: 'Secili donem henuz kapanmadi',
@@ -94,13 +113,22 @@ function resolveEmptyState(state: 'closed' | 'not_closed' | 'no_data') {
   return null
 }
 
+function formatLeaderboardCoverage(leaderboard?: ClosedLeaderboardSummary) {
+  if (leaderboard?.source.mode === 'live' && leaderboard.currentEmployee) {
+    return 'Aylik KPI verisi'
+  }
+
+  return formatCoverage(leaderboard?.currentEmployee?.coverage)
+}
+
 function resolveRankingScopeReadiness(leaderboard?: ClosedLeaderboardSummary) {
   const employee = leaderboard?.currentEmployee ?? null
   const isOfficial = employee?.rankingStatus === 'official'
   const hasTurkeyPopulation = Boolean(employee && employee.rankings.turkeyPopulation > 0)
   const hasStorePopulation = Boolean(employee && employee.rankings.storePopulation > 0)
   const hasMetricRanks = Boolean(employee?.metricRanks.length)
-  const hasClosedSource = leaderboard?.source.state === 'closed'
+  const hasRankingSource =
+    leaderboard?.source.state === 'closed' || leaderboard?.source.state === 'live'
 
   return [
     {
@@ -132,8 +160,8 @@ function resolveRankingScopeReadiness(leaderboard?: ClosedLeaderboardSummary) {
     },
     {
       label: 'Segment hazirligi',
-      status: hasClosedSource && hasMetricRanks ? 'Segment kuralina hazir' : 'Segment icin veri bekliyor',
-      tone: hasClosedSource && hasMetricRanks ? 'accent' : 'neutral',
+      status: hasRankingSource && hasMetricRanks ? 'Segment kuralina hazir' : 'Segment icin veri bekliyor',
+      tone: hasRankingSource && hasMetricRanks ? 'accent' : 'neutral',
       scope: leaderboard?.source.periodType === 'monthly' ? 'Aylik segmentlenebilir' : 'Gunluk segmentlenebilir',
       note: 'Bolge, challenge veya metrik segmenti ileride yeni skor motoru acmadan ayni kapanis modeline baglanabilir.',
     },
@@ -144,7 +172,7 @@ export function StoreRankingsPage(input: {
   authSummary: AuthSessionSummary | null
 }) {
   const enabled = canUseRankings(input.authSummary)
-  const [periodType, setPeriodType] = useState<'daily' | 'monthly'>('daily')
+  const [periodType, setPeriodType] = useState<'daily' | 'monthly'>('monthly')
   const [periodStart, setPeriodStart] = useState('')
   const [selectedSnapshotRunId, setSelectedSnapshotRunId] = useState('')
   const configQuery = useQuery({
@@ -193,13 +221,7 @@ export function StoreRankingsPage(input: {
       right.monthStart.localeCompare(left.monthStart),
     )
   }, [availableSnapshotRuns])
-  const activeMonthlySnapshotOption =
-    periodType === 'monthly'
-      ? monthlySnapshotOptions.find((option) => option.monthStart === periodStart) ??
-        monthlySnapshotOptions[0] ??
-        null
-      : null
-  const selectedMonthlyPeriodStart = activeMonthlySnapshotOption?.monthStart ?? ''
+  const selectedMonthlyPeriodStart = periodType === 'monthly' ? periodStart : ''
   const activeSnapshotRun =
     periodType === 'daily'
       ? availableSnapshotRuns.find((run) => run.snapshotRunId === selectedSnapshotRunId) ??
@@ -210,16 +232,14 @@ export function StoreRankingsPage(input: {
     queryKey: [
       'closed-leaderboard',
       periodType,
-      periodType === 'monthly' ? selectedMonthlyPeriodStart || 'latest-month' : 'latest-day',
+      periodType === 'monthly' ? selectedMonthlyPeriodStart || 'latest-monthly-kpi' : 'latest-day',
       activeSnapshotRun?.snapshotDate ?? 'latest-snapshot',
     ],
     queryFn: () =>
       getClosedLeaderboard({
         periodType,
         periodStart:
-          periodType === 'monthly' && selectedMonthlyPeriodStart
-            ? selectedMonthlyPeriodStart
-            : undefined,
+          periodType === 'monthly' && selectedMonthlyPeriodStart ? selectedMonthlyPeriodStart : undefined,
         snapshotDate:
           periodType === 'daily' && activeSnapshotRun?.snapshotDate
             ? activeSnapshotRun.snapshotDate
@@ -229,6 +249,39 @@ export function StoreRankingsPage(input: {
     enabled: enabled && !snapshotRunsQuery.isLoading,
     retry: false,
   })
+  const leaderboard = leaderboardQuery.data
+  const monthlyPeriodOptions = useMemo(() => {
+    const optionsByMonth = new Map<
+      string,
+      { monthStart: string; label: string; latestSnapshotDate: string }
+    >()
+
+    for (const period of leaderboard?.availablePeriods ?? []) {
+      if (period.periodType !== 'monthly') {
+        continue
+      }
+
+      optionsByMonth.set(period.periodStart, {
+        monthStart: period.periodStart,
+        label: `${formatDate(period.periodStart)} - ${formatDate(period.periodEnd)} - Canli KPI`,
+        latestSnapshotDate: period.periodEnd,
+      })
+    }
+
+    for (const option of monthlySnapshotOptions) {
+      if (!optionsByMonth.has(option.monthStart)) {
+        optionsByMonth.set(option.monthStart, {
+          monthStart: option.monthStart,
+          label: `${formatSnapshotMonthOptionLabel(option)} - Kapanis`,
+          latestSnapshotDate: option.latestSnapshotDate,
+        })
+      }
+    }
+
+    return [...optionsByMonth.values()].sort((left, right) =>
+      right.monthStart.localeCompare(left.monthStart),
+    )
+  }, [leaderboard?.availablePeriods, monthlySnapshotOptions])
 
   if (!enabled) {
     return (
@@ -247,8 +300,8 @@ export function StoreRankingsPage(input: {
   ) {
     return (
       <ScreenState
-        title="Kapanmis siralama hazirlaniyor"
-        copy="Tamamlanan closure snapshot verileri okunuyor."
+        title="Siralama hazirlaniyor"
+        copy="Aylik KPI verisi ve kapanis snapshotlari okunuyor."
       />
     )
   }
@@ -263,13 +316,17 @@ export function StoreRankingsPage(input: {
     )
   }
 
-  const leaderboard = leaderboardQuery.data
   const monthlyClosureEvidenceRuns =
-    periodType === 'monthly' ? leaderboard?.includedSnapshotRuns ?? [] : []
+    periodType === 'monthly' && leaderboard?.source.mode === 'closed'
+      ? leaderboard?.includedSnapshotRuns ?? []
+      : []
   const currentEmployeeGrade = leaderboard?.currentEmployee
     ? resolvePerformanceGrade(leaderboard.currentEmployee.scoreValue, configQuery.data?.gradingBands)
     : null
-  const rankingExplanation = resolveRankingExplanation(leaderboard?.currentEmployee)
+  const rankingExplanation = resolveRankingExplanation(
+    leaderboard?.currentEmployee,
+    leaderboard?.source.mode,
+  )
   const scopeReadiness = resolveRankingScopeReadiness(leaderboard)
   const emptyState = leaderboard ? resolveEmptyState(leaderboard.source.state) : null
   const selectionIsFiltered =
@@ -279,26 +336,27 @@ export function StoreRankingsPage(input: {
     <section className="page-stack">
       <section className="hero-panel store-hero-panel">
         <div>
-          <div className="eyebrow">Kapanmis Siralamalar</div>
-          <h2 className="hero-title">Gunluk ve aylik kapanis siralamasi.</h2>
+          <div className="eyebrow">Personel Siralamalari</div>
+          <h2 className="hero-title">Aylik KPI ve kapanis siralamasi.</h2>
           <p className="hero-copy">
-            Bu yuzey canli degil. Tamamlanmis gun kapanislarindan okur; aylik mod ay icindeki kapanmis gunleri toplar.
+            Aylik mod Power BI importundan gelen KPI verisini okur; kapanis snapshot'i olan donemlerde resmi closure kanitini de gosterir.
           </p>
         </div>
         <div className="hero-metrics">
           <MetricAccent label="Mod" value={formatPeriodType(periodType)} />
+          <MetricAccent label="Kaynak" value={formatSourceMode(leaderboard?.source.mode)} />
           <MetricAccent label="Durum" value={formatSourceState(leaderboard?.source.state)} />
           <MetricAccent
             label="Donem"
             value={
               leaderboard?.source.periodStart
                 ? `${leaderboard.source.periodStart} / ${leaderboard.source.periodEnd ?? '-'}`
-                : 'Son kapanis'
+                : 'Son veri'
             }
           />
           <MetricAccent
             label="Kapsam"
-            value={formatCoverage(leaderboard?.currentEmployee?.coverage)}
+            value={formatLeaderboardCoverage(leaderboard)}
           />
         </div>
       </section>
@@ -307,10 +365,10 @@ export function StoreRankingsPage(input: {
         <div className="panel-heading">
           <div>
             <div className="eyebrow">Donem Secimi</div>
-            <h3>Hangi kapanmis gun veya ayi gormek istiyorsun</h3>
+            <h3>Hangi gun veya ayi gormek istiyorsun</h3>
           </div>
           <StatusPill tone={selectionIsFiltered ? 'accent' : 'neutral'}>
-            {selectionIsFiltered ? 'Filtreli' : 'Son kapanis'}
+            {selectionIsFiltered ? 'Filtreli' : 'Son veri'}
           </StatusPill>
         </div>
         <div className="toolbar-cluster" role="group" aria-label="Ranking period controls">
@@ -358,16 +416,16 @@ export function StoreRankingsPage(input: {
             </label>
           ) : (
             <label className="control-field">
-              <span>Kapanmis aylik siralama secimi</span>
+              <span>Aylik siralama secimi</span>
               <select
-                value={periodStart || selectedMonthlyPeriodStart}
+                value={periodStart}
                 onChange={(event) => setPeriodStart(event.target.value)}
                 aria-label="Ranking month snapshot secimi"
               >
-                <option value="">Son aylik kapanis</option>
-                {monthlySnapshotOptions.map((option) => (
+                <option value="">Son aylik veri</option>
+                {monthlyPeriodOptions.map((option) => (
                   <option key={option.monthStart} value={option.monthStart}>
-                    {formatSnapshotMonthOptionLabel(option)}
+                    {option.label}
                   </option>
                 ))}
               </select>
@@ -390,7 +448,7 @@ export function StoreRankingsPage(input: {
                 : !periodStart
             }
           >
-            {periodType === 'monthly' ? 'Son aylik kapanisa don' : 'Son kapanmis gune don'}
+            {periodType === 'monthly' ? 'Son aylik veriye don' : 'Son kapanmis gune don'}
           </button>
         </div>
       </section>
@@ -403,7 +461,7 @@ export function StoreRankingsPage(input: {
         <MetricCard
           title="Personel ilk 10"
           value={leaderboard?.personnelTop.length ?? 0}
-          note="Secili closure kapsamindaki personel listesi."
+          note="Secili kaynak kapsamindaki personel listesi."
           icon={<Trophy size={18} />}
           tone="accent"
         />
@@ -424,7 +482,7 @@ export function StoreRankingsPage(input: {
         <MetricCard
           title="Kapsam"
           value={leaderboard?.currentEmployee?.coverage.daysWithPerformance ?? 0}
-          note={formatCoverage(leaderboard?.currentEmployee?.coverage)}
+          note={formatLeaderboardCoverage(leaderboard)}
           icon={<CalendarDays size={18} />}
           tone={
             leaderboard?.currentEmployee?.coverage.isEligibleForRanking === false
@@ -434,7 +492,7 @@ export function StoreRankingsPage(input: {
         />
       </section>
 
-      {periodType === 'monthly' ? (
+      {periodType === 'monthly' && leaderboard?.source.mode === 'closed' ? (
         <section className="panel" aria-label="Monthly closure evidence">
           <div className="panel-heading">
             <div>
@@ -486,12 +544,12 @@ export function StoreRankingsPage(input: {
           <StatusPill tone="accent">Resmi kural</StatusPill>
         </div>
         <p className="queue-subtitle">
-          Personel siralamasi, kapatilmis performans gunlerinin resmi score kaydina baglidir.
+          Personel siralamasi canli aylik KPI importunda ve kapanmis snapshotlarda ayni skor kuralini kullanir.
         </p>
         <div className="key-grid">
           <KeyValue
             label="Ana skor"
-            value="Personel ana skoru kapanmis gunlerdeki total score ortalamasidir."
+            value="Personel ana skoru hedef, ATV ve UPT agirlikli total score degeridir."
           />
           <KeyValue
             label="KPI kaynaklari"
@@ -515,14 +573,26 @@ export function StoreRankingsPage(input: {
               <div className="eyebrow">Kapanis baglami</div>
               <h3>Bu ranking neye gore hesaplandi</h3>
             </div>
-            <StatusPill tone={leaderboard?.source.state === 'closed' ? 'calm' : 'warning'}>
-              {formatPeriodType(leaderboard?.source.periodType)}
+            <StatusPill
+              tone={
+                leaderboard?.source.state === 'closed' || leaderboard?.source.state === 'live'
+                  ? 'calm'
+                  : 'warning'
+              }
+            >
+              {formatSourceMode(leaderboard?.source.mode)}
             </StatusPill>
           </div>
           <div className="key-grid">
             <KeyValue
               label="Snapshot tarihi"
-              value={leaderboard?.source.snapshotDate ? formatDate(leaderboard.source.snapshotDate) : 'Snapshot yok'}
+              value={
+                leaderboard?.source.mode === 'live'
+                  ? 'Canli import'
+                  : leaderboard?.source.snapshotDate
+                    ? formatDate(leaderboard.source.snapshotDate)
+                    : 'Snapshot yok'
+              }
             />
             <KeyValue
               label="Donem"
@@ -579,7 +649,7 @@ export function StoreRankingsPage(input: {
                 <KeyValue label="Magaza" value={leaderboard.currentEmployee.storeName ?? 'Bilinmiyor'} />
                 <KeyValue
                   label="Veri kapsami"
-                  value={formatCoverage(leaderboard.currentEmployee.coverage)}
+                  value={formatLeaderboardCoverage(leaderboard)}
                 />
               </div>
             </>
@@ -595,12 +665,20 @@ export function StoreRankingsPage(input: {
             <div className="eyebrow">Kapsam okunurlugu</div>
             <h3>Siralama kapsam olgunlugu</h3>
           </div>
-          <StatusPill tone={leaderboard?.source.state === 'closed' ? 'calm' : 'warning'}>
-            {leaderboard?.source.state === 'closed' ? 'Kapali kaynak' : 'Kisitli kaynak'}
+          <StatusPill
+            tone={
+              leaderboard?.source.state === 'closed' || leaderboard?.source.state === 'live'
+                ? 'calm'
+                : 'warning'
+            }
+          >
+            {leaderboard?.source.state === 'closed' || leaderboard?.source.state === 'live'
+              ? 'Hazir kaynak'
+              : 'Kisitli kaynak'}
           </StatusPill>
         </div>
         <p className="queue-subtitle">
-          Turkiye, magaza ve metrik siralari ayni kapali snapshot kaynagindan okunur; segmentler icin yeni skor motoru degil kapsam kurali gerekir.
+          Turkiye, magaza ve metrik siralari ayni skor kaynagindan okunur; segmentler icin yeni skor motoru degil kapsam kurali gerekir.
         </p>
         <div className="stacked-table">
           {scopeReadiness.map((item) => (

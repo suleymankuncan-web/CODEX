@@ -1,5 +1,5 @@
 export type ClosedRankingPeriodType = "daily" | "monthly";
-export type ClosedRankingState = "closed" | "not_closed" | "no_data";
+export type ClosedRankingState = "closed" | "live" | "not_closed" | "no_data";
 export type ClosedRankingStatus = "official" | "preview_only";
 export type ClosedRankingEligibilityReason = "eligible" | "needs_more_closed_days";
 
@@ -52,7 +52,7 @@ export type ClosedRankingIncludedSnapshotRun = {
 
 export type ClosedRankingSummary = {
   source: {
-    mode: "closed";
+    mode: "closed" | "live";
     periodType: ClosedRankingPeriodType;
     state: ClosedRankingState;
     snapshotRunId: string | null;
@@ -63,6 +63,11 @@ export type ClosedRankingSummary = {
   includedSnapshotRuns: ClosedRankingIncludedSnapshotRun[];
   currentEmployee: ClosedRankingEmployee | null;
   personnelTop: ClosedRankingEmployee[];
+  availablePeriods?: Array<{
+    periodType: string;
+    periodStart: string;
+    periodEnd: string;
+  }>;
 };
 
 export type ClosedRankingInput = {

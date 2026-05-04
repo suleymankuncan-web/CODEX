@@ -371,9 +371,9 @@ export type ClosedRankingIncludedSnapshotRun = {
 
 export type ClosedLeaderboardSummary = {
   source: {
-    mode: 'closed'
+    mode: 'closed' | 'live'
     periodType: 'daily' | 'monthly'
-    state: 'closed' | 'not_closed' | 'no_data'
+    state: 'closed' | 'live' | 'not_closed' | 'no_data'
     snapshotRunId: string | null
     snapshotDate: string | null
     periodStart: string | null
@@ -382,6 +382,11 @@ export type ClosedLeaderboardSummary = {
   includedSnapshotRuns: ClosedRankingIncludedSnapshotRun[]
   currentEmployee: ClosedRankingEmployee | null
   personnelTop: ClosedRankingEmployee[]
+  availablePeriods?: Array<{
+    periodType: 'daily' | 'weekly' | 'monthly' | string
+    periodStart: string
+    periodEnd: string
+  }>
 }
 
 export type ChecklistRow = {
