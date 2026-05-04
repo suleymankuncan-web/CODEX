@@ -1389,6 +1389,7 @@ export class ReportingRepository {
     const clauses = [
       `ka.period_type = 'monthly'`,
       `kd.kpi_code = ANY($1::text[])`,
+      `COALESCE(ka.source_type, '') <> 'demo_seed'`,
     ];
 
     if (input.periodStart) {
@@ -1439,6 +1440,7 @@ export class ReportingRepository {
           ON kd.kpi_id = ka.kpi_id
         WHERE ka.period_type = 'monthly'
           AND kd.kpi_code = ANY($1::text[])
+          AND COALESCE(ka.source_type, '') <> 'demo_seed'
         ORDER BY 3 DESC, 2 DESC
       `,
       [input.metricCodes],
@@ -1470,6 +1472,7 @@ export class ReportingRepository {
       `ka.period_type = $2`,
       `ka.period_start = $3::date`,
       `ka.period_end = $4::date`,
+      `COALESCE(ka.source_type, '') <> 'demo_seed'`,
     ];
 
     if (input.companyIds.length > 0) {
@@ -1571,6 +1574,7 @@ export class ReportingRepository {
       `ka.period_type = $2`,
       `ka.period_start = $3::date`,
       `ka.period_end = $4::date`,
+      `COALESCE(ka.source_type, '') <> 'demo_seed'`,
     ];
 
     if (input.companyIds.length > 0) {
@@ -1739,6 +1743,7 @@ export class ReportingRepository {
         WHERE ka.period_type = $1
           AND ka.period_start = $2::date
           AND ka.period_end = $3::date
+          AND COALESCE(ka.source_type, '') <> 'demo_seed'
           AND region.region_id IS NOT NULL
           ${companyClause}
         ORDER BY label ASC
@@ -1757,6 +1762,7 @@ export class ReportingRepository {
         WHERE ka.period_type = $1
           AND ka.period_start = $2::date
           AND ka.period_end = $3::date
+          AND COALESCE(ka.source_type, '') <> 'demo_seed'
           ${companyClause}
         ORDER BY label ASC
       `,
