@@ -1051,7 +1051,7 @@ export class ReportingRepository {
         WHERE item_count.kpi_code = 'ITEM_COUNT'
         UNION ALL
         SELECT 'CR' AS kpi_code,
-               ((SUM(ticket_count.actual_value) / NULLIF(SUM(ff.actual_value), 0)) * 100)::text AS benchmark_value
+               (SUM(ticket_count.actual_value) / NULLIF(SUM(ff.actual_value), 0))::text AS benchmark_value
         FROM scoped_actual ticket_count
         INNER JOIN scoped_actual ff
           ON ff.store_id = ticket_count.store_id

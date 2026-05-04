@@ -216,8 +216,9 @@ describe("ReportingRepository benchmark queries", () => {
       "SUM(item_count.actual_value) / NULLIF(SUM(ticket_count.actual_value), 0)",
     );
     expect(sql).toContain(
-      "(SUM(ticket_count.actual_value) / NULLIF(SUM(ff.actual_value), 0)) * 100",
+      "(SUM(ticket_count.actual_value) / NULLIF(SUM(ff.actual_value), 0))::text AS benchmark_value",
     );
+    expect(sql).not.toContain("NULLIF(SUM(ff.actual_value), 0)) * 100");
   });
 
   it("calculates personnel ATV UPT benchmarks for the same period", async () => {

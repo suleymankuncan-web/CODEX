@@ -393,6 +393,10 @@ export class MaterializationService {
       errorCount: 0,
       hasRetryableFailure: false,
     };
+    const storeOrgScopeCache = new Map<
+      string,
+      { companyId: string | null; regionId: string | null }
+    >();
 
     for (const row of rows.rows) {
       const payload = row.payload_json;
@@ -452,6 +456,11 @@ export class MaterializationService {
         const periodEnd = String(payload["periodEnd"]);
         const actualValue = Number(payload["actualValue"] ?? 0);
         const employeeIdToPersist = scopeType === "employee" ? employeeId : null;
+        const storeOrgScope = storeId
+          ? await this.resolveStoreOrgScope(storeId, storeOrgScopeCache)
+          : { companyId: null, regionId: null };
+        const companyIdToPersist = companyId ?? storeOrgScope.companyId;
+        const regionIdToPersist = regionId ?? storeOrgScope.regionId;
         const targetValue =
           payload["targetValue"] === null || payload["targetValue"] === undefined
             ? null
@@ -510,8 +519,8 @@ export class MaterializationService {
             `,
             [
               kpiId,
-              companyId,
-              regionId,
+              companyIdToPersist,
+              regionIdToPersist,
               storeId,
               periodType,
               periodStart,
@@ -578,8 +587,8 @@ export class MaterializationService {
               `,
               [
                 kpiId,
-                companyId,
-                regionId,
+                companyIdToPersist,
+                regionIdToPersist,
                 storeId,
                 periodType,
                 periodStart,
@@ -645,8 +654,8 @@ export class MaterializationService {
             `,
             [
               kpiId,
-              companyId,
-              regionId,
+              companyIdToPersist,
+              regionIdToPersist,
               storeId,
               employeeIdToPersist,
               periodType,
@@ -1275,6 +1284,41 @@ export class MaterializationService {
     }
 
     return result.rows[0].region_id;
+  }
+
+  private async resolveStoreOrgScope(
+    storeId: string,
+    cache: Map<string, { companyId: string | null; regionId: string | null }>,
+  ): Promise<{ companyId: string | null; regionId: string | null }> {
+    const cached = cache.get(storeId);
+    if (cached) {
+      return cached;
+    }
+
+    const result = await this.databaseService.query<{
+      company_id: string | null;
+      region_id: string | null;
+    }>(
+      `
+        SELECT company_id, region_id
+        FROM ops.store
+        WHERE store_id = $1::uuid
+        LIMIT 1
+      `,
+      [storeId],
+    );
+
+    if (result.rowCount === 0) {
+      throw new Error("store organization scope could not be resolved");
+    }
+
+    const scope = {
+      companyId: result.rows[0].company_id,
+      regionId: result.rows[0].region_id,
+    };
+    cache.set(storeId, scope);
+
+    return scope;
   }
 
   private async markRawRowProcessed(

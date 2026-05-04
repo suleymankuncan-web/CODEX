@@ -390,7 +390,7 @@ export class ReportingService {
       periodEnd: latestPeriod.period_end,
     });
 
-    if (benchmarkRows.length === 0) {
+    if (!this.hasUsableBenchmarkRows(benchmarkRows)) {
       benchmarkRows = await this.reportingRepository.getStoreTurkeyBenchmarkValues({
         companyId: undefined,
         periodType: latestPeriod.period_type,
@@ -810,7 +810,7 @@ export class ReportingService {
       periodEnd: latestPeriod.period_end,
     });
 
-    if (benchmarkRows.length === 0) {
+    if (!this.hasUsableBenchmarkRows(benchmarkRows)) {
       benchmarkRows = await this.reportingRepository.getEmployeeTurkeyBenchmarkValues({
         companyId: undefined,
         periodType: input.periodType,
@@ -1266,6 +1266,17 @@ export class ReportingService {
     }
 
     return this.getDefaultKpiConfig();
+  }
+
+  private hasUsableBenchmarkRows(rows: Array<{ benchmark_value: string | null }>) {
+    return rows.some((row) => {
+      if (row.benchmark_value === null) {
+        return false;
+      }
+
+      const value = Number(row.benchmark_value);
+      return Number.isFinite(value) && value !== 0;
+    });
   }
 
   private mapKpiConfigVersionMetadata(version: {

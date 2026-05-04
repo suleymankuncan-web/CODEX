@@ -297,6 +297,18 @@ describe("MaterializationService", () => {
         };
       }
 
+      if (sql.includes("SELECT company_id, region_id") && sql.includes("FROM ops.store")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              company_id: "00000000-0000-0000-0000-000000000354",
+              region_id: "00000000-0000-0000-0000-000000000355",
+            },
+          ],
+        };
+      }
+
       return { rowCount: 1, rows: [] };
     });
 
@@ -306,13 +318,101 @@ describe("MaterializationService", () => {
       expect.stringContaining("INSERT INTO ops.kpi_actual"),
       [
         "00000000-0000-0000-0000-000000000351",
-        null,
-        null,
+        "00000000-0000-0000-0000-000000000354",
+        "00000000-0000-0000-0000-000000000355",
         "00000000-0000-0000-0000-000000000352",
         "monthly",
         "2026-04-01",
         "2026-04-30",
         92,
+        null,
+        null,
+        null,
+      ],
+    );
+  });
+
+  it("inherits employee KPI company and region scope from the resolved store", async () => {
+    const { databaseService, service } = createService(async (sql, params) => {
+      if (sql.includes("FROM stg.import_batch")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              import_batch_id: batchId,
+              entity_type: "kpi",
+              integration_source_id: integrationSourceId,
+              source_batch_id: null,
+              source_payload_hash: null,
+              source_captured_at: null,
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("FROM stg.kpi_raw")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              stg_kpi_raw_id: "00000000-0000-0000-0000-000000000356",
+              payload_json: {
+                kpiId: "00000000-0000-0000-0000-000000000357",
+                scopeType: "employee",
+                sourceStoreId: "STORE-1",
+                employeeExternalRef: "EMP-4",
+                periodStart: "2026-04-01",
+                periodEnd: "2026-04-30",
+                actualValue: 1200,
+              },
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("FROM stg.external_id_map") && params[1] === "store") {
+        return {
+          rowCount: 1,
+          rows: [{ internal_id: "00000000-0000-0000-0000-000000000358" }],
+        };
+      }
+
+      if (sql.includes("FROM stg.external_id_map") && params[1] === "employee") {
+        return {
+          rowCount: 1,
+          rows: [{ internal_id: "00000000-0000-0000-0000-000000000359" }],
+        };
+      }
+
+      if (sql.includes("SELECT company_id, region_id") && sql.includes("FROM ops.store")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              company_id: "00000000-0000-0000-0000-000000000360",
+              region_id: "00000000-0000-0000-0000-000000000361",
+            },
+          ],
+        };
+      }
+
+      return { rowCount: 1, rows: [] };
+    });
+
+    await service.materializeBatch(batchId);
+
+    expect(databaseService.query).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO ops.kpi_actual"),
+      [
+        "00000000-0000-0000-0000-000000000357",
+        "00000000-0000-0000-0000-000000000360",
+        "00000000-0000-0000-0000-000000000361",
+        "00000000-0000-0000-0000-000000000358",
+        "00000000-0000-0000-0000-000000000359",
+        "monthly",
+        "2026-04-01",
+        "2026-04-30",
+        1200,
         null,
         null,
         null,
