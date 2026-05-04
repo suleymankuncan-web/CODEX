@@ -495,7 +495,7 @@ export function StoreRankingsPage(input: {
           />
           <KeyValue
             label="KPI kaynaklari"
-            value="Hedef TARGET kaynagindan; ATV ve UPT Turkiye ortalamasindan puanlanir."
+            value="Satis hedefi girilen hedeften; ATV ve UPT Turkiye ortalamasindan puanlanir."
           />
           <KeyValue
             label="Checklist"
