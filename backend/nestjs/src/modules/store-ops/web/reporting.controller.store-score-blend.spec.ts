@@ -7,7 +7,10 @@ describe("ReportingController store score breakdown", () => {
         totalScore: 100,
       })),
     };
-    const controller = new ReportingController(reportingService as never);
+    const controller = new ReportingController(
+      reportingService as never,
+      { getRankings: jest.fn() } as never,
+    );
 
     await controller.getStoreScoreBreakdown(
       {

@@ -1,10 +1,12 @@
 import { Body, Controller, Get, Patch, Query, Req } from "@nestjs/common";
 import { RequireRoles } from "../../auth/decorators/roles.decorator";
 import { RequireScope } from "../../auth/decorators/scope.decorator";
+import { RankingService } from "../application/ranking.service";
 import { ReportingService } from "../application/reporting.service";
 import { GetChecklistReportQueryDto } from "./dto/get-checklist-report.query";
 import { GetClosedLeaderboardQueryDto } from "./dto/get-closed-leaderboard.query";
 import { GetMyPerformanceQueryDto } from "./dto/get-my-performance.query";
+import { GetRankingQueryDto } from "./dto/get-ranking.query";
 import { GetStoreKpiHighlightsQueryDto } from "./dto/get-store-kpi-highlights.query";
 import { GetTurnoverReportQueryDto } from "./dto/get-turnover-report.query";
 import { GetWorkforceReportQueryDto } from "./dto/get-workforce-report.query";
@@ -12,7 +14,10 @@ import { ListSnapshotRunsQueryDto } from "./dto/list-snapshot-runs.query";
 
 @Controller("reports")
 export class ReportingController {
-  constructor(private readonly reportingService: ReportingService) {}
+  constructor(
+    private readonly reportingService: ReportingService,
+    private readonly rankingService: RankingService,
+  ) {}
 
   @Get("snapshot-runs")
   @RequireScope("authenticated")
@@ -232,6 +237,47 @@ export class ReportingController {
       snapshotRunId: query.snapshotRunId,
       storeId: query.storeId,
       storeIds: request.user.scope.storeIds,
+    });
+  }
+
+  @Get("rankings")
+  @RequireScope("authenticated")
+  @RequireRoles("STORE_MANAGER", "STORE_PERSONNEL", "REGION_MANAGER", "SUPER_ADMIN")
+  async getRankings(
+    @Req()
+    request: {
+      user: {
+        userId: string;
+        employeeId?: string;
+        roleCodes: string[];
+        scope: {
+          companyIds: string[];
+          regionIds: string[];
+          storeIds: string[];
+        };
+        actionScope?: {
+          assignedStoreIds: string[];
+        };
+      };
+    },
+    @Query() query: GetRankingQueryDto,
+  ) {
+    return this.rankingService.getRankings({
+      userId: request.user.userId,
+      employeeId: request.user.employeeId,
+      roleCodes: request.user.roleCodes,
+      companyIds: request.user.scope.companyIds,
+      regionIds: request.user.scope.regionIds,
+      storeIds: request.user.scope.storeIds,
+      assignedStoreIds: request.user.actionScope?.assignedStoreIds ?? [],
+      periodType: query.periodType ?? "monthly",
+      periodStart: query.periodStart,
+      regionManagerUserId: query.regionManagerUserId,
+      regionId: query.regionId,
+      storeId: query.storeId,
+      search: query.search,
+      limit: query.limit,
+      offset: query.offset,
     });
   }
 

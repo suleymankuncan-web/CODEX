@@ -1,6 +1,13 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { CalendarDays, Medal, Trophy } from 'lucide-react'
+import {
+  ChevronLeft,
+  ChevronRight,
+  Medal,
+  Store,
+  Trophy,
+  UsersRound,
+} from 'lucide-react'
 import {
   EmptyState,
   KeyValue,
@@ -10,774 +17,612 @@ import {
   StatusPill,
 } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
-import { formatPerformanceGrade, resolvePerformanceGrade } from '../features/kpi/grading'
-import { getClosedLeaderboard, getKpiConfig, getReportingSnapshotRuns } from '../features/reports/api'
-import type { ClosedLeaderboardSummary, ClosedRankingEmployee } from '../features/reports/api'
 import {
-  formatSnapshotMonthOptionLabel,
-  formatSnapshotOptionLabel,
-  getSnapshotMonthStart,
-} from '../features/reports/snapshot-labels'
+  getRankings,
+  type PersonnelRankingRow,
+  type RankingMetricValue,
+  type RankingSummary,
+  type StoreRankingRow,
+} from '../features/reports/api'
 import { formatDate, getErrorMessage } from '../lib/format'
 
+const privilegedRankingRoles = ['REGION_MANAGER', 'SUPER_ADMIN']
+const rankingRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', ...privilegedRankingRoles]
+
+function hasAnyRole(userRoles: string[], requiredRoles: string[]) {
+  return requiredRoles.some((role) => userRoles.includes(role))
+}
+
 function canUseRankings(authSummary: AuthSessionSummary | null) {
-  const roles = authSummary?.user.roleCodes ?? []
-  return roles.includes('STORE_PERSONNEL') || roles.includes('STORE_MANAGER')
+  return hasAnyRole(authSummary?.user.roleCodes ?? [], rankingRoles)
+}
+
+function canUsePrivilegedFilters(authSummary: AuthSessionSummary | null) {
+  return hasAnyRole(authSummary?.user.roleCodes ?? [], privilegedRankingRoles)
+}
+
+function formatNumber(input: number | null | undefined) {
+  if (input === null || input === undefined || !Number.isFinite(input)) {
+    return 'Veri yok'
+  }
+
+  return new Intl.NumberFormat('tr-TR', {
+    minimumFractionDigits: Number.isInteger(input) ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(input)
+}
+
+function formatPercent(input: number | null | undefined) {
+  if (input === null || input === undefined || !Number.isFinite(input)) {
+    return 'Veri yok'
+  }
+
+  return `${formatNumber(input * 100)}%`
+}
+
+function formatMetricValue(input: number | null | undefined, code: string) {
+  if (code === 'CR' || code === 'TARGET_ACHIEVEMENT') {
+    return formatPercent(input)
+  }
+
+  return formatNumber(input)
 }
 
 function formatRank(rank: number | null, population: number) {
   return rank !== null ? `${rank}/${population}` : 'Siralama yok'
 }
 
-function formatCoverage(input?: {
-  daysWithPerformance: number
-  closedDaysInPeriod: number
-}) {
-  if (!input || input.closedDaysInPeriod === 0) {
-    return 'Veri yok'
+function formatPeriod(source: RankingSummary['source'] | undefined) {
+  if (!source?.periodStart || !source.periodEnd) {
+    return 'Son aylik veri'
   }
 
-  return `${input.daysWithPerformance}/${input.closedDaysInPeriod} kapali gun`
+  return `${formatDate(source.periodStart)} - ${formatDate(source.periodEnd)}`
 }
 
-function formatSourceState(state?: 'closed' | 'live' | 'not_closed' | 'no_data') {
-  if (state === 'closed') {
-    return 'Kapandi'
-  }
-
-  if (state === 'live') {
-    return 'Canli veri'
-  }
-
-  if (state === 'not_closed') {
-    return 'Henuz kapanmadi'
-  }
-
-  return 'Veri yok'
+function formatMode(ranking?: RankingSummary) {
+  return ranking?.access.globalMode === 'full' ? 'Tum Turkiye' : 'Top 100'
 }
 
-function formatPeriodType(periodType?: 'daily' | 'monthly') {
-  return periodType === 'monthly' ? 'Aylik' : 'Gunluk'
-}
-
-function formatSourceMode(mode?: 'closed' | 'live') {
-  return mode === 'live' ? 'Canli KPI' : 'Kapanis'
-}
-
-function resolveRankingExplanation(
-  employee?: ClosedRankingEmployee | null,
-  sourceMode?: 'closed' | 'live',
-) {
-  if (!employee) {
-    return null
+function getRowTone(rank: number): 'accent' | 'calm' | 'neutral' {
+  if (rank <= 10) {
+    return 'accent'
   }
 
-  if (sourceMode === 'live') {
-    return {
-      label: 'Canli KPI',
-      copy: 'Bu sonuc Power BI importundan gelen aylik KPI verisine gore hesaplandi.',
-      tone: 'calm' as const,
-    }
+  if (rank <= 100) {
+    return 'calm'
   }
 
-  if (employee.rankingStatus === 'preview_only') {
-    return {
-      label: 'On izleme',
-      copy: `${employee.neededPerformanceDays} kapali performans gunu daha gerekiyor`,
-      tone: 'warning' as const,
-    }
-  }
-
-  return {
-    label: 'Resmi siralama',
-    copy: 'Bu sonuc kapanmis performans verisiyle resmi siralamaya dahildir.',
-    tone: 'calm' as const,
-  }
-}
-
-function resolveEmptyState(state: 'closed' | 'live' | 'not_closed' | 'no_data') {
-  if (state === 'not_closed') {
-    return {
-      title: 'Secili donem henuz kapanmadi',
-      copy: 'Siralama, secili gun veya ay icin kapanis verisi tamamlandiktan sonra gorunur.',
-    }
-  }
-
-  if (state === 'no_data') {
-    return {
-      title: 'Bu donem icin kapali performans verisi yok',
-      copy: 'Kapanis var; ancak bu secim icin personel performans satiri uretilmemis.',
-    }
-  }
-
-  return null
-}
-
-function formatLeaderboardCoverage(leaderboard?: ClosedLeaderboardSummary) {
-  if (leaderboard?.source.mode === 'live' && leaderboard.currentEmployee) {
-    return 'Aylik KPI verisi'
-  }
-
-  return formatCoverage(leaderboard?.currentEmployee?.coverage)
-}
-
-function resolveRankingScopeReadiness(leaderboard?: ClosedLeaderboardSummary) {
-  const employee = leaderboard?.currentEmployee ?? null
-  const isOfficial = employee?.rankingStatus === 'official'
-  const hasTurkeyPopulation = Boolean(employee && employee.rankings.turkeyPopulation > 0)
-  const hasStorePopulation = Boolean(employee && employee.rankings.storePopulation > 0)
-  const hasMetricRanks = Boolean(employee?.metricRanks.length)
-  const hasRankingSource =
-    leaderboard?.source.state === 'closed' || leaderboard?.source.state === 'live'
-
-  return [
-    {
-      label: 'Turkiye geneli',
-      status: isOfficial && employee?.rankings.turkeyRank ? 'Hazir' : 'On izleme',
-      tone: isOfficial && employee?.rankings.turkeyRank ? 'calm' : 'warning',
-      scope: hasTurkeyPopulation
-        ? formatRank(employee?.rankings.turkeyRank ?? null, employee?.rankings.turkeyPopulation ?? 0)
-        : 'Populasyon yok',
-      note: isOfficial
-        ? 'Kapali snapshot icindeki ulke geneli personel sirasi.'
-        : 'Resmi siralama icin kapali performans gunu esigi bekleniyor.',
-    },
-    {
-      label: 'Magaza ici',
-      status: isOfficial && employee?.rankings.storeRank ? 'Hazir' : 'On izleme',
-      tone: isOfficial && employee?.rankings.storeRank ? 'calm' : 'warning',
-      scope: hasStorePopulation
-        ? formatRank(employee?.rankings.storeRank ?? null, employee?.rankings.storePopulation ?? 0)
-        : 'Populasyon yok',
-      note: 'Ayni store icindeki personel karsilastirmasi mevcut read modelden okunur.',
-    },
-    {
-      label: 'Metrik mini-rank',
-      status: hasMetricRanks ? 'Hazir' : 'Veri bekliyor',
-      tone: hasMetricRanks ? 'accent' : 'neutral',
-      scope: hasMetricRanks ? `${employee?.metricRanks.length ?? 0} metrik` : 'Mini-rank yok',
-      note: 'UPT, ATV ve hedef gibi tekil KPI yarislari icin temel sinyal hazir.',
-    },
-    {
-      label: 'Segment hazirligi',
-      status: hasRankingSource && hasMetricRanks ? 'Segment kuralina hazir' : 'Segment icin veri bekliyor',
-      tone: hasRankingSource && hasMetricRanks ? 'accent' : 'neutral',
-      scope: leaderboard?.source.periodType === 'monthly' ? 'Aylik segmentlenebilir' : 'Gunluk segmentlenebilir',
-      note: 'Bolge, challenge veya metrik segmenti ileride yeni skor motoru acmadan ayni kapanis modeline baglanabilir.',
-    },
-  ] as const
+  return 'neutral'
 }
 
 export function StoreRankingsPage(input: {
   authSummary: AuthSessionSummary | null
 }) {
   const enabled = canUseRankings(input.authSummary)
-  const [periodType, setPeriodType] = useState<'daily' | 'monthly'>('monthly')
+  const privilegedSession = canUsePrivilegedFilters(input.authSummary)
   const [periodStart, setPeriodStart] = useState('')
-  const [selectedSnapshotRunId, setSelectedSnapshotRunId] = useState('')
-  const configQuery = useQuery({
-    queryKey: ['store-rankings-kpi-config'],
-    queryFn: getKpiConfig,
-    enabled,
-    retry: false,
-  })
-  const snapshotRunsQuery = useQuery({
-    queryKey: ['store-rankings-snapshot-runs', 'daily-list'],
-    queryFn: () =>
-      getReportingSnapshotRuns({
-        snapshotType: 'daily',
-        limit: 90,
-        offset: 0,
-      }),
-    enabled,
-    retry: false,
-  })
-  const availableSnapshotRuns = useMemo(
-    () => snapshotRunsQuery.data?.items ?? [],
-    [snapshotRunsQuery.data?.items],
-  )
-  const monthlySnapshotOptions = useMemo(() => {
-    const optionsByMonth = new Map<
-      string,
-      { monthStart: string; latestSnapshotDate: string }
-    >()
+  const [regionManagerUserId, setRegionManagerUserId] = useState('')
+  const [regionId, setRegionId] = useState('')
+  const [storeId, setStoreId] = useState('')
+  const [search, setSearch] = useState('')
+  const [offset, setOffset] = useState(0)
+  const limit = 100
+  const setFilter = (setter: (value: string) => void) => (value: string) => {
+    setter(value)
+    setOffset(0)
+  }
 
-    for (const run of availableSnapshotRuns) {
-      const monthStart = getSnapshotMonthStart(run.periodStart)
-      const current = optionsByMonth.get(monthStart)
-
-      if (
-        !current ||
-        Date.parse(run.snapshotDate) > Date.parse(current.latestSnapshotDate)
-      ) {
-        optionsByMonth.set(monthStart, {
-          monthStart,
-          latestSnapshotDate: run.snapshotDate,
-        })
-      }
-    }
-
-    return [...optionsByMonth.values()].sort((left, right) =>
-      right.monthStart.localeCompare(left.monthStart),
-    )
-  }, [availableSnapshotRuns])
-  const selectedMonthlyPeriodStart = periodType === 'monthly' ? periodStart : ''
-  const activeSnapshotRun =
-    periodType === 'daily'
-      ? availableSnapshotRuns.find((run) => run.snapshotRunId === selectedSnapshotRunId) ??
-        availableSnapshotRuns[0] ??
-        null
-      : null
-  const leaderboardQuery = useQuery({
+  const rankingsQuery = useQuery({
     queryKey: [
-      'closed-leaderboard',
-      periodType,
-      periodType === 'monthly' ? selectedMonthlyPeriodStart || 'latest-monthly-kpi' : 'latest-day',
-      activeSnapshotRun?.snapshotDate ?? 'latest-snapshot',
+      'ranking-v1',
+      periodStart || 'latest',
+      privilegedSession ? regionManagerUserId : '',
+      privilegedSession ? regionId : '',
+      privilegedSession ? storeId : '',
+      privilegedSession ? search : '',
+      privilegedSession ? offset : 0,
     ],
     queryFn: () =>
-      getClosedLeaderboard({
-        periodType,
-        periodStart:
-          periodType === 'monthly' && selectedMonthlyPeriodStart ? selectedMonthlyPeriodStart : undefined,
-        snapshotDate:
-          periodType === 'daily' && activeSnapshotRun?.snapshotDate
-            ? activeSnapshotRun.snapshotDate
-            : undefined,
-        limit: 10,
+      getRankings({
+        periodStart: periodStart || undefined,
+        regionManagerUserId: privilegedSession ? regionManagerUserId || undefined : undefined,
+        regionId: privilegedSession ? regionId || undefined : undefined,
+        storeId: privilegedSession ? storeId || undefined : undefined,
+        search: privilegedSession ? search || undefined : undefined,
+        limit,
+        offset: privilegedSession ? offset : 0,
       }),
-    enabled: enabled && !snapshotRunsQuery.isLoading,
+    enabled,
     retry: false,
   })
-  const leaderboard = leaderboardQuery.data
-  const monthlyPeriodOptions = useMemo(() => {
-    const optionsByMonth = new Map<
-      string,
-      { monthStart: string; label: string; latestSnapshotDate: string }
-    >()
-
-    for (const period of leaderboard?.availablePeriods ?? []) {
-      if (period.periodType !== 'monthly') {
-        continue
-      }
-
-      optionsByMonth.set(period.periodStart, {
-        monthStart: period.periodStart,
-        label: `${formatDate(period.periodStart)} - ${formatDate(period.periodEnd)} - Canli KPI`,
-        latestSnapshotDate: period.periodEnd,
-      })
-    }
-
-    for (const option of monthlySnapshotOptions) {
-      if (!optionsByMonth.has(option.monthStart)) {
-        optionsByMonth.set(option.monthStart, {
-          monthStart: option.monthStart,
-          label: `${formatSnapshotMonthOptionLabel(option)} - Kapanis`,
-          latestSnapshotDate: option.latestSnapshotDate,
-        })
-      }
-    }
-
-    return [...optionsByMonth.values()].sort((left, right) =>
-      right.monthStart.localeCompare(left.monthStart),
-    )
-  }, [leaderboard?.availablePeriods, monthlySnapshotOptions])
+  const ranking = rankingsQuery.data
+  const isPrivileged = ranking?.access.globalMode === 'full'
+  const hasNextPage =
+    isPrivileged &&
+    Math.max(
+      ranking.storeLeaderboard.meta.total,
+      ranking.personnelLeaderboard.meta.total,
+    ) > offset + limit
+  const activePeriodOptions = useMemo(
+    () => ranking?.availablePeriods ?? [],
+    [ranking?.availablePeriods],
+  )
 
   if (!enabled) {
     return (
       <ScreenState
         title="Siralama yuzeyi kullanilamiyor"
-        copy="Bu yuzey magaza personeli veya magaza muduru oturumu gerektirir."
+        copy="Bu yuzey magaza personeli, magaza muduru, bolge muduru veya super admin rolu gerektirir."
         tone="error"
       />
     )
   }
 
-  if (
-    leaderboardQuery.isLoading ||
-    configQuery.isLoading ||
-    snapshotRunsQuery.isLoading
-  ) {
+  if (rankingsQuery.isLoading) {
     return (
       <ScreenState
         title="Siralama hazirlaniyor"
-        copy="Aylik KPI verisi ve kapanis snapshotlari okunuyor."
+        copy="Aylik KPI ranking verisi okunuyor."
       />
     )
   }
 
-  if (leaderboardQuery.isError || configQuery.isError || snapshotRunsQuery.isError) {
+  if (rankingsQuery.isError) {
     return (
       <ScreenState
         title="Siralama yuzeyi acilamadi"
-        copy={getErrorMessage(leaderboardQuery.error ?? configQuery.error ?? snapshotRunsQuery.error)}
+        copy={getErrorMessage(rankingsQuery.error)}
         tone="error"
       />
     )
   }
 
-  const monthlyClosureEvidenceRuns =
-    periodType === 'monthly' && leaderboard?.source.mode === 'closed'
-      ? leaderboard?.includedSnapshotRuns ?? []
-      : []
-  const currentEmployeeGrade = leaderboard?.currentEmployee
-    ? resolvePerformanceGrade(leaderboard.currentEmployee.scoreValue, configQuery.data?.gradingBands)
-    : null
-  const rankingExplanation = resolveRankingExplanation(
-    leaderboard?.currentEmployee,
-    leaderboard?.source.mode,
-  )
-  const scopeReadiness = resolveRankingScopeReadiness(leaderboard)
-  const emptyState = leaderboard ? resolveEmptyState(leaderboard.source.state) : null
-  const selectionIsFiltered =
-    periodType === 'daily' ? Boolean(selectedSnapshotRunId) : Boolean(periodStart)
+  if (!ranking) {
+    return (
+      <ScreenState
+        title="Siralama verisi yok"
+        copy="Bu oturum icin ranking cevabi donmedi."
+        tone="error"
+      />
+    )
+  }
 
   return (
     <section className="page-stack">
       <section className="hero-panel store-hero-panel">
         <div>
-          <div className="eyebrow">Personel Siralamalari</div>
-          <h2 className="hero-title">Aylik KPI ve kapanis siralamasi.</h2>
+          <div className="eyebrow">Turkiye Siralamasi</div>
+          <h2 className="hero-title">Magaza ve personel rankingleri.</h2>
           <p className="hero-copy">
-            Aylik mod Power BI importundan gelen KPI verisini okur; kapanis snapshot'i olan donemlerde resmi closure kanitini de gosterir.
+            {isPrivileged
+              ? 'Tum Turkiye listesi filtreli ve detayli gorunur.'
+              : 'Global liste Top 100 ozet; kendi konumun ayrica gorunur.'}
           </p>
         </div>
         <div className="hero-metrics">
-          <MetricAccent label="Mod" value={formatPeriodType(periodType)} />
-          <MetricAccent label="Kaynak" value={formatSourceMode(leaderboard?.source.mode)} />
-          <MetricAccent label="Durum" value={formatSourceState(leaderboard?.source.state)} />
+          <MetricAccent label="Mod" value={formatMode(ranking)} />
+          <MetricAccent label="Donem" value={formatPeriod(ranking.source)} />
           <MetricAccent
-            label="Donem"
-            value={
-              leaderboard?.source.periodStart
-                ? `${leaderboard.source.periodStart} / ${leaderboard.source.periodEnd ?? '-'}`
-                : 'Son veri'
-            }
+            label="Magaza"
+            value={`${ranking.storeLeaderboard.items.length}/${ranking.storeLeaderboard.meta.total}`}
           />
           <MetricAccent
-            label="Kapsam"
-            value={formatLeaderboardCoverage(leaderboard)}
+            label="Personel"
+            value={`${ranking.personnelLeaderboard.items.length}/${ranking.personnelLeaderboard.meta.total}`}
+          />
+          <MetricAccent
+            label="Detay"
+            value={ranking.access.canSeeGlobalDetails ? 'Acik' : 'Kapali'}
           />
         </div>
       </section>
 
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">Donem Secimi</div>
-            <h3>Hangi gun veya ayi gormek istiyorsun</h3>
+      <RankingControls
+        ranking={ranking}
+        isPrivileged={Boolean(isPrivileged)}
+        periodStart={periodStart}
+        regionManagerUserId={regionManagerUserId}
+        regionId={regionId}
+        storeId={storeId}
+        search={search}
+        offset={offset}
+        limit={limit}
+        hasNextPage={Boolean(hasNextPage)}
+        onPeriodStartChange={setFilter(setPeriodStart)}
+        onRegionManagerChange={setFilter(setRegionManagerUserId)}
+        onRegionChange={setFilter(setRegionId)}
+        onStoreChange={setFilter(setStoreId)}
+        onSearchChange={setFilter(setSearch)}
+        onOffsetChange={setOffset}
+        onClearFilters={() => {
+          setRegionManagerUserId('')
+          setRegionId('')
+          setStoreId('')
+          setSearch('')
+          setOffset(0)
+        }}
+        periodOptions={activePeriodOptions}
+      />
+
+      <section className="metric-grid store-metric-grid">
+        <MetricCard
+          title="Magaza listesi"
+          value={ranking.storeLeaderboard.items.length}
+          note={`${ranking.storeLeaderboard.meta.total} magaza populasyonu`}
+          icon={<Store size={18} />}
+          tone="accent"
+        />
+        <MetricCard
+          title="Personel listesi"
+          value={ranking.personnelLeaderboard.items.length}
+          note={`${ranking.personnelLeaderboard.meta.total} personel populasyonu`}
+          icon={<UsersRound size={18} />}
+          tone="calm"
+        />
+        <MetricCard
+          title="Kendi magazam"
+          value={ranking.storeLeaderboard.currentStore?.rank ?? 0}
+          note={
+            ranking.storeLeaderboard.currentStore
+              ? formatRank(
+                  ranking.storeLeaderboard.currentStore.rank,
+                  ranking.storeLeaderboard.currentStore.population,
+                )
+              : 'Magaza konumu yok'
+          }
+          icon={<Medal size={18} />}
+          tone={ranking.storeLeaderboard.currentStore ? 'neutral' : 'warning'}
+        />
+        <MetricCard
+          title="Kendi siram"
+          value={ranking.personnelLeaderboard.currentEmployee?.rank ?? 0}
+          note={
+            ranking.personnelLeaderboard.currentEmployee
+              ? formatRank(
+                  ranking.personnelLeaderboard.currentEmployee.rank,
+                  ranking.personnelLeaderboard.currentEmployee.population,
+                )
+              : 'Personel konumu yok'
+          }
+          icon={<Trophy size={18} />}
+          tone={ranking.personnelLeaderboard.currentEmployee ? 'neutral' : 'warning'}
+        />
+      </section>
+
+      <section className="two-up-grid">
+        <StoreLeaderboardPanel rows={ranking.storeLeaderboard.items} />
+        <PersonnelLeaderboardPanel rows={ranking.personnelLeaderboard.items} />
+      </section>
+
+      <section className="two-up-grid">
+        <CurrentStorePanel row={ranking.storeLeaderboard.currentStore} />
+        <CurrentEmployeePanel row={ranking.personnelLeaderboard.currentEmployee} />
+      </section>
+
+      {ranking.personnelLeaderboard.managedStorePersonnel.length ? (
+        <section className="panel" aria-label="Managed store personnel ranking details">
+          <div className="panel-heading">
+            <div>
+              <div className="eyebrow">Magazam</div>
+              <h3>Magaza personelleri</h3>
+            </div>
+            <StatusPill tone="accent">
+              {`${ranking.personnelLeaderboard.managedStorePersonnel.length} kisi`}
+            </StatusPill>
           </div>
-          <StatusPill tone={selectionIsFiltered ? 'accent' : 'neutral'}>
-            {selectionIsFiltered ? 'Filtreli' : 'Son veri'}
-          </StatusPill>
+          <div className="stacked-table">
+            {ranking.personnelLeaderboard.managedStorePersonnel.map((row) => (
+              <PersonnelRankingCard key={row.employeeId} row={row} forceDetail />
+            ))}
+          </div>
+        </section>
+      ) : null}
+    </section>
+  )
+}
+
+function RankingControls(input: {
+  ranking: RankingSummary
+  isPrivileged: boolean
+  periodStart: string
+  regionManagerUserId: string
+  regionId: string
+  storeId: string
+  search: string
+  offset: number
+  limit: number
+  hasNextPage: boolean
+  periodOptions: RankingSummary['availablePeriods']
+  onPeriodStartChange: (value: string) => void
+  onRegionManagerChange: (value: string) => void
+  onRegionChange: (value: string) => void
+  onStoreChange: (value: string) => void
+  onSearchChange: (value: string) => void
+  onOffsetChange: (value: number) => void
+  onClearFilters: () => void
+}) {
+  return (
+    <section className="panel">
+      <div className="panel-heading">
+        <div>
+          <div className="eyebrow">Filtreler</div>
+          <h3>{input.isPrivileged ? 'Tum Turkiye' : 'Top 100 gorunumu'}</h3>
         </div>
-        <div className="toolbar-cluster" role="group" aria-label="Ranking period controls">
-          <button
-            className={`segmented-button${periodType === 'daily' ? ' segmented-button-active' : ''}`}
-            type="button"
-            onClick={() => {
-              setPeriodType('daily')
-              setPeriodStart('')
-              setSelectedSnapshotRunId('')
-            }}
+        <StatusPill tone={input.isPrivileged ? 'accent' : 'neutral'}>
+          {input.isPrivileged ? 'Detay acik' : 'Ozet'}
+        </StatusPill>
+      </div>
+      <div className="toolbar-cluster" role="group" aria-label="Ranking filters">
+        <label className="control-field">
+          <span>Donem</span>
+          <select
+            value={input.periodStart}
+            onChange={(event) => input.onPeriodStartChange(event.target.value)}
+            aria-label="Ranking donem secimi"
           >
-            Gunluk
-          </button>
-          <button
-            className={`segmented-button${periodType === 'monthly' ? ' segmented-button-active' : ''}`}
-            type="button"
-            onClick={() => {
-              setPeriodType('monthly')
-              setPeriodStart('')
-              setSelectedSnapshotRunId('')
-            }}
-          >
-            Aylik
-          </button>
-          {periodType === 'daily' ? (
+            <option value="">Son aylik veri</option>
+            {input.periodOptions.map((period) => (
+              <option key={period.periodStart} value={period.periodStart}>
+                {`${formatDate(period.periodStart)} - ${formatDate(period.periodEnd)}`}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {input.isPrivileged ? (
+          <>
             <label className="control-field">
-              <span>Kapanmis siralama snapshot secimi</span>
+              <span>Bolge muduru</span>
               <select
-                value={
-                  selectedSnapshotRunId ||
-                  activeSnapshotRun?.snapshotRunId ||
-                  ''
-                }
-                onChange={(event) => setSelectedSnapshotRunId(event.target.value)}
-                aria-label="Ranking snapshot secimi"
+                value={input.regionManagerUserId}
+                onChange={(event) => input.onRegionManagerChange(event.target.value)}
+                aria-label="Bolge muduru filtresi"
               >
-                <option value="">Son kapanmis snapshot</option>
-                {availableSnapshotRuns.map((run) => (
-                  <option key={run.snapshotRunId} value={run.snapshotRunId}>
-                    {formatSnapshotOptionLabel(run)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : (
-            <label className="control-field">
-              <span>Aylik siralama secimi</span>
-              <select
-                value={periodStart}
-                onChange={(event) => setPeriodStart(event.target.value)}
-                aria-label="Ranking month snapshot secimi"
-              >
-                <option value="">Son aylik veri</option>
-                {monthlyPeriodOptions.map((option) => (
-                  <option key={option.monthStart} value={option.monthStart}>
+                <option value="">Tum bolge mudurleri</option>
+                {input.ranking.filters.regionManagers.map((option) => (
+                  <option key={option.id} value={option.id}>
                     {option.label}
                   </option>
                 ))}
               </select>
             </label>
-          )}
-          <button
-            className="control-button"
-            type="button"
-            onClick={() => {
-              if (periodType === 'monthly') {
-                setPeriodStart('')
-                return
-              }
-
-              setSelectedSnapshotRunId('')
-            }}
-            disabled={
-              periodType === 'daily'
-                ? !selectedSnapshotRunId
-                : !periodStart
-            }
-          >
-            {periodType === 'monthly' ? 'Son aylik veriye don' : 'Son kapanmis gune don'}
-          </button>
-        </div>
-      </section>
-
-      {leaderboard && emptyState ? (
-        <EmptyState title={emptyState.title} copy={emptyState.copy} />
-      ) : null}
-
-      <section className="metric-grid store-metric-grid">
-        <MetricCard
-          title="Personel ilk 10"
-          value={leaderboard?.personnelTop.length ?? 0}
-          note="Secili kaynak kapsamindaki personel listesi."
-          icon={<Trophy size={18} />}
-          tone="accent"
-        />
-        <MetricCard
-          title="Mevcut siralama"
-          value={leaderboard?.currentEmployee?.rankings.turkeyRank ?? 0}
-          note={
-            leaderboard?.currentEmployee
-              ? `${leaderboard.currentEmployee.displayName} - ${formatRank(
-                  leaderboard.currentEmployee.rankings.turkeyRank,
-                  leaderboard.currentEmployee.rankings.turkeyPopulation,
-                )}`
-              : 'Aktif employee kaydi bulunamadi.'
-          }
-          icon={<Medal size={18} />}
-          tone={currentEmployeeGrade?.tone ?? 'neutral'}
-        />
-        <MetricCard
-          title="Kapsam"
-          value={leaderboard?.currentEmployee?.coverage.daysWithPerformance ?? 0}
-          note={formatLeaderboardCoverage(leaderboard)}
-          icon={<CalendarDays size={18} />}
-          tone={
-            leaderboard?.currentEmployee?.coverage.isEligibleForRanking === false
-              ? 'warning'
-              : 'calm'
-          }
-        />
-      </section>
-
-      {periodType === 'monthly' && leaderboard?.source.mode === 'closed' ? (
-        <section className="panel" aria-label="Monthly closure evidence">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">Aylik Kanit</div>
-              <h3>Aylik kapanis gunleri kaniti</h3>
-            </div>
-            <StatusPill tone={monthlyClosureEvidenceRuns.length ? 'calm' : 'warning'}>
-              {`${monthlyClosureEvidenceRuns.length} kapanmis gun dahil`}
-            </StatusPill>
-          </div>
-          <p className="queue-subtitle">
-            Bu ay siralamasi tek bir snapshot degil, secili ay icindeki tamamlanmis gunluk kapanislarin toplamindan okunur.
-          </p>
-          <p className="helper-text">
-            Aylik kanit includedSnapshotRuns alanindan gelir.
-          </p>
-          {monthlyClosureEvidenceRuns.length ? (
-            <div className="stacked-table">
-              {monthlyClosureEvidenceRuns.map((run) => (
-                <article className="stacked-row" key={run.snapshotRunId}>
-                  <div className="stacked-row-head">
-                    <strong>{formatDate(run.snapshotDate)}</strong>
-                    <StatusPill tone="calm">Dahil</StatusPill>
-                  </div>
-                  <div className="key-grid">
-                    <KeyValue label="Snapshot run" value={run.snapshotRunId} />
-                    <KeyValue label="Donem" value={`${run.periodStart} -> ${run.periodEnd}`} />
-                    <KeyValue label="Durum" value={run.runStatus} />
-                    <KeyValue label="Ureten" value={run.generatedBy} />
-                  </div>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              title="Bu ay icin kapanis kaniti yok"
-              copy="Aylik siralama, secili ay icin tamamlanmis gunluk snapshot buldugunda kanit listesi gosterir."
-            />
-          )}
-        </section>
-      ) : null}
-
-      <section className="panel" aria-label="Ranking score source explanation">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">Skor Kontrati</div>
-            <h3>Skor kaynaklari</h3>
-          </div>
-          <StatusPill tone="accent">Resmi kural</StatusPill>
-        </div>
-        <p className="queue-subtitle">
-          Personel siralamasi canli aylik KPI importunda ve kapanmis snapshotlarda ayni skor kuralini kullanir.
-        </p>
-        <div className="key-grid">
-          <KeyValue
-            label="Ana skor"
-            value="Personel ana skoru hedef, ATV ve UPT agirlikli total score degeridir."
-          />
-          <KeyValue
-            label="KPI kaynaklari"
-            value="Satis hedefi girilen hedeften; ATV ve UPT Turkiye ortalamasindan puanlanir."
-          />
-          <KeyValue
-            label="Checklist"
-            value="Checklist personel ranking V1 icinde puan kaynagi degildir."
-          />
-          <KeyValue
-            label="Mini siralar"
-            value="ATV ve UPT mini siralari aciklayicidir; ana siralama weighted total score ile kalir."
-          />
-        </div>
-      </section>
-
-      <section className="two-up-grid">
-        <article className="panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">Kapanis baglami</div>
-              <h3>Bu ranking neye gore hesaplandi</h3>
-            </div>
-            <StatusPill
-              tone={
-                leaderboard?.source.state === 'closed' || leaderboard?.source.state === 'live'
-                  ? 'calm'
-                  : 'warning'
-              }
+            <label className="control-field">
+              <span>Bolge</span>
+              <select
+                value={input.regionId}
+                onChange={(event) => input.onRegionChange(event.target.value)}
+                aria-label="Bolge filtresi"
+              >
+                <option value="">Tum bolgeler</option>
+                {input.ranking.filters.regions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="control-field">
+              <span>Magaza</span>
+              <select
+                value={input.storeId}
+                onChange={(event) => input.onStoreChange(event.target.value)}
+                aria-label="Magaza filtresi"
+              >
+                <option value="">Tum magazalar</option>
+                {input.ranking.filters.stores.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="control-field">
+              <span>Personel ara</span>
+              <input
+                value={input.search}
+                onChange={(event) => input.onSearchChange(event.target.value)}
+                placeholder="Ad veya magaza"
+                aria-label="Personel arama"
+              />
+            </label>
+            <button className="control-button" type="button" onClick={input.onClearFilters}>
+              Filtreleri temizle
+            </button>
+            <button
+              className="control-button"
+              type="button"
+              onClick={() => input.onOffsetChange(Math.max(0, input.offset - input.limit))}
+              disabled={input.offset === 0}
+              aria-label="Onceki ranking sayfasi"
             >
-              {formatSourceMode(leaderboard?.source.mode)}
-            </StatusPill>
-          </div>
-          <div className="key-grid">
-            <KeyValue
-              label="Snapshot tarihi"
-              value={
-                leaderboard?.source.mode === 'live'
-                  ? 'Canli import'
-                  : leaderboard?.source.snapshotDate
-                    ? formatDate(leaderboard.source.snapshotDate)
-                    : 'Snapshot yok'
-              }
-            />
-            <KeyValue
-              label="Donem"
-              value={`${leaderboard?.source.periodStart ?? 'n/a'} -> ${leaderboard?.source.periodEnd ?? 'n/a'}`}
-            />
-            <KeyValue label="Durum" value={formatSourceState(leaderboard?.source.state)} />
-            <KeyValue
-              label="Aktif personel"
-              value={leaderboard?.currentEmployee?.displayName ?? 'Personel yok'}
-            />
-          </div>
-        </article>
-
-        <article className="panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">Mevcut konum</div>
-              <h3>Aktif kullanici nerede duruyor</h3>
-            </div>
-            {rankingExplanation ? (
-              <StatusPill tone={rankingExplanation.tone}>{rankingExplanation.label}</StatusPill>
-            ) : null}
-          </div>
-          {leaderboard?.currentEmployee ? (
-            <>
-              {rankingExplanation ? (
-                <div className="queue-meta" aria-label="Ranking explanation">
-                  <StatusPill tone={rankingExplanation.tone}>{rankingExplanation.label}</StatusPill>
-                  <span>{rankingExplanation.copy}</span>
-                </div>
-              ) : null}
-              <div className="key-grid">
-                <KeyValue
-                  label="Turkiye sirasi"
-                  value={formatRank(
-                    leaderboard.currentEmployee.rankings.turkeyRank,
-                    leaderboard.currentEmployee.rankings.turkeyPopulation,
-                  )}
-                />
-                <KeyValue
-                  label="Magaza sirasi"
-                  value={formatRank(
-                    leaderboard.currentEmployee.rankings.storeRank,
-                    leaderboard.currentEmployee.rankings.storePopulation,
-                  )}
-                />
-                <KeyValue label="Skor" value={leaderboard.currentEmployee.scoreValue.toFixed(2)} />
-                <KeyValue
-                  label="Derece"
-                  value={
-                    currentEmployeeGrade ? formatPerformanceGrade(currentEmployeeGrade) : 'Derece yok'
-                  }
-                />
-                <KeyValue label="Magaza" value={leaderboard.currentEmployee.storeName ?? 'Bilinmiyor'} />
-                <KeyValue
-                  label="Veri kapsami"
-                  value={formatLeaderboardCoverage(leaderboard)}
-                />
-              </div>
-            </>
-          ) : (
-            <EmptyState title="Aktif employee bulunamadi" copy="Bu oturum icin employee map kaydi yoksa sadece genel siralamalar gorunur." />
-          )}
-        </article>
-      </section>
-
-      <section className="panel" aria-label="Ranking scope readiness">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">Kapsam okunurlugu</div>
-            <h3>Siralama kapsam olgunlugu</h3>
-          </div>
-          <StatusPill
-            tone={
-              leaderboard?.source.state === 'closed' || leaderboard?.source.state === 'live'
-                ? 'calm'
-                : 'warning'
-            }
-          >
-            {leaderboard?.source.state === 'closed' || leaderboard?.source.state === 'live'
-              ? 'Hazir kaynak'
-              : 'Kisitli kaynak'}
-          </StatusPill>
-        </div>
-        <p className="queue-subtitle">
-          Turkiye, magaza ve metrik siralari ayni skor kaynagindan okunur; segmentler icin yeni skor motoru degil kapsam kurali gerekir.
-        </p>
-        <div className="stacked-table">
-          {scopeReadiness.map((item) => (
-            <article className="stacked-row" key={item.label}>
-              <div className="stacked-row-head">
-                <strong>{item.label}</strong>
-                <StatusPill tone={item.tone}>{item.status}</StatusPill>
-              </div>
-              <div className="key-grid">
-                <KeyValue label="Kapsam" value={item.scope} />
-                <KeyValue label="Not" value={item.note} />
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="two-up-grid">
-        <article className="panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">Personel ilk 10</div>
-              <h3>Secili kapsamda ilk 10 personel</h3>
-            </div>
-          </div>
-          <div className="stacked-table">
-            {leaderboard?.personnelTop.length ? (
-              leaderboard.personnelTop.map((item) => {
-                const grade = resolvePerformanceGrade(item.scoreValue, configQuery.data?.gradingBands)
-                return (
-                  <article className="stacked-row" key={item.employeeId}>
-                    <div className="stacked-row-head">
-                      <div>
-                        <strong>{item.displayName}</strong>
-                        <span className="queue-subtitle">{item.storeName ?? 'Store yok'}</span>
-                      </div>
-                      <StatusPill tone={grade.tone}>
-                        {`TR ${formatRank(item.rankings.turkeyRank, item.rankings.turkeyPopulation)}`}
-                      </StatusPill>
-                    </div>
-                    <div className="key-grid">
-                      <KeyValue label="Skor" value={item.scoreValue.toFixed(2)} />
-                      <KeyValue label="Derece" value={formatPerformanceGrade(grade)} />
-                      <KeyValue
-                        label="Magaza sirasi"
-                        value={formatRank(item.rankings.storeRank, item.rankings.storePopulation)}
-                      />
-                      <KeyValue label="Kapsam" value={formatCoverage(item.coverage)} />
-                    </div>
-                  </article>
-                )
-              })
-            ) : (
-              <EmptyState copy="Bu secim icin personel siralamasi yok." />
-            )}
-          </div>
-        </article>
-
-        <article className="panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">KPI mini siralari</div>
-              <h3>Aktif personelin metrik bazli konumu</h3>
-            </div>
-          </div>
-          <div className="stacked-table">
-            {leaderboard?.currentEmployee?.metricRanks.length ? (
-              leaderboard.currentEmployee.metricRanks.map((metric) => (
-                <article className="stacked-row" key={metric.code}>
-                  <div className="stacked-row-head">
-                    <strong>{metric.label}</strong>
-                    <StatusPill tone="neutral">{metric.code}</StatusPill>
-                  </div>
-                  <div className="key-grid">
-                    <KeyValue
-                      label="Deger"
-                      value={metric.actualValue !== null ? metric.actualValue.toFixed(2) : 'Veri yok'}
-                    />
-                    <KeyValue
-                      label="Magaza sirasi"
-                      value={formatRank(metric.storeRank, metric.storePopulation)}
-                    />
-                    <KeyValue
-                      label="Turkiye sirasi"
-                      value={formatRank(metric.turkeyRank, metric.turkeyPopulation)}
-                    />
-                  </div>
-                </article>
-              ))
-            ) : (
-              <EmptyState copy="Aktif personel icin KPI mini-rank verisi yok." />
-            )}
-            {leaderboard?.source.periodType === 'monthly' &&
-            leaderboard.currentEmployee?.coverage.isEligibleForRanking === false ? (
-              <EmptyState copy="Aylik siralamanin resmi sayilmasi icin en az 3 kapali performans gunu gerekir." />
-            ) : null}
-          </div>
-        </article>
-      </section>
+              <ChevronLeft size={16} />
+            </button>
+            <button
+              className="control-button"
+              type="button"
+              onClick={() => input.onOffsetChange(input.offset + input.limit)}
+              disabled={!input.hasNextPage}
+              aria-label="Sonraki ranking sayfasi"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </>
+        ) : null}
+      </div>
     </section>
+  )
+}
+
+function StoreLeaderboardPanel(input: { rows: StoreRankingRow[] }) {
+  return (
+    <article className="panel">
+      <div className="panel-heading">
+        <div>
+          <div className="eyebrow">Magazalar</div>
+          <h3>Turkiye magaza siralamasi</h3>
+        </div>
+        <StatusPill tone="accent">{`${input.rows.length} satir`}</StatusPill>
+      </div>
+      <div className="stacked-table">
+        {input.rows.length ? (
+          input.rows.map((row) => <StoreRankingCard key={row.storeId} row={row} />)
+        ) : (
+          <EmptyState copy="Bu secim icin magaza siralamasi yok." />
+        )}
+      </div>
+    </article>
+  )
+}
+
+function PersonnelLeaderboardPanel(input: { rows: PersonnelRankingRow[] }) {
+  return (
+    <article className="panel">
+      <div className="panel-heading">
+        <div>
+          <div className="eyebrow">Personeller</div>
+          <h3>Turkiye personel siralamasi</h3>
+        </div>
+        <StatusPill tone="calm">{`${input.rows.length} satir`}</StatusPill>
+      </div>
+      <div className="stacked-table">
+        {input.rows.length ? (
+          input.rows.map((row) => <PersonnelRankingCard key={row.employeeId} row={row} />)
+        ) : (
+          <EmptyState copy="Bu secim icin personel siralamasi yok." />
+        )}
+      </div>
+    </article>
+  )
+}
+
+function CurrentStorePanel(input: { row: StoreRankingRow | null }) {
+  return (
+    <article className="panel">
+      <div className="panel-heading">
+        <div>
+          <div className="eyebrow">Konum</div>
+          <h3>Kendi magaza sirasi</h3>
+        </div>
+        {input.row ? (
+          <StatusPill tone={getRowTone(input.row.rank)}>
+            {formatRank(input.row.rank, input.row.population)}
+          </StatusPill>
+        ) : null}
+      </div>
+      {input.row ? (
+        <StoreRankingCard row={input.row} forceDetail={input.row.visibility === 'detail'} />
+      ) : (
+        <EmptyState copy="Bu oturum icin magaza sirasi bulunamadi." />
+      )}
+    </article>
+  )
+}
+
+function CurrentEmployeePanel(input: { row: PersonnelRankingRow | null }) {
+  return (
+    <article className="panel">
+      <div className="panel-heading">
+        <div>
+          <div className="eyebrow">Konum</div>
+          <h3>Kendi personel sirasi</h3>
+        </div>
+        {input.row ? (
+          <StatusPill tone={getRowTone(input.row.rank)}>
+            {formatRank(input.row.rank, input.row.population)}
+          </StatusPill>
+        ) : null}
+      </div>
+      {input.row ? (
+        <PersonnelRankingCard row={input.row} forceDetail={input.row.visibility === 'detail'} />
+      ) : (
+        <EmptyState copy="Bu oturum icin personel sirasi bulunamadi." />
+      )}
+    </article>
+  )
+}
+
+function StoreRankingCard(input: { row: StoreRankingRow; forceDetail?: boolean }) {
+  const row = input.row
+  const showMetrics = Boolean(input.forceDetail || row.visibility === 'detail')
+
+  return (
+    <article className="stacked-row">
+      <div className="stacked-row-head">
+        <div>
+          <strong>{row.storeName ?? row.storeId}</strong>
+          <span className="queue-subtitle">
+            {[row.regionName, row.regionManagerName].filter(Boolean).join(' / ') || 'Bolge yok'}
+          </span>
+        </div>
+        <StatusPill tone={getRowTone(row.rank)}>
+          {formatRank(row.rank, row.population)}
+        </StatusPill>
+      </div>
+      <div className="key-grid">
+        <KeyValue label="Skor" value={formatNumber(row.scoreValue)} />
+        <KeyValue label="Gorunum" value={row.visibility === 'detail' ? 'Detay' : 'Ozet'} />
+        <KeyValue label="Magaza" value={row.storeName ?? row.storeId} />
+      </div>
+      {showMetrics ? <MetricDetails metrics={row.metrics ?? []} /> : null}
+    </article>
+  )
+}
+
+function PersonnelRankingCard(input: { row: PersonnelRankingRow; forceDetail?: boolean }) {
+  const row = input.row
+  const showMetrics = Boolean(input.forceDetail || row.visibility === 'detail')
+
+  return (
+    <article className="stacked-row">
+      <div className="stacked-row-head">
+        <div>
+          <strong>{row.displayName}</strong>
+          <span className="queue-subtitle">
+            {[row.storeName, row.regionName].filter(Boolean).join(' / ') || 'Magaza yok'}
+          </span>
+        </div>
+        <StatusPill tone={getRowTone(row.rank)}>
+          {formatRank(row.rank, row.population)}
+        </StatusPill>
+      </div>
+      <div className="key-grid">
+        <KeyValue label="Skor" value={formatNumber(row.scoreValue)} />
+        <KeyValue label="Magaza sirasi" value={formatRank(row.storeRank, row.storePopulation)} />
+        <KeyValue label="Gorunum" value={row.visibility === 'detail' ? 'Detay' : 'Ozet'} />
+      </div>
+      {showMetrics ? <MetricDetails metrics={row.metrics ?? []} /> : null}
+    </article>
+  )
+}
+
+function MetricDetails(input: { metrics: RankingMetricValue[] }) {
+  if (!input.metrics.length) {
+    return null
+  }
+
+  return (
+    <div className="key-grid" aria-label="Ranking metric details">
+      {input.metrics.map((metric) => (
+        <KeyValue
+          key={metric.code}
+          label={metric.label}
+          value={[
+            formatMetricValue(metric.actualValue, metric.code),
+            metric.targetValue !== undefined && metric.targetValue !== null
+              ? `Hedef ${formatMetricValue(metric.targetValue, metric.code)}`
+              : null,
+            metric.benchmarkValue !== undefined && metric.benchmarkValue !== null
+              ? `Benchmark ${formatMetricValue(metric.benchmarkValue, metric.code)}`
+              : null,
+            metric.contributionValue !== undefined && metric.contributionValue !== null
+              ? `Katki ${formatNumber(metric.contributionValue)}`
+              : null,
+          ]
+            .filter(Boolean)
+            .join(' / ')}
+        />
+      ))}
+    </div>
   )
 }
