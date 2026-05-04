@@ -229,7 +229,7 @@ describe("MasterDataBootstrapService", () => {
     expect(result.data.batch.invalidCount).toBe(1);
   });
 
-  it("marks personnel rows with missing live-write metadata as invalid", async () => {
+  it("allows personnel rows without national id evidence when required live-write metadata is present", async () => {
     const masterDataBootstrapRepository = {
       getBootstrapBatchForActor: jest.fn(async () =>
         buildBootstrapBatch({
@@ -267,9 +267,9 @@ describe("MasterDataBootstrapService", () => {
         batchId: "batch-personnel-validation",
         batchStatus: "validated",
         rowCount: 3,
-        validCount: 0,
+        validCount: 1,
         needsReviewCount: 0,
-        invalidCount: 3,
+        invalidCount: 2,
         promotedCount: 0,
       })),
     };
@@ -296,8 +296,8 @@ describe("MasterDataBootstrapService", () => {
         }),
         expect.objectContaining({
           rowId: "row-missing-national-id",
-          validationStatus: "invalid",
-          issueCode: "missing_national_id",
+          validationStatus: "valid",
+          issueCode: null,
         }),
         expect.objectContaining({
           rowId: "row-invalid-hire-date",
@@ -306,6 +306,9 @@ describe("MasterDataBootstrapService", () => {
         }),
       ],
     });
+    expect(
+      masterDataBootstrapRepository.resolveEmployeeByNationalIdHash,
+    ).not.toHaveBeenCalled();
   });
 
   it("marks unknown store types as review rows for store bootstrap batches", async () => {
@@ -1144,6 +1147,9 @@ describe("MasterDataBootstrapService", () => {
       listBootstrapRows: jest.fn(async () => [
         buildPersonnelRow("row-ready-personnel", 1, "FM8375", undefined, {
           validationStatus: "valid",
+          normalizedPayload: {
+            normalizedNationalIdHash: null,
+          },
           resolvedStoreId: "00000000-0000-4000-8000-000000000140",
           resolvedRegionId: "00000000-0000-4000-8000-000000000240",
           resolvedEmployeeId: null,
@@ -1201,8 +1207,7 @@ describe("MasterDataBootstrapService", () => {
           employeeCode: "FM8375",
           firstName: "Ada",
           lastName: "Kaya",
-          nationalIdHash:
-            "1111111111111111111111111111111111111111111111111111111111111111",
+          nationalIdHash: null,
           hireDate: "2026-04-01",
           employmentType: "full_time",
         },

@@ -847,7 +847,7 @@ export class MasterDataBootstrapRepository {
       employeeCode: string;
       firstName: string;
       lastName: string;
-      nationalIdHash: string;
+      nationalIdHash: string | null;
       hireDate: string;
       employmentType: string;
     }>;

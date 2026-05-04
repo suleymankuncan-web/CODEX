@@ -265,7 +265,7 @@ describe("PowerBiExportUploadService", () => {
           kpiCode: "NET_SALES",
           actualValue: 10000,
           scopeType: "employee",
-          employeeExternalRef: "powerbi:Ali Can",
+          employeeExternalRef: "powerbi:Istanbul Marmara Park Avm:Ali Can",
           sourceRow: expect.objectContaining({
             personnelGrossSales: 10000,
           }),
@@ -274,7 +274,7 @@ describe("PowerBiExportUploadService", () => {
           kpiCode: "ITEM_COUNT",
           actualValue: 10,
           scopeType: "employee",
-          employeeExternalRef: "powerbi:Ali Can",
+          employeeExternalRef: "powerbi:Istanbul Marmara Park Avm:Ali Can",
         }),
       ]),
     );
@@ -285,6 +285,63 @@ describe("PowerBiExportUploadService", () => {
           sourceRow: expect.objectContaining({
             SatisTutari: -2000,
           }),
+        }),
+      ]),
+    );
+  });
+
+  it("keeps same-name personnel separate across stores", async () => {
+    const { integrationRepository, integrationService, service } = createService();
+    integrationRepository.listKpiImportStoreExternalRefs.mockResolvedValue([
+      { external_ref: "Istanbul Marmara Park Avm" },
+      { external_ref: "Kadikoy" },
+    ]);
+    const buffer = createWorkbookBuffer([
+      {
+        Adi: "Ali Can",
+        MagazaAdi: "Istanbul Marmara Park Avm",
+        PSatisAdeti: 10,
+        SatisTutari: 10000,
+      },
+      {
+        Adi: "Ali Can",
+        MagazaAdi: "Kadikoy",
+        PSatisAdeti: 3,
+        SatisTutari: 3000,
+      },
+    ]);
+
+    const response = await service.upload({
+      sourceCode: "POWER_BI",
+      periodMonth: "2026-03",
+      actorUserId: "user-1",
+      personnelFile: {
+        originalname: "personnel.xlsx",
+        buffer,
+      },
+    });
+
+    const rows = (integrationService.createImportBatch.mock.calls[0][0].rows ??
+      []) as Array<Record<string, unknown>>;
+
+    expect(response.data.summary).toMatchObject({
+      personnelRowsRead: 2,
+      personnelGrossSalesRows: 2,
+      canonicalRowCount: 4,
+    });
+    expect(rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kpiCode: "NET_SALES",
+          actualValue: 10000,
+          storeExternalRef: "Istanbul Marmara Park Avm",
+          employeeExternalRef: "powerbi:Istanbul Marmara Park Avm:Ali Can",
+        }),
+        expect.objectContaining({
+          kpiCode: "NET_SALES",
+          actualValue: 3000,
+          storeExternalRef: "Kadikoy",
+          employeeExternalRef: "powerbi:Kadikoy:Ali Can",
         }),
       ]),
     );
@@ -322,19 +379,19 @@ describe("PowerBiExportUploadService", () => {
           kpiCode: "TICKET_COUNT",
           actualValue: 10,
           scopeType: "employee",
-          employeeExternalRef: "powerbi:Ali Can",
+          employeeExternalRef: "powerbi:Istanbul Marmara Park Avm:Ali Can",
         }),
         expect.objectContaining({
           kpiCode: "ATV",
           actualValue: 1000,
           scopeType: "employee",
-          employeeExternalRef: "powerbi:Ali Can",
+          employeeExternalRef: "powerbi:Istanbul Marmara Park Avm:Ali Can",
         }),
         expect.objectContaining({
           kpiCode: "UPT",
           actualValue: 1,
           scopeType: "employee",
-          employeeExternalRef: "powerbi:Ali Can",
+          employeeExternalRef: "powerbi:Istanbul Marmara Park Avm:Ali Can",
         }),
       ]),
     );

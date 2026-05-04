@@ -647,14 +647,6 @@ export class MasterDataBootstrapService {
       row.normalizedPayload,
       "normalizedNationalIdHash",
     );
-    if (!nationalIdHash) {
-      return buildValidationResult(row, {
-        validationStatus: "invalid",
-        issueCode: "missing_national_id",
-        issueMessage: "National id evidence is required before personnel promotion",
-        ...buildStoreResolution(batch.companyId, resolvedStore),
-      });
-    }
 
     const hireDate = readNormalizedString(
       row.normalizedPayload,
@@ -702,11 +694,12 @@ export class MasterDataBootstrapService {
       ),
     ]);
 
-    const resolvedNationalIdEmployeeId =
-      await this.masterDataBootstrapRepository.resolveEmployeeByNationalIdHash(
+    const resolvedNationalIdEmployeeId = nationalIdHash
+      ? await this.masterDataBootstrapRepository.resolveEmployeeByNationalIdHash(
         batch.companyId,
         nationalIdHash,
-      );
+      )
+      : null;
 
     if (
       resolvedNationalIdEmployeeId &&
@@ -880,7 +873,6 @@ function buildPersonnelPromotionRow(
     !employeeCode ||
     !firstName ||
     !lastName ||
-    !nationalIdHash ||
     !hireDate ||
     !row.resolvedStoreId ||
     !row.resolvedRegionId ||
@@ -901,7 +893,7 @@ function buildPersonnelPromotionRow(
     employeeCode,
     firstName,
     lastName,
-    nationalIdHash,
+    nationalIdHash: nationalIdHash ?? null,
     hireDate,
     employmentType,
   };

@@ -261,7 +261,7 @@ export class PowerBiExportUploadService {
         continue;
       }
 
-      const aggregateKey = this.buildEmployeeExternalRef(personName);
+      const aggregateKey = this.buildEmployeeExternalRef(storeName, personName);
       const aggregate =
         aggregates.get(aggregateKey) ??
         {
@@ -486,7 +486,7 @@ export class PowerBiExportUploadService {
       actualValue,
       scopeType: "employee",
       storeExternalRef: storeName,
-      employeeExternalRef: this.buildEmployeeExternalRef(personName),
+      employeeExternalRef: this.buildEmployeeExternalRef(storeName, personName),
       periodType: period.periodType,
       periodStart: period.periodStart,
       periodEnd: period.periodEnd,
@@ -840,8 +840,8 @@ export class PowerBiExportUploadService {
     };
   }
 
-  private buildEmployeeExternalRef(personName: string) {
-    return `powerbi:${personName}`;
+  private buildEmployeeExternalRef(storeName: string, personName: string) {
+    return `powerbi:${storeName}:${personName}`;
   }
 
   private isSummaryText(value: string | null) {
