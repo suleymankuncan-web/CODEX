@@ -138,17 +138,11 @@ export function getBearerSessionCacheKey(token: string) {
 
   const sub = stringifyClaim(payload.sub)
   const sid = stringifyClaim(payload.sid)
-  const jti = stringifyClaim(payload.jti)
-  const iat = stringifyClaim(payload.iat)
-  const exp = stringifyClaim(payload.exp)
   const aud = stringifyClaim(payload.aud)
 
   return [
     `sub:${sub || 'unknown'}`,
     sid ? `sid:${sid}` : null,
-    jti ? `jti:${jti}` : null,
-    iat ? `iat:${iat}` : null,
-    exp ? `exp:${exp}` : null,
     aud ? `aud:${aud}` : null,
   ]
     .filter(Boolean)

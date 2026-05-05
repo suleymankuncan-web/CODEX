@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
 import { EmptyState, KeyValue, ScreenState } from '../components/dashboard-primitives'
 import { getActionStoreAssignmentAudit } from '../features/auth/api'
 import { formatDateTime, getErrorMessage } from '../lib/format'
+import { resolveAuditBackLink } from './audit-navigation'
 
 function describeDetails(details: Record<string, unknown> | undefined) {
   if (!details) {
@@ -18,6 +19,8 @@ function describeDetails(details: Record<string, unknown> | undefined) {
 
 export function AuthActionStoreAssignmentAuditPage() {
   const { assignmentId } = useParams<{ assignmentId: string }>()
+  const location = useLocation()
+  const backLink = resolveAuditBackLink(location.pathname)
 
   const auditQuery = useQuery({
     queryKey: ['auth-action-store-assignment-audit', assignmentId],
@@ -51,9 +54,9 @@ export function AuthActionStoreAssignmentAuditPage() {
         </div>
       </section>
 
-      <Link className="back-link" to="/admin/auth">
+      <Link className="back-link" to={backLink.to}>
         <ArrowLeft size={16} />
-        <span>Back to auth overview</span>
+        <span>{backLink.label}</span>
       </Link>
 
       {items.length === 0 ? (

@@ -86,7 +86,7 @@ export function AuditCenterPage() {
         title: event.eventType,
         subtitle: `auth user audit - actor ${event.actorUserId ?? 'system'}`,
         correlationId: event.correlationId,
-        href: `/admin/auth/users/${user.userId}/audit`,
+        href: `/admin/audit/users/${user.userId}/audit`,
         tone: 'accent',
       })
     }
@@ -105,7 +105,7 @@ export function AuditCenterPage() {
         title: event.eventType,
         subtitle: `assignment audit - ${assignment.roleCode} / ${assignment.scopeType}`,
         correlationId: event.correlationId,
-        href: `/admin/auth/role-assignments/${assignment.assignmentId}/audit`,
+        href: `/admin/audit/role-assignments/${assignment.assignmentId}/audit`,
         tone: 'warning',
       })
     }
@@ -223,7 +223,7 @@ export function AuditCenterPage() {
           ) : (
             <div className="stacked-table">
               {users.slice(0, 6).map((user) => (
-                <Link className="stacked-row audit-link-row" key={user.userId} to={`/admin/auth/users/${user.userId}/audit`}>
+                <Link className="stacked-row audit-link-row" key={user.userId} to={`/admin/audit/users/${user.userId}/audit`}>
                   <div className="stacked-row-head">
                     <strong>{user.username}</strong>
                     <StatusPill tone={user.isActive ? 'calm' : 'danger'}>
@@ -255,7 +255,7 @@ export function AuditCenterPage() {
                 <Link
                   className="stacked-row audit-link-row"
                   key={assignment.assignmentId}
-                  to={`/admin/auth/role-assignments/${assignment.assignmentId}/audit`}
+                  to={`/admin/audit/role-assignments/${assignment.assignmentId}/audit`}
                 >
                   <div className="stacked-row-head">
                     <strong>{assignment.roleCode}</strong>

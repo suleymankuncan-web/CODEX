@@ -142,12 +142,13 @@ function App() {
   const navigate = useNavigate()
   const { session, isReady, expireSession } = useSession()
   const [sessionNotice, setSessionNotice] = useState<string | null>(null)
+  const bearerTokenReadiness = session.bearerToken.trim() ? 'token-present' : 'token-missing'
   const bearerSessionKey = getBearerSessionCacheKey(session.bearerToken)
   const currentReturnPath = getCurrentReturnPath(location)
   const sessionQuery = useQuery({
     queryKey:
       session.mode === 'bearer'
-        ? ['shell-session', session.mode, bearerSessionKey]
+        ? ['shell-session', session.mode, bearerTokenReadiness, bearerSessionKey]
         : [
             'shell-session',
             session.mode,
@@ -318,7 +319,7 @@ function App() {
             <Route path="/" element={<Navigate to={firstAllowedPath} replace />} />
             <Route
               path="/admin/session"
-              element={<SessionGate shellState={shellState} firstAllowedPath={firstAllowedPath} />}
+              element={<SessionGate />}
             />
             <Route
               path="/admin/integrations"
@@ -411,6 +412,18 @@ function App() {
             <Route
               path="/admin/auth/action-store-assignments/:assignmentId/audit"
               element={guardRoute(shellState, authSummary, ['SUPER_ADMIN'], <AuthActionStoreAssignmentAuditPage />)}
+            />
+            <Route
+              path="/admin/audit/users/:userId/audit"
+              element={guardRoute(shellState, authSummary, ['SUPER_ADMIN', 'AUDITOR'], <AuthUserAuditPage />)}
+            />
+            <Route
+              path="/admin/audit/role-assignments/:assignmentId/audit"
+              element={guardRoute(shellState, authSummary, ['SUPER_ADMIN', 'AUDITOR'], <AuthAssignmentAuditPage />)}
+            />
+            <Route
+              path="/admin/audit/action-store-assignments/:assignmentId/audit"
+              element={guardRoute(shellState, authSummary, ['SUPER_ADMIN', 'AUDITOR'], <AuthActionStoreAssignmentAuditPage />)}
             />
             <Route
               path="/admin/audit"
@@ -601,11 +614,7 @@ function guardStoreRoute(
   return <>{element}</>
 }
 
-function SessionGate(input: { shellState: ShellState; firstAllowedPath: string }) {
-  if (input.shellState.mode === 'ready' && !input.shellState.notice) {
-    return <Navigate to={input.firstAllowedPath} replace />
-  }
-
+function SessionGate() {
   return <SessionReadinessPage />
 }
 
