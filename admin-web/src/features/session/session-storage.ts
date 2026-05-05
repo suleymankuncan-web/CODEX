@@ -93,14 +93,14 @@ export function writeClientBearerSession(token: string, providerIdToken?: string
 }
 
 export function buildSessionHeaders(session: SessionState): Record<string, string> {
-  if (
-    session.mode === 'bearer' &&
-    session.bearerToken.trim() &&
-    !isJwtExpired(session.bearerToken)
-  ) {
-    return {
-      Authorization: `Bearer ${session.bearerToken.trim()}`,
+  if (session.mode === 'bearer') {
+    if (session.bearerToken.trim() && !isJwtExpired(session.bearerToken)) {
+      return {
+        Authorization: `Bearer ${session.bearerToken.trim()}`,
+      }
     }
+
+    return {}
   }
 
   return {
@@ -124,6 +124,37 @@ export function isSessionReady(session: SessionState) {
   )
 }
 
+export function getBearerSessionCacheKey(token: string) {
+  const normalized = token.trim()
+
+  if (!normalized) {
+    return 'token-missing'
+  }
+
+  const payload = readJwtPayload(normalized)
+  if (!payload) {
+    return 'token-unreadable'
+  }
+
+  const sub = stringifyClaim(payload.sub)
+  const sid = stringifyClaim(payload.sid)
+  const jti = stringifyClaim(payload.jti)
+  const iat = stringifyClaim(payload.iat)
+  const exp = stringifyClaim(payload.exp)
+  const aud = stringifyClaim(payload.aud)
+
+  return [
+    `sub:${sub || 'unknown'}`,
+    sid ? `sid:${sid}` : null,
+    jti ? `jti:${jti}` : null,
+    iat ? `iat:${iat}` : null,
+    exp ? `exp:${exp}` : null,
+    aud ? `aud:${aud}` : null,
+  ]
+    .filter(Boolean)
+    .join('|')
+}
+
 export function persistClientSession(session: SessionState) {
   if (typeof window === 'undefined') {
     return
@@ -136,13 +167,6 @@ export function persistClientSession(session: SessionState) {
   }
 
   window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(persisted))
-
-  if (normalized.bearerToken) {
-    window.sessionStorage.setItem(BEARER_TOKEN_STORAGE_KEY, normalized.bearerToken)
-    return
-  }
-
-  window.sessionStorage.removeItem(BEARER_TOKEN_STORAGE_KEY)
 }
 
 export function normalizeSession(session: Partial<SessionState>): SessionState {
@@ -167,21 +191,37 @@ function isJwtExpired(token: string) {
     return false
   }
 
-  const [, payload] = normalized.split('.')
-  if (!payload) {
+  const payload = readJwtPayload(normalized)
+  if (typeof payload?.exp !== 'number') {
     return false
+  }
+
+  return payload.exp <= Math.floor(Date.now() / 1000) + TOKEN_EXPIRY_SKEW_SECONDS
+}
+
+function readJwtPayload(token: string) {
+  const [, payload] = token.split('.')
+  if (!payload) {
+    return null
   }
 
   try {
-    const json = JSON.parse(globalThis.atob(toBase64(payload))) as { exp?: unknown }
-    if (typeof json.exp !== 'number') {
-      return false
-    }
-
-    return json.exp <= Math.floor(Date.now() / 1000) + TOKEN_EXPIRY_SKEW_SECONDS
+    return JSON.parse(globalThis.atob(toBase64(payload))) as Record<string, unknown>
   } catch {
-    return false
+    return null
   }
+}
+
+function stringifyClaim(value: unknown) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item)).sort().join(',')
+  }
+
+  if (value === undefined || value === null) {
+    return ''
+  }
+
+  return String(value)
 }
 
 function toBase64(value: string) {

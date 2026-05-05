@@ -36,7 +36,7 @@ describe("Auth scope integration", () => {
     restoreEnv("JWT_JWKS_URL", originalAuthEnv.JWT_JWKS_URL);
   });
 
-  it("allows company-scoped access to store headcount gap", async () => {
+  it("blocks company-scoped access to store headcount gap without explicit store scope", async () => {
     const query = jest.fn(async (sql: string) => {
       if (sql.includes("WITH active_assignments AS")) {
         return {
@@ -71,7 +71,7 @@ describe("Auth scope integration", () => {
       .set("x-user-id", "user-1")
       .set("x-company-ids", "00000000-0000-0000-0000-000000000001");
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(403);
 
     await app.close();
   });
@@ -397,15 +397,15 @@ describe("Auth scope integration", () => {
             storeIds: ["store-1"],
           },
           actionScope: {
-            assignedStoreIds: ["store-1"],
+            assignedStoreIds: [],
           },
-          assignedStoreIds: ["store-1"],
+          assignedStoreIds: [],
         },
         scopeSummary: {
           companyCount: 1,
           regionCount: 1,
           storeCount: 1,
-          assignedStoreCount: 1,
+          assignedStoreCount: 0,
         },
       });
 

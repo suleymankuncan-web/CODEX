@@ -25,14 +25,22 @@ export function SessionProvider(input: { children: ReactNode }) {
   }, [session])
 
   const saveSession = useCallback((next: SessionState) => {
+    if (next.mode === 'bearer') {
+      writeClientBearerSession(next.bearerToken)
+    } else {
+      clearClientBearerSession()
+    }
+
     setSession(normalizeSession(next))
   }, [])
 
   const resetSession = useCallback(() => {
+    clearClientBearerSession()
     setSession(defaultSession)
   }, [])
 
   const expireSession = useCallback(() => {
+    clearClientBearerSession()
     setSession((current) =>
       normalizeSession({
         ...current,

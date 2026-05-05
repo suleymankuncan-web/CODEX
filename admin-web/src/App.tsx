@@ -1,14 +1,15 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
-import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { NavLink, Navigate, Route, Routes, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { BarChart3, Bell, ClipboardList, DatabaseZap, Fingerprint, KeyRound, Layers3, Megaphone, ShieldCheck, SlidersHorizontal, Target, Trophy } from 'lucide-react'
 import { KeyValue, ScreenState, StatusPill } from './components/dashboard-primitives'
 import { getAuthSession, type AuthSessionSummary } from './features/auth/api'
 import { formatDisplayRoles } from './features/auth/display'
+import { sanitizeAuthReturnPath } from './features/auth/return-path'
 import { LanguageToggle } from './features/localization/LanguageToggle'
 import { useSession } from './features/session/session-context-value'
-import { describeSessionMode } from './features/session/session-storage'
+import { describeSessionMode, getBearerSessionCacheKey } from './features/session/session-storage'
 import { SESSION_EXPIRED_EVENT, type SessionExpiredDetail, ApiError } from './lib/api'
 
 const AuditCenterPage = lazy(() => import('./pages/AuditCenterPage').then((module) => ({ default: module.AuditCenterPage })))
@@ -141,11 +142,12 @@ function App() {
   const navigate = useNavigate()
   const { session, isReady, expireSession } = useSession()
   const [sessionNotice, setSessionNotice] = useState<string | null>(null)
-  const bearerTokenReadiness = session.bearerToken.trim() ? 'token-present' : 'token-missing'
+  const bearerSessionKey = getBearerSessionCacheKey(session.bearerToken)
+  const currentReturnPath = getCurrentReturnPath(location)
   const sessionQuery = useQuery({
     queryKey:
       session.mode === 'bearer'
-        ? ['shell-session', session.mode, bearerTokenReadiness]
+        ? ['shell-session', session.mode, bearerSessionKey]
         : [
             'shell-session',
             session.mode,
@@ -168,13 +170,12 @@ function App() {
           ? `Session expired while calling ${detail.path}. Update the bearer token and verify again.`
           : 'Session expired. Update the bearer token and verify again.',
       )
-      const returnTo = encodeURIComponent(location.pathname)
-      navigate(`/auth/login?returnTo=${returnTo}`, { replace: true })
+      navigate(buildAuthLoginPath(currentReturnPath), { replace: true })
     }
 
     window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired)
     return () => window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired)
-  }, [expireSession, location.pathname, navigate])
+  }, [currentReturnPath, expireSession, navigate])
 
   const authSummary = sessionQuery.data ?? null
   const visibleSessionNotice = ['/admin/session', '/auth/login'].includes(location.pathname)
@@ -345,7 +346,7 @@ function App() {
             />
             <Route
               path="/admin/inbox"
-              element={guardRoute(shellState, authSummary, ['SUPER_ADMIN', 'REPORT_VIEWER'], <AdminInboxPage authSummary={authSummary} />)}
+              element={guardRoute(shellState, authSummary, ['SUPER_ADMIN', 'REPORT_VIEWER', 'HR_ADMIN'], <AdminInboxPage authSummary={authSummary} />)}
             />
             <Route
               path="/admin/feed"
@@ -424,6 +425,10 @@ function App() {
 }
 
 function AuthFlowShell(input: { shellState: ShellState; firstAllowedPath: string }) {
+  const [searchParams] = useSearchParams()
+  const returnTo = sanitizeAuthReturnPath(searchParams.get('returnTo'))
+  const readyPath = returnTo ?? input.firstAllowedPath
+
   return (
     <div className="auth-flow-shell">
       <Suspense fallback={<RouteLoadingState />}>
@@ -431,8 +436,8 @@ function AuthFlowShell(input: { shellState: ShellState; firstAllowedPath: string
           <Route
             path="/auth/login"
             element={
-              input.shellState.mode === 'ready' && !input.shellState.notice ? (
-                <Navigate to={input.firstAllowedPath} replace />
+              input.shellState.mode === 'ready' ? (
+                <Navigate to={readyPath} replace />
               ) : (
                 <AuthLoginPage />
               )
@@ -453,9 +458,10 @@ function StoreShell(input: {
   firstAllowedPath: string
 }) {
   const checklistOnly = isVisualMerchandiserOnly(input.authSummary)
+  const location = useLocation()
 
   if (input.shellState.mode === 'setup-required') {
-    return <Navigate to="/auth/login" replace />
+    return <Navigate to={buildAuthLoginPath(getCurrentReturnPath(location))} replace />
   }
 
   if (input.shellState.mode === 'verifying') {
@@ -772,12 +778,20 @@ function isNavAllowed(item: NavDefinition, authSummary: AuthSessionSummary | nul
 
 function isVisualMerchandiserOnly(authSummary: AuthSessionSummary | null) {
   const roles = authSummary?.user.roleCodes ?? []
-  const broadRoles = ['SUPER_ADMIN', 'HR_ADMIN', 'REGION_MANAGER', 'STORE_MANAGER']
+  const broadRoles = ['SUPER_ADMIN', 'HR_ADMIN', 'REGION_MANAGER', 'STORE_MANAGER', 'STORE_PERSONNEL']
   return roles.includes('VISUAL_MERCHANDISER') && !hasAnyRole(roles, broadRoles)
 }
 
 function hasAnyRole(userRoles: string[], requiredRoles: string[]) {
   return requiredRoles.some((role) => userRoles.includes(role))
+}
+
+function getCurrentReturnPath(location: ReturnType<typeof useLocation>) {
+  return `${location.pathname}${location.search}${location.hash}`
+}
+
+function buildAuthLoginPath(returnTo: string) {
+  return `/auth/login?returnTo=${encodeURIComponent(returnTo)}`
 }
 
 function NavItem(input: {

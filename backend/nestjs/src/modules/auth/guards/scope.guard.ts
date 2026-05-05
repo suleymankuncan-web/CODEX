@@ -90,6 +90,10 @@ export class ScopeGuard implements CanActivate {
     };
   }) {
     if (input.requiredScope === "company") {
+      if (input.readScope.companyIds.length === 0) {
+        throw new ForbiddenException("Missing company read scope");
+      }
+
       return;
     }
 
@@ -104,8 +108,8 @@ export class ScopeGuard implements CanActivate {
 
     const allowed =
       input.requiredScope === "region"
-        ? input.readScope.regionIds.includes(String(scopeId)) || input.readScope.companyIds.length > 0
-        : input.readScope.storeIds.includes(String(scopeId)) || input.readScope.companyIds.length > 0;
+        ? input.readScope.regionIds.includes(String(scopeId))
+        : input.readScope.storeIds.includes(String(scopeId));
 
     if (!allowed) {
       throw new ForbiddenException(`Out-of-scope ${input.requiredScope} access`);

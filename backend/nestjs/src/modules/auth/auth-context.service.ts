@@ -40,7 +40,7 @@ export function buildAuthenticatedUser(input: {
 }): AuthenticatedUser {
   const readScope = normalizeReadScope(input.readScope ?? input.scope);
   const assignedStoreIds = uniqueStrings(
-    input.actionScope?.assignedStoreIds ?? input.assignedStoreIds ?? readScope.storeIds,
+    input.actionScope?.assignedStoreIds ?? input.assignedStoreIds ?? [],
   );
 
   return {
@@ -131,6 +131,8 @@ export class AuthContextService {
             userId: mappedUser.user_id,
             employeeId: mappedUser.employee_id ?? providerUser.employeeId,
           });
+        } else if (this.appConfigService.isProduction) {
+          throw new UnauthorizedException("User account is not mapped");
         }
       }
 
@@ -167,6 +169,15 @@ export class AuthContextService {
     ]);
 
     if (assignments.length === 0) {
+      if (
+        this.appConfigService.authMode === "jwt" &&
+        this.appConfigService.isProduction
+      ) {
+        throw new UnauthorizedException(
+          "User account has no active role assignments",
+        );
+      }
+
       if (assignedStoreIds.length > 0) {
         return buildAuthenticatedUser({
           ...appUser,

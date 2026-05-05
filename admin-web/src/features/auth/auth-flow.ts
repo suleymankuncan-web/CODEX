@@ -1,4 +1,5 @@
 import type { AuthBootstrap } from './api'
+import { sanitizeAuthReturnPath } from './return-path'
 
 const DEFAULT_CALLBACK_PATH = '/auth/callback'
 const DEFAULT_LOGOUT_PATH = '/auth/login'
@@ -88,7 +89,7 @@ export async function buildProviderLoginUrl(input?: {
     DEFAULT_SCOPE
   const audience =
     input?.bootstrap?.provider.audience ?? import.meta.env.VITE_OIDC_AUDIENCE?.trim()
-  const returnTo = sanitizeReturnTo(input?.returnTo ?? null)
+  const returnTo = sanitizeAuthReturnPath(input?.returnTo)
 
   url.searchParams.set('client_id', clientId)
   url.searchParams.set('redirect_uri', callbackUrl)
@@ -164,7 +165,7 @@ export function readCallbackPayload(input: {
     searchParams.get('error_description') ?? hashParams.get('error_description')
   const code = searchParams.get('code') ?? hashParams.get('code') ?? ''
   const state = searchParams.get('state') ?? hashParams.get('state')
-  const returnTo = sanitizeReturnTo(
+  const returnTo = sanitizeAuthReturnPath(
     searchParams.get('returnTo') ??
       hashParams.get('returnTo') ??
       searchParams.get('state') ??
@@ -290,7 +291,7 @@ function consumePkceLoginState(state: string | null): PkceLoginState {
   return {
     state: parsed.state,
     codeVerifier: parsed.codeVerifier,
-    returnTo: sanitizeReturnTo(parsed.returnTo ?? null),
+    returnTo: sanitizeAuthReturnPath(parsed.returnTo),
     createdAt: parsed.createdAt,
   }
 }
@@ -334,12 +335,4 @@ function resolveAbsoluteUrl(input: string | undefined, fallbackPath: string) {
 
   const value = input?.trim() || fallbackPath
   return new URL(value, window.location.origin).toString()
-}
-
-function sanitizeReturnTo(input: string | null) {
-  if (!input) {
-    return null
-  }
-
-  return input.startsWith('/') ? input : null
 }

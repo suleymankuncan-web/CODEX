@@ -366,6 +366,80 @@ describe("AuthContextService", () => {
     ).rejects.toThrow("User account is inactive");
   });
 
+  it("requires a mapped app user account for production JWT sessions", async () => {
+    const service = new AuthContextService(
+      {
+        authMode: "jwt",
+        authProviderKey: "clerk",
+        allowMockAuth: false,
+        isProduction: true,
+      } as never,
+      buildAuthorizationRepository({ mappedProviderUser: null }),
+      { resolveUser: jest.fn() } as never,
+      {
+        resolveUser: jest.fn(async () => ({
+          userId: "user_unmappedClerkSubject",
+          roleCodes: ["INTEGRATION_ADMIN"],
+          readScope: {
+            companyIds: ["00000000-0000-0000-0000-000000000001"],
+            regionIds: [],
+            storeIds: [],
+          },
+          actionScope: {
+            assignedStoreIds: [],
+          },
+        })),
+      } as never,
+    );
+
+    await expect(
+      service.resolveUser({
+        headers: { authorization: "Bearer token" },
+      }),
+    ).rejects.toThrow("User account is not mapped");
+  });
+
+  it("requires active DB role assignments for production JWT sessions", async () => {
+    const service = new AuthContextService(
+      {
+        authMode: "jwt",
+        authProviderKey: "clerk",
+        allowMockAuth: false,
+        isProduction: true,
+      } as never,
+      buildAuthorizationRepository({
+        mappedProviderUser: {
+          user_id: "90000000-0000-4000-8000-000000000012",
+          employee_id: "70000000-0000-4000-8000-000000000012",
+          username: "integration.admin",
+          email: "integration.admin@example.com",
+          is_active: true,
+        },
+      }),
+      { resolveUser: jest.fn() } as never,
+      {
+        resolveUser: jest.fn(async () => ({
+          userId: "user_claimOnly",
+          roleCodes: ["INTEGRATION_ADMIN"],
+          readScope: {
+            companyIds: ["00000000-0000-0000-0000-000000000001"],
+            regionIds: [],
+            storeIds: [],
+          },
+          actionScope: {
+            assignedStoreIds: [],
+          },
+        })),
+      } as never,
+    );
+
+    await expect(
+      service.resolveUser({
+        headers: { authorization: "Bearer token" },
+      }),
+    ).rejects.toThrow("User account has no active role assignments");
+  });
+
   it("falls back to provider roles and scopes when no DB role assignments exist", async () => {
     const service = new AuthContextService(
       { authMode: "mock", allowMockAuth: true } as never,
@@ -457,7 +531,16 @@ describe("AuthContextService", () => {
   it("fails closed in production when DB authorization lookup throws", async () => {
     const service = new AuthContextService(
       { authMode: "jwt", allowMockAuth: false, isProduction: true } as never,
-      buildAuthorizationRepository({ throwOnRoleAssignments: true }),
+      buildAuthorizationRepository({
+        mappedProviderUser: {
+          user_id: "90000000-0000-4000-8000-000000000013",
+          employee_id: null,
+          username: "prod.user",
+          email: "prod.user@example.com",
+          is_active: true,
+        },
+        throwOnRoleAssignments: true,
+      }),
       { resolveUser: jest.fn() } as never,
       {
         resolveUser: jest.fn(async () => ({
