@@ -4,7 +4,9 @@ import {
   readClientSession,
 } from '../features/session/session-storage'
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '/api'
+const DEFAULT_API_BASE_URL = '/api'
+const STAGING_HOST_API_BASE_URL = 'https://api-staging.hr-axis.com/api'
+const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || DEFAULT_API_BASE_URL
 
 type JsonMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
@@ -37,7 +39,7 @@ async function requestJson<T>(path: string, input?: { method?: JsonMethod; body?
     headers['Content-Type'] = 'application/json'
   }
 
-  const response = await fetch(`${apiBaseUrl}${path}`, {
+  const response = await fetch(`${resolveApiBaseUrl()}${path}`, {
     method: input?.method ?? 'GET',
     headers,
     body: input?.body !== undefined ? JSON.stringify(input.body) : undefined,
@@ -63,7 +65,7 @@ async function requestJson<T>(path: string, input?: { method?: JsonMethod; body?
     throw new ApiError(response.status, message)
   }
 
-  return response.json() as Promise<T>
+  return parseJsonResponse<T>(response, path)
 }
 
 async function requestFormData<T>(
@@ -79,7 +81,7 @@ async function requestFormData<T>(
     ...buildSessionHeaders(session),
   }
 
-  const response = await fetch(`${apiBaseUrl}${path}`, {
+  const response = await fetch(`${resolveApiBaseUrl()}${path}`, {
     method: input.method,
     headers,
     body: input.body,
@@ -105,7 +107,7 @@ async function requestFormData<T>(
     throw new ApiError(response.status, message)
   }
 
-  return response.json() as Promise<T>
+  return parseJsonResponse<T>(response, path)
 }
 
 export async function fetchJson<T>(path: string): Promise<T> {
@@ -130,4 +132,29 @@ export async function sendFormData<T>(
   },
 ): Promise<T> {
   return requestFormData<T>(path, input)
+}
+
+function resolveApiBaseUrl() {
+  if (
+    configuredApiBaseUrl === DEFAULT_API_BASE_URL &&
+    typeof window !== 'undefined' &&
+    window.location.hostname === 'staging.hr-axis.com'
+  ) {
+    return STAGING_HOST_API_BASE_URL
+  }
+
+  return configuredApiBaseUrl
+}
+
+async function parseJsonResponse<T>(response: Response, path: string): Promise<T> {
+  const contentType = response.headers.get('content-type') ?? ''
+  if (!contentType.toLowerCase().includes('application/json')) {
+    const body = await response.text()
+    throw new ApiError(
+      response.status,
+      `API returned a non-JSON response for ${path}. Check VITE_API_BASE_URL or the staging API rewrite. ${body.slice(0, 160)}`,
+    )
+  }
+
+  return response.json() as Promise<T>
 }
