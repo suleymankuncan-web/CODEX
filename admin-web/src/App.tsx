@@ -424,6 +424,9 @@ function App() {
 }
 
 function AuthFlowShell(input: { shellState: ShellState; firstAllowedPath: string }) {
+  const location = useLocation()
+  const readyRedirectPath = resolveReadyAuthRedirectPath(location.search, input.firstAllowedPath)
+
   return (
     <div className="auth-flow-shell">
       <Suspense fallback={<RouteLoadingState />}>
@@ -432,7 +435,7 @@ function AuthFlowShell(input: { shellState: ShellState; firstAllowedPath: string
             path="/auth/login"
             element={
               input.shellState.mode === 'ready' && !input.shellState.notice ? (
-                <Navigate to={input.firstAllowedPath} replace />
+                <Navigate to={readyRedirectPath} replace />
               ) : (
                 <AuthLoginPage />
               )
@@ -742,6 +745,25 @@ function resolveLandingPath(authSummary: AuthSessionSummary | null, isReady: boo
   }
 
   return '/store'
+}
+
+function resolveReadyAuthRedirectPath(search: string, fallbackPath: string) {
+  const returnTo = new URLSearchParams(search).get('returnTo')
+  const sanitizedReturnTo = sanitizeAppReturnPath(returnTo)
+
+  return sanitizedReturnTo ?? fallbackPath
+}
+
+function sanitizeAppReturnPath(input: string | null) {
+  if (!input || !input.startsWith('/') || input.startsWith('//')) {
+    return null
+  }
+
+  if (input.startsWith('/auth')) {
+    return null
+  }
+
+  return input
 }
 
 function resolveAuthErrorCopy(error: unknown) {
