@@ -36,6 +36,19 @@ test('audit center user detail links stay inside the audit namespace', async ({ 
   await expect(page.getByRole('link', { name: /Back to audit center/i })).toBeVisible()
 })
 
+test('master data list renders bootstrap batches when updatedAt is absent', async ({ page }) => {
+  const pageErrors: string[] = []
+  page.on('pageerror', (error) => {
+    pageErrors.push(error.message)
+  })
+
+  await page.goto('/admin/master-data')
+
+  await expect(page.getByRole('heading', { name: 'Bootstrap batches' })).toBeVisible()
+  await expect(page.getByText('Accepted personnel baseline')).toBeVisible()
+  expect(pageErrors).toEqual([])
+})
+
 async function routeAdminShellApi(page: Page) {
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: authSessionFixture })
@@ -76,6 +89,36 @@ async function routeAdminShellApi(page: Page) {
 
   await page.route('**/api/snapshots/runs/needs-action?**', async (route) => {
     await route.fulfill({ json: emptyListFixture })
+  })
+
+  await page.route('**/api/integrations/master-data-bootstrap/batches?**', async (route) => {
+    await route.fulfill({
+      json: {
+        items: [
+          {
+            batchId: '8a1506af-b043-4968-9d75-d10c8d4432d5',
+            companyId: '00000000-0000-0000-0000-000000000001',
+            bootstrapEntity: 'personnel',
+            sourceLabel: 'Accepted personnel baseline',
+            fileReference: 'personnel-master-mapping-prep.xlsx#chunk-9',
+            uploadedByUserId: 'admin-routing-user',
+            batchStatus: 'promoted',
+            rowCount: 5,
+            pendingCount: 0,
+            validCount: 0,
+            needsReviewCount: 0,
+            invalidCount: 0,
+            promotedCount: 5,
+            createdAt: '2026-05-04T11:51:26.982Z',
+            validatedAt: '2026-05-04T11:51:27.289Z',
+            promotedAt: '2026-05-04T11:52:42.761Z',
+            readiness: 'closed',
+            nextAction: 'closed',
+          },
+        ],
+        meta: { count: 1, total: 10, limit: 1, offset: 0 },
+      },
+    })
   })
 }
 

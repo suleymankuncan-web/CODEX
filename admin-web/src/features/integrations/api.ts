@@ -316,9 +316,11 @@ export type MasterDataBootstrapBatchItem = {
   needsReviewCount: number
   invalidCount: number
   promotedCount: number
-  createdByUserId: string | null
+  createdByUserId?: string | null
+  uploadedByUserId?: string | null
   createdAt: string
-  updatedAt: string
+  updatedAt?: string | null
+  validatedAt?: string | null
   promotedAt: string | null
   readiness?: MasterDataBootstrapReadiness
   nextAction?: string
