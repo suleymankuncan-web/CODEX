@@ -60,7 +60,8 @@ test('controlled pilot operating checklist preserves evidence safety and closed 
 
   requireAll(checklist, [
     'Raw bearer tokens, Clerk cookies, passwords, provider subjects, full JWTs, database secrets, TC/national-id values, and private user data must not be recorded.',
-    'JSON/API source adapter remains future-only until real payload/source evidence exists.',
+    'JSON source integration is suspended for the current pilot and Power BI/Excel operating path.',
+    'Do not plan or staff JSON implementation work while Power BI/Excel outputs remain the chosen operating source.',
     'Direct Supabase client access to `ops.*` remains blocked until RLS/policy work is designed.',
     'Pause the pilot if a low-role user can see global metric details outside allowed scope.',
     'Pause the pilot if a user can act on an unassigned store.',

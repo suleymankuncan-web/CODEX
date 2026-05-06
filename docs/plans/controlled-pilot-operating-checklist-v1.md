@@ -35,7 +35,7 @@ Allowed:
 Not allowed:
 
 - widen the pilot to public or broad production usage,
-- add JSON/API source adapter work,
+- reopen, plan, or staff JSON/API source adapter work while Power BI/Excel remains the chosen operating source,
 - use KPI import rows as unreviewed master-data creation,
 - give direct Supabase client access to `ops.*`,
 - manually edit live `ops.*` data to make pilot evidence look clean,
@@ -150,7 +150,9 @@ Pause the pilot if raw bearer tokens, Clerk cookies, passwords, provider subject
 
 Pause the pilot if direct Supabase client access to `ops.*` is introduced without RLS/policy work.
 
-JSON/API source adapter remains future-only until real payload/source evidence exists.
+JSON source integration is suspended for the current pilot and Power BI/Excel operating path.
+
+Do not plan or staff JSON implementation work while Power BI/Excel outputs remain the chosen operating source.
 
 Direct Supabase client access to `ops.*` remains blocked until RLS/policy work is designed.
 
@@ -181,7 +183,7 @@ Exit review checklist:
 - Which feedback items are polish or future depth?
 - Did any No-Go trigger appear?
 - Is broad production still blocked?
-- Are JSON/API source adapter and direct Supabase client access still closed?
+- Are JSON/API source adapter work and direct Supabase client access still closed?
 - Is the next rollout scope smaller, same, or wider?
 
 ## Evidence Safety

@@ -157,16 +157,22 @@ Allowed sign-off states:
 
 ### P1 Recommended
 
-- [ ] Import batch smoke is run with a sanitized JSON sample payload once source payload evidence exists.
-- [ ] Import batch detail shows row lineage and data quality summary for the sample payload.
+- [ ] Future JSON import batch smoke is run only after the product owner reopens JSON planning and a sanitized JSON sample payload or official field list exists.
+- [ ] Import batch detail shows row lineage and data quality summary for any future sample payload.
 - [ ] Operational feed smoke confirms company, region, and store visibility boundaries.
 - [ ] Store KPI/ranking smoke confirms score interpretation and ranking confidence copy remain visible.
 
-## JSON Source Readiness Holding Area
+## JSON Source Suspension Holding Area
 
-Status: blocked until a real JSON sample payload or official field list arrives.
+Status: suspended for the current pilot.
 
-The source-specific adapter remains blocked until these inputs exist:
+JSON source integration is suspended for the current pilot and Power BI/Excel operating path.
+
+Power BI/Excel outputs remain the active operating source.
+
+Do not plan or staff JSON implementation work while Power BI/Excel outputs remain the chosen operating source.
+
+Do not build a source-specific adapter until the product owner reopens JSON planning and these inputs exist:
 
 - JSON sample payload.
 - Delivery method: pull API, push endpoint, file upload, SFTP, scheduled export, or manual import.
@@ -180,7 +186,7 @@ The source-specific adapter remains blocked until these inputs exist:
 - Duplicate handling rule.
 - idempotency key.
 
-Current local foundation already supports the next mapping step:
+Current local foundation stays ready for a future mapping step:
 
 - canonical raw KPI contract.
 - row hash generation.
@@ -193,7 +199,7 @@ Decision:
 
 - Do not write a JSON source-specific adapter yet.
 - Do not assume Nebim, SQL, API, or file semantics.
-- When the sample arrives, first create a source mapping spec, then implement the smallest adapter needed to convert that JSON into the canonical raw KPI contract.
+- When the product owner reopens JSON and a sample arrives, first create a source mapping spec, then implement the smallest adapter needed to convert that JSON into the canonical raw KPI contract.
 
 ## Go / No-Go Criteria
 
@@ -212,7 +218,7 @@ Any item below blocks production or staging sign-off:
 - No backup exists before production migration.
 - Audit event catalog guard fails.
 - Production secrets are stored in source control.
-- Source-specific import adapter is built without JSON sample payload or official field list.
+- Source-specific import adapter is built while JSON source integration is suspended or without JSON sample payload or official field list.
 
 ### Allowed Conditional Go Items
 
@@ -220,7 +226,7 @@ These can proceed only with written owner and date:
 
 - Full production UI/design-system pass is not complete.
 - Complete EN/TR expansion is not complete.
-- Real JSON import adapter is not complete because payload evidence has not arrived.
+- Real JSON import adapter is not complete because JSON source integration is suspended for the current pilot.
 - Staging data retention policy is temporary but documented.
 - Backup restore drill is scheduled but not yet performed for a limited pilot.
 
@@ -232,6 +238,6 @@ My recommendation is to keep this checklist as a gate, not as decoration. If an 
 
 ## Next Logical Step
 
-When the JSON sample payload arrives, create a source mapping specification before writing adapter code.
+Keep Power BI/Excel as the operating source while JSON remains suspended.
 
-If the JSON sample does not arrive yet, the next local step should be a small environment-drift guard or a target-specific staging fill-in note after the hosting/IdP details are known.
+If the product owner reopens JSON and a real JSON sample payload or official field list arrives, create a source mapping specification before writing adapter code.
