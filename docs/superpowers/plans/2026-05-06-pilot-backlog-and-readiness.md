@@ -318,7 +318,7 @@ git commit -m "Reduce auth refresh route flash"
 - Create: `scripts/json-ingestion-contract-doc.test.mjs`
 - Reference: `docs/plans/source-agnostic-ingest-contract-hardening-v1.md`
 
-- [ ] **Step 1: Document the future JSON call shape**
+- [x] **Step 1: Document the future JSON call shape**
 
 Create the doc with sections:
 
@@ -351,11 +351,11 @@ POST /api/integrations/kpi-json-import
 - Ambiguous rows go to review.
 ```
 
-- [ ] **Step 2: Add a documentation contract**
+- [x] **Step 2: Add a documentation contract**
 
 Create a Node test that checks the document includes `idempotencyKey`, `Ambiguous rows go to review`, and `Code-based matching wins when present`.
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run:
 
@@ -363,7 +363,7 @@ Run:
 node --test scripts/json-ingestion-contract-doc.test.mjs
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```powershell
 git add docs/plans/json-ingestion-contract-v1.md scripts/json-ingestion-contract-doc.test.mjs
