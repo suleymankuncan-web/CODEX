@@ -58,6 +58,7 @@ Current pilot stance:
 - Controlled staging/internal pilot: `Conditional Go`
 - Broad production rollout: not approved yet
 - The current consolidated pilot decision note is `docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-conditional-go-consolidation.md`.
+- The controlled pilot operating checklist is `docs/plans/controlled-pilot-operating-checklist-v1.md`.
 - UI quality pass: deliberately deferred
 - JSON source adapter: future-only until real payload/source evidence exists
 
@@ -175,6 +176,7 @@ Keep these references in this handoff because contract tests and future context 
 - `docs/plans/backend-foundation-hardening-plan-v1.md` - Backend Foundation Hardening Plan V1
 - `docs/plans/backup-restore-drill-runbook-v1.md` - Backup Restore Drill Runbook V1
 - `docs/plans/backup-restore-drill-local-evidence-2026-04-30.md` - Backup Restore Local Drill Evidence
+- `docs/plans/controlled-pilot-operating-checklist-v1.md` - Controlled Pilot Operating Checklist V1
 - `docs/plans/db-health-migration-evidence-v1.md` - DB Health And Migration Evidence V1
 - `docs/plans/excel-kpi-import-operator-runbook.md` - Excel KPI Import Operator Runbook V1
 - `docs/plans/master-data-bootstrap-pilot-smoke-runbook.md` - Master Data Bootstrap Pilot Smoke Runbook V1
