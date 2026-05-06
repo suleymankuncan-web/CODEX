@@ -27,11 +27,14 @@ import {
   mapWorkflowUrgencyTone,
   toTargetApprovalInboxItem,
 } from '../features/workflow/contracts'
+import type { TranslateFunction } from '../features/localization/dictionary'
+import { useLocalization } from '../features/localization/useLocalization'
 import { formatDate, formatDateTime, formatState, getErrorMessage } from '../lib/format'
 
 export function TargetApprovalQueuePage(input: {
   authSummary: AuthSessionSummary | null
 }) {
+  const { locale, t } = useLocalization()
   const queryClient = useQueryClient()
   const [approvalNotes, setApprovalNotes] = useState<Record<string, string>>({})
   const [approvalNotice, setApprovalNotice] = useState<string | null>(null)
@@ -56,8 +59,8 @@ export function TargetApprovalQueuePage(input: {
   if (approvalsQuery.isLoading) {
     return (
       <ScreenState
-        title="Loading target approvals"
-        copy="Pulling store-submitted target distribution requests that are waiting on region approval."
+        title={t('adminTargets.loadingTitle')}
+        copy={t('adminTargets.loadingCopy')}
       />
     )
   }
@@ -65,7 +68,7 @@ export function TargetApprovalQueuePage(input: {
   if (approvalsQuery.isError) {
     return (
       <ScreenState
-        title="Target approval queue unavailable"
+        title={t('adminTargets.errorTitle')}
         copy={getErrorMessage(approvalsQuery.error)}
         tone="error"
       />
@@ -83,53 +86,47 @@ export function TargetApprovalQueuePage(input: {
   const attentionCoverageRows = coverageRows
     .filter((item) => item.targetStatus !== 'approved')
     .slice(0, 8)
-  const regionScope = input.authSummary?.user.readScope.regionIds.join(', ') || 'No resolved region scope'
+  const regionScope = input.authSummary?.user.readScope.regionIds.join(', ') || t('adminTargets.noRegionScope')
   const assignedStoreScope = getAssignedStoreIds(input.authSummary)
 
   return (
     <section className="page-stack">
       <section className="hero-panel">
         <div>
-          <div className="eyebrow">Target Approvals</div>
-          <h2 className="hero-title">
-            Region approval queue for store-submitted target distribution requests.
-          </h2>
-          <p className="hero-copy">
-            This is the first real approval surface wired to the domain blueprint. Stores submit
-            target distribution requests here, and region-side operators approve them with a short
-            note and audit trace.
-          </p>
+          <div className="eyebrow">{t('adminTargets.heroEyebrow')}</div>
+          <h2 className="hero-title">{t('adminTargets.title')}</h2>
+          <p className="hero-copy">{t('adminTargets.heroCopy')}</p>
         </div>
         <div className="hero-metrics">
-          <MetricAccent label="Route" value="/admin/targets" />
-          <MetricAccent label="Pending" value={String(pendingCount)} />
-          <MetricAccent label="Region scope" value={regionScope} />
+          <MetricAccent label={t('adminTargets.route')} value="/admin/targets" />
+          <MetricAccent label={t('adminTargets.pending')} value={String(pendingCount)} />
+          <MetricAccent label={t('adminTargets.regionScope')} value={regionScope} />
           <MetricAccent
-            label="Action stores"
-            value={assignedStoreScope.length ? String(assignedStoreScope.length) : 'None'}
+            label={t('adminTargets.actionStores')}
+            value={assignedStoreScope.length ? String(assignedStoreScope.length) : t('adminTargets.none')}
           />
         </div>
       </section>
 
       <section className="metric-grid">
         <MetricCard
-          title="Pending approvals"
+          title={t('adminTargets.pendingApprovals')}
           value={pendingCount}
-          note="Requests still waiting on region-side approval."
+          note={t('adminTargets.pendingApprovalsNote')}
           icon={<ReceiptText size={18} />}
           tone="warning"
         />
         <MetricCard
-          title="Recently approved"
+          title={t('adminTargets.recentlyApproved')}
           value={approvedCount}
-          note="Approved requests visible in the current queue slice."
+          note={t('adminTargets.recentlyApprovedNote')}
           icon={<CheckCircle2 size={18} />}
           tone="calm"
         />
         <MetricCard
-          title="Queue model"
+          title={t('adminTargets.queueModel')}
           value={1}
-          note="First real write flow aligned with approval engine work."
+          note={t('adminTargets.queueModelNote')}
           icon={<TimerReset size={18} />}
           tone="accent"
         />
@@ -138,34 +135,36 @@ export function TargetApprovalQueuePage(input: {
       <section className="panel" aria-label="Target reference coverage">
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Target Reference Coverage</div>
-            <h3>Approved personnel target readiness</h3>
+            <div className="eyebrow">{t('adminTargets.coverageEyebrow')}</div>
+            <h3>{t('adminTargets.coverageTitle')}</h3>
           </div>
           <StatusPill tone={mapCoverageSummaryTone(coverageSummary)}>
-            {coverageSummary.uncoveredEmployees > 0 ? 'Needs review' : 'Complete'}
+            {coverageSummary.uncoveredEmployees > 0
+              ? t('adminTargets.needsReview')
+              : t('adminTargets.complete')}
           </StatusPill>
         </div>
 
         {coverageQuery.isLoading ? (
-          <p className="queue-subtitle">Loading target coverage...</p>
+          <p className="queue-subtitle">{t('adminTargets.coverageLoading')}</p>
         ) : coverageQuery.isError ? (
           <p className="queue-subtitle">{getErrorMessage(coverageQuery.error)}</p>
         ) : (
           <>
             <div className="key-grid">
-              <KeyValue label="Covered personnel" value={String(coverageSummary.coveredEmployees)} />
-              <KeyValue label="Pending approval" value={String(coverageSummary.pendingEmployees)} />
-              <KeyValue label="Pending changes" value={String(coverageSummary.conflictEmployees)} />
-              <KeyValue label="Stale references" value={String(coverageSummary.staleEmployees)} />
-              <KeyValue label="Missing targets" value={String(coverageSummary.missingEmployees)} />
-              <KeyValue label="Coverage rate" value={formatCoverageRate(coverageSummary.coverageRate)} />
-              <KeyValue label="Personnel in scope" value={String(coverageSummary.totalEmployees)} />
+              <KeyValue label={t('adminTargets.coveredPersonnel')} value={String(coverageSummary.coveredEmployees)} />
+              <KeyValue label={t('adminTargets.pendingApproval')} value={String(coverageSummary.pendingEmployees)} />
+              <KeyValue label={t('adminTargets.pendingChanges')} value={String(coverageSummary.conflictEmployees)} />
+              <KeyValue label={t('adminTargets.staleReferences')} value={String(coverageSummary.staleEmployees)} />
+              <KeyValue label={t('adminTargets.missingTargets')} value={String(coverageSummary.missingEmployees)} />
+              <KeyValue label={t('adminTargets.coverageRate')} value={formatCoverageRate(coverageSummary.coverageRate)} />
+              <KeyValue label={t('adminTargets.personnelInScope')} value={String(coverageSummary.totalEmployees)} />
             </div>
 
             {attentionCoverageRows.length === 0 ? (
               <EmptyState
-                title="No target coverage issues"
-                copy="Approved personnel target references cover the current month without pending or stale items."
+                title={t('adminTargets.noCoverageIssuesTitle')}
+                copy={t('adminTargets.noCoverageIssuesCopy')}
               />
             ) : (
               <div className="stacked-table">
@@ -181,18 +180,18 @@ export function TargetApprovalQueuePage(input: {
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Approval Queue</div>
-            <h3>Pending target distribution requests</h3>
+            <div className="eyebrow">{t('adminTargets.approvalQueue')}</div>
+            <h3>{t('adminTargets.pendingRequestsTitle')}</h3>
           </div>
           <StatusPill tone={pendingCount > 0 ? 'warning' : 'calm'}>
-            {pendingCount > 0 ? 'Needs attention' : 'Clear'}
+            {pendingCount > 0 ? t('adminTargets.needsAttention') : t('adminTargets.clear')}
           </StatusPill>
         </div>
 
         {pendingItems.length === 0 ? (
           <EmptyState
-            title="No pending requests"
-            copy="Store managers have not submitted any target distribution requests that require region approval yet."
+            title={t('adminTargets.noPendingTitle')}
+            copy={t('adminTargets.noPendingCopy')}
           />
         ) : (
           <div className="stacked-table">
@@ -236,18 +235,20 @@ export function TargetApprovalQueuePage(input: {
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Recent History</div>
-            <h3>Recently approved target requests</h3>
+            <div className="eyebrow">{t('adminTargets.recentHistory')}</div>
+            <h3>{t('adminTargets.recentlyApprovedTitle')}</h3>
           </div>
           <StatusPill tone={approvedItems.length > 0 ? 'calm' : 'accent'}>
-            {approvedItems.length > 0 ? 'Visible' : 'No history yet'}
+            {approvedItems.length > 0
+              ? t('adminTargets.visible')
+              : t('adminTargets.noHistoryYet')}
           </StatusPill>
         </div>
 
         {approvedItems.length === 0 ? (
           <EmptyState
-            title="No approved requests yet"
-            copy="Approved requests will remain visible here so region-side operators can review the latest decisions."
+            title={t('adminTargets.noApprovedTitle')}
+            copy={t('adminTargets.noApprovedCopy')}
           />
         ) : (
           <div className="stacked-table">
@@ -256,21 +257,23 @@ export function TargetApprovalQueuePage(input: {
                 <div className="stacked-row-head">
                   <strong>{item.targetLabel}</strong>
                   <StatusPill tone={mapInboxStatusTone(toTargetApprovalInboxItem(item).inboxStatus)}>
-                    {formatState(item.status)}
+                    {formatTargetDistributionStatus(item.status, t)}
                   </StatusPill>
                 </div>
                 <p>
-                  {item.storeName || item.storeId} icin {formatDate(item.requestMonth)} ayi hedef
-                  dagitim talebi.
+                  {t('adminTargets.requestSummary', {
+                    store: item.storeName || item.storeId,
+                    month: formatDate(item.requestMonth, locale),
+                  })}
                 </p>
                 <div className="key-grid">
-                  <KeyValue label="Toplam hedef" value={String(item.totalTargetValue)} />
-                  <KeyValue label="Dagitim sayisi" value={String(item.allocationCount)} />
+                  <KeyValue label={t('adminTargets.totalTarget')} value={String(item.totalTargetValue)} />
+                  <KeyValue label={t('adminTargets.allocationCount')} value={String(item.allocationCount)} />
                   <KeyValue
-                    label="Approved at"
-                    value={item.approvedAt ? formatDateTime(item.approvedAt) : 'Unknown'}
+                    label={t('adminTargets.approvedAt')}
+                    value={item.approvedAt ? formatDateTime(item.approvedAt, locale) : t('adminTargets.unknown')}
                   />
-                  <KeyValue label="Approver" value={item.approvedByUserId ?? 'Unknown'} />
+                  <KeyValue label={t('adminTargets.approver')} value={item.approvedByUserId ?? t('adminTargets.unknown')} />
                 </div>
                 {item.approvalNote ? <p className="queue-subtitle">{item.approvalNote}</p> : null}
               </article>
@@ -283,22 +286,24 @@ export function TargetApprovalQueuePage(input: {
 }
 
 function TargetCoverageAttentionRow(input: { item: TargetCoverageRow }) {
+  const { t } = useLocalization()
+
   return (
     <article className="stacked-row">
       <div className="stacked-row-head">
         <strong>{input.item.displayName}</strong>
         <StatusPill tone={mapTargetCoverageStatusTone(input.item.targetStatus)}>
-          {formatTargetCoverageStatus(input.item.targetStatus)}
+          {formatTargetCoverageStatus(input.item.targetStatus, t)}
         </StatusPill>
       </div>
       <p>{input.item.storeName || input.item.storeId}</p>
       <div className="key-grid">
-        <KeyValue label="Seller code" value={input.item.externalEmployeeRef ?? 'Unknown'} />
-        <KeyValue label="Approved target" value={formatTargetValue(input.item.targetValue)} />
-        <KeyValue label="Pending target" value={formatTargetValue(input.item.pendingTargetValue)} />
+        <KeyValue label={t('adminTargets.sellerCode')} value={input.item.externalEmployeeRef ?? t('adminTargets.unknown')} />
+        <KeyValue label={t('adminTargets.approvedTarget')} value={formatTargetValue(input.item.targetValue, t)} />
+        <KeyValue label={t('adminTargets.pendingTarget')} value={formatTargetValue(input.item.pendingTargetValue, t)} />
         <KeyValue
-          label="Reference state"
-          value={formatTargetCoverageReferenceState(input.item)}
+          label={t('adminTargets.referenceState')}
+          value={formatTargetCoverageReferenceState(input.item, t)}
         />
       </div>
     </article>
@@ -313,6 +318,7 @@ function TargetApprovalRow(input: {
   onApprove: () => void
   approving: boolean
 }) {
+  const { locale, t } = useLocalization()
   const allocations = Array.isArray(input.item.allocations) ? input.item.allocations : []
 
   return (
@@ -320,25 +326,31 @@ function TargetApprovalRow(input: {
       <div className="stacked-row-head">
         <strong>{input.item.targetLabel}</strong>
         <StatusPill tone={mapInboxStatusTone(toTargetApprovalInboxItem(input.item).inboxStatus)}>
-          {formatState(input.item.status)}
+          {formatTargetDistributionStatus(input.item.status, t)}
         </StatusPill>
       </div>
       <p>
-        {input.item.storeName || input.item.storeId} icin {formatDate(input.item.requestMonth)} ayi
-        hedef dagitim talebi.
+        {t('adminTargets.requestSummary', {
+          store: input.item.storeName || input.item.storeId,
+          month: formatDate(input.item.requestMonth, locale),
+        })}
       </p>
       <div className="key-grid">
-        <KeyValue label="Toplam hedef" value={String(input.item.totalTargetValue)} />
-        <KeyValue label="Dagitim sayisi" value={String(input.item.allocationCount)} />
-        <KeyValue label="Gonderim" value={formatDateTime(input.item.createdAt)} />
-        <KeyValue label="Talep sahibi" value={input.item.submittedByUserId} />
+        <KeyValue label={t('adminTargets.totalTarget')} value={String(input.item.totalTargetValue)} />
+        <KeyValue label={t('adminTargets.allocationCount')} value={String(input.item.allocationCount)} />
+        <KeyValue label={t('adminTargets.submission')} value={formatDateTime(input.item.createdAt, locale)} />
+        <KeyValue label={t('adminTargets.requestOwner')} value={input.item.submittedByUserId} />
       </div>
       {input.item.requestReason ? (
-        <p className="queue-subtitle">Gerekce: {input.item.requestReason}</p>
+        <p className="queue-subtitle">
+          {t('adminTargets.reason', { reason: input.item.requestReason })}
+        </p>
       ) : null}
       <div className="action-cluster">
         <StatusPill tone={mapWorkflowUrgencyTone(toTargetApprovalInboxItem(input.item).urgency)}>
-          {`Urgency: ${formatState(toTargetApprovalInboxItem(input.item).urgency)}`}
+          {t('adminTargets.urgency', {
+            urgency: formatTargetUrgency(toTargetApprovalInboxItem(input.item).urgency, t),
+          })}
         </StatusPill>
       </div>
       {allocations.length ? (
@@ -357,14 +369,14 @@ function TargetApprovalRow(input: {
       {input.item.status !== 'approved' && input.canApprove ? (
         <>
           <label className="eyebrow" htmlFor={`approval-note-${input.item.requestId}`}>
-            Approval note
+            {t('adminTargets.approvalNote')}
           </label>
           <textarea
             id={`approval-note-${input.item.requestId}`}
             value={input.approvalNote}
             onChange={(event) => input.onApprovalNoteChange(event.target.value)}
             rows={3}
-            placeholder="Optional region-side note"
+            placeholder={t('adminTargets.optionalRegionNote')}
           />
           <div className="action-cluster">
             <button
@@ -373,18 +385,24 @@ function TargetApprovalRow(input: {
               onClick={input.onApprove}
               disabled={input.approving || !input.canApprove}
             >
-              {input.approving ? 'Approving...' : 'Approve request'}
+              {input.approving ? t('adminTargets.approving') : t('adminTargets.approveRequest')}
             </button>
           </div>
         </>
       ) : input.item.status !== 'approved' ? (
         <p className="queue-subtitle">
-          This session can review the request, but approval is limited to assigned action stores.
+          {t('adminTargets.assignedStoreOnly')}
         </p>
       ) : input.item.approvedAt ? (
         <p className="queue-subtitle">
-          Approved at {formatDateTime(input.item.approvedAt)}
-          {input.item.approvalNote ? ` - ${input.item.approvalNote}` : ''}
+          {input.item.approvalNote
+            ? t('adminTargets.approvedAtMessageWithNote', {
+                date: formatDateTime(input.item.approvedAt, locale),
+                note: input.item.approvalNote,
+              })
+            : t('adminTargets.approvedAtMessage', {
+                date: formatDateTime(input.item.approvedAt, locale),
+              })}
         </p>
       ) : null}
     </article>
@@ -442,18 +460,29 @@ function mapCoverageSummaryTone(summary: {
   return 'calm'
 }
 
-function formatTargetCoverageStatus(status: string) {
+function formatTargetDistributionStatus(status: string, t: TranslateFunction) {
   switch (status) {
     case 'pending_region_approval':
-      return 'Pending approval'
-    case 'pending_change_conflict':
-      return 'Pending change'
-    case 'stale_reference':
-      return 'Stale reference'
-    case 'missing':
-      return 'Missing target'
+      return t('adminTargets.status.pending_region_approval')
     case 'approved':
-      return 'Approved'
+      return t('adminTargets.status.approved')
+    default:
+      return formatState(status)
+  }
+}
+
+function formatTargetCoverageStatus(status: string, t: TranslateFunction) {
+  switch (status) {
+    case 'pending_region_approval':
+      return t('adminTargets.status.pending_region_approval')
+    case 'pending_change_conflict':
+      return t('adminTargets.status.pending_change_conflict')
+    case 'stale_reference':
+      return t('adminTargets.status.stale_reference')
+    case 'missing':
+      return t('adminTargets.status.missing')
+    case 'approved':
+      return t('adminTargets.status.approved')
     default:
       return formatState(status)
   }
@@ -474,22 +503,35 @@ function mapTargetCoverageStatusTone(status: string): Tone {
   }
 }
 
-function formatTargetValue(value: number | null) {
-  return value === null ? 'None' : String(value)
+function formatTargetValue(value: number | null, t: TranslateFunction) {
+  return value === null ? t('adminTargets.value.none') : String(value)
 }
 
-function formatTargetCoverageReferenceState(item: TargetCoverageRow) {
+function formatTargetCoverageReferenceState(item: TargetCoverageRow, t: TranslateFunction) {
   if (item.staleTargetReferenceId) {
-    return 'Store mismatch'
+    return t('adminTargets.reference.storeMismatch')
   }
 
   if (item.targetReferenceId) {
-    return 'Approved reference'
+    return t('adminTargets.reference.approved')
   }
 
   if (item.pendingRequestId) {
-    return 'Waiting approval'
+    return t('adminTargets.reference.waitingApproval')
   }
 
-  return 'No approved reference'
+  return t('adminTargets.reference.none')
+}
+
+function formatTargetUrgency(urgency: string, t: TranslateFunction) {
+  switch (urgency) {
+    case 'high':
+      return t('adminTargets.urgency.high')
+    case 'medium':
+      return t('adminTargets.urgency.medium')
+    case 'low':
+      return t('adminTargets.urgency.low')
+    default:
+      return formatState(urgency)
+  }
 }

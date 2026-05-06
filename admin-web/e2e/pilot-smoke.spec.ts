@@ -36,7 +36,7 @@ test('core admin routes open without unavailable states', async ({ page }) => {
     },
     {
       path: '/admin/targets',
-      heading: page.getByRole('heading', { name: 'Pending target distribution requests' }),
+      heading: page.getByRole('heading', { name: 'Bekleyen hedef dağıtım talepleri' }),
     },
   ]
 

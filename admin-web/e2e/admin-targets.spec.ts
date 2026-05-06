@@ -21,18 +21,45 @@ test('admin target page shows approved personnel target coverage', async ({ page
   await page.goto('/admin/targets')
 
   const coveragePanel = page.getByLabel('Target reference coverage')
-  await expect(coveragePanel.getByRole('heading', { name: 'Approved personnel target readiness' })).toBeVisible()
-  await expect(coveragePanel.getByText('Coverage rate')).toBeVisible()
+  await expect(coveragePanel.getByRole('heading', { name: 'Onaylı personel hedef hazırlığı' })).toBeVisible()
+  await expect(coveragePanel.getByText('Kapsam oranı')).toBeVisible()
   await expect(coveragePanel.getByText('40%')).toBeVisible()
-  await expect(coveragePanel.getByText('Missing targets').first()).toBeVisible()
+  await expect(coveragePanel.getByText('Eksik hedefler').first()).toBeVisible()
   await expect(coveragePanel.getByText('Ece Demir')).toBeVisible()
-  await expect(coveragePanel.getByText('Pending approval').first()).toBeVisible()
+  await expect(coveragePanel.getByText('Onay bekliyor').first()).toBeVisible()
   await expect(coveragePanel.getByText('Mert Kaya')).toBeVisible()
-  await expect(coveragePanel.getByText('Pending change').first()).toBeVisible()
+  await expect(coveragePanel.getByText('Bekleyen değişiklik').first()).toBeVisible()
   await expect(coveragePanel.getByText('Deniz Arslan')).toBeVisible()
-  await expect(coveragePanel.getByText('Stale reference').first()).toBeVisible()
+  await expect(coveragePanel.getByText('Eski referans').first()).toBeVisible()
   await expect(coveragePanel.getByText('Selin Yurt')).toBeVisible()
   await expect(coveragePanel.getByText('Marmara Park').first()).toBeVisible()
+})
+
+test('admin target page switches chrome to English copy and persists locale', async ({ page }) => {
+  await page.goto('/admin/targets')
+
+  await expect(page.getByRole('heading', { name: 'Bekleyen hedef dağıtım talepleri' })).toBeVisible()
+  await expect(page.getByText('Hedef onayları', { exact: true })).toBeVisible()
+  await expect(page.getByText('Onay kuyruğu', { exact: true })).toBeVisible()
+  await expect(page.getByText('Yakın geçmiş', { exact: true })).toBeVisible()
+  await expect(page.getByText('Target Approvals')).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText('Ã')
+  await expect(page.locator('body')).not.toContainText('Ä')
+  await expect(page.locator('body')).not.toContainText('Å')
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'Pending target distribution requests' })).toBeVisible()
+  await expect(page.getByText('Target Approvals', { exact: true })).toBeVisible()
+  await expect(page.getByText('Approval Queue', { exact: true })).toBeVisible()
+  await expect(page.getByText('Recent History', { exact: true })).toBeVisible()
+  await expect(page.getByText('Hedef onayları')).toHaveCount(0)
+
+  await page.reload()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'Pending target distribution requests' })).toBeVisible()
 })
 
 async function routeAdminTargetsApi(page: Page) {
