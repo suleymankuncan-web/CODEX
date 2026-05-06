@@ -1229,6 +1229,22 @@ Interpretation:
 - Reference:
   - `docs/plans/source-agnostic-import-boundary-v1.md`
 
+### Recorded: Controlled Pilot Round 1 Outcome V1
+- Recorded: 6 May 2026
+- Status: control note, not a closed active debt item
+- Result:
+  - `docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-round-1-outcome.md` records the Round 1 outcome
+  - final decision is `Continue` for the same controlled staging/internal pilot scope
+  - broad production rollout remains `No-Go`
+  - no active route blocker remains from Round 1
+  - `/store/me`, `/store/approvals`, `/store/kpis`, and `/store/rankings` product-owner confirmations are preserved
+  - Power BI/Excel remains the active operating source and JSON source integration remains suspended
+- Verification:
+  - targeted Round 1 outcome guard passed: 4/4
+  - root script guard passed: 168/168
+- Reference:
+  - `docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-round-1-outcome.md`
+
 ### 1. Real IdP Staging Evidence
 - Priority: `P1`
 - Why: local provider and action mechanics are proven, but production confidence still needs real staging IdP and seeded staging action evidence.
@@ -1247,6 +1263,8 @@ Interpretation:
 If staging IdP and seeded staging DB values are available, start real staging evidence.
 
 JSON remains suspended for the current pilot. Do not reopen JSON planning until real JSON-format files or an official field list arrive and the product owner reopens the path.
+
+If the current controlled pilot continues without widening scope, add the next session to the controlled pilot feedback log and run `npm.cmd run check:pilot-stabilization` before any new invite wave or deploy that can affect pilot routes.
 
 If neither staging values nor true baseline files are available, do not open source-specific adapter work yet. Excel KPI Import V1 is now local implementation-complete, and the inspected March files remain KPI snapshot files, not master-data baseline files, so do not run a real personnel/store bootstrap promotion until a true baseline list with store codes and seller codes exists.
 
