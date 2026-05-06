@@ -26,7 +26,7 @@ Primary app endpoints:
 
 As of 2026-05-06:
 
-- `origin/main` includes PR #26: `82a99618 Merge pull request #26 from suleymankuncan-web/codex/suspend-json-source-plan-v1`
+- `origin/main` includes the merged pilot-control updates through JSON Source Suspension V1 and operator-doc alignment. Use `git log --oneline -5` for the exact latest merge commit.
 - Auth refresh flash fix is merged and deployed.
 - Master-data validation/promotion test split is merged.
 - Pilot readiness evidence consolidation is merged.
@@ -58,6 +58,7 @@ Current pilot stance:
 - Controlled staging/internal pilot: `Conditional Go`
 - Broad production rollout: not approved yet
 - The current consolidated pilot decision note is `docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-conditional-go-consolidation.md`.
+- The current controlled pilot Round 1 outcome note is `docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-round-1-outcome.md`.
 - The controlled pilot operating checklist is `docs/plans/controlled-pilot-operating-checklist-v1.md`.
 - The active controlled pilot feedback log is `docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md`.
 - The staging auth session edge evidence guard is `docs/plans/staging-auth-session-edge-evidence-guard-v1.md`.
@@ -71,6 +72,7 @@ Current pilot stance:
 Key 2026-05-06 evidence:
 
 - `docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-conditional-go-consolidation.md`
+- `docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-round-1-outcome.md`
 - `docs/evidence/pilot-readiness/2026-05-06-role-smoke.md`
 - `docs/evidence/pilot-readiness/2026-05-06-ranking-privacy-smoke.md`
 - `docs/evidence/pilot-readiness/2026-05-06-master-data-power-bi-acceptance.md`
@@ -88,6 +90,7 @@ Latest browser feedback:
 
 - `/admin/integrations`, `/admin/master-data`, `/admin/targets`, `/admin/competitions`, `/admin/audit`, `/store`, `/store/me`, `/store/kpis`, `/store/rankings`, and `/store/approvals` were manually toured during pilot stabilization.
 - `store/me` and `store/approvals` route issues were fixed and retested.
+- Controlled Pilot Round 1 Outcome: continue the same controlled staging/internal pilot scope; no active route blocker remains from Round 1.
 - Refresh on protected routes no longer visibly falls through `/auth/login` after PR #15; user confirmed the issue appears solved after deploy.
 
 ## Auth And Scope Notes
@@ -181,6 +184,7 @@ Keep these references in this handoff because contract tests and future context 
 - `docs/plans/backup-restore-drill-runbook-v1.md` - Backup Restore Drill Runbook V1
 - `docs/plans/backup-restore-drill-local-evidence-2026-04-30.md` - Backup Restore Local Drill Evidence
 - `docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md` - Controlled Pilot Feedback Log
+- `docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-round-1-outcome.md` - Controlled Pilot Round 1 Outcome
 - `docs/plans/controlled-pilot-operating-checklist-v1.md` - Controlled Pilot Operating Checklist V1
 - `docs/plans/db-health-migration-evidence-v1.md` - DB Health And Migration Evidence V1
 - `docs/plans/excel-kpi-import-operator-runbook.md` - Excel KPI Import Operator Runbook V1
@@ -206,6 +210,7 @@ Next local foundation step:
 - Choose the next small backend/data hardening slice through the intake gate.
 - If real staging IdP and seeded DB values are available, run guarded staging auth/action evidence.
 - If true store/personnel baseline files are available, run the master-data bootstrap pilot smoke flow from the existing runbook.
+- If continuing the current pilot scope, keep recording Round 2 feedback in the controlled pilot feedback log and run `npm.cmd run check:pilot-stabilization` before any new invite wave or deploy that can affect pilot routes.
 - JSON source integration is suspended for the current pilot and Power BI/Excel operating path; do not reopen JSON planning unless real JSON-format files or an official field list arrive.
 - If neither staging nor true baseline evidence is available, pick only a local guard that strengthens an existing surface.
 
@@ -221,5 +226,5 @@ Recommended local stance:
 Paste this into the next context window:
 
 ```text
-current-state.md oku; aktif workspace D:\store-ops-workspace. Eski OneDrive ve E:\ yollarini kullanma. Main son durum PR #26 JSON Source Suspension V1'i iceriyor; current controlled staging/internal pilot karari docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-conditional-go-consolidation.md icinde Conditional Go, broad production rollout henuz No-Go. Controlled pilot operating checklist docs/plans/controlled-pilot-operating-checklist-v1.md icinde. Aktif pilot feedback log docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md icinde. Staging auth session edge guard docs/plans/staging-auth-session-edge-evidence-guard-v1.md icinde. Staging frontend https://staging.hr-axis.com, backend https://api-staging.hr-axis.com/api. UI redesign ertelendi. Power BI/Excel aktif operating source; JSON Source Suspension V1 ile JSON source integration is suspended for the current pilot and Power BI/Excel operating path. Siradaki yerel is intake gate ile secilmeli: staging IdP/seeded DB varsa guarded auth/action evidence, true baseline varsa master-data bootstrap pilot smoke, ikisi de yoksa sadece mevcut yuzeyi guclendiren kucuk bir local guard.
+current-state.md oku; aktif workspace D:\store-ops-workspace. Eski OneDrive ve E:\ yollarini kullanma. Main pilot-control update'lerini iceriyor; exact merge icin git log --oneline -5 bak. Current controlled staging/internal pilot karari docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-conditional-go-consolidation.md icinde Conditional Go, broad production rollout henuz No-Go. Round 1 outcome docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-round-1-outcome.md icinde Continue: ayni controlled scope devam, aktif route blocker yok. Controlled pilot operating checklist docs/plans/controlled-pilot-operating-checklist-v1.md icinde. Aktif pilot feedback log docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md icinde. Staging auth session edge guard docs/plans/staging-auth-session-edge-evidence-guard-v1.md icinde. Staging frontend https://staging.hr-axis.com, backend https://api-staging.hr-axis.com/api. UI redesign ertelendi. Power BI/Excel aktif operating source; JSON Source Suspension V1 ile JSON source integration is suspended for the current pilot and Power BI/Excel operating path. Siradaki yerel is intake gate ile secilmeli: staging IdP/seeded DB varsa guarded auth/action evidence, true baseline varsa master-data bootstrap pilot smoke, mevcut pilot devam edecekse feedback log'a Round 2 kaydi ve yeni invite/deploy oncesi npm.cmd run check:pilot-stabilization.
 ```

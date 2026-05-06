@@ -10,6 +10,10 @@ Decision source:
 
 - `docs/evidence/pilot-readiness/2026-05-05-pilot-readiness-decision.md`
 
+Current outcome source:
+
+- `docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-round-1-outcome.md` - Controlled Pilot Round 1 Outcome
+
 Pilot decision:
 
 - `Conditional Go` for controlled staging/internal pilot.
@@ -338,3 +342,4 @@ Daily smoke continuation:
 | 2026-05-05 | Resume after authenticated browser retest gate | Root causes were auth return target drop and notice-blocked ready redirects; local fixes, regression tests, frontend deploys, and unauthenticated live returnTo smokes pass. | Rerun Session 1 low-role browser checklist for `/store/me` and `/store/approvals`. |
 | 2026-05-05 | Close Session 1 navigation blockers | Product owner confirmed `/store/me` and `/store/approvals` both open in the authenticated low-role browser session. | Continue daily controlled pilot smoke with `/store/kpis` and rankings checks. |
 | 2026-05-05 | Continue controlled pilot after route smoke | Product owner confirmed `/store/kpis` has no issue and `/store/rankings` behaves as expected for low-role summary plus managed-store detail. | Continue pilot feedback collection; next focus is user-facing wording/data trust issues. |
+| 2026-05-06 | Controlled Pilot Round 1 Outcome | `docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-round-1-outcome.md` records `Continue` for the same controlled staging/internal pilot scope with no active route blocker remaining from Round 1. | Continue collecting Round 2 feedback in this log; run `npm.cmd run check:pilot-stabilization` before any new invite wave or deploy that can affect pilot routes. |
