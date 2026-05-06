@@ -199,9 +199,10 @@ const authActionScopeExpectedTestNames = [
   'rejects checklist acknowledgement outside assigned action stores',
 ]
 const masterDataBootstrapServiceFiles = [
-  'backend/nestjs/src/modules/integration/application/master-data-bootstrap.service.spec.ts',
   'backend/nestjs/src/modules/integration/application/master-data-bootstrap-staging.service.spec.ts',
   'backend/nestjs/src/modules/integration/application/master-data-bootstrap-read-models.service.spec.ts',
+  'backend/nestjs/src/modules/integration/application/master-data-bootstrap-validation.service.spec.ts',
+  'backend/nestjs/src/modules/integration/application/master-data-bootstrap-promotion.service.spec.ts',
 ]
 const masterDataBootstrapServiceExpectedTestNames = [
   'stages bootstrap rows with normalized references and stable row hashes',
@@ -471,6 +472,10 @@ test('master data bootstrap service coverage is frozen before split', () => {
   }
 
   assert.equal(totalTests, 29)
+  assert.equal([...readText(masterDataBootstrapServiceFiles[0]).matchAll(/\bit\s*\(/g)].length, 4)
+  assert.equal([...readText(masterDataBootstrapServiceFiles[1]).matchAll(/\bit\s*\(/g)].length, 6)
+  assert.equal([...readText(masterDataBootstrapServiceFiles[2]).matchAll(/\bit\s*\(/g)].length, 10)
+  assert.equal([...readText(masterDataBootstrapServiceFiles[3]).matchAll(/\bit\s*\(/g)].length, 9)
   for (const testName of masterDataBootstrapServiceExpectedTestNames) {
     const exactOccurrences = [...combinedText.matchAll(new RegExp(`it\\("${testName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'g'))].length
     assert.equal(exactOccurrences, 1, `${testName} must appear exactly once`)
