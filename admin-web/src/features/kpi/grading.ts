@@ -26,9 +26,16 @@ export type StoreScoreThresholdMeaning = {
   tone: Tone
 }
 
+const performanceGradeLabels: Record<PerformanceGradeCode, string> = {
+  A: 'Mükemmel',
+  B: 'İyi',
+  C: 'Takip gerekli',
+  D: 'Kritik',
+}
+
 export const defaultGradingBands: KpiGradingBand[] = [
-  { code: 'A', label: 'Mukemmel', emoji: '🏆', tone: 'calm', minScore: 1 },
-  { code: 'B', label: 'Iyi', emoji: '🙂', tone: 'accent', minScore: 0.85 },
+  { code: 'A', label: 'Mükemmel', emoji: '🏆', tone: 'calm', minScore: 1 },
+  { code: 'B', label: 'İyi', emoji: '🙂', tone: 'accent', minScore: 0.85 },
   { code: 'C', label: 'Takip gerekli', emoji: '👀', tone: 'warning', minScore: 0.75 },
   { code: 'D', label: 'Kritik', emoji: '🚨', tone: 'danger', minScore: 0 },
 ]
@@ -55,7 +62,7 @@ export function resolvePerformanceGrade(
 }
 
 export function formatPerformanceGrade(grade: PerformanceGrade) {
-  return `${grade.emoji} ${grade.code} - ${grade.label}`
+  return `${grade.emoji} ${grade.code} - ${performanceGradeLabels[grade.code] ?? grade.label}`
 }
 
 export function resolvePerformanceScoreMeaning(input: {
@@ -65,14 +72,14 @@ export function resolvePerformanceScoreMeaning(input: {
   isPartial: boolean
 }): PerformanceScoreMeaning {
   const confidence = input.isPartial
-    ? `Veri guveni: ${input.matchedMetrics}/${input.totalMetrics} metrik skorlandi; yorum on izlemedir.`
-    : `Veri guveni: ${input.matchedMetrics}/${input.totalMetrics} metrik skorlandi.`
+    ? `Veri güveni: ${input.matchedMetrics}/${input.totalMetrics} metrik skorlandı; yorum ön izlemedir.`
+    : `Veri güveni: ${input.matchedMetrics}/${input.totalMetrics} metrik skorlandı.`
 
   if (input.grade.code === 'A') {
     return {
-      title: 'Guclu performans',
-      summary: 'Skor ust bantta. Bu sonuc mevcut donemde hedef, ATV ve UPT katkilarinin guclu okundugunu anlatir.',
-      focus: 'Ritmi koru; guclu metrikleri surdur ve zayiflayan ilk metrigi erken takip et.',
+      title: 'Güçlü performans',
+      summary: 'Skor üst bantta. Bu sonuç mevcut dönemde hedef, ATV ve UPT katkılarının güçlü okunduğunu anlatır.',
+      focus: 'Ritmi koru; güçlü metrikleri sürdür ve zayıflayan ilk metriği erken takip et.',
       confidence,
       tone: input.isPartial ? 'warning' : input.grade.tone,
     }
@@ -80,9 +87,9 @@ export function resolvePerformanceScoreMeaning(input: {
 
   if (input.grade.code === 'B') {
     return {
-      title: 'Saglikli performans',
-      summary: 'Skor iyi bantta. Genel performans saglikli, ama ust banda cikmak icin metrik bazli firsatlar var.',
-      focus: 'En dusuk katkili metrigi bul; kucuk iyilestirme toplam skoru yukari tasir.',
+      title: 'Sağlıklı performans',
+      summary: 'Skor iyi bantta. Genel performans sağlıklı, ama üst banda çıkmak için metrik bazlı fırsatlar var.',
+      focus: 'En düşük katkılı metriği bul; küçük iyileştirme toplam skoru yukarı taşır.',
       confidence,
       tone: input.isPartial ? 'warning' : input.grade.tone,
     }
@@ -91,8 +98,8 @@ export function resolvePerformanceScoreMeaning(input: {
   if (input.grade.code === 'C') {
     return {
       title: 'Takip gerekli',
-      summary: 'Skor takip bandinda. Performans dusmeden once hangi metriklerin skoru asagi cektigi incelenmeli.',
-      focus: 'Hedef, ATV veya UPT icinde dusuk katkili alan icin magaza muduruyle aksiyon belirle.',
+      summary: 'Skor takip bandında. Performans düşmeden önce hangi metriklerin skoru aşağı çektiği incelenmeli.',
+      focus: 'Hedef, ATV veya UPT içinde düşük katkılı alan için mağaza müdürüyle aksiyon belirle.',
       confidence,
       tone: 'warning',
     }
@@ -100,8 +107,8 @@ export function resolvePerformanceScoreMeaning(input: {
 
   return {
     title: 'Kritik takip',
-    summary: 'Skor kritik bantta. Bu sonuc hizli takip ve net aksiyon gerektiren performans riski oldugunu anlatir.',
-    focus: 'Once eksik veya dusuk katkili metrikleri ayir; ardindan hedef ve satis davranisini birlikte ele al.',
+    summary: 'Skor kritik bantta. Bu sonuç hızlı takip ve net aksiyon gerektiren performans riski olduğunu anlatır.',
+    focus: 'Önce eksik veya düşük katkılı metrikleri ayır; ardından hedef ve satış davranışını birlikte ele al.',
     confidence,
     tone: 'danger',
   }
@@ -124,14 +131,14 @@ export function resolveStoreScoreThresholdMeaning(input: {
 }): StoreScoreThresholdMeaning {
   const confidence =
     input.missingWeight > 0 || input.matchedMetrics < input.totalMetrics
-      ? `Skor guveni: ${formatCoveredWeight(input.coveredWeight)}% agirlik kapsandi; ${formatCoveredWeight(input.missingWeight)}% eksik agirlik yorumu on izleme yapar.`
-      : `Skor guveni: ${formatCoveredWeight(input.coveredWeight)}% agirlik kapsandi.`
+      ? `Skor güveni: ${formatCoveredWeight(input.coveredWeight)}% ağırlık kapsandı; ${formatCoveredWeight(input.missingWeight)}% eksik ağırlık yorumu ön izleme yapar.`
+      : `Skor güveni: ${formatCoveredWeight(input.coveredWeight)}% ağırlık kapsandı.`
 
   if (input.grade.code === 'A') {
     return {
-      title: 'Guclu store skoru',
-      summary: 'Store score ust bantta. Mevcut donemde KPI katkisi saglikli ve aksiyon dili koruma ritmidir.',
-      action: "Aksiyon: ritmi koru; dusuk katkili ilk KPI'yi gunluk izle.",
+      title: 'Güçlü mağaza skoru',
+      summary: 'Mağaza skoru üst bantta. Mevcut dönemde KPI katkısı sağlıklı ve aksiyon dili koruma ritmidir.',
+      action: "Aksiyon: ritmi koru; düşük katkılı ilk KPI'yi günlük izle.",
       confidence,
       tone: input.missingWeight > 0 ? 'warning' : input.grade.tone,
     }
@@ -139,9 +146,9 @@ export function resolveStoreScoreThresholdMeaning(input: {
 
   if (input.grade.code === 'B') {
     return {
-      title: 'Saglikli store skoru',
-      summary: 'Store score iyi bantta. Temel performans saglikli, ama ust banda cikmak icin net firsat var.',
-      action: 'Aksiyon: en dusuk katkili KPI icin kisa takip plani belirle.',
+      title: 'Sağlıklı mağaza skoru',
+      summary: 'Mağaza skoru iyi bantta. Temel performans sağlıklı, ama üst banda çıkmak için net fırsat var.',
+      action: 'Aksiyon: en düşük katkılı KPI için kısa takip planı belirle.',
       confidence,
       tone: input.missingWeight > 0 ? 'warning' : input.grade.tone,
     }
@@ -149,18 +156,18 @@ export function resolveStoreScoreThresholdMeaning(input: {
 
   if (input.grade.code === 'C') {
     return {
-      title: 'Store takip bandi',
-      summary: 'Store score takip bandinda. Bu seviye magaza muduru icin erken uyari dili uretir.',
-      action: 'Aksiyon: dusuk katkili KPI icin neden ve sahiplik netlestir.',
+      title: 'Mağaza takip bandı',
+      summary: 'Mağaza skoru takip bandında. Bu seviye mağaza müdürü için erken uyarı dili üretir.',
+      action: 'Aksiyon: düşük katkılı KPI için neden ve sahiplik netleştir.',
       confidence,
       tone: 'warning',
     }
   }
 
   return {
-    title: 'Kritik store skoru',
-    summary: 'Store score kritik bantta. Bu seviye hizli aksiyon ve yakin takip gerektirir.',
-    action: 'Aksiyon: once eksik veya dusuk KPI satirlarini ayir; sonra operasyon aksiyonunu netlestir.',
+    title: 'Kritik mağaza skoru',
+    summary: 'Mağaza skoru kritik bantta. Bu seviye hızlı aksiyon ve yakın takip gerektirir.',
+    action: 'Aksiyon: önce eksik veya düşük KPI satırlarını ayır; sonra operasyon aksiyonunu netleştir.',
     confidence,
     tone: 'danger',
   }
@@ -184,7 +191,7 @@ export function describeBenchmarkCap(input: {
     return null
   }
 
-  return `Gercek oran ${formatBenchmarkRatio(input.actualRatio, 'prefix')}. Skor limiti ${formatBenchmarkRatio(
+  return `Gerçek oran ${formatBenchmarkRatio(input.actualRatio, 'prefix')}. Skor limiti ${formatBenchmarkRatio(
     input.scoredRatio,
-  )}+ ile hesaplandi.`
+  )}+ ile hesaplandı.`
 }

@@ -53,7 +53,7 @@ export function formatSnapshotPeriodLabel(run: SnapshotRunLabelInput) {
   const periodEnd = parseDateOnly(run.periodEnd)
 
   if (isSameDay(periodStart, periodEnd)) {
-    return 'günlük snapshot'
+    return 'günlük kapanış'
   }
 
   if (
@@ -65,10 +65,10 @@ export function formatSnapshotPeriodLabel(run: SnapshotRunLabelInput) {
     const monthName = new Intl.DateTimeFormat('tr-TR', { month: 'long' }).format(
       periodStart,
     )
-    return `${monthName[0]?.toLocaleUpperCase('tr-TR')}${monthName.slice(1)} aylık snapshot`
+    return `${monthName[0]?.toLocaleUpperCase('tr-TR')}${monthName.slice(1)} aylık kapanış`
   }
 
-  return `${formatDate(run.periodStart)} - ${formatDate(run.periodEnd)} snapshot`
+  return `${formatDate(run.periodStart)} - ${formatDate(run.periodEnd)} kapanış`
 }
 
 export function formatSnapshotOptionLabel(run: SnapshotRunLabelInput) {
