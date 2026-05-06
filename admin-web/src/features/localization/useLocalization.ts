@@ -1,6 +1,6 @@
 import { useContext } from 'react'
 import { defaultAppLocale } from '../../lib/i18n'
-import { translate, type TranslationKey } from './dictionary'
+import { translate, type TranslationKey, type TranslationParams } from './dictionary'
 import { LocalizationContext, type LocalizationContextValue } from './localization-context'
 
 export function useLocalization(): LocalizationContextValue {
@@ -10,7 +10,8 @@ export function useLocalization(): LocalizationContextValue {
     return {
       locale: defaultAppLocale,
       setLocale: () => undefined,
-      t: (key: TranslationKey) => translate(defaultAppLocale, key),
+      t: (key: TranslationKey, params?: TranslationParams) =>
+        translate(defaultAppLocale, key, params),
     }
   }
 
