@@ -12,6 +12,7 @@ const localizationFiles = [
   'src/features/localization/messages/competition.ts',
   'src/features/localization/messages/store-approvals.ts',
   'src/features/localization/messages/store-checklists.ts',
+  'src/features/localization/messages/store-feed.ts',
   'src/features/localization/messages/store-home.ts',
   'src/features/localization/messages/store-me.ts',
   'src/features/localization/messages/store-kpis.ts',
