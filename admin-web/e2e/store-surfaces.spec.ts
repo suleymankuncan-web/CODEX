@@ -67,6 +67,38 @@ test('store self-performance page renders live score, metrics, and ranks', async
   await expect(page.getByText('Performans yüzeyi açılamadı')).toHaveCount(0)
 })
 
+test('store self-performance switches to English copy and persists locale', async ({ page }) => {
+  await page.goto('/store/me')
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: /My performance/i })).toBeVisible()
+  await expect(page.getByText('Performance summary')).toBeVisible()
+  await expect(page.getByText('Period performance')).toBeVisible()
+  await expect(page.getByText('Turkey rank')).toBeVisible()
+  await expect(page.getByText('Store rank')).toBeVisible()
+  await expect(page.getByText('Score meaning')).toBeVisible()
+  await expect(page.getByText('Strong performance')).toBeVisible()
+  await expect(page.getByText('Target entry')).toBeVisible()
+  await expect(page.getByText('A A - Excellent', { exact: true })).toBeVisible()
+  await expect(page.getByText('Data confidence: 3/3 metrics scored.')).toBeVisible()
+  await expect(page.getByText('Data source').first()).toBeVisible()
+  await expect(page.getByText('Target-based score').first()).toBeVisible()
+  await expect(page.getByText('Actual').first()).toBeVisible()
+  await expect(page.getByText('Achievement').first()).toBeVisible()
+  await expect(page.getByText('Benim performansım')).toHaveCount(0)
+  await expect(page.getByText('Performans özeti')).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText('Ã')
+  await expect(page.locator('body')).not.toContainText('Ä')
+  await expect(page.locator('body')).not.toContainText('Å')
+
+  await page.reload()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: /My performance/i })).toBeVisible()
+})
+
 test('store self-performance handles live no-data responses without supporting metadata', async ({ page }) => {
   const pageErrors: string[] = []
   page.on('pageerror', (error) => {
