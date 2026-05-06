@@ -26,11 +26,11 @@ Primary app endpoints:
 
 As of 2026-05-06:
 
-- `origin/main` includes PR #20: `08ac83fa Merge pull request #20 from suleymankuncan-web/codex/pilot-readiness-evidence-consolidation-v1`
+- `origin/main` includes PR #22: `d2d65729 Merge pull request #22 from suleymankuncan-web/codex/controlled-pilot-operating-checklist-v1`
 - Auth refresh flash fix is merged and deployed.
 - Master-data validation/promotion test split is merged.
 - Pilot readiness evidence consolidation is merged.
-- Current handoff cleanup branch: `codex/mark-pilot-consolidation-handoff`
+- Controlled pilot operating checklist is merged.
 
 If starting in a fresh context after this handoff PR is merged:
 
@@ -158,7 +158,7 @@ Migration smoke:
 
 Debt ledger:
 
-- Closed active debts: 90
+- Closed active debts: 91
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -214,5 +214,5 @@ Recommended local stance:
 Paste this into the next context window:
 
 ```text
-current-state.md oku; aktif workspace D:\store-ops-workspace. Eski OneDrive ve E:\ yollarini kullanma. Main son durum PR #20 pilot readiness evidence consolidation'i iceriyor; current controlled staging/internal pilot karari docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-conditional-go-consolidation.md icinde Conditional Go, broad production rollout henuz No-Go. PR #15 auth refresh flash fix'i deploy sonrasi kullanici tarafindan cozulmus gorundu. Staging frontend https://staging.hr-axis.com, backend https://api-staging.hr-axis.com/api. UI redesign ertelendi. JSON adapter future-only; real payload/source evidence olmadan baslama. Siradaki yerel is intake gate ile secilmeli: staging IdP/seeded DB varsa guarded auth/action evidence, true baseline varsa master-data bootstrap pilot smoke, ikisi de yoksa sadece mevcut yuzeyi guclendiren kucuk bir local guard.
+current-state.md oku; aktif workspace D:\store-ops-workspace. Eski OneDrive ve E:\ yollarini kullanma. Main son durum PR #22 controlled pilot operating checklist'i iceriyor; current controlled staging/internal pilot karari docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-conditional-go-consolidation.md icinde Conditional Go, broad production rollout henuz No-Go. Controlled pilot operating checklist docs/plans/controlled-pilot-operating-checklist-v1.md icinde. PR #15 auth refresh flash fix'i deploy sonrasi kullanici tarafindan cozulmus gorundu. Staging frontend https://staging.hr-axis.com, backend https://api-staging.hr-axis.com/api. UI redesign ertelendi. JSON adapter future-only; real payload/source evidence olmadan baslama. Siradaki yerel is intake gate ile secilmeli: staging IdP/seeded DB varsa guarded auth/action evidence, true baseline varsa master-data bootstrap pilot smoke, ikisi de yoksa sadece mevcut yuzeyi guclendiren kucuk bir local guard.
 ```
