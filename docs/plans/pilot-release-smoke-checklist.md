@@ -97,6 +97,38 @@ Rules:
 - The command fails if a route settles on `/auth/login`, shows an unavailable marker, raises a page error, or returns `4xx/5xx` API responses.
 - Manual browser smoke is still required when the command fails or when a user-visible interaction beyond page load is being validated.
 
+## Browser Console Protected API Smoke Fallback
+
+Use this fallback when the local Playwright live smoke cannot safely receive a fresh Clerk JWT, when a local token listener is unavailable, or when the operator needs quick protected API evidence from an already signed-in staging browser.
+
+Rules:
+
+- Run only from an authenticated `https://staging.hr-axis.com` browser session.
+- Use `skipCache: true` so Clerk returns the freshest available `hr-axis-api` token.
+- Never print or paste the raw token into chat, screenshots, evidence files, PR bodies, or commits.
+- Record only sanitized token metadata such as audience, session presence, and seconds remaining.
+- Treat `4xx/5xx` responses as blockers unless the endpoint call is proven to use the wrong query shape.
+
+Minimum protected API paths:
+
+- `/auth/session`
+- `/admin/migrations/status`
+- `/integrations/import-batches/overview`
+- `/integrations/import-batches/needs-action?limit=1&offset=0`
+- `/integrations/master-data-bootstrap/batches?limit=1&offset=0`
+- `/target-distributions/requests`
+- `/target-distributions/coverage?requestMonth=YYYY-MM-01`
+- `/reports/my-performance?mode=live`
+- `/reports/rankings?periodType=monthly&limit=100&offset=0`
+- `/reports/store-kpi-highlights?periodType=monthly`
+- `/workforce/seller-code-requests?status=rejected`
+- `/workforce/offboarding-requests?status=rejected`
+- `/workforce/store-employees?storeId=<resolved-session-store-id>`
+
+Accepted evidence file:
+
+- `docs/evidence/pilot-readiness/2026-05-06-live-protected-api-smoke.md`
+
 ## Old Chunk Symptoms
 
 - Old chunk symptoms mean the promoted deployment is ready but the browser still executes stale JavaScript.

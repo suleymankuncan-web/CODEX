@@ -52,3 +52,14 @@ test('pilot release checklist covers cache and old chunk recovery', () => {
     requireText(phrase)
   }
 })
+
+test('pilot release checklist covers browser console protected API smoke fallback', () => {
+  for (const phrase of [
+    'Browser Console Protected API Smoke Fallback',
+    'skipCache: true',
+    '/reports/store-kpi-highlights?periodType=monthly',
+    '2026-05-06-live-protected-api-smoke.md',
+  ]) {
+    requireText(phrase)
+  }
+})
