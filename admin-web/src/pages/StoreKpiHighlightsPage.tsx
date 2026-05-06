@@ -10,7 +10,6 @@ import {
   StatusPill,
 } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
-import { formatDisplayRoles } from '../features/auth/display'
 import {
   getKpiConfig,
   getKpiReport,
@@ -99,6 +98,62 @@ function formatChecklistMissingNote(input: {
   included: boolean
 }) {
   return input.included ? null : `${input.label} payı KPI tarafında kaldı`
+}
+
+function formatStatusBand(input: string | null) {
+  switch (input) {
+    case 'exceeded':
+      return 'Hedef üstü'
+    case 'on_track':
+      return 'Yolunda'
+    case 'at_risk':
+      return 'Riskli'
+    case 'off_track':
+      return 'Geride'
+    default:
+      return 'Durum yok'
+  }
+}
+
+function formatScoreProfileTitle(input: string | undefined) {
+  switch (input) {
+    case 'Store Score':
+      return 'Mağaza skoru'
+    case 'Personnel Score':
+      return 'Personel skoru'
+    case undefined:
+      return 'Profil yok'
+    default:
+      return input
+  }
+}
+
+function formatScoreBehavior(input: string) {
+  switch (input) {
+    case 'score_only':
+      return 'Sadece skor'
+    case 'warning_first':
+      return 'Önce uyarı'
+    case 'task_candidate':
+      return 'Aksiyon adayı'
+    default:
+      return formatState(input)
+  }
+}
+
+function formatPeriodTypeLabel(input: string) {
+  switch (input) {
+    case 'monthly':
+      return 'Aylık'
+    case 'daily':
+      return 'Günlük'
+    default:
+      return formatState(input)
+  }
+}
+
+function formatContributionTarget(input: 'store' | 'personnel') {
+  return input === 'store' ? 'Mağaza skoru' : 'Personel skoru'
 }
 
 function formatPercent(input: number) {
@@ -448,30 +503,25 @@ export function StoreKpiHighlightsPage(input: {
       <section className="page-stack">
         <section className="hero-panel store-hero-panel">
           <div>
-            <div className="eyebrow">Store KPI Highlights</div>
+            <div className="eyebrow">KPI görünümü</div>
             <h2 className="hero-title">
-              This is where store-scoped KPI signal should live once store-facing KPI visibility is enabled.
+              Mağaza KPI'ları
             </h2>
             <p className="hero-copy">
-              The route boundary is in the correct shell, but the current session does not yet have
-              KPI reporting access.
+              KPI raporlama yetkisi açıldığında mağaza skoru ve aksiyon sinyalleri burada görünür.
             </p>
           </div>
           <div className="hero-metrics">
-            <MetricAccent label="Route" value="/store/kpis" />
-            <MetricAccent label="Store scope" value={primaryStoreId ?? 'No store scope'} />
-            <MetricAccent label="State" value="Preview" />
+            <MetricAccent label="Mağaza" value={primaryStoreId ?? 'Mağaza kapsamı yok'} />
+            <MetricAccent label="Durum" value="Yetki bekliyor" />
           </div>
         </section>
 
         {storeShellIntent ? (
           <section className="panel">
             <div className="key-grid">
-              <KeyValue label="Primary store scope" value={primaryStoreId ?? 'No explicit store'} />
-              <KeyValue
-                label="Resolved roles"
-                value={formatDisplayRoles(input.authSummary?.user.roleCodes)}
-              />
+              <KeyValue label="Mağaza kapsamı" value={primaryStoreId ?? 'Açık mağaza kapsamı yok'} />
+              <KeyValue label="Okuma durumu" value="KPI raporlama yetkisi bekliyor" />
             </div>
           </section>
         ) : null}
@@ -491,7 +541,7 @@ export function StoreKpiHighlightsPage(input: {
   if (configQuery.isError) {
     return (
       <ScreenState
-        title="KPI config unavailable"
+        title="KPI ayarları açılamadı"
         copy={getErrorMessage(configQuery.error)}
         tone="error"
       />
@@ -502,8 +552,8 @@ export function StoreKpiHighlightsPage(input: {
     if (liveKpiQuery.error instanceof ApiError && liveKpiQuery.error.status === 403) {
       return (
         <ScreenState
-          title="KPI highlights not available for this session"
-          copy="Bu oturum store KPI live read path'ine erisemiyor."
+          title="Bu oturumda mağaza KPI görünümü açılamıyor"
+          copy="Bu oturum canlı mağaza KPI verisini okuyamıyor."
           tone="error"
         />
       )
@@ -511,7 +561,7 @@ export function StoreKpiHighlightsPage(input: {
 
     return (
       <ScreenState
-        title="KPI rows unavailable"
+        title="KPI satırları açılamadı"
         copy={getErrorMessage(liveKpiQuery.error)}
         tone="error"
       />
@@ -541,7 +591,7 @@ export function StoreKpiHighlightsPage(input: {
   if (viewMode === 'closed' && closedKpiQuery.isError) {
     return (
       <ScreenState
-        title="KPI rows unavailable"
+        title="KPI satırları açılamadı"
         copy={getErrorMessage(closedKpiQuery.error)}
         tone="error"
       />
@@ -551,8 +601,8 @@ export function StoreKpiHighlightsPage(input: {
   const liveSummary = liveKpiQuery.data
   const activeStoreName =
     viewMode === 'live'
-      ? liveSummary?.store?.storeName ?? 'Unknown store'
-      : primaryStoreId ?? 'Unknown store'
+      ? liveSummary?.store?.storeName ?? 'Mağaza bilinmiyor'
+      : primaryStoreId ?? 'Mağaza bilinmiyor'
   const latestLivePeriodLabel =
     liveSummary?.period
       ? `${formatDate(liveSummary.period.periodStart)} - ${formatDate(liveSummary.period.periodEnd)} (Son aylık dönem)`
@@ -562,30 +612,29 @@ export function StoreKpiHighlightsPage(input: {
     <section className="page-stack">
       <section className="hero-panel store-hero-panel">
         <div>
-          <div className="eyebrow">Store KPI Highlights</div>
+          <div className="eyebrow">KPI görünümü</div>
           <h2 className="hero-title">
-            Store-scoped KPI signal shaped for action instead of admin drill-down.
+            Mağaza KPI'ları
           </h2>
           <p className="hero-copy">
-            Canlı dönem modu import edilen aylık veriyi gösterir. Kapanmış gün modu değişmeyen
-            günlük kapanış kaydını gösterir.
+            Mağaza skorunu, kritik KPI sinyallerini ve aksiyon önceliğini tek yerden takip et.
           </p>
         </div>
         <div className="hero-metrics">
           <MetricAccent label="Mod" value={viewMode === 'live' ? 'Canlı dönem' : 'Kapanmış gün'} />
-          <MetricAccent label="Store" value={activeStoreName} />
+          <MetricAccent label="Mağaza" value={activeStoreName} />
           <MetricAccent
-            label="Period"
+            label="Dönem"
             value={
               viewMode === 'live'
                 ? liveSummary?.period
                   ? `${formatDate(liveSummary.period.periodStart)} - ${formatDate(liveSummary.period.periodEnd)}`
-                  : 'No live period'
+                  : 'Canlı dönem yok'
                 : activeSnapshotRun?.snapshotDate ?? 'Kayıt yok'
             }
           />
           <MetricAccent
-            label="Grade"
+            label="Skor bandı"
             value={`${storeGrade.emoji} ${storeGrade.code}`}
           />
           <MetricAccent
@@ -595,7 +644,7 @@ export function StoreKpiHighlightsPage(input: {
                 ? viewMode === 'live'
                   ? `${formatMetric(averageAchievement)} puan`
                   : formatPercent(averageAchievement)
-                : 'No scoreable rows'
+                : 'Skorlanacak satır yok'
             }
           />
         </div>
@@ -640,7 +689,7 @@ export function StoreKpiHighlightsPage(input: {
                   key={`${period.periodType}:${period.periodStart}`}
                   value={period.periodStart}
                 >
-                  {`${formatDate(period.periodStart)} - ${formatDate(period.periodEnd)} · ${formatState(period.periodType)}`}
+                  {`${formatDate(period.periodStart)} - ${formatDate(period.periodEnd)} · ${formatPeriodTypeLabel(period.periodType)}`}
                 </option>
               ))}
             </select>
@@ -682,7 +731,7 @@ export function StoreKpiHighlightsPage(input: {
 
       <section className="metric-grid store-metric-grid">
         <MetricCard
-          title="KPI rows"
+          title="KPI satırları"
           value={rows.length}
           note="Bu mağaza yüzeyinde görünen satırlar"
           icon={<Target size={18} />}
@@ -691,21 +740,21 @@ export function StoreKpiHighlightsPage(input: {
         <MetricCard
           title="Skorlanan"
           value={matchedMetricCount}
-          note={`${totals.pendingNormalization} normalization bekliyor`}
+          note={`${totals.pendingNormalization} normalizasyon bekliyor`}
           icon={<TrendingUp size={18} />}
           tone={totals.pendingNormalization === 0 ? 'calm' : 'warning'}
         />
         <MetricCard
-          title="Needs attention"
+          title="İzlenecek KPI"
           value={needsAttention.length}
-          note={`${totals.atRisk} at risk · ${totals.offTrack} off track`}
+          note={`${totals.atRisk} riskli · ${totals.offTrack} geride`}
           icon={<ShieldAlert size={18} />}
           tone={needsAttention.length === 0 ? 'neutral' : 'warning'}
         />
         <MetricCard
-          title="Weighted score"
+          title="Mağaza skoru"
           value={Number((weightedScore.scoreValue * 100).toFixed(1))}
-          note={`${formatPerformanceGrade(storeGrade)} · ${weightedScore.coveredWeight}% coverage`}
+          note={`${formatPerformanceGrade(storeGrade)} · ${weightedScore.coveredWeight}% kapsandı`}
           icon={<TrendingUp size={18} />}
           tone={storeGrade.tone}
         />
@@ -731,26 +780,26 @@ export function StoreKpiHighlightsPage(input: {
                 : `${formatMetric(weightedScore.scoreValue * 100)} puan`
             }
           />
-          <KeyValue label="BM checklist" value={bmChecklistStatusLabel} />
+          <KeyValue label="BM checklist durumu" value={bmChecklistStatusLabel} />
           <KeyValue label="BM katkısı" value={bmChecklistContributionLabel} />
           <KeyValue
-            label="VM checklist"
+            label="VM checklist durumu"
             value={vmChecklistStatusLabel}
           />
           <KeyValue label="VM katkısı" value={vmChecklistContributionLabel} />
           <KeyValue
-            label="Configured blend"
+            label="Planlanan dağılım"
             value={
               closedScoreBreakdown
-                ? `Configured ${closedScoreBreakdown.configuredWeights.kpiPerformanceWeight}/${closedScoreBreakdown.configuredWeights.bmChecklistWeight}/${closedScoreBreakdown.configuredWeights.vmChecklistWeight}`
-                : 'Configured 90/5/5'
+                ? `Plan ${closedScoreBreakdown.configuredWeights.kpiPerformanceWeight}/${closedScoreBreakdown.configuredWeights.bmChecklistWeight}/${closedScoreBreakdown.configuredWeights.vmChecklistWeight}`
+                : 'Plan 90/5/5'
             }
           />
           <KeyValue
-            label="Effective blend"
+            label="Uygulanan dağılım"
             value={
               closedScoreBreakdown
-                ? `Effective ${closedScoreBreakdown.effectiveWeights.kpiPerformanceWeight}/${closedScoreBreakdown.effectiveWeights.bmChecklistWeight}/${closedScoreBreakdown.effectiveWeights.vmChecklistWeight}`
+                ? `Uygulanan ${closedScoreBreakdown.effectiveWeights.kpiPerformanceWeight}/${closedScoreBreakdown.effectiveWeights.bmChecklistWeight}/${closedScoreBreakdown.effectiveWeights.vmChecklistWeight}`
                 : 'Canlı ön izleme'
             }
           />
@@ -767,7 +816,7 @@ export function StoreKpiHighlightsPage(input: {
         ) : null}
       </section>
 
-      <section className="panel" aria-label="Store score source explanation">
+      <section className="panel" aria-label="Mağaza skor kaynak açıklaması">
         <div className="panel-heading">
           <div>
             <div className="eyebrow">Skor Kontratı</div>
@@ -802,32 +851,29 @@ export function StoreKpiHighlightsPage(input: {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Current Context</div>
-              <h3>KPI scope for this shell</h3>
+              <div className="eyebrow">Aktif kapsam</div>
+              <h3>Bu görünüm hangi mağazayı okuyor</h3>
             </div>
           </div>
           <div className="key-grid">
-            <KeyValue label="Primary store id" value={primaryStoreId ?? 'No explicit store scope'} />
-            <KeyValue label="Store name" value={activeStoreName} />
+            <KeyValue label="Mağaza kapsamı" value={primaryStoreId ?? 'Açık mağaza kapsamı yok'} />
+            <KeyValue label="Mağaza adı" value={activeStoreName} />
             <KeyValue
-              label="Source"
+              label="Veri görünümü"
               value={viewMode === 'live' ? 'Import edilen aylık canlı durum' : 'Günlük kapanış kaydı'}
             />
-            <KeyValue
-              label="Resolved roles"
-              value={formatDisplayRoles(input.authSummary?.user.roleCodes)}
-            />
+            <KeyValue label="Okuma kapsamı" value="Mağaza KPI görünümü" />
           </div>
         </article>
 
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Top Signal</div>
-              <h3>What stands out first</h3>
+              <div className="eyebrow">Öne çıkan sinyal</div>
+              <h3>İlk bakılacak KPI</h3>
             </div>
             <StatusPill tone={needsAttention.length === 0 ? 'calm' : 'warning'}>
-              {needsAttention.length === 0 ? 'Stable' : 'Attention'}
+              {needsAttention.length === 0 ? 'Dengeli' : 'İzle'}
             </StatusPill>
           </div>
           {topPerformer ? (
@@ -842,12 +888,12 @@ export function StoreKpiHighlightsPage(input: {
                     {formatAchievementValue(topPerformer)}
                   </StatusPill>
                 </div>
-                <p>Bu moddaki en guclu sinyal.</p>
+                <p>Bu moddaki en güçlü sinyal.</p>
               </div>
             </div>
           ) : (
             <EmptyState
-              title="Scoreable KPI highlight yok"
+              title="Skorlanacak KPI öne çıkmıyor"
               copy="Bu dönemde skora dahil olabilecek KPI satırı henüz hazır değil."
             />
           )}
@@ -888,10 +934,10 @@ export function StoreKpiHighlightsPage(input: {
         </section>
       ) : null}
 
-      <section className="panel" aria-label="Store score meaning">
+      <section className="panel" aria-label="Mağaza skor yorumu">
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Store skor yorumu</div>
+            <div className="eyebrow">Mağaza skor yorumu</div>
             <h3>{storeScoreMeaning.title}</h3>
           </div>
           <StatusPill tone={storeScoreMeaning.tone}>{storeGrade.code}</StatusPill>
@@ -909,27 +955,27 @@ export function StoreKpiHighlightsPage(input: {
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Weighted Score Summary</div>
-            <h3>How the current period contributes to the store score</h3>
+            <div className="eyebrow">Mağaza skor özeti</div>
+            <h3>Skor kırılımı</h3>
           </div>
           <StatusPill tone={weightedScore.missingWeight === 0 ? 'calm' : 'warning'}>
-            {weightedScore.missingWeight === 0 ? 'Complete' : `${weightedScore.missingWeight}% missing`}
+            {weightedScore.missingWeight === 0 ? 'Tam' : `${weightedScore.missingWeight}% eksik`}
           </StatusPill>
         </div>
         <div className="key-grid">
-          <KeyValue label="Score value" value={formatPercent(weightedScore.scoreValue)} />
-          <KeyValue label="Grade" value={formatPerformanceGrade(storeGrade)} />
-          <KeyValue label="Covered weight" value={`${weightedScore.coveredWeight}%`} />
-          <KeyValue label="Missing weight" value={`${weightedScore.missingWeight}%`} />
-          <KeyValue label="Profile" value={storeKpiScoreProfile?.title ?? 'No profile'} />
-          <KeyValue label="Config source" value="Published live config" />
+          <KeyValue label="Skor değeri" value={formatPercent(weightedScore.scoreValue)} />
+          <KeyValue label="Skor bandı" value={formatPerformanceGrade(storeGrade)} />
+          <KeyValue label="Kapsanan ağırlık" value={`${weightedScore.coveredWeight}%`} />
+          <KeyValue label="Eksik ağırlık" value={`${weightedScore.missingWeight}%`} />
+          <KeyValue label="Skor profili" value={formatScoreProfileTitle(storeKpiScoreProfile?.title)} />
+          <KeyValue label="Ayar kaynağı" value="Yayınlanmış canlı konfigürasyon" />
           <KeyValue
-            label="Matched metrics"
+            label="Eşleşen metrik"
             value={`${matchedMetricCount}/${weightedScore.contributions.length}`}
           />
           <KeyValue
-            label="Personnel weights"
-            value={personnelWeightsReady ? 'Weighted' : 'Needs weights'}
+            label="Personel ağırlığı"
+            value={personnelWeightsReady ? 'Hazır' : 'Ağırlık bekliyor'}
           />
         </div>
         <div className="stacked-table">
@@ -951,7 +997,7 @@ export function StoreKpiHighlightsPage(input: {
                   <div>
                     <strong>{item.metric.label}</strong>
                     <span className="queue-subtitle">
-                      {item.matchingRow ? item.matchingRow.kpiCode : 'Waiting for KPI row'}
+                      {item.matchingRow ? item.matchingRow.kpiCode : 'KPI satırı bekleniyor'}
                     </span>
                   </div>
                   <StatusPill
@@ -993,8 +1039,8 @@ export function StoreKpiHighlightsPage(input: {
                     value={formatPercent(item.weightedContribution)}
                   />
                   <KeyValue
-                    label="Behavior"
-                    value={formatState(item.metric.scoreBehavior)}
+                    label="Skor davranışı"
+                    value={formatScoreBehavior(item.metric.scoreBehavior)}
                   />
                   <KeyValue label="Kaynak tipi" value={sourceSemantics.label} />
                   <KeyValue label="Veri kaynağı" value={sourceSemantics.summary} />
@@ -1022,8 +1068,8 @@ export function StoreKpiHighlightsPage(input: {
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Ownership Matrix</div>
-            <h3>Which KPI belongs to whom</h3>
+            <div className="eyebrow">Sorumluluk matrisi</div>
+            <h3>KPI kimin aksiyon alanında</h3>
           </div>
         </div>
         <div className="stacked-table">
@@ -1035,23 +1081,23 @@ export function StoreKpiHighlightsPage(input: {
                   <span className="queue-subtitle">{metric.code}</span>
                 </div>
                 <StatusPill tone={metric.taskCandidate ? 'warning' : 'neutral'}>
-                  {metric.taskCandidate ? 'Task candidate' : 'Observe first'}
+                  {metric.taskCandidate ? 'Aksiyon adayı' : 'Önce izle'}
                 </StatusPill>
               </div>
               <div className="key-grid">
                 <KeyValue
-                  label="Operational owner"
+                  label="Operasyon sahibi"
                   value={formatState(formatKpiOwnerRole(metric.operationalOwner))}
                 />
                 <KeyValue
-                  label="Visible to"
+                  label="Görünür roller"
                   value={metric.visibleTo
                     .map((role) => formatState(formatKpiOwnerRole(role)))
                     .join(', ')}
                 />
                 <KeyValue
-                  label="Contributes to"
-                  value={metric.contributesTo.join(', ')}
+                  label="Katkı alanı"
+                  value={metric.contributesTo.map(formatContributionTarget).join(', ')}
                 />
               </div>
             </article>
@@ -1062,15 +1108,15 @@ export function StoreKpiHighlightsPage(input: {
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Priority Follow-Up</div>
-            <h3>Rows that should shape future store action</h3>
+            <div className="eyebrow">Öncelikli takip</div>
+            <h3>Aksiyona dönüşecek KPI satırları</h3>
           </div>
         </div>
 
         {needsAttention.length === 0 ? (
           <EmptyState
-            title="No at-risk or off-track KPI rows are visible."
-            copy="That can mean the visible KPI set is healthy, or the current period has not produced store-specific exception rows."
+            title="Riskli veya geride KPI görünmüyor."
+            copy="Bu görünümdeki KPI seti sağlıklı olabilir ya da dönem henüz mağaza özelinde istisna üretmemiş olabilir."
           />
         ) : (
           <div className="stacked-table">
@@ -1089,7 +1135,7 @@ export function StoreKpiHighlightsPage(input: {
                       <span className="queue-subtitle">{row.kpiCode}</span>
                     </div>
                     <StatusPill tone={row.statusBand === 'off_track' ? 'danger' : 'warning'}>
-                      {row.statusBand ?? 'unknown'}
+                      {formatStatusBand(row.statusBand)}
                     </StatusPill>
                   </div>
                   <div className="key-grid">
@@ -1100,7 +1146,7 @@ export function StoreKpiHighlightsPage(input: {
                       value={formatAchievementValue(row)}
                     />
                     <KeyValue
-                      label="Period"
+                      label="Dönem"
                       value={`${formatDate(row.periodStart)} - ${formatDate(row.periodEnd)}`}
                     />
                     <KeyValue label="Kaynak tipi" value={sourceSemantics.label} />
