@@ -12,6 +12,10 @@ Active operating record:
 
 - `docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md`
 
+Auth session edge guard:
+
+- `docs/plans/staging-auth-session-edge-evidence-guard-v1.md`
+
 Controlled staging/internal pilot: `Conditional Go`.
 
 Broad production rollout: `No-Go`.
