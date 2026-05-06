@@ -44,7 +44,7 @@ test('store my performance renders fallback data when optional support fields ar
 
   await page.goto('/store/me')
 
-  await expect(page.getByRole('heading', { name: /Store personnel icin/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Benim performansim/i })).toBeVisible()
   await expect(page.getByText('Pilot Employee')).toBeVisible()
   expect(pageErrors).toEqual([])
 })
