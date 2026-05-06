@@ -457,7 +457,7 @@ test('store incentives page switches to English copy and persists locale', async
 test('store competitions page renders scoped contribution details', async ({ page }) => {
   await page.goto('/store/competitions')
 
-  await expect(page.getByRole('heading', { name: /Store competitions/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Mağaza yarışmaları/i })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'April Region Challenge' })).toBeVisible()
   const readSummary = page.getByLabel('Store competition read summary')
   const contributionRows = page.getByLabel('Scoped store competition contributions')
@@ -471,6 +471,37 @@ test('store competitions page renders scoped contribution details', async ({ pag
   await expect(page.getByText('93.50')).toBeVisible()
   await expect(page.getByText('Outside Region Store')).toHaveCount(0)
   await expect(page.getByRole('button', { name: /Recalculate/ })).toHaveCount(0)
+})
+
+test('store competitions page switches chrome to English copy and persists locale', async ({
+  page,
+}) => {
+  await page.goto('/store/competitions')
+
+  await expect(page.getByRole('heading', { name: /Mağaza yarışmaları/i })).toBeVisible()
+  await expect(page.getByText('Görünür yarışmalar')).toBeVisible()
+  await expect(page.getByText('Sadece okuma')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'İncele' }).first()).toBeVisible()
+  await expect(page.getByText('Store competitions')).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText('Ã')
+  await expect(page.locator('body')).not.toContainText('Ä')
+  await expect(page.locator('body')).not.toContainText('Å')
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: /Store competitions/i })).toBeVisible()
+  await expect(page.getByText('Visible challenges')).toBeVisible()
+  await expect(page.getByText('Read only')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Review' }).first()).toBeVisible()
+  await expect(page.getByText('Team standing', { exact: true })).toBeVisible()
+  await expect(page.getByText('Contribution rows').first()).toBeVisible()
+  await expect(page.getByText('Mağaza yarışmaları')).toHaveCount(0)
+
+  await page.reload()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: /Store competitions/i })).toBeVisible()
 })
 
 test('store approvals page lets store managers submit seller code requests', async ({ page }) => {

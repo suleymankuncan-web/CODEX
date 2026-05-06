@@ -24,15 +24,14 @@ import {
 } from '../features/competitions/readability'
 import { useLocalization } from '../features/localization/useLocalization'
 import { formatDate, formatState, getErrorMessage } from '../lib/format'
-import type { AppLocale } from '../lib/i18n'
 
 function canUseStoreCompetitions(authSummary: AuthSessionSummary | null) {
   const roles = authSummary?.user.roleCodes ?? []
   return roles.includes('STORE_MANAGER') || roles.includes('STORE_PERSONNEL')
 }
 
-function formatScore(value: number | null, locale: AppLocale) {
-  return value === null ? (locale === 'tr' ? 'Kısmi' : 'Partial') : value.toFixed(2)
+function formatScore(value: number | null, partialLabel: string) {
+  return value === null ? partialLabel : value.toFixed(2)
 }
 
 function formatRank(rank: number | null, population: number) {
@@ -45,7 +44,7 @@ export function StoreCompetitionsPage(input: {
   const { locale, t } = useLocalization()
   const enabled = canUseStoreCompetitions(input.authSummary)
   const [selectedCompetitionId, setSelectedCompetitionId] = useState<string | null>(null)
-  const primaryStoreId = input.authSummary?.user.scope.storeIds[0] ?? 'No store scope'
+  const primaryStoreId = input.authSummary?.user.scope.storeIds[0] ?? t('storeCompetitions.noStoreScope')
   const competitionsQuery = useQuery({
     queryKey: ['store-competitions'],
     queryFn: listCompetitions,
@@ -76,8 +75,8 @@ export function StoreCompetitionsPage(input: {
   if (!enabled) {
     return (
       <ScreenState
-        title="Competition surface unavailable"
-        copy="This store route requires a store manager or store personnel session."
+        title={t('storeCompetitions.unavailableTitle')}
+        copy={t('storeCompetitions.unavailableCopy')}
         tone="error"
       />
     )
@@ -86,8 +85,8 @@ export function StoreCompetitionsPage(input: {
   if (competitionsQuery.isLoading) {
     return (
       <ScreenState
-        title="Store competitions are loading"
-        copy="The store shell is checking scoped competition standings."
+        title={t('storeCompetitions.loadingTitle')}
+        copy={t('storeCompetitions.loadingCopy')}
       />
     )
   }
@@ -95,7 +94,7 @@ export function StoreCompetitionsPage(input: {
   if (competitionsQuery.isError) {
     return (
       <ScreenState
-        title="Competition surface could not load"
+        title={t('storeCompetitions.errorTitle')}
         copy={getErrorMessage(competitionsQuery.error)}
         tone="error"
       />
@@ -108,34 +107,31 @@ export function StoreCompetitionsPage(input: {
     <section className="page-stack">
       <section className="hero-panel store-hero-panel">
         <div>
-          <div className="eyebrow">Store Competitions</div>
-          <h2 className="hero-title">Store competitions and scoped contribution scores.</h2>
-          <p className="hero-copy">
-            Store users see active competition standings and the contribution rows that belong to
-            their resolved read scope.
-          </p>
+          <div className="eyebrow">{t('storeCompetitions.heroEyebrow')}</div>
+          <h2 className="hero-title">{t('storeCompetitions.title')}</h2>
+          <p className="hero-copy">{t('storeCompetitions.heroCopy')}</p>
         </div>
         <div className="hero-metrics">
-          <MetricAccent label="Route" value="/store/competitions" />
-          <MetricAccent label="Store scope" value={primaryStoreId} />
-          <MetricAccent label="Competitions" value={String(competitions.length)} />
-          <MetricAccent label="Contributions" value={String(contributionCount)} />
+          <MetricAccent label={t('storeCompetitions.route')} value="/store/competitions" />
+          <MetricAccent label={t('storeCompetitions.storeScope')} value={primaryStoreId} />
+          <MetricAccent label={t('storeCompetitions.competitions')} value={String(competitions.length)} />
+          <MetricAccent label={t('storeCompetitions.contributions')} value={String(contributionCount)} />
         </div>
       </section>
 
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Competition List</div>
-            <h3>Visible challenges</h3>
+            <div className="eyebrow">{t('storeCompetitions.competitionList')}</div>
+            <h3>{t('storeCompetitions.visibleChallenges')}</h3>
           </div>
-          <StatusPill tone="neutral">Read only</StatusPill>
+          <StatusPill tone="neutral">{t('storeCompetitions.readOnly')}</StatusPill>
         </div>
 
         {competitions.length === 0 ? (
           <EmptyState
-            title="No visible competitions"
-            copy="Competitions appear here when at least one scoped store participates."
+            title={t('storeCompetitions.noVisibleTitle')}
+            copy={t('storeCompetitions.noVisibleCopy')}
           />
         ) : (
           <div className="stacked-table">
@@ -151,14 +147,14 @@ export function StoreCompetitionsPage(input: {
                     type="button"
                     onClick={() => setSelectedCompetitionId(competition.competitionId)}
                   >
-                    Review
+                    {t('storeCompetitions.review')}
                   </button>
                 </div>
                 <div className="key-grid">
-                  <KeyValue label="Type" value={formatState(competition.competitionType)} />
-                  <KeyValue label="State" value={formatState(competition.lifecycleState)} />
-                  <KeyValue label="Starts" value={formatDate(competition.startsOn)} />
-                  <KeyValue label="Ends" value={formatDate(competition.endsOn)} />
+                  <KeyValue label={t('storeCompetitions.type')} value={formatState(competition.competitionType)} />
+                  <KeyValue label={t('storeCompetitions.state')} value={formatState(competition.lifecycleState)} />
+                  <KeyValue label={t('storeCompetitions.starts')} value={formatDate(competition.startsOn, locale)} />
+                  <KeyValue label={t('storeCompetitions.ends')} value={formatDate(competition.endsOn, locale)} />
                 </div>
               </article>
             ))}
@@ -170,23 +166,26 @@ export function StoreCompetitionsPage(input: {
         <section className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Standing</div>
+              <div className="eyebrow">{t('storeCompetitions.standing')}</div>
               <h3>{selectedCompetition.competitionName}</h3>
             </div>
             <StatusPill tone={detailQuery.data?.warnings.length ? 'warning' : 'calm'}>
               {detailQuery.data?.warnings.length
-                ? `${detailQuery.data.warnings.length} warnings`
+                ? t('storeCompetitions.warningCount', { count: detailQuery.data.warnings.length })
                 : t('competition.clean')}
             </StatusPill>
           </div>
 
           {detailQuery.isLoading ? (
-            <ScreenState title="Standing is loading" copy="Scoped competition detail is loading." />
+            <ScreenState
+              title={t('storeCompetitions.standingLoadingTitle')}
+              copy={t('storeCompetitions.standingLoadingCopy')}
+            />
           ) : null}
 
           {detailQuery.isError ? (
             <ScreenState
-              title="Standing could not load"
+              title={t('storeCompetitions.standingErrorTitle')}
               copy={getErrorMessage(detailQuery.error)}
               tone="error"
             />
@@ -198,23 +197,23 @@ export function StoreCompetitionsPage(input: {
 
               <section className="metric-grid store-metric-grid">
                 <MetricCard
-                  title="Teams"
+                  title={t('storeCompetitions.teams')}
                   value={detailQuery.data.latestScores.length}
-                  note="Current team standing rows visible for this competition."
+                  note={t('storeCompetitions.teamsNote')}
                   icon={<Trophy size={18} />}
                   tone="accent"
                 />
                 <MetricCard
-                  title="Contribution rows"
+                  title={t('storeCompetitions.contributionRows')}
                   value={detailQuery.data.storeContributions.length}
-                  note="Store contribution rows inside the current read scope."
+                  note={t('storeCompetitions.contributionRowsNote')}
                   icon={<Medal size={18} />}
                   tone={detailQuery.data.storeContributions.length > 0 ? 'calm' : 'neutral'}
                 />
                 <MetricCard
-                  title="Warnings"
+                  title={t('storeCompetitions.warnings')}
                   value={detailQuery.data.warnings.length}
-                  note="Data quality warnings filtered by this session scope."
+                  note={t('storeCompetitions.warningsNote')}
                   icon={<CalendarDays size={18} />}
                   tone={detailQuery.data.warnings.length > 0 ? 'warning' : 'neutral'}
                 />
@@ -223,31 +222,34 @@ export function StoreCompetitionsPage(input: {
               <section className="stacked-table">
                 <div className="panel-heading">
                   <div>
-                    <div className="eyebrow">Team Standing</div>
-                    <h3>Latest scores</h3>
+                    <div className="eyebrow">{t('storeCompetitions.teamStanding')}</div>
+                    <h3>{t('storeCompetitions.latestScores')}</h3>
                   </div>
                 </div>
                 {detailQuery.data.latestScores.length === 0 ? (
-                  <EmptyState copy="No team score snapshot is available yet." />
+                  <EmptyState copy={t('storeCompetitions.noTeamSnapshot')} />
                 ) : (
                   detailQuery.data.latestScores.map((score) => (
                     <article className="stacked-row" key={`${score.teamId}-${score.snapshotDate}`}>
                       <div className="stacked-row-head">
                         <div>
                           <strong>{score.teamName}</strong>
-                          <p className="queue-subtitle">{formatDate(score.snapshotDate)}</p>
+                          <p className="queue-subtitle">{formatDate(score.snapshotDate, locale)}</p>
                         </div>
                         <StatusPill tone="accent">
                           {formatRank(score.rankPosition, score.rankingPopulation)}
                         </StatusPill>
                       </div>
                       <div className="key-grid">
-                        <KeyValue label="Score" value={formatScore(score.scoreValue, locale)} />
                         <KeyValue
-                          label="Coverage"
+                          label={t('storeCompetitions.score')}
+                          value={formatScore(score.scoreValue, t('storeCompetitions.partialScore'))}
+                        />
+                        <KeyValue
+                          label={t('storeCompetitions.coverage')}
                           value={`${score.validStoreCount}/${score.totalStoreCount}`}
                         />
-                        <KeyValue label="Team code" value={score.teamCode} />
+                        <KeyValue label={t('storeCompetitions.teamCode')} value={score.teamCode} />
                       </div>
                     </article>
                   ))
@@ -319,13 +321,16 @@ function ScopedContributionSection(input: { contributions: CompetitionStoreContr
                 </div>
                 <div className="action-cluster">
                   <StatusPill tone={contribution.hasDailyData ? 'calm' : 'warning'}>
-                    {formatScore(contribution.scoreValue, locale)}
+                    {formatScore(contribution.scoreValue, t('storeCompetitions.partialScore'))}
                   </StatusPill>
                   <StatusPill tone={readability.tone}>{readability.statusLabel}</StatusPill>
                 </div>
               </div>
               <div className="key-grid">
-                <KeyValue label={t('competition.snapshot')} value={formatDate(contribution.snapshotDate)} />
+                <KeyValue
+                  label={t('competition.snapshot')}
+                  value={formatDate(contribution.snapshotDate, locale)}
+                />
                 <KeyValue label={t('competition.contributionHealth')} value={readability.statusLabel} />
                 <KeyValue label={t('competition.coverage')} value={readability.coverageLabel} />
                 <KeyValue label={t('competition.missingKpis')} value={readability.missingLabel} />
@@ -350,7 +355,9 @@ function ScopedWarningsSection(input: { warnings: CompetitionWarning[] }) {
           <h3>{t('competition.scopedWarnings')}</h3>
         </div>
         <StatusPill tone={input.warnings.length > 0 ? 'warning' : 'calm'}>
-          {input.warnings.length > 0 ? `${input.warnings.length} warnings` : t('competition.clean')}
+          {input.warnings.length > 0
+            ? t('storeCompetitions.warningCount', { count: input.warnings.length })
+            : t('competition.clean')}
         </StatusPill>
       </div>
       {input.warnings.length === 0 ? (
@@ -370,8 +377,8 @@ function ScopedWarningsSection(input: { warnings: CompetitionWarning[] }) {
               </div>
               <div className="key-grid">
                 <KeyValue label={t('competition.warningCode')} value={formatState(warning.warningCode)} />
-                <KeyValue label={t('competition.periodStart')} value={formatDate(warning.periodStart)} />
-                <KeyValue label={t('competition.periodEnd')} value={formatDate(warning.periodEnd)} />
+                <KeyValue label={t('competition.periodStart')} value={formatDate(warning.periodStart, locale)} />
+                <KeyValue label={t('competition.periodEnd')} value={formatDate(warning.periodEnd, locale)} />
               </div>
             </article>
           )

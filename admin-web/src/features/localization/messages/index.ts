@@ -2,6 +2,7 @@ import { commonEn, commonTr } from './common'
 import { competitionEn, competitionTr } from './competition'
 import { storeApprovalsEn, storeApprovalsTr } from './store-approvals'
 import { storeChecklistsEn, storeChecklistsTr } from './store-checklists'
+import { storeCompetitionsEn, storeCompetitionsTr } from './store-competitions'
 import { storeFeedEn, storeFeedTr } from './store-feed'
 import { storeHomeEn, storeHomeTr } from './store-home'
 import { storeIncentivesEn, storeIncentivesTr } from './store-incentives'
@@ -15,6 +16,7 @@ const tr = {
   ...competitionTr,
   ...storeApprovalsTr,
   ...storeChecklistsTr,
+  ...storeCompetitionsTr,
   ...storeFeedTr,
   ...storeHomeTr,
   ...storeIncentivesTr,
@@ -29,6 +31,7 @@ const en: Record<keyof typeof tr, string> = {
   ...competitionEn,
   ...storeApprovalsEn,
   ...storeChecklistsEn,
+  ...storeCompetitionsEn,
   ...storeFeedEn,
   ...storeHomeEn,
   ...storeIncentivesEn,
