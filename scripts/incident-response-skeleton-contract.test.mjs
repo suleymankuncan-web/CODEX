@@ -64,10 +64,11 @@ test('incident response skeleton links failures to guarded commands and rollback
   }
 })
 
-test('incident response skeleton keeps JSON source work blocked without sample evidence', () => {
+test('incident response skeleton keeps JSON source integration suspended during incidents', () => {
   for (const phrase of [
     'Do not create a source-specific JSON adapter during an incident',
-    'real JSON sample payload',
+    'JSON source integration is suspended for the current pilot and Power BI/Excel operating path.',
+    'Power BI/Excel remains the active operating source.',
     'source mapping spec',
     'canonical raw KPI contract',
   ]) {

@@ -26,7 +26,7 @@ Primary app endpoints:
 
 As of 2026-05-06:
 
-- `origin/main` includes PR #25: `15b4d10a Merge pull request #25 from suleymankuncan-web/codex/staging-auth-session-edge-evidence-guard-v1`
+- `origin/main` includes PR #26: `82a99618 Merge pull request #26 from suleymankuncan-web/codex/suspend-json-source-plan-v1`
 - Auth refresh flash fix is merged and deployed.
 - Master-data validation/promotion test split is merged.
 - Pilot readiness evidence consolidation is merged.
@@ -221,5 +221,5 @@ Recommended local stance:
 Paste this into the next context window:
 
 ```text
-current-state.md oku; aktif workspace D:\store-ops-workspace. Eski OneDrive ve E:\ yollarini kullanma. Main son durum PR #25 staging auth session edge evidence guard'i iceriyor; current controlled staging/internal pilot karari docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-conditional-go-consolidation.md icinde Conditional Go, broad production rollout henuz No-Go. Controlled pilot operating checklist docs/plans/controlled-pilot-operating-checklist-v1.md icinde. Aktif pilot feedback log docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md icinde. Staging auth session edge guard docs/plans/staging-auth-session-edge-evidence-guard-v1.md icinde. Staging frontend https://staging.hr-axis.com, backend https://api-staging.hr-axis.com/api. UI redesign ertelendi. Power BI/Excel aktif operating source; JSON Source Suspension V1 ile JSON source integration is suspended for the current pilot and Power BI/Excel operating path. Siradaki yerel is intake gate ile secilmeli: staging IdP/seeded DB varsa guarded auth/action evidence, true baseline varsa master-data bootstrap pilot smoke, ikisi de yoksa sadece mevcut yuzeyi guclendiren kucuk bir local guard.
+current-state.md oku; aktif workspace D:\store-ops-workspace. Eski OneDrive ve E:\ yollarini kullanma. Main son durum PR #26 JSON Source Suspension V1'i iceriyor; current controlled staging/internal pilot karari docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-conditional-go-consolidation.md icinde Conditional Go, broad production rollout henuz No-Go. Controlled pilot operating checklist docs/plans/controlled-pilot-operating-checklist-v1.md icinde. Aktif pilot feedback log docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md icinde. Staging auth session edge guard docs/plans/staging-auth-session-edge-evidence-guard-v1.md icinde. Staging frontend https://staging.hr-axis.com, backend https://api-staging.hr-axis.com/api. UI redesign ertelendi. Power BI/Excel aktif operating source; JSON Source Suspension V1 ile JSON source integration is suspended for the current pilot and Power BI/Excel operating path. Siradaki yerel is intake gate ile secilmeli: staging IdP/seeded DB varsa guarded auth/action evidence, true baseline varsa master-data bootstrap pilot smoke, ikisi de yoksa sadece mevcut yuzeyi guclendiren kucuk bir local guard.
 ```

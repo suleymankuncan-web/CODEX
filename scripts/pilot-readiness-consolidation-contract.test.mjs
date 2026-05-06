@@ -57,7 +57,8 @@ test('controlled pilot consolidation preserves restrictions and no-secret rules'
 
   requireAll(evidence, [
     'Raw bearer tokens, Clerk cookies, passwords, provider subjects, full JWTs, database secrets, TC/national-id values, and private user data are not recorded.',
-    'JSON/API source adapter remains future-only until real payload/source evidence exists.',
+    'JSON source integration is suspended for the current pilot and Power BI/Excel operating path.',
+    'Do not plan or staff JSON implementation work while Power BI/Excel outputs remain the chosen operating source.',
     'Direct Supabase client access to `ops.*` remains blocked until RLS/policy work is designed.',
     'Current master data is an accepted temporary pilot baseline, not the final HR/master-data source of truth.',
     'March 2026 Power BI import is historical pilot validation data, not proof of future monthly operation.',

@@ -1116,7 +1116,7 @@ Interpretation:
   - `docs/plans/pilot-readiness-gate-v1.md` now defines pilot Go / Conditional Go / No-Go evidence
   - required evidence is separated into staging auth, true baseline master data, real KPI import smoke, pilot user/scope, and release/migration proof
   - existing runbooks are referenced instead of inventing a second pilot flow
-  - production rollout, JSON adapter work, broad UI redesign, score-math changes, and manual `ops.*` edits remain outside this gate
+  - production rollout, JSON adapter work while suspended, broad UI redesign, score-math changes, and manual `ops.*` edits remain outside this gate
 - Verification:
   - TDD red failed first because the pilot readiness gate document did not exist
   - targeted `node --test scripts\pilot-readiness-gate-contract.test.mjs` passed: 5/5
@@ -1176,7 +1176,7 @@ Interpretation:
   - invite readiness, route monitoring, feedback intake, pause/rollback triggers, and pilot exit decisions are explicit
   - controlled staging/internal pilot remains `Conditional Go`
   - broad production rollout remains `No-Go`
-  - JSON adapter work, direct Supabase `ops.*` access, raw token evidence, low-role global metric leaks, and unassigned-store actions remain blocked
+  - JSON source integration remains suspended while Power BI/Excel is the operating source; direct Supabase `ops.*` access, raw token evidence, low-role global metric leaks, and unassigned-store actions remain blocked
 - Verification:
   - targeted checklist guard passed: 4/4
   - root script guard passed: 152/152

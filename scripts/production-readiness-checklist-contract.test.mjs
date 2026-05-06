@@ -24,7 +24,7 @@ test('production readiness checklist keeps core operator sections', () => {
     '## Audit, Backup, And Retention Checklist',
     '## Smoke Evidence Checklist',
     '## Go / No-Go Criteria',
-    '## JSON Source Readiness Holding Area',
+    '## JSON Source Suspension Holding Area',
   ]) {
     requireText(heading)
   }
@@ -55,10 +55,12 @@ test('production readiness checklist requires guarded release and smoke evidence
   }
 })
 
-test('production readiness checklist keeps JSON source work blocked until payload evidence exists', () => {
+test('production readiness checklist records JSON source suspension while preserving future mapping prerequisites', () => {
   for (const phrase of [
+    'JSON source integration is suspended for the current pilot and Power BI/Excel operating path.',
+    'Power BI/Excel outputs remain the active operating source.',
+    'Do not plan or staff JSON implementation work while Power BI/Excel outputs remain the chosen operating source.',
     'JSON sample payload',
-    'source-specific adapter remains blocked',
     'canonical raw KPI contract',
     'idempotency key',
     'row hash',

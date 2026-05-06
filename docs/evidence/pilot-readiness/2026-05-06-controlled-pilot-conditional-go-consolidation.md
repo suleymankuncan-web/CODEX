@@ -28,7 +28,7 @@ Test-mode emails may appear only when they are non-personal controlled staging p
 | --- | --- | --- | --- |
 | real staging IdP evidence | Conditional Go | `docs/evidence/pilot-readiness/2026-05-06-role-smoke.md`, `docs/evidence/pilot-readiness/2026-05-06-live-protected-api-smoke.md`, `docs/evidence/pilot-readiness/2026-05-05-pilot-readiness-decision.md` | Clerk test-mode pilot accounts are accepted for controlled staging smoke. Logout and expired-token evidence remain follow-up before broad rollout. |
 | true store/personnel baseline evidence | Conditional Go | `docs/evidence/pilot-readiness/2026-05-06-master-data-power-bi-acceptance.md`, `docs/evidence/pilot-readiness/2026-05-05-staging-master-data-kpi-materialization.md` | Current master data is an accepted temporary pilot baseline, not the final HR/master-data source of truth. Known provisional/skipped personnel cleanup remains documented. |
-| real KPI import smoke evidence | Go | `docs/evidence/pilot-readiness/2026-05-06-master-data-power-bi-acceptance.md`, `docs/evidence/pilot-readiness/2026-05-05-staging-master-data-kpi-materialization.md` | March 2026 Power BI import is historical pilot validation data, not proof of future monthly operation. JSON/API source adapter remains future-only until real payload/source evidence exists. |
+| real KPI import smoke evidence | Go | `docs/evidence/pilot-readiness/2026-05-06-master-data-power-bi-acceptance.md`, `docs/evidence/pilot-readiness/2026-05-05-staging-master-data-kpi-materialization.md` | March 2026 Power BI import is historical pilot validation data, not proof of future monthly operation. JSON source integration is suspended for the current pilot and Power BI/Excel operating path. |
 | pilot user and scope evidence | Go | `docs/evidence/pilot-readiness/2026-05-06-role-smoke.md`, `docs/evidence/pilot-readiness/2026-05-06-ranking-privacy-smoke.md` | The four pilot personas are accepted for controlled staging validation. Real mailbox-backed onboarding is still required before inviting real store personnel users. |
 | release and migration evidence | Conditional Go | `docs/evidence/pilot-readiness/2026-05-06-ranking-privacy-smoke.md`, `docs/evidence/pilot-readiness/2026-05-06-master-data-power-bi-acceptance.md`, `docs/evidence/pilot-readiness/2026-05-06-live-protected-api-smoke.md` | `check:pilot-stabilization` evidence exists in the 6 May notes. Fresh DB smoke is required as manual preflight only when DB schema or migration files change. |
 
@@ -47,7 +47,8 @@ Test-mode emails may appear only when they are non-personal controlled staging p
 - Keep access through the backend API; Direct Supabase client access to `ops.*` remains blocked until RLS/policy work is designed.
 - Treat current master data as an accepted temporary pilot baseline.
 - Treat March 2026 Power BI import as historical validation evidence only.
-- Keep JSON/API source adapter remains future-only until real payload/source evidence exists.
+- JSON source integration is suspended for the current pilot and Power BI/Excel operating path.
+- Do not plan or staff JSON implementation work while Power BI/Excel outputs remain the chosen operating source.
 - Keep broad production rollout closed.
 - Keep UI/design polish as later work unless a concrete pilot blocker appears.
 
@@ -74,7 +75,7 @@ Stop or pause the pilot if direct Supabase client access is introduced without R
 - Monitor `/store`, `/store/me`, `/store/kpis`, `/store/approvals`, `/store/rankings`, `/admin/integrations`, `/admin/master-data`, and `/admin/targets`.
 - Add logout and expired-token evidence before broad rollout.
 - Repeat role/privacy smoke before inviting real mailbox-backed store personnel users.
-- Do not start JSON/source-specific adapter work until real payload/source evidence exists.
+- Do not start JSON/source-specific adapter work while Power BI/Excel outputs remain the chosen operating source.
 
 ## Outcome
 

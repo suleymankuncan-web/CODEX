@@ -113,8 +113,10 @@ Decision checks:
 JSON source holding rule:
 
 - Do not create a source-specific JSON adapter during an incident.
-- Wait for a real JSON sample payload or official field list.
-- First update the source mapping spec.
+- JSON source integration is suspended for the current pilot and Power BI/Excel operating path.
+- Power BI/Excel remains the active operating source.
+- Do not plan or staff JSON implementation work while Power BI/Excel outputs remain the chosen operating source.
+- If the product owner reopens JSON later, first update the source mapping spec.
 - Then map into the canonical raw KPI contract.
 
 ## Deploy And Release Incident Playbook
