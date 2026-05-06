@@ -12,15 +12,52 @@ import {
   StatusPill,
 } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
-import { formatDisplayRoles } from '../features/auth/display'
+import { getDisplayRoleCodes } from '../features/auth/display'
 import { getVisibleFeedPosts } from '../features/feed/api'
-import { formatFeedPostType } from '../features/feed/contracts'
+import type { FeedPostType } from '../features/feed/contracts'
+import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
+import { useLocalization } from '../features/localization/useLocalization'
 import { getErrorMessage } from '../lib/format'
+
+const feedPostTypeLabelKeys = {
+  announcement: 'storeHome.feedType.announcement',
+  challenge: 'storeHome.feedType.challenge',
+} as const satisfies Record<FeedPostType, TranslationKey>
+
+const roleLabelKeys = {
+  HR_ADMIN: 'storeHome.role.HR_ADMIN',
+  REGION_MANAGER: 'storeHome.role.REGION_MANAGER',
+  REPORT_VIEWER: 'storeHome.role.REPORT_VIEWER',
+  STORE_MANAGER: 'storeHome.role.STORE_MANAGER',
+  STORE_PERSONNEL: 'storeHome.role.STORE_PERSONNEL',
+  SUPER_ADMIN: 'storeHome.role.SUPER_ADMIN',
+  VISUAL_MERCHANDISER: 'storeHome.role.VISUAL_MERCHANDISER',
+} as const satisfies Partial<Record<string, TranslationKey>>
+
+function formatFeedType(postType: FeedPostType, t: TranslateFunction) {
+  return t(feedPostTypeLabelKeys[postType])
+}
+
+function formatRole(roleCode: string, t: TranslateFunction) {
+  const key = roleLabelKeys[roleCode as keyof typeof roleLabelKeys]
+  return key ? t(key) : roleCode.replaceAll('_', ' ').toLowerCase()
+}
+
+function formatHomeRoles(
+  roleCodes: readonly string[] | null | undefined,
+  t: TranslateFunction,
+) {
+  const displayRoles = getDisplayRoleCodes(roleCodes)
+  return displayRoles.length > 0
+    ? displayRoles.map((roleCode) => formatRole(roleCode, t)).join(', ')
+    : t('storeHome.noResolvedRoles')
+}
 
 export function StoreShellPreviewPage(input: {
   authSummary: AuthSessionSummary | null
   recommendedLanding: string
 }) {
+  const { t } = useLocalization()
   const user = input.authSummary?.user
   const feedQuery = useQuery({
     queryKey: ['visible-feed', 'home-preview'],
@@ -36,41 +73,36 @@ export function StoreShellPreviewPage(input: {
     <section className="page-stack">
       <section className="hero-panel store-hero-panel">
         <div>
-          <div className="eyebrow">Mağaza ana sayfa Faz 1</div>
-          <h2 className="hero-title">
-            Mağaza kullanıcısı için admin panelinden ayrılmış görev odaklı ana sayfa.
-          </h2>
-          <p className="hero-copy">
-            Checklist, KPI, onay ve prim işleri mağaza kapsamlı kullanıcıya rapor kalabalığı
-            olarak değil, odaklı günlük aksiyon olarak gelmeli.
-          </p>
+          <div className="eyebrow">{t('storeHome.heroEyebrow')}</div>
+          <h2 className="hero-title">{t('storeHome.heroTitle')}</h2>
+          <p className="hero-copy">{t('storeHome.heroCopy')}</p>
         </div>
         <div className="hero-metrics">
-          <MetricAccent label="Alan" value="/store" />
-          <MetricAccent label="Geçerli açılış" value={input.recommendedLanding} />
-          <MetricAccent label="Amaç" value="Görev odaklı" />
+          <MetricAccent label={t('storeHome.area')} value="/store" />
+          <MetricAccent label={t('storeHome.currentLanding')} value={input.recommendedLanding} />
+          <MetricAccent label={t('storeHome.purpose')} value={t('storeHome.taskFocused')} />
         </div>
       </section>
 
       <section className="metric-grid store-metric-grid">
         <MetricCard
-          title="Bugünkü işler"
+          title={t('storeHome.todayWork')}
           value={3}
-          note="Checklist takibi, onaylar ve primle ilgili gözden geçirmeler burada başlamalı."
+          note={t('storeHome.todayWorkNote')}
           icon={<ClipboardList size={18} />}
           tone="accent"
         />
         <MetricCard
-          title="Mağaza odağı"
+          title={t('storeHome.storeFocus')}
           value={1}
-          note="Mağaza kullanıcısı yalnızca kendi kapsamını ilgilendiren parçayı görmeli."
+          note={t('storeHome.storeFocusNote')}
           icon={<Store size={18} />}
           tone="calm"
         />
         <MetricCard
-          title="Ortak yetki"
+          title={t('storeHome.sharedAuthority')}
           value={1}
-          note="Yüzey ayrı; auth, kapsam ve audit temelleri ortak kalır."
+          note={t('storeHome.sharedAuthorityNote')}
           icon={<BadgeCheck size={18} />}
           tone="warning"
         />
@@ -78,7 +110,7 @@ export function StoreShellPreviewPage(input: {
 
       {feedQuery.isError ? (
         <ScreenState
-          title="Sabit duyurular açılamadı"
+          title={t('storeHome.feedErrorTitle')}
           copy={getErrorMessage(feedQuery.error)}
           tone="error"
         />
@@ -86,11 +118,11 @@ export function StoreShellPreviewPage(input: {
         <section className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Sabit duyurular</div>
-              <h3>Günlük işlerden önce şirket odağı</h3>
+              <div className="eyebrow">{t('storeHome.pinnedAnnouncements')}</div>
+              <h3>{t('storeHome.pinnedTitle')}</h3>
             </div>
             <Link className="control-button store-shell-link" to="/store/feed">
-              Tüm duyurular
+              {t('storeHome.allAnnouncements')}
             </Link>
           </div>
           <div className="stacked-table">
@@ -100,7 +132,7 @@ export function StoreShellPreviewPage(input: {
                   <strong>{post.title}</strong>
                   <div className="action-cluster">
                     <StatusPill tone={post.postType === 'challenge' ? 'accent' : 'neutral'}>
-                      {formatFeedPostType(post.postType)}
+                      {formatFeedType(post.postType, t)}
                     </StatusPill>
                     <Megaphone size={16} />
                   </div>
@@ -116,41 +148,33 @@ export function StoreShellPreviewPage(input: {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Mağaza ana sayfası</div>
-              <h3>Mağaza kullanıcısı önce nereye ulaşmalı</h3>
+              <div className="eyebrow">{t('storeHome.homeEyebrow')}</div>
+              <h3>{t('storeHome.homeTitle')}</h3>
             </div>
-            <StatusPill tone="accent">Faz 1</StatusPill>
+            <StatusPill tone="accent">{t('storeHome.phaseOne')}</StatusPill>
           </div>
 
           <div className="stacked-table">
             <div className="stacked-row">
               <div className="stacked-row-head">
-                <strong>Bugünkü işler</strong>
-                <StatusPill tone="warning">Öncelik</StatusPill>
+                <strong>{t('storeHome.todayWork')}</strong>
+                <StatusPill tone="warning">{t('storeHome.priority')}</StatusPill>
               </div>
-              <p>
-                Checklist tamamlamaları, bekleyen onaylar ve mağazada hemen aksiyon gerektiren işler.
-              </p>
+              <p>{t('storeHome.todayWorkCopy')}</p>
             </div>
             <div className="stacked-row">
               <div className="stacked-row-head">
-                <strong>KPI özetleri</strong>
-                <StatusPill tone="calm">Görünürlük</StatusPill>
+                <strong>{t('storeHome.kpiSummaries')}</strong>
+                <StatusPill tone="calm">{t('storeHome.visibility')}</StatusPill>
               </div>
-              <p>
-                Varsayılan giriş admin tipi rapor tabloları değil, mağaza kapsamlı özet kartlar ve
-                hızlı trendler olmalı.
-              </p>
+              <p>{t('storeHome.kpiSummariesCopy')}</p>
             </div>
             <div className="stacked-row">
               <div className="stacked-row-head">
-                <strong>Prim özeti</strong>
-                <StatusPill tone="accent">Sonra</StatusPill>
+                <strong>{t('storeHome.incentiveSummary')}</strong>
+                <StatusPill tone="accent">{t('storeHome.later')}</StatusPill>
               </div>
-              <p>
-                Gelecekte prim görünürlüğü mağaza alanında okunmalı; konfigürasyon ve inceleme
-                admin tarafında kalmalı.
-              </p>
+              <p>{t('storeHome.incentiveSummaryCopy')}</p>
             </div>
           </div>
         </article>
@@ -158,42 +182,51 @@ export function StoreShellPreviewPage(input: {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Çözülen oturum</div>
-              <h3>Mevcut kullanıcı mağaza alanına hangi kapsamla geliyor</h3>
+              <div className="eyebrow">{t('storeHome.resolvedSession')}</div>
+              <h3>{t('storeHome.resolvedTitle')}</h3>
             </div>
           </div>
 
           <div className="key-grid">
-            <KeyValue label="Kullanıcı id" value={user?.userId ?? 'Oturum çözülmedi'} />
-            <KeyValue label="Roller" value={formatDisplayRoles(user?.roleCodes, 'Çözülen rol yok')} />
-            <KeyValue label="Şirket idleri" value={user?.scope.companyIds.join(', ') || 'yok'} />
-            <KeyValue label="Mağaza idleri" value={user?.scope.storeIds.join(', ') || 'yok'} />
+            <KeyValue
+              label={t('storeHome.userId')}
+              value={user?.userId ?? t('storeHome.sessionNotResolved')}
+            />
+            <KeyValue label={t('storeHome.roles')} value={formatHomeRoles(user?.roleCodes, t)} />
+            <KeyValue
+              label={t('storeHome.companyIds')}
+              value={user?.scope.companyIds.join(', ') || t('storeHome.none')}
+            />
+            <KeyValue
+              label={t('storeHome.storeIds')}
+              value={user?.scope.storeIds.join(', ') || t('storeHome.none')}
+            />
           </div>
 
           <div className="action-cluster">
             <Link className="control-button store-shell-link" to="/store/tasks">
-              Mağaza işleri
+              {t('storeHome.storeTasks')}
             </Link>
             <Link className="control-button store-shell-link" to="/store/checklists">
-              Mağaza checklistleri
+              {t('storeHome.storeChecklists')}
             </Link>
             <Link className="control-button store-shell-link" to="/store/kpis">
-              Mağaza KPI özetleri
+              {t('storeHome.storeKpis')}
             </Link>
             <Link className="control-button store-shell-link" to="/store/me">
-              Benim performansim
+              {t('storeHome.myPerformance')}
             </Link>
             <Link className="control-button store-shell-link" to="/store/rankings">
-              Siralamalar
+              {t('storeHome.rankings')}
             </Link>
             <Link className="control-button store-shell-link" to="/store/approvals">
-              Mağaza onayları
+              {t('storeHome.storeApprovals')}
             </Link>
             <Link className="control-button store-shell-link" to="/store/incentives">
-              Mağaza primleri
+              {t('storeHome.storeIncentives')}
             </Link>
             <Link className="control-button store-shell-link" to="/admin/reports">
-              Admin raporları
+              {t('storeHome.adminReports')}
             </Link>
           </div>
         </article>
@@ -202,51 +235,51 @@ export function StoreShellPreviewPage(input: {
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Rota iskeleti</div>
-            <h3>Gelecek mağaza işleri nereye oturmalı</h3>
+            <div className="eyebrow">{t('storeHome.routeSkeleton')}</div>
+            <h3>{t('storeHome.routeSkeletonTitle')}</h3>
           </div>
         </div>
 
         <div className="store-route-grid">
           <RoutePreviewCard
             route="/store/tasks"
-            title="İş kuyruğu"
-            copy="Checklist takibi, bekleyen talepler ve gelecek mağaza aksiyonları için günlük kuyruk."
+            title={t('storeHome.workQueue')}
+            copy={t('storeHome.workQueueCopy')}
             icon={<ClipboardList size={18} />}
             tone="accent"
           />
           <RoutePreviewCard
             route="/store/checklists"
-            title="Checklists"
-            copy="Mağaza uygulama yüzeyi, tamamlama ilerlemesi ve checklist takibi."
+            title={t('storeHome.checklists')}
+            copy={t('storeHome.checklistsCopy')}
             icon={<BadgeCheck size={18} />}
             tone="calm"
           />
           <RoutePreviewCard
             route="/store/kpis"
-            title="KPI özetleri"
-            copy="Mağaza odaklı KPI kartları ve hızlı trend görünürlüğü."
+            title={t('storeHome.kpiSummaries')}
+            copy={t('storeHome.kpiCardsCopy')}
             icon={<Target size={18} />}
             tone="warning"
           />
           <RoutePreviewCard
             route="/store/me"
-            title="Benim performansim"
-            copy="Mağaza personeli için bireysel KPI, skor ve sıralama yüzeyi."
+            title={t('storeHome.myPerformance')}
+            copy={t('storeHome.myPerformanceCopy')}
             icon={<BadgeCheck size={18} />}
             tone="calm"
           />
           <RoutePreviewCard
             route="/store/rankings"
-            title="Siralamalar"
-            copy="Kapanmış gün snapshotlarından gelen personel ve mağaza sıralamaları."
+            title={t('storeHome.rankings')}
+            copy={t('storeHome.rankingsCopy')}
             icon={<Target size={18} />}
             tone="warning"
           />
           <RoutePreviewCard
             route="/store/approvals"
-            title="Onaylar"
-            copy="Mağaza seviyesindeki onay ve kabul işleri için gelecek kutusu."
+            title={t('storeHome.approvals')}
+            copy={t('storeHome.approvalsCopy')}
             icon={<ReceiptText size={18} />}
             tone="accent"
           />
@@ -257,33 +290,31 @@ export function StoreShellPreviewPage(input: {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Buraya ne ait</div>
-              <h3>Mağaza alanı sahipliği</h3>
+              <div className="eyebrow">{t('storeHome.belongsHere')}</div>
+              <h3>{t('storeHome.ownershipTitle')}</h3>
             </div>
           </div>
           <div className="stacked-table">
             <div className="stacked-row">
               <div className="stacked-row-head">
-                <strong>Checklist aksiyonu</strong>
+                <strong>{t('storeHome.checklistAction')}</strong>
                 <ArrowRight size={16} />
               </div>
-              <p>Mağaza ekibine bağlı uygulama, tamamlama ve takip işleri.</p>
+              <p>{t('storeHome.checklistActionCopy')}</p>
             </div>
             <div className="stacked-row">
               <div className="stacked-row-head">
-                <strong>Mağaza KPI görünürlüğü</strong>
+                <strong>{t('storeHome.kpiVisibility')}</strong>
                 <ArrowRight size={16} />
               </div>
-              <p>Platform yönetimi değil, aksiyon almayı kolaylaştıran hızlı sinyal ve trend görünürlüğü.</p>
+              <p>{t('storeHome.kpiVisibilityCopy')}</p>
             </div>
             <div className="stacked-row">
               <div className="stacked-row-head">
-                <strong>Prim ve onay tüketimi</strong>
+                <strong>{t('storeHome.incentiveApprovalConsumption')}</strong>
                 <ArrowRight size={16} />
               </div>
-              <p>
-                Mağaza kullanıcısı burada okur ve aksiyon alır; admin konfigürasyon ve inceleme başka yerde kalır.
-              </p>
+              <p>{t('storeHome.incentiveApprovalConsumptionCopy')}</p>
             </div>
           </div>
         </article>
@@ -291,13 +322,13 @@ export function StoreShellPreviewPage(input: {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Admin'de ne kalır</div>
-              <h3>Bunları `/store` içine taşırma</h3>
+              <div className="eyebrow">{t('storeHome.adminKeeps')}</div>
+              <h3>{t('storeHome.doNotMoveTitle')}</h3>
             </div>
           </div>
           <EmptyState
-            title="Yönetişim admin öncelikli kalır"
-            copy="Import operasyonları, snapshot orkestrasyonu, auth yönetimi, audit incelemesi ve mağazalar arası platform kontrolleri mağaza kullanıcılarını desteklese bile admin alanında kalmalı."
+            title={t('storeHome.governanceStaysTitle')}
+            copy={t('storeHome.governanceStaysCopy')}
           />
         </article>
       </section>

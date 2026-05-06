@@ -8,6 +8,7 @@ import { getAuthSession, type AuthSessionSummary } from './features/auth/api'
 import { formatDisplayRoles } from './features/auth/display'
 import { sanitizeAuthReturnPath } from './features/auth/return-path'
 import { LanguageToggle } from './features/localization/LanguageToggle'
+import { useLocalization } from './features/localization/useLocalization'
 import { useSession } from './features/session/session-context-value'
 import { describeSessionMode, getBearerSessionCacheKey } from './features/session/session-storage'
 import { SESSION_EXPIRED_EVENT, type SessionExpiredDetail, ApiError } from './lib/api'
@@ -471,6 +472,7 @@ function StoreShell(input: {
   authSummary: AuthSessionSummary | null
   firstAllowedPath: string
 }) {
+  const { t } = useLocalization()
   const checklistOnly = isVisualMerchandiserOnly(input.authSummary)
   const location = useLocation()
 
@@ -481,8 +483,8 @@ function StoreShell(input: {
   if (input.shellState.mode === 'verifying') {
     return (
       <ScreenState
-        title="Mağaza alanı hazırlanıyor"
-        copy="Uygulama mağaza kullanıcı yüzeyini açmadan önce mevcut oturumu doğruluyor."
+        title={t('storeHome.shellVerifyingTitle')}
+        copy={t('storeHome.shellVerifyingCopy')}
       />
     )
   }
@@ -490,8 +492,8 @@ function StoreShell(input: {
   if (input.shellState.mode === 'rejected') {
     return (
       <ScreenState
-        title="Mağaza alanı açılamadı"
-        copy={input.shellState.notice ?? input.shellState.errorCopy ?? 'Oturum mağaza ön izleme alanı için çözülemedi.'}
+        title={t('storeHome.shellRejectedTitle')}
+        copy={input.shellState.notice ?? input.shellState.errorCopy ?? t('storeHome.shellRejectedFallback')}
         tone="error"
       />
     )
@@ -501,29 +503,26 @@ function StoreShell(input: {
     <div className="store-shell">
       <header className="store-shell-header">
         <div>
-          <div className="eyebrow">Mağaza alanı</div>
-          <h1>Mağaza kapsamlı işler için görev odaklı ön izleme.</h1>
-          <p className="topbar-copy">
-            Checklist, KPI, onay ve prim akışlarının mağaza kullanıcısına ayrı ve sade bir yüzeyden
-            gelmesi gereken alan burası.
-          </p>
+          <div className="eyebrow">{t('storeHome.shellEyebrow')}</div>
+          <h1>{t('storeHome.shellTitle')}</h1>
+          <p className="topbar-copy">{t('storeHome.shellCopy')}</p>
         </div>
         <div className="topbar-cluster">
           <LanguageToggle />
-          <StatusPill tone="accent">Ön izleme</StatusPill>
+          <StatusPill tone="accent">{t('storeHome.preview')}</StatusPill>
           <NavLink to="/auth/login" className="control-button store-shell-link">
-            Gerçek giriş
+            {t('storeHome.realLogin')}
           </NavLink>
           {!checklistOnly ? (
             <>
           <NavLink to="/admin/reports" className="control-button store-shell-link">
-            Admin raporları
+            {t('storeHome.adminReports')}
           </NavLink>
           <NavLink to="/store/feed" className="control-button store-shell-link">
-            Duyurular
+            {t('storeHome.announcements')}
           </NavLink>
           <NavLink to="/store/competitions" className="control-button store-shell-link">
-            Yarışmalar
+            {t('storeHome.competitions')}
           </NavLink>
             </>
           ) : null}

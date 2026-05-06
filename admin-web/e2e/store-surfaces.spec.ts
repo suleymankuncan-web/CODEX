@@ -275,6 +275,33 @@ test('store shell exposes Turkish-first chrome and hides technical auth roles', 
   await expect(page.getByText('Task-first preview for store-scoped work.')).toHaveCount(0)
 })
 
+test('store home switches to English copy and persists locale', async ({ page }) => {
+  await page.goto('/store')
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: /Task-focused home page/i })).toBeVisible()
+  await expect(page.getByText('Store home Phase 1')).toBeVisible()
+  await expect(page.getByText('Pinned announcements')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'All announcements' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'My performance' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Rankings' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Store approvals' })).toBeVisible()
+  await expect(page.getByText('Mağaza alanı')).toHaveCount(0)
+  await expect(page.getByText('Mağaza ana sayfa Faz 1')).toHaveCount(0)
+  await expect(page.getByText('Benim performansim')).toHaveCount(0)
+  await expect(page.getByText('Siralamalar')).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText('Ãƒ')
+  await expect(page.locator('body')).not.toContainText('Ã„')
+  await expect(page.locator('body')).not.toContainText('Ã…')
+
+  await page.reload()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: /Task-focused home page/i })).toBeVisible()
+})
+
 test('store rankings page renders closed leaderboard and metric mini-ranks', async ({ page }) => {
   await page.goto('/store/rankings')
 
@@ -774,6 +801,10 @@ async function routeStoreSurfaceApi(page: Page) {
     await route.fulfill({ json: authSessionFixture })
   })
 
+  await page.route('**/api/feed?**', async (route) => {
+    await route.fulfill({ json: storeFeedFixture })
+  })
+
   await page.route('**/api/reports/kpi-config', async (route) => {
     await route.fulfill({ json: kpiConfigFixture })
   })
@@ -956,6 +987,41 @@ const workflowInboxFixture = {
     count: 1,
     total: 1,
     limit: 30,
+    offset: 0,
+  },
+}
+
+const storeFeedFixture = {
+  items: [
+    {
+      feedPostId: 'store-home-feed-1',
+      postType: 'announcement',
+      title: 'Pilot announcement',
+      body: 'Pilot store shell announcement.',
+      linkLabel: null,
+      linkUrl: null,
+      visibilityScopeType: 'store',
+      visibilityScopeIds: [demoStoreId],
+      isPinned: true,
+      publishStatus: 'published',
+      publishedAt: '2026-05-01T08:00:00.000Z',
+      startsAt: null,
+      endsAt: null,
+      metricCode: null,
+      metricLabel: null,
+      challengeStartsOn: null,
+      challengeEndsOn: null,
+      targetRoute: null,
+      createdByUserId: 'store-me-smoke-user',
+      updatedByUserId: 'store-me-smoke-user',
+      createdAt: '2026-05-01T08:00:00.000Z',
+      updatedAt: '2026-05-01T08:00:00.000Z',
+    },
+  ],
+  meta: {
+    count: 1,
+    total: 1,
+    limit: 50,
     offset: 0,
   },
 }
