@@ -83,7 +83,7 @@ Add a blocker section to the evidence file:
 
 If a blocker exists, replace `None found` with the exact route, persona, expected behavior, actual behavior, and screenshot filename.
 
-- [ ] **Step 4: Run the local pilot gate**
+- [x] **Step 4: Run the local pilot gate**
 
 Run:
 
@@ -93,7 +93,7 @@ npm.cmd run check:pilot-stabilization
 
 Expected: contract tests pass, frontend builds, and `pilot-smoke.spec.ts` plus `pilot-api-contracts.spec.ts` pass.
 
-- [ ] **Step 5: Commit evidence**
+- [x] **Step 5: Commit evidence**
 
 ```powershell
 git add docs/evidence/pilot-readiness/YYYY-MM-DD-role-smoke.md
@@ -109,7 +109,7 @@ git commit -m "Document pilot role smoke evidence"
 - Reference: `docs/architecture/pilot-route-role-matrix.md`
 - Verify: `npm.cmd --prefix backend/nestjs test -- ranking-access.policy.spec.ts --runInBand`
 
-- [ ] **Step 1: Confirm store-role visibility**
+- [x] **Step 1: Confirm store-role visibility**
 
 Record the store manager and store personnel observations:
 
@@ -133,7 +133,7 @@ Record the store manager and store personnel observations:
 - Demo rows absent:
 ```
 
-- [ ] **Step 2: Confirm privileged visibility**
+- [x] **Step 2: Confirm privileged visibility**
 
 Add admin/region observations:
 
@@ -147,7 +147,7 @@ Add admin/region observations:
 - Demo rows absent:
 ```
 
-- [ ] **Step 3: Run backend policy test**
+- [x] **Step 3: Run backend policy test**
 
 Run:
 
@@ -157,7 +157,7 @@ npm.cmd --prefix backend/nestjs test -- ranking-access.policy.spec.ts --runInBan
 
 Expected: all ranking access policy tests pass.
 
-- [ ] **Step 4: Commit evidence**
+- [x] **Step 4: Commit evidence**
 
 ```powershell
 git add docs/evidence/pilot-readiness/YYYY-MM-DD-ranking-privacy-smoke.md
@@ -173,7 +173,7 @@ git commit -m "Document ranking privacy smoke evidence"
 - Reference: `docs/plans/master-data-bootstrap-pilot-smoke-runbook.md`
 - Reference: `docs/plans/excel-kpi-import-operator-runbook.md`
 
-- [ ] **Step 1: Record accepted master data baseline**
+- [x] **Step 1: Record accepted master data baseline**
 
 Create:
 
@@ -188,7 +188,7 @@ Create:
 - Accepted for pilot: yes/no
 ```
 
-- [ ] **Step 2: Run Power BI upload with a known monthly file**
+- [x] **Step 2: Run Power BI upload with a known monthly file**
 
 Record:
 
@@ -204,7 +204,7 @@ Record:
 - Needs review rows:
 ```
 
-- [ ] **Step 3: Verify user-facing data**
+- [x] **Step 3: Verify user-facing data**
 
 Check:
 
@@ -217,7 +217,7 @@ Check:
 
 Expected: KPI values load without demo rows or unavailable states.
 
-- [ ] **Step 4: Commit evidence**
+- [x] **Step 4: Commit evidence**
 
 ```powershell
 git add docs/evidence/pilot-readiness/YYYY-MM-DD-master-data-power-bi-acceptance.md
@@ -233,7 +233,7 @@ git commit -m "Document master data and Power BI acceptance"
 - Optional create: `docs/evidence/pilot-readiness/YYYY-MM-DD-deploy-smoke.md`
 - Verify: `node --test scripts/pilot-release-smoke-checklist-contract.test.mjs`
 
-- [ ] **Step 1: Add exact deploy order**
+- [x] **Step 1: Add exact deploy order**
 
 Ensure the checklist includes:
 
@@ -246,7 +246,7 @@ Ensure the checklist includes:
 6. Record outcome.
 ```
 
-- [ ] **Step 2: Run checklist contract**
+- [x] **Step 2: Run checklist contract**
 
 Run:
 
@@ -256,7 +256,7 @@ node --test scripts/pilot-release-smoke-checklist-contract.test.mjs
 
 Expected: all checklist contract tests pass.
 
-- [ ] **Step 3: Commit checklist update**
+- [x] **Step 3: Commit checklist update**
 
 ```powershell
 git add docs/plans/pilot-release-smoke-checklist.md
