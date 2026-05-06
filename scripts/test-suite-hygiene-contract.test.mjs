@@ -177,7 +177,7 @@ const authScopeSplitFiles = [
   'backend/nestjs/test/integration/auth-action-scope.e2e-spec.ts',
 ]
 const authScopeReadAndSessionExpectedTestNames = [
-  'allows company-scoped access to store headcount gap',
+  'blocks company-scoped access to store headcount gap without explicit store scope',
   'allows store-scoped access to headcount gap for the assigned store',
   'rejects import batch creation when authenticated user lacks integration role',
   'rejects snapshot run creation when authenticated user lacks snapshot role',
@@ -209,7 +209,7 @@ const masterDataBootstrapServiceExpectedTestNames = [
   'stages personnel rows with normalized promotion metadata',
   'stages store rows with normalized promotion metadata',
   'validates personnel rows without promoting staged data',
-  'marks personnel rows with missing live-write metadata as invalid',
+  'allows personnel rows without national id evidence when required live-write metadata is present',
   'marks unknown store types as review rows for store bootstrap batches',
   'marks new store rows without region code as review rows',
   'marks new store rows with unknown region code as review rows',
