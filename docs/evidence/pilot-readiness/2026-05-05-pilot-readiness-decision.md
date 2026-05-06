@@ -34,6 +34,7 @@ The earlier No-Go blockers were real and useful. The critical missing evidence h
 - Ranking V1 live API smoke passed for low-role `STORE_MANAGER` mode.
 - Store-facing KPI highlights smoke passed for Bursa Marka Park.
 - Controlled Clerk test accounts for `SUPER_ADMIN`, `REGION_MANAGER`, `STORE_MANAGER`, and `STORE_PERSONNEL` passed manual staging role smoke on 6 Mayis 2026.
+- Post-merge protected staging API smoke passed for auth/session, migrations, integrations, master-data, targets, store performance, rankings, KPI highlights, approvals, and store employee lookup paths on 6 Mayis 2026.
 
 ## Evidence Map
 
@@ -63,6 +64,7 @@ Evidence:
 
 - `docs/evidence/pilot-readiness/2026-05-02-authenticated-clerk-store-smoke.md`
 - `docs/evidence/pilot-readiness/2026-05-03-staging-token-scope-live-smoke.md`
+- `docs/evidence/pilot-readiness/2026-05-06-live-protected-api-smoke.md`
 
 Status: `Conditional Go`
 
@@ -72,6 +74,7 @@ Closed:
 - Live `/auth/session` role/scope resolution.
 - Assigned-store positive action-scope smoke.
 - Unassigned-store negative `403` smoke.
+- Post-merge protected API read smoke across admin and store pilot paths.
 
 Still open:
 
