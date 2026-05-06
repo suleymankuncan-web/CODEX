@@ -140,7 +140,7 @@ const adminNavDefinitions: NavDefinition[] = [
 function App() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { session, isReady, expireSession } = useSession()
+  const { session, isReady, isProviderSessionHydrating, expireSession } = useSession()
   const [sessionNotice, setSessionNotice] = useState<string | null>(null)
   const bearerTokenReadiness = session.bearerToken.trim() ? 'token-present' : 'token-missing'
   const bearerSessionKey = getBearerSessionCacheKey(session.bearerToken)
@@ -198,6 +198,7 @@ function App() {
     authErrorDetail: sessionQuery.error,
     firstAllowedPath,
     sessionNotice: visibleSessionNotice,
+    providerSessionHydrating: isProviderSessionHydrating,
   })
 
   if (location.pathname.startsWith('/auth')) {
@@ -679,8 +680,18 @@ function getShellState(input: {
   authErrorDetail: unknown
   firstAllowedPath: string
   sessionNotice: string | null
+  providerSessionHydrating: boolean
 }): ShellState {
   const errorCopy = resolveAuthErrorCopy(input.authErrorDetail)
+
+  if (!input.isReady && input.providerSessionHydrating) {
+    return {
+      mode: 'verifying',
+      firstAllowedPath: input.firstAllowedPath,
+      notice: input.sessionNotice,
+      errorCopy,
+    }
+  }
 
   if (!input.isReady) {
     return {
