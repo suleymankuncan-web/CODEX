@@ -69,19 +69,19 @@ function formatMetricValue(input: number | null | undefined, code: string) {
 }
 
 function formatRank(rank: number | null, population: number) {
-  return rank !== null ? `${rank}/${population}` : 'Siralama yok'
+  return rank !== null ? `${rank}/${population}` : 'Sıralama yok'
 }
 
 function formatPeriod(source: RankingSummary['source'] | undefined) {
   if (!source?.periodStart || !source.periodEnd) {
-    return 'Son aylik veri'
+    return 'Son aylık veri'
   }
 
   return `${formatDate(source.periodStart)} - ${formatDate(source.periodEnd)}`
 }
 
 function formatMode(ranking?: RankingSummary) {
-  return ranking?.access.globalMode === 'full' ? 'Tum Turkiye' : 'Top 100'
+  return ranking?.access.globalMode === 'full' ? 'Tüm Türkiye' : 'Top 100'
 }
 
 function getRowTone(rank: number): 'accent' | 'calm' | 'neutral' {
@@ -152,8 +152,8 @@ export function StoreRankingsPage(input: {
   if (!enabled) {
     return (
       <ScreenState
-        title="Siralama yuzeyi kullanilamiyor"
-        copy="Bu yuzey magaza personeli, magaza muduru, bolge muduru veya super admin rolu gerektirir."
+        title="Sıralama yüzeyi kullanılamıyor"
+        copy="Bu yüzey mağaza personeli, mağaza müdürü, bölge müdürü veya super admin rolü gerektirir."
         tone="error"
       />
     )
@@ -162,8 +162,8 @@ export function StoreRankingsPage(input: {
   if (rankingsQuery.isLoading) {
     return (
       <ScreenState
-        title="Siralama hazirlaniyor"
-        copy="Aylik KPI ranking verisi okunuyor."
+        title="Sıralama hazırlanıyor"
+        copy="Aylık KPI sıralama verisi okunuyor."
       />
     )
   }
@@ -171,7 +171,7 @@ export function StoreRankingsPage(input: {
   if (rankingsQuery.isError) {
     return (
       <ScreenState
-        title="Siralama yuzeyi acilamadi"
+        title="Sıralama yüzeyi açılamadı"
         copy={getErrorMessage(rankingsQuery.error)}
         tone="error"
       />
@@ -181,8 +181,8 @@ export function StoreRankingsPage(input: {
   if (!ranking) {
     return (
       <ScreenState
-        title="Siralama verisi yok"
-        copy="Bu oturum icin ranking cevabi donmedi."
+        title="Sıralama verisi yok"
+        copy="Bu oturum için sıralama cevabı dönmedi."
         tone="error"
       />
     )
@@ -192,19 +192,19 @@ export function StoreRankingsPage(input: {
     <section className="page-stack">
       <section className="hero-panel store-hero-panel">
         <div>
-          <div className="eyebrow">Turkiye Siralamasi</div>
-          <h2 className="hero-title">Magaza ve personel rankingleri.</h2>
+          <div className="eyebrow">Türkiye sıralaması</div>
+          <h2 className="hero-title">Mağaza ve personel sıralamaları</h2>
           <p className="hero-copy">
             {isPrivileged
-              ? 'Tum Turkiye listesi filtreli ve detayli gorunur.'
-              : 'Global liste Top 100 ozet; kendi konumun ayrica gorunur.'}
+              ? 'Tüm Türkiye listesi filtreli ve detaylı görünür.'
+              : 'Global liste Top 100 özet; kendi konumun ayrıca görünür.'}
           </p>
         </div>
         <div className="hero-metrics">
           <MetricAccent label="Mod" value={formatMode(ranking)} />
-          <MetricAccent label="Donem" value={formatPeriod(ranking.source)} />
+          <MetricAccent label="Dönem" value={formatPeriod(ranking.source)} />
           <MetricAccent
-            label="Magaza"
+            label="Mağaza"
             value={`${ranking.storeLeaderboard.items.length}/${ranking.storeLeaderboard.meta.total}`}
           />
           <MetricAccent
@@ -213,7 +213,7 @@ export function StoreRankingsPage(input: {
           />
           <MetricAccent
             label="Detay"
-            value={ranking.access.canSeeGlobalDetails ? 'Acik' : 'Kapali'}
+            value={ranking.access.canSeeGlobalDetails ? 'Açık' : 'Kapalı'}
           />
         </div>
       </section>
@@ -247,21 +247,21 @@ export function StoreRankingsPage(input: {
 
       <section className="metric-grid store-metric-grid">
         <MetricCard
-          title="Magaza listesi"
+          title="Mağaza listesi"
           value={ranking.storeLeaderboard.items.length}
-          note={`${ranking.storeLeaderboard.meta.total} magaza populasyonu`}
+          note={`${ranking.storeLeaderboard.meta.total} mağaza popülasyonu`}
           icon={<Store size={18} />}
           tone="accent"
         />
         <MetricCard
           title="Personel listesi"
           value={ranking.personnelLeaderboard.items.length}
-          note={`${ranking.personnelLeaderboard.meta.total} personel populasyonu`}
+          note={`${ranking.personnelLeaderboard.meta.total} personel popülasyonu`}
           icon={<UsersRound size={18} />}
           tone="calm"
         />
         <MetricCard
-          title="Kendi magazam"
+          title="Kendi mağazam"
           value={ranking.storeLeaderboard.currentStore?.rank ?? 0}
           note={
             ranking.storeLeaderboard.currentStore
@@ -269,13 +269,13 @@ export function StoreRankingsPage(input: {
                   ranking.storeLeaderboard.currentStore.rank,
                   ranking.storeLeaderboard.currentStore.population,
                 )
-              : 'Magaza konumu yok'
+              : 'Mağaza konumu yok'
           }
           icon={<Medal size={18} />}
           tone={ranking.storeLeaderboard.currentStore ? 'neutral' : 'warning'}
         />
         <MetricCard
-          title="Kendi siram"
+          title="Kendi sıram"
           value={ranking.personnelLeaderboard.currentEmployee?.rank ?? 0}
           note={
             ranking.personnelLeaderboard.currentEmployee
@@ -301,14 +301,14 @@ export function StoreRankingsPage(input: {
       </section>
 
       {ranking.personnelLeaderboard.managedStorePersonnel.length ? (
-        <section className="panel" aria-label="Managed store personnel ranking details">
+        <section className="panel" aria-label="Mağaza personeli sıralama detayları">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Magazam</div>
-              <h3>Magaza personelleri</h3>
+              <div className="eyebrow">Mağazam</div>
+              <h3>Mağaza personelleri</h3>
             </div>
             <StatusPill tone="accent">
-              {`${ranking.personnelLeaderboard.managedStorePersonnel.length} kisi`}
+              {`${ranking.personnelLeaderboard.managedStorePersonnel.length} kişi`}
             </StatusPill>
           </div>
           <div className="stacked-table">
@@ -347,21 +347,21 @@ function RankingControls(input: {
       <div className="panel-heading">
         <div>
           <div className="eyebrow">Filtreler</div>
-          <h3>{input.isPrivileged ? 'Tum Turkiye' : 'Top 100 gorunumu'}</h3>
+          <h3>{input.isPrivileged ? 'Tüm Türkiye' : 'Top 100 görünümü'}</h3>
         </div>
         <StatusPill tone={input.isPrivileged ? 'accent' : 'neutral'}>
-          {input.isPrivileged ? 'Detay acik' : 'Ozet'}
+          {input.isPrivileged ? 'Detay açık' : 'Özet'}
         </StatusPill>
       </div>
-      <div className="toolbar-cluster" role="group" aria-label="Ranking filters">
+      <div className="toolbar-cluster" role="group" aria-label="Sıralama filtreleri">
         <label className="control-field">
-          <span>Donem</span>
+          <span>Dönem</span>
           <select
             value={input.periodStart}
             onChange={(event) => input.onPeriodStartChange(event.target.value)}
-            aria-label="Ranking donem secimi"
+            aria-label="Sıralama dönem seçimi"
           >
-            <option value="">Son aylik veri</option>
+            <option value="">Son aylık veri</option>
             {input.periodOptions.map((period) => (
               <option key={period.periodStart} value={period.periodStart}>
                 {`${formatDate(period.periodStart)} - ${formatDate(period.periodEnd)}`}
@@ -373,13 +373,13 @@ function RankingControls(input: {
         {input.isPrivileged ? (
           <>
             <label className="control-field">
-              <span>Bolge muduru</span>
+              <span>Bölge müdürü</span>
               <select
                 value={input.regionManagerUserId}
                 onChange={(event) => input.onRegionManagerChange(event.target.value)}
-                aria-label="Bolge muduru filtresi"
+                aria-label="Bölge müdürü filtresi"
               >
-                <option value="">Tum bolge mudurleri</option>
+                <option value="">Tüm bölge müdürleri</option>
                 {input.ranking.filters.regionManagers.map((option) => (
                   <option key={option.id} value={option.id}>
                     {option.label}
@@ -388,13 +388,13 @@ function RankingControls(input: {
               </select>
             </label>
             <label className="control-field">
-              <span>Bolge</span>
+              <span>Bölge</span>
               <select
                 value={input.regionId}
                 onChange={(event) => input.onRegionChange(event.target.value)}
-                aria-label="Bolge filtresi"
+                aria-label="Bölge filtresi"
               >
-                <option value="">Tum bolgeler</option>
+                <option value="">Tüm bölgeler</option>
                 {input.ranking.filters.regions.map((option) => (
                   <option key={option.id} value={option.id}>
                     {option.label}
@@ -403,13 +403,13 @@ function RankingControls(input: {
               </select>
             </label>
             <label className="control-field">
-              <span>Magaza</span>
+              <span>Mağaza</span>
               <select
                 value={input.storeId}
                 onChange={(event) => input.onStoreChange(event.target.value)}
-                aria-label="Magaza filtresi"
+                aria-label="Mağaza filtresi"
               >
-                <option value="">Tum magazalar</option>
+                <option value="">Tüm mağazalar</option>
                 {input.ranking.filters.stores.map((option) => (
                   <option key={option.id} value={option.id}>
                     {option.label}
@@ -422,7 +422,7 @@ function RankingControls(input: {
               <input
                 value={input.search}
                 onChange={(event) => input.onSearchChange(event.target.value)}
-                placeholder="Ad veya magaza"
+                placeholder="Ad veya mağaza"
                 aria-label="Personel arama"
               />
             </label>
@@ -434,7 +434,7 @@ function RankingControls(input: {
               type="button"
               onClick={() => input.onOffsetChange(Math.max(0, input.offset - input.limit))}
               disabled={input.offset === 0}
-              aria-label="Onceki ranking sayfasi"
+              aria-label="Önceki sıralama sayfası"
             >
               <ChevronLeft size={16} />
             </button>
@@ -443,7 +443,7 @@ function RankingControls(input: {
               type="button"
               onClick={() => input.onOffsetChange(input.offset + input.limit)}
               disabled={!input.hasNextPage}
-              aria-label="Sonraki ranking sayfasi"
+              aria-label="Sonraki sıralama sayfası"
             >
               <ChevronRight size={16} />
             </button>
@@ -459,16 +459,16 @@ function StoreLeaderboardPanel(input: { rows: StoreRankingRow[] }) {
     <article className="panel">
       <div className="panel-heading">
         <div>
-          <div className="eyebrow">Magazalar</div>
-          <h3>Turkiye magaza siralamasi</h3>
+          <div className="eyebrow">Mağazalar</div>
+          <h3>Türkiye mağaza sıralaması</h3>
         </div>
-        <StatusPill tone="accent">{`${input.rows.length} satir`}</StatusPill>
+        <StatusPill tone="accent">{`${input.rows.length} satır`}</StatusPill>
       </div>
       <div className="stacked-table">
         {input.rows.length ? (
           input.rows.map((row) => <StoreRankingCard key={row.storeId} row={row} />)
         ) : (
-          <EmptyState copy="Bu secim icin magaza siralamasi yok." />
+          <EmptyState copy="Bu seçim için mağaza sıralaması yok." />
         )}
       </div>
     </article>
@@ -481,15 +481,15 @@ function PersonnelLeaderboardPanel(input: { rows: PersonnelRankingRow[] }) {
       <div className="panel-heading">
         <div>
           <div className="eyebrow">Personeller</div>
-          <h3>Turkiye personel siralamasi</h3>
+          <h3>Türkiye personel sıralaması</h3>
         </div>
-        <StatusPill tone="calm">{`${input.rows.length} satir`}</StatusPill>
+        <StatusPill tone="calm">{`${input.rows.length} satır`}</StatusPill>
       </div>
       <div className="stacked-table">
         {input.rows.length ? (
           input.rows.map((row) => <PersonnelRankingCard key={row.employeeId} row={row} />)
         ) : (
-          <EmptyState copy="Bu secim icin personel siralamasi yok." />
+          <EmptyState copy="Bu seçim için personel sıralaması yok." />
         )}
       </div>
     </article>
@@ -502,7 +502,7 @@ function CurrentStorePanel(input: { row: StoreRankingRow | null }) {
       <div className="panel-heading">
         <div>
           <div className="eyebrow">Konum</div>
-          <h3>Kendi magaza sirasi</h3>
+          <h3>Kendi mağaza sırası</h3>
         </div>
         {input.row ? (
           <StatusPill tone={getRowTone(input.row.rank)}>
@@ -513,7 +513,7 @@ function CurrentStorePanel(input: { row: StoreRankingRow | null }) {
       {input.row ? (
         <StoreRankingCard row={input.row} forceDetail={input.row.visibility === 'detail'} />
       ) : (
-        <EmptyState copy="Bu oturum icin magaza sirasi bulunamadi." />
+        <EmptyState copy="Bu oturum için mağaza sırası bulunamadı." />
       )}
     </article>
   )
@@ -525,7 +525,7 @@ function CurrentEmployeePanel(input: { row: PersonnelRankingRow | null }) {
       <div className="panel-heading">
         <div>
           <div className="eyebrow">Konum</div>
-          <h3>Kendi personel sirasi</h3>
+          <h3>Kendi personel sırası</h3>
         </div>
         {input.row ? (
           <StatusPill tone={getRowTone(input.row.rank)}>
@@ -536,7 +536,7 @@ function CurrentEmployeePanel(input: { row: PersonnelRankingRow | null }) {
       {input.row ? (
         <PersonnelRankingCard row={input.row} forceDetail={input.row.visibility === 'detail'} />
       ) : (
-        <EmptyState copy="Bu oturum icin personel sirasi bulunamadi." />
+        <EmptyState copy="Bu oturum için personel sırası bulunamadı." />
       )}
     </article>
   )
@@ -552,7 +552,7 @@ function StoreRankingCard(input: { row: StoreRankingRow; forceDetail?: boolean }
         <div>
           <strong>{row.storeName ?? row.storeId}</strong>
           <span className="queue-subtitle">
-            {[row.regionName, row.regionManagerName].filter(Boolean).join(' / ') || 'Bolge yok'}
+            {[row.regionName, row.regionManagerName].filter(Boolean).join(' / ') || 'Bölge yok'}
           </span>
         </div>
         <StatusPill tone={getRowTone(row.rank)}>
@@ -561,8 +561,8 @@ function StoreRankingCard(input: { row: StoreRankingRow; forceDetail?: boolean }
       </div>
       <div className="key-grid">
         <KeyValue label="Skor" value={formatNumber(row.scoreValue)} />
-        <KeyValue label="Gorunum" value={row.visibility === 'detail' ? 'Detay' : 'Ozet'} />
-        <KeyValue label="Magaza" value={row.storeName ?? row.storeId} />
+        <KeyValue label="Görünüm" value={row.visibility === 'detail' ? 'Detay' : 'Özet'} />
+        <KeyValue label="Mağaza" value={row.storeName ?? row.storeId} />
       </div>
       {showMetrics ? <MetricDetails metrics={row.metrics ?? []} /> : null}
     </article>
@@ -579,7 +579,7 @@ function PersonnelRankingCard(input: { row: PersonnelRankingRow; forceDetail?: b
         <div>
           <strong>{row.displayName}</strong>
           <span className="queue-subtitle">
-            {[row.storeName, row.regionName].filter(Boolean).join(' / ') || 'Magaza yok'}
+            {[row.storeName, row.regionName].filter(Boolean).join(' / ') || 'Mağaza yok'}
           </span>
         </div>
         <StatusPill tone={getRowTone(row.rank)}>
@@ -588,8 +588,8 @@ function PersonnelRankingCard(input: { row: PersonnelRankingRow; forceDetail?: b
       </div>
       <div className="key-grid">
         <KeyValue label="Skor" value={formatNumber(row.scoreValue)} />
-        <KeyValue label="Magaza sirasi" value={formatRank(row.storeRank, row.storePopulation)} />
-        <KeyValue label="Gorunum" value={row.visibility === 'detail' ? 'Detay' : 'Ozet'} />
+        <KeyValue label="Mağaza sırası" value={formatRank(row.storeRank, row.storePopulation)} />
+        <KeyValue label="Görünüm" value={row.visibility === 'detail' ? 'Detay' : 'Özet'} />
       </div>
       {showMetrics ? <MetricDetails metrics={row.metrics ?? []} /> : null}
     </article>
@@ -602,7 +602,7 @@ function MetricDetails(input: { metrics: RankingMetricValue[] }) {
   }
 
   return (
-    <div className="key-grid" aria-label="Ranking metric details">
+    <div className="key-grid" aria-label="Sıralama metrik detayları">
       {input.metrics.map((metric) => (
         <KeyValue
           key={metric.code}
@@ -616,7 +616,7 @@ function MetricDetails(input: { metrics: RankingMetricValue[] }) {
               ? `Benchmark ${formatMetricValue(metric.benchmarkValue, metric.code)}`
               : null,
             metric.contributionValue !== undefined && metric.contributionValue !== null
-              ? `Katki ${formatNumber(metric.contributionValue)}`
+              ? `Katkı ${formatNumber(metric.contributionValue)}`
               : null,
           ]
             .filter(Boolean)
