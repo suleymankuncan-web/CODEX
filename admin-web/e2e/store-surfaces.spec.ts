@@ -427,6 +427,33 @@ test('store tasks page switches to English copy and persists locale', async ({ p
   await expect(page.getByRole('heading', { name: /Action-required work/i })).toBeVisible()
 })
 
+test('store incentives page switches to English copy and persists locale', async ({ page }) => {
+  await page.goto('/store/incentives')
+
+  await expect(page.getByRole('heading', { name: /Mağaza prim görünürlüğü/i })).toBeVisible()
+  await expect(page.getByText('Prim görünümü')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Canlı ödeme' })).toBeVisible()
+  await expect(page.getByText('Store Incentives')).toHaveCount(0)
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: /Store incentive visibility/i })).toBeVisible()
+  await expect(page.getByText('Incentive view')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Live payouts' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Store tasks' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Store approvals' })).toBeVisible()
+  await expect(page.getByText('Mağaza prim görünürlüğü')).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText('Ãƒ')
+  await expect(page.locator('body')).not.toContainText('Ã„')
+  await expect(page.locator('body')).not.toContainText('Ã…')
+
+  await page.reload()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: /Store incentive visibility/i })).toBeVisible()
+})
+
 test('store competitions page renders scoped contribution details', async ({ page }) => {
   await page.goto('/store/competitions')
 
