@@ -59,7 +59,7 @@ test('core store routes open without unavailable states', async ({ page }) => {
     },
     {
       path: '/store/me',
-      heading: page.getByRole('heading', { name: /Store personnel icin/i }),
+      heading: page.getByRole('heading', { name: /Benim performansim/i }),
     },
     {
       path: '/store/rankings',

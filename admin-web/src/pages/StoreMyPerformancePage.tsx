@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { Medal, Target, Trophy, UserRound } from 'lucide-react'
 import {
-  EmptyState,
   KeyValue,
   MetricAccent,
   MetricCard,
@@ -10,12 +9,10 @@ import {
   StatusPill,
 } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
-import { formatDisplayRoles } from '../features/auth/display'
 import { getKpiConfig, getMyPerformance, getReportingSnapshotRuns } from '../features/reports/api'
 import { formatSnapshotOptionLabel } from '../features/reports/snapshot-labels'
 import {
   describeBenchmarkCap,
-  formatPerformanceGrade,
   resolvePerformanceGrade,
   resolvePerformanceScoreMeaning,
 } from '../features/kpi/grading'
@@ -23,7 +20,7 @@ import {
   resolveKpiScoreReference,
   resolveKpiSourceSemantics,
 } from '../features/kpi/source-semantics'
-import { formatDate, formatState, getErrorMessage } from '../lib/format'
+import { formatDate, getErrorMessage } from '../lib/format'
 
 function canUseSelfPerformance(authSummary: AuthSessionSummary | null) {
   const roles = authSummary?.user.roleCodes ?? []
@@ -76,7 +73,7 @@ function formatAchievementValue(metric: {
   }
 
   if (metric.achievementRate === null || metric.achievementRate === undefined) {
-    return metric.actualValue !== null ? 'Pending normalization' : 'Veri yok'
+    return metric.actualValue !== null ? 'Normalizasyon bekliyor' : 'Veri yok'
   }
 
   if (metric.targetValue !== null && metric.targetValue !== undefined) {
@@ -84,6 +81,90 @@ function formatAchievementValue(metric: {
   }
 
   return `${formatMetric(metric.achievementRate)} puan`
+}
+
+function formatSourceMode(mode: string) {
+  return mode === 'closed' ? 'Kapanmis gun' : 'Canli donem'
+}
+
+function formatPeriodLabel(input: {
+  period?: { periodStart: string; periodEnd: string } | null
+  snapshotDate?: string | null
+}) {
+  if (input.period) {
+    return `${formatDate(input.period.periodStart)} - ${formatDate(input.period.periodEnd)}`
+  }
+
+  if (input.snapshotDate) {
+    return formatDate(input.snapshotDate)
+  }
+
+  return 'Guncel donem'
+}
+
+function formatKpiSourceLabel(input: { kind: string; label: string }) {
+  switch (input.kind) {
+    case 'imported':
+      return 'Operasyon verisi'
+    case 'pending_normalization':
+      return 'Normalizasyon bekliyor'
+    case 'missing':
+      return 'Veri yok'
+    case 'checklist_fed':
+      return 'Checklist katkisi'
+    default:
+      return input.label
+  }
+}
+
+function formatKpiSourceSummary(input: { kind: string; summary: string }) {
+  switch (input.kind) {
+    case 'imported':
+      return 'Satis veya operasyon kaynagindan gelen KPI degeri.'
+    case 'pending_normalization':
+      return 'Deger geldi, skor hesabi icin normalizasyon bekliyor.'
+    case 'missing':
+      return 'Bu metrik icin henuz kullanilabilir veri yok.'
+    default:
+      return input.summary
+  }
+}
+
+function formatStorePerformanceGrade(grade: ReturnType<typeof resolvePerformanceGrade>) {
+  const labelByCode = {
+    A: 'Mukemmel',
+    B: 'Iyi',
+    C: 'Takip gerekli',
+    D: 'Kritik',
+  } as const
+
+  return `${grade.emoji} ${grade.code} - ${labelByCode[grade.code] ?? grade.label}`
+}
+
+function formatMetricScoreStatusLabel(status: string | null | undefined, weightPercent: number) {
+  switch (status) {
+    case 'scored':
+      return `${weightPercent}%`
+    case 'pending_normalization':
+      return 'Bekliyor'
+    case 'missing_reference':
+      return 'Referans eksik'
+    default:
+      return 'Eksik'
+  }
+}
+
+function formatMetricScoreStatusText(status: string | null | undefined) {
+  switch (status) {
+    case 'scored':
+      return 'Skorlandi'
+    case 'pending_normalization':
+      return 'Normalizasyon bekliyor'
+    case 'missing_reference':
+      return 'Referans eksik'
+    default:
+      return 'Eksik'
+  }
 }
 
 export function StoreMyPerformancePage(input: {
@@ -137,7 +218,6 @@ export function StoreMyPerformancePage(input: {
   })
 
   const performance = performanceQuery.data
-  const user = input.authSummary?.user
   const availableLivePeriods = useMemo(
     () => (performance?.availablePeriods ?? []).filter((period) => period.periodType === 'monthly'),
     [performance?.availablePeriods],
@@ -157,7 +237,7 @@ export function StoreMyPerformancePage(input: {
     return (
       <ScreenState
         title="Benim performansim hazirlaniyor"
-        copy="Personel score profile ve self-service yuzeyi yukleniyor."
+        copy="Personel performans profili yukleniyor."
       />
     )
   }
@@ -204,27 +284,39 @@ export function StoreMyPerformancePage(input: {
     totalMetrics: performance.score.totalMetrics,
     isPartial: partial.isPartial,
   })
+  const periodLabel = formatPeriodLabel({
+    period: performance.period,
+    snapshotDate: performance.source.snapshotDate,
+  })
 
   return (
     <section className="page-stack">
       <section className="hero-panel store-hero-panel">
         <div>
           <div className="eyebrow">Benim Performansim</div>
-          <h2 className="hero-title">Store personnel icin ayri self-performance yuzeyi.</h2>
+          <h2 className="hero-title">Benim performansim</h2>
           <p className="hero-copy">
-            Bu yuzey manager operasyonlarindan ayri yasar. Burada kullanici kendi KPI,
-            score, ranking ve donem secimlerini tek yerden takip eder.
+            Kendi KPI skorunu, siralamani ve donem durumunu tek yerden takip et.
           </p>
         </div>
         <div className="hero-metrics">
-          <MetricAccent label="Route" value="/store/me" />
-          <MetricAccent label="Persona" value="STORE_PERSONNEL" />
-          <MetricAccent label="Source" value={performance.source.mode === 'closed' ? 'Closed day' : 'Live'} />
-          <MetricAccent label="Grade" value={`${performanceGrade.emoji} ${performanceGrade.code}`} />
+          <MetricAccent label="Donem" value={periodLabel} />
+          <MetricAccent label="Magaza" value={performance.employee.storeName ?? 'Magaza yok'} />
+          <MetricAccent label="Veri" value={partial.isPartial ? 'Eksik veri' : 'Tam'} />
+          <MetricAccent label="Skor" value={`${performanceGrade.emoji} ${performanceGrade.code}`} />
         </div>
       </section>
 
       <section className="panel">
+        <div className="panel-heading">
+          <div>
+            <div className="eyebrow">Performans ozeti</div>
+            <h3>Donem performansi</h3>
+          </div>
+          <StatusPill tone={partial.isPartial ? 'warning' : 'calm'}>
+            {partial.isPartial ? 'Eksik veri' : 'Tam veri'}
+          </StatusPill>
+        </div>
         <div className="toolbar-cluster">
           <button
             className="control-button"
@@ -281,14 +373,13 @@ export function StoreMyPerformancePage(input: {
         </div>
         <div className="key-grid">
           <KeyValue
-            label="Source mode"
-            value={performance.source.mode === 'closed' ? 'Closed daily snapshot' : 'Live current state'}
+            label="Gorunum"
+            value={formatSourceMode(performance.source.mode)}
           />
-          <KeyValue label="Snapshot run" value={performance.source.snapshotRunId ?? 'Live mode'} />
-          <KeyValue label="Snapshot date" value={performance.source.snapshotDate ?? 'Current'} />
-          <KeyValue label="Data completeness" value={partial.isPartial ? 'Partial' : 'Complete'} />
+          <KeyValue label="Donem" value={periodLabel} />
+          <KeyValue label="Veri durumu" value={partial.isPartial ? 'Eksik veri var' : 'Tam veri'} />
           <KeyValue
-            label="Target girisi"
+            label="Hedef girisi"
             value={
               supporting.targetEntryMode === 'manager_assignment'
                 ? 'Magaza muduru girer, bolge muduru onaylar'
@@ -305,7 +396,7 @@ export function StoreMyPerformancePage(input: {
               <div className="eyebrow">Veri Durumu</div>
               <h3>Bu score su an kismi veriyle hesaplaniyor</h3>
             </div>
-            <StatusPill tone="warning">Partial</StatusPill>
+            <StatusPill tone="warning">Eksik veri</StatusPill>
           </div>
           <p className="queue-subtitle">
             Eksik metrikler: {partial.missingMetricLabels.join(', ') || 'Henuz metrik detayi yok'}
@@ -326,7 +417,7 @@ export function StoreMyPerformancePage(input: {
 
       <section className="metric-grid store-metric-grid">
         <MetricCard
-          title="Net sales"
+          title="Net satis"
           value={
             supporting.netSalesValue !== null
               ? Number(supporting.netSalesValue.toFixed(0))
@@ -341,14 +432,14 @@ export function StoreMyPerformancePage(input: {
           tone="accent"
         />
         <MetricCard
-          title="Weighted score"
+          title="Performans skoru"
           value={Number(performance.score.value.toFixed(1))}
-          note={`${formatPerformanceGrade(performanceGrade)} - ${performance.score.matchedMetrics}/${performance.score.totalMetrics} metrik eslesti.`}
+          note={`${formatStorePerformanceGrade(performanceGrade)} - ${performance.score.matchedMetrics}/${performance.score.totalMetrics} metrik eslesti.`}
           icon={<Target size={18} />}
           tone={performanceGrade.tone}
         />
         <MetricCard
-          title="Turkey ranking"
+          title="Turkiye siram"
           value={performance.rankings.turkeyRank ?? 0}
           note={
             performance.rankings.turkeyRank
@@ -359,7 +450,7 @@ export function StoreMyPerformancePage(input: {
           tone="neutral"
         />
         <MetricCard
-          title="Store ranking"
+          title="Magaza ici siram"
           value={performance.rankings.storeRank ?? 0}
           note={
             performance.rankings.storeRank
@@ -370,7 +461,7 @@ export function StoreMyPerformancePage(input: {
           tone="neutral"
         />
         <MetricCard
-          title="Current store"
+          title="Magazam"
           value={1}
           note={
             performance.employee.storeName
@@ -393,7 +484,7 @@ export function StoreMyPerformancePage(input: {
         <p className="queue-subtitle">{scoreMeaning.summary}</p>
         <div className="key-grid">
           <KeyValue label="Odak" value={scoreMeaning.focus} />
-          <KeyValue label="Grade" value={formatPerformanceGrade(performanceGrade)} />
+          <KeyValue label="Skor seviyesi" value={formatStorePerformanceGrade(performanceGrade)} />
           <KeyValue label="Skor" value={performance.score.value.toFixed(1)} />
           <KeyValue
             label="Kaynak"
@@ -403,59 +494,18 @@ export function StoreMyPerformancePage(input: {
         <p className="queue-subtitle">{scoreMeaning.confidence}</p>
       </section>
 
-      <section className="two-up-grid">
-        <article className="panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">Resolved Session</div>
-              <h3>Bu kullanici ne gorecek</h3>
-            </div>
-            <StatusPill tone="accent">Read only</StatusPill>
-          </div>
-          <div className="key-grid">
-            <KeyValue label="User id" value={user?.userId ?? 'Unknown'} />
-            <KeyValue label="Employee id" value={performance.employee.employeeId} />
-            <KeyValue label="Roles" value={formatDisplayRoles(user?.roleCodes)} />
-            <KeyValue label="Store ids" value={user?.scope.storeIds.join(', ') || 'none'} />
-            <KeyValue label="Grade" value={formatPerformanceGrade(performanceGrade)} />
-            <KeyValue label="Data status" value={partial.isPartial ? 'Partial' : 'Complete'} />
-            <KeyValue
-              label="Period"
-              value={
-                performance.period
-                  ? `${performance.period.periodStart} -> ${performance.period.periodEnd}`
-                  : 'Unknown'
-              }
-            />
-          </div>
-        </article>
-
-        <article className="panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">Boundary</div>
-              <h3>Bu yuzey ne yapmaz</h3>
-            </div>
-          </div>
-          <EmptyState
-            title="Manager is akislari burada yok"
-            copy="Hedef dagitimi, onay, checklist kabulu ve magaza yonetimi bu persona yuzeyine tasinmaz."
-          />
-        </article>
-      </section>
-
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Personnel Metrics</div>
+            <div className="eyebrow">KPI detaylari</div>
             <h3>{performance.employee.displayName}</h3>
           </div>
           <StatusPill tone={performanceGrade.tone}>
-            {`${formatPerformanceGrade(performanceGrade)} - ${performance.score.value.toFixed(1)}`}
+            {`${formatStorePerformanceGrade(performanceGrade)} - ${performance.score.value.toFixed(1)}`}
           </StatusPill>
         </div>
         <p className="queue-subtitle">
-          Bu yuzey bireysel KPI metric degerlerini, score katkisini ve ranking sonucunu tek yerde gosterir.
+          Bireysel KPI degerleri, skor katkisi ve siralama sonucu burada gorunur.
         </p>
         <div className="stacked-table">
           {performance.metrics.map((metric) => {
@@ -483,33 +533,27 @@ export function StoreMyPerformancePage(input: {
                           : 'danger'
                     }
                   >
-                    {metric.scoreStatus === 'scored'
-                      ? `${metric.weightPercent}%`
-                      : metric.scoreStatus === 'pending_normalization'
-                        ? 'Pending'
-                        : metric.scoreStatus === 'missing_reference'
-                          ? 'Referans eksik'
-                        : 'Missing'}
+                    {formatMetricScoreStatusLabel(metric.scoreStatus, metric.weightPercent)}
                   </StatusPill>
                 </div>
                 <div className="key-grid">
                   <KeyValue
-                    label="Actual"
+                    label="Gerceklesen"
                     value={formatMetricValue(metric.actualValue, metric.code)}
                   />
-                  <KeyValue label="Achievement" value={formatAchievementValue(metric)} />
+                  <KeyValue label="Basari" value={formatAchievementValue(metric)} />
                   <KeyValue
                     label="Skor hedefi"
                     value={formatMetricValue(scoreReference.value, metric.code)}
                   />
                   <KeyValue label="Hedef kaynagi" value={scoreReference.sourceLabel} />
-                  <KeyValue label="Contribution" value={`${metric.contributionValue.toFixed(2)}%`} />
+                  <KeyValue label="Skor katkisi" value={`${metric.contributionValue.toFixed(2)}%`} />
                   <KeyValue
-                    label="Status"
-                    value={formatState(metric.scoreStatus ?? metric.status ?? 'missing')}
+                    label="Durum"
+                    value={formatMetricScoreStatusText(metric.scoreStatus ?? metric.status)}
                   />
-                  <KeyValue label="Kaynak tipi" value={sourceSemantics.label} />
-                  <KeyValue label="Veri kaynagi" value={sourceSemantics.summary} />
+                  <KeyValue label="Kaynak tipi" value={formatKpiSourceLabel(sourceSemantics)} />
+                  <KeyValue label="Veri kaynagi" value={formatKpiSourceSummary(sourceSemantics)} />
                 </div>
                 {metric.isCapped ? (
                   <p className="queue-subtitle">
