@@ -11,17 +11,26 @@ import {
   StatusPill,
 } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
-import { formatDisplayRoles } from '../features/auth/display'
+import { getDisplayRoleCodes } from '../features/auth/display'
+import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
+import { useLocalization } from '../features/localization/useLocalization'
 import { WorkflowInboxDetail } from '../features/workflow/WorkflowInboxDetail'
 import { getWorkflowInbox } from '../features/workflow/api'
 import {
-  formatWorkflowItemType,
-  formatWorkflowSourceType,
   mapInboxStatusTone,
   mapWorkflowUrgencyTone,
   type WorkflowInboxItem,
 } from '../features/workflow/contracts'
 import { formatDateTime, formatState, getErrorMessage } from '../lib/format'
+import type { AppLocale } from '../lib/i18n'
+
+const actorRoleTranslationKeys: Partial<Record<string, TranslationKey>> = {
+  REGION_APPROVER: 'storeTasks.role.REGION_APPROVER',
+  REPORT_VIEWER: 'storeTasks.role.REPORT_VIEWER',
+  STORE_MANAGER: 'storeTasks.role.STORE_MANAGER',
+  STORE_PERSONNEL: 'storeTasks.role.STORE_PERSONNEL',
+  SUPER_ADMIN: 'storeTasks.role.SUPER_ADMIN',
+}
 
 function canUseWorkflowInbox(authSummary: AuthSessionSummary | null) {
   const roles = authSummary?.user.roleCodes ?? []
@@ -31,8 +40,9 @@ function canUseWorkflowInbox(authSummary: AuthSessionSummary | null) {
 export function StoreTasksPage(input: {
   authSummary: AuthSessionSummary | null
 }) {
+  const { locale, t } = useLocalization()
   const inboxEnabled = canUseWorkflowInbox(input.authSummary)
-  const primaryStoreId = input.authSummary?.user.scope.storeIds[0] ?? 'Mağaza kapsamı yok'
+  const primaryStoreId = input.authSummary?.user.scope.storeIds[0] ?? t('storeTasks.noStoreScope')
   const inboxQuery = useQuery({
     queryKey: ['workflow-inbox'],
     queryFn: getWorkflowInbox,
@@ -79,17 +89,14 @@ export function StoreTasksPage(input: {
       <section className="page-stack">
         <section className="hero-panel store-hero-panel">
           <div>
-            <div className="eyebrow">Mağaza işleri</div>
-            <h2 className="hero-title">Ortak iş kuyruğu açılmadan önce operasyon rolü netleşmeli.</h2>
-            <p className="hero-copy">
-              Faz 3 kuyruğu artık kontrat tabanlı; bu oturumun onay, kabul veya rapor destekli
-              işleri okuyabilecek bir mağaza rolüyle açılması gerekiyor.
-            </p>
+            <div className="eyebrow">{t('storeTasks.unavailableEyebrow')}</div>
+            <h2 className="hero-title">{t('storeTasks.unavailableTitle')}</h2>
+            <p className="hero-copy">{t('storeTasks.unavailableCopy')}</p>
           </div>
           <div className="hero-metrics">
-            <MetricAccent label="Rota" value="/store/tasks" />
-            <MetricAccent label="Mağaza kapsamı" value={primaryStoreId} />
-            <MetricAccent label="Durum" value="Ön izleme" />
+            <MetricAccent label={t('storeTasks.route')} value="/store/tasks" />
+            <MetricAccent label={t('storeTasks.storeScope')} value={primaryStoreId} />
+            <MetricAccent label={t('storeTasks.status')} value={t('storeTasks.preview')} />
           </div>
         </section>
       </section>
@@ -99,8 +106,8 @@ export function StoreTasksPage(input: {
   if (inboxQuery.isLoading) {
     return (
       <ScreenState
-        title="İş kuyruğu yükleniyor"
-        copy="Onay ve kabul işleri mobil kullanıma uygun tek kuyruğa alınıyor."
+        title={t('storeTasks.loadingTitle')}
+        copy={t('storeTasks.loadingCopy')}
       />
     )
   }
@@ -108,7 +115,7 @@ export function StoreTasksPage(input: {
   if (inboxQuery.isError) {
     return (
       <ScreenState
-        title="İş kuyruğu açılamadı"
+        title={t('storeTasks.errorTitle')}
         copy={getErrorMessage(inboxQuery.error)}
         tone="error"
       />
@@ -119,53 +126,50 @@ export function StoreTasksPage(input: {
     <section className="page-stack">
       <section className="hero-panel store-hero-panel">
         <div>
-          <div className="eyebrow">Ortak iş kuyruğu</div>
-          <h2 className="hero-title">Aksiyon gerektiren işler tek mağaza kuyruğunda.</h2>
-          <p className="hero-copy">
-            Onay, kabul ve KPI takipleri anlamını korur; mağaza tarafında ise tek dil, tek öncelik
-            modeli ve mobil öncelikli okuma düzeniyle görünür.
-          </p>
+          <div className="eyebrow">{t('storeTasks.heroEyebrow')}</div>
+          <h2 className="hero-title">{t('storeTasks.title')}</h2>
+          <p className="hero-copy">{t('storeTasks.heroCopy')}</p>
         </div>
         <div className="hero-metrics">
-          <MetricAccent label="Rota" value="/store/tasks" />
-          <MetricAccent label="Mağaza kapsamı" value={primaryStoreId} />
-          <MetricAccent label="Kuyruk öğesi" value={String(items.length)} />
+          <MetricAccent label={t('storeTasks.route')} value="/store/tasks" />
+          <MetricAccent label={t('storeTasks.storeScope')} value={primaryStoreId} />
+          <MetricAccent label={t('storeTasks.queueItems')} value={String(items.length)} />
         </div>
       </section>
 
       <section className="metric-grid store-metric-grid">
         <MetricCard
-          title="Aksiyon bekleyenler"
+          title={t('storeTasks.pendingActions')}
           value={pendingItems.length}
-          note="Mevcut rol setinden aksiyon bekleyen işler."
+          note={t('storeTasks.pendingActionsNote')}
           icon={<Bell size={18} />}
           tone={pendingItems.length > 0 ? 'warning' : 'calm'}
         />
         <MetricCard
-          title="Yüksek öncelik"
+          title={t('storeTasks.highPriority')}
           value={items.filter((item) => item.urgency === 'high').length}
-          note="Önce bakılması gereken işler."
+          note={t('storeTasks.highPriorityNote')}
           icon={<TrendingUp size={18} />}
           tone={items.some((item) => item.urgency === 'high') ? 'danger' : 'neutral'}
         />
         <MetricCard
-          title="Onaylar"
+          title={t('storeTasks.approvals')}
           value={approvalItems.length}
-          note="Hedef dağıtımı gibi karar gerektiren işler."
+          note={t('storeTasks.approvalsNote')}
           icon={<ReceiptText size={18} />}
           tone={approvalItems.length > 0 ? 'accent' : 'neutral'}
         />
         <MetricCard
-          title="Kabul bekleyenler"
+          title={t('storeTasks.acknowledgements')}
           value={acknowledgementItems.length}
-          note="Checklist görünürlüğünü ve kabulünü kayıt altına alan işler."
+          note={t('storeTasks.acknowledgementsNote')}
           icon={<ClipboardList size={18} />}
           tone={acknowledgementItems.length > 0 ? 'accent' : 'neutral'}
         />
         <MetricCard
-          title="KPI takipleri"
+          title={t('storeTasks.kpiFollowUps')}
           value={taskItems.length}
-          note="KPI performans sinyallerinden yükselen takip işleri."
+          note={t('storeTasks.kpiFollowUpsNote')}
           icon={<TrendingUp size={18} />}
           tone={taskItems.length > 0 ? 'warning' : 'neutral'}
         />
@@ -175,40 +179,46 @@ export function StoreTasksPage(input: {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Kuyruk bağlamı</div>
-              <h3>Bu ekran neleri ortaklaştırır</h3>
+              <div className="eyebrow">{t('storeTasks.queueContext')}</div>
+              <h3>{t('storeTasks.contextTitle')}</h3>
             </div>
           </div>
           <div className="key-grid">
-            <KeyValue label="İş tipleri" value="onay, kabul, görev" />
-            <KeyValue label="KPI bağlantısı" value={taskItems.length > 0 ? 'KPI takibi aktif' : 'KPI takibine hazır'} />
-            <KeyValue label="Kuyruk durumları" value="aksiyon bekliyor, tamamlandı, bilgilendirme" />
-            <KeyValue label="Ana düzen" value="mobil öncelikli satırlar" />
-            <KeyValue label="Çözülen roller" value={formatDisplayRoles(input.authSummary?.user.roleCodes)} />
+            <KeyValue label={t('storeTasks.workTypes')} value={t('storeTasks.workTypesValue')} />
+            <KeyValue
+              label={t('storeTasks.kpiConnection')}
+              value={taskItems.length > 0 ? t('storeTasks.kpiActive') : t('storeTasks.kpiReady')}
+            />
+            <KeyValue label={t('storeTasks.queueStatuses')} value={t('storeTasks.queueStatusesValue')} />
+            <KeyValue label={t('storeTasks.mainLayout')} value={t('storeTasks.mainLayoutValue')} />
+            <KeyValue
+              label={t('storeTasks.resolvedRoles')}
+              value={formatDisplayRoleLabels(t, input.authSummary?.user.roleCodes)}
+            />
           </div>
         </article>
 
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Kontrol sınırı</div>
-              <h3>Bu kuyruk neleri karıştırmaz</h3>
+              <div className="eyebrow">{t('storeTasks.controlBoundary')}</div>
+              <h3>{t('storeTasks.boundaryTitle')}</h3>
             </div>
           </div>
           <div className="stacked-table">
             <div className="stacked-row">
               <div className="stacked-row-head">
-                <strong>İş anlamlarını birleştirmez</strong>
+                <strong>{t('storeTasks.noMeaningMergeTitle')}</strong>
                 <CheckCircle2 size={16} />
               </div>
-              <p>Onay karar ister. Kabul işi görünürlüğü doğrular. Ortak kuyruk bunları tek statü makinesine düzlemez.</p>
+              <p>{t('storeTasks.noMeaningMergeCopy')}</p>
             </div>
             <div className="stacked-row">
               <div className="stacked-row-head">
-                <strong>Geniş masaüstü tablosu gerektirmez</strong>
+                <strong>{t('storeTasks.noDesktopTableTitle')}</strong>
                 <CheckCircle2 size={16} />
               </div>
-              <p>Her satır öncelik, başlık, özet ve birincil aksiyon yolunu dar ekranda da taşır.</p>
+              <p>{t('storeTasks.noDesktopTableCopy')}</p>
             </div>
           </div>
         </article>
@@ -217,20 +227,25 @@ export function StoreTasksPage(input: {
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Bugünün kuyruğu</div>
-            <h3>Ortak kontrata bağlı aksiyonlar</h3>
+            <div className="eyebrow">{t('storeTasks.todayQueue')}</div>
+            <h3>{t('storeTasks.queueTitle')}</h3>
           </div>
         </div>
 
         {items.length === 0 ? (
           <EmptyState
-            title="Şu anda aksiyon gerektiren iş yok"
-            copy="Onaylar, kabuller ve ilerideki KPI sapmaları ortak iş kuyruğuna düştüğünde burada görünür."
+            title={t('storeTasks.emptyTitle')}
+            copy={t('storeTasks.emptyCopy')}
           />
         ) : (
           <div className="stacked-table">
             {sortedItems.map((item) => (
-              <WorkflowInboxRow key={`${item.sourceType}:${item.sourceId}`} item={item} />
+              <WorkflowInboxRow
+                key={`${item.sourceType}:${item.sourceId}`}
+                item={item}
+                locale={locale}
+                t={t}
+              />
             ))}
           </div>
         )}
@@ -238,17 +253,21 @@ export function StoreTasksPage(input: {
 
       <div className="action-cluster">
         <Link className="control-button store-shell-link" to="/store/checklists">
-          Mağaza checklistleri
+          {t('storeTasks.checklistsLink')}
         </Link>
         <Link className="control-button store-shell-link" to="/store/approvals">
-          Mağaza onayları
+          {t('storeTasks.approvalsLink')}
         </Link>
       </div>
     </section>
   )
 }
 
-function WorkflowInboxRow(input: { item: WorkflowInboxItem }) {
+function WorkflowInboxRow(input: {
+  item: WorkflowInboxItem
+  locale: AppLocale
+  t: TranslateFunction
+}) {
   return (
     <article className="stacked-row">
       <div className="stacked-row-head">
@@ -257,23 +276,27 @@ function WorkflowInboxRow(input: { item: WorkflowInboxItem }) {
           <p className="queue-subtitle">{input.item.summary}</p>
         </div>
         <div className="action-cluster">
-          <StatusPill tone="accent">{formatWorkflowSourceType(input.item.sourceType)}</StatusPill>
+          <StatusPill tone="accent">{formatWorkflowSourceTypeLabel(input.t, input.item.sourceType)}</StatusPill>
           <StatusPill tone={mapInboxStatusTone(input.item.inboxStatus)}>
-            {formatWorkflowInboxStatusLabel(input.item.inboxStatus)}
+            {formatWorkflowInboxStatusLabel(input.t, input.item.inboxStatus)}
           </StatusPill>
           <StatusPill tone={mapWorkflowUrgencyTone(input.item.urgency)}>
-            {formatWorkflowUrgencyLabel(input.item.urgency)}
+            {formatWorkflowUrgencyLabel(input.t, input.item.urgency)}
           </StatusPill>
         </div>
       </div>
 
       <div className="key-grid">
-        <KeyValue label="İş tipi" value={formatWorkflowItemType(input.item.itemType)} />
-        <KeyValue label="Aktör rolü" value={formatState(input.item.actorRole)} />
-        <KeyValue label="Mağaza" value={input.item.storeName || input.item.storeId} />
+        <KeyValue label={input.t('storeTasks.workType')} value={formatWorkflowItemTypeLabel(input.t, input.item.itemType)} />
+        <KeyValue label={input.t('storeTasks.actorRole')} value={formatActorRoleLabel(input.t, input.item.actorRole)} />
+        <KeyValue label={input.t('storeTasks.store')} value={input.item.storeName || input.item.storeId} />
         <KeyValue
-          label="Aksiyon zamanı"
-          value={input.item.needsAttentionAt ? formatDateTime(input.item.needsAttentionAt) : 'Şimdi'}
+          label={input.t('storeTasks.actionTime')}
+          value={
+            input.item.needsAttentionAt
+              ? formatDateTime(input.item.needsAttentionAt, input.locale)
+              : input.t('storeTasks.now')
+          }
         />
       </div>
 
@@ -283,63 +306,110 @@ function WorkflowInboxRow(input: { item: WorkflowInboxItem }) {
 
       <div className="action-cluster">
         <Link className="control-button store-shell-link" to={input.item.deepLink}>
-          {formatWorkflowPrimaryActionLabel(input.item)}
+          {formatWorkflowPrimaryActionLabel(input.t, input.item)}
         </Link>
         <span className="queue-subtitle">
-          {formatWorkflowSecondaryActionLabel(input.item)}
+          {formatWorkflowSecondaryActionLabel(input.t, input.item)}
         </span>
       </div>
     </article>
   )
 }
 
-function formatWorkflowPrimaryActionLabel(item: WorkflowInboxItem) {
+function formatDisplayRoleLabels(t: TranslateFunction, roleCodes: readonly string[] | null | undefined) {
+  const displayRoleCodes = getDisplayRoleCodes(roleCodes)
+
+  if (displayRoleCodes.length === 0) {
+    return t('storeTasks.noRoles')
+  }
+
+  return displayRoleCodes.map((roleCode) => formatActorRoleLabel(t, roleCode)).join(', ')
+}
+
+function formatActorRoleLabel(t: TranslateFunction, roleCode: string) {
+  const translationKey = actorRoleTranslationKeys[roleCode]
+  return translationKey ? t(translationKey) : formatState(roleCode)
+}
+
+function formatWorkflowItemTypeLabel(t: TranslateFunction, type: WorkflowInboxItem['itemType']) {
+  switch (type) {
+    case 'approval':
+      return t('storeTasks.itemType.approval')
+    case 'acknowledgement':
+      return t('storeTasks.itemType.acknowledgement')
+    case 'task':
+      return t('storeTasks.itemType.task')
+    case 'notification':
+      return t('storeTasks.itemType.notification')
+    default:
+      return type
+  }
+}
+
+function formatWorkflowSourceTypeLabel(t: TranslateFunction, sourceType: WorkflowInboxItem['sourceType']) {
+  switch (sourceType) {
+    case 'target_distribution_request':
+      return t('storeTasks.sourceType.target_distribution_request')
+    case 'checklist_receipt':
+      return t('storeTasks.sourceType.checklist_receipt')
+    case 'kpi_exception':
+      return t('storeTasks.sourceType.kpi_exception')
+    default:
+      return sourceType
+  }
+}
+
+function formatWorkflowPrimaryActionLabel(t: TranslateFunction, item: WorkflowInboxItem) {
   switch (item.sourceType) {
     case 'target_distribution_request':
-      return item.inboxStatus === 'needs_attention' ? 'Talebi onayla' : 'Geçmişi incele'
+      return item.inboxStatus === 'needs_attention'
+        ? t('storeTasks.primary.targetApprove')
+        : t('storeTasks.primary.targetHistory')
     case 'checklist_receipt':
-      return item.inboxStatus === 'needs_attention' ? 'Kabul ediyorum' : 'Kabul kaydını gör'
+      return item.inboxStatus === 'needs_attention'
+        ? t('storeTasks.primary.checklistAccept')
+        : t('storeTasks.primary.checklistRecord')
     case 'kpi_exception':
-      return 'KPI detayına git'
+      return t('storeTasks.primary.kpiDetail')
     default:
       return item.primaryActionLabel
   }
 }
 
-function formatWorkflowSecondaryActionLabel(item: WorkflowInboxItem) {
+function formatWorkflowSecondaryActionLabel(t: TranslateFunction, item: WorkflowInboxItem) {
   switch (item.sourceType) {
     case 'target_distribution_request':
-      return 'Detayı aç'
+      return t('storeTasks.secondary.targetDetail')
     case 'checklist_receipt':
-      return 'Checklist sonucunu aç'
+      return t('storeTasks.secondary.checklistResult')
     case 'kpi_exception':
-      return 'Sapmayı incele'
+      return t('storeTasks.secondary.kpiDeviation')
     default:
-      return item.secondaryActionLabel ?? 'Detayı aç'
+      return item.secondaryActionLabel ?? t('storeTasks.secondary.targetDetail')
   }
 }
 
-function formatWorkflowInboxStatusLabel(status: WorkflowInboxItem['inboxStatus']) {
+function formatWorkflowInboxStatusLabel(t: TranslateFunction, status: WorkflowInboxItem['inboxStatus']) {
   switch (status) {
     case 'needs_attention':
-      return 'Aksiyon bekliyor'
+      return t('storeTasks.inboxStatus.needs_attention')
     case 'completed':
-      return 'Tamamlandı'
+      return t('storeTasks.inboxStatus.completed')
     case 'informational':
-      return 'Bilgilendirme'
+      return t('storeTasks.inboxStatus.informational')
     default:
       return formatState(status)
   }
 }
 
-function formatWorkflowUrgencyLabel(urgency: WorkflowInboxItem['urgency']) {
+function formatWorkflowUrgencyLabel(t: TranslateFunction, urgency: WorkflowInboxItem['urgency']) {
   switch (urgency) {
     case 'high':
-      return 'Yüksek'
+      return t('storeTasks.urgency.high')
     case 'medium':
-      return 'Orta'
+      return t('storeTasks.urgency.medium')
     case 'low':
-      return 'Düşük'
+      return t('storeTasks.urgency.low')
     default:
       return formatState(urgency)
   }
