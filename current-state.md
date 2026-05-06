@@ -26,7 +26,7 @@ Primary app endpoints:
 
 As of 2026-05-06:
 
-- `origin/main` includes PR #24: `76acc473 Merge pull request #24 from suleymankuncan-web/codex/controlled-pilot-feedback-log-guard-v1`
+- `origin/main` includes PR #25: `15b4d10a Merge pull request #25 from suleymankuncan-web/codex/staging-auth-session-edge-evidence-guard-v1`
 - Auth refresh flash fix is merged and deployed.
 - Master-data validation/promotion test split is merged.
 - Pilot readiness evidence consolidation is merged.
@@ -62,7 +62,9 @@ Current pilot stance:
 - The active controlled pilot feedback log is `docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md`.
 - The staging auth session edge evidence guard is `docs/plans/staging-auth-session-edge-evidence-guard-v1.md`.
 - UI quality pass: deliberately deferred
-- JSON source adapter: future-only until real payload/source evidence exists
+- Power BI/Excel outputs remain the active operating source for the current pilot.
+- JSON Source Suspension V1: JSON source integration is suspended for the current pilot and Power BI/Excel operating path.
+- Future JSON planning reopens only after real JSON-format files, official field list, delivery/cadence/auth model, and identity semantics exist.
 
 ## Recent Pilot Evidence
 
@@ -121,7 +123,7 @@ Rule for new work:
 
 - One PR = one risk reduction or one feature slice.
 - Do not mix UI redesign, backend behavior, and refactor in one PR.
-- Do not open guessed JSON adapter work.
+- Do not open or staff JSON adapter/source-specific work while Power BI/Excel remains the chosen operating source.
 - Do not manually edit live `ops.*` data outside guarded workflows.
 - Do not commit tokens, cookies, JWTs, local `.env`, generated `dist`, `test-results`, `coverage`, `node_modules`, or `outputs/` artifacts. `outputs/` is ignored local scratch work.
 
@@ -160,9 +162,9 @@ Migration smoke:
 
 Debt ledger:
 
-- Closed active debts: 93
+- Closed active debts: 94
 - Superseded before overbuilding: 1
-- Blocked external dependency: 2
+- Blocked external dependency: 1
 - Watchlist decision item: 0
 - Strategic investment backlog: 7
 - Silent untracked quality debt in the active gate: 0
@@ -204,13 +206,14 @@ Next local foundation step:
 - Choose the next small backend/data hardening slice through the intake gate.
 - If real staging IdP and seeded DB values are available, run guarded staging auth/action evidence.
 - If true store/personnel baseline files are available, run the master-data bootstrap pilot smoke flow from the existing runbook.
-- If neither external evidence source is available, keep JSON/source-specific adapter work closed and pick only a local guard that strengthens an existing surface.
+- JSON source integration is suspended for the current pilot and Power BI/Excel operating path; do not reopen JSON planning unless real JSON-format files or an official field list arrive.
+- If neither staging nor true baseline evidence is available, pick only a local guard that strengthens an existing surface.
 
 Recommended local stance:
 
 - Do not repeat completed test-split work as busywork.
 - Do not start UI redesign until a concrete product/UI change requires it.
-- Do not start JSON adapter work without real payload/source evidence.
+- Do not start JSON adapter work while Power BI/Excel outputs remain the chosen operating source.
 - Do not run master-data promotion without dry-run evidence and sanitized evidence.
 
 ## New Context Startup Prompt
@@ -218,5 +221,5 @@ Recommended local stance:
 Paste this into the next context window:
 
 ```text
-current-state.md oku; aktif workspace D:\store-ops-workspace. Eski OneDrive ve E:\ yollarini kullanma. Main son durum PR #24 controlled pilot feedback log guard'i iceriyor; current controlled staging/internal pilot karari docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-conditional-go-consolidation.md icinde Conditional Go, broad production rollout henuz No-Go. Controlled pilot operating checklist docs/plans/controlled-pilot-operating-checklist-v1.md icinde. Aktif pilot feedback log docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md icinde. Staging auth session edge guard docs/plans/staging-auth-session-edge-evidence-guard-v1.md icinde. PR #15 auth refresh flash fix'i deploy sonrasi kullanici tarafindan cozulmus gorundu. Staging frontend https://staging.hr-axis.com, backend https://api-staging.hr-axis.com/api. UI redesign ertelendi. JSON adapter future-only; real payload/source evidence olmadan baslama. Siradaki yerel is intake gate ile secilmeli: staging IdP/seeded DB varsa guarded auth/action evidence, true baseline varsa master-data bootstrap pilot smoke, ikisi de yoksa sadece mevcut yuzeyi guclendiren kucuk bir local guard.
+current-state.md oku; aktif workspace D:\store-ops-workspace. Eski OneDrive ve E:\ yollarini kullanma. Main son durum PR #25 staging auth session edge evidence guard'i iceriyor; current controlled staging/internal pilot karari docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-conditional-go-consolidation.md icinde Conditional Go, broad production rollout henuz No-Go. Controlled pilot operating checklist docs/plans/controlled-pilot-operating-checklist-v1.md icinde. Aktif pilot feedback log docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md icinde. Staging auth session edge guard docs/plans/staging-auth-session-edge-evidence-guard-v1.md icinde. Staging frontend https://staging.hr-axis.com, backend https://api-staging.hr-axis.com/api. UI redesign ertelendi. Power BI/Excel aktif operating source; JSON Source Suspension V1 ile JSON source integration is suspended for the current pilot and Power BI/Excel operating path. Siradaki yerel is intake gate ile secilmeli: staging IdP/seeded DB varsa guarded auth/action evidence, true baseline varsa master-data bootstrap pilot smoke, ikisi de yoksa sadece mevcut yuzeyi guclendiren kucuk bir local guard.
 ```

@@ -17,9 +17,9 @@ Date: 30 April 2026
 
 Current count:
 
-- Closed active debts: 93
+- Closed active debts: 94
 - Superseded before overbuilding: 1
-- Blocked external dependency: 2
+- Blocked external dependency: 1
 - Watchlist decision item: 0
 - Strategic investment backlog: 7
 - Silent untracked quality debt in the active gate: 0
@@ -121,6 +121,7 @@ These are counted as paid because they have implementation or documentation evid
 91. Controlled Pilot Operating Checklist V1
 92. Controlled Pilot Feedback Log Guard V1
 93. Staging Auth Session Edge Evidence Guard V1
+94. JSON Source Suspension V1
 
 Ranking Included Snapshot Contract V1 is counted as paid because `GET /reports/leaderboards/closed` now returns `includedSnapshotRuns`, daily ranking returns the included closed snapshot, monthly ranking returns every completed daily snapshot included in the month calculation, and `/store/rankings` uses that backend contract instead of frontend inference.
 
@@ -130,7 +131,9 @@ Ranking Score Explanation Copy V1 is counted as paid because `/store/rankings` a
 
 External ID Code Normalization Guard V1 is counted as paid because import/materialization external-id resolution now keeps exact mapping precedence, safely resolves normalized code variants such as `SM-140` / `SM140`, and rejects ambiguous normalized matches instead of choosing silently.
 
-Source-Agnostic Import Boundary V1 is counted as paid because Excel is locked as the active source path, JSON remains future-only until a real sample or official field list exists, and Excel/JSON/future sources must enter through the same canonical import payload before mapping, validation, data quality, lineage, materialization, snapshotting, scoring, or reporting. Reference: `docs/plans/source-agnostic-import-boundary-v1.md`.
+Source-Agnostic Import Boundary V1 is counted as paid because Excel is locked as the active source path, JSON source integration is suspended for the current pilot and Power BI/Excel operating path, and Excel/JSON/future sources must enter through the same canonical import payload before mapping, validation, data quality, lineage, materialization, snapshotting, scoring, or reporting. Reference: `docs/plans/source-agnostic-import-boundary-v1.md`.
+
+JSON Source Suspension V1 is counted as paid because Power BI/Excel outputs are the active operating source for the current pilot, JSON source integration is suspended, and the project no longer treats JSON ingest as an active blocker while Power BI/Excel remains the chosen source. Future JSON planning reopens only after real JSON-format files, official field list, delivery/cadence/auth model, and identity semantics exist. Reference: `docs/plans/source-agnostic-import-boundary-v1.md`.
 
 Master Data Bootstrap Admin Dry-Run Evidence V1 is counted as paid because `/admin/master-data/:batchId` now exposes backend promotion-readiness row evidence before any live promotion command is executed. Operators can see ready/already-promoted/blocked row state, promoted entity evidence, and block reasons while promotion commands remain explicit and unchanged. Reference: `docs/plans/master-data-bootstrap-admin-dry-run-evidence-v1.md`.
 
@@ -280,27 +283,26 @@ Exit criteria:
 - unassigned-store action returns `403`.
 - guarded evidence passes and is stored sanitized.
 
-### Real JSON Source Ingest Evidence
+## Suspended Product Decisions
 
-Status: `blocked_external`
+### JSON Source Integration
 
-Why it is not counted as completed:
+Status: `suspended`
 
-- Real JSON delivery method is unknown.
-- Real payload fields are unknown.
-- Source cadence is unknown.
-- Source authentication model is unknown.
-- Store/personnel identity fields are unknown.
-- Return/refund and latest-state/additive-event behavior are unknown.
+Current decision:
 
-What is already ready locally:
+- JSON source integration is suspended for the current pilot and Power BI/Excel operating path.
+- Power BI/Excel outputs remain the active operating source.
+- JSON ingest is not an active blocker while Power BI/Excel remains the chosen source.
+- Do not plan or staff JSON implementation work while Power BI/Excel outputs remain the chosen operating source.
+- Do not build a JSON adapter, endpoint, upload UI, scheduler, or source-specific field map from guessed data.
+
+What stays ready locally:
 
 - `stg.integration_source`
 - `stg.import_batch`
 - `stg.kpi_raw`
 - `stg.external_id_map`
-- import scheduler, normalization, and materialization services
-- source-agnostic ingest planning
 - source-agnostic import boundary guard
 - canonical KPI contract metadata on the payload template endpoint
 - deterministic KPI import `rowHash` and readable `rawRowReference`
@@ -309,23 +311,12 @@ What is already ready locally:
 - additive import error `qualityIssueCode`
 - batch-level import data quality summary on import detail
 
-Required external inputs:
+Trigger to reopen:
 
-- delivery type: pull API, push endpoint, file upload, SFTP, scheduled export, manual import, or intermediary service
-- one sanitized sample payload or official field list
-- authentication and access model
-- cadence and late-correction behavior
-- store identity key
-- personnel/seller identity key
-- business date and timezone rule
-- return/refund behavior
-
-Exit criteria:
-
-- sample payload maps into the canonical raw KPI contract
-- idempotency key is defined
-- source-specific adapter can be implemented without guessing
-- imported metrics and platform-derived metrics are separated
+- product owner reopens JSON planning
+- real JSON-format files or official field list exist
+- delivery type, cadence, auth model, store identity, personnel/seller identity, business date/timezone, return/refund behavior, and idempotency key can be specified without guessing
+- the source mapping spec is written against `docs/plans/source-agnostic-import-boundary-v1.md`
 
 ## Resolved Watchlist Decisions
 
@@ -358,11 +349,11 @@ These are important future product investments. They are not counted as hidden d
 
 KPI config version history, publish metadata, snapshot anchoring, and pre-governance visibility are implemented in V1. Rollback UI, future effective scheduling, approval workflow, and DB-managed interpretation copy remain future depth, not active hidden debt.
 
-Source-agnostic KPI ingest contract hardening is implemented in V1, Source-Agnostic Import Boundary V1 keeps Excel/JSON/future sources behind one canonical import payload, KPI raw row lineage is persisted as first-class staging columns, and admin import detail now surfaces KPI lineage evidence. Real source adapter work remains blocked until external source evidence exists.
+Source-agnostic KPI ingest contract hardening is implemented in V1, Source-Agnostic Import Boundary V1 keeps Excel/JSON/future sources behind one canonical import payload, KPI raw row lineage is persisted as first-class staging columns, and admin import detail now surfaces KPI lineage evidence. Real source adapter work remains suspended while Power BI/Excel remains the chosen operating source.
 
 Audit event taxonomy guard is implemented in V1. A global audit feed remains intentionally unbuilt until a real operator workflow requires it, but the backend now has a catalog and contract test that prevents new audit event strings from drifting silently.
 
-Data Quality Guard V1 is implemented. Import error rows now expose stable `qualityIssueCode` values while keeping the existing `errorCategory` contract intact. Real source adapter work still waits for external source evidence.
+Data Quality Guard V1 is implemented. Import error rows now expose stable `qualityIssueCode` values while keeping the existing `errorCategory` contract intact. Real source adapter work remains suspended while Power BI/Excel remains the chosen operating source.
 
 Import Batch Quality Summary V1 is implemented. Batch detail now summarizes failed rows by stable quality issue code, and the admin import detail surface shows the dominant cleanup categories without creating a new workflow or dashboard too early.
 
@@ -475,17 +466,17 @@ The dangerous kind of debt would be:
 - production auth fallback accepting default secrets
 - empty actor scope widening into full-data list access
 
-Those have been actively reduced. The remaining work is mostly planned product depth, real external staging proof, real source ingest evidence/adapter work, and a future coordinated visual/localization investment. That is a healthy place to be.
+Those have been actively reduced. The remaining work is mostly planned product depth, real external staging proof, suspended future source integration, and a future coordinated visual/localization investment. That is a healthy place to be.
 
 ## Next Logical Step
 
 If staging provider and seeded DB values are available, run the guarded staging action smoke.
 
-If they are not available, check whether real JSON source ingest details are available. If JSON source delivery details or a sample payload are unavailable, do not write a source-specific connector yet.
+JSON source integration is suspended for the current pilot and Power BI/Excel operating path. Do not reopen JSON planning unless real JSON-format files or an official field list arrive and the product owner reopens the path.
 
 The next local backend candidate should be chosen through the intake gate. Source-agnostic KPI ingest contract hardening, KPI raw row lineage persistence, admin lineage evidence visibility, audit event taxonomy guard, data quality guard, import batch quality summary, the first project-wide scope/auth guard scan, the no-empty-scope repository contract pass, production environment readiness checklist, env/deployment runbook skeleton, environment drift guard, and production/staging incident response skeleton are now done, so do not repeat them as busywork; pick a nearby backend/data surface only if it strengthens existing behavior without guessing external source details.
 
 Recommended local candidate if external evidence is still unavailable:
 
 - If a true store/personnel baseline list with store codes and seller codes is available, start Personnel Master Data Bootstrap V1 through the intake gate.
-- If no baseline/source evidence exists, keep source-specific adapter work closed and choose the next small guard only through the intake gate.
+- If no staging or baseline evidence exists, keep source-specific adapter work closed and choose the next small guard only through the intake gate.

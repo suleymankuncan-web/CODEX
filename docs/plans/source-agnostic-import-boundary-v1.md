@@ -4,15 +4,19 @@ Date: 30 April 2026
 
 Status: `implemented_guard`
 
+Current product decision: `JSON suspended`
+
 ## Purpose
 
 Lock the import boundary before a real JSON source exists.
 
-Excel KPI Import V1 is the active local source path. JSON is future-only until a real sample payload or official field list exists. The project should stay ready for JSON without coding guessed JSON behavior.
+Excel KPI Import V1 is the active local source path. JSON is future-only until a real sample payload or official field list exists. JSON source integration is suspended for the current pilot and Power BI/Excel operating path. The project should stay ready for JSON without coding guessed JSON behavior.
 
 ## Locked Decision
 
 - Excel KPI Import V1 is the active local source path.
+- JSON source integration is suspended for the current pilot and Power BI/Excel operating path.
+- Do not plan or staff JSON implementation work while Power BI/Excel outputs remain the chosen operating source.
 - JSON is future-only until a real sample payload or official field list exists.
 - Do not build a JSON adapter, endpoint, scheduled job, or field map from guessed data.
 - When JSON becomes real, it must enter through the same canonical import boundary as Excel.
@@ -87,7 +91,7 @@ This guard deliberately does not add:
 
 ## Trigger To Build JSON Adapter Later
 
-Only start JSON adapter implementation after these inputs exist:
+Only start JSON adapter implementation after the product owner reopens the JSON path and these inputs exist:
 
 - one sanitized real JSON sample payload or official field list
 - delivery type: pull API, push endpoint, file upload, SFTP, scheduled export, manual import, or intermediary service
@@ -111,10 +115,10 @@ node --test scripts\source-agnostic-import-boundary-contract.test.mjs
 
 This is intentionally small. It protects the project from the dangerous version of "JSON ready": a connector built from guesses.
 
-The healthy path is to keep Excel working today, keep JSON possible tomorrow, and force both through the same canonical import boundary. That keeps scoring, mapping, lineage, and quality controls from splitting into two parallel worlds.
+The healthy path is to keep Power BI/Excel working today, keep JSON possible tomorrow, and force any future JSON source through the same canonical import boundary. That keeps scoring, mapping, lineage, and quality controls from splitting into two parallel worlds.
 
 ## Next Logical Step
 
-If a real JSON sample or official field list arrives, write a source mapping spec against this boundary.
+If the product owner reopens JSON and a real JSON sample or official field list arrives, write a source mapping spec against this boundary.
 
-If it does not arrive yet, do not build JSON-specific code. Continue only with small guards or operator smoke steps that strengthen existing Excel/import/master-data behavior.
+While JSON remains suspended, do not build JSON-specific code. Continue only with small guards or operator smoke steps that strengthen existing Power BI/Excel import and master-data behavior.
