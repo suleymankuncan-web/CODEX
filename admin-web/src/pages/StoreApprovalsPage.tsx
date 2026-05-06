@@ -11,13 +11,15 @@ import {
   StatusPill,
 } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
-import { formatDisplayRoles } from '../features/auth/display'
 import {
   canCreateTargetDistributionRequest,
   canListTargetDistributionRequests,
   getAssignedStoreIds,
   getReadStoreIds,
 } from '../features/auth/authorization'
+import { getDisplayRoleCodes } from '../features/auth/display'
+import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
+import { useLocalization } from '../features/localization/useLocalization'
 import {
   createTargetDistributionRequest,
   getStoreTargetingPersonnel,
@@ -37,12 +39,58 @@ import {
   type SellerCodeRequest,
   type SellerEmploymentType,
 } from '../features/workforce/api'
-import { formatDate, formatDateTime, formatState, getErrorMessage } from '../lib/format'
+import { formatDate, formatDateTime, formatNumber, formatState, getErrorMessage } from '../lib/format'
+
+const approvalStatusLabelKeys = {
+  approved: 'storeApprovals.status.approved',
+  pending_hr_approval: 'storeApprovals.status.pending_hr_approval',
+  pending_region_approval: 'storeApprovals.status.pending_region_approval',
+  rejected: 'storeApprovals.status.rejected',
+} as const satisfies Partial<Record<string, TranslationKey>>
+
+const employmentTypeLabelKeys = {
+  full_time: 'storeApprovals.employment.full_time',
+  part_time: 'storeApprovals.employment.part_time',
+  temporary: 'storeApprovals.employment.temporary',
+} as const satisfies Record<SellerEmploymentType, TranslationKey>
+
+const roleLabelKeys = {
+  REGION_APPROVER: 'storeApprovals.role.REGION_APPROVER',
+  REPORT_VIEWER: 'storeApprovals.role.REPORT_VIEWER',
+  STORE_MANAGER: 'storeApprovals.role.STORE_MANAGER',
+  STORE_PERSONNEL: 'storeApprovals.role.STORE_PERSONNEL',
+  SUPER_ADMIN: 'storeApprovals.role.SUPER_ADMIN',
+} as const satisfies Partial<Record<string, TranslationKey>>
+
+function formatApprovalStatus(status: string, t: TranslateFunction) {
+  const key = approvalStatusLabelKeys[status as keyof typeof approvalStatusLabelKeys]
+  return key ? t(key) : formatState(status)
+}
+
+function formatEmploymentType(type: SellerEmploymentType, t: TranslateFunction) {
+  return t(employmentTypeLabelKeys[type])
+}
+
+function formatRole(roleCode: string, t: TranslateFunction) {
+  const key = roleLabelKeys[roleCode as keyof typeof roleLabelKeys]
+  return key ? t(key) : formatState(roleCode)
+}
+
+function formatRoles(
+  roleCodes: readonly string[] | null | undefined,
+  t: TranslateFunction,
+) {
+  const displayRoles = getDisplayRoleCodes(roleCodes)
+  return displayRoles.length > 0
+    ? displayRoles.map((roleCode) => formatRole(roleCode, t)).join(', ')
+    : t('storeApprovals.noResolvedRoles')
+}
 
 export function StoreApprovalsPage(input: {
   authSummary: AuthSessionSummary | null
 }) {
   const queryClient = useQueryClient()
+  const { locale, t } = useLocalization()
   const user = input.authSummary?.user
   const assignedStoreIds = getAssignedStoreIds(input.authSummary)
   const readStoreIds = getReadStoreIds(input.authSummary)
@@ -52,7 +100,7 @@ export function StoreApprovalsPage(input: {
   const canListRequests = canListTargetDistributionRequests(input.authSummary)
   const canCreateForStore = canCreateTargetDistributionRequest(input.authSummary, storeId || null)
   const [requestMonth, setRequestMonth] = useState(new Date().toISOString().slice(0, 7))
-  const [targetLabel, setTargetLabel] = useState('Aylik personel hedef dagitimi')
+  const [targetLabel, setTargetLabel] = useState(() => t('storeApprovals.targetLabelDefault'))
   const [totalTargetValue, setTotalTargetValue] = useState('0')
   const [requestReason, setRequestReason] = useState('')
   const [submissionNotice, setSubmissionNotice] = useState<string | null>(null)
@@ -114,7 +162,7 @@ export function StoreApprovalsPage(input: {
     mutationFn: createTargetDistributionRequest,
     onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: ['target-distribution-requests'] })
-      setTargetLabel('Aylik personel hedef dagitimi')
+      setTargetLabel(t('storeApprovals.targetLabelDefault'))
       setTotalTargetValue('0')
       setRequestReason('')
       setAllocations([{ employeeId: '', assigneeLabel: '', targetValue: 0, note: '' }])
@@ -227,8 +275,8 @@ export function StoreApprovalsPage(input: {
     setSellerRequestReason('')
     setSellerRequestNotice(
       item.reviewNote
-        ? `Returned by HR: ${item.reviewNote}. Re-enter full TC before resubmitting.`
-        : 'Returned request loaded. Re-enter full TC before resubmitting.',
+        ? t('storeApprovals.returnedSellerLoadedWithNote', { note: item.reviewNote })
+        : t('storeApprovals.returnedSellerLoaded'),
     )
   }
 
@@ -240,16 +288,16 @@ export function StoreApprovalsPage(input: {
     setOffboardingRequestReason(item.requestReason ?? '')
     setOffboardingNotice(
       item.reviewNote
-        ? `Returned by HR: ${item.reviewNote}. Review and resubmit when corrected.`
-        : 'Returned request loaded. Review and resubmit when corrected.',
+        ? t('storeApprovals.returnedOffboardingLoadedWithNote', { note: item.reviewNote })
+        : t('storeApprovals.returnedOffboardingLoaded'),
     )
   }
 
   if (canListRequests && requestsQuery.isLoading && !requestsQuery.data) {
     return (
       <ScreenState
-        title="Loading store approvals"
-        copy="Pulling target distribution requests already submitted for this store scope."
+        title={t('storeApprovals.loadingTitle')}
+        copy={t('storeApprovals.loadingCopy')}
       />
     )
   }
@@ -257,7 +305,7 @@ export function StoreApprovalsPage(input: {
   if (canListRequests && requestsQuery.isError) {
     return (
       <ScreenState
-        title="Store approvals unavailable"
+        title={t('storeApprovals.errorTitle')}
         copy={getErrorMessage(requestsQuery.error)}
         tone="error"
       />
@@ -301,60 +349,59 @@ export function StoreApprovalsPage(input: {
     <section className="page-stack">
       <section className="hero-panel store-hero-panel">
         <div>
-          <div className="eyebrow">Store Approvals</div>
-          <h2 className="hero-title">
-            Store-side target distribution requests should be submitted here, then flow to region
-            approval.
-          </h2>
-          <p className="hero-copy">
-            This is the first real write flow inside the store shell. A store manager prepares the
-            person-level target split, attaches a short reason when needed, and sends it to the
-            region approval queue without leaving the store-facing workflow surface.
-          </p>
+          <div className="eyebrow">{t('storeApprovals.heroEyebrow')}</div>
+          <h2 className="hero-title">{t('storeApprovals.title')}</h2>
+          <p className="hero-copy">{t('storeApprovals.heroCopy')}</p>
         </div>
         <div className="hero-metrics">
-          <MetricAccent label="Route" value="/store/approvals" />
-          <MetricAccent label="Action store" value={primaryStoreId ?? 'No action store'} />
-          <MetricAccent label="State" value="Live request flow" />
+          <MetricAccent label={t('storeApprovals.route')} value="/store/approvals" />
+          <MetricAccent
+            label={t('storeApprovals.actionStore')}
+            value={primaryStoreId ?? t('storeApprovals.noActionStore')}
+          />
+          <MetricAccent
+            label={t('storeApprovals.state')}
+            value={t('storeApprovals.liveRequestFlow')}
+          />
         </div>
       </section>
 
       <section className="metric-grid store-metric-grid">
         <MetricCard
-          title="Pending approvals"
+          title={t('storeApprovals.pendingApprovals')}
           value={pendingCount}
-          note="Requests still waiting on region-side approval."
+          note={t('storeApprovals.pendingApprovalsNote')}
           icon={<ReceiptText size={18} />}
           tone={pendingCount > 0 ? 'warning' : 'accent'}
         />
         <MetricCard
-          title="Approval intent"
+          title={t('storeApprovals.approvalIntent')}
           value={canCreateForStore ? 1 : 0}
-          note="Submission requires a store manager or super admin role on an assigned action store."
+          note={t('storeApprovals.approvalIntentNote')}
           icon={<ShieldCheck size={18} />}
           tone={canCreateForStore ? 'calm' : 'warning'}
         />
         <MetricCard
-          title="Approved requests"
+          title={t('storeApprovals.approvedRequests')}
           value={approvedCount}
-          note="Requests already accepted on the region side."
+          note={t('storeApprovals.approvedRequestsNote')}
           icon={<Clock3 size={18} />}
           tone="accent"
         />
         <MetricCard
-          title="Store personnel"
+          title={t('storeApprovals.storePersonnel')}
           value={personnelQuery.data?.items.length ?? 0}
-          note="Current personnel rows imported for this store and ready for target entry."
+          note={t('storeApprovals.storePersonnelNote')}
           icon={<CheckCircle2 size={18} />}
           tone="calm"
         />
       </section>
 
-      <section className="panel" aria-label="Returned workforce requests">
+      <section className="panel" aria-label={t('storeApprovals.returnedAria')}>
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Returned Requests</div>
-            <h3>Duzeltme bekleyen personel talepleri</h3>
+            <div className="eyebrow">{t('storeApprovals.returnedEyebrow')}</div>
+            <h3>{t('storeApprovals.returnedTitle')}</h3>
           </div>
           <StatusPill
             tone={returnedSellerCodeRequests.length + returnedOffboardingRequests.length > 0 ? 'warning' : 'calm'}
@@ -369,8 +416,8 @@ export function StoreApprovalsPage(input: {
           </div>
         ) : returnedSellerCodeRequests.length + returnedOffboardingRequests.length === 0 ? (
           <EmptyState
-            title="Duzeltme bekleyen personel talebi yok"
-            copy="HR tarafindan iade edilen satici kodu veya cikis talepleri burada duzenlenebilir hale gelir."
+            title={t('storeApprovals.returnedEmptyTitle')}
+            copy={t('storeApprovals.returnedEmptyCopy')}
           />
         ) : (
           <div className="stacked-table">
@@ -380,16 +427,19 @@ export function StoreApprovalsPage(input: {
                   <div>
                     <strong>{`${item.firstName} ${item.lastName}`.trim()}</strong>
                     <p className="queue-subtitle">
-                      Satici kodu talebi / {item.storeName} / TC son 4 {item.nationalIdLast4}
+                      {t('storeApprovals.sellerRequestSummary', {
+                        last4: item.nationalIdLast4,
+                        storeName: item.storeName,
+                      })}
                     </p>
                   </div>
-                  <StatusPill tone="warning">{formatState(item.status)}</StatusPill>
+                  <StatusPill tone="warning">{formatApprovalStatus(item.status, t)}</StatusPill>
                 </div>
                 <div className="key-grid">
-                  <KeyValue label="Pozisyon" value={item.positionName} />
-                  <KeyValue label="Iade notu" value={item.reviewNote ?? 'No note'} />
-                  <KeyValue label="Guncellendi" value={formatDateTime(item.updatedAt)} />
-                  <KeyValue label="Request id" value={item.requestId} />
+                  <KeyValue label={t('storeApprovals.position')} value={item.positionName} />
+                  <KeyValue label={t('storeApprovals.reviewNote')} value={item.reviewNote ?? t('storeApprovals.noNote')} />
+                  <KeyValue label={t('storeApprovals.updatedAt')} value={formatDateTime(item.updatedAt, locale)} />
+                  <KeyValue label={t('storeApprovals.requestId')} value={item.requestId} />
                 </div>
                 <div className="action-cluster">
                   <button
@@ -397,7 +447,7 @@ export function StoreApprovalsPage(input: {
                     type="button"
                     onClick={() => startEditingSellerRequest(item)}
                   >
-                    Edit seller code request
+                    {t('storeApprovals.editSellerCodeRequest')}
                   </button>
                 </div>
               </article>
@@ -409,16 +459,19 @@ export function StoreApprovalsPage(input: {
                   <div>
                     <strong>{item.displayName}</strong>
                     <p className="queue-subtitle">
-                      Personel cikis talebi / {item.storeName} / {item.externalEmployeeRef ?? 'no seller code'}
+                      {t('storeApprovals.offboardingRequestSummary', {
+                        ref: item.externalEmployeeRef ?? t('storeApprovals.noSellerCode'),
+                        storeName: item.storeName,
+                      })}
                     </p>
                   </div>
-                  <StatusPill tone="warning">{formatState(item.status)}</StatusPill>
+                  <StatusPill tone="warning">{formatApprovalStatus(item.status, t)}</StatusPill>
                 </div>
                 <div className="key-grid">
-                  <KeyValue label="Cikis tarihi" value={item.terminationDate} />
-                  <KeyValue label="Sebep" value={item.terminationReason} />
-                  <KeyValue label="Iade notu" value={item.reviewNote ?? 'No note'} />
-                  <KeyValue label="Request id" value={item.requestId} />
+                  <KeyValue label={t('storeApprovals.terminationDate')} value={formatDate(item.terminationDate, locale)} />
+                  <KeyValue label={t('storeApprovals.terminationReason')} value={item.terminationReason} />
+                  <KeyValue label={t('storeApprovals.reviewNote')} value={item.reviewNote ?? t('storeApprovals.noNote')} />
+                  <KeyValue label={t('storeApprovals.requestId')} value={item.requestId} />
                 </div>
                 <div className="action-cluster">
                   <button
@@ -426,7 +479,7 @@ export function StoreApprovalsPage(input: {
                     type="button"
                     onClick={() => startEditingOffboardingRequest(item)}
                   >
-                    Edit offboarding request
+                    {t('storeApprovals.editOffboardingRequest')}
                   </button>
                 </div>
               </article>
@@ -436,25 +489,25 @@ export function StoreApprovalsPage(input: {
       </section>
 
       <section className="two-up-grid">
-        <article className="panel" aria-label="Target distribution request form">
+        <article className="panel" aria-label={t('storeApprovals.targetFormAria')}>
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Future Inbox</div>
-              <h3>Submit a target distribution request</h3>
+              <div className="eyebrow">{t('storeApprovals.futureInbox')}</div>
+              <h3>{t('storeApprovals.targetTitle')}</h3>
             </div>
-            <StatusPill tone="accent">Write flow</StatusPill>
+            <StatusPill tone="accent">{t('storeApprovals.writeFlow')}</StatusPill>
           </div>
 
           {!canCreateForStore ? (
             <EmptyState
-              title="Assigned action store required"
-              copy="Target distribution submission is available only to STORE_MANAGER or SUPER_ADMIN sessions with this store in actionScope.assignedStoreIds."
+              title={t('storeApprovals.assignedActionStoreRequired')}
+              copy={t('storeApprovals.targetUnavailableCopy')}
             />
           ) : (
             <div className="stacked-table">
               <div className="stacked-row">
                 <label className="eyebrow" htmlFor="store-id">
-                  Store id
+                  {t('storeApprovals.storeId')}
                 </label>
                 {assignedStoreIds.length > 1 ? (
                   <select
@@ -473,7 +526,7 @@ export function StoreApprovalsPage(input: {
                     id="store-id"
                     value={storeId}
                     onChange={(event) => setSelectedStoreId(event.target.value)}
-                    placeholder="Scoped store id"
+                    placeholder={t('storeApprovals.scopedStoreId')}
                     readOnly={Boolean(primaryStoreId)}
                   />
                 )}
@@ -481,7 +534,7 @@ export function StoreApprovalsPage(input: {
 
               <div className="stacked-row">
                 <label className="eyebrow" htmlFor="request-month">
-                  Request month
+                  {t('storeApprovals.requestMonth')}
                 </label>
                 <input
                   id="request-month"
@@ -496,7 +549,7 @@ export function StoreApprovalsPage(input: {
 
               <div className="stacked-row">
                 <label className="eyebrow" htmlFor="target-label">
-                  Target label
+                  {t('storeApprovals.targetLabel')}
                 </label>
                 <input
                   id="target-label"
@@ -505,13 +558,13 @@ export function StoreApprovalsPage(input: {
                     setSubmissionNotice(null)
                     setTargetLabel(event.target.value)
                   }}
-                  placeholder="April target distribution"
+                  placeholder={t('storeApprovals.targetLabelPlaceholder')}
                 />
               </div>
 
               <div className="stacked-row">
                 <label className="eyebrow" htmlFor="total-target-value">
-                  Total target value
+                  {t('storeApprovals.totalTargetValue')}
                 </label>
                 <input
                   id="total-target-value"
@@ -527,7 +580,7 @@ export function StoreApprovalsPage(input: {
 
               <div className="stacked-row">
                 <label className="eyebrow" htmlFor="request-reason">
-                  Request reason
+                  {t('storeApprovals.requestReason')}
                 </label>
                 <textarea
                   id="request-reason"
@@ -537,13 +590,13 @@ export function StoreApprovalsPage(input: {
                     setSubmissionNotice(null)
                     setRequestReason(event.target.value)
                   }}
-                  placeholder="Optional note for the region approver"
+                  placeholder={t('storeApprovals.regionNotePlaceholder')}
                 />
               </div>
 
               <div className="stacked-row">
                 <div className="stacked-row-head">
-                  <strong>Person-level target entry</strong>
+                  <strong>{t('storeApprovals.personTargetEntry')}</strong>
                   <StatusPill tone={totalsAligned ? 'calm' : 'warning'}>
                     {`${allocationTotal}/${Number(totalTargetValue || 0)}`}
                   </StatusPill>
@@ -552,13 +605,10 @@ export function StoreApprovalsPage(input: {
                   <p className="queue-subtitle">{getErrorMessage(personnelQuery.error)}</p>
                 ) : null}
                 {personnelQuery.isLoading ? (
-                  <p className="queue-subtitle">Store personnel listesi hazirlaniyor.</p>
+                  <p className="queue-subtitle">{t('storeApprovals.personnelLoading')}</p>
                 ) : null}
                 {!personnelQuery.isLoading && !personnelQuery.isError ? (
-                  <p className="queue-subtitle">
-                    Personel hedefleri magaza muduru tarafindan girilir. Personel bu alani
-                    degistiremez; gonderim sonrasi bolge onayina gider.
-                  </p>
+                  <p className="queue-subtitle">{t('storeApprovals.personTargetCopy')}</p>
                 ) : null}
 
                 <div className="stacked-table">
@@ -569,18 +619,21 @@ export function StoreApprovalsPage(input: {
                       <div className="stacked-row" key={`allocation-${allocation.employeeId || index}`}>
                         {selectedPerson ? (
                           <div className="key-grid">
-                            <KeyValue label="Personel" value={allocation.assigneeLabel || 'Unassigned'} />
                             <KeyValue
-                              label="Mevcut satis"
+                              label={t('storeApprovals.personnel')}
+                              value={allocation.assigneeLabel || t('storeApprovals.unassigned')}
+                            />
+                            <KeyValue
+                              label={t('storeApprovals.currentSales')}
                               value={
                                 selectedPerson.netSalesValue !== null &&
                                 selectedPerson.netSalesValue !== undefined
-                                  ? new Intl.NumberFormat('tr-TR', {
-                                      style: 'currency',
+                                  ? formatNumber(selectedPerson.netSalesValue, locale, {
                                       currency: 'TRY',
                                       maximumFractionDigits: 0,
-                                    }).format(selectedPerson.netSalesValue)
-                                  : 'Veri yok'
+                                      style: 'currency',
+                                    })
+                                  : t('storeApprovals.noData')
                               }
                             />
                           </div>
@@ -603,7 +656,7 @@ export function StoreApprovalsPage(input: {
                               )
                             }}
                           >
-                            <option value="">Personel sec</option>
+                            <option value="">{t('storeApprovals.selectPersonnel')}</option>
                             {(personnelQuery.data?.items ?? []).map((person) => (
                               <option key={person.employeeId} value={person.employeeId}>
                                 {person.displayName}
@@ -612,7 +665,7 @@ export function StoreApprovalsPage(input: {
                           </select>
                         )}
                         <input
-                          aria-label="Personel target value"
+                          aria-label={t('storeApprovals.personTargetValue')}
                           type="number"
                           min="0"
                           value={allocation.targetValue}
@@ -626,7 +679,7 @@ export function StoreApprovalsPage(input: {
                               ),
                             )
                           }}
-                          placeholder="Hedef degeri"
+                          placeholder={t('storeApprovals.targetValuePlaceholder')}
                         />
                         <input
                           value={allocation.note ?? ''}
@@ -638,7 +691,7 @@ export function StoreApprovalsPage(input: {
                               ),
                             )
                           }}
-                          placeholder="Opsiyonel not"
+                          placeholder={t('storeApprovals.optionalNote')}
                         />
                         {activeAllocations.length > 1 ? (
                           <button
@@ -648,7 +701,7 @@ export function StoreApprovalsPage(input: {
                               setAllocations(activeAllocations.filter((_, itemIndex) => itemIndex !== index))
                             }
                           >
-                            Remove
+                            {t('storeApprovals.remove')}
                           </button>
                         ) : null}
                       </div>
@@ -657,9 +710,7 @@ export function StoreApprovalsPage(input: {
                 </div>
 
                 {!totalsAligned ? (
-                  <p className="queue-subtitle">
-                    Allocation toplami, toplam hedef ile ayni olmali.
-                  </p>
+                  <p className="queue-subtitle">{t('storeApprovals.allocationMismatch')}</p>
                 ) : null}
 
               <div className="action-cluster">
@@ -675,7 +726,7 @@ export function StoreApprovalsPage(input: {
                     ])
                   }}
                 >
-                  Add allocation
+                  {t('storeApprovals.addAllocation')}
                 </button>
               </div>
               </div>
@@ -696,7 +747,9 @@ export function StoreApprovalsPage(input: {
                     })
                   }
                 >
-                  {createMutation.isPending ? 'Submitting...' : 'Submit for region approval'}
+                  {createMutation.isPending
+                    ? t('storeApprovals.submitting')
+                    : t('storeApprovals.submitTargetRequest')}
                 </button>
               </div>
 
@@ -708,32 +761,32 @@ export function StoreApprovalsPage(input: {
           )}
         </article>
 
-        <article className="panel" aria-label="Seller code request form">
+        <article className="panel" aria-label={t('storeApprovals.sellerFormAria')}>
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Personnel Request</div>
-              <h3>Satici kodu talebi</h3>
+              <div className="eyebrow">{t('storeApprovals.personnelRequest')}</div>
+              <h3>{t('storeApprovals.sellerCodeTitle')}</h3>
             </div>
-            <StatusPill tone="calm">HR queue</StatusPill>
+            <StatusPill tone="calm">{t('storeApprovals.hrQueue')}</StatusPill>
           </div>
 
           {!canCreateForStore ? (
             <EmptyState
-              title="Assigned action store required"
-              copy="Seller code requests are available only to STORE_MANAGER or SUPER_ADMIN sessions with this store in actionScope.assignedStoreIds."
+              title={t('storeApprovals.assignedActionStoreRequired')}
+              copy={t('storeApprovals.sellerUnavailableCopy')}
             />
           ) : (
             <div className="stacked-table">
               <div className="stacked-row">
                 <label className="eyebrow" htmlFor="seller-store-id">
-                  Store id
+                  {t('storeApprovals.storeId')}
                 </label>
                 <input id="seller-store-id" value={storeId} readOnly />
               </div>
 
               <div className="stacked-row">
                 <label className="eyebrow" htmlFor="seller-first-name">
-                  First name
+                  {t('storeApprovals.firstName')}
                 </label>
                 <input
                   id="seller-first-name"
@@ -742,13 +795,13 @@ export function StoreApprovalsPage(input: {
                     setSellerRequestNotice(null)
                     setSellerFirstName(event.target.value)
                   }}
-                  placeholder="Ayse"
+                  placeholder={t('storeApprovals.firstNamePlaceholder')}
                 />
               </div>
 
               <div className="stacked-row">
                 <label className="eyebrow" htmlFor="seller-last-name">
-                  Last name
+                  {t('storeApprovals.lastName')}
                 </label>
                 <input
                   id="seller-last-name"
@@ -757,13 +810,13 @@ export function StoreApprovalsPage(input: {
                     setSellerRequestNotice(null)
                     setSellerLastName(event.target.value)
                   }}
-                  placeholder="Yilmaz"
+                  placeholder={t('storeApprovals.lastNamePlaceholder')}
                 />
               </div>
 
               <div className="stacked-row">
                 <label className="eyebrow" htmlFor="seller-position-id">
-                  Position
+                  {t('storeApprovals.position')}
                 </label>
                 <select
                   id="seller-position-id"
@@ -774,7 +827,7 @@ export function StoreApprovalsPage(input: {
                     setSellerPositionId(event.target.value)
                   }}
                 >
-                  <option value="">Select position</option>
+                  <option value="">{t('storeApprovals.selectPosition')}</option>
                   {(positionOptionsQuery.data?.items ?? []).map((position) => (
                     <option key={position.positionId} value={position.positionId}>
                       {position.positionName} ({position.positionCode})
@@ -782,7 +835,7 @@ export function StoreApprovalsPage(input: {
                   ))}
                 </select>
                 {positionOptionsQuery.isLoading ? (
-                  <p className="queue-subtitle">Position listesi hazirlaniyor.</p>
+                  <p className="queue-subtitle">{t('storeApprovals.positionsLoading')}</p>
                 ) : null}
                 {positionOptionsQuery.isError ? (
                   <p className="queue-subtitle">{getErrorMessage(positionOptionsQuery.error)}</p>
@@ -790,13 +843,13 @@ export function StoreApprovalsPage(input: {
                 {!positionOptionsQuery.isLoading &&
                 !positionOptionsQuery.isError &&
                 (positionOptionsQuery.data?.items.length ?? 0) === 0 ? (
-                  <p className="queue-subtitle">Bu magaza icin secilebilir position yok.</p>
+                  <p className="queue-subtitle">{t('storeApprovals.noPositions')}</p>
                 ) : null}
               </div>
 
               <div className="stacked-row">
                 <label className="eyebrow" htmlFor="seller-national-id">
-                  TC kimlik no
+                  {t('storeApprovals.nationalId')}
                 </label>
                 <input
                   id="seller-national-id"
@@ -813,7 +866,7 @@ export function StoreApprovalsPage(input: {
 
               <div className="stacked-row">
                 <label className="eyebrow" htmlFor="seller-phone-number">
-                  Phone number
+                  {t('storeApprovals.phoneNumber')}
                 </label>
                 <input
                   id="seller-phone-number"
@@ -829,7 +882,7 @@ export function StoreApprovalsPage(input: {
 
               <div className="stacked-row">
                 <label className="eyebrow" htmlFor="seller-hire-date">
-                  Hire date
+                  {t('storeApprovals.hireDate')}
                 </label>
                 <input
                   id="seller-hire-date"
@@ -844,7 +897,7 @@ export function StoreApprovalsPage(input: {
 
               <div className="stacked-row">
                 <label className="eyebrow" htmlFor="seller-employment-type">
-                  Employment type
+                  {t('storeApprovals.employmentType')}
                 </label>
                 <select
                   id="seller-employment-type"
@@ -854,15 +907,15 @@ export function StoreApprovalsPage(input: {
                     setSellerEmploymentType(event.target.value as SellerEmploymentType)
                   }}
                 >
-                  <option value="full_time">Full time</option>
-                  <option value="part_time">Part time</option>
-                  <option value="temporary">Temporary</option>
+                  <option value="full_time">{formatEmploymentType('full_time', t)}</option>
+                  <option value="part_time">{formatEmploymentType('part_time', t)}</option>
+                  <option value="temporary">{formatEmploymentType('temporary', t)}</option>
                 </select>
               </div>
 
               <div className="stacked-row">
                 <label className="eyebrow" htmlFor="seller-request-reason">
-                  Request reason
+                  {t('storeApprovals.requestReason')}
                 </label>
                 <textarea
                   id="seller-request-reason"
@@ -872,7 +925,7 @@ export function StoreApprovalsPage(input: {
                     setSellerRequestNotice(null)
                     setSellerRequestReason(event.target.value)
                   }}
-                  placeholder="Yeni personel"
+                  placeholder={t('storeApprovals.newPersonnelPlaceholder')}
                 />
               </div>
 
@@ -909,10 +962,10 @@ export function StoreApprovalsPage(input: {
                   }}
                 >
                   {sellerRequestPending
-                    ? 'Submitting...'
+                    ? t('storeApprovals.submitting')
                     : editingSellerRequestId
-                      ? 'Resubmit seller code request'
-                      : 'Submit seller code request'}
+                      ? t('storeApprovals.resubmitSellerCodeRequest')
+                      : t('storeApprovals.submitSellerCodeRequest')}
                 </button>
                 {editingSellerRequestId ? (
                   <button
@@ -932,7 +985,7 @@ export function StoreApprovalsPage(input: {
                       setSellerRequestNotice(null)
                     }}
                   >
-                    Cancel edit
+                    {t('storeApprovals.cancelEdit')}
                   </button>
                 ) : null}
               </div>
@@ -950,25 +1003,25 @@ export function StoreApprovalsPage(input: {
           )}
         </article>
 
-        <article className="panel" aria-label="Offboarding request form">
+        <article className="panel" aria-label={t('storeApprovals.offboardingFormAria')}>
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Personnel Request</div>
-              <h3>Personel cikis talebi</h3>
+              <div className="eyebrow">{t('storeApprovals.personnelRequest')}</div>
+              <h3>{t('storeApprovals.offboardingTitle')}</h3>
             </div>
-            <StatusPill tone="warning">HR queue</StatusPill>
+            <StatusPill tone="warning">{t('storeApprovals.hrQueue')}</StatusPill>
           </div>
 
           {!canCreateForStore ? (
             <EmptyState
-              title="Assigned action store required"
-              copy="Offboarding requests are available only to STORE_MANAGER or SUPER_ADMIN sessions with this store in actionScope.assignedStoreIds."
+              title={t('storeApprovals.assignedActionStoreRequired')}
+              copy={t('storeApprovals.offboardingUnavailableCopy')}
             />
           ) : (
             <div className="stacked-table">
               <div className="stacked-row">
                 <label className="eyebrow" htmlFor="offboarding-employee-id">
-                  Employee
+                  {t('storeApprovals.employee')}
                 </label>
                 <select
                   id="offboarding-employee-id"
@@ -979,7 +1032,7 @@ export function StoreApprovalsPage(input: {
                     setOffboardingEmployeeId(event.target.value)
                   }}
                 >
-                  <option value="">Select employee</option>
+                  <option value="">{t('storeApprovals.selectEmployee')}</option>
                   {(storeEmployeesQuery.data?.items ?? []).map((employee) => (
                     <option key={employee.employeeId} value={employee.employeeId}>
                       {employee.displayName} ({employee.externalEmployeeRef ?? employee.positionName})
@@ -987,7 +1040,7 @@ export function StoreApprovalsPage(input: {
                   ))}
                 </select>
                 {storeEmployeesQuery.isLoading ? (
-                  <p className="queue-subtitle">Aktif personel listesi hazirlaniyor.</p>
+                  <p className="queue-subtitle">{t('storeApprovals.activePersonnelLoading')}</p>
                 ) : null}
                 {storeEmployeesQuery.isError ? (
                   <p className="queue-subtitle">{getErrorMessage(storeEmployeesQuery.error)}</p>
@@ -995,13 +1048,13 @@ export function StoreApprovalsPage(input: {
                 {!storeEmployeesQuery.isLoading &&
                 !storeEmployeesQuery.isError &&
                 (storeEmployeesQuery.data?.items.length ?? 0) === 0 ? (
-                  <p className="queue-subtitle">Bu magazada aktif personel bulunamadi.</p>
+                  <p className="queue-subtitle">{t('storeApprovals.noActivePersonnel')}</p>
                 ) : null}
               </div>
 
               <div className="stacked-row">
                 <label className="eyebrow" htmlFor="offboarding-termination-date">
-                  Termination date
+                  {t('storeApprovals.terminationDate')}
                 </label>
                 <input
                   id="offboarding-termination-date"
@@ -1016,7 +1069,7 @@ export function StoreApprovalsPage(input: {
 
               <div className="stacked-row">
                 <label className="eyebrow" htmlFor="offboarding-termination-reason">
-                  Termination reason
+                  {t('storeApprovals.terminationReason')}
                 </label>
                 <input
                   id="offboarding-termination-reason"
@@ -1025,13 +1078,13 @@ export function StoreApprovalsPage(input: {
                     setOffboardingNotice(null)
                     setOffboardingTerminationReason(event.target.value)
                   }}
-                  placeholder="resignation"
+                  placeholder={t('storeApprovals.resignationPlaceholder')}
                 />
               </div>
 
               <div className="stacked-row">
                 <label className="eyebrow" htmlFor="offboarding-request-reason">
-                  Request reason
+                  {t('storeApprovals.requestReason')}
                 </label>
                 <textarea
                   id="offboarding-request-reason"
@@ -1041,7 +1094,7 @@ export function StoreApprovalsPage(input: {
                     setOffboardingNotice(null)
                     setOffboardingRequestReason(event.target.value)
                   }}
-                  placeholder="Personel istifa etti"
+                  placeholder={t('storeApprovals.offboardingReasonPlaceholder')}
                 />
               </div>
 
@@ -1073,10 +1126,10 @@ export function StoreApprovalsPage(input: {
                   }}
                 >
                   {offboardingRequestPending
-                    ? 'Submitting...'
+                    ? t('storeApprovals.submitting')
                     : editingOffboardingRequestId
-                      ? 'Resubmit offboarding request'
-                      : 'Submit offboarding request'}
+                      ? t('storeApprovals.resubmitOffboardingRequest')
+                      : t('storeApprovals.submitOffboardingRequest')}
                 </button>
                 {editingOffboardingRequestId ? (
                   <button
@@ -1092,7 +1145,7 @@ export function StoreApprovalsPage(input: {
                       setOffboardingNotice(null)
                     }}
                   >
-                    Cancel edit
+                    {t('storeApprovals.cancelEdit')}
                   </button>
                 ) : null}
               </div>
@@ -1111,29 +1164,38 @@ export function StoreApprovalsPage(input: {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Resolved Session</div>
-              <h3>Why this request flow belongs in the store shell</h3>
+              <div className="eyebrow">{t('storeApprovals.resolvedSession')}</div>
+              <h3>{t('storeApprovals.resolvedTitle')}</h3>
             </div>
           </div>
 
           <div className="key-grid">
-            <KeyValue label="User id" value={user?.userId ?? 'Session not resolved'} />
-          <KeyValue label="Roles" value={formatDisplayRoles(user?.roleCodes, 'No resolved roles')} />
-            <KeyValue label="Read store ids" value={readStoreIds.join(', ') || 'none'} />
-            <KeyValue label="Action store ids" value={assignedStoreIds.join(', ') || 'none'} />
             <KeyValue
-              label="Approval route fit"
+              label={t('storeApprovals.userId')}
+              value={user?.userId ?? t('storeApprovals.sessionNotResolved')}
+            />
+            <KeyValue label={t('storeApprovals.roles')} value={formatRoles(user?.roleCodes, t)} />
+            <KeyValue
+              label={t('storeApprovals.readStoreIds')}
+              value={readStoreIds.join(', ') || t('storeApprovals.none')}
+            />
+            <KeyValue
+              label={t('storeApprovals.actionStoreIds')}
+              value={assignedStoreIds.join(', ') || t('storeApprovals.none')}
+            />
+            <KeyValue
+              label={t('storeApprovals.approvalRouteFit')}
               value={
                 canCreateForStore
-                  ? 'Store submission belongs here'
-                  : 'Boundary is ready before role contract'
+                  ? t('storeApprovals.routeFitReady')
+                  : t('storeApprovals.routeFitPending')
               }
             />
           </div>
 
           <div className="action-cluster">
             <Link className="control-button store-shell-link" to="/admin/targets">
-              Region approval queue
+              {t('storeApprovals.regionApprovalQueue')}
             </Link>
           </div>
         </article>
@@ -1142,15 +1204,15 @@ export function StoreApprovalsPage(input: {
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Submitted Requests</div>
-            <h3>What already left the store shell</h3>
+            <div className="eyebrow">{t('storeApprovals.submittedEyebrow')}</div>
+            <h3>{t('storeApprovals.submittedTitle')}</h3>
           </div>
         </div>
 
         {requests.length === 0 ? (
           <EmptyState
-            title="No requests submitted yet"
-            copy="Once the store submits a target split, the request will appear here with its current approval state."
+            title={t('storeApprovals.noSubmittedTitle')}
+            copy={t('storeApprovals.noSubmittedCopy')}
           />
         ) : (
           <div className="stacked-table">
@@ -1159,27 +1221,44 @@ export function StoreApprovalsPage(input: {
                 <div className="stacked-row-head">
                   <strong>{item.targetLabel}</strong>
                   <StatusPill tone={item.status === 'approved' ? 'calm' : 'warning'}>
-                    {formatState(item.status)}
+                    {formatApprovalStatus(item.status, t)}
                   </StatusPill>
                 </div>
                 <p>
-                  {item.storeName || item.storeId} - {formatDate(item.requestMonth)} - toplam hedef{' '}
-                  {item.totalTargetValue}
+                  {t('storeApprovals.targetSummary', {
+                    month: formatDate(item.requestMonth, locale),
+                    storeName: item.storeName || item.storeId,
+                    value: item.totalTargetValue,
+                  })}
                 </p>
                 <div className="key-grid">
-                  <KeyValue label="Allocation count" value={String(item.allocationCount)} />
-                  <KeyValue label="Created" value={formatDateTime(item.createdAt)} />
                   <KeyValue
-                    label="Approved at"
-                    value={item.approvedAt ? formatDateTime(item.approvedAt) : 'Pending'}
+                    label={t('storeApprovals.allocationCount')}
+                    value={String(item.allocationCount)}
                   />
-                  <KeyValue label="Request id" value={item.requestId} />
+                  <KeyValue
+                    label={t('storeApprovals.createdAt')}
+                    value={formatDateTime(item.createdAt, locale)}
+                  />
+                  <KeyValue
+                    label={t('storeApprovals.approvedAt')}
+                    value={
+                      item.approvedAt
+                        ? formatDateTime(item.approvedAt, locale)
+                        : t('storeApprovals.pending')
+                    }
+                  />
+                  <KeyValue label={t('storeApprovals.requestId')} value={item.requestId} />
                 </div>
                 {item.requestReason ? (
-                  <p className="queue-subtitle">Reason: {item.requestReason}</p>
+                  <p className="queue-subtitle">
+                    {t('storeApprovals.reasonPrefix', { reason: item.requestReason })}
+                  </p>
                 ) : null}
                 {item.approvalNote ? (
-                  <p className="queue-subtitle">Approval note: {item.approvalNote}</p>
+                  <p className="queue-subtitle">
+                    {t('storeApprovals.approvalNotePrefix', { note: item.approvalNote })}
+                  </p>
                 ) : null}
               </article>
             ))}
@@ -1191,29 +1270,24 @@ export function StoreApprovalsPage(input: {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">This Flow Now</div>
-              <h3>What this page already handles</h3>
+              <div className="eyebrow">{t('storeApprovals.thisFlowNow')}</div>
+              <h3>{t('storeApprovals.handlesTitle')}</h3>
             </div>
           </div>
           <div className="stacked-table">
             <div className="stacked-row">
               <div className="stacked-row-head">
-                <strong>Store submission</strong>
+                <strong>{t('storeApprovals.storeSubmission')}</strong>
                 <CheckCircle2 size={16} />
               </div>
-              <p>
-                Store managers can now send a person-level target split into a real approval queue.
-              </p>
+              <p>{t('storeApprovals.storeSubmissionCopy')}</p>
             </div>
             <div className="stacked-row">
               <div className="stacked-row-head">
-                <strong>Region review</strong>
+                <strong>{t('storeApprovals.regionReview')}</strong>
                 <CheckCircle2 size={16} />
               </div>
-              <p>
-                The region-side queue can approve the request and attach a short note without
-                leaking governance controls into the store shell.
-              </p>
+              <p>{t('storeApprovals.regionReviewCopy')}</p>
             </div>
           </div>
         </article>
@@ -1221,30 +1295,24 @@ export function StoreApprovalsPage(input: {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Boundary Rule</div>
-              <h3>What stays outside `/store/approvals`</h3>
+              <div className="eyebrow">{t('storeApprovals.boundaryRule')}</div>
+              <h3>{t('storeApprovals.boundaryTitle')}</h3>
             </div>
           </div>
           <div className="stacked-table">
             <div className="stacked-row">
               <div className="stacked-row-head">
-                <strong>Workflow governance</strong>
+                <strong>{t('storeApprovals.workflowGovernance')}</strong>
                 <CheckCircle2 size={16} />
               </div>
-              <p>
-                Approval policy design, cross-store investigation, and region override controls
-                should remain admin-side.
-              </p>
+              <p>{t('storeApprovals.workflowGovernanceCopy')}</p>
             </div>
             <div className="stacked-row">
               <div className="stacked-row-head">
-                <strong>Store consumption</strong>
+                <strong>{t('storeApprovals.storeConsumption')}</strong>
                 <CheckCircle2 size={16} />
               </div>
-              <p>
-                Store users should prepare the split and then watch approval state without turning
-                this route into a region console.
-              </p>
+              <p>{t('storeApprovals.storeConsumptionCopy')}</p>
             </div>
           </div>
         </article>
@@ -1252,10 +1320,10 @@ export function StoreApprovalsPage(input: {
 
       <div className="action-cluster">
         <Link className="control-button store-shell-link" to="/store">
-          Back to store home
+          {t('storeApprovals.backToStoreHome')}
         </Link>
         <Link className="control-button store-shell-link" to="/admin/targets">
-          Open region approval queue
+          {t('storeApprovals.openRegionApprovalQueue')}
         </Link>
       </div>
     </section>

@@ -10,6 +10,7 @@ const appRoot = dirname(scriptsDir)
 const localizationFiles = [
   'src/features/localization/messages/common.ts',
   'src/features/localization/messages/competition.ts',
+  'src/features/localization/messages/store-approvals.ts',
   'src/features/localization/messages/store-checklists.ts',
   'src/features/localization/messages/store-me.ts',
   'src/features/localization/messages/store-kpis.ts',
