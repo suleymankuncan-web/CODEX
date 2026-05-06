@@ -368,6 +368,38 @@ test('store tasks page renders readable Turkish queue labels', async ({ page }) 
   await expect(page.locator('body')).not.toContainText('Å')
 })
 
+test('store tasks page switches to English copy and persists locale', async ({ page }) => {
+  await page.goto('/store/tasks')
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: /Action-required work/i })).toBeVisible()
+  await expect(page.getByText('Detail summary')).toBeVisible()
+  await expect(page.getByText('Time signal')).toBeVisible()
+  await expect(page.getByText('Escalation', { exact: true })).toBeVisible()
+  await expect(page.getByLabel('Inbox governance signals').getByText('Escalation candidate')).toBeVisible()
+  await expect(page.getByText('Source action')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Go to KPI detail' })).toBeVisible()
+  await expect(page.getByText('Work that should be reviewed first.')).toBeVisible()
+  await expect(page.getByText('Queue context')).toBeVisible()
+  await expect(page.getByText("Today's queue")).toBeVisible()
+  await expect(page.getByText('Work type', { exact: true })).toBeVisible()
+  await expect(page.getByText('Action time')).toBeVisible()
+  await expect(page.getByText('Task', { exact: true })).toBeVisible()
+  await expect(page.getByText('Review deviation')).toBeVisible()
+  await expect(page.getByText('Aksiyon gerektiren işler')).toHaveCount(0)
+  await expect(page.getByText('Detay özeti')).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText('Ãƒ')
+  await expect(page.locator('body')).not.toContainText('Ã„')
+  await expect(page.locator('body')).not.toContainText('Ã…')
+
+  await page.reload()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: /Action-required work/i })).toBeVisible()
+})
+
 test('store competitions page renders scoped contribution details', async ({ page }) => {
   await page.goto('/store/competitions')
 

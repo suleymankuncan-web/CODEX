@@ -1,6 +1,17 @@
 import { KeyValue, StatusPill, type Tone } from '../../components/dashboard-primitives'
 import { formatDateTime, formatState } from '../../lib/format'
-import { formatWorkflowItemType, type WorkflowInboxItem } from './contracts'
+import type { AppLocale } from '../../lib/i18n'
+import type { TranslateFunction, TranslationKey } from '../localization/dictionary'
+import { useLocalization } from '../localization/useLocalization'
+import type { WorkflowInboxItem } from './contracts'
+
+const actorRoleTranslationKeys: Partial<Record<string, TranslationKey>> = {
+  REGION_APPROVER: 'storeTasks.role.REGION_APPROVER',
+  REPORT_VIEWER: 'storeTasks.role.REPORT_VIEWER',
+  STORE_MANAGER: 'storeTasks.role.STORE_MANAGER',
+  STORE_PERSONNEL: 'storeTasks.role.STORE_PERSONNEL',
+  SUPER_ADMIN: 'storeTasks.role.SUPER_ADMIN',
+}
 
 type InboxDetailSignal = {
   value: string
@@ -15,7 +26,8 @@ type WorkflowInboxDetailModel = {
 }
 
 export function WorkflowInboxDetail(input: { item: WorkflowInboxItem }) {
-  const detail = resolveWorkflowInboxDetail(input.item)
+  const { locale, t } = useLocalization()
+  const detail = resolveWorkflowInboxDetail(input.item, t)
 
   return (
     <div aria-label="Inbox item detail" className="stacked-row-detail">
@@ -24,85 +36,112 @@ export function WorkflowInboxDetail(input: { item: WorkflowInboxItem }) {
         <StatusPill tone={detail.escalation.tone}>{detail.escalation.value}</StatusPill>
       </div>
       <div className="key-grid">
-        <KeyValue label="Detay özeti" value={detail.detailSummary} />
-        <KeyValue label="Zaman sinyali" value={resolveDueValue(input.item)} />
-        <KeyValue label="Yükseltme" value={detail.escalation.value} />
-        <KeyValue label="Kaynak aksiyonu" value={detail.sourceAction} />
+        <KeyValue label={t('storeTasks.detailSummary')} value={detail.detailSummary} />
+        <KeyValue label={t('storeTasks.timeSignal')} value={resolveDueValue(input.item, locale, t)} />
+        <KeyValue label={t('storeTasks.escalation')} value={detail.escalation.value} />
+        <KeyValue label={t('storeTasks.sourceAction')} value={detail.sourceAction} />
       </div>
     </div>
   )
 }
 
-function resolveWorkflowInboxDetail(item: WorkflowInboxItem): WorkflowInboxDetailModel {
+function resolveWorkflowInboxDetail(
+  item: WorkflowInboxItem,
+  t: TranslateFunction,
+): WorkflowInboxDetailModel {
   return {
-    detailSummary: `${formatWorkflowItemType(item.itemType)} · ${formatWorkflowStatus(item.workflowStatus)} · ${formatState(item.actorRole)}`,
-    dueSignal: resolveDueSignal(item),
-    escalation: resolveEscalationSignal(item),
-    sourceAction: resolveSourceAction(item),
+    detailSummary: `${formatWorkflowItemTypeLabel(t, item.itemType)} · ${formatWorkflowStatus(t, item.workflowStatus)} · ${formatActorRoleLabel(t, item.actorRole)}`,
+    dueSignal: resolveDueSignal(item, t),
+    escalation: resolveEscalationSignal(item, t),
+    sourceAction: resolveSourceAction(item, t),
   }
 }
 
-function formatWorkflowStatus(status: string) {
+function formatWorkflowItemTypeLabel(t: TranslateFunction, type: WorkflowInboxItem['itemType']) {
+  switch (type) {
+    case 'approval':
+      return t('storeTasks.itemType.approval')
+    case 'acknowledgement':
+      return t('storeTasks.itemType.acknowledgement')
+    case 'task':
+      return t('storeTasks.itemType.task')
+    case 'notification':
+      return t('storeTasks.itemType.notification')
+    default:
+      return type
+  }
+}
+
+function formatWorkflowStatus(t: TranslateFunction, status: string) {
   switch (status) {
     case 'at_risk':
-      return 'riskte'
+      return t('storeTasks.workflowStatus.at_risk')
     case 'off_track':
-      return 'rotadan sapmış'
+      return t('storeTasks.workflowStatus.off_track')
     case 'pending_region_approval':
-      return 'bölge onayı bekliyor'
+      return t('storeTasks.workflowStatus.pending_region_approval')
     case 'completed':
-      return 'tamamlandı'
+      return t('storeTasks.workflowStatus.completed')
     default:
       return formatState(status)
   }
 }
 
-function resolveDueSignal(item: WorkflowInboxItem): InboxDetailSignal {
+function resolveDueSignal(item: WorkflowInboxItem, t: TranslateFunction): InboxDetailSignal {
   if (item.inboxStatus === 'completed') {
-    return { value: 'Kapandı', tone: 'calm' }
+    return { value: t('storeTasks.due.closed'), tone: 'calm' }
   }
 
   if (item.urgency === 'high') {
-    return { value: 'Bugün ele al', tone: 'danger' }
+    return { value: t('storeTasks.due.today'), tone: 'danger' }
   }
 
   if (item.urgency === 'medium') {
-    return { value: 'Planlı takip', tone: 'warning' }
+    return { value: t('storeTasks.due.planned'), tone: 'warning' }
   }
 
-  return { value: 'Düşük öncelik', tone: 'accent' }
+  return { value: t('storeTasks.due.low'), tone: 'accent' }
 }
 
-function resolveEscalationSignal(item: WorkflowInboxItem): InboxDetailSignal {
+function resolveEscalationSignal(item: WorkflowInboxItem, t: TranslateFunction): InboxDetailSignal {
   if (item.inboxStatus !== 'needs_attention') {
-    return { value: 'Yükseltme yok', tone: 'calm' }
+    return { value: t('storeTasks.escalation.none'), tone: 'calm' }
   }
 
   if (item.urgency === 'high') {
-    return { value: 'Yükseltme adayı', tone: 'danger' }
+    return { value: t('storeTasks.escalation.candidate'), tone: 'danger' }
   }
 
   if (item.urgency === 'medium') {
-    return { value: 'Takipte tut', tone: 'warning' }
+    return { value: t('storeTasks.escalation.watch'), tone: 'warning' }
   }
 
-  return { value: 'İzlemede', tone: 'accent' }
+  return { value: t('storeTasks.escalation.monitoring'), tone: 'accent' }
 }
 
-function resolveSourceAction(item: WorkflowInboxItem) {
+function resolveSourceAction(item: WorkflowInboxItem, t: TranslateFunction) {
   switch (item.sourceType) {
     case 'target_distribution_request':
-      return 'Karar ekranına git'
+      return t('storeTasks.sourceAction.target')
     case 'checklist_receipt':
-      return 'Checklist sonucunu aç'
+      return t('storeTasks.sourceAction.checklist')
     case 'kpi_exception':
-      return 'KPI detayına git'
+      return t('storeTasks.sourceAction.kpi')
     default:
       return item.primaryActionLabel
   }
 }
 
-function resolveDueValue(item: WorkflowInboxItem) {
+function resolveDueValue(
+  item: WorkflowInboxItem,
+  locale: AppLocale,
+  t: TranslateFunction,
+) {
   const dateValue = item.needsAttentionAt ?? item.createdAt
-  return dateValue ? formatDateTime(dateValue) : 'Zaman yok'
+  return dateValue ? formatDateTime(dateValue, locale) : t('storeTasks.noTime')
+}
+
+function formatActorRoleLabel(t: TranslateFunction, roleCode: string) {
+  const translationKey = actorRoleTranslationKeys[roleCode]
+  return translationKey ? t(translationKey) : formatState(roleCode)
 }
