@@ -68,6 +68,25 @@ The smoke script writes sanitized JSON evidence to stdout. The guard checks that
 
 - `docs/plans/phase-7-auth-evidence-template.md`
 
+## Session Edge Review
+
+Logout evidence must prove:
+
+- provider logout request includes `id_token_hint`,
+- browser returns to `/auth/login`,
+- local bearer token storage is cleared,
+- local provider id token storage is cleared.
+
+Expired Token evidence must prove:
+
+- expired bearer JWT is cleared,
+- provider id token is cleared with the expired bearer session,
+- API requests do not include `Authorization: Bearer <expired-jwt>`,
+- browser returns to `/auth/login` or the approved session-recovery route,
+- no browser refresh token is requested or used.
+
+No refresh token should be requested, stored, logged, or attached in this first real staging IdP smoke.
+
 ## Required Environment
 
 Set these values before running either staging command:

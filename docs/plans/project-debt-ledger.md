@@ -17,7 +17,7 @@ Date: 30 April 2026
 
 Current count:
 
-- Closed active debts: 92
+- Closed active debts: 93
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -120,6 +120,7 @@ These are counted as paid because they have implementation or documentation evid
 90. Master Data Validation/Promotion Test Split V1
 91. Controlled Pilot Operating Checklist V1
 92. Controlled Pilot Feedback Log Guard V1
+93. Staging Auth Session Edge Evidence Guard V1
 
 Ranking Included Snapshot Contract V1 is counted as paid because `GET /reports/leaderboards/closed` now returns `includedSnapshotRuns`, daily ranking returns the included closed snapshot, monthly ranking returns every completed daily snapshot included in the month calculation, and `/store/rankings` uses that backend contract instead of frontend inference.
 
@@ -158,6 +159,8 @@ Master Data Validation/Promotion Test Split V1 is counted as paid because the re
 Controlled Pilot Operating Checklist V1 is counted as paid because the controlled staging/internal pilot now has a guarded operating routine for invitation, route monitoring, feedback intake, pause/rollback triggers, and exit decisions. The checklist preserves the current `Conditional Go` pilot boundary, keeps broad production rollout at `No-Go`, and blocks JSON adapter work, direct Supabase `ops.*` access, raw token evidence, low-role global metric leaks, and unassigned-store actions. Reference: `docs/plans/controlled-pilot-operating-checklist-v1.md`.
 
 Controlled Pilot Feedback Log Guard V1 is counted as paid because the active controlled pilot feedback log is now guarded as the operating record for sessions, issue status, route-blocker closure, pause/resume decisions, and sanitized evidence rules. The guard links the log from the pilot checklist, pilot readiness gate, and active handoff without approving broad production rollout. Reference: `docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md`.
+
+Staging Auth Session Edge Evidence Guard V1 is counted as paid because logout and expired-token behavior are now locked to the existing staging auth smoke and evidence guard path. It documents that `smoke:auth:staging`, `smoke:auth:staging:action`, and `guard:auth:evidence` must prove provider logout, token storage cleanup, no expired-token authorization header, no refresh-token use, and sanitized evidence before pilot expansion or broad rollout. Reference: `docs/plans/staging-auth-session-edge-evidence-guard-v1.md`.
 
 Operator Evidence Consistency Pass V1 is counted as paid because existing import and master-data operator surfaces now use the same `Go / Conditional Go / No-Go`, row evidence, dry-run evidence, sanitized evidence, retry evidence, and dependency mapping language without adding backend endpoints, workflows, scoring behavior, import behavior, or promotion behavior. Reference: `docs/plans/operator-evidence-consistency-pass-v1.md`.
 

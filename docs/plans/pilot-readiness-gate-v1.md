@@ -207,6 +207,7 @@ Final decision: Go / Conditional Go / No-Go
 - `docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-conditional-go-consolidation.md` records the current `Conditional Go` consolidation for the controlled staging/internal pilot, with broad production rollout still `No-Go`.
 - `docs/plans/controlled-pilot-operating-checklist-v1.md` records the operating checklist for inviting pilot users, monitoring pilot routes, collecting sanitized feedback, and deciding continue, pause, rollback, or No-Go.
 - `docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md` is the controlled pilot feedback log for session notes, issue status, pause/resume decisions, and sanitized operating evidence.
+- `docs/plans/staging-auth-session-edge-evidence-guard-v1.md` is the staging auth session edge evidence guard for logout, expired-token, no-refresh-token, and sanitized auth smoke evidence before pilot expansion or broad rollout.
 
 ## CODEX DURUST YORUM
 
