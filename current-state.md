@@ -91,6 +91,7 @@ Latest browser feedback:
 - `/admin/integrations`, `/admin/master-data`, `/admin/targets`, `/admin/competitions`, `/admin/audit`, `/store`, `/store/me`, `/store/kpis`, `/store/rankings`, and `/store/approvals` were manually toured during pilot stabilization.
 - `store/me` and `store/approvals` route issues were fixed and retested.
 - Controlled Pilot Round 1 Outcome: continue the same controlled staging/internal pilot scope; no active route blocker remains from Round 1.
+- Round 2 browser check: admin, store manager, store personnel, and region manager / BM identities are OK on checked staging routes; all current pilot users checked in this pass are OK. `npm.cmd run check:pilot-stabilization` passed after this check. `STORE_PERSONNEL` access to `/store/approvals` is logged as UX/navigation cleanup only because no personnel action is available there.
 - Refresh on protected routes no longer visibly falls through `/auth/login` after PR #15; user confirmed the issue appears solved after deploy.
 
 ## Auth And Scope Notes

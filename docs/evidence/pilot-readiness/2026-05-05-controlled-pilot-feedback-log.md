@@ -324,6 +324,78 @@ Daily smoke continuation:
 - Product owner confirmed managed-store personnel details are visible.
 - No demo-data issue was reported during this pass.
 
+## Session 2 - 2026-05-06 Round 2 Role Browser Check
+
+Tester:
+
+- Product owner in staging browser.
+
+Environment:
+
+- Frontend: `https://staging.hr-axis.com`
+- API base: `https://api-staging.hr-axis.com/api`
+
+Accounts/roles:
+
+- Admin user.
+- Store manager user.
+- Store personnel user.
+- Region manager / BM user.
+
+Routes checked:
+
+- [x] `/admin/integrations`
+- [x] `/admin/master-data`
+- [x] `/admin/targets`
+- [x] `/admin/competitions`
+- [x] `/admin/feed`
+- [x] `/store`
+- [x] `/store/me`
+- [x] `/store/kpis`
+- [x] `/store/rankings`
+- [x] `/store/approvals`
+
+Observed:
+
+- Admin user confirmed `/admin/integrations`, `/admin/master-data`, and `/admin/targets` are OK.
+- Store manager user confirmed store shell, self performance, KPI, rankings, and approvals surfaces are OK.
+- Store personnel user confirmed expected store-facing identity behavior is OK.
+- Region manager / BM user confirmed the recommended BM surfaces are OK, including `/admin/targets`, `/store/rankings`, `/admin/competitions`, and `/admin/feed`.
+- Product owner confirmed all current pilot users checked in this Round 2 browser pass are OK.
+- Store personnel can open `/store/approvals`, but no store-personnel operation belongs there; frontend action gates and backend write endpoints remain restricted to `STORE_MANAGER` or `SUPER_ADMIN` with assigned action store scope.
+
+Feedback buckets:
+
+- Data trust: no new issue reported.
+- Ranking trust: no new issue reported.
+- KPI explanation: no new issue reported.
+- Navigation/loading: no new blocker reported.
+- UI direction: `/store/approvals` visibility for `STORE_PERSONNEL` is confusing because the role has no action there.
+- Operational blocker: none.
+
+Issues:
+
+- `PILOT-005`: `STORE_PERSONNEL` can open `/store/approvals` even though the role has no action on that page. This is a UX/navigation cleanup item, not a confirmed authorization blocker.
+
+Pause criteria triggered:
+
+- No.
+
+Technical gate:
+
+- `npm.cmd run check:pilot-stabilization` -> pass.
+- Contract checks: 14 passed.
+- Admin web pilot smoke: build passed; `pilot-smoke.spec.ts` and `pilot-api-contracts.spec.ts` passed with 7 tests.
+
+Decision:
+
+- Continue controlled pilot.
+
+Next action:
+
+- Keep collecting Round 2 feedback.
+- Batch `/store/approvals` store-personnel route/link cleanup with the next UX/navigation slice unless it becomes confusing enough to block pilot use.
+
 ## Issue Register
 
 | ID | Date | Severity | Area | Status | Summary | Owner | Decision |
@@ -332,6 +404,7 @@ Daily smoke continuation:
 | PILOT-002 | 2026-05-05 | P1 | Store / performance | Closed | `/store/me` first hit auth return-path bugs, then a live no-data response without `supporting` metadata crashed the page while the URL stayed on `/store/me`; product owner confirmed the route now opens after deploy `dpl_6UUc3hoJ4C4tFowJeqrYR1hZ2daH`. | Codex + Product owner | Keep no-data regression in the release gate. |
 | PILOT-003 | 2026-05-05 | P1 | Store / approvals | Closed | `/store/approvals` redirected to `/store` because auth return target was dropped during login/session refresh; product owner confirmed the route now opens after staging deploys. | Codex + Product owner | Keep returnTo regression coverage in the release gate. |
 | PILOT-004 | 2026-05-05 | P0 | Ranking visibility | Closed | Product owner clarified that rankings show only ranking and score, not all metric details. | Product owner | Expected low-role behavior. |
+| PILOT-005 | 2026-05-06 | P3 | Store / approvals UX | Open | `STORE_PERSONNEL` can open `/store/approvals`, but has no expected operation there; action gates and backend write endpoints remain manager/super-admin scoped. | Product owner + Codex | Defer to the next UX/navigation cleanup unless pilot users find it confusing. |
 
 ## Decision Register
 
@@ -343,3 +416,4 @@ Daily smoke continuation:
 | 2026-05-05 | Close Session 1 navigation blockers | Product owner confirmed `/store/me` and `/store/approvals` both open in the authenticated low-role browser session. | Continue daily controlled pilot smoke with `/store/kpis` and rankings checks. |
 | 2026-05-05 | Continue controlled pilot after route smoke | Product owner confirmed `/store/kpis` has no issue and `/store/rankings` behaves as expected for low-role summary plus managed-store detail. | Continue pilot feedback collection; next focus is user-facing wording/data trust issues. |
 | 2026-05-06 | Controlled Pilot Round 1 Outcome | `docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-round-1-outcome.md` records `Continue` for the same controlled staging/internal pilot scope with no active route blocker remaining from Round 1. | Continue collecting Round 2 feedback in this log; run `npm.cmd run check:pilot-stabilization` before any new invite wave or deploy that can affect pilot routes. |
+| 2026-05-06 | Continue controlled pilot after Round 2 role browser check | Product owner confirmed admin, store manager, store personnel, and region manager / BM identities are OK on the checked staging routes; all current pilot users checked in this pass are OK. `/store/approvals` for `STORE_PERSONNEL` is UX cleanup only. | Keep collecting Round 2 feedback; batch approvals visibility cleanup with a navigation/UX slice if needed. |
