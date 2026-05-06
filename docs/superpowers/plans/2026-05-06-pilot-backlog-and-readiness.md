@@ -376,10 +376,12 @@ git commit -m "Document JSON ingestion contract"
 
 **Files:**
 - Create: `admin-web/scripts/pilot-live-smoke.mjs`
+- Create: `admin-web/scripts/pilot-live-smoke.test.mjs`
 - Modify: `admin-web/package.json`
+- Modify: `docs/plans/pilot-release-smoke-checklist.md`
 - Optional modify: `.github/workflows/frontend-release-check.yml`
 
-- [ ] **Step 1: Create script skeleton**
+- [x] **Step 1: Create script skeleton**
 
 Create a script that accepts:
 
@@ -388,7 +390,7 @@ Create a script that accepts:
 --routes=/admin/integrations,/admin/master-data,/admin/targets,/store,/store/me,/store/rankings,/store/approvals
 ```
 
-- [ ] **Step 2: Add package script**
+- [x] **Step 2: Add package script**
 
 Add:
 
@@ -396,20 +398,23 @@ Add:
 "smoke:pilot:live": "node scripts/pilot-live-smoke.mjs"
 ```
 
-- [ ] **Step 3: Verify locally against staging**
+- [x] **Step 3: Verify local harness and staging guard**
 
 Run:
 
 ```powershell
-npm.cmd --prefix admin-web run smoke:pilot:live -- --base-url=https://staging.hr-axis.com
+node --test admin-web\scripts\pilot-live-smoke.test.mjs
+$env:PILOT_SMOKE_BASE_URL = "https://staging.hr-axis.com"
+$env:PILOT_SMOKE_BEARER_TOKEN = "<fresh-redacted-clerk-jwt>"
+npm.cmd --prefix admin-web run smoke:pilot:live -- --staging
 ```
 
-Expected: every route returns a successful page without an unavailable marker.
+Expected: the local harness proves route walking, token injection, and token redaction. Staging smoke requires a fresh Clerk JWT and every route must return a successful page without an unavailable marker.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```powershell
-git add admin-web/scripts/pilot-live-smoke.mjs admin-web/package.json
+git add admin-web/scripts/pilot-live-smoke.mjs admin-web/scripts/pilot-live-smoke.test.mjs admin-web/package.json docs/plans/pilot-release-smoke-checklist.md
 git commit -m "Add pilot live smoke script"
 ```
 

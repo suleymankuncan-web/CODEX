@@ -69,6 +69,34 @@ git diff --check
 7. `/store/approvals`
 8. Refresh the active page and verify it returns to the same route after auth verification.
 
+## Automated Pilot Smoke
+
+Use the live smoke command after a promoted frontend deployment or backend deploy that can affect pilot routes:
+
+```powershell
+$env:PILOT_SMOKE_BASE_URL = "https://staging.hr-axis.com"
+$env:PILOT_SMOKE_BEARER_TOKEN = "<fresh-redacted-clerk-jwt>"
+npm.cmd --prefix admin-web run smoke:pilot:live -- --staging
+```
+
+Default route set:
+
+- `/admin/integrations`
+- `/admin/master-data`
+- `/admin/targets`
+- `/store`
+- `/store/me`
+- `/store/rankings`
+- `/store/approvals`
+
+Rules:
+
+- Never paste raw bearer tokens into evidence files, screenshots, PR bodies, or commits.
+- For staging/non-local smoke, use a fresh Clerk JWT through `PILOT_SMOKE_BEARER_TOKEN`.
+- The command fails fast when staging mode has no token, so it does not accidentally probe protected routes unauthenticated.
+- The command fails if a route settles on `/auth/login`, shows an unavailable marker, raises a page error, or returns `4xx/5xx` API responses.
+- Manual browser smoke is still required when the command fails or when a user-visible interaction beyond page load is being validated.
+
 ## Old Chunk Symptoms
 
 - Old chunk symptoms mean the promoted deployment is ready but the browser still executes stale JavaScript.
