@@ -56,6 +56,7 @@ Current pilot stance:
 
 - Controlled staging/internal pilot: `Conditional Go`
 - Broad production rollout: not approved yet
+- The current consolidated pilot decision note is `docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-conditional-go-consolidation.md`.
 - UI quality pass: deliberately deferred
 - JSON source adapter: future-only until real payload/source evidence exists
 
@@ -63,6 +64,7 @@ Current pilot stance:
 
 Key 2026-05-06 evidence:
 
+- `docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-conditional-go-consolidation.md`
 - `docs/evidence/pilot-readiness/2026-05-06-role-smoke.md`
 - `docs/evidence/pilot-readiness/2026-05-06-ranking-privacy-smoke.md`
 - `docs/evidence/pilot-readiness/2026-05-06-master-data-power-bi-acceptance.md`
