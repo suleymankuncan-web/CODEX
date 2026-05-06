@@ -19,10 +19,12 @@ const currentState = readText('current-state.md')
 const activeNextActions = readText('docs/plans/active-next-actions.md')
 const debtLedger = readText('docs/plans/project-debt-ledger.md')
 
-test('source agnostic import boundary keeps excel active and json future-only', () => {
+test('source agnostic import boundary keeps Power BI/Excel active and JSON suspended', () => {
   for (const phrase of [
     'Excel KPI Import V1 is the active local source path.',
     'JSON is future-only until a real sample payload or official field list exists.',
+    'JSON source integration is suspended for the current pilot and Power BI/Excel operating path.',
+    'Do not plan or staff JSON implementation work while Power BI/Excel outputs remain the chosen operating source.',
     'Do not build a JSON adapter, endpoint, scheduled job, or field map from guessed data.',
     'When JSON becomes real, it must enter through the same canonical import boundary as Excel.',
   ]) {
@@ -80,4 +82,15 @@ test('source agnostic import boundary is linked from handoff and debt docs', () 
     requireText(text, contractPath)
     requireText(text, 'Source-Agnostic Import Boundary V1')
   }
+})
+
+test('json source suspension is recorded as the current product decision', () => {
+  for (const text of [currentState, activeNextActions, debtLedger]) {
+    requireText(text, 'JSON Source Suspension V1')
+    requireText(text, 'Power BI/Excel')
+    requireText(text, 'JSON source integration is suspended')
+  }
+
+  requireText(debtLedger, '94. JSON Source Suspension V1')
+  requireText(debtLedger, 'JSON Source Suspension V1 is counted as paid because')
 })

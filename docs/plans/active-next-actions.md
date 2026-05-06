@@ -104,9 +104,9 @@ As of 6 May 2026, the competition package planning flow, Operational Feed V1, DM
 
 Reference: `docs/plans/project-debt-ledger.md`
 
-- Closed active debts: 93
+- Closed active debts: 94
 - Superseded before overbuilding: 1
-- Blocked external dependency: 2
+- Blocked external dependency: 1
 - Watchlist decision item: 0
 - Strategic investment backlog: 7
 - Silent untracked quality debt in the active gate: 0
@@ -115,7 +115,8 @@ Interpretation:
 
 - The local project is not carrying a known silent release-quality debt right now.
 - Real IdP staging evidence is not counted as done because it requires outside staging IdP and seeded DB values.
-- Real JSON source ingest evidence is not counted as done because delivery method, payload fields, cadence, auth, and identity semantics are not available yet.
+- JSON Source Suspension V1 is the current product decision: JSON source integration is suspended for the current pilot and Power BI/Excel operating path.
+- Power BI/Excel outputs remain the chosen operating source; JSON source work is not an active blocker while this remains true.
 - Daily Closure / Historical Ranking V2 explainability now exists over the existing read model.
 - Score Meaning V1 now explains the personnel weighted score on `/store/me`.
 - KPI Source Semantics V1 now explains imported, derived, checklist-fed, pending normalization, and missing KPI values on store-facing KPI rows.
@@ -125,9 +126,9 @@ Interpretation:
 - Ranking Completeness Segment Readiness V1 now makes `/store/rankings` explain Turkey-wide, store-level, metric mini-rank, and segment readiness without opening a new ranking engine.
 - Shared Inbox Maturity V1 now makes store/admin inbox rows explain detail, due signal, escalation, and source action without opening a new workflow state machine.
 - Store UX TR-First Copy V1 now closes the first coherent store-facing copy pass for shell, tasks, workflow details, feed, and pinned feed preview.
-- Real ingest local foundation exists, but the actual source-specific connector is blocked until external source evidence exists.
+- Real ingest local foundation exists, but source-specific connector work is suspended while Power BI/Excel remains the chosen operating source.
 - KPI Config Versioning V1 is implemented; rollback UI, future effective scheduling, approval workflow, and DB-managed interpretation copy remain future depth, not silent debt.
-- Source-Agnostic Ingest Contract Hardening V1 is implemented; real source adapter work remains blocked until external source evidence exists.
+- Source-Agnostic Ingest Contract Hardening V1 is implemented; real source adapter work remains suspended while Power BI/Excel remains the chosen operating source.
 - KPI Raw Row Lineage Persistence V1 is implemented; reconciliation can query staging lineage columns without parsing raw JSON.
 - Import Lineage Evidence Surface V1 is implemented; admin import detail now exposes KPI lineage counts and row-level evidence where available.
 - Audit Event Taxonomy Guard V1 is implemented; global audit feed remains intentionally unbuilt, but emitted audit events now have a backend-owned catalog and drift guard.
@@ -164,7 +165,7 @@ Interpretation:
 - Ranking Score Explanation Copy V1 is implemented; `/store/rankings` and `/store/kpis` now expose the locked source rules in user-facing Turkish copy without changing score math.
 - Master Data Bootstrap Promotion Safety Guard V1 is implemented; stale `ready_to_promote` batches with non-promotable rows now fail before any live `ops.*` promotion write.
 - External ID Code Normalization Guard V1 is implemented; exact mapping remains first, normalized fallback resolves safe code variants, and ambiguous normalized matches are rejected.
-- Source-Agnostic Import Boundary V1 is documented and guarded; Excel remains the active source, JSON remains future-only until real evidence exists, and both must pass through the same canonical import boundary.
+- Source-Agnostic Import Boundary V1 is documented and guarded; Power BI/Excel remains the active source, JSON source integration is suspended for the current pilot and Power BI/Excel operating path, and any future JSON source must pass through the same canonical import boundary.
 - Master Data Bootstrap Admin Dry-Run Evidence V1 is implemented; admin review now shows backend promotion-readiness row evidence before any live promotion command is executed.
 - Master Data Bootstrap Pilot Smoke Runbook V1 is documented and guarded; the first real baseline promotion must follow stage, validate, row evidence, dry-run evidence, scoped pilot promotion, and sanitized evidence steps.
 - Backend Foundation Hardening Plan V1 is documented and guarded as a control map; it does not increment closed active debt and keeps near-term work focused on existing backend/data/auth/import/operator evidence surfaces.
@@ -187,6 +188,7 @@ Interpretation:
 - Controlled Pilot Operating Checklist V1 is counted as paid because the controlled staging/internal pilot now has a guarded operating routine for invite, monitoring, feedback intake, pause/rollback triggers, and pilot exit decisions. Reference: `docs/plans/controlled-pilot-operating-checklist-v1.md`.
 - Controlled Pilot Feedback Log Guard V1 is counted as paid because the active pilot feedback log is now guarded as the operating record for sessions, issues, decisions, route-blocker closure, and sanitized evidence rules. Reference: `docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md`.
 - Staging Auth Session Edge Evidence Guard V1 is counted as paid because the existing staging auth smoke and evidence guard path now explicitly protects logout, expired-token, no-refresh-token, and sanitized auth evidence before pilot expansion or broad rollout. Reference: `docs/plans/staging-auth-session-edge-evidence-guard-v1.md`.
+- JSON Source Suspension V1 is counted as paid because Power BI/Excel is now the current pilot operating source, JSON source integration is suspended, and future JSON planning remains gated by `docs/plans/source-agnostic-import-boundary-v1.md`.
 
 ## Rules For Picking The Next Item
 
@@ -463,12 +465,13 @@ Interpretation:
 
 ### Intake: Real Ingest Connector And Payload Contract
 - Recorded: 26 April 2026
-- Status: `external_source_unknown`
+- Status: `suspended_product_decision`
 - Decision:
-  - do not build a source-specific JSON connector without real source evidence
+  - JSON source integration is suspended for the current pilot and Power BI/Excel operating path
+  - do not plan or staff JSON implementation work while Power BI/Excel outputs remain the chosen operating source
   - treat existing Nebim cadence/payload notes as superseded working assumptions, not the active integration target
   - keep the ingest boundary source-agnostic through `stg.integration_source`, `stg.import_batch`, canonical raw KPI rows, normalization, and materialization
-  - require a sanitized JSON sample payload or official field list before source-specific adapter code
+  - require product-owner reopening plus a sanitized JSON sample payload or official field list before source-specific adapter code
 - Reference:
   - `docs/plans/real-ingest-connector-contract-intake.md`
   - `docs/plans/nebim-ingestion-and-normalization-plan.md`
@@ -1005,15 +1008,15 @@ Interpretation:
 ### Completed: Source-Agnostic Import Boundary V1
 - Completed: 30 April 2026
 - Result:
-  - Excel KPI Import V1 is locked as the active local source path
-  - JSON remains future-only until a real sample payload or official field list exists
+  - Excel KPI Import V1 and Power BI/Excel outputs are locked as the active local source path
+  - JSON source integration is suspended for the current pilot and Power BI/Excel operating path
   - guessed JSON adapter, endpoint, scheduler, and field map work stays closed
   - Excel, JSON, and future sources must enter through one canonical import payload boundary
   - source adapters own only parsing/field mapping/evidence, not scoring or master-data promotion
   - canonical evidence fields and exact-first/normalized/ambiguous mapping safety rules are documented
 - Verification:
   - TDD red guard failed first because the boundary document did not exist
-  - targeted source-agnostic boundary script passed: 5/5
+  - targeted source-agnostic boundary script passed: 6/6
   - root `npm.cmd run check:release` passed
 - Reference:
   - `docs/plans/source-agnostic-import-boundary-v1.md`
@@ -1211,6 +1214,21 @@ Interpretation:
 - Reference:
   - `docs/plans/staging-auth-session-edge-evidence-guard-v1.md`
 
+### Completed: JSON Source Suspension V1
+- Completed: 6 May 2026
+- Result:
+  - Power BI/Excel outputs remain the active operating source for the current pilot
+  - JSON source integration is suspended for the current pilot and Power BI/Excel operating path
+  - JSON adapter, endpoint, upload UI, scheduled job, and field-map work remain closed
+  - future JSON planning starts only after real JSON-format files, official field list, delivery method, cadence, auth model, and identity semantics exist
+  - any future JSON source must still enter through `docs/plans/source-agnostic-import-boundary-v1.md`
+- Verification:
+  - targeted source boundary guard passed: 6/6
+  - project debt ledger consistency guard passed: 5/5
+  - root script guard passed: 164/164
+- Reference:
+  - `docs/plans/source-agnostic-import-boundary-v1.md`
+
 ### 1. Real IdP Staging Evidence
 - Priority: `P1`
 - Why: local provider and action mechanics are proven, but production confidence still needs real staging IdP and seeded staging action evidence.
@@ -1228,13 +1246,13 @@ Interpretation:
 
 If staging IdP and seeded staging DB values are available, start real staging evidence.
 
-If JSON source delivery details, sample payload, or official field list become available, start source mapping specification.
+JSON remains suspended for the current pilot. Do not reopen JSON planning until real JSON-format files or an official field list arrive and the product owner reopens the path.
 
-If neither staging values nor source ingest details are available, do not open source-specific adapter work yet. Excel KPI Import V1 is now local implementation-complete, and the inspected March files remain KPI snapshot files, not master-data baseline files, so do not run a real personnel/store bootstrap promotion until a true baseline list with store codes and seller codes exists.
+If neither staging values nor true baseline files are available, do not open source-specific adapter work yet. Excel KPI Import V1 is now local implementation-complete, and the inspected March files remain KPI snapshot files, not master-data baseline files, so do not run a real personnel/store bootstrap promotion until a true baseline list with store codes and seller codes exists.
 
 Recommended local candidate:
 
 - Follow `docs/plans/backend-foundation-hardening-plan-v1.md`; P0-4 Operator evidence consistency pass is done, so the next local foundation candidate should be chosen through the intake gate instead of opening a new module by reflex.
 - When true baseline master data exists, run a controlled store/personnel bootstrap dry-run and admin review smoke before promotion.
-- If no baseline/source evidence exists, keep source-specific adapter work closed and choose the next small guard only through the intake gate.
+- If no staging or baseline evidence exists, keep source-specific adapter work closed and choose the next small guard only through the intake gate.
 - Do not start a separate VM checklist, region-specific benchmark, or source-specific JSON adapter until the needed real data or operator workflow exists.
