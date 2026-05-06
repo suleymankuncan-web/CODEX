@@ -70,6 +70,35 @@ test('store feed renders pinned challenge posts with ranking link', async ({ pag
   await expect(page.getByRole('link', { name: 'Open rankings' })).toHaveAttribute('href', '/store/rankings')
 })
 
+test('store feed switches to English copy and persists locale', async ({ page }) => {
+  await seedMockSession(page, 'STORE_PERSONNEL', 'store-feed-english-user')
+  await routeFeedApi(page, storeSessionFixture)
+
+  await page.goto('/store/feed')
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'Visible announcements' })).toBeVisible()
+  await expect(page.getByText('Company, region, and store announcements in one feed.')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Visible posts' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Pinned posts' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Challenge announcements' })).toBeVisible()
+
+  const postRow = page.locator('.stacked-row').filter({ hasText: 'May UPT Challenge' })
+  await expect(postRow.getByText('Pinned', { exact: true })).toBeVisible()
+  await expect(postRow.getByText('Challenge', { exact: true })).toBeVisible()
+  await expect(postRow.getByText('Company', { exact: true })).toBeVisible()
+  await expect(page.locator('body')).not.toContainText('Ãƒ')
+  await expect(page.locator('body')).not.toContainText('Ã„')
+  await expect(page.locator('body')).not.toContainText('Ã…')
+
+  await page.reload()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'Visible announcements' })).toBeVisible()
+})
+
 test('store home shows pinned feed preview', async ({ page }) => {
   await seedMockSession(page, 'STORE_PERSONNEL', 'store-home-feed-smoke-user')
   await routeFeedApi(page, storeSessionFixture)
