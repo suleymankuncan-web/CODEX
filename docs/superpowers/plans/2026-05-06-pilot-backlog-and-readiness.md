@@ -40,7 +40,7 @@
 - Optional modify: `admin-web/e2e/pilot-smoke.spec.ts`
 - Verify: `npm.cmd run check:pilot-stabilization`
 
-- [ ] **Step 1: Capture the exact pilot users**
+- [x] **Step 1: Capture the exact pilot users**
 
 Create an evidence note with these rows filled from Clerk/app users:
 
@@ -55,7 +55,7 @@ Create an evidence note with these rows filled from Clerk/app users:
 | Store personnel | <email> | STORE_PERSONNEL | /store | pending |
 ```
 
-- [ ] **Step 2: Smoke each route with the matching persona**
+- [x] **Step 2: Smoke each route with the matching persona**
 
 Run manual browser smoke and record pass/fail for:
 
@@ -71,7 +71,7 @@ Run manual browser smoke and record pass/fail for:
 /store/approvals
 ```
 
-- [ ] **Step 3: Record failures as release blockers**
+- [x] **Step 3: Record failures as release blockers**
 
 Add a blocker section to the evidence file:
 
