@@ -9,7 +9,7 @@ test('region manager checklist surface shows assigned store visit workflow', asy
 
   await expect(page.getByText('Checklist yap')).toBeVisible()
   await expect(page.getByText('Taslak')).toBeVisible()
-  await expect(page.getByText('Tamamla')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Tamamla' })).toBeVisible()
 })
 
 test('store manager checklist surface keeps acknowledgement language', async ({ page }) => {
@@ -29,11 +29,47 @@ test('visual merchandiser sees checklist-only VM coverage and no broad store lin
   })
   await page.goto('/store/checklists')
 
-  await expect(page.getByText('VM checklist yapilmadi')).toBeVisible()
+  await expect(page.getByText('VM checklist yapılmadı')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Checklist yap' })).toBeVisible()
   await expect(page.locator('a[href="/admin/reports"]')).toHaveCount(0)
   await expect(page.locator('a[href="/store/feed"]')).toHaveCount(0)
   await expect(page.locator('a[href="/store/competitions"]')).toHaveCount(0)
+})
+
+test('store checklist surface switches to English copy and persists locale', async ({ page }) => {
+  await setupChecklistPage(page, ['SUPER_ADMIN'])
+  await page.goto('/store/checklists')
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(
+    page.getByRole('heading', { name: /Checklist results flow as acknowledgements/i }),
+  ).toBeVisible()
+  await expect(page.getByText('Visit flow')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Assigned store checklist visits' })).toBeVisible()
+  await expect(page.getByText('In progress', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('Template type', { exact: true })).toBeVisible()
+  await expect(page.getByText('This month', { exact: true })).toBeVisible()
+  await expect(page.getByText('Draft', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Complete' })).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: 'Completed checklist receipts waiting on store acknowledgement' }),
+  ).toBeVisible()
+  await expect(page.getByText('Acknowledgement note')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'I acknowledge' })).toBeVisible()
+  await expect(page.getByText('Checklist sonuçları')).toHaveCount(0)
+  await expect(page.getByText('Ziyaret akışı')).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText('Ãƒ')
+  await expect(page.locator('body')).not.toContainText('Ã„')
+  await expect(page.locator('body')).not.toContainText('Ã…')
+
+  await page.reload()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(
+    page.getByRole('heading', { name: /Checklist results flow as acknowledgements/i }),
+  ).toBeVisible()
 })
 
 type ChecklistFixtureOptions = {
