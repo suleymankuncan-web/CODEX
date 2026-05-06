@@ -4,11 +4,13 @@ import type { SessionState } from './session-storage'
 export type SessionContextValue = {
   session: SessionState
   isReady: boolean
+  isProviderSessionHydrating: boolean
   saveSession: (next: SessionState) => void
   resetSession: () => void
   expireSession: () => void
   startBearerSession: (token: string, providerIdToken?: string | null) => void
   clearToBearerMode: () => void
+  setProviderSessionHydrating: (isHydrating: boolean) => void
 }
 
 export const SessionContext = createContext<SessionContextValue | null>(null)

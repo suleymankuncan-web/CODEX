@@ -5,6 +5,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import { isClerkSessionProviderAvailable } from '../auth/clerk-config'
 import { SessionContext, type SessionContextValue } from './session-context-value'
 import {
   clearClientBearerSession,
@@ -19,6 +20,9 @@ import {
 
 export function SessionProvider(input: { children: ReactNode }) {
   const [session, setSession] = useState<SessionState>(() => readClientSession())
+  const [isProviderSessionHydrating, setProviderSessionHydrating] = useState(() =>
+    isClerkSessionProviderAvailable(),
+  )
 
   useEffect(() => {
     persistClientSession(session)
@@ -75,15 +79,18 @@ export function SessionProvider(input: { children: ReactNode }) {
     () => ({
       session,
       isReady: isSessionReady(session),
+      isProviderSessionHydrating,
       saveSession,
       resetSession,
       expireSession,
       startBearerSession,
       clearToBearerMode,
+      setProviderSessionHydrating,
     }),
     [
       clearToBearerMode,
       expireSession,
+      isProviderSessionHydrating,
       resetSession,
       saveSession,
       session,

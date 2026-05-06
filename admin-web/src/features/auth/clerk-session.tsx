@@ -105,33 +105,46 @@ export function ClerkLogoutEffect(input: { onFallback: () => void }) {
   return null
 }
 function ClerkSessionBridge() {
-  const { clearToBearerMode, startBearerSession } = useSession()
+  const { clearToBearerMode, startBearerSession, setProviderSessionHydrating } = useSession()
   const { getToken, isLoaded, isSignedIn } = useAuth()
   const lastTokenRef = useRef<string | null>(null)
   const template = (import.meta.env.VITE_CLERK_JWT_TEMPLATE ?? '').trim() || undefined
 
   useEffect(() => {
     if (!isLoaded) {
+      setProviderSessionHydrating(true)
       return
     }
 
     if (!isSignedIn) {
       lastTokenRef.current = null
       clearToBearerMode()
+      setProviderSessionHydrating(false)
       return
     }
 
     let cancelled = false
+    setProviderSessionHydrating(true)
 
     const syncToken = async () => {
-      const token = await getToken(template ? { template } : undefined)
+      try {
+        const token = await getToken(template ? { template } : undefined)
 
-      if (cancelled || !token || token === lastTokenRef.current) {
-        return
+        if (cancelled || !token || token === lastTokenRef.current) {
+          return
+        }
+
+        lastTokenRef.current = token
+        startBearerSession(token)
+      } catch {
+        if (!cancelled) {
+          lastTokenRef.current = null
+        }
+      } finally {
+        if (!cancelled) {
+          setProviderSessionHydrating(false)
+        }
       }
-
-      lastTokenRef.current = token
-      startBearerSession(token)
     }
 
     void syncToken()
@@ -143,7 +156,15 @@ function ClerkSessionBridge() {
       cancelled = true
       window.clearInterval(intervalId)
     }
-  }, [clearToBearerMode, getToken, isLoaded, isSignedIn, startBearerSession, template])
+  }, [
+    clearToBearerMode,
+    getToken,
+    isLoaded,
+    isSignedIn,
+    setProviderSessionHydrating,
+    startBearerSession,
+    template,
+  ])
 
   return null
 }
