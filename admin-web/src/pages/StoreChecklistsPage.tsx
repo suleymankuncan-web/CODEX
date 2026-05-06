@@ -24,17 +24,30 @@ import {
   saveMobileChecklistResponse,
   startMobileChecklistInstance,
   type ChecklistAcknowledgementItem,
+  type MobileChecklistToday,
 } from '../features/checklists/api'
+import type { TranslateFunction } from '../features/localization/dictionary'
+import { useLocalization } from '../features/localization/useLocalization'
 import {
   mapInboxStatusTone,
   mapWorkflowUrgencyTone,
   toChecklistAcknowledgementInboxItem,
 } from '../features/workflow/contracts'
 import { formatDateTime, formatState, getErrorMessage } from '../lib/format'
+import type { AppLocale } from '../lib/i18n'
+
+type ChecklistCoverageRow = {
+  store: MobileChecklistToday['stores'][number]
+  template: MobileChecklistToday['templates'][number]
+  active?: MobileChecklistToday['activeInstances'][number]
+  summary?: MobileChecklistToday['monthlySummaries'][number]
+  completedCount: number
+}
 
 export function StoreChecklistsPage(input: {
   authSummary: AuthSessionSummary | null
 }) {
+  const { locale, t } = useLocalization()
   const queryClient = useQueryClient()
   const [ackNotes, setAckNotes] = useState<Record<string, string>>({})
   const [ackNotice, setAckNotice] = useState<string | null>(null)
@@ -76,7 +89,7 @@ export function StoreChecklistsPage(input: {
     mutationFn: saveMobileChecklistResponse,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['mobile-checklists-today'] })
-      setAckNotice('Checklist cevabi kaydedildi')
+      setAckNotice(t('storeChecklists.responseSaved'))
     },
   })
   const completeVisitMutation = useMutation({
@@ -93,8 +106,8 @@ export function StoreChecklistsPage(input: {
   ) {
     return (
       <ScreenState
-        title="Checklist alani hazirlaniyor"
-        copy="Atanmis magaza checklistleri ve acknowledgement sirasi yukleniyor."
+        title={t('storeChecklists.loadingTitle')}
+        copy={t('storeChecklists.loadingCopy')}
       />
     )
   }
@@ -105,7 +118,7 @@ export function StoreChecklistsPage(input: {
   ) {
     return (
       <ScreenState
-        title="Checklist alani acilamadi"
+        title={t('storeChecklists.errorTitle')}
         copy={getErrorMessage(checklistsQuery.error ?? mobileTodayQuery.error)}
         tone="error"
       />
@@ -118,8 +131,8 @@ export function StoreChecklistsPage(input: {
   const pendingItems = items.filter((item) => item.acknowledgement === null)
   const acknowledgedItems = items.filter((item) => item.acknowledgement !== null).slice(0, 5)
   const assignedStoreIds = getAssignedStoreIds(input.authSummary)
-  const primaryStoreId = assignedStoreIds[0] ?? 'No action store'
-  const coverageRows = (mobileToday?.stores ?? []).flatMap((store) =>
+  const primaryStoreId = assignedStoreIds[0] ?? t('storeChecklists.noActionStore')
+  const coverageRows: ChecklistCoverageRow[] = (mobileToday?.stores ?? []).flatMap((store) =>
     (mobileToday?.templates ?? []).map((template) => {
       const active = mobileToday?.activeInstances.find(
         (item) =>
@@ -147,62 +160,66 @@ export function StoreChecklistsPage(input: {
     <section className="page-stack">
       <section className="hero-panel store-hero-panel">
         <div>
-          <div className="eyebrow">Store Checklists</div>
-          <h2 className="hero-title">
-            Checklist sonuclari onay degil, goruldu bilgisi olarak akar.
-          </h2>
-          <p className="hero-copy">
-            BM ve VM ziyaretleri ayni checklist motorunda kalir; rol, sablon tipi ve magaza
-            kapsami backend tarafinda korunur.
-          </p>
+          <div className="eyebrow">{t('storeChecklists.heroEyebrow')}</div>
+          <h2 className="hero-title">{t('storeChecklists.title')}</h2>
+          <p className="hero-copy">{t('storeChecklists.heroCopy')}</p>
         </div>
         <div className="hero-metrics">
-          <MetricAccent label="Route" value="/store/checklists" />
-          <MetricAccent label="Store scope" value={primaryStoreId} />
-          <MetricAccent label="Mode" value={canManageVisits ? 'Visit' : 'Acknowledgement'} />
+          <MetricAccent label={t('storeChecklists.route')} value="/store/checklists" />
+          <MetricAccent label={t('storeChecklists.storeScope')} value={primaryStoreId} />
+          <MetricAccent
+            label={t('storeChecklists.mode')}
+            value={
+              canManageVisits
+                ? t('storeChecklists.mode.visit')
+                : t('storeChecklists.mode.acknowledgement')
+            }
+          />
         </div>
       </section>
 
       <section className="metric-grid store-metric-grid">
         <MetricCard
-          title="Pending acknowledgements"
+          title={t('storeChecklists.pendingAcknowledgements')}
           value={inboxItems.filter((item) => item.inboxStatus === 'needs_attention').length}
-          note="Completed checklists still waiting on store acknowledgement."
+          note={t('storeChecklists.pendingAcknowledgementsNote')}
           icon={<ClipboardList size={18} />}
           tone={pendingItems.length > 0 ? 'warning' : 'accent'}
         />
         <MetricCard
-          title="Acknowledged"
+          title={t('storeChecklists.acknowledged')}
           value={inboxItems.filter((item) => item.inboxStatus === 'completed').length}
-          note="Recently acknowledged checklist receipts."
+          note={t('storeChecklists.acknowledgedNote')}
           icon={<BadgeCheck size={18} />}
           tone="calm"
         />
         <MetricCard
-          title="Action model"
+          title={t('storeChecklists.actionModel')}
           value={1}
-          note="Checklist result confirmation stays separate from approval."
+          note={t('storeChecklists.actionModelNote')}
           icon={<ShieldAlert size={18} />}
           tone="accent"
         />
       </section>
 
       {canManageVisits ? (
-        <section className="panel" aria-label="Assigned store checklist visits">
+        <section className="panel" aria-label={t('storeChecklists.visitPanelAria')}>
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Ziyaret Akisi</div>
-              <h3>Atanmis magaza checklist ziyaretleri</h3>
+              <div className="eyebrow">{t('storeChecklists.visitEyebrow')}</div>
+              <h3>{t('storeChecklists.visitTitle')}</h3>
             </div>
             <StatusPill tone={activeVisitCount > 0 ? 'warning' : 'accent'}>
-              {activeVisitCount > 0 ? 'Devam ediyor' : 'Hazir'}
+              {activeVisitCount > 0
+                ? t('storeChecklists.visitStatus.inProgress')
+                : t('storeChecklists.visitStatus.ready')}
             </StatusPill>
           </div>
 
           {coverageRows.length === 0 ? (
             <EmptyState
-              title="Aktif checklist bulunamadi"
-              copy="Atanmis magaza ve yayinlanmis checklist sablonu geldiginde ziyaret akisi burada gorunur."
+              title={t('storeChecklists.noActiveChecklistTitle')}
+              copy={t('storeChecklists.noActiveChecklistCopy')}
             />
           ) : (
             <div className="stacked-table">
@@ -218,25 +235,18 @@ export function StoreChecklistsPage(input: {
                       <StatusPill
                         tone={active ? 'warning' : row.completedCount > 0 ? 'calm' : 'danger'}
                       >
-                        {describeChecklistCoverage(row)}
+                        {formatChecklistCoverage(t, row)}
                       </StatusPill>
                     </div>
                     <p>{row.template.templateName}</p>
                     <div className="key-grid">
-                      <KeyValue label="Sablon tipi" value={row.template.templateType} />
+                      <KeyValue label={t('storeChecklists.templateType')} value={row.template.templateType} />
+                      <KeyValue label={t('storeChecklists.thisMonth')} value={formatMonthlySummary(t, row)} />
                       <KeyValue
-                        label="Bu ay"
-                        value={
-                          row.summary
-                            ? `${row.summary.completedCount} ziyaret / ${row.summary.averageScore ?? 0} ort.`
-                            : 'Ziyaret yok'
-                        }
+                        label={t('storeChecklists.status')}
+                        value={active ? formatChecklistStatus(t, active.status) : t('storeChecklists.newVisit')}
                       />
-                      <KeyValue
-                        label="Durum"
-                        value={active ? formatState(active.status) : 'Yeni ziyaret'}
-                      />
-                      <KeyValue label="Magaza" value={row.store.storeId} />
+                      <KeyValue label={t('storeChecklists.store')} value={row.store.storeId} />
                     </div>
 
                     {active ? (
@@ -248,11 +258,11 @@ export function StoreChecklistsPage(input: {
                               <StatusPill tone="accent">{`${item.weight}%`}</StatusPill>
                             </div>
                             <div className="key-grid">
-                              <KeyValue label="Bolum" value={item.sectionName} />
-                              <KeyValue label="Maksimum" value={String(item.maxScore)} />
+                              <KeyValue label={t('storeChecklists.section')} value={item.sectionName} />
+                              <KeyValue label={t('storeChecklists.maxScore')} value={String(item.maxScore)} />
                             </div>
                             <label className="eyebrow" htmlFor={`score-${item.templateItemId}`}>
-                              Puan
+                              {t('storeChecklists.scoreInput')}
                             </label>
                             <input
                               id={`score-${item.templateItemId}`}
@@ -268,7 +278,7 @@ export function StoreChecklistsPage(input: {
                               }
                             />
                             <label className="eyebrow" htmlFor={`comment-${item.templateItemId}`}>
-                              Not
+                              {t('storeChecklists.noteInput')}
                             </label>
                             <textarea
                               id={`comment-${item.templateItemId}`}
@@ -295,7 +305,7 @@ export function StoreChecklistsPage(input: {
                                   })
                                 }
                               >
-                                Kaydet
+                                {t('storeChecklists.save')}
                               </button>
                             </div>
                           </article>
@@ -319,25 +329,27 @@ export function StoreChecklistsPage(input: {
                             })
                           }
                         >
-                          {startVisitMutation.isPending ? 'Baslatiliyor...' : 'Checklist yap'}
+                          {startVisitMutation.isPending
+                            ? t('storeChecklists.startPending')
+                            : t('storeChecklists.startChecklist')}
                         </button>
                       ) : (
                         <>
-                        <button className="control-button" type="button" disabled>
-                          Checklist yap
-                        </button>
-                        <button
-                          className="control-button"
-                          type="button"
-                          disabled={completeVisitMutation.isPending}
-                          onClick={() =>
-                            completeVisitMutation.mutate({
-                              checklistInstanceId: active.checklistInstanceId,
-                            })
-                          }
-                        >
-                          Tamamla
-                        </button>
+                          <button className="control-button" type="button" disabled>
+                            {t('storeChecklists.startChecklist')}
+                          </button>
+                          <button
+                            className="control-button"
+                            type="button"
+                            disabled={completeVisitMutation.isPending}
+                            onClick={() =>
+                              completeVisitMutation.mutate({
+                                checklistInstanceId: active.checklistInstanceId,
+                              })
+                            }
+                          >
+                            {t('storeChecklists.complete')}
+                          </button>
                         </>
                       )}
                     </div>
@@ -362,18 +374,20 @@ export function StoreChecklistsPage(input: {
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Checklist Inbox</div>
-            <h3>Completed checklist instances waiting on store acknowledgement</h3>
+            <div className="eyebrow">{t('storeChecklists.inboxEyebrow')}</div>
+            <h3>{t('storeChecklists.inboxTitle')}</h3>
           </div>
           <StatusPill tone={pendingItems.length > 0 ? 'warning' : 'calm'}>
-            {pendingItems.length > 0 ? 'Needs acknowledgement' : 'Clear'}
+            {pendingItems.length > 0
+              ? t('storeChecklists.needsAcknowledgement')
+              : t('storeChecklists.clear')}
           </StatusPill>
         </div>
 
         {pendingItems.length === 0 ? (
           <EmptyState
-            title="No pending checklist receipts"
-            copy="Completed field checklists will appear here once the store is expected to acknowledge them."
+            title={t('storeChecklists.noPendingTitle')}
+            copy={t('storeChecklists.noPendingCopy')}
           />
         ) : (
           <div className="stacked-table">
@@ -382,33 +396,30 @@ export function StoreChecklistsPage(input: {
                 <div className="stacked-row-head">
                   <strong>{item.templateName}</strong>
                   <StatusPill tone={mapInboxStatusTone(toChecklistAcknowledgementInboxItem(item).inboxStatus)}>
-                    {formatState(item.status)}
+                    {formatChecklistStatus(t, item.status)}
                   </StatusPill>
                 </div>
-                <p>
-                  {item.storeName || item.storeId} - {item.category} - completed{' '}
-                  {item.completedAt ? formatDateTime(item.completedAt) : 'recently'}
-                </p>
+                <p>{formatCompletedSentence(t, locale, item)}</p>
                 <div className="key-grid">
-                  <KeyValue label="Checklist instance" value={item.checklistInstanceId} />
+                  <KeyValue label={t('storeChecklists.checklistInstance')} value={item.checklistInstanceId} />
                   <KeyValue
-                    label="Score"
-                    value={item.totalScore !== null ? String(item.totalScore) : 'No score'}
+                    label={t('storeChecklists.score')}
+                    value={item.totalScore !== null ? String(item.totalScore) : t('storeChecklists.noScore')}
                   />
                   <KeyValue
-                    label="Compliance"
+                    label={t('storeChecklists.compliance')}
                     value={
                       item.complianceRate !== null
                         ? `${Math.round(item.complianceRate * 100)}%`
-                        : 'No rate'
+                        : t('storeChecklists.noRate')
                     }
                   />
-                  <KeyValue label="Store" value={item.storeName || item.storeId} />
+                  <KeyValue label={t('storeChecklists.store')} value={item.storeName || item.storeId} />
                 </div>
                 {canAcknowledgeChecklist(input.authSummary, item.storeId) ? (
                   <>
                     <label className="eyebrow" htmlFor={`ack-note-${item.checklistInstanceId}`}>
-                      Acknowledgement note
+                      {t('storeChecklists.acknowledgementNote')}
                     </label>
                     <textarea
                       id={`ack-note-${item.checklistInstanceId}`}
@@ -420,11 +431,11 @@ export function StoreChecklistsPage(input: {
                           [item.checklistInstanceId]: event.target.value,
                         }))
                       }
-                      placeholder="Optional store-side note"
+                      placeholder={t('storeChecklists.acknowledgementNotePlaceholder')}
                     />
                     <div className="action-cluster">
                       <StatusPill tone={mapWorkflowUrgencyTone(toChecklistAcknowledgementInboxItem(item).urgency)}>
-                        {`Urgency: ${formatState(toChecklistAcknowledgementInboxItem(item).urgency)}`}
+                        {`${t('storeChecklists.urgency')}: ${formatChecklistUrgency(t, toChecklistAcknowledgementInboxItem(item).urgency)}`}
                       </StatusPill>
                       <button
                         className="control-button"
@@ -442,16 +453,13 @@ export function StoreChecklistsPage(input: {
                       >
                         {acknowledgeMutation.isPending &&
                         acknowledgeMutation.variables?.checklistInstanceId === item.checklistInstanceId
-                          ? 'Acknowledging...'
-                          : 'Kabul ettim'}
+                          ? t('storeChecklists.acknowledging')
+                          : t('storeChecklists.acknowledge')}
                       </button>
                     </div>
                   </>
                 ) : (
-                  <p className="queue-subtitle">
-                    This checklist can be reviewed, but acknowledgement is limited to assigned
-                    action stores.
-                  </p>
+                  <p className="queue-subtitle">{t('storeChecklists.reviewOnlyCopy')}</p>
                 )}
               </article>
             ))}
@@ -464,20 +472,25 @@ export function StoreChecklistsPage(input: {
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Recent History</div>
-            <h3>Recently acknowledged checklist receipts</h3>
+            <div className="eyebrow">{t('storeChecklists.recentHistoryEyebrow')}</div>
+            <h3>{t('storeChecklists.recentHistoryTitle')}</h3>
           </div>
         </div>
 
         {acknowledgedItems.length === 0 ? (
           <EmptyState
-            title="No acknowledgements yet"
-            copy="Once a store manager confirms they have seen a checklist, it will remain visible here."
+            title={t('storeChecklists.noAcknowledgementsTitle')}
+            copy={t('storeChecklists.noAcknowledgementsCopy')}
           />
         ) : (
           <div className="stacked-table">
             {acknowledgedItems.map((item) => (
-              <AcknowledgedChecklistRow key={item.checklistInstanceId} item={item} />
+              <AcknowledgedChecklistRow
+                key={item.checklistInstanceId}
+                item={item}
+                locale={locale}
+                t={t}
+              />
             ))}
           </div>
         )}
@@ -485,59 +498,115 @@ export function StoreChecklistsPage(input: {
 
       <div className="action-cluster">
         <Link className="control-button store-shell-link" to="/store">
-          Back to store home
+          {t('storeChecklists.backHome')}
         </Link>
       </div>
     </section>
   )
 }
 
-function describeChecklistCoverage(input: {
-  active?: { status: string }
-  completedCount: number
-  template: { templateType: string }
-}) {
-  const prefix = input.template.templateType === 'VM_STORE_VISIT' ? 'VM checklist' : 'BM checklist'
+function formatChecklistCoverage(t: TranslateFunction, input: ChecklistCoverageRow) {
+  const prefix =
+    input.template.templateType === 'VM_STORE_VISIT'
+      ? t('storeChecklists.coverage.vm')
+      : t('storeChecklists.coverage.bm')
 
-  if (input.active) return 'Taslak'
-  if (input.completedCount > 1) return `${input.completedCount} ${prefix} tamamlandi`
-  if (input.completedCount === 1) return `1 ${prefix} tamamlandi`
-  return `${prefix} yapilmadi`
+  if (input.active) return t('storeChecklists.coverage.draft')
+  if (input.completedCount > 1) {
+    return t('storeChecklists.coverage.manyCompleted', {
+      count: input.completedCount,
+      prefix,
+    })
+  }
+  if (input.completedCount === 1) {
+    return t('storeChecklists.coverage.singleCompleted', { prefix })
+  }
+  return t('storeChecklists.coverage.none', { prefix })
 }
 
-function AcknowledgedChecklistRow(input: { item: ChecklistAcknowledgementItem }) {
+function formatMonthlySummary(t: TranslateFunction, input: ChecklistCoverageRow) {
+  if (!input.summary) {
+    return t('storeChecklists.noVisit')
+  }
+
+  return t('storeChecklists.monthlySummary', {
+    count: input.summary.completedCount,
+    score: input.summary.averageScore ?? 0,
+  })
+}
+
+function formatChecklistStatus(t: TranslateFunction, status: string) {
+  switch (status) {
+    case 'in_progress':
+      return t('storeChecklists.status.in_progress')
+    case 'completed':
+      return t('storeChecklists.status.completed')
+    case 'draft':
+      return t('storeChecklists.status.draft')
+    default:
+      return formatState(status)
+  }
+}
+
+function formatChecklistUrgency(t: TranslateFunction, urgency: string) {
+  switch (urgency) {
+    case 'high':
+      return t('storeChecklists.urgency.high')
+    case 'medium':
+      return t('storeChecklists.urgency.medium')
+    case 'low':
+      return t('storeChecklists.urgency.low')
+    default:
+      return formatState(urgency)
+  }
+}
+
+function formatCompletedSentence(
+  t: TranslateFunction,
+  locale: AppLocale,
+  item: ChecklistAcknowledgementItem,
+) {
+  return t('storeChecklists.completedSentence', {
+    store: item.storeName || item.storeId,
+    category: item.category,
+    date: item.completedAt ? formatDateTime(item.completedAt, locale) : t('storeChecklists.recently'),
+  })
+}
+
+function AcknowledgedChecklistRow(input: {
+  item: ChecklistAcknowledgementItem
+  locale: AppLocale
+  t: TranslateFunction
+}) {
   return (
     <article className="stacked-row">
       <div className="stacked-row-head">
         <strong>{input.item.templateName}</strong>
         <StatusPill tone={mapInboxStatusTone(toChecklistAcknowledgementInboxItem(input.item).inboxStatus)}>
-          Acknowledged
+          {input.t('storeChecklists.acknowledged')}
         </StatusPill>
       </div>
-      <p>
-        {input.item.storeName || input.item.storeId} - {input.item.category} - completed{' '}
-        {input.item.completedAt ? formatDateTime(input.item.completedAt) : 'recently'}
-      </p>
+      <p>{formatCompletedSentence(input.t, input.locale, input.item)}</p>
       <div className="key-grid">
-        <KeyValue label="Checklist instance" value={input.item.checklistInstanceId} />
+        <KeyValue label={input.t('storeChecklists.checklistInstance')} value={input.item.checklistInstanceId} />
         <KeyValue
-          label="Acknowledged at"
+          label={input.t('storeChecklists.acknowledgedAt')}
           value={
             input.item.acknowledgement?.acknowledgedAt
-              ? formatDateTime(input.item.acknowledgement.acknowledgedAt)
-              : 'Unknown'
+              ? formatDateTime(input.item.acknowledgement.acknowledgedAt, input.locale)
+              : input.t('storeChecklists.unknown')
           }
         />
         <KeyValue
-          label="Acknowledged by"
-          value={input.item.acknowledgement?.acknowledgedByUserId ?? 'Unknown'}
+          label={input.t('storeChecklists.acknowledgedBy')}
+          value={input.item.acknowledgement?.acknowledgedByUserId ?? input.t('storeChecklists.unknown')}
         />
         <KeyValue
-          label="Compliance"
+          label={input.t('storeChecklists.compliance')}
           value={
             input.item.complianceRate !== null
               ? `${Math.round(input.item.complianceRate * 100)}%`
-              : 'No rate'
+              : input.t('storeChecklists.noRate')
           }
         />
       </div>
