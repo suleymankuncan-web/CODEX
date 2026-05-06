@@ -8,6 +8,10 @@ Decision source:
 
 - `docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-conditional-go-consolidation.md`
 
+Active operating record:
+
+- `docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md`
+
 Controlled staging/internal pilot: `Conditional Go`.
 
 Broad production rollout: `No-Go`.

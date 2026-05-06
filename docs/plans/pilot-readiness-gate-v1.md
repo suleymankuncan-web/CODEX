@@ -206,6 +206,7 @@ Final decision: Go / Conditional Go / No-Go
 - `docs/evidence/pilot-readiness/2026-05-01-preflight-no-go.md` records the first pilot preflight as `No-Go` because staging IdP values, true baseline master data, real KPI import smoke evidence, and pilot user/scope evidence are not available yet.
 - `docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-conditional-go-consolidation.md` records the current `Conditional Go` consolidation for the controlled staging/internal pilot, with broad production rollout still `No-Go`.
 - `docs/plans/controlled-pilot-operating-checklist-v1.md` records the operating checklist for inviting pilot users, monitoring pilot routes, collecting sanitized feedback, and deciding continue, pause, rollback, or No-Go.
+- `docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md` is the controlled pilot feedback log for session notes, issue status, pause/resume decisions, and sanitized operating evidence.
 
 ## CODEX DURUST YORUM
 
