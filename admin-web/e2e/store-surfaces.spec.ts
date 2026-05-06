@@ -236,6 +236,35 @@ test('store rankings page renders closed leaderboard and metric mini-ranks', asy
   await expect(page.getByText('Siralama yuzeyi acilamadi')).toHaveCount(0)
 })
 
+test('store rankings page switches to English copy and persists locale', async ({ page }) => {
+  await page.goto('/store/rankings')
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: /Store and personnel rankings/i })).toBeVisible()
+  await expect(
+    page.getByRole('option', {
+      name: /Apr 1, 2026 - Apr 30, 2026/,
+    }),
+  ).toBeAttached()
+  await expect(page.getByRole('heading', { name: 'Top 100 view' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Turkey store ranking' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Turkey personnel ranking' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'My store rank' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'My personnel rank' })).toBeVisible()
+  await expect(page.getByLabel('Ranking metric details').first()).toBeVisible()
+  await expect(page.getByText('Mağaza ve personel sıralamaları')).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText('Ã')
+  await expect(page.locator('body')).not.toContainText('Ä')
+  await expect(page.locator('body')).not.toContainText('Å')
+
+  await page.reload()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: /Store and personnel rankings/i })).toBeVisible()
+})
+
 test('store rankings page explains monthly preview-only ranking', async ({ page }) => {
   await page.goto('/store/rankings')
   await page.getByLabel('Sıralama dönem seçimi').selectOption('2026-04-01')
