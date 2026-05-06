@@ -228,6 +228,38 @@ test('store KPI highlights page explains metric source semantics', async ({ page
   await expect(page.getByText('KPI rows unavailable')).toHaveCount(0)
 })
 
+test('store KPI highlights switches to English copy and persists locale', async ({ page }) => {
+  await page.goto('/store/kpis')
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'Store KPIs' })).toBeVisible()
+  await expect(page.getByText('Store score summary')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Score breakdown' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'KPI rows', exact: true })).toBeVisible()
+  await expect(page.getByText('KPIs to watch')).toBeVisible()
+  await expect(page.getByText('Store score meaning')).toBeVisible()
+  await expect(page.getByText('Strong store score')).toBeVisible()
+  await expect(page.getByText('Action: keep the rhythm; watch the first low-contribution KPI daily.')).toBeVisible()
+  await expect(page.getByText('Score confidence: 100% weight covered.')).toBeVisible()
+  await expect(page.getByText('BM checklist status')).toBeVisible()
+  await expect(page.getByText('BM checklist: not included in score this period')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Store score sources' })).toBeVisible()
+  await expect(page.getByText('Target-based score').first()).toBeVisible()
+  await expect(page.getByText('Operational data').first()).toBeVisible()
+  await expect(page.getByText("Mağaza KPI'ları")).toHaveCount(0)
+  await expect(page.getByText('Mağaza skor özeti')).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText('Ãƒ')
+  await expect(page.locator('body')).not.toContainText('Ã„')
+  await expect(page.locator('body')).not.toContainText('Ã…')
+
+  await page.reload()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'Store KPIs' })).toBeVisible()
+})
+
 test('store shell exposes Turkish-first chrome and hides technical auth roles', async ({ page }) => {
   await page.goto('/store/me')
 
