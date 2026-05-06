@@ -12,15 +12,19 @@ import {
 } from '../components/dashboard-primitives'
 import { getAuthSession } from '../features/auth/api'
 import { useSession } from '../features/session/session-context-value'
-import { describeSessionMode } from '../features/session/session-storage'
+import { describeSessionMode, getBearerSessionCacheKey } from '../features/session/session-storage'
 
 export function SessionReadinessPage() {
   const { session, isReady, saveSession, resetSession } = useSession()
   const [draft, setDraft] = useState(session)
   const [verificationRequested, setVerificationRequested] = useState(false)
   const mode = draft.mode
+  const bearerSessionKey = getBearerSessionCacheKey(session.bearerToken)
   const sessionQuery = useQuery({
-    queryKey: ['auth-session', session.mode, session.mockUserId, session.mockRoleCodes, session.mockCompanyIds, session.bearerToken],
+    queryKey:
+      session.mode === 'bearer'
+        ? ['auth-session', session.mode, bearerSessionKey]
+        : ['auth-session', session.mode, session.mockUserId, session.mockRoleCodes, session.mockCompanyIds],
     queryFn: getAuthSession,
     enabled: verificationRequested && isReady,
     retry: false,

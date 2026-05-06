@@ -182,6 +182,18 @@ export function StoreMyPerformancePage(input: {
     )
   }
 
+  const partial = performance.partial ?? {
+    isPartial: true,
+    missingMetricCodes: [],
+    missingMetricLabels: [],
+    pendingNormalizationCodes: [],
+    pendingNormalizationLabels: [],
+  }
+  const supporting = performance.supporting ?? {
+    netSalesValue: null,
+    targetEntryMode: 'manager_assignment' as const,
+    targetEditableByCurrentUser: false,
+  }
   const performanceGrade = resolvePerformanceGrade(
     performance.score.value,
     configQuery.data?.gradingBands,
@@ -190,7 +202,7 @@ export function StoreMyPerformancePage(input: {
     grade: performanceGrade,
     matchedMetrics: performance.score.matchedMetrics,
     totalMetrics: performance.score.totalMetrics,
-    isPartial: performance.partial.isPartial,
+    isPartial: partial.isPartial,
   })
 
   return (
@@ -274,11 +286,11 @@ export function StoreMyPerformancePage(input: {
           />
           <KeyValue label="Snapshot run" value={performance.source.snapshotRunId ?? 'Live mode'} />
           <KeyValue label="Snapshot date" value={performance.source.snapshotDate ?? 'Current'} />
-          <KeyValue label="Data completeness" value={performance.partial.isPartial ? 'Partial' : 'Complete'} />
+          <KeyValue label="Data completeness" value={partial.isPartial ? 'Partial' : 'Complete'} />
           <KeyValue
             label="Target girisi"
             value={
-              performance.supporting.targetEntryMode === 'manager_assignment'
+              supporting.targetEntryMode === 'manager_assignment'
                 ? 'Magaza muduru girer, bolge muduru onaylar'
                 : 'Unknown'
             }
@@ -286,7 +298,7 @@ export function StoreMyPerformancePage(input: {
         </div>
       </section>
 
-      {performance.partial.isPartial ? (
+      {partial.isPartial ? (
         <section className="panel">
           <div className="panel-heading">
             <div>
@@ -296,17 +308,17 @@ export function StoreMyPerformancePage(input: {
             <StatusPill tone="warning">Partial</StatusPill>
           </div>
           <p className="queue-subtitle">
-            Eksik metrikler: {performance.partial.missingMetricLabels.join(', ')}
+            Eksik metrikler: {partial.missingMetricLabels.join(', ') || 'Henuz metrik detayi yok'}
           </p>
-          {performance.partial.missingMetricCodes.includes('TARGET_ACHIEVEMENT') ? (
+          {partial.missingMetricCodes.includes('TARGET_ACHIEVEMENT') ? (
             <p className="queue-subtitle">
               Personel hedefi su an eksik. Bu alan personel tarafindan degistirilmez; magaza muduru girer ve
               bolge muduru onayina gider.
             </p>
           ) : null}
-          {performance.partial.pendingNormalizationLabels?.length ? (
+          {partial.pendingNormalizationLabels?.length ? (
             <p className="queue-subtitle">
-              Normalizasyon bekleyenler: {performance.partial.pendingNormalizationLabels.join(', ')}
+              Normalizasyon bekleyenler: {partial.pendingNormalizationLabels.join(', ')}
             </p>
           ) : null}
         </section>
@@ -316,13 +328,13 @@ export function StoreMyPerformancePage(input: {
         <MetricCard
           title="Net sales"
           value={
-            performance.supporting.netSalesValue !== null
-              ? Number(performance.supporting.netSalesValue.toFixed(0))
+            supporting.netSalesValue !== null
+              ? Number(supporting.netSalesValue.toFixed(0))
               : 0
           }
           note={
-            performance.supporting.netSalesValue !== null
-              ? `Power BI importundan gelen mevcut satis toplami: ${formatCurrency(performance.supporting.netSalesValue)}`
+            supporting.netSalesValue !== null
+              ? `Power BI importundan gelen mevcut satis toplami: ${formatCurrency(supporting.netSalesValue)}`
               : 'Power BI importundan gelen satis verisi yok.'
           }
           icon={<Target size={18} />}
@@ -406,7 +418,7 @@ export function StoreMyPerformancePage(input: {
             <KeyValue label="Roles" value={formatDisplayRoles(user?.roleCodes)} />
             <KeyValue label="Store ids" value={user?.scope.storeIds.join(', ') || 'none'} />
             <KeyValue label="Grade" value={formatPerformanceGrade(performanceGrade)} />
-            <KeyValue label="Data status" value={performance.partial.isPartial ? 'Partial' : 'Complete'} />
+            <KeyValue label="Data status" value={partial.isPartial ? 'Partial' : 'Complete'} />
             <KeyValue
               label="Period"
               value={

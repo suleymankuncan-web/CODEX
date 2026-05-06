@@ -30,7 +30,7 @@ test('store self-performance page renders live score, metrics, and ranks', async
   await expect(page.getByText('Guclu performans')).toBeVisible()
   await expect(page.getByText('Veri guveni: 3/3 metrik skorlandi.')).toBeVisible()
   await expect(page.getByText('Veri kaynagi').first()).toBeVisible()
-  await expect(page.getByText('Derived score signal')).toBeVisible()
+  await expect(page.getByText('Hedef bazli skor')).toBeVisible()
   await expect(page.getByText('Imported operational data').first()).toBeVisible()
   await expect(page.getByText('Turkey ranking')).toBeVisible()
   await expect(page.getByText('Store ranking')).toBeVisible()
@@ -38,6 +38,89 @@ test('store self-performance page renders live score, metrics, and ranks', async
   await expect(page.getByText('ATV', { exact: true })).toBeVisible()
   await expect(page.getByText('UPT', { exact: true })).toBeVisible()
   await expect(page.getByText('Performans yuzeyi acilamadi')).toHaveCount(0)
+})
+
+test('store self-performance handles live no-data responses without supporting metadata', async ({ page }) => {
+  const pageErrors: string[] = []
+  page.on('pageerror', (error) => {
+    pageErrors.push(error.message)
+  })
+
+  const myPerformanceWithoutSupporting: Record<string, unknown> = {
+    ...myPerformanceFixture,
+    employee: {
+      employeeId: demoEmployeeId,
+      displayName: 'Unknown employee',
+      storeId: null,
+      storeName: null,
+    },
+    period: null,
+    score: {
+      value: 0,
+      matchedMetrics: 0,
+      totalMetrics: 3,
+    },
+    rankings: {
+      turkeyRank: null,
+      turkeyPopulation: 0,
+      storeRank: null,
+      storePopulation: 0,
+    },
+    availablePeriods: [],
+    partial: {
+      isPartial: true,
+      missingMetricCodes: ['TARGET_ACHIEVEMENT', 'ATV', 'UPT'],
+      missingMetricLabels: ['Target Achievement', 'Average Ticket Value', 'Units Per Ticket'],
+      pendingNormalizationCodes: [],
+      pendingNormalizationLabels: [],
+    },
+    metrics: [
+      {
+        code: 'TARGET_ACHIEVEMENT',
+        label: 'Target Achievement',
+        weightPercent: 40,
+        actualValue: null,
+        contributionValue: 0,
+        dataStatus: 'missing',
+        scoreStatus: 'missing',
+        status: 'missing',
+      },
+      {
+        code: 'ATV',
+        label: 'Average Ticket Value',
+        weightPercent: 30,
+        actualValue: null,
+        contributionValue: 0,
+        dataStatus: 'missing',
+        scoreStatus: 'missing',
+        status: 'missing',
+      },
+      {
+        code: 'UPT',
+        label: 'Units Per Ticket',
+        weightPercent: 30,
+        actualValue: null,
+        contributionValue: 0,
+        dataStatus: 'missing',
+        scoreStatus: 'missing',
+        status: 'missing',
+      },
+    ],
+  }
+  delete myPerformanceWithoutSupporting.supporting
+
+  await page.unroute('**/api/reports/my-performance**')
+  await page.route('**/api/reports/my-performance**', async (route) => {
+    await route.fulfill({ json: myPerformanceWithoutSupporting })
+  })
+
+  await page.goto('/store/me')
+
+  await expect(page.getByRole('heading', { name: /Store personnel icin/i })).toBeVisible()
+  await expect(page.getByText('Bu score su an kismi veriyle hesaplaniyor')).toBeVisible()
+  await expect(page.getByText('Power BI importundan gelen satis verisi yok.')).toBeVisible()
+  await expect(page.getByText('Performans yuzeyi acilamadi')).toHaveCount(0)
+  expect(pageErrors).toEqual([])
 })
 
 test('store self-performance closed mode uses readable snapshot labels', async ({ page }) => {
@@ -62,11 +145,11 @@ test('store KPI highlights page explains metric source semantics', async ({ page
   await expect(page.getByText('BM checklist', { exact: true })).toBeVisible()
   await expect(page.getByText('BM checklist: bu donem skora dahil edilmedi')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Magaza skor kaynaklari' })).toBeVisible()
-  await expect(page.getByText('Hedef TARGET kaynagindan; CR, ATV ve UPT Turkiye ortalamasindan puanlanir.')).toBeVisible()
-  await expect(page.getByText('BM ve VM checklist tamamlanmadiysa magaza ceza yemez; pay KPI tarafinda kalir.')).toBeVisible()
+  await expect(page.getByText('Satis hedefi girilen hedeften; CR, ATV ve UPT Turkiye ortalamasindan puanlanir.')).toBeVisible()
+  await expect(page.getByText('BM ve VM checklist tamamlanan aylik ziyaret varsa kucuk agirlikla skora katilir.')).toBeVisible()
   await expect(page.getByText('Gercek oran %120 uzerinde olsa da skor katkisi %120 cap ile hesaplanir.')).toBeVisible()
   await expect(page.getByText('Veri kaynagi').first()).toBeVisible()
-  await expect(page.getByText('Derived score signal')).toBeVisible()
+  await expect(page.getByText('Hedef bazli skor').first()).toBeVisible()
   await expect(page.getByText('Imported operational data').first()).toBeVisible()
   await expect(page.getByText('KPI rows unavailable')).toHaveCount(0)
 })
@@ -88,50 +171,34 @@ test('store shell exposes Turkish-first chrome and hides technical auth roles', 
 test('store rankings page renders closed leaderboard and metric mini-ranks', async ({ page }) => {
   await page.goto('/store/rankings')
 
-  await expect(page.getByRole('heading', { name: /Gunluk ve aylik kapanis siralamasi/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Magaza ve personel rankingleri/i })).toBeVisible()
   await expect(
     page.getByRole('option', {
-      name: /24 Nis 2026 kapan.*snapshot/,
+      name: /1 Nis 2026 - 30 Nis 2026/,
     }),
   ).toBeAttached()
-  await expect(page.getByText('Mevcut siralama')).toBeVisible()
-  await expect(page.getByText('Store Personnel - 1/4')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Siralama kapsam olgunlugu' })).toBeVisible()
-  await expect(page.getByText('Turkiye geneli')).toBeVisible()
-  await expect(page.getByText('Magaza ici')).toBeVisible()
-  await expect(page.getByText('Metrik mini-rank')).toBeVisible()
-  await expect(page.getByText('Segment hazirligi')).toBeVisible()
-  await expect(page.getByText('Segment kuralina hazir')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Skor kaynaklari' })).toBeVisible()
-  await expect(page.getByText('Personel ana skoru kapanmis gunlerdeki total score ortalamasidir.')).toBeVisible()
-  await expect(page.getByText('Hedef TARGET kaynagindan; ATV ve UPT Turkiye ortalamasindan puanlanir.')).toBeVisible()
-  await expect(page.getByText('Checklist personel ranking V1 icinde puan kaynagi degildir.')).toBeVisible()
-  await expect(page.getByText('KPI mini siralari')).toBeVisible()
-  await expect(page.getByText('TR 1/4')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Top 100 gorunumu' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Turkiye magaza siralamasi' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Turkiye personel siralamasi' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Kendi magaza sirasi' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Kendi personel sirasi' })).toBeVisible()
+  await expect(page.getByText('Store Personnel - 1').first()).toBeVisible()
+  await expect(page.getByLabel('Ranking metric details').first()).toBeVisible()
   await expect(page.getByText('Siralama yuzeyi acilamadi')).toHaveCount(0)
 })
 
 test('store rankings page explains monthly preview-only ranking', async ({ page }) => {
   await page.goto('/store/rankings')
-  await page.getByRole('button', { name: 'Aylik' }).click()
+  await page.getByLabel('Ranking donem secimi').selectOption('2026-04-01')
 
   await expect(
     page.getByRole('option', {
-      name: /Nisan 2026 ayl.*24 Nis 2026/,
+      name: /1 Nis 2026 - 30 Nis 2026/,
     }),
   ).toBeAttached()
-  await expect(page.getByLabel('Ranking month snapshot secimi')).toHaveValue('2026-04-01')
-  await expect(page.getByRole('heading', { name: 'Aylik kapanis gunleri kaniti' })).toBeVisible()
-  await expect(page.getByLabel('Monthly closure evidence').getByText('2 kapanmis gun dahil')).toBeVisible()
-  await expect(page.getByLabel('Monthly closure evidence').getByText('23 Nis 2026')).toBeVisible()
-  await expect(page.getByLabel('Monthly closure evidence').getByText('24 Nis 2026')).toBeVisible()
-  await expect(page.getByText('Aylik kanit includedSnapshotRuns alanindan gelir.')).toBeVisible()
-
-  const rankingExplanation = page.getByLabel('Ranking explanation')
-  await expect(rankingExplanation.getByText('On izleme')).toBeVisible()
-  await expect(rankingExplanation.getByText('1 kapali performans gunu daha gerekiyor')).toBeVisible()
-  await expect(page.getByText('Siralama yok').first()).toBeVisible()
-  await expect(page.getByText('2/2 kapali gun').first()).toBeVisible()
+  await expect(page.getByLabel('Ranking donem secimi')).toHaveValue('2026-04-01')
+  await expect(page.getByText('Top 100', { exact: true })).toBeVisible()
+  await expect(page.getByText('Global liste Top 100 ozet; kendi konumun ayrica gorunur.')).toBeVisible()
   await expect(page.getByText('Siralama yuzeyi acilamadi')).toHaveCount(0)
 })
 
@@ -523,6 +590,10 @@ async function routeStoreSurfaceApi(page: Page) {
           ? closedLeaderboardMonthlyPreviewFixture
           : closedLeaderboardFixture,
     })
+  })
+
+  await page.route('**/api/reports/rankings**', async (route) => {
+    await route.fulfill({ json: rankingsFixture })
   })
 
   await page.route('**/api/reports/snapshot-runs**', async (route) => {
@@ -1070,6 +1141,121 @@ const closedLeaderboardMonthlyPreviewFixture = {
       rankingStatus: 'preview_only',
       eligibilityReason: 'needs_more_closed_days',
       neededPerformanceDays: 1,
+    },
+  ],
+}
+
+const storeRankingSummaryRow = {
+  subject: 'store',
+  storeId: demoStoreId,
+  storeName: 'IstinyePark Demo Store',
+  regionId: '00000000-0000-0000-0000-000000000010',
+  regionName: 'Marmara',
+  regionManagerUserId: 'region-manager-1',
+  regionManagerName: 'Region Manager',
+  rank: 12,
+  population: 240,
+  scoreValue: 104.6,
+  visibility: 'summary',
+}
+
+const personnelRankingSummaryRow = {
+  subject: 'personnel',
+  employeeId: demoEmployeeId,
+  displayName: 'Store Personnel - 1',
+  storeId: demoStoreId,
+  storeName: 'IstinyePark Demo Store',
+  regionId: '00000000-0000-0000-0000-000000000010',
+  regionName: 'Marmara',
+  regionManagerUserId: 'region-manager-1',
+  regionManagerName: 'Region Manager',
+  rank: 7,
+  population: 420,
+  storeRank: 1,
+  storePopulation: 4,
+  scoreValue: 96.4,
+  visibility: 'summary',
+}
+
+const rankingsFixture = {
+  source: {
+    mode: 'live',
+    periodType: 'monthly',
+    periodStart: '2026-04-01',
+    periodEnd: '2026-04-30',
+  },
+  access: {
+    globalMode: 'top100',
+    canSeeGlobalDetails: false,
+    canSeeManagedStorePersonnelDetails: true,
+  },
+  filters: {
+    regionManagers: [],
+    regions: [],
+    stores: [],
+  },
+  storeLeaderboard: {
+    items: [storeRankingSummaryRow],
+    currentStore: {
+      ...storeRankingSummaryRow,
+      visibility: 'detail',
+      metrics: [
+        {
+          code: 'TARGET_ACHIEVEMENT',
+          label: 'Target Achievement',
+          actualValue: 1.12,
+          targetValue: 1,
+          contributionValue: 70,
+        },
+      ],
+    },
+    meta: {
+      total: 240,
+      limit: 100,
+      offset: 0,
+    },
+  },
+  personnelLeaderboard: {
+    items: [personnelRankingSummaryRow],
+    currentEmployee: {
+      ...personnelRankingSummaryRow,
+      visibility: 'detail',
+      metrics: [
+        {
+          code: 'ATV',
+          label: 'ATV',
+          actualValue: 1245,
+          benchmarkValue: 1180,
+          contributionValue: 28,
+        },
+      ],
+    },
+    managedStorePersonnel: [
+      {
+        ...personnelRankingSummaryRow,
+        visibility: 'detail',
+        metrics: [
+          {
+            code: 'UPT',
+            label: 'UPT',
+            actualValue: 4.8,
+            benchmarkValue: 4.2,
+            contributionValue: 29,
+          },
+        ],
+      },
+    ],
+    meta: {
+      total: 420,
+      limit: 100,
+      offset: 0,
+    },
+  },
+  availablePeriods: [
+    {
+      periodType: 'monthly',
+      periodStart: '2026-04-01',
+      periodEnd: '2026-04-30',
     },
   ],
 }

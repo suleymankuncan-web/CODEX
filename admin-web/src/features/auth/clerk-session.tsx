@@ -9,6 +9,7 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import { ScreenState, StatusPill } from '../../components/dashboard-primitives'
 import { useSession } from '../session/session-context-value'
 import { isClerkAuthEnabled, resolveClerkPublishableKey } from './clerk-config'
+import { sanitizeAuthReturnPath } from './return-path'
 
 const CLERK_TOKEN_REFRESH_MS = 45_000
 
@@ -46,7 +47,7 @@ export function ClerkSessionProvider(input: { children: ReactNode }) {
 
 export function ClerkLoginActions(input: { returnTo: string }) {
   const { isLoaded, isSignedIn, userId } = useAuth()
-  const safeReturnTo = sanitizeReturnTo(input.returnTo) ?? '/'
+  const safeReturnTo = sanitizeAuthReturnPath(input.returnTo) ?? '/'
 
   if (!isLoaded) {
     return (
@@ -103,7 +104,6 @@ export function ClerkLogoutEffect(input: { onFallback: () => void }) {
 
   return null
 }
-
 function ClerkSessionBridge() {
   const { clearToBearerMode, startBearerSession } = useSession()
   const { getToken, isLoaded, isSignedIn } = useAuth()
@@ -146,12 +146,4 @@ function ClerkSessionBridge() {
   }, [clearToBearerMode, getToken, isLoaded, isSignedIn, startBearerSession, template])
 
   return null
-}
-
-function sanitizeReturnTo(input: string | null) {
-  if (!input) {
-    return null
-  }
-
-  return input.startsWith('/') ? input : null
 }

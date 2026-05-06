@@ -63,9 +63,9 @@ describe("JwtAuthProvider", () => {
         storeIds: ["store-1"],
       },
       actionScope: {
-        assignedStoreIds: ["store-1"],
+        assignedStoreIds: [],
       },
-      assignedStoreIds: ["store-1"],
+      assignedStoreIds: [],
     });
   });
 
@@ -401,6 +401,36 @@ describe("JwtAuthProvider", () => {
       },
       assignedStoreIds: ["store-1"],
     });
+  });
+
+  it("does not promote legacy store_ids read scope into action scope", async () => {
+    const provider = new JwtAuthProvider({
+      jwtSecret: "top-secret",
+      jwtIssuer: "http://localhost:8080/realms/store-ops",
+      jwtAudience: "store-ops-api",
+      jwtJwksUrl: undefined,
+      authClientId: "store-ops-admin-web",
+    } as never);
+
+    const token = await new SignJWT({
+      roles: ["STORE_MANAGER"],
+      store_ids: ["store-1"],
+    })
+      .setProtectedHeader({ alg: "HS256" })
+      .setSubject("user-local-store-manager")
+      .setIssuer("http://localhost:8080/realms/store-ops")
+      .setAudience("store-ops-api")
+      .sign(new TextEncoder().encode("top-secret"));
+
+    const user = await provider.resolveUser({
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    });
+
+    expect(user?.readScope.storeIds).toEqual(["store-1"]);
+    expect(user?.actionScope.assignedStoreIds).toEqual([]);
+    expect(user?.assignedStoreIds).toEqual([]);
   });
 
   it("does not infer roles or scopes from local Keycloak demo usernames", async () => {

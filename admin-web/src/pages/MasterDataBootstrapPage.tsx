@@ -20,6 +20,7 @@ import {
 } from '../features/integrations/api'
 import type {
   MasterDataBootstrapBatchDetail,
+  MasterDataBootstrapBatchItem,
   MasterDataBootstrapEntity,
   MasterDataBootstrapPromotionReadinessResponse,
   MasterDataBootstrapPromotionResponse,
@@ -230,7 +231,7 @@ export function MasterDataBootstrapPage() {
                   <span>{batch.bootstrapEntity}</span>
                   <span>{batch.rowCount} rows</span>
                   <span>{batch.fileReference ?? 'No file reference'}</span>
-                  <span>{formatDateTime(batch.updatedAt)}</span>
+                  <span>{formatDateTime(getBatchDisplayTimestamp(batch))}</span>
                 </div>
                 <div className="queue-footer">
                   <span>
@@ -274,6 +275,10 @@ export function MasterDataBootstrapPage() {
       ) : null}
     </section>
   )
+}
+
+function getBatchDisplayTimestamp(batch: MasterDataBootstrapBatchItem) {
+  return batch.updatedAt ?? batch.promotedAt ?? batch.validatedAt ?? batch.createdAt
 }
 
 function BatchDetailPanel(input: {

@@ -7,6 +7,7 @@ services:
     rootDir: backend/nestjs
     branch: codex/clerk-auth-db-lifecycle
     buildCommand: npm ci --include=dev && npm run build
+    preDeployCommand: npm run db:migrate
     startCommand: node dist/src/main.js
     healthCheckPath: /api/health/live
     autoDeployTrigger: off

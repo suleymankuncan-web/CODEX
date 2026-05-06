@@ -89,7 +89,7 @@ export class JwtAuthProvider implements AuthProvider {
     const storeIds = parseReadScopeClaim("read_store_ids", "store_ids");
     const assignedStoreIds =
       payload["assigned_store_ids"] === undefined
-        ? parseScope(payload["store_ids"])
+        ? []
         : parseScope(payload["assigned_store_ids"]);
     const resolvedUserId =
       typeof payload.sub === "string"

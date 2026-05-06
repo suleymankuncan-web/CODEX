@@ -1,4 +1,4 @@
-﻿# Current State
+# Current State
 
 Bu dosya projeyi yeni bir konusma penceresinde ayni noktadan devam ettirmek icin kanonik handoff ozetidir.
 
@@ -6448,10 +6448,76 @@ Pilot kapisi etkisi:
 - Live authenticated `/api/auth/session` payload evidence ve assigned/unassigned action-scope API smoke artik kapandi.
 - Pilot hala `Go` degil; true baseline master data ve official real KPI import evidence tamamlanmali.
 
+## Son Controlled Pilot Evidence + Browser Retest
+
+5 Mayis 2026 itibariyla controlled staging/internal pilot kanit paketi genisletildi ve ilk low-role browser retest kapandi.
+
+Yeni/aktif kanit kayitlari:
+
+- `docs/evidence/pilot-readiness/2026-05-05-staging-master-data-kpi-materialization.md`
+- `docs/evidence/pilot-readiness/2026-05-05-staging-ranking-v1-live-smoke.md`
+- `docs/evidence/pilot-readiness/2026-05-05-staging-ranking-v1-low-role-smoke.md`
+- `docs/evidence/pilot-readiness/2026-05-05-pilot-readiness-decision.md`
+- `docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-scope.md`
+- `docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md`
+
+Karar:
+
+- Final decision: `Conditional Go` for controlled staging/internal pilot.
+- Broad production rollout icin `Go` degil.
+- Pilot kullanicilari explicit Clerk users ile sinirli kalmali.
+- Direct Supabase client access to `ops.*` tablolarina acilmamali.
+
+Staging data ve ranking kaniti:
+
+- Accepted staging baseline store `155/155` ve personnel `805/805` promoted.
+- March 2026 Power BI import batch `e3fd6958-04d2-45ac-a2ae-f1fbe401612d` completed.
+- `4864` raw rows processed, `4864` KPI actual rows materialized.
+- Ranking V1 privileged smoke: `/reports/rankings` `200`, access `full`, store leaderboard `154/154`, personnel total `727`, demo rows `0`.
+- Ranking V1 low-role smoke: `STORE_MANAGER` access `top100`, global details hidden, global metric leaks `0`, managed-store personnel `7/7` detail rows.
+- Bursa Marka Park sample DB'de ve ranking search sonucunda goruldu.
+
+Low-role pilot browser feedback:
+
+- Kullanici `suleymankuncan@lufian.com.tr` ile low-role store manager check yapti.
+- Ilk bulgular: `/store/me` acilmiyordu, `/store/approvals` `/store` route'una donuyordu, rankings sadece ranking ve score gosteriyordu.
+- Rankings davranisi expected olarak kapandi: low-role global detaylari gormuyor, sadece ranking/score summary goruyor.
+
+Fixler:
+
+- `/auth/login?returnTo=...` store alt route'larini koruyacak sekilde frontend auth return path duzeltildi.
+- Session-expired notice varken Clerk session ready olunca guvenli `returnTo` route'una donus duzeltildi.
+- `/store/me` live no-data response'unda eksik `partial` / `supporting` metadata artik render crash yaratmiyor; partial/no-data state olarak karsilaniyor.
+
+Deploy ve dogrulama:
+
+- `npm.cmd --prefix admin-web run build` -> pass.
+- `npm.cmd --prefix admin-web run test:e2e -- store-return-to.spec.ts` -> 3 passed.
+- `npm.cmd --prefix admin-web run test:e2e -- store-surfaces.spec.ts -g "store self-performance page renders|handles live no-data|store self-performance closed mode"` -> 3 passed.
+- Vercel production deploy `dpl_6UUc3hoJ4C4tFowJeqrYR1hZ2daH` READY.
+- Deploy URL `https://hr-axis-staging-hwt7e4dj3-suleymankuncan-webs-projects.vercel.app`.
+- Alias `https://staging.hr-axis.com`.
+- Live custom-domain asset `assets/StoreMyPerformancePage-BrK9bgPp.js`; fallback metinleri var ve raw `performance.supporting` access yok.
+
+Authenticated retest:
+
+- Kullanici `/store/me` acildi diye dogruladi.
+- Kullanici `/store/approvals` acildi diye dogruladi.
+- Kullanici `/store/kpis` sayfasinda sorun olmadigini dogruladi.
+- Kullanici `/store/rankings` icin top 100'de gorunmemenin beklenen oldugunu, kendi magazasinda detaylarin gorundugunu ve problem olmadigini dogruladi.
+- `PILOT-002` closed: `/store/me` included route artik low-role browser'da aciliyor.
+- `PILOT-003` closed: `/store/approvals` artik `/store` route'una donmuyor.
+- Session 1 included route smoke artik navigation/loading tarafinda temiz: `/store/me`, `/store/approvals`, `/store/kpis`, `/store/rankings`.
+
+Siradaki mantikli adim:
+
+- Pilot feedback collection'a devam etmek; siradaki odak user-facing wording/data trust notlari.
+- Pilot boyunca feedback log'a route, rol, store name, API status ve user-facing issue disinda private token/cookie yazmamak.
+
 ## Devam Komutu
 
 Yeni pencerede devam etmek icin:
 
 ```text
-current-state.md oku; aktif proje yolu artik D:\store-ops-workspace. OneDrive altindaki eski masaustu kopyasini kullanma. Eski E:\ yolunu da kullanma. HR Axis staging hatti canli: frontend https://staging.hr-axis.com, backend custom API https://api-staging.hr-axis.com/api, DB Supabase Free Postgres, auth Clerk, authorization uygulama DB'sinde. 2026-05-02 public staging smoke recheck kaydi `docs/evidence/pilot-readiness/2026-05-02-staging-smoke-recheck.md`. 45 saniyelik otomatik yenilenme fix'i main'e pushlandi ve staging bundle'da `token-present` / `token-missing` marker'lari goruldu. 2026-05-02 Vercel custom API base redeploy kaydi `docs/evidence/pilot-readiness/2026-05-02-vercel-custom-api-base-redeploy.md`: Vercel production `VITE_API_BASE_URL` artik `https://api-staging.hr-axis.com/api`; deploy id `dpl_Gu9gKJbuMPD7f3QVmruvnR6ZHppK`; staging bundle artik custom API base iceriyor ve Render direct API base icermiyor; custom API health/CORS ok; unauthenticated /store -> /auth/login clean. 2026-05-02 manuel authenticated Clerk store smoke kaydi `docs/evidence/pilot-readiness/2026-05-02-authenticated-clerk-store-smoke.md`: kullanici browser'da `/store`, `/store/me`, `/store/kpis`, `/store/approvals` route'larinin acildigini ve 45 saniye yenileme olmadigini dogruladi. 2026-05-03 KPI file preflight kaydi `docs/evidence/pilot-readiness/2026-05-03-kpi-file-preflight.md`: kullanicinin `MAĞAZA TABLO.xlsx` ve `PERSONEL TABLO.xlsx` dosyalari master-data degil KPI snapshot olarak okundu; dosya donemi monthly Mart 2026 (`2026-03-01`/`2026-03-31`) olarak teyit edildi; local reconciliation preflight 185 store icin 171 balanced / 14 warning verdi. 2026-05-03 Power BI upload unblock kaydi `docs/evidence/pilot-readiness/2026-05-03-power-bi-upload-unblock.md`: `/admin/integrations` upload butonu disabled nedenlerini gosteriyor, seed ve migration default `power-bi-kpi` source ekliyor. 2026-05-03 Power BI upload staging deploy kaydi `docs/evidence/pilot-readiness/2026-05-03-power-bi-upload-staging-deploy.md`: Vercel deploy `dpl_BppD5H6QP3uAdSEoDXde39tjktp3` READY ve `staging.hr-axis.com` aliaslandi; Supabase staging DB'de `power-bi-kpi` source active ve app migration tracking `045_power_bi_kpi_source_seed.sql` succeeded. 2026-05-03 staging role/scope DB evidence kaydi `docs/evidence/pilot-readiness/2026-05-03-staging-role-scope-db-evidence.md`: Clerk-backed `suleyman.kuncan` active, roles `STORE_MANAGER` + `SUPER_ADMIN`, read scope `1 company / 1 region / 1 store`, action scope `STORE100`; unassigned candidates `DEMO-101`, `IST-001`, `IST-002`, `IZM-001`; `ScopeGuard` action-store bypass yapmiyor. 2026-05-03 staging token scope smoke harness kaydi `docs/evidence/pilot-readiness/2026-05-03-staging-token-scope-smoke-harness.md`: Clerk token icin `admin-web/scripts/auth-token-scope-smoke.mjs` eklendi, token stdout'a basilmaz, admin-web script tests `10/10` gecti. 2026-05-03 live token scope smoke kaydi `docs/evidence/pilot-readiness/2026-05-03-staging-token-scope-live-smoke.md`: authenticated `/auth/session` `200`, roles `SUPER_ADMIN` + `STORE_MANAGER`, read/action scope `STORE100`; assigned `GET /target-distributions/store-personnel?storeId=STORE100` `200`; unassigned `DEMO-101` `403 Out-of-scope store action`; token/cookie/password/provider subject/raw JWT kayda alinmadi. Official authenticated Power BI upload smoke, true baseline master data ve real KPI import materialization evidence hala eksik. Pilot Readiness Gate V1 hala gecerli: true baseline master data, official real KPI import smoke ve release/migration evidence tamamlanmadan pilot onayi verilmesin.
+current-state.md oku; aktif proje yolu artik D:\store-ops-workspace. OneDrive altindaki eski masaustu kopyasini kullanma. Eski E:\ yolunu da kullanma. HR Axis staging hatti canli: frontend https://staging.hr-axis.com, backend custom API https://api-staging.hr-axis.com/api, DB Supabase Free Postgres, auth Clerk, authorization uygulama DB'sinde. 2026-05-05 controlled pilot status: Conditional Go for controlled staging/internal pilot, broad production rollout Go degil. Accepted staging baseline store `155/155`, personnel `805/805`; March 2026 Power BI import batch `e3fd6958-04d2-45ac-a2ae-f1fbe401612d` completed ve `4864` KPI actual rows materialized. Ranking V1 live privileged ve low-role smokes gecti; low-role `STORE_MANAGER` global rankings summary/top100 gorur, global metric details hidden kalir, managed-store personnel detail `7/7` gorunur. Controlled pilot feedback log `docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md`: `/store/me` ve `/store/approvals` low-role browser buglari fixlendi; auth returnTo, notice-ready redirect ve `/store/me` missing `supporting` metadata crash regressionlari kapandi. Vercel production deploy `dpl_6UUc3hoJ4C4tFowJeqrYR1hZ2daH` READY ve `https://staging.hr-axis.com` aliasinda fixli `StoreMyPerformancePage-BrK9bgPp.js` asset'i goruldu. Kullanici authenticated retest'te `/store/me`, `/store/approvals`, `/store/kpis` ve `/store/rankings` icin sorun olmadigini dogruladi; rankings top 100'de gorunmeme mevcut siraya gore kabul, kendi magazasinda detaylar gorunuyor; `PILOT-002` ve `PILOT-003` closed. Siradaki mantikli adim: pilot feedback collection'a user-facing wording/data trust odagiyla devam etmek; private token/cookie/JWT kaydetmemek.
 ```

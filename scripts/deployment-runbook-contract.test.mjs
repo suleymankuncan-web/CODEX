@@ -19,6 +19,7 @@ const backendEnvExample = readText('backend/nestjs/.env.example')
 const frontendEnvExample = readText('admin-web/.env.example')
 const appConfigService = readText('backend/nestjs/src/shared/app-config.service.ts')
 const authLiveSmokeScript = readText('admin-web/scripts/auth-live-smoke.mjs')
+const renderBlueprint = readText('render.yaml')
 
 function uniqueSorted(values) {
   return [...new Set(values)].sort()
@@ -153,6 +154,13 @@ test('deployment runbook requires guarded commands and sanitized evidence', () =
   ]) {
     requireText(runbook, phrase)
   }
+})
+
+test('render backend deploy runs database migrations before starting the api', () => {
+  requireText(renderBlueprint, 'name: hr-axis-api')
+  requireText(renderBlueprint, 'buildCommand: npm ci --include=dev && npm run build')
+  requireText(renderBlueprint, 'preDeployCommand: npm run db:migrate')
+  requireText(renderBlueprint, 'startCommand: node dist/src/main.js')
 })
 
 test('env examples expose production-relevant variables and PKCE response type', () => {
