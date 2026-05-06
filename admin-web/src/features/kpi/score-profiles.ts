@@ -4,7 +4,20 @@ import type {
 } from '../reports/api'
 
 export function formatKpiOwnerRole(role: KpiOwnerRole) {
-  return role.toLowerCase().replaceAll('_', ' ')
+  switch (role) {
+    case 'DEPUTY_GM':
+      return 'Genel müdür yardımcısı'
+    case 'REGION_MANAGER':
+      return 'Bölge müdürü'
+    case 'STORE_MANAGER':
+      return 'Mağaza müdürü'
+    case 'STORE_PERSONNEL':
+      return 'Mağaza personeli'
+    case 'VISUAL_TEAM':
+      return 'Görsel ekip'
+    default:
+      return String(role).toLowerCase().replaceAll('_', ' ')
+  }
 }
 
 export function matchesKpiMetricCode(

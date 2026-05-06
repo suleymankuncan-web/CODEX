@@ -41,8 +41,10 @@ test('store KPI closed view explains effective BM and VM checklist weights', asy
   await expect(page.getByText('VM checklist: bu dönem skora dahil edilmedi')).toBeVisible()
   await expect(page.getByText('VM payı KPI tarafında kaldı')).toBeVisible()
   await expect(page.getByText('BM checklist katkısı')).toBeVisible()
-  await expect(page.getByText('Configured 90/5/5')).toBeVisible()
-  await expect(page.getByText('Effective 95/5/0')).toBeVisible()
+  await expect(page.getByText('Plan 90/5/5')).toBeVisible()
+  await expect(page.getByText('Uygulanan 95/5/0')).toBeVisible()
+  await expect(page.getByText('Configured 90/5/5')).toHaveCount(0)
+  await expect(page.getByText('Effective 95/5/0')).toHaveCount(0)
 })
 
 test('store KPI closed view lets users choose a closed snapshot from the list', async ({ page }) => {
@@ -60,7 +62,8 @@ test('store KPI closed view lets users choose a closed snapshot from the list', 
 
   await expect(page.getByText('1 VM checklist yapıldı')).toBeVisible()
   await expect(page.getByText('VM checklist katkısı 5')).toBeVisible()
-  await expect(page.getByText('Effective 95/0/5')).toBeVisible()
+  await expect(page.getByText('Uygulanan 95/0/5')).toBeVisible()
+  await expect(page.getByText('Effective 95/0/5')).toHaveCount(0)
 })
 
 async function routeBenchmarkExplainabilityApi(page: Page) {
