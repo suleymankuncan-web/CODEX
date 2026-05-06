@@ -17,11 +17,11 @@ Date: 30 April 2026
 
 Current count:
 
-- Closed active debts: 89
+- Closed active debts: 90
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
-- Strategic investment backlog: 8
+- Strategic investment backlog: 7
 - Silent untracked quality debt in the active gate: 0
 
 ## Closed Active Debts
@@ -117,6 +117,7 @@ These are counted as paid because they have implementation or documentation evid
 87. Project Debt Ledger Consistency Guard V1
 88. Repo Hygiene Guard V1
 89. Pilot Readiness Gate V1
+90. Master Data Validation/Promotion Test Split V1
 
 Ranking Included Snapshot Contract V1 is counted as paid because `GET /reports/leaderboards/closed` now returns `includedSnapshotRuns`, daily ranking returns the included closed snapshot, monthly ranking returns every completed daily snapshot included in the month calculation, and `/store/rankings` uses that backend contract instead of frontend inference.
 
@@ -149,6 +150,8 @@ Project Debt Ledger Consistency Guard V1 is counted as paid because root script 
 Repo Hygiene Guard V1 is counted as paid because root script tests now reject tracked generated folders and local secret env files, verify representative generated/env paths are ignored, and keep the `outputs/` scratch folder explicitly ignored. This protects the release gate from accidental generated or local-only file commits.
 
 Pilot Readiness Gate V1 is counted as paid because pilot approval is now documented as an evidence gate rather than a feeling. It ties real staging IdP evidence, true store/personnel baseline evidence, real KPI import smoke evidence, scoped pilot user evidence, and release/migration evidence into one Go / Conditional Go / No-Go checklist guarded by root script tests. Reference: `docs/plans/pilot-readiness-gate-v1.md`.
+
+Master Data Validation/Promotion Test Split V1 is counted as paid because the remaining master-data bootstrap validation/conflict and promotion safety tests were mechanically split into focused service specs without changing production code, test names, or the guarded 29 master-data bootstrap service cases. The hygiene guard now freezes the service tests across staging, read-model, validation, and promotion files. Reference: `docs/superpowers/plans/2026-05-06-master-data-validation-promotion-test-split.md`.
 
 Operator Evidence Consistency Pass V1 is counted as paid because existing import and master-data operator surfaces now use the same `Go / Conditional Go / No-Go`, row evidence, dry-run evidence, sanitized evidence, retry evidence, and dependency mapping language without adding backend endpoints, workflows, scoring behavior, import behavior, or promotion behavior. Reference: `docs/plans/operator-evidence-consistency-pass-v1.md`.
 
@@ -338,12 +341,11 @@ These are important future product investments. They are not counted as hidden d
 
 1. Eventual real source adapter after real source evidence
 2. Full production UI/design-system pass and complete EN/TR localization expansion
-3. Master-data validation/promotion test split after a separate explicit plan
-4. StageBuilderForm competition admin UI split after a concrete competition UI change
-5. IntegrationRepository boundary split and raw import index review after real import volume or source-adapter evidence
-6. Remaining StoreOpsRepository legacy checklist/read boundary review after a concrete checklist, workforce reporting, or org-scope change
-7. ReportingRepository closed-ranking/performance/snapshot-report split and reporting query/index review after a concrete reporting/ranking change or measured pilot slow-query evidence
-8. AuthAdminRepository boundary split before broad user rollout
+3. StageBuilderForm competition admin UI split after a concrete competition UI change
+4. IntegrationRepository boundary split and raw import index review after real import volume or source-adapter evidence
+5. Remaining StoreOpsRepository legacy checklist/read boundary review after a concrete checklist, workforce reporting, or org-scope change
+6. ReportingRepository closed-ranking/performance/snapshot-report split and reporting query/index review after a concrete reporting/ranking change or measured pilot slow-query evidence
+7. AuthAdminRepository boundary split before broad user rollout
 
 KPI config version history, publish metadata, snapshot anchoring, and pre-governance visibility are implemented in V1. Rollback UI, future effective scheduling, approval workflow, and DB-managed interpretation copy remain future depth, not active hidden debt.
 
@@ -355,7 +357,7 @@ Data Quality Guard V1 is implemented. Import error rows now expose stable `quali
 
 Import Batch Quality Summary V1 is implemented. Batch detail now summarizes failed rows by stable quality issue code, and the admin import detail surface shows the dominant cleanup categories without creating a new workflow or dashboard too early.
 
-Master-data validation/promotion test split is a planned investment, not active debt. Staging/normalization and read-model/readiness tests are already split and guarded; validation and promotion safety still protect live master-data write behavior in one focused file. Future work must start with a separate explicit plan and a stronger validation/promotion test-name guard before moving those tests. Reference: `docs/plans/project-risk-scan-2026-04-30.md`.
+Master-data validation/promotion test split is closed. Validation/conflict and promotion safety tests now live in separate focused service specs, and the hygiene guard preserves the same 29 master-data bootstrap service test names across staging, read-model, validation, and promotion files. Reference: `docs/superpowers/plans/2026-05-06-master-data-validation-promotion-test-split.md`.
 
 StageBuilderForm competition admin UI split is a planned investment, not active debt. The current file is large because it owns several tested competition admin workflows; it should not be refactored only for line count. Future work should split template and package-plan sections only when a concrete competition UI change touches them. Reference: `docs/plans/stage-builder-form-risk-review-2026-04-30.md`.
 

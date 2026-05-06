@@ -26,9 +26,10 @@ Primary app endpoints:
 
 As of 2026-05-06:
 
-- `origin/main` includes PR #15: `a69ae4e9 Merge pull request #15 from suleymankuncan-web/codex/auth-refresh-flash-check`
+- `origin/main` includes PR #17: `53aa41c7 Merge pull request #17 from suleymankuncan-web/codex/master-data-validation-promotion-test-split`
 - Auth refresh flash fix is merged and deployed.
-- Current handoff cleanup branch: `codex/active-handoff-current-state`
+- Master-data validation/promotion test split is merged.
+- Current handoff cleanup branch: `codex/close-master-data-test-split-handoff`
 
 If starting in a fresh context after this handoff PR is merged:
 
@@ -107,7 +108,7 @@ Known planned refactor candidates:
 
 - `admin-web/src/App.tsx`: routing/auth/store/admin shell concerns are crowded. Split only when a concrete route/UI change touches the boundary.
 - `ReportingRepository`, `IntegrationRepository`, `AuthAdminRepository`: planned future boundary splits. Split only with measured need or concrete feature pressure.
-- Master-data validation/promotion tests: safest next maintenance candidate because production code can remain unchanged while test files become easier to maintain.
+- Master-data validation/promotion test split: closed in PR #17 and guarded by the test-suite hygiene contract.
 - `current-state.md`: now intentionally concise; do not let it grow back into a full project archive.
 
 Rule for new work:
@@ -153,11 +154,11 @@ Migration smoke:
 
 Debt ledger:
 
-- Closed active debts: 89
+- Closed active debts: 90
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
-- Strategic investment backlog: 8
+- Strategic investment backlog: 7
 - Silent untracked quality debt in the active gate: 0
 
 The current debt ledger is `docs/plans/project-debt-ledger.md`.
@@ -185,30 +186,28 @@ Keep these references in this handoff because contract tests and future context 
 - `docs/plans/repo-hygiene-contract-v1.md` - Repo Hygiene Guard V1 reference is tracked through the contract tests and debt ledger
 - `docs/plans/source-agnostic-import-boundary-v1.md` - Source-Agnostic Import Boundary V1
 - `docs/plans/test-suite-hygiene-v1.md` - Test Suite Hygiene V1
+- `docs/superpowers/plans/2026-05-06-master-data-validation-promotion-test-split.md` - Master Data Validation/Promotion Test Split V1
 
 ## Next Planned Work
 
 Next local foundation step:
 
-- Plan and execute Master Data Validation/Promotion Test Split.
-- Goal: reduce maintenance risk in `backend/nestjs/src/modules/integration/application/master-data-bootstrap.service.spec.ts` without changing production code.
-- Start from the dedicated plan: `docs/superpowers/plans/2026-05-06-master-data-validation-promotion-test-split.md`
+- Choose the next small backend/data hardening slice through the intake gate.
+- If real staging IdP and seeded DB values are available, run guarded staging auth/action evidence.
+- If true store/personnel baseline files are available, run the master-data bootstrap pilot smoke flow from the existing runbook.
+- If neither external evidence source is available, keep JSON/source-specific adapter work closed and pick only a local guard that strengthens an existing surface.
 
-Recommended first execution slice:
+Recommended local stance:
 
-1. Create or update a test-name guard for the current 29 master-data bootstrap service tests.
-2. Split validation/conflict tests from promotion tests mechanically.
-3. Keep test names unchanged.
-4. Run targeted master-data specs.
-5. Run root script tests and backend build.
-6. Open a small PR. No frontend, no UI, no production behavior change.
-
-Do not start UI redesign until this foundation slice is closed or explicitly paused.
+- Do not repeat completed test-split work as busywork.
+- Do not start UI redesign until a concrete product/UI change requires it.
+- Do not start JSON adapter work without real payload/source evidence.
+- Do not run master-data promotion without dry-run evidence and sanitized evidence.
 
 ## New Context Startup Prompt
 
 Paste this into the next context window:
 
 ```text
-current-state.md oku; aktif workspace D:\store-ops-workspace. Eski OneDrive ve E:\ yollarini kullanma. Main son durum PR #15 auth refresh flash fix'i iceriyor ve deploy sonrasi kullanici refresh/login flash sorununun cozulmus gorundugunu dogruladi. Staging frontend https://staging.hr-axis.com, backend https://api-staging.hr-axis.com/api. Controlled staging/internal pilot Conditional Go; broad production rollout henuz Go degil. UI redesign ertelendi. JSON adapter future-only; real payload/source evidence olmadan baslama. Siradaki planli is: docs/superpowers/plans/2026-05-06-master-data-validation-promotion-test-split.md uzerinden master-data validation/promotion test split. Production code degistirme; test isimlerini koru; once guard/test, sonra mekanik split, sonra targeted backend tests + root script tests.
+current-state.md oku; aktif workspace D:\store-ops-workspace. Eski OneDrive ve E:\ yollarini kullanma. Main son durum PR #17 master-data validation/promotion test split'i iceriyor; PR #15 auth refresh flash fix'i deploy sonrasi kullanici tarafindan cozulmus gorundu. Staging frontend https://staging.hr-axis.com, backend https://api-staging.hr-axis.com/api. Controlled staging/internal pilot Conditional Go; broad production rollout henuz Go degil. UI redesign ertelendi. JSON adapter future-only; real payload/source evidence olmadan baslama. Siradaki yerel is intake gate ile secilmeli: staging IdP/seeded DB varsa guarded auth/action evidence, true baseline varsa master-data bootstrap pilot smoke, ikisi de yoksa sadece mevcut yuzeyi guclendiren kucuk bir local guard.
 ```
