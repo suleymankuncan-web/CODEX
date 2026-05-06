@@ -85,3 +85,10 @@ test('handoff docs record the project debt ledger consistency guard', () => {
     requireText(text, 'Project Debt Ledger Consistency Guard V1')
   }
 })
+
+test('controlled pilot operating checklist is counted as closed evidence work', () => {
+  requireText(debtLedger, '91. Controlled Pilot Operating Checklist V1')
+  requireText(debtLedger, 'Controlled Pilot Operating Checklist V1 is counted as paid because')
+  requireText(activeNextActions, 'Controlled Pilot Operating Checklist V1 is counted as paid')
+  requireText(currentState, '`docs/plans/controlled-pilot-operating-checklist-v1.md` - Controlled Pilot Operating Checklist V1')
+})

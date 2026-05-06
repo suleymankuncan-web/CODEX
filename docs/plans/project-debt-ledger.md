@@ -17,7 +17,7 @@ Date: 30 April 2026
 
 Current count:
 
-- Closed active debts: 90
+- Closed active debts: 91
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -118,6 +118,7 @@ These are counted as paid because they have implementation or documentation evid
 88. Repo Hygiene Guard V1
 89. Pilot Readiness Gate V1
 90. Master Data Validation/Promotion Test Split V1
+91. Controlled Pilot Operating Checklist V1
 
 Ranking Included Snapshot Contract V1 is counted as paid because `GET /reports/leaderboards/closed` now returns `includedSnapshotRuns`, daily ranking returns the included closed snapshot, monthly ranking returns every completed daily snapshot included in the month calculation, and `/store/rankings` uses that backend contract instead of frontend inference.
 
@@ -152,6 +153,8 @@ Repo Hygiene Guard V1 is counted as paid because root script tests now reject tr
 Pilot Readiness Gate V1 is counted as paid because pilot approval is now documented as an evidence gate rather than a feeling. It ties real staging IdP evidence, true store/personnel baseline evidence, real KPI import smoke evidence, scoped pilot user evidence, and release/migration evidence into one Go / Conditional Go / No-Go checklist guarded by root script tests. Reference: `docs/plans/pilot-readiness-gate-v1.md`.
 
 Master Data Validation/Promotion Test Split V1 is counted as paid because the remaining master-data bootstrap validation/conflict and promotion safety tests were mechanically split into focused service specs without changing production code, test names, or the guarded 29 master-data bootstrap service cases. The hygiene guard now freezes the service tests across staging, read-model, validation, and promotion files. Reference: `docs/superpowers/plans/2026-05-06-master-data-validation-promotion-test-split.md`.
+
+Controlled Pilot Operating Checklist V1 is counted as paid because the controlled staging/internal pilot now has a guarded operating routine for invitation, route monitoring, feedback intake, pause/rollback triggers, and exit decisions. The checklist preserves the current `Conditional Go` pilot boundary, keeps broad production rollout at `No-Go`, and blocks JSON adapter work, direct Supabase `ops.*` access, raw token evidence, low-role global metric leaks, and unassigned-store actions. Reference: `docs/plans/controlled-pilot-operating-checklist-v1.md`.
 
 Operator Evidence Consistency Pass V1 is counted as paid because existing import and master-data operator surfaces now use the same `Go / Conditional Go / No-Go`, row evidence, dry-run evidence, sanitized evidence, retry evidence, and dependency mapping language without adding backend endpoints, workflows, scoring behavior, import behavior, or promotion behavior. Reference: `docs/plans/operator-evidence-consistency-pass-v1.md`.
 
