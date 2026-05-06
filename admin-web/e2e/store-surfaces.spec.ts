@@ -453,18 +453,18 @@ test('store approvals page lets store managers submit seller code requests', asy
 
   await page.goto('/store/approvals')
 
-  const sellerCodeForm = page.getByLabel('Seller code request form')
-  await expect(sellerCodeForm.getByRole('heading', { name: 'Satici kodu talebi' })).toBeVisible()
-  await expect(sellerCodeForm.getByLabel('Seller code', { exact: true })).toHaveCount(0)
-  await sellerCodeForm.getByLabel('First name').fill('Ayse')
-  await sellerCodeForm.getByLabel('Last name').fill('Yilmaz')
+  const sellerCodeForm = page.getByLabel('Satıcı kodu talebi formu')
+  await expect(sellerCodeForm.getByRole('heading', { name: 'Satıcı kodu talebi' })).toBeVisible()
+  await expect(sellerCodeForm.getByLabel('Satıcı kodu', { exact: true })).toHaveCount(0)
+  await sellerCodeForm.getByLabel('Ad', { exact: true }).fill('Ayse')
+  await sellerCodeForm.getByLabel('Soyad', { exact: true }).fill('Yilmaz')
   await sellerCodeForm.getByLabel('TC kimlik no').fill('12345678901')
-  await sellerCodeForm.getByLabel('Phone number').fill('05551234567')
-  await sellerCodeForm.getByLabel('Hire date').fill('2026-05-01')
-  await expect(sellerCodeForm.getByLabel('Position', { exact: true })).toContainText('Sales Consultant')
-  await sellerCodeForm.getByLabel('Position', { exact: true }).selectOption(demoPositionId)
-  await sellerCodeForm.getByLabel('Request reason').fill('Yeni personel')
-  await sellerCodeForm.getByRole('button', { name: 'Submit seller code request' }).click()
+  await sellerCodeForm.getByLabel('Telefon numarası').fill('05551234567')
+  await sellerCodeForm.getByLabel('İşe giriş tarihi').fill('2026-05-01')
+  await expect(sellerCodeForm.getByLabel('Pozisyon', { exact: true })).toContainText('Sales Consultant')
+  await sellerCodeForm.getByLabel('Pozisyon', { exact: true }).selectOption(demoPositionId)
+  await sellerCodeForm.getByLabel('Talep nedeni').fill('Yeni personel')
+  await sellerCodeForm.getByRole('button', { name: 'Satıcı kodu talebini gönder' }).click()
 
   await expect(page.getByText('Seller code request submitted for HR approval')).toBeVisible()
   expect(capturedPayload).not.toBeNull()
@@ -485,7 +485,7 @@ test('store approvals page submits target distribution allocations with employee
     expect(capturedPayload).toEqual({
       storeId: demoStoreId,
       requestMonth: '2026-04-01',
-      targetLabel: 'Aylik personel hedef dagitimi',
+      targetLabel: 'Aylık personel hedef dağıtımı',
       totalTargetValue: 100000,
       allocations: [
         {
@@ -511,7 +511,7 @@ test('store approvals page submits target distribution allocations with employee
             storeId: demoStoreId,
             storeName: 'IstinyePark Demo Store',
             requestMonth: '2026-04-01',
-            targetLabel: 'Aylik personel hedef dagitimi',
+            targetLabel: 'Aylık personel hedef dağıtımı',
             totalTargetValue: 100000,
             allocationCount: 1,
             status: 'pending_region_approval',
@@ -538,14 +538,14 @@ test('store approvals page submits target distribution allocations with employee
 
   await page.goto('/store/approvals')
 
-  const targetHeading = page.getByRole('heading', { name: 'Submit a target distribution request' })
+  const targetHeading = page.getByRole('heading', { name: 'Hedef dağıtım talebi' })
   await expect(targetHeading).toBeVisible()
   const targetForm = targetHeading.locator('xpath=ancestor::article[1]')
   await expect(targetForm.getByText('Store Personnel')).toBeVisible()
-  await targetForm.getByLabel('Request month').fill('2026-04')
-  await targetForm.getByLabel('Total target value').fill('100000')
-  await targetForm.getByLabel('Personel target value').fill('100000')
-  await targetForm.getByRole('button', { name: 'Submit for region approval' }).click()
+  await targetForm.getByLabel('Talep ayı').fill('2026-04')
+  await targetForm.getByLabel('Toplam hedef değeri').fill('100000')
+  await targetForm.getByLabel('Personel hedef değeri').fill('100000')
+  await targetForm.getByRole('button', { name: 'Bölge onayına gönder' }).click()
 
   await expect(page.getByText('Target distribution request submitted for region approval')).toBeVisible()
   expect(capturedPayload).not.toBeNull()
@@ -580,14 +580,14 @@ test('store approvals page lets store managers submit offboarding requests', asy
 
   await page.goto('/store/approvals')
 
-  const offboardingForm = page.getByLabel('Offboarding request form')
-  await expect(offboardingForm.getByRole('heading', { name: 'Personel cikis talebi' })).toBeVisible()
-  await expect(offboardingForm.getByLabel('Employee')).toContainText('Store Personnel')
-  await offboardingForm.getByLabel('Employee').selectOption(demoEmployeeId)
-  await offboardingForm.getByLabel('Termination date').fill('2026-05-10')
-  await offboardingForm.getByLabel('Termination reason').fill('resignation')
-  await offboardingForm.getByLabel('Request reason').fill('Personel istifa etti')
-  await offboardingForm.getByRole('button', { name: 'Submit offboarding request' }).click()
+  const offboardingForm = page.getByLabel('Personel çıkış talebi formu')
+  await expect(offboardingForm.getByRole('heading', { name: 'Personel çıkış talebi' })).toBeVisible()
+  await expect(offboardingForm.getByLabel('Personel')).toContainText('Store Personnel')
+  await offboardingForm.getByLabel('Personel').selectOption(demoEmployeeId)
+  await offboardingForm.getByLabel('Çıkış tarihi').fill('2026-05-10')
+  await offboardingForm.getByLabel('Çıkış sebebi').fill('resignation')
+  await offboardingForm.getByLabel('Talep nedeni').fill('Personel istifa etti')
+  await offboardingForm.getByRole('button', { name: 'Personel çıkış talebini gönder' }).click()
 
   await expect(page.getByText('Offboarding request submitted for HR approval')).toBeVisible()
   expect(capturedPayload).not.toBeNull()
@@ -686,30 +686,59 @@ test('store approvals page lets store managers edit and resubmit returned workfo
 
   await page.goto('/store/approvals')
 
-  const returnedPanel = page.getByLabel('Returned workforce requests')
+  const returnedPanel = page.getByLabel('İade edilen personel talepleri')
   await expect(returnedPanel.getByText('TC numarasi tekrar kontrol edilmeli')).toBeVisible()
   await expect(returnedPanel.getByText('Cikis tarihi tekrar kontrol edilmeli')).toBeVisible()
 
-  await returnedPanel.getByRole('button', { name: 'Edit seller code request' }).click()
-  const sellerCodeForm = page.getByLabel('Seller code request form')
-  await expect(sellerCodeForm.getByLabel('First name')).toHaveValue('Ayse')
-  await expect(sellerCodeForm.getByLabel('Last name')).toHaveValue('Yilmaz')
+  await returnedPanel.getByRole('button', { name: 'Satıcı kodu talebini düzenle' }).click()
+  const sellerCodeForm = page.getByLabel('Satıcı kodu talebi formu')
+  await expect(sellerCodeForm.getByLabel('Ad', { exact: true })).toHaveValue('Ayse')
+  await expect(sellerCodeForm.getByLabel('Soyad', { exact: true })).toHaveValue('Yilmaz')
   await sellerCodeForm.getByLabel('TC kimlik no').fill('12345678902')
-  await sellerCodeForm.getByLabel('Hire date').fill('2026-05-02')
-  await sellerCodeForm.getByLabel('Request reason').fill('TC guncellendi')
-  await sellerCodeForm.getByRole('button', { name: 'Resubmit seller code request' }).click()
+  await sellerCodeForm.getByLabel('İşe giriş tarihi').fill('2026-05-02')
+  await sellerCodeForm.getByLabel('Talep nedeni').fill('TC guncellendi')
+  await sellerCodeForm.getByRole('button', { name: 'Satıcı kodu talebini yeniden gönder' }).click()
   await expect(page.getByText('Seller code request resubmitted for HR approval')).toBeVisible()
 
-  await returnedPanel.getByRole('button', { name: 'Edit offboarding request' }).click()
-  const offboardingForm = page.getByLabel('Offboarding request form')
-  await offboardingForm.getByLabel('Termination date').fill('2026-05-12')
-  await offboardingForm.getByLabel('Termination reason').fill('transfer')
-  await offboardingForm.getByLabel('Request reason').fill('Tarih ve sebep guncellendi')
-  await offboardingForm.getByRole('button', { name: 'Resubmit offboarding request' }).click()
+  await returnedPanel.getByRole('button', { name: 'Personel çıkış talebini düzenle' }).click()
+  const offboardingForm = page.getByLabel('Personel çıkış talebi formu')
+  await offboardingForm.getByLabel('Çıkış tarihi').fill('2026-05-12')
+  await offboardingForm.getByLabel('Çıkış sebebi').fill('transfer')
+  await offboardingForm.getByLabel('Talep nedeni').fill('Tarih ve sebep guncellendi')
+  await offboardingForm.getByRole('button', { name: 'Personel çıkış talebini yeniden gönder' }).click()
   await expect(page.getByText('Offboarding request resubmitted for HR approval')).toBeVisible()
 
   expect(capturedSellerPayloads).toHaveLength(1)
   expect(capturedOffboardingPayloads).toHaveLength(1)
+})
+
+test('store approvals page switches to English copy and persists locale', async ({ page }) => {
+  await page.goto('/store/approvals')
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: /Store approval requests/i })).toBeVisible()
+  await expect(page.getByText('Returned requests')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Target distribution request' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Seller code request' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Employee exit request' })).toBeVisible()
+  await expect(page.getByLabel('Seller code request form').getByLabel('First name')).toBeVisible()
+  await expect(page.getByLabel('Offboarding request form').getByLabel('Employee')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Submit seller code request' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Submit offboarding request' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Submitted requests' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Open region approval queue' })).toBeVisible()
+  await expect(page.getByText('Mağaza onayları')).toHaveCount(0)
+  await expect(page.getByText('Satıcı kodu talebi')).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText('Ãƒ')
+  await expect(page.locator('body')).not.toContainText('Ã„')
+  await expect(page.locator('body')).not.toContainText('Ã…')
+
+  await page.reload()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: /Store approval requests/i })).toBeVisible()
 })
 
 test('language toggle localizes competition read labels and persists preference', async ({ page }) => {

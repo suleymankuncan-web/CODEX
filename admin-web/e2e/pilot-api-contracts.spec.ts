@@ -72,7 +72,7 @@ test('store approvals render pending requests with nullable approval fields', as
   await page.goto('/store/approvals')
 
   await expect(page.getByText('May target split')).toBeVisible()
-  await expect(page.getByText('Pending', { exact: true })).toBeVisible()
+  await expect(page.getByText('Bekliyor', { exact: true })).toBeVisible()
   expect(pageErrors).toEqual([])
 })
 
