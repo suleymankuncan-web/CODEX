@@ -26,11 +26,11 @@ Primary app endpoints:
 
 As of 2026-05-06:
 
-- `origin/main` includes PR #22: `d2d65729 Merge pull request #22 from suleymankuncan-web/codex/controlled-pilot-operating-checklist-v1`
+- `origin/main` includes PR #23: `40be3c76 Merge pull request #23 from suleymankuncan-web/codex/mark-controlled-pilot-checklist-closed`
 - Auth refresh flash fix is merged and deployed.
 - Master-data validation/promotion test split is merged.
 - Pilot readiness evidence consolidation is merged.
-- Controlled pilot operating checklist is merged.
+- Controlled pilot operating checklist is merged; the active feedback log is guarded as the pilot operating record.
 
 If starting in a fresh context after this handoff PR is merged:
 
@@ -59,6 +59,7 @@ Current pilot stance:
 - Broad production rollout: not approved yet
 - The current consolidated pilot decision note is `docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-conditional-go-consolidation.md`.
 - The controlled pilot operating checklist is `docs/plans/controlled-pilot-operating-checklist-v1.md`.
+- The active controlled pilot feedback log is `docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md`.
 - UI quality pass: deliberately deferred
 - JSON source adapter: future-only until real payload/source evidence exists
 
@@ -158,7 +159,7 @@ Migration smoke:
 
 Debt ledger:
 
-- Closed active debts: 91
+- Closed active debts: 92
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -176,6 +177,7 @@ Keep these references in this handoff because contract tests and future context 
 - `docs/plans/backend-foundation-hardening-plan-v1.md` - Backend Foundation Hardening Plan V1
 - `docs/plans/backup-restore-drill-runbook-v1.md` - Backup Restore Drill Runbook V1
 - `docs/plans/backup-restore-drill-local-evidence-2026-04-30.md` - Backup Restore Local Drill Evidence
+- `docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md` - Controlled Pilot Feedback Log
 - `docs/plans/controlled-pilot-operating-checklist-v1.md` - Controlled Pilot Operating Checklist V1
 - `docs/plans/db-health-migration-evidence-v1.md` - DB Health And Migration Evidence V1
 - `docs/plans/excel-kpi-import-operator-runbook.md` - Excel KPI Import Operator Runbook V1
@@ -214,5 +216,5 @@ Recommended local stance:
 Paste this into the next context window:
 
 ```text
-current-state.md oku; aktif workspace D:\store-ops-workspace. Eski OneDrive ve E:\ yollarini kullanma. Main son durum PR #22 controlled pilot operating checklist'i iceriyor; current controlled staging/internal pilot karari docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-conditional-go-consolidation.md icinde Conditional Go, broad production rollout henuz No-Go. Controlled pilot operating checklist docs/plans/controlled-pilot-operating-checklist-v1.md icinde. PR #15 auth refresh flash fix'i deploy sonrasi kullanici tarafindan cozulmus gorundu. Staging frontend https://staging.hr-axis.com, backend https://api-staging.hr-axis.com/api. UI redesign ertelendi. JSON adapter future-only; real payload/source evidence olmadan baslama. Siradaki yerel is intake gate ile secilmeli: staging IdP/seeded DB varsa guarded auth/action evidence, true baseline varsa master-data bootstrap pilot smoke, ikisi de yoksa sadece mevcut yuzeyi guclendiren kucuk bir local guard.
+current-state.md oku; aktif workspace D:\store-ops-workspace. Eski OneDrive ve E:\ yollarini kullanma. Main son durum PR #23 controlled pilot checklist ledger isaretlemesini iceriyor; current controlled staging/internal pilot karari docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-conditional-go-consolidation.md icinde Conditional Go, broad production rollout henuz No-Go. Controlled pilot operating checklist docs/plans/controlled-pilot-operating-checklist-v1.md icinde. Aktif pilot feedback log docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md icinde. PR #15 auth refresh flash fix'i deploy sonrasi kullanici tarafindan cozulmus gorundu. Staging frontend https://staging.hr-axis.com, backend https://api-staging.hr-axis.com/api. UI redesign ertelendi. JSON adapter future-only; real payload/source evidence olmadan baslama. Siradaki yerel is intake gate ile secilmeli: staging IdP/seeded DB varsa guarded auth/action evidence, true baseline varsa master-data bootstrap pilot smoke, ikisi de yoksa sadece mevcut yuzeyi guclendiren kucuk bir local guard.
 ```

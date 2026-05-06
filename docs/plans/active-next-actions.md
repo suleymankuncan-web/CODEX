@@ -6,7 +6,7 @@ This is the short working list for the next practical steps. It keeps the projec
 
 ## Current Position
 
-As of 6 May 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, Store UX TR-First Copy V1, KPI Config Versioning V1, Source-Agnostic Ingest Contract Hardening V1, KPI Raw Row Lineage Persistence V1, Import Lineage Evidence Surface V1, Audit Event Taxonomy Guard V1, Data Quality Guard V1, Import Batch Quality Summary V1, Project-Wide Scope/Auth Guard Scan V1, No-Empty-Scope Repository Contract Pass V1, Production Environment Readiness Checklist V1, Environment Variable Inventory + Deployment Runbook Skeleton V1, Environment Drift Guard V1, Production/Staging Incident Response Skeleton V1, Personnel Management V1, Personnel Request Return/Resubmit V1, Personnel Master Data Bootstrap V1 planning, Project MVP Focus Map, Excel KPI Import V1, Excel KPI Import Operator Runbook V1, Production-Ready Migration System V1, Production Security Gate V1-A, Mobile Auth/Session V1 P0, Mobile API/BFF Endpoint Inventory V1, Checklist Acknowledgement Canonical Schema Alignment V1, Mobile Checklist Today V1 Design, Mobile Checklist Today V1, Checklist Store Score Integration V1, KPI Benchmark Scoring V1, Target Reference Control Surface V1, Target Coverage V1-B Readiness Signals, Personnel Master Data Bootstrap Staging Foundation V1, Ranking Included Snapshot Contract V1, Monthly Ranking Score Source Contract V1, Ranking Score Explanation Copy V1, Master Data Bootstrap Promotion Safety Guard V1, External ID Code Normalization Guard V1, Source-Agnostic Import Boundary V1, Master Data Bootstrap Admin Dry-Run Evidence V1, Master Data Bootstrap Pilot Smoke Runbook V1, Import Decision Evidence V1, Scope/Auth Regression Matrix V1, DB Health And Migration Evidence V1, Test Suite Hygiene V1, Import Batch Source Test Split V1, Import Batch Evidence Test Split V1, Competition Repository Test Split V1, Competition Stage Package Plan Test Split V1, Snapshot Run Read Model Test Split V1, Competition Service Team Template Test Split V1, Auth Action Scope Test Split V1, Operator Evidence Consistency Pass V1, Backup Restore Drill Runbook V1, Backup Restore Local Drill Evidence V1, Migration Fresh DB Smoke V1, Migration Smoke Release Preflight Policy V1, Master Data Validation/Promotion Test Split V1, and Controlled Pilot Operating Checklist V1 have:
+As of 6 May 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, Store UX TR-First Copy V1, KPI Config Versioning V1, Source-Agnostic Ingest Contract Hardening V1, KPI Raw Row Lineage Persistence V1, Import Lineage Evidence Surface V1, Audit Event Taxonomy Guard V1, Data Quality Guard V1, Import Batch Quality Summary V1, Project-Wide Scope/Auth Guard Scan V1, No-Empty-Scope Repository Contract Pass V1, Production Environment Readiness Checklist V1, Environment Variable Inventory + Deployment Runbook Skeleton V1, Environment Drift Guard V1, Production/Staging Incident Response Skeleton V1, Personnel Management V1, Personnel Request Return/Resubmit V1, Personnel Master Data Bootstrap V1 planning, Project MVP Focus Map, Excel KPI Import V1, Excel KPI Import Operator Runbook V1, Production-Ready Migration System V1, Production Security Gate V1-A, Mobile Auth/Session V1 P0, Mobile API/BFF Endpoint Inventory V1, Checklist Acknowledgement Canonical Schema Alignment V1, Mobile Checklist Today V1 Design, Mobile Checklist Today V1, Checklist Store Score Integration V1, KPI Benchmark Scoring V1, Target Reference Control Surface V1, Target Coverage V1-B Readiness Signals, Personnel Master Data Bootstrap Staging Foundation V1, Ranking Included Snapshot Contract V1, Monthly Ranking Score Source Contract V1, Ranking Score Explanation Copy V1, Master Data Bootstrap Promotion Safety Guard V1, External ID Code Normalization Guard V1, Source-Agnostic Import Boundary V1, Master Data Bootstrap Admin Dry-Run Evidence V1, Master Data Bootstrap Pilot Smoke Runbook V1, Import Decision Evidence V1, Scope/Auth Regression Matrix V1, DB Health And Migration Evidence V1, Test Suite Hygiene V1, Import Batch Source Test Split V1, Import Batch Evidence Test Split V1, Competition Repository Test Split V1, Competition Stage Package Plan Test Split V1, Snapshot Run Read Model Test Split V1, Competition Service Team Template Test Split V1, Auth Action Scope Test Split V1, Operator Evidence Consistency Pass V1, Backup Restore Drill Runbook V1, Backup Restore Local Drill Evidence V1, Migration Fresh DB Smoke V1, Migration Smoke Release Preflight Policy V1, Master Data Validation/Promotion Test Split V1, Controlled Pilot Operating Checklist V1, and Controlled Pilot Feedback Log Guard V1 have:
 
 - saved drafts
 - edit/cancel/history
@@ -97,12 +97,13 @@ As of 6 May 2026, the competition package planning flow, Operational Feed V1, DM
 - pilot readiness gate that keeps pilot approval tied to real staging, baseline, KPI import, user/scope, and release evidence
 - master-data bootstrap validation/conflict and promotion safety tests split into focused service specs while preserving the same 29 guarded test names
 - controlled pilot operating checklist for invite, route monitoring, feedback intake, pause/rollback, and pilot exit decisions
+- controlled pilot feedback log guard that preserves session evidence, issue status, decision records, and sanitized evidence rules
 
 ## Debt Count
 
 Reference: `docs/plans/project-debt-ledger.md`
 
-- Closed active debts: 91
+- Closed active debts: 92
 - Superseded before overbuilding: 1
 - Blocked external dependency: 2
 - Watchlist decision item: 0
@@ -183,6 +184,7 @@ Interpretation:
 - Production UI/design-system is intentionally deferred into reversible pilots while backend/data foundations remain the priority.
 - The debt ledger itself is an accounting artifact and is not counted as a separate closed active debt item.
 - Controlled Pilot Operating Checklist V1 is counted as paid because the controlled staging/internal pilot now has a guarded operating routine for invite, monitoring, feedback intake, pause/rollback triggers, and pilot exit decisions. Reference: `docs/plans/controlled-pilot-operating-checklist-v1.md`.
+- Controlled Pilot Feedback Log Guard V1 is counted as paid because the active pilot feedback log is now guarded as the operating record for sessions, issues, decisions, route-blocker closure, and sanitized evidence rules. Reference: `docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md`.
 
 ## Rules For Picking The Next Item
 
@@ -1175,6 +1177,21 @@ Interpretation:
   - root script guard passed: 152/152
 - Reference:
   - `docs/plans/controlled-pilot-operating-checklist-v1.md`
+
+### Completed: Controlled Pilot Feedback Log Guard V1
+- Completed: 6 May 2026
+- Result:
+  - `scripts/controlled-pilot-feedback-log-contract.test.mjs` guards the active controlled pilot feedback log
+  - `docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md` remains the operating record for sessions, issue status, route-blocker closure, pause/resume decisions, and sanitized evidence
+  - `current-state.md`, `docs/plans/controlled-pilot-operating-checklist-v1.md`, and `docs/plans/pilot-readiness-gate-v1.md` link the active log
+  - controlled staging/internal pilot remains `Conditional Go`
+  - broad production rollout remains `No-Go`
+- Verification:
+  - targeted feedback log guard passed: 4/4
+  - project debt ledger consistency guard passed: 5/5
+  - root script guard passed: 157/157
+- Reference:
+  - `docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md`
 
 ### 1. Real IdP Staging Evidence
 - Priority: `P1`
