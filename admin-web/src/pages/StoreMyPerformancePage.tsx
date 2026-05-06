@@ -9,167 +9,279 @@ import {
   StatusPill,
 } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
+import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
+import { useLocalization } from '../features/localization/useLocalization'
 import { getKpiConfig, getMyPerformance, getReportingSnapshotRuns } from '../features/reports/api'
 import { formatSnapshotOptionLabel } from '../features/reports/snapshot-labels'
 import {
-  describeBenchmarkCap,
+  formatBenchmarkRatio,
+  type PerformanceGradeCode,
   resolvePerformanceGrade,
-  resolvePerformanceScoreMeaning,
 } from '../features/kpi/grading'
 import {
-  resolveKpiScoreReference,
   resolveKpiSourceSemantics,
+  type KpiSourceKind,
 } from '../features/kpi/source-semantics'
-import { formatDate, getErrorMessage } from '../lib/format'
+import { formatDate, formatNumber as formatIntlNumber, getErrorMessage } from '../lib/format'
+import { getIntlLocale, type AppLocale } from '../lib/i18n'
 
 function canUseSelfPerformance(authSummary: AuthSessionSummary | null) {
   const roles = authSummary?.user.roleCodes ?? []
   return roles.includes('STORE_PERSONNEL') || roles.includes('STORE_MANAGER')
 }
 
-function formatMetric(input: number) {
-  return new Intl.NumberFormat('tr-TR', {
+const metricLabelKeyByCode: Record<string, TranslationKey> = {
+  TARGET_ACHIEVEMENT: 'competition.kpi.targetAchievement',
+  ATV: 'storeMe.metric.atv',
+  UPT: 'storeMe.metric.upt',
+  CR: 'storeRankings.metric.cr',
+}
+
+function formatMetric(locale: AppLocale, input: number) {
+  return formatIntlNumber(input, locale, {
     minimumFractionDigits: Number.isInteger(input) ? 0 : 2,
     maximumFractionDigits: 2,
-  }).format(input)
+  })
 }
 
-function formatPercent(input: number) {
-  return `${formatMetric(input * 100)}%`
+function formatPercent(locale: AppLocale, input: number) {
+  return `${formatMetric(locale, input * 100)}%`
 }
 
-function formatMetricValue(input: number | null, code: string) {
+function formatMetricValue(
+  locale: AppLocale,
+  t: TranslateFunction,
+  input: number | null,
+  code: string,
+) {
   if (input === null) {
-    return 'Veri yok'
+    return t('storeMe.noData')
   }
 
   if (code === 'TARGET_ACHIEVEMENT') {
-    return formatPercent(input)
+    return formatPercent(locale, input)
   }
 
-  return formatMetric(input)
+  return formatMetric(locale, input)
 }
 
-function formatCurrency(input: number | null) {
+function formatCurrency(locale: AppLocale, t: TranslateFunction, input: number | null) {
   if (input === null) {
-    return 'Veri yok'
+    return t('storeMe.noData')
   }
 
-  return new Intl.NumberFormat('tr-TR', {
+  return new Intl.NumberFormat(getIntlLocale(locale), {
     style: 'currency',
     currency: 'TRY',
     maximumFractionDigits: 0,
   }).format(input)
 }
 
-function formatAchievementValue(metric: {
-  targetValue?: number | null
-  achievementRate?: number | null
-  actualValue: number | null
-  scoreStatus?: string
-}) {
+function formatAchievementValue(
+  locale: AppLocale,
+  t: TranslateFunction,
+  metric: {
+    targetValue?: number | null
+    achievementRate?: number | null
+    actualValue: number | null
+    scoreStatus?: string
+  },
+) {
   if (metric.scoreStatus === 'missing_reference') {
-    return 'Eksik referans'
+    return t('storeMe.missingReference')
   }
 
   if (metric.achievementRate === null || metric.achievementRate === undefined) {
-    return metric.actualValue !== null ? 'Normalizasyon bekliyor' : 'Veri yok'
+    return metric.actualValue !== null
+      ? t('storeMe.pendingNormalizationStatus')
+      : t('storeMe.noData')
   }
 
   if (metric.targetValue !== null && metric.targetValue !== undefined) {
-    return formatPercent(metric.achievementRate)
+    return formatPercent(locale, metric.achievementRate)
   }
 
-  return `${formatMetric(metric.achievementRate)} puan`
+  return t('storeMe.scorePoints', { value: formatMetric(locale, metric.achievementRate) })
 }
 
-function formatSourceMode(mode: string) {
-  return mode === 'closed' ? 'Kapanmış gün' : 'Canlı dönem'
+function formatSourceMode(t: TranslateFunction, mode: string) {
+  return mode === 'closed' ? t('storeMe.closedDay') : t('storeMe.livePeriod')
 }
 
-function formatPeriodLabel(input: {
-  period?: { periodStart: string; periodEnd: string } | null
-  snapshotDate?: string | null
-}) {
+function formatPeriodLabel(
+  locale: AppLocale,
+  t: TranslateFunction,
+  input: {
+    period?: { periodStart: string; periodEnd: string } | null
+    snapshotDate?: string | null
+  },
+) {
   if (input.period) {
-    return `${formatDate(input.period.periodStart)} - ${formatDate(input.period.periodEnd)}`
+    return `${formatDate(input.period.periodStart, locale)} - ${formatDate(
+      input.period.periodEnd,
+      locale,
+    )}`
   }
 
   if (input.snapshotDate) {
-    return formatDate(input.snapshotDate)
+    return formatDate(input.snapshotDate, locale)
   }
 
-  return 'Güncel dönem'
+  return t('storeMe.currentPeriod')
 }
 
-function formatKpiSourceLabel(input: { kind: string; label: string }) {
-  switch (input.kind) {
-    case 'imported':
-      return 'Operasyon verisi'
-    case 'pending_normalization':
-      return 'Normalizasyon bekliyor'
-    case 'missing':
-      return 'Veri yok'
-    case 'checklist_fed':
-      return 'Checklist katkısı'
-    default:
-      return input.label
+function getKpiSourceKey(kind: string, suffix: 'label' | 'summary'): TranslationKey {
+  const supportedKinds: KpiSourceKind[] = [
+    'imported',
+    'derived',
+    'checklist_fed',
+    'pending_normalization',
+    'missing_reference',
+    'missing',
+  ]
+  const normalizedKind = supportedKinds.includes(kind as KpiSourceKind) ? kind : 'imported'
+  return `storeMe.source.${normalizedKind}.${suffix}` as TranslationKey
+}
+
+function formatKpiSourceLabel(t: TranslateFunction, input: { kind: string; label: string }) {
+  return t(getKpiSourceKey(input.kind, 'label'))
+}
+
+function formatKpiSourceSummary(t: TranslateFunction, input: { kind: string; summary: string }) {
+  return t(getKpiSourceKey(input.kind, 'summary'))
+}
+
+function formatStorePerformanceGrade(
+  t: TranslateFunction,
+  grade: ReturnType<typeof resolvePerformanceGrade>,
+) {
+  const labelKey = `storeMe.grade.${grade.code}` as TranslationKey
+
+  return `${grade.emoji} ${grade.code} - ${t(labelKey)}`
+}
+
+function resolveLocalizedScoreMeaning(input: {
+  t: TranslateFunction
+  gradeCode: PerformanceGradeCode
+  matchedMetrics: number
+  totalMetrics: number
+  isPartial: boolean
+  tone: ReturnType<typeof resolvePerformanceGrade>['tone']
+}) {
+  const baseKey = `storeMe.meaning.${input.gradeCode}` as const
+
+  return {
+    title: input.t(`${baseKey}.title` as TranslationKey),
+    summary: input.t(`${baseKey}.summary` as TranslationKey),
+    focus: input.t(`${baseKey}.focus` as TranslationKey),
+    confidence: input.t(
+      input.isPartial ? 'storeMe.confidence.partial' : 'storeMe.confidence.full',
+      {
+        matched: input.matchedMetrics,
+        total: input.totalMetrics,
+      },
+    ),
+    tone: input.isPartial ? 'warning' : input.gradeCode === 'C' ? 'warning' : input.tone,
   }
 }
 
-function formatKpiSourceSummary(input: { kind: string; summary: string }) {
-  switch (input.kind) {
-    case 'imported':
-      return 'Satış veya operasyon kaynağından gelen KPI değeri.'
-    case 'pending_normalization':
-      return 'Değer geldi, skor hesabı için normalizasyon bekliyor.'
-    case 'missing':
-      return 'Bu metrik için henüz kullanılabilir veri yok.'
-    default:
-      return input.summary
-  }
-}
-
-function formatStorePerformanceGrade(grade: ReturnType<typeof resolvePerformanceGrade>) {
-  const labelByCode = {
-    A: 'Mükemmel',
-    B: 'İyi',
-    C: 'Takip gerekli',
-    D: 'Kritik',
-  } as const
-
-  return `${grade.emoji} ${grade.code} - ${labelByCode[grade.code] ?? grade.label}`
-}
-
-function formatMetricScoreStatusLabel(status: string | null | undefined, weightPercent: number) {
+function formatMetricScoreStatusLabel(
+  t: TranslateFunction,
+  status: string | null | undefined,
+  weightPercent: number,
+) {
   switch (status) {
     case 'scored':
       return `${weightPercent}%`
     case 'pending_normalization':
-      return 'Bekliyor'
+      return t('storeMe.waiting')
     case 'missing_reference':
-      return 'Referans eksik'
+      return t('storeMe.missingReference')
     default:
-      return 'Eksik'
+      return t('storeMe.missing')
   }
 }
 
-function formatMetricScoreStatusText(status: string | null | undefined) {
+function formatMetricScoreStatusText(t: TranslateFunction, status: string | null | undefined) {
   switch (status) {
     case 'scored':
-      return 'Skorlandı'
+      return t('storeMe.scored')
     case 'pending_normalization':
-      return 'Normalizasyon bekliyor'
+      return t('storeMe.pendingNormalizationStatus')
     case 'missing_reference':
-      return 'Referans eksik'
+      return t('storeMe.missingReference')
     default:
-      return 'Eksik'
+      return t('storeMe.missing')
   }
+}
+
+function getScoreReference(input: {
+  t: TranslateFunction
+  targetValue?: number | null
+  benchmarkValue?: number | null
+  benchmarkSource?: string | null
+}) {
+  if (input.targetValue !== null && input.targetValue !== undefined) {
+    return {
+      value: input.targetValue,
+      sourceLabel: input.t('storeMe.reference.target'),
+    }
+  }
+
+  if (input.benchmarkValue !== null && input.benchmarkValue !== undefined) {
+    if (input.benchmarkSource === 'TURKEY_AVERAGE') {
+      return {
+        value: input.benchmarkValue,
+        sourceLabel: input.t('storeMe.reference.turkeyAverage'),
+      }
+    }
+
+    if (input.benchmarkSource === 'CHECKLIST_SCORE') {
+      return {
+        value: input.benchmarkValue,
+        sourceLabel: input.t('storeMe.reference.checklistScore'),
+      }
+    }
+
+    return {
+      value: input.benchmarkValue,
+      sourceLabel: input.t('storeMe.reference.default'),
+    }
+  }
+
+  return {
+    value: null,
+    sourceLabel: input.t('storeMe.reference.pending'),
+  }
+}
+
+function getMetricLabel(t: TranslateFunction, metric: { code: string; label: string }) {
+  const key = metricLabelKeyByCode[metric.code]
+  return key ? t(key) : metric.label
+}
+
+function describeLocalizedBenchmarkCap(
+  t: TranslateFunction,
+  input: {
+    actualRatio?: number | null
+    scoredRatio?: number | null
+    isCapped?: boolean
+  },
+) {
+  if (!input.isCapped || !input.actualRatio || !input.scoredRatio) {
+    return null
+  }
+
+  return t('storeMe.benchmarkCap', {
+    actual: formatBenchmarkRatio(input.actualRatio, 'prefix').replace('%', ''),
+    scored: formatBenchmarkRatio(input.scoredRatio).replace('%', ''),
+  })
 }
 
 export function StoreMyPerformancePage(input: {
   authSummary: AuthSessionSummary | null
 }) {
+  const { locale, t } = useLocalization()
   const enabled = canUseSelfPerformance(input.authSummary)
   const [sourceMode, setSourceMode] = useState<'live' | 'closed'>('live')
   const [selectedLivePeriodStart, setSelectedLivePeriodStart] = useState('')
@@ -226,8 +338,8 @@ export function StoreMyPerformancePage(input: {
   if (!enabled) {
     return (
       <ScreenState
-        title="Performans yüzeyi kullanılamıyor"
-        copy="Bu yüzey mağaza personeli veya mağaza müdürü oturumu gerektirir."
+        title={t('storeMe.unavailableTitle')}
+        copy={t('storeMe.unavailableCopy')}
         tone="error"
       />
     )
@@ -236,8 +348,8 @@ export function StoreMyPerformancePage(input: {
   if (performanceQuery.isLoading || configQuery.isLoading || (sourceMode === 'closed' && closedRunsQuery.isLoading)) {
     return (
       <ScreenState
-        title="Benim performansım hazırlanıyor"
-        copy="Personel performans profili yükleniyor."
+        title={t('storeMe.loadingTitle')}
+        copy={t('storeMe.loadingCopy')}
       />
     )
   }
@@ -245,7 +357,7 @@ export function StoreMyPerformancePage(input: {
   if (performanceQuery.isError || configQuery.isError || (sourceMode === 'closed' && closedRunsQuery.isError)) {
     return (
       <ScreenState
-        title="Performans yüzeyi açılamadı"
+        title={t('storeMe.errorTitle')}
         copy={getErrorMessage(performanceQuery.error ?? configQuery.error ?? closedRunsQuery.error)}
         tone="error"
       />
@@ -255,8 +367,8 @@ export function StoreMyPerformancePage(input: {
   if (!performance?.employee) {
     return (
       <ScreenState
-        title="Performans yüzeyi açılamadı"
-        copy="Bu kullanıcı için bireysel performans kaydı bulunamadı."
+        title={t('storeMe.errorTitle')}
+        copy={t('storeMe.noEmployeeCopy')}
         tone="error"
       />
     )
@@ -278,13 +390,15 @@ export function StoreMyPerformancePage(input: {
     performance.score.value,
     configQuery.data?.gradingBands,
   )
-  const scoreMeaning = resolvePerformanceScoreMeaning({
-    grade: performanceGrade,
+  const scoreMeaning = resolveLocalizedScoreMeaning({
+    t,
+    gradeCode: performanceGrade.code,
     matchedMetrics: performance.score.matchedMetrics,
     totalMetrics: performance.score.totalMetrics,
     isPartial: partial.isPartial,
+    tone: performanceGrade.tone,
   })
-  const periodLabel = formatPeriodLabel({
+  const periodLabel = formatPeriodLabel(locale, t, {
     period: performance.period,
     snapshotDate: performance.source.snapshotDate,
   })
@@ -293,28 +407,35 @@ export function StoreMyPerformancePage(input: {
     <section className="page-stack">
       <section className="hero-panel store-hero-panel">
         <div>
-          <div className="eyebrow">Benim Performansım</div>
-          <h2 className="hero-title">Benim performansım</h2>
-          <p className="hero-copy">
-            Kendi KPI skorunu, sıralamanı ve dönem durumunu tek yerden takip et.
-          </p>
+          <div className="eyebrow">{t('storeMe.heroEyebrow')}</div>
+          <h2 className="hero-title">{t('storeMe.title')}</h2>
+          <p className="hero-copy">{t('storeMe.heroCopy')}</p>
         </div>
         <div className="hero-metrics">
-          <MetricAccent label="Dönem" value={periodLabel} />
-          <MetricAccent label="Mağaza" value={performance.employee.storeName ?? 'Mağaza yok'} />
-          <MetricAccent label="Veri" value={partial.isPartial ? 'Eksik veri' : 'Tam'} />
-          <MetricAccent label="Skor" value={`${performanceGrade.emoji} ${performanceGrade.code}`} />
+          <MetricAccent label={t('storeMe.period')} value={periodLabel} />
+          <MetricAccent
+            label={t('storeMe.store')}
+            value={performance.employee.storeName ?? t('storeMe.noStore')}
+          />
+          <MetricAccent
+            label={t('storeMe.data')}
+            value={partial.isPartial ? t('storeMe.incompleteData') : t('storeMe.complete')}
+          />
+          <MetricAccent
+            label={t('storeMe.score')}
+            value={`${performanceGrade.emoji} ${performanceGrade.code}`}
+          />
         </div>
       </section>
 
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Performans özeti</div>
-            <h3>Dönem performansı</h3>
+            <div className="eyebrow">{t('storeMe.performanceSummary')}</div>
+            <h3>{t('storeMe.periodPerformance')}</h3>
           </div>
           <StatusPill tone={partial.isPartial ? 'warning' : 'calm'}>
-            {partial.isPartial ? 'Eksik veri' : 'Tam veri'}
+            {partial.isPartial ? t('storeMe.incompleteData') : t('storeMe.completeData')}
           </StatusPill>
         </div>
         <div className="toolbar-cluster">
@@ -324,7 +445,7 @@ export function StoreMyPerformancePage(input: {
             onClick={() => setSourceMode('live')}
             disabled={sourceMode === 'live'}
           >
-            Canlı durum
+            {t('storeMe.liveStatus')}
           </button>
           <button
             className="control-button"
@@ -332,19 +453,22 @@ export function StoreMyPerformancePage(input: {
             onClick={() => setSourceMode('closed')}
             disabled={sourceMode === 'closed'}
           >
-            Kapanmış gün
+            {t('storeMe.closedDay')}
           </button>
           {sourceMode === 'live' && availableLivePeriods.length > 0 ? (
             <label className="control-field">
-              <span>Dönem</span>
+              <span>{t('storeMe.period')}</span>
               <select
                 value={selectedLivePeriodStart}
                 onChange={(event) => setSelectedLivePeriodStart(event.target.value)}
               >
-                <option value="">En güncel dönem</option>
+                <option value="">{t('storeMe.latestPeriod')}</option>
                 {availableLivePeriods.map((period) => (
                   <option key={`${period.periodType}-${period.periodStart}`} value={period.periodStart}>
-                    {`${formatDate(period.periodStart)} - ${formatDate(period.periodEnd)}`}
+                    {`${formatDate(period.periodStart, locale)} - ${formatDate(
+                      period.periodEnd,
+                      locale,
+                    )}`}
                   </option>
                 ))}
               </select>
@@ -352,7 +476,7 @@ export function StoreMyPerformancePage(input: {
           ) : null}
           {sourceMode === 'closed' && availableClosedSnapshotRuns.length > 0 ? (
             <label className="control-field">
-              <span>Kapanmış performans kaydı seçimi</span>
+              <span>{t('storeMe.closedSnapshotSelect')}</span>
               <select
                 value={
                   selectedClosedSnapshotRunId ||
@@ -361,10 +485,10 @@ export function StoreMyPerformancePage(input: {
                 }
                 onChange={(event) => setSelectedClosedSnapshotRunId(event.target.value)}
               >
-                <option value="">Son kapanmış kayıt</option>
+                <option value="">{t('storeMe.latestClosedSnapshot')}</option>
                 {availableClosedSnapshotRuns.map((run) => (
                   <option key={run.snapshotRunId} value={run.snapshotRunId}>
-                    {formatSnapshotOptionLabel(run)}
+                    {formatSnapshotOptionLabel(run, locale)}
                   </option>
                 ))}
               </select>
@@ -373,17 +497,20 @@ export function StoreMyPerformancePage(input: {
         </div>
         <div className="key-grid">
           <KeyValue
-            label="Görünüm"
-            value={formatSourceMode(performance.source.mode)}
+            label={t('storeMe.view')}
+            value={formatSourceMode(t, performance.source.mode)}
           />
-          <KeyValue label="Dönem" value={periodLabel} />
-          <KeyValue label="Veri durumu" value={partial.isPartial ? 'Eksik veri var' : 'Tam veri'} />
+          <KeyValue label={t('storeMe.period')} value={periodLabel} />
           <KeyValue
-            label="Hedef girişi"
+            label={t('storeMe.dataStatus')}
+            value={partial.isPartial ? t('storeMe.missingDataExists') : t('storeMe.completeData')}
+          />
+          <KeyValue
+            label={t('storeMe.targetEntry')}
             value={
               supporting.targetEntryMode === 'manager_assignment'
-                ? 'Mağaza müdürü girer, bölge müdürü onaylar'
-                : 'Bilinmiyor'
+                ? t('storeMe.targetEntryManager')
+                : t('storeMe.unknown')
             }
           />
         </div>
@@ -393,23 +520,24 @@ export function StoreMyPerformancePage(input: {
         <section className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Veri Durumu</div>
-              <h3>Bu skor şu an kısmi veriyle hesaplanıyor</h3>
+              <div className="eyebrow">{t('storeMe.partialEyebrow')}</div>
+              <h3>{t('storeMe.partialTitle')}</h3>
             </div>
-            <StatusPill tone="warning">Eksik veri</StatusPill>
+            <StatusPill tone="warning">{t('storeMe.incompleteData')}</StatusPill>
           </div>
           <p className="queue-subtitle">
-            Eksik metrikler: {partial.missingMetricLabels.join(', ') || 'Henüz metrik detayı yok'}
+            {t('storeMe.missingMetrics', {
+              labels: partial.missingMetricLabels.join(', ') || t('storeMe.noMetricDetail'),
+            })}
           </p>
           {partial.missingMetricCodes.includes('TARGET_ACHIEVEMENT') ? (
-            <p className="queue-subtitle">
-              Personel hedefi şu an eksik. Bu alan personel tarafından değiştirilmez; mağaza müdürü girer ve
-              bölge müdürü onayına gider.
-            </p>
+            <p className="queue-subtitle">{t('storeMe.targetMissingCopy')}</p>
           ) : null}
           {partial.pendingNormalizationLabels?.length ? (
             <p className="queue-subtitle">
-              Normalizasyon bekleyenler: {partial.pendingNormalizationLabels.join(', ')}
+              {t('storeMe.pendingNormalization', {
+                labels: partial.pendingNormalizationLabels.join(', '),
+              })}
             </p>
           ) : null}
         </section>
@@ -417,7 +545,7 @@ export function StoreMyPerformancePage(input: {
 
       <section className="metric-grid store-metric-grid">
         <MetricCard
-          title="Net satış"
+          title={t('storeMe.netSales')}
           value={
             supporting.netSalesValue !== null
               ? Number(supporting.netSalesValue.toFixed(0))
@@ -425,48 +553,53 @@ export function StoreMyPerformancePage(input: {
           }
           note={
             supporting.netSalesValue !== null
-              ? `Power BI importundan gelen mevcut satış toplamı: ${formatCurrency(supporting.netSalesValue)}`
-              : 'Power BI importundan gelen satış verisi yok.'
+              ? t('storeMe.netSalesNote', {
+                  value: formatCurrency(locale, t, supporting.netSalesValue),
+                })
+              : t('storeMe.noNetSales')
           }
           icon={<Target size={18} />}
           tone="accent"
         />
         <MetricCard
-          title="Performans skoru"
+          title={t('storeMe.performanceScore')}
           value={Number(performance.score.value.toFixed(1))}
-          note={`${formatStorePerformanceGrade(performanceGrade)} - ${performance.score.matchedMetrics}/${performance.score.totalMetrics} metrik eslesti.`}
+          note={`${formatStorePerformanceGrade(t, performanceGrade)} - ${t('storeMe.matchedMetrics', {
+            matched: performance.score.matchedMetrics,
+            total: performance.score.totalMetrics,
+          })}`}
           icon={<Target size={18} />}
           tone={performanceGrade.tone}
         />
         <MetricCard
-          title="Türkiye sıram"
+          title={t('storeMe.turkeyRank')}
           value={performance.rankings.turkeyRank ?? 0}
           note={
             performance.rankings.turkeyRank
-              ? `Toplam ${performance.rankings.turkeyPopulation} personel içinde.`
-              : 'Henüz sıralama verisi yok.'
+              ? t('storeMe.turkeyRankNote', { count: performance.rankings.turkeyPopulation })
+              : t('storeMe.noTurkeyRank')
           }
           icon={<Trophy size={18} />}
           tone="neutral"
         />
         <MetricCard
-          title="Mağaza içi sıram"
+          title={t('storeMe.storeRank')}
           value={performance.rankings.storeRank ?? 0}
           note={
             performance.rankings.storeRank
-              ? `Toplam ${performance.rankings.storePopulation} mağaza personeli içinde.`
-              : 'Henüz mağaza içi sıralama verisi yok.'
+              ? t('storeMe.storeRankNote', { count: performance.rankings.storePopulation })
+              : t('storeMe.noStoreRank')
           }
           icon={<Medal size={18} />}
           tone="neutral"
         />
         <MetricCard
-          title="Mağazam"
+          title={t('storeMe.myStore')}
           value={1}
           note={
             performance.employee.storeName
-              ? `Aktif mağaza: ${performance.employee.storeName}`
-              : 'Bireysel performans bu aktif mağaza kapsamı ile okunur.'
+              ? t('storeMe.activeStore', { storeName: performance.employee.storeName })
+              : t('storeMe.activeStoreScope')
           }
           icon={<UserRound size={18} />}
           tone="calm"
@@ -476,19 +609,26 @@ export function StoreMyPerformancePage(input: {
       <section className="panel" aria-label="Score meaning">
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Skor yorumu</div>
+            <div className="eyebrow">{t('storeMe.scoreMeaning')}</div>
             <h3>{scoreMeaning.title}</h3>
           </div>
           <StatusPill tone={scoreMeaning.tone}>{performanceGrade.code}</StatusPill>
         </div>
         <p className="queue-subtitle">{scoreMeaning.summary}</p>
         <div className="key-grid">
-          <KeyValue label="Odak" value={scoreMeaning.focus} />
-          <KeyValue label="Skor seviyesi" value={formatStorePerformanceGrade(performanceGrade)} />
-          <KeyValue label="Skor" value={performance.score.value.toFixed(1)} />
+          <KeyValue label={t('storeMe.focus')} value={scoreMeaning.focus} />
           <KeyValue
-            label="Kaynak"
-            value={performance.source.mode === 'closed' ? 'Kapanmış kayıt' : 'Canlı dönem'}
+            label={t('storeMe.scoreLevel')}
+            value={formatStorePerformanceGrade(t, performanceGrade)}
+          />
+          <KeyValue label={t('storeMe.score')} value={performance.score.value.toFixed(1)} />
+          <KeyValue
+            label={t('storeMe.source')}
+            value={
+              performance.source.mode === 'closed'
+                ? t('storeMe.closedRecord')
+                : t('storeMe.livePeriod')
+            }
           />
         </div>
         <p className="queue-subtitle">{scoreMeaning.confidence}</p>
@@ -497,20 +637,19 @@ export function StoreMyPerformancePage(input: {
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">KPI detaylari</div>
+            <div className="eyebrow">{t('storeMe.kpiDetails')}</div>
             <h3>{performance.employee.displayName}</h3>
           </div>
           <StatusPill tone={performanceGrade.tone}>
-            {`${formatStorePerformanceGrade(performanceGrade)} - ${performance.score.value.toFixed(1)}`}
+            {`${formatStorePerformanceGrade(t, performanceGrade)} - ${performance.score.value.toFixed(1)}`}
           </StatusPill>
         </div>
-        <p className="queue-subtitle">
-          Bireysel KPI değerleri, skor katkısı ve sıralama sonucu burada görünür.
-        </p>
+        <p className="queue-subtitle">{t('storeMe.kpiDetailsCopy')}</p>
         <div className="stacked-table">
           {performance.metrics.map((metric) => {
             const sourceSemantics = resolveKpiSourceSemantics(metric)
-            const scoreReference = resolveKpiScoreReference({
+            const scoreReference = getScoreReference({
+              t,
               targetValue: metric.targetValue ?? null,
               benchmarkValue: metric.benchmarkValue ?? null,
               benchmarkSource: metric.benchmarkSource ?? null,
@@ -520,7 +659,7 @@ export function StoreMyPerformancePage(input: {
               <article className="stacked-row" key={metric.code}>
                 <div className="stacked-row-head">
                   <div>
-                    <strong>{metric.label}</strong>
+                    <strong>{getMetricLabel(t, metric)}</strong>
                     <span className="queue-subtitle">{metric.code}</span>
                   </div>
                   <StatusPill
@@ -533,31 +672,43 @@ export function StoreMyPerformancePage(input: {
                           : 'danger'
                     }
                   >
-                    {formatMetricScoreStatusLabel(metric.scoreStatus, metric.weightPercent)}
+                    {formatMetricScoreStatusLabel(t, metric.scoreStatus, metric.weightPercent)}
                   </StatusPill>
                 </div>
                 <div className="key-grid">
                   <KeyValue
-                    label="Gerçekleşen"
-                    value={formatMetricValue(metric.actualValue, metric.code)}
+                    label={t('storeMe.actual')}
+                    value={formatMetricValue(locale, t, metric.actualValue, metric.code)}
                   />
-                  <KeyValue label="Başarı" value={formatAchievementValue(metric)} />
                   <KeyValue
-                    label="Skor hedefi"
-                    value={formatMetricValue(scoreReference.value, metric.code)}
+                    label={t('storeMe.achievement')}
+                    value={formatAchievementValue(locale, t, metric)}
                   />
-                  <KeyValue label="Hedef kaynağı" value={scoreReference.sourceLabel} />
-                  <KeyValue label="Skor katkısı" value={`${metric.contributionValue.toFixed(2)}%`} />
                   <KeyValue
-                    label="Durum"
-                    value={formatMetricScoreStatusText(metric.scoreStatus ?? metric.status)}
+                    label={t('storeMe.scoreTarget')}
+                    value={formatMetricValue(locale, t, scoreReference.value, metric.code)}
                   />
-                  <KeyValue label="Kaynak tipi" value={formatKpiSourceLabel(sourceSemantics)} />
-                  <KeyValue label="Veri kaynağı" value={formatKpiSourceSummary(sourceSemantics)} />
+                  <KeyValue label={t('storeMe.targetSource')} value={scoreReference.sourceLabel} />
+                  <KeyValue
+                    label={t('storeMe.scoreContribution')}
+                    value={`${metric.contributionValue.toFixed(2)}%`}
+                  />
+                  <KeyValue
+                    label={t('storeMe.status')}
+                    value={formatMetricScoreStatusText(t, metric.scoreStatus ?? metric.status)}
+                  />
+                  <KeyValue
+                    label={t('storeMe.sourceType')}
+                    value={formatKpiSourceLabel(t, sourceSemantics)}
+                  />
+                  <KeyValue
+                    label={t('storeMe.dataSource')}
+                    value={formatKpiSourceSummary(t, sourceSemantics)}
+                  />
                 </div>
                 {metric.isCapped ? (
                   <p className="queue-subtitle">
-                    {describeBenchmarkCap({
+                    {describeLocalizedBenchmarkCap(t, {
                       actualRatio: metric.actualRatio,
                       scoredRatio: metric.scoredRatio,
                       isCapped: metric.isCapped,
@@ -566,7 +717,9 @@ export function StoreMyPerformancePage(input: {
                 ) : null}
                 {metric.scoreStatus === 'missing_reference' ? (
                   <p className="queue-subtitle">
-                    Eksik referans: {metric.missingReason ?? 'reference_missing'}
+                    {t('storeMe.missingReferenceReason', {
+                      reason: metric.missingReason ?? 'reference_missing',
+                    })}
                   </p>
                 ) : null}
               </article>

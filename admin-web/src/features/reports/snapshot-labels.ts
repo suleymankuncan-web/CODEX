@@ -1,4 +1,5 @@
 import { formatDate } from '../../lib/format'
+import { defaultAppLocale, getIntlLocale, type AppLocale } from '../../lib/i18n'
 
 export type SnapshotRunLabelInput = {
   snapshotDate: string
@@ -39,21 +40,28 @@ export function getSnapshotMonthStart(input: string) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`
 }
 
-function formatMonthYear(input: string) {
+function capitalizeMonth(input: string, locale: AppLocale) {
+  return `${input[0]?.toLocaleUpperCase(getIntlLocale(locale))}${input.slice(1)}`
+}
+
+function formatMonthYear(input: string, locale: AppLocale = defaultAppLocale) {
   const date = parseDateOnly(input)
-  const monthName = new Intl.DateTimeFormat('tr-TR', { month: 'long' }).format(
+  const monthName = new Intl.DateTimeFormat(getIntlLocale(locale), { month: 'long' }).format(
     date,
   )
-  const formattedMonth = `${monthName[0]?.toLocaleUpperCase('tr-TR')}${monthName.slice(1)}`
+  const formattedMonth = capitalizeMonth(monthName, locale)
   return `${formattedMonth} ${date.getFullYear()}`
 }
 
-export function formatSnapshotPeriodLabel(run: SnapshotRunLabelInput) {
+export function formatSnapshotPeriodLabel(
+  run: SnapshotRunLabelInput,
+  locale: AppLocale = defaultAppLocale,
+) {
   const periodStart = parseDateOnly(run.periodStart)
   const periodEnd = parseDateOnly(run.periodEnd)
 
   if (isSameDay(periodStart, periodEnd)) {
-    return 'günlük kapanış'
+    return locale === 'en' ? 'daily close' : 'günlük kapanış'
   }
 
   if (
@@ -62,19 +70,38 @@ export function formatSnapshotPeriodLabel(run: SnapshotRunLabelInput) {
     periodStart.getDate() === 1 &&
     isLastDayOfMonth(periodEnd)
   ) {
-    const monthName = new Intl.DateTimeFormat('tr-TR', { month: 'long' }).format(
+    const monthName = new Intl.DateTimeFormat(getIntlLocale(locale), { month: 'long' }).format(
       periodStart,
     )
-    return `${monthName[0]?.toLocaleUpperCase('tr-TR')}${monthName.slice(1)} aylık kapanış`
+    const formattedMonth = capitalizeMonth(monthName, locale)
+    return locale === 'en' ? `${formattedMonth} monthly close` : `${formattedMonth} aylık kapanış`
   }
 
-  return `${formatDate(run.periodStart)} - ${formatDate(run.periodEnd)} kapanış`
+  const range = `${formatDate(run.periodStart, locale)} - ${formatDate(run.periodEnd, locale)}`
+  return locale === 'en' ? `${range} close` : `${range} kapanış`
 }
 
-export function formatSnapshotOptionLabel(run: SnapshotRunLabelInput) {
-  return `${formatDate(run.snapshotDate)} kapanışı - ${formatSnapshotPeriodLabel(run)}`
+export function formatSnapshotOptionLabel(
+  run: SnapshotRunLabelInput,
+  locale: AppLocale = defaultAppLocale,
+) {
+  const periodLabel = formatSnapshotPeriodLabel(run, locale)
+  return locale === 'en'
+    ? `${formatDate(run.snapshotDate, locale)} close - ${periodLabel}`
+    : `${formatDate(run.snapshotDate, locale)} kapanışı - ${periodLabel}`
 }
 
-export function formatSnapshotMonthOptionLabel(input: SnapshotMonthLabelInput) {
-  return `${formatMonthYear(input.monthStart)} aylık kapanış - son kapanış ${formatDate(input.latestSnapshotDate)}`
+export function formatSnapshotMonthOptionLabel(
+  input: SnapshotMonthLabelInput,
+  locale: AppLocale = defaultAppLocale,
+) {
+  return locale === 'en'
+    ? `${formatMonthYear(input.monthStart, locale)} monthly close - latest close ${formatDate(
+        input.latestSnapshotDate,
+        locale,
+      )}`
+    : `${formatMonthYear(input.monthStart, locale)} aylık kapanış - son kapanış ${formatDate(
+        input.latestSnapshotDate,
+        locale,
+      )}`
 }
