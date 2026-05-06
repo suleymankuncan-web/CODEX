@@ -76,11 +76,11 @@ function formatChecklistStatus(input: {
 }) {
   if (input.included) {
     return input.visitCount === 1
-      ? `1 ${input.label} checklist yapildi`
-      : `${input.visitCount} ${input.label} checklist yapildi`
+      ? `1 ${input.label} checklist yapıldı`
+      : `${input.visitCount} ${input.label} checklist yapıldı`
   }
 
-  return `${input.label} checklist: bu donem skora dahil edilmedi`
+  return `${input.label} checklist: bu dönem skora dahil edilmedi`
 }
 
 function formatChecklistContribution(input: {
@@ -88,17 +88,17 @@ function formatChecklistContribution(input: {
   contribution: number | null
 }) {
   if (input.contribution !== null && input.contribution !== undefined) {
-    return `${input.label} checklist katkisi ${formatMetric(input.contribution)}`
+    return `${input.label} checklist katkısı ${formatMetric(input.contribution)}`
   }
 
-  return 'Katki yok'
+  return 'Katkı yok'
 }
 
 function formatChecklistMissingNote(input: {
   label: 'BM' | 'VM'
   included: boolean
 }) {
-  return input.included ? null : `${input.label} payi KPI tarafinda kaldi`
+  return input.included ? null : `${input.label} payı KPI tarafında kaldı`
 }
 
 function formatPercent(input: number) {
@@ -124,7 +124,7 @@ function formatAchievementValue(row: DisplayKpiRow) {
   }
 
   if (row.achievementRate === null) {
-    return row.actualValue !== null ? 'Pending normalization' : 'No data'
+    return row.actualValue !== null ? 'Normalizasyon bekliyor' : 'Veri yok'
   }
 
   if (row.targetValue !== null) {
@@ -390,26 +390,26 @@ export function StoreKpiHighlightsPage(input: {
         included: bmChecklist.included,
         visitCount: bmChecklist.visitCount,
       })
-    : 'BM checklist: bu donem skora dahil edilmedi'
+    : 'BM checklist: bu dönem skora dahil edilmedi'
   const vmChecklistStatusLabel = vmChecklist
     ? formatChecklistStatus({
         label: 'VM',
         included: vmChecklist.included,
         visitCount: vmChecklist.visitCount,
       })
-    : 'VM checklist: bu donem skora dahil edilmedi'
+    : 'VM checklist: bu dönem skora dahil edilmedi'
   const bmChecklistContributionLabel = bmChecklist
     ? formatChecklistContribution({
         label: 'BM',
         contribution: bmChecklist.contribution,
       })
-    : 'Katki yok'
+    : 'Katkı yok'
   const vmChecklistContributionLabel = vmChecklist
     ? formatChecklistContribution({
         label: 'VM',
         contribution: vmChecklist.contribution,
       })
-    : 'Katki yok'
+    : 'Katkı yok'
   const bmChecklistMissingNote = formatChecklistMissingNote({
     label: 'BM',
     included: bmChecklist?.included ?? false,
@@ -482,8 +482,8 @@ export function StoreKpiHighlightsPage(input: {
   if (isLoading) {
     return (
       <ScreenState
-        title="Loading store KPI highlights"
-        copy="Store KPI verisi hazirlaniyor."
+        title="Mağaza KPI verisi hazırlanıyor"
+        copy="Mağaza KPI verisi hazırlanıyor."
       />
     )
   }
@@ -521,7 +521,7 @@ export function StoreKpiHighlightsPage(input: {
   if (viewMode === 'closed' && dailySnapshotQuery.isError) {
     return (
       <ScreenState
-        title="KPI snapshot listesi acilamadi"
+        title="KPI kayıt listesi açılamadı"
         copy={getErrorMessage(dailySnapshotQuery.error)}
         tone="error"
       />
@@ -531,8 +531,8 @@ export function StoreKpiHighlightsPage(input: {
   if (viewMode === 'closed' && !activeSnapshotRun) {
     return (
       <ScreenState
-        title="Kapanmis KPI gunu hazir degil"
-        copy="Once bir daily closure tamamlanmali."
+        title="Kapanmış KPI günü hazır değil"
+        copy="Önce günlük kapanış tamamlanmalı."
         tone="error"
       />
     )
@@ -555,8 +555,8 @@ export function StoreKpiHighlightsPage(input: {
       : primaryStoreId ?? 'Unknown store'
   const latestLivePeriodLabel =
     liveSummary?.period
-      ? `${formatDate(liveSummary.period.periodStart)} - ${formatDate(liveSummary.period.periodEnd)} (Son aylik donem)`
-      : 'Son aylik donem'
+      ? `${formatDate(liveSummary.period.periodStart)} - ${formatDate(liveSummary.period.periodEnd)} (Son aylık dönem)`
+      : 'Son aylık dönem'
 
   return (
     <section className="page-stack">
@@ -567,12 +567,12 @@ export function StoreKpiHighlightsPage(input: {
             Store-scoped KPI signal shaped for action instead of admin drill-down.
           </h2>
           <p className="hero-copy">
-            Canli donem modu imported aylik veriyi gosterir. Kapanmis gun modu immutable daily
-            closure snapshot'ini gosterir.
+            Canlı dönem modu import edilen aylık veriyi gösterir. Kapanmış gün modu değişmeyen
+            günlük kapanış kaydını gösterir.
           </p>
         </div>
         <div className="hero-metrics">
-          <MetricAccent label="Mod" value={viewMode === 'live' ? 'Canli donem' : 'Kapanmis gun'} />
+          <MetricAccent label="Mod" value={viewMode === 'live' ? 'Canlı dönem' : 'Kapanmış gün'} />
           <MetricAccent label="Store" value={activeStoreName} />
           <MetricAccent
             label="Period"
@@ -581,7 +581,7 @@ export function StoreKpiHighlightsPage(input: {
                 ? liveSummary?.period
                   ? `${formatDate(liveSummary.period.periodStart)} - ${formatDate(liveSummary.period.periodEnd)}`
                   : 'No live period'
-                : activeSnapshotRun?.snapshotDate ?? 'No snapshot'
+                : activeSnapshotRun?.snapshotDate ?? 'Kayıt yok'
             }
           />
           <MetricAccent
@@ -589,7 +589,7 @@ export function StoreKpiHighlightsPage(input: {
             value={`${storeGrade.emoji} ${storeGrade.code}`}
           />
           <MetricAccent
-            label={viewMode === 'live' ? 'Ort. puan' : 'Avg achievement'}
+            label={viewMode === 'live' ? 'Ort. puan' : 'Ort. başarı'}
             value={
               rows.length > 0
                 ? viewMode === 'live'
@@ -604,8 +604,8 @@ export function StoreKpiHighlightsPage(input: {
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Gorunum modu</div>
-            <h3>Canli imported veri mi, kapanmis gun mu</h3>
+            <div className="eyebrow">Görünüm modu</div>
+            <h3>Canlı import verisi mi, kapanmış gün mü</h3>
           </div>
         </div>
         <div className="toolbar-cluster">
@@ -615,7 +615,7 @@ export function StoreKpiHighlightsPage(input: {
             data-active={viewMode === 'live'}
             onClick={() => setViewMode('live')}
           >
-            Canli donem
+            Canlı dönem
           </button>
           <button
             className="control-button"
@@ -623,7 +623,7 @@ export function StoreKpiHighlightsPage(input: {
             data-active={viewMode === 'closed'}
             onClick={() => setViewMode('closed')}
           >
-            Kapanmis gun
+            Kapanmış gün
           </button>
         </div>
         {viewMode === 'live' ? (
@@ -632,7 +632,7 @@ export function StoreKpiHighlightsPage(input: {
               className="control-input"
               value={livePeriodStart}
               onChange={(event) => setLivePeriodStart(event.target.value)}
-              aria-label="Canli KPI donemi"
+              aria-label="Canlı KPI dönemi"
             >
               <option value="">{latestLivePeriodLabel}</option>
               {(liveSummary?.availablePeriods ?? []).map((period) => (
@@ -659,9 +659,9 @@ export function StoreKpiHighlightsPage(input: {
               className="control-input"
               value={activeSnapshotRun?.snapshotRunId ?? ''}
               onChange={(event) => setSelectedSnapshotRunId(event.target.value)}
-              aria-label="Kapanmis KPI snapshot secimi"
+              aria-label="Kapanmış KPI kaydı seçimi"
             >
-              {activeSnapshotRun ? null : <option value="">Snapshot yok</option>}
+              {activeSnapshotRun ? null : <option value="">Kayıt yok</option>}
               {availableSnapshotRuns.map((run) => (
                 <option key={run.snapshotRunId} value={run.snapshotRunId}>
                   {formatSnapshotOptionLabel(run)}
@@ -674,7 +674,7 @@ export function StoreKpiHighlightsPage(input: {
               onClick={() => setSelectedSnapshotRunId('')}
               disabled={!selectedSnapshotRunId}
             >
-              Son kapanmis gune don
+              Son kapanmış güne dön
             </button>
           </div>
         )}
@@ -684,7 +684,7 @@ export function StoreKpiHighlightsPage(input: {
         <MetricCard
           title="KPI rows"
           value={rows.length}
-          note="Bu store shell'de gorunen satirlar"
+          note="Bu mağaza yüzeyinde görünen satırlar"
           icon={<Target size={18} />}
           tone="accent"
         />
@@ -714,16 +714,16 @@ export function StoreKpiHighlightsPage(input: {
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Aylik skor kirilimi</div>
+            <div className="eyebrow">Aylık skor kırılımı</div>
             <h3>Checklist etkisi</h3>
           </div>
           <StatusPill tone={viewMode === 'closed' ? 'calm' : 'neutral'}>
-            {viewMode === 'closed' ? 'Final snapshot' : 'Canli on izleme'}
+            {viewMode === 'closed' ? 'Final kayıt' : 'Canlı ön izleme'}
           </StatusPill>
         </div>
         <div className="key-grid">
           <KeyValue
-            label="KPI katkisi"
+            label="KPI katkısı"
             value={
               closedScoreBreakdown?.components.kpi.contribution !== null &&
               closedScoreBreakdown?.components.kpi.contribution !== undefined
@@ -732,12 +732,12 @@ export function StoreKpiHighlightsPage(input: {
             }
           />
           <KeyValue label="BM checklist" value={bmChecklistStatusLabel} />
-          <KeyValue label="BM katkisi" value={bmChecklistContributionLabel} />
+          <KeyValue label="BM katkısı" value={bmChecklistContributionLabel} />
           <KeyValue
             label="VM checklist"
             value={vmChecklistStatusLabel}
           />
-          <KeyValue label="VM katkisi" value={vmChecklistContributionLabel} />
+          <KeyValue label="VM katkısı" value={vmChecklistContributionLabel} />
           <KeyValue
             label="Configured blend"
             value={
@@ -751,13 +751,13 @@ export function StoreKpiHighlightsPage(input: {
             value={
               closedScoreBreakdown
                 ? `Effective ${closedScoreBreakdown.effectiveWeights.kpiPerformanceWeight}/${closedScoreBreakdown.effectiveWeights.bmChecklistWeight}/${closedScoreBreakdown.effectiveWeights.vmChecklistWeight}`
-                : 'Canli on izleme'
+                : 'Canlı ön izleme'
             }
           />
         </div>
         <p className="helper-text">
-          BM ve VM checklist tamamlanan aylik ziyaret varsa kucuk agirlikla skora katilir.
-          Ziyaret yoksa magaza ceza yemez; eksik checklist payi KPI tarafinda kalir.
+          BM ve VM checklist tamamlanan aylık ziyaret varsa küçük ağırlıkla skora katılır.
+          Ziyaret yoksa mağaza ceza yemez; eksik checklist payı KPI tarafında kalır.
         </p>
         {bmChecklistMissingNote ? (
           <p className="helper-text">{bmChecklistMissingNote}</p>
@@ -770,30 +770,30 @@ export function StoreKpiHighlightsPage(input: {
       <section className="panel" aria-label="Store score source explanation">
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Skor Kontrati</div>
-            <h3>Magaza skor kaynaklari</h3>
+            <div className="eyebrow">Skor Kontratı</div>
+            <h3>Mağaza skor kaynakları</h3>
           </div>
           <StatusPill tone="accent">Resmi kural</StatusPill>
         </div>
         <p className="queue-subtitle">
-          Magaza skoru girilen hedef, Turkiye ortalamasi KPI sinyalleri ve tamamlanan checklist kanitlarindan okunur.
+          Mağaza skoru girilen hedef, Türkiye ortalaması KPI sinyalleri ve tamamlanan checklist kanıtlarından okunur.
         </p>
         <div className="key-grid">
           <KeyValue
-            label="KPI kaynaklari"
-            value="Satis hedefi girilen hedeften; CR, ATV ve UPT Turkiye ortalamasindan puanlanir."
+            label="KPI kaynakları"
+            value="Satış hedefi girilen hedeften; CR, ATV ve UPT Türkiye ortalamasından puanlanır."
           />
           <KeyValue
-            label="Checklist payi"
-            value="BM ve VM checklist tamamlanmadiysa magaza ceza yemez; pay KPI tarafinda kalir."
+            label="Checklist payı"
+            value="BM ve VM checklist tamamlanmadıysa mağaza ceza yemez; pay KPI tarafında kalır."
           />
           <KeyValue
             label="Cap dili"
-            value="Gercek oran %120 uzerinde olsa da skor katkisi %120 cap ile hesaplanir."
+            value="Gerçek oran %120 üzerinde olsa da skor katkısı %120 cap ile hesaplanır."
           />
           <KeyValue
-            label="Turkiye ortalamasi"
-            value="Import edilen ozet satirlar kontrol kanitidir; skor referansini sistem kendi kapsamindan hesaplar."
+            label="Türkiye ortalaması"
+            value="Import edilen özet satırlar kontrol kanıtıdır; skor referansını sistem kendi kapsamından hesaplar."
           />
         </div>
       </section>
@@ -811,7 +811,7 @@ export function StoreKpiHighlightsPage(input: {
             <KeyValue label="Store name" value={activeStoreName} />
             <KeyValue
               label="Source"
-              value={viewMode === 'live' ? 'Imported monthly live state' : 'Daily closure snapshot'}
+              value={viewMode === 'live' ? 'Import edilen aylık canlı durum' : 'Günlük kapanış kaydı'}
             />
             <KeyValue
               label="Resolved roles"
@@ -848,7 +848,7 @@ export function StoreKpiHighlightsPage(input: {
           ) : (
             <EmptyState
               title="Scoreable KPI highlight yok"
-              copy="Bu donemde skora dahil olabilecek KPI satiri henuz hazir degil."
+              copy="Bu dönemde skora dahil olabilecek KPI satırı henüz hazır değil."
             />
           )}
         </article>
@@ -858,10 +858,10 @@ export function StoreKpiHighlightsPage(input: {
         <section className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Partial Durum</div>
-              <h3>Store score henuz tam degil</h3>
+              <div className="eyebrow">Kısmi durum</div>
+              <h3>Mağaza skoru henüz tam değil</h3>
             </div>
-            <StatusPill tone="warning">Partial</StatusPill>
+            <StatusPill tone="warning">Kısmi veri</StatusPill>
           </div>
           <div className="key-grid">
             <KeyValue
@@ -873,7 +873,7 @@ export function StoreKpiHighlightsPage(input: {
               }
             />
             <KeyValue
-              label="Normalization bekleyenler"
+              label="Normalizasyon bekleyenler"
               value={
                 liveSummary.partial.pendingNormalizationLabels.length > 0
                   ? liveSummary.partial.pendingNormalizationLabels.join(', ')
@@ -882,7 +882,7 @@ export function StoreKpiHighlightsPage(input: {
             />
             <KeyValue
               label="Not"
-              value="Satis hedefi girilen hedefe, CR/ATV/UPT ise Turkiye ortalamasina gore puanlanir."
+              value="Satış hedefi girilen hedefe, CR/ATV/UPT ise Türkiye ortalamasına göre puanlanır."
             />
           </div>
         </section>
@@ -898,9 +898,9 @@ export function StoreKpiHighlightsPage(input: {
         </div>
         <p className="queue-subtitle">{storeScoreMeaning.summary}</p>
         <div className="key-grid">
-          <KeyValue label="Skor bandi" value={formatPerformanceGrade(storeGrade)} />
+          <KeyValue label="Skor bandı" value={formatPerformanceGrade(storeGrade)} />
           <KeyValue label="Skor" value={formatPercent(weightedScore.scoreValue)} />
-          <KeyValue label="Kapsanan agirlik" value={`${weightedScore.coveredWeight}%`} />
+          <KeyValue label="Kapsanan ağırlık" value={`${weightedScore.coveredWeight}%`} />
           <KeyValue label="Aksiyon dili" value={storeScoreMeaning.action} />
         </div>
         <p className="queue-subtitle">{storeScoreMeaning.confidence}</p>
@@ -973,23 +973,23 @@ export function StoreKpiHighlightsPage(input: {
                     value={formatMetricValue(scoreReference.value, item.matchingRow?.kpiCode)}
                   />
                   <KeyValue
-                    label="Actual"
+                    label="Gerçekleşen"
                     value={formatMetricValue(item.matchingRow?.actualValue ?? null, item.matchingRow?.kpiCode)}
                   />
                   <KeyValue
-                    label="Achievement"
+                    label="Başarı"
                     value={
                       item.matchingRow
                         ? formatAchievementValue(item.matchingRow)
-                        : 'No data'
+                        : 'Veri yok'
                     }
                   />
                   <KeyValue
-                    label="Hedef kaynagi"
+                    label="Hedef kaynağı"
                     value={scoreReference.sourceLabel}
                   />
                   <KeyValue
-                    label="Weighted contribution"
+                    label="Ağırlıklı katkı"
                     value={formatPercent(item.weightedContribution)}
                   />
                   <KeyValue
@@ -997,7 +997,7 @@ export function StoreKpiHighlightsPage(input: {
                     value={formatState(item.metric.scoreBehavior)}
                   />
                   <KeyValue label="Kaynak tipi" value={sourceSemantics.label} />
-                  <KeyValue label="Veri kaynagi" value={sourceSemantics.summary} />
+                  <KeyValue label="Veri kaynağı" value={sourceSemantics.summary} />
                 </div>
                 {item.matchingRow?.isCapped ? (
                   <p className="queue-subtitle">
@@ -1094,9 +1094,9 @@ export function StoreKpiHighlightsPage(input: {
                   </div>
                   <div className="key-grid">
                     <KeyValue label="Skor hedefi" value={formatMetricValue(row.targetValue, row.kpiCode)} />
-                    <KeyValue label="Actual" value={formatMetricValue(row.actualValue, row.kpiCode)} />
+                    <KeyValue label="Gerçekleşen" value={formatMetricValue(row.actualValue, row.kpiCode)} />
                     <KeyValue
-                      label="Achievement"
+                      label="Başarı"
                       value={formatAchievementValue(row)}
                     />
                     <KeyValue
@@ -1104,7 +1104,7 @@ export function StoreKpiHighlightsPage(input: {
                       value={`${formatDate(row.periodStart)} - ${formatDate(row.periodEnd)}`}
                     />
                     <KeyValue label="Kaynak tipi" value={sourceSemantics.label} />
-                    <KeyValue label="Veri kaynagi" value={sourceSemantics.summary} />
+                    <KeyValue label="Veri kaynağı" value={sourceSemantics.summary} />
                   </div>
                 </article>
               )

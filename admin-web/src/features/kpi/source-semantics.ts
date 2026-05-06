@@ -46,7 +46,7 @@ function hasReferenceValue<T extends number | string>(
 
 function formatReferenceSource(input: string | null | undefined) {
   if (input === 'TURKEY_AVERAGE') {
-    return 'Turkiye ortalamasi'
+    return 'Türkiye ortalaması'
   }
 
   if (input === 'CHECKLIST_SCORE') {
@@ -54,10 +54,10 @@ function formatReferenceSource(input: string | null | undefined) {
   }
 
   if (input === 'TARGET') {
-    return 'Magaza/personel hedefi'
+    return 'Mağaza/personel hedefi'
   }
 
-  return 'Skor referansi'
+  return 'Skor referansı'
 }
 
 export function resolveKpiScoreReference<T extends number | string>(
@@ -66,7 +66,7 @@ export function resolveKpiScoreReference<T extends number | string>(
   if (hasReferenceValue(input.targetValue)) {
     return {
       value: input.targetValue,
-      sourceLabel: 'Magaza/personel hedefi',
+      sourceLabel: 'Mağaza/personel hedefi',
     }
   }
 
@@ -89,8 +89,8 @@ export function resolveKpiSourceSemantics(input: SourceInput): KpiSourceSemantic
   if (input.scoreStatus === 'pending_normalization') {
     return {
       kind: 'pending_normalization',
-      label: 'Pending normalization',
-      summary: 'Deger geldi, score icin normalizasyon bekliyor.',
+      label: 'Normalizasyon bekliyor',
+      summary: 'Değer geldi, skor için normalizasyon bekliyor.',
       tone: 'warning',
     }
   }
@@ -99,7 +99,7 @@ export function resolveKpiSourceSemantics(input: SourceInput): KpiSourceSemantic
     return {
       kind: 'missing_reference',
       label: 'Eksik referans',
-      summary: 'Deger geldi, ancak skor hedefi referansi eksik.',
+      summary: 'Değer geldi, ancak skor hedefi referansı eksik.',
       tone: 'warning',
     }
   }
@@ -112,8 +112,8 @@ export function resolveKpiSourceSemantics(input: SourceInput): KpiSourceSemantic
   ) {
     return {
       kind: 'missing',
-      label: 'Missing',
-      summary: 'Bu metrik icin henuz kullanilabilir veri yok.',
+      label: 'Veri yok',
+      summary: 'Bu metrik için henüz kullanılabilir veri yok.',
       tone: 'danger',
     }
   }
@@ -121,8 +121,8 @@ export function resolveKpiSourceSemantics(input: SourceInput): KpiSourceSemantic
   if (code === 'BM_CHECKLIST' || code === 'VM_CHECKLIST') {
     return {
       kind: 'checklist_fed',
-      label: 'Checklist-fed',
-      summary: 'Checklist sonucundan beslenen compliance katkisi.',
+      label: 'Checklist katkısı',
+      summary: 'Checklist sonucundan beslenen uyum katkısı.',
       tone: 'calm',
     }
   }
@@ -130,16 +130,16 @@ export function resolveKpiSourceSemantics(input: SourceInput): KpiSourceSemantic
   if (code === 'TARGET_ACHIEVEMENT') {
     return {
       kind: 'derived',
-      label: 'Hedef bazli skor',
-      summary: 'Girilen hedef ve gerceklesen performanstan turetilen skor sinyali.',
+      label: 'Hedef bazlı skor',
+      summary: 'Girilen hedef ve gerçekleşen performanstan türetilen skor sinyali.',
       tone: 'accent',
     }
   }
 
   return {
     kind: 'imported',
-    label: 'Imported operational data',
-    summary: 'Operasyon veya satis kaynagindan gelen reported KPI degeri.',
+    label: 'Operasyon verisi',
+    summary: 'Operasyon veya satış kaynağından gelen raporlanmış KPI değeri.',
     tone: 'accent',
   }
 }
