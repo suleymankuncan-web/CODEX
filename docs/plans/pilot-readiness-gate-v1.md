@@ -204,6 +204,7 @@ Final decision: Go / Conditional Go / No-Go
 ## Current Evidence Notes
 
 - `docs/evidence/pilot-readiness/2026-05-01-preflight-no-go.md` records the first pilot preflight as `No-Go` because staging IdP values, true baseline master data, real KPI import smoke evidence, and pilot user/scope evidence are not available yet.
+- `docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-conditional-go-consolidation.md` records the current `Conditional Go` consolidation for the controlled staging/internal pilot, with broad production rollout still `No-Go`.
 
 ## CODEX DURUST YORUM
 
