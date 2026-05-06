@@ -33,8 +33,29 @@ The earlier No-Go blockers were real and useful. The critical missing evidence h
 - Ranking V1 live API smoke passed for privileged mode.
 - Ranking V1 live API smoke passed for low-role `STORE_MANAGER` mode.
 - Store-facing KPI highlights smoke passed for Bursa Marka Park.
+- Controlled Clerk test accounts for `SUPER_ADMIN`, `REGION_MANAGER`, `STORE_MANAGER`, and `STORE_PERSONNEL` passed manual staging role smoke on 6 Mayis 2026.
 
 ## Evidence Map
+
+### Controlled Pilot Role Smoke
+
+Evidence:
+
+- `docs/evidence/pilot-readiness/2026-05-06-role-smoke.md`
+
+Status: `Go` for the controlled four-persona pilot role set.
+
+Closed:
+
+- `SUPER_ADMIN` test account opens admin/operator surfaces.
+- `REGION_MANAGER` test account opens ranking, target, and competition surfaces while auth/master-data/integration admin routes remain unavailable.
+- `STORE_MANAGER` test account opens store shell, own performance, KPI, approvals, and rankings.
+- `STORE_PERSONNEL` test account opens own performance and rankings.
+- Store personnel cannot see other personnel KPI details; own details remain on `/store/me`.
+
+Restriction:
+
+- These are Clerk test-mode accounts for staging smoke, not real user inboxes.
 
 ### Staging Auth And Scope
 
@@ -138,7 +159,7 @@ Closed:
 
 Restriction:
 
-- This covers `STORE_MANAGER`, not `STORE_PERSONNEL`.
+- This file covers `STORE_MANAGER` low-role masking. `STORE_PERSONNEL` is covered separately in `docs/evidence/pilot-readiness/2026-05-06-role-smoke.md`.
 
 ## Conditional Go Restrictions
 
@@ -205,19 +226,21 @@ Decision:
 - Accept for controlled pilot if the user flow remains normal login/session usage.
 - Add logout/expired-token smoke before broad rollout.
 
-### P2 - Store Personnel Role Not Live-Smoked
+### P2 - Real Store Personnel Inbox Pilot Still Pending
 
 Current posture:
 
 - `STORE_MANAGER` low-role masking is proven live.
+- `STORE_PERSONNEL` route/privacy behavior is smoke-tested through a Clerk test-mode account.
 
 Risk:
 
-- `STORE_PERSONNEL` view and ranking visibility should be validated separately before opening that role broadly.
+- Real store personnel mailbox delivery, onboarding messaging, and support behavior are not validated yet.
 
 Decision:
 
-- Exclude `STORE_PERSONNEL` from pilot unless separately smoke-tested.
+- `STORE_PERSONNEL` can be included in controlled staging validation with test-mode accounts.
+- Before inviting a real store personnel user, create an active mailbox-backed account and repeat the same smoke.
 
 ### P2 - UI Polish Is Not Final
 
@@ -253,7 +276,7 @@ Before inviting pilot users:
 
 - Confirm the exact pilot user list and roles.
 - Confirm which flows are included: store KPI, rankings, approvals, target distribution, or read-only validation.
-- Confirm which flows are excluded: VM, region manager, store personnel, write actions, JSON/API integration.
+- Confirm which flows are excluded: VM, broad real-user rollout, write actions outside assigned-store checks, JSON/API integration.
 - Confirm March 2026 is historical validation data.
 - Keep one admin account and one low-role account available for support smoke.
 - Monitor `/store`, `/store/me`, `/store/kpis`, `/store/approvals`, and `/store/rankings` after each deploy.
