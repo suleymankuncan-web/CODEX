@@ -178,6 +178,49 @@ test('HR admin can search auth users and stores while creating assignments', asy
   })
 })
 
+test('auth catalog page switches chrome to English copy and persists locale', async ({ page }) => {
+  await page.goto('/admin/auth/catalog')
+
+  const main = page.getByRole('main')
+  const heroMetrics = main.locator('.hero-metrics')
+
+  await expect(main.getByText('Kimlik kataloğu')).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Rol ve izin tanımları açık ve incelenebilir kalır.' })).toBeVisible()
+  await expect(heroMetrics.getByText('Roller', { exact: true })).toBeVisible()
+  await expect(heroMetrics.getByText('İzinler', { exact: true })).toBeVisible()
+  await expect(heroMetrics.getByText('Sistem rolleri', { exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Auth özetine dön' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Rol tanımları' })).toBeVisible()
+  await expect(main.getByPlaceholder('Rol kodu, ad, kapsam veya izin ara')).toBeVisible()
+  await expect(main.getByText('Sistem rolü', { exact: true })).toBeVisible()
+  await expect(main.getByText('İzni geri al STORE_READ')).toBeVisible()
+  await expect(main.getByRole('button', { name: 'İzin ver' }).first()).toBeDisabled()
+  await expect(main.getByRole('heading', { name: 'İzin kataloğu' })).toBeVisible()
+  await expect(main.getByText('Role and permission definitions stay explicit')).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText('ÃƒÆ’')
+  await expect(page.locator('body')).not.toContainText('Ãƒâ€')
+  await expect(page.locator('body')).not.toContainText('Ãƒâ€¦')
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(main.getByText('Auth Catalog')).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Role and permission definitions stay explicit and inspectable.' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Back to auth overview' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Role definitions' })).toBeVisible()
+  await expect(main.getByPlaceholder('Search role code, name, scope, or permission')).toBeVisible()
+  await expect(main.getByText('System role', { exact: true })).toBeVisible()
+  await expect(main.getByText('Revoke STORE_READ')).toBeVisible()
+  await expect(main.getByRole('button', { name: 'Grant permission' }).first()).toBeDisabled()
+  await expect(main.getByRole('heading', { name: 'Permission catalog' })).toBeVisible()
+  await expect(main.getByText('Rol ve izin tanımları açık')).toHaveCount(0)
+
+  await page.reload()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(main.getByRole('heading', { name: 'Role and permission definitions stay explicit and inspectable.' })).toBeVisible()
+})
+
 async function routeAuthAdminApi(page: Page) {
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: authSessionFixture })
@@ -197,6 +240,14 @@ async function routeAuthAdminApi(page: Page) {
 
   await page.route('**/api/auth/action-store-assignments?**', async (route) => {
     await route.fulfill({ json: { items: [], meta: { count: 0, total: 0, limit: 50, offset: 0 } } })
+  })
+
+  await page.route('**/api/auth/roles', async (route) => {
+    await route.fulfill({ json: authRolesFixture })
+  })
+
+  await page.route('**/api/auth/permissions', async (route) => {
+    await route.fulfill({ json: authPermissionsFixture })
   })
 }
 
@@ -279,4 +330,56 @@ const authLookupsFixture = {
     totalPermissions: 0,
     totalStores: 1,
   },
+}
+
+const authRolesFixture = {
+  items: [
+    {
+      roleId: 'role-store-manager',
+      roleCode: 'STORE_MANAGER',
+      roleName: 'Store Manager',
+      scopeType: 'store',
+      description: 'Store manager pilot role',
+      isSystemRole: true,
+      permissions: [
+        {
+          permissionId: 'permission-store-read',
+          permissionCode: 'STORE_READ',
+          resourceName: 'store',
+          actionName: 'read',
+          description: 'Read store data',
+        },
+      ],
+    },
+    {
+      roleId: 'role-custom-auditor',
+      roleCode: 'CUSTOM_AUDITOR',
+      roleName: 'Custom Auditor',
+      scopeType: 'company',
+      description: null,
+      isSystemRole: false,
+      permissions: [],
+    },
+  ],
+  meta: { count: 2, total: 2, limit: 50, offset: 0 },
+}
+
+const authPermissionsFixture = {
+  items: [
+    {
+      permissionId: 'permission-store-read',
+      permissionCode: 'STORE_READ',
+      resourceName: 'store',
+      actionName: 'read',
+      description: 'Read store data',
+    },
+    {
+      permissionId: 'permission-target-write',
+      permissionCode: 'TARGET_WRITE',
+      resourceName: 'target',
+      actionName: 'write',
+      description: null,
+    },
+  ],
+  meta: { count: 2, total: 2, limit: 50, offset: 0 },
 }
