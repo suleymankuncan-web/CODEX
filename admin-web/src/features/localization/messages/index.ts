@@ -8,8 +8,11 @@ import { adminShellEn, adminShellTr } from './admin-shell'
 import { adminTargetsEn, adminTargetsTr } from './admin-targets'
 import { commonEn, commonTr } from './common'
 import { competitionEn, competitionTr } from './competition'
+import { reportsChecklistsEn, reportsChecklistsTr } from './reports-checklists'
+import { reportsKpisEn, reportsKpisTr } from './reports-kpis'
 import { reportsSummaryEn, reportsSummaryTr } from './reports-summary'
 import { reportsSnapshotRunsEn, reportsSnapshotRunsTr } from './reports-snapshot-runs'
+import { reportsTurnoverEn, reportsTurnoverTr } from './reports-turnover'
 import { reportsWorkforceEn, reportsWorkforceTr } from './reports-workforce'
 import { storeApprovalsEn, storeApprovalsTr } from './store-approvals'
 import { storeChecklistsEn, storeChecklistsTr } from './store-checklists'
@@ -33,8 +36,11 @@ const tr = {
   ...adminTargetsTr,
   ...commonTr,
   ...competitionTr,
+  ...reportsChecklistsTr,
+  ...reportsKpisTr,
   ...reportsSummaryTr,
   ...reportsSnapshotRunsTr,
+  ...reportsTurnoverTr,
   ...reportsWorkforceTr,
   ...storeApprovalsTr,
   ...storeChecklistsTr,
@@ -59,8 +65,11 @@ const en: Record<keyof typeof tr, string> = {
   ...adminTargetsEn,
   ...commonEn,
   ...competitionEn,
+  ...reportsChecklistsEn,
+  ...reportsKpisEn,
   ...reportsSummaryEn,
   ...reportsSnapshotRunsEn,
+  ...reportsTurnoverEn,
   ...reportsWorkforceEn,
   ...storeApprovalsEn,
   ...storeChecklistsEn,
