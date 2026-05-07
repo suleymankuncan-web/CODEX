@@ -55,6 +55,19 @@ export const adminShellTr = {
   'adminShell.scopeSummary': '{companyCount} şirket · {regionCount} bölge · {storeCount} mağaza',
   'adminShell.failureHandlingBearer': '401 bearer oturumunu temizler ve /auth/login yoluna döndürür',
   'adminShell.failureHandlingMock': 'Mock oturum geliştirme akışı için local kalır',
+  'adminShell.primaryNavigation': 'Birincil',
+  'adminShell.storeWorkspaceAria': 'Mağaza çalışma alanı',
+  'adminShell.routeLoadingTitle': 'Rota yükleniyor',
+  'adminShell.routeLoadingCopy': 'İstenen yüzey hazırlanıyor.',
+  'adminShell.routeVerifyingTitle': 'Oturum doğrulanıyor',
+  'adminShell.routeVerifyingCopy':
+    'Kabuk, korumalı rotaları açmadan önce mevcut kimlik modunu /api/auth/session üzerinden doğruluyor.',
+  'adminShell.routeRejectedTitle': 'Oturum reddedildi',
+  'adminShell.routeRejectedFallback':
+    'Backend mevcut oturumu kabul etmedi. Korumalı rotalara girmeden önce kimlik modunu veya bearer tokenı güncelle.',
+  'adminShell.forbiddenTitle': 'Bu rol için rota kullanılamaz',
+  'adminShell.forbiddenCopy':
+    'Bu oturum kimliği doğrulandı, ancak mevcut rol seti bu yüzeye izin vermiyor. Bunun yerine {firstAllowedPath} yoluna dön.',
 } as const
 
 export const adminShellEn: Record<keyof typeof adminShellTr, string> = {
@@ -114,4 +127,17 @@ export const adminShellEn: Record<keyof typeof adminShellTr, string> = {
   'adminShell.scopeSummary': '{companyCount} company · {regionCount} region · {storeCount} store',
   'adminShell.failureHandlingBearer': '401 clears bearer session and returns to /auth/login',
   'adminShell.failureHandlingMock': 'Mock session stays local for dev flow',
+  'adminShell.primaryNavigation': 'Primary',
+  'adminShell.storeWorkspaceAria': 'Store workspace',
+  'adminShell.routeLoadingTitle': 'Loading route',
+  'adminShell.routeLoadingCopy': 'Preparing the requested surface.',
+  'adminShell.routeVerifyingTitle': 'Verifying session',
+  'adminShell.routeVerifyingCopy':
+    'The shell is confirming the current auth mode through /api/auth/session before it opens protected routes.',
+  'adminShell.routeRejectedTitle': 'Session rejected',
+  'adminShell.routeRejectedFallback':
+    'The backend did not accept the current session. Update the auth mode or bearer token before entering protected routes.',
+  'adminShell.forbiddenTitle': 'Route not available for this role',
+  'adminShell.forbiddenCopy':
+    'This session is authenticated, but the current role set does not permit this surface. Return to {firstAllowedPath} instead.',
 }

@@ -236,7 +236,7 @@ function App() {
           <p>{t('adminShell.brandCopy')}</p>
         </div>
 
-        <nav className="nav-stack" aria-label="Primary">
+        <nav className="nav-stack" aria-label={t('adminShell.primaryNavigation')}>
           {allowedAdminNav.map((item) => (
             <NavItem key={item.to} to={item.to} icon={item.icon} label={t(item.labelKey)} />
           ))}
@@ -516,7 +516,7 @@ function StoreShell(input: {
         </div>
       </header>
 
-      <main className="store-main" aria-label="Store workspace">
+      <main className="store-main" aria-label={t('adminShell.storeWorkspaceAria')}>
         <Suspense fallback={<RouteLoadingState />}>
           <Routes>
             <Route
@@ -586,7 +586,14 @@ function StoreShell(input: {
 }
 
 function RouteLoadingState() {
-  return <ScreenState title="Loading route" copy="Preparing the requested surface." />
+  const { t } = useLocalization()
+
+  return (
+    <ScreenState
+      title={t('adminShell.routeLoadingTitle')}
+      copy={t('adminShell.routeLoadingCopy')}
+    />
+  )
 }
 
 function guardStoreRoute(
@@ -616,22 +623,11 @@ function guardRoute(
   }
 
   if (shellState.mode === 'verifying') {
-    return (
-      <ScreenState
-        title="Verifying session"
-        copy="The shell is confirming the current auth mode through /api/auth/session before it opens protected routes."
-      />
-    )
+    return <RouteVerifyingState />
   }
 
   if (shellState.mode === 'rejected') {
-    return (
-      <ScreenState
-        title="Session rejected"
-        copy={shellState.notice ?? shellState.errorCopy ?? 'The backend did not accept the current session. Update the auth mode or bearer token before entering protected routes.'}
-        tone="error"
-      />
-    )
+    return <RouteRejectedState shellState={shellState} />
   }
 
   if (!hasAnyRole(authSummary?.user.roleCodes ?? [], roles)) {
@@ -641,11 +637,36 @@ function guardRoute(
   return <>{element}</>
 }
 
-function ForbiddenRoute(input: { firstAllowedPath: string }) {
+function RouteVerifyingState() {
+  const { t } = useLocalization()
+
   return (
     <ScreenState
-      title="Route not available for this role"
-      copy={`This session is authenticated, but the current role set does not permit this surface. Return to ${input.firstAllowedPath} instead.`}
+      title={t('adminShell.routeVerifyingTitle')}
+      copy={t('adminShell.routeVerifyingCopy')}
+    />
+  )
+}
+
+function RouteRejectedState(input: { shellState: ShellState }) {
+  const { t } = useLocalization()
+
+  return (
+    <ScreenState
+      title={t('adminShell.routeRejectedTitle')}
+      copy={input.shellState.notice ?? input.shellState.errorCopy ?? t('adminShell.routeRejectedFallback')}
+      tone="error"
+    />
+  )
+}
+
+function ForbiddenRoute(input: { firstAllowedPath: string }) {
+  const { t } = useLocalization()
+
+  return (
+    <ScreenState
+      title={t('adminShell.forbiddenTitle')}
+      copy={t('adminShell.forbiddenCopy', { firstAllowedPath: input.firstAllowedPath })}
       tone="error"
     />
   )

@@ -266,7 +266,7 @@ test('bearer session refetches when the token identity changes in the same tab',
     .toBe(storeManagerToken)
 
   await expect(page.getByText('Kullanıcı:').locator('..').getByText('store-manager-user')).toBeVisible()
-  await expect(page.getByText('Route not available for this role')).toBeVisible()
+  await expect(page.getByText('Bu rol için rota kullanılamaz')).toBeVisible()
 })
 
 test('auth login ignores protocol-relative return targets for ready sessions', async ({ page }) => {
