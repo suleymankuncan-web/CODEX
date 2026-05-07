@@ -17,11 +17,51 @@ test.beforeEach(async ({ page }) => {
   await routeAdminShellApi(page)
 })
 
-test('session nav opens the session readiness surface for ready admin sessions', async ({ page }) => {
+test('session readiness page switches chrome to English copy and persists locale', async ({ page }) => {
   await page.goto('/admin/session')
 
+  const main = page.getByRole('main')
+  const heroMetrics = main.locator('.hero-metrics')
+
   await expect(page).toHaveURL(/\/admin\/session$/)
-  await expect(page.getByRole('heading', { name: /Prepare the shell for real auth/i })).toBeVisible()
+  await expect(main.getByText('Oturum hazırlığı')).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Gerçek auth akışına geçerken yerel hızı koru.' })).toBeVisible()
+  await expect(heroMetrics.getByText('Mod', { exact: true })).toBeVisible()
+  await expect(heroMetrics.getByText("Mock header'lar", { exact: true })).toBeVisible()
+  await expect(heroMetrics.getByText('Hazır', { exact: true })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'İsteklerin nasıl kimlik doğrulayacağını seç' })).toBeVisible()
+  await expect(main.getByRole('button', { name: "Mock header'lar" })).toBeVisible()
+  await expect(main.getByRole('button', { name: 'Bearer token' })).toBeVisible()
+  await expect(main.getByRole('button', { name: 'Oturumu kaydet' })).toBeVisible()
+  await expect(main.getByRole('button', { name: 'Mevcut oturumu doğrula' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'İstemcinin göndereceği bilgiler' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Korumalı backend el sıkışması' })).toBeVisible()
+  await expect(main.getByText('Prepare the shell for real auth')).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText('ÃƒÆ’')
+  await expect(page.locator('body')).not.toContainText('Ãƒâ€')
+  await expect(page.locator('body')).not.toContainText('Ãƒâ€¦')
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(main.getByText('Session Readiness')).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Prepare the shell for real auth without losing local speed.' })).toBeVisible()
+  await expect(heroMetrics.getByText('Mode', { exact: true })).toBeVisible()
+  await expect(heroMetrics.getByText('Mock headers', { exact: true })).toBeVisible()
+  await expect(heroMetrics.getByText('Ready', { exact: true })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Choose how requests authenticate' })).toBeVisible()
+  await expect(main.getByRole('button', { name: 'Mock headers' })).toBeVisible()
+  await expect(main.getByRole('button', { name: 'Bearer token' })).toBeVisible()
+  await expect(main.getByRole('button', { name: 'Save session' })).toBeVisible()
+  await expect(main.getByRole('button', { name: 'Verify current session' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'What the client will send' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Protected backend handshake' })).toBeVisible()
+  await expect(main.getByText('Oturum hazırlığı')).toHaveCount(0)
+
+  await page.reload()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(main.getByRole('heading', { name: 'Prepare the shell for real auth without losing local speed.' })).toBeVisible()
 })
 
 test('admin shell switches chrome to English copy and persists locale', async ({ page }) => {

@@ -11,14 +11,19 @@ import {
   StatusPill,
 } from '../components/dashboard-primitives'
 import { getAuthSession } from '../features/auth/api'
+import type { TranslateFunction } from '../features/localization/dictionary'
+import { useLocalization } from '../features/localization/useLocalization'
 import { useSession } from '../features/session/session-context-value'
-import { describeSessionMode, getBearerSessionCacheKey } from '../features/session/session-storage'
+import { getBearerSessionCacheKey, type SessionMode } from '../features/session/session-storage'
 
 export function SessionReadinessPage() {
+  const { t } = useLocalization()
   const { session, isReady, saveSession, resetSession } = useSession()
   const [draft, setDraft] = useState(session)
   const [verificationRequested, setVerificationRequested] = useState(false)
   const mode = draft.mode
+  const sessionModeLabel = formatSessionMode(session.mode, t)
+  const readinessLabel = isReady ? t('sessionReadiness.yes') : t('sessionReadiness.needsSetup')
   const bearerSessionKey = getBearerSessionCacheKey(session.bearerToken)
   const sessionQuery = useQuery({
     queryKey:
@@ -34,7 +39,7 @@ export function SessionReadinessPage() {
     if (mode === 'bearer') {
       return draft.bearerToken
         ? [{ label: 'Authorization', value: `Bearer ${truncateToken(draft.bearerToken)}` }]
-        : [{ label: 'Authorization', value: 'No token set yet' }]
+        : [{ label: 'Authorization', value: t('sessionReadiness.noTokenSetYet') }]
     }
 
     return [
@@ -42,51 +47,47 @@ export function SessionReadinessPage() {
       { label: 'x-role-codes', value: draft.mockRoleCodes },
       { label: 'x-company-ids', value: draft.mockCompanyIds },
     ]
-  }, [draft, mode])
+  }, [draft, mode, t])
 
   return (
     <section className="page-stack">
       <Link className="back-link" to="/admin/auth">
         <ArrowLeft size={16} />
-        Back to auth operations
+        {t('sessionReadiness.backToAuth')}
       </Link>
 
       <section className="hero-panel">
         <div>
-          <div className="eyebrow">Session Readiness</div>
-          <h2 className="hero-title">Prepare the shell for real auth without losing local speed.</h2>
-          <p className="hero-copy">
-            The backend already supports mock-header auth for development and JWT verification for a
-            production path. This screen keeps both modes explicit and swappable without leaving
-            bearer tokens in long-lived browser storage.
-          </p>
+          <div className="eyebrow">{t('sessionReadiness.eyebrow')}</div>
+          <h2 className="hero-title">{t('sessionReadiness.heroTitle')}</h2>
+          <p className="hero-copy">{t('sessionReadiness.heroCopy')}</p>
         </div>
         <div className="hero-metrics">
-          <MetricAccent label="Mode" value={describeSessionMode(session.mode)} />
-          <MetricAccent label="Ready" value={isReady ? 'Yes' : 'Needs setup'} />
-          <MetricAccent label="Backend path" value="Mock + JWT" />
+          <MetricAccent label={t('sessionReadiness.mode')} value={sessionModeLabel} />
+          <MetricAccent label={t('sessionReadiness.ready')} value={readinessLabel} />
+          <MetricAccent label={t('sessionReadiness.backendPath')} value="Mock + JWT" />
         </div>
       </section>
 
       <section className="metric-grid">
         <MetricCard
-          title="Development mode"
+          title={t('sessionReadiness.developmentMode')}
           value={session.mode === 'mock' ? 1 : 0}
-          note="Fast local work through explicit mock headers"
+          note={t('sessionReadiness.developmentModeNote')}
           icon={<TestTubeDiagonal size={18} />}
           tone="accent"
         />
         <MetricCard
-          title="Production path"
+          title={t('sessionReadiness.productionPath')}
           value={session.mode === 'bearer' ? 1 : 0}
-          note="Bearer token wiring is now available in the client"
+          note={t('sessionReadiness.productionPathNote')}
           icon={<KeyRound size={18} />}
           tone="neutral"
         />
         <MetricCard
-          title="Operator risk"
+          title={t('sessionReadiness.operatorRisk')}
           value={isReady ? 0 : 1}
-          note="App state is visible before requests fail unexpectedly"
+          note={t('sessionReadiness.operatorRiskNote')}
           icon={<ShieldEllipsis size={18} />}
           tone={isReady ? 'calm' : 'warning'}
         />
@@ -96,11 +97,11 @@ export function SessionReadinessPage() {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Session mode</div>
-              <h3>Choose how requests authenticate</h3>
+              <div className="eyebrow">{t('sessionReadiness.sessionMode')}</div>
+              <h3>{t('sessionReadiness.sessionModeTitle')}</h3>
             </div>
             <StatusPill tone={isReady ? 'calm' : 'warning'}>
-              {isReady ? 'Ready' : 'Needs setup'}
+              {isReady ? t('sessionReadiness.ready') : t('sessionReadiness.needsSetup')}
             </StatusPill>
           </div>
 
@@ -110,21 +111,21 @@ export function SessionReadinessPage() {
               type="button"
               onClick={() => setDraft((current) => ({ ...current, mode: 'mock' }))}
             >
-              Mock headers
+              {t('sessionReadiness.mockHeaders')}
             </button>
             <button
               className={`segmented-button${mode === 'bearer' ? ' segmented-button-active' : ''}`}
               type="button"
               onClick={() => setDraft((current) => ({ ...current, mode: 'bearer' }))}
             >
-              Bearer token
+              {t('sessionReadiness.bearerToken')}
             </button>
           </div>
 
           {mode === 'mock' ? (
             <div className="form-grid">
               <label className="field-block">
-                <span>User id</span>
+                <span>{t('sessionReadiness.userId')}</span>
                 <input
                   value={draft.mockUserId}
                   onChange={(event) =>
@@ -133,7 +134,7 @@ export function SessionReadinessPage() {
                 />
               </label>
               <label className="field-block">
-                <span>Company ids</span>
+                <span>{t('sessionReadiness.companyIds')}</span>
                 <input
                   value={draft.mockCompanyIds}
                   onChange={(event) =>
@@ -142,7 +143,7 @@ export function SessionReadinessPage() {
                 />
               </label>
               <label className="field-block field-block-full">
-                <span>Role codes</span>
+                <span>{t('sessionReadiness.roleCodes')}</span>
                 <input
                   value={draft.mockRoleCodes}
                   onChange={(event) =>
@@ -153,14 +154,14 @@ export function SessionReadinessPage() {
             </div>
           ) : (
             <label className="field-block">
-              <span>Bearer token</span>
+              <span>{t('sessionReadiness.bearerToken')}</span>
               <textarea
                 className="field-textarea"
                 value={draft.bearerToken}
                 onChange={(event) =>
                   setDraft((current) => ({ ...current, bearerToken: event.target.value }))
                 }
-                placeholder="Paste a JWT access token for a real auth flow"
+                placeholder={t('sessionReadiness.bearerPlaceholder')}
               />
             </label>
           )}
@@ -174,7 +175,7 @@ export function SessionReadinessPage() {
                 setVerificationRequested(false)
               }}
             >
-              Save session
+              {t('sessionReadiness.saveSession')}
             </button>
             <button
               className="control-button"
@@ -186,7 +187,7 @@ export function SessionReadinessPage() {
               }}
               disabled={!isReady}
             >
-              Verify current session
+              {t('sessionReadiness.verifyCurrentSession')}
             </button>
             <button
               className="control-button"
@@ -206,7 +207,7 @@ export function SessionReadinessPage() {
                 setVerificationRequested(false)
               }}
             >
-              Reset to defaults
+              {t('sessionReadiness.resetToDefaults')}
             </button>
           </div>
         </article>
@@ -214,8 +215,8 @@ export function SessionReadinessPage() {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Request preview</div>
-              <h3>What the client will send</h3>
+              <div className="eyebrow">{t('sessionReadiness.requestPreview')}</div>
+              <h3>{t('sessionReadiness.requestPreviewTitle')}</h3>
             </div>
           </div>
 
@@ -228,21 +229,21 @@ export function SessionReadinessPage() {
           <div className="stacked-table">
             <div className="stacked-row">
               <div className="stacked-row-head">
-                <strong>Mock mode</strong>
-                <StatusPill tone={session.mode === 'mock' ? 'accent' : 'neutral'}>Dev</StatusPill>
+                <strong>{t('sessionReadiness.mockMode')}</strong>
+                <StatusPill tone={session.mode === 'mock' ? 'accent' : 'neutral'}>
+                  {t('sessionReadiness.dev')}
+                </StatusPill>
               </div>
-              <p>Uses `x-user-id`, `x-role-codes`, and `x-company-ids` headers. Best for local admin iteration.</p>
+              <p>{t('sessionReadiness.mockModeCopy')}</p>
             </div>
             <div className="stacked-row">
               <div className="stacked-row-head">
-                <strong>Bearer mode</strong>
-                <StatusPill tone={session.mode === 'bearer' ? 'accent' : 'neutral'}>Prod path</StatusPill>
+                <strong>{t('sessionReadiness.bearerMode')}</strong>
+                <StatusPill tone={session.mode === 'bearer' ? 'accent' : 'neutral'}>
+                  {t('sessionReadiness.prodPath')}
+                </StatusPill>
               </div>
-              <p>
-                Sends `Authorization: Bearer ...`. The NestJS backend already has JWT verification
-                support, so the remaining work later is IdP wiring, token acquisition, and role claims mapping.
-                Tokens are now kept in session storage so they clear when the browser session ends.
-              </p>
+              <p>{t('sessionReadiness.bearerModeCopy')}</p>
             </div>
           </div>
         </article>
@@ -251,65 +252,93 @@ export function SessionReadinessPage() {
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Session verification</div>
-            <h3>Protected backend handshake</h3>
+            <div className="eyebrow">{t('sessionReadiness.sessionVerification')}</div>
+            <h3>{t('sessionReadiness.sessionVerificationTitle')}</h3>
           </div>
           {verificationRequested ? (
             <StatusPill tone={sessionQuery.isSuccess ? 'calm' : sessionQuery.isError ? 'danger' : 'warning'}>
-              {sessionQuery.isSuccess ? 'Verified' : sessionQuery.isError ? 'Rejected' : 'Checking'}
+              {sessionQuery.isSuccess
+                ? t('sessionReadiness.verified')
+                : sessionQuery.isError
+                  ? t('sessionReadiness.rejected')
+                  : t('sessionReadiness.checking')}
             </StatusPill>
           ) : (
-            <StatusPill tone="neutral">Idle</StatusPill>
+            <StatusPill tone="neutral">{t('sessionReadiness.idle')}</StatusPill>
           )}
         </div>
 
         {!verificationRequested ? (
-          <EmptyState copy="Save the session and run verification to confirm the current auth mode can reach a protected backend route." />
+          <EmptyState copy={t('sessionReadiness.verificationEmpty')} />
         ) : sessionQuery.isLoading ? (
-          <ScreenState title="Verifying session" copy="Calling /api/auth/session with the currently saved auth mode." />
+          <ScreenState
+            title={t('sessionReadiness.verifyingTitle')}
+            copy={t('sessionReadiness.verifyingCopy')}
+          />
         ) : sessionQuery.isError ? (
           <div className="stacked-table">
             <div className="stacked-row">
               <div className="stacked-row-head">
-                <strong>Verification failed</strong>
-                <StatusPill tone="danger">Rejected</StatusPill>
+                <strong>{t('sessionReadiness.verificationFailed')}</strong>
+                <StatusPill tone="danger">{t('sessionReadiness.rejected')}</StatusPill>
               </div>
-              <p>{sessionQuery.error instanceof Error ? sessionQuery.error.message : 'Unexpected auth verification error'}</p>
+              <p>
+                {sessionQuery.error instanceof Error
+                  ? sessionQuery.error.message
+                  : t('sessionReadiness.unexpectedVerificationError')}
+              </p>
             </div>
           </div>
         ) : sessionQuery.data ? (
           <div className="stacked-table">
             <div className="stacked-row">
               <div className="stacked-row-head">
-                <strong>Backend accepted the session</strong>
+                <strong>{t('sessionReadiness.backendAccepted')}</strong>
                 <StatusPill tone="calm">{sessionQuery.data.authMode}</StatusPill>
               </div>
               <p>
-                User <code>{sessionQuery.data.user.userId}</code> is authenticated with roles{' '}
-                {sessionQuery.data.user.roleCodes.join(', ') || 'none'}.
+                {t('sessionReadiness.backendAcceptedCopy', {
+                  userId: sessionQuery.data.user.userId,
+                  roles: sessionQuery.data.user.roleCodes.join(', ') || t('sessionReadiness.none'),
+                })}
               </p>
             </div>
 
             <div className="key-grid">
-              <KeyValue label="Employee id" value={sessionQuery.data.user.employeeId ?? 'n/a'} />
-              <KeyValue label="Company scopes" value={String(sessionQuery.data.scopeSummary.companyCount)} />
-              <KeyValue label="Region scopes" value={String(sessionQuery.data.scopeSummary.regionCount)} />
-              <KeyValue label="Store scopes" value={String(sessionQuery.data.scopeSummary.storeCount)} />
+              <KeyValue
+                label={t('sessionReadiness.employeeId')}
+                value={sessionQuery.data.user.employeeId ?? t('sessionReadiness.notAvailable')}
+              />
+              <KeyValue
+                label={t('sessionReadiness.companyScopes')}
+                value={String(sessionQuery.data.scopeSummary.companyCount)}
+              />
+              <KeyValue
+                label={t('sessionReadiness.regionScopes')}
+                value={String(sessionQuery.data.scopeSummary.regionCount)}
+              />
+              <KeyValue
+                label={t('sessionReadiness.storeScopes')}
+                value={String(sessionQuery.data.scopeSummary.storeCount)}
+              />
             </div>
 
             <div className="stacked-row">
               <div className="stacked-row-head">
-                <strong>Resolved scope</strong>
-                <StatusPill tone="accent">Claims + assignments</StatusPill>
+                <strong>{t('sessionReadiness.resolvedScope')}</strong>
+                <StatusPill tone="accent">{t('sessionReadiness.claimsAssignments')}</StatusPill>
               </div>
               <p>
-                company ids: {sessionQuery.data.user.scope.companyIds.join(', ') || 'none'}
+                {t('sessionReadiness.companyIdsLabel')}{' '}
+                {sessionQuery.data.user.scope.companyIds.join(', ') || t('sessionReadiness.none')}
               </p>
               <p>
-                region ids: {sessionQuery.data.user.scope.regionIds.join(', ') || 'none'}
+                {t('sessionReadiness.regionIdsLabel')}{' '}
+                {sessionQuery.data.user.scope.regionIds.join(', ') || t('sessionReadiness.none')}
               </p>
               <p>
-                store ids: {sessionQuery.data.user.scope.storeIds.join(', ') || 'none'}
+                {t('sessionReadiness.storeIdsLabel')}{' '}
+                {sessionQuery.data.user.scope.storeIds.join(', ') || t('sessionReadiness.none')}
               </p>
             </div>
           </div>
@@ -325,4 +354,8 @@ function truncateToken(token: string) {
   }
 
   return `${token.slice(0, 10)}...${token.slice(-6)}`
+}
+
+function formatSessionMode(mode: SessionMode, t: TranslateFunction) {
+  return mode === 'bearer' ? t('sessionReadiness.bearerToken') : t('sessionReadiness.mockHeaders')
 }
