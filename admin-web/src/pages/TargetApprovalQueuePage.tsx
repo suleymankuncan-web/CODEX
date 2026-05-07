@@ -132,7 +132,7 @@ export function TargetApprovalQueuePage(input: {
         />
       </section>
 
-      <section className="panel" aria-label="Target reference coverage">
+      <section className="panel" aria-label={t('adminTargets.coverageEyebrow')}>
         <div className="panel-heading">
           <div>
             <div className="eyebrow">{t('adminTargets.coverageEyebrow')}</div>

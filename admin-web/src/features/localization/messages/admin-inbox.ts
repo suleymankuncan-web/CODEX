@@ -27,6 +27,7 @@ export const adminInboxTr = {
   'adminInbox.offboardingNote': 'HR onayı bekleyen personel çıkış talepleri.',
 
   'adminInbox.workforceEyebrow': 'İşgücü ana verisi',
+  'adminInbox.sellerQueueAria': 'Satıcı kodu onay kuyruğu',
   'adminInbox.sellerQueueTitle': 'Satıcı kodu onay kuyruğu',
   'adminInbox.sellerQueueCopy':
     'Franchise kodları manuel kalır. Son FM kodu referans olarak gösterilir, onaylanan kodu HR girer.',
@@ -44,12 +45,15 @@ export const adminInboxTr = {
   'adminInbox.phone': 'Telefon',
   'adminInbox.hireDate': 'İşe giriş',
   'adminInbox.sellerCodeField': 'Satıcı kodu',
+  'adminInbox.sellerCodeInputAria': '{displayName} satıcı kodu',
   'adminInbox.manualControl': 'Manuel kontrol',
   'adminInbox.approveSellerCode': 'Satıcı kodunu onayla',
   'adminInbox.returnNote': 'İade notu',
+  'adminInbox.returnNoteForAria': '{displayName} için iade notu',
   'adminInbox.storeCorrection': 'Mağaza düzeltmesi',
   'adminInbox.returnSellerCode': 'Satıcı kodunu mağazaya iade et',
 
+  'adminInbox.offboardingQueueAria': 'Personel çıkış onay kuyruğu',
   'adminInbox.offboardingQueueTitle': 'Personel çıkış onay kuyruğu',
   'adminInbox.offboardingQueueCopy':
     'Mağaza müdürü talepleri yalnızca HR onayından sonra kapanır. Onay personeli sonlandırır ve aktif atamayı kapatır.',
@@ -106,6 +110,7 @@ export const adminInboxEn: Record<keyof typeof adminInboxTr, string> = {
   'adminInbox.offboardingNote': 'Personnel exit requests waiting for HR approval.',
 
   'adminInbox.workforceEyebrow': 'Workforce master data',
+  'adminInbox.sellerQueueAria': 'Seller code approval queue',
   'adminInbox.sellerQueueTitle': 'Seller code approval queue',
   'adminInbox.sellerQueueCopy':
     'Franchise codes stay manual. The latest FM code is shown as a reference, then HR enters the approved code.',
@@ -123,12 +128,15 @@ export const adminInboxEn: Record<keyof typeof adminInboxTr, string> = {
   'adminInbox.phone': 'Phone',
   'adminInbox.hireDate': 'Hire date',
   'adminInbox.sellerCodeField': 'Seller code',
+  'adminInbox.sellerCodeInputAria': '{displayName} seller code',
   'adminInbox.manualControl': 'Manual control',
   'adminInbox.approveSellerCode': 'Approve seller code',
   'adminInbox.returnNote': 'Return note',
+  'adminInbox.returnNoteForAria': 'Return note for {displayName}',
   'adminInbox.storeCorrection': 'Store correction',
   'adminInbox.returnSellerCode': 'Return seller code request',
 
+  'adminInbox.offboardingQueueAria': 'Offboarding approval queue',
   'adminInbox.offboardingQueueTitle': 'Offboarding approval queue',
   'adminInbox.offboardingQueueCopy':
     'Store manager requests close only after HR approval. Approval terminates the employee and closes the active assignment.',

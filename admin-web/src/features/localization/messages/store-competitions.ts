@@ -30,6 +30,7 @@ export const storeCompetitionsTr = {
   'storeCompetitions.ends': 'Bitiş',
 
   'storeCompetitions.standing': 'Yarışma durumu',
+  'storeCompetitions.readSummaryAria': 'Mağaza yarışma okuma özeti',
   'storeCompetitions.warningCount': '{count} uyarı',
   'storeCompetitions.standingLoadingTitle': 'Sıralama yükleniyor',
   'storeCompetitions.standingLoadingCopy': 'Kapsamlı yarışma detayı yükleniyor.',
@@ -38,9 +39,11 @@ export const storeCompetitionsTr = {
   'storeCompetitions.teamsNote':
     'Bu yarışma için görünür güncel takım sıralama satırları.',
   'storeCompetitions.contributionRows': 'Katkı satırları',
+  'storeCompetitions.scopedContributionsAria': 'Kapsamdaki mağaza yarışma katkıları',
   'storeCompetitions.contributionRowsNote':
     'Mevcut okuma kapsamındaki mağaza katkı satırları.',
   'storeCompetitions.warnings': 'Uyarılar',
+  'storeCompetitions.scopedWarningsAria': 'Kapsamdaki mağaza yarışma uyarıları',
   'storeCompetitions.warningsNote':
     'Bu oturum kapsamına göre filtrelenen veri kalite uyarıları.',
   'storeCompetitions.teamStanding': 'Takım sıralaması',
@@ -84,6 +87,7 @@ export const storeCompetitionsEn: Record<keyof typeof storeCompetitionsTr, strin
   'storeCompetitions.ends': 'Ends',
 
   'storeCompetitions.standing': 'Standing',
+  'storeCompetitions.readSummaryAria': 'Store competition read summary',
   'storeCompetitions.warningCount': '{count} warnings',
   'storeCompetitions.standingLoadingTitle': 'Standing is loading',
   'storeCompetitions.standingLoadingCopy': 'Scoped competition detail is loading.',
@@ -92,9 +96,11 @@ export const storeCompetitionsEn: Record<keyof typeof storeCompetitionsTr, strin
   'storeCompetitions.teamsNote':
     'Current team standing rows visible for this competition.',
   'storeCompetitions.contributionRows': 'Contribution rows',
+  'storeCompetitions.scopedContributionsAria': 'Scoped store competition contributions',
   'storeCompetitions.contributionRowsNote':
     'Store contribution rows inside the current read scope.',
   'storeCompetitions.warnings': 'Warnings',
+  'storeCompetitions.scopedWarningsAria': 'Scoped store competition warnings',
   'storeCompetitions.warningsNote':
     'Data quality warnings filtered by this session scope.',
   'storeCompetitions.teamStanding': 'Team standing',

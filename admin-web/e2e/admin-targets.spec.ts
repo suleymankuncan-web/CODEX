@@ -20,7 +20,7 @@ test.beforeEach(async ({ page }) => {
 test('admin target page shows approved personnel target coverage', async ({ page }) => {
   await page.goto('/admin/targets')
 
-  const coveragePanel = page.getByLabel('Target reference coverage')
+  const coveragePanel = page.getByLabel('Hedef referans kapsamı')
   await expect(coveragePanel.getByRole('heading', { name: 'Onaylı personel hedef hazırlığı' })).toBeVisible()
   await expect(coveragePanel.getByText('Kapsam oranı')).toBeVisible()
   await expect(coveragePanel.getByText('40%')).toBeVisible()

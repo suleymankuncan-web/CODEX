@@ -587,7 +587,7 @@ export function IntegrationDashboardPage() {
                   <label className="field-block compact-field">
                     <span>{t('adminIntegrations.type')}</span>
                     <select
-                      aria-label={`${store.storeName} store type`}
+                      aria-label={t('adminIntegrations.storeTypeAria', { storeName: store.storeName })}
                       value={normalizeStoreType(store.storeType)}
                       disabled={updateStoreMasterMutation.isPending}
                       onChange={(event) =>
@@ -606,7 +606,7 @@ export function IntegrationDashboardPage() {
                   <label className="field-block compact-field">
                     <span>{t('adminIntegrations.region')}</span>
                     <select
-                      aria-label={`${store.storeName} region`}
+                      aria-label={t('adminIntegrations.storeRegionAria', { storeName: store.storeName })}
                       value={store.regionId ?? ''}
                       disabled={updateStoreMasterMutation.isPending || regionOptions.length === 0}
                       onChange={(event) =>
@@ -626,7 +626,7 @@ export function IntegrationDashboardPage() {
                   <label className="field-block compact-field">
                     <span>{t('adminIntegrations.status')}</span>
                     <select
-                      aria-label={`${store.storeName} status`}
+                      aria-label={t('adminIntegrations.storeStatusAria', { storeName: store.storeName })}
                       value={normalizeStoreStatus(store.status)}
                       disabled={updateStoreMasterMutation.isPending}
                       onChange={(event) =>
@@ -644,7 +644,9 @@ export function IntegrationDashboardPage() {
                   </label>
                   <label className="scope-toggle">
                     <input
-                      aria-label={`${store.storeName} KPI import enabled`}
+                      aria-label={t('adminIntegrations.storeKpiImportEnabledAria', {
+                        storeName: store.storeName,
+                      })}
                       type="checkbox"
                       checked={store.kpiImportEnabled}
                       disabled={updateStoreMasterMutation.isPending}
