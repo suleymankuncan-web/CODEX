@@ -17,9 +17,38 @@ import {
   getSnapshotRunLineage,
   rerunSnapshotRun,
 } from '../features/snapshots/api'
-import { formatDate, formatDateTime, formatState, getErrorMessage, mapHealthTone } from '../lib/format'
+import type { TranslateFunction } from '../features/localization/dictionary'
+import { useLocalization } from '../features/localization/useLocalization'
+import { formatDate, formatDateTime, getErrorMessage, mapHealthTone } from '../lib/format'
+
+function formatSnapshotType(input: string, t: TranslateFunction) {
+  if (input === 'daily') return t('adminSnapshots.type.daily')
+  if (input === 'weekly') return t('adminSnapshots.type.weekly')
+  if (input === 'monthly') return t('adminSnapshots.type.monthly')
+  if (input === 'payroll') return t('adminSnapshots.type.payroll')
+  if (input === 'compliance') return t('adminSnapshots.type.compliance')
+  return input.replaceAll('_', ' ')
+}
+
+function formatSnapshotState(input: string, t: TranslateFunction) {
+  if (input === 'queued') return t('adminSnapshots.status.queued')
+  if (input === 'running') return t('adminSnapshots.status.running')
+  if (input === 'completed') return t('adminSnapshots.status.completed')
+  if (input === 'failed') return t('adminSnapshots.status.failed')
+  if (input === 'healthy') return t('adminSnapshots.health.healthy')
+  if (input === 'in_progress') return t('adminSnapshots.health.inProgress')
+  if (input === 'retry_ready') return t('adminSnapshots.health.retryReady')
+  if (input === 'needs_action') return t('adminSnapshots.health.needsAction')
+  if (input === 'stuck') return t('adminSnapshots.health.stuck')
+  return input.replaceAll('_', ' ')
+}
+
+function formatCheckStatus(input: 'pass' | 'fail', t: TranslateFunction) {
+  return input === 'pass' ? t('adminSnapshots.check.pass') : t('adminSnapshots.check.fail')
+}
 
 export function SnapshotRunDetailPage() {
+  const { locale, t } = useLocalization()
   const params = useParams()
   const snapshotRunId = params.snapshotRunId ?? ''
   const [feedback, setFeedback] = useState<string | null>(null)
@@ -61,15 +90,15 @@ export function SnapshotRunDetailPage() {
   })
 
   if (!snapshotRunId) {
-    return <ScreenState title="Snapshot run id missing" copy="Open this screen from the snapshot queue or overview." />
+    return <ScreenState title={t('adminSnapshots.detailMissingTitle')} copy={t('adminSnapshots.detailMissingCopy')} />
   }
 
   if (detailQuery.isLoading) {
-    return <ScreenState title="Loading snapshot run" copy="Pulling cards, rerun governance, lineage, and audit context." />
+    return <ScreenState title={t('adminSnapshots.detailLoadingTitle')} copy={t('adminSnapshots.detailLoadingCopy')} />
   }
 
   if (detailQuery.isError || !detailQuery.data) {
-    return <ScreenState title="Snapshot run unavailable" copy={getErrorMessage(detailQuery.error)} tone="error" />
+    return <ScreenState title={t('adminSnapshots.detailUnavailableTitle')} copy={getErrorMessage(detailQuery.error)} tone="error" />
   }
 
   const detail = detailQuery.data
@@ -86,27 +115,32 @@ export function SnapshotRunDetailPage() {
     <section className="page-stack">
       <Link className="back-link" to="/admin/snapshots">
         <ArrowLeft size={16} />
-        Back to snapshot operations
+        {t('adminSnapshots.backToOperations')}
       </Link>
 
       <section className="hero-panel hero-panel-detail">
         <div>
-          <div className="eyebrow">Snapshot Run Detail</div>
-          <h2 className="hero-title">{detail.snapshotRun.snapshotType} snapshot run</h2>
+          <div className="eyebrow">{t('adminSnapshots.detailEyebrow')}</div>
+          <h2 className="hero-title">
+            {t('adminSnapshots.detailTitle', { type: formatSnapshotType(detail.snapshotRun.snapshotType, t) })}
+          </h2>
           <p className="hero-copy">
-            Run <code>{detail.snapshotRun.snapshotRunId}</code> with health state{' '}
+            {t('adminSnapshots.detailCopy', {
+              runId: detail.snapshotRun.snapshotRunId,
+              state: formatSnapshotState(detail.snapshotRun.healthState, t),
+            })}{' '}
             <span className={`inline-state inline-state-${mapHealthTone(detail.snapshotRun.healthState)}`}>
-              {formatState(detail.snapshotRun.healthState)}
+              {formatSnapshotState(detail.snapshotRun.healthState, t)}
             </span>
           </p>
         </div>
         <div className="hero-metrics">
-          <MetricAccent label="Total report rows" value={String(totalRows)} />
-          <MetricAccent label="Can rerun" value={detail.canRerun ? 'Yes' : 'No'} />
-          <MetricAccent label="Rerun allowed" value={detail.rerunAllowed ? 'Yes' : 'No'} />
+          <MetricAccent label={t('adminSnapshots.totalReportRows')} value={String(totalRows)} />
+          <MetricAccent label={t('adminSnapshots.canRerun')} value={detail.canRerun ? t('adminSnapshots.yes') : t('adminSnapshots.no')} />
+          <MetricAccent label={t('adminSnapshots.rerunAllowed')} value={detail.rerunAllowed ? t('adminSnapshots.yes') : t('adminSnapshots.no')} />
           <MetricAccent
-            label="KPI config"
-            value={formatSnapshotKpiConfigVersion(detail.snapshotRun.kpiConfigVersion)}
+            label={t('adminSnapshots.kpiConfig')}
+            value={formatSnapshotKpiConfigVersion(detail.snapshotRun.kpiConfigVersion, t)}
           />
         </div>
       </section>
@@ -121,19 +155,19 @@ export function SnapshotRunDetailPage() {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Execution state</div>
-              <h3>Run summary</h3>
+              <div className="eyebrow">{t('adminSnapshots.executionStateEyebrow')}</div>
+              <h3>{t('adminSnapshots.runSummary')}</h3>
             </div>
           </div>
           <div className="detail-list">
             {[
-              ['Run status', detail.snapshotRun.runStatus],
-              ['Health state', detail.snapshotRun.healthState],
-              ['Period', `${formatDate(detail.snapshotRun.periodStart)} -> ${formatDate(detail.snapshotRun.periodEnd)}`],
-              ['KPI config version', formatSnapshotKpiConfigVersion(detail.snapshotRun.kpiConfigVersion)],
-              ['Generated at', formatDateTime(detail.snapshotRun.generatedAt)],
-              ['Started at', detail.snapshotRun.startedAt ? formatDateTime(detail.snapshotRun.startedAt) : 'Not started'],
-              ['Finished at', detail.snapshotRun.finishedAt ? formatDateTime(detail.snapshotRun.finishedAt) : 'Not finished'],
+              [t('adminSnapshots.runStatus'), formatSnapshotState(detail.snapshotRun.runStatus, t)],
+              [t('adminSnapshots.healthState'), formatSnapshotState(detail.snapshotRun.healthState, t)],
+              [t('adminSnapshots.period'), `${formatDate(detail.snapshotRun.periodStart, locale)} - ${formatDate(detail.snapshotRun.periodEnd, locale)}`],
+              [t('adminSnapshots.kpiConfigVersion'), formatSnapshotKpiConfigVersion(detail.snapshotRun.kpiConfigVersion, t)],
+              [t('adminSnapshots.generatedAt'), formatDateTime(detail.snapshotRun.generatedAt, locale)],
+              [t('adminSnapshots.startedAt'), detail.snapshotRun.startedAt ? formatDateTime(detail.snapshotRun.startedAt, locale) : t('adminSnapshots.notStarted')],
+              [t('adminSnapshots.finishedAt'), detail.snapshotRun.finishedAt ? formatDateTime(detail.snapshotRun.finishedAt, locale) : t('adminSnapshots.notFinished')],
             ].map(([label, value]) => (
               <div className="detail-row" key={label}>
                 <span>{label}</span>
@@ -146,8 +180,8 @@ export function SnapshotRunDetailPage() {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Rerun governance</div>
-              <h3>Dependencies and checks</h3>
+              <div className="eyebrow">{t('adminSnapshots.rerunGovernanceEyebrow')}</div>
+              <h3>{t('adminSnapshots.dependenciesTitle')}</h3>
             </div>
             <div className="toolbar-cluster">
               <button
@@ -156,7 +190,7 @@ export function SnapshotRunDetailPage() {
                 onClick={() => rerunMutation.mutate(snapshotRunId)}
                 disabled={!detail.canRerun || rerunMutation.isPending}
               >
-                {rerunMutation.isPending ? 'Rerunning...' : 'Rerun snapshot'}
+                {rerunMutation.isPending ? t('adminSnapshots.rerunning') : t('adminSnapshots.rerunSnapshot')}
               </button>
               <button
                 className="control-button"
@@ -174,7 +208,7 @@ export function SnapshotRunDetailPage() {
                 }
                 disabled={!dependencies?.checks.length}
               >
-                Export checks
+                {t('adminSnapshots.exportChecks')}
               </button>
             </div>
           </div>
@@ -185,7 +219,7 @@ export function SnapshotRunDetailPage() {
                   <div className="stacked-row-head">
                     <strong>{check.code}</strong>
                     <StatusPill tone={check.status === 'pass' ? 'calm' : 'danger'}>
-                      {check.status}
+                      {formatCheckStatus(check.status, t)}
                     </StatusPill>
                   </div>
                   <p>{check.message}</p>
@@ -193,13 +227,13 @@ export function SnapshotRunDetailPage() {
               ))}
               {dependencies.rerunBlockedReason ? (
                 <div className="empty-card">
-                  <strong>Rerun blocked</strong>
+                  <strong>{t('adminSnapshots.rerunBlocked')}</strong>
                   <p>{dependencies.rerunBlockedReason}</p>
                 </div>
               ) : null}
             </div>
           ) : (
-            <EmptyState copy="Dependency checks are still loading." />
+            <EmptyState copy={t('adminSnapshots.dependencyLoading')} />
           )}
         </article>
       </section>
@@ -208,56 +242,56 @@ export function SnapshotRunDetailPage() {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Output volume</div>
-              <h3>Materialized report slices</h3>
+              <div className="eyebrow">{t('adminSnapshots.outputVolumeEyebrow')}</div>
+              <h3>{t('adminSnapshots.materializedSlices')}</h3>
             </div>
           </div>
-          <StatusBar label="Workforce rows" value={detail.cards.workforceRows} total={Math.max(totalRows, 1)} tone="calm" />
-          <StatusBar label="KPI rows" value={detail.cards.kpiRows} total={Math.max(totalRows, 1)} tone="accent" />
-          <StatusBar label="Checklist rows" value={detail.cards.checklistRows} total={Math.max(totalRows, 1)} tone="warning" />
-          <StatusBar label="Turnover rows" value={detail.cards.turnoverRows} total={Math.max(totalRows, 1)} tone="danger" />
+          <StatusBar label={t('adminSnapshots.workforceRows')} value={detail.cards.workforceRows} total={Math.max(totalRows, 1)} tone="calm" />
+          <StatusBar label={t('adminSnapshots.kpiRows')} value={detail.cards.kpiRows} total={Math.max(totalRows, 1)} tone="accent" />
+          <StatusBar label={t('adminSnapshots.checklistRows')} value={detail.cards.checklistRows} total={Math.max(totalRows, 1)} tone="warning" />
+          <StatusBar label={t('adminSnapshots.turnoverRows')} value={detail.cards.turnoverRows} total={Math.max(totalRows, 1)} tone="danger" />
         </article>
 
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Lineage</div>
-              <h3>Parent and children</h3>
+              <div className="eyebrow">{t('adminSnapshots.lineageEyebrow')}</div>
+              <h3>{t('adminSnapshots.lineageTitle')}</h3>
             </div>
           </div>
           {lineage ? (
             <div className="stacked-table">
               <div className="stacked-row">
                 <div className="stacked-row-head">
-                  <strong>Parent</strong>
+                  <strong>{t('adminSnapshots.parent')}</strong>
                   <GitBranch size={16} />
                 </div>
                 <p>
                   {lineage.parent
-                    ? `${lineage.parent.snapshotType} · ${lineage.parent.runStatus} · ${lineage.parent.snapshotRunId}`
-                    : 'No parent run'}
+                    ? `${formatSnapshotType(lineage.parent.snapshotType, t)} · ${formatSnapshotState(lineage.parent.runStatus, t)} · ${lineage.parent.snapshotRunId}`
+                    : t('adminSnapshots.noParentRun')}
                 </p>
               </div>
               <div className="stacked-row">
                 <div className="stacked-row-head">
-                  <strong>Children</strong>
+                  <strong>{t('adminSnapshots.children')}</strong>
                   <Sparkles size={16} />
                 </div>
                 {lineage.children.length ? (
                   <div className="queue-meta">
                     {lineage.children.map((child) => (
                       <span key={child.snapshotRunId}>
-                        {child.snapshotType} · {child.runStatus} · {child.snapshotRunId}
+                        {formatSnapshotType(child.snapshotType, t)} · {formatSnapshotState(child.runStatus, t)} · {child.snapshotRunId}
                       </span>
                     ))}
                   </div>
                 ) : (
-                  <p>No rerun children yet.</p>
+                  <p>{t('adminSnapshots.noRerunChildren')}</p>
                 )}
               </div>
             </div>
           ) : (
-            <EmptyState copy="Lineage data is still loading." />
+            <EmptyState copy={t('adminSnapshots.dependencyLoading')} />
           )}
         </article>
       </section>
@@ -266,25 +300,25 @@ export function SnapshotRunDetailPage() {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Failure posture</div>
-              <h3>Reason and rerun state</h3>
+              <div className="eyebrow">{t('adminSnapshots.failurePostureEyebrow')}</div>
+              <h3>{t('adminSnapshots.failurePostureTitle')}</h3>
             </div>
           </div>
           <div className="stacked-table">
             <div className="stacked-row">
               <div className="stacked-row-head">
-                <strong>Failure reason</strong>
+                <strong>{t('adminSnapshots.failureReason')}</strong>
                 <Clock3 size={16} />
               </div>
-              <p>{detail.failureReason ?? 'No failure reason recorded'}</p>
+              <p>{detail.failureReason ?? t('adminSnapshots.noFailureReason')}</p>
             </div>
             <div className="stacked-row">
               <div className="stacked-row-head">
-                <strong>Latest rerun</strong>
+                <strong>{t('adminSnapshots.latestRerunTitle')}</strong>
                 <RefreshCcw size={16} />
               </div>
-              <p>{detail.latestRerunSnapshotRunId ?? 'No rerun has been created yet'}</p>
-              <span className="queue-subtitle">rerun count {detail.rerunCount}</span>
+              <p>{detail.latestRerunSnapshotRunId ?? t('adminSnapshots.noRerunCreated')}</p>
+              <span className="queue-subtitle">{t('adminSnapshots.rerunCount', { count: detail.rerunCount })}</span>
             </div>
           </div>
         </article>
@@ -292,8 +326,8 @@ export function SnapshotRunDetailPage() {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Audit timeline</div>
-              <h3>Operator-visible trace</h3>
+              <div className="eyebrow">{t('adminSnapshots.auditTimelineEyebrow')}</div>
+              <h3>{t('adminSnapshots.auditTimelineTitle')}</h3>
             </div>
             <button
               className="control-button"
@@ -313,11 +347,11 @@ export function SnapshotRunDetailPage() {
               }
               disabled={auditItems.length === 0}
             >
-              Export audit
+              {t('adminSnapshots.exportAudit')}
             </button>
           </div>
           {auditItems.length === 0 ? (
-            <EmptyState copy="No audit entries returned yet." />
+            <EmptyState copy={t('adminSnapshots.noAuditEntries')} />
           ) : (
             <div className="timeline">
               {auditItems.map((event) => (
@@ -325,8 +359,11 @@ export function SnapshotRunDetailPage() {
                   <div className="timeline-dot" />
                   <div>
                     <strong>{event.eventType}</strong>
-                    <p>{formatDateTime(event.occurredAt)}</p>
-                    <span>actor {event.actorUserId ?? 'system'} · correlation {event.correlationId ?? 'n/a'}</span>
+                    <p>{formatDateTime(event.occurredAt, locale)}</p>
+                    <span>
+                      {t('adminSnapshots.actor', { actor: event.actorUserId ?? t('adminSnapshots.system') })} ·{' '}
+                      {t('adminSnapshots.correlation', { correlation: event.correlationId ?? t('adminSnapshots.notAvailable') })}
+                    </span>
                   </div>
                 </div>
               ))}
@@ -341,10 +378,10 @@ export function SnapshotRunDetailPage() {
 function formatSnapshotKpiConfigVersion(input: {
   versionNo: number | null
   state: 'versioned' | 'pre_governance'
-} | null | undefined) {
+} | null | undefined, t: TranslateFunction) {
   if (input?.state === 'versioned' && input.versionNo) {
     return `v${input.versionNo}`
   }
 
-  return 'Pre-governance snapshot'
+  return t('adminSnapshots.preGovernanceSnapshot')
 }

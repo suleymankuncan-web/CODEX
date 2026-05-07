@@ -13,6 +13,7 @@ const localizationFiles = [
   'src/features/localization/messages/admin-kpi-config.ts',
   'src/features/localization/messages/admin-master-data.ts',
   'src/features/localization/messages/admin-shell.ts',
+  'src/features/localization/messages/admin-snapshots.ts',
   'src/features/localization/messages/admin-targets.ts',
   'src/features/localization/messages/common.ts',
   'src/features/localization/messages/competition.ts',
