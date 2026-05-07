@@ -1,6 +1,7 @@
 import { adminAuditEn, adminAuditTr } from './admin-audit'
 import { adminChecklistsEn, adminChecklistsTr } from './admin-checklists'
 import { authAuditDetailsEn, authAuditDetailsTr } from './auth-audit-details'
+import { authAdminEn, authAdminTr } from './auth-admin'
 import { authCatalogEn, authCatalogTr } from './auth-catalog'
 import { authFlowEn, authFlowTr } from './auth-flow'
 import { adminFeedEn, adminFeedTr } from './admin-feed'
@@ -35,6 +36,7 @@ const tr = {
   ...adminAuditTr,
   ...adminChecklistsTr,
   ...authAuditDetailsTr,
+  ...authAdminTr,
   ...authCatalogTr,
   ...authFlowTr,
   ...adminFeedTr,
@@ -70,6 +72,7 @@ const en: Record<keyof typeof tr, string> = {
   ...adminAuditEn,
   ...adminChecklistsEn,
   ...authAuditDetailsEn,
+  ...authAdminEn,
   ...authCatalogEn,
   ...authFlowEn,
   ...adminFeedEn,

@@ -28,6 +28,7 @@ import {
   type AuthLookupUser,
 } from '../features/auth/api'
 import { PilotUserBindingPanel } from '../features/auth/PilotUserBindingPanel'
+import { useLocalization } from '../features/localization/useLocalization'
 import { formatDateTime, getErrorMessage } from '../lib/format'
 
 type RoleScopeType = 'company' | 'region' | 'store'
@@ -124,6 +125,7 @@ export function AuthDashboardPage() {
   const assignmentStoreSearchEnabled = assignmentStoreSearchText.length >= 2
   const actionStoreUserSearchEnabled = actionStoreUserSearchText.length >= 2
   const actionStoreSearchEnabled = actionStoreSearchText.length >= 2
+  const { locale, t } = useLocalization()
 
   const lookupsQuery = useQuery({
     queryKey: ['auth-lookups'],
@@ -261,7 +263,12 @@ export function AuthDashboardPage() {
     onSuccess: async (response) => {
       const closure = response.data.accessClosure
       setFeedback(
-        `${response.command.message}. Closed ${closure.closedRoleAssignments} role grants, ${closure.closedActionStoreAssignments} action store grants, and ${closure.revokedMobileSessions} mobile sessions.`,
+        t('authAdmin.userClosureFeedback', {
+          message: response.command.message,
+          roleCount: closure.closedRoleAssignments,
+          actionStoreCount: closure.closedActionStoreAssignments,
+          sessionCount: closure.revokedMobileSessions,
+        }),
       )
       setErrorFeedback(null)
       await refreshAuthData()
@@ -398,27 +405,27 @@ export function AuthDashboardPage() {
     assignmentsQuery.isLoading ||
     actionStoreAssignmentsQuery.isLoading
   ) {
-    return <ScreenState title="Loading auth admin" copy="Pulling user accounts, assignments, and lookup catalogs." />
+    return <ScreenState title={t('authAdmin.loadingTitle')} copy={t('authAdmin.loadingCopy')} />
   }
 
   if (lookupsQuery.isError) {
-    return <ScreenState title="Auth lookups unavailable" copy={getErrorMessage(lookupsQuery.error)} tone="error" />
+    return <ScreenState title={t('authAdmin.lookupsUnavailable')} copy={getErrorMessage(lookupsQuery.error)} tone="error" />
   }
 
   if (usersQuery.isError) {
-    return <ScreenState title="User accounts unavailable" copy={getErrorMessage(usersQuery.error)} tone="error" />
+    return <ScreenState title={t('authAdmin.usersUnavailable')} copy={getErrorMessage(usersQuery.error)} tone="error" />
   }
 
   if (assignmentsQuery.isError) {
-    return <ScreenState title="Role assignments unavailable" copy={getErrorMessage(assignmentsQuery.error)} tone="error" />
+    return <ScreenState title={t('authAdmin.assignmentsUnavailable')} copy={getErrorMessage(assignmentsQuery.error)} tone="error" />
   }
 
   if (actionStoreAssignmentsQuery.isError) {
-    return <ScreenState title="Action store assignments unavailable" copy={getErrorMessage(actionStoreAssignmentsQuery.error)} tone="error" />
+    return <ScreenState title={t('authAdmin.actionStoresUnavailable')} copy={getErrorMessage(actionStoreAssignmentsQuery.error)} tone="error" />
   }
 
   if (!lookups) {
-    return <ScreenState title="Auth lookups unavailable" copy="No auth lookup payload was returned." tone="error" />
+    return <ScreenState title={t('authAdmin.lookupsUnavailable')} copy={t('authAdmin.noLookupPayload')} tone="error" />
   }
 
   const activeUsers = users.filter((user) => user.isActive).length
@@ -524,26 +531,23 @@ export function AuthDashboardPage() {
     <section className="page-stack">
       <section className="hero-panel">
         <div>
-          <div className="eyebrow">Auth Admin</div>
-          <h2 className="hero-title">Users, roles, and scope posture in one operator view.</h2>
-          <p className="hero-copy">
-            This surface is about control hygiene: who exists, who is active, which scoped roles shape
-            access, and how quickly an admin can correct drift.
-          </p>
+          <div className="eyebrow">{t('authAdmin.heroEyebrow')}</div>
+          <h2 className="hero-title">{t('authAdmin.heroTitle')}</h2>
+          <p className="hero-copy">{t('authAdmin.heroCopy')}</p>
         </div>
         <div className="hero-metrics">
-          <MetricAccent label="Users" value={String(lookups.meta.totalUsers)} />
-          <MetricAccent label="Roles" value={String(lookups.meta.totalRoles)} />
-          <MetricAccent label="Permissions" value={String(lookups.meta.totalPermissions)} />
+          <MetricAccent label={t('authAdmin.users')} value={String(lookups.meta.totalUsers)} />
+          <MetricAccent label={t('authAdmin.roles')} value={String(lookups.meta.totalRoles)} />
+          <MetricAccent label={t('authAdmin.permissions')} value={String(lookups.meta.totalPermissions)} />
         </div>
       </section>
 
       <section className="metric-grid">
-        <MetricCard title="Active users" value={activeUsers} note={`${users.length - activeUsers} inactive accounts`} icon={<Users size={18} />} tone="calm" />
-        <MetricCard title="Assignments" value={assignments.length} note={`${activeAssignments} active role grants`} icon={<UserCog size={18} />} tone="accent" />
-        <MetricCard title="Action stores" value={actionStoreAssignments.length} note={`${activeActionStores} active store action grants`} icon={<MapPin size={18} />} tone="calm" />
-        <MetricCard title="Role catalog" value={lookups.meta.totalRoles} note="Distinct roles available to admins" icon={<ShieldCheck size={18} />} tone="warning" />
-        <MetricCard title="Permission catalog" value={lookups.meta.totalPermissions} note="Action-level capabilities defined in ops" icon={<KeyRound size={18} />} tone="danger" />
+        <MetricCard title={t('authAdmin.activeUsers')} value={activeUsers} note={t('authAdmin.inactiveAccountsNote', { count: users.length - activeUsers })} icon={<Users size={18} />} tone="calm" />
+        <MetricCard title={t('authAdmin.assignments')} value={assignments.length} note={t('authAdmin.activeRoleGrantsNote', { count: activeAssignments })} icon={<UserCog size={18} />} tone="accent" />
+        <MetricCard title={t('authAdmin.actionStores')} value={actionStoreAssignments.length} note={t('authAdmin.activeStoreActionGrantsNote', { count: activeActionStores })} icon={<MapPin size={18} />} tone="calm" />
+        <MetricCard title={t('authAdmin.roleCatalog')} value={lookups.meta.totalRoles} note={t('authAdmin.roleCatalogNote')} icon={<ShieldCheck size={18} />} tone="warning" />
+        <MetricCard title={t('authAdmin.permissionCatalog')} value={lookups.meta.totalPermissions} note={t('authAdmin.permissionCatalogNote')} icon={<KeyRound size={18} />} tone="danger" />
       </section>
 
       {feedback ? (
@@ -564,24 +568,24 @@ export function AuthDashboardPage() {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Create user</div>
-              <h3>New account</h3>
+              <div className="eyebrow">{t('authAdmin.createUserEyebrow')}</div>
+              <h3>{t('authAdmin.newAccount')}</h3>
             </div>
             <Link className="back-link" to="/admin/auth/catalog">
-              <span>Open catalog</span>
+              <span>{t('authAdmin.openCatalog')}</span>
             </Link>
           </div>
           <div className="form-grid">
             <label className="field-block">
-              <span>Username</span>
+              <span>{t('authAdmin.username')}</span>
               <input value={userForm.username} onChange={(event) => updateUserForm('username', event.target.value)} placeholder="new.admin" />
             </label>
             <label className="field-block">
-              <span>Email</span>
+              <span>{t('authAdmin.email')}</span>
               <input value={userForm.email} onChange={(event) => updateUserForm('email', event.target.value)} placeholder="new.admin@example.com" />
             </label>
             <label className="field-block">
-              <span>Auth provider</span>
+              <span>{t('authAdmin.authProvider')}</span>
               <select value={userForm.authProvider} onChange={(event) => updateUserForm('authProvider', event.target.value as AuthProvider)}>
                 {providerOptions.map((provider) => (
                   <option key={provider} value={provider}>
@@ -591,8 +595,8 @@ export function AuthDashboardPage() {
               </select>
             </label>
             <label className="field-block">
-              <span>Employee id</span>
-              <input value={userForm.employeeId} onChange={(event) => updateUserForm('employeeId', event.target.value)} placeholder="optional employee uuid" />
+              <span>{t('authAdmin.employeeId')}</span>
+              <input value={userForm.employeeId} onChange={(event) => updateUserForm('employeeId', event.target.value)} placeholder={t('authAdmin.optionalEmployeeUuid')} />
             </label>
           </div>
           <div className="action-cluster">
@@ -602,7 +606,7 @@ export function AuthDashboardPage() {
               onClick={submitUserForm}
               disabled={mutationBusy || !userForm.username.trim() || !userForm.email.trim()}
             >
-              {createUserMutation.isPending ? 'Creating...' : 'Create user'}
+              {createUserMutation.isPending ? t('authAdmin.creating') : t('authAdmin.createUser')}
             </button>
           </div>
         </article>
@@ -610,28 +614,28 @@ export function AuthDashboardPage() {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Create assignment</div>
-              <h3>Scoped role grant</h3>
+              <div className="eyebrow">{t('authAdmin.createAssignmentEyebrow')}</div>
+              <h3>{t('authAdmin.scopedRoleGrant')}</h3>
             </div>
           </div>
           <div className="form-grid">
             <label className="field-block">
-              <span>Search users for role grant</span>
+              <span>{t('authAdmin.searchUsersForRoleGrant')}</span>
               <input
-                aria-label="Search users for role grant"
+                aria-label={t('authAdmin.searchUsersForRoleGrant')}
                 value={assignmentUserSearch}
                 onChange={(event) => setAssignmentUserSearch(event.target.value)}
-                placeholder="Type 2+ chars: username, email, provider subject"
+                placeholder={t('authAdmin.userSearchPlaceholder')}
               />
             </label>
             <label className="field-block">
-              <span>Role assignment user</span>
+              <span>{t('authAdmin.roleAssignmentUser')}</span>
               <select
-                aria-label="Role assignment user"
+                aria-label={t('authAdmin.roleAssignmentUser')}
                 value={assignmentForm.userId}
                 onChange={(event) => selectAssignmentUser(event.target.value)}
               >
-                <option value="">Select user</option>
+                <option value="">{t('authAdmin.selectUser')}</option>
                 {assignmentUserOptions.map((user) => (
                   <option key={user.userId} value={user.userId}>
                     {user.username} - {user.email}
@@ -640,13 +644,13 @@ export function AuthDashboardPage() {
               </select>
             </label>
             <label className="field-block">
-              <span>Role assignment role</span>
+              <span>{t('authAdmin.roleAssignmentRole')}</span>
               <select
-                aria-label="Role assignment role"
+                aria-label={t('authAdmin.roleAssignmentRole')}
                 value={assignmentForm.roleCode}
                 onChange={(event) => updateAssignmentForm('roleCode', event.target.value)}
               >
-                <option value="">Select role</option>
+                <option value="">{t('authAdmin.selectRole')}</option>
                 {lookups.roles.map((role) => (
                   <option key={role.roleId} value={role.roleCode}>
                     {role.roleCode} - {role.scopeType}
@@ -655,9 +659,9 @@ export function AuthDashboardPage() {
               </select>
             </label>
             <label className="field-block">
-              <span>Role assignment scope type</span>
+              <span>{t('authAdmin.roleAssignmentScopeType')}</span>
               <select
-                aria-label="Role assignment scope type"
+                aria-label={t('authAdmin.roleAssignmentScopeType')}
                 value={assignmentForm.scopeType}
                 onChange={(event) => {
                   const scopeType = event.target.value as RoleScopeType
@@ -681,34 +685,34 @@ export function AuthDashboardPage() {
               </select>
             </label>
             <label className="field-block">
-              <span>Company id</span>
-              <input value={assignmentForm.companyId} onChange={(event) => updateAssignmentForm('companyId', event.target.value)} placeholder="required for every scope" />
+              <span>{t('authAdmin.companyId')}</span>
+              <input value={assignmentForm.companyId} onChange={(event) => updateAssignmentForm('companyId', event.target.value)} placeholder={t('authAdmin.companyIdPlaceholder')} />
             </label>
             {assignmentForm.scopeType !== 'company' ? (
               <label className="field-block">
-                <span>Region id</span>
-                <input value={assignmentForm.regionId} onChange={(event) => updateAssignmentForm('regionId', event.target.value)} placeholder="required for region/store scope" />
+                <span>{t('authAdmin.regionId')}</span>
+                <input value={assignmentForm.regionId} onChange={(event) => updateAssignmentForm('regionId', event.target.value)} placeholder={t('authAdmin.regionIdPlaceholder')} />
               </label>
             ) : null}
             {assignmentForm.scopeType === 'store' ? (
               <>
                 <label className="field-block">
-                  <span>Search stores for role grant</span>
+                  <span>{t('authAdmin.searchStoresForRoleGrant')}</span>
                   <input
-                    aria-label="Search stores for role grant"
+                    aria-label={t('authAdmin.searchStoresForRoleGrant')}
                     value={assignmentStoreSearch}
                     onChange={(event) => setAssignmentStoreSearch(event.target.value)}
-                    placeholder="Type 2+ chars: store code, name, region"
+                    placeholder={t('authAdmin.storeSearchPlaceholder')}
                   />
                 </label>
                 <label className="field-block">
-                  <span>Role assignment store</span>
+                  <span>{t('authAdmin.roleAssignmentStore')}</span>
                   <select
-                    aria-label="Role assignment store"
+                    aria-label={t('authAdmin.roleAssignmentStore')}
                     value={assignmentForm.storeId}
                     onChange={(event) => selectAssignmentStore(event.target.value)}
                   >
-                    <option value="">Select store</option>
+                    <option value="">{t('authAdmin.selectStore')}</option>
                     {assignmentStoreOptions.map((store) => (
                       <option key={store.storeId} value={store.storeId}>
                         {store.storeCode} - {store.storeName} - {store.regionName}
@@ -719,11 +723,11 @@ export function AuthDashboardPage() {
               </>
             ) : null}
             <label className="field-block">
-              <span>Effective from</span>
+              <span>{t('authAdmin.effectiveFrom')}</span>
               <input type="date" value={assignmentForm.effectiveFrom} onChange={(event) => updateAssignmentForm('effectiveFrom', event.target.value)} />
             </label>
             <label className="field-block">
-              <span>Effective to</span>
+              <span>{t('authAdmin.effectiveTo')}</span>
               <input type="date" value={assignmentForm.effectiveTo} onChange={(event) => updateAssignmentForm('effectiveTo', event.target.value)} />
             </label>
           </div>
@@ -741,7 +745,7 @@ export function AuthDashboardPage() {
                 (assignmentForm.scopeType === 'store' && !assignmentForm.storeId.trim())
               }
             >
-              {createAssignmentMutation.isPending ? 'Creating...' : 'Create assignment'}
+              {createAssignmentMutation.isPending ? t('authAdmin.creating') : t('authAdmin.createAssignment')}
             </button>
           </div>
         </article>
@@ -751,28 +755,28 @@ export function AuthDashboardPage() {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Action store assignment</div>
-              <h3>Assigned stores for operational actions</h3>
+              <div className="eyebrow">{t('authAdmin.actionStoreAssignmentEyebrow')}</div>
+              <h3>{t('authAdmin.assignedStoresTitle')}</h3>
             </div>
           </div>
           <div className="form-grid">
             <label className="field-block">
-              <span>Search users for action access</span>
+              <span>{t('authAdmin.searchUsersForActionAccess')}</span>
               <input
-                aria-label="Search users for action access"
+                aria-label={t('authAdmin.searchUsersForActionAccess')}
                 value={actionStoreUserSearch}
                 onChange={(event) => setActionStoreUserSearch(event.target.value)}
-                placeholder="Type 2+ chars: username, email, provider subject"
+                placeholder={t('authAdmin.userSearchPlaceholder')}
               />
             </label>
             <label className="field-block">
-              <span>Action access user</span>
+              <span>{t('authAdmin.actionAccessUser')}</span>
               <select
-                aria-label="Action access user"
+                aria-label={t('authAdmin.actionAccessUser')}
                 value={actionStoreForm.userId}
                 onChange={(event) => selectActionStoreUser(event.target.value)}
               >
-                <option value="">Select user</option>
+                <option value="">{t('authAdmin.selectUser')}</option>
                 {actionStoreUserOptions.map((user) => (
                   <option key={user.userId} value={user.userId}>
                     {user.username} - {user.email}
@@ -781,22 +785,22 @@ export function AuthDashboardPage() {
               </select>
             </label>
             <label className="field-block">
-              <span>Search stores for action access</span>
+              <span>{t('authAdmin.searchStoresForActionAccess')}</span>
               <input
-                aria-label="Search stores for action access"
+                aria-label={t('authAdmin.searchStoresForActionAccess')}
                 value={actionStoreSearch}
                 onChange={(event) => setActionStoreSearch(event.target.value)}
-                placeholder="Type 2+ chars: store code, name, region"
+                placeholder={t('authAdmin.storeSearchPlaceholder')}
               />
             </label>
             <label className="field-block">
-              <span>Action store</span>
+              <span>{t('authAdmin.actionStore')}</span>
               <select
-                aria-label="Action store"
+                aria-label={t('authAdmin.actionStore')}
                 value={actionStoreForm.storeId}
                 onChange={(event) => selectActionStore(event.target.value)}
               >
-                <option value="">Select store</option>
+                <option value="">{t('authAdmin.selectStore')}</option>
                 {actionStoreOptions.map((store) => (
                   <option key={store.storeId} value={store.storeId}>
                     {store.storeCode} - {store.storeName} - {store.regionName}
@@ -805,11 +809,11 @@ export function AuthDashboardPage() {
               </select>
             </label>
             <label className="field-block">
-              <span>Effective from</span>
+              <span>{t('authAdmin.effectiveFrom')}</span>
               <input type="date" value={actionStoreForm.effectiveFrom} onChange={(event) => updateActionStoreForm('effectiveFrom', event.target.value)} />
             </label>
             <label className="field-block">
-              <span>Effective to</span>
+              <span>{t('authAdmin.effectiveTo')}</span>
               <input type="date" value={actionStoreForm.effectiveTo} onChange={(event) => updateActionStoreForm('effectiveTo', event.target.value)} />
             </label>
           </div>
@@ -820,7 +824,7 @@ export function AuthDashboardPage() {
               onClick={submitActionStoreForm}
               disabled={mutationBusy || !actionStoreForm.userId || !actionStoreForm.storeId}
             >
-              {createActionStoreAssignmentMutation.isPending ? 'Assigning...' : 'Assign action store'}
+              {createActionStoreAssignmentMutation.isPending ? t('authAdmin.assigning') : t('authAdmin.assignActionStore')}
             </button>
           </div>
         </article>
@@ -828,12 +832,12 @@ export function AuthDashboardPage() {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Action grants</div>
-              <h3>Store-level action access</h3>
+              <div className="eyebrow">{t('authAdmin.actionGrants')}</div>
+              <h3>{t('authAdmin.storeLevelActionAccess')}</h3>
             </div>
           </div>
           {filteredActionStoreAssignments.length === 0 ? (
-            <EmptyState copy="No action store assignments matched the current filter." />
+            <EmptyState copy={t('authAdmin.noActionStoreAssignments')} />
           ) : (
             <div className="stacked-table">
               {filteredActionStoreAssignments.map((assignment) => (
@@ -844,18 +848,18 @@ export function AuthDashboardPage() {
                       <span className="queue-subtitle">{assignment.email}</span>
                     </div>
                     <StatusPill tone={assignment.active ? 'calm' : 'danger'}>
-                      {assignment.active ? 'Active' : 'Inactive'}
+                      {assignment.active ? t('authAdmin.active') : t('authAdmin.inactive')}
                     </StatusPill>
                   </div>
                   <div className="key-grid">
-                    <KeyValue label="Store" value={`${assignment.storeCode} - ${assignment.storeName}`} />
-                    <KeyValue label="Region" value={assignment.regionName} />
-                    <KeyValue label="Effective from" value={assignment.effectiveFrom ? formatDateTime(assignment.effectiveFrom) : 'Immediate'} />
-                    <KeyValue label="Store id" value={assignment.storeId} />
+                    <KeyValue label={t('authAdmin.store')} value={`${assignment.storeCode} - ${assignment.storeName}`} />
+                    <KeyValue label={t('authAdmin.region')} value={assignment.regionName} />
+                    <KeyValue label={t('authAdmin.effectiveFrom')} value={assignment.effectiveFrom ? formatDateTime(assignment.effectiveFrom, locale) : t('authAdmin.immediate')} />
+                    <KeyValue label={t('authAdmin.storeId')} value={assignment.storeId} />
                   </div>
                   <div className="action-cluster">
                     <Link className="back-link" to={`/admin/auth/action-store-assignments/${assignment.assignmentId}/audit`}>
-                      <span>Open audit</span>
+                      <span>{t('authAdmin.openAudit')}</span>
                     </Link>
                     {assignment.active ? (
                       <button
@@ -864,7 +868,7 @@ export function AuthDashboardPage() {
                         onClick={() => deactivateActionStoreAssignmentMutation.mutate(assignment.assignmentId)}
                         disabled={mutationBusy}
                       >
-                        {deactivateActionStoreAssignmentMutation.isPending ? 'Updating...' : 'Deactivate action store'}
+                        {deactivateActionStoreAssignmentMutation.isPending ? t('authAdmin.updating') : t('authAdmin.deactivateActionStore')}
                       </button>
                     ) : null}
                   </div>
@@ -879,31 +883,31 @@ export function AuthDashboardPage() {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Lookup posture</div>
-              <h3>Admin option sets</h3>
+              <div className="eyebrow">{t('authAdmin.lookupPosture')}</div>
+              <h3>{t('authAdmin.adminOptionSets')}</h3>
             </div>
             <Link className="back-link" to="/admin/auth/catalog">
-              <span>Open catalog</span>
+              <span>{t('authAdmin.openCatalog')}</span>
             </Link>
           </div>
           <div className="key-grid">
-            <KeyValue label="Scope types" value={lookups.scopeTypes.join(', ')} />
-            <KeyValue label="Auth providers" value={lookups.authProviders.join(', ') || 'None'} />
-            <KeyValue label="User options" value={String(lookups.optionGroups.users.length)} />
-            <KeyValue label="Role options" value={String(lookups.optionGroups.roles.length)} />
-            <KeyValue label="Store options" value={String(lookups.optionGroups.stores.length)} />
+            <KeyValue label={t('authAdmin.scopeTypes')} value={lookups.scopeTypes.join(', ')} />
+            <KeyValue label={t('authAdmin.authProviders')} value={lookups.authProviders.join(', ') || t('authAdmin.none')} />
+            <KeyValue label={t('authAdmin.userOptions')} value={String(lookups.optionGroups.users.length)} />
+            <KeyValue label={t('authAdmin.roleOptions')} value={String(lookups.optionGroups.roles.length)} />
+            <KeyValue label={t('authAdmin.storeOptions')} value={String(lookups.optionGroups.stores.length)} />
           </div>
         </article>
 
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Recent users</div>
-              <h3>Account inventory</h3>
+              <div className="eyebrow">{t('authAdmin.recentUsers')}</div>
+              <h3>{t('authAdmin.accountInventory')}</h3>
             </div>
           </div>
           {users.length === 0 ? (
-            <EmptyState copy="No user accounts are available yet." />
+            <EmptyState copy={t('authAdmin.noUserAccounts')} />
           ) : (
             <div className="stacked-table">
               {users.slice(0, 6).map((user) => (
@@ -914,25 +918,25 @@ export function AuthDashboardPage() {
                       <span className="queue-subtitle">{user.email}</span>
                     </div>
                     <StatusPill tone={user.isActive ? 'calm' : 'danger'}>
-                      {user.isActive ? 'Active' : 'Inactive'}
+                      {user.isActive ? t('authAdmin.active') : t('authAdmin.inactive')}
                     </StatusPill>
                   </div>
                   <div className="key-grid">
-                    <KeyValue label="Provider" value={user.authProvider} />
-                    <KeyValue label="Created" value={formatDateTime(user.createdAt)} />
-                    <KeyValue label="Employee status" value={user.employeeStatus ?? 'Unlinked'} />
+                    <KeyValue label={t('authAdmin.provider')} value={user.authProvider} />
+                    <KeyValue label={t('authAdmin.created')} value={formatDateTime(user.createdAt, locale)} />
+                    <KeyValue label={t('authAdmin.employeeStatus')} value={user.employeeStatus ?? t('authAdmin.unlinked')} />
                     <KeyValue
-                      label="Deactivated"
-                      value={user.deactivatedAt ? formatDateTime(user.deactivatedAt) : 'No'}
+                      label={t('authAdmin.deactivated')}
+                      value={user.deactivatedAt ? formatDateTime(user.deactivatedAt, locale) : t('authAdmin.no')}
                     />
                     <KeyValue
-                      label="Deactivation reason"
-                      value={user.deactivationReason ?? 'None'}
+                      label={t('authAdmin.deactivationReason')}
+                      value={user.deactivationReason ?? t('authAdmin.none')}
                     />
                   </div>
                   <div className="action-cluster">
                     <Link className="back-link" to={`/admin/auth/users/${user.userId}/audit`}>
-                      <span>Open audit</span>
+                      <span>{t('authAdmin.openAudit')}</span>
                     </Link>
                     {user.isActive ? (
                       <button
@@ -940,7 +944,7 @@ export function AuthDashboardPage() {
                         type="button"
                         onClick={() => {
                           const confirmed = window.confirm(
-                            'Deactivate this user and close active role grants, action store grants, and mobile sessions?',
+                            t('authAdmin.deactivateUserConfirm'),
                           )
                           if (confirmed) {
                             deactivateUserMutation.mutate(user.userId)
@@ -948,7 +952,7 @@ export function AuthDashboardPage() {
                         }}
                         disabled={mutationBusy}
                       >
-                        {deactivateUserMutation.isPending ? 'Updating...' : 'Deactivate user'}
+                        {deactivateUserMutation.isPending ? t('authAdmin.updating') : t('authAdmin.deactivateUser')}
                       </button>
                     ) : (
                       <button
@@ -957,7 +961,7 @@ export function AuthDashboardPage() {
                         onClick={() => reactivateUserMutation.mutate(user.userId)}
                         disabled={mutationBusy}
                       >
-                        {reactivateUserMutation.isPending ? 'Updating...' : 'Reactivate user'}
+                        {reactivateUserMutation.isPending ? t('authAdmin.updating') : t('authAdmin.reactivateUser')}
                       </button>
                     )}
                   </div>
@@ -971,26 +975,24 @@ export function AuthDashboardPage() {
       <section className="panel">
         <div className="panel-heading panel-heading-spread">
           <div>
-            <div className="eyebrow">Role assignment queue</div>
-            <h3>Scoped grants</h3>
-            <p className="panel-copy">
-              Search by user, role, store, or scope identifiers to inspect the current access map.
-            </p>
+            <div className="eyebrow">{t('authAdmin.scopedGrants')}</div>
+            <h3>{t('authAdmin.roleAssignmentQueue')}</h3>
+            <p className="panel-copy">{t('authAdmin.assignmentSearchCopy')}</p>
           </div>
           <label className="search-field">
-            <span className="sr-only">Filter auth assignments</span>
+            <span className="sr-only">{t('authAdmin.filterAssignments')}</span>
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search by user, role, store, scope, or id"
+              placeholder={t('authAdmin.assignmentSearchPlaceholder')}
             />
           </label>
         </div>
 
         {filteredAssignments.length === 0 ? (
           <EmptyState
-            title="No assignments matched your filter."
-            copy="Clear the search to inspect the full role assignment inventory."
+            title={t('authAdmin.noAssignmentsMatched')}
+            copy={t('authAdmin.clearSearchForInventory')}
           />
         ) : (
           <div className="stacked-table">
@@ -1002,22 +1004,22 @@ export function AuthDashboardPage() {
                     <span className="queue-subtitle">{assignment.email}</span>
                   </div>
                   <StatusPill tone={assignment.active ? 'calm' : 'danger'}>
-                    {assignment.active ? 'Active' : 'Inactive'}
+                    {assignment.active ? t('authAdmin.active') : t('authAdmin.inactive')}
                   </StatusPill>
                 </div>
 
                 <div className="key-grid">
-                  <KeyValue label="Role" value={`${assignment.roleCode} · ${assignment.roleName}`} />
-                  <KeyValue label="Scope type" value={assignment.scopeType} />
-                  <KeyValue label="Company" value={assignment.companyId ?? 'n/a'} />
-                  <KeyValue label="Region" value={assignment.regionId ?? 'n/a'} />
-                  <KeyValue label="Store" value={assignment.storeId ?? 'n/a'} />
-                  <KeyValue label="Effective from" value={assignment.effectiveFrom ? formatDateTime(assignment.effectiveFrom) : 'Immediate'} />
+                  <KeyValue label={t('authAdmin.role')} value={`${assignment.roleCode} · ${assignment.roleName}`} />
+                  <KeyValue label={t('authAdmin.scopeType')} value={assignment.scopeType} />
+                  <KeyValue label={t('authAdmin.company')} value={assignment.companyId ?? t('authAdmin.notAvailable')} />
+                  <KeyValue label={t('authAdmin.region')} value={assignment.regionId ?? t('authAdmin.notAvailable')} />
+                  <KeyValue label={t('authAdmin.store')} value={assignment.storeId ?? t('authAdmin.notAvailable')} />
+                  <KeyValue label={t('authAdmin.effectiveFrom')} value={assignment.effectiveFrom ? formatDateTime(assignment.effectiveFrom, locale) : t('authAdmin.immediate')} />
                 </div>
                 {assignment.active ? (
                   <div className="action-cluster">
                     <Link className="back-link" to={`/admin/auth/role-assignments/${assignment.assignmentId}/audit`}>
-                      <span>Open audit</span>
+                      <span>{t('authAdmin.openAudit')}</span>
                     </Link>
                     <button
                       className="control-button"
@@ -1025,13 +1027,13 @@ export function AuthDashboardPage() {
                       onClick={() => deactivateAssignmentMutation.mutate(assignment.assignmentId)}
                       disabled={mutationBusy}
                     >
-                      {deactivateAssignmentMutation.isPending ? 'Updating...' : 'Deactivate assignment'}
+                      {deactivateAssignmentMutation.isPending ? t('authAdmin.updating') : t('authAdmin.deactivateAssignment')}
                     </button>
                   </div>
                 ) : (
                   <div className="action-cluster">
                     <Link className="back-link" to={`/admin/auth/role-assignments/${assignment.assignmentId}/audit`}>
-                      <span>Open audit</span>
+                      <span>{t('authAdmin.openAudit')}</span>
                     </Link>
                   </div>
                 )}
