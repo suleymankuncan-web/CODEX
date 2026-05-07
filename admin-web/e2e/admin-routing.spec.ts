@@ -24,6 +24,35 @@ test('session nav opens the session readiness surface for ready admin sessions',
   await expect(page.getByRole('heading', { name: /Prepare the shell for real auth/i })).toBeVisible()
 })
 
+test('admin shell switches chrome to English copy and persists locale', async ({ page }) => {
+  await page.goto('/admin/audit')
+
+  await expect(page.getByText('Mağaza Operasyon Kontrol')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Entegrasyonlar' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Ana Veri' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Denetim' })).toBeVisible()
+  await expect(page.getByText('Üretim UX ve gerçek kimlik')).toBeVisible()
+  await expect(page.getByText('Store Ops Control')).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText('Ã')
+  await expect(page.locator('body')).not.toContainText('Ä')
+  await expect(page.locator('body')).not.toContainText('Å')
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByText('Store Ops Control')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Integrations' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Master Data' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Audit' })).toBeVisible()
+  await expect(page.getByText('Production UX And Real Auth')).toBeVisible()
+  await expect(page.getByText('Mağaza Operasyon Kontrol')).toHaveCount(0)
+
+  await page.reload()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByText('Store Ops Control')).toBeVisible()
+})
+
 test('audit center user detail links stay inside the audit namespace', async ({ page }) => {
   await page.goto('/admin/audit')
 

@@ -11,6 +11,7 @@ const localizationFiles = [
   'src/features/localization/messages/admin-audit.ts',
   'src/features/localization/messages/admin-integrations.ts',
   'src/features/localization/messages/admin-master-data.ts',
+  'src/features/localization/messages/admin-shell.ts',
   'src/features/localization/messages/admin-targets.ts',
   'src/features/localization/messages/common.ts',
   'src/features/localization/messages/competition.ts',

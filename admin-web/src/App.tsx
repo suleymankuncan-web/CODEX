@@ -8,9 +8,10 @@ import { getAuthSession, type AuthSessionSummary } from './features/auth/api'
 import { formatDisplayRoles } from './features/auth/display'
 import { sanitizeAuthReturnPath } from './features/auth/return-path'
 import { LanguageToggle } from './features/localization/LanguageToggle'
+import type { TranslateFunction, TranslationKey } from './features/localization/dictionary'
 import { useLocalization } from './features/localization/useLocalization'
 import { useSession } from './features/session/session-context-value'
-import { describeSessionMode, getBearerSessionCacheKey } from './features/session/session-storage'
+import { getBearerSessionCacheKey, type SessionMode } from './features/session/session-storage'
 import { SESSION_EXPIRED_EVENT, type SessionExpiredDetail, ApiError } from './lib/api'
 
 const AuditCenterPage = lazy(() => import('./pages/AuditCenterPage').then((module) => ({ default: module.AuditCenterPage })))
@@ -54,7 +55,7 @@ const TargetApprovalQueuePage = lazy(() => import('./pages/TargetApprovalQueuePa
 type NavDefinition = {
   to: string
   icon: ReactNode
-  label: string
+  labelKey: TranslationKey
   roles?: string[]
 }
 
@@ -62,85 +63,86 @@ const adminNavDefinitions: NavDefinition[] = [
   {
     to: '/admin/integrations',
     icon: <DatabaseZap size={18} />,
-    label: 'Integrations',
+    labelKey: 'adminShell.nav.integrations',
     roles: ['SUPER_ADMIN', 'INTEGRATION_ADMIN'],
   },
   {
     to: '/admin/master-data',
     icon: <DatabaseZap size={18} />,
-    label: 'Master Data',
+    labelKey: 'adminShell.nav.masterData',
     roles: ['SUPER_ADMIN', 'HR_ADMIN', 'INTEGRATION_ADMIN'],
   },
   {
     to: '/admin/snapshots',
     icon: <Layers3 size={18} />,
-    label: 'Snapshots',
+    labelKey: 'adminShell.nav.snapshots',
     roles: ['SUPER_ADMIN', 'SNAPSHOT_OPERATOR'],
   },
   {
     to: '/admin/inbox',
     icon: <Bell size={18} />,
-    label: 'Inbox',
+    labelKey: 'adminShell.nav.inbox',
     roles: ['SUPER_ADMIN', 'REPORT_VIEWER', 'HR_ADMIN'],
   },
   {
     to: '/admin/feed',
     icon: <Megaphone size={18} />,
-    label: 'Duyurular',
+    labelKey: 'adminShell.nav.feed',
     roles: ['SUPER_ADMIN', 'HR_ADMIN', 'REGION_MANAGER'],
   },
   {
     to: '/admin/checklists',
     icon: <ClipboardList size={18} />,
-    label: 'Checklistler',
+    labelKey: 'adminShell.nav.checklists',
     roles: ['SUPER_ADMIN', 'HR_ADMIN'],
   },
   {
     to: '/admin/competitions',
     icon: <Trophy size={18} />,
-    label: 'Competitions',
+    labelKey: 'adminShell.nav.competitions',
     roles: ['SUPER_ADMIN', 'HR_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER'],
   },
   {
     to: '/admin/reports',
     icon: <BarChart3 size={18} />,
-    label: 'Reports',
+    labelKey: 'adminShell.nav.reports',
     roles: ['SUPER_ADMIN', 'REPORT_VIEWER'],
   },
   {
     to: '/admin/targets',
     icon: <Target size={18} />,
-    label: 'Targets',
+    labelKey: 'adminShell.nav.targets',
     roles: ['SUPER_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER'],
   },
   {
     to: '/admin/kpi-config',
     icon: <SlidersHorizontal size={18} />,
-    label: 'KPI Config',
+    labelKey: 'adminShell.nav.kpiConfig',
     roles: ['SUPER_ADMIN'],
   },
   {
     to: '/admin/auth',
     icon: <ShieldCheck size={18} />,
-    label: 'Auth',
+    labelKey: 'adminShell.nav.auth',
     roles: ['SUPER_ADMIN'],
   },
   {
     to: '/admin/audit',
     icon: <Fingerprint size={18} />,
-    label: 'Audit',
+    labelKey: 'adminShell.nav.audit',
     roles: ['SUPER_ADMIN', 'AUDITOR'],
   },
   {
     to: '/admin/session',
     icon: <KeyRound size={18} />,
-    label: 'Session',
+    labelKey: 'adminShell.nav.session',
   },
 ]
 
 function App() {
   const location = useLocation()
   const navigate = useNavigate()
+  const { t } = useLocalization()
   const { session, isReady, isProviderSessionHydrating, expireSession } = useSession()
   const [sessionNotice, setSessionNotice] = useState<string | null>(null)
   const bearerTokenReadiness = session.bearerToken.trim() ? 'token-present' : 'token-missing'
@@ -216,71 +218,59 @@ function App() {
     )
   }
 
-  const roleSummary = formatDisplayRoles(authSummary?.user.roleCodes, 'No resolved roles')
+  const roleSummary = formatDisplayRoles(authSummary?.user.roleCodes, t('adminShell.noResolvedRoles'))
   const scopeSummary = authSummary
-    ? `${authSummary.scopeSummary.companyCount} company · ${authSummary.scopeSummary.regionCount} region · ${authSummary.scopeSummary.storeCount} store`
-    : 'Scope resolves after session verification'
+    ? t('adminShell.scopeSummary', {
+        companyCount: authSummary.scopeSummary.companyCount,
+        regionCount: authSummary.scopeSummary.regionCount,
+        storeCount: authSummary.scopeSummary.storeCount,
+      })
+    : t('adminShell.scopePending')
 
   return (
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand-block">
-          <div className="brand-kicker">Store Ops Control</div>
-          <h1>Production shell for scoped operators, auditors, and reporting users.</h1>
-          <p>
-            Phase 7 shifts the app from a development-friendly dashboard into a role-aware
-            operational surface that can later branch cleanly into store-user experiences.
-          </p>
+          <div className="brand-kicker">{t('adminShell.brandKicker')}</div>
+          <h1>{t('adminShell.brandTitle')}</h1>
+          <p>{t('adminShell.brandCopy')}</p>
         </div>
 
         <nav className="nav-stack" aria-label="Primary">
           {allowedAdminNav.map((item) => (
-            <NavItem key={item.to} to={item.to} icon={item.icon} label={item.label} />
+            <NavItem key={item.to} to={item.to} icon={item.icon} label={t(item.labelKey)} />
           ))}
-          <NavItem to="/store" icon={<KeyRound size={18} />} label="Store Preview" />
-          <NavItem to="/auth/login" icon={<ShieldCheck size={18} />} label="Real Login" />
+          <NavItem to="/store" icon={<KeyRound size={18} />} label={t('adminShell.nav.storePreview')} />
+          <NavItem to="/auth/login" icon={<ShieldCheck size={18} />} label={t('adminShell.nav.realLogin')} />
         </nav>
 
         <div className="sidebar-note">
-          <span>Phase 7</span>
-          <p>
-            Real auth bootstrap, role-aware navigation, and clean future separation between admin
-            and store-user product surfaces.
-          </p>
+          <span>{t('adminShell.phaseLabel')}</span>
+          <p>{t('adminShell.phaseCopy')}</p>
         </div>
       </aside>
 
       <main className="main-panel">
         <header className="topbar">
           <div>
-            <div className="eyebrow">Production UX And Real Auth</div>
-            <p className="topbar-copy">
-              The shell now verifies session state before exposing admin surfaces, expires bearer
-              sessions cleanly on `401`, and routes users toward the first view their role set can
-              actually use.
-            </p>
+            <div className="eyebrow">{t('adminShell.topbarEyebrow')}</div>
+            <p className="topbar-copy">{t('adminShell.topbarCopy')}</p>
           </div>
           <div className="topbar-cluster">
             <LanguageToggle />
             <div className={`env-chip${isReady ? '' : ' env-chip-warning'}`}>
-              Session: {describeSessionMode(session.mode)} {isReady ? 'configured' : 'needs setup'}
+              {t('adminShell.sessionLabel')}: {formatAdminShellSessionMode(session.mode, t)}{' '}
+              {isReady ? t('adminShell.configured') : t('adminShell.needsSetup')}
             </div>
             <div className={`env-chip${sessionQuery.isError ? ' env-chip-warning' : ''}`}>
-              Auth bootstrap:{' '}
-              {sessionQuery.isLoading
-                ? 'checking'
-                : sessionQuery.isError
-                  ? 'rejected'
-                  : authSummary
-                    ? 'verified'
-                    : 'idle'}
+              {t('adminShell.authBootstrapLabel')}: {formatAdminShellAuthState(sessionQuery.isLoading, sessionQuery.isError, Boolean(authSummary), t)}
             </div>
             <div className="env-chip">
-              Landing: <code>{firstAllowedPath}</code>
+              {t('adminShell.landingLabel')}: <code>{firstAllowedPath}</code>
             </div>
             {authSummary ? (
               <div className="env-chip">
-                User: <code>{authSummary.user.userId}</code>
+                {t('adminShell.userLabel')}: <code>{authSummary.user.userId}</code>
               </div>
             ) : null}
           </div>
@@ -289,26 +279,20 @@ function App() {
         <section className="panel shell-context-panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Landing Context</div>
-              <h3>Why this shell is sending the user here</h3>
+              <div className="eyebrow">{t('adminShell.landingContextEyebrow')}</div>
+              <h3>{t('adminShell.landingContextTitle')}</h3>
             </div>
             <StatusPill tone={shellState.mode === 'ready' ? 'calm' : shellState.mode === 'verifying' ? 'warning' : 'danger'}>
-              {shellState.mode === 'ready'
-                ? 'Ready'
-                : shellState.mode === 'verifying'
-                  ? 'Checking'
-                  : shellState.mode === 'setup-required'
-                    ? 'Needs setup'
-                    : 'Attention'}
+              {formatAdminShellState(shellState.mode, t)}
             </StatusPill>
           </div>
           <div className="key-grid">
-            <KeyValue label="Recommended landing" value={firstAllowedPath} />
-            <KeyValue label="Resolved roles" value={roleSummary} />
-            <KeyValue label="Resolved scope" value={scopeSummary} />
+            <KeyValue label={t('adminShell.recommendedLanding')} value={firstAllowedPath} />
+            <KeyValue label={t('adminShell.resolvedRoles')} value={roleSummary} />
+            <KeyValue label={t('adminShell.resolvedScope')} value={scopeSummary} />
             <KeyValue
-              label="Failure handling"
-              value={session.mode === 'bearer' ? '401 clears bearer session and returns to /auth/login' : 'Mock session stays local for dev flow'}
+              label={t('adminShell.failureHandling')}
+              value={session.mode === 'bearer' ? t('adminShell.failureHandlingBearer') : t('adminShell.failureHandlingMock')}
             />
           </div>
           {shellState.notice ? (
@@ -725,6 +709,31 @@ function getShellState(input: {
     notice: input.sessionNotice,
     errorCopy,
   }
+}
+
+function formatAdminShellSessionMode(mode: SessionMode, t: TranslateFunction) {
+  return mode === 'bearer'
+    ? t('adminShell.sessionMode.bearer')
+    : t('adminShell.sessionMode.mock')
+}
+
+function formatAdminShellAuthState(
+  isLoading: boolean,
+  isError: boolean,
+  hasAuthSummary: boolean,
+  t: TranslateFunction,
+) {
+  if (isLoading) return t('adminShell.authState.checking')
+  if (isError) return t('adminShell.authState.rejected')
+  if (hasAuthSummary) return t('adminShell.authState.verified')
+  return t('adminShell.authState.idle')
+}
+
+function formatAdminShellState(mode: ShellState['mode'], t: TranslateFunction) {
+  if (mode === 'ready') return t('adminShell.state.ready')
+  if (mode === 'verifying') return t('adminShell.state.checking')
+  if (mode === 'setup-required') return t('adminShell.state.needsSetup')
+  return t('adminShell.state.attention')
 }
 
 function resolveLandingPath(authSummary: AuthSessionSummary | null, isReady: boolean) {
