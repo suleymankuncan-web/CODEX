@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 
 const scriptsDir = dirname(fileURLToPath(import.meta.url))
 const appRoot = dirname(scriptsDir)
+const repoRoot = dirname(appRoot)
 
 const localizationFiles = [
   'src/features/localization/messages/admin-audit.ts',
@@ -82,4 +83,59 @@ test('translation helper supports parameter interpolation', () => {
   assert.match(source, /TranslationParams/)
   assert.match(source, /params\?: TranslationParams/)
   assert.match(source, /replace/)
+})
+
+test('localization strategy records pilot closeout status with correct Turkish characters', () => {
+  const strategy = readFileSync(join(repoRoot, 'docs/plans/ui-localization-strategy.md'), 'utf8')
+
+  assert.match(strategy, /Pilot localization implementation status: `closeout_guarded`/)
+  assert.match(strategy, /Mağaza/)
+  assert.match(strategy, /Bölge/)
+  assert.match(strategy, /Çalışan/)
+  assert.doesNotMatch(strategy, /not yet active implementation work/i)
+  assert.doesNotMatch(strategy, /approved as a future project direction/i)
+
+  for (const marker of mojibakeMarkers) {
+    assert.equal(
+      strategy.includes(marker),
+      false,
+      `ui-localization-strategy.md should not contain mojibake marker ${marker}`,
+    )
+  }
+})
+
+test('active handoff records the localization closeout boundary', () => {
+  const handoff = readFileSync(join(repoRoot, 'current-state.md'), 'utf8')
+
+  assert.match(handoff, /Pilot localization closeout: `guarded`/)
+  assert.match(handoff, /Full product bilingual depth remains a future UI\/design-system investment/)
+  assert.match(handoff, /JSON source integration is suspended/)
+})
+
+test('app shell fallback copy stays dictionary-owned', () => {
+  const appShellSource = readFileSync(join(appRoot, 'src/App.tsx'), 'utf8')
+  const shellMessages = readFileSync(
+    join(appRoot, 'src/features/localization/messages/admin-shell.ts'),
+    'utf8',
+  )
+
+  for (const phrase of [
+    'Route not available for this role',
+    'Loading route',
+    'Preparing the requested surface.',
+    'Verifying session',
+    'Session rejected',
+    'Store workspace',
+  ]) {
+    assert.equal(
+      appShellSource.includes(phrase),
+      false,
+      `${phrase} should stay in admin-shell messages, not App.tsx`,
+    )
+    assert.equal(
+      shellMessages.includes(phrase),
+      true,
+      `${phrase} should remain available through the admin-shell dictionary`,
+    )
+  }
 })

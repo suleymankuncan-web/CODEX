@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define the future Turkish/English localization direction before the UI grows too much.
+Define and preserve the Turkish/English localization direction now that the pilot-facing implementation wave is active.
 
 The goal is to support:
 
@@ -11,11 +11,11 @@ The goal is to support:
 - full Turkish character support
 - consistent formatting for dates, numbers, money, exports, validation, and status labels
 
-This document is a decision note, not an immediate implementation plan.
+This document is the active localization boundary note. The closeout evidence is tracked in `docs/plans/ui-localization-closeout-v1.md`.
 
 ## Product Decision
 
-The application should eventually support two UI languages:
+The application supports two UI languages in the pilot-facing web UI:
 
 - `tr`: Turkish, default
 - `en`: English
@@ -24,20 +24,27 @@ Turkish must be a first-class language, not a partial translation layer. Charact
 
 ## Current State
 
-The frontend already has a small locale foundation:
+Pilot localization implementation status: `closeout_guarded`
+
+The frontend has an active typed locale foundation:
 
 - `admin-web/src/lib/i18n.ts`
 - `appLocales = ['tr', 'en']`
 - `defaultAppLocale = 'tr'`
 - `getIntlLocale()` returns `tr-TR` or `en-US`
+- `admin-web/src/features/localization/LocalizationProvider.tsx`
+- `admin-web/src/features/localization/dictionary.ts`
+- namespace message files under `admin-web/src/features/localization/messages/`
 
-This is a good start, but it is not yet a complete translation system.
+The pilot-facing admin/store shell, route guards, auth flow, reports, import, master-data, targets, competition, store, and common operational surfaces now use the local dictionary pattern. English remains available through the `TR / EN` toggle and the selected locale persists in browser storage.
+
+The closeout boundary is intentionally smaller than a full product design-system localization program. Backend contract values, raw technical codes, source data, and future export workflows remain governed by the stable-value rules below.
 
 ## Localization Boundaries
 
 ### Must Be Localized
 
-User-facing text must move to translation keys when the localization phase starts:
+User-facing text should stay in translation keys:
 
 - page titles
 - navigation labels
@@ -178,7 +185,7 @@ The selected language should not change auth, role, scope, route, or data access
 
 ## Suggested Implementation Direction
 
-When the project is ready for implementation, choose one of these paths:
+The project currently uses Option A.
 
 ### Option A: Lightweight Local Dictionary
 
@@ -210,12 +217,12 @@ Trade-off:
 
 Recommended future path:
 
-- start with a typed local dictionary if scope is small
+- keep the typed local dictionary while the app remains moderate in size
 - move to `react-i18next` if translation surface becomes broad enough to justify it
 
 ## Implementation Gate
 
-Before implementing localization, run the feature intake interview from:
+Before expanding localization beyond the pilot-facing web UI, run the feature intake interview from:
 
 - [request-intake-and-decision-policy.md](./request-intake-and-decision-policy.md)
 
@@ -229,25 +236,27 @@ Minimum questions to answer:
 
 ## Verification
 
-Localization implementation should not be considered complete until:
+Pilot localization closeout should not be considered complete until:
 
 - Turkish is default on first load
 - English switch works without reload bugs
 - Turkish characters render correctly in all major surfaces
 - route guards and auth behavior are unchanged
 - date/number formatting changes by locale
-- CSV/Excel exports preserve Turkish characters
+- CSV/Excel exports preserve Turkish characters when export headers become localized workflow scope
 - release check passes
 
 ## Current Decision
 
-Localization is approved as a future project direction.
+Pilot-facing localization is implemented and guarded for the current controlled pilot.
 
-It is not yet active implementation work.
+The current implementation path is the lightweight typed dictionary. Keep it until pluralization, translator workflow, or broader product language requirements justify a heavier i18n library.
 
-Until implementation starts:
+When adding or changing UI:
 
 - keep new user-facing strings easy to move into translation keys
 - avoid embedding technical enum text directly into UI
 - avoid ASCII-only Turkish labels
 - preserve UTF-8 text in docs and frontend files
+- keep route, role, permission, audit, source, KPI, and database codes stable
+- keep full product bilingual depth and broad visual redesign as future UI/design-system investment, not a blocker for the current pilot
