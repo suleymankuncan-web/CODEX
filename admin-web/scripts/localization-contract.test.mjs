@@ -8,6 +8,7 @@ const scriptsDir = dirname(fileURLToPath(import.meta.url))
 const appRoot = dirname(scriptsDir)
 
 const localizationFiles = [
+  'src/features/localization/messages/admin-integrations.ts',
   'src/features/localization/messages/admin-master-data.ts',
   'src/features/localization/messages/admin-targets.ts',
   'src/features/localization/messages/common.ts',

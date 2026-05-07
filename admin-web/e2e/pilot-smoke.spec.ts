@@ -28,7 +28,7 @@ test('core admin routes open without unavailable states', async ({ page }) => {
   const routes = [
     {
       path: '/admin/integrations',
-      heading: page.getByRole('heading', { name: 'Needs-action batches' }),
+      heading: page.getByRole('heading', { name: 'Aksiyon bekleyen partiler' }),
     },
     {
       path: '/admin/master-data',
