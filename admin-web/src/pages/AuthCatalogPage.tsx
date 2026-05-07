@@ -15,9 +15,11 @@ import {
   grantRolePermission,
   revokeRolePermission,
 } from '../features/auth/api'
+import { useLocalization } from '../features/localization/useLocalization'
 import { getErrorMessage } from '../lib/format'
 
 export function AuthCatalogPage() {
+  const { t } = useLocalization()
   const [search, setSearch] = useState('')
   const [feedback, setFeedback] = useState<string | null>(null)
   const [draftByRole, setDraftByRole] = useState<Record<string, string>>({})
@@ -73,44 +75,41 @@ export function AuthCatalogPage() {
   }, [deferredSearch, roles])
 
   if (rolesQuery.isLoading || permissionsQuery.isLoading) {
-    return <ScreenState title="Loading auth catalog" copy="Pulling roles and permission definitions." />
+    return <ScreenState title={t('authCatalog.loadingTitle')} copy={t('authCatalog.loadingCopy')} />
   }
 
   if (rolesQuery.isError) {
-    return <ScreenState title="Role catalog unavailable" copy={getErrorMessage(rolesQuery.error)} tone="error" />
+    return <ScreenState title={t('authCatalog.roleErrorTitle')} copy={getErrorMessage(rolesQuery.error)} tone="error" />
   }
 
   if (permissionsQuery.isError) {
-    return <ScreenState title="Permission catalog unavailable" copy={getErrorMessage(permissionsQuery.error)} tone="error" />
+    return <ScreenState title={t('authCatalog.permissionErrorTitle')} copy={getErrorMessage(permissionsQuery.error)} tone="error" />
   }
 
   return (
     <section className="page-stack">
       <section className="hero-panel">
         <div>
-          <div className="eyebrow">Auth Catalog</div>
-          <h2 className="hero-title">Role and permission definitions stay explicit and inspectable.</h2>
-          <p className="hero-copy">
-            This catalog keeps the authorization model readable before we add mutation forms and
-            deeper audit tooling on top of it.
-          </p>
+          <div className="eyebrow">{t('authCatalog.heroEyebrow')}</div>
+          <h2 className="hero-title">{t('authCatalog.heroTitle')}</h2>
+          <p className="hero-copy">{t('authCatalog.heroCopy')}</p>
         </div>
         <div className="hero-metrics">
-          <MetricAccent label="Roles" value={String(roles.length)} />
-          <MetricAccent label="Permissions" value={String(permissions.length)} />
-          <MetricAccent label="System roles" value={String(roles.filter((role) => role.isSystemRole).length)} />
+          <MetricAccent label={t('authCatalog.roles')} value={String(roles.length)} />
+          <MetricAccent label={t('authCatalog.permissions')} value={String(permissions.length)} />
+          <MetricAccent label={t('authCatalog.systemRoles')} value={String(roles.filter((role) => role.isSystemRole).length)} />
         </div>
       </section>
 
       <Link className="back-link" to="/admin/auth">
-        <span>Back to auth overview</span>
+        <span>{t('authCatalog.backToAuthOverview')}</span>
       </Link>
 
       <section className="metric-grid">
-        <MetricCard title="Role count" value={roles.length} note="Distinct role definitions in ops.role" icon={<UserRoundCog size={18} />} tone="accent" />
-        <MetricCard title="Permission count" value={permissions.length} note="Cataloged action capabilities" icon={<Fingerprint size={18} />} tone="calm" />
-        <MetricCard title="Company scoped" value={roles.filter((role) => role.scopeType === 'company').length} note="Roles that can bind at company level" icon={<Shield size={18} />} tone="warning" />
-        <MetricCard title="Searchable" value={filteredRoles.length} note="Roles currently visible after filter" icon={<SlidersHorizontal size={18} />} tone="danger" />
+        <MetricCard title={t('authCatalog.roleCount')} value={roles.length} note={t('authCatalog.roleCountNote')} icon={<UserRoundCog size={18} />} tone="accent" />
+        <MetricCard title={t('authCatalog.permissionCount')} value={permissions.length} note={t('authCatalog.permissionCountNote')} icon={<Fingerprint size={18} />} tone="calm" />
+        <MetricCard title={t('authCatalog.companyScoped')} value={roles.filter((role) => role.scopeType === 'company').length} note={t('authCatalog.companyScopedNote')} icon={<Shield size={18} />} tone="warning" />
+        <MetricCard title={t('authCatalog.searchable')} value={filteredRoles.length} note={t('authCatalog.searchableNote')} icon={<SlidersHorizontal size={18} />} tone="danger" />
       </section>
 
       {feedback ? (
@@ -123,22 +122,22 @@ export function AuthCatalogPage() {
         <article className="panel">
           <div className="panel-heading panel-heading-spread">
             <div>
-              <div className="eyebrow">Roles</div>
-              <h3>Role definitions</h3>
-              <p className="panel-copy">Search by code, name, scope, or permission code.</p>
+              <div className="eyebrow">{t('authCatalog.roles')}</div>
+              <h3>{t('authCatalog.roleDefinitions')}</h3>
+              <p className="panel-copy">{t('authCatalog.roleSearchCopy')}</p>
             </div>
             <label className="search-field">
-              <span className="sr-only">Filter roles</span>
+              <span className="sr-only">{t('authCatalog.filterRoles')}</span>
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search role code, name, scope, or permission"
+                placeholder={t('authCatalog.roleSearchPlaceholder')}
               />
             </label>
           </div>
 
           {filteredRoles.length === 0 ? (
-            <EmptyState copy="No roles matched your filter." />
+            <EmptyState copy={t('authCatalog.noRolesMatched')} />
           ) : (
             <div className="stacked-table">
               {filteredRoles.map((role) => (
@@ -149,10 +148,10 @@ export function AuthCatalogPage() {
                       <span className="queue-subtitle">{role.roleName}</span>
                     </div>
                     <StatusPill tone={role.isSystemRole ? 'accent' : 'neutral'}>
-                      {role.isSystemRole ? 'System role' : 'Custom role'}
+                      {role.isSystemRole ? t('authCatalog.systemRole') : t('authCatalog.customRole')}
                     </StatusPill>
                   </div>
-                  <p>{role.description ?? 'No role description provided.'}</p>
+                  <p>{role.description ?? t('authCatalog.noRoleDescription')}</p>
                   <div className="action-cluster">
                     <span className="inline-state inline-state-neutral">{role.scopeType}</span>
                     {role.permissions.map((permission) => (
@@ -168,13 +167,13 @@ export function AuthCatalogPage() {
                         }
                         disabled={grantMutation.isPending || revokeMutation.isPending}
                       >
-                        Revoke {permission.permissionCode}
+                        {t('authCatalog.revokePermission', { permissionCode: permission.permissionCode })}
                       </button>
                     ))}
                   </div>
                   <div className="action-cluster">
                     <label className="control-select">
-                      <span className="sr-only">Permission to grant</span>
+                      <span className="sr-only">{t('authCatalog.permissionToGrant')}</span>
                       <select
                         value={draftByRole[role.roleId] ?? ''}
                         onChange={(event) =>
@@ -184,7 +183,7 @@ export function AuthCatalogPage() {
                           }))
                         }
                       >
-                        <option value="">Select permission</option>
+                        <option value="">{t('authCatalog.selectPermission')}</option>
                         {permissions.map((permission) => (
                           <option key={permission.permissionId} value={permission.permissionCode}>
                             {permission.permissionCode}
@@ -207,7 +206,7 @@ export function AuthCatalogPage() {
                         !(draftByRole[role.roleId] ?? '')
                       }
                     >
-                      {grantMutation.isPending ? 'Granting...' : 'Grant permission'}
+                      {grantMutation.isPending ? t('authCatalog.granting') : t('authCatalog.grantPermission')}
                     </button>
                   </div>
                 </article>
@@ -219,12 +218,12 @@ export function AuthCatalogPage() {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Permissions</div>
-              <h3>Permission catalog</h3>
+              <div className="eyebrow">{t('authCatalog.permissions')}</div>
+              <h3>{t('authCatalog.permissionCatalog')}</h3>
             </div>
           </div>
           {permissions.length === 0 ? (
-            <EmptyState copy="No permissions are available yet." />
+            <EmptyState copy={t('authCatalog.noPermissions')} />
           ) : (
             <div className="stacked-table">
               {permissions.map((permission) => (
@@ -233,7 +232,7 @@ export function AuthCatalogPage() {
                     <strong>{permission.permissionCode}</strong>
                     <StatusPill tone="neutral">{permission.resourceName}</StatusPill>
                   </div>
-                  <p>{permission.description ?? 'No permission description provided.'}</p>
+                  <p>{permission.description ?? t('authCatalog.noPermissionDescription')}</p>
                   <div className="action-cluster">
                     <span className="inline-state inline-state-neutral">{permission.resourceName}</span>
                     <span className="inline-state inline-state-calm">{permission.actionName}</span>
