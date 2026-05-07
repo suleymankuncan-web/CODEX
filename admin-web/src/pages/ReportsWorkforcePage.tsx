@@ -11,23 +11,26 @@ import {
   StatusPill,
 } from '../components/dashboard-primitives'
 import { ReportingToolbar } from '../components/reporting-tools'
+import { useLocalization } from '../features/localization/useLocalization'
 import { getWorkforceReport } from '../features/reports/api'
 import { downloadCsv } from '../lib/download-csv'
-import { getErrorMessage } from '../lib/format'
+import { formatNumber, getErrorMessage } from '../lib/format'
+import type { AppLocale } from '../lib/i18n'
 
 function toNumber(input: string) {
   const parsed = Number(input)
   return Number.isFinite(parsed) ? parsed : 0
 }
 
-function formatMetric(input: number) {
-  return new Intl.NumberFormat('tr-TR', {
+function formatMetric(input: number, locale: AppLocale) {
+  return formatNumber(input, locale, {
     minimumFractionDigits: Number.isInteger(input) ? 0 : 2,
     maximumFractionDigits: 2,
-  }).format(input)
+  })
 }
 
 export function ReportsWorkforcePage() {
+  const { locale, t } = useLocalization()
   const { snapshotRunId } = useParams<{ snapshotRunId: string }>()
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState<'gap-desc' | 'store' | 'position'>('gap-desc')
@@ -93,79 +96,76 @@ export function ReportsWorkforcePage() {
   const rowsWithGap = sortedRows.filter((row) => toNumber(row.gapHeadcount) !== 0 || toNumber(row.gapFte) !== 0).length
 
   if (!snapshotRunId) {
-    return <ScreenState title="Workforce context missing" copy="Choose a reporting snapshot run before opening workforce rows." tone="error" />
+    return <ScreenState title={t('reportsWorkforce.missingTitle')} copy={t('reportsWorkforce.missingCopy')} tone="error" />
   }
 
   if (workforceQuery.isLoading) {
-    return <ScreenState title="Loading workforce rows" copy="Pulling materialized staffing rows for the selected reporting context." />
+    return <ScreenState title={t('reportsWorkforce.loadingTitle')} copy={t('reportsWorkforce.loadingCopy')} />
   }
 
   if (workforceQuery.isError) {
-    return <ScreenState title="Workforce report unavailable" copy={getErrorMessage(workforceQuery.error)} tone="error" />
+    return <ScreenState title={t('reportsWorkforce.errorTitle')} copy={getErrorMessage(workforceQuery.error)} tone="error" />
   }
 
   return (
     <section className="page-stack">
       <section className="hero-panel">
         <div>
-          <div className="eyebrow">Reporting Drill-Down</div>
-          <h2 className="hero-title">Workforce rows for one immutable reporting context.</h2>
-          <p className="hero-copy">
-            This page stays intentionally operational: choose a snapshot run, inspect staffing balance,
-            and isolate where planned versus active staffing diverges.
-          </p>
+          <div className="eyebrow">{t('reportsWorkforce.heroEyebrow')}</div>
+          <h2 className="hero-title">{t('reportsWorkforce.heroTitle')}</h2>
+          <p className="hero-copy">{t('reportsWorkforce.heroCopy')}</p>
         </div>
         <div className="hero-metrics">
-          <MetricAccent label="Snapshot run" value={snapshotRunId.slice(0, 12)} />
-          <MetricAccent label="Rows in view" value={String(filteredRows.length)} />
-          <MetricAccent label="Stores with gap" value={String(rowsWithGap)} />
+          <MetricAccent label={t('reportsWorkforce.snapshotRun')} value={snapshotRunId.slice(0, 12)} />
+          <MetricAccent label={t('reportsWorkforce.rowsInView')} value={String(filteredRows.length)} />
+          <MetricAccent label={t('reportsWorkforce.storesWithGap')} value={String(rowsWithGap)} />
         </div>
       </section>
 
       <Link className="back-link" to="/admin/reports/snapshot-runs">
         <ArrowLeft size={16} />
-        <span>Choose another snapshot</span>
+        <span>{t('reportsWorkforce.chooseAnotherSnapshot')}</span>
       </Link>
 
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Reporting context</div>
-            <h3>Selected workforce snapshot</h3>
+            <div className="eyebrow">{t('reportsWorkforce.contextEyebrow')}</div>
+            <h3>{t('reportsWorkforce.contextTitle')}</h3>
           </div>
         </div>
         <div className="key-grid">
-          <KeyValue label="Snapshot run id" value={snapshotRunId} />
-          <KeyValue label="Rows loaded" value={String(rows.length)} />
-          <KeyValue label="Rows after filter" value={String(filteredRows.length)} />
-          <KeyValue label="Gap rows" value={String(rowsWithGap)} />
+          <KeyValue label={t('reportsWorkforce.snapshotRunId')} value={snapshotRunId} />
+          <KeyValue label={t('reportsWorkforce.rowsLoaded')} value={String(rows.length)} />
+          <KeyValue label={t('reportsWorkforce.rowsAfterFilter')} value={String(filteredRows.length)} />
+          <KeyValue label={t('reportsWorkforce.gapRows')} value={String(rowsWithGap)} />
         </div>
       </section>
 
       <section className="metric-grid">
-        <MetricCard title="Active headcount" value={Math.round(totals.activeHeadcount)} note={`Active FTE ${formatMetric(totals.activeFte)}`} icon={<Users size={18} />} tone="calm" />
-        <MetricCard title="Planned headcount" value={Math.round(totals.plannedHeadcount)} note={`Planned FTE ${formatMetric(totals.plannedFte)}`} icon={<BriefcaseBusiness size={18} />} tone="accent" />
-        <MetricCard title="Headcount gap" value={Math.round(totals.gapHeadcount)} note={`Gap FTE ${formatMetric(totals.gapFte)}`} icon={<Building2 size={18} />} tone={totals.gapHeadcount === 0 && totals.gapFte === 0 ? 'neutral' : 'warning'} />
-        <MetricCard title="Gap rows" value={rowsWithGap} note="Store and position pairs needing closer review" icon={<ArrowRight size={18} />} tone={rowsWithGap === 0 ? 'calm' : 'danger'} />
+        <MetricCard title={t('reportsWorkforce.activeHeadcountTitle')} value={Math.round(totals.activeHeadcount)} note={t('reportsWorkforce.activeFteNote', { value: formatMetric(totals.activeFte, locale) })} icon={<Users size={18} />} tone="calm" />
+        <MetricCard title={t('reportsWorkforce.plannedHeadcountTitle')} value={Math.round(totals.plannedHeadcount)} note={t('reportsWorkforce.plannedFteNote', { value: formatMetric(totals.plannedFte, locale) })} icon={<BriefcaseBusiness size={18} />} tone="accent" />
+        <MetricCard title={t('reportsWorkforce.headcountGapTitle')} value={Math.round(totals.gapHeadcount)} note={t('reportsWorkforce.gapFteNote', { value: formatMetric(totals.gapFte, locale) })} icon={<Building2 size={18} />} tone={totals.gapHeadcount === 0 && totals.gapFte === 0 ? 'neutral' : 'warning'} />
+        <MetricCard title={t('reportsWorkforce.gapRows')} value={rowsWithGap} note={t('reportsWorkforce.gapRowsNote')} icon={<ArrowRight size={18} />} tone={rowsWithGap === 0 ? 'calm' : 'danger'} />
       </section>
 
       <section className="panel">
         <div className="panel-heading panel-heading-spread">
           <div>
-            <div className="eyebrow">Workforce table</div>
-            <h3>Store-position staffing balance</h3>
-            <p className="panel-copy">
-              Filter by store, position, or any numeric staffing field to narrow the materialized output.
-            </p>
+            <div className="eyebrow">{t('reportsWorkforce.tableEyebrow')}</div>
+            <h3>{t('reportsWorkforce.tableTitle')}</h3>
+            <p className="panel-copy">{t('reportsWorkforce.tableCopy')}</p>
           </div>
           <ReportingToolbar
             sortValue={sortBy}
             onSortChange={(value) => setSortBy(value as typeof sortBy)}
             sortOptions={[
-              { value: 'gap-desc', label: 'Largest gap first' },
-              { value: 'store', label: 'Store id' },
-              { value: 'position', label: 'Position id' },
+              { value: 'gap-desc', label: t('reportsWorkforce.sort.gapDesc') },
+              { value: 'store', label: t('reportsWorkforce.sort.store') },
+              { value: 'position', label: t('reportsWorkforce.sort.position') },
             ]}
+            sortAriaLabel={t('reportsWorkforce.sortRows')}
+            exportLabel={t('reportsWorkforce.exportCsv')}
             onExport={() =>
               downloadCsv({
                 filename: `workforce-${snapshotRunId}.csv`,
@@ -185,11 +185,11 @@ export function ReportsWorkforcePage() {
             }
           >
             <label className="search-field">
-              <span className="sr-only">Filter workforce rows</span>
+              <span className="sr-only">{t('reportsWorkforce.filterRows')}</span>
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search by store, position, or gap"
+                placeholder={t('reportsWorkforce.searchPlaceholder')}
               />
             </label>
           </ReportingToolbar>
@@ -197,8 +197,8 @@ export function ReportsWorkforcePage() {
 
         {sortedRows.length === 0 ? (
           <EmptyState
-            title="No workforce rows matched your filter."
-            copy="Clear the search to inspect the full materialized workforce output for this snapshot."
+            title={t('reportsWorkforce.emptyTitle')}
+            copy={t('reportsWorkforce.emptyCopy')}
           />
         ) : (
           <div className="stacked-table">
@@ -213,17 +213,17 @@ export function ReportsWorkforcePage() {
                       <span className="queue-subtitle">{row.positionId}</span>
                     </div>
                     <StatusPill tone={hasGap ? 'warning' : 'calm'}>
-                      {hasGap ? 'Gap detected' : 'Balanced'}
+                      {hasGap ? t('reportsWorkforce.gapDetected') : t('reportsWorkforce.balanced')}
                     </StatusPill>
                   </div>
 
                   <div className="key-grid">
-                    <KeyValue label="Active HC" value={formatMetric(toNumber(row.activeHeadcount))} />
-                    <KeyValue label="Planned HC" value={formatMetric(toNumber(row.plannedHeadcount))} />
-                    <KeyValue label="Gap HC" value={formatMetric(toNumber(row.gapHeadcount))} />
-                    <KeyValue label="Active FTE" value={formatMetric(toNumber(row.activeFte))} />
-                    <KeyValue label="Planned FTE" value={formatMetric(toNumber(row.plannedFte))} />
-                    <KeyValue label="Gap FTE" value={formatMetric(toNumber(row.gapFte))} />
+                    <KeyValue label={t('reportsWorkforce.activeHc')} value={formatMetric(toNumber(row.activeHeadcount), locale)} />
+                    <KeyValue label={t('reportsWorkforce.plannedHc')} value={formatMetric(toNumber(row.plannedHeadcount), locale)} />
+                    <KeyValue label={t('reportsWorkforce.gapHc')} value={formatMetric(toNumber(row.gapHeadcount), locale)} />
+                    <KeyValue label={t('reportsWorkforce.activeFte')} value={formatMetric(toNumber(row.activeFte), locale)} />
+                    <KeyValue label={t('reportsWorkforce.plannedFte')} value={formatMetric(toNumber(row.plannedFte), locale)} />
+                    <KeyValue label={t('reportsWorkforce.gapFte')} value={formatMetric(toNumber(row.gapFte), locale)} />
                   </div>
                 </article>
               )

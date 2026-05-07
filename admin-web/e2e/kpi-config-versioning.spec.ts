@@ -93,6 +93,49 @@ test('reports summary page switches hub chrome to English copy and persists loca
   await expect(page.getByRole('heading', { name: 'Read-only reporting from the latest trustworthy snapshot.' })).toBeVisible()
 })
 
+test('workforce report page switches drill-down chrome to English copy and persists locale', async ({ page }) => {
+  await page.goto('/admin/reports/workforce/snapshot-versioned')
+
+  await expect(page.getByText('Raporlama detayı')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Tek değişmez raporlama bağlamı için işgücü satırları.' })).toBeVisible()
+  await expect(page.getByText('Görünen satırlar')).toBeVisible()
+  await expect(page.getByText('Açığı olan mağazalar')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Başka snapshot seç' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Seçili işgücü snapshotı' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Aktif kadro' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Planlanan kadro' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Mağaza-pozisyon kadro dengesi' })).toBeVisible()
+  await expect(page.getByText('Personel açığı tespit edildi')).toBeVisible()
+  await expect(page.getByText('Dengeli')).toBeVisible()
+  await expect(page.getByPlaceholder('Mağaza, pozisyon veya açık ara')).toBeVisible()
+  await expect(page.getByText('Reporting Drill-Down')).toHaveCount(0)
+  await expect(page.getByText('Workforce rows for one immutable reporting context.')).toHaveCount(0)
+  await expect(page.getByText('Gap detected')).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText('ÃƒÆ’')
+  await expect(page.locator('body')).not.toContainText('Ãƒâ€')
+  await expect(page.locator('body')).not.toContainText('Ãƒâ€¦')
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByText('Reporting Drill-Down')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Workforce rows for one immutable reporting context.' })).toBeVisible()
+  await expect(page.getByText('Rows in view')).toBeVisible()
+  await expect(page.getByText('Stores with gap')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Choose another snapshot' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Selected workforce snapshot' })).toBeVisible()
+  await expect(page.getByText('Gap detected')).toBeVisible()
+  await expect(page.getByText('Balanced')).toBeVisible()
+  await expect(page.getByPlaceholder('Search by store, position, or gap')).toBeVisible()
+  await expect(page.getByText('Raporlama detayı')).toHaveCount(0)
+  await expect(page.getByText('Personel açığı tespit edildi')).toHaveCount(0)
+
+  await page.reload()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'Workforce rows for one immutable reporting context.' })).toBeVisible()
+})
+
 async function routeVersioningApi(page: Page) {
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: authSessionFixture })
@@ -112,6 +155,10 @@ async function routeVersioningApi(page: Page) {
 
   await page.route('**/api/reports/snapshot-runs?**', async (route) => {
     await route.fulfill({ json: snapshotRunsFixture })
+  })
+
+  await page.route('**/api/reports/workforce?**', async (route) => {
+    await route.fulfill({ json: workforceReportFixture })
   })
 }
 
@@ -249,4 +296,32 @@ const reportingSummaryFixture = {
     checklistRows: 6,
     turnoverRows: 3,
   },
+}
+
+const workforceReportFixture = {
+  items: [
+    {
+      snapshotRunId: 'snapshot-versioned',
+      storeId: 'store-istanbul-001',
+      positionId: 'sales-consultant',
+      activeHeadcount: '8',
+      activeFte: '8',
+      plannedHeadcount: '10',
+      plannedFte: '10',
+      gapHeadcount: '-2',
+      gapFte: '-2',
+    },
+    {
+      snapshotRunId: 'snapshot-versioned',
+      storeId: 'store-ankara-002',
+      positionId: 'store-manager',
+      activeHeadcount: '1',
+      activeFte: '1',
+      plannedHeadcount: '1',
+      plannedFte: '1',
+      gapHeadcount: '0',
+      gapFte: '0',
+    },
+  ],
+  meta: { count: 2, total: 2, limit: 50, offset: 0 },
 }
