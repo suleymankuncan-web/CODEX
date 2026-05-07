@@ -19,6 +19,7 @@ import { reportsSummaryEn, reportsSummaryTr } from './reports-summary'
 import { reportsSnapshotRunsEn, reportsSnapshotRunsTr } from './reports-snapshot-runs'
 import { reportsTurnoverEn, reportsTurnoverTr } from './reports-turnover'
 import { reportsWorkforceEn, reportsWorkforceTr } from './reports-workforce'
+import { sessionReadinessEn, sessionReadinessTr } from './session-readiness'
 import { storeApprovalsEn, storeApprovalsTr } from './store-approvals'
 import { storeChecklistsEn, storeChecklistsTr } from './store-checklists'
 import { storeCompetitionsEn, storeCompetitionsTr } from './store-competitions'
@@ -52,6 +53,7 @@ const tr = {
   ...reportsSnapshotRunsTr,
   ...reportsTurnoverTr,
   ...reportsWorkforceTr,
+  ...sessionReadinessTr,
   ...storeApprovalsTr,
   ...storeChecklistsTr,
   ...storeCompetitionsTr,
@@ -86,6 +88,7 @@ const en: Record<keyof typeof tr, string> = {
   ...reportsSnapshotRunsEn,
   ...reportsTurnoverEn,
   ...reportsWorkforceEn,
+  ...sessionReadinessEn,
   ...storeApprovalsEn,
   ...storeChecklistsEn,
   ...storeCompetitionsEn,
