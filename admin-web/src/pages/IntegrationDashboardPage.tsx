@@ -26,6 +26,8 @@ import {
   uploadPowerBiExport,
 } from '../features/integrations/api'
 import type { StoreMasterItem } from '../features/integrations/api'
+import type { TranslateFunction } from '../features/localization/dictionary'
+import { useLocalization } from '../features/localization/useLocalization'
 import { formatState, getErrorMessage, mapHealthTone } from '../lib/format'
 
 const PAGE_SIZE = 12
@@ -49,6 +51,7 @@ function normalizeStoreStatus(value: string): StoreMasterStatus {
 }
 
 export function IntegrationDashboardPage() {
+  const { t } = useLocalization()
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState<'priority' | 'errors' | 'records' | 'entity'>('priority')
   const [offset, setOffset] = useState(0)
@@ -184,7 +187,7 @@ export function IntegrationDashboardPage() {
     const regionId = patch.regionId ?? store.regionId
 
     if (!regionId) {
-      setStoreMasterFeedback('Store must have a region before it can be updated.')
+      setStoreMasterFeedback(t('adminIntegrations.storeRegionRequired'))
       return
     }
 
@@ -259,38 +262,67 @@ export function IntegrationDashboardPage() {
   }, [filteredItems, sortBy])
 
   if (overviewQuery.isLoading || needsActionQuery.isLoading || lookupsQuery.isLoading) {
-    return <ScreenState title="Loading integration surface" copy="Pulling overview, health totals, and operator queue." />
+    return (
+      <ScreenState
+        title={t('adminIntegrations.loadingTitle')}
+        copy={t('adminIntegrations.loadingCopy')}
+      />
+    )
   }
 
   if (overviewQuery.isError) {
-    return <ScreenState title="Integration dashboard unavailable" copy={getErrorMessage(overviewQuery.error)} tone="error" />
+    return (
+      <ScreenState
+        title={t('adminIntegrations.dashboardUnavailableTitle')}
+        copy={getErrorMessage(overviewQuery.error)}
+        tone="error"
+      />
+    )
   }
 
   if (needsActionQuery.isError) {
-    return <ScreenState title="Needs-action queue unavailable" copy={getErrorMessage(needsActionQuery.error)} tone="error" />
+    return (
+      <ScreenState
+        title={t('adminIntegrations.needsActionUnavailableTitle')}
+        copy={getErrorMessage(needsActionQuery.error)}
+        tone="error"
+      />
+    )
   }
 
   if (lookupsQuery.isError) {
-    return <ScreenState title="Integration lookups unavailable" copy={getErrorMessage(lookupsQuery.error)} tone="error" />
+    return (
+      <ScreenState
+        title={t('adminIntegrations.lookupsUnavailableTitle')}
+        copy={getErrorMessage(lookupsQuery.error)}
+        tone="error"
+      />
+    )
   }
 
   const overview = overviewQuery.data
   if (!overview) {
-    return <ScreenState title="Integration overview unavailable" copy="Overview data was not returned by the API." tone="error" />
+    return (
+      <ScreenState
+        title={t('adminIntegrations.overviewUnavailableTitle')}
+        copy={t('adminIntegrations.overviewUnavailableCopy')}
+        tone="error"
+      />
+    )
   }
 
   const meta = needsActionQuery.data?.meta
   const canGoBack = offset > 0
   const canGoForward = meta ? offset + PAGE_SIZE < meta.total : false
   const storeTypeOptions = storeMasterLookupsQuery.data?.storeTypes ?? [
-    { value: 'company' as const, label: 'Company' },
-    { value: 'franchise' as const, label: 'Franchise' },
-    { value: 'operator' as const, label: 'Operator' },
+    { value: 'company' as const, label: t('adminIntegrations.storeType.company') },
+    { value: 'franchise' as const, label: t('adminIntegrations.storeType.franchise') },
+    { value: 'operator' as const, label: t('adminIntegrations.storeType.operator') },
   ]
   const storeStatusOptions = storeMasterLookupsQuery.data?.statuses ?? [
-    { value: 'active' as const, label: 'Active' },
-    { value: 'inactive' as const, label: 'Inactive' },
-    { value: 'closed' as const, label: 'Closed' },
+    { value: 'active' as const, label: t('adminIntegrations.storeStatus.active') },
+    { value: 'inactive' as const, label: t('adminIntegrations.storeStatus.inactive') },
+    { value: 'closed' as const, label: t('adminIntegrations.storeStatus.closed') },
   ]
   const regionOptions = storeMasterLookupsQuery.data?.regions ?? []
   const isPowerBiPeriodValid =
@@ -298,10 +330,12 @@ export function IntegrationDashboardPage() {
       ? Boolean(powerBiPeriodMonth)
       : Boolean(powerBiPeriodStart && powerBiPeriodEnd && powerBiPeriodEnd >= powerBiPeriodStart)
   const powerBiUploadBlockers = [
-    powerBiSources.length === 0 ? 'Aktif Power BI KPI source yok.' : null,
-    !personnelFile && !storeFile ? 'Personel veya mağaza Excel dosyası seç.' : null,
-    powerBiSources.length > 0 && !resolvedPowerBiSourceCode ? 'Power BI KPI source seç.' : null,
-    !isPowerBiPeriodValid ? 'Dönem bilgisi eksik veya geçersiz.' : null,
+    powerBiSources.length === 0 ? t('adminIntegrations.noPowerBiSource') : null,
+    !personnelFile && !storeFile ? t('adminIntegrations.choosePersonnelOrStoreFile') : null,
+    powerBiSources.length > 0 && !resolvedPowerBiSourceCode
+      ? t('adminIntegrations.choosePowerBiSource')
+      : null,
+    !isPowerBiPeriodValid ? t('adminIntegrations.invalidPeriod') : null,
   ].filter((item): item is string => Boolean(item))
   const isPowerBiUploadDisabled =
     uploadPowerBiMutation.isPending || powerBiUploadBlockers.length > 0
@@ -310,17 +344,14 @@ export function IntegrationDashboardPage() {
     <section className="page-stack">
       <section className="hero-panel">
         <div>
-          <div className="eyebrow">Integration Operations</div>
-          <h2 className="hero-title">See friction early, not after the batch disappears into the queue.</h2>
-          <p className="hero-copy">
-            This dashboard is tuned for operational action: blocked dependencies, retry posture,
-            in-progress pressure, and which batch deserves attention next.
-          </p>
+          <div className="eyebrow">{t('adminIntegrations.heroEyebrow')}</div>
+          <h2 className="hero-title">{t('adminIntegrations.title')}</h2>
+          <p className="hero-copy">{t('adminIntegrations.heroCopy')}</p>
         </div>
         <div className="hero-metrics">
-          <MetricAccent label="Total batches" value={String(overview.totals.all)} />
-          <MetricAccent label="Needs action" value={String(overview.healthTotals.needsAction)} />
-          <MetricAccent label="Retry ready" value={String(overview.healthTotals.retryReady)} />
+          <MetricAccent label={t('adminIntegrations.totalBatches')} value={String(overview.totals.all)} />
+          <MetricAccent label={t('adminIntegrations.needsAction')} value={String(overview.healthTotals.needsAction)} />
+          <MetricAccent label={t('adminIntegrations.retryReady')} value={String(overview.healthTotals.retryReady)} />
         </div>
       </section>
 
@@ -330,7 +361,7 @@ export function IntegrationDashboardPage() {
             <div className="inline-state inline-state-accent">{feedback}</div>
             {createdBatchId ? (
               <Link className="back-link" to={`/admin/integrations/${createdBatchId}`}>
-                <span>Batch detail ac</span>
+                <span>{t('adminIntegrations.openBatchDetail')}</span>
               </Link>
             ) : null}
           </div>
@@ -338,54 +369,52 @@ export function IntegrationDashboardPage() {
       ) : null}
 
       <section className="metric-grid">
-        <MetricCard title="Healthy" value={overview.healthTotals.healthy} note={`${overview.totals.completed} completed cleanly`} icon={<Layers2 size={18} />} tone="calm" />
-        <MetricCard title="Blocked" value={overview.healthTotals.blocked} note="Dependency mappings missing" icon={<ShieldAlert size={18} />} tone="warning" />
-        <MetricCard title="Retry ready" value={overview.healthTotals.retryReady} note="Rows can likely be reprocessed now" icon={<TimerReset size={18} />} tone="accent" />
-        <MetricCard title="Needs action" value={overview.healthTotals.needsAction} note="Manual review required" icon={<AlertTriangle size={18} />} tone="danger" />
-        <MetricCard title="Stuck" value={overview.healthTotals.stuck} note="Exceeded in-progress threshold" icon={<Clock3 size={18} />} tone="danger" />
+        <MetricCard title={t('adminIntegrations.healthy')} value={overview.healthTotals.healthy} note={t('adminIntegrations.healthyNote', { count: overview.totals.completed })} icon={<Layers2 size={18} />} tone="calm" />
+        <MetricCard title={t('adminIntegrations.blocked')} value={overview.healthTotals.blocked} note={t('adminIntegrations.blockedNote')} icon={<ShieldAlert size={18} />} tone="warning" />
+        <MetricCard title={t('adminIntegrations.retryReady')} value={overview.healthTotals.retryReady} note={t('adminIntegrations.retryReadyNote')} icon={<TimerReset size={18} />} tone="accent" />
+        <MetricCard title={t('adminIntegrations.needsAction')} value={overview.healthTotals.needsAction} note={t('adminIntegrations.needsActionNote')} icon={<AlertTriangle size={18} />} tone="danger" />
+        <MetricCard title={t('adminIntegrations.stuck')} value={overview.healthTotals.stuck} note={t('adminIntegrations.stuckNote')} icon={<Clock3 size={18} />} tone="danger" />
       </section>
 
       <section className="two-up-grid">
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Latest pointers</div>
-              <h3>Where the queue last changed state</h3>
+              <div className="eyebrow">{t('adminIntegrations.latestPointers')}</div>
+              <h3>{t('adminIntegrations.latestTitle')}</h3>
             </div>
           </div>
           <div className="key-grid">
-            <KeyValue label="Latest completed" value={overview.latest.completedBatchId ?? 'No completed batch yet'} />
-            <KeyValue label="Latest failed" value={overview.latest.failedBatchId ?? 'No failed batch yet'} />
-            <KeyValue label="Latest in progress" value={overview.latest.inProgressBatchId ?? 'No active batch'} />
-            <KeyValue label="Latest stuck" value={overview.latest.stuckBatchId ?? 'No stuck batch'} />
+            <KeyValue label={t('adminIntegrations.latestCompleted')} value={overview.latest.completedBatchId ?? t('adminIntegrations.noCompletedBatch')} />
+            <KeyValue label={t('adminIntegrations.latestFailed')} value={overview.latest.failedBatchId ?? t('adminIntegrations.noFailedBatch')} />
+            <KeyValue label={t('adminIntegrations.latestInProgress')} value={overview.latest.inProgressBatchId ?? t('adminIntegrations.noActiveBatch')} />
+            <KeyValue label={t('adminIntegrations.latestStuck')} value={overview.latest.stuckBatchId ?? t('adminIntegrations.noStuckBatch')} />
           </div>
         </article>
 
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">System reading</div>
-              <h3>Batch flow balance</h3>
+              <div className="eyebrow">{t('adminIntegrations.systemReading')}</div>
+              <h3>{t('adminIntegrations.batchFlowBalance')}</h3>
             </div>
           </div>
-          <StatusBar label="Healthy" value={overview.healthTotals.healthy} total={overview.totals.all} tone="calm" />
-          <StatusBar label="In progress" value={overview.healthTotals.inProgress} total={overview.totals.all} tone="neutral" />
-          <StatusBar label="Retry ready" value={overview.healthTotals.retryReady} total={overview.totals.all} tone="accent" />
-          <StatusBar label="Blocked + needs action" value={overview.healthTotals.blocked + overview.healthTotals.needsAction} total={overview.totals.all} tone="danger" />
+          <StatusBar label={t('adminIntegrations.healthy')} value={overview.healthTotals.healthy} total={overview.totals.all} tone="calm" />
+          <StatusBar label={t('adminIntegrations.inProgress')} value={overview.healthTotals.inProgress} total={overview.totals.all} tone="neutral" />
+          <StatusBar label={t('adminIntegrations.retryReady')} value={overview.healthTotals.retryReady} total={overview.totals.all} tone="accent" />
+          <StatusBar label={t('adminIntegrations.blockedNeedsAction')} value={overview.healthTotals.blocked + overview.healthTotals.needsAction} total={overview.totals.all} tone="danger" />
         </article>
       </section>
 
       <section className="panel">
         <div className="panel-heading panel-heading-spread">
           <div>
-            <div className="eyebrow">Import contract</div>
-            <h3>Test payload template</h3>
-            <p className="panel-copy">
-              Real connector gelmeden once KPI import batch body yapisini buradan referans alabilirsin.
-            </p>
+            <div className="eyebrow">{t('adminIntegrations.importContract')}</div>
+            <h3>{t('adminIntegrations.testPayloadTemplate')}</h3>
+            <p className="panel-copy">{t('adminIntegrations.importContractCopy')}</p>
           </div>
           <label className="control-select">
-            <span className="sr-only">Template source system</span>
+            <span className="sr-only">{t('adminIntegrations.templateSourceSystem')}</span>
             <select
               value={templateSourceSystem}
               onChange={(event) => {
@@ -400,20 +429,20 @@ export function IntegrationDashboardPage() {
         </div>
 
         {importTemplateQuery.isLoading ? (
-          <div className="inline-state inline-state-neutral">Loading template...</div>
+          <div className="inline-state inline-state-neutral">{t('adminIntegrations.loadingTemplate')}</div>
         ) : importTemplateQuery.isError ? (
           <div className="inline-state inline-state-danger">{getErrorMessage(importTemplateQuery.error)}</div>
         ) : importTemplateQuery.data ? (
           <div className="stacked-layout">
             <div className="toolbar-cluster">
               <label className="control-select">
-                <span className="sr-only">Execution source</span>
+                <span className="sr-only">{t('adminIntegrations.executionSource')}</span>
                 <select
                   value={resolvedTemplateSourceCode}
                   onChange={(event) => setSelectedTemplateSourceCode(event.target.value)}
                   disabled={compatibleSources.length === 0}
                 >
-                  {compatibleSources.length === 0 ? <option value="">Aktif KPI source yok</option> : null}
+                  {compatibleSources.length === 0 ? <option value="">{t('adminIntegrations.noActiveKpiSource')}</option> : null}
                   {compatibleSources.map((item) => (
                     <option key={item.sourceId} value={item.sourceCode}>
                       {item.sourceCode} - {item.sourceName}
@@ -446,22 +475,22 @@ export function IntegrationDashboardPage() {
                   })
                 }}
               >
-                {createBatchMutation.isPending ? 'Calisiyor...' : 'Sample import calistir'}
+                {createBatchMutation.isPending ? t('adminIntegrations.running') : t('adminIntegrations.runSampleImport')}
               </button>
             </div>
             {compatibleSources.length === 0 ? (
               <div className="inline-state inline-state-warning">
-                Bu source system icin aktif bir KPI integration source olusturman gerekiyor.
+                {t('adminIntegrations.sourceSystemNeedsKpiSource')}
               </div>
             ) : null}
             <div className="queue-meta">
-              <span>Entity: {importTemplateQuery.data.entityType}</span>
-              <span>Source: {importTemplateQuery.data.sourceSystem}</span>
-              <span>Execution source: {resolvedTemplateSourceCode || 'none'}</span>
+              <span>{t('adminIntegrations.entity')}: {importTemplateQuery.data.entityType}</span>
+              <span>{t('adminIntegrations.source')}: {importTemplateQuery.data.sourceSystem}</span>
+              <span>{t('adminIntegrations.executionSource')}: {resolvedTemplateSourceCode || t('adminIntegrations.none')}</span>
             </div>
             {createdBatchId ? (
               <div className="inline-state inline-state-neutral">
-                Son olusan batch: <code>{createdBatchId}</code>
+                {t('adminIntegrations.latestCreatedBatch')}: <code>{createdBatchId}</code>
               </div>
             ) : null}
             {importTemplateQuery.data.normalizedBehavior?.length ? (
@@ -481,49 +510,47 @@ export function IntegrationDashboardPage() {
         ) : null}
       </section>
 
-      <section className="panel" aria-label="Store master data">
+      <section className="panel" aria-label={t('adminIntegrations.storeMasterAria')}>
         <div className="panel-heading panel-heading-spread">
           <div>
-            <div className="eyebrow">Master data</div>
-            <h3>Store master data</h3>
-            <p className="panel-copy">
-              Store type, region, status, and Excel KPI import scope are managed from one controlled surface.
-            </p>
+            <div className="eyebrow">{t('adminIntegrations.masterData')}</div>
+            <h3>{t('adminIntegrations.storeMasterData')}</h3>
+            <p className="panel-copy">{t('adminIntegrations.storeMasterCopy')}</p>
           </div>
           <div className="toolbar-cluster">
             <label className="search-field">
-              <span className="sr-only">Search stores</span>
+              <span className="sr-only">{t('adminIntegrations.searchStores')}</span>
               <input
                 value={storeMasterSearch}
                 onChange={(event) => setStoreMasterSearch(event.target.value)}
-                placeholder="Search store or region"
+                placeholder={t('adminIntegrations.searchStoreOrRegion')}
               />
             </label>
             <label className="control-select">
-              <span className="sr-only">Filter store import scope</span>
+              <span className="sr-only">{t('adminIntegrations.filterStoreImportScope')}</span>
               <select
                 value={storeMasterEnabledFilter}
                 onChange={(event) =>
                   setStoreMasterEnabledFilter(event.target.value as 'all' | 'enabled' | 'disabled')
                 }
               >
-                <option value="all">All stores</option>
-                <option value="enabled">Included</option>
-                <option value="disabled">Excluded</option>
+                <option value="all">{t('adminIntegrations.allStores')}</option>
+                <option value="enabled">{t('adminIntegrations.included')}</option>
+                <option value="disabled">{t('adminIntegrations.excluded')}</option>
               </select>
             </label>
             <label className="control-select">
-              <span className="sr-only">Filter store status</span>
+              <span className="sr-only">{t('adminIntegrations.filterStoreStatus')}</span>
               <select
                 value={storeMasterStatusFilter}
                 onChange={(event) =>
                   setStoreMasterStatusFilter(event.target.value as 'all' | StoreMasterStatus)
                 }
               >
-                <option value="all">All statuses</option>
+                <option value="all">{t('adminIntegrations.allStatuses')}</option>
                 {storeStatusOptions.map((status) => (
                   <option key={status.value} value={status.value}>
-                    {status.label}
+                    {formatStoreStatusLabel(status.value, t)}
                   </option>
                 ))}
               </select>
@@ -536,13 +563,13 @@ export function IntegrationDashboardPage() {
         ) : null}
 
         {storeMasterQuery.isLoading || storeMasterLookupsQuery.isLoading ? (
-          <div className="inline-state inline-state-neutral">Loading store master data...</div>
+          <div className="inline-state inline-state-neutral">{t('adminIntegrations.loadingStoreMaster')}</div>
         ) : storeMasterQuery.isError ? (
           <div className="inline-state inline-state-danger">{getErrorMessage(storeMasterQuery.error)}</div>
         ) : storeMasterLookupsQuery.isError ? (
           <div className="inline-state inline-state-danger">{getErrorMessage(storeMasterLookupsQuery.error)}</div>
         ) : (storeMasterQuery.data?.items.length ?? 0) === 0 ? (
-          <EmptyState title="No stores matched this master data filter." copy="Clear the filters to inspect the store list." />
+          <EmptyState title={t('adminIntegrations.noStoresTitle')} copy={t('adminIntegrations.noStoresCopy')} />
         ) : (
           <div className="scope-list">
             {storeMasterQuery.data?.items.map((store) => (
@@ -551,14 +578,14 @@ export function IntegrationDashboardPage() {
                   <div className="queue-title">{store.storeName}</div>
                   <div className="queue-meta">
                     <span>
-                      {store.storeCode} / {store.regionName ?? 'No region'} / {normalizeStoreType(store.storeType)}
+                      {store.storeCode} / {store.regionName ?? t('adminIntegrations.noRegion')} / {formatStoreTypeLabel(normalizeStoreType(store.storeType), t)}
                     </span>
-                    <span>{store.status}</span>
+                    <span>{formatStoreStatusLabel(normalizeStoreStatus(store.status), t)}</span>
                   </div>
                 </div>
                 <div className="scope-controls">
                   <label className="field-block compact-field">
-                    <span>Type</span>
+                    <span>{t('adminIntegrations.type')}</span>
                     <select
                       aria-label={`${store.storeName} store type`}
                       value={normalizeStoreType(store.storeType)}
@@ -571,13 +598,13 @@ export function IntegrationDashboardPage() {
                     >
                       {storeTypeOptions.map((type) => (
                         <option key={type.value} value={type.value}>
-                          {type.label}
+                          {formatStoreTypeLabel(type.value, t)}
                         </option>
                       ))}
                     </select>
                   </label>
                   <label className="field-block compact-field">
-                    <span>Region</span>
+                    <span>{t('adminIntegrations.region')}</span>
                     <select
                       aria-label={`${store.storeName} region`}
                       value={store.regionId ?? ''}
@@ -588,7 +615,7 @@ export function IntegrationDashboardPage() {
                         })
                       }
                     >
-                      {regionOptions.length === 0 ? <option value="">No active regions</option> : null}
+                      {regionOptions.length === 0 ? <option value="">{t('adminIntegrations.noActiveRegions')}</option> : null}
                       {regionOptions.map((region) => (
                         <option key={region.regionId} value={region.regionId}>
                           {region.regionName}
@@ -597,7 +624,7 @@ export function IntegrationDashboardPage() {
                     </select>
                   </label>
                   <label className="field-block compact-field">
-                    <span>Status</span>
+                    <span>{t('adminIntegrations.status')}</span>
                     <select
                       aria-label={`${store.storeName} status`}
                       value={normalizeStoreStatus(store.status)}
@@ -610,7 +637,7 @@ export function IntegrationDashboardPage() {
                     >
                       {storeStatusOptions.map((status) => (
                         <option key={status.value} value={status.value}>
-                          {status.label}
+                          {formatStoreStatusLabel(status.value, t)}
                         </option>
                       ))}
                     </select>
@@ -627,7 +654,7 @@ export function IntegrationDashboardPage() {
                         })
                       }
                     />
-                    <span>{store.kpiImportEnabled ? 'Included' : 'Excluded'}</span>
+                    <span>{store.kpiImportEnabled ? t('adminIntegrations.included') : t('adminIntegrations.excluded')}</span>
                   </label>
                 </div>
               </div>
@@ -639,23 +666,21 @@ export function IntegrationDashboardPage() {
       <section className="panel">
         <div className="panel-heading panel-heading-spread">
           <div>
-            <div className="eyebrow">Gecici Power BI akisi</div>
-            <h3>Excel export yukle</h3>
-            <p className="panel-copy">
-              Bu adaptör gecici. Personel için `Adı + Mağaza Adı`, mağaza için `Mağaza Adı` eşleşmesiyle veri içeri alınır.
-            </p>
+            <div className="eyebrow">{t('adminIntegrations.powerBiEyebrow')}</div>
+            <h3>{t('adminIntegrations.powerBiTitle')}</h3>
+            <p className="panel-copy">{t('adminIntegrations.powerBiCopy')}</p>
           </div>
         </div>
 
         <div className="form-grid">
           <label className="field-block">
-            <span>Power BI KPI source</span>
+            <span>{t('adminIntegrations.powerBiKpiSource')}</span>
             <select
               value={resolvedPowerBiSourceCode}
               onChange={(event) => setPowerBiSourceCode(event.target.value)}
               disabled={powerBiSources.length === 0}
             >
-              {powerBiSources.length === 0 ? <option value="">Aktif Power BI KPI source yok</option> : null}
+              {powerBiSources.length === 0 ? <option value="">{t('adminIntegrations.noActiveKpiSource')}</option> : null}
               {powerBiSources.map((item) => (
                 <option key={item.sourceId} value={item.sourceCode}>
                   {item.sourceCode} - {item.sourceName}
@@ -665,23 +690,23 @@ export function IntegrationDashboardPage() {
           </label>
 
           <label className="field-block">
-            <span>Donem tipi</span>
+            <span>{t('adminIntegrations.periodType')}</span>
             <select
-              aria-label="Donem tipi"
+              aria-label={t('adminIntegrations.periodType')}
               value={powerBiPeriodType}
               onChange={(event) =>
                 setPowerBiPeriodType(event.target.value as 'daily' | 'monthly' | 'custom')
               }
             >
-              <option value="monthly">Aylik snapshot</option>
-              <option value="daily">Gunluk veri</option>
-              <option value="custom">Ozel tarih araligi</option>
+              <option value="monthly">{t('adminIntegrations.monthlySnapshot')}</option>
+              <option value="daily">{t('adminIntegrations.dailyData')}</option>
+              <option value="custom">{t('adminIntegrations.customDateRange')}</option>
             </select>
           </label>
 
           {powerBiPeriodType === 'monthly' ? (
             <label className="field-block">
-              <span>Donem ayi</span>
+              <span>{t('adminIntegrations.periodMonth')}</span>
               <input
                 type="month"
                 value={powerBiPeriodMonth}
@@ -691,9 +716,9 @@ export function IntegrationDashboardPage() {
           ) : (
             <>
               <label className="field-block">
-                <span>Baslangic</span>
+                <span>{t('adminIntegrations.start')}</span>
                 <input
-                  aria-label="Baslangic"
+                  aria-label={t('adminIntegrations.start')}
                   type="date"
                   value={powerBiPeriodStart}
                   onChange={(event) => {
@@ -705,9 +730,9 @@ export function IntegrationDashboardPage() {
                 />
               </label>
               <label className="field-block">
-                <span>Bitis</span>
+                <span>{t('adminIntegrations.end')}</span>
                 <input
-                  aria-label="Bitis"
+                  aria-label={t('adminIntegrations.end')}
                   type="date"
                   value={powerBiPeriodType === 'daily' ? powerBiPeriodStart : powerBiPeriodEnd}
                   disabled={powerBiPeriodType === 'daily'}
@@ -718,7 +743,7 @@ export function IntegrationDashboardPage() {
           )}
 
           <label className="field-block">
-            <span>Personel export</span>
+            <span>{t('adminIntegrations.personnelExport')}</span>
             <input
               type="file"
               accept=".xlsx,.xls"
@@ -727,7 +752,7 @@ export function IntegrationDashboardPage() {
           </label>
 
           <label className="field-block">
-            <span>Magaza export</span>
+            <span>{t('adminIntegrations.storeExport')}</span>
             <input
               type="file"
               accept=".xlsx,.xls"
@@ -758,15 +783,15 @@ export function IntegrationDashboardPage() {
               })
             }
           >
-            {uploadPowerBiMutation.isPending ? 'Yukleniyor...' : 'Power BI export yukle'}
+            {uploadPowerBiMutation.isPending ? t('adminIntegrations.uploading') : t('adminIntegrations.uploadPowerBiExport')}
           </button>
           {powerBiUploadBlockers.length > 0 ? (
             <span className="inline-state inline-state-warning" role="status">
-              <strong>Power BI upload hazır değil</strong>: {powerBiUploadBlockers.join(' ')}
+              <strong>{t('adminIntegrations.powerBiNotReady')}</strong>: {powerBiUploadBlockers.join(' ')}
             </span>
           ) : (
             <span className="inline-state inline-state-neutral">
-              Personel pozitif satış brüt performans, mağaza cirosu net hedef performansı olarak işlenir.
+              {t('adminIntegrations.powerBiReadyCopy')}
             </span>
           )}
         </div>
@@ -776,7 +801,7 @@ export function IntegrationDashboardPage() {
             <div className="inline-state inline-state-accent">{uploadFeedback}</div>
             {uploadedBatchId ? (
               <Link className="back-link" to={`/admin/integrations/${uploadedBatchId}`}>
-                <span>Batch detail ac</span>
+                <span>{t('adminIntegrations.openBatchDetail')}</span>
               </Link>
             ) : null}
           </div>
@@ -786,66 +811,66 @@ export function IntegrationDashboardPage() {
           <>
             <div className="key-grid">
             <div className="key-item">
-              <span>Donem</span>
+              <span>{t('adminIntegrations.period')}</span>
               <strong>
                 {uploadPowerBiMutation.data.data.summary.periodMonth ??
                   `${uploadPowerBiMutation.data.data.summary.periodStart} / ${uploadPowerBiMutation.data.data.summary.periodEnd}`}
               </strong>
             </div>
             <div className="key-item">
-              <span>Canonical KPI satiri</span>
+              <span>{t('adminIntegrations.canonicalKpiRows')}</span>
               <strong>{uploadPowerBiMutation.data.data.summary.canonicalRowCount}</strong>
             </div>
             <div className="key-item">
-              <span>Okunan personel satiri</span>
+              <span>{t('adminIntegrations.personnelRowsRead')}</span>
               <strong>{uploadPowerBiMutation.data.data.summary.personnelRowsRead}</strong>
             </div>
             <div className="key-item">
-              <span>Ignore edilen personel satiri</span>
+              <span>{t('adminIntegrations.ignoredPersonnelRows')}</span>
               <strong>{uploadPowerBiMutation.data.data.summary.ignoredPersonnelRows}</strong>
             </div>
             <div className="key-item">
-              <span>Kapsam disi personel satiri</span>
+              <span>{t('adminIntegrations.scopeExcludedPersonnelRows')}</span>
               <strong>{uploadPowerBiMutation.data.data.summary.scopeExcludedPersonnelRows}</strong>
             </div>
             <div className="key-item">
-              <span>Pozitif personel satis satiri</span>
+              <span>{t('adminIntegrations.personnelGrossSalesRows')}</span>
               <strong>{uploadPowerBiMutation.data.data.summary.personnelGrossSalesRows}</strong>
             </div>
             <div className="key-item">
-              <span>Eksi personel satiri</span>
+              <span>{t('adminIntegrations.negativePersonnelRowsIgnored')}</span>
               <strong>{uploadPowerBiMutation.data.data.summary.negativePersonnelRowsIgnored}</strong>
             </div>
             <div className="key-item">
-              <span>Okunan magaza satiri</span>
+              <span>{t('adminIntegrations.storeRowsRead')}</span>
               <strong>{uploadPowerBiMutation.data.data.summary.storeRowsRead}</strong>
             </div>
             <div className="key-item">
-              <span>Kapsam disi magaza satiri</span>
+              <span>{t('adminIntegrations.scopeExcludedStoreRows')}</span>
               <strong>{uploadPowerBiMutation.data.data.summary.scopeExcludedStoreRows}</strong>
             </div>
             <div className="key-item">
-              <span>Mapping modu</span>
+              <span>{t('adminIntegrations.mappingMode')}</span>
               <strong>{uploadPowerBiMutation.data.data.summary.mappingMode}</strong>
             </div>
             </div>
 
             {uploadPowerBiMutation.data.data.summary.reconciliation.items.length > 0 ? (
-              <div className="key-grid" aria-label="Power BI reconciliation summary">
+              <div className="key-grid" aria-label={t('adminIntegrations.reconciliationAria')}>
                 <div className="key-item">
-                  <span>Karsilastirilan magaza</span>
+                  <span>{t('adminIntegrations.comparedStores')}</span>
                   <strong>
                     {uploadPowerBiMutation.data.data.summary.reconciliation.comparedStoreCount}
                   </strong>
                 </div>
                 <div className="key-item">
-                  <span>Dengeli magaza</span>
+                  <span>{t('adminIntegrations.balancedStores')}</span>
                   <strong>
                     {uploadPowerBiMutation.data.data.summary.reconciliation.balancedStoreCount}
                   </strong>
                 </div>
                 <div className="key-item">
-                  <span>Uyari veren magaza</span>
+                  <span>{t('adminIntegrations.warningStores')}</span>
                   <strong>
                     {uploadPowerBiMutation.data.data.summary.reconciliation.warningStoreCount}
                   </strong>
@@ -859,20 +884,18 @@ export function IntegrationDashboardPage() {
       <section className="panel">
         <div className="panel-heading panel-heading-spread">
           <div>
-            <div className="eyebrow">Operator queue</div>
-            <h3>Needs-action batches</h3>
-            <p className="panel-copy">
-              Filter by source, entity, reason, or batch id. Open a row to inspect dependency blockers, reconciliation posture, and row-level failures.
-            </p>
+            <div className="eyebrow">{t('adminIntegrations.operatorQueue')}</div>
+            <h3>{t('adminIntegrations.needsActionBatches')}</h3>
+            <p className="panel-copy">{t('adminIntegrations.operatorQueueCopy')}</p>
           </div>
           <ReportingToolbar
             sortValue={sortBy}
             onSortChange={(value) => setSortBy(value as typeof sortBy)}
             sortOptions={[
-              { value: 'priority', label: 'Priority state' },
-              { value: 'errors', label: 'Most errors' },
-              { value: 'records', label: 'Largest batch' },
-              { value: 'entity', label: 'Entity type' },
+              { value: 'priority', label: t('adminIntegrations.sortPriority') },
+              { value: 'errors', label: t('adminIntegrations.sortErrors') },
+              { value: 'records', label: t('adminIntegrations.sortRecords') },
+              { value: 'entity', label: t('adminIntegrations.sortEntity') },
             ]}
             onExport={() =>
               downloadCsv({
@@ -894,11 +917,11 @@ export function IntegrationDashboardPage() {
             }
           >
             <label className="search-field">
-              <span className="sr-only">Filter queue</span>
+              <span className="sr-only">{t('adminIntegrations.filterQueue')}</span>
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search by batch, source, reason, or state"
+                placeholder={t('adminIntegrations.searchQueuePlaceholder')}
               />
             </label>
           </ReportingToolbar>
@@ -906,30 +929,30 @@ export function IntegrationDashboardPage() {
 
         <div className="toolbar-cluster">
           <label className="control-select">
-            <span className="sr-only">Filter entity type</span>
+            <span className="sr-only">{t('adminIntegrations.filterEntityType')}</span>
             <select value={entityTypeFilter} onChange={(event) => { setOffset(0); setEntityTypeFilter(event.target.value) }}>
-              <option value="">All entities</option>
+              <option value="">{t('adminIntegrations.allEntities')}</option>
               {['employee', 'store', 'kpi', 'assignment', 'position', 'company', 'region'].map((entity) => (
                 <option key={entity} value={entity}>{entity}</option>
               ))}
             </select>
           </label>
           <label className="control-select">
-            <span className="sr-only">Filter status</span>
+            <span className="sr-only">{t('adminIntegrations.filterStatus')}</span>
             <select value={statusFilter} onChange={(event) => { setOffset(0); setStatusFilter(event.target.value) }}>
-              <option value="">All statuses</option>
+              <option value="">{t('adminIntegrations.allStatuses')}</option>
               {['pending', 'queued', 'processing', 'completed', 'completed_with_errors', 'failed'].map((status) => (
                 <option key={status} value={status}>{status}</option>
               ))}
             </select>
           </label>
           <button className="control-button" type="button" onClick={() => { setOffset(0); setEntityTypeFilter(''); setStatusFilter(''); setSearch('') }}>
-            Clear filters
+            {t('adminIntegrations.clearFilters')}
           </button>
         </div>
 
         {sortedItems.length === 0 ? (
-          <EmptyState title="No queue items matched your filter." copy="Try a broader term or clear the filter to inspect the full operational queue." />
+          <EmptyState title={t('adminIntegrations.noQueueItemsTitle')} copy={t('adminIntegrations.noQueueItemsCopy')} />
         ) : (
           <div className="queue-list">
             {sortedItems.map((item) => (
@@ -946,10 +969,10 @@ export function IntegrationDashboardPage() {
                   <p className="queue-reason">{item.actionReason}</p>
 
                   <div className="queue-meta">
-                    <span>{item.recordCount} records</span>
-                    <span>{item.errorCount} errors</span>
-                    <span>retry count {item.retryCount}</span>
-                    {item.recommendedNextEntityType ? <span>next import: {item.recommendedNextEntityType}</span> : null}
+                    <span>{t('adminIntegrations.records', { count: item.recordCount })}</span>
+                    <span>{t('adminIntegrations.errors', { count: item.errorCount })}</span>
+                    <span>{t('adminIntegrations.retryCount', { count: item.retryCount })}</span>
+                    {item.recommendedNextEntityType ? <span>{t('adminIntegrations.nextImport', { entity: item.recommendedNextEntityType })}</span> : null}
                   </div>
 
                   <div className="queue-footer">
@@ -965,7 +988,7 @@ export function IntegrationDashboardPage() {
                       onClick={() => retryMutation.mutate(item.batchId)}
                       disabled={retryMutation.isPending}
                     >
-                      {retryMutation.isPending ? 'Retrying...' : 'Retry batch'}
+                      {retryMutation.isPending ? t('adminIntegrations.retrying') : t('adminIntegrations.retryBatch')}
                     </button>
                   </div>
                 ) : null}
@@ -976,16 +999,42 @@ export function IntegrationDashboardPage() {
 
         <div className="toolbar-cluster">
           <button className="control-button" type="button" onClick={() => setOffset((current) => Math.max(0, current - PAGE_SIZE))} disabled={!canGoBack}>
-            Previous
+            {t('adminIntegrations.previous')}
           </button>
           <span className="inline-state inline-state-neutral">
-            {meta ? `${offset + 1}-${Math.min(offset + PAGE_SIZE, meta.total)} / ${meta.total}` : '0 results'}
+            {meta ? `${offset + 1}-${Math.min(offset + PAGE_SIZE, meta.total)} / ${meta.total}` : t('adminIntegrations.zeroResults')}
           </span>
           <button className="control-button" type="button" onClick={() => setOffset((current) => current + PAGE_SIZE)} disabled={!canGoForward}>
-            Next
+            {t('adminIntegrations.next')}
           </button>
         </div>
       </section>
     </section>
   )
+}
+
+function formatStoreTypeLabel(value: string, t: TranslateFunction) {
+  switch (value) {
+    case 'company':
+      return t('adminIntegrations.storeType.company')
+    case 'franchise':
+      return t('adminIntegrations.storeType.franchise')
+    case 'operator':
+      return t('adminIntegrations.storeType.operator')
+    default:
+      return value
+  }
+}
+
+function formatStoreStatusLabel(value: string, t: TranslateFunction) {
+  switch (value) {
+    case 'active':
+      return t('adminIntegrations.storeStatus.active')
+    case 'inactive':
+      return t('adminIntegrations.storeStatus.inactive')
+    case 'closed':
+      return t('adminIntegrations.storeStatus.closed')
+    default:
+      return value
+  }
 }

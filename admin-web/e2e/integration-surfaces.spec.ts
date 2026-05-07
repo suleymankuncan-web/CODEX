@@ -70,10 +70,10 @@ test('admin import batch detail explains KPI row lineage evidence', async ({ pag
 test('admin dashboard manages store master data import controls', async ({ page }) => {
   await page.goto('/admin/integrations')
 
-  const scopePanel = page.getByLabel('Store master data')
-  await expect(scopePanel.getByRole('heading', { name: 'Store master data' })).toBeVisible()
+  const scopePanel = page.getByLabel('Mağaza ana verisi')
+  await expect(scopePanel.getByRole('heading', { name: 'Mağaza ana verisi' })).toBeVisible()
   await expect(scopePanel.getByText('Marmara Park')).toBeVisible()
-  await expect(scopePanel.getByText('MP001 / Marmara / company')).toBeVisible()
+  await expect(scopePanel.getByText('MP001 / Marmara / şirket')).toBeVisible()
 
   const scopeToggle = scopePanel.getByRole('checkbox', { name: 'Marmara Park KPI import enabled' })
   await expect(scopeToggle).toBeChecked()
@@ -82,16 +82,46 @@ test('admin dashboard manages store master data import controls', async ({ page 
   await expect(page.getByText('Store master data updated')).toBeVisible()
 })
 
+test('admin integrations page switches chrome to English copy and persists locale', async ({ page }) => {
+  await page.goto('/admin/integrations')
+
+  await expect(page.getByRole('heading', { name: 'Entegrasyon operasyonları' })).toBeVisible()
+  await expect(page.getByText('İşlem kuyruğu')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Aksiyon bekleyen partiler' })).toBeVisible()
+  await expect(page.getByText('Integration Operations')).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText('Ã')
+  await expect(page.locator('body')).not.toContainText('Ä')
+  await expect(page.locator('body')).not.toContainText('Å')
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByText('Integration Operations')).toBeVisible()
+  await expect(
+    page.getByRole('heading', {
+      name: 'See friction early, not after the batch disappears into the queue.',
+    }),
+  ).toBeVisible()
+  await expect(page.getByText('Operator queue')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Needs-action batches' })).toBeVisible()
+  await expect(page.getByText('Entegrasyon operasyonları')).toHaveCount(0)
+
+  await page.reload()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByText('Integration Operations')).toBeVisible()
+})
+
 test('admin dashboard exposes Power BI period controls', async ({ page }) => {
   await page.goto('/admin/integrations')
 
-  await expect(page.getByLabel('Donem tipi')).toBeVisible()
-  await page.getByLabel('Donem tipi').selectOption('daily')
-  await expect(page.getByLabel('Baslangic')).toBeVisible()
-  await expect(page.getByLabel('Bitis')).toBeDisabled()
+  await expect(page.getByLabel('Dönem tipi')).toBeVisible()
+  await page.getByLabel('Dönem tipi').selectOption('daily')
+  await expect(page.getByLabel('Başlangıç')).toBeVisible()
+  await expect(page.getByLabel('Bitiş')).toBeDisabled()
 
-  await page.getByLabel('Donem tipi').selectOption('custom')
-  await expect(page.getByLabel('Bitis')).toBeEnabled()
+  await page.getByLabel('Dönem tipi').selectOption('custom')
+  await expect(page.getByLabel('Bitiş')).toBeEnabled()
 })
 
 test('admin dashboard explains why Power BI export upload is unavailable', async ({ page }) => {
@@ -102,8 +132,8 @@ test('admin dashboard explains why Power BI export upload is unavailable', async
 
   await page.goto('/admin/integrations')
 
-  await expect(page.getByRole('button', { name: 'Power BI export yukle' })).toBeDisabled()
-  await expect(page.getByText('Power BI upload hazır değil')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Power BI export yükle' })).toBeDisabled()
+  await expect(page.getByText('Power BI yükleme hazır değil')).toBeVisible()
   await expect(page.getByText('Aktif Power BI KPI source yok.')).toBeVisible()
   await expect(page.getByText('Personel veya mağaza Excel dosyası seç.')).toBeVisible()
 })
