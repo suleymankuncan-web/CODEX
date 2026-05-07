@@ -20,11 +20,39 @@ import {
   runDailyClosure,
   rerunSnapshotRun,
 } from '../features/snapshots/api'
-import { formatDate, formatState, getErrorMessage, mapHealthTone } from '../lib/format'
+import type { TranslateFunction } from '../features/localization/dictionary'
+import { useLocalization } from '../features/localization/useLocalization'
+import { formatDate, getErrorMessage, mapHealthTone } from '../lib/format'
 
 const PAGE_SIZE = 12
 
+const snapshotTypes = ['daily', 'weekly', 'monthly', 'payroll', 'compliance'] as const
+const runStatuses = ['queued', 'running', 'completed', 'failed'] as const
+
+function formatSnapshotType(input: string, t: TranslateFunction) {
+  if (input === 'daily') return t('adminSnapshots.type.daily')
+  if (input === 'weekly') return t('adminSnapshots.type.weekly')
+  if (input === 'monthly') return t('adminSnapshots.type.monthly')
+  if (input === 'payroll') return t('adminSnapshots.type.payroll')
+  if (input === 'compliance') return t('adminSnapshots.type.compliance')
+  return input.replaceAll('_', ' ')
+}
+
+function formatSnapshotState(input: string, t: TranslateFunction) {
+  if (input === 'queued') return t('adminSnapshots.status.queued')
+  if (input === 'running') return t('adminSnapshots.status.running')
+  if (input === 'completed') return t('adminSnapshots.status.completed')
+  if (input === 'failed') return t('adminSnapshots.status.failed')
+  if (input === 'healthy') return t('adminSnapshots.health.healthy')
+  if (input === 'in_progress') return t('adminSnapshots.health.inProgress')
+  if (input === 'retry_ready') return t('adminSnapshots.health.retryReady')
+  if (input === 'needs_action') return t('adminSnapshots.health.needsAction')
+  if (input === 'stuck') return t('adminSnapshots.health.stuck')
+  return input.replaceAll('_', ' ')
+}
+
 export function SnapshotsDashboardPage() {
+  const { locale, t } = useLocalization()
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState<'priority' | 'generated-desc' | 'reruns' | 'type'>('priority')
   const [offset, setOffset] = useState(0)
@@ -86,8 +114,11 @@ export function SnapshotsDashboardPage() {
       [
         item.snapshotRunId,
         item.snapshotType,
+        formatSnapshotType(item.snapshotType, t),
         item.runStatus,
+        formatSnapshotState(item.runStatus, t),
         item.healthState,
+        formatSnapshotState(item.healthState, t),
         item.actionReason,
         item.recommendedAction,
       ]
@@ -95,7 +126,7 @@ export function SnapshotsDashboardPage() {
         .toLowerCase()
         .includes(input),
     )
-  }, [deferredSearch, needsActionQuery.data?.items])
+  }, [deferredSearch, needsActionQuery.data?.items, t])
 
   const sortedItems = useMemo(() => {
     const items = [...filteredItems]
@@ -121,27 +152,27 @@ export function SnapshotsDashboardPage() {
   }, [filteredItems, sortBy])
 
   if (overviewQuery.isLoading || needsActionQuery.isLoading || dailyClosureQuery.isLoading) {
-    return <ScreenState title="Loading snapshot operations" copy="Pulling run overview and rerun pressure." />
+    return <ScreenState title={t('adminSnapshots.loadingTitle')} copy={t('adminSnapshots.loadingCopy')} />
   }
 
   if (overviewQuery.isError) {
-    return <ScreenState title="Snapshot overview unavailable" copy={getErrorMessage(overviewQuery.error)} tone="error" />
+    return <ScreenState title={t('adminSnapshots.overviewUnavailableTitle')} copy={getErrorMessage(overviewQuery.error)} tone="error" />
   }
 
   if (needsActionQuery.isError) {
-    return <ScreenState title="Snapshot queue unavailable" copy={getErrorMessage(needsActionQuery.error)} tone="error" />
+    return <ScreenState title={t('adminSnapshots.queueUnavailableTitle')} copy={getErrorMessage(needsActionQuery.error)} tone="error" />
   }
   if (dailyClosureQuery.isError) {
-    return <ScreenState title="Daily closure unavailable" copy={getErrorMessage(dailyClosureQuery.error)} tone="error" />
+    return <ScreenState title={t('adminSnapshots.dailyClosureUnavailableTitle')} copy={getErrorMessage(dailyClosureQuery.error)} tone="error" />
   }
 
   const overview = overviewQuery.data
   const dailyClosure = dailyClosureQuery.data
   if (!overview) {
-    return <ScreenState title="Snapshot overview unavailable" copy="No overview payload was returned." tone="error" />
+    return <ScreenState title={t('adminSnapshots.overviewUnavailableTitle')} copy={t('adminSnapshots.overviewMissingCopy')} tone="error" />
   }
   if (!dailyClosure) {
-    return <ScreenState title="Daily closure unavailable" copy="No daily closure payload was returned." tone="error" />
+    return <ScreenState title={t('adminSnapshots.dailyClosureUnavailableTitle')} copy={t('adminSnapshots.dailyClosureMissingCopy')} tone="error" />
   }
 
   const meta = needsActionQuery.data?.meta
@@ -152,17 +183,14 @@ export function SnapshotsDashboardPage() {
     <section className="page-stack">
       <section className="hero-panel">
         <div>
-          <div className="eyebrow">Snapshot Operations</div>
-          <h2 className="hero-title">Immutable runs need visibility before they need reruns.</h2>
-          <p className="hero-copy">
-            This surface shows queue pressure, stuck runs, and rerun posture so operators can decide
-            whether to wait, inspect, or request another immutable run.
-          </p>
+          <div className="eyebrow">{t('adminSnapshots.heroEyebrow')}</div>
+          <h2 className="hero-title">{t('adminSnapshots.heroTitle')}</h2>
+          <p className="hero-copy">{t('adminSnapshots.heroCopy')}</p>
         </div>
         <div className="hero-metrics">
-          <MetricAccent label="All runs" value={String(overview.totals.all)} />
-          <MetricAccent label="In progress" value={String(overview.healthTotals.inProgress)} />
-          <MetricAccent label="Retry ready" value={String(overview.healthTotals.retryReady)} />
+          <MetricAccent label={t('adminSnapshots.allRuns')} value={String(overview.totals.all)} />
+          <MetricAccent label={t('adminSnapshots.inProgress')} value={String(overview.healthTotals.inProgress)} />
+          <MetricAccent label={t('adminSnapshots.retryReady')} value={String(overview.healthTotals.retryReady)} />
         </div>
       </section>
 
@@ -176,23 +204,21 @@ export function SnapshotsDashboardPage() {
         <article className="panel">
           <div className="panel-heading panel-heading-spread">
             <div>
-              <div className="eyebrow">Daily closure</div>
-              <h3>Yesterday should become immutable history</h3>
-              <p className="panel-copy">
-                Close the previous local day into an immutable snapshot before day/week/month historical reads depend on it.
-              </p>
+              <div className="eyebrow">{t('adminSnapshots.dailyClosureEyebrow')}</div>
+              <h3>{t('adminSnapshots.dailyClosureTitle')}</h3>
+              <p className="panel-copy">{t('adminSnapshots.dailyClosureCopy')}</p>
             </div>
             <StatusPill tone={mapHealthTone(dailyClosure.healthState)}>
-              {formatState(dailyClosure.healthState)}
+              {formatSnapshotState(dailyClosure.healthState, t)}
             </StatusPill>
           </div>
           <div className="key-grid">
-            <KeyValue label="Closure date" value={formatDate(dailyClosure.closureDate)} />
-            <KeyValue label="Local date" value={formatDate(dailyClosure.localDate)} />
-            <KeyValue label="Timezone" value={dailyClosure.timezone} />
-            <KeyValue label="Existing run" value={dailyClosure.existingSnapshotRunId ?? 'No run yet'} />
-            <KeyValue label="Automation" value={dailyClosure.automationEnabled ? 'Enabled' : 'Disabled'} />
-            <KeyValue label="Poll cadence" value={`${dailyClosure.automationPollMinutes} min`} />
+            <KeyValue label={t('adminSnapshots.closureDate')} value={formatDate(dailyClosure.closureDate, locale)} />
+            <KeyValue label={t('adminSnapshots.localDate')} value={formatDate(dailyClosure.localDate, locale)} />
+            <KeyValue label={t('adminSnapshots.timezone')} value={dailyClosure.timezone} />
+            <KeyValue label={t('adminSnapshots.existingRun')} value={dailyClosure.existingSnapshotRunId ?? t('adminSnapshots.noRunYet')} />
+            <KeyValue label={t('adminSnapshots.automation')} value={dailyClosure.automationEnabled ? t('adminSnapshots.enabled') : t('adminSnapshots.disabled')} />
+            <KeyValue label={t('adminSnapshots.pollCadence')} value={t('adminSnapshots.minutes', { count: dailyClosure.automationPollMinutes })} />
           </div>
           <p className="queue-reason">{dailyClosure.recommendedAction}</p>
           {dailyClosure.existingFailureReason ? (
@@ -205,11 +231,11 @@ export function SnapshotsDashboardPage() {
               onClick={() => dailyClosureMutation.mutate()}
               disabled={!dailyClosure.canQueue || dailyClosureMutation.isPending}
             >
-              {dailyClosureMutation.isPending ? 'Queuing...' : 'Queue daily closure'}
+              {dailyClosureMutation.isPending ? t('adminSnapshots.queuing') : t('adminSnapshots.queueDailyClosure')}
             </button>
             {dailyClosure.existingSnapshotRunId ? (
               <Link className="back-link" to={`/admin/snapshots/${dailyClosure.existingSnapshotRunId}`}>
-                <span>Open snapshot run</span>
+                <span>{t('adminSnapshots.openSnapshotRun')}</span>
               </Link>
             ) : null}
           </div>
@@ -218,74 +244,74 @@ export function SnapshotsDashboardPage() {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Closure rule</div>
-              <h3>What happens now</h3>
+              <div className="eyebrow">{t('adminSnapshots.closureRuleEyebrow')}</div>
+              <h3>{t('adminSnapshots.closureRuleTitle')}</h3>
             </div>
           </div>
           <div className="key-grid">
-            <KeyValue label="Source model" value="Live state + daily closed snapshot" />
-            <KeyValue label="Automatic target" value="Yesterday in Europe/Istanbul" />
-            <KeyValue label="Queue behavior" value={dailyClosure.canQueue ? 'Ready to queue' : 'Waiting / already closed'} />
-            <KeyValue label="Retry path" value={dailyClosure.canRerun ? 'Use rerun on failed run' : 'Not needed'} />
+            <KeyValue label={t('adminSnapshots.sourceModel')} value={t('adminSnapshots.sourceModelValue')} />
+            <KeyValue label={t('adminSnapshots.automaticTarget')} value={t('adminSnapshots.automaticTargetValue')} />
+            <KeyValue label={t('adminSnapshots.queueBehavior')} value={dailyClosure.canQueue ? t('adminSnapshots.readyToQueue') : t('adminSnapshots.waitingOrClosed')} />
+            <KeyValue label={t('adminSnapshots.retryPath')} value={dailyClosure.canRerun ? t('adminSnapshots.useRerunOnFailed') : t('adminSnapshots.notNeeded')} />
           </div>
         </article>
       </section>
 
       <section className="metric-grid snapshot-metric-grid">
-        <MetricCard title="Healthy" value={overview.healthTotals.healthy} note={`${overview.totals.completed} completed runs`} icon={<Rocket size={18} />} tone="calm" />
-        <MetricCard title="In progress" value={overview.healthTotals.inProgress} note={`${overview.totals.queued + overview.totals.running} active queue items`} icon={<Activity size={18} />} tone="neutral" />
-        <MetricCard title="Retry ready" value={overview.healthTotals.retryReady} note="Failed runs can likely be rerun" icon={<RefreshCcw size={18} />} tone="accent" />
-        <MetricCard title="Stuck" value={overview.healthTotals.stuck} note="Exceeded snapshot threshold" icon={<Clock3 size={18} />} tone="danger" />
+        <MetricCard title={t('adminSnapshots.healthy')} value={overview.healthTotals.healthy} note={t('adminSnapshots.healthyNote', { count: overview.totals.completed })} icon={<Rocket size={18} />} tone="calm" />
+        <MetricCard title={t('adminSnapshots.inProgress')} value={overview.healthTotals.inProgress} note={t('adminSnapshots.inProgressNote', { count: overview.totals.queued + overview.totals.running })} icon={<Activity size={18} />} tone="neutral" />
+        <MetricCard title={t('adminSnapshots.retryReady')} value={overview.healthTotals.retryReady} note={t('adminSnapshots.retryReadyNote')} icon={<RefreshCcw size={18} />} tone="accent" />
+        <MetricCard title={t('adminSnapshots.stuck')} value={overview.healthTotals.stuck} note={t('adminSnapshots.stuckNote')} icon={<Clock3 size={18} />} tone="danger" />
       </section>
 
       <section className="two-up-grid">
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Latest pointers</div>
-              <h3>Run transitions</h3>
+              <div className="eyebrow">{t('adminSnapshots.latestPointers')}</div>
+              <h3>{t('adminSnapshots.runTransitions')}</h3>
             </div>
           </div>
           <div className="key-grid">
-            <KeyValue label="Latest completed" value={overview.latest.completedSnapshotRunId ?? 'No completed run yet'} />
-            <KeyValue label="Latest failed" value={overview.latest.failedSnapshotRunId ?? 'No failed run yet'} />
-            <KeyValue label="Latest in progress" value={overview.latest.inProgressSnapshotRunId ?? 'No active run'} />
-            <KeyValue label="Latest stuck" value={overview.latest.stuckSnapshotRunId ?? 'No stuck run'} />
+            <KeyValue label={t('adminSnapshots.latestCompleted')} value={overview.latest.completedSnapshotRunId ?? t('adminSnapshots.noCompletedRun')} />
+            <KeyValue label={t('adminSnapshots.latestFailed')} value={overview.latest.failedSnapshotRunId ?? t('adminSnapshots.noFailedRun')} />
+            <KeyValue label={t('adminSnapshots.latestInProgress')} value={overview.latest.inProgressSnapshotRunId ?? t('adminSnapshots.noActiveRun')} />
+            <KeyValue label={t('adminSnapshots.latestStuck')} value={overview.latest.stuckSnapshotRunId ?? t('adminSnapshots.noStuckRun')} />
           </div>
         </article>
 
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Health reading</div>
-              <h3>Run-state balance</h3>
+              <div className="eyebrow">{t('adminSnapshots.healthReading')}</div>
+              <h3>{t('adminSnapshots.runStateBalance')}</h3>
             </div>
           </div>
-          <StatusBar label="Healthy" value={overview.healthTotals.healthy} total={overview.totals.all} tone="calm" />
-          <StatusBar label="In progress" value={overview.healthTotals.inProgress} total={overview.totals.all} tone="neutral" />
-          <StatusBar label="Retry ready" value={overview.healthTotals.retryReady} total={overview.totals.all} tone="accent" />
-          <StatusBar label="Stuck" value={overview.healthTotals.stuck} total={overview.totals.all} tone="danger" />
+          <StatusBar label={t('adminSnapshots.healthy')} value={overview.healthTotals.healthy} total={overview.totals.all} tone="calm" />
+          <StatusBar label={t('adminSnapshots.inProgress')} value={overview.healthTotals.inProgress} total={overview.totals.all} tone="neutral" />
+          <StatusBar label={t('adminSnapshots.retryReady')} value={overview.healthTotals.retryReady} total={overview.totals.all} tone="accent" />
+          <StatusBar label={t('adminSnapshots.stuck')} value={overview.healthTotals.stuck} total={overview.totals.all} tone="danger" />
         </article>
       </section>
 
       <section className="panel">
         <div className="panel-heading panel-heading-spread">
           <div>
-            <div className="eyebrow">Action queue</div>
-            <h3>Runs needing operator attention</h3>
-            <p className="panel-copy">
-              Filter the queue by snapshot type or run status, then rerun safe candidates without leaving the dashboard.
-            </p>
+            <div className="eyebrow">{t('adminSnapshots.actionQueueEyebrow')}</div>
+            <h3>{t('adminSnapshots.actionQueueTitle')}</h3>
+            <p className="panel-copy">{t('adminSnapshots.actionQueueCopy')}</p>
           </div>
           <ReportingToolbar
             sortValue={sortBy}
             onSortChange={(value) => setSortBy(value as typeof sortBy)}
             sortOptions={[
-              { value: 'priority', label: 'Priority state' },
-              { value: 'generated-desc', label: 'Newest first' },
-              { value: 'reruns', label: 'Most reruns' },
-              { value: 'type', label: 'Snapshot type' },
+              { value: 'priority', label: t('adminSnapshots.sort.priority') },
+              { value: 'generated-desc', label: t('adminSnapshots.sort.generatedDesc') },
+              { value: 'reruns', label: t('adminSnapshots.sort.reruns') },
+              { value: 'type', label: t('adminSnapshots.sort.type') },
             ]}
+            sortAriaLabel={t('adminSnapshots.sortRows')}
+            exportLabel={t('adminSnapshots.exportCsv')}
             onExport={() =>
               downloadCsv({
                 filename: 'snapshot-needs-action.csv',
@@ -306,11 +332,11 @@ export function SnapshotsDashboardPage() {
             }
           >
             <label className="search-field">
-              <span className="sr-only">Filter snapshot queue</span>
+              <span className="sr-only">{t('adminSnapshots.filterQueue')}</span>
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search by run, type, reason, or state"
+                placeholder={t('adminSnapshots.searchPlaceholder')}
               />
             </label>
           </ReportingToolbar>
@@ -318,7 +344,7 @@ export function SnapshotsDashboardPage() {
 
         <div className="toolbar-cluster">
           <label className="control-select">
-            <span className="sr-only">Filter snapshot type</span>
+            <span className="sr-only">{t('adminSnapshots.filterSnapshotType')}</span>
             <select
               value={snapshotTypeFilter}
               onChange={(event) => {
@@ -326,16 +352,16 @@ export function SnapshotsDashboardPage() {
                 setSnapshotTypeFilter(event.target.value)
               }}
             >
-              <option value="">All snapshot types</option>
-              {['daily', 'weekly', 'monthly', 'payroll', 'compliance'].map((type) => (
+              <option value="">{t('adminSnapshots.allSnapshotTypes')}</option>
+              {snapshotTypes.map((type) => (
                 <option key={type} value={type}>
-                  {type}
+                  {formatSnapshotType(type, t)}
                 </option>
               ))}
             </select>
           </label>
           <label className="control-select">
-            <span className="sr-only">Filter run status</span>
+            <span className="sr-only">{t('adminSnapshots.filterRunStatus')}</span>
             <select
               value={runStatusFilter}
               onChange={(event) => {
@@ -343,10 +369,10 @@ export function SnapshotsDashboardPage() {
                 setRunStatusFilter(event.target.value)
               }}
             >
-              <option value="">All run statuses</option>
-              {['queued', 'running', 'completed', 'failed'].map((status) => (
+              <option value="">{t('adminSnapshots.allRunStatuses')}</option>
+              {runStatuses.map((status) => (
                 <option key={status} value={status}>
-                  {status}
+                  {formatSnapshotState(status, t)}
                 </option>
               ))}
             </select>
@@ -361,14 +387,14 @@ export function SnapshotsDashboardPage() {
               setSearch('')
             }}
           >
-            Clear filters
+            {t('adminSnapshots.clearFilters')}
           </button>
         </div>
 
         {sortedItems.length === 0 ? (
           <EmptyState
-            title="No snapshot runs matched your filter."
-            copy="Clear the search to review the full needs-action queue."
+            title={t('adminSnapshots.emptyQueueTitle')}
+            copy={t('adminSnapshots.emptyQueueCopy')}
           />
         ) : (
           <div className="queue-list">
@@ -377,20 +403,22 @@ export function SnapshotsDashboardPage() {
                 <Link to={`/admin/snapshots/${item.snapshotRunId}`}>
                   <div className="queue-row-head">
                     <div>
-                      <div className="queue-title">{item.snapshotType} snapshot</div>
+                      <div className="queue-title">
+                        {t('adminSnapshots.snapshotTitle', { type: formatSnapshotType(item.snapshotType, t) })}
+                      </div>
                       <div className="queue-subtitle">{item.snapshotRunId}</div>
                     </div>
-                    <StatusPill tone={mapHealthTone(item.healthState)}>{formatState(item.healthState)}</StatusPill>
+                    <StatusPill tone={mapHealthTone(item.healthState)}>{formatSnapshotState(item.healthState, t)}</StatusPill>
                   </div>
 
                   <p className="queue-reason">{item.actionReason}</p>
 
                   <div className="queue-meta">
-                    <span>{item.runStatus}</span>
-                    <span>{`${formatDate(item.periodStart)} -> ${formatDate(item.periodEnd)}`}</span>
-                    <span>reruns {item.rerunCount}</span>
+                    <span>{formatSnapshotState(item.runStatus, t)}</span>
+                    <span>{`${formatDate(item.periodStart, locale)} - ${formatDate(item.periodEnd, locale)}`}</span>
+                    <span>{t('adminSnapshots.reruns', { count: item.rerunCount })}</span>
                     {item.latestRerunSnapshotRunId ? (
-                      <span>latest rerun {item.latestRerunSnapshotRunId}</span>
+                      <span>{t('adminSnapshots.latestRerun', { id: item.latestRerunSnapshotRunId })}</span>
                     ) : null}
                   </div>
 
@@ -407,7 +435,7 @@ export function SnapshotsDashboardPage() {
                       onClick={() => rerunMutation.mutate(item.snapshotRunId)}
                       disabled={rerunMutation.isPending}
                     >
-                      {rerunMutation.isPending ? 'Rerunning...' : 'Rerun snapshot'}
+                      {rerunMutation.isPending ? t('adminSnapshots.rerunning') : t('adminSnapshots.rerunSnapshot')}
                     </button>
                   </div>
                 ) : null}
@@ -423,10 +451,10 @@ export function SnapshotsDashboardPage() {
             onClick={() => setOffset((current) => Math.max(0, current - PAGE_SIZE))}
             disabled={!canGoBack}
           >
-            Previous
+            {t('adminSnapshots.previous')}
           </button>
           <span className="inline-state inline-state-neutral">
-            {meta ? `${offset + 1}-${Math.min(offset + PAGE_SIZE, meta.total)} / ${meta.total}` : '0 results'}
+            {meta ? `${offset + 1}-${Math.min(offset + PAGE_SIZE, meta.total)} / ${meta.total}` : t('adminSnapshots.zeroResults')}
           </span>
           <button
             className="control-button"
@@ -434,7 +462,7 @@ export function SnapshotsDashboardPage() {
             onClick={() => setOffset((current) => current + PAGE_SIZE)}
             disabled={!canGoForward}
           >
-            Next
+            {t('adminSnapshots.next')}
           </button>
         </div>
       </section>

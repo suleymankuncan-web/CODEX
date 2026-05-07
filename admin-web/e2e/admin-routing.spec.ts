@@ -133,6 +133,72 @@ test('master data page switches chrome to English copy and persists locale', asy
   await expect(page.getByRole('heading', { name: 'Master data bootstrap' })).toBeVisible()
 })
 
+test('snapshot operations page switches chrome to English copy and persists locale', async ({ page }) => {
+  await page.goto('/admin/snapshots')
+
+  await expect(page.getByText('Snapshot operasyonları')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Değişmez çalışmalar yeniden çalıştırmadan önce görünür olmalı.' })).toBeVisible()
+  await expect(page.getByText('Günlük kapanış', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Dün değişmez tarihe dönüşmeli' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Operatör ilgisi isteyen çalışmalar' })).toBeVisible()
+  await expect(page.getByPlaceholder('Çalışma, tip, gerekçe veya durum ara')).toBeVisible()
+  await expect(page.getByText('Snapshot Operations')).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText('Ãƒ')
+  await expect(page.locator('body')).not.toContainText('Ã„')
+  await expect(page.locator('body')).not.toContainText('Ã…')
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByText('Snapshot Operations')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Immutable runs need visibility before they need reruns.' })).toBeVisible()
+  await expect(page.getByText('Daily closure', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Yesterday should become immutable history' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Runs needing operator attention' })).toBeVisible()
+  await expect(page.getByPlaceholder('Search by run, type, reason, or state')).toBeVisible()
+  await expect(page.getByText('Snapshot operasyonları')).toHaveCount(0)
+
+  await page.reload()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'Immutable runs need visibility before they need reruns.' })).toBeVisible()
+})
+
+test('snapshot run detail page switches chrome to English copy and persists locale', async ({ page }) => {
+  await page.goto('/admin/snapshots/snapshot-run-1')
+
+  await expect(page.getByRole('link', { name: 'Snapshot operasyonlarına dön' })).toBeVisible()
+  await expect(page.getByText('Snapshot çalışma detayı')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Günlük snapshot çalışması' })).toBeVisible()
+  await expect(page.getByText('Toplam rapor satırı')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Çalışma özeti' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Bağımlılıklar ve kontroller' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Materialize edilen rapor kesitleri' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Operatör izi' })).toBeVisible()
+  await expect(page.getByText('Snapshot Run Detail')).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText('Ãƒ')
+  await expect(page.locator('body')).not.toContainText('Ã„')
+  await expect(page.locator('body')).not.toContainText('Ã…')
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('link', { name: 'Back to snapshot operations' })).toBeVisible()
+  await expect(page.getByText('Snapshot Run Detail')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'daily snapshot run' })).toBeVisible()
+  await expect(page.getByText('Total report rows')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Run summary' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Dependencies and checks' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Materialized report slices' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Operator-visible trace' })).toBeVisible()
+  await expect(page.getByText('Snapshot çalışma detayı')).toHaveCount(0)
+
+  await page.reload()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'daily snapshot run' })).toBeVisible()
+})
+
 async function routeAdminShellApi(page: Page) {
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: authSessionFixture })
@@ -171,8 +237,32 @@ async function routeAdminShellApi(page: Page) {
     await route.fulfill({ json: emptyListFixture })
   })
 
+  await page.route('**/api/snapshots/runs/overview', async (route) => {
+    await route.fulfill({ json: snapshotOverviewFixture })
+  })
+
+  await page.route('**/api/snapshots/daily-closure', async (route) => {
+    await route.fulfill({ json: dailyClosureFixture })
+  })
+
   await page.route('**/api/snapshots/runs/needs-action?**', async (route) => {
-    await route.fulfill({ json: emptyListFixture })
+    await route.fulfill({ json: snapshotNeedsActionFixture })
+  })
+
+  await page.route('**/api/snapshots/runs/snapshot-run-1/dependencies', async (route) => {
+    await route.fulfill({ json: snapshotDependenciesFixture })
+  })
+
+  await page.route('**/api/snapshots/runs/snapshot-run-1/lineage', async (route) => {
+    await route.fulfill({ json: snapshotLineageFixture })
+  })
+
+  await page.route('**/api/snapshots/runs/snapshot-run-1/audit', async (route) => {
+    await route.fulfill({ json: snapshotAuditFixture })
+  })
+
+  await page.route('**/api/snapshots/runs/snapshot-run-1', async (route) => {
+    await route.fulfill({ json: snapshotDetailFixture })
   })
 
   await page.route('**/api/integrations/master-data-bootstrap/batches?**', async (route) => {
@@ -244,4 +334,150 @@ const emptyListFixture = {
     limit: 50,
     offset: 0,
   },
+}
+
+const snapshotOverviewFixture = {
+  totals: {
+    all: 4,
+    queued: 1,
+    running: 1,
+    completed: 1,
+    failed: 1,
+  },
+  healthTotals: {
+    healthy: 1,
+    inProgress: 1,
+    retryReady: 1,
+    needsAction: 0,
+    stuck: 1,
+  },
+  actionTotals: {
+    retryReady: 1,
+    stuck: 1,
+  },
+  latest: {
+    completedSnapshotRunId: 'snapshot-completed-1',
+    failedSnapshotRunId: 'snapshot-run-1',
+    inProgressSnapshotRunId: 'snapshot-running-1',
+    stuckSnapshotRunId: 'snapshot-stuck-1',
+  },
+}
+
+const dailyClosureFixture = {
+  automationEnabled: true,
+  automationPollMinutes: 15,
+  timezone: 'Europe/Istanbul',
+  referenceAt: '2026-05-07T09:00:00.000Z',
+  localDate: '2026-05-07',
+  closureDate: '2026-05-06',
+  healthState: 'retry_ready',
+  dueNow: true,
+  canQueue: true,
+  canRerun: false,
+  recommendedAction: 'Queue the daily closure for yesterday.',
+  existingSnapshotRunId: null,
+  existingRunStatus: null,
+  existingFailureReason: null,
+  existingGeneratedAt: null,
+}
+
+const snapshotNeedsActionFixture = {
+  items: [
+    {
+      snapshotRunId: 'snapshot-run-1',
+      snapshotDate: '2026-05-06',
+      snapshotType: 'daily',
+      periodStart: '2026-05-06',
+      periodEnd: '2026-05-06',
+      runStatus: 'failed',
+      healthState: 'retry_ready',
+      generatedAt: '2026-05-06T02:00:00.000Z',
+      generatedBy: 'admin-routing-user',
+      startedAt: '2026-05-06T02:01:00.000Z',
+      finishedAt: '2026-05-06T02:03:00.000Z',
+      failureReason: 'Fixture dependency failed',
+      rerunOfSnapshotRunId: null,
+      kpiConfigVersion: {
+        kpiConfigVersionId: '11111111-1111-4111-8111-111111111111',
+        versionNo: 7,
+        state: 'versioned',
+      },
+      actionReason: 'Dependency can be retried safely.',
+      recommendedAction: 'Rerun the snapshot after dependency recovery.',
+      canRerun: true,
+      rerunCount: 1,
+      latestRerunSnapshotRunId: null,
+      isStuck: false,
+    },
+  ],
+  meta: { count: 1, total: 1, limit: 12, offset: 0 },
+}
+
+const snapshotDetailFixture = {
+  snapshotRun: {
+    snapshotRunId: 'snapshot-run-1',
+    snapshotDate: '2026-05-06',
+    snapshotType: 'daily',
+    periodStart: '2026-05-06',
+    periodEnd: '2026-05-06',
+    runStatus: 'failed',
+    healthState: 'retry_ready',
+    generatedAt: '2026-05-06T02:00:00.000Z',
+    generatedBy: 'admin-routing-user',
+    startedAt: '2026-05-06T02:01:00.000Z',
+    finishedAt: '2026-05-06T02:03:00.000Z',
+    failureReason: 'Fixture dependency failed',
+    rerunOfSnapshotRunId: null,
+    kpiConfigVersion: {
+      kpiConfigVersionId: '11111111-1111-4111-8111-111111111111',
+      versionNo: 7,
+      state: 'versioned',
+    },
+  },
+  cards: {
+    workforceRows: 12,
+    kpiRows: 24,
+    checklistRows: 6,
+    turnoverRows: 3,
+  },
+  canRerun: true,
+  rerunAllowed: true,
+  rerunBlockedReason: null,
+  rerunCount: 1,
+  latestRerunSnapshotRunId: null,
+  failureReason: 'Fixture dependency failed',
+}
+
+const snapshotDependenciesFixture = {
+  snapshotRunId: 'snapshot-run-1',
+  runStatus: 'failed',
+  rerunAllowed: true,
+  rerunBlockedReason: null,
+  checks: [
+    {
+      code: 'source-ready',
+      status: 'pass',
+      message: 'Source dependency recovered.',
+    },
+  ],
+}
+
+const snapshotLineageFixture = {
+  snapshotRunId: 'snapshot-run-1',
+  parent: null,
+  children: [],
+}
+
+const snapshotAuditFixture = {
+  items: [
+    {
+      eventLogId: 'event-1',
+      occurredAt: '2026-05-06T02:00:00.000Z',
+      actorUserId: 'admin-routing-user',
+      correlationId: 'correlation-1',
+      eventType: 'snapshot.failed',
+      metadata: {},
+    },
+  ],
+  meta: { count: 1, total: 1, limit: 50, offset: 0 },
 }
