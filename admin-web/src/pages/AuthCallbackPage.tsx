@@ -8,9 +8,11 @@ import {
   isManualTokenCallbackAllowed,
   readCallbackPayload,
 } from '../features/auth/auth-flow'
+import { useLocalization } from '../features/localization/useLocalization'
 import { useSession } from '../features/session/session-context-value'
 
 export function AuthCallbackPage() {
+  const { t } = useLocalization()
   const { startBearerSession } = useSession()
   const [exchangeError, setExchangeError] = useState<string | null>(null)
   const handledRef = useRef(false)
@@ -89,14 +91,14 @@ export function AuthCallbackPage() {
         <div className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Auth Callback</div>
-              <h3>Login callback failed</h3>
+              <div className="eyebrow">{t('authFlow.callbackEyebrow')}</div>
+              <h3>{t('authFlow.callbackFailedTitle')}</h3>
             </div>
-            <StatusPill tone="danger">Provider error</StatusPill>
+            <StatusPill tone="danger">{t('authFlow.providerError')}</StatusPill>
           </div>
           <p className="panel-copy">
             {callbackPayload.errorDescription ??
-              `The provider returned ${callbackPayload.error}. Retry login or fall back to manual session setup while the integration is still being finalized.`}
+              t('authFlow.providerReturnedError', { error: callbackPayload.error })}
           </p>
         </div>
       </section>
@@ -106,7 +108,7 @@ export function AuthCallbackPage() {
   const visibleExchangeError =
     exchangeError ??
     (callbackPayload.code && bootstrapQuery.isError
-      ? 'Auth bootstrap metadata is unavailable'
+      ? t('authFlow.bootstrapUnavailable')
       : null)
 
   if (visibleExchangeError) {
@@ -115,10 +117,10 @@ export function AuthCallbackPage() {
         <div className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Auth Callback</div>
-              <h3>Secure login exchange failed</h3>
+              <div className="eyebrow">{t('authFlow.callbackEyebrow')}</div>
+              <h3>{t('authFlow.secureExchangeFailedTitle')}</h3>
             </div>
-            <StatusPill tone="danger">PKCE error</StatusPill>
+            <StatusPill tone="danger">{t('authFlow.pkceError')}</StatusPill>
           </div>
           <p className="panel-copy">{visibleExchangeError}</p>
         </div>
@@ -130,8 +132,8 @@ export function AuthCallbackPage() {
     return (
       <section className="auth-flow-shell">
         <ScreenState
-          title="Completing secure login"
-          copy="The callback received an authorization code and is exchanging it with the saved PKCE verifier before opening the app session."
+          title={t('authFlow.completingSecureLoginTitle')}
+          copy={t('authFlow.completingSecureLoginCopy')}
         />
       </section>
     )
@@ -141,8 +143,8 @@ export function AuthCallbackPage() {
     return (
       <section className="auth-flow-shell">
         <EmptyState
-          title="No callback credential found"
-          copy="This callback route is ready, but no authorization `code`, `access_token`, or `token` was found in the query string or URL hash."
+          title={t('authFlow.noCredentialTitle')}
+          copy={t('authFlow.noCredentialCopy')}
         />
       </section>
     )
@@ -154,15 +156,12 @@ export function AuthCallbackPage() {
         <div className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Auth Callback</div>
-              <h3>Manual token callback is disabled</h3>
+              <div className="eyebrow">{t('authFlow.callbackEyebrow')}</div>
+              <h3>{t('authFlow.manualTokenDisabledTitle')}</h3>
             </div>
-            <StatusPill tone="danger">Production hardening</StatusPill>
+            <StatusPill tone="danger">{t('authFlow.productionHardening')}</StatusPill>
           </div>
-          <p className="panel-copy">
-            This build only accepts the Authorization Code + PKCE callback path. Start login again
-            through the provider so the app can exchange a code and verify the session normally.
-          </p>
+          <p className="panel-copy">{t('authFlow.manualTokenDisabledCopy')}</p>
         </div>
       </section>
     )
@@ -174,18 +173,14 @@ export function AuthCallbackPage() {
         <div className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Auth Callback</div>
-              <h3>Callback route is ready for a real provider response</h3>
+              <div className="eyebrow">{t('authFlow.callbackEyebrow')}</div>
+              <h3>{t('authFlow.placeholderReadyTitle')}</h3>
             </div>
-            <StatusPill tone="warning">Placeholder token</StatusPill>
+            <StatusPill tone="warning">{t('authFlow.placeholderToken')}</StatusPill>
           </div>
-          <p className="panel-copy">
-            A real provider will later return a valid bearer token or code exchange result here.
-            This placeholder proves the route and handoff shape without claiming that a fake token
-            is usable.
-          </p>
+          <p className="panel-copy">{t('authFlow.placeholderReadyCopy')}</p>
           {callbackPayload.returnTo ? (
-            <p className="panel-copy">Intended return path: <code>{callbackPayload.returnTo}</code></p>
+            <p className="panel-copy">{t('authFlow.intendedReturnPath', { returnTo: callbackPayload.returnTo })}</p>
           ) : null}
         </div>
       </section>
@@ -195,8 +190,8 @@ export function AuthCallbackPage() {
   return (
     <section className="auth-flow-shell">
       <ScreenState
-        title="Completing login"
-        copy="The callback received a bearer token, stored it as the current session, and is routing the app back into the verified shell flow now."
+        title={t('authFlow.completingLoginTitle')}
+        copy={t('authFlow.completingLoginCopy')}
       />
     </section>
   )

@@ -85,6 +85,66 @@ test('store shell preserves requested store route when bearer session needs logi
   await expect(page.getByText('/store/approvals')).toBeVisible()
 })
 
+test('auth login and callback pages switch chrome to English copy and persist locale', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem(
+      'store-ops-admin-session',
+      JSON.stringify({
+        mode: 'bearer',
+        mockUserId: 'store-manager-user',
+        mockRoleCodes: 'STORE_MANAGER',
+        mockCompanyIds: '00000000-0000-0000-0000-000000000001',
+        bearerToken: '',
+      }),
+    )
+    window.sessionStorage.removeItem('store-ops-admin-bearer-token')
+  })
+  await routeAuthBootstrap(page)
+
+  await page.goto('/auth/login?returnTo=/store/approvals')
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'tr')
+  await expect(page.getByText('Kimlik girişi')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Uygulama admin veya mağaza kabuklarını açmadan önce gerçek giriş buradan yapılacak.' })).toBeVisible()
+  await expect(page.getByText('Sağlayıcı akışı', { exact: true })).toBeVisible()
+  await expect(page.getByText('Ortam gerekli', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Bu route şu anda ne yapabilir' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Callback route simülasyonu' })).toBeVisible()
+  await expect(page.getByText('Auth Entry')).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText('ÃƒÆ’')
+  await expect(page.locator('body')).not.toContainText('Ãƒâ€')
+  await expect(page.locator('body')).not.toContainText('Ãƒâ€¦')
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByText('Auth Entry')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Real login will enter here before the app opens admin or store shells.' })).toBeVisible()
+  await expect(page.getByText('Provider flow', { exact: true })).toBeVisible()
+  await expect(page.getByText('Needs env', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'What this route can do now' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Simulate callback route' })).toBeVisible()
+  await expect(page.getByText('Kimlik girişi')).toHaveCount(0)
+
+  await page.reload()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'Real login will enter here before the app opens admin or store shells.' })).toBeVisible()
+
+  await page.goto('/auth/callback#access_token=demo-placeholder-token&state=%2Fstore%2Fapprovals')
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'Manual token callback is disabled' })).toBeVisible()
+  await expect(page.getByText('Production hardening')).toBeVisible()
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'TR' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'tr')
+  await expect(page.getByRole('heading', { name: 'Manuel token callback kapalı' })).toBeVisible()
+  await expect(page.getByText('Production sertleştirme')).toBeVisible()
+  await expect(page.getByText('Manual token callback is disabled')).toHaveCount(0)
+})
+
 test('auth login returns ready store-manager sessions to the requested store route', async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem(
