@@ -14,12 +14,12 @@ import type { AuthSessionSummary } from '../features/auth/api'
 import { WorkflowInboxDetail } from '../features/workflow/WorkflowInboxDetail'
 import { getWorkflowInbox } from '../features/workflow/api'
 import {
-  formatWorkflowItemType,
-  formatWorkflowSourceType,
   mapInboxStatusTone,
   mapWorkflowUrgencyTone,
   type WorkflowInboxItem,
 } from '../features/workflow/contracts'
+import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
+import { useLocalization } from '../features/localization/useLocalization'
 import {
   approveOffboardingRequest,
   approveSellerCodeRequest,
@@ -42,23 +42,68 @@ function canUseSellerCodeQueue(authSummary: AuthSessionSummary | null) {
   return roles.includes('SUPER_ADMIN') || roles.includes('HR_ADMIN')
 }
 
-function formatOffboardingAccessClosure(closure?: OffboardingAccessClosure | null) {
+const workflowItemTypeLabelKeys: Record<WorkflowInboxItem['itemType'], TranslationKey> = {
+  approval: 'storeTasks.itemType.approval',
+  acknowledgement: 'storeTasks.itemType.acknowledgement',
+  task: 'storeTasks.itemType.task',
+  notification: 'storeTasks.itemType.notification',
+}
+
+const workflowSourceTypeLabelKeys: Record<WorkflowInboxItem['sourceType'], TranslationKey> = {
+  target_distribution_request: 'storeTasks.sourceType.target_distribution_request',
+  checklist_receipt: 'storeTasks.sourceType.checklist_receipt',
+  kpi_exception: 'storeTasks.sourceType.kpi_exception',
+}
+
+const workflowStateLabelKeys: Record<string, TranslationKey> = {
+  needs_attention: 'storeTasks.inboxStatus.needs_attention',
+  completed: 'storeTasks.inboxStatus.completed',
+  informational: 'storeTasks.inboxStatus.informational',
+  high: 'storeTasks.urgency.high',
+  medium: 'storeTasks.urgency.medium',
+  low: 'storeTasks.urgency.low',
+  pending_hr_approval: 'adminInbox.status.pendingHrApproval',
+  pending_region_approval: 'adminInbox.status.pendingRegionApproval',
+}
+
+function formatTranslatedState(state: string, t: TranslateFunction) {
+  const key = workflowStateLabelKeys[state]
+  return key ? t(key) : formatState(state)
+}
+
+function formatWorkflowItemTypeLabel(itemType: WorkflowInboxItem['itemType'], t: TranslateFunction) {
+  return t(workflowItemTypeLabelKeys[itemType])
+}
+
+function formatWorkflowSourceTypeLabel(sourceType: WorkflowInboxItem['sourceType'], t: TranslateFunction) {
+  return t(workflowSourceTypeLabelKeys[sourceType])
+}
+
+function formatOffboardingAccessClosure(
+  closure: OffboardingAccessClosure | null | undefined,
+  t: TranslateFunction,
+) {
   if (!closure) {
     return null
   }
 
   if (!closure.userAccessClosed) {
-    return 'No linked user account was found. Employee record was terminated.'
+    return t('adminInbox.noLinkedUserAccess')
   }
 
-  return `User access closed: ${closure.closedRoleAssignments} role grants, ${closure.closedActionStoreAssignments} action store grants, ${closure.revokedMobileSessions} mobile sessions.`
+  return t('adminInbox.userAccessClosed', {
+    closedRoleAssignments: closure.closedRoleAssignments,
+    closedActionStoreAssignments: closure.closedActionStoreAssignments,
+    revokedMobileSessions: closure.revokedMobileSessions,
+  })
 }
 
 export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }) {
+  const { t } = useLocalization()
   const queryClient = useQueryClient()
   const inboxEnabled = canUseAdminInbox(input.authSummary)
   const sellerCodeEnabled = canUseSellerCodeQueue(input.authSummary)
-  const regionScope = input.authSummary?.user.scope.regionIds.join(', ') || 'No region scope'
+  const regionScope = input.authSummary?.user.scope.regionIds.join(', ') || t('adminInbox.noRegionScope')
   const [sellerCodeDrafts, setSellerCodeDrafts] = useState<Record<string, string>>({})
   const [sellerCodeReturnNotes, setSellerCodeReturnNotes] = useState<Record<string, string>>({})
   const [offboardingReturnNotes, setOffboardingReturnNotes] = useState<Record<string, string>>({})
@@ -101,7 +146,7 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
   const approveOffboardingMutation = useMutation({
     mutationFn: approveOffboardingRequest,
     onSuccess: async (response) => {
-      const accessClosureCopy = formatOffboardingAccessClosure(response.data.accessClosure)
+      const accessClosureCopy = formatOffboardingAccessClosure(response.data.accessClosure, t)
       setSellerCodeNotice(
         accessClosureCopy
           ? `${response.command.message}. ${accessClosureCopy}`
@@ -164,8 +209,8 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
   if (!inboxEnabled) {
     return (
       <ScreenState
-        title="Admin inbox unavailable"
-        copy="Bu yüzey raporlama veya yönetici rolü gerektirir."
+        title={t('adminInbox.unavailableTitle')}
+        copy={t('adminInbox.unavailableCopy')}
         tone="error"
       />
     )
@@ -174,8 +219,8 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
   if (inboxQuery.isLoading) {
     return (
       <ScreenState
-        title="Loading admin inbox"
-        copy="Approvals ve KPI exception item'lari tek kuyrukta toplanıyor."
+        title={t('adminInbox.loadingTitle')}
+        copy={t('adminInbox.loadingCopy')}
       />
     )
   }
@@ -183,7 +228,7 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
   if (inboxQuery.isError) {
     return (
       <ScreenState
-        title="Admin inbox unavailable"
+        title={t('adminInbox.unavailableTitle')}
         copy={getErrorMessage(inboxQuery.error)}
         tone="error"
       />
@@ -194,59 +239,57 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
     <section className="page-stack">
       <section className="hero-panel">
         <div>
-          <div className="eyebrow">Admin Inbox</div>
-          <h2 className="hero-title">One queue for admin-side approvals and KPI follow-up.</h2>
-          <p className="hero-copy">
-            Store tarafında kullandığımız ortak workflow dili şimdi admin yüzeyine de taşındı.
-          </p>
+          <div className="eyebrow">{t('adminInbox.heroEyebrow')}</div>
+          <h2 className="hero-title">{t('adminInbox.heroTitle')}</h2>
+          <p className="hero-copy">{t('adminInbox.heroCopy')}</p>
         </div>
         <div className="hero-metrics">
-          <MetricAccent label="Route" value="/admin/inbox" />
-          <MetricAccent label="Region scope" value={regionScope} />
-          <MetricAccent label="Queue items" value={String(items.length)} />
+          <MetricAccent label={t('adminInbox.route')} value="/admin/inbox" />
+          <MetricAccent label={t('adminInbox.regionScope')} value={regionScope} />
+          <MetricAccent label={t('adminInbox.queueItems')} value={String(items.length)} />
         </div>
       </section>
 
       <section className="metric-grid">
         <MetricCard
-          title="Needs attention"
+          title={t('adminInbox.needsAttention')}
           value={pendingItems.length}
-          note="Şu an aksiyon bekleyen iş sayısı."
+          note={t('adminInbox.needsAttentionNote')}
           icon={<Bell size={18} />}
           tone={pendingItems.length > 0 ? 'warning' : 'calm'}
         />
         <MetricCard
-          title="Approvals"
+          title={t('adminInbox.approvals')}
           value={approvalItems.length}
-          note="Region onayı bekleyen target dağıtım talepleri."
+          note={t('adminInbox.approvalsNote')}
           icon={<ReceiptText size={18} />}
           tone={approvalItems.length > 0 ? 'accent' : 'neutral'}
         />
         <MetricCard
-          title="KPI tasks"
+          title={t('adminInbox.kpiTasks')}
           value={taskItems.length}
-          note="KPI exception’dan üretilen takip işleri."
+          note={t('adminInbox.kpiTasksNote')}
           icon={<TrendingUp size={18} />}
           tone={taskItems.length > 0 ? 'warning' : 'neutral'}
         />
         <MetricCard
-          title="Completed"
+          title={t('adminInbox.completed')}
           value={items.filter((item) => item.inboxStatus === 'completed').length}
-          note="Bu queue slice içinde kapanmış işler."
+          note={t('adminInbox.completedNote')}
           icon={<CheckCircle2 size={18} />}
           tone="calm"
         />
         <MetricCard
-          title="Seller code"
+          title={t('adminInbox.sellerCode')}
           value={sellerCodeRequests.length}
-          note="HR onayi bekleyen satici kodu talepleri."
+          note={t('adminInbox.sellerCodeNote')}
           icon={<KeyRound size={18} />}
           tone={sellerCodeRequests.length > 0 ? 'warning' : 'neutral'}
         />
         <MetricCard
-          title="Offboarding"
+          title={t('adminInbox.offboarding')}
           value={offboardingRequests.length}
-          note="HR onayi bekleyen personel cikis talepleri."
+          note={t('adminInbox.offboardingNote')}
           icon={<KeyRound size={18} />}
           tone={offboardingRequests.length > 0 ? 'warning' : 'neutral'}
         />
@@ -256,20 +299,18 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
         <section className="panel" aria-label="Seller code approval queue">
           <div className="panel-heading panel-heading-spread">
             <div>
-              <div className="eyebrow">Workforce master data</div>
-              <h3>Seller code approval queue</h3>
-              <p className="panel-copy">
-                Franchise codes stay manual. The latest FM code is shown as a reference, then HR enters the approved code.
-              </p>
+              <div className="eyebrow">{t('adminInbox.workforceEyebrow')}</div>
+              <h3>{t('adminInbox.sellerQueueTitle')}</h3>
+              <p className="panel-copy">{t('adminInbox.sellerQueueCopy')}</p>
             </div>
             <div className="hero-metrics compact-metrics">
               <MetricAccent
-                label="Last franchise code"
-                value={sellerCodeReferenceQuery.data?.lastSellerCode ?? 'No FM code'}
+                label={t('adminInbox.lastFranchiseCode')}
+                value={sellerCodeReferenceQuery.data?.lastSellerCode ?? t('adminInbox.noFmCode')}
               />
               <MetricAccent
-                label="Next preview"
-                value={sellerCodeReferenceQuery.data?.nextSellerCodePreview ?? 'n/a'}
+                label={t('adminInbox.nextPreview')}
+                value={sellerCodeReferenceQuery.data?.nextSellerCodePreview ?? t('adminInbox.notAvailable')}
               />
             </div>
           </div>
@@ -279,15 +320,15 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
           ) : null}
 
           {sellerCodeReferenceQuery.isLoading || sellerCodeRequestsQuery.isLoading ? (
-            <div className="inline-state inline-state-neutral">Loading seller code requests...</div>
+            <div className="inline-state inline-state-neutral">{t('adminInbox.loadingSellerRequests')}</div>
           ) : sellerCodeReferenceQuery.isError ? (
             <div className="inline-state inline-state-danger">{getErrorMessage(sellerCodeReferenceQuery.error)}</div>
           ) : sellerCodeRequestsQuery.isError ? (
             <div className="inline-state inline-state-danger">{getErrorMessage(sellerCodeRequestsQuery.error)}</div>
           ) : sellerCodeRequests.length === 0 ? (
             <EmptyState
-              title="No seller code requests are pending."
-              copy="Store manager requests will land here before HR approval."
+              title={t('adminInbox.noSellerRequestsTitle')}
+              copy={t('adminInbox.noSellerRequestsCopy')}
             />
           ) : (
             <div className="stacked-table">
@@ -306,22 +347,26 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
                       <div>
                         <strong>{displayName}</strong>
                         <p className="queue-subtitle">
-                          {item.storeName} / {item.storeType} / reference {item.lastReferenceSellerCode ?? 'none'}
+                          {t('adminInbox.referenceLine', {
+                            storeName: item.storeName,
+                            storeType: item.storeType,
+                            reference: item.lastReferenceSellerCode ?? t('adminInbox.none'),
+                          })}
                         </p>
                       </div>
-                      <StatusPill tone="warning">{formatState(item.status)}</StatusPill>
+                      <StatusPill tone="warning">{formatTranslatedState(item.status, t)}</StatusPill>
                     </div>
 
                     <div className="key-grid">
-                      <KeyValue label="Pozisyon" value={item.positionName} />
-                      <KeyValue label="TC son 4" value={item.nationalIdLast4} />
-                      <KeyValue label="Telefon" value={item.phoneNumber} />
-                      <KeyValue label="Ise giris" value={item.hireDate} />
+                      <KeyValue label={t('adminInbox.position')} value={item.positionName} />
+                      <KeyValue label={t('adminInbox.nationalIdLast4')} value={item.nationalIdLast4} />
+                      <KeyValue label={t('adminInbox.phone')} value={item.phoneNumber} />
+                      <KeyValue label={t('adminInbox.hireDate')} value={item.hireDate} />
                     </div>
 
                     <div className="form-grid">
                       <label className="field-block">
-                        <span>Seller code</span>
+                        <span>{t('adminInbox.sellerCodeField')}</span>
                         <input
                           aria-label={`${displayName} seller code`}
                           value={draftCode}
@@ -334,7 +379,7 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
                         />
                       </label>
                       <div className="field-block">
-                        <span>Manual control</span>
+                        <span>{t('adminInbox.manualControl')}</span>
                         <button
                           className="control-button"
                           type="button"
@@ -347,14 +392,14 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
                             })
                           }
                         >
-                          Approve seller code
+                          {t('adminInbox.approveSellerCode')}
                         </button>
                       </div>
                     </div>
 
                     <div className="form-grid">
                       <label className="field-block">
-                        <span>Return note</span>
+                        <span>{t('adminInbox.returnNote')}</span>
                         <textarea
                           aria-label={`Return note for ${displayName}`}
                           rows={2}
@@ -368,7 +413,7 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
                         />
                       </label>
                       <div className="field-block">
-                        <span>Store correction</span>
+                        <span>{t('adminInbox.storeCorrection')}</span>
                         <button
                           className="control-button"
                           type="button"
@@ -380,7 +425,7 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
                             })
                           }
                         >
-                          Return seller code request
+                          {t('adminInbox.returnSellerCode')}
                         </button>
                       </div>
                     </div>
@@ -396,22 +441,20 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
         <section className="panel" aria-label="Offboarding approval queue">
           <div className="panel-heading panel-heading-spread">
             <div>
-              <div className="eyebrow">Workforce master data</div>
-              <h3>Offboarding approval queue</h3>
-              <p className="panel-copy">
-                Store manager requests close only after HR approval. Approval terminates the employee and closes the active assignment.
-              </p>
+              <div className="eyebrow">{t('adminInbox.workforceEyebrow')}</div>
+              <h3>{t('adminInbox.offboardingQueueTitle')}</h3>
+              <p className="panel-copy">{t('adminInbox.offboardingQueueCopy')}</p>
             </div>
           </div>
 
           {offboardingRequestsQuery.isLoading ? (
-            <div className="inline-state inline-state-neutral">Loading offboarding requests...</div>
+            <div className="inline-state inline-state-neutral">{t('adminInbox.loadingOffboardingRequests')}</div>
           ) : offboardingRequestsQuery.isError ? (
             <div className="inline-state inline-state-danger">{getErrorMessage(offboardingRequestsQuery.error)}</div>
           ) : offboardingRequests.length === 0 ? (
             <EmptyState
-              title="No offboarding requests are pending."
-              copy="Store manager exit requests will land here before HR approval."
+              title={t('adminInbox.noOffboardingRequestsTitle')}
+              copy={t('adminInbox.noOffboardingRequestsCopy')}
             />
           ) : (
             <div className="stacked-table">
@@ -424,22 +467,22 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
                       <div>
                         <strong>{item.displayName}</strong>
                         <p className="queue-subtitle">
-                          {item.storeName} / {item.externalEmployeeRef ?? 'no seller code'}
+                          {item.storeName} / {item.externalEmployeeRef ?? t('adminInbox.noSellerCode')}
                         </p>
                       </div>
-                      <StatusPill tone="warning">{formatState(item.status)}</StatusPill>
+                      <StatusPill tone="warning">{formatTranslatedState(item.status, t)}</StatusPill>
                     </div>
 
                     <div className="key-grid">
-                      <KeyValue label="Pozisyon" value={item.positionName ?? 'No position'} />
-                      <KeyValue label="Cikis tarihi" value={item.terminationDate} />
-                      <KeyValue label="Sebep" value={item.terminationReason} />
-                      <KeyValue label="Talep notu" value={item.requestReason ?? 'No note'} />
+                      <KeyValue label={t('adminInbox.position')} value={item.positionName ?? t('adminInbox.noPosition')} />
+                      <KeyValue label={t('adminInbox.exitDate')} value={item.terminationDate} />
+                      <KeyValue label={t('adminInbox.reason')} value={item.terminationReason} />
+                      <KeyValue label={t('adminInbox.requestNote')} value={item.requestReason ?? t('adminInbox.noNote')} />
                     </div>
 
                     <div className="form-grid">
                       <div className="field-block">
-                        <span>Manual control</span>
+                        <span>{t('adminInbox.manualControl')}</span>
                         <button
                           className="control-button"
                           type="button"
@@ -451,11 +494,11 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
                             })
                           }
                         >
-                          Approve offboarding
+                          {t('adminInbox.approveOffboarding')}
                         </button>
                       </div>
                       <label className="field-block">
-                        <span>Return note</span>
+                        <span>{t('adminInbox.returnNote')}</span>
                         <textarea
                           aria-label={`Return note for ${item.displayName}`}
                           rows={2}
@@ -469,7 +512,7 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
                         />
                       </label>
                       <div className="field-block">
-                        <span>Store correction</span>
+                        <span>{t('adminInbox.storeCorrection')}</span>
                         <button
                           className="control-button"
                           type="button"
@@ -481,7 +524,7 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
                             })
                           }
                         >
-                          Return offboarding request
+                          {t('adminInbox.returnOffboarding')}
                         </button>
                       </div>
                     </div>
@@ -496,15 +539,15 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Admin Queue</div>
-            <h3>Shared workflow contract in admin shell</h3>
+            <div className="eyebrow">{t('adminInbox.adminQueueEyebrow')}</div>
+            <h3>{t('adminInbox.adminQueueTitle')}</h3>
           </div>
         </div>
 
         {sortedItems.length === 0 ? (
           <EmptyState
-            title="No admin-side queue items"
-            copy="Approval veya KPI review işi düştüğünde burada görünecek."
+            title={t('adminInbox.emptyQueueTitle')}
+            copy={t('adminInbox.emptyQueueCopy')}
           />
         ) : (
           <div className="stacked-table">
@@ -519,6 +562,8 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
 }
 
 function AdminInboxRow(input: { item: WorkflowInboxItem }) {
+  const { locale, t } = useLocalization()
+
   return (
     <article className="stacked-row">
       <div className="stacked-row-head">
@@ -527,23 +572,23 @@ function AdminInboxRow(input: { item: WorkflowInboxItem }) {
           <p className="queue-subtitle">{input.item.summary}</p>
         </div>
         <div className="action-cluster">
-          <StatusPill tone="accent">{formatWorkflowSourceType(input.item.sourceType)}</StatusPill>
+          <StatusPill tone="accent">{formatWorkflowSourceTypeLabel(input.item.sourceType, t)}</StatusPill>
           <StatusPill tone={mapInboxStatusTone(input.item.inboxStatus)}>
-            {formatState(input.item.inboxStatus)}
+            {formatTranslatedState(input.item.inboxStatus, t)}
           </StatusPill>
           <StatusPill tone={mapWorkflowUrgencyTone(input.item.urgency)}>
-            {formatState(input.item.urgency)}
+            {formatTranslatedState(input.item.urgency, t)}
           </StatusPill>
         </div>
       </div>
 
       <div className="key-grid">
-        <KeyValue label="İş tipi" value={formatWorkflowItemType(input.item.itemType)} />
-        <KeyValue label="Actor role" value={formatState(input.item.actorRole)} />
-        <KeyValue label="Store" value={input.item.storeName || input.item.storeId} />
+        <KeyValue label={t('storeTasks.workType')} value={formatWorkflowItemTypeLabel(input.item.itemType, t)} />
+        <KeyValue label={t('storeTasks.actorRole')} value={formatState(input.item.actorRole)} />
+        <KeyValue label={t('storeTasks.store')} value={input.item.storeName || input.item.storeId} />
         <KeyValue
-          label="Aksiyon zamanı"
-          value={input.item.needsAttentionAt ? formatDateTime(input.item.needsAttentionAt) : 'Now'}
+          label={t('storeTasks.actionTime')}
+          value={input.item.needsAttentionAt ? formatDateTime(input.item.needsAttentionAt, locale) : t('storeTasks.now')}
         />
       </div>
 

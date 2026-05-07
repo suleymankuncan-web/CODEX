@@ -1,4 +1,5 @@
 import { adminAuditEn, adminAuditTr } from './admin-audit'
+import { adminInboxEn, adminInboxTr } from './admin-inbox'
 import { adminIntegrationsEn, adminIntegrationsTr } from './admin-integrations'
 import { adminMasterDataEn, adminMasterDataTr } from './admin-master-data'
 import { adminShellEn, adminShellTr } from './admin-shell'
@@ -18,6 +19,7 @@ import { storeTasksEn, storeTasksTr } from './store-tasks'
 
 const tr = {
   ...adminAuditTr,
+  ...adminInboxTr,
   ...adminIntegrationsTr,
   ...adminMasterDataTr,
   ...adminShellTr,
@@ -38,6 +40,7 @@ const tr = {
 
 const en: Record<keyof typeof tr, string> = {
   ...adminAuditEn,
+  ...adminInboxEn,
   ...adminIntegrationsEn,
   ...adminMasterDataEn,
   ...adminShellEn,
