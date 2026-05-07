@@ -19,6 +19,7 @@ const currentState = readText('current-state.md')
 const activeNextActions = readText('docs/plans/active-next-actions.md')
 const debtLedger = readText('docs/plans/project-debt-ledger.md')
 const importBatchDetailPage = readText('admin-web/src/pages/ImportBatchDetailPage.tsx')
+const importBatchDetailMessages = readText('admin-web/src/features/localization/messages/import-batch-detail.ts')
 const masterDataBootstrapPage = readText('admin-web/src/pages/MasterDataBootstrapPage.tsx')
 const masterDataMessages = readText('admin-web/src/features/localization/messages/admin-master-data.ts')
 const adminRoutingSpec = readText('admin-web/e2e/admin-routing.spec.ts')
@@ -54,7 +55,20 @@ test('operator evidence copy is visible on existing admin surfaces', () => {
     'Conditional Go: review row evidence, quality guard, retry evidence, and dependency mapping before treating this batch as clean.',
     'Go / Conditional Go / No-Go',
   ]) {
+    requireText(importBatchDetailMessages, phrase)
+  }
+
+  for (const phrase of [
+    'importBatchDetail.conditionalReviewSummary',
+    'importBatchDetail.operatorDecisionCopy',
+  ]) {
     requireText(importBatchDetailPage, phrase)
+  }
+
+  for (const phrase of [
+    'Conditional Go: bu partiyi temiz saymadan önce satır kanıtını, kalite kontrolünü, tekrar deneme kanıtını ve bağımlılık eşlemesini incele.',
+    'Go / Conditional Go / No-Go',
+  ]) {
     requireText(integrationSurfacesSpec, phrase)
   }
 

@@ -23,6 +23,8 @@ import {
   type ImportBatchReconciliation,
   retryImportBatch,
 } from '../features/integrations/api'
+import { useLocalization } from '../features/localization/useLocalization'
+import type { TranslateFunction } from '../features/localization/dictionary'
 import { formatDateTime, getErrorMessage, mapHealthTone } from '../lib/format'
 
 export function ImportBatchDetailPage() {
@@ -35,6 +37,7 @@ export function ImportBatchDetailPage() {
     store: '',
   })
   const queryClient = useQueryClient()
+  const { locale, t } = useLocalization()
 
   const detailQuery = useQuery({
     queryKey: ['import-batch-detail', batchId],
@@ -133,15 +136,15 @@ export function ImportBatchDetailPage() {
   })
 
   if (!batchId) {
-    return <ScreenState title="Batch id missing" copy="Open this screen from the queue to inspect a concrete batch." />
+    return <ScreenState title={t('importBatchDetail.batchIdMissingTitle')} copy={t('importBatchDetail.batchIdMissingCopy')} />
   }
 
   if (detailQuery.isLoading) {
-    return <ScreenState title="Loading batch detail" copy="Pulling detail, reconciliation, errors, and audit context." />
+    return <ScreenState title={t('importBatchDetail.loadingTitle')} copy={t('importBatchDetail.loadingCopy')} />
   }
 
   if (detailQuery.isError || !detailQuery.data) {
-    return <ScreenState title="Batch detail unavailable" copy={getErrorMessage(detailQuery.error)} tone="error" />
+    return <ScreenState title={t('importBatchDetail.unavailableTitle')} copy={getErrorMessage(detailQuery.error)} tone="error" />
   }
 
   const detail = detailQuery.data
@@ -149,34 +152,36 @@ export function ImportBatchDetailPage() {
   const errors = errorItems
   const auditItems = auditQuery.data?.items ?? []
   const qualityIssueItems = detail.qualityIssueSummary?.items ?? []
-  const importDecision = buildImportDecisionEvidence({ detail, reconciliation, errors })
+  const importDecision = buildImportDecisionEvidence({ detail, reconciliation, errors, t })
   const kpiReviewEvidence = buildKpiReviewEvidence({
     errors,
     totalErrorRows: errorsQuery.data?.meta.total ?? errors.length,
+    t,
   })
 
   return (
     <section className="page-stack">
       <Link className="back-link" to="/admin/integrations">
         <ArrowLeft size={16} />
-        Back to integration queue
+        {t('importBatchDetail.backToQueue')}
       </Link>
 
       <section className="hero-panel hero-panel-detail">
         <div>
-          <div className="eyebrow">Import Batch Detail</div>
+          <div className="eyebrow">{t('importBatchDetail.heroEyebrow')}</div>
           <h2 className="hero-title">{detail.batch.sourceCode} / {detail.batch.entityType}</h2>
           <p className="hero-copy">
-            Batch <code>{detail.batch.batchId}</code> with current health state{' '}
+            {t('importBatchDetail.batchPrefix')} <code>{detail.batch.batchId}</code>{' '}
+            {t('importBatchDetail.currentHealthState')}{' '}
             <span className={`inline-state inline-state-${mapHealthTone(detail.healthState)}`}>
-              {detail.healthState.replaceAll('_', ' ')}
+              {formatStateLabel(detail.healthState, t)}
             </span>
           </p>
         </div>
         <div className="hero-metrics">
-          <MetricAccent label="Records" value={String(detail.batch.recordCount)} />
-          <MetricAccent label="Errors" value={String(detail.batch.errorCount)} />
-          <MetricAccent label="Retry now" value={detail.canRetryNow ? 'Yes' : 'No'} />
+          <MetricAccent label={t('importBatchDetail.records')} value={String(detail.batch.recordCount)} />
+          <MetricAccent label={t('importBatchDetail.errors')} value={String(detail.batch.errorCount)} />
+          <MetricAccent label={t('importBatchDetail.retryNow')} value={detail.canRetryNow ? t('importBatchDetail.yes') : t('importBatchDetail.no')} />
         </div>
       </section>
 
@@ -186,14 +191,12 @@ export function ImportBatchDetailPage() {
         </section>
       ) : null}
 
-      <section className="panel" aria-label="Import decision evidence">
+      <section className="panel" aria-label={t('importBatchDetail.decisionAria')}>
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Operator gate</div>
-            <h3>Operator decision evidence</h3>
-            <p className="panel-copy">
-              Uses the shared operator language: Go / Conditional Go / No-Go.
-            </p>
+            <div className="eyebrow">{t('importBatchDetail.operatorGate')}</div>
+            <h3>{t('importBatchDetail.operatorDecisionEvidence')}</h3>
+            <p className="panel-copy">{t('importBatchDetail.operatorDecisionCopy')}</p>
           </div>
           <span className={`status-pill status-pill-${importDecision.tone}`}>
             {importDecision.label}
@@ -211,18 +214,21 @@ export function ImportBatchDetailPage() {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Execution state</div>
-              <h3>Batch summary</h3>
+              <div className="eyebrow">{t('importBatchDetail.executionState')}</div>
+              <h3>{t('importBatchDetail.batchSummary')}</h3>
             </div>
           </div>
           <DetailList
             items={[
-              ['Status', detail.batch.status],
-              ['Health state', detail.batch.healthState],
-              ['Started at', formatDateTime(detail.batch.startedAt)],
-              ['Finished at', detail.batch.finishedAt ? formatDateTime(detail.batch.finishedAt) : 'Not finished'],
-              ['Retry count', String(detail.batch.retryCount)],
-              ['File reference', detail.batch.fileReference ?? 'N/A'],
+              [t('importBatchDetail.status'), formatStateLabel(detail.batch.status, t)],
+              [t('importBatchDetail.healthState'), formatStateLabel(detail.batch.healthState, t)],
+              [t('importBatchDetail.startedAt'), formatDateTime(detail.batch.startedAt, locale)],
+              [
+                t('importBatchDetail.finishedAt'),
+                detail.batch.finishedAt ? formatDateTime(detail.batch.finishedAt, locale) : t('importBatchDetail.notFinished'),
+              ],
+              [t('importBatchDetail.retryCount'), String(detail.batch.retryCount)],
+              [t('importBatchDetail.fileReference'), detail.batch.fileReference ?? t('importBatchDetail.notAvailable')],
             ]}
           />
         </article>
@@ -230,8 +236,8 @@ export function ImportBatchDetailPage() {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Dependency guidance</div>
-              <h3>What blocks progress</h3>
+              <div className="eyebrow">{t('importBatchDetail.dependencyGuidance')}</div>
+              <h3>{t('importBatchDetail.whatBlocksProgress')}</h3>
             </div>
             <button
               className="control-button"
@@ -239,64 +245,62 @@ export function ImportBatchDetailPage() {
               onClick={() => retryMutation.mutate(batchId)}
               disabled={!detail.canRetryNow || retryMutation.isPending}
             >
-              {retryMutation.isPending ? 'Retrying...' : 'Retry batch'}
+              {retryMutation.isPending ? t('importBatchDetail.retrying') : t('importBatchDetail.retryBatch')}
             </button>
           </div>
           <div className="dependency-list">
             <DependencyCard
               icon={<Network size={18} />}
-              label="Blocked by"
-              value={detail.blockedByEntityTypes.length ? detail.blockedByEntityTypes.join(', ') : 'Nothing blocking'}
+              label={t('importBatchDetail.blockedBy')}
+              value={detail.blockedByEntityTypes.length ? detail.blockedByEntityTypes.map((entity) => formatEntityType(entity, t)).join(', ') : t('importBatchDetail.nothingBlocking')}
             />
             <DependencyCard
               icon={<RefreshCw size={18} />}
-              label="Recommended next import"
-              value={detail.recommendedNextEntityType ?? 'No dependency import needed'}
+              label={t('importBatchDetail.recommendedNextImport')}
+              value={detail.recommendedNextEntityType ? formatEntityType(detail.recommendedNextEntityType, t) : t('importBatchDetail.noDependencyImportNeeded')}
             />
             <DependencyCard
               icon={<CircleDashed size={18} />}
-              label="Recommended order"
-              value={detail.recommendedImportOrder.join(' -> ')}
+              label={t('importBatchDetail.recommendedOrder')}
+              value={detail.recommendedImportOrder.map((entity) => formatEntityType(entity, t)).join(' -> ')}
             />
           </div>
         </article>
       </section>
 
-      <section className="panel" aria-label="Import data quality summary">
+      <section className="panel" aria-label={t('importBatchDetail.qualityAria')}>
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Quality guard</div>
-            <h3>Data quality summary</h3>
+            <div className="eyebrow">{t('importBatchDetail.qualityGuard')}</div>
+            <h3>{t('importBatchDetail.dataQualitySummary')}</h3>
           </div>
         </div>
-        <p className="panel-copy">
-          Failed rows are grouped by stable quality issue codes so operators can see the dominant cleanup work before opening every row.
-        </p>
+        <p className="panel-copy">{t('importBatchDetail.dataQualityCopy')}</p>
         <div className="reconciliation-grid">
           <ReconciliationStat
-            label="Issue rows"
+            label={t('importBatchDetail.issueRows')}
             value={String(detail.qualityIssueSummary?.totalIssueRows ?? 0)}
           />
           <ReconciliationStat
-            label="High severity rows"
+            label={t('importBatchDetail.highSeverityRowsLabel')}
             value={String(detail.qualityIssueSummary?.highSeverityRows ?? 0)}
           />
         </div>
         {qualityIssueItems.length === 0 ? (
-          <EmptyState copy="No data quality issues were classified for this batch." />
+          <EmptyState copy={t('importBatchDetail.noDataQualityIssues')} />
         ) : (
           <div className="stacked-table">
             {qualityIssueItems.map((issue) => (
               <div className="stacked-row" key={issue.code}>
                 <div className="stacked-row-head">
-                  <strong>{issue.label}</strong>
+                  <strong>{formatQualityIssueLabel(issue.code, issue.label, t)}</strong>
                   <span className={`status-pill status-pill-${mapQualitySeverityTone(issue.severity)}`}>
                     {issue.code}
                   </span>
                 </div>
-                <p>{issue.description}</p>
+                <p>{formatQualityIssueDescription(issue.code, issue.description, t)}</p>
                 <span>
-                  {issue.owner} / {issue.severity} / {formatRowCount(issue.count)}
+                  {formatIssueOwner(issue.owner, t)} / {formatQualitySeverity(issue.severity, t)} / {formatRowCount(issue.count, t)}
                 </span>
               </div>
             ))}
@@ -305,11 +309,11 @@ export function ImportBatchDetailPage() {
       </section>
 
       {detail.batch.entityType === 'kpi' ? (
-        <section className="panel" aria-label="KPI match review queue">
+        <section className="panel" aria-label={t('importBatchDetail.kpiReviewAria')}>
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">KPI Review Queue</div>
-              <h3>Eslesmeyen ve supheli satirlar</h3>
+              <div className="eyebrow">{t('importBatchDetail.kpiReviewEyebrow')}</div>
+              <h3>{t('importBatchDetail.kpiReviewTitle')}</h3>
               <p className="panel-copy">{kpiReviewEvidence.summary}</p>
             </div>
             <div className="heading-action-cluster">
@@ -346,30 +350,30 @@ export function ImportBatchDetailPage() {
                 }
                 disabled={kpiReviewEvidence.items.length === 0}
               >
-                Export review rows
+                {t('importBatchDetail.exportReviewRows')}
               </button>
             </div>
           </div>
           <div className="reconciliation-grid">
             <ReconciliationStat
-              label="Personel eslesmesi"
-              value={formatRowCount(kpiReviewEvidence.employeeMatchRows)}
+              label={t('importBatchDetail.employeeMatch')}
+              value={formatRowCount(kpiReviewEvidence.employeeMatchRows, t)}
             />
             <ReconciliationStat
-              label="Magaza eslesmesi"
-              value={formatRowCount(kpiReviewEvidence.storeMatchRows)}
+              label={t('importBatchDetail.storeMatch')}
+              value={formatRowCount(kpiReviewEvidence.storeMatchRows, t)}
             />
             <ReconciliationStat
-              label="Supheli satir"
-              value={formatRowCount(kpiReviewEvidence.suspiciousRows)}
+              label={t('importBatchDetail.suspiciousRow')}
+              value={formatRowCount(kpiReviewEvidence.suspiciousRows, t)}
             />
             <ReconciliationStat
-              label="Gorunen / toplam hata"
+              label={t('importBatchDetail.visibleTotalErrors')}
               value={`${kpiReviewEvidence.visibleErrorRows} / ${kpiReviewEvidence.totalErrorRows}`}
             />
           </div>
           {kpiReviewEvidence.items.length === 0 ? (
-            <EmptyState copy="Bu KPI batch icin review'a dusen eslesme veya supheli satir yok." />
+            <EmptyState copy={t('importBatchDetail.noKpiReviewRows')} />
           ) : (
             <div className="stacked-table">
               {kpiReviewEvidence.items.map((item) => (
@@ -384,28 +388,28 @@ export function ImportBatchDetailPage() {
                     </span>
                   </div>
                   <p>{item.message}</p>
-                  <div className="lineage-chip-list" aria-label="KPI review row evidence">
+                  <div className="lineage-chip-list" aria-label={t('importBatchDetail.kpiRowEvidenceAria')}>
                     {item.externalRef ? (
                       <div className="lineage-chip">
-                        <span>External ref</span>
+                        <span>{t('importBatchDetail.externalRef')}</span>
                         <code className="lineage-code">{item.externalRef}</code>
                       </div>
                     ) : null}
                     {item.issueCode ? (
                       <div className="lineage-chip">
-                        <span>Issue</span>
+                        <span>{t('importBatchDetail.issue')}</span>
                         <code className="lineage-code">{item.issueCode}</code>
                       </div>
                     ) : null}
                     {item.rawRowReference ? (
                       <div className="lineage-chip">
-                        <span>Raw reference</span>
+                        <span>{t('importBatchDetail.rawReference')}</span>
                         <code className="lineage-code">{item.rawRowReference}</code>
                       </div>
                     ) : null}
                     {item.rowHash ? (
                       <div className="lineage-chip">
-                        <span>Row hash</span>
+                        <span>{t('importBatchDetail.rowHash')}</span>
                         <code className="lineage-code">{item.rowHash}</code>
                       </div>
                     ) : null}
@@ -417,40 +421,38 @@ export function ImportBatchDetailPage() {
         </section>
       ) : null}
 
-      <section className="panel" aria-label="Import row lineage evidence">
+      <section className="panel" aria-label={t('importBatchDetail.lineageAria')}>
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Source evidence</div>
-            <h3>Source row lineage</h3>
+            <div className="eyebrow">{t('importBatchDetail.sourceEvidence')}</div>
+            <h3>{t('importBatchDetail.sourceRowLineage')}</h3>
           </div>
         </div>
         {detail.lineageSummary?.supported ? (
           <>
-            <p className="panel-copy">
-              KPI rows keep a stable hash and a readable source reference for future reconciliation.
-            </p>
+            <p className="panel-copy">{t('importBatchDetail.lineageCopy')}</p>
             <div className="reconciliation-grid">
               <ReconciliationStat
-                label="Trace-ready rows"
+                label={t('importBatchDetail.traceReadyRows')}
                 value={`${detail.lineageSummary.rowHashCount} / ${detail.batch.recordCount}`}
               />
               <ReconciliationStat
-                label="Readable references"
+                label={t('importBatchDetail.readableReferences')}
                 value={`${detail.lineageSummary.rawRowReferenceCount} / ${detail.batch.recordCount}`}
               />
             </div>
             <DetailList
               items={[
-                ['Sample row hash', detail.lineageSummary.sampleRowHash ?? 'No sample yet'],
+                [t('importBatchDetail.sampleRowHash'), detail.lineageSummary.sampleRowHash ?? t('importBatchDetail.noSampleYet')],
                 [
-                  'Sample raw row reference',
-                  detail.lineageSummary.sampleRawRowReference ?? 'No sample yet',
+                  t('importBatchDetail.sampleRawRowReference'),
+                  detail.lineageSummary.sampleRawRowReference ?? t('importBatchDetail.noSampleYet'),
                 ],
               ]}
             />
           </>
         ) : (
-          <EmptyState copy="Source row lineage is currently available for KPI raw rows." />
+          <EmptyState copy={t('importBatchDetail.lineageOnlyKpi')} />
         )}
       </section>
 
@@ -458,46 +460,46 @@ export function ImportBatchDetailPage() {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Row status</div>
-              <h3>Batch accounting</h3>
+              <div className="eyebrow">{t('importBatchDetail.rowStatus')}</div>
+              <h3>{t('importBatchDetail.batchAccounting')}</h3>
             </div>
           </div>
 
           {reconciliation ? (
             <>
               <div className="reconciliation-grid">
-                <ReconciliationStat label="Accounted rows" value={String(reconciliation.totals.accountedRows)} />
-                <ReconciliationStat label="Unaccounted rows" value={String(reconciliation.totals.unaccountedRows)} />
+                <ReconciliationStat label={t('importBatchDetail.accountedRows')} value={String(reconciliation.totals.accountedRows)} />
+                <ReconciliationStat label={t('importBatchDetail.unaccountedRowsLabel')} value={String(reconciliation.totals.unaccountedRows)} />
                 <ReconciliationStat
-                  label="Record count match"
-                  value={reconciliation.totals.countsMatchRecordCount ? 'Match' : 'Mismatch'}
+                  label={t('importBatchDetail.recordCountMatch')}
+                  value={reconciliation.totals.countsMatchRecordCount ? t('importBatchDetail.match') : t('importBatchDetail.mismatch')}
                 />
               </div>
-              <StatusBar label="Processed" value={reconciliation.rowStatusSummary.processed} rate={reconciliation.rates.processedRate} tone="calm" />
-              <StatusBar label="Validation failures" value={reconciliation.rowStatusSummary.validationFailed} rate={reconciliation.rates.validationFailureRate} tone="warning" />
-              <StatusBar label="Retryable errors" value={reconciliation.rowStatusSummary.retryableError} rate={reconciliation.rates.retryableErrorRate} tone="danger" />
-              <StatusBar label="Pending" value={reconciliation.rowStatusSummary.pending} rate={reconciliation.rates.pendingRate} tone="neutral" />
+              <StatusBar label={t('importBatchDetail.processed')} value={reconciliation.rowStatusSummary.processed} rate={reconciliation.rates.processedRate} tone="calm" />
+              <StatusBar label={t('importBatchDetail.validationFailures')} value={reconciliation.rowStatusSummary.validationFailed} rate={reconciliation.rates.validationFailureRate} tone="warning" />
+              <StatusBar label={t('importBatchDetail.retryableErrors')} value={reconciliation.rowStatusSummary.retryableError} rate={reconciliation.rates.retryableErrorRate} tone="danger" />
+              <StatusBar label={t('importBatchDetail.pending')} value={reconciliation.rowStatusSummary.pending} rate={reconciliation.rates.pendingRate} tone="neutral" />
             </>
           ) : (
-            <EmptyState copy="Reconciliation data is still loading." />
+            <EmptyState copy={t('importBatchDetail.reconciliationLoading')} />
           )}
         </article>
 
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Dependency counts</div>
-              <h3>Unresolved references</h3>
+              <div className="eyebrow">{t('importBatchDetail.dependencyCounts')}</div>
+              <h3>{t('importBatchDetail.unresolvedReferences')}</h3>
             </div>
           </div>
           <DetailList
             items={[
-              ['Employee', String(detail.dependencySummary.employee)],
-              ['Store', String(detail.dependencySummary.store)],
-              ['Position', String(detail.dependencySummary.position)],
-              ['Region', String(detail.dependencySummary.region)],
-              ['Company', String(detail.dependencySummary.company)],
-              ['Manager', String(detail.dependencySummary.manager)],
+              [t('importBatchDetail.employee'), String(detail.dependencySummary.employee)],
+              [t('importBatchDetail.store'), String(detail.dependencySummary.store)],
+              [t('importBatchDetail.position'), String(detail.dependencySummary.position)],
+              [t('importBatchDetail.region'), String(detail.dependencySummary.region)],
+              [t('importBatchDetail.company'), String(detail.dependencySummary.company)],
+              [t('importBatchDetail.manager'), String(detail.dependencySummary.manager)],
             ]}
           />
         </article>
@@ -507,8 +509,8 @@ export function ImportBatchDetailPage() {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Error rows</div>
-              <h3>Why rows failed</h3>
+              <div className="eyebrow">{t('importBatchDetail.errorRows')}</div>
+              <h3>{t('importBatchDetail.whyRowsFailed')}</h3>
             </div>
             <button
               className="control-button"
@@ -540,11 +542,11 @@ export function ImportBatchDetailPage() {
               }
               disabled={errors.length === 0}
             >
-              Export errors
+              {t('importBatchDetail.exportErrors')}
             </button>
           </div>
           {errors.length === 0 ? (
-            <EmptyState copy="No row-level errors returned for this batch." />
+            <EmptyState copy={t('importBatchDetail.noRowErrors')} />
           ) : (
             <div className="stacked-table">
               {errors.map((error) => (
@@ -552,35 +554,36 @@ export function ImportBatchDetailPage() {
                   <div className="stacked-row-head">
                     <strong>{error.sourceRef}</strong>
                     <span className={`status-pill status-pill-${mapErrorTone(error.errorCategory)}`}>
-                      {error.errorCategory.replaceAll('_', ' ')}
+                      {formatErrorCategory(error.errorCategory, t)}
                     </span>
                     {error.qualityIssueCode ? (
                       <span className="status-pill status-pill-accent">
-                        quality issue {error.qualityIssueCode}
+                        {t('importBatchDetail.qualityIssuePrefix', { code: error.qualityIssueCode })}
                       </span>
                     ) : null}
                   </div>
-                  <p>{error.validationError ?? 'No validation message available'}</p>
+                  <p>{error.validationError ?? t('importBatchDetail.noValidationMessage')}</p>
                   {error.rawRowReference || error.rowHash ? (
-                    <div className="lineage-chip-list" aria-label="Row lineage evidence">
+                    <div className="lineage-chip-list" aria-label={t('importBatchDetail.rowLineageAria')}>
                       {error.rawRowReference ? (
                         <div className="lineage-chip">
-                          <span>Raw reference</span>
+                          <span>{t('importBatchDetail.rawReference')}</span>
                           <code className="lineage-code">{error.rawRowReference}</code>
                         </div>
                       ) : null}
                       {error.rowHash ? (
                         <div className="lineage-chip">
-                          <span>Row hash</span>
+                          <span>{t('importBatchDetail.rowHash')}</span>
                           <code className="lineage-code">{error.rowHash}</code>
                         </div>
                       ) : null}
                     </div>
                   ) : null}
                   {error.mappingCandidate ? (
-                    <div className="mapping-action" aria-label="External ID mapping approval">
+                    <div className="mapping-action" aria-label={t('importBatchDetail.mappingAria')}>
                       {(() => {
                         const entityType = error.mappingCandidate.entityType
+                        const entityLabel = formatEntityType(entityType, t)
                         const candidateQuery =
                           entityType === 'store' ? storeCandidatesQuery : employeeCandidatesQuery
                         const candidates = candidateQuery.data?.items ?? []
@@ -589,11 +592,11 @@ export function ImportBatchDetailPage() {
                           <>
                       <div className="mapping-targets">
                         <div className="lineage-chip">
-                          <span>External {error.mappingCandidate.entityType}</span>
+                          <span>{t('importBatchDetail.externalEntity', { entity: entityLabel })}</span>
                           <code className="lineage-code">{error.mappingCandidate.externalId}</code>
                         </div>
                         <div className="lineage-chip">
-                          <span>Target table</span>
+                          <span>{t('importBatchDetail.targetTable')}</span>
                           <code className="lineage-code">{error.mappingCandidate.internalTableName}</code>
                         </div>
                       </div>
@@ -601,9 +604,9 @@ export function ImportBatchDetailPage() {
                         <input
                           className="control-input mapping-input"
                           type="text"
-                          aria-label={`Search internal ${entityType} candidates`}
+                          aria-label={t('importBatchDetail.searchInternalCandidates', { entity: entityLabel })}
                           value={mappingSearchInputs[entityType]}
-                          placeholder={`Search internal ${entityType} candidates`}
+                          placeholder={t('importBatchDetail.searchInternalCandidates', { entity: entityLabel })}
                           onChange={(event) =>
                             setMappingSearchInputs((current) => ({
                               ...current,
@@ -613,7 +616,7 @@ export function ImportBatchDetailPage() {
                         />
                         <select
                           className="control-input mapping-select"
-                          aria-label={`Map to internal ${entityType}`}
+                          aria-label={t('importBatchDetail.mapToInternal', { entity: entityLabel })}
                           value={mappingInputs[error.rowId] ?? ''}
                           disabled={candidateQuery.isLoading || candidates.length === 0}
                           onChange={(event) =>
@@ -623,7 +626,7 @@ export function ImportBatchDetailPage() {
                             }))
                           }
                         >
-                          <option value="">Select internal {entityType}</option>
+                          <option value="">{t('importBatchDetail.selectInternal', { entity: entityLabel })}</option>
                           {candidates.map((candidate) => (
                             <option key={candidate.internalId} value={candidate.internalId}>
                               {candidate.label} - {candidate.secondaryLabel}
@@ -650,19 +653,19 @@ export function ImportBatchDetailPage() {
                           }
                         >
                           {mappingMutation.isPending && mappingMutation.variables?.rowId === error.rowId
-                            ? 'Approving...'
-                            : 'Approve mapping'}
+                            ? t('importBatchDetail.approving')
+                            : t('importBatchDetail.approveMapping')}
                         </button>
                         {candidateQuery.isLoading ? (
-                          <span className="mapping-helper">Loading internal candidates...</span>
+                          <span className="mapping-helper">{t('importBatchDetail.loadingInternalCandidates')}</span>
                         ) : null}
                         {candidateQuery.isError ? (
                           <span className="mapping-helper mapping-helper-error">
-                            Candidate list unavailable: {getErrorMessage(candidateQuery.error)}
+                            {t('importBatchDetail.candidateListUnavailable', { message: getErrorMessage(candidateQuery.error) })}
                           </span>
                         ) : null}
                         {!candidateQuery.isLoading && !candidateQuery.isError && candidates.length === 0 ? (
-                          <span className="mapping-helper">No candidates found for this search.</span>
+                          <span className="mapping-helper">{t('importBatchDetail.noCandidatesFound')}</span>
                         ) : null}
                       </div>
                           </>
@@ -679,8 +682,8 @@ export function ImportBatchDetailPage() {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Audit timeline</div>
-              <h3>Operator-visible trace</h3>
+              <div className="eyebrow">{t('importBatchDetail.auditTimeline')}</div>
+              <h3>{t('importBatchDetail.operatorTrace')}</h3>
             </div>
             <button
               className="control-button"
@@ -700,11 +703,11 @@ export function ImportBatchDetailPage() {
               }
               disabled={auditItems.length === 0}
             >
-              Export audit
+              {t('importBatchDetail.exportAudit')}
             </button>
           </div>
           {auditItems.length === 0 ? (
-            <EmptyState copy="No audit entries returned yet." />
+            <EmptyState copy={t('importBatchDetail.noAuditEntries')} />
           ) : (
             <div className="timeline">
               {auditItems.map((event) => (
@@ -712,8 +715,13 @@ export function ImportBatchDetailPage() {
                   <div className="timeline-dot" />
                   <div>
                     <strong>{event.eventType}</strong>
-                    <p>{formatDateTime(event.occurredAt)}</p>
-                    <span>actor {event.actorUserId ?? 'system'} · correlation {event.correlationId ?? 'n/a'}</span>
+                    <p>{formatDateTime(event.occurredAt, locale)}</p>
+                    <span>
+                      {t('importBatchDetail.auditActorLine', {
+                        actor: event.actorUserId ?? t('importBatchDetail.system'),
+                        correlation: event.correlationId ?? t('importBatchDetail.none'),
+                      })}
+                    </span>
                   </div>
                 </div>
               ))}
@@ -757,14 +765,17 @@ function ReconciliationStat(input: { label: string; value: string }) {
   )
 }
 
-function formatRowCount(count: number) {
-  return `${count} ${count === 1 ? 'row' : 'rows'}`
+function formatRowCount(count: number, t: TranslateFunction) {
+  return t(
+    count === 1
+      ? 'importBatchDetail.rowCountSingular'
+      : 'importBatchDetail.rowCountPlural',
+    { count },
+  )
 }
 
-type ImportDecisionLabel = 'Go' | 'Conditional Go' | 'No-Go'
-
 type ImportDecisionEvidence = {
-  label: ImportDecisionLabel
+  label: string
   tone: Tone
   summary: string
   factors: [string, string][]
@@ -806,8 +817,9 @@ function buildImportDecisionEvidence(input: {
   detail: ImportBatchDetail
   reconciliation?: ImportBatchReconciliation
   errors: ImportBatchError[]
+  t: TranslateFunction
 }): ImportDecisionEvidence {
-  const { detail, reconciliation, errors } = input
+  const { detail, reconciliation, errors, t } = input
   const highSeverityRows = detail.qualityIssueSummary?.highSeverityRows ?? 0
   const totalIssueRows = detail.qualityIssueSummary?.totalIssueRows ?? 0
   const retryableRows = Math.max(
@@ -821,7 +833,7 @@ function buildImportDecisionEvidence(input: {
       ...(reconciliation?.reconciliation.blockedByEntityTypes ?? []),
     ]),
   )
-  const rowAccounting = getRowAccountingStatus(reconciliation)
+  const rowAccounting = getRowAccountingStatus(reconciliation, t)
   const hasRowAccountingFailure =
     reconciliation !== undefined &&
     (!reconciliation.totals.countsMatchRecordCount || reconciliation.totals.unaccountedRows > 0)
@@ -839,23 +851,22 @@ function buildImportDecisionEvidence(input: {
     mappingRows > 0 ||
     hasFailures
 
-  let label: ImportDecisionLabel = 'Go'
+  let label = t('importBatchDetail.go')
   let tone: Tone = 'calm'
-  let summary = 'Go: row evidence is clean; accounted rows match, no quality issues, no retryable rows.'
+  let summary = t('importBatchDetail.goSummary')
 
   if (!reconciliation) {
-    label = 'Conditional Go'
+    label = t('importBatchDetail.conditionalGo')
     tone = 'warning'
-    summary = 'Conditional Go: waiting for reconciliation evidence before treating this batch as clean.'
+    summary = t('importBatchDetail.conditionalWaitingSummary')
   } else if (hasRowAccountingFailure || hasPendingRows || blockedByEntityTypes.length > 0 || isStoppedState) {
-    label = 'No-Go'
+    label = t('importBatchDetail.noGo')
     tone = 'danger'
-    summary = 'No-Go: stop until row accounting, pending rows, dependency mapping, or stuck status is resolved.'
+    summary = t('importBatchDetail.noGoSummary')
   } else if (hasConditionalEvidence) {
-    label = 'Conditional Go'
+    label = t('importBatchDetail.conditionalGo')
     tone = 'warning'
-    summary =
-      'Conditional Go: review row evidence, quality guard, retry evidence, and dependency mapping before treating this batch as clean.'
+    summary = t('importBatchDetail.conditionalReviewSummary')
   }
 
   return {
@@ -863,10 +874,10 @@ function buildImportDecisionEvidence(input: {
     tone,
     summary,
     factors: [
-      ['Row accounting', rowAccounting],
-      ['Quality guard', formatQualityGuardStatus(highSeverityRows, totalIssueRows)],
-      ['Retry evidence', formatRetryEvidenceStatus(retryableRows, detail.canRetryNow)],
-      ['Dependency mapping', formatDependencyMappingStatus(blockedByEntityTypes, mappingRows)],
+      [t('importBatchDetail.rowAccounting'), rowAccounting],
+      [t('importBatchDetail.qualityGuard'), formatQualityGuardStatus(highSeverityRows, totalIssueRows, t)],
+      [t('importBatchDetail.retryEvidence'), formatRetryEvidenceStatus(retryableRows, detail.canRetryNow, t)],
+      [t('importBatchDetail.dependencyMapping'), formatDependencyMappingStatus(blockedByEntityTypes, mappingRows, t)],
     ],
   }
 }
@@ -874,9 +885,10 @@ function buildImportDecisionEvidence(input: {
 function buildKpiReviewEvidence(input: {
   errors: ImportBatchError[]
   totalErrorRows: number
+  t: TranslateFunction
 }): KpiReviewEvidence {
   const items = input.errors
-    .map(toKpiReviewItem)
+    .map((error) => toKpiReviewItem(error, input.t))
     .filter((item): item is KpiReviewItem => item !== null)
   const employeeMatchRows = items.filter(
     (item) => item.category === 'employee_match',
@@ -891,12 +903,15 @@ function buildKpiReviewEvidence(input: {
 
   if (mappingRows > 0) {
     return {
-      label: 'Review required',
+      label: input.t('importBatchDetail.reviewRequired'),
       tone: 'danger',
       summary:
         hiddenErrorRows > 0
-          ? `KPI importunda eslesmeyen magaza/personel satirlari var; ilk ${input.errors.length} / ${input.totalErrorRows} hata satiri gosteriliyor.`
-          : 'KPI importunda eslesmeyen magaza/personel satirlari var; once bu eslesmeler netlestirilmeli.',
+          ? input.t('importBatchDetail.kpiReviewRequiredHidden', {
+              visible: input.errors.length,
+              total: input.totalErrorRows,
+            })
+          : input.t('importBatchDetail.kpiReviewRequired'),
       employeeMatchRows,
       storeMatchRows,
       suspiciousRows,
@@ -908,12 +923,15 @@ function buildKpiReviewEvidence(input: {
 
   if (totalReviewRows > 0) {
     return {
-      label: 'Needs check',
+      label: input.t('importBatchDetail.needsCheck'),
       tone: 'warning',
       summary:
         hiddenErrorRows > 0
-          ? `Eslesme bloku yok, ama supheli KPI satirlari var; ilk ${input.errors.length} / ${input.totalErrorRows} hata satiri gosteriliyor.`
-          : 'Eslesme bloku yok, ama duplicate/metric/period gibi supheli KPI satirlari kontrol edilmeli.',
+          ? input.t('importBatchDetail.kpiNeedsCheckHidden', {
+              visible: input.errors.length,
+              total: input.totalErrorRows,
+            })
+          : input.t('importBatchDetail.kpiNeedsCheck'),
       employeeMatchRows,
       storeMatchRows,
       suspiciousRows,
@@ -924,9 +942,9 @@ function buildKpiReviewEvidence(input: {
   }
 
   return {
-    label: 'Clear',
+    label: input.t('importBatchDetail.clear'),
     tone: 'calm',
-    summary: 'KPI importunda review gerektiren magaza/personel eslesmesi veya supheli satir gorunmuyor.',
+    summary: input.t('importBatchDetail.kpiClear'),
     employeeMatchRows,
     storeMatchRows,
     suspiciousRows,
@@ -936,7 +954,7 @@ function buildKpiReviewEvidence(input: {
   }
 }
 
-function toKpiReviewItem(error: ImportBatchError): KpiReviewItem | null {
+function toKpiReviewItem(error: ImportBatchError, t: TranslateFunction): KpiReviewItem | null {
   const issueCode = error.qualityIssueCode ?? null
   const externalRef = error.mappingCandidate?.externalId ?? null
 
@@ -945,12 +963,12 @@ function toKpiReviewItem(error: ImportBatchError): KpiReviewItem | null {
       rowId: error.rowId,
       sourceRef: error.sourceRef,
       category: 'employee_match',
-      categoryLabel: 'Personel eslesmesi',
-      actionLabel: 'Map employee',
+      categoryLabel: t('importBatchDetail.employeeMatch'),
+      actionLabel: t('importBatchDetail.mapEmployee'),
       tone: 'danger',
       externalRef,
       issueCode,
-      message: error.validationError ?? 'Personel referansi cozumlenemedi.',
+      message: error.validationError ?? t('importBatchDetail.employeeReferenceUnresolved'),
       rawRowReference: error.rawRowReference ?? null,
       rowHash: error.rowHash ?? null,
     }
@@ -961,12 +979,12 @@ function toKpiReviewItem(error: ImportBatchError): KpiReviewItem | null {
       rowId: error.rowId,
       sourceRef: error.sourceRef,
       category: 'store_match',
-      categoryLabel: 'Magaza eslesmesi',
-      actionLabel: 'Map store',
+      categoryLabel: t('importBatchDetail.storeMatch'),
+      actionLabel: t('importBatchDetail.mapStore'),
       tone: 'danger',
       externalRef,
       issueCode,
-      message: error.validationError ?? 'Magaza referansi cozumlenemedi.',
+      message: error.validationError ?? t('importBatchDetail.storeReferenceUnresolved'),
       rawRowReference: error.rawRowReference ?? null,
       rowHash: error.rowHash ?? null,
     }
@@ -977,12 +995,12 @@ function toKpiReviewItem(error: ImportBatchError): KpiReviewItem | null {
       rowId: error.rowId,
       sourceRef: error.sourceRef,
       category: 'suspicious_row',
-      categoryLabel: 'Supheli satir',
-      actionLabel: 'Manual check',
+      categoryLabel: t('importBatchDetail.suspiciousRow'),
+      actionLabel: t('importBatchDetail.manualCheck'),
       tone: 'warning',
       externalRef,
       issueCode,
-      message: error.validationError ?? 'KPI satiri manuel kontrol gerektiriyor.',
+      message: error.validationError ?? t('importBatchDetail.kpiManualCheckRequired'),
       rawRowReference: error.rawRowReference ?? null,
       rowHash: error.rowHash ?? null,
     }
@@ -993,12 +1011,12 @@ function toKpiReviewItem(error: ImportBatchError): KpiReviewItem | null {
       rowId: error.rowId,
       sourceRef: error.sourceRef,
       category: 'system_retry',
-      categoryLabel: 'Retry satiri',
-      actionLabel: 'Retry batch',
+      categoryLabel: t('importBatchDetail.retryRow'),
+      actionLabel: t('importBatchDetail.retryBatch'),
       tone: 'danger',
       externalRef,
       issueCode,
-      message: error.validationError ?? 'Sistem yazma hatasi veya retry gerektiren satir.',
+      message: error.validationError ?? t('importBatchDetail.systemRetryRequired'),
       rawRowReference: error.rawRowReference ?? null,
       rowHash: error.rowHash ?? null,
     }
@@ -1017,30 +1035,111 @@ function isSuspiciousKpiIssue(issueCode: string | null) {
   )
 }
 
-function getRowAccountingStatus(reconciliation?: ImportBatchReconciliation) {
-  if (!reconciliation) return 'Waiting for reconciliation'
+function getRowAccountingStatus(
+  reconciliation: ImportBatchReconciliation | undefined,
+  t: TranslateFunction,
+) {
+  if (!reconciliation) return t('importBatchDetail.waitingForReconciliation')
   if (reconciliation.totals.unaccountedRows > 0) {
-    return `${formatRowCount(reconciliation.totals.unaccountedRows)} unaccounted`
+    return t('importBatchDetail.unaccountedRows', {
+      count: reconciliation.totals.unaccountedRows,
+    })
   }
-  if (!reconciliation.totals.countsMatchRecordCount) return 'Record count mismatch'
-  return 'Accounted and matched'
+  if (!reconciliation.totals.countsMatchRecordCount) return t('importBatchDetail.recordCountMismatch')
+  return t('importBatchDetail.accountedAndMatched')
 }
 
-function formatQualityGuardStatus(highSeverityRows: number, totalIssueRows: number) {
-  if (highSeverityRows > 0) return `${highSeverityRows} high severity ${highSeverityRows === 1 ? 'row' : 'rows'}`
-  if (totalIssueRows > 0) return `${formatRowCount(totalIssueRows)} classified`
-  return 'No classified issues'
+function formatQualityGuardStatus(
+  highSeverityRows: number,
+  totalIssueRows: number,
+  t: TranslateFunction,
+) {
+  if (highSeverityRows > 0) {
+    return t('importBatchDetail.highSeverityRows', { count: highSeverityRows })
+  }
+  if (totalIssueRows > 0) return t('importBatchDetail.classifiedRows', { count: totalIssueRows })
+  return t('importBatchDetail.noClassifiedIssues')
 }
 
-function formatRetryEvidenceStatus(retryableRows: number, canRetryNow: boolean) {
-  if (retryableRows === 0) return 'No retry needed'
-  return canRetryNow ? 'Retry available' : 'Retry blocked'
+function formatRetryEvidenceStatus(
+  retryableRows: number,
+  canRetryNow: boolean,
+  t: TranslateFunction,
+) {
+  if (retryableRows === 0) return t('importBatchDetail.noRetryNeeded')
+  return canRetryNow ? t('importBatchDetail.retryAvailable') : t('importBatchDetail.retryBlocked')
 }
 
-function formatDependencyMappingStatus(blockedByEntityTypes: string[], mappingRows: number) {
-  if (blockedByEntityTypes.length > 0) return `Blocked by ${blockedByEntityTypes.join(', ')}`
-  if (mappingRows > 0) return `${mappingRows} mapping ${mappingRows === 1 ? 'row' : 'rows'} pending`
-  return 'No dependency block'
+function formatDependencyMappingStatus(
+  blockedByEntityTypes: string[],
+  mappingRows: number,
+  t: TranslateFunction,
+) {
+  if (blockedByEntityTypes.length > 0) {
+    return t('importBatchDetail.blockedByValue', {
+      entities: blockedByEntityTypes.map((entity) => formatEntityType(entity, t)).join(', '),
+    })
+  }
+  if (mappingRows > 0) return t('importBatchDetail.mappingRowsPending', { count: mappingRows })
+  return t('importBatchDetail.noDependencyBlock')
+}
+
+function formatQualityIssueLabel(code: string, fallback: string, t: TranslateFunction) {
+  if (code === 'unmapped_store') return t('importBatchDetail.qualityIssue.unmapped_store.label')
+  if (code === 'unmapped_employee') return t('importBatchDetail.qualityIssue.unmapped_employee.label')
+  return fallback
+}
+
+function formatQualityIssueDescription(code: string, fallback: string, t: TranslateFunction) {
+  if (code === 'unmapped_store') return t('importBatchDetail.qualityIssue.unmapped_store.description')
+  if (code === 'unmapped_employee') return t('importBatchDetail.qualityIssue.unmapped_employee.description')
+  return fallback
+}
+
+function formatIssueOwner(owner: string, t: TranslateFunction) {
+  if (owner === 'mapping') return t('importBatchDetail.issueOwner.mapping')
+  if (owner === 'data') return t('importBatchDetail.issueOwner.data')
+  if (owner === 'system') return t('importBatchDetail.issueOwner.system')
+  return owner
+}
+
+function formatQualitySeverity(severity: string, t: TranslateFunction) {
+  if (severity === 'high') return t('importBatchDetail.severity.high')
+  if (severity === 'medium') return t('importBatchDetail.severity.medium')
+  if (severity === 'low') return t('importBatchDetail.severity.low')
+  return severity
+}
+
+function formatEntityType(entityType: string, t: TranslateFunction) {
+  if (entityType === 'employee') return t('importBatchDetail.entity.employee')
+  if (entityType === 'store') return t('importBatchDetail.entity.store')
+  if (entityType === 'position') return t('importBatchDetail.entity.position')
+  if (entityType === 'region') return t('importBatchDetail.entity.region')
+  if (entityType === 'company') return t('importBatchDetail.entity.company')
+  if (entityType === 'manager') return t('importBatchDetail.entity.manager')
+  return entityType.replaceAll('_', ' ')
+}
+
+function formatStateLabel(state: string, t: TranslateFunction) {
+  if (state === 'completed_with_errors') return t('importBatchDetail.state.completed_with_errors')
+  if (state === 'retry_ready') return t('importBatchDetail.state.retry_ready')
+  if (state === 'completed') return t('importBatchDetail.state.completed')
+  if (state === 'failed') return t('importBatchDetail.state.failed')
+  if (state === 'stuck') return t('importBatchDetail.state.stuck')
+  if (state === 'pending') return t('importBatchDetail.state.pending')
+  if (state === 'queued') return t('importBatchDetail.state.queued')
+  if (state === 'processing') return t('importBatchDetail.state.processing')
+  if (state === 'healthy') return t('importBatchDetail.state.healthy')
+  if (state === 'blocked') return t('importBatchDetail.state.blocked')
+  if (state === 'needs_action') return t('importBatchDetail.state.needs_action')
+  return state.replaceAll('_', ' ')
+}
+
+function formatErrorCategory(category: string, t: TranslateFunction) {
+  if (category === 'validation') return t('importBatchDetail.errorCategory.validation')
+  if (category === 'missing_dependency') return t('importBatchDetail.errorCategory.missing_dependency')
+  if (category === 'write_failure') return t('importBatchDetail.errorCategory.write_failure')
+  return category.replaceAll('_', ' ')
 }
 
 function mapQualitySeverityTone(severity: string) {
