@@ -111,31 +111,33 @@ test('admin dashboard explains why Power BI export upload is unavailable', async
 test('admin master data bootstrap surface exposes personnel promotion evidence', async ({ page }) => {
   await page.goto('/admin/master-data/bootstrap-batch-personnel-1')
 
-  await expect(page.getByRole('heading', { name: 'Master data bootstrap' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Ana veri hazırlığı' })).toBeVisible()
   await expect(
-    page.getByText('Open a batch to inspect row evidence, dry-run evidence, readiness counters, and promotion state.'),
+    page.getByText(
+      'Satır kanıtı, prova kanıtı, hazırlık sayaçları ve aktarım durumunu incelemek için bir parti aç.',
+    ),
   ).toBeVisible()
-  await expect(page.getByText('ready_to_promote').first()).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Promoted rows', exact: true })).toBeVisible()
+  await expect(page.getByText('aktarıma hazır').first()).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Aktarılan satırlar', exact: true })).toBeVisible()
   await expect(page.getByText('1 / 2').first()).toBeVisible()
   await expect(page.getByText('employee-live-1').first()).toBeVisible()
 
   const dryRunPanel = page.getByLabel('Master data promotion dry-run evidence')
   await expect(
-    dryRunPanel.getByRole('heading', { name: 'Promotion dry-run evidence' }),
+    dryRunPanel.getByRole('heading', { name: 'Aktarım prova kanıtı' }),
   ).toBeVisible()
   await expect(
     dryRunPanel.getByText(
-      'Dry-run evidence only. No rows are promoted from this panel; promotion still requires the explicit command.',
+      'Yalnızca prova kanıtı. Bu panelden satır aktarılmaz; aktarım hâlâ açık komut gerektirir.',
     ),
   ).toBeVisible()
   await expect(dryRunPanel.getByText('#1 FM8375')).toBeVisible()
-  await expect(dryRunPanel.getByText('ready', { exact: true })).toBeVisible()
+  await expect(dryRunPanel.getByText('hazır', { exact: true })).toBeVisible()
   await expect(dryRunPanel.getByText('#2 FM8374')).toBeVisible()
-  await expect(dryRunPanel.getByText('already_promoted').first()).toBeVisible()
+  await expect(dryRunPanel.getByText('zaten aktarıldı').first()).toBeVisible()
   await expect(dryRunPanel.getByText('employee-live-1')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Promote personnel' }).click()
+  await page.getByRole('button', { name: 'Personeli aktar' }).click()
   await expect(page.getByText('Personnel bootstrap rows promoted')).toBeVisible()
   await expect(page.getByText('assignment-live-1')).toBeVisible()
 })

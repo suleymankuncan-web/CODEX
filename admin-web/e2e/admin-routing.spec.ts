@@ -44,9 +44,39 @@ test('master data list renders bootstrap batches when updatedAt is absent', asyn
 
   await page.goto('/admin/master-data')
 
-  await expect(page.getByRole('heading', { name: 'Bootstrap batches' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Hazırlık partileri' })).toBeVisible()
   await expect(page.getByText('Accepted personnel baseline')).toBeVisible()
   expect(pageErrors).toEqual([])
+})
+
+test('master data page switches chrome to English copy and persists locale', async ({ page }) => {
+  await page.goto('/admin/master-data')
+
+  await expect(page.getByRole('heading', { name: 'Ana veri hazırlığı' })).toBeVisible()
+  await expect(page.getByText('İnceleme kuyruğu')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Hazırlık partileri' })).toBeVisible()
+  await expect(page.getByText('Master data bootstrap')).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText('Ã')
+  await expect(page.locator('body')).not.toContainText('Ä')
+  await expect(page.locator('body')).not.toContainText('Å')
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'Master data bootstrap' })).toBeVisible()
+  await expect(page.getByText('Review queue')).toBeVisible()
+  await expect(
+    page.getByText(
+      'Open a batch to inspect row evidence, dry-run evidence, readiness counters, and promotion state.',
+    ),
+  ).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Bootstrap batches' })).toBeVisible()
+  await expect(page.getByText('Ana veri hazırlığı')).toHaveCount(0)
+
+  await page.reload()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'Master data bootstrap' })).toBeVisible()
 })
 
 async function routeAdminShellApi(page: Page) {

@@ -32,7 +32,7 @@ test('core admin routes open without unavailable states', async ({ page }) => {
     },
     {
       path: '/admin/master-data',
-      heading: page.getByRole('heading', { name: 'Bootstrap batches' }),
+      heading: page.getByRole('heading', { name: 'Hazırlık partileri' }),
     },
     {
       path: '/admin/targets',
