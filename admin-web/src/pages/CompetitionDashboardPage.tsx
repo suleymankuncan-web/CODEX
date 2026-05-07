@@ -26,9 +26,9 @@ import {
 } from '../features/competitions/readability'
 import { StageBuilderForm } from '../features/competitions/StageBuilderForm'
 import type { AuthSessionSummary } from '../features/auth/api'
+import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import { formatDate, formatState, getErrorMessage } from '../lib/format'
-import type { AppLocale } from '../lib/i18n'
 
 function nextDraftPayload() {
   const startsOn = new Date()
@@ -59,8 +59,26 @@ function canManageCompetitions(authSummary: AuthSessionSummary | null) {
   return roles.includes('SUPER_ADMIN') || roles.includes('HR_ADMIN')
 }
 
-function formatScore(value: number | null, locale: AppLocale) {
-  return value === null ? (locale === 'tr' ? 'Kısmi' : 'Partial') : value.toFixed(2)
+const competitionStateLabels: Record<string, TranslationKey> = {
+  active: 'competition.admin.state.active',
+  finalized: 'competition.admin.state.finalized',
+  clean: 'competition.admin.state.clean',
+  draft: 'competition.admin.state.draft',
+  scheduled: 'competition.admin.state.scheduled',
+  awaiting_review: 'competition.admin.state.awaitingReview',
+  warnings_present: 'competition.admin.state.warningsPresent',
+  overridden: 'competition.admin.state.overridden',
+  cancelled: 'competition.admin.state.cancelled',
+  region_challenge: 'competition.admin.state.regionChallenge',
+}
+
+function formatCompetitionState(state: string, t: TranslateFunction) {
+  const key = competitionStateLabels[state]
+  return key ? t(key) : formatState(state)
+}
+
+function formatScore(value: number | null, t: TranslateFunction) {
+  return value === null ? t('competition.admin.partialScore') : value.toFixed(2)
 }
 
 export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummary | null }) {
@@ -120,8 +138,8 @@ export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummar
   if (competitionsQuery.isLoading) {
     return (
       <ScreenState
-        title="Competitions are loading"
-        copy="The admin competition surface is checking current stages."
+        title={t('competition.admin.loadingTitle')}
+        copy={t('competition.admin.loadingCopy')}
       />
     )
   }
@@ -129,7 +147,7 @@ export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummar
   if (competitionsQuery.isError) {
     return (
       <ScreenState
-        title="Competition surface could not load"
+        title={t('competition.admin.errorTitle')}
         copy={getErrorMessage(competitionsQuery.error)}
         tone="error"
       />
@@ -143,25 +161,22 @@ export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummar
     <section className="page-stack">
       <section className="hero-panel">
         <div>
-          <div className="eyebrow">Competition Control</div>
-          <h2 className="hero-title">Region challenge stages</h2>
-          <p className="hero-copy">
-            HR-owned challenge setup, live standing review, and finalization checks share one
-            controlled admin surface.
-          </p>
+          <div className="eyebrow">{t('competition.admin.heroEyebrow')}</div>
+          <h2 className="hero-title">{t('competition.admin.heroTitle')}</h2>
+          <p className="hero-copy">{t('competition.admin.heroCopy')}</p>
         </div>
         <div className="hero-metrics">
-          <MetricAccent label="Route" value="/admin/competitions" />
-          <MetricAccent label="Competitions" value={String(competitions.length)} />
-          <MetricAccent label="Warnings" value={String(warningCount)} />
+          <MetricAccent label={t('competition.admin.route')} value="/admin/competitions" />
+          <MetricAccent label={t('competition.admin.competitions')} value={String(competitions.length)} />
+          <MetricAccent label={t('competition.admin.warnings')} value={String(warningCount)} />
         </div>
       </section>
 
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Competition List</div>
-            <h3>Active and draft containers</h3>
+            <div className="eyebrow">{t('competition.admin.listEyebrow')}</div>
+            <h3>{t('competition.admin.listTitle')}</h3>
           </div>
           {canManage ? (
             <button
@@ -171,23 +186,23 @@ export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummar
               onClick={() => createMutation.mutate()}
             >
               <Trophy size={16} />
-              New draft
+              {t('competition.admin.newDraft')}
             </button>
           ) : (
-            <StatusPill tone="neutral">Read only</StatusPill>
+            <StatusPill tone="neutral">{t('competition.admin.readOnly')}</StatusPill>
           )}
         </div>
 
         {createMutation.isError ? (
           <ScreenState
-            title="Draft could not be created"
+            title={t('competition.admin.draftErrorTitle')}
             copy={getErrorMessage(createMutation.error)}
             tone="error"
           />
         ) : null}
 
         {competitions.length === 0 ? (
-          <EmptyState title="No competitions yet" copy="The first draft will appear here." />
+          <EmptyState title={t('competition.admin.emptyTitle')} copy={t('competition.admin.emptyCopy')} />
         ) : (
           <div className="stacked-table">
             {competitions.map((competition: CompetitionSummary) => (
@@ -199,21 +214,24 @@ export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummar
                   </div>
                   <div className="action-cluster">
                     <StatusPill tone={stateTone(competition.lifecycleState)}>
-                      {formatState(competition.lifecycleState)}
+                      {formatCompetitionState(competition.lifecycleState, t)}
                     </StatusPill>
                     <button
                       className="control-button"
                       type="button"
                       onClick={() => setSelectedCompetitionId(competition.competitionId)}
                     >
-                      Review
+                      {t('competition.admin.review')}
                     </button>
                   </div>
                 </div>
                 <div className="key-grid">
-                  <KeyValue label="Type" value={formatState(competition.competitionType)} />
-                  <KeyValue label="Starts" value={formatDate(competition.startsOn)} />
-                  <KeyValue label="Ends" value={formatDate(competition.endsOn)} />
+                  <KeyValue
+                    label={t('competition.admin.type')}
+                    value={formatCompetitionState(competition.competitionType, t)}
+                  />
+                  <KeyValue label={t('competition.admin.starts')} value={formatDate(competition.startsOn, locale)} />
+                  <KeyValue label={t('competition.admin.ends')} value={formatDate(competition.endsOn, locale)} />
                 </div>
               </article>
             ))}
@@ -225,21 +243,24 @@ export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummar
         <section className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Live Standing</div>
+              <div className="eyebrow">{t('competition.admin.liveEyebrow')}</div>
               <h3>{selectedCompetition.competitionName}</h3>
             </div>
             <StatusPill tone={warningCount > 0 ? 'warning' : 'calm'}>
-              {warningCount > 0 ? `${warningCount} warnings` : t('competition.clean')}
+              {warningCount > 0 ? t('competition.admin.warningCount', { count: warningCount }) : t('competition.clean')}
             </StatusPill>
           </div>
 
           {detailQuery.isLoading ? (
-            <ScreenState title="Standing is loading" copy="Stage scores and warnings are loading." />
+            <ScreenState
+              title={t('competition.admin.standingLoadingTitle')}
+              copy={t('competition.admin.standingLoadingCopy')}
+            />
           ) : null}
 
           {detailQuery.isError ? (
             <ScreenState
-              title="Standing could not load"
+              title={t('competition.admin.standingErrorTitle')}
               copy={getErrorMessage(detailQuery.error)}
               tone="error"
             />
@@ -252,8 +273,8 @@ export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummar
               <div className="metric-grid">
                 {detailQuery.data.latestScores.length === 0 ? (
                   <EmptyState
-                    title="No score snapshot"
-                    copy="Scores appear after a stage recalculation."
+                    title={t('competition.admin.noScoreTitle')}
+                    copy={t('competition.admin.noScoreCopy')}
                   />
                 ) : (
                   detailQuery.data.latestScores.map((score) => (
@@ -261,14 +282,20 @@ export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummar
                       <div className="metric-icon">
                         <Trophy size={18} />
                       </div>
-                      <div className="metric-value">{formatScore(score.scoreValue, locale)}</div>
+                      <div className="metric-value">{formatScore(score.scoreValue, t)}</div>
                       <h3>{score.teamName}</h3>
                       <p>
-                        Rank {score.rankPosition ?? '-'} / {score.rankingPopulation} on{' '}
-                        {formatDate(score.snapshotDate)}
+                        {t('competition.admin.rankLine', {
+                          rank: score.rankPosition ?? '-',
+                          population: score.rankingPopulation,
+                          date: formatDate(score.snapshotDate, locale),
+                        })}
                       </p>
                       <p>
-                        Coverage {score.validStoreCount}/{score.totalStoreCount}
+                        {t('competition.admin.coverageFraction', {
+                          valid: score.validStoreCount,
+                          total: score.totalStoreCount,
+                        })}
                       </p>
                     </article>
                   ))
@@ -286,7 +313,7 @@ export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummar
                       onClick={() => recalcMutation.mutate(stage.competitionStageId)}
                     >
                       <RefreshCw size={16} />
-                      Recalculate {stage.stageCode}
+                      {t('competition.admin.recalculateStage', { stageCode: stage.stageCode })}
                     </button>
                   ))}
                 </div>
@@ -315,16 +342,16 @@ export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummar
                 <article className="stacked-row">
                   <div className="panel-heading">
                     <div>
-                      <div className="eyebrow">Finalization</div>
+                      <div className="eyebrow">{t('competition.admin.finalizationEyebrow')}</div>
                       <h3>{activeStage.stageName}</h3>
                     </div>
                     <StatusPill tone={stateTone(activeStage.lifecycleState)}>
-                      {formatState(activeStage.lifecycleState)}
+                      {formatCompetitionState(activeStage.lifecycleState, t)}
                     </StatusPill>
                   </div>
                   <div className="form-grid">
                     <label>
-                      Override justification
+                      {t('competition.admin.overrideJustification')}
                       <textarea
                         value={overrideJustification}
                         onChange={(event) => setOverrideJustification(event.target.value)}
@@ -337,12 +364,12 @@ export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummar
                       onClick={() => finalizeMutation.mutate(activeStage.competitionStageId)}
                     >
                       <CheckCircle2 size={16} />
-                      Finalize {activeStage.stageCode}
+                      {t('competition.admin.finalizeStage', { stageCode: activeStage.stageCode })}
                     </button>
                   </div>
                   {finalizeMutation.isError ? (
                     <ScreenState
-                      title="Stage could not be finalized"
+                      title={t('competition.admin.finalizationErrorTitle')}
                       copy={getErrorMessage(finalizeMutation.error)}
                       tone="error"
                     />
@@ -418,13 +445,13 @@ function ScopedContributionSection(input: { contributions: CompetitionStoreContr
                 </div>
                 <div className="action-cluster">
                   <StatusPill tone={contribution.hasDailyData ? 'calm' : 'warning'}>
-                    {formatScore(contribution.scoreValue, locale)}
+                    {formatScore(contribution.scoreValue, t)}
                   </StatusPill>
                   <StatusPill tone={readability.tone}>{readability.statusLabel}</StatusPill>
                 </div>
               </div>
               <div className="key-grid">
-                <KeyValue label={t('competition.snapshot')} value={formatDate(contribution.snapshotDate)} />
+                <KeyValue label={t('competition.snapshot')} value={formatDate(contribution.snapshotDate, locale)} />
                 <KeyValue label={t('competition.contributionHealth')} value={readability.statusLabel} />
                 <KeyValue label={t('competition.coverage')} value={readability.coverageLabel} />
                 <KeyValue label={t('competition.missingKpis')} value={readability.missingLabel} />
@@ -450,7 +477,9 @@ function ScopedWarningsSection(input: { warnings: CompetitionWarning[] }) {
           <h3>{t('competition.scopedWarnings')}</h3>
         </div>
         <StatusPill tone={input.warnings.length > 0 ? 'warning' : 'calm'}>
-          {input.warnings.length > 0 ? `${input.warnings.length} warnings` : t('competition.clean')}
+          {input.warnings.length > 0
+            ? t('competition.admin.warningCount', { count: input.warnings.length })
+            : t('competition.clean')}
         </StatusPill>
       </div>
       {input.warnings.length === 0 ? (
@@ -472,8 +501,8 @@ function ScopedWarningsSection(input: { warnings: CompetitionWarning[] }) {
               </div>
               <div className="key-grid">
                 <KeyValue label={t('competition.warningCode')} value={formatState(warning.warningCode)} />
-                <KeyValue label={t('competition.periodStart')} value={formatDate(warning.periodStart)} />
-                <KeyValue label={t('competition.periodEnd')} value={formatDate(warning.periodEnd)} />
+                <KeyValue label={t('competition.periodStart')} value={formatDate(warning.periodStart, locale)} />
+                <KeyValue label={t('competition.periodEnd')} value={formatDate(warning.periodEnd, locale)} />
                 <KeyValue label={t('competition.store')} value={warning.storeId ?? t('competition.teamLevel')} />
               </div>
             </article>

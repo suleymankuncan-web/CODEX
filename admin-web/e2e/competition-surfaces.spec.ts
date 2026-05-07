@@ -33,7 +33,7 @@ test('admin competitions surface shows live scores and warnings', async ({ page 
   await page.goto('/admin/competitions')
 
   await expect(page.getByRole('link', { name: 'Yarışmalar' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: /Region challenge stages/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Bölge yarışma etapları/i })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'April Region Challenge' })).toBeVisible()
   const adminReadSummary = page.getByLabel('Admin competition read summary')
   await expect(adminReadSummary.getByText('Okuma özeti')).toBeVisible()
@@ -48,8 +48,33 @@ test('admin competitions surface shows live scores and warnings', async ({ page 
   await expect(
     page.getByLabel('Scoped competition warnings').getByText('missing bm checklist', { exact: true }),
   ).toBeVisible()
-  await expect(page.getByRole('button', { name: /Recalculate QUALIFIER/ })).toBeVisible()
-  await expect(page.getByRole('button', { name: /Finalize QUALIFIER/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Yeniden hesapla QUALIFIER/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Finale al QUALIFIER/ })).toBeVisible()
+})
+
+test('admin competitions page switches chrome to English copy and persists locale', async ({ page }) => {
+  await page.goto('/admin/competitions')
+
+  await expect(page.getByRole('heading', { name: 'Bölge yarışma etapları' })).toBeVisible()
+  await expect(page.getByText('Yarışma listesi')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Yeni taslak' })).toBeVisible()
+  await expect(page.getByText('Region challenge stages')).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText('Ã')
+  await expect(page.locator('body')).not.toContainText('Ä')
+  await expect(page.locator('body')).not.toContainText('Å')
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'Region challenge stages' })).toBeVisible()
+  await expect(page.getByText('Competition List')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'New draft' })).toBeVisible()
+  await expect(page.getByText('Bölge yarışma etapları')).toHaveCount(0)
+
+  await page.reload()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'Region challenge stages' })).toBeVisible()
 })
 
 test('admin can create a competition stage with team store assignments', async ({ page }) => {
@@ -521,7 +546,7 @@ test('region manager competitions surface is read-only and scoped to visible sto
 
   await page.goto('/admin/competitions')
 
-  await expect(page.getByRole('heading', { name: /Region challenge stages/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Bölge yarışma etapları/i })).toBeVisible()
   const regionReadSummary = page.getByLabel('Admin competition read summary')
   const regionContributionRows = page.getByLabel('Scoped competition store contributions')
   await expect(regionReadSummary.getByText('Okuma özeti')).toBeVisible()
