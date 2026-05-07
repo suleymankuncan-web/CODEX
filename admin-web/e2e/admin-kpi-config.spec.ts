@@ -17,23 +17,49 @@ test.beforeEach(async ({ page }) => {
   await routeAdminKpiConfigApi(page)
 })
 
-test('admin KPI config page explains publish governance preview', async ({ page }) => {
+test('admin KPI config page localizes publish governance preview', async ({ page }) => {
   await page.goto('/admin/kpi-config')
 
+  await expect(page.getByRole('heading', { name: 'Yayın kararı önizlemesi' })).toBeVisible()
+  await expect(page.getByText('Yönetişim önizlemesi')).toBeVisible()
+  await expect(page.getByText('Taslak değişiklikler canlı KPI yorumunu etkiler.')).toBeVisible()
+  await expect(page.getByText('Mağaza profil farkı')).toBeVisible()
+  await expect(page.getByText('+1 / ~1 / -0')).toBeVisible()
+  await expect(page.getByText('Puanlama farkı')).toBeVisible()
+  await expect(page.getByText('+0 / ~1 / -0')).toBeVisible()
+  await expect(page.getByText('Sürümlü şema')).toBeVisible()
+  await expect(page.getByText('Aktif', { exact: true })).toBeVisible()
+  await expect(page.getByText('Son sürüm')).toBeVisible()
+  await expect(page.getByText('v3')).toBeVisible()
+  await expect(page.getByText('Snapshot sabitleme', { exact: true })).toBeVisible()
+  await expect(
+    page.getByText('Snapshot sabitleme yeni çalışmalar için aktif; yönetişim öncesi snapshotlar okunabilir kalır.'),
+  ).toBeVisible()
+  await expect(page.getByText('Publish decision preview')).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText('Ã')
+  await expect(page.locator('body')).not.toContainText('Ä')
+  await expect(page.locator('body')).not.toContainText('Å')
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: 'Publish decision preview' })).toBeVisible()
   await expect(page.getByText('Governance preview')).toBeVisible()
   await expect(page.getByText('Draft changes affect live KPI interpretation.')).toBeVisible()
   await expect(page.getByText('Store profile diff')).toBeVisible()
-  await expect(page.getByText('+1 / ~1 / -0')).toBeVisible()
   await expect(page.getByText('Grading diff')).toBeVisible()
-  await expect(page.getByText('+0 / ~1 / -0')).toBeVisible()
   await expect(page.getByText('Versioned schema')).toBeVisible()
   await expect(page.getByText('Active', { exact: true })).toBeVisible()
   await expect(page.getByText('Latest version')).toBeVisible()
-  await expect(page.getByText('v3')).toBeVisible()
   await expect(
     page.getByText('Snapshot anchoring is active for new runs; pre-governance snapshots remain readable.'),
   ).toBeVisible()
+  await expect(page.getByText('Yayın kararı önizlemesi')).toHaveCount(0)
+
+  await page.reload()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'Publish decision preview' })).toBeVisible()
 })
 
 async function routeAdminKpiConfigApi(page: Page) {

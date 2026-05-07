@@ -2,6 +2,7 @@ import { adminAuditEn, adminAuditTr } from './admin-audit'
 import { adminFeedEn, adminFeedTr } from './admin-feed'
 import { adminInboxEn, adminInboxTr } from './admin-inbox'
 import { adminIntegrationsEn, adminIntegrationsTr } from './admin-integrations'
+import { adminKpiConfigEn, adminKpiConfigTr } from './admin-kpi-config'
 import { adminMasterDataEn, adminMasterDataTr } from './admin-master-data'
 import { adminShellEn, adminShellTr } from './admin-shell'
 import { adminTargetsEn, adminTargetsTr } from './admin-targets'
@@ -23,6 +24,7 @@ const tr = {
   ...adminFeedTr,
   ...adminInboxTr,
   ...adminIntegrationsTr,
+  ...adminKpiConfigTr,
   ...adminMasterDataTr,
   ...adminShellTr,
   ...adminTargetsTr,
@@ -45,6 +47,7 @@ const en: Record<keyof typeof tr, string> = {
   ...adminFeedEn,
   ...adminInboxEn,
   ...adminIntegrationsEn,
+  ...adminKpiConfigEn,
   ...adminMasterDataEn,
   ...adminShellEn,
   ...adminTargetsEn,
