@@ -17,6 +17,50 @@ test.beforeEach(async ({ page }) => {
   await routeAuthAdminApi(page)
 })
 
+test('auth dashboard page switches chrome to English copy and persists locale', async ({ page }) => {
+  await page.goto('/admin/auth')
+
+  const main = page.getByRole('main')
+  const heroMetrics = main.locator('.hero-metrics')
+
+  await expect(main.getByText('Auth operasyonları')).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Kullanıcılar, roller ve kapsam duruşu tek operatör görünümünde.' })).toBeVisible()
+  await expect(heroMetrics.getByText('Kullanıcılar', { exact: true })).toBeVisible()
+  await expect(heroMetrics.getByText('Roller', { exact: true })).toBeVisible()
+  await expect(heroMetrics.getByText('İzinler', { exact: true })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Pilot kullanıcı bağlantısı' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Yeni hesap' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Kapsamlı rol yetkisi' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Operasyonel aksiyonlar için atanmış mağazalar' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Rol atama kuyruğu' })).toBeVisible()
+  await expect(main.getByRole('link', { name: 'Kataloğu aç' }).first()).toBeVisible()
+  await expect(main.getByText('Users, roles, and scope posture')).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText('ÃƒÆ’')
+  await expect(page.locator('body')).not.toContainText('Ãƒâ€')
+  await expect(page.locator('body')).not.toContainText('Ãƒâ€¦')
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(main.getByText('Auth Admin')).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Users, roles, and scope posture in one operator view.' })).toBeVisible()
+  await expect(heroMetrics.getByText('Users', { exact: true })).toBeVisible()
+  await expect(heroMetrics.getByText('Roles', { exact: true })).toBeVisible()
+  await expect(heroMetrics.getByText('Permissions', { exact: true })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Pilot user binding' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'New account' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Scoped role grant' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Assigned stores for operational actions' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Role assignment queue' })).toBeVisible()
+  await expect(main.getByRole('link', { name: 'Open catalog' }).first()).toBeVisible()
+  await expect(main.getByText('Auth operasyonları')).toHaveCount(0)
+
+  await page.reload()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(main.getByRole('heading', { name: 'Users, roles, and scope posture in one operator view.' })).toBeVisible()
+})
+
 test('HR admin can submit a pilot user binding', async ({ page }) => {
   let requestBody: Record<string, unknown> | null = null
 
@@ -58,14 +102,14 @@ test('HR admin can submit a pilot user binding', async ({ page }) => {
 
   await page.goto('/admin/auth')
 
-  await expect(page.getByRole('heading', { name: 'Pilot user binding' })).toBeVisible()
-  await page.getByLabel('Pilot employee id').fill('70000000-0000-4000-8000-000000000101')
-  await page.getByLabel('Pilot provider subject').fill('2f7b9d1e-8a41-4c7e-9d63-0d6b3c9a5f22')
-  await page.getByLabel('Pilot username').fill('ayse.demir')
-  await page.getByLabel('Pilot email').fill('ayse.demir@example.com')
-  await page.getByLabel('Pilot role').selectOption('STORE_MANAGER')
-  await page.getByLabel('Pilot stores').selectOption('10000000-0000-4000-8000-000000000021')
-  await page.getByRole('button', { name: 'Create pilot binding' }).click()
+  await expect(page.getByRole('heading', { name: 'Pilot kullanıcı bağlantısı' })).toBeVisible()
+  await page.getByLabel('Pilot personel id').fill('70000000-0000-4000-8000-000000000101')
+  await page.getByLabel('Pilot sağlayıcı subject').fill('2f7b9d1e-8a41-4c7e-9d63-0d6b3c9a5f22')
+  await page.getByLabel('Pilot kullanıcı adı').fill('ayse.demir')
+  await page.getByLabel('Pilot e-posta').fill('ayse.demir@example.com')
+  await page.getByLabel('Pilot rolü').selectOption('STORE_MANAGER')
+  await page.getByLabel('Pilot mağazaları').selectOption('10000000-0000-4000-8000-000000000021')
+  await page.getByRole('button', { name: 'Pilot bağlantısı oluştur' }).click()
 
   await expect(page.getByText('Pilot user binding created')).toBeVisible()
   expect(requestBody?.roleCode).toBe('STORE_MANAGER')
@@ -143,15 +187,15 @@ test('HR admin can search auth users and stores while creating assignments', asy
 
   await page.goto('/admin/auth')
 
-  await page.getByLabel('Search users for role grant').fill('manager')
-  await expect(page.getByLabel('Role assignment user')).toContainText('store.manager')
-  await page.getByLabel('Role assignment user').selectOption(userId)
-  await page.getByLabel('Role assignment role').selectOption('STORE_MANAGER')
-  await page.getByLabel('Role assignment scope type').selectOption('store')
-  await page.getByLabel('Search stores for role grant').fill('marmara')
-  await expect(page.getByLabel('Role assignment store')).toContainText('SM140')
-  await page.getByLabel('Role assignment store').selectOption(storeId)
-  await page.getByRole('button', { name: 'Create assignment' }).click()
+  await page.getByLabel('Rol yetkisi için kullanıcı ara').fill('manager')
+  await expect(page.getByLabel('Rol yetkisi kullanıcısı')).toContainText('store.manager')
+  await page.getByLabel('Rol yetkisi kullanıcısı').selectOption(userId)
+  await page.getByLabel('Rol yetkisi rolü').selectOption('STORE_MANAGER')
+  await page.getByLabel('Rol yetkisi kapsam tipi').selectOption('store')
+  await page.getByLabel('Rol yetkisi için mağaza ara').fill('marmara')
+  await expect(page.getByLabel('Rol yetkisi mağazası')).toContainText('SM140')
+  await page.getByLabel('Rol yetkisi mağazası').selectOption(storeId)
+  await page.getByRole('button', { name: 'Yetki oluştur' }).click()
 
   await expect(page.getByText('Role assignment created')).toBeVisible()
   expect(roleAssignmentBody).toMatchObject({
@@ -163,13 +207,13 @@ test('HR admin can search auth users and stores while creating assignments', asy
     storeId,
   })
 
-  await page.getByLabel('Search users for action access').fill('manager')
-  await expect(page.getByLabel('Action access user')).toContainText('store.manager')
-  await page.getByLabel('Action access user').selectOption(userId)
-  await page.getByLabel('Search stores for action access').fill('marmara')
-  await expect(page.getByLabel('Action store')).toContainText('SM140')
-  await page.getByLabel('Action store').selectOption(storeId)
-  await page.getByRole('button', { name: 'Assign action store' }).click()
+  await page.getByLabel('Aksiyon erişimi için kullanıcı ara').fill('manager')
+  await expect(page.getByLabel('Aksiyon erişimi kullanıcısı')).toContainText('store.manager')
+  await page.getByLabel('Aksiyon erişimi kullanıcısı').selectOption(userId)
+  await page.getByLabel('Aksiyon erişimi için mağaza ara').fill('marmara')
+  await expect(page.getByLabel('Aksiyon mağazası')).toContainText('SM140')
+  await page.getByLabel('Aksiyon mağazası').selectOption(storeId)
+  await page.getByRole('button', { name: 'Aksiyon mağazası ata' }).click()
 
   await expect(page.getByText('Action store assignment created')).toBeVisible()
   expect(actionStoreBody).toMatchObject({

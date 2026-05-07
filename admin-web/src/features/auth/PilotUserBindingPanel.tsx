@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useLocalization } from '../localization/useLocalization'
 import { getErrorMessage } from '../../lib/format'
 import { createPilotUserBinding, type AuthLookupStore } from './api'
 
@@ -8,6 +9,7 @@ type PilotAuthProvider = 'oidc' | 'clerk'
 
 export function PilotUserBindingPanel({ stores }: { stores: AuthLookupStore[] }) {
   const queryClient = useQueryClient()
+  const { t } = useLocalization()
   const [employeeId, setEmployeeId] = useState('')
   const [providerSubject, setProviderSubject] = useState('')
   const [username, setUsername] = useState('')
@@ -40,33 +42,33 @@ export function PilotUserBindingPanel({ stores }: { stores: AuthLookupStore[] })
     <article className="panel">
       <div className="panel-heading">
         <div>
-          <div className="eyebrow">Pilot access</div>
-          <h3>Pilot user binding</h3>
+          <div className="eyebrow">{t('authAdmin.pilotAccess')}</div>
+          <h3>{t('authAdmin.pilotUserBinding')}</h3>
         </div>
       </div>
       {feedback ? <div className="inline-state inline-state-accent">{feedback}</div> : null}
       {errorFeedback ? <div className="inline-state inline-state-danger">{errorFeedback}</div> : null}
       <div className="form-grid">
         <label className="field-block">
-          <span>Pilot employee id</span>
+          <span>{t('authAdmin.pilotEmployeeId')}</span>
           <input
-            aria-label="Pilot employee id"
+            aria-label={t('authAdmin.pilotEmployeeId')}
             value={employeeId}
             onChange={(event) => setEmployeeId(event.target.value)}
           />
         </label>
         <label className="field-block">
-          <span>Pilot provider subject</span>
+          <span>{t('authAdmin.pilotProviderSubject')}</span>
           <input
-            aria-label="Pilot provider subject"
+            aria-label={t('authAdmin.pilotProviderSubject')}
             value={providerSubject}
             onChange={(event) => setProviderSubject(event.target.value)}
           />
         </label>
         <label className="field-block">
-          <span>Pilot auth provider</span>
+          <span>{t('authAdmin.pilotAuthProvider')}</span>
           <select
-            aria-label="Pilot auth provider"
+            aria-label={t('authAdmin.pilotAuthProvider')}
             value={authProvider}
             onChange={(event) => setAuthProvider(event.target.value as PilotAuthProvider)}
           >
@@ -75,25 +77,25 @@ export function PilotUserBindingPanel({ stores }: { stores: AuthLookupStore[] })
           </select>
         </label>
         <label className="field-block">
-          <span>Pilot username</span>
+          <span>{t('authAdmin.pilotUsername')}</span>
           <input
-            aria-label="Pilot username"
+            aria-label={t('authAdmin.pilotUsername')}
             value={username}
             onChange={(event) => setUsername(event.target.value)}
           />
         </label>
         <label className="field-block">
-          <span>Pilot email</span>
+          <span>{t('authAdmin.pilotEmail')}</span>
           <input
-            aria-label="Pilot email"
+            aria-label={t('authAdmin.pilotEmail')}
             value={email}
             onChange={(event) => setEmail(event.target.value)}
           />
         </label>
         <label className="field-block">
-          <span>Pilot role</span>
+          <span>{t('authAdmin.pilotRole')}</span>
           <select
-            aria-label="Pilot role"
+            aria-label={t('authAdmin.pilotRole')}
             value={roleCode}
             onChange={(event) => setRoleCode(event.target.value as PilotRole)}
           >
@@ -103,9 +105,9 @@ export function PilotUserBindingPanel({ stores }: { stores: AuthLookupStore[] })
           </select>
         </label>
         <label className="field-block">
-          <span>Pilot stores</span>
+          <span>{t('authAdmin.pilotStores')}</span>
           <select
-            aria-label="Pilot stores"
+            aria-label={t('authAdmin.pilotStores')}
             multiple
             value={storeIds}
             onChange={(event) => {
@@ -146,7 +148,7 @@ export function PilotUserBindingPanel({ stores }: { stores: AuthLookupStore[] })
             })
           }}
         >
-          {mutation.isPending ? 'Creating...' : 'Create pilot binding'}
+          {mutation.isPending ? t('authAdmin.creating') : t('authAdmin.createPilotBinding')}
         </button>
       </div>
     </article>
