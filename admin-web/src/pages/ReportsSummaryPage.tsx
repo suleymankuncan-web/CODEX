@@ -8,10 +8,27 @@ import {
   MetricCard,
   ScreenState,
 } from '../components/dashboard-primitives'
+import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
+import { useLocalization } from '../features/localization/useLocalization'
 import { getReportingSnapshotRuns, getReportingSummary } from '../features/reports/api'
 import { formatDate, formatDateTime, getErrorMessage } from '../lib/format'
 
+const runStatusLabelKeys: Record<string, TranslationKey> = {
+  completed: 'reportsSummary.status.completed',
+  failed: 'reportsSummary.status.failed',
+  running: 'reportsSummary.status.running',
+  processing: 'reportsSummary.status.running',
+  queued: 'reportsSummary.status.queued',
+  pending: 'reportsSummary.status.pending',
+}
+
+const snapshotTypeLabelKeys: Record<string, TranslationKey> = {
+  daily: 'reportsSummary.snapshotType.daily',
+  monthly: 'reportsSummary.snapshotType.monthly',
+}
+
 export function ReportsSummaryPage() {
+  const { locale, t } = useLocalization()
   const summaryQuery = useQuery({
     queryKey: ['reporting-summary'],
     queryFn: getReportingSummary,
@@ -22,20 +39,20 @@ export function ReportsSummaryPage() {
   })
 
   if (summaryQuery.isLoading || runsQuery.isLoading) {
-    return <ScreenState title="Loading reporting summary" copy="Pulling latest completed snapshot context and report volume." />
+    return <ScreenState title={t('reportsSummary.loadingTitle')} copy={t('reportsSummary.loadingCopy')} />
   }
 
   if (summaryQuery.isError) {
-    return <ScreenState title="Reporting summary unavailable" copy={getErrorMessage(summaryQuery.error)} tone="error" />
+    return <ScreenState title={t('reportsSummary.errorTitle')} copy={getErrorMessage(summaryQuery.error)} tone="error" />
   }
 
   if (runsQuery.isError) {
-    return <ScreenState title="Snapshot run list unavailable" copy={getErrorMessage(runsQuery.error)} tone="error" />
+    return <ScreenState title={t('reportsSummary.runsErrorTitle')} copy={getErrorMessage(runsQuery.error)} tone="error" />
   }
 
   const summary = summaryQuery.data
   if (!summary) {
-    return <ScreenState title="Reporting summary unavailable" copy="No summary payload was returned." tone="error" />
+    return <ScreenState title={t('reportsSummary.noSummaryTitle')} copy={t('reportsSummary.noSummaryCopy')} tone="error" />
   }
 
   const latestRun = summary.latestCompletedSnapshotRun
@@ -49,17 +66,20 @@ export function ReportsSummaryPage() {
     <section className="page-stack">
       <section className="hero-panel">
         <div>
-          <div className="eyebrow">Reporting Summary</div>
-          <h2 className="hero-title">Read-only output from the latest trustworthy snapshot.</h2>
-          <p className="hero-copy">
-            This page is intentionally thin: it orients the operator around the last completed
-            reporting run and how much data was materialized into each reporting slice.
-          </p>
+          <div className="eyebrow">{t('reportsSummary.heroEyebrow')}</div>
+          <h2 className="hero-title">{t('reportsSummary.heroTitle')}</h2>
+          <p className="hero-copy">{t('reportsSummary.heroCopy')}</p>
         </div>
         <div className="hero-metrics">
-          <MetricAccent label="Total report rows" value={String(totalRows)} />
-          <MetricAccent label="Latest run" value={latestRun?.snapshotType ?? 'No completed run'} />
-          <MetricAccent label="Status" value={latestRun?.runStatus ?? 'Unavailable'} />
+          <MetricAccent label={t('reportsSummary.totalReportRows')} value={String(totalRows)} />
+          <MetricAccent
+            label={t('reportsSummary.latestRun')}
+            value={latestRun ? formatSnapshotType(latestRun.snapshotType, t) : t('reportsSummary.noCompletedRun')}
+          />
+          <MetricAccent
+            label={t('reportsSummary.status')}
+            value={latestRun ? formatRunStatus(latestRun.runStatus, t) : t('reportsSummary.unavailable')}
+          />
         </div>
       </section>
 
@@ -67,39 +87,42 @@ export function ReportsSummaryPage() {
         <section className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Latest completed snapshot</div>
-              <h3>Reporting anchor</h3>
+              <div className="eyebrow">{t('reportsSummary.latestSnapshotEyebrow')}</div>
+              <h3>{t('reportsSummary.reportingAnchorTitle')}</h3>
             </div>
           </div>
           <div className="key-grid">
-            <KeyValue label="Snapshot run id" value={latestRun.snapshotRunId} />
-            <KeyValue label="Snapshot type" value={latestRun.snapshotType} />
-            <KeyValue label="Period" value={`${formatDate(latestRun.periodStart)} - ${formatDate(latestRun.periodEnd)}`} />
-            <KeyValue label="Generated at" value={formatDateTime(latestRun.generatedAt)} />
+            <KeyValue label={t('reportsSummary.snapshotRunId')} value={latestRun.snapshotRunId} />
+            <KeyValue label={t('reportsSummary.snapshotType')} value={formatSnapshotType(latestRun.snapshotType, t)} />
+            <KeyValue
+              label={t('reportsSummary.period')}
+              value={`${formatDate(latestRun.periodStart, locale)} - ${formatDate(latestRun.periodEnd, locale)}`}
+            />
+            <KeyValue label={t('reportsSummary.generatedAt')} value={formatDateTime(latestRun.generatedAt, locale)} />
           </div>
         </section>
       ) : (
         <section className="panel">
           <EmptyState
-            title="No completed snapshot run exists yet."
-            copy="Reporting will light up once at least one snapshot run finishes successfully."
+            title={t('reportsSummary.noCompletedTitle')}
+            copy={t('reportsSummary.noCompletedCopy')}
           />
         </section>
       )}
 
       <section className="metric-grid">
-        <MetricCard title="Workforce" value={summary.cards.workforceRows} note="Rows in workforce snapshot output" icon={<BriefcaseBusiness size={18} />} tone="calm" />
-        <MetricCard title="KPIs" value={summary.cards.kpiRows} note="Rows in KPI reporting output" icon={<Trophy size={18} />} tone="accent" />
-        <MetricCard title="Checklists" value={summary.cards.checklistRows} note="Checklist compliance snapshot rows" icon={<ClipboardCheck size={18} />} tone="warning" />
-        <MetricCard title="Turnover" value={summary.cards.turnoverRows} note="Turnover snapshot rows" icon={<TrendingDown size={18} />} tone="danger" />
+        <MetricCard title={t('reportsSummary.workforceTitle')} value={summary.cards.workforceRows} note={t('reportsSummary.workforceNote')} icon={<BriefcaseBusiness size={18} />} tone="calm" />
+        <MetricCard title={t('reportsSummary.kpisTitle')} value={summary.cards.kpiRows} note={t('reportsSummary.kpisNote')} icon={<Trophy size={18} />} tone="accent" />
+        <MetricCard title={t('reportsSummary.checklistsTitle')} value={summary.cards.checklistRows} note={t('reportsSummary.checklistsNote')} icon={<ClipboardCheck size={18} />} tone="warning" />
+        <MetricCard title={t('reportsSummary.turnoverTitle')} value={summary.cards.turnoverRows} note={t('reportsSummary.turnoverNote')} icon={<TrendingDown size={18} />} tone="danger" />
       </section>
 
       <section className="two-up-grid">
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Read paths</div>
-              <h3>Reporting endpoints already available</h3>
+              <div className="eyebrow">{t('reportsSummary.readPathsEyebrow')}</div>
+              <h3>{t('reportsSummary.readPathsTitle')}</h3>
             </div>
           </div>
           <div className="stacked-table">
@@ -114,7 +137,7 @@ export function ReportsSummaryPage() {
               <div className="stacked-row" key={path}>
                 <div className="stacked-row-head">
                   <strong>{path}</strong>
-                  <span className="status-pill status-pill-neutral">read-only</span>
+                  <span className="status-pill status-pill-neutral">{t('reportsSummary.readOnly')}</span>
                 </div>
               </div>
             ))}
@@ -124,11 +147,11 @@ export function ReportsSummaryPage() {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Recent completed runs</div>
-              <h3>Reporting selectable context</h3>
+              <div className="eyebrow">{t('reportsSummary.recentRunsEyebrow')}</div>
+              <h3>{t('reportsSummary.recentRunsTitle')}</h3>
             </div>
             <Link className="back-link" to="/admin/reports/snapshot-runs">
-              <span>Open drill-down chooser</span>
+              <span>{t('reportsSummary.openDrillDownChooser')}</span>
             </Link>
           </div>
           {runsQuery.data?.items.length ? (
@@ -136,33 +159,43 @@ export function ReportsSummaryPage() {
               {runsQuery.data.items.map((run) => (
                 <article className="stacked-row" key={run.snapshotRunId}>
                   <div className="stacked-row-head">
-                    <strong>{run.snapshotType}</strong>
-                    <span className="status-pill status-pill-calm">{run.runStatus}</span>
+                    <strong>{t('reportsSummary.snapshotLabel', { type: formatSnapshotType(run.snapshotType, t) })}</strong>
+                    <span className="status-pill status-pill-calm">{formatRunStatus(run.runStatus, t)}</span>
                   </div>
-                  <p>{formatDate(run.periodStart)} - {formatDate(run.periodEnd)}</p>
+                  <p>{formatDate(run.periodStart, locale)} - {formatDate(run.periodEnd, locale)}</p>
                   <span className="queue-subtitle">{run.snapshotRunId}</span>
                   <div className="action-cluster">
                     <Link className="back-link" to={`/admin/reports/workforce/${run.snapshotRunId}`}>
-                      <span>Workforce</span>
+                      <span>{t('reportsSummary.openWorkforce')}</span>
                     </Link>
                     <Link className="back-link" to={`/admin/reports/kpis/${run.snapshotRunId}`}>
-                      <span>KPIs</span>
+                      <span>{t('reportsSummary.openKpis')}</span>
                     </Link>
                     <Link className="back-link" to={`/admin/reports/checklists/${run.snapshotRunId}`}>
-                      <span>Checklists</span>
+                      <span>{t('reportsSummary.openChecklists')}</span>
                     </Link>
                     <Link className="back-link" to={`/admin/reports/turnover/${run.snapshotRunId}`}>
-                      <span>Turnover</span>
+                      <span>{t('reportsSummary.openTurnover')}</span>
                     </Link>
                   </div>
                 </article>
               ))}
             </div>
           ) : (
-            <EmptyState copy="No completed snapshot runs are available for reporting yet." />
+            <EmptyState copy={t('reportsSummary.recentRunsEmpty')} />
           )}
         </article>
       </section>
     </section>
   )
+}
+
+function formatRunStatus(status: string, t: TranslateFunction) {
+  const key = runStatusLabelKeys[status]
+  return key ? t(key) : status
+}
+
+function formatSnapshotType(type: string, t: TranslateFunction) {
+  const key = snapshotTypeLabelKeys[type]
+  return key ? t(key) : type
 }

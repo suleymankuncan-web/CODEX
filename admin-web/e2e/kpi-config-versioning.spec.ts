@@ -57,9 +57,49 @@ test('snapshot runs page localizes KPI config version reporting context', async 
   await expect(page.getByRole('heading', { name: 'Recent reporting runs' })).toBeVisible()
 })
 
+test('reports summary page switches hub chrome to English copy and persists locale', async ({ page }) => {
+  await page.goto('/admin/reports')
+
+  await expect(page.getByText('Raporlama özeti')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Güvenilir son snapshot üzerinden salt okunur raporlama.' })).toBeVisible()
+  await expect(page.getByText('Toplam rapor satırı')).toBeVisible()
+  await expect(page.getByText('Son tamamlanan snapshot')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Raporlama bağlamı', exact: true })).toBeVisible()
+  await expect(page.getByText('Snapshot çalışma ID')).toBeVisible()
+  await expect(page.getByText('tamamlandı').first()).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Detay seçiciyi aç' })).toBeVisible()
+  await expect(page.getByText('Reporting Summary')).toHaveCount(0)
+  await expect(page.getByText('Total report rows')).toHaveCount(0)
+  await expect(page.getByText('Open drill-down chooser')).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText('Ãƒ')
+  await expect(page.locator('body')).not.toContainText('Ã„')
+  await expect(page.locator('body')).not.toContainText('Ã…')
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByText('Reporting Summary')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Read-only reporting from the latest trustworthy snapshot.' })).toBeVisible()
+  await expect(page.getByText('Total report rows')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Reporting anchor' })).toBeVisible()
+  await expect(page.getByText('completed').first()).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Open drill-down chooser' })).toBeVisible()
+  await expect(page.getByText('Raporlama özeti')).toHaveCount(0)
+  await expect(page.getByText('Toplam rapor satırı')).toHaveCount(0)
+
+  await page.reload()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'Read-only reporting from the latest trustworthy snapshot.' })).toBeVisible()
+})
+
 async function routeVersioningApi(page: Page) {
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: authSessionFixture })
+  })
+
+  await page.route('**/api/reports/summary', async (route) => {
+    await route.fulfill({ json: reportingSummaryFixture })
   })
 
   await page.route('**/api/reports/kpi-config/editor', async (route) => {
@@ -199,4 +239,14 @@ const snapshotRunsFixture = {
     },
   ],
   meta: { count: 2, total: 2, limit: 8, offset: 0 },
+}
+
+const reportingSummaryFixture = {
+  latestCompletedSnapshotRun: snapshotRunsFixture.items[0],
+  cards: {
+    workforceRows: 12,
+    kpiRows: 24,
+    checklistRows: 6,
+    turnoverRows: 3,
+  },
 }
