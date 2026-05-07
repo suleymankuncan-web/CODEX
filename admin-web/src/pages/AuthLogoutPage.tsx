@@ -5,10 +5,12 @@ import { getAuthBootstrap } from '../features/auth/api'
 import { buildProviderLogoutUrl } from '../features/auth/auth-flow'
 import { isClerkSessionProviderAvailable } from '../features/auth/clerk-config'
 import { ClerkLogoutEffect } from '../features/auth/clerk-session'
+import { useLocalization } from '../features/localization/useLocalization'
 import { readClientProviderIdToken } from '../features/session/session-storage'
 import { useSession } from '../features/session/session-context-value'
 
 export function AuthLogoutPage() {
+  const { t } = useLocalization()
   const { clearToBearerMode } = useSession()
   const handledRef = useRef(false)
   const clerkReady = isClerkSessionProviderAvailable()
@@ -52,8 +54,8 @@ export function AuthLogoutPage() {
     <section className="auth-flow-shell">
       {clerkReady ? <ClerkLogoutEffect onFallback={finishLocalLogout} /> : null}
       <ScreenState
-        title="Signing out"
-        copy="The client bearer session is being cleared and the app is returning to the configured logout destination."
+        title={t('authFlow.logoutTitle')}
+        copy={t('authFlow.logoutCopy')}
       />
     </section>
   )

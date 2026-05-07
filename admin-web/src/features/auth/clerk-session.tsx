@@ -7,6 +7,9 @@ import {
 } from '@clerk/react'
 import { useEffect, useRef, type ReactNode } from 'react'
 import { ScreenState, StatusPill } from '../../components/dashboard-primitives'
+import { readStoredAppLocale } from '../../lib/i18n'
+import { translate } from '../localization/dictionary'
+import { useLocalization } from '../localization/useLocalization'
 import { useSession } from '../session/session-context-value'
 import { isClerkAuthEnabled, resolveClerkPublishableKey } from './clerk-config'
 import { sanitizeAuthReturnPath } from './return-path'
@@ -21,11 +24,13 @@ export function ClerkSessionProvider(input: { children: ReactNode }) {
   const publishableKey = resolveClerkPublishableKey()
 
   if (!publishableKey) {
+    const locale = readStoredAppLocale()
+
     return (
       <section className="auth-flow-shell">
         <ScreenState
-          title="Clerk publishable key is missing"
-          copy="VITE_AUTH_PROVIDER is set to clerk, but VITE_CLERK_PUBLISHABLE_KEY is not configured for this frontend build."
+          title={translate(locale, 'authFlow.clerkPublishableKeyMissingTitle')}
+          copy={translate(locale, 'authFlow.clerkPublishableKeyMissingCopy')}
           tone="error"
         />
       </section>
@@ -46,13 +51,14 @@ export function ClerkSessionProvider(input: { children: ReactNode }) {
 }
 
 export function ClerkLoginActions(input: { returnTo: string }) {
+  const { t } = useLocalization()
   const { isLoaded, isSignedIn, userId } = useAuth()
   const safeReturnTo = sanitizeAuthReturnPath(input.returnTo) ?? '/'
 
   if (!isLoaded) {
     return (
       <button className="control-button auth-flow-link" type="button" disabled>
-        Loading Clerk
+        {t('authFlow.loadingClerk')}
       </button>
     )
   }
@@ -61,11 +67,8 @@ export function ClerkLoginActions(input: { returnTo: string }) {
     return (
       <div className="clerk-session-card">
         <div>
-          <StatusPill tone="calm">Clerk signed in</StatusPill>
-          <p className="panel-copy">
-            The frontend is syncing Clerk user <code>{userId}</code> into the backend bearer
-            session.
-          </p>
+          <StatusPill tone="calm">{t('authFlow.clerkSignedIn')}</StatusPill>
+          <p className="panel-copy">{t('authFlow.clerkSyncingUser', { userId: userId ?? 'unknown' })}</p>
         </div>
         <UserButton />
       </div>
@@ -76,12 +79,12 @@ export function ClerkLoginActions(input: { returnTo: string }) {
     <>
       <SignInButton mode="modal" fallbackRedirectUrl={safeReturnTo}>
         <button className="control-button auth-flow-link" type="button">
-          Sign in with Clerk
+          {t('authFlow.signInWithClerk')}
         </button>
       </SignInButton>
       <SignUpButton mode="modal" fallbackRedirectUrl={safeReturnTo}>
         <button className="control-button auth-flow-link" type="button">
-          Create Clerk user
+          {t('authFlow.createClerkUser')}
         </button>
       </SignUpButton>
     </>

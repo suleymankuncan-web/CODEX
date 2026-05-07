@@ -48,6 +48,15 @@ export const authFlowTr = {
   'authFlow.verificationGate': 'Doğrulama kapısı',
   'authFlow.verificationGateCopy':
     'Callback bearer tokenı yalnızca code exchange sonrası saklar. Kabuk seçimi yine /api/auth/session gerçek rol ve kapsam bağlamını doğruladıktan sonra yapılır.',
+  'authFlow.clerkPublishableKeyMissingTitle': 'Clerk publishable key eksik',
+  'authFlow.clerkPublishableKeyMissingCopy':
+    'VITE_AUTH_PROVIDER clerk olarak ayarlı, ancak bu frontend build için VITE_CLERK_PUBLISHABLE_KEY yapılandırılmamış.',
+  'authFlow.loadingClerk': 'Clerk yükleniyor',
+  'authFlow.clerkSignedIn': 'Clerk oturumu açık',
+  'authFlow.clerkSyncingUser':
+    'Frontend, Clerk kullanıcısı {userId} için backend bearer oturumunu eşitliyor.',
+  'authFlow.signInWithClerk': 'Clerk ile giriş yap',
+  'authFlow.createClerkUser': 'Clerk kullanıcısı oluştur',
 
   'authFlow.callbackEyebrow': 'Kimlik callback',
   'authFlow.callbackFailedTitle': 'Login callback başarısız oldu',
@@ -75,6 +84,10 @@ export const authFlowTr = {
   'authFlow.completingLoginTitle': 'Giriş tamamlanıyor',
   'authFlow.completingLoginCopy':
     'Callback bearer token aldı, mevcut oturum olarak sakladı ve uygulamayı şimdi doğrulanmış kabuk akışına geri yönlendiriyor.',
+
+  'authFlow.logoutTitle': 'Çıkış yapılıyor',
+  'authFlow.logoutCopy':
+    'İstemci bearer oturumu temizleniyor ve uygulama yapılandırılmış çıkış hedefine dönüyor.',
 } as const
 
 export const authFlowEn: Record<keyof typeof authFlowTr, string> = {
@@ -127,6 +140,15 @@ export const authFlowEn: Record<keyof typeof authFlowTr, string> = {
   'authFlow.verificationGate': 'Verification gate',
   'authFlow.verificationGateCopy':
     'The callback only stores a bearer token after code exchange. Shell choice still happens after `/api/auth/session` confirms the real role and scope context.',
+  'authFlow.clerkPublishableKeyMissingTitle': 'Clerk publishable key is missing',
+  'authFlow.clerkPublishableKeyMissingCopy':
+    'VITE_AUTH_PROVIDER is set to clerk, but VITE_CLERK_PUBLISHABLE_KEY is not configured for this frontend build.',
+  'authFlow.loadingClerk': 'Loading Clerk',
+  'authFlow.clerkSignedIn': 'Clerk signed in',
+  'authFlow.clerkSyncingUser':
+    'The frontend is syncing Clerk user {userId} into the backend bearer session.',
+  'authFlow.signInWithClerk': 'Sign in with Clerk',
+  'authFlow.createClerkUser': 'Create Clerk user',
 
   'authFlow.callbackEyebrow': 'Auth Callback',
   'authFlow.callbackFailedTitle': 'Login callback failed',
@@ -154,4 +176,7 @@ export const authFlowEn: Record<keyof typeof authFlowTr, string> = {
   'authFlow.completingLoginTitle': 'Completing login',
   'authFlow.completingLoginCopy':
     'The callback received a bearer token, stored it as the current session, and is routing the app back into the verified shell flow now.',
+  'authFlow.logoutTitle': 'Signing out',
+  'authFlow.logoutCopy':
+    'The client bearer session is being cleared and the app is returning to the configured logout destination.',
 }

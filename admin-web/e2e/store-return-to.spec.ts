@@ -145,6 +145,47 @@ test('auth login and callback pages switch chrome to English copy and persist lo
   await expect(page.getByText('Manual token callback is disabled')).toHaveCount(0)
 })
 
+test('auth logout page switches chrome to English copy and persists locale while clearing the session', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem(
+      'store-ops-admin-session',
+      JSON.stringify({
+        mode: 'bearer',
+        mockUserId: 'store-manager-user',
+        mockRoleCodes: 'STORE_MANAGER',
+        mockCompanyIds: '00000000-0000-0000-0000-000000000001',
+        bearerToken: 'demo-token',
+      }),
+    )
+    window.sessionStorage.setItem('store-ops-admin-bearer-token', 'demo-token')
+  })
+  await page.route('**/api/auth/bootstrap', async () => {
+    await new Promise(() => undefined)
+  })
+
+  await page.goto('/auth/logout')
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'tr')
+  await expect(page.getByRole('heading', { name: 'Çıkış yapılıyor' })).toBeVisible()
+  await expect(page.getByText('İstemci bearer oturumu temizleniyor')).toBeVisible()
+  await expect(page.getByText('Signing out')).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText('ÃƒÆ’')
+  await expect(page.locator('body')).not.toContainText('Ãƒâ€')
+  await expect(page.locator('body')).not.toContainText('Ãƒâ€¦')
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'Signing out' })).toBeVisible()
+  await expect(page.getByText('The client bearer session is being cleared')).toBeVisible()
+  await expect(page.getByText('Çıkış yapılıyor')).toHaveCount(0)
+
+  await page.reload()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'Signing out' })).toBeVisible()
+})
+
 test('auth login returns ready store-manager sessions to the requested store route', async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem(
