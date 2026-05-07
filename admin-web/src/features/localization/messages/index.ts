@@ -1,6 +1,7 @@
 import { adminAuditEn, adminAuditTr } from './admin-audit'
 import { adminIntegrationsEn, adminIntegrationsTr } from './admin-integrations'
 import { adminMasterDataEn, adminMasterDataTr } from './admin-master-data'
+import { adminShellEn, adminShellTr } from './admin-shell'
 import { adminTargetsEn, adminTargetsTr } from './admin-targets'
 import { commonEn, commonTr } from './common'
 import { competitionEn, competitionTr } from './competition'
@@ -19,6 +20,7 @@ const tr = {
   ...adminAuditTr,
   ...adminIntegrationsTr,
   ...adminMasterDataTr,
+  ...adminShellTr,
   ...adminTargetsTr,
   ...commonTr,
   ...competitionTr,
@@ -38,6 +40,7 @@ const en: Record<keyof typeof tr, string> = {
   ...adminAuditEn,
   ...adminIntegrationsEn,
   ...adminMasterDataEn,
+  ...adminShellEn,
   ...adminTargetsEn,
   ...commonEn,
   ...competitionEn,

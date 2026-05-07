@@ -32,7 +32,7 @@ test.beforeEach(async ({ page }) => {
 test('admin competitions surface shows live scores and warnings', async ({ page }) => {
   await page.goto('/admin/competitions')
 
-  await expect(page.getByRole('link', { name: /Competitions/ })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Yarışmalar' })).toBeVisible()
   await expect(page.getByRole('heading', { name: /Region challenge stages/i })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'April Region Challenge' })).toBeVisible()
   const adminReadSummary = page.getByLabel('Admin competition read summary')
