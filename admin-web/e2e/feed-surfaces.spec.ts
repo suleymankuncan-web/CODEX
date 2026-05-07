@@ -15,13 +15,13 @@ test('admin feed allows HR admin to publish a challenge post', async ({ page }) 
 
   await page.goto('/admin/feed')
 
-  await expect(page.getByRole('heading', { name: 'Create feed post' })).toBeVisible()
-  await page.getByLabel('Type').selectOption('challenge')
-  await page.getByLabel('Title').fill('May UPT Challenge')
-  await page.getByLabel('Body').fill('UPT focus window for the current month.')
-  await page.getByLabel('Challenge starts').fill('2026-05-01')
-  await page.getByLabel('Challenge ends').fill('2026-05-31')
-  await page.getByRole('button', { name: 'Publish post' }).click()
+  await expect(page.getByRole('heading', { name: 'Feed postu oluştur' })).toBeVisible()
+  await page.getByLabel('Tip').selectOption('challenge')
+  await page.getByLabel('Başlık').fill('May UPT Challenge')
+  await page.getByLabel('Gövde').fill('UPT focus window for the current month.')
+  await page.getByLabel('Yarışma başlangıcı').fill('2026-05-01')
+  await page.getByLabel('Yarışma bitişi').fill('2026-05-31')
+  await page.getByRole('button', { name: 'Postu yayınla' }).click()
 
   await expect(page.getByText('Feed post created')).toBeVisible()
   expect(createdPayload).toMatchObject({
@@ -45,15 +45,45 @@ test('region manager feed composer defaults to own region and hides company scop
 
   await page.goto('/admin/feed')
 
-  await expect(page.getByRole('heading', { name: 'Create feed post' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Feed postu oluştur' })).toBeVisible()
   const composer = page.locator('article.panel').filter({
-    has: page.getByRole('heading', { name: 'Create feed post' }),
+    has: page.getByRole('heading', { name: 'Feed postu oluştur' }),
   })
-  const scopeSelect = composer.locator('label').filter({ hasText: 'Scope' }).locator('select').first()
-  const regionSelect = composer.locator('label').filter({ hasText: 'Region id' }).locator('select').first()
+  const scopeSelect = composer.locator('label').filter({ hasText: 'Kapsam' }).locator('select').first()
+  const regionSelect = composer.locator('label').filter({ hasText: 'Bölge id' }).locator('select').first()
   await expect(scopeSelect).toHaveValue('region')
-  await expect(scopeSelect).not.toContainText('Company')
+  await expect(scopeSelect).not.toContainText('Şirket')
   await expect(regionSelect).toHaveValue(regionId)
+})
+
+test('admin feed switches chrome to English copy and persists locale', async ({ page }) => {
+  await seedMockSession(page, 'HR_ADMIN', 'hr-feed-english-user')
+  await routeFeedApi(page, hrSessionFixture)
+
+  await page.goto('/admin/feed')
+
+  await expect(page.getByRole('heading', { name: 'Kontrollü şirket ve bölge duyuruları' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Feed postu oluştur' })).toBeVisible()
+  await expect(page.getByText('Toplam post')).toBeVisible()
+  await expect(page.getByText('Post kütüphanesi')).toBeVisible()
+  await expect(page.getByText('Company and region announcements in one controlled feed.')).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText('Ã')
+  await expect(page.locator('body')).not.toContainText('Ä')
+  await expect(page.locator('body')).not.toContainText('Å')
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'Company and region announcements in one controlled feed.' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Create feed post' })).toBeVisible()
+  await expect(page.getByText('Total posts')).toBeVisible()
+  await expect(page.getByText('Post library')).toBeVisible()
+  await expect(page.getByText('Kontrollü şirket ve bölge duyuruları')).toHaveCount(0)
+
+  await page.reload()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'Company and region announcements in one controlled feed.' })).toBeVisible()
 })
 
 test('store feed renders pinned challenge posts with ranking link', async ({ page }) => {
