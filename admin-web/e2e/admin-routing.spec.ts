@@ -43,7 +43,7 @@ test('admin shell switches chrome to English copy and persists locale', async ({
   await expect(page.getByText('Store Ops Control')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Integrations' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Master Data' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Audit' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Audit', exact: true })).toBeVisible()
   await expect(page.getByText('Production UX And Real Auth')).toBeVisible()
   await expect(page.getByText('Mağaza Operasyon Kontrol')).toHaveCount(0)
 
@@ -61,9 +61,77 @@ test('audit center user detail links stay inside the audit namespace', async ({ 
   await userAuditLink.click()
 
   await expect(page).toHaveURL(/\/admin\/audit\/users\/user-1\/audit$/)
-  await expect(page.getByRole('heading', { name: /User account audit trail/i })).toBeVisible()
-  await expect(page.getByRole('link', { name: /Back to audit center/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Kullanıcı hesabı denetim izi/i })).toBeVisible()
+  await expect(page.getByRole('link', { name: /Denetim merkezine dön/i })).toBeVisible()
 })
+
+const authAuditDetailCases = [
+  {
+    name: 'user audit detail',
+    path: '/admin/audit/users/user-1/audit',
+    trHeading: 'Kullanıcı hesabı denetim izi.',
+    trTimelineTitle: 'Kullanıcı olayları',
+    enHeading: 'User account audit trail.',
+    enTimelineTitle: 'User events',
+  },
+  {
+    name: 'role assignment audit detail',
+    path: '/admin/audit/role-assignments/assignment-1/audit',
+    trHeading: 'Rol ataması denetim izi.',
+    trTimelineTitle: 'Atama olayları',
+    enHeading: 'Role assignment audit trail.',
+    enTimelineTitle: 'Assignment events',
+  },
+  {
+    name: 'action store assignment audit detail',
+    path: '/admin/audit/action-store-assignments/action-store-assignment-1/audit',
+    trHeading: 'Aksiyon mağaza ataması denetim izi.',
+    trTimelineTitle: 'Aksiyon mağaza olayları',
+    enHeading: 'Action store assignment audit trail.',
+    enTimelineTitle: 'Action store events',
+  },
+]
+
+for (const detail of authAuditDetailCases) {
+  test(`${detail.name} switches chrome to English copy and persists locale`, async ({ page }) => {
+    await page.goto(detail.path)
+
+    const main = page.getByRole('main')
+
+    await expect(main.getByText('Kimlik denetimi')).toBeVisible()
+    await expect(main.getByRole('heading', { name: detail.trHeading })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Denetim merkezine dön' })).toBeVisible()
+    await expect(main.getByText('Denetim zaman çizelgesi')).toBeVisible()
+    await expect(main.getByRole('heading', { name: detail.trTimelineTitle })).toBeVisible()
+    await expect(main.getByText('Aktör: audit-admin | Modül: auth | Operasyon: update')).toBeVisible()
+    await expect(main.getByText('Olay kayıt id')).toBeVisible()
+    await expect(main.getByText('Korelasyon id')).toBeVisible()
+    await expect(main.getByText('Değişen alanlar')).toBeVisible()
+    await expect(main.getByText(detail.enHeading)).toHaveCount(0)
+    await expect(page.locator('body')).not.toContainText('ÃƒÆ’')
+    await expect(page.locator('body')).not.toContainText('Ãƒâ€')
+    await expect(page.locator('body')).not.toContainText('Ãƒâ€¦')
+
+    await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+    await expect(main.getByText('Auth Audit')).toBeVisible()
+    await expect(main.getByRole('heading', { name: detail.enHeading })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Back to audit center' })).toBeVisible()
+    await expect(main.getByText('Audit timeline')).toBeVisible()
+    await expect(main.getByRole('heading', { name: detail.enTimelineTitle })).toBeVisible()
+    await expect(main.getByText('Actor: audit-admin | Module: auth | Operation: update')).toBeVisible()
+    await expect(main.getByText('Event log id')).toBeVisible()
+    await expect(main.getByText('Correlation id')).toBeVisible()
+    await expect(main.getByText('Changed fields')).toBeVisible()
+    await expect(main.getByText(detail.trHeading)).toHaveCount(0)
+
+    await page.reload()
+
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+    await expect(main.getByRole('heading', { name: detail.enHeading })).toBeVisible()
+  })
+}
 
 test('audit center switches chrome to English copy and persists locale', async ({ page }) => {
   await page.goto('/admin/audit')
@@ -263,7 +331,15 @@ async function routeAdminShellApi(page: Page) {
   })
 
   await page.route('**/api/auth/users/user-1/audit', async (route) => {
-    await route.fulfill({ json: emptyListFixture })
+    await route.fulfill({ json: authAuditFixture })
+  })
+
+  await page.route('**/api/auth/role-assignments/assignment-1/audit', async (route) => {
+    await route.fulfill({ json: authAuditFixture })
+  })
+
+  await page.route('**/api/auth/action-store-assignments/action-store-assignment-1/audit', async (route) => {
+    await route.fulfill({ json: authAuditFixture })
   })
 
   await page.route('**/api/integrations/import-batches/needs-action?**', async (route) => {
@@ -364,6 +440,34 @@ const emptyListFixture = {
   meta: {
     count: 0,
     total: 0,
+    limit: 50,
+    offset: 0,
+  },
+}
+
+const authAuditFixture = {
+  items: [
+    {
+      eventLogId: 'event-1',
+      occurredAt: '2026-05-06T09:30:00.000Z',
+      actorUserId: 'audit-admin',
+      correlationId: 'correlation-1',
+      eventType: 'auth.assignment.updated',
+      metadata: {
+        changedFields: ['isActive'],
+        sourceContext: {
+          module: 'auth',
+          operation: 'update',
+        },
+        details: {
+          scopeType: 'store',
+        },
+      },
+    },
+  ],
+  meta: {
+    count: 1,
+    total: 1,
     limit: 50,
     offset: 0,
   },

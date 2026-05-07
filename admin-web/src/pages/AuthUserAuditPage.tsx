@@ -3,24 +3,26 @@ import { ArrowLeft } from 'lucide-react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { EmptyState, KeyValue, ScreenState } from '../components/dashboard-primitives'
 import { getUserAudit } from '../features/auth/api'
+import { useLocalization } from '../features/localization/useLocalization'
 import { formatDateTime, getErrorMessage } from '../lib/format'
 import { resolveAuditBackLink } from './audit-navigation'
 
-function describeDetails(details: Record<string, unknown> | undefined) {
+function describeDetails(details: Record<string, unknown> | undefined, nullValue: string) {
   if (!details) {
     return []
   }
 
   return Object.entries(details).map(([key, value]) => ({
     label: key,
-    value: value === null || value === undefined ? 'null' : String(value),
+    value: value === null || value === undefined ? nullValue : String(value),
   }))
 }
 
 export function AuthUserAuditPage() {
   const { userId } = useParams<{ userId: string }>()
   const location = useLocation()
-  const backLink = resolveAuditBackLink(location.pathname)
+  const { locale, t } = useLocalization()
+  const backLink = resolveAuditBackLink(location.pathname, t)
 
   const auditQuery = useQuery({
     queryKey: ['auth-user-audit', userId],
@@ -29,15 +31,26 @@ export function AuthUserAuditPage() {
   })
 
   if (!userId) {
-    return <ScreenState title="User audit context missing" copy="Choose a user before opening audit detail." tone="error" />
+    return (
+      <ScreenState
+        title={t('authAuditDetails.userMissingTitle')}
+        copy={t('authAuditDetails.userMissingCopy')}
+        tone="error"
+      />
+    )
   }
 
   if (auditQuery.isLoading) {
-    return <ScreenState title="Loading user audit" copy="Pulling account lifecycle events for the selected user." />
+    return (
+      <ScreenState
+        title={t('authAuditDetails.userLoadingTitle')}
+        copy={t('authAuditDetails.userLoadingCopy')}
+      />
+    )
   }
 
   if (auditQuery.isError) {
-    return <ScreenState title="User audit unavailable" copy={getErrorMessage(auditQuery.error)} tone="error" />
+    return <ScreenState title={t('authAuditDetails.userErrorTitle')} copy={getErrorMessage(auditQuery.error)} tone="error" />
   }
 
   const items = auditQuery.data?.items ?? []
@@ -46,11 +59,9 @@ export function AuthUserAuditPage() {
     <section className="page-stack">
       <section className="hero-panel">
         <div>
-          <div className="eyebrow">Auth Audit</div>
-          <h2 className="hero-title">User account audit trail.</h2>
-          <p className="hero-copy">
-            This timeline shows who created, deactivated, or reactivated the selected account and what changed.
-          </p>
+          <div className="eyebrow">{t('authAuditDetails.heroEyebrow')}</div>
+          <h2 className="hero-title">{t('authAuditDetails.userHeroTitle')}</h2>
+          <p className="hero-copy">{t('authAuditDetails.userHeroCopy')}</p>
         </div>
       </section>
 
@@ -61,14 +72,14 @@ export function AuthUserAuditPage() {
 
       {items.length === 0 ? (
         <section className="panel">
-          <EmptyState copy="No audit events were returned for this user account." />
+          <EmptyState copy={t('authAuditDetails.userEmptyCopy')} />
         </section>
       ) : (
         <section className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Audit timeline</div>
-              <h3>User events</h3>
+              <div className="eyebrow">{t('authAuditDetails.timelineEyebrow')}</div>
+              <h3>{t('authAuditDetails.userTimelineTitle')}</h3>
             </div>
           </div>
           <div className="timeline">
@@ -77,17 +88,20 @@ export function AuthUserAuditPage() {
                 <span className="timeline-dot" />
                 <div className="stacked-row-head">
                   <strong>{item.eventType}</strong>
-                  <span className="queue-subtitle">{formatDateTime(item.occurredAt)}</span>
+                  <span className="queue-subtitle">{formatDateTime(item.occurredAt, locale)}</span>
                 </div>
                 <p>
-                  Actor: {item.actorUserId ?? 'system'} | Module: {item.metadata.sourceContext?.module ?? 'n/a'} | Operation:{' '}
-                  {item.metadata.sourceContext?.operation ?? 'n/a'}
+                  {t('authAuditDetails.actorLine', {
+                    actor: item.actorUserId ?? t('authAuditDetails.systemActor'),
+                    module: item.metadata.sourceContext?.module ?? t('authAuditDetails.notAvailable'),
+                    operation: item.metadata.sourceContext?.operation ?? t('authAuditDetails.notAvailable'),
+                  })}
                 </p>
                 <div className="key-grid">
-                  <KeyValue label="Event log id" value={item.eventLogId} />
-                  <KeyValue label="Correlation id" value={item.correlationId ?? 'n/a'} />
-                  <KeyValue label="Changed fields" value={(item.metadata.changedFields ?? []).join(', ') || 'none'} />
-                  {describeDetails(item.metadata.details).map((detail) => (
+                  <KeyValue label={t('authAuditDetails.eventLogId')} value={item.eventLogId} />
+                  <KeyValue label={t('authAuditDetails.correlationId')} value={item.correlationId ?? t('authAuditDetails.notAvailable')} />
+                  <KeyValue label={t('authAuditDetails.changedFields')} value={(item.metadata.changedFields ?? []).join(', ') || t('authAuditDetails.none')} />
+                  {describeDetails(item.metadata.details, t('authAuditDetails.nullValue')).map((detail) => (
                     <KeyValue key={`${item.eventLogId}:${detail.label}`} label={detail.label} value={detail.value} />
                   ))}
                 </div>
