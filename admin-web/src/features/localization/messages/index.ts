@@ -1,3 +1,4 @@
+import { adminAuditEn, adminAuditTr } from './admin-audit'
 import { adminIntegrationsEn, adminIntegrationsTr } from './admin-integrations'
 import { adminMasterDataEn, adminMasterDataTr } from './admin-master-data'
 import { adminTargetsEn, adminTargetsTr } from './admin-targets'
@@ -15,6 +16,7 @@ import { storeRankingsEn, storeRankingsTr } from './store-rankings'
 import { storeTasksEn, storeTasksTr } from './store-tasks'
 
 const tr = {
+  ...adminAuditTr,
   ...adminIntegrationsTr,
   ...adminMasterDataTr,
   ...adminTargetsTr,
@@ -33,6 +35,7 @@ const tr = {
 } as const
 
 const en: Record<keyof typeof tr, string> = {
+  ...adminAuditEn,
   ...adminIntegrationsEn,
   ...adminMasterDataEn,
   ...adminTargetsEn,

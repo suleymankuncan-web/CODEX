@@ -36,6 +36,31 @@ test('audit center user detail links stay inside the audit namespace', async ({ 
   await expect(page.getByRole('link', { name: /Back to audit center/i })).toBeVisible()
 })
 
+test('audit center switches chrome to English copy and persists locale', async ({ page }) => {
+  await page.goto('/admin/audit')
+
+  await expect(page.getByRole('heading', { name: 'Denetim merkezi' })).toBeVisible()
+  await expect(page.getByText('Son görünür olaylar')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Hesap denetim kayıtları' })).toBeVisible()
+  await expect(page.getByText('Audit Center')).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText('Ã')
+  await expect(page.locator('body')).not.toContainText('Ä')
+  await expect(page.locator('body')).not.toContainText('Å')
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'Audit Center' })).toBeVisible()
+  await expect(page.getByText('Recent trace')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Recent account audit entries' })).toBeVisible()
+  await expect(page.getByText('Denetim merkezi')).toHaveCount(0)
+
+  await page.reload()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'Audit Center' })).toBeVisible()
+})
+
 test('master data list renders bootstrap batches when updatedAt is absent', async ({ page }) => {
   const pageErrors: string[] = []
   page.on('pageerror', (error) => {
