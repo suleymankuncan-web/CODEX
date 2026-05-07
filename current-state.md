@@ -24,13 +24,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-06:
+As of 2026-05-07:
 
-- `origin/main` includes the merged pilot-control updates through JSON Source Suspension V1 and operator-doc alignment. Use `git log --oneline -5` for the exact latest merge commit.
+- `origin/main` includes the merged pilot-control updates through JSON Source Suspension V1, operator-doc alignment, and the pilot-facing localization wave through App shell fallback localization. Use `git log --oneline -5` for the exact latest merge commit.
 - Auth refresh flash fix is merged and deployed.
 - Master-data validation/promotion test split is merged.
 - Pilot readiness evidence consolidation is merged.
 - Controlled pilot operating checklist is merged; the active feedback log is guarded as the pilot operating record.
+- Pilot localization closeout is guarded by `admin-web/scripts/localization-contract.test.mjs` and documented in `docs/plans/ui-localization-closeout-v1.md`.
 
 If starting in a fresh context after this handoff PR is merged:
 
@@ -62,6 +63,8 @@ Current pilot stance:
 - The controlled pilot operating checklist is `docs/plans/controlled-pilot-operating-checklist-v1.md`.
 - The active controlled pilot feedback log is `docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md`.
 - The staging auth session edge evidence guard is `docs/plans/staging-auth-session-edge-evidence-guard-v1.md`.
+- Pilot localization closeout: `guarded`
+- Full product bilingual depth remains a future UI/design-system investment, but the current pilot-facing TR/EN web localization wave is no longer an active blocker.
 - UI quality pass: deliberately deferred
 - Power BI/Excel outputs remain the active operating source for the current pilot.
 - JSON Source Suspension V1: JSON source integration is suspended for the current pilot and Power BI/Excel operating path.
@@ -202,6 +205,8 @@ Keep these references in this handoff because contract tests and future context 
 - `docs/plans/source-agnostic-import-boundary-v1.md` - Source-Agnostic Import Boundary V1
 - `docs/plans/staging-auth-session-edge-evidence-guard-v1.md` - Staging Auth Session Edge Evidence Guard V1
 - `docs/plans/test-suite-hygiene-v1.md` - Test Suite Hygiene V1
+- `docs/plans/ui-localization-strategy.md` - UI Localization Strategy
+- `docs/plans/ui-localization-closeout-v1.md` - UI Localization Closeout V1
 - `docs/superpowers/plans/2026-05-06-master-data-validation-promotion-test-split.md` - Master Data Validation/Promotion Test Split V1
 
 ## Next Planned Work
@@ -219,6 +224,7 @@ Recommended local stance:
 
 - Do not repeat completed test-split work as busywork.
 - Do not start UI redesign until a concrete product/UI change requires it.
+- Do not reopen broad localization as a standalone workstream after UI Localization Closeout V1; handle residual copy during page-by-page UI polish or when a concrete backend error/export workflow requires it.
 - Do not start JSON adapter work while Power BI/Excel outputs remain the chosen operating source.
 - Do not run master-data promotion without dry-run evidence and sanitized evidence.
 
@@ -227,5 +233,5 @@ Recommended local stance:
 Paste this into the next context window:
 
 ```text
-current-state.md oku; aktif workspace D:\store-ops-workspace. Eski OneDrive ve E:\ yollarini kullanma. Main pilot-control update'lerini iceriyor; exact merge icin git log --oneline -5 bak. Current controlled staging/internal pilot karari docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-conditional-go-consolidation.md icinde Conditional Go, broad production rollout henuz No-Go. Round 1 outcome docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-round-1-outcome.md icinde Continue: ayni controlled scope devam, aktif route blocker yok. Controlled pilot operating checklist docs/plans/controlled-pilot-operating-checklist-v1.md icinde. Aktif pilot feedback log docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md icinde. Staging auth session edge guard docs/plans/staging-auth-session-edge-evidence-guard-v1.md icinde. Staging frontend https://staging.hr-axis.com, backend https://api-staging.hr-axis.com/api. UI redesign ertelendi. Power BI/Excel aktif operating source; JSON Source Suspension V1 ile JSON source integration is suspended for the current pilot and Power BI/Excel operating path. Siradaki yerel is intake gate ile secilmeli: staging IdP/seeded DB varsa guarded auth/action evidence, true baseline varsa master-data bootstrap pilot smoke, mevcut pilot devam edecekse feedback log'a Round 2 kaydi ve yeni invite/deploy oncesi npm.cmd run check:pilot-stabilization.
+current-state.md oku; aktif workspace D:\store-ops-workspace. Eski OneDrive ve E:\ yollarini kullanma. Main pilot-control update'lerini iceriyor; exact merge icin git log --oneline -5 bak. Current controlled staging/internal pilot karari docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-conditional-go-consolidation.md icinde Conditional Go, broad production rollout henuz No-Go. Round 1 outcome docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-round-1-outcome.md icinde Continue: ayni controlled scope devam, aktif route blocker yok. Controlled pilot operating checklist docs/plans/controlled-pilot-operating-checklist-v1.md icinde. Aktif pilot feedback log docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md icinde. Staging auth session edge guard docs/plans/staging-auth-session-edge-evidence-guard-v1.md icinde. Pilot localization closeout docs/plans/ui-localization-closeout-v1.md icinde guarded; broad localization artik standalone is akisi degil, kalan copy page-by-page UI polish icinde ele alinacak. Staging frontend https://staging.hr-axis.com, backend https://api-staging.hr-axis.com/api. UI redesign ertelendi. Power BI/Excel aktif operating source; JSON Source Suspension V1 ile JSON source integration is suspended for the current pilot and Power BI/Excel operating path. Siradaki yerel is intake gate ile secilmeli: staging IdP/seeded DB varsa guarded auth/action evidence, true baseline varsa master-data bootstrap pilot smoke, mevcut pilot devam edecekse feedback log'a Round 2 kaydi ve yeni invite/deploy oncesi npm.cmd run check:pilot-stabilization.
 ```
