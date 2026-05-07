@@ -4,11 +4,28 @@ import { ArrowLeft } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { EmptyState, KeyValue, ScreenState, StatusPill } from '../components/dashboard-primitives'
 import { ReportingToolbar } from '../components/reporting-tools'
+import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
+import { useLocalization } from '../features/localization/useLocalization'
 import { getReportingSnapshotRuns } from '../features/reports/api'
 import { downloadCsv } from '../lib/download-csv'
 import { formatDate, formatDateTime, getErrorMessage, mapHealthTone } from '../lib/format'
 
+const runStatusLabelKeys: Record<string, TranslationKey> = {
+  completed: 'reportsSnapshotRuns.status.completed',
+  failed: 'reportsSnapshotRuns.status.failed',
+  running: 'reportsSnapshotRuns.status.running',
+  processing: 'reportsSnapshotRuns.status.running',
+  queued: 'reportsSnapshotRuns.status.queued',
+  pending: 'reportsSnapshotRuns.status.pending',
+}
+
+const snapshotTypeLabelKeys: Record<string, TranslationKey> = {
+  daily: 'reportsSnapshotRuns.snapshotType.daily',
+  monthly: 'reportsSnapshotRuns.snapshotType.monthly',
+}
+
 export function ReportsSnapshotRunsPage() {
+  const { locale, t } = useLocalization()
   const [sortBy, setSortBy] = useState<'generated-desc' | 'generated-asc' | 'type'>('generated-desc')
   const runsQuery = useQuery({
     queryKey: ['reporting-snapshot-runs-page'],
@@ -27,44 +44,54 @@ export function ReportsSnapshotRunsPage() {
   }, [runs, sortBy])
 
   if (runsQuery.isLoading) {
-    return <ScreenState title="Loading report snapshot runs" copy="Pulling recent reporting contexts." />
+    return (
+      <ScreenState
+        title={t('reportsSnapshotRuns.loadingTitle')}
+        copy={t('reportsSnapshotRuns.loadingCopy')}
+      />
+    )
   }
 
   if (runsQuery.isError) {
-    return <ScreenState title="Snapshot runs unavailable" copy={getErrorMessage(runsQuery.error)} tone="error" />
+    return (
+      <ScreenState
+        title={t('reportsSnapshotRuns.errorTitle')}
+        copy={getErrorMessage(runsQuery.error)}
+        tone="error"
+      />
+    )
   }
 
   return (
     <section className="page-stack">
       <section className="hero-panel">
         <div>
-          <div className="eyebrow">Reporting Drill-Down</div>
-          <h2 className="hero-title">Choose the reporting snapshot before you read the rows.</h2>
-          <p className="hero-copy">
-            Reporting is anchored to immutable snapshot runs. This list gives us stable contexts for
-            workforce, KPI, checklist, and turnover drill-down pages.
-          </p>
+          <div className="eyebrow">{t('reportsSnapshotRuns.heroEyebrow')}</div>
+          <h2 className="hero-title">{t('reportsSnapshotRuns.heroTitle')}</h2>
+          <p className="hero-copy">{t('reportsSnapshotRuns.heroCopy')}</p>
         </div>
         <Link className="back-link" to="/admin/reports">
           <ArrowLeft size={16} />
-          <span>Back to reporting summary</span>
+          <span>{t('reportsSnapshotRuns.backToSummary')}</span>
         </Link>
       </section>
 
       <section className="panel">
         <div className="panel-heading panel-heading-spread">
           <div>
-            <div className="eyebrow">Snapshot contexts</div>
-            <h3>Recent reporting runs</h3>
+            <div className="eyebrow">{t('reportsSnapshotRuns.contextsEyebrow')}</div>
+            <h3>{t('reportsSnapshotRuns.recentRunsTitle')}</h3>
           </div>
           <ReportingToolbar
             sortValue={sortBy}
             onSortChange={(value) => setSortBy(value as typeof sortBy)}
             sortOptions={[
-              { value: 'generated-desc', label: 'Newest first' },
-              { value: 'generated-asc', label: 'Oldest first' },
-              { value: 'type', label: 'Snapshot type' },
+              { value: 'generated-desc', label: t('reportsSnapshotRuns.sort.newest') },
+              { value: 'generated-asc', label: t('reportsSnapshotRuns.sort.oldest') },
+              { value: 'type', label: t('reportsSnapshotRuns.sort.type') },
             ]}
+            sortAriaLabel={t('reportsSnapshotRuns.sortRows')}
+            exportLabel={t('reportsSnapshotRuns.exportCsv')}
             onExport={() =>
               downloadCsv({
                 filename: 'reporting-snapshot-runs.csv',
@@ -78,7 +105,7 @@ export function ReportsSnapshotRunsPage() {
                   run.periodEnd,
                   run.generatedAt,
                   run.generatedBy,
-                  formatKpiConfigVersion(run.kpiConfigVersion),
+                  formatKpiConfigVersion(run.kpiConfigVersion, t),
                 ]),
               })
             }
@@ -86,42 +113,57 @@ export function ReportsSnapshotRunsPage() {
         </div>
 
         {sortedRuns.length === 0 ? (
-          <EmptyState copy="No reporting snapshot runs are available yet." />
+          <EmptyState copy={t('reportsSnapshotRuns.empty')} />
         ) : (
           <div className="stacked-table">
             {sortedRuns.map((run) => (
               <article className="stacked-row" key={run.snapshotRunId}>
                 <div className="stacked-row-head">
                   <div>
-                    <strong>{run.snapshotType} snapshot</strong>
+                    <strong>
+                      {t('reportsSnapshotRuns.snapshotLabel', {
+                        type: formatSnapshotType(run.snapshotType, t),
+                      })}
+                    </strong>
                     <span className="queue-subtitle">{run.snapshotRunId}</span>
                   </div>
-                  <StatusPill tone={mapHealthTone(run.runStatus)}>{run.runStatus}</StatusPill>
+                  <StatusPill tone={mapHealthTone(run.runStatus)}>
+                    {formatRunStatus(run.runStatus, t)}
+                  </StatusPill>
                 </div>
 
                 <div className="key-grid">
-                  <KeyValue label="Snapshot date" value={formatDate(run.snapshotDate)} />
-                  <KeyValue label="Generated at" value={formatDateTime(run.generatedAt)} />
-                  <KeyValue label="Period" value={`${formatDate(run.periodStart)} - ${formatDate(run.periodEnd)}`} />
-                  <KeyValue label="Generated by" value={run.generatedBy} />
                   <KeyValue
-                    label="KPI config version"
-                    value={formatKpiConfigVersion(run.kpiConfigVersion)}
+                    label={t('reportsSnapshotRuns.snapshotDate')}
+                    value={formatDate(run.snapshotDate, locale)}
+                  />
+                  <KeyValue
+                    label={t('reportsSnapshotRuns.generatedAt')}
+                    value={formatDateTime(run.generatedAt, locale)}
+                  />
+                  <KeyValue
+                    label={t('reportsSnapshotRuns.period')}
+                    value={`${formatDate(run.periodStart, locale)} - ${formatDate(run.periodEnd, locale)}`}
+                  />
+                  <KeyValue label={t('reportsSnapshotRuns.generatedBy')} value={run.generatedBy} />
+                  <KeyValue
+                    label={t('reportsSnapshotRuns.kpiConfigVersion')}
+                    value={formatKpiConfigVersion(run.kpiConfigVersion, t)}
                   />
                 </div>
 
                 <div className="action-cluster">
                   <Link className="back-link" to={`/admin/reports/workforce/${run.snapshotRunId}`}>
-                    <span>Open workforce</span>
+                    <span>{t('reportsSnapshotRuns.openWorkforce')}</span>
                   </Link>
                   <Link className="back-link" to={`/admin/reports/kpis/${run.snapshotRunId}`}>
-                    <span>Open KPIs</span>
+                    <span>{t('reportsSnapshotRuns.openKpis')}</span>
                   </Link>
                   <Link className="back-link" to={`/admin/reports/checklists/${run.snapshotRunId}`}>
-                    <span>Open checklists</span>
+                    <span>{t('reportsSnapshotRuns.openChecklists')}</span>
                   </Link>
                   <Link className="back-link" to={`/admin/reports/turnover/${run.snapshotRunId}`}>
-                    <span>Open turnover</span>
+                    <span>{t('reportsSnapshotRuns.openTurnover')}</span>
                   </Link>
                 </div>
               </article>
@@ -136,10 +178,20 @@ export function ReportsSnapshotRunsPage() {
 function formatKpiConfigVersion(input: {
   versionNo: number | null
   state: 'versioned' | 'pre_governance'
-} | null | undefined) {
+} | null | undefined, t: TranslateFunction) {
   if (input?.state === 'versioned' && input.versionNo) {
-    return `v${input.versionNo}`
+    return t('reportsSnapshotRuns.versionValue', { version: input.versionNo })
   }
 
-  return 'Pre-governance snapshot'
+  return t('reportsSnapshotRuns.preGovernanceSnapshot')
+}
+
+function formatRunStatus(status: string, t: TranslateFunction) {
+  const key = runStatusLabelKeys[status]
+  return key ? t(key) : status
+}
+
+function formatSnapshotType(type: string, t: TranslateFunction) {
+  const key = snapshotTypeLabelKeys[type]
+  return key ? t(key) : type
 }

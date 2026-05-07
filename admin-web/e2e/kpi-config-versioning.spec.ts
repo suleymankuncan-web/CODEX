@@ -27,12 +27,34 @@ test('admin KPI config page shows latest version metadata', async ({ page }) => 
   await expect(page.getByText('V1 için geri dönüş aktif değil')).toBeVisible()
 })
 
-test('snapshot runs page shows KPI config version for reporting context', async ({ page }) => {
+test('snapshot runs page localizes KPI config version reporting context', async ({ page }) => {
   await page.goto('/admin/reports/snapshot-runs')
 
-  await expect(page.getByText('KPI config version').first()).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Son raporlama çalışmaları' })).toBeVisible()
+  await expect(page.getByText('Snapshot bağlamları')).toBeVisible()
+  await expect(page.getByText('KPI ayar sürümü').first()).toBeVisible()
   await expect(page.getByText('v7')).toBeVisible()
+  await expect(page.getByText('Yönetişim öncesi snapshot')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'İşgücünü aç' }).first()).toBeVisible()
+  await expect(page.getByText('KPI config version')).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText('Ã')
+  await expect(page.locator('body')).not.toContainText('Ä')
+  await expect(page.locator('body')).not.toContainText('Å')
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'Recent reporting runs' })).toBeVisible()
+  await expect(page.getByText('Snapshot contexts')).toBeVisible()
+  await expect(page.getByText('KPI config version').first()).toBeVisible()
   await expect(page.getByText('Pre-governance snapshot')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Open workforce' }).first()).toBeVisible()
+  await expect(page.getByText('KPI ayar sürümü')).toHaveCount(0)
+
+  await page.reload()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'Recent reporting runs' })).toBeVisible()
 })
 
 async function routeVersioningApi(page: Page) {

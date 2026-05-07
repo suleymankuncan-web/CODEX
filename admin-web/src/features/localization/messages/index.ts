@@ -8,6 +8,7 @@ import { adminShellEn, adminShellTr } from './admin-shell'
 import { adminTargetsEn, adminTargetsTr } from './admin-targets'
 import { commonEn, commonTr } from './common'
 import { competitionEn, competitionTr } from './competition'
+import { reportsSnapshotRunsEn, reportsSnapshotRunsTr } from './reports-snapshot-runs'
 import { storeApprovalsEn, storeApprovalsTr } from './store-approvals'
 import { storeChecklistsEn, storeChecklistsTr } from './store-checklists'
 import { storeCompetitionsEn, storeCompetitionsTr } from './store-competitions'
@@ -30,6 +31,7 @@ const tr = {
   ...adminTargetsTr,
   ...commonTr,
   ...competitionTr,
+  ...reportsSnapshotRunsTr,
   ...storeApprovalsTr,
   ...storeChecklistsTr,
   ...storeCompetitionsTr,
@@ -53,6 +55,7 @@ const en: Record<keyof typeof tr, string> = {
   ...adminTargetsEn,
   ...commonEn,
   ...competitionEn,
+  ...reportsSnapshotRunsEn,
   ...storeApprovalsEn,
   ...storeChecklistsEn,
   ...storeCompetitionsEn,
