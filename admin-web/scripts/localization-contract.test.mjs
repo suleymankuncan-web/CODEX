@@ -10,6 +10,8 @@ const appRoot = dirname(scriptsDir)
 const localizationFiles = [
   'src/features/localization/messages/admin-audit.ts',
   'src/features/localization/messages/admin-checklists.ts',
+  'src/features/localization/messages/admin-feed.ts',
+  'src/features/localization/messages/admin-inbox.ts',
   'src/features/localization/messages/auth-audit-details.ts',
   'src/features/localization/messages/auth-admin.ts',
   'src/features/localization/messages/auth-catalog.ts',

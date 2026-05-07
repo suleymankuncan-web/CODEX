@@ -77,6 +77,45 @@ test('admin competitions page switches chrome to English copy and persists local
   await expect(page.getByRole('heading', { name: 'Region challenge stages' })).toBeVisible()
 })
 
+test('admin competition stage builder switches chrome to English copy and persists locale', async ({ page }) => {
+  await page.goto('/admin/competitions')
+
+  const builder = page.getByLabel('Yarışma etap oluşturucu')
+  await expect(builder).toBeVisible()
+  await expect(builder.getByText('Etap oluşturucu')).toBeVisible()
+  await expect(builder.getByRole('heading', { name: 'Etap oluştur' })).toBeVisible()
+  await expect(builder.getByLabel('Etap ön ayarı')).toBeVisible()
+  await expect(builder.getByLabel('Etap kodu')).toBeVisible()
+  await expect(builder.getByText('Etap paketi', { exact: true }).first()).toBeVisible()
+  await expect(builder.getByText('Paket plan kütüphanesi')).toBeVisible()
+  await expect(builder.getByText('Takım şablonu', { exact: true })).toBeVisible()
+  await expect(builder.getByText('Şablon kütüphanesi')).toBeVisible()
+  await expect(builder.getByText('Stage Builder')).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText('Ãƒ')
+  await expect(page.locator('body')).not.toContainText('Ã„')
+  await expect(page.locator('body')).not.toContainText('Ã…')
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  const englishBuilder = page.getByLabel('Competition stage builder')
+  await expect(englishBuilder).toBeVisible()
+  await expect(englishBuilder.getByText('Stage Builder')).toBeVisible()
+  await expect(englishBuilder.getByRole('heading', { name: 'Create stage' })).toBeVisible()
+  await expect(englishBuilder.getByLabel('Stage preset')).toBeVisible()
+  await expect(englishBuilder.getByText('Stage package', { exact: true }).first()).toBeVisible()
+  await expect(englishBuilder.getByText('Package plan library')).toBeVisible()
+  await expect(englishBuilder.getByText('Team template', { exact: true })).toBeVisible()
+  await expect(englishBuilder.getByText('Template library')).toBeVisible()
+  await expect(englishBuilder.getByText('Etap oluşturucu')).toHaveCount(0)
+
+  await page.reload()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByLabel('Competition stage builder')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Create stage' })).toBeVisible()
+})
+
 test('admin can create a competition stage with team store assignments', async ({ page }) => {
   let createdStagePayload: unknown = null
   await page.unroute('**/api/competitions**')
@@ -88,21 +127,21 @@ test('admin can create a competition stage with team store assignments', async (
 
   await page.goto('/admin/competitions')
 
-  await page.getByLabel('Stage code').fill('MAY_QUALIFIER')
-  await page.getByLabel('Stage name').fill('May Qualifier')
-  await page.getByLabel('Stage order').fill('1')
-  await page.getByLabel('Stage type').selectOption('qualifier')
-  await page.getByLabel('Stage starts').fill('2026-05-01')
-  await page.getByLabel('Stage ends').fill('2026-05-15')
-  const teamOne = page.locator('.stage-builder-team').filter({ hasText: 'Team 1' })
-  const teamTwo = page.locator('.stage-builder-team').filter({ hasText: 'Team 2' })
-  await page.getByLabel('Team 1 code').fill('MARMARA_A')
-  await page.getByLabel('Team 1 name').fill('Marmara A')
+  await page.getByLabel('Etap kodu').fill('MAY_QUALIFIER')
+  await page.getByLabel('Etap adı').fill('May Qualifier')
+  await page.getByLabel('Etap sırası').fill('1')
+  await page.getByLabel('Etap tipi').selectOption('qualifier')
+  await page.getByLabel('Başlangıç', { exact: true }).fill('2026-05-01')
+  await page.getByLabel('Bitiş', { exact: true }).fill('2026-05-15')
+  const teamOne = page.locator('.stage-builder-team').filter({ hasText: '1. takım' })
+  const teamTwo = page.locator('.stage-builder-team').filter({ hasText: '2. takım' })
+  await page.getByLabel('1. takım kodu').fill('MARMARA_A')
+  await page.getByLabel('1. takım adı').fill('Marmara A')
   await teamOne.getByLabel('DEMO-101 - Demo Store 101 - Marmara').check()
-  await page.getByLabel('Team 2 code').fill('MARMARA_B')
-  await page.getByLabel('Team 2 name').fill('Marmara B')
+  await page.getByLabel('2. takım kodu').fill('MARMARA_B')
+  await page.getByLabel('2. takım adı').fill('Marmara B')
   await teamTwo.getByLabel('DEMO-102 - Demo Store 102 - Marmara').check()
-  await page.getByRole('button', { name: 'Create stage', exact: true }).click()
+  await page.getByRole('button', { name: 'Etap oluştur', exact: true }).click()
 
   await expect(page.getByText('Competition stage created')).toBeVisible()
   expect(createdStagePayload).toMatchObject({
@@ -138,22 +177,22 @@ test('admin can apply a stage format preset before creating a stage', async ({ p
 
   await page.goto('/admin/competitions')
 
-  await page.getByLabel('Stage preset').selectOption('region_league')
-  await expect(page.getByLabel('Stage code')).toHaveValue('REGION_LEAGUE')
-  await expect(page.getByLabel('Stage name')).toHaveValue('Regional League')
-  await expect(page.getByLabel('Stage type')).toHaveValue('league')
-  await expect(page.getByLabel('Stage starts')).toHaveValue('2026-04-22')
-  await expect(page.getByLabel('Stage ends')).toHaveValue('2026-04-24')
+  await page.getByLabel('Etap ön ayarı').selectOption('region_league')
+  await expect(page.getByLabel('Etap kodu')).toHaveValue('REGION_LEAGUE')
+  await expect(page.getByLabel('Etap adı')).toHaveValue('Regional League')
+  await expect(page.getByLabel('Etap tipi')).toHaveValue('league')
+  await expect(page.getByLabel('Başlangıç', { exact: true })).toHaveValue('2026-04-22')
+  await expect(page.getByLabel('Bitiş', { exact: true })).toHaveValue('2026-04-24')
 
-  const teamOne = page.locator('.stage-builder-team').filter({ hasText: 'Team 1' })
-  const teamTwo = page.locator('.stage-builder-team').filter({ hasText: 'Team 2' })
-  await page.getByLabel('Team 1 code').fill('MARMARA_A')
-  await page.getByLabel('Team 1 name').fill('Marmara A')
+  const teamOne = page.locator('.stage-builder-team').filter({ hasText: '1. takım' })
+  const teamTwo = page.locator('.stage-builder-team').filter({ hasText: '2. takım' })
+  await page.getByLabel('1. takım kodu').fill('MARMARA_A')
+  await page.getByLabel('1. takım adı').fill('Marmara A')
   await teamOne.getByLabel('DEMO-101 - Demo Store 101 - Marmara').check()
-  await page.getByLabel('Team 2 code').fill('MARMARA_B')
-  await page.getByLabel('Team 2 name').fill('Marmara B')
+  await page.getByLabel('2. takım kodu').fill('MARMARA_B')
+  await page.getByLabel('2. takım adı').fill('Marmara B')
   await teamTwo.getByLabel('DEMO-102 - Demo Store 102 - Marmara').check()
-  await page.getByRole('button', { name: 'Create stage', exact: true }).click()
+  await page.getByRole('button', { name: 'Etap oluştur', exact: true }).click()
 
   await expect(page.getByText('Competition stage created')).toBeVisible()
   expect(createdStagePayload).toMatchObject({
@@ -179,14 +218,14 @@ test('admin can create a league then final stage package from templates', async 
 
   await page.goto('/admin/competitions')
 
-  await page.getByLabel('Stage package').selectOption('league_then_final')
-  await page.getByLabel('Package team 1 template').selectOption(templateId)
-  await page.getByLabel('Package team 2 template').selectOption(secondTemplateId)
-  await expect(page.getByLabel('Package stage 1 code')).toHaveValue('REGION_LEAGUE')
-  await expect(page.getByLabel('Package stage 2 code')).toHaveValue('FINAL_SHOWDOWN')
-  await page.getByLabel('Package stage 2 name').fill('Marmara Final Night')
-  await page.getByLabel('Package stage 2 starts').fill('2026-04-23')
-  await page.getByRole('button', { name: 'Create stage package' }).click()
+  await page.getByLabel('Etap paketi').selectOption('league_then_final')
+  await page.getByLabel('Paket 1. takım şablonu').selectOption(templateId)
+  await page.getByLabel('Paket 2. takım şablonu').selectOption(secondTemplateId)
+  await expect(page.getByLabel('Paket etabı 1 kodu')).toHaveValue('REGION_LEAGUE')
+  await expect(page.getByLabel('Paket etabı 2 kodu')).toHaveValue('FINAL_SHOWDOWN')
+  await page.getByLabel('Paket etabı 2 adı').fill('Marmara Final Night')
+  await page.getByLabel('Paket etabı 2 başlangıcı').fill('2026-04-23')
+  await page.getByRole('button', { name: 'Etap paketi oluştur' }).click()
 
   await expect(page.getByText('Competition stage package created')).toBeVisible()
   expect(createdStagePackagePayload).toMatchObject({
@@ -252,38 +291,38 @@ test('admin can save, submit, approve, and execute a stage package plan', async 
 
   await page.goto('/admin/competitions')
 
-  await page.getByLabel('Stage package').selectOption('league_then_final')
-  await page.getByLabel('Package team 1 template').selectOption(templateId)
-  await page.getByLabel('Package team 2 template').selectOption(secondTemplateId)
-  await page.getByLabel('Package plan name').fill('April regional package')
-  await page.getByLabel('Package stage 2 name').fill('Marmara Final Night')
-  await page.getByRole('button', { name: 'Save package plan' }).click()
+  await page.getByLabel('Etap paketi').selectOption('league_then_final')
+  await page.getByLabel('Paket 1. takım şablonu').selectOption(templateId)
+  await page.getByLabel('Paket 2. takım şablonu').selectOption(secondTemplateId)
+  await page.getByLabel('Paket plan adı').fill('April regional package')
+  await page.getByLabel('Paket etabı 2 adı').fill('Marmara Final Night')
+  await page.getByRole('button', { name: 'Paket planını kaydet' }).click()
 
   await expect(page.getByText('Competition stage package plan saved')).toBeVisible()
   const planLibrary = page.locator('.stage-package-plan-library')
   await expect(planLibrary.locator('strong').filter({ hasText: 'April regional package' })).toBeVisible()
-  await expect(planLibrary.getByText('draft', { exact: true })).toBeVisible()
+  await expect(planLibrary.getByText('taslak', { exact: true })).toBeVisible()
   await expect(
-    planLibrary.getByRole('button', { name: 'Execute approved plan April regional package' }),
+    planLibrary.getByRole('button', { name: 'April regional package onaylı planını çalıştır' }),
   ).toHaveCount(0)
 
-  await planLibrary.getByRole('button', { name: 'Mark ready for decision April regional package' }).click()
+  await planLibrary.getByRole('button', { name: 'April regional package planını karara hazır işaretle' }).click()
 
   await expect(page.getByText('Competition stage package plan submitted for review')).toBeVisible()
   expect(submittedStagePackagePlanId).toBe(stagePackagePlanId)
-  await expect(planLibrary.getByText('decision ready', { exact: true })).toBeVisible()
-  await expect(planLibrary.getByText('Decision preview')).toBeVisible()
+  await expect(planLibrary.getByText('karara hazır', { exact: true })).toBeVisible()
+  await expect(planLibrary.getByText('Karar önizlemesi')).toBeVisible()
   await expect(planLibrary.getByText('2026-04-22 - 2026-04-24').first()).toBeVisible()
-  await expect(planLibrary.getByText('4 store assignments')).toBeVisible()
+  await expect(planLibrary.getByText('4 mağaza ataması')).toBeVisible()
   await expect(planLibrary.getByText('MARMARA_TEMPLATE_A - Marmara Template A')).toBeVisible()
   await expect(planLibrary.getByText('MARMARA_TEMPLATE_B - Marmara Template B')).toBeVisible()
-  await planLibrary.getByLabel('Decision note for April regional package').fill('Reviewed in planning meeting.')
-  await planLibrary.getByRole('button', { name: 'Approve decision April regional package' }).click()
+  await planLibrary.getByLabel('April regional package karar notu').fill('Reviewed in planning meeting.')
+  await planLibrary.getByRole('button', { name: 'April regional package kararını onayla' }).click()
 
   await expect(page.getByText('Competition stage package plan approved')).toBeVisible()
   expect(approvedStagePackagePlanId).toBe(stagePackagePlanId)
-  await expect(planLibrary.getByText('approved', { exact: true })).toBeVisible()
-  await planLibrary.getByRole('button', { name: 'Execute approved plan April regional package' }).click()
+  await expect(planLibrary.getByText('onaylandı', { exact: true })).toBeVisible()
+  await planLibrary.getByRole('button', { name: 'April regional package onaylı planını çalıştır' }).click()
 
   await expect(page.getByText('Competition stage package plan executed')).toBeVisible()
   expect(executedStagePackagePlanId).toBe(stagePackagePlanId)
@@ -329,28 +368,28 @@ test('admin can reject a submitted stage package plan', async ({ page }) => {
   await page.goto('/admin/competitions')
 
   const planLibrary = page.locator('.stage-package-plan-library')
-  await expect(planLibrary.getByText('decision ready', { exact: true })).toBeVisible()
-  await expect(planLibrary.getByRole('button', { name: 'Edit April regional package' })).toHaveCount(0)
-  await expect(planLibrary.getByRole('button', { name: 'Cancel April regional package' })).toHaveCount(0)
-  await planLibrary.getByLabel('Decision note for April regional package').fill('Dates need another pass.')
-  await planLibrary.getByRole('button', { name: 'Return for revision April regional package' }).click()
+  await expect(planLibrary.getByText('karara hazır', { exact: true })).toBeVisible()
+  await expect(planLibrary.getByRole('button', { name: 'April regional package planını düzenle' })).toHaveCount(0)
+  await expect(planLibrary.getByRole('button', { name: 'April regional package planını iptal et' })).toHaveCount(0)
+  await planLibrary.getByLabel('April regional package karar notu').fill('Dates need another pass.')
+  await planLibrary.getByRole('button', { name: 'April regional package planını revizyona gönder' }).click()
 
   await expect(page.getByText('Competition stage package plan rejected')).toBeVisible()
   expect(rejectedStagePackagePlanId).toBe(stagePackagePlanId)
-  await expect(planLibrary.getByText('returned', { exact: true })).toBeVisible()
+  await expect(planLibrary.getByText('iade edildi', { exact: true })).toBeVisible()
   await expect(
-    planLibrary.getByRole('button', { name: 'Execute approved plan April regional package' }),
+    planLibrary.getByRole('button', { name: 'April regional package onaylı planını çalıştır' }),
   ).toHaveCount(0)
-  await planLibrary.getByRole('button', { name: 'Clone as new draft April regional package' }).click()
+  await planLibrary.getByRole('button', { name: 'April regional package planını yeni taslak olarak klonla' }).click()
   await expect(page.getByText('Competition stage package plan cloned as draft')).toBeVisible()
   expect(clonedStagePackagePlanSourceId).toBe(stagePackagePlanId)
   await expect(planLibrary.locator('strong').filter({ hasText: 'April regional package revision' })).toBeVisible()
-  await expect(planLibrary.getByText('Cloned from April regional package')).toBeVisible()
-  await expect(planLibrary.getByText('draft', { exact: true })).toBeVisible()
-  await planLibrary.getByRole('button', { name: 'Show history April regional package revision' }).click()
+  await expect(planLibrary.getByText('April regional package planından klonlandı')).toBeVisible()
+  await expect(planLibrary.getByText('taslak', { exact: true })).toBeVisible()
+  await planLibrary.getByRole('button', { name: 'April regional package revision geçmişini göster' }).click()
   await expect(planLibrary.getByText('competition_stage_package_plan.cloned_from_returned')).toBeVisible()
-  await expect(planLibrary.getByText('Source: April regional package')).toBeVisible()
-  await planLibrary.getByRole('button', { name: 'Show history April regional package', exact: true }).click()
+  await expect(planLibrary.getByText('Kaynak: April regional package')).toBeVisible()
+  await planLibrary.getByRole('button', { name: 'April regional package geçmişini göster', exact: true }).click()
   await expect(planLibrary.getByText('competition_stage_package_plan.rejected')).toBeVisible()
 })
 
@@ -372,10 +411,10 @@ test('admin can edit, inspect, and cancel a stage package plan draft', async ({ 
   await page.goto('/admin/competitions')
 
   const planLibrary = page.locator('.stage-package-plan-library')
-  await planLibrary.getByRole('button', { name: 'Edit April regional package' }).click()
-  await planLibrary.getByLabel('Edit plan name').fill('April regional package revised')
-  await planLibrary.getByLabel('Edit package stage 2 name').fill('Revised Final Showdown')
-  await planLibrary.getByRole('button', { name: 'Save package plan changes' }).click()
+  await planLibrary.getByRole('button', { name: 'April regional package planını düzenle' }).click()
+  await planLibrary.getByLabel('Plan adını düzenle').fill('April regional package revised')
+  await planLibrary.getByLabel('Paket etabı düzenle 2 adı').fill('Revised Final Showdown')
+  await planLibrary.getByRole('button', { name: 'Paket planı değişikliklerini kaydet' }).click()
 
   await expect(page.getByText('Competition stage package plan updated')).toBeVisible()
   await expect(planLibrary.locator('strong').filter({ hasText: 'April regional package revised' })).toBeVisible()
@@ -388,16 +427,16 @@ test('admin can edit, inspect, and cancel a stage package plan draft', async ({ 
     ],
   })
 
-  await planLibrary.getByRole('button', { name: 'Show history April regional package revised' }).click()
+  await planLibrary.getByRole('button', { name: 'April regional package revised geçmişini göster' }).click()
   await expect(planLibrary.getByText('competition_stage_package_plan.updated')).toBeVisible()
 
-  await planLibrary.getByRole('button', { name: 'Cancel April regional package revised' }).click()
+  await planLibrary.getByRole('button', { name: 'April regional package revised planını iptal et' }).click()
 
   await expect(page.getByText('Competition stage package plan cancelled')).toBeVisible()
   expect(cancelledStagePackagePlanId).toBe(stagePackagePlanId)
-  await expect(planLibrary.getByText('cancelled', { exact: true })).toBeVisible()
+  await expect(planLibrary.getByText('iptal', { exact: true })).toBeVisible()
   await expect(
-    planLibrary.getByRole('button', { name: 'Execute approved plan April regional package revised' }),
+    planLibrary.getByRole('button', { name: 'April regional package revised onaylı planını çalıştır' }),
   ).toHaveCount(0)
 })
 
@@ -417,10 +456,10 @@ test('admin creates a team template and applies it to a stage team', async ({ pa
   await page.goto('/admin/competitions')
 
   const templateBuilder = page.locator('.stage-template-builder')
-  await templateBuilder.getByLabel('Template code').fill('MARMARA_TEMPLATE_A')
-  await templateBuilder.getByLabel('Template name').fill('Marmara Template A')
+  await templateBuilder.getByLabel('Şablon kodu').fill('MARMARA_TEMPLATE_A')
+  await templateBuilder.getByLabel('Şablon adı').fill('Marmara Template A')
   await templateBuilder.getByLabel('DEMO-101 - Demo Store 101 - Marmara').check()
-  await templateBuilder.getByRole('button', { name: 'Create template' }).click()
+  await templateBuilder.getByRole('button', { name: 'Şablon oluştur' }).click()
 
   await expect(page.getByText('Competition team template created')).toBeVisible()
   expect(createdTemplatePayload).toMatchObject({
@@ -429,18 +468,18 @@ test('admin creates a team template and applies it to a stage team', async ({ pa
     storeIds: [storeId],
   })
 
-  await page.getByLabel('Stage code').fill('MAY_TEMPLATE_STAGE')
-  await page.getByLabel('Stage name').fill('May Template Stage')
-  await page.getByLabel('Stage order').fill('2')
-  await page.getByLabel('Stage starts').fill('2026-05-16')
-  await page.getByLabel('Stage ends').fill('2026-05-31')
-  const teamOne = page.locator('.stage-builder-team').filter({ hasText: 'Team 1' })
-  await teamOne.getByLabel('Team 1 template').selectOption(templateId)
-  await page.getByLabel('Team 2 code').fill('MARMARA_B')
-  await page.getByLabel('Team 2 name').fill('Marmara B')
-  const teamTwo = page.locator('.stage-builder-team').filter({ hasText: 'Team 2' })
+  await page.getByLabel('Etap kodu').fill('MAY_TEMPLATE_STAGE')
+  await page.getByLabel('Etap adı').fill('May Template Stage')
+  await page.getByLabel('Etap sırası').fill('2')
+  await page.getByLabel('Başlangıç', { exact: true }).fill('2026-05-16')
+  await page.getByLabel('Bitiş', { exact: true }).fill('2026-05-31')
+  const teamOne = page.locator('.stage-builder-team').filter({ hasText: '1. takım' })
+  await teamOne.getByLabel('1. takım şablonu').selectOption(templateId)
+  await page.getByLabel('2. takım kodu').fill('MARMARA_B')
+  await page.getByLabel('2. takım adı').fill('Marmara B')
+  const teamTwo = page.locator('.stage-builder-team').filter({ hasText: '2. takım' })
   await teamTwo.getByLabel('DEMO-102 - Demo Store 102 - Marmara').check()
-  await page.getByRole('button', { name: 'Create stage', exact: true }).click()
+  await page.getByRole('button', { name: 'Etap oluştur', exact: true }).click()
 
   await expect(page.getByText('Competition stage created')).toBeVisible()
   expect(createdStagePayload).toMatchObject({
@@ -479,16 +518,16 @@ test('admin can view inactive templates and deactivate active templates', async 
   await expect(activeTemplateRow.getByText('MARMARA_TEMPLATE_A', { exact: true })).toBeVisible()
   await expect(templateLibrary.getByText('OLD_MARMARA_TEMPLATE')).toHaveCount(0)
 
-  await templateLibrary.getByLabel('Show inactive templates').check()
+  await templateLibrary.getByLabel('Pasif şablonları göster').check()
   await expect(templateLibrary.locator('strong').filter({ hasText: 'OLD_MARMARA_TEMPLATE' })).toBeVisible()
-  await expect(templateLibrary.getByText('Inactive', { exact: true })).toBeVisible()
+  await expect(templateLibrary.getByText('Pasif', { exact: true })).toBeVisible()
 
-  await templateLibrary.getByRole('button', { name: 'Deactivate MARMARA_TEMPLATE_A' }).click()
+  await templateLibrary.getByRole('button', { name: 'MARMARA_TEMPLATE_A şablonunu pasifleştir' }).click()
 
   await expect(page.getByText('Competition team template deactivated')).toBeVisible()
   expect(deactivatedTemplateId).toBe(templateId)
-  const teamOne = page.locator('.stage-builder-team').filter({ hasText: 'Team 1' })
-  await expect(teamOne.getByLabel('Team 1 template')).not.toContainText('MARMARA_TEMPLATE_A')
+  const teamOne = page.locator('.stage-builder-team').filter({ hasText: '1. takım' })
+  await expect(teamOne.getByLabel('1. takım şablonu')).not.toContainText('MARMARA_TEMPLATE_A')
 })
 
 test('admin can update and clone competition team templates', async ({ page }) => {
@@ -509,11 +548,11 @@ test('admin can update and clone competition team templates', async ({ page }) =
 
   const templateLibrary = page.locator('.stage-template-library')
   let activeTemplateRow = templateLibrary.locator('article').filter({ hasText: 'MARMARA_TEMPLATE_A' })
-  await activeTemplateRow.getByRole('button', { name: 'Edit MARMARA_TEMPLATE_A' }).click()
-  await activeTemplateRow.getByLabel('Edit template name').fill('Marmara Template A Revised')
-  await activeTemplateRow.getByLabel('Edit template description').fill('May revision')
+  await activeTemplateRow.getByRole('button', { name: 'MARMARA_TEMPLATE_A şablonunu düzenle' }).click()
+  await activeTemplateRow.getByLabel('Şablon adını düzenle').fill('Marmara Template A Revised')
+  await activeTemplateRow.getByLabel('Şablon açıklamasını düzenle').fill('May revision')
   await activeTemplateRow.getByLabel('DEMO-102 - Demo Store 102 - Marmara').check()
-  await activeTemplateRow.getByRole('button', { name: 'Save template' }).click()
+  await activeTemplateRow.getByRole('button', { name: 'Şablonu kaydet' }).click()
 
   await expect(page.getByText('Competition team template updated')).toBeVisible()
   expect(updatedTemplatePayload).toMatchObject({
@@ -524,11 +563,11 @@ test('admin can update and clone competition team templates', async ({ page }) =
   })
 
   activeTemplateRow = templateLibrary.locator('article').filter({ hasText: 'MARMARA_TEMPLATE_A' })
-  await activeTemplateRow.getByRole('button', { name: 'Clone MARMARA_TEMPLATE_A' }).click()
-  await activeTemplateRow.getByLabel('Clone template code').fill('MARMARA_TEMPLATE_A_COPY')
-  await activeTemplateRow.getByLabel('Clone template name').fill('Marmara Template A Copy')
-  await activeTemplateRow.getByLabel('Clone template description').fill('Copy for finals')
-  await activeTemplateRow.getByRole('button', { name: 'Clone template' }).click()
+  await activeTemplateRow.getByRole('button', { name: 'MARMARA_TEMPLATE_A şablonunu klonla' }).click()
+  await activeTemplateRow.getByLabel('Klon şablon kodu').fill('MARMARA_TEMPLATE_A_COPY')
+  await activeTemplateRow.getByLabel('Klon şablon adı').fill('Marmara Template A Copy')
+  await activeTemplateRow.getByLabel('Klon şablon açıklaması').fill('Copy for finals')
+  await activeTemplateRow.getByRole('button', { name: 'Şablonu klonla' }).click()
 
   await expect(page.getByText('Competition team template cloned')).toBeVisible()
   expect(clonedTemplatePayload).toMatchObject({

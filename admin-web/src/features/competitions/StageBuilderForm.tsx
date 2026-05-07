@@ -50,7 +50,9 @@ import {
   stagePresetOptions,
   type StagePresetCode,
 } from './stage-presets'
-import { formatState, getErrorMessage } from '../../lib/format'
+import { getErrorMessage } from '../../lib/format'
+import type { TranslateFunction, TranslationKey } from '../localization/dictionary'
+import { useLocalization } from '../localization/useLocalization'
 
 const codePattern = /^[A-Z0-9_]+$/
 const stageTypeOptions: CompetitionStageSummary['stageType'][] = [
@@ -62,14 +64,57 @@ const stageTypeOptions: CompetitionStageSummary['stageType'][] = [
   'custom',
 ]
 
-function formatPlanStatus(status: CompetitionStagePackagePlan['planStatus']) {
-  if (status === 'submitted') return 'decision ready'
-  if (status === 'rejected') return 'returned'
-  return formatState(status)
+const stageTypeLabelKeys: Record<CompetitionStageSummary['stageType'], TranslationKey> = {
+  qualifier: 'competition.stageBuilder.stageType.qualifier',
+  league: 'competition.stageBuilder.stageType.league',
+  quarter_final: 'competition.stageBuilder.stageType.quarterFinal',
+  semi_final: 'competition.stageBuilder.stageType.semiFinal',
+  final: 'competition.stageBuilder.stageType.final',
+  custom: 'competition.stageBuilder.stageType.custom',
 }
 
-function formatCount(value: number, singular: string, plural: string) {
-  return `${value} ${value === 1 ? singular : plural}`
+const stagePresetLabelKeys: Record<StagePresetCode, TranslationKey> = {
+  region_league: 'competition.stageBuilder.preset.regionLeague',
+  first_half_qualifier: 'competition.stageBuilder.preset.firstHalfQualifier',
+  final_showdown: 'competition.stageBuilder.preset.finalShowdown',
+}
+
+const stagePackageLabelKeys: Record<CompetitionStagePackageCode, TranslationKey> = {
+  league_then_final: 'competition.stageBuilder.package.leagueThenFinal',
+}
+
+const planStatusLabelKeys: Record<CompetitionStagePackagePlan['planStatus'], TranslationKey> = {
+  draft: 'competition.stageBuilder.status.draft',
+  submitted: 'competition.stageBuilder.status.submitted',
+  approved: 'competition.stageBuilder.status.approved',
+  rejected: 'competition.stageBuilder.status.rejected',
+  executed: 'competition.stageBuilder.status.executed',
+  cancelled: 'competition.stageBuilder.status.cancelled',
+}
+
+function formatStageType(stageType: CompetitionStageSummary['stageType'], t: TranslateFunction) {
+  return t(stageTypeLabelKeys[stageType])
+}
+
+function formatStagePreset(presetCode: StagePresetCode | undefined, t: TranslateFunction) {
+  return presetCode ? t(stagePresetLabelKeys[presetCode]) : ''
+}
+
+function formatStagePackage(packageCode: CompetitionStagePackageCode, t: TranslateFunction) {
+  return t(stagePackageLabelKeys[packageCode])
+}
+
+function formatPlanStatus(status: CompetitionStagePackagePlan['planStatus'], t: TranslateFunction) {
+  return t(planStatusLabelKeys[status])
+}
+
+function formatCount(
+  value: number,
+  singularKey: TranslationKey,
+  pluralKey: TranslationKey,
+  t: TranslateFunction,
+) {
+  return `${value} ${t(value === 1 ? singularKey : pluralKey)}`
 }
 
 type TeamDraft = {
@@ -220,27 +265,27 @@ function storeLabel(store: AuthLookupStore) {
   return `${store.storeCode} - ${store.storeName} - ${store.regionName}`
 }
 
-function validateDraft(draft: StageDraft) {
+function validateDraft(draft: StageDraft): TranslationKey | null {
   const stageOrder = Number(draft.stageOrder)
 
   if (!draft.stageCode.trim() || !codePattern.test(draft.stageCode)) {
-    return 'Stage code must use uppercase letters, numbers, and underscores.'
+    return 'competition.stageBuilder.validation.stageCode'
   }
 
   if (!draft.stageName.trim()) {
-    return 'Stage name is required.'
+    return 'competition.stageBuilder.validation.stageName'
   }
 
   if (!Number.isInteger(stageOrder) || stageOrder < 1) {
-    return 'Stage order must be 1 or higher.'
+    return 'competition.stageBuilder.validation.stageOrder'
   }
 
   if (!draft.startsOn || !draft.endsOn || draft.endsOn < draft.startsOn) {
-    return 'Stage date range must be valid.'
+    return 'competition.stageBuilder.validation.stageDateRange'
   }
 
   if (draft.teams.length < 2) {
-    return 'At least two teams are required.'
+    return 'competition.stageBuilder.validation.teamCount'
   }
 
   const invalidTeam = draft.teams.find(
@@ -252,7 +297,7 @@ function validateDraft(draft: StageDraft) {
   )
 
   if (invalidTeam) {
-    return 'Every team needs a valid code, name, and at least one store.'
+    return 'competition.stageBuilder.validation.teamFields'
   }
 
   return null
@@ -261,17 +306,17 @@ function validateDraft(draft: StageDraft) {
 function validateStagePackageDraft(
   draft: StagePackageDraft,
   templates: CompetitionTeamTemplate[],
-) {
+): TranslationKey | null {
   if (!draft.packageCode) {
-    return 'Stage package is required.'
+    return 'competition.stageBuilder.validation.packageRequired'
   }
 
   if (!draft.firstTemplateId || !draft.secondTemplateId) {
-    return 'Stage package needs two active team templates.'
+    return 'competition.stageBuilder.validation.packageTwoTemplates'
   }
 
   if (draft.firstTemplateId === draft.secondTemplateId) {
-    return 'Stage package team templates must be different.'
+    return 'competition.stageBuilder.validation.packageDifferentTemplates'
   }
 
   const selectedTemplates = templates.filter((template) =>
@@ -279,20 +324,20 @@ function validateStagePackageDraft(
   )
 
   if (selectedTemplates.length !== 2) {
-    return 'Stage package templates must be active.'
+    return 'competition.stageBuilder.validation.packageActiveTemplates'
   }
 
   if (selectedTemplates.some((template) => template.stores.length === 0)) {
-    return 'Stage package templates need at least one store.'
+    return 'competition.stageBuilder.validation.packageTemplateStores'
   }
 
   if (draft.stageDrafts.length < 2) {
-    return 'Stage package needs at least two stage drafts.'
+    return 'competition.stageBuilder.validation.packageStageCount'
   }
 
   const stageCodes = draft.stageDrafts.map((stage) => stage.stageCode.trim())
   if (new Set(stageCodes).size !== stageCodes.length) {
-    return 'Stage package stage codes must be unique.'
+    return 'competition.stageBuilder.validation.packageUniqueStageCodes'
   }
 
   const invalidStage = draft.stageDrafts.find((stage) => {
@@ -311,7 +356,7 @@ function validateStagePackageDraft(
   })
 
   if (invalidStage) {
-    return 'Every package stage needs a valid code, name, order, and date range.'
+    return 'competition.stageBuilder.validation.packageStageFields'
   }
 
   return null
@@ -320,29 +365,29 @@ function validateStagePackageDraft(
 function validateStagePackagePlanDraft(
   draft: StagePackageDraft,
   templates: CompetitionTeamTemplate[],
-) {
+): TranslationKey | null {
   const packageValidation = validateStagePackageDraft(draft, templates)
   if (packageValidation) return packageValidation
 
   if (!draft.planName.trim()) {
-    return 'Package plan name is required.'
+    return 'competition.stageBuilder.validation.packagePlanName'
   }
 
   return null
 }
 
-function validateStagePackagePlanEditDraft(draft: StagePackagePlanEditDraft) {
+function validateStagePackagePlanEditDraft(draft: StagePackagePlanEditDraft): TranslationKey | null {
   if (!draft.planName.trim()) {
-    return 'Package plan name is required.'
+    return 'competition.stageBuilder.validation.packagePlanName'
   }
 
   if (draft.stageDrafts.length < 2) {
-    return 'Stage package needs at least two stage drafts.'
+    return 'competition.stageBuilder.validation.packageStageCount'
   }
 
   const stageCodes = draft.stageDrafts.map((stage) => stage.stageCode.trim())
   if (new Set(stageCodes).size !== stageCodes.length) {
-    return 'Stage package stage codes must be unique.'
+    return 'competition.stageBuilder.validation.packageUniqueStageCodes'
   }
 
   const invalidStage = draft.stageDrafts.find((stage) => {
@@ -363,7 +408,7 @@ function validateStagePackagePlanEditDraft(draft: StagePackagePlanEditDraft) {
   })
 
   if (invalidStage) {
-    return 'Every package stage needs valid stage fields and two teams with stores.'
+    return 'competition.stageBuilder.validation.packageEditStageFields'
   }
 
   return null
@@ -388,22 +433,39 @@ function buildStagePackagePlanUpdatePayload(
   }
 }
 
-function formatAuditMetadata(metadata: Record<string, unknown>) {
+function formatAuditMetadata(metadata: Record<string, unknown>, t: TranslateFunction) {
   const planName = typeof metadata.planName === 'string' ? metadata.planName : null
   const sourcePlanName =
-    typeof metadata.sourcePlanName === 'string' ? `Source: ${metadata.sourcePlanName}` : null
+    typeof metadata.sourcePlanName === 'string'
+      ? t('competition.stageBuilder.audit.source', { planName: metadata.sourcePlanName })
+      : null
   const clonedPlanName =
-    typeof metadata.clonedPlanName === 'string' ? `Clone: ${metadata.clonedPlanName}` : null
+    typeof metadata.clonedPlanName === 'string'
+      ? t('competition.stageBuilder.audit.clone', { planName: metadata.clonedPlanName })
+      : null
   const reviewNote = typeof metadata.reviewNote === 'string' ? metadata.reviewNote : null
-  const stageCount = typeof metadata.stageCount === 'number' ? `${metadata.stageCount} stages` : null
+  const stageCount =
+    typeof metadata.stageCount === 'number'
+      ? formatCount(
+          metadata.stageCount,
+          'competition.stageBuilder.count.stage',
+          'competition.stageBuilder.count.stages',
+          t,
+        )
+      : null
   const createdStageCount = Array.isArray(metadata.createdStageIds)
-    ? `${metadata.createdStageIds.length} created stages`
+    ? formatCount(
+        metadata.createdStageIds.length,
+        'competition.stageBuilder.count.createdStage',
+        'competition.stageBuilder.count.createdStages',
+        t,
+      )
     : null
 
   return (
     [sourcePlanName, clonedPlanName, planName, reviewNote, stageCount, createdStageCount]
       .filter(Boolean)
-      .join(' - ') || 'Metadata recorded'
+      .join(' - ') || t('competition.stageBuilder.audit.metadataRecorded')
   )
 }
 
@@ -430,37 +492,50 @@ function buildStagePackagePlanDecisionPreview(plan: CompetitionStagePackagePlan)
   )
 
   return {
-    dateRange: startsOn && endsOn ? `${startsOn} - ${endsOn}` : 'Dates missing',
+    dateRange: startsOn && endsOn ? `${startsOn} - ${endsOn}` : null,
     storeAssignmentCount,
     teamTemplateLabels,
   }
 }
 
 function StagePackagePlanDecisionPreview(input: { plan: CompetitionStagePackagePlan }) {
+  const { t } = useLocalization()
   const preview = buildStagePackagePlanDecisionPreview(input.plan)
 
   return (
     <div className="stacked-row">
       <div className="stacked-row-head">
         <div>
-          <strong>Decision preview</strong>
-          <p className="queue-subtitle">Review the package shape before approval.</p>
+          <strong>{t('competition.stageBuilder.decisionPreviewTitle')}</strong>
+          <p className="queue-subtitle">{t('competition.stageBuilder.decisionPreviewCopy')}</p>
         </div>
         <StatusPill tone="accent">
-          {formatCount(preview.storeAssignmentCount, 'store assignment', 'store assignments')}
+          {formatCount(
+            preview.storeAssignmentCount,
+            'competition.stageBuilder.count.storeAssignment',
+            'competition.stageBuilder.count.storeAssignments',
+            t,
+          )}
         </StatusPill>
       </div>
       <div className="key-grid">
         <div className="key-item">
-          <span>Plan window</span>
-          <strong>{preview.dateRange}</strong>
+          <span>{t('competition.stageBuilder.planWindow')}</span>
+          <strong>{preview.dateRange ?? t('competition.stageBuilder.datesMissing')}</strong>
         </div>
         <div className="key-item">
-          <span>Stages</span>
-          <strong>{formatCount(input.plan.stageDrafts.length, 'stage', 'stages')}</strong>
+          <span>{t('competition.stageBuilder.stages')}</span>
+          <strong>
+            {formatCount(
+              input.plan.stageDrafts.length,
+              'competition.stageBuilder.count.stage',
+              'competition.stageBuilder.count.stages',
+              t,
+            )}
+          </strong>
         </div>
         <div className="key-item">
-          <span>Team templates</span>
+          <span>{t('competition.stageBuilder.teamTemplates')}</span>
           <strong>{String(preview.teamTemplateLabels.length)}</strong>
         </div>
       </div>
@@ -472,15 +547,21 @@ function StagePackagePlanDecisionPreview(input: { plan: CompetitionStagePackageP
                 <strong>{stage.stageName}</strong>
                 <p className="queue-subtitle">{`${stage.startsOn} - ${stage.endsOn}`}</p>
               </div>
-              <StatusPill tone="neutral">{formatState(stage.stageType)}</StatusPill>
+              <StatusPill tone="neutral">{formatStageType(stage.stageType, t)}</StatusPill>
             </div>
             <p className="queue-subtitle">
               {[
-                formatCount(stage.teams.length, 'team', 'teams'),
+                formatCount(
+                  stage.teams.length,
+                  'competition.stageBuilder.count.team',
+                  'competition.stageBuilder.count.teams',
+                  t,
+                ),
                 formatCount(
                   stage.teams.reduce((total, team) => total + team.storeIds.length, 0),
-                  'store assignment',
-                  'store assignments',
+                  'competition.stageBuilder.count.storeAssignment',
+                  'competition.stageBuilder.count.storeAssignments',
+                  t,
                 ),
               ].join(' - ')}
             </p>
@@ -492,35 +573,36 @@ function StagePackagePlanDecisionPreview(input: { plan: CompetitionStagePackageP
   )
 }
 
-function validateTemplateDraft(draft: TemplateDraft) {
+function validateTemplateDraft(draft: TemplateDraft): TranslationKey | null {
   if (!draft.templateCode.trim() || !codePattern.test(draft.templateCode)) {
-    return 'Template code must use uppercase letters, numbers, and underscores.'
+    return 'competition.stageBuilder.validation.templateCode'
   }
 
   if (!draft.templateName.trim()) {
-    return 'Template name is required.'
+    return 'competition.stageBuilder.validation.templateName'
   }
 
   if (draft.storeIds.length === 0) {
-    return 'Template needs at least one store.'
+    return 'competition.stageBuilder.validation.templateStores'
   }
 
   return null
 }
 
-function validateTemplateCloneDraft(draft: TemplateCloneDraft) {
+function validateTemplateCloneDraft(draft: TemplateCloneDraft): TranslationKey | null {
   if (!draft.templateCode.trim() || !codePattern.test(draft.templateCode)) {
-    return 'Template code must use uppercase letters, numbers, and underscores.'
+    return 'competition.stageBuilder.validation.templateCode'
   }
 
   if (!draft.templateName.trim()) {
-    return 'Template name is required.'
+    return 'competition.stageBuilder.validation.templateName'
   }
 
   return null
 }
 
 export function StageBuilderForm(input: StageBuilderFormProps) {
+  const { t } = useLocalization()
   const queryClient = useQueryClient()
   const [draft, setDraft] = useState(() =>
     createInitialDraft({ startsOn: input.competitionStartsOn, endsOn: input.competitionEndsOn }),
@@ -958,49 +1040,49 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
   }
 
   return (
-    <section className="stacked-table" aria-label="Competition stage builder">
+    <section className="stacked-table" aria-label={t('competition.stageBuilder.ariaLabel')}>
       <div className="panel-heading">
         <div>
-          <div className="eyebrow">Stage Builder</div>
-          <h3>Create stage</h3>
+          <div className="eyebrow">{t('competition.stageBuilder.eyebrow')}</div>
+          <h3>{t('competition.stageBuilder.createStageTitle')}</h3>
         </div>
         <StatusPill tone={validationMessage ? 'warning' : 'calm'}>
-          {validationMessage ? 'Draft incomplete' : 'Ready'}
+          {validationMessage ? t('competition.stageBuilder.draftIncomplete') : t('competition.stageBuilder.ready')}
         </StatusPill>
       </div>
 
       <article className="stacked-row">
         <div className="form-grid">
           <label className="field-block">
-            <span>Stage preset</span>
+            <span>{t('competition.stageBuilder.stagePreset')}</span>
             <select
               value={draft.stagePresetCode ?? ''}
               onChange={(event) => applyStagePreset(event.target.value)}
             >
-              <option value="">Manual stage</option>
+              <option value="">{t('competition.stageBuilder.manualStage')}</option>
               {stagePresetOptions.map((preset) => (
                 <option key={preset.code} value={preset.code}>
-                  {preset.label}
+                  {t(stagePresetLabelKeys[preset.code])}
                 </option>
               ))}
             </select>
           </label>
           <label className="field-block">
-            <span>Stage code</span>
+            <span>{t('competition.stageBuilder.stageCode')}</span>
             <input
               value={draft.stageCode}
               onChange={(event) => updateDraft('stageCode', normalizeCode(event.target.value))}
             />
           </label>
           <label className="field-block">
-            <span>Stage name</span>
+            <span>{t('competition.stageBuilder.stageName')}</span>
             <input
               value={draft.stageName}
               onChange={(event) => updateDraft('stageName', event.target.value)}
             />
           </label>
           <label className="field-block">
-            <span>Stage order</span>
+            <span>{t('competition.stageBuilder.stageOrder')}</span>
             <input
               min="1"
               type="number"
@@ -1009,7 +1091,7 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
             />
           </label>
           <label className="field-block">
-            <span>Stage type</span>
+            <span>{t('competition.stageBuilder.stageType')}</span>
             <select
               value={draft.stageType}
               onChange={(event) =>
@@ -1018,13 +1100,13 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
             >
               {stageTypeOptions.map((stageType) => (
                 <option key={stageType} value={stageType}>
-                  {formatState(stageType)}
+                  {formatStageType(stageType, t)}
                 </option>
               ))}
             </select>
           </label>
           <label className="field-block">
-            <span>Stage starts</span>
+            <span>{t('competition.stageBuilder.stageStarts')}</span>
             <input
               type="date"
               value={draft.startsOn}
@@ -1032,7 +1114,7 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
             />
           </label>
           <label className="field-block">
-            <span>Stage ends</span>
+            <span>{t('competition.stageBuilder.stageEnds')}</span>
             <input
               type="date"
               value={draft.endsOn}
@@ -1043,19 +1125,25 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
       </article>
 
       {lookupsQuery.isLoading ? (
-        <ScreenState title="Stores are loading" copy="Store options are loading for team assignment." />
+        <ScreenState
+          title={t('competition.stageBuilder.storesLoadingTitle')}
+          copy={t('competition.stageBuilder.storesLoadingCopy')}
+        />
       ) : null}
 
       {lookupsQuery.isError ? (
         <ScreenState
-          title="Store options could not load"
+          title={t('competition.stageBuilder.storesErrorTitle')}
           copy={getErrorMessage(lookupsQuery.error)}
           tone="error"
         />
       ) : null}
 
       {!lookupsQuery.isLoading && stores.length === 0 ? (
-        <EmptyState title="No stores available" copy="Stage teams need at least one store." />
+        <EmptyState
+          title={t('competition.stageBuilder.noStoresTitle')}
+          copy={t('competition.stageBuilder.noStoresCopy')}
+        />
       ) : null}
 
       <TemplateBuilderSection
@@ -1099,7 +1187,7 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
 
       {templatesQuery.isError ? (
         <ScreenState
-          title="Team templates could not load"
+          title={t('competition.stageBuilder.teamTemplatesErrorTitle')}
           copy={getErrorMessage(templatesQuery.error)}
           tone="error"
         />
@@ -1163,19 +1251,24 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
       {draft.teams.map((team, teamIndex) => (
         <article className="stacked-row stage-builder-team" key={teamIndex}>
           <div className="stacked-row-head">
-            <strong>{`Team ${teamIndex + 1}`}</strong>
+            <strong>{t('competition.stageBuilder.teamNumber', { number: teamIndex + 1 })}</strong>
             <StatusPill tone={team.storeIds.length > 0 ? 'accent' : 'warning'}>
-              {`${team.storeIds.length} stores`}
+              {formatCount(
+                team.storeIds.length,
+                'competition.stageBuilder.count.store',
+                'competition.stageBuilder.count.stores',
+                t,
+              )}
             </StatusPill>
           </div>
           <div className="form-grid">
             <label className="field-block">
-              <span>{`Team ${teamIndex + 1} template`}</span>
+              <span>{t('competition.stageBuilder.teamTemplateLabel', { number: teamIndex + 1 })}</span>
               <select
                 value={team.sourceTemplateId ?? ''}
                 onChange={(event) => applyTemplate(teamIndex, event.target.value)}
               >
-                <option value="">Manual team</option>
+                <option value="">{t('competition.stageBuilder.manualTeam')}</option>
                 {templates.map((template) => (
                   <option key={template.templateId} value={template.templateId}>
                     {template.templateCode} - {template.templateName}
@@ -1184,7 +1277,7 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
               </select>
             </label>
             <label className="field-block">
-              <span>{`Team ${teamIndex + 1} code`}</span>
+              <span>{t('competition.stageBuilder.teamCodeLabel', { number: teamIndex + 1 })}</span>
               <input
                 value={team.teamCode}
                 onChange={(event) =>
@@ -1193,7 +1286,7 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
               />
             </label>
             <label className="field-block">
-              <span>{`Team ${teamIndex + 1} name`}</span>
+              <span>{t('competition.stageBuilder.teamNameLabel', { number: teamIndex + 1 })}</span>
               <input
                 value={team.teamName}
                 onChange={(event) => updateTeam(teamIndex, { teamName: event.target.value })}
@@ -1215,7 +1308,7 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
         </article>
       ))}
 
-      {validationMessage ? <p className="validation-copy">{validationMessage}</p> : null}
+      {validationMessage ? <p className="validation-copy">{t(validationMessage)}</p> : null}
 
       <div className="action-cluster">
         <button
@@ -1225,16 +1318,23 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
           onClick={submitStage}
         >
           <PlusCircle size={16} />
-          Create stage
+          {t('competition.stageBuilder.createStageButton')}
         </button>
-        <StatusPill tone="neutral">{`${draft.teams.length} teams`}</StatusPill>
+        <StatusPill tone="neutral">
+          {formatCount(
+            draft.teams.length,
+            'competition.stageBuilder.count.team',
+            'competition.stageBuilder.count.teams',
+            t,
+          )}
+        </StatusPill>
       </div>
 
-      {feedback ? <ScreenState title={feedback} copy="Stage detail is refreshed." /> : null}
+      {feedback ? <ScreenState title={feedback} copy={t('competition.stageBuilder.stageRefreshCopy')} /> : null}
 
       {createMutation.isError ? (
         <ScreenState
-          title="Stage could not be created"
+          title={t('competition.stageBuilder.stageCreateErrorTitle')}
           copy={getErrorMessage(createMutation.error)}
           tone="error"
         />
@@ -1254,8 +1354,8 @@ function StagePackageBuilderSection(input: {
   isPending: boolean
   plans: CompetitionStagePackagePlan[]
   templates: CompetitionTeamTemplate[]
-  planValidationMessage: string | null
-  validationMessage: string | null
+  planValidationMessage: TranslationKey | null
+  validationMessage: TranslationKey | null
   onApprovePlan: (planId: string, payload: ReviewCompetitionStagePackagePlanPayload) => void
   onCancelPlan: (planId: string) => void
   onClonePlan: (planId: string) => void
@@ -1269,6 +1369,7 @@ function StagePackageBuilderSection(input: {
   onUpdateStage: (stageIndex: number, field: keyof StagePackageStageDraft, value: string) => void
   onUpdate: (field: keyof StagePackageDraft, value: string) => void
 }) {
+  const { t } = useLocalization()
   const [editDraft, setEditDraft] = useState<StagePackagePlanEditDraft | null>(null)
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({})
   const editValidationMessage = editDraft ? validateStagePackagePlanEditDraft(editDraft) : null
@@ -1315,42 +1416,42 @@ function StagePackageBuilderSection(input: {
     <article className="stacked-row stage-package-builder">
       <div className="stacked-row-head">
         <div>
-          <strong>Stage package</strong>
-          <p className="queue-subtitle">Create the league and final stages from active templates.</p>
+          <strong>{t('competition.stageBuilder.stagePackageTitle')}</strong>
+          <p className="queue-subtitle">{t('competition.stageBuilder.stagePackageCopy')}</p>
         </div>
         <StatusPill tone={input.validationMessage ? 'warning' : 'calm'}>
-          {input.validationMessage ? 'Package incomplete' : 'Ready'}
+          {input.validationMessage ? t('competition.stageBuilder.packageIncomplete') : t('competition.stageBuilder.ready')}
         </StatusPill>
       </div>
 
       <div className="form-grid">
         <label className="field-block">
-          <span>Stage package</span>
+          <span>{t('competition.stageBuilder.stagePackage')}</span>
           <select
             value={input.draft.packageCode}
             onChange={(event) => input.onUpdate('packageCode', event.target.value)}
           >
             {stagePackageOptions.map((packageOption) => (
               <option key={packageOption.code} value={packageOption.code}>
-                {packageOption.label}
+                {t(stagePackageLabelKeys[packageOption.code])}
               </option>
             ))}
           </select>
         </label>
         <label className="field-block">
-          <span>Package plan name</span>
+          <span>{t('competition.stageBuilder.packagePlanName')}</span>
           <input
             value={input.draft.planName}
             onChange={(event) => input.onUpdate('planName', event.target.value)}
           />
         </label>
         <label className="field-block">
-          <span>Package team 1 template</span>
+          <span>{t('competition.stageBuilder.packageTeamTemplateLabel', { number: 1 })}</span>
           <select
             value={input.draft.firstTemplateId}
             onChange={(event) => input.onUpdate('firstTemplateId', event.target.value)}
           >
-            <option value="">Select template</option>
+            <option value="">{t('competition.stageBuilder.selectTemplate')}</option>
             {input.templates.map((template) => (
               <option key={template.templateId} value={template.templateId}>
                 {template.templateCode} - {template.templateName}
@@ -1359,12 +1460,12 @@ function StagePackageBuilderSection(input: {
           </select>
         </label>
         <label className="field-block">
-          <span>Package team 2 template</span>
+          <span>{t('competition.stageBuilder.packageTeamTemplateLabel', { number: 2 })}</span>
           <select
             value={input.draft.secondTemplateId}
             onChange={(event) => input.onUpdate('secondTemplateId', event.target.value)}
           >
-            <option value="">Select template</option>
+            <option value="">{t('competition.stageBuilder.selectTemplate')}</option>
             {input.templates.map((template) => (
               <option key={template.templateId} value={template.templateId}>
                 {template.templateCode} - {template.templateName}
@@ -1375,10 +1476,10 @@ function StagePackageBuilderSection(input: {
       </div>
 
       {input.validationMessage ? (
-        <p className="validation-copy">{input.validationMessage}</p>
+        <p className="validation-copy">{t(input.validationMessage)}</p>
       ) : null}
       {!input.validationMessage && input.planValidationMessage ? (
-        <p className="validation-copy">{input.planValidationMessage}</p>
+        <p className="validation-copy">{t(input.planValidationMessage)}</p>
       ) : null}
 
       <div className="stacked-table">
@@ -1386,14 +1487,14 @@ function StagePackageBuilderSection(input: {
           <article className="stacked-row stage-package-preview-stage" key={stageDraft.stagePresetCode}>
             <div className="stacked-row-head">
               <div>
-                <strong>{`Package stage ${stageIndex + 1}`}</strong>
-                <p className="queue-subtitle">{formatState(stageDraft.stagePresetCode)}</p>
+                <strong>{t('competition.stageBuilder.packageStageNumber', { number: stageIndex + 1 })}</strong>
+                <p className="queue-subtitle">{formatStagePreset(stageDraft.stagePresetCode, t)}</p>
               </div>
-              <StatusPill tone="accent">{formatState(stageDraft.stageType)}</StatusPill>
+              <StatusPill tone="accent">{formatStageType(stageDraft.stageType, t)}</StatusPill>
             </div>
             <div className="form-grid">
               <label className="field-block">
-                <span>{`Package stage ${stageIndex + 1} code`}</span>
+                <span>{t('competition.stageBuilder.packageStageCodeLabel', { number: stageIndex + 1 })}</span>
                 <input
                   value={stageDraft.stageCode}
                   onChange={(event) =>
@@ -1402,7 +1503,7 @@ function StagePackageBuilderSection(input: {
                 />
               </label>
               <label className="field-block">
-                <span>{`Package stage ${stageIndex + 1} name`}</span>
+                <span>{t('competition.stageBuilder.packageStageNameLabel', { number: stageIndex + 1 })}</span>
                 <input
                   value={stageDraft.stageName}
                   onChange={(event) =>
@@ -1411,7 +1512,7 @@ function StagePackageBuilderSection(input: {
                 />
               </label>
               <label className="field-block">
-                <span>{`Package stage ${stageIndex + 1} order`}</span>
+                <span>{t('competition.stageBuilder.packageStageOrderLabel', { number: stageIndex + 1 })}</span>
                 <input
                   min="1"
                   type="number"
@@ -1422,7 +1523,7 @@ function StagePackageBuilderSection(input: {
                 />
               </label>
               <label className="field-block">
-                <span>{`Package stage ${stageIndex + 1} type`}</span>
+                <span>{t('competition.stageBuilder.packageStageTypeLabel', { number: stageIndex + 1 })}</span>
                 <select
                   value={stageDraft.stageType}
                   onChange={(event) =>
@@ -1431,13 +1532,13 @@ function StagePackageBuilderSection(input: {
                 >
                   {stageTypeOptions.map((stageType) => (
                     <option key={stageType} value={stageType}>
-                      {formatState(stageType)}
+                      {formatStageType(stageType, t)}
                     </option>
                   ))}
                 </select>
               </label>
               <label className="field-block">
-                <span>{`Package stage ${stageIndex + 1} starts`}</span>
+                <span>{t('competition.stageBuilder.packageStageStartsLabel', { number: stageIndex + 1 })}</span>
                 <input
                   type="date"
                   value={stageDraft.startsOn}
@@ -1447,7 +1548,7 @@ function StagePackageBuilderSection(input: {
                 />
               </label>
               <label className="field-block">
-                <span>{`Package stage ${stageIndex + 1} ends`}</span>
+                <span>{t('competition.stageBuilder.packageStageEndsLabel', { number: stageIndex + 1 })}</span>
                 <input
                   type="date"
                   value={stageDraft.endsOn}
@@ -1468,7 +1569,7 @@ function StagePackageBuilderSection(input: {
           disabled={Boolean(input.planValidationMessage) || input.isPending}
           onClick={input.onSavePlan}
         >
-          Save package plan
+          {t('competition.stageBuilder.savePackagePlan')}
         </button>
         <button
           className="control-button"
@@ -1477,26 +1578,46 @@ function StagePackageBuilderSection(input: {
           onClick={input.onSubmit}
         >
           <PlusCircle size={16} />
-          Create stage package
+          {t('competition.stageBuilder.createStagePackage')}
         </button>
-        <StatusPill tone="neutral">2 stages</StatusPill>
+        <StatusPill tone="neutral">
+          {formatCount(
+            2,
+            'competition.stageBuilder.count.stage',
+            'competition.stageBuilder.count.stages',
+            t,
+          )}
+        </StatusPill>
       </div>
 
       <article className="stacked-row stage-package-plan-library">
         <div className="stacked-row-head">
           <div>
-            <strong>Package plan library</strong>
-            <p className="queue-subtitle">Drafts are locked as decision-ready before execution.</p>
+            <strong>{t('competition.stageBuilder.packagePlanLibraryTitle')}</strong>
+            <p className="queue-subtitle">{t('competition.stageBuilder.packagePlanLibraryCopy')}</p>
           </div>
-          <StatusPill tone="neutral">{`${input.plans.length} plans`}</StatusPill>
+          <StatusPill tone="neutral">
+            {formatCount(
+              input.plans.length,
+              'competition.stageBuilder.count.plan',
+              'competition.stageBuilder.count.plans',
+              t,
+            )}
+          </StatusPill>
         </div>
 
         {input.isLoadingPlans ? (
-          <ScreenState title="Package plans are loading" copy="Saved package plans are loading." />
+          <ScreenState
+            title={t('competition.stageBuilder.packagePlansLoadingTitle')}
+            copy={t('competition.stageBuilder.packagePlansLoadingCopy')}
+          />
         ) : null}
 
         {!input.isLoadingPlans && input.plans.length === 0 ? (
-          <EmptyState title="No package plans" copy="Saved package plans appear here." />
+          <EmptyState
+            title={t('competition.stageBuilder.noPackagePlansTitle')}
+            copy={t('competition.stageBuilder.noPackagePlansCopy')}
+          />
         ) : null}
 
         {input.plans.length > 0 ? (
@@ -1508,8 +1629,10 @@ function StagePackageBuilderSection(input: {
                     <strong>{plan.planName}</strong>
                     <p className="queue-subtitle">
                       {[
-                        formatState(plan.packageCode),
-                        plan.sourcePlan ? `Cloned from ${plan.sourcePlan.planName}` : null,
+                        formatStagePackage(plan.packageCode, t),
+                        plan.sourcePlan
+                          ? t('competition.stageBuilder.clonedFrom', { planName: plan.sourcePlan.planName })
+                          : null,
                       ]
                         .filter(Boolean)
                         .join(' - ')}
@@ -1526,20 +1649,20 @@ function StagePackageBuilderSection(input: {
                             : 'neutral'
                     }
                   >
-                    {formatPlanStatus(plan.planStatus)}
+                    {formatPlanStatus(plan.planStatus, t)}
                   </StatusPill>
                 </div>
                 <div className="key-grid">
                   <div className="key-item">
-                    <span>Stages</span>
+                    <span>{t('competition.stageBuilder.stages')}</span>
                     <strong>{String(plan.stageDrafts.length)}</strong>
                   </div>
                   <div className="key-item">
-                    <span>Created stages</span>
+                    <span>{t('competition.stageBuilder.createdStages')}</span>
                     <strong>{String(plan.createdStageIds.length)}</strong>
                   </div>
                   <div className="key-item">
-                    <span>Updated</span>
+                    <span>{t('competition.stageBuilder.updated')}</span>
                     <strong>{plan.updatedAt.slice(0, 10)}</strong>
                   </div>
                 </div>
@@ -1547,14 +1670,14 @@ function StagePackageBuilderSection(input: {
                   <div className="stacked-row">
                     <div className="form-grid">
                       <label className="field-block">
-                        <span>Edit plan name</span>
+                        <span>{t('competition.stageBuilder.editPlanName')}</span>
                         <input
                           value={editDraft.planName}
                           onChange={(event) => updatePlanEditDraft('planName', event.target.value)}
                         />
                       </label>
                       <label className="field-block">
-                        <span>Edit stage package</span>
+                        <span>{t('competition.stageBuilder.editStagePackage')}</span>
                         <select
                           value={editDraft.packageCode}
                           onChange={(event) =>
@@ -1566,7 +1689,7 @@ function StagePackageBuilderSection(input: {
                         >
                           {stagePackageOptions.map((packageOption) => (
                             <option key={packageOption.code} value={packageOption.code}>
-                              {packageOption.label}
+                              {t(stagePackageLabelKeys[packageOption.code])}
                             </option>
                           ))}
                         </select>
@@ -1580,16 +1703,18 @@ function StagePackageBuilderSection(input: {
                         >
                           <div className="stacked-row-head">
                             <div>
-                              <strong>{`Edit package stage ${stageIndex + 1}`}</strong>
+                              <strong>
+                                {t('competition.stageBuilder.editPackageStageNumber', { number: stageIndex + 1 })}
+                              </strong>
                               <p className="queue-subtitle">
-                                {formatState(stageDraft.stagePresetCode)}
+                                {formatStagePreset(stageDraft.stagePresetCode, t)}
                               </p>
                             </div>
-                            <StatusPill tone="accent">{formatState(stageDraft.stageType)}</StatusPill>
+                            <StatusPill tone="accent">{formatStageType(stageDraft.stageType, t)}</StatusPill>
                           </div>
                           <div className="form-grid">
                             <label className="field-block">
-                              <span>{`Edit package stage ${stageIndex + 1} code`}</span>
+                              <span>{t('competition.stageBuilder.editPackageStageCodeLabel', { number: stageIndex + 1 })}</span>
                               <input
                                 value={stageDraft.stageCode}
                                 onChange={(event) =>
@@ -1602,7 +1727,7 @@ function StagePackageBuilderSection(input: {
                               />
                             </label>
                             <label className="field-block">
-                              <span>{`Edit package stage ${stageIndex + 1} name`}</span>
+                              <span>{t('competition.stageBuilder.editPackageStageNameLabel', { number: stageIndex + 1 })}</span>
                               <input
                                 value={stageDraft.stageName}
                                 onChange={(event) =>
@@ -1611,7 +1736,7 @@ function StagePackageBuilderSection(input: {
                               />
                             </label>
                             <label className="field-block">
-                              <span>{`Edit package stage ${stageIndex + 1} order`}</span>
+                              <span>{t('competition.stageBuilder.editPackageStageOrderLabel', { number: stageIndex + 1 })}</span>
                               <input
                                 min="1"
                                 type="number"
@@ -1622,7 +1747,7 @@ function StagePackageBuilderSection(input: {
                               />
                             </label>
                             <label className="field-block">
-                              <span>{`Edit package stage ${stageIndex + 1} type`}</span>
+                              <span>{t('competition.stageBuilder.editPackageStageTypeLabel', { number: stageIndex + 1 })}</span>
                               <select
                                 value={stageDraft.stageType}
                                 onChange={(event) =>
@@ -1631,13 +1756,13 @@ function StagePackageBuilderSection(input: {
                               >
                                 {stageTypeOptions.map((stageType) => (
                                   <option key={stageType} value={stageType}>
-                                    {formatState(stageType)}
+                                    {formatStageType(stageType, t)}
                                   </option>
                                 ))}
                               </select>
                             </label>
                             <label className="field-block">
-                              <span>{`Edit package stage ${stageIndex + 1} starts`}</span>
+                              <span>{t('competition.stageBuilder.editPackageStageStartsLabel', { number: stageIndex + 1 })}</span>
                               <input
                                 type="date"
                                 value={stageDraft.startsOn}
@@ -1647,7 +1772,7 @@ function StagePackageBuilderSection(input: {
                               />
                             </label>
                             <label className="field-block">
-                              <span>{`Edit package stage ${stageIndex + 1} ends`}</span>
+                              <span>{t('competition.stageBuilder.editPackageStageEndsLabel', { number: stageIndex + 1 })}</span>
                               <input
                                 type="date"
                                 value={stageDraft.endsOn}
@@ -1661,7 +1786,7 @@ function StagePackageBuilderSection(input: {
                       ))}
                     </div>
                     {editValidationMessage ? (
-                      <p className="validation-copy">{editValidationMessage}</p>
+                      <p className="validation-copy">{t(editValidationMessage)}</p>
                     ) : null}
                     <div className="action-cluster">
                       <button
@@ -1670,14 +1795,14 @@ function StagePackageBuilderSection(input: {
                         disabled={Boolean(editValidationMessage) || input.isPending}
                         onClick={submitPlanEditDraft}
                       >
-                        Save package plan changes
+                        {t('competition.stageBuilder.savePackagePlanChanges')}
                       </button>
                       <button
                         className="ghost-button"
                         type="button"
                         onClick={() => setEditDraft(null)}
                       >
-                        Cancel edit
+                        {t('competition.stageBuilder.cancelEdit')}
                       </button>
                     </div>
                   </div>
@@ -1692,7 +1817,7 @@ function StagePackageBuilderSection(input: {
                         disabled={input.isPending}
                         onClick={() => setEditDraft(createStagePackagePlanEditDraft(plan))}
                       >
-                        Edit {plan.planName}
+                        {t('competition.stageBuilder.editPlanButton', { planName: plan.planName })}
                       </button>
                       <button
                         className="ghost-button"
@@ -1700,7 +1825,7 @@ function StagePackageBuilderSection(input: {
                         disabled={input.isPending}
                         onClick={() => input.onCancelPlan(plan.planId)}
                       >
-                        Cancel {plan.planName}
+                        {t('competition.stageBuilder.cancelPlanButton', { planName: plan.planName })}
                       </button>
                       <button
                         className="control-button"
@@ -1708,7 +1833,7 @@ function StagePackageBuilderSection(input: {
                         disabled={input.isPending}
                         onClick={() => input.onSubmitPlan(plan.planId)}
                       >
-                        Mark ready for decision {plan.planName}
+                        {t('competition.stageBuilder.markReadyButton', { planName: plan.planName })}
                       </button>
                     </>
                   ) : null}
@@ -1719,7 +1844,7 @@ function StagePackageBuilderSection(input: {
                       disabled={input.isPending}
                       onClick={() => input.onExecutePlan(plan.planId)}
                     >
-                      Execute approved plan {plan.planName}
+                      {t('competition.stageBuilder.executePlanButton', { planName: plan.planName })}
                     </button>
                   ) : null}
                   {plan.planStatus === 'rejected' ? (
@@ -1729,7 +1854,7 @@ function StagePackageBuilderSection(input: {
                       disabled={input.isPending}
                       onClick={() => input.onClonePlan(plan.planId)}
                     >
-                      Clone as new draft {plan.planName}
+                      {t('competition.stageBuilder.clonePlanButton', { planName: plan.planName })}
                     </button>
                   ) : null}
                   <button
@@ -1738,7 +1863,7 @@ function StagePackageBuilderSection(input: {
                     disabled={input.isPending}
                     onClick={() => input.onShowPlanHistory(plan.planId)}
                   >
-                    Show history {plan.planName}
+                    {t('competition.stageBuilder.showHistoryButton', { planName: plan.planName })}
                   </button>
                 </div>
 
@@ -1746,7 +1871,7 @@ function StagePackageBuilderSection(input: {
                   <div className="stacked-row">
                     <StagePackagePlanDecisionPreview plan={plan} />
                     <label className="field-block field-block-full">
-                      <span>{`Decision note for ${plan.planName}`}</span>
+                      <span>{t('competition.stageBuilder.decisionNoteLabel', { planName: plan.planName })}</span>
                       <input
                         value={reviewNotes[plan.planId] ?? ''}
                         onChange={(event) => updateReviewNote(plan.planId, event.target.value)}
@@ -1759,7 +1884,7 @@ function StagePackageBuilderSection(input: {
                         disabled={input.isPending}
                         onClick={() => input.onApprovePlan(plan.planId, getReviewPayload(plan.planId))}
                       >
-                        Approve decision {plan.planName}
+                        {t('competition.stageBuilder.approveDecisionButton', { planName: plan.planName })}
                       </button>
                       <button
                         className="ghost-button"
@@ -1767,7 +1892,7 @@ function StagePackageBuilderSection(input: {
                         disabled={input.isPending}
                         onClick={() => input.onRejectPlan(plan.planId, getReviewPayload(plan.planId))}
                       >
-                        Return for revision {plan.planName}
+                        {t('competition.stageBuilder.returnForRevisionButton', { planName: plan.planName })}
                       </button>
                     </div>
                   </div>
@@ -1776,10 +1901,16 @@ function StagePackageBuilderSection(input: {
                 {input.historyPlanId === plan.planId ? (
                   <div className="action-cluster">
                     {input.isLoadingAudit ? (
-                      <ScreenState title="Plan history is loading" copy="Audit events are loading." />
+                      <ScreenState
+                        title={t('competition.stageBuilder.planHistoryLoadingTitle')}
+                        copy={t('competition.stageBuilder.planHistoryLoadingCopy')}
+                      />
                     ) : null}
                     {!input.isLoadingAudit && input.auditEvents.length === 0 ? (
-                      <EmptyState title="No plan history" copy="Audit events appear here." />
+                      <EmptyState
+                        title={t('competition.stageBuilder.noPlanHistoryTitle')}
+                        copy={t('competition.stageBuilder.noPlanHistoryCopy')}
+                      />
                     ) : null}
                     {!input.isLoadingAudit && input.auditEvents.length > 0 ? (
                       <div className="stacked-table">
@@ -1789,7 +1920,7 @@ function StagePackageBuilderSection(input: {
                               <div>
                                 <strong>{event.eventType}</strong>
                                 <p className="queue-subtitle">
-                                  {formatAuditMetadata(event.metadata)}
+                                  {formatAuditMetadata(event.metadata, t)}
                                 </p>
                               </div>
                               <StatusPill tone="neutral">{event.occurredAt.slice(0, 10)}</StatusPill>
@@ -1807,12 +1938,12 @@ function StagePackageBuilderSection(input: {
       </article>
 
       {input.feedback ? (
-        <ScreenState title={input.feedback} copy="Competition detail is refreshed." />
+        <ScreenState title={input.feedback} copy={t('competition.stageBuilder.competitionRefreshCopy')} />
       ) : null}
 
       {input.error ? (
         <ScreenState
-          title="Stage package action failed"
+          title={t('competition.stageBuilder.stagePackageActionFailedTitle')}
           copy={getErrorMessage(input.error)}
           tone="error"
         />
@@ -1834,6 +1965,7 @@ function TemplateLibrarySection(input: {
   onShowInactiveChange: (value: boolean) => void
   onUpdate: (templateId: string, payload: UpdateCompetitionTeamTemplatePayload) => void
 }) {
+  const { t } = useLocalization()
   const [editDraft, setEditDraft] = useState<TemplateEditDraft | null>(null)
   const [cloneDraft, setCloneDraft] = useState<TemplateCloneDraft | null>(null)
   const editValidationMessage = editDraft ? validateTemplateDraft(editDraft) : null
@@ -1887,11 +2019,11 @@ function TemplateLibrarySection(input: {
     <article className="stacked-row stage-template-library">
       <div className="stacked-row-head">
         <div>
-          <strong>Template library</strong>
-          <p className="queue-subtitle">Active templates feed stage team selection.</p>
+          <strong>{t('competition.stageBuilder.templateLibraryTitle')}</strong>
+          <p className="queue-subtitle">{t('competition.stageBuilder.templateLibraryCopy')}</p>
         </div>
         <StatusPill tone={input.showInactive ? 'accent' : 'neutral'}>
-          {input.showInactive ? 'All templates' : 'Active only'}
+          {input.showInactive ? t('competition.stageBuilder.allTemplates') : t('competition.stageBuilder.activeOnly')}
         </StatusPill>
       </div>
       <label className="store-checkbox template-toggle">
@@ -1900,15 +2032,21 @@ function TemplateLibrarySection(input: {
           checked={input.showInactive}
           onChange={(event) => input.onShowInactiveChange(event.target.checked)}
         />
-        <span>Show inactive templates</span>
+        <span>{t('competition.stageBuilder.showInactiveTemplates')}</span>
       </label>
 
       {input.isLoading ? (
-        <ScreenState title="Templates are loading" copy="Reusable team templates are loading." />
+        <ScreenState
+          title={t('competition.stageBuilder.templatesLoadingTitle')}
+          copy={t('competition.stageBuilder.templatesLoadingCopy')}
+        />
       ) : null}
 
       {!input.isLoading && input.templates.length === 0 ? (
-        <EmptyState title="No templates" copy="Created templates appear in this library." />
+        <EmptyState
+          title={t('competition.stageBuilder.noTemplatesTitle')}
+          copy={t('competition.stageBuilder.noTemplatesCopy')}
+        />
       ) : null}
 
       {input.templates.length > 0 ? (
@@ -1921,16 +2059,16 @@ function TemplateLibrarySection(input: {
                   <p className="queue-subtitle">{template.templateName}</p>
                 </div>
                 <StatusPill tone={template.isActive ? 'calm' : 'neutral'}>
-                  {template.isActive ? 'Active' : 'Inactive'}
+                  {template.isActive ? t('competition.stageBuilder.active') : t('competition.stageBuilder.inactive')}
                 </StatusPill>
               </div>
               <div className="key-grid">
                 <div className="key-item">
-                  <span>Stores</span>
+                  <span>{t('competition.stageBuilder.stores')}</span>
                   <strong>{String(template.stores.length)}</strong>
                 </div>
                 <div className="key-item">
-                  <span>Description</span>
+                  <span>{t('competition.stageBuilder.description')}</span>
                   <strong>{template.description ?? '-'}</strong>
                 </div>
               </div>
@@ -1939,7 +2077,7 @@ function TemplateLibrarySection(input: {
                 <div className="stacked-row">
                   <div className="form-grid">
                     <label className="field-block">
-                      <span>Edit template code</span>
+                      <span>{t('competition.stageBuilder.editTemplateCode')}</span>
                       <input
                         value={editDraft.templateCode}
                         onChange={(event) =>
@@ -1948,14 +2086,14 @@ function TemplateLibrarySection(input: {
                       />
                     </label>
                     <label className="field-block">
-                      <span>Edit template name</span>
+                      <span>{t('competition.stageBuilder.editTemplateName')}</span>
                       <input
                         value={editDraft.templateName}
                         onChange={(event) => updateEditDraft('templateName', event.target.value)}
                       />
                     </label>
                     <label className="field-block field-block-full">
-                      <span>Edit template description</span>
+                      <span>{t('competition.stageBuilder.editTemplateDescription')}</span>
                       <input
                         value={editDraft.description}
                         onChange={(event) => updateEditDraft('description', event.target.value)}
@@ -1975,7 +2113,7 @@ function TemplateLibrarySection(input: {
                     ))}
                   </div>
                   {editValidationMessage ? (
-                    <p className="validation-copy">{editValidationMessage}</p>
+                    <p className="validation-copy">{t(editValidationMessage)}</p>
                   ) : null}
                   <div className="action-cluster">
                     <button
@@ -1984,14 +2122,14 @@ function TemplateLibrarySection(input: {
                       disabled={Boolean(editValidationMessage) || input.isPending}
                       onClick={submitEditDraft}
                     >
-                      Save template
+                      {t('competition.stageBuilder.saveTemplate')}
                     </button>
                     <button
                       className="ghost-button"
                       type="button"
                       onClick={() => setEditDraft(null)}
                     >
-                      Cancel edit
+                      {t('competition.stageBuilder.cancelEdit')}
                     </button>
                   </div>
                 </div>
@@ -2001,7 +2139,7 @@ function TemplateLibrarySection(input: {
                 <div className="stacked-row">
                   <div className="form-grid">
                     <label className="field-block">
-                      <span>Clone template code</span>
+                      <span>{t('competition.stageBuilder.cloneTemplateCode')}</span>
                       <input
                         value={cloneDraft.templateCode}
                         onChange={(event) =>
@@ -2010,14 +2148,14 @@ function TemplateLibrarySection(input: {
                       />
                     </label>
                     <label className="field-block">
-                      <span>Clone template name</span>
+                      <span>{t('competition.stageBuilder.cloneTemplateName')}</span>
                       <input
                         value={cloneDraft.templateName}
                         onChange={(event) => updateCloneDraft('templateName', event.target.value)}
                       />
                     </label>
                     <label className="field-block field-block-full">
-                      <span>Clone template description</span>
+                      <span>{t('competition.stageBuilder.cloneTemplateDescription')}</span>
                       <input
                         value={cloneDraft.description}
                         onChange={(event) => updateCloneDraft('description', event.target.value)}
@@ -2025,7 +2163,7 @@ function TemplateLibrarySection(input: {
                     </label>
                   </div>
                   {cloneValidationMessage ? (
-                    <p className="validation-copy">{cloneValidationMessage}</p>
+                    <p className="validation-copy">{t(cloneValidationMessage)}</p>
                   ) : null}
                   <div className="action-cluster">
                     <button
@@ -2034,14 +2172,14 @@ function TemplateLibrarySection(input: {
                       disabled={Boolean(cloneValidationMessage) || input.isPending}
                       onClick={submitCloneDraft}
                     >
-                      Clone template
+                      {t('competition.stageBuilder.cloneTemplate')}
                     </button>
                     <button
                       className="ghost-button"
                       type="button"
                       onClick={() => setCloneDraft(null)}
                     >
-                      Cancel clone
+                      {t('competition.stageBuilder.cancelClone')}
                     </button>
                   </div>
                 </div>
@@ -2057,7 +2195,7 @@ function TemplateLibrarySection(input: {
                     setEditDraft(createTemplateEditDraft(template))
                   }}
                 >
-                  Edit {template.templateCode}
+                  {t('competition.stageBuilder.editTemplateButton', { templateCode: template.templateCode })}
                 </button>
                 <button
                   className="ghost-button"
@@ -2068,7 +2206,7 @@ function TemplateLibrarySection(input: {
                     setCloneDraft(createTemplateCloneDraft(template))
                   }}
                 >
-                  Clone {template.templateCode}
+                  {t('competition.stageBuilder.cloneTemplateButton', { templateCode: template.templateCode })}
                 </button>
                 {template.isActive ? (
                   <button
@@ -2077,7 +2215,7 @@ function TemplateLibrarySection(input: {
                     disabled={input.isPending}
                     onClick={() => input.onDeactivate(template.templateId)}
                   >
-                    Deactivate {template.templateCode}
+                    {t('competition.stageBuilder.deactivateTemplateButton', { templateCode: template.templateCode })}
                   </button>
                 ) : null}
               </div>
@@ -2087,12 +2225,12 @@ function TemplateLibrarySection(input: {
       ) : null}
 
       {input.feedback ? (
-        <ScreenState title={input.feedback} copy="Template library is refreshed." />
+        <ScreenState title={input.feedback} copy={t('competition.stageBuilder.templateLibraryRefreshCopy')} />
       ) : null}
 
       {input.error ? (
         <ScreenState
-          title="Template library action failed"
+          title={t('competition.stageBuilder.templateLibraryActionFailedTitle')}
           copy={getErrorMessage(input.error)}
           tone="error"
         />
@@ -2107,39 +2245,46 @@ function TemplateBuilderSection(input: {
   feedback: string | null
   isPending: boolean
   stores: AuthLookupStore[]
-  validationMessage: string | null
+  validationMessage: TranslationKey | null
   onSubmit: () => void
   onToggleStore: (storeId: string) => void
   onUpdate: (field: keyof Omit<TemplateDraft, 'storeIds'>, value: string) => void
 }) {
+  const { t } = useLocalization()
+
   return (
     <article className="stacked-row stage-template-builder">
       <div className="stacked-row-head">
         <div>
-          <strong>Team template</strong>
-          <p className="queue-subtitle">Reusable store groups for future stages.</p>
+          <strong>{t('competition.stageBuilder.teamTemplateTitle')}</strong>
+          <p className="queue-subtitle">{t('competition.stageBuilder.teamTemplateCopy')}</p>
         </div>
         <StatusPill tone={input.draft.storeIds.length > 0 ? 'accent' : 'warning'}>
-          {`${input.draft.storeIds.length} stores`}
+          {formatCount(
+            input.draft.storeIds.length,
+            'competition.stageBuilder.count.store',
+            'competition.stageBuilder.count.stores',
+            t,
+          )}
         </StatusPill>
       </div>
       <div className="form-grid">
         <label className="field-block">
-          <span>Template code</span>
+          <span>{t('competition.stageBuilder.templateCode')}</span>
           <input
             value={input.draft.templateCode}
             onChange={(event) => input.onUpdate('templateCode', normalizeCode(event.target.value))}
           />
         </label>
         <label className="field-block">
-          <span>Template name</span>
+          <span>{t('competition.stageBuilder.templateName')}</span>
           <input
             value={input.draft.templateName}
             onChange={(event) => input.onUpdate('templateName', event.target.value)}
           />
         </label>
         <label className="field-block field-block-full">
-          <span>Template description</span>
+          <span>{t('competition.stageBuilder.templateDescription')}</span>
           <input
             value={input.draft.description}
             onChange={(event) => input.onUpdate('description', event.target.value)}
@@ -2159,7 +2304,7 @@ function TemplateBuilderSection(input: {
         ))}
       </div>
       {input.validationMessage ? (
-        <p className="validation-copy">{input.validationMessage}</p>
+        <p className="validation-copy">{t(input.validationMessage)}</p>
       ) : null}
       <div className="action-cluster">
         <button
@@ -2169,13 +2314,13 @@ function TemplateBuilderSection(input: {
           onClick={input.onSubmit}
         >
           <PlusCircle size={16} />
-          Create template
+          {t('competition.stageBuilder.createTemplate')}
         </button>
       </div>
-      {input.feedback ? <ScreenState title={input.feedback} copy="Template list is refreshed." /> : null}
+      {input.feedback ? <ScreenState title={input.feedback} copy={t('competition.stageBuilder.templateListRefreshCopy')} /> : null}
       {input.error ? (
         <ScreenState
-          title="Template could not be created"
+          title={t('competition.stageBuilder.templateCreateErrorTitle')}
           copy={getErrorMessage(input.error)}
           tone="error"
         />
