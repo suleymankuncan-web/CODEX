@@ -22,6 +22,7 @@ const localizationFiles = [
   'src/features/localization/messages/admin-targets.ts',
   'src/features/localization/messages/common.ts',
   'src/features/localization/messages/competition.ts',
+  'src/features/localization/messages/import-batch-detail.ts',
   'src/features/localization/messages/reports-checklists.ts',
   'src/features/localization/messages/reports-kpis.ts',
   'src/features/localization/messages/reports-summary.ts',
