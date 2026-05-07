@@ -26,11 +26,14 @@ import type {
   MasterDataBootstrapPromotionResponse,
   MasterDataBootstrapRow,
 } from '../features/integrations/api'
+import type { TranslateFunction } from '../features/localization/dictionary'
+import { useLocalization } from '../features/localization/useLocalization'
 import { formatDateTime, getErrorMessage } from '../lib/format'
 
 const PAGE_SIZE = 20
 
 export function MasterDataBootstrapPage() {
+  const { locale, t } = useLocalization()
   const params = useParams()
   const batchId = params.batchId ?? null
   const [search, setSearch] = useState('')
@@ -105,28 +108,41 @@ export function MasterDataBootstrapPage() {
   }, [batchId, batches, summary])
 
   if (batchesQuery.isLoading) {
-    return <ScreenState title="Loading master data" copy="Pulling bootstrap batches and review state." />
+    return <ScreenState title={t('adminMasterData.loadingTitle')} copy={t('adminMasterData.loadingCopy')} />
   }
 
   if (batchesQuery.isError) {
-    return <ScreenState title="Master data bootstrap unavailable" copy={getErrorMessage(batchesQuery.error)} tone="error" />
+    return (
+      <ScreenState
+        title={t('adminMasterData.errorTitle')}
+        copy={getErrorMessage(batchesQuery.error)}
+        tone="error"
+      />
+    )
   }
 
   return (
     <section className="page-stack">
       <section className="hero-panel">
         <div>
-          <div className="eyebrow">Master Data</div>
-          <h2 className="hero-title">Master data bootstrap</h2>
-          <p className="hero-copy">
-            Review staged store and personnel baseline files before they become live master data.
-            Row evidence and sanitized promotion evidence stay visible after the command runs.
-          </p>
+          <div className="eyebrow">{t('adminMasterData.heroEyebrow')}</div>
+          <h2 className="hero-title">{t('adminMasterData.title')}</h2>
+          <p className="hero-copy">{t('adminMasterData.heroCopy')}</p>
         </div>
         <div className="hero-metrics">
-          <MetricAccent label="Batches" value={String(batchesQuery.data?.meta.total ?? 0)} />
-          <MetricAccent label="Selected" value={selectedBatch?.bootstrapEntity ?? 'none'} />
-          <MetricAccent label="Readiness" value={selectedBatch?.readiness ?? selectedBatch?.batchStatus ?? 'none'} />
+          <MetricAccent label={t('adminMasterData.batches')} value={String(batchesQuery.data?.meta.total ?? 0)} />
+          <MetricAccent
+            label={t('adminMasterData.selected')}
+            value={selectedBatch ? formatMasterDataEntity(selectedBatch.bootstrapEntity, t) : t('adminMasterData.none')}
+          />
+          <MetricAccent
+            label={t('adminMasterData.readiness')}
+            value={
+              selectedBatch
+                ? formatMasterDataState(selectedBatch.readiness ?? selectedBatch.batchStatus, t)
+                : t('adminMasterData.none')
+            }
+          />
         </div>
       </section>
 
@@ -137,7 +153,7 @@ export function MasterDataBootstrapPage() {
             <div className="lineage-chip-list" aria-label="Promotion command result">
               {promotionResult.promotedRows.map((row) => (
                 <div className="lineage-chip" key={row.rowId}>
-                  <span>Promoted row</span>
+                  <span>{t('adminMasterData.promotedRow')}</span>
                   <code className="lineage-code">
                     {row.rowId} / {row.promotedEntityId}
                     {row.assignmentId ? ` / ${row.assignmentId}` : ''}
@@ -152,36 +168,34 @@ export function MasterDataBootstrapPage() {
       <section className="panel">
         <div className="panel-heading panel-heading-spread">
           <div>
-            <div className="eyebrow">Review queue</div>
-            <h3>Bootstrap batches</h3>
-            <p className="panel-copy">
-              Open a batch to inspect row evidence, dry-run evidence, readiness counters, and promotion state.
-            </p>
+            <div className="eyebrow">{t('adminMasterData.reviewQueue')}</div>
+            <h3>{t('adminMasterData.bootstrapBatches')}</h3>
+            <p className="panel-copy">{t('adminMasterData.reviewQueueCopy')}</p>
           </div>
           <div className="toolbar-cluster">
             <label className="search-field">
-              <span className="sr-only">Search bootstrap batches</span>
+              <span className="sr-only">{t('adminMasterData.searchBatches')}</span>
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search source, file, batch"
+                placeholder={t('adminMasterData.searchPlaceholder')}
               />
             </label>
             <label className="control-select">
-              <span className="sr-only">Entity filter</span>
+              <span className="sr-only">{t('adminMasterData.entityFilter')}</span>
               <select
                 value={entityFilter}
                 onChange={(event) =>
                   setEntityFilter(event.target.value as 'all' | MasterDataBootstrapEntity)
                 }
               >
-                <option value="all">All entities</option>
-                <option value="store">Stores</option>
-                <option value="personnel">Personnel</option>
+                <option value="all">{t('adminMasterData.allEntities')}</option>
+                <option value="store">{t('adminMasterData.stores')}</option>
+                <option value="personnel">{t('adminMasterData.personnel')}</option>
               </select>
             </label>
             <label className="control-select">
-              <span className="sr-only">Readiness filter</span>
+              <span className="sr-only">{t('adminMasterData.readinessFilter')}</span>
               <select
                 value={readinessFilter}
                 onChange={(event) =>
@@ -195,11 +209,11 @@ export function MasterDataBootstrapPage() {
                   )
                 }
               >
-                <option value="all">All readiness</option>
-                <option value="needs_validation">Needs validation</option>
-                <option value="needs_review">Needs review</option>
-                <option value="ready_to_promote">Ready to promote</option>
-                <option value="closed">Closed</option>
+                <option value="all">{t('adminMasterData.allReadiness')}</option>
+                <option value="needs_validation">{t('adminMasterData.needsValidation')}</option>
+                <option value="needs_review">{t('adminMasterData.needsReview')}</option>
+                <option value="ready_to_promote">{t('adminMasterData.readyToPromote')}</option>
+                <option value="closed">{t('adminMasterData.closed')}</option>
               </select>
             </label>
           </div>
@@ -207,8 +221,8 @@ export function MasterDataBootstrapPage() {
 
         {batches.length === 0 ? (
           <EmptyState
-            title="No bootstrap batches found."
-            copy="Stage a store or personnel baseline batch before using this review surface."
+            title={t('adminMasterData.emptyBatchesTitle')}
+            copy={t('adminMasterData.emptyBatchesCopy')}
           />
         ) : (
           <div className="queue-list">
@@ -224,19 +238,23 @@ export function MasterDataBootstrapPage() {
                     <div className="queue-subtitle">{batch.batchId}</div>
                   </div>
                   <StatusPill tone={mapReadinessTone(batch.readiness ?? batch.batchStatus)}>
-                    {batch.readiness ?? batch.batchStatus}
+                    {formatMasterDataState(batch.readiness ?? batch.batchStatus, t)}
                   </StatusPill>
                 </div>
                 <div className="queue-meta">
-                  <span>{batch.bootstrapEntity}</span>
-                  <span>{batch.rowCount} rows</span>
-                  <span>{batch.fileReference ?? 'No file reference'}</span>
-                  <span>{formatDateTime(getBatchDisplayTimestamp(batch))}</span>
+                  <span>{formatMasterDataEntity(batch.bootstrapEntity, t)}</span>
+                  <span>{t('adminMasterData.rowsSuffix', { count: batch.rowCount })}</span>
+                  <span>{batch.fileReference ?? t('adminMasterData.noFileReference')}</span>
+                  <span>{formatDateTime(getBatchDisplayTimestamp(batch), locale)}</span>
                 </div>
                 <div className="queue-footer">
                   <span>
-                    valid {batch.validCount} / review {batch.needsReviewCount} / invalid{' '}
-                    {batch.invalidCount} / promoted {batch.promotedCount}
+                    {t('adminMasterData.queueFooter', {
+                      valid: batch.validCount,
+                      review: batch.needsReviewCount,
+                      invalid: batch.invalidCount,
+                      promoted: batch.promotedCount,
+                    })}
                   </span>
                   <ArrowRight size={16} />
                 </div>
@@ -298,54 +316,83 @@ function BatchDetailPanel(input: {
   onValidate: () => void
   onPromote: () => void
 }) {
+  const { t } = useLocalization()
+
   if (input.detailLoading || input.readinessLoading) {
-    return <ScreenState title="Loading bootstrap batch" copy="Pulling row evidence and promotion readiness." />
+    return (
+      <ScreenState
+        title={t('adminMasterData.detailLoadingTitle')}
+        copy={t('adminMasterData.detailLoadingCopy')}
+      />
+    )
   }
 
   if (input.detailIsError) {
-    return <ScreenState title="Bootstrap batch unavailable" copy={getErrorMessage(input.detailError)} tone="error" />
+    return (
+      <ScreenState
+        title={t('adminMasterData.batchUnavailableTitle')}
+        copy={getErrorMessage(input.detailError)}
+        tone="error"
+      />
+    )
   }
 
   if (input.readinessIsError) {
-    return <ScreenState title="Promotion readiness unavailable" copy={getErrorMessage(input.readinessError)} tone="error" />
+    return (
+      <ScreenState
+        title={t('adminMasterData.readinessUnavailableTitle')}
+        copy={getErrorMessage(input.readinessError)}
+        tone="error"
+      />
+    )
   }
 
   if (!input.summary || !input.readiness) {
-    return <ScreenState title="Bootstrap batch unavailable" copy="The API did not return batch summary or readiness evidence." tone="error" />
+    return (
+      <ScreenState
+        title={t('adminMasterData.batchUnavailableTitle')}
+        copy={t('adminMasterData.missingEvidenceCopy')}
+        tone="error"
+      />
+    )
   }
 
   const promoteLabel =
-    input.summary.bootstrapEntity === 'store' ? 'Promote stores' : 'Promote personnel'
+    input.summary.bootstrapEntity === 'store'
+      ? t('adminMasterData.promoteStores')
+      : t('adminMasterData.promotePersonnel')
   const promotedLabel = `${input.summary.promotedCount} / ${input.summary.rowCount}`
 
   return (
     <>
       <section className="metric-grid">
         <MetricCard
-          title="Ready rows"
+          title={t('adminMasterData.readyRows')}
           value={input.readiness.readyCount}
-          note={`Next action: ${input.readiness.nextAction}`}
+          note={t('adminMasterData.nextAction', {
+            action: formatMasterDataState(input.readiness.nextAction, t),
+          })}
           icon={<ListChecks size={18} />}
           tone="accent"
         />
         <MetricCard
-          title="Promoted rows"
+          title={t('adminMasterData.promotedRows')}
           value={input.summary.promotedCount}
           note={promotedLabel}
           icon={<ShieldCheck size={18} />}
           tone="calm"
         />
         <MetricCard
-          title="Needs validation"
+          title={t('adminMasterData.needsValidationMetric')}
           value={input.readiness.needsValidationCount}
-          note="Run validation before promotion"
+          note={t('adminMasterData.needsValidationNote')}
           icon={<DatabaseZap size={18} />}
           tone="warning"
         />
         <MetricCard
-          title="Blocked rows"
+          title={t('adminMasterData.blockedRows')}
           value={input.readiness.blockedCount + input.readiness.needsReviewCount}
-          note="Review issue codes before promotion"
+          note={t('adminMasterData.blockedRowsNote')}
           icon={<UserCheck size={18} />}
           tone={input.readiness.blockedCount + input.readiness.needsReviewCount > 0 ? 'danger' : 'neutral'}
         />
@@ -355,34 +402,34 @@ function BatchDetailPanel(input: {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Selected batch</div>
+              <div className="eyebrow">{t('adminMasterData.selectedBatch')}</div>
               <h3>{input.summary.sourceLabel}</h3>
             </div>
             <StatusPill tone={mapReadinessTone(input.readiness.nextAction)}>
-              {input.readiness.nextAction}
+              {formatMasterDataState(input.readiness.nextAction, t)}
             </StatusPill>
           </div>
           <div className="key-grid">
-            <KeyValue label="Batch" value={input.batchId} />
-            <KeyValue label="Entity" value={input.summary.bootstrapEntity} />
-            <KeyValue label="Status" value={input.summary.batchStatus} />
-            <KeyValue label="Readiness" value={input.readiness.canPromote ? 'can promote' : 'blocked'} />
-            <KeyValue label="Promoted rows" value={promotedLabel} />
-            <KeyValue label="File" value={input.summary.fileReference ?? 'No file reference'} />
+            <KeyValue label={t('adminMasterData.batch')} value={input.batchId} />
+            <KeyValue label={t('adminMasterData.entity')} value={formatMasterDataEntity(input.summary.bootstrapEntity, t)} />
+            <KeyValue label={t('adminMasterData.status')} value={formatMasterDataState(input.summary.batchStatus, t)} />
+            <KeyValue
+              label={t('adminMasterData.readiness')}
+              value={input.readiness.canPromote ? t('adminMasterData.canPromote') : t('adminMasterData.blocked')}
+            />
+            <KeyValue label={t('adminMasterData.promotedRows')} value={promotedLabel} />
+            <KeyValue label={t('adminMasterData.file')} value={input.summary.fileReference ?? t('adminMasterData.noFileReference')} />
           </div>
         </article>
 
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Actions</div>
-              <h3>Backend-owned decisions</h3>
+              <div className="eyebrow">{t('adminMasterData.actions')}</div>
+              <h3>{t('adminMasterData.backendDecisions')}</h3>
             </div>
           </div>
-          <p className="panel-copy">
-            This page does not calculate eligibility. It renders backend readiness, row evidence,
-            and dry-run evidence before calling the existing command endpoint for the selected entity type.
-          </p>
+          <p className="panel-copy">{t('adminMasterData.backendDecisionsCopy')}</p>
           <div className="toolbar-cluster">
             <button
               className="control-button"
@@ -390,7 +437,7 @@ function BatchDetailPanel(input: {
               disabled={input.validating}
               onClick={input.onValidate}
             >
-              {input.validating ? 'Validating...' : 'Validate batch'}
+              {input.validating ? t('adminMasterData.validating') : t('adminMasterData.validateBatch')}
             </button>
             <button
               className="control-button"
@@ -398,11 +445,11 @@ function BatchDetailPanel(input: {
               disabled={!input.readiness.canPromote || input.promoting}
               onClick={input.onPromote}
             >
-              {input.promoting ? 'Promoting...' : promoteLabel}
+              {input.promoting ? t('adminMasterData.promoting') : promoteLabel}
             </button>
             {!input.readiness.canPromote ? (
               <span className="inline-state inline-state-warning">
-                Promotion is disabled until readiness is clean.
+                {t('adminMasterData.promotionDisabled')}
               </span>
             ) : null}
           </div>
@@ -412,15 +459,13 @@ function BatchDetailPanel(input: {
       <section className="panel" aria-label="Master data promotion dry-run evidence">
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Dry-run</div>
-            <h3>Promotion dry-run evidence</h3>
-            <p className="panel-copy">
-              Dry-run evidence only. No rows are promoted from this panel; promotion still requires the explicit command.
-            </p>
+            <div className="eyebrow">{t('adminMasterData.dryRun')}</div>
+            <h3>{t('adminMasterData.dryRunTitle')}</h3>
+            <p className="panel-copy">{t('adminMasterData.dryRunCopy')}</p>
           </div>
         </div>
         {input.readinessRows.length === 0 ? (
-          <EmptyState copy="No promotion readiness rows returned for this bootstrap batch." />
+          <EmptyState copy={t('adminMasterData.dryRunEmpty')} />
         ) : (
           <div className="stacked-table">
             {input.readinessRows.map((row) => (
@@ -428,14 +473,14 @@ function BatchDetailPanel(input: {
                 <div className="stacked-row-head">
                   <strong>#{row.rowNumber} {resolveDryRunRowLabel(row)}</strong>
                   <StatusPill tone={mapPromotionReadinessTone(row.promotionReadiness)}>
-                    {row.promotionReadiness}
+                    {formatMasterDataState(row.promotionReadiness, t)}
                   </StatusPill>
                 </div>
                 <div className="lineage-chip-list">
-                  <EvidenceChip label="Store code" value={row.sourceStoreCode} />
-                  <EvidenceChip label="Employee code" value={row.sourceEmployeeCode} />
-                  <EvidenceChip label="Promoted entity" value={row.promotedEntityId} />
-                  <EvidenceChip label="Block reason" value={row.blockReason} />
+                  <EvidenceChip label={t('adminMasterData.storeCode')} value={row.sourceStoreCode} />
+                  <EvidenceChip label={t('adminMasterData.employeeCode')} value={row.sourceEmployeeCode} />
+                  <EvidenceChip label={t('adminMasterData.promotedEntity')} value={row.promotedEntityId} />
+                  <EvidenceChip label={t('adminMasterData.blockReason')} value={row.blockReason} />
                 </div>
               </div>
             ))}
@@ -446,12 +491,12 @@ function BatchDetailPanel(input: {
       <section className="panel" aria-label="Master data bootstrap row evidence">
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Row evidence</div>
-            <h3>Resolved and promoted rows</h3>
+            <div className="eyebrow">{t('adminMasterData.rowEvidence')}</div>
+            <h3>{t('adminMasterData.rowEvidenceTitle')}</h3>
           </div>
         </div>
         {input.rows.length === 0 ? (
-          <EmptyState copy="No staged rows returned for this bootstrap batch." />
+          <EmptyState copy={t('adminMasterData.rowEvidenceEmpty')} />
         ) : (
           <div className="stacked-table">
             {input.rows.map((row) => (
@@ -461,7 +506,7 @@ function BatchDetailPanel(input: {
                     #{row.rowNumber} {resolveRowName(row)}
                   </strong>
                   <StatusPill tone={mapValidationTone(row.validationStatus)}>
-                    {row.validationStatus}
+                    {formatMasterDataState(row.validationStatus, t)}
                   </StatusPill>
                   {row.issueCode ? (
                     <span className="status-pill status-pill-warning">{row.issueCode}</span>
@@ -469,12 +514,12 @@ function BatchDetailPanel(input: {
                 </div>
                 {row.issueMessage ? <p>{row.issueMessage}</p> : null}
                 <div className="lineage-chip-list">
-                  <EvidenceChip label="Store code" value={row.sourceStoreCode} />
-                  <EvidenceChip label="Employee code" value={row.sourceEmployeeCode} />
-                  <EvidenceChip label="Resolved store" value={row.resolvedStoreId} />
-                  <EvidenceChip label="Resolved employee" value={row.resolvedEmployeeId} />
-                  <EvidenceChip label="Resolved position" value={row.resolvedPositionId} />
-                  <EvidenceChip label="Promoted entity" value={row.promotedEntityId} />
+                  <EvidenceChip label={t('adminMasterData.storeCode')} value={row.sourceStoreCode} />
+                  <EvidenceChip label={t('adminMasterData.employeeCode')} value={row.sourceEmployeeCode} />
+                  <EvidenceChip label={t('adminMasterData.resolvedStore')} value={row.resolvedStoreId} />
+                  <EvidenceChip label={t('adminMasterData.resolvedEmployee')} value={row.resolvedEmployeeId} />
+                  <EvidenceChip label={t('adminMasterData.resolvedPosition')} value={row.resolvedPositionId} />
+                  <EvidenceChip label={t('adminMasterData.promotedEntity')} value={row.promotedEntityId} />
                 </div>
               </div>
             ))}
@@ -486,10 +531,12 @@ function BatchDetailPanel(input: {
 }
 
 function EvidenceChip(input: { label: string; value: string | null | undefined }) {
+  const { t } = useLocalization()
+
   return (
     <div className="lineage-chip">
       <span>{input.label}</span>
-      <code className="lineage-code">{input.value ?? 'not resolved'}</code>
+      <code className="lineage-code">{input.value ?? t('adminMasterData.notResolved')}</code>
     </div>
   )
 }
@@ -512,6 +559,54 @@ function resolveDryRunRowLabel(
   row: MasterDataBootstrapPromotionReadinessResponse['rows']['items'][number],
 ) {
   return row.sourceEmployeeCode ?? row.sourceStoreCode ?? row.rowId
+}
+
+function formatMasterDataEntity(entity: MasterDataBootstrapEntity, t: TranslateFunction) {
+  switch (entity) {
+    case 'store':
+      return t('adminMasterData.entity.store')
+    case 'personnel':
+      return t('adminMasterData.entity.personnel')
+    default:
+      return entity
+  }
+}
+
+function formatMasterDataState(value: string, t: TranslateFunction) {
+  switch (value) {
+    case 'ready_to_promote':
+      return t('adminMasterData.status.ready_to_promote')
+    case 'promote_ready_rows':
+      return t('adminMasterData.status.promote_ready_rows')
+    case 'closed':
+      return t('adminMasterData.status.closed')
+    case 'promoted':
+      return t('adminMasterData.status.promoted')
+    case 'already_closed':
+      return t('adminMasterData.status.already_closed')
+    case 'needs_review':
+      return t('adminMasterData.status.needs_review')
+    case 'review_rows':
+      return t('adminMasterData.status.review_rows')
+    case 'needs_validation':
+      return t('adminMasterData.status.needs_validation')
+    case 'blocked':
+      return t('adminMasterData.status.blocked')
+    case 'ready':
+      return t('adminMasterData.status.ready')
+    case 'already_promoted':
+      return t('adminMasterData.status.already_promoted')
+    case 'waiting_batch':
+      return t('adminMasterData.status.waiting_batch')
+    case 'valid':
+      return t('adminMasterData.status.valid')
+    case 'pending':
+      return t('adminMasterData.status.pending')
+    case 'invalid':
+      return t('adminMasterData.status.invalid')
+    default:
+      return value
+  }
 }
 
 function mapPromotionReadinessTone(value: string) {

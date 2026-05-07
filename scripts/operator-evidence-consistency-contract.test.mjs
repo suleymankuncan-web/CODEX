@@ -20,6 +20,8 @@ const activeNextActions = readText('docs/plans/active-next-actions.md')
 const debtLedger = readText('docs/plans/project-debt-ledger.md')
 const importBatchDetailPage = readText('admin-web/src/pages/ImportBatchDetailPage.tsx')
 const masterDataBootstrapPage = readText('admin-web/src/pages/MasterDataBootstrapPage.tsx')
+const masterDataMessages = readText('admin-web/src/features/localization/messages/admin-master-data.ts')
+const adminRoutingSpec = readText('admin-web/e2e/admin-routing.spec.ts')
 const integrationSurfacesSpec = readText('admin-web/e2e/integration-surfaces.spec.ts')
 
 test('operator evidence consistency keeps the no-new-workflow boundary', () => {
@@ -60,7 +62,22 @@ test('operator evidence copy is visible on existing admin surfaces', () => {
     'Open a batch to inspect row evidence, dry-run evidence, readiness counters, and promotion state.',
     'Dry-run evidence only. No rows are promoted from this panel; promotion still requires the explicit command.',
   ]) {
+    requireText(masterDataMessages, phrase)
+  }
+
+  for (const phrase of ['adminMasterData.reviewQueueCopy', 'adminMasterData.dryRunCopy']) {
     requireText(masterDataBootstrapPage, phrase)
+  }
+
+  requireText(
+    adminRoutingSpec,
+    'Open a batch to inspect row evidence, dry-run evidence, readiness counters, and promotion state.',
+  )
+
+  for (const phrase of [
+    'Satır kanıtı, prova kanıtı, hazırlık sayaçları ve aktarım durumunu incelemek için bir parti aç.',
+    'Yalnızca prova kanıtı. Bu panelden satır aktarılmaz; aktarım hâlâ açık komut gerektirir.',
+  ]) {
     requireText(integrationSurfacesSpec, phrase)
   }
 })
