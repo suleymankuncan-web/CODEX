@@ -1,13 +1,15 @@
-export function resolveAuditBackLink(pathname: string) {
+import type { TranslateFunction } from '../features/localization/dictionary'
+
+export function resolveAuditBackLink(pathname: string, t: TranslateFunction) {
   if (pathname.startsWith('/admin/audit')) {
     return {
       to: '/admin/audit',
-      label: 'Back to audit center',
+      label: t('authAuditDetails.backToAuditCenter'),
     }
   }
 
   return {
     to: '/admin/auth',
-    label: 'Back to auth overview',
+    label: t('authAuditDetails.backToAuthOverview'),
   }
 }
