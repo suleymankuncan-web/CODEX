@@ -20,11 +20,11 @@ test.beforeEach(async ({ page }) => {
 test('admin KPI config page shows latest version metadata', async ({ page }) => {
   await page.goto('/admin/kpi-config')
 
-  await expect(page.getByText('Versioned schema')).toBeVisible()
-  await expect(page.getByText('Active', { exact: true })).toBeVisible()
-  await expect(page.getByText('Latest version')).toBeVisible()
+  await expect(page.getByText('Sürümlü şema')).toBeVisible()
+  await expect(page.getByText('Aktif', { exact: true })).toBeVisible()
+  await expect(page.getByText('Son sürüm')).toBeVisible()
   await expect(page.getByText('v7')).toBeVisible()
-  await expect(page.getByText('Rollback not active in V1')).toBeVisible()
+  await expect(page.getByText('V1 için geri dönüş aktif değil')).toBeVisible()
 })
 
 test('snapshot runs page shows KPI config version for reporting context', async ({ page }) => {
