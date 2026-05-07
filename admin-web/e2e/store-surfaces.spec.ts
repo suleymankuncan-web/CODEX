@@ -263,7 +263,7 @@ test('store KPI highlights switches to English copy and persists locale', async 
 test('store shell exposes Turkish-first chrome and hides technical auth roles', async ({ page }) => {
   await page.goto('/store/me')
 
-  await expect(page.getByRole('main', { name: 'Store workspace' })).toBeVisible()
+  await expect(page.getByRole('main', { name: 'Mağaza çalışma alanı' })).toBeVisible()
   await expect(page.getByRole('heading', { name: /Mağaza kapsamlı işler için/i })).toBeVisible()
   await expect(page.getByText('Ön izleme', { exact: true })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Yarışmalar' })).toBeVisible()

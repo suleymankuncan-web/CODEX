@@ -93,6 +93,41 @@ test('admin shell switches chrome to English copy and persists locale', async ({
   await expect(page.getByText('Store Ops Control')).toBeVisible()
 })
 
+test('admin shell fallback states switch chrome to English copy and persist locale', async ({ page }) => {
+  await page.unroute('**/api/auth/session')
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({ json: auditorOnlySessionFixture })
+  })
+
+  await page.goto('/admin/auth')
+
+  const main = page.getByRole('main')
+  await expect(page.getByRole('navigation', { name: 'Birincil' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Bu rol için rota kullanılamaz' })).toBeVisible()
+  await expect(
+    main.getByText('Bu oturum kimliği doğrulandı, ancak mevcut rol seti bu yüzeye izin vermiyor. Bunun yerine /admin/audit yoluna dön.'),
+  ).toBeVisible()
+  await expect(main.getByText('Route not available for this role')).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText('Ãƒ')
+  await expect(page.locator('body')).not.toContainText('Ã„')
+  await expect(page.locator('body')).not.toContainText('Ã…')
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('navigation', { name: 'Primary' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Route not available for this role' })).toBeVisible()
+  await expect(
+    main.getByText('This session is authenticated, but the current role set does not permit this surface. Return to /admin/audit instead.'),
+  ).toBeVisible()
+  await expect(main.getByText('Bu rol için rota kullanılamaz')).toHaveCount(0)
+
+  await page.reload()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(main.getByRole('heading', { name: 'Route not available for this role' })).toBeVisible()
+})
+
 test('audit center user detail links stay inside the audit namespace', async ({ page }) => {
   await page.goto('/admin/audit')
 
@@ -472,6 +507,14 @@ const authSessionFixture = {
     regionCount: 0,
     storeCount: 0,
     assignedStoreCount: 0,
+  },
+}
+
+const auditorOnlySessionFixture = {
+  ...authSessionFixture,
+  user: {
+    ...authSessionFixture.user,
+    roleCodes: ['AUDITOR'],
   },
 }
 
