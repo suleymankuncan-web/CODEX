@@ -22,14 +22,15 @@ import {
 import {
   challengeMetricOptions,
   feedTargetRouteOptions,
-  formatFeedPostType,
-  formatFeedScope,
   type FeedPost,
   type FeedPostType,
   type FeedPublishStatus,
   type FeedVisibilityScopeType,
 } from '../features/feed/contracts'
-import { formatDate, formatDateTime, formatState, getErrorMessage } from '../lib/format'
+import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
+import { useLocalization } from '../features/localization/useLocalization'
+import { formatDate, formatDateTime, getErrorMessage } from '../lib/format'
+import type { AppLocale } from '../lib/i18n'
 
 type FeedFormState = {
   postType: FeedPostType
@@ -48,7 +49,43 @@ type FeedFormState = {
   challengeEndsOn: string
 }
 
+const feedPostTypeLabelKeys: Record<FeedPostType, TranslationKey> = {
+  announcement: 'storeFeed.type.announcement',
+  challenge: 'storeFeed.type.challenge',
+}
+
+const feedScopeLabelKeys: Record<FeedVisibilityScopeType, TranslationKey> = {
+  company: 'storeFeed.scope.company',
+  region: 'storeFeed.scope.region',
+  store: 'storeFeed.scope.store',
+}
+
+const feedStatusLabelKeys: Record<FeedPublishStatus, TranslationKey> = {
+  draft: 'adminFeed.status.draft',
+  published: 'adminFeed.status.published',
+  archived: 'adminFeed.status.archived',
+}
+
+function formatFeedPostTypeLabel(input: FeedPostType, t: TranslateFunction) {
+  return t(feedPostTypeLabelKeys[input])
+}
+
+function formatFeedScopeLabel(input: FeedVisibilityScopeType, t: TranslateFunction) {
+  return t(feedScopeLabelKeys[input])
+}
+
+function formatFeedStatusLabel(input: FeedPublishStatus, t: TranslateFunction) {
+  return t(feedStatusLabelKeys[input])
+}
+
+function formatTargetRouteLabel(route: string, t: TranslateFunction) {
+  if (route === '/store/rankings') return t('adminFeed.targetRoute.rankings')
+  if (route === '/store/me') return t('adminFeed.targetRoute.me')
+  return route
+}
+
 export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null }) {
+  const { locale, t } = useLocalization()
   const roles = input.authSummary?.user.roleCodes ?? []
   const isGlobalWriter = roles.includes('SUPER_ADMIN') || roles.includes('HR_ADMIN')
   const isRegionManagerOnly = !isGlobalWriter && roles.includes('REGION_MANAGER')
@@ -130,8 +167,8 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
   if (!isGlobalWriter && !isRegionManagerOnly) {
     return (
       <ScreenState
-        title="Duyurular unavailable"
-        copy="Bu yüzey HR admin, super admin veya bölge yöneticisi rolü gerektirir."
+        title={t('adminFeed.unavailableTitle')}
+        copy={t('adminFeed.unavailableCopy')}
         tone="error"
       />
     )
@@ -140,21 +177,21 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
   if (isRegionManagerOnly && !defaultRegionId) {
     return (
       <ScreenState
-        title="Region scope missing"
-        copy="Bölge yöneticisi duyuru yayınlamak için token/read scope içinde en az bir region id taşımalı."
+        title={t('adminFeed.regionMissingTitle')}
+        copy={t('adminFeed.regionMissingCopy')}
         tone="error"
       />
     )
   }
 
   if (feedQuery.isLoading) {
-    return <ScreenState title="Loading feed" copy="Duyuru kütüphanesi hazırlanıyor." />
+    return <ScreenState title={t('adminFeed.loadingTitle')} copy={t('adminFeed.loadingCopy')} />
   }
 
   if (feedQuery.isError) {
     return (
       <ScreenState
-        title="Duyurular açılamadı"
+        title={t('adminFeed.errorTitle')}
         copy={getErrorMessage(feedQuery.error)}
         tone="error"
       />
@@ -191,25 +228,22 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
     <section className="page-stack">
       <section className="hero-panel">
         <div>
-          <div className="eyebrow">Duyurular</div>
-          <h2 className="hero-title">Company and region announcements in one controlled feed.</h2>
-          <p className="hero-copy">
-            Challenge postları mevcut performans ve sıralama yüzeylerine link verir; skor veya stage
-            üretmez.
-          </p>
+          <div className="eyebrow">{t('adminFeed.heroEyebrow')}</div>
+          <h2 className="hero-title">{t('adminFeed.heroTitle')}</h2>
+          <p className="hero-copy">{t('adminFeed.heroCopy')}</p>
         </div>
         <div className="hero-metrics">
-          <MetricAccent label="Route" value="/admin/feed" />
-          <MetricAccent label="Posts" value={String(posts.length)} />
-          <MetricAccent label="Published" value={String(publishedCount)} />
+          <MetricAccent label={t('adminFeed.route')} value="/admin/feed" />
+          <MetricAccent label={t('adminFeed.posts')} value={String(posts.length)} />
+          <MetricAccent label={t('adminFeed.published')} value={String(publishedCount)} />
         </div>
       </section>
 
       <section className="metric-grid">
-        <MetricCard title="Total posts" value={posts.length} note="Draft, published ve archived toplamı." icon={<Megaphone size={18} />} tone="accent" />
-        <MetricCard title="Pinned" value={pinnedCount} note="Store home üzerinde öne çıkan duyurular." icon={<Pin size={18} />} tone={pinnedCount > 0 ? 'warning' : 'neutral'} />
-        <MetricCard title="Challenges" value={challengeCount} note="Sadece duyuru ve yönlendirme; skor motoru değil." icon={<Trophy size={18} />} tone="calm" />
-        <MetricCard title="Published" value={publishedCount} note="Store feed tarafından okunabilir kayıtlar." icon={<Send size={18} />} tone="accent" />
+        <MetricCard title={t('adminFeed.totalPosts')} value={posts.length} note={t('adminFeed.totalPostsNote')} icon={<Megaphone size={18} />} tone="accent" />
+        <MetricCard title={t('adminFeed.pinned')} value={pinnedCount} note={t('adminFeed.pinnedNote')} icon={<Pin size={18} />} tone={pinnedCount > 0 ? 'warning' : 'neutral'} />
+        <MetricCard title={t('adminFeed.challenges')} value={challengeCount} note={t('adminFeed.challengesNote')} icon={<Trophy size={18} />} tone="calm" />
+        <MetricCard title={t('adminFeed.published')} value={publishedCount} note={t('adminFeed.publishedNote')} icon={<Send size={18} />} tone="accent" />
       </section>
 
       {notice ? <div className="shell-notice">{notice}</div> : null}
@@ -219,17 +253,17 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Composer</div>
-              <h3>Create feed post</h3>
+              <div className="eyebrow">{t('adminFeed.composerEyebrow')}</div>
+              <h3>{t('adminFeed.composerTitle')}</h3>
             </div>
             <StatusPill tone={form.postType === 'challenge' ? 'accent' : 'neutral'}>
-              {formatFeedPostType(form.postType)}
+              {formatFeedPostTypeLabel(form.postType, t)}
             </StatusPill>
           </div>
 
           <div className="form-grid">
             <label>
-              Type
+              {t('adminFeed.type')}
               <select
                 className="control-input"
                 value={form.postType}
@@ -241,12 +275,12 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
                   }))
                 }
               >
-                <option value="announcement">Announcement</option>
-                <option value="challenge">Challenge</option>
+                <option value="announcement">{formatFeedPostTypeLabel('announcement', t)}</option>
+                <option value="challenge">{formatFeedPostTypeLabel('challenge', t)}</option>
               </select>
             </label>
             <label>
-              Title
+              {t('adminFeed.title')}
               <input
                 className="control-input"
                 value={form.title}
@@ -254,7 +288,7 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
               />
             </label>
             <label>
-              Body
+              {t('adminFeed.body')}
               <textarea
                 className="control-input"
                 rows={4}
@@ -263,7 +297,7 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
               />
             </label>
             <label>
-              Scope
+              {t('adminFeed.scope')}
               <select
                 className="control-input"
                 value={form.visibilityScopeType}
@@ -276,21 +310,21 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
                   }))
                 }
               >
-                {isGlobalWriter ? <option value="company">Company</option> : null}
-                <option value="region">Region</option>
-                {isGlobalWriter ? <option value="store">Store</option> : null}
+                {isGlobalWriter ? <option value="company">{formatFeedScopeLabel('company', t)}</option> : null}
+                <option value="region">{formatFeedScopeLabel('region', t)}</option>
+                {isGlobalWriter ? <option value="store">{formatFeedScopeLabel('store', t)}</option> : null}
               </select>
             </label>
             {form.visibilityScopeType !== 'company' ? (
               <label>
-                {formatFeedScope(form.visibilityScopeType)} id
+                {t('adminFeed.scopeId', { scope: formatFeedScopeLabel(form.visibilityScopeType, t) })}
                 <select
                   className="control-input"
                   value={form.scopeId}
                   disabled={isRegionManagerOnly}
                   onChange={(event) => setForm((current) => ({ ...current, scopeId: event.target.value }))}
                 >
-                  <option value="">Select scope</option>
+                  <option value="">{t('adminFeed.selectScope')}</option>
                   {form.visibilityScopeType === 'region'
                     ? regionOptions.map((option) => (
                         <option key={option.regionId} value={option.regionId}>
@@ -306,7 +340,7 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
               </label>
             ) : null}
             <label>
-              Link label
+              {t('adminFeed.linkLabel')}
               <input
                 className="control-input"
                 value={form.linkLabel}
@@ -315,7 +349,7 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
             </label>
             {form.postType === 'announcement' ? (
               <label>
-                Link URL
+                {t('adminFeed.linkUrl')}
                 <input
                   className="control-input"
                   value={form.linkUrl}
@@ -325,7 +359,7 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
               </label>
             ) : null}
             <label>
-              Starts at
+              {t('adminFeed.startsAt')}
               <input
                 className="control-input"
                 type="datetime-local"
@@ -334,7 +368,7 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
               />
             </label>
             <label>
-              Ends at
+              {t('adminFeed.endsAt')}
               <input
                 className="control-input"
                 type="datetime-local"
@@ -348,14 +382,14 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
                 checked={form.isPinned}
                 onChange={(event) => setForm((current) => ({ ...current, isPinned: event.target.checked }))}
               />
-              Pin post
+              {t('adminFeed.pinPost')}
             </label>
           </div>
 
           {form.postType === 'challenge' ? (
             <div className="form-grid">
               <label>
-                Metric
+                {t('adminFeed.metric')}
                 <select
                   className="control-input"
                   value={form.metricCode}
@@ -369,7 +403,7 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
                 </select>
               </label>
               <label>
-                Target route
+                {t('adminFeed.targetRoute')}
                 <select
                   className="control-input"
                   value={form.targetRoute}
@@ -377,13 +411,13 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
                 >
                   {feedTargetRouteOptions.map((option) => (
                     <option key={option.route} value={option.route}>
-                      {option.label}
+                      {formatTargetRouteLabel(option.route, t)}
                     </option>
                   ))}
                 </select>
               </label>
               <label>
-                Challenge starts
+                {t('adminFeed.challengeStarts')}
                 <input
                   className="control-input"
                   type="date"
@@ -392,7 +426,7 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
                 />
               </label>
               <label>
-                Challenge ends
+                {t('adminFeed.challengeEnds')}
                 <input
                   className="control-input"
                   type="date"
@@ -410,7 +444,7 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
               disabled={createMutation.isPending}
               onClick={() => submitPost('draft')}
             >
-              Save draft
+              {t('adminFeed.saveDraft')}
             </button>
             <button
               className="control-button primary-control"
@@ -418,7 +452,7 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
               disabled={createMutation.isPending}
               onClick={() => submitPost('published')}
             >
-              Publish post
+              {t('adminFeed.publishPost')}
             </button>
           </div>
         </article>
@@ -426,15 +460,15 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Guardrail</div>
-              <h3>Feed is not a scoring engine</h3>
+              <div className="eyebrow">{t('adminFeed.guardrailEyebrow')}</div>
+              <h3>{t('adminFeed.guardrailTitle')}</h3>
             </div>
           </div>
           <div className="key-grid">
-            <KeyValue label="Challenge target" value="/store/rankings or /store/me" />
-            <KeyValue label="Score ownership" value="Performance/ranking modules" />
-            <KeyValue label="Competition stages" value="No mutation from feed" />
-            <KeyValue label="Region manager" value="Own region only" />
+            <KeyValue label={t('adminFeed.challengeTarget')} value="/store/rankings or /store/me" />
+            <KeyValue label={t('adminFeed.scoreOwnership')} value={t('adminFeed.scoreOwnershipValue')} />
+            <KeyValue label={t('adminFeed.competitionStages')} value={t('adminFeed.competitionStagesValue')} />
+            <KeyValue label={t('adminFeed.regionManager')} value={t('adminFeed.regionManagerValue')} />
           </div>
         </article>
       </section>
@@ -442,19 +476,21 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Post library</div>
-            <h3>Managed feed posts</h3>
+            <div className="eyebrow">{t('adminFeed.libraryEyebrow')}</div>
+            <h3>{t('adminFeed.libraryTitle')}</h3>
           </div>
         </div>
 
         {posts.length === 0 ? (
-          <EmptyState title="No feed posts yet" copy="İlk duyuru veya challenge postu oluşturulduğunda burada görünecek." />
+          <EmptyState title={t('adminFeed.emptyTitle')} copy={t('adminFeed.emptyCopy')} />
         ) : (
           <div className="stacked-table">
             {posts.map((post) => (
               <FeedAdminRow
                 key={post.feedPostId}
                 post={post}
+                locale={locale}
+                t={t}
                 onPublish={() => publishMutation.mutate(post.feedPostId)}
                 onPin={() => pinMutation.mutate(post.feedPostId)}
                 onUnpin={() => unpinMutation.mutate(post.feedPostId)}
@@ -470,6 +506,8 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
 
 function FeedAdminRow(input: {
   post: FeedPost
+  locale: AppLocale
+  t: TranslateFunction
   onPublish: () => void
   onPin: () => void
   onUnpin: () => void
@@ -484,50 +522,59 @@ function FeedAdminRow(input: {
         </div>
         <div className="action-cluster">
           <StatusPill tone={input.post.postType === 'challenge' ? 'accent' : 'neutral'}>
-            {formatFeedPostType(input.post.postType)}
+            {formatFeedPostTypeLabel(input.post.postType, input.t)}
           </StatusPill>
           <StatusPill tone={mapStatusTone(input.post.publishStatus)}>
-            {formatState(input.post.publishStatus)}
+            {formatFeedStatusLabel(input.post.publishStatus, input.t)}
           </StatusPill>
-          {input.post.isPinned ? <StatusPill tone="warning">Pinned</StatusPill> : null}
+          {input.post.isPinned ? <StatusPill tone="warning">{input.t('adminFeed.pinned')}</StatusPill> : null}
         </div>
       </div>
 
       <div className="key-grid">
-        <KeyValue label="Scope" value={`${formatFeedScope(input.post.visibilityScopeType)} ${input.post.visibilityScopeIds.join(', ')}`} />
-        <KeyValue label="Updated" value={formatDateTime(input.post.updatedAt)} />
-        <KeyValue label="Published" value={input.post.publishedAt ? formatDateTime(input.post.publishedAt) : 'Draft'} />
-        <KeyValue label="Metric" value={input.post.metricLabel ?? 'No metric'} />
         <KeyValue
-          label="Challenge window"
+          label={input.t('adminFeed.scope')}
+          value={input.t('adminFeed.scopeValue', {
+            scope: formatFeedScopeLabel(input.post.visibilityScopeType, input.t),
+            ids: input.post.visibilityScopeIds.join(', '),
+          })}
+        />
+        <KeyValue label={input.t('adminFeed.updated')} value={formatDateTime(input.post.updatedAt, input.locale)} />
+        <KeyValue
+          label={input.t('adminFeed.published')}
+          value={input.post.publishedAt ? formatDateTime(input.post.publishedAt, input.locale) : input.t('adminFeed.draft')}
+        />
+        <KeyValue label={input.t('adminFeed.metric')} value={input.post.metricLabel ?? input.t('storeFeed.noMetric')} />
+        <KeyValue
+          label={input.t('adminFeed.challengeWindow')}
           value={
             input.post.challengeStartsOn && input.post.challengeEndsOn
-              ? `${formatDate(input.post.challengeStartsOn)} - ${formatDate(input.post.challengeEndsOn)}`
-              : 'No challenge window'
+              ? `${formatDate(input.post.challengeStartsOn, input.locale)} - ${formatDate(input.post.challengeEndsOn, input.locale)}`
+              : input.t('adminFeed.noChallengeWindow')
           }
         />
-        <KeyValue label="Link" value={input.post.targetRoute ?? input.post.linkUrl ?? 'No link'} />
+        <KeyValue label={input.t('adminFeed.link')} value={input.post.targetRoute ?? input.post.linkUrl ?? input.t('storeFeed.noLink')} />
       </div>
 
       <div className="action-cluster">
         {input.post.publishStatus === 'draft' ? (
           <button className="control-button" type="button" onClick={input.onPublish}>
-            Publish
+            {input.t('adminFeed.publish')}
           </button>
         ) : null}
         {input.post.publishStatus !== 'archived' && !input.post.isPinned ? (
           <button className="control-button" type="button" onClick={input.onPin}>
-            Pin
+            {input.t('adminFeed.pin')}
           </button>
         ) : null}
         {input.post.publishStatus !== 'archived' && input.post.isPinned ? (
           <button className="control-button" type="button" onClick={input.onUnpin}>
-            Unpin
+            {input.t('adminFeed.unpin')}
           </button>
         ) : null}
         {input.post.publishStatus !== 'archived' ? (
           <button className="control-button" type="button" onClick={input.onArchive}>
-            Archive
+            {input.t('adminFeed.archive')}
           </button>
         ) : null}
       </div>
