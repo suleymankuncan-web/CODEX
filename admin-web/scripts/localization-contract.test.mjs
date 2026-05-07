@@ -12,6 +12,7 @@ const localizationFiles = [
   'src/features/localization/messages/admin-checklists.ts',
   'src/features/localization/messages/auth-audit-details.ts',
   'src/features/localization/messages/auth-catalog.ts',
+  'src/features/localization/messages/auth-flow.ts',
   'src/features/localization/messages/admin-integrations.ts',
   'src/features/localization/messages/admin-kpi-config.ts',
   'src/features/localization/messages/admin-master-data.ts',

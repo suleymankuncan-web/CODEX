@@ -1118,6 +1118,13 @@ code {
     linear-gradient(180deg, #f4f6f2 0%, #e8ede6 100%);
 }
 
+.auth-flow-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 auto 1rem;
+  max-width: 1180px;
+}
+
 .auth-hero-panel {
   background:
     linear-gradient(140deg, rgba(249, 255, 252, 0.96), rgba(236, 244, 255, 0.82)),

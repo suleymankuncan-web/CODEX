@@ -430,6 +430,9 @@ function AuthFlowShell(input: { shellState: ShellState; firstAllowedPath: string
 
   return (
     <div className="auth-flow-shell">
+      <div className="auth-flow-toolbar">
+        <LanguageToggle />
+      </div>
       <Suspense fallback={<RouteLoadingState />}>
         <Routes>
           <Route

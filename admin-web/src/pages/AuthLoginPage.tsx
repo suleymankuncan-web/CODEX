@@ -7,8 +7,10 @@ import { getAuthBootstrap } from '../features/auth/api'
 import { buildProviderLoginUrl, hasProviderLoginConfig } from '../features/auth/auth-flow'
 import { isClerkSessionProviderAvailable } from '../features/auth/clerk-config'
 import { ClerkLoginActions } from '../features/auth/clerk-session'
+import { useLocalization } from '../features/localization/useLocalization'
 
 export function AuthLoginPage() {
+  const { t } = useLocalization()
   const location = useLocation()
   const [searchParams] = useSearchParams()
   const [providerLoginUrl, setProviderLoginUrl] = useState<string | null>(null)
@@ -48,39 +50,36 @@ export function AuthLoginPage() {
     <section className="auth-flow-shell">
       <section className="hero-panel auth-hero-panel">
         <div>
-          <div className="eyebrow">Auth Entry</div>
-          <h2 className="hero-title">Real login will enter here before the app opens admin or store shells.</h2>
-          <p className="hero-copy">
-            This route is the Phase 7 entry point for real authentication. Clerk can now create
-            the browser session, while the backend still decides the real HR Axis roles and scope.
-          </p>
+          <div className="eyebrow">{t('authFlow.loginHeroEyebrow')}</div>
+          <h2 className="hero-title">{t('authFlow.loginHeroTitle')}</h2>
+          <p className="hero-copy">{t('authFlow.loginHeroCopy')}</p>
         </div>
         <div className="hero-metrics">
-          <MetricAccent label="Route" value="/auth/login" />
-          <MetricAccent label="Provider flow" value={providerReady ? 'Configured' : 'Needs env'} />
-          <MetricAccent label="Return to" value={returnTo} />
+          <MetricAccent label={t('authFlow.route')} value="/auth/login" />
+          <MetricAccent label={t('authFlow.providerFlow')} value={providerReady ? t('authFlow.configured') : t('authFlow.needsEnv')} />
+          <MetricAccent label={t('authFlow.returnTo')} value={returnTo} />
         </div>
       </section>
 
       <section className="metric-grid auth-metric-grid">
         <MetricCard
-          title="Real auth path"
+          title={t('authFlow.realAuthPath')}
           value={1}
-          note="This route now starts authorization code + PKCE when provider config is available."
+          note={t('authFlow.realAuthPathNote')}
           icon={<LogIn size={18} />}
           tone="accent"
         />
         <MetricCard
-          title="Shared contract"
+          title={t('authFlow.sharedContract')}
           value={1}
-          note="Admin and store shells will still share one bearer-token contract."
+          note={t('authFlow.sharedContractNote')}
           icon={<ShieldCheck size={18} />}
           tone="calm"
         />
         <MetricCard
-          title="Manual fallback"
+          title={t('authFlow.manualFallback')}
           value={1}
-          note="Session setup remains available while the provider flow is being introduced."
+          note={t('authFlow.manualFallbackNote')}
           icon={<KeyRound size={18} />}
           tone="warning"
         />
@@ -88,33 +87,33 @@ export function AuthLoginPage() {
 
       <section className="two-up-grid">
         <article className="panel">
-            <div className="panel-heading">
-              <div>
-                <div className="eyebrow">Current State</div>
-                <h3>What this route can do now</h3>
-              </div>
+          <div className="panel-heading">
+            <div>
+              <div className="eyebrow">{t('authFlow.currentState')}</div>
+              <h3>{t('authFlow.currentStateTitle')}</h3>
+            </div>
             <StatusPill tone={providerReady ? 'calm' : 'warning'}>
-              {providerReady ? 'Provider-ready' : 'Scaffolded'}
+              {providerReady ? t('authFlow.providerReady') : t('authFlow.scaffolded')}
             </StatusPill>
           </div>
           <div className="stacked-table">
             <div className="stacked-row">
               <div className="stacked-row-head">
-                <strong>Provider redirect</strong>
+                <strong>{t('authFlow.providerRedirect')}</strong>
               </div>
               <p>
                 {providerReady
                   ? clerkReady
-                    ? 'Clerk is configured, so this route can open the hosted Clerk sign-in flow and sync the resulting session token into the backend bearer contract.'
-                    : 'OIDC-style provider settings are present, so this route can hand the user off to the configured authorization endpoint.'
-                  : 'The provider contract is wired, but it still needs Clerk publishable key or OIDC env-backed authorization settings before this route can redirect for real.'}
+                    ? t('authFlow.providerRedirectClerk')
+                    : t('authFlow.providerRedirectOidc')
+                  : t('authFlow.providerRedirectNeedsEnv')}
               </p>
             </div>
             <div className="stacked-row">
               <div className="stacked-row-head">
-                <strong>Return path awareness</strong>
+                <strong>{t('authFlow.returnPathAwareness')}</strong>
               </div>
-              <p>The login entry can preserve a target shell path so the callback can send the user back into the correct surface after verification.</p>
+              <p>{t('authFlow.returnPathAwarenessCopy')}</p>
             </div>
           </div>
         </article>
@@ -122,8 +121,8 @@ export function AuthLoginPage() {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <div className="eyebrow">Available Actions</div>
-              <h3>Use the transition path that fits today</h3>
+              <div className="eyebrow">{t('authFlow.availableActions')}</div>
+              <h3>{t('authFlow.availableActionsTitle')}</h3>
             </div>
           </div>
           <div className="action-cluster">
@@ -131,27 +130,27 @@ export function AuthLoginPage() {
               <ClerkLoginActions returnTo={returnTo} />
             ) : providerLoginUrl ? (
               <a className="control-button auth-flow-link" href={providerLoginUrl}>
-                Start provider login
+                {t('authFlow.startProviderLogin')}
               </a>
             ) : null}
             <Link
               className="control-button auth-flow-link"
               to={`/auth/callback#access_token=demo-placeholder-token&state=${encodeURIComponent(returnTo)}`}
             >
-              Simulate callback route
+              {t('authFlow.simulateCallbackRoute')}
             </Link>
             <Link className="control-button auth-flow-link" to="/admin/session">
-              Manual session setup
+              {t('authFlow.manualSessionSetup')}
             </Link>
           </div>
           <p className="panel-copy">
             {providerLoginError
-              ? `Provider login is not ready: ${providerLoginError}`
+              ? t('authFlow.providerLoginNotReady', { error: providerLoginError })
               : clerkReady
-                ? 'Clerk signs the user in, the frontend stores the Clerk session token as the current bearer token, and /api/auth/session resolves the actual DB role and scope.'
+                ? t('authFlow.clerkReadyCopy')
                 : providerReady
-                ? 'Provider login will return through /auth/callback, exchange the code with PKCE, and let the verified session decide whether /admin or /store is the right landing shell.'
-              : 'Add backend auth bootstrap config or the OIDC env values before using this page as the primary login handoff.'}
+                ? t('authFlow.providerReadyCopy')
+              : t('authFlow.providerNeedsEnvCopy')}
           </p>
         </article>
       </section>
@@ -159,24 +158,24 @@ export function AuthLoginPage() {
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Contract Shape</div>
-            <h3>Frontend auth bootstrap expectations</h3>
+            <div className="eyebrow">{t('authFlow.contractShape')}</div>
+            <h3>{t('authFlow.contractShapeTitle')}</h3>
           </div>
         </div>
         <div className="stacked-table">
           <div className="stacked-row">
             <div className="stacked-row-head">
-              <strong>Login handoff</strong>
+              <strong>{t('authFlow.loginHandoff')}</strong>
               <ArrowRight size={16} />
             </div>
-            <p>Build an authorization URL from env config, redirect the browser, then receive the provider code at `/auth/callback` and exchange it with PKCE.</p>
+            <p>{t('authFlow.loginHandoffCopy')}</p>
           </div>
           <div className="stacked-row">
             <div className="stacked-row-head">
-              <strong>Verification gate</strong>
+              <strong>{t('authFlow.verificationGate')}</strong>
               <ArrowRight size={16} />
             </div>
-            <p>The callback only stores a bearer token after code exchange. Shell choice still happens after `/api/auth/session` confirms the real role and scope context.</p>
+            <p>{t('authFlow.verificationGateCopy')}</p>
           </div>
         </div>
       </section>
