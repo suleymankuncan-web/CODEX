@@ -133,6 +133,39 @@ test('master data page switches chrome to English copy and persists locale', asy
   await expect(page.getByRole('heading', { name: 'Master data bootstrap' })).toBeVisible()
 })
 
+test('admin checklist templates page switches chrome to English copy and persists locale', async ({ page }) => {
+  await page.goto('/admin/checklists')
+
+  await expect(page.getByRole('main').getByText('Checklistler', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'HR şablonları, yayınlanmadan önce taslak olarak hazırlanır.' })).toBeVisible()
+  await expect(page.getByText('Taslak pilot')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Şablon durumu' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Yayın kuralı' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'HR checklist şablon yönetimi' })).toBeVisible()
+  await expect(page.getByText('Form editörü sıradaki küçük parça')).toBeVisible()
+  await expect(page.getByText('Checklists')).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText('Ãƒ')
+  await expect(page.locator('body')).not.toContainText('Ã„')
+  await expect(page.locator('body')).not.toContainText('Ã…')
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('main').getByText('Checklists', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'HR templates are drafted before publication.' })).toBeVisible()
+  await expect(page.getByText('Draft pilot')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Template status' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Publish rule' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'HR checklist template management' })).toBeVisible()
+  await expect(page.getByText('Form editor is the next small slice')).toBeVisible()
+  await expect(page.getByText('Checklistler')).toHaveCount(0)
+
+  await page.reload()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'HR templates are drafted before publication.' })).toBeVisible()
+})
+
 test('snapshot operations page switches chrome to English copy and persists locale', async ({ page }) => {
   await page.goto('/admin/snapshots')
 
