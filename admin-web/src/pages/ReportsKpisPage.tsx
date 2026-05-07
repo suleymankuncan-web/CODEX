@@ -11,24 +11,27 @@ import {
   StatusPill,
 } from '../components/dashboard-primitives'
 import { ReportingToolbar } from '../components/reporting-tools'
+import type { TranslateFunction } from '../features/localization/dictionary'
+import { useLocalization } from '../features/localization/useLocalization'
 import { getKpiReport } from '../features/reports/api'
 import { downloadCsv } from '../lib/download-csv'
-import { formatDate, getErrorMessage } from '../lib/format'
+import { formatDate, formatNumber, getErrorMessage } from '../lib/format'
+import type { AppLocale } from '../lib/i18n'
 
 function toNumber(input: string | null) {
   const parsed = Number(input)
   return Number.isFinite(parsed) ? parsed : 0
 }
 
-function formatMetric(input: number) {
-  return new Intl.NumberFormat('tr-TR', {
+function formatMetric(input: number, locale: AppLocale) {
+  return formatNumber(input, locale, {
     minimumFractionDigits: Number.isInteger(input) ? 0 : 2,
     maximumFractionDigits: 2,
-  }).format(input)
+  })
 }
 
-function formatPercent(input: string | null) {
-  return `${formatMetric(toNumber(input) * 100)}%`
+function formatPercent(input: string | null, locale: AppLocale) {
+  return `${formatMetric(toNumber(input) * 100, locale)}%`
 }
 
 function mapStatusBandTone(input: string | null) {
@@ -39,7 +42,17 @@ function mapStatusBandTone(input: string | null) {
   return 'neutral'
 }
 
+function mapStatusBandLabel(input: string | null, t: TranslateFunction) {
+  if (input === 'on_track') return t('reportsKpis.status.onTrack')
+  if (input === 'at_risk') return t('reportsKpis.status.atRisk')
+  if (input === 'off_track') return t('reportsKpis.status.offTrack')
+  if (input === 'exceeded') return t('reportsKpis.status.exceeded')
+  if (input === 'over_target') return t('reportsKpis.status.overTarget')
+  return input ?? t('reportsKpis.status.unknown')
+}
+
 export function ReportsKpisPage() {
+  const { locale, t } = useLocalization()
   const { snapshotRunId } = useParams<{ snapshotRunId: string }>()
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState<'achievement-desc' | 'store' | 'status'>('achievement-desc')
@@ -62,6 +75,7 @@ export function ReportsKpisPage() {
         row.storeId,
         row.kpiId,
         row.statusBand ?? '',
+        mapStatusBandLabel(row.statusBand, t),
         row.targetValue ?? '',
         row.actualValue ?? '',
         row.achievementRate ?? '',
@@ -70,7 +84,7 @@ export function ReportsKpisPage() {
         .toLowerCase()
         .includes(input),
     )
-  }, [deferredSearch, rows])
+  }, [deferredSearch, rows, t])
 
   const sortedRows = useMemo(() => {
     const items = [...filteredRows]
@@ -108,79 +122,76 @@ export function ReportsKpisPage() {
   const averageAchievement = sortedRows.length > 0 ? totals.achievement / sortedRows.length : 0
 
   if (!snapshotRunId) {
-    return <ScreenState title="KPI context missing" copy="Choose a reporting snapshot run before opening KPI rows." tone="error" />
+    return <ScreenState title={t('reportsKpis.missingTitle')} copy={t('reportsKpis.missingCopy')} tone="error" />
   }
 
   if (kpiQuery.isLoading) {
-    return <ScreenState title="Loading KPI rows" copy="Pulling materialized KPI rows for the selected reporting context." />
+    return <ScreenState title={t('reportsKpis.loadingTitle')} copy={t('reportsKpis.loadingCopy')} />
   }
 
   if (kpiQuery.isError) {
-    return <ScreenState title="KPI report unavailable" copy={getErrorMessage(kpiQuery.error)} tone="error" />
+    return <ScreenState title={t('reportsKpis.errorTitle')} copy={getErrorMessage(kpiQuery.error)} tone="error" />
   }
 
   return (
     <section className="page-stack">
       <section className="hero-panel">
         <div>
-          <div className="eyebrow">Reporting Drill-Down</div>
-          <h2 className="hero-title">KPI rows for one immutable reporting context.</h2>
-          <p className="hero-copy">
-            KPI output stays separate from workforce logic, so we can grow targets, bonus rules,
-            and future scorecard semantics without tangling the reporting surface.
-          </p>
+          <div className="eyebrow">{t('reportsKpis.heroEyebrow')}</div>
+          <h2 className="hero-title">{t('reportsKpis.heroTitle')}</h2>
+          <p className="hero-copy">{t('reportsKpis.heroCopy')}</p>
         </div>
         <div className="hero-metrics">
-          <MetricAccent label="Snapshot run" value={snapshotRunId.slice(0, 12)} />
-          <MetricAccent label="Rows in view" value={String(filteredRows.length)} />
-          <MetricAccent label="Avg achievement" value={formatPercent(String(averageAchievement))} />
+          <MetricAccent label={t('reportsKpis.snapshotRun')} value={snapshotRunId.slice(0, 12)} />
+          <MetricAccent label={t('reportsKpis.rowsInView')} value={String(filteredRows.length)} />
+          <MetricAccent label={t('reportsKpis.avgAchievement')} value={formatPercent(String(averageAchievement), locale)} />
         </div>
       </section>
 
       <Link className="back-link" to="/admin/reports/snapshot-runs">
         <ArrowLeft size={16} />
-        <span>Choose another snapshot</span>
+        <span>{t('reportsKpis.chooseAnotherSnapshot')}</span>
       </Link>
 
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Reporting context</div>
-            <h3>Selected KPI snapshot</h3>
+            <div className="eyebrow">{t('reportsKpis.contextEyebrow')}</div>
+            <h3>{t('reportsKpis.contextTitle')}</h3>
           </div>
         </div>
         <div className="key-grid">
-          <KeyValue label="Snapshot run id" value={snapshotRunId} />
-          <KeyValue label="Rows loaded" value={String(rows.length)} />
-          <KeyValue label="Rows after filter" value={String(filteredRows.length)} />
-          <KeyValue label="Off-track rows" value={String(totals.offTrack)} />
+          <KeyValue label={t('reportsKpis.snapshotRunId')} value={snapshotRunId} />
+          <KeyValue label={t('reportsKpis.rowsLoaded')} value={String(rows.length)} />
+          <KeyValue label={t('reportsKpis.rowsAfterFilter')} value={String(filteredRows.length)} />
+          <KeyValue label={t('reportsKpis.offTrackRows')} value={String(totals.offTrack)} />
         </div>
       </section>
 
       <section className="metric-grid">
-        <MetricCard title="Target total" value={Math.round(totals.target)} note="Sum of target values in current view" icon={<Target size={18} />} tone="accent" />
-        <MetricCard title="Actual total" value={Math.round(totals.actual)} note="Sum of actual values in current view" icon={<Gauge size={18} />} tone="calm" />
-        <MetricCard title="On track" value={totals.onTrack} note={`${totals.atRisk} at risk in the same filter`} icon={<Trophy size={18} />} tone="calm" />
-        <MetricCard title="Off track" value={totals.offTrack} note={`Average achievement ${formatPercent(String(averageAchievement))}`} icon={<Activity size={18} />} tone={totals.offTrack === 0 ? 'neutral' : 'danger'} />
+        <MetricCard title={t('reportsKpis.targetTotalTitle')} value={Math.round(totals.target)} note={t('reportsKpis.targetTotalNote')} icon={<Target size={18} />} tone="accent" />
+        <MetricCard title={t('reportsKpis.actualTotalTitle')} value={Math.round(totals.actual)} note={t('reportsKpis.actualTotalNote')} icon={<Gauge size={18} />} tone="calm" />
+        <MetricCard title={t('reportsKpis.onTrackTitle')} value={totals.onTrack} note={t('reportsKpis.onTrackNote', { count: totals.atRisk })} icon={<Trophy size={18} />} tone="calm" />
+        <MetricCard title={t('reportsKpis.offTrackTitle')} value={totals.offTrack} note={t('reportsKpis.offTrackNote', { value: formatPercent(String(averageAchievement), locale) })} icon={<Activity size={18} />} tone={totals.offTrack === 0 ? 'neutral' : 'danger'} />
       </section>
 
       <section className="panel">
         <div className="panel-heading panel-heading-spread">
           <div>
-            <div className="eyebrow">KPI table</div>
-            <h3>Store-KPI performance rows</h3>
-            <p className="panel-copy">
-              Filter by store, KPI, status band, or numeric values to narrow the materialized output.
-            </p>
+            <div className="eyebrow">{t('reportsKpis.tableEyebrow')}</div>
+            <h3>{t('reportsKpis.tableTitle')}</h3>
+            <p className="panel-copy">{t('reportsKpis.tableCopy')}</p>
           </div>
           <ReportingToolbar
             sortValue={sortBy}
             onSortChange={(value) => setSortBy(value as typeof sortBy)}
             sortOptions={[
-              { value: 'achievement-desc', label: 'Highest achievement' },
-              { value: 'store', label: 'Store id' },
-              { value: 'status', label: 'Status band' },
+              { value: 'achievement-desc', label: t('reportsKpis.sort.achievementDesc') },
+              { value: 'store', label: t('reportsKpis.sort.store') },
+              { value: 'status', label: t('reportsKpis.sort.status') },
             ]}
+            sortAriaLabel={t('reportsKpis.sortRows')}
+            exportLabel={t('reportsKpis.exportCsv')}
             onExport={() =>
               downloadCsv({
                 filename: `kpis-${snapshotRunId}.csv`,
@@ -200,11 +211,11 @@ export function ReportsKpisPage() {
             }
           >
             <label className="search-field">
-              <span className="sr-only">Filter KPI rows</span>
+              <span className="sr-only">{t('reportsKpis.filterRows')}</span>
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search by store, KPI, status, or value"
+                placeholder={t('reportsKpis.searchPlaceholder')}
               />
             </label>
           </ReportingToolbar>
@@ -212,8 +223,8 @@ export function ReportsKpisPage() {
 
         {sortedRows.length === 0 ? (
           <EmptyState
-            title="No KPI rows matched your filter."
-            copy="Clear the search to inspect the full KPI output for this snapshot."
+            title={t('reportsKpis.emptyTitle')}
+            copy={t('reportsKpis.emptyCopy')}
           />
         ) : (
           <div className="stacked-table">
@@ -225,15 +236,15 @@ export function ReportsKpisPage() {
                     <span className="queue-subtitle">{row.kpiId}</span>
                   </div>
                   <StatusPill tone={mapStatusBandTone(row.statusBand)}>
-                    {row.statusBand ?? 'unknown'}
+                    {mapStatusBandLabel(row.statusBand, t)}
                   </StatusPill>
                 </div>
 
                 <div className="key-grid">
-                  <KeyValue label="Period" value={`${formatDate(row.periodStart)} - ${formatDate(row.periodEnd)}`} />
-                  <KeyValue label="Target value" value={formatMetric(toNumber(row.targetValue))} />
-                  <KeyValue label="Actual value" value={formatMetric(toNumber(row.actualValue))} />
-                  <KeyValue label="Achievement" value={formatPercent(row.achievementRate)} />
+                  <KeyValue label={t('reportsKpis.period')} value={`${formatDate(row.periodStart, locale)} - ${formatDate(row.periodEnd, locale)}`} />
+                  <KeyValue label={t('reportsKpis.targetValue')} value={formatMetric(toNumber(row.targetValue), locale)} />
+                  <KeyValue label={t('reportsKpis.actualValue')} value={formatMetric(toNumber(row.actualValue), locale)} />
+                  <KeyValue label={t('reportsKpis.achievement')} value={formatPercent(row.achievementRate, locale)} />
                 </div>
               </article>
             ))}

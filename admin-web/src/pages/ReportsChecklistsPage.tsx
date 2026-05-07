@@ -11,24 +11,26 @@ import {
   StatusPill,
 } from '../components/dashboard-primitives'
 import { ReportingToolbar } from '../components/reporting-tools'
+import { useLocalization } from '../features/localization/useLocalization'
 import { getChecklistReport } from '../features/reports/api'
 import { downloadCsv } from '../lib/download-csv'
-import { getErrorMessage } from '../lib/format'
+import { formatNumber, getErrorMessage } from '../lib/format'
+import type { AppLocale } from '../lib/i18n'
 
 function toNumber(input: string | null) {
   const parsed = Number(input)
   return Number.isFinite(parsed) ? parsed : 0
 }
 
-function formatMetric(input: number) {
-  return new Intl.NumberFormat('tr-TR', {
+function formatMetric(input: number, locale: AppLocale) {
+  return formatNumber(input, locale, {
     minimumFractionDigits: Number.isInteger(input) ? 0 : 2,
     maximumFractionDigits: 2,
-  }).format(input)
+  })
 }
 
-function formatPercent(input: string | null) {
-  return `${formatMetric(toNumber(input) * 100)}%`
+function formatPercent(input: string | null, locale: AppLocale) {
+  return `${formatMetric(toNumber(input) * 100, locale)}%`
 }
 
 function mapChecklistTone(complianceRate: string | null, criticalIssueCount: number) {
@@ -40,6 +42,7 @@ function mapChecklistTone(complianceRate: string | null, criticalIssueCount: num
 }
 
 export function ReportsChecklistsPage() {
+  const { locale, t } = useLocalization()
   const { snapshotRunId } = useParams<{ snapshotRunId: string }>()
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState<'critical-desc' | 'compliance-desc' | 'store'>('critical-desc')
@@ -65,12 +68,13 @@ export function ReportsChecklistsPage() {
         row.avgScore ?? '',
         row.complianceRate ?? '',
         row.criticalIssueCount,
+        row.criticalIssueCount > 0 ? t('reportsChecklists.criticalFindings') : t('reportsChecklists.compliant'),
       ]
         .join(' ')
         .toLowerCase()
         .includes(input),
     )
-  }, [deferredSearch, rows])
+  }, [deferredSearch, rows, t])
 
   const sortedRows = useMemo(() => {
     const items = [...filteredRows]
@@ -107,79 +111,76 @@ export function ReportsChecklistsPage() {
   const averageCompliance = sortedRows.length > 0 ? totals.complianceRate / sortedRows.length : 0
 
   if (!snapshotRunId) {
-    return <ScreenState title="Checklist context missing" copy="Choose a reporting snapshot run before opening checklist rows." tone="error" />
+    return <ScreenState title={t('reportsChecklists.missingTitle')} copy={t('reportsChecklists.missingCopy')} tone="error" />
   }
 
   if (checklistQuery.isLoading) {
-    return <ScreenState title="Loading checklist rows" copy="Pulling checklist compliance rows for the selected reporting context." />
+    return <ScreenState title={t('reportsChecklists.loadingTitle')} copy={t('reportsChecklists.loadingCopy')} />
   }
 
   if (checklistQuery.isError) {
-    return <ScreenState title="Checklist report unavailable" copy={getErrorMessage(checklistQuery.error)} tone="error" />
+    return <ScreenState title={t('reportsChecklists.errorTitle')} copy={getErrorMessage(checklistQuery.error)} tone="error" />
   }
 
   return (
     <section className="page-stack">
       <section className="hero-panel">
         <div>
-          <div className="eyebrow">Reporting Drill-Down</div>
-          <h2 className="hero-title">Checklist rows for one immutable reporting context.</h2>
-          <p className="hero-copy">
-            This slice isolates checklist compliance from KPI and workforce data, which makes future
-            audit semantics, scoring rules, and remediation flows easier to expand without crossover.
-          </p>
+          <div className="eyebrow">{t('reportsChecklists.heroEyebrow')}</div>
+          <h2 className="hero-title">{t('reportsChecklists.heroTitle')}</h2>
+          <p className="hero-copy">{t('reportsChecklists.heroCopy')}</p>
         </div>
         <div className="hero-metrics">
-          <MetricAccent label="Snapshot run" value={snapshotRunId.slice(0, 12)} />
-          <MetricAccent label="Rows in view" value={String(filteredRows.length)} />
-          <MetricAccent label="Avg compliance" value={formatPercent(String(averageCompliance))} />
+          <MetricAccent label={t('reportsChecklists.snapshotRun')} value={snapshotRunId.slice(0, 12)} />
+          <MetricAccent label={t('reportsChecklists.rowsInView')} value={String(filteredRows.length)} />
+          <MetricAccent label={t('reportsChecklists.avgCompliance')} value={formatPercent(String(averageCompliance), locale)} />
         </div>
       </section>
 
       <Link className="back-link" to="/admin/reports/snapshot-runs">
         <ArrowLeft size={16} />
-        <span>Choose another snapshot</span>
+        <span>{t('reportsChecklists.chooseAnotherSnapshot')}</span>
       </Link>
 
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Reporting context</div>
-            <h3>Selected checklist snapshot</h3>
+            <div className="eyebrow">{t('reportsChecklists.contextEyebrow')}</div>
+            <h3>{t('reportsChecklists.contextTitle')}</h3>
           </div>
         </div>
         <div className="key-grid">
-          <KeyValue label="Snapshot run id" value={snapshotRunId} />
-          <KeyValue label="Rows loaded" value={String(rows.length)} />
-          <KeyValue label="Rows after filter" value={String(filteredRows.length)} />
-          <KeyValue label="Critical rows" value={String(totals.rowsWithCriticalIssues)} />
+          <KeyValue label={t('reportsChecklists.snapshotRunId')} value={snapshotRunId} />
+          <KeyValue label={t('reportsChecklists.rowsLoaded')} value={String(rows.length)} />
+          <KeyValue label={t('reportsChecklists.rowsAfterFilter')} value={String(filteredRows.length)} />
+          <KeyValue label={t('reportsChecklists.criticalRows')} value={String(totals.rowsWithCriticalIssues)} />
         </div>
       </section>
 
       <section className="metric-grid">
-        <MetricCard title="Audit count" value={totals.auditCount} note="Total audits represented in current view" icon={<SearchCheck size={18} />} tone="accent" />
-        <MetricCard title="Avg score" value={Math.round(averageScore)} note={`Average compliance ${formatPercent(String(averageCompliance))}`} icon={<ClipboardCheck size={18} />} tone="calm" />
-        <MetricCard title="Critical issues" value={totals.criticalIssues} note={`${totals.rowsWithCriticalIssues} rows contain critical findings`} icon={<AlertTriangle size={18} />} tone={totals.criticalIssues === 0 ? 'neutral' : 'danger'} />
-        <MetricCard title="Critical rows" value={totals.rowsWithCriticalIssues} note="Store-template pairs needing remediation attention" icon={<ShieldAlert size={18} />} tone={totals.rowsWithCriticalIssues === 0 ? 'calm' : 'warning'} />
+        <MetricCard title={t('reportsChecklists.auditCountTitle')} value={totals.auditCount} note={t('reportsChecklists.auditCountNote')} icon={<SearchCheck size={18} />} tone="accent" />
+        <MetricCard title={t('reportsChecklists.avgScoreTitle')} value={Math.round(averageScore)} note={t('reportsChecklists.avgScoreNote', { value: formatPercent(String(averageCompliance), locale) })} icon={<ClipboardCheck size={18} />} tone="calm" />
+        <MetricCard title={t('reportsChecklists.criticalIssuesTitle')} value={totals.criticalIssues} note={t('reportsChecklists.criticalIssuesNote', { count: totals.rowsWithCriticalIssues })} icon={<AlertTriangle size={18} />} tone={totals.criticalIssues === 0 ? 'neutral' : 'danger'} />
+        <MetricCard title={t('reportsChecklists.criticalRows')} value={totals.rowsWithCriticalIssues} note={t('reportsChecklists.criticalRowsNote')} icon={<ShieldAlert size={18} />} tone={totals.rowsWithCriticalIssues === 0 ? 'calm' : 'warning'} />
       </section>
 
       <section className="panel">
         <div className="panel-heading panel-heading-spread">
           <div>
-            <div className="eyebrow">Checklist table</div>
-            <h3>Store-template compliance rows</h3>
-            <p className="panel-copy">
-              Filter by store, checklist template, score, compliance, or critical issue count.
-            </p>
+            <div className="eyebrow">{t('reportsChecklists.tableEyebrow')}</div>
+            <h3>{t('reportsChecklists.tableTitle')}</h3>
+            <p className="panel-copy">{t('reportsChecklists.tableCopy')}</p>
           </div>
           <ReportingToolbar
             sortValue={sortBy}
             onSortChange={(value) => setSortBy(value as typeof sortBy)}
             sortOptions={[
-              { value: 'critical-desc', label: 'Most critical issues' },
-              { value: 'compliance-desc', label: 'Highest compliance' },
-              { value: 'store', label: 'Store id' },
+              { value: 'critical-desc', label: t('reportsChecklists.sort.criticalDesc') },
+              { value: 'compliance-desc', label: t('reportsChecklists.sort.complianceDesc') },
+              { value: 'store', label: t('reportsChecklists.sort.store') },
             ]}
+            sortAriaLabel={t('reportsChecklists.sortRows')}
+            exportLabel={t('reportsChecklists.exportCsv')}
             onExport={() =>
               downloadCsv({
                 filename: `checklists-${snapshotRunId}.csv`,
@@ -197,11 +198,11 @@ export function ReportsChecklistsPage() {
             }
           >
             <label className="search-field">
-              <span className="sr-only">Filter checklist rows</span>
+              <span className="sr-only">{t('reportsChecklists.filterRows')}</span>
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search by store, template, score, or issue count"
+                placeholder={t('reportsChecklists.searchPlaceholder')}
               />
             </label>
           </ReportingToolbar>
@@ -209,8 +210,8 @@ export function ReportsChecklistsPage() {
 
         {sortedRows.length === 0 ? (
           <EmptyState
-            title="No checklist rows matched your filter."
-            copy="Clear the search to inspect the full checklist output for this snapshot."
+            title={t('reportsChecklists.emptyTitle')}
+            copy={t('reportsChecklists.emptyCopy')}
           />
         ) : (
           <div className="stacked-table">
@@ -222,15 +223,15 @@ export function ReportsChecklistsPage() {
                     <span className="queue-subtitle">{row.checklistTemplateId}</span>
                   </div>
                   <StatusPill tone={mapChecklistTone(row.complianceRate, row.criticalIssueCount)}>
-                    {row.criticalIssueCount > 0 ? 'Critical findings' : 'Compliant'}
+                    {row.criticalIssueCount > 0 ? t('reportsChecklists.criticalFindings') : t('reportsChecklists.compliant')}
                   </StatusPill>
                 </div>
 
                 <div className="key-grid">
-                  <KeyValue label="Audit count" value={String(row.auditCount)} />
-                  <KeyValue label="Average score" value={formatMetric(toNumber(row.avgScore))} />
-                  <KeyValue label="Compliance rate" value={formatPercent(row.complianceRate)} />
-                  <KeyValue label="Critical issue count" value={String(row.criticalIssueCount)} />
+                  <KeyValue label={t('reportsChecklists.auditCount')} value={String(row.auditCount)} />
+                  <KeyValue label={t('reportsChecklists.averageScore')} value={formatMetric(toNumber(row.avgScore), locale)} />
+                  <KeyValue label={t('reportsChecklists.complianceRate')} value={formatPercent(row.complianceRate, locale)} />
+                  <KeyValue label={t('reportsChecklists.criticalIssueCount')} value={String(row.criticalIssueCount)} />
                 </div>
               </article>
             ))}

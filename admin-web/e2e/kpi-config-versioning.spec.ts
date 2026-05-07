@@ -136,6 +136,114 @@ test('workforce report page switches drill-down chrome to English copy and persi
   await expect(page.getByRole('heading', { name: 'Workforce rows for one immutable reporting context.' })).toBeVisible()
 })
 
+test('KPI report page switches drill-down chrome to English copy and persists locale', async ({ page }) => {
+  await page.goto('/admin/reports/kpis/snapshot-versioned')
+
+  await expect(page.getByText('Raporlama detayı')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Tek değişmez raporlama bağlamı için KPI satırları.' })).toBeVisible()
+  await expect(page.getByText('Ortalama başarı', { exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Başka snapshot seç' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Seçili KPI snapshotı' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Mağaza-KPI performans satırları' })).toBeVisible()
+  await expect(page.getByText('Riskte').first()).toBeVisible()
+  await expect(page.getByText('Hedef değer', { exact: true }).first()).toBeVisible()
+  await expect(page.getByPlaceholder('Mağaza, KPI, durum veya değer ara')).toBeVisible()
+  await expect(page.getByText('KPI rows for one immutable reporting context.')).toHaveCount(0)
+  await expect(page.getByText('Status band')).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText('ÃƒÆ’')
+  await expect(page.locator('body')).not.toContainText('Ãƒâ€')
+  await expect(page.locator('body')).not.toContainText('Ãƒâ€¦')
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'KPI rows for one immutable reporting context.' })).toBeVisible()
+  await expect(page.getByText('Avg achievement', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Selected KPI snapshot' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Store-KPI performance rows' })).toBeVisible()
+  await expect(page.getByText('At risk').first()).toBeVisible()
+  await expect(page.getByText('Target value', { exact: true }).first()).toBeVisible()
+  await expect(page.getByPlaceholder('Search by store, KPI, status, or value')).toBeVisible()
+  await expect(page.getByText('Raporlama detayı')).toHaveCount(0)
+
+  await page.reload()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'KPI rows for one immutable reporting context.' })).toBeVisible()
+})
+
+test('checklist report page switches drill-down chrome to English copy and persists locale', async ({ page }) => {
+  await page.goto('/admin/reports/checklists/snapshot-versioned')
+
+  await expect(page.getByText('Raporlama detayı')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Tek değişmez raporlama bağlamı için checklist satırları.' })).toBeVisible()
+  await expect(page.getByText('Ortalama uyum', { exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Başka snapshot seç' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Seçili checklist snapshotı' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Mağaza-template uyum satırları' })).toBeVisible()
+  await expect(page.getByText('Kritik bulgu', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('Uyumlu')).toBeVisible()
+  await expect(page.getByPlaceholder('Mağaza, template, skor veya bulgu sayısı ara')).toBeVisible()
+  await expect(page.getByText('Checklist rows for one immutable reporting context.')).toHaveCount(0)
+  await expect(page.getByText('Critical findings')).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText('ÃƒÆ’')
+  await expect(page.locator('body')).not.toContainText('Ãƒâ€')
+  await expect(page.locator('body')).not.toContainText('Ãƒâ€¦')
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'Checklist rows for one immutable reporting context.' })).toBeVisible()
+  await expect(page.getByText('Avg compliance', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Selected checklist snapshot' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Store-template compliance rows' })).toBeVisible()
+  await expect(page.getByText('Critical findings', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('Compliant')).toBeVisible()
+  await expect(page.getByPlaceholder('Search by store, template, score, or issue count')).toBeVisible()
+  await expect(page.getByText('Raporlama detayı')).toHaveCount(0)
+
+  await page.reload()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'Checklist rows for one immutable reporting context.' })).toBeVisible()
+})
+
+test('turnover report page switches drill-down chrome to English copy and persists locale', async ({ page }) => {
+  await page.goto('/admin/reports/turnover/snapshot-versioned')
+
+  await expect(page.getByText('Raporlama detayı')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Tek değişmez raporlama bağlamı için personel çıkışı satırları.' })).toBeVisible()
+  await expect(page.getByText('Ortalama çıkış oranı', { exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Başka snapshot seç' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Seçili personel çıkışı snapshotı' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Şirket, bölge ve mağaza çıkış satırları' })).toBeVisible()
+  await expect(page.getByText('Ayrılan sayısı', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('Çıkış oranı', { exact: true }).first()).toBeVisible()
+  await expect(page.getByPlaceholder('Kapsam, organizasyon ID, ayrılan veya çıkış oranı ara')).toBeVisible()
+  await expect(page.getByText('Turnover rows for one immutable reporting context.')).toHaveCount(0)
+  await expect(page.getByText('Leaver count')).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText('ÃƒÆ’')
+  await expect(page.locator('body')).not.toContainText('Ãƒâ€')
+  await expect(page.locator('body')).not.toContainText('Ãƒâ€¦')
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'Turnover rows for one immutable reporting context.' })).toBeVisible()
+  await expect(page.getByText('Avg turnover', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Selected turnover snapshot' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Company, region, and store turnover rows' })).toBeVisible()
+  await expect(page.getByText('Leaver count', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('Turnover rate', { exact: true }).first()).toBeVisible()
+  await expect(page.getByPlaceholder('Search by scope, org id, leavers, or turnover')).toBeVisible()
+  await expect(page.getByText('Raporlama detayı')).toHaveCount(0)
+
+  await page.reload()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'Turnover rows for one immutable reporting context.' })).toBeVisible()
+})
+
 async function routeVersioningApi(page: Page) {
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: authSessionFixture })
@@ -159,6 +267,18 @@ async function routeVersioningApi(page: Page) {
 
   await page.route('**/api/reports/workforce?**', async (route) => {
     await route.fulfill({ json: workforceReportFixture })
+  })
+
+  await page.route('**/api/reports/kpis?**', async (route) => {
+    await route.fulfill({ json: kpiReportFixture })
+  })
+
+  await page.route('**/api/reports/checklists?**', async (route) => {
+    await route.fulfill({ json: checklistReportFixture })
+  })
+
+  await page.route('**/api/reports/turnover?**', async (route) => {
+    await route.fulfill({ json: turnoverReportFixture })
   })
 }
 
@@ -321,6 +441,96 @@ const workforceReportFixture = {
       plannedFte: '1',
       gapHeadcount: '0',
       gapFte: '0',
+    },
+  ],
+  meta: { count: 2, total: 2, limit: 50, offset: 0 },
+}
+
+const kpiReportFixture = {
+  items: [
+    {
+      snapshotRunId: 'snapshot-versioned',
+      storeId: 'store-istanbul-001',
+      kpiId: 'kpi-upt',
+      kpiCode: 'UPT',
+      kpiName: 'Units per transaction',
+      periodStart: '2026-04-26',
+      periodEnd: '2026-04-26',
+      targetValue: '100',
+      actualValue: '84',
+      achievementRate: '0.84',
+      statusBand: 'at_risk',
+    },
+    {
+      snapshotRunId: 'snapshot-versioned',
+      storeId: 'store-ankara-002',
+      kpiId: 'kpi-sales',
+      kpiCode: 'SALES',
+      kpiName: 'Sales',
+      periodStart: '2026-04-26',
+      periodEnd: '2026-04-26',
+      targetValue: '100',
+      actualValue: '104',
+      achievementRate: '1.04',
+      statusBand: 'on_track',
+    },
+  ],
+  meta: { count: 2, total: 2, limit: 50, offset: 0 },
+}
+
+const checklistReportFixture = {
+  items: [
+    {
+      snapshotRunId: 'snapshot-versioned',
+      storeId: 'store-istanbul-001',
+      checklistTemplateId: 'bm-visit',
+      auditCount: 2,
+      avgScore: '82',
+      complianceRate: '0.82',
+      criticalIssueCount: 1,
+    },
+    {
+      snapshotRunId: 'snapshot-versioned',
+      storeId: 'store-ankara-002',
+      checklistTemplateId: 'vm-visit',
+      auditCount: 1,
+      avgScore: '96',
+      complianceRate: '0.96',
+      criticalIssueCount: 0,
+    },
+  ],
+  meta: { count: 2, total: 2, limit: 50, offset: 0 },
+}
+
+const turnoverReportFixture = {
+  items: [
+    {
+      snapshotRunId: 'snapshot-versioned',
+      scopeType: 'store',
+      companyId: null,
+      regionId: null,
+      storeId: 'store-istanbul-001',
+      periodStart: '2026-04-01',
+      periodEnd: '2026-04-30',
+      openingHeadcount: '12',
+      closingHeadcount: '10',
+      avgHeadcount: '11',
+      leaverCount: 2,
+      turnoverRate: '0.18',
+    },
+    {
+      snapshotRunId: 'snapshot-versioned',
+      scopeType: 'region',
+      companyId: null,
+      regionId: 'region-marmara',
+      storeId: null,
+      periodStart: '2026-04-01',
+      periodEnd: '2026-04-30',
+      openingHeadcount: '120',
+      closingHeadcount: '118',
+      avgHeadcount: '119',
+      leaverCount: 3,
+      turnoverRate: '0.03',
     },
   ],
   meta: { count: 2, total: 2, limit: 50, offset: 0 },

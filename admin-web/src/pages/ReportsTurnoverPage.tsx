@@ -11,24 +11,27 @@ import {
   StatusPill,
 } from '../components/dashboard-primitives'
 import { ReportingToolbar } from '../components/reporting-tools'
+import type { TranslateFunction } from '../features/localization/dictionary'
+import { useLocalization } from '../features/localization/useLocalization'
 import { getTurnoverReport } from '../features/reports/api'
 import { downloadCsv } from '../lib/download-csv'
-import { formatDate, getErrorMessage } from '../lib/format'
+import { formatDate, formatNumber, getErrorMessage } from '../lib/format'
+import type { AppLocale } from '../lib/i18n'
 
 function toNumber(input: string | null) {
   const parsed = Number(input)
   return Number.isFinite(parsed) ? parsed : 0
 }
 
-function formatMetric(input: number) {
-  return new Intl.NumberFormat('tr-TR', {
+function formatMetric(input: number, locale: AppLocale) {
+  return formatNumber(input, locale, {
     minimumFractionDigits: Number.isInteger(input) ? 0 : 2,
     maximumFractionDigits: 2,
-  }).format(input)
+  })
 }
 
-function formatPercent(input: string) {
-  return `${formatMetric(toNumber(input) * 100)}%`
+function formatPercent(input: string, locale: AppLocale) {
+  return `${formatMetric(toNumber(input) * 100, locale)}%`
 }
 
 function getScopeLabel(row: {
@@ -36,11 +39,18 @@ function getScopeLabel(row: {
   companyId: string | null
   regionId: string | null
   storeId: string | null
-}) {
-  if (row.scopeType === 'store') return row.storeId ?? 'store'
-  if (row.scopeType === 'region') return row.regionId ?? 'region'
-  if (row.scopeType === 'company') return row.companyId ?? 'company'
-  return 'scope'
+}, t: TranslateFunction) {
+  if (row.scopeType === 'store') return row.storeId ?? t('reportsTurnover.scope.store')
+  if (row.scopeType === 'region') return row.regionId ?? t('reportsTurnover.scope.region')
+  if (row.scopeType === 'company') return row.companyId ?? t('reportsTurnover.scope.company')
+  return t('reportsTurnover.scope.unknown')
+}
+
+function getScopeTypeLabel(scopeType: string, t: TranslateFunction) {
+  if (scopeType === 'store') return t('reportsTurnover.scope.store')
+  if (scopeType === 'region') return t('reportsTurnover.scope.region')
+  if (scopeType === 'company') return t('reportsTurnover.scope.company')
+  return t('reportsTurnover.scope.unknown')
 }
 
 function mapTurnoverTone(rate: string) {
@@ -51,6 +61,7 @@ function mapTurnoverTone(rate: string) {
 }
 
 export function ReportsTurnoverPage() {
+  const { locale, t } = useLocalization()
   const { snapshotRunId } = useParams<{ snapshotRunId: string }>()
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState<'turnover-desc' | 'scope' | 'leavers-desc'>('turnover-desc')
@@ -71,6 +82,7 @@ export function ReportsTurnoverPage() {
     return rows.filter((row) =>
       [
         row.scopeType,
+        getScopeTypeLabel(row.scopeType, t),
         row.companyId ?? '',
         row.regionId ?? '',
         row.storeId ?? '',
@@ -81,7 +93,7 @@ export function ReportsTurnoverPage() {
         .toLowerCase()
         .includes(input),
     )
-  }, [deferredSearch, rows])
+  }, [deferredSearch, rows, t])
 
   const sortedRows = useMemo(() => {
     const items = [...filteredRows]
@@ -117,79 +129,76 @@ export function ReportsTurnoverPage() {
   const averageTurnover = sortedRows.length > 0 ? totals.turnover / sortedRows.length : 0
 
   if (!snapshotRunId) {
-    return <ScreenState title="Turnover context missing" copy="Choose a reporting snapshot run before opening turnover rows." tone="error" />
+    return <ScreenState title={t('reportsTurnover.missingTitle')} copy={t('reportsTurnover.missingCopy')} tone="error" />
   }
 
   if (turnoverQuery.isLoading) {
-    return <ScreenState title="Loading turnover rows" copy="Pulling turnover rows for the selected reporting context." />
+    return <ScreenState title={t('reportsTurnover.loadingTitle')} copy={t('reportsTurnover.loadingCopy')} />
   }
 
   if (turnoverQuery.isError) {
-    return <ScreenState title="Turnover report unavailable" copy={getErrorMessage(turnoverQuery.error)} tone="error" />
+    return <ScreenState title={t('reportsTurnover.errorTitle')} copy={getErrorMessage(turnoverQuery.error)} tone="error" />
   }
 
   return (
     <section className="page-stack">
       <section className="hero-panel">
         <div>
-          <div className="eyebrow">Reporting Drill-Down</div>
-          <h2 className="hero-title">Turnover rows for one immutable reporting context.</h2>
-          <p className="hero-copy">
-            Turnover remains its own reporting slice so we can evolve scope semantics, leaver logic,
-            and retention analysis without entangling workforce or KPI screens.
-          </p>
+          <div className="eyebrow">{t('reportsTurnover.heroEyebrow')}</div>
+          <h2 className="hero-title">{t('reportsTurnover.heroTitle')}</h2>
+          <p className="hero-copy">{t('reportsTurnover.heroCopy')}</p>
         </div>
         <div className="hero-metrics">
-          <MetricAccent label="Snapshot run" value={snapshotRunId.slice(0, 12)} />
-          <MetricAccent label="Rows in view" value={String(filteredRows.length)} />
-          <MetricAccent label="Avg turnover" value={formatPercent(String(averageTurnover))} />
+          <MetricAccent label={t('reportsTurnover.snapshotRun')} value={snapshotRunId.slice(0, 12)} />
+          <MetricAccent label={t('reportsTurnover.rowsInView')} value={String(filteredRows.length)} />
+          <MetricAccent label={t('reportsTurnover.avgTurnover')} value={formatPercent(String(averageTurnover), locale)} />
         </div>
       </section>
 
       <Link className="back-link" to="/admin/reports/snapshot-runs">
         <ArrowLeft size={16} />
-        <span>Choose another snapshot</span>
+        <span>{t('reportsTurnover.chooseAnotherSnapshot')}</span>
       </Link>
 
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <div className="eyebrow">Reporting context</div>
-            <h3>Selected turnover snapshot</h3>
+            <div className="eyebrow">{t('reportsTurnover.contextEyebrow')}</div>
+            <h3>{t('reportsTurnover.contextTitle')}</h3>
           </div>
         </div>
         <div className="key-grid">
-          <KeyValue label="Snapshot run id" value={snapshotRunId} />
-          <KeyValue label="Rows loaded" value={String(rows.length)} />
-          <KeyValue label="Rows after filter" value={String(filteredRows.length)} />
-          <KeyValue label="Leavers in view" value={String(totals.leavers)} />
+          <KeyValue label={t('reportsTurnover.snapshotRunId')} value={snapshotRunId} />
+          <KeyValue label={t('reportsTurnover.rowsLoaded')} value={String(rows.length)} />
+          <KeyValue label={t('reportsTurnover.rowsAfterFilter')} value={String(filteredRows.length)} />
+          <KeyValue label={t('reportsTurnover.leaversInView')} value={String(totals.leavers)} />
         </div>
       </section>
 
       <section className="metric-grid">
-        <MetricCard title="Opening HC" value={Math.round(totals.opening)} note="Summed opening headcount in current view" icon={<Users size={18} />} tone="neutral" />
-        <MetricCard title="Closing HC" value={Math.round(totals.closing)} note={`Average headcount ${formatMetric(totals.average)}`} icon={<Building2 size={18} />} tone="calm" />
-        <MetricCard title="Leaver count" value={totals.leavers} note={`Average turnover ${formatPercent(String(averageTurnover))}`} icon={<DoorOpen size={18} />} tone={totals.leavers === 0 ? 'neutral' : 'warning'} />
-        <MetricCard title="Turnover rate" value={Math.round(averageTurnover * 100)} note="Average percentage across filtered rows" icon={<Ratio size={18} />} tone={averageTurnover < 0.08 ? 'calm' : averageTurnover < 0.15 ? 'warning' : 'danger'} />
+        <MetricCard title={t('reportsTurnover.openingHcTitle')} value={Math.round(totals.opening)} note={t('reportsTurnover.openingHcNote')} icon={<Users size={18} />} tone="neutral" />
+        <MetricCard title={t('reportsTurnover.closingHcTitle')} value={Math.round(totals.closing)} note={t('reportsTurnover.closingHcNote', { value: formatMetric(totals.average, locale) })} icon={<Building2 size={18} />} tone="calm" />
+        <MetricCard title={t('reportsTurnover.leaverCountTitle')} value={totals.leavers} note={t('reportsTurnover.leaverCountNote', { value: formatPercent(String(averageTurnover), locale) })} icon={<DoorOpen size={18} />} tone={totals.leavers === 0 ? 'neutral' : 'warning'} />
+        <MetricCard title={t('reportsTurnover.turnoverRateTitle')} value={Math.round(averageTurnover * 100)} note={t('reportsTurnover.turnoverRateNote')} icon={<Ratio size={18} />} tone={averageTurnover < 0.08 ? 'calm' : averageTurnover < 0.15 ? 'warning' : 'danger'} />
       </section>
 
       <section className="panel">
         <div className="panel-heading panel-heading-spread">
           <div>
-            <div className="eyebrow">Turnover table</div>
-            <h3>Company, region, and store turnover rows</h3>
-            <p className="panel-copy">
-              Filter by scope, org ids, leaver count, or turnover rate to narrow the materialized output.
-            </p>
+            <div className="eyebrow">{t('reportsTurnover.tableEyebrow')}</div>
+            <h3>{t('reportsTurnover.tableTitle')}</h3>
+            <p className="panel-copy">{t('reportsTurnover.tableCopy')}</p>
           </div>
           <ReportingToolbar
             sortValue={sortBy}
             onSortChange={(value) => setSortBy(value as typeof sortBy)}
             sortOptions={[
-              { value: 'turnover-desc', label: 'Highest turnover' },
-              { value: 'leavers-desc', label: 'Most leavers' },
-              { value: 'scope', label: 'Scope type' },
+              { value: 'turnover-desc', label: t('reportsTurnover.sort.turnoverDesc') },
+              { value: 'leavers-desc', label: t('reportsTurnover.sort.leaversDesc') },
+              { value: 'scope', label: t('reportsTurnover.sort.scope') },
             ]}
+            sortAriaLabel={t('reportsTurnover.sortRows')}
+            exportLabel={t('reportsTurnover.exportCsv')}
             onExport={() =>
               downloadCsv({
                 filename: `turnover-${snapshotRunId}.csv`,
@@ -212,11 +221,11 @@ export function ReportsTurnoverPage() {
             }
           >
             <label className="search-field">
-              <span className="sr-only">Filter turnover rows</span>
+              <span className="sr-only">{t('reportsTurnover.filterRows')}</span>
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search by scope, org id, leavers, or turnover"
+                placeholder={t('reportsTurnover.searchPlaceholder')}
               />
             </label>
           </ReportingToolbar>
@@ -224,30 +233,30 @@ export function ReportsTurnoverPage() {
 
         {sortedRows.length === 0 ? (
           <EmptyState
-            title="No turnover rows matched your filter."
-            copy="Clear the search to inspect the full turnover output for this snapshot."
+            title={t('reportsTurnover.emptyTitle')}
+            copy={t('reportsTurnover.emptyCopy')}
           />
         ) : (
           <div className="stacked-table">
             {sortedRows.map((row, index) => (
-              <article className="stacked-row" key={`${row.scopeType}:${getScopeLabel(row)}:${index}`}>
+              <article className="stacked-row" key={`${row.scopeType}:${getScopeLabel(row, t)}:${index}`}>
                 <div className="stacked-row-head">
                   <div>
-                    <strong>{row.scopeType}</strong>
-                    <span className="queue-subtitle">{getScopeLabel(row)}</span>
+                    <strong>{getScopeTypeLabel(row.scopeType, t)}</strong>
+                    <span className="queue-subtitle">{getScopeLabel(row, t)}</span>
                   </div>
                   <StatusPill tone={mapTurnoverTone(row.turnoverRate)}>
-                    {formatPercent(row.turnoverRate)}
+                    {formatPercent(row.turnoverRate, locale)}
                   </StatusPill>
                 </div>
 
                 <div className="key-grid">
-                  <KeyValue label="Period" value={`${formatDate(row.periodStart)} - ${formatDate(row.periodEnd)}`} />
-                  <KeyValue label="Opening HC" value={formatMetric(toNumber(row.openingHeadcount))} />
-                  <KeyValue label="Closing HC" value={formatMetric(toNumber(row.closingHeadcount))} />
-                  <KeyValue label="Average HC" value={formatMetric(toNumber(row.avgHeadcount))} />
-                  <KeyValue label="Leaver count" value={String(row.leaverCount)} />
-                  <KeyValue label="Turnover rate" value={formatPercent(row.turnoverRate)} />
+                  <KeyValue label={t('reportsTurnover.period')} value={`${formatDate(row.periodStart, locale)} - ${formatDate(row.periodEnd, locale)}`} />
+                  <KeyValue label={t('reportsTurnover.openingHc')} value={formatMetric(toNumber(row.openingHeadcount), locale)} />
+                  <KeyValue label={t('reportsTurnover.closingHc')} value={formatMetric(toNumber(row.closingHeadcount), locale)} />
+                  <KeyValue label={t('reportsTurnover.averageHc')} value={formatMetric(toNumber(row.avgHeadcount), locale)} />
+                  <KeyValue label={t('reportsTurnover.leaverCount')} value={String(row.leaverCount)} />
+                  <KeyValue label={t('reportsTurnover.turnoverRate')} value={formatPercent(row.turnoverRate, locale)} />
                 </div>
               </article>
             ))}
