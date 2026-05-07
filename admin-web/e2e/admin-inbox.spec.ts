@@ -20,7 +20,8 @@ test.beforeEach(async ({ page }) => {
 test('admin inbox renders item detail, due, escalation, and source action signals', async ({ page }) => {
   await page.goto('/admin/inbox')
 
-  await expect(page.getByRole('heading', { name: 'Shared workflow contract in admin shell' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Admin iş kuyruğu' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Admin kabuğunda ortak iş akışı' })).toBeVisible()
   await expect(page.getByText('April Target Distribution')).toBeVisible()
   await expect(page.getByText('Detay özeti')).toBeVisible()
   await expect(page.getByText('Zaman sinyali')).toBeVisible()
@@ -29,7 +30,7 @@ test('admin inbox renders item detail, due, escalation, and source action signal
   await expect(page.getByText('Kaynak aksiyonu')).toBeVisible()
   await expect(page.getByText('Karar ekranına git')).toBeVisible()
   const sellerQueue = page.getByLabel('Seller code approval queue')
-  await expect(sellerQueue.getByText('Last franchise code')).toBeVisible()
+  await expect(sellerQueue.getByText('Son franchise kodu')).toBeVisible()
   await expect(sellerQueue.getByText('FM8375', { exact: true })).toBeVisible()
   await expect(sellerQueue.getByText('Ayse Yilmaz')).toBeVisible()
   await expect(sellerQueue.getByText('TC son 4')).toBeVisible()
@@ -38,17 +39,44 @@ test('admin inbox renders item detail, due, escalation, and source action signal
   await expect(sellerQueue.getByText('2026-05-01')).toBeVisible()
   await expect(sellerQueue.getByText('Sales Consultant')).toBeVisible()
   await expect(sellerQueue.getByRole('textbox', { name: 'Ayse Yilmaz seller code' })).toHaveValue('FM8376')
-  await sellerQueue.getByRole('button', { name: 'Approve seller code' }).click()
+  await sellerQueue.getByRole('button', { name: 'Satıcı kodunu onayla' }).click()
   await expect(page.getByText('Seller code request approved')).toBeVisible()
   const offboardingQueue = page.getByLabel('Offboarding approval queue')
   await expect(offboardingQueue.getByText('Store Personnel')).toBeVisible()
   await expect(offboardingQueue.getByText('FM8001')).toBeVisible()
   await expect(offboardingQueue.getByText('2026-05-10')).toBeVisible()
   await expect(offboardingQueue.getByText('resignation')).toBeVisible()
-  await offboardingQueue.getByRole('button', { name: 'Approve offboarding' }).click()
+  await offboardingQueue.getByRole('button', { name: 'Çıkışı onayla' }).click()
   await expect(page.getByText('Offboarding request approved')).toBeVisible()
-  await expect(page.getByText('User access closed: 2 role grants, 1 action store grants, 1 mobile sessions.')).toBeVisible()
+  await expect(
+    page.getByText('Kullanıcı erişimi kapatıldı: 2 rol yetkisi, 1 aksiyon mağaza yetkisi, 1 mobil oturum.'),
+  ).toBeVisible()
   await expect(page.getByText('Admin inbox unavailable')).toHaveCount(0)
+})
+
+test('admin inbox page switches chrome to English copy and persists locale', async ({ page }) => {
+  await page.goto('/admin/inbox')
+
+  await expect(page.getByRole('heading', { name: 'Admin iş kuyruğu' })).toBeVisible()
+  await expect(page.getByText('Aksiyon bekleyenler')).toBeVisible()
+  await expect(page.getByText('Satıcı kodu onay kuyruğu')).toBeVisible()
+  await expect(page.getByText('One queue for admin-side approvals and KPI follow-up.')).toHaveCount(0)
+  await expect(page.locator('body')).not.toContainText('Ã')
+  await expect(page.locator('body')).not.toContainText('Ä')
+  await expect(page.locator('body')).not.toContainText('Å')
+
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'One queue for admin-side approvals and KPI follow-up.' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Needs attention' })).toBeVisible()
+  await expect(page.getByText('Seller code approval queue')).toBeVisible()
+  await expect(page.getByText('Admin iş kuyruğu')).toHaveCount(0)
+
+  await page.reload()
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'One queue for admin-side approvals and KPI follow-up.' })).toBeVisible()
 })
 
 test('admin inbox lets HR return workforce requests with a required note', async ({ page }) => {
@@ -56,12 +84,12 @@ test('admin inbox lets HR return workforce requests with a required note', async
 
   const sellerQueue = page.getByLabel('Seller code approval queue')
   await sellerQueue.getByLabel('Return note for Ayse Yilmaz').fill('TC numarasi tekrar kontrol edilmeli')
-  await sellerQueue.getByRole('button', { name: 'Return seller code request' }).click()
+  await sellerQueue.getByRole('button', { name: 'Satıcı kodunu mağazaya iade et' }).click()
   await expect(page.getByText('Seller code request returned to store')).toBeVisible()
 
   const offboardingQueue = page.getByLabel('Offboarding approval queue')
   await offboardingQueue.getByLabel('Return note for Store Personnel').fill('Cikis tarihi tekrar kontrol edilmeli')
-  await offboardingQueue.getByRole('button', { name: 'Return offboarding request' }).click()
+  await offboardingQueue.getByRole('button', { name: 'Çıkış talebini mağazaya iade et' }).click()
   await expect(page.getByText('Offboarding request returned to store')).toBeVisible()
 })
 
