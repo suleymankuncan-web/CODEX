@@ -47,6 +47,16 @@ const localizationFiles = [
   'src/features/localization/dictionary.ts',
 ]
 
+const localizedPageFiles = [
+  'src/pages/AdminInboxPage.tsx',
+  'src/pages/CompetitionDashboardPage.tsx',
+  'src/pages/IntegrationDashboardPage.tsx',
+  'src/pages/MasterDataBootstrapPage.tsx',
+  'src/pages/StoreCompetitionsPage.tsx',
+  'src/pages/StoreMyPerformancePage.tsx',
+  'src/pages/TargetApprovalQueuePage.tsx',
+]
+
 const mojibakeMarkers = ['Ã', 'Ä', 'Å']
 
 test('localization messages are split into guarded namespace files', () => {
@@ -138,4 +148,22 @@ test('app shell fallback copy stays dictionary-owned', () => {
       `${phrase} should remain available through the admin-shell dictionary`,
     )
   }
+})
+
+test('localized pilot page aria labels stay dictionary-owned', () => {
+  const findings = []
+
+  for (const relativePath of localizedPageFiles) {
+    const source = readFileSync(join(appRoot, relativePath), 'utf8')
+    const hardcodedEnglishAriaLabels = [
+      ...source.matchAll(/aria-label="([A-Z][^"{]+)"/g),
+      ...source.matchAll(/aria-label=\{`([^`]*[A-Za-z][^`]*)`\}/g),
+    ]
+
+    for (const match of hardcodedEnglishAriaLabels) {
+      findings.push(`${relativePath}: ${match[1]}`)
+    }
+  }
+
+  assert.deepEqual(findings, [])
 })

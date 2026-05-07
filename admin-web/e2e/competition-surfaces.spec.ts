@@ -35,7 +35,7 @@ test('admin competitions surface shows live scores and warnings', async ({ page 
   await expect(page.getByRole('link', { name: 'Yarışmalar' })).toBeVisible()
   await expect(page.getByRole('heading', { name: /Bölge yarışma etapları/i })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'April Region Challenge' })).toBeVisible()
-  const adminReadSummary = page.getByLabel('Admin competition read summary')
+  const adminReadSummary = page.getByLabel('Yönetici yarışma okuma özeti')
   await expect(adminReadSummary.getByText('Okuma özeti')).toBeVisible()
   await expect(adminReadSummary.getByText('95% katkı kapsamı')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Marmara Demo' })).toBeVisible()
@@ -43,10 +43,10 @@ test('admin competitions surface shows live scores and warnings', async ({ page 
     page.locator('article').filter({ has: page.getByRole('heading', { name: 'Marmara Demo' }) }).getByText('92.45'),
   ).toBeVisible()
   await expect(
-    page.getByLabel('Scoped competition warnings').getByText('BM checklist eksik', { exact: true }),
+    page.getByLabel('Kapsamdaki yarışma uyarıları').getByText('BM checklist eksik', { exact: true }),
   ).toBeVisible()
   await expect(
-    page.getByLabel('Scoped competition warnings').getByText('missing bm checklist', { exact: true }),
+    page.getByLabel('Kapsamdaki yarışma uyarıları').getByText('missing bm checklist', { exact: true }),
   ).toBeVisible()
   await expect(page.getByRole('button', { name: /Yeniden hesapla QUALIFIER/ })).toBeVisible()
   await expect(page.getByRole('button', { name: /Finale al QUALIFIER/ })).toBeVisible()
@@ -586,8 +586,8 @@ test('region manager competitions surface is read-only and scoped to visible sto
   await page.goto('/admin/competitions')
 
   await expect(page.getByRole('heading', { name: /Bölge yarışma etapları/i })).toBeVisible()
-  const regionReadSummary = page.getByLabel('Admin competition read summary')
-  const regionContributionRows = page.getByLabel('Scoped competition store contributions')
+  const regionReadSummary = page.getByLabel('Yönetici yarışma okuma özeti')
+  const regionContributionRows = page.getByLabel('Kapsamdaki yarışma mağaza katkıları')
   await expect(regionReadSummary.getByText('Okuma özeti')).toBeVisible()
   await expect(regionReadSummary.getByText('95% katkı kapsamı')).toBeVisible()
   await expect(regionContributionRows.getByText('Katkı sağlığı')).toBeVisible()

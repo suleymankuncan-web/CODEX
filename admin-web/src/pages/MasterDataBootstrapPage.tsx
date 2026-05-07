@@ -150,7 +150,7 @@ export function MasterDataBootstrapPage() {
         <section className="panel">
           <div className="inline-state inline-state-accent">{feedback}</div>
           {promotionResult?.promotedRows.length ? (
-            <div className="lineage-chip-list" aria-label="Promotion command result">
+            <div className="lineage-chip-list" aria-label={t('adminMasterData.promotionCommandResultAria')}>
               {promotionResult.promotedRows.map((row) => (
                 <div className="lineage-chip" key={row.rowId}>
                   <span>{t('adminMasterData.promotedRow')}</span>
@@ -456,7 +456,7 @@ function BatchDetailPanel(input: {
         </article>
       </section>
 
-      <section className="panel" aria-label="Master data promotion dry-run evidence">
+      <section className="panel" aria-label={t('adminMasterData.promotionDryRunEvidenceAria')}>
         <div className="panel-heading">
           <div>
             <div className="eyebrow">{t('adminMasterData.dryRun')}</div>
@@ -488,7 +488,7 @@ function BatchDetailPanel(input: {
         )}
       </section>
 
-      <section className="panel" aria-label="Master data bootstrap row evidence">
+      <section className="panel" aria-label={t('adminMasterData.bootstrapRowEvidenceAria')}>
         <div className="panel-heading">
           <div>
             <div className="eyebrow">{t('adminMasterData.rowEvidence')}</div>

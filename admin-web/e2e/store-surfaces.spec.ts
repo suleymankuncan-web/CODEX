@@ -459,8 +459,8 @@ test('store competitions page renders scoped contribution details', async ({ pag
 
   await expect(page.getByRole('heading', { name: /Mağaza yarışmaları/i })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'April Region Challenge' })).toBeVisible()
-  const readSummary = page.getByLabel('Store competition read summary')
-  const contributionRows = page.getByLabel('Scoped store competition contributions')
+  const readSummary = page.getByLabel('Mağaza yarışma okuma özeti')
+  const contributionRows = page.getByLabel('Kapsamdaki mağaza yarışma katkıları')
   await expect(readSummary.getByText('Okuma özeti')).toBeVisible()
   await expect(readSummary.getByText('95% katkı kapsamı')).toBeVisible()
   await expect(contributionRows.getByText('Katkı sağlığı')).toBeVisible()
@@ -829,8 +829,8 @@ test('store approvals page switches to English copy and persists locale', async 
 test('language toggle localizes competition read labels and persists preference', async ({ page }) => {
   await page.goto('/store/competitions')
 
-  const readSummary = page.getByLabel('Store competition read summary')
-  const contributionRows = page.getByLabel('Scoped store competition contributions')
+  const readSummary = page.getByLabel('Mağaza yarışma okuma özeti')
+  const contributionRows = page.getByLabel('Kapsamdaki mağaza yarışma katkıları')
 
   await expect(readSummary.getByRole('heading', { name: 'Okuma özeti' })).toBeVisible()
   await expect(readSummary.getByText('95% katkı kapsamı')).toBeVisible()
@@ -839,15 +839,18 @@ test('language toggle localizes competition read labels and persists preference'
 
   await page.getByRole('button', { name: 'İngilizceye geç' }).click()
 
-  await expect(readSummary.getByRole('heading', { name: 'Read summary' })).toBeVisible()
-  await expect(readSummary.getByText('95% contribution coverage')).toBeVisible()
-  await expect(contributionRows.getByText('Contribution health')).toBeVisible()
-  await expect(contributionRows.getByText('Partial contribution').first()).toBeVisible()
+  const readSummaryEn = page.getByLabel('Store competition read summary')
+  const contributionRowsEn = page.getByLabel('Scoped store competition contributions')
+
+  await expect(readSummaryEn.getByRole('heading', { name: 'Read summary' })).toBeVisible()
+  await expect(readSummaryEn.getByText('95% contribution coverage')).toBeVisible()
+  await expect(contributionRowsEn.getByText('Contribution health')).toBeVisible()
+  await expect(contributionRowsEn.getByText('Partial contribution').first()).toBeVisible()
 
   await page.reload()
 
-  await expect(readSummary.getByRole('heading', { name: 'Read summary' })).toBeVisible()
-  await expect(contributionRows.getByText('Contribution health')).toBeVisible()
+  await expect(readSummaryEn.getByRole('heading', { name: 'Read summary' })).toBeVisible()
+  await expect(contributionRowsEn.getByText('Contribution health')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Switch language to Turkish' })).toHaveAttribute(
     'aria-pressed',
     'false',

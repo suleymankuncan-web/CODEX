@@ -606,7 +606,7 @@ export function StoreMyPerformancePage(input: {
         />
       </section>
 
-      <section className="panel" aria-label="Score meaning">
+      <section className="panel" aria-label={t('storeMe.scoreMeaning')}>
         <div className="panel-heading">
           <div>
             <div className="eyebrow">{t('storeMe.scoreMeaning')}</div>

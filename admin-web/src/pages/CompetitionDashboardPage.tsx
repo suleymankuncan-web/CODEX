@@ -388,7 +388,7 @@ function CompetitionReadSummaryPanel(input: { summary: CompetitionReadSummary })
   const { t } = useLocalization()
 
   return (
-    <section className="stacked-table" aria-label="Admin competition read summary">
+    <section className="stacked-table" aria-label={t('competition.readSummaryAria')}>
       <div className="panel-heading">
         <div>
           <div className="eyebrow">{t('competition.readScope')}</div>
@@ -412,7 +412,7 @@ function ScopedContributionSection(input: { contributions: CompetitionStoreContr
   const { locale, t } = useLocalization()
 
   return (
-    <section className="stacked-table" aria-label="Scoped competition store contributions">
+    <section className="stacked-table" aria-label={t('competition.scopedContributionsAria')}>
       <div className="panel-heading">
         <div>
           <div className="eyebrow">{t('competition.readScope')}</div>
@@ -470,7 +470,7 @@ function ScopedWarningsSection(input: { warnings: CompetitionWarning[] }) {
   const { locale, t } = useLocalization()
 
   return (
-    <section className="stacked-table" aria-label="Scoped competition warnings">
+    <section className="stacked-table" aria-label={t('competition.scopedWarningsAria')}>
       <div className="panel-heading">
         <div>
           <div className="eyebrow">{t('competition.dataQuality')}</div>

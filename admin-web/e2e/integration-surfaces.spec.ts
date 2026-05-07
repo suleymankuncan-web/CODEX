@@ -128,9 +128,9 @@ test('admin dashboard manages store master data import controls', async ({ page 
   await expect(scopePanel.getByText('Marmara Park')).toBeVisible()
   await expect(scopePanel.getByText('MP001 / Marmara / şirket')).toBeVisible()
 
-  const scopeToggle = scopePanel.getByRole('checkbox', { name: 'Marmara Park KPI import enabled' })
+  const scopeToggle = scopePanel.getByRole('checkbox', { name: 'Marmara Park KPI import aktif' })
   await expect(scopeToggle).toBeChecked()
-  await scopePanel.getByRole('combobox', { name: 'Marmara Park store type' }).selectOption('franchise')
+  await scopePanel.getByRole('combobox', { name: 'Marmara Park mağaza tipi' }).selectOption('franchise')
 
   await expect(page.getByText('Store master data updated')).toBeVisible()
 })
@@ -205,7 +205,7 @@ test('admin master data bootstrap surface exposes personnel promotion evidence',
   await expect(page.getByText('1 / 2').first()).toBeVisible()
   await expect(page.getByText('employee-live-1').first()).toBeVisible()
 
-  const dryRunPanel = page.getByLabel('Master data promotion dry-run evidence')
+  const dryRunPanel = page.getByLabel('Ana veri aktarım prova kanıtı')
   await expect(
     dryRunPanel.getByRole('heading', { name: 'Aktarım prova kanıtı' }),
   ).toBeVisible()

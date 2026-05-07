@@ -12,6 +12,7 @@ export const adminMasterDataTr = {
   'adminMasterData.readiness': 'Hazırlık',
   'adminMasterData.none': 'yok',
 
+  'adminMasterData.promotionCommandResultAria': 'Aktarım komutu sonucu',
   'adminMasterData.promotedRow': 'Aktarılan satır',
   'adminMasterData.reviewQueue': 'İnceleme kuyruğu',
   'adminMasterData.bootstrapBatches': 'Hazırlık partileri',
@@ -74,12 +75,14 @@ export const adminMasterDataTr = {
 
   'adminMasterData.dryRun': 'Prova',
   'adminMasterData.dryRunTitle': 'Aktarım prova kanıtı',
+  'adminMasterData.promotionDryRunEvidenceAria': 'Ana veri aktarım prova kanıtı',
   'adminMasterData.dryRunCopy':
     'Yalnızca prova kanıtı. Bu panelden satır aktarılmaz; aktarım hâlâ açık komut gerektirir.',
   'adminMasterData.dryRunEmpty':
     'Bu hazırlık partisi için aktarım hazırlığı satırı dönmedi.',
   'adminMasterData.rowEvidence': 'Satır kanıtı',
   'adminMasterData.rowEvidenceTitle': 'Çözülen ve aktarılan satırlar',
+  'adminMasterData.bootstrapRowEvidenceAria': 'Ana veri hazırlık satır kanıtı',
   'adminMasterData.rowEvidenceEmpty':
     'Bu hazırlık partisi için yüklenmiş satır dönmedi.',
 
@@ -125,6 +128,7 @@ export const adminMasterDataEn: Record<keyof typeof adminMasterDataTr, string> =
   'adminMasterData.readiness': 'Readiness',
   'adminMasterData.none': 'none',
 
+  'adminMasterData.promotionCommandResultAria': 'Promotion command result',
   'adminMasterData.promotedRow': 'Promoted row',
   'adminMasterData.reviewQueue': 'Review queue',
   'adminMasterData.bootstrapBatches': 'Bootstrap batches',
@@ -187,12 +191,14 @@ export const adminMasterDataEn: Record<keyof typeof adminMasterDataTr, string> =
 
   'adminMasterData.dryRun': 'Dry-run',
   'adminMasterData.dryRunTitle': 'Promotion dry-run evidence',
+  'adminMasterData.promotionDryRunEvidenceAria': 'Master data promotion dry-run evidence',
   'adminMasterData.dryRunCopy':
     'Dry-run evidence only. No rows are promoted from this panel; promotion still requires the explicit command.',
   'adminMasterData.dryRunEmpty':
     'No promotion readiness rows returned for this bootstrap batch.',
   'adminMasterData.rowEvidence': 'Row evidence',
   'adminMasterData.rowEvidenceTitle': 'Resolved and promoted rows',
+  'adminMasterData.bootstrapRowEvidenceAria': 'Master data bootstrap row evidence',
   'adminMasterData.rowEvidenceEmpty':
     'No staged rows returned for this bootstrap batch.',
 

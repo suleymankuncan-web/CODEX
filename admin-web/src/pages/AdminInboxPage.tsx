@@ -296,7 +296,7 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
       </section>
 
       {sellerCodeEnabled ? (
-        <section className="panel" aria-label="Seller code approval queue">
+        <section className="panel" aria-label={t('adminInbox.sellerQueueAria')}>
           <div className="panel-heading panel-heading-spread">
             <div>
               <div className="eyebrow">{t('adminInbox.workforceEyebrow')}</div>
@@ -368,7 +368,7 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
                       <label className="field-block">
                         <span>{t('adminInbox.sellerCodeField')}</span>
                         <input
-                          aria-label={`${displayName} seller code`}
+                          aria-label={t('adminInbox.sellerCodeInputAria', { displayName })}
                           value={draftCode}
                           onChange={(event) =>
                             setSellerCodeDrafts((current) => ({
@@ -401,7 +401,7 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
                       <label className="field-block">
                         <span>{t('adminInbox.returnNote')}</span>
                         <textarea
-                          aria-label={`Return note for ${displayName}`}
+                          aria-label={t('adminInbox.returnNoteForAria', { displayName })}
                           rows={2}
                           value={returnNote}
                           onChange={(event) =>
@@ -438,7 +438,7 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
       ) : null}
 
       {sellerCodeEnabled ? (
-        <section className="panel" aria-label="Offboarding approval queue">
+        <section className="panel" aria-label={t('adminInbox.offboardingQueueAria')}>
           <div className="panel-heading panel-heading-spread">
             <div>
               <div className="eyebrow">{t('adminInbox.workforceEyebrow')}</div>
@@ -500,7 +500,7 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
                       <label className="field-block">
                         <span>{t('adminInbox.returnNote')}</span>
                         <textarea
-                          aria-label={`Return note for ${item.displayName}`}
+                          aria-label={t('adminInbox.returnNoteForAria', { displayName: item.displayName })}
                           rows={2}
                           value={returnNote}
                           onChange={(event) =>
