@@ -62,7 +62,7 @@ Render dashboard:
 ```text
 New -> Blueprint veya New -> Web Service
 Repository: suleymankuncan-web/CODEX
-Branch: codex/clerk-auth-db-lifecycle
+Branch: main
 ```
 
 Blueprint kullanilacaksa repo root'taki dosya:
@@ -79,10 +79,18 @@ Runtime: Node
 Region: Frankfurt
 Plan: Free
 Root Directory: backend/nestjs
-Build Command: npm ci --include=dev && npm run build
+Build Command: npm ci --include=dev && npm run db:migrate && npm run build
 Start Command: node dist/src/main.js
 Health Check Path: /api/health/live
 Auto Deploy: Off
+```
+
+Render Free plan does not support `preDeployCommand`. On the active free-plan
+staging service, keep this Build Command so migrations run before the backend
+build:
+
+```text
+Build Command: npm ci --include=dev && npm run db:migrate && npm run build
 ```
 
 Port notu:
@@ -92,7 +100,7 @@ Port notu:
 - Render'da `APP_PORT` set etmeye gerek yoktur.
 - Render env degerleri build asamasinda da goruldugu icin `NODE_ENV=production`
   devDependencies kurulumunu etkileyebilir. Bu nedenle build command
-  `npm ci --include=dev && npm run build` olmalidir.
+  `npm ci --include=dev && npm run db:migrate && npm run build` olmalidir.
 
 ## 3. Backend Env
 
@@ -122,7 +130,20 @@ DAILY_CLOSURE_AUTOMATION_ENABLED=false
 
 ## 4. Migration
 
-Render deploy'dan once Supabase staging DB migration'i lokalden calistir:
+Aktif Render Free plan staging yolunda migration build command icinde calisir:
+
+```text
+npm ci --include=dev && npm run db:migrate && npm run build
+```
+
+Paid Render plan'a gecilirse daha temiz ayrim sudur:
+
+```text
+Build Command: npm ci --include=dev && npm run build
+Pre-Deploy Command: npm run db:migrate
+```
+
+Render build-step migration kullanilamiyorsa Supabase staging DB migration'i lokalden calistir:
 
 ```powershell
 cd D:\store-ops-workspace\backend\nestjs
@@ -141,7 +162,7 @@ Vercel project:
 
 ```text
 Repo: suleymankuncan-web/CODEX
-Branch: codex/clerk-auth-db-lifecycle
+Branch: main
 Root Directory: admin-web
 Framework: Vite
 Build Command: npm run build

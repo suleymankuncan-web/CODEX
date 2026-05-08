@@ -4,7 +4,7 @@
 
 - Frontend-only change: run local frontend verification, deploy Vercel preview, verify the Vercel deployment id maps to the expected Git commit hash, promote, run production smoke.
 - Backend/API change: run backend targeted tests, deploy Render, verify `/api/auth/session` and `/api/admin/migrations/status`, then run affected frontend smoke.
-- Database migration change: run migration tests, deploy Render with predeploy migration, verify migration status has no failed or pending migration, then run admin and store smoke.
+- Database migration change: run migration tests, deploy Render with the approved migration step, verify migration status has no failed or pending migration, then run admin and store smoke.
 - Docs-only change: run the affected documentation/contract tests, merge to main, record the Git commit hash; Vercel and Render deploys are not required unless runtime files changed.
 
 ## Standard Deploy SOP
@@ -15,7 +15,7 @@
 4. Record the Vercel deployment id and verify the Vercel deployment id maps to the expected Git commit hash.
 5. Promote only the verified Vercel deployment when the frontend change is intended for production/staging use.
 6. Trigger or verify Render deploy when backend, API contract, environment, migration, or `render.yaml` changed.
-7. Verify Render build completed and migrations ran through `preDeployCommand` when a Render deploy is required.
+7. Verify Render build completed and migrations ran through the approved Render migration step when a Render deploy is required.
 8. Verify `/api/auth/session` and `/api/admin/migrations/status`; migration status must have zero failed and zero pending migrations.
 9. Hard refresh the browser, then run the production smoke order.
 10. Record the outcome as `Go`, `Conditional Go`, or `No-Go` with links to deployment ids, commit hash, and evidence.
@@ -27,7 +27,7 @@
 | Docs-only change | Not required | Not required | Affected docs/contract tests and `git diff --check` |
 | Frontend-only change | Required | Not required | Vercel deployment id, Git commit hash, production smoke order |
 | Backend/API change | Only if frontend files changed | Required | `/api/auth/session`, `/api/admin/migrations/status`, affected frontend smoke |
-| Database migration change | Only if frontend files changed | Required | Render predeploy migration, migration status, admin and store smoke |
+| Database migration change | Only if frontend files changed | Required | Render migration step, migration status, admin and store smoke |
 | Environment/config change | Required for frontend-owned env | Required for backend-owned env | Verify the owning service restarted with expected config and run affected smoke |
 
 ## Local Verification Commands
@@ -55,7 +55,9 @@ git diff --check
 - Render deploy is required when backend, API contract, environment, migration, or `render.yaml` changes.
 - Deploy Render when backend, API contract, environment, migration, or `render.yaml` changes.
 - Verify Render build completed.
-- Verify migrations ran through `preDeployCommand`.
+- Verify migrations ran through the approved Render migration step.
+- On Render Free plan, the approved migration step is the build command `npm ci --include=dev && npm run db:migrate && npm run build`.
+- On a paid Render plan, the approved migration step may move back to `preDeployCommand: npm run db:migrate` with build command `npm ci --include=dev && npm run build`.
 - Verify `/api/admin/migrations/status` returns zero failed and zero pending migrations.
 
 ## Production Smoke Order

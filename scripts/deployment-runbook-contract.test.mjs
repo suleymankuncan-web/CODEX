@@ -158,8 +158,7 @@ test('deployment runbook requires guarded commands and sanitized evidence', () =
 
 test('render backend deploy runs database migrations before starting the api', () => {
   requireText(renderBlueprint, 'name: hr-axis-api')
-  requireText(renderBlueprint, 'buildCommand: npm ci --include=dev && npm run build')
-  requireText(renderBlueprint, 'preDeployCommand: npm run db:migrate')
+  requireText(renderBlueprint, 'buildCommand: npm ci --include=dev && npm run db:migrate && npm run build')
   requireText(renderBlueprint, 'startCommand: node dist/src/main.js')
 })
 
