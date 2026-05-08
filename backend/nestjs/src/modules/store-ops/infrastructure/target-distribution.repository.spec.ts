@@ -170,7 +170,8 @@ describe("TargetDistributionRepository", () => {
       String(sql).includes("INSERT INTO audit.event_log"),
     );
     expect(auditCall).toBeDefined();
-    expect(JSON.parse(auditCall?.[1][4] as string)).toMatchObject({
+    expect(auditCall?.[1][0]).toBe("region-manager-user");
+    expect(JSON.parse(auditCall?.[1][5] as string)).toMatchObject({
       actorUserId: "region-manager-user",
       promotedTargetReferenceCount: 2,
     });

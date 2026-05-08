@@ -249,14 +249,16 @@ export class ChecklistService {
       regionIds: string[];
       storeIds: string[];
     };
+    actorActionScope?: {
+      assignedStoreIds: string[];
+    };
+    actorRoleCodes: string[];
   }) {
+    const listScope = this.resolveChecklistAcknowledgementListScope(input);
     const items = await this.checklistAcknowledgementRepository.listChecklistAcknowledgements({
-      companyIds: input.actorScope.companyIds,
-      regionIds: input.actorScope.regionIds,
-      storeIds:
-        input.actorScope.companyIds.length > 0 || input.actorScope.regionIds.length > 0
-          ? []
-          : input.actorScope.storeIds,
+      companyIds: listScope.companyIds,
+      regionIds: listScope.regionIds,
+      storeIds: listScope.storeIds,
     });
 
     return buildListResponse(items, {
@@ -390,6 +392,42 @@ export class ChecklistService {
     if (!actionScope?.assignedStoreIds.includes(storeId)) {
       throw new ForbiddenException(message);
     }
+  }
+
+  private resolveChecklistAcknowledgementListScope(input: {
+    actorScope: {
+      companyIds: string[];
+      regionIds: string[];
+      storeIds: string[];
+    };
+    actorActionScope?: {
+      assignedStoreIds: string[];
+    };
+    actorRoleCodes: string[];
+  }) {
+    const canUseBroadReadScope = input.actorRoleCodes.some((roleCode) =>
+      ["REPORT_VIEWER", "SUPER_ADMIN"].includes(roleCode),
+    );
+    const storeIds = input.actorActionScope?.assignedStoreIds.length
+      ? input.actorActionScope.assignedStoreIds
+      : input.actorScope.storeIds;
+
+    if (!canUseBroadReadScope) {
+      return {
+        companyIds: [],
+        regionIds: [],
+        storeIds,
+      };
+    }
+
+    return {
+      companyIds: input.actorScope.companyIds,
+      regionIds: input.actorScope.regionIds,
+      storeIds:
+        input.actorScope.companyIds.length > 0 || input.actorScope.regionIds.length > 0
+          ? []
+          : storeIds,
+    };
   }
 
   private assertCanManageTemplateCompany(

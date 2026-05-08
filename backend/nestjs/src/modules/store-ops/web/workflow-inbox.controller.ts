@@ -20,12 +20,16 @@ export class WorkflowInboxController {
           regionIds: string[];
           storeIds: string[];
         };
+        actionScope: {
+          assignedStoreIds: string[];
+        };
       };
     },
   ) {
     return this.workflowInboxService.listInbox({
       actorRoles: request.user.roleCodes,
       actorScope: request.user.scope,
+      actorActionScope: request.user.actionScope,
     });
   }
 }

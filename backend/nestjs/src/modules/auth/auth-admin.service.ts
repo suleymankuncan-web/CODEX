@@ -1,4 +1,9 @@
-import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { buildCommandResponse, buildListResponse } from "../../shared/http/response-builders";
 import { mapAuditEvent } from "../../shared/audit/audit-event.mapper";
 import { semanticValidation } from "../../shared/http/api-errors";
@@ -26,6 +31,7 @@ export class AuthAdminService {
     actorUserId: string;
   }) {
     this.authRoleScopePolicyService.validateAssignmentScope(input);
+    await this.assertAssignmentScopeHierarchy(input);
 
     const role = await this.authAdminRepository.getRoleByCode(input.roleCode);
 
@@ -262,6 +268,10 @@ export class AuthAdminService {
     roleCode: "REGION_MANAGER" | "STORE_MANAGER" | "VISUAL_MERCHANDISER";
     storeIds: string[];
     actorUserId: string;
+    actorRoleCodes?: string[];
+    actorScope?: {
+      companyIds: string[];
+    };
   }) {
     const uniqueStoreIds = [...new Set(input.storeIds)];
 
@@ -316,6 +326,13 @@ export class AuthAdminService {
     if (stores.length !== uniqueStoreIds.length) {
       throw semanticValidation("Pilot user binding contains an inactive or unknown store");
     }
+
+    this.assertPilotBindingCompanyScope({
+      actorRoleCodes: input.actorRoleCodes ?? [],
+      actorScope: input.actorScope ?? { companyIds: [] },
+      employeeCompanyId: employee.company_id,
+      stores,
+    });
 
     const binding = await this.authAdminRepository.createPilotUserBinding({
       employeeId: input.employeeId,
@@ -710,6 +727,99 @@ export class AuthAdminService {
     storeId?: string;
   }) {
     return input.scopeType === "store" ? input.storeId ?? null : null;
+  }
+
+  private async assertAssignmentScopeHierarchy(input: {
+    scopeType: "company" | "region" | "store";
+    companyId?: string;
+    regionId?: string;
+    storeId?: string;
+  }) {
+    const companyId = this.getCompanyId(input);
+
+    if (!companyId) {
+      return;
+    }
+
+    const company = await this.authAdminRepository.getCompanyLookupById(companyId);
+
+    if (!company) {
+      throw new NotFoundException(`Company not found or inactive: ${companyId}`);
+    }
+
+    if (input.scopeType === "company") {
+      return;
+    }
+
+    const regionId = this.getRegionId(input);
+
+    if (!regionId) {
+      return;
+    }
+
+    const region = await this.authAdminRepository.getRegionLookupById(regionId);
+
+    if (!region) {
+      throw new NotFoundException(`Region not found or inactive: ${regionId}`);
+    }
+
+    if (region.company_id !== companyId) {
+      throw semanticValidation("Region does not belong to the provided company");
+    }
+
+    if (input.scopeType === "region") {
+      return;
+    }
+
+    const storeId = this.getStoreId(input);
+
+    if (!storeId) {
+      return;
+    }
+
+    const store = await this.authAdminRepository.getStoreLookupById(storeId);
+
+    if (!store) {
+      throw new NotFoundException(`Store not found or inactive: ${storeId}`);
+    }
+
+    if (store.company_id !== companyId || store.region_id !== regionId) {
+      throw semanticValidation("Store does not belong to the provided company and region");
+    }
+  }
+
+  private assertPilotBindingCompanyScope(input: {
+    actorRoleCodes: string[];
+    actorScope: {
+      companyIds: string[];
+    };
+    employeeCompanyId: string;
+    stores: Array<{
+      store_id: string;
+      company_id: string;
+    }>;
+  }) {
+    const hasOutOfEmployeeCompanyStore = input.stores.some(
+      (store) => store.company_id !== input.employeeCompanyId,
+    );
+
+    if (hasOutOfEmployeeCompanyStore) {
+      throw semanticValidation("Pilot user binding stores must belong to the employee company");
+    }
+
+    if (input.actorRoleCodes.includes("SUPER_ADMIN")) {
+      return;
+    }
+
+    const actorCompanyIds = new Set(input.actorScope.companyIds);
+
+    if (
+      actorCompanyIds.size === 0 ||
+      !actorCompanyIds.has(input.employeeCompanyId) ||
+      input.stores.some((store) => !actorCompanyIds.has(store.company_id))
+    ) {
+      throw new ForbiddenException("Pilot user binding is outside actor company scope");
+    }
   }
 
   private mapAssignment(item: {

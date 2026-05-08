@@ -51,12 +51,15 @@ export class TargetDistributionController {
         actionScope: {
           assignedStoreIds: string[];
         };
+        roleCodes: string[];
       };
     },
     @Query() query: ListTargetDistributionRequestsQueryDto,
   ) {
     return this.targetDistributionService.listRequests({
       actorScope: request.user.scope,
+      actorActionScope: request.user.actionScope,
+      actorRoleCodes: request.user.roleCodes,
       statuses: query.status ? [query.status] : undefined,
     });
   }
@@ -72,12 +75,18 @@ export class TargetDistributionController {
           regionIds: string[];
           storeIds: string[];
         };
+        actionScope: {
+          assignedStoreIds: string[];
+        };
+        roleCodes: string[];
       };
     },
     @Query() query: ListTargetCoverageQueryDto,
   ) {
     return this.targetDistributionService.getTargetCoverage({
       actorScope: request.user.scope,
+      actorActionScope: request.user.actionScope,
+      actorRoleCodes: request.user.roleCodes,
       requestMonth: query.requestMonth,
       storeId: query.storeId,
     });

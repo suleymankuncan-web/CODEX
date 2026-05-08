@@ -8,6 +8,7 @@ type Queryable = {
 
 type SnapshotRunRow = {
   snapshot_run_id: string;
+  company_ids: string[];
   snapshot_date: string;
   snapshot_type: string;
   period_start: string;
@@ -28,7 +29,7 @@ export class SnapshotOperationsRepository {
   constructor(private readonly databaseService: DatabaseService) {}
 
   private buildSnapshotRunFilters(
-    input: { runStatus?: string; snapshotType?: string },
+    input: { runStatus?: string; snapshotType?: string; actorCompanyIds?: string[] },
     runAlias = "rpt.snapshot_run",
   ) {
     const clauses: string[] = [];
@@ -44,6 +45,11 @@ export class SnapshotOperationsRepository {
       clauses.push(`${runAlias}.snapshot_type = $${params.length}`);
     }
 
+    if (input.actorCompanyIds) {
+      params.push(input.actorCompanyIds);
+      clauses.push(`${runAlias}.company_ids && $${params.length}::uuid[]`);
+    }
+
     return {
       clauses,
       params,
@@ -51,11 +57,15 @@ export class SnapshotOperationsRepository {
     };
   }
 
-  async findSnapshotRunById(snapshotRunId: string) {
+  async findSnapshotRunById(input: string | { snapshotRunId: string; actorCompanyIds?: string[] }) {
+    const { snapshotRunId, actorCompanyIds } = this.resolveScopedSnapshotRunInput(input);
+    const params: unknown[] = [snapshotRunId];
+    const companyScopeClause = this.buildCompanyScopeClause(actorCompanyIds, params);
     const result = await this.databaseService.query<SnapshotRunRow>(
       `
         SELECT
           rpt.snapshot_run.snapshot_run_id,
+          rpt.snapshot_run.company_ids,
           rpt.snapshot_run.snapshot_date,
           rpt.snapshot_run.snapshot_type,
           rpt.snapshot_run.period_start,
@@ -73,9 +83,10 @@ export class SnapshotOperationsRepository {
         LEFT JOIN ops.kpi_config_version version
           ON version.kpi_config_version_id = rpt.snapshot_run.kpi_config_version_id
         WHERE rpt.snapshot_run.snapshot_run_id = $1::uuid
+        ${companyScopeClause}
         LIMIT 1
       `,
-      [snapshotRunId],
+      params,
     );
 
     return result.rows[0] ?? null;
@@ -84,6 +95,7 @@ export class SnapshotOperationsRepository {
   async listSnapshotRuns(input: {
     runStatus?: string;
     snapshotType?: string;
+    actorCompanyIds?: string[];
     limit?: number;
     offset?: number;
   }) {
@@ -95,6 +107,7 @@ export class SnapshotOperationsRepository {
       `
         SELECT
           rpt.snapshot_run.snapshot_run_id,
+          rpt.snapshot_run.company_ids,
           rpt.snapshot_run.snapshot_date,
           rpt.snapshot_run.snapshot_type,
           rpt.snapshot_run.period_start,
@@ -134,7 +147,11 @@ export class SnapshotOperationsRepository {
     };
   }
 
-  async getSnapshotRunSummary(input: { runStatus?: string; snapshotType?: string }) {
+  async getSnapshotRunSummary(input: {
+    runStatus?: string;
+    snapshotType?: string;
+    actorCompanyIds?: string[];
+  }) {
     const { params, whereClause } = this.buildSnapshotRunFilters(input);
 
     const grouped = await this.databaseService.query<{
@@ -165,9 +182,14 @@ export class SnapshotOperationsRepository {
     };
   }
 
-  async getLatestSnapshotRunIdByStatus(input: { runStatus: string; snapshotType?: string }) {
+  async getLatestSnapshotRunIdByStatus(input: {
+    runStatus: string;
+    snapshotType?: string;
+    actorCompanyIds?: string[];
+  }) {
     const { clauses, params } = this.buildSnapshotRunFilters({
       snapshotType: input.snapshotType,
+      actorCompanyIds: input.actorCompanyIds,
     });
     params.push(input.runStatus);
     clauses.push(`rpt.snapshot_run.run_status = $${params.length}`);
@@ -191,11 +213,15 @@ export class SnapshotOperationsRepository {
     snapshotType: string;
     periodStart: string;
     periodEnd: string;
+    actorCompanyIds?: string[];
   }) {
+    const params: unknown[] = [input.snapshotType, input.periodStart, input.periodEnd];
+    const companyScopeClause = this.buildCompanyScopeClause(input.actorCompanyIds, params);
     const result = await this.databaseService.query<SnapshotRunRow>(
       `
         SELECT
           rpt.snapshot_run.snapshot_run_id,
+          rpt.snapshot_run.company_ids,
           rpt.snapshot_run.snapshot_date,
           rpt.snapshot_run.snapshot_type,
           rpt.snapshot_run.period_start,
@@ -215,10 +241,11 @@ export class SnapshotOperationsRepository {
         WHERE rpt.snapshot_run.snapshot_type = $1
           AND rpt.snapshot_run.period_start = $2::date
           AND rpt.snapshot_run.period_end = $3::date
+          ${companyScopeClause}
         ORDER BY rpt.snapshot_run.generated_at DESC, rpt.snapshot_run.snapshot_run_id DESC
         LIMIT 1
       `,
-      [input.snapshotType, input.periodStart, input.periodEnd],
+      params,
     );
 
     return result.rows[0] ?? null;
@@ -227,6 +254,7 @@ export class SnapshotOperationsRepository {
   async getSnapshotRunActionCounts(input: {
     runStatus?: string;
     snapshotType?: string;
+    actorCompanyIds?: string[];
     stuckBefore: string;
   }) {
     const { params, whereClause } = this.buildSnapshotRunFilters(input);
@@ -263,6 +291,7 @@ export class SnapshotOperationsRepository {
   async getLatestStuckSnapshotRunId(input: {
     runStatus?: string;
     snapshotType?: string;
+    actorCompanyIds?: string[];
     stuckBefore: string;
   }) {
     const { clauses, params } = this.buildSnapshotRunFilters(input);
@@ -288,6 +317,7 @@ export class SnapshotOperationsRepository {
   async listSnapshotRunsNeedingAction(input: {
     runStatus?: string;
     snapshotType?: string;
+    actorCompanyIds?: string[];
     limit?: number;
     offset?: number;
     stuckBefore: string;
@@ -299,6 +329,7 @@ export class SnapshotOperationsRepository {
       WITH action_queue AS (
         SELECT
           rpt.snapshot_run.snapshot_run_id,
+          rpt.snapshot_run.company_ids,
           rpt.snapshot_run.snapshot_date,
           rpt.snapshot_run.snapshot_type,
           rpt.snapshot_run.period_start,
@@ -406,12 +437,12 @@ export class SnapshotOperationsRepository {
     return result.rows;
   }
 
-  async getSnapshotRowCounts(snapshotRunId: string) {
+  async getSnapshotRowCounts(snapshotRunId: string, actorCompanyIds?: string[]) {
     const [workforce, kpis, checklists, turnover] = await Promise.all([
-      this.countSnapshotRows("rpt.store_workforce_snapshot", snapshotRunId),
-      this.countSnapshotRows("rpt.store_kpi_snapshot", snapshotRunId),
-      this.countSnapshotRows("rpt.store_checklist_snapshot", snapshotRunId),
-      this.countSnapshotRows("rpt.turnover_snapshot", snapshotRunId),
+      this.countSnapshotRows("rpt.store_workforce_snapshot", snapshotRunId, actorCompanyIds),
+      this.countSnapshotRows("rpt.store_kpi_snapshot", snapshotRunId, actorCompanyIds),
+      this.countSnapshotRows("rpt.store_checklist_snapshot", snapshotRunId, actorCompanyIds),
+      this.countSnapshotRows("rpt.turnover_snapshot", snapshotRunId, actorCompanyIds),
     ]);
 
     return {
@@ -422,39 +453,53 @@ export class SnapshotOperationsRepository {
     };
   }
 
-  async countReruns(snapshotRunId: string) {
+  async countReruns(input: string | { snapshotRunId: string; actorCompanyIds?: string[] }) {
+    const { snapshotRunId, actorCompanyIds } = this.resolveScopedSnapshotRunInput(input);
+    const params: unknown[] = [snapshotRunId];
+    const companyScopeClause = this.buildCompanyScopeClause(actorCompanyIds, params);
     const result = await this.databaseService.query<{ rerun_count: string }>(
       `
         SELECT COUNT(*)::text AS rerun_count
         FROM rpt.snapshot_run
         WHERE rerun_of_snapshot_run_id = $1::uuid
+        ${companyScopeClause}
       `,
-      [snapshotRunId],
+      params,
     );
 
     return Number(result.rows[0]?.rerun_count ?? 0);
   }
 
-  async getLatestRerunSnapshotRunId(snapshotRunId: string) {
+  async getLatestRerunSnapshotRunId(
+    input: string | { snapshotRunId: string; actorCompanyIds?: string[] },
+  ) {
+    const { snapshotRunId, actorCompanyIds } = this.resolveScopedSnapshotRunInput(input);
+    const params: unknown[] = [snapshotRunId];
+    const companyScopeClause = this.buildCompanyScopeClause(actorCompanyIds, params);
     const result = await this.databaseService.query<{ snapshot_run_id: string }>(
       `
         SELECT snapshot_run_id
         FROM rpt.snapshot_run
         WHERE rerun_of_snapshot_run_id = $1::uuid
+        ${companyScopeClause}
         ORDER BY generated_at DESC
         LIMIT 1
       `,
-      [snapshotRunId],
+      params,
     );
 
     return result.rows[0]?.snapshot_run_id ?? null;
   }
 
-  async listRerunChildren(snapshotRunId: string) {
+  async listRerunChildren(input: string | { snapshotRunId: string; actorCompanyIds?: string[] }) {
+    const { snapshotRunId, actorCompanyIds } = this.resolveScopedSnapshotRunInput(input);
+    const params: unknown[] = [snapshotRunId];
+    const companyScopeClause = this.buildCompanyScopeClause(actorCompanyIds, params);
     const result = await this.databaseService.query<SnapshotRunRow>(
       `
         SELECT
           rpt.snapshot_run.snapshot_run_id,
+          rpt.snapshot_run.company_ids,
           rpt.snapshot_run.snapshot_date,
           rpt.snapshot_run.snapshot_type,
           rpt.snapshot_run.period_start,
@@ -472,33 +517,41 @@ export class SnapshotOperationsRepository {
         LEFT JOIN ops.kpi_config_version version
           ON version.kpi_config_version_id = rpt.snapshot_run.kpi_config_version_id
         WHERE rpt.snapshot_run.rerun_of_snapshot_run_id = $1::uuid
+        ${companyScopeClause}
         ORDER BY rpt.snapshot_run.generated_at ASC, rpt.snapshot_run.snapshot_run_id ASC
       `,
-      [snapshotRunId],
+      params,
     );
 
     return result.rows;
   }
 
-  async countActiveReruns(snapshotRunId: string) {
+  async countActiveReruns(input: string | { snapshotRunId: string; actorCompanyIds?: string[] }) {
+    const { snapshotRunId, actorCompanyIds } = this.resolveScopedSnapshotRunInput(input);
+    const params: unknown[] = [snapshotRunId];
+    const companyScopeClause = this.buildCompanyScopeClause(actorCompanyIds, params);
     const result = await this.databaseService.query<{ active_rerun_count: string }>(
       `
         SELECT COUNT(*)::text AS active_rerun_count
         FROM rpt.snapshot_run
         WHERE rerun_of_snapshot_run_id = $1::uuid
           AND run_status IN ('queued', 'running')
+          ${companyScopeClause}
       `,
-      [snapshotRunId],
+      params,
     );
 
     return Number(result.rows[0]?.active_rerun_count ?? 0);
   }
 
-  async listFailedSnapshotRunsForLookup() {
+  async listFailedSnapshotRunsForLookup(input: { actorCompanyIds?: string[] } = {}) {
+    const params: unknown[] = [];
+    const companyScopeClause = this.buildCompanyScopeClause(input.actorCompanyIds, params);
     const result = await this.databaseService.query<SnapshotRunRow>(
       `
         SELECT
           rpt.snapshot_run.snapshot_run_id,
+          rpt.snapshot_run.company_ids,
           rpt.snapshot_run.snapshot_date,
           rpt.snapshot_run.snapshot_type,
           rpt.snapshot_run.period_start,
@@ -516,9 +569,11 @@ export class SnapshotOperationsRepository {
         LEFT JOIN ops.kpi_config_version version
           ON version.kpi_config_version_id = rpt.snapshot_run.kpi_config_version_id
         WHERE rpt.snapshot_run.run_status = 'failed'
+        ${companyScopeClause}
         ORDER BY rpt.snapshot_run.generated_at DESC
         LIMIT 20
       `,
+      params,
     );
 
     return result.rows;
@@ -531,6 +586,7 @@ export class SnapshotOperationsRepository {
       periodEnd: string;
       actorUserId: string;
       idempotencyKey: string | null;
+      actorCompanyIds?: string[];
       rerunOfSnapshotRunId?: string | null;
       kpiConfigVersionId?: string | null;
     },
@@ -539,6 +595,7 @@ export class SnapshotOperationsRepository {
     const runner = this.getRunner(client);
     const result = await runner.query<{
       snapshot_run_id: string;
+      company_ids: string[];
       snapshot_date: string;
       generated_at: string;
       run_status: string;
@@ -558,12 +615,14 @@ export class SnapshotOperationsRepository {
           run_status,
           idempotency_key,
           generated_by,
+          company_ids,
           rerun_of_snapshot_run_id,
           kpi_config_version_id
         )
-        VALUES (CURRENT_DATE, $1, $2::date, $3::date, 'queued', $4, $5, $6::uuid, $7::uuid)
+        VALUES (CURRENT_DATE, $1, $2::date, $3::date, 'queued', $4, $5, $6::uuid[], $7::uuid, $8::uuid)
         RETURNING
           snapshot_run_id,
+          company_ids,
           snapshot_date,
           generated_at,
           run_status,
@@ -575,7 +634,7 @@ export class SnapshotOperationsRepository {
           (
             SELECT version_no
             FROM ops.kpi_config_version
-            WHERE kpi_config_version_id = $7::uuid
+            WHERE kpi_config_version_id = $8::uuid
           ) AS kpi_config_version_no
       `,
       [
@@ -584,6 +643,7 @@ export class SnapshotOperationsRepository {
         input.periodEnd,
         input.idempotencyKey,
         input.actorUserId,
+        input.actorCompanyIds ?? [],
         input.rerunOfSnapshotRunId ?? null,
         input.kpiConfigVersionId ?? null,
       ],
@@ -703,17 +763,77 @@ export class SnapshotOperationsRepository {
     });
   }
 
-  private async countSnapshotRows(tableName: string, snapshotRunId: string) {
+  private async countSnapshotRows(
+    tableName: string,
+    snapshotRunId: string,
+    actorCompanyIds?: string[],
+  ) {
+    const params: unknown[] = [snapshotRunId];
+    const companyScope = this.buildSnapshotRowCompanyScope(tableName, actorCompanyIds, params);
     const result = await this.databaseService.query<{ row_count: string }>(
       `
         SELECT COUNT(*)::text AS row_count
         FROM ${tableName}
         WHERE snapshot_run_id = $1::uuid
+        ${companyScope.whereClause}
       `,
-      [snapshotRunId],
+      params,
     );
 
     return Number(result.rows[0]?.row_count ?? 0);
+  }
+
+  private buildCompanyScopeClause(
+    actorCompanyIds: string[] | undefined,
+    params: unknown[],
+    runAlias = "rpt.snapshot_run",
+  ) {
+    if (!actorCompanyIds) {
+      return "";
+    }
+
+    params.push(actorCompanyIds);
+    return `AND ${runAlias}.company_ids && $${params.length}::uuid[]`;
+  }
+
+  private buildSnapshotRowCompanyScope(
+    tableName: string,
+    actorCompanyIds: string[] | undefined,
+    params: unknown[],
+  ) {
+    if (!actorCompanyIds) {
+      return { whereClause: "" };
+    }
+
+    params.push(actorCompanyIds);
+    const paramRef = `$${params.length}::uuid[]`;
+
+    if (tableName === "rpt.turnover_snapshot") {
+      return {
+        whereClause: `AND ${tableName}.company_id = ANY(${paramRef})`,
+      };
+    }
+
+    return {
+      whereClause: `
+        AND EXISTS (
+          SELECT 1
+          FROM ops.store scoped_store
+          WHERE scoped_store.store_id = ${tableName}.store_id
+            AND scoped_store.company_id = ANY(${paramRef})
+        )
+      `,
+    };
+  }
+
+  private resolveScopedSnapshotRunInput(
+    input: string | { snapshotRunId: string; actorCompanyIds?: string[] },
+  ) {
+    if (typeof input === "string") {
+      return { snapshotRunId: input, actorCompanyIds: undefined };
+    }
+
+    return input;
   }
 
   private getRunner(client?: Queryable): Queryable {

@@ -223,18 +223,19 @@ export class TargetDistributionRepository {
             metadata_json
           )
           VALUES (
-            NULL,
+            $1::uuid,
             'target_distribution_request.created',
             'ops.target_distribution_request',
-            $1::uuid,
-            'store',
             $2::uuid,
+            'store',
             $3::uuid,
             $4::uuid,
-            $5::jsonb
+            $5::uuid,
+            $6::jsonb
           )
         `,
         [
+          input.submittedByUserId,
           request.target_distribution_request_id,
           input.companyId,
           input.regionId,
@@ -557,18 +558,19 @@ export class TargetDistributionRepository {
             metadata_json
           )
           VALUES (
-            NULL,
+            $1::uuid,
             'target_distribution_request.approved',
             'ops.target_distribution_request',
-            $1::uuid,
-            'store',
             $2::uuid,
+            'store',
             $3::uuid,
             $4::uuid,
-            $5::jsonb
+            $5::uuid,
+            $6::jsonb
           )
         `,
         [
+          input.approverUserId,
           request.target_distribution_request_id,
           request.company_id,
           request.region_id,

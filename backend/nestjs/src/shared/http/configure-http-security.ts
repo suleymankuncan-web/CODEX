@@ -2,6 +2,7 @@ import { INestApplication, ValidationPipe } from "@nestjs/common";
 import { AppConfigService } from "../app-config.service";
 import { createCorsAllowlistMiddleware } from "./cors-allowlist.middleware";
 import { createRateLimitMiddleware } from "./rate-limit.middleware";
+import { createSecurityHeadersMiddleware } from "./security-headers.middleware";
 import { StandardErrorFilter } from "./standard-error.filter";
 
 export function configureHttpSecurity(
@@ -12,6 +13,7 @@ export function configureHttpSecurity(
   >,
 ): void {
   app.setGlobalPrefix("api");
+  app.use(createSecurityHeadersMiddleware());
   app.use(createCorsAllowlistMiddleware(config.corsAllowedOrigins));
   app.use(
     createRateLimitMiddleware({

@@ -3,14 +3,9 @@ export function downloadCsv(input: {
   columns: string[]
   rows: Array<Array<string | number | null | undefined>>
 }) {
-  const escapeCell = (value: string | number | null | undefined) => {
-    const text = value === null || value === undefined ? '' : String(value)
-    return `"${text.replaceAll('"', '""')}"`
-  }
-
   const csv = [
-    input.columns.map(escapeCell).join(','),
-    ...input.rows.map((row) => row.map(escapeCell).join(',')),
+    input.columns.map(escapeCsvCellForDownload).join(','),
+    ...input.rows.map((row) => row.map(escapeCsvCellForDownload).join(',')),
   ].join('\n')
 
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
@@ -20,4 +15,16 @@ export function downloadCsv(input: {
   anchor.download = input.filename
   anchor.click()
   URL.revokeObjectURL(url)
+}
+
+const CSV_FORMULA_PREFIX_PATTERN = /^[=+\-@\t\r\n]/
+
+export function escapeCsvCellForDownload(value: string | number | null | undefined) {
+  const text = value === null || value === undefined ? '' : String(value)
+  const safeText =
+    typeof value === 'string' && CSV_FORMULA_PREFIX_PATTERN.test(text.trimStart())
+      ? `'${text}`
+      : text
+
+  return `"${safeText.replaceAll('"', '""')}"`
 }

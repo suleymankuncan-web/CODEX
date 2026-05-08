@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { ForbiddenException, Injectable } from "@nestjs/common";
 import { ReportingRepository } from "../infrastructure/reporting.repository";
 import {
   ClosedRankingEmployee,
@@ -63,7 +63,7 @@ export class ClosedRankingService {
       currentEmployeeId,
       personnelRows,
     });
-    const employeeIds = this.uniqueEmployeeIds([
+    const employeeIds = this.uniqueIds([
       ...personnelRows.map((row) => row.employee_id),
       currentRow?.employee_id ?? null,
     ]);
@@ -158,7 +158,7 @@ export class ClosedRankingService {
       currentEmployeeId !== null
         ? personnelRows.find((row) => row.employee_id === currentEmployeeId) ?? null
         : null;
-    const employeeIds = this.uniqueEmployeeIds([
+    const employeeIds = this.uniqueIds([
       ...personnelRows.slice(0, limit).map((row) => row.employee_id),
       currentRow?.employee_id ?? null,
     ]);
@@ -220,6 +220,7 @@ export class ClosedRankingService {
 
   private resolveStoreFilter(input: ClosedRankingInput) {
     if (input.storeId) {
+      this.assertStoreFilterInScope(input);
       return input.storeId;
     }
 
@@ -232,6 +233,21 @@ export class ClosedRankingService {
     }
 
     return undefined;
+  }
+
+  private assertStoreFilterInScope(input: ClosedRankingInput) {
+    if (input.roleCodes.includes("SUPER_ADMIN")) {
+      return;
+    }
+
+    const allowedStoreIds = this.uniqueIds([
+      ...input.storeIds,
+      ...input.assignedStoreIds,
+    ]);
+
+    if (!allowedStoreIds.includes(input.storeId ?? "")) {
+      throw new ForbiddenException("Closed leaderboard store is outside current scope");
+    }
   }
 
   private async resolveCurrentDailyRow(input: {
@@ -335,7 +351,7 @@ export class ClosedRankingService {
     }, new Map<string, ClosedRankingMetricRankRow[]>());
   }
 
-  private uniqueEmployeeIds(values: Array<string | null>) {
+  private uniqueIds(values: Array<string | null>) {
     return [...new Set(values.filter((value): value is string => Boolean(value)))];
   }
 

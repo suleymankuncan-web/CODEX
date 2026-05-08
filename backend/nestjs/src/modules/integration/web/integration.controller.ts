@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -15,6 +16,10 @@ import { IntegrationService } from "../application/integration.service";
 import { RequireRoles } from "../../auth/decorators/roles.decorator";
 import { RequireScope } from "../../auth/decorators/scope.decorator";
 import { PowerBiExportUploadService } from "../application/power-bi-export-upload.service";
+import {
+  isSupportedPowerBiExportFileName,
+  POWER_BI_EXPORT_MAX_FILE_BYTES,
+} from "../application/power-bi-export-upload.service";
 import { MasterDataBootstrapService } from "../application/master-data-bootstrap.service";
 import { ApproveExternalIdMapDto } from "./dto/approve-external-id-map.dto";
 import { CreateImportBatchDto } from "./dto/create-import-batch.dto";
@@ -134,8 +139,17 @@ export class IntegrationController {
   @RequireRoles("INTEGRATION_ADMIN")
   async listExternalIdMapCandidates(
     @Query() query: ListExternalIdMapCandidatesQueryDto,
+    @Req()
+    request: {
+      user: {
+        scope: {
+          companyIds: string[];
+        };
+      };
+    },
   ) {
     return this.integrationService.listExternalIdMapCandidates({
+      actorCompanyIds: request.user.scope.companyIds,
       entityType: query.entityType,
       q: query.q,
       limit: query.limit,
@@ -151,10 +165,14 @@ export class IntegrationController {
     request: {
       user: {
         userId: string;
+        scope: {
+          companyIds: string[];
+        };
       };
     },
   ) {
     return this.integrationService.approveExternalIdMapping({
+      actorCompanyIds: request.user.scope.companyIds,
       integrationSourceId: body.integrationSourceId,
       entityType: body.entityType,
       externalId: body.externalId,
@@ -166,8 +184,19 @@ export class IntegrationController {
   @Get("kpi-import-store-scope")
   @RequireScope("company")
   @RequireRoles("INTEGRATION_ADMIN")
-  async listKpiImportStoreScope(@Query() query: ListKpiImportStoreScopeQueryDto) {
+  async listKpiImportStoreScope(
+    @Query() query: ListKpiImportStoreScopeQueryDto,
+    @Req()
+    request: {
+      user: {
+        scope: {
+          companyIds: string[];
+        };
+      };
+    },
+  ) {
     return this.integrationService.listStoreMaster({
+      actorCompanyIds: request.user.scope.companyIds,
       q: query.q,
       enabled: query.enabled,
       status: query.status,
@@ -179,8 +208,19 @@ export class IntegrationController {
   @Get("store-master")
   @RequireScope("company")
   @RequireRoles("INTEGRATION_ADMIN")
-  async listStoreMaster(@Query() query: ListKpiImportStoreScopeQueryDto) {
+  async listStoreMaster(
+    @Query() query: ListKpiImportStoreScopeQueryDto,
+    @Req()
+    request: {
+      user: {
+        scope: {
+          companyIds: string[];
+        };
+      };
+    },
+  ) {
     return this.integrationService.listStoreMaster({
+      actorCompanyIds: request.user.scope.companyIds,
       q: query.q,
       enabled: query.enabled,
       status: query.status,
@@ -192,8 +232,19 @@ export class IntegrationController {
   @Get("store-master-lookups")
   @RequireScope("company")
   @RequireRoles("INTEGRATION_ADMIN")
-  async getStoreMasterLookups() {
-    return this.integrationService.getStoreMasterLookups();
+  async getStoreMasterLookups(
+    @Req()
+    request: {
+      user: {
+        scope: {
+          companyIds: string[];
+        };
+      };
+    },
+  ) {
+    return this.integrationService.getStoreMasterLookups({
+      actorCompanyIds: request.user.scope.companyIds,
+    });
   }
 
   @Get("master-data-bootstrap/batches")
@@ -233,10 +284,14 @@ export class IntegrationController {
     request: {
       user: {
         userId: string;
+        scope: {
+          companyIds: string[];
+        };
       };
     },
   ) {
     return this.integrationService.updateStoreMaster({
+      actorCompanyIds: request.user.scope.companyIds,
       storeId,
       storeType: body.storeType,
       regionId: body.regionId,
@@ -256,10 +311,14 @@ export class IntegrationController {
     request: {
       user: {
         userId: string;
+        scope: {
+          companyIds: string[];
+        };
       };
     },
   ) {
     return this.integrationService.updateStoreMaster({
+      actorCompanyIds: request.user.scope.companyIds,
       storeId,
       storeType: body.storeType,
       regionId: body.regionId,
@@ -458,7 +517,25 @@ export class IntegrationController {
     FileFieldsInterceptor([
       { name: "personnelFile", maxCount: 1 },
       { name: "storeFile", maxCount: 1 },
-    ]),
+    ], {
+      limits: {
+        fileSize: POWER_BI_EXPORT_MAX_FILE_BYTES,
+        files: 2,
+      },
+      fileFilter: (_request, file: { originalname?: string }, callback) => {
+        if (!isSupportedPowerBiExportFileName(file.originalname ?? "")) {
+          callback(
+            new BadRequestException(
+              "Power BI export dosyasi xlsx, xls veya csv olmali",
+            ),
+            false,
+          );
+          return;
+        }
+
+        callback(null, true);
+      },
+    }),
   )
   async uploadPowerBiExport(
     @Body() body: UploadPowerBiExportDto,
@@ -471,10 +548,14 @@ export class IntegrationController {
     request: {
       user: {
         userId: string;
+        scope: {
+          companyIds: string[];
+        };
       };
     },
   ) {
     return this.powerBiExportUploadService.upload({
+      actorCompanyIds: request.user.scope.companyIds,
       sourceCode: body.sourceCode,
       periodMonth: body.periodMonth,
       periodType: body.periodType,
@@ -501,12 +582,16 @@ export class IntegrationController {
     request: {
       user: {
         userId: string;
+        scope: {
+          companyIds: string[];
+        };
       };
     },
     @Body() body: CreateImportBatchDto,
   ) {
     return this.integrationService.createImportBatch({
       ...body,
+      actorCompanyIds: request.user.scope.companyIds,
       actorUserId: request.user.userId,
     });
   }
@@ -514,8 +599,19 @@ export class IntegrationController {
   @Get("import-batches")
   @RequireScope("company")
   @RequireRoles("INTEGRATION_ADMIN")
-  async listImportBatches(@Query() query: ListImportBatchesQueryDto) {
+  async listImportBatches(
+    @Query() query: ListImportBatchesQueryDto,
+    @Req()
+    request: {
+      user: {
+        scope: {
+          companyIds: string[];
+        };
+      };
+    },
+  ) {
     return this.integrationService.listImportBatches({
+      actorCompanyIds: request.user.scope.companyIds,
       limit: query.limit,
       offset: query.offset,
       status: query.status,
@@ -529,8 +625,19 @@ export class IntegrationController {
   @Get("import-batches/summary")
   @RequireScope("company")
   @RequireRoles("INTEGRATION_ADMIN")
-  async getImportBatchSummary(@Query() query: ListImportBatchesQueryDto) {
+  async getImportBatchSummary(
+    @Query() query: ListImportBatchesQueryDto,
+    @Req()
+    request: {
+      user: {
+        scope: {
+          companyIds: string[];
+        };
+      };
+    },
+  ) {
     return this.integrationService.getImportBatchSummary({
+      actorCompanyIds: request.user.scope.companyIds,
       status: query.status,
       entityType: query.entityType,
       sourceCode: query.sourceCode,
@@ -542,8 +649,19 @@ export class IntegrationController {
   @Get("import-batches/overview")
   @RequireScope("company")
   @RequireRoles("INTEGRATION_ADMIN")
-  async getImportBatchOverview(@Query() query: ListImportBatchesQueryDto) {
+  async getImportBatchOverview(
+    @Query() query: ListImportBatchesQueryDto,
+    @Req()
+    request: {
+      user: {
+        scope: {
+          companyIds: string[];
+        };
+      };
+    },
+  ) {
     return this.integrationService.getImportBatchOverview({
+      actorCompanyIds: request.user.scope.companyIds,
       status: query.status,
       entityType: query.entityType,
       sourceCode: query.sourceCode,
@@ -555,8 +673,19 @@ export class IntegrationController {
   @Get("import-batches/needs-action")
   @RequireScope("company")
   @RequireRoles("INTEGRATION_ADMIN")
-  async getImportBatchNeedsAction(@Query() query: ListImportBatchesQueryDto) {
+  async getImportBatchNeedsAction(
+    @Query() query: ListImportBatchesQueryDto,
+    @Req()
+    request: {
+      user: {
+        scope: {
+          companyIds: string[];
+        };
+      };
+    },
+  ) {
     return this.integrationService.getImportBatchNeedsAction({
+      actorCompanyIds: request.user.scope.companyIds,
       limit: query.limit,
       offset: query.offset,
       status: query.status,
@@ -573,8 +702,17 @@ export class IntegrationController {
   async getImportBatchErrors(
     @Param("batchId") batchId: string,
     @Query() query: ListImportBatchErrorsQueryDto,
+    @Req()
+    request: {
+      user: {
+        scope: {
+          companyIds: string[];
+        };
+      };
+    },
   ) {
     return this.integrationService.getImportBatchErrors({
+      actorCompanyIds: request.user.scope.companyIds,
       batchId,
       limit: query.limit,
       offset: query.offset,
@@ -584,22 +722,61 @@ export class IntegrationController {
   @Get("import-batches/:batchId/reconciliation")
   @RequireScope("company")
   @RequireRoles("INTEGRATION_ADMIN")
-  async getImportBatchReconciliation(@Param("batchId") batchId: string) {
-    return this.integrationService.getImportBatchReconciliation(batchId);
+  async getImportBatchReconciliation(
+    @Param("batchId") batchId: string,
+    @Req()
+    request: {
+      user: {
+        scope: {
+          companyIds: string[];
+        };
+      };
+    },
+  ) {
+    return this.integrationService.getImportBatchReconciliation({
+      actorCompanyIds: request.user.scope.companyIds,
+      batchId,
+    });
   }
 
   @Get("import-batch-audit/:batchId")
   @RequireScope("company")
   @RequireRoles("INTEGRATION_ADMIN")
-  async getImportBatchAudit(@Param("batchId") batchId: string) {
-    return this.integrationService.getImportBatchAudit(batchId);
+  async getImportBatchAudit(
+    @Param("batchId") batchId: string,
+    @Req()
+    request: {
+      user: {
+        scope: {
+          companyIds: string[];
+        };
+      };
+    },
+  ) {
+    return this.integrationService.getImportBatchAudit({
+      actorCompanyIds: request.user.scope.companyIds,
+      batchId,
+    });
   }
 
   @Get("import-batches/:batchId/audit")
   @RequireScope("company")
   @RequireRoles("INTEGRATION_ADMIN")
-  async getImportBatchAuditNested(@Param("batchId") batchId: string) {
-    return this.integrationService.getImportBatchAudit(batchId);
+  async getImportBatchAuditNested(
+    @Param("batchId") batchId: string,
+    @Req()
+    request: {
+      user: {
+        scope: {
+          companyIds: string[];
+        };
+      };
+    },
+  ) {
+    return this.integrationService.getImportBatchAudit({
+      actorCompanyIds: request.user.scope.companyIds,
+      batchId,
+    });
   }
 
   @Post("import-batches/:batchId/retry")
@@ -611,16 +788,36 @@ export class IntegrationController {
     request: {
       user: {
         userId: string;
+        scope: {
+          companyIds: string[];
+        };
       };
     },
   ) {
-    return this.integrationService.retryImportBatch(batchId, request.user.userId);
+    return this.integrationService.retryImportBatch({
+      actorCompanyIds: request.user.scope.companyIds,
+      actorUserId: request.user.userId,
+      batchId,
+    });
   }
 
   @Get("import-batches/:batchId")
   @RequireScope("company")
   @RequireRoles("INTEGRATION_ADMIN")
-  async getImportBatch(@Param("batchId") batchId: string) {
-    return this.integrationService.getImportBatch(batchId);
+  async getImportBatch(
+    @Param("batchId") batchId: string,
+    @Req()
+    request: {
+      user: {
+        scope: {
+          companyIds: string[];
+        };
+      };
+    },
+  ) {
+    return this.integrationService.getImportBatch({
+      actorCompanyIds: request.user.scope.companyIds,
+      batchId,
+    });
   }
 }

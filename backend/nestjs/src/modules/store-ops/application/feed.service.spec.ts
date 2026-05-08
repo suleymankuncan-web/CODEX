@@ -3,6 +3,8 @@ import { FeedService } from "./feed.service";
 import type { FeedPost } from "./feed.contract";
 
 const actorUserId = "00000000-0000-4000-8000-000000000001";
+const companyId = "00000000-0000-4000-8000-000000000100";
+const otherCompanyId = "00000000-0000-4000-8000-000000000200";
 const marmaraRegionId = "11111111-1111-4111-8111-111111111111";
 const egeRegionId = "22222222-2222-4222-8222-222222222222";
 
@@ -58,7 +60,7 @@ describe("FeedService", () => {
       actorUserId,
       actorRoles: ["HR_ADMIN"],
       actorScope: {
-        companyIds: ["00000000-0000-4000-8000-000000000100"],
+        companyIds: [companyId],
         regionIds: [],
         storeIds: [],
       },
@@ -66,7 +68,6 @@ describe("FeedService", () => {
       title: "May agenda",
       body: "Focus on service quality this month.",
       visibilityScopeType: "company",
-      visibilityScopeIds: [marmaraRegionId],
     });
 
     expect(result.command.status).toBe("created");
@@ -77,11 +78,34 @@ describe("FeedService", () => {
         title: "May agenda",
         body: "Focus on service quality this month.",
         visibilityScopeType: "company",
-        visibilityScopeIds: [],
+        visibilityScopeIds: [companyId],
         publishStatus: "draft",
         isPinned: false,
       }),
     );
+  });
+
+  it("rejects HR admin company posts outside their company scope", async () => {
+    const repository = createRepositoryMock();
+    const service = new FeedService(repository as never);
+
+    await expect(
+      service.createFeedPost({
+        actorUserId,
+        actorRoles: ["HR_ADMIN"],
+        actorScope: {
+          companyIds: [companyId],
+          regionIds: [],
+          storeIds: [],
+        },
+        postType: "announcement",
+        title: "Other company",
+        body: "This should stay tenant scoped.",
+        visibilityScopeType: "company",
+        visibilityScopeIds: [otherCompanyId],
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(repository.createFeedPost).not.toHaveBeenCalled();
   });
 
   it("allows region manager to create only an own-region post", async () => {

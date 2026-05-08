@@ -4,8 +4,11 @@ import { createIntegrationApp } from "./test-app";
 
 describe("Workforce seller code requests", () => {
   const companyId = "00000000-0000-0000-0000-000000000001";
+  const otherCompanyId = "00000000-0000-0000-0000-000000000002";
   const regionId = "22222222-2222-4222-8222-222222222222";
+  const otherRegionId = "22222222-2222-4222-8222-222222222223";
   const storeId = "33333333-3333-4333-8333-333333333333";
+  const otherStoreId = "33333333-3333-4333-8333-333333333334";
   const positionId = "44444444-4444-4444-8444-444444444444";
   const requestId = "55555555-5555-4555-8555-555555555555";
   const actorUserId = "66666666-6666-4666-8666-666666666666";
@@ -297,6 +300,79 @@ describe("Workforce seller code requests", () => {
         (call) => typeof call[0] === "string" && call[0].includes("seller_code_candidates"),
       ),
     ).toBe(false);
+
+    await app.close();
+  });
+
+  it("keeps store manager seller code request lists limited to assigned stores even when company scope is present", async () => {
+    const query = jest.fn(async (sql: string, params?: unknown[]) => {
+      if (sql.includes("FROM ops.seller_code_request scr") && sql.includes("ORDER BY scr.created_at DESC")) {
+        expect(params).toEqual([[storeId], "pending_hr_approval"]);
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              seller_code_request_id: requestId,
+              company_id: companyId,
+              region_id: regionId,
+              store_id: storeId,
+              store_code: "MP001",
+              store_name: "Marmara Park",
+              store_type: "franchise",
+              request_type: "create_code",
+              request_status: "pending_hr_approval",
+              first_name: "Ayse",
+              last_name: "Yilmaz",
+              national_id_hash: nationalIdHash,
+              national_id_last4: "8901",
+              phone_number: phoneNumber,
+              requested_hire_date: hireDate,
+              requested_position_id: positionId,
+              position_code: positionCode,
+              position_name: positionName,
+              employment_type: "full_time",
+              requested_seller_code: null,
+              approved_seller_code: null,
+              last_reference_seller_code: "FM8375",
+              submitted_by_user_id: actorUserId,
+              reviewed_by_user_id: null,
+              reviewed_at: null,
+              review_note: null,
+              employee_id: null,
+              created_at: "2026-04-27T12:00:00.000Z",
+              updated_at: "2026-04-27T12:00:00.000Z",
+            },
+          ],
+        };
+      }
+
+      return { rowCount: 0, rows: [] };
+    });
+
+    const app = await createIntegrationApp({
+      databaseService: {
+        query,
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .get("/api/workforce/seller-code-requests?status=pending_hr_approval")
+      .set("x-user-id", actorUserId)
+      .set("x-role-codes", "STORE_MANAGER")
+      .set("x-company-ids", companyId)
+      .set("x-region-ids", regionId)
+      .set("x-store-ids", storeId)
+      .set("x-assigned-store-ids", storeId);
+
+    expect(response.status).toBe(200);
+    expect(response.body.items).toHaveLength(1);
+    expect(response.body.items[0]).toMatchObject({
+      requestId,
+      storeId,
+      status: "pending_hr_approval",
+      nationalIdLast4: "8901",
+      phoneNumber,
+    });
 
     await app.close();
   });
@@ -667,6 +743,80 @@ describe("Workforce seller code requests", () => {
           call[0].includes("ops.seller_code_request"),
       ),
     ).toBe(true);
+
+    await app.close();
+  });
+
+  it("rejects HR approval for seller code requests outside actor company scope", async () => {
+    const query = jest.fn(async (sql: string, params?: unknown[]) => {
+      if (sql.includes("FROM ops.seller_code_request scr") && sql.includes("WHERE scr.seller_code_request_id")) {
+        expect(params).toEqual([requestId]);
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              seller_code_request_id: requestId,
+              company_id: otherCompanyId,
+              region_id: otherRegionId,
+              store_id: otherStoreId,
+              store_code: "ANK001",
+              store_name: "Other Store",
+              store_type: "franchise",
+              request_type: "create_code",
+              request_status: "pending_hr_approval",
+              first_name: "Ayse",
+              last_name: "Yilmaz",
+              national_id_hash: nationalIdHash,
+              national_id_last4: "8901",
+              phone_number: phoneNumber,
+              requested_hire_date: hireDate,
+              requested_position_id: positionId,
+              position_code: positionCode,
+              position_name: positionName,
+              employment_type: "full_time",
+              requested_seller_code: null,
+              approved_seller_code: null,
+              last_reference_seller_code: "FM8375",
+              submitted_by_user_id: "store-manager-2",
+              reviewed_by_user_id: null,
+              reviewed_at: null,
+              review_note: null,
+              employee_id: null,
+              created_at: "2026-04-27T12:00:00.000Z",
+              updated_at: "2026-04-27T12:00:00.000Z",
+            },
+          ],
+        };
+      }
+
+      return { rowCount: 0, rows: [] };
+    });
+
+    const app = await createIntegrationApp({
+      databaseService: {
+        query,
+        withTransaction: async <T>(work: (client: { query: typeof query }) => Promise<T>) =>
+          work({ query }),
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .patch(`/api/workforce/seller-code-requests/${requestId}/approve`)
+      .set("x-user-id", actorUserId)
+      .set("x-role-codes", "HR_ADMIN")
+      .set("x-company-ids", companyId)
+      .send({
+        sellerCode: "FM8376",
+        reviewNote: "Kod acildi",
+      });
+
+    expect(response.status).toBe(403);
+    expect(response.body.message).toBe("Workforce request is outside actor review scope");
+    expect(
+      query.mock.calls.some(
+        (call) => typeof call[0] === "string" && call[0].includes("UPDATE ops.seller_code_request"),
+      ),
+    ).toBe(false);
 
     await app.close();
   });

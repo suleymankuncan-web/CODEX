@@ -744,12 +744,14 @@ describe("CompetitionService", () => {
               storeId: "visible-store",
               storeCode: "IST-001",
               storeName: "Visible Store",
+              companyId: "company-1",
               regionId: "visible-region",
             },
             {
               storeId: "outside-store",
               storeCode: "KRD-001",
               storeName: "Outside Store",
+              companyId: "company-2",
               regionId: "outside-region",
             },
           ],
@@ -799,6 +801,7 @@ describe("CompetitionService", () => {
         regionIds: ["visible-region"],
         storeIds: [],
       },
+      actorRoleCodes: ["REGION_MANAGER"],
       includeStoreDetails: true,
     });
 
@@ -807,6 +810,7 @@ describe("CompetitionService", () => {
         storeId: "visible-store",
         storeCode: "IST-001",
         storeName: "Visible Store",
+        companyId: "company-1",
         regionId: "visible-region",
       },
     ]);
@@ -825,5 +829,146 @@ describe("CompetitionService", () => {
       regionIds: ["visible-region"],
       storeIds: [],
     });
+  });
+
+  it("keeps store manager competition detail limited to assigned stores even when company scope is present", async () => {
+    const repo = repository();
+    repo.getCompetitionDetail.mockResolvedValue({
+      competition: {
+        competitionId: "competition-1",
+        competitionCode: "APRIL",
+        competitionName: "April",
+        description: null,
+        competitionType: "region_challenge",
+        lifecycleState: "active",
+        startsOn: "2026-04-01",
+        endsOn: "2026-04-30",
+      },
+      stages: [],
+      teams: [
+        {
+          competitionTeamId: "team-1",
+          teamCode: "MARMARA",
+          teamName: "Marmara",
+          teamOrder: 1,
+          stores: [
+            {
+              storeId: "visible-store",
+              storeCode: "IST-001",
+              storeName: "Visible Store",
+              companyId: "company-1",
+              regionId: "visible-region",
+            },
+            {
+              storeId: "outside-store",
+              storeCode: "KRD-001",
+              storeName: "Outside Store",
+              companyId: "company-2",
+              regionId: "outside-region",
+            },
+          ],
+        },
+      ],
+      latestScores: [],
+      warnings: [],
+    });
+    repo.listStoreContributionsForCompetition.mockResolvedValue([]);
+    const service = new CompetitionService(repo as never);
+
+    const result = await service.getCompetitionDetail({
+      competitionId: "competition-1",
+      actorScope: {
+        companyIds: ["company-1"],
+        regionIds: ["visible-region"],
+        storeIds: ["visible-store"],
+      },
+      actorActionScope: {
+        assignedStoreIds: ["visible-store"],
+      },
+      actorRoleCodes: ["STORE_MANAGER"],
+      includeStoreDetails: true,
+    });
+
+    expect(repo.getCompetitionDetail).toHaveBeenCalledWith({
+      competitionId: "competition-1",
+      companyIds: [],
+      regionIds: [],
+      storeIds: ["visible-store"],
+    });
+    expect(result.teams[0].stores).toEqual([
+      {
+        storeId: "visible-store",
+        storeCode: "IST-001",
+        storeName: "Visible Store",
+        companyId: "company-1",
+        regionId: "visible-region",
+      },
+    ]);
+  });
+
+  it("redacts team stores from other companies for company-scoped competition detail", async () => {
+    const repo = repository();
+    repo.getCompetitionDetail.mockResolvedValue({
+      competition: {
+        competitionId: "competition-1",
+        competitionCode: "APRIL",
+        competitionName: "April",
+        description: null,
+        competitionType: "region_challenge",
+        lifecycleState: "active",
+        startsOn: "2026-04-01",
+        endsOn: "2026-04-30",
+      },
+      stages: [],
+      teams: [
+        {
+          competitionTeamId: "team-1",
+          teamCode: "MARMARA",
+          teamName: "Marmara",
+          teamOrder: 1,
+          stores: [
+            {
+              storeId: "visible-store",
+              storeCode: "IST-001",
+              storeName: "Visible Store",
+              companyId: "company-1",
+              regionId: "visible-region",
+            },
+            {
+              storeId: "outside-company-store",
+              storeCode: "ANK-001",
+              storeName: "Outside Company Store",
+              companyId: "company-2",
+              regionId: "outside-region",
+            },
+          ],
+        },
+      ],
+      latestScores: [],
+      warnings: [],
+    });
+    repo.listStoreContributionsForCompetition.mockResolvedValue([]);
+    const service = new CompetitionService(repo as never);
+
+    const result = await service.getCompetitionDetail({
+      competitionId: "competition-1",
+      actorScope: {
+        companyIds: ["company-1"],
+        regionIds: [],
+        storeIds: [],
+      },
+      actorRoleCodes: ["REGION_MANAGER"],
+      includeStoreDetails: true,
+    });
+
+    expect(result.teams[0].stores).toEqual([
+      {
+        storeId: "visible-store",
+        storeCode: "IST-001",
+        storeName: "Visible Store",
+        companyId: "company-1",
+        regionId: "visible-region",
+      },
+    ]);
   });
 });

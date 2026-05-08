@@ -128,6 +128,41 @@ describe("Production Security Gate V1-A", () => {
     }
   });
 
+  it("does not let clients bypass rate limiting by spoofing x-forwarded-for", async () => {
+    const app = await createSecurityApp({
+      corsAllowedOrigins: ["http://localhost:5173"],
+      rateLimitMax: 2,
+      rateLimitWindowMs: 60000,
+    });
+
+    try {
+      await request(app.getHttpServer())
+        .get("/api/security-test/ok")
+        .set("x-forwarded-for", "198.51.100.1")
+        .expect(200);
+      await request(app.getHttpServer())
+        .get("/api/security-test/ok")
+        .set("x-forwarded-for", "198.51.100.2")
+        .expect(200);
+
+      const response = await request(app.getHttpServer())
+        .get("/api/security-test/ok")
+        .set("x-forwarded-for", "198.51.100.3")
+        .set("x-correlation-id", "corr-rate-limit-spoof");
+
+      expect(response.status).toBe(429);
+      expect(response.body).toMatchObject({
+        correlationId: "corr-rate-limit-spoof",
+        errorCode: "RATE_LIMIT_EXCEEDED",
+        message: "Rate limit exceeded",
+        path: "/api/security-test/ok",
+        statusCode: 429,
+      });
+    } finally {
+      await app.close();
+    }
+  });
+
   it("returns validation errors in the standard error response shape", async () => {
     const app = await createSecurityApp({
       corsAllowedOrigins: ["http://localhost:5173"],

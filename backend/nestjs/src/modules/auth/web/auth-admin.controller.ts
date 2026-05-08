@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from "@nestjs/common";
 import { RequireRoles } from "../decorators/roles.decorator";
+import { RequireScope } from "../decorators/scope.decorator";
 import { AuthAdminService } from "../auth-admin.service";
 import { CreateActionStoreAssignmentDto } from "./dto/create-action-store-assignment.dto";
 import { CreatePilotUserBindingDto } from "./dto/create-pilot-user-binding.dto";
@@ -142,18 +143,27 @@ export class AuthAdminController {
   }
 
   @Post("pilot-user-bindings")
+  @RequireScope("company")
   @RequireRoles("SUPER_ADMIN", "HR_ADMIN")
   async createPilotUserBinding(
     @Req()
     request: {
       user: {
         userId: string;
+        roleCodes: string[];
+        scope: {
+          companyIds: string[];
+        };
       };
     },
     @Body() body: CreatePilotUserBindingDto,
   ) {
     return this.authAdminService.createPilotUserBinding({
       ...body,
+      actorRoleCodes: request.user.roleCodes,
+      actorScope: {
+        companyIds: request.user.scope.companyIds,
+      },
       actorUserId: request.user.userId,
     });
   }

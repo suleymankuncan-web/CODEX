@@ -58,6 +58,35 @@ describe("ChecklistService", () => {
     };
   }
 
+  it("keeps store manager checklist acknowledgement lists limited to assigned stores even when company scope is present", async () => {
+    const acknowledgementRepository = {
+      listChecklistAcknowledgements: jest.fn().mockResolvedValue([]),
+    };
+    const service = new ChecklistService(
+      storeOpsRepository as never,
+      acknowledgementRepository as never,
+      {} as never,
+    );
+
+    await service.listChecklistAcknowledgements({
+      actorScope: {
+        companyIds: ["company-1"],
+        regionIds: ["region-1"],
+        storeIds: ["store-1"],
+      },
+      actorActionScope: {
+        assignedStoreIds: ["store-1"],
+      },
+      actorRoleCodes: ["STORE_MANAGER"],
+    });
+
+    expect(acknowledgementRepository.listChecklistAcknowledgements).toHaveBeenCalledWith({
+      companyIds: [],
+      regionIds: [],
+      storeIds: ["store-1"],
+    });
+  });
+
   it("rejects publishing a draft checklist template when item weights do not total 100", async () => {
     const checklistRepository = {
       getDraftTemplateForPublish: jest

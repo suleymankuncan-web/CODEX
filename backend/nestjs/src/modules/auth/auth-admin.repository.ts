@@ -51,6 +51,15 @@ type StoreLookupRow = {
   region_name: string;
 };
 
+type CompanyLookupRow = {
+  company_id: string;
+};
+
+type RegionLookupRow = {
+  region_id: string;
+  company_id: string;
+};
+
 type ActiveEmployeeAccessContextRow = {
   employee_id: string;
   external_employee_ref: string | null;
@@ -245,14 +254,50 @@ export class AuthAdminRepository {
         FROM ops.store s
         INNER JOIN ops.region r
           ON r.region_id = s.region_id
+         AND r.company_id = s.company_id
+        INNER JOIN ops.company c
+          ON c.company_id = s.company_id
         WHERE s.store_id = ANY($1::uuid[])
           AND s.status = 'active'
+          AND r.status = 'active'
+          AND c.status = 'active'
         ORDER BY s.store_code ASC, s.store_id ASC
       `,
       [storeIds],
     );
 
     return result.rows;
+  }
+
+  async getCompanyLookupById(companyId: string) {
+    const result = await this.databaseService.query<CompanyLookupRow>(
+      `
+        SELECT c.company_id
+        FROM ops.company c
+        WHERE c.company_id = $1::uuid
+          AND c.status = 'active'
+      `,
+      [companyId],
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  async getRegionLookupById(regionId: string) {
+    const result = await this.databaseService.query<RegionLookupRow>(
+      `
+        SELECT r.region_id, r.company_id
+        FROM ops.region r
+        INNER JOIN ops.company c
+          ON c.company_id = r.company_id
+        WHERE r.region_id = $1::uuid
+          AND r.status = 'active'
+          AND c.status = 'active'
+      `,
+      [regionId],
+    );
+
+    return result.rows[0] ?? null;
   }
 
   async countActiveAssignments(input: {
@@ -644,9 +689,15 @@ export class AuthAdminRepository {
           s.region_id,
           r.region_name
         FROM ops.store s
-        INNER JOIN ops.region r ON r.region_id = s.region_id
+        INNER JOIN ops.region r
+          ON r.region_id = s.region_id
+         AND r.company_id = s.company_id
+        INNER JOIN ops.company c
+          ON c.company_id = s.company_id
         WHERE s.store_id = $1::uuid
           AND s.status = 'active'
+          AND r.status = 'active'
+          AND c.status = 'active'
       `,
       [storeId],
     );
@@ -1589,8 +1640,14 @@ export class AuthAdminRepository {
           s.region_id,
           r.region_name
         FROM ops.store s
-        INNER JOIN ops.region r ON r.region_id = s.region_id
+        INNER JOIN ops.region r
+          ON r.region_id = s.region_id
+         AND r.company_id = s.company_id
+        INNER JOIN ops.company c
+          ON c.company_id = s.company_id
         WHERE s.status = 'active'
+          AND r.status = 'active'
+          AND c.status = 'active'
         ORDER BY s.store_code ASC, s.store_id ASC
         LIMIT 200
       `,
@@ -1611,8 +1668,14 @@ export class AuthAdminRepository {
           s.region_id,
           r.region_name
         FROM ops.store s
-        INNER JOIN ops.region r ON r.region_id = s.region_id
+        INNER JOIN ops.region r
+          ON r.region_id = s.region_id
+         AND r.company_id = s.company_id
+        INNER JOIN ops.company c
+          ON c.company_id = s.company_id
         WHERE s.status = 'active'
+          AND r.status = 'active'
+          AND c.status = 'active'
           AND (
             s.store_code ILIKE $1 ESCAPE '\\'
             OR s.store_name ILIKE $1 ESCAPE '\\'

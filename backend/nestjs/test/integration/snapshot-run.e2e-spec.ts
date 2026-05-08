@@ -7,7 +7,8 @@ const hasSnapshotRunIdPredicate = (sql: string) =>
 
 describe("Snapshot run operations", () => {
   it("creates a snapshot run and dispatches snapshot generation", async () => {
-    const query = jest.fn(async (sql: string) => {
+    const companyId = "00000000-0000-0000-0000-000000000001";
+    const query = jest.fn(async (sql: string, _params?: unknown[]) => {
       if (sql.includes("SELECT snapshot_run_id")) {
         return { rowCount: 0, rows: [] };
       }
@@ -56,6 +57,8 @@ describe("Snapshot run operations", () => {
     const response = await request(app.getHttpServer())
       .post("/api/snapshots/runs")
       .set("x-user-id", "user-1")
+      .set("x-role-codes", "SNAPSHOT_OPERATOR")
+      .set("x-company-ids", companyId)
       .send({
         snapshotType: "monthly",
         periodStart: "2026-04-01",
@@ -83,6 +86,11 @@ describe("Snapshot run operations", () => {
       },
       expect.any(Function),
     );
+    const insertCall = query.mock.calls.find(([sql]) =>
+      sql.includes("INSERT INTO rpt.snapshot_run"),
+    );
+    expect(insertCall?.[0]).toContain("company_ids");
+    expect(insertCall?.[1]).toContainEqual([companyId]);
 
     await app.close();
   });

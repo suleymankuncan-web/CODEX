@@ -4,8 +4,13 @@ import { createIntegrationApp } from "./test-app";
 describe("Competition API", () => {
   const actorUserId = "11111111-1111-4111-8111-111111111111";
   const companyId = "00000000-0000-0000-0000-000000000001";
+  const otherCompanyId = "00000000-0000-0000-0000-000000000002";
   const competitionId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
   const stageId = "22222222-2222-4222-8222-222222222222";
+  const storeId = "00000000-0000-0000-0000-000000000101";
+  const otherStoreId = "00000000-0000-0000-0000-000000000201";
+  const regionId = "00000000-0000-0000-0000-000000000011";
+  const otherRegionId = "00000000-0000-0000-0000-000000000021";
 
   it("allows HR_ADMIN to create a draft competition", async () => {
     const query = jest.fn(async (sql: string) => {
@@ -73,8 +78,168 @@ describe("Competition API", () => {
     await app.close();
   });
 
+  it("rejects HR_ADMIN team templates with stores outside company scope", async () => {
+    const query = jest.fn(async (sql: string) => {
+      if (sql.includes("FROM ops.store") && sql.includes("store_id = ANY")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              store_id: otherStoreId,
+              company_id: otherCompanyId,
+              region_id: otherRegionId,
+            },
+          ],
+        };
+      }
+
+      return { rowCount: 0, rows: [] };
+    });
+    const app = await createIntegrationApp({
+      databaseService: { query },
+    });
+
+    const response = await request(app.getHttpServer())
+      .post("/api/competitions/team-templates")
+      .set("x-user-id", actorUserId)
+      .set("x-role-codes", "HR_ADMIN")
+      .set("x-read-company-ids", companyId)
+      .send({
+        templateCode: "OUT_OF_SCOPE",
+        templateName: "Out of Scope",
+        storeIds: [otherStoreId],
+      });
+
+    expect(response.status).toBe(403);
+    expect(response.body.message).toBe(
+      "Competition store selection is outside actor company scope",
+    );
+    expect(query).not.toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO ops.competition_team_template"),
+      expect.anything(),
+    );
+
+    await app.close();
+  });
+
+  it("allows HR_ADMIN to create team templates within company scope", async () => {
+    const templateId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+    const query = jest.fn(async (sql: string) => {
+      if (sql.includes("FROM ops.store") && sql.includes("store_id = ANY")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              store_id: storeId,
+              company_id: companyId,
+              region_id: regionId,
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("INSERT INTO ops.competition_team_template ")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              competition_team_template_id: templateId,
+              template_code: "MARMARA_SCOPE",
+              template_name: "Marmara Scope",
+              description: null,
+              is_active: true,
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("INSERT INTO ops.competition_team_template_store")) {
+        return { rowCount: 1, rows: [] };
+      }
+
+      if (sql.includes("INSERT INTO audit.event_log")) {
+        return { rowCount: 1, rows: [] };
+      }
+
+      if (sql.includes("FROM ops.competition_team_template template")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              competition_team_template_id: templateId,
+              template_code: "MARMARA_SCOPE",
+              template_name: "Marmara Scope",
+              description: null,
+              is_active: true,
+              store_id: storeId,
+              store_code: "IST-101",
+              store_name: "Marmara Store",
+              company_id: companyId,
+              region_id: regionId,
+            },
+          ],
+        };
+      }
+
+      return { rowCount: 0, rows: [] };
+    });
+    const app = await createIntegrationApp({
+      databaseService: {
+        query,
+        withTransaction: async <T>(work: (client: { query: typeof query }) => Promise<T>) =>
+          work({ query }),
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .post("/api/competitions/team-templates")
+      .set("x-user-id", actorUserId)
+      .set("x-role-codes", "HR_ADMIN")
+      .set("x-read-company-ids", companyId)
+      .send({
+        templateCode: "MARMARA_SCOPE",
+        templateName: "Marmara Scope",
+        storeIds: [storeId],
+      });
+
+    expect(response.status).toBe(201);
+    expect(response.body.command).toEqual({
+      status: "created",
+      message: "Competition team template created",
+    });
+    expect(response.body.data.template).toMatchObject({
+      templateId,
+      templateCode: "MARMARA_SCOPE",
+      stores: [expect.objectContaining({ storeId, storeCode: "IST-101" })],
+    });
+
+    await app.close();
+  });
+
   it("rejects finalization with warnings when override justification is missing", async () => {
     const query = jest.fn(async (sql: string) => {
+      if (sql.includes("FROM ops.competition_stage") && sql.includes("SELECT competition_id")) {
+        return {
+          rowCount: 1,
+          rows: [{ competition_id: competitionId }],
+        };
+      }
+
+      if (sql.includes("FROM ops.competition competition")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              competition_id: competitionId,
+              owner_user_id: actorUserId,
+              store_id: storeId,
+              company_id: companyId,
+              region_id: regionId,
+            },
+          ],
+        };
+      }
+
       if (sql.includes("FROM rpt.competition_stage_warning")) {
         return {
           rowCount: 1,

@@ -1,4 +1,11 @@
-import { ConflictException, Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
+import {
+  ConflictException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from "@nestjs/common";
 import { DatabaseService } from "../../../shared/database/database.service";
 import { JobDispatcher } from "../../../shared/jobs/job-dispatcher.interface";
 import { SnapshotRunJobPayload } from "../../../shared/jobs/job-payloads";
@@ -40,23 +47,34 @@ export class SnapshotService {
     periodStart: string;
     periodEnd: string;
     actorUserId: string;
+    actorCompanyIds?: string[];
   }) {
+    const actorCompanyIds = this.normalizeActorCompanyIds(input.actorCompanyIds);
     const idempotencyKey = `${input.snapshotType}:${input.periodStart}:${input.periodEnd}`;
 
     const snapshotRun = await this.databaseService.withTransaction(async (client) => {
+      const existingParams: unknown[] = [idempotencyKey];
+      const existingScopeClause = actorCompanyIds
+        ? (() => {
+            existingParams.push(actorCompanyIds);
+            return `AND company_ids = $${existingParams.length}::uuid[]`;
+          })()
+        : "AND company_ids = '{}'::uuid[]";
       const existing = await client.query<{
         snapshot_run_id: string;
+        company_ids: string[];
         snapshot_date: string;
         generated_at: string;
         run_status: string;
       }>(
         `
-          SELECT snapshot_run_id, snapshot_date, generated_at, run_status
+          SELECT snapshot_run_id, company_ids, snapshot_date, generated_at, run_status
           FROM rpt.snapshot_run
           WHERE idempotency_key = $1
+          ${existingScopeClause}
           LIMIT 1
         `,
-        [idempotencyKey],
+        existingParams,
       );
 
       if (existing.rowCount && existing.rows[0]) {
@@ -74,6 +92,7 @@ export class SnapshotService {
           periodEnd: input.periodEnd,
           actorUserId: input.actorUserId,
           idempotencyKey,
+          actorCompanyIds,
           kpiConfigVersionId: latestKpiConfigVersion?.kpi_config_version_id ?? null,
         },
         client,
@@ -90,6 +109,7 @@ export class SnapshotService {
             periodEnd: input.periodEnd,
             kpiConfigVersionId: latestKpiConfigVersion?.kpi_config_version_id ?? null,
             versionNo: latestKpiConfigVersion?.version_no ?? null,
+            companyIds: actorCompanyIds ?? [],
           },
         },
         client,
@@ -123,6 +143,7 @@ export class SnapshotService {
       periodEnd: input.periodEnd,
       queueBackend: job.backend,
       queueName: job.queueName ?? null,
+      companyIds: actorCompanyIds ?? [],
       reused,
     });
 
@@ -143,15 +164,18 @@ export class SnapshotService {
     });
   }
 
-  async getSnapshotLookups() {
-    const rerunnableRuns = await this.snapshotOperationsRepository.listFailedSnapshotRunsForLookup();
+  async getSnapshotLookups(input: { actorCompanyIds?: string[] } = {}) {
+    const actorCompanyIds = this.normalizeActorCompanyIds(input.actorCompanyIds);
+    const rerunnableRuns = await this.snapshotOperationsRepository.listFailedSnapshotRunsForLookup({
+      actorCompanyIds,
+    });
     const snapshotTypes = ["daily", "weekly", "monthly", "custom"];
     let blockedCount = 0;
 
     const rerunnableLookupItems = await Promise.all(
       rerunnableRuns.map(async (item) => {
         const activeRerunCount = await this.snapshotOperationsRepository.countActiveReruns(
-          item.snapshot_run_id,
+          { snapshotRunId: item.snapshot_run_id, actorCompanyIds },
         );
         const rerunAllowed = activeRerunCount === 0;
         if (!rerunAllowed) {
@@ -200,10 +224,15 @@ export class SnapshotService {
   async listSnapshotRuns(input: {
     runStatus?: string;
     snapshotType?: string;
+    actorCompanyIds?: string[];
     limit?: number;
     offset?: number;
   }) {
-    const result = await this.snapshotOperationsRepository.listSnapshotRuns(input);
+    const actorCompanyIds = this.normalizeActorCompanyIds(input.actorCompanyIds);
+    const result = await this.snapshotOperationsRepository.listSnapshotRuns({
+      ...input,
+      actorCompanyIds,
+    });
 
     return buildListResponse(
       result.rows.map((item) => this.mapSnapshotRun(item)),
@@ -211,21 +240,32 @@ export class SnapshotService {
     );
   }
 
-  async getSnapshotRunSummary(input: { runStatus?: string; snapshotType?: string }) {
-    const summary = await this.snapshotOperationsRepository.getSnapshotRunSummary(input);
+  async getSnapshotRunSummary(input: {
+    runStatus?: string;
+    snapshotType?: string;
+    actorCompanyIds?: string[];
+  }) {
+    const actorCompanyIds = this.normalizeActorCompanyIds(input.actorCompanyIds);
+    const summary = await this.snapshotOperationsRepository.getSnapshotRunSummary({
+      ...input,
+      actorCompanyIds,
+    });
     const [completedSnapshotRunId, failedSnapshotRunId, inProgressSnapshotRunId] =
       await Promise.all([
         this.snapshotOperationsRepository.getLatestSnapshotRunIdByStatus({
           snapshotType: input.snapshotType,
           runStatus: "completed",
+          actorCompanyIds,
         }),
         this.snapshotOperationsRepository.getLatestSnapshotRunIdByStatus({
           snapshotType: input.snapshotType,
           runStatus: "failed",
+          actorCompanyIds,
         }),
         this.snapshotOperationsRepository.getLatestSnapshotRunIdByStatus({
           snapshotType: input.snapshotType,
           runStatus: "running",
+          actorCompanyIds,
         }),
       ]);
     const statusTotals = {
@@ -259,7 +299,12 @@ export class SnapshotService {
     };
   }
 
-  async getSnapshotRunOverview(input: { runStatus?: string; snapshotType?: string }) {
+  async getSnapshotRunOverview(input: {
+    runStatus?: string;
+    snapshotType?: string;
+    actorCompanyIds?: string[];
+  }) {
+    const actorCompanyIds = this.normalizeActorCompanyIds(input.actorCompanyIds);
     const stuckBefore = this.getSnapshotStuckBeforeIso();
     const [
       summary,
@@ -269,25 +314,30 @@ export class SnapshotService {
       inProgressSnapshotRunId,
       stuckSnapshotRunId,
     ] = await Promise.all([
-      this.snapshotOperationsRepository.getSnapshotRunSummary(input),
+      this.snapshotOperationsRepository.getSnapshotRunSummary({ ...input, actorCompanyIds }),
       this.snapshotOperationsRepository.getSnapshotRunActionCounts({
         ...input,
+        actorCompanyIds,
         stuckBefore,
       }),
       this.snapshotOperationsRepository.getLatestSnapshotRunIdByStatus({
         snapshotType: input.snapshotType,
         runStatus: "completed",
+        actorCompanyIds,
       }),
       this.snapshotOperationsRepository.getLatestSnapshotRunIdByStatus({
         snapshotType: input.snapshotType,
         runStatus: "failed",
+        actorCompanyIds,
       }),
       this.snapshotOperationsRepository.getLatestSnapshotRunIdByStatus({
         snapshotType: input.snapshotType,
         runStatus: "running",
+        actorCompanyIds,
       }),
       this.snapshotOperationsRepository.getLatestStuckSnapshotRunId({
         ...input,
+        actorCompanyIds,
         stuckBefore,
       }),
     ]);
@@ -329,11 +379,14 @@ export class SnapshotService {
   async getSnapshotRunNeedsAction(input: {
     runStatus?: string;
     snapshotType?: string;
+    actorCompanyIds?: string[];
     limit?: number;
     offset?: number;
   }) {
+    const actorCompanyIds = this.normalizeActorCompanyIds(input.actorCompanyIds);
     const result = await this.snapshotOperationsRepository.listSnapshotRunsNeedingAction({
       ...input,
+      actorCompanyIds,
       stuckBefore: this.getSnapshotStuckBeforeIso(),
     });
 
@@ -343,9 +396,15 @@ export class SnapshotService {
         actionReason: item.action_reason,
         recommendedAction: item.recommended_action,
         canRerun: item.run_status === "failed",
-        rerunCount: await this.snapshotOperationsRepository.countReruns(item.snapshot_run_id),
+        rerunCount: await this.snapshotOperationsRepository.countReruns({
+          snapshotRunId: item.snapshot_run_id,
+          actorCompanyIds,
+        }),
         latestRerunSnapshotRunId:
-          await this.snapshotOperationsRepository.getLatestRerunSnapshotRunId(item.snapshot_run_id),
+          await this.snapshotOperationsRepository.getLatestRerunSnapshotRunId({
+            snapshotRunId: item.snapshot_run_id,
+            actorCompanyIds,
+          }),
         isStuck: item.is_stuck,
       })),
     );
@@ -357,18 +416,34 @@ export class SnapshotService {
     });
   }
 
-  async getSnapshotRun(snapshotRunId: string) {
-    const snapshotRun = await this.snapshotOperationsRepository.findSnapshotRunById(snapshotRunId);
+  async getSnapshotRun(snapshotRunId: string, actorCompanyIdsInput?: string[]) {
+    const actorCompanyIds = this.normalizeActorCompanyIds(actorCompanyIdsInput);
+    const snapshotRun = await this.snapshotOperationsRepository.findSnapshotRunById({
+      snapshotRunId,
+      actorCompanyIds,
+    });
 
     if (!snapshotRun) {
       throw new NotFoundException(`Snapshot run not found: ${snapshotRunId}`);
     }
 
-    const cards = await this.snapshotOperationsRepository.getSnapshotRowCounts(snapshotRunId);
-    const rerunCount = await this.snapshotOperationsRepository.countReruns(snapshotRunId);
+    const cards = await this.snapshotOperationsRepository.getSnapshotRowCounts(
+      snapshotRunId,
+      actorCompanyIds,
+    );
+    const rerunCount = await this.snapshotOperationsRepository.countReruns({
+      snapshotRunId,
+      actorCompanyIds,
+    });
     const latestRerunSnapshotRunId =
-      await this.snapshotOperationsRepository.getLatestRerunSnapshotRunId(snapshotRunId);
-    const activeRerunCount = await this.snapshotOperationsRepository.countActiveReruns(snapshotRunId);
+      await this.snapshotOperationsRepository.getLatestRerunSnapshotRunId({
+        snapshotRunId,
+        actorCompanyIds,
+      });
+    const activeRerunCount = await this.snapshotOperationsRepository.countActiveReruns({
+      snapshotRunId,
+      actorCompanyIds,
+    });
     const rerunAllowed = snapshotRun.run_status === "failed" && activeRerunCount === 0;
     const rerunBlockedReason =
       snapshotRun.run_status === "failed" && activeRerunCount > 0
@@ -387,8 +462,12 @@ export class SnapshotService {
     };
   }
 
-  async getSnapshotRunAudit(snapshotRunId: string) {
-    const snapshotRun = await this.snapshotOperationsRepository.findSnapshotRunById(snapshotRunId);
+  async getSnapshotRunAudit(snapshotRunId: string, actorCompanyIdsInput?: string[]) {
+    const actorCompanyIds = this.normalizeActorCompanyIds(actorCompanyIdsInput);
+    const snapshotRun = await this.snapshotOperationsRepository.findSnapshotRunById({
+      snapshotRunId,
+      actorCompanyIds,
+    });
 
     if (!snapshotRun) {
       throw new NotFoundException(`Snapshot run not found: ${snapshotRunId}`);
@@ -402,14 +481,21 @@ export class SnapshotService {
     );
   }
 
-  async getSnapshotRunDependencies(snapshotRunId: string) {
-    const snapshotRun = await this.snapshotOperationsRepository.findSnapshotRunById(snapshotRunId);
+  async getSnapshotRunDependencies(snapshotRunId: string, actorCompanyIdsInput?: string[]) {
+    const actorCompanyIds = this.normalizeActorCompanyIds(actorCompanyIdsInput);
+    const snapshotRun = await this.snapshotOperationsRepository.findSnapshotRunById({
+      snapshotRunId,
+      actorCompanyIds,
+    });
 
     if (!snapshotRun) {
       throw new NotFoundException(`Snapshot run not found: ${snapshotRunId}`);
     }
 
-    const activeRerunCount = await this.snapshotOperationsRepository.countActiveReruns(snapshotRunId);
+    const activeRerunCount = await this.snapshotOperationsRepository.countActiveReruns({
+      snapshotRunId,
+      actorCompanyIds,
+    });
     const rerunAllowed = snapshotRun.run_status === "failed" && activeRerunCount === 0;
     const rerunBlockedReason =
       snapshotRun.run_status === "failed" && activeRerunCount > 0
@@ -442,8 +528,12 @@ export class SnapshotService {
     };
   }
 
-  async getSnapshotRunLineage(snapshotRunId: string) {
-    const snapshotRun = await this.snapshotOperationsRepository.findSnapshotRunById(snapshotRunId);
+  async getSnapshotRunLineage(snapshotRunId: string, actorCompanyIdsInput?: string[]) {
+    const actorCompanyIds = this.normalizeActorCompanyIds(actorCompanyIdsInput);
+    const snapshotRun = await this.snapshotOperationsRepository.findSnapshotRunById({
+      snapshotRunId,
+      actorCompanyIds,
+    });
 
     if (!snapshotRun) {
       throw new NotFoundException(`Snapshot run not found: ${snapshotRunId}`);
@@ -451,9 +541,12 @@ export class SnapshotService {
 
     const [parent, children] = await Promise.all([
       snapshotRun.rerun_of_snapshot_run_id
-        ? this.snapshotOperationsRepository.findSnapshotRunById(snapshotRun.rerun_of_snapshot_run_id)
+        ? this.snapshotOperationsRepository.findSnapshotRunById({
+            snapshotRunId: snapshotRun.rerun_of_snapshot_run_id,
+            actorCompanyIds,
+          })
         : Promise.resolve(null),
-      this.snapshotOperationsRepository.listRerunChildren(snapshotRunId),
+      this.snapshotOperationsRepository.listRerunChildren({ snapshotRunId, actorCompanyIds }),
     ]);
 
     return {
@@ -473,8 +566,16 @@ export class SnapshotService {
     };
   }
 
-  async rerunSnapshotRun(snapshotRunId: string, actorUserId: string) {
-    const existing = await this.snapshotOperationsRepository.findSnapshotRunById(snapshotRunId);
+  async rerunSnapshotRun(
+    snapshotRunId: string,
+    actorUserId: string,
+    actorCompanyIdsInput?: string[],
+  ) {
+    const actorCompanyIds = this.normalizeActorCompanyIds(actorCompanyIdsInput);
+    const existing = await this.snapshotOperationsRepository.findSnapshotRunById({
+      snapshotRunId,
+      actorCompanyIds,
+    });
 
     if (!existing) {
       throw new NotFoundException(`Snapshot run not found: ${snapshotRunId}`);
@@ -484,7 +585,10 @@ export class SnapshotService {
       throw new ConflictException(`Snapshot run ${snapshotRunId} is not rerunnable`);
     }
 
-    const activeRerunCount = await this.snapshotOperationsRepository.countActiveReruns(snapshotRunId);
+    const activeRerunCount = await this.snapshotOperationsRepository.countActiveReruns({
+      snapshotRunId,
+      actorCompanyIds,
+    });
     if (activeRerunCount > 0) {
       throw new ConflictException(
         `An active rerun already exists for snapshot run ${snapshotRunId}`,
@@ -506,6 +610,7 @@ export class SnapshotService {
           periodEnd: existing.period_end,
           actorUserId,
           idempotencyKey: `${snapshotRunId}:rerun:${new Date().toISOString()}`,
+          actorCompanyIds,
           rerunOfSnapshotRunId: snapshotRunId,
           kpiConfigVersionId,
         },
@@ -538,6 +643,7 @@ export class SnapshotService {
             newSnapshotRunId: newRun.snapshot_run_id,
             kpiConfigVersionId,
             versionNo,
+            companyIds: actorCompanyIds ?? [],
           },
         },
         client,
@@ -568,6 +674,7 @@ export class SnapshotService {
       periodEnd: existing.period_end,
       queueBackend: job.backend,
       queueName: job.queueName ?? null,
+      companyIds: actorCompanyIds ?? [],
     });
 
     return buildCommandResponse({
@@ -656,6 +763,19 @@ export class SnapshotService {
 
       throw error;
     }
+  }
+
+  private normalizeActorCompanyIds(actorCompanyIds?: string[]) {
+    if (actorCompanyIds === undefined) {
+      return undefined;
+    }
+
+    const normalized = [...new Set(actorCompanyIds.filter(Boolean))].sort();
+    if (normalized.length === 0) {
+      throw new ForbiddenException("Missing snapshot company scope");
+    }
+
+    return normalized;
   }
 
   private mapSnapshotRun(item: {

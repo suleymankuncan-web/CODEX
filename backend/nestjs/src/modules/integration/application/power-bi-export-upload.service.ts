@@ -73,6 +73,19 @@ type KpiImportStoreScope = {
   externalRefKeys: Set<string>;
 };
 
+export const POWER_BI_EXPORT_MAX_FILE_BYTES = 8 * 1024 * 1024;
+export const POWER_BI_EXPORT_MAX_SHEET_ROWS = 20_000;
+export const POWER_BI_EXPORT_MAX_SHEET_COLUMNS = 80;
+
+const POWER_BI_EXPORT_ALLOWED_FILE_EXTENSIONS = [".xlsx", ".xls", ".csv"];
+
+export function isSupportedPowerBiExportFileName(fileName: string) {
+  const normalized = fileName.trim().toLowerCase();
+  return POWER_BI_EXPORT_ALLOWED_FILE_EXTENSIONS.some((extension) =>
+    normalized.endsWith(extension),
+  );
+}
+
 @Injectable()
 export class PowerBiExportUploadService {
   private readonly logger = new Logger(PowerBiExportUploadService.name);
@@ -85,6 +98,7 @@ export class PowerBiExportUploadService {
   ) {}
 
   async upload(input: {
+    actorCompanyIds?: string[];
     sourceCode: string;
     periodMonth?: string;
     periodType?: PeriodType;
@@ -123,9 +137,10 @@ export class PowerBiExportUploadService {
         ? this.readSheetRows(input.personnelFile)
         : [];
       const storeRows = input.storeFile ? this.readSheetRows(input.storeFile) : [];
-      const scopedStoreRefs = await this.integrationRepository.listKpiImportStoreExternalRefs(
-        source.integration_source_id,
-      );
+      const scopedStoreRefs = await this.integrationRepository.listKpiImportStoreExternalRefs({
+        actorCompanyIds: input.actorCompanyIds ?? [],
+        integrationSourceId: source.integration_source_id,
+      });
       const storeScope = this.buildKpiImportStoreScope(scopedStoreRefs);
 
       const canonicalRows = [
@@ -155,6 +170,7 @@ export class PowerBiExportUploadService {
         .join(" + ");
 
       const batch = await this.integrationService.createImportBatch({
+        actorCompanyIds: input.actorCompanyIds ?? [],
         sourceCode: input.sourceCode,
         entityType: "kpi",
         fileReference,
@@ -223,6 +239,14 @@ export class PowerBiExportUploadService {
       );
     }
 
+    if (file.buffer.length > POWER_BI_EXPORT_MAX_FILE_BYTES) {
+      throw new BadRequestException("Power BI export dosyasi en fazla 8 MB olabilir");
+    }
+
+    if (!isSupportedPowerBiExportFileName(file.originalname || "")) {
+      throw new BadRequestException("Power BI export dosyasi xlsx, xls veya csv olmali");
+    }
+
     const workbook = XLSX.read(file.buffer, { type: "buffer" });
     const firstSheetName = workbook.SheetNames[0];
     if (!firstSheetName) {
@@ -230,10 +254,41 @@ export class PowerBiExportUploadService {
     }
 
     const sheet = workbook.Sheets[firstSheetName];
+    this.assertSheetBounds(sheet["!ref"], file.originalname);
     return XLSX.utils.sheet_to_json<ExportRow>(sheet, {
       raw: true,
       defval: "",
     });
+  }
+
+  private assertSheetBounds(rangeRef: string | undefined, fileName: string) {
+    if (!rangeRef) {
+      return;
+    }
+
+    let range: XLSX.Range;
+    try {
+      range = XLSX.utils.decode_range(rangeRef);
+    } catch {
+      throw new BadRequestException(
+        `Power BI export calisma sayfasi okunamadi: ${fileName || "unknown-file"}`,
+      );
+    }
+
+    const rowCount = range.e.r - range.s.r + 1;
+    const columnCount = range.e.c - range.s.c + 1;
+
+    if (rowCount > POWER_BI_EXPORT_MAX_SHEET_ROWS) {
+      throw new BadRequestException(
+        `Power BI export dosyasi en fazla ${POWER_BI_EXPORT_MAX_SHEET_ROWS} satir olabilir`,
+      );
+    }
+
+    if (columnCount > POWER_BI_EXPORT_MAX_SHEET_COLUMNS) {
+      throw new BadRequestException(
+        `Power BI export dosyasi en fazla ${POWER_BI_EXPORT_MAX_SHEET_COLUMNS} kolon olabilir`,
+      );
+    }
   }
 
   private mapPersonnelRows(

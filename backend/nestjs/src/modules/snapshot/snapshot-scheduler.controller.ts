@@ -5,6 +5,17 @@ import { SnapshotSchedulerService } from "./snapshot-scheduler.service";
 import { GetDailyClosureStatusQueryDto } from "./dto/get-daily-closure-status.query";
 import { RunDailyClosureDto } from "./dto/run-daily-closure.dto";
 
+type SnapshotActorUser = {
+  userId: string;
+  roleCodes: string[];
+  scope: {
+    companyIds: string[];
+  };
+  readScope?: {
+    companyIds: string[];
+  };
+};
+
 @Controller("snapshots")
 export class SnapshotSchedulerController {
   constructor(private readonly snapshotSchedulerService: SnapshotSchedulerService) {}
@@ -12,8 +23,17 @@ export class SnapshotSchedulerController {
   @Get("daily-closure")
   @RequireScope("company")
   @RequireRoles("SNAPSHOT_OPERATOR")
-  async getDailyClosureStatus(@Query() query: GetDailyClosureStatusQueryDto) {
-    return this.snapshotSchedulerService.getDailyClosureStatus(query.referenceAt);
+  async getDailyClosureStatus(
+    @Req()
+    request: {
+      user: SnapshotActorUser;
+    },
+    @Query() query: GetDailyClosureStatusQueryDto,
+  ) {
+    return this.snapshotSchedulerService.getDailyClosureStatus({
+      referenceAt: query.referenceAt,
+      actorCompanyIds: this.getActorCompanyIds(request.user),
+    });
   }
 
   @Post("daily-closure/run")
@@ -22,9 +42,7 @@ export class SnapshotSchedulerController {
   async runDailyClosure(
     @Req()
     request: {
-      user: {
-        userId: string;
-      };
+      user: SnapshotActorUser;
     },
     @Body() body: RunDailyClosureDto,
   ) {
@@ -32,6 +50,15 @@ export class SnapshotSchedulerController {
       actorUserId: request.user.userId,
       closureDate: body.closureDate,
       referenceAt: body.referenceAt,
+      actorCompanyIds: this.getActorCompanyIds(request.user),
     });
+  }
+
+  private getActorCompanyIds(user: SnapshotActorUser) {
+    if (user.roleCodes.includes("SUPER_ADMIN")) {
+      return undefined;
+    }
+
+    return user.readScope?.companyIds ?? user.scope.companyIds;
   }
 }

@@ -124,11 +124,17 @@ export class ChecklistController {
           regionIds: string[];
           storeIds: string[];
         };
+        actionScope: {
+          assignedStoreIds: string[];
+        };
+        roleCodes: string[];
       };
     },
   ) {
     return this.checklistService.listChecklistAcknowledgements({
       actorScope: request.user.scope,
+      actorActionScope: request.user.actionScope,
+      actorRoleCodes: request.user.roleCodes,
     });
   }
 }

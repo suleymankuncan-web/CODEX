@@ -28,9 +28,12 @@ const authSplitFiles = [
 ]
 const authExpectedTestNames = [
   'creates a pilot user binding with HR admin access',
+  'rejects HR admin pilot user bindings outside the actor company scope',
   'rejects pilot user binding when provider subject is already linked',
   'creates a role assignment for a user',
   'rejects duplicate active role assignments',
+  'rejects region-scoped role assignments when the region belongs to another company',
+  'rejects store-scoped role assignments when the store hierarchy does not match',
   'creates an action store assignment for a user',
   'lists action store assignments with store context',
   'deactivates an action store assignment',
@@ -74,9 +77,12 @@ const importEvidenceExpectedTestNames = [
   'returns import batch reconciliation totals and rates',
   'returns import batch error rows with pagination metadata',
   'returns KPI import batch error row lineage for reconciliation',
+  'does not expose or retry import batches outside the actor company scope',
   'approves an external employee mapping without accepting a client-supplied table name',
+  'rejects external ID mapping approval outside the actor company scope',
   'lists controlled store and employee candidates for external ID mapping',
   'lists and updates store master data for import controls',
+  'does not update store master data outside the actor company scope',
   'returns import batch audit events',
   'returns import batch audit events from the nested audit route',
   'requeues import batches that no longer have blocking dependencies',
@@ -171,6 +177,8 @@ const competitionServiceCoreExpectedTestNames = [
   'rejects finalization with open warnings unless override justification is written',
   'finalizes with overridden state when warnings exist and justification is present',
   'redacts out-of-scope team stores while returning scoped store contributions',
+  'keeps store manager competition detail limited to assigned stores even when company scope is present',
+  'redacts team stores from other companies for company-scoped competition detail',
 ]
 const authScopeSplitFiles = [
   'backend/nestjs/test/integration/auth-scope.e2e-spec.ts',
@@ -298,7 +306,7 @@ test('auth admin integration tests are split without dropping test cases', () =>
     combinedText += `\n${text}`
   }
 
-  assert.equal(totalTests, 35)
+  assert.equal(totalTests, 38)
   for (const testName of authExpectedTestNames) {
     const exactOccurrences = [...combinedText.matchAll(new RegExp(`it\\("${testName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'g'))].length
     assert.equal(exactOccurrences, 1, `${testName} must appear exactly once`)
@@ -320,9 +328,9 @@ test('import batch e2e is split without dropping evidence coverage', () => {
     combinedText += `\n${text}`
   }
 
-  assert.equal(totalTests, 32)
+  assert.equal(totalTests, 35)
   assert.equal([...readText(importSplitFiles[0]).matchAll(/\bit\s*\(/g)].length, 11)
-  assert.equal([...readText(importSplitFiles[1]).matchAll(/\bit\s*\(/g)].length, 13)
+  assert.equal([...readText(importSplitFiles[1]).matchAll(/\bit\s*\(/g)].length, 16)
   assert.equal([...readText(importSplitFiles[2]).matchAll(/\bit\s*\(/g)].length, 8)
   for (const testName of importEvidenceExpectedTestNames) {
     const exactOccurrences = [...combinedText.matchAll(new RegExp(`it\\("${testName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'g'))].length
@@ -412,8 +420,8 @@ test('competition service tests are split without dropping team-template or core
     combinedText += `\n${text}`
   }
 
-  assert.equal(totalTests, 24)
-  assert.equal([...readText(competitionServiceSplitFiles[0]).matchAll(/\bit\s*\(/g)].length, 16)
+  assert.equal(totalTests, 26)
+  assert.equal([...readText(competitionServiceSplitFiles[0]).matchAll(/\bit\s*\(/g)].length, 18)
   assert.equal([...readText(competitionServiceSplitFiles[1]).matchAll(/\bit\s*\(/g)].length, 8)
   for (const testName of competitionServiceTeamTemplateExpectedTestNames) {
     const exactOccurrences = [...combinedText.matchAll(new RegExp(`it\\("${testName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'g'))].length

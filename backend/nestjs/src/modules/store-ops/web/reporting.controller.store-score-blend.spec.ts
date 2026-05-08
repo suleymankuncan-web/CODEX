@@ -15,8 +15,14 @@ describe("ReportingController store score breakdown", () => {
     await controller.getStoreScoreBreakdown(
       {
         user: {
+          roleCodes: ["STORE_MANAGER"],
           scope: {
+            companyIds: [],
+            regionIds: [],
             storeIds: ["store-1"],
+          },
+          actionScope: {
+            assignedStoreIds: ["store-1"],
           },
         },
       },

@@ -121,7 +121,10 @@ export class FeedRepository {
           AND (fp.starts_at IS NULL OR fp.starts_at <= NOW())
           AND (fp.ends_at IS NULL OR fp.ends_at >= NOW())
           AND (
-            ($1::boolean = TRUE AND fp.visibility_scope_type = 'company')
+            (
+              fp.visibility_scope_type = 'company'
+              AND fp.visibility_scope_ids && $1::uuid[]
+            )
             OR (
               fp.visibility_scope_type = 'region'
               AND (
@@ -139,7 +142,7 @@ export class FeedRepository {
         OFFSET $5::int
       `,
       [
-        this.hasVisibleScope(input.actorScope),
+        input.actorScope.companyIds,
         input.actorScope.regionIds,
         input.actorScope.storeIds,
         input.limit,
@@ -156,7 +159,7 @@ export class FeedRepository {
     limit: number;
     offset: number;
   }) {
-    if (input.actorRoles.includes("SUPER_ADMIN") || input.actorRoles.includes("HR_ADMIN")) {
+    if (input.actorRoles.includes("SUPER_ADMIN")) {
       const result = await this.databaseService.query<FeedPostRow>(
         `
           SELECT
@@ -167,6 +170,48 @@ export class FeedRepository {
           OFFSET $2::int
         `,
         [input.limit, input.offset],
+      );
+
+      return result.rows.map((row) => this.mapFeedPost(row));
+    }
+
+    if (input.actorRoles.includes("HR_ADMIN")) {
+      if (input.actorScope.companyIds.length === 0) {
+        return [];
+      }
+
+      const result = await this.databaseService.query<FeedPostRow>(
+        `
+          WITH actor_regions AS (
+            SELECT region_id
+            FROM ops.region
+            WHERE company_id = ANY($1::uuid[])
+          ),
+          actor_stores AS (
+            SELECT store_id
+            FROM ops.store
+            WHERE company_id = ANY($1::uuid[])
+          )
+          SELECT
+            ${feedPostColumns}
+          FROM ops.feed_post
+          WHERE (
+              visibility_scope_type = 'company'
+              AND visibility_scope_ids && $1::uuid[]
+            )
+            OR (
+              visibility_scope_type = 'region'
+              AND visibility_scope_ids && ARRAY(SELECT region_id FROM actor_regions)
+            )
+            OR (
+              visibility_scope_type = 'store'
+              AND visibility_scope_ids && ARRAY(SELECT store_id FROM actor_stores)
+            )
+          ORDER BY is_pinned DESC, updated_at DESC
+          LIMIT $2::int
+          OFFSET $3::int
+        `,
+        [input.actorScope.companyIds, input.limit, input.offset],
       );
 
       return result.rows.map((row) => this.mapFeedPost(row));
@@ -205,6 +250,38 @@ export class FeedRepository {
     );
 
     return result.rows[0] ? this.mapFeedPost(result.rows[0]) : null;
+  }
+
+  async visibilityScopeBelongsToCompanies(input: {
+    visibilityScopeType: FeedVisibilityScopeType;
+    visibilityScopeIds: string[];
+    companyIds: string[];
+  }) {
+    if (input.visibilityScopeIds.length === 0 || input.companyIds.length === 0) {
+      return false;
+    }
+
+    if (input.visibilityScopeType === "company") {
+      return input.visibilityScopeIds.every((scopeId) =>
+        input.companyIds.includes(scopeId),
+      );
+    }
+
+    const tableName =
+      input.visibilityScopeType === "region" ? "ops.region" : "ops.store";
+    const idColumn =
+      input.visibilityScopeType === "region" ? "region_id" : "store_id";
+    const result = await this.databaseService.query<{ scoped_count: string }>(
+      `
+        SELECT COUNT(DISTINCT ${idColumn})::text AS scoped_count
+        FROM ${tableName}
+        WHERE ${idColumn} = ANY($1::uuid[])
+          AND company_id = ANY($2::uuid[])
+      `,
+      [input.visibilityScopeIds, input.companyIds],
+    );
+
+    return Number(result.rows[0]?.scoped_count ?? 0) === input.visibilityScopeIds.length;
   }
 
   async createFeedPost(input: PersistedCreateFeedPostInput) {
@@ -485,18 +562,19 @@ export class FeedRepository {
           metadata_json
         )
         VALUES (
-          NULL,
-          $1,
+          $1::uuid,
+          $2,
           'ops.feed_post',
-          $2::uuid,
-          $3,
+          $3::uuid,
+          $4,
           NULL,
-          $4::uuid,
           $5::uuid,
-          $6::jsonb
+          $6::uuid,
+          $7::jsonb
         )
       `,
       [
+        input.actorUserId,
         input.eventType,
         input.feedPost.feedPostId,
         input.feedPost.visibilityScopeType,

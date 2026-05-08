@@ -19,6 +19,7 @@ export class SnapshotSchedulerService {
     periodStart: string;
     periodEnd: string;
     actorUserId: string;
+    actorCompanyIds?: string[];
   }) {
     this.logger.log(
       `Scheduling monthly snapshot for ${input.periodStart} - ${input.periodEnd}`,
@@ -29,10 +30,15 @@ export class SnapshotSchedulerService {
       periodStart: input.periodStart,
       periodEnd: input.periodEnd,
       actorUserId: input.actorUserId,
+      actorCompanyIds: input.actorCompanyIds,
     });
   }
 
-  async getDailyClosureStatus(referenceAt?: string) {
+  async getDailyClosureStatus(
+    input?: string | { referenceAt?: string; actorCompanyIds?: string[] },
+  ) {
+    const referenceAt = typeof input === "string" ? input : input?.referenceAt;
+    const actorCompanyIds = typeof input === "string" ? undefined : input?.actorCompanyIds;
     const referenceDate = referenceAt ? new Date(referenceAt) : new Date();
     const localDate = this.getLocalIsoDate(
       referenceDate,
@@ -44,6 +50,7 @@ export class SnapshotSchedulerService {
         snapshotType: "daily",
         periodStart: closureDate,
         periodEnd: closureDate,
+        actorCompanyIds,
       });
 
     const healthState = this.mapDailyClosureHealthState(existingSnapshotRun?.run_status ?? null);
@@ -71,10 +78,18 @@ export class SnapshotSchedulerService {
     actorUserId: string;
     closureDate?: string;
     referenceAt?: string;
+    actorCompanyIds?: string[];
   }) {
     const status = input.closureDate
-      ? await this.getDailyClosureStatusForDate(input.closureDate, input.referenceAt)
-      : await this.getDailyClosureStatus(input.referenceAt);
+      ? await this.getDailyClosureStatusForDate(
+          input.closureDate,
+          input.referenceAt,
+          input.actorCompanyIds,
+        )
+      : await this.getDailyClosureStatus({
+          referenceAt: input.referenceAt,
+          actorCompanyIds: input.actorCompanyIds,
+        });
 
     if (status.healthState === "completed") {
       return buildCommandResponse({
@@ -113,16 +128,22 @@ export class SnapshotSchedulerService {
       periodStart: status.closureDate,
       periodEnd: status.closureDate,
       actorUserId: input.actorUserId,
+      actorCompanyIds: input.actorCompanyIds,
     });
   }
 
-  private async getDailyClosureStatusForDate(closureDate: string, referenceAt?: string) {
+  private async getDailyClosureStatusForDate(
+    closureDate: string,
+    referenceAt?: string,
+    actorCompanyIds?: string[],
+  ) {
     const referenceDate = referenceAt ? new Date(referenceAt) : new Date();
     const existingSnapshotRun =
       await this.snapshotOperationsRepository.findLatestSnapshotRunByTypeAndPeriod({
         snapshotType: "daily",
         periodStart: closureDate,
         periodEnd: closureDate,
+        actorCompanyIds,
       });
 
     const healthState = this.mapDailyClosureHealthState(existingSnapshotRun?.run_status ?? null);

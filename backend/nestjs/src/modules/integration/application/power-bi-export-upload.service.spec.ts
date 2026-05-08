@@ -1,5 +1,10 @@
+import { Logger } from "@nestjs/common";
 import * as XLSX from "@e965/xlsx";
-import { PowerBiExportUploadService } from "./power-bi-export-upload.service";
+import {
+  POWER_BI_EXPORT_MAX_SHEET_COLUMNS,
+  POWER_BI_EXPORT_MAX_SHEET_ROWS,
+  PowerBiExportUploadService,
+} from "./power-bi-export-upload.service";
 
 function createWorkbookBuffer(rows: Array<Record<string, unknown>>): Buffer {
   const workbook = XLSX.utils.book_new();
@@ -63,6 +68,96 @@ function createService() {
 }
 
 describe("PowerBiExportUploadService", () => {
+  let loggerErrorSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    loggerErrorSpy = jest
+      .spyOn(Logger.prototype, "error")
+      .mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    loggerErrorSpy.mockRestore();
+  });
+
+  it("rejects oversized Power BI export files before parsing", async () => {
+    const { service } = createService();
+    const oversizedBuffer = Buffer.alloc(9 * 1024 * 1024, 1);
+
+    await expect(
+      service.upload({
+        sourceCode: "POWER_BI",
+        periodMonth: "2026-04",
+        actorUserId: "user-1",
+        storeFile: {
+          originalname: "store.xlsx",
+          buffer: oversizedBuffer,
+        },
+      }),
+    ).rejects.toThrow("Power BI export dosyasi en fazla 8 MB olabilir");
+  });
+
+  it("rejects unsupported Power BI export file names before parsing", async () => {
+    const { service } = createService();
+
+    await expect(
+      service.upload({
+        sourceCode: "POWER_BI",
+        periodMonth: "2026-04",
+        actorUserId: "user-1",
+        storeFile: {
+          originalname: "store.txt",
+          buffer: Buffer.from("not a spreadsheet"),
+        },
+      }),
+    ).rejects.toThrow("Power BI export dosyasi xlsx, xls veya csv olmali");
+  });
+
+  it("rejects Power BI sheets with too many rows before json conversion", async () => {
+    const { service } = createService();
+    const rows = Array.from({ length: POWER_BI_EXPORT_MAX_SHEET_ROWS + 1 }, (_, index) => ({
+      MagazaAdi: index === 0 ? "Kadikoy" : "",
+    }));
+
+    await expect(
+      service.upload({
+        sourceCode: "POWER_BI",
+        periodMonth: "2026-04",
+        actorUserId: "user-1",
+        storeFile: {
+          originalname: "store.xlsx",
+          buffer: createWorkbookBuffer(rows),
+        },
+      }),
+    ).rejects.toThrow(
+      `Power BI export dosyasi en fazla ${POWER_BI_EXPORT_MAX_SHEET_ROWS} satir olabilir`,
+    );
+  });
+
+  it("rejects Power BI sheets with too many columns before json conversion", async () => {
+    const { service } = createService();
+    const row = Object.fromEntries(
+      Array.from({ length: POWER_BI_EXPORT_MAX_SHEET_COLUMNS + 1 }, (_, index) => [
+        `Col${index}`,
+        "value",
+      ]),
+    );
+
+    await expect(
+      service.upload({
+        sourceCode: "POWER_BI",
+        periodMonth: "2026-04",
+        actorUserId: "user-1",
+        storeFile: {
+          originalname: "store.xlsx",
+          buffer: createWorkbookBuffer([row]),
+        },
+      }),
+    ).rejects.toThrow(
+      `Power BI export dosyasi en fazla ${POWER_BI_EXPORT_MAX_SHEET_COLUMNS} kolon olabilir`,
+    );
+  });
+
   it("reads uploaded store xlsx rows and creates canonical KPI import rows", async () => {
     const { integrationService, service } = createService();
     const buffer = createWorkbookBuffer([
@@ -609,7 +704,10 @@ describe("PowerBiExportUploadService", () => {
       ]),
     );
     expect(integrationRepository.listKpiImportStoreExternalRefs).toHaveBeenCalledWith(
-      "00000000-0000-0000-0000-000000000010",
+      {
+        actorCompanyIds: [],
+        integrationSourceId: "00000000-0000-0000-0000-000000000010",
+      },
     );
   });
 });
