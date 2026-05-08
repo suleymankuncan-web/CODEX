@@ -24,14 +24,15 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-07:
+As of 2026-05-08:
 
-- `origin/main` includes the merged pilot-control updates through JSON Source Suspension V1, operator-doc alignment, and the pilot-facing localization wave through App shell fallback localization. Use `git log --oneline -5` for the exact latest merge commit.
+- `origin/main` includes the merged pilot-control updates through JSON Source Suspension V1, operator-doc alignment, the pilot-facing localization wave through App shell fallback localization, scoped security hardening through PR #70, and Render Free plan migration command alignment through PR #71. Use `git log --oneline -5` for the exact latest merge commit.
 - Auth refresh flash fix is merged and deployed.
 - Master-data validation/promotion test split is merged.
 - Pilot readiness evidence consolidation is merged.
 - Controlled pilot operating checklist is merged; the active feedback log is guarded as the pilot operating record.
 - Pilot localization closeout is guarded by `admin-web/scripts/localization-contract.test.mjs` and documented in `docs/plans/ui-localization-closeout-v1.md`.
+- Render Free plan staging runs migrations in the backend Build Command: `npm ci --include=dev && npm run db:migrate && npm run build`.
 
 If starting in a fresh context after this handoff PR is merged:
 
@@ -80,6 +81,10 @@ Key 2026-05-06 evidence:
 - `docs/evidence/pilot-readiness/2026-05-06-ranking-privacy-smoke.md`
 - `docs/evidence/pilot-readiness/2026-05-06-master-data-power-bi-acceptance.md`
 - `docs/evidence/pilot-readiness/2026-05-06-live-protected-api-smoke.md`
+
+Key 2026-05-08 evidence:
+
+- `docs/evidence/pilot-readiness/2026-05-08-render-free-plan-migration-deploy.md`
 
 Accepted pilot data state:
 
@@ -191,6 +196,7 @@ Keep these references in this handoff because contract tests and future context 
 - `docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-round-1-outcome.md` - Controlled Pilot Round 1 Outcome
 - `docs/plans/controlled-pilot-operating-checklist-v1.md` - Controlled Pilot Operating Checklist V1
 - `docs/plans/db-health-migration-evidence-v1.md` - DB Health And Migration Evidence V1
+- `docs/evidence/pilot-readiness/2026-05-08-render-free-plan-migration-deploy.md` - Render Free Plan Migration Deploy Evidence
 - `docs/plans/excel-kpi-import-operator-runbook.md` - Excel KPI Import Operator Runbook V1
 - `docs/plans/master-data-bootstrap-pilot-smoke-runbook.md` - Master Data Bootstrap Pilot Smoke Runbook V1
 - `docs/plans/mobile-api-bff-endpoint-inventory-v1.md` - Mobile API/BFF Endpoint Inventory V1
