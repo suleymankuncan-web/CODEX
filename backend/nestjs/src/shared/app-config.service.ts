@@ -45,6 +45,40 @@ export class AppConfigService {
     return this.readPositiveNumber(key, fallback);
   }
 
+  private requireProductionHttpsUrl(
+    key: string,
+    value: string | undefined,
+  ): string | undefined {
+    if (!value || !this.isProduction) {
+      return value;
+    }
+
+    let parsed: URL;
+    try {
+      parsed = new URL(value);
+    } catch {
+      throw new Error(`${key} must be a valid URL in production`);
+    }
+
+    if (parsed.protocol !== "https:") {
+      throw new Error(`${key} must use https in production`);
+    }
+
+    return value;
+  }
+
+  private requireProductionSameOriginPath(key: string, value: string): string {
+    if (!this.isProduction) {
+      return value;
+    }
+
+    if (!value.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) {
+      throw new Error(`${key} must be a same-origin path in production`);
+    }
+
+    return value;
+  }
+
   get port(): number {
     return Number(
       this.readOptionalString("APP_PORT") ??
@@ -59,7 +93,13 @@ export class AppConfigService {
 
   get authMode(): string {
     const fallback = this.isProduction ? "jwt" : "mock";
-    return this.readString("AUTH_MODE", fallback);
+    const value = this.readString("AUTH_MODE", fallback);
+
+    if (this.isProduction && value === "mock") {
+      throw new Error("AUTH_MODE=mock is not allowed in production");
+    }
+
+    return value;
   }
 
   get authProviderKey(): string {
@@ -67,8 +107,12 @@ export class AppConfigService {
   }
 
   get allowMockAuth(): boolean {
+    if (this.isProduction) {
+      return false;
+    }
+
     const value = this.configService.get<string>("ALLOW_MOCK_AUTH");
-    return value === "true" || (!this.isProduction && value !== "false");
+    return value === "true" || value !== "false";
   }
 
   get httpMigrationEndpointEnabled(): boolean {
@@ -86,10 +130,31 @@ export class AppConfigService {
       throw new Error("CORS_ALLOWED_ORIGINS must be configured in production");
     }
 
-    return (value ?? "http://localhost:5173")
+    const origins = (value ?? "http://localhost:5173")
       .split(",")
       .map((origin) => origin.trim())
       .filter(Boolean);
+
+    if (this.isProduction) {
+      for (const origin of origins) {
+        if (origin === "*") {
+          throw new Error("CORS_ALLOWED_ORIGINS must use explicit https origins in production");
+        }
+
+        let parsed: URL;
+        try {
+          parsed = new URL(origin);
+        } catch {
+          throw new Error("CORS_ALLOWED_ORIGINS must use explicit https origins in production");
+        }
+
+        if (parsed.protocol !== "https:") {
+          throw new Error("CORS_ALLOWED_ORIGINS must use explicit https origins in production");
+        }
+      }
+    }
+
+    return origins;
   }
 
   get rateLimitWindowMs(): number {
@@ -148,7 +213,7 @@ export class AppConfigService {
     if (!value || value === "undefined" || value === "null") {
       return undefined;
     }
-    return value;
+    return this.requireProductionHttpsUrl("JWT_JWKS_URL", value);
   }
 
   get authAuthorizationUrl(): string | undefined {
@@ -156,7 +221,7 @@ export class AppConfigService {
     if (!value || value === "undefined" || value === "null") {
       return undefined;
     }
-    return value;
+    return this.requireProductionHttpsUrl("AUTH_AUTHORIZATION_URL", value);
   }
 
   get authClientId(): string | undefined {
@@ -172,7 +237,13 @@ export class AppConfigService {
   }
 
   get authResponseType(): string {
-    return this.readString("AUTH_RESPONSE_TYPE", "code");
+    const value = this.readString("AUTH_RESPONSE_TYPE", "code");
+
+    if (this.isProduction && value !== "code") {
+      throw new Error("AUTH_RESPONSE_TYPE=code is required in production");
+    }
+
+    return value;
   }
 
   get authTokenUrl(): string | undefined {
@@ -180,7 +251,7 @@ export class AppConfigService {
     if (!value || value === "undefined" || value === "null") {
       return undefined;
     }
-    return value;
+    return this.requireProductionHttpsUrl("AUTH_TOKEN_URL", value);
   }
 
   get authAudienceOverride(): string | undefined {
@@ -192,7 +263,10 @@ export class AppConfigService {
   }
 
   get authCallbackPath(): string {
-    return this.readString("AUTH_CALLBACK_PATH", "/auth/callback");
+    return this.requireProductionSameOriginPath(
+      "AUTH_CALLBACK_PATH",
+      this.readString("AUTH_CALLBACK_PATH", "/auth/callback"),
+    );
   }
 
   get authLogoutUrl(): string | undefined {
@@ -200,11 +274,14 @@ export class AppConfigService {
     if (!value || value === "undefined" || value === "null") {
       return undefined;
     }
-    return value;
+    return this.requireProductionHttpsUrl("AUTH_LOGOUT_URL", value);
   }
 
   get authPostLogoutRedirectPath(): string {
-    return this.readString("AUTH_POST_LOGOUT_REDIRECT_PATH", "/auth/login");
+    return this.requireProductionSameOriginPath(
+      "AUTH_POST_LOGOUT_REDIRECT_PATH",
+      this.readString("AUTH_POST_LOGOUT_REDIRECT_PATH", "/auth/login"),
+    );
   }
 
   get queueBackend(): string {

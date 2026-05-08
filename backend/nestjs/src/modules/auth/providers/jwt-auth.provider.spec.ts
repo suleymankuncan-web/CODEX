@@ -266,7 +266,7 @@ describe("JwtAuthProvider", () => {
     });
   });
 
-  it("accepts keycloak-style audience and role claims", async () => {
+  it("accepts keycloak-style client audience and role claims", async () => {
     const provider = new JwtAuthProvider({
       jwtSecret: "top-secret",
       jwtIssuer: "http://localhost:8080/realms/store-ops",
@@ -288,7 +288,7 @@ describe("JwtAuthProvider", () => {
       .setProtectedHeader({ alg: "HS256" })
       .setSubject("user-3")
       .setIssuer("http://localhost:8080/realms/store-ops")
-      .setAudience("account")
+      .setAudience("store-ops-admin-web")
       .sign(new TextEncoder().encode("top-secret"));
 
     const user = await provider.resolveUser({
@@ -318,6 +318,35 @@ describe("JwtAuthProvider", () => {
     });
   });
 
+  it("rejects generic keycloak account-audience tokens", async () => {
+    const provider = new JwtAuthProvider({
+      jwtSecret: "top-secret",
+      jwtIssuer: "http://localhost:8080/realms/store-ops",
+      jwtAudience: "store-ops-api",
+      jwtJwksUrl: undefined,
+      authClientId: "store-ops-admin-web",
+    } as never);
+
+    const token = await new SignJWT({
+      realm_access: {
+        roles: ["SUPER_ADMIN"],
+      },
+    })
+      .setProtectedHeader({ alg: "HS256" })
+      .setSubject("user-3")
+      .setIssuer("http://localhost:8080/realms/store-ops")
+      .setAudience("account")
+      .sign(new TextEncoder().encode("top-secret"));
+
+    await expect(
+      provider.resolveUser({
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+      }),
+    ).rejects.toThrow("Invalid JWT");
+  });
+
   it("filters provider default roles from keycloak role claims", async () => {
     const provider = new JwtAuthProvider({
       jwtSecret: "top-secret",
@@ -341,7 +370,7 @@ describe("JwtAuthProvider", () => {
       .setProtectedHeader({ alg: "HS256" })
       .setSubject("user-3")
       .setIssuer("http://localhost:8080/realms/store-ops")
-      .setAudience("account")
+      .setAudience("store-ops-api")
       .sign(new TextEncoder().encode("top-secret"));
 
     const user = await provider.resolveUser({
@@ -521,6 +550,7 @@ describe("JwtAuthProvider", () => {
       .setProtectedHeader({ alg: "HS256" })
       .setIssuer("store-ops-auth")
       .setAudience("store-ops-api")
+      .setExpirationTime("5m")
       .sign(new TextEncoder().encode("top-secret"));
 
     await expect(
@@ -530,6 +560,34 @@ describe("JwtAuthProvider", () => {
         },
       }),
     ).rejects.toThrow("JWT subject claim is required");
+  });
+
+  it("rejects production JWTs without an expiration claim", async () => {
+    const provider = new JwtAuthProvider({
+      jwtSecret: "top-secret",
+      jwtIssuer: "store-ops-auth",
+      jwtAudience: "store-ops-api",
+      jwtJwksUrl: undefined,
+      isProduction: true,
+    } as never);
+
+    const token = await new SignJWT({
+      roles: ["REPORT_VIEWER"],
+      read_company_ids: ["company-1"],
+    })
+      .setProtectedHeader({ alg: "HS256" })
+      .setSubject("user-1")
+      .setIssuer("store-ops-auth")
+      .setAudience("store-ops-api")
+      .sign(new TextEncoder().encode("top-secret"));
+
+    await expect(
+      provider.resolveUser({
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+      }),
+    ).rejects.toThrow("Invalid JWT");
   });
 
   it("rejects JWT tokens with invalid issuer", async () => {

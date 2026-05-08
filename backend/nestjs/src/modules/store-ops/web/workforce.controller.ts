@@ -16,6 +16,18 @@ import { RejectWorkforceRequestDto } from "./dto/reject-workforce-request.dto";
 import { ResubmitSellerCodeRequestDto } from "./dto/resubmit-seller-code-request.dto";
 import { ResubmitOffboardingRequestDto } from "./dto/resubmit-offboarding-request.dto";
 
+type WorkforceActorRequest = {
+  user: {
+    userId: string;
+    roleCodes: string[];
+    scope: {
+      companyIds: string[];
+      regionIds: string[];
+      storeIds: string[];
+    };
+  };
+};
+
 @Controller("workforce")
 export class WorkforceController {
   constructor(private readonly workforceService: WorkforceService) {}
@@ -52,6 +64,7 @@ export class WorkforceController {
         actionScope: {
           assignedStoreIds: string[];
         };
+        roleCodes: string[];
       };
     },
     @Query() query: ListSellerCodeRequestsQueryDto,
@@ -59,6 +72,7 @@ export class WorkforceController {
     return this.workforceService.listSellerCodeRequests({
       actorScope: request.user.scope,
       actorActionScope: request.user.actionScope,
+      actorRoleCodes: request.user.roleCodes,
       status: query.status,
     });
   }
@@ -153,6 +167,7 @@ export class WorkforceController {
         actionScope: {
           assignedStoreIds: string[];
         };
+        roleCodes: string[];
       };
     },
     @Query() query: ListOffboardingRequestsQueryDto,
@@ -160,6 +175,7 @@ export class WorkforceController {
     return this.workforceService.listOffboardingRequests({
       actorScope: request.user.scope,
       actorActionScope: request.user.actionScope,
+      actorRoleCodes: request.user.roleCodes,
       status: query.status,
     });
   }
@@ -197,15 +213,13 @@ export class WorkforceController {
   async approveSellerCodeRequest(
     @Param("requestId") requestId: string,
     @Req()
-    request: {
-      user: {
-        userId: string;
-      };
-    },
+    request: WorkforceActorRequest,
     @Body() body: ApproveSellerCodeRequestDto,
   ) {
     return this.workforceService.approveSellerCodeRequest({
       actorUserId: request.user.userId,
+      actorScope: request.user.scope,
+      actorRoleCodes: request.user.roleCodes,
       requestId,
       sellerCode: body.sellerCode,
       reviewNote: body.reviewNote,
@@ -217,15 +231,13 @@ export class WorkforceController {
   async rejectSellerCodeRequest(
     @Param("requestId") requestId: string,
     @Req()
-    request: {
-      user: {
-        userId: string;
-      };
-    },
+    request: WorkforceActorRequest,
     @Body() body: RejectWorkforceRequestDto,
   ) {
     return this.workforceService.rejectSellerCodeRequest({
       actorUserId: request.user.userId,
+      actorScope: request.user.scope,
+      actorRoleCodes: request.user.roleCodes,
       requestId,
       reviewNote: body.reviewNote,
     });
@@ -265,15 +277,13 @@ export class WorkforceController {
   async approveOffboardingRequest(
     @Param("requestId") requestId: string,
     @Req()
-    request: {
-      user: {
-        userId: string;
-      };
-    },
+    request: WorkforceActorRequest,
     @Body() body: ApproveOffboardingRequestDto,
   ) {
     return this.workforceService.approveOffboardingRequest({
       actorUserId: request.user.userId,
+      actorScope: request.user.scope,
+      actorRoleCodes: request.user.roleCodes,
       requestId,
       reviewNote: body.reviewNote,
     });
@@ -284,15 +294,13 @@ export class WorkforceController {
   async rejectOffboardingRequest(
     @Param("requestId") requestId: string,
     @Req()
-    request: {
-      user: {
-        userId: string;
-      };
-    },
+    request: WorkforceActorRequest,
     @Body() body: RejectWorkforceRequestDto,
   ) {
     return this.workforceService.rejectOffboardingRequest({
       actorUserId: request.user.userId,
+      actorScope: request.user.scope,
+      actorRoleCodes: request.user.roleCodes,
       requestId,
       reviewNote: body.reviewNote,
     });

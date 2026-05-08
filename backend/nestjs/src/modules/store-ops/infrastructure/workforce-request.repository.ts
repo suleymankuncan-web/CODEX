@@ -380,18 +380,19 @@ export class WorkforceRequestRepository {
             metadata_json
           )
           VALUES (
-            NULL,
+            $1::uuid,
             'seller_code_request.created',
             'ops.seller_code_request',
-            $1::uuid,
-            'store',
             $2::uuid,
+            'store',
             $3::uuid,
             $4::uuid,
-            $5::jsonb
+            $5::uuid,
+            $6::jsonb
           )
         `,
         [
+          input.submittedByUserId,
           request.seller_code_request_id,
           input.companyId,
           input.regionId,
@@ -682,18 +683,19 @@ export class WorkforceRequestRepository {
             metadata_json
           )
           VALUES (
-            NULL,
+            $1::uuid,
             'seller_code_request.approved',
             'ops.seller_code_request',
-            $1::uuid,
-            'store',
             $2::uuid,
+            'store',
             $3::uuid,
             $4::uuid,
-            $5::jsonb
+            $5::uuid,
+            $6::jsonb
           )
         `,
         [
+          input.actorUserId,
           request.seller_code_request_id,
           request.company_id,
           request.region_id,
@@ -790,18 +792,19 @@ export class WorkforceRequestRepository {
             metadata_json
           )
           VALUES (
-            NULL,
+            $1::uuid,
             'seller_code_request.rejected',
             'ops.seller_code_request',
-            $1::uuid,
-            'store',
             $2::uuid,
+            'store',
             $3::uuid,
             $4::uuid,
-            $5::jsonb
+            $5::uuid,
+            $6::jsonb
           )
         `,
         [
+          input.actorUserId,
           request.seller_code_request_id,
           request.company_id,
           request.region_id,
@@ -928,18 +931,19 @@ export class WorkforceRequestRepository {
             metadata_json
           )
           VALUES (
-            NULL,
+            $1::uuid,
             'seller_code_request.resubmitted',
             'ops.seller_code_request',
-            $1::uuid,
-            'store',
             $2::uuid,
+            'store',
             $3::uuid,
             $4::uuid,
-            $5::jsonb
+            $5::uuid,
+            $6::jsonb
           )
         `,
         [
+          input.actorUserId,
           request.seller_code_request_id,
           request.company_id,
           request.region_id,
@@ -1062,18 +1066,19 @@ export class WorkforceRequestRepository {
             metadata_json
           )
           VALUES (
-            NULL,
+            $1::uuid,
             'employee_offboarding_request.created',
             'ops.employee_offboarding_request',
-            $1::uuid,
-            'store',
             $2::uuid,
+            'store',
             $3::uuid,
             $4::uuid,
-            $5::jsonb
+            $5::uuid,
+            $6::jsonb
           )
         `,
         [
+          input.submittedByUserId,
           request.offboarding_request_id,
           input.companyId,
           input.regionId,
@@ -1399,18 +1404,19 @@ export class WorkforceRequestRepository {
             metadata_json
           )
           VALUES (
-            NULL,
+            $1::uuid,
             'employee_offboarding_request.approved',
             'ops.employee_offboarding_request',
-            $1::uuid,
-            'store',
             $2::uuid,
+            'store',
             $3::uuid,
             $4::uuid,
-            $5::jsonb
+            $5::uuid,
+            $6::jsonb
           )
         `,
         [
+          input.actorUserId,
           request.offboarding_request_id,
           request.company_id,
           request.region_id,
@@ -1516,18 +1522,19 @@ export class WorkforceRequestRepository {
             metadata_json
           )
           VALUES (
-            NULL,
+            $1::uuid,
             'employee_offboarding_request.rejected',
             'ops.employee_offboarding_request',
-            $1::uuid,
-            'store',
             $2::uuid,
+            'store',
             $3::uuid,
             $4::uuid,
-            $5::jsonb
+            $5::uuid,
+            $6::jsonb
           )
         `,
         [
+          input.actorUserId,
           request.offboarding_request_id,
           request.company_id,
           request.region_id,
@@ -1648,18 +1655,19 @@ export class WorkforceRequestRepository {
             metadata_json
           )
           VALUES (
-            NULL,
+            $1::uuid,
             'employee_offboarding_request.resubmitted',
             'ops.employee_offboarding_request',
-            $1::uuid,
-            'store',
             $2::uuid,
+            'store',
             $3::uuid,
             $4::uuid,
-            $5::jsonb
+            $5::uuid,
+            $6::jsonb
           )
         `,
         [
+          input.actorUserId,
           request.offboarding_request_id,
           request.company_id,
           request.region_id,

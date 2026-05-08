@@ -17,10 +17,14 @@ import { UpdateCompetitionTeamTemplateDto } from "./dto/update-competition-team-
 type CompetitionRequest = {
   user: {
     userId: string;
+    roleCodes: string[];
     scope: {
       companyIds: string[];
       regionIds: string[];
       storeIds: string[];
+    };
+    actionScope?: {
+      assignedStoreIds: string[];
     };
   };
 };
@@ -43,7 +47,10 @@ export class CompetitionController {
     @Query() query: ListCompetitionsQueryDto,
   ) {
     return this.competitionService.listCompetitions({
+      actorUserId: request.user.userId,
       actorScope: request.user.scope,
+      actorActionScope: request.user.actionScope,
+      actorRoleCodes: request.user.roleCodes,
       limit: query.limit,
       offset: query.offset,
     });
@@ -51,8 +58,12 @@ export class CompetitionController {
 
   @Get("team-templates")
   @RequireRoles("SUPER_ADMIN", "HR_ADMIN")
-  async listTeamTemplates(@Query() query: ListCompetitionTeamTemplatesQueryDto) {
+  async listTeamTemplates(
+    @Req() request: CompetitionRequest,
+    @Query() query: ListCompetitionTeamTemplatesQueryDto,
+  ) {
     return this.competitionService.listTeamTemplates({
+      ...competitionActorAccess(request),
       activeOnly: query.activeOnly,
     });
   }
@@ -72,7 +83,10 @@ export class CompetitionController {
   ) {
     return this.competitionService.getCompetitionDetail({
       competitionId,
+      actorUserId: request.user.userId,
       actorScope: request.user.scope,
+      actorActionScope: request.user.actionScope,
+      actorRoleCodes: request.user.roleCodes,
       includeStoreDetails: true,
     });
   }
@@ -85,6 +99,7 @@ export class CompetitionController {
   ) {
     return this.competitionService.createCompetition({
       actorUserId: request.user.userId,
+      ...competitionActorAccess(request),
       ...body,
     });
   }
@@ -97,6 +112,7 @@ export class CompetitionController {
   ) {
     return this.competitionService.createTeamTemplate({
       actorUserId: request.user.userId,
+      ...competitionActorAccess(request),
       ...body,
     });
   }
@@ -109,6 +125,7 @@ export class CompetitionController {
   ) {
     return this.competitionService.deactivateTeamTemplate({
       actorUserId: request.user.userId,
+      ...competitionActorAccess(request),
       templateId,
     });
   }
@@ -122,6 +139,7 @@ export class CompetitionController {
   ) {
     return this.competitionService.updateTeamTemplate({
       actorUserId: request.user.userId,
+      ...competitionActorAccess(request),
       templateId,
       ...body,
     });
@@ -136,6 +154,7 @@ export class CompetitionController {
   ) {
     return this.competitionService.cloneTeamTemplate({
       actorUserId: request.user.userId,
+      ...competitionActorAccess(request),
       sourceTemplateId: templateId,
       ...body,
     });
@@ -150,6 +169,7 @@ export class CompetitionController {
   ) {
     return this.competitionService.createStage({
       actorUserId: request.user.userId,
+      ...competitionActorAccess(request),
       competitionId,
       ...body,
     });
@@ -164,6 +184,7 @@ export class CompetitionController {
   ) {
     return this.competitionService.createStagePackage({
       actorUserId: request.user.userId,
+      ...competitionActorAccess(request),
       competitionId,
       ...body,
     });
@@ -171,8 +192,13 @@ export class CompetitionController {
 
   @Get(":competitionId/stage-package-plans")
   @RequireRoles("SUPER_ADMIN", "HR_ADMIN")
-  async listStagePackagePlans(@Param("competitionId") competitionId: string) {
+  async listStagePackagePlans(
+    @Req() request: CompetitionRequest,
+    @Param("competitionId") competitionId: string,
+  ) {
     return this.competitionService.listStagePackagePlans({
+      actorUserId: request.user.userId,
+      ...competitionActorAccess(request),
       competitionId,
     });
   }
@@ -186,6 +212,7 @@ export class CompetitionController {
   ) {
     return this.competitionService.createStagePackagePlan({
       actorUserId: request.user.userId,
+      ...competitionActorAccess(request),
       competitionId,
       ...body,
     });
@@ -200,6 +227,7 @@ export class CompetitionController {
   ) {
     return this.competitionService.updateStagePackagePlan({
       actorUserId: request.user.userId,
+      ...competitionActorAccess(request),
       planId,
       ...body,
     });
@@ -213,6 +241,7 @@ export class CompetitionController {
   ) {
     return this.competitionService.executeStagePackagePlan({
       actorUserId: request.user.userId,
+      ...competitionActorAccess(request),
       planId,
     });
   }
@@ -225,6 +254,7 @@ export class CompetitionController {
   ) {
     return this.competitionService.submitStagePackagePlan({
       actorUserId: request.user.userId,
+      ...competitionActorAccess(request),
       planId,
     });
   }
@@ -238,6 +268,7 @@ export class CompetitionController {
   ) {
     return this.competitionService.approveStagePackagePlan({
       actorUserId: request.user.userId,
+      ...competitionActorAccess(request),
       planId,
       reviewNote: body.reviewNote,
     });
@@ -252,6 +283,7 @@ export class CompetitionController {
   ) {
     return this.competitionService.rejectStagePackagePlan({
       actorUserId: request.user.userId,
+      ...competitionActorAccess(request),
       planId,
       reviewNote: body.reviewNote,
     });
@@ -265,6 +297,7 @@ export class CompetitionController {
   ) {
     return this.competitionService.cloneStagePackagePlan({
       actorUserId: request.user.userId,
+      ...competitionActorAccess(request),
       sourcePlanId: planId,
     });
   }
@@ -277,14 +310,20 @@ export class CompetitionController {
   ) {
     return this.competitionService.cancelStagePackagePlan({
       actorUserId: request.user.userId,
+      ...competitionActorAccess(request),
       planId,
     });
   }
 
   @Get("stage-package-plans/:planId/audit")
   @RequireRoles("SUPER_ADMIN", "HR_ADMIN")
-  async listStagePackagePlanAudit(@Param("planId") planId: string) {
+  async listStagePackagePlanAudit(
+    @Req() request: CompetitionRequest,
+    @Param("planId") planId: string,
+  ) {
     return this.competitionService.listStagePackagePlanAudit({
+      actorUserId: request.user.userId,
+      ...competitionActorAccess(request),
       planId,
     });
   }
@@ -297,6 +336,7 @@ export class CompetitionController {
   ) {
     return this.competitionService.recalculateStage({
       actorUserId: request.user.userId,
+      ...competitionActorAccess(request),
       stageId,
     });
   }
@@ -310,9 +350,18 @@ export class CompetitionController {
   ) {
     return this.competitionService.finalizeStage({
       actorUserId: request.user.userId,
+      ...competitionActorAccess(request),
       stageId,
       allowOverride: body.allowOverride,
       overrideJustification: body.overrideJustification,
     });
   }
+}
+
+function competitionActorAccess(request: CompetitionRequest) {
+  return {
+    actorRoleCodes: request.user.roleCodes,
+    actorScope: request.user.scope,
+    actorActionScope: request.user.actionScope,
+  };
 }

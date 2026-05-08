@@ -1,6 +1,208 @@
 import { TargetDistributionService } from "./target-distribution.service";
 
 describe("TargetDistributionService", () => {
+  it("keeps store manager request lists limited to assigned stores even when company scope is present", async () => {
+    const targetDistributionRepository = {
+      listRequests: jest.fn(async () => []),
+    };
+    const service = new TargetDistributionService(
+      targetDistributionRepository as never,
+      {} as never,
+    );
+
+    await service.listRequests({
+      actorScope: {
+        companyIds: ["00000000-0000-4000-8000-000000000001"],
+        regionIds: ["00000000-0000-4000-8000-000000000010"],
+        storeIds: ["00000000-0000-4000-8000-000000000201"],
+      },
+      actorActionScope: {
+        assignedStoreIds: ["00000000-0000-4000-8000-000000000201"],
+      },
+      actorRoleCodes: ["STORE_MANAGER"],
+      statuses: ["pending_region_approval"],
+    });
+
+    expect(targetDistributionRepository.listRequests).toHaveBeenCalledWith({
+      companyIds: [],
+      regionIds: [],
+      storeIds: ["00000000-0000-4000-8000-000000000201"],
+      statuses: ["pending_region_approval"],
+    });
+  });
+
+  it("keeps store manager target coverage limited to assigned stores even when company scope is present", async () => {
+    const targetDistributionRepository = {
+      listTargetCoverage: jest.fn(async () => []),
+    };
+    const service = new TargetDistributionService(
+      targetDistributionRepository as never,
+      {} as never,
+    );
+
+    await service.getTargetCoverage({
+      actorScope: {
+        companyIds: ["00000000-0000-4000-8000-000000000001"],
+        regionIds: ["00000000-0000-4000-8000-000000000010"],
+        storeIds: ["00000000-0000-4000-8000-000000000201"],
+      },
+      actorActionScope: {
+        assignedStoreIds: ["00000000-0000-4000-8000-000000000201"],
+      },
+      actorRoleCodes: ["STORE_MANAGER"],
+      requestMonth: "2026-03-01",
+    });
+
+    expect(targetDistributionRepository.listTargetCoverage).toHaveBeenCalledWith({
+      companyIds: [],
+      regionIds: [],
+      storeIds: ["00000000-0000-4000-8000-000000000201"],
+      requestMonth: "2026-03-01",
+      storeId: undefined,
+    });
+  });
+
+  it("rejects allocations for employees that are not active in the requested store", async () => {
+    const targetDistributionRepository = {
+      createRequest: jest.fn(),
+    };
+    const storeOpsRepository = {
+      listStorePersonnelTargetingRows: jest.fn(async () => [
+        {
+          employee_id: "00000000-0000-4000-8000-000000000501",
+          first_name: "Ada",
+          last_name: "Kaya",
+          external_employee_ref: "FM8375",
+          period_start: null,
+          period_end: null,
+          net_sales_value: null,
+        },
+      ]),
+    };
+    const service = new TargetDistributionService(
+      targetDistributionRepository as never,
+      storeOpsRepository as never,
+    );
+
+    await expect(
+      service.createRequest({
+        actorUserId: "user-1",
+        actorScope: {
+          companyIds: ["00000000-0000-4000-8000-000000000001"],
+          regionIds: ["00000000-0000-4000-8000-000000000010"],
+          storeIds: ["00000000-0000-4000-8000-000000000201"],
+        },
+        actorActionScope: {
+          assignedStoreIds: ["00000000-0000-4000-8000-000000000201"],
+        },
+        storeId: "00000000-0000-4000-8000-000000000201",
+        requestMonth: "2026-03-01",
+        targetLabel: "Net Sales",
+        totalTargetValue: 175000,
+        allocations: [
+          {
+            employeeId: "00000000-0000-4000-8000-000000000501",
+            assigneeLabel: "Ada Kaya",
+            targetValue: 100000,
+          },
+          {
+            employeeId: "00000000-0000-4000-8000-000000000999",
+            assigneeLabel: "Outside Store",
+            targetValue: 75000,
+          },
+        ],
+      }),
+    ).rejects.toThrow("Target allocation contains employees outside the requested store");
+
+    expect(storeOpsRepository.listStorePersonnelTargetingRows).toHaveBeenCalledWith({
+      storeId: "00000000-0000-4000-8000-000000000201",
+    });
+    expect(targetDistributionRepository.createRequest).not.toHaveBeenCalled();
+  });
+
+  it("uses the requested store's canonical company and region when creating requests", async () => {
+    const targetDistributionRepository = {
+      createRequest: jest.fn(async () => ({
+        request_id: "00000000-0000-4000-8000-000000000701",
+      })),
+    };
+    const storeOpsRepository = {
+      listStorePersonnelTargetingRows: jest.fn(async () => [
+        {
+          employee_id: "00000000-0000-4000-8000-000000000501",
+          first_name: "Ada",
+          last_name: "Kaya",
+          external_employee_ref: "FM8375",
+          period_start: null,
+          period_end: null,
+          net_sales_value: null,
+        },
+      ]),
+      listStoresByScope: jest.fn(async () => [
+        {
+          store_id: "00000000-0000-4000-8000-000000000201",
+          store_code: "MPK",
+          store_name: "Marmara Park",
+          region_id: "00000000-0000-4000-8000-000000000010",
+          company_id: "00000000-0000-4000-8000-000000000001",
+          status: "active",
+        },
+      ]),
+    };
+    const service = new TargetDistributionService(
+      targetDistributionRepository as never,
+      storeOpsRepository as never,
+    );
+
+    await service.createRequest({
+      actorUserId: "user-1",
+      actorScope: {
+        companyIds: ["00000000-0000-4000-8000-000000000099"],
+        regionIds: ["00000000-0000-4000-8000-000000000098"],
+        storeIds: ["00000000-0000-4000-8000-000000000201"],
+      },
+      actorActionScope: {
+        assignedStoreIds: ["00000000-0000-4000-8000-000000000201"],
+      },
+      storeId: "00000000-0000-4000-8000-000000000201",
+      requestMonth: "2026-03-01",
+      targetLabel: "Net Sales",
+      totalTargetValue: 100000,
+      requestReason: "Pilot target update",
+      allocations: [
+        {
+          employeeId: "00000000-0000-4000-8000-000000000501",
+          assigneeLabel: "Ada Kaya",
+          targetValue: 100000,
+        },
+      ],
+    });
+
+    expect(storeOpsRepository.listStoresByScope).toHaveBeenCalledWith({
+      companyIds: [],
+      regionIds: [],
+      storeIds: ["00000000-0000-4000-8000-000000000201"],
+      requestedStoreId: "00000000-0000-4000-8000-000000000201",
+    });
+    expect(targetDistributionRepository.createRequest).toHaveBeenCalledWith({
+      companyId: "00000000-0000-4000-8000-000000000001",
+      regionId: "00000000-0000-4000-8000-000000000010",
+      storeId: "00000000-0000-4000-8000-000000000201",
+      requestMonth: "2026-03-01",
+      targetLabel: "Net Sales",
+      totalTargetValue: 100000,
+      requestReason: "Pilot target update",
+      allocations: [
+        {
+          employeeId: "00000000-0000-4000-8000-000000000501",
+          assigneeLabel: "Ada Kaya",
+          targetValue: 100000,
+        },
+      ],
+      submittedByUserId: "user-1",
+    });
+  });
+
   it("summarizes approved target coverage for active personnel", async () => {
     const targetDistributionRepository = {
       listTargetCoverage: jest.fn(async () => [
@@ -87,6 +289,7 @@ describe("TargetDistributionService", () => {
         regionIds: [],
         storeIds: [],
       },
+      actorRoleCodes: ["REPORT_VIEWER"],
       requestMonth: "2026-03-01",
     });
 

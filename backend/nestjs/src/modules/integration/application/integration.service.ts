@@ -1,4 +1,11 @@
-import { ConflictException, Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
+import {
+  ConflictException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from "@nestjs/common";
 import { JobDispatcher } from "../../../shared/jobs/job-dispatcher.interface";
 import { ImportBatchJobPayload } from "../../../shared/jobs/job-payloads";
 import { JOB_DISPATCHER } from "../../../shared/jobs/jobs.constants";
@@ -50,6 +57,7 @@ export class IntegrationService {
   ) {}
 
   async createImportBatch(input: {
+    actorCompanyIds: string[];
     sourceCode: string;
     entityType:
       | "employee"
@@ -69,6 +77,9 @@ export class IntegrationService {
     sourceWindowEndedAt?: string;
     rows?: Record<string, unknown>[];
   }) {
+    const actorCompanyIds = this.normalizeCompanyScope(input.actorCompanyIds);
+    this.assertCompanyScope(actorCompanyIds);
+
     let rows = input.rows;
     if (input.entityType === "kpi" && input.rows?.length) {
       const source = await this.integrationSourceRepository.getIntegrationSourceByCodeAndEntity(
@@ -89,6 +100,7 @@ export class IntegrationService {
 
     const batch = await this.integrationRepository.createImportBatch({
       ...input,
+      actorCompanyIds,
       rows,
     });
 
@@ -462,12 +474,15 @@ export class IntegrationService {
   }
 
   async listExternalIdMapCandidates(input: {
+    actorCompanyIds: string[];
     entityType: "employee" | "store";
     q?: string;
     limit?: number;
   }) {
+    this.assertCompanyScope(input.actorCompanyIds);
     const limit = input.limit ?? 10;
     const result = await this.integrationRepository.listExternalIdMapCandidates({
+      actorCompanyIds: input.actorCompanyIds,
       entityType: input.entityType,
       q: input.q,
       limit,
@@ -487,6 +502,7 @@ export class IntegrationService {
   }
 
   async listStoreMaster(input: {
+    actorCompanyIds: string[];
     q?: string;
     enabled?: boolean;
     status?: "active" | "inactive" | "closed";
@@ -501,8 +517,10 @@ export class IntegrationService {
     );
   }
 
-  async getStoreMasterLookups() {
-    const regions = await this.integrationRepository.listStoreMasterRegions();
+  async getStoreMasterLookups(input: { actorCompanyIds: string[] }) {
+    const regions = await this.integrationRepository.listStoreMasterRegions({
+      actorCompanyIds: input.actorCompanyIds,
+    });
 
     return {
       storeTypes: [
@@ -524,6 +542,7 @@ export class IntegrationService {
   }
 
   async updateStoreMaster(input: {
+    actorCompanyIds: string[];
     storeId: string;
     storeType: "company" | "franchise" | "operator";
     regionId: string;
@@ -571,6 +590,7 @@ export class IntegrationService {
   }
 
   async listImportBatches(input: {
+    actorCompanyIds: string[];
     limit?: number;
     offset?: number;
     status?: string;
@@ -579,7 +599,11 @@ export class IntegrationService {
     startedFrom?: string;
     startedTo?: string;
   }) {
+    const actorCompanyIds = this.normalizeCompanyScope(input.actorCompanyIds);
+    this.assertCompanyScope(actorCompanyIds);
+
     const result = await this.integrationRepository.listImportBatches({
+      actorCompanyIds,
       limit: input.limit,
       offset: input.offset,
       status: input.status,
@@ -620,24 +644,32 @@ export class IntegrationService {
   }
 
   async getImportBatchSummary(input: {
+    actorCompanyIds: string[];
     status?: string;
     entityType?: string;
     sourceCode?: string;
     startedFrom?: string;
     startedTo?: string;
   }) {
-    const summary = await this.integrationRepository.getImportBatchSummary(input);
+    const actorCompanyIds = this.normalizeCompanyScope(input.actorCompanyIds);
+    this.assertCompanyScope(actorCompanyIds);
+    const scopedInput = {
+      ...input,
+      actorCompanyIds,
+    };
+
+    const summary = await this.integrationRepository.getImportBatchSummary(scopedInput);
     const [completedBatchId, failedBatchId, inProgressBatchId] = await Promise.all([
       this.integrationRepository.getLatestImportBatchIdByStatus({
-        ...input,
+        ...scopedInput,
         status: "completed",
       }),
       this.integrationRepository.getLatestImportBatchIdByStatus({
-        ...input,
+        ...scopedInput,
         status: "failed",
       }),
       this.integrationRepository.getLatestImportBatchIdByStatus({
-        ...input,
+        ...scopedInput,
         status: "processing",
       }),
     ]);
@@ -668,34 +700,41 @@ export class IntegrationService {
   }
 
   async getImportBatchOverview(input: {
+    actorCompanyIds: string[];
     status?: string;
     entityType?: string;
     sourceCode?: string;
     startedFrom?: string;
     startedTo?: string;
   }) {
+    const actorCompanyIds = this.normalizeCompanyScope(input.actorCompanyIds);
+    this.assertCompanyScope(actorCompanyIds);
+    const scopedInput = {
+      ...input,
+      actorCompanyIds,
+    };
     const stuckBefore = this.getImportStuckBeforeIso();
     const [summary, actionCounts, completedBatchId, failedBatchId, inProgressBatchId, stuckBatchId] =
       await Promise.all([
-        this.integrationRepository.getImportBatchSummary(input),
+        this.integrationRepository.getImportBatchSummary(scopedInput),
         this.integrationRepository.getImportBatchActionCounts({
-          ...input,
+          ...scopedInput,
           stuckBefore,
         }),
         this.integrationRepository.getLatestImportBatchIdByStatus({
-          ...input,
+          ...scopedInput,
           status: "completed",
         }),
         this.integrationRepository.getLatestImportBatchIdByStatus({
-          ...input,
+          ...scopedInput,
           status: "failed",
         }),
         this.integrationRepository.getLatestImportBatchIdByStatus({
-          ...input,
+          ...scopedInput,
           status: "processing",
         }),
         this.integrationRepository.getLatestStuckImportBatchId({
-          ...input,
+          ...scopedInput,
           stuckBefore,
         }),
       ]);
@@ -729,6 +768,7 @@ export class IntegrationService {
   }
 
   async getImportBatchNeedsAction(input: {
+    actorCompanyIds: string[];
     limit?: number;
     offset?: number;
     status?: string;
@@ -737,8 +777,12 @@ export class IntegrationService {
     startedFrom?: string;
     startedTo?: string;
   }) {
+    const actorCompanyIds = this.normalizeCompanyScope(input.actorCompanyIds);
+    this.assertCompanyScope(actorCompanyIds);
+
     const result = await this.integrationRepository.listImportBatchesNeedingAction({
       ...input,
+      actorCompanyIds,
       stuckBefore: this.getImportStuckBeforeIso(),
     });
 
@@ -807,11 +851,16 @@ export class IntegrationService {
     });
   }
 
-  async getImportBatch(batchId: string) {
-    const batch = await this.integrationRepository.getImportBatch(batchId);
+  async getImportBatch(input: { actorCompanyIds: string[]; batchId: string }) {
+    const actorCompanyIds = this.normalizeCompanyScope(input.actorCompanyIds);
+    this.assertCompanyScope(actorCompanyIds);
+    const batch = await this.integrationRepository.getImportBatch({
+      actorCompanyIds,
+      batchId: input.batchId,
+    });
 
     if (!batch) {
-      throw new NotFoundException(`Import batch not found: ${batchId}`);
+      throw new NotFoundException(`Import batch not found: ${input.batchId}`);
     }
 
     const summaryRows = await this.integrationRepository.getImportBatchRowStatusSummary(
@@ -909,8 +958,8 @@ export class IntegrationService {
     };
   }
 
-  async getImportBatchReconciliation(batchId: string) {
-    const detail = await this.getImportBatch(batchId);
+  async getImportBatchReconciliation(input: { actorCompanyIds: string[]; batchId: string }) {
+    const detail = await this.getImportBatch(input);
     const totalRows =
       detail.rowStatusSummary.processed +
       detail.rowStatusSummary.validationFailed +
@@ -954,8 +1003,18 @@ export class IntegrationService {
     };
   }
 
-  async getImportBatchErrors(input: { batchId: string; limit?: number; offset?: number }) {
-    const batch = await this.integrationRepository.getImportBatch(input.batchId);
+  async getImportBatchErrors(input: {
+    actorCompanyIds: string[];
+    batchId: string;
+    limit?: number;
+    offset?: number;
+  }) {
+    const actorCompanyIds = this.normalizeCompanyScope(input.actorCompanyIds);
+    this.assertCompanyScope(actorCompanyIds);
+    const batch = await this.integrationRepository.getImportBatch({
+      actorCompanyIds,
+      batchId: input.batchId,
+    });
 
     if (!batch) {
       throw new NotFoundException(`Import batch not found: ${input.batchId}`);
@@ -1004,12 +1063,14 @@ export class IntegrationService {
   }
 
   async approveExternalIdMapping(input: {
+    actorCompanyIds: string[];
     integrationSourceId: string;
     entityType: "employee" | "store";
     externalId: string;
     internalId: string;
     actorUserId: string;
   }) {
+    this.assertCompanyScope(input.actorCompanyIds);
     const source = await this.integrationSourceRepository.getIntegrationSourceById(input.integrationSourceId);
 
     if (!source) {
@@ -1021,6 +1082,17 @@ export class IntegrationService {
     }
 
     const internalTableName = this.getExternalIdInternalTableName(input.entityType);
+    const mappingTarget = await this.integrationRepository.getScopedExternalIdMappingTarget({
+      actorCompanyIds: input.actorCompanyIds,
+      entityType: input.entityType,
+      internalId: input.internalId,
+    });
+
+    if (!mappingTarget) {
+      throw new NotFoundException(
+        `External ID mapping target not found in actor company scope: ${input.internalId}`,
+      );
+    }
 
     await this.externalIdMappingService.upsertMapping({
       integrationSourceId: input.integrationSourceId,
@@ -1063,14 +1135,19 @@ export class IntegrationService {
     });
   }
 
-  async getImportBatchAudit(batchId: string) {
-    const batch = await this.integrationRepository.getImportBatch(batchId);
+  async getImportBatchAudit(input: { actorCompanyIds: string[]; batchId: string }) {
+    const actorCompanyIds = this.normalizeCompanyScope(input.actorCompanyIds);
+    this.assertCompanyScope(actorCompanyIds);
+    const batch = await this.integrationRepository.getImportBatch({
+      actorCompanyIds,
+      batchId: input.batchId,
+    });
 
     if (!batch) {
-      throw new NotFoundException(`Import batch not found: ${batchId}`);
+      throw new NotFoundException(`Import batch not found: ${input.batchId}`);
     }
 
-    const events = await this.integrationRepository.getImportBatchAudit(batchId);
+    const events = await this.integrationRepository.getImportBatchAudit(input.batchId);
 
     return buildListResponse(
       events.map((event) => mapAuditEvent(event)),
@@ -1078,40 +1155,52 @@ export class IntegrationService {
     );
   }
 
-  async retryImportBatch(batchId: string, actorUserId: string) {
-    const detail = await this.getImportBatch(batchId);
+  async retryImportBatch(input: {
+    actorCompanyIds: string[];
+    actorUserId: string;
+    batchId: string;
+  }) {
+    const actorCompanyIds = this.normalizeCompanyScope(input.actorCompanyIds);
+    this.assertCompanyScope(actorCompanyIds);
+    const detail = await this.getImportBatch({
+      actorCompanyIds,
+      batchId: input.batchId,
+    });
 
     if (!["failed", "completed_with_errors"].includes(detail.batch.status)) {
-      throw new ConflictException(`Import batch ${batchId} is not in a retryable status`);
+      throw new ConflictException(`Import batch ${input.batchId} is not in a retryable status`);
     }
 
     if (detail.rowStatusSummary.retryableError === 0) {
-      throw new ConflictException(`Import batch ${batchId} has no retryable rows`);
+      throw new ConflictException(`Import batch ${input.batchId} has no retryable rows`);
     }
 
     if (!detail.canRetryNow) {
-      throw new ConflictException(`Import batch ${batchId} still has unresolved dependencies`);
+      throw new ConflictException(`Import batch ${input.batchId} still has unresolved dependencies`);
     }
 
-    await this.integrationRepository.markImportBatchPending(batchId);
+    await this.integrationRepository.markImportBatchPending({
+      actorCompanyIds,
+      batchId: input.batchId,
+    });
     await this.integrationRepository.recordImportBatchRetried({
-      batchId,
-      actorUserId,
+      batchId: input.batchId,
+      actorUserId: input.actorUserId,
       entityType: detail.batch.entityType,
       retryCount: detail.batch.retryCount + 1,
     });
 
     const job = await this.jobDispatcher.dispatch(
       "import-batch",
-      { batchId } satisfies ImportBatchJobPayload,
+      { batchId: input.batchId } satisfies ImportBatchJobPayload,
       async ({ batchId: queuedBatchId }: ImportBatchJobPayload) => {
         await this.materializationService.materializeBatch(queuedBatchId);
       },
     );
 
     logStructuredMessage(this.logger, "import_batch.retry.accepted", {
-      actorUserId,
-      batchId,
+      actorUserId: input.actorUserId,
+      batchId: input.batchId,
       jobId: job.jobId ?? null,
       queueBackend: job.backend,
       queueName: job.queueName ?? null,
@@ -1205,6 +1294,16 @@ export class IntegrationService {
 
   private getExternalIdInternalTableName(entityType: "employee" | "store") {
     return entityType === "employee" ? "ops.employee" : "ops.store";
+  }
+
+  private normalizeCompanyScope(companyIds: string[]) {
+    return [...new Set(companyIds.filter((companyId) => companyId.trim().length > 0))].sort();
+  }
+
+  private assertCompanyScope(companyIds: string[]) {
+    if (companyIds.length === 0) {
+      throw new ForbiddenException("Integration operation requires company scope");
+    }
   }
 
   private firstNonEmptyString(values: unknown[]) {

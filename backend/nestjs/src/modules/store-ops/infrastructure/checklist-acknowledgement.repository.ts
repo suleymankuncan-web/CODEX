@@ -200,16 +200,17 @@ export class ChecklistAcknowledgementRepository {
             metadata_json
           )
           VALUES (
-            NULL,
+            $1::uuid,
             'checklist_instance.acknowledged',
             'ops.checklist_instance',
-            $1::uuid,
-            'store',
             $2::uuid,
-            $3::jsonb
+            'store',
+            $3::uuid,
+            $4::jsonb
           )
         `,
         [
+          input.actorUserId,
           input.checklistInstanceId,
           instance.store_id,
           JSON.stringify({

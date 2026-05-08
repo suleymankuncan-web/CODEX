@@ -1,6 +1,64 @@
 import { ReportingService } from "./reporting.service";
 
 describe("ReportingService live leaderboard fallback", () => {
+  it("rejects explicit live fallback store filters outside the caller scope", async () => {
+    const closedRankingService = {
+      getClosedLeaderboard: jest.fn(async () => ({
+        source: {
+          mode: "closed",
+          periodType: "monthly",
+          state: "not_closed",
+          snapshotRunId: null,
+          snapshotDate: null,
+          periodStart: "2026-03-01",
+          periodEnd: "2026-03-31",
+        },
+        includedSnapshotRuns: [],
+        currentEmployee: null,
+        personnelTop: [],
+      })),
+    };
+    const reportingRepository = {
+      resolveEmployeeIdForAuthIdentity: jest.fn(async () => "employee-1"),
+      listEmployeeKpiPeriods: jest.fn(async () => [
+        {
+          period_type: "monthly",
+          period_start: "2026-03-01",
+          period_end: "2026-03-31",
+        },
+      ]),
+      getLatestEmployeeKpiPeriod: jest.fn(async () => ({
+        period_start: "2026-03-01",
+        period_end: "2026-03-31",
+        store_id: "store-1",
+      })),
+      getEmployeeTurkeyBenchmarkValues: jest.fn(async () => []),
+      getPeerEmployeePerformanceRows: jest.fn(async () => []),
+    };
+    const service = new ReportingService(
+      reportingRepository as never,
+      { getKpiConfigRows: jest.fn(async () => []) } as never,
+      closedRankingService as never,
+    );
+
+    await expect(
+      service.getClosedLeaderboard({
+        userId: "user-1",
+        employeeId: "employee-1",
+        companyIds: ["company-1"],
+        regionIds: [],
+        storeIds: ["store-1"],
+        roleCodes: ["STORE_MANAGER"],
+        assignedStoreIds: ["store-1"],
+        periodType: "monthly",
+        periodStart: "2026-03-01",
+        storeId: "store-2",
+        limit: 10,
+      }),
+    ).rejects.toThrow("Live leaderboard store is outside current scope");
+    expect(reportingRepository.getPeerEmployeePerformanceRows).not.toHaveBeenCalled();
+  });
+
   it("serves monthly imported KPI rankings when monthly closure is not available", async () => {
     const closedRankingService = {
       getClosedLeaderboard: jest.fn(async () => ({

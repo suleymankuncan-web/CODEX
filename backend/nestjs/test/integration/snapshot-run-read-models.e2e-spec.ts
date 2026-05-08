@@ -15,7 +15,8 @@ const hasFailedRunStatusPredicate = (sql: string) =>
 
 describe("Snapshot run read models", () => {
   it("lists snapshot runs with health state and pagination metadata", async () => {
-    const query = jest.fn(async (sql: string) => {
+    const companyId = "00000000-0000-0000-0000-000000000001";
+    const query = jest.fn(async (sql: string, _params?: unknown[]) => {
       if (sql.includes("COUNT(*)::text AS total_count") && sql.includes("FROM rpt.snapshot_run")) {
         return {
           rowCount: 1,
@@ -68,7 +69,9 @@ describe("Snapshot run read models", () => {
 
     const response = await request(app.getHttpServer()).get(
       "/api/snapshots/runs?limit=20&offset=0&runStatus=failed&snapshotType=monthly",
-    );
+    )
+      .set("x-role-codes", "SNAPSHOT_OPERATOR")
+      .set("x-company-ids", companyId);
 
     expect(response.status).toBe(200);
     expect(response.body.items).toEqual([
@@ -89,12 +92,21 @@ describe("Snapshot run read models", () => {
       limit: 20,
       offset: 0,
     });
+    expect(
+      query.mock.calls.some(
+        ([sql, params]) =>
+          sql.includes("rpt.snapshot_run.company_ids &&") &&
+          Array.isArray(params) &&
+          params.some((param: unknown) => Array.isArray(param) && param.includes(companyId)),
+      ),
+    ).toBe(true);
 
     await app.close();
   });
 
   it("returns snapshot run detail with cards and rerun state", async () => {
-    const query = jest.fn(async (sql: string) => {
+    const companyId = "00000000-0000-0000-0000-000000000001";
+    const query = jest.fn(async (sql: string, _params?: unknown[]) => {
       if (sql.includes("FROM rpt.snapshot_run") && hasSnapshotRunIdPredicate(sql)) {
         return {
           rowCount: 1,
@@ -151,7 +163,10 @@ describe("Snapshot run read models", () => {
       databaseService: { query },
     });
 
-    const response = await request(app.getHttpServer()).get("/api/snapshots/runs/snapshot-2");
+    const response = await request(app.getHttpServer())
+      .get("/api/snapshots/runs/snapshot-2")
+      .set("x-role-codes", "SNAPSHOT_OPERATOR")
+      .set("x-company-ids", companyId);
 
     expect(response.status).toBe(200);
     expect(response.body.snapshotRun.snapshotRunId).toBe("snapshot-2");
@@ -166,6 +181,13 @@ describe("Snapshot run read models", () => {
     expect(response.body.rerunCount).toBe(1);
     expect(response.body.latestRerunSnapshotRunId).toBe("snapshot-3");
     expect(response.body.failureReason).toBe("db timeout");
+    const detailLookup = query.mock.calls.find(
+      ([sql]) =>
+        sql.includes("FROM rpt.snapshot_run") &&
+        hasSnapshotRunIdPredicate(sql) &&
+        sql.includes("rpt.snapshot_run.company_ids &&"),
+    );
+    expect(detailLookup?.[1]).toEqual(["snapshot-2", [companyId]]);
 
     await app.close();
   });

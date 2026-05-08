@@ -44,6 +44,14 @@ export type CompetitionScope = {
   storeIds: string[];
 };
 
+export type CompetitionActorAccess = {
+  actorRoleCodes?: string[];
+  actorScope?: CompetitionScope;
+  actorActionScope?: {
+    assignedStoreIds: string[];
+  };
+};
+
 export type Competition = {
   competitionId: string;
   competitionCode: string;
@@ -77,6 +85,7 @@ export type CompetitionTeam = {
     storeId: string;
     storeCode: string;
     storeName: string;
+    companyId: string;
     regionId: string;
   }>;
 };
@@ -159,7 +168,7 @@ export type CreateCompetitionInput = {
   competitionType: "region_challenge" | "region_league" | "campaign";
   startsOn: string;
   endsOn: string;
-};
+} & CompetitionActorAccess;
 
 export type CreateCompetitionStageInput = {
   actorUserId: string;
@@ -177,7 +186,7 @@ export type CreateCompetitionStageInput = {
     sourceTemplateId?: string;
     storeIds: string[];
   }>;
-};
+} & CompetitionActorAccess;
 
 export type CreateCompetitionStagePackageStageInput = Omit<
   CreateCompetitionStageInput,
@@ -189,7 +198,7 @@ export type CreateCompetitionStagePackageInput = {
   competitionId: string;
   packageCode: CompetitionStagePackageCode;
   stages: CreateCompetitionStagePackageStageInput[];
-};
+} & CompetitionActorAccess;
 
 export type CompetitionStagePackagePlan = {
   planId: string;
@@ -227,34 +236,34 @@ export type UpdateCompetitionStagePackagePlanInput = Omit<
 export type ExecuteCompetitionStagePackagePlanInput = {
   actorUserId: string;
   planId: string;
-};
+} & CompetitionActorAccess;
 
 export type SubmitCompetitionStagePackagePlanInput = {
   actorUserId: string;
   planId: string;
-};
+} & CompetitionActorAccess;
 
 export type ApproveCompetitionStagePackagePlanInput = {
   actorUserId: string;
   planId: string;
   reviewNote?: string;
-};
+} & CompetitionActorAccess;
 
 export type RejectCompetitionStagePackagePlanInput = {
   actorUserId: string;
   planId: string;
   reviewNote?: string;
-};
+} & CompetitionActorAccess;
 
 export type CancelCompetitionStagePackagePlanInput = {
   actorUserId: string;
   planId: string;
-};
+} & CompetitionActorAccess;
 
 export type CloneCompetitionStagePackagePlanInput = {
   actorUserId: string;
   sourcePlanId: string;
-};
+} & CompetitionActorAccess;
 
 export type CompetitionStagePackagePlanAuditEvent = {
   eventLogId: string;
@@ -270,7 +279,7 @@ export type CreateCompetitionTeamTemplateInput = {
   templateName: string;
   description?: string;
   storeIds: string[];
-};
+} & CompetitionActorAccess;
 
 export type UpdateCompetitionTeamTemplateInput = {
   actorUserId: string;
@@ -279,7 +288,7 @@ export type UpdateCompetitionTeamTemplateInput = {
   templateName: string;
   description?: string;
   storeIds: string[];
-};
+} & CompetitionActorAccess;
 
 export type CloneCompetitionTeamTemplateInput = {
   actorUserId: string;
@@ -287,21 +296,21 @@ export type CloneCompetitionTeamTemplateInput = {
   templateCode: string;
   templateName: string;
   description?: string;
-};
+} & CompetitionActorAccess;
 
 export type DeactivateCompetitionTeamTemplateInput = {
   actorUserId: string;
   templateId: string;
-};
+} & CompetitionActorAccess;
 
 export type RecalculateCompetitionStageInput = {
   actorUserId: string;
   stageId: string;
-};
+} & CompetitionActorAccess;
 
 export type FinalizeCompetitionStageInput = {
   actorUserId: string;
   stageId: string;
   allowOverride: boolean;
   overrideJustification?: string;
-};
+} & CompetitionActorAccess;

@@ -15,6 +15,8 @@ describe("Auth role assignments", () => {
   const pilotRoleAssignmentId = "11111111-2222-4333-8444-555555555555";
   const pilotActionStoreAssignmentId = "22222222-3333-4444-8555-666666666666";
   const companyId = "10000000-0000-4000-8000-000000000001";
+  const otherCompanyId = "10000000-0000-4000-8000-000000000002";
+  const otherRegionId = "10000000-0000-4000-8000-000000000012";
   const regionId = "10000000-0000-4000-8000-000000000011";
   const storeId = "10000000-0000-4000-8000-000000000021";
 
@@ -22,6 +24,13 @@ describe("Auth role assignments", () => {
     const query = jest.fn(async (sql: string) => {
       if (sql.includes("FROM ops.user_account ua")) {
         return { rowCount: 0, rows: [] };
+      }
+
+      if (sql.includes("FROM ops.company c")) {
+        return {
+          rowCount: 1,
+          rows: [{ company_id: companyId }],
+        };
       }
 
       if (sql.includes("FROM ops.role r") && sql.includes("WHERE r.role_code = $1")) {
@@ -112,6 +121,13 @@ describe("Auth role assignments", () => {
         return { rowCount: 0, rows: [] };
       }
 
+      if (sql.includes("FROM ops.company c")) {
+        return {
+          rowCount: 1,
+          rows: [{ company_id: companyId }],
+        };
+      }
+
       if (sql.includes("FROM ops.role r") && sql.includes("WHERE r.role_code = $1")) {
         return {
           rowCount: 1,
@@ -149,6 +165,123 @@ describe("Auth role assignments", () => {
       });
 
     expect(response.status).toBe(409);
+
+    await app.close();
+  });
+
+  it("rejects region-scoped role assignments when the region belongs to another company", async () => {
+    const query = jest.fn(async (sql: string) => {
+      if (sql.includes("FROM ops.user_account ua")) {
+        return { rowCount: 0, rows: [] };
+      }
+
+      if (sql.includes("FROM ops.company c")) {
+        return {
+          rowCount: 1,
+          rows: [{ company_id: companyId }],
+        };
+      }
+
+      if (sql.includes("FROM ops.region r") && sql.includes("WHERE r.region_id = $1::uuid")) {
+        return {
+          rowCount: 1,
+          rows: [{ region_id: regionId, company_id: otherCompanyId }],
+        };
+      }
+
+      return { rowCount: 0, rows: [] };
+    });
+
+    const app = await createIntegrationApp({
+      databaseService: {
+        query,
+        withTransaction: async <T>(work: (client: { query: typeof query }) => Promise<T>) =>
+          work({ query }),
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .post("/api/auth/role-assignments")
+      .set("x-user-id", adminUserId)
+      .set("x-role-codes", "SUPER_ADMIN")
+      .send({
+        userId: reportUserId,
+        roleCode: "REGION_MANAGER",
+        scopeType: "region",
+        companyId,
+        regionId,
+      });
+
+    expect(response.status).toBe(422);
+    expect(response.body.message).toBe("Region does not belong to the provided company");
+
+    await app.close();
+  });
+
+  it("rejects store-scoped role assignments when the store hierarchy does not match", async () => {
+    const query = jest.fn(async (sql: string) => {
+      if (sql.includes("FROM ops.user_account ua")) {
+        return { rowCount: 0, rows: [] };
+      }
+
+      if (sql.includes("FROM ops.company c")) {
+        return {
+          rowCount: 1,
+          rows: [{ company_id: companyId }],
+        };
+      }
+
+      if (sql.includes("FROM ops.region r") && sql.includes("WHERE r.region_id = $1::uuid")) {
+        return {
+          rowCount: 1,
+          rows: [{ region_id: regionId, company_id: companyId }],
+        };
+      }
+
+      if (sql.includes("FROM ops.store s") && sql.includes("WHERE s.store_id = $1::uuid")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              store_id: storeId,
+              store_code: "IST-021",
+              store_name: "Istanbul Field Store",
+              company_id: companyId,
+              region_id: otherRegionId,
+              region_name: "Marmara",
+            },
+          ],
+        };
+      }
+
+      return { rowCount: 0, rows: [] };
+    });
+
+    const app = await createIntegrationApp({
+      databaseService: {
+        query,
+        withTransaction: async <T>(work: (client: { query: typeof query }) => Promise<T>) =>
+          work({ query }),
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .post("/api/auth/role-assignments")
+      .set("x-user-id", adminUserId)
+      .set("x-role-codes", "SUPER_ADMIN")
+      .send({
+        userId: reportUserId,
+        roleCode: "STORE_MANAGER",
+        scopeType: "store",
+        companyId,
+        regionId,
+        storeId,
+      });
+
+    expect(response.status).toBe(422);
+    expect(response.body.message).toBe(
+      "Store does not belong to the provided company and region",
+    );
 
     await app.close();
   });

@@ -79,4 +79,36 @@ describe("MobileSessionRepository", () => {
     expect(client.query.mock.calls[0][0]).toContain("SET status = 'revoked'");
     expect(client.query.mock.calls[1][1][1]).toBe("mobile_device_session.revoked");
   });
+
+  it("only resumes non-expired active sessions", async () => {
+    const databaseService = {
+      query: jest.fn().mockResolvedValue({ rows: [sessionRow] }),
+    };
+    const repository = new MobileSessionRepository(databaseService as never);
+
+    await repository.getActiveSessionForUser({
+      sessionId: sessionRow.mobile_device_session_id,
+      userId: sessionRow.user_id,
+    });
+
+    expect(databaseService.query.mock.calls[0][0]).toContain(
+      "AND (expires_at IS NULL OR expires_at > NOW())",
+    );
+  });
+
+  it("only touches non-expired active sessions", async () => {
+    const databaseService = {
+      query: jest.fn().mockResolvedValue({ rows: [sessionRow] }),
+    };
+    const repository = new MobileSessionRepository(databaseService as never);
+
+    await repository.touchSession({
+      sessionId: sessionRow.mobile_device_session_id,
+      userId: sessionRow.user_id,
+    });
+
+    expect(databaseService.query.mock.calls[0][0]).toContain(
+      "AND (expires_at IS NULL OR expires_at > NOW())",
+    );
+  });
 });

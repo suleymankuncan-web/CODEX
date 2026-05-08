@@ -15,7 +15,7 @@ function createFeedPostRow(overrides?: Record<string, unknown>) {
     link_label: null,
     link_url: null,
     visibility_scope_type: "company",
-    visibility_scope_ids: [],
+    visibility_scope_ids: [companyId],
     is_pinned: false,
     publish_status: "draft",
     published_at: null,
@@ -91,7 +91,7 @@ describe("FeedRepository", () => {
       title: "Store agenda",
       body: "New operational note",
       visibilityScopeType: "company",
-      visibilityScopeIds: [],
+      visibilityScopeIds: [companyId],
       isPinned: false,
       publishStatus: "draft",
     });
@@ -180,6 +180,41 @@ describe("FeedRepository", () => {
     expect(sql).toContain("ORDER BY fp.is_pinned DESC");
   });
 
+  it("filters visible company posts by actor company ids", async () => {
+    const { repository, databaseQueryMock } = createRepositoryHarness();
+
+    await repository.listVisibleFeedPosts({
+      actorScope: { companyIds: [companyId], regionIds: [], storeIds: [] },
+      limit: 50,
+      offset: 0,
+    });
+
+    const sql = databaseQueryMock.mock.calls[0][0] as string;
+    const params = databaseQueryMock.mock.calls[0][1] as unknown[];
+    expect(sql).toContain("fp.visibility_scope_type = 'company'");
+    expect(sql).toContain("fp.visibility_scope_ids && $1::uuid[]");
+    expect(params[0]).toEqual([companyId]);
+  });
+
+  it("limits HR admin manageable posts to their company hierarchy", async () => {
+    const { repository, databaseQueryMock } = createRepositoryHarness();
+
+    await repository.listManageableFeedPosts({
+      actorRoles: ["HR_ADMIN"],
+      actorScope: { companyIds: [companyId], regionIds: [], storeIds: [] },
+      limit: 50,
+      offset: 0,
+    });
+
+    const sql = databaseQueryMock.mock.calls[0][0] as string;
+    const params = databaseQueryMock.mock.calls[0][1] as unknown[];
+    expect(sql).toContain("WITH actor_regions AS");
+    expect(sql).toContain("visibility_scope_ids && $1::uuid[]");
+    expect(sql).toContain("ARRAY(SELECT region_id FROM actor_regions)");
+    expect(sql).toContain("ARRAY(SELECT store_id FROM actor_stores)");
+    expect(params).toEqual([[companyId], 50, 0]);
+  });
+
   it("includes region posts for store-scoped users whose store belongs to that region", async () => {
     const { repository, databaseQueryMock } = createRepositoryHarness();
 
@@ -207,6 +242,26 @@ describe("FeedRepository", () => {
 
     const sql = databaseQueryMock.mock.calls[0][0] as string;
     expect(sql).toContain("fp.visibility_scope_ids && $2::uuid[]");
+  });
+
+  it("verifies region and store visibility scopes against actor companies", async () => {
+    const { repository, databaseQueryMock } = createRepositoryHarness([
+      { scoped_count: "1" },
+    ]);
+
+    await expect(
+      repository.visibilityScopeBelongsToCompanies({
+        visibilityScopeType: "region",
+        visibilityScopeIds: [regionId],
+        companyIds: [companyId],
+      }),
+    ).resolves.toBe(true);
+
+    const sql = databaseQueryMock.mock.calls[0][0] as string;
+    const params = databaseQueryMock.mock.calls[0][1] as unknown[];
+    expect(sql).toContain("FROM ops.region");
+    expect(sql).toContain("company_id = ANY($2::uuid[])");
+    expect(params).toEqual([[regionId], [companyId]]);
   });
 
   it("excludes expired published posts", async () => {

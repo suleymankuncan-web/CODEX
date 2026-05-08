@@ -5,6 +5,17 @@ import { RequireScope } from "../../auth/decorators/scope.decorator";
 import { CreateSnapshotRunDto } from "./dto/create-snapshot-run.dto";
 import { ListSnapshotRunOperationsQueryDto } from "./dto/list-snapshot-run-operations.query";
 
+type SnapshotActorUser = {
+  userId: string;
+  roleCodes: string[];
+  scope: {
+    companyIds: string[];
+  };
+  readScope?: {
+    companyIds: string[];
+  };
+};
+
 @Controller("snapshots")
 export class SnapshotController {
   constructor(private readonly snapshotService: SnapshotService) {}
@@ -15,32 +26,45 @@ export class SnapshotController {
   async createSnapshotRun(
     @Req()
     request: {
-      user: {
-        userId: string;
-      };
+      user: SnapshotActorUser;
     },
     @Body() body: CreateSnapshotRunDto,
   ) {
     return this.snapshotService.enqueueSnapshotRun({
       ...body,
       actorUserId: request.user.userId,
+      actorCompanyIds: this.getActorCompanyIds(request.user),
     });
   }
 
   @Get("lookups")
   @RequireScope("company")
   @RequireRoles("SNAPSHOT_OPERATOR")
-  async getSnapshotLookups() {
-    return this.snapshotService.getSnapshotLookups();
+  async getSnapshotLookups(
+    @Req()
+    request: {
+      user: SnapshotActorUser;
+    },
+  ) {
+    return this.snapshotService.getSnapshotLookups({
+      actorCompanyIds: this.getActorCompanyIds(request.user),
+    });
   }
 
   @Get("runs")
   @RequireScope("company")
   @RequireRoles("SNAPSHOT_OPERATOR")
-  async listSnapshotRuns(@Query() query: ListSnapshotRunOperationsQueryDto) {
+  async listSnapshotRuns(
+    @Req()
+    request: {
+      user: SnapshotActorUser;
+    },
+    @Query() query: ListSnapshotRunOperationsQueryDto,
+  ) {
     return this.snapshotService.listSnapshotRuns({
       runStatus: query.runStatus,
       snapshotType: query.snapshotType,
+      actorCompanyIds: this.getActorCompanyIds(request.user),
       limit: query.limit,
       offset: query.offset,
     });
@@ -49,30 +73,51 @@ export class SnapshotController {
   @Get("runs/summary")
   @RequireScope("company")
   @RequireRoles("SNAPSHOT_OPERATOR")
-  async getSnapshotRunSummary(@Query() query: ListSnapshotRunOperationsQueryDto) {
+  async getSnapshotRunSummary(
+    @Req()
+    request: {
+      user: SnapshotActorUser;
+    },
+    @Query() query: ListSnapshotRunOperationsQueryDto,
+  ) {
     return this.snapshotService.getSnapshotRunSummary({
       runStatus: query.runStatus,
       snapshotType: query.snapshotType,
+      actorCompanyIds: this.getActorCompanyIds(request.user),
     });
   }
 
   @Get("runs/overview")
   @RequireScope("company")
   @RequireRoles("SNAPSHOT_OPERATOR")
-  async getSnapshotRunOverview(@Query() query: ListSnapshotRunOperationsQueryDto) {
+  async getSnapshotRunOverview(
+    @Req()
+    request: {
+      user: SnapshotActorUser;
+    },
+    @Query() query: ListSnapshotRunOperationsQueryDto,
+  ) {
     return this.snapshotService.getSnapshotRunOverview({
       runStatus: query.runStatus,
       snapshotType: query.snapshotType,
+      actorCompanyIds: this.getActorCompanyIds(request.user),
     });
   }
 
   @Get("runs/needs-action")
   @RequireScope("company")
   @RequireRoles("SNAPSHOT_OPERATOR")
-  async getSnapshotRunNeedsAction(@Query() query: ListSnapshotRunOperationsQueryDto) {
+  async getSnapshotRunNeedsAction(
+    @Req()
+    request: {
+      user: SnapshotActorUser;
+    },
+    @Query() query: ListSnapshotRunOperationsQueryDto,
+  ) {
     return this.snapshotService.getSnapshotRunNeedsAction({
       runStatus: query.runStatus,
       snapshotType: query.snapshotType,
+      actorCompanyIds: this.getActorCompanyIds(request.user),
       limit: query.limit,
       offset: query.offset,
     });
@@ -81,22 +126,49 @@ export class SnapshotController {
   @Get("runs/:snapshotRunId/audit")
   @RequireScope("company")
   @RequireRoles("SNAPSHOT_OPERATOR")
-  async getSnapshotRunAudit(@Param("snapshotRunId") snapshotRunId: string) {
-    return this.snapshotService.getSnapshotRunAudit(snapshotRunId);
+  async getSnapshotRunAudit(
+    @Param("snapshotRunId") snapshotRunId: string,
+    @Req()
+    request: {
+      user: SnapshotActorUser;
+    },
+  ) {
+    return this.snapshotService.getSnapshotRunAudit(
+      snapshotRunId,
+      this.getActorCompanyIds(request.user),
+    );
   }
 
   @Get("runs/:snapshotRunId/dependencies")
   @RequireScope("company")
   @RequireRoles("SNAPSHOT_OPERATOR")
-  async getSnapshotRunDependencies(@Param("snapshotRunId") snapshotRunId: string) {
-    return this.snapshotService.getSnapshotRunDependencies(snapshotRunId);
+  async getSnapshotRunDependencies(
+    @Param("snapshotRunId") snapshotRunId: string,
+    @Req()
+    request: {
+      user: SnapshotActorUser;
+    },
+  ) {
+    return this.snapshotService.getSnapshotRunDependencies(
+      snapshotRunId,
+      this.getActorCompanyIds(request.user),
+    );
   }
 
   @Get("runs/:snapshotRunId/lineage")
   @RequireScope("company")
   @RequireRoles("SNAPSHOT_OPERATOR")
-  async getSnapshotRunLineage(@Param("snapshotRunId") snapshotRunId: string) {
-    return this.snapshotService.getSnapshotRunLineage(snapshotRunId);
+  async getSnapshotRunLineage(
+    @Param("snapshotRunId") snapshotRunId: string,
+    @Req()
+    request: {
+      user: SnapshotActorUser;
+    },
+  ) {
+    return this.snapshotService.getSnapshotRunLineage(
+      snapshotRunId,
+      this.getActorCompanyIds(request.user),
+    );
   }
 
   @Post("runs/:snapshotRunId/rerun")
@@ -106,18 +178,37 @@ export class SnapshotController {
     @Param("snapshotRunId") snapshotRunId: string,
     @Req()
     request: {
-      user: {
-        userId: string;
-      };
+      user: SnapshotActorUser;
     },
   ) {
-    return this.snapshotService.rerunSnapshotRun(snapshotRunId, request.user.userId);
+    return this.snapshotService.rerunSnapshotRun(
+      snapshotRunId,
+      request.user.userId,
+      this.getActorCompanyIds(request.user),
+    );
   }
 
   @Get("runs/:snapshotRunId")
   @RequireScope("company")
   @RequireRoles("SNAPSHOT_OPERATOR")
-  async getSnapshotRun(@Param("snapshotRunId") snapshotRunId: string) {
-    return this.snapshotService.getSnapshotRun(snapshotRunId);
+  async getSnapshotRun(
+    @Param("snapshotRunId") snapshotRunId: string,
+    @Req()
+    request: {
+      user: SnapshotActorUser;
+    },
+  ) {
+    return this.snapshotService.getSnapshotRun(
+      snapshotRunId,
+      this.getActorCompanyIds(request.user),
+    );
+  }
+
+  private getActorCompanyIds(user: SnapshotActorUser) {
+    if (user.roleCodes.includes("SUPER_ADMIN")) {
+      return undefined;
+    }
+
+    return user.readScope?.companyIds ?? user.scope.companyIds;
   }
 }

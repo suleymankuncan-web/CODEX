@@ -69,6 +69,7 @@ describe("POST /api/integrations/import-batches", () => {
   });
 
   it("lists import batches with pagination metadata and filters", async () => {
+    const actorCompanyId = "00000000-0000-0000-0000-000000000001";
     const query = jest.fn(async (sql: string) => {
       if (sql.includes("COUNT(*)::text AS total_count") && sql.includes("FROM stg.import_batch")) {
         return {
@@ -122,9 +123,11 @@ describe("POST /api/integrations/import-batches", () => {
       databaseService: { query },
     });
 
-    const response = await request(app.getHttpServer()).get(
-      "/api/integrations/import-batches?limit=20&offset=0&status=failed&entityType=assignment&sourceCode=HRIS&startedFrom=2026-04-17T00:00:00.000Z&startedTo=2026-04-18T00:00:00.000Z",
-    );
+    const response = await request(app.getHttpServer())
+      .get(
+        "/api/integrations/import-batches?limit=20&offset=0&status=failed&entityType=assignment&sourceCode=HRIS&startedFrom=2026-04-17T00:00:00.000Z&startedTo=2026-04-18T00:00:00.000Z",
+      )
+      .set("x-company-ids", actorCompanyId);
 
     expect(response.status).toBe(200);
     expect(response.body.items).toEqual([
@@ -172,10 +175,11 @@ describe("POST /api/integrations/import-batches", () => {
         (call) =>
           typeof call[0] === "string" &&
           call[0].includes(
-            "WHERE stg.import_batch.status = $1 AND stg.import_batch.entity_type = $2 AND src.source_code = $3 AND stg.import_batch.started_at >= $4::timestamptz AND stg.import_batch.started_at <= $5::timestamptz",
+            "WHERE stg.import_batch.company_ids && $1::uuid[] AND stg.import_batch.status = $2 AND stg.import_batch.entity_type = $3 AND src.source_code = $4 AND stg.import_batch.started_at >= $5::timestamptz AND stg.import_batch.started_at <= $6::timestamptz",
           ) &&
           JSON.stringify((call as any[])[1]) ===
             JSON.stringify([
+              [actorCompanyId],
               "failed",
               "assignment",
               "HRIS",
@@ -189,6 +193,7 @@ describe("POST /api/integrations/import-batches", () => {
   });
 
   it("returns import batch summary counts with filters", async () => {
+    const actorCompanyId = "00000000-0000-0000-0000-000000000001";
     const query = jest.fn(async (sql: string, params?: unknown[]) => {
       if (sql.includes("GROUP BY status")) {
         return {
@@ -237,9 +242,11 @@ describe("POST /api/integrations/import-batches", () => {
       databaseService: { query },
     });
 
-    const response = await request(app.getHttpServer()).get(
-      "/api/integrations/import-batches/summary?entityType=assignment&sourceCode=HRIS&startedFrom=2026-04-17T00:00:00.000Z&startedTo=2026-04-18T00:00:00.000Z",
-    );
+    const response = await request(app.getHttpServer())
+      .get(
+        "/api/integrations/import-batches/summary?entityType=assignment&sourceCode=HRIS&startedFrom=2026-04-17T00:00:00.000Z&startedTo=2026-04-18T00:00:00.000Z",
+      )
+      .set("x-company-ids", actorCompanyId);
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
@@ -270,10 +277,11 @@ describe("POST /api/integrations/import-batches", () => {
         (call) =>
           typeof call[0] === "string" &&
           call[0].includes(
-            "WHERE stg.import_batch.entity_type = $1 AND src.source_code = $2 AND stg.import_batch.started_at >= $3::timestamptz AND stg.import_batch.started_at <= $4::timestamptz",
+            "WHERE stg.import_batch.company_ids && $1::uuid[] AND stg.import_batch.entity_type = $2 AND src.source_code = $3 AND stg.import_batch.started_at >= $4::timestamptz AND stg.import_batch.started_at <= $5::timestamptz",
           ) &&
           JSON.stringify((call as any[])[1]) ===
             JSON.stringify([
+              [actorCompanyId],
               "assignment",
               "HRIS",
               "2026-04-17T00:00:00.000Z",

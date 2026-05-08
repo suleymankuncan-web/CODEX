@@ -36,18 +36,20 @@ export class TargetDistributionService {
       throw new ForbiddenException("Requested store is outside assigned action stores");
     }
 
-    const companyId =
-      input.actorScope.companyIds[0] ?? "00000000-0000-0000-0000-000000000001";
-    const regionId =
-      input.actorScope.regionIds[0] ?? "00000000-0000-0000-0000-000000000010";
+    await this.assertAllocationsBelongToStore({
+      storeId: input.storeId,
+      allocations: input.allocations,
+    });
+
+    const storeScope = await this.resolveStoreScope(input.storeId);
 
     return buildCommandResponse({
       status: "submitted",
       message: "Target distribution request submitted for region approval",
       data: {
         request: await this.targetDistributionRepository.createRequest({
-          companyId,
-          regionId,
+          companyId: storeScope.companyId,
+          regionId: storeScope.regionId,
           storeId: input.storeId,
           requestMonth: input.requestMonth,
           targetLabel: input.targetLabel,
@@ -66,12 +68,17 @@ export class TargetDistributionService {
       regionIds: string[];
       storeIds: string[];
     };
+    actorActionScope?: {
+      assignedStoreIds: string[];
+    };
+    actorRoleCodes: string[];
     statuses?: string[];
   }) {
+    const listScope = this.resolveTargetReadScope(input);
     const items = await this.targetDistributionRepository.listRequests({
-      companyIds: input.actorScope.companyIds,
-      regionIds: input.actorScope.regionIds,
-      storeIds: input.actorScope.companyIds.length > 0 || input.actorScope.regionIds.length > 0 ? [] : input.actorScope.storeIds,
+      companyIds: listScope.companyIds,
+      regionIds: listScope.regionIds,
+      storeIds: listScope.storeIds,
       statuses: input.statuses,
     });
 
@@ -88,13 +95,18 @@ export class TargetDistributionService {
       regionIds: string[];
       storeIds: string[];
     };
+    actorActionScope?: {
+      assignedStoreIds: string[];
+    };
+    actorRoleCodes: string[];
     requestMonth: string;
     storeId?: string;
   }) {
+    const listScope = this.resolveTargetReadScope(input);
     const rows = await this.targetDistributionRepository.listTargetCoverage({
-      companyIds: input.actorScope.companyIds,
-      regionIds: input.actorScope.regionIds,
-      storeIds: input.actorScope.storeIds,
+      companyIds: listScope.companyIds,
+      regionIds: listScope.regionIds,
+      storeIds: listScope.storeIds,
       requestMonth: input.requestMonth,
       storeId: input.storeId,
     });
@@ -227,5 +239,79 @@ export class TargetDistributionService {
   ) {
     const assignedStoreIds = actionScope?.assignedStoreIds ?? legacyScope.storeIds;
     return assignedStoreIds.includes(storeId);
+  }
+
+  private resolveTargetReadScope(input: {
+    actorScope: {
+      companyIds: string[];
+      regionIds: string[];
+      storeIds: string[];
+    };
+    actorActionScope?: {
+      assignedStoreIds: string[];
+    };
+    actorRoleCodes: string[];
+  }) {
+    const canUseBroadReadScope = input.actorRoleCodes.some((roleCode) =>
+      ["HR_ADMIN", "REGION_MANAGER", "REPORT_VIEWER", "SUPER_ADMIN"].includes(roleCode),
+    );
+    const storeIds = input.actorActionScope?.assignedStoreIds.length
+      ? input.actorActionScope.assignedStoreIds
+      : input.actorScope.storeIds;
+
+    if (!canUseBroadReadScope) {
+      return {
+        companyIds: [],
+        regionIds: [],
+        storeIds,
+      };
+    }
+
+    return {
+      companyIds: input.actorScope.companyIds,
+      regionIds: input.actorScope.regionIds,
+      storeIds:
+        input.actorScope.companyIds.length > 0 || input.actorScope.regionIds.length > 0
+          ? []
+          : storeIds,
+    };
+  }
+
+  private async assertAllocationsBelongToStore(input: {
+    storeId: string;
+    allocations: Array<{ employeeId: string }>;
+  }) {
+    const personnelRows = await this.storeOpsRepository.listStorePersonnelTargetingRows({
+      storeId: input.storeId,
+    });
+    const activeEmployeeIds = new Set(personnelRows.map((row) => row.employee_id));
+    const hasOutOfStoreEmployee = input.allocations.some(
+      (allocation) => !activeEmployeeIds.has(allocation.employeeId),
+    );
+
+    if (hasOutOfStoreEmployee) {
+      throw new ForbiddenException(
+        "Target allocation contains employees outside the requested store",
+      );
+    }
+  }
+
+  private async resolveStoreScope(storeId: string) {
+    const stores = await this.storeOpsRepository.listStoresByScope({
+      companyIds: [],
+      regionIds: [],
+      storeIds: [storeId],
+      requestedStoreId: storeId,
+    });
+    const store = stores[0];
+
+    if (!store) {
+      throw new ForbiddenException("Requested store is outside assigned action stores");
+    }
+
+    return {
+      companyId: store.company_id,
+      regionId: store.region_id,
+    };
   }
 }

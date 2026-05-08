@@ -55,6 +55,7 @@ export class MobileSessionRepository {
         WHERE user_id = $1::uuid
           AND device_id_hash = $2
           AND status = 'active'
+          AND (expires_at IS NULL OR expires_at > NOW())
         ORDER BY last_seen_at DESC, mobile_device_session_id DESC
         LIMIT 1
       `,
@@ -137,6 +138,7 @@ export class MobileSessionRepository {
         WHERE mobile_device_session_id = $1::uuid
           AND user_id = $2::uuid
           AND status = 'active'
+          AND (expires_at IS NULL OR expires_at > NOW())
         RETURNING ${MOBILE_SESSION_COLUMNS}
       `,
       [input.sessionId, input.userId],
@@ -153,6 +155,7 @@ export class MobileSessionRepository {
         WHERE mobile_device_session_id = $1::uuid
           AND user_id = $2::uuid
           AND status = 'active'
+          AND (expires_at IS NULL OR expires_at > NOW())
         LIMIT 1
       `,
       [input.sessionId, input.userId],

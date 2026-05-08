@@ -58,10 +58,33 @@ export class AuthAuthorizationRepository {
           ON ura.user_id = ua.user_id
         INNER JOIN ops.role r
           ON r.role_id = ura.role_id
+        LEFT JOIN ops.company c
+          ON c.company_id = ura.company_id
+        LEFT JOIN ops.region region
+          ON region.region_id = ura.region_id
+         AND region.company_id = ura.company_id
+        LEFT JOIN ops.store store
+          ON store.store_id = ura.store_id
+         AND store.region_id = ura.region_id
+         AND store.company_id = ura.company_id
         WHERE ua.user_id = $1::uuid
           AND ua.is_active = TRUE
           AND ura.start_at <= NOW()
           AND (ura.end_at IS NULL OR ura.end_at >= NOW())
+          AND (
+            (ura.scope_type = 'company' AND c.status = 'active')
+            OR (
+              ura.scope_type = 'region'
+              AND c.status = 'active'
+              AND region.status = 'active'
+            )
+            OR (
+              ura.scope_type = 'store'
+              AND c.status = 'active'
+              AND region.status = 'active'
+              AND store.status = 'active'
+            )
+          )
       `,
       [userId],
     );
@@ -84,9 +107,16 @@ export class AuthAuthorizationRepository {
           ON uasa.user_id = ua.user_id
         INNER JOIN ops.store s
           ON s.store_id = uasa.store_id
+        INNER JOIN ops.region r
+          ON r.region_id = s.region_id
+         AND r.company_id = s.company_id
+        INNER JOIN ops.company c
+          ON c.company_id = s.company_id
         WHERE ua.user_id = $1::uuid
           AND ua.is_active = TRUE
           AND s.status = 'active'
+          AND r.status = 'active'
+          AND c.status = 'active'
           AND uasa.start_at <= NOW()
           AND (uasa.end_at IS NULL OR uasa.end_at >= NOW())
         ORDER BY s.store_code ASC, uasa.store_id ASC

@@ -199,6 +199,84 @@ describe("Reporting read APIs", () => {
     await app.close();
   });
 
+  it("keeps store manager KPI report rows limited to assigned stores even when company scope is present", async () => {
+    const snapshotRunId = "11111111-1111-4111-8111-111111111111";
+    const companyId = "00000000-0000-0000-0000-000000000001";
+    const regionId = "33333333-3333-4333-8333-333333333333";
+    const assignedStoreId = "22222222-2222-4222-8222-222222222222";
+    const query = jest.fn(async (sql: string, params?: unknown[]) => {
+      if (
+        sql.includes("COUNT(*)::text AS total_count") &&
+        sql.includes("FROM rpt.store_kpi_snapshot")
+      ) {
+        expect(params).toEqual([snapshotRunId, [assignedStoreId]]);
+        return {
+          rowCount: 1,
+          rows: [{ total_count: "1" }],
+        };
+      }
+
+      if (sql.includes("FROM rpt.store_kpi_snapshot")) {
+        expect(params).toEqual([snapshotRunId, [assignedStoreId], 50, 0]);
+        expect(sql).toContain("s.store_id = ANY($2::uuid[])");
+        expect(sql).not.toContain("s.company_id = ANY($2::uuid[])");
+        expect(sql).not.toContain("s.region_id = ANY($2::uuid[])");
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              snapshot_run_id: snapshotRunId,
+              store_id: assignedStoreId,
+              kpi_id: "44444444-4444-4444-8444-444444444444",
+              kpi_code: "UPT",
+              kpi_name: "UPT",
+              period_start: "2026-04-01",
+              period_end: "2026-04-30",
+              target_value: "3.2000",
+              actual_value: "2.9000",
+              achievement_rate: "0.9063",
+              status_band: "at_risk",
+            },
+          ],
+        };
+      }
+
+      return { rowCount: 0, rows: [] };
+    });
+
+    const app = await createIntegrationApp({
+      databaseService: {
+        query,
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .get(`/api/reports/kpis?snapshotRunId=${snapshotRunId}`)
+      .set("x-role-codes", "STORE_MANAGER")
+      .set("x-company-ids", companyId)
+      .set("x-region-ids", regionId)
+      .set("x-assigned-store-ids", assignedStoreId);
+
+    expect(response.status).toBe(200);
+    expect(response.body.items).toEqual([
+      {
+        snapshotRunId,
+        storeId: assignedStoreId,
+        kpiId: "44444444-4444-4444-8444-444444444444",
+        kpiCode: "UPT",
+        kpiName: "UPT",
+        periodStart: "2026-04-01",
+        periodEnd: "2026-04-30",
+        targetValue: "3.2000",
+        actualValue: "2.9000",
+        achievementRate: "0.9063",
+        statusBand: "at_risk",
+      },
+    ]);
+
+    await app.close();
+  });
+
   it("returns checklist snapshot rows for a snapshot run", async () => {
     const query = jest.fn(async (sql: string) => {
       if (

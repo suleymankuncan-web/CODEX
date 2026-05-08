@@ -32,6 +32,39 @@ describe("Auth action scope integration", () => {
   it("accepts seeded PostgreSQL UUID store ids for target distribution creation", async () => {
     const seededStoreId = "00000000-0000-0000-0000-000000000100";
     const query = jest.fn(async (sql: string) => {
+      if (sql.includes("FROM ops.kpi_actual ka")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              employee_id: "00000000-0000-4000-8000-000000000501",
+              first_name: "Sales",
+              last_name: "Associate",
+              external_employee_ref: "FM501",
+              period_start: "2026-03-01",
+              period_end: "2026-03-31",
+              net_sales_value: "1000",
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("FROM ops.store s")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              store_id: seededStoreId,
+              store_code: "DEMO",
+              store_name: "Demo Store",
+              region_id: "00000000-0000-0000-0000-000000000010",
+              company_id: "00000000-0000-0000-0000-000000000001",
+              status: "active",
+            },
+          ],
+        };
+      }
+
       if (sql.includes("INSERT INTO ops.target_distribution_request")) {
         return {
           rowCount: 1,

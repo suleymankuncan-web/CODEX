@@ -650,6 +650,7 @@ CREATE TABLE rpt.snapshot_run (
     period_end DATE NOT NULL,
     run_status TEXT NOT NULL DEFAULT 'queued',
     idempotency_key TEXT,
+    company_ids UUID[] NOT NULL DEFAULT '{}'::uuid[],
     generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     started_at TIMESTAMPTZ,
     finished_at TIMESTAMPTZ,
@@ -806,6 +807,7 @@ CREATE TABLE stg.integration_source (
 CREATE TABLE stg.import_batch (
     import_batch_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     integration_source_id UUID NOT NULL REFERENCES stg.integration_source(integration_source_id),
+    company_ids UUID[] NOT NULL DEFAULT '{}'::uuid[],
     entity_type TEXT NOT NULL,
     idempotency_key TEXT,
     source_batch_id TEXT,
@@ -824,7 +826,7 @@ CREATE TABLE stg.import_batch (
 );
 
 CREATE UNIQUE INDEX import_batch_source_batch_unique_idx
-    ON stg.import_batch (integration_source_id, entity_type, source_batch_id)
+    ON stg.import_batch (integration_source_id, entity_type, source_batch_id, company_ids)
     WHERE source_batch_id IS NOT NULL;
 
 CREATE TABLE stg.employee_raw (
@@ -1114,6 +1116,9 @@ CREATE INDEX idx_turnover_event_scope_date
 CREATE INDEX idx_import_batch_source_status
     ON stg.import_batch (integration_source_id, status, started_at);
 
+CREATE INDEX idx_import_batch_company_ids
+    ON stg.import_batch USING GIN (company_ids);
+
 CREATE INDEX kpi_raw_row_hash_idx
     ON stg.kpi_raw (row_hash)
     WHERE row_hash IS NOT NULL;
@@ -1132,12 +1137,15 @@ CREATE INDEX IF NOT EXISTS idx_master_data_bootstrap_row_review
     ON stg.master_data_bootstrap_row (master_data_bootstrap_batch_id, validation_status, row_number);
 
 CREATE UNIQUE INDEX uq_import_batch_idempotency_key
-    ON stg.import_batch (idempotency_key)
+    ON stg.import_batch (idempotency_key, company_ids)
     WHERE idempotency_key IS NOT NULL;
 
 CREATE UNIQUE INDEX uq_snapshot_run_idempotency_key
-    ON rpt.snapshot_run (idempotency_key)
+    ON rpt.snapshot_run (idempotency_key, company_ids)
     WHERE idempotency_key IS NOT NULL;
+
+CREATE INDEX idx_snapshot_run_company_ids
+    ON rpt.snapshot_run USING GIN (company_ids);
 
 CREATE INDEX idx_snapshot_run_status_date
     ON rpt.snapshot_run (run_status, snapshot_date, generated_at);

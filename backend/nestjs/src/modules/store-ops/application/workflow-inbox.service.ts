@@ -27,6 +27,9 @@ export class WorkflowInboxService {
       regionIds: string[];
       storeIds: string[];
     };
+    actorActionScope?: {
+      assignedStoreIds: string[];
+    };
   }) {
     const items: WorkflowInboxItem[] = [];
     const canSeeApprovals =
@@ -55,14 +58,12 @@ export class WorkflowInboxService {
 
     if (canSeeAcknowledgements) {
       try {
+        const acknowledgementScope = this.resolveAcknowledgementScope(input);
         const acknowledgements =
           await this.checklistAcknowledgementRepository.listChecklistAcknowledgements({
-            companyIds: input.actorScope.companyIds,
-            regionIds: input.actorScope.regionIds,
-            storeIds:
-              input.actorScope.companyIds.length > 0 || input.actorScope.regionIds.length > 0
-                ? []
-                : input.actorScope.storeIds,
+            companyIds: acknowledgementScope.companyIds,
+            regionIds: acknowledgementScope.regionIds,
+            storeIds: acknowledgementScope.storeIds,
           });
         items.push(
           ...acknowledgements
@@ -83,11 +84,15 @@ export class WorkflowInboxService {
       if (latestCompletedSnapshotRun) {
         const canUseAdminKpiRoute =
           input.actorRoles.includes("SUPER_ADMIN") || input.actorRoles.includes("REPORT_VIEWER");
+        const kpiScope = this.resolveStoreReadScope(input, [
+          "REPORT_VIEWER",
+          "SUPER_ADMIN",
+        ]);
         const kpiExceptions = await this.reportingRepository.getKpiReport({
           snapshotRunId: latestCompletedSnapshotRun.snapshot_run_id,
-          companyIds: input.actorScope.companyIds,
-          regionIds: input.actorScope.regionIds,
-          storeIds: input.actorScope.storeIds,
+          companyIds: kpiScope.companyIds,
+          regionIds: kpiScope.regionIds,
+          storeIds: kpiScope.storeIds,
           limit: 20,
           offset: 0,
         });
@@ -134,5 +139,58 @@ export class WorkflowInboxService {
       limit: 50,
       offset: 0,
     });
+  }
+
+  private resolveAcknowledgementScope(input: {
+    actorRoles: string[];
+    actorScope: {
+      companyIds: string[];
+      regionIds: string[];
+      storeIds: string[];
+    };
+    actorActionScope?: {
+      assignedStoreIds: string[];
+    };
+  }) {
+    return this.resolveStoreReadScope(input, ["REPORT_VIEWER", "SUPER_ADMIN"]);
+  }
+
+  private resolveStoreReadScope(
+    input: {
+      actorRoles: string[];
+      actorScope: {
+        companyIds: string[];
+        regionIds: string[];
+        storeIds: string[];
+      };
+      actorActionScope?: {
+        assignedStoreIds: string[];
+      };
+    },
+    broadReadRoles: string[],
+  ) {
+    const canUseBroadReadScope = input.actorRoles.some((roleCode) =>
+      broadReadRoles.includes(roleCode),
+    );
+    const storeIds = input.actorActionScope?.assignedStoreIds.length
+      ? input.actorActionScope.assignedStoreIds
+      : input.actorScope.storeIds;
+
+    if (!canUseBroadReadScope) {
+      return {
+        companyIds: [],
+        regionIds: [],
+        storeIds,
+      };
+    }
+
+    return {
+      companyIds: input.actorScope.companyIds,
+      regionIds: input.actorScope.regionIds,
+      storeIds:
+        input.actorScope.companyIds.length > 0 || input.actorScope.regionIds.length > 0
+          ? []
+          : storeIds,
+    };
   }
 }

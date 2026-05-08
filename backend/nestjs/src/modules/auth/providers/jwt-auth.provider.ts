@@ -116,7 +116,6 @@ export class JwtAuthProvider implements AuthProvider {
       const audiences = [
         this.appConfigService.jwtAudience,
         this.appConfigService.authClientId,
-        "account",
       ].filter((value, index, list): value is string => Boolean(value) && list.indexOf(value) === index);
 
       const options = {
@@ -128,11 +127,16 @@ export class JwtAuthProvider implements AuthProvider {
         payloadSegment && payloadSegment.length > 0
           ? JSON.parse(Buffer.from(payloadSegment, "base64url").toString("utf8")) as {
               aud?: string | string[];
+              exp?: number;
             }
           : {};
 
       if (this.appConfigService.isProduction && decodedPayload.aud === undefined) {
         throw new Error("JWT audience claim is required in production");
+      }
+
+      if (this.appConfigService.isProduction && typeof decodedPayload.exp !== "number") {
+        throw new Error("JWT expiration claim is required in production");
       }
 
       const verificationOptions =

@@ -165,6 +165,55 @@ describe("ClosedRankingService", () => {
     ]);
   });
 
+  it("rejects explicit closed leaderboard store filters outside the caller scope", async () => {
+    const foreignStoreId = "33333333-3333-4333-8333-333333333333";
+    const repository = createRepositoryMock({
+      getCompletedDailySnapshotByDate: jest.fn(async () => ({
+        snapshot_run_id: "11111111-1111-4111-8111-111111111111",
+        snapshot_date: "2026-04-23",
+        snapshot_type: "daily",
+        period_start: "2026-04-23",
+        period_end: "2026-04-23",
+        run_status: "completed",
+        generated_at: "2026-04-24T00:10:00.000Z",
+        generated_by: "system",
+      })),
+      listClosedDailyPersonnelRankRows: jest.fn(async () => [
+        {
+          employee_id: currentEmployeeId,
+          first_name: "Ayse",
+          last_name: "Yilmaz",
+          store_id: storeId,
+          store_name: "Kadikoy",
+          score_value: "91.2500",
+          turkey_rank: 4,
+          turkey_population: 100,
+          store_rank: 1,
+          store_population: 8,
+        },
+      ]),
+      listClosedDailyMetricRankRows: jest.fn(async () => []),
+    });
+    const service = new ClosedRankingService(repository as never);
+
+    await expect(
+      service.getClosedLeaderboard({
+        userId: "user-1",
+        employeeId: currentEmployeeId,
+        companyIds: ["00000000-0000-0000-0000-000000000001"],
+        regionIds: [],
+        storeIds: [storeId],
+        roleCodes: ["STORE_PERSONNEL"],
+        assignedStoreIds: [storeId],
+        periodType: "daily",
+        periodStart: "2026-04-23",
+        storeId: foreignStoreId,
+        limit: 10,
+      }),
+    ).rejects.toThrow("Closed leaderboard store is outside current scope");
+    expect(repository.listClosedDailyPersonnelRankRows).not.toHaveBeenCalled();
+  });
+
   it("uses only completed daily snapshots in the selected month", async () => {
     const repository = createRepositoryMock({
       listCompletedDailySnapshotsInMonth: jest.fn(async () => [

@@ -51,12 +51,39 @@ describe("AppConfigService", () => {
     expect(config.jwtSecret).toBe("change-me");
   });
 
+  it("rejects insecure production JWKS URLs", () => {
+    const config = createConfig({
+      NODE_ENV: "production",
+      JWT_JWKS_URL: "http://idp.example.com/.well-known/jwks.json",
+    });
+
+    expect(() => config.jwtJwksUrl).toThrow("JWT_JWKS_URL must use https in production");
+  });
+
   it("uses oidc as the default auth provider key for JWT user mapping", () => {
     const config = createConfig({
       NODE_ENV: "development",
     });
 
     expect(config.authProviderKey).toBe("oidc");
+  });
+
+  it("rejects mock auth mode in production", () => {
+    const config = createConfig({
+      ALLOW_MOCK_AUTH: "true",
+      AUTH_MODE: "mock",
+      NODE_ENV: "production",
+    });
+
+    expect(() => config.authMode).toThrow("AUTH_MODE=mock is not allowed in production");
+    expect(config.allowMockAuth).toBe(false);
+  });
+
+  it("keeps mock auth available by default only outside production", () => {
+    expect(createConfig({ NODE_ENV: "development" }).authMode).toBe("mock");
+    expect(createConfig({ NODE_ENV: "development" }).allowMockAuth).toBe(true);
+    expect(createConfig({ NODE_ENV: "production" }).authMode).toBe("jwt");
+    expect(createConfig({ NODE_ENV: "production" }).allowMockAuth).toBe(false);
   });
 
   it("allows overriding the auth provider key for Clerk mapping", () => {
@@ -118,6 +145,26 @@ describe("AppConfigService", () => {
     ]);
   });
 
+  it("rejects wildcard or non-https CORS origins in production", () => {
+    expect(() =>
+      createConfig({
+        CORS_ALLOWED_ORIGINS: "*",
+        NODE_ENV: "production",
+        RATE_LIMIT_MAX: "200",
+        RATE_LIMIT_WINDOW_MS: "60000",
+      }).corsAllowedOrigins,
+    ).toThrow("CORS_ALLOWED_ORIGINS must use explicit https origins in production");
+
+    expect(() =>
+      createConfig({
+        CORS_ALLOWED_ORIGINS: "http://admin.example.com",
+        NODE_ENV: "production",
+        RATE_LIMIT_MAX: "200",
+        RATE_LIMIT_WINDOW_MS: "60000",
+      }).corsAllowedOrigins,
+    ).toThrow("CORS_ALLOWED_ORIGINS must use explicit https origins in production");
+  });
+
   it("requires explicit CORS origins in production", () => {
     const config = createConfig({
       NODE_ENV: "production",
@@ -151,5 +198,44 @@ describe("AppConfigService", () => {
     expect(() => config.rateLimitMax).toThrow(
       "RATE_LIMIT_MAX must be configured in production",
     );
+  });
+
+  it("requires authorization code flow and https provider endpoints in production", () => {
+    expect(() =>
+      createConfig({
+        AUTH_RESPONSE_TYPE: "token",
+        NODE_ENV: "production",
+      }).authResponseType,
+    ).toThrow("AUTH_RESPONSE_TYPE=code is required in production");
+
+    expect(() =>
+      createConfig({
+        AUTH_AUTHORIZATION_URL: "http://idp.example.com/auth",
+        NODE_ENV: "production",
+      }).authAuthorizationUrl,
+    ).toThrow("AUTH_AUTHORIZATION_URL must use https in production");
+
+    expect(() =>
+      createConfig({
+        AUTH_TOKEN_URL: "http://idp.example.com/token",
+        NODE_ENV: "production",
+      }).authTokenUrl,
+    ).toThrow("AUTH_TOKEN_URL must use https in production");
+  });
+
+  it("requires same-origin auth callback paths in production", () => {
+    expect(() =>
+      createConfig({
+        AUTH_CALLBACK_PATH: "https://evil.example.com/auth/callback",
+        NODE_ENV: "production",
+      }).authCallbackPath,
+    ).toThrow("AUTH_CALLBACK_PATH must be a same-origin path in production");
+
+    expect(() =>
+      createConfig({
+        AUTH_POST_LOGOUT_REDIRECT_PATH: "//evil.example.com/login",
+        NODE_ENV: "production",
+      }).authPostLogoutRedirectPath,
+    ).toThrow("AUTH_POST_LOGOUT_REDIRECT_PATH must be a same-origin path in production");
   });
 });

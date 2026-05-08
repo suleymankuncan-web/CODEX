@@ -15,8 +15,11 @@ describe("Auth pilot user bindings", () => {
   const pilotRoleAssignmentId = "11111111-2222-4333-8444-555555555555";
   const pilotActionStoreAssignmentId = "22222222-3333-4444-8555-666666666666";
   const companyId = "10000000-0000-4000-8000-000000000001";
+  const otherCompanyId = "20000000-0000-4000-8000-000000000001";
   const regionId = "10000000-0000-4000-8000-000000000011";
+  const otherRegionId = "20000000-0000-4000-8000-000000000011";
   const storeId = "10000000-0000-4000-8000-000000000021";
+  const otherStoreId = "20000000-0000-4000-8000-000000000021";
 
   it("creates a pilot user binding with HR admin access", async () => {
     const query = jest.fn(async (sql: string) => {
@@ -162,6 +165,7 @@ describe("Auth pilot user bindings", () => {
       .post("/api/auth/pilot-user-bindings")
       .set("x-user-id", adminUserId)
       .set("x-role-codes", "HR_ADMIN")
+      .set("x-company-ids", companyId)
       .send({
         employeeId: pilotEmployeeId,
         authProvider: "oidc",
@@ -223,6 +227,102 @@ describe("Auth pilot user bindings", () => {
     await app.close();
   });
 
+  it("rejects HR admin pilot user bindings outside the actor company scope", async () => {
+    const query = jest.fn(async (sql: string) => {
+      if (sql.includes("FROM ops.user_account ua") && sql.includes("INNER JOIN ops.user_role_assignment")) {
+        return { rowCount: 0, rows: [] };
+      }
+
+      if (sql.includes("FROM ops.user_account ua") && sql.includes("INNER JOIN ops.user_action_store_assignment")) {
+        return { rowCount: 0, rows: [] };
+      }
+
+      if (sql.includes("WHERE ua.auth_provider = $1") && sql.includes("ua.provider_subject = $2")) {
+        return { rowCount: 0, rows: [] };
+      }
+
+      if (sql.includes("active_employee_access_context")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              employee_id: pilotEmployeeId,
+              external_employee_ref: "FM8375",
+              first_name: "Ayse",
+              last_name: "Demir",
+              store_id: otherStoreId,
+              store_code: "ANK-021",
+              store_name: "Other Company Store",
+              company_id: otherCompanyId,
+              region_id: otherRegionId,
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("FROM ops.role r") && sql.includes("WHERE r.role_code = $1")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              role_id: "60000000-0000-0000-0000-000000000003",
+              role_code: "STORE_MANAGER",
+              role_scope_type: "store",
+              role_name: "Store Manager",
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("FROM ops.store s") && sql.includes("WHERE s.store_id = ANY")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              store_id: otherStoreId,
+              store_code: "ANK-021",
+              store_name: "Other Company Store",
+              company_id: otherCompanyId,
+              region_id: otherRegionId,
+              region_name: "Other Region",
+            },
+          ],
+        };
+      }
+
+      return { rowCount: 0, rows: [] };
+    });
+
+    const app = await createIntegrationApp({
+      databaseService: {
+        query,
+        withTransaction: async <T>(work: (client: { query: typeof query }) => Promise<T>) =>
+          work({ query }),
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .post("/api/auth/pilot-user-bindings")
+      .set("x-user-id", adminUserId)
+      .set("x-role-codes", "HR_ADMIN")
+      .set("x-company-ids", companyId)
+      .send({
+        employeeId: pilotEmployeeId,
+        authProvider: "oidc",
+        providerSubject: pilotProviderSubject,
+        username: "ayse.demir",
+        email: "ayse.demir@example.com",
+        roleCode: "STORE_MANAGER",
+        storeIds: [otherStoreId],
+      });
+
+    expect(response.status).toBe(403);
+    expect(response.body.message).toBe("Pilot user binding is outside actor company scope");
+    expect(query).not.toHaveBeenCalledWith(expect.stringContaining("INSERT INTO ops.user_account"), expect.anything());
+
+    await app.close();
+  });
+
   it("rejects pilot user binding when provider subject is already linked", async () => {
     const query = jest.fn(async (sql: string) => {
       if (sql.includes("FROM ops.user_account ua") && sql.includes("INNER JOIN ops.user_role_assignment")) {
@@ -259,6 +359,7 @@ describe("Auth pilot user bindings", () => {
       .post("/api/auth/pilot-user-bindings")
       .set("x-user-id", adminUserId)
       .set("x-role-codes", "HR_ADMIN")
+      .set("x-company-ids", companyId)
       .send({
         employeeId: pilotEmployeeId,
         authProvider: "oidc",

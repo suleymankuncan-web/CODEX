@@ -51,6 +51,14 @@ type CompetitionRow = {
   ends_on: string | Date;
 };
 
+type CompetitionAccessContextRow = {
+  competition_id: string;
+  owner_user_id: string;
+  store_id: string | null;
+  company_id: string | null;
+  region_id: string | null;
+};
+
 type CompetitionStageRow = {
   competition_stage_id: string;
   competition_id: string;
@@ -100,6 +108,7 @@ type CompetitionTeamStoreRow = {
   store_id: string | null;
   store_code: string | null;
   store_name: string | null;
+  company_id: string | null;
   region_id: string | null;
 };
 
@@ -112,7 +121,14 @@ type CompetitionTeamTemplateStoreRow = {
   store_id: string | null;
   store_code: string | null;
   store_name: string | null;
+  company_id: string | null;
   region_id: string | null;
+};
+
+type StoreAccessContext = {
+  storeId: string;
+  companyId: string;
+  regionId: string;
 };
 
 type CompetitionTeamScoreRow = {
@@ -175,14 +191,158 @@ export class CompetitionRepository {
     );
   }
 
+  async listStoreAccessContexts(storeIds: string[]): Promise<StoreAccessContext[]> {
+    if (storeIds.length === 0) {
+      return [];
+    }
+
+    const result = await this.databaseService.query<{
+      store_id: string;
+      company_id: string;
+      region_id: string;
+    }>(
+      `
+        SELECT store_id, company_id, region_id
+        FROM ops.store
+        WHERE store_id = ANY($1::uuid[])
+      `,
+      [storeIds],
+    );
+
+    return result.rows.map((row) => ({
+      storeId: row.store_id,
+      companyId: row.company_id,
+      regionId: row.region_id,
+    }));
+  }
+
+  async getCompetitionAccessContext(competitionId: string): Promise<{
+    competitionId: string;
+    ownerUserId: string;
+    stores: StoreAccessContext[];
+  } | null> {
+    const result = await this.databaseService.query<CompetitionAccessContextRow>(
+      `
+        SELECT
+          competition.competition_id,
+          competition.owner_user_id,
+          store.store_id,
+          store.company_id,
+          store.region_id
+        FROM ops.competition competition
+        LEFT JOIN ops.competition_stage stage
+          ON stage.competition_id = competition.competition_id
+        LEFT JOIN ops.competition_team team
+          ON team.competition_stage_id = stage.competition_stage_id
+        LEFT JOIN ops.competition_team_store team_store
+          ON team_store.competition_team_id = team.competition_team_id
+        LEFT JOIN ops.store store
+          ON store.store_id = team_store.store_id
+        WHERE competition.competition_id = $1::uuid
+      `,
+      [competitionId],
+    );
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    return {
+      competitionId: result.rows[0].competition_id,
+      ownerUserId: result.rows[0].owner_user_id,
+      stores: mapStoreAccessContexts(result.rows),
+    };
+  }
+
+  async getCompetitionIdForStage(stageId: string): Promise<string | null> {
+    const result = await this.databaseService.query<{ competition_id: string }>(
+      `
+        SELECT competition_id
+        FROM ops.competition_stage
+        WHERE competition_stage_id = $1::uuid
+      `,
+      [stageId],
+    );
+
+    return result.rows[0]?.competition_id ?? null;
+  }
+
+  async getTeamTemplateAccessContext(templateId: string): Promise<{
+    templateId: string;
+    stores: StoreAccessContext[];
+  } | null> {
+    const result = await this.databaseService.query<CompetitionTeamTemplateStoreRow>(
+      `
+        SELECT
+          template.competition_team_template_id,
+          template.template_code,
+          template.template_name,
+          template.description,
+          template.is_active,
+          store.store_id,
+          store.store_code,
+          store.store_name,
+          store.company_id,
+          store.region_id
+        FROM ops.competition_team_template template
+        LEFT JOIN ops.competition_team_template_store template_store
+          ON template_store.competition_team_template_id = template.competition_team_template_id
+        LEFT JOIN ops.store store
+          ON store.store_id = template_store.store_id
+        WHERE template.competition_team_template_id = $1::uuid
+      `,
+      [templateId],
+    );
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    return {
+      templateId: result.rows[0].competition_team_template_id,
+      stores: mapStoreAccessContexts(result.rows),
+    };
+  }
+
+  async getStagePackagePlanForAccess(
+    planId: string,
+  ): Promise<CompetitionStagePackagePlan | null> {
+    const result = await this.databaseService.query<CompetitionStagePackagePlanRow>(
+      `
+        SELECT
+          competition_stage_package_plan_id,
+          competition_id,
+          package_code,
+          plan_name,
+          plan_status,
+          stage_drafts_json,
+          created_stage_ids,
+          submitted_by_user_id,
+          submitted_at,
+          reviewed_by_user_id,
+          reviewed_at,
+          review_note,
+          created_at,
+          updated_at,
+          executed_at
+        FROM ops.competition_stage_package_plan
+        WHERE competition_stage_package_plan_id = $1::uuid
+      `,
+      [planId],
+    );
+
+    return result.rows[0] ? mapStagePackagePlan(result.rows[0]) : null;
+  }
+
   async listCompetitions(input: {
     companyIds: string[];
     regionIds: string[];
     storeIds: string[];
+    actorUserId?: string;
     limit: number;
     offset: number;
   }): Promise<Competition[]> {
-    if (!this.hasReadScope(input)) {
+    if (!this.hasReadScope(input) && !input.actorUserId) {
       return [];
     }
 
@@ -210,12 +370,23 @@ export class CompetitionRepository {
           store.company_id = ANY($1::uuid[])
           OR store.region_id = ANY($2::uuid[])
           OR store.store_id = ANY($3::uuid[])
-          OR (cardinality($1::uuid[]) > 0 AND team_store.store_id IS NULL)
+          OR (
+            team_store.store_id IS NULL
+            AND $6::uuid IS NOT NULL
+            AND competition.owner_user_id = $6::uuid
+          )
         ORDER BY competition.starts_on DESC, competition.competition_code ASC
         LIMIT $4::int
         OFFSET $5::int
       `,
-      [input.companyIds, input.regionIds, input.storeIds, input.limit, input.offset],
+      [
+        input.companyIds,
+        input.regionIds,
+        input.storeIds,
+        input.limit,
+        input.offset,
+        input.actorUserId ?? null,
+      ],
     );
 
     return result.rows.map(mapCompetition);
@@ -226,8 +397,9 @@ export class CompetitionRepository {
     companyIds: string[];
     regionIds: string[];
     storeIds: string[];
+    actorUserId?: string;
   }): Promise<CompetitionBaseDetail | null> {
-    if (!this.hasReadScope(input)) {
+    if (!this.hasReadScope(input) && !input.actorUserId) {
       return null;
     }
 
@@ -256,10 +428,20 @@ export class CompetitionRepository {
             store.company_id = ANY($2::uuid[])
             OR store.region_id = ANY($3::uuid[])
             OR store.store_id = ANY($4::uuid[])
-            OR (cardinality($2::uuid[]) > 0 AND team_store.store_id IS NULL)
+            OR (
+              team_store.store_id IS NULL
+              AND $5::uuid IS NOT NULL
+              AND competition.owner_user_id = $5::uuid
+            )
           )
       `,
-      [input.competitionId, input.companyIds, input.regionIds, input.storeIds],
+      [
+        input.competitionId,
+        input.companyIds,
+        input.regionIds,
+        input.storeIds,
+        input.actorUserId ?? null,
+      ],
     );
 
     const competition = competitionResult.rows[0];
@@ -335,9 +517,15 @@ export class CompetitionRepository {
 
   async listTeamTemplates(input: {
     activeOnly?: boolean;
+    companyIds?: string[];
+    regionIds?: string[];
+    storeIds?: string[];
   } = {}): Promise<CompetitionTeamTemplate[]> {
     const rows = await this.queryTeamTemplateRows(this.databaseService, {
       activeOnly: input.activeOnly ?? true,
+      companyIds: input.companyIds,
+      regionIds: input.regionIds,
+      storeIds: input.storeIds,
     });
 
     return mapTeamTemplates(rows);
@@ -1813,6 +2001,7 @@ export class CompetitionRepository {
           store.store_id,
           store.store_code,
           store.store_name,
+          store.company_id,
           store.region_id
         FROM ops.competition_stage stage
         INNER JOIN ops.competition_team team
@@ -1917,6 +2106,9 @@ export class CompetitionRepository {
     input: {
       templateId?: string;
       activeOnly: boolean;
+      companyIds?: string[];
+      regionIds?: string[];
+      storeIds?: string[];
     },
   ): Promise<CompetitionTeamTemplateStoreRow[]> {
     const params: unknown[] = [input.activeOnly];
@@ -1925,6 +2117,42 @@ export class CompetitionRepository {
     if (input.templateId) {
       params.push(input.templateId);
       clauses.push(`template.competition_team_template_id = $${params.length}::uuid`);
+    }
+
+    if (input.companyIds || input.regionIds || input.storeIds) {
+      params.push(input.companyIds ?? []);
+      const companyParam = params.length;
+      params.push(input.regionIds ?? []);
+      const regionParam = params.length;
+      params.push(input.storeIds ?? []);
+      const storeParam = params.length;
+
+      clauses.push(`
+        EXISTS (
+          SELECT 1
+          FROM ops.competition_team_template_store scoped_template_store
+          INNER JOIN ops.store scoped_store
+            ON scoped_store.store_id = scoped_template_store.store_id
+          WHERE scoped_template_store.competition_team_template_id = template.competition_team_template_id
+            AND (
+              scoped_store.company_id = ANY($${companyParam}::uuid[])
+              OR scoped_store.region_id = ANY($${regionParam}::uuid[])
+              OR scoped_store.store_id = ANY($${storeParam}::uuid[])
+            )
+        )
+        AND NOT EXISTS (
+          SELECT 1
+          FROM ops.competition_team_template_store outside_template_store
+          INNER JOIN ops.store outside_store
+            ON outside_store.store_id = outside_template_store.store_id
+          WHERE outside_template_store.competition_team_template_id = template.competition_team_template_id
+            AND NOT (
+              outside_store.company_id = ANY($${companyParam}::uuid[])
+              OR outside_store.region_id = ANY($${regionParam}::uuid[])
+              OR outside_store.store_id = ANY($${storeParam}::uuid[])
+            )
+        )
+      `);
     }
 
     const result = await queryable.query<CompetitionTeamTemplateStoreRow>(
@@ -1938,6 +2166,7 @@ export class CompetitionRepository {
           store.store_id,
           store.store_code,
           store.store_name,
+          store.company_id,
           store.region_id
         FROM ops.competition_team_template template
         LEFT JOIN ops.competition_team_template_store template_store
@@ -1952,6 +2181,30 @@ export class CompetitionRepository {
 
     return result.rows;
   }
+}
+
+function mapStoreAccessContexts(
+  rows: Array<{
+    store_id: string | null;
+    company_id: string | null;
+    region_id: string | null;
+  }>,
+): StoreAccessContext[] {
+  const stores = new Map<string, StoreAccessContext>();
+
+  for (const row of rows) {
+    if (!row.store_id || !row.company_id || !row.region_id) {
+      continue;
+    }
+
+    stores.set(row.store_id, {
+      storeId: row.store_id,
+      companyId: row.company_id,
+      regionId: row.region_id,
+    });
+  }
+
+  return [...stores.values()];
 }
 
 async function writeCompetitionAudit(
@@ -1975,15 +2228,16 @@ async function writeCompetitionAudit(
         metadata_json
       )
       VALUES (
-        NULL,
-        $1,
+        $1::uuid,
         $2,
-        $3::uuid,
+        $3,
+        $4::uuid,
         'company',
-        $4::jsonb
+        $5::jsonb
       )
     `,
     [
+      input.actorUserId,
       input.eventType,
       input.entityName,
       input.entityId,
@@ -2079,11 +2333,12 @@ function mapTeams(rows: CompetitionTeamStoreRow[]): CompetitionTeam[] {
         stores: [],
       };
 
-    if (row.store_id && row.store_code && row.store_name && row.region_id) {
+    if (row.store_id && row.store_code && row.store_name && row.company_id && row.region_id) {
       team.stores.push({
         storeId: row.store_id,
         storeCode: row.store_code,
         storeName: row.store_name,
+        companyId: row.company_id,
         regionId: row.region_id,
       });
     }

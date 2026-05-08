@@ -748,6 +748,9 @@ export class ReportingService {
       });
     }
 
+    const storeFilter =
+      this.resolveLeaderboardStoreFilter(input) ?? latestPeriod.store_id ?? undefined;
+
     let benchmarkRows = await this.reportingRepository.getEmployeeTurkeyBenchmarkValues({
       companyId: input.companyIds[0] ?? undefined,
       periodType: "monthly",
@@ -794,7 +797,6 @@ export class ReportingService {
       benchmarkLookup,
     });
     const limit = input.limit ?? 10;
-    const storeFilter = this.resolveLeaderboardStoreFilter(input) ?? latestPeriod.store_id ?? undefined;
     const storeScoreRows = storeFilter
       ? scoreRows.filter((row) => row.storeId === storeFilter)
       : scoreRows;
@@ -1081,6 +1083,7 @@ export class ReportingService {
     storeIds: string[];
   }) {
     if (input.storeId) {
+      this.assertLeaderboardStoreFilterInScope(input);
       return input.storeId;
     }
 
@@ -1093,6 +1096,25 @@ export class ReportingService {
     }
 
     return undefined;
+  }
+
+  private assertLeaderboardStoreFilterInScope(input: {
+    storeId?: string;
+    roleCodes: string[];
+    assignedStoreIds: string[];
+    storeIds: string[];
+  }) {
+    if (input.roleCodes.includes("SUPER_ADMIN")) {
+      return;
+    }
+
+    const allowedStoreIds = [
+      ...new Set([...input.storeIds, ...input.assignedStoreIds].filter(Boolean)),
+    ];
+
+    if (!allowedStoreIds.includes(input.storeId ?? "")) {
+      throw new ForbiddenException("Live leaderboard store is outside current scope");
+    }
   }
 
   private getLiveLeaderboardEmptyResponse(input: {

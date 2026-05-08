@@ -510,10 +510,49 @@ describe("Import batch evidence", () => {
     await app.close();
   });
 
+  it("does not expose or retry import batches outside the actor company scope", async () => {
+    const actorCompanyId = "00000000-0000-0000-0000-000000000001";
+    const query = jest.fn(async (sql: string, params?: unknown[]) => {
+      if (sql.includes("FROM stg.import_batch") && sql.includes("WHERE b.import_batch_id = $1")) {
+        expect(sql).toContain("AND b.company_ids && $2::uuid[]");
+        expect(params).toEqual(["batch-out-of-scope", [actorCompanyId]]);
+        return { rowCount: 0, rows: [] };
+      }
+
+      return { rowCount: 0, rows: [] };
+    });
+    const dispatch = jest.fn();
+
+    const app = await createIntegrationApp({
+      databaseService: { query },
+      jobDispatcher: { dispatch },
+    });
+
+    const detailResponse = await request(app.getHttpServer())
+      .get("/api/integrations/import-batches/batch-out-of-scope")
+      .set("x-user-id", "user-1")
+      .set("x-role-codes", "INTEGRATION_ADMIN")
+      .set("x-company-ids", actorCompanyId);
+
+    const retryResponse = await request(app.getHttpServer())
+      .post("/api/integrations/import-batches/batch-out-of-scope/retry")
+      .set("x-user-id", "user-1")
+      .set("x-role-codes", "INTEGRATION_ADMIN")
+      .set("x-company-ids", actorCompanyId);
+
+    expect(detailResponse.status).toBe(404);
+    expect(retryResponse.status).toBe(404);
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(query).toHaveBeenCalledTimes(2);
+
+    await app.close();
+  });
+
   it("approves an external employee mapping without accepting a client-supplied table name", async () => {
     const sourceId = "11111111-1111-4111-8111-111111111111";
     const employeeId = "22222222-2222-4222-8222-222222222222";
     const actorUserId = "33333333-3333-4333-8333-333333333333";
+    const actorCompanyId = "00000000-0000-0000-0000-000000000001";
     const query = jest.fn(async (sql: string, params?: unknown[]) => {
       if (
         sql.includes("SELECT user_id") &&
@@ -543,6 +582,14 @@ describe("Import batch evidence", () => {
               is_active: true,
             },
           ],
+        };
+      }
+
+      if (sql.includes("FROM ops.employee") && sql.includes("company_id = ANY($2::uuid[])")) {
+        expect(params).toEqual([employeeId, [actorCompanyId]]);
+        return {
+          rowCount: 1,
+          rows: [{ internal_id: employeeId }],
         };
       }
 
@@ -582,6 +629,7 @@ describe("Import batch evidence", () => {
       .post("/api/integrations/external-id-maps")
       .set("x-user-id", actorUserId)
       .set("x-role-codes", "INTEGRATION_ADMIN")
+      .set("x-company-ids", actorCompanyId)
       .send({
         integrationSourceId: sourceId,
         entityType: "employee",
@@ -614,12 +662,77 @@ describe("Import batch evidence", () => {
     await app.close();
   });
 
+  it("rejects external ID mapping approval outside the actor company scope", async () => {
+    const sourceId = "11111111-1111-4111-8111-111111111111";
+    const employeeId = "22222222-2222-4222-8222-222222222222";
+    const actorCompanyId = "00000000-0000-0000-0000-000000000001";
+    const query = jest.fn(async (sql: string) => {
+      if (sql.includes("FROM stg.integration_source") && sql.includes("WHERE integration_source_id")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              integration_source_id: sourceId,
+              source_code: "power-bi-kpi",
+              source_name: "Power BI KPI",
+              entity_type: "kpi",
+              source_system: "power_bi",
+              state_model: "closed_period",
+              poll_enabled: false,
+              poll_interval_minutes: 30,
+              poll_window_start_local: "10:30:00",
+              poll_window_end_local: "00:00:00",
+              poll_timezone: "Europe/Istanbul",
+              is_active: true,
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("FROM ops.employee") && sql.includes("company_id = ANY($2::uuid[])")) {
+        return { rowCount: 0, rows: [] };
+      }
+
+      if (sql.includes("INSERT INTO stg.external_id_map")) {
+        throw new Error("out-of-scope mapping should not be persisted");
+      }
+
+      return { rowCount: 0, rows: [] };
+    });
+
+    const app = await createIntegrationApp({
+      databaseService: { query },
+    });
+
+    const response = await request(app.getHttpServer())
+      .post("/api/integrations/external-id-maps")
+      .set("x-user-id", "33333333-3333-4333-8333-333333333333")
+      .set("x-role-codes", "INTEGRATION_ADMIN")
+      .set("x-company-ids", actorCompanyId)
+      .send({
+        integrationSourceId: sourceId,
+        entityType: "employee",
+        externalId: "powerbi:AYSE DEMIR",
+        internalId: employeeId,
+      });
+
+    expect(response.status).toBe(404);
+    expect(
+      query.mock.calls.some(
+        ([sql]) => typeof sql === "string" && sql.includes("INSERT INTO stg.external_id_map"),
+      ),
+    ).toBe(false);
+
+    await app.close();
+  });
+
   it("lists controlled store and employee candidates for external ID mapping", async () => {
+    const actorCompanyId = "00000000-0000-0000-0000-000000000001";
     const storeId = "44444444-4444-4444-8444-444444444444";
     const employeeId = "55555555-5555-4555-8555-555555555555";
     const query = jest.fn(async (sql: string, params?: unknown[]) => {
       if (sql.includes("FROM ops.store")) {
-        expect(params).toEqual(["%Marmara%", 5]);
+        expect(params).toEqual([[actorCompanyId], "%Marmara%", 5]);
         return {
           rowCount: 1,
           rows: [
@@ -633,7 +746,7 @@ describe("Import batch evidence", () => {
       }
 
       if (sql.includes("FROM ops.employee")) {
-        expect(params).toEqual(["%Ayse%", 5]);
+        expect(params).toEqual([[actorCompanyId], "%Ayse%", 5]);
         return {
           rowCount: 1,
           rows: [
@@ -656,7 +769,8 @@ describe("Import batch evidence", () => {
     const storeResponse = await request(app.getHttpServer())
       .get("/api/integrations/external-id-map-candidates?entityType=store&q=Marmara&limit=5")
       .set("x-user-id", "33333333-3333-4333-8333-333333333333")
-      .set("x-role-codes", "INTEGRATION_ADMIN");
+      .set("x-role-codes", "INTEGRATION_ADMIN")
+      .set("x-company-ids", actorCompanyId);
 
     expect(storeResponse.status).toBe(200);
     expect(storeResponse.body).toEqual({
@@ -680,7 +794,8 @@ describe("Import batch evidence", () => {
     const employeeResponse = await request(app.getHttpServer())
       .get("/api/integrations/external-id-map-candidates?entityType=employee&q=Ayse&limit=5")
       .set("x-user-id", "33333333-3333-4333-8333-333333333333")
-      .set("x-role-codes", "INTEGRATION_ADMIN");
+      .set("x-role-codes", "INTEGRATION_ADMIN")
+      .set("x-company-ids", actorCompanyId);
 
     expect(employeeResponse.status).toBe(200);
     expect(employeeResponse.body).toEqual({
@@ -706,11 +821,13 @@ describe("Import batch evidence", () => {
 
   it("lists and updates store master data for import controls", async () => {
     const actorUserId = "33333333-3333-4333-8333-333333333333";
+    const actorCompanyId = "00000000-0000-0000-0000-000000000001";
     const storeId = "44444444-4444-4444-8444-444444444444";
     const regionId = "22222222-2222-4222-8222-222222222222";
     const nextRegionId = "66666666-6666-4666-8666-666666666666";
     const query = jest.fn(async (sql: string, params?: unknown[]) => {
       if (sql.includes("FROM ops.region r") && sql.includes("ORDER BY r.region_name ASC")) {
+        expect(params).toEqual([[actorCompanyId]]);
         return {
           rowCount: 2,
           rows: [
@@ -729,7 +846,7 @@ describe("Import batch evidence", () => {
       }
 
       if (sql.includes("COUNT(*)::text AS total_count") && sql.includes("FROM ops.store s")) {
-        expect(params).toEqual(["%Marmara%", true, "active"]);
+        expect(params).toEqual([[actorCompanyId], "%Marmara%", true, "active"]);
         return {
           rowCount: 1,
           rows: [{ total_count: "1" }],
@@ -737,7 +854,7 @@ describe("Import batch evidence", () => {
       }
 
       if (sql.includes("FROM ops.store s") && sql.includes("LEFT JOIN ops.region r")) {
-        expect(params).toEqual(["%Marmara%", true, "active", 10, 0]);
+        expect(params).toEqual([[actorCompanyId], "%Marmara%", true, "active", 10, 0]);
         return {
           rowCount: 1,
           rows: [
@@ -763,7 +880,9 @@ describe("Import batch evidence", () => {
       }
 
       if (sql.includes("UPDATE ops.store")) {
-        expect(params).toEqual([storeId, "franchise", nextRegionId, "inactive", false]);
+        expect(sql).toContain("s.company_id = ANY($6::uuid[])");
+        expect(sql).toContain("r.company_id = s.company_id");
+        expect(params).toEqual([storeId, "franchise", nextRegionId, "inactive", false, [actorCompanyId]]);
         return {
           rowCount: 1,
           rows: [
@@ -795,7 +914,8 @@ describe("Import batch evidence", () => {
     const lookupsResponse = await request(app.getHttpServer())
       .get("/api/integrations/store-master-lookups")
       .set("x-user-id", actorUserId)
-      .set("x-role-codes", "INTEGRATION_ADMIN");
+      .set("x-role-codes", "INTEGRATION_ADMIN")
+      .set("x-company-ids", actorCompanyId);
 
     expect(lookupsResponse.status).toBe(200);
     expect(lookupsResponse.body).toEqual({
@@ -826,7 +946,8 @@ describe("Import batch evidence", () => {
     const listResponse = await request(app.getHttpServer())
       .get("/api/integrations/store-master?q=Marmara&enabled=true&status=active&limit=10&offset=0")
       .set("x-user-id", actorUserId)
-      .set("x-role-codes", "INTEGRATION_ADMIN");
+      .set("x-role-codes", "INTEGRATION_ADMIN")
+      .set("x-company-ids", actorCompanyId);
 
     expect(listResponse.status).toBe(200);
     expect(listResponse.body).toEqual({
@@ -854,6 +975,7 @@ describe("Import batch evidence", () => {
       .patch(`/api/integrations/store-master/${storeId}`)
       .set("x-user-id", actorUserId)
       .set("x-role-codes", "INTEGRATION_ADMIN")
+      .set("x-company-ids", actorCompanyId)
       .send({
         storeType: "franchise",
         regionId: nextRegionId,
@@ -888,6 +1010,64 @@ describe("Import batch evidence", () => {
           call[0].includes("ops.store"),
       ),
     ).toBe(true);
+
+    await app.close();
+  });
+
+  it("does not update store master data outside the actor company scope", async () => {
+    const actorUserId = "33333333-3333-4333-8333-333333333333";
+    const actorCompanyId = "00000000-0000-0000-0000-000000000001";
+    const storeId = "99999999-9999-4999-8999-999999999999";
+    const regionId = "88888888-8888-4888-8888-888888888888";
+    const query = jest.fn(async (sql: string, params?: unknown[]) => {
+      if (sql.includes("SELECT user_id") && sql.includes("FROM ops.user_account")) {
+        return {
+          rowCount: 1,
+          rows: [{ user_id: actorUserId }],
+        };
+      }
+
+      if (sql.includes("UPDATE ops.store")) {
+        expect(sql).toContain("s.company_id = ANY($6::uuid[])");
+        expect(sql).toContain("r.company_id = s.company_id");
+        expect(params).toEqual([storeId, "operator", regionId, "active", true, [actorCompanyId]]);
+        return {
+          rowCount: 0,
+          rows: [],
+        };
+      }
+
+      return { rowCount: 0, rows: [] };
+    });
+
+    const app = await createIntegrationApp({
+      databaseService: {
+        query,
+        withTransaction: async <T>(work: (client: { query: typeof query }) => Promise<T>) =>
+          work({ query }),
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .patch(`/api/integrations/store-master/${storeId}`)
+      .set("x-user-id", actorUserId)
+      .set("x-role-codes", "INTEGRATION_ADMIN")
+      .set("x-company-ids", actorCompanyId)
+      .send({
+        storeType: "operator",
+        regionId,
+        status: "active",
+        kpiImportEnabled: true,
+      });
+
+    expect(response.status).toBe(404);
+    expect(
+      query.mock.calls.some(
+        (call) =>
+          typeof call[0] === "string" &&
+          call[0].includes("store_master_data.updated"),
+      ),
+    ).toBe(false);
 
     await app.close();
   });

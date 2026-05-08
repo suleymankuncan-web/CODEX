@@ -30,6 +30,7 @@ export class IntegrationRepository {
 
   private buildImportBatchFilters(
     input: {
+      actorCompanyIds: string[];
       status?: string;
       entityType?: string;
       sourceCode?: string;
@@ -39,8 +40,8 @@ export class IntegrationRepository {
     batchAlias = "stg.import_batch",
     sourceAlias = "src",
   ) {
-    const conditions: string[] = [];
-    const params: unknown[] = [];
+    const conditions: string[] = [`${batchAlias}.company_ids && $1::uuid[]`];
+    const params: unknown[] = [input.actorCompanyIds];
 
     if (input.status) {
       params.push(input.status);
@@ -160,6 +161,7 @@ export class IntegrationRepository {
   }
 
   async createImportBatch(input: {
+    actorCompanyIds: string[];
     sourceCode: string;
     entityType:
       | "employee"
@@ -194,9 +196,10 @@ export class IntegrationRepository {
             SELECT import_batch_id, started_at, status, integration_source_id, record_count
             FROM stg.import_batch
             WHERE idempotency_key = $1
+              AND company_ids && $2::uuid[]
             LIMIT 1
           `,
-          [input.idempotencyKey],
+          [input.idempotencyKey, input.actorCompanyIds],
         );
 
         if (existing.rowCount && existing.rows[0]) {
@@ -283,9 +286,10 @@ export class IntegrationRepository {
             WHERE integration_source_id = $1::uuid
               AND entity_type = $2
               AND source_batch_id = $3
+              AND company_ids && $4::uuid[]
             LIMIT 1
           `,
-          [integrationSourceId, input.entityType, input.sourceBatchId],
+          [integrationSourceId, input.entityType, input.sourceBatchId, input.actorCompanyIds],
         );
 
         if (existingBySourceBatch.rowCount && existingBySourceBatch.rows[0]) {
@@ -319,6 +323,7 @@ export class IntegrationRepository {
         `
           INSERT INTO stg.import_batch (
             integration_source_id,
+            company_ids,
             entity_type,
             idempotency_key,
             source_batch_id,
@@ -331,7 +336,7 @@ export class IntegrationRepository {
             record_count,
             error_count
           )
-          VALUES ($1, $2, $3, $4, $5, $6::timestamptz, $7::timestamptz, $8::timestamptz, 'pending', $9, 0, 0)
+          VALUES ($1, $2::uuid[], $3, $4, $5, $6, $7::timestamptz, $8::timestamptz, $9::timestamptz, 'pending', $10, 0, 0)
           RETURNING
             import_batch_id,
             started_at,
@@ -344,6 +349,7 @@ export class IntegrationRepository {
         `,
         [
           integrationSourceId,
+          input.actorCompanyIds,
           input.entityType,
           input.idempotencyKey ?? null,
           input.sourceBatchId ?? null,
@@ -375,6 +381,7 @@ export class IntegrationRepository {
           JSON.stringify({
             correlationId: RequestContextStore.getCorrelationId(),
             requestedActorUserId: input.actorUserId,
+            companyIds: input.actorCompanyIds,
             sourceCode: input.sourceCode,
             entityType: input.entityType,
             fileReference: input.fileReference,
@@ -582,6 +589,7 @@ export class IntegrationRepository {
   }
 
   async listExternalIdMapCandidates(input: {
+    actorCompanyIds: string[];
     entityType: "employee" | "store";
     q?: string;
     limit: number;
@@ -601,15 +609,16 @@ export class IntegrationRepository {
             CONCAT(store_code, ' / ', status) AS secondary_label
           FROM ops.store
           WHERE status = 'active'
+            AND company_id = ANY($1::uuid[])
             AND (
-              $1 = '%%'
-              OR store_name ILIKE $1
-              OR store_code ILIKE $1
+              $2 = '%%'
+              OR store_name ILIKE $2
+              OR store_code ILIKE $2
             )
           ORDER BY store_name ASC, store_code ASC
-          LIMIT $2
+          LIMIT $3
         `,
-        [search, input.limit],
+        [input.actorCompanyIds, search, input.limit],
       );
 
       return result.rows;
@@ -628,23 +637,63 @@ export class IntegrationRepository {
             AS secondary_label
         FROM ops.employee
         WHERE employment_status = 'active'
+          AND company_id = ANY($1::uuid[])
           AND (
-            $1 = '%%'
-            OR first_name ILIKE $1
-            OR last_name ILIKE $1
-            OR external_employee_ref ILIKE $1
-            OR CONCAT(first_name, ' ', last_name) ILIKE $1
+            $2 = '%%'
+            OR first_name ILIKE $2
+            OR last_name ILIKE $2
+            OR external_employee_ref ILIKE $2
+            OR CONCAT(first_name, ' ', last_name) ILIKE $2
           )
         ORDER BY first_name ASC, last_name ASC, employee_id ASC
-        LIMIT $2
+        LIMIT $3
       `,
-      [search, input.limit],
+      [input.actorCompanyIds, search, input.limit],
     );
 
     return result.rows;
   }
 
-  async listKpiImportStoreExternalRefs(integrationSourceId: string) {
+  async getScopedExternalIdMappingTarget(input: {
+    actorCompanyIds: string[];
+    entityType: "employee" | "store";
+    internalId: string;
+  }) {
+    if (input.entityType === "store") {
+      const result = await this.databaseService.query<{ internal_id: string }>(
+        `
+          SELECT store_id::text AS internal_id
+          FROM ops.store
+          WHERE store_id = $1::uuid
+            AND company_id = ANY($2::uuid[])
+            AND status = 'active'
+          LIMIT 1
+        `,
+        [input.internalId, input.actorCompanyIds],
+      );
+
+      return result.rows[0] ?? null;
+    }
+
+    const result = await this.databaseService.query<{ internal_id: string }>(
+      `
+        SELECT employee_id::text AS internal_id
+        FROM ops.employee
+        WHERE employee_id = $1::uuid
+          AND company_id = ANY($2::uuid[])
+          AND employment_status = 'active'
+        LIMIT 1
+      `,
+      [input.internalId, input.actorCompanyIds],
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  async listKpiImportStoreExternalRefs(input: {
+    integrationSourceId: string;
+    actorCompanyIds: string[];
+  }) {
     const result = await this.databaseService.query<{ external_ref: string }>(
       `
         SELECT DISTINCT external_ref
@@ -653,6 +702,7 @@ export class IntegrationRepository {
           FROM ops.store s
           WHERE s.status = 'active'
             AND s.kpi_import_enabled = TRUE
+            AND s.company_id = ANY($2::uuid[])
 
           UNION
 
@@ -660,6 +710,7 @@ export class IntegrationRepository {
           FROM ops.store s
           WHERE s.status = 'active'
             AND s.kpi_import_enabled = TRUE
+            AND s.company_id = ANY($2::uuid[])
 
           UNION
 
@@ -672,26 +723,28 @@ export class IntegrationRepository {
             AND map.is_active = TRUE
             AND s.status = 'active'
             AND s.kpi_import_enabled = TRUE
+            AND s.company_id = ANY($2::uuid[])
         ) refs
         WHERE external_ref IS NOT NULL
           AND BTRIM(external_ref) <> ''
         ORDER BY external_ref ASC
       `,
-      [integrationSourceId],
+      [input.integrationSourceId, input.actorCompanyIds],
     );
 
     return result.rows;
   }
 
   async listKpiImportStoreScope(input: {
+    actorCompanyIds: string[];
     q?: string;
     enabled?: boolean;
     status?: "active" | "inactive" | "closed";
     limit?: number;
     offset?: number;
   }) {
-    const conditions: string[] = [];
-    const params: unknown[] = [];
+    const conditions: string[] = ["s.company_id = ANY($1::uuid[])"];
+    const params: unknown[] = [input.actorCompanyIds];
 
     const search = input.q?.trim();
     if (search) {
@@ -765,7 +818,7 @@ export class IntegrationRepository {
     };
   }
 
-  async listStoreMasterRegions() {
+  async listStoreMasterRegions(input: { actorCompanyIds: string[] }) {
     const result = await this.databaseService.query<{
       region_id: string;
       region_code: string;
@@ -778,14 +831,17 @@ export class IntegrationRepository {
           r.region_name
         FROM ops.region r
         WHERE r.status = 'active'
+          AND r.company_id = ANY($1::uuid[])
         ORDER BY r.region_name ASC, r.region_code ASC
       `,
+      [input.actorCompanyIds],
     );
 
     return result.rows;
   }
 
   async updateKpiImportStoreScope(input: {
+    actorCompanyIds: string[];
     storeId: string;
     storeType: "company" | "franchise" | "operator";
     regionId: string;
@@ -816,6 +872,8 @@ export class IntegrationRepository {
           WHERE s.store_id = $1::uuid
             AND r.region_id = $3::uuid
             AND r.status = 'active'
+            AND s.company_id = ANY($6::uuid[])
+            AND r.company_id = s.company_id
           RETURNING
             s.store_id::text AS store_id,
             s.store_code,
@@ -832,6 +890,7 @@ export class IntegrationRepository {
           input.regionId,
           input.status,
           input.kpiImportEnabled,
+          input.actorCompanyIds,
         ],
       );
 
@@ -871,6 +930,7 @@ export class IntegrationRepository {
   }
 
   async listImportBatches(input: {
+    actorCompanyIds: string[];
     limit?: number;
     offset?: number;
     status?: string;
@@ -951,6 +1011,7 @@ export class IntegrationRepository {
   }
 
   async getImportBatchSummary(input: {
+    actorCompanyIds: string[];
     status?: string;
     entityType?: string;
     sourceCode?: string;
@@ -1010,6 +1071,7 @@ export class IntegrationRepository {
   }
 
   async getLatestImportBatchIdByStatus(input: {
+    actorCompanyIds: string[];
     status: string;
     entityType?: string;
     sourceCode?: string;
@@ -1038,6 +1100,7 @@ export class IntegrationRepository {
   }
 
   async getImportBatchActionCounts(input: {
+    actorCompanyIds: string[];
     status?: string;
     entityType?: string;
     sourceCode?: string;
@@ -1122,6 +1185,7 @@ export class IntegrationRepository {
   }
 
   async getLatestStuckImportBatchId(input: {
+    actorCompanyIds: string[];
     status?: string;
     entityType?: string;
     sourceCode?: string;
@@ -1152,6 +1216,7 @@ export class IntegrationRepository {
   }
 
   async listImportBatchesNeedingAction(input: {
+    actorCompanyIds: string[];
     limit?: number;
     offset?: number;
     status?: string;
@@ -1350,7 +1415,7 @@ export class IntegrationRepository {
     };
   }
 
-  async getImportBatch(batchId: string) {
+  async getImportBatch(input: { actorCompanyIds: string[]; batchId: string }) {
     const result = await this.databaseService.query<{
       import_batch_id: string;
       integration_source_id: string;
@@ -1402,9 +1467,10 @@ export class IntegrationRepository {
         INNER JOIN stg.integration_source src
           ON src.integration_source_id = b.integration_source_id
         WHERE b.import_batch_id = $1
+          AND b.company_ids && $2::uuid[]
         LIMIT 1
       `,
-      [batchId],
+      [input.batchId, input.actorCompanyIds],
     );
 
     return result.rows[0] ?? null;
@@ -1600,7 +1666,7 @@ export class IntegrationRepository {
     return result.rows[0] ?? null;
   }
 
-  async markImportBatchPending(batchId: string) {
+  async markImportBatchPending(input: { actorCompanyIds: string[]; batchId: string }) {
     await this.databaseService.query(
       `
         UPDATE stg.import_batch
@@ -1610,8 +1676,9 @@ export class IntegrationRepository {
           retry_count = retry_count + 1,
           last_retried_at = NOW()
         WHERE import_batch_id = $1
+          AND company_ids && $2::uuid[]
       `,
-      [batchId],
+      [input.batchId, input.actorCompanyIds],
     );
   }
 

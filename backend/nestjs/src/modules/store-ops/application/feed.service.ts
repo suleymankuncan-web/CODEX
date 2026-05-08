@@ -61,7 +61,7 @@ export class FeedService {
     const title = this.requireText(input.title, "title");
     const body = this.requireText(input.body, "body");
 
-    this.assertWritableScope({
+    await this.assertWritableScope({
       actorRoles: input.actorRoles,
       actorScope: input.actorScope,
       visibilityScopeType: input.visibilityScopeType,
@@ -103,19 +103,19 @@ export class FeedService {
     }
 
     const visibilityScopeType = input.visibilityScopeType ?? existing.visibilityScopeType;
-    const visibilityScopeIds =
-      input.visibilityScopeIds === undefined
-        ? existing.visibilityScopeIds
-        : this.normalizeScopeIds({
-            actorRoles: input.actorRoles,
-            actorScope: input.actorScope,
-            visibilityScopeType,
-            visibilityScopeIds: input.visibilityScopeIds,
-          });
+    const visibilityScopeIds = this.normalizeScopeIds({
+      actorRoles: input.actorRoles,
+      actorScope: input.actorScope,
+      visibilityScopeType,
+      visibilityScopeIds:
+        input.visibilityScopeIds === undefined
+          ? existing.visibilityScopeIds
+          : input.visibilityScopeIds,
+    });
     const title = input.title === undefined ? undefined : this.requireText(input.title, "title");
     const body = input.body === undefined ? undefined : this.requireText(input.body, "body");
 
-    this.assertWritableScope({
+    await this.assertWritableScope({
       actorRoles: input.actorRoles,
       actorScope: input.actorScope,
       visibilityScopeType,
@@ -199,7 +199,7 @@ export class FeedService {
       throw new BadRequestException("Archived feed posts cannot be changed");
     }
 
-    this.assertWritableScope({
+    await this.assertWritableScope({
       actorRoles: input.actorRoles,
       actorScope: input.actorScope,
       visibilityScopeType: existing.visibilityScopeType,
@@ -217,13 +217,44 @@ export class FeedService {
     return feedPost;
   }
 
-  private assertWritableScope(input: {
+  private async assertWritableScope(input: {
     actorRoles: string[];
     actorScope: FeedActor["actorScope"];
     visibilityScopeType: FeedVisibilityScopeType;
     visibilityScopeIds: string[];
   }) {
-    if (input.actorRoles.includes("SUPER_ADMIN") || input.actorRoles.includes("HR_ADMIN")) {
+    if (input.actorRoles.includes("SUPER_ADMIN")) {
+      return;
+    }
+
+    if (input.actorRoles.includes("HR_ADMIN")) {
+      if (input.actorScope.companyIds.length === 0) {
+        throw new ForbiddenException("HR feed writers require a company scope");
+      }
+
+      if (input.visibilityScopeType === "company") {
+        const hasOutOfCompanyScope = input.visibilityScopeIds.some(
+          (scopeId) => !input.actorScope.companyIds.includes(scopeId),
+        );
+
+        if (hasOutOfCompanyScope) {
+          throw new ForbiddenException("Feed company scope is outside current company scope");
+        }
+
+        return;
+      }
+
+      const isWithinCompanyScope =
+        await this.feedRepository.visibilityScopeBelongsToCompanies({
+          visibilityScopeType: input.visibilityScopeType,
+          visibilityScopeIds: input.visibilityScopeIds,
+          companyIds: input.actorScope.companyIds,
+        });
+
+      if (!isWithinCompanyScope) {
+        throw new ForbiddenException("Feed visibility scope is outside current company scope");
+      }
+
       return;
     }
 
@@ -250,11 +281,32 @@ export class FeedService {
     visibilityScopeType: FeedVisibilityScopeType;
     visibilityScopeIds: string[];
   }) {
-    if (input.visibilityScopeType === "company") {
-      return [];
-    }
-
     const uniqueScopeIds = [...new Set(input.visibilityScopeIds.filter(Boolean))];
+
+    if (input.visibilityScopeType === "company") {
+      const companyScopeIds =
+        uniqueScopeIds.length > 0 ? uniqueScopeIds : input.actorScope.companyIds;
+
+      if (companyScopeIds.length === 0) {
+        if (!input.actorRoles.includes("SUPER_ADMIN") && !input.actorRoles.includes("HR_ADMIN")) {
+          throw new ForbiddenException("Missing feed writer role");
+        }
+
+        throw new BadRequestException("company feed posts require a company scope id");
+      }
+
+      if (!input.actorRoles.includes("SUPER_ADMIN")) {
+        const hasOutOfCompanyScope = companyScopeIds.some(
+          (scopeId) => !input.actorScope.companyIds.includes(scopeId),
+        );
+
+        if (hasOutOfCompanyScope) {
+          throw new ForbiddenException("Feed company scope is outside current company scope");
+        }
+      }
+
+      return companyScopeIds;
+    }
 
     if (uniqueScopeIds.length === 0) {
       throw new BadRequestException(`${input.visibilityScopeType} feed posts require a scope id`);

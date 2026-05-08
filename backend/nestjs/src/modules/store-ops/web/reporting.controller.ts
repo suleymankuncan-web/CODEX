@@ -104,10 +104,14 @@ export class ReportingController {
     @Req()
     request: {
       user: {
+        roleCodes: string[];
         scope: {
           companyIds: string[];
           regionIds: string[];
           storeIds: string[];
+        };
+        actionScope?: {
+          assignedStoreIds: string[];
         };
       };
     },
@@ -131,10 +135,14 @@ export class ReportingController {
     @Req()
     request: {
       user: {
+        roleCodes: string[];
         scope: {
           companyIds: string[];
           regionIds: string[];
           storeIds: string[];
+        };
+        actionScope?: {
+          assignedStoreIds: string[];
         };
       };
     },
@@ -147,13 +155,20 @@ export class ReportingController {
       offset?: string;
     },
   ) {
+    const storeReadScope = this.resolveStoreReadScope({
+      actorRoleCodes: request.user.roleCodes,
+      actorScope: request.user.scope,
+      actorActionScope: request.user.actionScope,
+      broadReadRoles: ["AUDITOR", "REPORT_VIEWER", "SUPER_ADMIN"],
+    });
+
     return this.reportingService.getKpiReport({
       snapshotRunId: query.snapshotRunId,
       storeId: query.storeId,
       kpiId: query.kpiId,
-      companyIds: request.user.scope.companyIds,
-      regionIds: request.user.scope.regionIds,
-      storeIds: request.user.scope.storeIds,
+      companyIds: storeReadScope.companyIds,
+      regionIds: storeReadScope.regionIds,
+      storeIds: storeReadScope.storeIds,
       limit: query.limit ? Number(query.limit) : undefined,
       offset: query.offset ? Number(query.offset) : undefined,
     });
@@ -197,19 +212,30 @@ export class ReportingController {
     @Req()
     request: {
       user: {
+        roleCodes: string[];
         scope: {
           companyIds: string[];
           regionIds: string[];
           storeIds: string[];
         };
+        actionScope?: {
+          assignedStoreIds: string[];
+        };
       };
     },
     @Query() query: GetStoreKpiHighlightsQueryDto,
   ) {
+    const storeReadScope = this.resolveStoreReadScope({
+      actorRoleCodes: request.user.roleCodes,
+      actorScope: request.user.scope,
+      actorActionScope: request.user.actionScope,
+      broadReadRoles: ["SUPER_ADMIN"],
+    });
+
     return this.reportingService.getStoreKpiHighlights({
-      companyIds: request.user.scope.companyIds,
-      regionIds: request.user.scope.regionIds,
-      storeIds: request.user.scope.storeIds,
+      companyIds: storeReadScope.companyIds,
+      regionIds: storeReadScope.regionIds,
+      storeIds: storeReadScope.storeIds,
       periodType: query.periodType,
       periodStart: query.periodStart,
     });
@@ -222,8 +248,14 @@ export class ReportingController {
     @Req()
     request: {
       user: {
+        roleCodes: string[];
         scope: {
+          companyIds: string[];
+          regionIds: string[];
           storeIds: string[];
+        };
+        actionScope?: {
+          assignedStoreIds: string[];
         };
       };
     },
@@ -233,10 +265,17 @@ export class ReportingController {
       storeId: string;
     },
   ) {
+    const storeReadScope = this.resolveStoreReadScope({
+      actorRoleCodes: request.user.roleCodes,
+      actorScope: request.user.scope,
+      actorActionScope: request.user.actionScope,
+      broadReadRoles: ["SUPER_ADMIN"],
+    });
+
     return this.reportingService.getStoreMonthlyScoreBreakdown({
       snapshotRunId: query.snapshotRunId,
       storeId: query.storeId,
-      storeIds: request.user.scope.storeIds,
+      storeIds: storeReadScope.storeIds,
     });
   }
 
@@ -375,5 +414,42 @@ export class ReportingController {
       limit: query.limit,
       offset: query.offset,
     });
+  }
+
+  private resolveStoreReadScope(input: {
+    actorRoleCodes: string[];
+    actorScope: {
+      companyIds: string[];
+      regionIds: string[];
+      storeIds: string[];
+    };
+    actorActionScope?: {
+      assignedStoreIds: string[];
+    };
+    broadReadRoles: string[];
+  }) {
+    const canUseBroadReadScope = input.actorRoleCodes.some((roleCode) =>
+      input.broadReadRoles.includes(roleCode),
+    );
+    const storeIds = input.actorActionScope?.assignedStoreIds.length
+      ? input.actorActionScope.assignedStoreIds
+      : input.actorScope.storeIds;
+
+    if (!canUseBroadReadScope) {
+      return {
+        companyIds: [],
+        regionIds: [],
+        storeIds,
+      };
+    }
+
+    return {
+      companyIds: input.actorScope.companyIds,
+      regionIds: input.actorScope.regionIds,
+      storeIds:
+        input.actorScope.companyIds.length > 0 || input.actorScope.regionIds.length > 0
+          ? []
+          : storeIds,
+    };
   }
 }

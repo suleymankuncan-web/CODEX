@@ -3,8 +3,11 @@ import { createIntegrationApp } from "./test-app";
 
 describe("Workforce offboarding requests", () => {
   const companyId = "00000000-0000-0000-0000-000000000001";
+  const otherCompanyId = "00000000-0000-0000-0000-000000000002";
   const regionId = "22222222-2222-4222-8222-222222222222";
+  const otherRegionId = "22222222-2222-4222-8222-222222222223";
   const storeId = "33333333-3333-4333-8333-333333333333";
+  const otherStoreId = "33333333-3333-4333-8333-333333333334";
   const employeeId = "77777777-7777-4777-8777-777777777777";
   const positionId = "44444444-4444-4444-8444-444444444444";
   const assignmentId = "88888888-8888-4888-8888-888888888888";
@@ -189,6 +192,49 @@ describe("Workforce offboarding requests", () => {
           call[0].includes("ops.employee_offboarding_request"),
       ),
     ).toBe(true);
+
+    await app.close();
+  });
+
+  it("keeps store manager offboarding request lists limited to assigned stores even when company scope is present", async () => {
+    const query = jest.fn(async (sql: string, params?: unknown[]) => {
+      if (
+        sql.includes("FROM ops.employee_offboarding_request eor") &&
+        sql.includes("ORDER BY eor.created_at DESC")
+      ) {
+        expect(params).toEqual([[storeId], "pending_hr_approval"]);
+        return {
+          rowCount: 1,
+          rows: [pendingRequestRow],
+        };
+      }
+
+      return { rowCount: 0, rows: [] };
+    });
+
+    const app = await createIntegrationApp({
+      databaseService: {
+        query,
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .get("/api/workforce/offboarding-requests?status=pending_hr_approval")
+      .set("x-user-id", actorUserId)
+      .set("x-role-codes", "STORE_MANAGER")
+      .set("x-company-ids", companyId)
+      .set("x-region-ids", regionId)
+      .set("x-store-ids", storeId)
+      .set("x-assigned-store-ids", storeId);
+
+    expect(response.status).toBe(200);
+    expect(response.body.items).toHaveLength(1);
+    expect(response.body.items[0]).toMatchObject({
+      requestId,
+      storeId,
+      employeeId,
+      status: "pending_hr_approval",
+    });
 
     await app.close();
   });
@@ -483,6 +529,62 @@ describe("Workforce offboarding requests", () => {
           call[0].includes("ops.employee_offboarding_request"),
       ),
     ).toBe(true);
+
+    await app.close();
+  });
+
+  it("rejects HR approval for offboarding requests outside actor company scope", async () => {
+    const outOfScopeRequestRow = {
+      ...pendingRequestRow,
+      company_id: otherCompanyId,
+      region_id: otherRegionId,
+      store_id: otherStoreId,
+      store_code: "ANK001",
+      store_name: "Other Store",
+      submitted_by_user_id: "store-manager-2",
+    };
+    const query = jest.fn(async (sql: string, params?: unknown[]) => {
+      if (
+        sql.includes("FROM ops.employee_offboarding_request eor") &&
+        sql.includes("WHERE eor.offboarding_request_id")
+      ) {
+        expect(params).toEqual([requestId]);
+        return {
+          rowCount: 1,
+          rows: [outOfScopeRequestRow],
+        };
+      }
+
+      return { rowCount: 0, rows: [] };
+    });
+
+    const app = await createIntegrationApp({
+      databaseService: {
+        query,
+        withTransaction: async <T>(work: (client: { query: typeof query }) => Promise<T>) =>
+          work({ query }),
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .patch(`/api/workforce/offboarding-requests/${requestId}/approve`)
+      .set("x-user-id", actorUserId)
+      .set("x-role-codes", "HR_ADMIN")
+      .set("x-company-ids", companyId)
+      .send({
+        reviewNote: "Cikis onaylandi",
+      });
+
+    expect(response.status).toBe(403);
+    expect(response.body.message).toBe("Workforce request is outside actor review scope");
+    expect(
+      query.mock.calls.some(
+        (call) =>
+          typeof call[0] === "string" &&
+          (call[0].includes("UPDATE ops.employee\n") ||
+            call[0].includes("UPDATE ops.employee_offboarding_request")),
+      ),
+    ).toBe(false);
 
     await app.close();
   });

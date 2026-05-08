@@ -39,15 +39,14 @@ export class WorkforceService {
     actorActionScope?: {
       assignedStoreIds: string[];
     };
+    actorRoleCodes: string[];
     status?: "pending_hr_approval" | "approved" | "rejected";
   }) {
-    const actorStoreIds = input.actorActionScope?.assignedStoreIds?.length
-      ? input.actorActionScope.assignedStoreIds
-      : input.actorScope.storeIds;
+    const listScope = this.resolveWorkforceRequestListScope(input);
     const rows = await this.workforceRequestRepository.listSellerCodeRequests({
-      companyIds: input.actorScope.companyIds,
-      regionIds: input.actorScope.regionIds,
-      storeIds: input.actorScope.companyIds.length > 0 || input.actorScope.regionIds.length > 0 ? [] : actorStoreIds,
+      companyIds: listScope.companyIds,
+      regionIds: listScope.regionIds,
+      storeIds: listScope.storeIds,
       status: input.status,
     });
 
@@ -197,6 +196,12 @@ export class WorkforceService {
 
   async approveSellerCodeRequest(input: {
     actorUserId: string;
+    actorScope: {
+      companyIds: string[];
+      regionIds: string[];
+      storeIds: string[];
+    };
+    actorRoleCodes: string[];
     requestId: string;
     sellerCode: string;
     reviewNote?: string;
@@ -209,6 +214,8 @@ export class WorkforceService {
     if (existing.request_status !== "pending_hr_approval") {
       throw new BadRequestException("Seller code request is not pending HR approval");
     }
+
+    this.assertCanReviewWorkforceRequest(input, existing);
 
     const sellerCode = input.sellerCode.trim().toUpperCase();
     if (existing.store_type === "franchise" && !/^FM\d+$/.test(sellerCode)) {
@@ -238,6 +245,12 @@ export class WorkforceService {
 
   async rejectSellerCodeRequest(input: {
     actorUserId: string;
+    actorScope: {
+      companyIds: string[];
+      regionIds: string[];
+      storeIds: string[];
+    };
+    actorRoleCodes: string[];
     requestId: string;
     reviewNote: string;
   }) {
@@ -249,6 +262,8 @@ export class WorkforceService {
     if (existing.request_status !== "pending_hr_approval") {
       throw new BadRequestException("Seller code request is not pending HR approval");
     }
+
+    this.assertCanReviewWorkforceRequest(input, existing);
 
     const reviewNote = input.reviewNote.trim();
     if (!reviewNote) {
@@ -341,15 +356,14 @@ export class WorkforceService {
     actorActionScope?: {
       assignedStoreIds: string[];
     };
+    actorRoleCodes: string[];
     status?: "pending_hr_approval" | "approved" | "rejected";
   }) {
-    const actorStoreIds = input.actorActionScope?.assignedStoreIds?.length
-      ? input.actorActionScope.assignedStoreIds
-      : input.actorScope.storeIds;
+    const listScope = this.resolveWorkforceRequestListScope(input);
     const rows = await this.workforceRequestRepository.listOffboardingRequests({
-      companyIds: input.actorScope.companyIds,
-      regionIds: input.actorScope.regionIds,
-      storeIds: input.actorScope.companyIds.length > 0 || input.actorScope.regionIds.length > 0 ? [] : actorStoreIds,
+      companyIds: listScope.companyIds,
+      regionIds: listScope.regionIds,
+      storeIds: listScope.storeIds,
       status: input.status,
     });
 
@@ -413,6 +427,12 @@ export class WorkforceService {
 
   async approveOffboardingRequest(input: {
     actorUserId: string;
+    actorScope: {
+      companyIds: string[];
+      regionIds: string[];
+      storeIds: string[];
+    };
+    actorRoleCodes: string[];
     requestId: string;
     reviewNote?: string;
   }) {
@@ -424,6 +444,8 @@ export class WorkforceService {
     if (existing.request_status !== "pending_hr_approval") {
       throw new BadRequestException("Offboarding request is not pending HR approval");
     }
+
+    this.assertCanReviewWorkforceRequest(input, existing);
 
     const approval = await this.workforceRequestRepository.approveOffboardingRequest({
       request: existing,
@@ -443,6 +465,12 @@ export class WorkforceService {
 
   async rejectOffboardingRequest(input: {
     actorUserId: string;
+    actorScope: {
+      companyIds: string[];
+      regionIds: string[];
+      storeIds: string[];
+    };
+    actorRoleCodes: string[];
     requestId: string;
     reviewNote: string;
   }) {
@@ -454,6 +482,8 @@ export class WorkforceService {
     if (existing.request_status !== "pending_hr_approval") {
       throw new BadRequestException("Offboarding request is not pending HR approval");
     }
+
+    this.assertCanReviewWorkforceRequest(input, existing);
 
     const reviewNote = input.reviewNote.trim();
     if (!reviewNote) {
@@ -557,6 +587,71 @@ export class WorkforceService {
   ) {
     const assignedStoreIds = actionScope?.assignedStoreIds ?? legacyScope.storeIds;
     return assignedStoreIds.includes(storeId);
+  }
+
+  private assertCanReviewWorkforceRequest(
+    input: {
+      actorScope: {
+        companyIds: string[];
+        regionIds: string[];
+        storeIds: string[];
+      };
+      actorRoleCodes: string[];
+    },
+    request: {
+      company_id: string;
+      region_id: string;
+      store_id: string;
+    },
+  ) {
+    if (input.actorRoleCodes.includes("SUPER_ADMIN")) {
+      return;
+    }
+
+    const isInScope =
+      input.actorScope.companyIds.includes(request.company_id) ||
+      input.actorScope.regionIds.includes(request.region_id) ||
+      input.actorScope.storeIds.includes(request.store_id);
+
+    if (!isInScope) {
+      throw new ForbiddenException("Workforce request is outside actor review scope");
+    }
+  }
+
+  private resolveWorkforceRequestListScope(input: {
+    actorScope: {
+      companyIds: string[];
+      regionIds: string[];
+      storeIds: string[];
+    };
+    actorActionScope?: {
+      assignedStoreIds: string[];
+    };
+    actorRoleCodes: string[];
+  }) {
+    const canUseBroadReadScope = input.actorRoleCodes.some((roleCode) =>
+      ["HR_ADMIN", "SUPER_ADMIN"].includes(roleCode),
+    );
+    const storeIds = input.actorActionScope?.assignedStoreIds.length
+      ? input.actorActionScope.assignedStoreIds
+      : input.actorScope.storeIds;
+
+    if (!canUseBroadReadScope) {
+      return {
+        companyIds: [],
+        regionIds: [],
+        storeIds,
+      };
+    }
+
+    return {
+      companyIds: input.actorScope.companyIds,
+      regionIds: input.actorScope.regionIds,
+      storeIds:
+        input.actorScope.companyIds.length > 0 || input.actorScope.regionIds.length > 0
+          ? []
+          : storeIds,
+    };
   }
 
   private mapSellerCodeRequest(row: {
