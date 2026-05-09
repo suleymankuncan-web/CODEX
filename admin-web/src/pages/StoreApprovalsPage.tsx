@@ -25,6 +25,8 @@ import {
   getStoreTargetingPersonnel,
   getTargetDistributionRequests,
   type TargetDistributionAllocation,
+  type TargetDistributionRequest,
+  type StoreTargetingPerson,
 } from '../features/targets/api'
 import {
   createOffboardingRequest,
@@ -36,10 +38,13 @@ import {
   resubmitOffboardingRequest,
   resubmitSellerCodeRequest,
   type OffboardingRequest,
+  type PositionOption,
   type SellerCodeRequest,
   type SellerEmploymentType,
+  type StoreEmployee,
 } from '../features/workforce/api'
 import { formatDate, formatDateTime, formatNumber, formatState, getErrorMessage } from '../lib/format'
+import type { AppLocale } from '../lib/i18n'
 
 const approvalStatusLabelKeys = {
   approved: 'storeApprovals.status.approved',
@@ -85,6 +90,17 @@ function formatRoles(
     ? displayRoles.map((roleCode) => formatRole(roleCode, t)).join(', ')
     : t('storeApprovals.noResolvedRoles')
 }
+
+type ListQuerySnapshot<T> = {
+  data?: {
+    items: T[]
+  }
+  error: unknown
+  isError: boolean
+  isLoading: boolean
+}
+
+type StringFieldSetter = (value: string) => void
 
 export function StoreApprovalsPage(input: {
   authSummary: AuthSessionSummary | null
@@ -344,6 +360,128 @@ export function StoreApprovalsPage(input: {
     Boolean(offboardingRequestReason.trim())
   const sellerRequestPending = sellerCodeMutation.isPending || resubmitSellerCodeMutation.isPending
   const offboardingRequestPending = offboardingMutation.isPending || resubmitOffboardingMutation.isPending
+  const addTargetAllocation = () => {
+    setSubmissionNotice(null)
+    setAllocations([
+      ...activeAllocations,
+      { employeeId: '', assigneeLabel: '', targetValue: 0, note: '' },
+    ])
+  }
+  const updateTargetAllocationPerson = (
+    index: number,
+    employeeId: string,
+    assigneeLabel: string,
+  ) => {
+    setSubmissionNotice(null)
+    setAllocations(
+      activeAllocations.map((item, itemIndex) =>
+        itemIndex === index
+          ? {
+              ...item,
+              employeeId,
+              assigneeLabel,
+            }
+          : item,
+      ),
+    )
+  }
+  const updateTargetAllocationValue = (index: number, targetValue: number) => {
+    setSubmissionNotice(null)
+    setAllocations(
+      activeAllocations.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, targetValue } : item,
+      ),
+    )
+  }
+  const updateTargetAllocationNote = (index: number, note: string) => {
+    setSubmissionNotice(null)
+    setAllocations(
+      activeAllocations.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, note } : item,
+      ),
+    )
+  }
+  const removeTargetAllocation = (index: number) => {
+    setSubmissionNotice(null)
+    setAllocations(activeAllocations.filter((_, itemIndex) => itemIndex !== index))
+  }
+  const submitTargetDistributionRequest = () => {
+    createMutation.mutate({
+      storeId,
+      requestMonth: `${requestMonth}-01`,
+      targetLabel,
+      totalTargetValue: Number(totalTargetValue),
+      requestReason: requestReason || undefined,
+      allocations: activeAllocations,
+    })
+  }
+  const submitSellerCodeRequest = () => {
+    const payload = {
+      firstName: sellerFirstName.trim(),
+      lastName: sellerLastName.trim(),
+      nationalId: sellerNationalId.trim(),
+      phoneNumber: sellerPhoneNumber.trim(),
+      hireDate: sellerHireDate,
+      requestedPositionId: sellerPositionId.trim(),
+      employmentType: sellerEmploymentType,
+      requestReason: sellerRequestReason.trim() || undefined,
+    }
+
+    if (editingSellerRequestId) {
+      resubmitSellerCodeMutation.mutate({
+        requestId: editingSellerRequestId,
+        ...payload,
+      })
+      return
+    }
+
+    sellerCodeMutation.mutate({
+      storeId,
+      requestType: 'create_code',
+      ...payload,
+    })
+  }
+  const cancelSellerRequestEdit = () => {
+    setEditingSellerRequestId(null)
+    setSellerFirstName('')
+    setSellerLastName('')
+    setSellerNationalId('')
+    setSellerPhoneNumber('')
+    setSellerHireDate(new Date().toISOString().slice(0, 10))
+    setSellerPositionId('')
+    setSellerEmploymentType('full_time')
+    setSellerRequestReason('')
+    setSellerRequestNotice(null)
+  }
+  const submitOffboardingRequest = () => {
+    const payload = {
+      employeeId: offboardingEmployeeId,
+      terminationDate: offboardingTerminationDate,
+      terminationReason: offboardingTerminationReason.trim(),
+      requestReason: offboardingRequestReason.trim(),
+    }
+
+    if (editingOffboardingRequestId) {
+      resubmitOffboardingMutation.mutate({
+        requestId: editingOffboardingRequestId,
+        ...payload,
+      })
+      return
+    }
+
+    offboardingMutation.mutate({
+      storeId,
+      ...payload,
+    })
+  }
+  const cancelOffboardingRequestEdit = () => {
+    setEditingOffboardingRequestId(null)
+    setOffboardingEmployeeId('')
+    setOffboardingTerminationDate(new Date().toISOString().slice(0, 10))
+    setOffboardingTerminationReason('resignation')
+    setOffboardingRequestReason('')
+    setOffboardingNotice(null)
+  }
 
   return (
     <section className="page-stack">
@@ -397,769 +535,158 @@ export function StoreApprovalsPage(input: {
         />
       </section>
 
-      <section className="panel" aria-label={t('storeApprovals.returnedAria')}>
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('storeApprovals.returnedEyebrow')}</div>
-            <h3>{t('storeApprovals.returnedTitle')}</h3>
-          </div>
-          <StatusPill
-            tone={returnedSellerCodeRequests.length + returnedOffboardingRequests.length > 0 ? 'warning' : 'calm'}
-          >
-            {String(returnedSellerCodeRequests.length + returnedOffboardingRequests.length)}
-          </StatusPill>
-        </div>
-
-        {rejectedSellerCodeRequestsQuery.isError || rejectedOffboardingRequestsQuery.isError ? (
-          <div className="inline-state inline-state-danger">
-            {getErrorMessage(rejectedSellerCodeRequestsQuery.error ?? rejectedOffboardingRequestsQuery.error)}
-          </div>
-        ) : returnedSellerCodeRequests.length + returnedOffboardingRequests.length === 0 ? (
-          <EmptyState
-            title={t('storeApprovals.returnedEmptyTitle')}
-            copy={t('storeApprovals.returnedEmptyCopy')}
-          />
-        ) : (
-          <div className="stacked-table">
-            {returnedSellerCodeRequests.map((item) => (
-              <article className="stacked-row" key={item.requestId}>
-                <div className="stacked-row-head">
-                  <div>
-                    <strong>{`${item.firstName} ${item.lastName}`.trim()}</strong>
-                    <p className="queue-subtitle">
-                      {t('storeApprovals.sellerRequestSummary', {
-                        last4: item.nationalIdLast4,
-                        storeName: item.storeName,
-                      })}
-                    </p>
-                  </div>
-                  <StatusPill tone="warning">{formatApprovalStatus(item.status, t)}</StatusPill>
-                </div>
-                <div className="key-grid">
-                  <KeyValue label={t('storeApprovals.position')} value={item.positionName} />
-                  <KeyValue label={t('storeApprovals.reviewNote')} value={item.reviewNote ?? t('storeApprovals.noNote')} />
-                  <KeyValue label={t('storeApprovals.updatedAt')} value={formatDateTime(item.updatedAt, locale)} />
-                  <KeyValue label={t('storeApprovals.requestId')} value={item.requestId} />
-                </div>
-                <div className="action-cluster">
-                  <button
-                    className="control-button"
-                    type="button"
-                    onClick={() => startEditingSellerRequest(item)}
-                  >
-                    {t('storeApprovals.editSellerCodeRequest')}
-                  </button>
-                </div>
-              </article>
-            ))}
-
-            {returnedOffboardingRequests.map((item) => (
-              <article className="stacked-row" key={item.requestId}>
-                <div className="stacked-row-head">
-                  <div>
-                    <strong>{item.displayName}</strong>
-                    <p className="queue-subtitle">
-                      {t('storeApprovals.offboardingRequestSummary', {
-                        ref: item.externalEmployeeRef ?? t('storeApprovals.noSellerCode'),
-                        storeName: item.storeName,
-                      })}
-                    </p>
-                  </div>
-                  <StatusPill tone="warning">{formatApprovalStatus(item.status, t)}</StatusPill>
-                </div>
-                <div className="key-grid">
-                  <KeyValue label={t('storeApprovals.terminationDate')} value={formatDate(item.terminationDate, locale)} />
-                  <KeyValue label={t('storeApprovals.terminationReason')} value={item.terminationReason} />
-                  <KeyValue label={t('storeApprovals.reviewNote')} value={item.reviewNote ?? t('storeApprovals.noNote')} />
-                  <KeyValue label={t('storeApprovals.requestId')} value={item.requestId} />
-                </div>
-                <div className="action-cluster">
-                  <button
-                    className="control-button"
-                    type="button"
-                    onClick={() => startEditingOffboardingRequest(item)}
-                  >
-                    {t('storeApprovals.editOffboardingRequest')}
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
+      <ReturnedRequestsPanel
+        locale={locale}
+        returnedOffboardingRequests={returnedOffboardingRequests}
+        returnedSellerCodeRequests={returnedSellerCodeRequests}
+        sellerCodeRequestsError={rejectedSellerCodeRequestsQuery.error}
+        hasSellerCodeRequestsError={rejectedSellerCodeRequestsQuery.isError}
+        offboardingRequestsError={rejectedOffboardingRequestsQuery.error}
+        hasOffboardingRequestsError={rejectedOffboardingRequestsQuery.isError}
+        onEditOffboardingRequest={startEditingOffboardingRequest}
+        onEditSellerCodeRequest={startEditingSellerRequest}
+        t={t}
+      />
 
       <section className="two-up-grid">
-        <article className="panel" aria-label={t('storeApprovals.targetFormAria')}>
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">{t('storeApprovals.futureInbox')}</div>
-              <h3>{t('storeApprovals.targetTitle')}</h3>
-            </div>
-            <StatusPill tone="accent">{t('storeApprovals.writeFlow')}</StatusPill>
-          </div>
+        <TargetDistributionRequestForm
+          activeAllocations={activeAllocations}
+          allocationTotal={allocationTotal}
+          assignedStoreIds={assignedStoreIds}
+          canCreateForStore={canCreateForStore}
+          canSubmit={canSubmit}
+          createError={createMutation.error}
+          hasCreateError={createMutation.isError}
+          isSubmitting={createMutation.isPending}
+          locale={locale}
+          onAddAllocation={addTargetAllocation}
+          onAllocationNoteChange={updateTargetAllocationNote}
+          onAllocationPersonChange={updateTargetAllocationPerson}
+          onAllocationValueChange={updateTargetAllocationValue}
+          onRemoveAllocation={removeTargetAllocation}
+          onRequestMonthChange={(value) => {
+            setSubmissionNotice(null)
+            setRequestMonth(value)
+          }}
+          onRequestReasonChange={(value) => {
+            setSubmissionNotice(null)
+            setRequestReason(value)
+          }}
+          onStoreIdChange={setSelectedStoreId}
+          onSubmit={submitTargetDistributionRequest}
+          onTargetLabelChange={(value) => {
+            setSubmissionNotice(null)
+            setTargetLabel(value)
+          }}
+          onTotalTargetValueChange={(value) => {
+            setSubmissionNotice(null)
+            setTotalTargetValue(value)
+          }}
+          personnelById={personnelById}
+          personnelQuery={personnelQuery}
+          primaryStoreId={primaryStoreId}
+          requestMonth={requestMonth}
+          requestReason={requestReason}
+          storeId={storeId}
+          submissionNotice={submissionNotice}
+          targetLabel={targetLabel}
+          t={t}
+          totalTargetValue={totalTargetValue}
+          totalsAligned={totalsAligned}
+        />
 
-          {!canCreateForStore ? (
-            <EmptyState
-              title={t('storeApprovals.assignedActionStoreRequired')}
-              copy={t('storeApprovals.targetUnavailableCopy')}
-            />
-          ) : (
-            <div className="stacked-table">
-              <div className="stacked-row">
-                <label className="eyebrow" htmlFor="store-id">
-                  {t('storeApprovals.storeId')}
-                </label>
-                {assignedStoreIds.length > 1 ? (
-                  <select
-                    id="store-id"
-                    value={storeId}
-                    onChange={(event) => setSelectedStoreId(event.target.value)}
-                  >
-                    {assignedStoreIds.map((assignedStoreId) => (
-                      <option key={assignedStoreId} value={assignedStoreId}>
-                        {assignedStoreId}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    id="store-id"
-                    value={storeId}
-                    onChange={(event) => setSelectedStoreId(event.target.value)}
-                    placeholder={t('storeApprovals.scopedStoreId')}
-                    readOnly={Boolean(primaryStoreId)}
-                  />
-                )}
-              </div>
+        <SellerCodeRequestForm
+          canCreateForStore={canCreateForStore}
+          canSubmit={canSubmitSellerCodeRequest}
+          editingRequestId={editingSellerRequestId}
+          hasCreateError={sellerCodeMutation.isError}
+          hasResubmitError={resubmitSellerCodeMutation.isError}
+          isPending={sellerRequestPending}
+          notice={sellerRequestNotice}
+          onCancelEdit={cancelSellerRequestEdit}
+          onEmploymentTypeChange={(value) => {
+            setSellerRequestNotice(null)
+            setSellerEmploymentType(value)
+          }}
+          onFirstNameChange={(value) => {
+            setSellerRequestNotice(null)
+            setSellerFirstName(value)
+          }}
+          onHireDateChange={(value) => {
+            setSellerRequestNotice(null)
+            setSellerHireDate(value)
+          }}
+          onLastNameChange={(value) => {
+            setSellerRequestNotice(null)
+            setSellerLastName(value)
+          }}
+          onNationalIdChange={(value) => {
+            setSellerRequestNotice(null)
+            setSellerNationalId(value.replace(/\D/g, '').slice(0, 11))
+          }}
+          onPhoneNumberChange={(value) => {
+            setSellerRequestNotice(null)
+            setSellerPhoneNumber(value)
+          }}
+          onPositionIdChange={(value) => {
+            setSellerRequestNotice(null)
+            setSellerPositionId(value)
+          }}
+          onRequestReasonChange={(value) => {
+            setSellerRequestNotice(null)
+            setSellerRequestReason(value)
+          }}
+          onSubmit={submitSellerCodeRequest}
+          positionOptionsQuery={positionOptionsQuery}
+          createError={sellerCodeMutation.error}
+          resubmitError={resubmitSellerCodeMutation.error}
+          sellerEmploymentType={sellerEmploymentType}
+          sellerFirstName={sellerFirstName}
+          sellerHireDate={sellerHireDate}
+          sellerLastName={sellerLastName}
+          sellerNationalId={sellerNationalId}
+          sellerPhoneNumber={sellerPhoneNumber}
+          sellerPositionId={sellerPositionId}
+          sellerRequestReason={sellerRequestReason}
+          storeId={storeId}
+          t={t}
+        />
 
-              <div className="stacked-row">
-                <label className="eyebrow" htmlFor="request-month">
-                  {t('storeApprovals.requestMonth')}
-                </label>
-                <input
-                  id="request-month"
-                  type="month"
-                  value={requestMonth}
-                  onChange={(event) => {
-                    setSubmissionNotice(null)
-                    setRequestMonth(event.target.value)
-                  }}
-                />
-              </div>
-
-              <div className="stacked-row">
-                <label className="eyebrow" htmlFor="target-label">
-                  {t('storeApprovals.targetLabel')}
-                </label>
-                <input
-                  id="target-label"
-                  value={targetLabel}
-                  onChange={(event) => {
-                    setSubmissionNotice(null)
-                    setTargetLabel(event.target.value)
-                  }}
-                  placeholder={t('storeApprovals.targetLabelPlaceholder')}
-                />
-              </div>
-
-              <div className="stacked-row">
-                <label className="eyebrow" htmlFor="total-target-value">
-                  {t('storeApprovals.totalTargetValue')}
-                </label>
-                <input
-                  id="total-target-value"
-                  type="number"
-                  min="0"
-                  value={totalTargetValue}
-                  onChange={(event) => {
-                    setSubmissionNotice(null)
-                    setTotalTargetValue(event.target.value)
-                  }}
-                />
-              </div>
-
-              <div className="stacked-row">
-                <label className="eyebrow" htmlFor="request-reason">
-                  {t('storeApprovals.requestReason')}
-                </label>
-                <textarea
-                  id="request-reason"
-                  rows={3}
-                  value={requestReason}
-                  onChange={(event) => {
-                    setSubmissionNotice(null)
-                    setRequestReason(event.target.value)
-                  }}
-                  placeholder={t('storeApprovals.regionNotePlaceholder')}
-                />
-              </div>
-
-              <div className="stacked-row">
-                <div className="stacked-row-head">
-                  <strong>{t('storeApprovals.personTargetEntry')}</strong>
-                  <StatusPill tone={totalsAligned ? 'calm' : 'warning'}>
-                    {`${allocationTotal}/${Number(totalTargetValue || 0)}`}
-                  </StatusPill>
-                </div>
-                {personnelQuery.isError ? (
-                  <p className="queue-subtitle">{getErrorMessage(personnelQuery.error)}</p>
-                ) : null}
-                {personnelQuery.isLoading ? (
-                  <p className="queue-subtitle">{t('storeApprovals.personnelLoading')}</p>
-                ) : null}
-                {!personnelQuery.isLoading && !personnelQuery.isError ? (
-                  <p className="queue-subtitle">{t('storeApprovals.personTargetCopy')}</p>
-                ) : null}
-
-                <div className="stacked-table">
-                  {activeAllocations.map((allocation, index) => {
-                    const selectedPerson = personnelById.get(allocation.employeeId)
-
-                    return (
-                      <div className="stacked-row" key={`allocation-${allocation.employeeId || index}`}>
-                        {selectedPerson ? (
-                          <div className="key-grid">
-                            <KeyValue
-                              label={t('storeApprovals.personnel')}
-                              value={allocation.assigneeLabel || t('storeApprovals.unassigned')}
-                            />
-                            <KeyValue
-                              label={t('storeApprovals.currentSales')}
-                              value={
-                                selectedPerson.netSalesValue !== null &&
-                                selectedPerson.netSalesValue !== undefined
-                                  ? formatNumber(selectedPerson.netSalesValue, locale, {
-                                      currency: 'TRY',
-                                      maximumFractionDigits: 0,
-                                      style: 'currency',
-                                    })
-                                  : t('storeApprovals.noData')
-                              }
-                            />
-                          </div>
-                        ) : (
-                          <select
-                            value={allocation.employeeId}
-                            onChange={(event) => {
-                              const selected = personnelById.get(event.target.value)
-                              setSubmissionNotice(null)
-                              setAllocations(
-                                activeAllocations.map((item, itemIndex) =>
-                                  itemIndex === index
-                                    ? {
-                                        ...item,
-                                        employeeId: event.target.value,
-                                        assigneeLabel: selected?.displayName ?? '',
-                                      }
-                                    : item,
-                                ),
-                              )
-                            }}
-                          >
-                            <option value="">{t('storeApprovals.selectPersonnel')}</option>
-                            {(personnelQuery.data?.items ?? []).map((person) => (
-                              <option key={person.employeeId} value={person.employeeId}>
-                                {person.displayName}
-                              </option>
-                            ))}
-                          </select>
-                        )}
-                        <input
-                          aria-label={t('storeApprovals.personTargetValue')}
-                          type="number"
-                          min="0"
-                          value={allocation.targetValue}
-                          onChange={(event) => {
-                            setSubmissionNotice(null)
-                            setAllocations(
-                              activeAllocations.map((item, itemIndex) =>
-                                itemIndex === index
-                                  ? { ...item, targetValue: Number(event.target.value) }
-                                  : item,
-                              ),
-                            )
-                          }}
-                          placeholder={t('storeApprovals.targetValuePlaceholder')}
-                        />
-                        <input
-                          value={allocation.note ?? ''}
-                          onChange={(event) => {
-                            setSubmissionNotice(null)
-                            setAllocations(
-                              activeAllocations.map((item, itemIndex) =>
-                                itemIndex === index ? { ...item, note: event.target.value } : item,
-                              ),
-                            )
-                          }}
-                          placeholder={t('storeApprovals.optionalNote')}
-                        />
-                        {activeAllocations.length > 1 ? (
-                          <button
-                            className="control-button"
-                            type="button"
-                            onClick={() =>
-                              setAllocations(activeAllocations.filter((_, itemIndex) => itemIndex !== index))
-                            }
-                          >
-                            {t('storeApprovals.remove')}
-                          </button>
-                        ) : null}
-                      </div>
-                    )
-                  })}
-                </div>
-
-                {!totalsAligned ? (
-                  <p className="queue-subtitle">{t('storeApprovals.allocationMismatch')}</p>
-                ) : null}
-
-              <div className="action-cluster">
-                <button
-                  className="control-button"
-                  type="button"
-                  disabled={!canCreateForStore}
-                  onClick={() => {
-                    setSubmissionNotice(null)
-                    setAllocations([
-                      ...activeAllocations,
-                      { employeeId: '', assigneeLabel: '', targetValue: 0, note: '' },
-                    ])
-                  }}
-                >
-                  {t('storeApprovals.addAllocation')}
-                </button>
-              </div>
-              </div>
-
-              <div className="action-cluster">
-                <button
-                  className="control-button"
-                  type="button"
-                  disabled={!canSubmit || createMutation.isPending}
-                  onClick={() =>
-                    createMutation.mutate({
-                      storeId,
-                      requestMonth: `${requestMonth}-01`,
-                      targetLabel,
-                      totalTargetValue: Number(totalTargetValue),
-                      requestReason: requestReason || undefined,
-                      allocations: activeAllocations,
-                    })
-                  }
-                >
-                  {createMutation.isPending
-                    ? t('storeApprovals.submitting')
-                    : t('storeApprovals.submitTargetRequest')}
-                </button>
-              </div>
-
-              {createMutation.isError ? (
-                <p className="queue-subtitle">{getErrorMessage(createMutation.error)}</p>
-              ) : null}
-              {submissionNotice ? <p className="queue-subtitle">{submissionNotice}</p> : null}
-            </div>
-          )}
-        </article>
-
-        <article className="panel" aria-label={t('storeApprovals.sellerFormAria')}>
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">{t('storeApprovals.personnelRequest')}</div>
-              <h3>{t('storeApprovals.sellerCodeTitle')}</h3>
-            </div>
-            <StatusPill tone="calm">{t('storeApprovals.hrQueue')}</StatusPill>
-          </div>
-
-          {!canCreateForStore ? (
-            <EmptyState
-              title={t('storeApprovals.assignedActionStoreRequired')}
-              copy={t('storeApprovals.sellerUnavailableCopy')}
-            />
-          ) : (
-            <div className="stacked-table">
-              <div className="stacked-row">
-                <label className="eyebrow" htmlFor="seller-store-id">
-                  {t('storeApprovals.storeId')}
-                </label>
-                <input id="seller-store-id" value={storeId} readOnly />
-              </div>
-
-              <div className="stacked-row">
-                <label className="eyebrow" htmlFor="seller-first-name">
-                  {t('storeApprovals.firstName')}
-                </label>
-                <input
-                  id="seller-first-name"
-                  value={sellerFirstName}
-                  onChange={(event) => {
-                    setSellerRequestNotice(null)
-                    setSellerFirstName(event.target.value)
-                  }}
-                  placeholder={t('storeApprovals.firstNamePlaceholder')}
-                />
-              </div>
-
-              <div className="stacked-row">
-                <label className="eyebrow" htmlFor="seller-last-name">
-                  {t('storeApprovals.lastName')}
-                </label>
-                <input
-                  id="seller-last-name"
-                  value={sellerLastName}
-                  onChange={(event) => {
-                    setSellerRequestNotice(null)
-                    setSellerLastName(event.target.value)
-                  }}
-                  placeholder={t('storeApprovals.lastNamePlaceholder')}
-                />
-              </div>
-
-              <div className="stacked-row">
-                <label className="eyebrow" htmlFor="seller-position-id">
-                  {t('storeApprovals.position')}
-                </label>
-                <select
-                  id="seller-position-id"
-                  value={sellerPositionId}
-                  disabled={positionOptionsQuery.isLoading || positionOptionsQuery.isError}
-                  onChange={(event) => {
-                    setSellerRequestNotice(null)
-                    setSellerPositionId(event.target.value)
-                  }}
-                >
-                  <option value="">{t('storeApprovals.selectPosition')}</option>
-                  {(positionOptionsQuery.data?.items ?? []).map((position) => (
-                    <option key={position.positionId} value={position.positionId}>
-                      {position.positionName} ({position.positionCode})
-                    </option>
-                  ))}
-                </select>
-                {positionOptionsQuery.isLoading ? (
-                  <p className="queue-subtitle">{t('storeApprovals.positionsLoading')}</p>
-                ) : null}
-                {positionOptionsQuery.isError ? (
-                  <p className="queue-subtitle">{getErrorMessage(positionOptionsQuery.error)}</p>
-                ) : null}
-                {!positionOptionsQuery.isLoading &&
-                !positionOptionsQuery.isError &&
-                (positionOptionsQuery.data?.items.length ?? 0) === 0 ? (
-                  <p className="queue-subtitle">{t('storeApprovals.noPositions')}</p>
-                ) : null}
-              </div>
-
-              <div className="stacked-row">
-                <label className="eyebrow" htmlFor="seller-national-id">
-                  {t('storeApprovals.nationalId')}
-                </label>
-                <input
-                  id="seller-national-id"
-                  inputMode="numeric"
-                  maxLength={11}
-                  value={sellerNationalId}
-                  onChange={(event) => {
-                    setSellerRequestNotice(null)
-                    setSellerNationalId(event.target.value.replace(/\D/g, '').slice(0, 11))
-                  }}
-                  placeholder="12345678901"
-                />
-              </div>
-
-              <div className="stacked-row">
-                <label className="eyebrow" htmlFor="seller-phone-number">
-                  {t('storeApprovals.phoneNumber')}
-                </label>
-                <input
-                  id="seller-phone-number"
-                  type="tel"
-                  value={sellerPhoneNumber}
-                  onChange={(event) => {
-                    setSellerRequestNotice(null)
-                    setSellerPhoneNumber(event.target.value)
-                  }}
-                  placeholder="05551234567"
-                />
-              </div>
-
-              <div className="stacked-row">
-                <label className="eyebrow" htmlFor="seller-hire-date">
-                  {t('storeApprovals.hireDate')}
-                </label>
-                <input
-                  id="seller-hire-date"
-                  type="date"
-                  value={sellerHireDate}
-                  onChange={(event) => {
-                    setSellerRequestNotice(null)
-                    setSellerHireDate(event.target.value)
-                  }}
-                />
-              </div>
-
-              <div className="stacked-row">
-                <label className="eyebrow" htmlFor="seller-employment-type">
-                  {t('storeApprovals.employmentType')}
-                </label>
-                <select
-                  id="seller-employment-type"
-                  value={sellerEmploymentType}
-                  onChange={(event) => {
-                    setSellerRequestNotice(null)
-                    setSellerEmploymentType(event.target.value as SellerEmploymentType)
-                  }}
-                >
-                  <option value="full_time">{formatEmploymentType('full_time', t)}</option>
-                  <option value="part_time">{formatEmploymentType('part_time', t)}</option>
-                  <option value="temporary">{formatEmploymentType('temporary', t)}</option>
-                </select>
-              </div>
-
-              <div className="stacked-row">
-                <label className="eyebrow" htmlFor="seller-request-reason">
-                  {t('storeApprovals.requestReason')}
-                </label>
-                <textarea
-                  id="seller-request-reason"
-                  rows={3}
-                  value={sellerRequestReason}
-                  onChange={(event) => {
-                    setSellerRequestNotice(null)
-                    setSellerRequestReason(event.target.value)
-                  }}
-                  placeholder={t('storeApprovals.newPersonnelPlaceholder')}
-                />
-              </div>
-
-              <div className="action-cluster">
-                <button
-                  className="control-button"
-                  type="button"
-                  disabled={!canSubmitSellerCodeRequest || sellerRequestPending}
-                  onClick={() => {
-                    const payload = {
-                      firstName: sellerFirstName.trim(),
-                      lastName: sellerLastName.trim(),
-                      nationalId: sellerNationalId.trim(),
-                      phoneNumber: sellerPhoneNumber.trim(),
-                      hireDate: sellerHireDate,
-                      requestedPositionId: sellerPositionId.trim(),
-                      employmentType: sellerEmploymentType,
-                      requestReason: sellerRequestReason.trim() || undefined,
-                    }
-
-                    if (editingSellerRequestId) {
-                      resubmitSellerCodeMutation.mutate({
-                        requestId: editingSellerRequestId,
-                        ...payload,
-                      })
-                      return
-                    }
-
-                    sellerCodeMutation.mutate({
-                      storeId,
-                      requestType: 'create_code',
-                      ...payload,
-                    })
-                  }}
-                >
-                  {sellerRequestPending
-                    ? t('storeApprovals.submitting')
-                    : editingSellerRequestId
-                      ? t('storeApprovals.resubmitSellerCodeRequest')
-                      : t('storeApprovals.submitSellerCodeRequest')}
-                </button>
-                {editingSellerRequestId ? (
-                  <button
-                    className="control-button"
-                    type="button"
-                    disabled={sellerRequestPending}
-                    onClick={() => {
-                      setEditingSellerRequestId(null)
-                      setSellerFirstName('')
-                      setSellerLastName('')
-                      setSellerNationalId('')
-                      setSellerPhoneNumber('')
-                      setSellerHireDate(new Date().toISOString().slice(0, 10))
-                      setSellerPositionId('')
-                      setSellerEmploymentType('full_time')
-                      setSellerRequestReason('')
-                      setSellerRequestNotice(null)
-                    }}
-                  >
-                    {t('storeApprovals.cancelEdit')}
-                  </button>
-                ) : null}
-              </div>
-
-              {sellerCodeMutation.isError ? (
-                <p className="queue-subtitle">{getErrorMessage(sellerCodeMutation.error)}</p>
-              ) : null}
-              {resubmitSellerCodeMutation.isError ? (
-                <p className="queue-subtitle">{getErrorMessage(resubmitSellerCodeMutation.error)}</p>
-              ) : null}
-              {sellerRequestNotice ? (
-                <p className="queue-subtitle">{sellerRequestNotice}</p>
-              ) : null}
-            </div>
-          )}
-        </article>
-
-        <article className="panel" aria-label={t('storeApprovals.offboardingFormAria')}>
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">{t('storeApprovals.personnelRequest')}</div>
-              <h3>{t('storeApprovals.offboardingTitle')}</h3>
-            </div>
-            <StatusPill tone="warning">{t('storeApprovals.hrQueue')}</StatusPill>
-          </div>
-
-          {!canCreateForStore ? (
-            <EmptyState
-              title={t('storeApprovals.assignedActionStoreRequired')}
-              copy={t('storeApprovals.offboardingUnavailableCopy')}
-            />
-          ) : (
-            <div className="stacked-table">
-              <div className="stacked-row">
-                <label className="eyebrow" htmlFor="offboarding-employee-id">
-                  {t('storeApprovals.employee')}
-                </label>
-                <select
-                  id="offboarding-employee-id"
-                  value={offboardingEmployeeId}
-                  disabled={storeEmployeesQuery.isLoading || storeEmployeesQuery.isError}
-                  onChange={(event) => {
-                    setOffboardingNotice(null)
-                    setOffboardingEmployeeId(event.target.value)
-                  }}
-                >
-                  <option value="">{t('storeApprovals.selectEmployee')}</option>
-                  {(storeEmployeesQuery.data?.items ?? []).map((employee) => (
-                    <option key={employee.employeeId} value={employee.employeeId}>
-                      {employee.displayName} ({employee.externalEmployeeRef ?? employee.positionName})
-                    </option>
-                  ))}
-                </select>
-                {storeEmployeesQuery.isLoading ? (
-                  <p className="queue-subtitle">{t('storeApprovals.activePersonnelLoading')}</p>
-                ) : null}
-                {storeEmployeesQuery.isError ? (
-                  <p className="queue-subtitle">{getErrorMessage(storeEmployeesQuery.error)}</p>
-                ) : null}
-                {!storeEmployeesQuery.isLoading &&
-                !storeEmployeesQuery.isError &&
-                (storeEmployeesQuery.data?.items.length ?? 0) === 0 ? (
-                  <p className="queue-subtitle">{t('storeApprovals.noActivePersonnel')}</p>
-                ) : null}
-              </div>
-
-              <div className="stacked-row">
-                <label className="eyebrow" htmlFor="offboarding-termination-date">
-                  {t('storeApprovals.terminationDate')}
-                </label>
-                <input
-                  id="offboarding-termination-date"
-                  type="date"
-                  value={offboardingTerminationDate}
-                  onChange={(event) => {
-                    setOffboardingNotice(null)
-                    setOffboardingTerminationDate(event.target.value)
-                  }}
-                />
-              </div>
-
-              <div className="stacked-row">
-                <label className="eyebrow" htmlFor="offboarding-termination-reason">
-                  {t('storeApprovals.terminationReason')}
-                </label>
-                <input
-                  id="offboarding-termination-reason"
-                  value={offboardingTerminationReason}
-                  onChange={(event) => {
-                    setOffboardingNotice(null)
-                    setOffboardingTerminationReason(event.target.value)
-                  }}
-                  placeholder={t('storeApprovals.resignationPlaceholder')}
-                />
-              </div>
-
-              <div className="stacked-row">
-                <label className="eyebrow" htmlFor="offboarding-request-reason">
-                  {t('storeApprovals.requestReason')}
-                </label>
-                <textarea
-                  id="offboarding-request-reason"
-                  rows={3}
-                  value={offboardingRequestReason}
-                  onChange={(event) => {
-                    setOffboardingNotice(null)
-                    setOffboardingRequestReason(event.target.value)
-                  }}
-                  placeholder={t('storeApprovals.offboardingReasonPlaceholder')}
-                />
-              </div>
-
-              <div className="action-cluster">
-                <button
-                  className="control-button"
-                  type="button"
-                  disabled={!canSubmitOffboardingRequest || offboardingRequestPending}
-                  onClick={() => {
-                    const payload = {
-                      employeeId: offboardingEmployeeId,
-                      terminationDate: offboardingTerminationDate,
-                      terminationReason: offboardingTerminationReason.trim(),
-                      requestReason: offboardingRequestReason.trim(),
-                    }
-
-                    if (editingOffboardingRequestId) {
-                      resubmitOffboardingMutation.mutate({
-                        requestId: editingOffboardingRequestId,
-                        ...payload,
-                      })
-                      return
-                    }
-
-                    offboardingMutation.mutate({
-                      storeId,
-                      ...payload,
-                    })
-                  }}
-                >
-                  {offboardingRequestPending
-                    ? t('storeApprovals.submitting')
-                    : editingOffboardingRequestId
-                      ? t('storeApprovals.resubmitOffboardingRequest')
-                      : t('storeApprovals.submitOffboardingRequest')}
-                </button>
-                {editingOffboardingRequestId ? (
-                  <button
-                    className="control-button"
-                    type="button"
-                    disabled={offboardingRequestPending}
-                    onClick={() => {
-                      setEditingOffboardingRequestId(null)
-                      setOffboardingEmployeeId('')
-                      setOffboardingTerminationDate(new Date().toISOString().slice(0, 10))
-                      setOffboardingTerminationReason('resignation')
-                      setOffboardingRequestReason('')
-                      setOffboardingNotice(null)
-                    }}
-                  >
-                    {t('storeApprovals.cancelEdit')}
-                  </button>
-                ) : null}
-              </div>
-
-              {offboardingMutation.isError ? (
-                <p className="queue-subtitle">{getErrorMessage(offboardingMutation.error)}</p>
-              ) : null}
-              {resubmitOffboardingMutation.isError ? (
-                <p className="queue-subtitle">{getErrorMessage(resubmitOffboardingMutation.error)}</p>
-              ) : null}
-              {offboardingNotice ? <p className="queue-subtitle">{offboardingNotice}</p> : null}
-            </div>
-          )}
-        </article>
+        <OffboardingRequestForm
+          canCreateForStore={canCreateForStore}
+          canSubmit={canSubmitOffboardingRequest}
+          createError={offboardingMutation.error}
+          editingRequestId={editingOffboardingRequestId}
+          hasCreateError={offboardingMutation.isError}
+          hasResubmitError={resubmitOffboardingMutation.isError}
+          isPending={offboardingRequestPending}
+          notice={offboardingNotice}
+          offboardingEmployeeId={offboardingEmployeeId}
+          offboardingRequestReason={offboardingRequestReason}
+          offboardingTerminationDate={offboardingTerminationDate}
+          offboardingTerminationReason={offboardingTerminationReason}
+          onCancelEdit={cancelOffboardingRequestEdit}
+          onEmployeeIdChange={(value) => {
+            setOffboardingNotice(null)
+            setOffboardingEmployeeId(value)
+          }}
+          onRequestReasonChange={(value) => {
+            setOffboardingNotice(null)
+            setOffboardingRequestReason(value)
+          }}
+          onSubmit={submitOffboardingRequest}
+          onTerminationDateChange={(value) => {
+            setOffboardingNotice(null)
+            setOffboardingTerminationDate(value)
+          }}
+          onTerminationReasonChange={(value) => {
+            setOffboardingNotice(null)
+            setOffboardingTerminationReason(value)
+          }}
+          resubmitError={resubmitOffboardingMutation.error}
+          storeEmployeesQuery={storeEmployeesQuery}
+          t={t}
+        />
 
         <article className="panel">
           <div className="panel-heading">
@@ -1201,70 +728,7 @@ export function StoreApprovalsPage(input: {
         </article>
       </section>
 
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('storeApprovals.submittedEyebrow')}</div>
-            <h3>{t('storeApprovals.submittedTitle')}</h3>
-          </div>
-        </div>
-
-        {requests.length === 0 ? (
-          <EmptyState
-            title={t('storeApprovals.noSubmittedTitle')}
-            copy={t('storeApprovals.noSubmittedCopy')}
-          />
-        ) : (
-          <div className="stacked-table">
-            {requests.map((item) => (
-              <article className="stacked-row" key={item.requestId}>
-                <div className="stacked-row-head">
-                  <strong>{item.targetLabel}</strong>
-                  <StatusPill tone={item.status === 'approved' ? 'calm' : 'warning'}>
-                    {formatApprovalStatus(item.status, t)}
-                  </StatusPill>
-                </div>
-                <p>
-                  {t('storeApprovals.targetSummary', {
-                    month: formatDate(item.requestMonth, locale),
-                    storeName: item.storeName || item.storeId,
-                    value: item.totalTargetValue,
-                  })}
-                </p>
-                <div className="key-grid">
-                  <KeyValue
-                    label={t('storeApprovals.allocationCount')}
-                    value={String(item.allocationCount)}
-                  />
-                  <KeyValue
-                    label={t('storeApprovals.createdAt')}
-                    value={formatDateTime(item.createdAt, locale)}
-                  />
-                  <KeyValue
-                    label={t('storeApprovals.approvedAt')}
-                    value={
-                      item.approvedAt
-                        ? formatDateTime(item.approvedAt, locale)
-                        : t('storeApprovals.pending')
-                    }
-                  />
-                  <KeyValue label={t('storeApprovals.requestId')} value={item.requestId} />
-                </div>
-                {item.requestReason ? (
-                  <p className="queue-subtitle">
-                    {t('storeApprovals.reasonPrefix', { reason: item.requestReason })}
-                  </p>
-                ) : null}
-                {item.approvalNote ? (
-                  <p className="queue-subtitle">
-                    {t('storeApprovals.approvalNotePrefix', { note: item.approvalNote })}
-                  </p>
-                ) : null}
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
+      <SubmittedTargetRequestsPanel locale={locale} requests={requests} t={t} />
 
       <section className="two-up-grid">
         <article className="panel">
@@ -1326,6 +790,843 @@ export function StoreApprovalsPage(input: {
           {t('storeApprovals.openRegionApprovalQueue')}
         </Link>
       </div>
+    </section>
+  )
+}
+
+function ReturnedRequestsPanel(input: {
+  locale: AppLocale
+  returnedOffboardingRequests: OffboardingRequest[]
+  returnedSellerCodeRequests: SellerCodeRequest[]
+  sellerCodeRequestsError: unknown
+  hasSellerCodeRequestsError: boolean
+  offboardingRequestsError: unknown
+  hasOffboardingRequestsError: boolean
+  onEditOffboardingRequest: (item: OffboardingRequest) => void
+  onEditSellerCodeRequest: (item: SellerCodeRequest) => void
+  t: TranslateFunction
+}) {
+  const returnedRequestCount =
+    input.returnedSellerCodeRequests.length + input.returnedOffboardingRequests.length
+
+  return (
+    <section className="panel" aria-label={input.t('storeApprovals.returnedAria')}>
+      <div className="panel-heading">
+        <div>
+          <div className="eyebrow">{input.t('storeApprovals.returnedEyebrow')}</div>
+          <h3>{input.t('storeApprovals.returnedTitle')}</h3>
+        </div>
+        <StatusPill tone={returnedRequestCount > 0 ? 'warning' : 'calm'}>
+          {String(returnedRequestCount)}
+        </StatusPill>
+      </div>
+
+      {input.hasSellerCodeRequestsError || input.hasOffboardingRequestsError ? (
+        <div className="inline-state inline-state-danger">
+          {getErrorMessage(input.sellerCodeRequestsError ?? input.offboardingRequestsError)}
+        </div>
+      ) : returnedRequestCount === 0 ? (
+        <EmptyState
+          title={input.t('storeApprovals.returnedEmptyTitle')}
+          copy={input.t('storeApprovals.returnedEmptyCopy')}
+        />
+      ) : (
+        <div className="stacked-table">
+          {input.returnedSellerCodeRequests.map((item) => (
+            <article className="stacked-row" key={item.requestId}>
+              <div className="stacked-row-head">
+                <div>
+                  <strong>{`${item.firstName} ${item.lastName}`.trim()}</strong>
+                  <p className="queue-subtitle">
+                    {input.t('storeApprovals.sellerRequestSummary', {
+                      last4: item.nationalIdLast4,
+                      storeName: item.storeName,
+                    })}
+                  </p>
+                </div>
+                <StatusPill tone="warning">
+                  {formatApprovalStatus(item.status, input.t)}
+                </StatusPill>
+              </div>
+              <div className="key-grid">
+                <KeyValue label={input.t('storeApprovals.position')} value={item.positionName} />
+                <KeyValue
+                  label={input.t('storeApprovals.reviewNote')}
+                  value={item.reviewNote ?? input.t('storeApprovals.noNote')}
+                />
+                <KeyValue
+                  label={input.t('storeApprovals.updatedAt')}
+                  value={formatDateTime(item.updatedAt, input.locale)}
+                />
+                <KeyValue label={input.t('storeApprovals.requestId')} value={item.requestId} />
+              </div>
+              <div className="action-cluster">
+                <button
+                  className="control-button"
+                  type="button"
+                  onClick={() => input.onEditSellerCodeRequest(item)}
+                >
+                  {input.t('storeApprovals.editSellerCodeRequest')}
+                </button>
+              </div>
+            </article>
+          ))}
+
+          {input.returnedOffboardingRequests.map((item) => (
+            <article className="stacked-row" key={item.requestId}>
+              <div className="stacked-row-head">
+                <div>
+                  <strong>{item.displayName}</strong>
+                  <p className="queue-subtitle">
+                    {input.t('storeApprovals.offboardingRequestSummary', {
+                      ref: item.externalEmployeeRef ?? input.t('storeApprovals.noSellerCode'),
+                      storeName: item.storeName,
+                    })}
+                  </p>
+                </div>
+                <StatusPill tone="warning">
+                  {formatApprovalStatus(item.status, input.t)}
+                </StatusPill>
+              </div>
+              <div className="key-grid">
+                <KeyValue
+                  label={input.t('storeApprovals.terminationDate')}
+                  value={formatDate(item.terminationDate, input.locale)}
+                />
+                <KeyValue
+                  label={input.t('storeApprovals.terminationReason')}
+                  value={item.terminationReason}
+                />
+                <KeyValue
+                  label={input.t('storeApprovals.reviewNote')}
+                  value={item.reviewNote ?? input.t('storeApprovals.noNote')}
+                />
+                <KeyValue label={input.t('storeApprovals.requestId')} value={item.requestId} />
+              </div>
+              <div className="action-cluster">
+                <button
+                  className="control-button"
+                  type="button"
+                  onClick={() => input.onEditOffboardingRequest(item)}
+                >
+                  {input.t('storeApprovals.editOffboardingRequest')}
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+function TargetDistributionRequestForm(input: {
+  activeAllocations: TargetDistributionAllocation[]
+  allocationTotal: number
+  assignedStoreIds: string[]
+  canCreateForStore: boolean
+  canSubmit: boolean
+  createError: unknown
+  hasCreateError: boolean
+  isSubmitting: boolean
+  locale: AppLocale
+  onAddAllocation: () => void
+  onAllocationNoteChange: (index: number, value: string) => void
+  onAllocationPersonChange: (index: number, employeeId: string, assigneeLabel: string) => void
+  onAllocationValueChange: (index: number, targetValue: number) => void
+  onRemoveAllocation: (index: number) => void
+  onRequestMonthChange: StringFieldSetter
+  onRequestReasonChange: StringFieldSetter
+  onStoreIdChange: StringFieldSetter
+  onSubmit: () => void
+  onTargetLabelChange: StringFieldSetter
+  onTotalTargetValueChange: StringFieldSetter
+  personnelById: ReadonlyMap<string, StoreTargetingPerson>
+  personnelQuery: ListQuerySnapshot<StoreTargetingPerson>
+  primaryStoreId: string | null
+  requestMonth: string
+  requestReason: string
+  storeId: string
+  submissionNotice: string | null
+  targetLabel: string
+  t: TranslateFunction
+  totalTargetValue: string
+  totalsAligned: boolean
+}) {
+  return (
+    <article className="panel" aria-label={input.t('storeApprovals.targetFormAria')}>
+      <div className="panel-heading">
+        <div>
+          <div className="eyebrow">{input.t('storeApprovals.futureInbox')}</div>
+          <h3>{input.t('storeApprovals.targetTitle')}</h3>
+        </div>
+        <StatusPill tone="accent">{input.t('storeApprovals.writeFlow')}</StatusPill>
+      </div>
+
+      {!input.canCreateForStore ? (
+        <EmptyState
+          title={input.t('storeApprovals.assignedActionStoreRequired')}
+          copy={input.t('storeApprovals.targetUnavailableCopy')}
+        />
+      ) : (
+        <div className="stacked-table">
+          <div className="stacked-row">
+            <label className="eyebrow" htmlFor="store-id">
+              {input.t('storeApprovals.storeId')}
+            </label>
+            {input.assignedStoreIds.length > 1 ? (
+              <select
+                id="store-id"
+                value={input.storeId}
+                onChange={(event) => input.onStoreIdChange(event.target.value)}
+              >
+                {input.assignedStoreIds.map((assignedStoreId) => (
+                  <option key={assignedStoreId} value={assignedStoreId}>
+                    {assignedStoreId}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                id="store-id"
+                value={input.storeId}
+                onChange={(event) => input.onStoreIdChange(event.target.value)}
+                placeholder={input.t('storeApprovals.scopedStoreId')}
+                readOnly={Boolean(input.primaryStoreId)}
+              />
+            )}
+          </div>
+
+          <div className="stacked-row">
+            <label className="eyebrow" htmlFor="request-month">
+              {input.t('storeApprovals.requestMonth')}
+            </label>
+            <input
+              id="request-month"
+              type="month"
+              value={input.requestMonth}
+              onChange={(event) => input.onRequestMonthChange(event.target.value)}
+            />
+          </div>
+
+          <div className="stacked-row">
+            <label className="eyebrow" htmlFor="target-label">
+              {input.t('storeApprovals.targetLabel')}
+            </label>
+            <input
+              id="target-label"
+              value={input.targetLabel}
+              onChange={(event) => input.onTargetLabelChange(event.target.value)}
+              placeholder={input.t('storeApprovals.targetLabelPlaceholder')}
+            />
+          </div>
+
+          <div className="stacked-row">
+            <label className="eyebrow" htmlFor="total-target-value">
+              {input.t('storeApprovals.totalTargetValue')}
+            </label>
+            <input
+              id="total-target-value"
+              type="number"
+              min="0"
+              value={input.totalTargetValue}
+              onChange={(event) => input.onTotalTargetValueChange(event.target.value)}
+            />
+          </div>
+
+          <div className="stacked-row">
+            <label className="eyebrow" htmlFor="request-reason">
+              {input.t('storeApprovals.requestReason')}
+            </label>
+            <textarea
+              id="request-reason"
+              rows={3}
+              value={input.requestReason}
+              onChange={(event) => input.onRequestReasonChange(event.target.value)}
+              placeholder={input.t('storeApprovals.regionNotePlaceholder')}
+            />
+          </div>
+
+          <div className="stacked-row">
+            <div className="stacked-row-head">
+              <strong>{input.t('storeApprovals.personTargetEntry')}</strong>
+              <StatusPill tone={input.totalsAligned ? 'calm' : 'warning'}>
+                {`${input.allocationTotal}/${Number(input.totalTargetValue || 0)}`}
+              </StatusPill>
+            </div>
+            {input.personnelQuery.isError ? (
+              <p className="queue-subtitle">
+                {getErrorMessage(input.personnelQuery.error)}
+              </p>
+            ) : null}
+            {input.personnelQuery.isLoading ? (
+              <p className="queue-subtitle">
+                {input.t('storeApprovals.personnelLoading')}
+              </p>
+            ) : null}
+            {!input.personnelQuery.isLoading && !input.personnelQuery.isError ? (
+              <p className="queue-subtitle">
+                {input.t('storeApprovals.personTargetCopy')}
+              </p>
+            ) : null}
+
+            <div className="stacked-table">
+              {input.activeAllocations.map((allocation, index) => {
+                const selectedPerson = input.personnelById.get(allocation.employeeId)
+
+                return (
+                  <div className="stacked-row" key={`allocation-${allocation.employeeId || index}`}>
+                    {selectedPerson ? (
+                      <div className="key-grid">
+                        <KeyValue
+                          label={input.t('storeApprovals.personnel')}
+                          value={allocation.assigneeLabel || input.t('storeApprovals.unassigned')}
+                        />
+                        <KeyValue
+                          label={input.t('storeApprovals.currentSales')}
+                          value={
+                            selectedPerson.netSalesValue !== null &&
+                            selectedPerson.netSalesValue !== undefined
+                              ? formatNumber(selectedPerson.netSalesValue, input.locale, {
+                                  currency: 'TRY',
+                                  maximumFractionDigits: 0,
+                                  style: 'currency',
+                                })
+                              : input.t('storeApprovals.noData')
+                          }
+                        />
+                      </div>
+                    ) : (
+                      <select
+                        value={allocation.employeeId}
+                        onChange={(event) => {
+                          const selected = input.personnelById.get(event.target.value)
+                          input.onAllocationPersonChange(
+                            index,
+                            event.target.value,
+                            selected?.displayName ?? '',
+                          )
+                        }}
+                      >
+                        <option value="">{input.t('storeApprovals.selectPersonnel')}</option>
+                        {(input.personnelQuery.data?.items ?? []).map((person) => (
+                          <option key={person.employeeId} value={person.employeeId}>
+                            {person.displayName}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    <input
+                      aria-label={input.t('storeApprovals.personTargetValue')}
+                      type="number"
+                      min="0"
+                      value={allocation.targetValue}
+                      onChange={(event) =>
+                        input.onAllocationValueChange(index, Number(event.target.value))
+                      }
+                      placeholder={input.t('storeApprovals.targetValuePlaceholder')}
+                    />
+                    <input
+                      value={allocation.note ?? ''}
+                      onChange={(event) => input.onAllocationNoteChange(index, event.target.value)}
+                      placeholder={input.t('storeApprovals.optionalNote')}
+                    />
+                    {input.activeAllocations.length > 1 ? (
+                      <button
+                        className="control-button"
+                        type="button"
+                        onClick={() => input.onRemoveAllocation(index)}
+                      >
+                        {input.t('storeApprovals.remove')}
+                      </button>
+                    ) : null}
+                  </div>
+                )
+              })}
+            </div>
+
+            {!input.totalsAligned ? (
+              <p className="queue-subtitle">
+                {input.t('storeApprovals.allocationMismatch')}
+              </p>
+            ) : null}
+
+            <div className="action-cluster">
+              <button
+                className="control-button"
+                type="button"
+                disabled={!input.canCreateForStore}
+                onClick={input.onAddAllocation}
+              >
+                {input.t('storeApprovals.addAllocation')}
+              </button>
+            </div>
+          </div>
+
+          <div className="action-cluster">
+            <button
+              className="control-button"
+              type="button"
+              disabled={!input.canSubmit || input.isSubmitting}
+              onClick={input.onSubmit}
+            >
+              {input.isSubmitting
+                ? input.t('storeApprovals.submitting')
+                : input.t('storeApprovals.submitTargetRequest')}
+            </button>
+          </div>
+
+          {input.hasCreateError ? (
+            <p className="queue-subtitle">{getErrorMessage(input.createError)}</p>
+          ) : null}
+          {input.submissionNotice ? (
+            <p className="queue-subtitle">{input.submissionNotice}</p>
+          ) : null}
+        </div>
+      )}
+    </article>
+  )
+}
+
+function SellerCodeRequestForm(input: {
+  canCreateForStore: boolean
+  canSubmit: boolean
+  createError: unknown
+  editingRequestId: string | null
+  hasCreateError: boolean
+  hasResubmitError: boolean
+  isPending: boolean
+  notice: string | null
+  onCancelEdit: () => void
+  onEmploymentTypeChange: (value: SellerEmploymentType) => void
+  onFirstNameChange: StringFieldSetter
+  onHireDateChange: StringFieldSetter
+  onLastNameChange: StringFieldSetter
+  onNationalIdChange: StringFieldSetter
+  onPhoneNumberChange: StringFieldSetter
+  onPositionIdChange: StringFieldSetter
+  onRequestReasonChange: StringFieldSetter
+  onSubmit: () => void
+  positionOptionsQuery: ListQuerySnapshot<PositionOption>
+  resubmitError: unknown
+  sellerEmploymentType: SellerEmploymentType
+  sellerFirstName: string
+  sellerHireDate: string
+  sellerLastName: string
+  sellerNationalId: string
+  sellerPhoneNumber: string
+  sellerPositionId: string
+  sellerRequestReason: string
+  storeId: string
+  t: TranslateFunction
+}) {
+  return (
+    <article className="panel" aria-label={input.t('storeApprovals.sellerFormAria')}>
+      <div className="panel-heading">
+        <div>
+          <div className="eyebrow">{input.t('storeApprovals.personnelRequest')}</div>
+          <h3>{input.t('storeApprovals.sellerCodeTitle')}</h3>
+        </div>
+        <StatusPill tone="calm">{input.t('storeApprovals.hrQueue')}</StatusPill>
+      </div>
+
+      {!input.canCreateForStore ? (
+        <EmptyState
+          title={input.t('storeApprovals.assignedActionStoreRequired')}
+          copy={input.t('storeApprovals.sellerUnavailableCopy')}
+        />
+      ) : (
+        <div className="stacked-table">
+          <div className="stacked-row">
+            <label className="eyebrow" htmlFor="seller-store-id">
+              {input.t('storeApprovals.storeId')}
+            </label>
+            <input id="seller-store-id" value={input.storeId} readOnly />
+          </div>
+
+          <div className="stacked-row">
+            <label className="eyebrow" htmlFor="seller-first-name">
+              {input.t('storeApprovals.firstName')}
+            </label>
+            <input
+              id="seller-first-name"
+              value={input.sellerFirstName}
+              onChange={(event) => input.onFirstNameChange(event.target.value)}
+              placeholder={input.t('storeApprovals.firstNamePlaceholder')}
+            />
+          </div>
+
+          <div className="stacked-row">
+            <label className="eyebrow" htmlFor="seller-last-name">
+              {input.t('storeApprovals.lastName')}
+            </label>
+            <input
+              id="seller-last-name"
+              value={input.sellerLastName}
+              onChange={(event) => input.onLastNameChange(event.target.value)}
+              placeholder={input.t('storeApprovals.lastNamePlaceholder')}
+            />
+          </div>
+
+          <div className="stacked-row">
+            <label className="eyebrow" htmlFor="seller-position-id">
+              {input.t('storeApprovals.position')}
+            </label>
+            <select
+              id="seller-position-id"
+              value={input.sellerPositionId}
+              disabled={input.positionOptionsQuery.isLoading || input.positionOptionsQuery.isError}
+              onChange={(event) => input.onPositionIdChange(event.target.value)}
+            >
+              <option value="">{input.t('storeApprovals.selectPosition')}</option>
+              {(input.positionOptionsQuery.data?.items ?? []).map((position) => (
+                <option key={position.positionId} value={position.positionId}>
+                  {position.positionName} ({position.positionCode})
+                </option>
+              ))}
+            </select>
+            {input.positionOptionsQuery.isLoading ? (
+              <p className="queue-subtitle">
+                {input.t('storeApprovals.positionsLoading')}
+              </p>
+            ) : null}
+            {input.positionOptionsQuery.isError ? (
+              <p className="queue-subtitle">
+                {getErrorMessage(input.positionOptionsQuery.error)}
+              </p>
+            ) : null}
+            {!input.positionOptionsQuery.isLoading &&
+            !input.positionOptionsQuery.isError &&
+            (input.positionOptionsQuery.data?.items.length ?? 0) === 0 ? (
+              <p className="queue-subtitle">{input.t('storeApprovals.noPositions')}</p>
+            ) : null}
+          </div>
+
+          <div className="stacked-row">
+            <label className="eyebrow" htmlFor="seller-national-id">
+              {input.t('storeApprovals.nationalId')}
+            </label>
+            <input
+              id="seller-national-id"
+              inputMode="numeric"
+              maxLength={11}
+              value={input.sellerNationalId}
+              onChange={(event) => input.onNationalIdChange(event.target.value)}
+              placeholder="12345678901"
+            />
+          </div>
+
+          <div className="stacked-row">
+            <label className="eyebrow" htmlFor="seller-phone-number">
+              {input.t('storeApprovals.phoneNumber')}
+            </label>
+            <input
+              id="seller-phone-number"
+              type="tel"
+              value={input.sellerPhoneNumber}
+              onChange={(event) => input.onPhoneNumberChange(event.target.value)}
+              placeholder="05551234567"
+            />
+          </div>
+
+          <div className="stacked-row">
+            <label className="eyebrow" htmlFor="seller-hire-date">
+              {input.t('storeApprovals.hireDate')}
+            </label>
+            <input
+              id="seller-hire-date"
+              type="date"
+              value={input.sellerHireDate}
+              onChange={(event) => input.onHireDateChange(event.target.value)}
+            />
+          </div>
+
+          <div className="stacked-row">
+            <label className="eyebrow" htmlFor="seller-employment-type">
+              {input.t('storeApprovals.employmentType')}
+            </label>
+            <select
+              id="seller-employment-type"
+              value={input.sellerEmploymentType}
+              onChange={(event) =>
+                input.onEmploymentTypeChange(event.target.value as SellerEmploymentType)
+              }
+            >
+              <option value="full_time">{formatEmploymentType('full_time', input.t)}</option>
+              <option value="part_time">{formatEmploymentType('part_time', input.t)}</option>
+              <option value="temporary">{formatEmploymentType('temporary', input.t)}</option>
+            </select>
+          </div>
+
+          <div className="stacked-row">
+            <label className="eyebrow" htmlFor="seller-request-reason">
+              {input.t('storeApprovals.requestReason')}
+            </label>
+            <textarea
+              id="seller-request-reason"
+              rows={3}
+              value={input.sellerRequestReason}
+              onChange={(event) => input.onRequestReasonChange(event.target.value)}
+              placeholder={input.t('storeApprovals.newPersonnelPlaceholder')}
+            />
+          </div>
+
+          <div className="action-cluster">
+            <button
+              className="control-button"
+              type="button"
+              disabled={!input.canSubmit || input.isPending}
+              onClick={input.onSubmit}
+            >
+              {input.isPending
+                ? input.t('storeApprovals.submitting')
+                : input.editingRequestId
+                  ? input.t('storeApprovals.resubmitSellerCodeRequest')
+                  : input.t('storeApprovals.submitSellerCodeRequest')}
+            </button>
+            {input.editingRequestId ? (
+              <button
+                className="control-button"
+                type="button"
+                disabled={input.isPending}
+                onClick={input.onCancelEdit}
+              >
+                {input.t('storeApprovals.cancelEdit')}
+              </button>
+            ) : null}
+          </div>
+
+          {input.hasCreateError ? (
+            <p className="queue-subtitle">{getErrorMessage(input.createError)}</p>
+          ) : null}
+          {input.hasResubmitError ? (
+            <p className="queue-subtitle">{getErrorMessage(input.resubmitError)}</p>
+          ) : null}
+          {input.notice ? <p className="queue-subtitle">{input.notice}</p> : null}
+        </div>
+      )}
+    </article>
+  )
+}
+
+function OffboardingRequestForm(input: {
+  canCreateForStore: boolean
+  canSubmit: boolean
+  createError: unknown
+  editingRequestId: string | null
+  hasCreateError: boolean
+  hasResubmitError: boolean
+  isPending: boolean
+  notice: string | null
+  offboardingEmployeeId: string
+  offboardingRequestReason: string
+  offboardingTerminationDate: string
+  offboardingTerminationReason: string
+  onCancelEdit: () => void
+  onEmployeeIdChange: StringFieldSetter
+  onRequestReasonChange: StringFieldSetter
+  onSubmit: () => void
+  onTerminationDateChange: StringFieldSetter
+  onTerminationReasonChange: StringFieldSetter
+  resubmitError: unknown
+  storeEmployeesQuery: ListQuerySnapshot<StoreEmployee>
+  t: TranslateFunction
+}) {
+  return (
+    <article className="panel" aria-label={input.t('storeApprovals.offboardingFormAria')}>
+      <div className="panel-heading">
+        <div>
+          <div className="eyebrow">{input.t('storeApprovals.personnelRequest')}</div>
+          <h3>{input.t('storeApprovals.offboardingTitle')}</h3>
+        </div>
+        <StatusPill tone="warning">{input.t('storeApprovals.hrQueue')}</StatusPill>
+      </div>
+
+      {!input.canCreateForStore ? (
+        <EmptyState
+          title={input.t('storeApprovals.assignedActionStoreRequired')}
+          copy={input.t('storeApprovals.offboardingUnavailableCopy')}
+        />
+      ) : (
+        <div className="stacked-table">
+          <div className="stacked-row">
+            <label className="eyebrow" htmlFor="offboarding-employee-id">
+              {input.t('storeApprovals.employee')}
+            </label>
+            <select
+              id="offboarding-employee-id"
+              value={input.offboardingEmployeeId}
+              disabled={input.storeEmployeesQuery.isLoading || input.storeEmployeesQuery.isError}
+              onChange={(event) => input.onEmployeeIdChange(event.target.value)}
+            >
+              <option value="">{input.t('storeApprovals.selectEmployee')}</option>
+              {(input.storeEmployeesQuery.data?.items ?? []).map((employee) => (
+                <option key={employee.employeeId} value={employee.employeeId}>
+                  {employee.displayName} ({employee.externalEmployeeRef ?? employee.positionName})
+                </option>
+              ))}
+            </select>
+            {input.storeEmployeesQuery.isLoading ? (
+              <p className="queue-subtitle">
+                {input.t('storeApprovals.activePersonnelLoading')}
+              </p>
+            ) : null}
+            {input.storeEmployeesQuery.isError ? (
+              <p className="queue-subtitle">
+                {getErrorMessage(input.storeEmployeesQuery.error)}
+              </p>
+            ) : null}
+            {!input.storeEmployeesQuery.isLoading &&
+            !input.storeEmployeesQuery.isError &&
+            (input.storeEmployeesQuery.data?.items.length ?? 0) === 0 ? (
+              <p className="queue-subtitle">{input.t('storeApprovals.noActivePersonnel')}</p>
+            ) : null}
+          </div>
+
+          <div className="stacked-row">
+            <label className="eyebrow" htmlFor="offboarding-termination-date">
+              {input.t('storeApprovals.terminationDate')}
+            </label>
+            <input
+              id="offboarding-termination-date"
+              type="date"
+              value={input.offboardingTerminationDate}
+              onChange={(event) => input.onTerminationDateChange(event.target.value)}
+            />
+          </div>
+
+          <div className="stacked-row">
+            <label className="eyebrow" htmlFor="offboarding-termination-reason">
+              {input.t('storeApprovals.terminationReason')}
+            </label>
+            <input
+              id="offboarding-termination-reason"
+              value={input.offboardingTerminationReason}
+              onChange={(event) => input.onTerminationReasonChange(event.target.value)}
+              placeholder={input.t('storeApprovals.resignationPlaceholder')}
+            />
+          </div>
+
+          <div className="stacked-row">
+            <label className="eyebrow" htmlFor="offboarding-request-reason">
+              {input.t('storeApprovals.requestReason')}
+            </label>
+            <textarea
+              id="offboarding-request-reason"
+              rows={3}
+              value={input.offboardingRequestReason}
+              onChange={(event) => input.onRequestReasonChange(event.target.value)}
+              placeholder={input.t('storeApprovals.offboardingReasonPlaceholder')}
+            />
+          </div>
+
+          <div className="action-cluster">
+            <button
+              className="control-button"
+              type="button"
+              disabled={!input.canSubmit || input.isPending}
+              onClick={input.onSubmit}
+            >
+              {input.isPending
+                ? input.t('storeApprovals.submitting')
+                : input.editingRequestId
+                  ? input.t('storeApprovals.resubmitOffboardingRequest')
+                  : input.t('storeApprovals.submitOffboardingRequest')}
+            </button>
+            {input.editingRequestId ? (
+              <button
+                className="control-button"
+                type="button"
+                disabled={input.isPending}
+                onClick={input.onCancelEdit}
+              >
+                {input.t('storeApprovals.cancelEdit')}
+              </button>
+            ) : null}
+          </div>
+
+          {input.hasCreateError ? (
+            <p className="queue-subtitle">{getErrorMessage(input.createError)}</p>
+          ) : null}
+          {input.hasResubmitError ? (
+            <p className="queue-subtitle">{getErrorMessage(input.resubmitError)}</p>
+          ) : null}
+          {input.notice ? <p className="queue-subtitle">{input.notice}</p> : null}
+        </div>
+      )}
+    </article>
+  )
+}
+
+function SubmittedTargetRequestsPanel(input: {
+  locale: AppLocale
+  requests: TargetDistributionRequest[]
+  t: TranslateFunction
+}) {
+  return (
+    <section className="panel">
+      <div className="panel-heading">
+        <div>
+          <div className="eyebrow">{input.t('storeApprovals.submittedEyebrow')}</div>
+          <h3>{input.t('storeApprovals.submittedTitle')}</h3>
+        </div>
+      </div>
+
+      {input.requests.length === 0 ? (
+        <EmptyState
+          title={input.t('storeApprovals.noSubmittedTitle')}
+          copy={input.t('storeApprovals.noSubmittedCopy')}
+        />
+      ) : (
+        <div className="stacked-table">
+          {input.requests.map((item) => (
+            <article className="stacked-row" key={item.requestId}>
+              <div className="stacked-row-head">
+                <strong>{item.targetLabel}</strong>
+                <StatusPill tone={item.status === 'approved' ? 'calm' : 'warning'}>
+                  {formatApprovalStatus(item.status, input.t)}
+                </StatusPill>
+              </div>
+              <p>
+                {input.t('storeApprovals.targetSummary', {
+                  month: formatDate(item.requestMonth, input.locale),
+                  storeName: item.storeName || item.storeId,
+                  value: item.totalTargetValue,
+                })}
+              </p>
+              <div className="key-grid">
+                <KeyValue
+                  label={input.t('storeApprovals.allocationCount')}
+                  value={String(item.allocationCount)}
+                />
+                <KeyValue
+                  label={input.t('storeApprovals.createdAt')}
+                  value={formatDateTime(item.createdAt, input.locale)}
+                />
+                <KeyValue
+                  label={input.t('storeApprovals.approvedAt')}
+                  value={
+                    item.approvedAt
+                      ? formatDateTime(item.approvedAt, input.locale)
+                      : input.t('storeApprovals.pending')
+                  }
+                />
+                <KeyValue label={input.t('storeApprovals.requestId')} value={item.requestId} />
+              </div>
+              {item.requestReason ? (
+                <p className="queue-subtitle">
+                  {input.t('storeApprovals.reasonPrefix', { reason: item.requestReason })}
+                </p>
+              ) : null}
+              {item.approvalNote ? (
+                <p className="queue-subtitle">
+                  {input.t('storeApprovals.approvalNotePrefix', { note: item.approvalNote })}
+                </p>
+              ) : null}
+            </article>
+          ))}
+        </div>
+      )}
     </section>
   )
 }
