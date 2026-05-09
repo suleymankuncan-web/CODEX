@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "check:release": "npm run test:scripts && node scripts/check-release.mjs",
+    "perf:public": "node scripts/public-performance-baseline.mjs",
     "smoke:migration:fresh-db": "node scripts/migration-fresh-db-smoke.mjs",
     "test:scripts": "node --test scripts/*.test.mjs",
     "check:pilot-stabilization": "node --test scripts/pilot-route-role-matrix-contract.test.mjs scripts/pilot-release-smoke-checklist-contract.test.mjs scripts/ranking-demo-live-boundary-contract.test.mjs scripts/pilot-stabilization-release-gate-contract.test.mjs && npm.cmd --prefix admin-web run smoke:pilot"

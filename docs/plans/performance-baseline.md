@@ -31,15 +31,28 @@ Establish one repeatable measurement path for the critical backend flows before 
 ## Measurement Harness
 - script: [scripts/performance-baseline.ts](../../backend/nestjs/scripts/performance-baseline.ts)
 - npm command:
-  - `npm.cmd run perf:baseline`
+  - `npm.cmd --prefix backend/nestjs run perf:baseline`
+- public frontend/API script: [public-performance-baseline.mjs](../../scripts/public-performance-baseline.mjs)
+- root npm command:
+  - `npm.cmd run perf:public`
 
 ### Environment Inputs
 - `PERF_BASE_URL`
 - `PERF_ITERATIONS`
+- `PERF_TARGET_PROFILE=admin|store-manager|store-personnel|all`
+- `PERF_AUTH_TOKEN` or `SMOKE_AUTH_TOKEN` or `STORE_ME_SMOKE_TOKEN` for real staging JWT/bearer mode
 - `PERF_USER_ID`
 - `PERF_ROLE_CODES`
 - `PERF_COMPANY_IDS`
 - `PERF_ENABLE_MUTATIONS=true` for command timing
+- `PUBLIC_PERF_FRONTEND_BASE_URL`
+- `PUBLIC_PERF_API_BASE_URL`
+- `PUBLIC_PERF_ITERATIONS`
+- `PUBLIC_PERF_ASSET_ITERATIONS`
+- `PUBLIC_PERF_FRONTEND_ROUTES`
+- `PUBLIC_PERF_API_PATHS`
+
+When running against staging from Node on Windows, use `NODE_OPTIONS=--dns-result-order=ipv4first` if the first fetch attempt times out while PowerShell/browser access works.
 
 ## Current Reality
 
@@ -151,4 +164,10 @@ If real numbers exceed these targets, the next action should be:
 3. compare checklist / turnover p95 stability before Phase 7 expansion
 
 ## Current Status
-Status: Harness ready, first live baseline captured
+Status: Harness ready, local live baseline captured, public staging baseline captured.
+
+Latest staging evidence:
+
+- [Staging Public Performance Baseline - 2026-05-09](../evidence/performance/2026-05-09-staging-public-performance-baseline.md)
+
+Protected staging API baseline is still blocked until a real bearer token or smoke auth session is provided.
