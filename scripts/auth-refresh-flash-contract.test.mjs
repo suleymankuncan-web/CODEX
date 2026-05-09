@@ -14,6 +14,7 @@ function requireText(text, expected) {
 }
 
 const app = readText('admin-web/src/App.tsx')
+const shellState = readText('admin-web/src/app/shell-state.ts')
 const sessionContext = readText('admin-web/src/features/session/session-context.tsx')
 const sessionContextValue = readText('admin-web/src/features/session/session-context-value.ts')
 const clerkSession = readText('admin-web/src/features/auth/clerk-session.tsx')
@@ -24,9 +25,9 @@ test('protected routes wait for Clerk bearer hydration instead of flashing throu
   requireText(sessionContext, 'isClerkSessionProviderAvailable')
   requireText(sessionContext, 'isProviderSessionHydrating')
   requireText(app, 'isProviderSessionHydrating')
-  requireText(app, 'providerSessionHydrating')
+  requireText(app, 'providerSessionHydrating: isProviderSessionHydrating')
   assert.match(
-    app,
+    shellState,
     /if \(!input\.isReady && input\.providerSessionHydrating\) \{[\s\S]*?mode: 'verifying'/,
     'shell state must prefer verifying while the external provider is hydrating a bearer token',
   )
