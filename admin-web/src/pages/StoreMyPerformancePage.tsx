@@ -14,15 +14,18 @@ import { useLocalization } from '../features/localization/useLocalization'
 import { getKpiConfig, getMyPerformance, getReportingSnapshotRuns } from '../features/reports/api'
 import { formatSnapshotOptionLabel } from '../features/reports/snapshot-labels'
 import {
-  formatBenchmarkRatio,
+  describeLocalizedBenchmarkCap,
+  formatKpiAchievementValue,
+  formatKpiMetricValue,
+  formatLocalizedPerformanceGrade,
+  localizeKpiSourceSemantics,
+  resolveLocalizedKpiScoreReference,
+} from '../features/kpi/display'
+import {
   type PerformanceGradeCode,
   resolvePerformanceGrade,
 } from '../features/kpi/grading'
-import {
-  resolveKpiSourceSemantics,
-  type KpiSourceKind,
-} from '../features/kpi/source-semantics'
-import { formatDate, formatNumber as formatIntlNumber, getErrorMessage } from '../lib/format'
+import { formatDate, getErrorMessage } from '../lib/format'
 import { getIntlLocale, type AppLocale } from '../lib/i18n'
 
 function canUseSelfPerformance(authSummary: AuthSessionSummary | null) {
@@ -37,34 +40,6 @@ const metricLabelKeyByCode: Record<string, TranslationKey> = {
   CR: 'storeRankings.metric.cr',
 }
 
-function formatMetric(locale: AppLocale, input: number) {
-  return formatIntlNumber(input, locale, {
-    minimumFractionDigits: Number.isInteger(input) ? 0 : 2,
-    maximumFractionDigits: 2,
-  })
-}
-
-function formatPercent(locale: AppLocale, input: number) {
-  return `${formatMetric(locale, input * 100)}%`
-}
-
-function formatMetricValue(
-  locale: AppLocale,
-  t: TranslateFunction,
-  input: number | null,
-  code: string,
-) {
-  if (input === null) {
-    return t('storeMe.noData')
-  }
-
-  if (code === 'TARGET_ACHIEVEMENT') {
-    return formatPercent(locale, input)
-  }
-
-  return formatMetric(locale, input)
-}
-
 function formatCurrency(locale: AppLocale, t: TranslateFunction, input: number | null) {
   if (input === null) {
     return t('storeMe.noData')
@@ -75,33 +50,6 @@ function formatCurrency(locale: AppLocale, t: TranslateFunction, input: number |
     currency: 'TRY',
     maximumFractionDigits: 0,
   }).format(input)
-}
-
-function formatAchievementValue(
-  locale: AppLocale,
-  t: TranslateFunction,
-  metric: {
-    targetValue?: number | null
-    achievementRate?: number | null
-    actualValue: number | null
-    scoreStatus?: string
-  },
-) {
-  if (metric.scoreStatus === 'missing_reference') {
-    return t('storeMe.missingReference')
-  }
-
-  if (metric.achievementRate === null || metric.achievementRate === undefined) {
-    return metric.actualValue !== null
-      ? t('storeMe.pendingNormalizationStatus')
-      : t('storeMe.noData')
-  }
-
-  if (metric.targetValue !== null && metric.targetValue !== undefined) {
-    return formatPercent(locale, metric.achievementRate)
-  }
-
-  return t('storeMe.scorePoints', { value: formatMetric(locale, metric.achievementRate) })
 }
 
 function formatSourceMode(t: TranslateFunction, mode: string) {
@@ -128,36 +76,6 @@ function formatPeriodLabel(
   }
 
   return t('storeMe.currentPeriod')
-}
-
-function getKpiSourceKey(kind: string, suffix: 'label' | 'summary'): TranslationKey {
-  const supportedKinds: KpiSourceKind[] = [
-    'imported',
-    'derived',
-    'checklist_fed',
-    'pending_normalization',
-    'missing_reference',
-    'missing',
-  ]
-  const normalizedKind = supportedKinds.includes(kind as KpiSourceKind) ? kind : 'imported'
-  return `storeMe.source.${normalizedKind}.${suffix}` as TranslationKey
-}
-
-function formatKpiSourceLabel(t: TranslateFunction, input: { kind: string; label: string }) {
-  return t(getKpiSourceKey(input.kind, 'label'))
-}
-
-function formatKpiSourceSummary(t: TranslateFunction, input: { kind: string; summary: string }) {
-  return t(getKpiSourceKey(input.kind, 'summary'))
-}
-
-function formatStorePerformanceGrade(
-  t: TranslateFunction,
-  grade: ReturnType<typeof resolvePerformanceGrade>,
-) {
-  const labelKey = `storeMe.grade.${grade.code}` as TranslationKey
-
-  return `${grade.emoji} ${grade.code} - ${t(labelKey)}`
 }
 
 function resolveLocalizedScoreMeaning(input: {
@@ -215,67 +133,9 @@ function formatMetricScoreStatusText(t: TranslateFunction, status: string | null
   }
 }
 
-function getScoreReference(input: {
-  t: TranslateFunction
-  targetValue?: number | null
-  benchmarkValue?: number | null
-  benchmarkSource?: string | null
-}) {
-  if (input.targetValue !== null && input.targetValue !== undefined) {
-    return {
-      value: input.targetValue,
-      sourceLabel: input.t('storeMe.reference.target'),
-    }
-  }
-
-  if (input.benchmarkValue !== null && input.benchmarkValue !== undefined) {
-    if (input.benchmarkSource === 'TURKEY_AVERAGE') {
-      return {
-        value: input.benchmarkValue,
-        sourceLabel: input.t('storeMe.reference.turkeyAverage'),
-      }
-    }
-
-    if (input.benchmarkSource === 'CHECKLIST_SCORE') {
-      return {
-        value: input.benchmarkValue,
-        sourceLabel: input.t('storeMe.reference.checklistScore'),
-      }
-    }
-
-    return {
-      value: input.benchmarkValue,
-      sourceLabel: input.t('storeMe.reference.default'),
-    }
-  }
-
-  return {
-    value: null,
-    sourceLabel: input.t('storeMe.reference.pending'),
-  }
-}
-
 function getMetricLabel(t: TranslateFunction, metric: { code: string; label: string }) {
   const key = metricLabelKeyByCode[metric.code]
   return key ? t(key) : metric.label
-}
-
-function describeLocalizedBenchmarkCap(
-  t: TranslateFunction,
-  input: {
-    actualRatio?: number | null
-    scoredRatio?: number | null
-    isCapped?: boolean
-  },
-) {
-  if (!input.isCapped || !input.actualRatio || !input.scoredRatio) {
-    return null
-  }
-
-  return t('storeMe.benchmarkCap', {
-    actual: formatBenchmarkRatio(input.actualRatio, 'prefix').replace('%', ''),
-    scored: formatBenchmarkRatio(input.scoredRatio).replace('%', ''),
-  })
 }
 
 export function StoreMyPerformancePage(input: {
@@ -564,7 +424,7 @@ export function StoreMyPerformancePage(input: {
         <MetricCard
           title={t('storeMe.performanceScore')}
           value={Number(performance.score.value.toFixed(1))}
-          note={`${formatStorePerformanceGrade(t, performanceGrade)} - ${t('storeMe.matchedMetrics', {
+          note={`${formatLocalizedPerformanceGrade(t, 'storeMe', performanceGrade)} - ${t('storeMe.matchedMetrics', {
             matched: performance.score.matchedMetrics,
             total: performance.score.totalMetrics,
           })}`}
@@ -619,7 +479,7 @@ export function StoreMyPerformancePage(input: {
           <KeyValue label={t('storeMe.focus')} value={scoreMeaning.focus} />
           <KeyValue
             label={t('storeMe.scoreLevel')}
-            value={formatStorePerformanceGrade(t, performanceGrade)}
+            value={formatLocalizedPerformanceGrade(t, 'storeMe', performanceGrade)}
           />
           <KeyValue label={t('storeMe.score')} value={performance.score.value.toFixed(1)} />
           <KeyValue
@@ -641,15 +501,20 @@ export function StoreMyPerformancePage(input: {
             <h3>{performance.employee.displayName}</h3>
           </div>
           <StatusPill tone={performanceGrade.tone}>
-            {`${formatStorePerformanceGrade(t, performanceGrade)} - ${performance.score.value.toFixed(1)}`}
+            {`${formatLocalizedPerformanceGrade(t, 'storeMe', performanceGrade)} - ${performance.score.value.toFixed(1)}`}
           </StatusPill>
         </div>
         <p className="queue-subtitle">{t('storeMe.kpiDetailsCopy')}</p>
         <div className="stacked-table">
           {performance.metrics.map((metric) => {
-            const sourceSemantics = resolveKpiSourceSemantics(metric)
-            const scoreReference = getScoreReference({
-              t,
+            const sourceSemantics = localizeKpiSourceSemantics(t, 'storeMe', metric)
+            const scoreReference = resolveLocalizedKpiScoreReference(t, {
+              target: 'storeMe.reference.target',
+              turkeyAverage: 'storeMe.reference.turkeyAverage',
+              checklistScore: 'storeMe.reference.checklistScore',
+              default: 'storeMe.reference.default',
+              pending: 'storeMe.reference.pending',
+            }, {
               targetValue: metric.targetValue ?? null,
               benchmarkValue: metric.benchmarkValue ?? null,
               benchmarkSource: metric.benchmarkSource ?? null,
@@ -678,15 +543,28 @@ export function StoreMyPerformancePage(input: {
                 <div className="key-grid">
                   <KeyValue
                     label={t('storeMe.actual')}
-                    value={formatMetricValue(locale, t, metric.actualValue, metric.code)}
+                    value={formatKpiMetricValue(locale, t, metric.actualValue, {
+                      noDataKey: 'storeMe.noData',
+                      code: metric.code,
+                      percentMetricCodes: ['TARGET_ACHIEVEMENT'],
+                    })}
                   />
                   <KeyValue
                     label={t('storeMe.achievement')}
-                    value={formatAchievementValue(locale, t, metric)}
+                    value={formatKpiAchievementValue(locale, t, metric, {
+                      missingReference: 'storeMe.missingReference',
+                      pendingNormalization: 'storeMe.pendingNormalizationStatus',
+                      noData: 'storeMe.noData',
+                      scorePoints: 'storeMe.scorePoints',
+                    })}
                   />
                   <KeyValue
                     label={t('storeMe.scoreTarget')}
-                    value={formatMetricValue(locale, t, scoreReference.value, metric.code)}
+                    value={formatKpiMetricValue(locale, t, scoreReference.value, {
+                      noDataKey: 'storeMe.noData',
+                      code: metric.code,
+                      percentMetricCodes: ['TARGET_ACHIEVEMENT'],
+                    })}
                   />
                   <KeyValue label={t('storeMe.targetSource')} value={scoreReference.sourceLabel} />
                   <KeyValue
@@ -699,16 +577,16 @@ export function StoreMyPerformancePage(input: {
                   />
                   <KeyValue
                     label={t('storeMe.sourceType')}
-                    value={formatKpiSourceLabel(t, sourceSemantics)}
+                    value={sourceSemantics.label}
                   />
                   <KeyValue
                     label={t('storeMe.dataSource')}
-                    value={formatKpiSourceSummary(t, sourceSemantics)}
+                    value={sourceSemantics.summary}
                   />
                 </div>
                 {metric.isCapped ? (
                   <p className="queue-subtitle">
-                    {describeLocalizedBenchmarkCap(t, {
+                    {describeLocalizedBenchmarkCap(t, 'storeMe.benchmarkCap', {
                       actualRatio: metric.actualRatio,
                       scoredRatio: metric.scoredRatio,
                       isCapped: metric.isCapped,
