@@ -5,11 +5,15 @@ describe("ClosedRankingService", () => {
   const storeId = "22222222-2222-4222-8222-222222222222";
 
   function createRepositoryMock(overrides?: Record<string, jest.Mock>) {
-    return {
+    const reportingRepository = {
       getEmployeeIdForUser: jest.fn(),
       resolveEmployeeIdForAuthIdentity: jest.fn(async (input) => input.employeeId ?? null),
       getLatestCompletedSnapshotRunByType: jest.fn(),
       getCompletedDailySnapshotByDate: jest.fn(),
+      getEmployeePerformanceSnapshot: jest.fn(),
+      ...overrides,
+    };
+    const closedRankingRepository = {
       listClosedDailyPersonnelRankRows: jest.fn(),
       listClosedDailyMetricRankRows: jest.fn(),
       listCompletedDailySnapshotsInMonth: jest.fn(),
@@ -17,13 +21,27 @@ describe("ClosedRankingService", () => {
       listClosedMonthlyMetricRankRows: jest.fn(),
       ...overrides,
     };
+
+    return {
+      ...reportingRepository,
+      ...closedRankingRepository,
+      reportingRepository,
+      closedRankingRepository,
+    };
+  }
+
+  function createService(repository: ReturnType<typeof createRepositoryMock>) {
+    return new ClosedRankingService(
+      repository.reportingRepository as never,
+      repository.closedRankingRepository as never,
+    );
   }
 
   it("returns not_closed when no completed daily snapshot exists", async () => {
     const repository = createRepositoryMock({
       getCompletedDailySnapshotByDate: jest.fn(async () => null),
     });
-    const service = new ClosedRankingService(repository as never);
+    const service = createService(repository);
 
     const result = await service.getClosedLeaderboard({
       userId: "user-1",
@@ -103,7 +121,7 @@ describe("ClosedRankingService", () => {
         },
       ]),
     });
-    const service = new ClosedRankingService(repository as never);
+    const service = createService(repository);
 
     const result = await service.getClosedLeaderboard({
       userId: "user-1",
@@ -194,7 +212,7 @@ describe("ClosedRankingService", () => {
       ]),
       listClosedDailyMetricRankRows: jest.fn(async () => []),
     });
-    const service = new ClosedRankingService(repository as never);
+    const service = createService(repository);
 
     await expect(
       service.getClosedLeaderboard({
@@ -265,7 +283,7 @@ describe("ClosedRankingService", () => {
       ]),
       listClosedMonthlyMetricRankRows: jest.fn(async () => []),
     });
-    const service = new ClosedRankingService(repository as never);
+    const service = createService(repository);
 
     const result = await service.getClosedLeaderboard({
       userId: "user-1",
@@ -351,7 +369,7 @@ describe("ClosedRankingService", () => {
       ]),
       listClosedMonthlyMetricRankRows: jest.fn(async () => []),
     });
-    const service = new ClosedRankingService(repository as never);
+    const service = createService(repository);
 
     const result = await service.getClosedLeaderboard({
       userId: "user-1",
