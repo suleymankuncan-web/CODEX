@@ -35,12 +35,25 @@ Establish one repeatable measurement path for the critical backend flows before 
 - public frontend/API script: [public-performance-baseline.mjs](../../scripts/public-performance-baseline.mjs)
 - root npm command:
   - `npm.cmd run perf:public`
+- protected staging API gate: [protected-performance-baseline.mjs](../../scripts/protected-performance-baseline.mjs)
+- root npm command:
+  - `npm.cmd run perf:protected`
 
 ### Environment Inputs
 - `PERF_BASE_URL`
 - `PERF_ITERATIONS`
 - `PERF_TARGET_PROFILE=admin|store-manager|store-personnel|all`
 - `PERF_AUTH_TOKEN` or `SMOKE_AUTH_TOKEN` or `STORE_ME_SMOKE_TOKEN` for real staging JWT/bearer mode
+- `PROTECTED_PERF_PROFILES=store-manager,store-personnel`
+- `PROTECTED_PERF_STORE_MANAGER_TOKEN` for store-manager protected staging baseline
+- `PROTECTED_PERF_STORE_PERSONNEL_TOKEN` for store-personnel protected staging baseline
+- `PROTECTED_PERF_ADMIN_TOKEN` for admin protected staging baseline
+- `PROTECTED_PERF_TOKEN`, `PILOT_SMOKE_BEARER_TOKEN`, or `AUTH_SMOKE_BEARER_TOKEN` as single-token fallback inputs
+- `PROTECTED_PERF_ALLOW_BLOCKED=true` to record the current no-token blocker as JSON without failing the local shell
+- `PROTECTED_PERF_ALLOW_SHARED_TOKEN=true` to intentionally reuse one token across multiple endpoint profiles for diagnostics
+- `PROTECTED_PERF_API_BASE_URL`
+- `PROTECTED_PERF_ITERATIONS`
+- `PROTECTED_PERF_ENABLE_MUTATIONS=true`
 - `PERF_USER_ID`
 - `PERF_ROLE_CODES`
 - `PERF_COMPANY_IDS`
@@ -169,5 +182,24 @@ Status: Harness ready, local live baseline captured, public staging baseline cap
 Latest staging evidence:
 
 - [Staging Public Performance Baseline - 2026-05-09](../evidence/performance/2026-05-09-staging-public-performance-baseline.md)
+- [Staging Protected Performance Gate - 2026-05-09](../evidence/performance/2026-05-09-staging-protected-performance-gate.md)
 
-Protected staging API baseline is still blocked until a real bearer token or smoke auth session is provided.
+Protected staging API baseline is still blocked until real bearer tokens or smoke auth sessions are provided.
+
+### Protected staging API baseline
+
+Run the protected gate with fresh Clerk JWTs from the matching staging roles:
+
+```powershell
+$env:NODE_OPTIONS="--dns-result-order=ipv4first"
+$env:PROTECTED_PERF_API_BASE_URL="https://api-staging.hr-axis.com/api"
+$env:PROTECTED_PERF_STORE_MANAGER_TOKEN="<fresh-redacted-clerk-jwt>"
+$env:PROTECTED_PERF_STORE_PERSONNEL_TOKEN="<fresh-redacted-clerk-jwt>"
+npm.cmd run perf:protected
+Remove-Item Env:PROTECTED_PERF_STORE_MANAGER_TOKEN -ErrorAction SilentlyContinue
+Remove-Item Env:PROTECTED_PERF_STORE_PERSONNEL_TOKEN -ErrorAction SilentlyContinue
+```
+
+The gate fails when required protected tokens are missing unless `PROTECTED_PERF_ALLOW_BLOCKED=true` is set for blocker evidence capture.
+
+When measuring both `store-manager` and `store-personnel`, use profile-specific tokens by default. A shared fallback token is accepted only when measuring a single profile or when `PROTECTED_PERF_ALLOW_SHARED_TOKEN=true` is explicitly set for a diagnostic run.
