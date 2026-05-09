@@ -28,6 +28,11 @@ import {
   getImportDataQualityIssue,
   IMPORT_DATA_QUALITY_ISSUES,
 } from "./import-data-quality";
+import {
+  mapImportBatchDetailBatch,
+  mapImportBatchListItem,
+  mapImportBatchNeedsActionItem,
+} from "./import-batch-read-model.mapper";
 
 type SupportedEntityType =
   | "employee"
@@ -614,31 +619,16 @@ export class IntegrationService {
     });
 
     return buildListResponse(
-      result.rows.map((batch) => ({
-        batchId: batch.import_batch_id,
-        integrationSourceId: batch.integration_source_id,
-        sourceCode: batch.source_code,
-        sourceName: batch.source_name,
-        entityType: batch.entity_type,
-        sourceBatchId: batch.source_batch_id,
-        sourcePayloadHash: batch.source_payload_hash,
-        sourceCapturedAt: batch.source_captured_at,
-        sourceWindowStartedAt: batch.source_window_started_at,
-        sourceWindowEndedAt: batch.source_window_ended_at,
-        startedAt: batch.started_at,
-        finishedAt: batch.finished_at,
-        status: batch.status,
-        fileReference: batch.raw_file_name,
-        recordCount: batch.record_count,
-        errorCount: batch.error_count,
-        retryCount: batch.retry_count,
-        lastRetriedAt: batch.last_retried_at,
-        healthState: this.getListHealthState(
+      result.rows.map((batch) =>
+        mapImportBatchListItem(
+          batch,
+          this.getListHealthState(
           batch.status,
           Number(batch.error_count),
           batch.started_at,
         ),
-      })),
+        ),
+      ),
       { total: result.total, limit: input.limit, offset: input.offset },
     );
   }
@@ -814,33 +804,7 @@ export class IntegrationService {
           });
         }
 
-        return {
-          batchId: batch.import_batch_id,
-          integrationSourceId: batch.integration_source_id,
-          sourceCode: batch.source_code,
-          sourceName: batch.source_name,
-          entityType: batch.entity_type,
-          sourceBatchId: batch.source_batch_id,
-          sourcePayloadHash: batch.source_payload_hash,
-          sourceCapturedAt: batch.source_captured_at,
-          sourceWindowStartedAt: batch.source_window_started_at,
-          sourceWindowEndedAt: batch.source_window_ended_at,
-          startedAt: batch.started_at,
-          finishedAt: batch.finished_at,
-          status: batch.status,
-          fileReference: batch.raw_file_name,
-          recordCount: batch.record_count,
-          errorCount: batch.error_count,
-          retryCount: batch.retry_count,
-          lastRetriedAt: batch.last_retried_at,
-          healthState: batch.health_state,
-          actionReason: batch.action_reason,
-          recommendedAction: batch.recommended_action,
-          blockedByEntityTypes,
-          recommendedNextEntityType: blockedByEntityTypes[0] ?? null,
-          canRetryNow: batch.health_state === "retry_ready",
-          isStuck: batch.is_stuck,
-        };
+        return mapImportBatchNeedsActionItem(batch, blockedByEntityTypes);
       }),
     );
 
@@ -919,27 +883,7 @@ export class IntegrationService {
     });
 
     return {
-      batch: {
-        batchId: batch.import_batch_id,
-        integrationSourceId: batch.integration_source_id,
-        sourceCode: batch.source_code,
-        sourceName: batch.source_name,
-        entityType: batch.entity_type,
-        sourceBatchId: batch.source_batch_id,
-        sourcePayloadHash: batch.source_payload_hash,
-        sourceCapturedAt: batch.source_captured_at,
-        sourceWindowStartedAt: batch.source_window_started_at,
-        sourceWindowEndedAt: batch.source_window_ended_at,
-        startedAt: batch.started_at,
-        finishedAt: batch.finished_at,
-        status: batch.status,
-        fileReference: batch.raw_file_name,
-        recordCount: batch.record_count,
-        errorCount: batch.error_count,
-        retryCount: batch.retry_count,
-        lastRetriedAt: batch.last_retried_at,
-        healthState,
-      },
+      batch: mapImportBatchDetailBatch(batch, healthState),
       rowStatusSummary,
       dependencySummary,
       blockedByEntityTypes,
