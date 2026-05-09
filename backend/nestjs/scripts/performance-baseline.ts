@@ -22,10 +22,13 @@ type EndpointSummary = {
 
 const baseUrl = process.env.PERF_BASE_URL ?? "http://localhost:3000/api";
 const iterations = Number(process.env.PERF_ITERATIONS ?? "5");
+const targetProfile = process.env.PERF_TARGET_PROFILE ?? "admin";
+const authToken =
+  process.env.PERF_AUTH_TOKEN ??
+  process.env.SMOKE_AUTH_TOKEN ??
+  process.env.STORE_ME_SMOKE_TOKEN;
 const smokeUserId = process.env.PERF_USER_ID ?? "80000000-0000-0000-0000-000000000001";
-const roleCodes =
-  process.env.PERF_ROLE_CODES ??
-  "SUPER_ADMIN,INTEGRATION_ADMIN,SNAPSHOT_OPERATOR,REPORT_VIEWER,AUDITOR";
+const roleCodes = process.env.PERF_ROLE_CODES ?? getDefaultRoleCodes(targetProfile);
 const companyIds = process.env.PERF_COMPANY_IDS ?? "00000000-0000-0000-0000-000000000001";
 const enableMutations = process.env.PERF_ENABLE_MUTATIONS === "true";
 type JsonRecord = Record<string, any>;
@@ -41,52 +44,10 @@ async function main() {
 
   const authHeaders = buildHeaders();
   const samples: Sample[] = [];
-
-  const summaryResponse = await requestJson("/reports/summary", {
-    headers: authHeaders,
-  });
-  const summaryBody = summaryResponse.body as JsonRecord;
-  const latestSnapshotRunId =
-    summaryBody.latestCompletedSnapshotRun?.snapshotRunId ??
-    summaryBody.latestCompletedSnapshotRun?.snapshot_run_id ??
-    null;
-
-  const readEndpoints: Array<{
-    label: string;
-    method: "GET";
-    path: string;
-  }> = [
-    { label: "import overview", method: "GET", path: "/integrations/import-batches/overview" },
-    { label: "snapshot overview", method: "GET", path: "/snapshots/runs/overview" },
-    { label: "reports summary", method: "GET", path: "/reports/summary" },
-    { label: "integration needs-action", method: "GET", path: "/integrations/import-batches/needs-action?limit=12&offset=0" },
-    { label: "snapshot needs-action", method: "GET", path: "/snapshots/runs/needs-action?limit=12&offset=0" },
-  ];
-
-  if (latestSnapshotRunId) {
-    readEndpoints.push(
-      {
-        label: "reports workforce",
-        method: "GET",
-        path: `/reports/workforce?snapshotRunId=${latestSnapshotRunId}&limit=50&offset=0`,
-      },
-      {
-        label: "reports kpis",
-        method: "GET",
-        path: `/reports/kpis?snapshotRunId=${latestSnapshotRunId}&limit=50&offset=0`,
-      },
-      {
-        label: "reports checklists",
-        method: "GET",
-        path: `/reports/checklists?snapshotRunId=${latestSnapshotRunId}&limit=50&offset=0`,
-      },
-      {
-        label: "reports turnover",
-        method: "GET",
-        path: `/reports/turnover?snapshotRunId=${latestSnapshotRunId}&limit=50&offset=0`,
-      },
-    );
-  }
+  const { readEndpoints, latestSnapshotRunId } = await buildReadEndpoints(
+    targetProfile,
+    authHeaders,
+  );
 
   for (const endpoint of readEndpoints) {
     await runMeasuredRequest(endpoint.label, endpoint.method, endpoint.path, { headers: authHeaders }, samples);
@@ -112,7 +73,10 @@ async function main() {
         latestSnapshotRunId,
         environment: {
           enableMutations,
-          userId: smokeUserId,
+          targetProfile,
+          authMode: authToken ? "bearer" : "mock-headers",
+          userId: authToken ? null : smokeUserId,
+          roleCodes: authToken ? null : roleCodes,
         },
         readBaseline: grouped,
         mutationBaseline: mutationSamples,
@@ -121,6 +85,104 @@ async function main() {
       2,
     ),
   );
+}
+
+async function buildReadEndpoints(profile: string, authHeaders: HeadersInit) {
+  let latestSnapshotRunId: string | null = null;
+  const readEndpoints: Array<{
+    label: string;
+    method: "GET";
+    path: string;
+  }> = [];
+
+  if (profile === "admin" || profile === "all") {
+    const summaryResponse = await requestJson("/reports/summary", {
+      headers: authHeaders,
+    });
+    const summaryBody = summaryResponse.body as JsonRecord;
+    latestSnapshotRunId =
+      summaryBody.latestCompletedSnapshotRun?.snapshotRunId ??
+      summaryBody.latestCompletedSnapshotRun?.snapshot_run_id ??
+      null;
+
+    readEndpoints.push(
+      { label: "import overview", method: "GET", path: "/integrations/import-batches/overview" },
+      { label: "snapshot overview", method: "GET", path: "/snapshots/runs/overview" },
+      { label: "reports summary", method: "GET", path: "/reports/summary" },
+      {
+        label: "integration needs-action",
+        method: "GET",
+        path: "/integrations/import-batches/needs-action?limit=12&offset=0",
+      },
+      {
+        label: "snapshot needs-action",
+        method: "GET",
+        path: "/snapshots/runs/needs-action?limit=12&offset=0",
+      },
+    );
+
+    if (latestSnapshotRunId) {
+      readEndpoints.push(
+        {
+          label: "reports workforce",
+          method: "GET",
+          path: `/reports/workforce?snapshotRunId=${latestSnapshotRunId}&limit=50&offset=0`,
+        },
+        {
+          label: "reports kpis",
+          method: "GET",
+          path: `/reports/kpis?snapshotRunId=${latestSnapshotRunId}&limit=50&offset=0`,
+        },
+        {
+          label: "reports checklists",
+          method: "GET",
+          path: `/reports/checklists?snapshotRunId=${latestSnapshotRunId}&limit=50&offset=0`,
+        },
+        {
+          label: "reports turnover",
+          method: "GET",
+          path: `/reports/turnover?snapshotRunId=${latestSnapshotRunId}&limit=50&offset=0`,
+        },
+      );
+    }
+  }
+
+  if (profile === "store-manager" || profile === "store-personnel" || profile === "all") {
+    readEndpoints.push(
+      { label: "kpi config", method: "GET", path: "/reports/kpi-config" },
+      {
+        label: "my performance live",
+        method: "GET",
+        path: "/reports/my-performance?mode=live&periodType=monthly",
+      },
+      {
+        label: "rankings monthly",
+        method: "GET",
+        path: "/reports/rankings?periodType=monthly&limit=20&offset=0",
+      },
+      {
+        label: "closed leaderboard monthly",
+        method: "GET",
+        path: "/reports/leaderboards/closed?periodType=monthly&limit=10",
+      },
+    );
+  }
+
+  if (profile === "store-manager" || profile === "all") {
+    readEndpoints.push({
+      label: "store kpi highlights",
+      method: "GET",
+      path: "/reports/store-kpi-highlights?periodType=monthly",
+    });
+  }
+
+  if (readEndpoints.length === 0) {
+    throw new Error(
+      `Unknown PERF_TARGET_PROFILE "${profile}". Use admin, store-manager, store-personnel, or all.`,
+    );
+  }
+
+  return { readEndpoints, latestSnapshotRunId };
 }
 
 async function runMeasuredRequest(
@@ -252,11 +314,33 @@ function percentile(values: number[], ratio: number) {
 }
 
 function buildHeaders(): HeadersInit {
+  if (authToken) {
+    return {
+      authorization: `Bearer ${authToken}`,
+    };
+  }
+
   return {
     "x-user-id": smokeUserId,
     "x-role-codes": roleCodes,
     "x-company-ids": companyIds,
   };
+}
+
+function getDefaultRoleCodes(profile: string) {
+  if (profile === "store-manager") {
+    return "STORE_MANAGER,REPORT_VIEWER";
+  }
+
+  if (profile === "store-personnel") {
+    return "STORE_PERSONNEL";
+  }
+
+  if (profile === "all") {
+    return "SUPER_ADMIN,INTEGRATION_ADMIN,SNAPSHOT_OPERATOR,REPORT_VIEWER,AUDITOR,STORE_MANAGER,STORE_PERSONNEL,REGION_MANAGER";
+  }
+
+  return "SUPER_ADMIN,INTEGRATION_ADMIN,SNAPSHOT_OPERATOR,REPORT_VIEWER,AUDITOR";
 }
 
 function asRecord(headers: HeadersInit): Record<string, string> {
