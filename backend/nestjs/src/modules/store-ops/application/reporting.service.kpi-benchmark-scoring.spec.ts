@@ -34,6 +34,7 @@ describe("ReportingService KPI benchmark scoring", () => {
       reportingRepository as never,
       { getKpiConfigRows: jest.fn(async () => []) } as never,
       {} as never,
+      {} as never,
     );
 
     const result = await service.getStoreKpiHighlights({
@@ -85,6 +86,7 @@ describe("ReportingService KPI benchmark scoring", () => {
     const service = new ReportingService(
       reportingRepository as never,
       { getKpiConfigRows: jest.fn(async () => []) } as never,
+      {} as never,
       {} as never,
     );
 
@@ -167,6 +169,7 @@ describe("ReportingService KPI benchmark scoring", () => {
       reportingRepository as never,
       { getKpiConfigRows: jest.fn(async () => []) } as never,
       {} as never,
+      {} as never,
     );
 
     const result = await service.getMyPerformance({
@@ -229,6 +232,7 @@ describe("ReportingService KPI benchmark scoring", () => {
     const service = new ReportingService(
       reportingRepository as never,
       { getKpiConfigRows: jest.fn(async () => []) } as never,
+      {} as never,
       {} as never,
     );
 

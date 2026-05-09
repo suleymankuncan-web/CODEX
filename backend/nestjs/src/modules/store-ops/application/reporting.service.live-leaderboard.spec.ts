@@ -1,4 +1,5 @@
 import { ReportingService } from "./reporting.service";
+import { LiveMonthlyLeaderboardService } from "./live-monthly-leaderboard.service";
 
 describe("ReportingService live leaderboard fallback", () => {
   it("rejects explicit live fallback store filters outside the caller scope", async () => {
@@ -39,6 +40,7 @@ describe("ReportingService live leaderboard fallback", () => {
       reportingRepository as never,
       { getKpiConfigRows: jest.fn(async () => []) } as never,
       closedRankingService as never,
+      new LiveMonthlyLeaderboardService(reportingRepository as never),
     );
 
     await expect(
@@ -209,6 +211,7 @@ describe("ReportingService live leaderboard fallback", () => {
       reportingRepository as never,
       { getKpiConfigRows: jest.fn(async () => []) } as never,
       closedRankingService as never,
+      new LiveMonthlyLeaderboardService(reportingRepository as never),
     );
 
     const result = await service.getClosedLeaderboard({

@@ -9,6 +9,7 @@ describe("ReportingService store monthly score breakdown", () => {
         getLatestPublishedKpiConfigVersion: jest.fn(async () => null),
       } as never,
       {} as never,
+      {} as never,
     );
 
   it("returns KPI plus BM and VM checklist contribution for a monthly snapshot", async () => {

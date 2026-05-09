@@ -73,6 +73,7 @@ function createService(repositoryOverrides: Record<string, unknown>) {
       ...repositoryOverrides,
     } as never,
     {} as never,
+    {} as never,
   );
 }
 
