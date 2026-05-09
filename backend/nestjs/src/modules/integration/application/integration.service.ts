@@ -33,6 +33,13 @@ import {
   mapImportBatchListItem,
   mapImportBatchNeedsActionItem,
 } from "./import-batch-read-model.mapper";
+import {
+  getBlockedByEntityTypes,
+  getDetailHealthState,
+  getImportStuckBeforeIso,
+  getListHealthState,
+  getRecommendedImportOrder,
+} from "./import-batch-health";
 
 type SupportedEntityType =
   | "employee"
@@ -47,7 +54,6 @@ type SupportedSourceSystem = "nebim_v3" | "power_bi" | "manual" | "other";
 
 @Injectable()
 export class IntegrationService {
-  private static readonly IMPORT_STUCK_THRESHOLD_MINUTES = 30;
   private readonly logger = new Logger(IntegrationService.name);
 
   constructor(
@@ -622,11 +628,11 @@ export class IntegrationService {
       result.rows.map((batch) =>
         mapImportBatchListItem(
           batch,
-          this.getListHealthState(
-          batch.status,
-          Number(batch.error_count),
-          batch.started_at,
-        ),
+          getListHealthState({
+            status: batch.status,
+            errorCount: Number(batch.error_count),
+            startedAt: batch.started_at,
+          }),
         ),
       ),
       { total: result.total, limit: input.limit, offset: input.offset },
@@ -703,7 +709,7 @@ export class IntegrationService {
       ...input,
       actorCompanyIds,
     };
-    const stuckBefore = this.getImportStuckBeforeIso();
+    const stuckBefore = getImportStuckBeforeIso();
     const [summary, actionCounts, completedBatchId, failedBatchId, inProgressBatchId, stuckBatchId] =
       await Promise.all([
         this.integrationRepository.getImportBatchSummary(scopedInput),
@@ -773,7 +779,7 @@ export class IntegrationService {
     const result = await this.integrationRepository.listImportBatchesNeedingAction({
       ...input,
       actorCompanyIds,
-      stuckBefore: this.getImportStuckBeforeIso(),
+      stuckBefore: getImportStuckBeforeIso(),
     });
 
     const items = await Promise.all(
@@ -794,7 +800,7 @@ export class IntegrationService {
                 | "region",
             );
 
-          blockedByEntityTypes = this.getBlockedByEntityTypes({
+          blockedByEntityTypes = getBlockedByEntityTypes({
             employee: Number(dependencySummaryRow?.employee_count ?? 0),
             store: Number(dependencySummaryRow?.store_count ?? 0),
             position: Number(dependencySummaryRow?.position_count ?? 0),
@@ -871,11 +877,11 @@ export class IntegrationService {
       company: Number(dependencySummaryRow?.company_count ?? 0),
       manager: Number(dependencySummaryRow?.manager_count ?? 0),
     };
-    const blockedByEntityTypes = this.getBlockedByEntityTypes(dependencySummary);
-    const recommendedImportOrder = this.getRecommendedImportOrder();
+    const blockedByEntityTypes = getBlockedByEntityTypes(dependencySummary);
+    const recommendedImportOrder = getRecommendedImportOrder();
     const recommendedNextEntityType = blockedByEntityTypes[0] ?? null;
     const canRetryNow = blockedByEntityTypes.length === 0;
-    const healthState = this.getDetailHealthState({
+    const healthState = getDetailHealthState({
       status: batch.status,
       rowStatusSummary,
       blockedByEntityTypes,
@@ -1312,30 +1318,6 @@ export class IntegrationService {
     return 2;
   }
 
-  private getBlockedByEntityTypes(dependencySummary: {
-    employee: number;
-    store: number;
-    position: number;
-    region: number;
-    company: number;
-    manager: number;
-  }): string[] {
-    const blocked = new Set<string>();
-
-    if (dependencySummary.company > 0) blocked.add("company");
-    if (dependencySummary.region > 0) blocked.add("region");
-    if (dependencySummary.store > 0) blocked.add("store");
-    if (dependencySummary.position > 0) blocked.add("position");
-    if (dependencySummary.employee > 0) blocked.add("employee");
-    if (dependencySummary.manager > 0) blocked.add("employee");
-
-    return this.getRecommendedImportOrder().filter((entityType) => blocked.has(entityType));
-  }
-
-  private getRecommendedImportOrder(): string[] {
-    return ["company", "region", "store", "position", "employee", "assignment", "kpi"];
-  }
-
   private getSupportedEntityTypes() {
     return ["employee", "store", "kpi", "assignment", "position", "company", "region"];
   }
@@ -1400,61 +1382,4 @@ export class IntegrationService {
     };
   }
 
-  private getListHealthState(status: string, errorCount: number, startedAt: string) {
-    if (status === "completed" && errorCount === 0) return "healthy";
-    if (["pending", "queued", "processing"].includes(status) && this.isImportStuck(startedAt)) {
-      return "stuck";
-    }
-    if (["pending", "queued", "processing"].includes(status)) return "in_progress";
-    return "needs_action";
-  }
-
-  private getDetailHealthState(input: {
-    status: string;
-    rowStatusSummary: {
-      processed: number;
-      validationFailed: number;
-      retryableError: number;
-      pending: number;
-    };
-    blockedByEntityTypes: string[];
-    canRetryNow: boolean;
-  }) {
-    if (input.status === "completed" && input.rowStatusSummary.validationFailed === 0 && input.rowStatusSummary.retryableError === 0) {
-      return "healthy";
-    }
-
-    if (["pending", "queued", "processing"].includes(input.status)) {
-      return "in_progress";
-    }
-
-    if (input.blockedByEntityTypes.length > 0) {
-      return "blocked";
-    }
-
-    if (
-      ["failed", "completed_with_errors"].includes(input.status) &&
-      input.rowStatusSummary.retryableError > 0 &&
-      input.canRetryNow
-    ) {
-      return "retry_ready";
-    }
-
-    return "needs_action";
-  }
-
-  private getImportStuckBeforeIso() {
-    return new Date(
-      Date.now() - IntegrationService.IMPORT_STUCK_THRESHOLD_MINUTES * 60 * 1000,
-    ).toISOString();
-  }
-
-  private isImportStuck(startedAt: string) {
-    const startedAtMs = Date.parse(startedAt);
-    if (Number.isNaN(startedAtMs)) {
-      return false;
-    }
-
-    return Date.now() - startedAtMs >= IntegrationService.IMPORT_STUCK_THRESHOLD_MINUTES * 60 * 1000;
-  }
 }
