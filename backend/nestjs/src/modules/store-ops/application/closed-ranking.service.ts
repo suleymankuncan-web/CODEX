@@ -1,4 +1,5 @@
 import { ForbiddenException, Injectable } from "@nestjs/common";
+import { ClosedRankingRepository } from "../infrastructure/closed-ranking.repository";
 import { ReportingRepository } from "../infrastructure/reporting.repository";
 import {
   ClosedRankingEmployee,
@@ -14,7 +15,10 @@ import {
 
 @Injectable()
 export class ClosedRankingService {
-  constructor(private readonly reportingRepository: ReportingRepository) {}
+  constructor(
+    private readonly reportingRepository: ReportingRepository,
+    private readonly closedRankingRepository: ClosedRankingRepository,
+  ) {}
 
   async getClosedLeaderboard(input: ClosedRankingInput): Promise<ClosedRankingSummary> {
     const periodType = input.periodType ?? "daily";
@@ -51,7 +55,7 @@ export class ClosedRankingService {
     const companyId = input.companyIds[0] ?? undefined;
     const storeId = this.resolveStoreFilter(input);
     const personnelRows =
-      await this.reportingRepository.listClosedDailyPersonnelRankRows({
+      await this.closedRankingRepository.listClosedDailyPersonnelRankRows({
         snapshotRunId: snapshotRun.snapshot_run_id,
         companyId,
         storeId,
@@ -69,7 +73,7 @@ export class ClosedRankingService {
     ]);
     const metricRows =
       employeeIds.length > 0
-        ? await this.reportingRepository.listClosedDailyMetricRankRows({
+        ? await this.closedRankingRepository.listClosedDailyMetricRankRows({
             snapshotRunId: snapshotRun.snapshot_run_id,
             employeeIds,
             storeId,
@@ -129,7 +133,7 @@ export class ClosedRankingService {
 
     const currentEmployeeId = await this.resolveCurrentEmployeeId(input);
     const completedRuns =
-      await this.reportingRepository.listCompletedDailySnapshotsInMonth({
+      await this.closedRankingRepository.listCompletedDailySnapshotsInMonth({
         monthStart,
       });
 
@@ -148,7 +152,7 @@ export class ClosedRankingService {
     const storeId = this.resolveStoreFilter(input);
     const snapshotRunIds = completedRuns.map((run) => run.snapshot_run_id);
     const personnelRows =
-      await this.reportingRepository.listClosedMonthlyPersonnelAggregateRows({
+      await this.closedRankingRepository.listClosedMonthlyPersonnelAggregateRows({
         snapshotRunIds,
         companyId,
         storeId,
@@ -164,7 +168,7 @@ export class ClosedRankingService {
     ]);
     const metricRows =
       employeeIds.length > 0
-        ? await this.reportingRepository.listClosedMonthlyMetricRankRows({
+        ? await this.closedRankingRepository.listClosedMonthlyMetricRankRows({
             snapshotRunIds,
             employeeIds,
             storeId,
