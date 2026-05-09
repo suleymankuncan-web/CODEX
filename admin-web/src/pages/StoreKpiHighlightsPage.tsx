@@ -21,22 +21,28 @@ import {
   type KpiOwnerRole,
 } from '../features/reports/api'
 import { formatSnapshotOptionLabel } from '../features/reports/snapshot-labels'
-import { formatDate, formatNumber as formatIntlNumber, formatState, getErrorMessage } from '../lib/format'
+import { formatDate, formatState, getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 import { ApiError } from '../lib/api'
 import {
   matchesKpiMetricCode,
 } from '../features/kpi/score-profiles'
 import {
-  formatBenchmarkRatio,
   type PerformanceGrade,
   type PerformanceGradeCode,
   resolvePerformanceGrade,
 } from '../features/kpi/grading'
 import {
-  resolveKpiSourceSemantics,
-  type KpiSourceKind,
-} from '../features/kpi/source-semantics'
+  describeLocalizedBenchmarkCap as describeSharedBenchmarkCap,
+  formatKpiAchievementValue,
+  formatKpiMetricValue,
+  formatKpiNumber as formatMetric,
+  formatKpiPercent as formatPercent,
+  formatLocalizedPerformanceGrade,
+  localizeKpiSourceSemantics,
+  resolveLocalizedKpiScoreReference as resolveSharedKpiScoreReference,
+  toKpiDisplayNumber as toNumber,
+} from '../features/kpi/display'
 
 type DisplayKpiRow = {
   storeId: string
@@ -59,11 +65,6 @@ type DisplayKpiRow = {
   scoreStatus: 'scored' | 'pending_normalization' | 'missing_reference' | 'missing'
 }
 
-function toNumber(input: string | null) {
-  const parsed = Number(input)
-  return Number.isFinite(parsed) ? parsed : 0
-}
-
 const metricLabelKeyByCode: Record<string, TranslationKey> = {
   TARGET_ACHIEVEMENT: 'storeKpis.metric.targetAchievement',
   ATV: 'storeKpis.metric.atv',
@@ -79,17 +80,6 @@ const ownerRoleLabelKeyByCode: Record<KpiOwnerRole, TranslationKey> = {
   STORE_MANAGER: 'storeKpis.role.STORE_MANAGER',
   STORE_PERSONNEL: 'storeKpis.role.STORE_PERSONNEL',
   VISUAL_TEAM: 'storeKpis.role.VISUAL_TEAM',
-}
-
-function formatMetric(locale: AppLocale, input: number) {
-  return formatIntlNumber(input, locale, {
-    minimumFractionDigits: Number.isInteger(input) ? 0 : 2,
-    maximumFractionDigits: 2,
-  })
-}
-
-function formatPercent(locale: AppLocale, input: number) {
-  return `${formatMetric(locale, input * 100)}%`
 }
 
 function formatCoveredWeight(input: number) {
@@ -201,35 +191,19 @@ function formatOwnerRole(t: TranslateFunction, role: KpiOwnerRole) {
 }
 
 function formatMetricValue(locale: AppLocale, t: TranslateFunction, input: string | null, kpiCode?: string) {
-  if (input === null) {
-    return t('storeKpis.noData')
-  }
-
-  const numericValue = toNumber(input)
-  if (kpiCode === 'CR') {
-    return formatPercent(locale, numericValue)
-  }
-
-  return formatMetric(locale, numericValue)
+  return formatKpiMetricValue(locale, t, input, {
+    noDataKey: 'storeKpis.noData',
+    code: kpiCode,
+    percentMetricCodes: ['CR'],
+  })
 }
 
 function formatAchievementValue(locale: AppLocale, t: TranslateFunction, row: DisplayKpiRow) {
-  if (row.scoreStatus === 'missing_reference') {
-    return t('storeKpis.missingReference')
-  }
-
-  if (row.achievementRate === null) {
-    return row.actualValue !== null
-      ? t('storeKpis.pendingNormalizationStatus')
-      : t('storeKpis.noData')
-  }
-
-  if (row.targetValue !== null) {
-    return formatPercent(locale, toNumber(row.achievementRate))
-  }
-
-  return t('storeKpis.scorePoints', {
-    value: formatMetric(locale, toNumber(row.achievementRate)),
+  return formatKpiAchievementValue(locale, t, row, {
+    missingReference: 'storeKpis.missingReference',
+    pendingNormalization: 'storeKpis.pendingNormalizationStatus',
+    noData: 'storeKpis.noData',
+    scorePoints: 'storeKpis.scorePoints',
   })
 }
 
@@ -253,42 +227,11 @@ function formatMetricLabelList(
     .join(', ')
 }
 
-function getKpiSourceKey(kind: KpiSourceKind, suffix: 'label' | 'summary') {
-  return `storeKpis.source.${kind}.${suffix}` as TranslationKey
-}
-
 function resolveLocalizedKpiSourceSemantics(
   t: TranslateFunction,
-  input: Parameters<typeof resolveKpiSourceSemantics>[0],
+  input: Parameters<typeof localizeKpiSourceSemantics>[2],
 ) {
-  const semantics = resolveKpiSourceSemantics(input)
-  return {
-    ...semantics,
-    label: t(getKpiSourceKey(semantics.kind, 'label')),
-    summary: t(getKpiSourceKey(semantics.kind, 'summary')),
-  }
-}
-
-function hasReferenceValue<T extends number | string>(
-  input: T | null | undefined,
-): input is T {
-  return input !== null && input !== undefined && input !== ''
-}
-
-function formatReferenceSource(t: TranslateFunction, input: string | null | undefined) {
-  if (input === 'TURKEY_AVERAGE') {
-    return t('storeKpis.reference.turkeyAverage')
-  }
-
-  if (input === 'CHECKLIST_SCORE') {
-    return t('storeKpis.reference.checklistScore')
-  }
-
-  if (input === 'TARGET') {
-    return t('storeKpis.reference.target')
-  }
-
-  return t('storeKpis.reference.default')
+  return localizeKpiSourceSemantics(t, 'storeKpis', input)
 }
 
 function resolveLocalizedKpiScoreReference<T extends number | string>(
@@ -299,29 +242,18 @@ function resolveLocalizedKpiScoreReference<T extends number | string>(
     benchmarkSource?: string | null
   },
 ) {
-  if (hasReferenceValue(input.targetValue)) {
-    return {
-      value: input.targetValue,
-      sourceLabel: t('storeKpis.reference.target'),
-    }
-  }
-
-  if (hasReferenceValue(input.benchmarkValue)) {
-    return {
-      value: input.benchmarkValue,
-      sourceLabel: formatReferenceSource(t, input.benchmarkSource),
-    }
-  }
-
-  return {
-    value: null,
-    sourceLabel: t('storeKpis.reference.pending'),
-  }
+  return resolveSharedKpiScoreReference(t, {
+    target: 'storeKpis.reference.target',
+    turkeyAverage: 'storeKpis.reference.turkeyAverage',
+    checklistScore: 'storeKpis.reference.checklistScore',
+    default: 'storeKpis.reference.default',
+    pending: 'storeKpis.reference.pending',
+    targetBenchmark: 'storeKpis.reference.target',
+  }, input)
 }
 
 function formatStorePerformanceGrade(t: TranslateFunction, grade: PerformanceGrade) {
-  const key = `storeKpis.grade.${grade.code}` as TranslationKey
-  return `${grade.emoji} ${grade.code} - ${t(key)}`
+  return formatLocalizedPerformanceGrade(t, 'storeKpis', grade)
 }
 
 function resolveLocalizedStoreScoreMeaning(input: {
@@ -363,14 +295,7 @@ function describeLocalizedBenchmarkCap(
     isCapped?: boolean
   },
 ) {
-  if (!input.isCapped || !input.actualRatio || !input.scoredRatio) {
-    return null
-  }
-
-  return t('storeKpis.benchmarkCap', {
-    actual: formatBenchmarkRatio(input.actualRatio, 'prefix').replace('%', ''),
-    scored: formatBenchmarkRatio(input.scoredRatio).replace('%', ''),
-  })
+  return describeSharedBenchmarkCap(t, 'storeKpis.benchmarkCap', input)
 }
 
 function clampScore(input: number) {
