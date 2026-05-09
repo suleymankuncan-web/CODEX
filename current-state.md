@@ -126,8 +126,10 @@ Do not do broad refactors for aesthetics.
 
 Known planned refactor candidates:
 
-- `admin-web/src/App.tsx`: routing/auth/store/admin shell concerns are crowded. Split only when a concrete route/UI change touches the boundary.
-- `ReportingRepository`, `IntegrationRepository`, `AuthAdminRepository`: planned future boundary splits. Split only with measured need or concrete feature pressure.
+- `docs/plans/refactor-execution-plan-v1.md`: active ordered refactor plan. Execute only small, behavior-preserving slices with targeted tests before merge.
+- `admin-web/src/App.tsx`: first approved slice is route/shell extraction with current behavior preserved.
+- `ReportingRepository` and `IntegrationRepository`: planned future boundary splits only after contracts are identified or added.
+- `AuthAdminRepository`: deferred unless concrete product, security, or bug pressure appears.
 - Master-data validation/promotion test split: closed in PR #17 and guarded by the test-suite hygiene contract.
 - `current-state.md`: now intentionally concise; do not let it grow back into a full project archive.
 
@@ -207,6 +209,7 @@ Keep these references in this handoff because contract tests and future context 
 - `docs/evidence/pilot-readiness/2026-05-01-preflight-no-go.md` - pilot preflight No-Go evidence
 - `docs/plans/pilot-readiness-gate-v1.md` - Pilot Readiness Gate V1
 - `docs/plans/project-health-snapshot-2026-05-01.md`
+- `docs/plans/refactor-execution-plan-v1.md` - Refactor Execution Plan V1
 - `docs/plans/repo-hygiene-contract-v1.md` - Repo Hygiene Guard V1 reference is tracked through the contract tests and debt ledger
 - `docs/plans/source-agnostic-import-boundary-v1.md` - Source-Agnostic Import Boundary V1
 - `docs/plans/staging-auth-session-edge-evidence-guard-v1.md` - Staging Auth Session Edge Evidence Guard V1
@@ -220,6 +223,7 @@ Keep these references in this handoff because contract tests and future context 
 Next local foundation step:
 
 - Choose the next small backend/data hardening slice through the intake gate.
+- If continuing refactor work, follow `docs/plans/refactor-execution-plan-v1.md` in order and keep each PR behavior-preserving with targeted tests.
 - If real staging IdP and seeded DB values are available, run guarded staging auth/action evidence.
 - If true store/personnel baseline files are available, run the master-data bootstrap pilot smoke flow from the existing runbook.
 - If continuing the current pilot scope, keep recording Round 2 feedback in the controlled pilot feedback log and run `npm.cmd run check:pilot-stabilization` before any new invite wave or deploy that can affect pilot routes.

@@ -14,7 +14,12 @@ function requireText(text, expected, context) {
 }
 
 const matrix = readText('docs/architecture/pilot-route-role-matrix.md')
-const app = readText('admin-web/src/App.tsx')
+const appRouteSource = [
+  readText('admin-web/src/App.tsx'),
+  readText('admin-web/src/app/admin-navigation.ts'),
+  readText('admin-web/src/app/admin-shell.tsx'),
+  readText('admin-web/src/app/store-shell.tsx'),
+].join('\n')
 
 const requiredRoutes = [
   '/admin/integrations',
@@ -45,7 +50,7 @@ const requiredRoutes = [
 test('pilot route matrix documents every active admin and store route', () => {
   for (const route of requiredRoutes) {
     requireText(matrix, `| \`${route}\` |`, 'route matrix')
-    requireText(app, route, 'admin-web/src/App.tsx')
+    requireText(appRouteSource, route, 'admin web route source')
   }
 })
 
