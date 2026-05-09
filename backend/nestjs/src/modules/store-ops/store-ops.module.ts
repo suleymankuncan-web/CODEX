@@ -17,6 +17,7 @@ import { SnapshotService } from "./application/snapshot.service";
 import { RankingService } from "./application/ranking.service";
 import { ReportingService } from "./application/reporting.service";
 import { ClosedRankingService } from "./application/closed-ranking.service";
+import { LiveMonthlyLeaderboardService } from "./application/live-monthly-leaderboard.service";
 import { TargetDistributionService } from "./application/target-distribution.service";
 import { WorkflowInboxService } from "./application/workflow-inbox.service";
 import { CompetitionService } from "./application/competition.service";
@@ -55,6 +56,7 @@ import { FeedRepository } from "./infrastructure/feed.repository";
     RankingService,
     ReportingService,
     ClosedRankingService,
+    LiveMonthlyLeaderboardService,
     TargetDistributionService,
     WorkflowInboxService,
     CompetitionService,
@@ -79,6 +81,7 @@ import { FeedRepository } from "./infrastructure/feed.repository";
     RankingService,
     ReportingService,
     ClosedRankingService,
+    LiveMonthlyLeaderboardService,
     TargetDistributionService,
     WorkflowInboxService,
     CompetitionService,
