@@ -206,24 +206,6 @@ function getVisibleWindow(total: number, offset: number, count: number, t: Trans
   return `${offset + 1}-${offset + count}`
 }
 
-function getScoreSignal(scoreValue: number | null | undefined) {
-  if (scoreValue === null || scoreValue === undefined || !Number.isFinite(scoreValue)) {
-    return {
-      value: null,
-      width: 42,
-      tone: 'neutral' as const,
-    }
-  }
-
-  const value = (scoreValue - 100) / 100
-
-  return {
-    value,
-    width: Math.max(12, Math.min(100, Math.round(Math.abs(value) * 500))),
-    tone: value >= 0 ? ('positive' as const) : ('negative' as const),
-  }
-}
-
 function getLatestRankingFromCache(queryClient: QueryClient) {
   const cachedRankings = queryClient
     .getQueryCache()
@@ -842,7 +824,18 @@ function RankingWorkspace(input: {
       </div>
 
       <div className="rankings-plum-table-scroll">
-        <table className="rankings-plum-table" aria-describedby="rankings-heading">
+        <table
+          className={`rankings-plum-table${
+            input.canSeeDetails ? ' rankings-plum-table-detail' : ' rankings-plum-table-summary'
+          }`}
+          aria-describedby="rankings-heading"
+        >
+          <colgroup>
+            <col className="rankings-plum-col-rank" />
+            <col className="rankings-plum-col-entity" />
+            <col className="rankings-plum-col-score" />
+            {input.canSeeDetails ? <col className="rankings-plum-col-metrics" /> : null}
+          </colgroup>
           <thead>
             <tr>
               <th>{input.t('storeRankings.rankColumn')}</th>
@@ -851,7 +844,7 @@ function RankingWorkspace(input: {
                   ? input.t('storeRankings.store')
                   : input.t('storeRankings.personnel')}
               </th>
-              <th>
+              <th className="rankings-plum-score-heading">
                 <SortButton
                   label={
                     input.activeList === 'stores'
@@ -865,18 +858,15 @@ function RankingWorkspace(input: {
                 />
               </th>
               {input.canSeeDetails ? (
-                <>
-                  <th className="rankings-plum-metric-heading">
-                    <MetricSortRow
-                      metricCodes={metricCodes}
-                      activeSortKey={input.sortKey}
-                      sortDirection={input.sortDirection}
-                      onSortChange={input.onSortChange}
-                      t={input.t}
-                    />
-                  </th>
-                  <th>{input.t('storeRankings.signal')}</th>
-                </>
+                <th className="rankings-plum-metric-heading">
+                  <MetricSortRow
+                    metricCodes={metricCodes}
+                    activeSortKey={input.sortKey}
+                    sortDirection={input.sortDirection}
+                    onSortChange={input.onSortChange}
+                    t={input.t}
+                  />
+                </th>
               ) : null}
             </tr>
           </thead>
@@ -911,7 +901,7 @@ function RankingWorkspace(input: {
               )
             ) : (
               <tr>
-                <td colSpan={input.canSeeDetails ? 5 : 3}>
+                <td colSpan={input.canSeeDetails ? 4 : 3}>
                   <div className="rankings-plum-empty">
                     {input.activeList === 'stores'
                       ? input.t('storeRankings.noStores')
@@ -1024,23 +1014,18 @@ function StoreRankingTableRow(input: {
           onOpen={() => input.onOpenDetail(row)}
         />
       </td>
-      <td data-label={input.t('storeRankings.storeScore')}>
+      <td className="rankings-plum-score-cell" data-label={input.t('storeRankings.storeScore')}>
         <RankingScore value={row.scoreValue} locale={input.locale} t={input.t} />
       </td>
       {input.canSeeDetails ? (
-        <>
-          <td data-label={input.t('storeRankings.kpiSummary')}>
-            <MetricDetails
-              metrics={row.metrics ?? []}
-              metricCodes={storeMetricCodes}
-              locale={input.locale}
-              t={input.t}
-            />
-          </td>
-          <td data-label={input.t('storeRankings.signal')}>
-            <RankingSignal scoreValue={row.scoreValue} locale={input.locale} t={input.t} />
-          </td>
-        </>
+        <td data-label={input.t('storeRankings.kpiSummary')}>
+          <MetricDetails
+            metrics={row.metrics ?? []}
+            metricCodes={storeMetricCodes}
+            locale={input.locale}
+            t={input.t}
+          />
+        </td>
       ) : null}
     </tr>
   )
@@ -1068,23 +1053,18 @@ function PersonnelRankingTableRow(input: {
           onOpen={() => input.onOpenDetail(row)}
         />
       </td>
-      <td data-label={input.t('storeRankings.personnelScore')}>
+      <td className="rankings-plum-score-cell" data-label={input.t('storeRankings.personnelScore')}>
         <RankingScore value={row.scoreValue} locale={input.locale} t={input.t} />
       </td>
       {input.canSeeDetails ? (
-        <>
-          <td data-label={input.t('storeRankings.kpiSummary')}>
-            <MetricDetails
-              metrics={row.metrics ?? []}
-              metricCodes={personnelMetricCodes}
-              locale={input.locale}
-              t={input.t}
-            />
-          </td>
-          <td data-label={input.t('storeRankings.signal')}>
-            <RankingSignal scoreValue={row.scoreValue} locale={input.locale} t={input.t} />
-          </td>
-        </>
+        <td data-label={input.t('storeRankings.kpiSummary')}>
+          <MetricDetails
+            metrics={row.metrics ?? []}
+            metricCodes={personnelMetricCodes}
+            locale={input.locale}
+            t={input.t}
+          />
+        </td>
       ) : null}
     </tr>
   )
@@ -1158,35 +1138,6 @@ function MetricDetails(input: {
           </div>
         )
       })}
-    </div>
-  )
-}
-
-function RankingSignal(input: {
-  scoreValue: number | null | undefined
-  locale: AppLocale
-  t: TranslateFunction
-}) {
-  const signal = getScoreSignal(input.scoreValue)
-  const style = { '--trend-width': `${signal.width}%` } as CSSProperties
-  const value =
-    signal.value === null
-      ? input.t('storeRankings.signalPending')
-      : `${signal.value >= 0 ? '+' : ''}${formatPercent(input.locale, input.t, signal.value)}`
-
-  return (
-    <div className={`rankings-plum-trend rankings-plum-trend-${signal.tone}`}>
-      <span>
-        {input.t(
-          signal.tone === 'negative'
-            ? 'storeRankings.signalBelow'
-            : signal.tone === 'positive'
-              ? 'storeRankings.signalAbove'
-              : 'storeRankings.signalPending',
-        )}
-        <strong>{value}</strong>
-      </span>
-      <i style={style} />
     </div>
   )
 }
@@ -1273,7 +1224,6 @@ function RankingDetailDrawer(input: {
                 <i />
               </span>
             </div>
-            <RankingSignal scoreValue={row.scoreValue} locale={input.locale} t={input.t} />
           </section>
           <section className="rankings-plum-detail-section">
             <h3>{input.t('storeRankings.coachingNote')}</h3>

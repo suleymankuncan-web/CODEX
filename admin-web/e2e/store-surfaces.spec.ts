@@ -302,7 +302,7 @@ test('store home switches to English copy and persists locale', async ({ page })
   await expect(page.getByRole('heading', { name: /Task-focused home page/i })).toBeVisible()
 })
 
-test('store rankings page renders Plum Signal ranking table', async ({ page }) => {
+test('store rankings page renders Plum ranking table without signal chrome', async ({ page }) => {
   await page.goto('/store/rankings')
 
   await expect(page.getByRole('heading', { name: 'Sıralamalar' })).toBeVisible()
@@ -315,10 +315,14 @@ test('store rankings page renders Plum Signal ranking table', async ({ page }) =
   await expect(page.getByText('Top 100 kapsam')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Mağaza listesi' })).toBeVisible()
   await expect(page.getByText('Mağaza skor')).toBeVisible()
+  await expect(page.getByText('Sinyal')).toHaveCount(0)
+  await expect(page.locator('.rankings-plum-trend')).toHaveCount(0)
   await page.getByRole('tab', { name: 'Personel listesi' }).click()
   await expect(page.getByRole('heading', { name: 'Personel listesi' })).toBeVisible()
   await expect(page.getByText('Store Personnel - 1').first()).toBeVisible()
   await expect(page.getByText('Personel skor')).toBeVisible()
+  await expect(page.getByText('Sinyal')).toHaveCount(0)
+  await expect(page.locator('.rankings-plum-trend')).toHaveCount(0)
   await expect(page.getByText('Magaza ve personel rankingleri')).toHaveCount(0)
   await expect(page.getByText('Top 100 gorunumu')).toHaveCount(0)
   await expect(page.getByText('Turkiye magaza siralamasi')).toHaveCount(0)
@@ -447,7 +451,7 @@ test('store rankings uses Turkey reference, checklist metrics, normalized HG, an
   await expect(page.getByRole('button', { name: 'Low HG Store' })).toBeVisible()
 })
 
-test('store rankings signal follows weighted score instead of raw KPI delta average', async ({ page }) => {
+test('store rankings removes signal chrome while preserving weighted score rows', async ({ page }) => {
   await page.unroute('**/api/auth/session')
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({
@@ -469,7 +473,7 @@ test('store rankings signal follows weighted score instead of raw KPI delta aver
         ...rankingsPrivilegedDetailFixture,
         storeLeaderboard: {
           ...rankingsPrivilegedDetailFixture.storeLeaderboard,
-          items: [scoreSignalLeaderStoreRow, scoreSignalFollowerStoreRow],
+          items: [scoreDisplayLeaderStoreRow, scoreDisplayFollowerStoreRow],
           meta: {
             total: 2,
             limit: 100,
@@ -484,10 +488,17 @@ test('store rankings signal follows weighted score instead of raw KPI delta aver
 
   const rows = page.locator('.rankings-plum-table tbody tr')
   await expect(rows.nth(0)).toContainText('Weighted Score Leader')
-  await expect(rows.nth(0).locator('.rankings-plum-trend')).toContainText('Referans üstü')
-  await expect(rows.nth(0).locator('.rankings-plum-trend')).toContainText('+12,30%')
+  await expect(rows.nth(0).locator('.rankings-plum-scorebar')).toContainText('112,30')
   await expect(rows.nth(1)).toContainText('Raw Delta Trap')
-  await expect(rows.nth(1).locator('.rankings-plum-trend')).toContainText('+4,20%')
+  await expect(rows.nth(1).locator('.rankings-plum-scorebar')).toContainText('104,20')
+  await expect(page.getByText('Sinyal')).toHaveCount(0)
+  await expect(page.locator('.rankings-plum-trend')).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Weighted Score Leader' }).click()
+
+  await expect(page.locator('.rankings-plum-drawer')).toBeVisible()
+  await expect(page.locator('.rankings-plum-drawer .rankings-plum-trend')).toHaveCount(0)
+  await expect(page.locator('.rankings-plum-month-row')).toContainText('112,30')
 })
 
 test('store tasks page renders readable Turkish queue labels', async ({ page }) => {
@@ -1700,9 +1711,9 @@ const rankingsPrivilegedLowHgStoreRow = {
   ),
 }
 
-const scoreSignalLeaderStoreRow = {
+const scoreDisplayLeaderStoreRow = {
   ...rankingsPrivilegedDetailStoreRow,
-  storeId: 'store-score-signal-leader',
+  storeId: 'store-score-display-leader',
   storeName: 'Weighted Score Leader',
   rank: 1,
   scoreValue: 112.3,
@@ -1750,9 +1761,9 @@ const scoreSignalLeaderStoreRow = {
   ],
 }
 
-const scoreSignalFollowerStoreRow = {
+const scoreDisplayFollowerStoreRow = {
   ...rankingsPrivilegedDetailStoreRow,
-  storeId: 'store-score-signal-follower',
+  storeId: 'store-score-display-follower',
   storeName: 'Raw Delta Trap',
   rank: 2,
   scoreValue: 104.2,

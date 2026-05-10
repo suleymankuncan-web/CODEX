@@ -2226,14 +2226,43 @@ code {
 
 .rankings-plum-table {
   width: 100%;
-  min-width: 760px;
+  min-width: 620px;
   border-collapse: separate;
   border-spacing: 0 5px;
+  table-layout: fixed;
+}
+
+.rankings-plum-table-detail {
+  min-width: 880px;
+}
+
+.rankings-plum-table-summary {
+  min-width: 620px;
+}
+
+.rankings-plum-col-rank {
+  width: 4.45rem;
+}
+
+.rankings-plum-table-detail .rankings-plum-col-entity {
+  width: 15.75rem;
+}
+
+.rankings-plum-table-summary .rankings-plum-col-entity {
+  width: auto;
+}
+
+.rankings-plum-col-score {
+  width: 11.75rem;
+}
+
+.rankings-plum-table-summary .rankings-plum-col-score {
+  width: 12.75rem;
 }
 
 .rankings-plum-table th {
   height: 2rem;
-  padding: 0 0.65rem;
+  padding: 0 0.48rem;
   color: var(--rp-muted);
   font-size: 0.66rem;
   font-weight: 860;
@@ -2246,7 +2275,7 @@ code {
   border-top: 1px solid var(--rp-line);
   border-bottom: 1px solid var(--rp-line);
   background: rgba(255, 255, 255, 0.8);
-  padding: 0.5rem 0.65rem;
+  padding: 0.45rem 0.48rem;
   vertical-align: middle;
 }
 
@@ -2353,8 +2382,8 @@ code {
 
 .rankings-plum-metric-heading {
   min-width: 360px;
-  padding-right: 0.65rem;
-  padding-left: 0.65rem;
+  padding-right: 0.48rem;
+  padding-left: 0.48rem;
 }
 
 .rankings-plum-metric-sort-row {
@@ -2382,21 +2411,26 @@ code {
 }
 
 .rankings-plum-scorebar {
-  display: flex;
-  min-width: 118px;
-  align-items: center;
-  gap: 0.55rem;
+  display: grid;
+  width: min(100%, 10.75rem);
+  min-width: 9.5rem;
+  gap: 0.38rem;
 }
 
 .rankings-plum-scorebar strong {
-  min-width: 2.65rem;
-  border-radius: 999px;
-  background: rgba(32, 22, 41, 0.04);
-  padding: 0.32rem 0.45rem;
-  color: var(--rp-ink);
-  font-size: 0.92rem;
-  line-height: 1;
-  text-align: center;
+  width: fit-content;
+  min-width: 3.8rem;
+  border: 1px solid rgba(107, 52, 179, 0.16);
+  border-radius: 12px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(248, 244, 252, 0.74)),
+    radial-gradient(circle at 18% 0%, rgba(139, 75, 216, 0.2), transparent 42%);
+  box-shadow: 0 8px 18px rgba(53, 32, 73, 0.07);
+  padding: 0.32rem 0.58rem;
+  color: #2f2140;
+  font-size: 0.98rem;
+  line-height: 0.95;
+  text-align: left;
   font-variant-numeric: tabular-nums;
 }
 
@@ -2404,10 +2438,14 @@ code {
   position: relative;
   overflow: hidden;
   width: 100%;
-  height: 0.42rem;
+  height: 0.56rem;
   border-radius: 999px;
-  background: linear-gradient(90deg, #d33f71 0%, #d78b20 48%, #1f965c 100%);
-  box-shadow: inset 0 0 0 1px rgba(32, 22, 41, 0.08);
+  background:
+    linear-gradient(90deg, #d33f71 0%, #d78b20 48%, #1f965c 100%),
+    rgba(78, 47, 105, 0.08);
+  box-shadow:
+    inset 0 0 0 1px rgba(32, 22, 41, 0.09),
+    0 8px 16px rgba(31, 150, 92, 0.08);
 }
 
 .rankings-plum-score-track::after {
@@ -2415,7 +2453,8 @@ code {
   inset: 0 0 0 var(--score-width, 0%);
   content: "";
   border-radius: inherit;
-  background: rgba(226, 232, 240, 0.92);
+  background: rgba(236, 239, 246, 0.96);
+  box-shadow: inset 8px 0 12px rgba(255, 255, 255, 0.64);
 }
 
 .rankings-plum-score-track i {
@@ -2430,10 +2469,10 @@ code {
 
 .rankings-plum-score-track i::after {
   position: absolute;
-  top: 1px;
-  right: -2px;
-  bottom: 1px;
-  width: 3px;
+  top: 0;
+  right: -3px;
+  bottom: 0;
+  width: 5px;
   content: "";
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.95);
@@ -2482,48 +2521,6 @@ code {
   color: var(--rp-rose);
   font-size: 0.72rem;
   font-weight: 780;
-}
-
-.rankings-plum-trend {
-  display: grid;
-  min-width: 126px;
-  gap: 0.32rem;
-}
-
-.rankings-plum-trend span {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.38rem;
-  color: var(--rp-muted);
-  font-size: 0.64rem;
-  font-weight: 780;
-}
-
-.rankings-plum-trend strong {
-  color: var(--rp-green);
-  font-size: 0.74rem;
-}
-
-.rankings-plum-trend-negative strong {
-  color: var(--rp-rose);
-}
-
-.rankings-plum-trend > i {
-  display: block;
-  width: var(--trend-width, 42%);
-  height: 0.44rem;
-  border-radius: 999px;
-  background: linear-gradient(90deg, var(--rp-cyan), var(--rp-green));
-}
-
-.rankings-plum-trend-negative > i {
-  margin-left: auto;
-  background: linear-gradient(90deg, var(--rp-amber), var(--rp-rose));
-}
-
-.rankings-plum-trend-neutral > i {
-  background: #cbd5e1;
 }
 
 .rankings-plum-empty {
