@@ -439,6 +439,17 @@ export type RankingFilterOption = {
   label: string
 }
 
+export type RankingReferenceMetric = {
+  code: string
+  label: string
+  value: number | null
+}
+
+export type RankingReferenceGroup = {
+  averageScore: number | null
+  metrics: RankingReferenceMetric[]
+}
+
 export type RankingSummary = {
   source: {
     mode: 'live'
@@ -455,6 +466,10 @@ export type RankingSummary = {
     regionManagers: RankingFilterOption[]
     regions: RankingFilterOption[]
     stores: RankingFilterOption[]
+  }
+  reference?: {
+    store: RankingReferenceGroup
+    personnel: RankingReferenceGroup
   }
   storeLeaderboard: {
     items: StoreRankingRow[]
@@ -665,6 +680,8 @@ export async function getRankings(input?: {
   regionId?: string
   storeId?: string
   search?: string
+  sortKey?: string
+  sortDirection?: 'asc' | 'desc'
   limit?: number
   offset?: number
 }) {
@@ -684,6 +701,12 @@ export async function getRankings(input?: {
   }
   if (input?.search) {
     params.set('search', input.search)
+  }
+  if (input?.sortKey) {
+    params.set('sortKey', input.sortKey)
+  }
+  if (input?.sortDirection) {
+    params.set('sortDirection', input.sortDirection)
   }
   if (input?.limit) {
     params.set('limit', String(input.limit))

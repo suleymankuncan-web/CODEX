@@ -36,6 +36,29 @@ export class GetRankingQueryDto {
   search?: string;
 
   @IsOptional()
+  @IsIn([
+    "score",
+    "UPT",
+    "ATV",
+    "CR",
+    "TARGET_ACHIEVEMENT",
+    "BM_CHECKLIST",
+    "VM_CHECKLIST",
+  ])
+  sortKey?:
+    | "score"
+    | "UPT"
+    | "ATV"
+    | "CR"
+    | "TARGET_ACHIEVEMENT"
+    | "BM_CHECKLIST"
+    | "VM_CHECKLIST";
+
+  @IsOptional()
+  @IsIn(["asc", "desc"])
+  sortDirection?: "asc" | "desc";
+
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)

@@ -208,6 +208,115 @@ describe("RankingService", () => {
     expect(result.personnelLeaderboard.items[0]).toHaveProperty("metrics");
   });
 
+  it("sorts privileged rankings across the full filtered population before pagination", async () => {
+    const storeRows = [
+      {
+        ...createStoreRows(1)[0],
+        store_id: "store-high",
+        actual_value: "240",
+        target_value: "100",
+      },
+      {
+        ...createStoreRows(1)[0],
+        store_id: "store-low",
+        actual_value: "50",
+        target_value: "100",
+      },
+      {
+        ...createStoreRows(1)[0],
+        store_id: "store-mid",
+        actual_value: "110",
+        target_value: "100",
+      },
+    ];
+    const personnelRows = [
+      {
+        ...createPersonnelRows(1)[0],
+        employee_id: "employee-high",
+        actual_value: "220",
+        target_value: "100",
+      },
+      {
+        ...createPersonnelRows(1)[0],
+        employee_id: "employee-low",
+        actual_value: "40",
+        target_value: "100",
+      },
+      {
+        ...createPersonnelRows(1)[0],
+        employee_id: "employee-mid",
+        actual_value: "105",
+        target_value: "100",
+      },
+    ];
+    const repository = createRepositoryMock({ storeRows, personnelRows });
+    const service = new RankingService(
+      repository as never,
+      createKpiConfigRepositoryMock() as never,
+    );
+
+    const result = await service.getRankings({
+      userId: "regional-1",
+      roleCodes: ["REGION_MANAGER"],
+      companyIds: [],
+      regionIds: [],
+      storeIds: [],
+      assignedStoreIds: [],
+      periodType: "monthly",
+      sortKey: "TARGET_ACHIEVEMENT",
+      sortDirection: "asc",
+      limit: 1,
+      offset: 0,
+    });
+
+    expect(result.storeLeaderboard.items).toHaveLength(1);
+    expect(result.storeLeaderboard.items[0]).toEqual(
+      expect.objectContaining({
+        storeId: "store-low",
+        rank: 3,
+      }),
+    );
+    expect(result.personnelLeaderboard.items).toHaveLength(1);
+    expect(result.personnelLeaderboard.items[0]).toEqual(
+      expect.objectContaining({
+        employeeId: "employee-low",
+        rank: 3,
+      }),
+    );
+  });
+
+  it("returns Turkey reference metrics even when low roles receive summary-only ranking rows", async () => {
+    const repository = createRepositoryMock();
+    const service = new RankingService(
+      repository as never,
+      createKpiConfigRepositoryMock() as never,
+    );
+
+    const result = await service.getRankings({
+      userId: "personnel-1",
+      employeeId: "employee-105",
+      roleCodes: ["STORE_PERSONNEL"],
+      companyIds: [],
+      regionIds: [],
+      storeIds: [],
+      assignedStoreIds: ["store-105"],
+      periodType: "monthly",
+    });
+
+    expect(result.storeLeaderboard.items[0]).not.toHaveProperty("metrics");
+    expect(result.personnelLeaderboard.items[0]).not.toHaveProperty("metrics");
+    expect(result.reference.store.averageScore).toBeGreaterThan(0);
+    expect(result.reference.store.metrics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "TARGET_ACHIEVEMENT",
+          value: expect.any(Number),
+        }),
+      ]),
+    );
+    expect(result.reference.personnel.averageScore).toBeGreaterThan(0);
+  });
+
   it("applies privileged filters without recomputing Turkey ranks", async () => {
     const repository = createRepositoryMock();
     const service = new RankingService(

@@ -2103,10 +2103,22 @@ code {
   padding: 0.65rem;
 }
 
-.rankings-plum-reference-item:first-child {
-  flex-basis: 190px;
+.rankings-plum-reference-title {
+  flex: 0 0 180px;
+  min-height: 3.65rem;
+  border: 1px solid rgba(139, 75, 216, 0.2);
+  border-radius: 14px;
+  background:
+    linear-gradient(135deg, rgba(80, 36, 128, 0.12), rgba(14, 165, 183, 0.12)),
+    rgba(255, 255, 255, 0.7);
+  padding: 0.65rem;
 }
 
+.rankings-plum-reference-item:first-child {
+  flex-basis: 150px;
+}
+
+.rankings-plum-reference-title span,
 .rankings-plum-reference-item span {
   display: block;
   color: var(--rp-muted);
@@ -2114,6 +2126,7 @@ code {
   font-weight: 760;
 }
 
+.rankings-plum-reference-title strong,
 .rankings-plum-reference-item strong {
   display: block;
   margin-top: 0.35rem;

@@ -374,6 +374,61 @@ test('store rankings page explains monthly preview-only ranking', async ({ page 
   await expect(page.getByText('Siralama yuzeyi acilamadi')).toHaveCount(0)
 })
 
+test('store rankings uses Turkey reference, checklist metrics, normalized HG, and backend sort params', async ({ page }) => {
+  const rankingRequests: URL[] = []
+
+  await page.unroute('**/api/auth/session')
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      json: {
+        ...authSessionFixture,
+        user: {
+          ...authSessionFixture.user,
+          userId: 'region-ranking-user',
+          roleCodes: ['REGION_MANAGER'],
+        },
+      },
+    })
+  })
+
+  await page.unroute('**/api/reports/rankings**')
+  await page.route('**/api/reports/rankings**', async (route) => {
+    const url = new URL(route.request().url())
+    rankingRequests.push(url)
+    const ascendingTargetSort =
+      url.searchParams.get('sortKey') === 'TARGET_ACHIEVEMENT' &&
+      url.searchParams.get('sortDirection') === 'asc'
+
+    await route.fulfill({
+      json: {
+        ...rankingsPrivilegedDetailFixture,
+        storeLeaderboard: {
+          ...rankingsPrivilegedDetailFixture.storeLeaderboard,
+          items: ascendingTargetSort
+            ? [rankingsPrivilegedLowHgStoreRow]
+            : [rankingsPrivilegedDetailStoreRow],
+        },
+      },
+    })
+  })
+
+  await page.goto('/store/rankings')
+
+  await expect(page.locator('.rankings-plum-reference-title')).toBeVisible()
+  await expect(page.locator('.rankings-plum-reference-bar')).toContainText('Türkiye Referansı')
+  await expect(page.locator('.rankings-plum-metric-sort-row')).toContainText('BM Checklist')
+  await expect(page.locator('.rankings-plum-metric-sort-row')).toContainText('VM Checklist')
+  await expect(page.locator('.rankings-plum-metric-grid').first()).toContainText('371,09%')
+  await expect(page.locator('.rankings-plum-metric-grid').first()).not.toContainText('371.088.457%')
+
+  await page.locator('.rankings-plum-sort-button', { hasText: 'HG%' }).click()
+  await page.locator('.rankings-plum-sort-button', { hasText: 'HG%' }).click()
+
+  await expect.poll(() => rankingRequests.at(-1)?.searchParams.get('sortKey')).toBe('TARGET_ACHIEVEMENT')
+  await expect.poll(() => rankingRequests.at(-1)?.searchParams.get('sortDirection')).toBe('asc')
+  await expect(page.getByText('Low HG Store')).toBeVisible()
+})
+
 test('store tasks page renders readable Turkish queue labels', async ({ page }) => {
   await page.goto('/store/tasks')
 
@@ -1508,6 +1563,146 @@ const personnelRankingSummaryRow = {
   storePopulation: 4,
   scoreValue: 96.4,
   visibility: 'summary',
+}
+
+const rankingsPrivilegedDetailStoreRow = {
+  subject: 'store',
+  storeId: 'store-high-hg',
+  storeName: 'High HG Store',
+  regionId: '00000000-0000-0000-0000-000000000010',
+  regionName: 'Marmara',
+  regionManagerUserId: 'region-manager-1',
+  regionManagerName: 'Region Manager',
+  rank: 1,
+  population: 2,
+  scoreValue: 91.4,
+  visibility: 'detail',
+  metrics: [
+    {
+      code: 'UPT',
+      label: 'UPT',
+      actualValue: 4.75,
+      benchmarkValue: 4.2,
+      contributionValue: 15,
+    },
+    {
+      code: 'ATV',
+      label: 'ATV',
+      actualValue: 1580,
+      benchmarkValue: 1320,
+      contributionValue: 15,
+    },
+    {
+      code: 'CR',
+      label: 'CR',
+      actualValue: 0.197,
+      benchmarkValue: 0.185,
+      contributionValue: 20,
+    },
+    {
+      code: 'TARGET_ACHIEVEMENT',
+      label: 'Target Achievement',
+      actualValue: 3710884.57,
+      targetValue: 1000000,
+      contributionValue: 40,
+    },
+    {
+      code: 'BM_CHECKLIST',
+      label: 'BM Checklist',
+      actualValue: 86,
+      contributionValue: 4.3,
+    },
+    {
+      code: 'VM_CHECKLIST',
+      label: 'VM Checklist',
+      actualValue: 92,
+      contributionValue: 4.6,
+    },
+  ],
+}
+
+const rankingsPrivilegedLowHgStoreRow = {
+  ...rankingsPrivilegedDetailStoreRow,
+  storeId: 'store-low-hg',
+  storeName: 'Low HG Store',
+  rank: 2,
+  scoreValue: 64.2,
+  metrics: rankingsPrivilegedDetailStoreRow.metrics.map((metric) =>
+    metric.code === 'TARGET_ACHIEVEMENT'
+      ? {
+          ...metric,
+          actualValue: 640000,
+          targetValue: 1000000,
+          contributionValue: 25.6,
+        }
+      : metric,
+  ),
+}
+
+const rankingsPrivilegedDetailFixture = {
+  source: {
+    mode: 'live',
+    periodType: 'monthly',
+    periodStart: '2026-04-01',
+    periodEnd: '2026-04-30',
+  },
+  access: {
+    globalMode: 'full',
+    canSeeGlobalDetails: true,
+    canSeeManagedStorePersonnelDetails: true,
+  },
+  filters: {
+    regionManagers: [{ id: 'region-manager-1', label: 'Region Manager' }],
+    regions: [{ id: '00000000-0000-0000-0000-000000000010', label: 'Marmara' }],
+    stores: [{ id: 'store-high-hg', label: 'High HG Store' }],
+  },
+  reference: {
+    store: {
+      averageScore: 83.6,
+      metrics: [
+        { code: 'UPT', label: 'UPT', value: 4.22 },
+        { code: 'ATV', label: 'ATV', value: 1320 },
+        { code: 'CR', label: 'CR', value: 0.185 },
+        { code: 'TARGET_ACHIEVEMENT', label: 'Target Achievement', value: 0.94 },
+        { code: 'BM_CHECKLIST', label: 'BM Checklist', value: 81 },
+        { code: 'VM_CHECKLIST', label: 'VM Checklist', value: 84 },
+      ],
+    },
+    personnel: {
+      averageScore: 79.2,
+      metrics: [
+        { code: 'UPT', label: 'UPT', value: 4.1 },
+        { code: 'ATV', label: 'ATV', value: 1180 },
+        { code: 'TARGET_ACHIEVEMENT', label: 'Target Achievement', value: 0.88 },
+      ],
+    },
+  },
+  storeLeaderboard: {
+    items: [rankingsPrivilegedDetailStoreRow],
+    currentStore: rankingsPrivilegedDetailStoreRow,
+    meta: {
+      total: 2,
+      limit: 100,
+      offset: 0,
+    },
+  },
+  personnelLeaderboard: {
+    items: [],
+    currentEmployee: null,
+    managedStorePersonnel: [],
+    meta: {
+      total: 0,
+      limit: 100,
+      offset: 0,
+    },
+  },
+  availablePeriods: [
+    {
+      periodType: 'monthly',
+      periodStart: '2026-04-01',
+      periodEnd: '2026-04-30',
+    },
+  ],
 }
 
 const rankingsFixture = {
