@@ -60,6 +60,7 @@ test('rankings render summary rows without metric detail arrays', async ({ page 
   await page.goto('/store/rankings')
 
   await expect(page.getByText('Pilot Store').first()).toBeVisible()
+  await page.getByRole('tab', { name: 'Personel listesi' }).click()
   await expect(page.getByText('Pilot Employee')).toBeVisible()
   expect(pageErrors).toEqual([])
 })

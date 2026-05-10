@@ -302,22 +302,23 @@ test('store home switches to English copy and persists locale', async ({ page })
   await expect(page.getByRole('heading', { name: /Task-focused home page/i })).toBeVisible()
 })
 
-test('store rankings page renders closed leaderboard and metric mini-ranks', async ({ page }) => {
+test('store rankings page renders Plum Signal ranking table', async ({ page }) => {
   await page.goto('/store/rankings')
 
-  await expect(page.getByRole('heading', { name: /Mağaza ve personel sıralamaları/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Sıralamalar' })).toBeVisible()
   await expect(
     page.getByRole('option', {
       name: /1 Nis 2026 - 30 Nis 2026/,
     }),
   ).toBeAttached()
-  await expect(page.getByRole('heading', { name: 'Top 100 görünümü' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Türkiye mağaza sıralaması' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Türkiye personel sıralaması' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Kendi mağaza sırası' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Kendi personel sırası' })).toBeVisible()
+  await expect(page.locator('.rankings-plum-page')).toBeVisible()
+  await expect(page.getByText('Top 100 kapsam')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Mağaza listesi' })).toBeVisible()
+  await expect(page.getByText('Mağaza skor')).toBeVisible()
+  await page.getByRole('tab', { name: 'Personel listesi' }).click()
+  await expect(page.getByRole('heading', { name: 'Personel listesi' })).toBeVisible()
   await expect(page.getByText('Store Personnel - 1').first()).toBeVisible()
-  await expect(page.getByLabel('Sıralama metrik detayları').first()).toBeVisible()
+  await expect(page.getByText('Personel skor')).toBeVisible()
   await expect(page.getByText('Magaza ve personel rankingleri')).toHaveCount(0)
   await expect(page.getByText('Top 100 gorunumu')).toHaveCount(0)
   await expect(page.getByText('Turkiye magaza siralamasi')).toHaveCount(0)
@@ -333,18 +334,17 @@ test('store rankings page switches to English copy and persists locale', async (
   await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: /Store and personnel rankings/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Rankings' })).toBeVisible()
   await expect(
     page.getByRole('option', {
       name: /Apr 1, 2026 - Apr 30, 2026/,
     }),
   ).toBeAttached()
-  await expect(page.getByRole('heading', { name: 'Top 100 view' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Turkey store ranking' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Turkey personnel ranking' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'My store rank' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'My personnel rank' })).toBeVisible()
-  await expect(page.getByLabel('Ranking metric details').first()).toBeVisible()
+  await expect(page.locator('.rankings-plum-page')).toBeVisible()
+  await expect(page.getByText('Top 100 scope')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Store list' })).toBeVisible()
+  await page.getByRole('tab', { name: 'Personnel list' }).click()
+  await expect(page.getByRole('heading', { name: 'Personnel list' })).toBeVisible()
   await expect(page.getByText('Mağaza ve personel sıralamaları')).toHaveCount(0)
   await expect(page.locator('body')).not.toContainText('Ã')
   await expect(page.locator('body')).not.toContainText('Ä')
@@ -353,7 +353,7 @@ test('store rankings page switches to English copy and persists locale', async (
   await page.reload()
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: /Store and personnel rankings/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Rankings' })).toBeVisible()
 })
 
 test('store rankings page explains monthly preview-only ranking', async ({ page }) => {
@@ -366,8 +366,10 @@ test('store rankings page explains monthly preview-only ranking', async ({ page 
     }),
   ).toBeAttached()
   await expect(page.getByLabel('Sıralama dönem seçimi')).toHaveValue('2026-04-01')
-  await expect(page.getByText('Top 100', { exact: true })).toBeVisible()
-  await expect(page.getByText('Global liste Top 100 özet; kendi konumun ayrıca görünür.')).toBeVisible()
+  await expect(page.getByText('Top 100 kapsam')).toBeVisible()
+  await expect(
+    page.getByText('Top 100 görünümünü, kendi mağaza ve personel konumunla birlikte takip et.'),
+  ).toBeVisible()
   await expect(page.getByText('Global liste Top 100 ozet; kendi konumun ayrica gorunur.')).toHaveCount(0)
   await expect(page.getByText('Siralama yuzeyi acilamadi')).toHaveCount(0)
 })

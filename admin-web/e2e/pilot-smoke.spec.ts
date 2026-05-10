@@ -63,7 +63,7 @@ test('core store routes open without unavailable states', async ({ page }) => {
     },
     {
       path: '/store/rankings',
-      heading: page.getByRole('heading', { name: /Mağaza ve personel sıralamaları/i }),
+      heading: page.getByRole('heading', { name: 'Sıralamalar' }),
     },
     {
       path: '/store/approvals',
@@ -88,7 +88,11 @@ test('protected route refresh returns to the same route', async ({ page }) => {
   await page.reload()
 
   await expect(page).toHaveURL(/\/store\/rankings$/)
-  await expect(page.getByRole('heading', { name: /Mağaza ve personel sıralamaları/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Sıralamalar' })).toBeVisible()
+  await expect(page.getByText('Tam kapsam')).toBeVisible()
+  await expect(page.getByLabel('Bölge müdürü filtresi')).toBeVisible()
+  await expect(page.getByLabel('Mağaza filtresi')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Filtreleri temizle' })).toBeVisible()
   await expectHealthySurface(page)
   monitor.expectClean()
 })
