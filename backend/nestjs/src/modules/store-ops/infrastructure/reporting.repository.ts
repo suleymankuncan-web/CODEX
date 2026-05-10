@@ -1031,6 +1031,7 @@ export class ReportingRepository {
             AND ka.period_type = $1
             AND ka.period_start >= $2::date
             AND ka.period_end <= $3::date
+            AND COALESCE(ka.source_type, '') <> 'demo_seed'
             ${companyClause}
           GROUP BY ka.store_id, kd.kpi_code
         )
@@ -1075,6 +1076,7 @@ export class ReportingRepository {
       `ka.scope_type = 'employee'`,
       `ka.period_start >= $1::date`,
       `ka.period_end <= $2::date`,
+      `COALESCE(ka.source_type, '') <> 'demo_seed'`,
     ];
 
     if (input.periodType) {

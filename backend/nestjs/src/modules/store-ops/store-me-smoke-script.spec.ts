@@ -125,6 +125,20 @@ describe("store-me smoke script", () => {
     expect(releaseRehearsal).toContain('"smoke:store-me"');
   });
 
+  it("marks rehearsal live KPI fixtures as non-demo before store-me smoke", () => {
+    const releaseRehearsal = readFileSync(
+      join(process.cwd(), "scripts", "release-rehearsal.ts"),
+      "utf8",
+    );
+
+    expect(releaseRehearsal).toContain("prepareReleaseRehearsalLiveFixture");
+    expect(releaseRehearsal).toContain("source_type = 'release_rehearsal'");
+    expect(releaseRehearsal).toContain("source_type = 'demo_seed'");
+    expect(releaseRehearsal.indexOf("prepareReleaseRehearsalLiveFixture")).toBeLessThan(
+      releaseRehearsal.indexOf('"smoke:store-me"'),
+    );
+  });
+
   it("starts the compiled Nest entrypoints during release rehearsal", () => {
     const releaseRehearsal = readFileSync(
       join(process.cwd(), "scripts", "release-rehearsal.ts"),

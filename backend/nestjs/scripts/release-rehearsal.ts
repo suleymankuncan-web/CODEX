@@ -186,6 +186,24 @@ async function resetAndSeedDatabase(databaseUrl: string) {
   }
 }
 
+async function prepareReleaseRehearsalLiveFixture(databaseUrl: string) {
+  const pool = new Pool({ connectionString: databaseUrl });
+
+  try {
+    await pool.query(`
+      UPDATE ops.kpi_actual
+      SET source_type = 'release_rehearsal'
+      WHERE source_type = 'demo_seed'
+        AND period_type = 'monthly'
+        AND period_start = DATE '2026-04-01'
+        AND period_end = DATE '2026-04-30'
+        AND scope_type IN ('employee', 'store')
+    `);
+  } finally {
+    await pool.end();
+  }
+}
+
 async function main() {
   const sharedEnv = {
     ...process.env,
@@ -208,6 +226,7 @@ async function main() {
     );
 
     await resetAndSeedDatabase(sharedEnv.DATABASE_URL);
+    await prepareReleaseRehearsalLiveFixture(sharedEnv.DATABASE_URL);
 
     await runCommand(npmCommand, ["run", "build"], {
       cwd: backendRoot,
