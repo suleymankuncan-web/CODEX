@@ -58,6 +58,8 @@ describe("RankingService", () => {
   function createRepositoryMock(input?: {
     storeRows?: ReturnType<typeof createStoreRows>;
     personnelRows?: ReturnType<typeof createPersonnelRows>;
+    storeBenchmarkRows?: Array<{ kpi_code: string; benchmark_value: string | null }>;
+    personnelBenchmarkRows?: Array<{ kpi_code: string; benchmark_value: string | null }>;
   }) {
     return {
       resolveEmployeeIdForAuthIdentity: jest.fn(async () => "employee-105"),
@@ -67,8 +69,8 @@ describe("RankingService", () => {
       listRankingPersonnelKpiRows: jest.fn(
         async () => input?.personnelRows ?? createPersonnelRows(105),
       ),
-      getStoreTurkeyBenchmarkValues: jest.fn(async () => []),
-      getEmployeeTurkeyBenchmarkValues: jest.fn(async () => []),
+      getStoreTurkeyBenchmarkValues: jest.fn(async () => input?.storeBenchmarkRows ?? []),
+      getEmployeeTurkeyBenchmarkValues: jest.fn(async () => input?.personnelBenchmarkRows ?? []),
       listRankingFilterOptions: jest.fn(async () => ({
         regionManagers: [
           { id: "region-manager-1", label: "Region Manager 1" },
@@ -315,6 +317,69 @@ describe("RankingService", () => {
       ]),
     );
     expect(result.reference.personnel.averageScore).toBeGreaterThan(0);
+  });
+
+  it("returns missing store checklist weights to scored KPI metrics", async () => {
+    const baseStoreRow = createStoreRows(1)[0];
+    const storeRows = [
+      {
+        ...baseStoreRow,
+        kpi_code: "TARGET_ACHIEVEMENT",
+        kpi_name: "Hedef gerceklestirme orani",
+        actual_value: "100",
+        target_value: "100",
+      },
+      {
+        ...baseStoreRow,
+        kpi_code: "CR",
+        kpi_name: "CR",
+        actual_value: "0.2",
+        target_value: "not_applicable",
+      },
+      {
+        ...baseStoreRow,
+        kpi_code: "ATV",
+        kpi_name: "ATV",
+        actual_value: "1500",
+        target_value: "not_applicable",
+      },
+      {
+        ...baseStoreRow,
+        kpi_code: "UPT",
+        kpi_name: "UPT",
+        actual_value: "4",
+        target_value: "not_applicable",
+      },
+    ];
+    const repository = createRepositoryMock({
+      storeRows,
+      storeBenchmarkRows: [
+        { kpi_code: "CR", benchmark_value: "0.2" },
+        { kpi_code: "ATV", benchmark_value: "1500" },
+        { kpi_code: "UPT", benchmark_value: "4" },
+      ],
+    });
+    const service = new RankingService(
+      repository as never,
+      createKpiConfigRepositoryMock() as never,
+    );
+
+    const result = await service.getRankings({
+      userId: "regional-1",
+      roleCodes: ["REGION_MANAGER"],
+      companyIds: [],
+      regionIds: [],
+      storeIds: [],
+      assignedStoreIds: [],
+      periodType: "monthly",
+    });
+
+    expect(result.storeLeaderboard.items[0]).toEqual(
+      expect.objectContaining({
+        storeId: "store-001",
+        scoreValue: 100,
+      }),
+    );
   });
 
   it("applies privileged filters without recomputing Turkey ranks", async () => {

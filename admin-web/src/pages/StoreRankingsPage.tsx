@@ -206,36 +206,16 @@ function getVisibleWindow(total: number, offset: number, count: number, t: Trans
   return `${offset + 1}-${offset + count}`
 }
 
-function getBenchmarkSignal(metrics: RankingMetricValue[] | undefined) {
-  const deltas =
-    metrics
-      ?.map((metric) => {
-        const referenceValue = metric.benchmarkValue ?? metric.targetValue
-        if (
-          metric.actualValue === null ||
-          metric.actualValue === undefined ||
-          referenceValue === null ||
-          referenceValue === undefined ||
-          !Number.isFinite(metric.actualValue) ||
-          !Number.isFinite(referenceValue) ||
-          referenceValue === 0
-        ) {
-          return null
-        }
-
-        return (metric.actualValue - referenceValue) / Math.abs(referenceValue)
-      })
-      .filter((value): value is number => value !== null) ?? []
-
-  const value = average(deltas)
-
-  if (value === null) {
+function getScoreSignal(scoreValue: number | null | undefined) {
+  if (scoreValue === null || scoreValue === undefined || !Number.isFinite(scoreValue)) {
     return {
       value: null,
       width: 42,
       tone: 'neutral' as const,
     }
   }
+
+  const value = (scoreValue - 100) / 100
 
   return {
     value,
@@ -1058,7 +1038,7 @@ function StoreRankingTableRow(input: {
             />
           </td>
           <td data-label={input.t('storeRankings.signal')}>
-            <RankingSignal metrics={row.metrics} locale={input.locale} t={input.t} />
+            <RankingSignal scoreValue={row.scoreValue} locale={input.locale} t={input.t} />
           </td>
         </>
       ) : null}
@@ -1102,7 +1082,7 @@ function PersonnelRankingTableRow(input: {
             />
           </td>
           <td data-label={input.t('storeRankings.signal')}>
-            <RankingSignal metrics={row.metrics} locale={input.locale} t={input.t} />
+            <RankingSignal scoreValue={row.scoreValue} locale={input.locale} t={input.t} />
           </td>
         </>
       ) : null}
@@ -1183,11 +1163,11 @@ function MetricDetails(input: {
 }
 
 function RankingSignal(input: {
-  metrics: RankingMetricValue[] | undefined
+  scoreValue: number | null | undefined
   locale: AppLocale
   t: TranslateFunction
 }) {
-  const signal = getBenchmarkSignal(input.metrics)
+  const signal = getScoreSignal(input.scoreValue)
   const style = { '--trend-width': `${signal.width}%` } as CSSProperties
   const value =
     signal.value === null
@@ -1293,7 +1273,7 @@ function RankingDetailDrawer(input: {
                 <i />
               </span>
             </div>
-            <RankingSignal metrics={row.metrics} locale={input.locale} t={input.t} />
+            <RankingSignal scoreValue={row.scoreValue} locale={input.locale} t={input.t} />
           </section>
           <section className="rankings-plum-detail-section">
             <h3>{input.t('storeRankings.coachingNote')}</h3>
