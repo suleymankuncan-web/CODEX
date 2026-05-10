@@ -275,6 +275,25 @@ describe("ReportingRepository ranking source filters", () => {
       expect(String(sql)).toContain("COALESCE(ka.source_type, '') <> 'demo_seed'");
     }
   });
+
+  it("excludes demo seed KPI rows from ranking Turkey benchmarks", async () => {
+    const { query, repository } = createRepository();
+
+    await repository.getStoreTurkeyBenchmarkValues({
+      periodType: "monthly",
+      periodStart: "2026-03-01",
+      periodEnd: "2026-03-31",
+    });
+    await repository.getEmployeeTurkeyBenchmarkValues({
+      periodType: "monthly",
+      periodStart: "2026-03-01",
+      periodEnd: "2026-03-31",
+    });
+
+    for (const [sql] of query.mock.calls) {
+      expect(String(sql)).toContain("COALESCE(ka.source_type, '') <> 'demo_seed'");
+    }
+  });
 });
 
 describe("ReportingRepository personnel target reference queries", () => {
