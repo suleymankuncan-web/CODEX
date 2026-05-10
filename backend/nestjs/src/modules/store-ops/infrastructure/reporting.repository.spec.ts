@@ -186,7 +186,7 @@ describe("ReportingRepository benchmark queries", () => {
     return { query, repository };
   }
 
-  it("calculates store ATV UPT CR benchmarks from PowerBI-compatible KPI averages", async () => {
+  it("calculates store ATV UPT CR benchmarks with PowerBI metric-specific aggregation", async () => {
     const { query, repository } = createRepository();
 
     await repository.getStoreTurkeyBenchmarkValues({
@@ -197,11 +197,11 @@ describe("ReportingRepository benchmark queries", () => {
     });
 
     const sql = String(query.mock.calls[0][0]);
-    expect(sql).toContain("AVG(ka.actual_value)::text AS benchmark_value");
-    expect(sql).toContain("kd.kpi_code IN ('ATV', 'UPT', 'CR')");
-    expect(sql).not.toContain("SUM(net_sales.actual_value)");
-    expect(sql).not.toContain("SUM(item_count.actual_value)");
-    expect(sql).not.toContain("SUM(ticket_count.actual_value)");
+    expect(sql).toContain("store.kpi_import_enabled = TRUE");
+    expect(sql).toContain("SELECT 'ATV' AS kpi_code");
+    expect(sql).toContain("AVG(scoped_actual.actual_value)::text AS benchmark_value");
+    expect(sql).toContain("SUM(item_count.actual_value) / NULLIF(SUM(ticket_count.actual_value), 0)");
+    expect(sql).toContain("SUM(ticket_count.actual_value) / NULLIF(SUM(ff.actual_value), 0)");
   });
 
   it("calculates personnel ATV UPT benchmarks from PowerBI-compatible KPI averages", async () => {
@@ -289,6 +289,40 @@ describe("ReportingRepository ranking source filters", () => {
 
     for (const [sql] of query.mock.calls) {
       expect(String(sql)).toContain("COALESCE(ka.source_type, '') <> 'demo_seed'");
+    }
+  });
+
+  it("uses KPI import enabled stores for ranking lists and filter options", async () => {
+    const { query, repository } = createRepository();
+
+    await repository.listRankingStoreKpiRows({
+      metricCodes: ["ATV"],
+      companyIds: [],
+      periodType: "monthly",
+      periodStart: "2026-03-01",
+      periodEnd: "2026-03-31",
+    });
+    await repository.listRankingPersonnelKpiRows({
+      metricCodes: ["ATV"],
+      companyIds: [],
+      periodType: "monthly",
+      periodStart: "2026-03-01",
+      periodEnd: "2026-03-31",
+    });
+    await repository.listRankingFilterOptions({
+      companyIds: [],
+      periodType: "monthly",
+      periodStart: "2026-03-01",
+      periodEnd: "2026-03-31",
+    });
+
+    const storeScopedQueries = query.mock.calls
+      .map(([sql]) => String(sql))
+      .filter((sql) => sql.includes("ops.store store"));
+
+    expect(storeScopedQueries.length).toBeGreaterThan(0);
+    for (const sql of storeScopedQueries) {
+      expect(sql).toContain("store.kpi_import_enabled = TRUE");
     }
   });
 });
