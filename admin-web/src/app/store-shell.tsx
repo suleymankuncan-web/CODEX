@@ -32,6 +32,7 @@ export function StoreShell(input: {
   const { t } = useLocalization()
   const checklistOnly = isVisualMerchandiserOnly(input.authSummary)
   const location = useLocation()
+  const rankingsRoute = location.pathname === '/store/rankings'
   const storeRoute = (element: ReactNode, options?: { allowVm?: boolean }) => (
     <StoreRouteGuard authSummary={input.authSummary} allowVm={options?.allowVm}>
       {element}
@@ -62,34 +63,36 @@ export function StoreShell(input: {
   }
 
   return (
-    <div className="store-shell">
-      <header className="store-shell-header">
-        <div>
-          <div className="eyebrow">{t('storeHome.shellEyebrow')}</div>
-          <h1>{t('storeHome.shellTitle')}</h1>
-          <p className="topbar-copy">{t('storeHome.shellCopy')}</p>
-        </div>
-        <div className="topbar-cluster">
-          <LanguageToggle />
-          <StatusPill tone="accent">{t('storeHome.preview')}</StatusPill>
-          <NavLink to="/auth/login" className="control-button store-shell-link">
-            {t('storeHome.realLogin')}
-          </NavLink>
-          {!checklistOnly ? (
-            <>
-              <NavLink to="/admin/reports" className="control-button store-shell-link">
-                {t('storeHome.adminReports')}
-              </NavLink>
-              <NavLink to="/store/feed" className="control-button store-shell-link">
-                {t('storeHome.announcements')}
-              </NavLink>
-              <NavLink to="/store/competitions" className="control-button store-shell-link">
-                {t('storeHome.competitions')}
-              </NavLink>
-            </>
-          ) : null}
-        </div>
-      </header>
+    <div className={`store-shell${rankingsRoute ? ' store-shell-rankings' : ''}`}>
+      {rankingsRoute ? null : (
+        <header className="store-shell-header">
+          <div>
+            <div className="eyebrow">{t('storeHome.shellEyebrow')}</div>
+            <h1>{t('storeHome.shellTitle')}</h1>
+            <p className="topbar-copy">{t('storeHome.shellCopy')}</p>
+          </div>
+          <div className="topbar-cluster">
+            <LanguageToggle />
+            <StatusPill tone="accent">{t('storeHome.preview')}</StatusPill>
+            <NavLink to="/auth/login" className="control-button store-shell-link">
+              {t('storeHome.realLogin')}
+            </NavLink>
+            {!checklistOnly ? (
+              <>
+                <NavLink to="/admin/reports" className="control-button store-shell-link">
+                  {t('storeHome.adminReports')}
+                </NavLink>
+                <NavLink to="/store/feed" className="control-button store-shell-link">
+                  {t('storeHome.announcements')}
+                </NavLink>
+                <NavLink to="/store/competitions" className="control-button store-shell-link">
+                  {t('storeHome.competitions')}
+                </NavLink>
+              </>
+            ) : null}
+          </div>
+        </header>
+      )}
 
       <main className="store-main" aria-label={t('adminShell.storeWorkspaceAria')}>
         <Suspense fallback={<RouteLoadingState />}>
