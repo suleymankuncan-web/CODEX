@@ -19,6 +19,7 @@ import {
   getRankings,
   type PersonnelRankingRow,
   type RankingMetricValue,
+  type RankingReferenceGroup,
   type RankingSummary,
   type StoreRankingRow,
 } from '../features/reports/api'
@@ -27,11 +28,11 @@ import type { AppLocale } from '../lib/i18n'
 
 const privilegedRankingRoles = ['REGION_MANAGER', 'SUPER_ADMIN']
 const rankingRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', ...privilegedRankingRoles]
-const storeMetricCodes = ['UPT', 'ATV', 'CR', 'TARGET_ACHIEVEMENT'] as const
+const storeMetricCodes = ['UPT', 'ATV', 'CR', 'TARGET_ACHIEVEMENT', 'BM_CHECKLIST', 'VM_CHECKLIST'] as const
 const personnelMetricCodes = ['UPT', 'ATV', 'TARGET_ACHIEVEMENT'] as const
 
 type ActiveRankingList = 'stores' | 'personnel'
-type RankingSortKey = 'score' | 'UPT' | 'ATV' | 'CR' | 'TARGET_ACHIEVEMENT'
+type RankingSortKey = 'score' | typeof storeMetricCodes[number]
 type RankingSortDirection = 'asc' | 'desc'
 type RankingDetailSelection =
   | { type: 'store'; row: StoreRankingRow }
@@ -48,6 +49,8 @@ const metricLabelKeyByCode: Record<string, TranslationKey> = {
   ATV: 'storeRankings.metric.atv',
   UPT: 'storeRankings.metric.upt',
   CR: 'storeRankings.metric.cr',
+  BM_CHECKLIST: 'storeRankings.metric.bmChecklist',
+  VM_CHECKLIST: 'storeRankings.metric.vmChecklist',
 }
 
 function hasAnyRole(userRoles: string[], requiredRoles: string[]) {
@@ -92,14 +95,19 @@ function formatPercent(
 function formatMetricValue(
   locale: AppLocale,
   t: TranslateFunction,
-  input: number | null | undefined,
+  input: RankingMetricValue | number | null | undefined,
   code: string,
 ) {
+  const value =
+    typeof input === 'object' && input !== null
+      ? getMetricComparableValue(input, code)
+      : input
+
   if (code === 'CR' || code === 'TARGET_ACHIEVEMENT') {
-    return formatPercent(locale, t, input)
+    return formatPercent(locale, t, value)
   }
 
-  return formatNumber(locale, t, input)
+  return formatNumber(locale, t, value)
 }
 
 function formatRank(t: TranslateFunction, rank: number | null, population: number) {
@@ -151,31 +159,25 @@ function getMetricByCode(metrics: RankingMetricValue[] | undefined, code: string
   return metrics?.find((metric) => metric.code === code)
 }
 
-function getMetricActual(row: SortableRankingRow, code: RankingSortKey) {
-  if (code === 'score') {
-    return row.scoreValue
+function getMetricComparableValue(metric: RankingMetricValue | undefined, code: string) {
+  if (!metric || metric.actualValue === null || metric.actualValue === undefined) {
+    return null
   }
 
-  return getMetricByCode(row.metrics, code)?.actualValue ?? null
-}
+  if (code !== 'TARGET_ACHIEVEMENT') {
+    return metric.actualValue
+  }
 
-function sortRankingRows<T extends SortableRankingRow>(
-  rows: T[],
-  sortKey: RankingSortKey,
-  sortDirection: RankingSortDirection,
-) {
-  const direction = sortDirection === 'desc' ? -1 : 1
+  if (
+    metric.targetValue === null ||
+    metric.targetValue === undefined ||
+    !Number.isFinite(metric.targetValue) ||
+    metric.targetValue === 0
+  ) {
+    return metric.actualValue
+  }
 
-  return [...rows].sort((left, right) => {
-    const leftValue = getMetricActual(left, sortKey)
-    const rightValue = getMetricActual(right, sortKey)
-
-    if (leftValue === null && rightValue === null) return 0
-    if (leftValue === null) return 1
-    if (rightValue === null) return -1
-
-    return (leftValue - rightValue) * direction
-  })
+  return metric.actualValue / Math.abs(metric.targetValue)
 }
 
 function average(values: Array<number | null | undefined>) {
@@ -191,7 +193,9 @@ function average(values: Array<number | null | undefined>) {
 }
 
 function getMetricAverage(rows: SortableRankingRow[], code: string) {
-  return average(rows.map((row) => getMetricByCode(row.metrics, code)?.actualValue))
+  return average(
+    rows.map((row) => getMetricComparableValue(getMetricByCode(row.metrics, code), code)),
+  )
 }
 
 function getVisibleWindow(total: number, offset: number, count: number, t: TranslateFunction) {
@@ -206,19 +210,20 @@ function getBenchmarkSignal(metrics: RankingMetricValue[] | undefined) {
   const deltas =
     metrics
       ?.map((metric) => {
+        const referenceValue = metric.benchmarkValue ?? metric.targetValue
         if (
           metric.actualValue === null ||
           metric.actualValue === undefined ||
-          metric.benchmarkValue === null ||
-          metric.benchmarkValue === undefined ||
+          referenceValue === null ||
+          referenceValue === undefined ||
           !Number.isFinite(metric.actualValue) ||
-          !Number.isFinite(metric.benchmarkValue) ||
-          metric.benchmarkValue === 0
+          !Number.isFinite(referenceValue) ||
+          referenceValue === 0
         ) {
           return null
         }
 
-        return (metric.actualValue - metric.benchmarkValue) / Math.abs(metric.benchmarkValue)
+        return (metric.actualValue - referenceValue) / Math.abs(referenceValue)
       })
       .filter((value): value is number => value !== null) ?? []
 
@@ -256,11 +261,13 @@ export function StoreRankingsPage(input: {
   const [sortDirection, setSortDirection] = useState<RankingSortDirection>('desc')
   const [selectedDetail, setSelectedDetail] = useState<RankingDetailSelection>(null)
   const limit = 100
+  const hasNonDefaultSort = sortKey !== 'score' || sortDirection !== 'desc'
   const setFilter = (setter: (value: string) => void) => (value: string) => {
     setter(value)
     setOffset(0)
   }
   const updateSort = (nextSortKey: RankingSortKey) => {
+    setOffset(0)
     if (sortKey === nextSortKey) {
       setSortDirection((current) => (current === 'desc' ? 'asc' : 'desc'))
       return
@@ -278,6 +285,8 @@ export function StoreRankingsPage(input: {
       privilegedSession ? regionId : '',
       privilegedSession ? storeId : '',
       privilegedSession ? search : '',
+      privilegedSession ? sortKey : 'score',
+      privilegedSession ? sortDirection : 'desc',
       privilegedSession ? offset : 0,
     ],
     queryFn: () =>
@@ -287,6 +296,8 @@ export function StoreRankingsPage(input: {
         regionId: privilegedSession ? regionId || undefined : undefined,
         storeId: privilegedSession ? storeId || undefined : undefined,
         search: privilegedSession ? search || undefined : undefined,
+        sortKey: privilegedSession && hasNonDefaultSort ? sortKey : undefined,
+        sortDirection: privilegedSession && hasNonDefaultSort ? sortDirection : undefined,
         limit,
         offset: privilegedSession ? offset : 0,
       }),
@@ -307,14 +318,8 @@ export function StoreRankingsPage(input: {
     () => ranking?.availablePeriods ?? [],
     [ranking?.availablePeriods],
   )
-  const sortedStoreRows = useMemo(
-    () => sortRankingRows(ranking?.storeLeaderboard.items ?? [], sortKey, sortDirection),
-    [ranking?.storeLeaderboard.items, sortDirection, sortKey],
-  )
-  const sortedPersonnelRows = useMemo(
-    () => sortRankingRows(ranking?.personnelLeaderboard.items ?? [], sortKey, sortDirection),
-    [ranking?.personnelLeaderboard.items, sortDirection, sortKey],
-  )
+  const storeRows = ranking?.storeLeaderboard.items ?? []
+  const personnelRows = ranking?.personnelLeaderboard.items ?? []
 
   if (!enabled) {
     return (
@@ -431,7 +436,8 @@ export function StoreRankingsPage(input: {
           />
 
           <RankingReferenceBar
-            rows={activeList === 'stores' ? sortedStoreRows : sortedPersonnelRows}
+            ranking={ranking}
+            rows={activeList === 'stores' ? storeRows : personnelRows}
             activeList={activeList}
             locale={locale}
             t={t}
@@ -441,8 +447,8 @@ export function StoreRankingsPage(input: {
         <RankingWorkspace
           activeList={activeList}
           ranking={ranking}
-          storeRows={sortedStoreRows}
-          personnelRows={sortedPersonnelRows}
+          storeRows={storeRows}
+          personnelRows={personnelRows}
           canSeeDetails={canSeeGlobalDetails}
           sortKey={sortKey}
           sortDirection={sortDirection}
@@ -676,18 +682,35 @@ function RankingControls(input: {
 }
 
 function RankingReferenceBar(input: {
+  ranking: RankingSummary
   rows: SortableRankingRow[]
   activeList: ActiveRankingList
   locale: AppLocale
   t: TranslateFunction
 }) {
   const metricCodes = input.activeList === 'stores' ? storeMetricCodes : personnelMetricCodes
+  const reference =
+    input.activeList === 'stores'
+      ? input.ranking.reference?.store
+      : input.ranking.reference?.personnel
 
   return (
     <div className="rankings-plum-reference-bar" aria-label={input.t('storeRankings.referenceLabel')}>
+      <div className="rankings-plum-reference-title">
+        <span>{input.t('storeRankings.turkeyReference')}</span>
+        <strong>
+          {input.activeList === 'stores'
+            ? input.t('storeRankings.storeList')
+            : input.t('storeRankings.personnelList')}
+        </strong>
+      </div>
       <ReferenceItem
         label={input.t('storeRankings.averageScore')}
-        value={formatNumber(input.locale, input.t, average(input.rows.map((row) => row.scoreValue)))}
+        value={formatNumber(
+          input.locale,
+          input.t,
+          reference?.averageScore ?? average(input.rows.map((row) => row.scoreValue)),
+        )}
       />
       {metricCodes.map((code) => (
         <ReferenceItem
@@ -696,13 +719,27 @@ function RankingReferenceBar(input: {
           value={formatMetricValue(
             input.locale,
             input.t,
-            getMetricAverage(input.rows, code),
+            getReferenceMetricValue(reference, input.rows, code),
             code,
           )}
         />
       ))}
     </div>
   )
+}
+
+function getReferenceMetricValue(
+  reference: RankingReferenceGroup | undefined,
+  rows: SortableRankingRow[],
+  code: string,
+) {
+  const referenceMetric = reference?.metrics.find((metric) => metric.code === code)
+
+  if (referenceMetric) {
+    return referenceMetric.value
+  }
+
+  return getMetricAverage(rows, code)
 }
 
 function ReferenceItem(input: { label: string; value: string }) {
@@ -1113,7 +1150,7 @@ function MetricDetails(input: {
             <span>{getMetricLabel(input.t, code, metric?.label)}</span>
             <strong>
               {metric
-                ? formatMetricValue(input.locale, input.t, metric.actualValue, code)
+                ? formatMetricValue(input.locale, input.t, metric, code)
                 : input.t('common.noData')}
             </strong>
           </div>

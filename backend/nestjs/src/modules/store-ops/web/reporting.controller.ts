@@ -315,6 +315,8 @@ export class ReportingController {
       regionId: query.regionId,
       storeId: query.storeId,
       search: query.search,
+      sortKey: query.sortKey,
+      sortDirection: query.sortDirection,
       limit: query.limit,
       offset: query.offset,
     });

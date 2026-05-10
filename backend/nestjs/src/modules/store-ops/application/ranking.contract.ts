@@ -1,6 +1,15 @@
 export type RankingSubject = "store" | "personnel";
 export type RankingPeriodType = "monthly";
 export type RankingVisibility = "summary" | "detail";
+export type RankingSortKey =
+  | "score"
+  | "UPT"
+  | "ATV"
+  | "CR"
+  | "TARGET_ACHIEVEMENT"
+  | "BM_CHECKLIST"
+  | "VM_CHECKLIST";
+export type RankingSortDirection = "asc" | "desc";
 
 export type RankingMetricValue = {
   code: string;
@@ -50,6 +59,17 @@ export type RankingFilterOption = {
   label: string;
 };
 
+export type RankingReferenceMetric = {
+  code: string;
+  label: string;
+  value: number | null;
+};
+
+export type RankingReferenceGroup = {
+  averageScore: number | null;
+  metrics: RankingReferenceMetric[];
+};
+
 export type RankingResponse = {
   source: {
     mode: "live";
@@ -66,6 +86,10 @@ export type RankingResponse = {
     regionManagers: RankingFilterOption[];
     regions: RankingFilterOption[];
     stores: RankingFilterOption[];
+  };
+  reference: {
+    store: RankingReferenceGroup;
+    personnel: RankingReferenceGroup;
   };
   storeLeaderboard: {
     items: StoreRankingRow[];

@@ -11,7 +11,10 @@ import {
   PersonnelRankingRow,
   RankingMetricValue,
   RankingPeriodType,
+  RankingReferenceGroup,
   RankingResponse,
+  RankingSortDirection,
+  RankingSortKey,
   RankingVisibility,
   StoreRankingRow,
 } from "./ranking.contract";
@@ -69,6 +72,8 @@ export type GetRankingsInput = RankingFilters & {
   assignedStoreIds: string[];
   periodType?: RankingPeriodType;
   periodStart?: string;
+  sortKey?: RankingSortKey;
+  sortDirection?: RankingSortDirection;
   limit?: number;
   offset?: number;
 };
@@ -175,6 +180,18 @@ export class RankingService {
         benchmarkLookup: personnelBenchmarkLookup,
       }),
     );
+    const reference = {
+      store: this.buildReferenceGroup({
+        rows: storeRows,
+        profile: storeProfile,
+        benchmarkLookup: storeBenchmarkLookup,
+      }),
+      personnel: this.buildReferenceGroup({
+        rows: personnelRows,
+        profile: personnelProfile,
+        benchmarkLookup: personnelBenchmarkLookup,
+      }),
+    };
 
     const filteredStoreRows = access.isPrivileged
       ? this.applyStoreFilters(storeRows, input)
@@ -182,10 +199,26 @@ export class RankingService {
     const filteredPersonnelRows = access.isPrivileged
       ? this.applyPersonnelFilters(personnelRows, input)
       : personnelRows;
-    const storeItems = this.selectGlobalRows(filteredStoreRows, access).map((row) =>
+    const effectiveSortKey = access.canSeeGlobalDetails ? input.sortKey ?? "score" : "score";
+    const effectiveSortDirection = access.canSeeGlobalDetails
+      ? input.sortDirection ?? "desc"
+      : "desc";
+    const sortedStoreRows = this.sortRowsForList(
+      filteredStoreRows,
+      effectiveSortKey,
+      effectiveSortDirection,
+      (row) => row.storeId,
+    );
+    const sortedPersonnelRows = this.sortRowsForList(
+      filteredPersonnelRows,
+      effectiveSortKey,
+      effectiveSortDirection,
+      (row) => row.employeeId,
+    );
+    const storeItems = this.selectGlobalRows(sortedStoreRows, access).map((row) =>
       this.maskStoreRow(row, access.canSeeGlobalDetails ? "detail" : "summary"),
     );
-    const personnelItems = this.selectGlobalRows(filteredPersonnelRows, access).map((row) =>
+    const personnelItems = this.selectGlobalRows(sortedPersonnelRows, access).map((row) =>
       this.maskPersonnelRow(row, access.canSeeGlobalDetails ? "detail" : "summary"),
     );
     const currentEmployee =
@@ -218,6 +251,7 @@ export class RankingService {
         canSeeManagedStorePersonnelDetails: access.canSeeManagedStorePersonnelDetails,
       },
       filters,
+      reference,
       storeLeaderboard: {
         items: storeItems,
         currentStore: currentStore
@@ -546,6 +580,116 @@ export class RankingService {
     };
   }
 
+  private buildReferenceGroup(input: {
+    rows: Array<{ scoreValue: number; metrics: RankingMetricValue[] }>;
+    profile: KpiScoreProfile;
+    benchmarkLookup: Map<string, number | null>;
+  }): RankingReferenceGroup {
+    return {
+      averageScore: this.average(input.rows.map((row) => row.scoreValue)),
+      metrics: input.profile.metrics.map((metric) => {
+        const benchmarkValue = input.benchmarkLookup.get(metric.code) ?? null;
+        const value =
+          metric.code === "TARGET_ACHIEVEMENT" || benchmarkValue === null
+            ? this.average(
+                input.rows.map((row) =>
+                  this.getMetricComparableValue(row.metrics, metric.code),
+                ),
+              )
+            : benchmarkValue;
+
+        return {
+          code: metric.code,
+          label: metric.label,
+          value,
+        };
+      }),
+    };
+  }
+
+  private sortRowsForList<Row extends { rank: number; scoreValue: number; metrics: RankingMetricValue[] }>(
+    rows: Row[],
+    sortKey: RankingSortKey,
+    sortDirection: RankingSortDirection,
+    stableId: (row: Row) => string,
+  ) {
+    const direction = sortDirection === "desc" ? -1 : 1;
+
+    return [...rows].sort((left, right) => {
+      const leftValue = this.getSortValue(left, sortKey);
+      const rightValue = this.getSortValue(right, sortKey);
+
+      if (leftValue === null && rightValue === null) {
+        return left.rank - right.rank || stableId(left).localeCompare(stableId(right));
+      }
+
+      if (leftValue === null) {
+        return 1;
+      }
+
+      if (rightValue === null) {
+        return -1;
+      }
+
+      return (
+        (leftValue - rightValue) * direction ||
+        left.rank - right.rank ||
+        stableId(left).localeCompare(stableId(right))
+      );
+    });
+  }
+
+  private getSortValue(
+    row: { scoreValue: number; metrics: RankingMetricValue[] },
+    sortKey: RankingSortKey,
+  ) {
+    if (sortKey === "score") {
+      return row.scoreValue;
+    }
+
+    return this.getMetricComparableValue(row.metrics, sortKey);
+  }
+
+  private getMetricComparableValue(metrics: RankingMetricValue[], code: string) {
+    const metric = metrics.find((candidate) => candidate.code === code);
+
+    if (!metric || metric.actualValue === null || !Number.isFinite(metric.actualValue)) {
+      return null;
+    }
+
+    if (code !== "TARGET_ACHIEVEMENT") {
+      return metric.actualValue;
+    }
+
+    if (
+      metric.targetValue === null ||
+      metric.targetValue === undefined ||
+      !Number.isFinite(metric.targetValue) ||
+      metric.targetValue === 0
+    ) {
+      return metric.actualValue;
+    }
+
+    return metric.actualValue / Math.abs(metric.targetValue);
+  }
+
+  private average(values: Array<number | null>) {
+    const numericValues = values.filter(
+      (value): value is number => value !== null && Number.isFinite(value),
+    );
+
+    if (!numericValues.length) {
+      return null;
+    }
+
+    return Number(
+      (
+        numericValues.reduce((total, value) => total + value, 0) /
+        numericValues.length
+      ).toFixed(4),
+    );
+  }
+
   private rankStoreRows(
     rows: Array<Omit<StoreRankingRow, "rank" | "population" | "visibility"> & {
       metrics: RankingMetricValue[];
@@ -788,6 +932,16 @@ export class RankingService {
         regionManagers: [],
         regions: [],
         stores: [],
+      },
+      reference: {
+        store: {
+          averageScore: null,
+          metrics: [],
+        },
+        personnel: {
+          averageScore: null,
+          metrics: [],
+        },
       },
       storeLeaderboard: {
         items: [],
