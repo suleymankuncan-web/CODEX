@@ -62,6 +62,60 @@ test('admin KPI config page localizes publish governance preview', async ({ page
   await expect(page.getByRole('heading', { name: 'Publish decision preview' })).toBeVisible()
 })
 
+test('admin KPI config profile fields stay editable and save changed draft', async ({ page }) => {
+  let savedConfig: typeof draftConfig | null = null
+
+  await page.route('**/api/reports/kpi-config', async (route) => {
+    if (route.request().method() !== 'PATCH') {
+      await route.fallback()
+      return
+    }
+
+    savedConfig = route.request().postDataJSON()
+    await route.fulfill({
+      json: {
+        ...kpiConfigEditorFixture,
+        draftConfig: savedConfig,
+        hasUnpublishedChanges: true,
+      },
+    })
+  })
+
+  await page.goto('/admin/kpi-config')
+
+  const targetMetric = page
+    .locator('.stacked-row')
+    .filter({ has: page.locator('input[value="TARGET_ACHIEVEMENT"]') })
+    .first()
+  const uptMetric = page
+    .locator('.stacked-row')
+    .filter({ has: page.locator('input[value="UPT"]') })
+    .first()
+
+  await targetMetric.getByLabel('Etiket').fill('HG skoru')
+  await expect(targetMetric.getByLabel('Etiket')).toHaveValue('HG skoru')
+
+  await targetMetric.getByLabel('Ağırlık %').fill('60')
+  await expect(targetMetric.getByLabel('Ağırlık %')).toHaveValue('60')
+
+  await uptMetric.getByLabel('Ağırlık %').fill('35')
+  await expect(uptMetric.getByLabel('Ağırlık %')).toHaveValue('35')
+
+  await targetMetric.getByLabel('Notlar').fill('HG ağırlığı pilot kararına göre güncellendi.')
+  await expect(targetMetric.getByLabel('Notlar')).toHaveValue(
+    'HG ağırlığı pilot kararına göre güncellendi.',
+  )
+
+  await page.getByRole('button', { name: 'Taslağı kaydet' }).click()
+
+  await expect.poll(() => savedConfig?.storeProfile.metrics[0].label).toBe('HG skoru')
+  await expect.poll(() => savedConfig?.storeProfile.metrics[0].weightPercent).toBe(60)
+  await expect.poll(() => savedConfig?.storeProfile.metrics[1].weightPercent).toBe(35)
+  await expect.poll(() => savedConfig?.storeProfile.metrics[0].notes).toBe(
+    'HG ağırlığı pilot kararına göre güncellendi.',
+  )
+})
+
 async function routeAdminKpiConfigApi(page: Page) {
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: authSessionFixture })

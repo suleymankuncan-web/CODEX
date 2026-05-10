@@ -90,6 +90,13 @@ export function AdminKpiConfigPage() {
   const published = publishedOverride ?? configQuery.data?.publishedConfig ?? null
   const latestPublishedVersion = configQuery.data?.latestPublishedVersion ?? null
 
+  const updateDraft = (updater: (current: KpiConfig) => KpiConfig) => {
+    setDraft((current) => {
+      const base = current ?? configQuery.data?.draftConfig ?? null
+      return base ? updater(base) : current
+    })
+  }
+
   const saveMutation = useMutation({
     mutationFn: updateKpiConfigDraft,
     onSuccess: (result) => {
@@ -322,47 +329,35 @@ export function AdminKpiConfigPage() {
         weightTone={storeWeightTotal === 100 ? 'calm' : 'warning'}
         weightLabel={t('adminKpiConfig.weightTotal', { total: storeWeightTotal })}
         onMetricChange={(index, next) =>
-          setDraft((current) =>
-            current
-              ? {
-                  ...current,
-                  storeProfile: {
-                    ...current.storeProfile,
-                    metrics: current.storeProfile.metrics.map((metric, metricIndex) =>
-                      metricIndex === index ? next : metric,
-                    ),
-                  },
-                }
-              : current,
-          )
+          updateDraft((current) => ({
+            ...current,
+            storeProfile: {
+              ...current.storeProfile,
+              metrics: current.storeProfile.metrics.map((metric, metricIndex) =>
+                metricIndex === index ? next : metric,
+              ),
+            },
+          }))
         }
         onAddMetric={() =>
-          setDraft((current) =>
-            current
-              ? {
-                  ...current,
-                  storeProfile: {
-                    ...current.storeProfile,
-                    metrics: [...current.storeProfile.metrics, createEmptyMetric()],
-                  },
-                }
-              : current,
-          )
+          updateDraft((current) => ({
+            ...current,
+            storeProfile: {
+              ...current.storeProfile,
+              metrics: [...current.storeProfile.metrics, createEmptyMetric()],
+            },
+          }))
         }
         onRemoveMetric={(index) =>
-          setDraft((current) =>
-            current
-              ? {
-                  ...current,
-                  storeProfile: {
-                    ...current.storeProfile,
-                    metrics: current.storeProfile.metrics.filter(
-                      (_metric, metricIndex) => metricIndex !== index,
-                    ),
-                  },
-                }
-              : current,
-          )
+          updateDraft((current) => ({
+            ...current,
+            storeProfile: {
+              ...current.storeProfile,
+              metrics: current.storeProfile.metrics.filter(
+                (_metric, metricIndex) => metricIndex !== index,
+              ),
+            },
+          }))
         }
       />
 
@@ -375,47 +370,35 @@ export function AdminKpiConfigPage() {
         weightTone={personnelWeightTotal === 100 ? 'calm' : 'warning'}
         weightLabel={t('adminKpiConfig.weightTotal', { total: personnelWeightTotal })}
         onMetricChange={(index, next) =>
-          setDraft((current) =>
-            current
-              ? {
-                  ...current,
-                  personnelProfile: {
-                    ...current.personnelProfile,
-                    metrics: current.personnelProfile.metrics.map((metric, metricIndex) =>
-                      metricIndex === index ? next : metric,
-                    ),
-                  },
-                }
-              : current,
-          )
+          updateDraft((current) => ({
+            ...current,
+            personnelProfile: {
+              ...current.personnelProfile,
+              metrics: current.personnelProfile.metrics.map((metric, metricIndex) =>
+                metricIndex === index ? next : metric,
+              ),
+            },
+          }))
         }
         onAddMetric={() =>
-          setDraft((current) =>
-            current
-              ? {
-                  ...current,
-                  personnelProfile: {
-                    ...current.personnelProfile,
-                    metrics: [...current.personnelProfile.metrics, createEmptyMetric()],
-                  },
-                }
-              : current,
-          )
+          updateDraft((current) => ({
+            ...current,
+            personnelProfile: {
+              ...current.personnelProfile,
+              metrics: [...current.personnelProfile.metrics, createEmptyMetric()],
+            },
+          }))
         }
         onRemoveMetric={(index) =>
-          setDraft((current) =>
-            current
-              ? {
-                  ...current,
-                  personnelProfile: {
-                    ...current.personnelProfile,
-                    metrics: current.personnelProfile.metrics.filter(
-                      (_metric, metricIndex) => metricIndex !== index,
-                    ),
-                  },
-                }
-              : current,
-          )
+          updateDraft((current) => ({
+            ...current,
+            personnelProfile: {
+              ...current.personnelProfile,
+              metrics: current.personnelProfile.metrics.filter(
+                (_metric, metricIndex) => metricIndex !== index,
+              ),
+            },
+          }))
         }
       />
 
@@ -498,16 +481,12 @@ export function AdminKpiConfigPage() {
                     className="control-button"
                     type="button"
                     onClick={() =>
-                      setDraft((current) =>
-                        current
-                          ? {
-                              ...current,
-                              ownershipMatrix: current.ownershipMatrix.filter(
-                                (_item, itemIndex) => itemIndex !== index,
-                              ),
-                            }
-                          : current,
-                      )
+                      updateDraft((current) => ({
+                        ...current,
+                        ownershipMatrix: current.ownershipMatrix.filter(
+                          (_item, itemIndex) => itemIndex !== index,
+                        ),
+                      }))
                     }
                   >
                     {t('adminKpiConfig.removeRow')}
@@ -522,14 +501,10 @@ export function AdminKpiConfigPage() {
             className="control-button"
             type="button"
             onClick={() =>
-              setDraft((current) =>
-                current
-                  ? {
-                      ...current,
-                      ownershipMatrix: [...current.ownershipMatrix, createEmptyOwnershipRow()],
-                    }
-                  : current,
-              )
+              updateDraft((current) => ({
+                ...current,
+                ownershipMatrix: [...current.ownershipMatrix, createEmptyOwnershipRow()],
+              }))
             }
           >
             {t('adminKpiConfig.addOwnershipRow')}
@@ -595,16 +570,12 @@ export function AdminKpiConfigPage() {
                   className="control-button"
                   type="button"
                   onClick={() =>
-                    setDraft((current) =>
-                      current
-                        ? {
-                            ...current,
-                            gradingBands: current.gradingBands.filter(
-                              (_item, itemIndex) => itemIndex !== index,
-                            ),
-                          }
-                        : current,
-                    )
+                    updateDraft((current) => ({
+                      ...current,
+                      gradingBands: current.gradingBands.filter(
+                        (_item, itemIndex) => itemIndex !== index,
+                      ),
+                    }))
                   }
                 >
                   {t('adminKpiConfig.removeBand')}
@@ -618,14 +589,10 @@ export function AdminKpiConfigPage() {
             className="control-button"
             type="button"
             onClick={() =>
-              setDraft((current) =>
-                current
-                  ? {
-                      ...current,
-                      gradingBands: [...current.gradingBands, createEmptyGradingBand()],
-                    }
-                  : current,
-              )
+              updateDraft((current) => ({
+                ...current,
+                gradingBands: [...current.gradingBands, createEmptyGradingBand()],
+              }))
             }
           >
             {t('adminKpiConfig.addGradingBand')}
