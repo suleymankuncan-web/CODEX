@@ -55,7 +55,7 @@ This means a broad split would have high review cost unless it is driven by one 
 - Read APIs are paginated for broad snapshot report lists.
 - Snapshot report list endpoints use a data query plus a count query instead of returning unbounded lists.
 - Closed daily and monthly ranking behavior is covered by integration tests.
-- Benchmark math is covered by repository tests and uses PowerBI-compatible KPI fact averages for ranking Turkey references.
+- Benchmark math is covered by repository tests and uses PowerBI-compatible metric-specific rules for ranking Turkey references.
 - Approved personnel target references are tested in live employee performance queries.
 - Store score breakdown reads are covered by repository tests.
 - Snapshot run read models were already split and guarded separately in e2e tests.

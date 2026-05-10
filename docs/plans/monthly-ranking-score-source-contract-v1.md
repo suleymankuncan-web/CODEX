@@ -84,9 +84,9 @@ Store profile V1:
 | Metric | Source | Weight | Rule |
 | --- | --- | ---: | --- |
 | `TARGET_ACHIEVEMENT` | `TARGET` | 40 | Uses store target/actual achievement for the period. |
-| `CR` | `TURKEY_AVERAGE` | 20 | Uses same-period PowerBI-compatible average of imported store KPI facts. |
-| `ATV` | `TURKEY_AVERAGE` | 15 | Uses same-period PowerBI-compatible average of imported store KPI facts. |
-| `UPT` | `TURKEY_AVERAGE` | 15 | Uses same-period PowerBI-compatible average of imported store KPI facts. |
+| `CR` | `TURKEY_AVERAGE` | 20 | Uses same-period PowerBI-compatible weighted total over KPI-import-enabled stores. |
+| `ATV` | `TURKEY_AVERAGE` | 15 | Uses same-period PowerBI-compatible average of store ATV facts over KPI-import-enabled stores. |
+| `UPT` | `TURKEY_AVERAGE` | 15 | Uses same-period PowerBI-compatible weighted total over KPI-import-enabled stores. |
 | `BM_CHECKLIST` | `CHECKLIST_SCORE` | 5 | Uses completed BM checklist monthly visit average when a completed visit exists. |
 | `VM_CHECKLIST` | `CHECKLIST_SCORE` | 5 | Reserved for VM checklist; V1 can return the weight to KPI when no completed VM checklist exists. |
 
@@ -115,9 +115,9 @@ Meaning:
 
 ## Turkey Average Policy
 
-Turkey average benchmarks are system-calculated from the platform's active in-scope imported KPI facts, using the same average-of-KPI-values behavior expected from the PowerBI ranking reference.
+Turkey average benchmarks are system-calculated from the platform's active in-scope imported KPI facts. Store references use PowerBI-compatible metric-specific behavior over KPI-import-enabled stores: ATV is the average of store ATV facts, while UPT and CR use weighted totals from the underlying base metrics.
 
-PowerBI or source-provided Turkey average summary rows are reconciliation evidence only. The platform should match PowerBI by averaging imported KPI fact rows, not by silently trusting a pre-aggregated source summary row.
+PowerBI or source-provided Turkey average summary rows are reconciliation evidence only. The platform should match the PowerBI-visible metric behavior without silently trusting a pre-aggregated source summary row.
 
 This applies to both Excel V1 and future JSON/API source work.
 
