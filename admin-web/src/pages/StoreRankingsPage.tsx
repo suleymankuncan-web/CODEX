@@ -1,5 +1,5 @@
 import { useMemo, useState, type CSSProperties, type ReactNode } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import {
   ChevronLeft,
   ChevronRight,
@@ -244,10 +244,25 @@ function getBenchmarkSignal(metrics: RankingMetricValue[] | undefined) {
   }
 }
 
+function getLatestRankingFromCache(queryClient: QueryClient) {
+  const cachedRankings = queryClient
+    .getQueryCache()
+    .findAll({ queryKey: ['ranking-v1'] })
+    .map((query) => ({
+      data: query.state.data as RankingSummary | undefined,
+      updatedAt: query.state.dataUpdatedAt,
+    }))
+    .filter((entry): entry is { data: RankingSummary; updatedAt: number } => Boolean(entry.data))
+    .sort((left, right) => right.updatedAt - left.updatedAt)
+
+  return cachedRankings[0]?.data ?? null
+}
+
 export function StoreRankingsPage(input: {
   authSummary: AuthSessionSummary | null
 }) {
   const { locale, t } = useLocalization()
+  const queryClient = useQueryClient()
   const enabled = canUseRankings(input.authSummary)
   const privilegedSession = canUsePrivilegedFilters(input.authSummary)
   const [periodStart, setPeriodStart] = useState('')
@@ -302,9 +317,11 @@ export function StoreRankingsPage(input: {
         offset: privilegedSession ? offset : 0,
       }),
     enabled,
+    placeholderData: (previousData) => previousData,
     retry: false,
   })
-  const ranking = rankingsQuery.data
+  const latestCachedRanking = rankingsQuery.data ? null : getLatestRankingFromCache(queryClient)
+  const ranking = rankingsQuery.data ?? latestCachedRanking
   const isPrivileged = ranking?.access.globalMode === 'full'
   const canSeeGlobalDetails = Boolean(ranking?.access.canSeeGlobalDetails)
   const hasNextPage =
@@ -331,7 +348,7 @@ export function StoreRankingsPage(input: {
     )
   }
 
-  if (rankingsQuery.isLoading) {
+  if (rankingsQuery.isLoading && !ranking) {
     return (
       <ScreenState
         title={t('storeRankings.loadingTitle')}
@@ -340,7 +357,7 @@ export function StoreRankingsPage(input: {
     )
   }
 
-  if (rankingsQuery.isError) {
+  if (rankingsQuery.isError && !ranking) {
     return (
       <ScreenState
         title={t('storeRankings.errorTitle')}
@@ -361,7 +378,10 @@ export function StoreRankingsPage(input: {
   }
 
   return (
-    <section className="rankings-plum-page">
+    <section
+      className={`rankings-plum-page${rankingsQuery.isFetching ? ' rankings-plum-page-updating' : ''}`}
+      aria-busy={rankingsQuery.isFetching}
+    >
       <header className="rankings-plum-topbar">
         <div className="rankings-plum-title-block">
           <h2 id="rankings-heading">{t('storeRankings.pageTitle')}</h2>
@@ -867,7 +887,6 @@ function RankingWorkspace(input: {
               {input.canSeeDetails ? (
                 <>
                   <th className="rankings-plum-metric-heading">
-                    <span>{input.t('storeRankings.kpiSummary')}</span>
                     <MetricSortRow
                       metricCodes={metricCodes}
                       activeSortKey={input.sortKey}
@@ -986,7 +1005,10 @@ function MetricSortRow(input: {
   t: TranslateFunction
 }) {
   return (
-    <div className="rankings-plum-metric-sort-row">
+    <div
+      className="rankings-plum-metric-sort-row"
+      style={{ '--metric-count': input.metricCodes.length } as CSSProperties}
+    >
       {input.metricCodes.map((code) => (
         <SortButton
           key={code}
