@@ -399,6 +399,10 @@ test('store rankings uses Turkey reference, checklist metrics, normalized HG, an
       url.searchParams.get('sortKey') === 'TARGET_ACHIEVEMENT' &&
       url.searchParams.get('sortDirection') === 'asc'
 
+    if (ascendingTargetSort) {
+      await new Promise((resolve) => setTimeout(resolve, 250))
+    }
+
     await route.fulfill({
       json: {
         ...rankingsPrivilegedDetailFixture,
@@ -416,17 +420,31 @@ test('store rankings uses Turkey reference, checklist metrics, normalized HG, an
 
   await expect(page.locator('.rankings-plum-reference-title')).toBeVisible()
   await expect(page.locator('.rankings-plum-reference-bar')).toContainText('Türkiye Referansı')
+  await expect(page.locator('.rankings-plum-metric-heading')).not.toContainText('KPI')
   await expect(page.locator('.rankings-plum-metric-sort-row')).toContainText('BM Checklist')
   await expect(page.locator('.rankings-plum-metric-sort-row')).toContainText('VM Checklist')
+  await expect
+    .poll(() =>
+      page
+        .locator('.rankings-plum-metric-sort-row')
+        .first()
+        .evaluate((element) =>
+          getComputedStyle(element).gridTemplateColumns.split(' ').filter(Boolean).length,
+        ),
+    )
+    .toBe(6)
   await expect(page.locator('.rankings-plum-metric-grid').first()).toContainText('371,09%')
   await expect(page.locator('.rankings-plum-metric-grid').first()).not.toContainText('371.088.457%')
 
   await page.locator('.rankings-plum-sort-button', { hasText: 'HG%' }).click()
   await page.locator('.rankings-plum-sort-button', { hasText: 'HG%' }).click()
 
+  await expect(page.getByRole('button', { name: 'High HG Store' })).toBeVisible()
+  await expect(page.getByText('Sıralama hazırlanıyor')).toHaveCount(0)
+  await expect(page.getByText('Sıralama yüzeyi açılamadı')).toHaveCount(0)
   await expect.poll(() => rankingRequests.at(-1)?.searchParams.get('sortKey')).toBe('TARGET_ACHIEVEMENT')
   await expect.poll(() => rankingRequests.at(-1)?.searchParams.get('sortDirection')).toBe('asc')
-  await expect(page.getByText('Low HG Store')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Low HG Store' })).toBeVisible()
 })
 
 test('store tasks page renders readable Turkish queue labels', async ({ page }) => {
