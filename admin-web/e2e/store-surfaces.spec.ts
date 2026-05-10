@@ -447,6 +447,49 @@ test('store rankings uses Turkey reference, checklist metrics, normalized HG, an
   await expect(page.getByRole('button', { name: 'Low HG Store' })).toBeVisible()
 })
 
+test('store rankings signal follows weighted score instead of raw KPI delta average', async ({ page }) => {
+  await page.unroute('**/api/auth/session')
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      json: {
+        ...authSessionFixture,
+        user: {
+          ...authSessionFixture.user,
+          userId: 'region-ranking-user',
+          roleCodes: ['REGION_MANAGER'],
+        },
+      },
+    })
+  })
+
+  await page.unroute('**/api/reports/rankings**')
+  await page.route('**/api/reports/rankings**', async (route) => {
+    await route.fulfill({
+      json: {
+        ...rankingsPrivilegedDetailFixture,
+        storeLeaderboard: {
+          ...rankingsPrivilegedDetailFixture.storeLeaderboard,
+          items: [scoreSignalLeaderStoreRow, scoreSignalFollowerStoreRow],
+          meta: {
+            total: 2,
+            limit: 100,
+            offset: 0,
+          },
+        },
+      },
+    })
+  })
+
+  await page.goto('/store/rankings')
+
+  const rows = page.locator('.rankings-plum-table tbody tr')
+  await expect(rows.nth(0)).toContainText('Weighted Score Leader')
+  await expect(rows.nth(0).locator('.rankings-plum-trend')).toContainText('Referans üstü')
+  await expect(rows.nth(0).locator('.rankings-plum-trend')).toContainText('+12,30%')
+  await expect(rows.nth(1)).toContainText('Raw Delta Trap')
+  await expect(rows.nth(1).locator('.rankings-plum-trend')).toContainText('+4,20%')
+})
+
 test('store tasks page renders readable Turkish queue labels', async ({ page }) => {
   await page.goto('/store/tasks')
 
@@ -1655,6 +1698,106 @@ const rankingsPrivilegedLowHgStoreRow = {
         }
       : metric,
   ),
+}
+
+const scoreSignalLeaderStoreRow = {
+  ...rankingsPrivilegedDetailStoreRow,
+  storeId: 'store-score-signal-leader',
+  storeName: 'Weighted Score Leader',
+  rank: 1,
+  scoreValue: 112.3,
+  metrics: [
+    {
+      code: 'UPT',
+      label: 'UPT',
+      actualValue: 4,
+      benchmarkValue: 4,
+      contributionValue: 15,
+    },
+    {
+      code: 'ATV',
+      label: 'ATV',
+      actualValue: 1500,
+      benchmarkValue: 1500,
+      contributionValue: 15,
+    },
+    {
+      code: 'CR',
+      label: 'CR',
+      actualValue: 0.2,
+      benchmarkValue: 0.2,
+      contributionValue: 20,
+    },
+    {
+      code: 'TARGET_ACHIEVEMENT',
+      label: 'Target Achievement',
+      actualValue: 1000000,
+      targetValue: 1000000,
+      contributionValue: 40,
+    },
+    {
+      code: 'BM_CHECKLIST',
+      label: 'BM Checklist',
+      actualValue: 95,
+      contributionValue: 11.15,
+    },
+    {
+      code: 'VM_CHECKLIST',
+      label: 'VM Checklist',
+      actualValue: 95,
+      contributionValue: 11.15,
+    },
+  ],
+}
+
+const scoreSignalFollowerStoreRow = {
+  ...rankingsPrivilegedDetailStoreRow,
+  storeId: 'store-score-signal-follower',
+  storeName: 'Raw Delta Trap',
+  rank: 2,
+  scoreValue: 104.2,
+  metrics: [
+    {
+      code: 'UPT',
+      label: 'UPT',
+      actualValue: 7,
+      benchmarkValue: 4,
+      contributionValue: 18,
+    },
+    {
+      code: 'ATV',
+      label: 'ATV',
+      actualValue: 1500,
+      benchmarkValue: 1500,
+      contributionValue: 15,
+    },
+    {
+      code: 'CR',
+      label: 'CR',
+      actualValue: 0.2,
+      benchmarkValue: 0.2,
+      contributionValue: 20,
+    },
+    {
+      code: 'TARGET_ACHIEVEMENT',
+      label: 'Target Achievement',
+      actualValue: 1000000,
+      targetValue: 1000000,
+      contributionValue: 40,
+    },
+    {
+      code: 'BM_CHECKLIST',
+      label: 'BM Checklist',
+      actualValue: 56,
+      contributionValue: 5.6,
+    },
+    {
+      code: 'VM_CHECKLIST',
+      label: 'VM Checklist',
+      actualValue: 56,
+      contributionValue: 5.6,
+    },
+  ],
 }
 
 const rankingsPrivilegedDetailFixture = {

@@ -62,6 +62,8 @@ type RankingFilters = {
   search?: string;
 };
 
+const storeChecklistMetricCodes = new Set(["BM_CHECKLIST", "VM_CHECKLIST"]);
+
 export type GetRankingsInput = RankingFilters & {
   userId: string;
   employeeId?: string;
@@ -548,16 +550,23 @@ export class RankingService {
             input.benchmarkLookup.get(metric.code) ??
             null
           : null;
-      const score = this.kpiBenchmarkScoringService.scoreMetric({
-        metricCode: metric.code,
-        actualValue,
-        benchmarkValue,
-        targetValue,
-        weightPercent: metric.weightPercent,
-        direction: metric.direction ?? "HIGHER_IS_BETTER",
-        benchmarkSource,
-        capRatio: metric.capRatio ?? 1.2,
-      });
+      const score = storeChecklistMetricCodes.has(metric.code)
+        ? {
+            scoreContribution:
+              actualValue !== null && Number.isFinite(actualValue)
+                ? Number(((actualValue * metric.weightPercent) / 100).toFixed(4))
+                : null,
+          }
+        : this.kpiBenchmarkScoringService.scoreMetric({
+            metricCode: metric.code,
+            actualValue,
+            benchmarkValue,
+            targetValue,
+            weightPercent: metric.weightPercent,
+            direction: metric.direction ?? "HIGHER_IS_BETTER",
+            benchmarkSource,
+            capRatio: metric.capRatio ?? 1.2,
+          });
 
       return {
         code: metric.code,
@@ -569,15 +578,57 @@ export class RankingService {
       };
     });
 
-    const scoreValue = metrics.reduce(
-      (sum, metric) => sum + (metric.contributionValue ?? 0),
-      0,
-    );
+    const scoreValue =
+      input.profile.profileCode === "store"
+        ? this.scoreStoreProfileWithChecklistFallback({
+            metrics,
+            profile: input.profile,
+          })
+        : metrics.reduce((sum, metric) => sum + (metric.contributionValue ?? 0), 0);
 
     return {
       scoreValue: Number(scoreValue.toFixed(2)),
       metrics,
     };
+  }
+
+  private scoreStoreProfileWithChecklistFallback(input: {
+    metrics: Array<{ code: string; contributionValue: number | null | undefined }>;
+    profile: KpiScoreProfile;
+  }) {
+    const metricByCode = new Map(input.metrics.map((metric) => [metric.code, metric]));
+    const kpiConfiguredWeight = input.profile.metrics
+      .filter((metric) => !storeChecklistMetricCodes.has(metric.code))
+      .reduce((sum, metric) => sum + metric.weightPercent, 0);
+    const kpiContribution = input.profile.metrics
+      .filter((metric) => !storeChecklistMetricCodes.has(metric.code))
+      .reduce((sum, metric) => {
+        const contribution = metricByCode.get(metric.code)?.contributionValue;
+        return sum + (contribution ?? 0);
+      }, 0);
+    const checklistMetrics = input.profile.metrics.filter((metric) =>
+      storeChecklistMetricCodes.has(metric.code),
+    );
+    const checklistContribution = checklistMetrics.reduce((sum, metric) => {
+      const contribution = metricByCode.get(metric.code)?.contributionValue;
+      return sum + (contribution ?? 0);
+    }, 0);
+    const missingChecklistWeight = checklistMetrics.reduce((sum, metric) => {
+      const contribution = metricByCode.get(metric.code)?.contributionValue;
+      return contribution === null || contribution === undefined
+        ? sum + metric.weightPercent
+        : sum;
+    }, 0);
+
+    if (kpiConfiguredWeight <= 0) {
+      return checklistContribution;
+    }
+
+    return (
+      (kpiContribution / kpiConfiguredWeight) *
+        (kpiConfiguredWeight + missingChecklistWeight) +
+      checklistContribution
+    );
   }
 
   private buildReferenceGroup(input: {
