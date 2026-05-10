@@ -186,7 +186,7 @@ describe("ReportingRepository benchmark queries", () => {
     return { query, repository };
   }
 
-  it("calculates store ATV UPT CR benchmarks from weighted totals", async () => {
+  it("calculates store ATV UPT CR benchmarks from PowerBI-compatible KPI averages", async () => {
     const { query, repository } = createRepository();
 
     await repository.getStoreTurkeyBenchmarkValues({
@@ -197,19 +197,14 @@ describe("ReportingRepository benchmark queries", () => {
     });
 
     const sql = String(query.mock.calls[0][0]);
-    expect(sql).toContain(
-      "SUM(net_sales.actual_value) / NULLIF(SUM(ticket_count.actual_value), 0)",
-    );
-    expect(sql).toContain(
-      "SUM(item_count.actual_value) / NULLIF(SUM(ticket_count.actual_value), 0)",
-    );
-    expect(sql).toContain(
-      "(SUM(ticket_count.actual_value) / NULLIF(SUM(ff.actual_value), 0))::text AS benchmark_value",
-    );
-    expect(sql).not.toContain("NULLIF(SUM(ff.actual_value), 0)) * 100");
+    expect(sql).toContain("AVG(ka.actual_value)::text AS benchmark_value");
+    expect(sql).toContain("kd.kpi_code IN ('ATV', 'UPT', 'CR')");
+    expect(sql).not.toContain("SUM(net_sales.actual_value)");
+    expect(sql).not.toContain("SUM(item_count.actual_value)");
+    expect(sql).not.toContain("SUM(ticket_count.actual_value)");
   });
 
-  it("calculates personnel ATV UPT benchmarks for the same period", async () => {
+  it("calculates personnel ATV UPT benchmarks from PowerBI-compatible KPI averages", async () => {
     const { query, repository } = createRepository();
 
     await repository.getEmployeeTurkeyBenchmarkValues({
@@ -220,9 +215,11 @@ describe("ReportingRepository benchmark queries", () => {
 
     const sql = String(query.mock.calls[0][0]);
     expect(sql).toContain("scope_type = 'employee'");
-    expect(sql).toContain(
-      "SUM(net_sales.actual_value) / NULLIF(SUM(ticket_count.actual_value), 0)",
-    );
+    expect(sql).toContain("AVG(ka.actual_value)::text AS benchmark_value");
+    expect(sql).toContain("kd.kpi_code IN ('ATV', 'UPT')");
+    expect(sql).not.toContain("SUM(net_sales.actual_value)");
+    expect(sql).not.toContain("SUM(item_count.actual_value)");
+    expect(sql).not.toContain("SUM(ticket_count.actual_value)");
   });
 });
 

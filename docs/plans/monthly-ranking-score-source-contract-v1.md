@@ -56,8 +56,8 @@ Personnel profile V1:
 | Metric | Source | Weight | Rule |
 | --- | --- | ---: | --- |
 | `TARGET_ACHIEVEMENT` | `TARGET` | 40 | Uses approved personnel target references. Missing target returns missing reference, not a guessed score. |
-| `ATV` | `TURKEY_AVERAGE` | 30 | Uses same-period system-calculated Turkey benchmark from active in-scope personnel facts. |
-| `UPT` | `TURKEY_AVERAGE` | 30 | Uses same-period system-calculated Turkey benchmark from active in-scope personnel facts. |
+| `ATV` | `TURKEY_AVERAGE` | 30 | Uses same-period PowerBI-compatible average of imported personnel KPI facts. |
+| `UPT` | `TURKEY_AVERAGE` | 30 | Uses same-period PowerBI-compatible average of imported personnel KPI facts. |
 
 Personnel V1 source map:
 
@@ -84,9 +84,9 @@ Store profile V1:
 | Metric | Source | Weight | Rule |
 | --- | --- | ---: | --- |
 | `TARGET_ACHIEVEMENT` | `TARGET` | 40 | Uses store target/actual achievement for the period. |
-| `CR` | `TURKEY_AVERAGE` | 20 | Uses same-period system-calculated Turkey benchmark from active in-scope store facts. |
-| `ATV` | `TURKEY_AVERAGE` | 15 | Uses same-period system-calculated Turkey benchmark from active in-scope store facts. |
-| `UPT` | `TURKEY_AVERAGE` | 15 | Uses same-period system-calculated Turkey benchmark from active in-scope store facts. |
+| `CR` | `TURKEY_AVERAGE` | 20 | Uses same-period PowerBI-compatible average of imported store KPI facts. |
+| `ATV` | `TURKEY_AVERAGE` | 15 | Uses same-period PowerBI-compatible average of imported store KPI facts. |
+| `UPT` | `TURKEY_AVERAGE` | 15 | Uses same-period PowerBI-compatible average of imported store KPI facts. |
 | `BM_CHECKLIST` | `CHECKLIST_SCORE` | 5 | Uses completed BM checklist monthly visit average when a completed visit exists. |
 | `VM_CHECKLIST` | `CHECKLIST_SCORE` | 5 | Reserved for VM checklist; V1 can return the weight to KPI when no completed VM checklist exists. |
 
@@ -115,9 +115,9 @@ Meaning:
 
 ## Turkey Average Policy
 
-Turkey average benchmarks are system-calculated from the platform's active in-scope facts.
+Turkey average benchmarks are system-calculated from the platform's active in-scope imported KPI facts, using the same average-of-KPI-values behavior expected from the PowerBI ranking reference.
 
-PowerBI or source-provided Turkey average rows are reconciliation evidence only. They must not become the scoring source unless a future approved override policy is implemented.
+PowerBI or source-provided Turkey average summary rows are reconciliation evidence only. The platform should match PowerBI by averaging imported KPI fact rows, not by silently trusting a pre-aggregated source summary row.
 
 This applies to both Excel V1 and future JSON/API source work.
 
@@ -169,6 +169,6 @@ Excluded:
 
 This is the right kind of control document. The system already has a scoring engine and ranking endpoint; the risk was explanation drift.
 
-The strongest decision here is that monthly evidence comes from `includedSnapshotRuns`, not from a frontend guess. The second strongest decision is that Turkey average means platform-scoped system calculation, while imported summary rows stay reconciliation evidence.
+The strongest decision here is that monthly evidence comes from `includedSnapshotRuns`, not from a frontend guess. The second strongest decision is that Turkey average means platform-scoped calculation over imported KPI facts, aligned to the PowerBI-visible reference, while imported summary rows stay reconciliation evidence.
 
 This keeps the product flexible for later tournaments, VM checklist activation, and mobile screens without letting each screen invent its own math.
