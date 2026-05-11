@@ -1,5 +1,6 @@
 import { useMemo, useState, type CSSProperties, type ReactNode } from 'react'
 import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import {
   ChevronLeft,
   ChevronRight,
@@ -224,6 +225,7 @@ export function StoreRankingsPage(input: {
   authSummary: AuthSessionSummary | null
 }) {
   const { locale, t } = useLocalization()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const enabled = canUseRankings(input.authSummary)
   const privilegedSession = canUsePrivilegedFilters(input.authSummary)
@@ -454,6 +456,9 @@ export function StoreRankingsPage(input: {
         locale={locale}
         t={t}
         onClose={() => setSelectedDetail(null)}
+        onOpenPersonnelProfile={(employeeId) => {
+          navigate(`/store/personnel/${encodeURIComponent(employeeId)}`)
+        }}
       />
     </section>
   )
@@ -1147,6 +1152,7 @@ function RankingDetailDrawer(input: {
   locale: AppLocale
   t: TranslateFunction
   onClose: () => void
+  onOpenPersonnelProfile: (employeeId: string) => void
 }) {
   if (!input.selection) {
     return null
@@ -1177,6 +1183,14 @@ function RankingDetailDrawer(input: {
             <button type="button" onClick={input.onClose}>
               {input.t('storeRankings.closeDetail')}
             </button>
+            {personnelRow ? (
+              <button
+                type="button"
+                onClick={() => input.onOpenPersonnelProfile(personnelRow.employeeId)}
+              >
+                {input.t('storeRankings.openPersonnelProfile')}
+              </button>
+            ) : null}
             <span>{input.t('storeRankings.inlineDetail')}</span>
           </div>
           <div className="rankings-plum-drawer-title">

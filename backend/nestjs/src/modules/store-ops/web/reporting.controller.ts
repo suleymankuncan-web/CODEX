@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Patch, Query, Req } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Query, Req } from "@nestjs/common";
 import { RequireRoles } from "../../auth/decorators/roles.decorator";
 import { RequireScope } from "../../auth/decorators/scope.decorator";
 import { RankingService } from "../application/ranking.service";
@@ -198,6 +198,53 @@ export class ReportingController {
       companyIds: request.user.scope.companyIds,
       regionIds: request.user.scope.regionIds,
       storeIds: request.user.scope.storeIds,
+      mode: query.mode,
+      snapshotDate: query.snapshotDate,
+      periodType: query.periodType,
+      periodStart: query.periodStart,
+    });
+  }
+
+  @Get("personnel-performance/:employeeId")
+  @RequireScope("authenticated")
+  @RequireRoles("STORE_PERSONNEL", "STORE_MANAGER", "REGION_MANAGER", "SUPER_ADMIN")
+  async getPersonnelPerformance(
+    @Req()
+    request: {
+      user: {
+        userId: string;
+        employeeId?: string;
+        roleCodes: string[];
+        scope: {
+          companyIds: string[];
+          regionIds: string[];
+          storeIds: string[];
+        };
+        actionScope?: {
+          assignedStoreIds: string[];
+        };
+      };
+    },
+    @Param("employeeId") employeeId: string,
+    @Query() query: GetMyPerformanceQueryDto,
+  ) {
+    const storeReadScope = this.resolveStoreReadScope({
+      actorRoleCodes: request.user.roleCodes,
+      actorScope: request.user.scope,
+      actorActionScope: request.user.actionScope,
+      broadReadRoles: ["REGION_MANAGER", "SUPER_ADMIN"],
+    });
+
+    return this.reportingService.getPersonnelPerformance({
+      userId: request.user.userId,
+      employeeId: request.user.employeeId,
+      targetEmployeeId: employeeId,
+      roleCodes: request.user.roleCodes,
+      identityCompanyIds: request.user.scope.companyIds,
+      companyIds: storeReadScope.companyIds,
+      regionIds: storeReadScope.regionIds,
+      storeIds: storeReadScope.storeIds,
+      assignedStoreIds: request.user.actionScope?.assignedStoreIds ?? [],
       mode: query.mode,
       snapshotDate: query.snapshotDate,
       periodType: query.periodType,

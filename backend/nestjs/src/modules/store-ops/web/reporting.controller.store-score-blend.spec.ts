@@ -38,4 +38,56 @@ describe("ReportingController store score breakdown", () => {
       storeIds: ["store-1"],
     });
   });
+
+  it("passes scoped personnel profile requests to the reporting service", async () => {
+    const reportingService = {
+      getPersonnelPerformance: jest.fn(async () => ({
+        employee: { employeeId: "employee-2" },
+      })),
+    };
+    const controller = new ReportingController(
+      reportingService as never,
+      { getRankings: jest.fn() } as never,
+    );
+
+    await controller.getPersonnelPerformance(
+      {
+        user: {
+          userId: "manager-1",
+          employeeId: "manager-employee",
+          roleCodes: ["STORE_MANAGER"],
+          scope: {
+            companyIds: ["company-1"],
+            regionIds: ["region-1"],
+            storeIds: ["store-raw"],
+          },
+          actionScope: {
+            assignedStoreIds: ["store-1"],
+          },
+        },
+      },
+      "employee-2",
+      {
+        mode: "live",
+        periodType: "monthly",
+        periodStart: "2026-03-01",
+      },
+    );
+
+    expect(reportingService.getPersonnelPerformance).toHaveBeenCalledWith({
+      userId: "manager-1",
+      employeeId: "manager-employee",
+      targetEmployeeId: "employee-2",
+      roleCodes: ["STORE_MANAGER"],
+      identityCompanyIds: ["company-1"],
+      companyIds: [],
+      regionIds: [],
+      storeIds: ["store-1"],
+      assignedStoreIds: ["store-1"],
+      mode: "live",
+      snapshotDate: undefined,
+      periodType: "monthly",
+      periodStart: "2026-03-01",
+    });
+  });
 });
