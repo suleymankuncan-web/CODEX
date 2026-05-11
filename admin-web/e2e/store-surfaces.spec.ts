@@ -606,6 +606,109 @@ test('store personnel profile falls back when ranking period has no personnel da
   await expect(page.getByText('Unknown employee')).toHaveCount(0)
 })
 
+test('store personnel profile date filter exposes loaded months and days', async ({ page }) => {
+  const personnelPerformanceRequests: URL[] = []
+  const loadedPeriods = [
+    {
+      periodType: 'monthly',
+      periodStart: '2026-04-01',
+      periodEnd: '2026-04-30',
+    },
+    {
+      periodType: 'monthly',
+      periodStart: '2026-05-01',
+      periodEnd: '2026-05-31',
+    },
+    {
+      periodType: 'daily',
+      periodStart: '2026-04-24',
+      periodEnd: '2026-04-24',
+    },
+    {
+      periodType: 'daily',
+      periodStart: '2026-04-25',
+      periodEnd: '2026-04-25',
+    },
+  ]
+  const dailyPerformanceFixture = {
+    ...myPerformanceFixture,
+    period: {
+      periodStart: '2026-04-24',
+      periodEnd: '2026-04-24',
+    },
+    score: {
+      value: 88.4,
+      matchedMetrics: 3,
+      totalMetrics: 3,
+    },
+    availablePeriods: loadedPeriods,
+    employee: {
+      ...myPerformanceFixture.employee,
+      employeeId: demoEmployeeId,
+      displayName: 'Store Personnel - 1',
+      storeName: 'IstinyePark Demo Store',
+    },
+  }
+
+  await page.unroute('**/api/auth/session')
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      json: {
+        ...authSessionFixture,
+        user: {
+          ...authSessionFixture.user,
+          userId: 'region-ranking-user',
+          roleCodes: ['REGION_MANAGER'],
+        },
+      },
+    })
+  })
+
+  await page.unroute('**/api/reports/personnel-performance/**')
+  await page.route('**/api/reports/personnel-performance/**', async (route) => {
+    const requestUrl = new URL(route.request().url())
+    personnelPerformanceRequests.push(requestUrl)
+
+    await route.fulfill({
+      json:
+        requestUrl.searchParams.get('periodType') === 'daily'
+          ? dailyPerformanceFixture
+          : {
+              ...myPerformanceFixture,
+              availablePeriods: loadedPeriods,
+              employee: {
+                ...myPerformanceFixture.employee,
+                employeeId: demoEmployeeId,
+                displayName: 'Store Personnel - 1',
+                storeName: 'IstinyePark Demo Store',
+              },
+            },
+    })
+  })
+
+  await page.goto(`/store/personnel/${demoEmployeeId}?mode=live&periodType=monthly&periodStart=2026-04-01`)
+  await page.getByRole('button', { name: /Tarih filtresi/i }).click()
+
+  await expect(page.getByRole('button', { name: 'Ay', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Gün', exact: true })).toBeVisible()
+  await expect(page.getByRole('option', { name: /1 Nis 2026 - 30 Nis 2026/ })).toBeAttached()
+  await expect(page.getByRole('option', { name: /1 May 2026 - 31 May 2026/ })).toBeAttached()
+
+  await page.getByRole('button', { name: 'Gün', exact: true }).click()
+  await expect(page.getByRole('option', { name: '24 Nis 2026' })).toBeAttached()
+  await expect(page.getByRole('option', { name: '25 Nis 2026' })).toBeAttached()
+  await page.getByLabel('Yüklü gün seçimi').selectOption('2026-04-24')
+
+  await expect.poll(() =>
+    personnelPerformanceRequests.some(
+      (requestUrl) =>
+        requestUrl.searchParams.get('periodType') === 'daily' &&
+        requestUrl.searchParams.get('periodStart') === '2026-04-24',
+    ),
+  ).toBe(true)
+  await expect(page.locator('.store-me-v2-period-pill')).toHaveText('24 Nis 2026 - 24 Nis 2026')
+})
+
 test('store rankings page switches to English copy and persists locale', async ({ page }) => {
   await page.goto('/store/rankings')
 

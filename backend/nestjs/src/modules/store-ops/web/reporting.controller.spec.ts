@@ -1,4 +1,5 @@
 import { ReportingController } from "./reporting.controller";
+import { REQUIRED_ROLES_KEY } from "../../auth/decorators/roles.decorator";
 
 describe("ReportingController", () => {
   const createController = () => {
@@ -77,5 +78,16 @@ describe("ReportingController", () => {
       storeId: "store-1",
       storeIds: ["store-1"],
     });
+  });
+
+  it("allows ranking detail roles to load closed day snapshot options", () => {
+    const { controller } = createController();
+
+    const roles = Reflect.getMetadata(
+      REQUIRED_ROLES_KEY,
+      controller.listSnapshotRuns,
+    );
+
+    expect(roles).toEqual(expect.arrayContaining(["REGION_MANAGER", "SUPER_ADMIN"]));
   });
 });

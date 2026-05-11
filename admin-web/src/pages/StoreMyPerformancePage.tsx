@@ -109,6 +109,8 @@ function isPersonnelMetric(metric: { code: string }) {
   return personnelMetricCodes.includes(metric.code)
 }
 
+type LivePeriodType = 'monthly' | 'daily'
+
 function findMetric(metrics: MyPerformanceMetric[], code: string) {
   return metrics.find((metric) => metric.code === code) ?? null
 }
@@ -163,6 +165,20 @@ function getLatestAvailablePeriodStart(periods: Array<{ periodStart: string }>) 
     .at(-1)
 
   return getPeriodDateKey(latestPeriod?.periodStart) || latestPeriod?.periodStart || ''
+}
+
+function formatLivePeriodOptionLabel(
+  locale: AppLocale,
+  period: { periodType: string; periodStart: string; periodEnd: string },
+) {
+  const start = formatDate(period.periodStart, locale)
+  const end = formatDate(period.periodEnd, locale)
+
+  if (period.periodType === 'daily' || getPeriodDateKey(period.periodStart) === getPeriodDateKey(period.periodEnd)) {
+    return start
+  }
+
+  return `${start} - ${end}`
 }
 
 function isSamePeriodStart(left: string | null | undefined, right: string | null | undefined) {
@@ -358,6 +374,7 @@ export function StoreMyPerformancePage(input: {
   authSummary: AuthSessionSummary | null
   employeeId?: string
   initialLivePeriodStart?: string
+  initialLivePeriodType?: LivePeriodType
   profileMode?: 'self' | 'personnel'
 }) {
   const { locale, t } = useLocalization()
@@ -368,6 +385,9 @@ export function StoreMyPerformancePage(input: {
       ? canUsePersonnelPerformance(input.authSummary) && targetEmployeeId !== ''
       : canUseSelfPerformance(input.authSummary)
   const [sourceMode, setSourceMode] = useState<'live' | 'closed'>('live')
+  const [selectedLivePeriodType, setSelectedLivePeriodType] = useState<LivePeriodType>(
+    input.initialLivePeriodType ?? 'monthly',
+  )
   const [selectedLivePeriodStart, setSelectedLivePeriodStart] = useState(
     input.initialLivePeriodStart?.trim() ?? '',
   )
@@ -411,11 +431,17 @@ export function StoreMyPerformancePage(input: {
   const selectedClosedSnapshotDate = activeClosedSnapshotRun?.snapshotDate ?? ''
 
   const performanceQuery = useQuery({
-    queryKey: [...queryPrefix, sourceMode, selectedLivePeriodStart, selectedClosedSnapshotDate],
+    queryKey: [
+      ...queryPrefix,
+      sourceMode,
+      selectedLivePeriodType,
+      selectedLivePeriodStart,
+      selectedClosedSnapshotDate,
+    ],
     queryFn: () =>
       fetchPerformance({
         mode: sourceMode,
-        periodType: sourceMode === 'live' && selectedLivePeriodStart ? 'monthly' : undefined,
+        periodType: sourceMode === 'live' ? selectedLivePeriodType : undefined,
         periodStart: sourceMode === 'live' && selectedLivePeriodStart ? selectedLivePeriodStart : undefined,
         snapshotDate:
           sourceMode === 'closed' && selectedClosedSnapshotDate ? selectedClosedSnapshotDate : undefined,
@@ -426,41 +452,54 @@ export function StoreMyPerformancePage(input: {
 
   const performance = performanceQuery.data
   const availableLivePeriods = useMemo(
-    () => (performance?.availablePeriods ?? []).filter((period) => period.periodType === 'monthly'),
+    () =>
+      (performance?.availablePeriods ?? []).filter(
+        (period) => period.periodType === 'monthly' || period.periodType === 'daily',
+      ),
     [performance?.availablePeriods],
   )
+  const availableMonthlyPeriods = useMemo(
+    () => availableLivePeriods.filter((period) => period.periodType === 'monthly'),
+    [availableLivePeriods],
+  )
+  const availableDailyPeriods = useMemo(
+    () => availableLivePeriods.filter((period) => period.periodType === 'daily'),
+    [availableLivePeriods],
+  )
+  const selectedLivePeriods =
+    selectedLivePeriodType === 'daily' ? availableDailyPeriods : availableMonthlyPeriods
   const livePeriodFallbackStart = useMemo(() => {
-    if (sourceMode !== 'live' || !performanceQuery.isSuccess || performance?.period || availableLivePeriods.length === 0) {
+    if (sourceMode !== 'live' || !performanceQuery.isSuccess || performance?.period || selectedLivePeriods.length === 0) {
       return ''
     }
 
     const selectedKey = getPeriodDateKey(selectedLivePeriodStart)
     const selectedPeriodExists =
       selectedKey !== '' &&
-      availableLivePeriods.some((period) => isSamePeriodStart(period.periodStart, selectedKey))
+      selectedLivePeriods.some((period) => isSamePeriodStart(period.periodStart, selectedKey))
 
     if (selectedPeriodExists) {
       return ''
     }
 
-    return getLatestAvailablePeriodStart(availableLivePeriods)
+    return getLatestAvailablePeriodStart(selectedLivePeriods)
   }, [
-    availableLivePeriods,
     performance?.period,
     performanceQuery.isSuccess,
     selectedLivePeriodStart,
+    selectedLivePeriods,
     sourceMode,
   ])
   const monthlyDetailPeriods = useMemo(() => {
-    const activeYear = getPeriodYear(performance?.period?.periodStart ?? availableLivePeriods.at(-1)?.periodStart)
+    const activeYear = getPeriodYear(performance?.period?.periodStart ?? availableMonthlyPeriods.at(-1)?.periodStart)
     const scopedPeriods = activeYear
-      ? availableLivePeriods.filter((period) => getPeriodYear(period.periodStart) === activeYear)
-      : availableLivePeriods
+      ? availableMonthlyPeriods.filter((period) => getPeriodYear(period.periodStart) === activeYear)
+      : availableMonthlyPeriods
 
     return [...scopedPeriods]
       .sort((left, right) => comparePeriodStart(left.periodStart, right.periodStart))
       .slice(-12)
-  }, [availableLivePeriods, performance?.period?.periodStart])
+  }, [availableMonthlyPeriods, performance?.period?.periodStart])
 
   const monthlyPerformanceQueries = useQueries({
     queries: monthlyDetailPeriods.map((period) => ({
@@ -703,7 +742,10 @@ export function StoreMyPerformancePage(input: {
   const employeeHeading = `${performance.employee.displayName} · ${employeeStore}`
   const scoreValue = Math.round(performance.score.value)
   const scoreDeltaLabel = samePeriodScoreDelta ?? t('storeMe.noTrendData')
-  const loadedPeriodCount = monthlyDetailRows.length || availableLivePeriods.length
+  const loadedPeriodCount =
+    sourceMode === 'closed'
+      ? availableClosedSnapshotRuns.length
+      : selectedLivePeriods.length || monthlyDetailRows.length || availableLivePeriods.length
   const dataQualityLabel = partial.isPartial ? t('storeMe.missingDataExists') : t('storeMe.completeData')
   const selectedPeriodLabel = `${periodLabel} · ${formatSourceMode(t, performance.source.mode)}`
   const gradeLabel = `${performanceGrade.code} - ${t(`storeMe.grade.${performanceGrade.code}` as TranslationKey)}`
@@ -812,23 +854,54 @@ export function StoreMyPerformancePage(input: {
                     </button>
                   </div>
                 </div>
+                <div className="store-me-v2-filter-field">
+                  <span>{t('storeMe.liveGranularity')}</span>
+                  <div className="store-me-v2-choice-row">
+                    <button
+                      className={selectedLivePeriodType === 'monthly' ? 'active' : ''}
+                      type="button"
+                      disabled={sourceMode !== 'live'}
+                      onClick={() => {
+                        setSelectedLivePeriodType('monthly')
+                        setSelectedLivePeriodStart('')
+                      }}
+                    >
+                      {t('storeMe.liveMonth')}
+                    </button>
+                    <button
+                      className={selectedLivePeriodType === 'daily' ? 'active' : ''}
+                      type="button"
+                      disabled={sourceMode !== 'live'}
+                      onClick={() => {
+                        setSelectedLivePeriodType('daily')
+                        setSelectedLivePeriodStart('')
+                      }}
+                    >
+                      {t('storeMe.liveDay')}
+                    </button>
+                  </div>
+                </div>
                 <label className="store-me-v2-filter-field">
-                  <span>{t('storeMe.period')}</span>
+                  <span>{selectedLivePeriodType === 'daily' ? t('storeMe.loadedDays') : t('storeMe.loadedMonths')}</span>
                   <select
                     value={selectedLivePeriodStart}
                     onChange={(event) => setSelectedLivePeriodStart(event.target.value)}
-                    disabled={sourceMode !== 'live' || availableLivePeriods.length === 0}
+                    disabled={sourceMode !== 'live' || selectedLivePeriods.length === 0}
+                    aria-label={
+                      selectedLivePeriodType === 'daily'
+                        ? t('storeMe.loadedDaySelect')
+                        : t('storeMe.loadedMonthSelect')
+                    }
                   >
-                    <option value="">{t('storeMe.latestPeriod')}</option>
-                    {availableLivePeriods.map((period) => (
+                    <option value="">
+                      {selectedLivePeriodType === 'daily' ? t('storeMe.latestDay') : t('storeMe.latestMonth')}
+                    </option>
+                    {selectedLivePeriods.map((period) => (
                       <option
                         key={`${period.periodType}-${getPeriodDateKey(period.periodStart) || period.periodStart}`}
                         value={getPeriodDateKey(period.periodStart) || period.periodStart}
                       >
-                        {`${formatDate(period.periodStart, locale)} - ${formatDate(
-                          period.periodEnd,
-                          locale,
-                        )}`}
+                        {formatLivePeriodOptionLabel(locale, period)}
                       </option>
                     ))}
                   </select>
