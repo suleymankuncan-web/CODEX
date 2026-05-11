@@ -157,6 +157,14 @@ function comparePeriodStart(left: string, right: string) {
   return leftKey.localeCompare(rightKey)
 }
 
+function getLatestAvailablePeriodStart(periods: Array<{ periodStart: string }>) {
+  const latestPeriod = [...periods]
+    .sort((left, right) => comparePeriodStart(left.periodStart, right.periodStart))
+    .at(-1)
+
+  return getPeriodDateKey(latestPeriod?.periodStart) || latestPeriod?.periodStart || ''
+}
+
 function isSamePeriodStart(left: string | null | undefined, right: string | null | undefined) {
   const leftKey = getPeriodDateKey(left)
   const rightKey = getPeriodDateKey(right)
@@ -421,6 +429,28 @@ export function StoreMyPerformancePage(input: {
     () => (performance?.availablePeriods ?? []).filter((period) => period.periodType === 'monthly'),
     [performance?.availablePeriods],
   )
+  const livePeriodFallbackStart = useMemo(() => {
+    if (sourceMode !== 'live' || !performanceQuery.isSuccess || performance?.period || availableLivePeriods.length === 0) {
+      return ''
+    }
+
+    const selectedKey = getPeriodDateKey(selectedLivePeriodStart)
+    const selectedPeriodExists =
+      selectedKey !== '' &&
+      availableLivePeriods.some((period) => isSamePeriodStart(period.periodStart, selectedKey))
+
+    if (selectedPeriodExists) {
+      return ''
+    }
+
+    return getLatestAvailablePeriodStart(availableLivePeriods)
+  }, [
+    availableLivePeriods,
+    performance?.period,
+    performanceQuery.isSuccess,
+    selectedLivePeriodStart,
+    sourceMode,
+  ])
   const monthlyDetailPeriods = useMemo(() => {
     const activeYear = getPeriodYear(performance?.period?.periodStart ?? availableLivePeriods.at(-1)?.periodStart)
     const scopedPeriods = activeYear
@@ -450,6 +480,18 @@ export function StoreMyPerformancePage(input: {
       retry: false,
     })),
   })
+
+  useEffect(() => {
+    if (!livePeriodFallbackStart || livePeriodFallbackStart === selectedLivePeriodStart) {
+      return undefined
+    }
+
+    const fallbackTimer = window.setTimeout(() => {
+      setSelectedLivePeriodStart(livePeriodFallbackStart)
+    }, 0)
+
+    return () => window.clearTimeout(fallbackTimer)
+  }, [livePeriodFallbackStart, selectedLivePeriodStart])
 
   useEffect(() => {
     if (!isKpiDetailOpen) {
