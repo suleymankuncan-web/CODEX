@@ -1205,12 +1205,14 @@ export class ReportingRepository {
     }
 
     const result = await this.databaseService.query<{
+      period_type: string;
       period_start: string;
       period_end: string;
       store_id: string | null;
     }>(
       `
         SELECT
+          ka.period_type,
           ka.period_start::text AS period_start,
           ka.period_end::text AS period_end,
           COALESCE(ka.store_id, assignment.store_id)::text AS store_id

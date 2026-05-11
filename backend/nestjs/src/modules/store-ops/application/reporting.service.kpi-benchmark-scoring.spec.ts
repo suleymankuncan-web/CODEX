@@ -112,6 +112,61 @@ describe("ReportingService KPI benchmark scoring", () => {
     expect(targetAchievement?.contributionValue).toBe(0);
   });
 
+  it("keeps the active personnel period selectable when the repository period list is empty", async () => {
+    const reportingRepository = {
+      resolveEmployeeIdForAuthIdentity: jest.fn(async () => "employee-1"),
+      listEmployeeKpiPeriods: jest.fn(async () => []),
+      getLatestEmployeeKpiPeriod: jest.fn(async () => ({
+        period_type: "monthly",
+        period_start: "2026-03-01",
+        period_end: "2026-03-31",
+        store_id: "store-1",
+      })),
+      getEmployeePerformanceRows: jest.fn(async () => [
+        {
+          employee_id: "employee-1",
+          first_name: "Ada",
+          last_name: "Lovelace",
+          store_id: "store-1",
+          store_name: "Marmara Park",
+          kpi_code: "ATV",
+          kpi_name: "ATV",
+          target_value: null,
+          personnel_target_reference_id: null,
+          actual_value: "1500",
+        },
+      ]),
+      getPeerEmployeePerformanceRows: jest.fn(async () => []),
+      getEmployeeTurkeyBenchmarkValues: jest.fn(async () => [
+        { kpi_code: "ATV", benchmark_value: "1000" },
+      ]),
+    };
+    const service = new ReportingService(
+      reportingRepository as never,
+      { getKpiConfigRows: jest.fn(async () => []) } as never,
+      {} as never,
+      {} as never,
+    );
+
+    const result = await service.getMyPerformance({
+      userId: "user-1",
+      employeeId: "employee-1",
+      companyIds: [],
+      regionIds: [],
+      storeIds: ["store-1"],
+      periodType: "monthly",
+      periodStart: "2026-03-01",
+    });
+
+    expect(result.availablePeriods).toEqual([
+      {
+        periodType: "monthly",
+        periodStart: "2026-03-01",
+        periodEnd: "2026-03-31",
+      },
+    ]);
+  });
+
   it("falls back to global personnel benchmarks when scoped benchmark rows are unusable", async () => {
     const getEmployeeTurkeyBenchmarkValues = jest
       .fn()

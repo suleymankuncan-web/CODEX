@@ -898,6 +898,11 @@ export class ReportingService {
       periodType: input.periodType,
       periodStart: input.periodStart,
     });
+    const mappedAvailablePeriods = this.mapEmployeeAvailablePeriods(
+      availablePeriods,
+      latestPeriod,
+      input.periodType,
+    );
 
     if (!latestPeriod) {
       return {
@@ -924,11 +929,7 @@ export class ReportingService {
           storeRank: null,
           storePopulation: 0,
         },
-        availablePeriods: availablePeriods.map((period) => ({
-          periodType: period.period_type,
-          periodStart: period.period_start,
-          periodEnd: period.period_end,
-        })),
+        availablePeriods: mappedAvailablePeriods,
         partial: {
           isPartial: true,
           missingMetricCodes: profile.metrics.map((metric) => metric.code),
@@ -1182,11 +1183,7 @@ export class ReportingService {
         storeRank,
         storePopulation: storeScores.length,
       },
-      availablePeriods: availablePeriods.map((period) => ({
-        periodType: period.period_type,
-        periodStart: period.period_start,
-        periodEnd: period.period_end,
-      })),
+      availablePeriods: mappedAvailablePeriods,
       partial: {
         isPartial: missingMetrics.length > 0 || pendingNormalizationMetrics.length > 0,
         missingMetricCodes: missingMetrics.map((metric) => metric.code),
@@ -1439,6 +1436,53 @@ export class ReportingService {
       const value = Number(row.benchmark_value);
       return Number.isFinite(value) && value !== 0;
     });
+  }
+
+  private mapEmployeeAvailablePeriods(
+    periods: Array<{ period_type: string; period_start: string; period_end: string }>,
+    fallbackPeriod?: {
+      period_type?: string | null;
+      period_start: string;
+      period_end: string;
+    } | null,
+    fallbackPeriodType?: string,
+  ) {
+    const seenPeriodKeys = new Set<string>();
+    const mappedPeriods: Array<{
+      periodType: string;
+      periodStart: string;
+      periodEnd: string;
+    }> = [];
+
+    const addPeriod = (periodType: string | null | undefined, periodStart: string, periodEnd: string) => {
+      if (!periodType || !periodStart || !periodEnd) {
+        return;
+      }
+
+      const periodKey = `${periodType}:${periodStart}`;
+      if (seenPeriodKeys.has(periodKey)) {
+        return;
+      }
+
+      seenPeriodKeys.add(periodKey);
+      mappedPeriods.push({
+        periodType,
+        periodStart,
+        periodEnd,
+      });
+    };
+
+    periods.forEach((period) => addPeriod(period.period_type, period.period_start, period.period_end));
+
+    if (fallbackPeriod) {
+      addPeriod(
+        fallbackPeriod.period_type ?? fallbackPeriodType ?? "monthly",
+        fallbackPeriod.period_start,
+        fallbackPeriod.period_end,
+      );
+    }
+
+    return mappedPeriods;
   }
 
   private mapKpiConfigVersionMetadata(version: {
