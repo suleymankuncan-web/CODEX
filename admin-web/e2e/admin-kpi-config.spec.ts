@@ -116,6 +116,36 @@ test('admin KPI config profile fields stay editable and save changed draft', asy
   )
 })
 
+test('admin KPI config explains weight totals before saving draft', async ({ page }) => {
+  await page.goto('/admin/kpi-config')
+  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+
+  const targetMetric = page
+    .locator('.stacked-row')
+    .filter({ has: page.locator('input[value="TARGET_ACHIEVEMENT"]') })
+    .first()
+  const uptMetric = page
+    .locator('.stacked-row')
+    .filter({ has: page.locator('input[value="UPT"]') })
+    .first()
+  const saveButton = page.getByRole('button', { name: 'Save draft' })
+
+  await targetMetric.getByLabel('Weight %').fill('')
+  await expect(targetMetric.getByLabel('Weight %')).toHaveValue('')
+  await expect(page.getByText('Store profile has an invalid weight value.').first()).toBeVisible()
+  await expect(saveButton).toBeDisabled()
+
+  await targetMetric.getByLabel('Weight %').fill('60')
+  await expect(
+    page.getByText('Store profile is 5 points short. Total must be 100 before saving.').first(),
+  ).toBeVisible()
+  await expect(saveButton).toBeDisabled()
+
+  await uptMetric.getByLabel('Weight %').fill('35')
+  await expect(page.getByText('Store profile is balanced at 100.').first()).toBeVisible()
+  await expect(saveButton).toBeEnabled()
+})
+
 async function routeAdminKpiConfigApi(page: Page) {
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: authSessionFixture })

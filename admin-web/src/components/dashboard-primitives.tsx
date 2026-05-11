@@ -13,7 +13,7 @@ export function MetricAccent(input: { label: string; value: string }) {
 
 export function MetricCard(input: {
   title: string
-  value: number
+  value: number | string
   note: string
   icon: ReactNode
   tone: Exclude<Tone, 'neutral'> | 'neutral'

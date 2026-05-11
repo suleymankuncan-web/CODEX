@@ -91,6 +91,7 @@ export function AdminKpiConfigPage() {
   const latestPublishedVersion = configQuery.data?.latestPublishedVersion ?? null
 
   const updateDraft = (updater: (current: KpiConfig) => KpiConfig) => {
+    setNotice(null)
     setDraft((current) => {
       const base = current ?? configQuery.data?.draftConfig ?? null
       return base ? updater(base) : current
@@ -136,22 +137,23 @@ export function AdminKpiConfigPage() {
     )
   }
 
-  const storeWeightTotal = draft.storeProfile.metrics.reduce(
-    (sum, metric) => sum + metric.weightPercent,
-    0,
-  )
-  const personnelWeightTotal = draft.personnelProfile.metrics.reduce(
-    (sum, metric) => sum + metric.weightPercent,
-    0,
-  )
-  const publishedStoreWeightTotal = published?.storeProfile.metrics.reduce(
-    (sum, metric) => sum + metric.weightPercent,
-    0,
-  ) ?? 0
-  const publishedPersonnelWeightTotal = published?.personnelProfile.metrics.reduce(
-    (sum, metric) => sum + metric.weightPercent,
-    0,
-  ) ?? 0
+  const storeWeightTotal = sumMetricWeights(draft.storeProfile.metrics)
+  const personnelWeightTotal = sumMetricWeights(draft.personnelProfile.metrics)
+  const publishedStoreWeightTotal = published ? sumMetricWeights(published.storeProfile.metrics) : 0
+  const publishedPersonnelWeightTotal = published
+    ? sumMetricWeights(published.personnelProfile.metrics)
+    : 0
+  const storeWeightGuidance = formatWeightGuidance({
+    total: storeWeightTotal,
+    profileLabel: t('adminKpiConfig.profile.store'),
+    t,
+  })
+  const personnelWeightGuidance = formatWeightGuidance({
+    total: personnelWeightTotal,
+    profileLabel: t('adminKpiConfig.profile.personnel'),
+    t,
+  })
+  const weightTotalsValid = isExactWeightTotal(storeWeightTotal) && isExactWeightTotal(personnelWeightTotal)
   const governancePreview = buildGovernancePreview({
     draft,
     published,
@@ -194,17 +196,17 @@ export function AdminKpiConfigPage() {
       <section className="metric-grid">
         <MetricCard
           title={t('adminKpiConfig.storeWeightTotal')}
-          value={storeWeightTotal}
-          note={t('adminKpiConfig.storeWeightTotalNote')}
+          value={formatWeightTotalValue(storeWeightTotal, t)}
+          note={storeWeightGuidance}
           icon={<SlidersHorizontal size={18} />}
-          tone={storeWeightTotal === 100 ? 'calm' : 'warning'}
+          tone={isExactWeightTotal(storeWeightTotal) ? 'calm' : 'warning'}
         />
         <MetricCard
           title={t('adminKpiConfig.personnelWeightTotal')}
-          value={personnelWeightTotal}
-          note={t('adminKpiConfig.personnelWeightTotalNote')}
+          value={formatWeightTotalValue(personnelWeightTotal, t)}
+          note={personnelWeightGuidance}
           icon={<Settings2 size={18} />}
-          tone={personnelWeightTotal === 100 ? 'calm' : 'warning'}
+          tone={isExactWeightTotal(personnelWeightTotal) ? 'calm' : 'warning'}
         />
         <MetricCard
           title={t('adminKpiConfig.taskCandidates')}
@@ -239,15 +241,21 @@ export function AdminKpiConfigPage() {
           </StatusPill>
         </div>
         <div className="key-grid">
-          <KeyValue label={t('adminKpiConfig.draftStoreWeight')} value={`${storeWeightTotal}%`} />
-          <KeyValue label={t('adminKpiConfig.liveStoreWeight')} value={`${publishedStoreWeightTotal}%`} />
+          <KeyValue
+            label={t('adminKpiConfig.draftStoreWeight')}
+            value={formatWeightPercent(storeWeightTotal, t)}
+          />
+          <KeyValue
+            label={t('adminKpiConfig.liveStoreWeight')}
+            value={formatWeightPercent(publishedStoreWeightTotal, t)}
+          />
           <KeyValue
             label={t('adminKpiConfig.draftPersonnelWeight')}
-            value={`${personnelWeightTotal}%`}
+            value={formatWeightPercent(personnelWeightTotal, t)}
           />
           <KeyValue
             label={t('adminKpiConfig.livePersonnelWeight')}
-            value={`${publishedPersonnelWeightTotal}%`}
+            value={formatWeightPercent(publishedPersonnelWeightTotal, t)}
           />
           <KeyValue
             label={t('adminKpiConfig.draftGradingBands')}
@@ -326,8 +334,11 @@ export function AdminKpiConfigPage() {
         summary={draft.storeProfile.summary}
         futureMetricRule={draft.storeProfile.futureMetricRule}
         metrics={draft.storeProfile.metrics}
-        weightTone={storeWeightTotal === 100 ? 'calm' : 'warning'}
-        weightLabel={t('adminKpiConfig.weightTotal', { total: storeWeightTotal })}
+        weightTone={isExactWeightTotal(storeWeightTotal) ? 'calm' : 'warning'}
+        weightLabel={t('adminKpiConfig.weightTotal', {
+          total: formatWeightTotalValue(storeWeightTotal, t),
+        })}
+        weightGuidance={storeWeightGuidance}
         onMetricChange={(index, next) =>
           updateDraft((current) => ({
             ...current,
@@ -367,8 +378,11 @@ export function AdminKpiConfigPage() {
         summary={draft.personnelProfile.summary}
         futureMetricRule={draft.personnelProfile.futureMetricRule}
         metrics={draft.personnelProfile.metrics}
-        weightTone={personnelWeightTotal === 100 ? 'calm' : 'warning'}
-        weightLabel={t('adminKpiConfig.weightTotal', { total: personnelWeightTotal })}
+        weightTone={isExactWeightTotal(personnelWeightTotal) ? 'calm' : 'warning'}
+        weightLabel={t('adminKpiConfig.weightTotal', {
+          total: formatWeightTotalValue(personnelWeightTotal, t),
+        })}
+        weightGuidance={personnelWeightGuidance}
         onMetricChange={(index, next) =>
           updateDraft((current) => ({
             ...current,
@@ -606,8 +620,12 @@ export function AdminKpiConfigPage() {
             <div className="eyebrow">{t('adminKpiConfig.saveEyebrow')}</div>
             <h3>{t('adminKpiConfig.persistTitle')}</h3>
           </div>
-          <StatusPill tone={saveMutation.isPending ? 'warning' : 'calm'}>
-            {saveMutation.isPending ? t('adminKpiConfig.saving') : t('adminKpiConfig.ready')}
+          <StatusPill tone={saveMutation.isPending || !weightTotalsValid ? 'warning' : 'calm'}>
+            {saveMutation.isPending
+              ? t('adminKpiConfig.saving')
+              : weightTotalsValid
+                ? t('adminKpiConfig.ready')
+                : t('adminKpiConfig.needsWeightBalance')}
           </StatusPill>
         </div>
         <div className="key-grid">
@@ -621,6 +639,9 @@ export function AdminKpiConfigPage() {
           <KeyValue label={t('adminKpiConfig.persistence')} value="ops.kpi_score_profile_config" />
         </div>
         {notice ? <p className="queue-subtitle">{notice}</p> : null}
+        {!weightTotalsValid ? (
+          <p className="queue-subtitle">{t('adminKpiConfig.weightSaveBlocked')}</p>
+        ) : null}
         {saveMutation.isError ? (
           <p className="queue-subtitle">{getErrorMessage(saveMutation.error)}</p>
         ) : null}
@@ -628,7 +649,7 @@ export function AdminKpiConfigPage() {
           <button
             className="control-button"
             type="button"
-            disabled={saveMutation.isPending || publishMutation.isPending}
+            disabled={saveMutation.isPending || publishMutation.isPending || !weightTotalsValid}
             onClick={() => saveMutation.mutate(draft)}
           >
             {saveMutation.isPending
@@ -641,6 +662,7 @@ export function AdminKpiConfigPage() {
             disabled={
               publishMutation.isPending ||
               saveMutation.isPending ||
+              !weightTotalsValid ||
               !configQuery.data?.hasUnpublishedChanges
             }
             onClick={() => publishMutation.mutate()}
@@ -726,6 +748,54 @@ function createEmptyKpiConfig(): KpiConfig {
     ownershipMatrix: [],
     gradingBands: [],
   }
+}
+
+function sumMetricWeights(metrics: KpiScoreProfileMetric[]) {
+  if (metrics.some((metric) => !Number.isFinite(metric.weightPercent))) {
+    return Number.NaN
+  }
+
+  return metrics.reduce((sum, metric) => sum + metric.weightPercent, 0)
+}
+
+function isExactWeightTotal(total: number) {
+  return Number.isFinite(total) && total === 100
+}
+
+function formatWeightTotalValue(total: number, t: TranslateFunction) {
+  return Number.isFinite(total) ? total : t('adminKpiConfig.invalidWeightValue')
+}
+
+function formatWeightPercent(total: number, t: TranslateFunction) {
+  return Number.isFinite(total)
+    ? t('adminKpiConfig.weightTotal', { total })
+    : t('adminKpiConfig.invalidWeightValue')
+}
+
+function formatWeightGuidance(input: {
+  total: number
+  profileLabel: string
+  t: TranslateFunction
+}) {
+  if (!Number.isFinite(input.total)) {
+    return input.t('adminKpiConfig.weightInvalid', { profile: input.profileLabel })
+  }
+
+  if (input.total === 100) {
+    return input.t('adminKpiConfig.weightBalanced', { profile: input.profileLabel })
+  }
+
+  if (input.total < 100) {
+    return input.t('adminKpiConfig.weightShort', {
+      profile: input.profileLabel,
+      amount: 100 - input.total,
+    })
+  }
+
+  return input.t('adminKpiConfig.weightOver', {
+    profile: input.profileLabel,
+    amount: input.total - 100,
+  })
 }
 
 function diffByCode<T extends { code: string }>(
@@ -842,6 +912,7 @@ function ProfileEditor(input: {
   metrics: KpiScoreProfileMetric[]
   weightLabel: string
   weightTone: 'calm' | 'warning' | 'accent'
+  weightGuidance: string
   onMetricChange: (index: number, next: KpiScoreProfileMetric) => void
   onAddMetric: () => void
   onRemoveMetric: (index: number) => void
@@ -856,6 +927,7 @@ function ProfileEditor(input: {
         <StatusPill tone={input.weightTone}>{input.weightLabel}</StatusPill>
       </div>
       <p className="queue-subtitle">{input.summary}</p>
+      <p className="queue-subtitle">{input.weightGuidance}</p>
       <div className="stacked-table">
         {input.metrics.map((metric, index) => (
           <article className="stacked-row" key={`${metric.code}-${index}`}>
@@ -962,8 +1034,11 @@ function NumberField(input: {
       <span className="eyebrow">{input.label}</span>
       <input
         type="number"
-        value={input.value}
-        onChange={(event) => input.onChange(Number(event.target.value))}
+        value={Number.isFinite(input.value) ? input.value : ''}
+        onChange={(event) => {
+          const nextValue = event.target.value
+          input.onChange(nextValue.trim() === '' ? Number.NaN : Number(nextValue))
+        }}
       />
     </label>
   )
