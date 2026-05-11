@@ -99,6 +99,31 @@ describe("ReportingRepository access scope contract", () => {
     expect(query).not.toHaveBeenCalled();
   });
 
+  it("allows explicit global employee KPI period lookups for super-admin profile reads", async () => {
+    const { query, repository } = createRepository();
+
+    await repository.getLatestEmployeeKpiPeriod({
+      employeeId: "00000000-0000-4000-8000-000000000010",
+      metricCodes: ["UPT"],
+      ...emptyScope,
+      allowGlobalScope: true,
+    });
+    await repository.listEmployeeKpiPeriods({
+      employeeId: "00000000-0000-4000-8000-000000000010",
+      metricCodes: ["UPT"],
+      ...emptyScope,
+      allowGlobalScope: true,
+    });
+
+    expect(query).toHaveBeenCalledTimes(2);
+    for (const [, params] of query.mock.calls) {
+      expect(params).toEqual([
+        "00000000-0000-4000-8000-000000000010",
+        ["UPT"],
+      ]);
+    }
+  });
+
   it("uses active assignment fallback when scoping live employee KPI period lookups", async () => {
     const { query, repository } = createRepository();
 
