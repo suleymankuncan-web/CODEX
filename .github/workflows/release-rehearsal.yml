@@ -11,11 +11,6 @@ on:
       - "infra/**"
       - ".github/workflows/release-rehearsal.yml"
   pull_request:
-    paths:
-      - "backend/nestjs/**"
-      - "db/**"
-      - "infra/**"
-      - ".github/workflows/release-rehearsal.yml"
   workflow_dispatch:
 
 concurrency:
@@ -32,8 +27,34 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Determine rehearsal scope
+        id: scope
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" != "pull_request" ]]; then
+            echo "run_rehearsal=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          changed_files="$(git diff --name-only \
+            "${{ github.event.pull_request.base.sha }}" \
+            "${{ github.event.pull_request.head.sha }}")"
+
+          if printf '%s\n' "$changed_files" | grep -E '^(backend/nestjs/|db/|infra/|\.github/workflows/release-rehearsal\.yml)' >/dev/null; then
+            echo "run_rehearsal=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_rehearsal=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip backend rehearsal for frontend-only changes
+        if: steps.scope.outputs.run_rehearsal != 'true'
+        run: echo "No backend, database, infrastructure, or release rehearsal workflow changes detected."
 
       - name: Setup Node.js
+        if: steps.scope.outputs.run_rehearsal == 'true'
         uses: actions/setup-node@v6
         with:
           node-version: 24
@@ -41,13 +62,16 @@ jobs:
           cache-dependency-path: backend/nestjs/package-lock.json
 
       - name: Install backend dependencies
+        if: steps.scope.outputs.run_rehearsal == 'true'
         working-directory: backend/nestjs
         run: npm ci
 
       - name: Verify Docker Compose
+        if: steps.scope.outputs.run_rehearsal == 'true'
         run: docker compose version
 
       - name: Run backend release check and Docker rehearsal
+        if: steps.scope.outputs.run_rehearsal == 'true'
         working-directory: backend/nestjs
         env:
           REHEARSAL_COMPOSE_PROJECT_NAME: store-ops-ci-release-rehearsal

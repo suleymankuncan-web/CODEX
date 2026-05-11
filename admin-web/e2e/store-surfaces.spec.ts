@@ -82,6 +82,60 @@ test('store self-performance page renders live score, metrics, and ranks', async
   await expect(page.getByText('Performans yüzeyi açılamadı')).toHaveCount(0)
 })
 
+test('store self-performance does not treat raw net sales as HG percent when target is missing', async ({ page }) => {
+  const missingTargetFixture = {
+    ...myPerformanceFixture,
+    score: {
+      value: 58.2,
+      matchedMetrics: 2,
+      totalMetrics: 3,
+    },
+    partial: {
+      isPartial: true,
+      missingMetricCodes: [],
+      missingMetricLabels: [],
+      pendingNormalizationCodes: ['TARGET_ACHIEVEMENT'],
+      pendingNormalizationLabels: ['Target Achievement'],
+    },
+    supporting: {
+      ...myPerformanceFixture.supporting,
+      netSalesValue: 92002.02,
+    },
+    metrics: myPerformanceFixture.metrics.map((metric) =>
+      metric.code === 'TARGET_ACHIEVEMENT'
+        ? {
+            ...metric,
+            actualValue: 92002.02,
+            targetValue: null,
+            achievementRate: null,
+            actualRatio: null,
+            scoredRatio: null,
+            contributionValue: 0,
+            dataStatus: 'reported',
+            scoreStatus: 'missing_reference',
+            missingReason: 'personnel_target_missing',
+          }
+        : metric,
+    ),
+  }
+
+  await page.unroute('**/api/reports/my-performance**')
+  await page.route('**/api/reports/my-performance**', async (route) => {
+    await route.fulfill({ json: missingTargetFixture })
+  })
+
+  await page.goto('/store/me')
+
+  await expect(page.getByText(/Hedefin %0/)).toBeVisible()
+  await expect(page.locator('.store-me-v2-target-progress-card')).toContainText('Hedef bekleniyor')
+  await expect(page.locator('.store-me-v2-target-progress-card')).toContainText('Veri yok')
+  await expect(page.locator('.store-me-v2-metric-card').filter({ hasText: 'HG%' })).toContainText('Eksik referans')
+  await expect(page.getByText(/9\.200\.202%/)).toHaveCount(0)
+
+  await page.getByRole('button', { name: /KPI detay/i }).click()
+  await expect(page.locator('.store-me-v2-kpi-dialog')).not.toContainText(/9\.200\.202%/)
+})
+
 test('store self-performance tolerates ISO period timestamps from live API', async ({ page }) => {
   const pageErrors: string[] = []
   page.on('pageerror', (error) => {
