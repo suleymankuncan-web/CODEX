@@ -38,9 +38,16 @@ test('store self-performance page renders live score, metrics, and ranks', async
   await expect(page.getByText('Hedef bazlı skor')).toBeVisible()
   await expect(page.getByText('Gerçekleşen').first()).toBeVisible()
   await expect(page.getByText('Başarı').first()).toBeVisible()
+  await expect(page.getByRole('button', { name: /Tarih filtresi/i })).toBeVisible()
+  await page.getByRole('button', { name: 'KPI detayları' }).click()
+  const kpiDetailsDialog = page.getByRole('dialog', { name: /ay ay performansı/i })
+  await expect(kpiDetailsDialog).toBeVisible()
+  await expect(kpiDetailsDialog).toContainText('Nisan 2026')
+  await expect(kpiDetailsDialog).toContainText('Mayıs 2026')
+  await expect(kpiDetailsDialog).not.toContainText('CR')
   await expect(page.getByText('TARGET_ACHIEVEMENT')).toBeVisible()
-  await expect(page.getByText('ATV', { exact: true })).toBeVisible()
-  await expect(page.getByText('UPT', { exact: true })).toBeVisible()
+  await expect(page.getByText('ATV', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('UPT', { exact: true }).first()).toBeVisible()
   await expect(page.getByText('Weighted score')).toHaveCount(0)
   await expect(page.getByText('Turkey ranking')).toHaveCount(0)
   await expect(page.getByText('Store ranking')).toHaveCount(0)
@@ -184,6 +191,7 @@ test('store self-performance handles live no-data responses without supporting m
 
 test('store self-performance closed mode uses readable snapshot labels', async ({ page }) => {
   await page.goto('/store/me')
+  await page.getByRole('button', { name: /Tarih filtresi/i }).click()
   await page.getByRole('button', { name: 'Kapanmış gün' }).click()
 
   await expect(
@@ -1002,7 +1010,13 @@ async function routeStoreSurfaceApi(page: Page) {
   })
 
   await page.route('**/api/reports/my-performance**', async (route) => {
-    await route.fulfill({ json: myPerformanceFixture })
+    const requestUrl = new URL(route.request().url())
+    await route.fulfill({
+      json:
+        requestUrl.searchParams.get('periodStart') === '2026-05-01'
+          ? myPerformanceMayFixture
+          : myPerformanceFixture,
+    })
   })
 
   await page.route('**/api/reports/store-kpi-highlights**', async (route) => {
@@ -1322,6 +1336,11 @@ const myPerformanceFixture = {
       periodStart: '2026-04-01',
       periodEnd: '2026-04-30',
     },
+    {
+      periodType: 'monthly',
+      periodStart: '2026-05-01',
+      periodEnd: '2026-05-31',
+    },
   ],
   partial: {
     isPartial: false,
@@ -1368,6 +1387,68 @@ const myPerformanceFixture = {
       targetValue: null,
       achievementRate: 95,
       contributionValue: 28.5,
+      dataStatus: 'reported',
+      scoreStatus: 'scored',
+      status: 'reported',
+    },
+  ],
+}
+
+const myPerformanceMayFixture = {
+  ...myPerformanceFixture,
+  period: {
+    periodStart: '2026-05-01',
+    periodEnd: '2026-05-31',
+  },
+  score: {
+    value: 93.2,
+    matchedMetrics: 3,
+    totalMetrics: 3,
+  },
+  rankings: {
+    turkeyRank: 1,
+    turkeyPopulation: 4,
+    storeRank: 1,
+    storePopulation: 3,
+  },
+  supporting: {
+    netSalesValue: 172000,
+    targetEntryMode: 'manager_assignment',
+    targetEditableByCurrentUser: false,
+  },
+  metrics: [
+    {
+      code: 'TARGET_ACHIEVEMENT',
+      label: 'Target Achievement',
+      weightPercent: 40,
+      actualValue: 1.04,
+      targetValue: null,
+      achievementRate: 1.04,
+      contributionValue: 41.6,
+      dataStatus: 'reported',
+      scoreStatus: 'scored',
+      status: 'reported',
+    },
+    {
+      code: 'ATV',
+      label: 'Average Ticket Value',
+      weightPercent: 30,
+      actualValue: 112,
+      targetValue: null,
+      achievementRate: 112,
+      contributionValue: 33.6,
+      dataStatus: 'reported',
+      scoreStatus: 'scored',
+      status: 'reported',
+    },
+    {
+      code: 'UPT',
+      label: 'Units Per Ticket',
+      weightPercent: 30,
+      actualValue: 101,
+      targetValue: null,
+      achievementRate: 101,
+      contributionValue: 30.3,
       dataStatus: 'reported',
       scoreStatus: 'scored',
       status: 'reported',
