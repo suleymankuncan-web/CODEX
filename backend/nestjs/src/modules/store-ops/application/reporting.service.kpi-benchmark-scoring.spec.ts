@@ -425,6 +425,109 @@ describe("ReportingService KPI benchmark scoring", () => {
     );
   });
 
+  it("keeps custom imported personnel periods visible as monthly live periods", async () => {
+    const targetEmployeeId = "00000000-0000-4000-8000-000000000201";
+    const getEmployeeTurkeyBenchmarkValues = jest.fn(async () => [
+      { kpi_code: "ATV", benchmark_value: "500" },
+      { kpi_code: "UPT", benchmark_value: "2" },
+    ]);
+    const reportingRepository = {
+      resolveEmployeeIdForAuthIdentity: jest.fn(async () => "employee-1"),
+      getActiveEmployeeAssignmentScope: jest.fn(async () => ({
+        employee_id: targetEmployeeId,
+        first_name: "Ada",
+        last_name: "Lovelace",
+        company_id: "company-1",
+        region_id: "region-1",
+        store_id: "store-1",
+        store_name: "Marmara Park",
+      })),
+      listEmployeeKpiPeriods: jest.fn(async () => [
+        {
+          period_type: "custom",
+          period_start: "2026-03-01",
+          period_end: "2026-03-31",
+        },
+      ]),
+      getLatestEmployeeKpiPeriod: jest.fn(async () => ({
+        period_type: "custom",
+        period_start: "2026-03-01",
+        period_end: "2026-03-31",
+        store_id: "store-1",
+      })),
+      getEmployeePerformanceRows: jest.fn(async () => [
+        {
+          employee_id: targetEmployeeId,
+          first_name: "Ada",
+          last_name: "Lovelace",
+          store_id: "store-1",
+          store_name: "Marmara Park",
+          kpi_code: "NET_SALES",
+          kpi_name: "Net Sales",
+          target_value: "100000",
+          personnel_target_reference_id: "00000000-0000-4000-8000-000000000901",
+          actual_value: "110000",
+        },
+        {
+          employee_id: targetEmployeeId,
+          first_name: "Ada",
+          last_name: "Lovelace",
+          store_id: "store-1",
+          store_name: "Marmara Park",
+          kpi_code: "ATV",
+          kpi_name: "ATV",
+          target_value: null,
+          personnel_target_reference_id: null,
+          actual_value: "600",
+        },
+      ]),
+      getPeerEmployeePerformanceRows: jest.fn(async () => []),
+      getEmployeeTurkeyBenchmarkValues,
+    };
+    const service = new ReportingService(
+      reportingRepository as never,
+      { getKpiConfigRows: jest.fn(async () => []) } as never,
+      {} as never,
+      {} as never,
+    );
+
+    const result = await service.getPersonnelPerformance({
+      userId: "region-manager-1",
+      employeeId: "region-manager-employee",
+      targetEmployeeId,
+      roleCodes: ["REGION_MANAGER"],
+      identityCompanyIds: [],
+      companyIds: ["company-1"],
+      regionIds: ["region-1"],
+      storeIds: [],
+      assignedStoreIds: [],
+      periodType: "monthly",
+      periodStart: "2026-03-01",
+    });
+
+    expect(result.availablePeriods).toEqual([
+      {
+        periodType: "monthly",
+        periodStart: "2026-03-01",
+        periodEnd: "2026-03-31",
+      },
+    ]);
+    expect(getEmployeeTurkeyBenchmarkValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        periodType: "custom",
+        periodStart: "2026-03-01",
+        periodEnd: "2026-03-31",
+      }),
+    );
+    expect(result.period).toEqual({
+      periodStart: "2026-03-01",
+      periodEnd: "2026-03-31",
+    });
+    expect(
+      result.metrics.find((metric) => metric.code === "TARGET_ACHIEVEMENT")?.actualValue,
+    ).toBe(110000);
+  });
+
   it("keeps closed personnel profiles renderable when the selected snapshot has no score row", async () => {
     const employeeId = "00000000-0000-0000-0000-000000000202";
     const reportingRepository = {
