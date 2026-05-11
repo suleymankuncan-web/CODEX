@@ -46,22 +46,6 @@ export type CreateFeedPostPayload = {
   targetRoute?: string
 }
 
-export type UpdateFeedPostPayload = {
-  title?: string
-  body?: string
-  linkLabel?: string | null
-  linkUrl?: string | null
-  visibilityScopeType?: FeedVisibilityScopeType
-  visibilityScopeIds?: string[]
-  startsAt?: string | null
-  endsAt?: string | null
-  metricCode?: string | null
-  metricLabel?: string | null
-  challengeStartsOn?: string | null
-  challengeEndsOn?: string | null
-  targetRoute?: string | null
-}
-
 export const challengeMetricOptions = [
   { metricCode: 'total_score', metricLabel: 'Total score' },
   { metricCode: 'upt', metricLabel: 'UPT' },
@@ -73,13 +57,3 @@ export const feedTargetRouteOptions = [
   { route: '/store/rankings', label: 'Store rankings' },
   { route: '/store/me', label: 'My performance' },
 ]
-
-export function formatFeedPostType(input: FeedPostType) {
-  return input === 'challenge' ? 'Challenge' : 'Announcement'
-}
-
-export function formatFeedScope(input: FeedVisibilityScopeType) {
-  if (input === 'company') return 'Company'
-  if (input === 'region') return 'Region'
-  return 'Store'
-}

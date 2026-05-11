@@ -211,12 +211,11 @@ function getLatestRankingFromCache(queryClient: QueryClient) {
   const cachedRankings = queryClient
     .getQueryCache()
     .findAll({ queryKey: ['ranking-v1'] })
-    .map((query) => ({
-      data: query.state.data as RankingSummary | undefined,
-      updatedAt: query.state.dataUpdatedAt,
-    }))
-    .filter((entry): entry is { data: RankingSummary; updatedAt: number } => Boolean(entry.data))
-    .sort((left, right) => right.updatedAt - left.updatedAt)
+    .flatMap((query) => {
+      const data = query.state.data as RankingSummary | undefined
+      return data ? [{ data, updatedAt: query.state.dataUpdatedAt }] : []
+    })
+    .toSorted((left, right) => right.updatedAt - left.updatedAt)
 
   return cachedRankings[0]?.data ?? null
 }

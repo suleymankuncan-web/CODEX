@@ -164,15 +164,6 @@ export function AuthDashboardPage() {
     queryFn: () => getActionStoreAssignments(),
   })
 
-  async function refreshAuthData() {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['auth-users'] }),
-      queryClient.invalidateQueries({ queryKey: ['auth-lookups'] }),
-      queryClient.invalidateQueries({ queryKey: ['auth-role-assignments'] }),
-      queryClient.invalidateQueries({ queryKey: ['auth-action-store-assignments'] }),
-    ])
-  }
-
   const createUserMutation = useMutation({
     mutationFn: createUserAccount,
     onSuccess: async (response) => {
@@ -184,7 +175,12 @@ export function AuthDashboardPage() {
         email: '',
         authProvider: 'oidc',
       })
-      await refreshAuthData()
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['auth-users'] }),
+        queryClient.invalidateQueries({ queryKey: ['auth-lookups'] }),
+        queryClient.invalidateQueries({ queryKey: ['auth-role-assignments'] }),
+        queryClient.invalidateQueries({ queryKey: ['auth-action-store-assignments'] }),
+      ])
     },
     onError: (error) => {
       setErrorFeedback(getErrorMessage(error))
@@ -209,7 +205,12 @@ export function AuthDashboardPage() {
       setAssignmentStoreSearch('')
       setSelectedAssignmentUser(null)
       setSelectedAssignmentStore(null)
-      await refreshAuthData()
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['auth-users'] }),
+        queryClient.invalidateQueries({ queryKey: ['auth-lookups'] }),
+        queryClient.invalidateQueries({ queryKey: ['auth-role-assignments'] }),
+        queryClient.invalidateQueries({ queryKey: ['auth-action-store-assignments'] }),
+      ])
     },
     onError: (error) => {
       setErrorFeedback(getErrorMessage(error))
@@ -230,7 +231,12 @@ export function AuthDashboardPage() {
       setActionStoreSearch('')
       setSelectedActionStoreUser(null)
       setSelectedActionStore(null)
-      await refreshAuthData()
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['auth-users'] }),
+        queryClient.invalidateQueries({ queryKey: ['auth-lookups'] }),
+        queryClient.invalidateQueries({ queryKey: ['auth-role-assignments'] }),
+        queryClient.invalidateQueries({ queryKey: ['auth-action-store-assignments'] }),
+      ])
     },
     onError: (error) => {
       setErrorFeedback(getErrorMessage(error))
@@ -271,7 +277,12 @@ export function AuthDashboardPage() {
         }),
       )
       setErrorFeedback(null)
-      await refreshAuthData()
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['auth-users'] }),
+        queryClient.invalidateQueries({ queryKey: ['auth-lookups'] }),
+        queryClient.invalidateQueries({ queryKey: ['auth-role-assignments'] }),
+        queryClient.invalidateQueries({ queryKey: ['auth-action-store-assignments'] }),
+      ])
     },
     onError: (error) => {
       setErrorFeedback(getErrorMessage(error))
@@ -282,7 +293,12 @@ export function AuthDashboardPage() {
     onSuccess: async (response) => {
       setFeedback(response.command.message)
       setErrorFeedback(null)
-      await refreshAuthData()
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['auth-users'] }),
+        queryClient.invalidateQueries({ queryKey: ['auth-lookups'] }),
+        queryClient.invalidateQueries({ queryKey: ['auth-role-assignments'] }),
+        queryClient.invalidateQueries({ queryKey: ['auth-action-store-assignments'] }),
+      ])
     },
     onError: (error) => {
       setErrorFeedback(getErrorMessage(error))

@@ -470,20 +470,28 @@ function formatAuditMetadata(metadata: Record<string, unknown>, t: TranslateFunc
 }
 
 function buildStagePackagePlanDecisionPreview(plan: CompetitionStagePackagePlan) {
-  const startsOn = plan.stageDrafts.map((stage) => stage.startsOn).filter(Boolean).sort()[0] ?? null
-  const endsOn =
-    plan.stageDrafts
-      .map((stage) => stage.endsOn)
-      .filter(Boolean)
-      .sort()
-      .at(-1) ?? null
-  const teamTemplateLabels = Array.from(
-    new Map(
-      plan.stageDrafts
-        .flatMap((stage) => stage.teams)
-        .map((team) => [team.sourceTemplateId ?? team.teamCode, `${team.teamCode} - ${team.teamName}`]),
-    ).values(),
-  )
+  let startsOn: string | null = null
+  let endsOn: string | null = null
+  const teamTemplateLabelByKey = new Map<string, string>()
+
+  for (const stage of plan.stageDrafts) {
+    if (stage.startsOn && (!startsOn || stage.startsOn < startsOn)) {
+      startsOn = stage.startsOn
+    }
+
+    if (stage.endsOn && (!endsOn || stage.endsOn > endsOn)) {
+      endsOn = stage.endsOn
+    }
+
+    for (const team of stage.teams) {
+      teamTemplateLabelByKey.set(
+        team.sourceTemplateId ?? team.teamCode,
+        `${team.teamCode} - ${team.teamName}`,
+      )
+    }
+  }
+
+  const teamTemplateLabels = Array.from(teamTemplateLabelByKey.values())
   const storeAssignmentCount = plan.stageDrafts.reduce(
     (stageTotal, stage) =>
       stageTotal +
@@ -629,7 +637,7 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
 
   const stores = useMemo(
     () =>
-      [...(lookupsQuery.data?.stores ?? [])].sort((left, right) =>
+      (lookupsQuery.data?.stores ?? []).toSorted((left, right) =>
         storeLabel(left).localeCompare(storeLabel(right)),
       ),
     [lookupsQuery.data?.stores],
@@ -662,7 +670,7 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
 
   const templates = useMemo(
     () =>
-      [...(templatesQuery.data?.items ?? [])].sort((left, right) =>
+      (templatesQuery.data?.items ?? []).toSorted((left, right) =>
         left.templateCode.localeCompare(right.templateCode),
       ),
     [templatesQuery.data?.items],
@@ -681,6 +689,10 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
       createCompetitionStage(input.competitionId, payload),
     onSuccess: async (response) => {
       setFeedback(response.command.message)
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['competitions'] }),
+        queryClient.invalidateQueries({ queryKey: ['competition-detail', input.competitionId] }),
+      ])
       await input.onCreated()
     },
   })
@@ -690,6 +702,10 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
       createCompetitionStagePackage(input.competitionId, payload),
     onSuccess: async (response) => {
       setStagePackageFeedback(response.command.message)
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['competitions'] }),
+        queryClient.invalidateQueries({ queryKey: ['competition-detail', input.competitionId] }),
+      ])
       await input.onCreated()
     },
   })

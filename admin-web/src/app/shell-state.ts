@@ -139,7 +139,7 @@ export function resolveLandingPath(authSummary: AuthSessionSummary | null, isRea
   return '/store'
 }
 
-export function resolveAuthErrorCopy(error: unknown) {
+function resolveAuthErrorCopy(error: unknown) {
   if (error instanceof ApiError) {
     if (error.status === 401) {
       return 'Session verification failed with 401. Refresh the bearer token or continue through the real login route.'

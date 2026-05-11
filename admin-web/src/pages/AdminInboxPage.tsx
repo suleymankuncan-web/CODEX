@@ -187,7 +187,7 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
     const urgencyRank = { high: 0, medium: 1, low: 2 }
     const statusRank = { needs_attention: 0, informational: 1, completed: 2 }
 
-    return [...items].sort((left, right) => {
+    return items.toSorted((left, right) => {
       const statusDelta = statusRank[left.inboxStatus] - statusRank[right.inboxStatus]
       if (statusDelta !== 0) return statusDelta
 

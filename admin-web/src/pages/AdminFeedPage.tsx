@@ -110,18 +110,16 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
   const regionOptions = useMemo(() => buildRegionOptions(stores), [stores])
   const posts = useMemo(() => feedQuery.data?.items ?? [], [feedQuery.data?.items])
 
-  const refreshFeed = async () => {
-    await queryClient.invalidateQueries({ queryKey: ['admin-feed'] })
-    await queryClient.invalidateQueries({ queryKey: ['visible-feed'] })
-  }
-
   const createMutation = useMutation({
     mutationFn: createFeedPost,
     onSuccess: async (response) => {
       setNotice(response.command.message)
       setErrorNotice(null)
       setForm(createInitialForm(isRegionManagerOnly, defaultRegionId))
-      await refreshFeed()
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin-feed'] }),
+        queryClient.invalidateQueries({ queryKey: ['visible-feed'] }),
+      ])
     },
     onError: (error) => {
       setErrorNotice(getErrorMessage(error))
@@ -132,7 +130,10 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
     onSuccess: async (response) => {
       setNotice(response.command.message)
       setErrorNotice(null)
-      await refreshFeed()
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin-feed'] }),
+        queryClient.invalidateQueries({ queryKey: ['visible-feed'] }),
+      ])
     },
     onError: (error) => setErrorNotice(getErrorMessage(error)),
   })
@@ -141,7 +142,10 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
     onSuccess: async (response) => {
       setNotice(response.command.message)
       setErrorNotice(null)
-      await refreshFeed()
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin-feed'] }),
+        queryClient.invalidateQueries({ queryKey: ['visible-feed'] }),
+      ])
     },
     onError: (error) => setErrorNotice(getErrorMessage(error)),
   })
@@ -150,7 +154,10 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
     onSuccess: async (response) => {
       setNotice(response.command.message)
       setErrorNotice(null)
-      await refreshFeed()
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin-feed'] }),
+        queryClient.invalidateQueries({ queryKey: ['visible-feed'] }),
+      ])
     },
     onError: (error) => setErrorNotice(getErrorMessage(error)),
   })
@@ -159,7 +166,10 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
     onSuccess: async (response) => {
       setNotice(response.command.message)
       setErrorNotice(null)
-      await refreshFeed()
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin-feed'] }),
+        queryClient.invalidateQueries({ queryKey: ['visible-feed'] }),
+      ])
     },
     onError: (error) => setErrorNotice(getErrorMessage(error)),
   })

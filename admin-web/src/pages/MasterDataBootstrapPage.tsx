@@ -73,7 +73,15 @@ export function MasterDataBootstrapPage() {
     onSuccess: async (response) => {
       setFeedback(response.command.message)
       setPromotionResult(null)
-      await invalidateMasterDataQueries(queryClient, batchId)
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['master-data-bootstrap-batches'] }),
+        batchId
+          ? queryClient.invalidateQueries({ queryKey: ['master-data-bootstrap-detail', batchId] })
+          : Promise.resolve(),
+        batchId
+          ? queryClient.invalidateQueries({ queryKey: ['master-data-bootstrap-readiness', batchId] })
+          : Promise.resolve(),
+      ])
     },
     onError: (error) => {
       setFeedback(getErrorMessage(error))
@@ -87,7 +95,15 @@ export function MasterDataBootstrapPage() {
     onSuccess: async (response) => {
       setFeedback(response.command.message)
       setPromotionResult(response.data)
-      await invalidateMasterDataQueries(queryClient, batchId)
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['master-data-bootstrap-batches'] }),
+        batchId
+          ? queryClient.invalidateQueries({ queryKey: ['master-data-bootstrap-detail', batchId] })
+          : Promise.resolve(),
+        batchId
+          ? queryClient.invalidateQueries({ queryKey: ['master-data-bootstrap-readiness', batchId] })
+          : Promise.resolve(),
+      ])
     },
     onError: (error) => {
       setFeedback(getErrorMessage(error))
@@ -625,7 +641,6 @@ function mapPromotionReadinessTone(value: string) {
 
   return 'neutral'
 }
-
 function mapReadinessTone(value: string) {
   if (value === 'ready_to_promote' || value === 'promote_ready_rows' || value === 'can promote') {
     return 'accent'
@@ -655,19 +670,4 @@ function mapValidationTone(value: string) {
   }
 
   return 'neutral'
-}
-
-async function invalidateMasterDataQueries(
-  queryClient: ReturnType<typeof useQueryClient>,
-  batchId: string | null,
-) {
-  await Promise.all([
-    queryClient.invalidateQueries({ queryKey: ['master-data-bootstrap-batches'] }),
-    batchId
-      ? queryClient.invalidateQueries({ queryKey: ['master-data-bootstrap-detail', batchId] })
-      : Promise.resolve(),
-    batchId
-      ? queryClient.invalidateQueries({ queryKey: ['master-data-bootstrap-readiness', batchId] })
-      : Promise.resolve(),
-  ])
 }

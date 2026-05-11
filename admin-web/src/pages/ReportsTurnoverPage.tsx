@@ -53,6 +53,24 @@ function getScopeTypeLabel(scopeType: string, t: TranslateFunction) {
   return t('reportsTurnover.scope.unknown')
 }
 
+function getTurnoverRowKey(row: {
+  scopeType: string
+  companyId: string | null
+  regionId: string | null
+  storeId: string | null
+  periodStart: string
+  periodEnd: string
+}) {
+  return [
+    row.scopeType,
+    row.companyId ?? '',
+    row.regionId ?? '',
+    row.storeId ?? '',
+    row.periodStart,
+    row.periodEnd,
+  ].join(':')
+}
+
 function mapTurnoverTone(rate: string) {
   const value = toNumber(rate)
   if (value < 0.08) return 'calm'
@@ -238,8 +256,8 @@ export function ReportsTurnoverPage() {
           />
         ) : (
           <div className="stacked-table">
-            {sortedRows.map((row, index) => (
-              <article className="stacked-row" key={`${row.scopeType}:${getScopeLabel(row, t)}:${index}`}>
+            {sortedRows.map((row) => (
+              <article className="stacked-row" key={getTurnoverRowKey(row)}>
                 <div className="stacked-row-head">
                   <div>
                     <strong>{getScopeTypeLabel(row.scopeType, t)}</strong>

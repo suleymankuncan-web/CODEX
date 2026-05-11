@@ -34,6 +34,14 @@ const PAGE_SIZE = 12
 type StoreMasterType = 'company' | 'franchise' | 'operator'
 type StoreMasterStatus = 'active' | 'inactive' | 'closed'
 
+function getCurrentIsoDate() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function getCurrentIsoMonth() {
+  return getCurrentIsoDate().slice(0, 7)
+}
+
 function normalizeStoreType(value: string): StoreMasterType {
   if (value === 'franchise' || value === 'operator') {
     return value
@@ -65,9 +73,9 @@ export function IntegrationDashboardPage() {
   const [selectedTemplateSourceCode, setSelectedTemplateSourceCode] = useState('')
   const [powerBiSourceCode, setPowerBiSourceCode] = useState('')
   const [powerBiPeriodType, setPowerBiPeriodType] = useState<'daily' | 'monthly' | 'custom'>('monthly')
-  const [powerBiPeriodMonth, setPowerBiPeriodMonth] = useState(new Date().toISOString().slice(0, 7))
-  const [powerBiPeriodStart, setPowerBiPeriodStart] = useState(new Date().toISOString().slice(0, 10))
-  const [powerBiPeriodEnd, setPowerBiPeriodEnd] = useState(new Date().toISOString().slice(0, 10))
+  const [powerBiPeriodMonth, setPowerBiPeriodMonth] = useState(getCurrentIsoMonth)
+  const [powerBiPeriodStart, setPowerBiPeriodStart] = useState(getCurrentIsoDate)
+  const [powerBiPeriodEnd, setPowerBiPeriodEnd] = useState(getCurrentIsoDate)
   const [personnelFile, setPersonnelFile] = useState<File | null>(null)
   const [storeFile, setStoreFile] = useState<File | null>(null)
   const [storeMasterSearch, setStoreMasterSearch] = useState('')
@@ -214,6 +222,27 @@ export function IntegrationDashboardPage() {
   const resolvedTemplateSourceCode =
     selectedTemplateSourceCode || compatibleSources[0]?.sourceCode || ''
   const resolvedPowerBiSourceCode = powerBiSourceCode || powerBiSources[0]?.sourceCode || ''
+
+  const submitSampleImport = () => {
+    if (!resolvedTemplateSourceCode || !importTemplateQuery.data) {
+      return
+    }
+
+    const timestamp = new Date().toISOString()
+    const requestBody = importTemplateQuery.data.requestBody
+    createBatchMutation.mutate({
+      sourceCode: resolvedTemplateSourceCode,
+      entityType: String(requestBody.entityType ?? 'kpi'),
+      fileReference: `sample-${templateSourceSystem}-${timestamp}.json`,
+      sourceBatchId: `${resolvedTemplateSourceCode}-${timestamp}`,
+      sourceCapturedAt: String(requestBody.sourceCapturedAt ?? timestamp),
+      sourceWindowStartedAt: String(requestBody.sourceWindowStartedAt ?? timestamp),
+      sourceWindowEndedAt: String(requestBody.sourceWindowEndedAt ?? timestamp),
+      rows: Array.isArray(requestBody.rows)
+        ? (requestBody.rows as Record<string, unknown>[])
+        : [],
+    })
+  }
 
   const filteredItems = useMemo(() => {
     const input = deferredSearch.trim().toLowerCase()
@@ -454,26 +483,7 @@ export function IntegrationDashboardPage() {
                 className="control-button"
                 type="button"
                 disabled={compatibleSources.length === 0 || createBatchMutation.isPending}
-                onClick={() => {
-                  if (!resolvedTemplateSourceCode) {
-                    return
-                  }
-
-                  const timestamp = new Date().toISOString()
-                  const requestBody = importTemplateQuery.data.requestBody
-                  createBatchMutation.mutate({
-                    sourceCode: resolvedTemplateSourceCode,
-                    entityType: String(requestBody.entityType ?? 'kpi'),
-                    fileReference: `sample-${templateSourceSystem}-${timestamp}.json`,
-                    sourceBatchId: `${resolvedTemplateSourceCode}-${timestamp}`,
-                    sourceCapturedAt: String(requestBody.sourceCapturedAt ?? timestamp),
-                    sourceWindowStartedAt: String(requestBody.sourceWindowStartedAt ?? timestamp),
-                    sourceWindowEndedAt: String(requestBody.sourceWindowEndedAt ?? timestamp),
-                    rows: Array.isArray(requestBody.rows)
-                      ? (requestBody.rows as Record<string, unknown>[])
-                      : [],
-                  })
-                }}
+                onClick={submitSampleImport}
               >
                 {createBatchMutation.isPending ? t('adminIntegrations.running') : t('adminIntegrations.runSampleImport')}
               </button>

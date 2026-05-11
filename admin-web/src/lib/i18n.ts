@@ -3,13 +3,13 @@ export const appLocales = ['tr', 'en'] as const
 export type AppLocale = (typeof appLocales)[number]
 
 export const defaultAppLocale: AppLocale = 'tr'
-export const appLocaleStorageKey = 'store-ops-app-locale'
+const appLocaleStorageKey = 'store-ops-app-locale'
 
-export function isAppLocale(input: unknown): input is AppLocale {
+function isAppLocale(input: unknown): input is AppLocale {
   return typeof input === 'string' && appLocales.includes(input as AppLocale)
 }
 
-export function normalizeAppLocale(input: unknown): AppLocale {
+function normalizeAppLocale(input: unknown): AppLocale {
   return isAppLocale(input) ? input : defaultAppLocale
 }
 

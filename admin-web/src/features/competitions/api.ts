@@ -43,7 +43,7 @@ export type CompetitionStageSummary = {
   finalizationState: 'clean' | 'warnings_present' | 'overridden' | null
 }
 
-export type CompetitionTeamScore = {
+type CompetitionTeamScore = {
   stageId: string
   teamId: string
   teamCode: string
@@ -144,7 +144,7 @@ export type CreateCompetitionStagePackagePayload = {
   stages: CreateCompetitionStagePayload[]
 }
 
-export type CompetitionStagePackagePlanStatus =
+type CompetitionStagePackagePlanStatus =
   | 'draft'
   | 'submitted'
   | 'approved'

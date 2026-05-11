@@ -282,7 +282,7 @@ export type StoreMasterLookups = {
 
 export type MasterDataBootstrapEntity = 'store' | 'personnel'
 
-export type MasterDataBootstrapBatchStatus =
+type MasterDataBootstrapBatchStatus =
   | 'uploaded'
   | 'validated'
   | 'ready_to_promote'
@@ -295,7 +295,7 @@ export type MasterDataBootstrapReadiness =
   | 'ready_to_promote'
   | 'closed'
 
-export type MasterDataBootstrapPromotionReadiness =
+type MasterDataBootstrapPromotionReadiness =
   | 'needs_validation'
   | 'needs_review'
   | 'blocked'

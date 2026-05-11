@@ -491,14 +491,17 @@ export function StoreKpiHighlightsPage(input: {
       : 0
 
   const topPerformer = useMemo(() => {
-    return (
-      [...rows]
-        .filter((row) => row.achievementRate !== null)
-        .sort(
-          (left, right) =>
-            toNumber(right.achievementRate) - toNumber(left.achievementRate),
-        )[0] ?? null
-    )
+    return rows.reduce<DisplayKpiRow | null>((best, row) => {
+      if (row.achievementRate === null) {
+        return best
+      }
+
+      if (!best || toNumber(row.achievementRate) > toNumber(best.achievementRate)) {
+        return row
+      }
+
+      return best
+    }, null)
   }, [rows])
 
   const needsAttention = useMemo(() => {

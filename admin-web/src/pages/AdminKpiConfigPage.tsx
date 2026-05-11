@@ -1,4 +1,4 @@
-import { useState, type Dispatch, type SetStateAction } from 'react'
+import { useId, useState, type Dispatch, type SetStateAction } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Settings2, ShieldCheck, SlidersHorizontal } from 'lucide-react'
 import {
@@ -89,6 +89,8 @@ export function AdminKpiConfigPage() {
   const draft = draftOverride ?? configQuery.data?.draftConfig ?? null
   const published = publishedOverride ?? configQuery.data?.publishedConfig ?? null
   const latestPublishedVersion = configQuery.data?.latestPublishedVersion ?? null
+  const ownershipRows = useStableDraftRows(draft?.ownershipMatrix ?? [], 'ownership')
+  const gradingBands = useStableDraftRows(draft?.gradingBands ?? [], 'grading-band')
 
   const updateDraft = (updater: (current: KpiConfig) => KpiConfig) => {
     setNotice(null)
@@ -428,8 +430,8 @@ export function AdminKpiConfigPage() {
           <EmptyState copy={t('adminKpiConfig.noOwnershipRows')} />
         ) : (
           <div className="stacked-table">
-            {draft.ownershipMatrix.map((row, index) => (
-              <article className="stacked-row" key={`${row.code}-${index}`}>
+            {ownershipRows.map(({ item: row, key }, index) => (
+              <article className="stacked-row" key={key}>
                 <div className="key-grid">
                   <TextField
                     label={t('adminKpiConfig.field.code')}
@@ -535,8 +537,8 @@ export function AdminKpiConfigPage() {
           <StatusPill tone="accent">{t('adminKpiConfig.editable')}</StatusPill>
         </div>
         <div className="stacked-table">
-          {draft.gradingBands.map((band, index) => (
-            <article className="stacked-row" key={`${band.code}-${index}`}>
+          {gradingBands.map(({ item: band, key }, index) => (
+            <article className="stacked-row" key={key}>
               <div className="key-grid">
                 <TextField
                   label={t('adminKpiConfig.field.code')}
@@ -804,18 +806,25 @@ function diffByCode<T extends { code: string }>(
 ): KpiConfigDiffSummary {
   const draftByCode = new Map(draftRows.map((row) => [row.code, row]))
   const publishedByCode = new Map(publishedRows.map((row) => [row.code, row]))
-  const added = draftRows
-    .filter((row) => !publishedByCode.has(row.code))
-    .map((row) => row.code)
-  const removed = publishedRows
-    .filter((row) => !draftByCode.has(row.code))
-    .map((row) => row.code)
-  const changed = draftRows
-    .filter((row) => {
-      const publishedRow = publishedByCode.get(row.code)
-      return publishedRow ? JSON.stringify(row) !== JSON.stringify(publishedRow) : false
-    })
-    .map((row) => row.code)
+  const added: string[] = []
+  const removed: string[] = []
+  const changed: string[] = []
+
+  for (const row of draftRows) {
+    const publishedRow = publishedByCode.get(row.code)
+
+    if (!publishedRow) {
+      added.push(row.code)
+    } else if (JSON.stringify(row) !== JSON.stringify(publishedRow)) {
+      changed.push(row.code)
+    }
+  }
+
+  for (const row of publishedRows) {
+    if (!draftByCode.has(row.code)) {
+      removed.push(row.code)
+    }
+  }
 
   return { added, removed, changed }
 }
@@ -904,6 +913,15 @@ function formatKpiConfigVersion(
     : t('adminKpiConfig.noPublishedVersion')
 }
 
+function useStableDraftRows<T>(items: T[], prefix: string) {
+  const idPrefix = useId()
+
+  return items.map((item, index) => ({
+    item,
+    key: `${idPrefix}-${prefix}-${index}`,
+  }))
+}
+
 function ProfileEditor(input: {
   t: TranslateFunction
   title: string
@@ -917,6 +935,8 @@ function ProfileEditor(input: {
   onAddMetric: () => void
   onRemoveMetric: (index: number) => void
 }) {
+  const metricRows = useStableDraftRows(input.metrics, 'profile-metric')
+
   return (
     <section className="panel">
       <div className="panel-heading">
@@ -929,8 +949,8 @@ function ProfileEditor(input: {
       <p className="queue-subtitle">{input.summary}</p>
       <p className="queue-subtitle">{input.weightGuidance}</p>
       <div className="stacked-table">
-        {input.metrics.map((metric, index) => (
-          <article className="stacked-row" key={`${metric.code}-${index}`}>
+        {metricRows.map(({ item: metric, key }, index) => (
+          <article className="stacked-row" key={key}>
             <div className="key-grid">
               <TextField
                 label={input.t('adminKpiConfig.field.code')}
@@ -1086,8 +1106,10 @@ function formatBooleanOption(option: string, t: TranslateFunction) {
 function splitCsv(input: string) {
   return input
     .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
+    .flatMap((item) => {
+      const value = item.trim()
+      return value ? [value] : []
+    })
 }
 
 function createEmptyMetric(): KpiScoreProfileMetric {
@@ -1129,11 +1151,15 @@ function updateOwnershipRow(
   index: number,
   nextRow: KpiOwnershipMatrixRow,
 ) {
-  setDraft({
-    ...draft,
-    ownershipMatrix: draft.ownershipMatrix.map((row, rowIndex) =>
-      rowIndex === index ? nextRow : row,
-    ),
+  setDraft((current) => {
+    const base = current ?? draft
+
+    return {
+      ...base,
+      ownershipMatrix: base.ownershipMatrix.map((row, rowIndex) =>
+        rowIndex === index ? nextRow : row,
+      ),
+    }
   })
 }
 
@@ -1143,11 +1169,15 @@ function updateGradingBand(
   index: number,
   nextBand: KpiGradingBand,
 ) {
-  setDraft({
-    ...draft,
-    gradingBands: draft.gradingBands.map((band, bandIndex) =>
-      bandIndex === index ? nextBand : band,
-    ),
+  setDraft((current) => {
+    const base = current ?? draft
+
+    return {
+      ...base,
+      gradingBands: base.gradingBands.map((band, bandIndex) =>
+        bandIndex === index ? nextBand : band,
+      ),
+    }
   })
 }
 
