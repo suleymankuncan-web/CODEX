@@ -19,6 +19,7 @@ export function StorePersonnelPerformancePage(input: {
 
   return (
     <StoreMyPerformancePage
+      key={`${employeeId ?? ''}:${initialLivePeriodType}:${initialLivePeriodStart}`}
       authSummary={input.authSummary}
       employeeId={employeeId}
       initialLivePeriodType={initialLivePeriodType}

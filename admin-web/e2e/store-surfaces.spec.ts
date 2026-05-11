@@ -1035,6 +1035,134 @@ test('store personnel profile uses employee periods instead of global closed sna
   expect(snapshotRunRequests).toEqual([])
 })
 
+test('store personnel profile resets requested live period when switching employees', async ({ page }) => {
+  const firstEmployeeId = demoEmployeeId
+  const secondEmployeeId = '00000000-0000-0000-0000-000000000203'
+  const personnelPerformanceRequests: URL[] = []
+  const firstDailyFixture = {
+    ...myPerformanceFixture,
+    period: {
+      periodStart: '2026-03-02',
+      periodEnd: '2026-03-02',
+    },
+    availablePeriods: [
+      {
+        periodType: 'daily',
+        periodStart: '2026-03-02',
+        periodEnd: '2026-03-02',
+      },
+    ],
+    employee: {
+      ...myPerformanceFixture.employee,
+      employeeId: firstEmployeeId,
+      displayName: 'First Person',
+      storeName: 'First Store',
+    },
+  }
+  const secondMonthlyFixture = {
+    ...myPerformanceFixture,
+    period: {
+      periodStart: '2026-04-01',
+      periodEnd: '2026-04-30',
+    },
+    availablePeriods: [
+      {
+        periodType: 'monthly',
+        periodStart: '2026-04-01',
+        periodEnd: '2026-04-30',
+      },
+    ],
+    employee: {
+      ...myPerformanceFixture.employee,
+      employeeId: secondEmployeeId,
+      displayName: 'Second Person',
+      storeName: 'Second Store',
+    },
+  }
+  const secondWrongPeriodFixture = {
+    ...secondMonthlyFixture,
+    period: null,
+    score: {
+      value: 0,
+      matchedMetrics: 0,
+      totalMetrics: 3,
+    },
+    metrics: secondMonthlyFixture.metrics.map((metric) => ({
+      ...metric,
+      actualValue: null,
+      achievementRate: null,
+      actualRatio: null,
+      scoredRatio: null,
+      contributionValue: 0,
+      dataStatus: 'missing',
+      scoreStatus: 'missing',
+      status: 'missing',
+    })),
+  }
+
+  await page.unroute('**/api/auth/session')
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      json: {
+        ...authSessionFixture,
+        user: {
+          ...authSessionFixture.user,
+          userId: 'region-ranking-user',
+          roleCodes: ['REGION_MANAGER'],
+        },
+      },
+    })
+  })
+
+  await page.unroute('**/api/reports/personnel-performance/**')
+  await page.route('**/api/reports/personnel-performance/**', async (route) => {
+    const requestUrl = new URL(route.request().url())
+    const requestedEmployeeId = decodeURIComponent(requestUrl.pathname.split('/').at(-1) ?? '')
+    personnelPerformanceRequests.push(requestUrl)
+
+    if (requestedEmployeeId === firstEmployeeId) {
+      await route.fulfill({ json: firstDailyFixture })
+      return
+    }
+
+    const isSecondMonthlyRequest =
+      requestedEmployeeId === secondEmployeeId &&
+      requestUrl.searchParams.get('periodType') === 'monthly' &&
+      requestUrl.searchParams.get('periodStart') === '2026-04-01'
+
+    await route.fulfill({
+      json: isSecondMonthlyRequest ? secondMonthlyFixture : secondWrongPeriodFixture,
+    })
+  })
+
+  await page.goto(
+    `/store/personnel/${firstEmployeeId}?mode=live&periodType=daily&periodStart=2026-03-02`,
+  )
+  await expect(page.getByRole('heading', { name: /First Person/i })).toBeVisible()
+
+  personnelPerformanceRequests.length = 0
+  await page.evaluate((url) => {
+    window.history.pushState({}, '', url)
+    window.dispatchEvent(new PopStateEvent('popstate'))
+  }, `/store/personnel/${secondEmployeeId}?mode=live&periodType=monthly&periodStart=2026-04-01`)
+
+  await expect
+    .poll(
+      () =>
+        personnelPerformanceRequests.find((requestUrl) =>
+          requestUrl.pathname.endsWith(secondEmployeeId),
+        ) !== undefined,
+    )
+    .toBe(true)
+
+  const firstSecondRequest = personnelPerformanceRequests.find((requestUrl) =>
+    requestUrl.pathname.endsWith(secondEmployeeId),
+  )
+  expect(firstSecondRequest?.searchParams.get('periodType')).toBe('monthly')
+  expect(firstSecondRequest?.searchParams.get('periodStart')).toBe('2026-04-01')
+  await expect(page.getByRole('heading', { name: /Second Person/i })).toBeVisible()
+})
+
 test('store rankings page switches to English copy and persists locale', async ({ page }) => {
   await page.goto('/store/rankings')
 
