@@ -1,4 +1,4 @@
-import { createContext, useContext } from 'react'
+import { createContext, use } from 'react'
 import type { SessionState } from './session-storage'
 
 export type SessionContextValue = {
@@ -16,7 +16,7 @@ export type SessionContextValue = {
 export const SessionContext = createContext<SessionContextValue | null>(null)
 
 export function useSession() {
-  const context = useContext(SessionContext)
+  const context = use(SessionContext)
   if (!context) {
     throw new Error('useSession must be used within SessionProvider')
   }
