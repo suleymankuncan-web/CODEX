@@ -267,6 +267,71 @@ describe("ReportingService KPI benchmark scoring", () => {
       "TARGET",
     );
   });
+
+  it("keeps closed personnel profiles renderable when the selected snapshot has no score row", async () => {
+    const employeeId = "00000000-0000-0000-0000-000000000202";
+    const reportingRepository = {
+      resolveEmployeeIdForAuthIdentity: jest.fn(async () => employeeId),
+      getCompletedSnapshotRunByTypeAndDate: jest.fn(async () => ({
+        snapshot_run_id: "00000000-0000-0000-0000-000000000111",
+        snapshot_date: "2026-04-24",
+        snapshot_type: "daily",
+        period_start: "2026-04-24",
+        period_end: "2026-04-24",
+        run_status: "completed",
+        generated_at: "2026-04-24T21:00:00.000Z",
+        generated_by: null,
+      })),
+      getLatestCompletedSnapshotRunByType: jest.fn(),
+      getEmployeePerformanceSnapshot: jest.fn(async () => null),
+      getEmployeeKpiSnapshotRows: jest.fn(async () => []),
+      getActiveEmployeeAssignmentScope: jest.fn(async () => ({
+        employee_id: employeeId,
+        external_employee_ref: "EMP-2",
+        first_name: "Ada",
+        last_name: "Lovelace",
+        company_id: "company-1",
+        region_id: "region-1",
+        region_name: "Marmara",
+        store_id: "store-1",
+        store_name: "Marmara Park",
+      })),
+    };
+    const service = new ReportingService(
+      reportingRepository as never,
+      { getKpiConfigRows: jest.fn(async () => []) } as never,
+      {} as never,
+      {} as never,
+    );
+
+    const result = await service.getMyPerformance({
+      userId: "user-1",
+      employeeId,
+      companyIds: [],
+      regionIds: [],
+      storeIds: ["store-1"],
+      mode: "closed",
+      snapshotDate: "2026-04-24",
+    });
+
+    expect(result.employee).toEqual({
+      employeeId,
+      displayName: "Ada Lovelace",
+      storeId: "store-1",
+      storeName: "Marmara Park",
+    });
+    expect(result.period).toEqual({
+      periodStart: "2026-04-24",
+      periodEnd: "2026-04-24",
+    });
+    expect(result.availablePeriods).toEqual([
+      {
+        periodType: "daily",
+        periodStart: "2026-04-24",
+        periodEnd: "2026-04-24",
+      },
+    ]);
+  });
 });
 
 describe("ReportingService personnel performance profile access", () => {

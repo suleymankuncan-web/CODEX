@@ -691,13 +691,18 @@ test('store personnel profile date filter exposes loaded months and days', async
 
   await expect(page.getByRole('button', { name: 'Ay', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Gün', exact: true })).toBeVisible()
-  await expect(page.getByRole('option', { name: /1 Nis 2026 - 30 Nis 2026/ })).toBeAttached()
-  await expect(page.getByRole('option', { name: /1 May 2026 - 31 May 2026/ })).toBeAttached()
+  await expect(page.getByLabel('1 Nis 2026 - 30 Nis 2026')).toBeChecked()
+  await expect(page.getByLabel('1 May 2026 - 31 May 2026')).toBeChecked()
+  await page.getByLabel('1 May 2026 - 31 May 2026').uncheck()
+  await expect(page.getByLabel('1 Nis 2026 - 30 Nis 2026')).toBeChecked()
+  await expect(page.getByLabel('1 May 2026 - 31 May 2026')).not.toBeChecked()
 
   await page.getByRole('button', { name: 'Gün', exact: true }).click()
-  await expect(page.getByRole('option', { name: '24 Nis 2026' })).toBeAttached()
-  await expect(page.getByRole('option', { name: '25 Nis 2026' })).toBeAttached()
-  await page.getByLabel('Yüklü gün seçimi').selectOption('2026-04-24')
+  await expect(page.getByLabel('24 Nis 2026')).toBeChecked()
+  await expect(page.getByLabel('25 Nis 2026')).toBeChecked()
+  await page.getByLabel('25 Nis 2026').uncheck()
+  await expect(page.getByLabel('24 Nis 2026')).toBeChecked()
+  await expect(page.getByLabel('25 Nis 2026')).not.toBeChecked()
 
   await expect.poll(() =>
     personnelPerformanceRequests.some(
@@ -707,6 +712,103 @@ test('store personnel profile date filter exposes loaded months and days', async
     ),
   ).toBe(true)
   await expect(page.locator('.store-me-v2-period-pill')).toHaveText('24 Nis 2026 - 24 Nis 2026')
+})
+
+test('store personnel profile opens daily data when requested month has no rows', async ({ page }) => {
+  const personnelPerformanceRequests: URL[] = []
+  const loadedPeriods = [
+    {
+      periodType: 'daily',
+      periodStart: '2026-04-24',
+      periodEnd: '2026-04-24',
+    },
+  ]
+  const noMonthlyDataFixture = {
+    ...myPerformanceFixture,
+    employee: {
+      employeeId: demoEmployeeId,
+      displayName: 'Unknown employee',
+      storeId: null,
+      storeName: null,
+    },
+    period: null,
+    score: {
+      value: 0,
+      matchedMetrics: 0,
+      totalMetrics: 3,
+    },
+    availablePeriods: loadedPeriods,
+    partial: {
+      isPartial: true,
+      missingMetricCodes: ['TARGET_ACHIEVEMENT', 'ATV', 'UPT'],
+      missingMetricLabels: ['Target Achievement', 'Average Ticket Value', 'Units Per Ticket'],
+      pendingNormalizationCodes: [],
+      pendingNormalizationLabels: [],
+    },
+    metrics: myPerformanceFixture.metrics.map((metric) => ({
+      ...metric,
+      actualValue: null,
+      contributionValue: 0,
+      dataStatus: 'missing',
+      scoreStatus: 'missing',
+      status: 'missing',
+    })),
+  }
+  const dailyPerformanceFixture = {
+    ...myPerformanceFixture,
+    period: {
+      periodStart: '2026-04-24',
+      periodEnd: '2026-04-24',
+    },
+    availablePeriods: loadedPeriods,
+    employee: {
+      ...myPerformanceFixture.employee,
+      employeeId: demoEmployeeId,
+      displayName: 'Store Personnel - 1',
+      storeName: 'IstinyePark Demo Store',
+    },
+  }
+
+  await page.unroute('**/api/auth/session')
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      json: {
+        ...authSessionFixture,
+        user: {
+          ...authSessionFixture.user,
+          userId: 'region-ranking-user',
+          roleCodes: ['REGION_MANAGER'],
+        },
+      },
+    })
+  })
+
+  await page.unroute('**/api/reports/personnel-performance/**')
+  await page.route('**/api/reports/personnel-performance/**', async (route) => {
+    const requestUrl = new URL(route.request().url())
+    personnelPerformanceRequests.push(requestUrl)
+
+    await route.fulfill({
+      json:
+        requestUrl.searchParams.get('periodType') === 'daily'
+          ? dailyPerformanceFixture
+          : noMonthlyDataFixture,
+    })
+  })
+
+  await page.goto(`/store/personnel/${demoEmployeeId}?mode=live&periodType=monthly&periodStart=2026-05-01`)
+
+  await expect.poll(() =>
+    personnelPerformanceRequests.some(
+      (requestUrl) =>
+        requestUrl.searchParams.get('periodType') === 'daily' &&
+        requestUrl.searchParams.get('periodStart') === '2026-04-24',
+    ),
+  ).toBe(true)
+  await expect(
+    page.getByRole('heading', { name: /Store Personnel - 1 . IstinyePark Demo Store/i }),
+  ).toBeVisible()
+  await expect(page.getByText('Unknown employee')).toHaveCount(0)
 })
 
 test('store rankings page switches to English copy and persists locale', async ({ page }) => {

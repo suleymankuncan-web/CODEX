@@ -1407,6 +1407,56 @@ code {
   font-weight: 800;
 }
 
+.store-me-v2-period-picklist {
+  display: grid;
+  max-height: 168px;
+  gap: 7px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.store-me-v2-period-check {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  min-height: 34px;
+  align-items: center;
+  padding: 7px 9px;
+  border: 1px solid var(--store-me-v2-line);
+  border-radius: 12px;
+  color: var(--store-me-v2-muted);
+  background: white;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.store-me-v2-period-check.active {
+  color: var(--store-me-v2-ink);
+  border-color: rgba(124, 58, 237, 0.24);
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.12), rgba(8, 145, 178, 0.1));
+}
+
+.store-me-v2-period-check input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--store-me-v2-plum);
+}
+
+.store-me-v2-period-check span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.store-me-v2-period-empty {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  color: var(--store-me-v2-muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
 .store-me-v2-choice-row {
   display: flex;
   flex-wrap: wrap;
