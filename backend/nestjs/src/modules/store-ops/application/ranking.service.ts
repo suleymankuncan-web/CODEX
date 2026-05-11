@@ -4,6 +4,7 @@ import { ReportingRepository } from "../infrastructure/reporting.repository";
 import { KpiBenchmarkScoringService } from "./kpi-benchmark-scoring.service";
 import {
   KpiScoreProfile,
+  normalizeKpiScoreProfile,
   personnelKpiScoreProfile,
   storeKpiScoreProfile,
 } from "./kpi-config.contract";
@@ -292,11 +293,11 @@ export class RankingService {
 
     return {
       storeProfile: this.isScoreProfile(storeProfile, "store")
-        ? storeProfile
-        : storeKpiScoreProfile,
+        ? normalizeKpiScoreProfile(storeProfile)
+        : normalizeKpiScoreProfile(storeKpiScoreProfile),
       personnelProfile: this.isScoreProfile(personnelProfile, "personnel")
-        ? personnelProfile
-        : personnelKpiScoreProfile,
+        ? normalizeKpiScoreProfile(personnelProfile)
+        : normalizeKpiScoreProfile(personnelKpiScoreProfile),
     };
   }
 

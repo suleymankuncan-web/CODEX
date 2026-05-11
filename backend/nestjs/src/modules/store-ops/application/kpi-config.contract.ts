@@ -53,6 +53,32 @@ export type KpiOwnershipMatrixRow = {
   taskCandidate: boolean;
 };
 
+export const personnelTargetAchievementAliases = [
+  "NET_SALES",
+  "STORE_SALES",
+  "SALES_TARGET_ACHIEVEMENT",
+];
+
+export function normalizeKpiScoreProfile(profile: KpiScoreProfile): KpiScoreProfile {
+  if (profile.profileCode !== "personnel") {
+    return profile;
+  }
+
+  return {
+    ...profile,
+    metrics: profile.metrics.map((metric) => {
+      if (metric.code !== "TARGET_ACHIEVEMENT") {
+        return metric;
+      }
+
+      return {
+        ...metric,
+        aliases: [...new Set([...personnelTargetAchievementAliases, ...(metric.aliases ?? [])])],
+      };
+    }),
+  };
+}
+
 export const storeKpiScoreProfile: KpiScoreProfile = {
   profileCode: "store",
   title: "Store score profile",
@@ -143,7 +169,7 @@ export const personnelKpiScoreProfile: KpiScoreProfile = {
       direction: "HIGHER_IS_BETTER",
       benchmarkSource: "TARGET",
       capRatio: 1.2,
-      aliases: ["STORE_SALES", "SALES_TARGET_ACHIEVEMENT"],
+      aliases: personnelTargetAchievementAliases,
       notes:
         "Primary personnel score driver and strongest coaching signal.",
     },
