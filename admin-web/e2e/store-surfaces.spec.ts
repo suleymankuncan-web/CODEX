@@ -479,6 +479,133 @@ test('store rankings personnel detail opens the selected personnel performance p
     .toBe(true)
 })
 
+test('store personnel profile falls back when ranking period has no personnel data', async ({ page }) => {
+  const personnelPerformanceRequests: URL[] = []
+  const aprilOnlyPeriods = [
+    {
+      periodType: 'monthly',
+      periodStart: '2026-04-01',
+      periodEnd: '2026-04-30',
+    },
+  ]
+  const noMayPersonnelDataFixture = {
+    ...myPerformanceFixture,
+    employee: {
+      employeeId: demoEmployeeId,
+      displayName: 'Unknown employee',
+      storeId: null,
+      storeName: null,
+    },
+    period: null,
+    score: {
+      value: 0,
+      matchedMetrics: 0,
+      totalMetrics: 3,
+    },
+    availablePeriods: aprilOnlyPeriods,
+    partial: {
+      isPartial: true,
+      missingMetricCodes: ['TARGET_ACHIEVEMENT', 'ATV', 'UPT'],
+      missingMetricLabels: ['Target Achievement', 'Average Ticket Value', 'Units Per Ticket'],
+      pendingNormalizationCodes: [],
+      pendingNormalizationLabels: [],
+    },
+    metrics: myPerformanceFixture.metrics.map((metric) => ({
+      ...metric,
+      actualValue: null,
+      contributionValue: 0,
+      dataStatus: 'missing',
+      scoreStatus: 'missing',
+      status: 'missing',
+    })),
+  }
+
+  await page.unroute('**/api/auth/session')
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      json: {
+        ...authSessionFixture,
+        user: {
+          ...authSessionFixture.user,
+          userId: 'region-ranking-user',
+          roleCodes: ['REGION_MANAGER'],
+        },
+      },
+    })
+  })
+
+  await page.unroute('**/api/reports/rankings**')
+  await page.route('**/api/reports/rankings**', async (route) => {
+    await route.fulfill({
+      json: {
+        ...rankingsPrivilegedDetailFixture,
+        source: {
+          ...rankingsPrivilegedDetailFixture.source,
+          periodStart: '2026-05-01',
+          periodEnd: '2026-05-31',
+        },
+        availablePeriods: [
+          ...rankingsPrivilegedDetailFixture.availablePeriods,
+          {
+            periodType: 'monthly',
+            periodStart: '2026-05-01',
+            periodEnd: '2026-05-31',
+          },
+        ],
+        personnelLeaderboard: {
+          items: [personnelRankingDetailRow],
+          currentEmployee: null,
+          managedStorePersonnel: [],
+          meta: {
+            total: 1,
+            limit: 100,
+            offset: 0,
+          },
+        },
+      },
+    })
+  })
+  await page.unroute('**/api/reports/personnel-performance/**')
+  await page.route('**/api/reports/personnel-performance/**', async (route) => {
+    const requestUrl = new URL(route.request().url())
+    personnelPerformanceRequests.push(requestUrl)
+
+    if (requestUrl.searchParams.get('periodStart') === '2026-05-01') {
+      await route.fulfill({ json: noMayPersonnelDataFixture })
+      return
+    }
+
+    await route.fulfill({
+      json: {
+        ...myPerformanceFixture,
+        availablePeriods: aprilOnlyPeriods,
+        employee: {
+          ...myPerformanceFixture.employee,
+          employeeId: demoEmployeeId,
+          displayName: 'Store Personnel - 1',
+          storeName: 'IstinyePark Demo Store',
+        },
+      },
+    })
+  })
+
+  await page.goto('/store/rankings')
+  await page.getByRole('tab', { name: 'Personel listesi' }).click()
+  await page.getByRole('button', { name: 'Store Personnel - 1' }).click()
+  await page.locator('.rankings-plum-drawer').getByRole('button', { name: 'Detaya git' }).click()
+
+  await expect.poll(() =>
+    personnelPerformanceRequests.some((requestUrl) => requestUrl.searchParams.get('periodStart') === '2026-05-01'),
+  ).toBe(true)
+  await expect.poll(() =>
+    personnelPerformanceRequests.some((requestUrl) => requestUrl.searchParams.get('periodStart') === '2026-04-01'),
+  ).toBe(true)
+  await expect(
+    page.getByRole('heading', { name: /Store Personnel - 1 . IstinyePark Demo Store/i }),
+  ).toBeVisible()
+  await expect(page.getByText('Unknown employee')).toHaveCount(0)
+})
+
 test('store rankings page switches to English copy and persists locale', async ({ page }) => {
   await page.goto('/store/rankings')
 
