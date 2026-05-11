@@ -21,7 +21,14 @@ export class ReportingController {
 
   @Get("snapshot-runs")
   @RequireScope("authenticated")
-  @RequireRoles("REPORT_VIEWER", "AUDITOR", "STORE_MANAGER", "STORE_PERSONNEL")
+  @RequireRoles(
+    "REPORT_VIEWER",
+    "AUDITOR",
+    "STORE_MANAGER",
+    "STORE_PERSONNEL",
+    "REGION_MANAGER",
+    "SUPER_ADMIN",
+  )
   async listSnapshotRuns(@Query() query: ListSnapshotRunsQueryDto) {
     return this.reportingService.listSnapshotRuns({
       runStatus: query.runStatus,

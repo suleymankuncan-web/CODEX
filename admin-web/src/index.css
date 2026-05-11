@@ -1367,7 +1367,7 @@ code {
   right: 0;
   left: 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   padding: 12px;
   border: 1px solid rgba(255, 255, 255, 0.72);
@@ -1428,6 +1428,11 @@ code {
   color: white;
   border-color: transparent;
   background: linear-gradient(135deg, var(--store-me-v2-plum), var(--store-me-v2-blue));
+}
+
+.store-me-v2-choice-row button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .store-me-v2-layout {
