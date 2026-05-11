@@ -12,11 +12,6 @@ export type SnapshotRunLabelInput = {
   periodEnd: string
 }
 
-type SnapshotMonthLabelInput = {
-  monthStart: string
-  latestSnapshotDate: string
-}
-
 function parseDateOnly(input: string) {
   if (input.includes('T')) {
     const date = new Date(input)
@@ -46,12 +41,6 @@ function capitalizeMonth(input: string, locale: AppLocale) {
 
 function formatMonthName(input: Date, locale: AppLocale) {
   return capitalizeMonth(monthFormatters[locale].format(input), locale)
-}
-
-function formatMonthYear(input: string, locale: AppLocale = defaultAppLocale) {
-  const date = parseDateOnly(input)
-  const formattedMonth = formatMonthName(date, locale)
-  return `${formattedMonth} ${date.getFullYear()}`
 }
 
 function formatSnapshotPeriodLabel(
@@ -87,19 +76,4 @@ export function formatSnapshotOptionLabel(
   return locale === 'en'
     ? `${formatDate(run.snapshotDate, locale)} close - ${periodLabel}`
     : `${formatDate(run.snapshotDate, locale)} kapanışı - ${periodLabel}`
-}
-
-export function formatSnapshotMonthOptionLabel(
-  input: SnapshotMonthLabelInput,
-  locale: AppLocale = defaultAppLocale,
-) {
-  return locale === 'en'
-    ? `${formatMonthYear(input.monthStart, locale)} monthly close - latest close ${formatDate(
-        input.latestSnapshotDate,
-        locale,
-      )}`
-    : `${formatMonthYear(input.monthStart, locale)} aylık kapanış - son kapanış ${formatDate(
-        input.latestSnapshotDate,
-        locale,
-      )}`
 }

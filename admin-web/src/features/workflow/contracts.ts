@@ -56,34 +56,6 @@ export function mapWorkflowUrgencyTone(urgency: WorkflowUrgency): Tone {
   }
 }
 
-export function formatWorkflowItemType(type: WorkflowItemType) {
-  switch (type) {
-    case 'approval':
-      return 'Onay'
-    case 'acknowledgement':
-      return 'Kabul'
-    case 'task':
-      return 'Görev'
-    case 'notification':
-      return 'Bilgi'
-    default:
-      return type
-  }
-}
-
-export function formatWorkflowSourceType(sourceType: WorkflowInboxItem['sourceType']) {
-  switch (sourceType) {
-    case 'target_distribution_request':
-      return 'Hedef dağıtımı'
-    case 'checklist_receipt':
-      return 'Checklist'
-    case 'kpi_exception':
-      return 'KPI'
-    default:
-      return sourceType
-  }
-}
-
 export function toTargetApprovalInboxItem(
   item: TargetDistributionRequest,
   deepLink = '/admin/targets',
@@ -137,43 +109,5 @@ export function toChecklistAcknowledgementInboxItem(
     secondaryActionLabel: 'Checklist sonucunu aç',
     deepLink,
     historyPreview: item.acknowledgement?.acknowledgementNote ?? undefined,
-  }
-}
-
-export function toKpiExceptionInboxItem(input: {
-  snapshotRunId: string
-  storeId: string
-  storeName?: string
-  kpiId: string
-  periodStart: string
-  periodEnd: string
-  targetValue: string | null
-  actualValue: string | null
-  achievementRate: string | null
-  statusBand: string | null
-}): WorkflowInboxItem {
-  const isOffTrack = input.statusBand === 'off_track'
-
-  return {
-    itemType: 'task',
-    sourceType: 'kpi_exception',
-    sourceId: `${input.snapshotRunId}:${input.storeId}:${input.kpiId}`,
-    title: `${input.kpiId} ${isOffTrack ? 'off track' : 'at risk'}`,
-    summary: `${input.storeName || input.storeId} icin KPI exception takibi gerekiyor`,
-    storeId: input.storeId,
-    storeName: input.storeName,
-    workflowStatus: input.statusBand ?? 'unknown',
-    inboxStatus: 'needs_attention',
-    urgency: isOffTrack ? 'high' : 'medium',
-    createdAt: input.periodEnd,
-    needsAttentionAt: input.periodEnd,
-    actorRole: 'STORE_MANAGER',
-    primaryActionLabel: 'KPI detayına git',
-    secondaryActionLabel: 'Sapmayı incele',
-    deepLink: '/store/kpis',
-    historyPreview:
-      input.achievementRate !== null
-        ? `Gerçekleşme ${Math.round(Number(input.achievementRate) * 100)}%`
-        : undefined,
   }
 }
