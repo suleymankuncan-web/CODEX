@@ -691,11 +691,12 @@ test('store personnel profile date filter exposes loaded months and days', async
 
   await expect(page.getByRole('button', { name: 'Ay', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Gün', exact: true })).toBeVisible()
-  await expect(page.getByLabel('1 Nis 2026 - 30 Nis 2026')).toBeChecked()
-  await expect(page.getByLabel('1 May 2026 - 31 May 2026')).toBeChecked()
-  await page.getByLabel('1 May 2026 - 31 May 2026').uncheck()
-  await expect(page.getByLabel('1 Nis 2026 - 30 Nis 2026')).toBeChecked()
-  await expect(page.getByLabel('1 May 2026 - 31 May 2026')).not.toBeChecked()
+  await expect(page.getByRole('checkbox', { name: '2026', exact: true })).toBeChecked()
+  await expect(page.getByRole('checkbox', { name: 'Nisan 2026', exact: true })).toBeChecked()
+  await expect(page.getByRole('checkbox', { name: 'Mayıs 2026', exact: true })).toBeChecked()
+  await page.getByRole('checkbox', { name: 'Mayıs 2026', exact: true }).uncheck()
+  await expect(page.getByRole('checkbox', { name: 'Nisan 2026', exact: true })).toBeChecked()
+  await expect(page.getByRole('checkbox', { name: 'Mayıs 2026', exact: true })).not.toBeChecked()
 
   await page.getByRole('button', { name: 'Gün', exact: true }).click()
   await expect(page.getByLabel('24 Nis 2026')).toBeChecked()
@@ -809,6 +810,132 @@ test('store personnel profile opens daily data when requested month has no rows'
     page.getByRole('heading', { name: /Store Personnel - 1 . IstinyePark Demo Store/i }),
   ).toBeVisible()
   await expect(page.getByText('Unknown employee')).toHaveCount(0)
+})
+
+test('store personnel profile uses employee periods instead of global closed snapshots', async ({ page }) => {
+  const personnelPerformanceRequests: URL[] = []
+  const snapshotRunRequests: URL[] = []
+  const loadedPeriods = [
+    {
+      periodType: 'monthly',
+      periodStart: '2026-03-01',
+      periodEnd: '2026-03-31',
+    },
+    {
+      periodType: 'daily',
+      periodStart: '2026-03-01',
+      periodEnd: '2026-03-01',
+    },
+    {
+      periodType: 'daily',
+      periodStart: '2026-03-02',
+      periodEnd: '2026-03-02',
+    },
+  ]
+  const monthlyPerformanceFixture = {
+    ...myPerformanceFixture,
+    period: {
+      periodStart: '2026-03-01',
+      periodEnd: '2026-03-31',
+    },
+    availablePeriods: loadedPeriods,
+    employee: {
+      ...myPerformanceFixture.employee,
+      employeeId: demoEmployeeId,
+      displayName: 'Store Personnel - 1',
+      storeName: 'IstinyePark Demo Store',
+    },
+  }
+  const dailyPerformanceFixture = {
+    ...myPerformanceFixture,
+    period: {
+      periodStart: '2026-03-01',
+      periodEnd: '2026-03-01',
+    },
+    availablePeriods: loadedPeriods,
+    employee: {
+      ...myPerformanceFixture.employee,
+      employeeId: demoEmployeeId,
+      displayName: 'Store Personnel - 1',
+      storeName: 'IstinyePark Demo Store',
+    },
+  }
+
+  await page.unroute('**/api/auth/session')
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      json: {
+        ...authSessionFixture,
+        user: {
+          ...authSessionFixture.user,
+          userId: 'region-ranking-user',
+          roleCodes: ['REGION_MANAGER'],
+        },
+      },
+    })
+  })
+
+  await page.unroute('**/api/reports/snapshot-runs**')
+  await page.route('**/api/reports/snapshot-runs**', async (route) => {
+    snapshotRunRequests.push(new URL(route.request().url()))
+    await route.fulfill({
+      json: {
+        items: [
+          {
+            snapshotRunId: '00000000-0000-0000-0000-000000000501',
+            snapshotType: 'daily',
+            snapshotDate: '2026-04-24',
+            runStatus: 'completed',
+            generatedAt: '2026-04-24T21:00:00.000Z',
+            generatedBy: null,
+          },
+        ],
+        total: 1,
+        limit: 30,
+        offset: 0,
+      },
+    })
+  })
+
+  await page.unroute('**/api/reports/personnel-performance/**')
+  await page.route('**/api/reports/personnel-performance/**', async (route) => {
+    const requestUrl = new URL(route.request().url())
+    personnelPerformanceRequests.push(requestUrl)
+
+    await route.fulfill({
+      json:
+        requestUrl.searchParams.get('periodType') === 'daily'
+          ? dailyPerformanceFixture
+          : monthlyPerformanceFixture,
+    })
+  })
+
+  await page.goto(`/store/personnel/${demoEmployeeId}`)
+  await page.getByRole('button', { name: /Tarih filtresi/i }).click()
+
+  await expect(page.getByText('Kapanmış performans kaydı seçimi')).toHaveCount(0)
+  await expect(page.getByText('Kapanmış gün')).toHaveCount(0)
+  await expect(page.getByText('Yıl')).toBeVisible()
+  await expect(page.getByRole('checkbox', { name: '2026', exact: true })).toBeChecked()
+  await expect(page.getByRole('checkbox', { name: 'Mart 2026', exact: true })).toBeChecked()
+  await expect(page.getByText('Nisan 2026')).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Gün', exact: true }).click()
+  await expect(page.getByLabel('1 Mar 2026')).toBeChecked()
+  await expect(page.getByLabel('2 Mar 2026')).toBeChecked()
+  await page.getByLabel('2 Mar 2026').uncheck()
+  await expect(page.getByLabel('1 Mar 2026')).toBeChecked()
+  await expect(page.getByLabel('2 Mar 2026')).not.toBeChecked()
+
+  await expect.poll(() =>
+    personnelPerformanceRequests.some(
+      (requestUrl) =>
+        requestUrl.searchParams.get('periodType') === 'daily' &&
+        requestUrl.searchParams.get('periodStart') === '2026-03-01',
+    ),
+  ).toBe(true)
+  await expect(page.locator('.store-me-v2-period-pill')).toHaveText('1 Mar 2026 - 1 Mar 2026')
+  expect(snapshotRunRequests).toEqual([])
 })
 
 test('store rankings page switches to English copy and persists locale', async ({ page }) => {
