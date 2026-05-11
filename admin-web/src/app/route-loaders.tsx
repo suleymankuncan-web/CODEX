@@ -33,6 +33,7 @@ export const StoreFeedPage = lazy(() => import('../pages/StoreFeedPage').then((m
 export const StoreIncentivesPage = lazy(() => import('../pages/StoreIncentivesPage').then((module) => ({ default: module.StoreIncentivesPage })))
 export const StoreKpiHighlightsPage = lazy(() => import('../pages/StoreKpiHighlightsPage').then((module) => ({ default: module.StoreKpiHighlightsPage })))
 export const StoreMyPerformancePage = lazy(() => import('../pages/StoreMyPerformancePage').then((module) => ({ default: module.StoreMyPerformancePage })))
+export const StorePersonnelPerformancePage = lazy(() => import('../pages/StorePersonnelPerformancePage').then((module) => ({ default: module.StorePersonnelPerformancePage })))
 export const StoreRankingsPage = lazy(() => import('../pages/StoreRankingsPage').then((module) => ({ default: module.StoreRankingsPage })))
 export const StoreShellPreviewPage = lazy(() => import('../pages/StoreShellPreviewPage').then((module) => ({ default: module.StoreShellPreviewPage })))
 export const StoreTasksPage = lazy(() => import('../pages/StoreTasksPage').then((module) => ({ default: module.StoreTasksPage })))

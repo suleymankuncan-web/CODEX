@@ -12,6 +12,7 @@ import {
   StoreIncentivesPage,
   StoreKpiHighlightsPage,
   StoreMyPerformancePage,
+  StorePersonnelPerformancePage,
   StoreRankingsPage,
   StoreShellPreviewPage,
   StoreTasksPage,
@@ -34,7 +35,8 @@ export function StoreShell(input: {
   const location = useLocation()
   const rankingsRoute = location.pathname === '/store/rankings'
   const storeMeRoute = location.pathname === '/store/me'
-  const immersiveRoute = rankingsRoute || storeMeRoute
+  const storePersonnelRoute = location.pathname.startsWith('/store/personnel/')
+  const immersiveRoute = rankingsRoute || storeMeRoute || storePersonnelRoute
   const storeRoute = (element: ReactNode, options?: { allowVm?: boolean }) => (
     <StoreRouteGuard authSummary={input.authSummary} allowVm={options?.allowVm}>
       {element}
@@ -65,7 +67,7 @@ export function StoreShell(input: {
   }
 
   return (
-    <div className={`store-shell${rankingsRoute ? ' store-shell-rankings' : ''}${storeMeRoute ? ' store-shell-store-me' : ''}`}>
+    <div className={`store-shell${rankingsRoute ? ' store-shell-rankings' : ''}${storeMeRoute || storePersonnelRoute ? ' store-shell-store-me' : ''}`}>
       {immersiveRoute ? null : (
         <header className="store-shell-header">
           <div>
@@ -136,6 +138,10 @@ export function StoreShell(input: {
             <Route
               path="/store/me"
               element={storeRoute(<StoreMyPerformancePage authSummary={input.authSummary} />)}
+            />
+            <Route
+              path="/store/personnel/:employeeId"
+              element={storeRoute(<StorePersonnelPerformancePage authSummary={input.authSummary} />)}
             />
             <Route
               path="/store/rankings"
