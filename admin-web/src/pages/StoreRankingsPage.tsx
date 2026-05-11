@@ -457,7 +457,17 @@ export function StoreRankingsPage(input: {
         t={t}
         onClose={() => setSelectedDetail(null)}
         onOpenPersonnelProfile={(employeeId) => {
-          navigate(`/store/personnel/${encodeURIComponent(employeeId)}`)
+          const path = `/store/personnel/${encodeURIComponent(employeeId)}`
+          const params = new URLSearchParams()
+
+          if (ranking.source.periodStart) {
+            params.set('mode', 'live')
+            params.set('periodType', 'monthly')
+            params.set('periodStart', ranking.source.periodStart)
+          }
+
+          const query = params.toString()
+          navigate(query ? `${path}?${query}` : path)
         }}
       />
     </section>

@@ -403,6 +403,8 @@ test('store rankings page renders Plum ranking table without signal chrome', asy
 })
 
 test('store rankings personnel detail opens the selected personnel performance profile', async ({ page }) => {
+  const personnelPerformanceRequests: URL[] = []
+
   await page.unroute('**/api/auth/session')
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({
@@ -435,6 +437,22 @@ test('store rankings personnel detail opens the selected personnel performance p
       },
     })
   })
+  await page.unroute('**/api/reports/personnel-performance/**')
+  await page.route('**/api/reports/personnel-performance/**', async (route) => {
+    const requestUrl = new URL(route.request().url())
+    personnelPerformanceRequests.push(requestUrl)
+    await route.fulfill({
+      json: {
+        ...myPerformanceFixture,
+        employee: {
+          ...myPerformanceFixture.employee,
+          employeeId: demoEmployeeId,
+          displayName: 'Store Personnel - 1',
+          storeName: 'IstinyePark Demo Store',
+        },
+      },
+    })
+  })
 
   await page.goto('/store/rankings')
   await page.getByRole('tab', { name: 'Personel listesi' }).click()
@@ -444,13 +462,21 @@ test('store rankings personnel detail opens the selected personnel performance p
   await expect(drawer).toBeVisible()
   await drawer.getByRole('button', { name: 'Detaya git' }).click()
 
-  await expect(page).toHaveURL(new RegExp(`/store/personnel/${demoEmployeeId}$`))
+  await expect(page).toHaveURL(new RegExp(`/store/personnel/${demoEmployeeId}\\?`))
+  await expect.poll(() => new URL(page.url()).searchParams.get('mode')).toBe('live')
+  await expect.poll(() => new URL(page.url()).searchParams.get('periodType')).toBe('monthly')
+  await expect.poll(() => new URL(page.url()).searchParams.get('periodStart')).toBe('2026-04-01')
   await expect(page.locator('.store-me-v2-page')).toBeVisible()
   await expect(
     page.getByRole('heading', { name: /Store Personnel - 1 . IstinyePark Demo Store/i }),
   ).toBeVisible()
   await expect(page.locator('.store-me-v2-metric-card')).toHaveCount(3)
   await expect(page.locator('.store-me-v2-metric-card').filter({ hasText: 'CR' })).toHaveCount(0)
+  await expect
+    .poll(() =>
+      personnelPerformanceRequests.some((requestUrl) => requestUrl.searchParams.get('periodStart') === '2026-04-01'),
+    )
+    .toBe(true)
 })
 
 test('store rankings page switches to English copy and persists locale', async ({ page }) => {

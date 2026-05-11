@@ -349,6 +349,7 @@ function NavGlyph(input: { type: 'home' | 'me' | 'rank' | 'target' | 'settings' 
 export function StoreMyPerformancePage(input: {
   authSummary: AuthSessionSummary | null
   employeeId?: string
+  initialLivePeriodStart?: string
   profileMode?: 'self' | 'personnel'
 }) {
   const { locale, t } = useLocalization()
@@ -359,7 +360,9 @@ export function StoreMyPerformancePage(input: {
       ? canUsePersonnelPerformance(input.authSummary) && targetEmployeeId !== ''
       : canUseSelfPerformance(input.authSummary)
   const [sourceMode, setSourceMode] = useState<'live' | 'closed'>('live')
-  const [selectedLivePeriodStart, setSelectedLivePeriodStart] = useState('')
+  const [selectedLivePeriodStart, setSelectedLivePeriodStart] = useState(
+    input.initialLivePeriodStart?.trim() ?? '',
+  )
   const [selectedClosedSnapshotRunId, setSelectedClosedSnapshotRunId] = useState('')
   const [isDateFilterOpen, setIsDateFilterOpen] = useState(false)
   const [isKpiDetailOpen, setIsKpiDetailOpen] = useState(false)
