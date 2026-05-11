@@ -767,6 +767,51 @@ export class ReportingRepository {
     return this.getEmployeeIdForUser(input.userId);
   }
 
+  async getActiveEmployeeAssignmentScope(employeeId: string) {
+    const result = await this.databaseService.query<{
+      employee_id: string;
+      external_employee_ref: string | null;
+      first_name: string;
+      last_name: string;
+      company_id: string | null;
+      region_id: string | null;
+      region_name: string | null;
+      store_id: string | null;
+      store_name: string | null;
+    }>(
+      `
+        SELECT
+          e.employee_id,
+          e.external_employee_ref,
+          e.first_name,
+          e.last_name,
+          COALESCE(store.company_id, e.company_id)::text AS company_id,
+          store.region_id::text AS region_id,
+          region.region_name,
+          assignment.store_id::text AS store_id,
+          store.store_name
+        FROM ops.employee e
+        LEFT JOIN LATERAL (
+          SELECT eah.store_id
+          FROM ops.employee_assignment_history eah
+          WHERE eah.employee_id = e.employee_id
+            AND eah.assignment_status = 'active'
+          ORDER BY eah.start_date DESC
+          LIMIT 1
+        ) assignment ON TRUE
+        LEFT JOIN ops.store store
+          ON store.store_id = assignment.store_id
+        LEFT JOIN ops.region region
+          ON region.region_id = store.region_id
+        WHERE e.employee_id = $1::uuid
+        LIMIT 1
+      `,
+      [employeeId],
+    );
+
+    return result.rows[0] ?? null;
+  }
+
   async getEmployeeIdByExternalRef(input: {
     externalEmployeeRef: string;
     companyIds: string[];

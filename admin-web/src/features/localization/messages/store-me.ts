@@ -1,6 +1,9 @@
 export const storeMeTr = {
   'storeMe.unavailableTitle': 'Performans yüzeyi kullanılamıyor',
   'storeMe.unavailableCopy': 'Bu yüzey mağaza personeli veya mağaza müdürü oturumu gerektirir.',
+  'storeMe.personnelProfileUnavailableTitle': 'Personel profili açılamıyor',
+  'storeMe.personnelProfileUnavailableCopy':
+    'Bu profil için personel, mağaza müdürü, bölge müdürü veya yetkili yönetici oturumu gerekir.',
   'storeMe.loadingTitle': 'Benim performansım hazırlanıyor',
   'storeMe.loadingCopy': 'Personel performans profili yükleniyor.',
   'storeMe.errorTitle': 'Performans yüzeyi açılamadı',
@@ -35,6 +38,8 @@ export const storeMeTr = {
   'storeMe.monthlyTrend': 'Ay içi trend',
   'storeMe.v2Intro':
     "Personel performansın aynı dönem penceresiyle okunur. Bu sayfada sadece kişisel KPI'lar görünür: UPT, ATV ve HG%.",
+  'storeMe.personnelProfileIntro':
+    "Seçili personelin performansı aynı dönem penceresiyle okunur. Bu profilde sadece kişisel KPI'lar görünür: UPT, ATV ve HG%.",
   'storeMe.v2HeroTitle': 'Bugün tablo iyi; seni yukarı taşıyacak alan çok net.',
   'storeMe.pageTools': 'Sayfa araçları',
   'storeMe.brandAria': 'HR-Axis performans markası',
@@ -216,6 +221,9 @@ export const storeMeTr = {
 export const storeMeEn: Record<keyof typeof storeMeTr, string> = {
   'storeMe.unavailableTitle': 'Performance surface unavailable',
   'storeMe.unavailableCopy': 'This surface requires a store personnel or store manager session.',
+  'storeMe.personnelProfileUnavailableTitle': 'Personnel profile cannot be opened',
+  'storeMe.personnelProfileUnavailableCopy':
+    'This profile requires a personnel, store manager, region manager, or authorized admin session.',
   'storeMe.loadingTitle': 'Preparing my performance',
   'storeMe.loadingCopy': 'Loading the personnel performance profile.',
   'storeMe.errorTitle': 'Performance surface could not be opened',
@@ -250,6 +258,8 @@ export const storeMeEn: Record<keyof typeof storeMeTr, string> = {
   'storeMe.monthlyTrend': 'Monthly trend',
   'storeMe.v2Intro':
     'Your personal performance is read through the comparable-period window. This page only shows personal KPIs: UPT, ATV, and HG%.',
+  'storeMe.personnelProfileIntro':
+    'The selected personnel performance is read through the comparable-period window. This profile only shows personal KPIs: UPT, ATV, and HG%.',
   'storeMe.v2HeroTitle': 'The table looks good today; the next lift is very clear.',
   'storeMe.pageTools': 'Page tools',
   'storeMe.brandAria': 'HR-Axis performance brand',

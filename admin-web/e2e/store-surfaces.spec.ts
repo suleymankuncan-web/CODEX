@@ -402,6 +402,57 @@ test('store rankings page renders Plum ranking table without signal chrome', asy
   await expect(page.getByText('Siralama yuzeyi acilamadi')).toHaveCount(0)
 })
 
+test('store rankings personnel detail opens the selected personnel performance profile', async ({ page }) => {
+  await page.unroute('**/api/auth/session')
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      json: {
+        ...authSessionFixture,
+        user: {
+          ...authSessionFixture.user,
+          userId: 'region-ranking-user',
+          roleCodes: ['REGION_MANAGER'],
+        },
+      },
+    })
+  })
+
+  await page.unroute('**/api/reports/rankings**')
+  await page.route('**/api/reports/rankings**', async (route) => {
+    await route.fulfill({
+      json: {
+        ...rankingsPrivilegedDetailFixture,
+        personnelLeaderboard: {
+          items: [personnelRankingDetailRow],
+          currentEmployee: null,
+          managedStorePersonnel: [],
+          meta: {
+            total: 1,
+            limit: 100,
+            offset: 0,
+          },
+        },
+      },
+    })
+  })
+
+  await page.goto('/store/rankings')
+  await page.getByRole('tab', { name: 'Personel listesi' }).click()
+  await page.getByRole('button', { name: 'Store Personnel - 1' }).click()
+
+  const drawer = page.locator('.rankings-plum-drawer')
+  await expect(drawer).toBeVisible()
+  await drawer.getByRole('button', { name: 'Detaya git' }).click()
+
+  await expect(page).toHaveURL(new RegExp(`/store/personnel/${demoEmployeeId}$`))
+  await expect(page.locator('.store-me-v2-page')).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: /Store Personnel - 1 . IstinyePark Demo Store/i }),
+  ).toBeVisible()
+  await expect(page.locator('.store-me-v2-metric-card')).toHaveCount(3)
+  await expect(page.locator('.store-me-v2-metric-card').filter({ hasText: 'CR' })).toHaveCount(0)
+})
+
 test('store rankings page switches to English copy and persists locale', async ({ page }) => {
   await page.goto('/store/rankings')
 
@@ -569,6 +620,7 @@ test('store rankings removes signal chrome while preserving weighted score rows'
   await page.getByRole('button', { name: 'Weighted Score Leader' }).click()
 
   await expect(page.locator('.rankings-plum-drawer')).toBeVisible()
+  await expect(page.locator('.rankings-plum-drawer')).not.toContainText('Detaya git')
   await expect(page.locator('.rankings-plum-drawer .rankings-plum-trend')).toHaveCount(0)
   await expect(page.locator('.rankings-plum-month-row')).toContainText('112,30')
 })
@@ -1078,6 +1130,26 @@ async function routeStoreSurfaceApi(page: Page) {
         requestUrl.searchParams.get('periodStart') === '2026-05-01'
           ? myPerformanceMayFixture
           : myPerformanceFixture,
+    })
+  })
+
+  await page.route('**/api/reports/personnel-performance/**', async (route) => {
+    const requestUrl = new URL(route.request().url())
+    const baseFixture =
+      requestUrl.searchParams.get('periodStart') === '2026-05-01'
+        ? myPerformanceMayFixture
+        : myPerformanceFixture
+
+    await route.fulfill({
+      json: {
+        ...baseFixture,
+        employee: {
+          ...baseFixture.employee,
+          employeeId: demoEmployeeId,
+          displayName: 'Store Personnel - 1',
+          storeName: 'IstinyePark Demo Store',
+        },
+      },
     })
   })
 
@@ -1780,6 +1852,34 @@ const personnelRankingSummaryRow = {
   storePopulation: 4,
   scoreValue: 96.4,
   visibility: 'summary',
+}
+
+const personnelRankingDetailRow = {
+  ...personnelRankingSummaryRow,
+  visibility: 'detail',
+  metrics: [
+    {
+      code: 'UPT',
+      label: 'UPT',
+      actualValue: 4.8,
+      benchmarkValue: 4.2,
+      contributionValue: 29,
+    },
+    {
+      code: 'ATV',
+      label: 'ATV',
+      actualValue: 1245,
+      benchmarkValue: 1180,
+      contributionValue: 28,
+    },
+    {
+      code: 'TARGET_ACHIEVEMENT',
+      label: 'Target Achievement',
+      actualValue: 0.98,
+      targetValue: 1,
+      contributionValue: 39.2,
+    },
+  ],
 }
 
 const rankingsPrivilegedDetailStoreRow = {

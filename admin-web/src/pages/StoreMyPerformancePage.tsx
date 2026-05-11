@@ -10,7 +10,9 @@ import { useLocalization } from '../features/localization/useLocalization'
 import {
   getKpiConfig,
   getMyPerformance,
+  getPersonnelPerformance,
   getReportingSnapshotRuns,
+  type MyPerformanceQueryInput,
   type MyPerformanceMetric,
   type MyPerformanceSummary,
 } from '../features/reports/api'
@@ -26,6 +28,16 @@ import { getIntlLocale, type AppLocale } from '../lib/i18n'
 function canUseSelfPerformance(authSummary: AuthSessionSummary | null) {
   const roles = authSummary?.user.roleCodes ?? []
   return roles.includes('STORE_PERSONNEL') || roles.includes('STORE_MANAGER')
+}
+
+function canUsePersonnelPerformance(authSummary: AuthSessionSummary | null) {
+  const roles = authSummary?.user.roleCodes ?? []
+  return (
+    roles.includes('STORE_PERSONNEL') ||
+    roles.includes('STORE_MANAGER') ||
+    roles.includes('REGION_MANAGER') ||
+    roles.includes('SUPER_ADMIN')
+  )
 }
 
 const personnelMetricCodes = ['TARGET_ACHIEVEMENT', 'ATV', 'UPT']
@@ -336,14 +348,28 @@ function NavGlyph(input: { type: 'home' | 'me' | 'rank' | 'target' | 'settings' 
 
 export function StoreMyPerformancePage(input: {
   authSummary: AuthSessionSummary | null
+  employeeId?: string
+  profileMode?: 'self' | 'personnel'
 }) {
   const { locale, t } = useLocalization()
-  const enabled = canUseSelfPerformance(input.authSummary)
+  const profileMode = input.profileMode ?? 'self'
+  const targetEmployeeId = input.employeeId?.trim() ?? ''
+  const enabled =
+    profileMode === 'personnel'
+      ? canUsePersonnelPerformance(input.authSummary) && targetEmployeeId !== ''
+      : canUseSelfPerformance(input.authSummary)
   const [sourceMode, setSourceMode] = useState<'live' | 'closed'>('live')
   const [selectedLivePeriodStart, setSelectedLivePeriodStart] = useState('')
   const [selectedClosedSnapshotRunId, setSelectedClosedSnapshotRunId] = useState('')
   const [isDateFilterOpen, setIsDateFilterOpen] = useState(false)
   const [isKpiDetailOpen, setIsKpiDetailOpen] = useState(false)
+  const queryPrefix = profileMode === 'personnel'
+    ? ['personnel-performance', targetEmployeeId] as const
+    : ['my-performance'] as const
+  const fetchPerformance = (queryInput: MyPerformanceQueryInput) =>
+    profileMode === 'personnel'
+      ? getPersonnelPerformance(targetEmployeeId, queryInput)
+      : getMyPerformance(queryInput)
 
   const configQuery = useQuery({
     queryKey: ['store-me-kpi-config'],
@@ -374,9 +400,9 @@ export function StoreMyPerformancePage(input: {
   const selectedClosedSnapshotDate = activeClosedSnapshotRun?.snapshotDate ?? ''
 
   const performanceQuery = useQuery({
-    queryKey: ['my-performance', sourceMode, selectedLivePeriodStart, selectedClosedSnapshotDate],
+    queryKey: [...queryPrefix, sourceMode, selectedLivePeriodStart, selectedClosedSnapshotDate],
     queryFn: () =>
-      getMyPerformance({
+      fetchPerformance({
         mode: sourceMode,
         periodType: sourceMode === 'live' && selectedLivePeriodStart ? 'monthly' : undefined,
         periodStart: sourceMode === 'live' && selectedLivePeriodStart ? selectedLivePeriodStart : undefined,
@@ -405,9 +431,14 @@ export function StoreMyPerformancePage(input: {
 
   const monthlyPerformanceQueries = useQueries({
     queries: monthlyDetailPeriods.map((period) => ({
-      queryKey: ['my-performance', 'live', getPeriodDateKey(period.periodStart) || period.periodStart, ''],
+      queryKey: [
+        ...queryPrefix,
+        'live',
+        getPeriodDateKey(period.periodStart) || period.periodStart,
+        '',
+      ],
       queryFn: () =>
-        getMyPerformance({
+        fetchPerformance({
           mode: 'live',
           periodType: 'monthly',
           periodStart: getPeriodDateKey(period.periodStart) || period.periodStart,
@@ -435,8 +466,16 @@ export function StoreMyPerformancePage(input: {
   if (!enabled) {
     return (
       <ScreenState
-        title={t('storeMe.unavailableTitle')}
-        copy={t('storeMe.unavailableCopy')}
+        title={
+          profileMode === 'personnel'
+            ? t('storeMe.personnelProfileUnavailableTitle')
+            : t('storeMe.unavailableTitle')
+        }
+        copy={
+          profileMode === 'personnel'
+            ? t('storeMe.personnelProfileUnavailableCopy')
+            : t('storeMe.unavailableCopy')
+        }
         tone="error"
       />
     )
@@ -623,6 +662,8 @@ export function StoreMyPerformancePage(input: {
   const dataQualityLabel = partial.isPartial ? t('storeMe.missingDataExists') : t('storeMe.completeData')
   const selectedPeriodLabel = `${periodLabel} · ${formatSourceMode(t, performance.source.mode)}`
   const gradeLabel = `${performanceGrade.code} - ${t(`storeMe.grade.${performanceGrade.code}` as TranslationKey)}`
+  const introCopy =
+    profileMode === 'personnel' ? t('storeMe.personnelProfileIntro') : t('storeMe.v2Intro')
 
   return (
     <section className="store-me-v2-page" aria-label={t('storeMe.title')}>
@@ -663,7 +704,7 @@ export function StoreMyPerformancePage(input: {
           <header className="store-me-v2-topbar">
             <div className="store-me-v2-identity">
               <h1>{employeeHeading}</h1>
-              <p>{t('storeMe.v2Intro')}</p>
+              <p>{introCopy}</p>
             </div>
             <div className="store-me-v2-top-actions" aria-label={t('storeMe.pageTools')}>
               <button className="store-me-v2-period-pill" type="button">

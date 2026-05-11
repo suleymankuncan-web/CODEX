@@ -635,6 +635,105 @@ export class ReportingService {
     return this.getLiveMyPerformance(input);
   }
 
+  async getPersonnelPerformance(input: {
+    userId: string;
+    employeeId?: string;
+    targetEmployeeId: string;
+    roleCodes: string[];
+    identityCompanyIds?: string[];
+    companyIds: string[];
+    regionIds: string[];
+    storeIds: string[];
+    assignedStoreIds: string[];
+    mode?: "live" | "closed";
+    snapshotDate?: string;
+    periodType?: "daily" | "weekly" | "monthly";
+    periodStart?: string;
+  }) {
+    if (!this.isUuid(input.targetEmployeeId)) {
+      throw new BadRequestException("Invalid personnel profile id");
+    }
+
+    await this.assertCanReadPersonnelPerformance(input);
+
+    if (input.mode === "closed") {
+      return this.getClosedMyPerformance({
+        ...input,
+        targetEmployeeId: input.targetEmployeeId,
+      });
+    }
+
+    return this.getLiveMyPerformance({
+      ...input,
+      targetEmployeeId: input.targetEmployeeId,
+    });
+  }
+
+  private async assertCanReadPersonnelPerformance(input: {
+    userId: string;
+    employeeId?: string;
+    targetEmployeeId: string;
+    roleCodes: string[];
+    identityCompanyIds?: string[];
+    companyIds: string[];
+    regionIds: string[];
+    storeIds: string[];
+    assignedStoreIds: string[];
+  }) {
+    const currentEmployeeId =
+      await this.reportingRepository.resolveEmployeeIdForAuthIdentity({
+        userId: input.userId,
+        employeeId: input.employeeId,
+        companyIds: input.identityCompanyIds ?? input.companyIds,
+      });
+
+    if (currentEmployeeId && currentEmployeeId === input.targetEmployeeId) {
+      return;
+    }
+
+    const assignment =
+      await this.reportingRepository.getActiveEmployeeAssignmentScope(input.targetEmployeeId);
+
+    if (!assignment) {
+      throw new ForbiddenException("Personnel profile is outside the current user's scope");
+    }
+
+    if (
+      input.roleCodes.includes("SUPER_ADMIN") &&
+      assignment.company_id &&
+      input.companyIds.includes(assignment.company_id)
+    ) {
+      return;
+    }
+
+    if (
+      input.roleCodes.includes("REGION_MANAGER") &&
+      assignment.region_id &&
+      input.regionIds.includes(assignment.region_id)
+    ) {
+      return;
+    }
+
+    const managerStoreIds = input.assignedStoreIds.length > 0
+      ? input.assignedStoreIds
+      : input.storeIds;
+    if (
+      input.roleCodes.includes("STORE_MANAGER") &&
+      assignment.store_id &&
+      managerStoreIds.includes(assignment.store_id)
+    ) {
+      return;
+    }
+
+    throw new ForbiddenException("Personnel profile is outside the current user's scope");
+  }
+
+  private isUuid(value: string) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      value,
+    );
+  }
+
   async getClosedLeaderboard(input: {
     userId: string;
     employeeId?: string;
@@ -696,6 +795,7 @@ export class ReportingService {
   private async getLiveMyPerformance(input: {
     userId: string;
     employeeId?: string;
+    targetEmployeeId?: string;
     companyIds: string[];
     regionIds: string[];
     storeIds: string[];
@@ -706,11 +806,13 @@ export class ReportingService {
     const profile = config.personnelProfile;
     const metricCodes = profile.metrics.map((metric) => metric.code);
     const employeeDataMetricCodes = [...new Set([...metricCodes, "NET_SALES"])];
-    const employeeId = await this.reportingRepository.resolveEmployeeIdForAuthIdentity({
-      userId: input.userId,
-      employeeId: input.employeeId,
-      companyIds: input.companyIds,
-    });
+    const employeeId =
+      input.targetEmployeeId ??
+      await this.reportingRepository.resolveEmployeeIdForAuthIdentity({
+        userId: input.userId,
+        employeeId: input.employeeId,
+        companyIds: input.companyIds,
+      });
 
     if (!employeeId) {
       return {
@@ -1073,6 +1175,7 @@ export class ReportingService {
   private async getClosedMyPerformance(input: {
     userId: string;
     employeeId?: string;
+    targetEmployeeId?: string;
     companyIds: string[];
     regionIds: string[];
     storeIds: string[];
@@ -1082,11 +1185,13 @@ export class ReportingService {
     const profile = config.personnelProfile;
     const metricCodes = profile.metrics.map((metric) => metric.code);
     const employeeDataMetricCodes = [...new Set([...metricCodes, "NET_SALES"])];
-    const employeeId = await this.reportingRepository.resolveEmployeeIdForAuthIdentity({
-      userId: input.userId,
-      employeeId: input.employeeId,
-      companyIds: input.companyIds,
-    });
+    const employeeId =
+      input.targetEmployeeId ??
+      await this.reportingRepository.resolveEmployeeIdForAuthIdentity({
+        userId: input.userId,
+        employeeId: input.employeeId,
+        companyIds: input.companyIds,
+      });
 
     if (!employeeId) {
       return {

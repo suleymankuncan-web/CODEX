@@ -588,12 +588,14 @@ export async function getKpiConfigAudit() {
   return fetchJson<ListResponse<AuditEvent>>('/reports/kpi-config/audit')
 }
 
-export async function getMyPerformance(input?: {
+export type MyPerformanceQueryInput = {
   mode?: 'live' | 'closed'
   snapshotDate?: string
   periodType?: 'daily' | 'weekly' | 'monthly'
   periodStart?: string
-}) {
+}
+
+function buildMyPerformanceQuery(input?: MyPerformanceQueryInput) {
   const params = new URLSearchParams()
   if (input?.mode) {
     params.set('mode', input.mode)
@@ -608,8 +610,22 @@ export async function getMyPerformance(input?: {
     params.set('periodStart', input.periodStart)
   }
 
-  const query = params.toString()
+  return params.toString()
+}
+
+export async function getMyPerformance(input?: MyPerformanceQueryInput) {
+  const query = buildMyPerformanceQuery(input)
   return fetchJson<MyPerformanceSummary>(`/reports/my-performance${query ? `?${query}` : ''}`)
+}
+
+export async function getPersonnelPerformance(
+  employeeId: string,
+  input?: MyPerformanceQueryInput,
+) {
+  const query = buildMyPerformanceQuery(input)
+  return fetchJson<MyPerformanceSummary>(
+    `/reports/personnel-performance/${encodeURIComponent(employeeId)}${query ? `?${query}` : ''}`,
+  )
 }
 
 export async function getStoreKpiHighlights(input?: {
