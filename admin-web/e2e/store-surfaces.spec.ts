@@ -74,6 +74,61 @@ test('store self-performance page renders live score, metrics, and ranks', async
   await expect(page.getByText('Performans yüzeyi açılamadı')).toHaveCount(0)
 })
 
+test('store self-performance tolerates ISO period timestamps from live API', async ({ page }) => {
+  const pageErrors: string[] = []
+  page.on('pageerror', (error) => {
+    pageErrors.push(error.message)
+  })
+  const availablePeriods = [
+    {
+      periodType: 'monthly',
+      periodStart: '2026-04-01T00:00:00.000Z',
+      periodEnd: '2026-04-30T00:00:00.000Z',
+    },
+    {
+      periodType: 'monthly',
+      periodStart: '2026-05-01T00:00:00.000Z',
+      periodEnd: '2026-05-31T00:00:00.000Z',
+    },
+  ]
+  const isoAprilFixture = {
+    ...myPerformanceFixture,
+    period: {
+      periodStart: '2026-04-01T00:00:00.000Z',
+      periodEnd: '2026-04-30T00:00:00.000Z',
+    },
+    availablePeriods,
+  }
+  const isoMayFixture = {
+    ...myPerformanceMayFixture,
+    period: {
+      periodStart: '2026-05-01T00:00:00.000Z',
+      periodEnd: '2026-05-31T00:00:00.000Z',
+    },
+    availablePeriods,
+  }
+
+  await page.unroute('**/api/reports/my-performance**')
+  await page.route('**/api/reports/my-performance**', async (route) => {
+    const requestUrl = new URL(route.request().url())
+    await route.fulfill({
+      json: requestUrl.searchParams.get('periodStart')?.startsWith('2026-05-01')
+        ? isoMayFixture
+        : isoAprilFixture,
+    })
+  })
+
+  await page.goto('/store/me')
+
+  await expect(page.getByRole('heading', { name: /Benim performansım/i })).toBeVisible()
+  await page.getByRole('button', { name: /KPI detayları/i }).click()
+  const kpiDetailsDialog = page.getByRole('dialog', { name: /ay ay performansı/i })
+  await expect(kpiDetailsDialog).toBeVisible()
+  await expect(kpiDetailsDialog).toContainText('Nisan 2026')
+  await expect(kpiDetailsDialog).toContainText('Mayıs 2026')
+  expect(pageErrors).toEqual([])
+})
+
 test('store self-performance switches to English copy and persists locale', async ({ page }) => {
   await page.goto('/store/me')
 
