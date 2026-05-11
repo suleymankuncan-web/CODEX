@@ -115,13 +115,39 @@ function findMetric(metrics: MyPerformanceMetric[], code: string) {
   return metrics.find((metric) => metric.code === code) ?? null
 }
 
+function getFiniteMetricNumber(input: number | null | undefined) {
+  return typeof input === 'number' && Number.isFinite(input) ? input : null
+}
+
+function getTargetAchievementRate(metric: MyPerformanceMetric | null) {
+  return getFiniteMetricNumber(metric?.achievementRate) ?? getFiniteMetricNumber(metric?.actualRatio)
+}
+
 function getMetricDisplayValue(
   locale: AppLocale,
   t: TranslateFunction,
   metrics: MyPerformanceMetric[],
   code: string,
 ) {
-  return formatKpiMetricValue(locale, t, findMetric(metrics, code)?.actualValue ?? null, {
+  const metric = findMetric(metrics, code)
+
+  if (code === 'TARGET_ACHIEVEMENT') {
+    const achievementRate = getTargetAchievementRate(metric)
+    if (
+      achievementRate === null &&
+      (metric?.scoreStatus === 'missing_reference' || metric?.scoreStatus === 'pending_normalization')
+    ) {
+      return t('storeMe.missingReference')
+    }
+
+    return formatKpiMetricValue(locale, t, achievementRate, {
+      noDataKey: 'storeMe.noData',
+      code,
+      percentMetricCodes: ['TARGET_ACHIEVEMENT'],
+    })
+  }
+
+  return formatKpiMetricValue(locale, t, metric?.actualValue ?? null, {
     noDataKey: 'storeMe.noData',
     code,
     percentMetricCodes: ['TARGET_ACHIEVEMENT'],
@@ -129,13 +155,17 @@ function getMetricDisplayValue(
 }
 
 function getMetricNumericValue(metrics: MyPerformanceMetric[], code: string) {
-  const value = findMetric(metrics, code)?.actualValue
-  return typeof value === 'number' && Number.isFinite(value) ? value : null
+  const metric = findMetric(metrics, code)
+  if (code === 'TARGET_ACHIEVEMENT') {
+    return getTargetAchievementRate(metric)
+  }
+
+  return getFiniteMetricNumber(metric?.actualValue)
 }
 
 function getTargetProgressPercent(metrics: MyPerformanceMetric[]) {
   const targetMetric = findMetric(metrics, 'TARGET_ACHIEVEMENT')
-  const source = targetMetric?.achievementRate ?? targetMetric?.actualValue ?? null
+  const source = getTargetAchievementRate(targetMetric)
 
   if (typeof source !== 'number' || !Number.isFinite(source)) {
     return 0
@@ -335,6 +365,26 @@ function getMetricStatusKey(delta: number | null) {
   if (delta >= 8) return 'storeMe.metricStatus.strong' as const
   if (delta >= 0) return 'storeMe.metricStatus.rising' as const
   return 'storeMe.metricStatus.watch' as const
+}
+
+function getMetricStatusLabel(
+  t: TranslateFunction,
+  metric: MyPerformanceMetric | null,
+  delta: number | null,
+) {
+  if (metric?.scoreStatus === 'missing_reference') {
+    return t('storeMe.missingReference')
+  }
+
+  if (metric?.scoreStatus === 'pending_normalization') {
+    return t('storeMe.pendingNormalizationStatus')
+  }
+
+  if (metric?.dataStatus === 'missing' || metric?.status === 'missing') {
+    return t('storeMe.noData')
+  }
+
+  return t(getMetricStatusKey(delta))
 }
 
 function buildTrendPoints(rows: Array<{ scoreValue: number | null }>) {
@@ -1014,7 +1064,7 @@ export function StoreMyPerformancePage(input: {
       displayValue,
       progressPercent,
       tone: getMetricTone(metricDelta.code),
-      statusLabel: t(getMetricStatusKey(metricDelta.deltaValue)),
+      statusLabel: getMetricStatusLabel(t, metric, metricDelta.deltaValue),
       narrative: t(getMetricNarrativeKey(metricDelta.code), {
         delta: metricDelta.delta ?? t('storeMe.noTrendData'),
       }),
@@ -1024,13 +1074,12 @@ export function StoreMyPerformancePage(input: {
   const targetSalesValue =
     typeof targetMetric?.targetValue === 'number' && Number.isFinite(targetMetric.targetValue) && targetMetric.targetValue > 0
       ? targetMetric.targetValue
-      : supporting.netSalesValue !== null && targetProgressPercent > 0
-        ? supporting.netSalesValue / (targetProgressPercent / 100)
-        : null
+      : null
   const remainingTargetValue =
     targetSalesValue !== null && supporting.netSalesValue !== null
       ? Math.max(0, targetSalesValue - supporting.netSalesValue)
       : null
+  const targetStatusLabel = targetSalesValue !== null ? t('storeMe.approvedTarget') : t('storeMe.targetPending')
   const trendPoints = buildTrendPoints(monthlyDetailRows)
   const employeeStore = performance.employee.storeName ?? t('storeMe.noStore')
   const employeeHeading = `${performance.employee.displayName} · ${employeeStore}`
@@ -1350,7 +1399,7 @@ export function StoreMyPerformancePage(input: {
                         <span>{t('storeMe.targetProgress')}</span>
                         <strong>{t('storeMe.targetProgressPercent', { value: targetProgressPercent })}</strong>
                       </div>
-                      <em>{t('storeMe.approvedTarget')}</em>
+                      <em>{targetStatusLabel}</em>
                     </div>
                     <div className="store-me-v2-target-progress-track" aria-hidden="true">
                       <i style={{ '--store-me-v2-fill': `${targetProgressPercent}%` } as CSSProperties} />
