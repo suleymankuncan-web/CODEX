@@ -425,6 +425,8 @@ test('store rankings uses Turkey reference, checklist metrics, normalized HG, an
   await expect(page.locator('.rankings-plum-reference-title')).toBeVisible()
   await expect(page.locator('.rankings-plum-reference-bar')).toContainText('Türkiye Referansı')
   await expect(page.locator('.rankings-plum-metric-heading')).not.toContainText('KPI')
+  await expect(page.locator('td[data-label="KPI özeti"]')).toHaveCount(0)
+  await expect(page.locator('td[data-label="KPI summary"]')).toHaveCount(0)
   await expect(page.locator('.rankings-plum-metric-sort-row')).toContainText('BM Checklist')
   await expect(page.locator('.rankings-plum-metric-sort-row')).toContainText('VM Checklist')
   await expect
