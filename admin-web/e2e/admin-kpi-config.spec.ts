@@ -22,7 +22,7 @@ test('admin KPI config page localizes publish governance preview', async ({ page
 
   await expect(page.getByRole('heading', { name: 'Yayın kararı önizlemesi' })).toBeVisible()
   await expect(page.getByText('Yönetişim önizlemesi')).toBeVisible()
-  await expect(page.getByText('Taslak değişiklikler canlı KPI yorumunu etkiler.')).toBeVisible()
+  await expect(page.getByText('Taslak kaydedilir; sıralamalar ve canlı KPI yorumu yayınlanan ayarı kullanır.')).toBeVisible()
   await expect(page.getByText('Mağaza profil farkı')).toBeVisible()
   await expect(page.getByText('+1 / ~1 / -0')).toBeVisible()
   await expect(page.getByText('Puanlama farkı')).toBeVisible()
@@ -45,7 +45,9 @@ test('admin KPI config page localizes publish governance preview', async ({ page
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: 'Publish decision preview' })).toBeVisible()
   await expect(page.getByText('Governance preview')).toBeVisible()
-  await expect(page.getByText('Draft changes affect live KPI interpretation.')).toBeVisible()
+  await expect(
+    page.getByText('Draft is saved for review; rankings and live KPI interpretation use the published config.'),
+  ).toBeVisible()
   await expect(page.getByText('Store profile diff')).toBeVisible()
   await expect(page.getByText('Grading diff')).toBeVisible()
   await expect(page.getByText('Versioned schema')).toBeVisible()
