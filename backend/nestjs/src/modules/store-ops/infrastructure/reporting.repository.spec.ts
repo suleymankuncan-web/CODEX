@@ -470,3 +470,35 @@ describe("ReportingRepository personnel target reference queries", () => {
     expect(sql).toContain("ptr.target_value::text AS target_value");
   });
 });
+
+describe("ReportingRepository personnel period compatibility", () => {
+  function createRepository() {
+    const query = jest.fn(async (_sql: string, _params?: unknown[]) => ({
+      rowCount: 0,
+      rows: [],
+    }));
+    const repository = new ReportingRepository({ query } as never);
+
+    return { query, repository };
+  }
+
+  it("lets monthly personnel profile lookups find custom imported periods for the same month", async () => {
+    const { query, repository } = createRepository();
+
+    await repository.getLatestEmployeeKpiPeriod({
+      employeeId: "00000000-0000-4000-8000-000000000010",
+      metricCodes: ["NET_SALES"],
+      companyIds: ["00000000-0000-4000-8000-000000000001"],
+      regionIds: [],
+      storeIds: [],
+      periodType: "monthly",
+      periodStart: "2026-03-01",
+    });
+
+    const sql = String(query.mock.calls[0][0]);
+    expect(sql).toContain("ka.period_type = ");
+    expect(sql).toContain("ka.period_type = 'custom'");
+    expect(sql).toContain("ka.period_start = ");
+    expect(sql).toContain("DATE_TRUNC('month', ka.period_start)::date");
+  });
+});

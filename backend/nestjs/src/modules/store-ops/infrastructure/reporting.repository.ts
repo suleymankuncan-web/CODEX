@@ -1177,14 +1177,34 @@ export class ReportingRepository {
       `kd.kpi_code = ANY($2::text[])`,
     ];
 
-    if (input.periodType) {
+    if (input.periodType === "monthly" && input.periodStart) {
       params.push(input.periodType);
-      clauses.push(`ka.period_type = $${params.length}`);
-    }
-
-    if (input.periodStart) {
+      const periodTypeIndex = params.length;
       params.push(input.periodStart);
-      clauses.push(`ka.period_start = $${params.length}::date`);
+      const periodStartIndex = params.length;
+      clauses.push(
+        `(
+          (ka.period_type = $${periodTypeIndex} AND ka.period_start = $${periodStartIndex}::date)
+          OR (
+            ka.period_type = 'custom'
+            AND DATE_TRUNC('month', ka.period_start)::date = DATE_TRUNC('month', $${periodStartIndex}::date)::date
+          )
+        )`,
+      );
+    } else {
+      if (input.periodType) {
+        params.push(input.periodType);
+        if (input.periodType === "monthly") {
+          clauses.push(`(ka.period_type = $${params.length} OR ka.period_type = 'custom')`);
+        } else {
+          clauses.push(`ka.period_type = $${params.length}`);
+        }
+      }
+
+      if (input.periodStart) {
+        params.push(input.periodStart);
+        clauses.push(`ka.period_start = $${params.length}::date`);
+      }
     }
 
     if (input.storeIds.length > 0) {

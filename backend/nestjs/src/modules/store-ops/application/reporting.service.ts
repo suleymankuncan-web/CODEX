@@ -955,7 +955,7 @@ export class ReportingService {
       employeeRows[0] ? null : await this.reportingRepository.getActiveEmployeeAssignmentScope(employeeId);
     let benchmarkRows = await this.reportingRepository.getEmployeeTurkeyBenchmarkValues({
       companyId: input.companyIds[0] ?? undefined,
-      periodType: input.periodType,
+      periodType: latestPeriod.period_type ?? input.periodType,
       periodStart: latestPeriod.period_start,
       periodEnd: latestPeriod.period_end,
     });
@@ -963,7 +963,7 @@ export class ReportingService {
     if (!this.hasUsableBenchmarkRows(benchmarkRows)) {
       benchmarkRows = await this.reportingRepository.getEmployeeTurkeyBenchmarkValues({
         companyId: undefined,
-        periodType: input.periodType,
+        periodType: latestPeriod.period_type ?? input.periodType,
         periodStart: latestPeriod.period_start,
         periodEnd: latestPeriod.period_end,
       });
@@ -1456,18 +1456,28 @@ export class ReportingService {
     }> = [];
 
     const addPeriod = (periodType: string | null | undefined, periodStart: string, periodEnd: string) => {
-      if (!periodType || !periodStart || !periodEnd) {
+      if (!periodStart || !periodEnd) {
         return;
       }
 
-      const periodKey = `${periodType}:${periodStart}`;
+      const normalizedPeriodType = this.normalizeEmployeeLivePeriodType(
+        periodType,
+        periodStart,
+        periodEnd,
+        fallbackPeriodType,
+      );
+      if (!normalizedPeriodType) {
+        return;
+      }
+
+      const periodKey = `${normalizedPeriodType}:${periodStart}`;
       if (seenPeriodKeys.has(periodKey)) {
         return;
       }
 
       seenPeriodKeys.add(periodKey);
       mappedPeriods.push({
-        periodType,
+        periodType: normalizedPeriodType,
         periodStart,
         periodEnd,
       });
@@ -1484,6 +1494,19 @@ export class ReportingService {
     }
 
     return mappedPeriods;
+  }
+
+  private normalizeEmployeeLivePeriodType(
+    periodType: string | null | undefined,
+    periodStart: string,
+    periodEnd: string,
+    fallbackPeriodType?: string,
+  ) {
+    if (periodType === "custom") {
+      return periodStart === periodEnd ? "daily" : "monthly";
+    }
+
+    return periodType ?? fallbackPeriodType ?? "monthly";
   }
 
   private mapEmployeeAssignmentIdentity(
