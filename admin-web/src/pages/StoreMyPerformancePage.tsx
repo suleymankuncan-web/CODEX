@@ -212,6 +212,47 @@ function formatMonthKeyLabel(locale: AppLocale, t: TranslateFunction, monthKey: 
   return formatMonthYear(locale, t, `${monthKey}-01`)
 }
 
+function getAvailableLivePeriods(input: {
+  performance: MyPerformanceSummary | undefined
+  selectedPeriodType: LivePeriodType
+}) {
+  const periodMap = new Map<string, MyPerformanceSummary['availablePeriods'][number]>()
+
+  const addPeriod = (period: MyPerformanceSummary['availablePeriods'][number]) => {
+    if (period.periodType !== 'monthly' && period.periodType !== 'daily') {
+      return
+    }
+
+    const periodStart = getPeriodDateKey(period.periodStart) || period.periodStart
+    const periodEnd = getPeriodDateKey(period.periodEnd) || period.periodEnd
+
+    if (!periodStart || !periodEnd) {
+      return
+    }
+
+    periodMap.set(`${period.periodType}:${periodStart}`, {
+      ...period,
+      periodStart,
+      periodEnd,
+    })
+  }
+
+  input.performance?.availablePeriods.forEach(addPeriod)
+
+  if (input.performance?.period) {
+    addPeriod({
+      periodType: input.selectedPeriodType,
+      periodStart: input.performance.period.periodStart,
+      periodEnd: input.performance.period.periodEnd,
+    })
+  }
+
+  return [...periodMap.values()].sort((left, right) => {
+    const startOrder = comparePeriodStart(right.periodStart, left.periodStart)
+    return startOrder !== 0 ? startOrder : left.periodType.localeCompare(right.periodType)
+  })
+}
+
 function formatSignedPercent(locale: AppLocale, input: number | null) {
   if (input === null || !Number.isFinite(input)) {
     return null
@@ -469,10 +510,11 @@ export function StoreMyPerformancePage(input: {
   const performance = performanceQuery.data
   const availableLivePeriods = useMemo(
     () =>
-      (performance?.availablePeriods ?? []).filter(
-        (period) => period.periodType === 'monthly' || period.periodType === 'daily',
-      ),
-    [performance?.availablePeriods],
+      getAvailableLivePeriods({
+        performance,
+        selectedPeriodType: selectedLivePeriodType,
+      }),
+    [performance, selectedLivePeriodType],
   )
   const availableMonthlyPeriods = useMemo(
     () => availableLivePeriods.filter((period) => period.periodType === 'monthly'),

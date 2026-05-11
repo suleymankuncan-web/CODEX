@@ -715,6 +715,49 @@ test('store personnel profile date filter exposes loaded months and days', async
   await expect(page.locator('.store-me-v2-period-pill')).toHaveText('24 Nis 2026 - 24 Nis 2026')
 })
 
+test('store personnel profile derives date filters from the active period when the period list is empty', async ({ page }) => {
+  await page.unroute('**/api/auth/session')
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      json: {
+        ...authSessionFixture,
+        user: {
+          ...authSessionFixture.user,
+          userId: 'region-ranking-user',
+          roleCodes: ['REGION_MANAGER'],
+        },
+      },
+    })
+  })
+
+  await page.unroute('**/api/reports/personnel-performance/**')
+  await page.route('**/api/reports/personnel-performance/**', async (route) => {
+    await route.fulfill({
+      json: {
+        ...myPerformanceFixture,
+        period: {
+          periodStart: '2026-03-01',
+          periodEnd: '2026-03-31',
+        },
+        availablePeriods: [],
+        employee: {
+          ...myPerformanceFixture.employee,
+          employeeId: demoEmployeeId,
+          displayName: 'Store Personnel - 1',
+          storeName: 'IstinyePark Demo Store',
+        },
+      },
+    })
+  })
+
+  await page.goto(`/store/personnel/${demoEmployeeId}?mode=live&periodType=monthly&periodStart=2026-03-01`)
+  await page.getByRole('button', { name: /Tarih filtresi/i }).click()
+
+  await expect(page.getByText('Yüklü dönem yok')).toHaveCount(0)
+  await expect(page.getByRole('checkbox', { name: '2026', exact: true })).toBeChecked()
+  await expect(page.getByRole('checkbox', { name: 'Mart 2026', exact: true })).toBeChecked()
+})
+
 test('store personnel profile opens daily data when requested month has no rows', async ({ page }) => {
   const personnelPerformanceRequests: URL[] = []
   const loadedPeriods = [
