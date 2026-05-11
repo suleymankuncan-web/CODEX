@@ -116,6 +116,11 @@ function ClerkSessionBridge() {
   useEffect(() => {
     if (!isLoaded) {
       setProviderSessionHydrating(true)
+    }
+  }, [isLoaded, setProviderSessionHydrating])
+
+  useEffect(() => {
+    if (!isLoaded) {
       return
     }
 
@@ -123,6 +128,11 @@ function ClerkSessionBridge() {
       lastTokenRef.current = null
       clearToBearerMode()
       setProviderSessionHydrating(false)
+    }
+  }, [clearToBearerMode, isLoaded, isSignedIn, setProviderSessionHydrating])
+
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn) {
       return
     }
 
@@ -160,7 +170,6 @@ function ClerkSessionBridge() {
       window.clearInterval(intervalId)
     }
   }, [
-    clearToBearerMode,
     getToken,
     isLoaded,
     isSignedIn,
