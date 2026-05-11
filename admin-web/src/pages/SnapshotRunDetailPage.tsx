@@ -16,6 +16,8 @@ import {
   getSnapshotRunDetail,
   getSnapshotRunLineage,
   rerunSnapshotRun,
+  type SnapshotRunDependencies,
+  type SnapshotRunDetail,
 } from '../features/snapshots/api'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
@@ -152,105 +154,19 @@ export function SnapshotRunDetailPage() {
       ) : null}
 
       <section className="two-up-grid">
-        <article className="panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">{t('adminSnapshots.executionStateEyebrow')}</div>
-              <h3>{t('adminSnapshots.runSummary')}</h3>
-            </div>
-          </div>
-          <div className="detail-list">
-            {[
-              [t('adminSnapshots.runStatus'), formatSnapshotState(detail.snapshotRun.runStatus, t)],
-              [t('adminSnapshots.healthState'), formatSnapshotState(detail.snapshotRun.healthState, t)],
-              [t('adminSnapshots.period'), `${formatDate(detail.snapshotRun.periodStart, locale)} - ${formatDate(detail.snapshotRun.periodEnd, locale)}`],
-              [t('adminSnapshots.kpiConfigVersion'), formatSnapshotKpiConfigVersion(detail.snapshotRun.kpiConfigVersion, t)],
-              [t('adminSnapshots.generatedAt'), formatDateTime(detail.snapshotRun.generatedAt, locale)],
-              [t('adminSnapshots.startedAt'), detail.snapshotRun.startedAt ? formatDateTime(detail.snapshotRun.startedAt, locale) : t('adminSnapshots.notStarted')],
-              [t('adminSnapshots.finishedAt'), detail.snapshotRun.finishedAt ? formatDateTime(detail.snapshotRun.finishedAt, locale) : t('adminSnapshots.notFinished')],
-            ].map(([label, value]) => (
-              <div className="detail-row" key={label}>
-                <span>{label}</span>
-                <strong>{value}</strong>
-              </div>
-            ))}
-          </div>
-        </article>
+        <SnapshotRunSummaryPanel detail={detail} />
 
-        <article className="panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">{t('adminSnapshots.rerunGovernanceEyebrow')}</div>
-              <h3>{t('adminSnapshots.dependenciesTitle')}</h3>
-            </div>
-            <div className="toolbar-cluster">
-              <button
-                className="control-button"
-                type="button"
-                onClick={() => rerunMutation.mutate(snapshotRunId)}
-                disabled={!detail.canRerun || rerunMutation.isPending}
-              >
-                {rerunMutation.isPending ? t('adminSnapshots.rerunning') : t('adminSnapshots.rerunSnapshot')}
-              </button>
-              <button
-                className="control-button"
-                type="button"
-                onClick={() =>
-                  downloadCsv({
-                    filename: `snapshot-dependency-checks-${snapshotRunId}.csv`,
-                    columns: ['code', 'status', 'message'],
-                    rows: (dependencies?.checks ?? []).map((check) => [
-                      check.code,
-                      check.status,
-                      check.message,
-                    ]),
-                  })
-                }
-                disabled={!dependencies?.checks.length}
-              >
-                {t('adminSnapshots.exportChecks')}
-              </button>
-            </div>
-          </div>
-          {dependencies ? (
-            <div className="stacked-table">
-              {dependencies.checks.map((check) => (
-                <div className="stacked-row" key={check.code}>
-                  <div className="stacked-row-head">
-                    <strong>{check.code}</strong>
-                    <StatusPill tone={check.status === 'pass' ? 'calm' : 'danger'}>
-                      {formatCheckStatus(check.status, t)}
-                    </StatusPill>
-                  </div>
-                  <p>{check.message}</p>
-                </div>
-              ))}
-              {dependencies.rerunBlockedReason ? (
-                <div className="empty-card">
-                  <strong>{t('adminSnapshots.rerunBlocked')}</strong>
-                  <p>{dependencies.rerunBlockedReason}</p>
-                </div>
-              ) : null}
-            </div>
-          ) : (
-            <EmptyState copy={t('adminSnapshots.dependencyLoading')} />
-          )}
-        </article>
+        <SnapshotDependenciesPanel
+          canRerun={detail.canRerun}
+          dependencies={dependencies}
+          isRerunPending={rerunMutation.isPending}
+          onRerun={() => rerunMutation.mutate(snapshotRunId)}
+          snapshotRunId={snapshotRunId}
+        />
       </section>
 
       <section className="two-up-grid">
-        <article className="panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">{t('adminSnapshots.outputVolumeEyebrow')}</div>
-              <h3>{t('adminSnapshots.materializedSlices')}</h3>
-            </div>
-          </div>
-          <StatusBar label={t('adminSnapshots.workforceRows')} value={detail.cards.workforceRows} total={Math.max(totalRows, 1)} tone="calm" />
-          <StatusBar label={t('adminSnapshots.kpiRows')} value={detail.cards.kpiRows} total={Math.max(totalRows, 1)} tone="accent" />
-          <StatusBar label={t('adminSnapshots.checklistRows')} value={detail.cards.checklistRows} total={Math.max(totalRows, 1)} tone="warning" />
-          <StatusBar label={t('adminSnapshots.turnoverRows')} value={detail.cards.turnoverRows} total={Math.max(totalRows, 1)} tone="danger" />
-        </article>
+        <SnapshotOutputVolumePanel detail={detail} totalRows={totalRows} />
 
         <article className="panel">
           <div className="panel-heading">
@@ -372,6 +288,130 @@ export function SnapshotRunDetailPage() {
         </article>
       </section>
     </section>
+  )
+}
+
+function SnapshotRunSummaryPanel(input: { detail: SnapshotRunDetail }) {
+  const { locale, t } = useLocalization()
+  const { snapshotRun } = input.detail
+
+  return (
+    <article className="panel">
+      <div className="panel-heading">
+        <div>
+          <div className="eyebrow">{t('adminSnapshots.executionStateEyebrow')}</div>
+          <h3>{t('adminSnapshots.runSummary')}</h3>
+        </div>
+      </div>
+      <div className="detail-list">
+        {[
+          [t('adminSnapshots.runStatus'), formatSnapshotState(snapshotRun.runStatus, t)],
+          [t('adminSnapshots.healthState'), formatSnapshotState(snapshotRun.healthState, t)],
+          [t('adminSnapshots.period'), `${formatDate(snapshotRun.periodStart, locale)} - ${formatDate(snapshotRun.periodEnd, locale)}`],
+          [t('adminSnapshots.kpiConfigVersion'), formatSnapshotKpiConfigVersion(snapshotRun.kpiConfigVersion, t)],
+          [t('adminSnapshots.generatedAt'), formatDateTime(snapshotRun.generatedAt, locale)],
+          [t('adminSnapshots.startedAt'), snapshotRun.startedAt ? formatDateTime(snapshotRun.startedAt, locale) : t('adminSnapshots.notStarted')],
+          [t('adminSnapshots.finishedAt'), snapshotRun.finishedAt ? formatDateTime(snapshotRun.finishedAt, locale) : t('adminSnapshots.notFinished')],
+        ].map(([label, value]) => (
+          <div className="detail-row" key={label}>
+            <span>{label}</span>
+            <strong>{value}</strong>
+          </div>
+        ))}
+      </div>
+    </article>
+  )
+}
+
+function SnapshotDependenciesPanel(input: {
+  canRerun: boolean
+  dependencies: SnapshotRunDependencies | undefined
+  isRerunPending: boolean
+  onRerun: () => void
+  snapshotRunId: string
+}) {
+  const { t } = useLocalization()
+
+  return (
+    <article className="panel">
+      <div className="panel-heading">
+        <div>
+          <div className="eyebrow">{t('adminSnapshots.rerunGovernanceEyebrow')}</div>
+          <h3>{t('adminSnapshots.dependenciesTitle')}</h3>
+        </div>
+        <div className="toolbar-cluster">
+          <button
+            className="control-button"
+            type="button"
+            onClick={input.onRerun}
+            disabled={!input.canRerun || input.isRerunPending}
+          >
+            {input.isRerunPending ? t('adminSnapshots.rerunning') : t('adminSnapshots.rerunSnapshot')}
+          </button>
+          <button
+            className="control-button"
+            type="button"
+            onClick={() =>
+              downloadCsv({
+                filename: `snapshot-dependency-checks-${input.snapshotRunId}.csv`,
+                columns: ['code', 'status', 'message'],
+                rows: (input.dependencies?.checks ?? []).map((check) => [
+                  check.code,
+                  check.status,
+                  check.message,
+                ]),
+              })
+            }
+            disabled={!input.dependencies?.checks.length}
+          >
+            {t('adminSnapshots.exportChecks')}
+          </button>
+        </div>
+      </div>
+      {input.dependencies ? (
+        <div className="stacked-table">
+          {input.dependencies.checks.map((check) => (
+            <div className="stacked-row" key={check.code}>
+              <div className="stacked-row-head">
+                <strong>{check.code}</strong>
+                <StatusPill tone={check.status === 'pass' ? 'calm' : 'danger'}>
+                  {formatCheckStatus(check.status, t)}
+                </StatusPill>
+              </div>
+              <p>{check.message}</p>
+            </div>
+          ))}
+          {input.dependencies.rerunBlockedReason ? (
+            <div className="empty-card">
+              <strong>{t('adminSnapshots.rerunBlocked')}</strong>
+              <p>{input.dependencies.rerunBlockedReason}</p>
+            </div>
+          ) : null}
+        </div>
+      ) : (
+        <EmptyState copy={t('adminSnapshots.dependencyLoading')} />
+      )}
+    </article>
+  )
+}
+
+function SnapshotOutputVolumePanel(input: { detail: SnapshotRunDetail; totalRows: number }) {
+  const { t } = useLocalization()
+  const total = Math.max(input.totalRows, 1)
+
+  return (
+    <article className="panel">
+      <div className="panel-heading">
+        <div>
+          <div className="eyebrow">{t('adminSnapshots.outputVolumeEyebrow')}</div>
+          <h3>{t('adminSnapshots.materializedSlices')}</h3>
+        </div>
+      </div>
+      <StatusBar label={t('adminSnapshots.workforceRows')} value={input.detail.cards.workforceRows} total={total} tone="calm" />
+      <StatusBar label={t('adminSnapshots.kpiRows')} value={input.detail.cards.kpiRows} total={total} tone="accent" />
+      <StatusBar label={t('adminSnapshots.checklistRows')} value={input.detail.cards.checklistRows} total={total} tone="warning" />
+      <StatusBar label={t('adminSnapshots.turnoverRows')} value={input.detail.cards.turnoverRows} total={total} tone="danger" />
+    </article>
   )
 }
 

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type Dispatch, type SetStateAction } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Megaphone, Pin, Send, Trophy } from 'lucide-react'
 import {
@@ -47,6 +47,11 @@ type FeedFormState = {
   targetRoute: string
   challengeStartsOn: string
   challengeEndsOn: string
+}
+
+type RegionOption = {
+  regionId: string
+  regionName: string
 }
 
 const feedPostTypeLabelKeys: Record<FeedPostType, TranslationKey> = {
@@ -260,212 +265,16 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
       {errorNotice ? <div className="shell-notice shell-notice-warning">{errorNotice}</div> : null}
 
       <section className="two-up-grid">
-        <article className="panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">{t('adminFeed.composerEyebrow')}</div>
-              <h3>{t('adminFeed.composerTitle')}</h3>
-            </div>
-            <StatusPill tone={form.postType === 'challenge' ? 'accent' : 'neutral'}>
-              {formatFeedPostTypeLabel(form.postType, t)}
-            </StatusPill>
-          </div>
-
-          <div className="form-grid">
-            <label>
-              {t('adminFeed.type')}
-              <select
-                className="control-input"
-                value={form.postType}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    postType: event.target.value as FeedPostType,
-                    linkUrl: event.target.value === 'challenge' ? '' : current.linkUrl,
-                  }))
-                }
-              >
-                <option value="announcement">{formatFeedPostTypeLabel('announcement', t)}</option>
-                <option value="challenge">{formatFeedPostTypeLabel('challenge', t)}</option>
-              </select>
-            </label>
-            <label>
-              {t('adminFeed.title')}
-              <input
-                className="control-input"
-                value={form.title}
-                onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
-              />
-            </label>
-            <label>
-              {t('adminFeed.body')}
-              <textarea
-                className="control-input"
-                rows={4}
-                value={form.body}
-                onChange={(event) => setForm((current) => ({ ...current, body: event.target.value }))}
-              />
-            </label>
-            <label>
-              {t('adminFeed.scope')}
-              <select
-                className="control-input"
-                value={form.visibilityScopeType}
-                disabled={isRegionManagerOnly}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    visibilityScopeType: event.target.value as FeedVisibilityScopeType,
-                    scopeId: '',
-                  }))
-                }
-              >
-                {isGlobalWriter ? <option value="company">{formatFeedScopeLabel('company', t)}</option> : null}
-                <option value="region">{formatFeedScopeLabel('region', t)}</option>
-                {isGlobalWriter ? <option value="store">{formatFeedScopeLabel('store', t)}</option> : null}
-              </select>
-            </label>
-            {form.visibilityScopeType !== 'company' ? (
-              <label>
-                {t('adminFeed.scopeId', { scope: formatFeedScopeLabel(form.visibilityScopeType, t) })}
-                <select
-                  className="control-input"
-                  value={form.scopeId}
-                  disabled={isRegionManagerOnly}
-                  onChange={(event) => setForm((current) => ({ ...current, scopeId: event.target.value }))}
-                >
-                  <option value="">{t('adminFeed.selectScope')}</option>
-                  {form.visibilityScopeType === 'region'
-                    ? regionOptions.map((option) => (
-                        <option key={option.regionId} value={option.regionId}>
-                          {option.regionName} - {option.regionId}
-                        </option>
-                      ))
-                    : stores.map((option) => (
-                        <option key={option.storeId} value={option.storeId}>
-                          {option.storeCode} - {option.storeName}
-                        </option>
-                      ))}
-                </select>
-              </label>
-            ) : null}
-            <label>
-              {t('adminFeed.linkLabel')}
-              <input
-                className="control-input"
-                value={form.linkLabel}
-                onChange={(event) => setForm((current) => ({ ...current, linkLabel: event.target.value }))}
-              />
-            </label>
-            {form.postType === 'announcement' ? (
-              <label>
-                {t('adminFeed.linkUrl')}
-                <input
-                  className="control-input"
-                  value={form.linkUrl}
-                  onChange={(event) => setForm((current) => ({ ...current, linkUrl: event.target.value }))}
-                  placeholder="/store/tasks"
-                />
-              </label>
-            ) : null}
-            <label>
-              {t('adminFeed.startsAt')}
-              <input
-                className="control-input"
-                type="datetime-local"
-                value={form.startsAt}
-                onChange={(event) => setForm((current) => ({ ...current, startsAt: event.target.value }))}
-              />
-            </label>
-            <label>
-              {t('adminFeed.endsAt')}
-              <input
-                className="control-input"
-                type="datetime-local"
-                value={form.endsAt}
-                onChange={(event) => setForm((current) => ({ ...current, endsAt: event.target.value }))}
-              />
-            </label>
-            <label className="checkbox-line">
-              <input
-                type="checkbox"
-                checked={form.isPinned}
-                onChange={(event) => setForm((current) => ({ ...current, isPinned: event.target.checked }))}
-              />
-              {t('adminFeed.pinPost')}
-            </label>
-          </div>
-
-          {form.postType === 'challenge' ? (
-            <div className="form-grid">
-              <label>
-                {t('adminFeed.metric')}
-                <select
-                  className="control-input"
-                  value={form.metricCode}
-                  onChange={(event) => setForm((current) => ({ ...current, metricCode: event.target.value }))}
-                >
-                  {challengeMetricOptions.map((metric) => (
-                    <option key={metric.metricCode} value={metric.metricCode}>
-                      {metric.metricLabel}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                {t('adminFeed.targetRoute')}
-                <select
-                  className="control-input"
-                  value={form.targetRoute}
-                  onChange={(event) => setForm((current) => ({ ...current, targetRoute: event.target.value }))}
-                >
-                  {feedTargetRouteOptions.map((option) => (
-                    <option key={option.route} value={option.route}>
-                      {formatTargetRouteLabel(option.route, t)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                {t('adminFeed.challengeStarts')}
-                <input
-                  className="control-input"
-                  type="date"
-                  value={form.challengeStartsOn}
-                  onChange={(event) => setForm((current) => ({ ...current, challengeStartsOn: event.target.value }))}
-                />
-              </label>
-              <label>
-                {t('adminFeed.challengeEnds')}
-                <input
-                  className="control-input"
-                  type="date"
-                  value={form.challengeEndsOn}
-                  onChange={(event) => setForm((current) => ({ ...current, challengeEndsOn: event.target.value }))}
-                />
-              </label>
-            </div>
-          ) : null}
-
-          <div className="action-cluster">
-            <button
-              className="control-button"
-              type="button"
-              disabled={createMutation.isPending}
-              onClick={() => submitPost('draft')}
-            >
-              {t('adminFeed.saveDraft')}
-            </button>
-            <button
-              className="control-button primary-control"
-              type="button"
-              disabled={createMutation.isPending}
-              onClick={() => submitPost('published')}
-            >
-              {t('adminFeed.publishPost')}
-            </button>
-          </div>
-        </article>
+        <AdminFeedComposerPanel
+          createPending={createMutation.isPending}
+          form={form}
+          isGlobalWriter={isGlobalWriter}
+          isRegionManagerOnly={isRegionManagerOnly}
+          onSubmit={submitPost}
+          regionOptions={regionOptions}
+          setForm={setForm}
+          stores={stores}
+        />
 
         <article className="panel">
           <div className="panel-heading">
@@ -511,6 +320,228 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
         )}
       </section>
     </section>
+  )
+}
+
+function AdminFeedComposerPanel(input: {
+  createPending: boolean
+  form: FeedFormState
+  isGlobalWriter: boolean
+  isRegionManagerOnly: boolean
+  onSubmit: (publishStatus: FeedPublishStatus) => void
+  regionOptions: RegionOption[]
+  setForm: Dispatch<SetStateAction<FeedFormState>>
+  stores: AuthLookupStore[]
+}) {
+  const { t } = useLocalization()
+
+  return (
+    <article className="panel">
+      <div className="panel-heading">
+        <div>
+          <div className="eyebrow">{t('adminFeed.composerEyebrow')}</div>
+          <h3>{t('adminFeed.composerTitle')}</h3>
+        </div>
+        <StatusPill tone={input.form.postType === 'challenge' ? 'accent' : 'neutral'}>
+          {formatFeedPostTypeLabel(input.form.postType, t)}
+        </StatusPill>
+      </div>
+
+      <div className="form-grid">
+        <label>
+          {t('adminFeed.type')}
+          <select
+            className="control-input"
+            value={input.form.postType}
+            onChange={(event) =>
+              input.setForm((current) => ({
+                ...current,
+                postType: event.target.value as FeedPostType,
+                linkUrl: event.target.value === 'challenge' ? '' : current.linkUrl,
+              }))
+            }
+          >
+            <option value="announcement">{formatFeedPostTypeLabel('announcement', t)}</option>
+            <option value="challenge">{formatFeedPostTypeLabel('challenge', t)}</option>
+          </select>
+        </label>
+        <label>
+          {t('adminFeed.title')}
+          <input
+            className="control-input"
+            value={input.form.title}
+            onChange={(event) => input.setForm((current) => ({ ...current, title: event.target.value }))}
+          />
+        </label>
+        <label>
+          {t('adminFeed.body')}
+          <textarea
+            className="control-input"
+            rows={4}
+            value={input.form.body}
+            onChange={(event) => input.setForm((current) => ({ ...current, body: event.target.value }))}
+          />
+        </label>
+        <label>
+          {t('adminFeed.scope')}
+          <select
+            className="control-input"
+            value={input.form.visibilityScopeType}
+            disabled={input.isRegionManagerOnly}
+            onChange={(event) =>
+              input.setForm((current) => ({
+                ...current,
+                visibilityScopeType: event.target.value as FeedVisibilityScopeType,
+                scopeId: '',
+              }))
+            }
+          >
+            {input.isGlobalWriter ? <option value="company">{formatFeedScopeLabel('company', t)}</option> : null}
+            <option value="region">{formatFeedScopeLabel('region', t)}</option>
+            {input.isGlobalWriter ? <option value="store">{formatFeedScopeLabel('store', t)}</option> : null}
+          </select>
+        </label>
+        {input.form.visibilityScopeType !== 'company' ? (
+          <label>
+            {t('adminFeed.scopeId', { scope: formatFeedScopeLabel(input.form.visibilityScopeType, t) })}
+            <select
+              className="control-input"
+              value={input.form.scopeId}
+              disabled={input.isRegionManagerOnly}
+              onChange={(event) => input.setForm((current) => ({ ...current, scopeId: event.target.value }))}
+            >
+              <option value="">{t('adminFeed.selectScope')}</option>
+              {input.form.visibilityScopeType === 'region'
+                ? input.regionOptions.map((option) => (
+                    <option key={option.regionId} value={option.regionId}>
+                      {option.regionName} - {option.regionId}
+                    </option>
+                  ))
+                : input.stores.map((option) => (
+                    <option key={option.storeId} value={option.storeId}>
+                      {option.storeCode} - {option.storeName}
+                    </option>
+                  ))}
+            </select>
+          </label>
+        ) : null}
+        <label>
+          {t('adminFeed.linkLabel')}
+          <input
+            className="control-input"
+            value={input.form.linkLabel}
+            onChange={(event) => input.setForm((current) => ({ ...current, linkLabel: event.target.value }))}
+          />
+        </label>
+        {input.form.postType === 'announcement' ? (
+          <label>
+            {t('adminFeed.linkUrl')}
+            <input
+              className="control-input"
+              value={input.form.linkUrl}
+              onChange={(event) => input.setForm((current) => ({ ...current, linkUrl: event.target.value }))}
+              placeholder="/store/tasks"
+            />
+          </label>
+        ) : null}
+        <label>
+          {t('adminFeed.startsAt')}
+          <input
+            className="control-input"
+            type="datetime-local"
+            value={input.form.startsAt}
+            onChange={(event) => input.setForm((current) => ({ ...current, startsAt: event.target.value }))}
+          />
+        </label>
+        <label>
+          {t('adminFeed.endsAt')}
+          <input
+            className="control-input"
+            type="datetime-local"
+            value={input.form.endsAt}
+            onChange={(event) => input.setForm((current) => ({ ...current, endsAt: event.target.value }))}
+          />
+        </label>
+        <label className="checkbox-line">
+          <input
+            type="checkbox"
+            checked={input.form.isPinned}
+            onChange={(event) => input.setForm((current) => ({ ...current, isPinned: event.target.checked }))}
+          />
+          {t('adminFeed.pinPost')}
+        </label>
+      </div>
+
+      {input.form.postType === 'challenge' ? (
+        <div className="form-grid">
+          <label>
+            {t('adminFeed.metric')}
+            <select
+              className="control-input"
+              value={input.form.metricCode}
+              onChange={(event) => input.setForm((current) => ({ ...current, metricCode: event.target.value }))}
+            >
+              {challengeMetricOptions.map((metric) => (
+                <option key={metric.metricCode} value={metric.metricCode}>
+                  {metric.metricLabel}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            {t('adminFeed.targetRoute')}
+            <select
+              className="control-input"
+              value={input.form.targetRoute}
+              onChange={(event) => input.setForm((current) => ({ ...current, targetRoute: event.target.value }))}
+            >
+              {feedTargetRouteOptions.map((option) => (
+                <option key={option.route} value={option.route}>
+                  {formatTargetRouteLabel(option.route, t)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            {t('adminFeed.challengeStarts')}
+            <input
+              className="control-input"
+              type="date"
+              value={input.form.challengeStartsOn}
+              onChange={(event) => input.setForm((current) => ({ ...current, challengeStartsOn: event.target.value }))}
+            />
+          </label>
+          <label>
+            {t('adminFeed.challengeEnds')}
+            <input
+              className="control-input"
+              type="date"
+              value={input.form.challengeEndsOn}
+              onChange={(event) => input.setForm((current) => ({ ...current, challengeEndsOn: event.target.value }))}
+            />
+          </label>
+        </div>
+      ) : null}
+
+      <div className="action-cluster">
+        <button
+          className="control-button"
+          type="button"
+          disabled={input.createPending}
+          onClick={() => input.onSubmit('draft')}
+        >
+          {t('adminFeed.saveDraft')}
+        </button>
+        <button
+          className="control-button primary-control"
+          type="button"
+          disabled={input.createPending}
+          onClick={() => input.onSubmit('published')}
+        >
+          {t('adminFeed.publishPost')}
+        </button>
+      </div>
+    </article>
   )
 }
 
