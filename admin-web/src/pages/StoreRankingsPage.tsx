@@ -1018,7 +1018,7 @@ function StoreRankingTableRow(input: {
         <RankingScore value={row.scoreValue} locale={input.locale} t={input.t} />
       </td>
       {input.canSeeDetails ? (
-        <td data-label={input.t('storeRankings.kpiSummary')}>
+        <td data-label={input.t('storeRankings.metricDetailsLabel')}>
           <MetricDetails
             metrics={row.metrics ?? []}
             metricCodes={storeMetricCodes}
@@ -1057,7 +1057,7 @@ function PersonnelRankingTableRow(input: {
         <RankingScore value={row.scoreValue} locale={input.locale} t={input.t} />
       </td>
       {input.canSeeDetails ? (
-        <td data-label={input.t('storeRankings.kpiSummary')}>
+        <td data-label={input.t('storeRankings.metricDetailsLabel')}>
           <MetricDetails
             metrics={row.metrics ?? []}
             metricCodes={personnelMetricCodes}
