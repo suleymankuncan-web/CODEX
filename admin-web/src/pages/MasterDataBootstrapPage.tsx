@@ -1,4 +1,4 @@
-import { useDeferredValue, useMemo, useState } from 'react'
+import { useDeferredValue, useMemo, useReducer } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowRight, DatabaseZap, ListChecks, ShieldCheck, UserCheck } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
@@ -32,18 +32,71 @@ import { formatDateTime, getErrorMessage } from '../lib/format'
 
 const PAGE_SIZE = 20
 
+type MasterDataBootstrapEntityFilter = 'all' | MasterDataBootstrapEntity
+type MasterDataBootstrapReadinessFilter =
+  | 'all'
+  | 'needs_validation'
+  | 'needs_review'
+  | 'ready_to_promote'
+  | 'closed'
+
+type MasterDataBootstrapPageState = {
+  search: string
+  entityFilter: MasterDataBootstrapEntityFilter
+  readinessFilter: MasterDataBootstrapReadinessFilter
+  feedback: string | null
+  promotionResult: MasterDataBootstrapPromotionResponse['data'] | null
+}
+
+type MasterDataBootstrapPageAction =
+  | { type: 'setSearch'; value: string }
+  | { type: 'setEntityFilter'; value: MasterDataBootstrapEntityFilter }
+  | { type: 'setReadinessFilter'; value: MasterDataBootstrapReadinessFilter }
+  | {
+      type: 'setCommandFeedback'
+      feedback: string | null
+      promotionResult: MasterDataBootstrapPromotionResponse['data'] | null
+    }
+
+const initialMasterDataBootstrapPageState: MasterDataBootstrapPageState = {
+  search: '',
+  entityFilter: 'all',
+  readinessFilter: 'all',
+  feedback: null,
+  promotionResult: null,
+}
+
+function masterDataBootstrapPageReducer(
+  state: MasterDataBootstrapPageState,
+  action: MasterDataBootstrapPageAction,
+): MasterDataBootstrapPageState {
+  switch (action.type) {
+    case 'setSearch':
+      return { ...state, search: action.value }
+    case 'setEntityFilter':
+      return { ...state, entityFilter: action.value }
+    case 'setReadinessFilter':
+      return { ...state, readinessFilter: action.value }
+    case 'setCommandFeedback':
+      return {
+        ...state,
+        feedback: action.feedback,
+        promotionResult: action.promotionResult,
+      }
+    default:
+      return state
+  }
+}
+
 export function MasterDataBootstrapPage() {
   const { locale, t } = useLocalization()
   const params = useParams()
   const batchId = params.batchId ?? null
-  const [search, setSearch] = useState('')
-  const [entityFilter, setEntityFilter] = useState<'all' | MasterDataBootstrapEntity>('all')
-  const [readinessFilter, setReadinessFilter] = useState<
-    'all' | 'needs_validation' | 'needs_review' | 'ready_to_promote' | 'closed'
-  >('all')
-  const [feedback, setFeedback] = useState<string | null>(null)
-  const [promotionResult, setPromotionResult] =
-    useState<MasterDataBootstrapPromotionResponse['data'] | null>(null)
+  const [pageState, dispatchPageState] = useReducer(
+    masterDataBootstrapPageReducer,
+    initialMasterDataBootstrapPageState,
+  )
+  const { search, entityFilter, readinessFilter, feedback, promotionResult } = pageState
   const deferredSearch = useDeferredValue(search)
   const queryClient = useQueryClient()
 
@@ -71,8 +124,11 @@ export function MasterDataBootstrapPage() {
   const validateMutation = useMutation({
     mutationFn: validateMasterDataBootstrapBatch,
     onSuccess: async (response) => {
-      setFeedback(response.command.message)
-      setPromotionResult(null)
+      dispatchPageState({
+        type: 'setCommandFeedback',
+        feedback: response.command.message,
+        promotionResult: null,
+      })
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['master-data-bootstrap-batches'] }),
         batchId
@@ -84,7 +140,11 @@ export function MasterDataBootstrapPage() {
       ])
     },
     onError: (error) => {
-      setFeedback(getErrorMessage(error))
+      dispatchPageState({
+        type: 'setCommandFeedback',
+        feedback: getErrorMessage(error),
+        promotionResult: null,
+      })
     },
   })
   const promoteMutation = useMutation({
@@ -93,8 +153,11 @@ export function MasterDataBootstrapPage() {
         ? promoteMasterDataBootstrapStores(input.batchId)
         : promoteMasterDataBootstrapPersonnel(input.batchId),
     onSuccess: async (response) => {
-      setFeedback(response.command.message)
-      setPromotionResult(response.data)
+      dispatchPageState({
+        type: 'setCommandFeedback',
+        feedback: response.command.message,
+        promotionResult: response.data,
+      })
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['master-data-bootstrap-batches'] }),
         batchId
@@ -106,7 +169,11 @@ export function MasterDataBootstrapPage() {
       ])
     },
     onError: (error) => {
-      setFeedback(getErrorMessage(error))
+      dispatchPageState({
+        type: 'setCommandFeedback',
+        feedback: getErrorMessage(error),
+        promotionResult: null,
+      })
     },
   })
 
@@ -193,7 +260,9 @@ export function MasterDataBootstrapPage() {
               <span className="sr-only">{t('adminMasterData.searchBatches')}</span>
               <input
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(event) =>
+                  dispatchPageState({ type: 'setSearch', value: event.target.value })
+                }
                 placeholder={t('adminMasterData.searchPlaceholder')}
               />
             </label>
@@ -202,7 +271,10 @@ export function MasterDataBootstrapPage() {
               <select
                 value={entityFilter}
                 onChange={(event) =>
-                  setEntityFilter(event.target.value as 'all' | MasterDataBootstrapEntity)
+                  dispatchPageState({
+                    type: 'setEntityFilter',
+                    value: event.target.value as MasterDataBootstrapEntityFilter,
+                  })
                 }
               >
                 <option value="all">{t('adminMasterData.allEntities')}</option>
@@ -215,14 +287,10 @@ export function MasterDataBootstrapPage() {
               <select
                 value={readinessFilter}
                 onChange={(event) =>
-                  setReadinessFilter(
-                    event.target.value as
-                      | 'all'
-                      | 'needs_validation'
-                      | 'needs_review'
-                      | 'ready_to_promote'
-                      | 'closed',
-                  )
+                  dispatchPageState({
+                    type: 'setReadinessFilter',
+                    value: event.target.value as MasterDataBootstrapReadinessFilter,
+                  })
                 }
               >
                 <option value="all">{t('adminMasterData.allReadiness')}</option>
