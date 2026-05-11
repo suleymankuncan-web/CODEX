@@ -153,6 +153,10 @@ function getPeriodYear(input: string | null | undefined) {
   return getPeriodDateKey(input).slice(0, 4)
 }
 
+function getPeriodMonthKey(input: string | null | undefined) {
+  return getPeriodDateKey(input).slice(0, 7)
+}
+
 function comparePeriodStart(left: string, right: string) {
   const leftKey = getPeriodDateKey(left) || left
   const rightKey = getPeriodDateKey(right) || right
@@ -202,6 +206,10 @@ function formatMonthYear(locale: AppLocale, t: TranslateFunction, input: string)
     month: 'long',
     year: 'numeric',
   }).format(new Date(`${dateKey}T00:00:00`))
+}
+
+function formatMonthKeyLabel(locale: AppLocale, t: TranslateFunction, monthKey: string) {
+  return formatMonthYear(locale, t, `${monthKey}-01`)
 }
 
 function formatSignedPercent(locale: AppLocale, input: number | null) {
@@ -395,11 +403,13 @@ export function StoreMyPerformancePage(input: {
   const [selectedLivePeriodStart, setSelectedLivePeriodStart] = useState(
     input.initialLivePeriodStart?.trim() ?? '',
   )
-  const [selectedLiveMonthStarts, setSelectedLiveMonthStarts] = useState<string[]>([])
+  const [selectedLiveYears, setSelectedLiveYears] = useState<string[]>([])
+  const [selectedLiveMonthKeys, setSelectedLiveMonthKeys] = useState<string[]>([])
   const [selectedLiveDayStarts, setSelectedLiveDayStarts] = useState<string[]>([])
   const [selectedClosedSnapshotRunId, setSelectedClosedSnapshotRunId] = useState('')
   const [isDateFilterOpen, setIsDateFilterOpen] = useState(false)
   const [isKpiDetailOpen, setIsKpiDetailOpen] = useState(false)
+  const usesClosedSnapshotMode = profileMode !== 'personnel'
   const queryPrefix = profileMode === 'personnel'
     ? ['personnel-performance', targetEmployeeId] as const
     : ['my-performance'] as const
@@ -423,7 +433,7 @@ export function StoreMyPerformancePage(input: {
         limit: 30,
         offset: 0,
       }),
-    enabled: enabled && sourceMode === 'closed',
+    enabled: enabled && usesClosedSnapshotMode && sourceMode === 'closed',
     retry: false,
   })
 
@@ -434,7 +444,7 @@ export function StoreMyPerformancePage(input: {
     ) ??
     availableClosedSnapshotRuns[0] ??
     null
-  const selectedClosedSnapshotDate = activeClosedSnapshotRun?.snapshotDate ?? ''
+  const selectedClosedSnapshotDate = usesClosedSnapshotMode ? activeClosedSnapshotRun?.snapshotDate ?? '' : ''
 
   const performanceQuery = useQuery({
     queryKey: [
@@ -452,7 +462,7 @@ export function StoreMyPerformancePage(input: {
         snapshotDate:
           sourceMode === 'closed' && selectedClosedSnapshotDate ? selectedClosedSnapshotDate : undefined,
       }),
-    enabled: enabled && (sourceMode === 'live' || !closedRunsQuery.isLoading),
+    enabled: enabled && (sourceMode === 'live' || !usesClosedSnapshotMode || !closedRunsQuery.isLoading),
     retry: false,
   })
 
@@ -472,41 +482,73 @@ export function StoreMyPerformancePage(input: {
     () => availableLivePeriods.filter((period) => period.periodType === 'daily'),
     [availableLivePeriods],
   )
-  const selectedLivePeriods =
-    selectedLivePeriodType === 'daily' ? availableDailyPeriods : availableMonthlyPeriods
-  const selectedLivePeriodKeys =
-    selectedLivePeriodType === 'daily' ? selectedLiveDayStarts : selectedLiveMonthStarts
-  const selectedLivePeriodOptionKeys = useMemo(
-    () => selectedLivePeriods.map((period) => getLivePeriodOptionKey(period)).filter(Boolean),
-    [selectedLivePeriods],
+  const availableLiveYearOptions = useMemo(() => {
+    const yearSet = new Set(
+      availableLivePeriods.map((period) => getPeriodYear(period.periodStart)).filter(Boolean),
+    )
+
+    return [...yearSet].sort((left, right) => right.localeCompare(left))
+  }, [availableLivePeriods])
+  const yearScopedLivePeriods = useMemo(() => {
+    if (selectedLiveYears.length === 0) {
+      return availableLivePeriods
+    }
+
+    const selectedYearSet = new Set(selectedLiveYears)
+    return availableLivePeriods.filter((period) => selectedYearSet.has(getPeriodYear(period.periodStart)))
+  }, [availableLivePeriods, selectedLiveYears])
+  const availableLiveMonthOptions = useMemo(() => {
+    const monthSet = new Set(
+      yearScopedLivePeriods.map((period) => getPeriodMonthKey(period.periodStart)).filter(Boolean),
+    )
+
+    return [...monthSet].sort((left, right) => right.localeCompare(left))
+  }, [yearScopedLivePeriods])
+  const monthScopedLivePeriods = useMemo(() => {
+    if (selectedLiveMonthKeys.length === 0) {
+      return yearScopedLivePeriods
+    }
+
+    const selectedMonthSet = new Set(selectedLiveMonthKeys)
+    return yearScopedLivePeriods.filter((period) => selectedMonthSet.has(getPeriodMonthKey(period.periodStart)))
+  }, [selectedLiveMonthKeys, yearScopedLivePeriods])
+  const scopedAvailableMonthlyPeriods = useMemo(
+    () => monthScopedLivePeriods.filter((period) => period.periodType === 'monthly'),
+    [monthScopedLivePeriods],
   )
+  const scopedAvailableDailyPeriods = useMemo(
+    () => monthScopedLivePeriods.filter((period) => period.periodType === 'daily'),
+    [monthScopedLivePeriods],
+  )
+  const selectedLivePeriods =
+    selectedLivePeriodType === 'daily' ? scopedAvailableDailyPeriods : scopedAvailableMonthlyPeriods
   const effectiveSelectedLivePeriods = useMemo(() => {
-    if (selectedLivePeriodKeys.length === 0) {
+    if (selectedLivePeriodType !== 'daily' || selectedLiveDayStarts.length === 0) {
       return selectedLivePeriods
     }
 
-    const selectedKeySet = new Set(selectedLivePeriodKeys)
+    const selectedKeySet = new Set(selectedLiveDayStarts)
     return selectedLivePeriods.filter((period) => selectedKeySet.has(getLivePeriodOptionKey(period)))
-  }, [selectedLivePeriodKeys, selectedLivePeriods])
+  }, [selectedLiveDayStarts, selectedLivePeriodType, selectedLivePeriods])
   const livePeriodFallbackType = useMemo(() => {
     if (sourceMode !== 'live' || !performanceQuery.isSuccess || performance?.period) {
       return null
     }
 
-    if (selectedLivePeriodType === 'monthly' && selectedLivePeriods.length === 0 && availableDailyPeriods.length > 0) {
+    if (selectedLivePeriodType === 'monthly' && selectedLivePeriods.length === 0 && scopedAvailableDailyPeriods.length > 0) {
       return 'daily' as const
     }
 
-    if (selectedLivePeriodType === 'daily' && selectedLivePeriods.length === 0 && availableMonthlyPeriods.length > 0) {
+    if (selectedLivePeriodType === 'daily' && selectedLivePeriods.length === 0 && scopedAvailableMonthlyPeriods.length > 0) {
       return 'monthly' as const
     }
 
     return null
   }, [
-    availableDailyPeriods.length,
-    availableMonthlyPeriods.length,
     performance?.period,
     performanceQuery.isSuccess,
+    scopedAvailableDailyPeriods.length,
+    scopedAvailableMonthlyPeriods.length,
     selectedLivePeriodType,
     selectedLivePeriods.length,
     sourceMode,
@@ -514,9 +556,9 @@ export function StoreMyPerformancePage(input: {
   const livePeriodFallbackStart = useMemo(() => {
     const fallbackPeriods =
       livePeriodFallbackType === 'daily'
-        ? availableDailyPeriods
+        ? scopedAvailableDailyPeriods
         : livePeriodFallbackType === 'monthly'
-          ? availableMonthlyPeriods
+          ? scopedAvailableMonthlyPeriods
           : effectiveSelectedLivePeriods
 
     if (sourceMode !== 'live' || !performanceQuery.isSuccess || performance?.period || fallbackPeriods.length === 0) {
@@ -538,30 +580,34 @@ export function StoreMyPerformancePage(input: {
 
     return getLatestAvailablePeriodStart(fallbackPeriods)
   }, [
-    availableDailyPeriods,
-    availableMonthlyPeriods,
     effectiveSelectedLivePeriods,
     livePeriodFallbackType,
     performance?.period,
     performanceQuery.isSuccess,
+    scopedAvailableDailyPeriods,
+    scopedAvailableMonthlyPeriods,
     selectedLivePeriodStart,
     sourceMode,
   ])
   const monthlyDetailPeriods = useMemo(() => {
-    const scopedAvailableMonthlyPeriods =
-      selectedLivePeriodType === 'monthly' ? effectiveSelectedLivePeriods : availableMonthlyPeriods
-    const activeYear = getPeriodYear(performance?.period?.periodStart ?? scopedAvailableMonthlyPeriods.at(-1)?.periodStart)
+    const scopedDetailPeriods = effectiveSelectedLivePeriods.length
+      ? effectiveSelectedLivePeriods
+      : selectedLivePeriodType === 'daily'
+        ? scopedAvailableDailyPeriods
+        : scopedAvailableMonthlyPeriods
+    const activeYear = getPeriodYear(performance?.period?.periodStart ?? scopedDetailPeriods.at(-1)?.periodStart)
     const scopedPeriods = activeYear
-      ? scopedAvailableMonthlyPeriods.filter((period) => getPeriodYear(period.periodStart) === activeYear)
-      : scopedAvailableMonthlyPeriods
+      ? scopedDetailPeriods.filter((period) => getPeriodYear(period.periodStart) === activeYear)
+      : scopedDetailPeriods
 
     return [...scopedPeriods]
       .sort((left, right) => comparePeriodStart(left.periodStart, right.periodStart))
       .slice(-12)
   }, [
-    availableMonthlyPeriods,
     effectiveSelectedLivePeriods,
     performance?.period?.periodStart,
+    scopedAvailableDailyPeriods,
+    scopedAvailableMonthlyPeriods,
     selectedLivePeriodType,
   ])
 
@@ -570,13 +616,14 @@ export function StoreMyPerformancePage(input: {
       queryKey: [
         ...queryPrefix,
         'live',
+        period.periodType,
         getPeriodDateKey(period.periodStart) || period.periodStart,
         '',
       ],
       queryFn: () =>
         fetchPerformance({
           mode: 'live',
-          periodType: 'monthly',
+          periodType: period.periodType === 'daily' ? 'daily' : 'monthly',
           periodStart: getPeriodDateKey(period.periodStart) || period.periodStart,
         }),
       enabled: enabled && sourceMode === 'live' && performanceQuery.isSuccess,
@@ -614,66 +661,133 @@ export function StoreMyPerformancePage(input: {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isKpiDetailOpen])
 
-  function getSelectedPeriodsForType(periodType: LivePeriodType) {
+  function getPeriodsForSelection(input?: {
+    periodType?: LivePeriodType
+    years?: string[]
+    months?: string[]
+    days?: string[]
+  }) {
+    const periodType = input?.periodType ?? selectedLivePeriodType
+    const selectedYears = input?.years ?? selectedLiveYears
+    const selectedMonths = input?.months ?? selectedLiveMonthKeys
+    const selectedDays = input?.days ?? selectedLiveDayStarts
+    const yearSet = selectedYears.length ? new Set(selectedYears) : null
+    const monthSet = selectedMonths.length ? new Set(selectedMonths) : null
+    const daySet = periodType === 'daily' && selectedDays.length ? new Set(selectedDays) : null
     const periods = periodType === 'daily' ? availableDailyPeriods : availableMonthlyPeriods
-    const selectedKeys = periodType === 'daily' ? selectedLiveDayStarts : selectedLiveMonthStarts
 
-    if (selectedKeys.length === 0) {
-      return periods
-    }
+    return periods.filter((period) => {
+      const periodStart = period.periodStart
+      if (yearSet && !yearSet.has(getPeriodYear(periodStart))) {
+        return false
+      }
+      if (monthSet && !monthSet.has(getPeriodMonthKey(periodStart))) {
+        return false
+      }
+      if (daySet && !daySet.has(getLivePeriodOptionKey(period))) {
+        return false
+      }
 
-    const selectedKeySet = new Set(selectedKeys)
-    return periods.filter((period) => selectedKeySet.has(getLivePeriodOptionKey(period)))
+      return true
+    })
   }
 
-  function setLivePeriodSelectionKeys(periodType: LivePeriodType, keys: string[]) {
-    if (periodType === 'daily') {
-      setSelectedLiveDayStarts(keys)
-      return
+  function getNextSelectionKeys(input: {
+    currentKeys: string[]
+    optionKeys: string[]
+    key: string
+  }) {
+    const currentKeys = input.currentKeys.length > 0 ? input.currentKeys : input.optionKeys
+    const nextKeySet = new Set(currentKeys)
+
+    if (nextKeySet.has(input.key)) {
+      nextKeySet.delete(input.key)
+    } else {
+      nextKeySet.add(input.key)
     }
 
-    setSelectedLiveMonthStarts(keys)
+    if (nextKeySet.size === 0) {
+      return null
+    }
+
+    const nextKeys = input.optionKeys.filter((optionKey) => nextKeySet.has(optionKey))
+    return nextKeys.length === input.optionKeys.length ? [] : nextKeys
   }
 
   function changeLivePeriodType(periodType: LivePeriodType) {
-    const nextPeriods = getSelectedPeriodsForType(periodType)
+    const nextPeriods = getPeriodsForSelection({ periodType })
     setSelectedLivePeriodType(periodType)
     setSelectedLivePeriodStart(getLatestAvailablePeriodStart(nextPeriods))
   }
 
-  function isLivePeriodSelected(period: { periodStart: string }) {
-    if (selectedLivePeriodKeys.length === 0) {
+  function isSelectionKeyChecked(currentKeys: string[], key: string) {
+    if (currentKeys.length === 0) {
       return true
     }
 
-    return selectedLivePeriodKeys.includes(getLivePeriodOptionKey(period))
+    return currentKeys.includes(key)
   }
 
-  function toggleLivePeriodSelection(period: { periodStart: string }) {
+  function toggleLiveYearSelection(year: string) {
+    const nextYears = getNextSelectionKeys({
+      currentKeys: selectedLiveYears,
+      optionKeys: availableLiveYearOptions,
+      key: year,
+    })
+    if (nextYears === null) {
+      return
+    }
+
+    const nextPeriods = getPeriodsForSelection({ years: nextYears })
+    if (nextPeriods.length === 0) {
+      return
+    }
+
+    setSelectedLiveYears(nextYears)
+    setSelectedLivePeriodStart(getLatestAvailablePeriodStart(nextPeriods))
+  }
+
+  function toggleLiveMonthSelection(monthKey: string) {
+    const nextMonths = getNextSelectionKeys({
+      currentKeys: selectedLiveMonthKeys,
+      optionKeys: availableLiveMonthOptions,
+      key: monthKey,
+    })
+    if (nextMonths === null) {
+      return
+    }
+
+    const nextPeriods = getPeriodsForSelection({ months: nextMonths })
+    if (nextPeriods.length === 0) {
+      return
+    }
+
+    setSelectedLiveMonthKeys(nextMonths)
+    setSelectedLivePeriodStart(getLatestAvailablePeriodStart(nextPeriods))
+  }
+
+  function toggleLiveDaySelection(period: { periodStart: string }) {
     const key = getLivePeriodOptionKey(period)
     if (!key) {
       return
     }
 
-    const currentKeys =
-      selectedLivePeriodKeys.length > 0 ? selectedLivePeriodKeys : selectedLivePeriodOptionKeys
-    const nextKeySet = new Set(currentKeys)
-
-    if (nextKeySet.has(key)) {
-      nextKeySet.delete(key)
-    } else {
-      nextKeySet.add(key)
-    }
-
-    if (nextKeySet.size === 0) {
+    const nextDays = getNextSelectionKeys({
+      currentKeys: selectedLiveDayStarts,
+      optionKeys: scopedAvailableDailyPeriods.map((item) => getLivePeriodOptionKey(item)).filter(Boolean),
+      key,
+    })
+    if (nextDays === null) {
       return
     }
 
-    const nextKeys = selectedLivePeriodOptionKeys.filter((optionKey) => nextKeySet.has(optionKey))
-    const storedKeys = nextKeys.length === selectedLivePeriodOptionKeys.length ? [] : nextKeys
-    const nextPeriods = selectedLivePeriods.filter((item) => nextKeySet.has(getLivePeriodOptionKey(item)))
+    const nextPeriods = getPeriodsForSelection({ periodType: 'daily', days: nextDays })
+    if (nextPeriods.length === 0) {
+      return
+    }
 
-    setLivePeriodSelectionKeys(selectedLivePeriodType, storedKeys)
+    setSelectedLivePeriodType('daily')
+    setSelectedLiveDayStarts(nextDays)
     setSelectedLivePeriodStart(getLatestAvailablePeriodStart(nextPeriods))
   }
 
@@ -695,7 +809,11 @@ export function StoreMyPerformancePage(input: {
     )
   }
 
-  if (performanceQuery.isLoading || configQuery.isLoading || (sourceMode === 'closed' && closedRunsQuery.isLoading)) {
+  if (
+    performanceQuery.isLoading ||
+    configQuery.isLoading ||
+    (usesClosedSnapshotMode && sourceMode === 'closed' && closedRunsQuery.isLoading)
+  ) {
     return (
       <ScreenState
         title={t('storeMe.loadingTitle')}
@@ -704,7 +822,11 @@ export function StoreMyPerformancePage(input: {
     )
   }
 
-  if (performanceQuery.isError || configQuery.isError || (sourceMode === 'closed' && closedRunsQuery.isError)) {
+  if (
+    performanceQuery.isError ||
+    configQuery.isError ||
+    (usesClosedSnapshotMode && sourceMode === 'closed' && closedRunsQuery.isError)
+  ) {
     return (
       <ScreenState
         title={t('storeMe.errorTitle')}
@@ -965,25 +1087,27 @@ export function StoreMyPerformancePage(input: {
 
             {isDateFilterOpen ? (
               <div className="store-me-v2-date-filter-popover" role="group" aria-label={t('storeMe.dateFilter')}>
-                <div className="store-me-v2-filter-field">
-                  <span>{t('storeMe.view')}</span>
-                  <div className="store-me-v2-choice-row">
-                    <button
-                      className={sourceMode === 'live' ? 'active' : ''}
-                      type="button"
-                      onClick={() => setSourceMode('live')}
-                    >
-                      {t('storeMe.liveStatus')}
-                    </button>
-                    <button
-                      className={sourceMode === 'closed' ? 'active' : ''}
-                      type="button"
-                      onClick={() => setSourceMode('closed')}
-                    >
-                      {t('storeMe.closedDay')}
-                    </button>
+                {usesClosedSnapshotMode ? (
+                  <div className="store-me-v2-filter-field">
+                    <span>{t('storeMe.view')}</span>
+                    <div className="store-me-v2-choice-row">
+                      <button
+                        className={sourceMode === 'live' ? 'active' : ''}
+                        type="button"
+                        onClick={() => setSourceMode('live')}
+                      >
+                        {t('storeMe.liveStatus')}
+                      </button>
+                      <button
+                        className={sourceMode === 'closed' ? 'active' : ''}
+                        type="button"
+                        onClick={() => setSourceMode('closed')}
+                      >
+                        {t('storeMe.closedDay')}
+                      </button>
+                    </div>
                   </div>
-                </div>
+                ) : null}
                 <div className="store-me-v2-filter-field">
                   <span>{t('storeMe.liveGranularity')}</span>
                   <div className="store-me-v2-choice-row">
@@ -1006,29 +1130,52 @@ export function StoreMyPerformancePage(input: {
                   </div>
                 </div>
                 <div className="store-me-v2-filter-field">
-                  <span>{selectedLivePeriodType === 'daily' ? t('storeMe.loadedDays') : t('storeMe.loadedMonths')}</span>
+                  <span>{t('storeMe.loadedYears')}</span>
                   <div
                     className="store-me-v2-period-picklist"
                     role="group"
-                    aria-label={
-                      selectedLivePeriodType === 'daily'
-                        ? t('storeMe.loadedDaySelect')
-                        : t('storeMe.loadedMonthSelect')
-                    }
+                    aria-label={t('storeMe.loadedYears')}
                   >
-                    {selectedLivePeriods.length ? (
-                      selectedLivePeriods.map((period) => {
-                        const label = formatLivePeriodOptionLabel(locale, period)
+                    {availableLiveYearOptions.length ? (
+                      availableLiveYearOptions.map((year) => (
+                        <label
+                          className={`store-me-v2-period-check${isSelectionKeyChecked(selectedLiveYears, year) ? ' active' : ''}`}
+                          key={year}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelectionKeyChecked(selectedLiveYears, year)}
+                            onChange={() => toggleLiveYearSelection(year)}
+                            disabled={sourceMode !== 'live'}
+                          />
+                          <span>{year}</span>
+                        </label>
+                      ))
+                    ) : (
+                      <span className="store-me-v2-period-empty">{t('storeMe.noLoadedPeriods')}</span>
+                    )}
+                  </div>
+                </div>
+                <div className="store-me-v2-filter-field">
+                  <span>{t('storeMe.loadedMonthBuckets')}</span>
+                  <div
+                    className="store-me-v2-period-picklist"
+                    role="group"
+                    aria-label={t('storeMe.loadedMonthBuckets')}
+                  >
+                    {availableLiveMonthOptions.length ? (
+                      availableLiveMonthOptions.map((monthKey) => {
+                        const label = formatMonthKeyLabel(locale, t, monthKey)
 
                         return (
                           <label
-                            className={`store-me-v2-period-check${isLivePeriodSelected(period) ? ' active' : ''}`}
-                            key={`${period.periodType}-${getLivePeriodOptionKey(period)}`}
+                            className={`store-me-v2-period-check${isSelectionKeyChecked(selectedLiveMonthKeys, monthKey) ? ' active' : ''}`}
+                            key={monthKey}
                           >
                             <input
                               type="checkbox"
-                              checked={isLivePeriodSelected(period)}
-                              onChange={() => toggleLivePeriodSelection(period)}
+                              checked={isSelectionKeyChecked(selectedLiveMonthKeys, monthKey)}
+                              onChange={() => toggleLiveMonthSelection(monthKey)}
                               disabled={sourceMode !== 'live'}
                             />
                             <span>{label}</span>
@@ -1040,25 +1187,61 @@ export function StoreMyPerformancePage(input: {
                     )}
                   </div>
                 </div>
-                <label className="store-me-v2-filter-field">
-                  <span>{t('storeMe.closedSnapshotSelect')}</span>
-                  <select
-                    value={
-                      selectedClosedSnapshotRunId ||
-                      activeClosedSnapshotRun?.snapshotRunId ||
-                      ''
-                    }
-                    onChange={(event) => setSelectedClosedSnapshotRunId(event.target.value)}
-                    disabled={sourceMode !== 'closed' || availableClosedSnapshotRuns.length === 0}
-                  >
-                    <option value="">{t('storeMe.latestClosedSnapshot')}</option>
-                    {availableClosedSnapshotRuns.map((run) => (
-                      <option key={run.snapshotRunId} value={run.snapshotRunId}>
-                        {formatSnapshotOptionLabel(run, locale)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                {selectedLivePeriodType === 'daily' ? (
+                  <div className="store-me-v2-filter-field">
+                    <span>{t('storeMe.loadedDays')}</span>
+                    <div
+                      className="store-me-v2-period-picklist"
+                      role="group"
+                      aria-label={t('storeMe.loadedDaySelect')}
+                    >
+                      {scopedAvailableDailyPeriods.length ? (
+                        scopedAvailableDailyPeriods.map((period) => {
+                          const label = formatLivePeriodOptionLabel(locale, period)
+                          const periodKey = getLivePeriodOptionKey(period)
+
+                          return (
+                            <label
+                              className={`store-me-v2-period-check${isSelectionKeyChecked(selectedLiveDayStarts, periodKey) ? ' active' : ''}`}
+                              key={`${period.periodType}-${periodKey}`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isSelectionKeyChecked(selectedLiveDayStarts, periodKey)}
+                                onChange={() => toggleLiveDaySelection(period)}
+                                disabled={sourceMode !== 'live'}
+                              />
+                              <span>{label}</span>
+                            </label>
+                          )
+                        })
+                      ) : (
+                        <span className="store-me-v2-period-empty">{t('storeMe.noLoadedPeriods')}</span>
+                      )}
+                    </div>
+                  </div>
+                ) : null}
+                {usesClosedSnapshotMode ? (
+                  <label className="store-me-v2-filter-field">
+                    <span>{t('storeMe.closedSnapshotSelect')}</span>
+                    <select
+                      value={
+                        selectedClosedSnapshotRunId ||
+                        activeClosedSnapshotRun?.snapshotRunId ||
+                        ''
+                      }
+                      onChange={(event) => setSelectedClosedSnapshotRunId(event.target.value)}
+                      disabled={sourceMode !== 'closed' || availableClosedSnapshotRuns.length === 0}
+                    >
+                      <option value="">{t('storeMe.latestClosedSnapshot')}</option>
+                      {availableClosedSnapshotRuns.map((run) => (
+                        <option key={run.snapshotRunId} value={run.snapshotRunId}>
+                          {formatSnapshotOptionLabel(run, locale)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
               </div>
             ) : null}
           </section>
