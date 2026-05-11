@@ -323,6 +323,108 @@ describe("ReportingService KPI benchmark scoring", () => {
     );
   });
 
+  it("maps employee NET_SALES to personnel target achievement for published profile configs without the alias", async () => {
+    const reportingRepository = {
+      resolveEmployeeIdForAuthIdentity: jest.fn(async () => "employee-1"),
+      listEmployeeKpiPeriods: jest.fn(async () => [
+        {
+          period_type: "monthly",
+          period_start: "2026-03-01",
+          period_end: "2026-03-31",
+        },
+      ]),
+      getLatestEmployeeKpiPeriod: jest.fn(async () => ({
+        period_type: "monthly",
+        period_start: "2026-03-01",
+        period_end: "2026-03-31",
+        store_id: "store-1",
+      })),
+      getEmployeePerformanceRows: jest.fn(async () => [
+        {
+          employee_id: "employee-1",
+          first_name: "Ada",
+          last_name: "Lovelace",
+          store_id: "store-1",
+          store_name: "Marmara Park",
+          kpi_code: "NET_SALES",
+          kpi_name: "Net Sales",
+          target_value: "100000",
+          personnel_target_reference_id: "00000000-0000-4000-8000-000000000901",
+          actual_value: "110000",
+        },
+      ]),
+      getPeerEmployeePerformanceRows: jest.fn(async () => []),
+      getEmployeeTurkeyBenchmarkValues: jest.fn(async () => []),
+    };
+    const service = new ReportingService(
+      reportingRepository as never,
+      {
+        getKpiConfigRows: jest.fn(async () => [
+          {
+            config_key: "store_profile",
+            config_payload: {
+              profileCode: "store",
+              title: "Store score profile",
+              summary: "Store score profile",
+              futureMetricRule: "test",
+              metrics: [],
+            },
+          },
+          {
+            config_key: "personnel_profile",
+            config_payload: {
+              profileCode: "personnel",
+              title: "Personnel score profile",
+              summary: "Personnel score profile",
+              futureMetricRule: "test",
+              metrics: [
+                {
+                  code: "TARGET_ACHIEVEMENT",
+                  label: "Hedef gerceklestirme orani",
+                  weightPercent: 100,
+                  ownerRole: "STORE_PERSONNEL",
+                  scoreBehavior: "warning_first",
+                  direction: "HIGHER_IS_BETTER",
+                  benchmarkSource: "TARGET",
+                  capRatio: 1.2,
+                  aliases: ["STORE_SALES", "SALES_TARGET_ACHIEVEMENT"],
+                },
+              ],
+            },
+          },
+          { config_key: "ownership_matrix", config_payload: [] },
+          { config_key: "grading_bands", config_payload: [] },
+        ]),
+        getLatestPublishedKpiConfigVersion: jest.fn(async () => null),
+      } as never,
+      {} as never,
+      {} as never,
+    );
+
+    const result = await service.getMyPerformance({
+      userId: "user-1",
+      employeeId: "employee-1",
+      companyIds: [],
+      regionIds: [],
+      storeIds: ["store-1"],
+      periodType: "monthly",
+      periodStart: "2026-03-01",
+    });
+
+    const targetAchievement = result.metrics.find(
+      (metric) => metric.code === "TARGET_ACHIEVEMENT",
+    );
+    expect((targetAchievement as Record<string, unknown> | undefined)?.actualValue).toBe(
+      110000,
+    );
+    expect((targetAchievement as Record<string, unknown> | undefined)?.targetValue).toBe(
+      100000,
+    );
+    expect((targetAchievement as Record<string, unknown> | undefined)?.scoreStatus).toBe(
+      "scored",
+    );
+  });
+
   it("keeps closed personnel profiles renderable when the selected snapshot has no score row", async () => {
     const employeeId = "00000000-0000-0000-0000-000000000202";
     const reportingRepository = {

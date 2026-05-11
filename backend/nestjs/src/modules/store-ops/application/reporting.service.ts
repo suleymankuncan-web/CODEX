@@ -8,6 +8,7 @@ import {
   kpiGradingBands,
   KpiScoreProfile,
   kpiOwnershipMatrix,
+  normalizeKpiScoreProfile,
   personnelKpiScoreProfile,
   storeKpiScoreProfile,
 } from "./kpi-config.contract";
@@ -1417,8 +1418,8 @@ export class ReportingService {
 
     if (storeProfile && personnelProfile && ownershipMatrixPayload && gradingBandsPayload) {
       return {
-        storeProfile: storeProfile as KpiScoreProfile,
-        personnelProfile: personnelProfile as KpiScoreProfile,
+        storeProfile: normalizeKpiScoreProfile(storeProfile as KpiScoreProfile),
+        personnelProfile: normalizeKpiScoreProfile(personnelProfile as KpiScoreProfile),
         ownershipMatrix: ownershipMatrixPayload as KpiOwnershipMatrixRow[],
         gradingBands: gradingBandsPayload as KpiGradingBand[],
       };
@@ -1539,8 +1540,8 @@ export class ReportingService {
 
   private getDefaultKpiConfig() {
     return {
-      storeProfile: storeKpiScoreProfile,
-      personnelProfile: personnelKpiScoreProfile,
+      storeProfile: normalizeKpiScoreProfile(storeKpiScoreProfile),
+      personnelProfile: normalizeKpiScoreProfile(personnelKpiScoreProfile),
       ownershipMatrix: kpiOwnershipMatrix,
       gradingBands: kpiGradingBands,
     };

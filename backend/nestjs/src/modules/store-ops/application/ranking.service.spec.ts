@@ -125,6 +125,37 @@ describe("RankingService", () => {
     };
   }
 
+  function createKpiConfigRepositoryMockWithPersonnelProfile(
+    metrics: Array<{
+      code: string;
+      label: string;
+      weightPercent: number;
+      benchmarkSource: "TARGET" | "TURKEY_AVERAGE";
+      aliases?: string[];
+    }>,
+  ) {
+    return {
+      getKpiConfigRows: jest.fn(async () => [
+        {
+          config_key: "personnel_profile",
+          config_payload: {
+            profileCode: "personnel",
+            title: "Custom personnel score profile",
+            summary: "Custom ranking profile for test",
+            futureMetricRule: "test",
+            metrics: metrics.map((metric) => ({
+              ...metric,
+              ownerRole: "STORE_PERSONNEL",
+              scoreBehavior: "score_only",
+              direction: "HIGHER_IS_BETTER",
+              capRatio: 1.2,
+            })),
+          },
+        },
+      ]),
+    };
+  }
+
   function createStoreKpiRows(input: {
     storeId: string;
     storeName: string;
@@ -569,6 +600,60 @@ describe("RankingService", () => {
     ]);
     expect(result.storeLeaderboard.items[0].scoreValue).toBeGreaterThan(
       result.storeLeaderboard.items[1].scoreValue,
+    );
+  });
+
+  it("maps personnel NET_SALES rows into target achievement when published config is missing the alias", async () => {
+    const personnelRows = [
+      {
+        ...createPersonnelRows(1)[0],
+        employee_id: "employee-net-sales",
+        kpi_code: "NET_SALES",
+        kpi_name: "Net Sales",
+        actual_value: "110000",
+        target_value: "100000",
+      },
+    ];
+    const repository = createRepositoryMock({ personnelRows, storeRows: [] });
+    const service = new RankingService(
+      repository as never,
+      createKpiConfigRepositoryMockWithPersonnelProfile([
+        {
+          code: "TARGET_ACHIEVEMENT",
+          label: "Hedef gerceklestirme orani",
+          weightPercent: 100,
+          benchmarkSource: "TARGET",
+          aliases: ["STORE_SALES", "SALES_TARGET_ACHIEVEMENT"],
+        },
+      ]) as never,
+    );
+
+    const result = await service.getRankings({
+      userId: "regional-1",
+      roleCodes: ["REGION_MANAGER"],
+      companyIds: [],
+      regionIds: [],
+      storeIds: [],
+      assignedStoreIds: [],
+      periodType: "monthly",
+    });
+
+    expect(repository.listRankingPersonnelKpiRows).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metricCodes: expect.arrayContaining(["NET_SALES"]),
+      }),
+    );
+    expect(result.personnelLeaderboard.items[0]).toEqual(
+      expect.objectContaining({
+        employeeId: "employee-net-sales",
+        metrics: expect.arrayContaining([
+          expect.objectContaining({
+            code: "TARGET_ACHIEVEMENT",
+            actualValue: 110000,
+            targetValue: 100000,
+          }),
+        ]),
+      }),
     );
   });
 

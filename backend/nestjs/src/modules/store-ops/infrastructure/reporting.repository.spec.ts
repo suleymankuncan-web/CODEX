@@ -412,7 +412,9 @@ describe("ReportingRepository personnel target reference queries", () => {
     expect(sql).toContain("ptr.period_end >= ka.period_end");
     expect(sql).toContain("ptr.target_type = 'monthly_sales_target'");
     expect(sql).toContain("ptr.status = 'approved'");
-    expect(sql).toContain("kd.kpi_code = 'TARGET_ACHIEVEMENT'");
+    expect(sql).toContain(
+      "kd.kpi_code IN ('TARGET_ACHIEVEMENT', 'NET_SALES', 'STORE_SALES', 'SALES_TARGET_ACHIEVEMENT')",
+    );
     expect(sql).toContain("ptr.target_value::text AS target_value");
     expect(sql).toContain(
       "ptr.personnel_target_reference_id::text AS personnel_target_reference_id",
@@ -437,10 +439,34 @@ describe("ReportingRepository personnel target reference queries", () => {
     expect(sql).toContain("ptr.period_end >= ka.period_end");
     expect(sql).toContain("ptr.target_type = 'monthly_sales_target'");
     expect(sql).toContain("ptr.status = 'approved'");
-    expect(sql).toContain("kd.kpi_code = 'TARGET_ACHIEVEMENT'");
+    expect(sql).toContain(
+      "kd.kpi_code IN ('TARGET_ACHIEVEMENT', 'NET_SALES', 'STORE_SALES', 'SALES_TARGET_ACHIEVEMENT')",
+    );
     expect(sql).toContain("ptr.target_value::text AS target_value");
     expect(sql).toContain(
       "ptr.personnel_target_reference_id::text AS personnel_target_reference_id",
     );
+  });
+
+  it("joins approved personnel target references for ranking personnel NET_SALES rows", async () => {
+    const { query, repository } = createRepository();
+
+    await repository.listRankingPersonnelKpiRows({
+      metricCodes: ["NET_SALES"],
+      companyIds: [],
+      periodType: "monthly",
+      periodStart: "2026-03-01",
+      periodEnd: "2026-03-31",
+    });
+
+    const sql = String(query.mock.calls[0][0]);
+    expect(sql).toContain("LEFT JOIN ops.personnel_target_reference ptr");
+    expect(sql).toContain("ptr.employee_id = ka.employee_id");
+    expect(sql).toContain("ptr.target_type = 'monthly_sales_target'");
+    expect(sql).toContain("ptr.status = 'approved'");
+    expect(sql).toContain(
+      "kd.kpi_code IN ('TARGET_ACHIEVEMENT', 'NET_SALES', 'STORE_SALES', 'SALES_TARGET_ACHIEVEMENT')",
+    );
+    expect(sql).toContain("ptr.target_value::text AS target_value");
   });
 });

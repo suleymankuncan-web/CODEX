@@ -1350,7 +1350,7 @@ export class ReportingRepository {
          AND ptr.period_end >= ka.period_end
          AND ptr.target_type = 'monthly_sales_target'
          AND ptr.status = 'approved'
-         AND kd.kpi_code = 'TARGET_ACHIEVEMENT'
+         AND kd.kpi_code IN ('TARGET_ACHIEVEMENT', 'NET_SALES', 'STORE_SALES', 'SALES_TARGET_ACHIEVEMENT')
         INNER JOIN ops.employee e
           ON e.employee_id = ka.employee_id
         LEFT JOIN LATERAL (
@@ -1438,7 +1438,7 @@ export class ReportingRepository {
          AND ptr.period_end >= ka.period_end
          AND ptr.target_type = 'monthly_sales_target'
          AND ptr.status = 'approved'
-         AND kd.kpi_code = 'TARGET_ACHIEVEMENT'
+         AND kd.kpi_code IN ('TARGET_ACHIEVEMENT', 'NET_SALES', 'STORE_SALES', 'SALES_TARGET_ACHIEVEMENT')
         WHERE ${clauses.join(" AND ")}
         ORDER BY ka.employee_id ASC, kd.kpi_code ASC
       `,
@@ -1708,7 +1708,7 @@ export class ReportingRepository {
          AND ptr.period_end >= ka.period_end
          AND ptr.target_type = 'monthly_sales_target'
          AND ptr.status = 'approved'
-         AND kd.kpi_code = 'TARGET_ACHIEVEMENT'
+         AND kd.kpi_code IN ('TARGET_ACHIEVEMENT', 'NET_SALES', 'STORE_SALES', 'SALES_TARGET_ACHIEVEMENT')
         LEFT JOIN LATERAL (
           SELECT
             ua.user_id::text AS user_id,
