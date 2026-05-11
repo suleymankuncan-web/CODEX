@@ -183,11 +183,38 @@ function getTargetProgressPercent(metrics: MyPerformanceMetric[]) {
   return Math.max(0, Math.min(100, Math.round(source * 100)))
 }
 
-function formatMonthYear(locale: AppLocale, date: string) {
+function getPeriodDateKey(input: string | null | undefined) {
+  const match = input?.trim().match(/^(\d{4}-\d{2}-\d{2})/)
+  return match?.[1] ?? ''
+}
+
+function getPeriodYear(input: string | null | undefined) {
+  return getPeriodDateKey(input).slice(0, 4)
+}
+
+function comparePeriodStart(left: string, right: string) {
+  const leftKey = getPeriodDateKey(left) || left
+  const rightKey = getPeriodDateKey(right) || right
+  return leftKey.localeCompare(rightKey)
+}
+
+function isSamePeriodStart(left: string | null | undefined, right: string | null | undefined) {
+  const leftKey = getPeriodDateKey(left)
+  const rightKey = getPeriodDateKey(right)
+  return leftKey !== '' && leftKey === rightKey
+}
+
+function formatMonthYear(locale: AppLocale, t: TranslateFunction, input: string) {
+  const dateKey = getPeriodDateKey(input)
+
+  if (!dateKey) {
+    return t('storeMe.currentPeriod')
+  }
+
   return new Intl.DateTimeFormat(getIntlLocale(locale), {
     month: 'long',
     year: 'numeric',
-  }).format(new Date(`${date}T00:00:00`))
+  }).format(new Date(`${dateKey}T00:00:00`))
 }
 
 function formatSignedPercent(locale: AppLocale, input: number | null) {
@@ -279,24 +306,24 @@ export function StoreMyPerformancePage(input: {
     [performance?.availablePeriods],
   )
   const monthlyDetailPeriods = useMemo(() => {
-    const activeYear = (performance?.period?.periodStart ?? availableLivePeriods.at(-1)?.periodStart ?? '').slice(0, 4)
+    const activeYear = getPeriodYear(performance?.period?.periodStart ?? availableLivePeriods.at(-1)?.periodStart)
     const scopedPeriods = activeYear
-      ? availableLivePeriods.filter((period) => period.periodStart.startsWith(activeYear))
+      ? availableLivePeriods.filter((period) => getPeriodYear(period.periodStart) === activeYear)
       : availableLivePeriods
 
     return [...scopedPeriods]
-      .sort((left, right) => left.periodStart.localeCompare(right.periodStart))
+      .sort((left, right) => comparePeriodStart(left.periodStart, right.periodStart))
       .slice(-12)
   }, [availableLivePeriods, performance?.period?.periodStart])
 
   const monthlyPerformanceQueries = useQueries({
     queries: monthlyDetailPeriods.map((period) => ({
-      queryKey: ['my-performance', 'live', period.periodStart, ''],
+      queryKey: ['my-performance', 'live', getPeriodDateKey(period.periodStart) || period.periodStart, ''],
       queryFn: () =>
         getMyPerformance({
           mode: 'live',
           periodType: 'monthly',
-          periodStart: period.periodStart,
+          periodStart: getPeriodDateKey(period.periodStart) || period.periodStart,
         }),
       enabled: enabled && sourceMode === 'live' && performanceQuery.isSuccess,
       retry: false,
@@ -399,7 +426,7 @@ export function StoreMyPerformancePage(input: {
   const monthlyPerformanceData = monthlyPeriodsForRows.map((period, index) => {
     const queriedData = monthlyPerformanceQueries[index]?.data
 
-    return queriedData ?? (period.periodStart === getPeriodStart(performance) ? performance : null)
+    return queriedData ?? (isSamePeriodStart(period.periodStart, getPeriodStart(performance)) ? performance : null)
   })
   const monthlyDetailRows = monthlyPeriodsForRows.map((period, index) => {
     const monthPerformance = monthlyPerformanceData[index]
@@ -408,10 +435,10 @@ export function StoreMyPerformancePage(input: {
     const scoreValue = monthPerformance?.score.value ?? null
 
     return {
-      key: period.periodStart,
-      label: formatMonthYear(locale, period.periodStart),
+      key: getPeriodDateKey(period.periodStart) || period.periodStart,
+      label: formatMonthYear(locale, t, period.periodStart),
       periodNote:
-        period.periodStart === getPeriodStart(performance)
+        isSamePeriodStart(period.periodStart, getPeriodStart(performance))
           ? t('storeMe.activePeriod')
           : formatPeriodLabel(locale, t, { period }),
       scoreValue,
@@ -427,7 +454,7 @@ export function StoreMyPerformancePage(input: {
     }
   })
   const activeMonthlyRow =
-    monthlyDetailRows.find((row) => row.key === getPeriodStart(performance)) ??
+    monthlyDetailRows.find((row) => isSamePeriodStart(row.key, getPeriodStart(performance))) ??
     monthlyDetailRows.at(-1) ??
     null
   const previousMonthlyRow = activeMonthlyRow
@@ -571,7 +598,10 @@ export function StoreMyPerformancePage(input: {
                   >
                     <option value="">{t('storeMe.latestPeriod')}</option>
                     {availableLivePeriods.map((period) => (
-                      <option key={`${period.periodType}-${period.periodStart}`} value={period.periodStart}>
+                      <option
+                        key={`${period.periodType}-${getPeriodDateKey(period.periodStart) || period.periodStart}`}
+                        value={getPeriodDateKey(period.periodStart) || period.periodStart}
+                      >
                         {`${formatDate(period.periodStart, locale)} - ${formatDate(
                           period.periodEnd,
                           locale,

@@ -1157,8 +1157,8 @@ export class ReportingRepository {
     }>(
       `
         SELECT
-          ka.period_start,
-          ka.period_end,
+          ka.period_start::text AS period_start,
+          ka.period_end::text AS period_end,
           ka.store_id
         FROM ops.kpi_actual ka
         INNER JOIN ops.kpi_definition kd
@@ -1210,8 +1210,8 @@ export class ReportingRepository {
       `
         SELECT DISTINCT
           ka.period_type,
-          ka.period_start,
-          ka.period_end
+          ka.period_start::text AS period_start,
+          ka.period_end::text AS period_end
         FROM ops.kpi_actual ka
         INNER JOIN ops.kpi_definition kd
           ON kd.kpi_id = ka.kpi_id
