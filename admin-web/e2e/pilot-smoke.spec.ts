@@ -1,9 +1,15 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 
 const storeId = '00000000-0000-0000-0000-000000000100'
 const employeeId = '00000000-0000-0000-0000-000000000200'
 const regionId = '00000000-0000-0000-0000-000000000010'
 const companyId = '00000000-0000-0000-0000-000000000001'
+
+type SmokeRoute = {
+  path: string
+  urlPattern: RegExp
+  heading: Locator
+}
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -28,24 +34,22 @@ test('core admin routes open without unavailable states', async ({ page }) => {
   const routes = [
     {
       path: '/admin/integrations',
+      urlPattern: /\/admin\/integrations$/,
       heading: page.getByRole('heading', { name: 'Aksiyon bekleyen partiler' }),
     },
     {
       path: '/admin/master-data',
+      urlPattern: /\/admin\/master-data$/,
       heading: page.getByRole('heading', { name: 'Hazırlık partileri' }),
     },
     {
       path: '/admin/targets',
+      urlPattern: /\/admin\/targets$/,
       heading: page.getByRole('heading', { name: 'Bekleyen hedef dağıtım talepleri' }),
     },
   ]
 
-  for (const route of routes) {
-    await page.goto(route.path)
-    await expect(page).toHaveURL(new RegExp(`${route.path.replaceAll('/', '\\/')}$`))
-    await expect(route.heading).toBeVisible()
-    await expectHealthySurface(page)
-  }
+  await verifyPilotRoutes(page, routes)
 
   monitor.expectClean()
 })
@@ -55,28 +59,27 @@ test('core store routes open without unavailable states', async ({ page }) => {
   const routes = [
     {
       path: '/store',
+      urlPattern: /\/store$/,
       heading: page.getByRole('heading', { name: /Mevcut kullan/i }),
     },
     {
       path: '/store/me',
+      urlPattern: /\/store\/me$/,
       heading: page.locator('.store-me-v2-page'),
     },
     {
       path: '/store/rankings',
+      urlPattern: /\/store\/rankings$/,
       heading: page.getByRole('heading', { name: 'Sıralamalar' }),
     },
     {
       path: '/store/approvals',
+      urlPattern: /\/store\/approvals$/,
       heading: page.getByRole('heading', { name: 'Hedef dağıtım talebi' }),
     },
   ]
 
-  for (const route of routes) {
-    await page.goto(route.path)
-    await expect(page).toHaveURL(new RegExp(`${route.path.replaceAll('/', '\\/')}$`))
-    await expect(route.heading).toBeVisible()
-    await expectHealthySurface(page)
-  }
+  await verifyPilotRoutes(page, routes)
 
   monitor.expectClean()
 })
@@ -101,6 +104,20 @@ async function expectHealthySurface(page: Page) {
   await expect(page.locator('body')).not.toContainText(
     /unavailable|acilamadi|could not load|couldn't load|route not available|session rejected/i,
   )
+}
+
+function verifyPilotRoutes(page: Page, routes: SmokeRoute[]) {
+  return routes.reduce(
+    (chain, route) => chain.then(() => verifyPilotRoute(page, route)),
+    Promise.resolve(),
+  )
+}
+
+async function verifyPilotRoute(page: Page, route: SmokeRoute) {
+  await page.goto(route.path)
+  await expect(page).toHaveURL(route.urlPattern)
+  await expect(route.heading).toBeVisible()
+  await expectHealthySurface(page)
 }
 
 function watchPilotFailures(page: Page) {
