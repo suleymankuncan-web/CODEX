@@ -90,4 +90,48 @@ describe("ReportingController store score breakdown", () => {
       periodStart: "2026-03-01",
     });
   });
+
+  it("keeps broad personnel profile reads at company scope when company and region scopes coexist", async () => {
+    const reportingService = {
+      getPersonnelPerformance: jest.fn(async () => ({
+        employee: { employeeId: "employee-2" },
+      })),
+    };
+    const controller = new ReportingController(
+      reportingService as never,
+      { getRankings: jest.fn() } as never,
+    );
+
+    await controller.getPersonnelPerformance(
+      {
+        user: {
+          userId: "admin-1",
+          employeeId: "admin-employee",
+          roleCodes: ["SUPER_ADMIN", "REGION_MANAGER"],
+          scope: {
+            companyIds: ["company-1"],
+            regionIds: ["region-1"],
+            storeIds: ["store-raw"],
+          },
+          actionScope: {
+            assignedStoreIds: ["store-1"],
+          },
+        },
+      },
+      "employee-2",
+      {
+        mode: "live",
+        periodType: "monthly",
+        periodStart: "2026-03-01",
+      },
+    );
+
+    expect(reportingService.getPersonnelPerformance).toHaveBeenCalledWith(
+      expect.objectContaining({
+        companyIds: ["company-1"],
+        regionIds: [],
+        storeIds: [],
+      }),
+    );
+  });
 });

@@ -499,13 +499,26 @@ export class ReportingController {
       };
     }
 
+    if (input.actorScope.companyIds.length > 0) {
+      return {
+        companyIds: input.actorScope.companyIds,
+        regionIds: [],
+        storeIds: [],
+      };
+    }
+
+    if (input.actorScope.regionIds.length > 0) {
+      return {
+        companyIds: [],
+        regionIds: input.actorScope.regionIds,
+        storeIds: [],
+      };
+    }
+
     return {
-      companyIds: input.actorScope.companyIds,
-      regionIds: input.actorScope.regionIds,
-      storeIds:
-        input.actorScope.companyIds.length > 0 || input.actorScope.regionIds.length > 0
-          ? []
-          : storeIds,
+      companyIds: [],
+      regionIds: [],
+      storeIds,
     };
   }
 }
