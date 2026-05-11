@@ -398,6 +398,24 @@ describe("ReportingService personnel performance profile access", () => {
     targetStoreId?: string | null;
     targetRegionId?: string | null;
     targetCompanyId?: string | null;
+    latestPeriod?: {
+      period_type?: string;
+      period_start: string;
+      period_end: string;
+      store_id: string | null;
+    } | null;
+    employeeRows?: Array<{
+      employee_id: string;
+      first_name: string;
+      last_name: string;
+      store_id: string | null;
+      store_name: string | null;
+      kpi_code: string;
+      kpi_name: string;
+      target_value: string | null;
+      personnel_target_reference_id: string | null;
+      actual_value: string;
+    }>;
   }) {
     const targetStoreId = input?.targetStoreId ?? "store-1";
     const targetRegionId = input?.targetRegionId ?? "region-1";
@@ -423,12 +441,16 @@ describe("ReportingService personnel performance profile access", () => {
           period_end: "2026-03-31",
         },
       ]),
-      getLatestEmployeeKpiPeriod: jest.fn(async () => ({
-        period_start: "2026-03-01",
-        period_end: "2026-03-31",
-        store_id: targetStoreId,
-      })),
-      getEmployeePerformanceRows: jest.fn(async () => [
+      getLatestEmployeeKpiPeriod: jest.fn(async () => (
+        input?.latestPeriod === undefined
+          ? {
+              period_start: "2026-03-01",
+              period_end: "2026-03-31",
+              store_id: targetStoreId,
+            }
+          : input.latestPeriod
+      )),
+      getEmployeePerformanceRows: jest.fn(async () => input?.employeeRows ?? [
         {
           employee_id: targetEmployeeId,
           first_name: "Ada",
@@ -518,6 +540,36 @@ describe("ReportingService personnel performance profile access", () => {
     });
 
     expect(result.employee?.displayName).toBe("Ada Lovelace");
+  });
+
+  it("keeps the selected personnel identity when the requested live period has no KPI rows", async () => {
+    const repository = createRepositoryMock({
+      targetRegionId: "region-1",
+      latestPeriod: null,
+    });
+    const service = createService(repository);
+
+    const result = await service.getPersonnelPerformance({
+      userId: "region-manager-1",
+      employeeId: "region-manager-employee",
+      targetEmployeeId,
+      roleCodes: ["REGION_MANAGER"],
+      companyIds: ["company-1"],
+      regionIds: ["region-1"],
+      storeIds: [],
+      assignedStoreIds: [],
+      periodType: "monthly",
+      periodStart: "2026-05-01",
+    });
+
+    expect(result.employee).toEqual({
+      employeeId: targetEmployeeId,
+      displayName: "Ada Lovelace",
+      storeId: "store-1",
+      storeName: "Marmara Park",
+    });
+    expect(result.period).toBeNull();
+    expect(result.partial.isPartial).toBe(true);
   });
 
   it("allows super admins without explicit company scope to open global personnel profiles", async () => {
