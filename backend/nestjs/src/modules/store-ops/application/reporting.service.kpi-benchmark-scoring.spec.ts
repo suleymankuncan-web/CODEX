@@ -249,6 +249,11 @@ describe("ReportingService KPI benchmark scoring", () => {
     const targetAchievement = result.metrics.find(
       (metric) => metric.code === "TARGET_ACHIEVEMENT",
     );
+    expect(reportingRepository.listEmployeeKpiPeriods).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metricCodes: expect.arrayContaining(["TARGET_ACHIEVEMENT", "STORE_SALES"]),
+      }),
+    );
     expect((targetAchievement as Record<string, unknown> | undefined)?.scoreStatus).toBe(
       "scored",
     );

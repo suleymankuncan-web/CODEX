@@ -99,6 +99,38 @@ describe("ReportingRepository access scope contract", () => {
     expect(query).not.toHaveBeenCalled();
   });
 
+  it("uses active assignment fallback when scoping live employee KPI period lookups", async () => {
+    const { query, repository } = createRepository();
+
+    await repository.getLatestEmployeeKpiPeriod({
+      employeeId: "00000000-0000-4000-8000-000000000010",
+      metricCodes: ["UPT"],
+      companyIds: [],
+      regionIds: [],
+      storeIds: ["00000000-0000-4000-8000-000000000100"],
+    });
+    await repository.listEmployeeKpiPeriods({
+      employeeId: "00000000-0000-4000-8000-000000000010",
+      metricCodes: ["UPT"],
+      companyIds: [],
+      regionIds: ["00000000-0000-4000-8000-000000000010"],
+      storeIds: [],
+    });
+
+    const latestSql = String(query.mock.calls[0][0]);
+    const listSql = String(query.mock.calls[1][0]);
+
+    expect(latestSql).toContain("LEFT JOIN LATERAL");
+    expect(latestSql).toContain("assignment_status = 'active'");
+    expect(latestSql).toContain("COALESCE(ka.store_id, assignment.store_id)");
+    expect(latestSql).toContain("COALESCE(ka.store_id, assignment.store_id)::text AS store_id");
+    expect(listSql).toContain("LEFT JOIN LATERAL");
+    expect(listSql).toContain("assignment_status = 'active'");
+    expect(listSql).toContain(
+      "COALESCE(ka.region_id, assignment.region_id, store.region_id)",
+    );
+  });
+
   it("does not resolve external employee references without company scope", async () => {
     const { query, repository } = createRepository();
 
