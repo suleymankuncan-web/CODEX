@@ -19,7 +19,7 @@ export function downloadCsv(input: {
 
 const CSV_FORMULA_PREFIX_PATTERN = /^[=+\-@\t\r\n]/
 
-function escapeCsvCellForDownload(value: string | number | null | undefined) {
+export function escapeCsvCellForDownload(value: string | number | null | undefined) {
   const text = value === null || value === undefined ? '' : String(value)
   const safeText =
     typeof value === 'string' && CSV_FORMULA_PREFIX_PATTERN.test(text.trimStart())
