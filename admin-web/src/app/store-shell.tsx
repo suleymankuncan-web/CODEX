@@ -33,6 +33,8 @@ export function StoreShell(input: {
   const checklistOnly = isVisualMerchandiserOnly(input.authSummary)
   const location = useLocation()
   const rankingsRoute = location.pathname === '/store/rankings'
+  const storeMeRoute = location.pathname === '/store/me'
+  const immersiveRoute = rankingsRoute || storeMeRoute
   const storeRoute = (element: ReactNode, options?: { allowVm?: boolean }) => (
     <StoreRouteGuard authSummary={input.authSummary} allowVm={options?.allowVm}>
       {element}
@@ -63,8 +65,8 @@ export function StoreShell(input: {
   }
 
   return (
-    <div className={`store-shell${rankingsRoute ? ' store-shell-rankings' : ''}`}>
-      {rankingsRoute ? null : (
+    <div className={`store-shell${rankingsRoute ? ' store-shell-rankings' : ''}${storeMeRoute ? ' store-shell-store-me' : ''}`}>
+      {immersiveRoute ? null : (
         <header className="store-shell-header">
           <div>
             <div className="eyebrow">{t('storeHome.shellEyebrow')}</div>
