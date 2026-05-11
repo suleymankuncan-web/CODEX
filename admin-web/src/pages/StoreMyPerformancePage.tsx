@@ -167,6 +167,10 @@ function getLatestAvailablePeriodStart(periods: Array<{ periodStart: string }>) 
   return getPeriodDateKey(latestPeriod?.periodStart) || latestPeriod?.periodStart || ''
 }
 
+function getLivePeriodOptionKey(period: { periodStart: string }) {
+  return getPeriodDateKey(period.periodStart) || period.periodStart
+}
+
 function formatLivePeriodOptionLabel(
   locale: AppLocale,
   period: { periodType: string; periodStart: string; periodEnd: string },
@@ -391,6 +395,8 @@ export function StoreMyPerformancePage(input: {
   const [selectedLivePeriodStart, setSelectedLivePeriodStart] = useState(
     input.initialLivePeriodStart?.trim() ?? '',
   )
+  const [selectedLiveMonthStarts, setSelectedLiveMonthStarts] = useState<string[]>([])
+  const [selectedLiveDayStarts, setSelectedLiveDayStarts] = useState<string[]>([])
   const [selectedClosedSnapshotRunId, setSelectedClosedSnapshotRunId] = useState('')
   const [isDateFilterOpen, setIsDateFilterOpen] = useState(false)
   const [isKpiDetailOpen, setIsKpiDetailOpen] = useState(false)
@@ -468,38 +474,96 @@ export function StoreMyPerformancePage(input: {
   )
   const selectedLivePeriods =
     selectedLivePeriodType === 'daily' ? availableDailyPeriods : availableMonthlyPeriods
+  const selectedLivePeriodKeys =
+    selectedLivePeriodType === 'daily' ? selectedLiveDayStarts : selectedLiveMonthStarts
+  const selectedLivePeriodOptionKeys = useMemo(
+    () => selectedLivePeriods.map((period) => getLivePeriodOptionKey(period)).filter(Boolean),
+    [selectedLivePeriods],
+  )
+  const effectiveSelectedLivePeriods = useMemo(() => {
+    if (selectedLivePeriodKeys.length === 0) {
+      return selectedLivePeriods
+    }
+
+    const selectedKeySet = new Set(selectedLivePeriodKeys)
+    return selectedLivePeriods.filter((period) => selectedKeySet.has(getLivePeriodOptionKey(period)))
+  }, [selectedLivePeriodKeys, selectedLivePeriods])
+  const livePeriodFallbackType = useMemo(() => {
+    if (sourceMode !== 'live' || !performanceQuery.isSuccess || performance?.period) {
+      return null
+    }
+
+    if (selectedLivePeriodType === 'monthly' && selectedLivePeriods.length === 0 && availableDailyPeriods.length > 0) {
+      return 'daily' as const
+    }
+
+    if (selectedLivePeriodType === 'daily' && selectedLivePeriods.length === 0 && availableMonthlyPeriods.length > 0) {
+      return 'monthly' as const
+    }
+
+    return null
+  }, [
+    availableDailyPeriods.length,
+    availableMonthlyPeriods.length,
+    performance?.period,
+    performanceQuery.isSuccess,
+    selectedLivePeriodType,
+    selectedLivePeriods.length,
+    sourceMode,
+  ])
   const livePeriodFallbackStart = useMemo(() => {
-    if (sourceMode !== 'live' || !performanceQuery.isSuccess || performance?.period || selectedLivePeriods.length === 0) {
+    const fallbackPeriods =
+      livePeriodFallbackType === 'daily'
+        ? availableDailyPeriods
+        : livePeriodFallbackType === 'monthly'
+          ? availableMonthlyPeriods
+          : effectiveSelectedLivePeriods
+
+    if (sourceMode !== 'live' || !performanceQuery.isSuccess || performance?.period || fallbackPeriods.length === 0) {
       return ''
+    }
+
+    if (livePeriodFallbackType) {
+      return getLatestAvailablePeriodStart(fallbackPeriods)
     }
 
     const selectedKey = getPeriodDateKey(selectedLivePeriodStart)
     const selectedPeriodExists =
       selectedKey !== '' &&
-      selectedLivePeriods.some((period) => isSamePeriodStart(period.periodStart, selectedKey))
+      fallbackPeriods.some((period) => isSamePeriodStart(period.periodStart, selectedKey))
 
     if (selectedPeriodExists) {
       return ''
     }
 
-    return getLatestAvailablePeriodStart(selectedLivePeriods)
+    return getLatestAvailablePeriodStart(fallbackPeriods)
   }, [
+    availableDailyPeriods,
+    availableMonthlyPeriods,
+    effectiveSelectedLivePeriods,
+    livePeriodFallbackType,
     performance?.period,
     performanceQuery.isSuccess,
     selectedLivePeriodStart,
-    selectedLivePeriods,
     sourceMode,
   ])
   const monthlyDetailPeriods = useMemo(() => {
-    const activeYear = getPeriodYear(performance?.period?.periodStart ?? availableMonthlyPeriods.at(-1)?.periodStart)
+    const scopedAvailableMonthlyPeriods =
+      selectedLivePeriodType === 'monthly' ? effectiveSelectedLivePeriods : availableMonthlyPeriods
+    const activeYear = getPeriodYear(performance?.period?.periodStart ?? scopedAvailableMonthlyPeriods.at(-1)?.periodStart)
     const scopedPeriods = activeYear
-      ? availableMonthlyPeriods.filter((period) => getPeriodYear(period.periodStart) === activeYear)
-      : availableMonthlyPeriods
+      ? scopedAvailableMonthlyPeriods.filter((period) => getPeriodYear(period.periodStart) === activeYear)
+      : scopedAvailableMonthlyPeriods
 
     return [...scopedPeriods]
       .sort((left, right) => comparePeriodStart(left.periodStart, right.periodStart))
       .slice(-12)
-  }, [availableMonthlyPeriods, performance?.period?.periodStart])
+  }, [
+    availableMonthlyPeriods,
+    effectiveSelectedLivePeriods,
+    performance?.period?.periodStart,
+    selectedLivePeriodType,
+  ])
 
   const monthlyPerformanceQueries = useQueries({
     queries: monthlyDetailPeriods.map((period) => ({
@@ -526,11 +590,14 @@ export function StoreMyPerformancePage(input: {
     }
 
     const fallbackTimer = window.setTimeout(() => {
+      if (livePeriodFallbackType) {
+        setSelectedLivePeriodType(livePeriodFallbackType)
+      }
       setSelectedLivePeriodStart(livePeriodFallbackStart)
     }, 0)
 
     return () => window.clearTimeout(fallbackTimer)
-  }, [livePeriodFallbackStart, selectedLivePeriodStart])
+  }, [livePeriodFallbackStart, livePeriodFallbackType, selectedLivePeriodStart])
 
   useEffect(() => {
     if (!isKpiDetailOpen) {
@@ -546,6 +613,69 @@ export function StoreMyPerformancePage(input: {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isKpiDetailOpen])
+
+  function getSelectedPeriodsForType(periodType: LivePeriodType) {
+    const periods = periodType === 'daily' ? availableDailyPeriods : availableMonthlyPeriods
+    const selectedKeys = periodType === 'daily' ? selectedLiveDayStarts : selectedLiveMonthStarts
+
+    if (selectedKeys.length === 0) {
+      return periods
+    }
+
+    const selectedKeySet = new Set(selectedKeys)
+    return periods.filter((period) => selectedKeySet.has(getLivePeriodOptionKey(period)))
+  }
+
+  function setLivePeriodSelectionKeys(periodType: LivePeriodType, keys: string[]) {
+    if (periodType === 'daily') {
+      setSelectedLiveDayStarts(keys)
+      return
+    }
+
+    setSelectedLiveMonthStarts(keys)
+  }
+
+  function changeLivePeriodType(periodType: LivePeriodType) {
+    const nextPeriods = getSelectedPeriodsForType(periodType)
+    setSelectedLivePeriodType(periodType)
+    setSelectedLivePeriodStart(getLatestAvailablePeriodStart(nextPeriods))
+  }
+
+  function isLivePeriodSelected(period: { periodStart: string }) {
+    if (selectedLivePeriodKeys.length === 0) {
+      return true
+    }
+
+    return selectedLivePeriodKeys.includes(getLivePeriodOptionKey(period))
+  }
+
+  function toggleLivePeriodSelection(period: { periodStart: string }) {
+    const key = getLivePeriodOptionKey(period)
+    if (!key) {
+      return
+    }
+
+    const currentKeys =
+      selectedLivePeriodKeys.length > 0 ? selectedLivePeriodKeys : selectedLivePeriodOptionKeys
+    const nextKeySet = new Set(currentKeys)
+
+    if (nextKeySet.has(key)) {
+      nextKeySet.delete(key)
+    } else {
+      nextKeySet.add(key)
+    }
+
+    if (nextKeySet.size === 0) {
+      return
+    }
+
+    const nextKeys = selectedLivePeriodOptionKeys.filter((optionKey) => nextKeySet.has(optionKey))
+    const storedKeys = nextKeys.length === selectedLivePeriodOptionKeys.length ? [] : nextKeys
+    const nextPeriods = selectedLivePeriods.filter((item) => nextKeySet.has(getLivePeriodOptionKey(item)))
+
+    setLivePeriodSelectionKeys(selectedLivePeriodType, storedKeys)
+    setSelectedLivePeriodStart(getLatestAvailablePeriodStart(nextPeriods))
+  }
 
   if (!enabled) {
     return (
@@ -745,7 +875,7 @@ export function StoreMyPerformancePage(input: {
   const loadedPeriodCount =
     sourceMode === 'closed'
       ? availableClosedSnapshotRuns.length
-      : selectedLivePeriods.length || monthlyDetailRows.length || availableLivePeriods.length
+      : effectiveSelectedLivePeriods.length || monthlyDetailRows.length || availableLivePeriods.length
   const dataQualityLabel = partial.isPartial ? t('storeMe.missingDataExists') : t('storeMe.completeData')
   const selectedPeriodLabel = `${periodLabel} · ${formatSourceMode(t, performance.source.mode)}`
   const gradeLabel = `${performanceGrade.code} - ${t(`storeMe.grade.${performanceGrade.code}` as TranslationKey)}`
@@ -861,10 +991,7 @@ export function StoreMyPerformancePage(input: {
                       className={selectedLivePeriodType === 'monthly' ? 'active' : ''}
                       type="button"
                       disabled={sourceMode !== 'live'}
-                      onClick={() => {
-                        setSelectedLivePeriodType('monthly')
-                        setSelectedLivePeriodStart('')
-                      }}
+                      onClick={() => changeLivePeriodType('monthly')}
                     >
                       {t('storeMe.liveMonth')}
                     </button>
@@ -872,40 +999,47 @@ export function StoreMyPerformancePage(input: {
                       className={selectedLivePeriodType === 'daily' ? 'active' : ''}
                       type="button"
                       disabled={sourceMode !== 'live'}
-                      onClick={() => {
-                        setSelectedLivePeriodType('daily')
-                        setSelectedLivePeriodStart('')
-                      }}
+                      onClick={() => changeLivePeriodType('daily')}
                     >
                       {t('storeMe.liveDay')}
                     </button>
                   </div>
                 </div>
-                <label className="store-me-v2-filter-field">
+                <div className="store-me-v2-filter-field">
                   <span>{selectedLivePeriodType === 'daily' ? t('storeMe.loadedDays') : t('storeMe.loadedMonths')}</span>
-                  <select
-                    value={selectedLivePeriodStart}
-                    onChange={(event) => setSelectedLivePeriodStart(event.target.value)}
-                    disabled={sourceMode !== 'live' || selectedLivePeriods.length === 0}
+                  <div
+                    className="store-me-v2-period-picklist"
+                    role="group"
                     aria-label={
                       selectedLivePeriodType === 'daily'
                         ? t('storeMe.loadedDaySelect')
                         : t('storeMe.loadedMonthSelect')
                     }
                   >
-                    <option value="">
-                      {selectedLivePeriodType === 'daily' ? t('storeMe.latestDay') : t('storeMe.latestMonth')}
-                    </option>
-                    {selectedLivePeriods.map((period) => (
-                      <option
-                        key={`${period.periodType}-${getPeriodDateKey(period.periodStart) || period.periodStart}`}
-                        value={getPeriodDateKey(period.periodStart) || period.periodStart}
-                      >
-                        {formatLivePeriodOptionLabel(locale, period)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    {selectedLivePeriods.length ? (
+                      selectedLivePeriods.map((period) => {
+                        const label = formatLivePeriodOptionLabel(locale, period)
+
+                        return (
+                          <label
+                            className={`store-me-v2-period-check${isLivePeriodSelected(period) ? ' active' : ''}`}
+                            key={`${period.periodType}-${getLivePeriodOptionKey(period)}`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isLivePeriodSelected(period)}
+                              onChange={() => toggleLivePeriodSelection(period)}
+                              disabled={sourceMode !== 'live'}
+                            />
+                            <span>{label}</span>
+                          </label>
+                        )
+                      })
+                    ) : (
+                      <span className="store-me-v2-period-empty">{t('storeMe.noLoadedPeriods')}</span>
+                    )}
+                  </div>
+                </div>
                 <label className="store-me-v2-filter-field">
                   <span>{t('storeMe.closedSnapshotSelect')}</span>
                   <select

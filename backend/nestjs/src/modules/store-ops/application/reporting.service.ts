@@ -1315,6 +1315,9 @@ export class ReportingService {
       employeeId,
       metricCodes: employeeDataMetricCodes,
     });
+    const fallbackAssignment = summaryRow
+      ? null
+      : await this.reportingRepository.getActiveEmployeeAssignmentScope(employeeId);
     const metricLookup = new Map(metricRows.map((row) => [row.kpi_code, row]));
     const salesRow = metricLookup.get("NET_SALES");
     const mappedMetrics = profile.metrics.map((metric) => {
@@ -1351,13 +1354,23 @@ export class ReportingService {
             storeId: summaryRow.store_id,
             storeName: summaryRow.store_name,
           }
-        : null,
+        : {
+            employeeId,
+            displayName: fallbackAssignment
+              ? `${fallbackAssignment.first_name} ${fallbackAssignment.last_name}`.trim()
+              : "Unknown employee",
+            storeId: fallbackAssignment?.store_id ?? null,
+            storeName: fallbackAssignment?.store_name ?? null,
+          },
       period: summaryRow
         ? {
             periodStart: summaryRow.period_start,
             periodEnd: summaryRow.period_end,
           }
-        : null,
+        : {
+            periodStart: snapshotRun.period_start,
+            periodEnd: snapshotRun.period_end,
+          },
       score: {
         value: summaryRow ? Number(summaryRow.score_value) : 0,
         matchedMetrics: summaryRow?.matched_metrics ?? 0,
@@ -1369,15 +1382,13 @@ export class ReportingService {
         storeRank: summaryRow?.store_rank ?? null,
         storePopulation: summaryRow?.store_population ?? 0,
       },
-      availablePeriods: summaryRow
-        ? [
-            {
-              periodType: "daily",
-              periodStart: summaryRow.period_start,
-              periodEnd: summaryRow.period_end,
-            },
-          ]
-        : [],
+      availablePeriods: [
+        {
+          periodType: "daily",
+          periodStart: summaryRow?.period_start ?? snapshotRun.period_start,
+          periodEnd: summaryRow?.period_end ?? snapshotRun.period_end,
+        },
+      ],
       partial: {
         isPartial: missingMetrics.length > 0,
         missingMetricCodes: missingMetrics.map((metric) => metric.code),
