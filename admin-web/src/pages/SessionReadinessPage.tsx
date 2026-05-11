@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMemo, useState, type Dispatch, type SetStateAction } from 'react'
+import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { ArrowLeft, KeyRound, ShieldEllipsis, TestTubeDiagonal } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import {
@@ -10,18 +10,22 @@ import {
   ScreenState,
   StatusPill,
 } from '../components/dashboard-primitives'
-import { getAuthSession } from '../features/auth/api'
+import { getAuthSession, type AuthSessionSummary } from '../features/auth/api'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import { useSession } from '../features/session/session-context-value'
-import { getBearerSessionCacheKey, type SessionMode } from '../features/session/session-storage'
+import {
+  defaultSession,
+  getBearerSessionCacheKey,
+  type SessionMode,
+  type SessionState,
+} from '../features/session/session-storage'
 
 export function SessionReadinessPage() {
   const { t } = useLocalization()
   const { session, isReady, saveSession, resetSession } = useSession()
   const [draft, setDraft] = useState(session)
   const [verificationRequested, setVerificationRequested] = useState(false)
-  const mode = draft.mode
   const sessionModeLabel = formatSessionMode(session.mode, t)
   const readinessLabel = isReady ? t('sessionReadiness.yes') : t('sessionReadiness.needsSetup')
   const bearerSessionKey = getBearerSessionCacheKey(session.bearerToken)
@@ -34,20 +38,6 @@ export function SessionReadinessPage() {
     enabled: verificationRequested && isReady,
     retry: false,
   })
-
-  const requestPreview = useMemo(() => {
-    if (mode === 'bearer') {
-      return draft.bearerToken
-        ? [{ label: 'Authorization', value: `Bearer ${truncateToken(draft.bearerToken)}` }]
-        : [{ label: 'Authorization', value: t('sessionReadiness.noTokenSetYet') }]
-    }
-
-    return [
-      { label: 'x-user-id', value: draft.mockUserId },
-      { label: 'x-role-codes', value: draft.mockRoleCodes },
-      { label: 'x-company-ids', value: draft.mockCompanyIds },
-    ]
-  }, [draft, mode, t])
 
   return (
     <section className="page-stack">
@@ -94,256 +84,294 @@ export function SessionReadinessPage() {
       </section>
 
       <section className="two-up-grid">
-        <article className="panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">{t('sessionReadiness.sessionMode')}</div>
-              <h3>{t('sessionReadiness.sessionModeTitle')}</h3>
-            </div>
-            <StatusPill tone={isReady ? 'calm' : 'warning'}>
-              {isReady ? t('sessionReadiness.ready') : t('sessionReadiness.needsSetup')}
-            </StatusPill>
-          </div>
+        <SessionModePanel
+          draft={draft}
+          isReady={isReady}
+          session={session}
+          setDraft={setDraft}
+          onSave={() => {
+            saveSession(draft)
+            setVerificationRequested(false)
+          }}
+          onVerify={() => {
+            saveSession(draft)
+            setVerificationRequested(true)
+            void sessionQuery.refetch()
+          }}
+          onReset={() => {
+            resetSession()
+            setDraft(defaultSession)
+            setVerificationRequested(false)
+          }}
+        />
+      </section>
 
-          <div className="toolbar-cluster">
-            <button
-              className={`segmented-button${mode === 'mock' ? ' segmented-button-active' : ''}`}
-              type="button"
-              onClick={() => setDraft((current) => ({ ...current, mode: 'mock' }))}
-            >
-              {t('sessionReadiness.mockHeaders')}
-            </button>
-            <button
-              className={`segmented-button${mode === 'bearer' ? ' segmented-button-active' : ''}`}
-              type="button"
-              onClick={() => setDraft((current) => ({ ...current, mode: 'bearer' }))}
-            >
-              {t('sessionReadiness.bearerToken')}
-            </button>
-          </div>
+      <SessionVerificationPanel
+        sessionQuery={sessionQuery}
+        verificationRequested={verificationRequested}
+      />
+    </section>
+  )
+}
 
-          {mode === 'mock' ? (
-            <div className="form-grid">
-              <label className="field-block">
-                <span>{t('sessionReadiness.userId')}</span>
-                <input
-                  value={draft.mockUserId}
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, mockUserId: event.target.value }))
-                  }
-                />
-              </label>
-              <label className="field-block">
-                <span>{t('sessionReadiness.companyIds')}</span>
-                <input
-                  value={draft.mockCompanyIds}
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, mockCompanyIds: event.target.value }))
-                  }
-                />
-              </label>
-              <label className="field-block field-block-full">
-                <span>{t('sessionReadiness.roleCodes')}</span>
-                <input
-                  value={draft.mockRoleCodes}
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, mockRoleCodes: event.target.value }))
-                  }
-                />
-              </label>
-            </div>
-          ) : (
+function SessionModePanel(input: {
+  draft: SessionState
+  isReady: boolean
+  session: SessionState
+  setDraft: Dispatch<SetStateAction<SessionState>>
+  onSave: () => void
+  onVerify: () => void
+  onReset: () => void
+}) {
+  const { t } = useLocalization()
+  const mode = input.draft.mode
+  const requestPreview = useMemo(() => {
+    if (mode === 'bearer') {
+      return input.draft.bearerToken
+        ? [{ label: 'Authorization', value: `Bearer ${truncateToken(input.draft.bearerToken)}` }]
+        : [{ label: 'Authorization', value: t('sessionReadiness.noTokenSetYet') }]
+    }
+
+    return [
+      { label: 'x-user-id', value: input.draft.mockUserId },
+      { label: 'x-role-codes', value: input.draft.mockRoleCodes },
+      { label: 'x-company-ids', value: input.draft.mockCompanyIds },
+    ]
+  }, [input.draft, mode, t])
+
+  return (
+    <>
+      <article className="panel">
+        <div className="panel-heading">
+          <div>
+            <div className="eyebrow">{t('sessionReadiness.sessionMode')}</div>
+            <h3>{t('sessionReadiness.sessionModeTitle')}</h3>
+          </div>
+          <StatusPill tone={input.isReady ? 'calm' : 'warning'}>
+            {input.isReady ? t('sessionReadiness.ready') : t('sessionReadiness.needsSetup')}
+          </StatusPill>
+        </div>
+
+        <div className="toolbar-cluster">
+          <button
+            className={`segmented-button${mode === 'mock' ? ' segmented-button-active' : ''}`}
+            type="button"
+            onClick={() => input.setDraft((current) => ({ ...current, mode: 'mock' }))}
+          >
+            {t('sessionReadiness.mockHeaders')}
+          </button>
+          <button
+            className={`segmented-button${mode === 'bearer' ? ' segmented-button-active' : ''}`}
+            type="button"
+            onClick={() => input.setDraft((current) => ({ ...current, mode: 'bearer' }))}
+          >
+            {t('sessionReadiness.bearerToken')}
+          </button>
+        </div>
+
+        {mode === 'mock' ? (
+          <div className="form-grid">
             <label className="field-block">
-              <span>{t('sessionReadiness.bearerToken')}</span>
-              <textarea
-                className="field-textarea"
-                value={draft.bearerToken}
+              <span>{t('sessionReadiness.userId')}</span>
+              <input
+                value={input.draft.mockUserId}
                 onChange={(event) =>
-                  setDraft((current) => ({ ...current, bearerToken: event.target.value }))
+                  input.setDraft((current) => ({ ...current, mockUserId: event.target.value }))
                 }
-                placeholder={t('sessionReadiness.bearerPlaceholder')}
               />
             </label>
-          )}
-
-          <div className="action-cluster">
-            <button
-              className="control-button"
-              type="button"
-              onClick={() => {
-                saveSession(draft)
-                setVerificationRequested(false)
-              }}
-            >
-              {t('sessionReadiness.saveSession')}
-            </button>
-            <button
-              className="control-button"
-              type="button"
-              onClick={() => {
-                saveSession(draft)
-                setVerificationRequested(true)
-                void sessionQuery.refetch()
-              }}
-              disabled={!isReady}
-            >
-              {t('sessionReadiness.verifyCurrentSession')}
-            </button>
-            <button
-              className="control-button"
-              type="button"
-              onClick={() => {
-                resetSession()
-                setDraft({
-                  mode: 'mock',
-                  mockUserId: import.meta.env.VITE_USER_ID ?? '80000000-0000-0000-0000-000000000001',
-                  mockRoleCodes:
-                    import.meta.env.VITE_ROLE_CODES ??
-                    'SUPER_ADMIN,INTEGRATION_ADMIN,SNAPSHOT_OPERATOR,REPORT_VIEWER,AUDITOR',
-                  mockCompanyIds:
-                    import.meta.env.VITE_COMPANY_IDS ?? '00000000-0000-0000-0000-000000000001',
-                  bearerToken: import.meta.env.VITE_BEARER_TOKEN ?? '',
-                })
-                setVerificationRequested(false)
-              }}
-            >
-              {t('sessionReadiness.resetToDefaults')}
-            </button>
+            <label className="field-block">
+              <span>{t('sessionReadiness.companyIds')}</span>
+              <input
+                value={input.draft.mockCompanyIds}
+                onChange={(event) =>
+                  input.setDraft((current) => ({ ...current, mockCompanyIds: event.target.value }))
+                }
+              />
+            </label>
+            <label className="field-block field-block-full">
+              <span>{t('sessionReadiness.roleCodes')}</span>
+              <input
+                value={input.draft.mockRoleCodes}
+                onChange={(event) =>
+                  input.setDraft((current) => ({ ...current, mockRoleCodes: event.target.value }))
+                }
+              />
+            </label>
           </div>
-        </article>
+        ) : (
+          <label className="field-block">
+            <span>{t('sessionReadiness.bearerToken')}</span>
+            <textarea
+              className="field-textarea"
+              value={input.draft.bearerToken}
+              onChange={(event) =>
+                input.setDraft((current) => ({ ...current, bearerToken: event.target.value }))
+              }
+              placeholder={t('sessionReadiness.bearerPlaceholder')}
+            />
+          </label>
+        )}
 
-        <article className="panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">{t('sessionReadiness.requestPreview')}</div>
-              <h3>{t('sessionReadiness.requestPreviewTitle')}</h3>
+        <div className="action-cluster">
+          <button className="control-button" type="button" onClick={input.onSave}>
+            {t('sessionReadiness.saveSession')}
+          </button>
+          <button
+            className="control-button"
+            type="button"
+            onClick={input.onVerify}
+            disabled={!input.isReady}
+          >
+            {t('sessionReadiness.verifyCurrentSession')}
+          </button>
+          <button className="control-button" type="button" onClick={input.onReset}>
+            {t('sessionReadiness.resetToDefaults')}
+          </button>
+        </div>
+      </article>
+
+      <article className="panel">
+        <div className="panel-heading">
+          <div>
+            <div className="eyebrow">{t('sessionReadiness.requestPreview')}</div>
+            <h3>{t('sessionReadiness.requestPreviewTitle')}</h3>
+          </div>
+        </div>
+
+        <div className="key-grid">
+          {requestPreview.map((item) => (
+            <KeyValue key={item.label} label={item.label} value={item.value} />
+          ))}
+        </div>
+
+        <div className="stacked-table">
+          <div className="stacked-row">
+            <div className="stacked-row-head">
+              <strong>{t('sessionReadiness.mockMode')}</strong>
+              <StatusPill tone={input.session.mode === 'mock' ? 'accent' : 'neutral'}>
+                {t('sessionReadiness.dev')}
+              </StatusPill>
             </div>
+            <p>{t('sessionReadiness.mockModeCopy')}</p>
+          </div>
+          <div className="stacked-row">
+            <div className="stacked-row-head">
+              <strong>{t('sessionReadiness.bearerMode')}</strong>
+              <StatusPill tone={input.session.mode === 'bearer' ? 'accent' : 'neutral'}>
+                {t('sessionReadiness.prodPath')}
+              </StatusPill>
+            </div>
+            <p>{t('sessionReadiness.bearerModeCopy')}</p>
+          </div>
+        </div>
+      </article>
+    </>
+  )
+}
+
+function SessionVerificationPanel(input: {
+  sessionQuery: UseQueryResult<AuthSessionSummary, Error>
+  verificationRequested: boolean
+}) {
+  const { t } = useLocalization()
+  const { sessionQuery, verificationRequested } = input
+
+  return (
+    <section className="panel">
+      <div className="panel-heading">
+        <div>
+          <div className="eyebrow">{t('sessionReadiness.sessionVerification')}</div>
+          <h3>{t('sessionReadiness.sessionVerificationTitle')}</h3>
+        </div>
+        {verificationRequested ? (
+          <StatusPill tone={sessionQuery.isSuccess ? 'calm' : sessionQuery.isError ? 'danger' : 'warning'}>
+            {sessionQuery.isSuccess
+              ? t('sessionReadiness.verified')
+              : sessionQuery.isError
+                ? t('sessionReadiness.rejected')
+                : t('sessionReadiness.checking')}
+          </StatusPill>
+        ) : (
+          <StatusPill tone="neutral">{t('sessionReadiness.idle')}</StatusPill>
+        )}
+      </div>
+
+      {!verificationRequested ? (
+        <EmptyState copy={t('sessionReadiness.verificationEmpty')} />
+      ) : sessionQuery.isLoading ? (
+        <ScreenState
+          title={t('sessionReadiness.verifyingTitle')}
+          copy={t('sessionReadiness.verifyingCopy')}
+        />
+      ) : sessionQuery.isError ? (
+        <div className="stacked-table">
+          <div className="stacked-row">
+            <div className="stacked-row-head">
+              <strong>{t('sessionReadiness.verificationFailed')}</strong>
+              <StatusPill tone="danger">{t('sessionReadiness.rejected')}</StatusPill>
+            </div>
+            <p>
+              {sessionQuery.error instanceof Error
+                ? sessionQuery.error.message
+                : t('sessionReadiness.unexpectedVerificationError')}
+            </p>
+          </div>
+        </div>
+      ) : sessionQuery.data ? (
+        <div className="stacked-table">
+          <div className="stacked-row">
+            <div className="stacked-row-head">
+              <strong>{t('sessionReadiness.backendAccepted')}</strong>
+              <StatusPill tone="calm">{sessionQuery.data.authMode}</StatusPill>
+            </div>
+            <p>
+              {t('sessionReadiness.backendAcceptedCopy', {
+                userId: sessionQuery.data.user.userId,
+                roles: sessionQuery.data.user.roleCodes.join(', ') || t('sessionReadiness.none'),
+              })}
+            </p>
           </div>
 
           <div className="key-grid">
-            {requestPreview.map((item) => (
-              <KeyValue key={item.label} label={item.label} value={item.value} />
-            ))}
+            <KeyValue
+              label={t('sessionReadiness.employeeId')}
+              value={sessionQuery.data.user.employeeId ?? t('sessionReadiness.notAvailable')}
+            />
+            <KeyValue
+              label={t('sessionReadiness.companyScopes')}
+              value={String(sessionQuery.data.scopeSummary.companyCount)}
+            />
+            <KeyValue
+              label={t('sessionReadiness.regionScopes')}
+              value={String(sessionQuery.data.scopeSummary.regionCount)}
+            />
+            <KeyValue
+              label={t('sessionReadiness.storeScopes')}
+              value={String(sessionQuery.data.scopeSummary.storeCount)}
+            />
           </div>
 
-          <div className="stacked-table">
-            <div className="stacked-row">
-              <div className="stacked-row-head">
-                <strong>{t('sessionReadiness.mockMode')}</strong>
-                <StatusPill tone={session.mode === 'mock' ? 'accent' : 'neutral'}>
-                  {t('sessionReadiness.dev')}
-                </StatusPill>
-              </div>
-              <p>{t('sessionReadiness.mockModeCopy')}</p>
+          <div className="stacked-row">
+            <div className="stacked-row-head">
+              <strong>{t('sessionReadiness.resolvedScope')}</strong>
+              <StatusPill tone="accent">{t('sessionReadiness.claimsAssignments')}</StatusPill>
             </div>
-            <div className="stacked-row">
-              <div className="stacked-row-head">
-                <strong>{t('sessionReadiness.bearerMode')}</strong>
-                <StatusPill tone={session.mode === 'bearer' ? 'accent' : 'neutral'}>
-                  {t('sessionReadiness.prodPath')}
-                </StatusPill>
-              </div>
-              <p>{t('sessionReadiness.bearerModeCopy')}</p>
-            </div>
+            <p>
+              {t('sessionReadiness.companyIdsLabel')}{' '}
+              {sessionQuery.data.user.scope.companyIds.join(', ') || t('sessionReadiness.none')}
+            </p>
+            <p>
+              {t('sessionReadiness.regionIdsLabel')}{' '}
+              {sessionQuery.data.user.scope.regionIds.join(', ') || t('sessionReadiness.none')}
+            </p>
+            <p>
+              {t('sessionReadiness.storeIdsLabel')}{' '}
+              {sessionQuery.data.user.scope.storeIds.join(', ') || t('sessionReadiness.none')}
+            </p>
           </div>
-        </article>
-      </section>
-
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('sessionReadiness.sessionVerification')}</div>
-            <h3>{t('sessionReadiness.sessionVerificationTitle')}</h3>
-          </div>
-          {verificationRequested ? (
-            <StatusPill tone={sessionQuery.isSuccess ? 'calm' : sessionQuery.isError ? 'danger' : 'warning'}>
-              {sessionQuery.isSuccess
-                ? t('sessionReadiness.verified')
-                : sessionQuery.isError
-                  ? t('sessionReadiness.rejected')
-                  : t('sessionReadiness.checking')}
-            </StatusPill>
-          ) : (
-            <StatusPill tone="neutral">{t('sessionReadiness.idle')}</StatusPill>
-          )}
         </div>
-
-        {!verificationRequested ? (
-          <EmptyState copy={t('sessionReadiness.verificationEmpty')} />
-        ) : sessionQuery.isLoading ? (
-          <ScreenState
-            title={t('sessionReadiness.verifyingTitle')}
-            copy={t('sessionReadiness.verifyingCopy')}
-          />
-        ) : sessionQuery.isError ? (
-          <div className="stacked-table">
-            <div className="stacked-row">
-              <div className="stacked-row-head">
-                <strong>{t('sessionReadiness.verificationFailed')}</strong>
-                <StatusPill tone="danger">{t('sessionReadiness.rejected')}</StatusPill>
-              </div>
-              <p>
-                {sessionQuery.error instanceof Error
-                  ? sessionQuery.error.message
-                  : t('sessionReadiness.unexpectedVerificationError')}
-              </p>
-            </div>
-          </div>
-        ) : sessionQuery.data ? (
-          <div className="stacked-table">
-            <div className="stacked-row">
-              <div className="stacked-row-head">
-                <strong>{t('sessionReadiness.backendAccepted')}</strong>
-                <StatusPill tone="calm">{sessionQuery.data.authMode}</StatusPill>
-              </div>
-              <p>
-                {t('sessionReadiness.backendAcceptedCopy', {
-                  userId: sessionQuery.data.user.userId,
-                  roles: sessionQuery.data.user.roleCodes.join(', ') || t('sessionReadiness.none'),
-                })}
-              </p>
-            </div>
-
-            <div className="key-grid">
-              <KeyValue
-                label={t('sessionReadiness.employeeId')}
-                value={sessionQuery.data.user.employeeId ?? t('sessionReadiness.notAvailable')}
-              />
-              <KeyValue
-                label={t('sessionReadiness.companyScopes')}
-                value={String(sessionQuery.data.scopeSummary.companyCount)}
-              />
-              <KeyValue
-                label={t('sessionReadiness.regionScopes')}
-                value={String(sessionQuery.data.scopeSummary.regionCount)}
-              />
-              <KeyValue
-                label={t('sessionReadiness.storeScopes')}
-                value={String(sessionQuery.data.scopeSummary.storeCount)}
-              />
-            </div>
-
-            <div className="stacked-row">
-              <div className="stacked-row-head">
-                <strong>{t('sessionReadiness.resolvedScope')}</strong>
-                <StatusPill tone="accent">{t('sessionReadiness.claimsAssignments')}</StatusPill>
-              </div>
-              <p>
-                {t('sessionReadiness.companyIdsLabel')}{' '}
-                {sessionQuery.data.user.scope.companyIds.join(', ') || t('sessionReadiness.none')}
-              </p>
-              <p>
-                {t('sessionReadiness.regionIdsLabel')}{' '}
-                {sessionQuery.data.user.scope.regionIds.join(', ') || t('sessionReadiness.none')}
-              </p>
-              <p>
-                {t('sessionReadiness.storeIdsLabel')}{' '}
-                {sessionQuery.data.user.scope.storeIds.join(', ') || t('sessionReadiness.none')}
-              </p>
-            </div>
-          </div>
-        ) : null}
-      </section>
+      ) : null}
     </section>
   )
 }
