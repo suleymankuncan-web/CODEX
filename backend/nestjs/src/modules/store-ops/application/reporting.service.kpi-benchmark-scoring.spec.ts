@@ -400,6 +400,61 @@ describe("ReportingService personnel performance profile access", () => {
     expect(result.employee?.displayName).toBe("Ada Lovelace");
   });
 
+  it("allows super admins without explicit company scope to open global personnel profiles", async () => {
+    const repository = createRepositoryMock();
+    const service = createService(repository);
+
+    const result = await service.getPersonnelPerformance({
+      userId: "super-admin-1",
+      employeeId: "super-admin-employee",
+      targetEmployeeId,
+      roleCodes: ["SUPER_ADMIN"],
+      companyIds: [],
+      regionIds: [],
+      storeIds: [],
+      assignedStoreIds: [],
+      periodType: "monthly",
+    });
+
+    expect(result.employee?.employeeId).toBe(targetEmployeeId);
+    expect(repository.getLatestEmployeeKpiPeriod).toHaveBeenCalledWith(
+      expect.objectContaining({
+        employeeId: targetEmployeeId,
+        companyIds: [],
+        regionIds: [],
+        storeIds: [],
+        allowGlobalScope: true,
+      }),
+    );
+    expect(repository.listEmployeeKpiPeriods).toHaveBeenCalledWith(
+      expect.objectContaining({
+        employeeId: targetEmployeeId,
+        allowGlobalScope: true,
+      }),
+    );
+  });
+
+  it("keeps unscoped region managers blocked from global personnel profiles", async () => {
+    const repository = createRepositoryMock({ targetRegionId: "region-1" });
+    const service = createService(repository);
+
+    await expect(
+      service.getPersonnelPerformance({
+        userId: "region-manager-1",
+        employeeId: "region-manager-employee",
+        targetEmployeeId,
+        roleCodes: ["REGION_MANAGER"],
+        companyIds: [],
+        regionIds: [],
+        storeIds: [],
+        assignedStoreIds: [],
+        periodType: "monthly",
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    expect(repository.getEmployeePerformanceRows).not.toHaveBeenCalled();
+  });
+
   it("rejects malformed personnel profile ids before querying assignment scope", async () => {
     const repository = createRepositoryMock();
     const service = createService(repository);

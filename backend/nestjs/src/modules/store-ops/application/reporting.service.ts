@@ -698,10 +698,22 @@ export class ReportingService {
       throw new ForbiddenException("Personnel profile is outside the current user's scope");
     }
 
+    const managerStoreIds = input.assignedStoreIds.length > 0
+      ? input.assignedStoreIds
+      : input.storeIds;
+
     if (
       input.roleCodes.includes("SUPER_ADMIN") &&
-      assignment.company_id &&
-      input.companyIds.includes(assignment.company_id)
+      (
+        !this.hasPersonnelReadScope({
+          companyIds: input.companyIds,
+          regionIds: input.regionIds,
+          storeIds: managerStoreIds,
+        }) ||
+        (assignment.company_id && input.companyIds.includes(assignment.company_id)) ||
+        (assignment.region_id && input.regionIds.includes(assignment.region_id)) ||
+        (assignment.store_id && managerStoreIds.includes(assignment.store_id))
+      )
     ) {
       return;
     }
@@ -713,10 +725,6 @@ export class ReportingService {
     ) {
       return;
     }
-
-    const managerStoreIds = input.assignedStoreIds.length > 0
-      ? input.assignedStoreIds
-      : input.storeIds;
     if (
       input.roleCodes.includes("STORE_MANAGER") &&
       assignment.store_id &&
@@ -731,6 +739,18 @@ export class ReportingService {
   private isUuid(value: string) {
     return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
       value,
+    );
+  }
+
+  private hasPersonnelReadScope(input: {
+    companyIds: string[];
+    regionIds: string[];
+    storeIds: string[];
+  }) {
+    return (
+      input.companyIds.length > 0 ||
+      input.regionIds.length > 0 ||
+      input.storeIds.length > 0
     );
   }
 
@@ -796,6 +816,7 @@ export class ReportingService {
     userId: string;
     employeeId?: string;
     targetEmployeeId?: string;
+    roleCodes?: string[];
     companyIds: string[];
     regionIds: string[];
     storeIds: string[];
@@ -851,12 +872,21 @@ export class ReportingService {
       };
     }
 
+    const allowGlobalScope =
+      Boolean(input.targetEmployeeId) &&
+      input.roleCodes?.includes("SUPER_ADMIN") === true &&
+      !this.hasPersonnelReadScope({
+        companyIds: input.companyIds,
+        regionIds: input.regionIds,
+        storeIds: input.storeIds,
+      });
     const availablePeriods = await this.reportingRepository.listEmployeeKpiPeriods({
       employeeId,
       metricCodes: employeeDataMetricCodes,
       companyIds: input.companyIds,
       regionIds: input.regionIds,
       storeIds: input.storeIds,
+      allowGlobalScope,
     });
     const latestPeriod = await this.reportingRepository.getLatestEmployeeKpiPeriod({
       employeeId,
@@ -864,6 +894,7 @@ export class ReportingService {
       companyIds: input.companyIds,
       regionIds: input.regionIds,
       storeIds: input.storeIds,
+      allowGlobalScope,
       periodType: input.periodType,
       periodStart: input.periodStart,
     });

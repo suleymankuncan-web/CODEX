@@ -9,8 +9,10 @@ export class ReportingRepository {
     companyIds: string[];
     regionIds: string[];
     storeIds: string[];
+    allowGlobalScope?: boolean;
   }) {
     return (
+      input.allowGlobalScope === true ||
       input.companyIds.length > 0 ||
       input.regionIds.length > 0 ||
       input.storeIds.length > 0
@@ -1160,6 +1162,7 @@ export class ReportingRepository {
     companyIds: string[];
     regionIds: string[];
     storeIds: string[];
+    allowGlobalScope?: boolean;
     periodType?: string;
     periodStart?: string;
   }) {
@@ -1242,6 +1245,7 @@ export class ReportingRepository {
     companyIds: string[];
     regionIds: string[];
     storeIds: string[];
+    allowGlobalScope?: boolean;
   }) {
     if (!this.hasStoreAccessScope(input)) {
       return [];
