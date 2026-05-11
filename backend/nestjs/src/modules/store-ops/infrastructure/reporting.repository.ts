@@ -1186,13 +1186,19 @@ export class ReportingRepository {
 
     if (input.storeIds.length > 0) {
       params.push(input.storeIds);
-      clauses.push(`ka.store_id = ANY($${params.length}::uuid[])`);
+      clauses.push(
+        `COALESCE(ka.store_id, assignment.store_id) = ANY($${params.length}::uuid[])`,
+      );
     } else if (input.regionIds.length > 0) {
       params.push(input.regionIds);
-      clauses.push(`ka.region_id = ANY($${params.length}::uuid[])`);
+      clauses.push(
+        `COALESCE(ka.region_id, assignment.region_id, store.region_id) = ANY($${params.length}::uuid[])`,
+      );
     } else if (input.companyIds.length > 0) {
       params.push(input.companyIds);
-      clauses.push(`ka.company_id = ANY($${params.length}::uuid[])`);
+      clauses.push(
+        `COALESCE(ka.company_id, store.company_id, employee.company_id) = ANY($${params.length}::uuid[])`,
+      );
     }
 
     const result = await this.databaseService.query<{
@@ -1204,10 +1210,22 @@ export class ReportingRepository {
         SELECT
           ka.period_start::text AS period_start,
           ka.period_end::text AS period_end,
-          ka.store_id
+          COALESCE(ka.store_id, assignment.store_id)::text AS store_id
         FROM ops.kpi_actual ka
         INNER JOIN ops.kpi_definition kd
           ON kd.kpi_id = ka.kpi_id
+        INNER JOIN ops.employee employee
+          ON employee.employee_id = ka.employee_id
+        LEFT JOIN LATERAL (
+          SELECT eah.store_id, eah.region_id
+          FROM ops.employee_assignment_history eah
+          WHERE eah.employee_id = ka.employee_id
+            AND eah.assignment_status = 'active'
+          ORDER BY eah.is_primary_assignment DESC, eah.start_date DESC
+          LIMIT 1
+        ) assignment ON TRUE
+        LEFT JOIN ops.store store
+          ON store.store_id = COALESCE(ka.store_id, assignment.store_id)
         WHERE ${clauses.join(" AND ")}
         ORDER BY ka.period_end DESC, ka.period_start DESC
         LIMIT 1
@@ -1238,13 +1256,19 @@ export class ReportingRepository {
 
     if (input.storeIds.length > 0) {
       params.push(input.storeIds);
-      clauses.push(`ka.store_id = ANY($${params.length}::uuid[])`);
+      clauses.push(
+        `COALESCE(ka.store_id, assignment.store_id) = ANY($${params.length}::uuid[])`,
+      );
     } else if (input.regionIds.length > 0) {
       params.push(input.regionIds);
-      clauses.push(`ka.region_id = ANY($${params.length}::uuid[])`);
+      clauses.push(
+        `COALESCE(ka.region_id, assignment.region_id, store.region_id) = ANY($${params.length}::uuid[])`,
+      );
     } else if (input.companyIds.length > 0) {
       params.push(input.companyIds);
-      clauses.push(`ka.company_id = ANY($${params.length}::uuid[])`);
+      clauses.push(
+        `COALESCE(ka.company_id, store.company_id, employee.company_id) = ANY($${params.length}::uuid[])`,
+      );
     }
 
     const result = await this.databaseService.query<{
@@ -1260,6 +1284,18 @@ export class ReportingRepository {
         FROM ops.kpi_actual ka
         INNER JOIN ops.kpi_definition kd
           ON kd.kpi_id = ka.kpi_id
+        INNER JOIN ops.employee employee
+          ON employee.employee_id = ka.employee_id
+        LEFT JOIN LATERAL (
+          SELECT eah.store_id, eah.region_id
+          FROM ops.employee_assignment_history eah
+          WHERE eah.employee_id = ka.employee_id
+            AND eah.assignment_status = 'active'
+          ORDER BY eah.is_primary_assignment DESC, eah.start_date DESC
+          LIMIT 1
+        ) assignment ON TRUE
+        LEFT JOIN ops.store store
+          ON store.store_id = COALESCE(ka.store_id, assignment.store_id)
         WHERE ${clauses.join(" AND ")}
         ORDER BY 3 DESC, 2 DESC
       `,

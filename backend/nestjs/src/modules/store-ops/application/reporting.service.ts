@@ -804,7 +804,7 @@ export class ReportingService {
   }) {
     const config = await this.getKpiConfig();
     const profile = config.personnelProfile;
-    const metricCodes = profile.metrics.map((metric) => metric.code);
+    const metricCodes = this.getProfileMetricCodes(profile);
     const employeeDataMetricCodes = [...new Set([...metricCodes, "NET_SALES"])];
     const employeeId =
       input.targetEmployeeId ??
@@ -1183,7 +1183,7 @@ export class ReportingService {
   }) {
     const config = await this.getKpiConfig();
     const profile = config.personnelProfile;
-    const metricCodes = profile.metrics.map((metric) => metric.code);
+    const metricCodes = this.getProfileMetricCodes(profile);
     const employeeDataMetricCodes = [...new Set([...metricCodes, "NET_SALES"])];
     const employeeId =
       input.targetEmployeeId ??
@@ -1415,6 +1415,12 @@ export class ReportingService {
       publishedAt: version?.published_at ?? null,
       publishedBy: version?.published_by ?? null,
     };
+  }
+
+  private getProfileMetricCodes(profile: KpiScoreProfile) {
+    return [
+      ...new Set(profile.metrics.flatMap((metric) => [metric.code, ...(metric.aliases ?? [])])),
+    ];
   }
 
   private getDefaultKpiConfig() {
