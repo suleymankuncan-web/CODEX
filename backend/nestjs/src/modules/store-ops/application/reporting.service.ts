@@ -905,18 +905,16 @@ export class ReportingService {
     );
 
     if (!latestPeriod) {
+      const fallbackAssignment =
+        await this.reportingRepository.getActiveEmployeeAssignmentScope(employeeId);
+
       return {
         source: {
           mode: "live",
           snapshotRunId: null,
           snapshotDate: null,
         },
-        employee: {
-          employeeId,
-          displayName: "Unknown employee",
-          storeId: null,
-          storeName: null,
-        },
+        employee: this.mapEmployeeAssignmentIdentity(employeeId, fallbackAssignment),
         period: null,
         score: {
           value: 0,
@@ -952,6 +950,8 @@ export class ReportingService {
       periodStart: latestPeriod.period_start,
       periodEnd: latestPeriod.period_end,
     });
+    const fallbackAssignment =
+      employeeRows[0] ? null : await this.reportingRepository.getActiveEmployeeAssignmentScope(employeeId);
     let benchmarkRows = await this.reportingRepository.getEmployeeTurkeyBenchmarkValues({
       companyId: input.companyIds[0] ?? undefined,
       periodType: input.periodType,
@@ -1164,9 +1164,9 @@ export class ReportingService {
         employeeId,
         displayName: employeeRows[0]
           ? `${employeeRows[0].first_name} ${employeeRows[0].last_name}`.trim()
-          : "Unknown employee",
-        storeId: employeeRows[0]?.store_id ?? latestPeriod.store_id,
-        storeName: employeeRows[0]?.store_name ?? null,
+          : this.formatEmployeeAssignmentName(fallbackAssignment),
+        storeId: employeeRows[0]?.store_id ?? latestPeriod.store_id ?? fallbackAssignment?.store_id ?? null,
+        storeName: employeeRows[0]?.store_name ?? fallbackAssignment?.store_name ?? null,
       },
       period: {
         periodStart: latestPeriod.period_start,
@@ -1483,6 +1483,34 @@ export class ReportingService {
     }
 
     return mappedPeriods;
+  }
+
+  private mapEmployeeAssignmentIdentity(
+    employeeId: string,
+    assignment: {
+      first_name?: string | null;
+      last_name?: string | null;
+      store_id?: string | null;
+      store_name?: string | null;
+    } | null,
+  ) {
+    return {
+      employeeId,
+      displayName: this.formatEmployeeAssignmentName(assignment),
+      storeId: assignment?.store_id ?? null,
+      storeName: assignment?.store_name ?? null,
+    };
+  }
+
+  private formatEmployeeAssignmentName(
+    assignment: {
+      first_name?: string | null;
+      last_name?: string | null;
+    } | null,
+  ) {
+    return assignment
+      ? `${assignment.first_name ?? ""} ${assignment.last_name ?? ""}`.trim() || "Unknown employee"
+      : "Unknown employee";
   }
 
   private mapKpiConfigVersionMetadata(version: {
