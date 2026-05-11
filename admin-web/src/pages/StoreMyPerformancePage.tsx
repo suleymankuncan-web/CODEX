@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
-import { useMemo, useState } from 'react'
-import { Medal, Target, Trophy, UserRound } from 'lucide-react'
+import { useQueries, useQuery } from '@tanstack/react-query'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { CalendarDays, ChevronDown, Medal, Target, Trophy, UserRound, X } from 'lucide-react'
 import {
   KeyValue,
   MetricAccent,
@@ -11,7 +11,13 @@ import {
 import type { AuthSessionSummary } from '../features/auth/api'
 import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
-import { getKpiConfig, getMyPerformance, getReportingSnapshotRuns } from '../features/reports/api'
+import {
+  getKpiConfig,
+  getMyPerformance,
+  getReportingSnapshotRuns,
+  type MyPerformanceMetric,
+  type MyPerformanceSummary,
+} from '../features/reports/api'
 import { formatSnapshotOptionLabel } from '../features/reports/snapshot-labels'
 import {
   describeLocalizedBenchmarkCap,
@@ -39,6 +45,8 @@ const metricLabelKeyByCode: Record<string, TranslationKey> = {
   UPT: 'storeMe.metric.upt',
   CR: 'storeRankings.metric.cr',
 }
+
+const personnelMetricCodes = ['TARGET_ACHIEVEMENT', 'ATV', 'UPT']
 
 function formatCurrency(locale: AppLocale, t: TranslateFunction, input: number | null) {
   if (input === null) {
@@ -138,6 +146,80 @@ function getMetricLabel(t: TranslateFunction, metric: { code: string; label: str
   return key ? t(key) : metric.label
 }
 
+function isPersonnelMetric(metric: { code: string }) {
+  return personnelMetricCodes.includes(metric.code)
+}
+
+function findMetric(metrics: MyPerformanceMetric[], code: string) {
+  return metrics.find((metric) => metric.code === code) ?? null
+}
+
+function getMetricDisplayValue(
+  locale: AppLocale,
+  t: TranslateFunction,
+  metrics: MyPerformanceMetric[],
+  code: string,
+) {
+  return formatKpiMetricValue(locale, t, findMetric(metrics, code)?.actualValue ?? null, {
+    noDataKey: 'storeMe.noData',
+    code,
+    percentMetricCodes: ['TARGET_ACHIEVEMENT'],
+  })
+}
+
+function getMetricNumericValue(metrics: MyPerformanceMetric[], code: string) {
+  const value = findMetric(metrics, code)?.actualValue
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
+function getTargetProgressPercent(metrics: MyPerformanceMetric[]) {
+  const targetMetric = findMetric(metrics, 'TARGET_ACHIEVEMENT')
+  const source = targetMetric?.achievementRate ?? targetMetric?.actualValue ?? null
+
+  if (typeof source !== 'number' || !Number.isFinite(source)) {
+    return 0
+  }
+
+  return Math.max(0, Math.min(100, Math.round(source * 100)))
+}
+
+function formatMonthYear(locale: AppLocale, date: string) {
+  return new Intl.DateTimeFormat(getIntlLocale(locale), {
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date(`${date}T00:00:00`))
+}
+
+function formatSignedPercent(locale: AppLocale, input: number | null) {
+  if (input === null || !Number.isFinite(input)) {
+    return null
+  }
+
+  const formatted = new Intl.NumberFormat(getIntlLocale(locale), {
+    maximumFractionDigits: 1,
+    minimumFractionDigits: 0,
+    signDisplay: 'always',
+  }).format(input)
+
+  return `${formatted}%`
+}
+
+function getDeltaPercent(current: number | null, previous: number | null) {
+  if (current === null || previous === null || previous === 0) {
+    return null
+  }
+
+  return ((current - previous) / Math.abs(previous)) * 100
+}
+
+function getTrendWidth(score: number) {
+  return `${Math.max(8, Math.min(100, Math.round(score)))}%`
+}
+
+function getPeriodStart(input: MyPerformanceSummary | null | undefined) {
+  return input?.period?.periodStart ?? input?.source.snapshotDate ?? ''
+}
+
 export function StoreMyPerformancePage(input: {
   authSummary: AuthSessionSummary | null
 }) {
@@ -146,6 +228,8 @@ export function StoreMyPerformancePage(input: {
   const [sourceMode, setSourceMode] = useState<'live' | 'closed'>('live')
   const [selectedLivePeriodStart, setSelectedLivePeriodStart] = useState('')
   const [selectedClosedSnapshotRunId, setSelectedClosedSnapshotRunId] = useState('')
+  const [isDateFilterOpen, setIsDateFilterOpen] = useState(false)
+  const [isKpiDetailOpen, setIsKpiDetailOpen] = useState(false)
 
   const configQuery = useQuery({
     queryKey: ['store-me-kpi-config'],
@@ -194,6 +278,45 @@ export function StoreMyPerformancePage(input: {
     () => (performance?.availablePeriods ?? []).filter((period) => period.periodType === 'monthly'),
     [performance?.availablePeriods],
   )
+  const monthlyDetailPeriods = useMemo(() => {
+    const activeYear = (performance?.period?.periodStart ?? availableLivePeriods.at(-1)?.periodStart ?? '').slice(0, 4)
+    const scopedPeriods = activeYear
+      ? availableLivePeriods.filter((period) => period.periodStart.startsWith(activeYear))
+      : availableLivePeriods
+
+    return [...scopedPeriods]
+      .sort((left, right) => left.periodStart.localeCompare(right.periodStart))
+      .slice(-12)
+  }, [availableLivePeriods, performance?.period?.periodStart])
+
+  const monthlyPerformanceQueries = useQueries({
+    queries: monthlyDetailPeriods.map((period) => ({
+      queryKey: ['my-performance', 'live', period.periodStart, ''],
+      queryFn: () =>
+        getMyPerformance({
+          mode: 'live',
+          periodType: 'monthly',
+          periodStart: period.periodStart,
+        }),
+      enabled: enabled && sourceMode === 'live' && performanceQuery.isSuccess,
+      retry: false,
+    })),
+  })
+
+  useEffect(() => {
+    if (!isKpiDetailOpen) {
+      return undefined
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsKpiDetailOpen(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isKpiDetailOpen])
 
   if (!enabled) {
     return (
@@ -262,6 +385,101 @@ export function StoreMyPerformancePage(input: {
     period: performance.period,
     snapshotDate: performance.source.snapshotDate,
   })
+  const personnelMetrics = performance.metrics.filter(isPersonnelMetric)
+  const targetProgressPercent = getTargetProgressPercent(personnelMetrics)
+  const monthlyPeriodsForRows = monthlyDetailPeriods.length
+    ? monthlyDetailPeriods
+    : performance.period
+      ? [{
+          periodType: 'monthly' as const,
+          periodStart: performance.period.periodStart,
+          periodEnd: performance.period.periodEnd,
+        }]
+      : []
+  const monthlyPerformanceData = monthlyPeriodsForRows.map((period, index) => {
+    const queriedData = monthlyPerformanceQueries[index]?.data
+
+    return queriedData ?? (period.periodStart === getPeriodStart(performance) ? performance : null)
+  })
+  const monthlyDetailRows = monthlyPeriodsForRows.map((period, index) => {
+    const monthPerformance = monthlyPerformanceData[index]
+    const previousPerformance = index > 0 ? monthlyPerformanceData[index - 1] : null
+    const metrics = monthPerformance?.metrics.filter(isPersonnelMetric) ?? []
+    const scoreValue = monthPerformance?.score.value ?? null
+
+    return {
+      key: period.periodStart,
+      label: formatMonthYear(locale, period.periodStart),
+      periodNote:
+        period.periodStart === getPeriodStart(performance)
+          ? t('storeMe.activePeriod')
+          : formatPeriodLabel(locale, t, { period }),
+      scoreValue,
+      scoreLabel: scoreValue === null ? t('storeMe.noData') : scoreValue.toFixed(1),
+      uptLabel: getMetricDisplayValue(locale, t, metrics, 'UPT'),
+      atvLabel: getMetricDisplayValue(locale, t, metrics, 'ATV'),
+      targetLabel: getMetricDisplayValue(locale, t, metrics, 'TARGET_ACHIEVEMENT'),
+      trendLabel: formatSignedPercent(
+        locale,
+        getDeltaPercent(scoreValue, previousPerformance?.score.value ?? null),
+      ),
+      trendWidth: getTrendWidth(scoreValue ?? 0),
+    }
+  })
+  const activeMonthlyRow =
+    monthlyDetailRows.find((row) => row.key === getPeriodStart(performance)) ??
+    monthlyDetailRows.at(-1) ??
+    null
+  const previousMonthlyRow = activeMonthlyRow
+    ? monthlyDetailRows[monthlyDetailRows.findIndex((row) => row.key === activeMonthlyRow.key) - 1] ?? null
+    : null
+  const samePeriodScoreDelta = formatSignedPercent(
+    locale,
+    getDeltaPercent(activeMonthlyRow?.scoreValue ?? null, previousMonthlyRow?.scoreValue ?? null),
+  )
+  const samePeriodMetrics = [
+    {
+      code: 'UPT',
+      label: t('storeMe.metric.uptShort'),
+      delta: formatSignedPercent(
+        locale,
+        getDeltaPercent(
+          getMetricNumericValue(personnelMetrics, 'UPT'),
+          previousMonthlyRow ? getMetricNumericValue(monthlyPerformanceData[monthlyDetailRows.indexOf(previousMonthlyRow)]?.metrics ?? [], 'UPT') : null,
+        ),
+      ),
+      width: '72%',
+    },
+    {
+      code: 'ATV',
+      label: t('storeMe.metric.atvShort'),
+      delta: formatSignedPercent(
+        locale,
+        getDeltaPercent(
+          getMetricNumericValue(personnelMetrics, 'ATV'),
+          previousMonthlyRow ? getMetricNumericValue(monthlyPerformanceData[monthlyDetailRows.indexOf(previousMonthlyRow)]?.metrics ?? [], 'ATV') : null,
+        ),
+      ),
+      width: '68%',
+    },
+    {
+      code: 'TARGET_ACHIEVEMENT',
+      label: t('storeMe.metric.hgShort'),
+      delta: formatSignedPercent(
+        locale,
+        getDeltaPercent(
+          getMetricNumericValue(personnelMetrics, 'TARGET_ACHIEVEMENT'),
+          previousMonthlyRow
+            ? getMetricNumericValue(
+                monthlyPerformanceData[monthlyDetailRows.indexOf(previousMonthlyRow)]?.metrics ?? [],
+                'TARGET_ACHIEVEMENT',
+              )
+            : null,
+        ),
+      ),
+      width: '76%',
+    },
+  ]
 
   return (
     <section className="page-stack">
@@ -288,7 +506,7 @@ export function StoreMyPerformancePage(input: {
         </div>
       </section>
 
-      <section className="panel">
+      <section className="panel store-me-filter-panel">
         <div className="panel-heading">
           <div>
             <div className="eyebrow">{t('storeMe.performanceSummary')}</div>
@@ -298,82 +516,194 @@ export function StoreMyPerformancePage(input: {
             {partial.isPartial ? t('storeMe.incompleteData') : t('storeMe.completeData')}
           </StatusPill>
         </div>
-        <div className="toolbar-cluster">
-          <button
-            className="control-button"
-            type="button"
-            onClick={() => setSourceMode('live')}
-            disabled={sourceMode === 'live'}
-          >
-            {t('storeMe.liveStatus')}
-          </button>
-          <button
-            className="control-button"
-            type="button"
-            onClick={() => setSourceMode('closed')}
-            disabled={sourceMode === 'closed'}
-          >
-            {t('storeMe.closedDay')}
-          </button>
-          {sourceMode === 'live' && availableLivePeriods.length > 0 ? (
-            <label className="control-field">
-              <span>{t('storeMe.period')}</span>
-              <select
-                value={selectedLivePeriodStart}
-                onChange={(event) => setSelectedLivePeriodStart(event.target.value)}
+        <button
+          className="store-me-filter-trigger"
+          type="button"
+          aria-expanded={isDateFilterOpen}
+          onClick={() => setIsDateFilterOpen((current) => !current)}
+        >
+          <span className="store-me-filter-icon" aria-hidden="true">
+            <CalendarDays size={19} />
+          </span>
+          <span className="store-me-filter-main">
+            <span>{t('storeMe.dateFilter')}</span>
+            <strong>{`${periodLabel} · ${formatSourceMode(t, performance.source.mode)}`}</strong>
+          </span>
+          <span className="store-me-filter-chips" aria-hidden="true">
+            <span>{partial.isPartial ? t('storeMe.incompleteData') : t('storeMe.completeData')}</span>
+            <span>
+              {`${t('storeMe.targetEntry')}: ${
+                supporting.targetEntryMode === 'manager_assignment'
+                  ? t('storeMe.approvedTarget')
+                  : t('storeMe.unknown')
+              }`}
+            </span>
+          </span>
+          <span className="store-me-filter-caret" aria-hidden="true">
+            <ChevronDown size={18} />
+          </span>
+        </button>
+        {isDateFilterOpen ? (
+          <div className="store-me-filter-popover">
+            <div className="toolbar-cluster store-me-filter-controls">
+              <button
+                className="control-button"
+                type="button"
+                onClick={() => setSourceMode('live')}
+                disabled={sourceMode === 'live'}
               >
-                <option value="">{t('storeMe.latestPeriod')}</option>
-                {availableLivePeriods.map((period) => (
-                  <option key={`${period.periodType}-${period.periodStart}`} value={period.periodStart}>
-                    {`${formatDate(period.periodStart, locale)} - ${formatDate(
-                      period.periodEnd,
-                      locale,
-                    )}`}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
-          {sourceMode === 'closed' && availableClosedSnapshotRuns.length > 0 ? (
-            <label className="control-field">
-              <span>{t('storeMe.closedSnapshotSelect')}</span>
-              <select
+                {t('storeMe.liveStatus')}
+              </button>
+              <button
+                className="control-button"
+                type="button"
+                onClick={() => setSourceMode('closed')}
+                disabled={sourceMode === 'closed'}
+              >
+                {t('storeMe.closedDay')}
+              </button>
+              {sourceMode === 'live' && availableLivePeriods.length > 0 ? (
+                <label className="control-field">
+                  <span>{t('storeMe.period')}</span>
+                  <select
+                    value={selectedLivePeriodStart}
+                    onChange={(event) => setSelectedLivePeriodStart(event.target.value)}
+                  >
+                    <option value="">{t('storeMe.latestPeriod')}</option>
+                    {availableLivePeriods.map((period) => (
+                      <option key={`${period.periodType}-${period.periodStart}`} value={period.periodStart}>
+                        {`${formatDate(period.periodStart, locale)} - ${formatDate(
+                          period.periodEnd,
+                          locale,
+                        )}`}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+              {sourceMode === 'closed' && availableClosedSnapshotRuns.length > 0 ? (
+                <label className="control-field">
+                  <span>{t('storeMe.closedSnapshotSelect')}</span>
+                  <select
+                    value={
+                      selectedClosedSnapshotRunId ||
+                      activeClosedSnapshotRun?.snapshotRunId ||
+                      ''
+                    }
+                    onChange={(event) => setSelectedClosedSnapshotRunId(event.target.value)}
+                  >
+                    <option value="">{t('storeMe.latestClosedSnapshot')}</option>
+                    {availableClosedSnapshotRuns.map((run) => (
+                      <option key={run.snapshotRunId} value={run.snapshotRunId}>
+                        {formatSnapshotOptionLabel(run, locale)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+            </div>
+            <div className="key-grid">
+              <KeyValue
+                label={t('storeMe.view')}
+                value={formatSourceMode(t, performance.source.mode)}
+              />
+              <KeyValue label={t('storeMe.period')} value={periodLabel} />
+              <KeyValue
+                label={t('storeMe.dataStatus')}
+                value={partial.isPartial ? t('storeMe.missingDataExists') : t('storeMe.completeData')}
+              />
+              <KeyValue
+                label={t('storeMe.targetEntry')}
                 value={
-                  selectedClosedSnapshotRunId ||
-                  activeClosedSnapshotRun?.snapshotRunId ||
-                  ''
+                  supporting.targetEntryMode === 'manager_assignment'
+                    ? t('storeMe.targetEntryManager')
+                    : t('storeMe.unknown')
                 }
-                onChange={(event) => setSelectedClosedSnapshotRunId(event.target.value)}
-              >
-                <option value="">{t('storeMe.latestClosedSnapshot')}</option>
-                {availableClosedSnapshotRuns.map((run) => (
-                  <option key={run.snapshotRunId} value={run.snapshotRunId}>
-                    {formatSnapshotOptionLabel(run, locale)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
-        </div>
-        <div className="key-grid">
-          <KeyValue
-            label={t('storeMe.view')}
-            value={formatSourceMode(t, performance.source.mode)}
-          />
-          <KeyValue label={t('storeMe.period')} value={periodLabel} />
-          <KeyValue
-            label={t('storeMe.dataStatus')}
-            value={partial.isPartial ? t('storeMe.missingDataExists') : t('storeMe.completeData')}
-          />
-          <KeyValue
-            label={t('storeMe.targetEntry')}
-            value={
-              supporting.targetEntryMode === 'manager_assignment'
-                ? t('storeMe.targetEntryManager')
-                : t('storeMe.unknown')
-            }
-          />
-        </div>
+              />
+            </div>
+          </div>
+        ) : null}
+      </section>
+
+      <section className="store-me-performance-stage">
+        <aside className="panel store-me-score-card" aria-label={t('storeMe.performanceScore')}>
+          <div className="store-me-score-head">
+            <div>
+              <div className="eyebrow">{t('storeMe.performanceScore')}</div>
+              <h3>{t('storeMe.personalScoreCard')}</h3>
+            </div>
+            <StatusPill tone={performanceGrade.tone}>
+              {performanceGrade.code}
+            </StatusPill>
+          </div>
+          <div
+            className="store-me-score-orbit"
+            style={{ '--store-me-score': `${Math.round(performance.score.value)}%` } as CSSProperties}
+          >
+            <div className="store-me-score-number">
+              <strong>{Math.round(performance.score.value)}</strong>
+              <span>/100</span>
+              <small>{samePeriodScoreDelta ?? t('storeMe.noTrendData')}</small>
+            </div>
+          </div>
+          <div className="store-me-rank-row">
+            <KeyValue
+              label={t('storeMe.store')}
+              value={performance.rankings.storeRank ? `${performance.rankings.storeRank}.` : t('storeMe.noData')}
+            />
+            <KeyValue
+              label={t('storeMe.turkey')}
+              value={performance.rankings.turkeyRank ? `${performance.rankings.turkeyRank}.` : t('storeMe.noData')}
+            />
+          </div>
+          <div className="store-me-coach-note">
+            <span>{t('storeMe.coachingMode')}</span>
+            <strong>{scoreMeaning.focus}</strong>
+          </div>
+        </aside>
+
+        <section className="panel store-me-action-panel" aria-label={t('storeMe.performanceSummary')}>
+          <div className="store-me-action-copy">
+            <h3>{t('storeMe.performanceFocusTitle')}</h3>
+            <p>{scoreMeaning.summary}</p>
+          </div>
+          <div className="store-me-target-card">
+            <div className="store-me-target-head">
+              <div>
+                <span>{t('storeMe.targetProgress')}</span>
+                <strong>{t('storeMe.targetProgressPercent', { value: targetProgressPercent })}</strong>
+              </div>
+              <em>{t('storeMe.approvedTarget')}</em>
+            </div>
+            <div className="store-me-target-track" aria-hidden="true">
+              <i style={{ width: `${targetProgressPercent}%` }} />
+            </div>
+          </div>
+          <article className="store-me-compare-card" aria-label={t('storeMe.samePeriodComparison')}>
+            <div>
+              <span>{t('storeMe.samePeriodComparison')}</span>
+              <strong>
+                {samePeriodScoreDelta
+                  ? t('storeMe.samePeriodSummary', { value: samePeriodScoreDelta })
+                  : t('storeMe.noTrendData')}
+              </strong>
+            </div>
+            <div className="store-me-mini-bars">
+              {samePeriodMetrics.map((metric) => (
+                <div className="store-me-mini-bar" key={metric.code}>
+                  <b>{metric.label}</b>
+                  <i style={{ '--store-me-width': metric.width } as CSSProperties} />
+                  <em>{metric.delta ?? t('storeMe.noData')}</em>
+                </div>
+              ))}
+            </div>
+          </article>
+          <div className="hero-actions store-me-action-buttons">
+            <button className="control-button" type="button" onClick={() => setIsKpiDetailOpen(true)}>
+              {t('storeMe.kpiDetails')}
+            </button>
+          </div>
+        </section>
       </section>
 
       {partial.isPartial ? (
@@ -506,7 +836,7 @@ export function StoreMyPerformancePage(input: {
         </div>
         <p className="queue-subtitle">{t('storeMe.kpiDetailsCopy')}</p>
         <div className="stacked-table">
-          {performance.metrics.map((metric) => {
+          {personnelMetrics.map((metric) => {
             const sourceSemantics = localizeKpiSourceSemantics(t, 'storeMe', metric)
             const scoreReference = resolveLocalizedKpiScoreReference(t, {
               target: 'storeMe.reference.target',
@@ -605,6 +935,71 @@ export function StoreMyPerformancePage(input: {
           })}
         </div>
       </section>
+
+      {isKpiDetailOpen ? (
+        <div
+          className="store-me-dialog-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setIsKpiDetailOpen(false)
+            }
+          }}
+        >
+          <section
+            className="store-me-kpi-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="store-me-kpi-dialog-title"
+          >
+            <div className="store-me-kpi-dialog-head">
+              <div>
+                <div className="eyebrow">{t('storeMe.kpiDetails')}</div>
+                <h3 id="store-me-kpi-dialog-title">
+                  {t('storeMe.monthlyPerformanceTitle', {
+                    name: performance.employee.displayName,
+                  })}
+                </h3>
+                <p>{t('storeMe.monthlyPerformanceCopy')}</p>
+              </div>
+              <button
+                className="icon-button store-me-dialog-close"
+                type="button"
+                aria-label={t('storeMe.closeKpiDetails')}
+                onClick={() => setIsKpiDetailOpen(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="store-me-month-table" aria-label={t('storeMe.monthlyPerformanceTable')}>
+              <div className="store-me-month-row store-me-month-row-head" aria-hidden="true">
+                <span>{t('storeMe.month')}</span>
+                <span>{t('storeMe.score')}</span>
+                <span>{t('storeMe.metric.uptShort')}</span>
+                <span>{t('storeMe.metric.atvShort')}</span>
+                <span>{t('storeMe.metric.hgShort')}</span>
+                <span>{t('storeMe.monthlyTrend')}</span>
+              </div>
+              {monthlyDetailRows.map((row) => (
+                <article className="store-me-month-row" key={row.key}>
+                  <div>
+                    <strong>{row.label}</strong>
+                    <small>{row.periodNote}</small>
+                  </div>
+                  <b>{row.scoreLabel}</b>
+                  <b>{row.uptLabel}</b>
+                  <b>{row.atvLabel}</b>
+                  <b>{row.targetLabel}</b>
+                  <div className="store-me-month-trend">
+                    <i style={{ '--store-me-width': row.trendWidth } as CSSProperties} />
+                    <em>{row.trendLabel ?? t('storeMe.noTrendData')}</em>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        </div>
+      ) : null}
     </section>
   )
 }
