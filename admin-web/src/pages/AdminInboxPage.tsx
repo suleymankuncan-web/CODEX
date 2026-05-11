@@ -29,6 +29,9 @@ import {
   rejectOffboardingRequest,
   rejectSellerCodeRequest,
   type OffboardingAccessClosure,
+  type OffboardingRequest,
+  type SellerCodeReference,
+  type SellerCodeRequest,
 } from '../features/workforce/api'
 import { formatDateTime, formatState, getErrorMessage } from '../lib/format'
 
@@ -296,244 +299,73 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
       </section>
 
       {sellerCodeEnabled ? (
-        <section className="panel" aria-label={t('adminInbox.sellerQueueAria')}>
-          <div className="panel-heading panel-heading-spread">
-            <div>
-              <div className="eyebrow">{t('adminInbox.workforceEyebrow')}</div>
-              <h3>{t('adminInbox.sellerQueueTitle')}</h3>
-              <p className="panel-copy">{t('adminInbox.sellerQueueCopy')}</p>
-            </div>
-            <div className="hero-metrics compact-metrics">
-              <MetricAccent
-                label={t('adminInbox.lastFranchiseCode')}
-                value={sellerCodeReferenceQuery.data?.lastSellerCode ?? t('adminInbox.noFmCode')}
-              />
-              <MetricAccent
-                label={t('adminInbox.nextPreview')}
-                value={sellerCodeReferenceQuery.data?.nextSellerCodePreview ?? t('adminInbox.notAvailable')}
-              />
-            </div>
-          </div>
-
-          {sellerCodeNotice ? (
-            <div className="inline-state inline-state-accent">{sellerCodeNotice}</div>
-          ) : null}
-
-          {sellerCodeReferenceQuery.isLoading || sellerCodeRequestsQuery.isLoading ? (
-            <div className="inline-state inline-state-neutral">{t('adminInbox.loadingSellerRequests')}</div>
-          ) : sellerCodeReferenceQuery.isError ? (
-            <div className="inline-state inline-state-danger">{getErrorMessage(sellerCodeReferenceQuery.error)}</div>
-          ) : sellerCodeRequestsQuery.isError ? (
-            <div className="inline-state inline-state-danger">{getErrorMessage(sellerCodeRequestsQuery.error)}</div>
-          ) : sellerCodeRequests.length === 0 ? (
-            <EmptyState
-              title={t('adminInbox.noSellerRequestsTitle')}
-              copy={t('adminInbox.noSellerRequestsCopy')}
-            />
-          ) : (
-            <div className="stacked-table">
-              {sellerCodeRequests.map((item) => {
-                const displayName = `${item.firstName} ${item.lastName}`.trim()
-                const draftCode =
-                  sellerCodeDrafts[item.requestId] ??
-                  item.requestedSellerCode ??
-                  sellerCodeReferenceQuery.data?.nextSellerCodePreview ??
-                  ''
-                const returnNote = sellerCodeReturnNotes[item.requestId] ?? ''
-
-                return (
-                  <article className="stacked-row" key={item.requestId}>
-                    <div className="stacked-row-head">
-                      <div>
-                        <strong>{displayName}</strong>
-                        <p className="queue-subtitle">
-                          {t('adminInbox.referenceLine', {
-                            storeName: item.storeName,
-                            storeType: item.storeType,
-                            reference: item.lastReferenceSellerCode ?? t('adminInbox.none'),
-                          })}
-                        </p>
-                      </div>
-                      <StatusPill tone="warning">{formatTranslatedState(item.status, t)}</StatusPill>
-                    </div>
-
-                    <div className="key-grid">
-                      <KeyValue label={t('adminInbox.position')} value={item.positionName} />
-                      <KeyValue label={t('adminInbox.nationalIdLast4')} value={item.nationalIdLast4} />
-                      <KeyValue label={t('adminInbox.phone')} value={item.phoneNumber} />
-                      <KeyValue label={t('adminInbox.hireDate')} value={item.hireDate} />
-                    </div>
-
-                    <div className="form-grid">
-                      <label className="field-block">
-                        <span>{t('adminInbox.sellerCodeField')}</span>
-                        <input
-                          aria-label={t('adminInbox.sellerCodeInputAria', { displayName })}
-                          value={draftCode}
-                          onChange={(event) =>
-                            setSellerCodeDrafts((current) => ({
-                              ...current,
-                              [item.requestId]: event.target.value.toUpperCase(),
-                            }))
-                          }
-                        />
-                      </label>
-                      <div className="field-block">
-                        <span>{t('adminInbox.manualControl')}</span>
-                        <button
-                          className="control-button"
-                          type="button"
-                          disabled={approveSellerCodeMutation.isPending || !draftCode.trim()}
-                          onClick={() =>
-                            approveSellerCodeMutation.mutate({
-                              requestId: item.requestId,
-                              sellerCode: draftCode.trim(),
-                              reviewNote: 'Approved from admin inbox',
-                            })
-                          }
-                        >
-                          {t('adminInbox.approveSellerCode')}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="form-grid">
-                      <label className="field-block">
-                        <span>{t('adminInbox.returnNote')}</span>
-                        <textarea
-                          aria-label={t('adminInbox.returnNoteForAria', { displayName })}
-                          rows={2}
-                          value={returnNote}
-                          onChange={(event) =>
-                            setSellerCodeReturnNotes((current) => ({
-                              ...current,
-                              [item.requestId]: event.target.value,
-                            }))
-                          }
-                        />
-                      </label>
-                      <div className="field-block">
-                        <span>{t('adminInbox.storeCorrection')}</span>
-                        <button
-                          className="control-button"
-                          type="button"
-                          disabled={rejectSellerCodeMutation.isPending || !returnNote.trim()}
-                          onClick={() =>
-                            rejectSellerCodeMutation.mutate({
-                              requestId: item.requestId,
-                              reviewNote: returnNote.trim(),
-                            })
-                          }
-                        >
-                          {t('adminInbox.returnSellerCode')}
-                        </button>
-                      </div>
-                    </div>
-                  </article>
-                )
-              })}
-            </div>
-          )}
-        </section>
+        <SellerCodeQueuePanel
+          approvePending={approveSellerCodeMutation.isPending}
+          drafts={sellerCodeDrafts}
+          notice={sellerCodeNotice}
+          onApprove={(requestId, sellerCode) =>
+            approveSellerCodeMutation.mutate({
+              requestId,
+              sellerCode,
+              reviewNote: 'Approved from admin inbox',
+            })
+          }
+          onDraftChange={(requestId, value) =>
+            setSellerCodeDrafts((current) => ({
+              ...current,
+              [requestId]: value.toUpperCase(),
+            }))
+          }
+          onReject={(requestId, reviewNote) =>
+            rejectSellerCodeMutation.mutate({
+              requestId,
+              reviewNote,
+            })
+          }
+          onReturnNoteChange={(requestId, value) =>
+            setSellerCodeReturnNotes((current) => ({
+              ...current,
+              [requestId]: value,
+            }))
+          }
+          reference={sellerCodeReferenceQuery.data}
+          referenceError={sellerCodeReferenceQuery.error}
+          referenceLoading={sellerCodeReferenceQuery.isLoading}
+          rejectPending={rejectSellerCodeMutation.isPending}
+          requests={sellerCodeRequests}
+          requestsError={sellerCodeRequestsQuery.error}
+          requestsLoading={sellerCodeRequestsQuery.isLoading}
+          returnNotes={sellerCodeReturnNotes}
+        />
       ) : null}
 
       {sellerCodeEnabled ? (
-        <section className="panel" aria-label={t('adminInbox.offboardingQueueAria')}>
-          <div className="panel-heading panel-heading-spread">
-            <div>
-              <div className="eyebrow">{t('adminInbox.workforceEyebrow')}</div>
-              <h3>{t('adminInbox.offboardingQueueTitle')}</h3>
-              <p className="panel-copy">{t('adminInbox.offboardingQueueCopy')}</p>
-            </div>
-          </div>
-
-          {offboardingRequestsQuery.isLoading ? (
-            <div className="inline-state inline-state-neutral">{t('adminInbox.loadingOffboardingRequests')}</div>
-          ) : offboardingRequestsQuery.isError ? (
-            <div className="inline-state inline-state-danger">{getErrorMessage(offboardingRequestsQuery.error)}</div>
-          ) : offboardingRequests.length === 0 ? (
-            <EmptyState
-              title={t('adminInbox.noOffboardingRequestsTitle')}
-              copy={t('adminInbox.noOffboardingRequestsCopy')}
-            />
-          ) : (
-            <div className="stacked-table">
-              {offboardingRequests.map((item) => {
-                const returnNote = offboardingReturnNotes[item.requestId] ?? ''
-
-                return (
-                  <article className="stacked-row" key={item.requestId}>
-                    <div className="stacked-row-head">
-                      <div>
-                        <strong>{item.displayName}</strong>
-                        <p className="queue-subtitle">
-                          {item.storeName} / {item.externalEmployeeRef ?? t('adminInbox.noSellerCode')}
-                        </p>
-                      </div>
-                      <StatusPill tone="warning">{formatTranslatedState(item.status, t)}</StatusPill>
-                    </div>
-
-                    <div className="key-grid">
-                      <KeyValue label={t('adminInbox.position')} value={item.positionName ?? t('adminInbox.noPosition')} />
-                      <KeyValue label={t('adminInbox.exitDate')} value={item.terminationDate} />
-                      <KeyValue label={t('adminInbox.reason')} value={item.terminationReason} />
-                      <KeyValue label={t('adminInbox.requestNote')} value={item.requestReason ?? t('adminInbox.noNote')} />
-                    </div>
-
-                    <div className="form-grid">
-                      <div className="field-block">
-                        <span>{t('adminInbox.manualControl')}</span>
-                        <button
-                          className="control-button"
-                          type="button"
-                          disabled={approveOffboardingMutation.isPending}
-                          onClick={() =>
-                            approveOffboardingMutation.mutate({
-                              requestId: item.requestId,
-                              reviewNote: 'Approved from admin inbox',
-                            })
-                          }
-                        >
-                          {t('adminInbox.approveOffboarding')}
-                        </button>
-                      </div>
-                      <label className="field-block">
-                        <span>{t('adminInbox.returnNote')}</span>
-                        <textarea
-                          aria-label={t('adminInbox.returnNoteForAria', { displayName: item.displayName })}
-                          rows={2}
-                          value={returnNote}
-                          onChange={(event) =>
-                            setOffboardingReturnNotes((current) => ({
-                              ...current,
-                              [item.requestId]: event.target.value,
-                            }))
-                          }
-                        />
-                      </label>
-                      <div className="field-block">
-                        <span>{t('adminInbox.storeCorrection')}</span>
-                        <button
-                          className="control-button"
-                          type="button"
-                          disabled={rejectOffboardingMutation.isPending || !returnNote.trim()}
-                          onClick={() =>
-                            rejectOffboardingMutation.mutate({
-                              requestId: item.requestId,
-                              reviewNote: returnNote.trim(),
-                            })
-                          }
-                        >
-                          {t('adminInbox.returnOffboarding')}
-                        </button>
-                      </div>
-                    </div>
-                  </article>
-                )
-              })}
-            </div>
-          )}
-        </section>
+        <OffboardingQueuePanel
+          approvePending={approveOffboardingMutation.isPending}
+          error={offboardingRequestsQuery.error}
+          loading={offboardingRequestsQuery.isLoading}
+          onApprove={(requestId) =>
+            approveOffboardingMutation.mutate({
+              requestId,
+              reviewNote: 'Approved from admin inbox',
+            })
+          }
+          onReject={(requestId, reviewNote) =>
+            rejectOffboardingMutation.mutate({
+              requestId,
+              reviewNote,
+            })
+          }
+          onReturnNoteChange={(requestId, value) =>
+            setOffboardingReturnNotes((current) => ({
+              ...current,
+              [requestId]: value,
+            }))
+          }
+          rejectPending={rejectOffboardingMutation.isPending}
+          requests={offboardingRequests}
+          returnNotes={offboardingReturnNotes}
+        />
       ) : null}
 
       <section className="panel">
@@ -558,6 +390,289 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
         )}
       </section>
     </section>
+  )
+}
+
+function SellerCodeQueuePanel(input: {
+  approvePending: boolean
+  drafts: Record<string, string>
+  notice: string | null
+  onApprove: (requestId: string, sellerCode: string) => void
+  onDraftChange: (requestId: string, value: string) => void
+  onReject: (requestId: string, reviewNote: string) => void
+  onReturnNoteChange: (requestId: string, value: string) => void
+  reference: SellerCodeReference | undefined
+  referenceError: Error | null
+  referenceLoading: boolean
+  rejectPending: boolean
+  requests: SellerCodeRequest[]
+  requestsError: Error | null
+  requestsLoading: boolean
+  returnNotes: Record<string, string>
+}) {
+  const { t } = useLocalization()
+
+  return (
+    <section className="panel" aria-label={t('adminInbox.sellerQueueAria')}>
+      <div className="panel-heading panel-heading-spread">
+        <div>
+          <div className="eyebrow">{t('adminInbox.workforceEyebrow')}</div>
+          <h3>{t('adminInbox.sellerQueueTitle')}</h3>
+          <p className="panel-copy">{t('adminInbox.sellerQueueCopy')}</p>
+        </div>
+        <div className="hero-metrics compact-metrics">
+          <MetricAccent
+            label={t('adminInbox.lastFranchiseCode')}
+            value={input.reference?.lastSellerCode ?? t('adminInbox.noFmCode')}
+          />
+          <MetricAccent
+            label={t('adminInbox.nextPreview')}
+            value={input.reference?.nextSellerCodePreview ?? t('adminInbox.notAvailable')}
+          />
+        </div>
+      </div>
+
+      {input.notice ? <div className="inline-state inline-state-accent">{input.notice}</div> : null}
+
+      {input.referenceLoading || input.requestsLoading ? (
+        <div className="inline-state inline-state-neutral">{t('adminInbox.loadingSellerRequests')}</div>
+      ) : input.referenceError ? (
+        <div className="inline-state inline-state-danger">{getErrorMessage(input.referenceError)}</div>
+      ) : input.requestsError ? (
+        <div className="inline-state inline-state-danger">{getErrorMessage(input.requestsError)}</div>
+      ) : input.requests.length === 0 ? (
+        <EmptyState
+          title={t('adminInbox.noSellerRequestsTitle')}
+          copy={t('adminInbox.noSellerRequestsCopy')}
+        />
+      ) : (
+        <div className="stacked-table">
+          {input.requests.map((item) => (
+            <SellerCodeRequestRow
+              approvePending={input.approvePending}
+              draftCode={
+                input.drafts[item.requestId] ??
+                item.requestedSellerCode ??
+                input.reference?.nextSellerCodePreview ??
+                ''
+              }
+              item={item}
+              key={item.requestId}
+              onApprove={input.onApprove}
+              onDraftChange={input.onDraftChange}
+              onReject={input.onReject}
+              onReturnNoteChange={input.onReturnNoteChange}
+              rejectPending={input.rejectPending}
+              returnNote={input.returnNotes[item.requestId] ?? ''}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+function SellerCodeRequestRow(input: {
+  approvePending: boolean
+  draftCode: string
+  item: SellerCodeRequest
+  onApprove: (requestId: string, sellerCode: string) => void
+  onDraftChange: (requestId: string, value: string) => void
+  onReject: (requestId: string, reviewNote: string) => void
+  onReturnNoteChange: (requestId: string, value: string) => void
+  rejectPending: boolean
+  returnNote: string
+}) {
+  const { t } = useLocalization()
+  const displayName = `${input.item.firstName} ${input.item.lastName}`.trim()
+
+  return (
+    <article className="stacked-row">
+      <div className="stacked-row-head">
+        <div>
+          <strong>{displayName}</strong>
+          <p className="queue-subtitle">
+            {t('adminInbox.referenceLine', {
+              storeName: input.item.storeName,
+              storeType: input.item.storeType,
+              reference: input.item.lastReferenceSellerCode ?? t('adminInbox.none'),
+            })}
+          </p>
+        </div>
+        <StatusPill tone="warning">{formatTranslatedState(input.item.status, t)}</StatusPill>
+      </div>
+
+      <div className="key-grid">
+        <KeyValue label={t('adminInbox.position')} value={input.item.positionName} />
+        <KeyValue label={t('adminInbox.nationalIdLast4')} value={input.item.nationalIdLast4} />
+        <KeyValue label={t('adminInbox.phone')} value={input.item.phoneNumber} />
+        <KeyValue label={t('adminInbox.hireDate')} value={input.item.hireDate} />
+      </div>
+
+      <div className="form-grid">
+        <label className="field-block">
+          <span>{t('adminInbox.sellerCodeField')}</span>
+          <input
+            aria-label={t('adminInbox.sellerCodeInputAria', { displayName })}
+            value={input.draftCode}
+            onChange={(event) => input.onDraftChange(input.item.requestId, event.target.value)}
+          />
+        </label>
+        <div className="field-block">
+          <span>{t('adminInbox.manualControl')}</span>
+          <button
+            className="control-button"
+            type="button"
+            disabled={input.approvePending || !input.draftCode.trim()}
+            onClick={() => input.onApprove(input.item.requestId, input.draftCode.trim())}
+          >
+            {t('adminInbox.approveSellerCode')}
+          </button>
+        </div>
+      </div>
+
+      <div className="form-grid">
+        <label className="field-block">
+          <span>{t('adminInbox.returnNote')}</span>
+          <textarea
+            aria-label={t('adminInbox.returnNoteForAria', { displayName })}
+            rows={2}
+            value={input.returnNote}
+            onChange={(event) => input.onReturnNoteChange(input.item.requestId, event.target.value)}
+          />
+        </label>
+        <div className="field-block">
+          <span>{t('adminInbox.storeCorrection')}</span>
+          <button
+            className="control-button"
+            type="button"
+            disabled={input.rejectPending || !input.returnNote.trim()}
+            onClick={() => input.onReject(input.item.requestId, input.returnNote.trim())}
+          >
+            {t('adminInbox.returnSellerCode')}
+          </button>
+        </div>
+      </div>
+    </article>
+  )
+}
+
+function OffboardingQueuePanel(input: {
+  approvePending: boolean
+  error: Error | null
+  loading: boolean
+  onApprove: (requestId: string) => void
+  onReject: (requestId: string, reviewNote: string) => void
+  onReturnNoteChange: (requestId: string, value: string) => void
+  rejectPending: boolean
+  requests: OffboardingRequest[]
+  returnNotes: Record<string, string>
+}) {
+  const { t } = useLocalization()
+
+  return (
+    <section className="panel" aria-label={t('adminInbox.offboardingQueueAria')}>
+      <div className="panel-heading panel-heading-spread">
+        <div>
+          <div className="eyebrow">{t('adminInbox.workforceEyebrow')}</div>
+          <h3>{t('adminInbox.offboardingQueueTitle')}</h3>
+          <p className="panel-copy">{t('adminInbox.offboardingQueueCopy')}</p>
+        </div>
+      </div>
+
+      {input.loading ? (
+        <div className="inline-state inline-state-neutral">{t('adminInbox.loadingOffboardingRequests')}</div>
+      ) : input.error ? (
+        <div className="inline-state inline-state-danger">{getErrorMessage(input.error)}</div>
+      ) : input.requests.length === 0 ? (
+        <EmptyState
+          title={t('adminInbox.noOffboardingRequestsTitle')}
+          copy={t('adminInbox.noOffboardingRequestsCopy')}
+        />
+      ) : (
+        <div className="stacked-table">
+          {input.requests.map((item) => (
+            <OffboardingRequestRow
+              approvePending={input.approvePending}
+              item={item}
+              key={item.requestId}
+              onApprove={input.onApprove}
+              onReject={input.onReject}
+              onReturnNoteChange={input.onReturnNoteChange}
+              rejectPending={input.rejectPending}
+              returnNote={input.returnNotes[item.requestId] ?? ''}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+function OffboardingRequestRow(input: {
+  approvePending: boolean
+  item: OffboardingRequest
+  onApprove: (requestId: string) => void
+  onReject: (requestId: string, reviewNote: string) => void
+  onReturnNoteChange: (requestId: string, value: string) => void
+  rejectPending: boolean
+  returnNote: string
+}) {
+  const { t } = useLocalization()
+
+  return (
+    <article className="stacked-row">
+      <div className="stacked-row-head">
+        <div>
+          <strong>{input.item.displayName}</strong>
+          <p className="queue-subtitle">
+            {input.item.storeName} / {input.item.externalEmployeeRef ?? t('adminInbox.noSellerCode')}
+          </p>
+        </div>
+        <StatusPill tone="warning">{formatTranslatedState(input.item.status, t)}</StatusPill>
+      </div>
+
+      <div className="key-grid">
+        <KeyValue label={t('adminInbox.position')} value={input.item.positionName ?? t('adminInbox.noPosition')} />
+        <KeyValue label={t('adminInbox.exitDate')} value={input.item.terminationDate} />
+        <KeyValue label={t('adminInbox.reason')} value={input.item.terminationReason} />
+        <KeyValue label={t('adminInbox.requestNote')} value={input.item.requestReason ?? t('adminInbox.noNote')} />
+      </div>
+
+      <div className="form-grid">
+        <div className="field-block">
+          <span>{t('adminInbox.manualControl')}</span>
+          <button
+            className="control-button"
+            type="button"
+            disabled={input.approvePending}
+            onClick={() => input.onApprove(input.item.requestId)}
+          >
+            {t('adminInbox.approveOffboarding')}
+          </button>
+        </div>
+        <label className="field-block">
+          <span>{t('adminInbox.returnNote')}</span>
+          <textarea
+            aria-label={t('adminInbox.returnNoteForAria', { displayName: input.item.displayName })}
+            rows={2}
+            value={input.returnNote}
+            onChange={(event) => input.onReturnNoteChange(input.item.requestId, event.target.value)}
+          />
+        </label>
+        <div className="field-block">
+          <span>{t('adminInbox.storeCorrection')}</span>
+          <button
+            className="control-button"
+            type="button"
+            disabled={input.rejectPending || !input.returnNote.trim()}
+            onClick={() => input.onReject(input.item.requestId, input.returnNote.trim())}
+          >
+            {t('adminInbox.returnOffboarding')}
+          </button>
+        </div>
+      </div>
+    </article>
   )
 }
 
