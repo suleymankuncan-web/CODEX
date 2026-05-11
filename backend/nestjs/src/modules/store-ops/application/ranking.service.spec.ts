@@ -94,6 +94,89 @@ describe("RankingService", () => {
     };
   }
 
+  function createKpiConfigRepositoryMockWithStoreProfile(
+    metrics: Array<{
+      code: string;
+      label: string;
+      weightPercent: number;
+      benchmarkSource: "TARGET" | "TURKEY_AVERAGE";
+      aliases?: string[];
+    }>,
+  ) {
+    return {
+      getKpiConfigRows: jest.fn(async () => [
+        {
+          config_key: "store_profile",
+          config_payload: {
+            profileCode: "store",
+            title: "Custom store score profile",
+            summary: "Custom ranking profile for test",
+            futureMetricRule: "test",
+            metrics: metrics.map((metric) => ({
+              ...metric,
+              ownerRole: "STORE_MANAGER",
+              scoreBehavior: "score_only",
+              direction: "HIGHER_IS_BETTER",
+              capRatio: 1.2,
+            })),
+          },
+        },
+      ]),
+    };
+  }
+
+  function createStoreKpiRows(input: {
+    storeId: string;
+    storeName: string;
+    targetAchievement: number;
+    upt: number;
+    atv: number;
+    cr: number;
+  }) {
+    const base = {
+      ...createStoreRows(1)[0],
+      store_id: input.storeId,
+      store_name: input.storeName,
+    };
+
+    return [
+      {
+        ...base,
+        kpi_code: "TARGET_ACHIEVEMENT",
+        kpi_name: "Hedef gerceklestirme orani",
+        actual_value: String(input.targetAchievement),
+        target_value: "100",
+      },
+      {
+        ...base,
+        kpi_code: "UPT",
+        kpi_name: "UPT",
+        actual_value: String(input.upt),
+        target_value: "not_applicable",
+      },
+      {
+        ...base,
+        kpi_code: "ATV",
+        kpi_name: "ATV",
+        actual_value: String(input.atv),
+        target_value: "not_applicable",
+      },
+      {
+        ...base,
+        kpi_code: "CR",
+        kpi_name: "CR",
+        actual_value: String(input.cr),
+        target_value: "not_applicable",
+      },
+    ];
+  }
+
+  const benchmarkRows = [
+    { kpi_code: "UPT", benchmark_value: "2.62" },
+    { kpi_code: "ATV", benchmark_value: "3573.08" },
+    { kpi_code: "CR", benchmark_value: "0.1126" },
+  ];
+
   it("caps store personnel to Turkey Top 100 summary rows and includes own position outside the top list", async () => {
     const repository = createRepositoryMock();
     const service = new RankingService(
@@ -379,6 +462,113 @@ describe("RankingService", () => {
         storeId: "store-001",
         scoreValue: 100,
       }),
+    );
+  });
+
+  it("keeps target achievement weight dominant in default store rankings", async () => {
+    const storeRows = [
+      ...createStoreKpiRows({
+        storeId: "store-hg-led",
+        storeName: "HG Led Store",
+        targetAchievement: 103,
+        upt: 2.86,
+        atv: 4140.33,
+        cr: 0.1842,
+      }),
+      ...createStoreKpiRows({
+        storeId: "store-atv-cr-led",
+        storeName: "ATV CR Led Store",
+        targetAchievement: 100.83,
+        upt: 2.83,
+        atv: 4780.53,
+        cr: 0.1931,
+      }),
+    ];
+    const repository = createRepositoryMock({
+      storeRows,
+      personnelRows: [],
+      storeBenchmarkRows: benchmarkRows,
+    });
+    const service = new RankingService(
+      repository as never,
+      createKpiConfigRepositoryMock() as never,
+    );
+
+    const result = await service.getRankings({
+      userId: "regional-1",
+      roleCodes: ["REGION_MANAGER"],
+      companyIds: [],
+      regionIds: [],
+      storeIds: [],
+      assignedStoreIds: [],
+      periodType: "monthly",
+    });
+
+    expect(result.storeLeaderboard.items.map((row) => row.storeId)).toEqual([
+      "store-hg-led",
+      "store-atv-cr-led",
+    ]);
+    expect(result.storeLeaderboard.items[0].scoreValue).toBeGreaterThan(
+      result.storeLeaderboard.items[1].scoreValue,
+    );
+  });
+
+  it("uses published KPI config weights to change store ranking order", async () => {
+    const storeRows = [
+      ...createStoreKpiRows({
+        storeId: "store-hg-led",
+        storeName: "HG Led Store",
+        targetAchievement: 103,
+        upt: 2.86,
+        atv: 4140.33,
+        cr: 0.1842,
+      }),
+      ...createStoreKpiRows({
+        storeId: "store-atv-cr-led",
+        storeName: "ATV CR Led Store",
+        targetAchievement: 100.83,
+        upt: 2.83,
+        atv: 4780.53,
+        cr: 0.1931,
+      }),
+    ];
+    const repository = createRepositoryMock({
+      storeRows,
+      personnelRows: [],
+      storeBenchmarkRows: benchmarkRows,
+    });
+    const service = new RankingService(
+      repository as never,
+      createKpiConfigRepositoryMockWithStoreProfile([
+        {
+          code: "TARGET_ACHIEVEMENT",
+          label: "Hedef gerceklestirme orani",
+          weightPercent: 20,
+          benchmarkSource: "TARGET",
+          aliases: ["STORE_SALES", "SALES_TARGET_ACHIEVEMENT"],
+        },
+        { code: "CR", label: "CR", weightPercent: 40, benchmarkSource: "TURKEY_AVERAGE" },
+        { code: "ATV", label: "ATV", weightPercent: 25, benchmarkSource: "TURKEY_AVERAGE" },
+        { code: "UPT", label: "UPT", weightPercent: 15, benchmarkSource: "TURKEY_AVERAGE" },
+      ]) as never,
+    );
+
+    const result = await service.getRankings({
+      userId: "regional-1",
+      roleCodes: ["REGION_MANAGER"],
+      companyIds: [],
+      regionIds: [],
+      storeIds: [],
+      assignedStoreIds: [],
+      periodType: "monthly",
+    });
+
+    expect(result.storeLeaderboard.items.map((row) => row.storeId)).toEqual([
+      "store-atv-cr-led",
+      "store-hg-led",
+    ]);
+    expect(result.storeLeaderboard.items[0].scoreValue).toBeGreaterThan(
+      result.storeLeaderboard.items[1].scoreValue,
     );
   });
 
