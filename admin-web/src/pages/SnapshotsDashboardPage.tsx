@@ -1,4 +1,4 @@
-import { useDeferredValue, useMemo, useState } from 'react'
+import { useDeferredValue, useMemo, useReducer } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Activity, ArrowRight, Clock3, RefreshCcw, Rocket } from 'lucide-react'
 import { Link } from 'react-router-dom'
@@ -29,6 +29,70 @@ const PAGE_SIZE = 12
 const snapshotTypes = ['daily', 'weekly', 'monthly', 'payroll', 'compliance'] as const
 const runStatuses = ['queued', 'running', 'completed', 'failed'] as const
 
+type SnapshotSortValue = 'priority' | 'generated-desc' | 'reruns' | 'type'
+type SnapshotTypeFilter = '' | (typeof snapshotTypes)[number]
+type SnapshotRunStatusFilter = '' | (typeof runStatuses)[number]
+
+type SnapshotsDashboardPageState = {
+  search: string
+  sortBy: SnapshotSortValue
+  offset: number
+  snapshotTypeFilter: SnapshotTypeFilter
+  runStatusFilter: SnapshotRunStatusFilter
+  feedback: string | null
+}
+
+type SnapshotsDashboardPageAction =
+  | { type: 'setSearch'; value: string }
+  | { type: 'setSortBy'; value: SnapshotSortValue }
+  | { type: 'setSnapshotTypeFilter'; value: SnapshotTypeFilter }
+  | { type: 'setRunStatusFilter'; value: SnapshotRunStatusFilter }
+  | { type: 'setFeedback'; value: string | null }
+  | { type: 'previousPage' }
+  | { type: 'nextPage' }
+  | { type: 'clearFilters' }
+
+const initialSnapshotsDashboardPageState: SnapshotsDashboardPageState = {
+  search: '',
+  sortBy: 'priority',
+  offset: 0,
+  snapshotTypeFilter: '',
+  runStatusFilter: '',
+  feedback: null,
+}
+
+function snapshotsDashboardPageReducer(
+  state: SnapshotsDashboardPageState,
+  action: SnapshotsDashboardPageAction,
+): SnapshotsDashboardPageState {
+  switch (action.type) {
+    case 'setSearch':
+      return { ...state, search: action.value }
+    case 'setSortBy':
+      return { ...state, sortBy: action.value }
+    case 'setSnapshotTypeFilter':
+      return { ...state, offset: 0, snapshotTypeFilter: action.value }
+    case 'setRunStatusFilter':
+      return { ...state, offset: 0, runStatusFilter: action.value }
+    case 'setFeedback':
+      return { ...state, feedback: action.value }
+    case 'previousPage':
+      return { ...state, offset: Math.max(0, state.offset - PAGE_SIZE) }
+    case 'nextPage':
+      return { ...state, offset: state.offset + PAGE_SIZE }
+    case 'clearFilters':
+      return {
+        ...state,
+        search: '',
+        offset: 0,
+        snapshotTypeFilter: '',
+        runStatusFilter: '',
+      }
+    default:
+      return state
+  }
+}
+
 function formatSnapshotType(input: string, t: TranslateFunction) {
   if (input === 'daily') return t('adminSnapshots.type.daily')
   if (input === 'weekly') return t('adminSnapshots.type.weekly')
@@ -53,12 +117,11 @@ function formatSnapshotState(input: string, t: TranslateFunction) {
 
 export function SnapshotsDashboardPage() {
   const { locale, t } = useLocalization()
-  const [search, setSearch] = useState('')
-  const [sortBy, setSortBy] = useState<'priority' | 'generated-desc' | 'reruns' | 'type'>('priority')
-  const [offset, setOffset] = useState(0)
-  const [snapshotTypeFilter, setSnapshotTypeFilter] = useState('')
-  const [runStatusFilter, setRunStatusFilter] = useState('')
-  const [feedback, setFeedback] = useState<string | null>(null)
+  const [pageState, dispatchPageState] = useReducer(
+    snapshotsDashboardPageReducer,
+    initialSnapshotsDashboardPageState,
+  )
+  const { search, sortBy, offset, snapshotTypeFilter, runStatusFilter, feedback } = pageState
   const deferredSearch = useDeferredValue(search)
   const queryClient = useQueryClient()
 
@@ -83,7 +146,7 @@ export function SnapshotsDashboardPage() {
   const rerunMutation = useMutation({
     mutationFn: rerunSnapshotRun,
     onSuccess: async (response) => {
-      setFeedback(response.command.message)
+      dispatchPageState({ type: 'setFeedback', value: response.command.message })
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['snapshot-needs-action'] }),
         queryClient.invalidateQueries({ queryKey: ['snapshot-overview'] }),
@@ -93,7 +156,7 @@ export function SnapshotsDashboardPage() {
   const dailyClosureMutation = useMutation({
     mutationFn: runDailyClosure,
     onSuccess: async (response) => {
-      setFeedback(response.command.message)
+      dispatchPageState({ type: 'setFeedback', value: response.command.message })
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['snapshot-daily-closure'] }),
         queryClient.invalidateQueries({ queryKey: ['snapshot-needs-action'] }),
@@ -303,7 +366,9 @@ export function SnapshotsDashboardPage() {
           </div>
           <ReportingToolbar
             sortValue={sortBy}
-            onSortChange={(value) => setSortBy(value as typeof sortBy)}
+            onSortChange={(value) =>
+              dispatchPageState({ type: 'setSortBy', value: value as SnapshotSortValue })
+            }
             sortOptions={[
               { value: 'priority', label: t('adminSnapshots.sort.priority') },
               { value: 'generated-desc', label: t('adminSnapshots.sort.generatedDesc') },
@@ -335,7 +400,9 @@ export function SnapshotsDashboardPage() {
               <span className="sr-only">{t('adminSnapshots.filterQueue')}</span>
               <input
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(event) =>
+                  dispatchPageState({ type: 'setSearch', value: event.target.value })
+                }
                 placeholder={t('adminSnapshots.searchPlaceholder')}
               />
             </label>
@@ -347,10 +414,12 @@ export function SnapshotsDashboardPage() {
             <span className="sr-only">{t('adminSnapshots.filterSnapshotType')}</span>
             <select
               value={snapshotTypeFilter}
-              onChange={(event) => {
-                setOffset(0)
-                setSnapshotTypeFilter(event.target.value)
-              }}
+              onChange={(event) =>
+                dispatchPageState({
+                  type: 'setSnapshotTypeFilter',
+                  value: event.target.value as SnapshotTypeFilter,
+                })
+              }
             >
               <option value="">{t('adminSnapshots.allSnapshotTypes')}</option>
               {snapshotTypes.map((type) => (
@@ -364,10 +433,12 @@ export function SnapshotsDashboardPage() {
             <span className="sr-only">{t('adminSnapshots.filterRunStatus')}</span>
             <select
               value={runStatusFilter}
-              onChange={(event) => {
-                setOffset(0)
-                setRunStatusFilter(event.target.value)
-              }}
+              onChange={(event) =>
+                dispatchPageState({
+                  type: 'setRunStatusFilter',
+                  value: event.target.value as SnapshotRunStatusFilter,
+                })
+              }
             >
               <option value="">{t('adminSnapshots.allRunStatuses')}</option>
               {runStatuses.map((status) => (
@@ -380,12 +451,7 @@ export function SnapshotsDashboardPage() {
           <button
             className="control-button"
             type="button"
-            onClick={() => {
-              setOffset(0)
-              setSnapshotTypeFilter('')
-              setRunStatusFilter('')
-              setSearch('')
-            }}
+            onClick={() => dispatchPageState({ type: 'clearFilters' })}
           >
             {t('adminSnapshots.clearFilters')}
           </button>
@@ -448,7 +514,7 @@ export function SnapshotsDashboardPage() {
           <button
             className="control-button"
             type="button"
-            onClick={() => setOffset((current) => Math.max(0, current - PAGE_SIZE))}
+            onClick={() => dispatchPageState({ type: 'previousPage' })}
             disabled={!canGoBack}
           >
             {t('adminSnapshots.previous')}
@@ -459,7 +525,7 @@ export function SnapshotsDashboardPage() {
           <button
             className="control-button"
             type="button"
-            onClick={() => setOffset((current) => current + PAGE_SIZE)}
+            onClick={() => dispatchPageState({ type: 'nextPage' })}
             disabled={!canGoForward}
           >
             {t('adminSnapshots.next')}
