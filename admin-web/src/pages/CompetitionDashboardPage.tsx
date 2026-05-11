@@ -172,72 +172,14 @@ export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummar
         </div>
       </section>
 
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('competition.admin.listEyebrow')}</div>
-            <h3>{t('competition.admin.listTitle')}</h3>
-          </div>
-          {canManage ? (
-            <button
-              className="control-button"
-              type="button"
-              disabled={createMutation.isPending}
-              onClick={() => createMutation.mutate()}
-            >
-              <Trophy size={16} />
-              {t('competition.admin.newDraft')}
-            </button>
-          ) : (
-            <StatusPill tone="neutral">{t('competition.admin.readOnly')}</StatusPill>
-          )}
-        </div>
-
-        {createMutation.isError ? (
-          <ScreenState
-            title={t('competition.admin.draftErrorTitle')}
-            copy={getErrorMessage(createMutation.error)}
-            tone="error"
-          />
-        ) : null}
-
-        {competitions.length === 0 ? (
-          <EmptyState title={t('competition.admin.emptyTitle')} copy={t('competition.admin.emptyCopy')} />
-        ) : (
-          <div className="stacked-table">
-            {competitions.map((competition: CompetitionSummary) => (
-              <article className="stacked-row" key={competition.competitionId}>
-                <div className="stacked-row-head">
-                  <div>
-                    <strong>{competition.competitionName}</strong>
-                    <p className="queue-subtitle">{competition.competitionCode}</p>
-                  </div>
-                  <div className="action-cluster">
-                    <StatusPill tone={stateTone(competition.lifecycleState)}>
-                      {formatCompetitionState(competition.lifecycleState, t)}
-                    </StatusPill>
-                    <button
-                      className="control-button"
-                      type="button"
-                      onClick={() => setSelectedCompetitionId(competition.competitionId)}
-                    >
-                      {t('competition.admin.review')}
-                    </button>
-                  </div>
-                </div>
-                <div className="key-grid">
-                  <KeyValue
-                    label={t('competition.admin.type')}
-                    value={formatCompetitionState(competition.competitionType, t)}
-                  />
-                  <KeyValue label={t('competition.admin.starts')} value={formatDate(competition.startsOn, locale)} />
-                  <KeyValue label={t('competition.admin.ends')} value={formatDate(competition.endsOn, locale)} />
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
+      <CompetitionListPanel
+        canManage={canManage}
+        competitions={competitions}
+        createError={createMutation.error}
+        createPending={createMutation.isPending}
+        onCreate={() => createMutation.mutate()}
+        onSelect={setSelectedCompetitionId}
+      />
 
       {selectedCompetition ? (
         <section className="panel">
@@ -380,6 +322,86 @@ export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummar
           ) : null}
         </section>
       ) : null}
+    </section>
+  )
+}
+
+function CompetitionListPanel(input: {
+  canManage: boolean
+  competitions: CompetitionSummary[]
+  createError: Error | null
+  createPending: boolean
+  onCreate: () => void
+  onSelect: (competitionId: string) => void
+}) {
+  const { locale, t } = useLocalization()
+
+  return (
+    <section className="panel">
+      <div className="panel-heading">
+        <div>
+          <div className="eyebrow">{t('competition.admin.listEyebrow')}</div>
+          <h3>{t('competition.admin.listTitle')}</h3>
+        </div>
+        {input.canManage ? (
+          <button
+            className="control-button"
+            type="button"
+            disabled={input.createPending}
+            onClick={input.onCreate}
+          >
+            <Trophy size={16} />
+            {t('competition.admin.newDraft')}
+          </button>
+        ) : (
+          <StatusPill tone="neutral">{t('competition.admin.readOnly')}</StatusPill>
+        )}
+      </div>
+
+      {input.createError ? (
+        <ScreenState
+          title={t('competition.admin.draftErrorTitle')}
+          copy={getErrorMessage(input.createError)}
+          tone="error"
+        />
+      ) : null}
+
+      {input.competitions.length === 0 ? (
+        <EmptyState title={t('competition.admin.emptyTitle')} copy={t('competition.admin.emptyCopy')} />
+      ) : (
+        <div className="stacked-table">
+          {input.competitions.map((competition: CompetitionSummary) => (
+            <article className="stacked-row" key={competition.competitionId}>
+              <div className="stacked-row-head">
+                <div>
+                  <strong>{competition.competitionName}</strong>
+                  <p className="queue-subtitle">{competition.competitionCode}</p>
+                </div>
+                <div className="action-cluster">
+                  <StatusPill tone={stateTone(competition.lifecycleState)}>
+                    {formatCompetitionState(competition.lifecycleState, t)}
+                  </StatusPill>
+                  <button
+                    className="control-button"
+                    type="button"
+                    onClick={() => input.onSelect(competition.competitionId)}
+                  >
+                    {t('competition.admin.review')}
+                  </button>
+                </div>
+              </div>
+              <div className="key-grid">
+                <KeyValue
+                  label={t('competition.admin.type')}
+                  value={formatCompetitionState(competition.competitionType, t)}
+                />
+                <KeyValue label={t('competition.admin.starts')} value={formatDate(competition.startsOn, locale)} />
+                <KeyValue label={t('competition.admin.ends')} value={formatDate(competition.endsOn, locale)} />
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
     </section>
   )
 }
