@@ -2,7 +2,6 @@ import { fetchJson, sendJson } from '../../lib/api'
 import type {
   CreateFeedPostPayload,
   FeedPost,
-  UpdateFeedPostPayload,
 } from './contracts'
 
 type ListResponse<T> = {
@@ -35,16 +34,6 @@ export async function createFeedPost(input: CreateFeedPostPayload) {
   return sendJson<CommandResponse<{ feedPost: FeedPost }>>('/admin/feed', {
     method: 'POST',
     body: input,
-  })
-}
-
-export async function updateFeedPost(input: {
-  feedPostId: string
-  payload: UpdateFeedPostPayload
-}) {
-  return sendJson<CommandResponse<{ feedPost: FeedPost }>>(`/admin/feed/${input.feedPostId}`, {
-    method: 'PUT',
-    body: input.payload,
   })
 }
 

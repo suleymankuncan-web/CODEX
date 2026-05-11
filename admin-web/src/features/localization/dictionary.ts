@@ -4,13 +4,13 @@ import { messages } from './messages'
 type LocaleMessages = (typeof messages)[typeof defaultAppLocale]
 
 export type TranslationKey = keyof LocaleMessages
-export type TranslationParamValue = string | number
+type TranslationParamValue = string | number
 export type TranslationParams = Record<string, TranslationParamValue>
 export type TranslateFunction = (key: TranslationKey, params?: TranslationParams) => string
 
 const dictionary: Record<AppLocale, LocaleMessages> = messages
 
-export function interpolateTranslation(template: string, params?: TranslationParams) {
+function interpolateTranslation(template: string, params?: TranslationParams) {
   if (!params) {
     return template
   }

@@ -10,7 +10,7 @@ type ListResponse<T> = {
   }
 }
 
-export type SnapshotKpiConfigVersion = {
+type SnapshotKpiConfigVersion = {
   kpiConfigVersionId: string | null
   versionNo: number | null
   state: 'versioned' | 'pre_governance'

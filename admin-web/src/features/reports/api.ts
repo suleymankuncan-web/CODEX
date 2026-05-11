@@ -50,7 +50,7 @@ export type ReportingSnapshotRun = {
   kpiConfigVersion?: SnapshotKpiConfigVersion | null
 }
 
-export type SnapshotKpiConfigVersion = {
+type SnapshotKpiConfigVersion = {
   kpiConfigVersionId: string | null
   versionNo: number | null
   state: 'versioned' | 'pre_governance'
@@ -90,9 +90,9 @@ export type KpiOwnerRole =
   | 'VISUAL_TEAM'
 
 export type KpiScoreBehavior = 'score_only' | 'warning_first' | 'task_candidate'
-export type KpiMetricDirection = 'HIGHER_IS_BETTER' | 'LOWER_IS_BETTER' | 'TARGET_BAND'
-export type KpiBenchmarkSource = 'TARGET' | 'TURKEY_AVERAGE' | 'CHECKLIST_SCORE'
-export type KpiMetricScoreStatus =
+type KpiMetricDirection = 'HIGHER_IS_BETTER' | 'LOWER_IS_BETTER' | 'TARGET_BAND'
+type KpiBenchmarkSource = 'TARGET' | 'TURKEY_AVERAGE' | 'CHECKLIST_SCORE'
+type KpiMetricScoreStatus =
   | 'scored'
   | 'pending_normalization'
   | 'missing_reference'
@@ -111,7 +111,7 @@ export type KpiScoreProfileMetric = {
   notes?: string
 }
 
-export type KpiScoreProfile = {
+type KpiScoreProfile = {
   profileCode: 'store' | 'personnel'
   title: string
   summary: string
@@ -230,7 +230,7 @@ export type MyPerformanceSummary = {
   metrics: MyPerformanceMetric[]
 }
 
-export type StoreKpiHighlightMetric = {
+type StoreKpiHighlightMetric = {
   code: string
   label: string
   weightPercent: number
@@ -285,7 +285,7 @@ export type StoreKpiHighlightsSummary = {
   metrics: StoreKpiHighlightMetric[]
 }
 
-export type StoreScoreBreakdownComponent = {
+type StoreScoreBreakdownComponent = {
   included: boolean
   score: number | null
   weight: number
@@ -294,7 +294,7 @@ export type StoreScoreBreakdownComponent = {
   missingReason?: string
 }
 
-export type StoreScoreWeights = {
+type StoreScoreWeights = {
   kpiPerformanceWeight: number
   bmChecklistWeight: number
   vmChecklistWeight: number
@@ -319,77 +319,7 @@ export type StoreMonthlyScoreBreakdown = {
   }
 }
 
-export type ClosedRankingMetricRank = {
-  code: string
-  label: string
-  actualValue: number | null
-  storeRank: number | null
-  storePopulation: number
-  turkeyRank: number | null
-  turkeyPopulation: number
-}
-
-export type ClosedRankingCoverage = {
-  closedDaysInPeriod: number
-  daysWithPerformance: number
-  minimumRequiredDays: number
-  isEligibleForRanking: boolean
-}
-
-export type ClosedRankingStatus = 'official' | 'preview_only'
-export type ClosedRankingEligibilityReason = 'eligible' | 'needs_more_closed_days'
-
-export type ClosedRankingEmployee = {
-  employeeId: string
-  displayName: string
-  storeId: string | null
-  storeName: string | null
-  scoreValue: number
-  rankingStatus: ClosedRankingStatus
-  eligibilityReason: ClosedRankingEligibilityReason
-  neededPerformanceDays: number
-  rankings: {
-    turkeyRank: number | null
-    turkeyPopulation: number
-    storeRank: number | null
-    storePopulation: number
-  }
-  coverage: ClosedRankingCoverage
-  metricRanks: ClosedRankingMetricRank[]
-}
-
-export type ClosedRankingIncludedSnapshotRun = {
-  snapshotRunId: string
-  snapshotDate: string
-  snapshotType: string
-  periodStart: string
-  periodEnd: string
-  runStatus: string
-  generatedAt: string
-  generatedBy: string
-}
-
-export type ClosedLeaderboardSummary = {
-  source: {
-    mode: 'closed' | 'live'
-    periodType: 'daily' | 'monthly'
-    state: 'closed' | 'live' | 'not_closed' | 'no_data'
-    snapshotRunId: string | null
-    snapshotDate: string | null
-    periodStart: string | null
-    periodEnd: string | null
-  }
-  includedSnapshotRuns: ClosedRankingIncludedSnapshotRun[]
-  currentEmployee: ClosedRankingEmployee | null
-  personnelTop: ClosedRankingEmployee[]
-  availablePeriods?: Array<{
-    periodType: 'daily' | 'weekly' | 'monthly' | string
-    periodStart: string
-    periodEnd: string
-  }>
-}
-
-export type RankingVisibility = 'summary' | 'detail'
+type RankingVisibility = 'summary' | 'detail'
 
 export type RankingMetricValue = {
   code: string
@@ -434,12 +364,12 @@ export type PersonnelRankingRow = {
   metrics?: RankingMetricValue[]
 }
 
-export type RankingFilterOption = {
+type RankingFilterOption = {
   id: string
   label: string
 }
 
-export type RankingReferenceMetric = {
+type RankingReferenceMetric = {
   code: string
   label: string
   value: number | null
@@ -657,36 +587,6 @@ export async function getStoreScoreBreakdown(input: {
 
   return fetchJson<StoreMonthlyScoreBreakdown>(
     `/reports/store-score-breakdown?${params.toString()}`,
-  )
-}
-
-export async function getClosedLeaderboard(input?: {
-  periodType?: 'daily' | 'monthly'
-  periodStart?: string
-  snapshotDate?: string
-  storeId?: string
-  limit?: number
-}) {
-  const params = new URLSearchParams()
-  if (input?.periodType) {
-    params.set('periodType', input.periodType)
-  }
-  if (input?.periodStart) {
-    params.set('periodStart', input.periodStart)
-  }
-  if (input?.snapshotDate) {
-    params.set('snapshotDate', input.snapshotDate)
-  }
-  if (input?.storeId) {
-    params.set('storeId', input.storeId)
-  }
-  if (input?.limit) {
-    params.set('limit', String(input.limit))
-  }
-
-  const query = params.toString()
-  return fetchJson<ClosedLeaderboardSummary>(
-    `/reports/leaderboards/closed${query ? `?${query}` : ''}`,
   )
 }
 

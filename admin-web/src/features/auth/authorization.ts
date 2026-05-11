@@ -23,7 +23,7 @@ export function getAssignedStoreIds(authSummary: AuthSessionSummary | null) {
   )
 }
 
-export function canActOnStore(authSummary: AuthSessionSummary | null, storeId: string | null) {
+function canActOnStore(authSummary: AuthSessionSummary | null, storeId: string | null) {
   if (!storeId) {
     return false
   }

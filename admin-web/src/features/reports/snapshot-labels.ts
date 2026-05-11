@@ -1,13 +1,18 @@
 import { formatDate } from '../../lib/format'
 import { defaultAppLocale, getIntlLocale, type AppLocale } from '../../lib/i18n'
 
+const monthFormatters: Record<AppLocale, Intl.DateTimeFormat> = {
+  tr: new Intl.DateTimeFormat(getIntlLocale('tr'), { month: 'long' }),
+  en: new Intl.DateTimeFormat(getIntlLocale('en'), { month: 'long' }),
+}
+
 export type SnapshotRunLabelInput = {
   snapshotDate: string
   periodStart: string
   periodEnd: string
 }
 
-export type SnapshotMonthLabelInput = {
+type SnapshotMonthLabelInput = {
   monthStart: string
   latestSnapshotDate: string
 }
@@ -35,25 +40,21 @@ function isLastDayOfMonth(date: Date) {
   return date.getDate() === lastDay
 }
 
-export function getSnapshotMonthStart(input: string) {
-  const date = parseDateOnly(input)
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`
-}
-
 function capitalizeMonth(input: string, locale: AppLocale) {
   return `${input[0]?.toLocaleUpperCase(getIntlLocale(locale))}${input.slice(1)}`
 }
 
+function formatMonthName(input: Date, locale: AppLocale) {
+  return capitalizeMonth(monthFormatters[locale].format(input), locale)
+}
+
 function formatMonthYear(input: string, locale: AppLocale = defaultAppLocale) {
   const date = parseDateOnly(input)
-  const monthName = new Intl.DateTimeFormat(getIntlLocale(locale), { month: 'long' }).format(
-    date,
-  )
-  const formattedMonth = capitalizeMonth(monthName, locale)
+  const formattedMonth = formatMonthName(date, locale)
   return `${formattedMonth} ${date.getFullYear()}`
 }
 
-export function formatSnapshotPeriodLabel(
+function formatSnapshotPeriodLabel(
   run: SnapshotRunLabelInput,
   locale: AppLocale = defaultAppLocale,
 ) {
@@ -70,10 +71,7 @@ export function formatSnapshotPeriodLabel(
     periodStart.getDate() === 1 &&
     isLastDayOfMonth(periodEnd)
   ) {
-    const monthName = new Intl.DateTimeFormat(getIntlLocale(locale), { month: 'long' }).format(
-      periodStart,
-    )
-    const formattedMonth = capitalizeMonth(monthName, locale)
+    const formattedMonth = formatMonthName(periodStart, locale)
     return locale === 'en' ? `${formattedMonth} monthly close` : `${formattedMonth} aylık kapanış`
   }
 

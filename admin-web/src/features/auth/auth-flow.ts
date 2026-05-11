@@ -40,14 +40,6 @@ export function hasProviderLoginConfig(bootstrap?: AuthBootstrap | null) {
   )
 }
 
-export function hasProviderLogoutConfig(bootstrap?: AuthBootstrap | null) {
-  if (bootstrap) {
-    return Boolean(bootstrap.provider.logoutUrl)
-  }
-
-  return Boolean(import.meta.env.VITE_OIDC_LOGOUT_URL?.trim())
-}
-
 export function isManualTokenCallbackAllowed() {
   return import.meta.env.DEV
 }

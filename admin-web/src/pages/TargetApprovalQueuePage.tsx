@@ -355,8 +355,8 @@ function TargetApprovalRow(input: {
       </div>
       {allocations.length ? (
         <div className="stacked-table">
-          {allocations.map((allocation, index) => (
-            <div className="stacked-row" key={`${input.item.requestId}-${index}`}>
+          {allocations.map((allocation) => (
+            <div className="stacked-row" key={`${input.item.requestId}-${allocation.employeeId}`}>
               <div className="stacked-row-head">
                 <strong>{allocation.assigneeLabel}</strong>
                 <span className="status-pill status-pill-neutral">{allocation.targetValue}</span>

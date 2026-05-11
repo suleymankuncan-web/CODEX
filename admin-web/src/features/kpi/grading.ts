@@ -33,7 +33,7 @@ const performanceGradeLabels: Record<PerformanceGradeCode, string> = {
   D: 'Kritik',
 }
 
-export const defaultGradingBands: KpiGradingBand[] = [
+const defaultGradingBands: KpiGradingBand[] = [
   { code: 'A', label: 'Mükemmel', emoji: '🏆', tone: 'calm', minScore: 1 },
   { code: 'B', label: 'İyi', emoji: '🙂', tone: 'accent', minScore: 0.85 },
   { code: 'C', label: 'Takip gerekli', emoji: '👀', tone: 'warning', minScore: 0.75 },
@@ -49,8 +49,8 @@ export function resolvePerformanceGrade(
   }
 
   const band =
-    [...gradingBands]
-      .sort((left, right) => right.minScore - left.minScore)
+    gradingBands
+      .toSorted((left, right) => right.minScore - left.minScore)
       .find((item) => score >= item.minScore) ?? defaultGradingBands[defaultGradingBands.length - 1]
 
   return {

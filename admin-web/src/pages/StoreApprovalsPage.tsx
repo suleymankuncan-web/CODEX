@@ -115,7 +115,7 @@ export function StoreApprovalsPage(input: {
   const storeId = selectedStoreId || primaryStoreId || ''
   const canListRequests = canListTargetDistributionRequests(input.authSummary)
   const canCreateForStore = canCreateTargetDistributionRequest(input.authSummary, storeId || null)
-  const [requestMonth, setRequestMonth] = useState(new Date().toISOString().slice(0, 7))
+  const [requestMonth, setRequestMonth] = useState(() => new Date().toISOString().slice(0, 7))
   const [targetLabel, setTargetLabel] = useState(() => t('storeApprovals.targetLabelDefault'))
   const [totalTargetValue, setTotalTargetValue] = useState('0')
   const [requestReason, setRequestReason] = useState('')
@@ -124,7 +124,7 @@ export function StoreApprovalsPage(input: {
   const [sellerLastName, setSellerLastName] = useState('')
   const [sellerNationalId, setSellerNationalId] = useState('')
   const [sellerPhoneNumber, setSellerPhoneNumber] = useState('')
-  const [sellerHireDate, setSellerHireDate] = useState(new Date().toISOString().slice(0, 10))
+  const [sellerHireDate, setSellerHireDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [sellerPositionId, setSellerPositionId] = useState('')
   const [sellerEmploymentType, setSellerEmploymentType] =
     useState<SellerEmploymentType>('full_time')
@@ -132,7 +132,7 @@ export function StoreApprovalsPage(input: {
   const [sellerRequestNotice, setSellerRequestNotice] = useState<string | null>(null)
   const [editingSellerRequestId, setEditingSellerRequestId] = useState<string | null>(null)
   const [offboardingEmployeeId, setOffboardingEmployeeId] = useState('')
-  const [offboardingTerminationDate, setOffboardingTerminationDate] = useState(
+  const [offboardingTerminationDate, setOffboardingTerminationDate] = useState(() =>
     new Date().toISOString().slice(0, 10),
   )
   const [offboardingTerminationReason, setOffboardingTerminationReason] = useState('resignation')

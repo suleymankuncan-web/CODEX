@@ -179,7 +179,7 @@ export function describeCompetitionWarning(
   }
 }
 
-export function formatCompetitionKpiCode(code: string, locale: AppLocale = defaultAppLocale) {
+function formatCompetitionKpiCode(code: string, locale: AppLocale = defaultAppLocale) {
   const key = kpiLabelKeyByCode[code]
 
   return key ? translate(locale, key) : code.replaceAll('_', ' ').toLowerCase()

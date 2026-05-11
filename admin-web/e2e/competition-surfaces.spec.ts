@@ -1251,14 +1251,18 @@ async function routeCompetitionApi(
 }
 
 function storesFromIds(storeIds: string[]) {
-  return authLookupsFixture.stores
-    .filter((store) => storeIds.includes(store.storeId))
-    .map((store) => ({
-      storeId: store.storeId,
-      storeCode: store.storeCode,
-      storeName: store.storeName,
-      regionId: store.regionId,
-    }))
+  return authLookupsFixture.stores.flatMap((store) =>
+    storeIds.includes(store.storeId)
+      ? [
+          {
+            storeId: store.storeId,
+            storeCode: store.storeCode,
+            storeName: store.storeName,
+            regionId: store.regionId,
+          },
+        ]
+      : [],
+  )
 }
 
 function createStagePackagePlanFixture(input?: { planStatus?: string }) {

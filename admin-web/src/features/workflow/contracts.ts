@@ -2,7 +2,7 @@ import type { Tone } from '../../components/dashboard-primitives'
 import type { ChecklistAcknowledgementItem } from '../checklists/api'
 import type { TargetDistributionRequest } from '../targets/api'
 
-export type WorkflowItemType = 'approval' | 'acknowledgement' | 'task' | 'notification'
+type WorkflowItemType = 'approval' | 'acknowledgement' | 'task' | 'notification'
 
 export type WorkflowInboxStatus = 'needs_attention' | 'completed' | 'informational'
 

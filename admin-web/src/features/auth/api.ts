@@ -10,7 +10,7 @@ type ListResponse<T> = {
   }
 }
 
-export type AuthLookupOption = {
+type AuthLookupOption = {
   value: string
   label: string
 }
@@ -26,14 +26,14 @@ export type AuthLookupUserSearchResult = AuthLookupUser & {
   providerSubject: string | null
 }
 
-export type AuthLookupRole = {
+type AuthLookupRole = {
   roleId: string
   roleCode: string
   roleName: string
   scopeType: string
 }
 
-export type AuthLookupPermission = {
+type AuthLookupPermission = {
   permissionId: string
   permissionCode: string
   resourceName: string

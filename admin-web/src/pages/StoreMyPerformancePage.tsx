@@ -41,17 +41,47 @@ function canUsePersonnelPerformance(authSummary: AuthSessionSummary | null) {
 }
 
 const personnelMetricCodes = ['TARGET_ACHIEVEMENT', 'ATV', 'UPT']
+const currencyFormatters: Record<AppLocale, Intl.NumberFormat> = {
+  tr: new Intl.NumberFormat(getIntlLocale('tr'), {
+    style: 'currency',
+    currency: 'TRY',
+    maximumFractionDigits: 0,
+  }),
+  en: new Intl.NumberFormat(getIntlLocale('en'), {
+    style: 'currency',
+    currency: 'TRY',
+    maximumFractionDigits: 0,
+  }),
+}
+const monthYearFormatters: Record<AppLocale, Intl.DateTimeFormat> = {
+  tr: new Intl.DateTimeFormat(getIntlLocale('tr'), {
+    month: 'long',
+    year: 'numeric',
+  }),
+  en: new Intl.DateTimeFormat(getIntlLocale('en'), {
+    month: 'long',
+    year: 'numeric',
+  }),
+}
+const signedPercentFormatters: Record<AppLocale, Intl.NumberFormat> = {
+  tr: new Intl.NumberFormat(getIntlLocale('tr'), {
+    maximumFractionDigits: 1,
+    minimumFractionDigits: 0,
+    signDisplay: 'always',
+  }),
+  en: new Intl.NumberFormat(getIntlLocale('en'), {
+    maximumFractionDigits: 1,
+    minimumFractionDigits: 0,
+    signDisplay: 'always',
+  }),
+}
 
 function formatCurrency(locale: AppLocale, t: TranslateFunction, input: number | null) {
   if (input === null) {
     return t('storeMe.noData')
   }
 
-  return new Intl.NumberFormat(getIntlLocale(locale), {
-    style: 'currency',
-    currency: 'TRY',
-    maximumFractionDigits: 0,
-  }).format(input)
+  return currencyFormatters[locale].format(input)
 }
 
 function formatSourceMode(t: TranslateFunction, mode: string) {
@@ -194,8 +224,8 @@ function comparePeriodStart(left: string, right: string) {
 }
 
 function getLatestAvailablePeriodStart(periods: Array<{ periodStart: string }>) {
-  const latestPeriod = [...periods]
-    .sort((left, right) => comparePeriodStart(left.periodStart, right.periodStart))
+  const latestPeriod = periods
+    .toSorted((left, right) => comparePeriodStart(left.periodStart, right.periodStart))
     .at(-1)
 
   return getPeriodDateKey(latestPeriod?.periodStart) || latestPeriod?.periodStart || ''
@@ -232,10 +262,7 @@ function formatMonthYear(locale: AppLocale, t: TranslateFunction, input: string)
     return t('storeMe.currentPeriod')
   }
 
-  return new Intl.DateTimeFormat(getIntlLocale(locale), {
-    month: 'long',
-    year: 'numeric',
-  }).format(new Date(`${dateKey}T00:00:00`))
+  return monthYearFormatters[locale].format(new Date(`${dateKey}T00:00:00`))
 }
 
 function formatMonthKeyLabel(locale: AppLocale, t: TranslateFunction, monthKey: string) {
@@ -277,7 +304,7 @@ function getAvailableLivePeriods(input: {
     })
   }
 
-  return [...periodMap.values()].sort((left, right) => {
+  return Array.from(periodMap.values()).toSorted((left, right) => {
     const startOrder = comparePeriodStart(right.periodStart, left.periodStart)
     return startOrder !== 0 ? startOrder : left.periodType.localeCompare(right.periodType)
   })
@@ -288,11 +315,7 @@ function formatSignedPercent(locale: AppLocale, input: number | null) {
     return null
   }
 
-  const formatted = new Intl.NumberFormat(getIntlLocale(locale), {
-    maximumFractionDigits: 1,
-    minimumFractionDigits: 0,
-    signDisplay: 'always',
-  }).format(input)
+  const formatted = signedPercentFormatters[locale].format(input)
 
   return `${formatted}%`
 }
@@ -576,10 +599,13 @@ export function StoreMyPerformancePage(input: {
   )
   const availableLiveYearOptions = useMemo(() => {
     const yearSet = new Set(
-      availableLivePeriods.map((period) => getPeriodYear(period.periodStart)).filter(Boolean),
+      availableLivePeriods.flatMap((period) => {
+        const year = getPeriodYear(period.periodStart)
+        return year ? [year] : []
+      }),
     )
 
-    return [...yearSet].sort((left, right) => right.localeCompare(left))
+    return Array.from(yearSet).toSorted((left, right) => right.localeCompare(left))
   }, [availableLivePeriods])
   const yearScopedLivePeriods = useMemo(() => {
     if (selectedLiveYears.length === 0) {
@@ -591,10 +617,13 @@ export function StoreMyPerformancePage(input: {
   }, [availableLivePeriods, selectedLiveYears])
   const availableLiveMonthOptions = useMemo(() => {
     const monthSet = new Set(
-      yearScopedLivePeriods.map((period) => getPeriodMonthKey(period.periodStart)).filter(Boolean),
+      yearScopedLivePeriods.flatMap((period) => {
+        const monthKey = getPeriodMonthKey(period.periodStart)
+        return monthKey ? [monthKey] : []
+      }),
     )
 
-    return [...monthSet].sort((left, right) => right.localeCompare(left))
+    return Array.from(monthSet).toSorted((left, right) => right.localeCompare(left))
   }, [yearScopedLivePeriods])
   const monthScopedLivePeriods = useMemo(() => {
     if (selectedLiveMonthKeys.length === 0) {
@@ -692,8 +721,8 @@ export function StoreMyPerformancePage(input: {
       ? scopedDetailPeriods.filter((period) => getPeriodYear(period.periodStart) === activeYear)
       : scopedDetailPeriods
 
-    return [...scopedPeriods]
-      .sort((left, right) => comparePeriodStart(left.periodStart, right.periodStart))
+    return scopedPeriods
+      .toSorted((left, right) => comparePeriodStart(left.periodStart, right.periodStart))
       .slice(-12)
   }, [
     effectiveSelectedLivePeriods,
@@ -866,7 +895,10 @@ export function StoreMyPerformancePage(input: {
 
     const nextDays = getNextSelectionKeys({
       currentKeys: selectedLiveDayStarts,
-      optionKeys: scopedAvailableDailyPeriods.map((item) => getLivePeriodOptionKey(item)).filter(Boolean),
+      optionKeys: scopedAvailableDailyPeriods.flatMap((item) => {
+        const optionKey = getLivePeriodOptionKey(item)
+        return optionKey ? [optionKey] : []
+      }),
       key,
     })
     if (nextDays === null) {
@@ -967,13 +999,12 @@ export function StoreMyPerformancePage(input: {
     snapshotDate: performance.source.snapshotDate,
   })
   const personnelMetrics = performance.metrics.filter(isPersonnelMetric)
-  const pendingMetricLabels = personnelMetrics
-    .filter(
-      (metric) =>
-        metric.scoreStatus === 'missing_reference' ||
-        metric.scoreStatus === 'pending_normalization',
-    )
-    .map((metric) => metric.label || metric.code)
+  const pendingMetricLabels = personnelMetrics.flatMap((metric) =>
+    metric.scoreStatus === 'missing_reference' ||
+    metric.scoreStatus === 'pending_normalization'
+      ? [metric.label || metric.code]
+      : [],
+  )
   const pendingNormalizationLabels = partial.pendingNormalizationLabels?.length
     ? partial.pendingNormalizationLabels
     : (partial.pendingNormalizationCodes ?? []).length

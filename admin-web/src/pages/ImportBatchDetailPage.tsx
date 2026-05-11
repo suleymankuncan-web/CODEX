@@ -887,9 +887,10 @@ function buildKpiReviewEvidence(input: {
   totalErrorRows: number
   t: TranslateFunction
 }): KpiReviewEvidence {
-  const items = input.errors
-    .map((error) => toKpiReviewItem(error, input.t))
-    .filter((item): item is KpiReviewItem => item !== null)
+  const items = input.errors.flatMap((error) => {
+    const item = toKpiReviewItem(error, input.t)
+    return item ? [item] : []
+  })
   const employeeMatchRows = items.filter(
     (item) => item.category === 'employee_match',
   ).length

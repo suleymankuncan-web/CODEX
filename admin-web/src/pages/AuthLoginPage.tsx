@@ -13,8 +13,10 @@ export function AuthLoginPage() {
   const { t } = useLocalization()
   const location = useLocation()
   const [searchParams] = useSearchParams()
-  const [providerLoginUrl, setProviderLoginUrl] = useState<string | null>(null)
-  const [providerLoginError, setProviderLoginError] = useState<string | null>(null)
+  const [providerLogin, setProviderLogin] = useState<{
+    url: string | null
+    error: string | null
+  }>({ url: null, error: null })
   const bootstrapQuery = useQuery({
     queryKey: ['auth-bootstrap'],
     queryFn: getAuthBootstrap,
@@ -30,14 +32,12 @@ export function AuthLoginPage() {
     buildProviderLoginUrl({ returnTo, bootstrap: bootstrapQuery.data })
       .then((url) => {
         if (!cancelled) {
-          setProviderLoginUrl(url)
-          setProviderLoginError(null)
+          setProviderLogin({ url, error: null })
         }
       })
       .catch((error: unknown) => {
         if (!cancelled) {
-          setProviderLoginUrl(null)
-          setProviderLoginError(error instanceof Error ? error.message : String(error))
+          setProviderLogin({ url: null, error: error instanceof Error ? error.message : String(error) })
         }
       })
 
@@ -128,8 +128,8 @@ export function AuthLoginPage() {
           <div className="action-cluster">
             {clerkReady ? (
               <ClerkLoginActions returnTo={returnTo} />
-            ) : providerLoginUrl ? (
-              <a className="control-button auth-flow-link" href={providerLoginUrl}>
+            ) : providerLogin.url ? (
+              <a className="control-button auth-flow-link" href={providerLogin.url}>
                 {t('authFlow.startProviderLogin')}
               </a>
             ) : null}
@@ -144,8 +144,8 @@ export function AuthLoginPage() {
             </Link>
           </div>
           <p className="panel-copy">
-            {providerLoginError
-              ? t('authFlow.providerLoginNotReady', { error: providerLoginError })
+            {providerLogin.error
+              ? t('authFlow.providerLoginNotReady', { error: providerLogin.error })
               : clerkReady
                 ? t('authFlow.clerkReadyCopy')
                 : providerReady

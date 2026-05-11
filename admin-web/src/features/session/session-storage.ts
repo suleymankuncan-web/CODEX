@@ -110,10 +110,6 @@ export function buildSessionHeaders(session: SessionState): Record<string, strin
   }
 }
 
-export function describeSessionMode(mode: SessionMode) {
-  return mode === 'bearer' ? 'Bearer token' : 'Mock headers'
-}
-
 export function isSessionReady(session: SessionState) {
   if (session.mode === 'bearer') {
     return Boolean(session.bearerToken.trim())
