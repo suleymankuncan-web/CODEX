@@ -119,6 +119,14 @@ type ListQuerySnapshot<T> = {
 
 type StringFieldSetter = (value: string) => void
 type StoreApprovalsPersona = 'storeManager' | 'regionManager' | 'readOnly'
+type StoreApprovalsLedgerPanel =
+  | 'overview'
+  | 'targetRequest'
+  | 'targetApproval'
+  | 'submittedTargets'
+  | 'returnedRequests'
+  | 'sellerCodeRequest'
+  | 'offboardingRequest'
 type StoreApprovalsLedgerRow = {
   actionLabel: string
   detail: string
@@ -183,6 +191,8 @@ export function StoreApprovalsPage(input: {
   const [ledgerSearch, setLedgerSearch] = useState('')
   const [ledgerTypeFilter, setLedgerTypeFilter] = useState('all')
   const [ledgerStatusFilter, setLedgerStatusFilter] = useState('all')
+  const [activeLedgerPanel, setActiveLedgerPanel] =
+    useState<StoreApprovalsLedgerPanel>('overview')
   const [sellerFirstName, setSellerFirstName] = useState('')
   const [sellerLastName, setSellerLastName] = useState('')
   const [sellerNationalId, setSellerNationalId] = useState('')
@@ -350,6 +360,7 @@ export function StoreApprovalsPage(input: {
   const returnedOffboardingRequests = rejectedOffboardingRequestsQuery.data?.items ?? []
 
   const startEditingSellerRequest = (item: SellerCodeRequest) => {
+    setActiveLedgerPanel('sellerCodeRequest')
     setEditingSellerRequestId(item.requestId)
     setSellerFirstName(item.firstName)
     setSellerLastName(item.lastName)
@@ -367,6 +378,7 @@ export function StoreApprovalsPage(input: {
   }
 
   const startEditingOffboardingRequest = (item: OffboardingRequest) => {
+    setActiveLedgerPanel('offboardingRequest')
     setEditingOffboardingRequestId(item.requestId)
     setOffboardingEmployeeId(item.employeeId)
     setOffboardingTerminationDate(item.terminationDate)
@@ -443,6 +455,7 @@ export function StoreApprovalsPage(input: {
             actionLabel: t('storeApprovals.ledgerActionEdit'),
             detail: t('storeApprovals.targetQueueTitle'),
             id: 'target-distribution-form',
+            onAction: () => setActiveLedgerPanel('targetRequest'),
             record: t('storeApprovals.targetTitle'),
             scope: storeId || t('storeApprovals.noActionStore'),
             source: t('storeApprovals.targetLedgerSource'),
@@ -461,14 +474,7 @@ export function StoreApprovalsPage(input: {
         : t('storeApprovals.ledgerActionDetail'),
       detail: item.requestReason ?? t('storeApprovals.noNote'),
       id: `pending-target-${item.requestId}`,
-      onAction:
-        showTargetApprovalQueue && canApproveTargetDistributionRequest(input.authSummary, item.storeId)
-          ? () =>
-              approveTargetMutation.mutate({
-                requestId: item.requestId,
-                approvalNote: approvalNotes[item.requestId] || undefined,
-              })
-          : undefined,
+      onAction: showTargetApprovalQueue ? () => setActiveLedgerPanel('targetApproval') : undefined,
       record: item.targetLabel,
       scope: item.storeName || item.storeId,
       source: t('storeApprovals.targetLedgerSource'),
@@ -481,6 +487,7 @@ export function StoreApprovalsPage(input: {
       actionLabel: t('storeApprovals.ledgerActionDetail'),
       detail: item.requestReason ?? t('storeApprovals.noNote'),
       id: `submitted-target-${item.requestId}`,
+      onAction: () => setActiveLedgerPanel('submittedTargets'),
       record: item.targetLabel,
       scope: item.storeName || item.storeId,
       source: t('storeApprovals.targetLedgerSource'),
@@ -491,6 +498,36 @@ export function StoreApprovalsPage(input: {
     })),
     ...(showWorkforceHrQueues
       ? [
+          {
+            actionLabel: t('storeApprovals.ledgerActionCreate'),
+            detail: t('storeApprovals.sellerCodeLedgerDetail'),
+            id: 'seller-code-form',
+            onAction: () => setActiveLedgerPanel('sellerCodeRequest'),
+            record: t('storeApprovals.sellerCodeTitle'),
+            scope: storeId || t('storeApprovals.noActionStore'),
+            source: t('storeApprovals.hrQueue'),
+            status: canSubmitSellerCodeRequest
+              ? t('storeApprovals.ledgerStatusReady')
+              : t('storeApprovals.ledgerStatusDraft'),
+            statusTone: canSubmitSellerCodeRequest ? 'calm' : 'warning',
+            type: t('storeApprovals.ledgerTypeSellerCode'),
+            wait: t('storeApprovals.ledgerWaitLive'),
+          } satisfies StoreApprovalsLedgerRow,
+          {
+            actionLabel: t('storeApprovals.ledgerActionCreate'),
+            detail: t('storeApprovals.offboardingLedgerDetail'),
+            id: 'offboarding-form',
+            onAction: () => setActiveLedgerPanel('offboardingRequest'),
+            record: t('storeApprovals.offboardingTitle'),
+            scope: storeId || t('storeApprovals.noActionStore'),
+            source: t('storeApprovals.hrQueue'),
+            status: canSubmitOffboardingRequest
+              ? t('storeApprovals.ledgerStatusReady')
+              : t('storeApprovals.ledgerStatusDraft'),
+            statusTone: canSubmitOffboardingRequest ? 'calm' : 'warning',
+            type: t('storeApprovals.ledgerTypeOffboarding'),
+            wait: t('storeApprovals.ledgerWaitLive'),
+          } satisfies StoreApprovalsLedgerRow,
           ...returnedSellerCodeRequests.map((item) => ({
             actionLabel: t('storeApprovals.editSellerCodeRequest'),
             detail: item.reviewNote ?? t('storeApprovals.noNote'),
@@ -760,9 +797,68 @@ export function StoreApprovalsPage(input: {
         onTypeFilterChange={setLedgerTypeFilter}
       />
 
-      <section className="store-approvals-ledger-grid">
-        <div className="store-approvals-ledger-primary">
-          {showTargetSubmission ? (
+      <section
+        className="store-approvals-ledger-inspector"
+        aria-label={t('storeApprovals.ledgerInspectorAria')}
+      >
+        <article className="store-approvals-ledger-note">
+          <div className="store-approvals-ledger-eyebrow">
+            {t('storeApprovals.ledgerInspectorEyebrow')}
+          </div>
+          <h3>{t('storeApprovals.ledgerInspectorTitle')}</h3>
+          <p>{t('storeApprovals.ledgerInspectorCopy')}</p>
+        </article>
+
+        <aside className="store-approvals-ledger-detail">
+          <div className="store-approvals-ledger-detail-head">
+            <div>
+              <div className="store-approvals-ledger-eyebrow">
+                {t('storeApprovals.ledgerDetailEyebrow')}
+              </div>
+              <h3>{t('storeApprovals.ledgerDetailTitle')}</h3>
+            </div>
+            <StatusPill tone={activeLedgerPanel === 'overview' ? 'neutral' : 'calm'}>
+              {t('storeApprovals.ledgerDetailStatus')}
+            </StatusPill>
+          </div>
+
+          <div className="store-approvals-ledger-detail-actions">
+            {showTargetSubmission ? (
+              <button type="button" onClick={() => setActiveLedgerPanel('targetRequest')}>
+                {t('storeApprovals.openTargetRequest')}
+              </button>
+            ) : null}
+            {showTargetApprovalQueue ? (
+              <button type="button" onClick={() => setActiveLedgerPanel('targetApproval')}>
+                {t('storeApprovals.openTargetApprovalQueue')}
+              </button>
+            ) : null}
+            <button type="button" onClick={() => setActiveLedgerPanel('submittedTargets')}>
+              {t('storeApprovals.openSubmittedTargets')}
+            </button>
+            {showWorkforceHrQueues ? (
+              <>
+                <button type="button" onClick={() => setActiveLedgerPanel('sellerCodeRequest')}>
+                  {t('storeApprovals.openSellerCodeRequest')}
+                </button>
+                <button type="button" onClick={() => setActiveLedgerPanel('offboardingRequest')}>
+                  {t('storeApprovals.openOffboardingRequest')}
+                </button>
+                <button type="button" onClick={() => setActiveLedgerPanel('returnedRequests')}>
+                  {t('storeApprovals.openReturnedRequests')}
+                </button>
+              </>
+            ) : null}
+          </div>
+
+          {activeLedgerPanel === 'overview' ? (
+            <EmptyState
+              title={t('storeApprovals.ledgerDetailEmptyTitle')}
+              copy={t('storeApprovals.ledgerDetailEmptyCopy')}
+            />
+          ) : null}
+
+          {activeLedgerPanel === 'targetRequest' && showTargetSubmission ? (
             <TargetDistributionRequestForm
               activeAllocations={activeAllocations}
               allocationTotal={allocationTotal}
@@ -810,7 +906,7 @@ export function StoreApprovalsPage(input: {
             />
           ) : null}
 
-          {showTargetApprovalQueue ? (
+          {activeLedgerPanel === 'targetApproval' && showTargetApprovalQueue ? (
             <TargetApprovalLedger
               approvalNotes={approvalNotes}
               approvalNotice={approvalNotice}
@@ -843,11 +939,11 @@ export function StoreApprovalsPage(input: {
             />
           ) : null}
 
-          <SubmittedTargetRequestsPanel locale={locale} requests={submittedTargetRequests} t={t} />
-        </div>
+          {activeLedgerPanel === 'submittedTargets' ? (
+            <SubmittedTargetRequestsPanel locale={locale} requests={submittedTargetRequests} t={t} />
+          ) : null}
 
-        {showWorkforceHrQueues ? (
-          <aside className="store-approvals-ledger-secondary">
+          {activeLedgerPanel === 'returnedRequests' && showWorkforceHrQueues ? (
             <ReturnedRequestsPanel
               locale={locale}
               returnedOffboardingRequests={returnedOffboardingRequests}
@@ -860,7 +956,9 @@ export function StoreApprovalsPage(input: {
               onEditSellerCodeRequest={startEditingSellerRequest}
               t={t}
             />
+          ) : null}
 
+          {activeLedgerPanel === 'sellerCodeRequest' && showWorkforceHrQueues ? (
             <SellerCodeRequestForm
               canCreateForStore={showWorkforceHrQueues}
               canSubmit={canSubmitSellerCodeRequest}
@@ -917,7 +1015,9 @@ export function StoreApprovalsPage(input: {
               storeId={storeId}
               t={t}
             />
+          ) : null}
 
+          {activeLedgerPanel === 'offboardingRequest' && showWorkforceHrQueues ? (
             <OffboardingRequestForm
               canCreateForStore={showWorkforceHrQueues}
               canSubmit={canSubmitOffboardingRequest}
@@ -953,8 +1053,8 @@ export function StoreApprovalsPage(input: {
               storeEmployeesQuery={storeEmployeesQuery}
               t={t}
             />
-          </aside>
-        ) : null}
+          ) : null}
+        </aside>
       </section>
     </section>
   )
