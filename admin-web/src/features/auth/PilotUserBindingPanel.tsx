@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useReducer } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useLocalization } from '../localization/useLocalization'
 import { getErrorMessage } from '../../lib/format'
@@ -7,24 +7,85 @@ import { createPilotUserBinding, type AuthLookupStore } from './api'
 type PilotRole = 'REGION_MANAGER' | 'STORE_MANAGER' | 'VISUAL_MERCHANDISER'
 type PilotAuthProvider = 'oidc' | 'clerk'
 
+type PilotUserBindingState = {
+  employeeId: string
+  providerSubject: string
+  username: string
+  email: string
+  authProvider: PilotAuthProvider
+  roleCode: PilotRole
+  storeIds: string[]
+  feedback: string | null
+  errorFeedback: string | null
+}
+
+type PilotUserBindingAction =
+  | {
+      type: 'set-text-field'
+      field: keyof Pick<PilotUserBindingState, 'employeeId' | 'providerSubject' | 'username' | 'email'>
+      value: string
+    }
+  | { type: 'set-auth-provider'; authProvider: PilotAuthProvider }
+  | { type: 'set-role-code'; roleCode: PilotRole }
+  | { type: 'set-store-ids'; storeIds: string[] }
+  | { type: 'submit-started' }
+  | { type: 'submit-succeeded'; message: string }
+  | { type: 'submit-failed'; message: string }
+
+const pilotUserBindingInitialState: PilotUserBindingState = {
+  employeeId: '',
+  providerSubject: '',
+  username: '',
+  email: '',
+  authProvider: 'clerk',
+  roleCode: 'STORE_MANAGER',
+  storeIds: [],
+  feedback: null,
+  errorFeedback: null,
+}
+
+function pilotUserBindingReducer(
+  state: PilotUserBindingState,
+  action: PilotUserBindingAction,
+): PilotUserBindingState {
+  switch (action.type) {
+    case 'set-text-field':
+      return { ...state, [action.field]: action.value }
+    case 'set-auth-provider':
+      return { ...state, authProvider: action.authProvider }
+    case 'set-role-code':
+      return { ...state, roleCode: action.roleCode }
+    case 'set-store-ids':
+      return { ...state, storeIds: action.storeIds }
+    case 'submit-started':
+      return { ...state, feedback: null, errorFeedback: null }
+    case 'submit-succeeded':
+      return { ...state, feedback: action.message, errorFeedback: null }
+    case 'submit-failed':
+      return { ...state, feedback: null, errorFeedback: action.message }
+  }
+}
+
 export function PilotUserBindingPanel({ stores }: { stores: AuthLookupStore[] }) {
   const queryClient = useQueryClient()
   const { t } = useLocalization()
-  const [employeeId, setEmployeeId] = useState('')
-  const [providerSubject, setProviderSubject] = useState('')
-  const [username, setUsername] = useState('')
-  const [email, setEmail] = useState('')
-  const [authProvider, setAuthProvider] = useState<PilotAuthProvider>('clerk')
-  const [roleCode, setRoleCode] = useState<PilotRole>('STORE_MANAGER')
-  const [storeIds, setStoreIds] = useState<string[]>([])
-  const [feedback, setFeedback] = useState<string | null>(null)
-  const [errorFeedback, setErrorFeedback] = useState<string | null>(null)
+  const [state, dispatch] = useReducer(pilotUserBindingReducer, pilotUserBindingInitialState)
+  const {
+    employeeId,
+    providerSubject,
+    username,
+    email,
+    authProvider,
+    roleCode,
+    storeIds,
+    feedback,
+    errorFeedback,
+  } = state
 
   const mutation = useMutation({
     mutationFn: createPilotUserBinding,
     onSuccess: async (response) => {
-      setFeedback(response.command.message)
-      setErrorFeedback(null)
+      dispatch({ type: 'submit-succeeded', message: response.command.message })
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['auth-users'] }),
         queryClient.invalidateQueries({ queryKey: ['auth-lookups'] }),
@@ -33,8 +94,7 @@ export function PilotUserBindingPanel({ stores }: { stores: AuthLookupStore[] })
       ])
     },
     onError: (error) => {
-      setFeedback(null)
-      setErrorFeedback(getErrorMessage(error))
+      dispatch({ type: 'submit-failed', message: getErrorMessage(error) })
     },
   })
 
@@ -54,7 +114,9 @@ export function PilotUserBindingPanel({ stores }: { stores: AuthLookupStore[] })
           <input
             aria-label={t('authAdmin.pilotEmployeeId')}
             value={employeeId}
-            onChange={(event) => setEmployeeId(event.target.value)}
+            onChange={(event) =>
+              dispatch({ type: 'set-text-field', field: 'employeeId', value: event.target.value })
+            }
           />
         </label>
         <label className="field-block">
@@ -62,7 +124,9 @@ export function PilotUserBindingPanel({ stores }: { stores: AuthLookupStore[] })
           <input
             aria-label={t('authAdmin.pilotProviderSubject')}
             value={providerSubject}
-            onChange={(event) => setProviderSubject(event.target.value)}
+            onChange={(event) =>
+              dispatch({ type: 'set-text-field', field: 'providerSubject', value: event.target.value })
+            }
           />
         </label>
         <label className="field-block">
@@ -70,7 +134,12 @@ export function PilotUserBindingPanel({ stores }: { stores: AuthLookupStore[] })
           <select
             aria-label={t('authAdmin.pilotAuthProvider')}
             value={authProvider}
-            onChange={(event) => setAuthProvider(event.target.value as PilotAuthProvider)}
+            onChange={(event) =>
+              dispatch({
+                type: 'set-auth-provider',
+                authProvider: event.target.value as PilotAuthProvider,
+              })
+            }
           >
             <option value="clerk">clerk</option>
             <option value="oidc">oidc</option>
@@ -81,7 +150,9 @@ export function PilotUserBindingPanel({ stores }: { stores: AuthLookupStore[] })
           <input
             aria-label={t('authAdmin.pilotUsername')}
             value={username}
-            onChange={(event) => setUsername(event.target.value)}
+            onChange={(event) =>
+              dispatch({ type: 'set-text-field', field: 'username', value: event.target.value })
+            }
           />
         </label>
         <label className="field-block">
@@ -89,7 +160,9 @@ export function PilotUserBindingPanel({ stores }: { stores: AuthLookupStore[] })
           <input
             aria-label={t('authAdmin.pilotEmail')}
             value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            onChange={(event) =>
+              dispatch({ type: 'set-text-field', field: 'email', value: event.target.value })
+            }
           />
         </label>
         <label className="field-block">
@@ -97,7 +170,9 @@ export function PilotUserBindingPanel({ stores }: { stores: AuthLookupStore[] })
           <select
             aria-label={t('authAdmin.pilotRole')}
             value={roleCode}
-            onChange={(event) => setRoleCode(event.target.value as PilotRole)}
+            onChange={(event) =>
+              dispatch({ type: 'set-role-code', roleCode: event.target.value as PilotRole })
+            }
           >
             <option value="STORE_MANAGER">STORE_MANAGER</option>
             <option value="REGION_MANAGER">REGION_MANAGER</option>
@@ -111,7 +186,10 @@ export function PilotUserBindingPanel({ stores }: { stores: AuthLookupStore[] })
             multiple
             value={storeIds}
             onChange={(event) => {
-              setStoreIds(Array.from(event.currentTarget.selectedOptions).map((option) => option.value))
+              dispatch({
+                type: 'set-store-ids',
+                storeIds: Array.from(event.currentTarget.selectedOptions).map((option) => option.value),
+              })
             }}
           >
             {stores.map((store) => (
@@ -135,8 +213,7 @@ export function PilotUserBindingPanel({ stores }: { stores: AuthLookupStore[] })
             storeIds.length === 0
           }
           onClick={() => {
-            setFeedback(null)
-            setErrorFeedback(null)
+            dispatch({ type: 'submit-started' })
             mutation.mutate({
               employeeId: employeeId.trim(),
               authProvider,
