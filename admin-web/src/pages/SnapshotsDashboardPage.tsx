@@ -1,4 +1,4 @@
-import { useDeferredValue, useMemo, useReducer } from 'react'
+import { useDeferredValue, useMemo, useReducer, type Dispatch } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Activity, ArrowRight, Clock3, RefreshCcw, Rocket } from 'lucide-react'
 import { Link } from 'react-router-dom'
@@ -19,10 +19,14 @@ import {
   getSnapshotOverview,
   runDailyClosure,
   rerunSnapshotRun,
+  type DailyClosureStatus,
+  type SnapshotNeedsActionItem,
+  type SnapshotOverview,
 } from '../features/snapshots/api'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import { formatDate, getErrorMessage, mapHealthTone } from '../lib/format'
+import type { AppLocale } from '../lib/i18n'
 
 const PAGE_SIZE = 12
 
@@ -244,294 +248,556 @@ export function SnapshotsDashboardPage() {
 
   return (
     <section className="page-stack">
-      <section className="hero-panel">
-        <div>
-          <div className="eyebrow">{t('adminSnapshots.heroEyebrow')}</div>
-          <h2 className="hero-title">{t('adminSnapshots.heroTitle')}</h2>
-          <p className="hero-copy">{t('adminSnapshots.heroCopy')}</p>
-        </div>
-        <div className="hero-metrics">
-          <MetricAccent label={t('adminSnapshots.allRuns')} value={String(overview.totals.all)} />
-          <MetricAccent label={t('adminSnapshots.inProgress')} value={String(overview.healthTotals.inProgress)} />
-          <MetricAccent label={t('adminSnapshots.retryReady')} value={String(overview.healthTotals.retryReady)} />
-        </div>
-      </section>
+      <SnapshotsHero overview={overview} t={t} />
+      <SnapshotFeedbackPanel feedback={feedback} />
+      <DailyClosurePanels
+        dailyClosure={dailyClosure}
+        isQueuing={dailyClosureMutation.isPending}
+        locale={locale}
+        onQueue={() => dailyClosureMutation.mutate()}
+        t={t}
+      />
+      <SnapshotHealthMetricGrid overview={overview} t={t} />
+      <SnapshotHealthSummaryPanels overview={overview} t={t} />
+      <SnapshotActionQueuePanel
+        dispatchPageState={dispatchPageState}
+        filters={{ search, snapshotTypeFilter, runStatusFilter }}
+        isRerunning={rerunMutation.isPending}
+        locale={locale}
+        meta={meta}
+        offset={offset}
+        pagination={{ canGoBack, canGoForward }}
+        sortedItems={sortedItems}
+        sortBy={sortBy}
+        onRerun={(snapshotRunId) => rerunMutation.mutate(snapshotRunId)}
+        t={t}
+      />
+    </section>
+  )
+}
 
-      {feedback ? (
-        <section className="panel">
-          <div className="inline-state inline-state-accent">{feedback}</div>
-        </section>
-      ) : null}
+type SnapshotNeedsActionMeta = {
+  total: number
+}
 
-      <section className="two-up-grid">
-        <article className="panel">
-          <div className="panel-heading panel-heading-spread">
-            <div>
-              <div className="eyebrow">{t('adminSnapshots.dailyClosureEyebrow')}</div>
-              <h3>{t('adminSnapshots.dailyClosureTitle')}</h3>
-              <p className="panel-copy">{t('adminSnapshots.dailyClosureCopy')}</p>
-            </div>
-            <StatusPill tone={mapHealthTone(dailyClosure.healthState)}>
-              {formatSnapshotState(dailyClosure.healthState, t)}
-            </StatusPill>
-          </div>
-          <div className="key-grid">
-            <KeyValue label={t('adminSnapshots.closureDate')} value={formatDate(dailyClosure.closureDate, locale)} />
-            <KeyValue label={t('adminSnapshots.localDate')} value={formatDate(dailyClosure.localDate, locale)} />
-            <KeyValue label={t('adminSnapshots.timezone')} value={dailyClosure.timezone} />
-            <KeyValue label={t('adminSnapshots.existingRun')} value={dailyClosure.existingSnapshotRunId ?? t('adminSnapshots.noRunYet')} />
-            <KeyValue label={t('adminSnapshots.automation')} value={dailyClosure.automationEnabled ? t('adminSnapshots.enabled') : t('adminSnapshots.disabled')} />
-            <KeyValue label={t('adminSnapshots.pollCadence')} value={t('adminSnapshots.minutes', { count: dailyClosure.automationPollMinutes })} />
-          </div>
-          <p className="queue-reason">{dailyClosure.recommendedAction}</p>
-          {dailyClosure.existingFailureReason ? (
-            <div className="inline-state inline-state-danger">{dailyClosure.existingFailureReason}</div>
-          ) : null}
-          <div className="toolbar-cluster">
-            <button
-              className="control-button"
-              type="button"
-              onClick={() => dailyClosureMutation.mutate()}
-              disabled={!dailyClosure.canQueue || dailyClosureMutation.isPending}
-            >
-              {dailyClosureMutation.isPending ? t('adminSnapshots.queuing') : t('adminSnapshots.queueDailyClosure')}
-            </button>
-            {dailyClosure.existingSnapshotRunId ? (
-              <Link className="back-link" to={`/admin/snapshots/${dailyClosure.existingSnapshotRunId}`}>
-                <span>{t('adminSnapshots.openSnapshotRun')}</span>
-              </Link>
-            ) : null}
-          </div>
-        </article>
+function SnapshotsHero(input: { overview: SnapshotOverview; t: TranslateFunction }) {
+  return (
+    <section className="hero-panel">
+      <div>
+        <div className="eyebrow">{input.t('adminSnapshots.heroEyebrow')}</div>
+        <h2 className="hero-title">{input.t('adminSnapshots.heroTitle')}</h2>
+        <p className="hero-copy">{input.t('adminSnapshots.heroCopy')}</p>
+      </div>
+      <div className="hero-metrics">
+        <MetricAccent label={input.t('adminSnapshots.allRuns')} value={String(input.overview.totals.all)} />
+        <MetricAccent
+          label={input.t('adminSnapshots.inProgress')}
+          value={String(input.overview.healthTotals.inProgress)}
+        />
+        <MetricAccent
+          label={input.t('adminSnapshots.retryReady')}
+          value={String(input.overview.healthTotals.retryReady)}
+        />
+      </div>
+    </section>
+  )
+}
 
-        <article className="panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">{t('adminSnapshots.closureRuleEyebrow')}</div>
-              <h3>{t('adminSnapshots.closureRuleTitle')}</h3>
-            </div>
-          </div>
-          <div className="key-grid">
-            <KeyValue label={t('adminSnapshots.sourceModel')} value={t('adminSnapshots.sourceModelValue')} />
-            <KeyValue label={t('adminSnapshots.automaticTarget')} value={t('adminSnapshots.automaticTargetValue')} />
-            <KeyValue label={t('adminSnapshots.queueBehavior')} value={dailyClosure.canQueue ? t('adminSnapshots.readyToQueue') : t('adminSnapshots.waitingOrClosed')} />
-            <KeyValue label={t('adminSnapshots.retryPath')} value={dailyClosure.canRerun ? t('adminSnapshots.useRerunOnFailed') : t('adminSnapshots.notNeeded')} />
-          </div>
-        </article>
-      </section>
+function SnapshotFeedbackPanel(input: { feedback: string | null }) {
+  return input.feedback ? (
+    <section className="panel">
+      <div className="inline-state inline-state-accent">{input.feedback}</div>
+    </section>
+  ) : null
+}
 
-      <section className="metric-grid snapshot-metric-grid">
-        <MetricCard title={t('adminSnapshots.healthy')} value={overview.healthTotals.healthy} note={t('adminSnapshots.healthyNote', { count: overview.totals.completed })} icon={<Rocket size={18} />} tone="calm" />
-        <MetricCard title={t('adminSnapshots.inProgress')} value={overview.healthTotals.inProgress} note={t('adminSnapshots.inProgressNote', { count: overview.totals.queued + overview.totals.running })} icon={<Activity size={18} />} tone="neutral" />
-        <MetricCard title={t('adminSnapshots.retryReady')} value={overview.healthTotals.retryReady} note={t('adminSnapshots.retryReadyNote')} icon={<RefreshCcw size={18} />} tone="accent" />
-        <MetricCard title={t('adminSnapshots.stuck')} value={overview.healthTotals.stuck} note={t('adminSnapshots.stuckNote')} icon={<Clock3 size={18} />} tone="danger" />
-      </section>
-
-      <section className="two-up-grid">
-        <article className="panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">{t('adminSnapshots.latestPointers')}</div>
-              <h3>{t('adminSnapshots.runTransitions')}</h3>
-            </div>
-          </div>
-          <div className="key-grid">
-            <KeyValue label={t('adminSnapshots.latestCompleted')} value={overview.latest.completedSnapshotRunId ?? t('adminSnapshots.noCompletedRun')} />
-            <KeyValue label={t('adminSnapshots.latestFailed')} value={overview.latest.failedSnapshotRunId ?? t('adminSnapshots.noFailedRun')} />
-            <KeyValue label={t('adminSnapshots.latestInProgress')} value={overview.latest.inProgressSnapshotRunId ?? t('adminSnapshots.noActiveRun')} />
-            <KeyValue label={t('adminSnapshots.latestStuck')} value={overview.latest.stuckSnapshotRunId ?? t('adminSnapshots.noStuckRun')} />
-          </div>
-        </article>
-
-        <article className="panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">{t('adminSnapshots.healthReading')}</div>
-              <h3>{t('adminSnapshots.runStateBalance')}</h3>
-            </div>
-          </div>
-          <StatusBar label={t('adminSnapshots.healthy')} value={overview.healthTotals.healthy} total={overview.totals.all} tone="calm" />
-          <StatusBar label={t('adminSnapshots.inProgress')} value={overview.healthTotals.inProgress} total={overview.totals.all} tone="neutral" />
-          <StatusBar label={t('adminSnapshots.retryReady')} value={overview.healthTotals.retryReady} total={overview.totals.all} tone="accent" />
-          <StatusBar label={t('adminSnapshots.stuck')} value={overview.healthTotals.stuck} total={overview.totals.all} tone="danger" />
-        </article>
-      </section>
-
-      <section className="panel">
+function DailyClosurePanels(input: {
+  dailyClosure: DailyClosureStatus
+  isQueuing: boolean
+  locale: AppLocale
+  onQueue: () => void
+  t: TranslateFunction
+}) {
+  return (
+    <section className="two-up-grid">
+      <article className="panel">
         <div className="panel-heading panel-heading-spread">
           <div>
-            <div className="eyebrow">{t('adminSnapshots.actionQueueEyebrow')}</div>
-            <h3>{t('adminSnapshots.actionQueueTitle')}</h3>
-            <p className="panel-copy">{t('adminSnapshots.actionQueueCopy')}</p>
+            <div className="eyebrow">{input.t('adminSnapshots.dailyClosureEyebrow')}</div>
+            <h3>{input.t('adminSnapshots.dailyClosureTitle')}</h3>
+            <p className="panel-copy">{input.t('adminSnapshots.dailyClosureCopy')}</p>
           </div>
-          <ReportingToolbar
-            sortValue={sortBy}
-            onSortChange={(value) =>
-              dispatchPageState({ type: 'setSortBy', value: value as SnapshotSortValue })
-            }
-            sortOptions={[
-              { value: 'priority', label: t('adminSnapshots.sort.priority') },
-              { value: 'generated-desc', label: t('adminSnapshots.sort.generatedDesc') },
-              { value: 'reruns', label: t('adminSnapshots.sort.reruns') },
-              { value: 'type', label: t('adminSnapshots.sort.type') },
-            ]}
-            sortAriaLabel={t('adminSnapshots.sortRows')}
-            exportLabel={t('adminSnapshots.exportCsv')}
-            onExport={() =>
-              downloadCsv({
-                filename: 'snapshot-needs-action.csv',
-                columns: ['snapshotRunId', 'snapshotType', 'runStatus', 'healthState', 'generatedAt', 'periodStart', 'periodEnd', 'rerunCount', 'actionReason', 'recommendedAction'],
-                rows: sortedItems.map((item) => [
-                  item.snapshotRunId,
-                  item.snapshotType,
-                  item.runStatus,
-                  item.healthState,
-                  item.generatedAt,
-                  item.periodStart,
-                  item.periodEnd,
-                  item.rerunCount,
-                  item.actionReason,
-                  item.recommendedAction,
-                ]),
-              })
-            }
-          >
-            <label className="search-field">
-              <span className="sr-only">{t('adminSnapshots.filterQueue')}</span>
-              <input
-                value={search}
-                onChange={(event) =>
-                  dispatchPageState({ type: 'setSearch', value: event.target.value })
-                }
-                placeholder={t('adminSnapshots.searchPlaceholder')}
-              />
-            </label>
-          </ReportingToolbar>
+          <StatusPill tone={mapHealthTone(input.dailyClosure.healthState)}>
+            {formatSnapshotState(input.dailyClosure.healthState, input.t)}
+          </StatusPill>
         </div>
-
-        <div className="toolbar-cluster">
-          <label className="control-select">
-            <span className="sr-only">{t('adminSnapshots.filterSnapshotType')}</span>
-            <select
-              value={snapshotTypeFilter}
-              onChange={(event) =>
-                dispatchPageState({
-                  type: 'setSnapshotTypeFilter',
-                  value: event.target.value as SnapshotTypeFilter,
-                })
-              }
-            >
-              <option value="">{t('adminSnapshots.allSnapshotTypes')}</option>
-              {snapshotTypes.map((type) => (
-                <option key={type} value={type}>
-                  {formatSnapshotType(type, t)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="control-select">
-            <span className="sr-only">{t('adminSnapshots.filterRunStatus')}</span>
-            <select
-              value={runStatusFilter}
-              onChange={(event) =>
-                dispatchPageState({
-                  type: 'setRunStatusFilter',
-                  value: event.target.value as SnapshotRunStatusFilter,
-                })
-              }
-            >
-              <option value="">{t('adminSnapshots.allRunStatuses')}</option>
-              {runStatuses.map((status) => (
-                <option key={status} value={status}>
-                  {formatSnapshotState(status, t)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button
-            className="control-button"
-            type="button"
-            onClick={() => dispatchPageState({ type: 'clearFilters' })}
-          >
-            {t('adminSnapshots.clearFilters')}
-          </button>
-        </div>
-
-        {sortedItems.length === 0 ? (
-          <EmptyState
-            title={t('adminSnapshots.emptyQueueTitle')}
-            copy={t('adminSnapshots.emptyQueueCopy')}
+        <div className="key-grid">
+          <KeyValue
+            label={input.t('adminSnapshots.closureDate')}
+            value={formatDate(input.dailyClosure.closureDate, input.locale)}
           />
-        ) : (
-          <div className="queue-list">
-            {sortedItems.map((item) => (
-              <div className="queue-row" key={item.snapshotRunId}>
-                <Link to={`/admin/snapshots/${item.snapshotRunId}`}>
-                  <div className="queue-row-head">
-                    <div>
-                      <div className="queue-title">
-                        {t('adminSnapshots.snapshotTitle', { type: formatSnapshotType(item.snapshotType, t) })}
-                      </div>
-                      <div className="queue-subtitle">{item.snapshotRunId}</div>
-                    </div>
-                    <StatusPill tone={mapHealthTone(item.healthState)}>{formatSnapshotState(item.healthState, t)}</StatusPill>
-                  </div>
-
-                  <p className="queue-reason">{item.actionReason}</p>
-
-                  <div className="queue-meta">
-                    <span>{formatSnapshotState(item.runStatus, t)}</span>
-                    <span>{`${formatDate(item.periodStart, locale)} - ${formatDate(item.periodEnd, locale)}`}</span>
-                    <span>{t('adminSnapshots.reruns', { count: item.rerunCount })}</span>
-                    {item.latestRerunSnapshotRunId ? (
-                      <span>{t('adminSnapshots.latestRerun', { id: item.latestRerunSnapshotRunId })}</span>
-                    ) : null}
-                  </div>
-
-                  <div className="queue-footer">
-                    <span>{item.recommendedAction}</span>
-                    <ArrowRight size={16} />
-                  </div>
-                </Link>
-                {item.canRerun ? (
-                  <div className="action-cluster">
-                    <button
-                      className="control-button"
-                      type="button"
-                      onClick={() => rerunMutation.mutate(item.snapshotRunId)}
-                      disabled={rerunMutation.isPending}
-                    >
-                      {rerunMutation.isPending ? t('adminSnapshots.rerunning') : t('adminSnapshots.rerunSnapshot')}
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-            ))}
+          <KeyValue
+            label={input.t('adminSnapshots.localDate')}
+            value={formatDate(input.dailyClosure.localDate, input.locale)}
+          />
+          <KeyValue label={input.t('adminSnapshots.timezone')} value={input.dailyClosure.timezone} />
+          <KeyValue
+            label={input.t('adminSnapshots.existingRun')}
+            value={input.dailyClosure.existingSnapshotRunId ?? input.t('adminSnapshots.noRunYet')}
+          />
+          <KeyValue
+            label={input.t('adminSnapshots.automation')}
+            value={
+              input.dailyClosure.automationEnabled
+                ? input.t('adminSnapshots.enabled')
+                : input.t('adminSnapshots.disabled')
+            }
+          />
+          <KeyValue
+            label={input.t('adminSnapshots.pollCadence')}
+            value={input.t('adminSnapshots.minutes', {
+              count: input.dailyClosure.automationPollMinutes,
+            })}
+          />
+        </div>
+        <p className="queue-reason">{input.dailyClosure.recommendedAction}</p>
+        {input.dailyClosure.existingFailureReason ? (
+          <div className="inline-state inline-state-danger">
+            {input.dailyClosure.existingFailureReason}
           </div>
-        )}
-
+        ) : null}
         <div className="toolbar-cluster">
           <button
             className="control-button"
             type="button"
-            onClick={() => dispatchPageState({ type: 'previousPage' })}
-            disabled={!canGoBack}
+            onClick={input.onQueue}
+            disabled={!input.dailyClosure.canQueue || input.isQueuing}
           >
-            {t('adminSnapshots.previous')}
+            {input.isQueuing
+              ? input.t('adminSnapshots.queuing')
+              : input.t('adminSnapshots.queueDailyClosure')}
           </button>
-          <span className="inline-state inline-state-neutral">
-            {meta ? `${offset + 1}-${Math.min(offset + PAGE_SIZE, meta.total)} / ${meta.total}` : t('adminSnapshots.zeroResults')}
-          </span>
+          {input.dailyClosure.existingSnapshotRunId ? (
+            <Link className="back-link" to={`/admin/snapshots/${input.dailyClosure.existingSnapshotRunId}`}>
+              <span>{input.t('adminSnapshots.openSnapshotRun')}</span>
+            </Link>
+          ) : null}
+        </div>
+      </article>
+
+      <article className="panel">
+        <div className="panel-heading">
+          <div>
+            <div className="eyebrow">{input.t('adminSnapshots.closureRuleEyebrow')}</div>
+            <h3>{input.t('adminSnapshots.closureRuleTitle')}</h3>
+          </div>
+        </div>
+        <div className="key-grid">
+          <KeyValue
+            label={input.t('adminSnapshots.sourceModel')}
+            value={input.t('adminSnapshots.sourceModelValue')}
+          />
+          <KeyValue
+            label={input.t('adminSnapshots.automaticTarget')}
+            value={input.t('adminSnapshots.automaticTargetValue')}
+          />
+          <KeyValue
+            label={input.t('adminSnapshots.queueBehavior')}
+            value={
+              input.dailyClosure.canQueue
+                ? input.t('adminSnapshots.readyToQueue')
+                : input.t('adminSnapshots.waitingOrClosed')
+            }
+          />
+          <KeyValue
+            label={input.t('adminSnapshots.retryPath')}
+            value={
+              input.dailyClosure.canRerun
+                ? input.t('adminSnapshots.useRerunOnFailed')
+                : input.t('adminSnapshots.notNeeded')
+            }
+          />
+        </div>
+      </article>
+    </section>
+  )
+}
+
+function SnapshotHealthMetricGrid(input: { overview: SnapshotOverview; t: TranslateFunction }) {
+  return (
+    <section className="metric-grid snapshot-metric-grid">
+      <MetricCard
+        title={input.t('adminSnapshots.healthy')}
+        value={input.overview.healthTotals.healthy}
+        note={input.t('adminSnapshots.healthyNote', { count: input.overview.totals.completed })}
+        icon={<Rocket size={18} />}
+        tone="calm"
+      />
+      <MetricCard
+        title={input.t('adminSnapshots.inProgress')}
+        value={input.overview.healthTotals.inProgress}
+        note={input.t('adminSnapshots.inProgressNote', {
+          count: input.overview.totals.queued + input.overview.totals.running,
+        })}
+        icon={<Activity size={18} />}
+        tone="neutral"
+      />
+      <MetricCard
+        title={input.t('adminSnapshots.retryReady')}
+        value={input.overview.healthTotals.retryReady}
+        note={input.t('adminSnapshots.retryReadyNote')}
+        icon={<RefreshCcw size={18} />}
+        tone="accent"
+      />
+      <MetricCard
+        title={input.t('adminSnapshots.stuck')}
+        value={input.overview.healthTotals.stuck}
+        note={input.t('adminSnapshots.stuckNote')}
+        icon={<Clock3 size={18} />}
+        tone="danger"
+      />
+    </section>
+  )
+}
+
+function SnapshotHealthSummaryPanels(input: { overview: SnapshotOverview; t: TranslateFunction }) {
+  return (
+    <section className="two-up-grid">
+      <article className="panel">
+        <div className="panel-heading">
+          <div>
+            <div className="eyebrow">{input.t('adminSnapshots.latestPointers')}</div>
+            <h3>{input.t('adminSnapshots.runTransitions')}</h3>
+          </div>
+        </div>
+        <div className="key-grid">
+          <KeyValue
+            label={input.t('adminSnapshots.latestCompleted')}
+            value={input.overview.latest.completedSnapshotRunId ?? input.t('adminSnapshots.noCompletedRun')}
+          />
+          <KeyValue
+            label={input.t('adminSnapshots.latestFailed')}
+            value={input.overview.latest.failedSnapshotRunId ?? input.t('adminSnapshots.noFailedRun')}
+          />
+          <KeyValue
+            label={input.t('adminSnapshots.latestInProgress')}
+            value={input.overview.latest.inProgressSnapshotRunId ?? input.t('adminSnapshots.noActiveRun')}
+          />
+          <KeyValue
+            label={input.t('adminSnapshots.latestStuck')}
+            value={input.overview.latest.stuckSnapshotRunId ?? input.t('adminSnapshots.noStuckRun')}
+          />
+        </div>
+      </article>
+
+      <article className="panel">
+        <div className="panel-heading">
+          <div>
+            <div className="eyebrow">{input.t('adminSnapshots.healthReading')}</div>
+            <h3>{input.t('adminSnapshots.runStateBalance')}</h3>
+          </div>
+        </div>
+        <StatusBar
+          label={input.t('adminSnapshots.healthy')}
+          value={input.overview.healthTotals.healthy}
+          total={input.overview.totals.all}
+          tone="calm"
+        />
+        <StatusBar
+          label={input.t('adminSnapshots.inProgress')}
+          value={input.overview.healthTotals.inProgress}
+          total={input.overview.totals.all}
+          tone="neutral"
+        />
+        <StatusBar
+          label={input.t('adminSnapshots.retryReady')}
+          value={input.overview.healthTotals.retryReady}
+          total={input.overview.totals.all}
+          tone="accent"
+        />
+        <StatusBar
+          label={input.t('adminSnapshots.stuck')}
+          value={input.overview.healthTotals.stuck}
+          total={input.overview.totals.all}
+          tone="danger"
+        />
+      </article>
+    </section>
+  )
+}
+
+function SnapshotActionQueuePanel(input: {
+  dispatchPageState: Dispatch<SnapshotsDashboardPageAction>
+  filters: {
+    search: string
+    snapshotTypeFilter: SnapshotTypeFilter
+    runStatusFilter: SnapshotRunStatusFilter
+  }
+  isRerunning: boolean
+  locale: AppLocale
+  meta: SnapshotNeedsActionMeta | undefined
+  offset: number
+  onRerun: (snapshotRunId: string) => void
+  pagination: {
+    canGoBack: boolean
+    canGoForward: boolean
+  }
+  sortedItems: SnapshotNeedsActionItem[]
+  sortBy: SnapshotSortValue
+  t: TranslateFunction
+}) {
+  return (
+    <section className="panel">
+      <div className="panel-heading panel-heading-spread">
+        <div>
+          <div className="eyebrow">{input.t('adminSnapshots.actionQueueEyebrow')}</div>
+          <h3>{input.t('adminSnapshots.actionQueueTitle')}</h3>
+          <p className="panel-copy">{input.t('adminSnapshots.actionQueueCopy')}</p>
+        </div>
+        <ReportingToolbar
+          sortValue={input.sortBy}
+          onSortChange={(value) =>
+            input.dispatchPageState({ type: 'setSortBy', value: value as SnapshotSortValue })
+          }
+          sortOptions={[
+            { value: 'priority', label: input.t('adminSnapshots.sort.priority') },
+            { value: 'generated-desc', label: input.t('adminSnapshots.sort.generatedDesc') },
+            { value: 'reruns', label: input.t('adminSnapshots.sort.reruns') },
+            { value: 'type', label: input.t('adminSnapshots.sort.type') },
+          ]}
+          sortAriaLabel={input.t('adminSnapshots.sortRows')}
+          exportLabel={input.t('adminSnapshots.exportCsv')}
+          onExport={() =>
+            downloadCsv({
+              filename: 'snapshot-needs-action.csv',
+              columns: [
+                'snapshotRunId',
+                'snapshotType',
+                'runStatus',
+                'healthState',
+                'generatedAt',
+                'periodStart',
+                'periodEnd',
+                'rerunCount',
+                'actionReason',
+                'recommendedAction',
+              ],
+              rows: input.sortedItems.map((item) => [
+                item.snapshotRunId,
+                item.snapshotType,
+                item.runStatus,
+                item.healthState,
+                item.generatedAt,
+                item.periodStart,
+                item.periodEnd,
+                item.rerunCount,
+                item.actionReason,
+                item.recommendedAction,
+              ]),
+            })
+          }
+        >
+          <label className="search-field">
+            <span className="sr-only">{input.t('adminSnapshots.filterQueue')}</span>
+            <input
+              value={input.filters.search}
+              onChange={(event) =>
+                input.dispatchPageState({ type: 'setSearch', value: event.target.value })
+              }
+              placeholder={input.t('adminSnapshots.searchPlaceholder')}
+            />
+          </label>
+        </ReportingToolbar>
+      </div>
+
+      <SnapshotQueueFilters
+        dispatchPageState={input.dispatchPageState}
+        runStatusFilter={input.filters.runStatusFilter}
+        snapshotTypeFilter={input.filters.snapshotTypeFilter}
+        t={input.t}
+      />
+
+      {input.sortedItems.length === 0 ? (
+        <EmptyState
+          title={input.t('adminSnapshots.emptyQueueTitle')}
+          copy={input.t('adminSnapshots.emptyQueueCopy')}
+        />
+      ) : (
+        <div className="queue-list">
+          {input.sortedItems.map((item) => (
+            <SnapshotActionQueueRow
+              isRerunning={input.isRerunning}
+              item={item}
+              key={item.snapshotRunId}
+              locale={input.locale}
+              onRerun={input.onRerun}
+              t={input.t}
+            />
+          ))}
+        </div>
+      )}
+
+      <SnapshotQueuePagination
+        dispatchPageState={input.dispatchPageState}
+        meta={input.meta}
+        offset={input.offset}
+        pagination={input.pagination}
+        t={input.t}
+      />
+    </section>
+  )
+}
+
+function SnapshotQueueFilters(input: {
+  dispatchPageState: Dispatch<SnapshotsDashboardPageAction>
+  runStatusFilter: SnapshotRunStatusFilter
+  snapshotTypeFilter: SnapshotTypeFilter
+  t: TranslateFunction
+}) {
+  return (
+    <div className="toolbar-cluster">
+      <label className="control-select">
+        <span className="sr-only">{input.t('adminSnapshots.filterSnapshotType')}</span>
+        <select
+          value={input.snapshotTypeFilter}
+          onChange={(event) =>
+            input.dispatchPageState({
+              type: 'setSnapshotTypeFilter',
+              value: event.target.value as SnapshotTypeFilter,
+            })
+          }
+        >
+          <option value="">{input.t('adminSnapshots.allSnapshotTypes')}</option>
+          {snapshotTypes.map((type) => (
+            <option key={type} value={type}>
+              {formatSnapshotType(type, input.t)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="control-select">
+        <span className="sr-only">{input.t('adminSnapshots.filterRunStatus')}</span>
+        <select
+          value={input.runStatusFilter}
+          onChange={(event) =>
+            input.dispatchPageState({
+              type: 'setRunStatusFilter',
+              value: event.target.value as SnapshotRunStatusFilter,
+            })
+          }
+        >
+          <option value="">{input.t('adminSnapshots.allRunStatuses')}</option>
+          {runStatuses.map((status) => (
+            <option key={status} value={status}>
+              {formatSnapshotState(status, input.t)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <button
+        className="control-button"
+        type="button"
+        onClick={() => input.dispatchPageState({ type: 'clearFilters' })}
+      >
+        {input.t('adminSnapshots.clearFilters')}
+      </button>
+    </div>
+  )
+}
+
+function SnapshotActionQueueRow(input: {
+  isRerunning: boolean
+  item: SnapshotNeedsActionItem
+  locale: AppLocale
+  onRerun: (snapshotRunId: string) => void
+  t: TranslateFunction
+}) {
+  return (
+    <div className="queue-row">
+      <Link to={`/admin/snapshots/${input.item.snapshotRunId}`}>
+        <div className="queue-row-head">
+          <div>
+            <div className="queue-title">
+              {input.t('adminSnapshots.snapshotTitle', {
+                type: formatSnapshotType(input.item.snapshotType, input.t),
+              })}
+            </div>
+            <div className="queue-subtitle">{input.item.snapshotRunId}</div>
+          </div>
+          <StatusPill tone={mapHealthTone(input.item.healthState)}>
+            {formatSnapshotState(input.item.healthState, input.t)}
+          </StatusPill>
+        </div>
+
+        <p className="queue-reason">{input.item.actionReason}</p>
+
+        <div className="queue-meta">
+          <span>{formatSnapshotState(input.item.runStatus, input.t)}</span>
+          <span>{`${formatDate(input.item.periodStart, input.locale)} - ${formatDate(input.item.periodEnd, input.locale)}`}</span>
+          <span>{input.t('adminSnapshots.reruns', { count: input.item.rerunCount })}</span>
+          {input.item.latestRerunSnapshotRunId ? (
+            <span>
+              {input.t('adminSnapshots.latestRerun', { id: input.item.latestRerunSnapshotRunId })}
+            </span>
+          ) : null}
+        </div>
+
+        <div className="queue-footer">
+          <span>{input.item.recommendedAction}</span>
+          <ArrowRight size={16} />
+        </div>
+      </Link>
+      {input.item.canRerun ? (
+        <div className="action-cluster">
           <button
             className="control-button"
             type="button"
-            onClick={() => dispatchPageState({ type: 'nextPage' })}
-            disabled={!canGoForward}
+            onClick={() => input.onRerun(input.item.snapshotRunId)}
+            disabled={input.isRerunning}
           >
-            {t('adminSnapshots.next')}
+            {input.isRerunning
+              ? input.t('adminSnapshots.rerunning')
+              : input.t('adminSnapshots.rerunSnapshot')}
           </button>
         </div>
-      </section>
-    </section>
+      ) : null}
+    </div>
+  )
+}
+
+function SnapshotQueuePagination(input: {
+  dispatchPageState: Dispatch<SnapshotsDashboardPageAction>
+  meta: SnapshotNeedsActionMeta | undefined
+  offset: number
+  pagination: {
+    canGoBack: boolean
+    canGoForward: boolean
+  }
+  t: TranslateFunction
+}) {
+  return (
+    <div className="toolbar-cluster">
+      <button
+        className="control-button"
+        type="button"
+        onClick={() => input.dispatchPageState({ type: 'previousPage' })}
+        disabled={!input.pagination.canGoBack}
+      >
+        {input.t('adminSnapshots.previous')}
+      </button>
+      <span className="inline-state inline-state-neutral">
+        {input.meta
+          ? `${input.offset + 1}-${Math.min(input.offset + PAGE_SIZE, input.meta.total)} / ${input.meta.total}`
+          : input.t('adminSnapshots.zeroResults')}
+      </span>
+      <button
+        className="control-button"
+        type="button"
+        onClick={() => input.dispatchPageState({ type: 'nextPage' })}
+        disabled={!input.pagination.canGoForward}
+      >
+        {input.t('adminSnapshots.next')}
+      </button>
+    </div>
   )
 }
