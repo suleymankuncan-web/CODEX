@@ -566,6 +566,29 @@ test('store rankings page renders Plum ranking table without signal chrome', asy
   await expect(page.getByText('Siralama yuzeyi acilamadi')).toHaveCount(0)
 })
 
+test('store rankings retries a transient API failure without leaving the user stuck', async ({ page }) => {
+  let rankingAttempts = 0
+
+  await page.unroute('**/api/reports/rankings**')
+  await page.route('**/api/reports/rankings**', async (route) => {
+    rankingAttempts += 1
+
+    if (rankingAttempts === 1) {
+      await route.fulfill({ status: 503, json: { message: 'Temporary rankings outage' } })
+      return
+    }
+
+    await route.fulfill({ json: rankingsFixture })
+  })
+
+  await page.goto('/store/rankings')
+
+  await expect.poll(() => rankingAttempts).toBeGreaterThanOrEqual(2)
+  await expect(page.locator('.rankings-plum-page')).toBeVisible()
+  await expect(page.getByText('IstinyePark Demo Store')).toBeVisible()
+  await expect(page.getByText('Siralama yuzeyi acilamadi')).toHaveCount(0)
+})
+
 test('store rankings personnel detail opens the selected personnel performance profile', async ({ page }) => {
   const personnelPerformanceRequests: URL[] = []
 

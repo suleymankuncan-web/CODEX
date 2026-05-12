@@ -25,6 +25,7 @@ import {
 } from '../features/reports/api'
 import { formatDate, formatNumber as formatIntlNumber, getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
+import { transientQueryRetryOptions } from '../lib/query-retry'
 
 const privilegedRankingRoles = ['REGION_MANAGER', 'SUPER_ADMIN']
 const rankingRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', ...privilegedRankingRoles]
@@ -280,7 +281,7 @@ export function StoreRankingsPage(input: {
       }),
     enabled,
     placeholderData: (previousData) => previousData,
-    retry: false,
+    ...transientQueryRetryOptions,
   })
   const latestCachedRanking = rankingsQuery.data ? null : getLatestRankingFromCache(queryClient)
   const ranking = rankingsQuery.data ?? latestCachedRanking

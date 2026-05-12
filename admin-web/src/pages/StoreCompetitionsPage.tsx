@@ -24,6 +24,7 @@ import {
 } from '../features/competitions/readability'
 import { useLocalization } from '../features/localization/useLocalization'
 import { formatDate, formatState, getErrorMessage } from '../lib/format'
+import { transientQueryRetryOptions } from '../lib/query-retry'
 
 function canUseStoreCompetitions(authSummary: AuthSessionSummary | null) {
   const roles = authSummary?.user.roleCodes ?? []
@@ -49,8 +50,8 @@ export function StoreCompetitionsPage(input: {
     queryKey: ['store-competitions'],
     queryFn: listCompetitions,
     enabled,
-    retry: false,
     staleTime: 30_000,
+    ...transientQueryRetryOptions,
   })
 
   const competitions = useMemo(
@@ -68,8 +69,8 @@ export function StoreCompetitionsPage(input: {
     queryKey: ['store-competition-detail', selectedCompetition?.competitionId],
     queryFn: () => getCompetition(selectedCompetition!.competitionId),
     enabled: enabled && Boolean(selectedCompetition),
-    retry: false,
     staleTime: 15_000,
+    ...transientQueryRetryOptions,
   })
 
   if (!enabled) {

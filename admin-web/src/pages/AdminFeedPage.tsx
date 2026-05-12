@@ -31,6 +31,7 @@ import type { TranslateFunction, TranslationKey } from '../features/localization
 import { useLocalization } from '../features/localization/useLocalization'
 import { formatDate, formatDateTime, getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
+import { transientQueryRetryOptions } from '../lib/query-retry'
 
 type FeedFormState = {
   postType: FeedPostType
@@ -103,12 +104,12 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
   const feedQuery = useQuery({
     queryKey: ['admin-feed'],
     queryFn: getAdminFeedPosts,
-    retry: false,
+    ...transientQueryRetryOptions,
   })
   const lookupsQuery = useQuery({
     queryKey: ['auth-lookups'],
     queryFn: getAuthLookups,
-    retry: false,
+    ...transientQueryRetryOptions,
   })
 
   const stores = useMemo(() => lookupsQuery.data?.stores ?? [], [lookupsQuery.data?.stores])
