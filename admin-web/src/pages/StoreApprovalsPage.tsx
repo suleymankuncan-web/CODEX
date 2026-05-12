@@ -140,6 +140,106 @@ type StoreApprovalsLedgerRow = {
   type: string
   wait: string
 }
+type StoreSellerPositionOption = {
+  label: string
+  position: PositionOption
+}
+
+const storeSellerPositionLabels = {
+  cashierResponsible: 'Kasa Sorumlusu',
+  salesConsultant: 'Satış Danışmanı',
+  seniorSalesConsultant: 'Uzman Satış Danışmanı',
+  storeAssistantManager: 'Mağaza Müdür Yardımcısı',
+  storeManager: 'Mağaza Müdürü',
+} as const
+type StoreSellerPositionKey = keyof typeof storeSellerPositionLabels
+
+const storeSellerPositionAliases = {
+  cashierResponsible: [
+    'CASHIER',
+    'CASHIER_RESPONSIBLE',
+    'CASH_RESPONSIBLE',
+    'CASH_REGISTER_RESPONSIBLE',
+    'KASA SORUMLUSU',
+    'KASA_SORUMLUSU',
+  ],
+  salesConsultant: [
+    'SALES CONSULTANT',
+    'SALES_CONSULTANT',
+    'SATIS DANISMANI',
+    'SATIS_DANISMANI',
+    'SATIŞ DANIŞMANI',
+  ],
+  seniorSalesConsultant: [
+    'EXPERT SALES CONSULTANT',
+    'EXPERT_SALES_CONSULTANT',
+    'SENIOR SALES CONSULTANT',
+    'SENIOR_SALES_CONSULTANT',
+    'UZMAN SATIS DANISMANI',
+    'UZMAN SATIŞ DANIŞMANI',
+    'UZMAN_SATIS_DANISMANI',
+  ],
+  storeAssistantManager: [
+    'ASSISTANT MANAGER',
+    'ASSISTANT STORE MANAGER',
+    'ASSISTANT_MANAGER',
+    'MAGAZA MUDUR YARDIMCISI',
+    'MAGAZA_MUDUR_YARDIMCISI',
+    'MAĞAZA MÜDÜR YARDIMCISI',
+    'STORE ASSISTANT MANAGER',
+    'STORE_ASSISTANT_MANAGER',
+  ],
+  storeManager: [
+    'MAGAZA MUDURU',
+    'MAGAZA_MUDURU',
+    'MAĞAZA MÜDÜRÜ',
+    'STORE MANAGER',
+    'STORE_MANAGER',
+  ],
+} as const satisfies Record<StoreSellerPositionKey, readonly string[]>
+
+const storeSellerPositionLookup = new Map<string, StoreSellerPositionKey>(
+  Object.entries(storeSellerPositionAliases).flatMap(([positionKey, aliases]) =>
+    aliases.map((alias) => [
+      normalizePositionLookup(alias),
+      positionKey as StoreSellerPositionKey,
+    ]),
+  ),
+)
+
+function normalizePositionLookup(value: string) {
+  return value
+    .trim()
+    .toLocaleLowerCase('tr-TR')
+    .replaceAll('ı', 'i')
+    .replaceAll('ğ', 'g')
+    .replaceAll('ü', 'u')
+    .replaceAll('ş', 's')
+    .replaceAll('ö', 'o')
+    .replaceAll('ç', 'c')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+}
+
+function resolveStoreSellerPositionLabel(position: PositionOption) {
+  const matchingKey =
+    storeSellerPositionLookup.get(normalizePositionLookup(position.positionCode)) ??
+    storeSellerPositionLookup.get(normalizePositionLookup(position.positionName))
+
+  return matchingKey ? storeSellerPositionLabels[matchingKey] : null
+}
+
+function getStoreSellerPositionOptions(positions: readonly PositionOption[]) {
+  return positions.reduce<StoreSellerPositionOption[]>((options, position) => {
+    const label = resolveStoreSellerPositionLabel(position)
+    if (!label) {
+      return options
+    }
+
+    options.push({ label, position })
+    return options
+  }, [])
+}
 
 function resolveStoreApprovalsPersona(
   authSummary: AuthSessionSummary | null,
@@ -801,14 +901,6 @@ export function StoreApprovalsPage(input: {
         className="store-approvals-ledger-inspector"
         aria-label={t('storeApprovals.ledgerInspectorAria')}
       >
-        <article className="store-approvals-ledger-note">
-          <div className="store-approvals-ledger-eyebrow">
-            {t('storeApprovals.ledgerInspectorEyebrow')}
-          </div>
-          <h3>{t('storeApprovals.ledgerInspectorTitle')}</h3>
-          <p>{t('storeApprovals.ledgerInspectorCopy')}</p>
-        </article>
-
         <aside className="store-approvals-ledger-detail">
           <div className="store-approvals-ledger-detail-head">
             <div>
@@ -1479,7 +1571,7 @@ function TargetDistributionRequestForm(input: {
 }) {
   return (
     <article
-      className="store-approvals-ledger-card store-approvals-ledger-editor"
+      className="store-approvals-ledger-card store-approvals-ledger-editor store-approvals-ledger-compact-form"
       aria-label={input.t('storeApprovals.targetFormAria')}
     >
       <div className="store-approvals-ledger-card-head">
@@ -1752,9 +1844,13 @@ function SellerCodeRequestForm(input: {
   storeId: string
   t: TranslateFunction
 }) {
+  const sellerPositionOptions = getStoreSellerPositionOptions(
+    input.positionOptionsQuery.data?.items ?? [],
+  )
+
   return (
     <article
-      className="store-approvals-ledger-card store-approvals-ledger-editor"
+      className="store-approvals-ledger-card store-approvals-ledger-editor store-approvals-ledger-compact-form"
       aria-label={input.t('storeApprovals.sellerFormAria')}
     >
       <div className="store-approvals-ledger-card-head">
@@ -1816,9 +1912,9 @@ function SellerCodeRequestForm(input: {
               onChange={(event) => input.onPositionIdChange(event.target.value)}
             >
               <option value="">{input.t('storeApprovals.selectPosition')}</option>
-              {(input.positionOptionsQuery.data?.items ?? []).map((position) => (
+              {sellerPositionOptions.map(({ label, position }) => (
                 <option key={position.positionId} value={position.positionId}>
-                  {position.positionName} ({position.positionCode})
+                  {label}
                 </option>
               ))}
             </select>
@@ -1834,7 +1930,7 @@ function SellerCodeRequestForm(input: {
             ) : null}
             {!input.positionOptionsQuery.isLoading &&
             !input.positionOptionsQuery.isError &&
-            (input.positionOptionsQuery.data?.items.length ?? 0) === 0 ? (
+            sellerPositionOptions.length === 0 ? (
               <p className="store-approvals-ledger-row-note">{input.t('storeApprovals.noPositions')}</p>
             ) : null}
           </div>
@@ -1971,7 +2067,7 @@ function OffboardingRequestForm(input: {
 }) {
   return (
     <article
-      className="store-approvals-ledger-card store-approvals-ledger-editor"
+      className="store-approvals-ledger-card store-approvals-ledger-editor store-approvals-ledger-compact-form"
       aria-label={input.t('storeApprovals.offboardingFormAria')}
     >
       <div className="store-approvals-ledger-card-head">

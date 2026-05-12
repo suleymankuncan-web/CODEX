@@ -1663,7 +1663,7 @@ test('store approvals page lets store managers submit seller code requests', asy
   await sellerCodeForm.getByLabel('TC kimlik no').fill('12345678901')
   await sellerCodeForm.getByLabel('Telefon numarası').fill('05551234567')
   await sellerCodeForm.getByLabel('İşe giriş tarihi').fill('2026-05-01')
-  await expect(sellerCodeForm.getByLabel('Pozisyon', { exact: true })).toContainText('Sales Consultant')
+  await expect(sellerCodeForm.getByLabel('Pozisyon', { exact: true })).toContainText('Satış Danışmanı')
   await sellerCodeForm.getByLabel('Pozisyon', { exact: true }).selectOption(demoPositionId)
   await sellerCodeForm.getByLabel('Talep nedeni').fill('Yeni personel')
   await sellerCodeForm.getByRole('button', { name: 'Satıcı kodu talebini gönder' }).click()
