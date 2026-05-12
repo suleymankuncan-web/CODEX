@@ -6,6 +6,7 @@ import {
   KeyValue,
   ScreenState,
   StatusPill,
+  type Tone,
 } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
 import {
@@ -72,6 +73,22 @@ function formatApprovalStatus(status: string, t: TranslateFunction) {
   return key ? t(key) : formatState(status)
 }
 
+function mapApprovalStatusTone(status: string): Tone {
+  if (status === 'approved') {
+    return 'calm'
+  }
+
+  if (status === 'rejected') {
+    return 'danger'
+  }
+
+  if (status === 'pending_hr_approval' || status === 'pending_region_approval') {
+    return 'warning'
+  }
+
+  return 'neutral'
+}
+
 function formatEmploymentType(type: SellerEmploymentType, t: TranslateFunction) {
   return t(employmentTypeLabelKeys[type])
 }
@@ -102,6 +119,19 @@ type ListQuerySnapshot<T> = {
 
 type StringFieldSetter = (value: string) => void
 type StoreApprovalsPersona = 'storeManager' | 'regionManager' | 'readOnly'
+type StoreApprovalsLedgerRow = {
+  actionLabel: string
+  detail: string
+  id: string
+  onAction?: () => void
+  record: string
+  scope: string
+  source: string
+  status: string
+  statusTone: Tone
+  type: string
+  wait: string
+}
 
 function resolveStoreApprovalsPersona(
   authSummary: AuthSessionSummary | null,
@@ -150,6 +180,9 @@ export function StoreApprovalsPage(input: {
   const [submissionNotice, setSubmissionNotice] = useState<string | null>(null)
   const [approvalNotes, setApprovalNotes] = useState<Record<string, string>>({})
   const [approvalNotice, setApprovalNotice] = useState<string | null>(null)
+  const [ledgerSearch, setLedgerSearch] = useState('')
+  const [ledgerTypeFilter, setLedgerTypeFilter] = useState('all')
+  const [ledgerStatusFilter, setLedgerStatusFilter] = useState('all')
   const [sellerFirstName, setSellerFirstName] = useState('')
   const [sellerLastName, setSellerLastName] = useState('')
   const [sellerNationalId, setSellerNationalId] = useState('')
@@ -403,6 +436,105 @@ export function StoreApprovalsPage(input: {
     Boolean(offboardingRequestReason.trim())
   const sellerRequestPending = sellerCodeMutation.isPending || resubmitSellerCodeMutation.isPending
   const offboardingRequestPending = offboardingMutation.isPending || resubmitOffboardingMutation.isPending
+  const ledgerRows: StoreApprovalsLedgerRow[] = [
+    ...(showTargetSubmission
+      ? [
+          {
+            actionLabel: t('storeApprovals.ledgerActionEdit'),
+            detail: t('storeApprovals.targetQueueTitle'),
+            id: 'target-distribution-form',
+            record: t('storeApprovals.targetTitle'),
+            scope: storeId || t('storeApprovals.noActionStore'),
+            source: t('storeApprovals.targetLedgerSource'),
+            status: canSubmit
+              ? t('storeApprovals.ledgerStatusReady')
+              : t('storeApprovals.ledgerStatusDraft'),
+            statusTone: canSubmit ? 'calm' : 'warning',
+            type: t('storeApprovals.ledgerTypeTarget'),
+            wait: t('storeApprovals.ledgerWaitLive'),
+          } satisfies StoreApprovalsLedgerRow,
+        ]
+      : []),
+    ...pendingTargetRequests.map((item) => ({
+      actionLabel: showTargetApprovalQueue
+        ? t('storeApprovals.ledgerActionReview')
+        : t('storeApprovals.ledgerActionDetail'),
+      detail: item.requestReason ?? t('storeApprovals.noNote'),
+      id: `pending-target-${item.requestId}`,
+      onAction:
+        showTargetApprovalQueue && canApproveTargetDistributionRequest(input.authSummary, item.storeId)
+          ? () =>
+              approveTargetMutation.mutate({
+                requestId: item.requestId,
+                approvalNote: approvalNotes[item.requestId] || undefined,
+              })
+          : undefined,
+      record: item.targetLabel,
+      scope: item.storeName || item.storeId,
+      source: t('storeApprovals.targetLedgerSource'),
+      status: formatApprovalStatus(item.status, t),
+      statusTone: 'warning' as const,
+      type: t('storeApprovals.ledgerTypeTarget'),
+      wait: formatDateTime(item.createdAt, locale),
+    })),
+    ...submittedTargetRequests.map((item) => ({
+      actionLabel: t('storeApprovals.ledgerActionDetail'),
+      detail: item.requestReason ?? t('storeApprovals.noNote'),
+      id: `submitted-target-${item.requestId}`,
+      record: item.targetLabel,
+      scope: item.storeName || item.storeId,
+      source: t('storeApprovals.targetLedgerSource'),
+      status: formatApprovalStatus(item.status, t),
+      statusTone: mapApprovalStatusTone(item.status),
+      type: t('storeApprovals.ledgerTypeTarget'),
+      wait: formatDateTime(item.updatedAt, locale),
+    })),
+    ...(showWorkforceHrQueues
+      ? [
+          ...returnedSellerCodeRequests.map((item) => ({
+            actionLabel: t('storeApprovals.editSellerCodeRequest'),
+            detail: item.reviewNote ?? t('storeApprovals.noNote'),
+            id: `seller-returned-${item.requestId}`,
+            onAction: () => startEditingSellerRequest(item),
+            record: `${item.firstName} ${item.lastName}`.trim(),
+            scope: item.storeName || item.storeId,
+            source: t('storeApprovals.hrQueue'),
+            status: formatApprovalStatus(item.status, t),
+            statusTone: 'danger' as const,
+            type: t('storeApprovals.ledgerTypeSellerCode'),
+            wait: formatDateTime(item.updatedAt, locale),
+          })),
+          ...returnedOffboardingRequests.map((item) => ({
+            actionLabel: t('storeApprovals.editOffboardingRequest'),
+            detail: item.reviewNote ?? t('storeApprovals.noNote'),
+            id: `offboarding-returned-${item.requestId}`,
+            onAction: () => startEditingOffboardingRequest(item),
+            record: item.displayName,
+            scope: item.storeName || item.storeId,
+            source: t('storeApprovals.hrQueue'),
+            status: formatApprovalStatus(item.status, t),
+            statusTone: 'danger' as const,
+            type: t('storeApprovals.ledgerTypeOffboarding'),
+            wait: formatDateTime(item.updatedAt, locale),
+          })),
+        ]
+      : []),
+  ]
+  const ledgerTypeOptions = Array.from(new Set(ledgerRows.map((item) => item.type)))
+  const ledgerStatusOptions = Array.from(new Set(ledgerRows.map((item) => item.status)))
+  const normalizedLedgerSearch = ledgerSearch.trim().toLocaleLowerCase(locale)
+  const visibleLedgerRows = ledgerRows.filter((item) => {
+    const matchesType = ledgerTypeFilter === 'all' || item.type === ledgerTypeFilter
+    const matchesStatus = ledgerStatusFilter === 'all' || item.status === ledgerStatusFilter
+    const matchesSearch =
+      !normalizedLedgerSearch ||
+      [item.type, item.record, item.detail, item.scope, item.status, item.source]
+        .join(' ')
+        .toLocaleLowerCase(locale)
+        .includes(normalizedLedgerSearch)
+
+    return matchesType && matchesStatus && matchesSearch
+  })
   const addTargetAllocation = () => {
     setSubmissionNotice(null)
     setAllocations([
@@ -609,6 +741,24 @@ export function StoreApprovalsPage(input: {
           }
         />
       </section>
+
+      <StoreApprovalsLedgerTable
+        rows={visibleLedgerRows}
+        searchValue={ledgerSearch}
+        statusFilter={ledgerStatusFilter}
+        statusOptions={ledgerStatusOptions}
+        t={t}
+        typeFilter={ledgerTypeFilter}
+        typeOptions={ledgerTypeOptions}
+        onPrimaryAction={() => {
+          setLedgerTypeFilter('all')
+          setLedgerStatusFilter('all')
+          setLedgerSearch('')
+        }}
+        onSearchChange={setLedgerSearch}
+        onStatusFilterChange={setLedgerStatusFilter}
+        onTypeFilterChange={setLedgerTypeFilter}
+      />
 
       <section className="store-approvals-ledger-grid">
         <div className="store-approvals-ledger-primary">
@@ -823,6 +973,118 @@ function LedgerMetric(input: {
       <strong>{input.value}</strong>
       <small>{input.note}</small>
     </article>
+  )
+}
+
+function StoreApprovalsLedgerTable(input: {
+  onPrimaryAction: () => void
+  onSearchChange: (value: string) => void
+  onStatusFilterChange: (value: string) => void
+  onTypeFilterChange: (value: string) => void
+  rows: StoreApprovalsLedgerRow[]
+  searchValue: string
+  statusFilter: string
+  statusOptions: string[]
+  t: TranslateFunction
+  typeFilter: string
+  typeOptions: string[]
+}) {
+  return (
+    <section className="store-approvals-ledger-workbench">
+      <div className="store-approvals-ledger-toolbar">
+        <div className="store-approvals-ledger-filters">
+          <input
+            aria-label={input.t('storeApprovals.ledgerSearchAria')}
+            value={input.searchValue}
+            onChange={(event) => input.onSearchChange(event.target.value)}
+            placeholder={input.t('storeApprovals.ledgerSearchPlaceholder')}
+          />
+          <select
+            aria-label={input.t('storeApprovals.ledgerTypeFilterAria')}
+            value={input.typeFilter}
+            onChange={(event) => input.onTypeFilterChange(event.target.value)}
+          >
+            <option value="all">{input.t('storeApprovals.ledgerAllTypes')}</option>
+            {input.typeOptions.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label={input.t('storeApprovals.ledgerStatusFilterAria')}
+            value={input.statusFilter}
+            onChange={(event) => input.onStatusFilterChange(event.target.value)}
+          >
+            <option value="all">{input.t('storeApprovals.ledgerAllStatuses')}</option>
+            {input.statusOptions.map((status) => (
+              <option key={status} value={status}>
+                {status}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button
+          className="store-approvals-ledger-button store-approvals-ledger-button-primary"
+          type="button"
+          onClick={input.onPrimaryAction}
+        >
+          {input.t('storeApprovals.ledgerResetFilters')}
+        </button>
+      </div>
+
+      <div
+        className="store-approvals-ledger-table"
+        role="table"
+        aria-label={input.t('storeApprovals.ledgerTableAria')}
+      >
+        <div className="store-approvals-ledger-table-head" role="row">
+          <div role="columnheader">{input.t('storeApprovals.ledgerColumnType')}</div>
+          <div role="columnheader">{input.t('storeApprovals.ledgerColumnRecord')}</div>
+          <div role="columnheader">{input.t('storeApprovals.ledgerColumnScope')}</div>
+          <div role="columnheader">{input.t('storeApprovals.ledgerColumnStatus')}</div>
+          <div role="columnheader">{input.t('storeApprovals.ledgerColumnWait')}</div>
+          <div role="columnheader">{input.t('storeApprovals.ledgerColumnSource')}</div>
+          <div role="columnheader">{input.t('storeApprovals.ledgerColumnAction')}</div>
+        </div>
+
+        {input.rows.length === 0 ? (
+          <div className="store-approvals-ledger-table-empty" role="row">
+            <div role="cell">{input.t('storeApprovals.emptyQueue')}</div>
+          </div>
+        ) : (
+          input.rows.map((row) => (
+            <div className="store-approvals-ledger-table-row" role="row" key={row.id}>
+              <div role="cell">
+                <span className={`store-approvals-ledger-type store-approvals-ledger-type-${row.statusTone}`}>
+                  {row.type}
+                </span>
+              </div>
+              <div role="cell">
+                <strong>{row.record}</strong>
+                <small>{row.detail}</small>
+              </div>
+              <div role="cell">{row.scope}</div>
+              <div role="cell">
+                <StatusPill tone={row.statusTone}>{row.status}</StatusPill>
+              </div>
+              <div role="cell">{row.wait}</div>
+              <div role="cell">{row.source}</div>
+              <div role="cell">
+                <button
+                  className="store-approvals-ledger-table-action"
+                  type="button"
+                  onClick={row.onAction}
+                  disabled={!row.onAction}
+                >
+                  {row.actionLabel}
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </section>
   )
 }
 

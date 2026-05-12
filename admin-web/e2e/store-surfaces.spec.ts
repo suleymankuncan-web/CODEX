@@ -1718,6 +1718,21 @@ test('store approvals page keeps region manager ledger free of workforce queues'
   expect(workforceCalls).toEqual([])
 })
 
+test('store approvals page renders the approved ledger table chrome', async ({ page }) => {
+  await page.goto('/store/approvals')
+
+  const ledger = page.getByRole('table', { name: 'Talep ve onay kayıtları' })
+  await expect(ledger).toBeVisible()
+  await expect(ledger.getByText('Tip', { exact: true })).toBeVisible()
+  await expect(ledger.getByText('Kayıt', { exact: true })).toBeVisible()
+  await expect(ledger.getByText('Kapsam', { exact: true })).toBeVisible()
+  await expect(ledger.getByText('Durum', { exact: true })).toBeVisible()
+  await expect(ledger.getByText('Bekleme', { exact: true })).toBeVisible()
+  await expect(ledger.getByText('Kaynak', { exact: true })).toBeVisible()
+  await expect(ledger.getByText('Aksiyon', { exact: true })).toBeVisible()
+  await expect(ledger.getByText('Hedef dağıtım talebi')).toBeVisible()
+})
+
 test('store approvals page submits target distribution allocations with employee ids', async ({ page }) => {
   let capturedPayload: unknown = null
 
