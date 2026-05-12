@@ -72,8 +72,12 @@ test('store approvals render pending requests with nullable approval fields', as
 
   await page.goto('/store/approvals')
 
-  await expect(page.getByText('May target split')).toBeVisible()
-  await expect(page.getByText('Bekliyor', { exact: true })).toBeVisible()
+  await expect(
+    page.getByLabel('Hedef onay kayıtları').getByText('May target split'),
+  ).toBeVisible()
+  await expect(
+    page.getByLabel('Hedef onay kayıtları').getByText(/bölge onayı bekliyor/i),
+  ).toBeVisible()
   expect(pageErrors).toEqual([])
 })
 
