@@ -536,6 +536,26 @@ test('store sidebar transitions across visible manager pages without requiring m
   await expectHealthyStoreTransition(page)
 })
 
+test('store route transitions show a loading layer and hide stale page content', async ({ page }) => {
+  const storeNav = page.locator('.store-command-nav')
+  await page.goto('/store/home')
+
+  await expect(page.locator('.store-command-home')).toBeVisible()
+
+  const transitionLayer = page.getByTestId('route-transition')
+  const transitionVisible = expect(transitionLayer).toBeVisible()
+
+  await storeNav.getByRole('link', { name: 'Duyurular', exact: true }).click()
+
+  await transitionVisible
+  await expect(transitionLayer).toBeVisible()
+  await expect(page.locator('.store-command-home')).toBeHidden()
+  await expect(page).toHaveURL(/\/store\/feed$/)
+  await expect(transitionLayer).toHaveCount(0)
+  await expect(page.getByText('Pilot announcement')).toBeVisible()
+  await expectHealthyStoreTransition(page)
+})
+
 test('store rankings page renders Plum ranking table without signal chrome', async ({ page }) => {
   await page.goto('/store/rankings')
 
