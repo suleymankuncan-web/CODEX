@@ -13,7 +13,6 @@ import {
 } from 'lucide-react'
 import { ScreenState } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
-import { LanguageToggle } from '../features/localization/LanguageToggle'
 import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import {
@@ -355,7 +354,6 @@ export function StoreRankingsPage(input: {
           </p>
         </div>
         <div className="rankings-plum-topbar-actions">
-          <LanguageToggle />
           <div className="rankings-plum-identity-card" aria-label={t('storeRankings.roleView')}>
             <div>
               <strong>{formatMode(t, ranking)}</strong>

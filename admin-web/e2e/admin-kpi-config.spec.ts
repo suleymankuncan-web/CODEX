@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { setStoredLocale } from './locale-test-utils'
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -40,7 +41,7 @@ test('admin KPI config page localizes publish governance preview', async ({ page
   await expect(page.locator('body')).not.toContainText('Ä')
   await expect(page.locator('body')).not.toContainText('Å')
 
-  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+  await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: 'Publish decision preview' })).toBeVisible()
@@ -120,7 +121,7 @@ test('admin KPI config profile fields stay editable and save changed draft', asy
 
 test('admin KPI config explains weight totals before saving draft', async ({ page }) => {
   await page.goto('/admin/kpi-config')
-  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+  await setStoredLocale(page, 'en')
 
   const targetMetric = page
     .locator('.stacked-row')

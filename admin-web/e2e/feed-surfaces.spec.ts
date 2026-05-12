@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { setStoredLocale } from './locale-test-utils'
 
 const companyId = '00000000-0000-0000-0000-000000000001'
 const regionId = '00000000-0000-0000-0000-000000000010'
@@ -71,7 +72,7 @@ test('admin feed switches chrome to English copy and persists locale', async ({ 
   await expect(page.locator('body')).not.toContainText('Ä')
   await expect(page.locator('body')).not.toContainText('Å')
 
-  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+  await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: 'Company and region announcements in one controlled feed.' })).toBeVisible()
@@ -106,7 +107,7 @@ test('store feed switches to English copy and persists locale', async ({ page })
 
   await page.goto('/store/feed')
 
-  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+  await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: 'Visible announcements' })).toBeVisible()

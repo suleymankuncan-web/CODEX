@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { setStoredLocale } from './locale-test-utils'
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -41,7 +42,7 @@ test('snapshot runs page localizes KPI config version reporting context', async 
   await expect(page.locator('body')).not.toContainText('Ä')
   await expect(page.locator('body')).not.toContainText('Å')
 
-  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+  await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: 'Recent reporting runs' })).toBeVisible()
@@ -75,7 +76,7 @@ test('reports summary page switches hub chrome to English copy and persists loca
   await expect(page.locator('body')).not.toContainText('Ã„')
   await expect(page.locator('body')).not.toContainText('Ã…')
 
-  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+  await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByText('Reporting Summary')).toBeVisible()
@@ -115,7 +116,7 @@ test('workforce report page switches drill-down chrome to English copy and persi
   await expect(page.locator('body')).not.toContainText('Ãƒâ€')
   await expect(page.locator('body')).not.toContainText('Ãƒâ€¦')
 
-  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+  await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByText('Reporting Drill-Down')).toBeVisible()
@@ -154,7 +155,7 @@ test('KPI report page switches drill-down chrome to English copy and persists lo
   await expect(page.locator('body')).not.toContainText('Ãƒâ€')
   await expect(page.locator('body')).not.toContainText('Ãƒâ€¦')
 
-  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+  await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: 'KPI rows for one immutable reporting context.' })).toBeVisible()
@@ -190,7 +191,7 @@ test('checklist report page switches drill-down chrome to English copy and persi
   await expect(page.locator('body')).not.toContainText('Ãƒâ€')
   await expect(page.locator('body')).not.toContainText('Ãƒâ€¦')
 
-  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+  await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: 'Checklist rows for one immutable reporting context.' })).toBeVisible()
@@ -226,7 +227,7 @@ test('turnover report page switches drill-down chrome to English copy and persis
   await expect(page.locator('body')).not.toContainText('Ãƒâ€')
   await expect(page.locator('body')).not.toContainText('Ãƒâ€¦')
 
-  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+  await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: 'Turnover rows for one immutable reporting context.' })).toBeVisible()

@@ -361,6 +361,11 @@ code {
   gap: 0.8rem;
 }
 
+.store-home-language-control {
+  display: inline-flex;
+  align-items: center;
+}
+
 .accent-chip {
   justify-content: space-between;
   min-width: 150px;

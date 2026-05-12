@@ -16,6 +16,7 @@ import { getDisplayRoleCodes } from '../features/auth/display'
 import { getVisibleFeedPosts } from '../features/feed/api'
 import type { FeedPostType } from '../features/feed/contracts'
 import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
+import { LanguageToggle } from '../features/localization/LanguageToggle'
 import { useLocalization } from '../features/localization/useLocalization'
 import { getErrorMessage } from '../lib/format'
 
@@ -81,6 +82,9 @@ export function StoreShellPreviewPage(input: {
           <MetricAccent label={t('storeHome.area')} value="/store" />
           <MetricAccent label={t('storeHome.currentLanding')} value={input.recommendedLanding} />
           <MetricAccent label={t('storeHome.purpose')} value={t('storeHome.taskFocused')} />
+          <div className="store-home-language-control">
+            <LanguageToggle />
+          </div>
         </div>
       </section>
 

@@ -1,7 +1,6 @@
 import { Suspense } from 'react'
 import { Navigate, Route, Routes, useSearchParams } from 'react-router-dom'
 import { sanitizeAuthReturnPath } from '../features/auth/return-path'
-import { LanguageToggle } from '../features/localization/LanguageToggle'
 import { AuthCallbackPage, AuthLoginPage, AuthLogoutPage } from './route-loaders'
 import { RouteLoadingState } from './route-states'
 import type { ShellState } from './shell-state'
@@ -13,9 +12,6 @@ export function AuthFlowShell(input: { shellState: ShellState; firstAllowedPath:
 
   return (
     <div className="auth-flow-shell">
-      <div className="auth-flow-toolbar">
-        <LanguageToggle />
-      </div>
       <Suspense fallback={<RouteLoadingState />}>
         <Routes>
           <Route

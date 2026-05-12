@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { setStoredLocale } from './locale-test-utils'
 
 const storeManagerSession = {
   authMode: 'mock',
@@ -115,7 +116,7 @@ test('auth login and callback pages switch chrome to English copy and persist lo
   await expect(page.locator('body')).not.toContainText('Ãƒâ€')
   await expect(page.locator('body')).not.toContainText('Ãƒâ€¦')
 
-  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+  await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByText('Auth Entry')).toBeVisible()
@@ -137,7 +138,10 @@ test('auth login and callback pages switch chrome to English copy and persist lo
   await expect(page.getByRole('heading', { name: 'Manual token callback is disabled' })).toBeVisible()
   await expect(page.getByText('Production hardening')).toBeVisible()
 
-  await page.locator('.language-toggle-button').filter({ hasText: 'TR' }).click()
+  await page.evaluate(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'tr')
+  })
+  await page.goto('/auth/callback?access_token=demo-placeholder-token&state=%2Fstore%2Fapprovals')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'tr')
   await expect(page.getByRole('heading', { name: 'Manuel token callback kapalı' })).toBeVisible()
@@ -173,7 +177,7 @@ test('auth logout page switches chrome to English copy and persists locale while
   await expect(page.locator('body')).not.toContainText('Ãƒâ€')
   await expect(page.locator('body')).not.toContainText('Ãƒâ€¦')
 
-  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+  await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: 'Signing out' })).toBeVisible()
