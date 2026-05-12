@@ -32,8 +32,18 @@ test('visual merchandiser sees checklist-only VM coverage and no broad store lin
 
   await expect(page.getByText('VM checklist yapılmadı')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Checklist yap' })).toBeVisible()
+  await expect(
+    page.locator('.store-command-nav').getByRole('link', { name: 'Checklist', exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.locator('.store-command-nav').getByRole('link', { name: 'Duyurular', exact: true }),
+  ).toBeVisible()
   await expect(page.locator('a[href="/admin/reports"]')).toHaveCount(0)
-  await expect(page.locator('a[href="/store/feed"]')).toHaveCount(0)
+  await expect(page.locator('a[href="/store/kpis"]')).toHaveCount(0)
+  await expect(page.locator('a[href="/store/rankings"]')).toHaveCount(0)
+  await expect(page.locator('a[href="/store/approvals"]')).toHaveCount(0)
+  await expect(page.locator('a[href="/store/targets"]')).toHaveCount(0)
+  await expect(page.locator('a[href="/store/reports"]')).toHaveCount(0)
   await expect(page.locator('a[href="/store/competitions"]')).toHaveCount(0)
 })
 

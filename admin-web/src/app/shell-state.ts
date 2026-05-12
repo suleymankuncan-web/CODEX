@@ -116,10 +116,6 @@ export function resolveLandingPath(authSummary: AuthSessionSummary | null, isRea
     return '/admin/competitions'
   }
 
-  if (hasAnyRole(roles, ['REGION_MANAGER'])) {
-    return '/admin/targets'
-  }
-
   if (hasAnyRole(roles, ['SUPER_ADMIN', 'REPORT_VIEWER'])) {
     return '/admin/reports'
   }
@@ -132,11 +128,15 @@ export function resolveLandingPath(authSummary: AuthSessionSummary | null, isRea
     return '/admin/auth'
   }
 
-  if (hasAnyRole(roles, ['VISUAL_MERCHANDISER'])) {
+  if (isVisualMerchandiserOnly(authSummary)) {
     return '/store/checklists'
   }
 
-  return '/store'
+  if (hasAnyRole(roles, ['REGION_MANAGER', 'STORE_MANAGER', 'STORE_PERSONNEL', 'VISUAL_MERCHANDISER'])) {
+    return '/store/home'
+  }
+
+  return '/store/home'
 }
 
 function resolveAuthErrorCopy(error: unknown) {

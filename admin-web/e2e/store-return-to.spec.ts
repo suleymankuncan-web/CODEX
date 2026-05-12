@@ -293,7 +293,7 @@ test('auth login ignores protocol-relative return targets for ready sessions', a
 
   await page.goto('/auth/login?returnTo=//evil.example/store/me')
 
-  await expect(page).toHaveURL(/\/store$/)
+  await expect(page).toHaveURL(/\/store\/home$/)
   expect(page.url()).not.toContain('evil.example')
 })
 
@@ -323,7 +323,7 @@ test('oidc callback ignores protocol-relative stored return targets', async ({ p
 
   await page.goto('/auth/callback?code=test-code&state=return-state')
 
-  await expect(page).toHaveURL(/\/store$/)
+  await expect(page).toHaveURL(/\/store\/home$/)
   expect(page.url()).not.toContain('evil.example')
 })
 
