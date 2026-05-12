@@ -68,11 +68,12 @@ export function StatusPill(input: { children: string; tone: Tone }) {
   return <span className={`status-pill status-pill-${input.tone}`}>{input.children}</span>
 }
 
-export function ScreenState(input: { title: string; copy: string; tone?: 'error' }) {
+export function ScreenState(input: { title: string; copy: string; tone?: 'error'; action?: ReactNode }) {
   return (
     <section className={`screen-state${input.tone === 'error' ? ' screen-state-error' : ''}`}>
       <h2>{input.title}</h2>
       <p>{input.copy}</p>
+      {input.action ? <div className="screen-state-actions">{input.action}</div> : null}
     </section>
   )
 }

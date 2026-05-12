@@ -19,8 +19,11 @@ import {
 } from '../features/feed/contracts'
 import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
+import { ApiError } from '../lib/api'
 import { formatDate, formatDateTime, getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
+
+const VISIBLE_FEED_TRANSIENT_RETRY_LIMIT = 2
 
 const feedPostTypeLabelKeys: Record<FeedPostType, TranslationKey> = {
   announcement: 'storeFeed.type.announcement',
@@ -41,12 +44,22 @@ function formatFeedScopeLabel(t: TranslateFunction, input: FeedVisibilityScopeTy
   return t(feedScopeLabelKeys[input])
 }
 
+function shouldRetryVisibleFeed(failureCount: number, error: unknown) {
+  if (error instanceof ApiError) {
+    const isTransientStatus = error.status === 408 || error.status === 429 || error.status >= 500
+    return isTransientStatus && failureCount < VISIBLE_FEED_TRANSIENT_RETRY_LIMIT
+  }
+
+  return failureCount < VISIBLE_FEED_TRANSIENT_RETRY_LIMIT
+}
+
 export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null }) {
   const { locale, t } = useLocalization()
   const feedQuery = useQuery({
     queryKey: ['visible-feed'],
     queryFn: getVisibleFeedPosts,
-    retry: false,
+    retry: shouldRetryVisibleFeed,
+    retryDelay: (attemptIndex) => Math.min(250 * (attemptIndex + 1), 1_000),
   })
   const posts = useMemo(() => feedQuery.data?.items ?? [], [feedQuery.data?.items])
   const pinnedPosts = posts.filter((post) => post.isPinned)
@@ -66,6 +79,11 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
         title={t('storeFeed.errorTitle')}
         copy={getErrorMessage(feedQuery.error)}
         tone="error"
+        action={
+          <button type="button" className="control-button" onClick={() => void feedQuery.refetch()}>
+            {t('storeFeed.retryAction')}
+          </button>
+        }
       />
     )
   }

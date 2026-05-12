@@ -825,6 +825,13 @@ code {
   background: linear-gradient(180deg, rgba(255, 245, 241, 0.98), rgba(255, 251, 244, 0.88));
 }
 
+.screen-state-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
 .route-recovery-state {
   align-content: center;
   border: 1px solid rgba(180, 83, 9, 0.18);
