@@ -825,6 +825,24 @@ code {
   background: linear-gradient(180deg, rgba(255, 245, 241, 0.98), rgba(255, 251, 244, 0.88));
 }
 
+.route-recovery-state {
+  align-content: center;
+  border: 1px solid rgba(180, 83, 9, 0.18);
+  border-radius: 1rem;
+  padding: 2rem;
+}
+
+.route-recovery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.route-recovery-actions .back-link {
+  cursor: pointer;
+}
+
 .back-link {
   display: inline-flex;
   align-items: center;

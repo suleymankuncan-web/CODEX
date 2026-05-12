@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 import { setStoredLocale } from './locale-test-utils'
 
 const demoStoreId = '00000000-0000-0000-0000-000000000100'
@@ -431,6 +431,72 @@ test('store home switches to English copy and persists locale', async ({ page })
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: /Store home is ready/i })).toBeVisible()
+})
+
+test('store sidebar recovers when a lazy route module fails during SPA navigation', async ({ page }) => {
+  let failedFeedRouteModuleOnce = false
+  await page.route(/StoreFeedPage.*\.(js|tsx)(\?.*)?$/, async (route) => {
+    if (!failedFeedRouteModuleOnce) {
+      failedFeedRouteModuleOnce = true
+      await route.abort('failed')
+      return
+    }
+
+    await route.continue()
+  })
+
+  await page.goto('/store/home')
+
+  await page
+    .locator('.store-command-nav')
+    .getByRole('link', { name: 'Duyurular', exact: true })
+    .click()
+
+  await expect(page).toHaveURL(/\/store\/feed$/)
+  await expect(page.getByRole('heading', { name: 'Görünen duyurular' })).toBeVisible()
+  expect(failedFeedRouteModuleOnce).toBe(true)
+})
+
+test('store sidebar transitions across visible manager pages without requiring manual refresh', async ({ page }) => {
+  const storeNav = page.locator('.store-command-nav')
+  await page.goto('/store/home')
+
+  await verifyStoreNavTransition(page, storeNav, {
+    linkName: 'Mağaza KPI',
+    path: '/store/kpis',
+    ready: page.getByRole('heading', { name: "Mağaza KPI'ları" }),
+  })
+  await verifyStoreNavTransition(page, storeNav, {
+    linkName: 'Rankings',
+    path: '/store/rankings',
+    ready: page.getByRole('heading', { name: 'Sıralamalar' }),
+  })
+  await verifyStoreNavTransition(page, storeNav, {
+    linkName: 'Talepler / Onaylar',
+    path: '/store/approvals',
+    ready: page.getByRole('heading', { name: 'Hedef dağıtım talebi' }),
+  })
+  await verifyStoreNavTransition(page, storeNav, {
+    linkName: 'Görevler',
+    path: '/store/tasks',
+    ready: page.getByRole('heading', { name: 'Aksiyon gerektiren işler tek mağaza kuyruğunda.' }),
+  })
+  await verifyStoreNavTransition(page, storeNav, {
+    linkName: 'Duyurular',
+    path: '/store/feed',
+    ready: page.getByRole('heading', { name: 'Görünen duyurular' }),
+  })
+  await verifyStoreNavTransition(page, storeNav, {
+    linkName: 'Ana Sayfa',
+    path: '/store/home',
+    ready: page.getByRole('heading', { name: /Mağaza ana ekranı hazır/i }),
+  })
+
+  await page.getByRole('link', { name: /Ayarlar \/ Profil/ }).click()
+
+  await expect(page).toHaveURL(/\/store\/settings$/)
+  await expect(page.getByRole('heading', { name: 'Profil ve dil tercihleri' })).toBeVisible()
+  await expectHealthyStoreTransition(page)
 })
 
 test('store rankings page renders Plum ranking table without signal chrome', async ({ page }) => {
@@ -1824,6 +1890,32 @@ test('language toggle localizes competition read labels and persists preference'
   await expect(contributionRowsEn.getByText('Contribution health')).toBeVisible()
   await expect(page.locator('.language-toggle-button')).toHaveCount(0)
 })
+
+async function verifyStoreNavTransition(
+  page: Page,
+  storeNav: Locator,
+  input: {
+    linkName: string
+    path: string
+    ready: Locator
+  },
+) {
+  await storeNav.getByRole('link', { name: input.linkName, exact: true }).click()
+
+  await expect(page).toHaveURL(new RegExp(`${escapeRegex(input.path)}$`))
+  await expect(input.ready).toBeVisible()
+  await expectHealthyStoreTransition(page)
+}
+
+async function expectHealthyStoreTransition(page: Page) {
+  await expect(page.locator('body')).not.toContainText(
+    /Rota yükleniyor|Sayfa geçişi tamamlanamadı|Bu rol için rota kullanılamaz|açılamadı|could not finish|could not be opened|unavailable/i,
+  )
+}
+
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
 
 async function routeStoreSurfaceApi(page: Page) {
   await page.route('**/api/auth/session', async (route) => {

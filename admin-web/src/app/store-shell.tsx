@@ -20,6 +20,7 @@ import {
   StoreTasksPage,
 } from './route-loaders'
 import { RouteLoadingState, StoreRouteGuard } from './route-states'
+import { RouteRecoveryBoundary } from './route-recovery-boundary'
 import {
   buildAuthLoginPath,
   getCurrentReturnPath,
@@ -84,8 +85,9 @@ export function StoreShell(input: {
       />
 
       <main className="store-main store-command-main" aria-label={t('adminShell.storeWorkspaceAria')}>
-        <Suspense fallback={<RouteLoadingState />}>
-          <Routes>
+        <RouteRecoveryBoundary firstAllowedPath={input.firstAllowedPath}>
+          <Suspense fallback={<RouteLoadingState />}>
+            <Routes>
             <Route
               path="/store"
               element={checklistOnly ? (
@@ -154,9 +156,10 @@ export function StoreShell(input: {
               path="/store/reports"
               element={storeRoute(<StoreReportsPage />)}
             />
-            <Route path="*" element={<Navigate to="/store" replace />} />
-          </Routes>
-        </Suspense>
+              <Route path="*" element={<Navigate to="/store" replace />} />
+            </Routes>
+          </Suspense>
+        </RouteRecoveryBoundary>
       </main>
     </div>
   )

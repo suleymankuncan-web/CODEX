@@ -59,6 +59,13 @@ export const adminShellTr = {
   'adminShell.storeWorkspaceAria': 'Mağaza çalışma alanı',
   'adminShell.routeLoadingTitle': 'Rota yükleniyor',
   'adminShell.routeLoadingCopy': 'İstenen yüzey hazırlanıyor.',
+  'adminShell.routeErrorTitle': 'Sayfa geçişi tamamlanamadı',
+  'adminShell.routeErrorCopy':
+    'Bu yüzey açılırken beklenmeyen bir hata oluştu. Menüden başka bir sayfaya geçebilir veya sayfayı yenileyebilirsin.',
+  'adminShell.routeErrorChunkCopy':
+    'Yeni sürüm dosyası tarayıcıda eski kalmış olabilir. Sayfa bir kez otomatik yenilenerek tekrar denenir.',
+  'adminShell.routeErrorReload': 'Sayfayı yenile',
+  'adminShell.routeErrorHome': 'İlk sayfaya dön',
   'adminShell.routeVerifyingTitle': 'Oturum doğrulanıyor',
   'adminShell.routeVerifyingCopy':
     'Kabuk, korumalı rotaları açmadan önce mevcut kimlik modunu /api/auth/session üzerinden doğruluyor.',
@@ -131,6 +138,13 @@ export const adminShellEn: Record<keyof typeof adminShellTr, string> = {
   'adminShell.storeWorkspaceAria': 'Store workspace',
   'adminShell.routeLoadingTitle': 'Loading route',
   'adminShell.routeLoadingCopy': 'Preparing the requested surface.',
+  'adminShell.routeErrorTitle': 'Page transition could not finish',
+  'adminShell.routeErrorCopy':
+    'An unexpected error occurred while opening this surface. Use the menu to move elsewhere or reload the page.',
+  'adminShell.routeErrorChunkCopy':
+    'A new version file may be stale in the browser. The page is retried once with an automatic reload.',
+  'adminShell.routeErrorReload': 'Reload page',
+  'adminShell.routeErrorHome': 'Return to first page',
   'adminShell.routeVerifyingTitle': 'Verifying session',
   'adminShell.routeVerifyingCopy':
     'The shell is confirming the current auth mode through /api/auth/session before it opens protected routes.',
