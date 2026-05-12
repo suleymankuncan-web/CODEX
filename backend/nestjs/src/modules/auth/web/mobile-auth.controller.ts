@@ -35,6 +35,7 @@ export class MobileAuthController {
     };
   }
 
+  @UseGuards(MobileSessionGuard)
   @Get("sessions")
   async listSessions(@Req() request: MobileAuthRequest) {
     return this.mobileSessionService.listSessions(request.user);
@@ -49,6 +50,7 @@ export class MobileAuthController {
     });
   }
 
+  @UseGuards(MobileSessionGuard)
   @Delete("sessions/:sessionId")
   async revokeSession(
     @Req() request: MobileAuthRequest,

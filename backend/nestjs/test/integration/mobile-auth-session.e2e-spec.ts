@@ -95,6 +95,45 @@ describe("Mobile auth session integration", () => {
     await app.close();
   });
 
+  it("requires x-mobile-session-id when listing mobile sessions", async () => {
+    const app = await createIntegrationApp({
+      authContextService: {
+        resolveUser: jest.fn(async () => user),
+      },
+      databaseService: {
+        query: jest.fn(async () => ({ rowCount: 0, rows: [] })),
+      },
+    });
+
+    const response = await request(app.getHttpServer()).get("/api/mobile/auth/sessions");
+
+    expect(response.status).toBe(401);
+
+    await app.close();
+  });
+
+  it("requires x-mobile-session-id when revoking a mobile session", async () => {
+    const app = await createIntegrationApp({
+      authContextService: {
+        resolveUser: jest.fn(async () => user),
+      },
+      databaseService: {
+        query: jest.fn(async () => ({ rowCount: 0, rows: [] })),
+        withTransaction: async <T>() => {
+          throw new Error("revoke should not reach the repository without a mobile session");
+        },
+      },
+    });
+
+    const response = await request(app.getHttpServer()).delete(
+      `/api/mobile/auth/sessions/${activeSessionRow.mobile_device_session_id}`,
+    );
+
+    expect(response.status).toBe(401);
+
+    await app.close();
+  });
+
   it("returns current auth scope only when the mobile session is active", async () => {
     const query = jest.fn(async (sql: string) => {
       if (sql.includes("FROM ops.mobile_device_session")) {
