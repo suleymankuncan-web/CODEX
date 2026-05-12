@@ -8,7 +8,7 @@ const routePreloaders: Array<{
   },
   {
     match: (pathname) => pathname === '/store' || pathname === '/store/home',
-    preload: () => import('../pages/StoreShellPreviewPage'),
+    preload: () => import('../pages/StoreHomePage'),
   },
   { match: (pathname) => pathname === '/store/me', preload: () => import('../pages/StoreMyPerformancePage') },
   { match: (pathname) => pathname === '/store/rankings', preload: () => import('../pages/StoreRankingsPage') },
@@ -19,6 +19,9 @@ const routePreloaders: Array<{
   { match: (pathname) => pathname === '/store/competitions', preload: () => import('../pages/StoreCompetitionsPage') },
   { match: (pathname) => pathname === '/store/approvals', preload: () => import('../pages/StoreApprovalsPage') },
   { match: (pathname) => pathname === '/store/incentives', preload: () => import('../pages/StoreIncentivesPage') },
+  { match: (pathname) => pathname === '/store/settings', preload: () => import('../pages/StoreSettingsPage') },
+  { match: (pathname) => pathname === '/store/targets', preload: () => import('../pages/StoreTargetsPage') },
+  { match: (pathname) => pathname === '/store/reports', preload: () => import('../pages/StoreReportsPage') },
   { match: (pathname) => pathname.startsWith('/admin/integrations/'), preload: () => import('../pages/ImportBatchDetailPage') },
   { match: (pathname) => pathname === '/admin/integrations', preload: () => import('../pages/IntegrationDashboardPage') },
   { match: (pathname) => pathname.startsWith('/admin/master-data'), preload: () => import('../pages/MasterDataBootstrapPage') },

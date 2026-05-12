@@ -501,9 +501,11 @@ export function StoreMyPerformancePage(input: {
   initialLivePeriodStart?: string
   initialLivePeriodType?: LivePeriodType
   profileMode?: 'self' | 'personnel'
+  showInternalRail?: boolean
 }) {
   const { locale, t } = useLocalization()
   const profileMode = input.profileMode ?? 'self'
+  const showInternalRail = input.showInternalRail ?? true
   const targetEmployeeId = input.employeeId?.trim() ?? ''
   const enabled =
     profileMode === 'personnel'
@@ -1126,38 +1128,43 @@ export function StoreMyPerformancePage(input: {
     profileMode === 'personnel' ? t('storeMe.personnelProfileIntro') : t('storeMe.v2Intro')
 
   return (
-    <section className="store-me-v2-page" aria-label={t('storeMe.title')}>
-      <aside className="store-me-v2-rail" aria-label={t('storeMe.nav.aria')}>
-        <div className="store-me-v2-brand-mark" aria-label={t('storeMe.brandAria')}>
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M4 16.5 9.2 11l3.8 3.7L20 7" />
-            <path d="M15 7h5v5" />
-          </svg>
-        </div>
-        <nav className="store-me-v2-rail-nav" aria-label={t('storeMe.nav.aria')}>
-          <NavLink to="/store/home" className="store-me-v2-rail-link">
-            <NavGlyph type="home" />
-            <span>{t('storeMe.nav.home')}</span>
+    <section
+      className={`store-me-v2-page${showInternalRail ? '' : ' store-me-v2-page-shell-owned'}`}
+      aria-label={t('storeMe.title')}
+    >
+      {showInternalRail ? (
+        <aside className="store-me-v2-rail" aria-label={t('storeMe.nav.aria')}>
+          <div className="store-me-v2-brand-mark" aria-label={t('storeMe.brandAria')}>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 16.5 9.2 11l3.8 3.7L20 7" />
+              <path d="M15 7h5v5" />
+            </svg>
+          </div>
+          <nav className="store-me-v2-rail-nav" aria-label={t('storeMe.nav.aria')}>
+            <NavLink to="/store/home" className="store-me-v2-rail-link">
+              <NavGlyph type="home" />
+              <span>{t('storeMe.nav.home')}</span>
+            </NavLink>
+            <NavLink to="/store/me" className="store-me-v2-rail-link">
+              <NavGlyph type="me" />
+              <span>{t('storeMe.nav.me')}</span>
+            </NavLink>
+            <NavLink to="/store/rankings" className="store-me-v2-rail-link">
+              <NavGlyph type="rank" />
+              <span>{t('storeMe.nav.rankings')}</span>
+            </NavLink>
+            <NavLink to="/store/approvals" className="store-me-v2-rail-link">
+              <NavGlyph type="target" />
+              <span>{t('storeMe.nav.targets')}</span>
+            </NavLink>
+          </nav>
+          <div className="store-me-v2-rail-spacer" />
+          <NavLink to="/store/tasks" className="store-me-v2-rail-link">
+            <NavGlyph type="settings" />
+            <span>{t('storeMe.nav.tasks')}</span>
           </NavLink>
-          <NavLink to="/store/me" className="store-me-v2-rail-link">
-            <NavGlyph type="me" />
-            <span>{t('storeMe.nav.me')}</span>
-          </NavLink>
-          <NavLink to="/store/rankings" className="store-me-v2-rail-link">
-            <NavGlyph type="rank" />
-            <span>{t('storeMe.nav.rankings')}</span>
-          </NavLink>
-          <NavLink to="/store/approvals" className="store-me-v2-rail-link">
-            <NavGlyph type="target" />
-            <span>{t('storeMe.nav.targets')}</span>
-          </NavLink>
-        </nav>
-        <div className="store-me-v2-rail-spacer" />
-        <NavLink to="/store/tasks" className="store-me-v2-rail-link">
-          <NavGlyph type="settings" />
-          <span>{t('storeMe.nav.tasks')}</span>
-        </NavLink>
-      </aside>
+        </aside>
+      ) : null}
 
       <main className="store-me-v2-main">
         <section className="store-me-v2-content" aria-label={t('storeMe.title')}>

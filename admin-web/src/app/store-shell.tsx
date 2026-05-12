@@ -1,6 +1,6 @@
-import { Suspense, type ReactNode } from 'react'
-import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
-import { ScreenState, StatusPill } from '../components/dashboard-primitives'
+import { Suspense, useState, type ReactNode } from 'react'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { ScreenState } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { useLocalization } from '../features/localization/useLocalization'
 import {
@@ -8,12 +8,15 @@ import {
   StoreChecklistsPage,
   StoreCompetitionsPage,
   StoreFeedPage,
+  StoreHomePage,
   StoreIncentivesPage,
   StoreKpiHighlightsPage,
   StoreMyPerformancePage,
   StorePersonnelPerformancePage,
   StoreRankingsPage,
-  StoreShellPreviewPage,
+  StoreReportsPage,
+  StoreSettingsPage,
+  StoreTargetsPage,
   StoreTasksPage,
 } from './route-loaders'
 import { RouteLoadingState, StoreRouteGuard } from './route-states'
@@ -23,6 +26,7 @@ import {
   isVisualMerchandiserOnly,
   type ShellState,
 } from './shell-state'
+import { StoreSidebar } from './store-sidebar'
 
 export function StoreShell(input: {
   shellState: ShellState
@@ -35,7 +39,7 @@ export function StoreShell(input: {
   const rankingsRoute = location.pathname === '/store/rankings'
   const storeMeRoute = location.pathname === '/store/me'
   const storePersonnelRoute = location.pathname.startsWith('/store/personnel/')
-  const immersiveRoute = rankingsRoute || storeMeRoute || storePersonnelRoute
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const storeRoute = (element: ReactNode, options?: { allowVm?: boolean }) => (
     <StoreRouteGuard authSummary={input.authSummary} allowVm={options?.allowVm}>
       {element}
@@ -66,37 +70,20 @@ export function StoreShell(input: {
   }
 
   return (
-    <div className={`store-shell${rankingsRoute ? ' store-shell-rankings' : ''}${storeMeRoute || storePersonnelRoute ? ' store-shell-store-me' : ''}`}>
-      {immersiveRoute ? null : (
-        <header className="store-shell-header">
-          <div>
-            <div className="eyebrow">{t('storeHome.shellEyebrow')}</div>
-            <h1>{t('storeHome.shellTitle')}</h1>
-            <p className="topbar-copy">{t('storeHome.shellCopy')}</p>
-          </div>
-          <div className="topbar-cluster">
-            <StatusPill tone="accent">{t('storeHome.preview')}</StatusPill>
-            <NavLink to="/auth/login" className="control-button store-shell-link">
-              {t('storeHome.realLogin')}
-            </NavLink>
-            {!checklistOnly ? (
-              <>
-                <NavLink to="/admin/reports" className="control-button store-shell-link">
-                  {t('storeHome.adminReports')}
-                </NavLink>
-                <NavLink to="/store/feed" className="control-button store-shell-link">
-                  {t('storeHome.announcements')}
-                </NavLink>
-                <NavLink to="/store/competitions" className="control-button store-shell-link">
-                  {t('storeHome.competitions')}
-                </NavLink>
-              </>
-            ) : null}
-          </div>
-        </header>
-      )}
+    <div
+      className={`store-shell store-command-app${
+        isSidebarCollapsed ? ' store-command-app-collapsed' : ''
+      }${rankingsRoute ? ' store-shell-rankings' : ''}${
+        storeMeRoute || storePersonnelRoute ? ' store-shell-store-me' : ''
+      }`}
+    >
+      <StoreSidebar
+        authSummary={input.authSummary}
+        collapsed={isSidebarCollapsed}
+        onCollapsedChange={setIsSidebarCollapsed}
+      />
 
-      <main className="store-main" aria-label={t('adminShell.storeWorkspaceAria')}>
+      <main className="store-main store-command-main" aria-label={t('adminShell.storeWorkspaceAria')}>
         <Suspense fallback={<RouteLoadingState />}>
           <Routes>
             <Route
@@ -104,10 +91,7 @@ export function StoreShell(input: {
               element={checklistOnly ? (
                 <Navigate to="/store/checklists" replace />
               ) : (
-                <StoreShellPreviewPage
-                  authSummary={input.authSummary}
-                  recommendedLanding={input.firstAllowedPath}
-                />
+                <StoreHomePage authSummary={input.authSummary} />
               )}
             />
             <Route
@@ -115,10 +99,7 @@ export function StoreShell(input: {
               element={checklistOnly ? (
                 <Navigate to="/store/checklists" replace />
               ) : (
-                <StoreShellPreviewPage
-                  authSummary={input.authSummary}
-                  recommendedLanding={input.firstAllowedPath}
-                />
+                <StoreHomePage authSummary={input.authSummary} />
               )}
             />
             <Route
@@ -135,7 +116,7 @@ export function StoreShell(input: {
             />
             <Route
               path="/store/me"
-              element={storeRoute(<StoreMyPerformancePage authSummary={input.authSummary} />)}
+              element={storeRoute(<StoreMyPerformancePage authSummary={input.authSummary} showInternalRail={false} />)}
             />
             <Route
               path="/store/personnel/:employeeId"
@@ -147,7 +128,7 @@ export function StoreShell(input: {
             />
             <Route
               path="/store/feed"
-              element={storeRoute(<StoreFeedPage authSummary={input.authSummary} />)}
+              element={storeRoute(<StoreFeedPage authSummary={input.authSummary} />, { allowVm: true })}
             />
             <Route
               path="/store/competitions"
@@ -160,6 +141,18 @@ export function StoreShell(input: {
             <Route
               path="/store/incentives"
               element={storeRoute(<StoreIncentivesPage authSummary={input.authSummary} />)}
+            />
+            <Route
+              path="/store/settings"
+              element={storeRoute(<StoreSettingsPage />, { allowVm: true })}
+            />
+            <Route
+              path="/store/targets"
+              element={storeRoute(<StoreTargetsPage />)}
+            />
+            <Route
+              path="/store/reports"
+              element={storeRoute(<StoreReportsPage />)}
             />
             <Route path="*" element={<Navigate to="/store" replace />} />
           </Routes>
