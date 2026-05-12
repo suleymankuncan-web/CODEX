@@ -34,6 +34,7 @@ import {
   TargetApprovalQueuePage,
 } from './route-loaders'
 import { AdminRouteGuard, RouteLoadingState, SessionGate } from './route-states'
+import { RouteRecoveryBoundary } from './route-recovery-boundary'
 import {
   formatAdminShellAuthState,
   formatAdminShellSessionMode,
@@ -141,8 +142,9 @@ export function AdminShell(input: {
           ) : null}
         </section>
 
-        <Suspense fallback={<RouteLoadingState />}>
-          <Routes>
+        <RouteRecoveryBoundary firstAllowedPath={input.firstAllowedPath}>
+          <Suspense fallback={<RouteLoadingState />}>
+            <Routes>
             <Route path="/" element={<Navigate to={input.firstAllowedPath} replace />} />
             <Route path="/admin/session" element={<SessionGate />} />
             <Route
@@ -253,9 +255,10 @@ export function AdminShell(input: {
               path="/admin/audit"
               element={adminRoute(['SUPER_ADMIN', 'AUDITOR'], <AuditCenterPage />)}
             />
-            <Route path="*" element={<Navigate to={input.firstAllowedPath} replace />} />
-          </Routes>
-        </Suspense>
+              <Route path="*" element={<Navigate to={input.firstAllowedPath} replace />} />
+            </Routes>
+          </Suspense>
+        </RouteRecoveryBoundary>
       </main>
     </div>
   )
