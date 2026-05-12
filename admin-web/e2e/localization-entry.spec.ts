@@ -1,10 +1,14 @@
 import { expect, test, type Page } from '@playwright/test'
 
-test('keeps language control on store home and out of work surfaces', async ({ page }) => {
+test('keeps language control in store settings and out of work surfaces', async ({ page }) => {
   await seedMockSession(page)
   await routeEntryApi(page)
 
   await page.goto('/store')
+
+  await expect(page.locator('.language-toggle-button')).toHaveCount(0)
+
+  await page.goto('/store/settings')
 
   await expect(page.locator('.language-toggle-button')).toHaveCount(2)
 

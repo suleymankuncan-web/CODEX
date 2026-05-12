@@ -130,15 +130,18 @@ test('store feed switches to English copy and persists locale', async ({ page })
   await expect(page.getByRole('heading', { name: 'Visible announcements' })).toBeVisible()
 })
 
-test('store home shows pinned feed preview', async ({ page }) => {
+test('store home links to announcements without rendering pinned feed preview', async ({ page }) => {
   await seedMockSession(page, 'STORE_PERSONNEL', 'store-home-feed-smoke-user')
   await routeFeedApi(page, storeSessionFixture)
 
   await page.goto('/store')
 
-  await expect(page.getByText('Sabit duyurular')).toBeVisible()
-  await expect(page.getByText('May UPT Challenge')).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Tüm duyurular' })).toHaveAttribute('href', '/store/feed')
+  await expect(page.getByRole('heading', { name: /ana ekranı hazır/i })).toBeVisible()
+  await expect(
+    page.locator('.store-command-nav').getByRole('link', { name: 'Duyurular', exact: true }),
+  ).toHaveAttribute('href', '/store/feed')
+  await expect(page.getByText('Sabit duyurular')).toHaveCount(0)
+  await expect(page.getByText('May UPT Challenge')).toHaveCount(0)
 })
 
 async function seedMockSession(page: Page, roleCodes: string, userId: string) {
