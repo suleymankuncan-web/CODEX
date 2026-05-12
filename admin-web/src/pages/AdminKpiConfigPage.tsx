@@ -164,171 +164,39 @@ export function AdminKpiConfigPage() {
 
   return (
     <section className="page-stack">
-      <section className="hero-panel">
-        <div>
-          <div className="eyebrow">{t('adminKpiConfig.heroEyebrow')}</div>
-          <h2 className="hero-title">{t('adminKpiConfig.heroTitle')}</h2>
-          <p className="hero-copy">{t('adminKpiConfig.heroCopy')}</p>
-        </div>
-        <div className="hero-metrics">
-          <MetricAccent label={t('adminKpiConfig.route')} value="/admin/kpi-config" />
-          <MetricAccent
-            label={t('adminKpiConfig.storeMetrics')}
-            value={String(draft.storeProfile.metrics.length)}
-          />
-          <MetricAccent
-            label={t('adminKpiConfig.ownershipRows')}
-            value={String(draft.ownershipMatrix.length)}
-          />
-          <MetricAccent
-            label={t('adminKpiConfig.gradingBandsMetric')}
-            value={String(draft.gradingBands.length)}
-          />
-          <MetricAccent
-            label={t('adminKpiConfig.mode')}
-            value={
-              configQuery.data?.hasUnpublishedChanges
-                ? t('adminKpiConfig.draftDirty')
-                : t('adminKpiConfig.publishedInSync')
-            }
-          />
-        </div>
-      </section>
+      <AdminKpiConfigHero
+        draft={draft}
+        editorState={{ hasUnpublishedChanges: Boolean(configQuery.data?.hasUnpublishedChanges) }}
+        t={t}
+      />
 
-      <section className="metric-grid">
-        <MetricCard
-          title={t('adminKpiConfig.storeWeightTotal')}
-          value={formatWeightTotalValue(storeWeightTotal, t)}
-          note={storeWeightGuidance}
-          icon={<SlidersHorizontal size={18} />}
-          tone={isExactWeightTotal(storeWeightTotal) ? 'calm' : 'warning'}
-        />
-        <MetricCard
-          title={t('adminKpiConfig.personnelWeightTotal')}
-          value={formatWeightTotalValue(personnelWeightTotal, t)}
-          note={personnelWeightGuidance}
-          icon={<Settings2 size={18} />}
-          tone={isExactWeightTotal(personnelWeightTotal) ? 'calm' : 'warning'}
-        />
-        <MetricCard
-          title={t('adminKpiConfig.taskCandidates')}
-          value={draft.ownershipMatrix.filter((row) => row.taskCandidate).length}
-          note={t('adminKpiConfig.taskCandidatesNote')}
-          icon={<ShieldCheck size={18} />}
-          tone="accent"
-        />
-        <MetricCard
-          title={t('adminKpiConfig.publishState')}
-          value={configQuery.data?.hasUnpublishedChanges ? 1 : 0}
-          note={
-            configQuery.data?.hasUnpublishedChanges
-              ? t('adminKpiConfig.draftDiffersFromLive')
-              : t('adminKpiConfig.draftMatchesLive')
-          }
-          icon={<ShieldCheck size={18} />}
-          tone={configQuery.data?.hasUnpublishedChanges ? 'warning' : 'calm'}
-        />
-      </section>
+      <KpiConfigMetricSummary
+        draft={draft}
+        storeWeightGuidance={storeWeightGuidance}
+        storeWeightTotal={storeWeightTotal}
+        personnelWeightGuidance={personnelWeightGuidance}
+        personnelWeightTotal={personnelWeightTotal}
+        editorState={{ hasUnpublishedChanges: Boolean(configQuery.data?.hasUnpublishedChanges) }}
+        t={t}
+      />
 
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('adminKpiConfig.publishModel')}</div>
-            <h3>{t('adminKpiConfig.draftVsLiveTitle')}</h3>
-          </div>
-          <StatusPill tone={configQuery.data?.hasUnpublishedChanges ? 'warning' : 'calm'}>
-            {configQuery.data?.hasUnpublishedChanges
-              ? t('adminKpiConfig.unpublishedChanges')
-              : t('adminKpiConfig.live')}
-          </StatusPill>
-        </div>
-        <div className="key-grid">
-          <KeyValue
-            label={t('adminKpiConfig.draftStoreWeight')}
-            value={formatWeightPercent(storeWeightTotal, t)}
-          />
-          <KeyValue
-            label={t('adminKpiConfig.liveStoreWeight')}
-            value={formatWeightPercent(publishedStoreWeightTotal, t)}
-          />
-          <KeyValue
-            label={t('adminKpiConfig.draftPersonnelWeight')}
-            value={formatWeightPercent(personnelWeightTotal, t)}
-          />
-          <KeyValue
-            label={t('adminKpiConfig.livePersonnelWeight')}
-            value={formatWeightPercent(publishedPersonnelWeightTotal, t)}
-          />
-          <KeyValue
-            label={t('adminKpiConfig.draftGradingBands')}
-            value={String(draft.gradingBands.length)}
-          />
-          <KeyValue
-            label={t('adminKpiConfig.liveGradingBands')}
-            value={String(published?.gradingBands.length ?? 0)}
-          />
-        </div>
-      </section>
+      <KpiConfigDraftLivePanel
+        draft={draft}
+        published={published}
+        storeWeightTotal={storeWeightTotal}
+        personnelWeightTotal={personnelWeightTotal}
+        publishedStoreWeightTotal={publishedStoreWeightTotal}
+        publishedPersonnelWeightTotal={publishedPersonnelWeightTotal}
+        editorState={{ hasUnpublishedChanges: Boolean(configQuery.data?.hasUnpublishedChanges) }}
+        t={t}
+      />
 
-      <section className="panel" aria-label={t('adminKpiConfig.governancePreview')}>
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('adminKpiConfig.governancePreview')}</div>
-            <h3>{t('adminKpiConfig.publishDecisionPreview')}</h3>
-          </div>
-          <StatusPill tone={governancePreview.tone}>
-            {t(governancePreview.statusKey)}
-          </StatusPill>
-        </div>
-        <p className="queue-subtitle">{t(governancePreview.summaryKey)}</p>
-        <div className="key-grid">
-          <KeyValue
-            label={t('adminKpiConfig.storeProfileDiff')}
-            value={formatDiffSummary(governancePreview.storeProfile, t)}
-          />
-          <KeyValue
-            label={t('adminKpiConfig.personnelProfileDiff')}
-            value={formatDiffSummary(governancePreview.personnelProfile, t)}
-          />
-          <KeyValue
-            label={t('adminKpiConfig.ownershipDiff')}
-            value={formatDiffSummary(governancePreview.ownershipMatrix, t)}
-          />
-          <KeyValue
-            label={t('adminKpiConfig.gradingDiff')}
-            value={formatDiffSummary(governancePreview.gradingBands, t)}
-          />
-          <KeyValue
-            label={t('adminKpiConfig.versionedSchema')}
-            value={
-              latestPublishedVersion?.versionNo
-                ? t('adminKpiConfig.active')
-                : t('adminKpiConfig.preGovernance')
-            }
-          />
-          <KeyValue
-            label={t('adminKpiConfig.latestVersion')}
-            value={formatKpiConfigVersion(latestPublishedVersion, t)}
-          />
-          <KeyValue
-            label={t('adminKpiConfig.publishedAt')}
-            value={
-              latestPublishedVersion?.publishedAt
-                ? formatDateTime(latestPublishedVersion.publishedAt, locale)
-                : t('adminKpiConfig.notPublishedYet')
-            }
-          />
-          <KeyValue
-            label={t('adminKpiConfig.rollback')}
-            value={t('adminKpiConfig.rollbackInactive')}
-          />
-          <KeyValue
-            label={t('adminKpiConfig.snapshotAnchoring')}
-            value={t('adminKpiConfig.snapshotAnchoringActive')}
-          />
-        </div>
-        <p className="queue-subtitle">{t('adminKpiConfig.snapshotAnchoringCopy')}</p>
-      </section>
+      <KpiConfigGovernancePreviewPanel
+        governancePreview={governancePreview}
+        latestPublishedVersion={latestPublishedVersion}
+        locale={locale}
+        t={t}
+      />
 
       <ProfileEditor
         t={t}
@@ -418,166 +286,348 @@ export function AdminKpiConfigPage() {
         }
       />
 
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('adminKpiConfig.ownershipMatrix')}</div>
-            <h3>{t('adminKpiConfig.ownershipTitle')}</h3>
-          </div>
-          <StatusPill tone="accent">{t('adminKpiConfig.editable')}</StatusPill>
-        </div>
-        {draft.ownershipMatrix.length === 0 ? (
-          <EmptyState copy={t('adminKpiConfig.noOwnershipRows')} />
-        ) : (
-          <div className="stacked-table">
-            {ownershipRows.map(({ item: row, key }, index) => (
-              <article className="stacked-row" key={key}>
-                <div className="key-grid">
-                  <TextField
-                    label={t('adminKpiConfig.field.code')}
-                    value={row.code}
-                    onChange={(next) =>
-                      updateOwnershipRow(setDraft, draft, index, { ...row, code: next })
-                    }
-                  />
-                  <TextField
-                    label={t('adminKpiConfig.field.label')}
-                    value={row.label}
-                    onChange={(next) =>
-                      updateOwnershipRow(setDraft, draft, index, { ...row, label: next })
-                    }
-                  />
-                  <SelectField
-                    label={t('adminKpiConfig.field.owner')}
-                    value={row.operationalOwner}
-                    options={ownerRoleOptions}
-                    optionLabel={(option) => formatOwnerRole(option as KpiOwnerRole, t)}
-                    onChange={(next) =>
-                      updateOwnershipRow(setDraft, draft, index, {
-                        ...row,
-                        operationalOwner: next as KpiOwnerRole,
-                      })
-                    }
-                  />
-                  <TextField
-                    label={t('adminKpiConfig.field.visibleTo')}
-                    value={row.visibleTo.join(', ')}
-                    onChange={(next) =>
-                      updateOwnershipRow(setDraft, draft, index, {
-                        ...row,
-                        visibleTo: splitCsv(next) as KpiOwnerRole[],
-                      })
-                    }
-                  />
-                  <TextField
-                    label={t('adminKpiConfig.field.contributesTo')}
-                    value={row.contributesTo.join(', ')}
-                    onChange={(next) =>
-                      updateOwnershipRow(setDraft, draft, index, {
-                        ...row,
-                        contributesTo: splitCsv(next) as Array<'store' | 'personnel'>,
-                      })
-                    }
-                  />
-                  <SelectField
-                    label={t('adminKpiConfig.field.taskCandidate')}
-                    value={row.taskCandidate ? 'true' : 'false'}
-                    options={['true', 'false']}
-                    optionLabel={(option) => formatBooleanOption(option, t)}
-                    onChange={(next) =>
-                      updateOwnershipRow(setDraft, draft, index, {
-                        ...row,
-                        taskCandidate: next === 'true',
-                      })
-                    }
-                  />
-                </div>
-                <div className="action-cluster">
-                  <button
-                    className="control-button"
-                    type="button"
-                    onClick={() =>
-                      updateDraft((current) => ({
-                        ...current,
-                        ownershipMatrix: current.ownershipMatrix.filter(
-                          (_item, itemIndex) => itemIndex !== index,
-                        ),
-                      }))
-                    }
-                  >
-                    {t('adminKpiConfig.removeRow')}
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-        <div className="action-cluster">
-          <button
-            className="control-button"
-            type="button"
-            onClick={() =>
-              updateDraft((current) => ({
-                ...current,
-                ownershipMatrix: [...current.ownershipMatrix, createEmptyOwnershipRow()],
-              }))
-            }
-          >
-            {t('adminKpiConfig.addOwnershipRow')}
-          </button>
-        </div>
-      </section>
+      <OwnershipMatrixPanel
+        draft={draft}
+        rows={ownershipRows}
+        setDraft={setDraft}
+        t={t}
+        updateDraft={updateDraft}
+      />
 
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('adminKpiConfig.gradingBands')}</div>
-            <h3>{t('adminKpiConfig.gradingBandsTitle')}</h3>
-          </div>
-          <StatusPill tone="accent">{t('adminKpiConfig.editable')}</StatusPill>
+      <GradingBandsPanel
+        draft={draft}
+        rows={gradingBands}
+        setDraft={setDraft}
+        t={t}
+        updateDraft={updateDraft}
+      />
+
+      <KpiConfigPersistPanel
+        draft={draft}
+        notice={notice}
+        onPublish={() => publishMutation.mutate()}
+        onSave={() => saveMutation.mutate(draft)}
+        saveError={saveMutation.error}
+        status={{
+          hasUnpublishedChanges: Boolean(configQuery.data?.hasUnpublishedChanges),
+          publishPending: publishMutation.isPending,
+          saveErrorVisible: saveMutation.isError,
+          savePending: saveMutation.isPending,
+          weightTotalsValid,
+        }}
+        t={t}
+      />
+
+      <KpiConfigAuditPanel
+        auditState={{
+          error: auditQuery.error,
+          items: auditQuery.data?.items ?? [],
+          loading: auditQuery.isLoading,
+          showError: auditQuery.isError,
+        }}
+        locale={locale}
+        t={t}
+      />
+    </section>
+  )
+}
+
+type KpiConfigEditorStatus = {
+  hasUnpublishedChanges: boolean
+}
+
+type StableDraftRow<T> = {
+  item: T
+  key: string
+}
+
+function AdminKpiConfigHero(input: {
+  draft: KpiConfig
+  editorState: KpiConfigEditorStatus
+  t: TranslateFunction
+}) {
+  return (
+    <section className="hero-panel">
+      <div>
+        <div className="eyebrow">{input.t('adminKpiConfig.heroEyebrow')}</div>
+        <h2 className="hero-title">{input.t('adminKpiConfig.heroTitle')}</h2>
+        <p className="hero-copy">{input.t('adminKpiConfig.heroCopy')}</p>
+      </div>
+      <div className="hero-metrics">
+        <MetricAccent label={input.t('adminKpiConfig.route')} value="/admin/kpi-config" />
+        <MetricAccent
+          label={input.t('adminKpiConfig.storeMetrics')}
+          value={String(input.draft.storeProfile.metrics.length)}
+        />
+        <MetricAccent
+          label={input.t('adminKpiConfig.ownershipRows')}
+          value={String(input.draft.ownershipMatrix.length)}
+        />
+        <MetricAccent
+          label={input.t('adminKpiConfig.gradingBandsMetric')}
+          value={String(input.draft.gradingBands.length)}
+        />
+        <MetricAccent
+          label={input.t('adminKpiConfig.mode')}
+          value={
+            input.editorState.hasUnpublishedChanges
+              ? input.t('adminKpiConfig.draftDirty')
+              : input.t('adminKpiConfig.publishedInSync')
+          }
+        />
+      </div>
+    </section>
+  )
+}
+
+function KpiConfigMetricSummary(input: {
+  draft: KpiConfig
+  editorState: KpiConfigEditorStatus
+  storeWeightGuidance: string
+  storeWeightTotal: number
+  personnelWeightGuidance: string
+  personnelWeightTotal: number
+  t: TranslateFunction
+}) {
+  return (
+    <section className="metric-grid">
+      <MetricCard
+        title={input.t('adminKpiConfig.storeWeightTotal')}
+        value={formatWeightTotalValue(input.storeWeightTotal, input.t)}
+        note={input.storeWeightGuidance}
+        icon={<SlidersHorizontal size={18} />}
+        tone={isExactWeightTotal(input.storeWeightTotal) ? 'calm' : 'warning'}
+      />
+      <MetricCard
+        title={input.t('adminKpiConfig.personnelWeightTotal')}
+        value={formatWeightTotalValue(input.personnelWeightTotal, input.t)}
+        note={input.personnelWeightGuidance}
+        icon={<Settings2 size={18} />}
+        tone={isExactWeightTotal(input.personnelWeightTotal) ? 'calm' : 'warning'}
+      />
+      <MetricCard
+        title={input.t('adminKpiConfig.taskCandidates')}
+        value={input.draft.ownershipMatrix.filter((row) => row.taskCandidate).length}
+        note={input.t('adminKpiConfig.taskCandidatesNote')}
+        icon={<ShieldCheck size={18} />}
+        tone="accent"
+      />
+      <MetricCard
+        title={input.t('adminKpiConfig.publishState')}
+        value={input.editorState.hasUnpublishedChanges ? 1 : 0}
+        note={
+          input.editorState.hasUnpublishedChanges
+            ? input.t('adminKpiConfig.draftDiffersFromLive')
+            : input.t('adminKpiConfig.draftMatchesLive')
+        }
+        icon={<ShieldCheck size={18} />}
+        tone={input.editorState.hasUnpublishedChanges ? 'warning' : 'calm'}
+      />
+    </section>
+  )
+}
+
+function KpiConfigDraftLivePanel(input: {
+  draft: KpiConfig
+  published: KpiConfig | null
+  editorState: KpiConfigEditorStatus
+  storeWeightTotal: number
+  personnelWeightTotal: number
+  publishedStoreWeightTotal: number
+  publishedPersonnelWeightTotal: number
+  t: TranslateFunction
+}) {
+  return (
+    <section className="panel">
+      <div className="panel-heading">
+        <div>
+          <div className="eyebrow">{input.t('adminKpiConfig.publishModel')}</div>
+          <h3>{input.t('adminKpiConfig.draftVsLiveTitle')}</h3>
         </div>
+        <StatusPill tone={input.editorState.hasUnpublishedChanges ? 'warning' : 'calm'}>
+          {input.editorState.hasUnpublishedChanges
+            ? input.t('adminKpiConfig.unpublishedChanges')
+            : input.t('adminKpiConfig.live')}
+        </StatusPill>
+      </div>
+      <div className="key-grid">
+        <KeyValue
+          label={input.t('adminKpiConfig.draftStoreWeight')}
+          value={formatWeightPercent(input.storeWeightTotal, input.t)}
+        />
+        <KeyValue
+          label={input.t('adminKpiConfig.liveStoreWeight')}
+          value={formatWeightPercent(input.publishedStoreWeightTotal, input.t)}
+        />
+        <KeyValue
+          label={input.t('adminKpiConfig.draftPersonnelWeight')}
+          value={formatWeightPercent(input.personnelWeightTotal, input.t)}
+        />
+        <KeyValue
+          label={input.t('adminKpiConfig.livePersonnelWeight')}
+          value={formatWeightPercent(input.publishedPersonnelWeightTotal, input.t)}
+        />
+        <KeyValue
+          label={input.t('adminKpiConfig.draftGradingBands')}
+          value={String(input.draft.gradingBands.length)}
+        />
+        <KeyValue
+          label={input.t('adminKpiConfig.liveGradingBands')}
+          value={String(input.published?.gradingBands.length ?? 0)}
+        />
+      </div>
+    </section>
+  )
+}
+
+function KpiConfigGovernancePreviewPanel(input: {
+  governancePreview: ReturnType<typeof buildGovernancePreview>
+  latestPublishedVersion: KpiConfigVersionMetadata | null
+  locale: AppLocale
+  t: TranslateFunction
+}) {
+  return (
+    <section className="panel" aria-label={input.t('adminKpiConfig.governancePreview')}>
+      <div className="panel-heading">
+        <div>
+          <div className="eyebrow">{input.t('adminKpiConfig.governancePreview')}</div>
+          <h3>{input.t('adminKpiConfig.publishDecisionPreview')}</h3>
+        </div>
+        <StatusPill tone={input.governancePreview.tone}>
+          {input.t(input.governancePreview.statusKey)}
+        </StatusPill>
+      </div>
+      <p className="queue-subtitle">{input.t(input.governancePreview.summaryKey)}</p>
+      <div className="key-grid">
+        <KeyValue
+          label={input.t('adminKpiConfig.storeProfileDiff')}
+          value={formatDiffSummary(input.governancePreview.storeProfile, input.t)}
+        />
+        <KeyValue
+          label={input.t('adminKpiConfig.personnelProfileDiff')}
+          value={formatDiffSummary(input.governancePreview.personnelProfile, input.t)}
+        />
+        <KeyValue
+          label={input.t('adminKpiConfig.ownershipDiff')}
+          value={formatDiffSummary(input.governancePreview.ownershipMatrix, input.t)}
+        />
+        <KeyValue
+          label={input.t('adminKpiConfig.gradingDiff')}
+          value={formatDiffSummary(input.governancePreview.gradingBands, input.t)}
+        />
+        <KeyValue
+          label={input.t('adminKpiConfig.versionedSchema')}
+          value={
+            input.latestPublishedVersion?.versionNo
+              ? input.t('adminKpiConfig.active')
+              : input.t('adminKpiConfig.preGovernance')
+          }
+        />
+        <KeyValue
+          label={input.t('adminKpiConfig.latestVersion')}
+          value={formatKpiConfigVersion(input.latestPublishedVersion, input.t)}
+        />
+        <KeyValue
+          label={input.t('adminKpiConfig.publishedAt')}
+          value={
+            input.latestPublishedVersion?.publishedAt
+              ? formatDateTime(input.latestPublishedVersion.publishedAt, input.locale)
+              : input.t('adminKpiConfig.notPublishedYet')
+          }
+        />
+        <KeyValue
+          label={input.t('adminKpiConfig.rollback')}
+          value={input.t('adminKpiConfig.rollbackInactive')}
+        />
+        <KeyValue
+          label={input.t('adminKpiConfig.snapshotAnchoring')}
+          value={input.t('adminKpiConfig.snapshotAnchoringActive')}
+        />
+      </div>
+      <p className="queue-subtitle">{input.t('adminKpiConfig.snapshotAnchoringCopy')}</p>
+    </section>
+  )
+}
+
+function OwnershipMatrixPanel(input: {
+  draft: KpiConfig
+  rows: Array<StableDraftRow<KpiOwnershipMatrixRow>>
+  setDraft: Dispatch<SetStateAction<KpiConfig | null>>
+  t: TranslateFunction
+  updateDraft: (updater: (current: KpiConfig) => KpiConfig) => void
+}) {
+  return (
+    <section className="panel">
+      <div className="panel-heading">
+        <div>
+          <div className="eyebrow">{input.t('adminKpiConfig.ownershipMatrix')}</div>
+          <h3>{input.t('adminKpiConfig.ownershipTitle')}</h3>
+        </div>
+        <StatusPill tone="accent">{input.t('adminKpiConfig.editable')}</StatusPill>
+      </div>
+      {input.draft.ownershipMatrix.length === 0 ? (
+        <EmptyState copy={input.t('adminKpiConfig.noOwnershipRows')} />
+      ) : (
         <div className="stacked-table">
-          {gradingBands.map(({ item: band, key }, index) => (
+          {input.rows.map(({ item: row, key }, index) => (
             <article className="stacked-row" key={key}>
               <div className="key-grid">
                 <TextField
-                  label={t('adminKpiConfig.field.code')}
-                  value={band.code}
+                  label={input.t('adminKpiConfig.field.code')}
+                  value={row.code}
                   onChange={(next) =>
-                    updateGradingBand(setDraft, draft, index, { ...band, code: next })
+                    updateOwnershipRow(input.setDraft, input.draft, index, { ...row, code: next })
                   }
                 />
                 <TextField
-                  label={t('adminKpiConfig.field.label')}
-                  value={band.label}
+                  label={input.t('adminKpiConfig.field.label')}
+                  value={row.label}
                   onChange={(next) =>
-                    updateGradingBand(setDraft, draft, index, { ...band, label: next })
-                  }
-                />
-                <TextField
-                  label={t('adminKpiConfig.field.emoji')}
-                  value={band.emoji}
-                  onChange={(next) =>
-                    updateGradingBand(setDraft, draft, index, { ...band, emoji: next })
+                    updateOwnershipRow(input.setDraft, input.draft, index, { ...row, label: next })
                   }
                 />
                 <SelectField
-                  label={t('adminKpiConfig.field.tone')}
-                  value={band.tone}
-                  options={['calm', 'accent', 'warning', 'danger', 'neutral']}
-                  optionLabel={(option) => formatToneOption(option as KpiGradingBand['tone'], t)}
+                  label={input.t('adminKpiConfig.field.owner')}
+                  value={row.operationalOwner}
+                  options={ownerRoleOptions}
+                  optionLabel={(option) => formatOwnerRole(option as KpiOwnerRole, input.t)}
                   onChange={(next) =>
-                    updateGradingBand(setDraft, draft, index, {
-                      ...band,
-                      tone: next as KpiGradingBand['tone'],
+                    updateOwnershipRow(input.setDraft, input.draft, index, {
+                      ...row,
+                      operationalOwner: next as KpiOwnerRole,
                     })
                   }
                 />
-                <NumberField
-                  label={t('adminKpiConfig.field.minScore')}
-                  value={band.minScore}
+                <TextField
+                  label={input.t('adminKpiConfig.field.visibleTo')}
+                  value={row.visibleTo.join(', ')}
                   onChange={(next) =>
-                    updateGradingBand(setDraft, draft, index, { ...band, minScore: next })
+                    updateOwnershipRow(input.setDraft, input.draft, index, {
+                      ...row,
+                      visibleTo: splitCsv(next) as KpiOwnerRole[],
+                    })
+                  }
+                />
+                <TextField
+                  label={input.t('adminKpiConfig.field.contributesTo')}
+                  value={row.contributesTo.join(', ')}
+                  onChange={(next) =>
+                    updateOwnershipRow(input.setDraft, input.draft, index, {
+                      ...row,
+                      contributesTo: splitCsv(next) as Array<'store' | 'personnel'>,
+                    })
+                  }
+                />
+                <SelectField
+                  label={input.t('adminKpiConfig.field.taskCandidate')}
+                  value={row.taskCandidate ? 'true' : 'false'}
+                  options={['true', 'false']}
+                  optionLabel={(option) => formatBooleanOption(option, input.t)}
+                  onChange={(next) =>
+                    updateOwnershipRow(input.setDraft, input.draft, index, {
+                      ...row,
+                      taskCandidate: next === 'true',
+                    })
                   }
                 />
               </div>
@@ -586,118 +636,264 @@ export function AdminKpiConfigPage() {
                   className="control-button"
                   type="button"
                   onClick={() =>
-                    updateDraft((current) => ({
+                    input.updateDraft((current) => ({
                       ...current,
-                      gradingBands: current.gradingBands.filter(
+                      ownershipMatrix: current.ownershipMatrix.filter(
                         (_item, itemIndex) => itemIndex !== index,
                       ),
                     }))
                   }
                 >
-                  {t('adminKpiConfig.removeBand')}
+                  {input.t('adminKpiConfig.removeRow')}
                 </button>
               </div>
             </article>
           ))}
         </div>
-        <div className="action-cluster">
-          <button
-            className="control-button"
-            type="button"
-            onClick={() =>
-              updateDraft((current) => ({
-                ...current,
-                gradingBands: [...current.gradingBands, createEmptyGradingBand()],
-              }))
-            }
-          >
-            {t('adminKpiConfig.addGradingBand')}
-          </button>
-        </div>
-      </section>
+      )}
+      <div className="action-cluster">
+        <button
+          className="control-button"
+          type="button"
+          onClick={() =>
+            input.updateDraft((current) => ({
+              ...current,
+              ownershipMatrix: [...current.ownershipMatrix, createEmptyOwnershipRow()],
+            }))
+          }
+        >
+          {input.t('adminKpiConfig.addOwnershipRow')}
+        </button>
+      </div>
+    </section>
+  )
+}
 
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('adminKpiConfig.saveEyebrow')}</div>
-            <h3>{t('adminKpiConfig.persistTitle')}</h3>
-          </div>
-          <StatusPill tone={saveMutation.isPending || !weightTotalsValid ? 'warning' : 'calm'}>
-            {saveMutation.isPending
-              ? t('adminKpiConfig.saving')
-              : weightTotalsValid
-                ? t('adminKpiConfig.ready')
-                : t('adminKpiConfig.needsWeightBalance')}
-          </StatusPill>
+function GradingBandsPanel(input: {
+  draft: KpiConfig
+  rows: Array<StableDraftRow<KpiGradingBand>>
+  setDraft: Dispatch<SetStateAction<KpiConfig | null>>
+  t: TranslateFunction
+  updateDraft: (updater: (current: KpiConfig) => KpiConfig) => void
+}) {
+  return (
+    <section className="panel">
+      <div className="panel-heading">
+        <div>
+          <div className="eyebrow">{input.t('adminKpiConfig.gradingBands')}</div>
+          <h3>{input.t('adminKpiConfig.gradingBandsTitle')}</h3>
         </div>
-        <div className="key-grid">
-          <KeyValue label={t('adminKpiConfig.saveStoreProfile')} value={draft.storeProfile.title} />
-          <KeyValue
-            label={t('adminKpiConfig.savePersonnelProfile')}
-            value={draft.personnelProfile.title}
-          />
-          <KeyValue label={t('adminKpiConfig.matrixRows')} value={String(draft.ownershipMatrix.length)} />
-          <KeyValue label={t('adminKpiConfig.gradingBands')} value={String(draft.gradingBands.length)} />
-          <KeyValue label={t('adminKpiConfig.persistence')} value="ops.kpi_score_profile_config" />
-        </div>
-        {notice ? <p className="queue-subtitle">{notice}</p> : null}
-        {!weightTotalsValid ? (
-          <p className="queue-subtitle">{t('adminKpiConfig.weightSaveBlocked')}</p>
-        ) : null}
-        {saveMutation.isError ? (
-          <p className="queue-subtitle">{getErrorMessage(saveMutation.error)}</p>
-        ) : null}
-        <div className="action-cluster">
-          <button
-            className="control-button"
-            type="button"
-            disabled={saveMutation.isPending || publishMutation.isPending || !weightTotalsValid}
-            onClick={() => saveMutation.mutate(draft)}
-          >
-            {saveMutation.isPending
-              ? t('adminKpiConfig.saveDraftPending')
-              : t('adminKpiConfig.saveDraft')}
-          </button>
-          <button
-            className="control-button"
-            type="button"
-            disabled={
-              publishMutation.isPending ||
-              saveMutation.isPending ||
-              !weightTotalsValid ||
-              !configQuery.data?.hasUnpublishedChanges
-            }
-            onClick={() => publishMutation.mutate()}
-          >
-            {publishMutation.isPending
-              ? t('adminKpiConfig.publishPending')
-              : t('adminKpiConfig.publishLiveConfig')}
-          </button>
-        </div>
-      </section>
+        <StatusPill tone="accent">{input.t('adminKpiConfig.editable')}</StatusPill>
+      </div>
+      <div className="stacked-table">
+        {input.rows.map(({ item: band, key }, index) => (
+          <article className="stacked-row" key={key}>
+            <div className="key-grid">
+              <TextField
+                label={input.t('adminKpiConfig.field.code')}
+                value={band.code}
+                onChange={(next) =>
+                  updateGradingBand(input.setDraft, input.draft, index, { ...band, code: next })
+                }
+              />
+              <TextField
+                label={input.t('adminKpiConfig.field.label')}
+                value={band.label}
+                onChange={(next) =>
+                  updateGradingBand(input.setDraft, input.draft, index, { ...band, label: next })
+                }
+              />
+              <TextField
+                label={input.t('adminKpiConfig.field.emoji')}
+                value={band.emoji}
+                onChange={(next) =>
+                  updateGradingBand(input.setDraft, input.draft, index, { ...band, emoji: next })
+                }
+              />
+              <SelectField
+                label={input.t('adminKpiConfig.field.tone')}
+                value={band.tone}
+                options={['calm', 'accent', 'warning', 'danger', 'neutral']}
+                optionLabel={(option) => formatToneOption(option as KpiGradingBand['tone'], input.t)}
+                onChange={(next) =>
+                  updateGradingBand(input.setDraft, input.draft, index, {
+                    ...band,
+                    tone: next as KpiGradingBand['tone'],
+                  })
+                }
+              />
+              <NumberField
+                label={input.t('adminKpiConfig.field.minScore')}
+                value={band.minScore}
+                onChange={(next) =>
+                  updateGradingBand(input.setDraft, input.draft, index, { ...band, minScore: next })
+                }
+              />
+            </div>
+            <div className="action-cluster">
+              <button
+                className="control-button"
+                type="button"
+                onClick={() =>
+                  input.updateDraft((current) => ({
+                    ...current,
+                    gradingBands: current.gradingBands.filter(
+                      (_item, itemIndex) => itemIndex !== index,
+                    ),
+                  }))
+                }
+              >
+                {input.t('adminKpiConfig.removeBand')}
+              </button>
+            </div>
+          </article>
+        ))}
+      </div>
+      <div className="action-cluster">
+        <button
+          className="control-button"
+          type="button"
+          onClick={() =>
+            input.updateDraft((current) => ({
+              ...current,
+              gradingBands: [...current.gradingBands, createEmptyGradingBand()],
+            }))
+          }
+        >
+          {input.t('adminKpiConfig.addGradingBand')}
+        </button>
+      </div>
+    </section>
+  )
+}
 
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('adminKpiConfig.recentChanges')}</div>
-            <h3>{t('adminKpiConfig.auditTrailTitle')}</h3>
-          </div>
-          <StatusPill tone={auditQuery.isLoading ? 'warning' : 'accent'}>
-            {auditQuery.isLoading ? t('adminKpiConfig.loading') : t('adminKpiConfig.live')}
-          </StatusPill>
+type KpiConfigPersistStatus = {
+  hasUnpublishedChanges: boolean
+  publishPending: boolean
+  saveErrorVisible: boolean
+  savePending: boolean
+  weightTotalsValid: boolean
+}
+
+function KpiConfigPersistPanel(input: {
+  draft: KpiConfig
+  notice: string | null
+  onPublish: () => void
+  onSave: () => void
+  saveError: unknown
+  status: KpiConfigPersistStatus
+  t: TranslateFunction
+}) {
+  return (
+    <section className="panel">
+      <div className="panel-heading">
+        <div>
+          <div className="eyebrow">{input.t('adminKpiConfig.saveEyebrow')}</div>
+          <h3>{input.t('adminKpiConfig.persistTitle')}</h3>
         </div>
-        {auditQuery.isError ? (
-          <p className="queue-subtitle">{getErrorMessage(auditQuery.error)}</p>
-        ) : auditQuery.data && auditQuery.data.items.length > 0 ? (
-          <div className="stacked-table">
-            {auditQuery.data.items.map((item) => (
-              <KpiConfigAuditRow item={item} key={item.eventLogId} locale={locale} t={t} />
-            ))}
-          </div>
-        ) : (
-          <EmptyState copy={t('adminKpiConfig.noChangesSaved')} />
-        )}
-      </section>
+        <StatusPill tone={input.status.savePending || !input.status.weightTotalsValid ? 'warning' : 'calm'}>
+          {input.status.savePending
+            ? input.t('adminKpiConfig.saving')
+            : input.status.weightTotalsValid
+              ? input.t('adminKpiConfig.ready')
+              : input.t('adminKpiConfig.needsWeightBalance')}
+        </StatusPill>
+      </div>
+      <div className="key-grid">
+        <KeyValue
+          label={input.t('adminKpiConfig.saveStoreProfile')}
+          value={input.draft.storeProfile.title}
+        />
+        <KeyValue
+          label={input.t('adminKpiConfig.savePersonnelProfile')}
+          value={input.draft.personnelProfile.title}
+        />
+        <KeyValue
+          label={input.t('adminKpiConfig.matrixRows')}
+          value={String(input.draft.ownershipMatrix.length)}
+        />
+        <KeyValue
+          label={input.t('adminKpiConfig.gradingBands')}
+          value={String(input.draft.gradingBands.length)}
+        />
+        <KeyValue label={input.t('adminKpiConfig.persistence')} value="ops.kpi_score_profile_config" />
+      </div>
+      {input.notice ? <p className="queue-subtitle">{input.notice}</p> : null}
+      {!input.status.weightTotalsValid ? (
+        <p className="queue-subtitle">{input.t('adminKpiConfig.weightSaveBlocked')}</p>
+      ) : null}
+      {input.status.saveErrorVisible ? (
+        <p className="queue-subtitle">{getErrorMessage(input.saveError)}</p>
+      ) : null}
+      <div className="action-cluster">
+        <button
+          className="control-button"
+          type="button"
+          disabled={
+            input.status.savePending ||
+            input.status.publishPending ||
+            !input.status.weightTotalsValid
+          }
+          onClick={input.onSave}
+        >
+          {input.status.savePending
+            ? input.t('adminKpiConfig.saveDraftPending')
+            : input.t('adminKpiConfig.saveDraft')}
+        </button>
+        <button
+          className="control-button"
+          type="button"
+          disabled={
+            input.status.publishPending ||
+            input.status.savePending ||
+            !input.status.weightTotalsValid ||
+            !input.status.hasUnpublishedChanges
+          }
+          onClick={input.onPublish}
+        >
+          {input.status.publishPending
+            ? input.t('adminKpiConfig.publishPending')
+            : input.t('adminKpiConfig.publishLiveConfig')}
+        </button>
+      </div>
+    </section>
+  )
+}
+
+type KpiConfigAuditState = {
+  error: unknown
+  items: AuditEvent[]
+  loading: boolean
+  showError: boolean
+}
+
+function KpiConfigAuditPanel(input: {
+  auditState: KpiConfigAuditState
+  locale: AppLocale
+  t: TranslateFunction
+}) {
+  return (
+    <section className="panel">
+      <div className="panel-heading">
+        <div>
+          <div className="eyebrow">{input.t('adminKpiConfig.recentChanges')}</div>
+          <h3>{input.t('adminKpiConfig.auditTrailTitle')}</h3>
+        </div>
+        <StatusPill tone={input.auditState.loading ? 'warning' : 'accent'}>
+          {input.auditState.loading ? input.t('adminKpiConfig.loading') : input.t('adminKpiConfig.live')}
+        </StatusPill>
+      </div>
+      {input.auditState.showError ? (
+        <p className="queue-subtitle">{getErrorMessage(input.auditState.error)}</p>
+      ) : input.auditState.items.length > 0 ? (
+        <div className="stacked-table">
+          {input.auditState.items.map((item) => (
+            <KpiConfigAuditRow item={item} key={item.eventLogId} locale={input.locale} t={input.t} />
+          ))}
+        </div>
+      ) : (
+        <EmptyState copy={input.t('adminKpiConfig.noChangesSaved')} />
+      )}
     </section>
   )
 }
