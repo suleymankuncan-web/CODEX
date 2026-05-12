@@ -23,6 +23,7 @@ import {
 } from '../features/workflow/contracts'
 import { formatDateTime, formatState, getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
+import { transientQueryRetryOptions } from '../lib/query-retry'
 
 const actorRoleTranslationKeys: Partial<Record<string, TranslationKey>> = {
   REGION_APPROVER: 'storeTasks.role.REGION_APPROVER',
@@ -47,7 +48,7 @@ export function StoreTasksPage(input: {
     queryKey: ['workflow-inbox'],
     queryFn: getWorkflowInbox,
     enabled: inboxEnabled,
-    retry: false,
+    ...transientQueryRetryOptions,
   })
 
   const items = useMemo(() => inboxQuery.data?.items ?? [], [inboxQuery.data?.items])

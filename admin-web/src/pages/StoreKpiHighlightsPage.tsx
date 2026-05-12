@@ -24,6 +24,7 @@ import { formatSnapshotOptionLabel } from '../features/reports/snapshot-labels'
 import { formatDate, formatState, getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 import { ApiError } from '../lib/api'
+import { transientQueryRetryOptions } from '../lib/query-retry'
 import {
   matchesKpiMetricCode,
 } from '../features/kpi/score-profiles'
@@ -336,7 +337,7 @@ export function StoreKpiHighlightsPage(input: {
     queryKey: ['store-kpi-config'],
     queryFn: getKpiConfig,
     enabled: Boolean(input.authSummary),
-    retry: false,
+    ...transientQueryRetryOptions,
   })
 
   const liveKpiQuery = useQuery({
@@ -347,7 +348,7 @@ export function StoreKpiHighlightsPage(input: {
         periodStart: livePeriodStart || undefined,
       }),
     enabled: reportingAllowed && viewMode === 'live',
-    retry: false,
+    ...transientQueryRetryOptions,
   })
 
   const dailySnapshotQuery = useQuery({
@@ -359,7 +360,7 @@ export function StoreKpiHighlightsPage(input: {
         offset: 0,
       }),
     enabled: reportingAllowed && viewMode === 'closed',
-    retry: false,
+    ...transientQueryRetryOptions,
   })
 
   const availableSnapshotRuns = dailySnapshotQuery.data?.items ?? []
@@ -372,7 +373,7 @@ export function StoreKpiHighlightsPage(input: {
     queryKey: ['store-kpis-closed', snapshotRunId || 'no-run'],
     queryFn: () => getKpiReport(snapshotRunId),
     enabled: reportingAllowed && viewMode === 'closed' && Boolean(snapshotRunId),
-    retry: false,
+    ...transientQueryRetryOptions,
   })
 
   const scoreBreakdownQuery = useQuery({
@@ -387,7 +388,7 @@ export function StoreKpiHighlightsPage(input: {
       viewMode === 'closed' &&
       Boolean(snapshotRunId) &&
       Boolean(primaryStoreId),
-    retry: false,
+    ...transientQueryRetryOptions,
   })
 
   const liveRows = useMemo<DisplayKpiRow[]>(() => {

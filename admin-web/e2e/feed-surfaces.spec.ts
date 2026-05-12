@@ -40,6 +40,58 @@ test('admin feed allows HR admin to publish a challenge post', async ({ page }) 
   })
 })
 
+test('admin feed retries transient feed and lookup failures without leaving the user stuck', async ({ page }) => {
+  let feedAttempts = 0
+  let lookupAttempts = 0
+  await seedMockSession(page, 'HR_ADMIN', 'hr-feed-transient-user')
+
+  await page.route('**/api/**', async (route) => {
+    const request = route.request()
+    const pathname = new URL(request.url()).pathname
+
+    if (pathname.endsWith('/api/auth/session')) {
+      await route.fulfill({ json: hrSessionFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/auth/lookups')) {
+      lookupAttempts += 1
+      if (lookupAttempts === 1) {
+        await route.fulfill({ status: 503, json: { message: 'Temporary lookup outage' } })
+        return
+      }
+
+      await route.fulfill({ json: authLookupsFixture })
+      return
+    }
+
+    if (request.method() === 'GET' && pathname.endsWith('/api/admin/feed')) {
+      feedAttempts += 1
+      if (feedAttempts === 1) {
+        await route.fulfill({ status: 503, json: { message: 'Temporary feed outage' } })
+        return
+      }
+
+      await route.fulfill({
+        json: {
+          items: [feedPostFixture],
+          meta: { count: 1, total: 1, limit: 50, offset: 0 },
+        },
+      })
+      return
+    }
+
+    await route.fulfill({ json: {} })
+  })
+
+  await page.goto('/admin/feed')
+
+  await expect.poll(() => feedAttempts).toBeGreaterThanOrEqual(2)
+  await expect.poll(() => lookupAttempts).toBeGreaterThanOrEqual(2)
+  await expect(page.getByText('May UPT Challenge')).toBeVisible()
+  await expect(page.getByText(/Duyurular a..lamad./i)).toHaveCount(0)
+})
+
 test('region manager feed composer defaults to own region and hides company scope', async ({ page }) => {
   await seedMockSession(page, 'REGION_MANAGER', 'region-feed-smoke-user')
   await routeFeedApi(page, regionManagerSessionFixture)

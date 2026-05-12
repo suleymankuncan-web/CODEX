@@ -35,6 +35,7 @@ import {
 } from '../features/workflow/contracts'
 import { formatDateTime, formatState, getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
+import { transientQueryRetryOptions } from '../lib/query-retry'
 
 type ChecklistCoverageRow = {
   store: MobileChecklistToday['stores'][number]
@@ -63,13 +64,13 @@ export function StoreChecklistsPage(input: {
     queryKey: ['checklist-acknowledgements'],
     queryFn: getChecklistAcknowledgements,
     enabled: canUseAcknowledgements,
-    retry: false,
+    ...transientQueryRetryOptions,
   })
   const mobileTodayQuery = useQuery({
     queryKey: ['mobile-checklists-today'],
     queryFn: getMobileChecklistToday,
     enabled: canManageVisits,
-    retry: false,
+    ...transientQueryRetryOptions,
   })
   const acknowledgeMutation = useMutation({
     mutationFn: acknowledgeChecklist,

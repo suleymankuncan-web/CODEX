@@ -34,6 +34,7 @@ import {
   type SellerCodeRequest,
 } from '../features/workforce/api'
 import { formatDateTime, formatState, getErrorMessage } from '../lib/format'
+import { transientQueryRetryOptions } from '../lib/query-retry'
 
 function canUseAdminInbox(authSummary: AuthSessionSummary | null) {
   const roles = authSummary?.user.roleCodes ?? []
@@ -116,7 +117,7 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
     queryKey: ['workflow-inbox', 'admin'],
     queryFn: getWorkflowInbox,
     enabled: inboxEnabled,
-    retry: false,
+    ...transientQueryRetryOptions,
   })
   const sellerCodeReferenceQuery = useQuery({
     queryKey: ['seller-code-reference', 'franchise'],

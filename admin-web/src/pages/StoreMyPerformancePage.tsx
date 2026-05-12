@@ -23,6 +23,7 @@ import {
 } from '../features/kpi/grading'
 import { formatDate, getErrorMessage } from '../lib/format'
 import { getIntlLocale, type AppLocale } from '../lib/i18n'
+import { transientQueryRetryOptions } from '../lib/query-retry'
 
 function canUseSelfPerformance(authSummary: AuthSessionSummary | null) {
   const roles = authSummary?.user.roleCodes ?? []
@@ -537,7 +538,7 @@ export function StoreMyPerformancePage(input: {
     queryKey: ['store-me-kpi-config'],
     queryFn: getKpiConfig,
     enabled,
-    retry: false,
+    ...transientQueryRetryOptions,
   })
 
   const closedRunsQuery = useQuery({
@@ -549,7 +550,7 @@ export function StoreMyPerformancePage(input: {
         offset: 0,
       }),
     enabled: enabled && usesClosedSnapshotMode && sourceMode === 'closed',
-    retry: false,
+    ...transientQueryRetryOptions,
   })
 
   const availableClosedSnapshotRuns = closedRunsQuery.data?.items ?? []
@@ -578,7 +579,7 @@ export function StoreMyPerformancePage(input: {
           sourceMode === 'closed' && selectedClosedSnapshotDate ? selectedClosedSnapshotDate : undefined,
       }),
     enabled: enabled && (sourceMode === 'live' || !usesClosedSnapshotMode || !closedRunsQuery.isLoading),
-    retry: false,
+    ...transientQueryRetryOptions,
   })
 
   const performance = performanceQuery.data
@@ -749,7 +750,7 @@ export function StoreMyPerformancePage(input: {
           periodStart: getPeriodDateKey(period.periodStart) || period.periodStart,
         }),
       enabled: enabled && sourceMode === 'live' && performanceQuery.isSuccess,
-      retry: false,
+      ...transientQueryRetryOptions,
     })),
   })
 
