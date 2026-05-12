@@ -5,7 +5,6 @@ import { CalendarDays, ChevronDown, X } from 'lucide-react'
 import { ScreenState } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
 import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
-import { LanguageToggle } from '../features/localization/LanguageToggle'
 import { useLocalization } from '../features/localization/useLocalization'
 import {
   getKpiConfig,
@@ -1174,7 +1173,6 @@ export function StoreMyPerformancePage(input: {
               <button className="store-me-v2-theme-pill" type="button">
                 {t('storeMe.lightTheme')}
               </button>
-              <LanguageToggle />
               <button className="store-me-v2-icon-button" type="button" aria-label={t('storeMe.notifications')}>
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />

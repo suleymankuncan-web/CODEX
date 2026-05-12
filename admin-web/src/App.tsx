@@ -10,6 +10,7 @@ import {
   getShellState,
   resolveLandingPath,
 } from './app/shell-state'
+import { preloadRouteModule } from './app/route-preloaders'
 import { StoreShell } from './app/store-shell'
 import { getAuthSession } from './features/auth/api'
 import { useSession } from './features/session/session-context-value'
@@ -79,6 +80,13 @@ function App() {
     sessionNotice: visibleSessionNotice,
     providerSessionHydrating: isProviderSessionHydrating,
   })
+
+  useEffect(() => {
+    if (shellState.mode !== 'ready') return
+
+    preloadRouteModule(firstAllowedPath)
+    preloadRouteModule(location.pathname)
+  }, [firstAllowedPath, location.pathname, shellState.mode])
 
   if (location.pathname.startsWith('/auth')) {
     return <AuthFlowShell shellState={shellState} firstAllowedPath={firstAllowedPath} />

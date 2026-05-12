@@ -2,7 +2,6 @@ import { Suspense, type ReactNode } from 'react'
 import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { ScreenState, StatusPill } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
-import { LanguageToggle } from '../features/localization/LanguageToggle'
 import { useLocalization } from '../features/localization/useLocalization'
 import {
   StoreApprovalsPage,
@@ -76,7 +75,6 @@ export function StoreShell(input: {
             <p className="topbar-copy">{t('storeHome.shellCopy')}</p>
           </div>
           <div className="topbar-cluster">
-            <LanguageToggle />
             <StatusPill tone="accent">{t('storeHome.preview')}</StatusPill>
             <NavLink to="/auth/login" className="control-button store-shell-link">
               {t('storeHome.realLogin')}

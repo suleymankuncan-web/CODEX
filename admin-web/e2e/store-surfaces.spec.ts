@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { setStoredLocale } from './locale-test-utils'
 
 const demoStoreId = '00000000-0000-0000-0000-000000000100'
 const demoEmployeeId = '00000000-0000-0000-0000-000000000202'
@@ -194,7 +195,7 @@ test('store self-performance tolerates ISO period timestamps from live API', asy
 test('store self-performance switches to English copy and persists locale', async ({ page }) => {
   await page.goto('/store/me')
 
-  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+  await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.locator('.store-me-v2-page')).toBeVisible()
@@ -355,7 +356,7 @@ test('store KPI highlights page explains metric source semantics', async ({ page
 test('store KPI highlights switches to English copy and persists locale', async ({ page }) => {
   await page.goto('/store/kpis')
 
-  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+  await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: 'Store KPIs' })).toBeVisible()
@@ -402,7 +403,7 @@ test('store shell exposes Turkish-first chrome and hides technical auth roles', 
 test('store home switches to English copy and persists locale', async ({ page }) => {
   await page.goto('/store')
 
-  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+  await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: /Task-focused home page/i })).toBeVisible()
@@ -1166,7 +1167,7 @@ test('store personnel profile resets requested live period when switching employ
 test('store rankings page switches to English copy and persists locale', async ({ page }) => {
   await page.goto('/store/rankings')
 
-  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+  await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: 'Rankings' })).toBeVisible()
@@ -1361,7 +1362,7 @@ test('store tasks page renders readable Turkish queue labels', async ({ page }) 
 test('store tasks page switches to English copy and persists locale', async ({ page }) => {
   await page.goto('/store/tasks')
 
-  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+  await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: /Action-required work/i })).toBeVisible()
@@ -1398,7 +1399,7 @@ test('store incentives page switches to English copy and persists locale', async
   await expect(page.getByRole('heading', { name: 'Canlı ödeme' })).toBeVisible()
   await expect(page.getByText('Store Incentives')).toHaveCount(0)
 
-  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+  await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: /Store incentive visibility/i })).toBeVisible()
@@ -1450,7 +1451,7 @@ test('store competitions page switches chrome to English copy and persists local
   await expect(page.locator('body')).not.toContainText('Ä')
   await expect(page.locator('body')).not.toContainText('Å')
 
-  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+  await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: /Store competitions/i })).toBeVisible()
@@ -1763,7 +1764,7 @@ test('store approvals page lets store managers edit and resubmit returned workfo
 test('store approvals page switches to English copy and persists locale', async ({ page }) => {
   await page.goto('/store/approvals')
 
-  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+  await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: /Store approval requests/i })).toBeVisible()
@@ -1800,7 +1801,7 @@ test('language toggle localizes competition read labels and persists preference'
   await expect(contributionRows.getByText('Katkı sağlığı')).toBeVisible()
   await expect(contributionRows.getByText('Kısmi katkı').first()).toBeVisible()
 
-  await page.getByRole('button', { name: 'İngilizceye geç' }).click()
+  await setStoredLocale(page, 'en')
 
   const readSummaryEn = page.getByLabel('Store competition read summary')
   const contributionRowsEn = page.getByLabel('Scoped store competition contributions')
@@ -1812,12 +1813,10 @@ test('language toggle localizes competition read labels and persists preference'
 
   await page.reload()
 
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(readSummaryEn.getByRole('heading', { name: 'Read summary' })).toBeVisible()
   await expect(contributionRowsEn.getByText('Contribution health')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Switch language to Turkish' })).toHaveAttribute(
-    'aria-pressed',
-    'false',
-  )
+  await expect(page.locator('.language-toggle-button')).toHaveCount(0)
 })
 
 async function routeStoreSurfaceApi(page: Page) {

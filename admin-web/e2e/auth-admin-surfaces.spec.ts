@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { setStoredLocale } from './locale-test-utils'
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -39,7 +40,7 @@ test('auth dashboard page switches chrome to English copy and persists locale', 
   await expect(page.locator('body')).not.toContainText('Ãƒâ€')
   await expect(page.locator('body')).not.toContainText('Ãƒâ€¦')
 
-  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+  await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(main.getByText('Auth Admin')).toBeVisible()
@@ -245,7 +246,7 @@ test('auth catalog page switches chrome to English copy and persists locale', as
   await expect(page.locator('body')).not.toContainText('Ãƒâ€')
   await expect(page.locator('body')).not.toContainText('Ãƒâ€¦')
 
-  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+  await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(main.getByText('Auth Catalog')).toBeVisible()

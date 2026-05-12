@@ -4,7 +4,6 @@ import { KeyRound, ShieldCheck } from 'lucide-react'
 import { KeyValue, StatusPill } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { formatDisplayRoles } from '../features/auth/display'
-import { LanguageToggle } from '../features/localization/LanguageToggle'
 import { useLocalization } from '../features/localization/useLocalization'
 import type { SessionMode } from '../features/session/session-storage'
 import { NavItem } from './admin-nav-item'
@@ -100,7 +99,6 @@ export function AdminShell(input: {
             <p className="topbar-copy">{t('adminShell.topbarCopy')}</p>
           </div>
           <div className="topbar-cluster">
-            <LanguageToggle />
             <div className={`env-chip${input.shellState.mode === 'setup-required' ? ' env-chip-warning' : ''}`}>
               {t('adminShell.sessionLabel')}: {formatAdminShellSessionMode(input.sessionMode, t)}{' '}
               {input.shellState.mode === 'setup-required' ? t('adminShell.needsSetup') : t('adminShell.configured')}

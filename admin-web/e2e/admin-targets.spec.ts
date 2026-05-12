@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { setStoredLocale } from './locale-test-utils'
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -47,7 +48,7 @@ test('admin target page switches chrome to English copy and persists locale', as
   await expect(page.locator('body')).not.toContainText('Ä')
   await expect(page.locator('body')).not.toContainText('Å')
 
-  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+  await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: 'Pending target distribution requests' })).toBeVisible()

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { setStoredLocale } from './locale-test-utils'
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -41,7 +42,7 @@ test('session readiness page switches chrome to English copy and persists locale
   await expect(page.locator('body')).not.toContainText('Ãƒâ€')
   await expect(page.locator('body')).not.toContainText('Ãƒâ€¦')
 
-  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+  await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(main.getByText('Session Readiness')).toBeVisible()
@@ -77,7 +78,7 @@ test('admin shell switches chrome to English copy and persists locale', async ({
   await expect(page.locator('body')).not.toContainText('Ä')
   await expect(page.locator('body')).not.toContainText('Å')
 
-  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+  await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByText('Store Ops Control')).toBeVisible()
@@ -112,7 +113,7 @@ test('admin shell fallback states switch chrome to English copy and persist loca
   await expect(page.locator('body')).not.toContainText('Ã„')
   await expect(page.locator('body')).not.toContainText('Ã…')
 
-  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+  await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('navigation', { name: 'Primary' })).toBeVisible()
@@ -187,7 +188,7 @@ for (const detail of authAuditDetailCases) {
     await expect(page.locator('body')).not.toContainText('Ãƒâ€')
     await expect(page.locator('body')).not.toContainText('Ãƒâ€¦')
 
-    await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+    await setStoredLocale(page, 'en')
 
     await expect(page.locator('html')).toHaveAttribute('lang', 'en')
     await expect(main.getByText('Auth Audit')).toBeVisible()
@@ -219,7 +220,7 @@ test('audit center switches chrome to English copy and persists locale', async (
   await expect(page.locator('body')).not.toContainText('Ä')
   await expect(page.locator('body')).not.toContainText('Å')
 
-  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+  await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: 'Audit Center' })).toBeVisible()
@@ -257,7 +258,7 @@ test('master data page switches chrome to English copy and persists locale', asy
   await expect(page.locator('body')).not.toContainText('Ä')
   await expect(page.locator('body')).not.toContainText('Å')
 
-  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+  await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: 'Master data bootstrap' })).toBeVisible()
@@ -291,7 +292,7 @@ test('admin checklist templates page switches chrome to English copy and persist
   await expect(page.locator('body')).not.toContainText('Ã„')
   await expect(page.locator('body')).not.toContainText('Ã…')
 
-  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+  await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('main').getByText('Checklists', { exact: true })).toBeVisible()
@@ -323,7 +324,7 @@ test('snapshot operations page switches chrome to English copy and persists loca
   await expect(page.locator('body')).not.toContainText('Ã„')
   await expect(page.locator('body')).not.toContainText('Ã…')
 
-  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+  await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByText('Snapshot Operations')).toBeVisible()
@@ -356,7 +357,7 @@ test('snapshot run detail page switches chrome to English copy and persists loca
   await expect(page.locator('body')).not.toContainText('Ã„')
   await expect(page.locator('body')).not.toContainText('Ã…')
 
-  await page.locator('.language-toggle-button').filter({ hasText: 'EN' }).click()
+  await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('link', { name: 'Back to snapshot operations' })).toBeVisible()
