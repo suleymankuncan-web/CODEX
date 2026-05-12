@@ -457,6 +457,43 @@ test('store sidebar recovers when a lazy route module fails during SPA navigatio
   expect(failedFeedRouteModuleOnce).toBe(true)
 })
 
+test('store sidebar retries a transient announcements API failure without leaving the user stuck', async ({ page }) => {
+  const pageErrors: string[] = []
+  let feedAttempts = 0
+
+  page.on('pageerror', (error) => {
+    pageErrors.push(error.message)
+  })
+
+  await page.unroute('**/api/feed?**')
+  await page.route('**/api/feed?**', async (route) => {
+    feedAttempts += 1
+
+    if (feedAttempts === 1) {
+      await route.fulfill({
+        status: 503,
+        json: { message: 'Temporary feed outage' },
+      })
+      return
+    }
+
+    await route.fulfill({ json: storeFeedFixture })
+  })
+
+  await page.goto('/store/home')
+
+  await page
+    .locator('.store-command-nav')
+    .getByRole('link', { name: 'Duyurular', exact: true })
+    .click()
+
+  await expect(page).toHaveURL(/\/store\/feed$/)
+  await expect.poll(() => feedAttempts).toBeGreaterThanOrEqual(2)
+  await expect(page.getByText('Pilot announcement')).toBeVisible()
+  await expect(page.getByText(/Duyurular a..lamad./i)).toHaveCount(0)
+  expect(pageErrors).toEqual([])
+})
+
 test('store sidebar transitions across visible manager pages without requiring manual refresh', async ({ page }) => {
   const storeNav = page.locator('.store-command-nav')
   await page.goto('/store/home')

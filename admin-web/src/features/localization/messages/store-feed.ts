@@ -4,6 +4,8 @@ export const storeFeedTr = {
   'storeFeed.loadingCopy': 'Mağaza akışı hazırlanıyor.',
   'storeFeed.errorTitle': 'Duyurular açılamadı',
 
+  'storeFeed.retryAction': 'Tekrar dene',
+
   'storeFeed.heroEyebrow': 'Duyurular',
   'storeFeed.title': 'Şirket, bölge ve mağaza duyuruları tek akışta.',
   'storeFeed.heroCopy':
@@ -49,6 +51,8 @@ export const storeFeedEn: Record<keyof typeof storeFeedTr, string> = {
   'storeFeed.loadingTitle': 'Loading announcements',
   'storeFeed.loadingCopy': 'Preparing the store feed.',
   'storeFeed.errorTitle': 'Announcements could not be opened',
+
+  'storeFeed.retryAction': 'Try again',
 
   'storeFeed.heroEyebrow': 'Announcements',
   'storeFeed.title': 'Company, region, and store announcements in one feed.',
