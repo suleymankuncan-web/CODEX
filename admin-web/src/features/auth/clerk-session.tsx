@@ -152,6 +152,7 @@ function ClerkSessionBridge() {
       } catch {
         if (!cancelled) {
           lastTokenRef.current = null
+          clearToBearerMode()
         }
       } finally {
         if (!cancelled) {
@@ -170,6 +171,7 @@ function ClerkSessionBridge() {
       window.clearInterval(intervalId)
     }
   }, [
+    clearToBearerMode,
     getToken,
     isLoaded,
     isSignedIn,
