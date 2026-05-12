@@ -35,6 +35,7 @@ import {
 } from './route-loaders'
 import { AdminRouteGuard, RouteLoadingState, SessionGate } from './route-states'
 import { RouteRecoveryBoundary } from './route-recovery-boundary'
+import { RouteTransitionFrame } from './route-transition-frame'
 import {
   formatAdminShellAuthState,
   formatAdminShellSessionMode,
@@ -142,9 +143,10 @@ export function AdminShell(input: {
           ) : null}
         </section>
 
-        <RouteRecoveryBoundary firstAllowedPath={input.firstAllowedPath}>
-          <Suspense fallback={<RouteLoadingState />}>
-            <Routes>
+        <RouteTransitionFrame>
+          <RouteRecoveryBoundary firstAllowedPath={input.firstAllowedPath}>
+            <Suspense fallback={<RouteLoadingState />}>
+              <Routes>
             <Route path="/" element={<Navigate to={input.firstAllowedPath} replace />} />
             <Route path="/admin/session" element={<SessionGate />} />
             <Route
@@ -255,10 +257,11 @@ export function AdminShell(input: {
               path="/admin/audit"
               element={adminRoute(['SUPER_ADMIN', 'AUDITOR'], <AuditCenterPage />)}
             />
-              <Route path="*" element={<Navigate to={input.firstAllowedPath} replace />} />
-            </Routes>
-          </Suspense>
-        </RouteRecoveryBoundary>
+                <Route path="*" element={<Navigate to={input.firstAllowedPath} replace />} />
+              </Routes>
+            </Suspense>
+          </RouteRecoveryBoundary>
+        </RouteTransitionFrame>
       </main>
     </div>
   )

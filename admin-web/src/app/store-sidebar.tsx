@@ -23,6 +23,7 @@ import {
   resolveStorePersona,
   type StoreNavIconId,
 } from './store-navigation'
+import { preloadRouteModule } from './route-preloaders'
 
 const iconById: Record<StoreNavIconId, LucideIcon> = {
   approvals: ReceiptText,
@@ -117,6 +118,9 @@ export function StoreSidebar(input: {
               }
               end={item.end}
               key={item.id}
+              onFocus={() => preloadRouteModule(item.path)}
+              onPointerDown={() => preloadRouteModule(item.path)}
+              onPointerEnter={() => preloadRouteModule(item.path)}
               title={t(item.labelKey)}
               to={item.path}
             >
@@ -134,6 +138,9 @@ export function StoreSidebar(input: {
           className={({ isActive }) =>
             `store-command-settings-link${isActive ? ' store-command-settings-link-active' : ''}`
           }
+          onFocus={() => preloadRouteModule('/store/settings')}
+          onPointerDown={() => preloadRouteModule('/store/settings')}
+          onPointerEnter={() => preloadRouteModule('/store/settings')}
           title={t('storeHome.nav.settings')}
           to="/store/settings"
         >
