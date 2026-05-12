@@ -75,7 +75,7 @@ test('core store routes open without unavailable states', async ({ page }) => {
     {
       path: '/store/approvals',
       urlPattern: /\/store\/approvals$/,
-      heading: page.getByRole('heading', { name: 'Hedef dağıtım talebi' }),
+      heading: page.getByRole('heading', { name: 'Talepler / Onaylar Ledger' }),
     },
   ]
 

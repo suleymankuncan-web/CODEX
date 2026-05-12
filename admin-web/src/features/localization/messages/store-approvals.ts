@@ -8,6 +8,30 @@ export const storeApprovalsTr = {
   'storeApprovals.title': 'Mağaza onay talepleri mağaza iş akışının içinde kalır.',
   'storeApprovals.heroCopy':
     'Mağaza müdürü hedef dağıtımını, satıcı kodu talebini ve personel çıkışını tek yüzeyden hazırlar; karar ve kontrol adımları ilgili onay kuyruğuna akar.',
+  'storeApprovals.ledgerEyebrow': 'Mağaza iş akışı',
+  'storeApprovals.ledgerTitle': 'Talepler / Onaylar Ledger',
+  'storeApprovals.storeManagerSubtitle':
+    'Hedef dağıtımı, satıcı kodu ve personel çıkış talepleri mağaza tarafında tek kayıt defterinde yönetilir.',
+  'storeApprovals.regionManagerSubtitle':
+    'Bölge görünümünde yalnızca mevcut yetkinin kapsadığı hedef dağıtım onayları yer alır.',
+  'storeApprovals.readOnlySubtitle':
+    'Bu kullanıcı için mağaza talep kayıtları salt okunur kapsamda gösterilir.',
+  'storeApprovals.ledgerScope': 'Ledger kapsamı',
+  'storeApprovals.ledgerMetrics': 'Ledger özet metrikleri',
+  'storeApprovals.ledgerReturnedCorrections': 'Düzeltme bekleyenler',
+  'storeApprovals.targetQueueTitle': 'Hedef dağıtım kayıtları',
+  'storeApprovals.workforceQueueTitle': 'Personel talep kayıtları',
+  'storeApprovals.targetApprovalQueueTitle': 'Hedef onay kayıtları',
+  'storeApprovals.ledgerStatus': 'Kayıt durumu',
+  'storeApprovals.targetApprovalEmptyTitle': 'Onay bekleyen hedef talebi yok',
+  'storeApprovals.targetApprovalEmptyCopy':
+    'Bölge kapsamına düşen yeni hedef dağıtım talepleri burada listelenir.',
+  'storeApprovals.approvalNote': 'Onay notu',
+  'storeApprovals.approvalNotePlaceholder': 'Bölge onayı için opsiyonel not',
+  'storeApprovals.approving': 'Onaylanıyor...',
+  'storeApprovals.approveTargetRequest': 'Hedef talebini onayla',
+  'storeApprovals.cannotApproveStore': 'Bu mağaza için onay yetkisi yok',
+  'storeApprovals.submittedTargetLedgerTitle': 'Gönderilen hedef ledger',
   'storeApprovals.route': 'Rota',
   'storeApprovals.actionStore': 'Aksiyon mağazası',
   'storeApprovals.noActionStore': 'Aksiyon mağazası yok',
@@ -192,6 +216,30 @@ export const storeApprovalsEn: Record<keyof typeof storeApprovalsTr, string> = {
   'storeApprovals.title': 'Store approval requests stay inside the store workflow.',
   'storeApprovals.heroCopy':
     'The store manager prepares target distribution, seller code, and employee exit requests from one surface; decision and control steps flow to the right approval queue.',
+  'storeApprovals.ledgerEyebrow': 'Store workflow',
+  'storeApprovals.ledgerTitle': 'Requests / Approvals Ledger',
+  'storeApprovals.storeManagerSubtitle':
+    'Target distribution, seller code, and employee exit requests are managed in one store-side ledger.',
+  'storeApprovals.regionManagerSubtitle':
+    'The region view only shows target distribution approvals covered by the current authority.',
+  'storeApprovals.readOnlySubtitle':
+    'Store request records are shown in read-only scope for this user.',
+  'storeApprovals.ledgerScope': 'Ledger scope',
+  'storeApprovals.ledgerMetrics': 'Ledger summary metrics',
+  'storeApprovals.ledgerReturnedCorrections': 'Returned corrections',
+  'storeApprovals.targetQueueTitle': 'Target distribution records',
+  'storeApprovals.workforceQueueTitle': 'Personnel request records',
+  'storeApprovals.targetApprovalQueueTitle': 'Target approval records',
+  'storeApprovals.ledgerStatus': 'Record status',
+  'storeApprovals.targetApprovalEmptyTitle': 'No target request is waiting for approval',
+  'storeApprovals.targetApprovalEmptyCopy':
+    'New target distribution requests in the region scope will be listed here.',
+  'storeApprovals.approvalNote': 'Approval note',
+  'storeApprovals.approvalNotePlaceholder': 'Optional note for region approval',
+  'storeApprovals.approving': 'Approving...',
+  'storeApprovals.approveTargetRequest': 'Approve target request',
+  'storeApprovals.cannotApproveStore': 'No approval authority for this store',
+  'storeApprovals.submittedTargetLedgerTitle': 'Submitted target ledger',
   'storeApprovals.route': 'Route',
   'storeApprovals.actionStore': 'Action store',
   'storeApprovals.noActionStore': 'No action store',

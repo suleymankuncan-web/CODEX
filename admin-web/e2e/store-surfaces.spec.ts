@@ -511,7 +511,7 @@ test('store sidebar transitions across visible manager pages without requiring m
   await verifyStoreNavTransition(page, storeNav, {
     linkName: 'Talepler / Onaylar',
     path: '/store/approvals',
-    ready: page.getByRole('heading', { name: 'Hedef dağıtım talebi' }),
+    ready: page.getByRole('heading', { name: 'Talepler / Onaylar Ledger' }),
   })
   await verifyStoreNavTransition(page, storeNav, {
     linkName: 'Görevler',
@@ -1671,6 +1671,53 @@ test('store approvals page lets store managers submit seller code requests', asy
   expect(capturedPayload).not.toBeNull()
 })
 
+test('store approvals page keeps region manager ledger free of workforce queues', async ({ page }) => {
+  await page.unroute('**/api/auth/session')
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      json: {
+        ...authSessionFixture,
+        user: {
+          ...authSessionFixture.user,
+          roleCodes: ['REGION_MANAGER'],
+          actionScope: {
+            assignedStoreIds: [demoStoreId],
+          },
+          assignedStoreIds: [demoStoreId],
+        },
+      },
+    })
+  })
+
+  const workforceCalls: string[] = []
+  await page.unroute('**/api/workforce/seller-code-requests**')
+  await page.route('**/api/workforce/seller-code-requests**', async (route) => {
+    workforceCalls.push(route.request().url())
+    await route.fulfill({
+      status: 403,
+      json: { message: 'Region manager must not request seller-code queues here.' },
+    })
+  })
+  await page.unroute('**/api/workforce/offboarding-requests**')
+  await page.route('**/api/workforce/offboarding-requests**', async (route) => {
+    workforceCalls.push(route.request().url())
+    await route.fulfill({
+      status: 403,
+      json: { message: 'Region manager must not request offboarding queues here.' },
+    })
+  })
+
+  await page.goto('/store/approvals')
+
+  await expect(page.getByRole('heading', { name: 'Talepler / Onaylar Ledger' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'SM' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'BM' })).toHaveCount(0)
+  await expect(page.getByLabel('Satıcı kodu talebi formu')).toHaveCount(0)
+  await expect(page.getByLabel('Personel çıkış talebi formu')).toHaveCount(0)
+  await expect(page.getByLabel('İade edilen personel talepleri')).toHaveCount(0)
+  expect(workforceCalls).toEqual([])
+})
+
 test('store approvals page submits target distribution allocations with employee ids', async ({ page }) => {
   let capturedPayload: unknown = null
 
@@ -1741,7 +1788,8 @@ test('store approvals page submits target distribution allocations with employee
 
   const targetHeading = page.getByRole('heading', { name: 'Hedef dağıtım talebi' })
   await expect(targetHeading).toBeVisible()
-  const targetForm = targetHeading.locator('xpath=ancestor::article[1]')
+  await expect(page.getByRole('heading', { name: 'Talepler / Onaylar Ledger' })).toBeVisible()
+  const targetForm = page.getByLabel('Hedef dağıtım talebi formu')
   await expect(targetForm.getByText('Store Personnel')).toBeVisible()
   await targetForm.getByLabel('Talep ayı').fill('2026-04')
   await targetForm.getByLabel('Toplam hedef değeri').fill('100000')
@@ -1919,8 +1967,8 @@ test('store approvals page switches to English copy and persists locale', async 
   await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: /Store approval requests/i })).toBeVisible()
-  await expect(page.getByText('Returned requests')).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Requests \/ Approvals Ledger/i })).toBeVisible()
+  await expect(page.getByText('Returned corrections')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Target distribution request' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Seller code request' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Employee exit request' })).toBeVisible()
@@ -1928,8 +1976,7 @@ test('store approvals page switches to English copy and persists locale', async 
   await expect(page.getByLabel('Offboarding request form').getByLabel('Employee')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Submit seller code request' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Submit offboarding request' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Submitted requests' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Open region approval queue' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Submitted target ledger' })).toBeVisible()
   await expect(page.getByText('Mağaza onayları')).toHaveCount(0)
   await expect(page.getByText('Satıcı kodu talebi')).toHaveCount(0)
   await expect(page.locator('body')).not.toContainText('Ãƒ')
@@ -1939,7 +1986,7 @@ test('store approvals page switches to English copy and persists locale', async 
   await page.reload()
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: /Store approval requests/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Requests \/ Approvals Ledger/i })).toBeVisible()
 })
 
 test('language toggle localizes competition read labels and persists preference', async ({ page }) => {
