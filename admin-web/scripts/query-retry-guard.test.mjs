@@ -58,3 +58,23 @@ test('data surface queries do not disable transient retry handling', () => {
 
   assert.deepEqual(findings, [])
 })
+
+test('query client applies transient retry handling to every data surface by default', () => {
+  const source = readFileSync(join(appRoot, 'src/main.tsx'), 'utf8')
+
+  assert.match(
+    source,
+    /from '\.\/lib\/query-retry'/,
+    'main.tsx should import the shared transient query retry helpers',
+  )
+  assert.match(
+    source,
+    /\bretry\s*:\s*shouldRetryTransientQuery\b/,
+    'main.tsx should use the shared transient retry predicate as the query default',
+  )
+  assert.match(
+    source,
+    /\bretryDelay\s*:\s*transientQueryRetryDelay\b/,
+    'main.tsx should use the shared transient retry delay as the query default',
+  )
+})

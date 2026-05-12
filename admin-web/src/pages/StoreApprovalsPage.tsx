@@ -7,7 +7,6 @@ import {
   KeyValue,
   MetricAccent,
   MetricCard,
-  ScreenState,
   StatusPill,
 } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
@@ -306,25 +305,6 @@ export function StoreApprovalsPage(input: {
       item.reviewNote
         ? t('storeApprovals.returnedOffboardingLoadedWithNote', { note: item.reviewNote })
         : t('storeApprovals.returnedOffboardingLoaded'),
-    )
-  }
-
-  if (canListRequests && requestsQuery.isLoading && !requestsQuery.data) {
-    return (
-      <ScreenState
-        title={t('storeApprovals.loadingTitle')}
-        copy={t('storeApprovals.loadingCopy')}
-      />
-    )
-  }
-
-  if (canListRequests && requestsQuery.isError) {
-    return (
-      <ScreenState
-        title={t('storeApprovals.errorTitle')}
-        copy={getErrorMessage(requestsQuery.error)}
-        tone="error"
-      />
     )
   }
 
@@ -728,7 +708,15 @@ export function StoreApprovalsPage(input: {
         </article>
       </section>
 
-      <SubmittedTargetRequestsPanel locale={locale} requests={requests} t={t} />
+      <SubmittedTargetRequestsPanel
+        error={requestsQuery.error}
+        isError={requestsQuery.isError}
+        isLoading={requestsQuery.isLoading}
+        locale={locale}
+        onRetry={() => void requestsQuery.refetch()}
+        requests={requests}
+        t={t}
+      />
 
       <section className="two-up-grid">
         <article className="panel">
@@ -1559,7 +1547,11 @@ function OffboardingRequestForm(input: {
 }
 
 function SubmittedTargetRequestsPanel(input: {
+  error: unknown
+  isError: boolean
+  isLoading: boolean
   locale: AppLocale
+  onRetry: () => void
   requests: TargetDistributionRequest[]
   t: TranslateFunction
 }) {
@@ -1572,7 +1564,20 @@ function SubmittedTargetRequestsPanel(input: {
         </div>
       </div>
 
-      {input.requests.length === 0 ? (
+      {input.isLoading ? (
+        <EmptyState
+          title={input.t('storeApprovals.submittedLoadingTitle')}
+          copy={input.t('storeApprovals.submittedLoadingCopy')}
+        />
+      ) : input.isError ? (
+        <div className="empty-card">
+          <strong>{input.t('storeApprovals.submittedUnavailableTitle')}</strong>
+          <p>{getErrorMessage(input.error)}</p>
+          <button className="control-button" type="button" onClick={input.onRetry}>
+            {input.t('common.retryAction')}
+          </button>
+        </div>
+      ) : input.requests.length === 0 ? (
         <EmptyState
           title={input.t('storeApprovals.noSubmittedTitle')}
           copy={input.t('storeApprovals.noSubmittedCopy')}

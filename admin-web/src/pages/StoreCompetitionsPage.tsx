@@ -98,6 +98,15 @@ export function StoreCompetitionsPage(input: {
         title={t('storeCompetitions.errorTitle')}
         copy={getErrorMessage(competitionsQuery.error)}
         tone="error"
+        action={
+          <button
+            className="control-button"
+            type="button"
+            onClick={() => void competitionsQuery.refetch()}
+          >
+            {t('common.retryAction')}
+          </button>
+        }
       />
     )
   }

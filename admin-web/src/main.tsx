@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { ClerkSessionProvider } from './features/auth/clerk-session'
 import { LocalizationProvider } from './features/localization/LocalizationProvider'
 import { SessionProvider } from './features/session/session-context'
+import { shouldRetryTransientQuery, transientQueryRetryDelay } from './lib/query-retry'
 import './index.css'
 import App from './App.tsx'
 
@@ -12,6 +13,8 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
+      retry: shouldRetryTransientQuery,
+      retryDelay: transientQueryRetryDelay,
       staleTime: 60_000,
     },
   },

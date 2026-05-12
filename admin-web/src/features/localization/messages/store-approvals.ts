@@ -138,6 +138,9 @@ export const storeApprovalsTr = {
   'storeApprovals.submittedEyebrow': 'Gönderilen talepler',
   'storeApprovals.submittedTitle': 'Gönderilen talepler',
   'storeApprovals.submittedSubtitle': 'Mağaza yüzeyinden çıkan talepler',
+  'storeApprovals.submittedLoadingTitle': 'Gönderilen talepler yükleniyor',
+  'storeApprovals.submittedLoadingCopy': 'Mağazadan çıkmış hedef talepleri güncel durumuyla alınıyor.',
+  'storeApprovals.submittedUnavailableTitle': 'Gönderilen talep listesi alınamadı',
   'storeApprovals.noSubmittedTitle': 'Henüz gönderilen talep yok',
   'storeApprovals.noSubmittedCopy':
     'Mağaza hedef dağıtımını gönderdiğinde talep burada güncel onay durumu ile görünür.',
@@ -322,6 +325,9 @@ export const storeApprovalsEn: Record<keyof typeof storeApprovalsTr, string> = {
   'storeApprovals.submittedEyebrow': 'Submitted requests',
   'storeApprovals.submittedTitle': 'Submitted requests',
   'storeApprovals.submittedSubtitle': 'Requests that already left the store shell',
+  'storeApprovals.submittedLoadingTitle': 'Loading submitted requests',
+  'storeApprovals.submittedLoadingCopy': 'Fetching target requests already sent from the store shell.',
+  'storeApprovals.submittedUnavailableTitle': 'Submitted request list could not load',
   'storeApprovals.noSubmittedTitle': 'No requests submitted yet',
   'storeApprovals.noSubmittedCopy':
     'Once the store submits a target split, the request will appear here with its current approval state.',

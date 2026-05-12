@@ -13,6 +13,7 @@ export const commonTr = {
   'common.personCount': '{count} kişi',
   'common.storePopulation': '{count} mağaza popülasyonu',
   'common.personnelPopulation': '{count} personel popülasyonu',
+  'common.retryAction': 'Tekrar dene',
 } as const
 
 export const commonEn: Record<keyof typeof commonTr, string> = {
@@ -30,4 +31,5 @@ export const commonEn: Record<keyof typeof commonTr, string> = {
   'common.personCount': '{count} people',
   'common.storePopulation': '{count} store population',
   'common.personnelPopulation': '{count} personnel population',
+  'common.retryAction': 'Try again',
 }

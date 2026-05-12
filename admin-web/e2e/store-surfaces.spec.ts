@@ -1651,6 +1651,33 @@ test('store approvals page lets store managers submit seller code requests', asy
   expect(capturedPayload).not.toBeNull()
 })
 
+test('store approvals page keeps workforce forms available when submitted target requests fail', async ({ page }) => {
+  await page.unroute('**/api/target-distributions/requests**')
+  await page.route('**/api/target-distributions/requests**', async (route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({
+        status: 503,
+        json: { message: 'Target request list temporarily unavailable' },
+      })
+      return
+    }
+
+    await route.fulfill({
+      status: 403,
+      json: { message: 'Target distribution write route is not mocked in this surface test.' },
+    })
+  })
+
+  await page.goto('/store/approvals')
+
+  await expect(page.getByText('Mağaza onayları açılamadı')).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Hedef dağıtım talebi' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Satıcı kodu talebi' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Personel çıkış talebi' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Gönderilen talepler' })).toBeVisible()
+  await expect(page.getByText('Gönderilen talep listesi alınamadı')).toBeVisible()
+})
+
 test('store approvals page submits target distribution allocations with employee ids', async ({ page }) => {
   let capturedPayload: unknown = null
 
@@ -1920,6 +1947,58 @@ test('store approvals page switches to English copy and persists locale', async 
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: /Store approval requests/i })).toBeVisible()
+})
+
+test('store competitions page lets users retry when the competition list is unavailable', async ({
+  page,
+}) => {
+  let failList = true
+
+  await page.unroute('**/api/competitions**')
+  await page.route('**/api/competitions**', async (route) => {
+    const request = route.request()
+    const pathname = new URL(request.url()).pathname
+
+    if (request.method() === 'GET' && pathname.endsWith('/api/competitions')) {
+      if (failList) {
+        await route.fulfill({
+          status: 503,
+          json: { message: 'Competition list temporarily unavailable' },
+        })
+        return
+      }
+
+      await route.fulfill({
+        json: {
+          items: [competitionFixture],
+          meta: { count: 1, total: 1, limit: 50, offset: 0 },
+        },
+      })
+      return
+    }
+
+    if (
+      request.method() === 'GET' &&
+      pathname.endsWith(`/api/competitions/${competitionFixture.competitionId}`)
+    ) {
+      await route.fulfill({ json: competitionDetailFixture })
+      return
+    }
+
+    await route.fulfill({
+      status: 403,
+      json: { message: 'Store competition surface is read-only' },
+    })
+  })
+
+  await page.goto('/store/competitions')
+
+  await expect(page.getByRole('heading', { name: /Yarışma yüzeyi açılamadı/ })).toBeVisible()
+  failList = false
+  await page.getByRole('button', { name: 'Tekrar dene' }).click()
+  await expect(
+    page.getByRole('heading', { name: /Mağaza yarışmaları ve kapsamdaki katkı skorları/i }),
+  ).toBeVisible()
 })
 
 test('language toggle localizes competition read labels and persists preference', async ({ page }) => {
