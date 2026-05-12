@@ -51,3 +51,11 @@ test('Clerk bridge owns the provider hydration lifecycle', () => {
     'Clerk must release provider hydration after token sync finishes',
   )
 })
+
+test('Clerk bridge clears stale bearer session when token refresh fails', () => {
+  assert.match(
+    clerkSession,
+    /catch \{[\s\S]*?lastTokenRef\.current = null[\s\S]*?clearToBearerMode\(\)/,
+    'Clerk token refresh failures must clear the bearer session instead of leaving a stale token active',
+  )
+})
