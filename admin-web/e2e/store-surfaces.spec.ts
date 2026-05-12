@@ -1653,6 +1653,7 @@ test('store approvals page lets store managers submit seller code requests', asy
   })
 
   await page.goto('/store/approvals')
+  await page.getByRole('button', { name: 'Satıcı kodu talebi aç' }).click()
 
   const sellerCodeForm = page.getByLabel('Satıcı kodu talebi formu')
   await expect(sellerCodeForm.getByRole('heading', { name: 'Satıcı kodu talebi' })).toBeVisible()
@@ -1723,6 +1724,8 @@ test('store approvals page renders the approved ledger table chrome', async ({ p
 
   const ledger = page.getByRole('table', { name: 'Talep ve onay kayıtları' })
   await expect(ledger).toBeVisible()
+  await expect(page.locator('.store-approvals-ledger-grid')).toHaveCount(0)
+  await expect(page.getByLabel('Satıcı kodu talebi formu')).toHaveCount(0)
   await expect(ledger.getByText('Tip', { exact: true })).toBeVisible()
   await expect(ledger.getByText('Kayıt', { exact: true })).toBeVisible()
   await expect(ledger.getByText('Kapsam', { exact: true })).toBeVisible()
@@ -1800,6 +1803,7 @@ test('store approvals page submits target distribution allocations with employee
   })
 
   await page.goto('/store/approvals')
+  await page.getByRole('button', { name: 'Hedef talebi aç' }).click()
 
   const targetHeading = page.getByRole('heading', { name: 'Hedef dağıtım talebi' })
   await expect(targetHeading).toBeVisible()
@@ -1843,6 +1847,7 @@ test('store approvals page lets store managers submit offboarding requests', asy
   })
 
   await page.goto('/store/approvals')
+  await page.getByRole('button', { name: 'Personel çıkış talebi aç' }).click()
 
   const offboardingForm = page.getByLabel('Personel çıkış talebi formu')
   await expect(offboardingForm.getByRole('heading', { name: 'Personel çıkış talebi' })).toBeVisible()
@@ -1949,6 +1954,7 @@ test('store approvals page lets store managers edit and resubmit returned workfo
   })
 
   await page.goto('/store/approvals')
+  await page.getByRole('button', { name: 'İade kayıtlarını aç' }).click()
 
   const returnedPanel = page.getByLabel('İade edilen personel talepleri')
   await expect(returnedPanel.getByText('TC numarasi tekrar kontrol edilmeli')).toBeVisible()
@@ -1964,6 +1970,7 @@ test('store approvals page lets store managers edit and resubmit returned workfo
   await sellerCodeForm.getByRole('button', { name: 'Satıcı kodu talebini yeniden gönder' }).click()
   await expect(page.getByText('Seller code request resubmitted for HR approval')).toBeVisible()
 
+  await page.getByRole('button', { name: 'İade kayıtlarını aç' }).click()
   await returnedPanel.getByRole('button', { name: 'Personel çıkış talebini düzenle' }).click()
   const offboardingForm = page.getByLabel('Personel çıkış talebi formu')
   await offboardingForm.getByLabel('Çıkış tarihi').fill('2026-05-12')
@@ -1984,13 +1991,18 @@ test('store approvals page switches to English copy and persists locale', async 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: /Requests \/ Approvals Ledger/i })).toBeVisible()
   await expect(page.getByText('Returned corrections')).toBeVisible()
+  await expect(page.getByLabel('Seller code request form')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Open target request' }).click()
   await expect(page.getByRole('heading', { name: 'Target distribution request' })).toBeVisible()
+  await page.getByRole('button', { name: 'Open seller code request' }).click()
   await expect(page.getByRole('heading', { name: 'Seller code request' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Employee exit request' })).toBeVisible()
   await expect(page.getByLabel('Seller code request form').getByLabel('First name')).toBeVisible()
-  await expect(page.getByLabel('Offboarding request form').getByLabel('Employee')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Submit seller code request' })).toBeVisible()
+  await page.getByRole('button', { name: 'Open employee exit request' }).click()
+  await expect(page.getByRole('heading', { name: 'Employee exit request' })).toBeVisible()
+  await expect(page.getByLabel('Offboarding request form').getByLabel('Employee')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Submit offboarding request' })).toBeVisible()
+  await page.getByRole('button', { name: 'Open submitted targets' }).click()
   await expect(page.getByRole('heading', { name: 'Submitted target ledger' })).toBeVisible()
   await expect(page.getByText('Mağaza onayları')).toHaveCount(0)
   await expect(page.getByText('Satıcı kodu talebi')).toHaveCount(0)
