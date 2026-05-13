@@ -273,6 +273,46 @@ test('bearer session refetches when the token identity changes in the same tab',
   await expect(page.getByText('Bu rol için rota kullanılamaz')).toBeVisible()
 })
 
+test('bearer session keeps a near-expiry token usable while refresh is attempted', async ({ page }) => {
+  const nearExpiryToken = buildJwt('admin-user', 20)
+  await page.addInitScript((token) => {
+    window.localStorage.setItem(
+      'store-ops-admin-session',
+      JSON.stringify({
+        mode: 'bearer',
+        mockUserId: 'unused-mock-user',
+        mockRoleCodes: 'SUPER_ADMIN',
+        mockCompanyIds: '00000000-0000-0000-0000-000000000001',
+        bearerToken: '',
+      }),
+    )
+    window.sessionStorage.setItem('store-ops-admin-bearer-token', token)
+  }, nearExpiryToken)
+  await routeOidcBootstrap(page)
+  const authSessionRequests: string[] = []
+  await page.route('**/api/auth/session', async (route) => {
+    const authorization = route.request().headers().authorization ?? ''
+    authSessionRequests.push(authorization)
+
+    if (!authorization.includes(nearExpiryToken)) {
+      await route.fulfill({
+        status: 401,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: 'Missing near-expiry bearer token' }),
+      })
+      return
+    }
+
+    await route.fulfill({ json: superAdminSession })
+  })
+
+  await page.goto('/admin/session')
+
+  await expect(page).toHaveURL(/\/admin\/session$/)
+  await expect(page.locator('.admin-command-identity').getByText('admin-user')).toBeVisible()
+  expect(authSessionRequests.some((authorization) => authorization.includes(nearExpiryToken))).toBe(true)
+})
+
 test('auth login ignores protocol-relative return targets for ready sessions', async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem(
@@ -407,12 +447,12 @@ async function routeOidcBootstrap(page: Page) {
   })
 }
 
-function buildJwt(sub: string) {
+function buildJwt(sub: string, expiresInSeconds = 60 * 60) {
   const header = base64Url(JSON.stringify({ alg: 'none', typ: 'JWT' }))
   const payload = base64Url(
     JSON.stringify({
       sub,
-      exp: Math.floor(Date.now() / 1000) + 60 * 60,
+      exp: Math.floor(Date.now() / 1000) + expiresInSeconds,
       iat: Math.floor(Date.now() / 1000),
     }),
   )

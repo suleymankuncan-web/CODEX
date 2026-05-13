@@ -16,7 +16,7 @@ export type SessionState = {
 const SESSION_STORAGE_KEY = 'store-ops-admin-session'
 const BEARER_TOKEN_STORAGE_KEY = 'store-ops-admin-bearer-token'
 const PROVIDER_ID_TOKEN_STORAGE_KEY = 'store-ops-admin-provider-id-token'
-const TOKEN_EXPIRY_SKEW_SECONDS = 30
+const TOKEN_REFRESH_SKEW_SECONDS = 30
 
 export const defaultSession: SessionState = {
   mode: resolveSessionMode(import.meta.env.VITE_AUTH_MODE),
@@ -164,6 +164,10 @@ export function getBearerSessionCacheKey(token: string) {
     .join('|')
 }
 
+export function isBearerTokenExpiringSoon(token: string) {
+  return isJwtExpired(token, TOKEN_REFRESH_SKEW_SECONDS)
+}
+
 export function persistClientSession(session: SessionState) {
   if (typeof window === 'undefined') {
     return
@@ -207,7 +211,7 @@ function resolveSessionMode(input: unknown): SessionMode {
   return input === 'bearer' ? 'bearer' : 'mock'
 }
 
-function isJwtExpired(token: string) {
+function isJwtExpired(token: string, skewSeconds = 0) {
   const normalized = token.trim()
   if (!normalized) {
     return false
@@ -218,7 +222,7 @@ function isJwtExpired(token: string) {
     return false
   }
 
-  return payload.exp <= Math.floor(Date.now() / 1000) + TOKEN_EXPIRY_SKEW_SECONDS
+  return payload.exp <= Math.floor(Date.now() / 1000) + skewSeconds
 }
 
 function readJwtPayload(token: string) {
