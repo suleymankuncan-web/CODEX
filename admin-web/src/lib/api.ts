@@ -1,6 +1,7 @@
 import {
   buildSessionHeaders,
   clearClientBearerSession,
+  isBearerTokenExpiringSoon,
   readClientSession,
   writeClientBearerSession,
 } from '../features/session/session-storage'
@@ -11,9 +12,10 @@ const STAGING_HOST_API_BASE_URL = 'https://api-staging.hr-axis.com/api'
 const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || DEFAULT_API_BASE_URL
 
 type JsonMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
-type BearerTokenRefreshHandler = () => Promise<string | null>
+type BearerTokenRefreshHandler = (input?: { skipCache?: boolean }) => Promise<string | null>
 
 let bearerTokenRefreshHandler: BearerTokenRefreshHandler | null = null
+let bearerTokenRefreshPromise: Promise<string | null> | null = null
 
 export class ApiError extends Error {
   status: number
@@ -54,7 +56,7 @@ async function requestJson<T>(path: string, input?: { method?: JsonMethod; body?
   })
 
   if (response.status === 401 && prepared.session.mode === 'bearer') {
-    const retryHeaders = await prepareRefreshedHeaders(input?.body !== undefined)
+    const retryHeaders = await prepareRefreshedHeaders(input?.body !== undefined, { skipCache: true })
     if (retryHeaders) {
       response = await fetch(`${resolveApiBaseUrl()}${path}`, {
         method: input?.method ?? 'GET',
@@ -87,7 +89,7 @@ async function requestFormData<T>(
   })
 
   if (response.status === 401 && prepared.session.mode === 'bearer') {
-    const retryHeaders = await prepareRefreshedHeaders(false)
+    const retryHeaders = await prepareRefreshedHeaders(false, { skipCache: true })
     if (retryHeaders) {
       response = await fetch(`${resolveApiBaseUrl()}${path}`, {
         method: input.method,
@@ -144,11 +146,15 @@ async function prepareHeaders(hasJsonBody: boolean) {
   const session = readClientSession()
   const headers = buildRequestHeaders(session, hasJsonBody)
 
-  if (session.mode !== 'bearer' || headers.Authorization) {
+  if (session.mode !== 'bearer') {
     return { session, headers }
   }
 
-  const refreshedHeaders = await prepareRefreshedHeaders(hasJsonBody)
+  if (headers.Authorization && !isBearerTokenExpiringSoon(session.bearerToken)) {
+    return { session, headers }
+  }
+
+  const refreshedHeaders = await prepareRefreshedHeaders(hasJsonBody, { skipCache: true })
   if (!refreshedHeaders) {
     return { session, headers }
   }
@@ -172,8 +178,8 @@ function buildRequestHeaders(session: SessionState, hasJsonBody: boolean) {
   return headers
 }
 
-async function prepareRefreshedHeaders(hasJsonBody: boolean) {
-  const refreshedToken = await refreshBearerToken()
+async function prepareRefreshedHeaders(hasJsonBody: boolean, input?: { skipCache?: boolean }) {
+  const refreshedToken = await refreshBearerToken(input)
   if (!refreshedToken) {
     return null
   }
@@ -183,18 +189,34 @@ async function prepareRefreshedHeaders(hasJsonBody: boolean) {
   return headers.Authorization ? headers : null
 }
 
-async function refreshBearerToken() {
+async function refreshBearerToken(input?: { skipCache?: boolean }) {
   if (!bearerTokenRefreshHandler) {
     return null
   }
 
+  if (!bearerTokenRefreshPromise) {
+    bearerTokenRefreshPromise = bearerTokenRefreshHandler({ skipCache: Boolean(input?.skipCache) })
+      .then((result) => {
+        const token = result?.trim() ?? ''
+        if (!token) {
+          return null
+        }
+
+        writeClientBearerSession(token)
+        return token
+      })
+      .catch(() => null)
+      .finally(() => {
+        bearerTokenRefreshPromise = null
+      })
+  }
+
   try {
-    const token = (await bearerTokenRefreshHandler())?.trim() ?? ''
+    const token = await bearerTokenRefreshPromise
     if (!token) {
       return null
     }
 
-    writeClientBearerSession(token)
     return token
   } catch {
     return null

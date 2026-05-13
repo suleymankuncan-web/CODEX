@@ -190,6 +190,48 @@ test('admin store master edits keep row-local pending state and latest values', 
   })
 })
 
+test('admin store master update keeps near-expiry bearer tokens on action requests', async ({ page }) => {
+  const nearExpiryToken = buildJwt('admin-user', 20)
+  await page.addInitScript((token) => {
+    window.localStorage.setItem(
+      'store-ops-admin-session',
+      JSON.stringify({
+        mode: 'bearer',
+        mockUserId: 'unused-mock-user',
+        mockRoleCodes: 'SUPER_ADMIN',
+        mockCompanyIds: '00000000-0000-0000-0000-000000000001',
+        bearerToken: '',
+      }),
+    )
+    window.sessionStorage.setItem('store-ops-admin-bearer-token', token)
+  }, nearExpiryToken)
+  await page.unroute('**/api/auth/session')
+  await page.route('**/api/auth/session', async (route) => {
+    const authorization = route.request().headers().authorization ?? ''
+    await route.fulfill({
+      status: authorization.includes(nearExpiryToken) ? 200 : 401,
+      contentType: 'application/json',
+      body: JSON.stringify(
+        authorization.includes(nearExpiryToken)
+          ? { ...authSessionFixture, authMode: 'jwt' }
+          : { message: 'Missing near-expiry bearer token' },
+      ),
+    })
+  })
+  await page.unroute(STORE_MASTER_ROUTE)
+  const patchAuthorizations: string[] = []
+  await routeStoreMasterApi(page, {
+    onPatchAuthorization: (authorization) => patchAuthorizations.push(authorization),
+  })
+
+  await page.goto('/admin/integrations')
+  await page.getByLabel('Mağaza ana verisi').getByRole('combobox', { name: 'Marmara Park mağaza tipi' }).selectOption('franchise')
+
+  await expect(page).toHaveURL(/\/admin\/integrations$/)
+  await expect(page.getByText('Store master data updated')).toBeVisible()
+  expect(patchAuthorizations.some((authorization) => authorization.includes(nearExpiryToken))).toBe(true)
+})
+
 test('admin integrations page switches chrome to English copy and persists locale', async ({ page }) => {
   await page.goto('/admin/integrations')
 
@@ -390,6 +432,7 @@ async function routeStoreMasterApi(
   options: {
     delayFirstPatch?: () => Promise<void>
     onPatch?: (body: Record<string, unknown>) => void
+    onPatchAuthorization?: (authorization: string) => void
   } = {},
 ) {
   let patchCount = 0
@@ -400,6 +443,7 @@ async function routeStoreMasterApi(
       patchCount += 1
       const body = route.request().postDataJSON() as Record<string, unknown>
       options.onPatch?.(body)
+      options.onPatchAuthorization?.(route.request().headers().authorization ?? '')
 
       const storeId = new URL(route.request().url()).pathname.split('/').at(-1) ?? ''
       const currentStore = storeMasterItems.find((item) => item.storeId === storeId) ?? storeMasterItems[0]
@@ -447,6 +491,27 @@ async function routeStoreMasterApi(
       },
     })
   })
+}
+
+function buildJwt(sub: string, expiresInSeconds = 60 * 60) {
+  const header = base64Url(JSON.stringify({ alg: 'none', typ: 'JWT' }))
+  const payload = base64Url(
+    JSON.stringify({
+      sub,
+      exp: Math.floor(Date.now() / 1000) + expiresInSeconds,
+      iat: Math.floor(Date.now() / 1000),
+    }),
+  )
+
+  return `${header}.${payload}.signature`
+}
+
+function base64Url(value: string) {
+  return Buffer.from(value, 'utf8')
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/g, '')
 }
 
 const authSessionFixture = {

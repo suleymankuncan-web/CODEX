@@ -5,7 +5,7 @@ import {
   UserButton,
   useAuth,
 } from '@clerk/react'
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, type ReactNode } from 'react'
 import { ScreenState, StatusPill } from '../../components/dashboard-primitives'
 import { registerBearerTokenRefreshHandler } from '../../lib/api'
 import { readStoredAppLocale } from '../../lib/i18n'
@@ -113,6 +113,17 @@ function ClerkSessionBridge() {
   const { getToken, isLoaded, isSignedIn } = useAuth()
   const lastTokenRef = useRef<string | null>(null)
   const template = (import.meta.env.VITE_CLERK_JWT_TEMPLATE ?? '').trim() || undefined
+  const getClerkToken = useCallback((input?: { skipCache?: boolean }) => {
+    const options: { template?: string; skipCache?: boolean } = {}
+    if (template) {
+      options.template = template
+    }
+    if (input?.skipCache) {
+      options.skipCache = true
+    }
+
+    return getToken(Object.keys(options).length > 0 ? options : undefined)
+  }, [getToken, template])
 
   useEffect(() => {
     if (!isLoaded) {
@@ -137,8 +148,8 @@ function ClerkSessionBridge() {
       return
     }
 
-    return registerBearerTokenRefreshHandler(async () => {
-      const token = await getToken(template ? { template } : undefined)
+    return registerBearerTokenRefreshHandler(async (input) => {
+      const token = await getClerkToken({ skipCache: input?.skipCache })
       if (!token) {
         return null
       }
@@ -147,7 +158,7 @@ function ClerkSessionBridge() {
       startBearerSession(token)
       return token
     })
-  }, [getToken, isLoaded, isSignedIn, startBearerSession, template])
+  }, [getToken, getClerkToken, isLoaded, isSignedIn, startBearerSession])
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn) {
@@ -159,7 +170,7 @@ function ClerkSessionBridge() {
 
     const syncToken = async () => {
       try {
-        const token = await getToken(template ? { template } : undefined)
+        const token = await getClerkToken()
 
         if (cancelled || !token || token === lastTokenRef.current) {
           return
@@ -190,12 +201,11 @@ function ClerkSessionBridge() {
     }
   }, [
     clearToBearerMode,
-    getToken,
+    getClerkToken,
     isLoaded,
     isSignedIn,
     setProviderSessionHydrating,
     startBearerSession,
-    template,
   ])
 
   return null
