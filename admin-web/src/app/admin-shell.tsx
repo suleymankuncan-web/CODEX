@@ -1,12 +1,9 @@
-import { Suspense, type ReactNode } from 'react'
+import { Suspense, useState, type ReactNode } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
-import { KeyRound, ShieldCheck } from 'lucide-react'
-import { KeyValue, StatusPill } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
-import { formatDisplayRoles } from '../features/auth/display'
 import { useLocalization } from '../features/localization/useLocalization'
 import type { SessionMode } from '../features/session/session-storage'
-import { NavItem } from './admin-nav-item'
+import { AdminSidebar } from './admin-sidebar'
 import type { NavDefinition } from './admin-navigation'
 import {
   AdminChecklistTemplatesPage,
@@ -36,12 +33,7 @@ import {
 import { AdminRouteGuard, RouteLoadingState, SessionGate } from './route-states'
 import { RouteRecoveryBoundary } from './route-recovery-boundary'
 import { RouteTransitionFrame } from './route-transition-frame'
-import {
-  formatAdminShellAuthState,
-  formatAdminShellSessionMode,
-  formatAdminShellState,
-  type ShellState,
-} from './shell-state'
+import type { ShellState } from './shell-state'
 
 export function AdminShell(input: {
   sessionMode: SessionMode
@@ -53,14 +45,7 @@ export function AdminShell(input: {
   authError: boolean
 }) {
   const { t } = useLocalization()
-  const roleSummary = formatDisplayRoles(input.authSummary?.user.roleCodes, t('adminShell.noResolvedRoles'))
-  const scopeSummary = input.authSummary
-    ? t('adminShell.scopeSummary', {
-        companyCount: input.authSummary.scopeSummary.companyCount,
-        regionCount: input.authSummary.scopeSummary.regionCount,
-        storeCount: input.authSummary.scopeSummary.storeCount,
-      })
-    : t('adminShell.scopePending')
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const adminRoute = (roles: string[], element: ReactNode) => (
     <AdminRouteGuard
       shellState={input.shellState}
@@ -72,77 +57,15 @@ export function AdminShell(input: {
   )
 
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <div className="brand-block">
-          <div className="brand-kicker">{t('adminShell.brandKicker')}</div>
-          <h1>{t('adminShell.brandTitle')}</h1>
-          <p>{t('adminShell.brandCopy')}</p>
-        </div>
+    <div className={`admin-command-app${isSidebarCollapsed ? ' admin-command-app-collapsed' : ''}`}>
+      <AdminSidebar
+        allowedAdminNav={input.allowedAdminNav}
+        authSummary={input.authSummary}
+        collapsed={isSidebarCollapsed}
+        onCollapsedChange={setIsSidebarCollapsed}
+      />
 
-        <nav className="nav-stack" aria-label={t('adminShell.primaryNavigation')}>
-          {input.allowedAdminNav.map((item) => (
-            <NavItem key={item.to} to={item.to} icon={item.icon} label={t(item.labelKey)} />
-          ))}
-          <NavItem to="/store" icon={KeyRound} label={t('adminShell.nav.storePreview')} />
-          <NavItem to="/auth/login" icon={ShieldCheck} label={t('adminShell.nav.realLogin')} />
-        </nav>
-
-        <div className="sidebar-note">
-          <span>{t('adminShell.phaseLabel')}</span>
-          <p>{t('adminShell.phaseCopy')}</p>
-        </div>
-      </aside>
-
-      <main className="main-panel">
-        <header className="topbar">
-          <div>
-            <div className="eyebrow">{t('adminShell.topbarEyebrow')}</div>
-            <p className="topbar-copy">{t('adminShell.topbarCopy')}</p>
-          </div>
-          <div className="topbar-cluster">
-            <div className={`env-chip${input.shellState.mode === 'setup-required' ? ' env-chip-warning' : ''}`}>
-              {t('adminShell.sessionLabel')}: {formatAdminShellSessionMode(input.sessionMode, t)}{' '}
-              {input.shellState.mode === 'setup-required' ? t('adminShell.needsSetup') : t('adminShell.configured')}
-            </div>
-            <div className={`env-chip${input.authError ? ' env-chip-warning' : ''}`}>
-              {t('adminShell.authBootstrapLabel')}: {formatAdminShellAuthState(input.authLoading, input.authError, Boolean(input.authSummary), t)}
-            </div>
-            <div className="env-chip">
-              {t('adminShell.landingLabel')}: <code>{input.firstAllowedPath}</code>
-            </div>
-            {input.authSummary ? (
-              <div className="env-chip">
-                {t('adminShell.userLabel')}: <code>{input.authSummary.user.userId}</code>
-              </div>
-            ) : null}
-          </div>
-        </header>
-
-        <section className="panel shell-context-panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">{t('adminShell.landingContextEyebrow')}</div>
-              <h3>{t('adminShell.landingContextTitle')}</h3>
-            </div>
-            <StatusPill tone={input.shellState.mode === 'ready' ? 'calm' : input.shellState.mode === 'verifying' ? 'warning' : 'danger'}>
-              {formatAdminShellState(input.shellState.mode, t)}
-            </StatusPill>
-          </div>
-          <div className="key-grid">
-            <KeyValue label={t('adminShell.recommendedLanding')} value={input.firstAllowedPath} />
-            <KeyValue label={t('adminShell.resolvedRoles')} value={roleSummary} />
-            <KeyValue label={t('adminShell.resolvedScope')} value={scopeSummary} />
-            <KeyValue
-              label={t('adminShell.failureHandling')}
-              value={input.sessionMode === 'bearer' ? t('adminShell.failureHandlingBearer') : t('adminShell.failureHandlingMock')}
-            />
-          </div>
-          {input.shellState.notice ? (
-            <div className="shell-notice shell-notice-warning">{input.shellState.notice}</div>
-          ) : null}
-        </section>
-
+      <main className="admin-command-main" aria-label={t('adminShell.adminWorkspaceAria')}>
         <RouteTransitionFrame>
           <RouteRecoveryBoundary firstAllowedPath={input.firstAllowedPath}>
             <Suspense fallback={<RouteLoadingState />}>
