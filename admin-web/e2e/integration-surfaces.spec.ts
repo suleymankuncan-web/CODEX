@@ -123,23 +123,26 @@ test('admin import batch detail explains KPI row lineage evidence', async ({ pag
   await expect(page.getByText('Parti detayı açılamadı')).toHaveCount(0)
 })
 
-test('admin dashboard manages store master data import controls', async ({ page }) => {
+test('admin integrations keeps store master controls in the master data surface', async ({ page }) => {
   await page.goto('/admin/integrations')
-  await page.getByRole('button', { name: 'Mağaza kapsamı' }).click()
 
-  const scopePanel = page.getByLabel('Mağaza kapsamı sekmesi')
-  await expect(scopePanel.getByRole('heading', { name: 'Bölge müdürü bazlı mağaza yönetimi' })).toBeVisible()
-  await expect(scopePanel.getByText('Marmara Park')).toBeVisible()
-  await expect(scopePanel.getByText('MP001')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Entegrasyon yönetim paneli' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Mağaza kapsamı' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Aktarımlar' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Kanıtlar' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Hatalar' })).toBeVisible()
 
-  const scopeToggle = scopePanel.getByRole('checkbox', { name: 'Marmara Park KPI import aktif' })
-  await expect(scopeToggle).toBeChecked()
-  await scopePanel.getByRole('combobox', { name: 'Marmara Park mağaza tipi' }).selectOption('franchise')
+  await page.goto('/admin/master-data')
+  await page.getByRole('button', { name: 'Mağazalar' }).click()
 
-  await expect(page.getByText('Store master data updated')).toBeVisible()
+  const storePanel = page.getByLabel('Mağaza ana veri sekmesi')
+  await expect(storePanel.getByRole('heading', { name: 'Mağaza ana veri düzenleme' })).toBeVisible()
+  await expect(storePanel.getByText('Marmara Park')).toBeVisible()
+  await expect(storePanel.getByText('MP001')).toBeVisible()
+  await expect(storePanel.getByRole('checkbox', { name: 'Marmara Park KPI import kapsamı' })).toBeChecked()
 })
 
-test('admin store master edits keep row-local pending state and latest values', async ({ page }) => {
+test('admin store master edits bulk save from master data and keep latest values', async ({ page }) => {
   await page.unroute(STORE_MASTER_ROUTE)
   const patchBodies: Array<Record<string, unknown>> = []
   let releaseFirstPatch: () => void = () => undefined
@@ -152,17 +155,19 @@ test('admin store master edits keep row-local pending state and latest values', 
     onPatch: (body) => patchBodies.push(body),
   })
 
-  await page.goto('/admin/integrations')
-  await page.getByRole('button', { name: 'Mağaza kapsamı' }).click()
+  await page.goto('/admin/master-data')
+  await page.getByRole('button', { name: 'Mağazalar' }).click()
 
-  const scopePanel = page.getByLabel('Mağaza kapsamı sekmesi')
-  const marmaraType = scopePanel.getByRole('combobox', { name: 'Marmara Park mağaza tipi' })
-  const garajToggle = scopePanel.getByRole('checkbox', { name: 'Garaj Outlet KPI import aktif' })
+  const storePanel = page.getByLabel('Mağaza ana veri sekmesi')
+  const marmaraType = storePanel.getByRole('combobox', { name: 'Marmara Park mağaza tipi' })
+  const garajToggle = storePanel.getByRole('checkbox', { name: 'Garaj Outlet KPI import kapsamı' })
 
   await marmaraType.selectOption('franchise')
   await expect(marmaraType).toHaveValue('franchise')
   await expect(garajToggle).toBeEnabled()
   await garajToggle.check()
+  await expect(storePanel.getByText('2 değişiklik bekliyor')).toBeVisible()
+  await storePanel.getByRole('button', { name: 'Değişiklikleri kaydet' }).click()
 
   expect(patchBodies).toHaveLength(2)
   expect(patchBodies[0]).toMatchObject({
@@ -179,11 +184,14 @@ test('admin store master edits keep row-local pending state and latest values', 
   })
 
   releaseFirstPatch()
-  await expect(page.getByText('Store master data updated')).toBeVisible()
+  await expect(page.getByText('2 değişiklik kaydedildi.')).toBeVisible()
   await expect(marmaraType).toHaveValue('franchise')
 
-  const marmaraToggle = scopePanel.getByRole('checkbox', { name: 'Marmara Park KPI import aktif' })
+  const marmaraToggle = storePanel.getByRole('checkbox', { name: 'Marmara Park KPI import kapsamı' })
   await marmaraToggle.uncheck()
+  await expect(storePanel.getByText('1 değişiklik bekliyor')).toBeVisible()
+  await storePanel.getByRole('button', { name: 'Değişiklikleri kaydet' }).click()
+  await expect(page.getByText('1 değişiklik kaydedildi.')).toBeVisible()
   expect(patchBodies[patchBodies.length - 1]).toMatchObject({
     storeType: 'franchise',
     regionId: '22222222-2222-4222-8222-222222222222',
@@ -226,23 +234,25 @@ test('admin store master update keeps near-expiry bearer tokens on action reques
     onPatchAuthorization: (authorization) => patchAuthorizations.push(authorization),
   })
 
-  await page.goto('/admin/integrations')
-  await page.getByRole('button', { name: 'Mağaza kapsamı' }).click()
-  await page.getByLabel('Mağaza kapsamı sekmesi').getByRole('combobox', { name: 'Marmara Park mağaza tipi' }).selectOption('franchise')
+  await page.goto('/admin/master-data')
+  await page.getByRole('button', { name: 'Mağazalar' }).click()
+  const storePanel = page.getByLabel('Mağaza ana veri sekmesi')
+  await storePanel.getByRole('combobox', { name: 'Marmara Park mağaza tipi' }).selectOption('franchise')
+  await storePanel.getByRole('button', { name: 'Değişiklikleri kaydet' }).click()
 
-  await expect(page).toHaveURL(/\/admin\/integrations$/)
-  await expect(page.getByText('Store master data updated')).toBeVisible()
+  await expect(page).toHaveURL(/\/admin\/master-data$/)
+  await expect(page.getByText('1 değişiklik kaydedildi.')).toBeVisible()
   expect(patchAuthorizations.some((authorization) => authorization.includes(nearExpiryToken))).toBe(true)
 })
 
 test('admin integrations page switches chrome to English copy and persists locale', async ({ page }) => {
   await page.goto('/admin/integrations')
 
-  await expect(page.getByRole('heading', { name: 'Şirket veri yönetimi' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Entegrasyon yönetim paneli' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Aktarımlar' })).toBeVisible()
   await page.getByRole('button', { name: 'Hatalar' }).click()
   await expect(page.getByRole('heading', { name: 'İncelenecek hata kayıtları' })).toBeVisible()
-  await expect(page.getByText('Company data management')).toHaveCount(0)
+  await expect(page.getByText('Integration control panel')).toHaveCount(0)
   await expect(page.locator('body')).not.toContainText('Ã')
   await expect(page.locator('body')).not.toContainText('Ä')
   await expect(page.locator('body')).not.toContainText('Å')
@@ -250,16 +260,16 @@ test('admin integrations page switches chrome to English copy and persists local
   await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByText('Company data management')).toBeVisible()
+  await expect(page.getByText('Integration control panel')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Uploads' })).toBeVisible()
   await page.getByRole('button', { name: 'Issues' }).click()
   await expect(page.getByRole('heading', { name: 'Issue records to review' })).toBeVisible()
-  await expect(page.getByText('Şirket veri yönetimi')).toHaveCount(0)
+  await expect(page.getByText('Entegrasyon yönetim paneli')).toHaveCount(0)
 
   await page.reload()
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByText('Company data management')).toBeVisible()
+  await expect(page.getByText('Integration control panel')).toBeVisible()
 })
 
 test('admin dashboard exposes Power BI period controls', async ({ page }) => {

@@ -24,29 +24,17 @@ import {
   getIntegrationLookups,
   getNeedsAction,
   getImportPayloadTemplate,
-  getStoreMasterData,
-  getStoreMasterLookups,
   retryImportBatch,
-  updateStoreMasterData,
   uploadPowerBiExport,
 } from '../features/integrations/api'
-import type { ListResponse, StoreMasterItem } from '../features/integrations/api'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import { formatState, getErrorMessage, mapHealthTone } from '../lib/format'
 
 const PAGE_SIZE = 12
 
-type IntegrationTab = 'uploads' | 'scope' | 'evidence' | 'errors'
+type IntegrationTab = 'uploads' | 'evidence' | 'errors'
 type PowerBiPeriodType = 'daily' | 'monthly' | 'custom'
-type StoreMasterType = 'company' | 'franchise' | 'operator'
-type StoreMasterStatus = 'active' | 'inactive' | 'closed'
-type StoreMasterPatch = {
-  storeType?: StoreMasterType
-  regionId?: string
-  status?: StoreMasterStatus
-  kpiImportEnabled?: boolean
-}
 
 function getCurrentIsoDate() {
   return new Date().toISOString().slice(0, 10)
@@ -54,22 +42,6 @@ function getCurrentIsoDate() {
 
 function getCurrentIsoMonth() {
   return getCurrentIsoDate().slice(0, 7)
-}
-
-function normalizeStoreType(value: string): StoreMasterType {
-  if (value === 'franchise' || value === 'operator') {
-    return value
-  }
-
-  return 'company'
-}
-
-function normalizeStoreStatus(value: string): StoreMasterStatus {
-  if (value === 'inactive' || value === 'closed') {
-    return value
-  }
-
-  return 'active'
 }
 
 function formatNumber(value: number) {
@@ -101,14 +73,7 @@ export function IntegrationDashboardPage() {
   const [powerBiPeriodEnd, setPowerBiPeriodEnd] = useState(getCurrentIsoDate)
   const [personnelFile, setPersonnelFile] = useState<File | null>(null)
   const [storeFile, setStoreFile] = useState<File | null>(null)
-  const [storeMasterSearch, setStoreMasterSearch] = useState('')
-  const [storeMasterEnabledFilter, setStoreMasterEnabledFilter] = useState<'all' | 'enabled' | 'disabled'>('all')
-  const [storeMasterStatusFilter, setStoreMasterStatusFilter] = useState<'all' | StoreMasterStatus>('all')
-  const [storeMasterFeedback, setStoreMasterFeedback] = useState<string | null>(null)
-  const [storeMasterDrafts, setStoreMasterDrafts] = useState<Record<string, StoreMasterPatch>>({})
-  const [savingStoreMasterIds, setSavingStoreMasterIds] = useState<ReadonlySet<string>>(() => new Set())
   const deferredSearch = useDeferredValue(search)
-  const deferredStoreMasterSearch = useDeferredValue(storeMasterSearch)
   const queryClient = useQueryClient()
 
   const overviewQuery = useQuery({
@@ -136,29 +101,6 @@ export function IntegrationDashboardPage() {
   const lookupsQuery = useQuery({
     queryKey: ['integration-lookups'],
     queryFn: getIntegrationLookups,
-  })
-  const storeMasterQuery = useQuery({
-    queryKey: [
-      'store-master',
-      deferredStoreMasterSearch,
-      storeMasterEnabledFilter,
-      storeMasterStatusFilter,
-    ],
-    queryFn: () =>
-      getStoreMasterData({
-        q: deferredStoreMasterSearch || undefined,
-        enabled:
-          storeMasterEnabledFilter === 'all'
-            ? undefined
-            : storeMasterEnabledFilter === 'enabled',
-        status: storeMasterStatusFilter === 'all' ? undefined : storeMasterStatusFilter,
-        limit: 200,
-        offset: 0,
-      }),
-  })
-  const storeMasterLookupsQuery = useQuery({
-    queryKey: ['store-master-lookups'],
-    queryFn: getStoreMasterLookups,
   })
   const retryMutation = useMutation({
     mutationFn: retryImportBatch,
@@ -197,111 +139,6 @@ export function IntegrationDashboardPage() {
       setUploadedBatchId(null)
     },
   })
-
-  function resolveRegionName(regionId: string | null, fallback: string | null) {
-    if (!regionId) {
-      return fallback
-    }
-
-    return storeMasterLookupsQuery.data?.regions.find((region) => region.regionId === regionId)?.regionName ?? fallback
-  }
-
-  function mergeStoreMasterPatch(store: StoreMasterItem, patch: StoreMasterPatch): StoreMasterItem {
-    const regionId = patch.regionId ?? store.regionId
-
-    return {
-      ...store,
-      storeType: patch.storeType ?? normalizeStoreType(store.storeType),
-      regionId,
-      regionName: patch.regionId === undefined ? store.regionName : resolveRegionName(regionId, store.regionName),
-      status: patch.status ?? normalizeStoreStatus(store.status),
-      kpiImportEnabled: patch.kpiImportEnabled ?? store.kpiImportEnabled,
-    }
-  }
-
-  function getEffectiveStoreMaster(store: StoreMasterItem) {
-    return mergeStoreMasterPatch(store, storeMasterDrafts[store.storeId] ?? {})
-  }
-
-  function setStoreMasterSaving(storeId: string, isSaving: boolean) {
-    setSavingStoreMasterIds((current) => {
-      const next = new Set(current)
-      if (isSaving) {
-        next.add(storeId)
-      } else {
-        next.delete(storeId)
-      }
-      return next
-    })
-  }
-
-  function clearStoreMasterDraft(storeId: string) {
-    setStoreMasterDrafts((current) => {
-      const next = { ...current }
-      delete next[storeId]
-      return next
-    })
-  }
-
-  function updateStoreMasterCache(updatedStore: StoreMasterItem) {
-    queryClient.setQueriesData<ListResponse<StoreMasterItem>>({ queryKey: ['store-master'] }, (current) => {
-      if (!current) {
-        return current
-      }
-
-      return {
-        ...current,
-        items: current.items.map((item) => (item.storeId === updatedStore.storeId ? updatedStore : item)),
-      }
-    })
-  }
-
-  const updateStoreMasterMutation = useMutation({
-    mutationFn: updateStoreMasterData,
-    onSuccess: (response, variables) => {
-      updateStoreMasterCache(response.data.storeMaster)
-      clearStoreMasterDraft(variables.storeId)
-      setStoreMasterSaving(variables.storeId, false)
-      setStoreMasterFeedback(response.command.message)
-      void queryClient.invalidateQueries({ queryKey: ['store-master'] })
-    },
-    onError: (error, variables) => {
-      clearStoreMasterDraft(variables.storeId)
-      setStoreMasterSaving(variables.storeId, false)
-      setStoreMasterFeedback(getErrorMessage(error))
-      void queryClient.invalidateQueries({ queryKey: ['store-master'] })
-    },
-  })
-
-  const submitStoreMasterUpdate = (store: StoreMasterItem, patch: StoreMasterPatch) => {
-    const nextStore = mergeStoreMasterPatch(getEffectiveStoreMaster(store), patch)
-    const regionId = nextStore.regionId
-
-    if (!regionId) {
-      setStoreMasterFeedback(t('adminIntegrations.storeRegionRequired'))
-      return
-    }
-
-    const nextDraft: StoreMasterPatch = {
-      storeType: normalizeStoreType(nextStore.storeType),
-      regionId,
-      status: normalizeStoreStatus(nextStore.status),
-      kpiImportEnabled: nextStore.kpiImportEnabled,
-    }
-
-    setStoreMasterDrafts((current) => ({
-      ...current,
-      [store.storeId]: nextDraft,
-    }))
-    setStoreMasterSaving(store.storeId, true)
-    updateStoreMasterMutation.mutate({
-      storeId: store.storeId,
-      storeType: nextDraft.storeType ?? 'company',
-      regionId,
-      status: nextDraft.status ?? 'active',
-      kpiImportEnabled: Boolean(nextDraft.kpiImportEnabled),
-    })
-  }
 
   const compatibleSources = useMemo(() => {
     return (lookupsQuery.data?.activeSources ?? []).filter(
@@ -438,17 +275,6 @@ export function IntegrationDashboardPage() {
   const meta = needsActionQuery.data?.meta
   const canGoBack = offset > 0
   const canGoForward = meta ? offset + PAGE_SIZE < meta.total : false
-  const storeTypeOptions = storeMasterLookupsQuery.data?.storeTypes ?? [
-    { value: 'company' as const, label: t('adminIntegrations.storeType.company') },
-    { value: 'franchise' as const, label: t('adminIntegrations.storeType.franchise') },
-    { value: 'operator' as const, label: t('adminIntegrations.storeType.operator') },
-  ]
-  const storeStatusOptions = storeMasterLookupsQuery.data?.statuses ?? [
-    { value: 'active' as const, label: t('adminIntegrations.storeStatus.active') },
-    { value: 'inactive' as const, label: t('adminIntegrations.storeStatus.inactive') },
-    { value: 'closed' as const, label: t('adminIntegrations.storeStatus.closed') },
-  ]
-  const regionalManagerOptions = storeMasterLookupsQuery.data?.regions ?? []
   const isPowerBiPeriodValid =
     powerBiPeriodType === 'monthly'
       ? Boolean(powerBiPeriodMonth)
@@ -468,7 +294,6 @@ export function IntegrationDashboardPage() {
 
   const tabs: Array<{ id: IntegrationTab; label: string; count?: number }> = [
     { id: 'uploads', label: t('adminIntegrations.tabUploads') },
-    { id: 'scope', label: t('adminIntegrations.tabScope'), count: storeMasterQuery.data?.meta.total },
     { id: 'evidence', label: t('adminIntegrations.tabEvidence') },
     { id: 'errors', label: t('adminIntegrations.tabErrors'), count: actionCount },
   ]
@@ -484,9 +309,6 @@ export function IntegrationDashboardPage() {
         <div className="integration-management-hero-actions">
           <span className="integration-management-chip">
             {t('adminIntegrations.totalBatches')}: {formatNumber(overview.totals.all)}
-          </span>
-          <span className="integration-management-chip">
-            {t('adminIntegrations.scopeCount')}: {formatNumber(storeMasterQuery.data?.meta.total ?? 0)}
           </span>
           <button className="control-button integration-management-primary-button" type="button" onClick={() => setActiveTab('uploads')}>
             {t('adminIntegrations.newUpload')}
@@ -527,7 +349,7 @@ export function IntegrationDashboardPage() {
         />
       </section>
 
-      {(feedback || uploadFeedback || storeMasterFeedback) ? (
+      {(feedback || uploadFeedback) ? (
         <section className="integration-management-feedback">
           {feedback ? <div className="inline-state inline-state-accent">{feedback}</div> : null}
           {createdBatchId ? (
@@ -541,7 +363,6 @@ export function IntegrationDashboardPage() {
               <span>{t('adminIntegrations.openBatchDetail')}</span>
             </Link>
           ) : null}
-          {storeMasterFeedback ? <div className="inline-state inline-state-accent">{storeMasterFeedback}</div> : null}
         </section>
       ) : null}
 
@@ -730,185 +551,6 @@ export function IntegrationDashboardPage() {
           {uploadPowerBiMutation.data?.data.summary ? (
             <UploadSummaryGrid summary={uploadPowerBiMutation.data.data.summary} t={t} />
           ) : null}
-        </section>
-      ) : null}
-
-      {activeTab === 'scope' ? (
-        <section className="integration-management-panel" aria-label={t('adminIntegrations.scopeTabAria')}>
-          <div className="integration-management-panel-head">
-            <div>
-              <div className="eyebrow">{t('adminIntegrations.tabScope')}</div>
-              <h3>{t('adminIntegrations.scopePanelTitle')}</h3>
-              <p className="integration-management-panel-copy">{t('adminIntegrations.scopePanelCopy')}</p>
-            </div>
-            <div className="toolbar-cluster">
-              <label className="search-field integration-management-search">
-                <Search size={16} aria-hidden="true" />
-                <span className="sr-only">{t('adminIntegrations.searchStores')}</span>
-                <input
-                  value={storeMasterSearch}
-                  onChange={(event) => setStoreMasterSearch(event.target.value)}
-                  placeholder={t('adminIntegrations.searchStoreOrManager')}
-                />
-              </label>
-              <label className="control-select">
-                <span className="sr-only">{t('adminIntegrations.filterStoreImportScope')}</span>
-                <select
-                  value={storeMasterEnabledFilter}
-                  onChange={(event) =>
-                    setStoreMasterEnabledFilter(event.target.value as 'all' | 'enabled' | 'disabled')
-                  }
-                >
-                  <option value="all">{t('adminIntegrations.allStores')}</option>
-                  <option value="enabled">{t('adminIntegrations.included')}</option>
-                  <option value="disabled">{t('adminIntegrations.excluded')}</option>
-                </select>
-              </label>
-              <label className="control-select">
-                <span className="sr-only">{t('adminIntegrations.filterStoreStatus')}</span>
-                <select
-                  value={storeMasterStatusFilter}
-                  onChange={(event) =>
-                    setStoreMasterStatusFilter(event.target.value as 'all' | StoreMasterStatus)
-                  }
-                >
-                  <option value="all">{t('adminIntegrations.allStatuses')}</option>
-                  {storeStatusOptions.map((status) => (
-                    <option key={status.value} value={status.value}>
-                      {formatStoreStatusLabel(status.value, t)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-          </div>
-
-          {storeMasterQuery.isLoading || storeMasterLookupsQuery.isLoading ? (
-            <div className="inline-state inline-state-neutral">{t('adminIntegrations.loadingStoreMaster')}</div>
-          ) : storeMasterQuery.isError ? (
-            <div className="inline-state inline-state-danger">{getErrorMessage(storeMasterQuery.error)}</div>
-          ) : storeMasterLookupsQuery.isError ? (
-            <div className="inline-state inline-state-danger">{getErrorMessage(storeMasterLookupsQuery.error)}</div>
-          ) : (storeMasterQuery.data?.items.length ?? 0) === 0 ? (
-            <EmptyState title={t('adminIntegrations.noStoresTitle')} copy={t('adminIntegrations.noStoresCopy')} />
-          ) : (
-            <div className="integration-management-table-wrap">
-              <table className="integration-management-table">
-                <thead>
-                  <tr>
-                    <th>{t('adminIntegrations.store')}</th>
-                    <th>{t('adminIntegrations.type')}</th>
-                    <th>{t('adminIntegrations.regionalManager')}</th>
-                    <th>{t('adminIntegrations.status')}</th>
-                    <th>{t('adminIntegrations.kpiImport')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {storeMasterQuery.data?.items.map((store) => {
-                    const effectiveStore = getEffectiveStoreMaster(store)
-                    const isSavingStore = savingStoreMasterIds.has(store.storeId)
-
-                    return (
-                      <tr key={store.storeId}>
-                        <td>
-                          <strong>{store.storeName}</strong>
-                          <small>{store.storeCode}</small>
-                        </td>
-                        <td>
-                          <label className="field-block compact-field">
-                            <span className="sr-only">{t('adminIntegrations.type')}</span>
-                            <select
-                              aria-label={t('adminIntegrations.storeTypeAria', { storeName: store.storeName })}
-                              value={normalizeStoreType(effectiveStore.storeType)}
-                              disabled={isSavingStore}
-                              onChange={(event) =>
-                                submitStoreMasterUpdate(store, {
-                                  storeType: event.target.value as StoreMasterType,
-                                })
-                              }
-                            >
-                              {storeTypeOptions.map((type) => (
-                                <option key={type.value} value={type.value}>
-                                  {formatStoreTypeLabel(type.value, t)}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                        </td>
-                        <td>
-                          <label className="field-block compact-field">
-                            <span className="sr-only">{t('adminIntegrations.regionalManager')}</span>
-                            <select
-                              aria-label={t('adminIntegrations.storeRegionalManagerAria', { storeName: store.storeName })}
-                              value={effectiveStore.regionId ?? ''}
-                              disabled={isSavingStore || regionalManagerOptions.length === 0}
-                              onChange={(event) =>
-                                submitStoreMasterUpdate(store, {
-                                  regionId: event.target.value,
-                                })
-                              }
-                            >
-                              {regionalManagerOptions.length === 0 ? (
-                                <option value="">{t('adminIntegrations.noActiveRegionalManagers')}</option>
-                              ) : null}
-                              {regionalManagerOptions.map((region) => (
-                                <option key={region.regionId} value={region.regionId}>
-                                  {region.regionName}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                        </td>
-                        <td>
-                          <label className="field-block compact-field">
-                            <span className="sr-only">{t('adminIntegrations.status')}</span>
-                            <select
-                              aria-label={t('adminIntegrations.storeStatusAria', { storeName: store.storeName })}
-                              value={normalizeStoreStatus(effectiveStore.status)}
-                              disabled={isSavingStore}
-                              onChange={(event) =>
-                                submitStoreMasterUpdate(store, {
-                                  status: event.target.value as StoreMasterStatus,
-                                })
-                              }
-                            >
-                              {storeStatusOptions.map((status) => (
-                                <option key={status.value} value={status.value}>
-                                  {formatStoreStatusLabel(status.value, t)}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                        </td>
-                        <td>
-                          <label className="integration-management-toggle">
-                            <input
-                              aria-label={t('adminIntegrations.storeKpiImportEnabledAria', {
-                                storeName: store.storeName,
-                              })}
-                              type="checkbox"
-                              checked={effectiveStore.kpiImportEnabled}
-                              disabled={isSavingStore}
-                              onChange={(event) =>
-                                submitStoreMasterUpdate(store, {
-                                  kpiImportEnabled: event.target.checked,
-                                })
-                              }
-                            />
-                            <span>
-                              {effectiveStore.kpiImportEnabled
-                                ? t('adminIntegrations.included')
-                                : t('adminIntegrations.excluded')}
-                            </span>
-                          </label>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
         </section>
       ) : null}
 
@@ -1256,30 +898,4 @@ function UploadSummaryGrid(input: {
       ) : null}
     </section>
   )
-}
-
-function formatStoreTypeLabel(value: string, t: TranslateFunction) {
-  switch (value) {
-    case 'company':
-      return t('adminIntegrations.storeType.company')
-    case 'franchise':
-      return t('adminIntegrations.storeType.franchise')
-    case 'operator':
-      return t('adminIntegrations.storeType.operator')
-    default:
-      return value
-  }
-}
-
-function formatStoreStatusLabel(value: string, t: TranslateFunction) {
-  switch (value) {
-    case 'active':
-      return t('adminIntegrations.storeStatus.active')
-    case 'inactive':
-      return t('adminIntegrations.storeStatus.inactive')
-    case 'closed':
-      return t('adminIntegrations.storeStatus.closed')
-    default:
-      return value
-  }
 }
