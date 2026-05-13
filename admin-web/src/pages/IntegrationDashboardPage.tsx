@@ -25,7 +25,7 @@ import {
   updateStoreMasterData,
   uploadPowerBiExport,
 } from '../features/integrations/api'
-import type { StoreMasterItem } from '../features/integrations/api'
+import type { ListResponse, StoreMasterItem } from '../features/integrations/api'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import { formatState, getErrorMessage, mapHealthTone } from '../lib/format'
@@ -33,6 +33,12 @@ import { formatState, getErrorMessage, mapHealthTone } from '../lib/format'
 const PAGE_SIZE = 12
 type StoreMasterType = 'company' | 'franchise' | 'operator'
 type StoreMasterStatus = 'active' | 'inactive' | 'closed'
+type StoreMasterPatch = {
+  storeType?: StoreMasterType
+  regionId?: string
+  status?: StoreMasterStatus
+  kpiImportEnabled?: boolean
+}
 
 function getCurrentIsoDate() {
   return new Date().toISOString().slice(0, 10)
@@ -82,6 +88,8 @@ export function IntegrationDashboardPage() {
   const [storeMasterEnabledFilter, setStoreMasterEnabledFilter] = useState<'all' | 'enabled' | 'disabled'>('all')
   const [storeMasterStatusFilter, setStoreMasterStatusFilter] = useState<'all' | StoreMasterStatus>('all')
   const [storeMasterFeedback, setStoreMasterFeedback] = useState<string | null>(null)
+  const [storeMasterDrafts, setStoreMasterDrafts] = useState<Record<string, StoreMasterPatch>>({})
+  const [savingStoreMasterIds, setSavingStoreMasterIds] = useState<ReadonlySet<string>>(() => new Set())
   const deferredSearch = useDeferredValue(search)
   const deferredStoreMasterSearch = useDeferredValue(storeMasterSearch)
   const queryClient = useQueryClient()
@@ -172,39 +180,108 @@ export function IntegrationDashboardPage() {
       setUploadedBatchId(null)
     },
   })
+  function resolveRegionName(regionId: string | null, fallback: string | null) {
+    if (!regionId) {
+      return fallback
+    }
+
+    return storeMasterLookupsQuery.data?.regions.find((region) => region.regionId === regionId)?.regionName ?? fallback
+  }
+
+  function mergeStoreMasterPatch(store: StoreMasterItem, patch: StoreMasterPatch): StoreMasterItem {
+    const regionId = patch.regionId ?? store.regionId
+
+    return {
+      ...store,
+      storeType: patch.storeType ?? normalizeStoreType(store.storeType),
+      regionId,
+      regionName: patch.regionId === undefined ? store.regionName : resolveRegionName(regionId, store.regionName),
+      status: patch.status ?? normalizeStoreStatus(store.status),
+      kpiImportEnabled: patch.kpiImportEnabled ?? store.kpiImportEnabled,
+    }
+  }
+
+  function getEffectiveStoreMaster(store: StoreMasterItem) {
+    return mergeStoreMasterPatch(store, storeMasterDrafts[store.storeId] ?? {})
+  }
+
+  function setStoreMasterSaving(storeId: string, isSaving: boolean) {
+    setSavingStoreMasterIds((current) => {
+      const next = new Set(current)
+      if (isSaving) {
+        next.add(storeId)
+      } else {
+        next.delete(storeId)
+      }
+      return next
+    })
+  }
+
+  function clearStoreMasterDraft(storeId: string) {
+    setStoreMasterDrafts((current) => {
+      const next = { ...current }
+      delete next[storeId]
+      return next
+    })
+  }
+
+  function updateStoreMasterCache(updatedStore: StoreMasterItem) {
+    queryClient.setQueriesData<ListResponse<StoreMasterItem>>({ queryKey: ['store-master'] }, (current) => {
+      if (!current) {
+        return current
+      }
+
+      return {
+        ...current,
+        items: current.items.map((item) => (item.storeId === updatedStore.storeId ? updatedStore : item)),
+      }
+    })
+  }
+
   const updateStoreMasterMutation = useMutation({
     mutationFn: updateStoreMasterData,
-    onSuccess: async (response) => {
+    onSuccess: (response, variables) => {
+      updateStoreMasterCache(response.data.storeMaster)
+      clearStoreMasterDraft(variables.storeId)
+      setStoreMasterSaving(variables.storeId, false)
       setStoreMasterFeedback(response.command.message)
-      await queryClient.invalidateQueries({ queryKey: ['store-master'] })
+      void queryClient.invalidateQueries({ queryKey: ['store-master'] })
     },
-    onError: (error) => {
+    onError: (error, variables) => {
+      clearStoreMasterDraft(variables.storeId)
+      setStoreMasterSaving(variables.storeId, false)
       setStoreMasterFeedback(getErrorMessage(error))
+      void queryClient.invalidateQueries({ queryKey: ['store-master'] })
     },
   })
 
-  const submitStoreMasterUpdate = (
-    store: StoreMasterItem,
-    patch: Partial<{
-      storeType: StoreMasterType
-      regionId: string
-      status: StoreMasterStatus
-      kpiImportEnabled: boolean
-    }>,
-  ) => {
-    const regionId = patch.regionId ?? store.regionId
+  const submitStoreMasterUpdate = (store: StoreMasterItem, patch: StoreMasterPatch) => {
+    const nextStore = mergeStoreMasterPatch(getEffectiveStoreMaster(store), patch)
+    const regionId = nextStore.regionId
 
     if (!regionId) {
       setStoreMasterFeedback(t('adminIntegrations.storeRegionRequired'))
       return
     }
 
+    const nextDraft: StoreMasterPatch = {
+      storeType: normalizeStoreType(nextStore.storeType),
+      regionId,
+      status: normalizeStoreStatus(nextStore.status),
+      kpiImportEnabled: nextStore.kpiImportEnabled,
+    }
+
+    setStoreMasterDrafts((current) => ({
+      ...current,
+      [store.storeId]: nextDraft,
+    }))
+    setStoreMasterSaving(store.storeId, true)
     updateStoreMasterMutation.mutate({
       storeId: store.storeId,
-      storeType: patch.storeType ?? normalizeStoreType(store.storeType),
+      storeType: nextDraft.storeType ?? 'company',
       regionId,
-      status: patch.status ?? normalizeStoreStatus(store.status),
-      kpiImportEnabled: patch.kpiImportEnabled ?? store.kpiImportEnabled,
+      status: nextDraft.status ?? 'active',
+      kpiImportEnabled: Boolean(nextDraft.kpiImportEnabled),
     })
   }
 
@@ -582,95 +659,107 @@ export function IntegrationDashboardPage() {
           <EmptyState title={t('adminIntegrations.noStoresTitle')} copy={t('adminIntegrations.noStoresCopy')} />
         ) : (
           <div className="scope-list">
-            {storeMasterQuery.data?.items.map((store) => (
-              <div className="scope-row" key={store.storeId}>
-                <div>
-                  <div className="queue-title">{store.storeName}</div>
-                  <div className="queue-meta">
-                    <span>
-                      {store.storeCode} / {store.regionName ?? t('adminIntegrations.noRegion')} / {formatStoreTypeLabel(normalizeStoreType(store.storeType), t)}
-                    </span>
-                    <span>{formatStoreStatusLabel(normalizeStoreStatus(store.status), t)}</span>
+            {storeMasterQuery.data?.items.map((store) => {
+              const effectiveStore = getEffectiveStoreMaster(store)
+              const isSavingStore = savingStoreMasterIds.has(store.storeId)
+
+              return (
+                <div className="scope-row" key={store.storeId}>
+                  <div>
+                    <div className="queue-title">{store.storeName}</div>
+                    <div className="queue-meta">
+                      <span>
+                        {store.storeCode} / {effectiveStore.regionName ?? t('adminIntegrations.noRegion')} /{' '}
+                        {formatStoreTypeLabel(normalizeStoreType(effectiveStore.storeType), t)}
+                      </span>
+                      <span>{formatStoreStatusLabel(normalizeStoreStatus(effectiveStore.status), t)}</span>
+                    </div>
+                  </div>
+                  <div className="scope-controls">
+                    <label className="field-block compact-field">
+                      <span>{t('adminIntegrations.type')}</span>
+                      <select
+                        aria-label={t('adminIntegrations.storeTypeAria', { storeName: store.storeName })}
+                        value={normalizeStoreType(effectiveStore.storeType)}
+                        disabled={isSavingStore}
+                        onChange={(event) =>
+                          submitStoreMasterUpdate(store, {
+                            storeType: event.target.value as StoreMasterType,
+                          })
+                        }
+                      >
+                        {storeTypeOptions.map((type) => (
+                          <option key={type.value} value={type.value}>
+                            {formatStoreTypeLabel(type.value, t)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="field-block compact-field">
+                      <span>{t('adminIntegrations.region')}</span>
+                      <select
+                        aria-label={t('adminIntegrations.storeRegionAria', { storeName: store.storeName })}
+                        value={effectiveStore.regionId ?? ''}
+                        disabled={isSavingStore || regionOptions.length === 0}
+                        onChange={(event) =>
+                          submitStoreMasterUpdate(store, {
+                            regionId: event.target.value,
+                          })
+                        }
+                      >
+                        {regionOptions.length === 0 ? (
+                          <option value="">{t('adminIntegrations.noActiveRegions')}</option>
+                        ) : null}
+                        {regionOptions.map((region) => (
+                          <option key={region.regionId} value={region.regionId}>
+                            {region.regionName}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="field-block compact-field">
+                      <span>{t('adminIntegrations.status')}</span>
+                      <select
+                        aria-label={t('adminIntegrations.storeStatusAria', { storeName: store.storeName })}
+                        value={normalizeStoreStatus(effectiveStore.status)}
+                        disabled={isSavingStore}
+                        onChange={(event) =>
+                          submitStoreMasterUpdate(store, {
+                            status: event.target.value as StoreMasterStatus,
+                          })
+                        }
+                      >
+                        {storeStatusOptions.map((status) => (
+                          <option key={status.value} value={status.value}>
+                            {formatStoreStatusLabel(status.value, t)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="scope-toggle">
+                      <input
+                        aria-label={t('adminIntegrations.storeKpiImportEnabledAria', {
+                          storeName: store.storeName,
+                        })}
+                        type="checkbox"
+                        checked={effectiveStore.kpiImportEnabled}
+                        disabled={isSavingStore}
+                        onChange={(event) =>
+                          submitStoreMasterUpdate(store, {
+                            kpiImportEnabled: event.target.checked,
+                          })
+                        }
+                      />
+                      <span>
+                        {effectiveStore.kpiImportEnabled
+                          ? t('adminIntegrations.included')
+                          : t('adminIntegrations.excluded')}
+                      </span>
+                    </label>
                   </div>
                 </div>
-                <div className="scope-controls">
-                  <label className="field-block compact-field">
-                    <span>{t('adminIntegrations.type')}</span>
-                    <select
-                      aria-label={t('adminIntegrations.storeTypeAria', { storeName: store.storeName })}
-                      value={normalizeStoreType(store.storeType)}
-                      disabled={updateStoreMasterMutation.isPending}
-                      onChange={(event) =>
-                        submitStoreMasterUpdate(store, {
-                          storeType: event.target.value as StoreMasterType,
-                        })
-                      }
-                    >
-                      {storeTypeOptions.map((type) => (
-                        <option key={type.value} value={type.value}>
-                          {formatStoreTypeLabel(type.value, t)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="field-block compact-field">
-                    <span>{t('adminIntegrations.region')}</span>
-                    <select
-                      aria-label={t('adminIntegrations.storeRegionAria', { storeName: store.storeName })}
-                      value={store.regionId ?? ''}
-                      disabled={updateStoreMasterMutation.isPending || regionOptions.length === 0}
-                      onChange={(event) =>
-                        submitStoreMasterUpdate(store, {
-                          regionId: event.target.value,
-                        })
-                      }
-                    >
-                      {regionOptions.length === 0 ? <option value="">{t('adminIntegrations.noActiveRegions')}</option> : null}
-                      {regionOptions.map((region) => (
-                        <option key={region.regionId} value={region.regionId}>
-                          {region.regionName}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="field-block compact-field">
-                    <span>{t('adminIntegrations.status')}</span>
-                    <select
-                      aria-label={t('adminIntegrations.storeStatusAria', { storeName: store.storeName })}
-                      value={normalizeStoreStatus(store.status)}
-                      disabled={updateStoreMasterMutation.isPending}
-                      onChange={(event) =>
-                        submitStoreMasterUpdate(store, {
-                          status: event.target.value as StoreMasterStatus,
-                        })
-                      }
-                    >
-                      {storeStatusOptions.map((status) => (
-                        <option key={status.value} value={status.value}>
-                          {formatStoreStatusLabel(status.value, t)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="scope-toggle">
-                    <input
-                      aria-label={t('adminIntegrations.storeKpiImportEnabledAria', {
-                        storeName: store.storeName,
-                      })}
-                      type="checkbox"
-                      checked={store.kpiImportEnabled}
-                      disabled={updateStoreMasterMutation.isPending}
-                      onChange={(event) =>
-                        submitStoreMasterUpdate(store, {
-                          kpiImportEnabled: event.target.checked,
-                        })
-                      }
-                    />
-                    <span>{store.kpiImportEnabled ? t('adminIntegrations.included') : t('adminIntegrations.excluded')}</span>
-                  </label>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </section>

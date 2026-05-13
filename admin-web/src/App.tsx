@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { AdminShell } from './app/admin-shell'
 import { adminNavDefinitions, isNavAllowed } from './app/admin-navigation'
@@ -20,6 +20,7 @@ import { SESSION_EXPIRED_EVENT, type SessionExpiredDetail } from './lib/api'
 function App() {
   const location = useLocation()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { session, isReady, isProviderSessionHydrating, expireSession } = useSession()
   const [sessionNotice, setSessionNotice] = useState<string | null>(null)
   const bearerTokenReadiness = session.bearerToken.trim() ? 'token-present' : 'token-missing'
@@ -62,6 +63,16 @@ function App() {
     window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired)
     return () => window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired)
   }, [currentReturnPath, expireSession, navigate])
+
+  useEffect(() => {
+    if (session.mode !== 'bearer' || bearerTokenReadiness !== 'token-present') {
+      return
+    }
+
+    void queryClient.invalidateQueries({
+      predicate: (query) => query.queryKey[0] !== 'shell-session',
+    })
+  }, [bearerSessionKey, bearerTokenReadiness, queryClient, session.mode])
 
   const authSummary = sessionQuery.data ?? null
   const visibleSessionNotice = ['/admin/session', '/auth/login'].includes(location.pathname)

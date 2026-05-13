@@ -1,6 +1,8 @@
 import { expect, test, type Page } from '@playwright/test'
 import { setStoredLocale } from './locale-test-utils'
 
+const STORE_MASTER_ROUTE = /\/api\/integrations\/store-master(?:\/[^/?]+)?(?:\?.*)?$/
+
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem(
@@ -136,6 +138,58 @@ test('admin dashboard manages store master data import controls', async ({ page 
   await expect(page.getByText('Store master data updated')).toBeVisible()
 })
 
+test('admin store master edits keep row-local pending state and latest values', async ({ page }) => {
+  await page.unroute(STORE_MASTER_ROUTE)
+  const patchBodies: Array<Record<string, unknown>> = []
+  let releaseFirstPatch: () => void = () => undefined
+  const firstPatchGate = new Promise<void>((resolve) => {
+    releaseFirstPatch = resolve
+  })
+
+  await routeStoreMasterApi(page, {
+    delayFirstPatch: () => firstPatchGate,
+    onPatch: (body) => patchBodies.push(body),
+  })
+
+  await page.goto('/admin/integrations')
+
+  const scopePanel = page.getByLabel('Mağaza ana verisi')
+  const marmaraType = scopePanel.getByRole('combobox', { name: 'Marmara Park mağaza tipi' })
+  const garajToggle = scopePanel.getByRole('checkbox', { name: 'Garaj Outlet KPI import aktif' })
+
+  await marmaraType.selectOption('franchise')
+  await expect(marmaraType).toHaveValue('franchise')
+  await expect(garajToggle).toBeEnabled()
+  await garajToggle.check()
+
+  expect(patchBodies).toHaveLength(2)
+  expect(patchBodies[0]).toMatchObject({
+    storeType: 'franchise',
+    regionId: '22222222-2222-4222-8222-222222222222',
+    status: 'active',
+    kpiImportEnabled: true,
+  })
+  expect(patchBodies[1]).toMatchObject({
+    storeType: 'company',
+    regionId: '22222222-2222-4222-8222-222222222222',
+    status: 'active',
+    kpiImportEnabled: true,
+  })
+
+  releaseFirstPatch()
+  await expect(page.getByText('Store master data updated')).toBeVisible()
+  await expect(marmaraType).toHaveValue('franchise')
+
+  const marmaraToggle = scopePanel.getByRole('checkbox', { name: 'Marmara Park KPI import aktif' })
+  await marmaraToggle.uncheck()
+  expect(patchBodies[patchBodies.length - 1]).toMatchObject({
+    storeType: 'franchise',
+    regionId: '22222222-2222-4222-8222-222222222222',
+    status: 'active',
+    kpiImportEnabled: false,
+  })
+})
+
 test('admin integrations page switches chrome to English copy and persists locale', async ({ page }) => {
   await page.goto('/admin/integrations')
 
@@ -251,34 +305,7 @@ async function routeIntegrationApi(page: Page) {
     await route.fulfill({ json: storeMasterLookupsFixture })
   })
 
-  await page.route('**/api/integrations/store-master**', async (route) => {
-    if (route.request().method() === 'PATCH') {
-      const body = route.request().postDataJSON()
-      expect(body).toEqual({
-        storeType: 'franchise',
-        regionId: '22222222-2222-4222-8222-222222222222',
-        status: 'active',
-        kpiImportEnabled: true,
-      })
-      await route.fulfill({
-        json: {
-          command: {
-            status: 'updated',
-            message: 'Store master data updated',
-          },
-          data: {
-            storeMaster: {
-              ...storeMasterFixture.items[0],
-              storeType: 'franchise',
-            },
-          },
-        },
-      })
-      return
-    }
-
-    await route.fulfill({ json: storeMasterFixture })
-  })
+  await routeStoreMasterApi(page)
 
   await page.route('**/api/integrations/import-batches/batch-kpi-lineage-ui-1/reconciliation', async (route) => {
     await route.fulfill({ json: reconciliationFixture })
@@ -356,6 +383,70 @@ async function routeIntegrationApi(page: Page) {
       await route.fulfill({ json: masterDataBootstrapDetailFixture })
     },
   )
+}
+
+async function routeStoreMasterApi(
+  page: Page,
+  options: {
+    delayFirstPatch?: () => Promise<void>
+    onPatch?: (body: Record<string, unknown>) => void
+  } = {},
+) {
+  let patchCount = 0
+  let storeMasterItems = storeMasterFixture.items.map((item) => ({ ...item }))
+
+  await page.route(STORE_MASTER_ROUTE, async (route) => {
+    if (route.request().method() === 'PATCH') {
+      patchCount += 1
+      const body = route.request().postDataJSON() as Record<string, unknown>
+      options.onPatch?.(body)
+
+      const storeId = new URL(route.request().url()).pathname.split('/').at(-1) ?? ''
+      const currentStore = storeMasterItems.find((item) => item.storeId === storeId) ?? storeMasterItems[0]
+      const regionId = typeof body.regionId === 'string' ? body.regionId : currentStore.regionId
+      const regionName =
+        storeMasterLookupsFixture.regions.find((region) => region.regionId === regionId)?.regionName ??
+        currentStore.regionName
+      const updatedStore = {
+        ...currentStore,
+        storeType: typeof body.storeType === 'string' ? body.storeType : currentStore.storeType,
+        regionId,
+        regionName,
+        status: typeof body.status === 'string' ? body.status : currentStore.status,
+        kpiImportEnabled:
+          typeof body.kpiImportEnabled === 'boolean'
+            ? body.kpiImportEnabled
+            : currentStore.kpiImportEnabled,
+      }
+      storeMasterItems = storeMasterItems.map((item) =>
+        item.storeId === currentStore.storeId ? updatedStore : item,
+      )
+
+      if (patchCount === 1) {
+        await options.delayFirstPatch?.()
+      }
+
+      await route.fulfill({
+        json: {
+          command: {
+            status: 'updated',
+            message: 'Store master data updated',
+          },
+          data: {
+            storeMaster: updatedStore,
+          },
+        },
+      })
+      return
+    }
+
+    await route.fulfill({
+      json: {
+        ...storeMasterFixture,
+        items: storeMasterItems,
+      },
+    })
+  })
 }
 
 const authSessionFixture = {

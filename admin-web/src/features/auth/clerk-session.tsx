@@ -7,6 +7,7 @@ import {
 } from '@clerk/react'
 import { useEffect, useRef, type ReactNode } from 'react'
 import { ScreenState, StatusPill } from '../../components/dashboard-primitives'
+import { registerBearerTokenRefreshHandler } from '../../lib/api'
 import { readStoredAppLocale } from '../../lib/i18n'
 import { translate } from '../localization/dictionary'
 import { useLocalization } from '../localization/useLocalization'
@@ -130,6 +131,23 @@ function ClerkSessionBridge() {
       setProviderSessionHydrating(false)
     }
   }, [clearToBearerMode, isLoaded, isSignedIn, setProviderSessionHydrating])
+
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn) {
+      return
+    }
+
+    return registerBearerTokenRefreshHandler(async () => {
+      const token = await getToken(template ? { template } : undefined)
+      if (!token) {
+        return null
+      }
+
+      lastTokenRef.current = token
+      startBearerSession(token)
+      return token
+    })
+  }, [getToken, isLoaded, isSignedIn, startBearerSession, template])
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn) {
