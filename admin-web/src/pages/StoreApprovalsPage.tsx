@@ -371,7 +371,6 @@ export function StoreApprovalsPage(input: {
   const [offboardingTerminationDate, setOffboardingTerminationDate] = useState(() =>
     new Date().toISOString().slice(0, 10),
   )
-  const [offboardingTerminationReason, setOffboardingTerminationReason] = useState('resignation')
   const [offboardingRequestReason, setOffboardingRequestReason] = useState('')
   const [offboardingNotice, setOffboardingNotice] = useState<string | null>(null)
   const [editingOffboardingRequestId, setEditingOffboardingRequestId] = useState<string | null>(null)
@@ -462,7 +461,6 @@ export function StoreApprovalsPage(input: {
       setEditingOffboardingRequestId(null)
       setOffboardingEmployeeId('')
       setOffboardingTerminationDate(new Date().toISOString().slice(0, 10))
-      setOffboardingTerminationReason('resignation')
       setOffboardingRequestReason('')
       setOffboardingNotice(result.command.message)
     },
@@ -482,7 +480,6 @@ export function StoreApprovalsPage(input: {
       setEditingOffboardingRequestId(null)
       setOffboardingEmployeeId('')
       setOffboardingTerminationDate(new Date().toISOString().slice(0, 10))
-      setOffboardingTerminationReason('resignation')
       setOffboardingRequestReason('')
       setOffboardingNotice(result.command.message)
     },
@@ -545,7 +542,6 @@ export function StoreApprovalsPage(input: {
     setEditingOffboardingRequestId(item.requestId)
     setOffboardingEmployeeId(item.employeeId)
     setOffboardingTerminationDate(item.terminationDate)
-    setOffboardingTerminationReason(item.terminationReason)
     setOffboardingRequestReason(item.requestReason ?? '')
     setOffboardingNotice(
       item.reviewNote
@@ -607,7 +603,6 @@ export function StoreApprovalsPage(input: {
     Boolean(storeId) &&
     Boolean(offboardingEmployeeId.trim()) &&
     Boolean(offboardingTerminationDate) &&
-    Boolean(offboardingTerminationReason.trim()) &&
     Boolean(offboardingRequestReason.trim())
   const sellerRequestPending = sellerCodeMutation.isPending || resubmitSellerCodeMutation.isPending
   const offboardingRequestPending = offboardingMutation.isPending || resubmitOffboardingMutation.isPending
@@ -829,11 +824,12 @@ export function StoreApprovalsPage(input: {
     setSellerRequestNotice(null)
   }
   const submitOffboardingRequest = () => {
+    const requestReason = offboardingRequestReason.trim()
     const payload = {
       employeeId: offboardingEmployeeId,
       terminationDate: offboardingTerminationDate,
-      terminationReason: offboardingTerminationReason.trim(),
-      requestReason: offboardingRequestReason.trim(),
+      terminationReason: requestReason.slice(0, 80),
+      requestReason,
     }
 
     if (editingOffboardingRequestId) {
@@ -853,7 +849,6 @@ export function StoreApprovalsPage(input: {
     setEditingOffboardingRequestId(null)
     setOffboardingEmployeeId('')
     setOffboardingTerminationDate(new Date().toISOString().slice(0, 10))
-    setOffboardingTerminationReason('resignation')
     setOffboardingRequestReason('')
     setOffboardingNotice(null)
   }
@@ -1222,7 +1217,6 @@ export function StoreApprovalsPage(input: {
               offboardingEmployeeId={offboardingEmployeeId}
               offboardingRequestReason={offboardingRequestReason}
               offboardingTerminationDate={offboardingTerminationDate}
-              offboardingTerminationReason={offboardingTerminationReason}
               onCancelEdit={cancelOffboardingRequestEdit}
               onEmployeeIdChange={(value) => {
                 setOffboardingNotice(null)
@@ -1236,10 +1230,6 @@ export function StoreApprovalsPage(input: {
               onTerminationDateChange={(value) => {
                 setOffboardingNotice(null)
                 setOffboardingTerminationDate(value)
-              }}
-              onTerminationReasonChange={(value) => {
-                setOffboardingNotice(null)
-                setOffboardingTerminationReason(value)
               }}
               resubmitError={resubmitOffboardingMutation.error}
               storeEmployeesQuery={storeEmployeesQuery}
@@ -1327,53 +1317,41 @@ function StoreApprovalsLedgerTable(input: {
       </div>
 
       <div
-        className="store-approvals-ledger-table"
-        role="table"
+        className="store-approvals-request-list"
+        role="list"
         aria-label={input.t('storeApprovals.ledgerTableAria')}
       >
-        <div className="store-approvals-ledger-table-head" role="row">
-          <div role="columnheader">{input.t('storeApprovals.ledgerColumnType')}</div>
-          <div role="columnheader">{input.t('storeApprovals.ledgerColumnRecord')}</div>
-          <div role="columnheader">{input.t('storeApprovals.ledgerColumnScope')}</div>
-          <div role="columnheader">{input.t('storeApprovals.ledgerColumnStatus')}</div>
-          <div role="columnheader">{input.t('storeApprovals.ledgerColumnWait')}</div>
-          <div role="columnheader">{input.t('storeApprovals.ledgerColumnSource')}</div>
-          <div role="columnheader">{input.t('storeApprovals.ledgerColumnAction')}</div>
-        </div>
-
         {input.rows.length === 0 ? (
-          <div className="store-approvals-ledger-table-empty" role="row">
-            <div role="cell">{input.t('storeApprovals.emptyQueue')}</div>
+          <div className="store-approvals-request-empty" role="listitem">
+            {input.t('storeApprovals.emptyQueue')}
           </div>
         ) : (
           input.rows.map((row) => (
-            <div className="store-approvals-ledger-table-row" role="row" key={row.id}>
-              <div role="cell">
+            <article className="store-approvals-request-row" role="listitem" key={row.id}>
+              <div className="store-approvals-request-main">
                 <span className={`store-approvals-ledger-type store-approvals-ledger-type-${row.statusTone}`}>
                   {row.type}
                 </span>
+                <div className="store-approvals-request-copy">
+                  <strong>{row.record}</strong>
+                  <small>{row.detail}</small>
+                </div>
               </div>
-              <div role="cell">
-                <strong>{row.record}</strong>
-                <small>{row.detail}</small>
+              <div className="store-approvals-request-meta">
+                <span>{row.scope}</span>
+                <span>{row.wait}</span>
+                <span>{row.source}</span>
               </div>
-              <div role="cell">{row.scope}</div>
-              <div role="cell">
-                <StatusPill tone={row.statusTone}>{row.status}</StatusPill>
-              </div>
-              <div role="cell">{row.wait}</div>
-              <div role="cell">{row.source}</div>
-              <div role="cell">
-                <button
-                  className="store-approvals-ledger-table-action"
-                  type="button"
-                  onClick={row.onAction}
-                  disabled={!row.onAction}
-                >
-                  {row.actionLabel}
-                </button>
-              </div>
-            </div>
+              <StatusPill tone={row.statusTone}>{row.status}</StatusPill>
+              <button
+                className="store-approvals-request-action"
+                type="button"
+                onClick={row.onAction}
+                disabled={!row.onAction}
+              >
+                {row.actionLabel}
+              </button>
+            </article>
           ))
         )}
       </div>
@@ -1611,8 +1589,8 @@ function ReturnedRequestsPanel(input: {
                   value={formatDate(item.terminationDate, input.locale)}
                 />
                 <KeyValue
-                  label={input.t('storeApprovals.terminationReason')}
-                  value={item.terminationReason}
+                  label={input.t('storeApprovals.requestReason')}
+                  value={item.requestReason ?? input.t('storeApprovals.noNote')}
                 />
                 <KeyValue
                   label={input.t('storeApprovals.reviewNote')}
@@ -1802,14 +1780,10 @@ function TargetDistributionRequestForm(input: {
                     key={`allocation-${allocation.employeeId || index}`}
                   >
                     {selectedPerson ? (
-                      <div className="store-request-key-grid">
-                        <KeyValue
-                          label={input.t('storeApprovals.personnel')}
-                          value={allocation.assigneeLabel || input.t('storeApprovals.unassigned')}
-                        />
-                        <KeyValue
-                          label={input.t('storeApprovals.currentSales')}
-                          value={
+                      <div className="store-request-allocation-person">
+                        <strong>{allocation.assigneeLabel || input.t('storeApprovals.unassigned')}</strong>
+                        <span>
+                          {input.t('storeApprovals.currentSales')}: {
                             selectedPerson.netSalesValue !== null &&
                             selectedPerson.netSalesValue !== undefined
                               ? formatNumber(selectedPerson.netSalesValue, input.locale, {
@@ -1819,7 +1793,7 @@ function TargetDistributionRequestForm(input: {
                                 })
                               : input.t('storeApprovals.noData')
                           }
-                        />
+                        </span>
                       </div>
                     ) : (
                       <select
@@ -2155,13 +2129,11 @@ function OffboardingRequestForm(input: {
   offboardingEmployeeId: string
   offboardingRequestReason: string
   offboardingTerminationDate: string
-  offboardingTerminationReason: string
   onCancelEdit: () => void
   onEmployeeIdChange: StringFieldSetter
   onRequestReasonChange: StringFieldSetter
   onSubmit: () => void
   onTerminationDateChange: StringFieldSetter
-  onTerminationReasonChange: StringFieldSetter
   resubmitError: unknown
   storeEmployeesQuery: ListQuerySnapshot<StoreEmployee>
   t: TranslateFunction
@@ -2231,18 +2203,6 @@ function OffboardingRequestForm(input: {
               type="date"
               value={input.offboardingTerminationDate}
               onChange={(event) => input.onTerminationDateChange(event.target.value)}
-            />
-          </div>
-
-          <div className="store-request-field">
-            <label className="store-request-label" htmlFor="offboarding-termination-reason">
-              {input.t('storeApprovals.terminationReason')}
-            </label>
-            <input
-              id="offboarding-termination-reason"
-              value={input.offboardingTerminationReason}
-              onChange={(event) => input.onTerminationReasonChange(event.target.value)}
-              placeholder={input.t('storeApprovals.resignationPlaceholder')}
             />
           </div>
 

@@ -71,7 +71,15 @@ export function resolveStorePersona(authSummary: AuthSessionSummary | null): Sto
     authSummary?.user.assignedStoreIds ??
     []
 
-  if (roles.has('STORE_MANAGER') || assignedStoreIds.length > 0) {
+  if (roles.has('STORE_MANAGER')) {
+    return 'storeManager'
+  }
+
+  if (roles.has('STORE_PERSONNEL')) {
+    return 'personnel'
+  }
+
+  if (assignedStoreIds.length > 0) {
     return 'storeManager'
   }
 

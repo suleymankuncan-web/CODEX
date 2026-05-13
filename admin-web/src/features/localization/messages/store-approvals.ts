@@ -9,9 +9,9 @@ export const storeApprovalsTr = {
   'storeApprovals.heroCopy':
     'Mağaza müdürü hedef dağıtımını, satıcı kodu talebini ve personel çıkışını tek yüzeyden hazırlar; karar ve kontrol adımları ilgili onay kuyruğuna akar.',
   'storeApprovals.ledgerEyebrow': 'Mağaza iş akışı',
-  'storeApprovals.ledgerTitle': 'Talepler / Onaylar Ledger',
+  'storeApprovals.ledgerTitle': 'Talepler / Onaylar',
   'storeApprovals.storeManagerSubtitle':
-    'Hedef dağıtımı, satıcı kodu ve personel çıkış talepleri mağaza tarafında tek kayıt defterinde yönetilir.',
+    'Hedef dağıtımı, satıcı kodu ve personel çıkış talepleri mağaza tarafında kompakt talep akışında yönetilir.',
   'storeApprovals.regionManagerSubtitle':
     'Bölge görünümünde yalnızca mevcut yetkinin kapsadığı hedef dağıtım onayları yer alır.',
   'storeApprovals.readOnlySubtitle':
@@ -263,9 +263,9 @@ export const storeApprovalsEn: Record<keyof typeof storeApprovalsTr, string> = {
   'storeApprovals.heroCopy':
     'The store manager prepares target distribution, seller code, and employee exit requests from one surface; decision and control steps flow to the right approval queue.',
   'storeApprovals.ledgerEyebrow': 'Store workflow',
-  'storeApprovals.ledgerTitle': 'Requests / Approvals Ledger',
+  'storeApprovals.ledgerTitle': 'Requests / Approvals',
   'storeApprovals.storeManagerSubtitle':
-    'Target distribution, seller code, and employee exit requests are managed in one store-side ledger.',
+    'Target distribution, seller code, and employee exit requests are managed in one compact store request flow.',
   'storeApprovals.regionManagerSubtitle':
     'The region view only shows target distribution approvals covered by the current authority.',
   'storeApprovals.readOnlySubtitle':
