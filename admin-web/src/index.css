@@ -3880,61 +3880,167 @@ code {
   padding: 14px;
 }
 
-.store-approvals-ledger-compact-form {
-  max-width: 760px;
-  border: 1px solid rgba(122, 74, 232, 0.12);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.7);
-  box-shadow: none;
+.store-request-sheet {
+  display: grid;
+  max-width: 720px;
+  gap: 10px;
+  border: 1px solid rgba(122, 74, 232, 0.16);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(249, 251, 255, 0.86)),
+    rgba(255, 255, 255, 0.92);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 18px 44px rgba(31, 24, 54, 0.08);
   padding: 12px;
 }
 
-.store-approvals-ledger-compact-form .store-approvals-ledger-card-head {
-  margin-bottom: 10px;
+.store-request-sheet-head,
+.store-request-subsection-head,
+.store-request-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
-.store-approvals-ledger-compact-form .store-approvals-ledger-card-head h3 {
+.store-request-sheet-head {
+  min-height: 42px;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 96% 0%, rgba(19, 167, 179, 0.18), transparent 30%),
+    linear-gradient(135deg, rgba(44, 31, 86, 0.96), rgba(74, 56, 145, 0.92));
+  color: #fff;
+  padding: 10px 12px;
+}
+
+.store-request-sheet-head h3 {
+  margin: 3px 0 0;
   font-size: 16px;
+  line-height: 1.15;
 }
 
-.store-approvals-ledger-compact-form .store-approvals-ledger-form-grid,
-.store-approvals-ledger-compact-form .store-approvals-ledger-rows {
+.store-request-eyebrow,
+.store-request-label {
+  color: rgba(15, 23, 42, 0.58);
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.store-request-sheet-head .store-request-eyebrow {
+  color: rgba(255, 255, 255, 0.66);
+}
+
+.store-request-grid,
+.store-request-list {
+  display: grid;
   gap: 8px;
 }
 
-.store-approvals-ledger-compact-form .store-approvals-ledger-row,
-.store-approvals-ledger-compact-form .store-approvals-ledger-field {
-  border-color: rgba(122, 74, 232, 0.12);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.72);
+.store-request-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.store-request-field,
+.store-request-subsection,
+.store-request-allocation-row {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+  border: 1px solid rgba(122, 74, 232, 0.12);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.74);
   padding: 9px;
 }
 
-.store-approvals-ledger-compact-form .store-approvals-ledger-field,
-.store-approvals-ledger-compact-form .store-approvals-ledger-row {
-  gap: 7px;
+.store-request-field-wide {
+  grid-column: 1 / -1;
 }
 
-.store-approvals-ledger-compact-form .store-approvals-ledger-key-grid {
-  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+.store-request-subsection {
+  background:
+    linear-gradient(135deg, rgba(122, 74, 232, 0.06), rgba(19, 167, 179, 0.05)),
+    rgba(255, 255, 255, 0.72);
+}
+
+.store-request-key-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
   gap: 8px;
-  margin-top: 6px;
 }
 
-.store-approvals-ledger-compact-form input,
-.store-approvals-ledger-compact-form select,
-.store-approvals-ledger-compact-form textarea {
+.store-request-sheet input,
+.store-request-sheet select,
+.store-request-sheet textarea {
+  width: 100%;
+  border: 1px solid rgba(122, 74, 232, 0.16);
   border-radius: 10px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--store-command-ink);
   padding: 7px 9px;
+  font: inherit;
   font-size: 12px;
 }
 
-.store-approvals-ledger-compact-form textarea {
-  min-height: 66px;
+.store-request-sheet textarea {
+  min-height: 62px;
+  resize: vertical;
 }
 
-.store-approvals-ledger-compact-form .store-approvals-ledger-actions {
-  margin-top: 6px;
+.store-request-sheet input:focus,
+.store-request-sheet select:focus,
+.store-request-sheet textarea:focus {
+  border-color: rgba(122, 74, 232, 0.52);
+  box-shadow: 0 0 0 4px rgba(122, 74, 232, 0.12);
+  outline: none;
+}
+
+.store-request-note {
+  margin: 0;
+  color: var(--store-command-muted);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.store-request-actions {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  margin-top: 2px;
+}
+
+.store-request-button {
+  min-height: 36px;
+  border: 1px solid rgba(122, 74, 232, 0.16);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--store-command-ink);
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.store-request-button-primary {
+  border: 0;
+  background: linear-gradient(135deg, var(--store-command-plum), #3765ea 62%, var(--store-command-cyan));
+  color: #fff;
+  box-shadow: 0 14px 28px rgba(89, 70, 206, 0.18);
+}
+
+.store-request-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.store-approvals-action-panel .store-approvals-ledger-card {
+  max-width: 720px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: none;
+  padding: 12px;
 }
 
 @media (max-width: 980px) {
@@ -4059,7 +4165,8 @@ code {
   }
 
   .store-approvals-ledger-metrics,
-  .store-approvals-ledger-form-grid {
+  .store-approvals-ledger-form-grid,
+  .store-request-grid {
     grid-template-columns: 1fr;
   }
 
@@ -4076,7 +4183,10 @@ code {
   }
 
   .store-approvals-ledger-row-head,
-  .store-approvals-ledger-actions {
+  .store-approvals-ledger-actions,
+  .store-request-sheet-head,
+  .store-request-subsection-head,
+  .store-request-actions {
     align-items: stretch;
     flex-direction: column;
   }

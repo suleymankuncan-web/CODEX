@@ -1657,6 +1657,8 @@ test('store approvals page lets store managers submit seller code requests', asy
 
   const sellerCodeForm = page.getByLabel('Satıcı kodu talebi formu')
   await expect(sellerCodeForm.getByRole('heading', { name: 'Satıcı kodu talebi' })).toBeVisible()
+  await expect(sellerCodeForm).toHaveClass(/store-request-sheet/)
+  await expect(sellerCodeForm).not.toHaveClass(/store-approvals-ledger-card/)
   await expect(sellerCodeForm.getByLabel('Satıcı kodu', { exact: true })).toHaveCount(0)
   await sellerCodeForm.getByLabel('Ad', { exact: true }).fill('Ayse')
   await sellerCodeForm.getByLabel('Soyad', { exact: true }).fill('Yilmaz')
@@ -1670,6 +1672,7 @@ test('store approvals page lets store managers submit seller code requests', asy
   await expect(positionSelect).toContainText('Satış Danışmanı')
   await expect(positionSelect).toContainText('Kasa Sorumlusu')
   await expect(positionSelect).not.toContainText('Sales Associate')
+  await expect(positionSelect.getByRole('option', { name: 'Satış Danışmanı', exact: true })).toHaveCount(1)
   await sellerCodeForm.getByLabel('Pozisyon', { exact: true }).selectOption(demoPositionId)
   await sellerCodeForm.getByLabel('Talep nedeni').fill('Yeni personel')
   await sellerCodeForm.getByRole('button', { name: 'Satıcı kodu talebini gönder' }).click()
@@ -1815,6 +1818,8 @@ test('store approvals page submits target distribution allocations with employee
   await expect(targetHeading).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Talepler / Onaylar Ledger' })).toBeVisible()
   const targetForm = page.getByLabel('Hedef dağıtım talebi formu')
+  await expect(targetForm).toHaveClass(/store-request-sheet/)
+  await expect(targetForm).not.toHaveClass(/store-approvals-ledger-card/)
   await expect(targetForm.getByText('Store Personnel')).toBeVisible()
   await targetForm.getByLabel('Talep ayı').fill('2026-04')
   await targetForm.getByLabel('Toplam hedef değeri').fill('100000')
@@ -1857,6 +1862,8 @@ test('store approvals page lets store managers submit offboarding requests', asy
 
   const offboardingForm = page.getByLabel('Personel çıkış talebi formu')
   await expect(offboardingForm.getByRole('heading', { name: 'Personel çıkış talebi' })).toBeVisible()
+  await expect(offboardingForm).toHaveClass(/store-request-sheet/)
+  await expect(offboardingForm).not.toHaveClass(/store-approvals-ledger-card/)
   await expect(offboardingForm.getByLabel('Personel')).toContainText('Store Personnel')
   await offboardingForm.getByLabel('Personel').selectOption(demoEmployeeId)
   await offboardingForm.getByLabel('Çıkış tarihi').fill('2026-05-10')
@@ -3317,6 +3324,13 @@ const positionOptionsFixture = {
       isManagerial: false,
     },
     {
+      positionId: '44444444-4444-4444-9444-444444444443',
+      positionCode: 'SALES',
+      positionName: 'Sales',
+      jobFamily: 'store',
+      isManagerial: false,
+    },
+    {
       positionId: '44444444-4444-4444-9444-444444444444',
       positionCode: 'ASSISTANT_MANAGER',
       positionName: 'Assistant Store Manager',
@@ -3346,9 +3360,9 @@ const positionOptionsFixture = {
     },
   ],
   meta: {
-    count: 5,
-    total: 5,
-    limit: 5,
+    count: 6,
+    total: 6,
+    limit: 6,
     offset: 0,
   },
 }
