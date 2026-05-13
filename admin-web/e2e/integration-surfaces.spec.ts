@@ -125,11 +125,12 @@ test('admin import batch detail explains KPI row lineage evidence', async ({ pag
 
 test('admin dashboard manages store master data import controls', async ({ page }) => {
   await page.goto('/admin/integrations')
+  await page.getByRole('button', { name: 'Mağaza kapsamı' }).click()
 
-  const scopePanel = page.getByLabel('Mağaza ana verisi')
-  await expect(scopePanel.getByRole('heading', { name: 'Mağaza ana verisi' })).toBeVisible()
+  const scopePanel = page.getByLabel('Mağaza kapsamı sekmesi')
+  await expect(scopePanel.getByRole('heading', { name: 'Bölge müdürü bazlı mağaza yönetimi' })).toBeVisible()
   await expect(scopePanel.getByText('Marmara Park')).toBeVisible()
-  await expect(scopePanel.getByText('MP001 / Marmara / şirket')).toBeVisible()
+  await expect(scopePanel.getByText('MP001')).toBeVisible()
 
   const scopeToggle = scopePanel.getByRole('checkbox', { name: 'Marmara Park KPI import aktif' })
   await expect(scopeToggle).toBeChecked()
@@ -152,8 +153,9 @@ test('admin store master edits keep row-local pending state and latest values', 
   })
 
   await page.goto('/admin/integrations')
+  await page.getByRole('button', { name: 'Mağaza kapsamı' }).click()
 
-  const scopePanel = page.getByLabel('Mağaza ana verisi')
+  const scopePanel = page.getByLabel('Mağaza kapsamı sekmesi')
   const marmaraType = scopePanel.getByRole('combobox', { name: 'Marmara Park mağaza tipi' })
   const garajToggle = scopePanel.getByRole('checkbox', { name: 'Garaj Outlet KPI import aktif' })
 
@@ -225,7 +227,8 @@ test('admin store master update keeps near-expiry bearer tokens on action reques
   })
 
   await page.goto('/admin/integrations')
-  await page.getByLabel('Mağaza ana verisi').getByRole('combobox', { name: 'Marmara Park mağaza tipi' }).selectOption('franchise')
+  await page.getByRole('button', { name: 'Mağaza kapsamı' }).click()
+  await page.getByLabel('Mağaza kapsamı sekmesi').getByRole('combobox', { name: 'Marmara Park mağaza tipi' }).selectOption('franchise')
 
   await expect(page).toHaveURL(/\/admin\/integrations$/)
   await expect(page.getByText('Store master data updated')).toBeVisible()
@@ -235,10 +238,11 @@ test('admin store master update keeps near-expiry bearer tokens on action reques
 test('admin integrations page switches chrome to English copy and persists locale', async ({ page }) => {
   await page.goto('/admin/integrations')
 
-  await expect(page.getByRole('heading', { name: 'Entegrasyon operasyonları' })).toBeVisible()
-  await expect(page.getByText('İşlem kuyruğu')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Aksiyon bekleyen partiler' })).toBeVisible()
-  await expect(page.getByText('Integration Operations')).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Şirket veri yönetimi' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Aktarımlar' })).toBeVisible()
+  await page.getByRole('button', { name: 'Hatalar' }).click()
+  await expect(page.getByRole('heading', { name: 'İncelenecek hata kayıtları' })).toBeVisible()
+  await expect(page.getByText('Company data management')).toHaveCount(0)
   await expect(page.locator('body')).not.toContainText('Ã')
   await expect(page.locator('body')).not.toContainText('Ä')
   await expect(page.locator('body')).not.toContainText('Å')
@@ -246,20 +250,16 @@ test('admin integrations page switches chrome to English copy and persists local
   await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByText('Integration Operations')).toBeVisible()
-  await expect(
-    page.getByRole('heading', {
-      name: 'See friction early, not after the batch disappears into the queue.',
-    }),
-  ).toBeVisible()
-  await expect(page.getByText('Operator queue')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Needs-action batches' })).toBeVisible()
-  await expect(page.getByText('Entegrasyon operasyonları')).toHaveCount(0)
+  await expect(page.getByText('Company data management')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Uploads' })).toBeVisible()
+  await page.getByRole('button', { name: 'Issues' }).click()
+  await expect(page.getByRole('heading', { name: 'Issue records to review' })).toBeVisible()
+  await expect(page.getByText('Şirket veri yönetimi')).toHaveCount(0)
 
   await page.reload()
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByText('Integration Operations')).toBeVisible()
+  await expect(page.getByText('Company data management')).toBeVisible()
 })
 
 test('admin dashboard exposes Power BI period controls', async ({ page }) => {
