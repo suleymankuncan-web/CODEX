@@ -3580,7 +3580,6 @@ code {
 
 .master-data-command-metric span,
 .master-data-command-key-tile span,
-.master-data-command-table th,
 .master-data-command-history-row span {
   display: block;
   color: var(--admin-command-muted);
@@ -3589,6 +3588,16 @@ code {
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+
+.master-data-command-table th {
+  color: var(--admin-command-muted);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .master-data-command-metric strong {
