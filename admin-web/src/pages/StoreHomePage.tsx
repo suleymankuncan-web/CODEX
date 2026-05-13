@@ -201,6 +201,10 @@ export function StoreHomePage(input: {
   const persona = resolveStorePersona(input.authSummary)
   const config = homeConfigByPersona[persona]
   const navigation = getStoreNavigation(persona)
+  const title = t(config.titleKey)
+  const copy = t(config.copyKey)
+  const heroTitle = t(config.heroTitleKey)
+  const heroCopy = t(config.heroCopyKey)
   const pendingValue = t('storeHome.valuePending')
   const storeScopeValue = formatStoreScope(input.authSummary)
   const metrics = buildMetrics({
@@ -231,8 +235,8 @@ export function StoreHomePage(input: {
     <section className="store-command-home" aria-label={t('storeHome.command.aria')}>
       <header className="store-command-topbar">
         <div className="store-command-title-block">
-          <h1>{t(config.titleKey)}</h1>
-          <p>{t(config.copyKey)}</p>
+          <h1>{title}</h1>
+          {copy ? <p>{copy}</p> : null}
         </div>
       </header>
 
@@ -240,10 +244,12 @@ export function StoreHomePage(input: {
         <div className="store-command-content-primary">
           <section className="store-command-hero">
             <div className="store-command-hero-head">
-              <div>
-                <h2>{t(config.heroTitleKey)}</h2>
-                <p>{t(config.heroCopyKey)}</p>
-              </div>
+              {heroTitle || heroCopy ? (
+                <div>
+                  {heroTitle ? <h2>{heroTitle}</h2> : null}
+                  {heroCopy ? <p>{heroCopy}</p> : null}
+                </div>
+              ) : null}
               <div className="store-command-period-pill">
                 {t('storeHome.command.latestLoadedPeriodPending')}
               </div>

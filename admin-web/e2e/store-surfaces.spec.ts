@@ -391,10 +391,10 @@ test('store shell exposes Turkish-first chrome and hides technical auth roles', 
   const storeNav = page.locator('.store-command-nav')
   const storeSidebar = page.locator('.store-command-sidebar')
   await expect(page.getByRole('main', { name: 'Mağaza çalışma alanı' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: /Mağaza ana ekranı hazır/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Mağaza Yönetim Paneli/i })).toBeVisible()
   await expect(storeNav.getByRole('link', { name: 'Mağaza KPI', exact: true })).toBeVisible()
   await expect(storeNav.getByRole('link', { name: 'Talepler / Onaylar', exact: true })).toBeVisible()
-  await expect(storeSidebar.getByRole('link', { name: /Ayarlar \/ Profil/ })).toBeVisible()
+  await expect(storeSidebar.locator('a[href="/store/settings"]')).toBeVisible()
   await expect(page.getByText('Ön izleme', { exact: true })).toHaveCount(0)
   await expect(page.getByLabel('Prototip rol seçimi')).toHaveCount(0)
   await expect(page.locator('body')).not.toContainText('STORE_PERSONNEL')
@@ -441,12 +441,12 @@ test('store home switches to English copy and persists locale', async ({ page })
   const storeNav = page.locator('.store-command-nav')
   const storeSidebar = page.locator('.store-command-sidebar')
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: /Store home is ready/i })).toBeVisible()
-  await expect(page.getByText('Store performance and requests share one entry.')).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Store Management Panel/i })).toBeVisible()
+  await expect(page.getByText('Store performance and requests share one entry.')).toHaveCount(0)
   await expect(storeNav.getByRole('link', { name: 'Store KPIs', exact: true })).toBeVisible()
   await expect(storeNav.getByRole('link', { name: 'Rankings', exact: true })).toBeVisible()
   await expect(storeNav.getByRole('link', { name: 'Requests / Approvals', exact: true })).toBeVisible()
-  await expect(storeSidebar.getByRole('link', { name: /Settings \/ Profile/ })).toBeVisible()
+  await expect(storeSidebar.locator('a[href="/store/settings"]')).toBeVisible()
   await expect(page.getByText('Mağaza alanı')).toHaveCount(0)
   await expect(page.getByText('Mağaza ana sayfa Faz 1')).toHaveCount(0)
   await expect(page.getByText('Benim performansim')).toHaveCount(0)
@@ -458,7 +458,7 @@ test('store home switches to English copy and persists locale', async ({ page })
   await page.reload()
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: /Store home is ready/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Store Management Panel/i })).toBeVisible()
 })
 
 test('store sidebar recovers when a lazy route module fails during SPA navigation', async ({ page }) => {
@@ -554,10 +554,10 @@ test('store sidebar transitions across visible manager pages without requiring m
   await verifyStoreNavTransition(page, storeNav, {
     linkName: 'Ana Sayfa',
     path: '/store/home',
-    ready: page.getByRole('heading', { name: /Mağaza ana ekranı hazır/i }),
+    ready: page.getByRole('heading', { name: /Mağaza Yönetim Paneli/i }),
   })
 
-  await page.getByRole('link', { name: /Ayarlar \/ Profil/ }).click()
+  await page.locator('.store-command-sidebar a[href="/store/settings"]').click()
 
   await expect(page).toHaveURL(/\/store\/settings$/)
   await expect(page.getByRole('heading', { name: 'Profil ve dil tercihleri' })).toBeVisible()
@@ -1756,18 +1756,18 @@ test('store approvals page keeps region manager ledger free of workforce queues'
   expect(workforceCalls).toEqual([])
 })
 
-test('store approvals page renders the compact request list chrome', async ({ page }) => {
+test('store approvals page renders direct action tabs without the legacy request list', async ({ page }) => {
   await page.goto('/store/approvals')
 
-  const requestList = page.getByRole('list', { name: 'Talep ve onay kayıtları' })
-  await expect(requestList).toBeVisible()
+  await expect(page.getByRole('list', { name: 'Talep ve onay kayıtları' })).toHaveCount(0)
   await expect(page.locator('.store-approvals-ledger-grid')).toHaveCount(0)
   await expect(page.locator('.store-approvals-ledger-table')).toHaveCount(0)
-  await expect(page.locator('.store-approvals-request-row')).toHaveCount(3)
+  await expect(page.locator('.store-approvals-request-row')).toHaveCount(0)
+  await expect(page.getByPlaceholder('Talep, mağaza veya kişi ara')).toHaveCount(0)
   await expect(page.getByLabel('Satıcı kodu talebi formu')).toHaveCount(0)
-  await expect(requestList.getByText('Hedef dağıtım talebi', { exact: true })).toBeVisible()
-  await expect(requestList.getByText('Satıcı kodu talebi', { exact: true })).toBeVisible()
-  await expect(requestList.getByText('Personel çıkış talebi', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Hedef talebi aç' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Satıcı kodu talebi aç' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Personel çıkış talebi aç' })).toBeVisible()
 })
 
 test('store approvals page submits target distribution allocations with employee ids', async ({ page }) => {
@@ -1846,9 +1846,13 @@ test('store approvals page submits target distribution allocations with employee
   await expect(targetForm).toHaveClass(/store-request-sheet/)
   await expect(targetForm).not.toHaveClass(/store-approvals-ledger-card/)
   await expect(targetForm.getByText('Store Personnel')).toBeVisible()
+  await expect(targetForm.getByText('Hedef payı')).toBeVisible()
+  await expect(targetForm.getByText('Mevcut satış')).toHaveCount(0)
+  await expect(targetForm.getByRole('button', { name: 'Dağıtım ekle' })).toHaveCount(0)
   await targetForm.getByLabel('Talep ayı').fill('2026-04')
   await targetForm.getByLabel('Toplam hedef değeri').fill('100000')
   await targetForm.getByLabel('Personel hedef değeri').fill('100000')
+  await expect(targetForm.locator('.store-request-allocation-share strong')).toHaveText('100%')
   await targetForm.getByRole('button', { name: 'Bölge onayına gönder' }).click()
 
   await expect(page.getByText('Target distribution request submitted for region approval')).toBeVisible()

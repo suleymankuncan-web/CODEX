@@ -15,6 +15,7 @@ import {
   UserRound,
 } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
+import lufianLogoUrl from '../assets/lufian-logo.png'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { useLocalization } from '../features/localization/useLocalization'
 import {
@@ -69,7 +70,7 @@ export function StoreSidebar(input: {
   collapsed: boolean
   onCollapsedChange: (collapsed: boolean) => void
 }) {
-  const { locale, t } = useLocalization()
+  const { t } = useLocalization()
   const persona = resolveStorePersona(input.authSummary)
   const navItems = getStoreNavigation(persona)
   const identityLabel = getIdentityLabel(input.authSummary)
@@ -88,11 +89,11 @@ export function StoreSidebar(input: {
   return (
     <aside className="store-command-sidebar" aria-label={t('storeHome.sidebar.aria')}>
       <div className="store-command-brand">
-        <div className="store-command-brand-mark" aria-hidden="true">
-          HR
+        <div className="store-command-brand-mark store-command-brand-logo" aria-hidden="true">
+          <img src={lufianLogoUrl} alt="" />
         </div>
         <div className="store-command-brand-text">
-          <strong>HR-Axis</strong>
+          <strong>LUFIAN</strong>
           <small>{t('storeHome.sidebar.brandArea')}</small>
         </div>
       </div>
@@ -136,7 +137,9 @@ export function StoreSidebar(input: {
       <div className="store-command-sidebar-footer">
         <NavLink
           className={({ isActive }) =>
-            `store-command-settings-link${isActive ? ' store-command-settings-link-active' : ''}`
+            `store-command-identity store-command-identity-link${
+              isActive ? ' store-command-identity-link-active' : ''
+            }`
           }
           onFocus={() => preloadRouteModule('/store/settings')}
           onPointerDown={() => preloadRouteModule('/store/settings')}
@@ -144,26 +147,17 @@ export function StoreSidebar(input: {
           title={t('storeHome.nav.settings')}
           to="/store/settings"
         >
-          <span className="store-command-nav-icon" aria-hidden="true">
-            <Settings size={20} />
-          </span>
-          <span className="store-command-settings-text">
-            {t('storeHome.nav.settings')}
-            <small>{t('storeHome.sidebar.languagePreference', { locale: locale.toUpperCase() })}</small>
-          </span>
-        </NavLink>
-
-        <div className="store-command-identity">
-          <div className="store-command-avatar" aria-hidden="true">
+          <span className="store-command-avatar" aria-hidden="true">
             {getIdentityInitials(input.authSummary)}
-          </div>
-          <div className="store-command-identity-text">
+          </span>
+          <span className="store-command-identity-text">
             <strong>{identityLabel ?? t('storeHome.sidebar.sessionUser')}</strong>
             <small>
               {t(getStorePersonaLabelKey(persona))} · {identityMeta}
             </small>
-          </div>
-        </div>
+          </span>
+        </NavLink>
+
       </div>
     </aside>
   )

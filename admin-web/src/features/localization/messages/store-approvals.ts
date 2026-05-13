@@ -142,6 +142,9 @@ export const storeApprovalsTr = {
   'storeApprovals.personnelLoading': 'Mağaza personel listesi hazırlanıyor.',
   'storeApprovals.personTargetCopy':
     'Personel hedefleri mağaza müdürü tarafından girilir. Personel bu alanı değiştiremez; gönderim sonrası bölge onayına gider.',
+  'storeApprovals.allocatedTarget': 'Dağıtılan hedef',
+  'storeApprovals.remainingTarget': 'Kalan hedef',
+  'storeApprovals.allocationShare': 'Hedef payı',
   'storeApprovals.personnel': 'Personel',
   'storeApprovals.unassigned': 'Atanmamış',
   'storeApprovals.currentSales': 'Mevcut satış',
@@ -396,6 +399,9 @@ export const storeApprovalsEn: Record<keyof typeof storeApprovalsTr, string> = {
   'storeApprovals.personnelLoading': 'Store personnel list is being prepared.',
   'storeApprovals.personTargetCopy':
     'Personnel targets are entered by the store manager. Personnel cannot change this field; after submission it goes to region approval.',
+  'storeApprovals.allocatedTarget': 'Allocated target',
+  'storeApprovals.remainingTarget': 'Remaining target',
+  'storeApprovals.allocationShare': 'Target share',
   'storeApprovals.personnel': 'Personnel',
   'storeApprovals.unassigned': 'Unassigned',
   'storeApprovals.currentSales': 'Current sales',

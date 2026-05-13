@@ -52,12 +52,10 @@ export const storeHomeTr = {
   'storeHome.command.openPerformance': 'Performansı aç',
   'storeHome.command.personnelSummaryTitle': 'Kişisel özet',
   'storeHome.command.personnelTimelineTitle': 'Kişisel akış',
-  'storeHome.command.managerTitle': 'Mağaza ana ekranı hazır.',
-  'storeHome.command.managerCopy':
-    'Mağaza skoru, talepler, checklist ve KPI girişleri tek sol toolbar üzerinden açılır.',
-  'storeHome.command.managerHeroTitle': 'Mağaza performansı ve talepler aynı girişte.',
-  'storeHome.command.managerHeroCopy':
-    'Skor, sıralama ve talep akışları son yüklü veri günü üzerinden bağlanacak.',
+  'storeHome.command.managerTitle': 'Mağaza Yönetim Paneli',
+  'storeHome.command.managerCopy': '',
+  'storeHome.command.managerHeroTitle': '',
+  'storeHome.command.managerHeroCopy': '',
   'storeHome.command.managerFocusTitle': 'Satıcı kodu ve hedef işleri Talepler / Onaylar altında.',
   'storeHome.command.managerFocusCopy':
     'Bekleyen talebe dokunulduğunda mağaza müdürünün aksiyon alacağı sayfa açılır.',
@@ -289,12 +287,10 @@ export const storeHomeEn: Record<keyof typeof storeHomeTr, string> = {
   'storeHome.command.openPerformance': 'Open performance',
   'storeHome.command.personnelSummaryTitle': 'Personal summary',
   'storeHome.command.personnelTimelineTitle': 'Personal flow',
-  'storeHome.command.managerTitle': 'Store home is ready.',
-  'storeHome.command.managerCopy':
-    'Store score, requests, checklist, and KPI entry points open from the same left toolbar.',
-  'storeHome.command.managerHeroTitle': 'Store performance and requests share one entry.',
-  'storeHome.command.managerHeroCopy':
-    'Score, ranking, and request flows will be read from the latest loaded data day.',
+  'storeHome.command.managerTitle': 'Store Management Panel',
+  'storeHome.command.managerCopy': '',
+  'storeHome.command.managerHeroTitle': '',
+  'storeHome.command.managerHeroCopy': '',
   'storeHome.command.managerFocusTitle': 'Salesperson code and target work live under Requests / Approvals.',
   'storeHome.command.managerFocusCopy':
     'Clicking pending requests opens the page where store managers take action.',
