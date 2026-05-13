@@ -3813,6 +3813,24 @@ code {
   color: var(--admin-command-muted);
 }
 
+.master-data-command-bulk-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0.85rem 0;
+  border: 1px solid var(--admin-command-line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.68);
+  padding: 0.78rem 0.9rem;
+}
+
+.master-data-command-bulk-actions span {
+  color: var(--admin-command-muted);
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
 .master-data-command-table-wrap {
   overflow-x: auto;
   border: 1px solid var(--admin-command-line);
@@ -4024,6 +4042,7 @@ code {
   .master-data-command-hero-actions,
   .master-data-command-panel-head,
   .master-data-command-feedback,
+  .master-data-command-bulk-actions,
   .master-data-command-toolbar {
     width: 100%;
   }
@@ -4034,6 +4053,11 @@ code {
   }
 
   .master-data-command-panel-head {
+    flex-direction: column;
+  }
+
+  .master-data-command-bulk-actions {
+    align-items: stretch;
     flex-direction: column;
   }
 
