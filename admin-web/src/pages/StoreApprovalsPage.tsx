@@ -156,19 +156,29 @@ type StoreSellerPositionKey = keyof typeof storeSellerPositionLabels
 
 const storeSellerPositionAliases = {
   cashierResponsible: [
+    'CASH RESPONSIBLE',
+    'CASH REGISTER RESPONSIBLE',
     'CASHIER',
+    'CASHIER RESPONSIBLE',
     'CASHIER_RESPONSIBLE',
     'CASH_RESPONSIBLE',
     'CASH_REGISTER_RESPONSIBLE',
+    'KASA',
     'KASA SORUMLUSU',
     'KASA_SORUMLUSU',
   ],
   salesConsultant: [
+    'SALES',
+    'SALES ADVISOR',
+    'SALES ASSOCIATE',
     'SALES CONSULTANT',
+    'SALES_ADVISOR',
+    'SALES_ASSOCIATE',
     'SALES_CONSULTANT',
     'SATIS DANISMANI',
     'SATIS_DANISMANI',
     'SATIŞ DANIŞMANI',
+    'SATIS',
   ],
   seniorSalesConsultant: [
     'EXPERT SALES CONSULTANT',
@@ -178,16 +188,25 @@ const storeSellerPositionAliases = {
     'UZMAN SATIS DANISMANI',
     'UZMAN SATIŞ DANIŞMANI',
     'UZMAN_SATIS_DANISMANI',
+    'UZMAN_SATIS',
   ],
   storeAssistantManager: [
     'ASSISTANT MANAGER',
     'ASSISTANT STORE MANAGER',
     'ASSISTANT_MANAGER',
+    'DEPUTY STORE MANAGER',
+    'DEPUTY_STORE_MANAGER',
+    'MAGAZA MUDUR YARD',
     'MAGAZA MUDUR YARDIMCISI',
+    'MAGAZA MUDUR YRD',
+    'MAGAZA_MUDUR_YARD',
     'MAGAZA_MUDUR_YARDIMCISI',
+    'MAGAZA_MUDUR_YRD',
     'MAĞAZA MÜDÜR YARDIMCISI',
+    'STORE DEPUTY MANAGER',
     'STORE ASSISTANT MANAGER',
     'STORE_ASSISTANT_MANAGER',
+    'STORE_DEPUTY_MANAGER',
   ],
   storeManager: [
     'MAGAZA MUDURU',
@@ -206,6 +225,16 @@ const storeSellerPositionLookup = new Map<string, StoreSellerPositionKey>(
     ]),
   ),
 )
+
+const ledgerActionLabelKeys = {
+  offboardingRequest: 'storeApprovals.openOffboardingRequest',
+  overview: 'storeApprovals.ledgerDetailTitle',
+  returnedRequests: 'storeApprovals.openReturnedRequests',
+  sellerCodeRequest: 'storeApprovals.openSellerCodeRequest',
+  submittedTargets: 'storeApprovals.openSubmittedTargets',
+  targetApproval: 'storeApprovals.openTargetApprovalQueue',
+  targetRequest: 'storeApprovals.openTargetRequest',
+} as const satisfies Record<StoreApprovalsLedgerPanel, TranslationKey>
 
 function normalizePositionLookup(value: string) {
   return value
@@ -794,6 +823,10 @@ export function StoreApprovalsPage(input: {
     setOffboardingRequestReason('')
     setOffboardingNotice(null)
   }
+  const getLedgerActionButtonClass = (panel: StoreApprovalsLedgerPanel) =>
+    activeLedgerPanel === panel
+      ? 'store-approvals-action-tab store-approvals-action-tab-active'
+      : 'store-approvals-action-tab'
 
   return (
     <section
@@ -901,57 +934,90 @@ export function StoreApprovalsPage(input: {
         className="store-approvals-ledger-inspector"
         aria-label={t('storeApprovals.ledgerInspectorAria')}
       >
-        <aside className="store-approvals-ledger-detail">
-          <div className="store-approvals-ledger-detail-head">
+        <aside className="store-approvals-action-workbench">
+          <div className="store-approvals-action-head">
             <div>
               <div className="store-approvals-ledger-eyebrow">
-                {t('storeApprovals.ledgerDetailEyebrow')}
+                {t('storeApprovals.liveRequestFlow')}
               </div>
-              <h3>{t('storeApprovals.ledgerDetailTitle')}</h3>
+              <strong className="store-approvals-action-title">
+                {t(ledgerActionLabelKeys[activeLedgerPanel])}
+              </strong>
             </div>
             <StatusPill tone={activeLedgerPanel === 'overview' ? 'neutral' : 'calm'}>
               {t('storeApprovals.ledgerDetailStatus')}
             </StatusPill>
           </div>
 
-          <div className="store-approvals-ledger-detail-actions">
+          <div className="store-approvals-action-tabs" aria-label={t('storeApprovals.ledgerInspectorAria')}>
             {showTargetSubmission ? (
-              <button type="button" onClick={() => setActiveLedgerPanel('targetRequest')}>
+              <button
+                className={getLedgerActionButtonClass('targetRequest')}
+                type="button"
+                aria-pressed={activeLedgerPanel === 'targetRequest'}
+                onClick={() => setActiveLedgerPanel('targetRequest')}
+              >
                 {t('storeApprovals.openTargetRequest')}
               </button>
             ) : null}
             {showTargetApprovalQueue ? (
-              <button type="button" onClick={() => setActiveLedgerPanel('targetApproval')}>
+              <button
+                className={getLedgerActionButtonClass('targetApproval')}
+                type="button"
+                aria-pressed={activeLedgerPanel === 'targetApproval'}
+                onClick={() => setActiveLedgerPanel('targetApproval')}
+              >
                 {t('storeApprovals.openTargetApprovalQueue')}
               </button>
             ) : null}
-            <button type="button" onClick={() => setActiveLedgerPanel('submittedTargets')}>
+            <button
+              className={getLedgerActionButtonClass('submittedTargets')}
+              type="button"
+              aria-pressed={activeLedgerPanel === 'submittedTargets'}
+              onClick={() => setActiveLedgerPanel('submittedTargets')}
+            >
               {t('storeApprovals.openSubmittedTargets')}
             </button>
             {showWorkforceHrQueues ? (
               <>
-                <button type="button" onClick={() => setActiveLedgerPanel('sellerCodeRequest')}>
+                <button
+                  className={getLedgerActionButtonClass('sellerCodeRequest')}
+                  type="button"
+                  aria-pressed={activeLedgerPanel === 'sellerCodeRequest'}
+                  onClick={() => setActiveLedgerPanel('sellerCodeRequest')}
+                >
                   {t('storeApprovals.openSellerCodeRequest')}
                 </button>
-                <button type="button" onClick={() => setActiveLedgerPanel('offboardingRequest')}>
+                <button
+                  className={getLedgerActionButtonClass('offboardingRequest')}
+                  type="button"
+                  aria-pressed={activeLedgerPanel === 'offboardingRequest'}
+                  onClick={() => setActiveLedgerPanel('offboardingRequest')}
+                >
                   {t('storeApprovals.openOffboardingRequest')}
                 </button>
-                <button type="button" onClick={() => setActiveLedgerPanel('returnedRequests')}>
+                <button
+                  className={getLedgerActionButtonClass('returnedRequests')}
+                  type="button"
+                  aria-pressed={activeLedgerPanel === 'returnedRequests'}
+                  onClick={() => setActiveLedgerPanel('returnedRequests')}
+                >
                   {t('storeApprovals.openReturnedRequests')}
                 </button>
               </>
             ) : null}
           </div>
 
-          {activeLedgerPanel === 'overview' ? (
-            <EmptyState
-              title={t('storeApprovals.ledgerDetailEmptyTitle')}
-              copy={t('storeApprovals.ledgerDetailEmptyCopy')}
-            />
-          ) : null}
+          <div className="store-approvals-action-panel">
+            {activeLedgerPanel === 'overview' ? (
+              <EmptyState
+                title={t('storeApprovals.ledgerDetailEmptyTitle')}
+                copy={t('storeApprovals.ledgerDetailEmptyCopy')}
+              />
+            ) : null}
 
-          {activeLedgerPanel === 'targetRequest' && showTargetSubmission ? (
-            <TargetDistributionRequestForm
+            {activeLedgerPanel === 'targetRequest' && showTargetSubmission ? (
+              <TargetDistributionRequestForm
               activeAllocations={activeAllocations}
               allocationTotal={allocationTotal}
               assignedStoreIds={assignedStoreIds}
@@ -995,11 +1061,11 @@ export function StoreApprovalsPage(input: {
               t={t}
               totalTargetValue={totalTargetValue}
               totalsAligned={totalsAligned}
-            />
-          ) : null}
+              />
+            ) : null}
 
-          {activeLedgerPanel === 'targetApproval' && showTargetApprovalQueue ? (
-            <TargetApprovalLedger
+            {activeLedgerPanel === 'targetApproval' && showTargetApprovalQueue ? (
+              <TargetApprovalLedger
               approvalNotes={approvalNotes}
               approvalNotice={approvalNotice}
               approvingRequestId={approveTargetMutation.variables?.requestId ?? null}
@@ -1028,15 +1094,15 @@ export function StoreApprovalsPage(input: {
               canApproveRequest={(request) =>
                 canApproveTargetDistributionRequest(input.authSummary, request.storeId)
               }
-            />
-          ) : null}
+              />
+            ) : null}
 
-          {activeLedgerPanel === 'submittedTargets' ? (
-            <SubmittedTargetRequestsPanel locale={locale} requests={submittedTargetRequests} t={t} />
-          ) : null}
+            {activeLedgerPanel === 'submittedTargets' ? (
+              <SubmittedTargetRequestsPanel locale={locale} requests={submittedTargetRequests} t={t} />
+            ) : null}
 
-          {activeLedgerPanel === 'returnedRequests' && showWorkforceHrQueues ? (
-            <ReturnedRequestsPanel
+            {activeLedgerPanel === 'returnedRequests' && showWorkforceHrQueues ? (
+              <ReturnedRequestsPanel
               locale={locale}
               returnedOffboardingRequests={returnedOffboardingRequests}
               returnedSellerCodeRequests={returnedSellerCodeRequests}
@@ -1047,11 +1113,11 @@ export function StoreApprovalsPage(input: {
               onEditOffboardingRequest={startEditingOffboardingRequest}
               onEditSellerCodeRequest={startEditingSellerRequest}
               t={t}
-            />
-          ) : null}
+              />
+            ) : null}
 
-          {activeLedgerPanel === 'sellerCodeRequest' && showWorkforceHrQueues ? (
-            <SellerCodeRequestForm
+            {activeLedgerPanel === 'sellerCodeRequest' && showWorkforceHrQueues ? (
+              <SellerCodeRequestForm
               canCreateForStore={showWorkforceHrQueues}
               canSubmit={canSubmitSellerCodeRequest}
               editingRequestId={editingSellerRequestId}
@@ -1106,11 +1172,11 @@ export function StoreApprovalsPage(input: {
               sellerRequestReason={sellerRequestReason}
               storeId={storeId}
               t={t}
-            />
-          ) : null}
+              />
+            ) : null}
 
-          {activeLedgerPanel === 'offboardingRequest' && showWorkforceHrQueues ? (
-            <OffboardingRequestForm
+            {activeLedgerPanel === 'offboardingRequest' && showWorkforceHrQueues ? (
+              <OffboardingRequestForm
               canCreateForStore={showWorkforceHrQueues}
               canSubmit={canSubmitOffboardingRequest}
               createError={offboardingMutation.error}
@@ -1144,8 +1210,9 @@ export function StoreApprovalsPage(input: {
               resubmitError={resubmitOffboardingMutation.error}
               storeEmployeesQuery={storeEmployeesQuery}
               t={t}
-            />
-          ) : null}
+              />
+            ) : null}
+          </div>
         </aside>
       </section>
     </section>

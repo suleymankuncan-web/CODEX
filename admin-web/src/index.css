@@ -3799,65 +3799,94 @@ code {
 
 .store-approvals-ledger-inspector {
   display: grid;
-  width: min(100%, 920px);
+  width: min(100%, 820px);
   gap: 12px;
   align-items: start;
 }
 
-.store-approvals-ledger-detail {
-  border: 1px solid var(--store-command-line);
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.82);
-  box-shadow: 0 14px 38px rgba(31, 24, 54, 0.07);
-  padding: 14px;
-}
-
-.store-approvals-ledger-detail h3 {
-  margin: 5px 0 8px;
-  font-size: 18px;
-  line-height: 1.2;
-}
-
-.store-approvals-ledger-detail {
+.store-approvals-action-workbench {
   display: grid;
   min-width: 0;
-  gap: 12px;
+  gap: 10px;
+  border: 1px solid var(--store-command-line);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(245, 249, 255, 0.86)),
+    rgba(255, 255, 255, 0.86);
+  box-shadow: 0 18px 44px rgba(31, 24, 54, 0.08);
+  padding: 10px;
 }
 
-.store-approvals-ledger-detail-head {
+.store-approvals-action-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
+  padding: 4px 4px 0;
 }
 
-.store-approvals-ledger-detail-actions {
+.store-approvals-action-title {
+  display: block;
+  margin-top: 4px;
+  color: var(--store-command-ink);
+  font-size: 16px;
+  font-weight: 950;
+  line-height: 1.2;
+}
+
+.store-approvals-action-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
-.store-approvals-ledger-detail-actions button {
-  min-height: 36px;
-  border: 1px solid var(--store-command-line);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.86);
-  color: var(--store-command-ink);
-  padding: 0 12px;
-  font-size: 12px;
+.store-approvals-action-tab {
+  min-height: 32px;
+  border: 1px solid rgba(122, 74, 232, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.84);
+  color: var(--store-command-muted);
+  padding: 0 11px;
+  font-size: 11px;
   font-weight: 950;
   cursor: pointer;
+  transition:
+    background 160ms ease,
+    box-shadow 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
 }
 
-.store-approvals-ledger-detail .store-approvals-ledger-card {
-  border: 1px solid var(--store-command-line);
-  box-shadow: none;
+.store-approvals-action-tab:hover {
+  color: var(--store-command-plum-deep);
+  transform: translateY(-1px);
+}
+
+.store-approvals-action-tab-active {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--store-command-plum), #3765ea 64%, var(--store-command-cyan));
+  color: #fff;
+  box-shadow: 0 14px 28px rgba(89, 70, 206, 0.2);
+}
+
+.store-approvals-action-panel {
+  width: min(100%, 760px);
+}
+
+.store-approvals-action-panel > .empty-card {
+  border: 1px dashed rgba(122, 74, 232, 0.2);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.68);
+  padding: 14px;
 }
 
 .store-approvals-ledger-compact-form {
-  max-width: 820px;
-  border-radius: 18px;
-  padding: 14px;
+  max-width: 760px;
+  border: 1px solid rgba(122, 74, 232, 0.12);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: none;
+  padding: 12px;
 }
 
 .store-approvals-ledger-compact-form .store-approvals-ledger-card-head {
@@ -3865,7 +3894,7 @@ code {
 }
 
 .store-approvals-ledger-compact-form .store-approvals-ledger-card-head h3 {
-  font-size: 17px;
+  font-size: 16px;
 }
 
 .store-approvals-ledger-compact-form .store-approvals-ledger-form-grid,
@@ -3875,8 +3904,10 @@ code {
 
 .store-approvals-ledger-compact-form .store-approvals-ledger-row,
 .store-approvals-ledger-compact-form .store-approvals-ledger-field {
-  border-radius: 14px;
-  padding: 10px;
+  border-color: rgba(122, 74, 232, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 9px;
 }
 
 .store-approvals-ledger-compact-form .store-approvals-ledger-field,
@@ -3893,13 +3924,13 @@ code {
 .store-approvals-ledger-compact-form input,
 .store-approvals-ledger-compact-form select,
 .store-approvals-ledger-compact-form textarea {
-  border-radius: 11px;
-  padding: 8px 10px;
-  font-size: 13px;
+  border-radius: 10px;
+  padding: 7px 9px;
+  font-size: 12px;
 }
 
 .store-approvals-ledger-compact-form textarea {
-  min-height: 74px;
+  min-height: 66px;
 }
 
 .store-approvals-ledger-compact-form .store-approvals-ledger-actions {
