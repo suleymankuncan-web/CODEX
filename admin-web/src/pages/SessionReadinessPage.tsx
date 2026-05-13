@@ -33,7 +33,18 @@ export function SessionReadinessPage() {
     queryKey:
       session.mode === 'bearer'
         ? ['auth-session', session.mode, bearerSessionKey]
-        : ['auth-session', session.mode, session.mockUserId, session.mockRoleCodes, session.mockCompanyIds],
+        : [
+            'auth-session',
+            session.mode,
+            session.mockUserId,
+            session.mockRoleCodes,
+            session.mockCompanyIds,
+            session.mockStoreIds,
+            session.mockReadStoreIds,
+            session.mockAssignedStoreIds,
+            session.mockRegionIds,
+            session.mockReadRegionIds,
+          ],
     queryFn: getAuthSession,
     enabled: verificationRequested && isReady,
     retry: false,
@@ -136,6 +147,11 @@ function SessionModePanel(input: {
       { label: 'x-user-id', value: input.draft.mockUserId },
       { label: 'x-role-codes', value: input.draft.mockRoleCodes },
       { label: 'x-company-ids', value: input.draft.mockCompanyIds },
+      { label: 'x-store-ids', value: input.draft.mockStoreIds || '-' },
+      { label: 'x-read-store-ids', value: input.draft.mockReadStoreIds || '-' },
+      { label: 'x-assigned-store-ids', value: input.draft.mockAssignedStoreIds || '-' },
+      { label: 'x-region-ids', value: input.draft.mockRegionIds || '-' },
+      { label: 'x-read-region-ids', value: input.draft.mockReadRegionIds || '-' },
     ]
   }, [input.draft, mode, t])
 
@@ -195,6 +211,60 @@ function SessionModePanel(input: {
                 value={input.draft.mockRoleCodes}
                 onChange={(event) =>
                   input.setDraft((current) => ({ ...current, mockRoleCodes: event.target.value }))
+                }
+              />
+            </label>
+            <label className="field-block">
+              <span>x-store-ids</span>
+              <input
+                value={input.draft.mockStoreIds}
+                onChange={(event) =>
+                  input.setDraft((current) => ({ ...current, mockStoreIds: event.target.value }))
+                }
+              />
+            </label>
+            <label className="field-block">
+              <span>x-assigned-store-ids</span>
+              <input
+                value={input.draft.mockAssignedStoreIds}
+                onChange={(event) =>
+                  input.setDraft((current) => ({
+                    ...current,
+                    mockAssignedStoreIds: event.target.value,
+                  }))
+                }
+              />
+            </label>
+            <label className="field-block">
+              <span>x-read-store-ids</span>
+              <input
+                value={input.draft.mockReadStoreIds}
+                onChange={(event) =>
+                  input.setDraft((current) => ({
+                    ...current,
+                    mockReadStoreIds: event.target.value,
+                  }))
+                }
+              />
+            </label>
+            <label className="field-block">
+              <span>x-region-ids</span>
+              <input
+                value={input.draft.mockRegionIds}
+                onChange={(event) =>
+                  input.setDraft((current) => ({ ...current, mockRegionIds: event.target.value }))
+                }
+              />
+            </label>
+            <label className="field-block field-block-full">
+              <span>x-read-region-ids</span>
+              <input
+                value={input.draft.mockReadRegionIds}
+                onChange={(event) =>
+                  input.setDraft((current) => ({
+                    ...current,
+                    mockReadRegionIds: event.target.value,
+                  }))
                 }
               />
             </label>

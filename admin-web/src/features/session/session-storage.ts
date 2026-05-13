@@ -5,6 +5,11 @@ export type SessionState = {
   mockUserId: string
   mockRoleCodes: string
   mockCompanyIds: string
+  mockStoreIds: string
+  mockReadStoreIds: string
+  mockAssignedStoreIds: string
+  mockRegionIds: string
+  mockReadRegionIds: string
   bearerToken: string
 }
 
@@ -20,6 +25,12 @@ export const defaultSession: SessionState = {
     import.meta.env.VITE_ROLE_CODES ??
     'SUPER_ADMIN,INTEGRATION_ADMIN,SNAPSHOT_OPERATOR,REPORT_VIEWER,AUDITOR',
   mockCompanyIds: import.meta.env.VITE_COMPANY_IDS ?? '00000000-0000-0000-0000-000000000001',
+  mockStoreIds: import.meta.env.VITE_STORE_IDS ?? '',
+  mockReadStoreIds: import.meta.env.VITE_READ_STORE_IDS ?? import.meta.env.VITE_STORE_IDS ?? '',
+  mockAssignedStoreIds:
+    import.meta.env.VITE_ASSIGNED_STORE_IDS ?? import.meta.env.VITE_STORE_IDS ?? '',
+  mockRegionIds: import.meta.env.VITE_REGION_IDS ?? '',
+  mockReadRegionIds: import.meta.env.VITE_READ_REGION_IDS ?? import.meta.env.VITE_REGION_IDS ?? '',
   bearerToken: import.meta.env.VITE_BEARER_TOKEN ?? '',
 }
 
@@ -103,11 +114,19 @@ export function buildSessionHeaders(session: SessionState): Record<string, strin
     return {}
   }
 
-  return {
+  const headers: Record<string, string> = {
     'x-user-id': session.mockUserId,
     'x-role-codes': session.mockRoleCodes,
     'x-company-ids': session.mockCompanyIds,
   }
+
+  appendHeader(headers, 'x-store-ids', session.mockStoreIds)
+  appendHeader(headers, 'x-read-store-ids', session.mockReadStoreIds)
+  appendHeader(headers, 'x-assigned-store-ids', session.mockAssignedStoreIds)
+  appendHeader(headers, 'x-region-ids', session.mockRegionIds)
+  appendHeader(headers, 'x-read-region-ids', session.mockReadRegionIds)
+
+  return headers
 }
 
 export function isSessionReady(session: SessionState) {
@@ -167,7 +186,20 @@ export function normalizeSession(session: Partial<SessionState>): SessionState {
     mockUserId: session.mockUserId?.trim() || defaultSession.mockUserId,
     mockRoleCodes: session.mockRoleCodes?.trim() || defaultSession.mockRoleCodes,
     mockCompanyIds: session.mockCompanyIds?.trim() || defaultSession.mockCompanyIds,
+    mockStoreIds: session.mockStoreIds?.trim() ?? defaultSession.mockStoreIds,
+    mockReadStoreIds: session.mockReadStoreIds?.trim() ?? defaultSession.mockReadStoreIds,
+    mockAssignedStoreIds:
+      session.mockAssignedStoreIds?.trim() ?? defaultSession.mockAssignedStoreIds,
+    mockRegionIds: session.mockRegionIds?.trim() ?? defaultSession.mockRegionIds,
+    mockReadRegionIds: session.mockReadRegionIds?.trim() ?? defaultSession.mockReadRegionIds,
     bearerToken: isJwtExpired(bearerToken) ? '' : bearerToken,
+  }
+}
+
+function appendHeader(headers: Record<string, string>, key: string, value: string) {
+  const normalized = value.trim()
+  if (normalized) {
+    headers[key] = normalized
   }
 }
 

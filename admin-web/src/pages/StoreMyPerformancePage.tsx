@@ -23,6 +23,7 @@ import {
 } from '../features/kpi/grading'
 import { formatDate, getErrorMessage } from '../lib/format'
 import { getIntlLocale, type AppLocale } from '../lib/i18n'
+import { ApiError } from '../lib/api'
 import { transientQueryRetryOptions } from '../lib/query-retry'
 
 function canUseSelfPerformance(authSummary: AuthSessionSummary | null) {
@@ -935,9 +936,11 @@ export function StoreMyPerformancePage(input: {
     )
   }
 
+  const configForbidden = configQuery.error instanceof ApiError && configQuery.error.status === 403
+
   if (
     performanceQuery.isLoading ||
-    configQuery.isLoading ||
+    (configQuery.isLoading && !configForbidden) ||
     (usesClosedSnapshotMode && sourceMode === 'closed' && closedRunsQuery.isLoading)
   ) {
     return (
@@ -950,7 +953,7 @@ export function StoreMyPerformancePage(input: {
 
   if (
     performanceQuery.isError ||
-    configQuery.isError ||
+    (configQuery.isError && !configForbidden) ||
     (usesClosedSnapshotMode && sourceMode === 'closed' && closedRunsQuery.isError)
   ) {
     return (

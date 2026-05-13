@@ -609,8 +609,9 @@ export function StoreKpiHighlightsPage(input: {
       (metric) => metric.weightPercent > 0,
     )
 
+  const configForbidden = configQuery.error instanceof ApiError && configQuery.error.status === 403
   const isLoading =
-    configQuery.isLoading ||
+    (configQuery.isLoading && !configForbidden) ||
     (viewMode === 'live' ? liveKpiQuery.isLoading : dailySnapshotQuery.isLoading || closedKpiQuery.isLoading)
 
   if (!reportingAllowed) {
@@ -653,7 +654,7 @@ export function StoreKpiHighlightsPage(input: {
     )
   }
 
-  if (configQuery.isError) {
+  if (configQuery.isError && !configForbidden) {
     return (
       <ScreenState
         title={t('storeKpis.configErrorTitle')}

@@ -29,7 +29,8 @@ import {
 } from '../features/workflow/contracts'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
-import { formatDate, formatDateTime, formatState, getErrorMessage } from '../lib/format'
+import { formatDate, formatDateTime, formatNumber, formatState, getErrorMessage } from '../lib/format'
+import type { AppLocale } from '../lib/i18n'
 
 export function TargetApprovalQueuePage(input: {
   authSummary: AuthSessionSummary | null
@@ -267,7 +268,10 @@ export function TargetApprovalQueuePage(input: {
                   })}
                 </p>
                 <div className="key-grid">
-                  <KeyValue label={t('adminTargets.totalTarget')} value={String(item.totalTargetValue)} />
+                  <KeyValue
+                    label={t('adminTargets.totalTarget')}
+                    value={formatTargetAmount(item.totalTargetValue, locale)}
+                  />
                   <KeyValue label={t('adminTargets.allocationCount')} value={String(item.allocationCount)} />
                   <KeyValue
                     label={t('adminTargets.approvedAt')}
@@ -336,7 +340,10 @@ function TargetApprovalRow(input: {
         })}
       </p>
       <div className="key-grid">
-        <KeyValue label={t('adminTargets.totalTarget')} value={String(input.item.totalTargetValue)} />
+        <KeyValue
+          label={t('adminTargets.totalTarget')}
+          value={formatTargetAmount(input.item.totalTargetValue, locale)}
+        />
         <KeyValue label={t('adminTargets.allocationCount')} value={String(input.item.allocationCount)} />
         <KeyValue label={t('adminTargets.submission')} value={formatDateTime(input.item.createdAt, locale)} />
         <KeyValue label={t('adminTargets.requestOwner')} value={input.item.submittedByUserId} />
@@ -355,15 +362,22 @@ function TargetApprovalRow(input: {
       </div>
       {allocations.length ? (
         <div className="stacked-table">
-          {allocations.map((allocation) => (
-            <div className="stacked-row" key={`${input.item.requestId}-${allocation.employeeId}`}>
-              <div className="stacked-row-head">
-                <strong>{allocation.assigneeLabel}</strong>
-                <span className="status-pill status-pill-neutral">{allocation.targetValue}</span>
+          {allocations.map((allocation) => {
+            const targetValue = Number(allocation.targetValue || 0)
+
+            return (
+              <div className="stacked-row" key={`${input.item.requestId}-${allocation.employeeId}`}>
+                <div className="stacked-row-head">
+                  <strong>{allocation.assigneeLabel}</strong>
+                  <span className="status-pill status-pill-neutral">
+                    {formatTargetAmount(targetValue, locale)} /{' '}
+                    {formatTargetShare(targetValue, input.item.totalTargetValue, locale)}
+                  </span>
+                </div>
+                {allocation.note ? <p>{allocation.note}</p> : null}
               </div>
-              {allocation.note ? <p>{allocation.note}</p> : null}
-            </div>
-          ))}
+            )
+          })}
         </div>
       ) : null}
       {input.item.status !== 'approved' && input.canApprove ? (
@@ -436,6 +450,22 @@ function formatCoverageRate(rate: number) {
   }
 
   return `${Math.round(rate * 100)}%`
+}
+
+function formatTargetAmount(value: number, locale: AppLocale) {
+  return formatNumber(value, locale, {
+    maximumFractionDigits: 0,
+  })
+}
+
+function formatTargetShare(value: number, total: number, locale: AppLocale) {
+  if (total <= 0) {
+    return '0%'
+  }
+
+  return `${formatNumber((value / total) * 100, locale, {
+    maximumFractionDigits: 1,
+  })}%`
 }
 
 function mapCoverageSummaryTone(summary: {

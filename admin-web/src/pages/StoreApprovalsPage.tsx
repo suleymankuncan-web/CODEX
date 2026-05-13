@@ -6,7 +6,6 @@ import {
   KeyValue,
   ScreenState,
   StatusPill,
-  type Tone,
 } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
 import {
@@ -17,7 +16,6 @@ import {
   getReadStoreIds,
   hasAnyRole,
 } from '../features/auth/authorization'
-import { getDisplayRoleCodes } from '../features/auth/display'
 import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import {
@@ -60,52 +58,33 @@ const employmentTypeLabelKeys = {
   temporary: 'storeApprovals.employment.temporary',
 } as const satisfies Record<SellerEmploymentType, TranslationKey>
 
-const roleLabelKeys = {
-  REGION_APPROVER: 'storeApprovals.role.REGION_APPROVER',
-  REPORT_VIEWER: 'storeApprovals.role.REPORT_VIEWER',
-  STORE_MANAGER: 'storeApprovals.role.STORE_MANAGER',
-  STORE_PERSONNEL: 'storeApprovals.role.STORE_PERSONNEL',
-  SUPER_ADMIN: 'storeApprovals.role.SUPER_ADMIN',
-} as const satisfies Partial<Record<string, TranslationKey>>
-
 function formatApprovalStatus(status: string, t: TranslateFunction) {
   const key = approvalStatusLabelKeys[status as keyof typeof approvalStatusLabelKeys]
   return key ? t(key) : formatState(status)
 }
 
-function mapApprovalStatusTone(status: string): Tone {
-  if (status === 'approved') {
-    return 'calm'
+function formatTargetNumber(value: number, locale: AppLocale) {
+  return formatNumber(value, locale, {
+    maximumFractionDigits: 0,
+  })
+}
+
+function formatAllocationShare(
+  targetValue: number,
+  totalTargetValue: number,
+  locale: AppLocale,
+) {
+  if (totalTargetValue <= 0) {
+    return '0%'
   }
 
-  if (status === 'rejected') {
-    return 'danger'
-  }
-
-  if (status === 'pending_hr_approval' || status === 'pending_region_approval') {
-    return 'warning'
-  }
-
-  return 'neutral'
+  return `${formatNumber((targetValue / totalTargetValue) * 100, locale, {
+    maximumFractionDigits: 1,
+  })}%`
 }
 
 function formatEmploymentType(type: SellerEmploymentType, t: TranslateFunction) {
   return t(employmentTypeLabelKeys[type])
-}
-
-function formatRole(roleCode: string, t: TranslateFunction) {
-  const key = roleLabelKeys[roleCode as keyof typeof roleLabelKeys]
-  return key ? t(key) : formatState(roleCode)
-}
-
-function formatRoles(
-  roleCodes: readonly string[] | null | undefined,
-  t: TranslateFunction,
-) {
-  const displayRoles = getDisplayRoleCodes(roleCodes)
-  return displayRoles.length > 0
-    ? displayRoles.map((roleCode) => formatRole(roleCode, t)).join(', ')
-    : t('storeApprovals.noResolvedRoles')
 }
 
 type ListQuerySnapshot<T> = {
@@ -120,26 +99,12 @@ type ListQuerySnapshot<T> = {
 type StringFieldSetter = (value: string) => void
 type StoreApprovalsPersona = 'storeManager' | 'regionManager' | 'readOnly'
 type StoreApprovalsLedgerPanel =
-  | 'overview'
   | 'targetRequest'
   | 'targetApproval'
   | 'submittedTargets'
   | 'returnedRequests'
   | 'sellerCodeRequest'
   | 'offboardingRequest'
-type StoreApprovalsLedgerRow = {
-  actionLabel: string
-  detail: string
-  id: string
-  onAction?: () => void
-  record: string
-  scope: string
-  source: string
-  status: string
-  statusTone: Tone
-  type: string
-  wait: string
-}
 
 const storeSellerPositionLabels = {
   cashierResponsible: 'Kasa Sorumlusu',
@@ -245,7 +210,6 @@ const storeSellerPositionLookup = new Map<string, StoreSellerPositionKey>(
 
 const ledgerActionLabelKeys = {
   offboardingRequest: 'storeApprovals.openOffboardingRequest',
-  overview: 'storeApprovals.ledgerDetailTitle',
   returnedRequests: 'storeApprovals.openReturnedRequests',
   sellerCodeRequest: 'storeApprovals.openSellerCodeRequest',
   submittedTargets: 'storeApprovals.openSubmittedTargets',
@@ -351,11 +315,14 @@ export function StoreApprovalsPage(input: {
   const [submissionNotice, setSubmissionNotice] = useState<string | null>(null)
   const [approvalNotes, setApprovalNotes] = useState<Record<string, string>>({})
   const [approvalNotice, setApprovalNotice] = useState<string | null>(null)
-  const [ledgerSearch, setLedgerSearch] = useState('')
-  const [ledgerTypeFilter, setLedgerTypeFilter] = useState('all')
-  const [ledgerStatusFilter, setLedgerStatusFilter] = useState('all')
   const [activeLedgerPanel, setActiveLedgerPanel] =
-    useState<StoreApprovalsLedgerPanel>('overview')
+    useState<StoreApprovalsLedgerPanel>(
+      showTargetSubmission
+        ? 'targetRequest'
+        : showTargetApprovalQueue
+          ? 'targetApproval'
+          : 'submittedTargets',
+    )
   const [sellerFirstName, setSellerFirstName] = useState('')
   const [sellerLastName, setSellerLastName] = useState('')
   const [sellerNationalId, setSellerNationalId] = useState('')
@@ -416,7 +383,7 @@ export function StoreApprovalsPage(input: {
       setTargetLabel(t('storeApprovals.targetLabelDefault'))
       setTotalTargetValue('0')
       setRequestReason('')
-      setAllocations([{ employeeId: '', assigneeLabel: '', targetValue: 0, note: '' }])
+      setAllocations([])
       setSubmissionNotice(result.command.message)
     },
   })
@@ -487,35 +454,22 @@ export function StoreApprovalsPage(input: {
 
   const activeAllocations = useMemo(() => {
     const personnel = personnelQuery.data?.items ?? []
-    const canHydrateFromPersonnel =
-      personnel.length > 0 &&
-      allocations.every(
-        (item) =>
-          !item.employeeId.trim() &&
-          !item.assigneeLabel.trim() &&
-          Number(item.targetValue) === 0 &&
-          !(item.note ?? '').trim(),
-      )
-
-    if (!canHydrateFromPersonnel) {
-      return allocations
+    if (personnel.length === 0) {
+      return []
     }
-
+    const allocationsByEmployeeId = new Map(
+      allocations
+        .filter((item) => item.employeeId.trim())
+        .map((item) => [item.employeeId, item] as const),
+    )
     return personnel.map((person) => ({
       employeeId: person.employeeId,
       assigneeLabel: person.displayName,
-      targetValue: 0,
-      note: '',
+      targetValue: allocationsByEmployeeId.get(person.employeeId)?.targetValue ?? 0,
+      note: allocationsByEmployeeId.get(person.employeeId)?.note ?? '',
     }))
   }, [allocations, personnelQuery.data?.items])
 
-  const personnelById = useMemo(
-    () =>
-      new Map(
-        (personnelQuery.data?.items ?? []).map((person) => [person.employeeId, person] as const),
-      ),
-    [personnelQuery.data?.items],
-  )
   const returnedSellerCodeRequests = rejectedSellerCodeRequestsQuery.data?.items ?? []
   const returnedOffboardingRequests = rejectedOffboardingRequestsQuery.data?.items ?? []
 
@@ -579,13 +533,15 @@ export function StoreApprovalsPage(input: {
   const returnedWorkforceCount =
     returnedSellerCodeRequests.length + returnedOffboardingRequests.length
   const allocationTotal = activeAllocations.reduce((sum, item) => sum + Number(item.targetValue || 0), 0)
-  const totalsAligned = allocationTotal === Number(totalTargetValue || 0)
+  const totalTargetNumber = Number(totalTargetValue || 0)
+  const totalsAligned = allocationTotal === totalTargetNumber
   const canSubmit =
     showTargetSubmission &&
     Boolean(storeId) &&
     Boolean(targetLabel.trim()) &&
-    Number(totalTargetValue) > 0 &&
+    totalTargetNumber > 0 &&
     totalsAligned &&
+    activeAllocations.length > 0 &&
     activeAllocations.every(
       (item) => item.employeeId.trim() && item.assigneeLabel.trim() && Number(item.targetValue) > 0,
     )
@@ -606,155 +562,6 @@ export function StoreApprovalsPage(input: {
     Boolean(offboardingRequestReason.trim())
   const sellerRequestPending = sellerCodeMutation.isPending || resubmitSellerCodeMutation.isPending
   const offboardingRequestPending = offboardingMutation.isPending || resubmitOffboardingMutation.isPending
-  const ledgerRows: StoreApprovalsLedgerRow[] = [
-    ...(showTargetSubmission
-      ? [
-          {
-            actionLabel: t('storeApprovals.ledgerActionEdit'),
-            detail: t('storeApprovals.targetQueueTitle'),
-            id: 'target-distribution-form',
-            onAction: () => setActiveLedgerPanel('targetRequest'),
-            record: t('storeApprovals.targetTitle'),
-            scope: storeId || t('storeApprovals.noActionStore'),
-            source: t('storeApprovals.targetLedgerSource'),
-            status: canSubmit
-              ? t('storeApprovals.ledgerStatusReady')
-              : t('storeApprovals.ledgerStatusDraft'),
-            statusTone: canSubmit ? 'calm' : 'warning',
-            type: t('storeApprovals.ledgerTypeTarget'),
-            wait: t('storeApprovals.ledgerWaitLive'),
-          } satisfies StoreApprovalsLedgerRow,
-        ]
-      : []),
-    ...pendingTargetRequests.map((item) => ({
-      actionLabel: showTargetApprovalQueue
-        ? t('storeApprovals.ledgerActionReview')
-        : t('storeApprovals.ledgerActionDetail'),
-      detail: item.requestReason ?? t('storeApprovals.noNote'),
-      id: `pending-target-${item.requestId}`,
-      onAction: showTargetApprovalQueue ? () => setActiveLedgerPanel('targetApproval') : undefined,
-      record: item.targetLabel,
-      scope: item.storeName || item.storeId,
-      source: t('storeApprovals.targetLedgerSource'),
-      status: formatApprovalStatus(item.status, t),
-      statusTone: 'warning' as const,
-      type: t('storeApprovals.ledgerTypeTarget'),
-      wait: formatDateTime(item.createdAt, locale),
-    })),
-    ...submittedTargetRequests.map((item) => ({
-      actionLabel: t('storeApprovals.ledgerActionDetail'),
-      detail: item.requestReason ?? t('storeApprovals.noNote'),
-      id: `submitted-target-${item.requestId}`,
-      onAction: () => setActiveLedgerPanel('submittedTargets'),
-      record: item.targetLabel,
-      scope: item.storeName || item.storeId,
-      source: t('storeApprovals.targetLedgerSource'),
-      status: formatApprovalStatus(item.status, t),
-      statusTone: mapApprovalStatusTone(item.status),
-      type: t('storeApprovals.ledgerTypeTarget'),
-      wait: formatDateTime(item.updatedAt, locale),
-    })),
-    ...(showWorkforceHrQueues
-      ? [
-          {
-            actionLabel: t('storeApprovals.ledgerActionCreate'),
-            detail: t('storeApprovals.sellerCodeLedgerDetail'),
-            id: 'seller-code-form',
-            onAction: () => setActiveLedgerPanel('sellerCodeRequest'),
-            record: t('storeApprovals.sellerCodeTitle'),
-            scope: storeId || t('storeApprovals.noActionStore'),
-            source: t('storeApprovals.hrQueue'),
-            status: canSubmitSellerCodeRequest
-              ? t('storeApprovals.ledgerStatusReady')
-              : t('storeApprovals.ledgerStatusDraft'),
-            statusTone: canSubmitSellerCodeRequest ? 'calm' : 'warning',
-            type: t('storeApprovals.ledgerTypeSellerCode'),
-            wait: t('storeApprovals.ledgerWaitLive'),
-          } satisfies StoreApprovalsLedgerRow,
-          {
-            actionLabel: t('storeApprovals.ledgerActionCreate'),
-            detail: t('storeApprovals.offboardingLedgerDetail'),
-            id: 'offboarding-form',
-            onAction: () => setActiveLedgerPanel('offboardingRequest'),
-            record: t('storeApprovals.offboardingTitle'),
-            scope: storeId || t('storeApprovals.noActionStore'),
-            source: t('storeApprovals.hrQueue'),
-            status: canSubmitOffboardingRequest
-              ? t('storeApprovals.ledgerStatusReady')
-              : t('storeApprovals.ledgerStatusDraft'),
-            statusTone: canSubmitOffboardingRequest ? 'calm' : 'warning',
-            type: t('storeApprovals.ledgerTypeOffboarding'),
-            wait: t('storeApprovals.ledgerWaitLive'),
-          } satisfies StoreApprovalsLedgerRow,
-          ...returnedSellerCodeRequests.map((item) => ({
-            actionLabel: t('storeApprovals.editSellerCodeRequest'),
-            detail: item.reviewNote ?? t('storeApprovals.noNote'),
-            id: `seller-returned-${item.requestId}`,
-            onAction: () => startEditingSellerRequest(item),
-            record: `${item.firstName} ${item.lastName}`.trim(),
-            scope: item.storeName || item.storeId,
-            source: t('storeApprovals.hrQueue'),
-            status: formatApprovalStatus(item.status, t),
-            statusTone: 'danger' as const,
-            type: t('storeApprovals.ledgerTypeSellerCode'),
-            wait: formatDateTime(item.updatedAt, locale),
-          })),
-          ...returnedOffboardingRequests.map((item) => ({
-            actionLabel: t('storeApprovals.editOffboardingRequest'),
-            detail: item.reviewNote ?? t('storeApprovals.noNote'),
-            id: `offboarding-returned-${item.requestId}`,
-            onAction: () => startEditingOffboardingRequest(item),
-            record: item.displayName,
-            scope: item.storeName || item.storeId,
-            source: t('storeApprovals.hrQueue'),
-            status: formatApprovalStatus(item.status, t),
-            statusTone: 'danger' as const,
-            type: t('storeApprovals.ledgerTypeOffboarding'),
-            wait: formatDateTime(item.updatedAt, locale),
-          })),
-        ]
-      : []),
-  ]
-  const ledgerTypeOptions = Array.from(new Set(ledgerRows.map((item) => item.type)))
-  const ledgerStatusOptions = Array.from(new Set(ledgerRows.map((item) => item.status)))
-  const normalizedLedgerSearch = ledgerSearch.trim().toLocaleLowerCase(locale)
-  const visibleLedgerRows = ledgerRows.filter((item) => {
-    const matchesType = ledgerTypeFilter === 'all' || item.type === ledgerTypeFilter
-    const matchesStatus = ledgerStatusFilter === 'all' || item.status === ledgerStatusFilter
-    const matchesSearch =
-      !normalizedLedgerSearch ||
-      [item.type, item.record, item.detail, item.scope, item.status, item.source]
-        .join(' ')
-        .toLocaleLowerCase(locale)
-        .includes(normalizedLedgerSearch)
-
-    return matchesType && matchesStatus && matchesSearch
-  })
-  const addTargetAllocation = () => {
-    setSubmissionNotice(null)
-    setAllocations([
-      ...activeAllocations,
-      { employeeId: '', assigneeLabel: '', targetValue: 0, note: '' },
-    ])
-  }
-  const updateTargetAllocationPerson = (
-    index: number,
-    employeeId: string,
-    assigneeLabel: string,
-  ) => {
-    setSubmissionNotice(null)
-    setAllocations(
-      activeAllocations.map((item, itemIndex) =>
-        itemIndex === index
-          ? {
-              ...item,
-              employeeId,
-              assigneeLabel,
-            }
-          : item,
-      ),
-    )
-  }
   const updateTargetAllocationValue = (index: number, targetValue: number) => {
     setSubmissionNotice(null)
     setAllocations(
@@ -770,10 +577,6 @@ export function StoreApprovalsPage(input: {
         itemIndex === index ? { ...item, note } : item,
       ),
     )
-  }
-  const removeTargetAllocation = (index: number) => {
-    setSubmissionNotice(null)
-    setAllocations(activeAllocations.filter((_, itemIndex) => itemIndex !== index))
   }
   const submitTargetDistributionRequest = () => {
     createMutation.mutate({
@@ -879,20 +682,6 @@ export function StoreApprovalsPage(input: {
                 : t('storeApprovals.readOnlySubtitle')}
           </p>
         </div>
-        <div className="store-approvals-ledger-scope" aria-label={t('storeApprovals.ledgerScope')}>
-          <span>
-            <strong>{t('storeApprovals.roles')}</strong>
-            {formatRoles(user?.roleCodes, t)}
-          </span>
-          <span>
-            <strong>{t('storeApprovals.actionStore')}</strong>
-            {primaryStoreId ?? t('storeApprovals.noActionStore')}
-          </span>
-          <span>
-            <strong>{t('storeApprovals.readStoreIds')}</strong>
-            {readStoreIds.length ? String(readStoreIds.length) : t('storeApprovals.none')}
-          </span>
-        </div>
       </header>
 
       <section
@@ -941,24 +730,6 @@ export function StoreApprovalsPage(input: {
         />
       </section>
 
-      <StoreApprovalsLedgerTable
-        rows={visibleLedgerRows}
-        searchValue={ledgerSearch}
-        statusFilter={ledgerStatusFilter}
-        statusOptions={ledgerStatusOptions}
-        t={t}
-        typeFilter={ledgerTypeFilter}
-        typeOptions={ledgerTypeOptions}
-        onPrimaryAction={() => {
-          setLedgerTypeFilter('all')
-          setLedgerStatusFilter('all')
-          setLedgerSearch('')
-        }}
-        onSearchChange={setLedgerSearch}
-        onStatusFilterChange={setLedgerStatusFilter}
-        onTypeFilterChange={setLedgerTypeFilter}
-      />
-
       <section
         className="store-approvals-ledger-inspector"
         aria-label={t('storeApprovals.ledgerInspectorAria')}
@@ -973,7 +744,7 @@ export function StoreApprovalsPage(input: {
                 {t(ledgerActionLabelKeys[activeLedgerPanel])}
               </strong>
             </div>
-            <StatusPill tone={activeLedgerPanel === 'overview' ? 'neutral' : 'calm'}>
+            <StatusPill tone="calm">
               {t('storeApprovals.ledgerDetailStatus')}
             </StatusPill>
           </div>
@@ -1038,13 +809,6 @@ export function StoreApprovalsPage(input: {
           </div>
 
           <div className="store-approvals-action-panel">
-            {activeLedgerPanel === 'overview' ? (
-              <EmptyState
-                title={t('storeApprovals.ledgerDetailEmptyTitle')}
-                copy={t('storeApprovals.ledgerDetailEmptyCopy')}
-              />
-            ) : null}
-
             {activeLedgerPanel === 'targetRequest' && showTargetSubmission ? (
               <TargetDistributionRequestForm
               activeAllocations={activeAllocations}
@@ -1056,11 +820,8 @@ export function StoreApprovalsPage(input: {
               hasCreateError={createMutation.isError}
               isSubmitting={createMutation.isPending}
               locale={locale}
-              onAddAllocation={addTargetAllocation}
               onAllocationNoteChange={updateTargetAllocationNote}
-              onAllocationPersonChange={updateTargetAllocationPerson}
               onAllocationValueChange={updateTargetAllocationValue}
-              onRemoveAllocation={removeTargetAllocation}
               onRequestMonthChange={(value) => {
                 setSubmissionNotice(null)
                 setRequestMonth(value)
@@ -1079,7 +840,6 @@ export function StoreApprovalsPage(input: {
                 setSubmissionNotice(null)
                 setTotalTargetValue(value)
               }}
-              personnelById={personnelById}
               personnelQuery={personnelQuery}
               primaryStoreId={primaryStoreId}
               requestMonth={requestMonth}
@@ -1259,106 +1019,6 @@ function LedgerMetric(input: {
   )
 }
 
-function StoreApprovalsLedgerTable(input: {
-  onPrimaryAction: () => void
-  onSearchChange: (value: string) => void
-  onStatusFilterChange: (value: string) => void
-  onTypeFilterChange: (value: string) => void
-  rows: StoreApprovalsLedgerRow[]
-  searchValue: string
-  statusFilter: string
-  statusOptions: string[]
-  t: TranslateFunction
-  typeFilter: string
-  typeOptions: string[]
-}) {
-  return (
-    <section className="store-approvals-ledger-workbench">
-      <div className="store-approvals-ledger-toolbar">
-        <div className="store-approvals-ledger-filters">
-          <input
-            aria-label={input.t('storeApprovals.ledgerSearchAria')}
-            value={input.searchValue}
-            onChange={(event) => input.onSearchChange(event.target.value)}
-            placeholder={input.t('storeApprovals.ledgerSearchPlaceholder')}
-          />
-          <select
-            aria-label={input.t('storeApprovals.ledgerTypeFilterAria')}
-            value={input.typeFilter}
-            onChange={(event) => input.onTypeFilterChange(event.target.value)}
-          >
-            <option value="all">{input.t('storeApprovals.ledgerAllTypes')}</option>
-            {input.typeOptions.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </select>
-          <select
-            aria-label={input.t('storeApprovals.ledgerStatusFilterAria')}
-            value={input.statusFilter}
-            onChange={(event) => input.onStatusFilterChange(event.target.value)}
-          >
-            <option value="all">{input.t('storeApprovals.ledgerAllStatuses')}</option>
-            {input.statusOptions.map((status) => (
-              <option key={status} value={status}>
-                {status}
-              </option>
-            ))}
-          </select>
-        </div>
-        <button
-          className="store-approvals-ledger-button store-approvals-ledger-button-primary"
-          type="button"
-          onClick={input.onPrimaryAction}
-        >
-          {input.t('storeApprovals.ledgerResetFilters')}
-        </button>
-      </div>
-
-      <div
-        className="store-approvals-request-list"
-        role="list"
-        aria-label={input.t('storeApprovals.ledgerTableAria')}
-      >
-        {input.rows.length === 0 ? (
-          <div className="store-approvals-request-empty" role="listitem">
-            {input.t('storeApprovals.emptyQueue')}
-          </div>
-        ) : (
-          input.rows.map((row) => (
-            <article className="store-approvals-request-row" role="listitem" key={row.id}>
-              <div className="store-approvals-request-main">
-                <span className={`store-approvals-ledger-type store-approvals-ledger-type-${row.statusTone}`}>
-                  {row.type}
-                </span>
-                <div className="store-approvals-request-copy">
-                  <strong>{row.record}</strong>
-                  <small>{row.detail}</small>
-                </div>
-              </div>
-              <div className="store-approvals-request-meta">
-                <span>{row.scope}</span>
-                <span>{row.wait}</span>
-                <span>{row.source}</span>
-              </div>
-              <StatusPill tone={row.statusTone}>{row.status}</StatusPill>
-              <button
-                className="store-approvals-request-action"
-                type="button"
-                onClick={row.onAction}
-                disabled={!row.onAction}
-              >
-                {row.actionLabel}
-              </button>
-            </article>
-          ))
-        )}
-      </div>
-    </section>
-  )
-}
-
 function TargetApprovalLedger(input: {
   approvalNotes: Record<string, string>
   approvalNotice: string | null
@@ -1435,6 +1095,11 @@ function TargetApprovalLedger(input: {
                     {input.t('storeApprovals.reasonPrefix', { reason: item.requestReason })}
                   </p>
                 ) : null}
+                <TargetAllocationBreakdown
+                  allocations={item.allocations}
+                  locale={input.locale}
+                  totalTargetValue={item.totalTargetValue}
+                />
                 <label
                   className="store-approvals-ledger-label"
                   htmlFor={`store-approval-note-${item.requestId}`}
@@ -1481,6 +1146,36 @@ function TargetApprovalLedger(input: {
         <p className="store-approvals-ledger-row-note">{input.approvalNotice}</p>
       ) : null}
     </section>
+  )
+}
+
+function TargetAllocationBreakdown(input: {
+  allocations: TargetDistributionAllocation[]
+  locale: AppLocale
+  totalTargetValue: number
+}) {
+  if (!input.allocations.length) {
+    return null
+  }
+
+  return (
+    <div className="store-target-allocation-breakdown">
+      {input.allocations.map((allocation) => {
+        const targetValue = Number(allocation.targetValue || 0)
+
+        return (
+          <div
+            className="store-target-allocation-breakdown-row"
+            key={`${allocation.employeeId}-${allocation.assigneeLabel}`}
+          >
+            <strong>{allocation.assigneeLabel}</strong>
+            <span>{formatTargetNumber(targetValue, input.locale)}</span>
+            <span>{formatAllocationShare(targetValue, input.totalTargetValue, input.locale)}</span>
+            {allocation.note ? <small>{allocation.note}</small> : null}
+          </div>
+        )
+      })}
+    </div>
   )
 }
 
@@ -1625,18 +1320,14 @@ function TargetDistributionRequestForm(input: {
   hasCreateError: boolean
   isSubmitting: boolean
   locale: AppLocale
-  onAddAllocation: () => void
   onAllocationNoteChange: (index: number, value: string) => void
-  onAllocationPersonChange: (index: number, employeeId: string, assigneeLabel: string) => void
   onAllocationValueChange: (index: number, targetValue: number) => void
-  onRemoveAllocation: (index: number) => void
   onRequestMonthChange: StringFieldSetter
   onRequestReasonChange: StringFieldSetter
   onStoreIdChange: StringFieldSetter
   onSubmit: () => void
   onTargetLabelChange: StringFieldSetter
   onTotalTargetValueChange: StringFieldSetter
-  personnelById: ReadonlyMap<string, StoreTargetingPerson>
   personnelQuery: ListQuerySnapshot<StoreTargetingPerson>
   primaryStoreId: string | null
   requestMonth: string
@@ -1648,6 +1339,14 @@ function TargetDistributionRequestForm(input: {
   totalTargetValue: string
   totalsAligned: boolean
 }) {
+  const totalTargetNumber = Number(input.totalTargetValue || 0)
+  const remainingTargetValue = totalTargetNumber - input.allocationTotal
+  const completionShare = formatAllocationShare(
+    input.allocationTotal,
+    totalTargetNumber,
+    input.locale,
+  )
+
   return (
     <article
       className="store-request-sheet"
@@ -1750,9 +1449,19 @@ function TargetDistributionRequestForm(input: {
           <div className="store-request-subsection store-request-field-wide">
             <div className="store-request-subsection-head">
               <strong>{input.t('storeApprovals.personTargetEntry')}</strong>
-              <StatusPill tone={input.totalsAligned ? 'calm' : 'warning'}>
-                {`${input.allocationTotal}/${Number(input.totalTargetValue || 0)}`}
-              </StatusPill>
+              <div className="store-request-allocation-summary">
+                <span>
+                  <small>{input.t('storeApprovals.allocatedTarget')}</small>
+                  <strong>{formatTargetNumber(input.allocationTotal, input.locale)}</strong>
+                </span>
+                <span>
+                  <small>{input.t('storeApprovals.remainingTarget')}</small>
+                  <strong>{formatTargetNumber(remainingTargetValue, input.locale)}</strong>
+                </span>
+                <StatusPill tone={input.totalsAligned ? 'calm' : 'warning'}>
+                  {completionShare}
+                </StatusPill>
+              </div>
             </div>
             {input.personnelQuery.isError ? (
               <p className="store-request-note">
@@ -1772,49 +1481,16 @@ function TargetDistributionRequestForm(input: {
 
             <div className="store-request-list">
               {input.activeAllocations.map((allocation, index) => {
-                const selectedPerson = input.personnelById.get(allocation.employeeId)
+                const targetValue = Number(allocation.targetValue || 0)
 
                 return (
                   <div
                     className="store-request-allocation-row"
                     key={`allocation-${allocation.employeeId || index}`}
                   >
-                    {selectedPerson ? (
-                      <div className="store-request-allocation-person">
-                        <strong>{allocation.assigneeLabel || input.t('storeApprovals.unassigned')}</strong>
-                        <span>
-                          {input.t('storeApprovals.currentSales')}: {
-                            selectedPerson.netSalesValue !== null &&
-                            selectedPerson.netSalesValue !== undefined
-                              ? formatNumber(selectedPerson.netSalesValue, input.locale, {
-                                  currency: 'TRY',
-                                  maximumFractionDigits: 0,
-                                  style: 'currency',
-                                })
-                              : input.t('storeApprovals.noData')
-                          }
-                        </span>
-                      </div>
-                    ) : (
-                      <select
-                        value={allocation.employeeId}
-                        onChange={(event) => {
-                          const selected = input.personnelById.get(event.target.value)
-                          input.onAllocationPersonChange(
-                            index,
-                            event.target.value,
-                            selected?.displayName ?? '',
-                          )
-                        }}
-                      >
-                        <option value="">{input.t('storeApprovals.selectPersonnel')}</option>
-                        {(input.personnelQuery.data?.items ?? []).map((person) => (
-                          <option key={person.employeeId} value={person.employeeId}>
-                            {person.displayName}
-                          </option>
-                        ))}
-                      </select>
-                    )}
+                    <div className="store-request-allocation-person">
+                      <strong>{allocation.assigneeLabel || input.t('storeApprovals.unassigned')}</strong>
+                    </div>
                     <input
                       aria-label={input.t('storeApprovals.personTargetValue')}
                       type="number"
@@ -1825,20 +1501,15 @@ function TargetDistributionRequestForm(input: {
                       }
                       placeholder={input.t('storeApprovals.targetValuePlaceholder')}
                     />
+                    <div className="store-request-allocation-share">
+                      <span>{input.t('storeApprovals.allocationShare')}</span>
+                      <strong>{formatAllocationShare(targetValue, totalTargetNumber, input.locale)}</strong>
+                    </div>
                     <input
                       value={allocation.note ?? ''}
                       onChange={(event) => input.onAllocationNoteChange(index, event.target.value)}
                       placeholder={input.t('storeApprovals.optionalNote')}
                     />
-                    {input.activeAllocations.length > 1 ? (
-                      <button
-                        className="store-request-button"
-                        type="button"
-                        onClick={() => input.onRemoveAllocation(index)}
-                      >
-                        {input.t('storeApprovals.remove')}
-                      </button>
-                    ) : null}
                   </div>
                 )
               })}
@@ -1850,16 +1521,6 @@ function TargetDistributionRequestForm(input: {
               </p>
             ) : null}
 
-            <div className="store-request-actions">
-              <button
-                className="store-request-button"
-                type="button"
-                disabled={!input.canCreateForStore}
-                onClick={input.onAddAllocation}
-              >
-                {input.t('storeApprovals.addAllocation')}
-              </button>
-            </div>
           </div>
 
           <div className="store-request-actions store-request-field-wide">
@@ -2319,6 +1980,11 @@ function SubmittedTargetRequestsPanel(input: {
                   {input.t('storeApprovals.reasonPrefix', { reason: item.requestReason })}
                 </p>
               ) : null}
+              <TargetAllocationBreakdown
+                allocations={item.allocations}
+                locale={input.locale}
+                totalTargetValue={item.totalTargetValue}
+              />
               {item.approvalNote ? (
                 <p className="store-approvals-ledger-row-note">
                   {input.t('storeApprovals.approvalNotePrefix', { note: item.approvalNote })}
