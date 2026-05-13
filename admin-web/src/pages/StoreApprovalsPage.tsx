@@ -140,10 +140,6 @@ type StoreApprovalsLedgerRow = {
   type: string
   wait: string
 }
-type StoreSellerPositionOption = {
-  label: string
-  position: PositionOption
-}
 
 const storeSellerPositionLabels = {
   cashierResponsible: 'Kasa Sorumlusu',
@@ -153,6 +149,11 @@ const storeSellerPositionLabels = {
   storeManager: 'Mağaza Müdürü',
 } as const
 type StoreSellerPositionKey = keyof typeof storeSellerPositionLabels
+type StoreSellerPositionOption = {
+  key: StoreSellerPositionKey
+  label: string
+  position: PositionOption
+}
 
 const storeSellerPositionAliases = {
   cashierResponsible: [
@@ -217,6 +218,22 @@ const storeSellerPositionAliases = {
   ],
 } as const satisfies Record<StoreSellerPositionKey, readonly string[]>
 
+const storeSellerPositionOrder: StoreSellerPositionKey[] = [
+  'storeManager',
+  'storeAssistantManager',
+  'seniorSalesConsultant',
+  'salesConsultant',
+  'cashierResponsible',
+]
+
+const storeSellerCanonicalCodes = {
+  cashierResponsible: 'CASHIER',
+  salesConsultant: 'SALES_ASSOCIATE',
+  seniorSalesConsultant: 'SENIOR_SALES_CONSULTANT',
+  storeAssistantManager: 'ASSISTANT_MANAGER',
+  storeManager: 'STORE_MANAGER',
+} as const satisfies Record<StoreSellerPositionKey, string>
+
 const storeSellerPositionLookup = new Map<string, StoreSellerPositionKey>(
   Object.entries(storeSellerPositionAliases).flatMap(([positionKey, aliases]) =>
     aliases.map((alias) => [
@@ -250,24 +267,41 @@ function normalizePositionLookup(value: string) {
     .replace(/^_+|_+$/g, '')
 }
 
-function resolveStoreSellerPositionLabel(position: PositionOption) {
-  const matchingKey =
+function resolveStoreSellerPositionKey(position: PositionOption) {
+  return (
     storeSellerPositionLookup.get(normalizePositionLookup(position.positionCode)) ??
     storeSellerPositionLookup.get(normalizePositionLookup(position.positionName))
-
-  return matchingKey ? storeSellerPositionLabels[matchingKey] : null
+  )
 }
 
 function getStoreSellerPositionOptions(positions: readonly PositionOption[]) {
-  return positions.reduce<StoreSellerPositionOption[]>((options, position) => {
-    const label = resolveStoreSellerPositionLabel(position)
-    if (!label) {
-      return options
+  const optionsByKey = new Map<StoreSellerPositionKey, StoreSellerPositionOption>()
+
+  positions.forEach((position) => {
+    const key = resolveStoreSellerPositionKey(position)
+    if (!key) {
+      return
     }
 
-    options.push({ label, position })
-    return options
-  }, [])
+    const nextOption = {
+      key,
+      label: storeSellerPositionLabels[key],
+      position,
+    }
+    const currentOption = optionsByKey.get(key)
+    if (
+      !currentOption ||
+      normalizePositionLookup(position.positionCode) ===
+        normalizePositionLookup(storeSellerCanonicalCodes[key])
+    ) {
+      optionsByKey.set(key, nextOption)
+    }
+  })
+
+  return storeSellerPositionOrder.flatMap((key) => {
+    const option = optionsByKey.get(key)
+    return option ? [option] : []
+  })
 }
 
 function resolveStoreApprovalsPersona(
@@ -1638,12 +1672,12 @@ function TargetDistributionRequestForm(input: {
 }) {
   return (
     <article
-      className="store-approvals-ledger-card store-approvals-ledger-editor store-approvals-ledger-compact-form"
+      className="store-request-sheet"
       aria-label={input.t('storeApprovals.targetFormAria')}
     >
-      <div className="store-approvals-ledger-card-head">
+      <div className="store-request-sheet-head">
         <div>
-          <div className="store-approvals-ledger-eyebrow">
+          <div className="store-request-eyebrow">
             {input.t('storeApprovals.targetQueueTitle')}
           </div>
           <h3>{input.t('storeApprovals.targetTitle')}</h3>
@@ -1657,9 +1691,9 @@ function TargetDistributionRequestForm(input: {
           copy={input.t('storeApprovals.targetUnavailableCopy')}
         />
       ) : (
-        <div className="store-approvals-ledger-form-grid">
-          <div className="store-approvals-ledger-field">
-            <label className="store-approvals-ledger-label" htmlFor="store-id">
+        <div className="store-request-grid">
+          <div className="store-request-field">
+            <label className="store-request-label" htmlFor="store-id">
               {input.t('storeApprovals.storeId')}
             </label>
             {input.assignedStoreIds.length > 1 ? (
@@ -1685,8 +1719,8 @@ function TargetDistributionRequestForm(input: {
             )}
           </div>
 
-          <div className="store-approvals-ledger-field">
-            <label className="store-approvals-ledger-label" htmlFor="request-month">
+          <div className="store-request-field">
+            <label className="store-request-label" htmlFor="request-month">
               {input.t('storeApprovals.requestMonth')}
             </label>
             <input
@@ -1697,8 +1731,8 @@ function TargetDistributionRequestForm(input: {
             />
           </div>
 
-          <div className="store-approvals-ledger-field">
-            <label className="store-approvals-ledger-label" htmlFor="target-label">
+          <div className="store-request-field">
+            <label className="store-request-label" htmlFor="target-label">
               {input.t('storeApprovals.targetLabel')}
             </label>
             <input
@@ -1709,8 +1743,8 @@ function TargetDistributionRequestForm(input: {
             />
           </div>
 
-          <div className="store-approvals-ledger-field">
-            <label className="store-approvals-ledger-label" htmlFor="total-target-value">
+          <div className="store-request-field">
+            <label className="store-request-label" htmlFor="total-target-value">
               {input.t('storeApprovals.totalTargetValue')}
             </label>
             <input
@@ -1722,8 +1756,8 @@ function TargetDistributionRequestForm(input: {
             />
           </div>
 
-          <div className="store-approvals-ledger-field store-approvals-ledger-field-wide">
-            <label className="store-approvals-ledger-label" htmlFor="request-reason">
+          <div className="store-request-field store-request-field-wide">
+            <label className="store-request-label" htmlFor="request-reason">
               {input.t('storeApprovals.requestReason')}
             </label>
             <textarea
@@ -1735,40 +1769,40 @@ function TargetDistributionRequestForm(input: {
             />
           </div>
 
-          <div className="store-approvals-ledger-row store-approvals-ledger-field-wide">
-            <div className="store-approvals-ledger-row-head">
+          <div className="store-request-subsection store-request-field-wide">
+            <div className="store-request-subsection-head">
               <strong>{input.t('storeApprovals.personTargetEntry')}</strong>
               <StatusPill tone={input.totalsAligned ? 'calm' : 'warning'}>
                 {`${input.allocationTotal}/${Number(input.totalTargetValue || 0)}`}
               </StatusPill>
             </div>
             {input.personnelQuery.isError ? (
-              <p className="store-approvals-ledger-row-note">
+              <p className="store-request-note">
                 {getErrorMessage(input.personnelQuery.error)}
               </p>
             ) : null}
             {input.personnelQuery.isLoading ? (
-              <p className="store-approvals-ledger-row-note">
+              <p className="store-request-note">
                 {input.t('storeApprovals.personnelLoading')}
               </p>
             ) : null}
             {!input.personnelQuery.isLoading && !input.personnelQuery.isError ? (
-              <p className="store-approvals-ledger-row-note">
+              <p className="store-request-note">
                 {input.t('storeApprovals.personTargetCopy')}
               </p>
             ) : null}
 
-            <div className="store-approvals-ledger-rows">
+            <div className="store-request-list">
               {input.activeAllocations.map((allocation, index) => {
                 const selectedPerson = input.personnelById.get(allocation.employeeId)
 
                 return (
                   <div
-                    className="store-approvals-ledger-row"
+                    className="store-request-allocation-row"
                     key={`allocation-${allocation.employeeId || index}`}
                   >
                     {selectedPerson ? (
-                      <div className="store-approvals-ledger-key-grid">
+                      <div className="store-request-key-grid">
                         <KeyValue
                           label={input.t('storeApprovals.personnel')}
                           value={allocation.assigneeLabel || input.t('storeApprovals.unassigned')}
@@ -1824,7 +1858,7 @@ function TargetDistributionRequestForm(input: {
                     />
                     {input.activeAllocations.length > 1 ? (
                       <button
-                        className="store-approvals-ledger-button"
+                        className="store-request-button"
                         type="button"
                         onClick={() => input.onRemoveAllocation(index)}
                       >
@@ -1837,14 +1871,14 @@ function TargetDistributionRequestForm(input: {
             </div>
 
             {!input.totalsAligned ? (
-              <p className="store-approvals-ledger-row-note">
+              <p className="store-request-note">
                 {input.t('storeApprovals.allocationMismatch')}
               </p>
             ) : null}
 
-            <div className="store-approvals-ledger-actions">
+            <div className="store-request-actions">
               <button
-                className="store-approvals-ledger-button"
+                className="store-request-button"
                 type="button"
                 disabled={!input.canCreateForStore}
                 onClick={input.onAddAllocation}
@@ -1854,9 +1888,9 @@ function TargetDistributionRequestForm(input: {
             </div>
           </div>
 
-          <div className="store-approvals-ledger-actions store-approvals-ledger-field-wide">
+          <div className="store-request-actions store-request-field-wide">
             <button
-              className="store-approvals-ledger-button store-approvals-ledger-button-primary"
+              className="store-request-button store-request-button-primary"
               type="button"
               disabled={!input.canSubmit || input.isSubmitting}
               onClick={input.onSubmit}
@@ -1868,10 +1902,10 @@ function TargetDistributionRequestForm(input: {
           </div>
 
           {input.hasCreateError ? (
-            <p className="store-approvals-ledger-row-note">{getErrorMessage(input.createError)}</p>
+            <p className="store-request-note">{getErrorMessage(input.createError)}</p>
           ) : null}
           {input.submissionNotice ? (
-            <p className="store-approvals-ledger-row-note">{input.submissionNotice}</p>
+            <p className="store-request-note">{input.submissionNotice}</p>
           ) : null}
         </div>
       )}
@@ -1917,12 +1951,12 @@ function SellerCodeRequestForm(input: {
 
   return (
     <article
-      className="store-approvals-ledger-card store-approvals-ledger-editor store-approvals-ledger-compact-form"
+      className="store-request-sheet"
       aria-label={input.t('storeApprovals.sellerFormAria')}
     >
-      <div className="store-approvals-ledger-card-head">
+      <div className="store-request-sheet-head">
         <div>
-          <div className="store-approvals-ledger-eyebrow">
+          <div className="store-request-eyebrow">
             {input.t('storeApprovals.workforceQueueTitle')}
           </div>
           <h3>{input.t('storeApprovals.sellerCodeTitle')}</h3>
@@ -1936,16 +1970,16 @@ function SellerCodeRequestForm(input: {
           copy={input.t('storeApprovals.sellerUnavailableCopy')}
         />
       ) : (
-        <div className="store-approvals-ledger-form-grid">
-          <div className="store-approvals-ledger-field">
-            <label className="store-approvals-ledger-label" htmlFor="seller-store-id">
+        <div className="store-request-grid">
+          <div className="store-request-field">
+            <label className="store-request-label" htmlFor="seller-store-id">
               {input.t('storeApprovals.storeId')}
             </label>
             <input id="seller-store-id" value={input.storeId} readOnly />
           </div>
 
-          <div className="store-approvals-ledger-field">
-            <label className="store-approvals-ledger-label" htmlFor="seller-first-name">
+          <div className="store-request-field">
+            <label className="store-request-label" htmlFor="seller-first-name">
               {input.t('storeApprovals.firstName')}
             </label>
             <input
@@ -1956,8 +1990,8 @@ function SellerCodeRequestForm(input: {
             />
           </div>
 
-          <div className="store-approvals-ledger-field">
-            <label className="store-approvals-ledger-label" htmlFor="seller-last-name">
+          <div className="store-request-field">
+            <label className="store-request-label" htmlFor="seller-last-name">
               {input.t('storeApprovals.lastName')}
             </label>
             <input
@@ -1968,8 +2002,8 @@ function SellerCodeRequestForm(input: {
             />
           </div>
 
-          <div className="store-approvals-ledger-field">
-            <label className="store-approvals-ledger-label" htmlFor="seller-position-id">
+          <div className="store-request-field">
+            <label className="store-request-label" htmlFor="seller-position-id">
               {input.t('storeApprovals.position')}
             </label>
             <select
@@ -1986,24 +2020,24 @@ function SellerCodeRequestForm(input: {
               ))}
             </select>
             {input.positionOptionsQuery.isLoading ? (
-              <p className="store-approvals-ledger-row-note">
+              <p className="store-request-note">
                 {input.t('storeApprovals.positionsLoading')}
               </p>
             ) : null}
             {input.positionOptionsQuery.isError ? (
-              <p className="store-approvals-ledger-row-note">
+              <p className="store-request-note">
                 {getErrorMessage(input.positionOptionsQuery.error)}
               </p>
             ) : null}
             {!input.positionOptionsQuery.isLoading &&
             !input.positionOptionsQuery.isError &&
             sellerPositionOptions.length === 0 ? (
-              <p className="store-approvals-ledger-row-note">{input.t('storeApprovals.noPositions')}</p>
+              <p className="store-request-note">{input.t('storeApprovals.noPositions')}</p>
             ) : null}
           </div>
 
-          <div className="store-approvals-ledger-field">
-            <label className="store-approvals-ledger-label" htmlFor="seller-national-id">
+          <div className="store-request-field">
+            <label className="store-request-label" htmlFor="seller-national-id">
               {input.t('storeApprovals.nationalId')}
             </label>
             <input
@@ -2016,8 +2050,8 @@ function SellerCodeRequestForm(input: {
             />
           </div>
 
-          <div className="store-approvals-ledger-field">
-            <label className="store-approvals-ledger-label" htmlFor="seller-phone-number">
+          <div className="store-request-field">
+            <label className="store-request-label" htmlFor="seller-phone-number">
               {input.t('storeApprovals.phoneNumber')}
             </label>
             <input
@@ -2029,8 +2063,8 @@ function SellerCodeRequestForm(input: {
             />
           </div>
 
-          <div className="store-approvals-ledger-field">
-            <label className="store-approvals-ledger-label" htmlFor="seller-hire-date">
+          <div className="store-request-field">
+            <label className="store-request-label" htmlFor="seller-hire-date">
               {input.t('storeApprovals.hireDate')}
             </label>
             <input
@@ -2041,8 +2075,8 @@ function SellerCodeRequestForm(input: {
             />
           </div>
 
-          <div className="store-approvals-ledger-field">
-            <label className="store-approvals-ledger-label" htmlFor="seller-employment-type">
+          <div className="store-request-field">
+            <label className="store-request-label" htmlFor="seller-employment-type">
               {input.t('storeApprovals.employmentType')}
             </label>
             <select
@@ -2058,8 +2092,8 @@ function SellerCodeRequestForm(input: {
             </select>
           </div>
 
-          <div className="store-approvals-ledger-field store-approvals-ledger-field-wide">
-            <label className="store-approvals-ledger-label" htmlFor="seller-request-reason">
+          <div className="store-request-field store-request-field-wide">
+            <label className="store-request-label" htmlFor="seller-request-reason">
               {input.t('storeApprovals.requestReason')}
             </label>
             <textarea
@@ -2071,9 +2105,9 @@ function SellerCodeRequestForm(input: {
             />
           </div>
 
-          <div className="store-approvals-ledger-actions store-approvals-ledger-field-wide">
+          <div className="store-request-actions store-request-field-wide">
             <button
-              className="store-approvals-ledger-button store-approvals-ledger-button-primary"
+              className="store-request-button store-request-button-primary"
               type="button"
               disabled={!input.canSubmit || input.isPending}
               onClick={input.onSubmit}
@@ -2086,7 +2120,7 @@ function SellerCodeRequestForm(input: {
             </button>
             {input.editingRequestId ? (
               <button
-                className="store-approvals-ledger-button"
+                className="store-request-button"
                 type="button"
                 disabled={input.isPending}
                 onClick={input.onCancelEdit}
@@ -2097,12 +2131,12 @@ function SellerCodeRequestForm(input: {
           </div>
 
           {input.hasCreateError ? (
-            <p className="store-approvals-ledger-row-note">{getErrorMessage(input.createError)}</p>
+            <p className="store-request-note">{getErrorMessage(input.createError)}</p>
           ) : null}
           {input.hasResubmitError ? (
-            <p className="store-approvals-ledger-row-note">{getErrorMessage(input.resubmitError)}</p>
+            <p className="store-request-note">{getErrorMessage(input.resubmitError)}</p>
           ) : null}
-          {input.notice ? <p className="store-approvals-ledger-row-note">{input.notice}</p> : null}
+          {input.notice ? <p className="store-request-note">{input.notice}</p> : null}
         </div>
       )}
     </article>
@@ -2134,12 +2168,12 @@ function OffboardingRequestForm(input: {
 }) {
   return (
     <article
-      className="store-approvals-ledger-card store-approvals-ledger-editor store-approvals-ledger-compact-form"
+      className="store-request-sheet"
       aria-label={input.t('storeApprovals.offboardingFormAria')}
     >
-      <div className="store-approvals-ledger-card-head">
+      <div className="store-request-sheet-head">
         <div>
-          <div className="store-approvals-ledger-eyebrow">
+          <div className="store-request-eyebrow">
             {input.t('storeApprovals.workforceQueueTitle')}
           </div>
           <h3>{input.t('storeApprovals.offboardingTitle')}</h3>
@@ -2153,9 +2187,9 @@ function OffboardingRequestForm(input: {
           copy={input.t('storeApprovals.offboardingUnavailableCopy')}
         />
       ) : (
-        <div className="store-approvals-ledger-form-grid">
-          <div className="store-approvals-ledger-field store-approvals-ledger-field-wide">
-            <label className="store-approvals-ledger-label" htmlFor="offboarding-employee-id">
+        <div className="store-request-grid">
+          <div className="store-request-field store-request-field-wide">
+            <label className="store-request-label" htmlFor="offboarding-employee-id">
               {input.t('storeApprovals.employee')}
             </label>
             <select
@@ -2172,24 +2206,24 @@ function OffboardingRequestForm(input: {
               ))}
             </select>
             {input.storeEmployeesQuery.isLoading ? (
-              <p className="store-approvals-ledger-row-note">
+              <p className="store-request-note">
                 {input.t('storeApprovals.activePersonnelLoading')}
               </p>
             ) : null}
             {input.storeEmployeesQuery.isError ? (
-              <p className="store-approvals-ledger-row-note">
+              <p className="store-request-note">
                 {getErrorMessage(input.storeEmployeesQuery.error)}
               </p>
             ) : null}
             {!input.storeEmployeesQuery.isLoading &&
             !input.storeEmployeesQuery.isError &&
             (input.storeEmployeesQuery.data?.items.length ?? 0) === 0 ? (
-              <p className="store-approvals-ledger-row-note">{input.t('storeApprovals.noActivePersonnel')}</p>
+              <p className="store-request-note">{input.t('storeApprovals.noActivePersonnel')}</p>
             ) : null}
           </div>
 
-          <div className="store-approvals-ledger-field">
-            <label className="store-approvals-ledger-label" htmlFor="offboarding-termination-date">
+          <div className="store-request-field">
+            <label className="store-request-label" htmlFor="offboarding-termination-date">
               {input.t('storeApprovals.terminationDate')}
             </label>
             <input
@@ -2200,8 +2234,8 @@ function OffboardingRequestForm(input: {
             />
           </div>
 
-          <div className="store-approvals-ledger-field">
-            <label className="store-approvals-ledger-label" htmlFor="offboarding-termination-reason">
+          <div className="store-request-field">
+            <label className="store-request-label" htmlFor="offboarding-termination-reason">
               {input.t('storeApprovals.terminationReason')}
             </label>
             <input
@@ -2212,8 +2246,8 @@ function OffboardingRequestForm(input: {
             />
           </div>
 
-          <div className="store-approvals-ledger-field store-approvals-ledger-field-wide">
-            <label className="store-approvals-ledger-label" htmlFor="offboarding-request-reason">
+          <div className="store-request-field store-request-field-wide">
+            <label className="store-request-label" htmlFor="offboarding-request-reason">
               {input.t('storeApprovals.requestReason')}
             </label>
             <textarea
@@ -2225,9 +2259,9 @@ function OffboardingRequestForm(input: {
             />
           </div>
 
-          <div className="store-approvals-ledger-actions store-approvals-ledger-field-wide">
+          <div className="store-request-actions store-request-field-wide">
             <button
-              className="store-approvals-ledger-button store-approvals-ledger-button-primary"
+              className="store-request-button store-request-button-primary"
               type="button"
               disabled={!input.canSubmit || input.isPending}
               onClick={input.onSubmit}
@@ -2240,7 +2274,7 @@ function OffboardingRequestForm(input: {
             </button>
             {input.editingRequestId ? (
               <button
-                className="store-approvals-ledger-button"
+                className="store-request-button"
                 type="button"
                 disabled={input.isPending}
                 onClick={input.onCancelEdit}
@@ -2251,12 +2285,12 @@ function OffboardingRequestForm(input: {
           </div>
 
           {input.hasCreateError ? (
-            <p className="store-approvals-ledger-row-note">{getErrorMessage(input.createError)}</p>
+            <p className="store-request-note">{getErrorMessage(input.createError)}</p>
           ) : null}
           {input.hasResubmitError ? (
-            <p className="store-approvals-ledger-row-note">{getErrorMessage(input.resubmitError)}</p>
+            <p className="store-request-note">{getErrorMessage(input.resubmitError)}</p>
           ) : null}
-          {input.notice ? <p className="store-approvals-ledger-row-note">{input.notice}</p> : null}
+          {input.notice ? <p className="store-request-note">{input.notice}</p> : null}
         </div>
       )}
     </article>
