@@ -269,44 +269,19 @@ export function MasterDataBootstrapPage() {
       setPromotionResult(null)
     },
   })
-  const updateStoreMasterMutation = useMutation({
-    mutationFn: updateStoreMasterData,
-    onSuccess: (response, variables) => {
-      updateStoreMasterCache(response.data.storeMaster)
-      clearStoreDraft(variables.storeId)
-      setStoreSaving(variables.storeId, false)
-      setStoreFeedback(response.command.message)
-      void queryClient.invalidateQueries({ queryKey: ['master-data-store-master'] })
-    },
-    onError: (error, variables) => {
-      clearStoreDraft(variables.storeId)
-      setStoreSaving(variables.storeId, false)
-      setStoreFeedback(getErrorMessage(error))
-      void queryClient.invalidateQueries({ queryKey: ['master-data-store-master'] })
-    },
-  })
-  const updatePersonnelMasterMutation = useMutation({
-    mutationFn: updatePersonnelMasterData,
-    onSuccess: (response, variables) => {
-      updatePersonnelMasterCache(response.data.personnelMaster)
-      clearPersonnelDraft(variables.employeeId)
-      setPersonnelSaving(variables.employeeId, false)
-      setPersonnelFeedback(response.command.message)
-      void queryClient.invalidateQueries({ queryKey: ['master-data-personnel-master'] })
-    },
-    onError: (error, variables) => {
-      clearPersonnelDraft(variables.employeeId)
-      setPersonnelSaving(variables.employeeId, false)
-      setPersonnelFeedback(getErrorMessage(error))
-      void queryClient.invalidateQueries({ queryKey: ['master-data-personnel-master'] })
-    },
-  })
-
   const batches = useMemo(() => batchesQuery.data?.items ?? [], [batchesQuery.data?.items])
   const summary = detailQuery.data?.summary ?? null
   const readiness = readinessQuery.data?.summary ?? null
   const readinessRows = readinessQuery.data?.rows.items ?? []
   const rows = detailQuery.data?.rows.items ?? []
+  const storeMasterItems = storeMasterQuery.data?.items ?? []
+  const personnelMasterItems = personnelMasterQuery.data?.items ?? []
+  const pendingStoreCount = storeMasterItems.filter((store) => Boolean(storeDrafts[store.storeId])).length
+  const pendingPersonnelCount = personnelMasterItems.filter((personnel) =>
+    Boolean(personnelDrafts[personnel.employeeId]),
+  ).length
+  const isSavingStores = savingStoreIds.size > 0
+  const isSavingPersonnel = savingPersonnelIds.size > 0
 
   function resolveRegionName(regionId: string | null, fallback: string | null) {
     if (!regionId) {
@@ -379,21 +354,48 @@ export function MasterDataBootstrapPage() {
     )
   }
 
-  function submitStoreUpdate(store: StoreMasterItem) {
-    const nextStore = getEffectiveStoreMaster(store)
-    if (!nextStore.regionId) {
+  async function submitStoreDrafts() {
+    const changedStores = storeMasterItems.filter((store) => Boolean(storeDrafts[store.storeId]))
+    if (changedStores.length === 0 || isSavingStores) {
+      return
+    }
+
+    const invalidStore = changedStores.find((store) => !getEffectiveStoreMaster(store).regionId)
+    if (invalidStore) {
       setStoreFeedback(t('adminMasterData.storeRegionRequired'))
       return
     }
 
-    setStoreSaving(store.storeId, true)
-    updateStoreMasterMutation.mutate({
-      storeId: store.storeId,
-      storeType: normalizeStoreType(nextStore.storeType),
-      regionId: nextStore.regionId,
-      status: normalizeStoreStatus(nextStore.status),
-      kpiImportEnabled: nextStore.kpiImportEnabled,
-    })
+    setStoreFeedback(null)
+    const results = await Promise.allSettled(
+      changedStores.map(async (store) => {
+        const nextStore = getEffectiveStoreMaster(store)
+        setStoreSaving(store.storeId, true)
+        try {
+          const response = await updateStoreMasterData({
+            storeId: store.storeId,
+            storeType: normalizeStoreType(nextStore.storeType),
+            regionId: nextStore.regionId ?? '',
+            status: normalizeStoreStatus(nextStore.status),
+            kpiImportEnabled: nextStore.kpiImportEnabled,
+          })
+          updateStoreMasterCache(response.data.storeMaster)
+          clearStoreDraft(store.storeId)
+          return response
+        } finally {
+          setStoreSaving(store.storeId, false)
+        }
+      }),
+    )
+    const failedCount = results.filter((result) => result.status === 'rejected').length
+    const savedCount = changedStores.length - failedCount
+
+    setStoreFeedback(
+      failedCount > 0
+        ? t('adminMasterData.bulkSavePartial', { saved: savedCount, failed: failedCount })
+        : t('adminMasterData.bulkSaveSuccess', { count: savedCount }),
+    )
+    void queryClient.invalidateQueries({ queryKey: ['master-data-store-master'] })
   }
 
   function mergePersonnelPatch(personnel: PersonnelMasterItem, patch: PersonnelMasterPatch) {
@@ -463,31 +465,60 @@ export function MasterDataBootstrapPage() {
     )
   }
 
-  function submitPersonnelUpdate(personnel: PersonnelMasterItem) {
-    const nextPersonnel = getEffectivePersonnel(personnel)
+  async function submitPersonnelDrafts() {
+    const changedPersonnel = personnelMasterItems.filter((personnel) =>
+      Boolean(personnelDrafts[personnel.employeeId]),
+    )
+    if (changedPersonnel.length === 0 || isSavingPersonnel) {
+      return
+    }
 
-    if (!nextPersonnel.storeId) {
+    const missingStore = changedPersonnel.find((personnel) => !getEffectivePersonnel(personnel).storeId)
+    if (missingStore) {
       setPersonnelFeedback(t('adminMasterData.personnelStoreRequired'))
       return
     }
-    if (!nextPersonnel.positionId) {
+    const missingPosition = changedPersonnel.find((personnel) => !getEffectivePersonnel(personnel).positionId)
+    if (missingPosition) {
       setPersonnelFeedback(t('adminMasterData.personnelPositionRequired'))
       return
     }
 
-    setPersonnelSaving(personnel.employeeId, true)
-    updatePersonnelMasterMutation.mutate({
-      employeeId: personnel.employeeId,
-      firstName: nextPersonnel.firstName,
-      lastName: nextPersonnel.lastName,
-      externalEmployeeRef: nextPersonnel.externalEmployeeRef || undefined,
-      employmentStatus: normalizePersonnelStatus(nextPersonnel.employmentStatus),
-      employmentType: normalizeEmploymentType(nextPersonnel.employmentType),
-      hireDate: nextPersonnel.hireDate,
-      storeId: nextPersonnel.storeId,
-      positionId: nextPersonnel.positionId,
-      assignmentStartDate: nextPersonnel.assignmentStartDate || undefined,
-    })
+    setPersonnelFeedback(null)
+    const results = await Promise.allSettled(
+      changedPersonnel.map(async (personnel) => {
+        const nextPersonnel = getEffectivePersonnel(personnel)
+        setPersonnelSaving(personnel.employeeId, true)
+        try {
+          const response = await updatePersonnelMasterData({
+            employeeId: personnel.employeeId,
+            firstName: nextPersonnel.firstName,
+            lastName: nextPersonnel.lastName,
+            externalEmployeeRef: nextPersonnel.externalEmployeeRef || undefined,
+            employmentStatus: normalizePersonnelStatus(nextPersonnel.employmentStatus),
+            employmentType: normalizeEmploymentType(nextPersonnel.employmentType),
+            hireDate: nextPersonnel.hireDate,
+            storeId: nextPersonnel.storeId,
+            positionId: nextPersonnel.positionId,
+            assignmentStartDate: nextPersonnel.assignmentStartDate || undefined,
+          })
+          updatePersonnelMasterCache(response.data.personnelMaster)
+          clearPersonnelDraft(personnel.employeeId)
+          return response
+        } finally {
+          setPersonnelSaving(personnel.employeeId, false)
+        }
+      }),
+    )
+    const failedCount = results.filter((result) => result.status === 'rejected').length
+    const savedCount = changedPersonnel.length - failedCount
+
+    setPersonnelFeedback(
+      failedCount > 0
+        ? t('adminMasterData.bulkSavePartial', { saved: savedCount, failed: failedCount })
+        : t('adminMasterData.bulkSaveSuccess', { count: savedCount }),
+    )
+    void queryClient.invalidateQueries({ queryKey: ['master-data-personnel-master'] })
   }
 
   if (batchesQuery.isLoading) {
@@ -769,10 +800,17 @@ export function MasterDataBootstrapPage() {
             <div className="inline-state inline-state-neutral">{t('adminMasterData.loadingStoreMaster')}</div>
           ) : storeMasterQuery.isError ? (
             <ScreenState title={t('adminMasterData.errorTitle')} copy={getErrorMessage(storeMasterQuery.error)} tone="error" />
-          ) : (storeMasterQuery.data?.items ?? []).length === 0 ? (
+          ) : storeMasterItems.length === 0 ? (
             <EmptyState title={t('adminMasterData.noStoresTitle')} copy={t('adminMasterData.noStoresCopy')} />
           ) : (
             <>
+              <MasterDataBulkSaveBar
+                disabled={pendingStoreCount === 0 || isSavingStores}
+                isSaving={isSavingStores}
+                pendingCount={pendingStoreCount}
+                t={t}
+                onSave={() => void submitStoreDrafts()}
+              />
               <div className="master-data-command-table-wrap">
                 <table className="master-data-command-table">
                   <thead>
@@ -782,11 +820,10 @@ export function MasterDataBootstrapPage() {
                       <th>{t('adminMasterData.regionalManager')}</th>
                       <th>{t('adminMasterData.status')}</th>
                       <th>{t('adminMasterData.kpiImport')}</th>
-                      <th>{t('adminMasterData.actions')}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {(storeMasterQuery.data?.items ?? []).map((store) => {
+                    {storeMasterItems.map((store) => {
                       const effectiveStore = getEffectiveStoreMaster(store)
                       const saving = savingStoreIds.has(store.storeId)
                       return (
@@ -799,6 +836,7 @@ export function MasterDataBootstrapPage() {
                             <select
                               aria-label={t('adminMasterData.storeTypeAria', { storeName: store.storeName })}
                               className="master-data-command-row-control"
+                              disabled={saving}
                               value={normalizeStoreType(effectiveStore.storeType)}
                               onChange={(event) =>
                                 updateStoreDraft(store.storeId, { storeType: normalizeStoreType(event.target.value) })
@@ -813,6 +851,7 @@ export function MasterDataBootstrapPage() {
                             <select
                               aria-label={t('adminMasterData.storeRegionalManagerAria', { storeName: store.storeName })}
                               className="master-data-command-row-control"
+                              disabled={saving}
                               value={effectiveStore.regionId ?? ''}
                               onChange={(event) => updateStoreDraft(store.storeId, { regionId: event.target.value })}
                             >
@@ -830,6 +869,7 @@ export function MasterDataBootstrapPage() {
                             <select
                               aria-label={t('adminMasterData.storeStatusAria', { storeName: store.storeName })}
                               className="master-data-command-row-control"
+                              disabled={saving}
                               value={normalizeStoreStatus(effectiveStore.status)}
                               onChange={(event) =>
                                 updateStoreDraft(store.storeId, { status: normalizeStoreStatus(event.target.value) })
@@ -845,6 +885,7 @@ export function MasterDataBootstrapPage() {
                               <input
                                 aria-label={t('adminMasterData.storeKpiImportEnabledAria', { storeName: store.storeName })}
                                 checked={effectiveStore.kpiImportEnabled}
+                                disabled={saving}
                                 type="checkbox"
                                 onChange={(event) =>
                                   updateStoreDraft(store.storeId, {
@@ -858,17 +899,6 @@ export function MasterDataBootstrapPage() {
                                   : t('adminMasterData.excluded')}
                               </span>
                             </label>
-                          </td>
-                          <td>
-                            <button
-                              className="control-button master-data-command-small-button"
-                              type="button"
-                              disabled={saving}
-                              onClick={() => submitStoreUpdate(store)}
-                            >
-                              <Save size={15} />
-                              {saving ? t('adminMasterData.saving') : t('adminMasterData.save')}
-                            </button>
                           </td>
                         </tr>
                       )
@@ -948,10 +978,17 @@ export function MasterDataBootstrapPage() {
             <div className="inline-state inline-state-neutral">{t('adminMasterData.loadingPersonnelMaster')}</div>
           ) : personnelMasterQuery.isError ? (
             <ScreenState title={t('adminMasterData.errorTitle')} copy={getErrorMessage(personnelMasterQuery.error)} tone="error" />
-          ) : (personnelMasterQuery.data?.items ?? []).length === 0 ? (
+          ) : personnelMasterItems.length === 0 ? (
             <EmptyState title={t('adminMasterData.noPersonnelTitle')} copy={t('adminMasterData.noPersonnelCopy')} />
           ) : (
             <>
+              <MasterDataBulkSaveBar
+                disabled={pendingPersonnelCount === 0 || isSavingPersonnel}
+                isSaving={isSavingPersonnel}
+                pendingCount={pendingPersonnelCount}
+                t={t}
+                onSave={() => void submitPersonnelDrafts()}
+              />
               <div className="master-data-command-table-wrap">
                 <table className="master-data-command-table master-data-command-personnel-table">
                   <thead>
@@ -962,11 +999,10 @@ export function MasterDataBootstrapPage() {
                       <th>{t('adminMasterData.position')}</th>
                       <th>{t('adminMasterData.employment')}</th>
                       <th>{t('adminMasterData.assignmentStart')}</th>
-                      <th>{t('adminMasterData.actions')}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {(personnelMasterQuery.data?.items ?? []).map((personnel) => {
+                    {personnelMasterItems.map((personnel) => {
                       const effectivePersonnel = getEffectivePersonnel(personnel)
                       const saving = savingPersonnelIds.has(personnel.employeeId)
                       return (
@@ -976,6 +1012,7 @@ export function MasterDataBootstrapPage() {
                               <input
                                 aria-label={t('adminMasterData.firstName')}
                                 className="master-data-command-row-control"
+                                disabled={saving}
                                 value={effectivePersonnel.firstName}
                                 onChange={(event) =>
                                   updatePersonnelDraft(personnel.employeeId, { firstName: event.target.value })
@@ -984,6 +1021,7 @@ export function MasterDataBootstrapPage() {
                               <input
                                 aria-label={t('adminMasterData.lastName')}
                                 className="master-data-command-row-control"
+                                disabled={saving}
                                 value={effectivePersonnel.lastName}
                                 onChange={(event) =>
                                   updatePersonnelDraft(personnel.employeeId, { lastName: event.target.value })
@@ -995,6 +1033,7 @@ export function MasterDataBootstrapPage() {
                             <input
                               aria-label={t('adminMasterData.sellerCode')}
                               className="master-data-command-row-control"
+                              disabled={saving}
                               value={effectivePersonnel.externalEmployeeRef ?? ''}
                               onChange={(event) =>
                                 updatePersonnelDraft(personnel.employeeId, {
@@ -1006,6 +1045,7 @@ export function MasterDataBootstrapPage() {
                           <td>
                             <select
                               className="master-data-command-row-control"
+                              disabled={saving}
                               value={effectivePersonnel.storeId}
                               onChange={(event) =>
                                 updatePersonnelDraft(personnel.employeeId, { storeId: event.target.value })
@@ -1022,6 +1062,7 @@ export function MasterDataBootstrapPage() {
                           <td>
                             <select
                               className="master-data-command-row-control"
+                              disabled={saving}
                               value={effectivePersonnel.positionId}
                               onChange={(event) =>
                                 updatePersonnelDraft(personnel.employeeId, { positionId: event.target.value })
@@ -1039,6 +1080,7 @@ export function MasterDataBootstrapPage() {
                             <div className="master-data-command-name-grid">
                               <select
                                 className="master-data-command-row-control"
+                                disabled={saving}
                                 value={normalizePersonnelStatus(effectivePersonnel.employmentStatus)}
                                 onChange={(event) =>
                                   updatePersonnelDraft(personnel.employeeId, {
@@ -1052,6 +1094,7 @@ export function MasterDataBootstrapPage() {
                               </select>
                               <select
                                 className="master-data-command-row-control"
+                                disabled={saving}
                                 value={normalizeEmploymentType(effectivePersonnel.employmentType)}
                                 onChange={(event) =>
                                   updatePersonnelDraft(personnel.employeeId, {
@@ -1070,6 +1113,7 @@ export function MasterDataBootstrapPage() {
                               <input
                                 aria-label={t('adminMasterData.hireDate')}
                                 className="master-data-command-row-control"
+                                disabled={saving}
                                 type="date"
                                 value={dateInputValue(effectivePersonnel.hireDate)}
                                 onChange={(event) =>
@@ -1079,6 +1123,7 @@ export function MasterDataBootstrapPage() {
                               <input
                                 aria-label={t('adminMasterData.assignmentStart')}
                                 className="master-data-command-row-control"
+                                disabled={saving}
                                 type="date"
                                 value={dateInputValue(effectivePersonnel.assignmentStartDate)}
                                 onChange={(event) =>
@@ -1088,17 +1133,6 @@ export function MasterDataBootstrapPage() {
                                 }
                               />
                             </div>
-                          </td>
-                          <td>
-                            <button
-                              className="control-button master-data-command-small-button"
-                              type="button"
-                              disabled={saving}
-                              onClick={() => submitPersonnelUpdate(personnel)}
-                            >
-                              <Save size={15} />
-                              {saving ? t('adminMasterData.saving') : t('adminMasterData.save')}
-                            </button>
                           </td>
                         </tr>
                       )
@@ -1190,6 +1224,29 @@ function MasterDataPager(input: {
           {t('adminIntegrations.next')}
         </button>
       </div>
+    </div>
+  )
+}
+
+function MasterDataBulkSaveBar(input: {
+  disabled: boolean
+  isSaving: boolean
+  pendingCount: number
+  t: TranslateFunction
+  onSave: () => void
+}) {
+  return (
+    <div className="master-data-command-bulk-actions">
+      <span>{input.t('adminMasterData.pendingChanges', { count: input.pendingCount })}</span>
+      <button
+        className="control-button master-data-command-primary-button"
+        disabled={input.disabled}
+        type="button"
+        onClick={input.onSave}
+      >
+        <Save size={16} />
+        {input.isSaving ? input.t('adminMasterData.saving') : input.t('adminMasterData.saveChanges')}
+      </button>
     </div>
   )
 }
