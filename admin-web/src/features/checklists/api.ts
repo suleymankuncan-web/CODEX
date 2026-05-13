@@ -18,6 +18,49 @@ type CommandResponse<T> = {
   data: T
 }
 
+export type ChecklistTemplateResponseType = 'score' | 'yes_no' | 'partial' | 'text'
+
+export type AdminChecklistTemplateItemInput = {
+  sectionName: string
+  itemNo: number
+  itemText: string
+  responseType: ChecklistTemplateResponseType
+  weight: number
+  maxScore: number
+  expectedValue?: string
+}
+
+export type AdminChecklistTemplateSummary = {
+  checklistTemplateId: string
+  companyId?: string
+  templateCode?: string
+  templateType?: string
+  templateName?: string
+  category?: string
+  versionNo?: number
+  status: string
+  effectiveFrom?: string
+  effectiveTo?: string | null
+  items?: Array<AdminChecklistTemplateItemInput & { templateItemId: string }>
+}
+
+export type CreateAdminChecklistTemplateInput = {
+  companyId: string
+  templateCode: string
+  templateName: string
+  templateType: string
+  category: string
+  effectiveFrom: string
+  effectiveTo?: string
+  items: AdminChecklistTemplateItemInput[]
+}
+
+export type PublishAdminChecklistTemplateInput = {
+  checklistTemplateId: string
+  effectiveFrom?: string
+  effectiveTo?: string
+}
+
 export type ChecklistAcknowledgementItem = {
   checklistInstanceId: string
   checklistTemplateId: string
@@ -146,6 +189,29 @@ export async function getChecklistAcknowledgements() {
     method: 'POST',
     body: {},
   })
+}
+
+export async function createAdminChecklistTemplate(input: CreateAdminChecklistTemplateInput) {
+  return sendJson<CommandResponse<{ checklistTemplate: AdminChecklistTemplateSummary }>>(
+    '/admin/checklist-templates',
+    {
+      method: 'POST',
+      body: input,
+    },
+  )
+}
+
+export async function publishAdminChecklistTemplate(input: PublishAdminChecklistTemplateInput) {
+  return sendJson<CommandResponse<{ checklistTemplate: AdminChecklistTemplateSummary }>>(
+    `/admin/checklist-templates/${input.checklistTemplateId}/publish`,
+    {
+      method: 'POST',
+      body: {
+        effectiveFrom: input.effectiveFrom,
+        effectiveTo: input.effectiveTo,
+      },
+    },
+  )
 }
 
 export async function acknowledgeChecklist(input: {

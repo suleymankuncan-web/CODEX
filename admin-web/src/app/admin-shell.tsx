@@ -106,7 +106,7 @@ export function AdminShell(input: {
             />
             <Route
               path="/admin/checklists"
-              element={adminRoute(['SUPER_ADMIN', 'HR_ADMIN'], <AdminChecklistTemplatesPage />)}
+              element={adminRoute(['SUPER_ADMIN', 'HR_ADMIN'], <AdminChecklistTemplatesPage authSummary={input.authSummary} />)}
             />
             <Route
               path="/admin/competitions"
