@@ -311,14 +311,18 @@ test('master data page switches chrome to English copy and persists locale', asy
 test('admin checklist templates page switches chrome to English copy and persists locale', async ({ page }) => {
   await page.goto('/admin/checklists')
 
-  await expect(page.getByRole('main').getByText('Checklistler', { exact: true })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'HR şablonları, yayınlanmadan önce taslak olarak hazırlanır.' })).toBeVisible()
-  await expect(page.getByText('Taslak pilot')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Şablon durumu' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Yayın kuralı' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'HR checklist şablon yönetimi' })).toBeVisible()
-  await expect(page.getByText('Form editörü sıradaki küçük parça')).toBeVisible()
-  await expect(page.getByText('Checklists')).toHaveCount(0)
+  const main = page.getByRole('main')
+
+  await expect(main.getByText('Admin checklist', { exact: true })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Checklist şablon editörü' })).toBeVisible()
+  await expect(
+    main.getByText('Bölüm ekle, madde ekle, ağırlıkları 100’e tamamla ve yayınla.'),
+  ).toBeVisible()
+  await expect(main.getByRole('button', { name: 'Bölüm Ekle' }).first()).toBeVisible()
+  await expect(main.getByRole('button', { name: 'Taslak Kaydet' })).toBeVisible()
+  await expect(main.getByRole('button', { name: 'Yayınla' })).toBeVisible()
+  await expect(main.getByText('Toplam ağırlık: 100/100')).toBeVisible()
+  await expect(main.getByText('Checklist template editor')).toHaveCount(0)
   await expect(page.locator('body')).not.toContainText('Ãƒ')
   await expect(page.locator('body')).not.toContainText('Ã„')
   await expect(page.locator('body')).not.toContainText('Ã…')
@@ -326,19 +330,21 @@ test('admin checklist templates page switches chrome to English copy and persist
   await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('main').getByText('Checklists', { exact: true })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'HR templates are drafted before publication.' })).toBeVisible()
-  await expect(page.getByText('Draft pilot')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Template status' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Publish rule' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'HR checklist template management' })).toBeVisible()
-  await expect(page.getByText('Form editor is the next small slice')).toBeVisible()
-  await expect(page.getByText('Checklistler')).toHaveCount(0)
+  await expect(main.getByText('Admin checklist', { exact: true })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Checklist template editor' })).toBeVisible()
+  await expect(
+    main.getByText('Add sections, add items, bring weights to 100, and publish.'),
+  ).toBeVisible()
+  await expect(main.getByRole('button', { name: 'Add Section' }).first()).toBeVisible()
+  await expect(main.getByRole('button', { name: 'Save Draft' })).toBeVisible()
+  await expect(main.getByRole('button', { name: 'Publish' })).toBeVisible()
+  await expect(main.getByText('Total weight: 100/100')).toBeVisible()
+  await expect(main.getByText('Checklist şablon editörü')).toHaveCount(0)
 
   await page.reload()
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: 'HR templates are drafted before publication.' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Checklist template editor' })).toBeVisible()
 })
 
 test('snapshot operations page switches chrome to English copy and persists locale', async ({ page }) => {

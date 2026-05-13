@@ -9,6 +9,8 @@ import {
   type ChecklistTemplateResponseType,
   type CreateAdminChecklistTemplateInput,
 } from '../features/checklists/api'
+import { useLocalization } from '../features/localization/useLocalization'
+import type { TranslateFunction } from '../features/localization/dictionary'
 import { getErrorMessage } from '../lib/format'
 
 type DraftChecklistItem = {
@@ -53,13 +55,6 @@ const templateOptions: TemplateOption[] = [
     category: 'visual_merchandising',
   },
 ]
-
-const responseTypeLabels: Record<ChecklistTemplateResponseType, string> = {
-  score: 'Skor',
-  yes_no: 'Evet / Hayır',
-  partial: 'Kısmi',
-  text: 'Metin',
-}
 
 const today = new Date().toISOString().slice(0, 10)
 
@@ -218,7 +213,14 @@ function createPayload(input: {
 }
 
 export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSummary | null }) {
+  const { t } = useLocalization()
   const companyId = getCompanyId(input.authSummary)
+  const responseTypeLabels: Record<ChecklistTemplateResponseType, string> = {
+    score: t('adminChecklists.responseScore'),
+    yes_no: t('adminChecklists.responseYesNo'),
+    partial: t('adminChecklists.responsePartial'),
+    text: t('adminChecklists.responseText'),
+  }
   const [templateType, setTemplateType] = useState<TemplateOption['templateType']>('BM_STORE_VISIT')
   const selectedTemplate = templateOptions.find((option) => option.templateType === templateType) ?? templateOptions[0]
   const [templateName, setTemplateName] = useState(selectedTemplate.templateName)
@@ -313,7 +315,7 @@ export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSum
 
   const removeSection = (sectionId: string) => {
     if (sections.length <= 1) {
-      setNotice({ tone: 'warning', message: 'En az bir bölüm kalmalı.' })
+      setNotice({ tone: 'warning', message: t('adminChecklists.noticeMinSection') })
       return
     }
 
@@ -335,7 +337,7 @@ export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSum
   const removeItem = (sectionId: string, itemId: string) => {
     const targetSection = sections.find((section) => section.id === sectionId)
     if (!targetSection || targetSection.items.length <= 1) {
-      setNotice({ tone: 'warning', message: 'Her bölümde en az bir madde kalmalı.' })
+      setNotice({ tone: 'warning', message: t('adminChecklists.noticeMinItem') })
       return
     }
 
@@ -351,7 +353,7 @@ export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSum
 
   const saveDraft = async () => {
     if (!canSubmit) {
-      setNotice({ tone: 'warning', message: resolveValidationMessage(companyId, weightIsReady, emptyTextCount, hasInvalidScore) })
+      setNotice({ tone: 'warning', message: resolveValidationMessage(companyId, weightIsReady, emptyTextCount, hasInvalidScore, t) })
       return null
     }
 
@@ -377,7 +379,7 @@ export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSum
 
   const publishTemplate = async () => {
     if (!canSubmit) {
-      setNotice({ tone: 'warning', message: resolveValidationMessage(companyId, weightIsReady, emptyTextCount, hasInvalidScore) })
+      setNotice({ tone: 'warning', message: resolveValidationMessage(companyId, weightIsReady, emptyTextCount, hasInvalidScore, t) })
       return
     }
 
@@ -401,17 +403,14 @@ export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSum
     <section className="admin-checklist-builder-page">
       <header className="admin-checklist-builder-hero">
         <div>
-          <div className="eyebrow">Admin checklist</div>
-          <h2>Checklist şablon editörü</h2>
-          <p>
-            Bölüm ekle, madde ekle, ağırlıkları 100’e tamamla ve yayınla. Yayınlanan
-            şablon yeni saha checklist başlangıçlarında kullanılacak.
-          </p>
+          <div className="eyebrow">{t('adminChecklists.heroEyebrow')}</div>
+          <h2>{t('adminChecklists.heroTitle')}</h2>
+          <p>{t('adminChecklists.heroCopy')}</p>
         </div>
         <div className="admin-checklist-builder-actions">
           <button className="admin-checklist-builder-button secondary" type="button" onClick={addSection}>
             <Plus size={16} />
-            Bölüm Ekle
+            {t('adminChecklists.addSection')}
           </button>
           <button
             className="admin-checklist-builder-button"
@@ -420,7 +419,7 @@ export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSum
             disabled={isSaving || !canSubmit}
           >
             <Save size={16} />
-            Taslak Kaydet
+            {t('adminChecklists.saveDraft')}
           </button>
           <button
             className="admin-checklist-builder-button primary"
@@ -429,15 +428,15 @@ export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSum
             disabled={isSaving || !canSubmit}
           >
             <Rocket size={16} />
-            Yayınla
+            {t('adminChecklists.publish')}
           </button>
         </div>
       </header>
 
-      <section className="admin-checklist-builder-panel" aria-label="Checklist şablon düzenleme alanı">
+      <section className="admin-checklist-builder-panel" aria-label={t('adminChecklists.editorAria')}>
         <div className="admin-checklist-builder-template-strip">
           <label className="admin-checklist-builder-field">
-            <span>Şablon adı</span>
+            <span>{t('adminChecklists.templateName')}</span>
             <input
               value={templateName}
               onChange={(event) => {
@@ -447,7 +446,7 @@ export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSum
             />
           </label>
           <label className="admin-checklist-builder-field">
-            <span>Checklist tipi</span>
+            <span>{t('adminChecklists.checklistType')}</span>
             <select
               value={templateType}
               onChange={(event) => updateTemplateType(event.target.value as TemplateOption['templateType'])}
@@ -460,7 +459,7 @@ export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSum
             </select>
           </label>
           <label className="admin-checklist-builder-field">
-            <span>Yürürlük tarihi</span>
+            <span>{t('adminChecklists.effectiveFrom')}</span>
             <input
               type="date"
               value={effectiveFrom}
@@ -471,7 +470,7 @@ export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSum
             />
           </label>
           <div className="admin-checklist-builder-field readonly">
-            <span>Şablon kodu</span>
+            <span>{t('adminChecklists.templateCode')}</span>
             <strong>{selectedTemplate.templateCode}</strong>
           </div>
         </div>
@@ -479,16 +478,23 @@ export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSum
         <div className="admin-checklist-builder-status-strip">
           <div className="admin-checklist-builder-chips">
             <span className={weightIsReady ? 'ready' : 'warning'}>
-              Toplam ağırlık: {formatWeight(totalWeight)}/100
+              {t('adminChecklists.totalWeight', { total: formatWeight(totalWeight) })}
             </span>
-            <span>{sectionCount} bölüm</span>
-            <span>{itemCount} madde</span>
-            <span>{savedTemplate ? `v${savedTemplate.versionNo ?? '-'} ${savedTemplate.status}` : 'Yeni taslak'}</span>
-            {!companyId ? <span className="warning">Şirket scope yok</span> : null}
+            <span>{t('adminChecklists.sectionCount', { count: sectionCount })}</span>
+            <span>{t('adminChecklists.itemCount', { count: itemCount })}</span>
+            <span>
+              {savedTemplate
+                ? t('adminChecklists.savedStatus', {
+                    version: savedTemplate.versionNo ?? '-',
+                    status: savedTemplate.status,
+                  })
+                : t('adminChecklists.newDraft')}
+            </span>
+            {!companyId ? <span className="warning">{t('adminChecklists.missingCompanyScope')}</span> : null}
           </div>
           <button className="admin-checklist-builder-button secondary" type="button" onClick={addSection}>
             <Plus size={16} />
-            Bölüm Ekle
+            {t('adminChecklists.addSection')}
           </button>
         </div>
 
@@ -507,14 +513,15 @@ export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSum
                   <span>{sectionIndex + 1}</span>
                   <input
                     value={section.name}
-                    aria-label="Bölüm adı"
+                    aria-label={t('adminChecklists.sectionNameAria')}
                     onChange={(event) => updateSection(section.id, event.target.value)}
                   />
                 </div>
                 <div className="admin-checklist-builder-section-actions">
                   <strong>
-                    Ağırlık:{' '}
-                    {formatWeight(section.items.reduce((sum, item) => sum + item.weight, 0))}
+                    {t('adminChecklists.sectionWeight', {
+                      weight: formatWeight(section.items.reduce((sum, item) => sum + item.weight, 0)),
+                    })}
                   </strong>
                   <button
                     className="admin-checklist-builder-button secondary compact"
@@ -522,12 +529,12 @@ export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSum
                     onClick={() => addItem(section.id)}
                   >
                     <Plus size={15} />
-                    Madde Ekle
+                    {t('adminChecklists.addItem')}
                   </button>
                   <button
                     className="admin-checklist-builder-icon-button"
                     type="button"
-                    aria-label="Bölümü sil"
+                    aria-label={t('adminChecklists.removeSectionAria')}
                     onClick={() => removeSection(section.id)}
                   >
                     <Trash2 size={16} />
@@ -543,7 +550,7 @@ export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSum
                       <div className="admin-checklist-builder-question-line">
                         <input
                           value={item.itemText}
-                          aria-label="Checklist maddesi"
+                          aria-label={t('adminChecklists.questionAria')}
                           onChange={(event) =>
                             updateItem(section.id, item.id, { itemText: event.target.value })
                           }
@@ -551,7 +558,7 @@ export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSum
                         <button
                           className="admin-checklist-builder-icon-button"
                           type="button"
-                          aria-label="Maddeyi sil"
+                          aria-label={t('adminChecklists.removeItemAria')}
                           onClick={() => removeItem(section.id, item.id)}
                         >
                           <Trash2 size={16} />
@@ -559,12 +566,12 @@ export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSum
                       </div>
                       <textarea
                         value={item.note}
-                        aria-label="Madde açıklaması"
+                        aria-label={t('adminChecklists.itemNoteAria')}
                         onChange={(event) => updateItem(section.id, item.id, { note: event.target.value })}
                       />
                       <div className="admin-checklist-builder-item-settings">
                         <label>
-                          <span>Cevap tipi</span>
+                          <span>{t('adminChecklists.responseType')}</span>
                           <select
                             value={item.responseType}
                             onChange={(event) =>
@@ -583,7 +590,7 @@ export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSum
                           </select>
                         </label>
                         <label>
-                          <span>Min</span>
+                          <span>{t('adminChecklists.minScore')}</span>
                           <input
                             type="number"
                             min={0}
@@ -596,7 +603,7 @@ export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSum
                           />
                         </label>
                         <label>
-                          <span>Max</span>
+                          <span>{t('adminChecklists.maxScore')}</span>
                           <input
                             type="number"
                             min={1}
@@ -609,7 +616,7 @@ export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSum
                           />
                         </label>
                         <label>
-                          <span>Düşük eşik</span>
+                          <span>{t('adminChecklists.lowScoreThreshold')}</span>
                           <input
                             type="number"
                             min={0}
@@ -625,7 +632,7 @@ export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSum
                           />
                         </label>
                         <label>
-                          <span>Ağırlık</span>
+                          <span>{t('adminChecklists.weight')}</span>
                           <input
                             type="number"
                             min={0}
@@ -648,7 +655,7 @@ export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSum
                               })
                             }
                           />
-                          <span>Düşük puanda açıklama zorunlu</span>
+                          <span>{t('adminChecklists.lowScoreNoteRequired')}</span>
                         </label>
                       </div>
                     </div>
@@ -660,7 +667,7 @@ export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSum
 
           <button className="admin-checklist-builder-add-section" type="button" onClick={addSection}>
             <Plus size={17} />
-            Bölüm Ekle
+            {t('adminChecklists.addSection')}
           </button>
         </div>
       </section>
@@ -673,11 +680,12 @@ function resolveValidationMessage(
   weightIsReady: boolean,
   emptyTextCount: number,
   hasInvalidScore: boolean,
+  t: TranslateFunction,
 ) {
-  if (!companyId) return 'Şirket scope bulunamadı. Bu kullanıcıyla şablon yayınlanamaz.'
-  if (!weightIsReady) return 'Yayınlamak için madde ağırlıkları toplamı 100 olmalı.'
-  if (emptyTextCount > 0) return 'Bölüm adı ve madde metni boş bırakılamaz.'
-  if (hasInvalidScore) return 'Skor alanlarında geçerli sayılar kullanılmalı.'
+  if (!companyId) return t('adminChecklists.validationMissingCompany')
+  if (!weightIsReady) return t('adminChecklists.validationWeight')
+  if (emptyTextCount > 0) return t('adminChecklists.validationEmptyText')
+  if (hasInvalidScore) return t('adminChecklists.validationInvalidScore')
 
-  return 'Şablon yayına hazır değil.'
+  return t('adminChecklists.validationDefault')
 }
