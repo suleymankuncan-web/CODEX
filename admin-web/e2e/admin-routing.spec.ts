@@ -296,7 +296,7 @@ test('master data page switches chrome to English copy and persists locale', asy
   await expect(page.getByRole('button', { name: /Bootstrap Batches/ })).toBeVisible()
   await expect(
     page.getByText(
-      'Personnel or store master-data files are validated here before going live; row evidence and promotion results stay attached.',
+      'Open a batch to inspect row evidence, dry-run evidence, readiness counters, and promotion state.',
     ),
   ).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Baseline files before live promotion' })).toBeVisible()

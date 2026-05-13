@@ -35,7 +35,7 @@ export const adminMasterDataTr = {
   'adminMasterData.reviewQueue': 'Hazırlık Partileri',
   'adminMasterData.bootstrapBatches': 'Canlıya alınacak temel dosyalar',
   'adminMasterData.reviewQueueCopy':
-    'Personel veya mağaza ana veri dosyası canlıya geçmeden önce doğrulanır, satır kanıtı ve aktarım sonucu burada kalır.',
+    'Satır kanıtı, prova kanıtı, hazırlık sayaçları ve aktarım durumunu incelemek için bir parti aç.',
   'adminMasterData.searchBatches': 'Hazırlık partilerinde ara',
   'adminMasterData.searchPlaceholder': 'Kaynak, dosya, parti ara',
   'adminMasterData.entityFilter': 'Varlık filtresi',
@@ -161,7 +161,7 @@ export const adminMasterDataTr = {
   'adminMasterData.dryRunTitle': 'Aktarım prova kanıtı',
   'adminMasterData.promotionDryRunEvidenceAria': 'Ana veri aktarım prova kanıtı',
   'adminMasterData.dryRunCopy':
-    'Bu kanıt satırları backendin hangi kayıtları güvenli gördüğünü gösterir.',
+    'Yalnızca prova kanıtı. Bu panelden satır aktarılmaz; aktarım hâlâ açık komut gerektirir.',
   'adminMasterData.dryRunEmpty':
     'Bu hazırlık partisi için aktarım hazırlığı satırı dönmedi.',
   'adminMasterData.rowEvidence': 'Satır kanıtı',
@@ -234,7 +234,7 @@ export const adminMasterDataEn: Record<keyof typeof adminMasterDataTr, string> =
   'adminMasterData.reviewQueue': 'Bootstrap Batches',
   'adminMasterData.bootstrapBatches': 'Baseline files before live promotion',
   'adminMasterData.reviewQueueCopy':
-    'Personnel or store master-data files are validated here before going live; row evidence and promotion results stay attached.',
+    'Open a batch to inspect row evidence, dry-run evidence, readiness counters, and promotion state.',
   'adminMasterData.searchBatches': 'Search bootstrap batches',
   'adminMasterData.searchPlaceholder': 'Search source, file, batch',
   'adminMasterData.entityFilter': 'Entity filter',
@@ -360,7 +360,7 @@ export const adminMasterDataEn: Record<keyof typeof adminMasterDataTr, string> =
   'adminMasterData.dryRunTitle': 'Promotion dry-run evidence',
   'adminMasterData.promotionDryRunEvidenceAria': 'Master data promotion dry-run evidence',
   'adminMasterData.dryRunCopy':
-    'These evidence rows show which records the backend considers safe.',
+    'Dry-run evidence only. No rows are promoted from this panel; promotion still requires the explicit command.',
   'adminMasterData.dryRunEmpty':
     'No promotion readiness rows returned for this bootstrap batch.',
   'adminMasterData.rowEvidence': 'Row evidence',

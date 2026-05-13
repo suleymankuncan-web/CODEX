@@ -294,7 +294,7 @@ test('admin master data bootstrap surface exposes personnel promotion evidence',
   await expect(page.getByRole('heading', { name: 'Ana Veri Yönetim Paneli' })).toBeVisible()
   await expect(
     page.getByText(
-      'Personel veya mağaza ana veri dosyası canlıya geçmeden önce doğrulanır, satır kanıtı ve aktarım sonucu burada kalır.',
+      'Satır kanıtı, prova kanıtı, hazırlık sayaçları ve aktarım durumunu incelemek için bir parti aç.',
     ),
   ).toBeVisible()
   await expect(page.getByText('hazır satırları aktar').first()).toBeVisible()
@@ -308,7 +308,7 @@ test('admin master data bootstrap surface exposes personnel promotion evidence',
   ).toBeVisible()
   await expect(
     dryRunPanel.getByText(
-      'Bu kanıt satırları backendin hangi kayıtları güvenli gördüğünü gösterir.',
+      'Yalnızca prova kanıtı. Bu panelden satır aktarılmaz; aktarım hâlâ açık komut gerektirir.',
     ),
   ).toBeVisible()
   await expect(dryRunPanel.getByText('#1 FM8375')).toBeVisible()
