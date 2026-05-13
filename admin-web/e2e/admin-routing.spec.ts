@@ -273,7 +273,7 @@ test('master data list renders bootstrap batches when updatedAt is absent', asyn
 
   await page.goto('/admin/master-data')
 
-  await expect(page.getByRole('heading', { name: 'Hazırlık partileri' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Ana Veri Yönetim Paneli' })).toBeVisible()
   await expect(page.getByText('Accepted personnel baseline')).toBeVisible()
   expect(pageErrors).toEqual([])
 })
@@ -281,9 +281,9 @@ test('master data list renders bootstrap batches when updatedAt is absent', asyn
 test('master data page switches chrome to English copy and persists locale', async ({ page }) => {
   await page.goto('/admin/master-data')
 
-  await expect(page.getByRole('heading', { name: 'Ana veri hazırlığı' })).toBeVisible()
-  await expect(page.getByText('İnceleme kuyruğu')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Hazırlık partileri' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Ana Veri Yönetim Paneli' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Hazırlık Partileri/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Canlıya alınacak temel dosyalar' })).toBeVisible()
   await expect(page.getByText('Master data bootstrap')).toHaveCount(0)
   await expect(page.locator('body')).not.toContainText('Ã')
   await expect(page.locator('body')).not.toContainText('Ä')
@@ -292,20 +292,20 @@ test('master data page switches chrome to English copy and persists locale', asy
   await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: 'Master data bootstrap' })).toBeVisible()
-  await expect(page.getByText('Review queue')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Master Data Command Center' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Bootstrap Batches/ })).toBeVisible()
   await expect(
     page.getByText(
-      'Open a batch to inspect row evidence, dry-run evidence, readiness counters, and promotion state.',
+      'Personnel or store master-data files are validated here before going live; row evidence and promotion results stay attached.',
     ),
   ).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Bootstrap batches' })).toBeVisible()
-  await expect(page.getByText('Ana veri hazırlığı')).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Baseline files before live promotion' })).toBeVisible()
+  await expect(page.getByText('Ana Veri Yönetim Paneli')).toHaveCount(0)
 
   await page.reload()
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: 'Master data bootstrap' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Master Data Command Center' })).toBeVisible()
 })
 
 test('admin checklist templates page switches chrome to English copy and persists locale', async ({ page }) => {

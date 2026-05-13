@@ -34,8 +34,10 @@ import { ListIntegrationSourcesQueryDto } from "./dto/list-integration-sources.q
 import { ListKpiImportStoreScopeQueryDto } from "./dto/list-kpi-import-store-scope.query";
 import { ListMasterDataBootstrapBatchesQueryDto } from "./dto/list-master-data-bootstrap-batches.query";
 import { ListMasterDataBootstrapRowsQueryDto } from "./dto/list-master-data-bootstrap-rows.query";
+import { ListPersonnelMasterQueryDto } from "./dto/list-personnel-master.query";
 import { UpdateIntegrationSourceScheduleDto } from "./dto/update-integration-source-schedule.dto";
 import { UpdateKpiImportStoreScopeDto } from "./dto/update-kpi-import-store-scope.dto";
+import { UpdatePersonnelMasterDto } from "./dto/update-personnel-master.dto";
 import { UploadPowerBiExportDto } from "./dto/upload-power-bi-export.dto";
 
 @Controller("integrations")
@@ -247,6 +249,48 @@ export class IntegrationController {
     });
   }
 
+  @Get("personnel-master")
+  @RequireScope("company")
+  @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")
+  async listPersonnelMaster(
+    @Query() query: ListPersonnelMasterQueryDto,
+    @Req()
+    request: {
+      user: {
+        scope: {
+          companyIds: string[];
+        };
+      };
+    },
+  ) {
+    return this.integrationService.listPersonnelMaster({
+      actorCompanyIds: request.user.scope.companyIds,
+      q: query.q,
+      status: query.status,
+      storeId: query.storeId,
+      limit: query.limit,
+      offset: query.offset,
+    });
+  }
+
+  @Get("personnel-master-lookups")
+  @RequireScope("company")
+  @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")
+  async getPersonnelMasterLookups(
+    @Req()
+    request: {
+      user: {
+        scope: {
+          companyIds: string[];
+        };
+      };
+    },
+  ) {
+    return this.integrationService.getPersonnelMasterLookups({
+      actorCompanyIds: request.user.scope.companyIds,
+    });
+  }
+
   @Get("master-data-bootstrap/batches")
   @RequireScope("company")
   @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")
@@ -325,6 +369,38 @@ export class IntegrationController {
       status: body.status,
       kpiImportEnabled: body.kpiImportEnabled,
       actorUserId: request.user.userId,
+    });
+  }
+
+  @Patch("personnel-master/:employeeId")
+  @RequireScope("company")
+  @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")
+  async updatePersonnelMaster(
+    @Param("employeeId") employeeId: string,
+    @Body() body: UpdatePersonnelMasterDto,
+    @Req()
+    request: {
+      user: {
+        userId: string;
+        scope: {
+          companyIds: string[];
+        };
+      };
+    },
+  ) {
+    return this.integrationService.updatePersonnelMaster({
+      actorCompanyIds: request.user.scope.companyIds,
+      actorUserId: request.user.userId,
+      employeeId,
+      firstName: body.firstName,
+      lastName: body.lastName,
+      externalEmployeeRef: body.externalEmployeeRef,
+      employmentStatus: body.employmentStatus,
+      employmentType: body.employmentType,
+      hireDate: body.hireDate,
+      storeId: body.storeId,
+      positionId: body.positionId,
+      assignmentStartDate: body.assignmentStartDate,
     });
   }
 

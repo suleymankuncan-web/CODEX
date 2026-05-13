@@ -280,6 +280,46 @@ export type StoreMasterLookups = {
   }>
 }
 
+export type PersonnelMasterItem = {
+  employeeId: string
+  externalEmployeeRef: string | null
+  firstName: string
+  lastName: string
+  displayName: string
+  hireDate: string
+  terminationDate: string | null
+  employmentStatus: 'active' | 'inactive' | 'terminated' | string
+  employmentType: 'full_time' | 'part_time' | 'temporary' | string
+  assignmentId: string | null
+  assignmentStartDate: string | null
+  storeId: string | null
+  storeCode: string | null
+  storeName: string | null
+  regionId: string | null
+  regionName: string | null
+  positionId: string | null
+  positionCode: string | null
+  positionName: string | null
+}
+
+export type PersonnelMasterLookups = {
+  stores: Array<{
+    storeId: string
+    storeCode: string
+    storeName: string
+    regionId: string
+    regionName: string
+  }>
+  positions: Array<{
+    positionId: string
+    positionCode: string
+    positionName: string
+    isManagerial: boolean
+  }>
+  employmentStatuses: Array<{ value: 'active' | 'inactive' | 'terminated'; label: string }>
+  employmentTypes: Array<{ value: 'full_time' | 'part_time' | 'temporary'; label: string }>
+}
+
 export type MasterDataBootstrapEntity = 'store' | 'personnel'
 
 type MasterDataBootstrapBatchStatus =
@@ -596,6 +636,68 @@ export async function updateStoreMasterData(input: {
         regionId: input.regionId,
         status: input.status,
         kpiImportEnabled: input.kpiImportEnabled,
+      },
+    },
+  )
+}
+
+export async function getPersonnelMasterData(input?: {
+  q?: string
+  status?: 'active' | 'inactive' | 'terminated'
+  storeId?: string
+  limit?: number
+  offset?: number
+}) {
+  const params = new URLSearchParams({
+    limit: String(input?.limit ?? 50),
+    offset: String(input?.offset ?? 0),
+  })
+  const search = input?.q?.trim()
+  if (search) {
+    params.set('q', search)
+  }
+  if (input?.status) {
+    params.set('status', input.status)
+  }
+  if (input?.storeId) {
+    params.set('storeId', input.storeId)
+  }
+
+  return fetchJson<ListResponse<PersonnelMasterItem>>(
+    `/integrations/personnel-master?${params.toString()}`,
+  )
+}
+
+export async function getPersonnelMasterLookups() {
+  return fetchJson<PersonnelMasterLookups>('/integrations/personnel-master-lookups')
+}
+
+export async function updatePersonnelMasterData(input: {
+  employeeId: string
+  firstName: string
+  lastName: string
+  externalEmployeeRef?: string
+  employmentStatus: 'active' | 'inactive' | 'terminated'
+  employmentType: 'full_time' | 'part_time' | 'temporary'
+  hireDate: string
+  storeId: string
+  positionId: string
+  assignmentStartDate?: string
+}) {
+  return sendJson<CommandResponse<{ personnelMaster: PersonnelMasterItem }>>(
+    `/integrations/personnel-master/${input.employeeId}`,
+    {
+      method: 'PATCH',
+      body: {
+        firstName: input.firstName,
+        lastName: input.lastName,
+        externalEmployeeRef: input.externalEmployeeRef,
+        employmentStatus: input.employmentStatus,
+        employmentType: input.employmentType,
+        hireDate: input.hireDate,
+        storeId: input.storeId,
+        positionId: input.positionId,
+        assignmentStartDate: input.assignmentStartDate,
       },
     },
   )

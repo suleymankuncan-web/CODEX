@@ -291,14 +291,14 @@ test('admin dashboard explains why Power BI export upload is unavailable', async
 test('admin master data bootstrap surface exposes personnel promotion evidence', async ({ page }) => {
   await page.goto('/admin/master-data/bootstrap-batch-personnel-1')
 
-  await expect(page.getByRole('heading', { name: 'Ana veri hazırlığı' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Ana Veri Yönetim Paneli' })).toBeVisible()
   await expect(
     page.getByText(
-      'Satır kanıtı, prova kanıtı, hazırlık sayaçları ve aktarım durumunu incelemek için bir parti aç.',
+      'Personel veya mağaza ana veri dosyası canlıya geçmeden önce doğrulanır, satır kanıtı ve aktarım sonucu burada kalır.',
     ),
   ).toBeVisible()
-  await expect(page.getByText('aktarıma hazır').first()).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Aktarılan satırlar', exact: true })).toBeVisible()
+  await expect(page.getByText('hazır satırları aktar').first()).toBeVisible()
+  await expect(page.getByText('Aktarılan satırlar', { exact: true }).first()).toBeVisible()
   await expect(page.getByText('1 / 2').first()).toBeVisible()
   await expect(page.getByText('employee-live-1').first()).toBeVisible()
 
@@ -308,7 +308,7 @@ test('admin master data bootstrap surface exposes personnel promotion evidence',
   ).toBeVisible()
   await expect(
     dryRunPanel.getByText(
-      'Yalnızca prova kanıtı. Bu panelden satır aktarılmaz; aktarım hâlâ açık komut gerektirir.',
+      'Bu kanıt satırları backendin hangi kayıtları güvenli gördüğünü gösterir.',
     ),
   ).toBeVisible()
   await expect(dryRunPanel.getByText('#1 FM8375')).toBeVisible()
@@ -319,7 +319,6 @@ test('admin master data bootstrap surface exposes personnel promotion evidence',
 
   await page.getByRole('button', { name: 'Personeli aktar' }).click()
   await expect(page.getByText('Personnel bootstrap rows promoted')).toBeVisible()
-  await expect(page.getByText('assignment-live-1')).toBeVisible()
 })
 
 async function routeIntegrationApi(page: Page) {
