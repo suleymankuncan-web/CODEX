@@ -14,6 +14,11 @@ export const adminShellTr = {
   'adminShell.nav.session': 'Oturum',
   'adminShell.nav.storePreview': 'Mağaza Ön İzleme',
   'adminShell.nav.realLogin': 'Gerçek Giriş',
+  'adminShell.adminWorkspace': 'Admin',
+  'adminShell.adminWorkspaceAria': 'Admin çalışma alanı',
+  'adminShell.sessionUser': 'Admin kullanıcı',
+  'adminShell.sidebar.expand': 'Menüyü genişlet',
+  'adminShell.sidebar.collapse': 'Menüyü daralt',
 
   'adminShell.brandKicker': 'Mağaza Operasyon Kontrol',
   'adminShell.brandTitle':
@@ -93,6 +98,11 @@ export const adminShellEn: Record<keyof typeof adminShellTr, string> = {
   'adminShell.nav.session': 'Session',
   'adminShell.nav.storePreview': 'Store Preview',
   'adminShell.nav.realLogin': 'Real Login',
+  'adminShell.adminWorkspace': 'Admin',
+  'adminShell.adminWorkspaceAria': 'Admin workspace',
+  'adminShell.sessionUser': 'Admin user',
+  'adminShell.sidebar.expand': 'Expand menu',
+  'adminShell.sidebar.collapse': 'Collapse menu',
 
   'adminShell.brandKicker': 'Store Ops Control',
   'adminShell.brandTitle':

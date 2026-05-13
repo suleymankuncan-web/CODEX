@@ -243,7 +243,7 @@ test('bearer session refetches when the token identity changes in the same tab',
   })
 
   await page.goto('/admin/integrations')
-  await expect(page.getByText('Kullanıcı:').locator('..').getByText('admin-user')).toBeVisible()
+  await expect(page.locator('.admin-command-identity').getByText('admin-user')).toBeVisible()
 
   await page.evaluate(() => {
     window.sessionStorage.setItem(
@@ -269,7 +269,7 @@ test('bearer session refetches when the token identity changes in the same tab',
     .poll(() => page.evaluate(() => window.sessionStorage.getItem('store-ops-admin-bearer-token')))
     .toBe(storeManagerToken)
 
-  await expect(page.getByText('Kullanıcı:').locator('..').getByText('store-manager-user')).toBeVisible()
+  await expect(page.locator('.admin-command-identity').getByText('store-manager-user')).toBeVisible()
   await expect(page.getByText('Bu rol için rota kullanılamaz')).toBeVisible()
 })
 

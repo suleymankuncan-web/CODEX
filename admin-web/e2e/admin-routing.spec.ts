@@ -68,11 +68,15 @@ test('session readiness page switches chrome to English copy and persists locale
 test('admin shell switches chrome to English copy and persists locale', async ({ page }) => {
   await page.goto('/admin/audit')
 
-  await expect(page.getByText('Mağaza Operasyon Kontrol')).toBeVisible()
+  await expect(page.locator('.admin-command-sidebar')).toBeVisible()
+  await expect(page.locator('.admin-command-brand').getByText('LUFIAN')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Entegrasyonlar' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Ana Veri' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Denetim' })).toBeVisible()
-  await expect(page.getByText('Üretim UX ve gerçek kimlik')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Oturum' })).toBeVisible()
+  await expect(page.locator('.shell-context-panel')).toHaveCount(0)
+  await expect(page.getByText('Mağaza Operasyon Kontrol')).toHaveCount(0)
+  await expect(page.getByText('Üretim UX ve gerçek kimlik')).toHaveCount(0)
   await expect(page.getByText('Store Ops Control')).toHaveCount(0)
   await expect(page.locator('body')).not.toContainText('Ã')
   await expect(page.locator('body')).not.toContainText('Ä')
@@ -81,17 +85,44 @@ test('admin shell switches chrome to English copy and persists locale', async ({
   await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByText('Store Ops Control')).toBeVisible()
+  await expect(page.locator('.admin-command-brand').getByText('LUFIAN')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Integrations' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Master Data' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Audit', exact: true })).toBeVisible()
-  await expect(page.getByText('Production UX And Real Auth')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Session' })).toBeVisible()
+  await expect(page.getByText('Production UX And Real Auth')).toHaveCount(0)
   await expect(page.getByText('Mağaza Operasyon Kontrol')).toHaveCount(0)
 
   await page.reload()
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByText('Store Ops Control')).toBeVisible()
+  await expect(page.locator('.admin-command-brand').getByText('LUFIAN')).toBeVisible()
+})
+
+test('admin sidebar collapses without losing navigation targets', async ({ page }) => {
+  await page.goto('/admin/audit')
+
+  await page.getByRole('button', { name: /daralt/i }).click()
+
+  const sidebarNav = page.locator('.admin-command-nav')
+  await expect(page.locator('.admin-command-app')).toHaveClass(/admin-command-app-collapsed/)
+  await expect(sidebarNav.getByRole('link', { name: 'Denetim' })).toBeVisible()
+  await sidebarNav.getByRole('link', { name: 'Raporlar' }).click()
+  await expect(page).toHaveURL(/\/admin\/reports$/)
+})
+
+test('admin command shell keeps navigation responsive across lazy routes', async ({ page }) => {
+  await page.goto('/admin/audit')
+
+  await page.getByRole('link', { name: 'Raporlar' }).click()
+  await expect(page).toHaveURL(/\/admin\/reports$/)
+  await expect(page.getByRole('main')).toBeVisible()
+
+  await page.getByRole('link', { name: 'Gelen Kutusu' }).click()
+  await expect(page).toHaveURL(/\/admin\/inbox$/)
+  await expect(page.getByRole('main')).toBeVisible()
+
+  await expect(page.getByText('Sayfa geçişi tamamlanamadı')).toHaveCount(0)
 })
 
 test('admin shell fallback states switch chrome to English copy and persist locale', async ({ page }) => {
