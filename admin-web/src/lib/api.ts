@@ -2,13 +2,18 @@ import {
   buildSessionHeaders,
   clearClientBearerSession,
   readClientSession,
+  writeClientBearerSession,
 } from '../features/session/session-storage'
+import type { SessionState } from '../features/session/session-storage'
 
 const DEFAULT_API_BASE_URL = '/api'
 const STAGING_HOST_API_BASE_URL = 'https://api-staging.hr-axis.com/api'
 const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || DEFAULT_API_BASE_URL
 
 type JsonMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+type BearerTokenRefreshHandler = () => Promise<string | null>
+
+let bearerTokenRefreshHandler: BearerTokenRefreshHandler | null = null
 
 export class ApiError extends Error {
   status: number
@@ -28,41 +33,39 @@ export type SessionExpiredDetail = {
 
 export const SESSION_EXPIRED_EVENT = 'store-ops-session-expired'
 
+export function registerBearerTokenRefreshHandler(handler: BearerTokenRefreshHandler) {
+  bearerTokenRefreshHandler = handler
+
+  return () => {
+    if (bearerTokenRefreshHandler === handler) {
+      bearerTokenRefreshHandler = null
+    }
+  }
+}
+
 async function requestJson<T>(path: string, input?: { method?: JsonMethod; body?: unknown }): Promise<T> {
-  const session = readClientSession()
-  const headers: Record<string, string> = {
-    Accept: 'application/json',
-    ...buildSessionHeaders(session),
-  }
+  const body = input?.body !== undefined ? JSON.stringify(input.body) : undefined
+  const prepared = await prepareHeaders(input?.body !== undefined)
 
-  if (input?.body !== undefined) {
-    headers['Content-Type'] = 'application/json'
-  }
-
-  const response = await fetch(`${resolveApiBaseUrl()}${path}`, {
+  let response = await fetch(`${resolveApiBaseUrl()}${path}`, {
     method: input?.method ?? 'GET',
-    headers,
-    body: input?.body !== undefined ? JSON.stringify(input.body) : undefined,
+    headers: prepared.headers,
+    body,
   })
 
-  if (!response.ok) {
-    const fallbackText = await response.text()
-    const message = fallbackText || `Request failed with status ${response.status}`
-
-    if (response.status === 401 && session.mode === 'bearer' && typeof window !== 'undefined') {
-      clearClientBearerSession()
-      window.dispatchEvent(
-        new CustomEvent<SessionExpiredDetail>(SESSION_EXPIRED_EVENT, {
-          detail: {
-            path,
-            message,
-            status: response.status,
-          },
-        }),
-      )
+  if (response.status === 401 && prepared.session.mode === 'bearer') {
+    const retryHeaders = await prepareRefreshedHeaders(input?.body !== undefined)
+    if (retryHeaders) {
+      response = await fetch(`${resolveApiBaseUrl()}${path}`, {
+        method: input?.method ?? 'GET',
+        headers: retryHeaders,
+        body,
+      })
     }
+  }
 
-    throw new ApiError(response.status, message)
+  if (!response.ok) {
+    await throwApiError(response, path, prepared.session)
   }
 
   return parseJsonResponse<T>(response, path)
@@ -75,36 +78,27 @@ async function requestFormData<T>(
     body: FormData
   },
 ): Promise<T> {
-  const session = readClientSession()
-  const headers: Record<string, string> = {
-    Accept: 'application/json',
-    ...buildSessionHeaders(session),
-  }
+  const prepared = await prepareHeaders(false)
 
-  const response = await fetch(`${resolveApiBaseUrl()}${path}`, {
+  let response = await fetch(`${resolveApiBaseUrl()}${path}`, {
     method: input.method,
-    headers,
+    headers: prepared.headers,
     body: input.body,
   })
 
-  if (!response.ok) {
-    const fallbackText = await response.text()
-    const message = fallbackText || `Request failed with status ${response.status}`
-
-    if (response.status === 401 && session.mode === 'bearer' && typeof window !== 'undefined') {
-      clearClientBearerSession()
-      window.dispatchEvent(
-        new CustomEvent<SessionExpiredDetail>(SESSION_EXPIRED_EVENT, {
-          detail: {
-            path,
-            message,
-            status: response.status,
-          },
-        }),
-      )
+  if (response.status === 401 && prepared.session.mode === 'bearer') {
+    const retryHeaders = await prepareRefreshedHeaders(false)
+    if (retryHeaders) {
+      response = await fetch(`${resolveApiBaseUrl()}${path}`, {
+        method: input.method,
+        headers: retryHeaders,
+        body: input.body,
+      })
     }
+  }
 
-    throw new ApiError(response.status, message)
+  if (!response.ok) {
+    await throwApiError(response, path, prepared.session)
   }
 
   return parseJsonResponse<T>(response, path)
@@ -144,6 +138,87 @@ function resolveApiBaseUrl() {
   }
 
   return configuredApiBaseUrl
+}
+
+async function prepareHeaders(hasJsonBody: boolean) {
+  const session = readClientSession()
+  const headers = buildRequestHeaders(session, hasJsonBody)
+
+  if (session.mode !== 'bearer' || headers.Authorization) {
+    return { session, headers }
+  }
+
+  const refreshedHeaders = await prepareRefreshedHeaders(hasJsonBody)
+  if (!refreshedHeaders) {
+    return { session, headers }
+  }
+
+  return {
+    session: readClientSession(),
+    headers: refreshedHeaders,
+  }
+}
+
+function buildRequestHeaders(session: SessionState, hasJsonBody: boolean) {
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    ...buildSessionHeaders(session),
+  }
+
+  if (hasJsonBody) {
+    headers['Content-Type'] = 'application/json'
+  }
+
+  return headers
+}
+
+async function prepareRefreshedHeaders(hasJsonBody: boolean) {
+  const refreshedToken = await refreshBearerToken()
+  if (!refreshedToken) {
+    return null
+  }
+
+  const refreshedSession = readClientSession()
+  const headers = buildRequestHeaders(refreshedSession, hasJsonBody)
+  return headers.Authorization ? headers : null
+}
+
+async function refreshBearerToken() {
+  if (!bearerTokenRefreshHandler) {
+    return null
+  }
+
+  try {
+    const token = (await bearerTokenRefreshHandler())?.trim() ?? ''
+    if (!token) {
+      return null
+    }
+
+    writeClientBearerSession(token)
+    return token
+  } catch {
+    return null
+  }
+}
+
+async function throwApiError(response: Response, path: string, session: SessionState): Promise<never> {
+  const fallbackText = await response.text()
+  const message = fallbackText || `Request failed with status ${response.status}`
+
+  if (response.status === 401 && session.mode === 'bearer' && typeof window !== 'undefined') {
+    clearClientBearerSession()
+    window.dispatchEvent(
+      new CustomEvent<SessionExpiredDetail>(SESSION_EXPIRED_EVENT, {
+        detail: {
+          path,
+          message,
+          status: response.status,
+        },
+      }),
+    )
+  }
+
+  throw new ApiError(response.status, message)
 }
 
 async function parseJsonResponse<T>(response: Response, path: string): Promise<T> {
