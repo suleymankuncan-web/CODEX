@@ -1663,7 +1663,13 @@ test('store approvals page lets store managers submit seller code requests', asy
   await sellerCodeForm.getByLabel('TC kimlik no').fill('12345678901')
   await sellerCodeForm.getByLabel('Telefon numarası').fill('05551234567')
   await sellerCodeForm.getByLabel('İşe giriş tarihi').fill('2026-05-01')
-  await expect(sellerCodeForm.getByLabel('Pozisyon', { exact: true })).toContainText('Satış Danışmanı')
+  const positionSelect = sellerCodeForm.getByLabel('Pozisyon', { exact: true })
+  await expect(positionSelect).toContainText('Mağaza Müdürü')
+  await expect(positionSelect).toContainText('Mağaza Müdür Yardımcısı')
+  await expect(positionSelect).toContainText('Uzman Satış Danışmanı')
+  await expect(positionSelect).toContainText('Satış Danışmanı')
+  await expect(positionSelect).toContainText('Kasa Sorumlusu')
+  await expect(positionSelect).not.toContainText('Sales Associate')
   await sellerCodeForm.getByLabel('Pozisyon', { exact: true }).selectOption(demoPositionId)
   await sellerCodeForm.getByLabel('Talep nedeni').fill('Yeni personel')
   await sellerCodeForm.getByRole('button', { name: 'Satıcı kodu talebini gönder' }).click()
@@ -3305,8 +3311,8 @@ const positionOptionsFixture = {
   items: [
     {
       positionId: demoPositionId,
-      positionCode: 'SALES_CONSULTANT',
-      positionName: 'Sales Consultant',
+      positionCode: 'SALES_ASSOCIATE',
+      positionName: 'Sales Associate',
       jobFamily: 'store',
       isManagerial: false,
     },
@@ -3317,11 +3323,32 @@ const positionOptionsFixture = {
       jobFamily: 'store',
       isManagerial: true,
     },
+    {
+      positionId: '44444444-4444-4444-9444-444444444445',
+      positionCode: 'SENIOR_SALES_CONSULTANT',
+      positionName: 'Senior Sales Consultant',
+      jobFamily: 'store',
+      isManagerial: false,
+    },
+    {
+      positionId: '44444444-4444-4444-9444-444444444446',
+      positionCode: 'CASHIER',
+      positionName: 'Cashier',
+      jobFamily: 'store',
+      isManagerial: false,
+    },
+    {
+      positionId: '44444444-4444-4444-9444-444444444447',
+      positionCode: 'STORE_MANAGER',
+      positionName: 'Store Manager',
+      jobFamily: 'store',
+      isManagerial: true,
+    },
   ],
   meta: {
-    count: 2,
-    total: 2,
-    limit: 2,
+    count: 5,
+    total: 5,
+    limit: 5,
     offset: 0,
   },
 }
