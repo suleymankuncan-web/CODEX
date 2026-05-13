@@ -3386,11 +3386,11 @@ code {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(260px, 360px);
   gap: 18px;
-  border-radius: 30px;
+  border-radius: 24px;
   background:
     radial-gradient(circle at 82% 12%, rgba(122, 74, 232, 0.16), transparent 34%),
     linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(247, 243, 251, 0.78));
-  padding: 24px;
+  padding: 20px;
 }
 
 .store-approvals-ledger-eyebrow,
@@ -3404,7 +3404,7 @@ code {
 
 .store-approvals-ledger-header h2 {
   margin: 6px 0 0;
-  font-size: clamp(30px, 3.6vw, 48px);
+  font-size: clamp(28px, 3vw, 40px);
   line-height: 1;
 }
 
@@ -3453,7 +3453,7 @@ code {
 
 .store-approvals-ledger-metric {
   display: grid;
-  min-height: 126px;
+  min-height: 104px;
   align-content: space-between;
   border-radius: 22px;
   background:
@@ -3797,9 +3797,97 @@ code {
   font-weight: 850;
 }
 
+.store-approvals-request-list {
+  display: grid;
+  gap: 8px;
+}
+
+.store-approvals-request-empty,
+.store-approvals-request-row {
+  border: 1px solid var(--store-command-line);
+  border-radius: 16px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(245, 249, 255, 0.82)),
+    rgba(255, 255, 255, 0.86);
+  box-shadow: 0 12px 30px rgba(31, 24, 54, 0.06);
+}
+
+.store-approvals-request-empty {
+  display: grid;
+  min-height: 64px;
+  place-items: center;
+  color: var(--store-command-muted);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.store-approvals-request-row {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.25fr) minmax(250px, 0.9fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+}
+
+.store-approvals-request-main,
+.store-approvals-request-meta {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.store-approvals-request-copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.store-approvals-request-copy strong {
+  color: var(--store-command-ink);
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.store-approvals-request-copy small,
+.store-approvals-request-meta {
+  color: var(--store-command-muted);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.store-approvals-request-copy small,
+.store-approvals-request-meta span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.store-approvals-request-meta span {
+  min-width: 0;
+}
+
+.store-approvals-request-action {
+  min-height: 34px;
+  border: 1px solid rgba(122, 74, 232, 0.16);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--store-command-plum-deep);
+  padding: 0 12px;
+  font-size: 11px;
+  font-weight: 950;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.store-approvals-request-action:disabled {
+  cursor: default;
+  opacity: 0.58;
+}
+
 .store-approvals-ledger-inspector {
   display: grid;
-  width: min(100%, 820px);
+  width: 100%;
   gap: 12px;
   align-items: start;
 }
@@ -3870,7 +3958,7 @@ code {
 }
 
 .store-approvals-action-panel {
-  width: min(100%, 760px);
+  width: min(100%, 940px);
 }
 
 .store-approvals-action-panel > .empty-card {
@@ -3882,7 +3970,7 @@ code {
 
 .store-request-sheet {
   display: grid;
-  max-width: 720px;
+  max-width: 940px;
   gap: 10px;
   border: 1px solid rgba(122, 74, 232, 0.16);
   border-radius: 18px;
@@ -3953,6 +4041,36 @@ code {
   border-radius: 13px;
   background: rgba(255, 255, 255, 0.74);
   padding: 9px;
+}
+
+.store-request-allocation-row {
+  grid-template-columns: minmax(220px, 1fr) 150px minmax(150px, 0.8fr) auto;
+  align-items: end;
+}
+
+.store-request-allocation-person {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.store-request-allocation-person strong {
+  overflow: hidden;
+  color: var(--store-command-ink);
+  font-size: 13px;
+  font-weight: 950;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.store-request-allocation-person span {
+  overflow: hidden;
+  color: var(--store-command-muted);
+  font-size: 11px;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .store-request-field-wide {
@@ -4036,7 +4154,7 @@ code {
 }
 
 .store-approvals-action-panel .store-approvals-ledger-card {
-  max-width: 720px;
+  max-width: 940px;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.86);
   box-shadow: none;
@@ -4145,6 +4263,16 @@ code {
   .store-approvals-ledger-table-head,
   .store-approvals-ledger-table-row {
     min-width: 980px;
+  }
+
+  .store-approvals-request-row,
+  .store-request-allocation-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .store-approvals-request-meta {
+    flex-wrap: wrap;
   }
 }
 

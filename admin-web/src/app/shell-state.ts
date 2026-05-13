@@ -132,7 +132,11 @@ export function resolveLandingPath(authSummary: AuthSessionSummary | null, isRea
     return '/store/checklists'
   }
 
-  if (hasAnyRole(roles, ['REGION_MANAGER', 'STORE_MANAGER', 'STORE_PERSONNEL', 'VISUAL_MERCHANDISER'])) {
+  if (hasAnyRole(roles, ['STORE_PERSONNEL']) && !hasAnyRole(roles, ['STORE_MANAGER', 'REGION_MANAGER'])) {
+    return '/store/me'
+  }
+
+  if (hasAnyRole(roles, ['REGION_MANAGER', 'STORE_MANAGER', 'VISUAL_MERCHANDISER'])) {
     return '/store/home'
   }
 

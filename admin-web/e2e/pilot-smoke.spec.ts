@@ -60,7 +60,7 @@ test('core store routes open without unavailable states', async ({ page }) => {
     {
       path: '/store',
       urlPattern: /\/store$/,
-      heading: page.getByRole('heading', { name: /ana ekranı hazır/i }),
+      heading: page.locator('.store-command-home'),
     },
     {
       path: '/store/me',
@@ -75,7 +75,7 @@ test('core store routes open without unavailable states', async ({ page }) => {
     {
       path: '/store/approvals',
       urlPattern: /\/store\/approvals$/,
-      heading: page.getByRole('heading', { name: 'Talepler / Onaylar Ledger' }),
+      heading: page.getByRole('heading', { name: 'Talepler / Onaylar' }),
     },
   ]
 

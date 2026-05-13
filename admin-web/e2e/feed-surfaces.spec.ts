@@ -188,7 +188,7 @@ test('store home links to announcements without rendering pinned feed preview', 
 
   await page.goto('/store')
 
-  await expect(page.getByRole('heading', { name: /ana ekranı hazır/i })).toBeVisible()
+  await expect(page.locator('.store-command-home')).toBeVisible()
   await expect(
     page.locator('.store-command-nav').getByRole('link', { name: 'Duyurular', exact: true }),
   ).toHaveAttribute('href', '/store/feed')
