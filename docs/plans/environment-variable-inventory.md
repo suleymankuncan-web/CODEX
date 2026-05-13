@@ -72,6 +72,11 @@ These values are read by `admin-web/src`.
 | `VITE_USER_ID` | P1 local-only | Do not use for production auth. | Mock-session helper only. |
 | `VITE_ROLE_CODES` | P1 local-only | Do not use for production auth. | Mock-session helper only. |
 | `VITE_COMPANY_IDS` | P1 local-only | Do not use for production auth. | Mock-session helper only. |
+| `VITE_STORE_IDS` | P1 local-only | Do not use for production auth. | Mock-session store-scope helper only. |
+| `VITE_READ_STORE_IDS` | P1 local-only | Do not use for production auth. | Mock-session read store-scope helper only; falls back to `VITE_STORE_IDS` when empty. |
+| `VITE_ASSIGNED_STORE_IDS` | P1 local-only | Do not use for production auth. | Mock-session assigned/action store-scope helper only; falls back to `VITE_STORE_IDS` when empty. |
+| `VITE_REGION_IDS` | P1 local-only | Do not use for production auth. | Mock-session region-scope helper only. |
+| `VITE_READ_REGION_IDS` | P1 local-only | Do not use for production auth. | Mock-session read region-scope helper only; falls back to `VITE_REGION_IDS` when empty. |
 | `VITE_BEARER_TOKEN` | P0 local-only | Must be empty in committed examples and production. | Never put real tokens in env files. |
 | `VITE_CLERK_PUBLISHABLE_KEY` | P0 conditional | Required when `VITE_AUTH_PROVIDER=clerk`. | Public Clerk publishable key only; never store Clerk secret key in frontend env. |
 | `VITE_CLERK_JWT_TEMPLATE` | P1 conditional | Set to the Clerk JWT template used for the backend API audience when required. | Leave empty to use the default Clerk session token. |
