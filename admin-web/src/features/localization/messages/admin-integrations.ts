@@ -1,6 +1,6 @@
 export const adminIntegrationsTr = {
   'adminIntegrations.loadingTitle': 'Entegrasyon yönetimi yükleniyor',
-  'adminIntegrations.loadingCopy': 'Aktarım özeti, mağaza kapsamı ve hata kayıtları alınıyor.',
+  'adminIntegrations.loadingCopy': 'Aktarım özeti, kanıtlar ve hata kayıtları alınıyor.',
   'adminIntegrations.dashboardUnavailableTitle': 'Entegrasyon paneli açılamadı',
   'adminIntegrations.needsActionUnavailableTitle': 'Hata sekmesi açılamadı',
   'adminIntegrations.lookupsUnavailableTitle': 'Entegrasyon seçenekleri açılamadı',
@@ -8,11 +8,10 @@ export const adminIntegrationsTr = {
   'adminIntegrations.overviewUnavailableCopy': 'API özet verisini döndürmedi.',
 
   'adminIntegrations.heroEyebrow': 'Entegrasyonlar',
-  'adminIntegrations.title': 'Şirket veri yönetimi',
+  'adminIntegrations.title': 'Entegrasyon yönetim paneli',
   'adminIntegrations.heroCopy':
-    'Power BI yüklemeleri, mağaza kapsamı, kanıtlar ve hata kayıtları dört net sekmede yönetilir.',
+    'Power BI yüklemeleri, kanıtlar ve hata kayıtları üç net sekmede yönetilir.',
   'adminIntegrations.totalBatches': 'Toplam batch',
-  'adminIntegrations.scopeCount': 'Kapsam',
   'adminIntegrations.newUpload': 'Yeni aktarım',
   'adminIntegrations.summaryAria': 'Entegrasyon yönetimi özeti',
   'adminIntegrations.status': 'Durum',
@@ -35,11 +34,9 @@ export const adminIntegrationsTr = {
 
   'adminIntegrations.tabsAria': 'Entegrasyon yönetimi sekmeleri',
   'adminIntegrations.tabUploads': 'Aktarımlar',
-  'adminIntegrations.tabScope': 'Mağaza kapsamı',
   'adminIntegrations.tabEvidence': 'Kanıtlar',
   'adminIntegrations.tabErrors': 'Hatalar',
   'adminIntegrations.uploadsTabAria': 'Power BI aktarım sekmesi',
-  'adminIntegrations.scopeTabAria': 'Mağaza kapsamı sekmesi',
   'adminIntegrations.evidenceTabAria': 'Kanıtlar sekmesi',
   'adminIntegrations.errorsTabAria': 'Hatalar sekmesi',
 
@@ -89,37 +86,7 @@ export const adminIntegrationsTr = {
   'adminIntegrations.balancedStores': 'Dengeli mağaza',
   'adminIntegrations.warningStores': 'Uyarı veren mağaza',
 
-  'adminIntegrations.scopePanelTitle': 'Bölge müdürü bazlı mağaza yönetimi',
-  'adminIntegrations.scopePanelCopy':
-    'Mağaza tipi, durum ve KPI import kapsamı satır bazında yönetilir. Buradaki bölge alanı Bölge Müdürü anlamındadır.',
-  'adminIntegrations.searchStores': 'Mağazalarda ara',
-  'adminIntegrations.searchStoreOrManager': 'Mağaza veya bölge müdürü ara',
-  'adminIntegrations.filterStoreImportScope': 'KPI import kapsamı filtresi',
-  'adminIntegrations.allStores': 'Tüm mağazalar',
-  'adminIntegrations.included': 'Dahil',
-  'adminIntegrations.excluded': 'Hariç',
-  'adminIntegrations.filterStoreStatus': 'Mağaza durumu filtresi',
   'adminIntegrations.allStatuses': 'Tüm durumlar',
-  'adminIntegrations.loadingStoreMaster': 'Mağaza kapsamı yükleniyor...',
-  'adminIntegrations.noStoresTitle': 'Bu filtreyle mağaza bulunamadı.',
-  'adminIntegrations.noStoresCopy': 'Mağaza listesini incelemek için filtreleri temizle.',
-  'adminIntegrations.store': 'Mağaza',
-  'adminIntegrations.type': 'Tip',
-  'adminIntegrations.regionalManager': 'Bölge müdürü',
-  'adminIntegrations.kpiImport': 'KPI import',
-  'adminIntegrations.storeTypeAria': '{storeName} mağaza tipi',
-  'adminIntegrations.storeRegionalManagerAria': '{storeName} bölge müdürü',
-  'adminIntegrations.storeStatusAria': '{storeName} durumu',
-  'adminIntegrations.storeKpiImportEnabledAria': '{storeName} KPI import aktif',
-  'adminIntegrations.noActiveRegionalManagers': 'Aktif bölge müdürü yok',
-  'adminIntegrations.storeRegionRequired':
-    'Mağaza güncellenmeden önce bir bölge müdürüne bağlı olmalıdır.',
-  'adminIntegrations.storeType.company': 'şirket',
-  'adminIntegrations.storeType.franchise': 'franchise',
-  'adminIntegrations.storeType.operator': 'operatör',
-  'adminIntegrations.storeStatus.active': 'aktif',
-  'adminIntegrations.storeStatus.inactive': 'pasif',
-  'adminIntegrations.storeStatus.closed': 'kapalı',
 
   'adminIntegrations.evidencePanelTitle': 'Payload, audit ve mutabakat kanıtları',
   'adminIntegrations.evidencePanelCopy':
@@ -172,7 +139,7 @@ export const adminIntegrationsTr = {
 
 export const adminIntegrationsEn: Record<keyof typeof adminIntegrationsTr, string> = {
   'adminIntegrations.loadingTitle': 'Loading integration management',
-  'adminIntegrations.loadingCopy': 'Fetching upload summary, store scope, and issue records.',
+  'adminIntegrations.loadingCopy': 'Fetching upload summary, evidence, and issue records.',
   'adminIntegrations.dashboardUnavailableTitle': 'Integration panel unavailable',
   'adminIntegrations.needsActionUnavailableTitle': 'Issues tab unavailable',
   'adminIntegrations.lookupsUnavailableTitle': 'Integration options unavailable',
@@ -180,11 +147,10 @@ export const adminIntegrationsEn: Record<keyof typeof adminIntegrationsTr, strin
   'adminIntegrations.overviewUnavailableCopy': 'The API did not return summary data.',
 
   'adminIntegrations.heroEyebrow': 'Integrations',
-  'adminIntegrations.title': 'Company data management',
+  'adminIntegrations.title': 'Integration control panel',
   'adminIntegrations.heroCopy':
-    'Power BI uploads, store scope, evidence, and issue records are managed in four clear tabs.',
+    'Power BI uploads, evidence, and issue records are managed in three clear tabs.',
   'adminIntegrations.totalBatches': 'Total batches',
-  'adminIntegrations.scopeCount': 'Scope',
   'adminIntegrations.newUpload': 'New upload',
   'adminIntegrations.summaryAria': 'Integration management summary',
   'adminIntegrations.status': 'Status',
@@ -207,11 +173,9 @@ export const adminIntegrationsEn: Record<keyof typeof adminIntegrationsTr, strin
 
   'adminIntegrations.tabsAria': 'Integration management tabs',
   'adminIntegrations.tabUploads': 'Uploads',
-  'adminIntegrations.tabScope': 'Store scope',
   'adminIntegrations.tabEvidence': 'Evidence',
   'adminIntegrations.tabErrors': 'Issues',
   'adminIntegrations.uploadsTabAria': 'Power BI upload tab',
-  'adminIntegrations.scopeTabAria': 'Store scope tab',
   'adminIntegrations.evidenceTabAria': 'Evidence tab',
   'adminIntegrations.errorsTabAria': 'Issues tab',
 
@@ -261,37 +225,7 @@ export const adminIntegrationsEn: Record<keyof typeof adminIntegrationsTr, strin
   'adminIntegrations.balancedStores': 'Balanced stores',
   'adminIntegrations.warningStores': 'Warning stores',
 
-  'adminIntegrations.scopePanelTitle': 'Store management by regional manager',
-  'adminIntegrations.scopePanelCopy':
-    'Store type, status, and KPI import scope are managed row by row. Region here means the assigned regional manager.',
-  'adminIntegrations.searchStores': 'Search stores',
-  'adminIntegrations.searchStoreOrManager': 'Search store or regional manager',
-  'adminIntegrations.filterStoreImportScope': 'KPI import scope filter',
-  'adminIntegrations.allStores': 'All stores',
-  'adminIntegrations.included': 'Included',
-  'adminIntegrations.excluded': 'Excluded',
-  'adminIntegrations.filterStoreStatus': 'Store status filter',
   'adminIntegrations.allStatuses': 'All statuses',
-  'adminIntegrations.loadingStoreMaster': 'Loading store scope...',
-  'adminIntegrations.noStoresTitle': 'No store matched this filter.',
-  'adminIntegrations.noStoresCopy': 'Clear the filters to inspect the store list.',
-  'adminIntegrations.store': 'Store',
-  'adminIntegrations.type': 'Type',
-  'adminIntegrations.regionalManager': 'Regional manager',
-  'adminIntegrations.kpiImport': 'KPI import',
-  'adminIntegrations.storeTypeAria': '{storeName} store type',
-  'adminIntegrations.storeRegionalManagerAria': '{storeName} regional manager',
-  'adminIntegrations.storeStatusAria': '{storeName} status',
-  'adminIntegrations.storeKpiImportEnabledAria': '{storeName} KPI import enabled',
-  'adminIntegrations.noActiveRegionalManagers': 'No active regional manager',
-  'adminIntegrations.storeRegionRequired':
-    'The store must be assigned to a regional manager before it can be updated.',
-  'adminIntegrations.storeType.company': 'company',
-  'adminIntegrations.storeType.franchise': 'franchise',
-  'adminIntegrations.storeType.operator': 'operator',
-  'adminIntegrations.storeStatus.active': 'active',
-  'adminIntegrations.storeStatus.inactive': 'inactive',
-  'adminIntegrations.storeStatus.closed': 'closed',
 
   'adminIntegrations.evidencePanelTitle': 'Payload, audit, and reconciliation evidence',
   'adminIntegrations.evidencePanelCopy':
