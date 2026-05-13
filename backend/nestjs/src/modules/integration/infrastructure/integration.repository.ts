@@ -753,6 +753,432 @@ export class IntegrationRepository {
     });
   }
 
+  async listPersonnelMaster(input: {
+    actorCompanyIds: string[];
+    q?: string;
+    status?: "active" | "inactive" | "terminated";
+    storeId?: string;
+    limit?: number;
+    offset?: number;
+  }) {
+    const conditions: string[] = ["e.company_id = ANY($1::uuid[])"];
+    const params: unknown[] = [input.actorCompanyIds];
+
+    const search = input.q?.trim();
+    if (search) {
+      params.push(`%${search}%`);
+      conditions.push(`(
+        e.external_employee_ref ILIKE $${params.length}
+        OR e.first_name ILIKE $${params.length}
+        OR e.last_name ILIKE $${params.length}
+        OR CONCAT(e.first_name, ' ', e.last_name) ILIKE $${params.length}
+        OR s.store_name ILIKE $${params.length}
+        OR s.store_code ILIKE $${params.length}
+        OR p.position_name ILIKE $${params.length}
+      )`);
+    }
+
+    if (input.status) {
+      params.push(input.status);
+      conditions.push(`e.employment_status = $${params.length}`);
+    }
+
+    if (input.storeId) {
+      params.push(input.storeId);
+      conditions.push(`assignment.store_id = $${params.length}::uuid`);
+    }
+
+    const whereClause = `WHERE ${conditions.join(" AND ")}`;
+    const fromClause = `
+      FROM ops.employee e
+      LEFT JOIN LATERAL (
+        SELECT
+          eah.assignment_id,
+          eah.store_id,
+          eah.region_id,
+          eah.position_id,
+          eah.start_date
+        FROM ops.employee_assignment_history eah
+        WHERE eah.employee_id = e.employee_id
+          AND eah.is_primary_assignment = TRUE
+          AND eah.assignment_status = 'active'
+          AND eah.end_date IS NULL
+        ORDER BY eah.start_date DESC, eah.created_at DESC
+        LIMIT 1
+      ) assignment ON TRUE
+      LEFT JOIN ops.store s
+        ON s.store_id = assignment.store_id
+      LEFT JOIN ops.region r
+        ON r.region_id = assignment.region_id
+      LEFT JOIN ops.position p
+        ON p.position_id = assignment.position_id
+    `;
+
+    const totalResult = await this.databaseService.query<{ total_count: string }>(
+      `
+        SELECT COUNT(*)::text AS total_count
+        ${fromClause}
+        ${whereClause}
+      `,
+      params,
+    );
+
+    const limit = input.limit ?? 50;
+    const offset = input.offset ?? 0;
+    const listParams = [...params, limit, offset];
+    const result = await this.databaseService.query<{
+      employee_id: string;
+      external_employee_ref: string | null;
+      first_name: string;
+      last_name: string;
+      hire_date: string;
+      termination_date: string | null;
+      employment_status: string;
+      employment_type: string;
+      assignment_id: string | null;
+      assignment_start_date: string | null;
+      store_id: string | null;
+      store_code: string | null;
+      store_name: string | null;
+      region_id: string | null;
+      region_name: string | null;
+      position_id: string | null;
+      position_code: string | null;
+      position_name: string | null;
+    }>(
+      `
+        SELECT
+          e.employee_id::text AS employee_id,
+          e.external_employee_ref,
+          e.first_name,
+          e.last_name,
+          e.hire_date::text AS hire_date,
+          e.termination_date::text AS termination_date,
+          e.employment_status,
+          e.employment_type,
+          assignment.assignment_id::text AS assignment_id,
+          assignment.start_date::text AS assignment_start_date,
+          s.store_id::text AS store_id,
+          s.store_code,
+          s.store_name,
+          r.region_id::text AS region_id,
+          r.region_name,
+          p.position_id::text AS position_id,
+          p.position_code,
+          p.position_name
+        ${fromClause}
+        ${whereClause}
+        ORDER BY e.first_name ASC, e.last_name ASC, e.external_employee_ref ASC
+        LIMIT $${params.length + 1}
+        OFFSET $${params.length + 2}
+      `,
+      listParams,
+    );
+
+    return {
+      rows: result.rows,
+      total: Number(totalResult.rows[0]?.total_count ?? 0),
+    };
+  }
+
+  async listPersonnelMasterLookups(input: { actorCompanyIds: string[] }) {
+    const [stores, positions] = await Promise.all([
+      this.databaseService.query<{
+        store_id: string;
+        store_code: string;
+        store_name: string;
+        region_id: string;
+        region_name: string;
+      }>(
+        `
+          SELECT
+            s.store_id::text AS store_id,
+            s.store_code,
+            s.store_name,
+            r.region_id::text AS region_id,
+            r.region_name
+          FROM ops.store s
+          INNER JOIN ops.region r
+            ON r.region_id = s.region_id
+          WHERE s.company_id = ANY($1::uuid[])
+            AND s.status = 'active'
+          ORDER BY s.store_name ASC, s.store_code ASC
+        `,
+        [input.actorCompanyIds],
+      ),
+      this.databaseService.query<{
+        position_id: string;
+        position_code: string;
+        position_name: string;
+        is_managerial: boolean;
+      }>(
+        `
+          SELECT
+            p.position_id::text AS position_id,
+            p.position_code,
+            p.position_name,
+            p.is_managerial
+          FROM ops.position p
+          WHERE p.company_id = ANY($1::uuid[])
+          ORDER BY p.is_managerial DESC, p.position_name ASC, p.position_code ASC
+        `,
+        [input.actorCompanyIds],
+      ),
+    ]);
+
+    return {
+      stores: stores.rows,
+      positions: positions.rows,
+    };
+  }
+
+  async updatePersonnelMaster(input: {
+    actorCompanyIds: string[];
+    employeeId: string;
+    firstName: string;
+    lastName: string;
+    externalEmployeeRef?: string;
+    employmentStatus: "active" | "inactive" | "terminated";
+    employmentType: "full_time" | "part_time" | "temporary";
+    hireDate: string;
+    storeId: string;
+    positionId: string;
+    assignmentStartDate?: string;
+    actorUserId: string;
+  }) {
+    return this.databaseService.withTransaction(async (client) => {
+      const auditActorUserId = await this.resolveAuditActorUserId(input.actorUserId, client);
+      const employeeResult = await client.query<{ employee_id: string; company_id: string }>(
+        `
+          SELECT employee_id::text AS employee_id, company_id::text AS company_id
+          FROM ops.employee
+          WHERE employee_id = $1::uuid
+            AND company_id = ANY($2::uuid[])
+          LIMIT 1
+        `,
+        [input.employeeId, input.actorCompanyIds],
+      );
+      const employee = employeeResult.rows[0] ?? null;
+      if (!employee) {
+        return null;
+      }
+
+      const storeResult = await client.query<{
+        store_id: string;
+        region_id: string;
+        company_id: string;
+      }>(
+        `
+          SELECT
+            s.store_id::text AS store_id,
+            s.region_id::text AS region_id,
+            s.company_id::text AS company_id
+          FROM ops.store s
+          WHERE s.store_id = $1::uuid
+            AND s.company_id = $2::uuid
+          LIMIT 1
+        `,
+        [input.storeId, employee.company_id],
+      );
+      const store = storeResult.rows[0] ?? null;
+      if (!store) {
+        return null;
+      }
+
+      const positionResult = await client.query<{ position_id: string }>(
+        `
+          SELECT p.position_id::text AS position_id
+          FROM ops.position p
+          WHERE p.position_id = $1::uuid
+            AND p.company_id = $2::uuid
+          LIMIT 1
+        `,
+        [input.positionId, employee.company_id],
+      );
+      if (!positionResult.rows[0]) {
+        return null;
+      }
+
+      await client.query(
+        `
+          UPDATE ops.employee
+          SET
+            external_employee_ref = NULLIF(BTRIM($2), ''),
+            first_name = BTRIM($3),
+            last_name = BTRIM($4),
+            employment_status = $5,
+            employment_type = $6,
+            hire_date = $7::date
+          WHERE employee_id = $1::uuid
+        `,
+        [
+          input.employeeId,
+          input.externalEmployeeRef ?? "",
+          input.firstName,
+          input.lastName,
+          input.employmentStatus,
+          input.employmentType,
+          input.hireDate,
+        ],
+      );
+
+      const assignmentStartDate = input.assignmentStartDate ?? input.hireDate;
+      const assignmentResult = await client.query<{ assignment_id: string }>(
+        `
+          SELECT assignment_id::text AS assignment_id
+          FROM ops.employee_assignment_history
+          WHERE employee_id = $1::uuid
+            AND is_primary_assignment = TRUE
+            AND assignment_status = 'active'
+            AND end_date IS NULL
+          ORDER BY start_date DESC, created_at DESC
+          LIMIT 1
+        `,
+        [input.employeeId],
+      );
+      const assignmentId = assignmentResult.rows[0]?.assignment_id ?? null;
+
+      if (assignmentId) {
+        await client.query(
+          `
+            UPDATE ops.employee_assignment_history
+            SET
+              store_id = $2::uuid,
+              region_id = $3::uuid,
+              position_id = $4::uuid,
+              start_date = $5::date
+            WHERE assignment_id = $1::uuid
+          `,
+          [
+            assignmentId,
+            store.store_id,
+            store.region_id,
+            input.positionId,
+            assignmentStartDate,
+          ],
+        );
+      } else {
+        await client.query(
+          `
+            INSERT INTO ops.employee_assignment_history (
+              employee_id,
+              store_id,
+              region_id,
+              position_id,
+              start_date,
+              is_primary_assignment,
+              assignment_status
+            )
+            VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::date, TRUE, 'active')
+          `,
+          [
+            input.employeeId,
+            store.store_id,
+            store.region_id,
+            input.positionId,
+            assignmentStartDate,
+          ],
+        );
+      }
+
+      await client.query(
+        `
+          INSERT INTO audit.event_log (
+            actor_user_id,
+            event_type,
+            entity_name,
+            entity_id,
+            scope_type,
+            metadata_json
+          )
+          VALUES ($1::uuid, 'personnel_master_data.updated', 'ops.employee', $2::uuid, 'company', $3::jsonb)
+        `,
+        [
+          auditActorUserId,
+          input.employeeId,
+          JSON.stringify({
+            correlationId: RequestContextStore.getCorrelationId(),
+            requestedActorUserId: input.actorUserId,
+            storeId: store.store_id,
+            regionId: store.region_id,
+            positionId: input.positionId,
+            employmentStatus: input.employmentStatus,
+            employmentType: input.employmentType,
+          }),
+        ],
+      );
+
+      const updated = await client.query<{
+        employee_id: string;
+        external_employee_ref: string | null;
+        first_name: string;
+        last_name: string;
+        hire_date: string;
+        termination_date: string | null;
+        employment_status: string;
+        employment_type: string;
+        assignment_id: string | null;
+        assignment_start_date: string | null;
+        store_id: string | null;
+        store_code: string | null;
+        store_name: string | null;
+        region_id: string | null;
+        region_name: string | null;
+        position_id: string | null;
+        position_code: string | null;
+        position_name: string | null;
+      }>(
+        `
+          SELECT
+            e.employee_id::text AS employee_id,
+            e.external_employee_ref,
+            e.first_name,
+            e.last_name,
+            e.hire_date::text AS hire_date,
+            e.termination_date::text AS termination_date,
+            e.employment_status,
+            e.employment_type,
+            assignment.assignment_id::text AS assignment_id,
+            assignment.start_date::text AS assignment_start_date,
+            s.store_id::text AS store_id,
+            s.store_code,
+            s.store_name,
+            r.region_id::text AS region_id,
+            r.region_name,
+            p.position_id::text AS position_id,
+            p.position_code,
+            p.position_name
+          FROM ops.employee e
+          LEFT JOIN LATERAL (
+            SELECT
+              eah.assignment_id,
+              eah.store_id,
+              eah.region_id,
+              eah.position_id,
+              eah.start_date
+            FROM ops.employee_assignment_history eah
+            WHERE eah.employee_id = e.employee_id
+              AND eah.is_primary_assignment = TRUE
+              AND eah.assignment_status = 'active'
+              AND eah.end_date IS NULL
+            ORDER BY eah.start_date DESC, eah.created_at DESC
+            LIMIT 1
+          ) assignment ON TRUE
+          LEFT JOIN ops.store s
+            ON s.store_id = assignment.store_id
+          LEFT JOIN ops.region r
+            ON r.region_id = assignment.region_id
+          LEFT JOIN ops.position p
+            ON p.position_id = assignment.position_id
+          WHERE e.employee_id = $1::uuid
+        `,
+        [input.employeeId],
+      );
+
+      return updated.rows[0] ?? null;
+    });
+  }
+
   async listImportBatches(input: {
     actorCompanyIds: string[];
     limit?: number;

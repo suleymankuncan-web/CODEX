@@ -585,6 +585,108 @@ export class IntegrationService {
     });
   }
 
+  async listPersonnelMaster(input: {
+    actorCompanyIds: string[];
+    q?: string;
+    status?: "active" | "inactive" | "terminated";
+    storeId?: string;
+    limit?: number;
+    offset?: number;
+  }) {
+    const actorCompanyIds = this.normalizeCompanyScope(input.actorCompanyIds);
+    this.assertCompanyScope(actorCompanyIds);
+    const result = await this.integrationRepository.listPersonnelMaster({
+      ...input,
+      actorCompanyIds,
+    });
+
+    return buildListResponse(
+      result.rows.map((item) => this.mapPersonnelMaster(item)),
+      { total: result.total, limit: input.limit, offset: input.offset },
+    );
+  }
+
+  async getPersonnelMasterLookups(input: { actorCompanyIds: string[] }) {
+    const actorCompanyIds = this.normalizeCompanyScope(input.actorCompanyIds);
+    this.assertCompanyScope(actorCompanyIds);
+    const lookups = await this.integrationRepository.listPersonnelMasterLookups({
+      actorCompanyIds,
+    });
+
+    return {
+      stores: lookups.stores.map((item) => ({
+        storeId: item.store_id,
+        storeCode: item.store_code,
+        storeName: item.store_name,
+        regionId: item.region_id,
+        regionName: item.region_name,
+      })),
+      positions: lookups.positions.map((item) => ({
+        positionId: item.position_id,
+        positionCode: item.position_code,
+        positionName: item.position_name,
+        isManagerial: item.is_managerial,
+      })),
+      employmentStatuses: [
+        { value: "active", label: "Active" },
+        { value: "inactive", label: "Inactive" },
+        { value: "terminated", label: "Terminated" },
+      ],
+      employmentTypes: [
+        { value: "full_time", label: "Full time" },
+        { value: "part_time", label: "Part time" },
+        { value: "temporary", label: "Temporary" },
+      ],
+    };
+  }
+
+  async updatePersonnelMaster(input: {
+    actorCompanyIds: string[];
+    actorUserId: string;
+    employeeId: string;
+    firstName: string;
+    lastName: string;
+    externalEmployeeRef?: string;
+    employmentStatus: "active" | "inactive" | "terminated";
+    employmentType: "full_time" | "part_time" | "temporary";
+    hireDate: string;
+    storeId: string;
+    positionId: string;
+    assignmentStartDate?: string;
+  }) {
+    const actorCompanyIds = this.normalizeCompanyScope(input.actorCompanyIds);
+    this.assertCompanyScope(actorCompanyIds);
+    const personnel = await this.integrationRepository.updatePersonnelMaster({
+      ...input,
+      actorCompanyIds,
+      firstName: input.firstName.trim(),
+      lastName: input.lastName.trim(),
+      externalEmployeeRef: input.externalEmployeeRef?.trim(),
+      hireDate: input.hireDate.slice(0, 10),
+      assignmentStartDate: input.assignmentStartDate?.slice(0, 10),
+    });
+
+    if (!personnel) {
+      throw new NotFoundException(`Personnel master record not found: ${input.employeeId}`);
+    }
+
+    logStructuredMessage(this.logger, "personnel_master_data.updated", {
+      actorUserId: input.actorUserId,
+      employeeId: input.employeeId,
+      storeId: input.storeId,
+      positionId: input.positionId,
+      employmentStatus: input.employmentStatus,
+    });
+
+    return buildCommandResponse({
+      status: "updated",
+      message: "Personnel master data updated",
+      data: {
+        personnelMaster: this.mapPersonnelMaster(personnel),
+      },
+    });
+  }
+
   async getIntegrationSourceAudit(sourceId: string) {
     const source = await this.integrationSourceRepository.getIntegrationSourceById(sourceId);
 
@@ -1379,6 +1481,52 @@ export class IntegrationService {
       kpiImportEnabled: item.kpi_import_enabled,
       regionId: item.region_id,
       regionName: item.region_name,
+    };
+  }
+
+  private mapPersonnelMaster(item: {
+    employee_id: string;
+    external_employee_ref: string | null;
+    first_name: string;
+    last_name: string;
+    hire_date: string;
+    termination_date: string | null;
+    employment_status: string;
+    employment_type: string;
+    assignment_id: string | null;
+    assignment_start_date: string | null;
+    store_id: string | null;
+    store_code: string | null;
+    store_name: string | null;
+    region_id: string | null;
+    region_name: string | null;
+    position_id: string | null;
+    position_code: string | null;
+    position_name: string | null;
+  }) {
+    const firstName = item.first_name.trim();
+    const lastName = item.last_name.trim();
+
+    return {
+      employeeId: item.employee_id,
+      externalEmployeeRef: item.external_employee_ref,
+      firstName,
+      lastName,
+      displayName: [firstName, lastName].filter(Boolean).join(" "),
+      hireDate: item.hire_date,
+      terminationDate: item.termination_date,
+      employmentStatus: item.employment_status,
+      employmentType: item.employment_type,
+      assignmentId: item.assignment_id,
+      assignmentStartDate: item.assignment_start_date,
+      storeId: item.store_id,
+      storeCode: item.store_code,
+      storeName: item.store_name,
+      regionId: item.region_id,
+      regionName: item.region_name,
+      positionId: item.position_id,
+      positionCode: item.position_code,
+      positionName: item.position_name,
     };
   }
 

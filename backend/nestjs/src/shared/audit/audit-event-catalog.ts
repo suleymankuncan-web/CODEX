@@ -62,6 +62,12 @@ export const AUDIT_EVENT_CATALOG = [
     "integration",
     "Store master data was updated.",
   ),
+  auditEvent(
+    "personnel_master_data.updated",
+    "ops.employee",
+    "integration",
+    "Personnel master data and active assignment were updated.",
+  ),
   auditEvent("integration_source.created", "stg.integration_source", "integration", "Integration source was created."),
   auditEvent(
     "integration_source.deactivated",

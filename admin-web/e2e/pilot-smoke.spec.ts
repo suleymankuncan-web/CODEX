@@ -40,7 +40,7 @@ test('core admin routes open without unavailable states', async ({ page }) => {
     {
       path: '/admin/master-data',
       urlPattern: /\/admin\/master-data$/,
-      heading: page.getByRole('heading', { name: 'Hazırlık partileri' }),
+      heading: page.getByRole('heading', { name: 'Ana Veri Yönetim Paneli' }),
     },
     {
       path: '/admin/targets',
