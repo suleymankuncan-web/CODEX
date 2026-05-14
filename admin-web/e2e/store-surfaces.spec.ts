@@ -597,12 +597,20 @@ test('store rankings page renders Plum ranking table without signal chrome', asy
   await expect(page.getByText('Top 100 kapsam')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Mağaza listesi' })).toBeVisible()
   await expect(page.getByText('Mağaza skor')).toBeVisible()
+  await expect(page.locator('.rankings-plum-score-track i').first()).toHaveCSS(
+    'background-image',
+    /linear-gradient/,
+  )
   await expect(page.getByText('Sinyal')).toHaveCount(0)
   await expect(page.locator('.rankings-plum-trend')).toHaveCount(0)
   await page.getByRole('tab', { name: 'Personel listesi' }).click()
   await expect(page.getByRole('heading', { name: 'Personel listesi' })).toBeVisible()
   await expect(page.getByText('Store Personnel - 1').first()).toBeVisible()
   await expect(page.getByText('Personel skor')).toBeVisible()
+  await expect(page.locator('.rankings-plum-score-track i').first()).toHaveCSS(
+    'background-image',
+    /linear-gradient/,
+  )
   await expect(page.getByText('Sinyal')).toHaveCount(0)
   await expect(page.locator('.rankings-plum-trend')).toHaveCount(0)
   await expect(page.getByText('Magaza ve personel rankingleri')).toHaveCount(0)

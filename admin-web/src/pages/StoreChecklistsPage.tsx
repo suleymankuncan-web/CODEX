@@ -105,9 +105,10 @@ export function StoreChecklistsPage(input: {
     onSuccess: (result, variables) => {
       void queryClient.invalidateQueries({ queryKey: ['mobile-checklists-today'] })
       const instance = result.data.checklistInstance
+      const rowKey = getCoverageRowKey(variables.storeId, variables.checklistTemplateId)
       setLocalActiveInstances((current) => ({
         ...current,
-        [getCoverageRowKey(variables.storeId, variables.checklistTemplateId)]: {
+        [rowKey]: {
           checklistInstanceId: instance.checklist_instance_id,
           checklistTemplateId: variables.checklistTemplateId,
           storeId: variables.storeId,
@@ -117,6 +118,10 @@ export function StoreChecklistsPage(input: {
           responses: [],
         },
       }))
+      setScores({})
+      setComments({})
+      setSelectedSessionKey(rowKey)
+      setSessionDirty(false)
       setAckNotice(result.command.message)
     },
   })
@@ -193,12 +198,12 @@ export function StoreChecklistsPage(input: {
   const hydrateActiveResponseDrafts = (
     active: MobileChecklistToday['activeInstances'][number] | undefined,
   ) => {
-    if (!active?.responses.length) return
+    const nextScores: Record<string, number> = {}
+    const nextComments: Record<string, string> = {}
 
-    setScores((current) => {
-      const next = { ...current }
+    if (active?.responses.length) {
       for (const response of active.responses) {
-        next[response.templateItemId] = response.scoreValue
+        nextScores[response.templateItemId] = response.scoreValue
         const draft = {
           checklistInstanceId: active.checklistInstanceId,
           templateItemId: response.templateItemId,
@@ -207,16 +212,13 @@ export function StoreChecklistsPage(input: {
         }
         savedResponseDraftsRef.current[getChecklistResponseDraftKey(draft)] =
           serializeChecklistResponseDraft(draft)
+        if (response.commentText) nextComments[response.templateItemId] = response.commentText
       }
-      return next
-    })
-    setComments((current) => {
-      const next = { ...current }
-      for (const response of active.responses) {
-        if (response.commentText) next[response.templateItemId] = response.commentText
-      }
-      return next
-    })
+    }
+
+    setScores(nextScores)
+    setComments(nextComments)
+    setSessionDirty(false)
   }
 
   if (
@@ -437,6 +439,11 @@ export function StoreChecklistsPage(input: {
                 const active = row.active
                 const rowScore = getCoverageScore(row)
                 const canStart = active || assignedStoreIds.includes(row.store.storeId)
+                const rowKey = getCoverageRowKeyFromRow(row)
+                const isStartingRow =
+                  startVisitMutation.isPending &&
+                  startVisitMutation.variables?.storeId === row.store.storeId &&
+                  startVisitMutation.variables?.checklistTemplateId === row.template.checklistTemplateId
 
                 return (
                   <article
@@ -465,15 +472,28 @@ export function StoreChecklistsPage(input: {
                     />
                     <button
                       className="store-checklists-action-button"
-                      disabled={!canStart}
+                      disabled={!canStart || (!active && startVisitMutation.isPending)}
                       type="button"
                       onClick={() => {
-                        hydrateActiveResponseDrafts(active)
-                        setSelectedSessionKey(getCoverageRowKeyFromRow(row))
-                        setSessionDirty(false)
+                        if (active) {
+                          hydrateActiveResponseDrafts(active)
+                          setSelectedSessionKey(rowKey)
+                          return
+                        }
+
+                        hydrateActiveResponseDrafts(undefined)
+                        setSelectedSessionKey(null)
+                        startVisitMutation.mutate({
+                          storeId: row.store.storeId,
+                          checklistTemplateId: row.template.checklistTemplateId,
+                        })
                       }}
                     >
-                      {active ? t('storeChecklists.continueChecklist') : t('storeChecklists.startChecklist')}
+                      {active
+                        ? t('storeChecklists.continueChecklist')
+                        : isStartingRow
+                          ? t('storeChecklists.startPending')
+                          : t('storeChecklists.startChecklist')}
                     </button>
                   </article>
                 )
@@ -546,12 +566,6 @@ export function StoreChecklistsPage(input: {
             }
             setSessionDirty(true)
           }}
-          onStart={(row) =>
-            startVisitMutation.mutate({
-              storeId: row.store.storeId,
-              checklistTemplateId: row.template.checklistTemplateId,
-            })
-          }
           scores={scores}
           session={selectedSession}
           t={t}
@@ -825,7 +839,6 @@ function ChecklistVisitModal(input: {
   onCommentChange: (templateItemId: string, comment: string) => void
   onComplete: (checklistInstanceId: string) => void
   onScoreChange: (templateItemId: string, score: number | null) => void
-  onStart: (session: ChecklistSession) => void
   scores: Record<string, number>
   session: ChecklistSession
   t: TranslateFunction
@@ -892,25 +905,6 @@ function ChecklistVisitModal(input: {
             value={`${answeredCount}/${input.session.template.items.length}`}
           />
         </div>
-
-        {!input.active ? (
-          <div className="store-checklist-modal-start">
-            <div>
-              <strong>{input.t('storeChecklists.sessionStartTitle')}</strong>
-              <p>{input.t('storeChecklists.sessionStartCopy')}</p>
-            </div>
-            <button
-              className="store-checklists-action-button"
-              disabled={input.isStarting || !hasItems}
-              type="button"
-              onClick={() => input.onStart(input.session)}
-            >
-              {input.isStarting
-                ? input.t('storeChecklists.startPending')
-                : input.t('storeChecklists.startChecklist')}
-            </button>
-          </div>
-        ) : null}
 
         {!hasItems ? (
           <ChecklistEmptyBlock
@@ -999,7 +993,9 @@ function ChecklistVisitModal(input: {
         )}
 
         <div className="store-checklist-modal-footer">
-          {missingResponseCount > 0 ? (
+          {!input.active && input.isStarting ? (
+            <p className="store-checklists-inline-notice">{input.t('storeChecklists.startPending')}</p>
+          ) : missingResponseCount > 0 ? (
             <p className="store-checklists-inline-notice">
               {input.t('storeChecklists.missingResponsesHint', {
                 count: missingResponseCount,
@@ -1243,7 +1239,11 @@ function ChecklistScoreBar(input: {
   const percent = clamp(input.percent, 0, 100)
 
   return (
-    <div className="store-checklists-scorebar">
+    <div
+      className={`store-checklists-scorebar${
+        input.tone === 'neutral' ? ' store-checklists-scorebar-empty' : ''
+      }`}
+    >
       <div>
         <span>{input.label}</span>
         <strong>{input.value}</strong>

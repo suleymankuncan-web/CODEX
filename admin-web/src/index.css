@@ -1016,8 +1016,7 @@ code {
 
 .store-checklist-modal-head,
 .store-checklist-modal-footer,
-.store-checklist-modal-section-head,
-.store-checklist-modal-start {
+.store-checklist-modal-section-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -1032,7 +1031,6 @@ code {
 }
 
 .store-checklist-modal-head p,
-.store-checklist-modal-start p,
 .store-checklist-modal-item p {
   margin: 7px 0 0;
   color: var(--surface-muted);
@@ -1045,14 +1043,6 @@ code {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
   margin-top: 14px;
-}
-
-.store-checklist-modal-start {
-  margin-top: 14px;
-  padding: 12px;
-  border: 1px solid rgba(115, 76, 232, 0.16);
-  border-radius: 16px;
-  background: linear-gradient(135deg, rgba(115, 76, 232, 0.08), rgba(16, 169, 183, 0.08));
 }
 
 .store-checklist-modal-sections {
@@ -1304,8 +1294,7 @@ code {
   }
 
   .store-checklist-modal-head,
-  .store-checklist-modal-footer,
-  .store-checklist-modal-start {
+  .store-checklist-modal-footer {
     flex-direction: column;
   }
 
@@ -7271,20 +7260,38 @@ code {
 }
 
 .rankings-plum-score-track {
+  position: relative;
   overflow: hidden;
   width: 100%;
-  height: 0.48rem;
+  height: 0.56rem;
+  border: 1px solid rgba(122, 74, 232, 0.15);
   border-radius: 999px;
-  background: rgba(78, 47, 105, 0.1);
+  background:
+    repeating-linear-gradient(90deg, rgba(76, 42, 165, 0.13) 0 2px, transparent 2px 10px),
+    linear-gradient(90deg, rgba(122, 74, 232, 0.08), rgba(19, 167, 179, 0.09));
+  box-shadow: inset 0 1px 5px rgba(32, 24, 48, 0.08);
 }
 
 .rankings-plum-score-track i {
+  position: relative;
+  z-index: 1;
   display: block;
   width: var(--score-width, 0%);
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--rp-rose), var(--rp-amber), var(--rp-green));
-  box-shadow: 0 0 18px rgba(22, 163, 74, 0.18);
+  background: linear-gradient(90deg, #4c2aa5, #7a4ae8 48%, #13a7b3);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.28) inset,
+    0 0 18px rgba(19, 167, 179, 0.26);
+}
+
+.rankings-plum-score-track i::after {
+  position: absolute;
+  inset: 1px 2px auto 2px;
+  height: 2px;
+  content: "";
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.62);
 }
 
 .rankings-plum-row-meta {
@@ -8260,23 +8267,24 @@ code {
   position: relative;
   overflow: hidden;
   width: 100%;
-  height: 0.56rem;
+  height: 0.62rem;
+  border: 1px solid rgba(122, 74, 232, 0.15);
   border-radius: 999px;
   background:
-    linear-gradient(90deg, #d33f71 0%, #d78b20 48%, #1f965c 100%),
-    rgba(78, 47, 105, 0.08);
+    repeating-linear-gradient(90deg, rgba(76, 42, 165, 0.13) 0 2px, transparent 2px 10px),
+    linear-gradient(90deg, rgba(122, 74, 232, 0.08), rgba(19, 167, 179, 0.09));
   box-shadow:
-    inset 0 0 0 1px rgba(32, 22, 41, 0.09),
-    0 8px 16px rgba(31, 150, 92, 0.08);
+    inset 0 1px 5px rgba(32, 24, 48, 0.08),
+    0 8px 16px rgba(19, 167, 179, 0.08);
 }
 
 .rankings-plum-score-track::after {
   position: absolute;
-  inset: 0 0 0 var(--score-width, 0%);
+  inset: 1px;
   content: "";
   border-radius: inherit;
-  background: rgba(236, 239, 246, 0.96);
-  box-shadow: inset 8px 0 12px rgba(255, 255, 255, 0.64);
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.42), transparent 60%);
 }
 
 .rankings-plum-score-track i {
@@ -8286,19 +8294,28 @@ code {
   width: var(--score-width, 0%);
   height: 100%;
   border-radius: inherit;
-  background: transparent;
+  background: linear-gradient(90deg, #4c2aa5, #7a4ae8 48%, #13a7b3);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.28) inset,
+    0 0 18px rgba(19, 167, 179, 0.26);
 }
 
 .rankings-plum-score-track i::after {
   position: absolute;
-  top: 0;
-  right: -3px;
-  bottom: 0;
-  width: 5px;
+  inset: 1px 2px auto 2px;
+  height: 2px;
   content: "";
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 0 10px rgba(31, 150, 92, 0.55);
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.rankings-plum-scorebar-empty .rankings-plum-score-track i {
+  background: rgba(36, 28, 50, 0.12);
+  box-shadow: none;
+}
+
+.rankings-plum-scorebar-empty .rankings-plum-score-track i::after {
+  display: none;
 }
 
 .rankings-plum-metric-grid {
@@ -8552,16 +8569,33 @@ code {
 .rankings-plum-month-score-track {
   position: relative;
   overflow: hidden;
-  height: 0.5rem;
+  height: 0.56rem;
+  border: 1px solid rgba(122, 74, 232, 0.15);
   border-radius: 999px;
-  background: linear-gradient(90deg, #d33f71 0%, #d78b20 48%, #1f965c 100%);
+  background:
+    repeating-linear-gradient(90deg, rgba(76, 42, 165, 0.13) 0 2px, transparent 2px 10px),
+    linear-gradient(90deg, rgba(122, 74, 232, 0.08), rgba(19, 167, 179, 0.09));
+  box-shadow: inset 0 1px 5px rgba(32, 24, 48, 0.08);
+}
+
+.rankings-plum-month-score-track::before {
+  position: absolute;
+  inset: 0 calc(100% - var(--month-score, 0%)) 0 0;
+  content: "";
+  border-radius: inherit;
+  background: linear-gradient(90deg, #4c2aa5, #7a4ae8 48%, #13a7b3);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.28) inset,
+    0 0 18px rgba(19, 167, 179, 0.26);
 }
 
 .rankings-plum-month-score-track::after {
   position: absolute;
-  inset: 0 0 0 var(--month-score, 0%);
+  inset: 1px;
   content: "";
-  background: rgba(226, 232, 240, 0.9);
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.42), transparent 60%);
 }
 
 .rankings-plum-note {
@@ -9585,34 +9619,58 @@ code {
 }
 
 .store-checklists-scorebar i {
+  position: relative;
   display: block;
   overflow: hidden;
-  height: 0.52rem;
+  height: 0.62rem;
+  border: 1px solid rgba(122, 74, 232, 0.15);
   border-radius: 999px;
-  background: rgba(36, 28, 50, 0.08);
+  background:
+    repeating-linear-gradient(90deg, rgba(76, 42, 165, 0.13) 0 2px, transparent 2px 10px),
+    linear-gradient(90deg, rgba(122, 74, 232, 0.08), rgba(19, 167, 179, 0.09));
+  box-shadow: inset 0 1px 5px rgba(32, 24, 48, 0.08);
+}
+
+.store-checklists-scorebar i::after {
+  position: absolute;
+  inset: 1px;
+  content: "";
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.42), transparent 60%);
 }
 
 .store-checklists-scorebar b {
+  position: relative;
+  z-index: 1;
   display: block;
   height: 100%;
   border: 0;
   border-radius: inherit;
+  background: linear-gradient(90deg, #4c2aa5, #7a4ae8 48%, #13a7b3);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.28) inset,
+    0 0 18px rgba(19, 167, 179, 0.26);
 }
 
-.store-checklists-scorebar b.store-checklists-tone-calm {
-  background: linear-gradient(90deg, var(--checklist-cyan), var(--checklist-mint));
+.store-checklists-scorebar b::after {
+  position: absolute;
+  inset: 1px 2px auto 2px;
+  height: 2px;
+  content: "";
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.62);
 }
 
-.store-checklists-scorebar b.store-checklists-tone-warning {
-  background: linear-gradient(90deg, var(--checklist-danger), var(--checklist-amber));
-}
-
-.store-checklists-scorebar b.store-checklists-tone-accent {
-  background: linear-gradient(90deg, var(--checklist-plum), var(--checklist-cyan));
-}
-
+.store-checklists-scorebar-empty b,
 .store-checklists-scorebar b.store-checklists-tone-neutral {
   background: rgba(36, 28, 50, 0.18);
+  box-shadow: none;
+}
+
+.store-checklists-scorebar-empty b::after,
+.store-checklists-scorebar b.store-checklists-tone-neutral::after {
+  display: none;
 }
 
 .store-checklists-action-button,
@@ -9673,7 +9731,6 @@ code {
 }
 
 .store-checklists-empty-block strong,
-.store-checklist-modal-start strong,
 .store-checklist-result-alert strong {
   color: var(--surface-ink, var(--checklist-ink));
 }
@@ -9716,8 +9773,7 @@ code {
 
 .store-checklist-modal-head,
 .store-checklist-modal-footer,
-.store-checklist-modal-section-head,
-.store-checklist-modal-start {
+.store-checklist-modal-section-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -9734,21 +9790,6 @@ code {
 
 .store-checklist-result-summary {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.store-checklist-modal-start {
-  align-items: center;
-  margin-top: 0.85rem;
-  border: 1px solid rgba(115, 76, 232, 0.16);
-  border-radius: 1.1rem;
-  background: linear-gradient(135deg, rgba(115, 76, 232, 0.08), rgba(16, 169, 183, 0.08));
-  padding: 0.75rem;
-}
-
-.store-checklist-modal-start p {
-  margin: 0.25rem 0 0;
-  color: var(--surface-muted, var(--checklist-muted));
-  font-size: 0.84rem;
 }
 
 .store-checklist-modal-layout {
@@ -9987,8 +10028,7 @@ code {
   .store-checklist-modal-head,
   .store-checklist-modal-footer,
   .store-checklists-section-head,
-  .store-checklist-modal-section-head,
-  .store-checklist-modal-start {
+  .store-checklist-modal-section-head {
     align-items: stretch;
     flex-direction: column;
   }

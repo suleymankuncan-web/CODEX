@@ -85,8 +85,8 @@ test('completed checklist handoff moves from field visit to store acknowledgemen
   await page.getByRole('button', { name: 'Start checklist' }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
   await expect(page.getByText('Vitrin standartlara uygun')).toBeVisible()
-  await page.getByRole('dialog').getByRole('button', { name: 'Start checklist' }).click()
   await expect.poll(() => requests.starts).toEqual([{ checklistTemplateId: templateId, storeId }])
+  await expect(page.locator('.store-checklist-modal-start')).toHaveCount(0)
 
   await expect(page.getByLabel('Score')).toBeEnabled()
   await page.getByLabel('Score').fill('8')
@@ -169,8 +169,8 @@ test('visual merchandiser sees checklist-only VM coverage and no broad store lin
   await page.getByRole('button', { name: 'Checklist yap' }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
   await expect(page.getByText('Vitrin standartlara uygun')).toBeVisible()
-  await page.getByRole('dialog').getByRole('button', { name: 'Checklist yap' }).click()
-  expect(requests.starts).toEqual([{ checklistTemplateId: templateId, storeId }])
+  await expect.poll(() => requests.starts).toEqual([{ checklistTemplateId: templateId, storeId }])
+  await expect(page.locator('.store-checklist-modal-start')).toHaveCount(0)
   await page.getByLabel('Puan').fill('8')
   await page.getByLabel('Not').fill('Vitrin iyi')
   await expect.poll(() => requests.saves).toContainEqual(
