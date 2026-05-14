@@ -5,12 +5,34 @@ const storeId = '11111111-1111-4111-8111-111111111111'
 const templateId = '22222222-2222-4222-8222-222222222222'
 
 test('region manager checklist surface shows assigned store visit workflow', async ({ page }) => {
-  await setupChecklistPage(page, ['REGION_MANAGER'])
+  const requests = createChecklistRequestLog()
+  await setupChecklistPage(page, ['REGION_MANAGER'], { requests })
   await page.goto('/store/checklists')
 
-  await expect(page.getByText('Checklist yap')).toBeVisible()
+  await expect(page.getByText('Devam et')).toBeVisible()
   await expect(page.getByText('Taslak')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Devam et' }).click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect(page.getByText('Vitrin standartlara uygun')).toBeVisible()
+  await page.getByLabel('Puan').fill('8')
+  await page.getByLabel('Not').fill('Raf ve vitrin uygun')
+  await page.getByRole('button', { name: 'Maddeyi kaydet' }).click()
+  await expect.poll(() => requests.saves).toEqual([
+    {
+      checklistInstanceId: '33333333-3333-4333-8333-333333333333',
+      body: {
+        templateItemId: '55555555-5555-4555-8555-555555555555',
+        scoreValue: 8,
+        commentText: 'Raf ve vitrin uygun',
+      },
+    },
+  ])
   await expect(page.getByRole('button', { name: 'Tamamla' })).toBeVisible()
+  await page.getByRole('button', { name: 'Tamamla' }).click()
+  await expect.poll(() => requests.completes).toEqual([
+    { checklistInstanceId: '33333333-3333-4333-8333-333333333333' },
+  ])
 })
 
 test('store manager checklist surface keeps acknowledgement language', async ({ page }) => {
@@ -21,17 +43,37 @@ test('store manager checklist surface keeps acknowledgement language', async ({ 
 })
 
 test('visual merchandiser sees checklist-only VM coverage and no broad store links', async ({ page }) => {
+  const requests = createChecklistRequestLog()
   await setupChecklistPage(page, ['VISUAL_MERCHANDISER'], {
     templateType: 'VM_STORE_VISIT',
     templateCode: 'VM_VISIT_V1',
     templateName: 'VM Visit',
     activeInstances: [],
     monthlySummaries: [],
+    requests,
   })
   await page.goto('/store/checklists')
 
   await expect(page.getByText('VM checklist yapılmadı')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Checklist yap' })).toBeVisible()
+  await page.getByRole('button', { name: 'Checklist yap' }).click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect(page.getByText('Vitrin standartlara uygun')).toBeVisible()
+  await page.getByRole('dialog').getByRole('button', { name: 'Checklist yap' }).click()
+  expect(requests.starts).toEqual([{ checklistTemplateId: templateId, storeId }])
+  await page.getByLabel('Puan').fill('8')
+  await page.getByLabel('Not').fill('Vitrin iyi')
+  await page.getByRole('button', { name: 'Maddeyi kaydet' }).click()
+  expect(requests.saves).toEqual([
+    {
+      checklistInstanceId: '33333333-3333-4333-8333-333333333333',
+      body: {
+        templateItemId: '55555555-5555-4555-8555-555555555555',
+        scoreValue: 8,
+        commentText: 'Vitrin iyi',
+      },
+    },
+  ])
   await expect(
     page.locator('.store-command-nav').getByRole('link', { name: 'Checklist', exact: true }),
   ).toBeVisible()
@@ -63,7 +105,10 @@ test('store checklist surface switches to English copy and persists locale', asy
   await expect(page.getByText('Template type', { exact: true })).toBeVisible()
   await expect(page.getByText('This month', { exact: true })).toBeVisible()
   await expect(page.getByText('Draft', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Continue' }).click()
+  await expect(page.getByRole('dialog')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Complete' })).toBeVisible()
+  await page.getByRole('button', { name: 'Close' }).click()
   await expect(
     page.getByRole('heading', { name: 'Completed checklist receipts waiting on store acknowledgement' }),
   ).toBeVisible()
@@ -87,8 +132,43 @@ type ChecklistFixtureOptions = {
   templateType?: string
   templateCode?: string
   templateName?: string
-  activeInstances?: typeof mobileChecklistTodayFixture.data.activeInstances
-  monthlySummaries?: typeof mobileChecklistTodayFixture.data.monthlySummaries
+  activeInstances?: ChecklistActiveInstanceFixture[]
+  monthlySummaries?: ChecklistMonthlySummaryFixture[]
+  requests?: ChecklistRequestLog
+}
+
+type ChecklistActiveInstanceFixture = {
+  checklistInstanceId: string
+  checklistTemplateId: string
+  storeId: string
+  status: string
+  startedAt: string
+  updatedAt: string
+}
+
+type ChecklistMonthlySummaryFixture = {
+  storeId: string
+  checklistTemplateId: string
+  monthStart: string
+  completedCount: number
+  averageScore: number | null
+}
+
+type ChecklistRequestLog = {
+  starts: Array<{ checklistTemplateId: string; storeId: string }>
+  saves: Array<{
+    checklistInstanceId: string
+    body: { templateItemId: string; scoreValue: number; commentText?: string }
+  }>
+  completes: Array<{ checklistInstanceId: string }>
+}
+
+function createChecklistRequestLog(): ChecklistRequestLog {
+  return {
+    starts: [],
+    saves: [],
+    completes: [],
+  }
 }
 
 async function setupChecklistPage(page: Page, roleCodes: string[], options: ChecklistFixtureOptions = {}) {
@@ -123,6 +203,7 @@ async function routeChecklistApi(page: Page, roleCodes: string[], options: Check
   })
 
   await page.route('**/api/mobile/checklists/instances', async (route) => {
+    options.requests?.starts.push(await route.request().postDataJSON())
     await route.fulfill({
       status: 201,
       json: {
@@ -132,6 +213,41 @@ async function routeChecklistApi(page: Page, roleCodes: string[], options: Check
             checklist_instance_id: '33333333-3333-4333-8333-333333333333',
             status: 'in_progress',
             created_at: '2026-04-28T10:00:00.000Z',
+          },
+        },
+      },
+    })
+  })
+
+  await page.route('**/api/mobile/checklists/instances/*/responses', async (route) => {
+    const match = route.request().url().match(/instances\/([^/]+)\/responses/)
+    options.requests?.saves.push({
+      checklistInstanceId: match?.[1] ?? '',
+      body: await route.request().postDataJSON(),
+    })
+    await route.fulfill({
+      json: {
+        command: { status: 'saved', message: 'Checklist response saved' },
+        data: {
+          checklistResponse: {
+            response_id: '66666666-6666-4666-8666-666666666666',
+            responded_at: '2026-04-28T10:05:00.000Z',
+          },
+        },
+      },
+    })
+  })
+
+  await page.route('**/api/mobile/checklists/instances/*/complete', async (route) => {
+    const match = route.request().url().match(/instances\/([^/]+)\/complete/)
+    options.requests?.completes.push({ checklistInstanceId: match?.[1] ?? '' })
+    await route.fulfill({
+      json: {
+        command: { status: 'completed', message: 'Checklist instance completed' },
+        data: {
+          checklistInstance: {
+            checklist_instance_id: match?.[1] ?? '33333333-3333-4333-8333-333333333333',
+            status: 'completed',
           },
         },
       },

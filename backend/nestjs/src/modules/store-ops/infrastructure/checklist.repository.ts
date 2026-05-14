@@ -655,18 +655,37 @@ export class ChecklistRepository {
       version_no: number;
     }>(
       `
-        SELECT ct.checklist_template_id, ct.template_code, ct.template_type, ct.template_name, ct.version_no
-        FROM ops.checklist_template ct
-        WHERE ct.company_id IN (
-          SELECT DISTINCT s.company_id
-          FROM ops.store s
-          WHERE s.store_id = ANY($1::uuid[])
+        WITH ranked_templates AS (
+          SELECT
+            ct.checklist_template_id,
+            ct.template_code,
+            ct.template_type,
+            ct.template_name,
+            ct.version_no,
+            ROW_NUMBER() OVER (
+              PARTITION BY ct.company_id, ct.template_type, ct.template_code
+              ORDER BY ct.version_no DESC, ct.effective_from DESC, ct.checklist_template_id DESC
+            ) AS version_rank
+          FROM ops.checklist_template ct
+          WHERE ct.company_id IN (
+            SELECT DISTINCT s.company_id
+            FROM ops.store s
+            WHERE s.store_id = ANY($1::uuid[])
+          )
+            AND ct.template_type = ANY($2::text[])
+            AND ct.status = 'published'
+            AND ct.effective_from <= CURRENT_DATE
+            AND (ct.effective_to IS NULL OR ct.effective_to >= CURRENT_DATE)
         )
-          AND ct.template_type = ANY($2::text[])
-          AND ct.status = 'published'
-          AND ct.effective_from <= CURRENT_DATE
-          AND (ct.effective_to IS NULL OR ct.effective_to >= CURRENT_DATE)
-        ORDER BY ct.template_type ASC, ct.template_name ASC, ct.version_no DESC
+        SELECT
+          ranked_templates.checklist_template_id,
+          ranked_templates.template_code,
+          ranked_templates.template_type,
+          ranked_templates.template_name,
+          ranked_templates.version_no
+        FROM ranked_templates
+        WHERE ranked_templates.version_rank = 1
+        ORDER BY ranked_templates.template_type ASC, ranked_templates.template_name ASC, ranked_templates.version_no DESC
       `,
       [storeIds, input.allowedTemplateTypes],
     );

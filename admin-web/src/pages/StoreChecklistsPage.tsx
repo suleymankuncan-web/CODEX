@@ -45,6 +45,8 @@ type ChecklistCoverageRow = {
   completedCount: number
 }
 
+type ChecklistSession = ChecklistCoverageRow
+
 export function StoreChecklistsPage(input: {
   authSummary: AuthSessionSummary | null
 }) {
@@ -54,6 +56,11 @@ export function StoreChecklistsPage(input: {
   const [ackNotice, setAckNotice] = useState<string | null>(null)
   const [scores, setScores] = useState<Record<string, number>>({})
   const [comments, setComments] = useState<Record<string, string>>({})
+  const [selectedSessionKey, setSelectedSessionKey] = useState<string | null>(null)
+  const [localActiveInstances, setLocalActiveInstances] = useState<
+    Record<string, MobileChecklistToday['activeInstances'][number]>
+  >({})
+  const [sessionDirty, setSessionDirty] = useState(false)
   const canManageVisits = hasAnyRole(input.authSummary, [
     'REGION_MANAGER',
     'VISUAL_MERCHANDISER',
@@ -81,8 +88,20 @@ export function StoreChecklistsPage(input: {
   })
   const startVisitMutation = useMutation({
     mutationFn: startMobileChecklistInstance,
-    onSuccess: (result) => {
+    onSuccess: (result, variables) => {
       void queryClient.invalidateQueries({ queryKey: ['mobile-checklists-today'] })
+      const instance = result.data.checklistInstance
+      setLocalActiveInstances((current) => ({
+        ...current,
+        [getCoverageRowKey(variables.storeId, variables.checklistTemplateId)]: {
+          checklistInstanceId: instance.checklist_instance_id,
+          checklistTemplateId: variables.checklistTemplateId,
+          storeId: variables.storeId,
+          status: instance.status,
+          startedAt: instance.created_at,
+          updatedAt: instance.created_at,
+        },
+      }))
       setAckNotice(result.command.message)
     },
   })
@@ -95,8 +114,17 @@ export function StoreChecklistsPage(input: {
   })
   const completeVisitMutation = useMutation({
     mutationFn: completeMobileChecklistInstance,
-    onSuccess: (result) => {
+    onSuccess: (result, variables) => {
       void queryClient.invalidateQueries({ queryKey: ['mobile-checklists-today'] })
+      setLocalActiveInstances((current) =>
+        Object.fromEntries(
+          Object.entries(current).filter(
+            ([, instance]) => instance.checklistInstanceId !== variables.checklistInstanceId,
+          ),
+        ),
+      )
+      setSelectedSessionKey(null)
+      setSessionDirty(false)
       setAckNotice(result.command.message)
     },
   })
@@ -135,11 +163,12 @@ export function StoreChecklistsPage(input: {
   const primaryStoreId = assignedStoreIds[0] ?? t('storeChecklists.noActionStore')
   const coverageRows: ChecklistCoverageRow[] = (mobileToday?.stores ?? []).flatMap((store) =>
     (mobileToday?.templates ?? []).map((template) => {
+      const rowKey = getCoverageRowKey(store.storeId, template.checklistTemplateId)
       const active = mobileToday?.activeInstances.find(
         (item) =>
           item.storeId === store.storeId &&
           item.checklistTemplateId === template.checklistTemplateId,
-      )
+      ) ?? localActiveInstances[rowKey]
       const summary = mobileToday?.monthlySummaries.find(
         (item) =>
           item.storeId === store.storeId &&
@@ -156,6 +185,17 @@ export function StoreChecklistsPage(input: {
     }),
   )
   const activeVisitCount = coverageRows.filter((row) => row.active).length
+  const selectedSession =
+    coverageRows.find((row) => getCoverageRowKeyFromRow(row) === selectedSessionKey) ?? null
+
+  const closeSession = () => {
+    if (sessionDirty && !window.confirm(t('storeChecklists.sessionCloseConfirm'))) {
+      return
+    }
+
+    setSelectedSessionKey(null)
+    setSessionDirty(false)
+  }
 
   return (
     <section className="page-stack">
@@ -250,109 +290,18 @@ export function StoreChecklistsPage(input: {
                       <KeyValue label={t('storeChecklists.store')} value={row.store.storeId} />
                     </div>
 
-                    {active ? (
-                      <div className="stacked-table">
-                        {row.template.items.map((item) => (
-                          <article className="stacked-row" key={item.templateItemId}>
-                            <div className="stacked-row-head">
-                              <strong>{item.itemText}</strong>
-                              <StatusPill tone="accent">{`${item.weight}%`}</StatusPill>
-                            </div>
-                            <div className="key-grid">
-                              <KeyValue label={t('storeChecklists.section')} value={item.sectionName} />
-                              <KeyValue label={t('storeChecklists.maxScore')} value={String(item.maxScore)} />
-                            </div>
-                            <label className="eyebrow" htmlFor={`score-${item.templateItemId}`}>
-                              {t('storeChecklists.scoreInput')}
-                            </label>
-                            <input
-                              id={`score-${item.templateItemId}`}
-                              type="number"
-                              min={0}
-                              max={item.maxScore}
-                              value={scores[item.templateItemId] ?? 0}
-                              onChange={(event) =>
-                                setScores((current) => ({
-                                  ...current,
-                                  [item.templateItemId]: Number(event.target.value),
-                                }))
-                              }
-                            />
-                            <label className="eyebrow" htmlFor={`comment-${item.templateItemId}`}>
-                              {t('storeChecklists.noteInput')}
-                            </label>
-                            <textarea
-                              id={`comment-${item.templateItemId}`}
-                              rows={2}
-                              value={comments[item.templateItemId] ?? ''}
-                              onChange={(event) =>
-                                setComments((current) => ({
-                                  ...current,
-                                  [item.templateItemId]: event.target.value,
-                                }))
-                              }
-                            />
-                            <div className="action-cluster">
-                              <button
-                                className="control-button"
-                                type="button"
-                                disabled={saveResponseMutation.isPending}
-                                onClick={() =>
-                                  saveResponseMutation.mutate({
-                                    checklistInstanceId: active.checklistInstanceId,
-                                    templateItemId: item.templateItemId,
-                                    scoreValue: scores[item.templateItemId] ?? 0,
-                                    commentText: comments[item.templateItemId] || undefined,
-                                  })
-                                }
-                              >
-                                {t('storeChecklists.save')}
-                              </button>
-                            </div>
-                          </article>
-                        ))}
-                      </div>
-                    ) : null}
-
                     <div className="action-cluster">
-                      {!active ? (
-                        <button
-                          className="control-button"
-                          type="button"
-                          disabled={
-                            !assignedStoreIds.includes(row.store.storeId) ||
-                            startVisitMutation.isPending
-                          }
-                          onClick={() =>
-                            startVisitMutation.mutate({
-                              storeId: row.store.storeId,
-                              checklistTemplateId: row.template.checklistTemplateId,
-                            })
-                          }
-                        >
-                          {startVisitMutation.isPending
-                            ? t('storeChecklists.startPending')
-                            : t('storeChecklists.startChecklist')}
-                        </button>
-                      ) : (
-                        <>
-                          <button className="control-button" type="button" disabled>
-                            {t('storeChecklists.startChecklist')}
-                          </button>
-                          <button
-                            className="control-button"
-                            type="button"
-                            disabled={completeVisitMutation.isPending}
-                            onClick={() =>
-                              completeVisitMutation.mutate({
-                                checklistInstanceId: active.checklistInstanceId,
-                              })
-                            }
-                          >
-                            {t('storeChecklists.complete')}
-                          </button>
-                        </>
-                      )}
+                      <button
+                        className="control-button"
+                        type="button"
+                        disabled={!active && !assignedStoreIds.includes(row.store.storeId)}
+                        onClick={() => {
+                          setSelectedSessionKey(getCoverageRowKeyFromRow(row))
+                          setSessionDirty(false)
+                        }}
+                      >
+                        {active ? t('storeChecklists.continueChecklist') : t('storeChecklists.startChecklist')}
+                      </button>
                     </div>
                   </article>
                 )
@@ -370,6 +319,41 @@ export function StoreChecklistsPage(input: {
             <p className="queue-subtitle">{getErrorMessage(completeVisitMutation.error)}</p>
           ) : null}
         </section>
+      ) : null}
+
+      {selectedSession ? (
+        <ChecklistVisitModal
+          active={selectedSession.active}
+          comments={comments}
+          isCompleting={completeVisitMutation.isPending}
+          isSaving={saveResponseMutation.isPending}
+          isStarting={startVisitMutation.isPending}
+          onClose={closeSession}
+          onCommentChange={(templateItemId, comment) => {
+            setComments((current) => ({ ...current, [templateItemId]: comment }))
+            setSessionDirty(true)
+          }}
+          onComplete={(checklistInstanceId) =>
+            completeVisitMutation.mutate({ checklistInstanceId })
+          }
+          onSaveResponse={(input) => {
+            saveResponseMutation.mutate(input)
+            setSessionDirty(false)
+          }}
+          onScoreChange={(templateItemId, score) => {
+            setScores((current) => ({ ...current, [templateItemId]: score }))
+            setSessionDirty(true)
+          }}
+          onStart={(row) =>
+            startVisitMutation.mutate({
+              storeId: row.store.storeId,
+              checklistTemplateId: row.template.checklistTemplateId,
+            })
+          }
+          scores={scores}
+          session={selectedSession}
+          t={t}
+        />
       ) : null}
 
       <section className="panel">
@@ -504,6 +488,216 @@ export function StoreChecklistsPage(input: {
       </div>
     </section>
   )
+}
+
+function ChecklistVisitModal(input: {
+  active?: MobileChecklistToday['activeInstances'][number]
+  comments: Record<string, string>
+  isCompleting: boolean
+  isSaving: boolean
+  isStarting: boolean
+  onClose: () => void
+  onCommentChange: (templateItemId: string, comment: string) => void
+  onComplete: (checklistInstanceId: string) => void
+  onSaveResponse: (input: {
+    checklistInstanceId: string
+    templateItemId: string
+    scoreValue: number
+    commentText?: string
+  }) => void
+  onScoreChange: (templateItemId: string, score: number) => void
+  onStart: (session: ChecklistSession) => void
+  scores: Record<string, number>
+  session: ChecklistSession
+  t: TranslateFunction
+}) {
+  const sections = groupChecklistTemplateItems(input.session.template.items)
+  const hasItems = input.session.template.items.length > 0
+
+  return (
+    <div className="store-checklist-modal-backdrop">
+      <section
+        aria-labelledby="store-checklist-modal-title"
+        aria-modal="true"
+        className="store-checklist-modal"
+        role="dialog"
+      >
+        <div className="store-checklist-modal-head">
+          <div>
+            <div className="eyebrow">{input.t('storeChecklists.sessionEyebrow')}</div>
+            <h3 id="store-checklist-modal-title">{input.session.template.templateName}</h3>
+            <p>
+              {input.t('storeChecklists.sessionCopy', {
+                store: input.session.store.storeName,
+                template: input.session.template.templateCode,
+                version: input.session.template.versionNo,
+              })}
+            </p>
+          </div>
+          <button className="control-button" type="button" onClick={input.onClose}>
+            {input.t('storeChecklists.closeSession')}
+          </button>
+        </div>
+
+        <div className="store-checklist-modal-meta">
+          <KeyValue label={input.t('storeChecklists.store')} value={input.session.store.storeName} />
+          <KeyValue label={input.t('storeChecklists.templateCode')} value={input.session.template.templateCode} />
+          <KeyValue label={input.t('storeChecklists.templateVersion')} value={`v${input.session.template.versionNo}`} />
+          <KeyValue
+            label={input.t('storeChecklists.status')}
+            value={
+              input.active
+                ? formatChecklistStatus(input.t, input.active.status)
+                : input.t('storeChecklists.newVisit')
+            }
+          />
+        </div>
+
+        {!input.active ? (
+          <div className="store-checklist-modal-start">
+            <div>
+              <strong>{input.t('storeChecklists.sessionStartTitle')}</strong>
+              <p>{input.t('storeChecklists.sessionStartCopy')}</p>
+            </div>
+            <button
+              className="control-button"
+              disabled={input.isStarting || !hasItems}
+              type="button"
+              onClick={() => input.onStart(input.session)}
+            >
+              {input.isStarting
+                ? input.t('storeChecklists.startPending')
+                : input.t('storeChecklists.startChecklist')}
+            </button>
+          </div>
+        ) : null}
+
+        {!hasItems ? (
+          <EmptyState
+            title={input.t('storeChecklists.emptyTemplateTitle')}
+            copy={input.t('storeChecklists.emptyTemplateCopy')}
+          />
+        ) : (
+          <div className="store-checklist-modal-sections">
+            {sections.map((section) => (
+              <article className="store-checklist-modal-section" key={section.name}>
+                <div className="store-checklist-modal-section-head">
+                  <strong>{section.name}</strong>
+                  <StatusPill tone="accent">
+                    {input.t('storeChecklists.sectionItemCount', { count: section.items.length })}
+                  </StatusPill>
+                </div>
+                <div className="store-checklist-modal-items">
+                  {section.items.map((item) => (
+                    <div className="store-checklist-modal-item" key={item.templateItemId}>
+                      <div>
+                        <strong>{item.itemText}</strong>
+                        <p>
+                          {input.t('storeChecklists.itemMeta', {
+                            maxScore: item.maxScore,
+                            weight: item.weight,
+                          })}
+                        </p>
+                      </div>
+                      <div className="store-checklist-modal-inputs">
+                        <label>
+                          <span>{input.t('storeChecklists.scoreInput')}</span>
+                          <input
+                            disabled={!input.active || input.isSaving}
+                            max={item.maxScore}
+                            min={0}
+                            type="number"
+                            value={input.scores[item.templateItemId] ?? ''}
+                            onChange={(event) =>
+                              input.onScoreChange(
+                                item.templateItemId,
+                                Number(event.target.value || 0),
+                              )
+                            }
+                          />
+                        </label>
+                        <label>
+                          <span>{input.t('storeChecklists.noteInput')}</span>
+                          <textarea
+                            disabled={!input.active || input.isSaving}
+                            rows={2}
+                            value={input.comments[item.templateItemId] ?? ''}
+                            onChange={(event) =>
+                              input.onCommentChange(item.templateItemId, event.target.value)
+                            }
+                          />
+                        </label>
+                        <button
+                          className="control-button"
+                          disabled={!input.active || input.isSaving}
+                          type="button"
+                          onClick={() =>
+                            input.active
+                              ? input.onSaveResponse({
+                                  checklistInstanceId: input.active.checklistInstanceId,
+                                  templateItemId: item.templateItemId,
+                                  scoreValue: input.scores[item.templateItemId] ?? 0,
+                                  commentText: input.comments[item.templateItemId] || undefined,
+                                })
+                              : undefined
+                          }
+                        >
+                          {input.isSaving
+                            ? input.t('storeChecklists.savingItem')
+                            : input.t('storeChecklists.saveItem')}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+
+        <div className="store-checklist-modal-footer">
+          <button className="control-button" type="button" onClick={input.onClose}>
+            {input.t('storeChecklists.cancelSession')}
+          </button>
+          <button
+            className="control-button"
+            disabled={!input.active || input.isCompleting || !hasItems}
+            type="button"
+            onClick={() =>
+              input.active ? input.onComplete(input.active.checklistInstanceId) : undefined
+            }
+          >
+            {input.isCompleting
+              ? input.t('storeChecklists.completing')
+              : input.t('storeChecklists.complete')}
+          </button>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function groupChecklistTemplateItems(items: MobileChecklistToday['templates'][number]['items']) {
+  const sections = new Map<
+    string,
+    { name: string; items: MobileChecklistToday['templates'][number]['items'] }
+  >()
+
+  for (const item of items) {
+    const section = sections.get(item.sectionName) ?? { name: item.sectionName, items: [] }
+    section.items.push(item)
+    sections.set(item.sectionName, section)
+  }
+
+  return [...sections.values()]
+}
+
+function getCoverageRowKey(storeId: string, checklistTemplateId: string) {
+  return `${storeId}:${checklistTemplateId}`
+}
+
+function getCoverageRowKeyFromRow(row: ChecklistCoverageRow) {
+  return getCoverageRowKey(row.store.storeId, row.template.checklistTemplateId)
 }
 
 function formatChecklistCoverage(t: TranslateFunction, input: ChecklistCoverageRow) {
