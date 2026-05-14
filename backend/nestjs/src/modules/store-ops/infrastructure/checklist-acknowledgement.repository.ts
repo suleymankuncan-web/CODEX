@@ -6,9 +6,11 @@ type ChecklistAcknowledgementRow = {
   checklist_instance_id: string;
   checklist_template_id: string;
   template_name: string;
+  template_type: string;
   category: string;
   store_id: string;
   store_name: string;
+  completed_by_user_id: string | null;
   completed_at: string | null;
   status: string;
   total_score: string | null;
@@ -17,6 +19,19 @@ type ChecklistAcknowledgementRow = {
   acknowledged_by_user_id: string | null;
   acknowledgement_note: string | null;
   acknowledged_at: string | null;
+  responses_json: unknown;
+};
+
+type ChecklistAcknowledgementResponseRow = {
+  templateItemId?: string | null;
+  sectionName?: string | null;
+  itemNo?: string | number | null;
+  itemText?: string | null;
+  responseType?: string | null;
+  weight?: string | number | null;
+  maxScore?: string | number | null;
+  scoreValue?: string | number | null;
+  commentText?: string | null;
 };
 
 @Injectable()
@@ -61,8 +76,13 @@ export class ChecklistAcknowledgementRepository {
     companyIds: string[];
     regionIds: string[];
     storeIds: string[];
+    allowedTemplateTypes?: string[];
   }) {
     if (!this.hasStoreAccessScope(input)) {
+      return [];
+    }
+
+    if (input.allowedTemplateTypes && input.allowedTemplateTypes.length === 0) {
       return [];
     }
 
@@ -80,6 +100,11 @@ export class ChecklistAcknowledgementRepository {
       clauses.push(`s.company_id = ANY($${params.length}::uuid[])`);
     }
 
+    if (input.allowedTemplateTypes) {
+      params.push(input.allowedTemplateTypes);
+      clauses.push(`ct.template_type = ANY($${params.length}::text[])`);
+    }
+
     clauses.push(`ci.status = 'completed'`);
     const whereClause = `WHERE ${clauses.join(" AND ")}`;
 
@@ -89,9 +114,58 @@ export class ChecklistAcknowledgementRepository {
           ci.checklist_instance_id,
           ci.checklist_template_id,
           ct.template_name,
+          ct.template_type,
           ct.category,
           ci.store_id,
           s.store_name,
+          ci.completed_by_user_id,
+          ci.completed_at,
+          ci.status,
+          ci.total_score,
+          ci.compliance_rate,
+          ca.checklist_acknowledgement_id,
+          ca.acknowledged_by_user_id,
+          ca.acknowledgement_note,
+          ca.acknowledged_at,
+          COALESCE(
+            jsonb_agg(
+              jsonb_build_object(
+                'templateItemId', cti.template_item_id,
+                'sectionName', cti.section_name,
+                'itemNo', cti.item_no,
+                'itemText', cti.item_text,
+                'responseType', cti.response_type,
+                'weight', cti.weight,
+                'maxScore', cti.max_score,
+                'scoreValue', cr.score_value,
+                'commentText', cr.comment_text
+              )
+              ORDER BY cti.section_name ASC, cti.item_no ASC, cti.template_item_id ASC
+            ) FILTER (WHERE cti.template_item_id IS NOT NULL),
+            '[]'::jsonb
+          ) AS responses_json
+        FROM ops.checklist_instance ci
+        INNER JOIN ops.checklist_template ct
+          ON ct.checklist_template_id = ci.checklist_template_id
+        INNER JOIN ops.store s
+          ON s.store_id = ci.store_id
+        LEFT JOIN ops.checklist_template_item cti
+          ON cti.checklist_template_id = ci.checklist_template_id
+        LEFT JOIN ops.checklist_response cr
+          ON cr.checklist_instance_id = ci.checklist_instance_id
+         AND cr.template_item_id = cti.template_item_id
+        LEFT JOIN ops.checklist_acknowledgement ca
+          ON ca.checklist_instance_id = ci.checklist_instance_id
+        ${whereClause}
+        GROUP BY
+          ci.checklist_instance_id,
+          ci.checklist_template_id,
+          ct.template_name,
+          ct.template_type,
+          ct.category,
+          ci.store_id,
+          s.store_name,
+          ci.completed_by_user_id,
           ci.completed_at,
           ci.status,
           ci.total_score,
@@ -100,14 +174,6 @@ export class ChecklistAcknowledgementRepository {
           ca.acknowledged_by_user_id,
           ca.acknowledgement_note,
           ca.acknowledged_at
-        FROM ops.checklist_instance ci
-        INNER JOIN ops.checklist_template ct
-          ON ct.checklist_template_id = ci.checklist_template_id
-        INNER JOIN ops.store s
-          ON s.store_id = ci.store_id
-        LEFT JOIN ops.checklist_acknowledgement ca
-          ON ca.checklist_instance_id = ci.checklist_instance_id
-        ${whereClause}
         ORDER BY ci.completed_at DESC NULLS LAST, ci.created_at DESC
       `,
       params,
@@ -117,13 +183,16 @@ export class ChecklistAcknowledgementRepository {
       checklistInstanceId: row.checklist_instance_id,
       checklistTemplateId: row.checklist_template_id,
       templateName: row.template_name,
+      templateType: row.template_type,
       category: row.category,
       storeId: row.store_id,
       storeName: row.store_name,
+      completedByUserId: row.completed_by_user_id,
       completedAt: row.completed_at,
       status: row.status,
       totalScore: row.total_score ? Number(row.total_score) : null,
       complianceRate: row.compliance_rate ? Number(row.compliance_rate) : null,
+      responses: this.mapResponseDetails(row.responses_json),
       acknowledgement: row.checklist_acknowledgement_id
         ? {
             checklistAcknowledgementId: row.checklist_acknowledgement_id,
@@ -132,6 +201,25 @@ export class ChecklistAcknowledgementRepository {
             acknowledgedAt: row.acknowledged_at,
           }
         : null,
+    }));
+  }
+
+  private mapResponseDetails(value: unknown) {
+    const rows = Array.isArray(value) ? (value as ChecklistAcknowledgementResponseRow[]) : [];
+
+    return rows.map((row) => ({
+      templateItemId: String(row.templateItemId ?? ""),
+      sectionName: String(row.sectionName ?? ""),
+      itemNo: Number(row.itemNo ?? 0),
+      itemText: String(row.itemText ?? ""),
+      responseType: String(row.responseType ?? ""),
+      weight: Number(row.weight ?? 0),
+      maxScore: Number(row.maxScore ?? 0),
+      scoreValue:
+        row.scoreValue === null || row.scoreValue === undefined
+          ? null
+          : Number(row.scoreValue),
+      commentText: row.commentText ?? null,
     }));
   }
 

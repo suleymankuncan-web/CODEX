@@ -255,10 +255,14 @@ export class ChecklistService {
     actorRoleCodes: string[];
   }) {
     const listScope = this.resolveChecklistAcknowledgementListScope(input);
+    const allowedTemplateTypes = this.resolveReadableAcknowledgementTemplateTypes(
+      input.actorRoleCodes,
+    );
     const items = await this.checklistAcknowledgementRepository.listChecklistAcknowledgements({
       companyIds: listScope.companyIds,
       regionIds: listScope.regionIds,
       storeIds: listScope.storeIds,
+      allowedTemplateTypes,
     });
 
     return buildListResponse(items, {
@@ -379,6 +383,28 @@ export class ChecklistService {
 
     if (roleCodes.includes("STORE_MANAGER")) {
       return ["BM_STORE_VISIT", "VM_STORE_VISIT"];
+    }
+
+    return [];
+  }
+
+  private resolveReadableAcknowledgementTemplateTypes(roleCodes: string[]) {
+    if (
+      roleCodes.includes("SUPER_ADMIN") ||
+      roleCodes.includes("REPORT_VIEWER")
+    ) {
+      return undefined;
+    }
+
+    if (
+      roleCodes.includes("STORE_MANAGER") ||
+      roleCodes.includes("REGION_MANAGER")
+    ) {
+      return ["BM_STORE_VISIT", "VM_STORE_VISIT"];
+    }
+
+    if (roleCodes.includes("VISUAL_MERCHANDISER")) {
+      return ["VM_STORE_VISIT"];
     }
 
     return [];

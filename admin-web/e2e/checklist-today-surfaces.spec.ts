@@ -36,10 +36,44 @@ test('region manager checklist surface shows assigned store visit workflow', asy
 })
 
 test('store manager checklist surface keeps acknowledgement language', async ({ page }) => {
-  await setupChecklistPage(page, ['STORE_MANAGER'])
+  const requests = createChecklistRequestLog()
+  await setupChecklistPage(page, ['STORE_MANAGER'], { requests })
   await page.goto('/store/checklists')
 
+  await page
+    .locator('.stacked-row')
+    .filter({ hasText: 'BM Result' })
+    .getByRole('button', { name: 'Detayı gör' })
+    .click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect(page.getByText('Checklist sonucu', { exact: true })).toBeVisible()
+  await expect(page.getByText('Dikkat isteyen maddeler')).toBeVisible()
+  await expect(page.getByText('Eksik manken')).toBeVisible()
+  await page.getByLabel('Kabul notu').fill('Mağaza sonucu gördü')
   await expect(page.getByText('Kabul ettim')).toBeVisible()
+  await page.getByRole('button', { name: 'Kabul ettim' }).click()
+  await expect.poll(() => requests.acknowledgements).toEqual([
+    {
+      checklistInstanceId: '44444444-4444-4444-8444-444444444444',
+      body: { acknowledgementNote: 'Mağaza sonucu gördü' },
+    },
+  ])
+})
+
+test('region manager can read BM and VM checklist results without acknowledging them', async ({ page }) => {
+  await setupChecklistPage(page, ['REGION_MANAGER'])
+  await page.goto('/store/checklists')
+
+  await expect(page.locator('.stacked-row').filter({ hasText: 'BM Result' })).toBeVisible()
+  await expect(page.locator('.stacked-row').filter({ hasText: 'VM Result' })).toBeVisible()
+  await page
+    .locator('.stacked-row')
+    .filter({ hasText: 'VM Result' })
+    .getByRole('button', { name: 'Detayı gör' })
+    .click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect(page.getByText('Bu checklist incelenebilir')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Kabul ettim' })).toHaveCount(0)
 })
 
 test('visual merchandiser sees checklist-only VM coverage and no broad store links', async ({ page }) => {
@@ -87,6 +121,8 @@ test('visual merchandiser sees checklist-only VM coverage and no broad store lin
   await expect(page.locator('a[href="/store/targets"]')).toHaveCount(0)
   await expect(page.locator('a[href="/store/reports"]')).toHaveCount(0)
   await expect(page.locator('a[href="/store/competitions"]')).toHaveCount(0)
+  await expect(page.locator('.stacked-row').filter({ hasText: 'BM Result' })).toHaveCount(0)
+  await expect(page.locator('.stacked-row').filter({ hasText: 'VM Result' })).toBeVisible()
 })
 
 test('store checklist surface switches to English copy and persists locale', async ({ page }) => {
@@ -102,7 +138,7 @@ test('store checklist surface switches to English copy and persists locale', asy
   await expect(page.getByText('Visit flow')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Assigned store checklist visits' })).toBeVisible()
   await expect(page.getByText('In progress', { exact: true }).first()).toBeVisible()
-  await expect(page.getByText('Template type', { exact: true })).toBeVisible()
+  await expect(page.getByText('Template type', { exact: true }).first()).toBeVisible()
   await expect(page.getByText('This month', { exact: true })).toBeVisible()
   await expect(page.getByText('Draft', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Continue' }).click()
@@ -112,6 +148,12 @@ test('store checklist surface switches to English copy and persists locale', asy
   await expect(
     page.getByRole('heading', { name: 'Completed checklist receipts waiting on store acknowledgement' }),
   ).toBeVisible()
+  await page
+    .locator('.stacked-row')
+    .filter({ hasText: 'BM Result' })
+    .getByRole('button', { name: 'View details' })
+    .click()
+  await expect(page.getByText('Checklist result', { exact: true })).toBeVisible()
   await expect(page.getByText('Acknowledgement note')).toBeVisible()
   await expect(page.getByRole('button', { name: 'I acknowledge' })).toBeVisible()
   await expect(page.getByText('Checklist sonuçları')).toHaveCount(0)
@@ -161,6 +203,10 @@ type ChecklistRequestLog = {
     body: { templateItemId: string; scoreValue: number; commentText?: string }
   }>
   completes: Array<{ checklistInstanceId: string }>
+  acknowledgements: Array<{
+    checklistInstanceId: string
+    body: { acknowledgementNote?: string }
+  }>
 }
 
 function createChecklistRequestLog(): ChecklistRequestLog {
@@ -168,6 +214,7 @@ function createChecklistRequestLog(): ChecklistRequestLog {
     starts: [],
     saves: [],
     completes: [],
+    acknowledgements: [],
   }
 }
 
@@ -199,7 +246,7 @@ async function routeChecklistApi(page: Page, roleCodes: string[], options: Check
   })
 
   await page.route('**/api/checklists/acknowledgements/list', async (route) => {
-    await route.fulfill({ json: checklistAcknowledgementsFixture })
+    await route.fulfill({ json: createChecklistAcknowledgementsFixture(roleCodes) })
   })
 
   await page.route('**/api/mobile/checklists/instances', async (route) => {
@@ -248,6 +295,27 @@ async function routeChecklistApi(page: Page, roleCodes: string[], options: Check
           checklistInstance: {
             checklist_instance_id: match?.[1] ?? '33333333-3333-4333-8333-333333333333',
             status: 'completed',
+          },
+        },
+      },
+    })
+  })
+
+  await page.route('**/api/checklists/instances/*/acknowledge', async (route) => {
+    const match = route.request().url().match(/instances\/([^/]+)\/acknowledge/)
+    options.requests?.acknowledgements.push({
+      checklistInstanceId: match?.[1] ?? '',
+      body: await route.request().postDataJSON(),
+    })
+    await route.fulfill({
+      json: {
+        command: { status: 'acknowledged', message: 'Checklist instance acknowledged' },
+        data: {
+          acknowledgement: {
+            checklistAcknowledgementId: '77777777-7777-4777-8777-777777777777',
+            acknowledgedByUserId: 'store-manager-1',
+            acknowledgementNote: 'Mağaza sonucu gördü',
+            acknowledgedAt: '2026-04-28T11:00:00.000Z',
           },
         },
       },
@@ -339,26 +407,87 @@ function createMobileChecklistTodayFixture(options: ChecklistFixtureOptions = {}
 }
 }
 
-const checklistAcknowledgementsFixture = {
-  items: [
+function createChecklistAcknowledgementsFixture(roleCodes: string[]) {
+  const items = [
     {
       checklistInstanceId: '44444444-4444-4444-8444-444444444444',
       checklistTemplateId: templateId,
-      templateName: 'BM Visit',
+      templateName: 'BM Result',
+      templateType: 'BM_STORE_VISIT',
       category: 'BM',
       storeId,
       storeName: 'Marmara Park',
+      completedByUserId: 'region-user-1',
       completedAt: '2026-04-28T09:00:00.000Z',
       status: 'completed',
       totalScore: 86,
-      complianceRate: 1,
+      complianceRate: 0.75,
+      responses: [
+        {
+          templateItemId: '55555555-5555-4555-8555-555555555555',
+          sectionName: 'Vitrin',
+          itemNo: 1,
+          itemText: 'Vitrin standartlara uygun',
+          responseType: 'score',
+          weight: 60,
+          maxScore: 10,
+          scoreValue: 5,
+          commentText: 'Eksik manken',
+        },
+        {
+          templateItemId: '55555555-5555-4555-8555-555555555556',
+          sectionName: 'Kasa',
+          itemNo: 2,
+          itemText: 'Kasa alanı düzenli',
+          responseType: 'score',
+          weight: 40,
+          maxScore: 10,
+          scoreValue: 9,
+          commentText: 'Temiz',
+        },
+      ],
       acknowledgement: null,
     },
-  ],
-  meta: {
-    count: 1,
-    total: 1,
-    limit: 50,
-    offset: 0,
-  },
+    {
+      checklistInstanceId: '88888888-8888-4888-8888-888888888888',
+      checklistTemplateId: '99999999-9999-4999-8999-999999999999',
+      templateName: 'VM Result',
+      templateType: 'VM_STORE_VISIT',
+      category: 'VM',
+      storeId,
+      storeName: 'Marmara Park',
+      completedByUserId: 'vm-user-1',
+      completedAt: '2026-04-27T09:00:00.000Z',
+      status: 'completed',
+      totalScore: 92,
+      complianceRate: 1,
+      responses: [
+        {
+          templateItemId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+          sectionName: 'Görsel düzen',
+          itemNo: 1,
+          itemText: 'Reyon düzeni temiz',
+          responseType: 'score',
+          weight: 100,
+          maxScore: 10,
+          scoreValue: 10,
+          commentText: null,
+        },
+      ],
+      acknowledgement: null,
+    },
+  ]
+  const visibleItems = roleCodes.includes('VISUAL_MERCHANDISER')
+    ? items.filter((item) => item.templateType === 'VM_STORE_VISIT')
+    : items
+
+  return {
+    items: visibleItems,
+    meta: {
+      count: visibleItems.length,
+      total: visibleItems.length,
+      limit: 50,
+      offset: 0,
+    },
+  }
 }

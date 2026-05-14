@@ -13,6 +13,7 @@ import {
 import type { AuthSessionSummary } from '../features/auth/api'
 import {
   canAcknowledgeChecklist,
+  canReadChecklistResults,
   getAssignedStoreIds,
   hasAnyRole,
 } from '../features/auth/authorization'
@@ -57,6 +58,7 @@ export function StoreChecklistsPage(input: {
   const [scores, setScores] = useState<Record<string, number>>({})
   const [comments, setComments] = useState<Record<string, string>>({})
   const [selectedSessionKey, setSelectedSessionKey] = useState<string | null>(null)
+  const [selectedResultId, setSelectedResultId] = useState<string | null>(null)
   const [localActiveInstances, setLocalActiveInstances] = useState<
     Record<string, MobileChecklistToday['activeInstances'][number]>
   >({})
@@ -66,7 +68,7 @@ export function StoreChecklistsPage(input: {
     'VISUAL_MERCHANDISER',
     'SUPER_ADMIN',
   ])
-  const canUseAcknowledgements = hasAnyRole(input.authSummary, ['STORE_MANAGER', 'SUPER_ADMIN'])
+  const canUseAcknowledgements = canReadChecklistResults(input.authSummary)
   const checklistsQuery = useQuery({
     queryKey: ['checklist-acknowledgements'],
     queryFn: getChecklistAcknowledgements,
@@ -81,8 +83,14 @@ export function StoreChecklistsPage(input: {
   })
   const acknowledgeMutation = useMutation({
     mutationFn: acknowledgeChecklist,
-    onSuccess: (result) => {
+    onSuccess: (result, variables) => {
       void queryClient.invalidateQueries({ queryKey: ['checklist-acknowledgements'] })
+      setSelectedResultId(null)
+      setAckNotes((current) => {
+        const next = { ...current }
+        delete next[variables.checklistInstanceId]
+        return next
+      })
       setAckNotice(result.command.message)
     },
   })
@@ -159,6 +167,7 @@ export function StoreChecklistsPage(input: {
   const inboxItems = items.map((item) => toChecklistAcknowledgementInboxItem(item))
   const pendingItems = items.filter((item) => item.acknowledgement === null)
   const acknowledgedItems = items.filter((item) => item.acknowledgement !== null).slice(0, 5)
+  const selectedResult = items.find((item) => item.checklistInstanceId === selectedResultId) ?? null
   const assignedStoreIds = getAssignedStoreIds(input.authSummary)
   const primaryStoreId = assignedStoreIds[0] ?? t('storeChecklists.noActionStore')
   const coverageRows: ChecklistCoverageRow[] = (mobileToday?.stores ?? []).flatMap((store) =>
@@ -356,6 +365,33 @@ export function StoreChecklistsPage(input: {
         />
       ) : null}
 
+      {selectedResult ? (
+        <ChecklistResultModal
+          acknowledgementNote={ackNotes[selectedResult.checklistInstanceId] ?? ''}
+          canAcknowledge={canAcknowledgeChecklist(input.authSummary, selectedResult.storeId)}
+          isAcknowledging={
+            acknowledgeMutation.isPending &&
+            acknowledgeMutation.variables?.checklistInstanceId === selectedResult.checklistInstanceId
+          }
+          item={selectedResult}
+          locale={locale}
+          onAcknowledge={() =>
+            acknowledgeMutation.mutate({
+              checklistInstanceId: selectedResult.checklistInstanceId,
+              acknowledgementNote: ackNotes[selectedResult.checklistInstanceId] || undefined,
+            })
+          }
+          onClose={() => setSelectedResultId(null)}
+          onNoteChange={(note) =>
+            setAckNotes((current) => ({
+              ...current,
+              [selectedResult.checklistInstanceId]: note,
+            }))
+          }
+          t={t}
+        />
+      ) : null}
+
       <section className="panel">
         <div className="panel-heading">
           <div>
@@ -386,66 +422,29 @@ export function StoreChecklistsPage(input: {
                 </div>
                 <p>{formatCompletedSentence(t, locale, item)}</p>
                 <div className="key-grid">
-                  <KeyValue label={t('storeChecklists.checklistInstance')} value={item.checklistInstanceId} />
                   <KeyValue
                     label={t('storeChecklists.score')}
-                    value={item.totalScore !== null ? String(item.totalScore) : t('storeChecklists.noScore')}
+                    value={formatScoreValue(t, item.totalScore)}
                   />
                   <KeyValue
                     label={t('storeChecklists.compliance')}
-                    value={
-                      item.complianceRate !== null
-                        ? `${Math.round(item.complianceRate * 100)}%`
-                        : t('storeChecklists.noRate')
-                    }
+                    value={formatComplianceValue(t, item.complianceRate)}
                   />
                   <KeyValue label={t('storeChecklists.store')} value={item.storeName || item.storeId} />
+                  <KeyValue label={t('storeChecklists.templateType')} value={formatChecklistTemplateType(t, item.templateType)} />
                 </div>
-                {canAcknowledgeChecklist(input.authSummary, item.storeId) ? (
-                  <>
-                    <label className="eyebrow" htmlFor={`ack-note-${item.checklistInstanceId}`}>
-                      {t('storeChecklists.acknowledgementNote')}
-                    </label>
-                    <textarea
-                      id={`ack-note-${item.checklistInstanceId}`}
-                      rows={3}
-                      value={ackNotes[item.checklistInstanceId] ?? ''}
-                      onChange={(event) =>
-                        setAckNotes((current) => ({
-                          ...current,
-                          [item.checklistInstanceId]: event.target.value,
-                        }))
-                      }
-                      placeholder={t('storeChecklists.acknowledgementNotePlaceholder')}
-                    />
-                    <div className="action-cluster">
-                      <StatusPill tone={mapWorkflowUrgencyTone(toChecklistAcknowledgementInboxItem(item).urgency)}>
-                        {`${t('storeChecklists.urgency')}: ${formatChecklistUrgency(t, toChecklistAcknowledgementInboxItem(item).urgency)}`}
-                      </StatusPill>
-                      <button
-                        className="control-button"
-                        type="button"
-                        disabled={
-                          acknowledgeMutation.isPending &&
-                          acknowledgeMutation.variables?.checklistInstanceId === item.checklistInstanceId
-                        }
-                        onClick={() =>
-                          acknowledgeMutation.mutate({
-                            checklistInstanceId: item.checklistInstanceId,
-                            acknowledgementNote: ackNotes[item.checklistInstanceId] || undefined,
-                          })
-                        }
-                      >
-                        {acknowledgeMutation.isPending &&
-                        acknowledgeMutation.variables?.checklistInstanceId === item.checklistInstanceId
-                          ? t('storeChecklists.acknowledging')
-                          : t('storeChecklists.acknowledge')}
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <p className="queue-subtitle">{t('storeChecklists.reviewOnlyCopy')}</p>
-                )}
+                <div className="action-cluster">
+                  <StatusPill tone={mapWorkflowUrgencyTone(toChecklistAcknowledgementInboxItem(item).urgency)}>
+                    {`${t('storeChecklists.urgency')}: ${formatChecklistUrgency(t, toChecklistAcknowledgementInboxItem(item).urgency)}`}
+                  </StatusPill>
+                  <button
+                    className="control-button"
+                    type="button"
+                    onClick={() => setSelectedResultId(item.checklistInstanceId)}
+                  >
+                    {t('storeChecklists.viewResultDetail')}
+                  </button>
+                </div>
               </article>
             ))}
           </div>
@@ -474,6 +473,7 @@ export function StoreChecklistsPage(input: {
                 key={item.checklistInstanceId}
                 item={item}
                 locale={locale}
+                onOpen={() => setSelectedResultId(item.checklistInstanceId)}
                 t={t}
               />
             ))}
@@ -677,6 +677,175 @@ function ChecklistVisitModal(input: {
   )
 }
 
+function ChecklistResultModal(input: {
+  acknowledgementNote: string
+  canAcknowledge: boolean
+  isAcknowledging: boolean
+  item: ChecklistAcknowledgementItem
+  locale: AppLocale
+  onAcknowledge: () => void
+  onClose: () => void
+  onNoteChange: (note: string) => void
+  t: TranslateFunction
+}) {
+  const lowScoreResponses = getLowScoreResponses(input.item.responses)
+  const sections = groupChecklistResultResponses(input.item.responses)
+  const hasAcknowledgement = input.item.acknowledgement !== null
+
+  return (
+    <div className="store-checklist-modal-backdrop">
+      <section
+        aria-labelledby="store-checklist-result-title"
+        aria-modal="true"
+        className="store-checklist-modal store-checklist-result-modal"
+        role="dialog"
+      >
+        <div className="store-checklist-modal-head">
+          <div>
+            <div className="eyebrow">{input.t('storeChecklists.resultEyebrow')}</div>
+            <h3 id="store-checklist-result-title">{input.item.templateName}</h3>
+            <p>{formatCompletedSentence(input.t, input.locale, input.item)}</p>
+          </div>
+          <button className="control-button" type="button" onClick={input.onClose}>
+            {input.t('storeChecklists.closeSession')}
+          </button>
+        </div>
+
+        <div className="store-checklist-modal-meta">
+          <KeyValue label={input.t('storeChecklists.store')} value={input.item.storeName || input.item.storeId} />
+          <KeyValue label={input.t('storeChecklists.templateType')} value={formatChecklistTemplateType(input.t, input.item.templateType)} />
+          <KeyValue label={input.t('storeChecklists.score')} value={formatScoreValue(input.t, input.item.totalScore)} />
+          <KeyValue label={input.t('storeChecklists.compliance')} value={formatComplianceValue(input.t, input.item.complianceRate)} />
+        </div>
+
+        <div className="store-checklist-result-summary">
+          <div>
+            <span>{input.t('storeChecklists.resultCompletedBy')}</span>
+            <strong>{input.item.completedByUserId ?? input.t('storeChecklists.unknown')}</strong>
+          </div>
+          <div>
+            <span>{input.t('storeChecklists.resultLowScore')}</span>
+            <strong>{input.t('storeChecklists.lowScoreCount', { count: lowScoreResponses.length })}</strong>
+          </div>
+          <div>
+            <span>{input.t('storeChecklists.resultStatus')}</span>
+            <strong>
+              {hasAcknowledgement
+                ? input.t('storeChecklists.acknowledged')
+                : input.t('storeChecklists.needsAcknowledgement')}
+            </strong>
+          </div>
+        </div>
+
+        {lowScoreResponses.length > 0 ? (
+          <div className="store-checklist-result-alert">
+            <strong>{input.t('storeChecklists.lowScoreTitle')}</strong>
+            <p>
+              {lowScoreResponses
+                .slice(0, 3)
+                .map((response) => response.itemText)
+                .join(' · ')}
+            </p>
+          </div>
+        ) : null}
+
+        <div className="store-checklist-result-sections">
+          {sections.map((section) => (
+            <article className="store-checklist-result-section" key={section.name}>
+              <div className="store-checklist-result-section-head">
+                <div>
+                  <strong>{section.name || input.t('storeChecklists.section')}</strong>
+                  <p>
+                    {input.t('storeChecklists.sectionResultSummary', {
+                      score: section.averageScore,
+                      count: section.items.length,
+                    })}
+                  </p>
+                </div>
+                <StatusPill tone={section.averageScore >= 70 ? 'calm' : 'warning'}>
+                  {`${section.averageScore}%`}
+                </StatusPill>
+              </div>
+              <div className="store-checklist-result-items">
+                {section.items.map((response) => {
+                  const ratio = getResponseRatio(response)
+                  const isLowScore = ratio !== null && ratio < 70
+
+                  return (
+                    <div
+                      className={`store-checklist-result-item${isLowScore ? ' store-checklist-result-item-low' : ''}`}
+                      key={response.templateItemId}
+                    >
+                      <div>
+                        <strong>{response.itemText}</strong>
+                        {response.commentText ? <p>{response.commentText}</p> : null}
+                      </div>
+                      <div className="store-checklist-result-score">
+                        <span>{input.t('storeChecklists.score')}</span>
+                        <strong>
+                          {response.scoreValue === null
+                            ? input.t('storeChecklists.noScore')
+                            : `${response.scoreValue}/${response.maxScore}`}
+                        </strong>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <div className="store-checklist-result-ack">
+          {hasAcknowledgement ? (
+            <>
+              <div className="eyebrow">{input.t('storeChecklists.acknowledged')}</div>
+              <p>
+                {input.item.acknowledgement?.acknowledgedAt
+                  ? formatDateTime(input.item.acknowledgement.acknowledgedAt, input.locale)
+                  : input.t('storeChecklists.unknown')}
+              </p>
+              {input.item.acknowledgement?.acknowledgementNote ? (
+                <p>{input.item.acknowledgement.acknowledgementNote}</p>
+              ) : null}
+            </>
+          ) : input.canAcknowledge ? (
+            <>
+              <label className="eyebrow" htmlFor={`result-ack-note-${input.item.checklistInstanceId}`}>
+                {input.t('storeChecklists.acknowledgementNote')}
+              </label>
+              <textarea
+                id={`result-ack-note-${input.item.checklistInstanceId}`}
+                rows={3}
+                value={input.acknowledgementNote}
+                onChange={(event) => input.onNoteChange(event.target.value)}
+                placeholder={input.t('storeChecklists.acknowledgementNotePlaceholder')}
+              />
+              <div className="store-checklist-modal-footer">
+                <button className="control-button" type="button" onClick={input.onClose}>
+                  {input.t('storeChecklists.cancelSession')}
+                </button>
+                <button
+                  className="control-button"
+                  disabled={input.isAcknowledging}
+                  type="button"
+                  onClick={input.onAcknowledge}
+                >
+                  {input.isAcknowledging
+                    ? input.t('storeChecklists.acknowledging')
+                    : input.t('storeChecklists.acknowledge')}
+                </button>
+              </div>
+            </>
+          ) : (
+            <p className="queue-subtitle">{input.t('storeChecklists.reviewOnlyCopy')}</p>
+          )}
+        </div>
+      </section>
+    </div>
+  )
+}
+
 function groupChecklistTemplateItems(items: MobileChecklistToday['templates'][number]['items']) {
   const sections = new Map<
     string,
@@ -690,6 +859,53 @@ function groupChecklistTemplateItems(items: MobileChecklistToday['templates'][nu
   }
 
   return [...sections.values()]
+}
+
+function groupChecklistResultResponses(items: ChecklistAcknowledgementItem['responses']) {
+  const sections = new Map<
+    string,
+    { name: string; items: ChecklistAcknowledgementItem['responses']; averageScore: number }
+  >()
+
+  for (const item of items) {
+    const section = sections.get(item.sectionName) ?? {
+      name: item.sectionName,
+      items: [],
+      averageScore: 0,
+    }
+    section.items.push(item)
+    sections.set(item.sectionName, section)
+  }
+
+  return [...sections.values()].map((section) => {
+    const ratios = section.items
+      .map((item) => getResponseRatio(item))
+      .filter((ratio): ratio is number => ratio !== null)
+    const averageScore =
+      ratios.length > 0
+        ? Math.round(ratios.reduce((sum, ratio) => sum + ratio, 0) / ratios.length)
+        : 0
+
+    return {
+      ...section,
+      averageScore,
+    }
+  })
+}
+
+function getLowScoreResponses(items: ChecklistAcknowledgementItem['responses']) {
+  return items.filter((item) => {
+    const ratio = getResponseRatio(item)
+    return ratio !== null && ratio < 70
+  })
+}
+
+function getResponseRatio(item: ChecklistAcknowledgementItem['responses'][number]) {
+  if (item.scoreValue === null || item.maxScore <= 0) {
+    return null
+  }
+
+  return Math.round((item.scoreValue / item.maxScore) * 100)
 }
 
 function getCoverageRowKey(storeId: string, checklistTemplateId: string) {
@@ -743,6 +959,25 @@ function formatChecklistStatus(t: TranslateFunction, status: string) {
   }
 }
 
+function formatChecklistTemplateType(t: TranslateFunction, templateType: string) {
+  switch (templateType) {
+    case 'BM_STORE_VISIT':
+      return t('storeChecklists.coverage.bm')
+    case 'VM_STORE_VISIT':
+      return t('storeChecklists.coverage.vm')
+    default:
+      return formatState(templateType)
+  }
+}
+
+function formatScoreValue(t: TranslateFunction, value: number | null) {
+  return value === null ? t('storeChecklists.noScore') : value.toLocaleString('tr-TR')
+}
+
+function formatComplianceValue(t: TranslateFunction, value: number | null) {
+  return value === null ? t('storeChecklists.noRate') : `${Math.round(value * 100)}%`
+}
+
 function formatChecklistUrgency(t: TranslateFunction, urgency: string) {
   switch (urgency) {
     case 'high':
@@ -771,6 +1006,7 @@ function formatCompletedSentence(
 function AcknowledgedChecklistRow(input: {
   item: ChecklistAcknowledgementItem
   locale: AppLocale
+  onOpen: () => void
   t: TranslateFunction
 }) {
   return (
@@ -798,16 +1034,18 @@ function AcknowledgedChecklistRow(input: {
         />
         <KeyValue
           label={input.t('storeChecklists.compliance')}
-          value={
-            input.item.complianceRate !== null
-              ? `${Math.round(input.item.complianceRate * 100)}%`
-              : input.t('storeChecklists.noRate')
-          }
+          value={formatComplianceValue(input.t, input.item.complianceRate)}
         />
+        <KeyValue label={input.t('storeChecklists.templateType')} value={formatChecklistTemplateType(input.t, input.item.templateType)} />
       </div>
       {input.item.acknowledgement?.acknowledgementNote ? (
         <p className="queue-subtitle">{input.item.acknowledgement.acknowledgementNote}</p>
       ) : null}
+      <div className="action-cluster">
+        <button className="control-button" type="button" onClick={input.onOpen}>
+          {input.t('storeChecklists.viewResultDetail')}
+        </button>
+      </div>
     </article>
   )
 }

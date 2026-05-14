@@ -84,6 +84,94 @@ describe("ChecklistService", () => {
       companyIds: [],
       regionIds: [],
       storeIds: ["store-1"],
+      allowedTemplateTypes: ["BM_STORE_VISIT", "VM_STORE_VISIT"],
+    });
+  });
+
+  it("lets region managers read BM and VM checklist results for their assigned stores", async () => {
+    const acknowledgementRepository = {
+      listChecklistAcknowledgements: jest.fn().mockResolvedValue([]),
+    };
+    const service = new ChecklistService(
+      storeOpsRepository as never,
+      acknowledgementRepository as never,
+      {} as never,
+    );
+
+    await service.listChecklistAcknowledgements({
+      actorScope: {
+        companyIds: [],
+        regionIds: ["region-1"],
+        storeIds: [],
+      },
+      actorActionScope: {
+        assignedStoreIds: ["store-1", "store-2"],
+      },
+      actorRoleCodes: ["REGION_MANAGER"],
+    });
+
+    expect(acknowledgementRepository.listChecklistAcknowledgements).toHaveBeenCalledWith({
+      companyIds: [],
+      regionIds: [],
+      storeIds: ["store-1", "store-2"],
+      allowedTemplateTypes: ["BM_STORE_VISIT", "VM_STORE_VISIT"],
+    });
+  });
+
+  it("limits visual merchandisers to VM checklist results", async () => {
+    const acknowledgementRepository = {
+      listChecklistAcknowledgements: jest.fn().mockResolvedValue([]),
+    };
+    const service = new ChecklistService(
+      storeOpsRepository as never,
+      acknowledgementRepository as never,
+      {} as never,
+    );
+
+    await service.listChecklistAcknowledgements({
+      actorScope: {
+        companyIds: [],
+        regionIds: [],
+        storeIds: ["store-1"],
+      },
+      actorActionScope: {
+        assignedStoreIds: ["store-1"],
+      },
+      actorRoleCodes: ["VISUAL_MERCHANDISER"],
+    });
+
+    expect(acknowledgementRepository.listChecklistAcknowledgements).toHaveBeenCalledWith({
+      companyIds: [],
+      regionIds: [],
+      storeIds: ["store-1"],
+      allowedTemplateTypes: ["VM_STORE_VISIT"],
+    });
+  });
+
+  it("keeps broad checklist result readers unrestricted by template type", async () => {
+    const acknowledgementRepository = {
+      listChecklistAcknowledgements: jest.fn().mockResolvedValue([]),
+    };
+    const service = new ChecklistService(
+      storeOpsRepository as never,
+      acknowledgementRepository as never,
+      {} as never,
+    );
+
+    await service.listChecklistAcknowledgements({
+      actorScope: {
+        companyIds: ["company-1"],
+        regionIds: [],
+        storeIds: [],
+      },
+      actorRoleCodes: ["REPORT_VIEWER"],
+    });
+
+    expect(acknowledgementRepository.listChecklistAcknowledgements).toHaveBeenCalledWith({
+      companyIds: ["company-1"],
+      regionIds: [],
+      storeIds: [],
+      allowedTemplateTypes: undefined,
     });
   });
 
