@@ -754,15 +754,36 @@ export class ChecklistRepository {
       status: "planned" | "in_progress";
       started_at: string | null;
       updated_at: string | null;
+      responses_json: unknown;
     }>(
       `
-        SELECT ci.checklist_instance_id, ci.checklist_template_id, ci.store_id, ci.status, ci.started_at, ci.created_at AS updated_at
+        SELECT
+          ci.checklist_instance_id,
+          ci.checklist_template_id,
+          ci.store_id,
+          ci.status,
+          ci.started_at,
+          ci.created_at AS updated_at,
+          COALESCE(
+            jsonb_agg(
+              jsonb_build_object(
+                'templateItemId', cr.template_item_id,
+                'scoreValue', cr.score_value,
+                'commentText', cr.comment_text
+              )
+              ORDER BY cr.responded_at ASC
+            ) FILTER (WHERE cr.response_id IS NOT NULL),
+            '[]'::jsonb
+          ) AS responses_json
         FROM ops.checklist_instance ci
         INNER JOIN ops.checklist_template ct
           ON ct.checklist_template_id = ci.checklist_template_id
+        LEFT JOIN ops.checklist_response cr
+          ON cr.checklist_instance_id = ci.checklist_instance_id
         WHERE ci.store_id = ANY($1::uuid[])
           AND ct.template_type = ANY($2::text[])
           AND ci.status IN ('planned', 'in_progress')
+        GROUP BY ci.checklist_instance_id, ci.checklist_template_id, ci.store_id, ci.status, ci.started_at, ci.created_at
         ORDER BY ci.created_at DESC
       `,
       [storeIds, input.allowedTemplateTypes],
@@ -839,6 +860,7 @@ export class ChecklistRepository {
         status: row.status,
         startedAt: row.started_at,
         updatedAt: row.updated_at,
+        responses: this.mapMobileChecklistDraftResponses(row.responses_json),
       })),
       completedThisMonth: completedThisMonth.rows.map((row) => ({
         checklistInstanceId: row.checklist_instance_id,
@@ -865,6 +887,31 @@ export class ChecklistRepository {
         averageScore: row.average_score === null ? null : Number(row.average_score),
       })),
     };
+  }
+
+  private mapMobileChecklistDraftResponses(
+    value: unknown,
+  ): MobileChecklistToday["activeInstances"][number]["responses"] {
+    const parsed = typeof value === "string" ? JSON.parse(value) : value;
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed.map((item) => {
+      const row = item as {
+        templateItemId?: unknown;
+        scoreValue?: unknown;
+        commentText?: unknown;
+      };
+
+      return {
+        templateItemId: String(row.templateItemId ?? ""),
+        scoreValue: Number(row.scoreValue ?? 0),
+        commentText: row.commentText === null || row.commentText === undefined
+          ? null
+          : String(row.commentText),
+      };
+    }).filter((item) => item.templateItemId.length > 0);
   }
 
   private async queryMobileChecklistStores(input: {

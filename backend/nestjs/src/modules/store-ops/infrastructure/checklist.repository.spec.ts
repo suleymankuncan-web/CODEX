@@ -564,6 +564,64 @@ describe("ChecklistRepository", () => {
     expect(templateSql).toContain("ranked_templates.version_rank = 1");
   });
 
+  it("hydrates active mobile checklist draft responses", async () => {
+    const query = createQueryMock({
+      stores: [{ store_id: "store-1", store_name: "Marmara Park" }],
+      templates: [
+        {
+          checklist_template_id: "template-1",
+          template_code: "BM_VISIT_V1",
+          template_type: "BM_STORE_VISIT",
+          template_name: "BM Visit",
+          version_no: 1,
+        },
+      ],
+      activeInstances: [
+        {
+          checklist_instance_id: "instance-1",
+          checklist_template_id: "template-1",
+          store_id: "store-1",
+          status: "in_progress",
+          started_at: "2026-04-28T10:00:00.000Z",
+          updated_at: "2026-04-28T10:05:00.000Z",
+          responses_json: [
+            {
+              templateItemId: "item-1",
+              scoreValue: "8.00",
+              commentText: "Raf ve vitrin uygun",
+            },
+          ],
+        },
+      ],
+    });
+    const repository = new ChecklistRepository({ query } as never);
+
+    const result = await repository.getMobileChecklistToday({
+      actorUserId: "region-user-1",
+      assignedStoreIds: ["store-1"],
+      readStoreIds: [],
+      allowedTemplateTypes: ["BM_STORE_VISIT"],
+    });
+
+    expect(result.activeInstances).toEqual([
+      {
+        checklistInstanceId: "instance-1",
+        checklistTemplateId: "template-1",
+        storeId: "store-1",
+        status: "in_progress",
+        startedAt: "2026-04-28T10:00:00.000Z",
+        updatedAt: "2026-04-28T10:05:00.000Z",
+        responses: [
+          {
+            templateItemId: "item-1",
+            scoreValue: 8,
+            commentText: "Raf ve vitrin uygun",
+          },
+        ],
+      },
+    ]);
+  });
+
   it("excludes completed checklist rows without total scores", async () => {
     const query = createQueryMock({
       stores: [{ store_id: "store-1", store_name: "Marmara Park" }],

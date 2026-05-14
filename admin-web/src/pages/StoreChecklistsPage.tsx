@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ScreenState } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
@@ -39,6 +39,12 @@ type ChecklistStatusFilter = 'all' | 'missing' | 'draft' | 'completed' | 'pendin
 type ChecklistSortKey = 'priority' | 'store' | 'score' | 'date' | 'status'
 type ChecklistSortDirection = 'asc' | 'desc'
 type ChecklistSort = { key: ChecklistSortKey; direction: ChecklistSortDirection }
+type ChecklistResponseDraft = {
+  checklistInstanceId: string
+  templateItemId: string
+  scoreValue: number
+  commentText?: string
+}
 
 export function StoreChecklistsPage(input: {
   authSummary: AuthSessionSummary | null
@@ -61,6 +67,8 @@ export function StoreChecklistsPage(input: {
     Record<string, MobileChecklistToday['activeInstances'][number]>
   >({})
   const [sessionDirty, setSessionDirty] = useState(false)
+  const autoSaveTimersRef = useRef<Record<string, number>>({})
+  const savedResponseDraftsRef = useRef<Record<string, string>>({})
   const canManageVisits = hasAnyRole(input.authSummary, [
     'REGION_MANAGER',
     'VISUAL_MERCHANDISER',
@@ -106,6 +114,7 @@ export function StoreChecklistsPage(input: {
           status: instance.status,
           startedAt: instance.created_at,
           updatedAt: instance.created_at,
+          responses: [],
         },
       }))
       setAckNotice(result.command.message)
@@ -113,14 +122,48 @@ export function StoreChecklistsPage(input: {
   })
   const saveResponseMutation = useMutation({
     mutationFn: saveMobileChecklistResponse,
-    onSuccess: () => {
+    onSuccess: (_result, variables) => {
+      savedResponseDraftsRef.current[getChecklistResponseDraftKey(variables)] =
+        serializeChecklistResponseDraft(variables)
       void queryClient.invalidateQueries({ queryKey: ['mobile-checklists-today'] })
-      setAckNotice(t('storeChecklists.responseSaved'))
+      setSessionDirty(false)
     },
   })
+  const savePendingSessionResponses = async (
+    checklistInstanceId: string,
+    responseDrafts: ChecklistResponseDraft[],
+  ) => {
+    for (const [key, timerId] of Object.entries(autoSaveTimersRef.current)) {
+      if (key.startsWith(`${checklistInstanceId}:`)) {
+        window.clearTimeout(timerId)
+        delete autoSaveTimersRef.current[key]
+      }
+    }
+
+    const changedDrafts = responseDrafts.filter((draft) => {
+      const key = getChecklistResponseDraftKey(draft)
+      return savedResponseDraftsRef.current[key] !== serializeChecklistResponseDraft(draft)
+    })
+
+    await Promise.all(
+      changedDrafts.map(async (draft) => {
+        await saveMobileChecklistResponse(draft)
+        savedResponseDraftsRef.current[getChecklistResponseDraftKey(draft)] =
+          serializeChecklistResponseDraft(draft)
+      }),
+    )
+  }
   const completeVisitMutation = useMutation({
-    mutationFn: completeMobileChecklistInstance,
-    onSuccess: (result, variables) => {
+    mutationFn: async (variables: {
+      checklistInstanceId: string
+      responses: ChecklistResponseDraft[]
+    }) => {
+      await savePendingSessionResponses(variables.checklistInstanceId, variables.responses)
+      return completeMobileChecklistInstance({
+        checklistInstanceId: variables.checklistInstanceId,
+      })
+    },
+    onSuccess: (_result, variables) => {
       void queryClient.invalidateQueries({ queryKey: ['mobile-checklists-today'] })
       void queryClient.invalidateQueries({ queryKey: ['checklist-acknowledgements'] })
       setLocalActiveInstances((current) =>
@@ -132,9 +175,49 @@ export function StoreChecklistsPage(input: {
       )
       setSelectedSessionKey(null)
       setSessionDirty(false)
-      setAckNotice(result.command.message)
+      setAckNotice(t('storeChecklists.completeSuccess'))
     },
   })
+  const queueResponseAutoSave = (draft: ChecklistResponseDraft) => {
+    const key = getChecklistResponseDraftKey(draft)
+    const serialized = serializeChecklistResponseDraft(draft)
+    if (savedResponseDraftsRef.current[key] === serialized) return
+
+    const existingTimer = autoSaveTimersRef.current[key]
+    if (existingTimer) window.clearTimeout(existingTimer)
+    autoSaveTimersRef.current[key] = window.setTimeout(() => {
+      delete autoSaveTimersRef.current[key]
+      saveResponseMutation.mutate(draft)
+    }, 500)
+  }
+  const hydrateActiveResponseDrafts = (
+    active: MobileChecklistToday['activeInstances'][number] | undefined,
+  ) => {
+    if (!active?.responses.length) return
+
+    setScores((current) => {
+      const next = { ...current }
+      for (const response of active.responses) {
+        next[response.templateItemId] = response.scoreValue
+        const draft = {
+          checklistInstanceId: active.checklistInstanceId,
+          templateItemId: response.templateItemId,
+          scoreValue: response.scoreValue,
+          commentText: response.commentText ?? undefined,
+        }
+        savedResponseDraftsRef.current[getChecklistResponseDraftKey(draft)] =
+          serializeChecklistResponseDraft(draft)
+      }
+      return next
+    })
+    setComments((current) => {
+      const next = { ...current }
+      for (const response of active.responses) {
+        if (response.commentText) next[response.templateItemId] = response.commentText
+      }
+      return next
+    })
+  }
 
   if (
     (canUseAcknowledgements && checklistsQuery.isLoading) ||
@@ -385,6 +468,7 @@ export function StoreChecklistsPage(input: {
                       disabled={!canStart}
                       type="button"
                       onClick={() => {
+                        hydrateActiveResponseDrafts(active)
                         setSelectedSessionKey(getCoverageRowKeyFromRow(row))
                         setSessionDirty(false)
                       }}
@@ -418,19 +502,48 @@ export function StoreChecklistsPage(input: {
           isStarting={startVisitMutation.isPending}
           locale={locale}
           onClose={closeSession}
-          onCommentChange={(templateItemId, comment) => {
-            setComments((current) => ({ ...current, [templateItemId]: comment }))
-            setSessionDirty(true)
-          }}
-          onComplete={(checklistInstanceId) =>
-            completeVisitMutation.mutate({ checklistInstanceId })
-          }
-          onSaveResponse={(saveInput) => {
-            saveResponseMutation.mutate(saveInput)
-            setSessionDirty(false)
+          onComplete={(checklistInstanceId) => {
+            completeVisitMutation.mutate({
+              checklistInstanceId,
+              responses: buildChecklistResponseDrafts({
+                checklistInstanceId,
+                comments,
+                scores,
+                session: selectedSession,
+              }),
+            })
           }}
           onScoreChange={(templateItemId, score) => {
-            setScores((current) => ({ ...current, [templateItemId]: score }))
+            setScores((current) => {
+              const next = { ...current }
+              if (score === null) {
+                delete next[templateItemId]
+              } else {
+                next[templateItemId] = score
+              }
+              return next
+            })
+            if (selectedSession.active && score !== null) {
+              queueResponseAutoSave({
+                checklistInstanceId: selectedSession.active.checklistInstanceId,
+                templateItemId,
+                scoreValue: score,
+                commentText: comments[templateItemId] || undefined,
+              })
+            }
+            setSessionDirty(true)
+          }}
+          onCommentChange={(templateItemId, comment) => {
+            setComments((current) => ({ ...current, [templateItemId]: comment }))
+            const score = scores[templateItemId]
+            if (selectedSession.active && Number.isFinite(score)) {
+              queueResponseAutoSave({
+                checklistInstanceId: selectedSession.active.checklistInstanceId,
+                templateItemId,
+                scoreValue: score,
+                commentText: comment || undefined,
+              })
+            }
             setSessionDirty(true)
           }}
           onStart={(row) =>
@@ -711,13 +824,7 @@ function ChecklistVisitModal(input: {
   onClose: () => void
   onCommentChange: (templateItemId: string, comment: string) => void
   onComplete: (checklistInstanceId: string) => void
-  onSaveResponse: (input: {
-    checklistInstanceId: string
-    templateItemId: string
-    scoreValue: number
-    commentText?: string
-  }) => void
-  onScoreChange: (templateItemId: string, score: number) => void
+  onScoreChange: (templateItemId: string, score: number | null) => void
   onStart: (session: ChecklistSession) => void
   scores: Record<string, number>
   session: ChecklistSession
@@ -743,6 +850,9 @@ function ChecklistVisitModal(input: {
     scoredRatios.length > 0
       ? Math.round(scoredRatios.reduce((sum, ratio) => sum + ratio, 0) / scoredRatios.length)
       : 0
+  const missingResponseCount = Math.max(input.session.template.items.length - answeredCount, 0)
+  const canComplete =
+    Boolean(input.active) && !input.isCompleting && hasItems && missingResponseCount === 0
 
   return (
     <div className="store-checklist-modal-backdrop">
@@ -822,7 +932,7 @@ function ChecklistVisitModal(input: {
                 {getStaticCopy(
                   input.locale,
                   'Maddeleri sırayla doldur; düşük puanlı cevaplarda not bırakmak saha takibini kolaylaştırır.',
-                  'Answer items in order; notes on low scores make field follow-up easier.',
+                  'Answers are auto-saved as you fill items; notes on low scores make field follow-up easier.',
                 )}
               </p>
             </aside>
@@ -854,7 +964,7 @@ function ChecklistVisitModal(input: {
                           <label>
                             <span>{input.t('storeChecklists.scoreInput')}</span>
                             <input
-                              disabled={!input.active || input.isSaving}
+                              disabled={!input.active}
                               max={item.maxScore}
                               min={0}
                               type="number"
@@ -862,7 +972,7 @@ function ChecklistVisitModal(input: {
                               onChange={(event) =>
                                 input.onScoreChange(
                                   item.templateItemId,
-                                  Number(event.target.value || 0),
+                                  parseChecklistScoreInput(event.target.value, item.maxScore),
                                 )
                               }
                             />
@@ -870,7 +980,7 @@ function ChecklistVisitModal(input: {
                           <label>
                             <span>{input.t('storeChecklists.noteInput')}</span>
                             <textarea
-                              disabled={!input.active || input.isSaving}
+                              disabled={!input.active}
                               rows={2}
                               value={input.comments[item.templateItemId] ?? ''}
                               onChange={(event) =>
@@ -878,25 +988,6 @@ function ChecklistVisitModal(input: {
                               }
                             />
                           </label>
-                          <button
-                            className="store-checklists-action-button store-checklists-action-button-soft"
-                            disabled={!input.active || input.isSaving}
-                            type="button"
-                            onClick={() =>
-                              input.active
-                                ? input.onSaveResponse({
-                                    checklistInstanceId: input.active.checklistInstanceId,
-                                    templateItemId: item.templateItemId,
-                                    scoreValue: input.scores[item.templateItemId] ?? 0,
-                                    commentText: input.comments[item.templateItemId] || undefined,
-                                  })
-                                : undefined
-                            }
-                          >
-                            {input.isSaving
-                              ? input.t('storeChecklists.savingItem')
-                              : input.t('storeChecklists.saveItem')}
-                          </button>
                         </div>
                       </div>
                     ))}
@@ -908,12 +999,21 @@ function ChecklistVisitModal(input: {
         )}
 
         <div className="store-checklist-modal-footer">
+          {missingResponseCount > 0 ? (
+            <p className="store-checklists-inline-notice">
+              {input.t('storeChecklists.missingResponsesHint', {
+                count: missingResponseCount,
+              })}
+            </p>
+          ) : input.isSaving ? (
+            <p className="store-checklists-inline-notice">{input.t('storeChecklists.autosaving')}</p>
+          ) : null}
           <button className="store-checklists-ghost-button" type="button" onClick={input.onClose}>
             {input.t('storeChecklists.cancelSession')}
           </button>
           <button
             className="store-checklists-action-button"
-            disabled={!input.active || input.isCompleting || !hasItems}
+            disabled={!canComplete}
             type="button"
             onClick={() => {
               if (!input.active) return
@@ -1539,6 +1639,53 @@ function normalizeSearch(input: string) {
 
 function formatOptionalDate(value: string | null | undefined, locale: AppLocale) {
   return value ? formatDateTime(value, locale) : '-'
+}
+
+function buildChecklistResponseDrafts(input: {
+  checklistInstanceId: string
+  comments: Record<string, string>
+  scores: Record<string, number>
+  session: ChecklistSession
+}): ChecklistResponseDraft[] {
+  const drafts: ChecklistResponseDraft[] = []
+
+  for (const item of input.session.template.items) {
+    const score = input.scores[item.templateItemId]
+    if (!Number.isFinite(score)) continue
+
+    drafts.push({
+        checklistInstanceId: input.checklistInstanceId,
+        templateItemId: item.templateItemId,
+        scoreValue: score,
+        commentText: input.comments[item.templateItemId] || undefined,
+    })
+  }
+
+  return drafts
+}
+
+function getChecklistResponseDraftKey(input: {
+  checklistInstanceId: string
+  templateItemId: string
+}) {
+  return `${input.checklistInstanceId}:${input.templateItemId}`
+}
+
+function serializeChecklistResponseDraft(input: {
+  scoreValue: number
+  commentText?: string
+}) {
+  return JSON.stringify({
+    commentText: input.commentText ?? '',
+    scoreValue: input.scoreValue,
+  })
+}
+
+function parseChecklistScoreInput(value: string, maxScore: number) {
+  if (value === '') return null
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return null
+  return clamp(parsed, 0, maxScore)
 }
 
 function clamp(value: number, min: number, max: number) {

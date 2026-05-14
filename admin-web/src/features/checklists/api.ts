@@ -118,6 +118,11 @@ export type MobileChecklistToday = {
     status: string
     startedAt: string | null
     updatedAt: string | null
+    responses: Array<{
+      templateItemId: string
+      scoreValue: number
+      commentText: string | null
+    }>
   }>
   completedThisMonth: Array<{
     checklistInstanceId: string
