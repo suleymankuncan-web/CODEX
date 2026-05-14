@@ -18,8 +18,7 @@ test('region manager checklist surface shows assigned store visit workflow', asy
   await expect(page.getByText('Vitrin standartlara uygun')).toBeVisible()
   await page.getByLabel('Puan').fill('8')
   await page.getByLabel('Not').fill('Raf ve vitrin uygun')
-  await page.getByRole('button', { name: 'Maddeyi kaydet' }).click()
-  await expect.poll(() => requests.saves).toEqual([
+  await expect.poll(() => requests.saves).toContainEqual(
     {
       checklistInstanceId: '33333333-3333-4333-8333-333333333333',
       body: {
@@ -28,13 +27,14 @@ test('region manager checklist surface shows assigned store visit workflow', asy
         commentText: 'Raf ve vitrin uygun',
       },
     },
-  ])
+  )
   await expect(page.getByRole('button', { name: 'Tamamla', exact: true })).toBeVisible()
   page.once('dialog', (dialog) => dialog.accept())
   await page.getByRole('button', { name: 'Tamamla', exact: true }).click()
   await expect.poll(() => requests.completes).toEqual([
     { checklistInstanceId: '33333333-3333-4333-8333-333333333333' },
   ])
+  await expect(page.getByText('Başarıyla Tamamlandı')).toBeVisible()
 })
 
 test('store manager checklist surface keeps acknowledgement language', async ({ page }) => {
@@ -91,8 +91,7 @@ test('completed checklist handoff moves from field visit to store acknowledgemen
   await expect(page.getByLabel('Score')).toBeEnabled()
   await page.getByLabel('Score').fill('8')
   await page.getByLabel('Note').fill('Handoff-ready visit')
-  await page.getByRole('button', { name: 'Save item' }).click()
-  await expect.poll(() => requests.saves).toEqual([
+  await expect.poll(() => requests.saves).toContainEqual(
     {
       checklistInstanceId: '33333333-3333-4333-8333-333333333333',
       body: {
@@ -101,7 +100,7 @@ test('completed checklist handoff moves from field visit to store acknowledgemen
         commentText: 'Handoff-ready visit',
       },
     },
-  ])
+  )
 
   page.once('dialog', (dialog) => dialog.accept())
   await page.getByRole('button', { name: 'Complete', exact: true }).click()
@@ -174,8 +173,7 @@ test('visual merchandiser sees checklist-only VM coverage and no broad store lin
   expect(requests.starts).toEqual([{ checklistTemplateId: templateId, storeId }])
   await page.getByLabel('Puan').fill('8')
   await page.getByLabel('Not').fill('Vitrin iyi')
-  await page.getByRole('button', { name: 'Maddeyi kaydet' }).click()
-  expect(requests.saves).toEqual([
+  await expect.poll(() => requests.saves).toContainEqual(
     {
       checklistInstanceId: '33333333-3333-4333-8333-333333333333',
       body: {
@@ -184,7 +182,7 @@ test('visual merchandiser sees checklist-only VM coverage and no broad store lin
         commentText: 'Vitrin iyi',
       },
     },
-  ])
+  )
   await expect(
     page.locator('.store-command-nav').getByRole('link', { name: 'Checklist', exact: true }),
   ).toBeVisible()
@@ -266,6 +264,11 @@ type ChecklistActiveInstanceFixture = {
   status: string
   startedAt: string
   updatedAt: string
+  responses?: Array<{
+    templateItemId: string
+    scoreValue: number
+    commentText: string | null
+  }>
 }
 
 type ChecklistMonthlySummaryFixture = {
@@ -496,16 +499,18 @@ function createMobileChecklistTodayFixture(options: ChecklistFixtureOptions = {}
         ],
       },
     ],
-    activeInstances: options.activeInstances ?? [
-      {
-        checklistInstanceId: '33333333-3333-4333-8333-333333333333',
-        checklistTemplateId: templateId,
-        storeId,
-        status: 'in_progress',
-        startedAt: '2026-04-28T10:00:00.000Z',
-        updatedAt: '2026-04-28T10:00:00.000Z',
-      },
-    ],
+    activeInstances: (
+      options.activeInstances ?? [
+        {
+          checklistInstanceId: '33333333-3333-4333-8333-333333333333',
+          checklistTemplateId: templateId,
+          storeId,
+          status: 'in_progress',
+          startedAt: '2026-04-28T10:00:00.000Z',
+          updatedAt: '2026-04-28T10:00:00.000Z',
+        },
+      ]
+    ).map((instance) => ({ ...instance, responses: instance.responses ?? [] })),
     completedThisMonth: [],
     pendingAcknowledgements: [],
     monthlySummaries: options.monthlySummaries ?? [

@@ -1100,7 +1100,7 @@ code {
 
 .store-checklist-modal-inputs {
   display: grid;
-  grid-template-columns: minmax(76px, 0.36fr) minmax(180px, 1fr) auto;
+  grid-template-columns: minmax(76px, 0.36fr) minmax(180px, 1fr);
   gap: 8px;
   align-items: end;
 }
@@ -9881,7 +9881,7 @@ code {
 
 .store-checklist-modal-inputs {
   display: grid;
-  grid-template-columns: minmax(70px, 0.24fr) minmax(160px, 1fr) auto;
+  grid-template-columns: minmax(70px, 0.24fr) minmax(160px, 1fr);
   gap: 0.5rem;
   align-items: end;
 }
