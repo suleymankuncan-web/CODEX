@@ -2,11 +2,13 @@ import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { ArrowRight, KeyRound, LogIn, ShieldCheck } from 'lucide-react'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
+import { preloadRouteModule } from '../app/route-preloaders'
 import { MetricAccent, MetricCard, StatusPill } from '../components/dashboard-primitives'
 import { getAuthBootstrap } from '../features/auth/api'
 import { buildProviderLoginUrl, hasProviderLoginConfig } from '../features/auth/auth-flow'
 import { isClerkSessionProviderAvailable } from '../features/auth/clerk-config'
 import { ClerkLoginActions } from '../features/auth/clerk-session'
+import { sanitizeAuthReturnPath } from '../features/auth/return-path'
 import { useLocalization } from '../features/localization/useLocalization'
 
 export function AuthLoginPage() {
@@ -17,16 +19,28 @@ export function AuthLoginPage() {
     url: string | null
     error: string | null
   }>({ url: null, error: null })
+  const returnTo = searchParams.get('returnTo') ?? location.state?.returnTo ?? '/store'
+  const clerkReady = isClerkSessionProviderAvailable()
   const bootstrapQuery = useQuery({
     queryKey: ['auth-bootstrap'],
     queryFn: getAuthBootstrap,
     retry: false,
+    enabled: !clerkReady,
   })
-  const returnTo = searchParams.get('returnTo') ?? location.state?.returnTo ?? '/store'
-  const clerkReady = isClerkSessionProviderAvailable()
   const providerReady = clerkReady || hasProviderLoginConfig(bootstrapQuery.data)
 
   useEffect(() => {
+    const safeReturnTo = sanitizeAuthReturnPath(returnTo)
+    if (safeReturnTo) {
+      preloadRouteModule(safeReturnTo)
+    }
+  }, [returnTo])
+
+  useEffect(() => {
+    if (clerkReady) {
+      return
+    }
+
     let cancelled = false
 
     buildProviderLoginUrl({ returnTo, bootstrap: bootstrapQuery.data })
@@ -44,7 +58,7 @@ export function AuthLoginPage() {
     return () => {
       cancelled = true
     }
-  }, [bootstrapQuery.data, returnTo])
+  }, [bootstrapQuery.data, clerkReady, returnTo])
 
   return (
     <section className="auth-flow-shell">

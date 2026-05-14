@@ -98,6 +98,12 @@ function App() {
   })
 
   useEffect(() => {
+    if (location.pathname.startsWith('/auth')) return
+
+    preloadRouteModule(location.pathname)
+  }, [location.pathname])
+
+  useEffect(() => {
     if (shellState.mode !== 'ready') return
 
     preloadRouteModule(firstAllowedPath)

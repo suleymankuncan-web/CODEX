@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { EmptyState, ScreenState, StatusPill } from '../components/dashboard-primitives'
 import { getAuthBootstrap } from '../features/auth/api'
 import {
@@ -14,6 +15,7 @@ import { useSession } from '../features/session/session-context-value'
 export function AuthCallbackPage() {
   const { t } = useLocalization()
   const { startBearerSession } = useSession()
+  const navigate = useNavigate()
   const [exchangeError, setExchangeError] = useState<string | null>(null)
   const handledRef = useRef(false)
   const callbackPayload = useMemo(
@@ -48,7 +50,7 @@ export function AuthCallbackPage() {
     if (token && token !== 'demo-placeholder-token') {
       handledRef.current = true
       startBearerSession(token)
-      window.location.replace(callbackPayload.returnTo ?? '/')
+      navigate(callbackPayload.returnTo ?? '/', { replace: true })
       return
     }
 
@@ -68,7 +70,7 @@ export function AuthCallbackPage() {
     })
       .then((result) => {
         startBearerSession(result.accessToken, result.idToken)
-        window.location.replace(result.returnTo)
+        navigate(result.returnTo, { replace: true })
       })
       .catch((error: unknown) => {
         setExchangeError(error instanceof Error ? error.message : String(error))
@@ -81,6 +83,7 @@ export function AuthCallbackPage() {
     callbackPayload.returnTo,
     callbackPayload.state,
     manualTokenCallbackRejected,
+    navigate,
     startBearerSession,
     token,
   ])
