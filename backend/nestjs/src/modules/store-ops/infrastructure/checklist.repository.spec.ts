@@ -534,6 +534,36 @@ describe("ChecklistRepository", () => {
     ]);
   });
 
+  it("returns only the latest currently effective published template version per code", async () => {
+    const query = createQueryMock({
+      stores: [{ store_id: "store-1", store_name: "Marmara Park" }],
+      templates: [
+        {
+          checklist_template_id: "template-v2",
+          template_code: "BM_STORE_VISIT_2026",
+          template_type: "BM_STORE_VISIT",
+          template_name: "BM Store Visit",
+          version_no: 2,
+        },
+      ],
+    });
+    const repository = new ChecklistRepository({ query } as never);
+
+    await repository.getMobileChecklistToday({
+      actorUserId: "region-user-1",
+      assignedStoreIds: ["store-1"],
+      readStoreIds: [],
+      allowedTemplateTypes: ["BM_STORE_VISIT"],
+    });
+
+    const [templateSql] = query.mock.calls[1];
+    expect(templateSql).toContain("ROW_NUMBER() OVER");
+    expect(templateSql).toContain(
+      "PARTITION BY ct.company_id, ct.template_type, ct.template_code",
+    );
+    expect(templateSql).toContain("ranked_templates.version_rank = 1");
+  });
+
   it("excludes completed checklist rows without total scores", async () => {
     const query = createQueryMock({
       stores: [{ store_id: "store-1", store_name: "Marmara Park" }],
