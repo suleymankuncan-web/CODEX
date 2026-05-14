@@ -1112,7 +1112,7 @@ function RankingScore(input: {
   const style = { '--score-width': scoreWidth } as CSSProperties
 
   return (
-    <div className="rankings-plum-scorebar">
+    <div className={`rankings-plum-scorebar${input.value == null ? ' rankings-plum-scorebar-empty' : ''}`}>
       <strong>{formatNumber(input.locale, input.t, input.value)}</strong>
       <span className="rankings-plum-score-track" style={style}>
         <i />
