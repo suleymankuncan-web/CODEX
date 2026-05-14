@@ -110,6 +110,33 @@ function App() {
     preloadRouteModule(location.pathname)
   }, [firstAllowedPath, location.pathname, shellState.mode])
 
+  useEffect(() => {
+    if (shellState.mode !== 'ready') return
+    if (session.mode !== 'bearer') return
+
+    let cancelled = false
+    void import('./app/route-data-preloaders')
+      .then(({ prefetchRouteData }) => {
+        if (cancelled) return
+
+        prefetchRouteData({
+          queryClient,
+          pathname: firstAllowedPath,
+          authSummary,
+        })
+        prefetchRouteData({
+          queryClient,
+          pathname: location.pathname,
+          authSummary,
+        })
+      })
+      .catch(() => undefined)
+
+    return () => {
+      cancelled = true
+    }
+  }, [authSummary, firstAllowedPath, location.pathname, queryClient, session.mode, shellState.mode])
+
   if (location.pathname.startsWith('/auth')) {
     return <AuthFlowShell shellState={shellState} firstAllowedPath={firstAllowedPath} />
   }
