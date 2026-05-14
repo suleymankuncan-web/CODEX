@@ -1,12 +1,9 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { BadgeCheck, ClipboardList, ShieldAlert } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import {
   EmptyState,
   KeyValue,
-  MetricAccent,
-  MetricCard,
   ScreenState,
   StatusPill,
 } from '../components/dashboard-primitives'
@@ -164,12 +161,10 @@ export function StoreChecklistsPage(input: {
 
   const items = canUseAcknowledgements ? (checklistsQuery.data?.items ?? []) : []
   const mobileToday = mobileTodayQuery.data?.data
-  const inboxItems = items.map((item) => toChecklistAcknowledgementInboxItem(item))
   const pendingItems = items.filter((item) => item.acknowledgement === null)
   const acknowledgedItems = items.filter((item) => item.acknowledgement !== null).slice(0, 5)
   const selectedResult = items.find((item) => item.checklistInstanceId === selectedResultId) ?? null
   const assignedStoreIds = getAssignedStoreIds(input.authSummary)
-  const primaryStoreId = assignedStoreIds[0] ?? t('storeChecklists.noActionStore')
   const coverageRows: ChecklistCoverageRow[] = (mobileToday?.stores ?? []).flatMap((store) =>
     (mobileToday?.templates ?? []).map((template) => {
       const rowKey = getCoverageRowKey(store.storeId, template.checklistTemplateId)
@@ -194,11 +189,15 @@ export function StoreChecklistsPage(input: {
     }),
   )
   const activeVisitCount = coverageRows.filter((row) => row.active).length
+  const completedThisMonthCount = coverageRows.reduce((sum, row) => sum + row.completedCount, 0)
   const selectedSession =
     coverageRows.find((row) => getCoverageRowKeyFromRow(row) === selectedSessionKey) ?? null
 
   const closeSession = () => {
-    if (sessionDirty && !window.confirm(t('storeChecklists.sessionCloseConfirm'))) {
+    const confirmMessage = sessionDirty
+      ? t('storeChecklists.sessionCloseConfirm')
+      : t('storeChecklists.cancelSessionConfirm')
+    if (!window.confirm(confirmMessage)) {
       return
     }
 
@@ -207,53 +206,34 @@ export function StoreChecklistsPage(input: {
   }
 
   return (
-    <section className="page-stack">
-      <section className="hero-panel store-hero-panel">
+    <section className="page-stack store-checklists-command-page">
+      <section className="hero-panel store-hero-panel store-checklists-hero">
         <div>
           <div className="eyebrow">{t('storeChecklists.heroEyebrow')}</div>
           <h2 className="hero-title">{t('storeChecklists.title')}</h2>
           <p className="hero-copy">{t('storeChecklists.heroCopy')}</p>
         </div>
-        <div className="hero-metrics">
-          <MetricAccent label={t('storeChecklists.route')} value="/store/checklists" />
-          <MetricAccent label={t('storeChecklists.storeScope')} value={primaryStoreId} />
-          <MetricAccent
-            label={t('storeChecklists.mode')}
-            value={
-              canManageVisits
-                ? t('storeChecklists.mode.visit')
-                : t('storeChecklists.mode.acknowledgement')
-            }
+        <div className="store-checklists-hero-stats" aria-label={t('storeChecklists.summaryAria')}>
+          <ChecklistSummaryPill
+            label={t('storeChecklists.pendingAcknowledgements')}
+            tone={pendingItems.length > 0 ? 'warning' : 'calm'}
+            value={pendingItems.length}
+          />
+          <ChecklistSummaryPill
+            label={t('storeChecklists.summary.activeDrafts')}
+            tone={activeVisitCount > 0 ? 'warning' : 'neutral'}
+            value={activeVisitCount}
+          />
+          <ChecklistSummaryPill
+            label={t('storeChecklists.summary.monthlyDone')}
+            tone={completedThisMonthCount > 0 ? 'accent' : 'neutral'}
+            value={completedThisMonthCount}
           />
         </div>
       </section>
 
-      <section className="metric-grid store-metric-grid">
-        <MetricCard
-          title={t('storeChecklists.pendingAcknowledgements')}
-          value={inboxItems.filter((item) => item.inboxStatus === 'needs_attention').length}
-          note={t('storeChecklists.pendingAcknowledgementsNote')}
-          icon={<ClipboardList size={18} />}
-          tone={pendingItems.length > 0 ? 'warning' : 'accent'}
-        />
-        <MetricCard
-          title={t('storeChecklists.acknowledged')}
-          value={inboxItems.filter((item) => item.inboxStatus === 'completed').length}
-          note={t('storeChecklists.acknowledgedNote')}
-          icon={<BadgeCheck size={18} />}
-          tone="calm"
-        />
-        <MetricCard
-          title={t('storeChecklists.actionModel')}
-          value={1}
-          note={t('storeChecklists.actionModelNote')}
-          icon={<ShieldAlert size={18} />}
-          tone="accent"
-        />
-      </section>
-
       {canManageVisits ? (
-        <section className="panel" aria-label={t('storeChecklists.visitPanelAria')}>
+        <section className="panel store-checklists-ledger-panel" aria-label={t('storeChecklists.visitPanelAria')}>
           <div className="panel-heading">
             <div>
               <div className="eyebrow">{t('storeChecklists.visitEyebrow')}</div>
@@ -272,34 +252,35 @@ export function StoreChecklistsPage(input: {
               copy={t('storeChecklists.noActiveChecklistCopy')}
             />
           ) : (
-            <div className="stacked-table">
+            <div className="store-checklists-ledger">
               {coverageRows.map((row) => {
                 const active = row.active
                 return (
                   <article
-                    className="stacked-row"
+                    className="store-checklists-ledger-row"
                     key={`${row.store.storeId}:${row.template.checklistTemplateId}`}
                   >
-                    <div className="stacked-row-head">
+                    <div className="store-checklists-ledger-main">
+                      <span>{formatChecklistTemplateType(t, row.template.templateType)}</span>
                       <strong>{row.store.storeName}</strong>
+                      <p>{row.template.templateName}</p>
+                    </div>
+                    <div className="store-checklists-ledger-status">
                       <StatusPill
                         tone={active ? 'warning' : row.completedCount > 0 ? 'calm' : 'danger'}
                       >
                         {formatChecklistCoverage(t, row)}
                       </StatusPill>
                     </div>
-                    <p>{row.template.templateName}</p>
-                    <div className="key-grid">
-                      <KeyValue label={t('storeChecklists.templateType')} value={row.template.templateType} />
+                    <div className="store-checklists-ledger-meta">
                       <KeyValue label={t('storeChecklists.thisMonth')} value={formatMonthlySummary(t, row)} />
                       <KeyValue
                         label={t('storeChecklists.status')}
                         value={active ? formatChecklistStatus(t, active.status) : t('storeChecklists.newVisit')}
                       />
-                      <KeyValue label={t('storeChecklists.store')} value={row.store.storeId} />
                     </div>
 
-                    <div className="action-cluster">
+                    <div className="store-checklists-ledger-action">
                       <button
                         className="control-button"
                         type="button"
@@ -534,9 +515,11 @@ function ChecklistVisitModal(input: {
               })}
             </p>
           </div>
-          <button className="control-button" type="button" onClick={input.onClose}>
-            {input.t('storeChecklists.closeSession')}
-          </button>
+          <StatusPill tone={input.active ? 'warning' : 'accent'}>
+            {input.active
+              ? formatChecklistStatus(input.t, input.active.status)
+              : input.t('storeChecklists.newVisit')}
+          </StatusPill>
         </div>
 
         <div className="store-checklist-modal-meta">
@@ -663,9 +646,11 @@ function ChecklistVisitModal(input: {
             className="control-button"
             disabled={!input.active || input.isCompleting || !hasItems}
             type="button"
-            onClick={() =>
-              input.active ? input.onComplete(input.active.checklistInstanceId) : undefined
-            }
+            onClick={() => {
+              if (!input.active) return
+              if (!window.confirm(input.t('storeChecklists.completeSessionConfirm'))) return
+              input.onComplete(input.active.checklistInstanceId)
+            }}
           >
             {input.isCompleting
               ? input.t('storeChecklists.completing')
@@ -673,6 +658,19 @@ function ChecklistVisitModal(input: {
           </button>
         </div>
       </section>
+    </div>
+  )
+}
+
+function ChecklistSummaryPill(input: {
+  label: string
+  tone: 'calm' | 'warning' | 'accent' | 'neutral'
+  value: number
+}) {
+  return (
+    <div className={`store-checklists-summary-pill store-checklists-summary-pill-${input.tone}`}>
+      <span>{input.label}</span>
+      <strong>{input.value.toLocaleString('tr-TR')}</strong>
     </div>
   )
 }

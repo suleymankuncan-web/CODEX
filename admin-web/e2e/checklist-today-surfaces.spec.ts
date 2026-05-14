@@ -10,7 +10,7 @@ test('region manager checklist surface shows assigned store visit workflow', asy
   await page.goto('/store/checklists')
 
   await expect(page.getByText('Devam et')).toBeVisible()
-  await expect(page.getByText('Taslak')).toBeVisible()
+  await expect(page.getByText('Taslak', { exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: 'Devam et' }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
@@ -29,6 +29,7 @@ test('region manager checklist surface shows assigned store visit workflow', asy
     },
   ])
   await expect(page.getByRole('button', { name: 'Tamamla' })).toBeVisible()
+  page.once('dialog', (dialog) => dialog.accept())
   await page.getByRole('button', { name: 'Tamamla' }).click()
   await expect.poll(() => requests.completes).toEqual([
     { checklistInstanceId: '33333333-3333-4333-8333-333333333333' },
@@ -101,6 +102,7 @@ test('completed checklist handoff moves from field visit to store acknowledgemen
     },
   ])
 
+  page.once('dialog', (dialog) => dialog.accept())
   await page.getByRole('button', { name: 'Complete' }).click()
   await expect.poll(() => requests.completes).toEqual([
     { checklistInstanceId: '33333333-3333-4333-8333-333333333333' },
@@ -207,18 +209,19 @@ test('store checklist surface switches to English copy and persists locale', asy
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(
-    page.getByRole('heading', { name: /Checklist results flow as acknowledgements/i }),
+    page.getByRole('heading', { name: 'Checklist operations panel' }),
   ).toBeVisible()
   await expect(page.getByText('Visit flow')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Assigned store checklist visits' })).toBeVisible()
   await expect(page.getByText('In progress', { exact: true }).first()).toBeVisible()
-  await expect(page.getByText('Template type', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('Active drafts', { exact: true })).toBeVisible()
   await expect(page.getByText('This month', { exact: true })).toBeVisible()
   await expect(page.getByText('Draft', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Continue' }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Complete' })).toBeVisible()
-  await page.getByRole('button', { name: 'Close' }).click()
+  page.once('dialog', (dialog) => dialog.accept())
+  await page.getByRole('button', { name: 'Cancel' }).click()
   await expect(
     page.getByRole('heading', { name: 'Completed checklist receipts waiting on store acknowledgement' }),
   ).toBeVisible()
@@ -240,7 +243,7 @@ test('store checklist surface switches to English copy and persists locale', asy
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(
-    page.getByRole('heading', { name: /Checklist results flow as acknowledgements/i }),
+    page.getByRole('heading', { name: 'Checklist operations panel' }),
   ).toBeVisible()
 })
 
