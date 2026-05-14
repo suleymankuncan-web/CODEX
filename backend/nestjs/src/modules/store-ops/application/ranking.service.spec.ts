@@ -55,8 +55,14 @@ describe("RankingService", () => {
     });
   }
 
+  type StoreRankingFixtureRow = Omit<
+    ReturnType<typeof createStoreRows>[number],
+    "target_value"
+  > & { target_value: string | null };
+
   function createRepositoryMock(input?: {
     storeRows?: ReturnType<typeof createStoreRows>;
+    storeChecklistRows?: StoreRankingFixtureRow[];
     personnelRows?: ReturnType<typeof createPersonnelRows>;
     storeBenchmarkRows?: Array<{ kpi_code: string; benchmark_value: string | null }>;
     personnelBenchmarkRows?: Array<{ kpi_code: string; benchmark_value: string | null }>;
@@ -66,6 +72,7 @@ describe("RankingService", () => {
       getLatestMonthlyRankingPeriod: jest.fn(async () => period),
       listRankingAvailablePeriods: jest.fn(async () => [period]),
       listRankingStoreKpiRows: jest.fn(async () => input?.storeRows ?? createStoreRows(105)),
+      listRankingStoreChecklistRows: jest.fn(async () => input?.storeChecklistRows ?? []),
       listRankingPersonnelKpiRows: jest.fn(
         async () => input?.personnelRows ?? createPersonnelRows(105),
       ),
@@ -492,6 +499,104 @@ describe("RankingService", () => {
       expect.objectContaining({
         storeId: "store-001",
         scoreValue: 100,
+      }),
+    );
+  });
+
+  it("includes completed BM and VM checklist visits in live store rankings", async () => {
+    const baseStoreRow = createStoreRows(1)[0];
+    const storeRows = [
+      {
+        ...baseStoreRow,
+        kpi_code: "TARGET_ACHIEVEMENT",
+        kpi_name: "Hedef gerceklestirme orani",
+        actual_value: "100",
+        target_value: "100",
+      },
+      {
+        ...baseStoreRow,
+        kpi_code: "CR",
+        kpi_name: "CR",
+        actual_value: "0.2",
+        target_value: "not_applicable",
+      },
+      {
+        ...baseStoreRow,
+        kpi_code: "ATV",
+        kpi_name: "ATV",
+        actual_value: "1500",
+        target_value: "not_applicable",
+      },
+      {
+        ...baseStoreRow,
+        kpi_code: "UPT",
+        kpi_name: "UPT",
+        actual_value: "4",
+        target_value: "not_applicable",
+      },
+    ];
+    const checklistRows = [
+      {
+        ...baseStoreRow,
+        kpi_code: "BM_CHECKLIST",
+        kpi_name: "BM Checklist",
+        actual_value: "80",
+        target_value: null,
+      },
+      {
+        ...baseStoreRow,
+        kpi_code: "VM_CHECKLIST",
+        kpi_name: "VM Checklist",
+        actual_value: "100",
+        target_value: null,
+      },
+    ];
+    const repository = createRepositoryMock({
+      storeRows,
+      storeChecklistRows: checklistRows,
+      personnelRows: [],
+      storeBenchmarkRows: [
+        { kpi_code: "CR", benchmark_value: "0.2" },
+        { kpi_code: "ATV", benchmark_value: "1500" },
+        { kpi_code: "UPT", benchmark_value: "4" },
+      ],
+    });
+    const service = new RankingService(
+      repository as never,
+      createKpiConfigRepositoryMock() as never,
+    );
+
+    const result = await service.getRankings({
+      userId: "regional-1",
+      roleCodes: ["REGION_MANAGER"],
+      companyIds: [],
+      regionIds: [],
+      storeIds: [],
+      assignedStoreIds: [],
+      periodType: "monthly",
+    });
+
+    expect(repository.listRankingStoreChecklistRows).toHaveBeenCalledWith({
+      companyIds: [],
+      periodStart: "2026-03-01",
+      periodEnd: "2026-03-31",
+    });
+    expect(result.storeLeaderboard.items[0]).toEqual(
+      expect.objectContaining({
+        storeId: "store-001",
+        scoreValue: 99,
+        metrics: expect.arrayContaining([
+          expect.objectContaining({
+            code: "BM_CHECKLIST",
+            actualValue: 80,
+            contributionValue: 4,
+          }),
+          expect.objectContaining({
+            code: "VM_CHECKLIST",
+            actualValue: 100,
+            contributionValue: 5,
+          }),
+        ]),
       }),
     );
   });

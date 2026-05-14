@@ -127,7 +127,8 @@ export class RankingService {
     }
 
     const [
-      rawStoreRows,
+      rawStoreKpiRows,
+      rawStoreChecklistRows,
       rawPersonnelRows,
       storeBenchmarkRows,
       personnelBenchmarkRows,
@@ -137,6 +138,11 @@ export class RankingService {
         metricCodes: storeMetricCodes,
         companyIds: input.companyIds,
         periodType: latestPeriod.period_type,
+        periodStart: latestPeriod.period_start,
+        periodEnd: latestPeriod.period_end,
+      }),
+      this.reportingRepository.listRankingStoreChecklistRows({
+        companyIds: input.companyIds,
         periodStart: latestPeriod.period_start,
         periodEnd: latestPeriod.period_end,
       }),
@@ -166,6 +172,7 @@ export class RankingService {
         periodEnd: latestPeriod.period_end,
       }),
     ]);
+    const rawStoreRows = [...rawStoreKpiRows, ...rawStoreChecklistRows];
 
     const storeBenchmarkLookup = this.toBenchmarkLookup(storeBenchmarkRows);
     const personnelBenchmarkLookup = this.toBenchmarkLookup(personnelBenchmarkRows);
