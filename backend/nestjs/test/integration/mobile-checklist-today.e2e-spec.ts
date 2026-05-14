@@ -593,4 +593,303 @@ describe("Mobile checklist today flow", () => {
 
     await app.close();
   });
+
+  it("hands a completed BM checklist to the store manager acknowledgement queue", async () => {
+    const checklistInstanceIdForHandoff = "44444444-4444-4444-8444-444444444444";
+    const state = {
+      active: false,
+      responseSaved: false,
+      completed: false,
+      acknowledged: false,
+      acknowledgementNote: null as string | null,
+    };
+    const query = jest.fn(async (sql: string, params?: unknown[]) => {
+      if (sql.includes("SELECT ct.checklist_template_id, ct.template_type")) {
+        return {
+          rows: [
+            {
+              checklist_template_id: templateId,
+              template_type: "BM_STORE_VISIT",
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("INSERT INTO ops.checklist_instance")) {
+        state.active = true;
+        return {
+          rows: [
+            {
+              checklist_instance_id: checklistInstanceIdForHandoff,
+              status: "in_progress",
+              created_at: "2026-04-28T10:00:00.000Z",
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("SELECT ci.checklist_instance_id, ci.store_id, ci.status, ct.template_type")) {
+        return {
+          rows: [
+            {
+              checklist_instance_id: checklistInstanceIdForHandoff,
+              store_id: storeId,
+              status: state.completed ? "completed" : "in_progress",
+              template_type: "BM_STORE_VISIT",
+            },
+          ],
+        };
+      }
+
+      if (
+        sql.includes("FROM ops.checklist_instance ci") &&
+        sql.includes("cti.max_score") &&
+        !sql.includes("jsonb_agg")
+      ) {
+        return {
+          rows: [
+            {
+              checklist_instance_id: checklistInstanceIdForHandoff,
+              store_id: storeId,
+              status: state.completed ? "completed" : "in_progress",
+              max_score: "10.00",
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("INSERT INTO ops.checklist_response")) {
+        state.responseSaved = true;
+        return {
+          rows: [
+            {
+              response_id: "66666666-6666-4666-8666-666666666666",
+              responded_at: "2026-04-28T10:05:00.000Z",
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("UPDATE ops.checklist_instance") && sql.includes("status = 'planned'")) {
+        return { rows: [] };
+      }
+
+      if (sql.includes("SELECT checklist_instance_id, store_id, status") && sql.includes("FOR UPDATE")) {
+        return {
+          rows: [
+            {
+              checklist_instance_id: checklistInstanceIdForHandoff,
+              store_id: storeId,
+              status: state.completed ? "completed" : "in_progress",
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("SUM((COALESCE(cr.score_value, 0) / NULLIF(cti.max_score, 0))")) {
+        return {
+          rows: [
+            {
+              total_score: state.responseSaved ? "80.00" : "0.00",
+              compliance_rate: state.responseSaved ? "1.0000" : "0.0000",
+              missing_mandatory_count: "0",
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("UPDATE ops.checklist_instance") && sql.includes("locked_at = NOW()")) {
+        state.active = false;
+        state.completed = true;
+        return {
+          rows: [
+            {
+              checklist_instance_id: checklistInstanceIdForHandoff,
+              status: "completed",
+              total_score: "80.00",
+              compliance_rate: "1.0000",
+              completed_at: "2026-04-28T10:10:00.000Z",
+              locked_at: "2026-04-28T10:10:00.000Z",
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("jsonb_agg")) {
+        return {
+          rows: state.completed
+            ? [
+                {
+                  checklist_instance_id: checklistInstanceIdForHandoff,
+                  checklist_template_id: templateId,
+                  template_name: "BM Result",
+                  template_type: "BM_STORE_VISIT",
+                  category: "BM",
+                  store_id: storeId,
+                  store_name: "Marmara Park",
+                  completed_by_user_id: "region-user-1",
+                  completed_at: "2026-04-28T10:10:00.000Z",
+                  status: "completed",
+                  total_score: "80.00",
+                  compliance_rate: "1.0000",
+                  checklist_acknowledgement_id: state.acknowledged
+                    ? "77777777-7777-4777-8777-777777777777"
+                    : null,
+                  acknowledged_by_user_id: state.acknowledged ? "store-manager-1" : null,
+                  acknowledgement_note: state.acknowledgementNote,
+                  acknowledged_at: state.acknowledged ? "2026-04-28T11:00:00.000Z" : null,
+                  responses_json: [
+                    {
+                      templateItemId,
+                      sectionName: "Vitrin",
+                      itemNo: 1,
+                      itemText: "Vitrin standartlara uygun",
+                      responseType: "score",
+                      weight: 100,
+                      maxScore: 10,
+                      scoreValue: 8,
+                      commentText: "Saha kontrolu tamamlandi",
+                    },
+                  ],
+                },
+              ]
+            : [],
+        };
+      }
+
+      if (
+        sql.includes("SELECT checklist_instance_id, store_id") &&
+        sql.includes("FROM ops.checklist_instance")
+      ) {
+        return {
+          rows: [
+            {
+              checklist_instance_id: checklistInstanceIdForHandoff,
+              store_id: storeId,
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("INSERT INTO ops.checklist_acknowledgement")) {
+        state.acknowledged = true;
+        state.acknowledgementNote = String(params?.[3] ?? "");
+        return {
+          rows: [
+            {
+              checklist_acknowledgement_id: "77777777-7777-4777-8777-777777777777",
+              acknowledged_by_user_id: "store-manager-1",
+              acknowledgement_note: state.acknowledgementNote,
+              acknowledged_at: "2026-04-28T11:00:00.000Z",
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("INSERT INTO audit.event_log")) {
+        return { rows: [] };
+      }
+
+      return { rows: [] };
+    });
+    const app = await createIntegrationApp({
+      databaseService: {
+        query,
+        withTransaction: async <T>(work: (client: { query: typeof query }) => Promise<T>) =>
+          work({ query }),
+      },
+    });
+
+    const start = await request(app.getHttpServer())
+      .post("/api/mobile/checklists/instances")
+      .set("x-user-id", "region-user-1")
+      .set("x-role-codes", "REGION_MANAGER")
+      .set("x-store-ids", storeId)
+      .set("x-assigned-store-ids", storeId)
+      .send({ checklistTemplateId: templateId, storeId });
+
+    expect(start.status).toBe(201);
+    expect(start.body.data.checklistInstance.checklist_instance_id).toBe(
+      checklistInstanceIdForHandoff,
+    );
+
+    const save = await request(app.getHttpServer())
+      .patch(`/api/mobile/checklists/instances/${checklistInstanceIdForHandoff}/responses`)
+      .set("x-user-id", "region-user-1")
+      .set("x-role-codes", "REGION_MANAGER")
+      .set("x-store-ids", storeId)
+      .set("x-assigned-store-ids", storeId)
+      .send({
+        templateItemId,
+        scoreValue: 8,
+        commentText: "Saha kontrolu tamamlandi",
+      });
+
+    expect(save.status).toBe(200);
+
+    const complete = await request(app.getHttpServer())
+      .post(`/api/mobile/checklists/instances/${checklistInstanceIdForHandoff}/complete`)
+      .set("x-user-id", "region-user-1")
+      .set("x-role-codes", "REGION_MANAGER")
+      .set("x-store-ids", storeId)
+      .set("x-assigned-store-ids", storeId)
+      .send({});
+
+    expect(complete.status).toBe(201);
+    expect(complete.body.data.checklistInstance.status).toBe("completed");
+    expect(state.completed).toBe(true);
+
+    const pendingList = await request(app.getHttpServer())
+      .post("/api/checklists/acknowledgements/list")
+      .set("x-user-id", "store-manager-1")
+      .set("x-role-codes", "STORE_MANAGER")
+      .set("x-store-ids", storeId)
+      .set("x-assigned-store-ids", storeId)
+      .send({});
+
+    expect(pendingList.status).toBe(201);
+    expect(pendingList.body.items).toHaveLength(1);
+    expect(pendingList.body.items[0]).toMatchObject({
+      checklistInstanceId: checklistInstanceIdForHandoff,
+      templateType: "BM_STORE_VISIT",
+      totalScore: 80,
+      acknowledgement: null,
+    });
+    expect(pendingList.body.items[0].responses).toEqual([
+      expect.objectContaining({
+        templateItemId,
+        scoreValue: 8,
+        commentText: "Saha kontrolu tamamlandi",
+      }),
+    ]);
+
+    const acknowledge = await request(app.getHttpServer())
+      .post(`/api/checklists/instances/${checklistInstanceIdForHandoff}/acknowledge`)
+      .set("x-user-id", "store-manager-1")
+      .set("x-role-codes", "STORE_MANAGER")
+      .set("x-store-ids", storeId)
+      .set("x-assigned-store-ids", storeId)
+      .send({ acknowledgementNote: "Magaza sonucu gordu" });
+
+    expect(acknowledge.status).toBe(201);
+    expect(acknowledge.body.data.acknowledgement.acknowledgementNote).toBe(
+      "Magaza sonucu gordu",
+    );
+
+    const acknowledgedList = await request(app.getHttpServer())
+      .post("/api/checklists/acknowledgements/list")
+      .set("x-user-id", "store-manager-1")
+      .set("x-role-codes", "STORE_MANAGER")
+      .set("x-store-ids", storeId)
+      .set("x-assigned-store-ids", storeId)
+      .send({});
+
+    expect(acknowledgedList.status).toBe(201);
+    expect(acknowledgedList.body.items[0].acknowledgement).toMatchObject({
+      acknowledgedByUserId: "store-manager-1",
+      acknowledgementNote: "Magaza sonucu gordu",
+    });
+
+    await app.close();
+  });
 });
