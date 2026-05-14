@@ -4,6 +4,13 @@ const targetRequestListRoles = ['STORE_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER',
 const targetRequestCreateRoles = ['STORE_MANAGER', 'SUPER_ADMIN']
 const targetRequestApproveRoles = ['SUPER_ADMIN', 'REGION_MANAGER']
 const checklistAcknowledgementRoles = ['STORE_MANAGER', 'SUPER_ADMIN']
+const checklistResultReadRoles = [
+  'STORE_MANAGER',
+  'SUPER_ADMIN',
+  'REPORT_VIEWER',
+  'REGION_MANAGER',
+  'VISUAL_MERCHANDISER',
+]
 
 export function hasAnyRole(authSummary: AuthSessionSummary | null, requiredRoles: string[]) {
   const roles = authSummary?.user.roleCodes ?? []
@@ -51,4 +58,8 @@ export function canApproveTargetDistributionRequest(
 
 export function canAcknowledgeChecklist(authSummary: AuthSessionSummary | null, storeId: string | null) {
   return hasAnyRole(authSummary, checklistAcknowledgementRoles) && canActOnStore(authSummary, storeId)
+}
+
+export function canReadChecklistResults(authSummary: AuthSessionSummary | null) {
+  return hasAnyRole(authSummary, checklistResultReadRoles)
 }

@@ -114,7 +114,13 @@ export class ChecklistController {
 
   @Post("acknowledgements/list")
   @RequireScope("authenticated")
-  @RequireRoles("STORE_MANAGER", "SUPER_ADMIN", "REPORT_VIEWER")
+  @RequireRoles(
+    "STORE_MANAGER",
+    "SUPER_ADMIN",
+    "REPORT_VIEWER",
+    "REGION_MANAGER",
+    "VISUAL_MERCHANDISER",
+  )
   async listChecklistAcknowledgements(
     @Req()
     request: {

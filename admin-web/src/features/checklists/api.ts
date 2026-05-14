@@ -65,13 +65,26 @@ export type ChecklistAcknowledgementItem = {
   checklistInstanceId: string
   checklistTemplateId: string
   templateName: string
+  templateType: string
   category: string
   storeId: string
   storeName: string
+  completedByUserId: string | null
   completedAt: string | null
   status: string
   totalScore: number | null
   complianceRate: number | null
+  responses: Array<{
+    templateItemId: string
+    sectionName: string
+    itemNo: number
+    itemText: string
+    responseType: string
+    weight: number
+    maxScore: number
+    scoreValue: number | null
+    commentText: string | null
+  }>
   acknowledgement: {
     checklistAcknowledgementId: string
     acknowledgedByUserId: string
