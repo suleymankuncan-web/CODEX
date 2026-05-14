@@ -33,7 +33,7 @@ export class MobileChecklistController {
   }
 
   @Post("instances")
-  @RequireScope("store")
+  @RequireScope("authenticated")
   @RequireActionScope("store")
   @RequireRoles("REGION_MANAGER", "VISUAL_MERCHANDISER", "SUPER_ADMIN")
   async startInstance(
