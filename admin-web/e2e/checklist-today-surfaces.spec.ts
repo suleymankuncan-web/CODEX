@@ -214,7 +214,7 @@ test('store checklist surface switches to English copy and persists locale', asy
   await expect(page.getByRole('heading', { name: 'Assigned store checklist visits' })).toBeVisible()
   await expect(page.getByText('In progress', { exact: true }).first()).toBeVisible()
   await expect(page.getByText('Active drafts', { exact: true })).toBeVisible()
-  await expect(page.getByText('This month', { exact: true })).toBeVisible()
+  await expect(page.getByText('BM score', { exact: true })).toBeVisible()
   await expect(page.locator('.store-checklists-visit-row').getByText('Draft', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Continue' }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
