@@ -1643,6 +1643,103 @@ export class ReportingRepository {
     return result.rows;
   }
 
+  async listRankingStoreChecklistRows(input: {
+    companyIds: string[];
+    periodStart: string;
+    periodEnd: string;
+  }) {
+    const params: unknown[] = [input.periodStart, input.periodEnd];
+    const clauses = [
+      `ci.status = 'completed'`,
+      `ci.completed_at IS NOT NULL`,
+      `ci.completed_at::date BETWEEN $1::date AND $2::date`,
+      `ct.template_type IN ('BM_STORE_VISIT', 'VM_STORE_VISIT')`,
+      `store.kpi_import_enabled = TRUE`,
+    ];
+
+    if (input.companyIds.length > 0) {
+      params.push(input.companyIds);
+      clauses.push(`store.company_id = ANY($${params.length}::uuid[])`);
+    }
+
+    const result = await this.databaseService.query<{
+      store_id: string;
+      store_name: string | null;
+      region_id: string | null;
+      region_name: string | null;
+      region_manager_user_id: string | null;
+      region_manager_name: string | null;
+      kpi_code: string;
+      kpi_name: string | null;
+      actual_value: string | null;
+      target_value: string | null;
+    }>(
+      `
+        SELECT
+          store.store_id::text AS store_id,
+          store.store_name,
+          store.region_id::text AS region_id,
+          region.region_name,
+          region_manager.user_id AS region_manager_user_id,
+          region_manager.display_name AS region_manager_name,
+          CASE ct.template_type
+            WHEN 'BM_STORE_VISIT' THEN 'BM_CHECKLIST'
+            WHEN 'VM_STORE_VISIT' THEN 'VM_CHECKLIST'
+          END AS kpi_code,
+          CASE ct.template_type
+            WHEN 'BM_STORE_VISIT' THEN 'BM Checklist'
+            WHEN 'VM_STORE_VISIT' THEN 'VM Checklist'
+          END AS kpi_name,
+          AVG(ci.total_score)::numeric(12,2)::text AS actual_value,
+          NULL::text AS target_value
+        FROM ops.checklist_instance ci
+        INNER JOIN ops.checklist_template ct
+          ON ct.checklist_template_id = ci.checklist_template_id
+        INNER JOIN ops.store store
+          ON store.store_id = ci.store_id
+        LEFT JOIN ops.region region
+          ON region.region_id = store.region_id
+        LEFT JOIN LATERAL (
+          SELECT
+            ua.user_id::text AS user_id,
+            COALESCE(
+              NULLIF(TRIM(CONCAT(employee.first_name, ' ', employee.last_name)), ''),
+              ua.username,
+              ua.email,
+              ua.user_id::text
+            ) AS display_name
+          FROM ops.user_role_assignment ura
+          INNER JOIN ops.role role
+            ON role.role_id = ura.role_id
+           AND role.role_code = 'REGION_MANAGER'
+          INNER JOIN ops.user_account ua
+            ON ua.user_id = ura.user_id
+           AND ua.is_active = TRUE
+          LEFT JOIN ops.employee employee
+            ON employee.employee_id = ua.employee_id
+          WHERE ura.region_id = store.region_id
+            AND ura.start_at <= NOW()
+            AND (ura.end_at IS NULL OR ura.end_at >= NOW())
+          ORDER BY ua.username ASC, ua.user_id ASC
+          LIMIT 1
+        ) region_manager ON TRUE
+        WHERE ${clauses.join(" AND ")}
+        GROUP BY
+          store.store_id,
+          store.store_name,
+          store.region_id,
+          region.region_name,
+          region_manager.user_id,
+          region_manager.display_name,
+          ct.template_type
+        ORDER BY store.store_name ASC, store.store_id ASC, kpi_code ASC
+      `,
+      params,
+    );
+
+    return result.rows;
+  }
+
   async listRankingPersonnelKpiRows(input: {
     metricCodes: string[];
     companyIds: string[];
