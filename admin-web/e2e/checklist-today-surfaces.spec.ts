@@ -9,8 +9,9 @@ test('region manager checklist surface shows assigned store visit workflow', asy
   await setupChecklistPage(page, ['REGION_MANAGER'], { requests })
   await page.goto('/store/checklists')
 
+  await expect(page.locator('.store-checklists-command-page .stacked-row')).toHaveCount(0)
   await expect(page.getByText('Devam et')).toBeVisible()
-  await expect(page.getByText('Taslak', { exact: true })).toBeVisible()
+  await expect(page.locator('.store-checklists-visit-row').getByText('Taslak', { exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: 'Devam et' }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
@@ -28,9 +29,9 @@ test('region manager checklist surface shows assigned store visit workflow', asy
       },
     },
   ])
-  await expect(page.getByRole('button', { name: 'Tamamla' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Tamamla', exact: true })).toBeVisible()
   page.once('dialog', (dialog) => dialog.accept())
-  await page.getByRole('button', { name: 'Tamamla' }).click()
+  await page.getByRole('button', { name: 'Tamamla', exact: true }).click()
   await expect.poll(() => requests.completes).toEqual([
     { checklistInstanceId: '33333333-3333-4333-8333-333333333333' },
   ])
@@ -42,7 +43,7 @@ test('store manager checklist surface keeps acknowledgement language', async ({ 
   await page.goto('/store/checklists')
 
   await page
-    .locator('.stacked-row')
+    .locator('.store-checklists-history-row')
     .filter({ hasText: 'BM Result' })
     .getByRole('button', { name: 'Detayı gör' })
     .click()
@@ -103,7 +104,7 @@ test('completed checklist handoff moves from field visit to store acknowledgemen
   ])
 
   page.once('dialog', (dialog) => dialog.accept())
-  await page.getByRole('button', { name: 'Complete' }).click()
+  await page.getByRole('button', { name: 'Complete', exact: true }).click()
   await expect.poll(() => requests.completes).toEqual([
     { checklistInstanceId: '33333333-3333-4333-8333-333333333333' },
   ])
@@ -116,7 +117,7 @@ test('completed checklist handoff moves from field visit to store acknowledgemen
   await expect(
     page.getByRole('heading', { name: 'Completed checklist receipts waiting on store acknowledgement' }),
   ).toBeVisible()
-  const resultRow = page.locator('.stacked-row').filter({ hasText: 'BM Result' })
+  const resultRow = page.locator('.store-checklists-history-row').filter({ hasText: 'BM Result' })
   await expect(resultRow).toBeVisible()
   await resultRow.getByRole('button', { name: 'View details' }).click()
   await expect(page.getByText('Checklist result', { exact: true })).toBeVisible()
@@ -132,7 +133,7 @@ test('completed checklist handoff moves from field visit to store acknowledgemen
   await expect(page.getByText('No pending checklist receipts')).toBeVisible()
   await expect(page.getByText('Store saw the completed visit')).toBeVisible()
   await expect(
-    page.locator('.stacked-row').filter({ hasText: 'BM Result' }).filter({ hasText: 'Acknowledged' }),
+    page.locator('.store-checklists-history-row').filter({ hasText: 'BM Result' }).filter({ hasText: 'Acknowledged' }),
   ).toBeVisible()
 })
 
@@ -140,10 +141,10 @@ test('region manager can read BM and VM checklist results without acknowledging 
   await setupChecklistPage(page, ['REGION_MANAGER'])
   await page.goto('/store/checklists')
 
-  await expect(page.locator('.stacked-row').filter({ hasText: 'BM Result' })).toBeVisible()
-  await expect(page.locator('.stacked-row').filter({ hasText: 'VM Result' })).toBeVisible()
+  await expect(page.locator('.store-checklists-history-row').filter({ hasText: 'BM Result' })).toBeVisible()
+  await expect(page.locator('.store-checklists-history-row').filter({ hasText: 'VM Result' })).toBeVisible()
   await page
-    .locator('.stacked-row')
+    .locator('.store-checklists-history-row')
     .filter({ hasText: 'VM Result' })
     .getByRole('button', { name: 'Detayı gör' })
     .click()
@@ -197,8 +198,8 @@ test('visual merchandiser sees checklist-only VM coverage and no broad store lin
   await expect(page.locator('a[href="/store/targets"]')).toHaveCount(0)
   await expect(page.locator('a[href="/store/reports"]')).toHaveCount(0)
   await expect(page.locator('a[href="/store/competitions"]')).toHaveCount(0)
-  await expect(page.locator('.stacked-row').filter({ hasText: 'BM Result' })).toHaveCount(0)
-  await expect(page.locator('.stacked-row').filter({ hasText: 'VM Result' })).toBeVisible()
+  await expect(page.locator('.store-checklists-history-row').filter({ hasText: 'BM Result' })).toHaveCount(0)
+  await expect(page.locator('.store-checklists-history-row').filter({ hasText: 'VM Result' })).toBeVisible()
 })
 
 test('store checklist surface switches to English copy and persists locale', async ({ page }) => {
@@ -216,17 +217,17 @@ test('store checklist surface switches to English copy and persists locale', asy
   await expect(page.getByText('In progress', { exact: true }).first()).toBeVisible()
   await expect(page.getByText('Active drafts', { exact: true })).toBeVisible()
   await expect(page.getByText('This month', { exact: true })).toBeVisible()
-  await expect(page.getByText('Draft', { exact: true })).toBeVisible()
+  await expect(page.locator('.store-checklists-visit-row').getByText('Draft', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Continue' }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Complete' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Complete', exact: true })).toBeVisible()
   page.once('dialog', (dialog) => dialog.accept())
   await page.getByRole('button', { name: 'Cancel' }).click()
   await expect(
     page.getByRole('heading', { name: 'Completed checklist receipts waiting on store acknowledgement' }),
   ).toBeVisible()
   await page
-    .locator('.stacked-row')
+    .locator('.store-checklists-history-row')
     .filter({ hasText: 'BM Result' })
     .getByRole('button', { name: 'View details' })
     .click()
