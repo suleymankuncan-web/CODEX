@@ -32,6 +32,13 @@ type ChecklistCoverageRow = {
   completedCount: number
 }
 
+type ChecklistStoreVisitRow = {
+  store: MobileChecklistToday['stores'][number]
+  bm?: ChecklistCoverageRow
+  vm?: ChecklistCoverageRow
+  primary: ChecklistCoverageRow
+}
+
 type ChecklistSession = ChecklistCoverageRow
 type ChecklistTone = 'calm' | 'warning' | 'accent' | 'danger' | 'neutral'
 type ChecklistTypeFilter = 'all' | 'BM_STORE_VISIT' | 'VM_STORE_VISIT'
@@ -288,6 +295,11 @@ export function StoreChecklistsPage(input: {
     visitSort,
     locale,
   )
+  const visitStoreRows = sortStoreVisitRows(
+    buildChecklistStoreVisitRows(filteredCoverageRows),
+    visitSort,
+    locale,
+  )
   const filteredPendingItems = sortChecklistItems(
     pendingItems.filter((item) =>
       doesChecklistItemMatchFilters(item, {
@@ -388,6 +400,13 @@ export function StoreChecklistsPage(input: {
             <div>
               <div className="store-checklists-eyebrow">{t('storeChecklists.visitEyebrow')}</div>
               <h3>{t('storeChecklists.visitTitle')}</h3>
+              <p>
+                {getStaticCopy(
+                  locale,
+                  'Her satır tek mağaza; BM ve VM checklist skorları birbirine karışmadan okunur.',
+                  'Each row is one store; BM and VM checklist scores stay separate.',
+                )}
+              </p>
             </div>
             <ChecklistBadge tone={activeVisitCount > 0 ? 'warning' : 'accent'}>
               {activeVisitCount > 0
@@ -396,7 +415,7 @@ export function StoreChecklistsPage(input: {
             </ChecklistBadge>
           </div>
 
-          {filteredCoverageRows.length === 0 ? (
+          {visitStoreRows.length === 0 ? (
             <ChecklistEmptyBlock
               copy={t('storeChecklists.noActiveChecklistCopy')}
               title={t('storeChecklists.noActiveChecklistTitle')}
@@ -416,14 +435,14 @@ export function StoreChecklistsPage(input: {
                   direction={visitSort.direction}
                   onClick={() => setVisitSort(toggleSort(visitSort, 'score'))}
                 >
-                  {t('storeChecklists.score')}
+                  {getStaticCopy(locale, 'BM skor', 'BM score')}
                 </SortButton>
                 <SortButton
-                  active={visitSort.key === 'status'}
+                  active={visitSort.key === 'score'}
                   direction={visitSort.direction}
-                  onClick={() => setVisitSort(toggleSort(visitSort, 'status'))}
+                  onClick={() => setVisitSort(toggleSort(visitSort, 'score'))}
                 >
-                  {t('storeChecklists.status')}
+                  {getStaticCopy(locale, 'VM skor', 'VM score')}
                 </SortButton>
                 <SortButton
                   active={visitSort.key === 'date'}
@@ -432,44 +451,51 @@ export function StoreChecklistsPage(input: {
                 >
                   {getStaticCopy(locale, 'Son ziyaret', 'Last visit')}
                 </SortButton>
+                <SortButton
+                  active={visitSort.key === 'priority'}
+                  direction={visitSort.direction}
+                  onClick={() => setVisitSort(toggleSort(visitSort, 'priority'))}
+                >
+                  {getStaticCopy(locale, 'Düşük alan', 'Low area')}
+                </SortButton>
                 <span>{getStaticCopy(locale, 'Aksiyon', 'Action')}</span>
               </div>
 
-              {filteredCoverageRows.map((row) => {
+              {visitStoreRows.map((storeRow) => {
+                const row = storeRow.primary
                 const active = row.active
-                const rowScore = getCoverageScore(row)
-                const canStart = active || assignedStoreIds.includes(row.store.storeId)
+                const canStart = active || assignedStoreIds.includes(storeRow.store.storeId)
                 const rowKey = getCoverageRowKeyFromRow(row)
                 const isStartingRow =
                   startVisitMutation.isPending &&
-                  startVisitMutation.variables?.storeId === row.store.storeId &&
+                  startVisitMutation.variables?.storeId === storeRow.store.storeId &&
                   startVisitMutation.variables?.checklistTemplateId === row.template.checklistTemplateId
 
                 return (
                   <article
                     className="store-checklists-visit-row"
-                    key={`${row.store.storeId}:${row.template.checklistTemplateId}`}
+                    key={getStoreVisitRowKey(storeRow)}
                   >
                     <div className="store-checklists-row-main">
-                      <ChecklistBadge tone={row.template.templateType === 'VM_STORE_VISIT' ? 'accent' : 'neutral'}>
-                        {formatChecklistTemplateType(t, row.template.templateType)}
-                      </ChecklistBadge>
-                      <strong>{row.store.storeName}</strong>
-                      <p>{row.template.templateName}</p>
+                      <strong>{storeRow.store.storeName}</strong>
+                      <p>{getStoreVisitSummary(t, locale, storeRow)}</p>
                     </div>
-                    <ChecklistScoreBar
-                      label={t('storeChecklists.thisMonth')}
-                      percent={rowScore ?? 0}
-                      tone={rowScore === null ? 'neutral' : rowScore >= 70 ? 'calm' : 'warning'}
-                      value={rowScore === null ? t('storeChecklists.noScore') : `${rowScore}`}
+                    <ChecklistTemplateScore
+                      label={getStaticCopy(locale, 'BM', 'BM')}
+                      row={storeRow.bm}
+                      t={t}
                     />
-                    <ChecklistBadge tone={getCoverageTone(row)}>
-                      {formatChecklistCoverage(t, row)}
+                    <ChecklistTemplateScore
+                      label={getStaticCopy(locale, 'VM', 'VM')}
+                      row={storeRow.vm}
+                      t={t}
+                    />
+                    <ChecklistBadge tone={getStoreVisitDate(storeRow) ? 'accent' : 'danger'}>
+                      {formatOptionalDate(getStoreVisitDate(storeRow), locale)}
                     </ChecklistBadge>
-                    <ChecklistFact
-                      label={t('storeChecklists.status')}
-                      value={active ? formatChecklistStatus(t, active.status) : formatOptionalDate(row.summary?.monthStart, locale)}
-                    />
+                    <ChecklistBadge tone={getStoreVisitRiskTone(storeRow)}>
+                      {getStoreVisitRiskLabel(t, locale, storeRow)}
+                    </ChecklistBadge>
                     <button
                       className="store-checklists-action-button"
                       disabled={!canStart || (!active && startVisitMutation.isPending)}
@@ -484,7 +510,7 @@ export function StoreChecklistsPage(input: {
                         hydrateActiveResponseDrafts(undefined)
                         setSelectedSessionKey(null)
                         startVisitMutation.mutate({
-                          storeId: row.store.storeId,
+                          storeId: storeRow.store.storeId,
                           checklistTemplateId: row.template.checklistTemplateId,
                         })
                       }}
@@ -955,22 +981,41 @@ function ChecklistVisitModal(input: {
                           </div>
                         </div>
                         <div className="store-checklist-modal-inputs">
-                          <label>
-                            <span>{input.t('storeChecklists.scoreInput')}</span>
-                            <input
-                              disabled={!input.active}
-                              max={item.maxScore}
-                              min={0}
-                              type="number"
-                              value={input.scores[item.templateItemId] ?? ''}
-                              onChange={(event) =>
-                                input.onScoreChange(
-                                  item.templateItemId,
-                                  parseChecklistScoreInput(event.target.value, item.maxScore),
-                                )
-                              }
-                            />
-                          </label>
+                          <div className="store-checklist-modal-score-control">
+                            <label>
+                              <span>{input.t('storeChecklists.scoreInput')}</span>
+                              <input
+                                disabled={!input.active}
+                                max={item.maxScore}
+                                min={0}
+                                type="number"
+                                value={input.scores[item.templateItemId] ?? ''}
+                                onChange={(event) =>
+                                  input.onScoreChange(
+                                    item.templateItemId,
+                                    parseChecklistScoreInput(event.target.value, item.maxScore),
+                                  )
+                                }
+                              />
+                            </label>
+                            <div className="store-checklist-modal-answer-cluster">
+                              {getScoreQuickOptions(input.locale, item.maxScore).map((option) => (
+                                <button
+                                  className={
+                                    input.scores[item.templateItemId] === option.value
+                                      ? 'store-checklist-modal-answer-active'
+                                      : ''
+                                  }
+                                  disabled={!input.active}
+                                  key={option.label}
+                                  type="button"
+                                  onClick={() => input.onScoreChange(item.templateItemId, option.value)}
+                                >
+                                  {option.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
                           <label>
                             <span>{input.t('storeChecklists.noteInput')}</span>
                             <textarea
@@ -1255,6 +1300,31 @@ function ChecklistScoreBar(input: {
   )
 }
 
+function ChecklistTemplateScore(input: {
+  label: string
+  row?: ChecklistCoverageRow
+  t: TranslateFunction
+}) {
+  const score = input.row ? getCoverageScore(input.row) : null
+  const tone = !input.row || score === null ? 'neutral' : score >= 70 ? 'calm' : 'warning'
+  const status = input.row ? getTemplateScoreStatus(input.t, input.label, input.row) : `${input.label} yapılmadı`
+
+  return (
+    <div className="store-checklists-template-score">
+      <small>{status}</small>
+      <b>
+        {score === null ? '-' : formatNumber(score, 'tr')}
+        <em>/100</em>
+      </b>
+      <span className={`store-checklists-template-scorebar${tone === 'neutral' ? ' store-checklists-scorebar-empty' : ''}`}>
+        <i>
+          <b className={`store-checklists-tone-${tone}`} style={{ width: `${clamp(score ?? 0, 0, 100)}%` }} />
+        </i>
+      </span>
+    </div>
+  )
+}
+
 function ChecklistEmptyBlock(input: { copy: string; title: string }) {
   return (
     <div className="store-checklists-empty-block">
@@ -1350,6 +1420,85 @@ function getCoverageRowKey(storeId: string, checklistTemplateId: string) {
 
 function getCoverageRowKeyFromRow(row: ChecklistCoverageRow) {
   return getCoverageRowKey(row.store.storeId, row.template.checklistTemplateId)
+}
+
+function getStoreVisitRowKey(row: ChecklistStoreVisitRow) {
+  return `${row.store.storeId}:${row.bm?.template.checklistTemplateId ?? 'bm'}:${row.vm?.template.checklistTemplateId ?? 'vm'}`
+}
+
+function buildChecklistStoreVisitRows(rows: ChecklistCoverageRow[]) {
+  const grouped = new Map<string, ChecklistStoreVisitRow>()
+
+  for (const row of rows) {
+    const current = grouped.get(row.store.storeId) ?? { store: row.store, primary: row }
+    const next = { ...current }
+
+    if (row.template.templateType === 'VM_STORE_VISIT') {
+      next.vm = row
+    } else {
+      next.bm = row
+    }
+
+    next.primary = chooseStoreVisitPrimary(next)
+    grouped.set(row.store.storeId, next)
+  }
+
+  return [...grouped.values()]
+}
+
+function chooseStoreVisitPrimary(row: Omit<ChecklistStoreVisitRow, 'primary'> & { primary?: ChecklistCoverageRow }) {
+  const primary = row.bm?.active ? row.bm : row.vm?.active ? row.vm : row.bm ?? row.vm ?? row.primary
+  if (!primary) {
+    throw new Error('Checklist store visit row requires at least one checklist row')
+  }
+  return primary
+}
+
+function getTemplateScoreStatus(t: TranslateFunction, label: string, row: ChecklistCoverageRow) {
+  if (row.active) return `${label} ${t('storeChecklists.coverage.draft').toLocaleLowerCase('tr-TR')}`
+  if (row.completedCount > 0) return `${label} ${t('storeChecklists.status.completed').toLocaleLowerCase('tr-TR')}`
+  return `${label} ${t('storeChecklists.noVisit').toLocaleLowerCase('tr-TR')}`
+}
+
+function getStoreVisitSummary(t: TranslateFunction, locale: AppLocale, row: ChecklistStoreVisitRow) {
+  const bm = row.bm ? formatChecklistCoverage(t, row.bm) : getStaticCopy(locale, 'BM yapılmadı', 'BM not done')
+  const vm = row.vm ? formatChecklistCoverage(t, row.vm) : getStaticCopy(locale, 'VM yapılmadı', 'VM not done')
+  return `${bm} / ${vm}`
+}
+
+function getStoreVisitDate(row: ChecklistStoreVisitRow) {
+  const dates = [row.bm, row.vm]
+    .map((item) => item ? getCoverageDate(item) : null)
+    .filter((value): value is string => Boolean(value))
+  return dates.sort((left, right) => compareDate(right, left))[0] ?? null
+}
+
+function getStoreVisitPriority(row: ChecklistStoreVisitRow) {
+  return Math.max(row.bm ? getCoveragePriority(row.bm) : 0, row.vm ? getCoveragePriority(row.vm) : 0)
+}
+
+function getStoreVisitScore(row: ChecklistStoreVisitRow) {
+  const scores = [row.bm, row.vm]
+    .map((item) => item ? getCoverageScore(item) : null)
+    .filter((value): value is number => value !== null)
+  if (!scores.length) return null
+  return Math.min(...scores)
+}
+
+function getStoreVisitRiskTone(row: ChecklistStoreVisitRow): ChecklistTone {
+  if (row.bm?.active || row.vm?.active) return 'warning'
+  if (!row.bm || !row.vm) return 'danger'
+  const score = getStoreVisitScore(row)
+  if (score !== null && score < 70) return 'danger'
+  return 'calm'
+}
+
+function getStoreVisitRiskLabel(t: TranslateFunction, locale: AppLocale, row: ChecklistStoreVisitRow) {
+  if (row.bm?.active || row.vm?.active) return t('storeChecklists.coverage.draft')
+  if (!row.bm || !row.vm) return getStaticCopy(locale, 'Riskli', 'Risk')
+  const score = getStoreVisitScore(row)
+  if (score !== null && score < 70) return getStaticCopy(locale, 'Düşük puan', 'Low score')
+  return getStaticCopy(locale, 'Temiz', 'Clear')
 }
 
 function formatChecklistCoverage(t: TranslateFunction, input: ChecklistCoverageRow) {
@@ -1524,12 +1673,6 @@ function getCoverageStatus(row: ChecklistCoverageRow): ChecklistStatusFilter {
   return 'missing'
 }
 
-function getCoverageTone(row: ChecklistCoverageRow): ChecklistTone {
-  if (row.active) return 'warning'
-  if (row.completedCount > 0) return 'calm'
-  return 'danger'
-}
-
 function getCoverageScore(row: ChecklistCoverageRow) {
   return row.summary?.averageScore ?? null
 }
@@ -1540,6 +1683,35 @@ function sortCoverageRows(rows: ChecklistCoverageRow[], sort: ChecklistSort, loc
     const compared = compareCoverageRows(left, right, sort.key, locale)
     return compared * multiplier
   })
+}
+
+function sortStoreVisitRows(rows: ChecklistStoreVisitRow[], sort: ChecklistSort, locale: AppLocale) {
+  return [...rows].sort((left, right) => {
+    const multiplier = sort.direction === 'asc' ? 1 : -1
+    const compared = compareStoreVisitRows(left, right, sort.key, locale)
+    return compared * multiplier
+  })
+}
+
+function compareStoreVisitRows(
+  left: ChecklistStoreVisitRow,
+  right: ChecklistStoreVisitRow,
+  key: ChecklistSortKey,
+  locale: AppLocale,
+) {
+  switch (key) {
+    case 'store':
+      return compareText(left.store.storeName, right.store.storeName, locale)
+    case 'score':
+      return compareNumber(getStoreVisitScore(left) ?? -1, getStoreVisitScore(right) ?? -1)
+    case 'date':
+      return compareDate(getStoreVisitDate(left), getStoreVisitDate(right))
+    case 'status':
+      return compareText(getCoverageStatus(left.primary), getCoverageStatus(right.primary), locale)
+    case 'priority':
+    default:
+      return compareNumber(getStoreVisitPriority(left), getStoreVisitPriority(right))
+  }
 }
 
 function compareCoverageRows(
@@ -1686,6 +1858,21 @@ function parseChecklistScoreInput(value: string, maxScore: number) {
   const parsed = Number(value)
   if (!Number.isFinite(parsed)) return null
   return clamp(parsed, 0, maxScore)
+}
+
+function getScoreQuickOptions(locale: AppLocale, maxScore: number) {
+  const safeMax = Math.max(0, maxScore)
+  return [
+    { label: `${getStaticCopy(locale, 'Uygun', 'Good')} ${safeMax}`, value: safeMax },
+    {
+      label: `${getStaticCopy(locale, 'Takip', 'Watch')} ${Math.round(safeMax * 0.6)}`,
+      value: Math.round(safeMax * 0.6),
+    },
+    {
+      label: `${getStaticCopy(locale, 'Kritik', 'Critical')} ${Math.round(safeMax * 0.2)}`,
+      value: Math.round(safeMax * 0.2),
+    },
+  ]
 }
 
 function clamp(value: number, min: number, max: number) {
