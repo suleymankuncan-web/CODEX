@@ -201,6 +201,13 @@ async function routePilotSmokeApi(page: Page) {
     await route.fulfill({ json: emptyListFixture })
   })
 
+  await page.route('**/api/checklists/acknowledgements/list', async (route) => {
+    await route.fulfill({ json: checklistAcknowledgementsFixture })
+  })
+  await page.route('**/api/mobile/checklists/today', async (route) => {
+    await route.fulfill({ json: mobileChecklistTodayFixture })
+  })
+
   await page.route('**/api/reports/kpi-config', async (route) => {
     await route.fulfill({ json: kpiConfigFixture })
   })
@@ -485,6 +492,56 @@ const storeEmployeesFixture = {
     },
   ],
   meta: { count: 1, total: 1, limit: 50, offset: 0 },
+}
+
+const checklistAcknowledgementsFixture = {
+  items: [
+    {
+      checklistInstanceId: 'pilot-checklist-instance-bm-1',
+      checklistTemplateId: 'pilot-checklist-template-bm-1',
+      templateName: 'BM Visit',
+      templateType: 'BM_STORE_VISIT',
+      category: 'BM',
+      storeId,
+      storeName: 'Pilot Store',
+      completedByUserId: 'pilot-smoke-user',
+      completedAt: '2026-05-12T09:00:00.000Z',
+      status: 'completed',
+      totalScore: 82,
+      complianceRate: 0.82,
+      responses: [],
+      acknowledgement: null,
+    },
+  ],
+  meta: { count: 1, total: 1, limit: 50, offset: 0 },
+}
+
+const mobileChecklistTodayFixture = {
+  data: {
+    stores: [{ storeId, storeName: 'Pilot Store' }],
+    templates: [
+      {
+        checklistTemplateId: 'pilot-checklist-template-bm-1',
+        templateCode: 'BM_STORE_VISIT_2026',
+        templateType: 'BM_STORE_VISIT',
+        templateName: 'BM Visit',
+        versionNo: 1,
+        items: [],
+      },
+      {
+        checklistTemplateId: 'pilot-checklist-template-vm-1',
+        templateCode: 'VM_STORE_VISIT_2026',
+        templateType: 'VM_STORE_VISIT',
+        templateName: 'VM Visit',
+        versionNo: 1,
+        items: [],
+      },
+    ],
+    activeInstances: [],
+    completedThisMonth: [],
+    pendingAcknowledgements: [],
+    monthlySummaries: [],
+  },
 }
 
 const kpiConfigFixture = {

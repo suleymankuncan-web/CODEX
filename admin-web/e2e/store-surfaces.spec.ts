@@ -395,6 +395,9 @@ test('store shell exposes Turkish-first chrome and hides technical auth roles', 
   await expect(storeNav.getByRole('link', { name: 'Mağaza KPI', exact: true })).toBeVisible()
   await expect(storeNav.getByRole('link', { name: 'Talepler / Onaylar', exact: true })).toBeVisible()
   await expect(storeSidebar.locator('a[href="/store/settings"]')).toBeVisible()
+  const checklistCard = page.getByRole('link', { name: /Checklist kabul/i })
+  await expect(checklistCard).toBeVisible()
+  await expect(checklistCard).toContainText('1')
   await expect(page.getByText('Ön izleme', { exact: true })).toHaveCount(0)
   await expect(page.getByLabel('Prototip rol seçimi')).toHaveCount(0)
   await expect(page.locator('body')).not.toContainText('STORE_PERSONNEL')
@@ -403,6 +406,38 @@ test('store shell exposes Turkish-first chrome and hides technical auth roles', 
   await expect(page.getByText('uma_authorization')).toHaveCount(0)
   await expect(page.getByText('default-roles-store-ops')).toHaveCount(0)
   await expect(page.getByText('Task-first preview for store-scoped work.')).toHaveCount(0)
+})
+
+test('region manager home surfaces checklist field queue summary', async ({ page }) => {
+  await page.unroute('**/api/auth/session')
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      json: {
+        ...authSessionFixture,
+        user: {
+          ...authSessionFixture.user,
+          roleCodes: ['REGION_MANAGER'],
+          actionScope: {
+            assignedStoreIds: [demoStoreId, '00000000-0000-0000-0000-000000000101'],
+          },
+          assignedStoreIds: [demoStoreId, '00000000-0000-0000-0000-000000000101'],
+        },
+        scopeSummary: {
+          ...authSessionFixture.scopeSummary,
+          assignedStoreCount: 2,
+          storeCount: 2,
+        },
+      },
+    })
+  })
+
+  await page.goto('/store/home')
+
+  const checklistCard = page.getByRole('link', { name: /Checklist saha turu/i })
+  await expect(checklistCard).toBeVisible()
+  await expect(checklistCard).toContainText('2')
+  await expect(checklistCard).toContainText('1')
+  await expect(checklistCard).toHaveAttribute('href', '/store/checklists')
 })
 
 test('store personnel sidebar only exposes personnel surfaces', async ({ page }) => {
@@ -2212,6 +2247,14 @@ async function routeStoreSurfaceApi(page: Page) {
     await route.fulfill({ json: workflowInboxFixture })
   })
 
+  await page.route('**/api/checklists/acknowledgements/list', async (route) => {
+    await route.fulfill({ json: checklistAcknowledgementsFixture })
+  })
+
+  await page.route('**/api/mobile/checklists/today', async (route) => {
+    await route.fulfill({ json: mobileChecklistTodayFixture })
+  })
+
   await page.route('**/api/target-distributions/requests**', async (route) => {
     if (route.request().method() === 'GET') {
       await route.fulfill({ json: targetDistributionRequestsFixture })
@@ -2340,6 +2383,112 @@ const workflowInboxFixture = {
     total: 1,
     limit: 30,
     offset: 0,
+  },
+}
+
+const checklistAcknowledgementsFixture = {
+  items: [
+    {
+      checklistInstanceId: 'checklist-instance-bm-1',
+      checklistTemplateId: 'checklist-template-bm-1',
+      templateName: 'BM Result',
+      templateType: 'BM_STORE_VISIT',
+      category: 'BM',
+      storeId: demoStoreId,
+      storeName: 'IstinyePark Demo Store',
+      completedByUserId: 'region-user-1',
+      completedAt: '2026-05-12T09:00:00.000Z',
+      status: 'completed',
+      totalScore: 82,
+      complianceRate: 0.82,
+      responses: [],
+      acknowledgement: null,
+    },
+    {
+      checklistInstanceId: 'checklist-instance-vm-1',
+      checklistTemplateId: 'checklist-template-vm-1',
+      templateName: 'VM Result',
+      templateType: 'VM_STORE_VISIT',
+      category: 'VM',
+      storeId: demoStoreId,
+      storeName: 'IstinyePark Demo Store',
+      completedByUserId: 'vm-user-1',
+      completedAt: '2026-05-11T09:00:00.000Z',
+      status: 'completed',
+      totalScore: 94,
+      complianceRate: 0.94,
+      responses: [],
+      acknowledgement: {
+        checklistAcknowledgementId: 'checklist-ack-vm-1',
+        acknowledgedByUserId: 'store-manager-1',
+        acknowledgementNote: 'Goruldu',
+        acknowledgedAt: '2026-05-11T11:00:00.000Z',
+      },
+    },
+  ],
+  meta: {
+    count: 2,
+    total: 2,
+    limit: 50,
+    offset: 0,
+  },
+}
+
+const mobileChecklistTodayFixture = {
+  data: {
+    stores: [
+      { storeId: demoStoreId, storeName: 'IstinyePark Demo Store' },
+      { storeId: '00000000-0000-0000-0000-000000000101', storeName: 'Marmara Park Demo Store' },
+    ],
+    templates: [
+      {
+        checklistTemplateId: 'checklist-template-bm-1',
+        templateCode: 'BM_STORE_VISIT_2026',
+        templateType: 'BM_STORE_VISIT',
+        templateName: 'BM Visit',
+        versionNo: 1,
+        items: [],
+      },
+      {
+        checklistTemplateId: 'checklist-template-vm-1',
+        templateCode: 'VM_STORE_VISIT_2026',
+        templateType: 'VM_STORE_VISIT',
+        templateName: 'VM Visit',
+        versionNo: 1,
+        items: [],
+      },
+    ],
+    activeInstances: [
+      {
+        checklistInstanceId: 'checklist-active-bm-1',
+        checklistTemplateId: 'checklist-template-bm-1',
+        storeId: demoStoreId,
+        status: 'in_progress',
+        startedAt: '2026-05-12T10:00:00.000Z',
+        updatedAt: '2026-05-12T10:10:00.000Z',
+        responses: [],
+      },
+    ],
+    completedThisMonth: [
+      {
+        checklistInstanceId: 'checklist-instance-bm-1',
+        checklistTemplateId: 'checklist-template-bm-1',
+        storeId: demoStoreId,
+        completedAt: '2026-05-12T09:00:00.000Z',
+        totalScore: 82,
+        acknowledgedAt: null,
+      },
+    ],
+    pendingAcknowledgements: [],
+    monthlySummaries: [
+      {
+        storeId: demoStoreId,
+        checklistTemplateId: 'checklist-template-bm-1',
+        monthStart: '2026-05-01',
+        completedCount: 1,
+        averageScore: 82,
+      },
+    ],
   },
 }
 

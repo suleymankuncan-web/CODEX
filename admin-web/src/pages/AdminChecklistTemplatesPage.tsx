@@ -31,12 +31,22 @@ type DraftChecklistSection = {
   items: DraftChecklistItem[]
 }
 
+type ChecklistTemplateType = 'BM_STORE_VISIT' | 'VM_STORE_VISIT'
+
 type TemplateOption = {
   label: string
-  templateType: 'BM_STORE_VISIT' | 'VM_STORE_VISIT'
+  templateType: ChecklistTemplateType
   templateCode: string
   templateName: string
   category: string
+}
+
+type TemplateDraft = {
+  effectiveFrom: string
+  isDirty: boolean
+  savedTemplate: AdminChecklistTemplateSummary | null
+  sections: DraftChecklistSection[]
+  templateName: string
 }
 
 const templateOptions: TemplateOption[] = [
@@ -122,6 +132,97 @@ const initialSections: DraftChecklistSection[] = [
     ],
   },
 ]
+
+const vmInitialSections: DraftChecklistSection[] = [
+  {
+    id: 'vm-section-visual-presentation',
+    name: 'Gorsel Sunum',
+    items: [
+      {
+        id: 'vm-item-window-concept',
+        itemText: 'Vitrin konsepti VM standardina uygun mu?',
+        note: 'Tema, renk akisi, manken kombinleri ve ilk gorunur alan birlikte kontrol edilir.',
+        responseType: 'score',
+        minScore: 0,
+        maxScore: 10,
+        lowScoreThreshold: 7,
+        weight: 30,
+        requiresLowScoreNote: true,
+      },
+      {
+        id: 'vm-item-mannequin-story',
+        itemText: 'Manken hikayesi ve urun anlatimi net mi?',
+        note: 'Kombin butunlugu, aksesuar kullanimi ve fiyat/urun gorunurlugu degerlendirilir.',
+        responseType: 'score',
+        minScore: 0,
+        maxScore: 10,
+        lowScoreThreshold: 7,
+        weight: 25,
+        requiresLowScoreNote: true,
+      },
+    ],
+  },
+  {
+    id: 'vm-section-floor-layout',
+    name: 'Reyon Duzeni',
+    items: [
+      {
+        id: 'vm-item-floor-flow',
+        itemText: 'Reyon akisi ve urun bloklari okunabilir mi?',
+        note: 'Kategori ayrimi, beden akisi ve eksik urun gorunurlugu incelenir.',
+        responseType: 'score',
+        minScore: 0,
+        maxScore: 10,
+        lowScoreThreshold: 6,
+        weight: 25,
+        requiresLowScoreNote: true,
+      },
+    ],
+  },
+  {
+    id: 'vm-section-signage',
+    name: 'Tabela ve POP',
+    items: [
+      {
+        id: 'vm-item-signage',
+        itemText: 'Tabela, POP ve kampanya materyalleri guncel mi?',
+        note: 'Eski kampanya gorseli, eksik etiket ve yanlis konumlanan POP notlanir.',
+        responseType: 'score',
+        minScore: 0,
+        maxScore: 10,
+        lowScoreThreshold: 6,
+        weight: 20,
+        requiresLowScoreNote: true,
+      },
+    ],
+  },
+]
+
+function cloneSections(sections: DraftChecklistSection[]) {
+  return sections.map((section) => ({
+    ...section,
+    items: section.items.map((item) => ({ ...item })),
+  }))
+}
+
+function createInitialDrafts(): Record<ChecklistTemplateType, TemplateDraft> {
+  return {
+    BM_STORE_VISIT: {
+      effectiveFrom: today,
+      isDirty: true,
+      savedTemplate: null,
+      sections: cloneSections(initialSections),
+      templateName: templateOptions[0].templateName,
+    },
+    VM_STORE_VISIT: {
+      effectiveFrom: today,
+      isDirty: true,
+      savedTemplate: null,
+      sections: cloneSections(vmInitialSections),
+      templateName: templateOptions[1].templateName,
+    },
+  }
+}
 
 function createDraftId(prefix: string) {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
@@ -221,13 +322,13 @@ export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSum
     partial: t('adminChecklists.responsePartial'),
     text: t('adminChecklists.responseText'),
   }
-  const [templateType, setTemplateType] = useState<TemplateOption['templateType']>('BM_STORE_VISIT')
+  const [templateType, setTemplateType] = useState<ChecklistTemplateType>('BM_STORE_VISIT')
   const selectedTemplate = templateOptions.find((option) => option.templateType === templateType) ?? templateOptions[0]
-  const [templateName, setTemplateName] = useState(selectedTemplate.templateName)
-  const [effectiveFrom, setEffectiveFrom] = useState(today)
-  const [sections, setSections] = useState<DraftChecklistSection[]>(initialSections)
-  const [savedTemplate, setSavedTemplate] = useState<AdminChecklistTemplateSummary | null>(null)
-  const [isDirty, setIsDirty] = useState(true)
+  const [draftsByTemplate, setDraftsByTemplate] = useState<Record<ChecklistTemplateType, TemplateDraft>>(
+    createInitialDrafts,
+  )
+  const currentDraft = draftsByTemplate[templateType]
+  const { effectiveFrom, isDirty, savedTemplate, sections, templateName } = currentDraft
   const [notice, setNotice] = useState<{ tone: 'success' | 'warning' | 'danger'; message: string } | null>(
     null,
   )
@@ -266,26 +367,34 @@ export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSum
   })
   const isSaving = createMutation.isPending || publishMutation.isPending
 
-  const markDirty = () => {
-    setIsDirty(true)
+  const updateCurrentDraft = (updater: (draft: TemplateDraft) => TemplateDraft) => {
+    setDraftsByTemplate((current) => ({
+      ...current,
+      [templateType]: updater(current[templateType]),
+    }))
+  }
+
+  const updateCurrentDraftFields = (patch: Partial<TemplateDraft>) => {
+    updateCurrentDraft((draft) => ({
+      ...draft,
+      ...patch,
+      isDirty: true,
+    }))
     setNotice(null)
   }
 
-  const updateTemplateType = (nextType: TemplateOption['templateType']) => {
+  const updateTemplateType = (nextType: ChecklistTemplateType) => {
     const nextTemplate = templateOptions.find((option) => option.templateType === nextType)
     if (!nextTemplate) return
 
     setTemplateType(nextType)
-    setTemplateName(nextTemplate.templateName)
-    setSavedTemplate(null)
-    markDirty()
+    setNotice(null)
   }
 
   const updateSection = (sectionId: string, name: string) => {
-    setSections((current) =>
-      current.map((section) => (section.id === sectionId ? { ...section, name } : section)),
-    )
-    markDirty()
+    updateCurrentDraftFields({
+      sections: sections.map((section) => (section.id === sectionId ? { ...section, name } : section)),
+    })
   }
 
   const updateItem = (
@@ -293,8 +402,8 @@ export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSum
     itemId: string,
     patch: Partial<DraftChecklistItem>,
   ) => {
-    setSections((current) =>
-      current.map((section) =>
+    updateCurrentDraftFields({
+      sections: sections.map((section) =>
         section.id === sectionId
           ? {
               ...section,
@@ -304,13 +413,11 @@ export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSum
             }
           : section,
       ),
-    )
-    markDirty()
+    })
   }
 
   const addSection = () => {
-    setSections((current) => [...current, createEmptySection()])
-    markDirty()
+    updateCurrentDraftFields({ sections: [...sections, createEmptySection()] })
   }
 
   const removeSection = (sectionId: string) => {
@@ -319,19 +426,17 @@ export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSum
       return
     }
 
-    setSections((current) => current.filter((section) => section.id !== sectionId))
-    markDirty()
+    updateCurrentDraftFields({ sections: sections.filter((section) => section.id !== sectionId) })
   }
 
   const addItem = (sectionId: string) => {
-    setSections((current) =>
-      current.map((section) =>
+    updateCurrentDraftFields({
+      sections: sections.map((section) =>
         section.id === sectionId
           ? { ...section, items: [...section.items, createEmptyItem()] }
           : section,
       ),
-    )
-    markDirty()
+    })
   }
 
   const removeItem = (sectionId: string, itemId: string) => {
@@ -341,14 +446,13 @@ export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSum
       return
     }
 
-    setSections((current) =>
-      current.map((section) =>
+    updateCurrentDraftFields({
+      sections: sections.map((section) =>
         section.id === sectionId
           ? { ...section, items: section.items.filter((item) => item.id !== itemId) }
           : section,
       ),
-    )
-    markDirty()
+    })
   }
 
   const saveDraft = async () => {
@@ -367,8 +471,11 @@ export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSum
           sections,
         }),
       )
-      setSavedTemplate(result.data.checklistTemplate)
-      setIsDirty(false)
+      updateCurrentDraft((draft) => ({
+        ...draft,
+        isDirty: false,
+        savedTemplate: result.data.checklistTemplate,
+      }))
       setNotice({ tone: 'success', message: result.command.message })
       return result.data.checklistTemplate
     } catch (error) {
@@ -391,8 +498,11 @@ export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSum
         checklistTemplateId: draft.checklistTemplateId,
         effectiveFrom,
       })
-      setSavedTemplate(result.data.checklistTemplate)
-      setIsDirty(false)
+      updateCurrentDraft((draft) => ({
+        ...draft,
+        isDirty: false,
+        savedTemplate: result.data.checklistTemplate,
+      }))
       setNotice({ tone: 'success', message: result.command.message })
     } catch (error) {
       setNotice({ tone: 'danger', message: getErrorMessage(error) })
@@ -440,8 +550,7 @@ export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSum
             <input
               value={templateName}
               onChange={(event) => {
-                setTemplateName(event.target.value)
-                markDirty()
+                updateCurrentDraftFields({ templateName: event.target.value })
               }}
             />
           </label>
@@ -449,7 +558,7 @@ export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSum
             <span>{t('adminChecklists.checklistType')}</span>
             <select
               value={templateType}
-              onChange={(event) => updateTemplateType(event.target.value as TemplateOption['templateType'])}
+              onChange={(event) => updateTemplateType(event.target.value as ChecklistTemplateType)}
             >
               {templateOptions.map((option) => (
                 <option key={option.templateType} value={option.templateType}>
@@ -464,8 +573,7 @@ export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSum
               type="date"
               value={effectiveFrom}
               onChange={(event) => {
-                setEffectiveFrom(event.target.value)
-                markDirty()
+                updateCurrentDraftFields({ effectiveFrom: event.target.value })
               }}
             />
           </label>

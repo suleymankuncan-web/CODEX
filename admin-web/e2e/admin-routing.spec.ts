@@ -347,6 +347,29 @@ test('admin checklist templates page switches chrome to English copy and persist
   await expect(main.getByRole('heading', { name: 'Checklist template editor' })).toBeVisible()
 })
 
+test('admin checklist editor keeps BM and VM template drafts separate', async ({ page }) => {
+  await page.goto('/admin/checklists')
+
+  const main = page.getByRole('main')
+  const templateTypeSelect = main.locator('.admin-checklist-builder-template-strip select')
+  const firstQuestion = main.locator('.admin-checklist-builder-question-line input').first()
+
+  await expect(firstQuestion).toHaveValue(/Vitrin sezon/i)
+
+  await templateTypeSelect.selectOption('VM_STORE_VISIT')
+  await expect(firstQuestion).toHaveValue('Vitrin konsepti VM standardina uygun mu?')
+
+  await firstQuestion.fill('VM-only fixture question')
+  await expect(firstQuestion).toHaveValue('VM-only fixture question')
+
+  await templateTypeSelect.selectOption('BM_STORE_VISIT')
+  await expect(firstQuestion).toHaveValue(/Vitrin sezon/i)
+  await expect(firstQuestion).not.toHaveValue('VM-only fixture question')
+
+  await templateTypeSelect.selectOption('VM_STORE_VISIT')
+  await expect(firstQuestion).toHaveValue('VM-only fixture question')
+})
+
 test('snapshot operations page switches chrome to English copy and persists locale', async ({ page }) => {
   await page.goto('/admin/snapshots')
 
