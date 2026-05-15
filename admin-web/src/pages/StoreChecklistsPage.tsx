@@ -74,7 +74,9 @@ export function StoreChecklistsPage(input: {
   const [scores, setScores] = useState<Record<string, number>>({})
   const [comments, setComments] = useState<Record<string, string>>({})
   const [selectedSessionKey, setSelectedSessionKey] = useState<string | null>(null)
-  const [selectedResultId, setSelectedResultId] = useState<string | null>(null)
+  const [selectedResultId, setSelectedResultId] = useState<string | null>(() =>
+    resolveChecklistResultFromSearch(location.search),
+  )
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedMonth, setSelectedMonth] = useState('all')
   const [typeFilter, setTypeFilter] = useState<ChecklistTypeFilter>('all')
@@ -1854,6 +1856,11 @@ function isVisualMerchandiserOnly(authSummary: AuthSessionSummary | null) {
 function resolveChecklistTabFromSearch(search: string): ChecklistTab {
   const tab = new URLSearchParams(search).get('tab')
   return tab === 'inbox' || tab === 'history' || tab === 'visits' ? tab : 'visits'
+}
+
+function resolveChecklistResultFromSearch(search: string) {
+  const result = new URLSearchParams(search).get('result')
+  return result && result.trim().length > 0 ? result : null
 }
 
 function getChecklistHeroScopeLabel(

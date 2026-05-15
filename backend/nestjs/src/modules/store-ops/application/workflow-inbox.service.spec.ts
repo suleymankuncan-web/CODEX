@@ -102,7 +102,7 @@ describe("WorkflowInboxService", () => {
     ]);
   });
 
-  it("deep-links pending checklist acknowledgements to the checklist inbox tab", async () => {
+  it("deep-links pending checklist acknowledgements to the exact checklist receipt", async () => {
     const targetDistributionRepository = {
       listRequests: jest.fn(),
     };
@@ -148,7 +148,7 @@ describe("WorkflowInboxService", () => {
       expect.objectContaining({
         sourceType: "checklist_receipt",
         sourceId: "checklist-instance-1",
-        deepLink: "/store/checklists?tab=inbox",
+        deepLink: "/store/checklists?tab=inbox&result=checklist-instance-1",
       }),
     ]);
   });
