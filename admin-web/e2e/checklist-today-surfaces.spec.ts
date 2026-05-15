@@ -10,6 +10,7 @@ test('region manager checklist surface shows assigned store visit workflow', asy
   await page.goto('/store/checklists')
 
   await expect(page.locator('.store-checklists-command-page .stacked-row')).toHaveCount(0)
+  await expect(page.getByRole('tab', { name: /Ziyaret akışı/ })).toHaveAttribute('aria-selected', 'true')
   await expect(page.getByText('Devam et')).toBeVisible()
   await expect(page.locator('.store-checklists-visit-row').getByText('Taslak', { exact: true })).toBeVisible()
 
@@ -129,17 +130,20 @@ test('completed checklist handoff moves from field visit to store acknowledgemen
       body: { acknowledgementNote: 'Store saw the completed visit' },
     },
   ])
-  await expect(page.getByText('No pending checklist receipts')).toBeVisible()
+  await expect(page.getByRole('tab', { name: /Recent history/ })).toHaveAttribute('aria-selected', 'true')
   await expect(page.getByText('Store saw the completed visit')).toBeVisible()
   await expect(
     page.locator('.store-checklists-history-row').filter({ hasText: 'BM Result' }).filter({ hasText: 'Acknowledged' }),
   ).toBeVisible()
+  await page.getByRole('tab', { name: /Checklist inbox/ }).click()
+  await expect(page.getByText('No pending checklist receipts')).toBeVisible()
 })
 
 test('region manager can read BM and VM checklist results without acknowledging them', async ({ page }) => {
   await setupChecklistPage(page, ['REGION_MANAGER'])
   await page.goto('/store/checklists')
 
+  await page.getByRole('tab', { name: /Checklist kutusu/ }).click()
   await expect(page.locator('.store-checklists-history-row').filter({ hasText: 'BM Result' })).toBeVisible()
   await expect(page.locator('.store-checklists-history-row').filter({ hasText: 'VM Result' })).toBeVisible()
   await page
@@ -196,6 +200,9 @@ test('visual merchandiser sees checklist-only VM coverage and no broad store lin
   await expect(page.locator('a[href="/store/targets"]')).toHaveCount(0)
   await expect(page.locator('a[href="/store/reports"]')).toHaveCount(0)
   await expect(page.locator('a[href="/store/competitions"]')).toHaveCount(0)
+  page.once('dialog', (dialog) => dialog.accept())
+  await page.getByRole('button', { name: 'İptal Et' }).click()
+  await page.getByRole('tab', { name: /Checklist kutusu/ }).click()
   await expect(page.locator('.store-checklists-history-row').filter({ hasText: 'BM Result' })).toHaveCount(0)
   await expect(page.locator('.store-checklists-history-row').filter({ hasText: 'VM Result' })).toBeVisible()
 })
@@ -208,12 +215,13 @@ test('store checklist surface switches to English copy and persists locale', asy
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(
-    page.getByRole('heading', { name: 'Checklist operations panel' }),
+    page.getByRole('heading', { name: /Today.s field route prioritizes stores with low checklist scores/ }),
   ).toBeVisible()
-  await expect(page.getByText('Visit flow')).toBeVisible()
+  await expect(page.getByRole('tab', { name: /Visit flow/ })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Assigned store checklist visits' })).toBeVisible()
   await expect(page.getByText('In progress', { exact: true }).first()).toBeVisible()
-  await expect(page.getByText('Active drafts', { exact: true })).toBeVisible()
+  await expect(page.getByText('Assigned stores', { exact: true })).toBeVisible()
+  await expect(page.getByText('Average score', { exact: true })).toBeVisible()
   await expect(page.getByText('BM score', { exact: true })).toBeVisible()
   await expect(page.locator('.store-checklists-visit-row').getByText('Draft', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Continue' }).click()
@@ -221,6 +229,7 @@ test('store checklist surface switches to English copy and persists locale', asy
   await expect(page.getByRole('button', { name: 'Complete', exact: true })).toBeVisible()
   page.once('dialog', (dialog) => dialog.accept())
   await page.getByRole('button', { name: 'Cancel' }).click()
+  await page.getByRole('tab', { name: /Checklist inbox/ }).click()
   await expect(
     page.getByRole('heading', { name: 'Completed checklist receipts waiting on store acknowledgement' }),
   ).toBeVisible()
@@ -242,8 +251,27 @@ test('store checklist surface switches to English copy and persists locale', asy
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(
-    page.getByRole('heading', { name: 'Checklist operations panel' }),
+    page.getByRole('heading', { name: /Today.s field route prioritizes stores with low checklist scores/ }),
   ).toBeVisible()
+})
+
+test('checklist visit surface stays usable on mobile width', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await setupChecklistPage(page, ['REGION_MANAGER'])
+  await page.goto('/store/checklists')
+
+  await expect(page.getByRole('tab', { name: /Ziyaret akışı/ })).toBeVisible()
+  await expect.poll(async () =>
+    page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1),
+  ).toBe(true)
+
+  await page.getByRole('button', { name: 'Devam et' }).click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect(page.getByLabel('Puan')).toBeVisible()
+  await expect(page.getByLabel('Not')).toBeVisible()
+  await expect.poll(async () =>
+    page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1),
+  ).toBe(true)
 })
 
 type ChecklistFixtureOptions = {
