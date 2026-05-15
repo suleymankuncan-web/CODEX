@@ -1,6 +1,6 @@
 import type { QueryClient, QueryKey } from '@tanstack/react-query'
 import type { AuthSessionSummary } from '../features/auth/api'
-import { hasAnyRole } from '../features/auth/authorization'
+import { canReadChecklistResults, hasAnyRole } from '../features/auth/authorization'
 import {
   getChecklistAcknowledgements,
   getMobileChecklistToday,
@@ -30,6 +30,7 @@ type PrefetchTask = {
 const rankingRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN']
 const storeReportingRoles = ['SUPER_ADMIN', 'REPORT_VIEWER', 'AUDITOR', 'STORE_MANAGER']
 const workflowInboxRoles = ['STORE_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER']
+const checklistVisitManagerRoles = ['REGION_MANAGER', 'VISUAL_MERCHANDISER', 'SUPER_ADMIN']
 
 export function prefetchRouteData(input: RouteDataPrefetchInput) {
   const tasks = resolveRoutePrefetchTasks(input.pathname, input.authSummary)
@@ -86,7 +87,10 @@ function resolveRoutePrefetchTasks(
 }
 
 function getStoreHomePrefetchTasks(authSummary: AuthSessionSummary | null): PrefetchTask[] {
-  return getStoreTasksPrefetchTasks(authSummary)
+  return [
+    ...getStoreTasksPrefetchTasks(authSummary),
+    ...getStoreChecklistsPrefetchTasks(authSummary),
+  ]
 }
 
 function getStoreTasksPrefetchTasks(authSummary: AuthSessionSummary | null): PrefetchTask[] {
@@ -153,25 +157,19 @@ function getStoreRankingsPrefetchTasks(authSummary: AuthSessionSummary | null): 
 }
 
 function getStoreChecklistsPrefetchTasks(authSummary: AuthSessionSummary | null): PrefetchTask[] {
-  const roles = authSummary?.user.roleCodes ?? []
-  const canReadChecklists = hasAnyRole(authSummary, [
-    'STORE_MANAGER',
-    'SUPER_ADMIN',
-    'REPORT_VIEWER',
-    'REGION_MANAGER',
-    'VISUAL_MERCHANDISER',
-  ])
+  const canReadChecklists = canReadChecklistResults(authSummary)
+  const canManageChecklistVisits = hasAnyRole(authSummary, checklistVisitManagerRoles)
 
   return [
     {
       queryKey: ['checklist-acknowledgements'],
       queryFn: getChecklistAcknowledgements,
-      enabled: roles.includes('STORE_MANAGER') || roles.includes('SUPER_ADMIN'),
+      enabled: canReadChecklists,
     },
     {
       queryKey: ['mobile-checklists-today'],
       queryFn: getMobileChecklistToday,
-      enabled: canReadChecklists,
+      enabled: canManageChecklistVisits,
     },
   ]
 }
