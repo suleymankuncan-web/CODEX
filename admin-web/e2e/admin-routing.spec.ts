@@ -152,6 +152,51 @@ test('admin sidebar prefetches integration data before opening integrations', as
   await expect.poll(() => templateRequests, { timeout: 1000 }).toBe(prefetchedTemplateRequests)
 })
 
+test('admin sidebar prefetches target queue data before opening targets', async ({ page }) => {
+  let requestsCalls = 0
+  let coverageCalls = 0
+
+  await page.route('**/api/target-distributions/requests**', async (route) => {
+    requestsCalls += 1
+    await route.fulfill({ json: targetDistributionRequestsPrefetchFixture })
+  })
+  await page.route('**/api/target-distributions/coverage**', async (route) => {
+    coverageCalls += 1
+    await route.fulfill({ json: targetCoveragePrefetchFixture })
+  })
+  await page.route('**/api/integrations/import-batches/overview', async (route) => {
+    await route.fulfill({ json: integrationOverviewFixture })
+  })
+  await page.route('**/api/integrations/import-batches/needs-action?**', async (route) => {
+    await route.fulfill({ json: emptyListFixture })
+  })
+  await page.route('**/api/integrations/lookups', async (route) => {
+    await route.fulfill({ json: integrationLookupsFixture })
+  })
+  await page.route('**/api/integrations/import-payload-templates**', async (route) => {
+    await route.fulfill({ json: integrationTemplateFixture })
+  })
+
+  await page.goto('/admin/session')
+
+  const targetLink = page.locator('a[href="/admin/targets"]')
+  await expect(targetLink).toBeVisible()
+
+  await targetLink.hover()
+
+  await expect.poll(() => requestsCalls).toBeGreaterThanOrEqual(1)
+  await expect.poll(() => coverageCalls).toBeGreaterThanOrEqual(1)
+  const prefetchedRequestsCalls = requestsCalls
+  const prefetchedCoverageCalls = coverageCalls
+
+  await targetLink.click()
+
+  await expect(page).toHaveURL(/\/admin\/targets$/)
+  await expect(page.getByText('Target Prefetch Request')).toBeVisible()
+  await expect.poll(() => requestsCalls, { timeout: 1000 }).toBe(prefetchedRequestsCalls)
+  await expect.poll(() => coverageCalls, { timeout: 1000 }).toBe(prefetchedCoverageCalls)
+})
+
 test('admin sidebar collapses without losing navigation targets', async ({ page }) => {
   await page.goto('/admin/audit')
 
@@ -639,6 +684,78 @@ const emptyListFixture = {
     total: 0,
     limit: 50,
     offset: 0,
+  },
+}
+
+const targetDistributionRequestsPrefetchFixture = {
+  items: [
+    {
+      requestId: 'target-prefetch-request-1',
+      companyId: '00000000-0000-0000-0000-000000000001',
+      regionId: '00000000-0000-0000-0000-000000000010',
+      storeId: '00000000-0000-0000-0000-000000000100',
+      storeName: 'Prefetch Demo Store',
+      requestMonth: '2026-05-01',
+      targetLabel: 'Target Prefetch Request',
+      totalTargetValue: 250000,
+      allocationCount: 1,
+      status: 'pending_region_approval',
+      requestReason: 'Navigation prefetch proof',
+      allocations: [
+        {
+          employeeId: '00000000-0000-4000-8000-000000000501',
+          assigneeLabel: 'Coverage Prefetch Person',
+          targetValue: 250000,
+        },
+      ],
+      submittedByUserId: 'store-manager-prefetch',
+      approvedByUserId: null,
+      approvedAt: null,
+      approvalNote: null,
+      createdAt: '2026-05-15T09:00:00.000Z',
+      updatedAt: '2026-05-15T09:00:00.000Z',
+    },
+  ],
+  meta: {
+    count: 1,
+    total: 1,
+    limit: 50,
+    offset: 0,
+  },
+}
+
+const targetCoveragePrefetchFixture = {
+  items: [
+    {
+      storeId: '00000000-0000-0000-0000-000000000100',
+      storeName: 'Prefetch Demo Store',
+      employeeId: '00000000-0000-4000-8000-000000000501',
+      displayName: 'Coverage Prefetch Person',
+      externalEmployeeRef: 'PF1001',
+      targetReferenceId: null,
+      targetValue: null,
+      pendingRequestId: 'target-prefetch-request-1',
+      pendingTargetValue: 250000,
+      staleTargetReferenceId: null,
+      targetStatus: 'pending_region_approval',
+    },
+  ],
+  meta: {
+    count: 1,
+    total: 1,
+    limit: 50,
+    offset: 0,
+  },
+  summary: {
+    requestMonth: '2026-05-01',
+    totalEmployees: 1,
+    coveredEmployees: 0,
+    missingEmployees: 0,
+    pendingEmployees: 1,
+    conflictEmployees: 0,
+    staleEmployees: 0,
+    uncoveredEmployees: 1,
+    coverageRate: 0,
   },
 }
 

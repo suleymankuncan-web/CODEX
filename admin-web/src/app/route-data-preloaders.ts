@@ -22,6 +22,10 @@ import {
 } from '../features/reports/api'
 import { getStoreApprovalsPrefetchTasks } from '../features/store-approvals/prefetch'
 import {
+  getTargetCoverage,
+  getTargetDistributionRequests,
+} from '../features/targets/api'
+import {
   getOffboardingRequests,
   getSellerCodeReference,
   getSellerCodeRequests,
@@ -47,6 +51,7 @@ const adminInboxRoles = ['SUPER_ADMIN', 'REPORT_VIEWER', 'HR_ADMIN']
 const adminInboxWorkforceRoles = ['SUPER_ADMIN', 'HR_ADMIN']
 const adminIntegrationRoles = ['SUPER_ADMIN', 'INTEGRATION_ADMIN']
 const adminMasterDataRoles = ['SUPER_ADMIN', 'HR_ADMIN', 'INTEGRATION_ADMIN']
+const adminTargetRoles = ['SUPER_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER']
 const storeCompetitionRoles = ['STORE_PERSONNEL', 'STORE_MANAGER']
 const storeReportingRoles = ['SUPER_ADMIN', 'REPORT_VIEWER', 'AUDITOR', 'STORE_MANAGER']
 const workflowInboxRoles = ['STORE_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER']
@@ -127,6 +132,10 @@ function resolveRoutePrefetchTasks(
 
   if (pathname === '/admin/inbox') {
     return getAdminInboxPrefetchTasks(authSummary)
+  }
+
+  if (pathname === '/admin/targets') {
+    return getAdminTargetsPrefetchTasks(authSummary)
   }
 
   return []
@@ -321,4 +330,29 @@ function getAdminInboxPrefetchTasks(authSummary: AuthSessionSummary | null): Pre
       enabled: workforceEnabled,
     },
   ]
+}
+
+function getAdminTargetsPrefetchTasks(authSummary: AuthSessionSummary | null): PrefetchTask[] {
+  const enabled = hasAnyRole(authSummary, adminTargetRoles)
+  const currentRequestMonth = getCurrentRequestMonth()
+
+  return [
+    {
+      queryKey: ['target-distribution-requests', 'approval-queue'],
+      queryFn: () => getTargetDistributionRequests(),
+      enabled,
+    },
+    {
+      queryKey: ['target-distribution-coverage', currentRequestMonth],
+      queryFn: () => getTargetCoverage({ requestMonth: currentRequestMonth }),
+      enabled,
+    },
+  ]
+}
+
+function getCurrentRequestMonth() {
+  const now = new Date()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+
+  return `${now.getFullYear()}-${month}-01`
 }
