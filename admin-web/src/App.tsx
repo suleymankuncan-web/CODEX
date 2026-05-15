@@ -112,7 +112,6 @@ function App() {
 
   useEffect(() => {
     if (shellState.mode !== 'ready') return
-    if (session.mode !== 'bearer') return
 
     let cancelled = false
     void import('./app/route-data-preloaders')
@@ -135,7 +134,7 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [authSummary, firstAllowedPath, location.pathname, queryClient, session.mode, shellState.mode])
+  }, [authSummary, firstAllowedPath, location.pathname, queryClient, shellState.mode])
 
   if (location.pathname.startsWith('/auth')) {
     return <AuthFlowShell shellState={shellState} firstAllowedPath={firstAllowedPath} />
