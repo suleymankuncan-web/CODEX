@@ -92,6 +92,10 @@ export function StoreChecklistsPage(input: {
     'SUPER_ADMIN',
   ])
   const canUseAcknowledgements = canReadChecklistResults(input.authSummary)
+  const templateTypeOptions = getChecklistTypeFilterOptions(input.authSummary, locale, t)
+  const effectiveTypeFilter = templateTypeOptions.some((option) => option.value === typeFilter)
+    ? typeFilter
+    : templateTypeOptions[0]?.value ?? 'all'
   const showCommandNotice = (message: string) => {
     storeChecklistCommandNotice(message)
     setAckNotice(message)
@@ -309,7 +313,7 @@ export function StoreChecklistsPage(input: {
         month: selectedMonth,
         query: searchQuery,
         status: statusFilter,
-        type: typeFilter,
+        type: effectiveTypeFilter,
       }),
     ),
     visitSort,
@@ -326,7 +330,7 @@ export function StoreChecklistsPage(input: {
         month: selectedMonth,
         query: searchQuery,
         status: statusFilter,
-        type: typeFilter,
+        type: effectiveTypeFilter,
       }),
     ),
     resultSort,
@@ -338,14 +342,13 @@ export function StoreChecklistsPage(input: {
         month: selectedMonth,
         query: searchQuery,
         status: statusFilter,
-        type: typeFilter,
+        type: effectiveTypeFilter,
       }),
     ),
     resultSort,
     locale,
   ).slice(0, 5)
   const activeVisitCount = coverageRows.filter((row) => row.active).length
-  const storeCount = new Set(coverageRows.map((row) => row.store.storeId)).size
   const selectedSession =
     coverageRows.find((row) => getCoverageRowKeyFromRow(row) === selectedSessionKey) ?? null
   const resultStoreCount = new Set(items.map((item) => item.storeId)).size
@@ -361,10 +364,16 @@ export function StoreChecklistsPage(input: {
     heroScoreValues.length > 0
       ? Math.round((heroScoreValues.reduce((sum, value) => sum + value, 0) / heroScoreValues.length) * 10) / 10
       : null
-  const heroStoreCount = canManageVisits ? storeCount : resultStoreCount
+  const assignedVisitStoreCount =
+    mobileToday?.stores.length ??
+    (assignedStoreIds.length > 0
+      ? assignedStoreIds.length
+      : input.authSummary?.scopeSummary.assignedStoreCount ?? 0)
+  const heroStoreCount = canManageVisits ? assignedVisitStoreCount : resultStoreCount
   const heroCompletedCount = canManageVisits ? completedVisitStoreCount : acknowledgedItems.length
   const heroWaitingCount = canManageVisits ? pendingVisitStoreCount : pendingItems.length
   const heroScopeLabel = getChecklistHeroScopeLabel(input.authSummary, locale, canManageVisits)
+  const vmOnlyVisitScope = isVisualMerchandiserOnly(input.authSummary)
   const commandNotice = ackNotice ?? (completeVisitMutation.isSuccess ? t('storeChecklists.completeSuccess') : null)
   const checklistTabs: ChecklistTabOption[] = [
     ...(canManageVisits
@@ -480,7 +489,13 @@ export function StoreChecklistsPage(input: {
           />
           <ChecklistMetric
             label={getStaticCopy(locale, 'Ortalama skor', 'Average score')}
-            note={canManageVisits ? getStaticCopy(locale, 'BM + VM', 'BM + VM') : getStaticCopy(locale, 'Son sonuçlar', 'Latest results')}
+            note={
+              canManageVisits
+                ? vmOnlyVisitScope
+                  ? getStaticCopy(locale, 'VM', 'VM')
+                  : getStaticCopy(locale, 'BM + VM', 'BM + VM')
+                : getStaticCopy(locale, 'Son sonuçlar', 'Latest results')
+            }
             tone={heroAverageScore !== null && heroAverageScore >= 70 ? 'calm' : heroAverageScore === null ? 'neutral' : 'warning'}
             value={
               heroAverageScore === null
@@ -498,11 +513,12 @@ export function StoreChecklistsPage(input: {
         selectedMonth={selectedMonth}
         statusFilter={statusFilter}
         t={t}
-        typeFilter={typeFilter}
+        typeFilter={effectiveTypeFilter}
+        typeOptions={templateTypeOptions}
         onClear={() => {
           setSearchQuery('')
           setSelectedMonth('all')
-          setTypeFilter('all')
+          setTypeFilter(templateTypeOptions[0]?.value ?? 'all')
           setStatusFilter('all')
         }}
         onMonthChange={setSelectedMonth}
@@ -550,8 +566,20 @@ export function StoreChecklistsPage(input: {
 
           {visitStoreRows.length === 0 ? (
             <ChecklistEmptyBlock
-              copy={t('storeChecklists.noActiveChecklistCopy')}
-              title={t('storeChecklists.noActiveChecklistTitle')}
+              copy={
+                assignedVisitStoreCount > 0 && (mobileToday?.templates.length ?? 0) === 0
+                  ? getStaticCopy(
+                      locale,
+                      'Atanmış mağazan var; ancak bu rol için yayınlanmış VM checklist şablonu henüz yok.',
+                      'You have assigned stores, but there is no published VM checklist template for this role yet.',
+                    )
+                  : t('storeChecklists.noActiveChecklistCopy')
+              }
+              title={
+                assignedVisitStoreCount > 0 && (mobileToday?.templates.length ?? 0) === 0
+                  ? getStaticCopy(locale, 'VM şablonu yayında değil', 'VM template is not published')
+                  : t('storeChecklists.noActiveChecklistTitle')
+              }
             />
           ) : (
             <div className="store-checklists-table store-checklists-visit-table">
@@ -853,6 +881,7 @@ function ChecklistToolbar(input: {
   statusFilter: ChecklistStatusFilter
   t: TranslateFunction
   typeFilter: ChecklistTypeFilter
+  typeOptions: Array<{ value: ChecklistTypeFilter; label: string }>
   onClear: () => void
   onMonthChange: (value: string) => void
   onSearchChange: (value: string) => void
@@ -891,9 +920,11 @@ function ChecklistToolbar(input: {
           value={input.typeFilter}
           onChange={(event) => input.onTypeChange(event.target.value as ChecklistTypeFilter)}
         >
-          <option value="all">{getStaticCopy(input.locale, 'BM + VM', 'BM + VM')}</option>
-          <option value="BM_STORE_VISIT">{input.t('storeChecklists.coverage.bm')}</option>
-          <option value="VM_STORE_VISIT">{input.t('storeChecklists.coverage.vm')}</option>
+          {input.typeOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
         </select>
       </label>
       <label className="store-checklists-filter">
@@ -1733,6 +1764,35 @@ function getStoreVisitRiskLabel(t: TranslateFunction, locale: AppLocale, row: Ch
   const score = getStoreVisitScore(row)
   if (score !== null && score < 70) return getStaticCopy(locale, 'Düşük puan', 'Low score')
   return getStaticCopy(locale, 'Temiz', 'Clear')
+}
+
+function getChecklistTypeFilterOptions(
+  authSummary: AuthSessionSummary | null,
+  locale: AppLocale,
+  t: TranslateFunction,
+): Array<{ value: ChecklistTypeFilter; label: string }> {
+  if (isVisualMerchandiserOnly(authSummary)) {
+    return [{ value: 'VM_STORE_VISIT', label: getStaticCopy(locale, 'VM', 'VM') }]
+  }
+
+  return [
+    { value: 'all', label: getStaticCopy(locale, 'BM + VM', 'BM + VM') },
+    { value: 'BM_STORE_VISIT', label: t('storeChecklists.coverage.bm') },
+    { value: 'VM_STORE_VISIT', label: t('storeChecklists.coverage.vm') },
+  ]
+}
+
+function isVisualMerchandiserOnly(authSummary: AuthSessionSummary | null) {
+  return (
+    hasAnyRole(authSummary, ['VISUAL_MERCHANDISER']) &&
+    !hasAnyRole(authSummary, [
+      'HR_ADMIN',
+      'REGION_MANAGER',
+      'STORE_MANAGER',
+      'STORE_PERSONNEL',
+      'SUPER_ADMIN',
+    ])
+  )
 }
 
 function getChecklistHeroScopeLabel(
