@@ -118,6 +118,42 @@ describe("ChecklistService", () => {
     });
   });
 
+  it("lets region managers read BM and VM checklist visit coverage without granting VM mutation", async () => {
+    const checklistRepository = {
+      getMobileChecklistToday: jest.fn().mockResolvedValue({
+        stores: [],
+        templates: [],
+        activeInstances: [],
+        completedThisMonth: [],
+        pendingAcknowledgements: [],
+        monthlySummaries: [],
+      }),
+    };
+    const service = createService(checklistRepository);
+
+    await service.getMobileChecklistToday({
+      actorUserId: "region-user-1",
+      actorScope: {
+        companyIds: [],
+        regionIds: ["region-1"],
+        storeIds: ["store-1"],
+      },
+      actorActionScope: {
+        assignedStoreIds: ["store-1"],
+      },
+      actorRoleCodes: ["REGION_MANAGER"],
+    });
+
+    expect(checklistRepository.getMobileChecklistToday).toHaveBeenCalledWith({
+      actorUserId: "region-user-1",
+      assignedStoreIds: ["store-1"],
+      readStoreIds: ["store-1"],
+      readRegionIds: ["region-1"],
+      readCompanyIds: [],
+      allowedTemplateTypes: ["BM_STORE_VISIT", "VM_STORE_VISIT"],
+    });
+  });
+
   it("limits visual merchandisers to VM checklist results", async () => {
     const acknowledgementRepository = {
       listChecklistAcknowledgements: jest.fn().mockResolvedValue([]),
@@ -473,7 +509,7 @@ describe("ChecklistService", () => {
       readStoreIds: ["read-store-1"],
       readRegionIds: [],
       readCompanyIds: [],
-      allowedTemplateTypes: ["BM_STORE_VISIT"],
+      allowedTemplateTypes: ["BM_STORE_VISIT", "VM_STORE_VISIT"],
     });
   });
 

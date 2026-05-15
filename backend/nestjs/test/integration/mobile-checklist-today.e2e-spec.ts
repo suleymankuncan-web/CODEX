@@ -120,6 +120,62 @@ describe("Mobile checklist today flow", () => {
     await app.close();
   });
 
+  it("returns BM and VM checklist coverage to region managers", async () => {
+    const query = jest.fn(async (sql: string, params?: unknown[]) => {
+      if (sql.includes("FROM ops.store s") && sql.includes("ORDER BY s.store_name ASC")) {
+        return {
+          rows: [{ store_id: storeId, store_name: "Marmara Park" }],
+        };
+      }
+
+      if (sql.includes("WITH ranked_templates")) {
+        expect(params?.[1]).toEqual(["BM_STORE_VISIT", "VM_STORE_VISIT"]);
+        return {
+          rows: [
+            {
+              checklist_template_id: templateId,
+              template_code: "BM_VISIT_V1",
+              template_type: "BM_STORE_VISIT",
+              template_name: "BM Visit",
+              version_no: 1,
+            },
+            {
+              checklist_template_id: vmTemplateId,
+              template_code: "VM_VISIT_V1",
+              template_type: "VM_STORE_VISIT",
+              template_name: "VM Visit",
+              version_no: 1,
+            },
+          ],
+        };
+      }
+
+      return { rows: [] };
+    });
+    const app = await createIntegrationApp({
+      databaseService: {
+        query,
+        withTransaction: async <T>(work: (client: { query: typeof query }) => Promise<T>) =>
+          work({ query }),
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .get("/api/mobile/checklists/today")
+      .set("x-user-id", "region-user-1")
+      .set("x-role-codes", "REGION_MANAGER")
+      .set("x-region-ids", regionId)
+      .set("x-read-company-ids", "");
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.templates.map((template: { templateType: string }) => template.templateType)).toEqual([
+      "BM_STORE_VISIT",
+      "VM_STORE_VISIT",
+    ]);
+
+    await app.close();
+  });
+
   it("filters VM checklist today payload to VM templates for visual merchandisers", async () => {
     const query = jest.fn(async (sql: string) => {
       if (sql.includes("FROM ops.store s") && sql.includes("ORDER BY s.store_name ASC")) {

@@ -595,9 +595,12 @@ export function StoreChecklistsPage(input: {
               </div>
 
               {visitStoreRows.map((storeRow) => {
-                const row = storeRow.primary
+                const actionableRow = getActionableStoreVisitRow(storeRow, input.authSummary)
+                const row = actionableRow ?? storeRow.primary
                 const active = row.active
-                const canStart = active || assignedStoreIds.includes(storeRow.store.storeId)
+                const canStart =
+                  Boolean(actionableRow) &&
+                  (active || assignedStoreIds.includes(storeRow.store.storeId))
                 const rowKey = getCoverageRowKeyFromRow(row)
                 const isStartingRow =
                   startVisitMutation.isPending &&
@@ -642,6 +645,10 @@ export function StoreChecklistsPage(input: {
                           return
                         }
 
+                        if (!actionableRow) {
+                          return
+                        }
+
                         hydrateActiveResponseDrafts(undefined)
                         setSelectedSessionKey(null)
                         startVisitMutation.mutate({
@@ -654,7 +661,9 @@ export function StoreChecklistsPage(input: {
                         ? t('storeChecklists.continueChecklist')
                         : isStartingRow
                           ? t('storeChecklists.startPending')
-                          : t('storeChecklists.startChecklist')}
+                          : actionableRow
+                            ? t('storeChecklists.startChecklist')
+                            : getStaticCopy(locale, 'Sadece oku', 'Read only')}
                     </button>
                   </article>
                 )
@@ -1645,6 +1654,18 @@ function chooseStoreVisitPrimary(row: Omit<ChecklistStoreVisitRow, 'primary'> & 
     throw new Error('Checklist store visit row requires at least one checklist row')
   }
   return primary
+}
+
+function getActionableStoreVisitRow(row: ChecklistStoreVisitRow, authSummary: AuthSessionSummary | null) {
+  const rows = [row.bm, row.vm].filter((item): item is ChecklistCoverageRow => Boolean(item))
+  return rows.find((item) => canMutateChecklistTemplateType(authSummary, item.template.templateType)) ?? null
+}
+
+function canMutateChecklistTemplateType(authSummary: AuthSessionSummary | null, templateType: string) {
+  if (hasAnyRole(authSummary, ['SUPER_ADMIN'])) return true
+  if (templateType === 'BM_STORE_VISIT') return hasAnyRole(authSummary, ['REGION_MANAGER'])
+  if (templateType === 'VM_STORE_VISIT') return hasAnyRole(authSummary, ['VISUAL_MERCHANDISER'])
+  return false
 }
 
 function getLocalizedTemplateScoreStatus(
