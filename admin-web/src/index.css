@@ -9629,6 +9629,11 @@ code {
   align-items: center;
 }
 
+.store-checklists-visit-table.store-checklists-visit-table-single-score .store-checklists-table-head,
+.store-checklists-visit-table.store-checklists-visit-table-single-score .store-checklists-visit-row {
+  grid-template-columns: minmax(220px, 1.35fr) 132px 112px 104px 96px;
+}
+
 .store-checklists-table-head {
   min-height: 2.4rem;
   padding: 0 0.55rem;
