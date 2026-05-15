@@ -1769,6 +1769,66 @@ test('store tasks page switches to English copy and persists locale', async ({ p
   await expect(page.getByRole('heading', { name: /Action-required work/i })).toBeVisible()
 })
 
+test('store tasks checklist acknowledgement opens the checklist inbox tab', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'en')
+  })
+  await page.unroute('**/api/auth/session')
+  await page.unroute('**/api/workflow/inbox')
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      json: {
+        ...authSessionFixture,
+        user: {
+          ...authSessionFixture.user,
+          roleCodes: ['SUPER_ADMIN', 'STORE_MANAGER'],
+        },
+      },
+    })
+  })
+  await page.route('**/api/workflow/inbox', async (route) => {
+    await route.fulfill({
+      json: {
+        items: [
+          {
+            itemType: 'acknowledgement',
+            sourceType: 'checklist_receipt',
+            sourceId: 'checklist-instance-bm-1',
+            title: 'BM Result',
+            summary: 'IstinyePark Demo Store completed checklist result',
+            storeId: demoStoreId,
+            storeName: 'IstinyePark Demo Store',
+            workflowStatus: 'completed',
+            inboxStatus: 'needs_attention',
+            urgency: 'medium',
+            createdAt: '2026-05-12T09:00:00.000Z',
+            needsAttentionAt: '2026-05-12T09:00:00.000Z',
+            actorRole: 'STORE_MANAGER',
+            primaryActionLabel: 'I acknowledge',
+            secondaryActionLabel: 'Open checklist result',
+            deepLink: '/store/checklists?tab=inbox',
+          },
+        ],
+        meta: {
+          count: 1,
+          total: 1,
+          limit: 30,
+          offset: 0,
+        },
+      },
+    })
+  })
+
+  await page.goto('/store/tasks')
+  await page.getByRole('link', { name: 'I acknowledge' }).click()
+
+  await expect(page).toHaveURL(/\/store\/checklists\?tab=inbox$/)
+  await expect(page.getByRole('tab', { name: /Checklist inbox/ })).toHaveAttribute('aria-selected', 'true')
+  await expect(
+    page.getByRole('heading', { name: 'Completed checklist receipts waiting on store acknowledgement' }),
+  ).toBeVisible()
+})
+
 test('store incentives page switches to English copy and persists locale', async ({ page }) => {
   await page.goto('/store/incentives')
 

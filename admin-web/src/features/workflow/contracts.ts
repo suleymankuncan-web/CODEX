@@ -87,7 +87,7 @@ export function toTargetApprovalInboxItem(
 
 export function toChecklistAcknowledgementInboxItem(
   item: ChecklistAcknowledgementItem,
-  deepLink = '/store/checklists',
+  deepLink = '/store/checklists?tab=inbox',
 ): WorkflowInboxItem {
   const needsAttention = item.acknowledgement === null
 

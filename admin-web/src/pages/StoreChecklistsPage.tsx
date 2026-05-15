@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useLocation } from 'react-router-dom'
 import { ScreenState } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
 import {
@@ -66,6 +67,7 @@ export function StoreChecklistsPage(input: {
   authSummary: AuthSessionSummary | null
 }) {
   const { locale, t } = useLocalization()
+  const location = useLocation()
   const queryClient = useQueryClient()
   const [ackNotes, setAckNotes] = useState<Record<string, string>>({})
   const [ackNotice, setAckNotice] = useState<string | null>(() => takeChecklistCommandNotice())
@@ -77,7 +79,9 @@ export function StoreChecklistsPage(input: {
   const [selectedMonth, setSelectedMonth] = useState('all')
   const [typeFilter, setTypeFilter] = useState<ChecklistTypeFilter>('all')
   const [statusFilter, setStatusFilter] = useState<ChecklistStatusFilter>('all')
-  const [activeTab, setActiveTab] = useState<ChecklistTab>('visits')
+  const [activeTab, setActiveTab] = useState<ChecklistTab>(() =>
+    resolveChecklistTabFromSearch(location.search),
+  )
   const [visitSort, setVisitSort] = useState<ChecklistSort>({ key: 'priority', direction: 'desc' })
   const [resultSort, setResultSort] = useState<ChecklistSort>({ key: 'date', direction: 'desc' })
   const [localActiveInstances, setLocalActiveInstances] = useState<
@@ -1845,6 +1849,11 @@ function isVisualMerchandiserOnly(authSummary: AuthSessionSummary | null) {
       'SUPER_ADMIN',
     ])
   )
+}
+
+function resolveChecklistTabFromSearch(search: string): ChecklistTab {
+  const tab = new URLSearchParams(search).get('tab')
+  return tab === 'inbox' || tab === 'history' || tab === 'visits' ? tab : 'visits'
 }
 
 function getChecklistHeroScopeLabel(
