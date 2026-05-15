@@ -215,6 +215,7 @@ export function StoreChecklistsPage(input: {
       showCommandNotice(getStaticCopy(locale, 'Başarıyla Tamamlandı', 'Completed successfully'))
       void queryClient.invalidateQueries({ queryKey: ['mobile-checklists-today'] })
       void queryClient.invalidateQueries({ queryKey: ['checklist-acknowledgements'] })
+      void queryClient.invalidateQueries({ queryKey: ['workflow-inbox'] })
       setLocalActiveInstances((current) =>
         Object.fromEntries(
           Object.entries(current).filter(
