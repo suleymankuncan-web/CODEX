@@ -525,6 +525,28 @@ test('store shell exposes Turkish-first chrome and hides technical auth roles', 
   await expect(page.getByText('Task-first preview for store-scoped work.')).toHaveCount(0)
 })
 
+test('store home prefetches the task queue for manager navigation', async ({ page }) => {
+  let workflowInboxRequests = 0
+  await page.unroute('**/api/workflow/inbox')
+  await page.route('**/api/workflow/inbox', async (route) => {
+    workflowInboxRequests += 1
+    await route.fulfill({ json: workflowInboxFixture })
+  })
+
+  await page.goto('/store/home')
+
+  await expect(page.getByRole('heading', { name: /Mağaza Yönetim Paneli/i })).toBeVisible()
+  await expect.poll(() => workflowInboxRequests).toBeGreaterThanOrEqual(1)
+
+  await page
+    .locator('.store-command-nav')
+    .getByRole('link', { name: 'Görevler', exact: true })
+    .click()
+
+  await expect(page.getByRole('heading', { name: 'Aksiyon gerektiren işler tek mağaza kuyruğunda.' })).toBeVisible()
+  expect(workflowInboxRequests).toBe(1)
+})
+
 test('region manager home surfaces checklist field queue summary', async ({ page }) => {
   await page.unroute('**/api/auth/session')
   await page.route('**/api/auth/session', async (route) => {

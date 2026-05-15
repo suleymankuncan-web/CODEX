@@ -590,6 +590,20 @@ async function routeChecklistApi(page: Page, roleCodes: string[], options: Check
     })
   })
 
+  await page.route('**/api/workflow/inbox', async (route) => {
+    await route.fulfill({
+      json: {
+        items: [],
+        meta: {
+          count: 0,
+          total: 0,
+          limit: 30,
+          offset: 0,
+        },
+      },
+    })
+  })
+
   await page.route('**/api/mobile/checklists/instances', async (route) => {
     options.requests?.starts.push(await route.request().postDataJSON())
     await route.fulfill({

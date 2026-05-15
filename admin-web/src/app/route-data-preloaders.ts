@@ -27,6 +27,7 @@ import {
   getSellerCodeRequests,
   getStoreEmployees,
 } from '../features/workforce/api'
+import { getWorkflowInbox } from '../features/workflow/api'
 import { transientQueryRetryOptions } from '../lib/query-retry'
 
 type RouteDataPrefetchInput = {
@@ -43,6 +44,7 @@ type PrefetchTask = {
 
 const rankingRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN']
 const storeReportingRoles = ['SUPER_ADMIN', 'REPORT_VIEWER', 'AUDITOR', 'STORE_MANAGER']
+const workflowInboxRoles = ['STORE_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER']
 
 export function prefetchRouteData(input: RouteDataPrefetchInput) {
   const tasks = resolveRoutePrefetchTasks(input.pathname, input.authSummary)
@@ -67,6 +69,10 @@ function resolveRoutePrefetchTasks(
   pathname: string,
   authSummary: AuthSessionSummary | null,
 ): PrefetchTask[] {
+  if (pathname === '/store' || pathname === '/store/home') {
+    return getStoreHomePrefetchTasks(authSummary)
+  }
+
   if (pathname === '/store/me') {
     return getStoreMePrefetchTasks(authSummary)
   }
@@ -83,11 +89,29 @@ function resolveRoutePrefetchTasks(
     return getStoreChecklistsPrefetchTasks(authSummary)
   }
 
+  if (pathname === '/store/tasks') {
+    return getStoreTasksPrefetchTasks(authSummary)
+  }
+
   if (pathname === '/store/approvals') {
     return getStoreApprovalsPrefetchTasks(authSummary)
   }
 
   return []
+}
+
+function getStoreHomePrefetchTasks(authSummary: AuthSessionSummary | null): PrefetchTask[] {
+  return getStoreTasksPrefetchTasks(authSummary)
+}
+
+function getStoreTasksPrefetchTasks(authSummary: AuthSessionSummary | null): PrefetchTask[] {
+  return [
+    {
+      queryKey: ['workflow-inbox'],
+      queryFn: getWorkflowInbox,
+      enabled: hasAnyRole(authSummary, workflowInboxRoles),
+    },
+  ]
 }
 
 function getStoreMePrefetchTasks(authSummary: AuthSessionSummary | null): PrefetchTask[] {
