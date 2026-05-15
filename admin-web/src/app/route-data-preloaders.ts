@@ -1,12 +1,19 @@
 import type { QueryClient, QueryKey } from '@tanstack/react-query'
-import type { AuthSessionSummary } from '../features/auth/api'
+import { getAuthLookups, type AuthSessionSummary } from '../features/auth/api'
 import { canReadChecklistResults, hasAnyRole } from '../features/auth/authorization'
 import {
   getChecklistAcknowledgements,
   getMobileChecklistToday,
 } from '../features/checklists/api'
 import { listCompetitions } from '../features/competitions/api'
-import { getVisibleFeedPosts } from '../features/feed/api'
+import { getAdminFeedPosts, getVisibleFeedPosts } from '../features/feed/api'
+import {
+  getImportOverview,
+  getImportPayloadTemplate,
+  getIntegrationLookups,
+  getMasterDataBootstrapBatches,
+  getNeedsAction,
+} from '../features/integrations/api'
 import {
   getKpiConfig,
   getMyPerformance,
@@ -30,10 +37,14 @@ type PrefetchTask = {
 }
 
 const rankingRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN']
+const adminFeedRoles = ['SUPER_ADMIN', 'HR_ADMIN', 'REGION_MANAGER']
+const adminIntegrationRoles = ['SUPER_ADMIN', 'INTEGRATION_ADMIN']
+const adminMasterDataRoles = ['SUPER_ADMIN', 'HR_ADMIN', 'INTEGRATION_ADMIN']
 const storeCompetitionRoles = ['STORE_PERSONNEL', 'STORE_MANAGER']
 const storeReportingRoles = ['SUPER_ADMIN', 'REPORT_VIEWER', 'AUDITOR', 'STORE_MANAGER']
 const workflowInboxRoles = ['STORE_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER']
 const checklistVisitManagerRoles = ['REGION_MANAGER', 'VISUAL_MERCHANDISER', 'SUPER_ADMIN']
+const routePrefetchStaleTimeMs = 30_000
 
 export function prefetchRouteData(input: RouteDataPrefetchInput) {
   const tasks = resolveRoutePrefetchTasks(input.pathname, input.authSummary)
@@ -49,6 +60,7 @@ export function prefetchRouteData(input: RouteDataPrefetchInput) {
     void input.queryClient.prefetchQuery({
       queryKey: task.queryKey,
       queryFn: task.queryFn,
+      staleTime: routePrefetchStaleTimeMs,
       ...transientQueryRetryOptions,
     }).catch(() => undefined)
   })
@@ -92,6 +104,18 @@ function resolveRoutePrefetchTasks(
 
   if (pathname === '/store/approvals') {
     return getStoreApprovalsPrefetchTasks(authSummary)
+  }
+
+  if (pathname === '/admin/integrations') {
+    return getAdminIntegrationsPrefetchTasks(authSummary)
+  }
+
+  if (pathname === '/admin/master-data') {
+    return getAdminMasterDataPrefetchTasks(authSummary)
+  }
+
+  if (pathname === '/admin/feed') {
+    return getAdminFeedPrefetchTasks(authSummary)
   }
 
   return []
@@ -201,6 +225,62 @@ function getStoreChecklistsPrefetchTasks(authSummary: AuthSessionSummary | null)
       queryKey: ['mobile-checklists-today'],
       queryFn: getMobileChecklistToday,
       enabled: canManageChecklistVisits,
+    },
+  ]
+}
+
+function getAdminIntegrationsPrefetchTasks(authSummary: AuthSessionSummary | null): PrefetchTask[] {
+  const enabled = hasAnyRole(authSummary, adminIntegrationRoles)
+  return [
+    {
+      queryKey: ['integration-overview'],
+      queryFn: getImportOverview,
+      enabled,
+    },
+    {
+      queryKey: ['integration-needs-action', 0, '', ''],
+      queryFn: () => getNeedsAction({ limit: 12, offset: 0 }),
+      enabled,
+    },
+    {
+      queryKey: ['integration-import-template', 'power_bi'],
+      queryFn: () =>
+        getImportPayloadTemplate({
+          entityType: 'kpi',
+          sourceSystem: 'power_bi',
+        }),
+      enabled,
+    },
+    {
+      queryKey: ['integration-lookups'],
+      queryFn: getIntegrationLookups,
+      enabled,
+    },
+  ]
+}
+
+function getAdminMasterDataPrefetchTasks(authSummary: AuthSessionSummary | null): PrefetchTask[] {
+  return [
+    {
+      queryKey: ['master-data-bootstrap-batches', 'all', 'all', ''],
+      queryFn: () => getMasterDataBootstrapBatches({ limit: 50, offset: 0 }),
+      enabled: hasAnyRole(authSummary, adminMasterDataRoles),
+    },
+  ]
+}
+
+function getAdminFeedPrefetchTasks(authSummary: AuthSessionSummary | null): PrefetchTask[] {
+  const enabled = hasAnyRole(authSummary, adminFeedRoles)
+  return [
+    {
+      queryKey: ['admin-feed'],
+      queryFn: getAdminFeedPosts,
+      enabled,
+    },
+    {
+      queryKey: ['auth-lookups'],
+      queryFn: getAuthLookups,
+      enabled,
     },
   ]
 }
