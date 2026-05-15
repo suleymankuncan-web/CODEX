@@ -242,6 +242,24 @@ test('visual merchandiser sees checklist-only VM coverage and no broad store lin
   await expect(page.locator('.store-checklists-history-row').filter({ hasText: 'VM Result' })).toBeVisible()
 })
 
+test('visual merchandiser without a published VM template still sees assigned store scope', async ({ page }) => {
+  await setupChecklistPage(page, ['VISUAL_MERCHANDISER'], {
+    activeInstances: [],
+    monthlySummaries: [],
+    omitTemplates: true,
+  })
+  await page.goto('/store/checklists')
+
+  await expect(page.locator('.store-checklists-command-metrics')).toContainText('Atanmış mağaza')
+  await expect(page.locator('.store-checklists-command-metrics .store-checklists-metric').first()).toContainText('1')
+  await expect(page.getByText('VM şablonu yayında değil')).toBeVisible()
+  const templateTypeSelect = page.locator('.store-checklists-toolbar select').nth(1)
+  await expect(templateTypeSelect).toHaveValue('VM_STORE_VISIT')
+  await expect(templateTypeSelect.locator('option')).toHaveCount(1)
+  await expect(templateTypeSelect.locator('option')).toHaveText(['VM'])
+  await expect(page.getByText('BM + VM')).toHaveCount(0)
+})
+
 test('visual merchandiser completed checklist lands in store manager acknowledgement inbox', async ({ page }) => {
   const requests = createChecklistRequestLog()
   const roleState: ChecklistRoleState = { current: ['VISUAL_MERCHANDISER'] }
@@ -374,6 +392,7 @@ type ChecklistFixtureOptions = {
   templateCode?: string
   templateName?: string
   includeVmTemplate?: boolean
+  omitTemplates?: boolean
   activeInstances?: ChecklistActiveInstanceFixture[]
   monthlySummaries?: ChecklistMonthlySummaryFixture[]
   requests?: ChecklistRequestLog
@@ -639,11 +658,12 @@ function createMobileChecklistTodayFixture(options: ChecklistFixtureOptions = {}
       ],
     })
   }
+  const visibleTemplates = options.omitTemplates ? [] : templates
 
   return {
   data: {
     stores: [{ storeId, storeName: 'Marmara Park' }],
-    templates,
+    templates: visibleTemplates,
     activeInstances: (
       options.activeInstances ?? [
         {
