@@ -43,10 +43,12 @@ export function TargetApprovalQueuePage(input: {
   const approvalsQuery = useQuery({
     queryKey: ['target-distribution-requests', 'approval-queue'],
     queryFn: () => getTargetDistributionRequests(),
+    staleTime: 30_000,
   })
   const coverageQuery = useQuery({
     queryKey: ['target-distribution-coverage', currentRequestMonth],
     queryFn: () => getTargetCoverage({ requestMonth: currentRequestMonth }),
+    staleTime: 30_000,
   })
   const approveMutation = useMutation({
     mutationFn: approveTargetDistributionRequest,
