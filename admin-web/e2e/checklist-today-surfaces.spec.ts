@@ -207,6 +207,66 @@ test('visual merchandiser sees checklist-only VM coverage and no broad store lin
   await expect(page.locator('.store-checklists-history-row').filter({ hasText: 'VM Result' })).toBeVisible()
 })
 
+test('visual merchandiser completed checklist lands in store manager acknowledgement inbox', async ({ page }) => {
+  const requests = createChecklistRequestLog()
+  const roleState: ChecklistRoleState = { current: ['VISUAL_MERCHANDISER'] }
+  const handoffState: ChecklistHandoffState = {
+    completed: false,
+    acknowledged: false,
+  }
+  await page.addInitScript(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'en')
+  })
+  await setupChecklistPage(page, roleState.current, {
+    activeInstances: [],
+    handoffState,
+    handoffTemplateName: 'VM Result',
+    handoffTemplateType: 'VM_STORE_VISIT',
+    monthlySummaries: [],
+    requests,
+    roleState,
+    templateCode: 'VM_VISIT_V1',
+    templateName: 'VM Visit',
+    templateType: 'VM_STORE_VISIT',
+  })
+  await page.goto('/store/checklists')
+
+  await expect(page.getByText('VM checklist not completed')).toBeVisible()
+  await page.getByRole('button', { name: 'Start checklist' }).click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect.poll(() => requests.starts).toEqual([{ checklistTemplateId: templateId, storeId }])
+
+  await page.getByLabel('Score').fill('8')
+  await page.getByLabel('Note').fill('VM handoff-ready visit')
+  page.once('dialog', (dialog) => dialog.accept())
+  await page.getByRole('button', { name: 'Complete', exact: true }).click()
+  await expect.poll(() => requests.completes).toEqual([
+    { checklistInstanceId: '33333333-3333-4333-8333-333333333333' },
+  ])
+  await expect.poll(() => handoffState.completed).toBe(true)
+
+  roleState.current = ['STORE_MANAGER']
+  await setMockSessionRoles(page, roleState.current)
+  await page.goto('/store/checklists')
+
+  const resultRow = page.locator('.store-checklists-history-row').filter({ hasText: 'VM Result' })
+  await expect(resultRow).toBeVisible()
+  await expect(resultRow.getByText(/Result summary|low-score/)).toBeVisible()
+  await resultRow.getByRole('button', { name: 'View details' }).click()
+  const resultDialog = page.getByRole('dialog')
+  await expect(resultDialog).toBeVisible()
+  await expect(resultDialog.getByText('Result summary')).toBeVisible()
+  await page.getByLabel('Acknowledgement note').fill('Store acknowledged VM visit')
+  await page.getByRole('button', { name: 'I acknowledge' }).click()
+
+  await expect.poll(() => requests.acknowledgements).toEqual([
+    {
+      checklistInstanceId: '88888888-8888-4888-8888-888888888888',
+      body: { acknowledgementNote: 'Store acknowledged VM visit' },
+    },
+  ])
+})
+
 test('store checklist surface switches to English copy and persists locale', async ({ page }) => {
   await setupChecklistPage(page, ['SUPER_ADMIN'])
   await page.goto('/store/checklists')
@@ -283,6 +343,8 @@ type ChecklistFixtureOptions = {
   requests?: ChecklistRequestLog
   roleState?: ChecklistRoleState
   handoffState?: ChecklistHandoffState
+  handoffTemplateName?: string
+  handoffTemplateType?: string
 }
 
 type ChecklistActiveInstanceFixture = {
@@ -379,10 +441,7 @@ async function routeChecklistApi(page: Page, roleCodes: string[], options: Check
 
   await page.route('**/api/checklists/acknowledgements/list', async (route) => {
     await route.fulfill({
-      json: createChecklistAcknowledgementsFixture(
-        options.roleState?.current ?? roleCodes,
-        options.handoffState,
-      ),
+      json: createChecklistAcknowledgementsFixture(options.roleState?.current ?? roleCodes, options),
     })
   })
 
@@ -556,8 +615,17 @@ function createMobileChecklistTodayFixture(options: ChecklistFixtureOptions = {}
 
 function createChecklistAcknowledgementsFixture(
   roleCodes: string[],
-  handoffState?: ChecklistHandoffState,
+  options: ChecklistFixtureOptions = {},
 ) {
+  const handoffState = options.handoffState
+  const acknowledgement = handoffState?.acknowledged
+    ? {
+        checklistAcknowledgementId: '77777777-7777-4777-8777-777777777777',
+        acknowledgedByUserId: 'store-manager-1',
+        acknowledgementNote: handoffState.acknowledgementNote ?? null,
+        acknowledgedAt: '2026-04-28T11:00:00.000Z',
+      }
+    : null
   const items = [
     {
       checklistInstanceId: '44444444-4444-4444-8444-444444444444',
@@ -596,14 +664,7 @@ function createChecklistAcknowledgementsFixture(
           commentText: 'Temiz',
         },
       ],
-      acknowledgement: handoffState?.acknowledged
-        ? {
-            checklistAcknowledgementId: '77777777-7777-4777-8777-777777777777',
-            acknowledgedByUserId: 'store-manager-1',
-            acknowledgementNote: handoffState.acknowledgementNote ?? null,
-            acknowledgedAt: '2026-04-28T11:00:00.000Z',
-          }
-        : null,
+      acknowledgement: null,
     },
     {
       checklistInstanceId: '88888888-8888-4888-8888-888888888888',
@@ -634,9 +695,17 @@ function createChecklistAcknowledgementsFixture(
       acknowledgement: null,
     },
   ]
+  const handoffTemplateType = options.handoffTemplateType ?? 'BM_STORE_VISIT'
+  const handoffItem = items.find((item) => item.templateType === handoffTemplateType) ?? items[0]
   const completedItems = handoffState
     ? handoffState.completed
-      ? [items[0]]
+      ? [
+          {
+            ...handoffItem,
+            acknowledgement,
+            templateName: options.handoffTemplateName ?? handoffItem.templateName,
+          },
+        ]
       : []
     : items
   const visibleItems = roleCodes.includes('VISUAL_MERCHANDISER')
