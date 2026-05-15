@@ -26,6 +26,7 @@ describe("ReportingService KPI benchmark scoring", () => {
           store_name: "Marmara Park",
         },
       ]),
+      listRankingStoreChecklistRows: jest.fn(async () => []),
       getPeerStorePerformanceRows: jest.fn(async () => []),
       getStoreTurkeyBenchmarkValues: jest.fn(async () => [
         { kpi_code: "UPT", benchmark_value: "3" },
@@ -50,6 +51,98 @@ describe("ReportingService KPI benchmark scoring", () => {
     expect((upt as Record<string, unknown> | undefined)?.scoredRatio).toBe(1.2);
     expect((upt as Record<string, unknown> | undefined)?.isCapped).toBe(true);
     expect((upt as Record<string, unknown> | undefined)?.scoreContribution).toBe(18);
+  });
+
+  it("feeds completed BM and VM checklist visits into live store KPI highlights", async () => {
+    const reportingRepository = {
+      getStoreNameById: jest.fn(async () => "Marmara Park"),
+      listStoreKpiPeriods: jest.fn(async () => [
+        {
+          period_type: "monthly",
+          period_start: "2026-03-01",
+          period_end: "2026-03-31",
+        },
+      ]),
+      getLatestStoreKpiPeriod: jest.fn(async () => ({
+        period_type: "monthly",
+        period_start: "2026-03-01",
+        period_end: "2026-03-31",
+      })),
+      getStorePerformanceRows: jest.fn(async () => [
+        {
+          kpi_code: "TARGET_ACHIEVEMENT",
+          kpi_name: "Hedef gerceklestirme",
+          actual_value: "100",
+          target_value: "100",
+          store_name: "Marmara Park",
+        },
+      ]),
+      listRankingStoreChecklistRows: jest.fn(async () => [
+        {
+          store_id: "store-1",
+          store_name: "Marmara Park",
+          region_id: null,
+          region_name: null,
+          region_manager_user_id: null,
+          region_manager_name: null,
+          kpi_code: "BM_CHECKLIST",
+          kpi_name: "BM Checklist",
+          actual_value: "80",
+          target_value: null,
+        },
+        {
+          store_id: "store-1",
+          store_name: "Marmara Park",
+          region_id: null,
+          region_name: null,
+          region_manager_user_id: null,
+          region_manager_name: null,
+          kpi_code: "VM_CHECKLIST",
+          kpi_name: "VM Checklist",
+          actual_value: "100",
+          target_value: null,
+        },
+      ]),
+      getPeerStorePerformanceRows: jest.fn(async () => []),
+      getStoreTurkeyBenchmarkValues: jest.fn(async () => []),
+    };
+    const service = new ReportingService(
+      reportingRepository as never,
+      { getKpiConfigRows: jest.fn(async () => []) } as never,
+      {} as never,
+      {} as never,
+    );
+
+    const result = await service.getStoreKpiHighlights({
+      companyIds: ["company-1"],
+      regionIds: [],
+      storeIds: ["store-1"],
+      periodType: "monthly",
+    });
+
+    expect(reportingRepository.listRankingStoreChecklistRows).toHaveBeenCalledWith({
+      companyIds: ["company-1"],
+      periodStart: "2026-03-01",
+      periodEnd: "2026-03-31",
+    });
+    expect(result.metrics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "BM_CHECKLIST",
+          actualValue: 80,
+          achievementRate: 0.8,
+          scoreContribution: 4,
+          scoreStatus: "scored",
+        }),
+        expect.objectContaining({
+          code: "VM_CHECKLIST",
+          actualValue: 100,
+          achievementRate: 1,
+          scoreContribution: 5,
+          scoreStatus: "scored",
+        }),
+      ]),
+    );
   });
 
   it("does not score personnel target achievement without an approved target", async () => {

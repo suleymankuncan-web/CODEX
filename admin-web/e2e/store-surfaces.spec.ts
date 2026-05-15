@@ -353,6 +353,123 @@ test('store KPI highlights page explains metric source semantics', async ({ page
   await expect(page.getByText('KPI rows unavailable')).toHaveCount(0)
 })
 
+test('store KPI live checklist impact uses completed BM and VM visits from highlights', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'en')
+  })
+
+  await page.unroute('**/api/reports/kpi-config')
+  await page.unroute('**/api/reports/store-kpi-highlights**')
+
+  await page.route('**/api/reports/kpi-config', async (route) => {
+    await route.fulfill({
+      json: {
+        ...kpiConfigFixture,
+        storeProfile: {
+          ...kpiConfigFixture.storeProfile,
+          metrics: [
+            {
+              code: 'TARGET_ACHIEVEMENT',
+              label: 'Target Achievement',
+              weightPercent: 90,
+              ownerRole: 'STORE_MANAGER',
+              scoreBehavior: 'score_only',
+            },
+            {
+              code: 'BM_CHECKLIST',
+              label: 'BM Checklist',
+              weightPercent: 5,
+              ownerRole: 'REGION_MANAGER',
+              scoreBehavior: 'score_only',
+            },
+            {
+              code: 'VM_CHECKLIST',
+              label: 'VM Checklist',
+              weightPercent: 5,
+              ownerRole: 'VISUAL_TEAM',
+              scoreBehavior: 'score_only',
+            },
+          ],
+        },
+      },
+    })
+  })
+
+  await page.route('**/api/reports/store-kpi-highlights**', async (route) => {
+    await route.fulfill({
+      json: {
+        ...storeKpiHighlightsFixture,
+        score: {
+          value: 99,
+          matchedMetrics: 3,
+          totalMetrics: 3,
+        },
+        metrics: [
+          {
+            code: 'TARGET_ACHIEVEMENT',
+            label: 'Target Achievement',
+            weightPercent: 90,
+            actualValue: 1,
+            targetValue: 1,
+            achievementRate: 1,
+            actualRatio: 1,
+            scoredRatio: 1,
+            capRatio: 1.2,
+            isCapped: false,
+            scoreContribution: 90,
+            statusBand: 'exceeded',
+            dataStatus: 'reported',
+            scoreStatus: 'scored',
+          },
+          {
+            code: 'BM_CHECKLIST',
+            label: 'BM Checklist',
+            weightPercent: 5,
+            actualValue: 80,
+            targetValue: 100,
+            achievementRate: 0.8,
+            actualRatio: 0.8,
+            scoredRatio: 0.8,
+            capRatio: 1,
+            isCapped: false,
+            scoreContribution: 4,
+            statusBand: 'on_track',
+            dataStatus: 'reported',
+            scoreStatus: 'scored',
+          },
+          {
+            code: 'VM_CHECKLIST',
+            label: 'VM Checklist',
+            weightPercent: 5,
+            actualValue: 100,
+            targetValue: 100,
+            achievementRate: 1,
+            actualRatio: 1,
+            scoredRatio: 1,
+            capRatio: 1,
+            isCapped: false,
+            scoreContribution: 5,
+            statusBand: 'exceeded',
+            dataStatus: 'reported',
+            scoreStatus: 'scored',
+          },
+        ],
+      },
+    })
+  })
+
+  await page.goto('/store/kpis')
+
+  await expect(page.getByText('BM checklist status')).toBeVisible()
+  await expect(page.getByText('1 BM checklist completed')).toBeVisible()
+  await expect(page.getByText('BM checklist contribution 4')).toBeVisible()
+  await expect(page.getByText('VM checklist status')).toBeVisible()
+  await expect(page.getByText('1 VM checklist completed')).toBeVisible()
+  await expect(page.getByText('VM checklist contribution 5')).toBeVisible()
+  await expect(page.getByText('BM checklist: not included in score this period')).toHaveCount(0)
+  await expect(page.getByText('VM checklist: not included in score this period')).toHaveCount(0)
+})
+
 test('store KPI highlights switches to English copy and persists locale', async ({ page }) => {
   await page.goto('/store/kpis')
 

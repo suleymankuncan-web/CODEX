@@ -66,6 +66,16 @@ type DisplayKpiRow = {
   scoreStatus: 'scored' | 'pending_normalization' | 'missing_reference' | 'missing'
 }
 
+type ChecklistImpactComponent = {
+  included: boolean
+  score: number | null
+  weight: number
+  contribution: number | null
+  status: string
+  missingReason?: string
+  visitCount: number
+}
+
 const metricLabelKeyByCode: Record<string, TranslationKey> = {
   TARGET_ACHIEVEMENT: 'storeKpis.metric.targetAchievement',
   ATV: 'storeKpis.metric.atv',
@@ -127,6 +137,62 @@ function formatChecklistMissingNote(t: TranslateFunction, input: {
   included: boolean
 }) {
   return input.included ? null : t('storeKpis.checklist.shareStayed', { label: input.label })
+}
+
+function resolveLiveChecklistImpact(input: {
+  rows: DisplayKpiRow[]
+  metricCode: 'BM_CHECKLIST' | 'VM_CHECKLIST'
+  scoreProfile?: {
+    metrics: Array<{
+      code: string
+      weightPercent: number
+    }>
+  }
+}): ChecklistImpactComponent | null {
+  const metricConfig = input.scoreProfile?.metrics.find(
+    (metric) => metric.code === input.metricCode,
+  )
+  const row = input.rows.find((item) => item.kpiCode === input.metricCode)
+
+  if (!metricConfig && !row) {
+    return null
+  }
+
+  const weight = metricConfig?.weightPercent ?? row?.scoreContribution ?? 0
+
+  if (row?.scoreStatus === 'scored' && row.actualValue !== null) {
+    const score = toNumber(row.actualValue)
+    const contribution =
+      row.scoreContribution !== null && row.scoreContribution !== undefined
+        ? row.scoreContribution
+        : row.scoredRatio !== null && row.scoredRatio !== undefined
+          ? row.scoredRatio * weight
+          : row.achievementRate !== null && row.achievementRate !== undefined
+            ? toNumber(row.achievementRate) * weight
+            : null
+
+    return {
+      included: true,
+      score,
+      weight,
+      contribution,
+      status: 'included',
+      visitCount: 1,
+    }
+  }
+
+  return {
+    included: false,
+    score: null,
+    weight,
+    contribution: null,
+    status: row?.scoreStatus ?? 'not_included',
+    missingReason:
+      input.metricCode === 'BM_CHECKLIST'
+        ? 'bm_checklist_not_completed_for_period'
+        : 'vm_checklist_not_completed_for_period',
+    visitCount: 0,
+  }
 }
 
 function formatStatusBand(t: TranslateFunction, input: string | null) {
@@ -551,8 +617,24 @@ export function StoreKpiHighlightsPage(input: {
     }
   }, [rows, storeKpiScoreProfile])
   const closedScoreBreakdown = scoreBreakdownQuery.data ?? null
-  const bmChecklist = closedScoreBreakdown?.components.bmChecklist ?? null
-  const vmChecklist = closedScoreBreakdown?.components.vmChecklist ?? null
+  const liveBmChecklist = resolveLiveChecklistImpact({
+    rows,
+    metricCode: 'BM_CHECKLIST',
+    scoreProfile: storeKpiScoreProfile,
+  })
+  const liveVmChecklist = resolveLiveChecklistImpact({
+    rows,
+    metricCode: 'VM_CHECKLIST',
+    scoreProfile: storeKpiScoreProfile,
+  })
+  const bmChecklist =
+    viewMode === 'closed'
+      ? closedScoreBreakdown?.components.bmChecklist ?? null
+      : liveBmChecklist
+  const vmChecklist =
+    viewMode === 'closed'
+      ? closedScoreBreakdown?.components.vmChecklist ?? null
+      : liveVmChecklist
   const bmChecklistStatusLabel = bmChecklist
     ? formatChecklistStatus(t, {
         label: 'BM',
