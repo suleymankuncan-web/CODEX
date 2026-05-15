@@ -615,11 +615,13 @@ export function StoreChecklistsPage(input: {
                     </div>
                     <ChecklistTemplateScore
                       label={getStaticCopy(locale, 'BM', 'BM')}
+                      locale={locale}
                       row={storeRow.bm}
                       t={t}
                     />
                     <ChecklistTemplateScore
                       label={getStaticCopy(locale, 'VM', 'VM')}
+                      locale={locale}
                       row={storeRow.vm}
                       t={t}
                     />
@@ -996,6 +998,7 @@ function ChecklistResultRow(input: {
   const hasAcknowledgement = input.item.acknowledgement !== null
   const lowScoreCount = getLowScoreResponses(input.item.responses).length
   const scorePercent = input.item.totalScore ?? Math.round((input.item.complianceRate ?? 0) * 100)
+  const digest = getChecklistResultDigest(input.t, input.locale, input.item)
 
   return (
     <article className="store-checklists-history-row">
@@ -1005,6 +1008,10 @@ function ChecklistResultRow(input: {
         </ChecklistBadge>
         <strong>{input.item.templateName}</strong>
         <p>{formatCompletedSentence(input.t, input.locale, input.item)}</p>
+        <p className="store-checklist-result-digest">
+          <span>{getStaticCopy(input.locale, 'Sonuç özeti', 'Result summary')}</span>
+          {digest.title}
+        </p>
       </div>
       <ChecklistScoreBar
         label={input.t('storeChecklists.score')}
@@ -1262,6 +1269,7 @@ function ChecklistResultModal(input: {
   const sections = groupChecklistResultResponses(input.item.responses)
   const hasAcknowledgement = input.item.acknowledgement !== null
   const scorePercent = input.item.totalScore ?? Math.round((input.item.complianceRate ?? 0) * 100)
+  const digest = getChecklistResultDigest(input.t, input.locale, input.item)
 
   return (
     <div className="store-checklist-modal-backdrop">
@@ -1314,6 +1322,12 @@ function ChecklistResultModal(input: {
                 : input.t('storeChecklists.needsAcknowledgement')
             }
           />
+        </div>
+
+        <div className={`store-checklist-result-digest-card store-checklist-result-digest-card-${digest.tone}`}>
+          <span>{getStaticCopy(input.locale, 'Sonuç özeti', 'Result summary')}</span>
+          <strong>{digest.title}</strong>
+          <p>{digest.copy}</p>
         </div>
 
         {lowScoreResponses.length > 0 ? (
@@ -1478,18 +1492,21 @@ function ChecklistScoreBar(input: {
 
 function ChecklistTemplateScore(input: {
   label: string
+  locale: AppLocale
   row?: ChecklistCoverageRow
   t: TranslateFunction
 }) {
   const score = input.row ? getCoverageScore(input.row) : null
   const tone = !input.row || score === null ? 'neutral' : score >= 70 ? 'calm' : 'warning'
-  const status = input.row ? getTemplateScoreStatus(input.t, input.label, input.row) : `${input.label} yapılmadı`
+  const status = input.row
+    ? getLocalizedTemplateScoreStatus(input.t, input.locale, input.label, input.row)
+    : getStaticCopy(input.locale, `${input.label} yapılmadı`, `${input.label} not done`)
 
   return (
     <div className="store-checklists-template-score">
       <small>{status}</small>
       <b>
-        {score === null ? '-' : formatNumber(score, 'tr')}
+        {score === null ? '-' : formatNumber(score, input.locale)}
         <em>/100</em>
       </b>
       <span className={`store-checklists-template-scorebar${tone === 'neutral' ? ' store-checklists-scorebar-empty' : ''}`}>
@@ -1630,10 +1647,21 @@ function chooseStoreVisitPrimary(row: Omit<ChecklistStoreVisitRow, 'primary'> & 
   return primary
 }
 
-function getTemplateScoreStatus(t: TranslateFunction, label: string, row: ChecklistCoverageRow) {
-  if (row.active) return `${label} ${t('storeChecklists.coverage.draft').toLocaleLowerCase('tr-TR')}`
-  if (row.completedCount > 0) return `${label} ${t('storeChecklists.status.completed').toLocaleLowerCase('tr-TR')}`
-  return `${label} ${t('storeChecklists.noVisit').toLocaleLowerCase('tr-TR')}`
+function getLocalizedTemplateScoreStatus(
+  t: TranslateFunction,
+  locale: AppLocale,
+  label: string,
+  row: ChecklistCoverageRow,
+) {
+  if (row.active) return `${label} ${lowercaseChecklistCopy(t('storeChecklists.coverage.draft'), locale)}`
+  if (row.completedCount > 0) {
+    return `${label} ${lowercaseChecklistCopy(t('storeChecklists.status.completed'), locale)}`
+  }
+  return `${label} ${lowercaseChecklistCopy(t('storeChecklists.noVisit'), locale)}`
+}
+
+function lowercaseChecklistCopy(value: string, locale: AppLocale) {
+  return value.toLocaleLowerCase(locale === 'en' ? 'en-US' : 'tr-TR')
 }
 
 function getStoreVisitSummary(t: TranslateFunction, locale: AppLocale, row: ChecklistStoreVisitRow) {
@@ -1752,6 +1780,57 @@ function formatScoreValue(t: TranslateFunction, value: number | null) {
 
 function formatComplianceValue(t: TranslateFunction, value: number | null) {
   return value === null ? t('storeChecklists.noRate') : `${Math.round(value * 100)}%`
+}
+
+function getChecklistResultDigest(
+  t: TranslateFunction,
+  locale: AppLocale,
+  item: ChecklistAcknowledgementItem,
+): { copy: string; title: string; tone: ChecklistTone } {
+  const lowScoreResponses = getLowScoreResponses(item.responses)
+  const templateLabel = formatChecklistTemplateType(t, item.templateType)
+  const scorePercent =
+    item.totalScore ?? (typeof item.complianceRate === 'number' ? Math.round(item.complianceRate * 100) : null)
+  const scoreLabel = item.totalScore === null ? t('storeChecklists.noScore') : formatScoreValue(t, item.totalScore)
+
+  if (lowScoreResponses.length > 0) {
+    const firstLowScore = lowScoreResponses[0]?.itemText
+    return {
+      tone: 'warning',
+      title: getStaticCopy(
+        locale,
+        `${templateLabel} ${scoreLabel}; ${lowScoreResponses.length} düşük madde`,
+        `${templateLabel} ${scoreLabel}; ${lowScoreResponses.length} low-score ${
+          lowScoreResponses.length === 1 ? 'item' : 'items'
+        }`,
+      ),
+      copy: firstLowScore
+        ? getStaticCopy(locale, `Öncelik: ${firstLowScore}`, `Priority: ${firstLowScore}`)
+        : getStaticCopy(locale, 'Düşük puanlı maddeler takipte.', 'Low-score items are in follow-up.'),
+    }
+  }
+
+  if (scorePercent !== null && scorePercent >= 90) {
+    return {
+      tone: 'calm',
+      title: getStaticCopy(locale, `${templateLabel} ${scoreLabel}; güçlü sonuç`, `${templateLabel} ${scoreLabel}; strong result`),
+      copy: getStaticCopy(
+        locale,
+        'Kritik düşük madde görünmüyor; mağaza kabulü sonrası yakın geçmişe alınır.',
+        'No critical low item is visible; after store acknowledgement it moves to recent history.',
+      ),
+    }
+  }
+
+  return {
+    tone: 'accent',
+    title: getStaticCopy(locale, `${templateLabel} ${scoreLabel}; takipte`, `${templateLabel} ${scoreLabel}; in follow-up`),
+    copy: getStaticCopy(
+      locale,
+      'Sonuç mağaza kabul notuyla beraber izlenir.',
+      'The result is tracked together with the store acknowledgement note.',
+    ),
+  }
 }
 
 function formatCompletedSentence(
