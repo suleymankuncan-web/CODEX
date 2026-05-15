@@ -15,6 +15,7 @@ import { getDisplayRoleCodes } from '../features/auth/display'
 import { getChecklistAcknowledgements } from '../features/checklists/api'
 import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
+import { getStoreApprovalsPrefetchTasks } from '../features/store-approvals/prefetch'
 import { WorkflowInboxDetail } from '../features/workflow/WorkflowInboxDetail'
 import { getWorkflowInbox } from '../features/workflow/api'
 import {
@@ -86,6 +87,15 @@ export function StoreTasksPage(input: {
     () => items.some((item) => item.sourceType === 'checklist_receipt'),
     [items],
   )
+  const hasStoreApprovalAction = useMemo(
+    () =>
+      items.some(
+        (item) =>
+          item.sourceType === 'target_distribution_request' ||
+          item.deepLink.startsWith('/store/approvals'),
+      ),
+    [items],
+  )
   const taskItems = useMemo(
     () => items.filter((item) => item.itemType === 'task'),
     [items],
@@ -100,6 +110,22 @@ export function StoreTasksPage(input: {
       ...transientQueryRetryOptions,
     }).catch(() => undefined)
   }, [hasChecklistReceiptAction, queryClient])
+
+  useEffect(() => {
+    if (!hasStoreApprovalAction || !input.authSummary) return
+
+    getStoreApprovalsPrefetchTasks(input.authSummary).forEach((task) => {
+      if (task.enabled === false) {
+        return
+      }
+
+      void queryClient.prefetchQuery({
+        queryKey: task.queryKey,
+        queryFn: task.queryFn,
+        ...transientQueryRetryOptions,
+      }).catch(() => undefined)
+    })
+  }, [hasStoreApprovalAction, input.authSummary, queryClient])
 
   if (!inboxEnabled) {
     return (

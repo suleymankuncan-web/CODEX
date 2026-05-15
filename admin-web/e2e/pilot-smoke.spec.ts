@@ -149,18 +149,18 @@ function watchPilotFailures(page: Page) {
 }
 
 async function routePilotSmokeApi(page: Page) {
-  await page.route('**/api/auth/session', async (route) => {
+  await page.route('**/api/auth/session**', async (route) => {
     await route.fulfill({ json: authSessionFixture })
   })
 
-  await page.route('**/api/feed?**', async (route) => {
+  await page.route('**/api/feed**', async (route) => {
     await route.fulfill({ json: feedFixture })
   })
 
   await page.route('**/api/integrations/import-batches/overview', async (route) => {
     await route.fulfill({ json: importOverviewFixture })
   })
-  await page.route('**/api/integrations/import-batches/needs-action?**', async (route) => {
+  await page.route('**/api/integrations/import-batches/needs-action**', async (route) => {
     await route.fulfill({ json: emptyListFixture })
   })
   await page.route('**/api/integrations/lookups', async (route) => {
@@ -175,7 +175,7 @@ async function routePilotSmokeApi(page: Page) {
   await page.route('**/api/integrations/store-master**', async (route) => {
     await route.fulfill({ json: storeMasterFixture })
   })
-  await page.route('**/api/integrations/master-data-bootstrap/batches?**', async (route) => {
+  await page.route('**/api/integrations/master-data-bootstrap/batches**', async (route) => {
     await route.fulfill({ json: masterDataFixture })
   })
 
@@ -185,19 +185,19 @@ async function routePilotSmokeApi(page: Page) {
   await page.route('**/api/target-distributions/coverage**', async (route) => {
     await route.fulfill({ json: targetCoverageFixture })
   })
-  await page.route('**/api/target-distributions/store-personnel?**', async (route) => {
+  await page.route('**/api/target-distributions/store-personnel**', async (route) => {
     await route.fulfill({ json: storePersonnelFixture })
   })
-  await page.route('**/api/workforce/position-options?**', async (route) => {
+  await page.route('**/api/workforce/position-options**', async (route) => {
     await route.fulfill({ json: positionOptionsFixture })
   })
-  await page.route('**/api/workforce/store-employees?**', async (route) => {
+  await page.route('**/api/workforce/store-employees**', async (route) => {
     await route.fulfill({ json: storeEmployeesFixture })
   })
-  await page.route('**/api/workforce/seller-code-requests?**', async (route) => {
+  await page.route('**/api/workforce/seller-code-requests**', async (route) => {
     await route.fulfill({ json: emptyListFixture })
   })
-  await page.route('**/api/workforce/offboarding-requests?**', async (route) => {
+  await page.route('**/api/workforce/offboarding-requests**', async (route) => {
     await route.fulfill({ json: emptyListFixture })
   })
 
@@ -217,7 +217,7 @@ async function routePilotSmokeApi(page: Page) {
   await page.route('**/api/reports/my-performance**', async (route) => {
     await route.fulfill({ json: myPerformanceFixture })
   })
-  await page.route('**/api/reports/rankings?**', async (route) => {
+  await page.route('**/api/reports/rankings**', async (route) => {
     await route.fulfill({ json: rankingsFixture })
   })
 }
