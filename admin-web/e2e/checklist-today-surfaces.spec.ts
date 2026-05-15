@@ -203,6 +203,11 @@ test('visual merchandiser sees checklist-only VM coverage and no broad store lin
   })
   await page.goto('/store/checklists')
 
+  await expect(page.getByText('VM kapsamı').first()).toBeVisible()
+  await expect(page.getByText('BM kapsamı')).toHaveCount(0)
+  await expect(page.getByText('BM + VM')).toHaveCount(0)
+  await expect(page.getByText('BM skor')).toHaveCount(0)
+  await expect(page.getByText('BM yapılmadı')).toHaveCount(0)
   await expect(page.getByText('VM checklist yapılmadı')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Checklist yap' })).toBeVisible()
   await page.getByRole('button', { name: 'Checklist yap' }).click()

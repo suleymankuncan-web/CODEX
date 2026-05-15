@@ -352,6 +352,10 @@ export function StoreChecklistsPage(input: {
   const selectedSession =
     coverageRows.find((row) => getCoverageRowKeyFromRow(row) === selectedSessionKey) ?? null
   const resultStoreCount = new Set(items.map((item) => item.storeId)).size
+  const vmOnlyVisitScope = isVisualMerchandiserOnly(input.authSummary)
+  const showBmVisitScore = effectiveTypeFilter === 'all' || effectiveTypeFilter === 'BM_STORE_VISIT'
+  const showVmVisitScore = effectiveTypeFilter === 'all' || effectiveTypeFilter === 'VM_STORE_VISIT'
+  const requiresCombinedVisitTemplates = showBmVisitScore && showVmVisitScore
   const completedVisitStoreCount = visitStoreRows.filter((row) =>
     [row.bm, row.vm].some((item) => (item?.completedCount ?? 0) > 0),
   ).length
@@ -373,7 +377,6 @@ export function StoreChecklistsPage(input: {
   const heroCompletedCount = canManageVisits ? completedVisitStoreCount : acknowledgedItems.length
   const heroWaitingCount = canManageVisits ? pendingVisitStoreCount : pendingItems.length
   const heroScopeLabel = getChecklistHeroScopeLabel(input.authSummary, locale, canManageVisits)
-  const vmOnlyVisitScope = isVisualMerchandiserOnly(input.authSummary)
   const commandNotice = ackNotice ?? (completeVisitMutation.isSuccess ? t('storeChecklists.completeSuccess') : null)
   const checklistTabs: ChecklistTabOption[] = [
     ...(canManageVisits
@@ -456,7 +459,13 @@ export function StoreChecklistsPage(input: {
           </h2>
           <p>
             {canManageVisits
-              ? getStaticCopy(
+              ? vmOnlyVisitScope
+                ? getStaticCopy(
+                    locale,
+                    'VM kullanıcıları yalnızca kendilerine atanmış mağazaların VM checklist akışını görür ve doldurur.',
+                    'VM users only see and complete VM checklist flows for their assigned stores.',
+                  )
+                : getStaticCopy(
                   locale,
                   'Bölge = Bölge müdürü. BM kendisine tanımlı mağazaları görür; BM Checklist ve VM Checklist puanlarını birlikte okuyabilir. VM yalnızca kendi VM Checklist kayıtlarına erişir.',
                   'Region means region manager. BM users see assigned stores and can read BM plus VM checklist scores together. VM users only access their own VM checklist records.',
@@ -471,7 +480,13 @@ export function StoreChecklistsPage(input: {
         <div className="store-checklists-command-metrics" aria-label={t('storeChecklists.summaryAria')}>
           <ChecklistMetric
             label={canManageVisits ? getStaticCopy(locale, 'Atanmış mağaza', 'Assigned stores') : t('storeChecklists.store')}
-            note={canManageVisits ? getStaticCopy(locale, 'BM kapsamı', 'Field scope') : getStaticCopy(locale, 'Kabul kapsamı', 'Receipt scope')}
+            note={
+              canManageVisits
+                ? vmOnlyVisitScope
+                  ? getStaticCopy(locale, 'VM kapsamı', 'VM scope')
+                  : getStaticCopy(locale, 'BM kapsamı', 'Field scope')
+                : getStaticCopy(locale, 'Kabul kapsamı', 'Receipt scope')
+            }
             tone={heroStoreCount > 0 ? 'accent' : 'neutral'}
             value={formatNumber(heroStoreCount, locale)}
           />
@@ -550,11 +565,17 @@ export function StoreChecklistsPage(input: {
               <div className="store-checklists-eyebrow">{t('storeChecklists.visitEyebrow')}</div>
               <h3>{t('storeChecklists.visitTitle')}</h3>
               <p>
-                {getStaticCopy(
-                  locale,
-                  'Her satır tek mağaza; BM ve VM checklist skorları birbirine karışmadan okunur.',
-                  'Each row is one store; BM and VM checklist scores stay separate.',
-                )}
+                {vmOnlyVisitScope
+                  ? getStaticCopy(
+                      locale,
+                      'Her satır tek mağaza; yalnızca VM checklist durumu ve skoru gösterilir.',
+                      'Each row is one store; only VM checklist status and score are shown.',
+                    )
+                  : getStaticCopy(
+                      locale,
+                      'Her satır tek mağaza; BM ve VM checklist skorları birbirine karışmadan okunur.',
+                      'Each row is one store; BM and VM checklist scores stay separate.',
+                    )}
               </p>
             </div>
             <ChecklistBadge tone={activeVisitCount > 0 ? 'warning' : 'accent'}>
@@ -582,7 +603,11 @@ export function StoreChecklistsPage(input: {
               }
             />
           ) : (
-            <div className="store-checklists-table store-checklists-visit-table">
+            <div
+              className={`store-checklists-table store-checklists-visit-table${
+                requiresCombinedVisitTemplates ? '' : ' store-checklists-visit-table-single-score'
+              }`}
+            >
               <div className="store-checklists-table-head">
                 <SortButton
                   active={visitSort.key === 'store'}
@@ -591,20 +616,24 @@ export function StoreChecklistsPage(input: {
                 >
                   {t('storeChecklists.store')}
                 </SortButton>
-                <SortButton
-                  active={visitSort.key === 'score'}
-                  direction={visitSort.direction}
-                  onClick={() => setVisitSort(toggleSort(visitSort, 'score'))}
-                >
-                  {getStaticCopy(locale, 'BM skor', 'BM score')}
-                </SortButton>
-                <SortButton
-                  active={visitSort.key === 'score'}
-                  direction={visitSort.direction}
-                  onClick={() => setVisitSort(toggleSort(visitSort, 'score'))}
-                >
-                  {getStaticCopy(locale, 'VM skor', 'VM score')}
-                </SortButton>
+                {showBmVisitScore ? (
+                  <SortButton
+                    active={visitSort.key === 'score'}
+                    direction={visitSort.direction}
+                    onClick={() => setVisitSort(toggleSort(visitSort, 'score'))}
+                  >
+                    {getStaticCopy(locale, 'BM skor', 'BM score')}
+                  </SortButton>
+                ) : null}
+                {showVmVisitScore ? (
+                  <SortButton
+                    active={visitSort.key === 'score'}
+                    direction={visitSort.direction}
+                    onClick={() => setVisitSort(toggleSort(visitSort, 'score'))}
+                  >
+                    {getStaticCopy(locale, 'VM skor', 'VM score')}
+                  </SortButton>
+                ) : null}
                 <SortButton
                   active={visitSort.key === 'date'}
                   direction={visitSort.direction}
@@ -642,25 +671,29 @@ export function StoreChecklistsPage(input: {
                   >
                     <div className="store-checklists-row-main">
                       <strong>{storeRow.store.storeName}</strong>
-                      <p>{getStoreVisitSummary(t, locale, storeRow)}</p>
+                      <p>{getStoreVisitSummary(t, locale, storeRow, requiresCombinedVisitTemplates)}</p>
                     </div>
-                    <ChecklistTemplateScore
-                      label={getStaticCopy(locale, 'BM', 'BM')}
-                      locale={locale}
-                      row={storeRow.bm}
-                      t={t}
-                    />
-                    <ChecklistTemplateScore
-                      label={getStaticCopy(locale, 'VM', 'VM')}
-                      locale={locale}
-                      row={storeRow.vm}
-                      t={t}
-                    />
+                    {showBmVisitScore ? (
+                      <ChecklistTemplateScore
+                        label={getStaticCopy(locale, 'BM', 'BM')}
+                        locale={locale}
+                        row={storeRow.bm}
+                        t={t}
+                      />
+                    ) : null}
+                    {showVmVisitScore ? (
+                      <ChecklistTemplateScore
+                        label={getStaticCopy(locale, 'VM', 'VM')}
+                        locale={locale}
+                        row={storeRow.vm}
+                        t={t}
+                      />
+                    ) : null}
                     <ChecklistBadge tone={getStoreVisitDate(storeRow) ? 'accent' : 'danger'}>
                       {formatOptionalDate(getStoreVisitDate(storeRow), locale)}
                     </ChecklistBadge>
-                    <ChecklistBadge tone={getStoreVisitRiskTone(storeRow)}>
-                      {getStoreVisitRiskLabel(t, locale, storeRow)}
+                    <ChecklistBadge tone={getStoreVisitRiskTone(storeRow, requiresCombinedVisitTemplates)}>
+                      {getStoreVisitRiskLabel(t, locale, storeRow, requiresCombinedVisitTemplates)}
                     </ChecklistBadge>
                     <button
                       className="store-checklists-action-button"
@@ -1716,7 +1749,19 @@ function lowercaseChecklistCopy(value: string, locale: AppLocale) {
   return value.toLocaleLowerCase(locale === 'en' ? 'en-US' : 'tr-TR')
 }
 
-function getStoreVisitSummary(t: TranslateFunction, locale: AppLocale, row: ChecklistStoreVisitRow) {
+function getStoreVisitSummary(
+  t: TranslateFunction,
+  locale: AppLocale,
+  row: ChecklistStoreVisitRow,
+  requiresCombinedTemplates: boolean,
+) {
+  if (!requiresCombinedTemplates) {
+    const visibleRows = [row.bm, row.vm].filter((item): item is ChecklistCoverageRow => Boolean(item))
+    return visibleRows.length > 0
+      ? visibleRows.map((item) => formatChecklistCoverage(t, item)).join(' / ')
+      : getStaticCopy(locale, 'Checklist yapılmadı', 'Checklist not done')
+  }
+
   const bm = row.bm ? formatChecklistCoverage(t, row.bm) : getStaticCopy(locale, 'BM yapılmadı', 'BM not done')
   const vm = row.vm ? formatChecklistCoverage(t, row.vm) : getStaticCopy(locale, 'VM yapılmadı', 'VM not done')
   return `${bm} / ${vm}`
@@ -1750,17 +1795,24 @@ function getStoreVisitScore(row: ChecklistStoreVisitRow) {
   return Math.min(...scores)
 }
 
-function getStoreVisitRiskTone(row: ChecklistStoreVisitRow): ChecklistTone {
+function getStoreVisitRiskTone(row: ChecklistStoreVisitRow, requiresCombinedTemplates: boolean): ChecklistTone {
   if (row.bm?.active || row.vm?.active) return 'warning'
-  if (!row.bm || !row.vm) return 'danger'
+  if (requiresCombinedTemplates && (!row.bm || !row.vm)) return 'danger'
+  if (!row.bm && !row.vm) return 'danger'
   const score = getStoreVisitScore(row)
   if (score !== null && score < 70) return 'danger'
   return 'calm'
 }
 
-function getStoreVisitRiskLabel(t: TranslateFunction, locale: AppLocale, row: ChecklistStoreVisitRow) {
+function getStoreVisitRiskLabel(
+  t: TranslateFunction,
+  locale: AppLocale,
+  row: ChecklistStoreVisitRow,
+  requiresCombinedTemplates: boolean,
+) {
   if (row.bm?.active || row.vm?.active) return t('storeChecklists.coverage.draft')
-  if (!row.bm || !row.vm) return getStaticCopy(locale, 'Riskli', 'Risk')
+  if (requiresCombinedTemplates && (!row.bm || !row.vm)) return getStaticCopy(locale, 'Riskli', 'Risk')
+  if (!row.bm && !row.vm) return getStaticCopy(locale, 'Riskli', 'Risk')
   const score = getStoreVisitScore(row)
   if (score !== null && score < 70) return getStaticCopy(locale, 'Düşük puan', 'Low score')
   return getStaticCopy(locale, 'Temiz', 'Clear')
