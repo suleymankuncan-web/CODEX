@@ -46,6 +46,13 @@ type ChecklistStatusFilter = 'all' | 'missing' | 'draft' | 'completed' | 'pendin
 type ChecklistSortKey = 'priority' | 'store' | 'score' | 'date' | 'status'
 type ChecklistSortDirection = 'asc' | 'desc'
 type ChecklistSort = { key: ChecklistSortKey; direction: ChecklistSortDirection }
+type ChecklistTab = 'visits' | 'inbox' | 'history'
+type ChecklistTabOption = {
+  key: ChecklistTab
+  label: string
+  count: number
+  tone: ChecklistTone
+}
 type ChecklistResponseDraft = {
   checklistInstanceId: string
   templateItemId: string
@@ -53,13 +60,15 @@ type ChecklistResponseDraft = {
   commentText?: string
 }
 
+const CHECKLIST_COMMAND_NOTICE_KEY = 'store-checklists-command-notice'
+
 export function StoreChecklistsPage(input: {
   authSummary: AuthSessionSummary | null
 }) {
   const { locale, t } = useLocalization()
   const queryClient = useQueryClient()
   const [ackNotes, setAckNotes] = useState<Record<string, string>>({})
-  const [ackNotice, setAckNotice] = useState<string | null>(null)
+  const [ackNotice, setAckNotice] = useState<string | null>(() => takeChecklistCommandNotice())
   const [scores, setScores] = useState<Record<string, number>>({})
   const [comments, setComments] = useState<Record<string, string>>({})
   const [selectedSessionKey, setSelectedSessionKey] = useState<string | null>(null)
@@ -68,6 +77,7 @@ export function StoreChecklistsPage(input: {
   const [selectedMonth, setSelectedMonth] = useState('all')
   const [typeFilter, setTypeFilter] = useState<ChecklistTypeFilter>('all')
   const [statusFilter, setStatusFilter] = useState<ChecklistStatusFilter>('all')
+  const [activeTab, setActiveTab] = useState<ChecklistTab>('visits')
   const [visitSort, setVisitSort] = useState<ChecklistSort>({ key: 'priority', direction: 'desc' })
   const [resultSort, setResultSort] = useState<ChecklistSort>({ key: 'date', direction: 'desc' })
   const [localActiveInstances, setLocalActiveInstances] = useState<
@@ -82,6 +92,10 @@ export function StoreChecklistsPage(input: {
     'SUPER_ADMIN',
   ])
   const canUseAcknowledgements = canReadChecklistResults(input.authSummary)
+  const showCommandNotice = (message: string) => {
+    storeChecklistCommandNotice(message)
+    setAckNotice(message)
+  }
   const checklistsQuery = useQuery({
     queryKey: ['checklist-acknowledgements'],
     queryFn: getChecklistAcknowledgements,
@@ -104,7 +118,8 @@ export function StoreChecklistsPage(input: {
         delete next[variables.checklistInstanceId]
         return next
       })
-      setAckNotice(result.command.message)
+      setActiveTab('history')
+      showCommandNotice(result.command.message)
     },
   })
   const startVisitMutation = useMutation({
@@ -129,7 +144,7 @@ export function StoreChecklistsPage(input: {
       setComments({})
       setSelectedSessionKey(rowKey)
       setSessionDirty(false)
-      setAckNotice(result.command.message)
+      showCommandNotice(result.command.message)
     },
   })
   const saveResponseMutation = useMutation({
@@ -171,11 +186,14 @@ export function StoreChecklistsPage(input: {
       responses: ChecklistResponseDraft[]
     }) => {
       await savePendingSessionResponses(variables.checklistInstanceId, variables.responses)
-      return completeMobileChecklistInstance({
+      const result = await completeMobileChecklistInstance({
         checklistInstanceId: variables.checklistInstanceId,
       })
+      showCommandNotice(getStaticCopy(locale, 'Başarıyla Tamamlandı', 'Completed successfully'))
+      return result
     },
     onSuccess: (_result, variables) => {
+      showCommandNotice(getStaticCopy(locale, 'Başarıyla Tamamlandı', 'Completed successfully'))
       void queryClient.invalidateQueries({ queryKey: ['mobile-checklists-today'] })
       void queryClient.invalidateQueries({ queryKey: ['checklist-acknowledgements'] })
       setLocalActiveInstances((current) =>
@@ -187,7 +205,9 @@ export function StoreChecklistsPage(input: {
       )
       setSelectedSessionKey(null)
       setSessionDirty(false)
-      setAckNotice(t('storeChecklists.completeSuccess'))
+    },
+    onError: (error) => {
+      showCommandNotice(getErrorMessage(error))
     },
   })
   const queueResponseAutoSave = (draft: ChecklistResponseDraft) => {
@@ -325,10 +345,58 @@ export function StoreChecklistsPage(input: {
     locale,
   ).slice(0, 5)
   const activeVisitCount = coverageRows.filter((row) => row.active).length
-  const completedThisMonthCount = coverageRows.reduce((sum, row) => sum + row.completedCount, 0)
   const storeCount = new Set(coverageRows.map((row) => row.store.storeId)).size
   const selectedSession =
     coverageRows.find((row) => getCoverageRowKeyFromRow(row) === selectedSessionKey) ?? null
+  const resultStoreCount = new Set(items.map((item) => item.storeId)).size
+  const completedVisitStoreCount = visitStoreRows.filter((row) =>
+    [row.bm, row.vm].some((item) => (item?.completedCount ?? 0) > 0),
+  ).length
+  const pendingVisitStoreCount = visitStoreRows.filter(hasOpenStoreVisitWork).length
+  const heroScoreValues = (canManageVisits
+    ? visitStoreRows.map(getStoreVisitScore)
+    : items.map((item) => item.totalScore ?? Math.round((item.complianceRate ?? 0) * 100))
+  ).filter((value): value is number => value !== null && Number.isFinite(value))
+  const heroAverageScore =
+    heroScoreValues.length > 0
+      ? Math.round((heroScoreValues.reduce((sum, value) => sum + value, 0) / heroScoreValues.length) * 10) / 10
+      : null
+  const heroStoreCount = canManageVisits ? storeCount : resultStoreCount
+  const heroCompletedCount = canManageVisits ? completedVisitStoreCount : acknowledgedItems.length
+  const heroWaitingCount = canManageVisits ? pendingVisitStoreCount : pendingItems.length
+  const heroScopeLabel = getChecklistHeroScopeLabel(input.authSummary, locale, canManageVisits)
+  const commandNotice = ackNotice ?? (completeVisitMutation.isSuccess ? t('storeChecklists.completeSuccess') : null)
+  const checklistTabs: ChecklistTabOption[] = [
+    ...(canManageVisits
+      ? [
+          {
+            key: 'visits' as const,
+            label: t('storeChecklists.visitEyebrow'),
+            count: visitStoreRows.length,
+            tone: activeVisitCount > 0 ? 'warning' as const : 'accent' as const,
+          },
+        ]
+      : []),
+    ...(canUseAcknowledgements
+      ? [
+          {
+            key: 'inbox' as const,
+            label: t('storeChecklists.inboxEyebrow'),
+            count: filteredPendingItems.length,
+            tone: filteredPendingItems.length > 0 ? 'warning' as const : 'calm' as const,
+          },
+          {
+            key: 'history' as const,
+            label: t('storeChecklists.recentHistoryEyebrow'),
+            count: filteredAcknowledgedItems.length,
+            tone: filteredAcknowledgedItems.length > 0 ? 'accent' as const : 'neutral' as const,
+          },
+        ]
+      : []),
+  ]
+  const selectedTab = checklistTabs.some((tab) => tab.key === activeTab)
+    ? activeTab
+    : checklistTabs[0]?.key ?? 'visits'
 
   const closeSession = () => {
     const confirmMessage = sessionDirty
@@ -346,30 +414,79 @@ export function StoreChecklistsPage(input: {
     <section className="store-checklists-command-page">
       <header className="store-checklists-command-hero">
         <div className="store-checklists-hero-copy">
+          <div className="store-checklists-hero-pills" aria-label={t('storeChecklists.summaryAria')}>
+            <ChecklistBadge tone="accent">{heroScopeLabel}</ChecklistBadge>
+            <ChecklistBadge tone={heroWaitingCount > 0 ? 'warning' : 'calm'}>
+              {getStaticCopy(
+                locale,
+                `${formatNumber(heroWaitingCount, locale)} mağaza bekliyor`,
+                `${formatNumber(heroWaitingCount, locale)} stores waiting`,
+              )}
+            </ChecklistBadge>
+            <ChecklistBadge tone={heroCompletedCount > 0 ? 'calm' : 'neutral'}>
+              {getStaticCopy(
+                locale,
+                `${formatNumber(heroCompletedCount, locale)} kayıt tamamlandı`,
+                `${formatNumber(heroCompletedCount, locale)} records completed`,
+              )}
+            </ChecklistBadge>
+          </div>
           <div className="store-checklists-eyebrow">{t('storeChecklists.heroEyebrow')}</div>
-          <h2>{t('storeChecklists.title')}</h2>
-          <p>{t('storeChecklists.heroCopy')}</p>
+          <h2>
+            {canManageVisits
+              ? getStaticCopy(
+                  locale,
+                  'Bugünkü saha turunda öncelik düşük checklist skorlu mağazalarda.',
+                  'Today’s field route prioritizes stores with low checklist scores.',
+                )
+              : getStaticCopy(
+                  locale,
+                  'Mağazana yapılan kontroller tek ekranda.',
+                  'Your store checklist receipts stay in one focused surface.',
+                )}
+          </h2>
+          <p>
+            {canManageVisits
+              ? getStaticCopy(
+                  locale,
+                  'Bölge = Bölge müdürü. BM kendisine tanımlı mağazaları görür; BM Checklist ve VM Checklist puanlarını birlikte okuyabilir. VM yalnızca kendi VM Checklist kayıtlarına erişir.',
+                  'Region means region manager. BM users see assigned stores and can read BM plus VM checklist scores together. VM users only access their own VM checklist records.',
+                )
+              : getStaticCopy(
+                  locale,
+                  'BM ve VM sonuçlarını tarih, skor ve kabul durumuyla takip edip mağaza aksiyonunu hızla kapatabilirsin.',
+                  'Track BM and VM results by date, score, and acknowledgement status so store follow-up stays tight.',
+                )}
+          </p>
         </div>
         <div className="store-checklists-command-metrics" aria-label={t('storeChecklists.summaryAria')}>
           <ChecklistMetric
-            label={t('storeChecklists.pendingAcknowledgements')}
-            tone={pendingItems.length > 0 ? 'warning' : 'calm'}
-            value={formatNumber(pendingItems.length, locale)}
+            label={canManageVisits ? getStaticCopy(locale, 'Atanmış mağaza', 'Assigned stores') : t('storeChecklists.store')}
+            note={canManageVisits ? getStaticCopy(locale, 'BM kapsamı', 'Field scope') : getStaticCopy(locale, 'Kabul kapsamı', 'Receipt scope')}
+            tone={heroStoreCount > 0 ? 'accent' : 'neutral'}
+            value={formatNumber(heroStoreCount, locale)}
           />
           <ChecklistMetric
-            label={t('storeChecklists.summary.activeDrafts')}
-            tone={activeVisitCount > 0 ? 'warning' : 'neutral'}
-            value={formatNumber(activeVisitCount, locale)}
+            label={canManageVisits ? getStaticCopy(locale, 'Checklist yapılan', 'Completed visits') : t('storeChecklists.acknowledged')}
+            note={canManageVisits ? getStaticCopy(locale, 'Bu ay', 'This month') : getStaticCopy(locale, 'Yakın geçmiş', 'Recent history')}
+            tone={heroCompletedCount > 0 ? 'calm' : 'neutral'}
+            value={formatNumber(heroCompletedCount, locale)}
           />
           <ChecklistMetric
-            label={t('storeChecklists.summary.monthlyDone')}
-            tone={completedThisMonthCount > 0 ? 'accent' : 'neutral'}
-            value={formatNumber(completedThisMonthCount, locale)}
+            label={getStaticCopy(locale, 'Bekleyen', 'Waiting')}
+            note={canManageVisits ? getStaticCopy(locale, 'Öncelik sıralı', 'Prioritized') : t('storeChecklists.needsAcknowledgement')}
+            tone={heroWaitingCount > 0 ? 'warning' : 'calm'}
+            value={formatNumber(heroWaitingCount, locale)}
           />
           <ChecklistMetric
-            label={t('storeChecklists.store')}
-            tone={storeCount > 0 ? 'accent' : 'neutral'}
-            value={formatNumber(storeCount, locale)}
+            label={getStaticCopy(locale, 'Ortalama skor', 'Average score')}
+            note={canManageVisits ? getStaticCopy(locale, 'BM + VM', 'BM + VM') : getStaticCopy(locale, 'Son sonuçlar', 'Latest results')}
+            tone={heroAverageScore !== null && heroAverageScore >= 70 ? 'calm' : heroAverageScore === null ? 'neutral' : 'warning'}
+            value={
+              heroAverageScore === null
+                ? '-'
+                : formatNumber(heroAverageScore, locale, { maximumFractionDigits: 1 })
+            }
           />
         </div>
       </header>
@@ -394,8 +511,24 @@ export function StoreChecklistsPage(input: {
         onTypeChange={setTypeFilter}
       />
 
-      {canManageVisits ? (
-        <section className="store-checklists-command-card" aria-label={t('storeChecklists.visitPanelAria')}>
+      {checklistTabs.length > 0 ? (
+        <ChecklistTabs
+          activeTab={selectedTab}
+          tabs={checklistTabs}
+          onChange={setActiveTab}
+        />
+      ) : null}
+
+      {commandNotice ? <p className="store-checklists-inline-notice">{commandNotice}</p> : null}
+
+      {canManageVisits && selectedTab === 'visits' ? (
+        <section
+          aria-label={t('storeChecklists.visitPanelAria')}
+          aria-labelledby="store-checklist-tab-visits"
+          className="store-checklists-command-card"
+          id="store-checklist-panel-visits"
+          role="tabpanel"
+        >
           <div className="store-checklists-section-head">
             <div>
               <div className="store-checklists-eyebrow">{t('storeChecklists.visitEyebrow')}</div>
@@ -549,6 +682,9 @@ export function StoreChecklistsPage(input: {
           locale={locale}
           onClose={closeSession}
           onComplete={(checklistInstanceId) => {
+            showCommandNotice(getStaticCopy(locale, 'Başarıyla Tamamlandı', 'Completed successfully'))
+            setSelectedSessionKey(null)
+            setSessionDirty(false)
             completeVisitMutation.mutate({
               checklistInstanceId,
               responses: buildChecklistResponseDrafts({
@@ -625,7 +761,13 @@ export function StoreChecklistsPage(input: {
         />
       ) : null}
 
-      <section className="store-checklists-command-card">
+      {canUseAcknowledgements && selectedTab === 'inbox' ? (
+        <section
+          aria-labelledby="store-checklist-tab-inbox"
+          className="store-checklists-command-card"
+          id="store-checklist-panel-inbox"
+          role="tabpanel"
+        >
         <div className="store-checklists-section-head">
           <div>
             <div className="store-checklists-eyebrow">{t('storeChecklists.inboxEyebrow')}</div>
@@ -654,10 +796,16 @@ export function StoreChecklistsPage(input: {
           />
         )}
 
-        {ackNotice ? <p className="store-checklists-inline-notice">{ackNotice}</p> : null}
-      </section>
+        </section>
+      ) : null}
 
-      <section className="store-checklists-command-card">
+      {canUseAcknowledgements && selectedTab === 'history' ? (
+        <section
+          aria-labelledby="store-checklist-tab-history"
+          className="store-checklists-command-card"
+          id="store-checklist-panel-history"
+          role="tabpanel"
+        >
         <div className="store-checklists-section-head">
           <div>
             <div className="store-checklists-eyebrow">{t('storeChecklists.recentHistoryEyebrow')}</div>
@@ -680,7 +828,8 @@ export function StoreChecklistsPage(input: {
             onSort={(key) => setResultSort(toggleSort(resultSort, key))}
           />
         )}
-      </section>
+        </section>
+      ) : null}
     </section>
   )
 }
@@ -755,6 +904,32 @@ function ChecklistToolbar(input: {
         {getStaticCopy(input.locale, 'Filtreleri sıfırla', 'Reset filters')}
       </button>
     </section>
+  )
+}
+
+function ChecklistTabs(input: {
+  activeTab: ChecklistTab
+  tabs: ChecklistTabOption[]
+  onChange: (tab: ChecklistTab) => void
+}) {
+  return (
+    <nav className="store-checklists-tabs" role="tablist" aria-label="Checklist bölümleri">
+      {input.tabs.map((tab) => (
+        <button
+          aria-controls={`store-checklist-panel-${tab.key}`}
+          aria-selected={input.activeTab === tab.key}
+          className={`store-checklists-tab store-checklists-tone-${tab.tone}`}
+          id={`store-checklist-tab-${tab.key}`}
+          key={tab.key}
+          role="tab"
+          type="button"
+          onClick={() => input.onChange(tab.key)}
+        >
+          <span>{tab.label}</span>
+          <small>{tab.count}</small>
+        </button>
+      ))}
+    </nav>
   )
 }
 
@@ -1253,11 +1428,12 @@ function ChecklistResultModal(input: {
   )
 }
 
-function ChecklistMetric(input: { label: string; tone: ChecklistTone; value: string }) {
+function ChecklistMetric(input: { label: string; note?: string; tone: ChecklistTone; value: string }) {
   return (
     <div className={`store-checklists-metric store-checklists-tone-${input.tone}`}>
       <span>{input.label}</span>
       <strong>{input.value}</strong>
+      {input.note ? <small>{input.note}</small> : null}
     </div>
   )
 }
@@ -1477,6 +1653,15 @@ function getStoreVisitPriority(row: ChecklistStoreVisitRow) {
   return Math.max(row.bm ? getCoveragePriority(row.bm) : 0, row.vm ? getCoveragePriority(row.vm) : 0)
 }
 
+function hasOpenStoreVisitWork(row: ChecklistStoreVisitRow) {
+  const rows = [row.bm, row.vm].filter((item): item is ChecklistCoverageRow => Boolean(item))
+  if (rows.length === 0) return true
+  return rows.some((item) => {
+    const score = getCoverageScore(item)
+    return item.active || item.completedCount === 0 || (score !== null && score < 70)
+  })
+}
+
 function getStoreVisitScore(row: ChecklistStoreVisitRow) {
   const scores = [row.bm, row.vm]
     .map((item) => item ? getCoverageScore(item) : null)
@@ -1499,6 +1684,23 @@ function getStoreVisitRiskLabel(t: TranslateFunction, locale: AppLocale, row: Ch
   const score = getStoreVisitScore(row)
   if (score !== null && score < 70) return getStaticCopy(locale, 'Düşük puan', 'Low score')
   return getStaticCopy(locale, 'Temiz', 'Clear')
+}
+
+function getChecklistHeroScopeLabel(
+  authSummary: AuthSessionSummary | null,
+  locale: AppLocale,
+  canManageVisits: boolean,
+) {
+  if (!canManageVisits) {
+    return getStaticCopy(locale, 'Mağaza kabulü', 'Store acknowledgement')
+  }
+  if (hasAnyRole(authSummary, ['REGION_MANAGER'])) {
+    return getStaticCopy(locale, 'Bölge Müdürü kapsamı', 'Region manager scope')
+  }
+  if (hasAnyRole(authSummary, ['VISUAL_MERCHANDISER'])) {
+    return getStaticCopy(locale, 'VM kapsamı', 'VM scope')
+  }
+  return getStaticCopy(locale, 'Operasyon kapsamı', 'Operations scope')
 }
 
 function formatChecklistCoverage(t: TranslateFunction, input: ChecklistCoverageRow) {
@@ -1881,4 +2083,18 @@ function clamp(value: number, min: number, max: number) {
 
 function getStaticCopy(locale: AppLocale, tr: string, en: string) {
   return locale === 'en' ? en : tr
+}
+
+function takeChecklistCommandNotice() {
+  if (typeof window === 'undefined') return null
+  const notice = window.sessionStorage.getItem(CHECKLIST_COMMAND_NOTICE_KEY)
+  if (notice) {
+    window.sessionStorage.removeItem(CHECKLIST_COMMAND_NOTICE_KEY)
+  }
+  return notice
+}
+
+function storeChecklistCommandNotice(message: string) {
+  if (typeof window === 'undefined') return
+  window.sessionStorage.setItem(CHECKLIST_COMMAND_NOTICE_KEY, message)
 }
