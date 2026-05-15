@@ -123,6 +123,7 @@ export function StoreChecklistsPage(input: {
     mutationFn: acknowledgeChecklist,
     onSuccess: (result, variables) => {
       void queryClient.invalidateQueries({ queryKey: ['checklist-acknowledgements'] })
+      void queryClient.invalidateQueries({ queryKey: ['workflow-inbox'] })
       setSelectedResultId(null)
       setAckNotes((current) => {
         const next = { ...current }

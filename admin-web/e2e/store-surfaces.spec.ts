@@ -1842,6 +1842,117 @@ test('store tasks checklist acknowledgement opens the exact checklist receipt', 
   await expect(page.getByRole('dialog').getByRole('heading', { name: 'BM Result' })).toBeVisible()
 })
 
+test('store checklist acknowledgement refreshes the store task queue', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'en')
+  })
+  await page.unroute('**/api/auth/session')
+  await page.unroute('**/api/workflow/inbox')
+  await page.unroute('**/api/checklists/acknowledgements/list')
+  let acknowledged = false
+  let workflowInboxRequests = 0
+
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      json: {
+        ...authSessionFixture,
+        user: {
+          ...authSessionFixture.user,
+          roleCodes: ['STORE_MANAGER'],
+        },
+      },
+    })
+  })
+  await page.route('**/api/workflow/inbox', async (route) => {
+    workflowInboxRequests += 1
+    await route.fulfill({
+      json: {
+        items: acknowledged
+          ? []
+          : [
+              {
+                itemType: 'acknowledgement',
+                sourceType: 'checklist_receipt',
+                sourceId: 'checklist-instance-bm-1',
+                title: 'BM Result',
+                summary: 'IstinyePark Demo Store completed checklist result',
+                storeId: demoStoreId,
+                storeName: 'IstinyePark Demo Store',
+                workflowStatus: 'completed',
+                inboxStatus: 'needs_attention',
+                urgency: 'medium',
+                createdAt: '2026-05-12T09:00:00.000Z',
+                needsAttentionAt: '2026-05-12T09:00:00.000Z',
+                actorRole: 'STORE_MANAGER',
+                primaryActionLabel: 'I acknowledge',
+                secondaryActionLabel: 'Open checklist result',
+                deepLink: '/store/checklists?tab=inbox&result=checklist-instance-bm-1',
+              },
+            ],
+        meta: {
+          count: acknowledged ? 0 : 1,
+          total: acknowledged ? 0 : 1,
+          limit: 30,
+          offset: 0,
+        },
+      },
+    })
+  })
+  await page.route('**/api/checklists/acknowledgements/list', async (route) => {
+    await route.fulfill({
+      json: {
+        ...checklistAcknowledgementsFixture,
+        items: checklistAcknowledgementsFixture.items.map((item) =>
+          item.checklistInstanceId === 'checklist-instance-bm-1'
+            ? {
+                ...item,
+                acknowledgement: acknowledged
+                  ? {
+                      checklistAcknowledgementId: 'checklist-ack-bm-1',
+                      acknowledgedByUserId: 'store-manager-1',
+                      acknowledgementNote: 'Store saw the completed visit',
+                      acknowledgedAt: '2026-05-12T11:00:00.000Z',
+                    }
+                  : null,
+              }
+            : item,
+        ),
+      },
+    })
+  })
+  await page.route('**/api/checklists/instances/*/acknowledge', async (route) => {
+    expect(route.request().method()).toBe('POST')
+    acknowledged = true
+    await route.fulfill({
+      json: {
+        command: { status: 'acknowledged', message: 'Checklist instance acknowledged' },
+        data: {
+          acknowledgement: {
+            checklistAcknowledgementId: 'checklist-ack-bm-1',
+            acknowledgedByUserId: 'store-manager-1',
+            acknowledgementNote: 'Store saw the completed visit',
+            acknowledgedAt: '2026-05-12T11:00:00.000Z',
+          },
+        },
+      },
+    })
+  })
+
+  await page.goto('/store/tasks')
+  await expect(page.getByRole('link', { name: 'I acknowledge' })).toBeVisible()
+  expect(workflowInboxRequests).toBe(1)
+
+  await page.getByRole('link', { name: 'I acknowledge' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'I acknowledge' }).click()
+  await expect(page).toHaveURL(/\/store\/checklists\?tab=history$/)
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+
+  await page.getByRole('link', { name: 'Tasks' }).click()
+
+  await expect.poll(() => workflowInboxRequests).toBeGreaterThanOrEqual(2)
+  await expect(page.getByRole('link', { name: 'I acknowledge' })).toHaveCount(0)
+})
+
 test('store incentives page switches to English copy and persists locale', async ({ page }) => {
   await page.goto('/store/incentives')
 
