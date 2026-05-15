@@ -117,22 +117,26 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
     queryKey: ['workflow-inbox', 'admin'],
     queryFn: getWorkflowInbox,
     enabled: inboxEnabled,
+    staleTime: 30_000,
     ...transientQueryRetryOptions,
   })
   const sellerCodeReferenceQuery = useQuery({
     queryKey: ['seller-code-reference', 'franchise'],
     queryFn: getSellerCodeReference,
     enabled: sellerCodeEnabled,
+    staleTime: 30_000,
   })
   const sellerCodeRequestsQuery = useQuery({
     queryKey: ['seller-code-requests', 'pending_hr_approval'],
     queryFn: () => getSellerCodeRequests({ status: 'pending_hr_approval' }),
     enabled: sellerCodeEnabled,
+    staleTime: 30_000,
   })
   const offboardingRequestsQuery = useQuery({
     queryKey: ['offboarding-requests', 'pending_hr_approval'],
     queryFn: () => getOffboardingRequests({ status: 'pending_hr_approval' }),
     enabled: sellerCodeEnabled,
+    staleTime: 30_000,
   })
   const approveSellerCodeMutation = useMutation({
     mutationFn: approveSellerCodeRequest,

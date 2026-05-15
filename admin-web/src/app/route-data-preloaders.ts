@@ -21,6 +21,11 @@ import {
   getStoreKpiHighlights,
 } from '../features/reports/api'
 import { getStoreApprovalsPrefetchTasks } from '../features/store-approvals/prefetch'
+import {
+  getOffboardingRequests,
+  getSellerCodeReference,
+  getSellerCodeRequests,
+} from '../features/workforce/api'
 import { getWorkflowInbox } from '../features/workflow/api'
 import { transientQueryRetryOptions } from '../lib/query-retry'
 
@@ -38,6 +43,8 @@ type PrefetchTask = {
 
 const rankingRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN']
 const adminFeedRoles = ['SUPER_ADMIN', 'HR_ADMIN', 'REGION_MANAGER']
+const adminInboxRoles = ['SUPER_ADMIN', 'REPORT_VIEWER', 'HR_ADMIN']
+const adminInboxWorkforceRoles = ['SUPER_ADMIN', 'HR_ADMIN']
 const adminIntegrationRoles = ['SUPER_ADMIN', 'INTEGRATION_ADMIN']
 const adminMasterDataRoles = ['SUPER_ADMIN', 'HR_ADMIN', 'INTEGRATION_ADMIN']
 const storeCompetitionRoles = ['STORE_PERSONNEL', 'STORE_MANAGER']
@@ -116,6 +123,10 @@ function resolveRoutePrefetchTasks(
 
   if (pathname === '/admin/feed') {
     return getAdminFeedPrefetchTasks(authSummary)
+  }
+
+  if (pathname === '/admin/inbox') {
+    return getAdminInboxPrefetchTasks(authSummary)
   }
 
   return []
@@ -285,3 +296,29 @@ function getAdminFeedPrefetchTasks(authSummary: AuthSessionSummary | null): Pref
   ]
 }
 
+function getAdminInboxPrefetchTasks(authSummary: AuthSessionSummary | null): PrefetchTask[] {
+  const inboxEnabled = hasAnyRole(authSummary, adminInboxRoles)
+  const workforceEnabled = hasAnyRole(authSummary, adminInboxWorkforceRoles)
+  return [
+    {
+      queryKey: ['workflow-inbox', 'admin'],
+      queryFn: getWorkflowInbox,
+      enabled: inboxEnabled,
+    },
+    {
+      queryKey: ['seller-code-reference', 'franchise'],
+      queryFn: getSellerCodeReference,
+      enabled: workforceEnabled,
+    },
+    {
+      queryKey: ['seller-code-requests', 'pending_hr_approval'],
+      queryFn: () => getSellerCodeRequests({ status: 'pending_hr_approval' }),
+      enabled: workforceEnabled,
+    },
+    {
+      queryKey: ['offboarding-requests', 'pending_hr_approval'],
+      queryFn: () => getOffboardingRequests({ status: 'pending_hr_approval' }),
+      enabled: workforceEnabled,
+    },
+  ]
+}

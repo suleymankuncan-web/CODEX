@@ -80,6 +80,64 @@ test('admin inbox page switches chrome to English copy and persists locale', asy
   await expect(page.getByRole('heading', { name: 'One queue for admin-side approvals and KPI follow-up.' })).toBeVisible()
 })
 
+test('admin sidebar prefetches inbox queues before opening admin inbox', async ({ page }) => {
+  let workflowRequests = 0
+  let sellerReferenceRequests = 0
+  let sellerCodeRequests = 0
+  let offboardingRequests = 0
+
+  page.on('request', (request) => {
+    if (request.method() !== 'GET') {
+      return
+    }
+
+    const requestUrl = new URL(request.url())
+    if (requestUrl.pathname === '/api/workflow/inbox') {
+      workflowRequests += 1
+    }
+    if (requestUrl.pathname === '/api/workforce/seller-code-reference') {
+      sellerReferenceRequests += 1
+    }
+    if (
+      requestUrl.pathname === '/api/workforce/seller-code-requests' &&
+      requestUrl.searchParams.get('status') === 'pending_hr_approval'
+    ) {
+      sellerCodeRequests += 1
+    }
+    if (
+      requestUrl.pathname === '/api/workforce/offboarding-requests' &&
+      requestUrl.searchParams.get('status') === 'pending_hr_approval'
+    ) {
+      offboardingRequests += 1
+    }
+  })
+
+  await page.goto('/admin/session')
+
+  const inboxLink = page.getByRole('link', { name: 'Gelen Kutusu' })
+  await expect(inboxLink).toBeVisible()
+
+  await inboxLink.hover()
+
+  await expect.poll(() => workflowRequests).toBeGreaterThanOrEqual(1)
+  await expect.poll(() => sellerReferenceRequests).toBeGreaterThanOrEqual(1)
+  await expect.poll(() => sellerCodeRequests).toBeGreaterThanOrEqual(1)
+  await expect.poll(() => offboardingRequests).toBeGreaterThanOrEqual(1)
+  const prefetchedWorkflowRequests = workflowRequests
+  const prefetchedSellerReferenceRequests = sellerReferenceRequests
+  const prefetchedSellerCodeRequests = sellerCodeRequests
+  const prefetchedOffboardingRequests = offboardingRequests
+
+  await inboxLink.click()
+
+  await expect(page).toHaveURL(/\/admin\/inbox$/)
+  await expect(page.getByText('April Target Distribution')).toBeVisible()
+  await expect.poll(() => workflowRequests, { timeout: 1000 }).toBe(prefetchedWorkflowRequests)
+  await expect.poll(() => sellerReferenceRequests, { timeout: 1000 }).toBe(prefetchedSellerReferenceRequests)
+  await expect.poll(() => sellerCodeRequests, { timeout: 1000 }).toBe(prefetchedSellerCodeRequests)
+  await expect.poll(() => offboardingRequests, { timeout: 1000 }).toBe(prefetchedOffboardingRequests)
+})
+
 test('admin inbox lets HR return workforce requests with a required note', async ({ page }) => {
   await page.goto('/admin/inbox')
 
@@ -97,6 +155,10 @@ test('admin inbox lets HR return workforce requests with a required note', async
 async function routeAdminInboxApi(page: Page) {
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: authSessionFixture })
+  })
+
+  await page.route('**/api/integrations/**', async (route) => {
+    await route.fulfill({ json: {} })
   })
 
   await page.route('**/api/workflow/inbox', async (route) => {
