@@ -101,4 +101,55 @@ describe("WorkflowInboxService", () => {
       }),
     ]);
   });
+
+  it("deep-links pending checklist acknowledgements to the checklist inbox tab", async () => {
+    const targetDistributionRepository = {
+      listRequests: jest.fn(),
+    };
+    const checklistAcknowledgementRepository = {
+      listChecklistAcknowledgements: jest.fn(async () => [
+        {
+          checklistInstanceId: "checklist-instance-1",
+          checklistTemplateId: "checklist-template-1",
+          templateName: "BM Result",
+          category: "BM",
+          storeId: "store-1",
+          storeName: "Assigned Store",
+          completedAt: "2026-05-14T09:00:00.000Z",
+          status: "completed",
+          totalScore: 82,
+          complianceRate: 0.82,
+          acknowledgement: null,
+        },
+      ]),
+    };
+    const reportingRepository = {
+      getLatestCompletedSnapshotRun: jest.fn(async () => null),
+    };
+    const service = new WorkflowInboxService(
+      targetDistributionRepository as never,
+      checklistAcknowledgementRepository as never,
+      reportingRepository as never,
+    );
+
+    const result = await service.listInbox({
+      actorRoles: ["STORE_MANAGER"],
+      actorScope: {
+        companyIds: ["company-1"],
+        regionIds: ["region-1"],
+        storeIds: ["legacy-store"],
+      },
+      actorActionScope: {
+        assignedStoreIds: ["store-1"],
+      },
+    });
+
+    expect(result.items).toEqual([
+      expect.objectContaining({
+        sourceType: "checklist_receipt",
+        sourceId: "checklist-instance-1",
+        deepLink: "/store/checklists?tab=inbox",
+      }),
+    ]);
+  });
 });
