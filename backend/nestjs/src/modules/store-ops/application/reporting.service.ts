@@ -18,6 +18,8 @@ import { StoreScoreBlendService } from "./store-score-blend.service";
 import { KpiBenchmarkScoringService } from "./kpi-benchmark-scoring.service";
 import { LiveMonthlyLeaderboardService } from "./live-monthly-leaderboard.service";
 
+const storeChecklistMetricCodes = new Set(["BM_CHECKLIST", "VM_CHECKLIST"]);
+
 @Injectable()
 export class ReportingService {
   private readonly kpiBenchmarkScoringService = new KpiBenchmarkScoringService();
@@ -379,13 +381,29 @@ export class ReportingService {
       };
     }
 
-    const liveRows = await this.reportingRepository.getStorePerformanceRows({
-      storeId,
-      metricCodes,
-      periodType: latestPeriod.period_type,
-      periodStart: latestPeriod.period_start,
-      periodEnd: latestPeriod.period_end,
-    });
+    const shouldReadChecklistRows = metricCodes.some((code) =>
+      storeChecklistMetricCodes.has(code),
+    );
+    const [storePerformanceRows, checklistRows] = await Promise.all([
+      this.reportingRepository.getStorePerformanceRows({
+        storeId,
+        metricCodes,
+        periodType: latestPeriod.period_type,
+        periodStart: latestPeriod.period_start,
+        periodEnd: latestPeriod.period_end,
+      }),
+      shouldReadChecklistRows
+        ? this.reportingRepository.listRankingStoreChecklistRows({
+            companyIds: input.companyIds,
+            periodStart: latestPeriod.period_start,
+            periodEnd: latestPeriod.period_end,
+          })
+        : Promise.resolve([]),
+    ]);
+    const liveRows = [
+      ...storePerformanceRows,
+      ...checklistRows.filter((row) => row.store_id === storeId),
+    ];
     let benchmarkRows = await this.reportingRepository.getStoreTurkeyBenchmarkValues({
       companyId: input.companyIds[0] ?? undefined,
       periodType: latestPeriod.period_type,
@@ -418,14 +436,19 @@ export class ReportingService {
         row?.actual_value !== null && row?.actual_value !== undefined
           ? Number(row.actual_value)
           : null;
+      const isChecklistMetric = storeChecklistMetricCodes.has(metric.code);
       const targetValue =
-        row?.target_value !== null && row?.target_value !== undefined
-          ? Number(row.target_value)
-          : null;
+        isChecklistMetric && actualValue !== null
+          ? 100
+          : row?.target_value !== null && row?.target_value !== undefined
+            ? Number(row.target_value)
+            : null;
       const benchmarkSource =
-        metric.benchmarkSource ?? (targetValue !== null ? "TARGET" : "TURKEY_AVERAGE");
+        isChecklistMetric
+          ? "TARGET"
+          : metric.benchmarkSource ?? (targetValue !== null ? "TARGET" : "TURKEY_AVERAGE");
       const benchmarkValue =
-        benchmarkSource === "TURKEY_AVERAGE" && row
+        !isChecklistMetric && benchmarkSource === "TURKEY_AVERAGE" && row
           ? benchmarkLookup.get(row.kpi_code) ?? null
           : null;
       const metricScore = this.kpiBenchmarkScoringService.scoreMetric({
@@ -436,7 +459,7 @@ export class ReportingService {
         weightPercent: metric.weightPercent,
         direction: metric.direction ?? "HIGHER_IS_BETTER",
         benchmarkSource,
-        capRatio: metric.capRatio ?? 1.2,
+        capRatio: isChecklistMetric ? 1 : metric.capRatio ?? 1.2,
       });
       const achievementRate = metricScore.actualRatio;
       const statusBand =
