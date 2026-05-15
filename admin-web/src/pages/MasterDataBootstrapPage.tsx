@@ -162,6 +162,7 @@ export function MasterDataBootstrapPage() {
         limit: PAGE_SIZE,
         offset: 0,
       }),
+    staleTime: 30_000,
   })
   const detailQuery = useQuery({
     queryKey: ['master-data-bootstrap-detail', batchId],

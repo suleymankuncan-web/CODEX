@@ -1,4 +1,6 @@
 import { KeyRound, LogIn, PanelLeftClose, PanelLeftOpen, Settings } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
+import { useRef } from 'react'
 import { NavLink } from 'react-router-dom'
 import lufianLogoUrl from '../assets/lufian-logo.png'
 import type { AuthSessionSummary } from '../features/auth/api'
@@ -6,6 +8,8 @@ import { formatDisplayRoles } from '../features/auth/display'
 import { useLocalization } from '../features/localization/useLocalization'
 import type { NavDefinition } from './admin-navigation'
 import { preloadRouteModule } from './route-preloaders'
+
+const adminRouteWarmDedupeMs = 2_000
 
 function getAdminInitials(authSummary: AuthSessionSummary | null) {
   const userId = authSummary?.user.userId?.trim() || 'ADMIN'
@@ -29,9 +33,31 @@ export function AdminSidebar(input: {
   onCollapsedChange: (collapsed: boolean) => void
 }) {
   const { t } = useLocalization()
+  const queryClient = useQueryClient()
+  const warmingRouteDedupeRef = useRef<Set<string>>(new Set())
   const ToggleIcon = input.collapsed ? PanelLeftOpen : PanelLeftClose
   const roleSummary = formatDisplayRoles(input.authSummary?.user.roleCodes, t('adminShell.noResolvedRoles'))
   const primaryNavItems = input.allowedAdminNav.filter((item) => item.id !== 'session')
+  const warmAdminRoute = (path: string) => {
+    preloadRouteModule(path)
+    if (warmingRouteDedupeRef.current.has(path)) {
+      return
+    }
+    warmingRouteDedupeRef.current.add(path)
+    window.setTimeout(() => {
+      warmingRouteDedupeRef.current.delete(path)
+    }, adminRouteWarmDedupeMs)
+
+    void import('./route-data-preloaders')
+      .then(({ prefetchRouteData }) => {
+        prefetchRouteData({
+          authSummary: input.authSummary,
+          pathname: path,
+          queryClient,
+        })
+      })
+      .catch(() => undefined)
+  }
 
   return (
     <aside className="admin-command-sidebar" aria-label={t('adminShell.primaryNavigation')}>
@@ -65,9 +91,9 @@ export function AdminSidebar(input: {
                 `admin-command-nav-link${isActive ? ' admin-command-nav-link-active' : ''}`
               }
               key={item.to}
-              onFocus={() => preloadRouteModule(item.to)}
-              onPointerDown={() => preloadRouteModule(item.to)}
-              onPointerEnter={() => preloadRouteModule(item.to)}
+              onFocus={() => warmAdminRoute(item.to)}
+              onPointerDown={() => warmAdminRoute(item.to)}
+              onPointerEnter={() => warmAdminRoute(item.to)}
               title={t(item.labelKey)}
               to={item.to}
             >
@@ -94,9 +120,9 @@ export function AdminSidebar(input: {
         <div className="admin-command-utility-links">
           <NavLink
             className="admin-command-utility-link"
-            onFocus={() => preloadRouteModule('/admin/session')}
-            onPointerDown={() => preloadRouteModule('/admin/session')}
-            onPointerEnter={() => preloadRouteModule('/admin/session')}
+            onFocus={() => warmAdminRoute('/admin/session')}
+            onPointerDown={() => warmAdminRoute('/admin/session')}
+            onPointerEnter={() => warmAdminRoute('/admin/session')}
             title={t('adminShell.nav.session')}
             to="/admin/session"
           >

@@ -104,11 +104,13 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
   const feedQuery = useQuery({
     queryKey: ['admin-feed'],
     queryFn: getAdminFeedPosts,
+    staleTime: 30_000,
     ...transientQueryRetryOptions,
   })
   const lookupsQuery = useQuery({
     queryKey: ['auth-lookups'],
     queryFn: getAuthLookups,
+    staleTime: 30_000,
     ...transientQueryRetryOptions,
   })
 

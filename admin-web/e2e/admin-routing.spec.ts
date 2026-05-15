@@ -99,6 +99,59 @@ test('admin shell switches chrome to English copy and persists locale', async ({
   await expect(page.locator('.admin-command-brand').getByText('LUFIAN')).toBeVisible()
 })
 
+test('admin sidebar prefetches integration data before opening integrations', async ({ page }) => {
+  let overviewRequests = 0
+  let needsActionRequests = 0
+  let lookupsRequests = 0
+  let templateRequests = 0
+
+  await page.unroute('**/api/integrations/import-batches/overview')
+  await page.unroute('**/api/integrations/import-batches/needs-action?**')
+  await page.unroute('**/api/integrations/lookups')
+  await page.unroute('**/api/integrations/import-payload-templates**')
+  await page.route('**/api/integrations/import-batches/overview', async (route) => {
+    overviewRequests += 1
+    await route.fulfill({ json: integrationOverviewFixture })
+  })
+  await page.route('**/api/integrations/import-batches/needs-action?**', async (route) => {
+    needsActionRequests += 1
+    await route.fulfill({ json: emptyListFixture })
+  })
+  await page.route('**/api/integrations/lookups', async (route) => {
+    lookupsRequests += 1
+    await route.fulfill({ json: integrationLookupsFixture })
+  })
+  await page.route('**/api/integrations/import-payload-templates**', async (route) => {
+    templateRequests += 1
+    await route.fulfill({ json: integrationTemplateFixture })
+  })
+
+  await page.goto('/admin/audit')
+
+  const integrationLink = page.getByRole('link', { name: 'Entegrasyonlar' })
+  await expect(integrationLink).toBeVisible()
+
+  await integrationLink.hover()
+
+  await expect.poll(() => overviewRequests).toBeGreaterThanOrEqual(1)
+  await expect.poll(() => needsActionRequests).toBeGreaterThanOrEqual(1)
+  await expect.poll(() => lookupsRequests).toBeGreaterThanOrEqual(1)
+  await expect.poll(() => templateRequests).toBeGreaterThanOrEqual(1)
+  const prefetchedOverviewRequests = overviewRequests
+  const prefetchedNeedsActionRequests = needsActionRequests
+  const prefetchedLookupsRequests = lookupsRequests
+  const prefetchedTemplateRequests = templateRequests
+
+  await integrationLink.click()
+
+  await expect(page).toHaveURL(/\/admin\/integrations$/)
+  await expect(page.getByText('batch-admin-prefetch-1').first()).toBeVisible()
+  await expect.poll(() => overviewRequests, { timeout: 1000 }).toBe(prefetchedOverviewRequests)
+  await expect.poll(() => needsActionRequests, { timeout: 1000 }).toBe(prefetchedNeedsActionRequests)
+  await expect.poll(() => lookupsRequests, { timeout: 1000 }).toBe(prefetchedLookupsRequests)
+  await expect.poll(() => templateRequests, { timeout: 1000 }).toBe(prefetchedTemplateRequests)
+})
+
 test('admin sidebar collapses without losing navigation targets', async ({ page }) => {
   await page.goto('/admin/audit')
 
@@ -586,6 +639,66 @@ const emptyListFixture = {
     total: 0,
     limit: 50,
     offset: 0,
+  },
+}
+
+const integrationOverviewFixture = {
+  totals: {
+    all: 3,
+    completed: 2,
+    failed: 0,
+    completedWithErrors: 1,
+    pending: 0,
+    queued: 0,
+    processing: 0,
+  },
+  healthTotals: {
+    healthy: 2,
+    inProgress: 0,
+    blocked: 0,
+    retryReady: 0,
+    needsAction: 0,
+    stuck: 0,
+  },
+  actionTotals: {
+    blocked: 0,
+    retryReady: 0,
+    needsAction: 0,
+    stuck: 0,
+  },
+  latest: {
+    completedBatchId: 'batch-admin-prefetch-1',
+    failedBatchId: null,
+    inProgressBatchId: null,
+    stuckBatchId: null,
+  },
+}
+
+const integrationLookupsFixture = {
+  activeSources: [
+    {
+      sourceId: 'source-power-bi',
+      sourceCode: 'POWER_BI_KPI',
+      sourceName: 'Power BI KPI',
+      entityType: 'kpi',
+      sourceSystem: 'power_bi',
+      stateModel: 'manual_upload',
+    },
+  ],
+  meta: {
+    totalEntityTypes: 1,
+    totalActiveSources: 1,
+  },
+}
+
+const integrationTemplateFixture = {
+  entityType: 'kpi',
+  sourceSystem: 'power_bi',
+  normalizedBehavior: ['Power BI personnel and store KPI rows stay split at upload time.'],
+  requestBody: {
+    entityType: 'kpi',
+    rows: [],
+    sourceCapturedAt: '2026-05-01T09:00:00.000Z',
   },
 }
 

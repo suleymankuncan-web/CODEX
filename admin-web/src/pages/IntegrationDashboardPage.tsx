@@ -79,6 +79,7 @@ export function IntegrationDashboardPage() {
   const overviewQuery = useQuery({
     queryKey: ['integration-overview'],
     queryFn: getImportOverview,
+    staleTime: 30_000,
   })
   const needsActionQuery = useQuery({
     queryKey: ['integration-needs-action', offset, entityTypeFilter, statusFilter],
@@ -89,6 +90,7 @@ export function IntegrationDashboardPage() {
         entityType: entityTypeFilter || undefined,
         status: statusFilter || undefined,
       }),
+    staleTime: 30_000,
   })
   const importTemplateQuery = useQuery({
     queryKey: ['integration-import-template', templateSourceSystem],
@@ -97,10 +99,12 @@ export function IntegrationDashboardPage() {
         entityType: 'kpi',
         sourceSystem: templateSourceSystem,
       }),
+    staleTime: 30_000,
   })
   const lookupsQuery = useQuery({
     queryKey: ['integration-lookups'],
     queryFn: getIntegrationLookups,
+    staleTime: 30_000,
   })
   const retryMutation = useMutation({
     mutationFn: retryImportBatch,
