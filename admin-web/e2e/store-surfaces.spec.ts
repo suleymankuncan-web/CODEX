@@ -468,6 +468,44 @@ test('store personnel sidebar only exposes personnel surfaces', async ({ page })
   await expect(storeNav.locator('a[href="/store/tasks"]')).toHaveCount(0)
 })
 
+test('visual merchandiser lands on checklist-only shell from store root', async ({ page }) => {
+  await page.unroute('**/api/auth/session')
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      json: {
+        ...authSessionFixture,
+        user: {
+          ...authSessionFixture.user,
+          roleCodes: ['VISUAL_MERCHANDISER'],
+          actionScope: {
+            assignedStoreIds: [demoStoreId],
+          },
+          assignedStoreIds: [demoStoreId],
+        },
+      },
+    })
+  })
+
+  await page.goto('/store')
+
+  await expect(page).toHaveURL(/\/store\/checklists$/)
+  await expect(page.locator('.store-checklists-command-page')).toBeVisible()
+  const storeNav = page.locator('.store-command-nav')
+  await expect(storeNav.locator('a[href="/store/checklists"]')).toBeVisible()
+  await expect(storeNav.locator('a[href="/store/feed"]')).toBeVisible()
+  await expect(storeNav.locator('a[href="/store/home"]')).toHaveCount(0)
+  await expect(storeNav.locator('a[href="/store/kpis"]')).toHaveCount(0)
+  await expect(storeNav.locator('a[href="/store/rankings"]')).toHaveCount(0)
+  await expect(storeNav.locator('a[href="/store/approvals"]')).toHaveCount(0)
+  await expect(page.getByText('VM kapsamı').first()).toBeVisible()
+  await expect(page.getByText('VM checklist yapılmadı')).toHaveCount(2)
+  await expect(page.getByText('BM Checklist')).toHaveCount(0)
+  await expect(page.getByText('BM skor')).toHaveCount(0)
+  await expect(page.getByText('BM kapsamı')).toHaveCount(0)
+  await expect(page.getByText('BM + VM')).toHaveCount(0)
+  await expectHealthyStoreTransition(page)
+})
+
 test('store home switches to English copy and persists locale', async ({ page }) => {
   await page.goto('/store')
 

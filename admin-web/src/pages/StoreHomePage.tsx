@@ -441,7 +441,7 @@ function ChecklistHomeCard(input: { summary: ChecklistHomeSummary }) {
 
 function getKpiRowsForPersona(persona: StorePersona) {
   if (persona === 'personnel') return ['UPT', 'ATV', 'HG%']
-  if (persona === 'visualMerchandiser') return ['BM Checklist', 'VM Checklist']
+  if (persona === 'visualMerchandiser') return ['VM Checklist']
   return ['UPT', 'ATV', 'CR', 'HG%', 'BM Checklist', 'VM Checklist']
 }
 
@@ -456,12 +456,17 @@ function buildChecklistHomeSummary(input: {
 }): ChecklistHomeSummary | null {
   if (input.persona === 'personnel') return null
 
-  const pendingAcknowledgements = input.acknowledgementItems.filter((item) => item.acknowledgement === null).length
-  const acknowledgedCount = input.acknowledgementItems.filter((item) => item.acknowledgement !== null).length
-  const activeDraftCount = input.mobileToday?.activeInstances.length ?? 0
-  const completedVisitCount = input.mobileToday?.completedThisMonth.length ?? acknowledgedCount
-  const expectedVisitCount = input.mobileToday
-    ? input.mobileToday.stores.length * Math.max(input.mobileToday.templates.length, 1)
+  const visibleAcknowledgementItems = getChecklistHomeAcknowledgementItemsForPersona(
+    input.acknowledgementItems,
+    input.persona,
+  )
+  const visibleMobileToday = getChecklistHomeMobileTodayForPersona(input.mobileToday, input.persona)
+  const pendingAcknowledgements = visibleAcknowledgementItems.filter((item) => item.acknowledgement === null).length
+  const acknowledgedCount = visibleAcknowledgementItems.filter((item) => item.acknowledgement !== null).length
+  const activeDraftCount = visibleMobileToday?.activeInstances.length ?? 0
+  const completedVisitCount = visibleMobileToday?.completedThisMonth.length ?? acknowledgedCount
+  const expectedVisitCount = visibleMobileToday
+    ? visibleMobileToday.stores.length * Math.max(visibleMobileToday.templates.length, 1)
     : null
   const pendingVisitCount =
     expectedVisitCount === null
@@ -512,5 +517,46 @@ function buildChecklistHomeSummary(input: {
     note: input.t('storeHome.checklistCard.regionNote'),
     title: input.t('storeHome.checklistCard.regionTitle'),
     tone: pendingVisitCount > 0 ? 'attention' : 'ready',
+  }
+}
+
+function getChecklistHomeAcknowledgementItemsForPersona(
+  items: ChecklistAcknowledgementItem[],
+  persona: StorePersona,
+) {
+  if (persona === 'visualMerchandiser') {
+    return items.filter((item) => item.templateType === 'VM_STORE_VISIT')
+  }
+
+  return items
+}
+
+function getChecklistHomeMobileTodayForPersona(
+  mobileToday: MobileChecklistToday | null,
+  persona: StorePersona,
+): MobileChecklistToday | null {
+  if (!mobileToday || persona !== 'visualMerchandiser') return mobileToday
+
+  const vmTemplateIds = new Set(
+    mobileToday.templates
+      .filter((template) => template.templateType === 'VM_STORE_VISIT')
+      .map((template) => template.checklistTemplateId),
+  )
+
+  return {
+    ...mobileToday,
+    templates: mobileToday.templates.filter((template) => template.templateType === 'VM_STORE_VISIT'),
+    activeInstances: mobileToday.activeInstances.filter((instance) =>
+      vmTemplateIds.has(instance.checklistTemplateId),
+    ),
+    completedThisMonth: mobileToday.completedThisMonth.filter((item) =>
+      vmTemplateIds.has(item.checklistTemplateId),
+    ),
+    pendingAcknowledgements: mobileToday.pendingAcknowledgements.filter((item) =>
+      vmTemplateIds.has(item.checklistTemplateId),
+    ),
+    monthlySummaries: mobileToday.monthlySummaries.filter((item) =>
+      vmTemplateIds.has(item.checklistTemplateId),
+    ),
   }
 }
