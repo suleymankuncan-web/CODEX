@@ -207,6 +207,9 @@ async function routePilotSmokeApi(page: Page) {
   await page.route('**/api/mobile/checklists/today', async (route) => {
     await route.fulfill({ json: mobileChecklistTodayFixture })
   })
+  await page.route('**/api/workflow/inbox', async (route) => {
+    await route.fulfill({ json: workflowInboxFixture })
+  })
 
   await page.route('**/api/reports/kpi-config', async (route) => {
     await route.fulfill({ json: kpiConfigFixture })
@@ -542,6 +545,11 @@ const mobileChecklistTodayFixture = {
     pendingAcknowledgements: [],
     monthlySummaries: [],
   },
+}
+
+const workflowInboxFixture = {
+  items: [],
+  meta: { count: 0, total: 0, limit: 30, offset: 0 },
 }
 
 const kpiConfigFixture = {
