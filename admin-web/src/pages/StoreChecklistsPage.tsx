@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { ScreenState } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
 import {
@@ -68,6 +68,7 @@ export function StoreChecklistsPage(input: {
 }) {
   const { locale, t } = useLocalization()
   const location = useLocation()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [ackNotes, setAckNotes] = useState<Record<string, string>>({})
   const [ackNotice, setAckNotice] = useState<string | null>(() => takeChecklistCommandNotice())
@@ -129,6 +130,13 @@ export function StoreChecklistsPage(input: {
         return next
       })
       setActiveTab('history')
+      navigate(
+        {
+          pathname: location.pathname,
+          search: buildChecklistSearch(location.search, { result: null, tab: 'history' }),
+        },
+        { replace: true },
+      )
       showCommandNotice(result.command.message)
     },
   })
@@ -416,6 +424,45 @@ export function StoreChecklistsPage(input: {
     ? activeTab
     : checklistTabs[0]?.key ?? 'visits'
 
+  const selectChecklistTab = (tab: ChecklistTab) => {
+    setActiveTab(tab)
+    setSelectedResultId(null)
+    navigate(
+      {
+        pathname: location.pathname,
+        search: buildChecklistSearch(location.search, { result: null, tab }),
+      },
+      { replace: true },
+    )
+  }
+
+  const openChecklistResult = (item: ChecklistAcknowledgementItem) => {
+    const tab = item.acknowledgement ? 'history' : 'inbox'
+    setActiveTab(tab)
+    setSelectedResultId(item.checklistInstanceId)
+    navigate(
+      {
+        pathname: location.pathname,
+        search: buildChecklistSearch(location.search, {
+          result: item.checklistInstanceId,
+          tab,
+        }),
+      },
+      { replace: true },
+    )
+  }
+
+  const closeChecklistResult = () => {
+    setSelectedResultId(null)
+    navigate(
+      {
+        pathname: location.pathname,
+        search: buildChecklistSearch(location.search, { result: null }),
+      },
+      { replace: true },
+    )
+  }
+
   const closeSession = () => {
     const confirmMessage = sessionDirty
       ? t('storeChecklists.sessionCloseConfirm')
@@ -552,7 +599,7 @@ export function StoreChecklistsPage(input: {
         <ChecklistTabs
           activeTab={selectedTab}
           tabs={checklistTabs}
-          onChange={setActiveTab}
+          onChange={selectChecklistTab}
         />
       ) : null}
 
@@ -828,7 +875,7 @@ export function StoreChecklistsPage(input: {
               acknowledgementNote: ackNotes[selectedResult.checklistInstanceId] || undefined,
             })
           }
-          onClose={() => setSelectedResultId(null)}
+          onClose={closeChecklistResult}
           onNoteChange={(note) =>
             setAckNotes((current) => ({
               ...current,
@@ -869,7 +916,7 @@ export function StoreChecklistsPage(input: {
             locale={locale}
             resultSort={resultSort}
             t={t}
-            onOpen={(item) => setSelectedResultId(item.checklistInstanceId)}
+            onOpen={openChecklistResult}
             onSort={(key) => setResultSort(toggleSort(resultSort, key))}
           />
         )}
@@ -902,7 +949,7 @@ export function StoreChecklistsPage(input: {
             locale={locale}
             resultSort={resultSort}
             t={t}
-            onOpen={(item) => setSelectedResultId(item.checklistInstanceId)}
+            onOpen={openChecklistResult}
             onSort={(key) => setResultSort(toggleSort(resultSort, key))}
           />
         )}
@@ -1861,6 +1908,28 @@ function resolveChecklistTabFromSearch(search: string): ChecklistTab {
 function resolveChecklistResultFromSearch(search: string) {
   const result = new URLSearchParams(search).get('result')
   return result && result.trim().length > 0 ? result : null
+}
+
+function buildChecklistSearch(
+  search: string,
+  updates: { result?: string | null; tab?: ChecklistTab },
+) {
+  const params = new URLSearchParams(search)
+
+  if (updates.tab) {
+    params.set('tab', updates.tab)
+  }
+
+  if (updates.result !== undefined) {
+    if (updates.result === null || updates.result.trim().length === 0) {
+      params.delete('result')
+    } else {
+      params.set('result', updates.result)
+    }
+  }
+
+  const nextSearch = params.toString()
+  return nextSearch ? `?${nextSearch}` : ''
 }
 
 function getChecklistHeroScopeLabel(

@@ -1830,6 +1830,16 @@ test('store tasks checklist acknowledgement opens the exact checklist receipt', 
   await expect(page.getByRole('dialog')).toBeVisible()
   await expect(page.getByRole('dialog')).toContainText('Checklist result')
   await expect(page.getByRole('dialog').getByRole('heading', { name: 'BM Result' })).toBeVisible()
+
+  await page.getByRole('dialog').getByRole('button', { name: 'Close' }).click()
+
+  await expect(page).toHaveURL(/\/store\/checklists\?tab=inbox$/)
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'View details' }).click()
+
+  await expect(page).toHaveURL(/\/store\/checklists\?tab=inbox&result=checklist-instance-bm-1$/)
+  await expect(page.getByRole('dialog').getByRole('heading', { name: 'BM Result' })).toBeVisible()
 })
 
 test('store incentives page switches to English copy and persists locale', async ({ page }) => {
