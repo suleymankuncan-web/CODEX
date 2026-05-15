@@ -140,6 +140,91 @@ test('completed checklist handoff moves from field visit to store acknowledgemen
   await expect(page.getByText('No pending checklist receipts')).toBeVisible()
 })
 
+test('completed checklist refreshes the store task queue cache', async ({ page }) => {
+  const requests = createChecklistRequestLog()
+  const handoffState: ChecklistHandoffState = {
+    completed: false,
+    acknowledged: false,
+  }
+  let workflowInboxRequests = 0
+
+  await page.addInitScript(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'en')
+  })
+  await setupChecklistPage(page, ['STORE_MANAGER', 'VISUAL_MERCHANDISER'], {
+    activeInstances: [],
+    handoffState,
+    monthlySummaries: [],
+    requests,
+    templateName: 'VM Visit',
+    templateType: 'VM_STORE_VISIT',
+  })
+  await page.route('**/api/workflow/inbox', async (route) => {
+    workflowInboxRequests += 1
+    await route.fulfill({
+      json: {
+        items: handoffState.completed
+          ? [
+              {
+                itemType: 'acknowledgement',
+                sourceType: 'checklist_receipt',
+                sourceId: '44444444-4444-4444-8444-444444444444',
+                title: 'VM Result',
+                summary: 'Marmara Park completed checklist result',
+                storeId,
+                storeName: 'Marmara Park',
+                workflowStatus: 'completed',
+                inboxStatus: 'needs_attention',
+                urgency: 'medium',
+                createdAt: '2026-04-28T10:30:00.000Z',
+                needsAttentionAt: '2026-04-28T10:30:00.000Z',
+                actorRole: 'STORE_MANAGER',
+                primaryActionLabel: 'I acknowledge',
+                secondaryActionLabel: 'Open checklist result',
+                deepLink: '/store/checklists?tab=inbox&result=44444444-4444-4444-8444-444444444444',
+              },
+            ]
+          : [],
+        meta: {
+          count: handoffState.completed ? 1 : 0,
+          total: handoffState.completed ? 1 : 0,
+          limit: 30,
+          offset: 0,
+        },
+      },
+    })
+  })
+
+  await page.goto('/store/tasks')
+  await expect(page.getByRole('heading', { name: /Action-required work/i })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'I acknowledge' })).toHaveCount(0)
+  expect(workflowInboxRequests).toBe(1)
+
+  await page.getByRole('link', { name: 'Store checklists' }).click()
+  await page.getByRole('button', { name: 'Start checklist' }).click()
+  await page.getByLabel('Score').fill('8')
+  await page.getByLabel('Note').fill('Task-refresh visit')
+  await expect.poll(() => requests.saves).toContainEqual(
+    {
+      checklistInstanceId: '33333333-3333-4333-8333-333333333333',
+      body: {
+        templateItemId: '55555555-5555-4555-8555-555555555555',
+        scoreValue: 8,
+        commentText: 'Task-refresh visit',
+      },
+    },
+  )
+  page.once('dialog', (dialog) => dialog.accept())
+  await page.getByRole('button', { name: 'Complete', exact: true }).click()
+  await expect.poll(() => handoffState.completed).toBe(true)
+
+  await page.getByRole('link', { name: 'Tasks' }).click()
+  await expect(page.getByRole('heading', { name: /Action-required work/i })).toBeVisible()
+
+  await expect.poll(() => workflowInboxRequests).toBeGreaterThanOrEqual(2)
+  await expect(page.getByRole('link', { name: 'I acknowledge' })).toBeVisible()
+})
+
 test('region manager can read BM and VM checklist results without acknowledging them', async ({ page }) => {
   await setupChecklistPage(page, ['REGION_MANAGER'])
   await page.goto('/store/checklists')
