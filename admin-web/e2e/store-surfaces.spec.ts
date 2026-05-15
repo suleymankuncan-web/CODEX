@@ -1769,7 +1769,7 @@ test('store tasks page switches to English copy and persists locale', async ({ p
   await expect(page.getByRole('heading', { name: /Action-required work/i })).toBeVisible()
 })
 
-test('store tasks checklist acknowledgement opens the checklist inbox tab', async ({ page }) => {
+test('store tasks checklist acknowledgement opens the exact checklist receipt', async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem('store-ops-app-locale', 'en')
   })
@@ -1806,7 +1806,7 @@ test('store tasks checklist acknowledgement opens the checklist inbox tab', asyn
             actorRole: 'STORE_MANAGER',
             primaryActionLabel: 'I acknowledge',
             secondaryActionLabel: 'Open checklist result',
-            deepLink: '/store/checklists?tab=inbox',
+            deepLink: '/store/checklists?tab=inbox&result=checklist-instance-bm-1',
           },
         ],
         meta: {
@@ -1822,11 +1822,14 @@ test('store tasks checklist acknowledgement opens the checklist inbox tab', asyn
   await page.goto('/store/tasks')
   await page.getByRole('link', { name: 'I acknowledge' }).click()
 
-  await expect(page).toHaveURL(/\/store\/checklists\?tab=inbox$/)
+  await expect(page).toHaveURL(/\/store\/checklists\?tab=inbox&result=checklist-instance-bm-1$/)
   await expect(page.getByRole('tab', { name: /Checklist inbox/ })).toHaveAttribute('aria-selected', 'true')
   await expect(
     page.getByRole('heading', { name: 'Completed checklist receipts waiting on store acknowledgement' }),
   ).toBeVisible()
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect(page.getByRole('dialog')).toContainText('Checklist result')
+  await expect(page.getByRole('dialog').getByRole('heading', { name: 'BM Result' })).toBeVisible()
 })
 
 test('store incentives page switches to English copy and persists locale', async ({ page }) => {

@@ -128,7 +128,7 @@ export function toChecklistAcknowledgementInboxItem(
     actorRole: "STORE_MANAGER",
     primaryActionLabel: needsAttention ? "Kabul ediyorum" : "View acknowledgement",
     secondaryActionLabel: "Open checklist receipt",
-    deepLink: "/store/checklists?tab=inbox",
+    deepLink: `/store/checklists?tab=inbox&result=${encodeURIComponent(item.checklistInstanceId)}`,
     historyPreview: item.acknowledgement?.acknowledgementNote ?? undefined,
   };
 }
