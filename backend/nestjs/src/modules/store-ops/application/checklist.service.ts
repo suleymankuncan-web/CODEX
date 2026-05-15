@@ -378,7 +378,7 @@ export class ChecklistService {
     }
 
     if (roleCodes.includes("REGION_MANAGER")) {
-      return ["BM_STORE_VISIT"];
+      return ["BM_STORE_VISIT", "VM_STORE_VISIT"];
     }
 
     if (roleCodes.includes("STORE_MANAGER")) {

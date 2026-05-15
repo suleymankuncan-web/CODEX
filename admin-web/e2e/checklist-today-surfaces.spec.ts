@@ -3,6 +3,7 @@ import { setStoredLocale } from './locale-test-utils'
 
 const storeId = '11111111-1111-4111-8111-111111111111'
 const templateId = '22222222-2222-4222-8222-222222222222'
+const vmTemplateId = '99999999-9999-4999-8999-999999999999'
 
 test('region manager checklist surface shows assigned store visit workflow', async ({ page }) => {
   const requests = createChecklistRequestLog()
@@ -154,6 +155,40 @@ test('region manager can read BM and VM checklist results without acknowledging 
   await expect(page.getByRole('dialog')).toBeVisible()
   await expect(page.getByText('Bu checklist incelenebilir')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Kabul ettim' })).toHaveCount(0)
+})
+
+test('region manager visit flow reads VM score but starts BM checklist only', async ({ page }) => {
+  const requests = createChecklistRequestLog()
+  await setupChecklistPage(page, ['REGION_MANAGER'], {
+    activeInstances: [],
+    includeVmTemplate: true,
+    monthlySummaries: [
+      {
+        storeId,
+        checklistTemplateId: templateId,
+        monthStart: '2026-04-01',
+        completedCount: 1,
+        averageScore: 82,
+      },
+      {
+        storeId,
+        checklistTemplateId: vmTemplateId,
+        monthStart: '2026-04-01',
+        completedCount: 1,
+        averageScore: 92,
+      },
+    ],
+    requests,
+  })
+  await page.goto('/store/checklists')
+
+  const visitRow = page.locator('.store-checklists-visit-row').filter({ hasText: 'Marmara Park' })
+  await expect(visitRow).toBeVisible()
+  await expect(visitRow.getByText('82')).toBeVisible()
+  await expect(visitRow.getByText('92')).toBeVisible()
+
+  await visitRow.getByRole('button', { name: 'Checklist yap' }).click()
+  await expect.poll(() => requests.starts).toEqual([{ checklistTemplateId: templateId, storeId }])
 })
 
 test('visual merchandiser sees checklist-only VM coverage and no broad store links', async ({ page }) => {
@@ -338,6 +373,7 @@ type ChecklistFixtureOptions = {
   templateType?: string
   templateCode?: string
   templateName?: string
+  includeVmTemplate?: boolean
   activeInstances?: ChecklistActiveInstanceFixture[]
   monthlySummaries?: ChecklistMonthlySummaryFixture[]
   requests?: ChecklistRequestLog
@@ -562,30 +598,52 @@ function createMobileChecklistTodayFixture(options: ChecklistFixtureOptions = {}
   const templateType = options.templateType ?? 'BM_STORE_VISIT'
   const templateCode = options.templateCode ?? 'BM_VISIT_V1'
   const templateName = options.templateName ?? 'BM Visit'
+  const templates = [
+    {
+      checklistTemplateId: templateId,
+      templateCode,
+      templateType,
+      templateName,
+      versionNo: 1,
+      items: [
+        {
+          templateItemId: '55555555-5555-4555-8555-555555555555',
+          sectionName: 'Gorsel duzen',
+          itemNo: 1,
+          itemText: 'Vitrin standartlara uygun',
+          responseType: 'score',
+          weight: 100,
+          maxScore: 10,
+        },
+      ],
+    },
+  ]
+
+  if (options.includeVmTemplate) {
+    templates.push({
+      checklistTemplateId: vmTemplateId,
+      templateCode: 'VM_VISIT_V1',
+      templateType: 'VM_STORE_VISIT',
+      templateName: 'VM Visit',
+      versionNo: 1,
+      items: [
+        {
+          templateItemId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+          sectionName: 'Gorsel duzen',
+          itemNo: 1,
+          itemText: 'Reyon duzeni temiz',
+          responseType: 'score',
+          weight: 100,
+          maxScore: 10,
+        },
+      ],
+    })
+  }
 
   return {
   data: {
     stores: [{ storeId, storeName: 'Marmara Park' }],
-    templates: [
-      {
-        checklistTemplateId: templateId,
-        templateCode,
-        templateType,
-        templateName,
-        versionNo: 1,
-        items: [
-          {
-            templateItemId: '55555555-5555-4555-8555-555555555555',
-            sectionName: 'Gorsel duzen',
-            itemNo: 1,
-            itemText: 'Vitrin standartlara uygun',
-            responseType: 'score',
-            weight: 100,
-            maxScore: 10,
-          },
-        ],
-      },
-    ],
+    templates,
     activeInstances: (
       options.activeInstances ?? [
         {
