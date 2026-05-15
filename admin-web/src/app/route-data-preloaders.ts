@@ -5,6 +5,8 @@ import {
   getChecklistAcknowledgements,
   getMobileChecklistToday,
 } from '../features/checklists/api'
+import { listCompetitions } from '../features/competitions/api'
+import { getVisibleFeedPosts } from '../features/feed/api'
 import {
   getKpiConfig,
   getMyPerformance,
@@ -28,6 +30,7 @@ type PrefetchTask = {
 }
 
 const rankingRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN']
+const storeCompetitionRoles = ['STORE_PERSONNEL', 'STORE_MANAGER']
 const storeReportingRoles = ['SUPER_ADMIN', 'REPORT_VIEWER', 'AUDITOR', 'STORE_MANAGER']
 const workflowInboxRoles = ['STORE_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER']
 const checklistVisitManagerRoles = ['REGION_MANAGER', 'VISUAL_MERCHANDISER', 'SUPER_ADMIN']
@@ -73,6 +76,14 @@ function resolveRoutePrefetchTasks(
 
   if (pathname === '/store/checklists') {
     return getStoreChecklistsPrefetchTasks(authSummary)
+  }
+
+  if (pathname === '/store/feed') {
+    return getStoreFeedPrefetchTasks(authSummary)
+  }
+
+  if (pathname === '/store/competitions') {
+    return getStoreCompetitionsPrefetchTasks(authSummary)
   }
 
   if (pathname === '/store/tasks') {
@@ -152,6 +163,26 @@ function getStoreRankingsPrefetchTasks(authSummary: AuthSessionSummary | null): 
           offset: 0,
         }),
       enabled: hasAnyRole(authSummary, rankingRoles),
+    },
+  ]
+}
+
+function getStoreFeedPrefetchTasks(authSummary: AuthSessionSummary | null): PrefetchTask[] {
+  return [
+    {
+      queryKey: ['visible-feed'],
+      queryFn: getVisibleFeedPosts,
+      enabled: Boolean(authSummary),
+    },
+  ]
+}
+
+function getStoreCompetitionsPrefetchTasks(authSummary: AuthSessionSummary | null): PrefetchTask[] {
+  return [
+    {
+      queryKey: ['store-competitions'],
+      queryFn: listCompetitions,
+      enabled: hasAnyRole(authSummary, storeCompetitionRoles),
     },
   ]
 }

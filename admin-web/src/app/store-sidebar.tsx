@@ -14,6 +14,7 @@ import {
   Trophy,
   UserRound,
 } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 import { NavLink } from 'react-router-dom'
 import lufianLogoUrl from '../assets/lufian-logo.png'
 import type { AuthSessionSummary } from '../features/auth/api'
@@ -71,6 +72,7 @@ export function StoreSidebar(input: {
   onCollapsedChange: (collapsed: boolean) => void
 }) {
   const { t } = useLocalization()
+  const queryClient = useQueryClient()
   const persona = resolveStorePersona(input.authSummary)
   const navItems = getStoreNavigation(persona)
   const identityLabel = getIdentityLabel(input.authSummary)
@@ -85,6 +87,18 @@ export function StoreSidebar(input: {
       ? t('storeHome.sidebar.assignedStores', { count: assignedStoreCount })
       : t('storeHome.sidebar.scopedStores', { count: scopedStoreCount })
   const ToggleIcon = input.collapsed ? PanelLeftOpen : PanelLeftClose
+  const warmStoreRoute = (path: string) => {
+    preloadRouteModule(path)
+    void import('./route-data-preloaders')
+      .then(({ prefetchRouteData }) => {
+        prefetchRouteData({
+          authSummary: input.authSummary,
+          pathname: path,
+          queryClient,
+        })
+      })
+      .catch(() => undefined)
+  }
 
   return (
     <aside className="store-command-sidebar" aria-label={t('storeHome.sidebar.aria')}>
@@ -119,9 +133,9 @@ export function StoreSidebar(input: {
               }
               end={item.end}
               key={item.id}
-              onFocus={() => preloadRouteModule(item.path)}
-              onPointerDown={() => preloadRouteModule(item.path)}
-              onPointerEnter={() => preloadRouteModule(item.path)}
+              onFocus={() => warmStoreRoute(item.path)}
+              onPointerDown={() => warmStoreRoute(item.path)}
+              onPointerEnter={() => warmStoreRoute(item.path)}
               title={t(item.labelKey)}
               to={item.path}
             >
@@ -141,9 +155,9 @@ export function StoreSidebar(input: {
               isActive ? ' store-command-identity-link-active' : ''
             }`
           }
-          onFocus={() => preloadRouteModule('/store/settings')}
-          onPointerDown={() => preloadRouteModule('/store/settings')}
-          onPointerEnter={() => preloadRouteModule('/store/settings')}
+          onFocus={() => warmStoreRoute('/store/settings')}
+          onPointerDown={() => warmStoreRoute('/store/settings')}
+          onPointerEnter={() => warmStoreRoute('/store/settings')}
           title={t('storeHome.nav.settings')}
           to="/store/settings"
         >

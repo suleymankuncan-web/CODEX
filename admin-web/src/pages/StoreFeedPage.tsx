@@ -47,6 +47,7 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
   const feedQuery = useQuery({
     queryKey: ['visible-feed'],
     queryFn: getVisibleFeedPosts,
+    staleTime: 30_000,
     ...transientQueryRetryOptions,
   })
   const posts = useMemo(() => feedQuery.data?.items ?? [], [feedQuery.data?.items])
