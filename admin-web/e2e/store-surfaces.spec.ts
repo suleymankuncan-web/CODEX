@@ -758,6 +758,35 @@ test('store sidebar retries a transient announcements API failure without leavin
   expect(pageErrors).toEqual([])
 })
 
+test('store sidebar prefetches announcement data before opening feed', async ({ page }) => {
+  let feedRequests = 0
+
+  await page.unroute('**/api/feed?**')
+  await page.route('**/api/feed?**', async (route) => {
+    feedRequests += 1
+    await route.fulfill({ json: storeFeedFixture })
+  })
+
+  await page.goto('/store/home')
+
+  const feedLink = page
+    .locator('.store-command-nav')
+    .getByRole('link', { name: 'Duyurular', exact: true })
+  await expect(feedLink).toBeVisible()
+  expect(feedRequests).toBe(0)
+
+  await feedLink.hover()
+
+  await expect.poll(() => feedRequests).toBeGreaterThanOrEqual(1)
+  const prefetchedFeedRequests = feedRequests
+
+  await feedLink.click()
+
+  await expect(page).toHaveURL(/\/store\/feed$/)
+  await expect(page.getByText('Pilot announcement')).toBeVisible()
+  await expect.poll(() => feedRequests, { timeout: 1000 }).toBe(prefetchedFeedRequests)
+})
+
 test('store sidebar transitions across visible manager pages without requiring manual refresh', async ({ page }) => {
   const storeNav = page.locator('.store-command-nav')
   await page.goto('/store/home')
