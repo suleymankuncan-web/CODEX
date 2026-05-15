@@ -1872,6 +1872,70 @@ test('store tasks checklist acknowledgement opens the exact checklist receipt', 
   await expect(page.getByRole('dialog').getByRole('heading', { name: 'BM Result' })).toBeVisible()
 })
 
+test('store tasks prefetches approvals data before opening approval actions', async ({ page }) => {
+  let targetDistributionRequests = 0
+
+  await page.unroute('**/api/workflow/inbox')
+  await page.unroute('**/api/target-distributions/requests**')
+  await page.route('**/api/workflow/inbox', async (route) => {
+    await route.fulfill({
+      json: {
+        items: [
+          {
+            itemType: 'approval',
+            sourceType: 'target_distribution_request',
+            sourceId: 'target-request-prefetch-1',
+            title: 'Mayis hedef dagitimi',
+            summary: 'IstinyePark Demo Store icin hedef onayi bekliyor',
+            storeId: demoStoreId,
+            storeName: 'IstinyePark Demo Store',
+            workflowStatus: 'pending_region_approval',
+            inboxStatus: 'needs_attention',
+            urgency: 'medium',
+            createdAt: '2026-05-12T09:00:00.000Z',
+            needsAttentionAt: '2026-05-12T09:00:00.000Z',
+            actorRole: 'STORE_MANAGER',
+            primaryActionLabel: 'Talebi ac',
+            secondaryActionLabel: 'Onay yuzeyine git',
+            deepLink: '/store/approvals',
+          },
+        ],
+        meta: {
+          count: 1,
+          total: 1,
+          limit: 30,
+          offset: 0,
+        },
+      },
+    })
+  })
+  await page.route('**/api/target-distributions/requests**', async (route) => {
+    if (route.request().method() === 'GET') {
+      targetDistributionRequests += 1
+      await route.fulfill({ json: targetDistributionRequestsFixture })
+      return
+    }
+
+    await route.fulfill({
+      status: 403,
+      json: { message: 'Target distribution write route is not mocked in this surface test.' },
+    })
+  })
+
+  await page.goto('/store/tasks')
+
+  const approvalAction = page.locator('.stacked-row a[href="/store/approvals"]').first()
+  await expect(approvalAction).toBeVisible()
+  await expect.poll(() => targetDistributionRequests).toBeGreaterThanOrEqual(1)
+  const prefetchedRequestCount = targetDistributionRequests
+
+  await approvalAction.click()
+
+  await expect(page).toHaveURL(/\/store\/approvals$/)
+  await expect(page.getByRole('heading', { name: /Talepler \/ Onaylar/i })).toBeVisible()
+  await expect.poll(() => targetDistributionRequests, { timeout: 1000 }).toBe(prefetchedRequestCount)
+})
+
 test('store checklist acknowledgement refreshes the store task queue', async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem('store-ops-app-locale', 'en')
