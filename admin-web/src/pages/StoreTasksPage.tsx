@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useEffect, useMemo } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { CheckCircle2, ClipboardList, Bell, ReceiptText, TrendingUp } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import {
@@ -12,6 +12,7 @@ import {
 } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { getDisplayRoleCodes } from '../features/auth/display'
+import { getChecklistAcknowledgements } from '../features/checklists/api'
 import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import { WorkflowInboxDetail } from '../features/workflow/WorkflowInboxDetail'
@@ -42,6 +43,7 @@ export function StoreTasksPage(input: {
   authSummary: AuthSessionSummary | null
 }) {
   const { locale, t } = useLocalization()
+  const queryClient = useQueryClient()
   const inboxEnabled = canUseWorkflowInbox(input.authSummary)
   const primaryStoreId = input.authSummary?.user.scope.storeIds[0] ?? t('storeTasks.noStoreScope')
   const inboxQuery = useQuery({
@@ -80,10 +82,24 @@ export function StoreTasksPage(input: {
     () => items.filter((item) => item.itemType === 'acknowledgement'),
     [items],
   )
+  const hasChecklistReceiptAction = useMemo(
+    () => items.some((item) => item.sourceType === 'checklist_receipt'),
+    [items],
+  )
   const taskItems = useMemo(
     () => items.filter((item) => item.itemType === 'task'),
     [items],
   )
+
+  useEffect(() => {
+    if (!hasChecklistReceiptAction) return
+
+    void queryClient.prefetchQuery({
+      queryKey: ['checklist-acknowledgements'],
+      queryFn: getChecklistAcknowledgements,
+      ...transientQueryRetryOptions,
+    }).catch(() => undefined)
+  }, [hasChecklistReceiptAction, queryClient])
 
   if (!inboxEnabled) {
     return (

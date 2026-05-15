@@ -1792,11 +1792,14 @@ test('store tasks page switches to English copy and persists locale', async ({ p
 })
 
 test('store tasks checklist acknowledgement opens the exact checklist receipt', async ({ page }) => {
+  let acknowledgementRequests = 0
+
   await page.addInitScript(() => {
     window.localStorage.setItem('store-ops-app-locale', 'en')
   })
   await page.unroute('**/api/auth/session')
   await page.unroute('**/api/workflow/inbox')
+  await page.unroute('**/api/checklists/acknowledgements/list')
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({
       json: {
@@ -1840,8 +1843,13 @@ test('store tasks checklist acknowledgement opens the exact checklist receipt', 
       },
     })
   })
+  await page.route('**/api/checklists/acknowledgements/list', async (route) => {
+    acknowledgementRequests += 1
+    await route.fulfill({ json: checklistAcknowledgementsFixture })
+  })
 
   await page.goto('/store/tasks')
+  await expect.poll(() => acknowledgementRequests).toBeGreaterThanOrEqual(1)
   await page.getByRole('link', { name: 'I acknowledge' }).click()
 
   await expect(page).toHaveURL(/\/store\/checklists\?tab=inbox&result=checklist-instance-bm-1$/)
