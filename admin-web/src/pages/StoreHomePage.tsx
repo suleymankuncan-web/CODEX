@@ -1,6 +1,14 @@
 import { ArrowRight } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import type { AuthSessionSummary } from '../features/auth/api'
+import { canReadChecklistResults, hasAnyRole } from '../features/auth/authorization'
+import {
+  getChecklistAcknowledgements,
+  getMobileChecklistToday,
+  type ChecklistAcknowledgementItem,
+  type MobileChecklistToday,
+} from '../features/checklists/api'
 import type { TranslationKey } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import {
@@ -8,11 +16,13 @@ import {
   resolveStorePersona,
   type StorePersona,
 } from '../app/store-navigation'
+import { transientQueryRetryOptions } from '../lib/query-retry'
 
 type HomeMetric = {
   labelKey: TranslationKey
   value: string
   noteKey?: TranslationKey
+  note?: string
   tone?: 'score' | 'link'
   href?: string
 }
@@ -28,6 +38,16 @@ type HomeConfig = {
   focusHref: string
   summaryTitleKey: TranslationKey
   timelineTitleKey: TranslationKey
+}
+
+type ChecklistHomeSummary = {
+  actionLabel: string
+  copy: string
+  metricNote: string
+  metricValue: string
+  note: string
+  title: string
+  tone: 'attention' | 'ready'
 }
 
 const homeConfigByPersona: Record<StorePersona, HomeConfig> = {
@@ -93,6 +113,7 @@ function formatStoreScope(authSummary: AuthSessionSummary | null) {
 }
 
 function buildMetrics(input: {
+  checklistSummary: ChecklistHomeSummary | null
   persona: StorePersona
   pendingValue: string
   storeScopeValue: string
@@ -119,8 +140,11 @@ function buildMetrics(input: {
       },
       {
         labelKey: 'storeHome.metric.checklistCoverage',
-        value: input.pendingValue,
-        noteKey: 'storeHome.metric.checklistPending',
+        value: input.checklistSummary?.metricValue ?? input.pendingValue,
+        note: input.checklistSummary?.metricNote,
+        noteKey: input.checklistSummary ? undefined : 'storeHome.metric.checklistPending',
+        tone: 'link',
+        href: '/store/checklists',
       },
     ] satisfies HomeMetric[]
   }
@@ -147,8 +171,11 @@ function buildMetrics(input: {
       },
       {
         labelKey: 'storeHome.metric.checklistStatus',
-        value: input.pendingValue,
-        noteKey: 'storeHome.metric.checklistPending',
+        value: input.checklistSummary?.metricValue ?? input.pendingValue,
+        note: input.checklistSummary?.metricNote,
+        noteKey: input.checklistSummary ? undefined : 'storeHome.metric.checklistPending',
+        tone: 'link',
+        href: '/store/checklists',
       },
     ] satisfies HomeMetric[]
   }
@@ -157,9 +184,11 @@ function buildMetrics(input: {
     return [
       {
         labelKey: 'storeHome.metric.checklistQueue',
-        value: input.pendingValue,
-        noteKey: 'storeHome.metric.checklistPending',
+        value: input.checklistSummary?.metricValue ?? input.pendingValue,
+        note: input.checklistSummary?.metricNote,
+        noteKey: input.checklistSummary ? undefined : 'storeHome.metric.checklistPending',
         tone: 'score',
+        href: '/store/checklists',
       },
       {
         labelKey: 'storeHome.metric.storeScope',
@@ -199,6 +228,24 @@ export function StoreHomePage(input: {
 }) {
   const { t } = useLocalization()
   const persona = resolveStorePersona(input.authSummary)
+  const canManageChecklistVisits = hasAnyRole(input.authSummary, [
+    'REGION_MANAGER',
+    'VISUAL_MERCHANDISER',
+    'SUPER_ADMIN',
+  ])
+  const canReadChecklistInbox = canReadChecklistResults(input.authSummary)
+  const checklistAcknowledgementsQuery = useQuery({
+    queryKey: ['checklist-acknowledgements'],
+    queryFn: getChecklistAcknowledgements,
+    enabled: canReadChecklistInbox && persona !== 'personnel',
+    ...transientQueryRetryOptions,
+  })
+  const mobileChecklistQuery = useQuery({
+    queryKey: ['mobile-checklists-today'],
+    queryFn: getMobileChecklistToday,
+    enabled: canManageChecklistVisits && persona !== 'storeManager' && persona !== 'personnel',
+    ...transientQueryRetryOptions,
+  })
   const config = homeConfigByPersona[persona]
   const navigation = getStoreNavigation(persona)
   const title = t(config.titleKey)
@@ -207,7 +254,17 @@ export function StoreHomePage(input: {
   const heroCopy = t(config.heroCopyKey)
   const pendingValue = t('storeHome.valuePending')
   const storeScopeValue = formatStoreScope(input.authSummary)
+  const checklistSummary = buildChecklistHomeSummary({
+    acknowledgementItems: checklistAcknowledgementsQuery.data?.items ?? [],
+    isLoading: checklistAcknowledgementsQuery.isLoading || mobileChecklistQuery.isLoading,
+    mobileToday: mobileChecklistQuery.data?.data ?? null,
+    pendingValue,
+    persona,
+    storeScopeValue,
+    t,
+  })
   const metrics = buildMetrics({
+    checklistSummary,
     persona,
     pendingValue,
     storeScopeValue,
@@ -270,6 +327,8 @@ export function StoreHomePage(input: {
                 <MetricCard key={metric.labelKey} metric={metric} />
               ))}
             </div>
+
+            {checklistSummary ? <ChecklistHomeCard summary={checklistSummary} /> : null}
           </section>
 
           <section className="store-command-panel">
@@ -336,7 +395,8 @@ function MetricCard(input: { metric: HomeMetric }) {
       <div>
         <span>{t(input.metric.labelKey)}</span>
         <strong>{input.metric.value}</strong>
-        {input.metric.noteKey ? <small>{t(input.metric.noteKey)}</small> : null}
+        {input.metric.note ? <small>{input.metric.note}</small> : null}
+        {!input.metric.note && input.metric.noteKey ? <small>{t(input.metric.noteKey)}</small> : null}
       </div>
       {input.metric.tone === 'link' ? (
         <span className="store-command-metric-link-hint" aria-hidden="true">
@@ -360,8 +420,97 @@ function MetricCard(input: { metric: HomeMetric }) {
   return <article className={className}>{content}</article>
 }
 
+function ChecklistHomeCard(input: { summary: ChecklistHomeSummary }) {
+  return (
+    <Link
+      className={`store-command-checklist-card store-command-checklist-card-${input.summary.tone}`}
+      to="/store/checklists"
+    >
+      <div>
+        <span>{input.summary.note}</span>
+        <strong>{input.summary.title}</strong>
+        <p>{input.summary.copy}</p>
+      </div>
+      <em>
+        {input.summary.metricValue}
+        <small>{input.summary.actionLabel}</small>
+      </em>
+    </Link>
+  )
+}
+
 function getKpiRowsForPersona(persona: StorePersona) {
   if (persona === 'personnel') return ['UPT', 'ATV', 'HG%']
   if (persona === 'visualMerchandiser') return ['BM Checklist', 'VM Checklist']
   return ['UPT', 'ATV', 'CR', 'HG%', 'BM Checklist', 'VM Checklist']
+}
+
+function buildChecklistHomeSummary(input: {
+  acknowledgementItems: ChecklistAcknowledgementItem[]
+  isLoading: boolean
+  mobileToday: MobileChecklistToday | null
+  pendingValue: string
+  persona: StorePersona
+  storeScopeValue: string
+  t: ReturnType<typeof useLocalization>['t']
+}): ChecklistHomeSummary | null {
+  if (input.persona === 'personnel') return null
+
+  const pendingAcknowledgements = input.acknowledgementItems.filter((item) => item.acknowledgement === null).length
+  const acknowledgedCount = input.acknowledgementItems.filter((item) => item.acknowledgement !== null).length
+  const activeDraftCount = input.mobileToday?.activeInstances.length ?? 0
+  const completedVisitCount = input.mobileToday?.completedThisMonth.length ?? acknowledgedCount
+  const expectedVisitCount = input.mobileToday
+    ? input.mobileToday.stores.length * Math.max(input.mobileToday.templates.length, 1)
+    : null
+  const pendingVisitCount =
+    expectedVisitCount === null
+      ? pendingAcknowledgements
+      : Math.max(expectedVisitCount - completedVisitCount - activeDraftCount, 0)
+
+  if (input.persona === 'storeManager') {
+    const value = input.isLoading ? input.pendingValue : String(pendingAcknowledgements)
+    return {
+      actionLabel: input.t('storeHome.checklistCard.action'),
+      copy: input.t('storeHome.checklistCard.storeCopy', { count: value }),
+      metricNote: input.t('storeHome.checklistCard.storeMetricNote'),
+      metricValue: value,
+      note: input.t('storeHome.checklistCard.storeNote'),
+      title: input.t('storeHome.checklistCard.storeTitle'),
+      tone: pendingAcknowledgements > 0 ? 'attention' : 'ready',
+    }
+  }
+
+  const value = input.isLoading ? input.pendingValue : String(pendingVisitCount)
+  const completedValue = input.isLoading ? input.pendingValue : String(completedVisitCount)
+
+  if (input.persona === 'visualMerchandiser') {
+    return {
+      actionLabel: input.t('storeHome.checklistCard.action'),
+      copy: input.t('storeHome.checklistCard.vmCopy', {
+        completed: completedValue,
+        count: value,
+        scope: input.storeScopeValue,
+      }),
+      metricNote: input.t('storeHome.checklistCard.vmMetricNote', { completed: completedValue }),
+      metricValue: value,
+      note: input.t('storeHome.checklistCard.vmNote'),
+      title: input.t('storeHome.checklistCard.vmTitle'),
+      tone: pendingVisitCount > 0 ? 'attention' : 'ready',
+    }
+  }
+
+  return {
+    actionLabel: input.t('storeHome.checklistCard.action'),
+    copy: input.t('storeHome.checklistCard.regionCopy', {
+      completed: completedValue,
+      count: value,
+      scope: input.storeScopeValue,
+    }),
+    metricNote: input.t('storeHome.checklistCard.regionMetricNote', { completed: completedValue }),
+    metricValue: value,
+    note: input.t('storeHome.checklistCard.regionNote'),
+    title: input.t('storeHome.checklistCard.regionTitle'),
+    tone: pendingVisitCount > 0 ? 'attention' : 'ready',
+  }
 }
