@@ -548,7 +548,12 @@ test('store home prefetches the task queue for manager navigation', async ({ pag
 })
 
 test('region manager home surfaces checklist field queue summary', async ({ page }) => {
+  let acknowledgementRequests = 0
+  let mobileTodayRequests = 0
+
   await page.unroute('**/api/auth/session')
+  await page.unroute('**/api/checklists/acknowledgements/list')
+  await page.unroute('**/api/mobile/checklists/today')
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({
       json: {
@@ -569,6 +574,14 @@ test('region manager home surfaces checklist field queue summary', async ({ page
       },
     })
   })
+  await page.route('**/api/checklists/acknowledgements/list', async (route) => {
+    acknowledgementRequests += 1
+    await route.fulfill({ json: checklistAcknowledgementsFixture })
+  })
+  await page.route('**/api/mobile/checklists/today', async (route) => {
+    mobileTodayRequests += 1
+    await route.fulfill({ json: mobileChecklistTodayFixture })
+  })
 
   await page.goto('/store/home')
 
@@ -577,6 +590,17 @@ test('region manager home surfaces checklist field queue summary', async ({ page
   await expect(checklistCard).toContainText('2')
   await expect(checklistCard).toContainText('1')
   await expect(checklistCard).toHaveAttribute('href', '/store/checklists')
+  await expect.poll(() => acknowledgementRequests).toBeGreaterThanOrEqual(1)
+  await expect.poll(() => mobileTodayRequests).toBeGreaterThanOrEqual(1)
+  const prefetchedAcknowledgementRequests = acknowledgementRequests
+  const prefetchedMobileTodayRequests = mobileTodayRequests
+
+  await checklistCard.click()
+
+  await expect(page).toHaveURL(/\/store\/checklists$/)
+  await expect(page.getByRole('heading', { name: /saha turunda/i })).toBeVisible()
+  await expect.poll(() => acknowledgementRequests, { timeout: 1000 }).toBe(prefetchedAcknowledgementRequests)
+  await expect.poll(() => mobileTodayRequests, { timeout: 1000 }).toBe(prefetchedMobileTodayRequests)
 })
 
 test('store personnel sidebar only exposes personnel surfaces', async ({ page }) => {
