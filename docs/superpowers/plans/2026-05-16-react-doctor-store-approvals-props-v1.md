@@ -152,6 +152,9 @@ Result:
 - `npm.cmd --prefix admin-web run check:release`: passed, including lint, script tests, build, 149 Playwright tests, and audit.
 - `npx.cmd --yes react-doctor@latest admin-web --full --offline --fail-on none`: 18 issues across 10 files, score 99/100.
 - `npx.cmd --yes react-doctor@latest admin-web --score --full --offline --fail-on none`: 99.
+- CI follow-up: root `release-check` initially failed because `scripts/csv-export-safety-contract.test.mjs` still required the safe CSV helper to be exported. The contract now checks for the shared helper by function name and the unchanged header/row call sites instead.
+- `npm.cmd run test:scripts`: passed, 178 tests.
+- `npm.cmd run check:release`: passed.
 
 ### Task 6: Finish
 
