@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useReducer, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CheckCircle2, Clock3, ReceiptText, ShieldCheck } from 'lucide-react'
 import {
@@ -119,6 +119,232 @@ type StoreApprovalsLedgerPanel =
   | 'returnedRequests'
   | 'sellerCodeRequest'
   | 'offboardingRequest'
+
+type StoreApprovalsPageState = {
+  selectedStoreId: string
+  requestMonth: string
+  targetLabel: string
+  totalTargetValue: string
+  requestReason: string
+  submissionNotice: string | null
+  approvalNotes: Record<string, string>
+  approvalNotice: string | null
+  activeLedgerPanel: StoreApprovalsLedgerPanel
+  sellerFirstName: string
+  sellerLastName: string
+  sellerNationalId: string
+  sellerPhoneNumber: string
+  sellerHireDate: string
+  sellerPositionId: string
+  sellerEmploymentType: SellerEmploymentType
+  sellerRequestReason: string
+  sellerRequestNotice: string | null
+  editingSellerRequestId: string | null
+  offboardingEmployeeId: string
+  offboardingTerminationDate: string
+  offboardingRequestReason: string
+  offboardingNotice: string | null
+  editingOffboardingRequestId: string | null
+  allocations: Array<TargetDistributionAllocation>
+}
+
+type StoreApprovalsPageStateInput = {
+  defaultTargetLabel: string
+  initialPanel: StoreApprovalsLedgerPanel
+}
+
+type StoreApprovalsPageAction =
+  | { type: 'setSelectedStoreId'; value: string }
+  | { type: 'setActiveLedgerPanel'; panel: StoreApprovalsLedgerPanel }
+  | { type: 'resetTargetRequestSuccess'; message: string; defaultTargetLabel: string }
+  | { type: 'setRequestMonth'; value: string }
+  | { type: 'setTargetLabel'; value: string }
+  | { type: 'setTotalTargetValue'; value: string }
+  | { type: 'setRequestReason'; value: string }
+  | { type: 'replaceAllocations'; allocations: Array<TargetDistributionAllocation> }
+  | { type: 'setApprovalNote'; requestId: string; value: string }
+  | { type: 'setApprovalNotice'; message: string }
+  | { type: 'resetSellerRequestSuccess'; message: string }
+  | { type: 'loadSellerRequestEdit'; item: SellerCodeRequest; notice: string }
+  | { type: 'cancelSellerRequestEdit' }
+  | { type: 'setSellerEmploymentType'; value: SellerEmploymentType }
+  | { type: 'setSellerFirstName'; value: string }
+  | { type: 'setSellerHireDate'; value: string }
+  | { type: 'setSellerLastName'; value: string }
+  | { type: 'setSellerNationalId'; value: string }
+  | { type: 'setSellerPhoneNumber'; value: string }
+  | { type: 'setSellerPositionId'; value: string }
+  | { type: 'setSellerRequestReason'; value: string }
+  | { type: 'resetOffboardingRequestSuccess'; message: string }
+  | { type: 'loadOffboardingRequestEdit'; item: OffboardingRequest; notice: string }
+  | { type: 'cancelOffboardingRequestEdit' }
+  | { type: 'setOffboardingEmployeeId'; value: string }
+  | { type: 'setOffboardingRequestReason'; value: string }
+  | { type: 'setOffboardingTerminationDate'; value: string }
+
+function getCurrentMonthInputValue() {
+  return new Date().toISOString().slice(0, 7)
+}
+
+function getTodayInputValue() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function getEmptyTargetAllocations(): Array<TargetDistributionAllocation> {
+  return [{ employeeId: '', assigneeLabel: '', targetValue: 0, note: '' }]
+}
+
+function createStoreApprovalsPageState(input: StoreApprovalsPageStateInput): StoreApprovalsPageState {
+  return {
+    selectedStoreId: '',
+    requestMonth: getCurrentMonthInputValue(),
+    targetLabel: input.defaultTargetLabel,
+    totalTargetValue: '0',
+    requestReason: '',
+    submissionNotice: null,
+    approvalNotes: {},
+    approvalNotice: null,
+    activeLedgerPanel: input.initialPanel,
+    sellerFirstName: '',
+    sellerLastName: '',
+    sellerNationalId: '',
+    sellerPhoneNumber: '',
+    sellerHireDate: getTodayInputValue(),
+    sellerPositionId: '',
+    sellerEmploymentType: 'full_time',
+    sellerRequestReason: '',
+    sellerRequestNotice: null,
+    editingSellerRequestId: null,
+    offboardingEmployeeId: '',
+    offboardingTerminationDate: getTodayInputValue(),
+    offboardingRequestReason: '',
+    offboardingNotice: null,
+    editingOffboardingRequestId: null,
+    allocations: getEmptyTargetAllocations(),
+  }
+}
+
+function resetSellerRequestState(state: StoreApprovalsPageState, notice: string | null): StoreApprovalsPageState {
+  return {
+    ...state,
+    editingSellerRequestId: null,
+    sellerFirstName: '',
+    sellerLastName: '',
+    sellerNationalId: '',
+    sellerPhoneNumber: '',
+    sellerHireDate: getTodayInputValue(),
+    sellerPositionId: '',
+    sellerEmploymentType: 'full_time',
+    sellerRequestReason: '',
+    sellerRequestNotice: notice,
+  }
+}
+
+function resetOffboardingRequestState(state: StoreApprovalsPageState, notice: string | null): StoreApprovalsPageState {
+  return {
+    ...state,
+    editingOffboardingRequestId: null,
+    offboardingEmployeeId: '',
+    offboardingTerminationDate: getTodayInputValue(),
+    offboardingRequestReason: '',
+    offboardingNotice: notice,
+  }
+}
+
+function storeApprovalsPageReducer(
+  state: StoreApprovalsPageState,
+  action: StoreApprovalsPageAction,
+): StoreApprovalsPageState {
+  switch (action.type) {
+    case 'setSelectedStoreId':
+      return { ...state, selectedStoreId: action.value }
+    case 'setActiveLedgerPanel':
+      return { ...state, activeLedgerPanel: action.panel }
+    case 'resetTargetRequestSuccess':
+      return {
+        ...state,
+        targetLabel: action.defaultTargetLabel,
+        totalTargetValue: '0',
+        requestReason: '',
+        allocations: [],
+        submissionNotice: action.message,
+      }
+    case 'setRequestMonth':
+      return { ...state, requestMonth: action.value, submissionNotice: null }
+    case 'setTargetLabel':
+      return { ...state, targetLabel: action.value, submissionNotice: null }
+    case 'setTotalTargetValue':
+      return { ...state, totalTargetValue: action.value, submissionNotice: null }
+    case 'setRequestReason':
+      return { ...state, requestReason: action.value, submissionNotice: null }
+    case 'replaceAllocations':
+      return { ...state, allocations: action.allocations, submissionNotice: null }
+    case 'setApprovalNote':
+      return {
+        ...state,
+        approvalNotes: { ...state.approvalNotes, [action.requestId]: action.value },
+      }
+    case 'setApprovalNotice':
+      return { ...state, approvalNotice: action.message }
+    case 'resetSellerRequestSuccess':
+      return resetSellerRequestState(state, action.message)
+    case 'loadSellerRequestEdit':
+      return {
+        ...state,
+        activeLedgerPanel: 'sellerCodeRequest',
+        editingSellerRequestId: action.item.requestId,
+        sellerFirstName: action.item.firstName,
+        sellerLastName: action.item.lastName,
+        sellerNationalId: '',
+        sellerPhoneNumber: action.item.phoneNumber,
+        sellerHireDate: action.item.hireDate,
+        sellerPositionId: action.item.requestedPositionId,
+        sellerEmploymentType: action.item.employmentType as SellerEmploymentType,
+        sellerRequestReason: '',
+        sellerRequestNotice: action.notice,
+      }
+    case 'cancelSellerRequestEdit':
+      return resetSellerRequestState(state, null)
+    case 'setSellerEmploymentType':
+      return { ...state, sellerEmploymentType: action.value, sellerRequestNotice: null }
+    case 'setSellerFirstName':
+      return { ...state, sellerFirstName: action.value, sellerRequestNotice: null }
+    case 'setSellerHireDate':
+      return { ...state, sellerHireDate: action.value, sellerRequestNotice: null }
+    case 'setSellerLastName':
+      return { ...state, sellerLastName: action.value, sellerRequestNotice: null }
+    case 'setSellerNationalId':
+      return { ...state, sellerNationalId: action.value.replace(/\D/g, '').slice(0, 11), sellerRequestNotice: null }
+    case 'setSellerPhoneNumber':
+      return { ...state, sellerPhoneNumber: action.value, sellerRequestNotice: null }
+    case 'setSellerPositionId':
+      return { ...state, sellerPositionId: action.value, sellerRequestNotice: null }
+    case 'setSellerRequestReason':
+      return { ...state, sellerRequestReason: action.value, sellerRequestNotice: null }
+    case 'resetOffboardingRequestSuccess':
+      return resetOffboardingRequestState(state, action.message)
+    case 'loadOffboardingRequestEdit':
+      return {
+        ...state,
+        activeLedgerPanel: 'offboardingRequest',
+        editingOffboardingRequestId: action.item.requestId,
+        offboardingEmployeeId: action.item.employeeId,
+        offboardingTerminationDate: action.item.terminationDate,
+        offboardingRequestReason: action.item.requestReason ?? '',
+        offboardingNotice: action.notice,
+      }
+    case 'cancelOffboardingRequestEdit':
+      return resetOffboardingRequestState(state, null)
+    case 'setOffboardingEmployeeId':
+      return { ...state, offboardingEmployeeId: action.value, offboardingNotice: null }
+    case 'setOffboardingRequestReason':
+      return { ...state, offboardingRequestReason: action.value, offboardingNotice: null }
+    case 'setOffboardingTerminationDate':
+      return { ...state, offboardingTerminationDate: action.value, offboardingNotice: null }
+    default:
+      return state
+  }
+}
 
 const storeSellerPositionLabels = {
   cashierResponsible: 'Kasa Sorumlusu',
@@ -305,13 +531,55 @@ export function StoreApprovalsPage(input: {
   const assignedStoreIds = getAssignedStoreIds(input.authSummary)
   const readStoreIds = getReadStoreIds(input.authSummary)
   const primaryStoreId = assignedStoreIds[0] ?? null
-  const [selectedStoreId, setSelectedStoreId] = useState('')
-  const storeId = selectedStoreId || primaryStoreId || ''
   const persona = resolveStoreApprovalsPersona(input.authSummary)
   const canListRequests = canListTargetDistributionRequests(input.authSummary)
-  const canCreateForStore = canCreateTargetDistributionRequest(input.authSummary, storeId || null)
+  const initialStoreId = primaryStoreId || ''
+  const initialCanCreateForStore = canCreateTargetDistributionRequest(input.authSummary, initialStoreId || null)
   const isStoreManagerLedger = persona === 'storeManager'
   const isRegionManagerLedger = persona === 'regionManager'
+  const initialShowTargetSubmission = isStoreManagerLedger && initialCanCreateForStore
+  const initialShowTargetApprovalQueue = isRegionManagerLedger && canListRequests
+  const [state, dispatch] = useReducer(
+    storeApprovalsPageReducer,
+    {
+      defaultTargetLabel: t('storeApprovals.targetLabelDefault'),
+      initialPanel: initialShowTargetSubmission
+        ? 'targetRequest'
+        : initialShowTargetApprovalQueue
+          ? 'targetApproval'
+          : 'submittedTargets',
+    },
+    createStoreApprovalsPageState,
+  )
+  const {
+    selectedStoreId,
+    requestMonth,
+    targetLabel,
+    totalTargetValue,
+    requestReason,
+    submissionNotice,
+    approvalNotes,
+    approvalNotice,
+    activeLedgerPanel,
+    sellerFirstName,
+    sellerLastName,
+    sellerNationalId,
+    sellerPhoneNumber,
+    sellerHireDate,
+    sellerPositionId,
+    sellerEmploymentType,
+    sellerRequestReason,
+    sellerRequestNotice,
+    editingSellerRequestId,
+    offboardingEmployeeId,
+    offboardingTerminationDate,
+    offboardingRequestReason,
+    offboardingNotice,
+    editingOffboardingRequestId,
+    allocations,
+  } = state
+  const storeId = selectedStoreId || primaryStoreId || ''
+  const canCreateForStore = canCreateTargetDistributionRequest(input.authSummary, storeId || null)
   const showTargetSubmission = isStoreManagerLedger && canCreateForStore
   const showWorkforceHrQueues = isStoreManagerLedger && canCreateForStore
   const showTargetApprovalQueue = isRegionManagerLedger && canListRequests
@@ -322,43 +590,6 @@ export function StoreApprovalsPage(input: {
     assignedStoreIds.join('|'),
     storeId,
   ].join(':')
-  const [requestMonth, setRequestMonth] = useState(() => new Date().toISOString().slice(0, 7))
-  const [targetLabel, setTargetLabel] = useState(() => t('storeApprovals.targetLabelDefault'))
-  const [totalTargetValue, setTotalTargetValue] = useState('0')
-  const [requestReason, setRequestReason] = useState('')
-  const [submissionNotice, setSubmissionNotice] = useState<string | null>(null)
-  const [approvalNotes, setApprovalNotes] = useState<Record<string, string>>({})
-  const [approvalNotice, setApprovalNotice] = useState<string | null>(null)
-  const [activeLedgerPanel, setActiveLedgerPanel] =
-    useState<StoreApprovalsLedgerPanel>(
-      showTargetSubmission
-        ? 'targetRequest'
-        : showTargetApprovalQueue
-          ? 'targetApproval'
-          : 'submittedTargets',
-    )
-  const [sellerFirstName, setSellerFirstName] = useState('')
-  const [sellerLastName, setSellerLastName] = useState('')
-  const [sellerNationalId, setSellerNationalId] = useState('')
-  const [sellerPhoneNumber, setSellerPhoneNumber] = useState('')
-  const [sellerHireDate, setSellerHireDate] = useState(() => new Date().toISOString().slice(0, 10))
-  const [sellerPositionId, setSellerPositionId] = useState('')
-  const [sellerEmploymentType, setSellerEmploymentType] =
-    useState<SellerEmploymentType>('full_time')
-  const [sellerRequestReason, setSellerRequestReason] = useState('')
-  const [sellerRequestNotice, setSellerRequestNotice] = useState<string | null>(null)
-  const [editingSellerRequestId, setEditingSellerRequestId] = useState<string | null>(null)
-  const [offboardingEmployeeId, setOffboardingEmployeeId] = useState('')
-  const [offboardingTerminationDate, setOffboardingTerminationDate] = useState(() =>
-    new Date().toISOString().slice(0, 10),
-  )
-  const [offboardingRequestReason, setOffboardingRequestReason] = useState('')
-  const [offboardingNotice, setOffboardingNotice] = useState<string | null>(null)
-  const [editingOffboardingRequestId, setEditingOffboardingRequestId] = useState<string | null>(null)
-  const [allocations, setAllocations] = useState<Array<TargetDistributionAllocation>>([
-    { employeeId: '', assigneeLabel: '', targetValue: 0, note: '' },
-  ])
-
   const requestsQuery = useQuery({
     queryKey: ['target-distribution-requests', 'store-approvals-ledger', scopeKey],
     queryFn: () => getTargetDistributionRequests(),
@@ -394,11 +625,11 @@ export function StoreApprovalsPage(input: {
     mutationFn: createTargetDistributionRequest,
     onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: ['target-distribution-requests'] })
-      setTargetLabel(t('storeApprovals.targetLabelDefault'))
-      setTotalTargetValue('0')
-      setRequestReason('')
-      setAllocations([])
-      setSubmissionNotice(result.command.message)
+      dispatch({
+        type: 'resetTargetRequestSuccess',
+        defaultTargetLabel: t('storeApprovals.targetLabelDefault'),
+        message: result.command.message,
+      })
     },
   })
 
@@ -406,32 +637,14 @@ export function StoreApprovalsPage(input: {
     mutationFn: createSellerCodeRequest,
     onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: ['seller-code-requests'] })
-      setEditingSellerRequestId(null)
-      setSellerFirstName('')
-      setSellerLastName('')
-      setSellerNationalId('')
-      setSellerPhoneNumber('')
-      setSellerHireDate(new Date().toISOString().slice(0, 10))
-      setSellerPositionId('')
-      setSellerEmploymentType('full_time')
-      setSellerRequestReason('')
-      setSellerRequestNotice(result.command.message)
+      dispatch({ type: 'resetSellerRequestSuccess', message: result.command.message })
     },
   })
   const resubmitSellerCodeMutation = useMutation({
     mutationFn: resubmitSellerCodeRequest,
     onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: ['seller-code-requests'] })
-      setEditingSellerRequestId(null)
-      setSellerFirstName('')
-      setSellerLastName('')
-      setSellerNationalId('')
-      setSellerPhoneNumber('')
-      setSellerHireDate(new Date().toISOString().slice(0, 10))
-      setSellerPositionId('')
-      setSellerEmploymentType('full_time')
-      setSellerRequestReason('')
-      setSellerRequestNotice(result.command.message)
+      dispatch({ type: 'resetSellerRequestSuccess', message: result.command.message })
     },
   })
   const offboardingMutation = useMutation({
@@ -439,18 +652,14 @@ export function StoreApprovalsPage(input: {
     onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: ['offboarding-requests'] })
       void queryClient.invalidateQueries({ queryKey: ['workforce-store-employees'] })
-      setEditingOffboardingRequestId(null)
-      setOffboardingEmployeeId('')
-      setOffboardingTerminationDate(new Date().toISOString().slice(0, 10))
-      setOffboardingRequestReason('')
-      setOffboardingNotice(result.command.message)
+      dispatch({ type: 'resetOffboardingRequestSuccess', message: result.command.message })
     },
   })
   const approveTargetMutation = useMutation({
     mutationFn: approveTargetDistributionRequest,
     onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: ['target-distribution-requests'] })
-      setApprovalNotice(result.command.message)
+      dispatch({ type: 'setApprovalNotice', message: result.command.message })
     },
   })
   const resubmitOffboardingMutation = useMutation({
@@ -458,11 +667,7 @@ export function StoreApprovalsPage(input: {
     onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: ['offboarding-requests'] })
       void queryClient.invalidateQueries({ queryKey: ['workforce-store-employees'] })
-      setEditingOffboardingRequestId(null)
-      setOffboardingEmployeeId('')
-      setOffboardingTerminationDate(new Date().toISOString().slice(0, 10))
-      setOffboardingRequestReason('')
-      setOffboardingNotice(result.command.message)
+      dispatch({ type: 'resetOffboardingRequestSuccess', message: result.command.message })
     },
   })
 
@@ -488,34 +693,23 @@ export function StoreApprovalsPage(input: {
   const returnedOffboardingRequests = rejectedOffboardingRequestsQuery.data?.items ?? []
 
   const startEditingSellerRequest = (item: SellerCodeRequest) => {
-    setActiveLedgerPanel('sellerCodeRequest')
-    setEditingSellerRequestId(item.requestId)
-    setSellerFirstName(item.firstName)
-    setSellerLastName(item.lastName)
-    setSellerNationalId('')
-    setSellerPhoneNumber(item.phoneNumber)
-    setSellerHireDate(item.hireDate)
-    setSellerPositionId(item.requestedPositionId)
-    setSellerEmploymentType(item.employmentType as SellerEmploymentType)
-    setSellerRequestReason('')
-    setSellerRequestNotice(
-      item.reviewNote
+    dispatch({
+      type: 'loadSellerRequestEdit',
+      item,
+      notice: item.reviewNote
         ? t('storeApprovals.returnedSellerLoadedWithNote', { note: item.reviewNote })
         : t('storeApprovals.returnedSellerLoaded'),
-    )
+    })
   }
 
   const startEditingOffboardingRequest = (item: OffboardingRequest) => {
-    setActiveLedgerPanel('offboardingRequest')
-    setEditingOffboardingRequestId(item.requestId)
-    setOffboardingEmployeeId(item.employeeId)
-    setOffboardingTerminationDate(item.terminationDate)
-    setOffboardingRequestReason(item.requestReason ?? '')
-    setOffboardingNotice(
-      item.reviewNote
+    dispatch({
+      type: 'loadOffboardingRequestEdit',
+      item,
+      notice: item.reviewNote
         ? t('storeApprovals.returnedOffboardingLoadedWithNote', { note: item.reviewNote })
         : t('storeApprovals.returnedOffboardingLoaded'),
-    )
+    })
   }
 
   if (canListRequests && requestsQuery.isLoading && !requestsQuery.data) {
@@ -577,20 +771,20 @@ export function StoreApprovalsPage(input: {
   const sellerRequestPending = sellerCodeMutation.isPending || resubmitSellerCodeMutation.isPending
   const offboardingRequestPending = offboardingMutation.isPending || resubmitOffboardingMutation.isPending
   const updateTargetAllocationValue = (index: number, targetValue: number) => {
-    setSubmissionNotice(null)
-    setAllocations(
-      activeAllocations.map((item, itemIndex) =>
+    dispatch({
+      type: 'replaceAllocations',
+      allocations: activeAllocations.map((item, itemIndex) =>
         itemIndex === index ? { ...item, targetValue } : item,
       ),
-    )
+    })
   }
   const updateTargetAllocationNote = (index: number, note: string) => {
-    setSubmissionNotice(null)
-    setAllocations(
-      activeAllocations.map((item, itemIndex) =>
+    dispatch({
+      type: 'replaceAllocations',
+      allocations: activeAllocations.map((item, itemIndex) =>
         itemIndex === index ? { ...item, note } : item,
       ),
-    )
+    })
   }
   const submitTargetDistributionRequest = () => {
     createMutation.mutate({
@@ -629,16 +823,7 @@ export function StoreApprovalsPage(input: {
     })
   }
   const cancelSellerRequestEdit = () => {
-    setEditingSellerRequestId(null)
-    setSellerFirstName('')
-    setSellerLastName('')
-    setSellerNationalId('')
-    setSellerPhoneNumber('')
-    setSellerHireDate(new Date().toISOString().slice(0, 10))
-    setSellerPositionId('')
-    setSellerEmploymentType('full_time')
-    setSellerRequestReason('')
-    setSellerRequestNotice(null)
+    dispatch({ type: 'cancelSellerRequestEdit' })
   }
   const submitOffboardingRequest = () => {
     const requestReason = offboardingRequestReason.trim()
@@ -663,11 +848,7 @@ export function StoreApprovalsPage(input: {
     })
   }
   const cancelOffboardingRequestEdit = () => {
-    setEditingOffboardingRequestId(null)
-    setOffboardingEmployeeId('')
-    setOffboardingTerminationDate(new Date().toISOString().slice(0, 10))
-    setOffboardingRequestReason('')
-    setOffboardingNotice(null)
+    dispatch({ type: 'cancelOffboardingRequestEdit' })
   }
   const getLedgerActionButtonClass = (panel: StoreApprovalsLedgerPanel) =>
     activeLedgerPanel === panel
@@ -769,7 +950,7 @@ export function StoreApprovalsPage(input: {
                 className={getLedgerActionButtonClass('targetRequest')}
                 type="button"
                 aria-pressed={activeLedgerPanel === 'targetRequest'}
-                onClick={() => setActiveLedgerPanel('targetRequest')}
+                onClick={() => dispatch({ type: 'setActiveLedgerPanel', panel: 'targetRequest' })}
               >
                 {t('storeApprovals.openTargetRequest')}
               </button>
@@ -779,7 +960,7 @@ export function StoreApprovalsPage(input: {
                 className={getLedgerActionButtonClass('targetApproval')}
                 type="button"
                 aria-pressed={activeLedgerPanel === 'targetApproval'}
-                onClick={() => setActiveLedgerPanel('targetApproval')}
+                onClick={() => dispatch({ type: 'setActiveLedgerPanel', panel: 'targetApproval' })}
               >
                 {t('storeApprovals.openTargetApprovalQueue')}
               </button>
@@ -788,7 +969,7 @@ export function StoreApprovalsPage(input: {
               className={getLedgerActionButtonClass('submittedTargets')}
               type="button"
               aria-pressed={activeLedgerPanel === 'submittedTargets'}
-              onClick={() => setActiveLedgerPanel('submittedTargets')}
+              onClick={() => dispatch({ type: 'setActiveLedgerPanel', panel: 'submittedTargets' })}
             >
               {t('storeApprovals.openSubmittedTargets')}
             </button>
@@ -798,7 +979,7 @@ export function StoreApprovalsPage(input: {
                   className={getLedgerActionButtonClass('sellerCodeRequest')}
                   type="button"
                   aria-pressed={activeLedgerPanel === 'sellerCodeRequest'}
-                  onClick={() => setActiveLedgerPanel('sellerCodeRequest')}
+                  onClick={() => dispatch({ type: 'setActiveLedgerPanel', panel: 'sellerCodeRequest' })}
                 >
                   {t('storeApprovals.openSellerCodeRequest')}
                 </button>
@@ -806,7 +987,7 @@ export function StoreApprovalsPage(input: {
                   className={getLedgerActionButtonClass('offboardingRequest')}
                   type="button"
                   aria-pressed={activeLedgerPanel === 'offboardingRequest'}
-                  onClick={() => setActiveLedgerPanel('offboardingRequest')}
+                  onClick={() => dispatch({ type: 'setActiveLedgerPanel', panel: 'offboardingRequest' })}
                 >
                   {t('storeApprovals.openOffboardingRequest')}
                 </button>
@@ -814,7 +995,7 @@ export function StoreApprovalsPage(input: {
                   className={getLedgerActionButtonClass('returnedRequests')}
                   type="button"
                   aria-pressed={activeLedgerPanel === 'returnedRequests'}
-                  onClick={() => setActiveLedgerPanel('returnedRequests')}
+                  onClick={() => dispatch({ type: 'setActiveLedgerPanel', panel: 'returnedRequests' })}
                 >
                   {t('storeApprovals.openReturnedRequests')}
                 </button>
@@ -839,24 +1020,12 @@ export function StoreApprovalsPage(input: {
               locale={locale}
               onAllocationNoteChange={updateTargetAllocationNote}
               onAllocationValueChange={updateTargetAllocationValue}
-              onRequestMonthChange={(value) => {
-                setSubmissionNotice(null)
-                setRequestMonth(value)
-              }}
-              onRequestReasonChange={(value) => {
-                setSubmissionNotice(null)
-                setRequestReason(value)
-              }}
-              onStoreIdChange={setSelectedStoreId}
+              onRequestMonthChange={(value) => dispatch({ type: 'setRequestMonth', value })}
+              onRequestReasonChange={(value) => dispatch({ type: 'setRequestReason', value })}
+              onStoreIdChange={(value) => dispatch({ type: 'setSelectedStoreId', value })}
               onSubmit={submitTargetDistributionRequest}
-              onTargetLabelChange={(value) => {
-                setSubmissionNotice(null)
-                setTargetLabel(value)
-              }}
-              onTotalTargetValueChange={(value) => {
-                setSubmissionNotice(null)
-                setTotalTargetValue(value)
-              }}
+              onTargetLabelChange={(value) => dispatch({ type: 'setTargetLabel', value })}
+              onTotalTargetValueChange={(value) => dispatch({ type: 'setTotalTargetValue', value })}
               personnelQuery={personnelQuery}
               primaryStoreId={primaryStoreId}
               requestMonth={requestMonth}
@@ -881,7 +1050,7 @@ export function StoreApprovalsPage(input: {
               isApproving={approveTargetMutation.isPending}
               locale={locale}
               onApprovalNoteChange={(requestId, value) =>
-                setApprovalNotes((current) => ({ ...current, [requestId]: value }))
+                dispatch({ type: 'setApprovalNote', requestId, value })
               }
               onApprove={(request) => {
                 const canApprove = canApproveTargetDistributionRequest(
@@ -939,38 +1108,14 @@ export function StoreApprovalsPage(input: {
                 resubmitVisible: resubmitSellerCodeMutation.isError,
               }}
               onCancelEdit={cancelSellerRequestEdit}
-              onEmploymentTypeChange={(value) => {
-                setSellerRequestNotice(null)
-                setSellerEmploymentType(value)
-              }}
-              onFirstNameChange={(value) => {
-                setSellerRequestNotice(null)
-                setSellerFirstName(value)
-              }}
-              onHireDateChange={(value) => {
-                setSellerRequestNotice(null)
-                setSellerHireDate(value)
-              }}
-              onLastNameChange={(value) => {
-                setSellerRequestNotice(null)
-                setSellerLastName(value)
-              }}
-              onNationalIdChange={(value) => {
-                setSellerRequestNotice(null)
-                setSellerNationalId(value.replace(/\D/g, '').slice(0, 11))
-              }}
-              onPhoneNumberChange={(value) => {
-                setSellerRequestNotice(null)
-                setSellerPhoneNumber(value)
-              }}
-              onPositionIdChange={(value) => {
-                setSellerRequestNotice(null)
-                setSellerPositionId(value)
-              }}
-              onRequestReasonChange={(value) => {
-                setSellerRequestNotice(null)
-                setSellerRequestReason(value)
-              }}
+              onEmploymentTypeChange={(value) => dispatch({ type: 'setSellerEmploymentType', value })}
+              onFirstNameChange={(value) => dispatch({ type: 'setSellerFirstName', value })}
+              onHireDateChange={(value) => dispatch({ type: 'setSellerHireDate', value })}
+              onLastNameChange={(value) => dispatch({ type: 'setSellerLastName', value })}
+              onNationalIdChange={(value) => dispatch({ type: 'setSellerNationalId', value })}
+              onPhoneNumberChange={(value) => dispatch({ type: 'setSellerPhoneNumber', value })}
+              onPositionIdChange={(value) => dispatch({ type: 'setSellerPositionId', value })}
+              onRequestReasonChange={(value) => dispatch({ type: 'setSellerRequestReason', value })}
               onSubmit={submitSellerCodeRequest}
               positionOptionsQuery={positionOptionsQuery}
               sellerEmploymentType={sellerEmploymentType}
@@ -1007,19 +1152,10 @@ export function StoreApprovalsPage(input: {
               offboardingRequestReason={offboardingRequestReason}
               offboardingTerminationDate={offboardingTerminationDate}
               onCancelEdit={cancelOffboardingRequestEdit}
-              onEmployeeIdChange={(value) => {
-                setOffboardingNotice(null)
-                setOffboardingEmployeeId(value)
-              }}
-              onRequestReasonChange={(value) => {
-                setOffboardingNotice(null)
-                setOffboardingRequestReason(value)
-              }}
+              onEmployeeIdChange={(value) => dispatch({ type: 'setOffboardingEmployeeId', value })}
+              onRequestReasonChange={(value) => dispatch({ type: 'setOffboardingRequestReason', value })}
               onSubmit={submitOffboardingRequest}
-              onTerminationDateChange={(value) => {
-                setOffboardingNotice(null)
-                setOffboardingTerminationDate(value)
-              }}
+              onTerminationDateChange={(value) => dispatch({ type: 'setOffboardingTerminationDate', value })}
               submission={{
                 notice: offboardingNotice,
                 pending: offboardingRequestPending,
