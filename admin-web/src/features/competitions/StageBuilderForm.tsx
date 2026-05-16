@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useReducer, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { PlusCircle } from 'lucide-react'
 import {
@@ -174,6 +174,196 @@ type StageBuilderFormProps = {
   competitionStartsOn: string
   competitionEndsOn: string
   onCreated: () => void | Promise<void>
+}
+
+type StageBuilderFormState = {
+  draft: StageDraft
+  stagePackageDraft: StagePackageDraft
+  templateDraft: TemplateDraft
+  feedback: string | null
+  stagePackageFeedback: string | null
+  templateFeedback: string | null
+  templateLifecycleFeedback: string | null
+  showInactiveTemplates: boolean
+  stagePackageHistoryPlanId: string | null
+}
+
+type StageBuilderFormStateInput = {
+  startsOn: string
+  endsOn: string
+}
+
+type StagePresetDraft = NonNullable<ReturnType<typeof buildStagePresetDraft>>
+type StageDraftTextField = 'stageCode' | 'stageName' | 'stageOrder' | 'startsOn' | 'endsOn'
+type StagePackageDraftTextField = 'planName' | 'firstTemplateId' | 'secondTemplateId'
+type StagePackageStageTextField = 'stageCode' | 'stageName' | 'stageOrder' | 'startsOn' | 'endsOn'
+
+type StageBuilderFormAction =
+  | { type: 'setStageFeedback'; message: string }
+  | { type: 'setStagePackageFeedback'; message: string }
+  | { type: 'setTemplateLifecycleFeedback'; message: string }
+  | { type: 'setShowInactiveTemplates'; value: boolean }
+  | { type: 'setStagePackageHistoryPlanId'; planId: string }
+  | { type: 'updateStageDraftField'; field: StageDraftTextField; value: string }
+  | { type: 'updateStageDraftType'; value: CompetitionStageSummary['stageType'] }
+  | { type: 'clearStagePreset' }
+  | { type: 'applyStagePreset'; presetDraft: StagePresetDraft }
+  | { type: 'updateTeam'; index: number; patch: Partial<TeamDraft> }
+  | {
+      type: 'updateStagePackageCode'
+      packageCode: CompetitionStagePackageCode
+      stageDrafts: StagePackageStageDraft[]
+    }
+  | { type: 'updateStagePackageField'; field: StagePackageDraftTextField; value: string }
+  | {
+      type: 'updateStagePackageStageField'
+      stageIndex: number
+      field: StagePackageStageTextField
+      value: string
+    }
+  | {
+      type: 'updateStagePackageStageType'
+      stageIndex: number
+      value: CompetitionStageSummary['stageType']
+    }
+  | { type: 'updateTemplateDraftField'; field: keyof Omit<TemplateDraft, 'storeIds'>; value: string }
+  | { type: 'toggleTemplateStore'; storeId: string }
+  | { type: 'resetTemplateDraftAfterCreate'; message: string }
+
+function createStageBuilderFormState(input: StageBuilderFormStateInput): StageBuilderFormState {
+  return {
+    draft: createInitialDraft({ startsOn: input.startsOn, endsOn: input.endsOn }),
+    stagePackageDraft: createInitialStagePackageDraft({
+      startsOn: input.startsOn,
+      endsOn: input.endsOn,
+    }),
+    templateDraft: createInitialTemplateDraft(),
+    feedback: null,
+    stagePackageFeedback: null,
+    templateFeedback: null,
+    templateLifecycleFeedback: null,
+    showInactiveTemplates: false,
+    stagePackageHistoryPlanId: null,
+  }
+}
+
+function stageBuilderFormReducer(
+  state: StageBuilderFormState,
+  action: StageBuilderFormAction,
+): StageBuilderFormState {
+  switch (action.type) {
+    case 'setStageFeedback':
+      return { ...state, feedback: action.message }
+    case 'setStagePackageFeedback':
+      return { ...state, stagePackageFeedback: action.message }
+    case 'setTemplateLifecycleFeedback':
+      return { ...state, templateLifecycleFeedback: action.message }
+    case 'setShowInactiveTemplates':
+      return { ...state, showInactiveTemplates: action.value }
+    case 'setStagePackageHistoryPlanId':
+      return { ...state, stagePackageHistoryPlanId: action.planId }
+    case 'updateStageDraftField':
+      return {
+        ...state,
+        feedback: null,
+        draft: { ...state.draft, [action.field]: action.value },
+      }
+    case 'updateStageDraftType':
+      return {
+        ...state,
+        feedback: null,
+        draft: { ...state.draft, stageType: action.value },
+      }
+    case 'clearStagePreset':
+      return {
+        ...state,
+        feedback: null,
+        draft: { ...state.draft, stagePresetCode: undefined },
+      }
+    case 'applyStagePreset':
+      return {
+        ...state,
+        feedback: null,
+        draft: { ...state.draft, ...action.presetDraft },
+      }
+    case 'updateTeam':
+      return {
+        ...state,
+        feedback: null,
+        draft: {
+          ...state.draft,
+          teams: state.draft.teams.map((team, teamIndex) =>
+            teamIndex === action.index ? { ...team, ...action.patch } : team,
+          ),
+        },
+      }
+    case 'updateStagePackageCode':
+      return {
+        ...state,
+        stagePackageFeedback: null,
+        stagePackageDraft: {
+          ...state.stagePackageDraft,
+          packageCode: action.packageCode,
+          stageDrafts: action.stageDrafts,
+        },
+      }
+    case 'updateStagePackageField':
+      return {
+        ...state,
+        stagePackageFeedback: null,
+        stagePackageDraft: {
+          ...state.stagePackageDraft,
+          [action.field]: action.value,
+        },
+      }
+    case 'updateStagePackageStageField':
+      return {
+        ...state,
+        stagePackageFeedback: null,
+        stagePackageDraft: {
+          ...state.stagePackageDraft,
+          stageDrafts: state.stagePackageDraft.stageDrafts.map((stage, currentIndex) =>
+            currentIndex === action.stageIndex ? { ...stage, [action.field]: action.value } : stage,
+          ),
+        },
+      }
+    case 'updateStagePackageStageType':
+      return {
+        ...state,
+        stagePackageFeedback: null,
+        stagePackageDraft: {
+          ...state.stagePackageDraft,
+          stageDrafts: state.stagePackageDraft.stageDrafts.map((stage, currentIndex) =>
+            currentIndex === action.stageIndex ? { ...stage, stageType: action.value } : stage,
+          ),
+        },
+      }
+    case 'updateTemplateDraftField':
+      return {
+        ...state,
+        templateFeedback: null,
+        templateDraft: { ...state.templateDraft, [action.field]: action.value },
+      }
+    case 'toggleTemplateStore':
+      return {
+        ...state,
+        templateFeedback: null,
+        templateDraft: {
+          ...state.templateDraft,
+          storeIds: state.templateDraft.storeIds.includes(action.storeId)
+            ? state.templateDraft.storeIds.filter((currentStoreId) => currentStoreId !== action.storeId)
+            : [...state.templateDraft.storeIds, action.storeId],
+        },
+      }
+    case 'resetTemplateDraftAfterCreate':
+      return {
+        ...state,
+        templateFeedback: action.message,
+        templateDraft: createInitialTemplateDraft(),
+      }
+    default:
+      return state
+  }
 }
 
 function normalizeCode(value: string) {
@@ -612,22 +802,25 @@ function validateTemplateCloneDraft(draft: TemplateCloneDraft): TranslationKey |
 export function StageBuilderForm(input: StageBuilderFormProps) {
   const { t } = useLocalization()
   const queryClient = useQueryClient()
-  const [draft, setDraft] = useState(() =>
-    createInitialDraft({ startsOn: input.competitionStartsOn, endsOn: input.competitionEndsOn }),
-  )
-  const [stagePackageDraft, setStagePackageDraft] = useState(() =>
-    createInitialStagePackageDraft({
+  const [state, dispatch] = useReducer(
+    stageBuilderFormReducer,
+    {
       startsOn: input.competitionStartsOn,
       endsOn: input.competitionEndsOn,
-    }),
+    },
+    createStageBuilderFormState,
   )
-  const [templateDraft, setTemplateDraft] = useState(createInitialTemplateDraft)
-  const [feedback, setFeedback] = useState<string | null>(null)
-  const [stagePackageFeedback, setStagePackageFeedback] = useState<string | null>(null)
-  const [templateFeedback, setTemplateFeedback] = useState<string | null>(null)
-  const [templateLifecycleFeedback, setTemplateLifecycleFeedback] = useState<string | null>(null)
-  const [showInactiveTemplates, setShowInactiveTemplates] = useState(false)
-  const [stagePackageHistoryPlanId, setStagePackageHistoryPlanId] = useState<string | null>(null)
+  const {
+    draft,
+    stagePackageDraft,
+    templateDraft,
+    feedback,
+    stagePackageFeedback,
+    templateFeedback,
+    templateLifecycleFeedback,
+    showInactiveTemplates,
+    stagePackageHistoryPlanId,
+  } = state
 
   const lookupsQuery = useQuery({
     queryKey: ['competition-stage-builder-lookups'],
@@ -688,7 +881,7 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
     mutationFn: (payload: CreateCompetitionStagePayload) =>
       createCompetitionStage(input.competitionId, payload),
     onSuccess: async (response) => {
-      setFeedback(response.command.message)
+      dispatch({ type: 'setStageFeedback', message: response.command.message })
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['competitions'] }),
         queryClient.invalidateQueries({ queryKey: ['competition-detail', input.competitionId] }),
@@ -701,7 +894,7 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
     mutationFn: (payload: CreateCompetitionStagePackagePayload) =>
       createCompetitionStagePackage(input.competitionId, payload),
     onSuccess: async (response) => {
-      setStagePackageFeedback(response.command.message)
+      dispatch({ type: 'setStagePackageFeedback', message: response.command.message })
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['competitions'] }),
         queryClient.invalidateQueries({ queryKey: ['competition-detail', input.competitionId] }),
@@ -714,7 +907,7 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
     mutationFn: (payload: CreateCompetitionStagePackagePlanPayload) =>
       createCompetitionStagePackagePlan(input.competitionId, payload),
     onSuccess: async (response) => {
-      setStagePackageFeedback(response.command.message)
+      dispatch({ type: 'setStagePackageFeedback', message: response.command.message })
       await queryClient.invalidateQueries({
         queryKey: ['competition-stage-package-plans', input.competitionId],
       })
@@ -727,7 +920,7 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
       payload: UpdateCompetitionStagePackagePlanPayload
     }) => updateCompetitionStagePackagePlan(request.planId, request.payload),
     onSuccess: async (response) => {
-      setStagePackageFeedback(response.command.message)
+      dispatch({ type: 'setStagePackageFeedback', message: response.command.message })
       await queryClient.invalidateQueries({
         queryKey: ['competition-stage-package-plans', input.competitionId],
       })
@@ -740,7 +933,7 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
   const submitStagePackagePlanMutation = useMutation({
     mutationFn: submitCompetitionStagePackagePlan,
     onSuccess: async (response) => {
-      setStagePackageFeedback(response.command.message)
+      dispatch({ type: 'setStagePackageFeedback', message: response.command.message })
       await queryClient.invalidateQueries({
         queryKey: ['competition-stage-package-plans', input.competitionId],
       })
@@ -756,7 +949,7 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
       payload: ReviewCompetitionStagePackagePlanPayload
     }) => approveCompetitionStagePackagePlan(request.planId, request.payload),
     onSuccess: async (response) => {
-      setStagePackageFeedback(response.command.message)
+      dispatch({ type: 'setStagePackageFeedback', message: response.command.message })
       await queryClient.invalidateQueries({
         queryKey: ['competition-stage-package-plans', input.competitionId],
       })
@@ -772,7 +965,7 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
       payload: ReviewCompetitionStagePackagePlanPayload
     }) => rejectCompetitionStagePackagePlan(request.planId, request.payload),
     onSuccess: async (response) => {
-      setStagePackageFeedback(response.command.message)
+      dispatch({ type: 'setStagePackageFeedback', message: response.command.message })
       await queryClient.invalidateQueries({
         queryKey: ['competition-stage-package-plans', input.competitionId],
       })
@@ -785,7 +978,7 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
   const cloneStagePackagePlanMutation = useMutation({
     mutationFn: cloneCompetitionStagePackagePlan,
     onSuccess: async (response) => {
-      setStagePackageFeedback(response.command.message)
+      dispatch({ type: 'setStagePackageFeedback', message: response.command.message })
       await queryClient.invalidateQueries({
         queryKey: ['competition-stage-package-plans', input.competitionId],
       })
@@ -798,7 +991,7 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
   const executeStagePackagePlanMutation = useMutation({
     mutationFn: executeCompetitionStagePackagePlan,
     onSuccess: async (response) => {
-      setStagePackageFeedback(response.command.message)
+      dispatch({ type: 'setStagePackageFeedback', message: response.command.message })
       await queryClient.invalidateQueries({
         queryKey: ['competition-stage-package-plans', input.competitionId],
       })
@@ -809,7 +1002,7 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
   const cancelStagePackagePlanMutation = useMutation({
     mutationFn: cancelCompetitionStagePackagePlan,
     onSuccess: async (response) => {
-      setStagePackageFeedback(response.command.message)
+      dispatch({ type: 'setStagePackageFeedback', message: response.command.message })
       await queryClient.invalidateQueries({
         queryKey: ['competition-stage-package-plans', input.competitionId],
       })
@@ -823,8 +1016,7 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
     mutationFn: (payload: CreateCompetitionTeamTemplatePayload) =>
       createCompetitionTeamTemplate(payload),
     onSuccess: async (response) => {
-      setTemplateFeedback(response.command.message)
-      setTemplateDraft(createInitialTemplateDraft())
+      dispatch({ type: 'resetTemplateDraftAfterCreate', message: response.command.message })
       await queryClient.invalidateQueries({ queryKey: ['competition-team-templates'] })
     },
   })
@@ -832,7 +1024,7 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
   const deactivateTemplateMutation = useMutation({
     mutationFn: deactivateCompetitionTeamTemplate,
     onSuccess: async (response) => {
-      setTemplateLifecycleFeedback(response.command.message)
+      dispatch({ type: 'setTemplateLifecycleFeedback', message: response.command.message })
       await queryClient.invalidateQueries({ queryKey: ['competition-team-templates'] })
     },
   })
@@ -843,7 +1035,7 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
       payload: UpdateCompetitionTeamTemplatePayload
     }) => updateCompetitionTeamTemplate(request.templateId, request.payload),
     onSuccess: async (response) => {
-      setTemplateLifecycleFeedback(response.command.message)
+      dispatch({ type: 'setTemplateLifecycleFeedback', message: response.command.message })
       await queryClient.invalidateQueries({ queryKey: ['competition-team-templates'] })
     },
   })
@@ -854,21 +1046,30 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
       payload: CloneCompetitionTeamTemplatePayload
     }) => cloneCompetitionTeamTemplate(request.templateId, request.payload),
     onSuccess: async (response) => {
-      setTemplateLifecycleFeedback(response.command.message)
+      dispatch({ type: 'setTemplateLifecycleFeedback', message: response.command.message })
       await queryClient.invalidateQueries({ queryKey: ['competition-team-templates'] })
     },
   })
 
   function updateDraft(field: keyof Omit<StageDraft, 'teams'>, value: string) {
-    setFeedback(null)
-    setDraft((current) => ({ ...current, [field]: value }))
+    if (field === 'stageType') {
+      dispatch({
+        type: 'updateStageDraftType',
+        value: value as CompetitionStageSummary['stageType'],
+      })
+      return
+    }
+
+    if (field === 'stagePresetCode') {
+      return
+    }
+
+    dispatch({ type: 'updateStageDraftField', field, value })
   }
 
   function applyStagePreset(presetCode: string) {
-    setFeedback(null)
-
     if (!presetCode) {
-      setDraft((current) => ({ ...current, stagePresetCode: undefined }))
+      dispatch({ type: 'clearStagePreset' })
       return
     }
 
@@ -880,31 +1081,30 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
 
     if (!presetDraft) return
 
-    setDraft((current) => ({
-      ...current,
-      ...presetDraft,
-    }))
+    dispatch({ type: 'applyStagePreset', presetDraft })
   }
 
   function updateStagePackageDraft(field: keyof StagePackageDraft, value: string) {
-    setStagePackageFeedback(null)
-    setStagePackageDraft((current) => {
-      if (field === 'packageCode') {
-        const packageCode = value as CompetitionStagePackageCode
+    if (field === 'packageCode') {
+      const packageCode = value as CompetitionStagePackageCode
 
-        return {
-          ...current,
+      dispatch({
+        type: 'updateStagePackageCode',
+        packageCode,
+        stageDrafts: createStagePackageStageDrafts({
+          competitionStartsOn: input.competitionStartsOn,
+          competitionEndsOn: input.competitionEndsOn,
           packageCode,
-          stageDrafts: createStagePackageStageDrafts({
-            competitionStartsOn: input.competitionStartsOn,
-            competitionEndsOn: input.competitionEndsOn,
-            packageCode,
-          }),
-        }
-      }
+        }),
+      })
+      return
+    }
 
-      return { ...current, [field]: value }
-    })
+    if (field === 'stageDrafts') {
+      return
+    }
+
+    dispatch({ type: 'updateStagePackageField', field, value })
   }
 
   function updateStagePackageStage(
@@ -912,13 +1112,20 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
     field: keyof StagePackageStageDraft,
     value: string,
   ) {
-    setStagePackageFeedback(null)
-    setStagePackageDraft((current) => ({
-      ...current,
-      stageDrafts: current.stageDrafts.map((stage, currentIndex) =>
-        currentIndex === stageIndex ? { ...stage, [field]: value } : stage,
-      ),
-    }))
+    if (field === 'stageType') {
+      dispatch({
+        type: 'updateStagePackageStageType',
+        stageIndex,
+        value: value as CompetitionStageSummary['stageType'],
+      })
+      return
+    }
+
+    if (field === 'stagePresetCode') {
+      return
+    }
+
+    dispatch({ type: 'updateStagePackageStageField', stageIndex, field, value })
   }
 
   function getSelectedStagePackageTemplates() {
@@ -929,18 +1136,11 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
   }
 
   function updateTeam(index: number, patch: Partial<TeamDraft>) {
-    setFeedback(null)
-    setDraft((current) => ({
-      ...current,
-      teams: current.teams.map((team, teamIndex) =>
-        teamIndex === index ? { ...team, ...patch } : team,
-      ),
-    }))
+    dispatch({ type: 'updateTeam', index, patch })
   }
 
   function updateTemplateDraft(field: keyof Omit<TemplateDraft, 'storeIds'>, value: string) {
-    setTemplateFeedback(null)
-    setTemplateDraft((current) => ({ ...current, [field]: value }))
+    dispatch({ type: 'updateTemplateDraftField', field, value })
   }
 
   function toggleStore(teamIndex: number, storeId: string) {
@@ -953,13 +1153,7 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
   }
 
   function toggleTemplateStore(storeId: string) {
-    setTemplateFeedback(null)
-    setTemplateDraft((current) => ({
-      ...current,
-      storeIds: current.storeIds.includes(storeId)
-        ? current.storeIds.filter((currentStoreId) => currentStoreId !== storeId)
-        : [...current.storeIds, storeId],
-    }))
+    dispatch({ type: 'toggleTemplateStore', storeId })
   }
 
   function applyTemplate(teamIndex: number, templateId: string) {
@@ -1195,7 +1389,9 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
           cloneTemplateMutation.mutate({ templateId, payload })
         }
         onDeactivate={(templateId) => deactivateTemplateMutation.mutate(templateId)}
-        onShowInactiveChange={setShowInactiveTemplates}
+        onShowInactiveChange={(value) =>
+          dispatch({ type: 'setShowInactiveTemplates', value })
+        }
         onUpdate={(templateId, payload) =>
           updateTemplateMutation.mutate({ templateId, payload })
         }
@@ -1254,7 +1450,9 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
           rejectStagePackagePlanMutation.mutate({ planId, payload })
         }
         onSavePlan={submitStagePackagePlan}
-        onShowPlanHistory={(planId) => setStagePackageHistoryPlanId(planId)}
+        onShowPlanHistory={(planId) =>
+          dispatch({ type: 'setStagePackageHistoryPlanId', planId })
+        }
         onSubmit={submitStagePackage}
         onSubmitPlan={(planId) => submitStagePackagePlanMutation.mutate(planId)}
         onUpdatePlan={(planId, payload) =>
