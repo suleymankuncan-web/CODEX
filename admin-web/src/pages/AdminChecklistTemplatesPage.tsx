@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { CheckCircle2, ClipboardList, Plus, Rocket, Save, Trash2 } from 'lucide-react'
 import type { AuthSessionSummary } from '../features/auth/api'
 import {
@@ -67,6 +67,15 @@ const templateOptions: TemplateOption[] = [
 ]
 
 const today = new Date().toISOString().slice(0, 10)
+
+const wholeWeightFormatter = new Intl.NumberFormat('tr-TR', {
+  maximumFractionDigits: 0,
+})
+
+const fractionalWeightFormatter = new Intl.NumberFormat('tr-TR', {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 2,
+})
 
 const initialSections: DraftChecklistSection[] = [
   {
@@ -268,10 +277,7 @@ function clampNumber(value: string, fallback: number) {
 }
 
 function formatWeight(value: number) {
-  return new Intl.NumberFormat('tr-TR', {
-    minimumFractionDigits: value % 1 === 0 ? 0 : 1,
-    maximumFractionDigits: 2,
-  }).format(value)
+  return (value % 1 === 0 ? wholeWeightFormatter : fractionalWeightFormatter).format(value)
 }
 
 function buildExpectedValue(item: DraftChecklistItem) {
@@ -315,6 +321,7 @@ function createPayload(input: {
 
 export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSummary | null }) {
   const { t } = useLocalization()
+  const queryClient = useQueryClient()
   const companyId = getCompanyId(input.authSummary)
   const responseTypeLabels: Record<ChecklistTemplateResponseType, string> = {
     score: t('adminChecklists.responseScore'),
@@ -361,9 +368,15 @@ export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSum
 
   const createMutation = useMutation({
     mutationFn: createAdminChecklistTemplate,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['mobile-checklists-today'] })
+    },
   })
   const publishMutation = useMutation({
     mutationFn: publishAdminChecklistTemplate,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['mobile-checklists-today'] })
+    },
   })
   const isSaving = createMutation.isPending || publishMutation.isPending
 
