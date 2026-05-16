@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties, type ReactNode } from 'react'
+import { useMemo, useReducer, type CSSProperties, type ReactNode } from 'react'
 import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -40,9 +40,50 @@ type RankingDetailSelection =
   | { type: 'personnel'; row: PersonnelRankingRow }
   | null
 
+type StoreRankingsPageState = {
+  periodStart: string
+  regionManagerUserId: string
+  regionId: string
+  storeId: string
+  search: string
+  offset: number
+  activeList: ActiveRankingList
+  sortKey: RankingSortKey
+  sortDirection: RankingSortDirection
+  selectedDetail: RankingDetailSelection
+}
+
+type StoreRankingsTextFilter =
+  | 'periodStart'
+  | 'regionManagerUserId'
+  | 'regionId'
+  | 'storeId'
+  | 'search'
+
+type StoreRankingsPageAction =
+  | { type: 'setFilter'; field: StoreRankingsTextFilter; value: string }
+  | { type: 'setOffset'; value: number }
+  | { type: 'clearFilters' }
+  | { type: 'setActiveList'; value: ActiveRankingList }
+  | { type: 'setSort'; value: RankingSortKey }
+  | { type: 'setSelectedDetail'; value: RankingDetailSelection }
+
 type SortableRankingRow = {
   scoreValue: number
   metrics?: RankingMetricValue[]
+}
+
+const initialStoreRankingsPageState: StoreRankingsPageState = {
+  periodStart: '',
+  regionManagerUserId: '',
+  regionId: '',
+  storeId: '',
+  search: '',
+  offset: 0,
+  activeList: 'stores',
+  sortKey: 'score',
+  sortDirection: 'desc',
+  selectedDetail: null,
 }
 
 const metricLabelKeyByCode: Record<string, TranslationKey> = {
@@ -207,6 +248,46 @@ function getVisibleWindow(total: number, offset: number, count: number, t: Trans
   return `${offset + 1}-${offset + count}`
 }
 
+function storeRankingsPageReducer(
+  state: StoreRankingsPageState,
+  action: StoreRankingsPageAction,
+): StoreRankingsPageState {
+  switch (action.type) {
+    case 'setFilter':
+      return { ...state, [action.field]: action.value, offset: 0 }
+    case 'setOffset':
+      return { ...state, offset: action.value }
+    case 'clearFilters':
+      return {
+        ...state,
+        regionManagerUserId: '',
+        regionId: '',
+        storeId: '',
+        search: '',
+        offset: 0,
+      }
+    case 'setActiveList':
+      return { ...state, activeList: action.value, selectedDetail: null }
+    case 'setSort':
+      return state.sortKey === action.value
+        ? {
+            ...state,
+            offset: 0,
+            sortDirection: state.sortDirection === 'desc' ? 'asc' : 'desc',
+          }
+        : {
+            ...state,
+            offset: 0,
+            sortKey: action.value,
+            sortDirection: 'desc',
+          }
+    case 'setSelectedDetail':
+      return { ...state, selectedDetail: action.value }
+    default:
+      return state
+  }
+}
+
 function getLatestRankingFromCache(queryClient: QueryClient) {
   const cachedRankings = queryClient
     .getQueryCache()
@@ -228,31 +309,29 @@ export function StoreRankingsPage(input: {
   const queryClient = useQueryClient()
   const enabled = canUseRankings(input.authSummary)
   const privilegedSession = canUsePrivilegedFilters(input.authSummary)
-  const [periodStart, setPeriodStart] = useState('')
-  const [regionManagerUserId, setRegionManagerUserId] = useState('')
-  const [regionId, setRegionId] = useState('')
-  const [storeId, setStoreId] = useState('')
-  const [search, setSearch] = useState('')
-  const [offset, setOffset] = useState(0)
-  const [activeList, setActiveList] = useState<ActiveRankingList>('stores')
-  const [sortKey, setSortKey] = useState<RankingSortKey>('score')
-  const [sortDirection, setSortDirection] = useState<RankingSortDirection>('desc')
-  const [selectedDetail, setSelectedDetail] = useState<RankingDetailSelection>(null)
+  const [pageState, dispatchPageState] = useReducer(
+    storeRankingsPageReducer,
+    initialStoreRankingsPageState,
+  )
+  const {
+    periodStart,
+    regionManagerUserId,
+    regionId,
+    storeId,
+    search,
+    offset,
+    activeList,
+    sortKey,
+    sortDirection,
+    selectedDetail,
+  } = pageState
   const limit = 100
   const hasNonDefaultSort = sortKey !== 'score' || sortDirection !== 'desc'
-  const setFilter = (setter: (value: string) => void) => (value: string) => {
-    setter(value)
-    setOffset(0)
+  const setFilter = (field: StoreRankingsTextFilter) => (value: string) => {
+    dispatchPageState({ type: 'setFilter', field, value })
   }
   const updateSort = (nextSortKey: RankingSortKey) => {
-    setOffset(0)
-    if (sortKey === nextSortKey) {
-      setSortDirection((current) => (current === 'desc' ? 'asc' : 'desc'))
-      return
-    }
-
-    setSortKey(nextSortKey)
-    setSortDirection('desc')
+    dispatchPageState({ type: 'setSort', value: nextSortKey })
   }
 
   const rankingsQuery = useQuery({
@@ -399,19 +478,13 @@ export function StoreRankingsPage(input: {
             hasNextPage={Boolean(hasNextPage)}
             sortKey={sortKey}
             sortDirection={sortDirection}
-            onPeriodStartChange={setFilter(setPeriodStart)}
-            onRegionManagerChange={setFilter(setRegionManagerUserId)}
-            onRegionChange={setFilter(setRegionId)}
-            onStoreChange={setFilter(setStoreId)}
-            onSearchChange={setFilter(setSearch)}
-            onOffsetChange={setOffset}
-            onClearFilters={() => {
-              setRegionManagerUserId('')
-              setRegionId('')
-              setStoreId('')
-              setSearch('')
-              setOffset(0)
-            }}
+            onPeriodStartChange={setFilter('periodStart')}
+            onRegionManagerChange={setFilter('regionManagerUserId')}
+            onRegionChange={setFilter('regionId')}
+            onStoreChange={setFilter('storeId')}
+            onSearchChange={setFilter('search')}
+            onOffsetChange={(value) => dispatchPageState({ type: 'setOffset', value })}
+            onClearFilters={() => dispatchPageState({ type: 'clearFilters' })}
             periodOptions={activePeriodOptions}
             locale={locale}
             t={t}
@@ -435,12 +508,11 @@ export function StoreRankingsPage(input: {
           sortKey={sortKey}
           sortDirection={sortDirection}
           onSortChange={updateSort}
-          onActiveListChange={(nextList) => {
-            setActiveList(nextList)
-            setSelectedDetail(null)
-          }}
-          onOpenDetail={setSelectedDetail}
-          onOffsetChange={setOffset}
+          onActiveListChange={(nextList) =>
+            dispatchPageState({ type: 'setActiveList', value: nextList })
+          }
+          onOpenDetail={(value) => dispatchPageState({ type: 'setSelectedDetail', value })}
+          onOffsetChange={(value) => dispatchPageState({ type: 'setOffset', value })}
           hasNextPage={Boolean(hasNextPage)}
           offset={offset}
           limit={limit}
@@ -453,7 +525,7 @@ export function StoreRankingsPage(input: {
         selection={selectedDetail}
         locale={locale}
         t={t}
-        onClose={() => setSelectedDetail(null)}
+        onClose={() => dispatchPageState({ type: 'setSelectedDetail', value: null })}
         onOpenPersonnelProfile={(employeeId) => {
           const path = `/store/personnel/${encodeURIComponent(employeeId)}`
           const params = new URLSearchParams()
