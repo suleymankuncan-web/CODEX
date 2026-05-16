@@ -1,4 +1,4 @@
-import { useDeferredValue, useMemo, useState } from 'react'
+import { useDeferredValue, useMemo, useReducer } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { KeyRound, MapPin, ShieldCheck, UserCog, Users } from 'lucide-react'
@@ -34,6 +34,210 @@ import { formatDateTime, getErrorMessage } from '../lib/format'
 type RoleScopeType = 'company' | 'region' | 'store'
 type AuthProvider = 'local' | 'oidc' | 'sso' | 'clerk'
 
+type AuthUserFormState = {
+  employeeId: string
+  username: string
+  email: string
+  authProvider: AuthProvider
+}
+
+type AuthAssignmentFormState = {
+  userId: string
+  roleCode: string
+  scopeType: RoleScopeType
+  companyId: string
+  regionId: string
+  storeId: string
+  effectiveFrom: string
+  effectiveTo: string
+}
+
+type AuthActionStoreFormState = {
+  userId: string
+  storeId: string
+  effectiveFrom: string
+  effectiveTo: string
+}
+
+type AuthDashboardState = {
+  search: string
+  assignmentUserSearch: string
+  assignmentStoreSearch: string
+  actionStoreUserSearch: string
+  actionStoreSearch: string
+  selectedAssignmentUser: AuthLookupUser | null
+  selectedAssignmentStore: AuthLookupStore | null
+  selectedActionStoreUser: AuthLookupUser | null
+  selectedActionStore: AuthLookupStore | null
+  feedback: string | null
+  errorFeedback: string | null
+  userForm: AuthUserFormState
+  assignmentForm: AuthAssignmentFormState
+  actionStoreForm: AuthActionStoreFormState
+}
+
+type AuthDashboardAction =
+  | { type: 'setSearch'; value: string }
+  | { type: 'setAssignmentUserSearch'; value: string }
+  | { type: 'setAssignmentStoreSearch'; value: string }
+  | { type: 'setActionStoreUserSearch'; value: string }
+  | { type: 'setActionStoreSearch'; value: string }
+  | { type: 'setErrorFeedback'; message: string | null }
+  | { type: 'clearFeedback' }
+  | { type: 'createUserSucceeded'; message: string }
+  | { type: 'createAssignmentSucceeded'; message: string }
+  | { type: 'createActionStoreSucceeded'; message: string }
+  | { type: 'mutationSucceeded'; message: string }
+  | { type: 'userClosed'; message: string }
+  | { type: 'updateUserForm'; form: AuthUserFormState }
+  | { type: 'updateAssignmentForm'; form: AuthAssignmentFormState }
+  | { type: 'updateActionStoreForm'; form: AuthActionStoreFormState }
+  | { type: 'selectAssignmentUser'; user: AuthLookupUser | null; userId: string }
+  | { type: 'selectAssignmentStore'; store: AuthLookupStore | null; storeId: string }
+  | { type: 'selectActionStoreUser'; user: AuthLookupUser | null; userId: string }
+  | { type: 'selectActionStore'; store: AuthLookupStore | null; storeId: string }
+  | { type: 'setAssignmentScopeType'; scopeType: RoleScopeType }
+
+const initialAuthUserForm: AuthUserFormState = {
+  employeeId: '',
+  username: '',
+  email: '',
+  authProvider: 'oidc',
+}
+
+const initialAuthAssignmentForm: AuthAssignmentFormState = {
+  userId: '',
+  roleCode: '',
+  scopeType: 'company',
+  companyId: '',
+  regionId: '',
+  storeId: '',
+  effectiveFrom: '',
+  effectiveTo: '',
+}
+
+const initialAuthActionStoreForm: AuthActionStoreFormState = {
+  userId: '',
+  storeId: '',
+  effectiveFrom: '',
+  effectiveTo: '',
+}
+
+const initialAuthDashboardState: AuthDashboardState = {
+  search: '',
+  assignmentUserSearch: '',
+  assignmentStoreSearch: '',
+  actionStoreUserSearch: '',
+  actionStoreSearch: '',
+  selectedAssignmentUser: null,
+  selectedAssignmentStore: null,
+  selectedActionStoreUser: null,
+  selectedActionStore: null,
+  feedback: null,
+  errorFeedback: null,
+  userForm: initialAuthUserForm,
+  assignmentForm: initialAuthAssignmentForm,
+  actionStoreForm: initialAuthActionStoreForm,
+}
+
+function authDashboardReducer(
+  state: AuthDashboardState,
+  action: AuthDashboardAction,
+): AuthDashboardState {
+  switch (action.type) {
+    case 'setSearch':
+      return { ...state, search: action.value }
+    case 'setAssignmentUserSearch':
+      return { ...state, assignmentUserSearch: action.value }
+    case 'setAssignmentStoreSearch':
+      return { ...state, assignmentStoreSearch: action.value }
+    case 'setActionStoreUserSearch':
+      return { ...state, actionStoreUserSearch: action.value }
+    case 'setActionStoreSearch':
+      return { ...state, actionStoreSearch: action.value }
+    case 'setErrorFeedback':
+      return { ...state, errorFeedback: action.message }
+    case 'clearFeedback':
+      return { ...state, feedback: null, errorFeedback: null }
+    case 'createUserSucceeded':
+      return { ...state, feedback: action.message, errorFeedback: null, userForm: initialAuthUserForm }
+    case 'createAssignmentSucceeded':
+      return {
+        ...state,
+        feedback: action.message,
+        errorFeedback: null,
+        assignmentForm: initialAuthAssignmentForm,
+        assignmentUserSearch: '',
+        assignmentStoreSearch: '',
+        selectedAssignmentUser: null,
+        selectedAssignmentStore: null,
+      }
+    case 'createActionStoreSucceeded':
+      return {
+        ...state,
+        feedback: action.message,
+        errorFeedback: null,
+        actionStoreForm: initialAuthActionStoreForm,
+        actionStoreUserSearch: '',
+        actionStoreSearch: '',
+        selectedActionStoreUser: null,
+        selectedActionStore: null,
+      }
+    case 'mutationSucceeded':
+    case 'userClosed':
+      return { ...state, feedback: action.message, errorFeedback: null }
+    case 'updateUserForm':
+      return { ...state, userForm: action.form }
+    case 'updateAssignmentForm':
+      return { ...state, assignmentForm: action.form }
+    case 'updateActionStoreForm':
+      return { ...state, actionStoreForm: action.form }
+    case 'selectAssignmentUser':
+      return {
+        ...state,
+        selectedAssignmentUser: action.user,
+        assignmentForm: { ...state.assignmentForm, userId: action.userId },
+      }
+    case 'selectAssignmentStore':
+      return {
+        ...state,
+        selectedAssignmentStore: action.store,
+        assignmentForm: {
+          ...state.assignmentForm,
+          storeId: action.storeId,
+          companyId: action.store?.companyId ?? state.assignmentForm.companyId,
+          regionId: action.store?.regionId ?? state.assignmentForm.regionId,
+        },
+      }
+    case 'selectActionStoreUser':
+      return {
+        ...state,
+        selectedActionStoreUser: action.user,
+        actionStoreForm: { ...state.actionStoreForm, userId: action.userId },
+      }
+    case 'selectActionStore':
+      return {
+        ...state,
+        selectedActionStore: action.store,
+        actionStoreForm: { ...state.actionStoreForm, storeId: action.storeId },
+      }
+    case 'setAssignmentScopeType':
+      return {
+        ...state,
+        assignmentStoreSearch: action.scopeType === 'store' ? state.assignmentStoreSearch : '',
+        selectedAssignmentStore: action.scopeType === 'store' ? state.selectedAssignmentStore : null,
+        assignmentForm: {
+          ...state.assignmentForm,
+          scopeType: action.scopeType,
+          regionId: action.scopeType === 'company' ? '' : state.assignmentForm.regionId,
+          storeId: action.scopeType === 'store' ? state.assignmentForm.storeId : '',
+        },
+      }
+    default:
+      return state
+  }
+}
+
 function mergeAuthUsers(...groups: Array<Array<AuthLookupUser | null | undefined>>) {
   const byId = new Map<string, AuthLookupUser>()
   for (const group of groups) {
@@ -59,58 +263,26 @@ function mergeAuthStores(...groups: Array<Array<AuthLookupStore | null | undefin
 }
 
 export function AuthDashboardPage() {
-  const [search, setSearch] = useState('')
-  const [assignmentUserSearch, setAssignmentUserSearch] = useState('')
-  const [assignmentStoreSearch, setAssignmentStoreSearch] = useState('')
-  const [actionStoreUserSearch, setActionStoreUserSearch] = useState('')
-  const [actionStoreSearch, setActionStoreSearch] = useState('')
-  const [selectedAssignmentUser, setSelectedAssignmentUser] = useState<AuthLookupUser | null>(null)
-  const [selectedAssignmentStore, setSelectedAssignmentStore] = useState<AuthLookupStore | null>(null)
-  const [selectedActionStoreUser, setSelectedActionStoreUser] = useState<AuthLookupUser | null>(null)
-  const [selectedActionStore, setSelectedActionStore] = useState<AuthLookupStore | null>(null)
-  const [feedback, setFeedback] = useState<string | null>(null)
-  const [errorFeedback, setErrorFeedback] = useState<string | null>(null)
-  const [userForm, setUserForm] = useState<{
-    employeeId: string
-    username: string
-    email: string
-    authProvider: AuthProvider
-  }>({
-    employeeId: '',
-    username: '',
-    email: '',
-    authProvider: 'oidc',
-  })
-  const [assignmentForm, setAssignmentForm] = useState<{
-    userId: string
-    roleCode: string
-    scopeType: RoleScopeType
-    companyId: string
-    regionId: string
-    storeId: string
-    effectiveFrom: string
-    effectiveTo: string
-  }>({
-    userId: '',
-    roleCode: '',
-    scopeType: 'company',
-    companyId: '',
-    regionId: '',
-    storeId: '',
-    effectiveFrom: '',
-    effectiveTo: '',
-  })
-  const [actionStoreForm, setActionStoreForm] = useState<{
-    userId: string
-    storeId: string
-    effectiveFrom: string
-    effectiveTo: string
-  }>({
-    userId: '',
-    storeId: '',
-    effectiveFrom: '',
-    effectiveTo: '',
-  })
+  const [authState, dispatchAuthState] = useReducer(
+    authDashboardReducer,
+    initialAuthDashboardState,
+  )
+  const {
+    search,
+    assignmentUserSearch,
+    assignmentStoreSearch,
+    actionStoreUserSearch,
+    actionStoreSearch,
+    selectedAssignmentUser,
+    selectedAssignmentStore,
+    selectedActionStoreUser,
+    selectedActionStore,
+    feedback,
+    errorFeedback,
+    userForm,
+    assignmentForm,
+    actionStoreForm,
+  } = authState
   const deferredSearch = useDeferredValue(search)
   const deferredAssignmentUserSearch = useDeferredValue(assignmentUserSearch)
   const deferredAssignmentStoreSearch = useDeferredValue(assignmentStoreSearch)
@@ -167,14 +339,7 @@ export function AuthDashboardPage() {
   const createUserMutation = useMutation({
     mutationFn: createUserAccount,
     onSuccess: async (response) => {
-      setFeedback(response.command.message)
-      setErrorFeedback(null)
-      setUserForm({
-        employeeId: '',
-        username: '',
-        email: '',
-        authProvider: 'oidc',
-      })
+      dispatchAuthState({ type: 'createUserSucceeded', message: response.command.message })
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['auth-users'] }),
         queryClient.invalidateQueries({ queryKey: ['auth-lookups'] }),
@@ -183,28 +348,13 @@ export function AuthDashboardPage() {
       ])
     },
     onError: (error) => {
-      setErrorFeedback(getErrorMessage(error))
+      dispatchAuthState({ type: 'setErrorFeedback', message: getErrorMessage(error) })
     },
   })
   const createAssignmentMutation = useMutation({
     mutationFn: createRoleAssignment,
     onSuccess: async (response) => {
-      setFeedback(response.command.message)
-      setErrorFeedback(null)
-      setAssignmentForm({
-        userId: '',
-        roleCode: '',
-        scopeType: 'company',
-        companyId: '',
-        regionId: '',
-        storeId: '',
-        effectiveFrom: '',
-        effectiveTo: '',
-      })
-      setAssignmentUserSearch('')
-      setAssignmentStoreSearch('')
-      setSelectedAssignmentUser(null)
-      setSelectedAssignmentStore(null)
+      dispatchAuthState({ type: 'createAssignmentSucceeded', message: response.command.message })
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['auth-users'] }),
         queryClient.invalidateQueries({ queryKey: ['auth-lookups'] }),
@@ -213,24 +363,13 @@ export function AuthDashboardPage() {
       ])
     },
     onError: (error) => {
-      setErrorFeedback(getErrorMessage(error))
+      dispatchAuthState({ type: 'setErrorFeedback', message: getErrorMessage(error) })
     },
   })
   const createActionStoreAssignmentMutation = useMutation({
     mutationFn: createActionStoreAssignment,
     onSuccess: async (response) => {
-      setFeedback(response.command.message)
-      setErrorFeedback(null)
-      setActionStoreForm({
-        userId: '',
-        storeId: '',
-        effectiveFrom: '',
-        effectiveTo: '',
-      })
-      setActionStoreUserSearch('')
-      setActionStoreSearch('')
-      setSelectedActionStoreUser(null)
-      setSelectedActionStore(null)
+      dispatchAuthState({ type: 'createActionStoreSucceeded', message: response.command.message })
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['auth-users'] }),
         queryClient.invalidateQueries({ queryKey: ['auth-lookups'] }),
@@ -239,44 +378,42 @@ export function AuthDashboardPage() {
       ])
     },
     onError: (error) => {
-      setErrorFeedback(getErrorMessage(error))
+      dispatchAuthState({ type: 'setErrorFeedback', message: getErrorMessage(error) })
     },
   })
   const deactivateAssignmentMutation = useMutation({
     mutationFn: deactivateRoleAssignment,
     onSuccess: async (response) => {
-      setFeedback(response.command.message)
-      setErrorFeedback(null)
+      dispatchAuthState({ type: 'mutationSucceeded', message: response.command.message })
       await queryClient.invalidateQueries({ queryKey: ['auth-role-assignments'] })
     },
     onError: (error) => {
-      setErrorFeedback(getErrorMessage(error))
+      dispatchAuthState({ type: 'setErrorFeedback', message: getErrorMessage(error) })
     },
   })
   const deactivateActionStoreAssignmentMutation = useMutation({
     mutationFn: deactivateActionStoreAssignment,
     onSuccess: async (response) => {
-      setFeedback(response.command.message)
-      setErrorFeedback(null)
+      dispatchAuthState({ type: 'mutationSucceeded', message: response.command.message })
       await queryClient.invalidateQueries({ queryKey: ['auth-action-store-assignments'] })
     },
     onError: (error) => {
-      setErrorFeedback(getErrorMessage(error))
+      dispatchAuthState({ type: 'setErrorFeedback', message: getErrorMessage(error) })
     },
   })
   const deactivateUserMutation = useMutation({
     mutationFn: deactivateUserAccount,
     onSuccess: async (response) => {
       const closure = response.data.accessClosure
-      setFeedback(
-        t('authAdmin.userClosureFeedback', {
+      dispatchAuthState({
+        type: 'userClosed',
+        message: t('authAdmin.userClosureFeedback', {
           message: response.command.message,
           roleCount: closure.closedRoleAssignments,
           actionStoreCount: closure.closedActionStoreAssignments,
           sessionCount: closure.revokedMobileSessions,
         }),
-      )
-      setErrorFeedback(null)
+      })
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['auth-users'] }),
         queryClient.invalidateQueries({ queryKey: ['auth-lookups'] }),
@@ -285,14 +422,13 @@ export function AuthDashboardPage() {
       ])
     },
     onError: (error) => {
-      setErrorFeedback(getErrorMessage(error))
+      dispatchAuthState({ type: 'setErrorFeedback', message: getErrorMessage(error) })
     },
   })
   const reactivateUserMutation = useMutation({
     mutationFn: reactivateUserAccount,
     onSuccess: async (response) => {
-      setFeedback(response.command.message)
-      setErrorFeedback(null)
+      dispatchAuthState({ type: 'mutationSucceeded', message: response.command.message })
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['auth-users'] }),
         queryClient.invalidateQueries({ queryKey: ['auth-lookups'] }),
@@ -301,7 +437,7 @@ export function AuthDashboardPage() {
       ])
     },
     onError: (error) => {
-      setErrorFeedback(getErrorMessage(error))
+      dispatchAuthState({ type: 'setErrorFeedback', message: getErrorMessage(error) })
     },
   })
   const lookups = lookupsQuery.data ?? null
@@ -460,55 +596,45 @@ export function AuthDashboardPage() {
   )
 
   function updateUserForm<K extends keyof typeof userForm>(key: K, value: (typeof userForm)[K]) {
-    setUserForm((current) => ({ ...current, [key]: value }))
+    dispatchAuthState({ type: 'updateUserForm', form: { ...userForm, [key]: value } })
   }
 
   function updateAssignmentForm<K extends keyof typeof assignmentForm>(
     key: K,
     value: (typeof assignmentForm)[K],
   ) {
-    setAssignmentForm((current) => ({ ...current, [key]: value }))
+    dispatchAuthState({ type: 'updateAssignmentForm', form: { ...assignmentForm, [key]: value } })
   }
 
   function updateActionStoreForm<K extends keyof typeof actionStoreForm>(
     key: K,
     value: (typeof actionStoreForm)[K],
   ) {
-    setActionStoreForm((current) => ({ ...current, [key]: value }))
+    dispatchAuthState({ type: 'updateActionStoreForm', form: { ...actionStoreForm, [key]: value } })
   }
 
   function selectAssignmentUser(userId: string) {
     const user = assignmentUserOptions.find((item) => item.userId === userId) ?? null
-    setSelectedAssignmentUser(user)
-    updateAssignmentForm('userId', userId)
+    dispatchAuthState({ type: 'selectAssignmentUser', user, userId })
   }
 
   function selectAssignmentStore(storeId: string) {
     const store = assignmentStoreOptions.find((item) => item.storeId === storeId) ?? null
-    setSelectedAssignmentStore(store)
-    setAssignmentForm((current) => ({
-      ...current,
-      storeId,
-      companyId: store?.companyId ?? current.companyId,
-      regionId: store?.regionId ?? current.regionId,
-    }))
+    dispatchAuthState({ type: 'selectAssignmentStore', store, storeId })
   }
 
   function selectActionStoreUser(userId: string) {
     const user = actionStoreUserOptions.find((item) => item.userId === userId) ?? null
-    setSelectedActionStoreUser(user)
-    updateActionStoreForm('userId', userId)
+    dispatchAuthState({ type: 'selectActionStoreUser', user, userId })
   }
 
   function selectActionStore(storeId: string) {
     const store = actionStoreOptions.find((item) => item.storeId === storeId) ?? null
-    setSelectedActionStore(store)
-    updateActionStoreForm('storeId', storeId)
+    dispatchAuthState({ type: 'selectActionStore', store, storeId })
   }
 
   function submitUserForm() {
-    setFeedback(null)
-    setErrorFeedback(null)
+    dispatchAuthState({ type: 'clearFeedback' })
     createUserMutation.mutate({
       username: userForm.username.trim(),
       email: userForm.email.trim(),
@@ -518,8 +644,7 @@ export function AuthDashboardPage() {
   }
 
   function submitAssignmentForm() {
-    setFeedback(null)
-    setErrorFeedback(null)
+    dispatchAuthState({ type: 'clearFeedback' })
     createAssignmentMutation.mutate({
       userId: assignmentForm.userId,
       roleCode: assignmentForm.roleCode,
@@ -533,8 +658,7 @@ export function AuthDashboardPage() {
   }
 
   function submitActionStoreForm() {
-    setFeedback(null)
-    setErrorFeedback(null)
+    dispatchAuthState({ type: 'clearFeedback' })
     createActionStoreAssignmentMutation.mutate({
       userId: actionStoreForm.userId,
       storeId: actionStoreForm.storeId,
@@ -640,7 +764,9 @@ export function AuthDashboardPage() {
               <input
                 aria-label={t('authAdmin.searchUsersForRoleGrant')}
                 value={assignmentUserSearch}
-                onChange={(event) => setAssignmentUserSearch(event.target.value)}
+                onChange={(event) =>
+                  dispatchAuthState({ type: 'setAssignmentUserSearch', value: event.target.value })
+                }
                 placeholder={t('authAdmin.userSearchPlaceholder')}
               />
             </label>
@@ -680,17 +806,10 @@ export function AuthDashboardPage() {
                 aria-label={t('authAdmin.roleAssignmentScopeType')}
                 value={assignmentForm.scopeType}
                 onChange={(event) => {
-                  const scopeType = event.target.value as RoleScopeType
-                  if (scopeType !== 'store') {
-                    setAssignmentStoreSearch('')
-                    setSelectedAssignmentStore(null)
-                  }
-                  setAssignmentForm((current) => ({
-                    ...current,
-                    scopeType,
-                    regionId: scopeType === 'company' ? '' : current.regionId,
-                    storeId: scopeType === 'store' ? current.storeId : '',
-                  }))
+                  dispatchAuthState({
+                    type: 'setAssignmentScopeType',
+                    scopeType: event.target.value as RoleScopeType,
+                  })
                 }}
               >
                 {lookups.scopeTypes.map((scopeType) => (
@@ -717,7 +836,12 @@ export function AuthDashboardPage() {
                   <input
                     aria-label={t('authAdmin.searchStoresForRoleGrant')}
                     value={assignmentStoreSearch}
-                    onChange={(event) => setAssignmentStoreSearch(event.target.value)}
+                    onChange={(event) =>
+                      dispatchAuthState({
+                        type: 'setAssignmentStoreSearch',
+                        value: event.target.value,
+                      })
+                    }
                     placeholder={t('authAdmin.storeSearchPlaceholder')}
                   />
                 </label>
@@ -781,7 +905,9 @@ export function AuthDashboardPage() {
               <input
                 aria-label={t('authAdmin.searchUsersForActionAccess')}
                 value={actionStoreUserSearch}
-                onChange={(event) => setActionStoreUserSearch(event.target.value)}
+                onChange={(event) =>
+                  dispatchAuthState({ type: 'setActionStoreUserSearch', value: event.target.value })
+                }
                 placeholder={t('authAdmin.userSearchPlaceholder')}
               />
             </label>
@@ -805,7 +931,9 @@ export function AuthDashboardPage() {
               <input
                 aria-label={t('authAdmin.searchStoresForActionAccess')}
                 value={actionStoreSearch}
-                onChange={(event) => setActionStoreSearch(event.target.value)}
+                onChange={(event) =>
+                  dispatchAuthState({ type: 'setActionStoreSearch', value: event.target.value })
+                }
                 placeholder={t('authAdmin.storeSearchPlaceholder')}
               />
             </label>
@@ -999,7 +1127,7 @@ export function AuthDashboardPage() {
             <span className="sr-only">{t('authAdmin.filterAssignments')}</span>
             <input
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => dispatchAuthState({ type: 'setSearch', value: event.target.value })}
               placeholder={t('authAdmin.assignmentSearchPlaceholder')}
             />
           </label>
