@@ -63,6 +63,17 @@ type ChecklistResponseDraft = {
 
 const CHECKLIST_COMMAND_NOTICE_KEY = 'store-checklists-command-notice'
 
+const checklistMonthFormatters: Record<AppLocale, Intl.DateTimeFormat> = {
+  tr: new Intl.DateTimeFormat(getIntlLocale('tr'), {
+    month: 'long',
+    year: 'numeric',
+  }),
+  en: new Intl.DateTimeFormat(getIntlLocale('en'), {
+    month: 'long',
+    year: 'numeric',
+  }),
+}
+
 export function StoreChecklistsPage(input: {
   authSummary: AuthSessionSummary | null
 }) {
@@ -1187,18 +1198,18 @@ function ChecklistVisitModal(input: {
   const progressPercent = hasItems
     ? Math.round((answeredCount / input.session.template.items.length) * 100)
     : 0
-  const scoredRatios = input.session.template.items
-    .map((item) => {
-      const score = input.scores[item.templateItemId]
-      return Number.isFinite(score) && item.maxScore > 0
-        ? Math.round((score / item.maxScore) * 100)
-        : null
-    })
-    .filter((ratio): ratio is number => ratio !== null)
+  let scoredRatioTotal = 0
+  let scoredRatioCount = 0
+
+  for (const item of input.session.template.items) {
+    const score = input.scores[item.templateItemId]
+    if (!Number.isFinite(score) || item.maxScore <= 0) continue
+    scoredRatioTotal += Math.round((score / item.maxScore) * 100)
+    scoredRatioCount += 1
+  }
+
   const currentScore =
-    scoredRatios.length > 0
-      ? Math.round(scoredRatios.reduce((sum, ratio) => sum + ratio, 0) / scoredRatios.length)
-      : 0
+    scoredRatioCount > 0 ? Math.round(scoredRatioTotal / scoredRatioCount) : 0
   const missingResponseCount = Math.max(input.session.template.items.length - answeredCount, 0)
   const canComplete =
     Boolean(input.active) && !input.isCompleting && hasItems && missingResponseCount === 0
@@ -1704,20 +1715,30 @@ function groupChecklistResultResponses(items: ChecklistAcknowledgementItem['resp
     sections.set(item.sectionName, section)
   }
 
-  return [...sections.values()].map((section) => {
-    const ratios = section.items
-      .map((item) => getResponseRatio(item))
-      .filter((ratio): ratio is number => ratio !== null)
-    const averageScore =
-      ratios.length > 0
-        ? Math.round(ratios.reduce((sum, ratio) => sum + ratio, 0) / ratios.length)
-        : 0
+  const groupedSections: Array<{
+    name: string
+    items: ChecklistAcknowledgementItem['responses']
+    averageScore: number
+  }> = []
 
-    return {
-      ...section,
-      averageScore,
+  for (const section of sections.values()) {
+    let ratioTotal = 0
+    let ratioCount = 0
+
+    for (const item of section.items) {
+      const ratio = getResponseRatio(item)
+      if (ratio === null) continue
+      ratioTotal += ratio
+      ratioCount += 1
     }
-  })
+
+    groupedSections.push({
+      ...section,
+      averageScore: ratioCount > 0 ? Math.round(ratioTotal / ratioCount) : 0,
+    })
+  }
+
+  return groupedSections
 }
 
 function getLowScoreResponses(items: ChecklistAcknowledgementItem['responses']) {
@@ -1823,10 +1844,12 @@ function getStoreVisitSummary(
 }
 
 function getStoreVisitDate(row: ChecklistStoreVisitRow) {
-  const dates = [row.bm, row.vm]
-    .map((item) => item ? getCoverageDate(item) : null)
-    .filter((value): value is string => Boolean(value))
-  return dates.sort((left, right) => compareDate(right, left))[0] ?? null
+  const bmDate = row.bm ? getCoverageDate(row.bm) : null
+  const vmDate = row.vm ? getCoverageDate(row.vm) : null
+
+  if (!bmDate) return vmDate
+  if (!vmDate) return bmDate
+  return compareDate(bmDate, vmDate) >= 0 ? bmDate : vmDate
 }
 
 function getStoreVisitPriority(row: ChecklistStoreVisitRow) {
@@ -1843,11 +1866,12 @@ function hasOpenStoreVisitWork(row: ChecklistStoreVisitRow) {
 }
 
 function getStoreVisitScore(row: ChecklistStoreVisitRow) {
-  const scores = [row.bm, row.vm]
-    .map((item) => item ? getCoverageScore(item) : null)
-    .filter((value): value is number => value !== null)
-  if (!scores.length) return null
-  return Math.min(...scores)
+  const bmScore = row.bm ? getCoverageScore(row.bm) : null
+  const vmScore = row.vm ? getCoverageScore(row.vm) : null
+
+  if (bmScore === null) return vmScore
+  if (vmScore === null) return bmScore
+  return Math.min(bmScore, vmScore)
 }
 
 function getStoreVisitRiskTone(row: ChecklistStoreVisitRow, requiresCombinedTemplates: boolean): ChecklistTone {
@@ -2083,7 +2107,7 @@ function buildMonthOptions(
 
   return [
     { value: 'all', label: getStaticCopy(locale, 'Tüm aylar', 'All months') },
-    ...[...monthKeys].sort().reverse().map((value) => ({
+    ...Array.from(monthKeys).toSorted((left, right) => right.localeCompare(left)).map((value) => ({
       value,
       label: formatMonthKey(value, locale),
     })),
@@ -2106,10 +2130,7 @@ function getMonthKey(value?: string | null) {
 
 function formatMonthKey(value: string, locale: AppLocale) {
   const [year, month] = value.split('-').map(Number)
-  return new Intl.DateTimeFormat(getIntlLocale(locale), {
-    month: 'long',
-    year: 'numeric',
-  }).format(new Date(year, month - 1, 1))
+  return checklistMonthFormatters[locale].format(new Date(year, month - 1, 1))
 }
 
 function doesCoverageRowMatchFilters(
@@ -2179,7 +2200,7 @@ function getCoverageScore(row: ChecklistCoverageRow) {
 }
 
 function sortCoverageRows(rows: ChecklistCoverageRow[], sort: ChecklistSort, locale: AppLocale) {
-  return [...rows].sort((left, right) => {
+  return rows.toSorted((left, right) => {
     const multiplier = sort.direction === 'asc' ? 1 : -1
     const compared = compareCoverageRows(left, right, sort.key, locale)
     return compared * multiplier
@@ -2187,7 +2208,7 @@ function sortCoverageRows(rows: ChecklistCoverageRow[], sort: ChecklistSort, loc
 }
 
 function sortStoreVisitRows(rows: ChecklistStoreVisitRow[], sort: ChecklistSort, locale: AppLocale) {
-  return [...rows].sort((left, right) => {
+  return rows.toSorted((left, right) => {
     const multiplier = sort.direction === 'asc' ? 1 : -1
     const compared = compareStoreVisitRows(left, right, sort.key, locale)
     return compared * multiplier
@@ -2241,7 +2262,7 @@ function sortChecklistItems(
   sort: ChecklistSort,
   locale: AppLocale,
 ) {
-  return [...items].sort((left, right) => {
+  return items.toSorted((left, right) => {
     const multiplier = sort.direction === 'asc' ? 1 : -1
     const compared = compareChecklistItems(left, right, sort.key, locale)
     return compared * multiplier
