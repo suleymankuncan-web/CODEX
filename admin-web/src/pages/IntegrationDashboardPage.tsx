@@ -32,6 +32,7 @@ import { useLocalization } from '../features/localization/useLocalization'
 import { formatState, getErrorMessage, mapHealthTone } from '../lib/format'
 
 const PAGE_SIZE = 12
+const trNumberFormatter = new Intl.NumberFormat('tr-TR')
 
 type IntegrationTab = 'uploads' | 'evidence' | 'errors'
 type PowerBiPeriodType = 'daily' | 'monthly' | 'custom'
@@ -45,7 +46,7 @@ function getCurrentIsoMonth() {
 }
 
 function formatNumber(value: number) {
-  return new Intl.NumberFormat('tr-TR').format(value)
+  return trNumberFormatter.format(value)
 }
 
 function formatOptionalBatch(value: string | null, t: TranslateFunction) {

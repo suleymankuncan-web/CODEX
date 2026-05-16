@@ -537,15 +537,18 @@ function getChecklistHomeMobileTodayForPersona(
 ): MobileChecklistToday | null {
   if (!mobileToday || persona !== 'visualMerchandiser') return mobileToday
 
-  const vmTemplateIds = new Set(
-    mobileToday.templates
-      .filter((template) => template.templateType === 'VM_STORE_VISIT')
-      .map((template) => template.checklistTemplateId),
-  )
+  const vmTemplateIds = new Set<string>()
+  const vmTemplates: MobileChecklistToday['templates'] = []
+
+  for (const template of mobileToday.templates) {
+    if (template.templateType !== 'VM_STORE_VISIT') continue
+    vmTemplateIds.add(template.checklistTemplateId)
+    vmTemplates.push(template)
+  }
 
   return {
     ...mobileToday,
-    templates: mobileToday.templates.filter((template) => template.templateType === 'VM_STORE_VISIT'),
+    templates: vmTemplates,
     activeInstances: mobileToday.activeInstances.filter((instance) =>
       vmTemplateIds.has(instance.checklistTemplateId),
     ),

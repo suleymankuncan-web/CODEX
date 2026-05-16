@@ -134,7 +134,9 @@ test('completed checklist handoff moves from field visit to store acknowledgemen
   await expect(page.getByRole('tab', { name: /Recent history/ })).toHaveAttribute('aria-selected', 'true')
   await expect(page.getByText('Store saw the completed visit')).toBeVisible()
   await expect(
-    page.locator('.store-checklists-history-row').filter({ hasText: 'BM Result' }).filter({ hasText: 'Acknowledged' }),
+    page.locator('.store-checklists-history-row').filter({
+      hasText: /(?=.*BM Result)(?=.*Acknowledged)/,
+    }),
   ).toBeVisible()
   await page.getByRole('tab', { name: /Checklist inbox/ }).click()
   await expect(page.getByText('No pending checklist receipts')).toBeVisible()
