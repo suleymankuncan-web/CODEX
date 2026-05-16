@@ -114,7 +114,10 @@ test('admin sidebar prefetches integration data before opening integrations', as
     await route.fulfill({ json: integrationOverviewFixture })
   })
   await page.route('**/api/integrations/import-batches/needs-action?**', async (route) => {
-    needsActionRequests += 1
+    const url = new URL(route.request().url())
+    if (url.searchParams.get('limit') === '12' && url.searchParams.get('offset') === '0') {
+      needsActionRequests += 1
+    }
     await route.fulfill({ json: emptyListFixture })
   })
   await page.route('**/api/integrations/lookups', async (route) => {

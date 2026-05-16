@@ -1,6 +1,4 @@
 import type { AuthSessionSummary } from '../features/auth/api'
-import type { TranslateFunction } from '../features/localization/dictionary'
-import type { SessionMode } from '../features/session/session-storage'
 import { ApiError } from '../lib/api'
 
 export type ShellState = {
@@ -70,31 +68,6 @@ export function getShellState(input: {
     notice: input.sessionNotice,
     errorCopy,
   }
-}
-
-export function formatAdminShellSessionMode(mode: SessionMode, t: TranslateFunction) {
-  return mode === 'bearer'
-    ? t('adminShell.sessionMode.bearer')
-    : t('adminShell.sessionMode.mock')
-}
-
-export function formatAdminShellAuthState(
-  isLoading: boolean,
-  isError: boolean,
-  hasAuthSummary: boolean,
-  t: TranslateFunction,
-) {
-  if (isLoading) return t('adminShell.authState.checking')
-  if (isError) return t('adminShell.authState.rejected')
-  if (hasAuthSummary) return t('adminShell.authState.verified')
-  return t('adminShell.authState.idle')
-}
-
-export function formatAdminShellState(mode: ShellState['mode'], t: TranslateFunction) {
-  if (mode === 'ready') return t('adminShell.state.ready')
-  if (mode === 'verifying') return t('adminShell.state.checking')
-  if (mode === 'setup-required') return t('adminShell.state.needsSetup')
-  return t('adminShell.state.attention')
 }
 
 export function resolveLandingPath(authSummary: AuthSessionSummary | null, isReady: boolean) {

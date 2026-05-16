@@ -19,6 +19,7 @@ import { SESSION_EXPIRED_EVENT, type SessionExpiredDetail } from './lib/api'
 
 function App() {
   const location = useLocation()
+  const pathname = location.pathname
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { session, isReady, isProviderSessionHydrating, expireSession } = useSession()
@@ -75,7 +76,7 @@ function App() {
   }, [bearerSessionKey, bearerTokenReadiness, queryClient, session.mode])
 
   const authSummary = sessionQuery.data ?? null
-  const visibleSessionNotice = ['/admin/session', '/auth/login'].includes(location.pathname)
+  const visibleSessionNotice = ['/admin/session', '/auth/login'].includes(pathname)
     ? sessionNotice
     : null
   const allowedAdminNav = useMemo(
@@ -98,17 +99,17 @@ function App() {
   })
 
   useEffect(() => {
-    if (location.pathname.startsWith('/auth')) return
+    if (pathname.startsWith('/auth')) return
 
-    preloadRouteModule(location.pathname)
-  }, [location.pathname])
+    preloadRouteModule(pathname)
+  }, [pathname])
 
   useEffect(() => {
     if (shellState.mode !== 'ready') return
 
     preloadRouteModule(firstAllowedPath)
-    preloadRouteModule(location.pathname)
-  }, [firstAllowedPath, location.pathname, shellState.mode])
+    preloadRouteModule(pathname)
+  }, [firstAllowedPath, pathname, shellState.mode])
 
   useEffect(() => {
     if (shellState.mode !== 'ready') return
@@ -125,7 +126,7 @@ function App() {
         })
         prefetchRouteData({
           queryClient,
-          pathname: location.pathname,
+          pathname,
           authSummary,
         })
       })
@@ -134,13 +135,13 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [authSummary, firstAllowedPath, location.pathname, queryClient, shellState.mode])
+  }, [authSummary, firstAllowedPath, pathname, queryClient, shellState.mode])
 
-  if (location.pathname.startsWith('/auth')) {
+  if (pathname.startsWith('/auth')) {
     return <AuthFlowShell shellState={shellState} firstAllowedPath={firstAllowedPath} />
   }
 
-  if (location.pathname.startsWith('/store')) {
+  if (pathname.startsWith('/store')) {
     return (
       <StoreShell
         shellState={shellState}

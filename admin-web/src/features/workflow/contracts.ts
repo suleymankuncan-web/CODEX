@@ -1,5 +1,4 @@
 import type { Tone } from '../../components/dashboard-primitives'
-import type { ChecklistAcknowledgementItem } from '../checklists/api'
 import type { TargetDistributionRequest } from '../targets/api'
 
 type WorkflowItemType = 'approval' | 'acknowledgement' | 'task' | 'notification'
@@ -42,7 +41,6 @@ export function mapInboxStatusTone(status: WorkflowInboxStatus): Tone {
       return 'neutral'
   }
 }
-
 export function mapWorkflowUrgencyTone(urgency: WorkflowUrgency): Tone {
   switch (urgency) {
     case 'high':
@@ -82,32 +80,5 @@ export function toTargetApprovalInboxItem(
     secondaryActionLabel: 'Detayı aç',
     deepLink,
     historyPreview: item.approvalNote ?? item.requestReason ?? undefined,
-  }
-}
-
-export function toChecklistAcknowledgementInboxItem(
-  item: ChecklistAcknowledgementItem,
-  deepLink = `/store/checklists?tab=inbox&result=${encodeURIComponent(item.checklistInstanceId)}`,
-): WorkflowInboxItem {
-  const needsAttention = item.acknowledgement === null
-
-  return {
-    itemType: 'acknowledgement',
-    sourceType: 'checklist_receipt',
-    sourceId: item.checklistInstanceId,
-    title: item.templateName,
-    summary: `${item.storeName || item.storeId} icin tamamlanan checklist sonucu`,
-    storeId: item.storeId,
-    storeName: item.storeName,
-    workflowStatus: item.status,
-    inboxStatus: needsAttention ? 'needs_attention' : 'completed',
-    urgency: needsAttention ? 'medium' : 'low',
-    createdAt: item.completedAt,
-    needsAttentionAt: needsAttention ? item.completedAt : item.acknowledgement?.acknowledgedAt,
-    actorRole: 'STORE_MANAGER',
-    primaryActionLabel: needsAttention ? 'Kabul ediyorum' : 'Kabul kaydını gör',
-    secondaryActionLabel: 'Checklist sonucunu aç',
-    deepLink,
-    historyPreview: item.acknowledgement?.acknowledgementNote ?? undefined,
   }
 }

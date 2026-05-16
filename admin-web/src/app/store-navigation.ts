@@ -16,7 +16,7 @@ export type StoreNavIconId =
   | 'targets'
   | 'tasks'
 
-export type StoreNavigationItem = {
+type StoreNavigationItem = {
   id: string
   labelKey: TranslationKey
   path: string
@@ -45,12 +45,12 @@ function roleSet(authSummary: AuthSessionSummary | null) {
   return new Set(authSummary?.user.roleCodes ?? [])
 }
 
-export function hasAdminLandingRole(authSummary: AuthSessionSummary | null) {
+function hasAdminLandingRole(authSummary: AuthSessionSummary | null) {
   const roles = roleSet(authSummary)
   return Array.from(adminLandingRoles).some((role) => roles.has(role))
 }
 
-export function isStoreVisualMerchandiserOnly(authSummary: AuthSessionSummary | null) {
+function isStoreVisualMerchandiserOnly(authSummary: AuthSessionSummary | null) {
   const roles = roleSet(authSummary)
   return roles.has('VISUAL_MERCHANDISER') && !Array.from(vmBroadRoles).some((role) => roles.has(role))
 }
