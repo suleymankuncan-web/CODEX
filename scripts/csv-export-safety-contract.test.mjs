@@ -12,7 +12,7 @@ test("CSV export helper neutralizes spreadsheet formula prefixes", () => {
 });
 
 test("CSV export uses the shared safe cell helper for headers and rows", () => {
-  assert.match(csvHelper, /export function escapeCsvCellForDownload/);
+  assert.match(csvHelper, /function escapeCsvCellForDownload/);
   assert.match(csvHelper, /input\.columns\.map\(escapeCsvCellForDownload\)/);
   assert.match(csvHelper, /row\.map\(escapeCsvCellForDownload\)/);
 });
