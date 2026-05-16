@@ -1,4 +1,4 @@
-import { useDeferredValue, useMemo, useState, type ReactNode } from 'react'
+import { useDeferredValue, useMemo, useReducer, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AlertTriangle,
@@ -36,6 +36,52 @@ const trNumberFormatter = new Intl.NumberFormat('tr-TR')
 
 type IntegrationTab = 'uploads' | 'evidence' | 'errors'
 type PowerBiPeriodType = 'daily' | 'monthly' | 'custom'
+type IntegrationSortValue = 'priority' | 'errors' | 'records' | 'entity'
+type IntegrationTemplateSourceSystem = 'nebim_v3' | 'power_bi'
+type IntegrationQueueFilter = 'entityTypeFilter' | 'statusFilter'
+
+type IntegrationDashboardState = {
+  activeTab: IntegrationTab
+  search: string
+  sortBy: IntegrationSortValue
+  offset: number
+  entityTypeFilter: string
+  statusFilter: string
+  feedback: string | null
+  createdBatchId: string | null
+  uploadFeedback: string | null
+  uploadedBatchId: string | null
+  templateSourceSystem: IntegrationTemplateSourceSystem
+  selectedTemplateSourceCode: string
+  powerBiSourceCode: string
+  powerBiPeriodType: PowerBiPeriodType
+  powerBiPeriodMonth: string
+  powerBiPeriodStart: string
+  powerBiPeriodEnd: string
+  personnelFile: File | null
+  storeFile: File | null
+}
+
+type IntegrationDashboardAction =
+  | { type: 'setActiveTab'; value: IntegrationTab }
+  | { type: 'setSearch'; value: string }
+  | { type: 'setSortBy'; value: IntegrationSortValue }
+  | { type: 'setQueueFilter'; field: IntegrationQueueFilter; value: string }
+  | { type: 'setOffset'; value: number }
+  | { type: 'clearQueueFilters' }
+  | { type: 'retrySucceeded'; message: string }
+  | { type: 'batchCreated'; message: string; batchId: string }
+  | { type: 'uploadSucceeded'; message: string; batchId: string }
+  | { type: 'uploadFailed'; message: string }
+  | { type: 'setTemplateSourceSystem'; value: IntegrationTemplateSourceSystem }
+  | { type: 'setSelectedTemplateSourceCode'; value: string }
+  | { type: 'setPowerBiSourceCode'; value: string }
+  | { type: 'setPowerBiPeriodType'; value: PowerBiPeriodType }
+  | { type: 'setPowerBiPeriodMonth'; value: string }
+  | { type: 'setPowerBiPeriodStart'; value: string; syncEnd: boolean }
+  | { type: 'setPowerBiPeriodEnd'; value: string }
+  | { type: 'setPersonnelFile'; value: File | null }
+  | { type: 'setStoreFile'; value: File | null }
 
 function getCurrentIsoDate() {
   return new Date().toISOString().slice(0, 10)
@@ -43,6 +89,82 @@ function getCurrentIsoDate() {
 
 function getCurrentIsoMonth() {
   return getCurrentIsoDate().slice(0, 7)
+}
+
+function createInitialIntegrationDashboardState(): IntegrationDashboardState {
+  return {
+    activeTab: 'uploads',
+    search: '',
+    sortBy: 'priority',
+    offset: 0,
+    entityTypeFilter: '',
+    statusFilter: '',
+    feedback: null,
+    createdBatchId: null,
+    uploadFeedback: null,
+    uploadedBatchId: null,
+    templateSourceSystem: 'power_bi',
+    selectedTemplateSourceCode: '',
+    powerBiSourceCode: '',
+    powerBiPeriodType: 'monthly',
+    powerBiPeriodMonth: getCurrentIsoMonth(),
+    powerBiPeriodStart: getCurrentIsoDate(),
+    powerBiPeriodEnd: getCurrentIsoDate(),
+    personnelFile: null,
+    storeFile: null,
+  }
+}
+
+function integrationDashboardReducer(
+  state: IntegrationDashboardState,
+  action: IntegrationDashboardAction,
+): IntegrationDashboardState {
+  switch (action.type) {
+    case 'setActiveTab':
+      return { ...state, activeTab: action.value }
+    case 'setSearch':
+      return { ...state, search: action.value }
+    case 'setSortBy':
+      return { ...state, sortBy: action.value }
+    case 'setQueueFilter':
+      return { ...state, [action.field]: action.value, offset: 0 }
+    case 'setOffset':
+      return { ...state, offset: action.value }
+    case 'clearQueueFilters':
+      return { ...state, offset: 0, entityTypeFilter: '', statusFilter: '', search: '' }
+    case 'retrySucceeded':
+      return { ...state, feedback: action.message, createdBatchId: null }
+    case 'batchCreated':
+      return { ...state, feedback: action.message, createdBatchId: action.batchId }
+    case 'uploadSucceeded':
+      return { ...state, uploadFeedback: action.message, uploadedBatchId: action.batchId }
+    case 'uploadFailed':
+      return { ...state, uploadFeedback: action.message, uploadedBatchId: null }
+    case 'setTemplateSourceSystem':
+      return { ...state, templateSourceSystem: action.value, selectedTemplateSourceCode: '' }
+    case 'setSelectedTemplateSourceCode':
+      return { ...state, selectedTemplateSourceCode: action.value }
+    case 'setPowerBiSourceCode':
+      return { ...state, powerBiSourceCode: action.value }
+    case 'setPowerBiPeriodType':
+      return { ...state, powerBiPeriodType: action.value }
+    case 'setPowerBiPeriodMonth':
+      return { ...state, powerBiPeriodMonth: action.value }
+    case 'setPowerBiPeriodStart':
+      return {
+        ...state,
+        powerBiPeriodStart: action.value,
+        powerBiPeriodEnd: action.syncEnd ? action.value : state.powerBiPeriodEnd,
+      }
+    case 'setPowerBiPeriodEnd':
+      return { ...state, powerBiPeriodEnd: action.value }
+    case 'setPersonnelFile':
+      return { ...state, personnelFile: action.value }
+    case 'setStoreFile':
+      return { ...state, storeFile: action.value }
+    default:
+      return state
+  }
 }
 
 function formatNumber(value: number) {
@@ -55,25 +177,32 @@ function formatOptionalBatch(value: string | null, t: TranslateFunction) {
 
 export function IntegrationDashboardPage() {
   const { t } = useLocalization()
-  const [activeTab, setActiveTab] = useState<IntegrationTab>('uploads')
-  const [search, setSearch] = useState('')
-  const [sortBy, setSortBy] = useState<'priority' | 'errors' | 'records' | 'entity'>('priority')
-  const [offset, setOffset] = useState(0)
-  const [entityTypeFilter, setEntityTypeFilter] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
-  const [feedback, setFeedback] = useState<string | null>(null)
-  const [createdBatchId, setCreatedBatchId] = useState<string | null>(null)
-  const [uploadFeedback, setUploadFeedback] = useState<string | null>(null)
-  const [uploadedBatchId, setUploadedBatchId] = useState<string | null>(null)
-  const [templateSourceSystem, setTemplateSourceSystem] = useState<'nebim_v3' | 'power_bi'>('power_bi')
-  const [selectedTemplateSourceCode, setSelectedTemplateSourceCode] = useState('')
-  const [powerBiSourceCode, setPowerBiSourceCode] = useState('')
-  const [powerBiPeriodType, setPowerBiPeriodType] = useState<PowerBiPeriodType>('monthly')
-  const [powerBiPeriodMonth, setPowerBiPeriodMonth] = useState(getCurrentIsoMonth)
-  const [powerBiPeriodStart, setPowerBiPeriodStart] = useState(getCurrentIsoDate)
-  const [powerBiPeriodEnd, setPowerBiPeriodEnd] = useState(getCurrentIsoDate)
-  const [personnelFile, setPersonnelFile] = useState<File | null>(null)
-  const [storeFile, setStoreFile] = useState<File | null>(null)
+  const [pageState, dispatchPageState] = useReducer(
+    integrationDashboardReducer,
+    undefined,
+    createInitialIntegrationDashboardState,
+  )
+  const {
+    activeTab,
+    search,
+    sortBy,
+    offset,
+    entityTypeFilter,
+    statusFilter,
+    feedback,
+    createdBatchId,
+    uploadFeedback,
+    uploadedBatchId,
+    templateSourceSystem,
+    selectedTemplateSourceCode,
+    powerBiSourceCode,
+    powerBiPeriodType,
+    powerBiPeriodMonth,
+    powerBiPeriodStart,
+    powerBiPeriodEnd,
+    personnelFile,
+    storeFile,
+  } = pageState
   const deferredSearch = useDeferredValue(search)
   const queryClient = useQueryClient()
 
@@ -110,8 +239,7 @@ export function IntegrationDashboardPage() {
   const retryMutation = useMutation({
     mutationFn: retryImportBatch,
     onSuccess: async (response) => {
-      setFeedback(response.command.message)
-      setCreatedBatchId(null)
+      dispatchPageState({ type: 'retrySucceeded', message: response.command.message })
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['integration-needs-action'] }),
         queryClient.invalidateQueries({ queryKey: ['integration-overview'] }),
@@ -121,8 +249,11 @@ export function IntegrationDashboardPage() {
   const createBatchMutation = useMutation({
     mutationFn: createImportBatch,
     onSuccess: async (response) => {
-      setFeedback(response.command.message)
-      setCreatedBatchId(response.data.batch.batchId)
+      dispatchPageState({
+        type: 'batchCreated',
+        message: response.command.message,
+        batchId: response.data.batch.batchId,
+      })
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['integration-needs-action'] }),
         queryClient.invalidateQueries({ queryKey: ['integration-overview'] }),
@@ -132,16 +263,18 @@ export function IntegrationDashboardPage() {
   const uploadPowerBiMutation = useMutation({
     mutationFn: uploadPowerBiExport,
     onSuccess: async (response) => {
-      setUploadFeedback(response.command.message)
-      setUploadedBatchId(response.data.batch.batchId)
+      dispatchPageState({
+        type: 'uploadSucceeded',
+        message: response.command.message,
+        batchId: response.data.batch.batchId,
+      })
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['integration-needs-action'] }),
         queryClient.invalidateQueries({ queryKey: ['integration-overview'] }),
       ])
     },
     onError: (error) => {
-      setUploadFeedback(getErrorMessage(error))
-      setUploadedBatchId(null)
+      dispatchPageState({ type: 'uploadFailed', message: getErrorMessage(error) })
     },
   })
 
@@ -315,7 +448,11 @@ export function IntegrationDashboardPage() {
           <span className="integration-management-chip">
             {t('adminIntegrations.totalBatches')}: {formatNumber(overview.totals.all)}
           </span>
-          <button className="control-button integration-management-primary-button" type="button" onClick={() => setActiveTab('uploads')}>
+          <button
+            className="control-button integration-management-primary-button"
+            type="button"
+            onClick={() => dispatchPageState({ type: 'setActiveTab', value: 'uploads' })}
+          >
             {t('adminIntegrations.newUpload')}
           </button>
         </div>
@@ -377,7 +514,7 @@ export function IntegrationDashboardPage() {
             className={`integration-management-tab${activeTab === tab.id ? ' integration-management-tab-active' : ''}`}
             key={tab.id}
             type="button"
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => dispatchPageState({ type: 'setActiveTab', value: tab.id })}
           >
             <span>{tab.label}</span>
             {typeof tab.count === 'number' ? <strong>{formatNumber(tab.count)}</strong> : null}
@@ -416,7 +553,12 @@ export function IntegrationDashboardPage() {
                   <span>{t('adminIntegrations.powerBiKpiSource')}</span>
                   <select
                     value={resolvedPowerBiSourceCode}
-                    onChange={(event) => setPowerBiSourceCode(event.target.value)}
+                    onChange={(event) =>
+                      dispatchPageState({
+                        type: 'setPowerBiSourceCode',
+                        value: event.target.value,
+                      })
+                    }
                     disabled={powerBiSources.length === 0}
                   >
                     {powerBiSources.length === 0 ? <option value="">{t('adminIntegrations.noActiveKpiSource')}</option> : null}
@@ -434,7 +576,10 @@ export function IntegrationDashboardPage() {
                     aria-label={t('adminIntegrations.periodType')}
                     value={powerBiPeriodType}
                     onChange={(event) =>
-                      setPowerBiPeriodType(event.target.value as PowerBiPeriodType)
+                      dispatchPageState({
+                        type: 'setPowerBiPeriodType',
+                        value: event.target.value as PowerBiPeriodType,
+                      })
                     }
                   >
                     <option value="monthly">{t('adminIntegrations.monthlySnapshot')}</option>
@@ -449,7 +594,12 @@ export function IntegrationDashboardPage() {
                     <input
                       type="month"
                       value={powerBiPeriodMonth}
-                      onChange={(event) => setPowerBiPeriodMonth(event.target.value)}
+                      onChange={(event) =>
+                        dispatchPageState({
+                          type: 'setPowerBiPeriodMonth',
+                          value: event.target.value,
+                        })
+                      }
                     />
                   </label>
                 ) : (
@@ -460,12 +610,13 @@ export function IntegrationDashboardPage() {
                         aria-label={t('adminIntegrations.start')}
                         type="date"
                         value={powerBiPeriodStart}
-                        onChange={(event) => {
-                          setPowerBiPeriodStart(event.target.value)
-                          if (powerBiPeriodType === 'daily') {
-                            setPowerBiPeriodEnd(event.target.value)
-                          }
-                        }}
+                        onChange={(event) =>
+                          dispatchPageState({
+                            type: 'setPowerBiPeriodStart',
+                            value: event.target.value,
+                            syncEnd: powerBiPeriodType === 'daily',
+                          })
+                        }
                       />
                     </label>
                     <label className="field-block">
@@ -475,7 +626,12 @@ export function IntegrationDashboardPage() {
                         type="date"
                         value={powerBiPeriodType === 'daily' ? powerBiPeriodStart : powerBiPeriodEnd}
                         disabled={powerBiPeriodType === 'daily'}
-                        onChange={(event) => setPowerBiPeriodEnd(event.target.value)}
+                        onChange={(event) =>
+                          dispatchPageState({
+                            type: 'setPowerBiPeriodEnd',
+                            value: event.target.value,
+                          })
+                        }
                       />
                     </label>
                   </>
@@ -490,7 +646,12 @@ export function IntegrationDashboardPage() {
                   <input
                     type="file"
                     accept=".xlsx,.xls"
-                    onChange={(event) => setPersonnelFile(event.target.files?.[0] ?? null)}
+                    onChange={(event) =>
+                      dispatchPageState({
+                        type: 'setPersonnelFile',
+                        value: event.target.files?.[0] ?? null,
+                      })
+                    }
                   />
                 </label>
                 <label className="integration-management-upload-drop">
@@ -500,7 +661,12 @@ export function IntegrationDashboardPage() {
                   <input
                     type="file"
                     accept=".xlsx,.xls"
-                    onChange={(event) => setStoreFile(event.target.files?.[0] ?? null)}
+                    onChange={(event) =>
+                      dispatchPageState({
+                        type: 'setStoreFile',
+                        value: event.target.files?.[0] ?? null,
+                      })
+                    }
                   />
                 </label>
               </div>
@@ -572,10 +738,12 @@ export function IntegrationDashboardPage() {
                 <span className="sr-only">{t('adminIntegrations.templateSourceSystem')}</span>
                 <select
                   value={templateSourceSystem}
-                  onChange={(event) => {
-                    setTemplateSourceSystem(event.target.value as 'nebim_v3' | 'power_bi')
-                    setSelectedTemplateSourceCode('')
-                  }}
+                  onChange={(event) =>
+                    dispatchPageState({
+                      type: 'setTemplateSourceSystem',
+                      value: event.target.value as IntegrationTemplateSourceSystem,
+                    })
+                  }
                 >
                   <option value="power_bi">Power BI</option>
                   <option value="nebim_v3">Nebim V3</option>
@@ -616,7 +784,12 @@ export function IntegrationDashboardPage() {
                   <span className="sr-only">{t('adminIntegrations.executionSource')}</span>
                   <select
                     value={resolvedTemplateSourceCode}
-                    onChange={(event) => setSelectedTemplateSourceCode(event.target.value)}
+                    onChange={(event) =>
+                      dispatchPageState({
+                        type: 'setSelectedTemplateSourceCode',
+                        value: event.target.value,
+                      })
+                    }
                     disabled={compatibleSources.length === 0}
                   >
                     {compatibleSources.length === 0 ? <option value="">{t('adminIntegrations.noActiveKpiSource')}</option> : null}
@@ -676,7 +849,9 @@ export function IntegrationDashboardPage() {
             </div>
             <ReportingToolbar
               sortValue={sortBy}
-              onSortChange={(value) => setSortBy(value as typeof sortBy)}
+              onSortChange={(value) =>
+                dispatchPageState({ type: 'setSortBy', value: value as IntegrationSortValue })
+              }
               sortOptions={[
                 { value: 'priority', label: t('adminIntegrations.sortPriority') },
                 { value: 'errors', label: t('adminIntegrations.sortErrors') },
@@ -707,7 +882,9 @@ export function IntegrationDashboardPage() {
                 <span className="sr-only">{t('adminIntegrations.filterQueue')}</span>
                 <input
                   value={search}
-                  onChange={(event) => setSearch(event.target.value)}
+                  onChange={(event) =>
+                    dispatchPageState({ type: 'setSearch', value: event.target.value })
+                  }
                   placeholder={t('adminIntegrations.searchQueuePlaceholder')}
                 />
               </label>
@@ -717,7 +894,16 @@ export function IntegrationDashboardPage() {
           <div className="toolbar-cluster">
             <label className="control-select">
               <span className="sr-only">{t('adminIntegrations.filterEntityType')}</span>
-              <select value={entityTypeFilter} onChange={(event) => { setOffset(0); setEntityTypeFilter(event.target.value) }}>
+              <select
+                value={entityTypeFilter}
+                onChange={(event) =>
+                  dispatchPageState({
+                    type: 'setQueueFilter',
+                    field: 'entityTypeFilter',
+                    value: event.target.value,
+                  })
+                }
+              >
                 <option value="">{t('adminIntegrations.allEntities')}</option>
                 {['employee', 'store', 'kpi', 'assignment', 'position', 'company', 'region'].map((entity) => (
                   <option key={entity} value={entity}>{entity}</option>
@@ -726,14 +912,27 @@ export function IntegrationDashboardPage() {
             </label>
             <label className="control-select">
               <span className="sr-only">{t('adminIntegrations.filterStatus')}</span>
-              <select value={statusFilter} onChange={(event) => { setOffset(0); setStatusFilter(event.target.value) }}>
+              <select
+                value={statusFilter}
+                onChange={(event) =>
+                  dispatchPageState({
+                    type: 'setQueueFilter',
+                    field: 'statusFilter',
+                    value: event.target.value,
+                  })
+                }
+              >
                 <option value="">{t('adminIntegrations.allStatuses')}</option>
                 {['pending', 'queued', 'processing', 'completed', 'completed_with_errors', 'failed'].map((status) => (
                   <option key={status} value={status}>{status}</option>
                 ))}
               </select>
             </label>
-            <button className="control-button" type="button" onClick={() => { setOffset(0); setEntityTypeFilter(''); setStatusFilter(''); setSearch('') }}>
+            <button
+              className="control-button"
+              type="button"
+              onClick={() => dispatchPageState({ type: 'clearQueueFilters' })}
+            >
               {t('adminIntegrations.clearFilters')}
             </button>
           </div>
@@ -785,13 +984,25 @@ export function IntegrationDashboardPage() {
           )}
 
           <div className="toolbar-cluster">
-            <button className="control-button" type="button" onClick={() => setOffset((current) => Math.max(0, current - PAGE_SIZE))} disabled={!canGoBack}>
+            <button
+              className="control-button"
+              type="button"
+              onClick={() =>
+                dispatchPageState({ type: 'setOffset', value: Math.max(0, offset - PAGE_SIZE) })
+              }
+              disabled={!canGoBack}
+            >
               {t('adminIntegrations.previous')}
             </button>
             <span className="inline-state inline-state-neutral">
               {meta ? `${offset + 1}-${Math.min(offset + PAGE_SIZE, meta.total)} / ${meta.total}` : t('adminIntegrations.zeroResults')}
             </span>
-            <button className="control-button" type="button" onClick={() => setOffset((current) => current + PAGE_SIZE)} disabled={!canGoForward}>
+            <button
+              className="control-button"
+              type="button"
+              onClick={() => dispatchPageState({ type: 'setOffset', value: offset + PAGE_SIZE })}
+              disabled={!canGoForward}
+            >
               {t('adminIntegrations.next')}
             </button>
           </div>
