@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useReducer, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ScreenState } from '../components/dashboard-primitives'
@@ -48,6 +48,7 @@ type ChecklistSortKey = 'priority' | 'store' | 'score' | 'date' | 'status'
 type ChecklistSortDirection = 'asc' | 'desc'
 type ChecklistSort = { key: ChecklistSortKey; direction: ChecklistSortDirection }
 type ChecklistTab = 'visits' | 'inbox' | 'history'
+type ChecklistActiveInstance = MobileChecklistToday['activeInstances'][number]
 type ChecklistTabOption = {
   key: ChecklistTab
   label: string
@@ -63,6 +64,53 @@ type ChecklistResponseDraft = {
 
 const CHECKLIST_COMMAND_NOTICE_KEY = 'store-checklists-command-notice'
 
+type StoreChecklistsState = {
+  ackNotes: Record<string, string>
+  ackNotice: string | null
+  scores: Record<string, number>
+  comments: Record<string, string>
+  selectedSessionKey: string | null
+  selectedResultId: string | null
+  searchQuery: string
+  selectedMonth: string
+  typeFilter: ChecklistTypeFilter
+  statusFilter: ChecklistStatusFilter
+  activeTab: ChecklistTab
+  visitSort: ChecklistSort
+  resultSort: ChecklistSort
+  localActiveInstances: Record<string, ChecklistActiveInstance>
+  sessionDirty: boolean
+}
+
+type StoreChecklistsAction =
+  | { type: 'setAckNotice'; message: string | null }
+  | { type: 'acknowledgeSucceeded'; checklistInstanceId: string }
+  | { type: 'startVisitSucceeded'; rowKey: string; instance: ChecklistActiveInstance }
+  | { type: 'saveResponseSucceeded' }
+  | { type: 'completeVisitSucceeded'; checklistInstanceId: string }
+  | {
+      type: 'openSession'
+      rowKey: string
+      scores: Record<string, number>
+      comments: Record<string, string>
+    }
+  | { type: 'resetSessionDrafts' }
+  | { type: 'closeSession' }
+  | { type: 'completeVisitSubmitted' }
+  | { type: 'setScoreDraft'; templateItemId: string; score: number | null }
+  | { type: 'setCommentDraft'; templateItemId: string; comment: string }
+  | { type: 'setAckNote'; checklistInstanceId: string; note: string }
+  | { type: 'selectTab'; tab: ChecklistTab }
+  | { type: 'openResult'; tab: ChecklistTab; checklistInstanceId: string }
+  | { type: 'closeResult' }
+  | { type: 'clearFilters'; typeFilter: ChecklistTypeFilter }
+  | { type: 'setSearchQuery'; value: string }
+  | { type: 'setSelectedMonth'; value: string }
+  | { type: 'setTypeFilter'; value: ChecklistTypeFilter }
+  | { type: 'setStatusFilter'; value: ChecklistStatusFilter }
+  | { type: 'toggleVisitSort'; key: ChecklistSortKey }
+  | { type: 'toggleResultSort'; key: ChecklistSortKey }
+
 const checklistMonthFormatters: Record<AppLocale, Intl.DateTimeFormat> = {
   tr: new Intl.DateTimeFormat(getIntlLocale('tr'), {
     month: 'long',
@@ -74,6 +122,127 @@ const checklistMonthFormatters: Record<AppLocale, Intl.DateTimeFormat> = {
   }),
 }
 
+function createInitialStoreChecklistsState(search: string): StoreChecklistsState {
+  return {
+    ackNotes: {},
+    ackNotice: takeChecklistCommandNotice(),
+    scores: {},
+    comments: {},
+    selectedSessionKey: null,
+    selectedResultId: resolveChecklistResultFromSearch(search),
+    searchQuery: '',
+    selectedMonth: 'all',
+    typeFilter: 'all',
+    statusFilter: 'all',
+    activeTab: resolveChecklistTabFromSearch(search),
+    visitSort: { key: 'priority', direction: 'desc' },
+    resultSort: { key: 'date', direction: 'desc' },
+    localActiveInstances: {},
+    sessionDirty: false,
+  }
+}
+
+function storeChecklistsReducer(
+  state: StoreChecklistsState,
+  action: StoreChecklistsAction,
+): StoreChecklistsState {
+  switch (action.type) {
+    case 'setAckNotice':
+      return { ...state, ackNotice: action.message }
+    case 'acknowledgeSucceeded': {
+      const nextAckNotes = { ...state.ackNotes }
+      delete nextAckNotes[action.checklistInstanceId]
+      return { ...state, ackNotes: nextAckNotes, selectedResultId: null, activeTab: 'history' }
+    }
+    case 'startVisitSucceeded':
+      return {
+        ...state,
+        localActiveInstances: {
+          ...state.localActiveInstances,
+          [action.rowKey]: action.instance,
+        },
+        scores: {},
+        comments: {},
+        selectedSessionKey: action.rowKey,
+        sessionDirty: false,
+      }
+    case 'saveResponseSucceeded':
+      return { ...state, sessionDirty: false }
+    case 'completeVisitSucceeded':
+      return {
+        ...state,
+        localActiveInstances: Object.fromEntries(
+          Object.entries(state.localActiveInstances).filter(
+            ([, instance]) => instance.checklistInstanceId !== action.checklistInstanceId,
+          ),
+        ),
+        selectedSessionKey: null,
+        sessionDirty: false,
+      }
+    case 'openSession':
+      return {
+        ...state,
+        selectedSessionKey: action.rowKey,
+        scores: action.scores,
+        comments: action.comments,
+        sessionDirty: false,
+      }
+    case 'resetSessionDrafts':
+      return { ...state, scores: {}, comments: {}, selectedSessionKey: null, sessionDirty: false }
+    case 'closeSession':
+    case 'completeVisitSubmitted':
+      return { ...state, selectedSessionKey: null, sessionDirty: false }
+    case 'setScoreDraft': {
+      const nextScores = { ...state.scores }
+      if (action.score === null) {
+        delete nextScores[action.templateItemId]
+      } else {
+        nextScores[action.templateItemId] = action.score
+      }
+      return { ...state, scores: nextScores, sessionDirty: true }
+    }
+    case 'setCommentDraft':
+      return {
+        ...state,
+        comments: { ...state.comments, [action.templateItemId]: action.comment },
+        sessionDirty: true,
+      }
+    case 'setAckNote':
+      return {
+        ...state,
+        ackNotes: { ...state.ackNotes, [action.checklistInstanceId]: action.note },
+      }
+    case 'selectTab':
+      return { ...state, activeTab: action.tab, selectedResultId: null }
+    case 'openResult':
+      return { ...state, activeTab: action.tab, selectedResultId: action.checklistInstanceId }
+    case 'closeResult':
+      return { ...state, selectedResultId: null }
+    case 'clearFilters':
+      return {
+        ...state,
+        searchQuery: '',
+        selectedMonth: 'all',
+        typeFilter: action.typeFilter,
+        statusFilter: 'all',
+      }
+    case 'setSearchQuery':
+      return { ...state, searchQuery: action.value }
+    case 'setSelectedMonth':
+      return { ...state, selectedMonth: action.value }
+    case 'setTypeFilter':
+      return { ...state, typeFilter: action.value }
+    case 'setStatusFilter':
+      return { ...state, statusFilter: action.value }
+    case 'toggleVisitSort':
+      return { ...state, visitSort: toggleSort(state.visitSort, action.key) }
+    case 'toggleResultSort':
+      return { ...state, resultSort: toggleSort(state.resultSort, action.key) }
+    default:
+      return state
+  }
+}
+
 export function StoreChecklistsPage(input: {
   authSummary: AuthSessionSummary | null
 }) {
@@ -81,27 +250,28 @@ export function StoreChecklistsPage(input: {
   const location = useLocation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const [ackNotes, setAckNotes] = useState<Record<string, string>>({})
-  const [ackNotice, setAckNotice] = useState<string | null>(() => takeChecklistCommandNotice())
-  const [scores, setScores] = useState<Record<string, number>>({})
-  const [comments, setComments] = useState<Record<string, string>>({})
-  const [selectedSessionKey, setSelectedSessionKey] = useState<string | null>(null)
-  const [selectedResultId, setSelectedResultId] = useState<string | null>(() =>
-    resolveChecklistResultFromSearch(location.search),
+  const [pageState, dispatchPageState] = useReducer(
+    storeChecklistsReducer,
+    location.search,
+    createInitialStoreChecklistsState,
   )
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedMonth, setSelectedMonth] = useState('all')
-  const [typeFilter, setTypeFilter] = useState<ChecklistTypeFilter>('all')
-  const [statusFilter, setStatusFilter] = useState<ChecklistStatusFilter>('all')
-  const [activeTab, setActiveTab] = useState<ChecklistTab>(() =>
-    resolveChecklistTabFromSearch(location.search),
-  )
-  const [visitSort, setVisitSort] = useState<ChecklistSort>({ key: 'priority', direction: 'desc' })
-  const [resultSort, setResultSort] = useState<ChecklistSort>({ key: 'date', direction: 'desc' })
-  const [localActiveInstances, setLocalActiveInstances] = useState<
-    Record<string, MobileChecklistToday['activeInstances'][number]>
-  >({})
-  const [sessionDirty, setSessionDirty] = useState(false)
+  const {
+    ackNotes,
+    ackNotice,
+    scores,
+    comments,
+    selectedSessionKey,
+    selectedResultId,
+    searchQuery,
+    selectedMonth,
+    typeFilter,
+    statusFilter,
+    activeTab,
+    visitSort,
+    resultSort,
+    localActiveInstances,
+    sessionDirty,
+  } = pageState
   const autoSaveTimersRef = useRef<Record<string, number>>({})
   const savedResponseDraftsRef = useRef<Record<string, string>>({})
   const canManageVisits = hasAnyRole(input.authSummary, [
@@ -116,7 +286,7 @@ export function StoreChecklistsPage(input: {
     : templateTypeOptions[0]?.value ?? 'all'
   const showCommandNotice = (message: string) => {
     storeChecklistCommandNotice(message)
-    setAckNotice(message)
+    dispatchPageState({ type: 'setAckNotice', message })
   }
   const checklistsQuery = useQuery({
     queryKey: ['checklist-acknowledgements'],
@@ -135,13 +305,10 @@ export function StoreChecklistsPage(input: {
     onSuccess: (result, variables) => {
       void queryClient.invalidateQueries({ queryKey: ['checklist-acknowledgements'] })
       void queryClient.invalidateQueries({ queryKey: ['workflow-inbox'] })
-      setSelectedResultId(null)
-      setAckNotes((current) => {
-        const next = { ...current }
-        delete next[variables.checklistInstanceId]
-        return next
+      dispatchPageState({
+        type: 'acknowledgeSucceeded',
+        checklistInstanceId: variables.checklistInstanceId,
       })
-      setActiveTab('history')
       navigate(
         {
           pathname: location.pathname,
@@ -158,9 +325,10 @@ export function StoreChecklistsPage(input: {
       void queryClient.invalidateQueries({ queryKey: ['mobile-checklists-today'] })
       const instance = result.data.checklistInstance
       const rowKey = getCoverageRowKey(variables.storeId, variables.checklistTemplateId)
-      setLocalActiveInstances((current) => ({
-        ...current,
-        [rowKey]: {
+      dispatchPageState({
+        type: 'startVisitSucceeded',
+        rowKey,
+        instance: {
           checklistInstanceId: instance.checklist_instance_id,
           checklistTemplateId: variables.checklistTemplateId,
           storeId: variables.storeId,
@@ -169,11 +337,7 @@ export function StoreChecklistsPage(input: {
           updatedAt: instance.created_at,
           responses: [],
         },
-      }))
-      setScores({})
-      setComments({})
-      setSelectedSessionKey(rowKey)
-      setSessionDirty(false)
+      })
       showCommandNotice(result.command.message)
     },
   })
@@ -183,7 +347,7 @@ export function StoreChecklistsPage(input: {
       savedResponseDraftsRef.current[getChecklistResponseDraftKey(variables)] =
         serializeChecklistResponseDraft(variables)
       void queryClient.invalidateQueries({ queryKey: ['mobile-checklists-today'] })
-      setSessionDirty(false)
+      dispatchPageState({ type: 'saveResponseSucceeded' })
     },
   })
   const savePendingSessionResponses = async (
@@ -227,15 +391,10 @@ export function StoreChecklistsPage(input: {
       void queryClient.invalidateQueries({ queryKey: ['mobile-checklists-today'] })
       void queryClient.invalidateQueries({ queryKey: ['checklist-acknowledgements'] })
       void queryClient.invalidateQueries({ queryKey: ['workflow-inbox'] })
-      setLocalActiveInstances((current) =>
-        Object.fromEntries(
-          Object.entries(current).filter(
-            ([, instance]) => instance.checklistInstanceId !== variables.checklistInstanceId,
-          ),
-        ),
-      )
-      setSelectedSessionKey(null)
-      setSessionDirty(false)
+      dispatchPageState({
+        type: 'completeVisitSucceeded',
+        checklistInstanceId: variables.checklistInstanceId,
+      })
     },
     onError: (error) => {
       showCommandNotice(getErrorMessage(error))
@@ -274,9 +433,7 @@ export function StoreChecklistsPage(input: {
       }
     }
 
-    setScores(nextScores)
-    setComments(nextComments)
-    setSessionDirty(false)
+    return { comments: nextComments, scores: nextScores }
   }
 
   if (
@@ -438,8 +595,7 @@ export function StoreChecklistsPage(input: {
     : checklistTabs[0]?.key ?? 'visits'
 
   const selectChecklistTab = (tab: ChecklistTab) => {
-    setActiveTab(tab)
-    setSelectedResultId(null)
+    dispatchPageState({ type: 'selectTab', tab })
     navigate(
       {
         pathname: location.pathname,
@@ -451,8 +607,7 @@ export function StoreChecklistsPage(input: {
 
   const openChecklistResult = (item: ChecklistAcknowledgementItem) => {
     const tab = item.acknowledgement ? 'history' : 'inbox'
-    setActiveTab(tab)
-    setSelectedResultId(item.checklistInstanceId)
+    dispatchPageState({ type: 'openResult', tab, checklistInstanceId: item.checklistInstanceId })
     navigate(
       {
         pathname: location.pathname,
@@ -466,7 +621,7 @@ export function StoreChecklistsPage(input: {
   }
 
   const closeChecklistResult = () => {
-    setSelectedResultId(null)
+    dispatchPageState({ type: 'closeResult' })
     navigate(
       {
         pathname: location.pathname,
@@ -484,8 +639,7 @@ export function StoreChecklistsPage(input: {
       return
     }
 
-    setSelectedSessionKey(null)
-    setSessionDirty(false)
+    dispatchPageState({ type: 'closeSession' })
   }
 
   return (
@@ -596,16 +750,16 @@ export function StoreChecklistsPage(input: {
         t={t}
         typeFilter={effectiveTypeFilter}
         typeOptions={templateTypeOptions}
-        onClear={() => {
-          setSearchQuery('')
-          setSelectedMonth('all')
-          setTypeFilter(templateTypeOptions[0]?.value ?? 'all')
-          setStatusFilter('all')
-        }}
-        onMonthChange={setSelectedMonth}
-        onSearchChange={setSearchQuery}
-        onStatusChange={setStatusFilter}
-        onTypeChange={setTypeFilter}
+        onClear={() =>
+          dispatchPageState({
+            type: 'clearFilters',
+            typeFilter: templateTypeOptions[0]?.value ?? 'all',
+          })
+        }
+        onMonthChange={(value) => dispatchPageState({ type: 'setSelectedMonth', value })}
+        onSearchChange={(value) => dispatchPageState({ type: 'setSearchQuery', value })}
+        onStatusChange={(value) => dispatchPageState({ type: 'setStatusFilter', value })}
+        onTypeChange={(value) => dispatchPageState({ type: 'setTypeFilter', value })}
       />
 
       {checklistTabs.length > 0 ? (
@@ -678,7 +832,7 @@ export function StoreChecklistsPage(input: {
                 <SortButton
                   active={visitSort.key === 'store'}
                   direction={visitSort.direction}
-                  onClick={() => setVisitSort(toggleSort(visitSort, 'store'))}
+                  onClick={() => dispatchPageState({ type: 'toggleVisitSort', key: 'store' })}
                 >
                   {t('storeChecklists.store')}
                 </SortButton>
@@ -686,7 +840,7 @@ export function StoreChecklistsPage(input: {
                   <SortButton
                     active={visitSort.key === 'score'}
                     direction={visitSort.direction}
-                    onClick={() => setVisitSort(toggleSort(visitSort, 'score'))}
+                    onClick={() => dispatchPageState({ type: 'toggleVisitSort', key: 'score' })}
                   >
                     {getStaticCopy(locale, 'BM skor', 'BM score')}
                   </SortButton>
@@ -695,7 +849,7 @@ export function StoreChecklistsPage(input: {
                   <SortButton
                     active={visitSort.key === 'score'}
                     direction={visitSort.direction}
-                    onClick={() => setVisitSort(toggleSort(visitSort, 'score'))}
+                    onClick={() => dispatchPageState({ type: 'toggleVisitSort', key: 'score' })}
                   >
                     {getStaticCopy(locale, 'VM skor', 'VM score')}
                   </SortButton>
@@ -703,14 +857,14 @@ export function StoreChecklistsPage(input: {
                 <SortButton
                   active={visitSort.key === 'date'}
                   direction={visitSort.direction}
-                  onClick={() => setVisitSort(toggleSort(visitSort, 'date'))}
+                  onClick={() => dispatchPageState({ type: 'toggleVisitSort', key: 'date' })}
                 >
                   {getStaticCopy(locale, 'Son ziyaret', 'Last visit')}
                 </SortButton>
                 <SortButton
                   active={visitSort.key === 'priority'}
                   direction={visitSort.direction}
-                  onClick={() => setVisitSort(toggleSort(visitSort, 'priority'))}
+                  onClick={() => dispatchPageState({ type: 'toggleVisitSort', key: 'priority' })}
                 >
                   {getStaticCopy(locale, 'Düşük alan', 'Low area')}
                 </SortButton>
@@ -767,8 +921,8 @@ export function StoreChecklistsPage(input: {
                       type="button"
                       onClick={() => {
                         if (active) {
-                          hydrateActiveResponseDrafts(active)
-                          setSelectedSessionKey(rowKey)
+                          const drafts = hydrateActiveResponseDrafts(active)
+                          dispatchPageState({ type: 'openSession', rowKey, ...drafts })
                           return
                         }
 
@@ -777,7 +931,7 @@ export function StoreChecklistsPage(input: {
                         }
 
                         hydrateActiveResponseDrafts(undefined)
-                        setSelectedSessionKey(null)
+                        dispatchPageState({ type: 'resetSessionDrafts' })
                         startVisitMutation.mutate({
                           storeId: storeRow.store.storeId,
                           checklistTemplateId: row.template.checklistTemplateId,
@@ -821,8 +975,7 @@ export function StoreChecklistsPage(input: {
           onClose={closeSession}
           onComplete={(checklistInstanceId) => {
             showCommandNotice(getStaticCopy(locale, 'Başarıyla Tamamlandı', 'Completed successfully'))
-            setSelectedSessionKey(null)
-            setSessionDirty(false)
+            dispatchPageState({ type: 'completeVisitSubmitted' })
             completeVisitMutation.mutate({
               checklistInstanceId,
               responses: buildChecklistResponseDrafts({
@@ -834,15 +987,7 @@ export function StoreChecklistsPage(input: {
             })
           }}
           onScoreChange={(templateItemId, score) => {
-            setScores((current) => {
-              const next = { ...current }
-              if (score === null) {
-                delete next[templateItemId]
-              } else {
-                next[templateItemId] = score
-              }
-              return next
-            })
+            dispatchPageState({ type: 'setScoreDraft', templateItemId, score })
             if (selectedSession.active && score !== null) {
               queueResponseAutoSave({
                 checklistInstanceId: selectedSession.active.checklistInstanceId,
@@ -851,10 +996,9 @@ export function StoreChecklistsPage(input: {
                 commentText: comments[templateItemId] || undefined,
               })
             }
-            setSessionDirty(true)
           }}
           onCommentChange={(templateItemId, comment) => {
-            setComments((current) => ({ ...current, [templateItemId]: comment }))
+            dispatchPageState({ type: 'setCommentDraft', templateItemId, comment })
             const score = scores[templateItemId]
             if (selectedSession.active && Number.isFinite(score)) {
               queueResponseAutoSave({
@@ -864,7 +1008,6 @@ export function StoreChecklistsPage(input: {
                 commentText: comment || undefined,
               })
             }
-            setSessionDirty(true)
           }}
           scores={scores}
           session={selectedSession}
@@ -890,10 +1033,11 @@ export function StoreChecklistsPage(input: {
           }
           onClose={closeChecklistResult}
           onNoteChange={(note) =>
-            setAckNotes((current) => ({
-              ...current,
-              [selectedResult.checklistInstanceId]: note,
-            }))
+            dispatchPageState({
+              type: 'setAckNote',
+              checklistInstanceId: selectedResult.checklistInstanceId,
+              note,
+            })
           }
           t={t}
         />
@@ -930,7 +1074,7 @@ export function StoreChecklistsPage(input: {
             resultSort={resultSort}
             t={t}
             onOpen={openChecklistResult}
-            onSort={(key) => setResultSort(toggleSort(resultSort, key))}
+            onSort={(key) => dispatchPageState({ type: 'toggleResultSort', key })}
           />
         )}
 
@@ -963,7 +1107,7 @@ export function StoreChecklistsPage(input: {
             resultSort={resultSort}
             t={t}
             onOpen={openChecklistResult}
-            onSort={(key) => setResultSort(toggleSort(resultSort, key))}
+            onSort={(key) => dispatchPageState({ type: 'toggleResultSort', key })}
           />
         )}
         </section>
