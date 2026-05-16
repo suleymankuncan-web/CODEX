@@ -1,4 +1,4 @@
-import { useDeferredValue, useMemo, useState, type ReactNode } from 'react'
+import { useDeferredValue, useMemo, useReducer, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowRight,
@@ -57,8 +57,11 @@ type MasterDataBootstrapReadinessFilter =
   | 'closed'
 type StoreMasterType = 'company' | 'franchise' | 'operator'
 type StoreMasterStatus = 'active' | 'inactive' | 'closed'
+type StoreMasterEnabledFilter = 'all' | 'enabled' | 'disabled'
+type StoreMasterStatusFilter = 'all' | StoreMasterStatus
 type PersonnelStatus = 'active' | 'inactive' | 'terminated'
 type PersonnelEmploymentType = 'full_time' | 'part_time' | 'temporary'
+type PersonnelStatusFilter = 'all' | PersonnelStatus
 
 type StoreMasterPatch = {
   storeType?: StoreMasterType
@@ -78,6 +81,168 @@ type PersonnelMasterPatch = Partial<{
   positionId: string
   assignmentStartDate: string
 }>
+
+type MasterDataPageState = {
+  activeTab: MasterDataTab
+  batchSearch: string
+  entityFilter: MasterDataBootstrapEntityFilter
+  readinessFilter: MasterDataBootstrapReadinessFilter
+  feedback: string | null
+  promotionResult: MasterDataBootstrapPromotionResponse['data'] | null
+  storeSearch: string
+  storeEnabledFilter: StoreMasterEnabledFilter
+  storeStatusFilter: StoreMasterStatusFilter
+  storeOffset: number
+  storeFeedback: string | null
+  storeDrafts: Record<string, StoreMasterPatch>
+  savingStoreIds: ReadonlySet<string>
+  personnelSearch: string
+  personnelStatusFilter: PersonnelStatusFilter
+  personnelStoreFilter: string
+  personnelOffset: number
+  personnelFeedback: string | null
+  personnelDrafts: Record<string, PersonnelMasterPatch>
+  savingPersonnelIds: ReadonlySet<string>
+}
+
+type MasterDataPageAction =
+  | { type: 'selectTab'; tab: MasterDataTab }
+  | { type: 'setBatchSearch'; value: string }
+  | { type: 'setEntityFilter'; value: MasterDataBootstrapEntityFilter }
+  | { type: 'setReadinessFilter'; value: MasterDataBootstrapReadinessFilter }
+  | { type: 'setFeedback'; value: string | null }
+  | { type: 'setPromotionResult'; value: MasterDataBootstrapPromotionResponse['data'] | null }
+  | { type: 'setStoreSearch'; value: string }
+  | { type: 'setStoreEnabledFilter'; value: StoreMasterEnabledFilter }
+  | { type: 'setStoreStatusFilter'; value: StoreMasterStatusFilter }
+  | { type: 'shiftStoreOffset'; delta: number }
+  | { type: 'setStoreFeedback'; value: string | null }
+  | { type: 'setStoreSaving'; storeId: string; isSaving: boolean }
+  | { type: 'updateStoreDraft'; storeId: string; patch: StoreMasterPatch }
+  | { type: 'clearStoreDraft'; storeId: string }
+  | { type: 'setPersonnelSearch'; value: string }
+  | { type: 'setPersonnelStatusFilter'; value: PersonnelStatusFilter }
+  | { type: 'setPersonnelStoreFilter'; value: string }
+  | { type: 'shiftPersonnelOffset'; delta: number }
+  | { type: 'setPersonnelFeedback'; value: string | null }
+  | { type: 'setPersonnelSaving'; employeeId: string; isSaving: boolean }
+  | { type: 'updatePersonnelDraft'; employeeId: string; patch: PersonnelMasterPatch }
+  | { type: 'clearPersonnelDraft'; employeeId: string }
+
+const initialMasterDataPageState: MasterDataPageState = {
+  activeTab: 'batches',
+  batchSearch: '',
+  entityFilter: 'all',
+  readinessFilter: 'all',
+  feedback: null,
+  promotionResult: null,
+  storeSearch: '',
+  storeEnabledFilter: 'all',
+  storeStatusFilter: 'all',
+  storeOffset: 0,
+  storeFeedback: null,
+  storeDrafts: {},
+  savingStoreIds: new Set(),
+  personnelSearch: '',
+  personnelStatusFilter: 'all',
+  personnelStoreFilter: 'all',
+  personnelOffset: 0,
+  personnelFeedback: null,
+  personnelDrafts: {},
+  savingPersonnelIds: new Set(),
+}
+
+function masterDataPageReducer(
+  state: MasterDataPageState,
+  action: MasterDataPageAction,
+): MasterDataPageState {
+  switch (action.type) {
+    case 'selectTab':
+      return { ...state, activeTab: action.tab }
+    case 'setBatchSearch':
+      return { ...state, batchSearch: action.value }
+    case 'setEntityFilter':
+      return { ...state, entityFilter: action.value }
+    case 'setReadinessFilter':
+      return { ...state, readinessFilter: action.value }
+    case 'setFeedback':
+      return { ...state, feedback: action.value }
+    case 'setPromotionResult':
+      return { ...state, promotionResult: action.value }
+    case 'setStoreSearch':
+      return { ...state, storeSearch: action.value, storeOffset: 0 }
+    case 'setStoreEnabledFilter':
+      return { ...state, storeEnabledFilter: action.value, storeOffset: 0 }
+    case 'setStoreStatusFilter':
+      return { ...state, storeStatusFilter: action.value, storeOffset: 0 }
+    case 'shiftStoreOffset':
+      return { ...state, storeOffset: Math.max(0, state.storeOffset + action.delta) }
+    case 'setStoreFeedback':
+      return { ...state, storeFeedback: action.value }
+    case 'setStoreSaving': {
+      const savingStoreIds = new Set(state.savingStoreIds)
+      if (action.isSaving) {
+        savingStoreIds.add(action.storeId)
+      } else {
+        savingStoreIds.delete(action.storeId)
+      }
+      return { ...state, savingStoreIds }
+    }
+    case 'updateStoreDraft':
+      return {
+        ...state,
+        storeDrafts: {
+          ...state.storeDrafts,
+          [action.storeId]: {
+            ...(state.storeDrafts[action.storeId] ?? {}),
+            ...action.patch,
+          },
+        },
+      }
+    case 'clearStoreDraft': {
+      const storeDrafts = { ...state.storeDrafts }
+      delete storeDrafts[action.storeId]
+      return { ...state, storeDrafts }
+    }
+    case 'setPersonnelSearch':
+      return { ...state, personnelSearch: action.value, personnelOffset: 0 }
+    case 'setPersonnelStatusFilter':
+      return { ...state, personnelStatusFilter: action.value, personnelOffset: 0 }
+    case 'setPersonnelStoreFilter':
+      return { ...state, personnelStoreFilter: action.value, personnelOffset: 0 }
+    case 'shiftPersonnelOffset':
+      return { ...state, personnelOffset: Math.max(0, state.personnelOffset + action.delta) }
+    case 'setPersonnelFeedback':
+      return { ...state, personnelFeedback: action.value }
+    case 'setPersonnelSaving': {
+      const savingPersonnelIds = new Set(state.savingPersonnelIds)
+      if (action.isSaving) {
+        savingPersonnelIds.add(action.employeeId)
+      } else {
+        savingPersonnelIds.delete(action.employeeId)
+      }
+      return { ...state, savingPersonnelIds }
+    }
+    case 'updatePersonnelDraft':
+      return {
+        ...state,
+        personnelDrafts: {
+          ...state.personnelDrafts,
+          [action.employeeId]: {
+            ...(state.personnelDrafts[action.employeeId] ?? {}),
+            ...action.patch,
+          },
+        },
+      }
+    case 'clearPersonnelDraft': {
+      const personnelDrafts = { ...state.personnelDrafts }
+      delete personnelDrafts[action.employeeId]
+      return { ...state, personnelDrafts }
+    }
+    default:
+      return state
+  }
+}
 
 function normalizeStoreType(value: string): StoreMasterType {
   if (value === 'franchise' || value === 'operator') {
@@ -125,29 +290,29 @@ export function MasterDataBootstrapPage() {
   const batchId = params.batchId ?? null
   const queryClient = useQueryClient()
 
-  const [activeTab, setActiveTab] = useState<MasterDataTab>('batches')
-  const [batchSearch, setBatchSearch] = useState('')
-  const [entityFilter, setEntityFilter] = useState<MasterDataBootstrapEntityFilter>('all')
-  const [readinessFilter, setReadinessFilter] = useState<MasterDataBootstrapReadinessFilter>('all')
-  const [feedback, setFeedback] = useState<string | null>(null)
-  const [promotionResult, setPromotionResult] =
-    useState<MasterDataBootstrapPromotionResponse['data'] | null>(null)
-
-  const [storeSearch, setStoreSearch] = useState('')
-  const [storeEnabledFilter, setStoreEnabledFilter] = useState<'all' | 'enabled' | 'disabled'>('all')
-  const [storeStatusFilter, setStoreStatusFilter] = useState<'all' | StoreMasterStatus>('all')
-  const [storeOffset, setStoreOffset] = useState(0)
-  const [storeFeedback, setStoreFeedback] = useState<string | null>(null)
-  const [storeDrafts, setStoreDrafts] = useState<Record<string, StoreMasterPatch>>({})
-  const [savingStoreIds, setSavingStoreIds] = useState<ReadonlySet<string>>(() => new Set())
-
-  const [personnelSearch, setPersonnelSearch] = useState('')
-  const [personnelStatusFilter, setPersonnelStatusFilter] = useState<'all' | PersonnelStatus>('all')
-  const [personnelStoreFilter, setPersonnelStoreFilter] = useState('all')
-  const [personnelOffset, setPersonnelOffset] = useState(0)
-  const [personnelFeedback, setPersonnelFeedback] = useState<string | null>(null)
-  const [personnelDrafts, setPersonnelDrafts] = useState<Record<string, PersonnelMasterPatch>>({})
-  const [savingPersonnelIds, setSavingPersonnelIds] = useState<ReadonlySet<string>>(() => new Set())
+  const [state, dispatch] = useReducer(masterDataPageReducer, initialMasterDataPageState)
+  const {
+    activeTab,
+    batchSearch,
+    entityFilter,
+    readinessFilter,
+    feedback,
+    promotionResult,
+    storeSearch,
+    storeEnabledFilter,
+    storeStatusFilter,
+    storeOffset,
+    storeFeedback,
+    storeDrafts,
+    savingStoreIds,
+    personnelSearch,
+    personnelStatusFilter,
+    personnelStoreFilter,
+    personnelOffset,
+    personnelFeedback,
+    personnelDrafts,
+    savingPersonnelIds,
+  } = state
 
   const deferredBatchSearch = useDeferredValue(batchSearch)
   const deferredStoreSearch = useDeferredValue(storeSearch)
@@ -225,8 +390,8 @@ export function MasterDataBootstrapPage() {
   const validateMutation = useMutation({
     mutationFn: validateMasterDataBootstrapBatch,
     onSuccess: async (response) => {
-      setFeedback(response.command.message)
-      setPromotionResult(null)
+      dispatch({ type: 'setFeedback', value: response.command.message })
+      dispatch({ type: 'setPromotionResult', value: null })
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['master-data-bootstrap-batches'] }),
         batchId
@@ -238,8 +403,8 @@ export function MasterDataBootstrapPage() {
       ])
     },
     onError: (error) => {
-      setFeedback(getErrorMessage(error))
-      setPromotionResult(null)
+      dispatch({ type: 'setFeedback', value: getErrorMessage(error) })
+      dispatch({ type: 'setPromotionResult', value: null })
     },
   })
   const promoteMutation = useMutation({
@@ -254,8 +419,8 @@ export function MasterDataBootstrapPage() {
       const promotedTrail = resultRows
         .map((row) => [row.rowId, row.promotedEntityId, row.assignmentId].filter(Boolean).join(' / '))
         .join(' · ')
-      setFeedback([response.command.message, promotedTrail].filter(Boolean).join(' — '))
-      setPromotionResult(response.data)
+      dispatch({ type: 'setFeedback', value: [response.command.message, promotedTrail].filter(Boolean).join(' — ') })
+      dispatch({ type: 'setPromotionResult', value: response.data })
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['master-data-bootstrap-batches'] }),
         batchId
@@ -267,8 +432,8 @@ export function MasterDataBootstrapPage() {
       ])
     },
     onError: (error) => {
-      setFeedback(getErrorMessage(error))
-      setPromotionResult(null)
+      dispatch({ type: 'setFeedback', value: getErrorMessage(error) })
+      dispatch({ type: 'setPromotionResult', value: null })
     },
   })
   const batches = useMemo(() => batchesQuery.data?.items ?? [], [batchesQuery.data?.items])
@@ -311,33 +476,15 @@ export function MasterDataBootstrapPage() {
   }
 
   function setStoreSaving(storeId: string, isSaving: boolean) {
-    setSavingStoreIds((current) => {
-      const next = new Set(current)
-      if (isSaving) {
-        next.add(storeId)
-      } else {
-        next.delete(storeId)
-      }
-      return next
-    })
+    dispatch({ type: 'setStoreSaving', storeId, isSaving })
   }
 
   function clearStoreDraft(storeId: string) {
-    setStoreDrafts((current) => {
-      const next = { ...current }
-      delete next[storeId]
-      return next
-    })
+    dispatch({ type: 'clearStoreDraft', storeId })
   }
 
   function updateStoreDraft(storeId: string, patch: StoreMasterPatch) {
-    setStoreDrafts((current) => ({
-      ...current,
-      [storeId]: {
-        ...(current[storeId] ?? {}),
-        ...patch,
-      },
-    }))
+    dispatch({ type: 'updateStoreDraft', storeId, patch })
   }
 
   function updateStoreMasterCache(updatedStore: StoreMasterItem) {
@@ -364,11 +511,11 @@ export function MasterDataBootstrapPage() {
 
     const invalidStore = changedStores.find((store) => !getEffectiveStoreMaster(store).regionId)
     if (invalidStore) {
-      setStoreFeedback(t('adminMasterData.storeRegionRequired'))
+      dispatch({ type: 'setStoreFeedback', value: t('adminMasterData.storeRegionRequired') })
       return
     }
 
-    setStoreFeedback(null)
+    dispatch({ type: 'setStoreFeedback', value: null })
     const results = await Promise.allSettled(
       changedStores.map(async (store) => {
         const nextStore = getEffectiveStoreMaster(store)
@@ -392,11 +539,13 @@ export function MasterDataBootstrapPage() {
     const failedCount = results.filter((result) => result.status === 'rejected').length
     const savedCount = changedStores.length - failedCount
 
-    setStoreFeedback(
-      failedCount > 0
-        ? t('adminMasterData.bulkSavePartial', { saved: savedCount, failed: failedCount })
-        : t('adminMasterData.bulkSaveSuccess', { count: savedCount }),
-    )
+    dispatch({
+      type: 'setStoreFeedback',
+      value:
+        failedCount > 0
+          ? t('adminMasterData.bulkSavePartial', { saved: savedCount, failed: failedCount })
+          : t('adminMasterData.bulkSaveSuccess', { count: savedCount }),
+    })
     void queryClient.invalidateQueries({ queryKey: ['master-data-store-master'] })
   }
 
@@ -420,33 +569,15 @@ export function MasterDataBootstrapPage() {
   }
 
   function setPersonnelSaving(employeeId: string, isSaving: boolean) {
-    setSavingPersonnelIds((current) => {
-      const next = new Set(current)
-      if (isSaving) {
-        next.add(employeeId)
-      } else {
-        next.delete(employeeId)
-      }
-      return next
-    })
+    dispatch({ type: 'setPersonnelSaving', employeeId, isSaving })
   }
 
   function clearPersonnelDraft(employeeId: string) {
-    setPersonnelDrafts((current) => {
-      const next = { ...current }
-      delete next[employeeId]
-      return next
-    })
+    dispatch({ type: 'clearPersonnelDraft', employeeId })
   }
 
   function updatePersonnelDraft(employeeId: string, patch: PersonnelMasterPatch) {
-    setPersonnelDrafts((current) => ({
-      ...current,
-      [employeeId]: {
-        ...(current[employeeId] ?? {}),
-        ...patch,
-      },
-    }))
+    dispatch({ type: 'updatePersonnelDraft', employeeId, patch })
   }
 
   function updatePersonnelMasterCache(updatedPersonnel: PersonnelMasterItem) {
@@ -477,16 +608,16 @@ export function MasterDataBootstrapPage() {
 
     const missingStore = changedPersonnel.find((personnel) => !getEffectivePersonnel(personnel).storeId)
     if (missingStore) {
-      setPersonnelFeedback(t('adminMasterData.personnelStoreRequired'))
+      dispatch({ type: 'setPersonnelFeedback', value: t('adminMasterData.personnelStoreRequired') })
       return
     }
     const missingPosition = changedPersonnel.find((personnel) => !getEffectivePersonnel(personnel).positionId)
     if (missingPosition) {
-      setPersonnelFeedback(t('adminMasterData.personnelPositionRequired'))
+      dispatch({ type: 'setPersonnelFeedback', value: t('adminMasterData.personnelPositionRequired') })
       return
     }
 
-    setPersonnelFeedback(null)
+    dispatch({ type: 'setPersonnelFeedback', value: null })
     const results = await Promise.allSettled(
       changedPersonnel.map(async (personnel) => {
         const nextPersonnel = getEffectivePersonnel(personnel)
@@ -515,11 +646,13 @@ export function MasterDataBootstrapPage() {
     const failedCount = results.filter((result) => result.status === 'rejected').length
     const savedCount = changedPersonnel.length - failedCount
 
-    setPersonnelFeedback(
-      failedCount > 0
-        ? t('adminMasterData.bulkSavePartial', { saved: savedCount, failed: failedCount })
-        : t('adminMasterData.bulkSaveSuccess', { count: savedCount }),
-    )
+    dispatch({
+      type: 'setPersonnelFeedback',
+      value:
+        failedCount > 0
+          ? t('adminMasterData.bulkSavePartial', { saved: savedCount, failed: failedCount })
+          : t('adminMasterData.bulkSaveSuccess', { count: savedCount }),
+    })
     void queryClient.invalidateQueries({ queryKey: ['master-data-personnel-master'] })
   }
 
@@ -631,7 +764,7 @@ export function MasterDataBootstrapPage() {
             className={`master-data-command-tab${activeTab === tab.id ? ' master-data-command-tab-active' : ''}`}
             key={tab.id}
             type="button"
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => dispatch({ type: 'selectTab', tab: tab.id })}
           >
             <strong>{tab.label}</strong>
             {tab.count !== undefined ? <span>{formatNumber(tab.count)}</span> : null}
@@ -653,7 +786,7 @@ export function MasterDataBootstrapPage() {
                 <span className="sr-only">{t('adminMasterData.searchBatches')}</span>
                 <input
                   value={batchSearch}
-                  onChange={(event) => setBatchSearch(event.target.value)}
+                  onChange={(event) => dispatch({ type: 'setBatchSearch', value: event.target.value })}
                   placeholder={t('adminMasterData.searchPlaceholder')}
                 />
               </label>
@@ -661,7 +794,12 @@ export function MasterDataBootstrapPage() {
                 <span className="sr-only">{t('adminMasterData.entityFilter')}</span>
                 <select
                   value={entityFilter}
-                  onChange={(event) => setEntityFilter(event.target.value as MasterDataBootstrapEntityFilter)}
+                  onChange={(event) =>
+                    dispatch({
+                      type: 'setEntityFilter',
+                      value: event.target.value as MasterDataBootstrapEntityFilter,
+                    })
+                  }
                 >
                   <option value="all">{t('adminMasterData.allEntities')}</option>
                   <option value="store">{t('adminMasterData.stores')}</option>
@@ -673,7 +811,10 @@ export function MasterDataBootstrapPage() {
                 <select
                   value={readinessFilter}
                   onChange={(event) =>
-                    setReadinessFilter(event.target.value as MasterDataBootstrapReadinessFilter)
+                    dispatch({
+                      type: 'setReadinessFilter',
+                      value: event.target.value as MasterDataBootstrapReadinessFilter,
+                    })
                   }
                 >
                   <option value="all">{t('adminMasterData.allReadiness')}</option>
@@ -758,10 +899,7 @@ export function MasterDataBootstrapPage() {
                 <span className="sr-only">{t('adminMasterData.searchStores')}</span>
                 <input
                   value={storeSearch}
-                  onChange={(event) => {
-                    setStoreSearch(event.target.value)
-                    setStoreOffset(0)
-                  }}
+                  onChange={(event) => dispatch({ type: 'setStoreSearch', value: event.target.value })}
                   placeholder={t('adminMasterData.searchStoreOrManager')}
                 />
               </label>
@@ -769,10 +907,12 @@ export function MasterDataBootstrapPage() {
                 <span className="sr-only">{t('adminMasterData.filterStoreImportScope')}</span>
                 <select
                   value={storeEnabledFilter}
-                  onChange={(event) => {
-                    setStoreEnabledFilter(event.target.value as 'all' | 'enabled' | 'disabled')
-                    setStoreOffset(0)
-                  }}
+                  onChange={(event) =>
+                    dispatch({
+                      type: 'setStoreEnabledFilter',
+                      value: event.target.value as StoreMasterEnabledFilter,
+                    })
+                  }
                 >
                   <option value="all">{t('adminMasterData.allStores')}</option>
                   <option value="enabled">{t('adminMasterData.included')}</option>
@@ -783,10 +923,12 @@ export function MasterDataBootstrapPage() {
                 <span className="sr-only">{t('adminMasterData.filterStoreStatus')}</span>
                 <select
                   value={storeStatusFilter}
-                  onChange={(event) => {
-                    setStoreStatusFilter(event.target.value as 'all' | StoreMasterStatus)
-                    setStoreOffset(0)
-                  }}
+                  onChange={(event) =>
+                    dispatch({
+                      type: 'setStoreStatusFilter',
+                      value: event.target.value as StoreMasterStatusFilter,
+                    })
+                  }
                 >
                   <option value="all">{t('adminMasterData.allStatuses')}</option>
                   <option value="active">{t('adminMasterData.storeStatus.active')}</option>
@@ -911,8 +1053,8 @@ export function MasterDataBootstrapPage() {
               <MasterDataPager
                 offset={storeOffset}
                 total={storeMasterQuery.data?.meta.total ?? 0}
-                onPrevious={() => setStoreOffset((current) => Math.max(0, current - PAGE_SIZE))}
-                onNext={() => setStoreOffset((current) => current + PAGE_SIZE)}
+                onPrevious={() => dispatch({ type: 'shiftStoreOffset', delta: -PAGE_SIZE })}
+                onNext={() => dispatch({ type: 'shiftStoreOffset', delta: PAGE_SIZE })}
               />
             </>
           )}
@@ -933,10 +1075,7 @@ export function MasterDataBootstrapPage() {
                 <span className="sr-only">{t('adminMasterData.searchPersonnel')}</span>
                 <input
                   value={personnelSearch}
-                  onChange={(event) => {
-                    setPersonnelSearch(event.target.value)
-                    setPersonnelOffset(0)
-                  }}
+                  onChange={(event) => dispatch({ type: 'setPersonnelSearch', value: event.target.value })}
                   placeholder={t('adminMasterData.searchPersonnelPlaceholder')}
                 />
               </label>
@@ -944,10 +1083,12 @@ export function MasterDataBootstrapPage() {
                 <span className="sr-only">{t('adminMasterData.filterPersonnelStatus')}</span>
                 <select
                   value={personnelStatusFilter}
-                  onChange={(event) => {
-                    setPersonnelStatusFilter(event.target.value as 'all' | PersonnelStatus)
-                    setPersonnelOffset(0)
-                  }}
+                  onChange={(event) =>
+                    dispatch({
+                      type: 'setPersonnelStatusFilter',
+                      value: event.target.value as PersonnelStatusFilter,
+                    })
+                  }
                 >
                   <option value="all">{t('adminMasterData.allStatuses')}</option>
                   <option value="active">{t('adminMasterData.employmentStatus.active')}</option>
@@ -959,10 +1100,7 @@ export function MasterDataBootstrapPage() {
                 <span className="sr-only">{t('adminMasterData.filterPersonnelStore')}</span>
                 <select
                   value={personnelStoreFilter}
-                  onChange={(event) => {
-                    setPersonnelStoreFilter(event.target.value)
-                    setPersonnelOffset(0)
-                  }}
+                  onChange={(event) => dispatch({ type: 'setPersonnelStoreFilter', value: event.target.value })}
                 >
                   <option value="all">{t('adminMasterData.allStores')}</option>
                   {personnelMasterLookupsQuery.data?.stores.map((store) => (
@@ -1145,8 +1283,8 @@ export function MasterDataBootstrapPage() {
               <MasterDataPager
                 offset={personnelOffset}
                 total={personnelMasterQuery.data?.meta.total ?? 0}
-                onPrevious={() => setPersonnelOffset((current) => Math.max(0, current - PAGE_SIZE))}
-                onNext={() => setPersonnelOffset((current) => current + PAGE_SIZE)}
+                onPrevious={() => dispatch({ type: 'shiftPersonnelOffset', delta: -PAGE_SIZE })}
+                onNext={() => dispatch({ type: 'shiftPersonnelOffset', delta: PAGE_SIZE })}
               />
             </>
           )}
