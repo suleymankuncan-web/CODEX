@@ -25,7 +25,7 @@ export type NavDefinition = {
   roles?: string[]
 }
 
-export type AdminNavIconId =
+type AdminNavIconId =
   | 'audit'
   | 'auth'
   | 'checklists'

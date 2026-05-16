@@ -20,7 +20,7 @@ type CommandResponse<T> = {
 
 export type ChecklistTemplateResponseType = 'score' | 'yes_no' | 'partial' | 'text'
 
-export type AdminChecklistTemplateItemInput = {
+type AdminChecklistTemplateItemInput = {
   sectionName: string
   itemNo: number
   itemText: string
