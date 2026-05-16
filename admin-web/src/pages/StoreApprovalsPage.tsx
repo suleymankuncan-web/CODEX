@@ -97,6 +97,20 @@ type ListQuerySnapshot<T> = {
 }
 
 type StringFieldSetter = (value: string) => void
+type RequestFormAccess = {
+  createAllowed: boolean
+  submitAllowed: boolean
+}
+type RequestFormSubmission = {
+  notice: string | null
+  pending: boolean
+}
+type RequestFormErrors = {
+  create: unknown
+  createVisible: boolean
+  resubmit?: unknown
+  resubmitVisible?: boolean
+}
 type StoreApprovalsPersona = 'storeManager' | 'regionManager' | 'readOnly'
 type StoreApprovalsLedgerPanel =
   | 'targetRequest'
@@ -457,11 +471,11 @@ export function StoreApprovalsPage(input: {
     if (personnel.length === 0) {
       return []
     }
-    const allocationsByEmployeeId = new Map(
-      allocations
-        .filter((item) => item.employeeId.trim())
-        .map((item) => [item.employeeId, item] as const),
-    )
+    const allocationsByEmployeeId = new Map<string, TargetDistributionAllocation>()
+    for (const item of allocations) {
+      if (!item.employeeId.trim()) continue
+      allocationsByEmployeeId.set(item.employeeId, item)
+    }
     return personnel.map((person) => ({
       employeeId: person.employeeId,
       assigneeLabel: person.displayName,
@@ -811,14 +825,17 @@ export function StoreApprovalsPage(input: {
           <div className="store-approvals-action-panel">
             {activeLedgerPanel === 'targetRequest' && showTargetSubmission ? (
               <TargetDistributionRequestForm
+              access={{
+                createAllowed: showTargetSubmission,
+                submitAllowed: canSubmit,
+              }}
               activeAllocations={activeAllocations}
               allocationTotal={allocationTotal}
               assignedStoreIds={assignedStoreIds}
-              canCreateForStore={showTargetSubmission}
-              canSubmit={canSubmit}
-              createError={createMutation.error}
-              hasCreateError={createMutation.isError}
-              isSubmitting={createMutation.isPending}
+              errors={{
+                create: createMutation.error,
+                createVisible: createMutation.isError,
+              }}
               locale={locale}
               onAllocationNoteChange={updateTargetAllocationNote}
               onAllocationValueChange={updateTargetAllocationValue}
@@ -845,7 +862,10 @@ export function StoreApprovalsPage(input: {
               requestMonth={requestMonth}
               requestReason={requestReason}
               storeId={storeId}
-              submissionNotice={submissionNotice}
+              submission={{
+                notice: submissionNotice,
+                pending: createMutation.isPending,
+              }}
               targetLabel={targetLabel}
               t={t}
               totalTargetValue={totalTargetValue}
@@ -907,13 +927,17 @@ export function StoreApprovalsPage(input: {
 
             {activeLedgerPanel === 'sellerCodeRequest' && showWorkforceHrQueues ? (
               <SellerCodeRequestForm
-              canCreateForStore={showWorkforceHrQueues}
-              canSubmit={canSubmitSellerCodeRequest}
+              access={{
+                createAllowed: showWorkforceHrQueues,
+                submitAllowed: canSubmitSellerCodeRequest,
+              }}
               editingRequestId={editingSellerRequestId}
-              hasCreateError={sellerCodeMutation.isError}
-              hasResubmitError={resubmitSellerCodeMutation.isError}
-              isPending={sellerRequestPending}
-              notice={sellerRequestNotice}
+              errors={{
+                create: sellerCodeMutation.error,
+                createVisible: sellerCodeMutation.isError,
+                resubmit: resubmitSellerCodeMutation.error,
+                resubmitVisible: resubmitSellerCodeMutation.isError,
+              }}
               onCancelEdit={cancelSellerRequestEdit}
               onEmploymentTypeChange={(value) => {
                 setSellerRequestNotice(null)
@@ -949,8 +973,6 @@ export function StoreApprovalsPage(input: {
               }}
               onSubmit={submitSellerCodeRequest}
               positionOptionsQuery={positionOptionsQuery}
-              createError={sellerCodeMutation.error}
-              resubmitError={resubmitSellerCodeMutation.error}
               sellerEmploymentType={sellerEmploymentType}
               sellerFirstName={sellerFirstName}
               sellerHireDate={sellerHireDate}
@@ -959,6 +981,10 @@ export function StoreApprovalsPage(input: {
               sellerPhoneNumber={sellerPhoneNumber}
               sellerPositionId={sellerPositionId}
               sellerRequestReason={sellerRequestReason}
+              submission={{
+                notice: sellerRequestNotice,
+                pending: sellerRequestPending,
+              }}
               storeId={storeId}
               t={t}
               />
@@ -966,14 +992,17 @@ export function StoreApprovalsPage(input: {
 
             {activeLedgerPanel === 'offboardingRequest' && showWorkforceHrQueues ? (
               <OffboardingRequestForm
-              canCreateForStore={showWorkforceHrQueues}
-              canSubmit={canSubmitOffboardingRequest}
-              createError={offboardingMutation.error}
+              access={{
+                createAllowed: showWorkforceHrQueues,
+                submitAllowed: canSubmitOffboardingRequest,
+              }}
               editingRequestId={editingOffboardingRequestId}
-              hasCreateError={offboardingMutation.isError}
-              hasResubmitError={resubmitOffboardingMutation.isError}
-              isPending={offboardingRequestPending}
-              notice={offboardingNotice}
+              errors={{
+                create: offboardingMutation.error,
+                createVisible: offboardingMutation.isError,
+                resubmit: resubmitOffboardingMutation.error,
+                resubmitVisible: resubmitOffboardingMutation.isError,
+              }}
               offboardingEmployeeId={offboardingEmployeeId}
               offboardingRequestReason={offboardingRequestReason}
               offboardingTerminationDate={offboardingTerminationDate}
@@ -991,7 +1020,10 @@ export function StoreApprovalsPage(input: {
                 setOffboardingNotice(null)
                 setOffboardingTerminationDate(value)
               }}
-              resubmitError={resubmitOffboardingMutation.error}
+              submission={{
+                notice: offboardingNotice,
+                pending: offboardingRequestPending,
+              }}
               storeEmployeesQuery={storeEmployeesQuery}
               t={t}
               />
@@ -1311,14 +1343,11 @@ function ReturnedRequestsPanel(input: {
 }
 
 function TargetDistributionRequestForm(input: {
+  access: RequestFormAccess
   activeAllocations: TargetDistributionAllocation[]
   allocationTotal: number
   assignedStoreIds: string[]
-  canCreateForStore: boolean
-  canSubmit: boolean
-  createError: unknown
-  hasCreateError: boolean
-  isSubmitting: boolean
+  errors: RequestFormErrors
   locale: AppLocale
   onAllocationNoteChange: (index: number, value: string) => void
   onAllocationValueChange: (index: number, targetValue: number) => void
@@ -1333,7 +1362,7 @@ function TargetDistributionRequestForm(input: {
   requestMonth: string
   requestReason: string
   storeId: string
-  submissionNotice: string | null
+  submission: RequestFormSubmission
   targetLabel: string
   t: TranslateFunction
   totalTargetValue: string
@@ -1362,7 +1391,7 @@ function TargetDistributionRequestForm(input: {
         <StatusPill tone="accent">{input.t('storeApprovals.writeFlow')}</StatusPill>
       </div>
 
-      {!input.canCreateForStore ? (
+      {!input.access.createAllowed ? (
         <EmptyState
           title={input.t('storeApprovals.assignedActionStoreRequired')}
           copy={input.t('storeApprovals.targetUnavailableCopy')}
@@ -1527,20 +1556,20 @@ function TargetDistributionRequestForm(input: {
             <button
               className="store-request-button store-request-button-primary"
               type="button"
-              disabled={!input.canSubmit || input.isSubmitting}
+              disabled={!input.access.submitAllowed || input.submission.pending}
               onClick={input.onSubmit}
             >
-              {input.isSubmitting
+              {input.submission.pending
                 ? input.t('storeApprovals.submitting')
                 : input.t('storeApprovals.submitTargetRequest')}
             </button>
           </div>
 
-          {input.hasCreateError ? (
-            <p className="store-request-note">{getErrorMessage(input.createError)}</p>
+          {input.errors.createVisible ? (
+            <p className="store-request-note">{getErrorMessage(input.errors.create)}</p>
           ) : null}
-          {input.submissionNotice ? (
-            <p className="store-request-note">{input.submissionNotice}</p>
+          {input.submission.notice ? (
+            <p className="store-request-note">{input.submission.notice}</p>
           ) : null}
         </div>
       )}
@@ -1549,14 +1578,9 @@ function TargetDistributionRequestForm(input: {
 }
 
 function SellerCodeRequestForm(input: {
-  canCreateForStore: boolean
-  canSubmit: boolean
-  createError: unknown
+  access: RequestFormAccess
   editingRequestId: string | null
-  hasCreateError: boolean
-  hasResubmitError: boolean
-  isPending: boolean
-  notice: string | null
+  errors: RequestFormErrors
   onCancelEdit: () => void
   onEmploymentTypeChange: (value: SellerEmploymentType) => void
   onFirstNameChange: StringFieldSetter
@@ -1568,7 +1592,6 @@ function SellerCodeRequestForm(input: {
   onRequestReasonChange: StringFieldSetter
   onSubmit: () => void
   positionOptionsQuery: ListQuerySnapshot<PositionOption>
-  resubmitError: unknown
   sellerEmploymentType: SellerEmploymentType
   sellerFirstName: string
   sellerHireDate: string
@@ -1577,6 +1600,7 @@ function SellerCodeRequestForm(input: {
   sellerPhoneNumber: string
   sellerPositionId: string
   sellerRequestReason: string
+  submission: RequestFormSubmission
   storeId: string
   t: TranslateFunction
 }) {
@@ -1599,7 +1623,7 @@ function SellerCodeRequestForm(input: {
         <StatusPill tone="calm">{input.t('storeApprovals.hrQueue')}</StatusPill>
       </div>
 
-      {!input.canCreateForStore ? (
+      {!input.access.createAllowed ? (
         <EmptyState
           title={input.t('storeApprovals.assignedActionStoreRequired')}
           copy={input.t('storeApprovals.sellerUnavailableCopy')}
@@ -1744,10 +1768,10 @@ function SellerCodeRequestForm(input: {
             <button
               className="store-request-button store-request-button-primary"
               type="button"
-              disabled={!input.canSubmit || input.isPending}
+              disabled={!input.access.submitAllowed || input.submission.pending}
               onClick={input.onSubmit}
             >
-              {input.isPending
+              {input.submission.pending
                 ? input.t('storeApprovals.submitting')
                 : input.editingRequestId
                   ? input.t('storeApprovals.resubmitSellerCodeRequest')
@@ -1757,7 +1781,7 @@ function SellerCodeRequestForm(input: {
               <button
                 className="store-request-button"
                 type="button"
-                disabled={input.isPending}
+                disabled={input.submission.pending}
                 onClick={input.onCancelEdit}
               >
                 {input.t('storeApprovals.cancelEdit')}
@@ -1765,13 +1789,13 @@ function SellerCodeRequestForm(input: {
             ) : null}
           </div>
 
-          {input.hasCreateError ? (
-            <p className="store-request-note">{getErrorMessage(input.createError)}</p>
+          {input.errors.createVisible ? (
+            <p className="store-request-note">{getErrorMessage(input.errors.create)}</p>
           ) : null}
-          {input.hasResubmitError ? (
-            <p className="store-request-note">{getErrorMessage(input.resubmitError)}</p>
+          {input.errors.resubmitVisible ? (
+            <p className="store-request-note">{getErrorMessage(input.errors.resubmit)}</p>
           ) : null}
-          {input.notice ? <p className="store-request-note">{input.notice}</p> : null}
+          {input.submission.notice ? <p className="store-request-note">{input.submission.notice}</p> : null}
         </div>
       )}
     </article>
@@ -1779,14 +1803,9 @@ function SellerCodeRequestForm(input: {
 }
 
 function OffboardingRequestForm(input: {
-  canCreateForStore: boolean
-  canSubmit: boolean
-  createError: unknown
+  access: RequestFormAccess
   editingRequestId: string | null
-  hasCreateError: boolean
-  hasResubmitError: boolean
-  isPending: boolean
-  notice: string | null
+  errors: RequestFormErrors
   offboardingEmployeeId: string
   offboardingRequestReason: string
   offboardingTerminationDate: string
@@ -1795,8 +1814,8 @@ function OffboardingRequestForm(input: {
   onRequestReasonChange: StringFieldSetter
   onSubmit: () => void
   onTerminationDateChange: StringFieldSetter
-  resubmitError: unknown
   storeEmployeesQuery: ListQuerySnapshot<StoreEmployee>
+  submission: RequestFormSubmission
   t: TranslateFunction
 }) {
   return (
@@ -1814,7 +1833,7 @@ function OffboardingRequestForm(input: {
         <StatusPill tone="warning">{input.t('storeApprovals.hrQueue')}</StatusPill>
       </div>
 
-      {!input.canCreateForStore ? (
+      {!input.access.createAllowed ? (
         <EmptyState
           title={input.t('storeApprovals.assignedActionStoreRequired')}
           copy={input.t('storeApprovals.offboardingUnavailableCopy')}
@@ -1884,10 +1903,10 @@ function OffboardingRequestForm(input: {
             <button
               className="store-request-button store-request-button-primary"
               type="button"
-              disabled={!input.canSubmit || input.isPending}
+              disabled={!input.access.submitAllowed || input.submission.pending}
               onClick={input.onSubmit}
             >
-              {input.isPending
+              {input.submission.pending
                 ? input.t('storeApprovals.submitting')
                 : input.editingRequestId
                   ? input.t('storeApprovals.resubmitOffboardingRequest')
@@ -1897,7 +1916,7 @@ function OffboardingRequestForm(input: {
               <button
                 className="store-request-button"
                 type="button"
-                disabled={input.isPending}
+                disabled={input.submission.pending}
                 onClick={input.onCancelEdit}
               >
                 {input.t('storeApprovals.cancelEdit')}
@@ -1905,13 +1924,13 @@ function OffboardingRequestForm(input: {
             ) : null}
           </div>
 
-          {input.hasCreateError ? (
-            <p className="store-request-note">{getErrorMessage(input.createError)}</p>
+          {input.errors.createVisible ? (
+            <p className="store-request-note">{getErrorMessage(input.errors.create)}</p>
           ) : null}
-          {input.hasResubmitError ? (
-            <p className="store-request-note">{getErrorMessage(input.resubmitError)}</p>
+          {input.errors.resubmitVisible ? (
+            <p className="store-request-note">{getErrorMessage(input.errors.resubmit)}</p>
           ) : null}
-          {input.notice ? <p className="store-request-note">{input.notice}</p> : null}
+          {input.submission.notice ? <p className="store-request-note">{input.submission.notice}</p> : null}
         </div>
       )}
     </article>
