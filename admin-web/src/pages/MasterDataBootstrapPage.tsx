@@ -45,6 +45,7 @@ import { useLocalization } from '../features/localization/useLocalization'
 import { formatDateTime, getErrorMessage } from '../lib/format'
 
 const PAGE_SIZE = 50
+const trNumberFormatter = new Intl.NumberFormat('tr-TR')
 
 type MasterDataTab = 'batches' | 'stores' | 'personnel' | 'history'
 type MasterDataBootstrapEntityFilter = 'all' | MasterDataBootstrapEntity
@@ -111,7 +112,7 @@ function normalizeEmploymentType(value: string): PersonnelEmploymentType {
 }
 
 function formatNumber(value: number) {
-  return new Intl.NumberFormat('tr-TR').format(value)
+  return trNumberFormatter.format(value)
 }
 
 function dateInputValue(value: string | null | undefined) {
@@ -910,8 +911,8 @@ export function MasterDataBootstrapPage() {
               <MasterDataPager
                 offset={storeOffset}
                 total={storeMasterQuery.data?.meta.total ?? 0}
-                onPrevious={() => setStoreOffset(Math.max(0, storeOffset - PAGE_SIZE))}
-                onNext={() => setStoreOffset(storeOffset + PAGE_SIZE)}
+                onPrevious={() => setStoreOffset((current) => Math.max(0, current - PAGE_SIZE))}
+                onNext={() => setStoreOffset((current) => current + PAGE_SIZE)}
               />
             </>
           )}
@@ -1144,8 +1145,8 @@ export function MasterDataBootstrapPage() {
               <MasterDataPager
                 offset={personnelOffset}
                 total={personnelMasterQuery.data?.meta.total ?? 0}
-                onPrevious={() => setPersonnelOffset(Math.max(0, personnelOffset - PAGE_SIZE))}
-                onNext={() => setPersonnelOffset(personnelOffset + PAGE_SIZE)}
+                onPrevious={() => setPersonnelOffset((current) => Math.max(0, current - PAGE_SIZE))}
+                onNext={() => setPersonnelOffset((current) => current + PAGE_SIZE)}
               />
             </>
           )}
