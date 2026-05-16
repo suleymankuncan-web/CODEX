@@ -1,5 +1,5 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
-import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useReducer, type CSSProperties } from 'react'
 import { NavLink } from 'react-router-dom'
 import { CalendarDays, ChevronDown, X } from 'lucide-react'
 import { ScreenState } from '../components/dashboard-primitives'
@@ -141,6 +141,100 @@ function isPersonnelMetric(metric: { code: string }) {
 }
 
 type LivePeriodType = 'monthly' | 'daily'
+type StorePerformanceSourceMode = 'live' | 'closed'
+
+type StoreMyPerformancePageState = {
+  sourceMode: StorePerformanceSourceMode
+  selectedLivePeriodType: LivePeriodType
+  selectedLivePeriodStart: string
+  selectedLiveYears: string[]
+  selectedLiveMonthKeys: string[]
+  selectedLiveDayStarts: string[]
+  selectedClosedSnapshotRunId: string
+  isDateFilterOpen: boolean
+  isKpiDetailOpen: boolean
+}
+
+type StoreMyPerformancePageStateInput = {
+  initialLivePeriodStart?: string
+  initialLivePeriodType?: LivePeriodType
+}
+
+type StoreMyPerformancePageAction =
+  | { type: 'applyLivePeriodFallback'; periodType: LivePeriodType | null; periodStart: string }
+  | { type: 'changeLivePeriodType'; periodType: LivePeriodType; periodStart: string }
+  | { type: 'setLiveYearSelection'; years: string[]; periodStart: string }
+  | { type: 'setLiveMonthSelection'; monthKeys: string[]; periodStart: string }
+  | { type: 'setLiveDaySelection'; dayStarts: string[]; periodStart: string }
+  | { type: 'toggleDateFilter' }
+  | { type: 'setSourceMode'; mode: StorePerformanceSourceMode }
+  | { type: 'setClosedSnapshotRunId'; snapshotRunId: string }
+  | { type: 'setKpiDetailOpen'; open: boolean }
+
+function createStoreMyPerformancePageState(
+  input: StoreMyPerformancePageStateInput,
+): StoreMyPerformancePageState {
+  return {
+    sourceMode: 'live',
+    selectedLivePeriodType: input.initialLivePeriodType ?? 'monthly',
+    selectedLivePeriodStart: input.initialLivePeriodStart?.trim() ?? '',
+    selectedLiveYears: [],
+    selectedLiveMonthKeys: [],
+    selectedLiveDayStarts: [],
+    selectedClosedSnapshotRunId: '',
+    isDateFilterOpen: false,
+    isKpiDetailOpen: false,
+  }
+}
+
+function storeMyPerformancePageReducer(
+  state: StoreMyPerformancePageState,
+  action: StoreMyPerformancePageAction,
+): StoreMyPerformancePageState {
+  switch (action.type) {
+    case 'applyLivePeriodFallback':
+      return {
+        ...state,
+        selectedLivePeriodType: action.periodType ?? state.selectedLivePeriodType,
+        selectedLivePeriodStart: action.periodStart,
+      }
+    case 'changeLivePeriodType':
+      return {
+        ...state,
+        selectedLivePeriodType: action.periodType,
+        selectedLivePeriodStart: action.periodStart,
+      }
+    case 'setLiveYearSelection':
+      return {
+        ...state,
+        selectedLiveYears: action.years,
+        selectedLivePeriodStart: action.periodStart,
+      }
+    case 'setLiveMonthSelection':
+      return {
+        ...state,
+        selectedLiveMonthKeys: action.monthKeys,
+        selectedLivePeriodStart: action.periodStart,
+      }
+    case 'setLiveDaySelection':
+      return {
+        ...state,
+        selectedLivePeriodType: 'daily',
+        selectedLiveDayStarts: action.dayStarts,
+        selectedLivePeriodStart: action.periodStart,
+      }
+    case 'toggleDateFilter':
+      return { ...state, isDateFilterOpen: !state.isDateFilterOpen }
+    case 'setSourceMode':
+      return { ...state, sourceMode: action.mode }
+    case 'setClosedSnapshotRunId':
+      return { ...state, selectedClosedSnapshotRunId: action.snapshotRunId }
+    case 'setKpiDetailOpen':
+      return { ...state, isKpiDetailOpen: action.open }
+    default:
+      return state
+  }
+}
 
 function findMetric(metrics: MyPerformanceMetric[], code: string) {
   return metrics.find((metric) => metric.code === code) ?? null
@@ -513,19 +607,25 @@ export function StoreMyPerformancePage(input: {
     profileMode === 'personnel'
       ? canUsePersonnelPerformance(input.authSummary) && targetEmployeeId !== ''
       : canUseSelfPerformance(input.authSummary)
-  const [sourceMode, setSourceMode] = useState<'live' | 'closed'>('live')
-  const [selectedLivePeriodType, setSelectedLivePeriodType] = useState<LivePeriodType>(
-    input.initialLivePeriodType ?? 'monthly',
+  const [state, dispatch] = useReducer(
+    storeMyPerformancePageReducer,
+    {
+      initialLivePeriodStart: input.initialLivePeriodStart,
+      initialLivePeriodType: input.initialLivePeriodType,
+    },
+    createStoreMyPerformancePageState,
   )
-  const [selectedLivePeriodStart, setSelectedLivePeriodStart] = useState(
-    input.initialLivePeriodStart?.trim() ?? '',
-  )
-  const [selectedLiveYears, setSelectedLiveYears] = useState<string[]>([])
-  const [selectedLiveMonthKeys, setSelectedLiveMonthKeys] = useState<string[]>([])
-  const [selectedLiveDayStarts, setSelectedLiveDayStarts] = useState<string[]>([])
-  const [selectedClosedSnapshotRunId, setSelectedClosedSnapshotRunId] = useState('')
-  const [isDateFilterOpen, setIsDateFilterOpen] = useState(false)
-  const [isKpiDetailOpen, setIsKpiDetailOpen] = useState(false)
+  const {
+    sourceMode,
+    selectedLivePeriodType,
+    selectedLivePeriodStart,
+    selectedLiveYears,
+    selectedLiveMonthKeys,
+    selectedLiveDayStarts,
+    selectedClosedSnapshotRunId,
+    isDateFilterOpen,
+    isKpiDetailOpen,
+  } = state
   const usesClosedSnapshotMode = profileMode !== 'personnel'
   const queryPrefix = profileMode === 'personnel'
     ? ['personnel-performance', targetEmployeeId] as const
@@ -761,10 +861,11 @@ export function StoreMyPerformancePage(input: {
     }
 
     const fallbackTimer = window.setTimeout(() => {
-      if (livePeriodFallbackType) {
-        setSelectedLivePeriodType(livePeriodFallbackType)
-      }
-      setSelectedLivePeriodStart(livePeriodFallbackStart)
+      dispatch({
+        type: 'applyLivePeriodFallback',
+        periodType: livePeriodFallbackType,
+        periodStart: livePeriodFallbackStart,
+      })
     }, 0)
 
     return () => window.clearTimeout(fallbackTimer)
@@ -777,7 +878,7 @@ export function StoreMyPerformancePage(input: {
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setIsKpiDetailOpen(false)
+        dispatch({ type: 'setKpiDetailOpen', open: false })
       }
     }
 
@@ -840,8 +941,11 @@ export function StoreMyPerformancePage(input: {
 
   function changeLivePeriodType(periodType: LivePeriodType) {
     const nextPeriods = getPeriodsForSelection({ periodType })
-    setSelectedLivePeriodType(periodType)
-    setSelectedLivePeriodStart(getLatestAvailablePeriodStart(nextPeriods))
+    dispatch({
+      type: 'changeLivePeriodType',
+      periodType,
+      periodStart: getLatestAvailablePeriodStart(nextPeriods),
+    })
   }
 
   function isSelectionKeyChecked(currentKeys: string[], key: string) {
@@ -867,8 +971,11 @@ export function StoreMyPerformancePage(input: {
       return
     }
 
-    setSelectedLiveYears(nextYears)
-    setSelectedLivePeriodStart(getLatestAvailablePeriodStart(nextPeriods))
+    dispatch({
+      type: 'setLiveYearSelection',
+      years: nextYears,
+      periodStart: getLatestAvailablePeriodStart(nextPeriods),
+    })
   }
 
   function toggleLiveMonthSelection(monthKey: string) {
@@ -886,8 +993,11 @@ export function StoreMyPerformancePage(input: {
       return
     }
 
-    setSelectedLiveMonthKeys(nextMonths)
-    setSelectedLivePeriodStart(getLatestAvailablePeriodStart(nextPeriods))
+    dispatch({
+      type: 'setLiveMonthSelection',
+      monthKeys: nextMonths,
+      periodStart: getLatestAvailablePeriodStart(nextPeriods),
+    })
   }
 
   function toggleLiveDaySelection(period: { periodStart: string }) {
@@ -913,9 +1023,11 @@ export function StoreMyPerformancePage(input: {
       return
     }
 
-    setSelectedLivePeriodType('daily')
-    setSelectedLiveDayStarts(nextDays)
-    setSelectedLivePeriodStart(getLatestAvailablePeriodStart(nextPeriods))
+    dispatch({
+      type: 'setLiveDaySelection',
+      dayStarts: nextDays,
+      periodStart: getLatestAvailablePeriodStart(nextPeriods),
+    })
   }
 
   if (!enabled) {
@@ -1198,7 +1310,7 @@ export function StoreMyPerformancePage(input: {
               className="store-me-v2-date-filter-trigger"
               type="button"
               aria-expanded={isDateFilterOpen}
-              onClick={() => setIsDateFilterOpen((current) => !current)}
+              onClick={() => dispatch({ type: 'toggleDateFilter' })}
             >
               <span className="store-me-v2-filter-trigger-icon" aria-hidden="true">
                 <CalendarDays size={20} />
@@ -1225,14 +1337,14 @@ export function StoreMyPerformancePage(input: {
                       <button
                         className={sourceMode === 'live' ? 'active' : ''}
                         type="button"
-                        onClick={() => setSourceMode('live')}
+                        onClick={() => dispatch({ type: 'setSourceMode', mode: 'live' })}
                       >
                         {t('storeMe.liveStatus')}
                       </button>
                       <button
                         className={sourceMode === 'closed' ? 'active' : ''}
                         type="button"
-                        onClick={() => setSourceMode('closed')}
+                        onClick={() => dispatch({ type: 'setSourceMode', mode: 'closed' })}
                       >
                         {t('storeMe.closedDay')}
                       </button>
@@ -1361,7 +1473,9 @@ export function StoreMyPerformancePage(input: {
                         activeClosedSnapshotRun?.snapshotRunId ||
                         ''
                       }
-                      onChange={(event) => setSelectedClosedSnapshotRunId(event.target.value)}
+                      onChange={(event) =>
+                        dispatch({ type: 'setClosedSnapshotRunId', snapshotRunId: event.target.value })
+                      }
                       disabled={sourceMode !== 'closed' || availableClosedSnapshotRuns.length === 0}
                     >
                       <option value="">{t('storeMe.latestClosedSnapshot')}</option>
@@ -1466,7 +1580,7 @@ export function StoreMyPerformancePage(input: {
                     <button
                       className="store-me-v2-secondary-button"
                       type="button"
-                      onClick={() => setIsKpiDetailOpen(true)}
+                      onClick={() => dispatch({ type: 'setKpiDetailOpen', open: true })}
                     >
                       {t('storeMe.kpiDetails')}
                     </button>
@@ -1638,7 +1752,7 @@ export function StoreMyPerformancePage(input: {
           role="presentation"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
-              setIsKpiDetailOpen(false)
+              dispatch({ type: 'setKpiDetailOpen', open: false })
             }
           }}
         >
@@ -1662,7 +1776,7 @@ export function StoreMyPerformancePage(input: {
                 className="store-me-v2-dialog-close"
                 type="button"
                 aria-label={t('storeMe.closeKpiDetails')}
-                onClick={() => setIsKpiDetailOpen(false)}
+                onClick={() => dispatch({ type: 'setKpiDetailOpen', open: false })}
               >
                 <X size={20} />
               </button>
