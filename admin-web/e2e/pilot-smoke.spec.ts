@@ -4,6 +4,9 @@ const storeId = '00000000-0000-0000-0000-000000000100'
 const employeeId = '00000000-0000-0000-0000-000000000200'
 const regionId = '00000000-0000-0000-0000-000000000010'
 const companyId = '00000000-0000-0000-0000-000000000001'
+const competitionId = '00000000-0000-4000-8000-000000000300'
+const competitionStageId = '00000000-0000-4000-8000-000000000301'
+const competitionTeamId = '00000000-0000-4000-8000-000000000302'
 
 type SmokeRoute = {
   path: string
@@ -47,6 +50,11 @@ test('core admin routes open without unavailable states', async ({ page }) => {
       urlPattern: /\/admin\/targets$/,
       heading: page.getByRole('heading', { name: 'Bekleyen hedef dağıtım talepleri' }),
     },
+    {
+      path: '/admin/competitions',
+      urlPattern: /\/admin\/competitions$/,
+      heading: page.getByText('/admin/competitions'),
+    },
   ]
 
   await verifyPilotRoutes(page, routes)
@@ -71,6 +79,11 @@ test('core store routes open without unavailable states', async ({ page }) => {
       path: '/store/rankings',
       urlPattern: /\/store\/rankings$/,
       heading: page.getByRole('heading', { name: 'Sıralamalar' }),
+    },
+    {
+      path: '/store/competitions',
+      urlPattern: /\/store\/competitions$/,
+      heading: page.getByText('/store/competitions'),
     },
     {
       path: '/store/approvals',
@@ -181,6 +194,11 @@ async function routePilotSmokeApi(page: Page) {
       return
     }
 
+    if (pathname.endsWith('/api/auth/lookups')) {
+      await route.fulfill({ json: authLookupsFixture })
+      return
+    }
+
     if (pathname.endsWith('/api/feed')) {
       await route.fulfill({ json: feedFixture })
       return
@@ -286,6 +304,26 @@ async function routePilotSmokeApi(page: Page) {
       return
     }
 
+    if (pathname.endsWith('/api/competitions/team-templates')) {
+      await route.fulfill({ json: competitionTeamTemplatesFixture })
+      return
+    }
+
+    if (pathname.endsWith(`/api/competitions/${competitionId}/stage-package-plans`)) {
+      await route.fulfill({ json: emptyListFixture })
+      return
+    }
+
+    if (pathname.endsWith(`/api/competitions/${competitionId}`)) {
+      await route.fulfill({ json: competitionDetailFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/competitions')) {
+      await route.fulfill({ json: competitionListFixture })
+      return
+    }
+
     await route.fulfill({
       status: 501,
       json: {
@@ -328,6 +366,42 @@ const authSessionFixture = {
     regionCount: 1,
     storeCount: 1,
     assignedStoreCount: 1,
+  },
+}
+
+const authLookupsFixture = {
+  scopeTypes: ['company', 'region', 'store'],
+  authProviders: ['mock'],
+  users: [],
+  roles: [],
+  permissions: [],
+  stores: [
+    {
+      storeId,
+      storeCode: 'PILOT-100',
+      storeName: 'Pilot Store',
+      companyId,
+      regionId,
+      regionName: 'Pilot Region',
+    },
+  ],
+  optionGroups: {
+    users: [],
+    roles: [],
+    permissions: [],
+    stores: [],
+    scopeTypes: [
+      { value: 'company', label: 'company' },
+      { value: 'region', label: 'region' },
+      { value: 'store', label: 'store' },
+    ],
+    authProviders: [{ value: 'mock', label: 'mock' }],
+  },
+  meta: {
+    totalUsers: 0,
+    totalRoles: 0,
+    totalPermissions: 0,
+    totalStores: 1,
   },
 }
 
@@ -769,4 +843,93 @@ const rankingsFixture = {
     meta: { total: 1, limit: 100, offset: 0 },
   },
   availablePeriods: [{ periodType: 'monthly', periodStart: '2026-05-01', periodEnd: '2026-05-31' }],
+}
+
+const competitionFixture = {
+  competitionId,
+  competitionCode: 'PILOT_REGION_CHALLENGE',
+  competitionName: 'Pilot Region Challenge',
+  description: null,
+  competitionType: 'region_challenge',
+  lifecycleState: 'active',
+  startsOn: '2026-05-01',
+  endsOn: '2026-05-31',
+}
+
+const competitionListFixture = {
+  items: [competitionFixture],
+  meta: { count: 1, total: 1, limit: 50, offset: 0 },
+}
+
+const competitionDetailFixture = {
+  competition: competitionFixture,
+  stages: [
+    {
+      competitionStageId,
+      competitionId,
+      stageCode: 'PILOT_QUALIFIER',
+      stageName: 'Pilot Qualifier',
+      stageOrder: 1,
+      stageType: 'qualifier',
+      startsOn: '2026-05-01',
+      endsOn: '2026-05-31',
+      lifecycleState: 'active',
+      finalizationState: null,
+    },
+  ],
+  teams: [
+    {
+      competitionTeamId,
+      teamCode: 'PILOT_TEAM',
+      teamName: 'Pilot Team',
+      teamOrder: 1,
+      stores: [
+        {
+          storeId,
+          storeCode: 'PILOT-100',
+          storeName: 'Pilot Store',
+          regionId,
+        },
+      ],
+    },
+  ],
+  latestScores: [
+    {
+      stageId: competitionStageId,
+      teamId: competitionTeamId,
+      teamCode: 'PILOT_TEAM',
+      teamName: 'Pilot Team',
+      snapshotDate: '2026-05-15',
+      scoreValue: 91.25,
+      validStoreCount: 1,
+      totalStoreCount: 1,
+      coverageRate: 1,
+      rankPosition: 1,
+      rankingPopulation: 1,
+    },
+  ],
+  warnings: [],
+  storeContributions: [
+    {
+      stageId: competitionStageId,
+      teamId: competitionTeamId,
+      teamCode: 'PILOT_TEAM',
+      teamName: 'Pilot Team',
+      storeId,
+      storeCode: 'PILOT-100',
+      storeName: 'Pilot Store',
+      regionId,
+      snapshotDate: '2026-05-15',
+      scoreValue: 91.25,
+      reportedWeightPercent: 100,
+      expectedWeightPercent: 100,
+      hasDailyData: true,
+      missingKpiCodes: [],
+    },
+  ],
+}
+
+const competitionTeamTemplatesFixture = {
+  items: [],
+  meta: { count: 0, total: 0, limit: 50, offset: 0 },
 }
