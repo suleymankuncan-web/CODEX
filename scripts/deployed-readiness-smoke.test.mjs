@@ -12,6 +12,15 @@ const backendHeaders = {
   'x-ratelimit-remaining': '119',
   'x-ratelimit-reset': '2026-05-18T00:00:00.000Z',
 }
+const frontendSecurityHeaders = {
+  'content-security-policy':
+    "default-src 'self'; script-src 'self' https://*.clerk.accounts.dev https://*.clerk.com https://*.clerk.dev https://challenges.cloudflare.com; connect-src 'self' https://api-staging.hr-axis.com https://api.hr-axis.com https://*.clerk.accounts.dev https://*.clerk.com https://*.clerk.dev; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'",
+  'strict-transport-security': 'max-age=31536000; includeSubDomains',
+  'x-content-type-options': 'nosniff',
+  'x-frame-options': 'DENY',
+  'referrer-policy': 'strict-origin-when-cross-origin',
+  'permissions-policy': 'camera=(), microphone=(), geolocation=(), payment=()',
+}
 
 test('deployed readiness config accepts backend origin or api base url', () => {
   const fromOrigin = readDeployedReadinessConfig({
@@ -221,6 +230,38 @@ test('deployed readiness smoke fails when a discovered asset returns html', asyn
   )
 })
 
+test('deployed readiness smoke fails when frontend security headers are missing', async () => {
+  const fetchFn = createFetch({
+    'https://api.example.com/api/health/live': () =>
+      jsonResponse({ status: 'ok' }, { headers: backendHeaders }),
+    'https://api.example.com/api/health': () =>
+      jsonResponse({ status: 'ok' }, { headers: backendHeaders }),
+    'https://app.example.com/': () =>
+      textResponse('<html></html>', {
+        headers: { 'content-type': 'text/html; charset=utf-8' },
+      }),
+    'https://app.example.com/store/me': () => htmlResponse('<html></html>'),
+  })
+
+  const evidence = await runDeployedReadinessSmoke({
+    env: {
+      READINESS_FRONTEND_URL: 'https://app.example.com',
+      READINESS_BACKEND_URL: 'https://api.example.com',
+    },
+    fetchFn,
+  })
+
+  assert.equal(evidence.status, 'failed')
+  assert.ok(
+    evidence.checks.some(
+      (check) =>
+        check.name === 'frontend security headers' &&
+        check.status === 'failed' &&
+        check.missing.includes('content-security-policy'),
+    ),
+  )
+})
+
 test('deployed readiness smoke reports request failures as failed checks', async () => {
   const fetchFn = createFetch({
     'https://api.example.com/api/health/live': () =>
@@ -285,6 +326,7 @@ function htmlResponse(body, { status = 200, headers = {} } = {}) {
     status,
     headers: {
       'content-type': 'text/html; charset=utf-8',
+      ...frontendSecurityHeaders,
       ...headers,
     },
   })
