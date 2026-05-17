@@ -357,8 +357,8 @@ test('competition repository tests are split without dropping package or templat
     combinedText += `\n${text}`
   }
 
-  assert.equal(totalTests, 27)
-  assert.equal([...readText(competitionRepositorySplitFiles[0]).matchAll(/\bit\s*\(/g)].length, 10)
+  assert.equal(totalTests, 29)
+  assert.equal([...readText(competitionRepositorySplitFiles[0]).matchAll(/\bit\s*\(/g)].length, 12)
   assert.equal([...readText(competitionRepositorySplitFiles[1]).matchAll(/\bit\s*\(/g)].length, 11)
   assert.equal([...readText(competitionRepositorySplitFiles[2]).matchAll(/\bit\s*\(/g)].length, 6)
   for (const testName of competitionStagePackagePlanExpectedTestNames) {
