@@ -49,6 +49,7 @@ const rankingRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', 'REGION_MANAGER', 'SUP
 const adminFeedRoles = ['SUPER_ADMIN', 'HR_ADMIN', 'REGION_MANAGER']
 const adminInboxRoles = ['SUPER_ADMIN', 'REPORT_VIEWER', 'HR_ADMIN']
 const adminInboxWorkforceRoles = ['SUPER_ADMIN', 'HR_ADMIN']
+const adminCompetitionRoles = ['SUPER_ADMIN', 'HR_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER']
 const adminIntegrationRoles = ['SUPER_ADMIN', 'INTEGRATION_ADMIN']
 const adminMasterDataRoles = ['SUPER_ADMIN', 'HR_ADMIN', 'INTEGRATION_ADMIN']
 const adminTargetRoles = ['SUPER_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER']
@@ -128,6 +129,10 @@ function resolveRoutePrefetchTasks(
 
   if (pathname === '/admin/feed') {
     return getAdminFeedPrefetchTasks(authSummary)
+  }
+
+  if (pathname === '/admin/competitions') {
+    return getAdminCompetitionsPrefetchTasks(authSummary)
   }
 
   if (pathname === '/admin/inbox') {
@@ -227,6 +232,16 @@ function getStoreCompetitionsPrefetchTasks(authSummary: AuthSessionSummary | nul
       queryKey: ['store-competitions'],
       queryFn: listCompetitions,
       enabled: hasAnyRole(authSummary, storeCompetitionRoles),
+    },
+  ]
+}
+
+function getAdminCompetitionsPrefetchTasks(authSummary: AuthSessionSummary | null): PrefetchTask[] {
+  return [
+    {
+      queryKey: ['competitions'],
+      queryFn: listCompetitions,
+      enabled: hasAnyRole(authSummary, adminCompetitionRoles),
     },
   ]
 }

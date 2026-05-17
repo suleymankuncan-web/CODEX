@@ -22,6 +22,10 @@ import {
   describeCompetitionWarning,
   type CompetitionReadSummary,
 } from '../features/competitions/readability'
+import {
+  formatCompetitionLifecycleState,
+  formatCompetitionType,
+} from '../features/competitions/display'
 import { useLocalization } from '../features/localization/useLocalization'
 import { formatDate, formatState, getErrorMessage } from '../lib/format'
 import { transientQueryRetryOptions } from '../lib/query-retry'
@@ -152,8 +156,11 @@ export function StoreCompetitionsPage(input: {
                   </button>
                 </div>
                 <div className="key-grid">
-                  <KeyValue label={t('storeCompetitions.type')} value={formatState(competition.competitionType)} />
-                  <KeyValue label={t('storeCompetitions.state')} value={formatState(competition.lifecycleState)} />
+                  <KeyValue label={t('storeCompetitions.type')} value={formatCompetitionType(competition.competitionType, t)} />
+                  <KeyValue
+                    label={t('storeCompetitions.state')}
+                    value={formatCompetitionLifecycleState(competition.lifecycleState, t)}
+                  />
                   <KeyValue label={t('storeCompetitions.starts')} value={formatDate(competition.startsOn, locale)} />
                   <KeyValue label={t('storeCompetitions.ends')} value={formatDate(competition.endsOn, locale)} />
                 </div>

@@ -2146,6 +2146,74 @@ test('store competitions page renders scoped contribution details', async ({ pag
   await expect(page.getByRole('button', { name: /Recalculate/ })).toHaveCount(0)
 })
 
+test('store competitions page localizes lifecycle states and competition types', async ({ page }) => {
+  const competitionSummaries = [
+    competitionFixture,
+    {
+      ...competitionFixture,
+      competitionId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa02',
+      competitionCode: 'MAY_REGION_LEAGUE',
+      competitionName: 'May Region League',
+      competitionType: 'region_league',
+      lifecycleState: 'published',
+    },
+    {
+      ...competitionFixture,
+      competitionId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa03',
+      competitionCode: 'SUMMER_CAMPAIGN',
+      competitionName: 'Summer Campaign',
+      competitionType: 'campaign',
+      lifecycleState: 'completed',
+    },
+  ]
+
+  await page.unroute('**/api/competitions**')
+  await page.route('**/api/competitions**', async (route) => {
+    const request = route.request()
+    const pathname = new URL(request.url()).pathname
+
+    if (request.method() === 'GET' && pathname.endsWith('/api/competitions')) {
+      await route.fulfill({
+        json: {
+          items: competitionSummaries,
+          meta: {
+            count: competitionSummaries.length,
+            total: competitionSummaries.length,
+            limit: 50,
+            offset: 0,
+          },
+        },
+      })
+      return
+    }
+
+    if (
+      request.method() === 'GET' &&
+      pathname.endsWith(`/api/competitions/${competitionFixture.competitionId}`)
+    ) {
+      await route.fulfill({ json: competitionDetailFixture })
+      return
+    }
+
+    await route.fulfill({
+      status: 403,
+      json: { message: 'Store competition surface is read-only' },
+    })
+  })
+
+  await page.goto('/store/competitions')
+
+  const leagueRow = page.locator('article').filter({ hasText: 'May Region League' })
+  const campaignRow = page.locator('article').filter({ hasText: 'Summer Campaign' })
+  await expect(leagueRow.getByText('yayında', { exact: true })).toBeVisible()
+  await expect(leagueRow.getByText('bölge ligi', { exact: true })).toBeVisible()
+  await expect(campaignRow.getByText('tamamlandı', { exact: true })).toBeVisible()
+  await expect(campaignRow.getByText('kampanya', { exact: true })).toBeVisible()
+  await expect(page.locator('body')).not.toContainText('published')
+  await expect(page.locator('body')).not.toContainText('completed')
+  await expect(page.locator('body')).not.toContainText('region_league')
+})
+
 test('store competitions page switches chrome to English copy and persists locale', async ({
   page,
 }) => {
