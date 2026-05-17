@@ -24,6 +24,16 @@ describe("HealthController (integration)", () => {
       expect(response.body.status).toBe("ok");
       expect(response.body.service).toBe("store-ops-backend");
       expect(response.headers["x-correlation-id"]).toBeDefined();
+      expect(response.body.observability).toMatchObject({
+        status: "ok",
+        errorTracking: {
+          dsnConfigured: false,
+          externalDelivery: "not-enabled",
+          mode: "log-only",
+        },
+        logLevel: "info",
+        readinessProfile: "controlled-pilot",
+      });
       expect(response.body.checks.database.status).toBe("ok");
       expect(response.body.checks.redis.status).toBe("skipped");
     } finally {

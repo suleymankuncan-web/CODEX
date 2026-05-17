@@ -4,6 +4,7 @@ import { createCorsAllowlistMiddleware } from "./cors-allowlist.middleware";
 import { createRateLimitMiddleware } from "./rate-limit.middleware";
 import { createSecurityHeadersMiddleware } from "./security-headers.middleware";
 import { StandardErrorFilter } from "./standard-error.filter";
+import { ObservabilityService } from "../observability/observability.service";
 
 type HttpApplicationWithSettings = {
   set(name: string, value: number | boolean): void;
@@ -15,6 +16,7 @@ export function configureHttpSecurity(
     AppConfigService,
     "corsAllowedOrigins" | "rateLimitMax" | "rateLimitWindowMs" | "trustProxyHops"
   >,
+  observabilityService?: ObservabilityService,
 ): void {
   configureTrustProxy(app, config.trustProxyHops ?? 0);
   app.setGlobalPrefix("api");
@@ -33,7 +35,7 @@ export function configureHttpSecurity(
       forbidNonWhitelisted: true,
     }),
   );
-  app.useGlobalFilters(new StandardErrorFilter());
+  app.useGlobalFilters(new StandardErrorFilter(observabilityService));
 }
 
 function configureTrustProxy(

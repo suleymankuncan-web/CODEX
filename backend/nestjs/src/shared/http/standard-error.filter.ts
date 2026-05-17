@@ -9,7 +9,10 @@ import {
   buildStandardErrorResponse,
   defaultErrorCode,
   ErrorRequestLike,
+  resolveRequestCorrelationId,
+  resolveRequestPath,
 } from "./standard-error-response";
+import { ObservabilityService } from "../observability/observability.service";
 
 type HttpResponseLike = {
   status(statusCode: number): { json(body: unknown): void };
@@ -23,6 +26,8 @@ type HttpExceptionBody = {
 
 @Catch()
 export class StandardErrorFilter implements ExceptionFilter {
+  constructor(private readonly observabilityService?: ObservabilityService) {}
+
   catch(exception: unknown, host: ArgumentsHost): void {
     const http = host.switchToHttp();
     const request = http.getRequest<ErrorRequestLike>();
@@ -33,10 +38,22 @@ export class StandardErrorFilter implements ExceptionFilter {
         ? exception.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR;
     const exceptionBody = this.resolveExceptionBody(exception);
+    const errorCode = this.resolveErrorCode(statusCode, exceptionBody);
+
+    if (statusCode >= HttpStatus.INTERNAL_SERVER_ERROR) {
+      this.observabilityService?.captureException(exception, {
+        correlationId: resolveRequestCorrelationId(request),
+        errorCode,
+        event: "http.exception",
+        path: resolveRequestPath(request),
+        source: "standard-error-filter",
+        statusCode,
+      });
+    }
 
     response.status(statusCode).json(
       buildStandardErrorResponse({
-        errorCode: this.resolveErrorCode(statusCode, exceptionBody),
+        errorCode,
         message: this.resolveMessage(statusCode, exceptionBody),
         request,
         statusCode,

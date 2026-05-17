@@ -8,11 +8,13 @@ import { HealthController } from "./shared/health.controller";
 import { HealthService } from "./shared/health.service";
 import { DatabaseModule } from "./shared/database/database.module";
 import { RequestContextMiddleware } from "./shared/request-context.middleware";
+import { ObservabilityModule } from "./shared/observability/observability.module";
 
 @Module({
   imports: [
     AppConfigModule,
     DatabaseModule,
+    ObservabilityModule,
     AuthModule,
     StoreOpsModule,
     IntegrationModule,
