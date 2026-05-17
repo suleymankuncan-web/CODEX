@@ -123,6 +123,7 @@ async function verifyPilotRoute(page: Page, route: SmokeRoute) {
 function watchPilotFailures(page: Page) {
   const failedRequests: string[] = []
   const failedResponses: string[] = []
+  const apiFailureDiagnostics: string[] = []
   const pageErrors: string[] = []
 
   page.on('requestfailed', (request) => {
@@ -135,6 +136,11 @@ function watchPilotFailures(page: Page) {
       failedResponses.push(`${response.status()} ${response.url()}`)
     }
   })
+  page.on('console', (message) => {
+    if (message.type() === 'warning' && message.text().includes('[store-ops:api-failure]')) {
+      apiFailureDiagnostics.push(message.text())
+    }
+  })
   page.on('pageerror', (error) => {
     pageErrors.push(error.message)
   })
@@ -143,6 +149,7 @@ function watchPilotFailures(page: Page) {
     expectClean() {
       expect(failedRequests, 'API requests should not fail at the network layer').toEqual([])
       expect(failedResponses, 'API responses should not return error status codes').toEqual([])
+      expect(apiFailureDiagnostics, 'Pilot smoke routes should not emit API failure diagnostics').toEqual([])
       expect(pageErrors, 'Pilot smoke routes should not raise page errors').toEqual([])
     },
   }
