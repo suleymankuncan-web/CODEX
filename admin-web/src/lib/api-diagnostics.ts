@@ -55,7 +55,7 @@ export function emitApiFailureDiagnostic(input: ApiFailureDiagnosticInput) {
   return diagnostic
 }
 
-export function buildApiFailureDiagnostic(input: ApiFailureDiagnosticInput): ApiFailureDiagnostic {
+function buildApiFailureDiagnostic(input: ApiFailureDiagnosticInput): ApiFailureDiagnostic {
   const sanitizedApiPath = sanitizeUrlParts(input.path)
 
   return {
