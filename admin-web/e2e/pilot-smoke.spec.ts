@@ -76,6 +76,16 @@ test('core store routes open without unavailable states', async ({ page }) => {
       heading: page.locator('.store-me-v2-page'),
     },
     {
+      path: '/store/checklists',
+      urlPattern: /\/store\/checklists$/,
+      heading: page.locator('.store-checklists-command-page'),
+    },
+    {
+      path: '/store/tasks',
+      urlPattern: /\/store\/tasks$/,
+      heading: page.locator('.store-metric-grid'),
+    },
+    {
       path: '/store/rankings',
       urlPattern: /\/store\/rankings$/,
       heading: page.getByRole('heading', { name: 'Sıralamalar' }),
