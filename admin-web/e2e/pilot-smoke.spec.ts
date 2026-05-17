@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from '@playwright/test'
+import { expect, test, type BrowserContext, type Locator, type Page } from '@playwright/test'
 
 const storeId = '00000000-0000-0000-0000-000000000100'
 const employeeId = '00000000-0000-0000-0000-000000000200'
@@ -14,7 +14,7 @@ type SmokeRoute = {
   heading: Locator
 }
 
-test.beforeEach(async ({ page }) => {
+test.beforeEach(async ({ context, page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem(
       'store-ops-admin-session',
@@ -29,7 +29,7 @@ test.beforeEach(async ({ page }) => {
     )
   })
 
-  await routePilotSmokeApi(page)
+  await routePilotSmokeApi(context)
 })
 
 test('core admin routes open without unavailable states', async ({ page }) => {
@@ -219,8 +219,8 @@ function watchPilotFailures(page: Page) {
   }
 }
 
-async function routePilotSmokeApi(page: Page) {
-  await page.route('**/api/**', async (route) => {
+async function routePilotSmokeApi(context: BrowserContext) {
+  await context.route('**/api/**', async (route) => {
     const request = route.request()
     const pathname = new URL(request.url()).pathname
 
