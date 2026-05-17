@@ -4,7 +4,7 @@
 
 - Status: V1 local readiness guard.
 - Owner: Platform, backend, frontend, and operations sign-off.
-- Last updated: 2026-04-27.
+- Last updated: 2026-05-18.
 - Purpose: Keep production and staging preparation explicit before real users, real identity, real data, or scheduled imports are trusted.
 
 ## Decision Rule
@@ -143,6 +143,11 @@ Allowed sign-off states:
 ### P0 Required
 
 - [ ] Root release gate passed: `npm.cmd run check:release`.
+- [ ] Deployed readiness smoke passed against the target frontend/backend: `npm.cmd run smoke:deployed-readiness`.
+- [ ] Deployed readiness smoke used explicit `READINESS_FRONTEND_URL` and `READINESS_BACKEND_URL` values for the target environment.
+- [ ] Deployed readiness evidence records environment name, frontend URL, backend URL, commit SHA when known, Render deploy id when known, Vercel deployment URL when known, and JSON smoke output summary.
+- [ ] If `READINESS_BEARER_TOKEN` is unavailable, deployed readiness evidence marks auth/session as skipped instead of passed.
+- [ ] If `READINESS_BEARER_TOKEN` is available, `GET /api/auth/session` returns authenticated user role codes, read scope, and action scope.
 - [ ] Real or staging IdP login smoke passed.
 - [ ] Real or staging IdP logout smoke passed.
 - [ ] `GET /api/auth/session` returned expected role codes.
@@ -209,6 +214,7 @@ Decision:
 Any item below blocks production or staging sign-off:
 
 - Root `npm.cmd run check:release` fails.
+- Deployed readiness smoke fails for the target frontend/backend without a written Conditional Go owner/date.
 - Production auth uses missing/default JWT verification settings.
 - Real IdP cannot prove authorization code + PKCE.
 - Real IdP smoke evidence contains raw tokens, codes, verifier values, client secrets, or production credentials.

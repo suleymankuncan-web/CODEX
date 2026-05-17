@@ -46,6 +46,9 @@ test('production readiness checklist preserves no-secret evidence rules', () => 
 test('production readiness checklist requires guarded release and smoke evidence', () => {
   for (const phrase of [
     'npm.cmd run check:release',
+    'npm.cmd run smoke:deployed-readiness',
+    'READINESS_FRONTEND_URL',
+    'READINESS_BACKEND_URL',
     'npm.cmd run smoke:auth:staging:action',
     'npm.cmd run guard:auth:evidence',
     'assigned-store action returns success',
