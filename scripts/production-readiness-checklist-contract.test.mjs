@@ -22,6 +22,7 @@ test('production readiness checklist keeps core operator sections', () => {
     '## Identity Provider Checklist',
     '## Database And Migration Checklist',
     '## Audit, Backup, And Retention Checklist',
+    '## Alerting And Incident Evidence Checklist',
     '## Smoke Evidence Checklist',
     '## Go / No-Go Criteria',
     '## JSON Source Suspension Holding Area',
@@ -51,6 +52,9 @@ test('production readiness checklist requires guarded release and smoke evidence
     'READINESS_BACKEND_URL',
     'npm.cmd run smoke:auth:staging:action',
     'npm.cmd run guard:auth:evidence',
+    'npm.cmd run smoke:alert-routing',
+    'Alert routing smoke passed',
+    'Production incident contact path is written',
     'assigned-store action returns success',
     'unassigned-store action returns `403`',
   ]) {

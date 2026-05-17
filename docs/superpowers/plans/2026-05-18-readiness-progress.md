@@ -32,6 +32,8 @@ GSD is therefore usable as a planning second opinion, but its headless project s
 
 Slice 3 note: `gsd headless query` was retried before implementation and still returned `DB unavailable - runtime markdown state derivation is disabled`; execution continued from this checked-in plan and repo tests.
 
+Slice 4 note: `gsd headless query` was retried again before implementation and returned the same canonical DB blocker; execution continued from this checked-in plan, deployed smoke evidence, and repo tests.
+
 ## Current Readiness Baseline
 
 Strong areas that should be preserved:
@@ -72,8 +74,8 @@ Open risk areas this plan must progress:
 | --- | --- | --- | --- | --- |
 | 1 | Deployed Readiness Smoke | Merged (#228) | Render/Vercel env drift after merge | Yes, when used against live env |
 | 2 | Edge Security Headers | Merged (#229) | Browser token theft blast radius | Vercel, maybe Render |
-| 3 | Observability V1 | Ready for PR | Silent backend/frontend failures | Backend + frontend |
-| 4 | Alerting and Incident Evidence | Pending | Nobody notices production degradation | Depends on provider |
+| 3 | Observability V1 | Merged (#230) | Silent backend/frontend failures | Backend + frontend |
+| 4 | Alerting and Incident Evidence | Ready for PR | Nobody notices production degradation | Depends on provider |
 | 5 | Redis-Backed Rate Limit | Pending | Abuse bypass on multi-instance runtime | Render |
 | 6 | Queue Durability Gate | Pending | Lost in-process background jobs | Render |
 | 7 | Backup/Restore Live Drill | Pending | Data-loss recovery uncertainty | No code deploy unless scripts change |
@@ -274,6 +276,12 @@ Open risk areas this plan must progress:
   - `node --test scripts/observability-contract.test.mjs scripts/deployment-runbook-contract.test.mjs` passed.
   - `npm.cmd --prefix backend/nestjs run build` passed.
 - Post-merge deploy note: Render deploy verification is required because backend runtime behavior changed. Frontend deploy is not required by this slice unless the platform deploys both services together.
+- PR: #230 merged into `main`.
+- Post-merge staging deploy smoke passed:
+  - `READINESS_FRONTEND_URL=https://staging.hr-axis.com READINESS_BACKEND_URL=https://api-staging.hr-axis.com/api READINESS_TIMEOUT_MS=45000 npm.cmd run smoke:deployed-readiness`
+  - 13 passed, 0 failed, 1 skipped.
+  - Auth/session remained skipped because no real `READINESS_BEARER_TOKEN` was provided.
+  - Evidence file: `docs/evidence/readiness/2026-05-18-staging-observability-deploy-smoke.md`
 
 ## Slice 4: Alerting and Incident Evidence
 
@@ -312,6 +320,19 @@ Open risk areas this plan must progress:
 **Done when:**
 
 - A production degradation has a named alert, owner, and first response action.
+
+**Current branch evidence:**
+
+- `docs/backend/operational-monitoring-contract.md` now has Alert Routing V1 with required alert ids, trigger signals, severity, owner roles, first response, and guarded evidence.
+- `docs/plans/production-staging-incident-response-skeleton.md` now has Alert Trigger Playbooks for health, 5xx, auth/session, import, snapshot worker, DB latency, frontend reachability, and observability degradation.
+- `docs/plans/production-environment-readiness-checklist.md` now requires alert routing smoke and incident contact path evidence.
+- Added `scripts/alert-routing-smoke.mjs` and `scripts/alert-routing-smoke.test.mjs`.
+- Added root command: `npm.cmd run smoke:alert-routing`.
+- Added evidence file: `docs/evidence/readiness/2026-05-18-alert-routing-smoke.md`.
+- Local/staging verification:
+  - `node --test scripts/alert-routing-smoke.test.mjs scripts/incident-response-skeleton-contract.test.mjs` passed.
+  - `ALERT_SMOKE_ENVIRONMENT=staging ALERT_SMOKE_BACKEND_URL=https://api-staging.hr-axis.com/api ALERT_SMOKE_TIMEOUT_MS=45000 npm.cmd run smoke:alert-routing` passed.
+- Provider note: external alert delivery remains skipped/not configured until an approved provider destination is configured outside source control. This slice closes routing metadata and first-response evidence, not provider delivery.
 
 ## Slice 5: Redis-Backed Rate Limit
 

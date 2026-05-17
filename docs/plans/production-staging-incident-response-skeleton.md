@@ -4,7 +4,7 @@
 
 - Status: V1 skeleton for staging, pilot, and production incident rehearsals.
 - Owner: Release operator with backend, frontend, data, and business sign-off.
-- Last updated: 2026-04-27.
+- Last updated: 2026-05-18.
 - Purpose: Give auth, import/data quality, and deploy/release failures a calm operating path before real users depend on the system.
 
 ## Decision Rule
@@ -22,6 +22,50 @@ This skeleton does not invent hosting-provider commands. Target-specific command
 | P0 | Unauthorized access, data exposure risk, production unavailable, destructive migration risk, or a real user cannot complete a critical flow. | Stop the release, assign owner, preserve sanitized evidence, decide Rollback / Forward-fix / No-Go. |
 | P1 | Auth, import, reporting, or deploy issue affects a limited pilot/staging group without data exposure. | Assign owner, contain scope, record decision, follow up before broad rollout. |
 | P2 | Non-blocking evidence, copy, UI, or documentation issue with no user/data risk. | Track as follow-up with owner and date. |
+
+## Alert Trigger Playbooks
+
+Alert routing is metadata-only until an approved provider destination is configured outside source control. The local guard is:
+
+```powershell
+cd "<workspace-root>"
+npm.cmd run smoke:alert-routing
+```
+
+For deployed staging evidence, include the backend URL:
+
+```powershell
+$env:ALERT_SMOKE_ENVIRONMENT="staging"
+$env:ALERT_SMOKE_BACKEND_URL="https://api-staging.hr-axis.com/api"
+npm.cmd run smoke:alert-routing
+```
+
+Alert response rules:
+
+| Alert id | First response | Owner path |
+| --- | --- | --- |
+| `backend-health-down` | Stop release or rollout, run deployed readiness smoke, inspect Render logs by correlation id, decide Rollback / Forward-fix / No-Go. | Incident lead -> Release operator -> Backend owner |
+| `backend-5xx-spike` | Group errors by path and correlation id, identify failing dependency or route, preserve redacted structured logs. | Incident lead -> Backend owner |
+| `auth-session-failure-spike` | Run auth staging action smoke and evidence guard; treat unauthorized success as P0. | Incident lead -> Backend owner -> Business approver |
+| `import-failure-spike` | Pause import/materialization jobs, record batch/source/entity evidence, do not retry until idempotency impact is understood. | Incident lead -> Data owner |
+| `snapshot-worker-failure` | Pause dependent reporting decisions, inspect snapshot run lineage, rerun only after dependency cause is known. | Incident lead -> Data owner -> Backend owner |
+| `database-latency-high` | Check provider health, migration state, pool pressure, and recent query-heavy changes. | Incident lead -> Backend owner |
+| `frontend-unreachable` | Verify Vercel deployment, frontend root, SPA fallback, static assets, and backend API reachability. | Incident lead -> Frontend owner -> Release operator |
+| `observability-degraded` | Keep broad rollout blocked until provider decision, DSN setup, or written Conditional Go risk acceptance exists. | Incident lead -> Backend owner -> Business approver |
+
+Minimum alert evidence:
+
+- alert id,
+- environment,
+- detected at,
+- detected by,
+- severity,
+- owner role,
+- primary and backup response path,
+- related correlation id when present,
+- guarded command result,
+- sanitized evidence link,
+- decision.
 
 ## Roles And Ownership
 

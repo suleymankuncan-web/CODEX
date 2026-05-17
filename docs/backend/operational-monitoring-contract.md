@@ -38,6 +38,17 @@
   "service": "store-ops-backend",
   "timestamp": "2026-04-18T08:00:00.000Z",
   "queueBackend": "bullmq",
+  "observability": {
+    "status": "ok",
+    "errorTracking": {
+      "dsnConfigured": false,
+      "environment": "production",
+      "externalDelivery": "not-enabled",
+      "mode": "log-only"
+    },
+    "logLevel": "info",
+    "readinessProfile": "controlled-pilot"
+  },
   "checks": {
     "database": {
       "status": "ok",
@@ -138,6 +149,49 @@
   - `stuck`
 
 ## Alerting Interpretation
+
+## Alert Routing V1
+
+Provider status: metadata-only until an approved alerting provider, alert destination, and secret storage path are configured outside source control.
+
+Smoke command:
+
+```powershell
+cd "<workspace-root>"
+npm.cmd run smoke:alert-routing
+```
+
+Optional deployed signal input:
+
+```powershell
+$env:ALERT_SMOKE_ENVIRONMENT="staging"
+$env:ALERT_SMOKE_BACKEND_URL="https://api-staging.hr-axis.com/api"
+npm.cmd run smoke:alert-routing
+```
+
+Owner roles:
+
+- Incident lead
+- Release operator
+- Backend owner
+- Frontend owner
+- Data owner
+- Business approver
+
+Required alert routes:
+
+| Alert id | Trigger signal | Severity | Owner role | First response | Guarded evidence |
+| --- | --- | --- | --- | --- | --- |
+| `backend-health-down` | `GET /api/health` fails, returns `503`, or database check is `error`. | P0 | Backend owner + Release operator | Run `npm.cmd run smoke:deployed-readiness`, inspect Render logs by `x-correlation-id`, and decide rollback/forward-fix. | Health JSON, deployed readiness output, Render deploy id, correlation id. |
+| `backend-5xx-spike` | Structured `http.exception` or `http.request.completed` events show repeated `5xx` for protected routes. | P0/P1 | Backend owner | Group by `path` and `correlationId`; confirm whether auth, DB, queue, or code path is failing. | Structured logs with redacted error message, path, status code, correlation id. |
+| `auth-session-failure-spike` | `/api/auth/session` fails, returns empty role/scope, or auth smoke fails. | P0 | Backend owner + Business approver | Run `npm.cmd run smoke:auth:staging:action` and `npm.cmd run guard:auth:evidence`; do not broaden IdP access while unexplained. | Sanitized auth smoke evidence, assigned/unassigned store action result. |
+| `import-failure-spike` | Import batch `healthTotals.stuck`, `blocked`, or persistent `retryReady` becomes non-zero in a real feed. | P1/P0 if data damage risk exists | Data owner | Pause import/materialization jobs; review batch evidence and dominant quality issue before retrying. | Batch id, source id, entity type, failed row count, dominant quality issue code. |
+| `snapshot-worker-failure` | Snapshot run `healthTotals.stuck`, repeated retry-ready state, or worker logs show failed snapshot execution. | P1 | Data owner + Backend owner | Pause dependent reporting decisions, review snapshot lineage, and rerun only after dependency cause is known. | Snapshot run id, parent run id, failure reason, queue backend, correlation id. |
+| `database-latency-high` | `/api/health` database latency exceeds target for repeated checks or DB check fails. | P1/P0 if app unavailable | Backend owner | Check DB provider health, pool pressure, migrations, and recent query-heavy changes. | Health latency samples, DB provider status, release SHA, migration status. |
+| `frontend-unreachable` | Frontend root, SPA fallback, or static asset checks fail. | P0/P1 | Frontend owner + Release operator | Run `npm.cmd run smoke:deployed-readiness`; verify Vercel deployment, rewrites, and asset content types. | Frontend URL, Vercel deployment URL, failed asset URL, deployed smoke output. |
+| `observability-degraded` | `/api/health` reports `observability.status=degraded` or broad-production profile lacks `ERROR_TRACKING_DSN`. | P1 before rollout, P0 if broad production is already live | Incident lead + Backend owner | Keep rollout at Conditional Go/No-Go until provider decision or accepted risk is recorded. | Health observability block, env inventory note, approval/Conditional Go record. |
+
+Alert routing smoke must pass before staging or production sign-off unless a written Conditional Go names the owner, missing provider capability, and due date.
 
 ### Import alerts
 - Page or escalate when:
