@@ -51,7 +51,7 @@ test('core admin routes open without unavailable states', async ({ page }) => {
 
   await verifyPilotRoutes(page, routes)
 
-  monitor.expectClean()
+  await monitor.expectClean()
 })
 
 test('core store routes open without unavailable states', async ({ page }) => {
@@ -81,7 +81,7 @@ test('core store routes open without unavailable states', async ({ page }) => {
 
   await verifyPilotRoutes(page, routes)
 
-  monitor.expectClean()
+  await monitor.expectClean()
 })
 
 test('protected route refresh returns to the same route', async ({ page }) => {
@@ -97,7 +97,7 @@ test('protected route refresh returns to the same route', async ({ page }) => {
   await expect(page.getByLabel('Mağaza filtresi')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Filtreleri temizle' })).toBeVisible()
   await expectHealthySurface(page)
-  monitor.expectClean()
+  await monitor.expectClean()
 })
 
 async function expectHealthySurface(page: Page) {
@@ -146,10 +146,26 @@ function watchPilotFailures(page: Page) {
   })
 
   return {
-    expectClean() {
+    async expectClean() {
+      const bufferedApiFailures = await page.evaluate(() => {
+        const typedWindow = window as Window & {
+          __STORE_OPS_API_FAILURES__?: Array<Record<string, unknown>>
+        }
+
+        return (typedWindow.__STORE_OPS_API_FAILURES__ ?? []).map((failure) =>
+          [
+            String(failure.method ?? 'UNKNOWN'),
+            String(failure.path ?? 'unknown-path'),
+            String(failure.status ?? 'no-status'),
+            String(failure.errorCategory ?? 'unknown-category'),
+          ].join(' '),
+        )
+      })
+
       expect(failedRequests, 'API requests should not fail at the network layer').toEqual([])
       expect(failedResponses, 'API responses should not return error status codes').toEqual([])
       expect(apiFailureDiagnostics, 'Pilot smoke routes should not emit API failure diagnostics').toEqual([])
+      expect(bufferedApiFailures, 'Pilot smoke routes should not buffer API failure diagnostics').toEqual([])
       expect(pageErrors, 'Pilot smoke routes should not raise page errors').toEqual([])
     },
   }
