@@ -522,7 +522,7 @@ function resolveStoreApprovalsPersona(
   return 'readOnly'
 }
 
-export function StoreApprovalsPage(input: {
+function useStoreApprovalsPageContent(input: {
   authSummary: AuthSessionSummary | null
 }) {
   const queryClient = useQueryClient()
@@ -850,10 +850,18 @@ export function StoreApprovalsPage(input: {
   const cancelOffboardingRequestEdit = () => {
     dispatch({ type: 'cancelOffboardingRequestEdit' })
   }
-  const getLedgerActionButtonClass = (panel: StoreApprovalsLedgerPanel) =>
-    activeLedgerPanel === panel
-      ? 'store-approvals-action-tab store-approvals-action-tab-active'
-      : 'store-approvals-action-tab'
+  const approveTargetRequest = (request: TargetDistributionRequest) => {
+    const canApprove = canApproveTargetDistributionRequest(input.authSummary, request.storeId)
+
+    if (!canApprove) {
+      return
+    }
+
+    approveTargetMutation.mutate({
+      requestId: request.requestId,
+      approvalNote: approvalNotes[request.requestId] || undefined,
+    })
+  }
 
   return (
     <section
@@ -861,312 +869,559 @@ export function StoreApprovalsPage(input: {
       aria-labelledby="store-approvals-ledger-title"
       data-testid="store-approvals-ledger"
     >
-      <header className="store-approvals-ledger-header">
-        <div>
-          <div className="store-approvals-ledger-eyebrow">
-            {t('storeApprovals.ledgerEyebrow')}
-          </div>
-          <h2 id="store-approvals-ledger-title">
-            {t('storeApprovals.ledgerTitle')}
-          </h2>
-          <p>
-            {isRegionManagerLedger
-              ? t('storeApprovals.regionManagerSubtitle')
-              : isStoreManagerLedger
-                ? t('storeApprovals.storeManagerSubtitle')
-                : t('storeApprovals.readOnlySubtitle')}
-          </p>
+      <StoreApprovalsHeader
+        isRegionManagerLedger={isRegionManagerLedger}
+        isStoreManagerLedger={isStoreManagerLedger}
+        t={t}
+      />
+
+      <StoreApprovalsMetrics
+        approvedCount={approvedCount}
+        pendingCount={pendingCount}
+        personnelCount={personnelQuery.data?.items.length ?? 0}
+        returnedWorkforceCount={returnedWorkforceCount}
+        showTargetApprovalQueue={showTargetApprovalQueue}
+        showTargetSubmission={showTargetSubmission}
+        showWorkforceHrQueues={showWorkforceHrQueues}
+        t={t}
+      />
+
+      <StoreApprovalsWorkbench
+        activeLedgerPanel={activeLedgerPanel}
+        approvals={{
+          approvalNotes,
+          approvalNotice,
+          approvingRequestId: approveTargetMutation.variables?.requestId ?? null,
+          pendingRequests: pendingTargetRequests,
+          isApproving: approveTargetMutation.isPending,
+        }}
+        locale={locale}
+        panels={{
+          showTargetApprovalQueue,
+          showTargetSubmission,
+          showWorkforceHrQueues,
+        }}
+        returnedRequests={{
+          hasOffboardingRequestsError: rejectedOffboardingRequestsQuery.isError,
+          hasSellerCodeRequestsError: rejectedSellerCodeRequestsQuery.isError,
+          offboardingRequestsError: rejectedOffboardingRequestsQuery.error,
+          returnedOffboardingRequests,
+          returnedSellerCodeRequests,
+          sellerCodeRequestsError: rejectedSellerCodeRequestsQuery.error,
+        }}
+        sellerCodeRequest={{
+          editingRequestId: editingSellerRequestId,
+          errors: {
+            create: sellerCodeMutation.error,
+            createVisible: sellerCodeMutation.isError,
+            resubmit: resubmitSellerCodeMutation.error,
+            resubmitVisible: resubmitSellerCodeMutation.isError,
+          },
+          positionOptionsQuery,
+          sellerEmploymentType,
+          sellerFirstName,
+          sellerHireDate,
+          sellerLastName,
+          sellerNationalId,
+          sellerPhoneNumber,
+          sellerPositionId,
+          sellerRequestReason,
+          submission: {
+            notice: sellerRequestNotice,
+            pending: sellerRequestPending,
+          },
+          submitAllowed: canSubmitSellerCodeRequest,
+        }}
+        offboardingRequest={{
+          editingRequestId: editingOffboardingRequestId,
+          errors: {
+            create: offboardingMutation.error,
+            createVisible: offboardingMutation.isError,
+            resubmit: resubmitOffboardingMutation.error,
+            resubmitVisible: resubmitOffboardingMutation.isError,
+          },
+          offboardingEmployeeId,
+          offboardingRequestReason,
+          offboardingTerminationDate,
+          storeEmployeesQuery,
+          submission: {
+            notice: offboardingNotice,
+            pending: offboardingRequestPending,
+          },
+          submitAllowed: canSubmitOffboardingRequest,
+        }}
+        submittedTargetRequests={submittedTargetRequests}
+        targetRequest={{
+          activeAllocations,
+          allocationTotal,
+          assignedStoreIds,
+          errors: {
+            create: createMutation.error,
+            createVisible: createMutation.isError,
+          },
+          personnelQuery,
+          primaryStoreId,
+          requestMonth,
+          requestReason,
+          storeId,
+          submission: {
+            notice: submissionNotice,
+            pending: createMutation.isPending,
+          },
+          submitAllowed: canSubmit,
+          targetLabel,
+          totalTargetValue,
+          totalsAligned,
+        }}
+        t={t}
+        onActivePanelChange={(panel) => dispatch({ type: 'setActiveLedgerPanel', panel })}
+        onAllocationNoteChange={updateTargetAllocationNote}
+        onAllocationValueChange={updateTargetAllocationValue}
+        onApproveTargetRequest={approveTargetRequest}
+        onApprovalNoteChange={(requestId, value) =>
+          dispatch({ type: 'setApprovalNote', requestId, value })
+        }
+        onCancelOffboardingEdit={cancelOffboardingRequestEdit}
+        onCancelSellerEdit={cancelSellerRequestEdit}
+        onEditOffboardingRequest={startEditingOffboardingRequest}
+        onEditSellerCodeRequest={startEditingSellerRequest}
+        onOffboardingEmployeeIdChange={(value) =>
+          dispatch({ type: 'setOffboardingEmployeeId', value })
+        }
+        onOffboardingRequestReasonChange={(value) =>
+          dispatch({ type: 'setOffboardingRequestReason', value })
+        }
+        onOffboardingTerminationDateChange={(value) =>
+          dispatch({ type: 'setOffboardingTerminationDate', value })
+        }
+        onRequestMonthChange={(value) => dispatch({ type: 'setRequestMonth', value })}
+        onRequestReasonChange={(value) => dispatch({ type: 'setRequestReason', value })}
+        onSellerEmploymentTypeChange={(value) =>
+          dispatch({ type: 'setSellerEmploymentType', value })
+        }
+        onSellerFirstNameChange={(value) => dispatch({ type: 'setSellerFirstName', value })}
+        onSellerHireDateChange={(value) => dispatch({ type: 'setSellerHireDate', value })}
+        onSellerLastNameChange={(value) => dispatch({ type: 'setSellerLastName', value })}
+        onSellerNationalIdChange={(value) => dispatch({ type: 'setSellerNationalId', value })}
+        onSellerPhoneNumberChange={(value) => dispatch({ type: 'setSellerPhoneNumber', value })}
+        onSellerPositionIdChange={(value) => dispatch({ type: 'setSellerPositionId', value })}
+        onSellerRequestReasonChange={(value) =>
+          dispatch({ type: 'setSellerRequestReason', value })
+        }
+        onStoreIdChange={(value) => dispatch({ type: 'setSelectedStoreId', value })}
+        onSubmitOffboardingRequest={submitOffboardingRequest}
+        onSubmitSellerCodeRequest={submitSellerCodeRequest}
+        onSubmitTargetRequest={submitTargetDistributionRequest}
+        onTargetLabelChange={(value) => dispatch({ type: 'setTargetLabel', value })}
+        onTotalTargetValueChange={(value) => dispatch({ type: 'setTotalTargetValue', value })}
+        canApproveRequest={(request) =>
+          canApproveTargetDistributionRequest(input.authSummary, request.storeId)
+        }
+      />
+    </section>
+  )
+}
+
+export function StoreApprovalsPage(input: {
+  authSummary: AuthSessionSummary | null
+}) {
+  return useStoreApprovalsPageContent(input)
+}
+
+function StoreApprovalsHeader(input: {
+  isRegionManagerLedger: boolean
+  isStoreManagerLedger: boolean
+  t: TranslateFunction
+}) {
+  return (
+    <header className="store-approvals-ledger-header">
+      <div>
+        <div className="store-approvals-ledger-eyebrow">
+          {input.t('storeApprovals.ledgerEyebrow')}
         </div>
-      </header>
+        <h2 id="store-approvals-ledger-title">
+          {input.t('storeApprovals.ledgerTitle')}
+        </h2>
+        <p>
+          {input.isRegionManagerLedger
+            ? input.t('storeApprovals.regionManagerSubtitle')
+            : input.isStoreManagerLedger
+              ? input.t('storeApprovals.storeManagerSubtitle')
+              : input.t('storeApprovals.readOnlySubtitle')}
+        </p>
+      </div>
+    </header>
+  )
+}
 
-      <section
-        className="store-approvals-ledger-metrics"
-        aria-label={t('storeApprovals.ledgerMetrics')}
-      >
-        <LedgerMetric
-          icon={<ReceiptText size={18} />}
-          label={t('storeApprovals.pendingApprovals')}
-          note={t('storeApprovals.pendingApprovalsNote')}
-          value={String(pendingCount)}
-        />
-        <LedgerMetric
-          icon={<ShieldCheck size={18} />}
-          label={t('storeApprovals.approvalIntent')}
-          note={
-            showTargetApprovalQueue
-              ? t('storeApprovals.targetApprovalQueueTitle')
-              : t('storeApprovals.approvalIntentNote')
-          }
-          value={showTargetSubmission || showTargetApprovalQueue ? '1' : '0'}
-        />
-        <LedgerMetric
-          icon={<Clock3 size={18} />}
-          label={t('storeApprovals.approvedRequests')}
-          note={t('storeApprovals.approvedRequestsNote')}
-          value={String(approvedCount)}
-        />
-        <LedgerMetric
-          icon={<CheckCircle2 size={18} />}
-          label={
-            showWorkforceHrQueues
-              ? t('storeApprovals.ledgerReturnedCorrections')
-              : t('storeApprovals.storePersonnel')
-          }
-          note={
-            showWorkforceHrQueues
-              ? t('storeApprovals.workforceQueueTitle')
-              : t('storeApprovals.regionReviewCopy')
-          }
-          value={
-            showWorkforceHrQueues
-              ? String(returnedWorkforceCount)
-              : String(personnelQuery.data?.items.length ?? 0)
-          }
-        />
-      </section>
+function StoreApprovalsMetrics(input: {
+  approvedCount: number
+  pendingCount: number
+  personnelCount: number
+  returnedWorkforceCount: number
+  showTargetApprovalQueue: boolean
+  showTargetSubmission: boolean
+  showWorkforceHrQueues: boolean
+  t: TranslateFunction
+}) {
+  return (
+    <section
+      className="store-approvals-ledger-metrics"
+      aria-label={input.t('storeApprovals.ledgerMetrics')}
+    >
+      <LedgerMetric
+        icon={<ReceiptText size={18} />}
+        label={input.t('storeApprovals.pendingApprovals')}
+        note={input.t('storeApprovals.pendingApprovalsNote')}
+        value={String(input.pendingCount)}
+      />
+      <LedgerMetric
+        icon={<ShieldCheck size={18} />}
+        label={input.t('storeApprovals.approvalIntent')}
+        note={
+          input.showTargetApprovalQueue
+            ? input.t('storeApprovals.targetApprovalQueueTitle')
+            : input.t('storeApprovals.approvalIntentNote')
+        }
+        value={input.showTargetSubmission || input.showTargetApprovalQueue ? '1' : '0'}
+      />
+      <LedgerMetric
+        icon={<Clock3 size={18} />}
+        label={input.t('storeApprovals.approvedRequests')}
+        note={input.t('storeApprovals.approvedRequestsNote')}
+        value={String(input.approvedCount)}
+      />
+      <LedgerMetric
+        icon={<CheckCircle2 size={18} />}
+        label={
+          input.showWorkforceHrQueues
+            ? input.t('storeApprovals.ledgerReturnedCorrections')
+            : input.t('storeApprovals.storePersonnel')
+        }
+        note={
+          input.showWorkforceHrQueues
+            ? input.t('storeApprovals.workforceQueueTitle')
+            : input.t('storeApprovals.regionReviewCopy')
+        }
+        value={
+          input.showWorkforceHrQueues
+            ? String(input.returnedWorkforceCount)
+            : String(input.personnelCount)
+        }
+      />
+    </section>
+  )
+}
 
-      <section
-        className="store-approvals-ledger-inspector"
-        aria-label={t('storeApprovals.ledgerInspectorAria')}
-      >
-        <aside className="store-approvals-action-workbench">
-          <div className="store-approvals-action-head">
-            <div>
-              <div className="store-approvals-ledger-eyebrow">
-                {t('storeApprovals.liveRequestFlow')}
-              </div>
-              <strong className="store-approvals-action-title">
-                {t(ledgerActionLabelKeys[activeLedgerPanel])}
-              </strong>
+type StoreApprovalsWorkbenchInput = {
+  activeLedgerPanel: StoreApprovalsLedgerPanel
+  approvals: {
+    approvalNotes: Record<string, string>
+    approvalNotice: string | null
+    approvingRequestId: string | null
+    isApproving: boolean
+    pendingRequests: TargetDistributionRequest[]
+  }
+  canApproveRequest: (request: TargetDistributionRequest) => boolean
+  locale: AppLocale
+  panels: {
+    showTargetApprovalQueue: boolean
+    showTargetSubmission: boolean
+    showWorkforceHrQueues: boolean
+  }
+  returnedRequests: {
+    hasOffboardingRequestsError: boolean
+    hasSellerCodeRequestsError: boolean
+    offboardingRequestsError: unknown
+    returnedOffboardingRequests: OffboardingRequest[]
+    returnedSellerCodeRequests: SellerCodeRequest[]
+    sellerCodeRequestsError: unknown
+  }
+  sellerCodeRequest: {
+    editingRequestId: string | null
+    errors: RequestFormErrors
+    positionOptionsQuery: ListQuerySnapshot<PositionOption>
+    sellerEmploymentType: SellerEmploymentType
+    sellerFirstName: string
+    sellerHireDate: string
+    sellerLastName: string
+    sellerNationalId: string
+    sellerPhoneNumber: string
+    sellerPositionId: string
+    sellerRequestReason: string
+    submission: RequestFormSubmission
+    submitAllowed: boolean
+  }
+  offboardingRequest: {
+    editingRequestId: string | null
+    errors: RequestFormErrors
+    offboardingEmployeeId: string
+    offboardingRequestReason: string
+    offboardingTerminationDate: string
+    storeEmployeesQuery: ListQuerySnapshot<StoreEmployee>
+    submission: RequestFormSubmission
+    submitAllowed: boolean
+  }
+  submittedTargetRequests: TargetDistributionRequest[]
+  targetRequest: {
+    activeAllocations: TargetDistributionAllocation[]
+    allocationTotal: number
+    assignedStoreIds: string[]
+    errors: RequestFormErrors
+    personnelQuery: ListQuerySnapshot<StoreTargetingPerson>
+    primaryStoreId: string | null
+    requestMonth: string
+    requestReason: string
+    storeId: string
+    submission: RequestFormSubmission
+    submitAllowed: boolean
+    targetLabel: string
+    totalTargetValue: string
+    totalsAligned: boolean
+  }
+  t: TranslateFunction
+  onActivePanelChange: (panel: StoreApprovalsLedgerPanel) => void
+  onAllocationNoteChange: (index: number, value: string) => void
+  onAllocationValueChange: (index: number, targetValue: number) => void
+  onApprovalNoteChange: (requestId: string, value: string) => void
+  onApproveTargetRequest: (request: TargetDistributionRequest) => void
+  onCancelOffboardingEdit: () => void
+  onCancelSellerEdit: () => void
+  onEditOffboardingRequest: (item: OffboardingRequest) => void
+  onEditSellerCodeRequest: (item: SellerCodeRequest) => void
+  onOffboardingEmployeeIdChange: StringFieldSetter
+  onOffboardingRequestReasonChange: StringFieldSetter
+  onOffboardingTerminationDateChange: StringFieldSetter
+  onRequestMonthChange: StringFieldSetter
+  onRequestReasonChange: StringFieldSetter
+  onSellerEmploymentTypeChange: (value: SellerEmploymentType) => void
+  onSellerFirstNameChange: StringFieldSetter
+  onSellerHireDateChange: StringFieldSetter
+  onSellerLastNameChange: StringFieldSetter
+  onSellerNationalIdChange: StringFieldSetter
+  onSellerPhoneNumberChange: StringFieldSetter
+  onSellerPositionIdChange: StringFieldSetter
+  onSellerRequestReasonChange: StringFieldSetter
+  onStoreIdChange: StringFieldSetter
+  onSubmitOffboardingRequest: () => void
+  onSubmitSellerCodeRequest: () => void
+  onSubmitTargetRequest: () => void
+  onTargetLabelChange: StringFieldSetter
+  onTotalTargetValueChange: StringFieldSetter
+}
+
+function StoreApprovalsWorkbench(input: StoreApprovalsWorkbenchInput) {
+  const getLedgerActionButtonClass = (panel: StoreApprovalsLedgerPanel) =>
+    input.activeLedgerPanel === panel
+      ? 'store-approvals-action-tab store-approvals-action-tab-active'
+      : 'store-approvals-action-tab'
+
+  return (
+    <section
+      className="store-approvals-ledger-inspector"
+      aria-label={input.t('storeApprovals.ledgerInspectorAria')}
+    >
+      <aside className="store-approvals-action-workbench">
+        <div className="store-approvals-action-head">
+          <div>
+            <div className="store-approvals-ledger-eyebrow">
+              {input.t('storeApprovals.liveRequestFlow')}
             </div>
-            <StatusPill tone="calm">
-              {t('storeApprovals.ledgerDetailStatus')}
-            </StatusPill>
+            <strong className="store-approvals-action-title">
+              {input.t(ledgerActionLabelKeys[input.activeLedgerPanel])}
+            </strong>
           </div>
+          <StatusPill tone="calm">
+            {input.t('storeApprovals.ledgerDetailStatus')}
+          </StatusPill>
+        </div>
 
-          <div className="store-approvals-action-tabs" aria-label={t('storeApprovals.ledgerInspectorAria')}>
-            {showTargetSubmission ? (
-              <button
-                className={getLedgerActionButtonClass('targetRequest')}
-                type="button"
-                aria-pressed={activeLedgerPanel === 'targetRequest'}
-                onClick={() => dispatch({ type: 'setActiveLedgerPanel', panel: 'targetRequest' })}
-              >
-                {t('storeApprovals.openTargetRequest')}
-              </button>
-            ) : null}
-            {showTargetApprovalQueue ? (
-              <button
-                className={getLedgerActionButtonClass('targetApproval')}
-                type="button"
-                aria-pressed={activeLedgerPanel === 'targetApproval'}
-                onClick={() => dispatch({ type: 'setActiveLedgerPanel', panel: 'targetApproval' })}
-              >
-                {t('storeApprovals.openTargetApprovalQueue')}
-              </button>
-            ) : null}
+        <div className="store-approvals-action-tabs" aria-label={input.t('storeApprovals.ledgerInspectorAria')}>
+          {input.panels.showTargetSubmission ? (
             <button
-              className={getLedgerActionButtonClass('submittedTargets')}
+              className={getLedgerActionButtonClass('targetRequest')}
               type="button"
-              aria-pressed={activeLedgerPanel === 'submittedTargets'}
-              onClick={() => dispatch({ type: 'setActiveLedgerPanel', panel: 'submittedTargets' })}
+              aria-pressed={input.activeLedgerPanel === 'targetRequest'}
+              onClick={() => input.onActivePanelChange('targetRequest')}
             >
-              {t('storeApprovals.openSubmittedTargets')}
+              {input.t('storeApprovals.openTargetRequest')}
             </button>
-            {showWorkforceHrQueues ? (
-              <>
-                <button
-                  className={getLedgerActionButtonClass('sellerCodeRequest')}
-                  type="button"
-                  aria-pressed={activeLedgerPanel === 'sellerCodeRequest'}
-                  onClick={() => dispatch({ type: 'setActiveLedgerPanel', panel: 'sellerCodeRequest' })}
-                >
-                  {t('storeApprovals.openSellerCodeRequest')}
-                </button>
-                <button
-                  className={getLedgerActionButtonClass('offboardingRequest')}
-                  type="button"
-                  aria-pressed={activeLedgerPanel === 'offboardingRequest'}
-                  onClick={() => dispatch({ type: 'setActiveLedgerPanel', panel: 'offboardingRequest' })}
-                >
-                  {t('storeApprovals.openOffboardingRequest')}
-                </button>
-                <button
-                  className={getLedgerActionButtonClass('returnedRequests')}
-                  type="button"
-                  aria-pressed={activeLedgerPanel === 'returnedRequests'}
-                  onClick={() => dispatch({ type: 'setActiveLedgerPanel', panel: 'returnedRequests' })}
-                >
-                  {t('storeApprovals.openReturnedRequests')}
-                </button>
-              </>
-            ) : null}
-          </div>
+          ) : null}
+          {input.panels.showTargetApprovalQueue ? (
+            <button
+              className={getLedgerActionButtonClass('targetApproval')}
+              type="button"
+              aria-pressed={input.activeLedgerPanel === 'targetApproval'}
+              onClick={() => input.onActivePanelChange('targetApproval')}
+            >
+              {input.t('storeApprovals.openTargetApprovalQueue')}
+            </button>
+          ) : null}
+          <button
+            className={getLedgerActionButtonClass('submittedTargets')}
+            type="button"
+            aria-pressed={input.activeLedgerPanel === 'submittedTargets'}
+            onClick={() => input.onActivePanelChange('submittedTargets')}
+          >
+            {input.t('storeApprovals.openSubmittedTargets')}
+          </button>
+          {input.panels.showWorkforceHrQueues ? (
+            <>
+              <button
+                className={getLedgerActionButtonClass('sellerCodeRequest')}
+                type="button"
+                aria-pressed={input.activeLedgerPanel === 'sellerCodeRequest'}
+                onClick={() => input.onActivePanelChange('sellerCodeRequest')}
+              >
+                {input.t('storeApprovals.openSellerCodeRequest')}
+              </button>
+              <button
+                className={getLedgerActionButtonClass('offboardingRequest')}
+                type="button"
+                aria-pressed={input.activeLedgerPanel === 'offboardingRequest'}
+                onClick={() => input.onActivePanelChange('offboardingRequest')}
+              >
+                {input.t('storeApprovals.openOffboardingRequest')}
+              </button>
+              <button
+                className={getLedgerActionButtonClass('returnedRequests')}
+                type="button"
+                aria-pressed={input.activeLedgerPanel === 'returnedRequests'}
+                onClick={() => input.onActivePanelChange('returnedRequests')}
+              >
+                {input.t('storeApprovals.openReturnedRequests')}
+              </button>
+            </>
+          ) : null}
+        </div>
 
-          <div className="store-approvals-action-panel">
-            {activeLedgerPanel === 'targetRequest' && showTargetSubmission ? (
-              <TargetDistributionRequestForm
+        <div className="store-approvals-action-panel">
+          {input.activeLedgerPanel === 'targetRequest' && input.panels.showTargetSubmission ? (
+            <TargetDistributionRequestForm
               access={{
-                createAllowed: showTargetSubmission,
-                submitAllowed: canSubmit,
+                createAllowed: input.panels.showTargetSubmission,
+                submitAllowed: input.targetRequest.submitAllowed,
               }}
-              activeAllocations={activeAllocations}
-              allocationTotal={allocationTotal}
-              assignedStoreIds={assignedStoreIds}
-              errors={{
-                create: createMutation.error,
-                createVisible: createMutation.isError,
-              }}
-              locale={locale}
-              onAllocationNoteChange={updateTargetAllocationNote}
-              onAllocationValueChange={updateTargetAllocationValue}
-              onRequestMonthChange={(value) => dispatch({ type: 'setRequestMonth', value })}
-              onRequestReasonChange={(value) => dispatch({ type: 'setRequestReason', value })}
-              onStoreIdChange={(value) => dispatch({ type: 'setSelectedStoreId', value })}
-              onSubmit={submitTargetDistributionRequest}
-              onTargetLabelChange={(value) => dispatch({ type: 'setTargetLabel', value })}
-              onTotalTargetValueChange={(value) => dispatch({ type: 'setTotalTargetValue', value })}
-              personnelQuery={personnelQuery}
-              primaryStoreId={primaryStoreId}
-              requestMonth={requestMonth}
-              requestReason={requestReason}
-              storeId={storeId}
-              submission={{
-                notice: submissionNotice,
-                pending: createMutation.isPending,
-              }}
-              targetLabel={targetLabel}
-              t={t}
-              totalTargetValue={totalTargetValue}
-              totalsAligned={totalsAligned}
-              />
-            ) : null}
+              activeAllocations={input.targetRequest.activeAllocations}
+              allocationTotal={input.targetRequest.allocationTotal}
+              assignedStoreIds={input.targetRequest.assignedStoreIds}
+              errors={input.targetRequest.errors}
+              locale={input.locale}
+              onAllocationNoteChange={input.onAllocationNoteChange}
+              onAllocationValueChange={input.onAllocationValueChange}
+              onRequestMonthChange={input.onRequestMonthChange}
+              onRequestReasonChange={input.onRequestReasonChange}
+              onStoreIdChange={input.onStoreIdChange}
+              onSubmit={input.onSubmitTargetRequest}
+              onTargetLabelChange={input.onTargetLabelChange}
+              onTotalTargetValueChange={input.onTotalTargetValueChange}
+              personnelQuery={input.targetRequest.personnelQuery}
+              primaryStoreId={input.targetRequest.primaryStoreId}
+              requestMonth={input.targetRequest.requestMonth}
+              requestReason={input.targetRequest.requestReason}
+              storeId={input.targetRequest.storeId}
+              submission={input.targetRequest.submission}
+              targetLabel={input.targetRequest.targetLabel}
+              t={input.t}
+              totalTargetValue={input.targetRequest.totalTargetValue}
+              totalsAligned={input.targetRequest.totalsAligned}
+            />
+          ) : null}
 
-            {activeLedgerPanel === 'targetApproval' && showTargetApprovalQueue ? (
-              <TargetApprovalLedger
-              approvalNotes={approvalNotes}
-              approvalNotice={approvalNotice}
-              approvingRequestId={approveTargetMutation.variables?.requestId ?? null}
-              isApproving={approveTargetMutation.isPending}
-              locale={locale}
-              onApprovalNoteChange={(requestId, value) =>
-                dispatch({ type: 'setApprovalNote', requestId, value })
-              }
-              onApprove={(request) => {
-                const canApprove = canApproveTargetDistributionRequest(
-                  input.authSummary,
-                  request.storeId,
-                )
+          {input.activeLedgerPanel === 'targetApproval' && input.panels.showTargetApprovalQueue ? (
+            <TargetApprovalLedger
+              approvalNotes={input.approvals.approvalNotes}
+              approvalNotice={input.approvals.approvalNotice}
+              approvingRequestId={input.approvals.approvingRequestId}
+              isApproving={input.approvals.isApproving}
+              locale={input.locale}
+              onApprovalNoteChange={input.onApprovalNoteChange}
+              onApprove={input.onApproveTargetRequest}
+              requests={input.approvals.pendingRequests}
+              t={input.t}
+              canApproveRequest={input.canApproveRequest}
+            />
+          ) : null}
 
-                if (!canApprove) {
-                  return
-                }
+          {input.activeLedgerPanel === 'submittedTargets' ? (
+            <SubmittedTargetRequestsPanel
+              locale={input.locale}
+              requests={input.submittedTargetRequests}
+              t={input.t}
+            />
+          ) : null}
 
-                approveTargetMutation.mutate({
-                  requestId: request.requestId,
-                  approvalNote: approvalNotes[request.requestId] || undefined,
-                })
-              }}
-              requests={pendingTargetRequests}
-              t={t}
-              canApproveRequest={(request) =>
-                canApproveTargetDistributionRequest(input.authSummary, request.storeId)
-              }
-              />
-            ) : null}
+          {input.activeLedgerPanel === 'returnedRequests' && input.panels.showWorkforceHrQueues ? (
+            <ReturnedRequestsPanel
+              locale={input.locale}
+              returnedOffboardingRequests={input.returnedRequests.returnedOffboardingRequests}
+              returnedSellerCodeRequests={input.returnedRequests.returnedSellerCodeRequests}
+              sellerCodeRequestsError={input.returnedRequests.sellerCodeRequestsError}
+              hasSellerCodeRequestsError={input.returnedRequests.hasSellerCodeRequestsError}
+              offboardingRequestsError={input.returnedRequests.offboardingRequestsError}
+              hasOffboardingRequestsError={input.returnedRequests.hasOffboardingRequestsError}
+              onEditOffboardingRequest={input.onEditOffboardingRequest}
+              onEditSellerCodeRequest={input.onEditSellerCodeRequest}
+              t={input.t}
+            />
+          ) : null}
 
-            {activeLedgerPanel === 'submittedTargets' ? (
-              <SubmittedTargetRequestsPanel locale={locale} requests={submittedTargetRequests} t={t} />
-            ) : null}
-
-            {activeLedgerPanel === 'returnedRequests' && showWorkforceHrQueues ? (
-              <ReturnedRequestsPanel
-              locale={locale}
-              returnedOffboardingRequests={returnedOffboardingRequests}
-              returnedSellerCodeRequests={returnedSellerCodeRequests}
-              sellerCodeRequestsError={rejectedSellerCodeRequestsQuery.error}
-              hasSellerCodeRequestsError={rejectedSellerCodeRequestsQuery.isError}
-              offboardingRequestsError={rejectedOffboardingRequestsQuery.error}
-              hasOffboardingRequestsError={rejectedOffboardingRequestsQuery.isError}
-              onEditOffboardingRequest={startEditingOffboardingRequest}
-              onEditSellerCodeRequest={startEditingSellerRequest}
-              t={t}
-              />
-            ) : null}
-
-            {activeLedgerPanel === 'sellerCodeRequest' && showWorkforceHrQueues ? (
-              <SellerCodeRequestForm
+          {input.activeLedgerPanel === 'sellerCodeRequest' && input.panels.showWorkforceHrQueues ? (
+            <SellerCodeRequestForm
               access={{
-                createAllowed: showWorkforceHrQueues,
-                submitAllowed: canSubmitSellerCodeRequest,
+                createAllowed: input.panels.showWorkforceHrQueues,
+                submitAllowed: input.sellerCodeRequest.submitAllowed,
               }}
-              editingRequestId={editingSellerRequestId}
-              errors={{
-                create: sellerCodeMutation.error,
-                createVisible: sellerCodeMutation.isError,
-                resubmit: resubmitSellerCodeMutation.error,
-                resubmitVisible: resubmitSellerCodeMutation.isError,
-              }}
-              onCancelEdit={cancelSellerRequestEdit}
-              onEmploymentTypeChange={(value) => dispatch({ type: 'setSellerEmploymentType', value })}
-              onFirstNameChange={(value) => dispatch({ type: 'setSellerFirstName', value })}
-              onHireDateChange={(value) => dispatch({ type: 'setSellerHireDate', value })}
-              onLastNameChange={(value) => dispatch({ type: 'setSellerLastName', value })}
-              onNationalIdChange={(value) => dispatch({ type: 'setSellerNationalId', value })}
-              onPhoneNumberChange={(value) => dispatch({ type: 'setSellerPhoneNumber', value })}
-              onPositionIdChange={(value) => dispatch({ type: 'setSellerPositionId', value })}
-              onRequestReasonChange={(value) => dispatch({ type: 'setSellerRequestReason', value })}
-              onSubmit={submitSellerCodeRequest}
-              positionOptionsQuery={positionOptionsQuery}
-              sellerEmploymentType={sellerEmploymentType}
-              sellerFirstName={sellerFirstName}
-              sellerHireDate={sellerHireDate}
-              sellerLastName={sellerLastName}
-              sellerNationalId={sellerNationalId}
-              sellerPhoneNumber={sellerPhoneNumber}
-              sellerPositionId={sellerPositionId}
-              sellerRequestReason={sellerRequestReason}
-              submission={{
-                notice: sellerRequestNotice,
-                pending: sellerRequestPending,
-              }}
-              storeId={storeId}
-              t={t}
-              />
-            ) : null}
+              editingRequestId={input.sellerCodeRequest.editingRequestId}
+              errors={input.sellerCodeRequest.errors}
+              onCancelEdit={input.onCancelSellerEdit}
+              onEmploymentTypeChange={input.onSellerEmploymentTypeChange}
+              onFirstNameChange={input.onSellerFirstNameChange}
+              onHireDateChange={input.onSellerHireDateChange}
+              onLastNameChange={input.onSellerLastNameChange}
+              onNationalIdChange={input.onSellerNationalIdChange}
+              onPhoneNumberChange={input.onSellerPhoneNumberChange}
+              onPositionIdChange={input.onSellerPositionIdChange}
+              onRequestReasonChange={input.onSellerRequestReasonChange}
+              onSubmit={input.onSubmitSellerCodeRequest}
+              positionOptionsQuery={input.sellerCodeRequest.positionOptionsQuery}
+              sellerEmploymentType={input.sellerCodeRequest.sellerEmploymentType}
+              sellerFirstName={input.sellerCodeRequest.sellerFirstName}
+              sellerHireDate={input.sellerCodeRequest.sellerHireDate}
+              sellerLastName={input.sellerCodeRequest.sellerLastName}
+              sellerNationalId={input.sellerCodeRequest.sellerNationalId}
+              sellerPhoneNumber={input.sellerCodeRequest.sellerPhoneNumber}
+              sellerPositionId={input.sellerCodeRequest.sellerPositionId}
+              sellerRequestReason={input.sellerCodeRequest.sellerRequestReason}
+              submission={input.sellerCodeRequest.submission}
+              storeId={input.targetRequest.storeId}
+              t={input.t}
+            />
+          ) : null}
 
-            {activeLedgerPanel === 'offboardingRequest' && showWorkforceHrQueues ? (
-              <OffboardingRequestForm
+          {input.activeLedgerPanel === 'offboardingRequest' && input.panels.showWorkforceHrQueues ? (
+            <OffboardingRequestForm
               access={{
-                createAllowed: showWorkforceHrQueues,
-                submitAllowed: canSubmitOffboardingRequest,
+                createAllowed: input.panels.showWorkforceHrQueues,
+                submitAllowed: input.offboardingRequest.submitAllowed,
               }}
-              editingRequestId={editingOffboardingRequestId}
-              errors={{
-                create: offboardingMutation.error,
-                createVisible: offboardingMutation.isError,
-                resubmit: resubmitOffboardingMutation.error,
-                resubmitVisible: resubmitOffboardingMutation.isError,
-              }}
-              offboardingEmployeeId={offboardingEmployeeId}
-              offboardingRequestReason={offboardingRequestReason}
-              offboardingTerminationDate={offboardingTerminationDate}
-              onCancelEdit={cancelOffboardingRequestEdit}
-              onEmployeeIdChange={(value) => dispatch({ type: 'setOffboardingEmployeeId', value })}
-              onRequestReasonChange={(value) => dispatch({ type: 'setOffboardingRequestReason', value })}
-              onSubmit={submitOffboardingRequest}
-              onTerminationDateChange={(value) => dispatch({ type: 'setOffboardingTerminationDate', value })}
-              submission={{
-                notice: offboardingNotice,
-                pending: offboardingRequestPending,
-              }}
-              storeEmployeesQuery={storeEmployeesQuery}
-              t={t}
-              />
-            ) : null}
-          </div>
-        </aside>
-      </section>
+              editingRequestId={input.offboardingRequest.editingRequestId}
+              errors={input.offboardingRequest.errors}
+              offboardingEmployeeId={input.offboardingRequest.offboardingEmployeeId}
+              offboardingRequestReason={input.offboardingRequest.offboardingRequestReason}
+              offboardingTerminationDate={input.offboardingRequest.offboardingTerminationDate}
+              onCancelEdit={input.onCancelOffboardingEdit}
+              onEmployeeIdChange={input.onOffboardingEmployeeIdChange}
+              onRequestReasonChange={input.onOffboardingRequestReasonChange}
+              onSubmit={input.onSubmitOffboardingRequest}
+              onTerminationDateChange={input.onOffboardingTerminationDateChange}
+              submission={input.offboardingRequest.submission}
+              storeEmployeesQuery={input.offboardingRequest.storeEmployeesQuery}
+              t={input.t}
+            />
+          ) : null}
+        </div>
+      </aside>
     </section>
   )
 }
