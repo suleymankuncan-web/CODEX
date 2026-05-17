@@ -609,6 +609,49 @@ describe("CompetitionRepository", () => {
     expect(databaseService.query).not.toHaveBeenCalled();
   });
 
+  it("compares owner user ids as text when listing owned competitions", async () => {
+    const { repository, databaseService } = createRepositoryHarness();
+    databaseService.query.mockResolvedValueOnce({ rowCount: 0, rows: [] });
+
+    await repository.listCompetitions({
+      companyIds: [],
+      regionIds: [],
+      storeIds: [],
+      actorUserId: "auth-provider-subject",
+      limit: 50,
+      offset: 0,
+    });
+
+    const sql = databaseService.query.mock.calls[0][0] as string;
+    const params = databaseService.query.mock.calls[0][1] as unknown[];
+    expect(sql).toContain("$6::text IS NOT NULL");
+    expect(sql).toContain("competition.owner_user_id = $6::text");
+    expect(sql).not.toContain("competition.owner_user_id = $6::uuid");
+    expect(params[5]).toBe("auth-provider-subject");
+  });
+
+  it("compares owner user ids as text when reading owned competition details", async () => {
+    const { repository, databaseService } = createRepositoryHarness();
+    databaseService.query.mockResolvedValueOnce({ rowCount: 0, rows: [] });
+
+    await expect(
+      repository.getCompetitionDetail({
+        competitionId: "11111111-1111-4111-8111-111111111111",
+        companyIds: [],
+        regionIds: [],
+        storeIds: [],
+        actorUserId: "auth-provider-subject",
+      }),
+    ).resolves.toBeNull();
+
+    const sql = databaseService.query.mock.calls[0][0] as string;
+    const params = databaseService.query.mock.calls[0][1] as unknown[];
+    expect(sql).toContain("$5::text IS NOT NULL");
+    expect(sql).toContain("competition.owner_user_id = $5::text");
+    expect(sql).not.toContain("competition.owner_user_id = $5::uuid");
+    expect(params[4]).toBe("auth-provider-subject");
+  });
+
   it("returns no competition detail or contribution rows without querying when actor scope is empty", async () => {
     const { repository, databaseService } = createRepositoryHarness();
 
