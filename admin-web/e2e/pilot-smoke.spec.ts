@@ -51,6 +51,16 @@ test('core admin routes open without unavailable states', async ({ page }) => {
       heading: page.getByRole('heading', { name: 'Bekleyen hedef dağıtım talepleri' }),
     },
     {
+      path: '/admin/auth',
+      urlPattern: /\/admin\/auth$/,
+      heading: page.locator('a[href="/admin/auth/catalog"]').first(),
+    },
+    {
+      path: '/admin/audit',
+      urlPattern: /\/admin\/audit$/,
+      heading: page.locator('a[href="/admin/audit/users/pilot-auth-user/audit"]').first(),
+    },
+    {
       path: '/admin/competitions',
       urlPattern: /\/admin\/competitions$/,
       heading: page.getByText('/admin/competitions'),
@@ -214,6 +224,31 @@ async function routePilotSmokeApi(page: Page) {
       return
     }
 
+    if (pathname.endsWith('/api/auth/users')) {
+      await route.fulfill({ json: authUsersFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/auth/role-assignments')) {
+      await route.fulfill({ json: authRoleAssignmentsFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/auth/action-store-assignments')) {
+      await route.fulfill({ json: authActionStoreAssignmentsFixture })
+      return
+    }
+
+    if (/\/api\/auth\/users\/[^/]+\/audit$/.test(pathname)) {
+      await route.fulfill({ json: authAuditFixture })
+      return
+    }
+
+    if (/\/api\/auth\/role-assignments\/[^/]+\/audit$/.test(pathname)) {
+      await route.fulfill({ json: authAuditFixture })
+      return
+    }
+
     if (pathname.endsWith('/api/feed')) {
       await route.fulfill({ json: feedFixture })
       return
@@ -251,6 +286,11 @@ async function routePilotSmokeApi(page: Page) {
 
     if (pathname.endsWith('/api/integrations/master-data-bootstrap/batches')) {
       await route.fulfill({ json: masterDataFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/snapshots/runs/needs-action')) {
+      await route.fulfill({ json: snapshotNeedsActionFixture })
       return
     }
 
@@ -392,9 +432,23 @@ const authSessionFixture = {
 const authLookupsFixture = {
   scopeTypes: ['company', 'region', 'store'],
   authProviders: ['mock'],
-  users: [],
-  roles: [],
-  permissions: [],
+  users: [{ userId: 'pilot-auth-user', username: 'pilot.admin', email: 'pilot.admin@example.com' }],
+  roles: [
+    {
+      roleId: 'pilot-role-super-admin',
+      roleCode: 'SUPER_ADMIN',
+      roleName: 'Super Admin',
+      scopeType: 'company',
+    },
+  ],
+  permissions: [
+    {
+      permissionId: 'pilot-permission-auth-read',
+      permissionCode: 'auth:read',
+      resourceName: 'auth',
+      actionName: 'read',
+    },
+  ],
   stores: [
     {
       storeId,
@@ -406,9 +460,23 @@ const authLookupsFixture = {
     },
   ],
   optionGroups: {
-    users: [],
-    roles: [],
-    permissions: [],
+    users: [{ userId: 'pilot-auth-user', username: 'pilot.admin', email: 'pilot.admin@example.com' }],
+    roles: [
+      {
+        roleId: 'pilot-role-super-admin',
+        roleCode: 'SUPER_ADMIN',
+        roleName: 'Super Admin',
+        scopeType: 'company',
+      },
+    ],
+    permissions: [
+      {
+        permissionId: 'pilot-permission-auth-read',
+        permissionCode: 'auth:read',
+        resourceName: 'auth',
+        actionName: 'read',
+      },
+    ],
     stores: [],
     scopeTypes: [
       { value: 'company', label: 'company' },
@@ -418,11 +486,90 @@ const authLookupsFixture = {
     authProviders: [{ value: 'mock', label: 'mock' }],
   },
   meta: {
-    totalUsers: 0,
-    totalRoles: 0,
-    totalPermissions: 0,
+    totalUsers: 1,
+    totalRoles: 1,
+    totalPermissions: 1,
     totalStores: 1,
   },
+}
+
+const authUsersFixture = {
+  items: [
+    {
+      userId: 'pilot-auth-user',
+      employeeId: null,
+      username: 'pilot.admin',
+      email: 'pilot.admin@example.com',
+      authProvider: 'mock',
+      providerSubject: 'pilot-admin-subject',
+      isActive: true,
+      lastLoginAt: '2026-05-01T09:00:00.000Z',
+      createdAt: '2026-05-01T08:00:00.000Z',
+    },
+  ],
+  meta: { count: 1, total: 1, limit: 50, offset: 0 },
+}
+
+const authRoleAssignmentsFixture = {
+  items: [
+    {
+      assignmentId: 'pilot-role-assignment',
+      userId: 'pilot-auth-user',
+      username: 'pilot.admin',
+      email: 'pilot.admin@example.com',
+      roleCode: 'SUPER_ADMIN',
+      roleName: 'Super Admin',
+      scopeType: 'company',
+      companyId,
+      regionId: null,
+      storeId: null,
+      effectiveFrom: '2026-05-01',
+      effectiveTo: null,
+      createdAt: '2026-05-01T08:05:00.000Z',
+      active: true,
+    },
+  ],
+  meta: { count: 1, total: 1, limit: 50, offset: 0 },
+}
+
+const authActionStoreAssignmentsFixture = {
+  items: [
+    {
+      assignmentId: 'pilot-action-store-assignment',
+      userId: 'pilot-auth-user',
+      username: 'pilot.admin',
+      email: 'pilot.admin@example.com',
+      storeId,
+      storeCode: 'PILOT-100',
+      storeName: 'Pilot Store',
+      companyId,
+      regionId,
+      regionName: 'Pilot Region',
+      effectiveFrom: '2026-05-01',
+      effectiveTo: null,
+      createdAt: '2026-05-01T08:10:00.000Z',
+      active: true,
+    },
+  ],
+  meta: { count: 1, total: 1, limit: 50, offset: 0 },
+}
+
+const authAuditFixture = {
+  items: [
+    {
+      eventLogId: 'pilot-auth-audit-event',
+      occurredAt: '2026-05-01T08:15:00.000Z',
+      eventType: 'auth.assignment.updated',
+      actorUserId: 'pilot-smoke-user',
+      correlationId: 'pilot-auth-audit-correlation',
+      metadata: {
+        sourceContext: { module: 'auth', operation: 'update' },
+        changedFields: ['roleCode'],
+        details: { roleCode: 'SUPER_ADMIN' },
+      },
+    },
+  ],
+  meta: { count: 1, total: 1, limit: 50, offset: 0 },
 }
 
 const emptyListFixture = {
@@ -583,6 +730,11 @@ const masterDataFixture = {
     },
   ],
   meta: { count: 1, total: 1, limit: 20, offset: 0 },
+}
+
+const snapshotNeedsActionFixture = {
+  items: [],
+  meta: { count: 0, total: 0, limit: 6, offset: 0 },
 }
 
 const targetRequestsFixture = {
