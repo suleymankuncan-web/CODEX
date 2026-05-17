@@ -1812,6 +1812,39 @@ test('store tasks page renders readable Turkish queue labels', async ({ page }) 
   await expect(page.locator('body')).not.toContainText('Å')
 })
 
+test('store tasks lets managers retry after the queue load fails', async ({ page }) => {
+  let inboxAttempts = 0
+  let allowInbox = false
+
+  await page.unroute('**/api/workflow/inbox')
+  await page.route('**/api/workflow/inbox', async (route) => {
+    inboxAttempts += 1
+
+    if (!allowInbox) {
+      await route.fulfill({
+        status: 503,
+        json: { message: 'Temporary workflow inbox outage' },
+      })
+      return
+    }
+
+    await route.fulfill({ json: workflowInboxFixture })
+  })
+
+  await page.goto('/store/tasks')
+
+  await expect(page.getByRole('heading', { name: 'İş kuyruğu açılamadı' })).toBeVisible()
+  const retryButton = page.getByRole('button', { name: 'Tekrar dene' })
+  await expect(retryButton).toBeVisible()
+
+  allowInbox = true
+  await retryButton.click()
+
+  await expect(page.getByRole('heading', { name: /Aksiyon gerektiren işler/i })).toBeVisible()
+  await expect.poll(() => inboxAttempts).toBeGreaterThan(1)
+  await expect(page.getByRole('heading', { name: 'İş kuyruğu açılamadı' })).toHaveCount(0)
+})
+
 test('store tasks page switches to English copy and persists locale', async ({ page }) => {
   await page.goto('/store/tasks')
 

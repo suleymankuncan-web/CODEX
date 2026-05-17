@@ -13,6 +13,8 @@ export const storeTasksTr = {
   'storeTasks.loadingCopy':
     'Onay ve kabul işleri mobil kullanıma uygun tek kuyruğa alınıyor.',
   'storeTasks.errorTitle': 'İş kuyruğu açılamadı',
+  'storeTasks.retryAction': 'Tekrar dene',
+  'storeTasks.retryingAction': 'Tekrar deneniyor...',
 
   'storeTasks.heroEyebrow': 'Ortak iş kuyruğu',
   'storeTasks.title': 'Aksiyon gerektiren işler tek mağaza kuyruğunda.',
@@ -135,6 +137,8 @@ export const storeTasksEn: Record<keyof typeof storeTasksTr, string> = {
   'storeTasks.loadingCopy':
     'Approval and acknowledgement work is being gathered into one mobile-ready queue.',
   'storeTasks.errorTitle': 'Work queue could not be opened',
+  'storeTasks.retryAction': 'Try again',
+  'storeTasks.retryingAction': 'Retrying...',
 
   'storeTasks.heroEyebrow': 'Shared work queue',
   'storeTasks.title': 'Action-required work in one store queue.',
