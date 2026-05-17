@@ -61,6 +61,14 @@ type ChecklistResponseDraft = {
   scoreValue: number
   commentText?: string
 }
+type ChecklistDraftHydration = {
+  comments: Record<string, string>
+  scores: Record<string, number>
+}
+type ChecklistVisitStartVariables = {
+  checklistTemplateId: string
+  storeId: string
+}
 
 const CHECKLIST_COMMAND_NOTICE_KEY = 'store-checklists-command-notice'
 
@@ -243,7 +251,7 @@ function storeChecklistsReducer(
   }
 }
 
-export function StoreChecklistsPage(input: {
+function useStoreChecklistsPageContent(input: {
   authSummary: AuthSessionSummary | null
 }) {
   const { locale, t } = useLocalization()
@@ -436,30 +444,13 @@ export function StoreChecklistsPage(input: {
     return { comments: nextComments, scores: nextScores }
   }
 
-  if (
+  const isLoading =
     (canUseAcknowledgements && checklistsQuery.isLoading) ||
     (canManageVisits && mobileTodayQuery.isLoading)
-  ) {
-    return (
-      <ScreenState
-        title={t('storeChecklists.loadingTitle')}
-        copy={t('storeChecklists.loadingCopy')}
-      />
-    )
-  }
-
-  if (
+  const isError =
     (canUseAcknowledgements && checklistsQuery.isError) ||
     (canManageVisits && mobileTodayQuery.isError)
-  ) {
-    return (
-      <ScreenState
-        title={t('storeChecklists.errorTitle')}
-        copy={getErrorMessage(checklistsQuery.error ?? mobileTodayQuery.error)}
-        tone="error"
-      />
-    )
-  }
+  const errorMessage = getErrorMessage(checklistsQuery.error ?? mobileTodayQuery.error)
 
   const items = canUseAcknowledgements ? (checklistsQuery.data?.items ?? []) : []
   const mobileToday = mobileTodayQuery.data?.data
@@ -642,104 +633,38 @@ export function StoreChecklistsPage(input: {
     dispatchPageState({ type: 'closeSession' })
   }
 
+  if (isLoading) {
+    return (
+      <ScreenState
+        title={t('storeChecklists.loadingTitle')}
+        copy={t('storeChecklists.loadingCopy')}
+      />
+    )
+  }
+
+  if (isError) {
+    return (
+      <ScreenState
+        title={t('storeChecklists.errorTitle')}
+        copy={errorMessage}
+        tone="error"
+      />
+    )
+  }
+
   return (
     <section className="store-checklists-command-page">
-      <header className="store-checklists-command-hero">
-        <div className="store-checklists-hero-copy">
-          <div className="store-checklists-hero-pills" aria-label={t('storeChecklists.summaryAria')}>
-            <ChecklistBadge tone="accent">{heroScopeLabel}</ChecklistBadge>
-            <ChecklistBadge tone={heroWaitingCount > 0 ? 'warning' : 'calm'}>
-              {getStaticCopy(
-                locale,
-                `${formatNumber(heroWaitingCount, locale)} mağaza bekliyor`,
-                `${formatNumber(heroWaitingCount, locale)} stores waiting`,
-              )}
-            </ChecklistBadge>
-            <ChecklistBadge tone={heroCompletedCount > 0 ? 'calm' : 'neutral'}>
-              {getStaticCopy(
-                locale,
-                `${formatNumber(heroCompletedCount, locale)} kayıt tamamlandı`,
-                `${formatNumber(heroCompletedCount, locale)} records completed`,
-              )}
-            </ChecklistBadge>
-          </div>
-          <div className="store-checklists-eyebrow">{t('storeChecklists.heroEyebrow')}</div>
-          <h2>
-            {canManageVisits
-              ? getStaticCopy(
-                  locale,
-                  'Bugünkü saha turunda öncelik düşük checklist skorlu mağazalarda.',
-                  'Today’s field route prioritizes stores with low checklist scores.',
-                )
-              : getStaticCopy(
-                  locale,
-                  'Mağazana yapılan kontroller tek ekranda.',
-                  'Your store checklist receipts stay in one focused surface.',
-                )}
-          </h2>
-          <p>
-            {canManageVisits
-              ? vmOnlyVisitScope
-                ? getStaticCopy(
-                    locale,
-                    'VM kullanıcıları yalnızca kendilerine atanmış mağazaların VM checklist akışını görür ve doldurur.',
-                    'VM users only see and complete VM checklist flows for their assigned stores.',
-                  )
-                : getStaticCopy(
-                  locale,
-                  'Bölge = Bölge müdürü. BM kendisine tanımlı mağazaları görür; BM Checklist ve VM Checklist puanlarını birlikte okuyabilir. VM yalnızca kendi VM Checklist kayıtlarına erişir.',
-                  'Region means region manager. BM users see assigned stores and can read BM plus VM checklist scores together. VM users only access their own VM checklist records.',
-                )
-              : getStaticCopy(
-                  locale,
-                  'BM ve VM sonuçlarını tarih, skor ve kabul durumuyla takip edip mağaza aksiyonunu hızla kapatabilirsin.',
-                  'Track BM and VM results by date, score, and acknowledgement status so store follow-up stays tight.',
-                )}
-          </p>
-        </div>
-        <div className="store-checklists-command-metrics" aria-label={t('storeChecklists.summaryAria')}>
-          <ChecklistMetric
-            label={canManageVisits ? getStaticCopy(locale, 'Atanmış mağaza', 'Assigned stores') : t('storeChecklists.store')}
-            note={
-              canManageVisits
-                ? vmOnlyVisitScope
-                  ? getStaticCopy(locale, 'VM kapsamı', 'VM scope')
-                  : getStaticCopy(locale, 'BM kapsamı', 'Field scope')
-                : getStaticCopy(locale, 'Kabul kapsamı', 'Receipt scope')
-            }
-            tone={heroStoreCount > 0 ? 'accent' : 'neutral'}
-            value={formatNumber(heroStoreCount, locale)}
-          />
-          <ChecklistMetric
-            label={canManageVisits ? getStaticCopy(locale, 'Checklist yapılan', 'Completed visits') : t('storeChecklists.acknowledged')}
-            note={canManageVisits ? getStaticCopy(locale, 'Bu ay', 'This month') : getStaticCopy(locale, 'Yakın geçmiş', 'Recent history')}
-            tone={heroCompletedCount > 0 ? 'calm' : 'neutral'}
-            value={formatNumber(heroCompletedCount, locale)}
-          />
-          <ChecklistMetric
-            label={getStaticCopy(locale, 'Bekleyen', 'Waiting')}
-            note={canManageVisits ? getStaticCopy(locale, 'Öncelik sıralı', 'Prioritized') : t('storeChecklists.needsAcknowledgement')}
-            tone={heroWaitingCount > 0 ? 'warning' : 'calm'}
-            value={formatNumber(heroWaitingCount, locale)}
-          />
-          <ChecklistMetric
-            label={getStaticCopy(locale, 'Ortalama skor', 'Average score')}
-            note={
-              canManageVisits
-                ? vmOnlyVisitScope
-                  ? getStaticCopy(locale, 'VM', 'VM')
-                  : getStaticCopy(locale, 'BM + VM', 'BM + VM')
-                : getStaticCopy(locale, 'Son sonuçlar', 'Latest results')
-            }
-            tone={heroAverageScore !== null && heroAverageScore >= 70 ? 'calm' : heroAverageScore === null ? 'neutral' : 'warning'}
-            value={
-              heroAverageScore === null
-                ? '-'
-                : formatNumber(heroAverageScore, locale, { maximumFractionDigits: 1 })
-            }
-          />
-        </div>
-      </header>
+      <StoreChecklistsHero
+        canManageVisits={canManageVisits}
+        heroAverageScore={heroAverageScore}
+        heroCompletedCount={heroCompletedCount}
+        heroScopeLabel={heroScopeLabel}
+        heroStoreCount={heroStoreCount}
+        heroWaitingCount={heroWaitingCount}
+        locale={locale}
+        t={t}
+        vmOnlyVisitScope={vmOnlyVisitScope}
+      />
 
       <ChecklistToolbar
         locale={locale}
@@ -772,347 +697,748 @@ export function StoreChecklistsPage(input: {
 
       {commandNotice ? <p className="store-checklists-inline-notice">{commandNotice}</p> : null}
 
-      {canManageVisits && selectedTab === 'visits' ? (
-        <section
-          aria-label={t('storeChecklists.visitPanelAria')}
-          aria-labelledby="store-checklist-tab-visits"
-          className="store-checklists-command-card"
-          id="store-checklist-panel-visits"
-          role="tabpanel"
-        >
-          <div className="store-checklists-section-head">
-            <div>
-              <div className="store-checklists-eyebrow">{t('storeChecklists.visitEyebrow')}</div>
-              <h3>{t('storeChecklists.visitTitle')}</h3>
-              <p>
-                {vmOnlyVisitScope
-                  ? getStaticCopy(
-                      locale,
-                      'Her satır tek mağaza; yalnızca VM checklist durumu ve skoru gösterilir.',
-                      'Each row is one store; only VM checklist status and score are shown.',
-                    )
-                  : getStaticCopy(
-                      locale,
-                      'Her satır tek mağaza; BM ve VM checklist skorları birbirine karışmadan okunur.',
-                      'Each row is one store; BM and VM checklist scores stay separate.',
-                    )}
-              </p>
-            </div>
-            <ChecklistBadge tone={activeVisitCount > 0 ? 'warning' : 'accent'}>
-              {activeVisitCount > 0
-                ? t('storeChecklists.visitStatus.inProgress')
-                : t('storeChecklists.visitStatus.ready')}
-            </ChecklistBadge>
-          </div>
-
-          {visitStoreRows.length === 0 ? (
-            <ChecklistEmptyBlock
-              copy={
-                assignedVisitStoreCount > 0 && (mobileToday?.templates.length ?? 0) === 0
-                  ? getStaticCopy(
-                      locale,
-                      'Atanmış mağazan var; ancak bu rol için yayınlanmış VM checklist şablonu henüz yok.',
-                      'You have assigned stores, but there is no published VM checklist template for this role yet.',
-                    )
-                  : t('storeChecklists.noActiveChecklistCopy')
-              }
-              title={
-                assignedVisitStoreCount > 0 && (mobileToday?.templates.length ?? 0) === 0
-                  ? getStaticCopy(locale, 'VM şablonu yayında değil', 'VM template is not published')
-                  : t('storeChecklists.noActiveChecklistTitle')
-              }
-            />
-          ) : (
-            <div
-              className={`store-checklists-table store-checklists-visit-table${
-                requiresCombinedVisitTemplates ? '' : ' store-checklists-visit-table-single-score'
-              }`}
-            >
-              <div className="store-checklists-table-head">
-                <SortButton
-                  active={visitSort.key === 'store'}
-                  direction={visitSort.direction}
-                  onClick={() => dispatchPageState({ type: 'toggleVisitSort', key: 'store' })}
-                >
-                  {t('storeChecklists.store')}
-                </SortButton>
-                {showBmVisitScore ? (
-                  <SortButton
-                    active={visitSort.key === 'score'}
-                    direction={visitSort.direction}
-                    onClick={() => dispatchPageState({ type: 'toggleVisitSort', key: 'score' })}
-                  >
-                    {getStaticCopy(locale, 'BM skor', 'BM score')}
-                  </SortButton>
-                ) : null}
-                {showVmVisitScore ? (
-                  <SortButton
-                    active={visitSort.key === 'score'}
-                    direction={visitSort.direction}
-                    onClick={() => dispatchPageState({ type: 'toggleVisitSort', key: 'score' })}
-                  >
-                    {getStaticCopy(locale, 'VM skor', 'VM score')}
-                  </SortButton>
-                ) : null}
-                <SortButton
-                  active={visitSort.key === 'date'}
-                  direction={visitSort.direction}
-                  onClick={() => dispatchPageState({ type: 'toggleVisitSort', key: 'date' })}
-                >
-                  {getStaticCopy(locale, 'Son ziyaret', 'Last visit')}
-                </SortButton>
-                <SortButton
-                  active={visitSort.key === 'priority'}
-                  direction={visitSort.direction}
-                  onClick={() => dispatchPageState({ type: 'toggleVisitSort', key: 'priority' })}
-                >
-                  {getStaticCopy(locale, 'Düşük alan', 'Low area')}
-                </SortButton>
-                <span>{getStaticCopy(locale, 'Aksiyon', 'Action')}</span>
-              </div>
-
-              {visitStoreRows.map((storeRow) => {
-                const actionableRow = getActionableStoreVisitRow(storeRow, input.authSummary)
-                const row = actionableRow ?? storeRow.primary
-                const active = row.active
-                const canStart =
-                  Boolean(actionableRow) &&
-                  (active || assignedStoreIds.includes(storeRow.store.storeId))
-                const rowKey = getCoverageRowKeyFromRow(row)
-                const isStartingRow =
-                  startVisitMutation.isPending &&
-                  startVisitMutation.variables?.storeId === storeRow.store.storeId &&
-                  startVisitMutation.variables?.checklistTemplateId === row.template.checklistTemplateId
-
-                return (
-                  <article
-                    className="store-checklists-visit-row"
-                    key={getStoreVisitRowKey(storeRow)}
-                  >
-                    <div className="store-checklists-row-main">
-                      <strong>{storeRow.store.storeName}</strong>
-                      <p>{getStoreVisitSummary(t, locale, storeRow, requiresCombinedVisitTemplates)}</p>
-                    </div>
-                    {showBmVisitScore ? (
-                      <ChecklistTemplateScore
-                        label={getStaticCopy(locale, 'BM', 'BM')}
-                        locale={locale}
-                        row={storeRow.bm}
-                        t={t}
-                      />
-                    ) : null}
-                    {showVmVisitScore ? (
-                      <ChecklistTemplateScore
-                        label={getStaticCopy(locale, 'VM', 'VM')}
-                        locale={locale}
-                        row={storeRow.vm}
-                        t={t}
-                      />
-                    ) : null}
-                    <ChecklistBadge tone={getStoreVisitDate(storeRow) ? 'accent' : 'danger'}>
-                      {formatOptionalDate(getStoreVisitDate(storeRow), locale)}
-                    </ChecklistBadge>
-                    <ChecklistBadge tone={getStoreVisitRiskTone(storeRow, requiresCombinedVisitTemplates)}>
-                      {getStoreVisitRiskLabel(t, locale, storeRow, requiresCombinedVisitTemplates)}
-                    </ChecklistBadge>
-                    <button
-                      className="store-checklists-action-button"
-                      disabled={!canStart || (!active && startVisitMutation.isPending)}
-                      type="button"
-                      onClick={() => {
-                        if (active) {
-                          const drafts = hydrateActiveResponseDrafts(active)
-                          dispatchPageState({ type: 'openSession', rowKey, ...drafts })
-                          return
-                        }
-
-                        if (!actionableRow) {
-                          return
-                        }
-
-                        hydrateActiveResponseDrafts(undefined)
-                        dispatchPageState({ type: 'resetSessionDrafts' })
-                        startVisitMutation.mutate({
-                          storeId: storeRow.store.storeId,
-                          checklistTemplateId: row.template.checklistTemplateId,
-                        })
-                      }}
-                    >
-                      {active
-                        ? t('storeChecklists.continueChecklist')
-                        : isStartingRow
-                          ? t('storeChecklists.startPending')
-                          : actionableRow
-                            ? t('storeChecklists.startChecklist')
-                            : getStaticCopy(locale, 'Sadece oku', 'Read only')}
-                    </button>
-                  </article>
-                )
-              })}
-            </div>
-          )}
-
-          {startVisitMutation.isError ? (
-            <p className="store-checklists-inline-notice">{getErrorMessage(startVisitMutation.error)}</p>
-          ) : null}
-          {saveResponseMutation.isError ? (
-            <p className="store-checklists-inline-notice">{getErrorMessage(saveResponseMutation.error)}</p>
-          ) : null}
-          {completeVisitMutation.isError ? (
-            <p className="store-checklists-inline-notice">{getErrorMessage(completeVisitMutation.error)}</p>
-          ) : null}
-        </section>
-      ) : null}
-
-      {selectedSession ? (
-        <ChecklistVisitModal
-          active={selectedSession.active}
-          comments={comments}
-          isCompleting={completeVisitMutation.isPending}
-          isSaving={saveResponseMutation.isPending}
-          isStarting={startVisitMutation.isPending}
+      {canManageVisits ? (
+        <StoreChecklistsVisitPanel
+          activeVisitCount={activeVisitCount}
+          assignedStoreIds={assignedStoreIds}
+          assignedVisitStoreCount={assignedVisitStoreCount}
+          authSummary={input.authSummary}
+          display={{
+            requiresCombinedVisitTemplates,
+            showBmVisitScore,
+            showVmVisitScore,
+            vmOnlyVisitScope,
+          }}
+          errors={{
+            complete: completeVisitMutation.isError ? completeVisitMutation.error : null,
+            save: saveResponseMutation.isError ? saveResponseMutation.error : null,
+            start: startVisitMutation.isError ? startVisitMutation.error : null,
+          }}
+          hydrateActiveResponseDrafts={hydrateActiveResponseDrafts}
           locale={locale}
-          onClose={closeSession}
-          onComplete={(checklistInstanceId) => {
-            showCommandNotice(getStaticCopy(locale, 'Başarıyla Tamamlandı', 'Completed successfully'))
-            dispatchPageState({ type: 'completeVisitSubmitted' })
-            completeVisitMutation.mutate({
-              checklistInstanceId,
-              responses: buildChecklistResponseDrafts({
-                checklistInstanceId,
-                comments,
-                scores,
-                session: selectedSession,
-              }),
-            })
-          }}
-          onScoreChange={(templateItemId, score) => {
-            dispatchPageState({ type: 'setScoreDraft', templateItemId, score })
-            if (selectedSession.active && score !== null) {
-              queueResponseAutoSave({
-                checklistInstanceId: selectedSession.active.checklistInstanceId,
-                templateItemId,
-                scoreValue: score,
-                commentText: comments[templateItemId] || undefined,
-              })
-            }
-          }}
-          onCommentChange={(templateItemId, comment) => {
-            dispatchPageState({ type: 'setCommentDraft', templateItemId, comment })
-            const score = scores[templateItemId]
-            if (selectedSession.active && Number.isFinite(score)) {
-              queueResponseAutoSave({
-                checklistInstanceId: selectedSession.active.checklistInstanceId,
-                templateItemId,
-                scoreValue: score,
-                commentText: comment || undefined,
-              })
-            }
-          }}
-          scores={scores}
-          session={selectedSession}
+          mobileToday={mobileToday}
+          selectedTab={selectedTab}
+          startVisitIsPending={startVisitMutation.isPending}
+          startVisitVariables={startVisitMutation.variables}
           t={t}
+          visitSort={visitSort}
+          visitStoreRows={visitStoreRows}
+          onOpenSession={(rowKey, drafts) =>
+            dispatchPageState({ type: 'openSession', rowKey, ...drafts })
+          }
+          onResetSessionDrafts={() => dispatchPageState({ type: 'resetSessionDrafts' })}
+          onStartVisit={(variables) => startVisitMutation.mutate(variables)}
+          onToggleVisitSort={(key) => dispatchPageState({ type: 'toggleVisitSort', key })}
         />
       ) : null}
 
-      {selectedResult ? (
-        <ChecklistResultModal
-          acknowledgementNote={ackNotes[selectedResult.checklistInstanceId] ?? ''}
-          canAcknowledge={canAcknowledgeChecklist(input.authSummary, selectedResult.storeId)}
-          isAcknowledging={
+      <StoreChecklistsModals
+        acknowledgementNote={selectedResult ? (ackNotes[selectedResult.checklistInstanceId] ?? '') : ''}
+        comments={comments}
+        locale={locale}
+        resultState={{
+          acknowledging:
+            Boolean(selectedResult) &&
             acknowledgeMutation.isPending &&
-            acknowledgeMutation.variables?.checklistInstanceId === selectedResult.checklistInstanceId
+            acknowledgeMutation.variables?.checklistInstanceId === selectedResult?.checklistInstanceId,
+          canAcknowledge: selectedResult
+            ? canAcknowledgeChecklist(input.authSummary, selectedResult.storeId)
+            : false,
+        }}
+        scores={scores}
+        selectedResult={selectedResult}
+        selectedSession={selectedSession}
+        t={t}
+        visitState={{
+          completing: completeVisitMutation.isPending,
+          saving: saveResponseMutation.isPending,
+          starting: startVisitMutation.isPending,
+        }}
+        onAcknowledgeResult={() => {
+          if (!selectedResult) return
+          acknowledgeMutation.mutate({
+            checklistInstanceId: selectedResult.checklistInstanceId,
+            acknowledgementNote: ackNotes[selectedResult.checklistInstanceId] || undefined,
+          })
+        }}
+        onCloseResult={closeChecklistResult}
+        onCloseSession={closeSession}
+        onCommentChange={(templateItemId, comment) => {
+          dispatchPageState({ type: 'setCommentDraft', templateItemId, comment })
+          const score = scores[templateItemId]
+          if (selectedSession?.active && Number.isFinite(score)) {
+            queueResponseAutoSave({
+              checklistInstanceId: selectedSession.active.checklistInstanceId,
+              templateItemId,
+              scoreValue: score,
+              commentText: comment || undefined,
+            })
           }
-          item={selectedResult}
+        }}
+        onCompleteVisit={(checklistInstanceId) => {
+          if (!selectedSession) return
+          showCommandNotice(getStaticCopy(locale, 'Başarıyla Tamamlandı', 'Completed successfully'))
+          dispatchPageState({ type: 'completeVisitSubmitted' })
+          completeVisitMutation.mutate({
+            checklistInstanceId,
+            responses: buildChecklistResponseDrafts({
+              checklistInstanceId,
+              comments,
+              scores,
+              session: selectedSession,
+            }),
+          })
+        }}
+        onNoteChange={(note) => {
+          if (!selectedResult) return
+          dispatchPageState({
+            type: 'setAckNote',
+            checklistInstanceId: selectedResult.checklistInstanceId,
+            note,
+          })
+        }}
+        onScoreChange={(templateItemId, score) => {
+          dispatchPageState({ type: 'setScoreDraft', templateItemId, score })
+          if (selectedSession?.active && score !== null) {
+            queueResponseAutoSave({
+              checklistInstanceId: selectedSession.active.checklistInstanceId,
+              templateItemId,
+              scoreValue: score,
+              commentText: comments[templateItemId] || undefined,
+            })
+          }
+        }}
+      />
+
+      {canUseAcknowledgements ? (
+        <StoreChecklistsAcknowledgementPanels
+          filteredAcknowledgedItems={filteredAcknowledgedItems}
+          filteredPendingItems={filteredPendingItems}
           locale={locale}
-          onAcknowledge={() =>
-            acknowledgeMutation.mutate({
-              checklistInstanceId: selectedResult.checklistInstanceId,
-              acknowledgementNote: ackNotes[selectedResult.checklistInstanceId] || undefined,
-            })
-          }
-          onClose={closeChecklistResult}
-          onNoteChange={(note) =>
-            dispatchPageState({
-              type: 'setAckNote',
-              checklistInstanceId: selectedResult.checklistInstanceId,
-              note,
-            })
-          }
+          pendingItemCount={pendingItems.length}
+          resultSort={resultSort}
+          selectedTab={selectedTab}
           t={t}
+          onOpenResult={openChecklistResult}
+          onToggleResultSort={(key) => dispatchPageState({ type: 'toggleResultSort', key })}
+        />
+      ) : null}
+    </section>
+  )
+}
+
+export function StoreChecklistsPage(input: {
+  authSummary: AuthSessionSummary | null
+}) {
+  return useStoreChecklistsPageContent(input)
+}
+
+function StoreChecklistsHero(input: {
+  canManageVisits: boolean
+  heroAverageScore: number | null
+  heroCompletedCount: number
+  heroScopeLabel: string
+  heroStoreCount: number
+  heroWaitingCount: number
+  locale: AppLocale
+  t: TranslateFunction
+  vmOnlyVisitScope: boolean
+}) {
+  const {
+    canManageVisits,
+    heroAverageScore,
+    heroCompletedCount,
+    heroScopeLabel,
+    heroStoreCount,
+    heroWaitingCount,
+    locale,
+    t,
+    vmOnlyVisitScope,
+  } = input
+
+  return (
+    <header className="store-checklists-command-hero">
+      <div className="store-checklists-hero-copy">
+        <div className="store-checklists-hero-pills" aria-label={t('storeChecklists.summaryAria')}>
+          <ChecklistBadge tone="accent">{heroScopeLabel}</ChecklistBadge>
+          <ChecklistBadge tone={heroWaitingCount > 0 ? 'warning' : 'calm'}>
+            {getStaticCopy(
+              locale,
+              `${formatNumber(heroWaitingCount, locale)} mağaza bekliyor`,
+              `${formatNumber(heroWaitingCount, locale)} stores waiting`,
+            )}
+          </ChecklistBadge>
+          <ChecklistBadge tone={heroCompletedCount > 0 ? 'calm' : 'neutral'}>
+            {getStaticCopy(
+              locale,
+              `${formatNumber(heroCompletedCount, locale)} kayıt tamamlandı`,
+              `${formatNumber(heroCompletedCount, locale)} records completed`,
+            )}
+          </ChecklistBadge>
+        </div>
+        <div className="store-checklists-eyebrow">{t('storeChecklists.heroEyebrow')}</div>
+        <h2>
+          {canManageVisits
+            ? getStaticCopy(
+                locale,
+                'Bugünkü saha turunda öncelik düşük checklist skorlu mağazalarda.',
+                'Today’s field route prioritizes stores with low checklist scores.',
+              )
+            : getStaticCopy(
+                locale,
+                'Mağazana yapılan kontroller tek ekranda.',
+                'Your store checklist receipts stay in one focused surface.',
+              )}
+        </h2>
+        <p>
+          {canManageVisits
+            ? vmOnlyVisitScope
+              ? getStaticCopy(
+                  locale,
+                  'VM kullanıcıları yalnızca kendilerine atanmış mağazaların VM checklist akışını görür ve doldurur.',
+                  'VM users only see and complete VM checklist flows for their assigned stores.',
+                )
+              : getStaticCopy(
+                  locale,
+                  'Bölge = Bölge müdürü. BM kendisine tanımlı mağazaları görür; BM Checklist ve VM Checklist puanlarını birlikte okuyabilir. VM yalnızca kendi VM Checklist kayıtlarına erişir.',
+                  'Region means region manager. BM users see assigned stores and can read BM plus VM checklist scores together. VM users only access their own VM checklist records.',
+                )
+            : getStaticCopy(
+                locale,
+                'BM ve VM sonuçlarını tarih, skor ve kabul durumuyla takip edip mağaza aksiyonunu hızla kapatabilirsin.',
+                'Track BM and VM results by date, score, and acknowledgement status so store follow-up stays tight.',
+              )}
+        </p>
+      </div>
+      <div className="store-checklists-command-metrics" aria-label={t('storeChecklists.summaryAria')}>
+        <ChecklistMetric
+          label={
+            canManageVisits
+              ? getStaticCopy(locale, 'Atanmış mağaza', 'Assigned stores')
+              : t('storeChecklists.store')
+          }
+          note={
+            canManageVisits
+              ? vmOnlyVisitScope
+                ? getStaticCopy(locale, 'VM kapsamı', 'VM scope')
+                : getStaticCopy(locale, 'BM kapsamı', 'Field scope')
+              : getStaticCopy(locale, 'Kabul kapsamı', 'Receipt scope')
+          }
+          tone={heroStoreCount > 0 ? 'accent' : 'neutral'}
+          value={formatNumber(heroStoreCount, locale)}
+        />
+        <ChecklistMetric
+          label={
+            canManageVisits
+              ? getStaticCopy(locale, 'Checklist yapılan', 'Completed visits')
+              : t('storeChecklists.acknowledged')
+          }
+          note={
+            canManageVisits
+              ? getStaticCopy(locale, 'Bu ay', 'This month')
+              : getStaticCopy(locale, 'Yakın geçmiş', 'Recent history')
+          }
+          tone={heroCompletedCount > 0 ? 'calm' : 'neutral'}
+          value={formatNumber(heroCompletedCount, locale)}
+        />
+        <ChecklistMetric
+          label={getStaticCopy(locale, 'Bekleyen', 'Waiting')}
+          note={
+            canManageVisits
+              ? getStaticCopy(locale, 'Öncelik sıralı', 'Prioritized')
+              : t('storeChecklists.needsAcknowledgement')
+          }
+          tone={heroWaitingCount > 0 ? 'warning' : 'calm'}
+          value={formatNumber(heroWaitingCount, locale)}
+        />
+        <ChecklistMetric
+          label={getStaticCopy(locale, 'Ortalama skor', 'Average score')}
+          note={
+            canManageVisits
+              ? vmOnlyVisitScope
+                ? getStaticCopy(locale, 'VM', 'VM')
+                : getStaticCopy(locale, 'BM + VM', 'BM + VM')
+              : getStaticCopy(locale, 'Son sonuçlar', 'Latest results')
+          }
+          tone={
+            heroAverageScore !== null && heroAverageScore >= 70
+              ? 'calm'
+              : heroAverageScore === null
+                ? 'neutral'
+                : 'warning'
+          }
+          value={
+            heroAverageScore === null
+              ? '-'
+              : formatNumber(heroAverageScore, locale, { maximumFractionDigits: 1 })
+          }
+        />
+      </div>
+    </header>
+  )
+}
+
+function StoreChecklistsModals(input: {
+  acknowledgementNote: string
+  comments: Record<string, string>
+  locale: AppLocale
+  resultState: {
+    acknowledging: boolean
+    canAcknowledge: boolean
+  }
+  scores: Record<string, number>
+  selectedResult: ChecklistAcknowledgementItem | null
+  selectedSession: ChecklistSession | null
+  t: TranslateFunction
+  visitState: {
+    completing: boolean
+    saving: boolean
+    starting: boolean
+  }
+  onAcknowledgeResult: () => void
+  onCloseResult: () => void
+  onCloseSession: () => void
+  onCommentChange: (templateItemId: string, comment: string) => void
+  onCompleteVisit: (checklistInstanceId: string) => void
+  onNoteChange: (note: string) => void
+  onScoreChange: (templateItemId: string, score: number | null) => void
+}) {
+  return (
+    <>
+      {input.selectedSession ? (
+        <ChecklistVisitModal
+          active={input.selectedSession.active}
+          comments={input.comments}
+          isCompleting={input.visitState.completing}
+          isSaving={input.visitState.saving}
+          isStarting={input.visitState.starting}
+          locale={input.locale}
+          onClose={input.onCloseSession}
+          onComplete={input.onCompleteVisit}
+          onScoreChange={input.onScoreChange}
+          onCommentChange={input.onCommentChange}
+          scores={input.scores}
+          session={input.selectedSession}
+          t={input.t}
         />
       ) : null}
 
-      {canUseAcknowledgements && selectedTab === 'inbox' ? (
+      {input.selectedResult ? (
+        <ChecklistResultModal
+          acknowledgementNote={input.acknowledgementNote}
+          canAcknowledge={input.resultState.canAcknowledge}
+          isAcknowledging={input.resultState.acknowledging}
+          item={input.selectedResult}
+          locale={input.locale}
+          onAcknowledge={input.onAcknowledgeResult}
+          onClose={input.onCloseResult}
+          onNoteChange={input.onNoteChange}
+          t={input.t}
+        />
+      ) : null}
+    </>
+  )
+}
+
+function StoreChecklistsAcknowledgementPanels(input: {
+  filteredAcknowledgedItems: ChecklistAcknowledgementItem[]
+  filteredPendingItems: ChecklistAcknowledgementItem[]
+  locale: AppLocale
+  pendingItemCount: number
+  resultSort: ChecklistSort
+  selectedTab: ChecklistTab
+  t: TranslateFunction
+  onOpenResult: (item: ChecklistAcknowledgementItem) => void
+  onToggleResultSort: (key: ChecklistSortKey) => void
+}) {
+  return (
+    <>
+      {input.selectedTab === 'inbox' ? (
         <section
           aria-labelledby="store-checklist-tab-inbox"
           className="store-checklists-command-card"
           id="store-checklist-panel-inbox"
           role="tabpanel"
         >
-        <div className="store-checklists-section-head">
-          <div>
-            <div className="store-checklists-eyebrow">{t('storeChecklists.inboxEyebrow')}</div>
-            <h3>{t('storeChecklists.inboxTitle')}</h3>
+          <div className="store-checklists-section-head">
+            <div>
+              <div className="store-checklists-eyebrow">{input.t('storeChecklists.inboxEyebrow')}</div>
+              <h3>{input.t('storeChecklists.inboxTitle')}</h3>
+            </div>
+            <ChecklistBadge tone={input.pendingItemCount > 0 ? 'warning' : 'calm'}>
+              {input.pendingItemCount > 0
+                ? input.t('storeChecklists.needsAcknowledgement')
+                : input.t('storeChecklists.clear')}
+            </ChecklistBadge>
           </div>
-          <ChecklistBadge tone={pendingItems.length > 0 ? 'warning' : 'calm'}>
-            {pendingItems.length > 0
-              ? t('storeChecklists.needsAcknowledgement')
-              : t('storeChecklists.clear')}
-          </ChecklistBadge>
-        </div>
 
-        {filteredPendingItems.length === 0 ? (
-          <ChecklistEmptyBlock
-            copy={t('storeChecklists.noPendingCopy')}
-            title={t('storeChecklists.noPendingTitle')}
-          />
-        ) : (
-          <ChecklistResultList
-            items={filteredPendingItems}
-            locale={locale}
-            resultSort={resultSort}
-            t={t}
-            onOpen={openChecklistResult}
-            onSort={(key) => dispatchPageState({ type: 'toggleResultSort', key })}
-          />
-        )}
-
+          {input.filteredPendingItems.length === 0 ? (
+            <ChecklistEmptyBlock
+              copy={input.t('storeChecklists.noPendingCopy')}
+              title={input.t('storeChecklists.noPendingTitle')}
+            />
+          ) : (
+            <ChecklistResultList
+              items={input.filteredPendingItems}
+              locale={input.locale}
+              resultSort={input.resultSort}
+              t={input.t}
+              onOpen={input.onOpenResult}
+              onSort={input.onToggleResultSort}
+            />
+          )}
         </section>
       ) : null}
 
-      {canUseAcknowledgements && selectedTab === 'history' ? (
+      {input.selectedTab === 'history' ? (
         <section
           aria-labelledby="store-checklist-tab-history"
           className="store-checklists-command-card"
           id="store-checklist-panel-history"
           role="tabpanel"
         >
-        <div className="store-checklists-section-head">
-          <div>
-            <div className="store-checklists-eyebrow">{t('storeChecklists.recentHistoryEyebrow')}</div>
-            <h3>{t('storeChecklists.recentHistoryTitle')}</h3>
+          <div className="store-checklists-section-head">
+            <div>
+              <div className="store-checklists-eyebrow">{input.t('storeChecklists.recentHistoryEyebrow')}</div>
+              <h3>{input.t('storeChecklists.recentHistoryTitle')}</h3>
+            </div>
           </div>
-        </div>
 
-        {filteredAcknowledgedItems.length === 0 ? (
-          <ChecklistEmptyBlock
-            copy={t('storeChecklists.noAcknowledgementsCopy')}
-            title={t('storeChecklists.noAcknowledgementsTitle')}
-          />
-        ) : (
-          <ChecklistResultList
-            items={filteredAcknowledgedItems}
-            locale={locale}
-            resultSort={resultSort}
-            t={t}
-            onOpen={openChecklistResult}
-            onSort={(key) => dispatchPageState({ type: 'toggleResultSort', key })}
-          />
-        )}
+          {input.filteredAcknowledgedItems.length === 0 ? (
+            <ChecklistEmptyBlock
+              copy={input.t('storeChecklists.noAcknowledgementsCopy')}
+              title={input.t('storeChecklists.noAcknowledgementsTitle')}
+            />
+          ) : (
+            <ChecklistResultList
+              items={input.filteredAcknowledgedItems}
+              locale={input.locale}
+              resultSort={input.resultSort}
+              t={input.t}
+              onOpen={input.onOpenResult}
+              onSort={input.onToggleResultSort}
+            />
+          )}
         </section>
       ) : null}
+    </>
+  )
+}
+
+function StoreChecklistsVisitPanel(input: {
+  activeVisitCount: number
+  assignedStoreIds: string[]
+  assignedVisitStoreCount: number
+  authSummary: AuthSessionSummary | null
+  display: {
+    requiresCombinedVisitTemplates: boolean
+    showBmVisitScore: boolean
+    showVmVisitScore: boolean
+    vmOnlyVisitScope: boolean
+  }
+  errors: {
+    complete: unknown | null
+    save: unknown | null
+    start: unknown | null
+  }
+  hydrateActiveResponseDrafts: (
+    active: ChecklistActiveInstance | undefined,
+  ) => ChecklistDraftHydration
+  locale: AppLocale
+  mobileToday: MobileChecklistToday | undefined
+  selectedTab: ChecklistTab
+  startVisitIsPending: boolean
+  startVisitVariables: ChecklistVisitStartVariables | undefined
+  t: TranslateFunction
+  visitSort: ChecklistSort
+  visitStoreRows: ChecklistStoreVisitRow[]
+  onOpenSession: (rowKey: string, drafts: ChecklistDraftHydration) => void
+  onResetSessionDrafts: () => void
+  onStartVisit: (variables: ChecklistVisitStartVariables) => void
+  onToggleVisitSort: (key: ChecklistSortKey) => void
+}) {
+  if (input.selectedTab !== 'visits') return null
+
+  const hasMissingTemplate =
+    input.assignedVisitStoreCount > 0 && (input.mobileToday?.templates.length ?? 0) === 0
+
+  return (
+    <section
+      aria-label={input.t('storeChecklists.visitPanelAria')}
+      aria-labelledby="store-checklist-tab-visits"
+      className="store-checklists-command-card"
+      id="store-checklist-panel-visits"
+      role="tabpanel"
+    >
+      <div className="store-checklists-section-head">
+        <div>
+          <div className="store-checklists-eyebrow">{input.t('storeChecklists.visitEyebrow')}</div>
+          <h3>{input.t('storeChecklists.visitTitle')}</h3>
+          <p>
+            {input.display.vmOnlyVisitScope
+              ? getStaticCopy(
+                  input.locale,
+                  'Her satır tek mağaza; yalnızca VM checklist durumu ve skoru gösterilir.',
+                  'Each row is one store; only VM checklist status and score are shown.',
+                )
+              : getStaticCopy(
+                  input.locale,
+                  'Her satır tek mağaza; BM ve VM checklist skorları birbirine karışmadan okunur.',
+                  'Each row is one store; BM and VM checklist scores stay separate.',
+                )}
+          </p>
+        </div>
+        <ChecklistBadge tone={input.activeVisitCount > 0 ? 'warning' : 'accent'}>
+          {input.activeVisitCount > 0
+            ? input.t('storeChecklists.visitStatus.inProgress')
+            : input.t('storeChecklists.visitStatus.ready')}
+        </ChecklistBadge>
+      </div>
+
+      {input.visitStoreRows.length === 0 ? (
+        <ChecklistEmptyBlock
+          copy={
+            hasMissingTemplate
+              ? getStaticCopy(
+                  input.locale,
+                  'Atanmış mağazan var; ancak bu rol için yayınlanmış VM checklist şablonu henüz yok.',
+                  'You have assigned stores, but there is no published VM checklist template for this role yet.',
+                )
+              : input.t('storeChecklists.noActiveChecklistCopy')
+          }
+          title={
+            hasMissingTemplate
+              ? getStaticCopy(input.locale, 'VM şablonu yayında değil', 'VM template is not published')
+              : input.t('storeChecklists.noActiveChecklistTitle')
+          }
+        />
+      ) : (
+        <StoreChecklistsVisitTable
+          assignedStoreIds={input.assignedStoreIds}
+          authSummary={input.authSummary}
+          hydrateActiveResponseDrafts={input.hydrateActiveResponseDrafts}
+          locale={input.locale}
+          requiresCombinedVisitTemplates={input.display.requiresCombinedVisitTemplates}
+          showBmVisitScore={input.display.showBmVisitScore}
+          showVmVisitScore={input.display.showVmVisitScore}
+          startVisitIsPending={input.startVisitIsPending}
+          startVisitVariables={input.startVisitVariables}
+          t={input.t}
+          visitSort={input.visitSort}
+          visitStoreRows={input.visitStoreRows}
+          onOpenSession={input.onOpenSession}
+          onResetSessionDrafts={input.onResetSessionDrafts}
+          onStartVisit={input.onStartVisit}
+          onToggleVisitSort={input.onToggleVisitSort}
+        />
+      )}
+
+      {input.errors.start ? (
+        <p className="store-checklists-inline-notice">{getErrorMessage(input.errors.start)}</p>
+      ) : null}
+      {input.errors.save ? (
+        <p className="store-checklists-inline-notice">{getErrorMessage(input.errors.save)}</p>
+      ) : null}
+      {input.errors.complete ? (
+        <p className="store-checklists-inline-notice">{getErrorMessage(input.errors.complete)}</p>
+      ) : null}
     </section>
+  )
+}
+
+function StoreChecklistsVisitTable(input: {
+  assignedStoreIds: string[]
+  authSummary: AuthSessionSummary | null
+  hydrateActiveResponseDrafts: (
+    active: ChecklistActiveInstance | undefined,
+  ) => ChecklistDraftHydration
+  locale: AppLocale
+  requiresCombinedVisitTemplates: boolean
+  showBmVisitScore: boolean
+  showVmVisitScore: boolean
+  startVisitIsPending: boolean
+  startVisitVariables: ChecklistVisitStartVariables | undefined
+  t: TranslateFunction
+  visitSort: ChecklistSort
+  visitStoreRows: ChecklistStoreVisitRow[]
+  onOpenSession: (rowKey: string, drafts: ChecklistDraftHydration) => void
+  onResetSessionDrafts: () => void
+  onStartVisit: (variables: ChecklistVisitStartVariables) => void
+  onToggleVisitSort: (key: ChecklistSortKey) => void
+}) {
+  return (
+    <div
+      className={`store-checklists-table store-checklists-visit-table${
+        input.requiresCombinedVisitTemplates ? '' : ' store-checklists-visit-table-single-score'
+      }`}
+    >
+      <div className="store-checklists-table-head">
+        <SortButton
+          active={input.visitSort.key === 'store'}
+          direction={input.visitSort.direction}
+          onClick={() => input.onToggleVisitSort('store')}
+        >
+          {input.t('storeChecklists.store')}
+        </SortButton>
+        {input.showBmVisitScore ? (
+          <SortButton
+            active={input.visitSort.key === 'score'}
+            direction={input.visitSort.direction}
+            onClick={() => input.onToggleVisitSort('score')}
+          >
+            {getStaticCopy(input.locale, 'BM skor', 'BM score')}
+          </SortButton>
+        ) : null}
+        {input.showVmVisitScore ? (
+          <SortButton
+            active={input.visitSort.key === 'score'}
+            direction={input.visitSort.direction}
+            onClick={() => input.onToggleVisitSort('score')}
+          >
+            {getStaticCopy(input.locale, 'VM skor', 'VM score')}
+          </SortButton>
+        ) : null}
+        <SortButton
+          active={input.visitSort.key === 'date'}
+          direction={input.visitSort.direction}
+          onClick={() => input.onToggleVisitSort('date')}
+        >
+          {getStaticCopy(input.locale, 'Son ziyaret', 'Last visit')}
+        </SortButton>
+        <SortButton
+          active={input.visitSort.key === 'priority'}
+          direction={input.visitSort.direction}
+          onClick={() => input.onToggleVisitSort('priority')}
+        >
+          {getStaticCopy(input.locale, 'Düşük alan', 'Low area')}
+        </SortButton>
+        <span>{getStaticCopy(input.locale, 'Aksiyon', 'Action')}</span>
+      </div>
+
+      {input.visitStoreRows.map((storeRow) => (
+        <StoreChecklistsVisitRow
+          assignedStoreIds={input.assignedStoreIds}
+          authSummary={input.authSummary}
+          hydrateActiveResponseDrafts={input.hydrateActiveResponseDrafts}
+          key={getStoreVisitRowKey(storeRow)}
+          locale={input.locale}
+          requiresCombinedVisitTemplates={input.requiresCombinedVisitTemplates}
+          showBmVisitScore={input.showBmVisitScore}
+          showVmVisitScore={input.showVmVisitScore}
+          startVisitIsPending={input.startVisitIsPending}
+          startVisitVariables={input.startVisitVariables}
+          storeRow={storeRow}
+          t={input.t}
+          onOpenSession={input.onOpenSession}
+          onResetSessionDrafts={input.onResetSessionDrafts}
+          onStartVisit={input.onStartVisit}
+        />
+      ))}
+    </div>
+  )
+}
+
+function StoreChecklistsVisitRow(input: {
+  assignedStoreIds: string[]
+  authSummary: AuthSessionSummary | null
+  hydrateActiveResponseDrafts: (
+    active: ChecklistActiveInstance | undefined,
+  ) => ChecklistDraftHydration
+  locale: AppLocale
+  requiresCombinedVisitTemplates: boolean
+  showBmVisitScore: boolean
+  showVmVisitScore: boolean
+  startVisitIsPending: boolean
+  startVisitVariables: ChecklistVisitStartVariables | undefined
+  storeRow: ChecklistStoreVisitRow
+  t: TranslateFunction
+  onOpenSession: (rowKey: string, drafts: ChecklistDraftHydration) => void
+  onResetSessionDrafts: () => void
+  onStartVisit: (variables: ChecklistVisitStartVariables) => void
+}) {
+  const actionableRow = getActionableStoreVisitRow(input.storeRow, input.authSummary)
+  const row = actionableRow ?? input.storeRow.primary
+  const active = row.active
+  const canStart =
+    Boolean(actionableRow) &&
+    (Boolean(active) || input.assignedStoreIds.includes(input.storeRow.store.storeId))
+  const rowKey = getCoverageRowKeyFromRow(row)
+  const isStartingRow =
+    input.startVisitIsPending &&
+    input.startVisitVariables?.storeId === input.storeRow.store.storeId &&
+    input.startVisitVariables?.checklistTemplateId === row.template.checklistTemplateId
+
+  return (
+    <article className="store-checklists-visit-row">
+      <div className="store-checklists-row-main">
+        <strong>{input.storeRow.store.storeName}</strong>
+        <p>
+          {getStoreVisitSummary(
+            input.t,
+            input.locale,
+            input.storeRow,
+            input.requiresCombinedVisitTemplates,
+          )}
+        </p>
+      </div>
+      {input.showBmVisitScore ? (
+        <ChecklistTemplateScore
+          label={getStaticCopy(input.locale, 'BM', 'BM')}
+          locale={input.locale}
+          row={input.storeRow.bm}
+          t={input.t}
+        />
+      ) : null}
+      {input.showVmVisitScore ? (
+        <ChecklistTemplateScore
+          label={getStaticCopy(input.locale, 'VM', 'VM')}
+          locale={input.locale}
+          row={input.storeRow.vm}
+          t={input.t}
+        />
+      ) : null}
+      <ChecklistBadge tone={getStoreVisitDate(input.storeRow) ? 'accent' : 'danger'}>
+        {formatOptionalDate(getStoreVisitDate(input.storeRow), input.locale)}
+      </ChecklistBadge>
+      <ChecklistBadge
+        tone={getStoreVisitRiskTone(input.storeRow, input.requiresCombinedVisitTemplates)}
+      >
+        {getStoreVisitRiskLabel(
+          input.t,
+          input.locale,
+          input.storeRow,
+          input.requiresCombinedVisitTemplates,
+        )}
+      </ChecklistBadge>
+      <button
+        className="store-checklists-action-button"
+        disabled={!canStart || (!active && input.startVisitIsPending)}
+        type="button"
+        onClick={() => {
+          if (active) {
+            input.onOpenSession(rowKey, input.hydrateActiveResponseDrafts(active))
+            return
+          }
+
+          if (!actionableRow) return
+
+          input.hydrateActiveResponseDrafts(undefined)
+          input.onResetSessionDrafts()
+          input.onStartVisit({
+            storeId: input.storeRow.store.storeId,
+            checklistTemplateId: row.template.checklistTemplateId,
+          })
+        }}
+      >
+        {active
+          ? input.t('storeChecklists.continueChecklist')
+          : isStartingRow
+            ? input.t('storeChecklists.startPending')
+            : actionableRow
+              ? input.t('storeChecklists.startChecklist')
+              : getStaticCopy(input.locale, 'Sadece oku', 'Read only')}
+      </button>
+    </article>
   )
 }
 
