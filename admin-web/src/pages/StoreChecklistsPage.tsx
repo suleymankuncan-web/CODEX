@@ -1,4 +1,4 @@
-import { useReducer, useRef } from 'react'
+import { useEffect, useReducer, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { RefreshCw } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -775,11 +775,11 @@ function useStoreChecklistsPageContent(input: {
           saving: saveResponseMutation.isPending,
           starting: startVisitMutation.isPending,
         }}
-        onAcknowledgeResult={() => {
+        onAcknowledgeResult={(acknowledgementNote) => {
           if (!selectedResult) return
           acknowledgeMutation.mutate({
             checklistInstanceId: selectedResult.checklistInstanceId,
-            acknowledgementNote: ackNotes[selectedResult.checklistInstanceId] || undefined,
+            acknowledgementNote: acknowledgementNote.trim() || undefined,
           })
         }}
         onCloseResult={closeChecklistResult}
@@ -1016,7 +1016,7 @@ function StoreChecklistsModals(input: {
     saving: boolean
     starting: boolean
   }
-  onAcknowledgeResult: () => void
+  onAcknowledgeResult: (acknowledgementNote: string) => void
   onCloseResult: () => void
   onCloseSession: () => void
   onCommentChange: (templateItemId: string, comment: string) => void
@@ -1890,11 +1890,17 @@ function ChecklistResultModal(input: {
   isAcknowledging: boolean
   item: ChecklistAcknowledgementItem
   locale: AppLocale
-  onAcknowledge: () => void
+  onAcknowledge: (acknowledgementNote: string) => void
   onClose: () => void
   onNoteChange: (note: string) => void
   t: TranslateFunction
 }) {
+  const acknowledgementNoteRef = useRef(input.acknowledgementNote)
+
+  useEffect(() => {
+    acknowledgementNoteRef.current = input.acknowledgementNote
+  }, [input.acknowledgementNote])
+
   const lowScoreResponses = getLowScoreResponses(input.item.responses)
   const sections = groupChecklistResultResponses(input.item.responses)
   const hasAcknowledgement = input.item.acknowledgement !== null
@@ -2044,7 +2050,10 @@ function ChecklistResultModal(input: {
                 id={`result-ack-note-${input.item.checklistInstanceId}`}
                 rows={3}
                 value={input.acknowledgementNote}
-                onChange={(event) => input.onNoteChange(event.target.value)}
+                onChange={(event) => {
+                  acknowledgementNoteRef.current = event.target.value
+                  input.onNoteChange(event.target.value)
+                }}
                 placeholder={input.t('storeChecklists.acknowledgementNotePlaceholder')}
               />
               <div className="store-checklist-modal-footer">
@@ -2055,7 +2064,7 @@ function ChecklistResultModal(input: {
                   className="store-checklists-action-button"
                   disabled={input.isAcknowledging}
                   type="button"
-                  onClick={input.onAcknowledge}
+                  onClick={() => input.onAcknowledge(acknowledgementNoteRef.current)}
                 >
                   {input.isAcknowledging
                     ? input.t('storeChecklists.acknowledging')
