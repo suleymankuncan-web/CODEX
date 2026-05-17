@@ -27,3 +27,21 @@ tmp-keycloak-cookie*.txt
 references/design-md/
 
 .vercel
+
+# GSD runtime / ephemeral state
+.gsd/completed-units*.json
+.gsd/state-manifest.json
+.gsd/STATE.md
+.gsd/metrics.json
+.gsd/activity/
+.gsd/runtime/
+.gsd/worktrees/
+.gsd/parallel/
+.gsd/auto.lock
+.gsd/gsd.db*
+.gsd/journal/
+.gsd/doctor-history.jsonl
+.gsd/event-log.jsonl
+.gsd/reports/
+.gsd/milestones/**/continue.md
+.gsd/milestones/**/*-CONTINUE.md
