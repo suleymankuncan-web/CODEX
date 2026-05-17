@@ -6,6 +6,11 @@ import {
   writeClientBearerSession,
 } from '../features/session/session-storage'
 import type { SessionState } from '../features/session/session-storage'
+import {
+  emitApiFailureDiagnostic,
+  getRequestIdFromHeaders,
+  type ApiFailureCategory,
+} from './api-diagnostics'
 
 const DEFAULT_API_BASE_URL = '/api'
 const STAGING_HOST_API_BASE_URL = 'https://api-staging.hr-axis.com/api'
@@ -13,6 +18,11 @@ const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || DEFAUL
 
 type JsonMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 type BearerTokenRefreshHandler = (input?: { skipCache?: boolean }) => Promise<string | null>
+type ApiRequestContext = {
+  method: JsonMethod
+  durationMs: number
+  requestAttempt: number
+}
 
 let bearerTokenRefreshHandler: BearerTokenRefreshHandler | null = null
 let bearerTokenRefreshPromise: Promise<string | null> | null = null
@@ -48,29 +58,44 @@ export function registerBearerTokenRefreshHandler(handler: BearerTokenRefreshHan
 async function requestJson<T>(path: string, input?: { method?: JsonMethod; body?: unknown }): Promise<T> {
   const body = input?.body !== undefined ? JSON.stringify(input.body) : undefined
   const prepared = await prepareHeaders(input?.body !== undefined)
+  const method = input?.method ?? 'GET'
 
-  let response = await fetch(`${resolveApiBaseUrl()}${path}`, {
-    method: input?.method ?? 'GET',
+  let attempt = await performFetchAttempt(path, {
+    method,
     headers: prepared.headers,
     body,
   })
+  let response = attempt.response
 
   if (response.status === 401 && prepared.session.mode === 'bearer') {
     const retryHeaders = await prepareRefreshedHeaders(input?.body !== undefined, { skipCache: true })
     if (retryHeaders) {
-      response = await fetch(`${resolveApiBaseUrl()}${path}`, {
-        method: input?.method ?? 'GET',
-        headers: retryHeaders,
-        body,
-      })
+      attempt = await performFetchAttempt(
+        path,
+        {
+          method,
+          headers: retryHeaders,
+          body,
+        },
+        2,
+      )
+      response = attempt.response
     }
   }
 
   if (!response.ok) {
-    await throwApiError(response, path, prepared.session)
+    await throwApiError(response, path, prepared.session, {
+      method,
+      durationMs: attempt.durationMs,
+      requestAttempt: attempt.requestAttempt,
+    })
   }
 
-  return parseJsonResponse<T>(response, path)
+  return parseJsonResponse<T>(response, path, {
+    method,
+    durationMs: attempt.durationMs,
+    requestAttempt: attempt.requestAttempt,
+  })
 }
 
 async function requestFormData<T>(
@@ -82,28 +107,42 @@ async function requestFormData<T>(
 ): Promise<T> {
   const prepared = await prepareHeaders(false)
 
-  let response = await fetch(`${resolveApiBaseUrl()}${path}`, {
+  let attempt = await performFetchAttempt(path, {
     method: input.method,
     headers: prepared.headers,
     body: input.body,
   })
+  let response = attempt.response
 
   if (response.status === 401 && prepared.session.mode === 'bearer') {
     const retryHeaders = await prepareRefreshedHeaders(false, { skipCache: true })
     if (retryHeaders) {
-      response = await fetch(`${resolveApiBaseUrl()}${path}`, {
-        method: input.method,
-        headers: retryHeaders,
-        body: input.body,
-      })
+      attempt = await performFetchAttempt(
+        path,
+        {
+          method: input.method,
+          headers: retryHeaders,
+          body: input.body,
+        },
+        2,
+      )
+      response = attempt.response
     }
   }
 
   if (!response.ok) {
-    await throwApiError(response, path, prepared.session)
+    await throwApiError(response, path, prepared.session, {
+      method: input.method,
+      durationMs: attempt.durationMs,
+      requestAttempt: attempt.requestAttempt,
+    })
   }
 
-  return parseJsonResponse<T>(response, path)
+  return parseJsonResponse<T>(response, path, {
+    method: input.method,
+    durationMs: attempt.durationMs,
+    requestAttempt: attempt.requestAttempt,
+  })
 }
 
 export async function fetchJson<T>(path: string): Promise<T> {
@@ -128,6 +167,35 @@ export async function sendFormData<T>(
   },
 ): Promise<T> {
   return requestFormData<T>(path, input)
+}
+
+async function performFetchAttempt(
+  path: string,
+  request: RequestInit & { method: JsonMethod },
+  requestAttempt = 1,
+) {
+  const startedAt = getCurrentTimeMs()
+
+  try {
+    const response = await fetch(`${resolveApiBaseUrl()}${path}`, request)
+    return {
+      response,
+      durationMs: getCurrentTimeMs() - startedAt,
+      requestAttempt,
+    }
+  } catch (error) {
+    emitApiFailureDiagnostic({
+      path,
+      method: request.method,
+      status: null,
+      durationMs: getCurrentTimeMs() - startedAt,
+      requestAttempt,
+      errorCategory: 'network',
+      errorMessage: getNetworkFailureMessage(error),
+      requestId: null,
+    })
+    throw error
+  }
 }
 
 function resolveApiBaseUrl() {
@@ -223,9 +291,16 @@ async function refreshBearerToken(input?: { skipCache?: boolean }) {
   }
 }
 
-async function throwApiError(response: Response, path: string, session: SessionState): Promise<never> {
+async function throwApiError(
+  response: Response,
+  path: string,
+  session: SessionState,
+  context: ApiRequestContext,
+): Promise<never> {
   const fallbackText = await response.text()
   const message = fallbackText || `Request failed with status ${response.status}`
+
+  emitResponseFailureDiagnostic(response, path, context, 'http', `Request failed with status ${response.status}`)
 
   if (response.status === 401 && session.mode === 'bearer' && typeof window !== 'undefined') {
     clearClientBearerSession()
@@ -243,15 +318,56 @@ async function throwApiError(response: Response, path: string, session: SessionS
   throw new ApiError(response.status, message)
 }
 
-async function parseJsonResponse<T>(response: Response, path: string): Promise<T> {
+async function parseJsonResponse<T>(
+  response: Response,
+  path: string,
+  context: ApiRequestContext,
+): Promise<T> {
   const contentType = response.headers.get('content-type') ?? ''
   if (!contentType.toLowerCase().includes('application/json')) {
     const body = await response.text()
+    emitResponseFailureDiagnostic(response, path, context, 'non_json', 'API returned a non-JSON response')
     throw new ApiError(
       response.status,
       `API returned a non-JSON response for ${path}. Check VITE_API_BASE_URL or the staging API rewrite. ${body.slice(0, 160)}`,
     )
   }
 
-  return response.json() as Promise<T>
+  try {
+    return (await response.json()) as T
+  } catch (error) {
+    emitResponseFailureDiagnostic(response, path, context, 'non_json', 'API returned invalid JSON')
+    throw error
+  }
+}
+
+function emitResponseFailureDiagnostic(
+  response: Response,
+  path: string,
+  context: ApiRequestContext,
+  errorCategory: ApiFailureCategory,
+  errorMessage: string,
+) {
+  emitApiFailureDiagnostic({
+    path,
+    method: context.method,
+    status: response.status,
+    durationMs: context.durationMs,
+    requestAttempt: context.requestAttempt,
+    errorCategory,
+    errorMessage,
+    requestId: getRequestIdFromHeaders(response.headers),
+  })
+}
+
+function getCurrentTimeMs() {
+  return typeof performance !== 'undefined' ? performance.now() : Date.now()
+}
+
+function getNetworkFailureMessage(error: unknown) {
+  if (error instanceof Error && error.name.trim()) {
+    return `Network request failed (${error.name})`
+  }
+
+  return 'Network request failed'
 }

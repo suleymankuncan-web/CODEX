@@ -83,7 +83,7 @@ type ApiFailureDiagnostic = {
 
 Field notes:
 
-- `route` is `window.location.pathname + window.location.search`, with browser availability checked.
+- `route` is the current browser pathname plus query parameter names only; query values are replaced so deep-link values do not leak.
 - `path` is sanitized: UUID-like ids, long numeric ids, and query values are not logged raw.
 - `queryKeys` includes query parameter names only.
 - `requestAttempt` means the attempt inside the API helper, such as initial request vs. post-refresh retry. It is not React Query retry count.
