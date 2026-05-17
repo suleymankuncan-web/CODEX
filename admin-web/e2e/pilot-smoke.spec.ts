@@ -81,6 +81,11 @@ test('core store routes open without unavailable states', async ({ page }) => {
       heading: page.getByRole('heading', { name: 'Sıralamalar' }),
     },
     {
+      path: '/store/kpis',
+      urlPattern: /\/store\/kpis$/,
+      heading: page.getByRole('heading', { name: /KPI/ }).first(),
+    },
+    {
       path: '/store/competitions',
       urlPattern: /\/store\/competitions$/,
       heading: page.getByText('/store/competitions'),
@@ -296,6 +301,11 @@ async function routePilotSmokeApi(page: Page) {
 
     if (pathname.endsWith('/api/reports/my-performance')) {
       await route.fulfill({ json: myPerformanceFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/reports/store-kpi-highlights')) {
+      await route.fulfill({ json: storeKpiHighlightsFixture })
       return
     }
 
@@ -763,6 +773,82 @@ const myPerformanceFixture = {
       dataStatus: 'reported',
       scoreStatus: 'scored',
       status: 'reported',
+    },
+  ],
+}
+
+const storeKpiHighlightsFixture = {
+  source: {
+    mode: 'live',
+    snapshotRunId: null,
+    snapshotDate: null,
+    periodType: 'monthly',
+  },
+  store: {
+    storeId,
+    storeName: 'Pilot Store',
+  },
+  period: {
+    periodStart: '2026-05-01',
+    periodEnd: '2026-05-31',
+  },
+  score: {
+    value: 88,
+    matchedMetrics: 2,
+    totalMetrics: 2,
+  },
+  availablePeriods: [
+    {
+      periodType: 'monthly',
+      periodStart: '2026-05-01',
+      periodEnd: '2026-05-31',
+    },
+  ],
+  partial: {
+    isPartial: false,
+    missingMetricCodes: [],
+    missingMetricLabels: [],
+    pendingNormalizationCodes: [],
+    pendingNormalizationLabels: [],
+  },
+  metrics: [
+    {
+      code: 'TARGET_ACHIEVEMENT',
+      label: 'Target achievement',
+      weightPercent: 60,
+      actualValue: 0.92,
+      targetValue: 1,
+      achievementRate: 0.92,
+      benchmarkValue: null,
+      benchmarkSource: 'TARGET',
+      actualRatio: 0.92,
+      scoredRatio: 0.92,
+      capRatio: 1.2,
+      isCapped: false,
+      scoreContribution: 55.2,
+      missingReason: null,
+      statusBand: 'on_track',
+      dataStatus: 'reported',
+      scoreStatus: 'scored',
+    },
+    {
+      code: 'UPT',
+      label: 'Units per ticket',
+      weightPercent: 40,
+      actualValue: 1.08,
+      targetValue: 1,
+      achievementRate: 1.08,
+      benchmarkValue: null,
+      benchmarkSource: 'TARGET',
+      actualRatio: 1.08,
+      scoredRatio: 1.08,
+      capRatio: 1.2,
+      isCapped: false,
+      scoreContribution: 43.2,
+      missingReason: null,
+      statusBand: 'exceeded',
+      dataStatus: 'reported',
+      scoreStatus: 'scored',
     },
   ],
 }
