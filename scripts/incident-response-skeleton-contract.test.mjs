@@ -22,6 +22,7 @@ test('incident response skeleton keeps operator-ready sections', () => {
     '# Production And Staging Incident Response Skeleton',
     '## Decision Rule',
     '## Incident Severity',
+    '## Alert Trigger Playbooks',
     '## Roles And Ownership',
     '## Triage Flow',
     '## Auth Incident Playbook',
@@ -54,11 +55,30 @@ test('incident response skeleton links failures to guarded commands and rollback
     'npm.cmd run check:release',
     'npm.cmd run smoke:auth:staging:action',
     'npm.cmd run guard:auth:evidence',
+    'npm.cmd run smoke:alert-routing',
     'Stop the release',
     'pause import/materialization jobs',
     'Rollback / Forward-fix / No-Go',
     'assigned-store action',
     'unassigned-store action returns `403`',
+  ]) {
+    requireText(incidentSkeleton, phrase)
+  }
+})
+
+test('incident response skeleton names alert ids and first response owners', () => {
+  for (const phrase of [
+    'backend-health-down',
+    'backend-5xx-spike',
+    'auth-session-failure-spike',
+    'import-failure-spike',
+    'snapshot-worker-failure',
+    'database-latency-high',
+    'frontend-unreachable',
+    'observability-degraded',
+    'Incident lead -> Backend owner',
+    'Incident lead -> Data owner',
+    'Incident lead -> Frontend owner',
   ]) {
     requireText(incidentSkeleton, phrase)
   }

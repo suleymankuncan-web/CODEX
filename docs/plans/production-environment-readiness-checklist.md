@@ -138,6 +138,21 @@ Allowed sign-off states:
 - [ ] Production incident contact path is written.
 - [ ] High-severity import/data quality events have an owner for triage.
 
+## Alerting And Incident Evidence Checklist
+
+### P0 Required
+
+- [ ] `docs/backend/operational-monitoring-contract.md` names every required alert route and owner role.
+- [ ] `docs/plans/production-staging-incident-response-skeleton.md` names first response actions for health, 5xx, auth, import, snapshot, DB latency, frontend, and observability alerts.
+- [ ] Alert routing smoke passed: `npm.cmd run smoke:alert-routing`.
+- [ ] If provider delivery is not configured, alert-routing-smoke evidence records provider delivery as skipped or metadata-only instead of passed.
+- [ ] Production incident contact path is written with primary and backup response owners.
+
+### P1 Recommended
+
+- [ ] Provider alert destinations are tested through the approved provider console/API.
+- [ ] Alert routing evidence links to the latest deployed readiness smoke.
+
 ## Smoke Evidence Checklist
 
 ### P0 Required
