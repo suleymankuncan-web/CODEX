@@ -106,9 +106,19 @@ test('core store routes open without unavailable states', async ({ page }) => {
       heading: page.getByRole('heading', { name: /KPI/ }).first(),
     },
     {
+      path: '/store/feed',
+      urlPattern: /\/store\/feed$/,
+      heading: page.getByText('/store/feed', { exact: true }),
+    },
+    {
       path: '/store/competitions',
       urlPattern: /\/store\/competitions$/,
       heading: page.getByText('/store/competitions'),
+    },
+    {
+      path: '/store/incentives',
+      urlPattern: /\/store\/incentives$/,
+      heading: page.getByText('/store/incentives', { exact: true }),
     },
     {
       path: '/store/approvals',
