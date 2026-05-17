@@ -372,8 +372,8 @@ export class CompetitionRepository {
           OR store.store_id = ANY($3::uuid[])
           OR (
             team_store.store_id IS NULL
-            AND $6::uuid IS NOT NULL
-            AND competition.owner_user_id = $6::uuid
+            AND $6::text IS NOT NULL
+            AND competition.owner_user_id = $6::text
           )
         ORDER BY competition.starts_on DESC, competition.competition_code ASC
         LIMIT $4::int
@@ -430,8 +430,8 @@ export class CompetitionRepository {
             OR store.store_id = ANY($4::uuid[])
             OR (
               team_store.store_id IS NULL
-              AND $5::uuid IS NOT NULL
-              AND competition.owner_user_id = $5::uuid
+              AND $5::text IS NOT NULL
+              AND competition.owner_user_id = $5::text
             )
           )
       `,
