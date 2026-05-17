@@ -64,6 +64,42 @@ test('store manager checklist surface keeps acknowledgement language', async ({ 
   ])
 })
 
+test('store checklist area lets managers retry after acknowledgement load fails', async ({ page }) => {
+  let acknowledgementAttempts = 0
+  let allowAcknowledgements = false
+
+  await setupChecklistPage(page, ['STORE_MANAGER'])
+  await page.unroute('**/api/checklists/acknowledgements/list')
+  await page.route('**/api/checklists/acknowledgements/list', async (route) => {
+    acknowledgementAttempts += 1
+
+    if (!allowAcknowledgements) {
+      await route.fulfill({
+        status: 503,
+        json: { message: 'Temporary checklist acknowledgement outage' },
+      })
+      return
+    }
+
+    await route.fulfill({ json: createChecklistAcknowledgementsFixture(['STORE_MANAGER']) })
+  })
+
+  await page.goto('/store/checklists')
+
+  await expect(page.getByRole('heading', { name: 'Checklist alanı açılamadı' })).toBeVisible()
+  const retryButton = page.getByRole('button', { name: 'Tekrar dene' })
+  await expect(retryButton).toBeVisible()
+
+  allowAcknowledgements = true
+  await retryButton.click()
+
+  await expect(
+    page.getByRole('heading', { name: 'Mağaza kabulü bekleyen tamamlanmış checklistler' }),
+  ).toBeVisible()
+  await expect.poll(() => acknowledgementAttempts).toBeGreaterThan(1)
+  await expect(page.getByRole('heading', { name: 'Checklist alanı açılamadı' })).toHaveCount(0)
+})
+
 test('completed checklist handoff moves from field visit to store acknowledgement history', async ({ page }) => {
   const requests = createChecklistRequestLog()
   const roleState: ChecklistRoleState = { current: ['REGION_MANAGER'] }
