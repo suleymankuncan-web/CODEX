@@ -388,7 +388,7 @@ function hasStoreShellIntent(authSummary: AuthSessionSummary | null) {
   return roles.includes('STORE_MANAGER') || Boolean(authSummary?.user.scope.storeIds.length)
 }
 
-export function StoreKpiHighlightsPage(input: {
+function useStoreKpiHighlightsPageModel(input: {
   authSummary: AuthSessionSummary | null
 }) {
   const { locale, t } = useLocalization()
@@ -616,6 +616,7 @@ export function StoreKpiHighlightsPage(input: {
       missingWeight: Math.max(0, 100 - coveredWeight),
     }
   }, [rows, storeKpiScoreProfile])
+
   const closedScoreBreakdown = scoreBreakdownQuery.data ?? null
   const liveBmChecklist = resolveLiveChecklistImpact({
     rows,
@@ -695,39 +696,74 @@ export function StoreKpiHighlightsPage(input: {
   const isLoading =
     (configQuery.isLoading && !configForbidden) ||
     (viewMode === 'live' ? liveKpiQuery.isLoading : dailySnapshotQuery.isLoading || closedKpiQuery.isLoading)
+  const liveSummary = liveKpiQuery.data
+  const activeStoreName =
+    viewMode === 'live'
+      ? liveSummary?.store?.storeName ?? t('storeKpis.noStoreScope')
+      : primaryStoreId ?? t('storeKpis.noStoreScope')
+  const latestLivePeriodLabel =
+    liveSummary?.period
+      ? `${formatDate(liveSummary.period.periodStart, locale)} - ${formatDate(liveSummary.period.periodEnd, locale)} (${t('storeKpis.latestMonthlyPeriod')})`
+      : t('storeKpis.latestMonthlyPeriod')
 
-  if (!reportingAllowed) {
-    return (
-      <section className="page-stack">
-        <section className="hero-panel store-hero-panel">
-          <div>
-            <div className="eyebrow">{t('storeKpis.unavailableEyebrow')}</div>
-            <h2 className="hero-title">
-              {t('storeKpis.title')}
-            </h2>
-            <p className="hero-copy">
-              {t('storeKpis.unavailableCopy')}
-            </p>
-          </div>
-          <div className="hero-metrics">
-            <MetricAccent label={t('storeKpis.store')} value={primaryStoreId ?? t('storeKpis.noStoreScope')} />
-            <MetricAccent label={t('storeKpis.status')} value={t('storeKpis.authWaiting')} />
-          </div>
-        </section>
+  return {
+    activeSnapshotRun,
+    activeStoreName,
+    availableSnapshotRuns,
+    averageAchievement,
+    bmChecklistContributionLabel,
+    bmChecklistMissingNote,
+    bmChecklistStatusLabel,
+    closedKpiQuery,
+    closedScoreBreakdown,
+    configForbidden,
+    configQuery,
+    dailySnapshotQuery,
+    isLoading,
+    kpiOwnershipMatrix,
+    latestLivePeriodLabel,
+    liveKpiQuery,
+    livePeriodStart,
+    liveSummary,
+    locale,
+    matchedMetricCount,
+    needsAttention,
+    personnelWeightsReady,
+    primaryStoreId,
+    reportingAllowed,
+    rows,
+    selectedSnapshotRunId,
+    setLivePeriodStart,
+    setSelectedSnapshotRunId,
+    setViewMode,
+    storeGrade,
+    storeKpiScoreProfile,
+    storeScoreMeaning,
+    storeShellIntent,
+    t,
+    totals,
+    topPerformer,
+    viewMode,
+    vmChecklistContributionLabel,
+    vmChecklistMissingNote,
+    vmChecklistStatusLabel,
+    weightedScore,
+  }
+}
 
-        {storeShellIntent ? (
-          <section className="panel">
-            <div className="key-grid">
-              <KeyValue label={t('storeKpis.storeScope')} value={primaryStoreId ?? t('storeKpis.noOpenStoreScope')} />
-              <KeyValue label={t('storeKpis.readStatus')} value={t('storeKpis.readWaiting')} />
-            </div>
-          </section>
-        ) : null}
-      </section>
-    )
+type StoreKpiHighlightsPageModel = ReturnType<typeof useStoreKpiHighlightsPageModel>
+
+export function StoreKpiHighlightsPage(input: {
+  authSummary: AuthSessionSummary | null
+}) {
+  const model = useStoreKpiHighlightsPageModel(input)
+  const { t } = model
+
+  if (!model.reportingAllowed) {
+    return <StoreKpiUnavailableState model={model} />
   }
 
-  if (isLoading) {
+  if (model.isLoading) {
     return (
       <ScreenState
         title={t('storeKpis.loadingTitle')}
@@ -736,18 +772,18 @@ export function StoreKpiHighlightsPage(input: {
     )
   }
 
-  if (configQuery.isError && !configForbidden) {
+  if (model.configQuery.isError && !model.configForbidden) {
     return (
       <ScreenState
         title={t('storeKpis.configErrorTitle')}
-        copy={getErrorMessage(configQuery.error)}
+        copy={getErrorMessage(model.configQuery.error)}
         tone="error"
       />
     )
   }
 
-  if (viewMode === 'live' && liveKpiQuery.isError) {
-    if (liveKpiQuery.error instanceof ApiError && liveKpiQuery.error.status === 403) {
+  if (model.viewMode === 'live' && model.liveKpiQuery.isError) {
+    if (model.liveKpiQuery.error instanceof ApiError && model.liveKpiQuery.error.status === 403) {
       return (
         <ScreenState
           title={t('storeKpis.liveForbiddenTitle')}
@@ -760,23 +796,23 @@ export function StoreKpiHighlightsPage(input: {
     return (
       <ScreenState
         title={t('storeKpis.rowsErrorTitle')}
-        copy={getErrorMessage(liveKpiQuery.error)}
+        copy={getErrorMessage(model.liveKpiQuery.error)}
         tone="error"
       />
     )
   }
 
-  if (viewMode === 'closed' && dailySnapshotQuery.isError) {
+  if (model.viewMode === 'closed' && model.dailySnapshotQuery.isError) {
     return (
       <ScreenState
         title={t('storeKpis.snapshotListErrorTitle')}
-        copy={getErrorMessage(dailySnapshotQuery.error)}
+        copy={getErrorMessage(model.dailySnapshotQuery.error)}
         tone="error"
       />
     )
   }
 
-  if (viewMode === 'closed' && !activeSnapshotRun) {
+  if (model.viewMode === 'closed' && !model.activeSnapshotRun) {
     return (
       <ScreenState
         title={t('storeKpis.closedDayMissingTitle')}
@@ -786,604 +822,632 @@ export function StoreKpiHighlightsPage(input: {
     )
   }
 
-  if (viewMode === 'closed' && closedKpiQuery.isError) {
+  if (model.viewMode === 'closed' && model.closedKpiQuery.isError) {
     return (
       <ScreenState
         title={t('storeKpis.rowsErrorTitle')}
-        copy={getErrorMessage(closedKpiQuery.error)}
+        copy={getErrorMessage(model.closedKpiQuery.error)}
         tone="error"
       />
     )
   }
 
-  const liveSummary = liveKpiQuery.data
-  const activeStoreName =
-    viewMode === 'live'
-      ? liveSummary?.store?.storeName ?? t('storeKpis.noStoreScope')
-      : primaryStoreId ?? t('storeKpis.noStoreScope')
-  const latestLivePeriodLabel =
-    liveSummary?.period
-      ? `${formatDate(liveSummary.period.periodStart, locale)} - ${formatDate(liveSummary.period.periodEnd, locale)} (${t('storeKpis.latestMonthlyPeriod')})`
-      : t('storeKpis.latestMonthlyPeriod')
+  return <StoreKpiHighlightsExperience model={model} />
+}
+
+function StoreKpiUnavailableState({ model }: { model: StoreKpiHighlightsPageModel }) {
+  const { primaryStoreId, storeShellIntent, t } = model
 
   return (
     <section className="page-stack">
       <section className="hero-panel store-hero-panel">
         <div>
-          <div className="eyebrow">{t('storeKpis.heroEyebrow')}</div>
-          <h2 className="hero-title">
-            {t('storeKpis.title')}
-          </h2>
-          <p className="hero-copy">
-            {t('storeKpis.heroCopy')}
-          </p>
+          <div className="eyebrow">{t('storeKpis.unavailableEyebrow')}</div>
+          <h2 className="hero-title">{t('storeKpis.title')}</h2>
+          <p className="hero-copy">{t('storeKpis.unavailableCopy')}</p>
         </div>
         <div className="hero-metrics">
-          <MetricAccent label={t('storeKpis.mode')} value={viewMode === 'live' ? t('storeKpis.livePeriod') : t('storeKpis.closedDay')} />
-          <MetricAccent label={t('storeKpis.store')} value={activeStoreName} />
-          <MetricAccent
-            label={t('storeKpis.period')}
-            value={
-              viewMode === 'live'
-                ? liveSummary?.period
-                  ? `${formatDate(liveSummary.period.periodStart, locale)} - ${formatDate(liveSummary.period.periodEnd, locale)}`
-                  : t('storeKpis.noLivePeriod')
-                : activeSnapshotRun?.snapshotDate ?? t('storeKpis.noRecord')
-            }
-          />
-          <MetricAccent
-            label={t('storeKpis.scoreBand')}
-            value={`${storeGrade.emoji} ${storeGrade.code}`}
-          />
-          <MetricAccent
-            label={viewMode === 'live' ? t('storeKpis.averageScore') : t('storeKpis.averageAchievement')}
-            value={
-              rows.length > 0
-                ? viewMode === 'live'
-                  ? t('storeKpis.scorePoints', { value: formatMetric(locale, averageAchievement) })
-                  : formatPercent(locale, averageAchievement)
-                : t('storeKpis.noScorableRows')
-            }
-          />
+          <MetricAccent label={t('storeKpis.store')} value={primaryStoreId ?? t('storeKpis.noStoreScope')} />
+          <MetricAccent label={t('storeKpis.status')} value={t('storeKpis.authWaiting')} />
         </div>
       </section>
 
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('storeKpis.viewModeEyebrow')}</div>
-            <h3>{t('storeKpis.viewModeTitle')}</h3>
-          </div>
-        </div>
-        <div className="toolbar-cluster">
-          <button
-            className="control-button"
-            type="button"
-            data-active={viewMode === 'live'}
-            onClick={() => setViewMode('live')}
-          >
-            {t('storeKpis.livePeriod')}
-          </button>
-          <button
-            className="control-button"
-            type="button"
-            data-active={viewMode === 'closed'}
-            onClick={() => setViewMode('closed')}
-          >
-            {t('storeKpis.closedDay')}
-          </button>
-        </div>
-        {viewMode === 'live' ? (
-          <div className="toolbar-cluster">
-            <select
-              className="control-input"
-              value={livePeriodStart}
-              onChange={(event) => setLivePeriodStart(event.target.value)}
-              aria-label={t('storeKpis.livePeriodSelect')}
-            >
-              <option value="">{latestLivePeriodLabel}</option>
-              {(liveSummary?.availablePeriods ?? []).map((period) => (
-                <option
-                  key={`${period.periodType}:${period.periodStart}`}
-                  value={period.periodStart}
-                >
-                  {t('storeKpis.periodOption', {
-                    start: formatDate(period.periodStart, locale),
-                    end: formatDate(period.periodEnd, locale),
-                    periodType: formatPeriodTypeLabel(t, period.periodType),
-                  })}
-                </option>
-              ))}
-            </select>
-            <button
-              className="control-button"
-              type="button"
-              onClick={() => setLivePeriodStart('')}
-              disabled={!livePeriodStart}
-            >
-              {t('storeKpis.clearFilter')}
-            </button>
-          </div>
-        ) : (
-          <div className="toolbar-cluster">
-            <select
-              className="control-input"
-              value={activeSnapshotRun?.snapshotRunId ?? ''}
-              onChange={(event) => setSelectedSnapshotRunId(event.target.value)}
-              aria-label={t('storeKpis.closedRecordSelect')}
-            >
-              {activeSnapshotRun ? null : <option value="">{t('storeKpis.noRecord')}</option>}
-              {availableSnapshotRuns.map((run) => (
-                <option key={run.snapshotRunId} value={run.snapshotRunId}>
-                  {formatSnapshotOptionLabel(run, locale)}
-                </option>
-              ))}
-            </select>
-            <button
-              className="control-button"
-              type="button"
-              onClick={() => setSelectedSnapshotRunId('')}
-              disabled={!selectedSnapshotRunId}
-            >
-              {t('storeKpis.returnLatestClosedDay')}
-            </button>
-          </div>
-        )}
-      </section>
-
-      <section className="metric-grid store-metric-grid">
-        <MetricCard
-          title={t('storeKpis.kpiRows')}
-          value={rows.length}
-          note={t('storeKpis.kpiRowsNote')}
-          icon={<Target size={18} />}
-          tone="accent"
-        />
-        <MetricCard
-          title={t('storeKpis.scored')}
-          value={matchedMetricCount}
-          note={t('storeKpis.pendingNormalizationCount', {
-            count: totals.pendingNormalization,
-          })}
-          icon={<TrendingUp size={18} />}
-          tone={totals.pendingNormalization === 0 ? 'calm' : 'warning'}
-        />
-        <MetricCard
-          title={t('storeKpis.watchKpi')}
-          value={needsAttention.length}
-          note={t('storeKpis.riskNote', {
-            atRisk: totals.atRisk,
-            offTrack: totals.offTrack,
-          })}
-          icon={<ShieldAlert size={18} />}
-          tone={needsAttention.length === 0 ? 'neutral' : 'warning'}
-        />
-        <MetricCard
-          title={t('storeKpis.storeScore')}
-          value={Number((weightedScore.scoreValue * 100).toFixed(1))}
-          note={`${formatStorePerformanceGrade(t, storeGrade)} · ${t('storeKpis.covered', { weight: weightedScore.coveredWeight })}`}
-          icon={<TrendingUp size={18} />}
-          tone={storeGrade.tone}
-        />
-      </section>
-
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('storeKpis.monthlyBreakdownEyebrow')}</div>
-            <h3>{t('storeKpis.checklistImpact')}</h3>
-          </div>
-          <StatusPill tone={viewMode === 'closed' ? 'calm' : 'neutral'}>
-            {viewMode === 'closed' ? t('storeKpis.finalRecord') : t('storeKpis.livePreview')}
-          </StatusPill>
-        </div>
-        <div className="key-grid">
-          <KeyValue
-            label={t('storeKpis.kpiContribution')}
-            value={
-              closedScoreBreakdown?.components.kpi.contribution !== null &&
-              closedScoreBreakdown?.components.kpi.contribution !== undefined
-                ? formatMetric(locale, closedScoreBreakdown.components.kpi.contribution)
-                : t('storeKpis.scorePoints', {
-                    value: formatMetric(locale, weightedScore.scoreValue * 100),
-                  })
-            }
-          />
-          <KeyValue label={t('storeKpis.bmChecklistStatus')} value={bmChecklistStatusLabel} />
-          <KeyValue label={t('storeKpis.bmContribution')} value={bmChecklistContributionLabel} />
-          <KeyValue
-            label={t('storeKpis.vmChecklistStatus')}
-            value={vmChecklistStatusLabel}
-          />
-          <KeyValue label={t('storeKpis.vmContribution')} value={vmChecklistContributionLabel} />
-          <KeyValue
-            label={t('storeKpis.configuredBlend')}
-            value={
-              closedScoreBreakdown
-                ? t('storeKpis.configuredBlendValue', {
-                    kpi: closedScoreBreakdown.configuredWeights.kpiPerformanceWeight,
-                    bm: closedScoreBreakdown.configuredWeights.bmChecklistWeight,
-                    vm: closedScoreBreakdown.configuredWeights.vmChecklistWeight,
-                  })
-                : t('storeKpis.defaultPlanBlend')
-            }
-          />
-          <KeyValue
-            label={t('storeKpis.effectiveBlend')}
-            value={
-              closedScoreBreakdown
-                ? t('storeKpis.effectiveBlendValue', {
-                    kpi: closedScoreBreakdown.effectiveWeights.kpiPerformanceWeight,
-                    bm: closedScoreBreakdown.effectiveWeights.bmChecklistWeight,
-                    vm: closedScoreBreakdown.effectiveWeights.vmChecklistWeight,
-                  })
-                : t('storeKpis.livePreview')
-            }
-          />
-        </div>
-        <p className="helper-text">{t('storeKpis.checklistImpactCopy')}</p>
-        {bmChecklistMissingNote ? (
-          <p className="helper-text">{bmChecklistMissingNote}</p>
-        ) : null}
-        {vmChecklistMissingNote ? (
-          <p className="helper-text">{vmChecklistMissingNote}</p>
-        ) : null}
-      </section>
-
-      <section className="panel" aria-label={t('storeKpis.scoreSourcesAria')}>
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('storeKpis.scoreContractEyebrow')}</div>
-            <h3>{t('storeKpis.storeScoreSources')}</h3>
-          </div>
-          <StatusPill tone="accent">{t('storeKpis.officialRule')}</StatusPill>
-        </div>
-        <p className="queue-subtitle">{t('storeKpis.scoreSourcesCopy')}</p>
-        <div className="key-grid">
-          <KeyValue
-            label={t('storeKpis.kpiSources')}
-            value={t('storeKpis.kpiSourcesValue')}
-          />
-          <KeyValue
-            label={t('storeKpis.checklistShare')}
-            value={t('storeKpis.checklistShareValue')}
-          />
-          <KeyValue
-            label={t('storeKpis.capLanguage')}
-            value={t('storeKpis.capLanguageValue')}
-          />
-          <KeyValue
-            label={t('storeKpis.turkeyAverage')}
-            value={t('storeKpis.turkeyAverageValue')}
-          />
-        </div>
-      </section>
-
-      <section className="two-up-grid">
-        <article className="panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">{t('storeKpis.activeScopeEyebrow')}</div>
-              <h3>{t('storeKpis.activeScopeTitle')}</h3>
-            </div>
-          </div>
+      {storeShellIntent ? (
+        <section className="panel">
           <div className="key-grid">
             <KeyValue label={t('storeKpis.storeScope')} value={primaryStoreId ?? t('storeKpis.noOpenStoreScope')} />
-            <KeyValue label={t('storeKpis.storeName')} value={activeStoreName} />
-            <KeyValue
-              label={t('storeKpis.dataView')}
-              value={viewMode === 'live' ? t('storeKpis.liveImportedMonthlyData') : t('storeKpis.dailyClosedRecord')}
-            />
-            <KeyValue label={t('storeKpis.readScope')} value={t('storeKpis.readScopeValue')} />
-          </div>
-        </article>
-
-        <article className="panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">{t('storeKpis.topSignalEyebrow')}</div>
-              <h3>{t('storeKpis.topSignalTitle')}</h3>
-            </div>
-            <StatusPill tone={needsAttention.length === 0 ? 'calm' : 'warning'}>
-              {needsAttention.length === 0 ? t('storeKpis.balanced') : t('storeKpis.watch')}
-            </StatusPill>
-          </div>
-          {topPerformer ? (
-            <div className="stacked-table">
-              <div className="stacked-row">
-                <div className="stacked-row-head">
-                  <div>
-                    <strong>{formatKpiMetricLabel(t, topPerformer.kpiCode, topPerformer.kpiName)}</strong>
-                    <span className="queue-subtitle">{topPerformer.kpiCode}</span>
-                  </div>
-                  <StatusPill tone="accent">
-                    {formatAchievementValue(locale, t, topPerformer)}
-                  </StatusPill>
-                </div>
-                <p>{t('storeKpis.topSignalCopy')}</p>
-              </div>
-            </div>
-          ) : (
-            <EmptyState
-              title={t('storeKpis.noTopSignalTitle')}
-              copy={t('storeKpis.noTopSignalCopy')}
-            />
-          )}
-        </article>
-      </section>
-
-      {viewMode === 'live' && liveSummary?.partial.isPartial ? (
-        <section className="panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">{t('storeKpis.partialEyebrow')}</div>
-              <h3>{t('storeKpis.partialTitle')}</h3>
-            </div>
-            <StatusPill tone="warning">{t('storeKpis.partialData')}</StatusPill>
-          </div>
-          <div className="key-grid">
-            <KeyValue
-              label={t('storeKpis.missingMetrics')}
-              value={
-                liveSummary.partial.missingMetricLabels.length > 0
-                  ? formatMetricLabelList(
-                      t,
-                      liveSummary.partial.missingMetricCodes,
-                      liveSummary.partial.missingMetricLabels,
-                    )
-                  : t('storeKpis.none')
-              }
-            />
-            <KeyValue
-              label={t('storeKpis.pendingNormalization')}
-              value={
-                liveSummary.partial.pendingNormalizationLabels.length > 0
-                  ? formatMetricLabelList(
-                      t,
-                      liveSummary.partial.pendingNormalizationCodes,
-                      liveSummary.partial.pendingNormalizationLabels,
-                    )
-                  : t('storeKpis.none')
-              }
-            />
-            <KeyValue
-              label={t('storeKpis.note')}
-              value={t('storeKpis.partialNote')}
-            />
+            <KeyValue label={t('storeKpis.readStatus')} value={t('storeKpis.readWaiting')} />
           </div>
         </section>
       ) : null}
+    </section>
+  )
+}
 
-      <section className="panel" aria-label={t('storeKpis.scoreMeaningAria')}>
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('storeKpis.scoreMeaningEyebrow')}</div>
-            <h3>{storeScoreMeaning.title}</h3>
-          </div>
-          <StatusPill tone={storeScoreMeaning.tone}>{storeGrade.code}</StatusPill>
-        </div>
-        <p className="queue-subtitle">{storeScoreMeaning.summary}</p>
-        <div className="key-grid">
-          <KeyValue label={t('storeKpis.scoreBand')} value={formatStorePerformanceGrade(t, storeGrade)} />
-          <KeyValue label={t('storeKpis.score')} value={formatPercent(locale, weightedScore.scoreValue)} />
-          <KeyValue label={t('storeKpis.coveredWeight')} value={`${weightedScore.coveredWeight}%`} />
-          <KeyValue label={t('storeKpis.actionLanguage')} value={storeScoreMeaning.action} />
-        </div>
-        <p className="queue-subtitle">{storeScoreMeaning.confidence}</p>
-      </section>
+function StoreKpiHighlightsExperience({ model }: { model: StoreKpiHighlightsPageModel }) {
+  return (
+    <section className="page-stack">
+      <StoreKpiHeroPanel model={model} />
+      <StoreKpiViewModePanel model={model} />
+      <StoreKpiSummaryGrid model={model} />
+      <StoreKpiChecklistImpactPanel model={model} />
+      <StoreKpiScoreSourcesPanel model={model} />
+      <StoreKpiScopeSignalGrid model={model} />
+      <StoreKpiPartialDataPanel model={model} />
+      <StoreKpiScoreMeaningPanel model={model} />
+      <StoreKpiScoreBreakdownPanel model={model} />
+      <StoreKpiOwnershipPanel model={model} />
+      <StoreKpiPriorityPanel model={model} />
+    </section>
+  )
+}
 
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('storeKpis.storeScoreSummary')}</div>
-            <h3>{t('storeKpis.scoreBreakdown')}</h3>
-          </div>
-          <StatusPill tone={weightedScore.missingWeight === 0 ? 'calm' : 'warning'}>
-            {weightedScore.missingWeight === 0
-              ? t('storeKpis.complete')
-              : t('storeKpis.missingWeightStatus', {
-                  weight: weightedScore.missingWeight,
+function StoreKpiHeroPanel({ model }: { model: StoreKpiHighlightsPageModel }) {
+  const { activeSnapshotRun, activeStoreName, averageAchievement, liveSummary, locale, rows, storeGrade, t, viewMode } = model
+
+  return (
+    <section className="hero-panel store-hero-panel">
+      <div>
+        <div className="eyebrow">{t('storeKpis.heroEyebrow')}</div>
+        <h2 className="hero-title">{t('storeKpis.title')}</h2>
+        <p className="hero-copy">{t('storeKpis.heroCopy')}</p>
+      </div>
+      <div className="hero-metrics">
+        <MetricAccent label={t('storeKpis.mode')} value={viewMode === 'live' ? t('storeKpis.livePeriod') : t('storeKpis.closedDay')} />
+        <MetricAccent label={t('storeKpis.store')} value={activeStoreName} />
+        <MetricAccent
+          label={t('storeKpis.period')}
+          value={
+            viewMode === 'live'
+              ? liveSummary?.period
+                ? `${formatDate(liveSummary.period.periodStart, locale)} - ${formatDate(liveSummary.period.periodEnd, locale)}`
+                : t('storeKpis.noLivePeriod')
+              : activeSnapshotRun?.snapshotDate ?? t('storeKpis.noRecord')
+          }
+        />
+        <MetricAccent
+          label={t('storeKpis.scoreBand')}
+          value={`${storeGrade.emoji} ${storeGrade.code}`}
+        />
+        <MetricAccent
+          label={viewMode === 'live' ? t('storeKpis.averageScore') : t('storeKpis.averageAchievement')}
+          value={
+            rows.length > 0
+              ? viewMode === 'live'
+                ? t('storeKpis.scorePoints', { value: formatMetric(locale, averageAchievement) })
+                : formatPercent(locale, averageAchievement)
+              : t('storeKpis.noScorableRows')
+          }
+        />
+      </div>
+    </section>
+  )
+}
+
+function StoreKpiViewModePanel({ model }: { model: StoreKpiHighlightsPageModel }) {
+  const {
+    activeSnapshotRun,
+    availableSnapshotRuns,
+    latestLivePeriodLabel,
+    livePeriodStart,
+    liveSummary,
+    locale,
+    selectedSnapshotRunId,
+    setLivePeriodStart,
+    setSelectedSnapshotRunId,
+    setViewMode,
+    t,
+    viewMode,
+  } = model
+
+  return (
+    <section className="panel">
+      <div className="panel-heading">
+        <div>
+          <div className="eyebrow">{t('storeKpis.viewModeEyebrow')}</div>
+          <h3>{t('storeKpis.viewModeTitle')}</h3>
+        </div>
+      </div>
+      <div className="toolbar-cluster">
+        <button className="control-button" type="button" data-active={viewMode === 'live'} onClick={() => setViewMode('live')}>
+          {t('storeKpis.livePeriod')}
+        </button>
+        <button className="control-button" type="button" data-active={viewMode === 'closed'} onClick={() => setViewMode('closed')}>
+          {t('storeKpis.closedDay')}
+        </button>
+      </div>
+      {viewMode === 'live' ? (
+        <div className="toolbar-cluster">
+          <select
+            className="control-input"
+            value={livePeriodStart}
+            onChange={(event) => setLivePeriodStart(event.target.value)}
+            aria-label={t('storeKpis.livePeriodSelect')}
+          >
+            <option value="">{latestLivePeriodLabel}</option>
+            {(liveSummary?.availablePeriods ?? []).map((period) => (
+              <option key={`${period.periodType}:${period.periodStart}`} value={period.periodStart}>
+                {t('storeKpis.periodOption', {
+                  start: formatDate(period.periodStart, locale),
+                  end: formatDate(period.periodEnd, locale),
+                  periodType: formatPeriodTypeLabel(t, period.periodType),
                 })}
+              </option>
+            ))}
+          </select>
+          <button className="control-button" type="button" onClick={() => setLivePeriodStart('')} disabled={!livePeriodStart}>
+            {t('storeKpis.clearFilter')}
+          </button>
+        </div>
+      ) : (
+        <div className="toolbar-cluster">
+          <select
+            className="control-input"
+            value={activeSnapshotRun?.snapshotRunId ?? ''}
+            onChange={(event) => setSelectedSnapshotRunId(event.target.value)}
+            aria-label={t('storeKpis.closedRecordSelect')}
+          >
+            {activeSnapshotRun ? null : <option value="">{t('storeKpis.noRecord')}</option>}
+            {availableSnapshotRuns.map((run) => (
+              <option key={run.snapshotRunId} value={run.snapshotRunId}>
+                {formatSnapshotOptionLabel(run, locale)}
+              </option>
+            ))}
+          </select>
+          <button className="control-button" type="button" onClick={() => setSelectedSnapshotRunId('')} disabled={!selectedSnapshotRunId}>
+            {t('storeKpis.returnLatestClosedDay')}
+          </button>
+        </div>
+      )}
+    </section>
+  )
+}
+
+function StoreKpiSummaryGrid({ model }: { model: StoreKpiHighlightsPageModel }) {
+  const { matchedMetricCount, needsAttention, rows, storeGrade, t, totals, weightedScore } = model
+  const storeScoreNote = `${formatStorePerformanceGrade(t, storeGrade)} \u00B7 ${t('storeKpis.covered', { weight: weightedScore.coveredWeight })}`
+
+  return (
+    <section className="metric-grid store-metric-grid">
+      <MetricCard title={t('storeKpis.kpiRows')} value={rows.length} note={t('storeKpis.kpiRowsNote')} icon={<Target size={18} />} tone="accent" />
+      <MetricCard
+        title={t('storeKpis.scored')}
+        value={matchedMetricCount}
+        note={t('storeKpis.pendingNormalizationCount', { count: totals.pendingNormalization })}
+        icon={<TrendingUp size={18} />}
+        tone={totals.pendingNormalization === 0 ? 'calm' : 'warning'}
+      />
+      <MetricCard
+        title={t('storeKpis.watchKpi')}
+        value={needsAttention.length}
+        note={t('storeKpis.riskNote', { atRisk: totals.atRisk, offTrack: totals.offTrack })}
+        icon={<ShieldAlert size={18} />}
+        tone={needsAttention.length === 0 ? 'neutral' : 'warning'}
+      />
+      <MetricCard
+        title={t('storeKpis.storeScore')}
+        value={Number((weightedScore.scoreValue * 100).toFixed(1))}
+        note={storeScoreNote}
+        icon={<TrendingUp size={18} />}
+        tone={storeGrade.tone}
+      />
+    </section>
+  )
+}
+
+function StoreKpiChecklistImpactPanel({ model }: { model: StoreKpiHighlightsPageModel }) {
+  const {
+    bmChecklistContributionLabel,
+    bmChecklistMissingNote,
+    bmChecklistStatusLabel,
+    closedScoreBreakdown,
+    locale,
+    t,
+    viewMode,
+    vmChecklistContributionLabel,
+    vmChecklistMissingNote,
+    vmChecklistStatusLabel,
+    weightedScore,
+  } = model
+
+  return (
+    <section className="panel">
+      <div className="panel-heading">
+        <div>
+          <div className="eyebrow">{t('storeKpis.monthlyBreakdownEyebrow')}</div>
+          <h3>{t('storeKpis.checklistImpact')}</h3>
+        </div>
+        <StatusPill tone={viewMode === 'closed' ? 'calm' : 'neutral'}>
+          {viewMode === 'closed' ? t('storeKpis.finalRecord') : t('storeKpis.livePreview')}
+        </StatusPill>
+      </div>
+      <div className="key-grid">
+        <KeyValue
+          label={t('storeKpis.kpiContribution')}
+          value={
+            closedScoreBreakdown?.components.kpi.contribution !== null &&
+            closedScoreBreakdown?.components.kpi.contribution !== undefined
+              ? formatMetric(locale, closedScoreBreakdown.components.kpi.contribution)
+              : t('storeKpis.scorePoints', {
+                  value: formatMetric(locale, weightedScore.scoreValue * 100),
+                })
+          }
+        />
+        <KeyValue label={t('storeKpis.bmChecklistStatus')} value={bmChecklistStatusLabel} />
+        <KeyValue label={t('storeKpis.bmContribution')} value={bmChecklistContributionLabel} />
+        <KeyValue label={t('storeKpis.vmChecklistStatus')} value={vmChecklistStatusLabel} />
+        <KeyValue label={t('storeKpis.vmContribution')} value={vmChecklistContributionLabel} />
+        <KeyValue
+          label={t('storeKpis.configuredBlend')}
+          value={
+            closedScoreBreakdown
+              ? t('storeKpis.configuredBlendValue', {
+                  kpi: closedScoreBreakdown.configuredWeights.kpiPerformanceWeight,
+                  bm: closedScoreBreakdown.configuredWeights.bmChecklistWeight,
+                  vm: closedScoreBreakdown.configuredWeights.vmChecklistWeight,
+                })
+              : t('storeKpis.defaultPlanBlend')
+          }
+        />
+        <KeyValue
+          label={t('storeKpis.effectiveBlend')}
+          value={
+            closedScoreBreakdown
+              ? t('storeKpis.effectiveBlendValue', {
+                  kpi: closedScoreBreakdown.effectiveWeights.kpiPerformanceWeight,
+                  bm: closedScoreBreakdown.effectiveWeights.bmChecklistWeight,
+                  vm: closedScoreBreakdown.effectiveWeights.vmChecklistWeight,
+                })
+              : t('storeKpis.livePreview')
+          }
+        />
+      </div>
+      <p className="helper-text">{t('storeKpis.checklistImpactCopy')}</p>
+      {bmChecklistMissingNote ? <p className="helper-text">{bmChecklistMissingNote}</p> : null}
+      {vmChecklistMissingNote ? <p className="helper-text">{vmChecklistMissingNote}</p> : null}
+    </section>
+  )
+}
+
+function StoreKpiScoreSourcesPanel({ model }: { model: StoreKpiHighlightsPageModel }) {
+  const { t } = model
+
+  return (
+    <section className="panel" aria-label={t('storeKpis.scoreSourcesAria')}>
+      <div className="panel-heading">
+        <div>
+          <div className="eyebrow">{t('storeKpis.scoreContractEyebrow')}</div>
+          <h3>{t('storeKpis.storeScoreSources')}</h3>
+        </div>
+        <StatusPill tone="accent">{t('storeKpis.officialRule')}</StatusPill>
+      </div>
+      <p className="queue-subtitle">{t('storeKpis.scoreSourcesCopy')}</p>
+      <div className="key-grid">
+        <KeyValue label={t('storeKpis.kpiSources')} value={t('storeKpis.kpiSourcesValue')} />
+        <KeyValue label={t('storeKpis.checklistShare')} value={t('storeKpis.checklistShareValue')} />
+        <KeyValue label={t('storeKpis.capLanguage')} value={t('storeKpis.capLanguageValue')} />
+        <KeyValue label={t('storeKpis.turkeyAverage')} value={t('storeKpis.turkeyAverageValue')} />
+      </div>
+    </section>
+  )
+}
+
+function StoreKpiScopeSignalGrid({ model }: { model: StoreKpiHighlightsPageModel }) {
+  const { activeStoreName, locale, needsAttention, primaryStoreId, t, topPerformer, viewMode } = model
+
+  return (
+    <section className="two-up-grid">
+      <article className="panel">
+        <div className="panel-heading">
+          <div>
+            <div className="eyebrow">{t('storeKpis.activeScopeEyebrow')}</div>
+            <h3>{t('storeKpis.activeScopeTitle')}</h3>
+          </div>
+        </div>
+        <div className="key-grid">
+          <KeyValue label={t('storeKpis.storeScope')} value={primaryStoreId ?? t('storeKpis.noOpenStoreScope')} />
+          <KeyValue label={t('storeKpis.storeName')} value={activeStoreName} />
+          <KeyValue
+            label={t('storeKpis.dataView')}
+            value={viewMode === 'live' ? t('storeKpis.liveImportedMonthlyData') : t('storeKpis.dailyClosedRecord')}
+          />
+          <KeyValue label={t('storeKpis.readScope')} value={t('storeKpis.readScopeValue')} />
+        </div>
+      </article>
+
+      <article className="panel">
+        <div className="panel-heading">
+          <div>
+            <div className="eyebrow">{t('storeKpis.topSignalEyebrow')}</div>
+            <h3>{t('storeKpis.topSignalTitle')}</h3>
+          </div>
+          <StatusPill tone={needsAttention.length === 0 ? 'calm' : 'warning'}>
+            {needsAttention.length === 0 ? t('storeKpis.balanced') : t('storeKpis.watch')}
           </StatusPill>
         </div>
-        <div className="key-grid">
-          <KeyValue label={t('storeKpis.scoreValueLabel')} value={formatPercent(locale, weightedScore.scoreValue)} />
-          <KeyValue label={t('storeKpis.scoreBand')} value={formatStorePerformanceGrade(t, storeGrade)} />
-          <KeyValue label={t('storeKpis.coveredWeight')} value={`${weightedScore.coveredWeight}%`} />
-          <KeyValue label={t('storeKpis.missingWeight')} value={`${weightedScore.missingWeight}%`} />
-          <KeyValue label={t('storeKpis.scoreProfile')} value={formatScoreProfileTitle(t, storeKpiScoreProfile?.title)} />
-          <KeyValue label={t('storeKpis.settingsSource')} value={t('storeKpis.publishedLiveConfig')} />
-          <KeyValue
-            label={t('storeKpis.matchedMetric')}
-            value={`${matchedMetricCount}/${weightedScore.contributions.length}`}
-          />
-          <KeyValue
-            label={t('storeKpis.personnelWeight')}
-            value={personnelWeightsReady ? t('storeKpis.ready') : t('storeKpis.weightWaiting')}
-          />
+        {topPerformer ? (
+          <div className="stacked-table">
+            <div className="stacked-row">
+              <div className="stacked-row-head">
+                <div>
+                  <strong>{formatKpiMetricLabel(t, topPerformer.kpiCode, topPerformer.kpiName)}</strong>
+                  <span className="queue-subtitle">{topPerformer.kpiCode}</span>
+                </div>
+                <StatusPill tone="accent">{formatAchievementValue(locale, t, topPerformer)}</StatusPill>
+              </div>
+              <p>{t('storeKpis.topSignalCopy')}</p>
+            </div>
+          </div>
+        ) : (
+          <EmptyState title={t('storeKpis.noTopSignalTitle')} copy={t('storeKpis.noTopSignalCopy')} />
+        )}
+      </article>
+    </section>
+  )
+}
+
+function StoreKpiPartialDataPanel({ model }: { model: StoreKpiHighlightsPageModel }) {
+  const { liveSummary, t, viewMode } = model
+
+  if (viewMode !== 'live' || !liveSummary?.partial.isPartial) {
+    return null
+  }
+
+  return (
+    <section className="panel">
+      <div className="panel-heading">
+        <div>
+          <div className="eyebrow">{t('storeKpis.partialEyebrow')}</div>
+          <h3>{t('storeKpis.partialTitle')}</h3>
         </div>
+        <StatusPill tone="warning">{t('storeKpis.partialData')}</StatusPill>
+      </div>
+      <div className="key-grid">
+        <KeyValue
+          label={t('storeKpis.missingMetrics')}
+          value={
+            liveSummary.partial.missingMetricLabels.length > 0
+              ? formatMetricLabelList(
+                  t,
+                  liveSummary.partial.missingMetricCodes,
+                  liveSummary.partial.missingMetricLabels,
+                )
+              : t('storeKpis.none')
+          }
+        />
+        <KeyValue
+          label={t('storeKpis.pendingNormalization')}
+          value={
+            liveSummary.partial.pendingNormalizationLabels.length > 0
+              ? formatMetricLabelList(
+                  t,
+                  liveSummary.partial.pendingNormalizationCodes,
+                  liveSummary.partial.pendingNormalizationLabels,
+                )
+              : t('storeKpis.none')
+          }
+        />
+        <KeyValue label={t('storeKpis.note')} value={t('storeKpis.partialNote')} />
+      </div>
+    </section>
+  )
+}
+
+function StoreKpiScoreMeaningPanel({ model }: { model: StoreKpiHighlightsPageModel }) {
+  const { locale, storeGrade, storeScoreMeaning, t, weightedScore } = model
+
+  return (
+    <section className="panel" aria-label={t('storeKpis.scoreMeaningAria')}>
+      <div className="panel-heading">
+        <div>
+          <div className="eyebrow">{t('storeKpis.scoreMeaningEyebrow')}</div>
+          <h3>{storeScoreMeaning.title}</h3>
+        </div>
+        <StatusPill tone={storeScoreMeaning.tone}>{storeGrade.code}</StatusPill>
+      </div>
+      <p className="queue-subtitle">{storeScoreMeaning.summary}</p>
+      <div className="key-grid">
+        <KeyValue label={t('storeKpis.scoreBand')} value={formatStorePerformanceGrade(t, storeGrade)} />
+        <KeyValue label={t('storeKpis.score')} value={formatPercent(locale, weightedScore.scoreValue)} />
+        <KeyValue label={t('storeKpis.coveredWeight')} value={`${weightedScore.coveredWeight}%`} />
+        <KeyValue label={t('storeKpis.actionLanguage')} value={storeScoreMeaning.action} />
+      </div>
+      <p className="queue-subtitle">{storeScoreMeaning.confidence}</p>
+    </section>
+  )
+}
+
+function getContributionStatusTone(item: StoreKpiHighlightsPageModel['weightedScore']['contributions'][number]) {
+  if (item.matchingRow?.scoreStatus === 'scored') {
+    return 'accent'
+  }
+
+  if (
+    item.matchingRow?.scoreStatus === 'pending_normalization' ||
+    item.matchingRow?.scoreStatus === 'missing_reference'
+  ) {
+    return 'warning'
+  }
+
+  return 'neutral'
+}
+
+function StoreKpiScoreBreakdownPanel({ model }: { model: StoreKpiHighlightsPageModel }) {
+  const {
+    locale,
+    matchedMetricCount,
+    personnelWeightsReady,
+    storeGrade,
+    storeKpiScoreProfile,
+    t,
+    weightedScore,
+  } = model
+
+  return (
+    <section className="panel">
+      <div className="panel-heading">
+        <div>
+          <div className="eyebrow">{t('storeKpis.storeScoreSummary')}</div>
+          <h3>{t('storeKpis.scoreBreakdown')}</h3>
+        </div>
+        <StatusPill tone={weightedScore.missingWeight === 0 ? 'calm' : 'warning'}>
+          {weightedScore.missingWeight === 0
+            ? t('storeKpis.complete')
+            : t('storeKpis.missingWeightStatus', { weight: weightedScore.missingWeight })}
+        </StatusPill>
+      </div>
+      <div className="key-grid">
+        <KeyValue label={t('storeKpis.scoreValueLabel')} value={formatPercent(locale, weightedScore.scoreValue)} />
+        <KeyValue label={t('storeKpis.scoreBand')} value={formatStorePerformanceGrade(t, storeGrade)} />
+        <KeyValue label={t('storeKpis.coveredWeight')} value={`${weightedScore.coveredWeight}%`} />
+        <KeyValue label={t('storeKpis.missingWeight')} value={`${weightedScore.missingWeight}%`} />
+        <KeyValue label={t('storeKpis.scoreProfile')} value={formatScoreProfileTitle(t, storeKpiScoreProfile?.title)} />
+        <KeyValue label={t('storeKpis.settingsSource')} value={t('storeKpis.publishedLiveConfig')} />
+        <KeyValue label={t('storeKpis.matchedMetric')} value={`${matchedMetricCount}/${weightedScore.contributions.length}`} />
+        <KeyValue label={t('storeKpis.personnelWeight')} value={personnelWeightsReady ? t('storeKpis.ready') : t('storeKpis.weightWaiting')} />
+      </div>
+      <div className="stacked-table">
+        {weightedScore.contributions.map((item) => {
+          const sourceSemantics = resolveLocalizedKpiSourceSemantics(t, {
+            code: item.matchingRow?.kpiCode ?? item.metric.code,
+            actualValue: item.matchingRow?.actualValue ?? null,
+            scoreStatus: item.matchingRow?.scoreStatus ?? 'missing',
+          })
+          const scoreReference = resolveLocalizedKpiScoreReference(t, {
+            targetValue: item.matchingRow?.targetValue ?? null,
+            benchmarkValue: item.matchingRow?.benchmarkValue ?? null,
+            benchmarkSource: item.matchingRow?.benchmarkSource ?? null,
+          })
+
+          return (
+            <article className="stacked-row" key={item.metric.code}>
+              <div className="stacked-row-head">
+                <div>
+                  <strong>{formatKpiMetricLabel(t, item.metric.code, item.metric.label)}</strong>
+                  <span className="queue-subtitle">
+                    {item.matchingRow ? item.matchingRow.kpiCode : t('storeKpis.kpiRowWaiting')}
+                  </span>
+                </div>
+                <StatusPill tone={getContributionStatusTone(item)}>
+                  {`${item.metric.weightPercent}%`}
+                </StatusPill>
+              </div>
+              <div className="key-grid">
+                <KeyValue label={t('storeKpis.scoreTarget')} value={formatMetricValue(locale, t, scoreReference.value, item.matchingRow?.kpiCode)} />
+                <KeyValue label={t('storeKpis.actual')} value={formatMetricValue(locale, t, item.matchingRow?.actualValue ?? null, item.matchingRow?.kpiCode)} />
+                <KeyValue label={t('storeKpis.achievement')} value={item.matchingRow ? formatAchievementValue(locale, t, item.matchingRow) : t('storeKpis.noData')} />
+                <KeyValue label={t('storeKpis.targetSource')} value={scoreReference.sourceLabel} />
+                <KeyValue label={t('storeKpis.weightedContribution')} value={formatPercent(locale, item.weightedContribution)} />
+                <KeyValue label={t('storeKpis.scoreBehavior')} value={formatScoreBehavior(t, item.metric.scoreBehavior)} />
+                <KeyValue label={t('storeKpis.sourceType')} value={sourceSemantics.label} />
+                <KeyValue label={t('storeKpis.dataSource')} value={sourceSemantics.summary} />
+              </div>
+              {item.matchingRow?.isCapped ? (
+                <p className="queue-subtitle">
+                  {describeLocalizedBenchmarkCap(t, {
+                    actualRatio: item.matchingRow.actualRatio,
+                    scoredRatio: item.matchingRow.scoredRatio,
+                    isCapped: item.matchingRow.isCapped,
+                  })}
+                </p>
+              ) : null}
+              {item.matchingRow?.scoreStatus === 'missing_reference' ? (
+                <p className="queue-subtitle">
+                  {t('storeKpis.missingReferenceReason', {
+                    reason: item.matchingRow.missingReason ?? 'reference_missing',
+                  })}
+                </p>
+              ) : null}
+            </article>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
+function StoreKpiOwnershipPanel({ model }: { model: StoreKpiHighlightsPageModel }) {
+  const { kpiOwnershipMatrix, t } = model
+
+  return (
+    <section className="panel">
+      <div className="panel-heading">
+        <div>
+          <div className="eyebrow">{t('storeKpis.ownershipMatrix')}</div>
+          <h3>{t('storeKpis.ownershipTitle')}</h3>
+        </div>
+      </div>
+      <div className="stacked-table">
+        {kpiOwnershipMatrix.map((metric) => (
+          <article className="stacked-row" key={metric.code}>
+            <div className="stacked-row-head">
+              <div>
+                <strong>{formatKpiMetricLabel(t, metric.code, metric.label)}</strong>
+                <span className="queue-subtitle">{metric.code}</span>
+              </div>
+              <StatusPill tone={metric.taskCandidate ? 'warning' : 'neutral'}>
+                {metric.taskCandidate ? t('storeKpis.taskCandidate') : t('storeKpis.watchFirst')}
+              </StatusPill>
+            </div>
+            <div className="key-grid">
+              <KeyValue label={t('storeKpis.operationalOwner')} value={formatOwnerRole(t, metric.operationalOwner)} />
+              <KeyValue label={t('storeKpis.visibleRoles')} value={metric.visibleTo.map((role) => formatOwnerRole(t, role)).join(', ')} />
+              <KeyValue label={t('storeKpis.contributionArea')} value={metric.contributesTo.map((item) => formatContributionTarget(t, item)).join(', ')} />
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function StoreKpiPriorityPanel({ model }: { model: StoreKpiHighlightsPageModel }) {
+  const { locale, needsAttention, t } = model
+
+  return (
+    <section className="panel">
+      <div className="panel-heading">
+        <div>
+          <div className="eyebrow">{t('storeKpis.priorityEyebrow')}</div>
+          <h3>{t('storeKpis.priorityTitle')}</h3>
+        </div>
+      </div>
+
+      {needsAttention.length === 0 ? (
+        <EmptyState title={t('storeKpis.noRiskTitle')} copy={t('storeKpis.noRiskCopy')} />
+      ) : (
         <div className="stacked-table">
-          {weightedScore.contributions.map((item) => {
+          {needsAttention.map((row) => {
             const sourceSemantics = resolveLocalizedKpiSourceSemantics(t, {
-              code: item.matchingRow?.kpiCode ?? item.metric.code,
-              actualValue: item.matchingRow?.actualValue ?? null,
-              scoreStatus: item.matchingRow?.scoreStatus ?? 'missing',
-            })
-            const scoreReference = resolveLocalizedKpiScoreReference(t, {
-              targetValue: item.matchingRow?.targetValue ?? null,
-              benchmarkValue: item.matchingRow?.benchmarkValue ?? null,
-              benchmarkSource: item.matchingRow?.benchmarkSource ?? null,
+              code: row.kpiCode,
+              actualValue: row.actualValue,
+              scoreStatus: row.scoreStatus,
             })
 
             return (
-              <article className="stacked-row" key={item.metric.code}>
+              <article className="stacked-row" key={`${row.storeId}:${row.kpiCode}`}>
                 <div className="stacked-row-head">
                   <div>
-                    <strong>{formatKpiMetricLabel(t, item.metric.code, item.metric.label)}</strong>
-                    <span className="queue-subtitle">
-                      {item.matchingRow ? item.matchingRow.kpiCode : t('storeKpis.kpiRowWaiting')}
-                    </span>
+                    <strong>{formatKpiMetricLabel(t, row.kpiCode, row.kpiName)}</strong>
+                    <span className="queue-subtitle">{row.kpiCode}</span>
                   </div>
-                  <StatusPill
-                    tone={
-                      item.matchingRow?.scoreStatus === 'scored'
-                        ? 'accent'
-                        : item.matchingRow?.scoreStatus === 'pending_normalization' ||
-                            item.matchingRow?.scoreStatus === 'missing_reference'
-                          ? 'warning'
-                          : 'neutral'
-                    }
-                  >
-                    {`${item.metric.weightPercent}%`}
+                  <StatusPill tone={row.statusBand === 'off_track' ? 'danger' : 'warning'}>
+                    {formatStatusBand(t, row.statusBand)}
                   </StatusPill>
                 </div>
                 <div className="key-grid">
-                  <KeyValue
-                    label={t('storeKpis.scoreTarget')}
-                    value={formatMetricValue(locale, t, scoreReference.value, item.matchingRow?.kpiCode)}
-                  />
-                  <KeyValue
-                    label={t('storeKpis.actual')}
-                    value={formatMetricValue(locale, t, item.matchingRow?.actualValue ?? null, item.matchingRow?.kpiCode)}
-                  />
-                  <KeyValue
-                    label={t('storeKpis.achievement')}
-                    value={
-                      item.matchingRow
-                        ? formatAchievementValue(locale, t, item.matchingRow)
-                        : t('storeKpis.noData')
-                    }
-                  />
-                  <KeyValue
-                    label={t('storeKpis.targetSource')}
-                    value={scoreReference.sourceLabel}
-                  />
-                  <KeyValue
-                    label={t('storeKpis.weightedContribution')}
-                    value={formatPercent(locale, item.weightedContribution)}
-                  />
-                  <KeyValue
-                    label={t('storeKpis.scoreBehavior')}
-                    value={formatScoreBehavior(t, item.metric.scoreBehavior)}
-                  />
+                  <KeyValue label={t('storeKpis.scoreTarget')} value={formatMetricValue(locale, t, row.targetValue, row.kpiCode)} />
+                  <KeyValue label={t('storeKpis.actual')} value={formatMetricValue(locale, t, row.actualValue, row.kpiCode)} />
+                  <KeyValue label={t('storeKpis.achievement')} value={formatAchievementValue(locale, t, row)} />
+                  <KeyValue label={t('storeKpis.period')} value={`${formatDate(row.periodStart, locale)} - ${formatDate(row.periodEnd, locale)}`} />
                   <KeyValue label={t('storeKpis.sourceType')} value={sourceSemantics.label} />
                   <KeyValue label={t('storeKpis.dataSource')} value={sourceSemantics.summary} />
                 </div>
-                {item.matchingRow?.isCapped ? (
-                  <p className="queue-subtitle">
-                    {describeLocalizedBenchmarkCap(t, {
-                      actualRatio: item.matchingRow.actualRatio,
-                      scoredRatio: item.matchingRow.scoredRatio,
-                      isCapped: item.matchingRow.isCapped,
-                    })}
-                  </p>
-                ) : null}
-                {item.matchingRow?.scoreStatus === 'missing_reference' ? (
-                  <p className="queue-subtitle">
-                    {t('storeKpis.missingReferenceReason', {
-                      reason: item.matchingRow.missingReason ?? 'reference_missing',
-                    })}
-                  </p>
-                ) : null}
               </article>
             )
           })}
         </div>
-      </section>
-
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('storeKpis.ownershipMatrix')}</div>
-            <h3>{t('storeKpis.ownershipTitle')}</h3>
-          </div>
-        </div>
-        <div className="stacked-table">
-          {kpiOwnershipMatrix.map((metric) => (
-            <article className="stacked-row" key={metric.code}>
-              <div className="stacked-row-head">
-                <div>
-                  <strong>{formatKpiMetricLabel(t, metric.code, metric.label)}</strong>
-                  <span className="queue-subtitle">{metric.code}</span>
-                </div>
-                <StatusPill tone={metric.taskCandidate ? 'warning' : 'neutral'}>
-                  {metric.taskCandidate ? t('storeKpis.taskCandidate') : t('storeKpis.watchFirst')}
-                </StatusPill>
-              </div>
-              <div className="key-grid">
-                <KeyValue
-                  label={t('storeKpis.operationalOwner')}
-                  value={formatOwnerRole(t, metric.operationalOwner)}
-                />
-                <KeyValue
-                  label={t('storeKpis.visibleRoles')}
-                  value={metric.visibleTo
-                    .map((role) => formatOwnerRole(t, role))
-                    .join(', ')}
-                />
-                <KeyValue
-                  label={t('storeKpis.contributionArea')}
-                  value={metric.contributesTo.map((item) => formatContributionTarget(t, item)).join(', ')}
-                />
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('storeKpis.priorityEyebrow')}</div>
-            <h3>{t('storeKpis.priorityTitle')}</h3>
-          </div>
-        </div>
-
-        {needsAttention.length === 0 ? (
-          <EmptyState
-            title={t('storeKpis.noRiskTitle')}
-            copy={t('storeKpis.noRiskCopy')}
-          />
-        ) : (
-          <div className="stacked-table">
-            {needsAttention.map((row) => {
-              const sourceSemantics = resolveLocalizedKpiSourceSemantics(t, {
-                code: row.kpiCode,
-                actualValue: row.actualValue,
-                scoreStatus: row.scoreStatus,
-              })
-
-              return (
-                <article className="stacked-row" key={`${row.storeId}:${row.kpiCode}`}>
-                  <div className="stacked-row-head">
-                    <div>
-                      <strong>{formatKpiMetricLabel(t, row.kpiCode, row.kpiName)}</strong>
-                      <span className="queue-subtitle">{row.kpiCode}</span>
-                    </div>
-                    <StatusPill tone={row.statusBand === 'off_track' ? 'danger' : 'warning'}>
-                      {formatStatusBand(t, row.statusBand)}
-                    </StatusPill>
-                  </div>
-                  <div className="key-grid">
-                    <KeyValue label={t('storeKpis.scoreTarget')} value={formatMetricValue(locale, t, row.targetValue, row.kpiCode)} />
-                    <KeyValue label={t('storeKpis.actual')} value={formatMetricValue(locale, t, row.actualValue, row.kpiCode)} />
-                    <KeyValue
-                      label={t('storeKpis.achievement')}
-                      value={formatAchievementValue(locale, t, row)}
-                    />
-                    <KeyValue
-                      label={t('storeKpis.period')}
-                      value={`${formatDate(row.periodStart, locale)} - ${formatDate(row.periodEnd, locale)}`}
-                    />
-                    <KeyValue label={t('storeKpis.sourceType')} value={sourceSemantics.label} />
-                    <KeyValue label={t('storeKpis.dataSource')} value={sourceSemantics.summary} />
-                  </div>
-                </article>
-              )
-            })}
-          </div>
-        )}
-      </section>
+      )}
     </section>
   )
 }

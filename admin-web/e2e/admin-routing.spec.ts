@@ -68,12 +68,15 @@ test('session readiness page switches chrome to English copy and persists locale
 test('admin shell switches chrome to English copy and persists locale', async ({ page }) => {
   await page.goto('/admin/audit')
 
-  await expect(page.locator('.admin-command-sidebar')).toBeVisible()
-  await expect(page.locator('.admin-command-brand').getByText('LUFIAN')).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Entegrasyonlar' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Ana Veri' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Denetim' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Oturum' })).toBeVisible()
+  const sidebar = page.locator('.admin-command-sidebar')
+  const sidebarNav = sidebar.locator('.admin-command-nav')
+
+  await expect(sidebar).toBeVisible()
+  await expect(sidebar.locator('.admin-command-brand').getByText('LUFIAN')).toBeVisible()
+  await expect(sidebarNav.getByRole('link', { name: 'Entegrasyonlar' })).toBeVisible()
+  await expect(sidebarNav.getByRole('link', { name: 'Ana Veri' })).toBeVisible()
+  await expect(sidebarNav.getByRole('link', { name: 'Denetim' })).toBeVisible()
+  await expect(sidebar.getByRole('link', { name: 'Oturum' })).toBeVisible()
   await expect(page.locator('.shell-context-panel')).toHaveCount(0)
   await expect(page.getByText('Mağaza Operasyon Kontrol')).toHaveCount(0)
   await expect(page.getByText('Üretim UX ve gerçek kimlik')).toHaveCount(0)
@@ -85,18 +88,18 @@ test('admin shell switches chrome to English copy and persists locale', async ({
   await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.locator('.admin-command-brand').getByText('LUFIAN')).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Integrations' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Master Data' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Audit', exact: true })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Session' })).toBeVisible()
+  await expect(sidebar.locator('.admin-command-brand').getByText('LUFIAN')).toBeVisible()
+  await expect(sidebarNav.getByRole('link', { name: 'Integrations' })).toBeVisible()
+  await expect(sidebarNav.getByRole('link', { name: 'Master Data' })).toBeVisible()
+  await expect(sidebarNav.getByRole('link', { name: 'Audit', exact: true })).toBeVisible()
+  await expect(sidebar.getByRole('link', { name: 'Session' })).toBeVisible()
   await expect(page.getByText('Production UX And Real Auth')).toHaveCount(0)
   await expect(page.getByText('Mağaza Operasyon Kontrol')).toHaveCount(0)
 
   await page.reload()
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.locator('.admin-command-brand').getByText('LUFIAN')).toBeVisible()
+  await expect(sidebar.locator('.admin-command-brand').getByText('LUFIAN')).toBeVisible()
 })
 
 test('admin sidebar prefetches integration data before opening integrations', async ({ page }) => {
