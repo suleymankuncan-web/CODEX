@@ -51,6 +51,7 @@ import {
   type StagePresetCode,
 } from './stage-presets'
 import { getErrorMessage } from '../../lib/format'
+import { transientQueryRetryOptions } from '../../lib/query-retry'
 import type { TranslateFunction, TranslationKey } from '../localization/dictionary'
 import { useLocalization } from '../localization/useLocalization'
 
@@ -826,6 +827,7 @@ function useStageBuilderFormContent(input: StageBuilderFormProps) {
     queryKey: ['competition-stage-builder-lookups'],
     queryFn: getAuthLookups,
     staleTime: 60_000,
+    ...transientQueryRetryOptions,
   })
 
   const stores = useMemo(
@@ -840,18 +842,21 @@ function useStageBuilderFormContent(input: StageBuilderFormProps) {
     queryKey: ['competition-team-templates', 'active'],
     queryFn: () => listCompetitionTeamTemplates({ activeOnly: true }),
     staleTime: 60_000,
+    ...transientQueryRetryOptions,
   })
 
   const templateLibraryQuery = useQuery({
     queryKey: ['competition-team-templates', 'library', showInactiveTemplates],
     queryFn: () => listCompetitionTeamTemplates({ activeOnly: !showInactiveTemplates }),
     staleTime: 60_000,
+    ...transientQueryRetryOptions,
   })
 
   const stagePackagePlansQuery = useQuery({
     queryKey: ['competition-stage-package-plans', input.competitionId],
     queryFn: () => listCompetitionStagePackagePlans(input.competitionId),
     staleTime: 60_000,
+    ...transientQueryRetryOptions,
   })
 
   const stagePackagePlanAuditQuery = useQuery({
@@ -859,6 +864,7 @@ function useStageBuilderFormContent(input: StageBuilderFormProps) {
     queryFn: () => listCompetitionStagePackagePlanAudit(stagePackageHistoryPlanId as string),
     enabled: Boolean(stagePackageHistoryPlanId),
     staleTime: 30_000,
+    ...transientQueryRetryOptions,
   })
 
   const templates = useMemo(

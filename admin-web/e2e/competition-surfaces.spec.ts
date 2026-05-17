@@ -53,6 +53,43 @@ test('admin competitions surface shows live scores and warnings', async ({ page 
   await expect(page.getByRole('button', { name: /Finale al QUALIFIER/ })).toBeVisible()
 })
 
+test('admin competitions localizes lifecycle states and competition types', async ({ page }) => {
+  await page.unroute('**/api/competitions**')
+  await routeCompetitionApi(page, authSessionFixture, competitionDetailFixture, {
+    competitionSummaries: [
+      competitionFixture,
+      {
+        ...competitionFixture,
+        competitionId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa02',
+        competitionCode: 'MAY_REGION_LEAGUE',
+        competitionName: 'May Region League',
+        competitionType: 'region_league',
+        lifecycleState: 'published',
+      },
+      {
+        ...competitionFixture,
+        competitionId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa03',
+        competitionCode: 'SUMMER_CAMPAIGN',
+        competitionName: 'Summer Campaign',
+        competitionType: 'campaign',
+        lifecycleState: 'completed',
+      },
+    ],
+  })
+
+  await page.goto('/admin/competitions')
+
+  const leagueRow = page.locator('article').filter({ hasText: 'May Region League' })
+  const campaignRow = page.locator('article').filter({ hasText: 'Summer Campaign' })
+  await expect(leagueRow.getByText('yayında', { exact: true })).toBeVisible()
+  await expect(leagueRow.getByText('bölge ligi', { exact: true })).toBeVisible()
+  await expect(campaignRow.getByText('tamamlandı', { exact: true })).toBeVisible()
+  await expect(campaignRow.getByText('kampanya', { exact: true })).toBeVisible()
+  await expect(page.locator('body')).not.toContainText('published')
+  await expect(page.locator('body')).not.toContainText('completed')
+  await expect(page.locator('body')).not.toContainText('region_league')
+})
+
 test('admin competitions page switches chrome to English copy and persists locale', async ({ page }) => {
   await page.goto('/admin/competitions')
 
@@ -623,6 +660,7 @@ async function routeCompetitionApi(
     onCancelStagePackagePlan?: (planId: string) => void
     initialTeamTemplates?: unknown[]
     initialStagePackagePlans?: unknown[]
+    competitionSummaries?: Array<typeof competitionFixture>
   },
 ) {
   let teamTemplates: unknown[] = options?.initialTeamTemplates ?? []
@@ -778,10 +816,16 @@ async function routeCompetitionApi(
     }
 
     if (request.method() === 'GET' && pathname.endsWith('/api/competitions')) {
+      const competitionSummaries = options?.competitionSummaries ?? [competitionFixture]
       await route.fulfill({
         json: {
-          items: [competitionFixture],
-          meta: { count: 1, total: 1, limit: 50, offset: 0 },
+          items: competitionSummaries,
+          meta: {
+            count: competitionSummaries.length,
+            total: competitionSummaries.length,
+            limit: 50,
+            offset: 0,
+          },
         },
       })
       return

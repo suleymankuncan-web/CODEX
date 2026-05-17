@@ -24,11 +24,18 @@ import {
   describeCompetitionWarning,
   type CompetitionReadSummary,
 } from '../features/competitions/readability'
+import {
+  competitionStateTone,
+  formatCompetitionLifecycleState,
+  formatCompetitionStageState,
+  formatCompetitionType,
+} from '../features/competitions/display'
 import { StageBuilderForm } from '../features/competitions/StageBuilderForm'
 import type { AuthSessionSummary } from '../features/auth/api'
-import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
+import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import { formatDate, formatState, getErrorMessage } from '../lib/format'
+import { transientQueryRetryOptions } from '../lib/query-retry'
 
 function nextDraftPayload() {
   const startsOn = new Date()
@@ -44,37 +51,9 @@ function nextDraftPayload() {
   }
 }
 
-function stateTone(state: string) {
-  if (state === 'active' || state === 'finalized' || state === 'clean') return 'calm'
-  if (state === 'draft' || state === 'scheduled') return 'accent'
-  if (state === 'awaiting_review' || state === 'warnings_present' || state === 'overridden') {
-    return 'warning'
-  }
-  if (state === 'cancelled') return 'danger'
-  return 'neutral'
-}
-
 function canManageCompetitions(authSummary: AuthSessionSummary | null) {
   const roles = authSummary?.user.roleCodes ?? []
   return roles.includes('SUPER_ADMIN') || roles.includes('HR_ADMIN')
-}
-
-const competitionStateLabels: Record<string, TranslationKey> = {
-  active: 'competition.admin.state.active',
-  finalized: 'competition.admin.state.finalized',
-  clean: 'competition.admin.state.clean',
-  draft: 'competition.admin.state.draft',
-  scheduled: 'competition.admin.state.scheduled',
-  awaiting_review: 'competition.admin.state.awaitingReview',
-  warnings_present: 'competition.admin.state.warningsPresent',
-  overridden: 'competition.admin.state.overridden',
-  cancelled: 'competition.admin.state.cancelled',
-  region_challenge: 'competition.admin.state.regionChallenge',
-}
-
-function formatCompetitionState(state: string, t: TranslateFunction) {
-  const key = competitionStateLabels[state]
-  return key ? t(key) : formatState(state)
 }
 
 function formatScore(value: number | null, t: TranslateFunction) {
@@ -92,6 +71,7 @@ export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummar
     queryKey: ['competitions'],
     queryFn: listCompetitions,
     staleTime: 30_000,
+    ...transientQueryRetryOptions,
   })
 
   const competitions = useMemo(
@@ -111,6 +91,7 @@ export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummar
     queryFn: () => getCompetition(selectedCompetition!.competitionId),
     enabled: Boolean(selectedCompetition),
     staleTime: 15_000,
+    ...transientQueryRetryOptions,
   })
 
   const createMutation = useMutation({
@@ -287,8 +268,8 @@ export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummar
                       <div className="eyebrow">{t('competition.admin.finalizationEyebrow')}</div>
                       <h3>{activeStage.stageName}</h3>
                     </div>
-                    <StatusPill tone={stateTone(activeStage.lifecycleState)}>
-                      {formatCompetitionState(activeStage.lifecycleState, t)}
+                    <StatusPill tone={competitionStateTone(activeStage.lifecycleState)}>
+                      {formatCompetitionStageState(activeStage.lifecycleState, t)}
                     </StatusPill>
                   </div>
                   <div className="form-grid">
@@ -378,8 +359,8 @@ function CompetitionListPanel(input: {
                   <p className="queue-subtitle">{competition.competitionCode}</p>
                 </div>
                 <div className="action-cluster">
-                  <StatusPill tone={stateTone(competition.lifecycleState)}>
-                    {formatCompetitionState(competition.lifecycleState, t)}
+                  <StatusPill tone={competitionStateTone(competition.lifecycleState)}>
+                    {formatCompetitionLifecycleState(competition.lifecycleState, t)}
                   </StatusPill>
                   <button
                     className="control-button"
@@ -393,7 +374,7 @@ function CompetitionListPanel(input: {
               <div className="key-grid">
                 <KeyValue
                   label={t('competition.admin.type')}
-                  value={formatCompetitionState(competition.competitionType, t)}
+                  value={formatCompetitionType(competition.competitionType, t)}
                 />
                 <KeyValue label={t('competition.admin.starts')} value={formatDate(competition.startsOn, locale)} />
                 <KeyValue label={t('competition.admin.ends')} value={formatDate(competition.endsOn, locale)} />
