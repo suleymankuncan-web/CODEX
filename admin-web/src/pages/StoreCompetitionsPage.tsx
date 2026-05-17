@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { CalendarDays, Medal, Trophy } from 'lucide-react'
+import { CalendarDays, Medal, RefreshCw, Trophy } from 'lucide-react'
 import {
   EmptyState,
   KeyValue,
@@ -102,6 +102,19 @@ export function StoreCompetitionsPage(input: {
         title={t('storeCompetitions.errorTitle')}
         copy={getErrorMessage(competitionsQuery.error)}
         tone="error"
+        action={
+          <button
+            type="button"
+            className="control-button"
+            disabled={competitionsQuery.isFetching}
+            onClick={() => void competitionsQuery.refetch()}
+          >
+            <RefreshCw size={16} />
+            {competitionsQuery.isFetching
+              ? t('storeCompetitions.retryingAction')
+              : t('storeCompetitions.retryAction')}
+          </button>
+        }
       />
     )
   }
@@ -196,6 +209,19 @@ export function StoreCompetitionsPage(input: {
               title={t('storeCompetitions.standingErrorTitle')}
               copy={getErrorMessage(detailQuery.error)}
               tone="error"
+              action={
+                <button
+                  type="button"
+                  className="control-button"
+                  disabled={detailQuery.isFetching}
+                  onClick={() => void detailQuery.refetch()}
+                >
+                  <RefreshCw size={16} />
+                  {detailQuery.isFetching
+                    ? t('storeCompetitions.retryingAction')
+                    : t('storeCompetitions.retryAction')}
+                </button>
+              }
             />
           ) : null}
 

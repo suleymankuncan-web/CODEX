@@ -7,6 +7,8 @@ export const storeCompetitionsTr = {
   'storeCompetitions.loadingCopy':
     'Mağaza alanı kapsamlı yarışma sıralamalarını kontrol ediyor.',
   'storeCompetitions.errorTitle': 'Yarışma yüzeyi açılamadı',
+  'storeCompetitions.retryAction': 'Tekrar dene',
+  'storeCompetitions.retryingAction': 'Tekrar deneniyor...',
 
   'storeCompetitions.heroEyebrow': 'Mağaza yarışmaları',
   'storeCompetitions.title': 'Mağaza yarışmaları ve kapsamdaki katkı skorları.',
@@ -64,6 +66,8 @@ export const storeCompetitionsEn: Record<keyof typeof storeCompetitionsTr, strin
   'storeCompetitions.loadingCopy':
     'The store shell is checking scoped competition standings.',
   'storeCompetitions.errorTitle': 'Competition surface could not load',
+  'storeCompetitions.retryAction': 'Try again',
+  'storeCompetitions.retryingAction': 'Retrying...',
 
   'storeCompetitions.heroEyebrow': 'Store competitions',
   'storeCompetitions.title': 'Store competitions and scoped contribution scores.',

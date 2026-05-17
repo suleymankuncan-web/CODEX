@@ -2,6 +2,8 @@ export const competitionTr = {
   'competition.admin.loadingTitle': 'Yarışmalar yükleniyor',
   'competition.admin.loadingCopy': 'Admin yarışma yüzeyi mevcut etapları kontrol ediyor.',
   'competition.admin.errorTitle': 'Yarışma yüzeyi yüklenemedi',
+  'competition.admin.retryAction': 'Tekrar dene',
+  'competition.admin.retryingAction': 'Tekrar deneniyor...',
   'competition.admin.heroEyebrow': 'Yarışma kontrolü',
   'competition.admin.heroTitle': 'Bölge yarışma etapları',
   'competition.admin.heroCopy':
@@ -301,6 +303,8 @@ export const competitionEn: Record<keyof typeof competitionTr, string> = {
   'competition.admin.loadingTitle': 'Competitions are loading',
   'competition.admin.loadingCopy': 'The admin competition surface is checking current stages.',
   'competition.admin.errorTitle': 'Competition surface could not load',
+  'competition.admin.retryAction': 'Try again',
+  'competition.admin.retryingAction': 'Retrying...',
   'competition.admin.heroEyebrow': 'Competition Control',
   'competition.admin.heroTitle': 'Region challenge stages',
   'competition.admin.heroCopy':

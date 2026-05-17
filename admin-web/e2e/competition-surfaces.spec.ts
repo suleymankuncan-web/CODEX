@@ -53,6 +53,32 @@ test('admin competitions surface shows live scores and warnings', async ({ page 
   await expect(page.getByRole('button', { name: /Finale al QUALIFIER/ })).toBeVisible()
 })
 
+test('admin competitions lets operators retry after the list load fails', async ({ page }) => {
+  let listAttempts = 0
+  let allowCompetitionList = false
+
+  await page.unroute('**/api/competitions**')
+  await routeCompetitionApi(page, authSessionFixture, competitionDetailFixture, {
+    shouldFailCompetitionList: () => {
+      listAttempts += 1
+      return !allowCompetitionList
+    },
+  })
+
+  await page.goto('/admin/competitions')
+
+  await expect(page.getByRole('heading', { name: 'Yarışma yüzeyi yüklenemedi' })).toBeVisible()
+  const retryButton = page.getByRole('button', { name: 'Tekrar dene' })
+  await expect(retryButton).toBeVisible()
+
+  allowCompetitionList = true
+  await retryButton.click()
+
+  await expect(page.getByRole('heading', { name: 'April Region Challenge' })).toBeVisible()
+  await expect.poll(() => listAttempts).toBeGreaterThan(1)
+  await expect(page.getByRole('heading', { name: 'Yarışma yüzeyi yüklenemedi' })).toHaveCount(0)
+})
+
 test('admin competitions localizes lifecycle states and competition types', async ({ page }) => {
   await page.unroute('**/api/competitions**')
   await routeCompetitionApi(page, authSessionFixture, competitionDetailFixture, {
@@ -661,6 +687,7 @@ async function routeCompetitionApi(
     initialTeamTemplates?: unknown[]
     initialStagePackagePlans?: unknown[]
     competitionSummaries?: Array<typeof competitionFixture>
+    shouldFailCompetitionList?: () => boolean
   },
 ) {
   let teamTemplates: unknown[] = options?.initialTeamTemplates ?? []
@@ -816,6 +843,14 @@ async function routeCompetitionApi(
     }
 
     if (request.method() === 'GET' && pathname.endsWith('/api/competitions')) {
+      if (options?.shouldFailCompetitionList?.()) {
+        await route.fulfill({
+          status: 503,
+          json: { message: 'Temporary competitions outage' },
+        })
+        return
+      }
+
       const competitionSummaries = options?.competitionSummaries ?? [competitionFixture]
       await route.fulfill({
         json: {
