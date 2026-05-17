@@ -1,4 +1,4 @@
-import { useDeferredValue, useMemo, useReducer, type ReactNode } from 'react'
+import { useDeferredValue, useMemo, useReducer, type Dispatch, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AlertTriangle,
@@ -24,6 +24,12 @@ import {
   getIntegrationLookups,
   getNeedsAction,
   getImportPayloadTemplate,
+  type ImportOverview,
+  type ImportPayloadTemplate,
+  type IntegrationLookups,
+  type ListResponse,
+  type NeedsActionItem,
+  type PowerBiExportUploadResponse,
   retryImportBatch,
   uploadPowerBiExport,
 } from '../features/integrations/api'
@@ -39,6 +45,10 @@ type PowerBiPeriodType = 'daily' | 'monthly' | 'custom'
 type IntegrationSortValue = 'priority' | 'errors' | 'records' | 'entity'
 type IntegrationTemplateSourceSystem = 'nebim_v3' | 'power_bi'
 type IntegrationQueueFilter = 'entityTypeFilter' | 'statusFilter'
+type IntegrationSource = IntegrationLookups['activeSources'][number]
+type IntegrationTabOption = { id: IntegrationTab; label: string; count?: number }
+type IntegrationDispatch = Dispatch<IntegrationDashboardAction>
+type IntegrationListMeta = ListResponse<NeedsActionItem>['meta']
 
 type IntegrationDashboardState = {
   activeTab: IntegrationTab
@@ -430,7 +440,131 @@ export function IntegrationDashboardPage() {
   const actionCount = overview.healthTotals.blocked + overview.healthTotals.needsAction + overview.healthTotals.stuck
   const evidenceState = overview.latest.completedBatchId ? t('adminIntegrations.ready') : t('adminIntegrations.waiting')
 
-  const tabs: Array<{ id: IntegrationTab; label: string; count?: number }> = [
+  return (
+    <IntegrationDashboardLoadedContent
+      activeTab={activeTab}
+      actionCount={actionCount}
+      canGoBack={canGoBack}
+      canGoForward={canGoForward}
+      compatibleSources={compatibleSources}
+      createBatchMutation={createBatchMutation}
+      createdBatchId={createdBatchId}
+      dispatchPageState={dispatchPageState}
+      entityTypeFilter={entityTypeFilter}
+      evidenceState={evidenceState}
+      feedback={feedback}
+      importTemplateQuery={importTemplateQuery}
+      isPowerBiUploadDisabled={isPowerBiUploadDisabled}
+      meta={meta}
+      offset={offset}
+      overview={overview}
+      personnelFile={personnelFile}
+      powerBiPeriodEnd={powerBiPeriodEnd}
+      powerBiPeriodMonth={powerBiPeriodMonth}
+      powerBiPeriodStart={powerBiPeriodStart}
+      powerBiPeriodType={powerBiPeriodType}
+      powerBiSources={powerBiSources}
+      powerBiUploadBlockers={powerBiUploadBlockers}
+      resolvedPowerBiSourceCode={resolvedPowerBiSourceCode}
+      resolvedTemplateSourceCode={resolvedTemplateSourceCode}
+      retryMutation={retryMutation}
+      search={search}
+      sortBy={sortBy}
+      sortedItems={sortedItems}
+      statusFilter={statusFilter}
+      storeFile={storeFile}
+      submitSampleImport={submitSampleImport}
+      t={t}
+      templateSourceSystem={templateSourceSystem}
+      uploadFeedback={uploadFeedback}
+      uploadedBatchId={uploadedBatchId}
+      uploadPowerBiMutation={uploadPowerBiMutation}
+    />
+  )
+}
+
+type IntegrationDashboardLoadedContentProps = {
+  activeTab: IntegrationTab
+  actionCount: number
+  canGoBack: boolean
+  canGoForward: boolean
+  compatibleSources: IntegrationSource[]
+  createBatchMutation: CreateBatchMutationState
+  createdBatchId: string | null
+  dispatchPageState: IntegrationDispatch
+  entityTypeFilter: string
+  evidenceState: string
+  feedback: string | null
+  importTemplateQuery: ImportTemplateQueryState
+  isPowerBiUploadDisabled: boolean
+  meta: IntegrationListMeta | undefined
+  offset: number
+  overview: ImportOverview
+  personnelFile: File | null
+  powerBiPeriodEnd: string
+  powerBiPeriodMonth: string
+  powerBiPeriodStart: string
+  powerBiPeriodType: PowerBiPeriodType
+  powerBiSources: IntegrationSource[]
+  powerBiUploadBlockers: string[]
+  resolvedPowerBiSourceCode: string
+  resolvedTemplateSourceCode: string
+  retryMutation: RetryMutationState
+  search: string
+  sortBy: IntegrationSortValue
+  sortedItems: NeedsActionItem[]
+  statusFilter: string
+  storeFile: File | null
+  submitSampleImport: () => void
+  t: TranslateFunction
+  templateSourceSystem: IntegrationTemplateSourceSystem
+  uploadFeedback: string | null
+  uploadedBatchId: string | null
+  uploadPowerBiMutation: PowerBiUploadMutationState
+}
+
+function IntegrationDashboardLoadedContent(input: IntegrationDashboardLoadedContentProps) {
+  const {
+    activeTab,
+    actionCount,
+    canGoBack,
+    canGoForward,
+    compatibleSources,
+    createBatchMutation,
+    createdBatchId,
+    dispatchPageState,
+    entityTypeFilter,
+    evidenceState,
+    feedback,
+    importTemplateQuery,
+    isPowerBiUploadDisabled,
+    meta,
+    offset,
+    overview,
+    personnelFile,
+    powerBiPeriodEnd,
+    powerBiPeriodMonth,
+    powerBiPeriodStart,
+    powerBiPeriodType,
+    powerBiSources,
+    powerBiUploadBlockers,
+    resolvedPowerBiSourceCode,
+    resolvedTemplateSourceCode,
+    retryMutation,
+    search,
+    sortBy,
+    sortedItems,
+    statusFilter,
+    storeFile,
+    submitSampleImport,
+    t,
+    templateSourceSystem,
+    uploadFeedback,
+    uploadedBatchId,
+    uploadPowerBiMutation,
+  } = input
+
+  const tabs: IntegrationTabOption[] = [
     { id: 'uploads', label: t('adminIntegrations.tabUploads') },
     { id: 'evidence', label: t('adminIntegrations.tabEvidence') },
     { id: 'errors', label: t('adminIntegrations.tabErrors'), count: actionCount },
@@ -523,7 +657,119 @@ export function IntegrationDashboardPage() {
       </nav>
 
       {activeTab === 'uploads' ? (
-        <section className="integration-management-panel" aria-label={t('adminIntegrations.uploadsTabAria')}>
+        <IntegrationUploadsPanel
+          dispatchPageState={dispatchPageState}
+          isPowerBiUploadDisabled={isPowerBiUploadDisabled}
+          overview={overview}
+          personnelFile={personnelFile}
+          powerBiPeriodEnd={powerBiPeriodEnd}
+          powerBiPeriodMonth={powerBiPeriodMonth}
+          powerBiPeriodStart={powerBiPeriodStart}
+          powerBiPeriodType={powerBiPeriodType}
+          powerBiSources={powerBiSources}
+          powerBiUploadBlockers={powerBiUploadBlockers}
+          resolvedPowerBiSourceCode={resolvedPowerBiSourceCode}
+          storeFile={storeFile}
+          t={t}
+          uploadPowerBiMutation={uploadPowerBiMutation}
+        />
+      ) : null}
+
+      {activeTab === 'evidence' ? (
+        <IntegrationEvidencePanel
+          compatibleSources={compatibleSources}
+          createBatchMutation={createBatchMutation}
+          createdBatchId={createdBatchId}
+          dispatchPageState={dispatchPageState}
+          evidenceState={evidenceState}
+          importTemplateQuery={importTemplateQuery}
+          overview={overview}
+          resolvedTemplateSourceCode={resolvedTemplateSourceCode}
+          submitSampleImport={submitSampleImport}
+          t={t}
+          templateSourceSystem={templateSourceSystem}
+        />
+      ) : null}
+
+      {activeTab === 'errors' ? (
+        <IntegrationErrorsPanel
+          canGoBack={canGoBack}
+          canGoForward={canGoForward}
+          dispatchPageState={dispatchPageState}
+          entityTypeFilter={entityTypeFilter}
+          meta={meta}
+          offset={offset}
+          retryMutation={retryMutation}
+          search={search}
+          sortBy={sortBy}
+          sortedItems={sortedItems}
+          statusFilter={statusFilter}
+          t={t}
+        />
+      ) : null}
+    </section>
+  )
+}
+
+type PowerBiUploadMutationState = {
+  data?: PowerBiExportUploadResponse
+  isPending: boolean
+  mutate: (input: Parameters<typeof uploadPowerBiExport>[0]) => void
+}
+
+type ImportTemplateQueryState = {
+  data?: ImportPayloadTemplate
+  error: unknown
+  isError: boolean
+  isLoading: boolean
+}
+
+type CreateBatchMutationState = {
+  isPending: boolean
+}
+
+type RetryMutationState = {
+  isPending: boolean
+  mutate: (batchId: string) => void
+}
+
+type IntegrationUploadsPanelProps = {
+  dispatchPageState: IntegrationDispatch
+  isPowerBiUploadDisabled: boolean
+  overview: ImportOverview
+  personnelFile: File | null
+  powerBiPeriodEnd: string
+  powerBiPeriodMonth: string
+  powerBiPeriodStart: string
+  powerBiPeriodType: PowerBiPeriodType
+  powerBiSources: IntegrationSource[]
+  powerBiUploadBlockers: string[]
+  resolvedPowerBiSourceCode: string
+  storeFile: File | null
+  t: TranslateFunction
+  uploadPowerBiMutation: PowerBiUploadMutationState
+}
+
+function IntegrationUploadsPanel(input: IntegrationUploadsPanelProps) {
+  const {
+    dispatchPageState,
+    isPowerBiUploadDisabled,
+    overview,
+    personnelFile,
+    powerBiPeriodEnd,
+    powerBiPeriodMonth,
+    powerBiPeriodStart,
+    powerBiPeriodType,
+    powerBiSources,
+    powerBiUploadBlockers,
+    resolvedPowerBiSourceCode,
+    storeFile,
+    t,
+    uploadPowerBiMutation,
+  } = input
+
+  return (
+<section className="integration-management-panel" aria-label={t('adminIntegrations.uploadsTabAria')}>
           <div className="integration-management-panel-head">
             <div>
               <div className="eyebrow">{t('adminIntegrations.tabUploads')}</div>
@@ -723,10 +969,40 @@ export function IntegrationDashboardPage() {
             <UploadSummaryGrid summary={uploadPowerBiMutation.data.data.summary} t={t} />
           ) : null}
         </section>
-      ) : null}
+  )
+}
 
-      {activeTab === 'evidence' ? (
-        <section className="integration-management-panel" aria-label={t('adminIntegrations.evidenceTabAria')}>
+type IntegrationEvidencePanelProps = {
+  compatibleSources: IntegrationSource[]
+  createBatchMutation: CreateBatchMutationState
+  createdBatchId: string | null
+  dispatchPageState: IntegrationDispatch
+  evidenceState: string
+  importTemplateQuery: ImportTemplateQueryState
+  overview: ImportOverview
+  resolvedTemplateSourceCode: string
+  submitSampleImport: () => void
+  t: TranslateFunction
+  templateSourceSystem: IntegrationTemplateSourceSystem
+}
+
+function IntegrationEvidencePanel(input: IntegrationEvidencePanelProps) {
+  const {
+    compatibleSources,
+    createBatchMutation,
+    createdBatchId,
+    dispatchPageState,
+    evidenceState,
+    importTemplateQuery,
+    overview,
+    resolvedTemplateSourceCode,
+    submitSampleImport,
+    t,
+    templateSourceSystem,
+  } = input
+
+  return (
+<section className="integration-management-panel" aria-label={t('adminIntegrations.evidenceTabAria')}>
           <div className="integration-management-panel-head">
             <div>
               <div className="eyebrow">{t('adminIntegrations.tabEvidence')}</div>
@@ -837,10 +1113,42 @@ export function IntegrationDashboardPage() {
             </div>
           ) : null}
         </section>
-      ) : null}
+  )
+}
 
-      {activeTab === 'errors' ? (
-        <section className="integration-management-panel" aria-label={t('adminIntegrations.errorsTabAria')}>
+type IntegrationErrorsPanelProps = {
+  canGoBack: boolean
+  canGoForward: boolean
+  dispatchPageState: IntegrationDispatch
+  entityTypeFilter: string
+  meta: IntegrationListMeta | undefined
+  offset: number
+  retryMutation: RetryMutationState
+  search: string
+  sortBy: IntegrationSortValue
+  sortedItems: NeedsActionItem[]
+  statusFilter: string
+  t: TranslateFunction
+}
+
+function IntegrationErrorsPanel(input: IntegrationErrorsPanelProps) {
+  const {
+    canGoBack,
+    canGoForward,
+    dispatchPageState,
+    entityTypeFilter,
+    meta,
+    offset,
+    retryMutation,
+    search,
+    sortBy,
+    sortedItems,
+    statusFilter,
+    t,
+  } = input
+
+  return (
+<section className="integration-management-panel" aria-label={t('adminIntegrations.errorsTabAria')}>
           <div className="integration-management-panel-head">
             <div>
               <div className="eyebrow">{t('adminIntegrations.tabErrors')}</div>
@@ -1007,8 +1315,6 @@ export function IntegrationDashboardPage() {
             </button>
           </div>
         </section>
-      ) : null}
-    </section>
   )
 }
 
