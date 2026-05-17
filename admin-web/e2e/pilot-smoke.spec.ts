@@ -149,76 +149,126 @@ function watchPilotFailures(page: Page) {
 }
 
 async function routePilotSmokeApi(page: Page) {
-  await page.route('**/api/auth/session**', async (route) => {
-    await route.fulfill({ json: authSessionFixture })
-  })
+  await page.route('**/api/**', async (route) => {
+    const request = route.request()
+    const pathname = new URL(request.url()).pathname
 
-  await page.route('**/api/feed**', async (route) => {
-    await route.fulfill({ json: feedFixture })
-  })
+    if (pathname.endsWith('/api/auth/session')) {
+      await route.fulfill({ json: authSessionFixture })
+      return
+    }
 
-  await page.route('**/api/integrations/import-batches/overview', async (route) => {
-    await route.fulfill({ json: importOverviewFixture })
-  })
-  await page.route('**/api/integrations/import-batches/needs-action**', async (route) => {
-    await route.fulfill({ json: emptyListFixture })
-  })
-  await page.route('**/api/integrations/lookups', async (route) => {
-    await route.fulfill({ json: integrationLookupsFixture })
-  })
-  await page.route('**/api/integrations/import-payload-templates**', async (route) => {
-    await route.fulfill({ json: importPayloadTemplateFixture })
-  })
-  await page.route('**/api/integrations/store-master-lookups', async (route) => {
-    await route.fulfill({ json: storeMasterLookupsFixture })
-  })
-  await page.route('**/api/integrations/store-master**', async (route) => {
-    await route.fulfill({ json: storeMasterFixture })
-  })
-  await page.route('**/api/integrations/master-data-bootstrap/batches**', async (route) => {
-    await route.fulfill({ json: masterDataFixture })
-  })
+    if (pathname.endsWith('/api/feed')) {
+      await route.fulfill({ json: feedFixture })
+      return
+    }
 
-  await page.route('**/api/target-distributions/requests**', async (route) => {
-    await route.fulfill({ json: targetRequestsFixture })
-  })
-  await page.route('**/api/target-distributions/coverage**', async (route) => {
-    await route.fulfill({ json: targetCoverageFixture })
-  })
-  await page.route('**/api/target-distributions/store-personnel**', async (route) => {
-    await route.fulfill({ json: storePersonnelFixture })
-  })
-  await page.route('**/api/workforce/position-options**', async (route) => {
-    await route.fulfill({ json: positionOptionsFixture })
-  })
-  await page.route('**/api/workforce/store-employees**', async (route) => {
-    await route.fulfill({ json: storeEmployeesFixture })
-  })
-  await page.route('**/api/workforce/seller-code-requests**', async (route) => {
-    await route.fulfill({ json: emptyListFixture })
-  })
-  await page.route('**/api/workforce/offboarding-requests**', async (route) => {
-    await route.fulfill({ json: emptyListFixture })
-  })
+    if (pathname.endsWith('/api/integrations/import-batches/overview')) {
+      await route.fulfill({ json: importOverviewFixture })
+      return
+    }
 
-  await page.route('**/api/checklists/acknowledgements/list', async (route) => {
-    await route.fulfill({ json: checklistAcknowledgementsFixture })
-  })
-  await page.route('**/api/mobile/checklists/today', async (route) => {
-    await route.fulfill({ json: mobileChecklistTodayFixture })
-  })
-  await page.route('**/api/workflow/inbox', async (route) => {
-    await route.fulfill({ json: workflowInboxFixture })
-  })
+    if (pathname.endsWith('/api/integrations/import-batches/needs-action')) {
+      await route.fulfill({ json: emptyListFixture })
+      return
+    }
 
-  await page.route('**/api/reports/kpi-config', async (route) => {
-    await route.fulfill({ json: kpiConfigFixture })
-  })
-  await page.route('**/api/reports/my-performance**', async (route) => {
-    await route.fulfill({ json: myPerformanceFixture })
-  })
-  await page.route('**/api/reports/rankings**', async (route) => {
-    await route.fulfill({ json: rankingsFixture })
+    if (pathname.endsWith('/api/integrations/lookups')) {
+      await route.fulfill({ json: integrationLookupsFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/integrations/import-payload-templates')) {
+      await route.fulfill({ json: importPayloadTemplateFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/integrations/store-master-lookups')) {
+      await route.fulfill({ json: storeMasterLookupsFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/integrations/store-master')) {
+      await route.fulfill({ json: storeMasterFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/integrations/master-data-bootstrap/batches')) {
+      await route.fulfill({ json: masterDataFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/target-distributions/requests')) {
+      await route.fulfill({ json: targetRequestsFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/target-distributions/coverage')) {
+      await route.fulfill({ json: targetCoverageFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/target-distributions/store-personnel')) {
+      await route.fulfill({ json: storePersonnelFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/workforce/position-options')) {
+      await route.fulfill({ json: positionOptionsFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/workforce/store-employees')) {
+      await route.fulfill({ json: storeEmployeesFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/workforce/seller-code-requests')) {
+      await route.fulfill({ json: emptyListFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/workforce/offboarding-requests')) {
+      await route.fulfill({ json: emptyListFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/checklists/acknowledgements/list')) {
+      await route.fulfill({ json: checklistAcknowledgementsFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/mobile/checklists/today')) {
+      await route.fulfill({ json: mobileChecklistTodayFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/workflow/inbox')) {
+      await route.fulfill({ json: workflowInboxFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/reports/kpi-config')) {
+      await route.fulfill({ json: kpiConfigFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/reports/my-performance')) {
+      await route.fulfill({ json: myPerformanceFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/reports/rankings')) {
+      await route.fulfill({ json: rankingsFixture })
+      return
+    }
+
+    await route.fulfill({
+      status: 501,
+      json: {
+        message: `Missing pilot smoke API fixture for ${request.method()} ${pathname}`,
+      },
+    })
   })
 }
 
