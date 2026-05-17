@@ -103,6 +103,7 @@ JWT_AUDIENCE=<beklenen audience veya Clerk azp/client policy ile uyumlu deger>
 AUTH_CLIENT_ID=<Clerk publishable/client id kaniti icin kaydedilen deger>
 
 CORS_ALLOWED_ORIGINS=https://staging.hr-axis.com
+TRUST_PROXY_HOPS=1
 RATE_LIMIT_WINDOW_MS=60000
 RATE_LIMIT_MAX=120
 ```

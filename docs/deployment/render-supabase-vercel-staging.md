@@ -122,6 +122,7 @@ JWT_JWKS_URL=https://relative-gazelle-47.clerk.accounts.dev/.well-known/jwks.jso
 JWT_AUDIENCE=hr-axis-api
 AUTH_CLIENT_ID=pk_test_cmVsYXRpdmUtZ2F6ZWxsZS00Ny5jbGVyay5hY2NvdW50cy5kZXYk
 CORS_ALLOWED_ORIGINS=https://staging.hr-axis.com
+TRUST_PROXY_HOPS=1
 RATE_LIMIT_WINDOW_MS=60000
 RATE_LIMIT_MAX=120
 QUEUE_BACKEND=in-memory
@@ -151,6 +152,7 @@ $env:NODE_ENV="production"
 $env:DATABASE_URL="<Supabase session pooler URI>"
 $env:DB_SSL_MODE="require"
 $env:DB_POOL_MAX="5"
+$env:TRUST_PROXY_HOPS="1"
 $env:RATE_LIMIT_WINDOW_MS="60000"
 $env:RATE_LIMIT_MAX="120"
 npm.cmd run db:migrate

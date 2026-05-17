@@ -82,10 +82,5 @@ export function createRateLimitMiddleware(input: {
 }
 
 function resolveClientKey(req: RateLimitRequest): string {
-  const forwardedFor = resolveHeader(req.headers["x-forwarded-for"]);
-  return req.ip || req.socket?.remoteAddress || forwardedFor?.split(",")[0]?.trim() || "unknown";
-}
-
-function resolveHeader(value: string | string[] | undefined): string | undefined {
-  return (Array.isArray(value) ? value[0] : value)?.trim() || undefined;
+  return req.ip || req.socket?.remoteAddress || "unknown";
 }

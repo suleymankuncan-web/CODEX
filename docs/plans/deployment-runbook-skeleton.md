@@ -103,6 +103,7 @@ Rules:
 - [ ] `JWT_SECRET` is not `change-me`.
 - [ ] `ALLOW_MOCK_AUTH=false` or unset with production fail-closed behavior verified.
 - [ ] `CORS_ALLOWED_ORIGINS` contains only approved frontend origins.
+- [ ] `TRUST_PROXY_HOPS` matches the backend proxy path, such as `1` on Render.
 - [ ] `RATE_LIMIT_WINDOW_MS` and `RATE_LIMIT_MAX` are explicitly set.
 
 ### Deploy

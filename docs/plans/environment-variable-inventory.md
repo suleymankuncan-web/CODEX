@@ -31,6 +31,7 @@ These values are read by `backend/nestjs/src/shared/app-config.service.ts`.
 | `ALLOW_MOCK_AUTH` | P0 | Must be `false` or unset in production. | Production must not allow mock auth. |
 | `MIGRATIONS_HTTP_ENABLED` | P0 | Forced disabled when `NODE_ENV=production`. | Enables the legacy HTTP migration endpoint only for local/non-production controlled use; production must use CLI/CI migration execution. |
 | `CORS_ALLOWED_ORIGINS` | P0 | Required in production. | Comma-separated browser origins; local default is `http://localhost:5173`. |
+| `TRUST_PROXY_HOPS` | P0 | Required in production. | Trusted reverse-proxy hop count used by Express `req.ip` and rate-limit client identity; local default is `0`, Render staging uses `1`. |
 | `RATE_LIMIT_WINDOW_MS` | P0 | Required in production. | In-memory V1 request window; local default is `60000`. |
 | `RATE_LIMIT_MAX` | P0 | Required in production. | In-memory V1 max requests per client/window; local default is `120`. |
 | `JWT_AUDIENCE` | P0 | Must match accepted access token audience. | Defaults to `store-ops-api`. |
@@ -141,6 +142,7 @@ These values are read by `admin-web/scripts/auth-live-smoke.mjs`.
 - [ ] `ALLOW_MOCK_AUTH=false` or unset with production fail-closed behavior verified.
 - [ ] `DATABASE_URL` points to production DB.
 - [ ] `CORS_ALLOWED_ORIGINS` lists only approved frontend origins.
+- [ ] `TRUST_PROXY_HOPS` matches the target backend proxy path, such as `1` for Render.
 - [ ] `RATE_LIMIT_WINDOW_MS` and `RATE_LIMIT_MAX` are explicitly set for the environment.
 - [ ] `JWT_ISSUER`, `JWT_AUDIENCE`, and `JWT_JWKS_URL` match real provider.
 - [ ] `JWT_SECRET` is empty when JWKS is used, or explicitly approved for non-JWKS mode.

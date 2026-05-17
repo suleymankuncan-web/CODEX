@@ -45,6 +45,29 @@ export class AppConfigService {
     return this.readPositiveNumber(key, fallback);
   }
 
+  private readNonNegativeInteger(key: string, fallback: string): number {
+    const value = Number(this.readString(key, fallback));
+
+    if (!Number.isInteger(value) || value < 0) {
+      throw new Error(`${key} must be a non-negative integer`);
+    }
+
+    return value;
+  }
+
+  private readRequiredProductionNonNegativeInteger(
+    key: string,
+    fallback: string,
+  ): number {
+    const value = this.readOptionalString(key);
+
+    if (this.isProduction && !value) {
+      throw new Error(`${key} must be configured in production`);
+    }
+
+    return this.readNonNegativeInteger(key, fallback);
+  }
+
   private requireProductionHttpsUrl(
     key: string,
     value: string | undefined,
@@ -163,6 +186,10 @@ export class AppConfigService {
 
   get rateLimitMax(): number {
     return this.readRequiredProductionNumber("RATE_LIMIT_MAX", "120");
+  }
+
+  get trustProxyHops(): number {
+    return this.readRequiredProductionNonNegativeInteger("TRUST_PROXY_HOPS", "0");
   }
 
   get isProduction(): boolean {
