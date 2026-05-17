@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import IORedis from "ioredis";
 import { AppConfigService } from "./app-config.service";
 import { DatabaseService } from "./database/database.service";
+import { ObservabilityService } from "./observability/observability.service";
 
 type DependencyCheck = {
   status: "ok" | "error" | "skipped";
@@ -14,6 +15,7 @@ export class HealthService {
   constructor(
     private readonly appConfigService: AppConfigService,
     private readonly databaseService: DatabaseService,
+    private readonly observabilityService: ObservabilityService,
   ) {}
 
   getLiveHealth() {
@@ -36,6 +38,7 @@ export class HealthService {
       service: this.appConfigService.appName,
       timestamp: new Date().toISOString(),
       queueBackend: this.appConfigService.queueBackend,
+      observability: this.observabilityService.getStatus(),
       checks: {
         database,
         redis,

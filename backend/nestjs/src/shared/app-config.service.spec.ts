@@ -249,6 +249,56 @@ describe("AppConfigService", () => {
     ).toThrow("TRUST_PROXY_HOPS must be a non-negative integer");
   });
 
+  it("defaults observability settings to log-only controlled pilot mode", () => {
+    const config = createConfig({
+      NODE_ENV: "development",
+    });
+
+    expect(config.logLevel).toBe("info");
+    expect(config.errorTrackingDsn).toBeUndefined();
+    expect(config.errorTrackingEnvironment).toBe("development");
+    expect(config.errorTrackingRelease).toBeUndefined();
+    expect(config.readinessProfile).toBe("controlled-pilot");
+  });
+
+  it("accepts explicit production observability settings", () => {
+    const config = createConfig({
+      ERROR_TRACKING_DSN: "https://example.invalid/123",
+      ERROR_TRACKING_ENVIRONMENT: "staging",
+      ERROR_TRACKING_RELEASE: "a1b2c3d",
+      LOG_LEVEL: "warn",
+      NODE_ENV: "production",
+      READINESS_PROFILE: "broad-production",
+    });
+
+    expect(config.logLevel).toBe("warn");
+    expect(config.errorTrackingDsn).toBe("https://example.invalid/123");
+    expect(config.errorTrackingEnvironment).toBe("staging");
+    expect(config.errorTrackingRelease).toBe("a1b2c3d");
+    expect(config.readinessProfile).toBe("broad-production");
+  });
+
+  it("rejects invalid observability config values", () => {
+    expect(() =>
+      createConfig({
+        LOG_LEVEL: "chatty",
+      }).logLevel,
+    ).toThrow("LOG_LEVEL must be one of error, warn, info, debug, verbose");
+
+    expect(() =>
+      createConfig({
+        READINESS_PROFILE: "public-launch",
+      }).readinessProfile,
+    ).toThrow("READINESS_PROFILE must be one of controlled-pilot, broad-production");
+
+    expect(() =>
+      createConfig({
+        ERROR_TRACKING_DSN: "http://errors.example.com/123",
+        NODE_ENV: "production",
+      }).errorTrackingDsn,
+    ).toThrow("ERROR_TRACKING_DSN must use https in production");
+  });
+
   it("requires authorization code flow and https provider endpoints in production", () => {
     expect(() =>
       createConfig({

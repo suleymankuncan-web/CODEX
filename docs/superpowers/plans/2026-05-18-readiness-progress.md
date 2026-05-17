@@ -30,6 +30,8 @@ GSD was attempted before writing this plan.
 
 GSD is therefore usable as a planning second opinion, but its headless project state should be repaired later before relying on it as the canonical execution tracker.
 
+Slice 3 note: `gsd headless query` was retried before implementation and still returned `DB unavailable - runtime markdown state derivation is disabled`; execution continued from this checked-in plan and repo tests.
+
 ## Current Readiness Baseline
 
 Strong areas that should be preserved:
@@ -69,8 +71,8 @@ Open risk areas this plan must progress:
 | Order | Slice | Status | Main Risk Reduced | Deploy Needed |
 | --- | --- | --- | --- | --- |
 | 1 | Deployed Readiness Smoke | Merged (#228) | Render/Vercel env drift after merge | Yes, when used against live env |
-| 2 | Edge Security Headers | Ready for PR | Browser token theft blast radius | Vercel, maybe Render |
-| 3 | Observability V1 | Pending | Silent backend/frontend failures | Backend + frontend |
+| 2 | Edge Security Headers | Merged (#229) | Browser token theft blast radius | Vercel, maybe Render |
+| 3 | Observability V1 | Ready for PR | Silent backend/frontend failures | Backend + frontend |
 | 4 | Alerting and Incident Evidence | Pending | Nobody notices production degradation | Depends on provider |
 | 5 | Redis-Backed Rate Limit | Pending | Abuse bypass on multi-instance runtime | Render |
 | 6 | Queue Durability Gate | Pending | Lost in-process background jobs | Render |
@@ -206,6 +208,7 @@ Open risk areas this plan must progress:
   - `npm.cmd --prefix admin-web run build` passed.
   - `npm.cmd run test:scripts` passed.
 - Post-merge deploy note: Vercel deploy verification is required because frontend hosting/security headers changed. Render deploy verification is only needed if the backend service is redeployed for the HSTS middleware change.
+- PR: #229 merged into `main`.
 
 ## Slice 3: Observability V1
 
@@ -256,6 +259,21 @@ Open risk areas this plan must progress:
 **Done when:**
 
 - A real staging failure can be traced from user report to log/error event by correlation ID.
+
+**Current branch evidence:**
+
+- Added provider-neutral observability module/service with log-only external delivery, process-level unhandled rejection/exception capture, startup status, and broad-production missing-DSN warning.
+- `StandardErrorFilter` now captures 5xx exceptions with correlation ID, request path, status code, and error code while keeping user-facing 500 responses generic.
+- Structured log helpers now redact bearer tokens, secret-like fields, Postgres URLs, and Redis URLs before logging.
+- `/api/health` now exposes non-secret observability status: log-only mode, DSN configured boolean, environment, release, log level, and readiness profile.
+- Added runtime env contract for `ERROR_TRACKING_DSN`, `ERROR_TRACKING_ENVIRONMENT`, `ERROR_TRACKING_RELEASE`, `LOG_LEVEL`, and `READINESS_PROFILE`.
+- Added `scripts/observability-contract.test.mjs` plus backend unit/e2e tests for config, redaction, filter capture, health status, and startup warning behavior.
+- Provider package note: Sentry or another provider is intentionally not added in V1 because the plan requires owner approval before adding provider packages/DSNs. Render logs plus structured correlation events are the active signal for this slice.
+- Local verification:
+  - `npm.cmd --prefix backend/nestjs test -- --runInBand src/shared/app-config.service.spec.ts src/shared/observability/observability.service.spec.ts src/shared/http/standard-error.filter.spec.ts src/shared/structured-log.spec.ts test/integration/health.e2e-spec.ts` passed.
+  - `node --test scripts/observability-contract.test.mjs scripts/deployment-runbook-contract.test.mjs` passed.
+  - `npm.cmd --prefix backend/nestjs run build` passed.
+- Post-merge deploy note: Render deploy verification is required because backend runtime behavior changed. Frontend deploy is not required by this slice unless the platform deploys both services together.
 
 ## Slice 4: Alerting and Incident Evidence
 

@@ -192,6 +192,48 @@ export class AppConfigService {
     return this.readRequiredProductionNonNegativeInteger("TRUST_PROXY_HOPS", "0");
   }
 
+  get logLevel(): string {
+    const value = this.readString("LOG_LEVEL", "info");
+    const allowedValues = new Set(["error", "warn", "info", "debug", "verbose"]);
+
+    if (!allowedValues.has(value)) {
+      throw new Error("LOG_LEVEL must be one of error, warn, info, debug, verbose");
+    }
+
+    return value;
+  }
+
+  get errorTrackingDsn(): string | undefined {
+    return this.requireProductionHttpsUrl(
+      "ERROR_TRACKING_DSN",
+      this.readOptionalString("ERROR_TRACKING_DSN"),
+    );
+  }
+
+  get errorTrackingEnvironment(): string {
+    return this.readString(
+      "ERROR_TRACKING_ENVIRONMENT",
+      this.isProduction ? "production" : "development",
+    );
+  }
+
+  get errorTrackingRelease(): string | undefined {
+    return this.readOptionalString("ERROR_TRACKING_RELEASE");
+  }
+
+  get readinessProfile(): string {
+    const value = this.readString("READINESS_PROFILE", "controlled-pilot");
+    const allowedValues = new Set(["controlled-pilot", "broad-production"]);
+
+    if (!allowedValues.has(value)) {
+      throw new Error(
+        "READINESS_PROFILE must be one of controlled-pilot, broad-production",
+      );
+    }
+
+    return value;
+  }
+
   get isProduction(): boolean {
     return this.readString("NODE_ENV", "development") === "production";
   }
