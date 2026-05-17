@@ -799,7 +799,7 @@ function validateTemplateCloneDraft(draft: TemplateCloneDraft): TranslationKey |
   return null
 }
 
-export function StageBuilderForm(input: StageBuilderFormProps) {
+function useStageBuilderFormContent(input: StageBuilderFormProps) {
   const { t } = useLocalization()
   const queryClient = useQueryClient()
   const [state, dispatch] = useReducer(
@@ -1462,65 +1462,14 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
         onUpdate={updateStagePackageDraft}
       />
 
-      {draft.teams.map((team, teamIndex) => (
-        <article className="stacked-row stage-builder-team" key={teamIndex}>
-          <div className="stacked-row-head">
-            <strong>{t('competition.stageBuilder.teamNumber', { number: teamIndex + 1 })}</strong>
-            <StatusPill tone={team.storeIds.length > 0 ? 'accent' : 'warning'}>
-              {formatCount(
-                team.storeIds.length,
-                'competition.stageBuilder.count.store',
-                'competition.stageBuilder.count.stores',
-                t,
-              )}
-            </StatusPill>
-          </div>
-          <div className="form-grid">
-            <label className="field-block">
-              <span>{t('competition.stageBuilder.teamTemplateLabel', { number: teamIndex + 1 })}</span>
-              <select
-                value={team.sourceTemplateId ?? ''}
-                onChange={(event) => applyTemplate(teamIndex, event.target.value)}
-              >
-                <option value="">{t('competition.stageBuilder.manualTeam')}</option>
-                {templates.map((template) => (
-                  <option key={template.templateId} value={template.templateId}>
-                    {template.templateCode} - {template.templateName}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field-block">
-              <span>{t('competition.stageBuilder.teamCodeLabel', { number: teamIndex + 1 })}</span>
-              <input
-                value={team.teamCode}
-                onChange={(event) =>
-                  updateTeam(teamIndex, { teamCode: normalizeCode(event.target.value) })
-                }
-              />
-            </label>
-            <label className="field-block">
-              <span>{t('competition.stageBuilder.teamNameLabel', { number: teamIndex + 1 })}</span>
-              <input
-                value={team.teamName}
-                onChange={(event) => updateTeam(teamIndex, { teamName: event.target.value })}
-              />
-            </label>
-          </div>
-          <div className="store-checkbox-grid">
-            {stores.map((store) => (
-              <label className="store-checkbox" key={`${teamIndex}-${store.storeId}`}>
-                <input
-                  type="checkbox"
-                  checked={team.storeIds.includes(store.storeId)}
-                  onChange={() => toggleStore(teamIndex, store.storeId)}
-                />
-                <span>{storeLabel(store)}</span>
-              </label>
-            ))}
-          </div>
-        </article>
-      ))}
+      <StageBuilderTeamsSection
+        stores={stores}
+        teams={draft.teams}
+        templates={templates}
+        onApplyTemplate={applyTemplate}
+        onToggleStore={toggleStore}
+        onUpdateTeam={updateTeam}
+      />
 
       {validationMessage ? <p className="validation-copy">{t(validationMessage)}</p> : null}
 
@@ -1557,7 +1506,86 @@ export function StageBuilderForm(input: StageBuilderFormProps) {
   )
 }
 
-function StagePackageBuilderSection(input: {
+export function StageBuilderForm(input: StageBuilderFormProps) {
+  return useStageBuilderFormContent(input)
+}
+
+function StageBuilderTeamsSection(input: {
+  stores: AuthLookupStore[]
+  teams: TeamDraft[]
+  templates: CompetitionTeamTemplate[]
+  onApplyTemplate: (teamIndex: number, templateId: string) => void
+  onToggleStore: (teamIndex: number, storeId: string) => void
+  onUpdateTeam: (index: number, patch: Partial<TeamDraft>) => void
+}) {
+  const { t } = useLocalization()
+
+  return (
+    <>
+      {input.teams.map((team, teamIndex) => (
+        <article className="stacked-row stage-builder-team" key={teamIndex}>
+          <div className="stacked-row-head">
+            <strong>{t('competition.stageBuilder.teamNumber', { number: teamIndex + 1 })}</strong>
+            <StatusPill tone={team.storeIds.length > 0 ? 'accent' : 'warning'}>
+              {formatCount(
+                team.storeIds.length,
+                'competition.stageBuilder.count.store',
+                'competition.stageBuilder.count.stores',
+                t,
+              )}
+            </StatusPill>
+          </div>
+          <div className="form-grid">
+            <label className="field-block">
+              <span>{t('competition.stageBuilder.teamTemplateLabel', { number: teamIndex + 1 })}</span>
+              <select
+                value={team.sourceTemplateId ?? ''}
+                onChange={(event) => input.onApplyTemplate(teamIndex, event.target.value)}
+              >
+                <option value="">{t('competition.stageBuilder.manualTeam')}</option>
+                {input.templates.map((template) => (
+                  <option key={template.templateId} value={template.templateId}>
+                    {template.templateCode} - {template.templateName}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field-block">
+              <span>{t('competition.stageBuilder.teamCodeLabel', { number: teamIndex + 1 })}</span>
+              <input
+                value={team.teamCode}
+                onChange={(event) =>
+                  input.onUpdateTeam(teamIndex, { teamCode: normalizeCode(event.target.value) })
+                }
+              />
+            </label>
+            <label className="field-block">
+              <span>{t('competition.stageBuilder.teamNameLabel', { number: teamIndex + 1 })}</span>
+              <input
+                value={team.teamName}
+                onChange={(event) => input.onUpdateTeam(teamIndex, { teamName: event.target.value })}
+              />
+            </label>
+          </div>
+          <div className="store-checkbox-grid">
+            {input.stores.map((store) => (
+              <label className="store-checkbox" key={`${teamIndex}-${store.storeId}`}>
+                <input
+                  type="checkbox"
+                  checked={team.storeIds.includes(store.storeId)}
+                  onChange={() => input.onToggleStore(teamIndex, store.storeId)}
+                />
+                <span>{storeLabel(store)}</span>
+              </label>
+            ))}
+          </div>
+        </article>
+      ))}
+    </>
+  )
+}
+
+type StagePackageBuilderSectionInput = {
   auditEvents: CompetitionStagePackagePlanAuditEvent[]
   draft: StagePackageDraft
   error: unknown
@@ -1582,7 +1610,13 @@ function StagePackageBuilderSection(input: {
   onUpdatePlan: (planId: string, payload: UpdateCompetitionStagePackagePlanPayload) => void
   onUpdateStage: (stageIndex: number, field: keyof StagePackageStageDraft, value: string) => void
   onUpdate: (field: keyof StagePackageDraft, value: string) => void
-}) {
+}
+
+function StagePackageBuilderSection(input: StagePackageBuilderSectionInput) {
+  return useStagePackageBuilderSectionContent(input)
+}
+
+function useStagePackageBuilderSectionContent(input: StagePackageBuilderSectionInput) {
   const { t } = useLocalization()
   const [editDraft, setEditDraft] = useState<StagePackagePlanEditDraft | null>(null)
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({})
@@ -1638,171 +1672,26 @@ function StagePackageBuilderSection(input: {
         </StatusPill>
       </div>
 
-      <div className="form-grid">
-        <label className="field-block">
-          <span>{t('competition.stageBuilder.stagePackage')}</span>
-          <select
-            value={input.draft.packageCode}
-            onChange={(event) => input.onUpdate('packageCode', event.target.value)}
-          >
-            {stagePackageOptions.map((packageOption) => (
-              <option key={packageOption.code} value={packageOption.code}>
-                {t(stagePackageLabelKeys[packageOption.code])}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field-block">
-          <span>{t('competition.stageBuilder.packagePlanName')}</span>
-          <input
-            value={input.draft.planName}
-            onChange={(event) => input.onUpdate('planName', event.target.value)}
-          />
-        </label>
-        <label className="field-block">
-          <span>{t('competition.stageBuilder.packageTeamTemplateLabel', { number: 1 })}</span>
-          <select
-            value={input.draft.firstTemplateId}
-            onChange={(event) => input.onUpdate('firstTemplateId', event.target.value)}
-          >
-            <option value="">{t('competition.stageBuilder.selectTemplate')}</option>
-            {input.templates.map((template) => (
-              <option key={template.templateId} value={template.templateId}>
-                {template.templateCode} - {template.templateName}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field-block">
-          <span>{t('competition.stageBuilder.packageTeamTemplateLabel', { number: 2 })}</span>
-          <select
-            value={input.draft.secondTemplateId}
-            onChange={(event) => input.onUpdate('secondTemplateId', event.target.value)}
-          >
-            <option value="">{t('competition.stageBuilder.selectTemplate')}</option>
-            {input.templates.map((template) => (
-              <option key={template.templateId} value={template.templateId}>
-                {template.templateCode} - {template.templateName}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+      <StagePackageDraftFields
+        draft={input.draft}
+        planValidationMessage={input.planValidationMessage}
+        templates={input.templates}
+        validationMessage={input.validationMessage}
+        onUpdate={input.onUpdate}
+      />
 
-      {input.validationMessage ? (
-        <p className="validation-copy">{t(input.validationMessage)}</p>
-      ) : null}
-      {!input.validationMessage && input.planValidationMessage ? (
-        <p className="validation-copy">{t(input.planValidationMessage)}</p>
-      ) : null}
+      <StagePackagePreviewStages
+        stageDrafts={input.draft.stageDrafts}
+        onUpdateStage={input.onUpdateStage}
+      />
 
-      <div className="stacked-table">
-        {input.draft.stageDrafts.map((stageDraft, stageIndex) => (
-          <article className="stacked-row stage-package-preview-stage" key={stageDraft.stagePresetCode}>
-            <div className="stacked-row-head">
-              <div>
-                <strong>{t('competition.stageBuilder.packageStageNumber', { number: stageIndex + 1 })}</strong>
-                <p className="queue-subtitle">{formatStagePreset(stageDraft.stagePresetCode, t)}</p>
-              </div>
-              <StatusPill tone="accent">{formatStageType(stageDraft.stageType, t)}</StatusPill>
-            </div>
-            <div className="form-grid">
-              <label className="field-block">
-                <span>{t('competition.stageBuilder.packageStageCodeLabel', { number: stageIndex + 1 })}</span>
-                <input
-                  value={stageDraft.stageCode}
-                  onChange={(event) =>
-                    input.onUpdateStage(stageIndex, 'stageCode', normalizeCode(event.target.value))
-                  }
-                />
-              </label>
-              <label className="field-block">
-                <span>{t('competition.stageBuilder.packageStageNameLabel', { number: stageIndex + 1 })}</span>
-                <input
-                  value={stageDraft.stageName}
-                  onChange={(event) =>
-                    input.onUpdateStage(stageIndex, 'stageName', event.target.value)
-                  }
-                />
-              </label>
-              <label className="field-block">
-                <span>{t('competition.stageBuilder.packageStageOrderLabel', { number: stageIndex + 1 })}</span>
-                <input
-                  min="1"
-                  type="number"
-                  value={stageDraft.stageOrder}
-                  onChange={(event) =>
-                    input.onUpdateStage(stageIndex, 'stageOrder', event.target.value)
-                  }
-                />
-              </label>
-              <label className="field-block">
-                <span>{t('competition.stageBuilder.packageStageTypeLabel', { number: stageIndex + 1 })}</span>
-                <select
-                  value={stageDraft.stageType}
-                  onChange={(event) =>
-                    input.onUpdateStage(stageIndex, 'stageType', event.target.value)
-                  }
-                >
-                  {stageTypeOptions.map((stageType) => (
-                    <option key={stageType} value={stageType}>
-                      {formatStageType(stageType, t)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="field-block">
-                <span>{t('competition.stageBuilder.packageStageStartsLabel', { number: stageIndex + 1 })}</span>
-                <input
-                  type="date"
-                  value={stageDraft.startsOn}
-                  onChange={(event) =>
-                    input.onUpdateStage(stageIndex, 'startsOn', event.target.value)
-                  }
-                />
-              </label>
-              <label className="field-block">
-                <span>{t('competition.stageBuilder.packageStageEndsLabel', { number: stageIndex + 1 })}</span>
-                <input
-                  type="date"
-                  value={stageDraft.endsOn}
-                  onChange={(event) =>
-                    input.onUpdateStage(stageIndex, 'endsOn', event.target.value)
-                  }
-                />
-              </label>
-            </div>
-          </article>
-        ))}
-      </div>
-
-      <div className="action-cluster">
-        <button
-          className="ghost-button"
-          type="button"
-          disabled={Boolean(input.planValidationMessage) || input.isPending}
-          onClick={input.onSavePlan}
-        >
-          {t('competition.stageBuilder.savePackagePlan')}
-        </button>
-        <button
-          className="control-button"
-          type="button"
-          disabled={Boolean(input.validationMessage) || input.isPending}
-          onClick={input.onSubmit}
-        >
-          <PlusCircle size={16} />
-          {t('competition.stageBuilder.createStagePackage')}
-        </button>
-        <StatusPill tone="neutral">
-          {formatCount(
-            2,
-            'competition.stageBuilder.count.stage',
-            'competition.stageBuilder.count.stages',
-            t,
-          )}
-        </StatusPill>
-      </div>
+      <StagePackageDraftActions
+        isPending={input.isPending}
+        planValidationMessage={input.planValidationMessage}
+        validationMessage={input.validationMessage}
+        onSavePlan={input.onSavePlan}
+        onSubmit={input.onSubmit}
+      />
 
       <article className="stacked-row stage-package-plan-library">
         <div className="stacked-row-head">
@@ -2163,6 +2052,207 @@ function StagePackageBuilderSection(input: {
         />
       ) : null}
     </article>
+  )
+}
+
+function StagePackageDraftFields(input: {
+  draft: StagePackageDraft
+  planValidationMessage: TranslationKey | null
+  templates: CompetitionTeamTemplate[]
+  validationMessage: TranslationKey | null
+  onUpdate: (field: keyof StagePackageDraft, value: string) => void
+}) {
+  const { t } = useLocalization()
+
+  return (
+    <>
+      <div className="form-grid">
+        <label className="field-block">
+          <span>{t('competition.stageBuilder.stagePackage')}</span>
+          <select
+            value={input.draft.packageCode}
+            onChange={(event) => input.onUpdate('packageCode', event.target.value)}
+          >
+            {stagePackageOptions.map((packageOption) => (
+              <option key={packageOption.code} value={packageOption.code}>
+                {t(stagePackageLabelKeys[packageOption.code])}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field-block">
+          <span>{t('competition.stageBuilder.packagePlanName')}</span>
+          <input
+            value={input.draft.planName}
+            onChange={(event) => input.onUpdate('planName', event.target.value)}
+          />
+        </label>
+        <label className="field-block">
+          <span>{t('competition.stageBuilder.packageTeamTemplateLabel', { number: 1 })}</span>
+          <select
+            value={input.draft.firstTemplateId}
+            onChange={(event) => input.onUpdate('firstTemplateId', event.target.value)}
+          >
+            <option value="">{t('competition.stageBuilder.selectTemplate')}</option>
+            {input.templates.map((template) => (
+              <option key={template.templateId} value={template.templateId}>
+                {template.templateCode} - {template.templateName}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field-block">
+          <span>{t('competition.stageBuilder.packageTeamTemplateLabel', { number: 2 })}</span>
+          <select
+            value={input.draft.secondTemplateId}
+            onChange={(event) => input.onUpdate('secondTemplateId', event.target.value)}
+          >
+            <option value="">{t('competition.stageBuilder.selectTemplate')}</option>
+            {input.templates.map((template) => (
+              <option key={template.templateId} value={template.templateId}>
+                {template.templateCode} - {template.templateName}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      {input.validationMessage ? (
+        <p className="validation-copy">{t(input.validationMessage)}</p>
+      ) : null}
+      {!input.validationMessage && input.planValidationMessage ? (
+        <p className="validation-copy">{t(input.planValidationMessage)}</p>
+      ) : null}
+    </>
+  )
+}
+
+function StagePackagePreviewStages(input: {
+  stageDrafts: StagePackageStageDraft[]
+  onUpdateStage: (stageIndex: number, field: keyof StagePackageStageDraft, value: string) => void
+}) {
+  const { t } = useLocalization()
+
+  return (
+    <div className="stacked-table">
+      {input.stageDrafts.map((stageDraft, stageIndex) => (
+        <article className="stacked-row stage-package-preview-stage" key={stageDraft.stagePresetCode}>
+          <div className="stacked-row-head">
+            <div>
+              <strong>{t('competition.stageBuilder.packageStageNumber', { number: stageIndex + 1 })}</strong>
+              <p className="queue-subtitle">{formatStagePreset(stageDraft.stagePresetCode, t)}</p>
+            </div>
+            <StatusPill tone="accent">{formatStageType(stageDraft.stageType, t)}</StatusPill>
+          </div>
+          <div className="form-grid">
+            <label className="field-block">
+              <span>{t('competition.stageBuilder.packageStageCodeLabel', { number: stageIndex + 1 })}</span>
+              <input
+                value={stageDraft.stageCode}
+                onChange={(event) =>
+                  input.onUpdateStage(stageIndex, 'stageCode', normalizeCode(event.target.value))
+                }
+              />
+            </label>
+            <label className="field-block">
+              <span>{t('competition.stageBuilder.packageStageNameLabel', { number: stageIndex + 1 })}</span>
+              <input
+                value={stageDraft.stageName}
+                onChange={(event) =>
+                  input.onUpdateStage(stageIndex, 'stageName', event.target.value)
+                }
+              />
+            </label>
+            <label className="field-block">
+              <span>{t('competition.stageBuilder.packageStageOrderLabel', { number: stageIndex + 1 })}</span>
+              <input
+                min="1"
+                type="number"
+                value={stageDraft.stageOrder}
+                onChange={(event) =>
+                  input.onUpdateStage(stageIndex, 'stageOrder', event.target.value)
+                }
+              />
+            </label>
+            <label className="field-block">
+              <span>{t('competition.stageBuilder.packageStageTypeLabel', { number: stageIndex + 1 })}</span>
+              <select
+                value={stageDraft.stageType}
+                onChange={(event) =>
+                  input.onUpdateStage(stageIndex, 'stageType', event.target.value)
+                }
+              >
+                {stageTypeOptions.map((stageType) => (
+                  <option key={stageType} value={stageType}>
+                    {formatStageType(stageType, t)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field-block">
+              <span>{t('competition.stageBuilder.packageStageStartsLabel', { number: stageIndex + 1 })}</span>
+              <input
+                type="date"
+                value={stageDraft.startsOn}
+                onChange={(event) =>
+                  input.onUpdateStage(stageIndex, 'startsOn', event.target.value)
+                }
+              />
+            </label>
+            <label className="field-block">
+              <span>{t('competition.stageBuilder.packageStageEndsLabel', { number: stageIndex + 1 })}</span>
+              <input
+                type="date"
+                value={stageDraft.endsOn}
+                onChange={(event) =>
+                  input.onUpdateStage(stageIndex, 'endsOn', event.target.value)
+                }
+              />
+            </label>
+          </div>
+        </article>
+      ))}
+    </div>
+  )
+}
+
+function StagePackageDraftActions(input: {
+  isPending: boolean
+  planValidationMessage: TranslationKey | null
+  validationMessage: TranslationKey | null
+  onSavePlan: () => void
+  onSubmit: () => void
+}) {
+  const { t } = useLocalization()
+
+  return (
+    <div className="action-cluster">
+      <button
+        className="ghost-button"
+        type="button"
+        disabled={Boolean(input.planValidationMessage) || input.isPending}
+        onClick={input.onSavePlan}
+      >
+        {t('competition.stageBuilder.savePackagePlan')}
+      </button>
+      <button
+        className="control-button"
+        type="button"
+        disabled={Boolean(input.validationMessage) || input.isPending}
+        onClick={input.onSubmit}
+      >
+        <PlusCircle size={16} />
+        {t('competition.stageBuilder.createStagePackage')}
+      </button>
+      <StatusPill tone="neutral">
+        {formatCount(
+          2,
+          'competition.stageBuilder.count.stage',
+          'competition.stageBuilder.count.stages',
+          t,
+        )}
+      </StatusPill>
+    </div>
   )
 }
 
