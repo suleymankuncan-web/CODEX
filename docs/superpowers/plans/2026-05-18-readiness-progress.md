@@ -68,8 +68,8 @@ Open risk areas this plan must progress:
 
 | Order | Slice | Status | Main Risk Reduced | Deploy Needed |
 | --- | --- | --- | --- | --- |
-| 1 | Deployed Readiness Smoke | Ready for PR | Render/Vercel env drift after merge | Yes, when used against live env |
-| 2 | Edge Security Headers | Pending | Browser token theft blast radius | Vercel, maybe Render |
+| 1 | Deployed Readiness Smoke | Merged (#228) | Render/Vercel env drift after merge | Yes, when used against live env |
+| 2 | Edge Security Headers | Ready for PR | Browser token theft blast radius | Vercel, maybe Render |
 | 3 | Observability V1 | Pending | Silent backend/frontend failures | Backend + frontend |
 | 4 | Alerting and Incident Evidence | Pending | Nobody notices production degradation | Depends on provider |
 | 5 | Redis-Backed Rate Limit | Pending | Abuse bypass on multi-instance runtime | Render |
@@ -148,6 +148,7 @@ Open risk areas this plan must progress:
 - Public staging smoke without bearer token passed for health, rate-limit headers, correlation IDs, frontend root, SPA fallback, and static assets.
 - Auth/session remained skipped because no real `READINESS_BEARER_TOKEN` was provided.
 - Evidence file: `docs/evidence/readiness/2026-05-18-staging-deploy-smoke.md`
+- PR: #228 merged into `main`.
 
 ## Slice 2: Edge Security Headers
 
@@ -192,6 +193,19 @@ Open risk areas this plan must progress:
 **Done when:**
 
 - Security headers are present in code config and verified against the deployed frontend.
+
+**Current branch evidence:**
+
+- Frontend edge headers added to `admin-web/vercel.json` for Vercel and `admin-web/nginx.conf` for the container fallback.
+- Backend shared security headers now include HSTS.
+- Contract coverage expanded in `scripts/security-headers-contract.test.mjs`.
+- Deployed readiness smoke now fails when the public frontend root is missing required security headers.
+- Local verification:
+  - `node --test scripts/security-headers-contract.test.mjs scripts/deployed-readiness-smoke.test.mjs` passed.
+  - `npm.cmd --prefix backend/nestjs test -- security-headers.middleware.spec.ts --runInBand` passed.
+  - `npm.cmd --prefix admin-web run build` passed.
+  - `npm.cmd run test:scripts` passed.
+- Post-merge deploy note: Vercel deploy verification is required because frontend hosting/security headers changed. Render deploy verification is only needed if the backend service is redeployed for the HSTS middleware change.
 
 ## Slice 3: Observability V1
 

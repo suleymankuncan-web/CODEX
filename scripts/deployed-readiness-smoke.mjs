@@ -8,6 +8,28 @@ const RATE_LIMIT_HEADERS = [
   'x-ratelimit-remaining',
   'x-ratelimit-reset',
 ]
+const FRONTEND_SECURITY_HEADERS = {
+  'content-security-policy': [
+    "default-src 'self'",
+    "script-src 'self'",
+    'https://*.clerk.accounts.dev',
+    'https://*.clerk.com',
+    'https://*.clerk.dev',
+    'https://challenges.cloudflare.com',
+    "connect-src 'self'",
+    'https://api-staging.hr-axis.com',
+    'https://api.hr-axis.com',
+    "frame-ancestors 'none'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+  ],
+  'strict-transport-security': ['max-age=31536000', 'includeSubDomains'],
+  'x-content-type-options': ['nosniff'],
+  'x-frame-options': ['DENY'],
+  'referrer-policy': ['strict-origin-when-cross-origin'],
+  'permissions-policy': ['camera=()', 'microphone=()', 'geolocation=()', 'payment=()'],
+}
 
 export function readDeployedReadinessConfig(env = process.env) {
   const frontendBaseUrl = normalizeBaseUrl(
@@ -81,6 +103,7 @@ export async function runDeployedReadinessSmoke(input = {}) {
   if (root.ok) {
     frontendRootHtml = root.body
   }
+  checks.push(checkFrontendSecurityHeaders(root.response))
 
   const fallback = await fetchTextCheck({
     name: 'frontend spa fallback',
@@ -349,6 +372,53 @@ async function checkFrontendAssets({
   }
 
   return checks
+}
+
+function checkFrontendSecurityHeaders(response) {
+  if (!response) {
+    return {
+      name: 'frontend security headers',
+      status: 'failed',
+      reason: 'frontend root response was unavailable; security headers could not be checked',
+    }
+  }
+
+  const missing = []
+
+  for (const [header, requiredValues] of Object.entries(FRONTEND_SECURITY_HEADERS)) {
+    const value = response.headers.get(header)
+
+    if (!value) {
+      missing.push(header)
+      continue
+    }
+
+    for (const requiredValue of requiredValues) {
+      if (!value.includes(requiredValue)) {
+        missing.push(`${header} missing ${requiredValue}`)
+      }
+    }
+  }
+
+  if (missing.length > 0) {
+    return {
+      name: 'frontend security headers',
+      status: 'failed',
+      reason: 'frontend root response is missing required security headers or directives',
+      missing,
+    }
+  }
+
+  return {
+    name: 'frontend security headers',
+    status: 'passed',
+    headers: Object.fromEntries(
+      Object.keys(FRONTEND_SECURITY_HEADERS).map((header) => [
+        header,
+        response.headers.get(header),
+      ]),
+    ),
+  }
 }
 
 async function checkAuthSession({ config, fetchFn }) {
