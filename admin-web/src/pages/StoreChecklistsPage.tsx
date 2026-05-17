@@ -1,5 +1,6 @@
 import { useReducer, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { RefreshCw } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ScreenState } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
@@ -451,6 +452,15 @@ function useStoreChecklistsPageContent(input: {
     (canUseAcknowledgements && checklistsQuery.isError) ||
     (canManageVisits && mobileTodayQuery.isError)
   const errorMessage = getErrorMessage(checklistsQuery.error ?? mobileTodayQuery.error)
+  const isRetrying =
+    (canUseAcknowledgements && checklistsQuery.isFetching) ||
+    (canManageVisits && mobileTodayQuery.isFetching)
+  const retryChecklistQueries = () => {
+    void Promise.all([
+      ...(canUseAcknowledgements && checklistsQuery.isError ? [checklistsQuery.refetch()] : []),
+      ...(canManageVisits && mobileTodayQuery.isError ? [mobileTodayQuery.refetch()] : []),
+    ])
+  }
 
   const items = canUseAcknowledgements ? (checklistsQuery.data?.items ?? []) : []
   const mobileToday = mobileTodayQuery.data?.data
@@ -648,6 +658,17 @@ function useStoreChecklistsPageContent(input: {
         title={t('storeChecklists.errorTitle')}
         copy={errorMessage}
         tone="error"
+        action={
+          <button
+            type="button"
+            className="control-button"
+            disabled={isRetrying}
+            onClick={retryChecklistQueries}
+          >
+            <RefreshCw size={16} />
+            {isRetrying ? t('storeChecklists.retryingAction') : t('storeChecklists.retryAction')}
+          </button>
+        }
       />
     )
   }

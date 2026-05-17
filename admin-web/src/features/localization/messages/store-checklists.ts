@@ -3,6 +3,8 @@ export const storeChecklistsTr = {
   'storeChecklists.loadingCopy':
     'Atanmış mağaza checklistleri ve kabul sırası yükleniyor.',
   'storeChecklists.errorTitle': 'Checklist alanı açılamadı',
+  'storeChecklists.retryAction': 'Tekrar dene',
+  'storeChecklists.retryingAction': 'Tekrar deneniyor...',
 
   'storeChecklists.heroEyebrow': 'Mağaza checklistleri',
   'storeChecklists.title': 'Checklist operasyon paneli',
@@ -136,6 +138,8 @@ export const storeChecklistsEn: Record<keyof typeof storeChecklistsTr, string> =
   'storeChecklists.loadingCopy':
     'Assigned store checklists and the acknowledgement queue are loading.',
   'storeChecklists.errorTitle': 'Checklist area could not be opened',
+  'storeChecklists.retryAction': 'Try again',
+  'storeChecklists.retryingAction': 'Retrying...',
 
   'storeChecklists.heroEyebrow': 'Store checklists',
   'storeChecklists.title': 'Checklist operations panel',
