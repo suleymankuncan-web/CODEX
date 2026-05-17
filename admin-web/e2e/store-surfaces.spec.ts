@@ -2146,6 +2146,63 @@ test('store competitions page renders scoped contribution details', async ({ pag
   await expect(page.getByRole('button', { name: /Recalculate/ })).toHaveCount(0)
 })
 
+test('store competitions lets store users retry after the detail load fails', async ({ page }) => {
+  let detailAttempts = 0
+  let allowCompetitionDetail = false
+
+  await page.unroute('**/api/competitions**')
+  await page.route('**/api/competitions**', async (route) => {
+    const request = route.request()
+    const pathname = new URL(request.url()).pathname
+
+    if (request.method() === 'GET' && pathname.endsWith('/api/competitions')) {
+      await route.fulfill({
+        json: {
+          items: [competitionFixture],
+          meta: { count: 1, total: 1, limit: 50, offset: 0 },
+        },
+      })
+      return
+    }
+
+    if (
+      request.method() === 'GET' &&
+      pathname.endsWith(`/api/competitions/${competitionFixture.competitionId}`)
+    ) {
+      detailAttempts += 1
+
+      if (!allowCompetitionDetail) {
+        await route.fulfill({
+          status: 503,
+          json: { message: 'Temporary competition detail outage' },
+        })
+        return
+      }
+
+      await route.fulfill({ json: competitionDetailFixture })
+      return
+    }
+
+    await route.fulfill({
+      status: 403,
+      json: { message: 'Store competition surface is read-only' },
+    })
+  })
+
+  await page.goto('/store/competitions')
+
+  await expect(page.getByRole('heading', { name: 'Sıralama açılamadı' })).toBeVisible()
+  const retryButton = page.getByRole('button', { name: 'Tekrar dene' })
+  await expect(retryButton).toBeVisible()
+
+  allowCompetitionDetail = true
+  await retryButton.click()
+
+  await expect(page.getByLabel('Mağaza yarışma okuma özeti').getByText('Okuma özeti')).toBeVisible()
+  await expect.poll(() => detailAttempts).toBeGreaterThan(1)
+  await expect(page.getByRole('heading', { name: 'Sıralama açılamadı' })).toHaveCount(0)
+})
+
 test('store competitions page localizes lifecycle states and competition types', async ({ page }) => {
   const competitionSummaries = [
     competitionFixture,

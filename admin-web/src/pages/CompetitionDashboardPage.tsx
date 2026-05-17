@@ -131,6 +131,19 @@ export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummar
         title={t('competition.admin.errorTitle')}
         copy={getErrorMessage(competitionsQuery.error)}
         tone="error"
+        action={
+          <button
+            type="button"
+            className="control-button"
+            disabled={competitionsQuery.isFetching}
+            onClick={() => void competitionsQuery.refetch()}
+          >
+            <RefreshCw size={16} />
+            {competitionsQuery.isFetching
+              ? t('competition.admin.retryingAction')
+              : t('competition.admin.retryAction')}
+          </button>
+        }
       />
     )
   }
@@ -186,6 +199,19 @@ export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummar
               title={t('competition.admin.standingErrorTitle')}
               copy={getErrorMessage(detailQuery.error)}
               tone="error"
+              action={
+                <button
+                  type="button"
+                  className="control-button"
+                  disabled={detailQuery.isFetching}
+                  onClick={() => void detailQuery.refetch()}
+                >
+                  <RefreshCw size={16} />
+                  {detailQuery.isFetching
+                    ? t('competition.admin.retryingAction')
+                    : t('competition.admin.retryAction')}
+                </button>
+              }
             />
           ) : null}
 
