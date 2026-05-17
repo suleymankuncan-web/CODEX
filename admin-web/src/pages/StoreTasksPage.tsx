@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { CheckCircle2, ClipboardList, Bell, ReceiptText, TrendingUp } from 'lucide-react'
+import { Bell, CheckCircle2, ClipboardList, ReceiptText, RefreshCw, TrendingUp } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import {
   EmptyState,
@@ -161,6 +161,17 @@ export function StoreTasksPage(input: {
         title={t('storeTasks.errorTitle')}
         copy={getErrorMessage(inboxQuery.error)}
         tone="error"
+        action={
+          <button
+            type="button"
+            className="control-button"
+            disabled={inboxQuery.isFetching}
+            onClick={() => void inboxQuery.refetch()}
+          >
+            <RefreshCw size={16} />
+            {inboxQuery.isFetching ? t('storeTasks.retryingAction') : t('storeTasks.retryAction')}
+          </button>
+        }
       />
     )
   }
