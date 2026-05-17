@@ -186,6 +186,14 @@ describe("AppConfigService", () => {
     expect(config.rateLimitMax).toBe(120);
   });
 
+  it("uses no trusted proxy hops by default outside production", () => {
+    const config = createConfig({
+      NODE_ENV: "development",
+    });
+
+    expect(config.trustProxyHops).toBe(0);
+  });
+
   it("requires explicit rate limit settings in production", () => {
     const config = createConfig({
       CORS_ALLOWED_ORIGINS: "https://admin.example.com",
@@ -198,6 +206,47 @@ describe("AppConfigService", () => {
     expect(() => config.rateLimitMax).toThrow(
       "RATE_LIMIT_MAX must be configured in production",
     );
+  });
+
+  it("requires explicit trusted proxy hops in production", () => {
+    const config = createConfig({
+      CORS_ALLOWED_ORIGINS: "https://admin.example.com",
+      NODE_ENV: "production",
+      RATE_LIMIT_MAX: "200",
+      RATE_LIMIT_WINDOW_MS: "60000",
+    });
+
+    expect(() => config.trustProxyHops).toThrow(
+      "TRUST_PROXY_HOPS must be configured in production",
+    );
+  });
+
+  it("parses trusted proxy hops as a non-negative integer", () => {
+    expect(
+      createConfig({
+        NODE_ENV: "production",
+        TRUST_PROXY_HOPS: "0",
+      }).trustProxyHops,
+    ).toBe(0);
+    expect(
+      createConfig({
+        NODE_ENV: "production",
+        TRUST_PROXY_HOPS: "1",
+      }).trustProxyHops,
+    ).toBe(1);
+
+    expect(() =>
+      createConfig({
+        NODE_ENV: "development",
+        TRUST_PROXY_HOPS: "-1",
+      }).trustProxyHops,
+    ).toThrow("TRUST_PROXY_HOPS must be a non-negative integer");
+    expect(() =>
+      createConfig({
+        NODE_ENV: "development",
+        TRUST_PROXY_HOPS: "1.5",
+      }).trustProxyHops,
+    ).toThrow("TRUST_PROXY_HOPS must be a non-negative integer");
   });
 
   it("requires authorization code flow and https provider endpoints in production", () => {

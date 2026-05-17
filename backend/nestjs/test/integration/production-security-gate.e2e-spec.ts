@@ -37,13 +37,17 @@ async function createSecurityApp(config: {
   corsAllowedOrigins: string[];
   rateLimitMax: number;
   rateLimitWindowMs: number;
+  trustProxyHops?: number;
 }): Promise<INestApplication> {
   const moduleRef = await Test.createTestingModule({
     imports: [SecurityTestModule],
   }).compile();
   const app = moduleRef.createNestApplication();
 
-  configureHttpSecurity(app, config as AppConfigService);
+  configureHttpSecurity(app, {
+    ...config,
+    trustProxyHops: config.trustProxyHops ?? 0,
+  } as AppConfigService);
   await app.init();
 
   return app;
@@ -153,6 +157,42 @@ describe("Production Security Gate V1-A", () => {
       expect(response.status).toBe(429);
       expect(response.body).toMatchObject({
         correlationId: "corr-rate-limit-spoof",
+        errorCode: "RATE_LIMIT_EXCEEDED",
+        message: "Rate limit exceeded",
+        path: "/api/security-test/ok",
+        statusCode: 429,
+      });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("separates forwarded clients only when a trusted proxy hop is configured", async () => {
+    const app = await createSecurityApp({
+      corsAllowedOrigins: ["http://localhost:5173"],
+      rateLimitMax: 1,
+      rateLimitWindowMs: 60000,
+      trustProxyHops: 1,
+    });
+
+    try {
+      await request(app.getHttpServer())
+        .get("/api/security-test/ok")
+        .set("x-forwarded-for", "198.51.100.1")
+        .expect(200);
+      await request(app.getHttpServer())
+        .get("/api/security-test/ok")
+        .set("x-forwarded-for", "198.51.100.2")
+        .expect(200);
+
+      const response = await request(app.getHttpServer())
+        .get("/api/security-test/ok")
+        .set("x-forwarded-for", "198.51.100.1")
+        .set("x-correlation-id", "corr-rate-limit-proxy");
+
+      expect(response.status).toBe(429);
+      expect(response.body).toMatchObject({
+        correlationId: "corr-rate-limit-proxy",
         errorCode: "RATE_LIMIT_EXCEEDED",
         message: "Rate limit exceeded",
         path: "/api/security-test/ok",
