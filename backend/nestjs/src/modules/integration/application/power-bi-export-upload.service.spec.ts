@@ -1,10 +1,15 @@
-import { Logger } from "@nestjs/common";
+import { HttpException, HttpStatus, Logger } from "@nestjs/common";
 import * as XLSX from "@e965/xlsx";
 import {
   POWER_BI_EXPORT_MAX_SHEET_COLUMNS,
   POWER_BI_EXPORT_MAX_SHEET_ROWS,
+  POWER_BI_EXPORT_PARSE_RETRY_AFTER_SECONDS,
   PowerBiExportUploadService,
 } from "./power-bi-export-upload.service";
+
+type PowerBiExportUploadServiceTestHooks = {
+  readSheetRows: jest.Mock<Promise<Array<Record<string, unknown>>>, []>;
+};
 
 function createWorkbookBuffer(rows: Array<Record<string, unknown>>): Buffer {
   const workbook = XLSX.utils.book_new();
@@ -13,7 +18,9 @@ function createWorkbookBuffer(rows: Array<Record<string, unknown>>): Buffer {
   return Buffer.from(XLSX.write(workbook, { bookType: "xlsx", type: "buffer" }));
 }
 
-function createService() {
+function createService(
+  config: { uploadParseMaxConcurrency?: number; uploadParseTimeoutMs?: number } = {},
+) {
   const databaseService = {
     query: jest.fn(async (sql: string) => {
       if (sql.includes("FROM ops.company c")) {
@@ -51,14 +58,20 @@ function createService() {
       job: { backend: "in-memory", jobId: null, queueName: null, jobType: "import_batch" },
     }),
   };
+  const appConfigService = {
+    uploadParseMaxConcurrency: config.uploadParseMaxConcurrency ?? 1,
+    uploadParseTimeoutMs: config.uploadParseTimeoutMs ?? 15000,
+  };
   const service = new PowerBiExportUploadService(
     databaseService as never,
     integrationRepository as never,
     integrationSourceRepository as never,
     integrationService as never,
+    appConfigService as never,
   );
 
   return {
+    appConfigService,
     databaseService,
     integrationRepository,
     integrationSourceRepository,
@@ -69,15 +82,112 @@ function createService() {
 
 describe("PowerBiExportUploadService", () => {
   let loggerErrorSpy: jest.SpyInstance;
+  let loggerLogSpy: jest.SpyInstance;
 
   beforeEach(() => {
     loggerErrorSpy = jest
       .spyOn(Logger.prototype, "error")
       .mockImplementation(() => undefined);
+    loggerLogSpy = jest
+      .spyOn(Logger.prototype, "log")
+      .mockImplementation(() => undefined);
   });
 
   afterEach(() => {
+    loggerLogSpy.mockRestore();
     loggerErrorSpy.mockRestore();
+  });
+
+  it("rejects concurrent Power BI parses with a retryable 503", async () => {
+    const { service } = createService({
+      uploadParseMaxConcurrency: 1,
+      uploadParseTimeoutMs: 1000,
+    });
+    let releaseParse: (() => void) | undefined;
+    const parseStarted = new Promise<void>((resolve) => {
+      (service as unknown as PowerBiExportUploadServiceTestHooks).readSheetRows = jest.fn(
+        async () => {
+          resolve();
+          await new Promise<void>((release) => {
+            releaseParse = release;
+          });
+          return [{ MagazaAdi: "Kadikoy", Ciro: 150000 }];
+        },
+      );
+    });
+
+    const firstUpload = service.upload({
+      sourceCode: "POWER_BI",
+      periodMonth: "2026-04",
+      actorUserId: "user-1",
+      storeFile: {
+        originalname: "store.xlsx",
+        buffer: createWorkbookBuffer([{ MagazaAdi: "Kadikoy", Ciro: 150000 }]),
+      },
+    });
+    await parseStarted;
+
+    let error: unknown;
+    try {
+      await service.upload({
+        sourceCode: "POWER_BI",
+        periodMonth: "2026-04",
+        actorUserId: "user-2",
+        storeFile: {
+          originalname: "store.xlsx",
+          buffer: createWorkbookBuffer([{ MagazaAdi: "Kadikoy", Ciro: 150000 }]),
+        },
+      });
+    } catch (caught) {
+      error = caught;
+    }
+
+    expect(error).toBeInstanceOf(HttpException);
+    expect((error as HttpException).getStatus()).toBe(HttpStatus.SERVICE_UNAVAILABLE);
+    expect((error as HttpException).getResponse()).toMatchObject({
+      message:
+        "Power BI export isleme kapasitesi dolu; lutfen kisa sure sonra tekrar deneyin",
+      retryAfterSeconds: POWER_BI_EXPORT_PARSE_RETRY_AFTER_SECONDS,
+    });
+
+    releaseParse?.();
+    await firstUpload;
+  });
+
+  it("times out slow Power BI parsing with a retryable 503", async () => {
+    const { service } = createService({
+      uploadParseMaxConcurrency: 1,
+      uploadParseTimeoutMs: 5,
+    });
+    (service as unknown as PowerBiExportUploadServiceTestHooks).readSheetRows = jest.fn(
+      async () =>
+        new Promise<Array<Record<string, unknown>>>((resolve) => {
+          setTimeout(() => resolve([{ MagazaAdi: "Kadikoy", Ciro: 150000 }]), 30);
+        }),
+    );
+
+    let error: unknown;
+    try {
+      await service.upload({
+        sourceCode: "POWER_BI",
+        periodMonth: "2026-04",
+        actorUserId: "user-1",
+        storeFile: {
+          originalname: "store.xlsx",
+          buffer: createWorkbookBuffer([{ MagazaAdi: "Kadikoy", Ciro: 150000 }]),
+        },
+      });
+    } catch (caught) {
+      error = caught;
+    }
+
+    expect(error).toBeInstanceOf(HttpException);
+    expect((error as HttpException).getStatus()).toBe(HttpStatus.SERVICE_UNAVAILABLE);
+    expect((error as HttpException).getResponse()).toMatchObject({
+      message:
+        "Power BI export dosyasi isleme suresi asildi; lutfen daha kucuk dosya yukleyin veya tekrar deneyin",
+      retryAfterSeconds: POWER_BI_EXPORT_PARSE_RETRY_AFTER_SECONDS,
+    });
   });
 
   it("rejects oversized Power BI export files before parsing", async () => {
@@ -191,6 +301,16 @@ describe("PowerBiExportUploadService", () => {
       periodMonth: "2026-04",
       mappingMode: "strict_external_id_map",
     });
+    const parseLog = loggerLogSpy.mock.calls
+      .map(([message]) => String(message))
+      .find((message) => message.includes("power_bi_export_upload.parse.completed"));
+    expect(parseLog).toBeDefined();
+    expect(parseLog).toContain('"fileRole":"store"');
+    expect(parseLog).toContain('"fileType":"xlsx"');
+    expect(parseLog).toContain('"fileSizeBytes"');
+    expect(parseLog).toContain('"parseDurationMs"');
+    expect(parseLog).toContain('"rowCount":1');
+    expect(parseLog).not.toContain("store.xlsx");
     expect(integrationService.createImportBatch).toHaveBeenCalledWith(
       expect.objectContaining({
         sourceCode: "POWER_BI",

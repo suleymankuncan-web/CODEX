@@ -188,6 +188,70 @@ describe("AppConfigService", () => {
     expect(config.rateLimitRedisPrefix).toBe("hr-axis:rate-limit");
   });
 
+  it("uses local upload parse guardrail defaults outside production", () => {
+    const config = createConfig({
+      NODE_ENV: "development",
+    });
+
+    expect(config.uploadParseMaxConcurrency).toBe(1);
+    expect(config.uploadParseTimeoutMs).toBe(15000);
+  });
+
+  it("accepts explicit upload parse guardrail configuration", () => {
+    const config = createConfig({
+      UPLOAD_PARSE_MAX_CONCURRENCY: "2",
+      UPLOAD_PARSE_TIMEOUT_MS: "30000",
+    });
+
+    expect(config.uploadParseMaxConcurrency).toBe(2);
+    expect(config.uploadParseTimeoutMs).toBe(30000);
+  });
+
+  it("requires explicit upload parse guardrails for broad production readiness", () => {
+    expect(() =>
+      createConfig({
+        NODE_ENV: "production",
+        READINESS_PROFILE: "broad-production",
+      }).uploadParseMaxConcurrency,
+    ).toThrow(
+      "UPLOAD_PARSE_MAX_CONCURRENCY must be configured when READINESS_PROFILE=broad-production",
+    );
+
+    expect(() =>
+      createConfig({
+        NODE_ENV: "production",
+        READINESS_PROFILE: "broad-production",
+        UPLOAD_PARSE_MAX_CONCURRENCY: "1",
+      }).uploadParseTimeoutMs,
+    ).toThrow(
+      "UPLOAD_PARSE_TIMEOUT_MS must be configured when READINESS_PROFILE=broad-production",
+    );
+
+    const config = createConfig({
+      NODE_ENV: "production",
+      READINESS_PROFILE: "broad-production",
+      UPLOAD_PARSE_MAX_CONCURRENCY: "1",
+      UPLOAD_PARSE_TIMEOUT_MS: "30000",
+    });
+
+    expect(config.uploadParseMaxConcurrency).toBe(1);
+    expect(config.uploadParseTimeoutMs).toBe(30000);
+  });
+
+  it("rejects invalid upload parse guardrails", () => {
+    expect(() =>
+      createConfig({
+        UPLOAD_PARSE_MAX_CONCURRENCY: "0",
+      }).uploadParseMaxConcurrency,
+    ).toThrow("UPLOAD_PARSE_MAX_CONCURRENCY must be a positive integer");
+
+    expect(() =>
+      createConfig({
+        UPLOAD_PARSE_TIMEOUT_MS: "100.5",
+      }).uploadParseTimeoutMs,
+    ).toThrow("UPLOAD_PARSE_TIMEOUT_MS must be a positive integer");
+  });
+
   it("accepts Redis rate limiting configuration", () => {
     const config = createConfig({
       RATE_LIMIT_BACKEND: "redis",

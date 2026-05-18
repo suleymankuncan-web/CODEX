@@ -37,6 +37,29 @@ export class AppConfigService {
     return value;
   }
 
+  private readPositiveInteger(key: string, fallback: string): number {
+    const value = Number(this.readString(key, fallback));
+
+    if (!Number.isInteger(value) || value <= 0) {
+      throw new Error(`${key} must be a positive integer`);
+    }
+
+    return value;
+  }
+
+  private readRequiredBroadProductionPositiveInteger(
+    key: string,
+    fallback: string,
+  ): number {
+    const value = this.readOptionalString(key);
+
+    if (this.isProduction && this.readinessProfile === "broad-production" && !value) {
+      throw new Error(`${key} must be configured when READINESS_PROFILE=broad-production`);
+    }
+
+    return this.readPositiveInteger(key, fallback);
+  }
+
   private readRequiredProductionNumber(key: string, fallback: string): number {
     const value = this.readOptionalString(key);
 
@@ -217,6 +240,20 @@ export class AppConfigService {
 
   get rateLimitRedisPrefix(): string {
     return this.readString("RATE_LIMIT_REDIS_PREFIX", "hr-axis:rate-limit");
+  }
+
+  get uploadParseMaxConcurrency(): number {
+    return this.readRequiredBroadProductionPositiveInteger(
+      "UPLOAD_PARSE_MAX_CONCURRENCY",
+      "1",
+    );
+  }
+
+  get uploadParseTimeoutMs(): number {
+    return this.readRequiredBroadProductionPositiveInteger(
+      "UPLOAD_PARSE_TIMEOUT_MS",
+      "15000",
+    );
   }
 
   get trustProxyHops(): number {
