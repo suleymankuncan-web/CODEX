@@ -37,6 +37,14 @@ This runbook is intentionally a skeleton. It gives the order, checks, and eviden
 - [ ] Real secrets are stored in the target environment or secret manager.
 - [ ] JSON source adapter remains disabled unless a real JSON sample payload has already been mapped and approved.
 
+### Manual Env Verification
+
+- [ ] Compare Render backend env names against the `Production Env Contract Guard` table in `docs/plans/environment-variable-inventory.md`.
+- [ ] Compare Vercel frontend env names against the `Production Env Contract Guard` table in `docs/plans/environment-variable-inventory.md`.
+- [ ] Do not copy values from Render, Vercel, Clerk, Supabase, or local shells into docs, PRs, chat, screenshots, or evidence.
+- [ ] Record only variable names, status, and owner in the deployment note.
+- [ ] Confirm any missing P0 variable has a dated Go / Conditional Go / No-Go decision before deploy starts.
+
 ## 2. Build And Release Gate
 
 Run from workspace root:

@@ -156,6 +156,19 @@ test('deployment runbook requires guarded commands and sanitized evidence', () =
   }
 })
 
+test('deployment runbook requires manual Render and Vercel env verification', () => {
+  for (const phrase of [
+    'Manual Env Verification',
+    'Production Env Contract Guard',
+    'Render',
+    'Vercel',
+    'Do not copy values',
+    'variable names, status, and owner',
+  ]) {
+    requireText(runbook, phrase)
+  }
+})
+
 test('render backend deploy runs database migrations before starting the api', () => {
   requireText(renderBlueprint, 'name: hr-axis-api')
   requireText(renderBlueprint, 'buildCommand: npm ci --include=dev && npm run db:migrate && npm run build')

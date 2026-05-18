@@ -205,3 +205,31 @@ bagimliliklari da kontrol eder; staging smoke ve DB kaniti icin asil hazirlik
 kontrolu budur.
 
 Smoke tamamlanmadan pilot gate acilmaz.
+
+## 8. Manual Env Verification
+
+Before a staging deploy is approved, compare environment variable names against
+`docs/plans/environment-variable-inventory.md` and its `Production Env Contract
+Guard` table.
+
+- Render backend: verify `NODE_ENV`, `DATABASE_URL`, `DB_SSL_MODE`,
+  `AUTH_MODE`, `AUTH_PROVIDER_KEY`, `ALLOW_MOCK_AUTH`,
+  `MIGRATIONS_HTTP_ENABLED`, `JWT_ISSUER`, `JWT_JWKS_URL`, `JWT_AUDIENCE`,
+  `AUTH_AUTHORIZATION_URL`, `AUTH_CLIENT_ID`, `AUTH_SCOPE`,
+  `AUTH_RESPONSE_TYPE`, `AUTH_TOKEN_URL`, `AUTH_CALLBACK_PATH`,
+  `AUTH_POST_LOGOUT_REDIRECT_PATH`, `CORS_ALLOWED_ORIGINS`,
+  `TRUST_PROXY_HOPS`, `RATE_LIMIT_BACKEND`, `RATE_LIMIT_WINDOW_MS`,
+  `RATE_LIMIT_MAX`, `QUEUE_BACKEND`, `UPLOAD_PARSE_MAX_CONCURRENCY`,
+  `UPLOAD_PARSE_TIMEOUT_MS`, `DAILY_CLOSURE_ACTOR_USER_ID`, and
+  `READINESS_PROFILE` are intentionally set or intentionally omitted for the
+  controlled-pilot profile.
+- Vercel frontend: verify `VITE_API_BASE_URL`, `VITE_AUTH_MODE`,
+  `VITE_AUTH_PROVIDER`, `VITE_CLERK_PUBLISHABLE_KEY`,
+  `VITE_CLERK_JWT_TEMPLATE`, and empty `VITE_BEARER_TOKEN`.
+- Clerk dashboard: verify the issuer, JWKS URL, audience/template, callback URL,
+  and post-logout URL match the backend/frontend env names above.
+- Supabase dashboard: verify the database connection target, backup capability,
+  and pooler mode without copying the connection string.
+
+Do not copy values from Render, Vercel, Clerk, Supabase, or local shells into
+docs, PRs, chat, screenshots, or evidence. Record only variable names, status, and owner.

@@ -36,6 +36,9 @@ Allowed sign-off states:
 - [ ] Target environment name is explicit: local, staging, pilot, or production.
 - [ ] `NODE_ENV=production` is used for production backend runtime.
 - [ ] Backend and frontend public origins are final for the target environment.
+- [ ] Manual Env Verification compares Render backend env names against `docs/plans/environment-variable-inventory.md`.
+- [ ] Manual Env Verification compares Vercel frontend env names against `docs/plans/environment-variable-inventory.md`.
+- [ ] Manual Env Verification records only variable names, status, and owner. Do not copy values from Render, Vercel, Clerk, Supabase, local shells, or secret managers.
 - [ ] `JWT_JWKS_URL` is configured for real IdP verification, or production has an explicit non-default `JWT_SECRET` only for an approved non-JWKS mode.
 - [ ] Production never uses `JWT_SECRET=change-me`.
 - [ ] `CORS_ALLOWED_ORIGINS` is explicitly configured and contains only approved frontend origins.

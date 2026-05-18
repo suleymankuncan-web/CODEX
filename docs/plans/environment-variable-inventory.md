@@ -13,6 +13,50 @@ No target environment should be approved until every P0 variable in this documen
 
 Do not store real values in this document. Store only names, owners, purpose, required status, and source of truth.
 
+## Production Env Contract Guard
+
+This table is the machine-checked minimum contract for production-like environments.
+Do not copy values into evidence. Record only variable names, status, and owner.
+
+| Variable | Owner | Runtime location | Classification | Production requirement | Local/default value |
+| --- | --- | --- | --- | --- | --- |
+| `NODE_ENV` | Platform owner | Render backend env | Internal | Must be `production` for production-like backend runtime so fail-closed behavior is active. | `development` |
+| `DATABASE_URL` | Backend/Data owner | Render backend env | Secret | Must point to the target Supabase/PostgreSQL database, never local development. | Local example uses disposable local PostgreSQL. |
+| `DB_SSL_MODE` | Backend/Data owner | Render backend env | Internal | Must match the provider-required database SSL mode; Supabase/Render staging uses `require`. | `disable` |
+| `AUTH_MODE` | Auth owner | Render backend env | Internal | Must be `jwt` for real environments. | `mock` |
+| `AUTH_PROVIDER_KEY` | Auth owner | Render backend env | Public | Must match the provider namespace used in `ops.user_account.auth_provider`; Clerk environments use `clerk`. | `oidc` |
+| `ALLOW_MOCK_AUTH` | Auth owner | Render backend env | Internal | Must be `false` or unset in production-like environments. | `true` |
+| `MIGRATIONS_HTTP_ENABLED` | Backend/Data owner | Render backend env | Internal | Must remain disabled in production; migrations run through CLI/CI, not HTTP. | `true` locally, forced disabled when `NODE_ENV=production`. |
+| `CORS_ALLOWED_ORIGINS` | Backend/Frontend owner | Render backend env | Public | Must list explicit HTTPS frontend origins; `*` is forbidden in production. | `http://localhost:5173` |
+| `TRUST_PROXY_HOPS` | Platform owner | Render backend env | Internal | Must match the target reverse-proxy path; Render staging uses `1`. | `0` |
+| `RATE_LIMIT_WINDOW_MS` | Backend owner | Render backend env | Internal | Must be explicit for the environment. | `60000` |
+| `RATE_LIMIT_MAX` | Backend owner | Render backend env | Internal | Must be explicit for the environment. | `120` |
+| `RATE_LIMIT_BACKEND` | Backend/Platform owner | Render backend env | Internal | Use `redis` for broad production; `memory` is controlled-pilot only with written risk acceptance. | `memory` |
+| `RATE_LIMIT_REDIS_PREFIX` | Backend/Platform owner | Render backend env | Internal | Must be stable and environment-specific when Redis rate limiting is enabled. | `hr-axis:rate-limit` |
+| `QUEUE_BACKEND` | Backend/Platform owner | Render backend env | Internal | Use `bullmq` before broad production durable background processing. | `in-memory` |
+| `REDIS_URL` | Platform owner | Render backend env | Secret | Required when `QUEUE_BACKEND=bullmq` or `RATE_LIMIT_BACKEND=redis`. | Local Redis URL. |
+| `UPLOAD_PARSE_MAX_CONCURRENCY` | Backend owner | Render backend env | Internal | Must be explicit before broad production upload/import windows. | `1` |
+| `UPLOAD_PARSE_TIMEOUT_MS` | Backend owner | Render backend env | Internal | Must be explicit before broad production upload/import windows. | `15000` |
+| `READINESS_PROFILE` | Release operator | Render backend env | Internal | Keep `controlled-pilot` until broad production is approved. | `controlled-pilot` |
+| `JWT_ISSUER` | Auth owner | Render backend env | Public | Must exactly match the Clerk issuer. | Local mock issuer. |
+| `JWT_AUDIENCE` | Auth owner | Render backend env | Public | Must match the backend API audience accepted by Clerk tokens. | `store-ops-api` |
+| `JWT_JWKS_URL` | Auth owner | Render backend env | Public | Required for Clerk/JWKS verification in real environments. | Empty in local example. |
+| `JWT_SECRET` | Auth owner | Render backend env | Secret | Must be empty with JWKS or non-default only for an approved non-JWKS mode. | `change-me` local placeholder. |
+| `AUTH_AUTHORIZATION_URL` | Auth owner | Render backend env | Public | Must be the real provider authorization URL exposed by auth bootstrap. | Empty in local example. |
+| `AUTH_CLIENT_ID` | Auth owner | Render backend env | Public | Must match the real Clerk browser/client id when bootstrap exposes auth metadata. | Empty in local example. |
+| `AUTH_SCOPE` | Auth owner | Render backend env | Public | Must include `openid profile email` unless provider approval changes scope. | `openid profile email` |
+| `AUTH_RESPONSE_TYPE` | Auth owner | Render backend env | Public | Must be `code` for PKCE login. | `code` |
+| `AUTH_TOKEN_URL` | Auth owner | Render backend env | Public | Must be the real provider token URL for PKCE exchange. | Empty in local example. |
+| `AUTH_CALLBACK_PATH` | Auth owner | Render backend env | Public | Must match the frontend/provider callback registration. | `/auth/callback` |
+| `AUTH_POST_LOGOUT_REDIRECT_PATH` | Auth owner | Render backend env | Public | Must match provider post-logout registration. | `/auth/login` |
+| `VITE_API_BASE_URL` | Frontend owner | Vercel frontend env | Public | Must point to the target backend `/api` URL. | `/api` |
+| `VITE_AUTH_MODE` | Frontend/Auth owner | Vercel frontend env | Public | Must be `bearer` for real environments. | `mock` |
+| `VITE_AUTH_PROVIDER` | Frontend/Auth owner | Vercel frontend env | Public | Must be `clerk` when Clerk owns browser auth. | `oidc` |
+| `VITE_BEARER_TOKEN` | Frontend/Auth owner | Vercel frontend env | Secret | Must stay empty in production and committed examples. | Empty. |
+| `VITE_CLERK_PUBLISHABLE_KEY` | Frontend/Auth owner | Vercel frontend env | Public | Required when `VITE_AUTH_PROVIDER=clerk`; publishable key only. | Empty in local example. |
+| `VITE_CLERK_JWT_TEMPLATE` | Frontend/Auth owner | Vercel frontend env | Public | Set only when backend audience verification requires a Clerk JWT template. | Empty in local example. |
+| `DAILY_CLOSURE_ACTOR_USER_ID` | Backend owner | Render backend env | Secret | Required only if daily closure automation is enabled; must identify a real service/operator actor. | Local seed actor placeholder. |
+
 ## Backend Runtime Variables
 
 These values are read by `backend/nestjs/src/shared/app-config.service.ts`.
