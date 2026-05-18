@@ -25,6 +25,10 @@ type UploadFile = {
 };
 
 type ExportRow = Record<string, unknown>;
+const PARSE_SLOT_CLEANUP_PROMISE = Symbol("parseSlotCleanupPromise");
+type ParseSlotCleanupCarrier = {
+  [PARSE_SLOT_CLEANUP_PROMISE]?: Promise<void>;
+};
 type PeriodType = "daily" | "weekly" | "monthly" | "custom";
 
 type PeriodBounds = {
@@ -334,10 +338,22 @@ export class PowerBiExportUploadService {
     }
 
     this.activeParseSlots += 1;
+    let releaseSlotImmediately = true;
     try {
       return await this.withParseTimeout(operation);
+    } catch (error) {
+      const cleanupPromise = this.getParseSlotCleanupPromise(error);
+      if (cleanupPromise) {
+        releaseSlotImmediately = false;
+        void cleanupPromise.finally(() => {
+          this.releaseParseSlot();
+        });
+      }
+      throw error;
     } finally {
-      this.activeParseSlots = Math.max(0, this.activeParseSlots - 1);
+      if (releaseSlotImmediately) {
+        this.releaseParseSlot();
+      }
     }
   }
 
@@ -351,6 +367,10 @@ export class PowerBiExportUploadService {
 
     try {
       return await new Promise<T>((resolve, reject) => {
+        const operationPromise = Promise.resolve().then(() =>
+          operation(abortController.signal),
+        );
+
         timeout = setTimeout(() => {
           if (settled) {
             return;
@@ -358,30 +378,38 @@ export class PowerBiExportUploadService {
 
           settled = true;
           abortController.abort();
+          const timeoutError = this.buildRetryableParseException(
+            "Power BI export dosyasi isleme suresi asildi; lutfen daha kucuk dosya yukleyin veya tekrar deneyin",
+          );
           reject(
-            this.buildRetryableParseException(
-              "Power BI export dosyasi isleme suresi asildi; lutfen daha kucuk dosya yukleyin veya tekrar deneyin",
+            this.withParseSlotCleanup(
+              timeoutError,
+              operationPromise.then(
+                () => undefined,
+                () => undefined,
+              ),
             ),
           );
         }, timeoutMs);
 
-        operation(abortController.signal)
-          .then((result) => {
+        operationPromise.then(
+          (result) => {
             if (settled) {
               return;
             }
 
             settled = true;
             resolve(result);
-          })
-          .catch((error) => {
+          },
+          (error) => {
             if (settled) {
               return;
             }
 
             settled = true;
             reject(error);
-          });
+          },
+        );
       });
     } finally {
       if (timeout) {
@@ -398,6 +426,29 @@ export class PowerBiExportUploadService {
       },
       HttpStatus.SERVICE_UNAVAILABLE,
     );
+  }
+
+  private releaseParseSlot(): void {
+    this.activeParseSlots = Math.max(0, this.activeParseSlots - 1);
+  }
+
+  private withParseSlotCleanup(
+    error: HttpException,
+    cleanupPromise: Promise<void>,
+  ): HttpException {
+    Object.defineProperty(error, PARSE_SLOT_CLEANUP_PROMISE, {
+      enumerable: false,
+      value: cleanupPromise,
+    });
+    return error;
+  }
+
+  private getParseSlotCleanupPromise(error: unknown): Promise<void> | undefined {
+    if (typeof error !== "object" || error === null) {
+      return undefined;
+    }
+
+    return (error as ParseSlotCleanupCarrier)[PARSE_SLOT_CLEANUP_PROMISE];
   }
 
   private async readSheetRows(
@@ -466,13 +517,18 @@ export class PowerBiExportUploadService {
       };
 
       const abortHandler = () => {
-        void worker.terminate();
-        settle(() =>
-          reject(
-            this.buildRetryableParseException(
-              "Power BI export dosyasi isleme suresi asildi; lutfen daha kucuk dosya yukleyin veya tekrar deneyin",
-            ),
-          ),
+        if (settled) {
+          return;
+        }
+
+        settled = true;
+        signal.removeEventListener("abort", abortHandler);
+        const timeoutError = this.buildRetryableParseException(
+          "Power BI export dosyasi isleme suresi asildi; lutfen daha kucuk dosya yukleyin veya tekrar deneyin",
+        );
+        void worker.terminate().then(
+          () => reject(timeoutError),
+          () => reject(timeoutError),
         );
       };
 

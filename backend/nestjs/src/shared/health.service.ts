@@ -74,11 +74,15 @@ export class HealthService {
   }
 
   private async checkRedis(): Promise<DependencyCheck> {
-    if (this.appConfigService.queueBackend !== "bullmq") {
+    const queueRequiresRedis = this.appConfigService.queueBackend === "bullmq";
+    const rateLimitRequiresRedis = this.appConfigService.rateLimitBackend === "redis";
+
+    if (!queueRequiresRedis && !rateLimitRequiresRedis) {
       return {
         status: "skipped",
         latencyMs: 0,
-        message: "Redis health check skipped because queue backend is not bullmq",
+        message:
+          "Redis health check skipped because queue backend is not bullmq and rate limit backend is not redis",
       };
     }
 

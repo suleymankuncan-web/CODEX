@@ -18,12 +18,14 @@ import { HealthService } from "./health.service";
 function createService(input: {
   databaseQuery?: jest.Mock;
   queueBackend?: "in-memory" | "bullmq";
+  rateLimitBackend?: "memory" | "redis";
   redisUrl?: string;
 }) {
   return new HealthService(
     {
       appName: "store-ops-backend",
       queueBackend: input.queueBackend ?? "in-memory",
+      rateLimitBackend: input.rateLimitBackend ?? "memory",
       redisUrl: input.redisUrl ?? "redis://localhost:6379",
     } as never,
     {
@@ -64,9 +66,39 @@ describe("HealthService", () => {
     });
     expect(result.checks.redis).toMatchObject({
       status: "skipped",
-      message: "Redis health check skipped because queue backend is not bullmq",
+      message:
+        "Redis health check skipped because queue backend is not bullmq and rate limit backend is not redis",
     });
     expect(redisConstructorMock).not.toHaveBeenCalled();
+  });
+
+  it("checks Redis when Redis-backed rate limiting is enabled with an in-memory queue", async () => {
+    redisConnectMock.mockResolvedValue(undefined);
+    redisPingMock.mockResolvedValue("PONG");
+    redisQuitMock.mockResolvedValue("OK");
+    const service = createService({
+      queueBackend: "in-memory",
+      rateLimitBackend: "redis",
+      redisUrl: "redis://cache.example.internal:6379",
+    });
+
+    const result = await service.getHealth();
+
+    expect(result.status).toBe("ok");
+    expect(result.queue).toEqual({
+      backend: "in-memory",
+      durable: false,
+      redisRequired: false,
+      status: "process-local",
+      message:
+        "In-memory queue is process-local; acceptable for local or controlled pilot only.",
+    });
+    expect(result.checks.redis.status).toBe("ok");
+    expect(redisConstructorMock).toHaveBeenCalledWith("redis://cache.example.internal:6379", {
+      maxRetriesPerRequest: 1,
+      enableReadyCheck: false,
+      lazyConnect: true,
+    });
   });
 
   it("reports durable queue mode when BullMQ Redis health is ok", async () => {

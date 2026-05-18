@@ -232,7 +232,7 @@ Conditional Go:
 No-Go:
 
 - source or restore target cannot be confirmed,
-- Supabase plan backup capability is unknown,
+- Supabase managed restore mode is selected and plan backup capability is unknown,
 - PITR is required by the RPO but is not enabled or not approved,
 - restore-to-new-project is required but no disposable project/cost approval exists,
 - restore target may be production,

@@ -2,17 +2,19 @@ import "reflect-metadata";
 import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { WorkerModule } from "./worker.module";
+import { AppConfigService } from "./shared/app-config.service";
 import {
   ObservabilityService,
   resolveNestLogLevels,
 } from "./shared/observability/observability.service";
 
 async function bootstrap() {
-  const app = await NestFactory.createApplicationContext(WorkerModule, {
-    logger: resolveNestLogLevels(process.env.LOG_LEVEL),
-  });
+  const app = await NestFactory.createApplicationContext(WorkerModule);
   const logger = new Logger("WorkerBootstrap");
   const observabilityService = app.get(ObservabilityService);
+  const config = app.get(AppConfigService);
+
+  app.useLogger(resolveNestLogLevels(config.logLevel));
 
   observabilityService.installProcessHandlers();
   observabilityService.logStartupState("worker");

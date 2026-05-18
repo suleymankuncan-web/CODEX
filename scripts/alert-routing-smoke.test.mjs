@@ -142,6 +142,38 @@ test('alert routing smoke fails when backend health signal is missing alertable 
   )
 })
 
+test('alert routing smoke fails when backend observability is degraded', async () => {
+  const evidence = await runAlertRoutingSmoke({
+    docs: validDocs,
+    env: {
+      ALERT_SMOKE_BACKEND_URL: 'https://api.example.com',
+    },
+    fetchFn: async () =>
+      jsonResponse({
+        status: 'ok',
+        observability: {
+          status: 'degraded',
+        },
+        checks: {
+          database: {
+            status: 'ok',
+          },
+        },
+      }),
+  })
+
+  assert.equal(evidence.status, 'failed')
+  assert.ok(
+    evidence.checks.some(
+      (check) =>
+        check.name === 'backend health alert signal' &&
+        check.status === 'failed' &&
+        check.reason === 'backend observability is degraded' &&
+        check.observabilityStatus === 'degraded',
+    ),
+  )
+})
+
 test('alert routing smoke validates complete provider metadata without printing secret material', async () => {
   const evidence = await runAlertRoutingSmoke({
     docs: validDocs,
