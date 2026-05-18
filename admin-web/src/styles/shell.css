@@ -1,0 +1,211 @@
+.app-shell {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1.5rem;
+  border-right: 1px solid var(--line);
+  background: rgba(24, 33, 39, 0.95);
+  color: #f7f1e6;
+  padding: 2rem 1.25rem;
+}
+
+.brand-block {
+  display: grid;
+  gap: 1rem;
+}
+
+.brand-kicker,
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.brand-block h1,
+.hero-title,
+.panel h3,
+.metric-card h3,
+.screen-state h2 {
+  margin: 0;
+  line-height: 1.04;
+  letter-spacing: -0.04em;
+}
+
+.brand-block h1 {
+  font-size: 2.25rem;
+}
+
+.brand-block p,
+.sidebar-note p,
+.panel-copy,
+.hero-copy,
+.screen-state p {
+  margin: 0;
+  color: rgba(247, 241, 230, 0.72);
+}
+
+.nav-stack {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  border: 1px solid rgba(247, 241, 230, 0.12);
+  border-radius: 999px;
+  padding: 0.9rem 1rem;
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.nav-link:hover,
+.nav-link:focus-visible {
+  transform: translateX(4px);
+  border-color: rgba(247, 241, 230, 0.28);
+  background: rgba(247, 241, 230, 0.08);
+  outline: none;
+}
+
+.nav-link-active {
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.24), rgba(247, 241, 230, 0.08));
+  border-color: rgba(15, 118, 110, 0.6);
+}
+
+.nav-link-disabled {
+  opacity: 0.58;
+}
+
+.nav-link-disabled em {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-style: normal;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sidebar-note {
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(247, 241, 230, 0.12);
+  background: rgba(247, 241, 230, 0.06);
+  padding: 1rem;
+}
+
+.sidebar-note span {
+  display: inline-flex;
+  margin-bottom: 0.6rem;
+  border-radius: 999px;
+  background: rgba(247, 241, 230, 0.12);
+  padding: 0.35rem 0.65rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.main-panel {
+  display: grid;
+  gap: 1.5rem;
+  padding: 1.5rem;
+}
+
+.topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--line);
+  background: rgba(255, 251, 244, 0.66);
+  box-shadow: var(--shadow);
+  padding: 1.25rem 1.4rem;
+  backdrop-filter: blur(14px);
+}
+
+.topbar-cluster {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.topbar-copy {
+  margin: 0.3rem 0 0;
+  color: var(--surface-muted);
+}
+
+.env-chip,
+.accent-chip,
+.status-pill,
+.inline-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+}
+
+.env-chip {
+  border: 1px solid var(--line);
+  background: rgba(255, 251, 244, 0.92);
+  padding: 0.7rem 0.85rem;
+}
+
+.language-toggle {
+  display: inline-flex;
+  align-items: center;
+  min-height: 46px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 251, 244, 0.92);
+  padding: 0.18rem;
+}
+
+.language-toggle-button {
+  min-width: 44px;
+  min-height: 38px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--surface-muted);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  letter-spacing: 0;
+}
+
+.language-toggle-button:hover,
+.language-toggle-button:focus-visible {
+  background: rgba(15, 118, 110, 0.1);
+  color: var(--surface-ink);
+  outline: none;
+}
+
+.language-toggle-button:focus-visible {
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.18);
+}
+
+.language-toggle-button-active {
+  background: var(--accent);
+  color: #fffaf1;
+}
+
+.env-chip-warning {
+  border-color: rgba(185, 95, 24, 0.36);
+  background: rgba(255, 244, 235, 0.92);
+  color: var(--warning);
+}

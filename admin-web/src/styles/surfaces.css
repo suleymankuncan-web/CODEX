@@ -1,0 +1,251 @@
+.page-stack {
+  display: grid;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+.hero-panel,
+.panel,
+.metric-card,
+.screen-state,
+.queue-row,
+.empty-card {
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(14px);
+}
+
+.hero-panel,
+.panel,
+.screen-state {
+  padding: 1.35rem;
+  min-width: 0;
+}
+
+.hero-panel {
+  display: grid;
+  gap: 1.25rem;
+  background:
+    linear-gradient(140deg, rgba(255, 250, 241, 0.96), rgba(235, 245, 241, 0.88)),
+    var(--surface);
+}
+
+.hero-panel > div,
+.store-shell-header > div {
+  min-width: 0;
+}
+
+.hero-title {
+  overflow-wrap: anywhere;
+}
+
+.hero-panel-detail {
+  background:
+    linear-gradient(140deg, rgba(255, 250, 241, 0.96), rgba(248, 232, 221, 0.88)),
+    var(--surface);
+}
+
+.hero-title {
+  max-width: 12ch;
+  font-size: clamp(2rem, 3vw, 3.3rem);
+}
+
+.hero-copy {
+  max-width: 64ch;
+  color: var(--surface-muted);
+}
+
+.hero-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+}
+
+.store-home-language-control {
+  display: inline-flex;
+  align-items: center;
+}
+
+.accent-chip {
+  justify-content: space-between;
+  min-width: 150px;
+  border: 1px solid rgba(15, 118, 110, 0.24);
+  background: rgba(255, 255, 255, 0.58);
+  padding: 0.75rem 0.9rem;
+}
+
+.accent-chip span {
+  color: var(--surface-muted);
+}
+
+.accent-chip strong {
+  font-size: 1rem;
+}
+
+.metric-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  min-width: 0;
+}
+
+.metric-card {
+  padding: 1.15rem;
+}
+
+.metric-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.9rem;
+  border-radius: 50%;
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.metric-card h3 {
+  font-size: 1.1rem;
+  margin-top: 0.25rem;
+}
+
+.metric-card p {
+  margin: 0.35rem 0 0;
+  color: var(--surface-muted);
+  font-size: 0.92rem;
+}
+
+.metric-value {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+}
+
+.metric-card-calm .metric-icon,
+.status-pill-calm,
+.status-bar-fill-calm,
+.inline-state-calm {
+  background: var(--calm-soft);
+  color: var(--calm);
+}
+
+.metric-card-warning .metric-icon,
+.status-pill-warning,
+.status-bar-fill-warning,
+.inline-state-warning {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.metric-card-accent .metric-icon,
+.status-pill-accent,
+.status-bar-fill-accent,
+.inline-state-accent {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.metric-card-danger .metric-icon,
+.status-pill-danger,
+.status-bar-fill-danger,
+.inline-state-danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.status-pill-neutral,
+.status-bar-fill-neutral,
+.inline-state-neutral {
+  background: var(--neutral-soft);
+  color: var(--surface-ink);
+}
+
+.status-pill,
+.inline-state {
+  padding: 0.38rem 0.62rem;
+}
+
+.two-up-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 0;
+}
+
+.panel-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.panel-heading-spread {
+  align-items: end;
+}
+
+.panel h3 {
+  font-size: 1.45rem;
+}
+
+.key-grid,
+.reconciliation-grid {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.key-item,
+.reconciliation-stat,
+.dependency-card,
+.detail-row {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.56);
+  padding: 0.95rem 1rem;
+}
+
+.key-item span,
+.reconciliation-stat span,
+.detail-row span,
+.dependency-card span {
+  display: block;
+  color: var(--surface-muted);
+  font-size: 0.84rem;
+  margin-bottom: 0.25rem;
+}
+
+.key-item strong,
+.reconciliation-stat strong,
+.detail-row strong,
+.dependency-card strong {
+  display: block;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.status-bar {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.85rem;
+}
+
+.status-bar-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.92rem;
+}
+
+.status-bar-track {
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(24, 33, 39, 0.08);
+  height: 0.72rem;
+}
+
+.status-bar-fill {
+  height: 100%;
+  border-radius: inherit;
+}
