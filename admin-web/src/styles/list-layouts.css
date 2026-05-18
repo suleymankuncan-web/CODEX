@@ -1,0 +1,46 @@
+.action-cluster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+}
+
+.heading-action-cluster {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.dependency-list {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.dependency-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.6rem;
+  border-radius: 50%;
+  width: 2.15rem;
+  height: 2.15rem;
+  background: rgba(24, 33, 39, 0.07);
+}
+
+.detail-bottom-grid {
+  align-items: start;
+}
+
+.stacked-row,
+.timeline-item {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.56);
+  padding: 0.95rem 1rem;
+}
+
+.stacked-row p,
+.timeline-item p {
+  margin: 0.4rem 0 0;
+}
