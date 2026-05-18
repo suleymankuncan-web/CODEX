@@ -111,6 +111,7 @@ type RequestFormErrors = {
   resubmit?: unknown
   resubmitVisible?: boolean
 }
+type StoreRequestFeedbackTone = 'error' | 'success'
 type StoreApprovalsPersona = 'storeManager' | 'regionManager' | 'readOnly'
 type StoreApprovalsLedgerPanel =
   | 'targetRequest'
@@ -1566,7 +1567,9 @@ function TargetApprovalLedger(input: {
       )}
 
       {input.approvalNotice ? (
-        <p className="store-approvals-ledger-row-note">{input.approvalNotice}</p>
+        <StoreRequestFeedback tone="success" className="store-approvals-ledger-feedback">
+          {input.approvalNotice}
+        </StoreRequestFeedback>
       ) : null}
     </section>
   )
@@ -1599,6 +1602,28 @@ function TargetAllocationBreakdown(input: {
         )
       })}
     </div>
+  )
+}
+
+function StoreRequestFeedback(input: {
+  children: ReactNode
+  className?: string
+  tone: StoreRequestFeedbackTone
+}) {
+  const role = input.tone === 'error' ? 'alert' : 'status'
+  const ariaLive = input.tone === 'error' ? 'assertive' : 'polite'
+  const className = [
+    'store-request-feedback',
+    `store-request-feedback-${input.tone}`,
+    input.className,
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+  return (
+    <p className={className} role={role} aria-live={ariaLive}>
+      {input.children}
+    </p>
   )
 }
 
@@ -1635,9 +1660,9 @@ function ReturnedRequestsPanel(input: {
       </div>
 
       {input.hasSellerCodeRequestsError || input.hasOffboardingRequestsError ? (
-        <div className="store-approvals-ledger-error">
+        <StoreRequestFeedback tone="error" className="store-approvals-ledger-feedback">
           {getErrorMessage(input.sellerCodeRequestsError ?? input.offboardingRequestsError)}
-        </div>
+        </StoreRequestFeedback>
       ) : returnedRequestCount === 0 ? (
         <EmptyState
           title={input.t('storeApprovals.returnedEmptyTitle')}
@@ -1957,10 +1982,14 @@ function TargetDistributionRequestForm(input: {
           </div>
 
           {input.errors.createVisible ? (
-            <p className="store-request-note">{getErrorMessage(input.errors.create)}</p>
+            <StoreRequestFeedback tone="error">
+              {getErrorMessage(input.errors.create)}
+            </StoreRequestFeedback>
           ) : null}
           {input.submission.notice ? (
-            <p className="store-request-note">{input.submission.notice}</p>
+            <StoreRequestFeedback tone="success">
+              {input.submission.notice}
+            </StoreRequestFeedback>
           ) : null}
         </div>
       )}
@@ -2181,12 +2210,20 @@ function SellerCodeRequestForm(input: {
           </div>
 
           {input.errors.createVisible ? (
-            <p className="store-request-note">{getErrorMessage(input.errors.create)}</p>
+            <StoreRequestFeedback tone="error">
+              {getErrorMessage(input.errors.create)}
+            </StoreRequestFeedback>
           ) : null}
           {input.errors.resubmitVisible ? (
-            <p className="store-request-note">{getErrorMessage(input.errors.resubmit)}</p>
+            <StoreRequestFeedback tone="error">
+              {getErrorMessage(input.errors.resubmit)}
+            </StoreRequestFeedback>
           ) : null}
-          {input.submission.notice ? <p className="store-request-note">{input.submission.notice}</p> : null}
+          {input.submission.notice ? (
+            <StoreRequestFeedback tone="success">
+              {input.submission.notice}
+            </StoreRequestFeedback>
+          ) : null}
         </div>
       )}
     </article>
@@ -2316,12 +2353,20 @@ function OffboardingRequestForm(input: {
           </div>
 
           {input.errors.createVisible ? (
-            <p className="store-request-note">{getErrorMessage(input.errors.create)}</p>
+            <StoreRequestFeedback tone="error">
+              {getErrorMessage(input.errors.create)}
+            </StoreRequestFeedback>
           ) : null}
           {input.errors.resubmitVisible ? (
-            <p className="store-request-note">{getErrorMessage(input.errors.resubmit)}</p>
+            <StoreRequestFeedback tone="error">
+              {getErrorMessage(input.errors.resubmit)}
+            </StoreRequestFeedback>
           ) : null}
-          {input.submission.notice ? <p className="store-request-note">{input.submission.notice}</p> : null}
+          {input.submission.notice ? (
+            <StoreRequestFeedback tone="success">
+              {input.submission.notice}
+            </StoreRequestFeedback>
+          ) : null}
         </div>
       )}
     </article>
