@@ -1,0 +1,36 @@
+.store-shell {
+  min-height: 100vh;
+  overflow-x: hidden;
+  padding: 1.5rem;
+  background:
+    radial-gradient(circle at top left, rgba(47, 111, 83, 0.14), transparent 28rem),
+    radial-gradient(circle at top right, rgba(15, 118, 110, 0.12), transparent 24rem),
+    linear-gradient(180deg, #eff5ef 0%, #e4ece4 100%);
+}
+
+.store-shell-rankings {
+  padding: 0;
+  background: #f6f3fb;
+}
+
+.store-shell-rankings .store-main {
+  gap: 0;
+}
+
+.store-shell-rankings .rankings-plum-page {
+  min-height: 100vh;
+  border: 0;
+  border-radius: 0;
+}
+
+.store-shell-store-me {
+  padding: 0;
+  background:
+    radial-gradient(circle at 8% 8%, rgba(124, 58, 237, 0.12), transparent 30rem),
+    radial-gradient(circle at 92% 4%, rgba(8, 145, 178, 0.13), transparent 24rem),
+    linear-gradient(145deg, #f8fbff 0%, #f2f5fb 46%, #edf2f8 100%);
+}
+
+.store-shell-store-me .store-main {
+  gap: 0;
+}
