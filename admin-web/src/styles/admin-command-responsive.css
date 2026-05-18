@@ -1,0 +1,43 @@
+@media (max-width: 760px) {
+  .admin-command-app,
+  .admin-command-app.admin-command-app-collapsed {
+    padding-top: 74px;
+    padding-left: 0;
+  }
+
+  .admin-command-sidebar {
+    inset: 0 0 auto 0;
+    width: 100%;
+    min-height: 74px;
+    flex-direction: row;
+    align-items: center;
+    overflow-x: auto;
+    padding: 10px 12px;
+  }
+
+  .admin-command-brand,
+  .admin-command-sidebar-toggle,
+  .admin-command-sidebar-footer {
+    display: none;
+  }
+
+  .admin-command-nav {
+    display: flex;
+    min-width: max-content;
+    gap: 8px;
+    overflow: visible;
+  }
+
+  .admin-command-nav-link {
+    min-height: 44px;
+    padding: 0 12px;
+    border: 1px solid var(--admin-command-line);
+    background: rgba(255, 255, 255, 0.72);
+  }
+
+  .admin-command-main,
+  .admin-command-app-collapsed .admin-command-main {
+    width: min(100%, 1180px);
+    padding: 18px 12px 32px;
+  }
+}
