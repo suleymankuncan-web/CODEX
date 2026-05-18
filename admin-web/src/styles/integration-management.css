@@ -1,0 +1,515 @@
+.integration-management-page {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.integration-management-hero,
+.integration-management-panel,
+.integration-management-metric,
+.integration-management-feedback,
+.integration-management-card,
+.integration-management-tabs,
+.integration-management-plan-card,
+.integration-management-evidence-card {
+  border: 1px solid var(--admin-command-line);
+  background: var(--admin-command-surface);
+  box-shadow: var(--admin-command-shadow);
+  backdrop-filter: blur(16px);
+}
+
+.integration-management-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1.1rem;
+  align-items: end;
+  border-radius: 28px;
+  padding: 1.35rem;
+}
+
+.integration-management-title {
+  max-width: 14ch;
+  margin: 0.35rem 0 0;
+  font-size: clamp(2rem, 3.6vw, 3.5rem);
+  line-height: 0.98;
+  letter-spacing: -0.05em;
+}
+
+.integration-management-copy {
+  max-width: 66ch;
+  margin: 0.7rem 0 0;
+  color: var(--admin-command-muted);
+}
+
+.integration-management-hero-actions,
+.integration-management-feedback,
+.integration-management-tabs,
+.integration-management-panel-head,
+.integration-management-card-head,
+.integration-management-evidence-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.integration-management-hero-actions {
+  justify-content: flex-end;
+  min-width: 280px;
+}
+
+.integration-management-chip {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--admin-command-line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  padding: 0 1rem;
+  color: var(--admin-command-ink);
+  font-size: 0.82rem;
+  font-weight: 900;
+  box-shadow: 0 10px 24px rgba(32, 24, 48, 0.05);
+}
+
+.integration-management-primary-button {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--admin-command-plum), #3765ea 58%, var(--admin-command-cyan));
+  color: #fff;
+  font-weight: 900;
+}
+
+.integration-management-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.integration-management-metric {
+  position: relative;
+  min-height: 100px;
+  overflow: hidden;
+  border-radius: 20px;
+  padding: 0.95rem;
+}
+
+.integration-management-metric span {
+  display: block;
+  color: var(--admin-command-muted);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.integration-management-metric strong {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 1.55rem;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.integration-management-metric p {
+  margin: 0.35rem 0 0;
+  color: var(--admin-command-muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.integration-management-metric-icon {
+  position: absolute;
+  right: 0.8rem;
+  top: 0.8rem;
+  display: inline-grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(115, 76, 232, 0.1);
+  color: var(--admin-command-plum);
+}
+
+.integration-management-metric-primary {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--admin-command-plum), #3765ea 58%, var(--admin-command-cyan));
+  color: #fff;
+}
+
+.integration-management-metric-primary span,
+.integration-management-metric-primary p {
+  color: rgba(255, 255, 255, 0.76);
+}
+
+.integration-management-feedback {
+  align-items: center;
+  border-radius: 20px;
+  padding: 0.9rem;
+}
+
+.integration-management-tabs {
+  overflow-x: auto;
+  border-radius: 18px;
+  padding: 0.4rem;
+}
+
+.integration-management-tab {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 0.55rem;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--admin-command-muted);
+  padding: 0 1rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.integration-management-tab strong {
+  min-width: 1.4rem;
+  border-radius: 999px;
+  background: rgba(115, 76, 232, 0.1);
+  color: var(--admin-command-plum);
+  padding: 0.16rem 0.42rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
+.integration-management-tab-active {
+  background: #fff;
+  color: var(--admin-command-ink);
+  box-shadow: 0 14px 34px rgba(32, 24, 48, 0.08);
+}
+
+.integration-management-panel {
+  border-radius: 28px;
+  padding: 1.15rem;
+}
+
+.integration-management-panel-head {
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.integration-management-panel h3 {
+  margin: 0;
+  font-size: 1.35rem;
+  letter-spacing: -0.03em;
+}
+
+.integration-management-panel-copy {
+  max-width: 72ch;
+  margin: 0.35rem 0 0;
+  color: var(--admin-command-muted);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.integration-management-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(300px, 0.85fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.integration-management-card {
+  border-radius: 22px;
+  padding: 1rem;
+}
+
+.integration-management-card-head {
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.integration-management-card h4,
+.integration-management-evidence-card h4 {
+  margin: 0;
+  font-size: 1rem;
+  letter-spacing: -0.02em;
+}
+
+.integration-management-card p,
+.integration-management-evidence-card p {
+  margin: 0.25rem 0 0;
+  color: var(--admin-command-muted);
+  font-size: 0.82rem;
+}
+
+.integration-management-card-icon {
+  display: inline-grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 2.5rem;
+  place-items: center;
+  border-radius: 14px;
+  background: rgba(115, 76, 232, 0.1);
+  color: var(--admin-command-plum);
+}
+
+.integration-management-form-grid,
+.integration-management-upload-pair,
+.integration-management-summary-grid,
+.integration-management-evidence-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.integration-management-upload-pair {
+  margin: 0.9rem 0;
+}
+
+.integration-management-upload-drop {
+  position: relative;
+  display: grid;
+  min-height: 128px;
+  place-items: center;
+  align-content: center;
+  gap: 0.35rem;
+  overflow: hidden;
+  border: 1px dashed rgba(115, 76, 232, 0.36);
+  border-radius: 18px;
+  background: rgba(115, 76, 232, 0.06);
+  color: var(--admin-command-plum);
+  padding: 1rem;
+  text-align: center;
+}
+
+.integration-management-upload-drop span {
+  max-width: 22ch;
+  overflow: hidden;
+  color: var(--admin-command-muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.integration-management-upload-drop input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+
+.integration-management-decision-card {
+  color: #fff;
+  background:
+    linear-gradient(135deg, #171421, rgba(115, 76, 232, 0.92) 64%, rgba(16, 169, 183, 0.88)),
+    #171421;
+}
+
+.integration-management-decision-card p,
+.integration-management-decision-card .eyebrow {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.integration-management-decision-list {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.integration-management-decision-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.72rem;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.integration-management-summary-grid {
+  margin-top: 1rem;
+}
+
+.integration-management-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: 1px solid var(--admin-command-line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  padding: 0 0.85rem;
+}
+
+.integration-management-search input {
+  width: min(100%, 260px);
+  border: 0;
+  background: transparent;
+  padding-inline: 0;
+}
+
+.integration-management-search input:focus-visible {
+  outline: none;
+}
+
+.integration-management-table-wrap {
+  overflow-x: auto;
+}
+
+.integration-management-table {
+  width: 100%;
+  min-width: 820px;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.integration-management-table th {
+  color: var(--admin-command-muted);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.integration-management-table th,
+.integration-management-table td {
+  border-bottom: 1px solid var(--admin-command-line);
+  padding: 0.72rem 0.55rem;
+  vertical-align: middle;
+}
+
+.integration-management-table td strong {
+  display: block;
+  font-weight: 900;
+}
+
+.integration-management-table td small {
+  display: block;
+  color: var(--admin-command-muted);
+  font-weight: 800;
+}
+
+.integration-management-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 42px;
+  color: var(--admin-command-ink);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.integration-management-toggle input {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--admin-command-cyan);
+}
+
+.integration-management-evidence-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.integration-management-evidence-card {
+  display: grid;
+  min-height: 150px;
+  align-content: space-between;
+  gap: 0.75rem;
+  border-radius: 22px;
+  padding: 1rem;
+}
+
+.integration-management-evidence-card strong {
+  color: var(--admin-command-plum);
+}
+
+.integration-management-evidence-detail {
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 1rem;
+}
+
+.integration-management-evidence-meta {
+  color: var(--admin-command-muted);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+}
+
+.integration-management-code-block {
+  overflow: auto;
+  max-height: 360px;
+  border: 1px solid rgba(36, 28, 50, 0.18);
+  border-radius: 18px;
+  background: rgba(23, 20, 33, 0.94);
+  color: #f8f5fb;
+  padding: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  line-height: 1.55;
+  white-space: pre;
+}
+
+.integration-management-queue-list {
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 1rem;
+}
+
+.integration-management-queue-row {
+  display: grid;
+  gap: 0.85rem;
+  border: 1px solid var(--admin-command-line);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.64);
+  padding: 1rem;
+}
+
+@media (max-width: 1040px) {
+  .integration-management-hero,
+  .integration-management-split {
+    grid-template-columns: 1fr;
+  }
+
+  .integration-management-hero-actions {
+    justify-content: flex-start;
+  }
+
+  .integration-management-metrics,
+  .integration-management-evidence-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .integration-management-hero,
+  .integration-management-panel,
+  .integration-management-card {
+    border-radius: 22px;
+    padding: 1rem;
+  }
+
+  .integration-management-title {
+    max-width: 100%;
+    font-size: 2rem;
+  }
+
+  .integration-management-hero-actions,
+  .integration-management-panel-head,
+  .integration-management-feedback {
+    width: 100%;
+  }
+
+  .integration-management-metrics,
+  .integration-management-form-grid,
+  .integration-management-upload-pair,
+  .integration-management-summary-grid,
+  .integration-management-evidence-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .integration-management-panel-head {
+    flex-direction: column;
+  }
+}
+
