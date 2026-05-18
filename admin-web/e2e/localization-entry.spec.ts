@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Page } from './test-fixtures'
 
 test('keeps language control in store settings and out of work surfaces', async ({ page }) => {
   await seedMockSession(page)

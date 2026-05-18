@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Page } from './test-fixtures'
 import { setStoredLocale } from './locale-test-utils'
 
 const companyId = '00000000-0000-0000-0000-000000000001'

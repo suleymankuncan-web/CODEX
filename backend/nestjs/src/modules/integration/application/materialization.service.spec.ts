@@ -1,5 +1,6 @@
 import { MaterializationService } from "./materialization.service";
 import { ExternalIdMappingService } from "./external-id-mapping.service";
+import { muteNestLogger } from "../../../../test/jest/mute-nest-logger";
 
 type QueryResponse<T> = {
   rowCount: number;
@@ -9,6 +10,16 @@ type QueryResponse<T> = {
 describe("MaterializationService", () => {
   const batchId = "00000000-0000-0000-0000-000000000001";
   const integrationSourceId = "00000000-0000-0000-0000-000000000002";
+  let restoreLogger: (() => void) | null = null;
+
+  beforeEach(() => {
+    restoreLogger = muteNestLogger(["error", "log"]);
+  });
+
+  afterEach(() => {
+    restoreLogger?.();
+    restoreLogger = null;
+  });
 
   function createDatabaseServiceMock(
     handler: (sql: string, params: unknown[]) => Promise<QueryResponse<unknown>>,
