@@ -190,6 +190,67 @@ describe("PowerBiExportUploadService", () => {
     });
   });
 
+  it("keeps the parse slot occupied until timed-out parsing cleanup finishes", async () => {
+    const { service } = createService({
+      uploadParseMaxConcurrency: 1,
+      uploadParseTimeoutMs: 5,
+    });
+    let releaseCleanup: (() => void) | undefined;
+    const parseStarted = new Promise<void>((resolve) => {
+      (service as unknown as PowerBiExportUploadServiceTestHooks).readSheetRows = jest.fn(
+        async () => {
+          resolve();
+          await new Promise<void>((release) => {
+            releaseCleanup = release;
+          });
+          return [{ MagazaAdi: "Kadikoy", Ciro: 150000 }];
+        },
+      );
+    });
+
+    const firstUpload = service.upload({
+      sourceCode: "POWER_BI",
+      periodMonth: "2026-04",
+      actorUserId: "user-1",
+      storeFile: {
+        originalname: "store.xlsx",
+        buffer: createWorkbookBuffer([{ MagazaAdi: "Kadikoy", Ciro: 150000 }]),
+      },
+    });
+    const firstUploadTimeout = expect(firstUpload).rejects.toMatchObject({
+      status: HttpStatus.SERVICE_UNAVAILABLE,
+      response: {
+        message:
+          "Power BI export dosyasi isleme suresi asildi; lutfen daha kucuk dosya yukleyin veya tekrar deneyin",
+        retryAfterSeconds: POWER_BI_EXPORT_PARSE_RETRY_AFTER_SECONDS,
+      },
+    });
+    await parseStarted;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    await firstUploadTimeout;
+
+    await expect(
+      service.upload({
+        sourceCode: "POWER_BI",
+        periodMonth: "2026-04",
+        actorUserId: "user-2",
+        storeFile: {
+          originalname: "store.xlsx",
+          buffer: createWorkbookBuffer([{ MagazaAdi: "Kadikoy", Ciro: 150000 }]),
+        },
+      }),
+    ).rejects.toMatchObject({
+      status: HttpStatus.SERVICE_UNAVAILABLE,
+      response: {
+        message:
+          "Power BI export isleme kapasitesi dolu; lutfen kisa sure sonra tekrar deneyin",
+        retryAfterSeconds: POWER_BI_EXPORT_PARSE_RETRY_AFTER_SECONDS,
+      },
+    });
+
+    releaseCleanup?.();
+  });
+
   it("rejects oversized Power BI export files before parsing", async () => {
     const { service } = createService();
     const oversizedBuffer = Buffer.alloc(9 * 1024 * 1024, 1);

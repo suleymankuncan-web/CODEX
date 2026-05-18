@@ -259,6 +259,19 @@ async function checkBackendHealthSignal({ backendApiBaseUrl, fetchFn, timeoutMs 
       }
     }
 
+    if (body.observability.status !== 'ok') {
+      return {
+        name: 'backend health alert signal',
+        status: 'failed',
+        url,
+        httpStatus: response.status,
+        reason: 'backend observability is degraded',
+        healthStatus: body.status,
+        databaseStatus: body.checks.database.status,
+        observabilityStatus: body.observability.status,
+      }
+    }
+
     return {
       name: 'backend health alert signal',
       status: 'passed',

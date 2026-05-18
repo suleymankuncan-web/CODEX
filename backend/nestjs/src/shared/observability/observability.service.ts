@@ -141,7 +141,7 @@ export class ObservabilityService {
     );
 
     if (status.status === "degraded") {
-      this.logger.warn(
+      this.logger.error(
         JSON.stringify({
           event: "observability.error_tracking.missing",
           runtime,

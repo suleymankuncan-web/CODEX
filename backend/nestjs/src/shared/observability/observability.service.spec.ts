@@ -90,7 +90,7 @@ describe("ObservabilityService", () => {
     expect(JSON.stringify(payload)).not.toContain("Bearer abc");
   });
 
-  it("marks broad production without a DSN as degraded and logs a startup warning", () => {
+  it("marks broad production without a DSN as degraded and logs a startup error", () => {
     const service = new ObservabilityService(
       createConfig({
         LOG_LEVEL: "warn",
@@ -114,8 +114,9 @@ describe("ObservabilityService", () => {
     service.logStartupState("api");
 
     expect(logSpy).toHaveBeenCalledTimes(1);
-    expect(warnSpy).toHaveBeenCalledTimes(1);
-    expect(warnSpy.mock.calls[0][0]).toContain(
+    expect(warnSpy).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    expect(errorSpy.mock.calls[0][0]).toContain(
       "ERROR_TRACKING_DSN is not configured",
     );
   });

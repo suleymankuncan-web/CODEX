@@ -8,11 +8,11 @@ import {
 } from "./shared/observability/observability.service";
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
-    logger: resolveNestLogLevels(process.env.LOG_LEVEL),
-  });
+  const app = await NestFactory.create(AppModule);
   const config = app.get(AppConfigService);
   const observabilityService = app.get(ObservabilityService);
+
+  app.useLogger(resolveNestLogLevels(config.logLevel));
 
   observabilityService.installProcessHandlers();
   observabilityService.logStartupState("api");
