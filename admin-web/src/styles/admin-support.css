@@ -1,0 +1,120 @@
+.lineage-chip-list {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.lineage-chip {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.lineage-chip span {
+  color: var(--surface-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.mapping-action {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--line);
+}
+
+.mapping-targets,
+.mapping-controls {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.mapping-controls {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.mapping-input,
+.mapping-select {
+  width: 100%;
+  min-width: 0;
+}
+
+.mapping-helper {
+  grid-column: 1 / -1;
+  color: var(--muted-ink);
+  font-size: 0.85rem;
+}
+
+.mapping-helper-error {
+  color: var(--danger);
+}
+
+.lineage-code {
+  display: block;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.timeline-item {
+  position: relative;
+  padding-left: 1.35rem;
+}
+
+.timeline-dot {
+  position: absolute;
+  top: 1.18rem;
+  left: 0.7rem;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.empty-card {
+  padding: 0;
+}
+
+.empty-card strong {
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.audit-source-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.audit-link-row {
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.audit-link-row:hover,
+.audit-link-row:focus-visible {
+  transform: translateY(-2px);
+  border-color: rgba(15, 118, 110, 0.3);
+  background: rgba(255, 255, 255, 0.88);
+  outline: none;
+}
+
+.shell-context-panel {
+  background:
+    linear-gradient(140deg, rgba(255, 250, 241, 0.96), rgba(238, 244, 255, 0.78)),
+    var(--surface);
+}
+
+.shell-notice {
+  margin-top: 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  padding: 0.95rem 1rem;
+  font-weight: 600;
+}
+
+.shell-notice-warning {
+  border-color: rgba(185, 95, 24, 0.28);
+  background: rgba(255, 244, 235, 0.92);
+  color: var(--warning);
+}
