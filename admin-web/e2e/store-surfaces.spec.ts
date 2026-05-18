@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from './test-fixtures'
 import { setStoredLocale } from './locale-test-utils'
 
 const demoStoreId = '00000000-0000-0000-0000-000000000100'

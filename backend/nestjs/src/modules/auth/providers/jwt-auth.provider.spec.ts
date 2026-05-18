@@ -1,11 +1,20 @@
 import { createServer, Server } from "http";
 import { exportJWK, generateKeyPair, SignJWT } from "jose";
+import { muteNestLogger } from "../../../../test/jest/mute-nest-logger";
 import { JwtAuthProvider } from "./jwt-auth.provider";
 
 describe("JwtAuthProvider", () => {
   let jwksServer: Server | null = null;
+  let restoreLogger: (() => void) | null = null;
+
+  beforeEach(() => {
+    restoreLogger = muteNestLogger(["warn"]);
+  });
 
   afterEach(async () => {
+    restoreLogger?.();
+    restoreLogger = null;
+
     if (jwksServer) {
       await new Promise<void>((resolve, reject) => {
         jwksServer?.close((error) => {

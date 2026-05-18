@@ -1,5 +1,6 @@
 import { AuthAuthorizationRepository } from "./auth-authorization.repository";
 import { AuthContextService } from "./auth-context.service";
+import { muteNestLogger } from "../../../test/jest/mute-nest-logger";
 
 describe("AuthContextService", () => {
   function buildAuthorizationRepository(input: {
@@ -485,6 +486,7 @@ describe("AuthContextService", () => {
   });
 
   it("falls back to provider roles and scopes outside production when DB lookup throws", async () => {
+    const restoreLogger = muteNestLogger(["warn"]);
     const service = new AuthContextService(
       { authMode: "mock", allowMockAuth: true } as never,
       buildAuthorizationRepository({ throwOnRoleAssignments: true }),
@@ -502,33 +504,38 @@ describe("AuthContextService", () => {
       { resolveUser: jest.fn() } as never,
     );
 
-    const user = await service.resolveUser({
-      headers: {
-        "x-user-id": "4e0cb8bc-8a19-4e1a-b812-3f5ab9d7d111",
-      },
-    });
+    try {
+      const user = await service.resolveUser({
+        headers: {
+          "x-user-id": "4e0cb8bc-8a19-4e1a-b812-3f5ab9d7d111",
+        },
+      });
 
-    expect(user).toEqual({
-      userId: "4e0cb8bc-8a19-4e1a-b812-3f5ab9d7d111",
-      roleCodes: ["STORE_MANAGER"],
-      scope: {
-        companyIds: [],
-        regionIds: [],
-        storeIds: [],
-      },
-      readScope: {
-        companyIds: [],
-        regionIds: [],
-        storeIds: [],
-      },
-      actionScope: {
+      expect(user).toEqual({
+        userId: "4e0cb8bc-8a19-4e1a-b812-3f5ab9d7d111",
+        roleCodes: ["STORE_MANAGER"],
+        scope: {
+          companyIds: [],
+          regionIds: [],
+          storeIds: [],
+        },
+        readScope: {
+          companyIds: [],
+          regionIds: [],
+          storeIds: [],
+        },
+        actionScope: {
+          assignedStoreIds: [],
+        },
         assignedStoreIds: [],
-      },
-      assignedStoreIds: [],
-    });
+      });
+    } finally {
+      restoreLogger();
+    }
   });
 
   it("fails closed in production when DB authorization lookup throws", async () => {
+    const restoreLogger = muteNestLogger(["error"]);
     const service = new AuthContextService(
       { authMode: "jwt", allowMockAuth: false, isProduction: true } as never,
       buildAuthorizationRepository({
@@ -558,13 +565,17 @@ describe("AuthContextService", () => {
       } as never,
     );
 
-    await expect(
-      service.resolveUser({
-        headers: {
-          authorization: "Bearer token",
-        },
-      }),
-    ).rejects.toThrow("Authorization context is unavailable");
+    try {
+      await expect(
+        service.resolveUser({
+          headers: {
+            authorization: "Bearer token",
+          },
+        }),
+      ).rejects.toThrow("Authorization context is unavailable");
+    } finally {
+      restoreLogger();
+    }
   });
 
   it("rejects mock auth when it is explicitly disabled", async () => {
