@@ -97,7 +97,7 @@ Open risk areas this plan must progress:
 | 9 | Performance Budget Pass | Merged (#239) | Slow critical routes under realistic load | No runtime deploy if scripts/docs only |
 | 10 | Supabase Boundary Guard | Merged (#238) | Accidental direct client/RLS exposure | No runtime deploy; main release check passed |
 | 11 | Env/Secret Drift Guard | Merged (#237) | Secret/public-env mistakes | No runtime deploy; main release check passed |
-| 12 | Final Go/No-Go Readiness Packet | In progress | Unclear launch decision | No |
+| 12 | Final Go/No-Go Readiness Packet | Merged (#240) | Unclear launch decision | No |
 
 ## Slice 1: Deployed Readiness Smoke
 
@@ -798,16 +798,17 @@ Open risk areas this plan must progress:
   - external alert/error-tracking destination or log-retention proof
   - Redis/BullMQ broad-production decision and health evidence
   - authenticated integration-admin upload smoke
+- Post-merge evidence tier:
+  - Tier A - controlled pilot expansion first: real staging auth/action smoke, role-specific protected route load smoke, authenticated integration-admin upload smoke.
+  - Tier B - broad-production/operational hardening: Supabase staging restore drill, external alert/error-tracking or log-retention proof, Redis/BullMQ broad-production decision and health evidence.
 - Local verification:
-  - `node --test scripts/production-readiness-decision-contract.test.mjs scripts/project-debt-ledger-consistency-contract.test.mjs` passed: 10 tests.
-  - `npm.cmd run test:scripts` passed: 233 tests.
+  - `node --test scripts/production-readiness-decision-contract.test.mjs scripts/project-debt-ledger-consistency-contract.test.mjs` passed: 11 tests.
+  - `npm.cmd run test:scripts` passed: 234 tests.
   - `npm.cmd run check:release` passed after installing worktree dependencies, including backend lint/test/build/audit and frontend build/Playwright/audit.
 
 ## Recommended Next Move
 
-Follow **Slice 12: Final Go/No-Go Readiness Packet** until it is merged.
-
-After that, do not open another local readiness guard by reflex. The next high-value work is one of the external evidence items named by the decision packet, or a narrow visible product-feel slice if those external inputs are not available.
+Do not open another local readiness guard by reflex. The next high-value work is one of the external evidence items named by the decision packet, starting with Tier A if controlled pilot expansion is the goal. If those external inputs are not available, use a narrow visible product-feel slice instead.
 
 ## Open Decisions
 

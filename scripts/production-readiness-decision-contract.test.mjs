@@ -18,6 +18,7 @@ const decision = readText(decisionPath)
 const currentState = readText('current-state.md')
 const activeNextActions = readText('docs/plans/active-next-actions.md')
 const debtLedger = readText('docs/plans/project-debt-ledger.md')
+const readinessProgress = readText('docs/superpowers/plans/2026-05-18-readiness-progress.md')
 
 test('production readiness decision records the final release posture', () => {
   for (const phrase of [
@@ -87,5 +88,25 @@ test('handoff and action docs link the production readiness decision', () => {
   for (const text of [currentState, activeNextActions, debtLedger]) {
     requireText(text, 'Production Readiness Decision Packet V1')
     requireText(text, decisionPath)
+  }
+})
+
+test('handoff docs keep post-merge readiness evidence tiers clear', () => {
+  requireText(currentState, '107cc561 Merge pull request #240')
+  requireText(currentState, 'PR #240 Final Go/No-Go Readiness Packet')
+  requireText(currentState, 'Main `Release Check` passed after PR #240.')
+  requireText(debtLedger, 'PR #240 merged')
+  requireText(readinessProgress, '| 12 | Final Go/No-Go Readiness Packet | Merged (#240) |')
+
+  for (const text of [currentState, activeNextActions]) {
+    requireText(text, 'There are six external evidence gaps')
+    requireText(text, 'Tier A - controlled pilot expansion first')
+    requireText(text, 'Real staging auth/action smoke with sanitized evidence.')
+    requireText(text, 'Protected route load smoke with role-specific staging bearer tokens.')
+    requireText(text, 'Authenticated integration-admin upload smoke with a safe sample file.')
+    requireText(text, 'Tier B - broad-production/operational hardening')
+    requireText(text, 'Supabase staging restore drill into an approved disposable target.')
+    requireText(text, 'Alert/error-tracking destination proof or accepted log-retention evidence.')
+    requireText(text, 'Broad-production Redis/BullMQ decision and health evidence')
   }
 })

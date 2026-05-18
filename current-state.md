@@ -27,12 +27,12 @@ Primary app endpoints:
 ## Latest Git State
 
 As of 2026-05-18, `origin/main` is verified through the production readiness
-load-smoke merge.
+decision packet merge.
 
 Latest merge on main:
 
 ```text
-c69b7cf2 Merge pull request #239 from suleymankuncan-web/codex/performance-budget-pass
+107cc561 Merge pull request #240 from suleymankuncan-web/codex/final-readiness-packet
 ```
 
 The production readiness roadmap is merged through:
@@ -49,9 +49,10 @@ The production readiness roadmap is merged through:
 - PR #237 Env/Secret Drift Guard
 - PR #238 Supabase Boundary Guard
 - PR #239 Performance Budget Pass
+- PR #240 Final Go/No-Go Readiness Packet
 
-Main `Release Check` passed after PR #239. Render deploy was not required for
-PR #239 because it changed readiness scripts/docs/evidence rather than backend
+Main `Release Check` passed after PR #240. Render deploy was not required for
+PR #240 because it changed readiness scripts/docs/evidence rather than backend
 runtime code.
 
 Known local working tree noise at recovery time:
@@ -276,16 +277,22 @@ Rule for new work:
 
 Recommended next action in this new window:
 
-Do not widen rollout yet. First close the external evidence gaps named by the
-Production Readiness Decision Packet V1:
+Do not widen rollout yet. There are six external evidence gaps named by the
+Production Readiness Decision Packet V1. Read them as 3 pilot-expansion-first
+items plus 3 broad-production/operational hardening items.
+
+Tier A - controlled pilot expansion first:
 
 1. Real staging auth/action smoke with sanitized evidence.
 2. Protected route load smoke with role-specific staging bearer tokens.
-3. Supabase staging restore drill into an approved disposable target.
-4. Alert/error-tracking destination proof or accepted log-retention evidence.
-5. Broad-production Redis/BullMQ decision and health evidence if import or
+3. Authenticated integration-admin upload smoke with a safe sample file.
+
+Tier B - broad-production/operational hardening:
+
+1. Supabase staging restore drill into an approved disposable target.
+2. Alert/error-tracking destination proof or accepted log-retention evidence.
+3. Broad-production Redis/BullMQ decision and health evidence if import or
    snapshot durability is required.
-6. Authenticated integration-admin upload smoke with a safe sample file.
 
 If those external inputs are not available, the next local product work should
 be a narrow visible product-feel slice, not broad backend/refactor cleanup.
