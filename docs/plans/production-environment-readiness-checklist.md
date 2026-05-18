@@ -180,6 +180,12 @@ Allowed sign-off states:
 - [ ] Deployed readiness evidence records environment name, frontend URL, backend URL, commit SHA when known, Render deploy id when known, Vercel deployment URL when known, and JSON smoke output summary.
 - [ ] If `READINESS_BEARER_TOKEN` is unavailable, deployed readiness evidence marks auth/session as skipped instead of passed.
 - [ ] If `READINESS_BEARER_TOKEN` is available, `GET /api/auth/session` returns authenticated user role codes, read scope, and action scope.
+- [ ] Backend readiness load smoke ran against the target API: `npm.cmd run smoke:backend-readiness-load`.
+- [ ] Backend readiness load smoke includes `public api health`, `authenticated session`, `store read routes`, `competition read routes`, and `import read routes` groups.
+- [ ] Backend readiness load smoke records availability, p50, p95, `5xx` count, and non-HTML JSON response correctness for measured route groups.
+- [ ] If `BACKEND_LOAD_BEARER_TOKEN` or `READINESS_BEARER_TOKEN` is unavailable, protected route groups are marked skipped/blocked instead of passed.
+- [ ] Protected route budget smoke uses role-specific tokens such as `BACKEND_LOAD_STORE_TOKEN`, `BACKEND_LOAD_COMPETITION_TOKEN`, and `BACKEND_LOAD_IMPORT_TOKEN`; `BACKEND_LOAD_ALLOW_SHARED_TOKEN=true` is diagnostic-only.
+- [ ] Upload mutations are excluded from the simple GET budget and remain covered by upload resource guardrails, command benchmarks, and background job evidence.
 - [ ] Real or staging IdP login smoke passed.
 - [ ] Real or staging IdP logout smoke passed.
 - [ ] `GET /api/auth/session` returned expected role codes.

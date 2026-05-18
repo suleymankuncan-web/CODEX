@@ -42,6 +42,8 @@ Slice 7 note: `gsd headless query` was retried before implementation and returne
 
 Slice 8 note: `gsd headless query` was retried before implementation and returned the same canonical DB blocker; execution continued from this checked-in plan, upload service tests, config contracts, and repo release gates.
 
+Slice 9 note: `gsd headless query` was retried after PR #238 merged and returned the same canonical DB blocker; execution continued from this checked-in plan, the existing performance baseline harness, and repo tests.
+
 Slice 10 note: `gsd headless query` was retried after PR #237 merged and returned the same canonical DB blocker; execution continued from this checked-in plan, current Supabase API key/security docs, and repo tests. Current Supabase docs still state that secret/service_role keys are backend-only and bypass Row Level Security, so this slice keeps the active frontend boundary closed.
 
 ## Current Readiness Baseline
@@ -90,8 +92,8 @@ Open risk areas this plan must progress:
 | 6 | Queue Durability Gate | Merged (#233) | Lost in-process background jobs | Render |
 | 7 | Backup/Restore Live Drill | Merged evidence gate (#234); external drill pending | Data-loss recovery uncertainty | No code deploy unless scripts change |
 | 8 | Upload Resource Guardrails | Merged (#235, review fixes #236) | CPU/memory spikes from imports | Render |
-| 9 | Performance Budget Pass | Pending | Slow critical routes under realistic load | Maybe |
-| 10 | Supabase Boundary Guard | In progress | Accidental direct client/RLS exposure | No deploy unless guard scripts only |
+| 9 | Performance Budget Pass | In progress | Slow critical routes under realistic load | No runtime deploy if scripts/docs only |
+| 10 | Supabase Boundary Guard | Merged (#238) | Accidental direct client/RLS exposure | No runtime deploy; main release check passed |
 | 11 | Env/Secret Drift Guard | Merged (#237) | Secret/public-env mistakes | No runtime deploy; main release check passed |
 | 12 | Final Go/No-Go Readiness Packet | Pending | Unclear launch decision | No |
 
@@ -601,20 +603,20 @@ Open risk areas this plan must progress:
 
 **Implementation outline:**
 
-- [ ] Define route groups:
+- [x] Define route groups:
   - public frontend shell
   - authenticated session
   - store dashboard/read routes
   - competition routes
   - upload/import routes excluded from simple GET budget
-- [ ] Add budgets:
+- [x] Add budgets:
   - availability
   - p50/p95 latency
   - non-HTML API response correctness
   - max 5xx count
-- [ ] Implement a dependency-light Node script using built-in `fetch` and concurrent requests.
-- [ ] Make the script report JSON and human-readable summary.
-- [ ] Do not make this a mandatory CI gate until staging baseline is stable.
+- [x] Implement a dependency-light Node script using built-in `fetch` and concurrent requests.
+- [x] Make the script report JSON and human-readable summary.
+- [x] Do not make this a mandatory CI gate until staging baseline is stable.
 
 **Verification:**
 
@@ -624,6 +626,26 @@ Open risk areas this plan must progress:
 **Done when:**
 
 - The team has concrete p95 and failure-rate numbers before broad rollout.
+
+**Current branch evidence:**
+
+- Added `scripts/backend-readiness-load-smoke.mjs`.
+- Added root command: `npm.cmd run smoke:backend-readiness-load`.
+- Added `scripts/backend-readiness-load-smoke.test.mjs`.
+- The smoke defines route groups for public API health, authenticated session, store read routes, competition read routes, and import read routes.
+- The smoke enforces availability, p50/p95 latency, non-HTML JSON API correctness, and max `5xx` count for measured groups.
+- Protected route groups are skipped/blocked, not marked as passed, when no real role-specific bearer tokens are provided.
+- The smoke accepts group-specific tokens for store, competition, and import routes; shared token reuse requires explicit `BACKEND_LOAD_ALLOW_SHARED_TOKEN=true`.
+- Upload/import mutation routes remain excluded from this simple GET budget and stay covered by upload resource guardrails, command benchmarks, and background job evidence.
+- This is intentionally not a mandatory CI gate until staging baselines are stable.
+- Staging public API health smoke passed with `NODE_OPTIONS=--dns-result-order=ipv4first`: availability `100%`, p50 `132.23ms`, p95 `224.59ms`, 5xx `0`.
+- Protected route performance remains blocked until real staging role-specific bearer tokens are provided.
+- Evidence file: `docs/evidence/readiness/2026-05-18-staging-backend-readiness-load-smoke.md`.
+- Local verification:
+  - `node --test scripts/backend-readiness-load-smoke.test.mjs` passed: 6 tests.
+  - `npm.cmd run test:scripts` passed: 227 tests.
+  - `npm.cmd run check:release` passed, including backend lint/test/build/audit and frontend build/Playwright/audit.
+  - `git diff --check` passed with line-ending warnings only.
 
 ## Slice 10: Supabase Boundary Guard
 
@@ -665,6 +687,8 @@ Open risk areas this plan must progress:
 - Guard scans tracked `admin-web` frontend files for Supabase service-role/secret keys, `DATABASE_URL`, `JWT_SECRET`, direct `@supabase/supabase-js` imports, and direct Supabase REST access to `ops.*` under `admin-web/src`.
 - Guard includes fake frontend fixtures proving service-role, direct client, direct REST, and unsafe `VITE_*` values fail.
 - Production checklist and env inventory now keep direct Supabase client access to `ops.*` blocked until RLS/policy work is designed, tested, and approved.
+- PR: #238 merged into `main`.
+- Main `Release Check` passed after merge commit `e0a5bbff6e45edde035d588f2e103dfba9b56778`.
 
 ## Slice 11: Env/Secret Drift Guard
 
