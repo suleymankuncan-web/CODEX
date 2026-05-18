@@ -1,0 +1,149 @@
+.search-field input {
+  width: min(100%, 360px);
+  min-height: 46px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  padding: 0 1rem;
+  color: var(--surface-ink);
+}
+
+.search-field input:focus-visible {
+  outline: 3px solid rgba(15, 118, 110, 0.18);
+  border-color: rgba(15, 118, 110, 0.44);
+}
+
+.toolbar-cluster {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.control-select select,
+.control-input,
+.control-button {
+  min-height: 46px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--surface-ink);
+}
+
+.control-select select {
+  padding: 0 1rem;
+}
+
+.control-input {
+  padding: 0 1rem;
+}
+
+.control-button {
+  padding: 0 1rem;
+  cursor: pointer;
+}
+
+.control-select select:focus-visible,
+.control-input:focus-visible,
+.control-button:focus-visible {
+  outline: 3px solid rgba(15, 118, 110, 0.18);
+  border-color: rgba(15, 118, 110, 0.44);
+}
+
+.form-grid {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.field-block-full {
+  grid-column: 1 / -1;
+}
+
+.field-block {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.field-block span {
+  color: var(--surface-muted);
+  font-size: 0.84rem;
+}
+
+.field-block input,
+.field-block select,
+.field-textarea {
+  min-height: 46px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.88);
+  padding: 0 0.9rem;
+  color: var(--surface-ink);
+}
+
+.field-block input:focus-visible,
+.field-block select:focus-visible,
+.field-textarea:focus-visible {
+  outline: 3px solid rgba(15, 118, 110, 0.18);
+  border-color: rgba(15, 118, 110, 0.44);
+}
+
+.field-textarea {
+  min-height: 160px;
+  padding: 0.9rem;
+  resize: vertical;
+}
+
+.store-checkbox-grid {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 0.85rem;
+}
+
+.store-checkbox {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.68);
+  padding: 0.75rem 0.85rem;
+  color: var(--surface-ink);
+  font-size: 0.9rem;
+}
+
+.store-checkbox input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+
+.store-checkbox span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.validation-copy {
+  margin: 0;
+  color: var(--warning);
+  font-size: 0.9rem;
+}
+
+.segmented-button {
+  min-height: 46px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 0 1rem;
+  cursor: pointer;
+  color: var(--surface-muted);
+}
+
+.segmented-button-active {
+  border-color: rgba(15, 118, 110, 0.44);
+  background: rgba(15, 118, 110, 0.1);
+  color: var(--accent-strong);
+}
