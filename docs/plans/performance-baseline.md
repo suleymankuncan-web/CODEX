@@ -38,6 +38,9 @@ Establish one repeatable measurement path for the critical backend flows before 
 - protected staging API gate: [protected-performance-baseline.mjs](../../scripts/protected-performance-baseline.mjs)
 - root npm command:
   - `npm.cmd run perf:protected`
+- backend readiness load smoke: [backend-readiness-load-smoke.mjs](../../scripts/backend-readiness-load-smoke.mjs)
+- root npm command:
+  - `npm.cmd run smoke:backend-readiness-load`
 
 ### Environment Inputs
 - `PERF_BASE_URL`
@@ -64,8 +67,57 @@ Establish one repeatable measurement path for the critical backend flows before 
 - `PUBLIC_PERF_ASSET_ITERATIONS`
 - `PUBLIC_PERF_FRONTEND_ROUTES`
 - `PUBLIC_PERF_API_PATHS`
+- `BACKEND_LOAD_API_BASE_URL`
+- `BACKEND_LOAD_ENVIRONMENT`
+- `BACKEND_LOAD_ITERATIONS`
+- `BACKEND_LOAD_CONCURRENCY`
+- `BACKEND_LOAD_TIMEOUT_MS`
+- `BACKEND_LOAD_BEARER_TOKEN` or `READINESS_BEARER_TOKEN` for real protected route budgets
+- `BACKEND_LOAD_REQUIRE_PROTECTED=true` to fail the shell when protected budgets are skipped
+- `BACKEND_LOAD_OUTPUT=text|json|both`
 
 When running against staging from Node on Windows, use `NODE_OPTIONS=--dns-result-order=ipv4first` if the first fetch attempt times out while PowerShell/browser access works.
+
+### Backend Readiness Load Smoke
+
+`npm.cmd run smoke:backend-readiness-load` is the production readiness budget smoke. It is intentionally lighter than a full load test and does not replace provider APM, k6, or real traffic replay.
+
+Route groups:
+
+- `public api health`
+  - `GET /api/health/live`
+  - `GET /api/health`
+- `authenticated session`
+  - `GET /api/auth/session`
+- `store read routes`
+  - `GET /api/reports/kpi-config`
+  - `GET /api/reports/my-performance?mode=live&periodType=monthly`
+  - `GET /api/reports/rankings?periodType=monthly&limit=20&offset=0`
+  - `GET /api/reports/leaderboards/closed?periodType=monthly&limit=10`
+  - `GET /api/reports/store-kpi-highlights?periodType=monthly`
+- `competition read routes`
+  - `GET /api/competitions?limit=20&offset=0`
+- `import read routes`
+  - `GET /api/integrations/import-batches/overview`
+  - `GET /api/integrations/import-batches/needs-action?limit=12&offset=0`
+
+Budget rules:
+
+- availability must remain `100%` for measured route groups
+- `5xx` count must remain `0`
+- API responses must be valid JSON, not frontend fallback HTML
+- public health p95 budget starts at `1200ms`
+- authenticated session p95 budget starts at `1500ms`
+- store and competition read p95 budgets start at `2000ms`
+- import read p95 budget starts at `2500ms`
+
+Upload/import mutations are excluded from this simple GET budget:
+
+- `POST /api/integrations/power-bi-export-upload`
+- `POST /api/integrations/import-batches`
+- `POST /api/snapshots/runs`
+
+Those paths remain covered by upload resource guardrails, command benchmarks, and background job evidence. If upload windows degrade API p95, move parsing/materialization to the durable worker path before broad production.
 
 ## Current Reality
 
@@ -183,6 +235,7 @@ Latest staging evidence:
 
 - [Staging Public Performance Baseline - 2026-05-09](../evidence/performance/2026-05-09-staging-public-performance-baseline.md)
 - [Staging Protected Performance Gate - 2026-05-09](../evidence/performance/2026-05-09-staging-protected-performance-gate.md)
+- [Staging Backend Readiness Load Smoke - 2026-05-18](../evidence/readiness/2026-05-18-staging-backend-readiness-load-smoke.md)
 
 Protected staging API baseline is still blocked until real bearer tokens or smoke auth sessions are provided.
 
