@@ -36,6 +36,8 @@ These values are read by `backend/nestjs/src/shared/app-config.service.ts`.
 | `RATE_LIMIT_MAX` | P0 | Required in production. | Max requests per client/window; local default is `120`. |
 | `RATE_LIMIT_BACKEND` | P0 | `memory` is allowed for local and controlled pilot; `redis` is required when `READINESS_PROFILE=broad-production`. | Controls whether rate limit counters are process-local or shared through Redis. |
 | `RATE_LIMIT_REDIS_PREFIX` | P1 | Stable prefix per environment when Redis rate limiting is enabled. | Defaults to `hr-axis:rate-limit`; use an environment-specific prefix if staging and production share a Redis provider. |
+| `UPLOAD_PARSE_MAX_CONCURRENCY` | P0 for broad production, P1 for controlled pilot | Required when `READINESS_PROFILE=broad-production`; controlled pilot default is `1`. | Limits concurrent Power BI export parsing inside the API process. Increase only after CPU/memory evidence is reviewed. |
+| `UPLOAD_PARSE_TIMEOUT_MS` | P0 for broad production, P1 for controlled pilot | Required when `READINESS_PROFILE=broad-production`; controlled pilot default is `15000`. | Retryable timeout budget for upload parsing. Sustained timeouts mean parsing should move out of the API request path. |
 | `LOG_LEVEL` | P1 | Use `info`, `warn`, or `error` unless debugging a controlled incident. | Controls Nest logger verbosity; local default is `info`. |
 | `ERROR_TRACKING_DSN` | P1 until provider is approved | Leave empty for log-only mode; use HTTPS DSN only when an error tracking provider is approved. | V1 does not add a provider package; public logs remain the active error signal. |
 | `ERROR_TRACKING_ENVIRONMENT` | P1 | Stable environment label such as `staging` or `production`. | Included in structured observability events. |
@@ -154,6 +156,8 @@ These values are read by `admin-web/scripts/auth-live-smoke.mjs`.
 - [ ] `RATE_LIMIT_BACKEND=redis` when `READINESS_PROFILE=broad-production`; `memory` is only accepted for local or controlled pilot risk.
 - [ ] `REDIS_URL` is explicitly configured when production rate limiting uses Redis.
 - [ ] `RATE_LIMIT_REDIS_PREFIX` is unique to the environment when Redis is shared.
+- [ ] `UPLOAD_PARSE_MAX_CONCURRENCY` and `UPLOAD_PARSE_TIMEOUT_MS` are explicit before broad production.
+- [ ] Upload parse logs are reviewed for duration, row count, and API latency before increasing parse concurrency above `1`.
 - [ ] `QUEUE_BACKEND=bullmq` when `READINESS_PROFILE=broad-production`; `in-memory` is only accepted for local or controlled pilot risk.
 - [ ] `/api/health` shows queue `status=durable` and Redis `status=ok` before durable background work is approved.
 - [ ] `LOG_LEVEL` is set to the intended runtime verbosity.

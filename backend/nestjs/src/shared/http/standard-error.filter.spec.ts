@@ -1,6 +1,8 @@
 import {
   ArgumentsHost,
   BadRequestException,
+  HttpException,
+  HttpStatus,
   InternalServerErrorException,
 } from "@nestjs/common";
 import { StandardErrorFilter } from "./standard-error.filter";
@@ -12,6 +14,7 @@ function createHost(input: {
 }) {
   const json = jest.fn();
   const status = jest.fn().mockReturnValue({ json });
+  const setHeader = jest.fn();
   const request = {
     headers: input.correlationId
       ? { "x-correlation-id": input.correlationId }
@@ -22,11 +25,11 @@ function createHost(input: {
   const host = {
     switchToHttp: () => ({
       getRequest: () => request,
-      getResponse: () => ({ status }),
+      getResponse: () => ({ setHeader, status }),
     }),
   } as unknown as ArgumentsHost;
 
-  return { host, json, status };
+  return { host, json, setHeader, status };
 }
 
 describe("StandardErrorFilter", () => {
@@ -90,5 +93,36 @@ describe("StandardErrorFilter", () => {
       }),
     );
     expect(observabilityService.captureException).not.toHaveBeenCalled();
+  });
+
+  it("forwards retry-after metadata from retryable capacity exceptions", () => {
+    const filter = new StandardErrorFilter();
+    const { host, json, setHeader, status } = createHost({
+      correlationId: "corr-retry",
+      url: "/api/integration/power-bi-export-upload",
+    });
+
+    filter.catch(
+      new HttpException(
+        {
+          message: "Power BI export isleme kapasitesi dolu",
+          retryAfterSeconds: 5,
+        },
+        HttpStatus.SERVICE_UNAVAILABLE,
+      ),
+      host,
+    );
+
+    expect(setHeader).toHaveBeenCalledWith("Retry-After", "5");
+    expect(status).toHaveBeenCalledWith(503);
+    expect(json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        correlationId: "corr-retry",
+        errorCode: "SERVICE_UNAVAILABLE",
+        message: "Power BI export isleme kapasitesi dolu",
+        path: "/api/integration/power-bi-export-upload",
+        statusCode: 503,
+      }),
+    );
   });
 });

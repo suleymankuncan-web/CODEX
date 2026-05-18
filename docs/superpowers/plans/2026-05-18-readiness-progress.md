@@ -40,6 +40,8 @@ Slice 6 note: `gsd headless query` was retried before implementation and returne
 
 Slice 7 note: `gsd headless query` was retried before implementation and returned the same canonical DB blocker; execution continued from this checked-in plan, Supabase documentation review, and repo tests. No destructive restore command was run because no approved disposable Supabase restore target or staging restore credentials were available in source-controlled context.
 
+Slice 8 note: `gsd headless query` was retried before implementation and returned the same canonical DB blocker; execution continued from this checked-in plan, upload service tests, config contracts, and repo release gates.
+
 ## Current Readiness Baseline
 
 Strong areas that should be preserved:
@@ -84,8 +86,8 @@ Open risk areas this plan must progress:
 | 4 | Alerting and Incident Evidence | Merged (#231) | Nobody notices production degradation | Depends on provider |
 | 5 | Redis-Backed Rate Limit | Merged (#232) | Abuse bypass on multi-instance runtime | Render |
 | 6 | Queue Durability Gate | Merged (#233) | Lost in-process background jobs | Render |
-| 7 | Backup/Restore Live Drill | External drill pending | Data-loss recovery uncertainty | No code deploy unless scripts change |
-| 8 | Upload Resource Guardrails | Pending | CPU/memory spikes from imports | Render |
+| 7 | Backup/Restore Live Drill | Merged evidence gate (#234); external drill pending | Data-loss recovery uncertainty | No code deploy unless scripts change |
+| 8 | Upload Resource Guardrails | In progress | CPU/memory spikes from imports | Render |
 | 9 | Performance Budget Pass | Pending | Slow critical routes under realistic load | Maybe |
 | 10 | Supabase Boundary Guard | Pending | Accidental direct client/RLS exposure | No deploy unless guard scripts only |
 | 11 | Env/Secret Drift Guard | Pending | Secret/public-env mistakes | Maybe |
@@ -540,19 +542,19 @@ Open risk areas this plan must progress:
 
 **Implementation outline:**
 
-- [ ] Add env:
+- [x] Add env:
   - `UPLOAD_PARSE_MAX_CONCURRENCY`
   - `UPLOAD_PARSE_TIMEOUT_MS`
-- [ ] Add an in-process semaphore around XLSX parsing for the current API-process model.
-- [ ] Return a standard 429 or 503 with `Retry-After` when parse capacity is full.
-- [ ] Preserve existing 8 MB file limit and 20k row limit.
-- [ ] Add timing logs:
+- [x] Add an in-process semaphore around XLSX parsing for the current API-process model.
+- [x] Return a standard 429 or 503 with `Retry-After` when parse capacity is full.
+- [x] Preserve existing 8 MB file limit and 20k row limit.
+- [x] Add timing logs:
   - file type
   - sanitized file size
   - parse duration
   - row count
   - correlation ID
-- [ ] Document when to move parsing to BullMQ:
+- [x] Document when to move parsing to BullMQ:
   - sustained concurrent uploads
   - parse duration above budget
   - API p95 degradation during imports
@@ -566,6 +568,21 @@ Open risk areas this plan must progress:
 **Done when:**
 
 - Uploads degrade gracefully instead of consuming unbounded API process capacity.
+
+**Current branch evidence:**
+
+- Added `UPLOAD_PARSE_MAX_CONCURRENCY` and `UPLOAD_PARSE_TIMEOUT_MS` to backend config, `.env.example`, and environment inventory.
+- Broad production now requires explicit upload parse guardrail envs; controlled pilot keeps safe defaults.
+- Added an in-process parse slot around Power BI export parsing and moved XLSX parsing into a bounded worker thread so retryable `503` capacity/timeout responses with `Retry-After` can stop slow parse work.
+- Preserved the existing 8 MB file limit and 20k row/80-column sheet bounds.
+- Added structured parse completion logs with file role, extension, file size bytes, duration, row count, source code, and correlation id from request context.
+- Documented the move-to-BullMQ trigger in readiness docs: sustained concurrent uploads, parse duration above budget, or API p95 degradation during imports.
+- Targeted verification passed:
+  - `npm.cmd test -- --runInBand src/modules/integration/application/power-bi-export-upload.service.spec.ts src/shared/app-config.service.spec.ts src/shared/http/standard-error.filter.spec.ts` passed: 57 tests.
+  - `node --test scripts/deployment-runbook-contract.test.mjs` passed: 11 tests.
+  - `npm.cmd run lint` passed in `backend/nestjs`.
+  - `npm.cmd run check:release` passed from the workspace root, including scripts, backend release checks, frontend Playwright E2E, builds, and audit.
+- Staging upload smoke remains a post-merge/operator task because it needs a real authenticated integration-admin session and sample upload file in the target environment.
 
 ## Slice 9: Performance Budget Pass
 

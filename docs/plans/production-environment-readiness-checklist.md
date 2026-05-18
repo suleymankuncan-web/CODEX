@@ -44,6 +44,7 @@ Allowed sign-off states:
 - [ ] `RATE_LIMIT_BACKEND=redis` is configured before broad production rollout; `memory` is accepted only for local or controlled pilot with written risk acceptance.
 - [ ] `REDIS_URL` is explicitly configured when production rate limiting uses Redis.
 - [ ] `RATE_LIMIT_REDIS_PREFIX` is unique to the environment when Redis rate limiting is enabled.
+- [ ] `UPLOAD_PARSE_MAX_CONCURRENCY` and `UPLOAD_PARSE_TIMEOUT_MS` are explicitly configured before broad production rollout.
 - [ ] `QUEUE_BACKEND=bullmq` is configured before broad production rollout; `in-memory` is accepted only for local or controlled pilot with written risk acceptance.
 - [ ] `/api/health` shows queue `status=durable` and Redis `status=ok` before durable import/snapshot background work is approved.
 - [ ] Error responses do not expose stack traces or raw exception details.
@@ -67,6 +68,8 @@ Allowed sign-off states:
 - [ ] Production secrets have a rotation date and emergency rotation owner.
 - [ ] Application logs redact authorization headers, cookies, token-like query params, and provider codes.
 - [ ] Error reporting is enabled without collecting raw tokens, passwords, or personal notes.
+- [ ] Power BI upload parse logs are reviewed for `parseDurationMs`, row count, and API p95 before parse concurrency is increased above `1`.
+- [ ] Move Power BI parsing to BullMQ or another worker path if sustained concurrent uploads, parse duration above budget, or API p95 degradation appears during import windows.
 
 ## Identity Provider Checklist
 

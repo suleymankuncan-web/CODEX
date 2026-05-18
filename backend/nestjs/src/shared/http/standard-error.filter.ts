@@ -15,12 +15,14 @@ import {
 import { ObservabilityService } from "../observability/observability.service";
 
 type HttpResponseLike = {
+  setHeader?(name: string, value: string): void;
   status(statusCode: number): { json(body: unknown): void };
 };
 
 type HttpExceptionBody = {
   error?: string;
   message?: string | string[];
+  retryAfterSeconds?: number | string;
   statusCode?: number;
 };
 
@@ -49,6 +51,11 @@ export class StandardErrorFilter implements ExceptionFilter {
         source: "standard-error-filter",
         statusCode,
       });
+    }
+
+    const retryAfter = this.resolveRetryAfter(exceptionBody);
+    if (retryAfter) {
+      response.setHeader?.("Retry-After", retryAfter);
     }
 
     response.status(statusCode).json(
@@ -99,5 +106,18 @@ export class StandardErrorFilter implements ExceptionFilter {
     }
 
     return exceptionBody?.message ?? exceptionBody?.error ?? defaultErrorCode(statusCode);
+  }
+
+  private resolveRetryAfter(exceptionBody: HttpExceptionBody | null): string | undefined {
+    const value = exceptionBody?.retryAfterSeconds;
+    if (typeof value === "number" && Number.isInteger(value) && value > 0) {
+      return String(value);
+    }
+
+    if (typeof value === "string" && /^[1-9]\d*$/.test(value)) {
+      return value;
+    }
+
+    return undefined;
   }
 }
