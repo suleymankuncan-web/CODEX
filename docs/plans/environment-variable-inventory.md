@@ -32,8 +32,10 @@ These values are read by `backend/nestjs/src/shared/app-config.service.ts`.
 | `MIGRATIONS_HTTP_ENABLED` | P0 | Forced disabled when `NODE_ENV=production`. | Enables the legacy HTTP migration endpoint only for local/non-production controlled use; production must use CLI/CI migration execution. |
 | `CORS_ALLOWED_ORIGINS` | P0 | Required in production. | Comma-separated browser origins; local default is `http://localhost:5173`. |
 | `TRUST_PROXY_HOPS` | P0 | Required in production. | Trusted reverse-proxy hop count used by Express `req.ip` and rate-limit client identity; local default is `0`, Render staging uses `1`. |
-| `RATE_LIMIT_WINDOW_MS` | P0 | Required in production. | In-memory V1 request window; local default is `60000`. |
-| `RATE_LIMIT_MAX` | P0 | Required in production. | In-memory V1 max requests per client/window; local default is `120`. |
+| `RATE_LIMIT_WINDOW_MS` | P0 | Required in production. | Request window; local default is `60000`. |
+| `RATE_LIMIT_MAX` | P0 | Required in production. | Max requests per client/window; local default is `120`. |
+| `RATE_LIMIT_BACKEND` | P0 | `memory` is allowed for local and controlled pilot; `redis` is required when `READINESS_PROFILE=broad-production`. | Controls whether rate limit counters are process-local or shared through Redis. |
+| `RATE_LIMIT_REDIS_PREFIX` | P1 | Stable prefix per environment when Redis rate limiting is enabled. | Defaults to `hr-axis:rate-limit`; use an environment-specific prefix if staging and production share a Redis provider. |
 | `LOG_LEVEL` | P1 | Use `info`, `warn`, or `error` unless debugging a controlled incident. | Controls Nest logger verbosity; local default is `info`. |
 | `ERROR_TRACKING_DSN` | P1 until provider is approved | Leave empty for log-only mode; use HTTPS DSN only when an error tracking provider is approved. | V1 does not add a provider package; public logs remain the active error signal. |
 | `ERROR_TRACKING_ENVIRONMENT` | P1 | Stable environment label such as `staging` or `production`. | Included in structured observability events. |
@@ -53,7 +55,7 @@ These values are read by `backend/nestjs/src/shared/app-config.service.ts`.
 | `AUTH_LOGOUT_URL` | P1 | Provider logout endpoint when supported. | Needed for provider logout smoke. |
 | `AUTH_POST_LOGOUT_REDIRECT_PATH` | P0 | `/auth/login` unless route changes. | Must match provider post-logout registration. |
 | `QUEUE_BACKEND` | P0 | `bullmq` when durable worker queue is required. | Local default is `in-memory`. |
-| `REDIS_URL` | P0 conditional | Required when `QUEUE_BACKEND=bullmq`. | Secret-bearing if provider uses credentials. |
+| `REDIS_URL` | P0 conditional | Required when `QUEUE_BACKEND=bullmq` or `RATE_LIMIT_BACKEND=redis` in production. | Secret-bearing if provider uses credentials. |
 | `QUEUE_IMPORT_NAME` | P1 | Stable import queue name. | Defaults to `store-ops-import`. |
 | `QUEUE_SNAPSHOT_NAME` | P1 | Stable snapshot queue name. | Defaults to `store-ops-snapshot`. |
 | `DAILY_CLOSURE_AUTOMATION_ENABLED` | P1 | Keep `false` until closure schedule is approved. | Enables automated closure polling. |
@@ -149,6 +151,9 @@ These values are read by `admin-web/scripts/auth-live-smoke.mjs`.
 - [ ] `CORS_ALLOWED_ORIGINS` lists only approved frontend origins.
 - [ ] `TRUST_PROXY_HOPS` matches the target backend proxy path, such as `1` for Render.
 - [ ] `RATE_LIMIT_WINDOW_MS` and `RATE_LIMIT_MAX` are explicitly set for the environment.
+- [ ] `RATE_LIMIT_BACKEND=redis` when `READINESS_PROFILE=broad-production`; `memory` is only accepted for local or controlled pilot risk.
+- [ ] `REDIS_URL` is explicitly configured when production rate limiting uses Redis.
+- [ ] `RATE_LIMIT_REDIS_PREFIX` is unique to the environment when Redis is shared.
 - [ ] `LOG_LEVEL` is set to the intended runtime verbosity.
 - [ ] `ERROR_TRACKING_ENVIRONMENT` and `ERROR_TRACKING_RELEASE` identify the deploy in structured observability events.
 - [ ] `READINESS_PROFILE=controlled-pilot` unless broad production rollout is explicitly approved.

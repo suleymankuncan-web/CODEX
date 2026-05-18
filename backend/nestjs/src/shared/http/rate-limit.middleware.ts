@@ -3,6 +3,7 @@ import {
   buildStandardErrorResponse,
   ErrorRequestLike,
 } from "./standard-error-response";
+import { InMemoryRateLimitStore, RateLimitStore } from "./rate-limit-store";
 
 type RateLimitRequest = ErrorRequestLike & {
   method: string;
@@ -18,32 +19,6 @@ type RateLimitResponse = {
   };
 };
 
-type RateLimitState = {
-  count: number;
-  resetAt: number;
-};
-
-export interface RateLimitStore {
-  increment(key: string, now: number, windowMs: number): RateLimitState;
-}
-
-export class InMemoryRateLimitStore implements RateLimitStore {
-  private readonly buckets = new Map<string, RateLimitState>();
-
-  increment(key: string, now: number, windowMs: number): RateLimitState {
-    const existing = this.buckets.get(key);
-
-    if (!existing || existing.resetAt <= now) {
-      const state = { count: 1, resetAt: now + windowMs };
-      this.buckets.set(key, state);
-      return state;
-    }
-
-    existing.count += 1;
-    return existing;
-  }
-}
-
 export function createRateLimitMiddleware(input: {
   max: number;
   windowMs: number;
@@ -51,14 +26,33 @@ export function createRateLimitMiddleware(input: {
 }) {
   const store = input.store ?? new InMemoryRateLimitStore();
 
-  return (req: RateLimitRequest, res: RateLimitResponse, next: () => void): void => {
+  return async (
+    req: RateLimitRequest,
+    res: RateLimitResponse,
+    next: () => void,
+  ): Promise<void> => {
     if (req.method === "OPTIONS") {
       next();
       return;
     }
 
     const now = Date.now();
-    const state = store.increment(resolveClientKey(req), now, input.windowMs);
+    let state;
+
+    try {
+      state = await store.increment(resolveClientKey(req), now, input.windowMs);
+    } catch {
+      res.status(HttpStatus.SERVICE_UNAVAILABLE).json(
+        buildStandardErrorResponse({
+          errorCode: "RATE_LIMIT_STORE_UNAVAILABLE",
+          message: "Rate limit store unavailable",
+          request: req,
+          statusCode: HttpStatus.SERVICE_UNAVAILABLE,
+        }),
+      );
+      return;
+    }
+
     const remaining = Math.max(input.max - state.count, 0);
 
     res.setHeader("X-RateLimit-Limit", String(input.max));

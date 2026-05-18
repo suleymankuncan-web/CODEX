@@ -184,6 +184,67 @@ describe("AppConfigService", () => {
 
     expect(config.rateLimitWindowMs).toBe(60000);
     expect(config.rateLimitMax).toBe(120);
+    expect(config.rateLimitBackend).toBe("memory");
+    expect(config.rateLimitRedisPrefix).toBe("hr-axis:rate-limit");
+  });
+
+  it("accepts Redis rate limiting configuration", () => {
+    const config = createConfig({
+      RATE_LIMIT_BACKEND: "redis",
+      RATE_LIMIT_REDIS_PREFIX: "custom:rate-limit",
+    });
+
+    expect(config.rateLimitBackend).toBe("redis");
+    expect(config.rateLimitRedisPrefix).toBe("custom:rate-limit");
+  });
+
+  it("requires Redis rate limiting for broad production readiness", () => {
+    expect(() =>
+      createConfig({
+        CORS_ALLOWED_ORIGINS: "https://admin.example.com",
+        NODE_ENV: "production",
+        RATE_LIMIT_BACKEND: "memory",
+        RATE_LIMIT_MAX: "200",
+        RATE_LIMIT_WINDOW_MS: "60000",
+        READINESS_PROFILE: "broad-production",
+      }).rateLimitBackend,
+    ).toThrow(
+      "RATE_LIMIT_BACKEND=redis is required when READINESS_PROFILE=broad-production",
+    );
+
+    expect(
+      createConfig({
+        CORS_ALLOWED_ORIGINS: "https://admin.example.com",
+        NODE_ENV: "production",
+        RATE_LIMIT_BACKEND: "redis",
+        RATE_LIMIT_MAX: "200",
+        RATE_LIMIT_WINDOW_MS: "60000",
+        READINESS_PROFILE: "broad-production",
+        REDIS_URL: "redis://cache.example.internal:6379",
+      }).rateLimitBackend,
+    ).toBe("redis");
+  });
+
+  it("requires Redis URL when Redis rate limiting is enabled in production", () => {
+    expect(() =>
+      createConfig({
+        CORS_ALLOWED_ORIGINS: "https://admin.example.com",
+        NODE_ENV: "production",
+        RATE_LIMIT_BACKEND: "redis",
+        RATE_LIMIT_MAX: "200",
+        RATE_LIMIT_WINDOW_MS: "60000",
+      }).rateLimitBackend,
+    ).toThrow(
+      "REDIS_URL must be configured in production when RATE_LIMIT_BACKEND=redis",
+    );
+  });
+
+  it("rejects unknown rate limit backends", () => {
+    expect(() =>
+      createConfig({
+        RATE_LIMIT_BACKEND: "file",
+      }).rateLimitBackend,
+    ).toThrow("RATE_LIMIT_BACKEND must be one of memory, redis");
   });
 
   it("uses no trusted proxy hops by default outside production", () => {

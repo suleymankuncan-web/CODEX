@@ -2,6 +2,7 @@ import { INestApplication, ValidationPipe } from "@nestjs/common";
 import { AppConfigService } from "../app-config.service";
 import { createCorsAllowlistMiddleware } from "./cors-allowlist.middleware";
 import { createRateLimitMiddleware } from "./rate-limit.middleware";
+import { createRedisRateLimitStore } from "./redis-rate-limit-store";
 import { createSecurityHeadersMiddleware } from "./security-headers.middleware";
 import { StandardErrorFilter } from "./standard-error.filter";
 import { ObservabilityService } from "../observability/observability.service";
@@ -14,7 +15,13 @@ export function configureHttpSecurity(
   app: INestApplication,
   config: Pick<
     AppConfigService,
-    "corsAllowedOrigins" | "rateLimitMax" | "rateLimitWindowMs" | "trustProxyHops"
+    | "corsAllowedOrigins"
+    | "rateLimitBackend"
+    | "rateLimitMax"
+    | "rateLimitRedisPrefix"
+    | "rateLimitWindowMs"
+    | "redisUrl"
+    | "trustProxyHops"
   >,
   observabilityService?: ObservabilityService,
 ): void {
@@ -25,6 +32,13 @@ export function configureHttpSecurity(
   app.use(
     createRateLimitMiddleware({
       max: config.rateLimitMax,
+      store:
+        config.rateLimitBackend === "redis"
+          ? createRedisRateLimitStore({
+              prefix: config.rateLimitRedisPrefix,
+              redisUrl: config.redisUrl,
+            })
+          : undefined,
       windowMs: config.rateLimitWindowMs,
     }),
   );
