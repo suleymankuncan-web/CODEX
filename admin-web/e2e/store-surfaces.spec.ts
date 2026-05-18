@@ -2395,6 +2395,9 @@ test('store approvals page lets store managers submit seller code requests', asy
   await sellerCodeForm.getByRole('button', { name: 'Satıcı kodu talebini gönder' }).click()
 
   await expect(page.getByText('Seller code request submitted for HR approval')).toBeVisible()
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Seller code request submitted for HR approval' }),
+  ).toHaveClass(/store-request-feedback-success/)
   expect(capturedPayload).not.toBeNull()
 })
 
@@ -2457,6 +2460,22 @@ test('store approvals page renders direct action tabs without the legacy request
   await expect(page.getByRole('button', { name: 'Hedef talebi aç' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Satıcı kodu talebi aç' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Personel çıkış talebi aç' })).toBeVisible()
+})
+
+test('store approvals page presents returned request load failures as alerts', async ({ page }) => {
+  await page.unroute('**/api/workforce/seller-code-requests**')
+  await page.route('**/api/workforce/seller-code-requests**', async (route) => {
+    await route.fulfill({
+      status: 500,
+      body: 'Returned seller queue unavailable',
+    })
+  })
+
+  await page.goto('/store/approvals')
+  await page.getByRole('button', { name: 'İade kayıtlarını aç' }).click()
+  const alert = page.getByRole('alert').filter({ hasText: 'Returned seller queue unavailable' })
+  await expect(alert).toBeVisible()
+  await expect(alert).toHaveClass(/store-request-feedback-error/)
 })
 
 test('store approvals page submits target distribution allocations with employee ids', async ({ page }) => {
@@ -2545,6 +2564,9 @@ test('store approvals page submits target distribution allocations with employee
   await targetForm.getByRole('button', { name: 'Bölge onayına gönder' }).click()
 
   await expect(page.getByText('Target distribution request submitted for region approval')).toBeVisible()
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Target distribution request submitted for region approval' }),
+  ).toHaveClass(/store-request-feedback-success/)
   expect(capturedPayload).not.toBeNull()
 })
 
@@ -2590,6 +2612,9 @@ test('store approvals page lets store managers submit offboarding requests', asy
   await offboardingForm.getByRole('button', { name: 'Personel çıkış talebini gönder' }).click()
 
   await expect(page.getByText('Offboarding request submitted for HR approval')).toBeVisible()
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Offboarding request submitted for HR approval' }),
+  ).toHaveClass(/store-request-feedback-success/)
   expect(capturedPayload).not.toBeNull()
 })
 

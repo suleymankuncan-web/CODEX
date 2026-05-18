@@ -6001,6 +6001,33 @@ code {
   line-height: 1.45;
 }
 
+.store-request-feedback {
+  grid-column: 1 / -1;
+  margin: 0;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.45;
+}
+
+.store-request-feedback-success {
+  border-color: rgba(13, 148, 136, 0.24);
+  background: rgba(236, 253, 245, 0.9);
+  color: #0f766e;
+}
+
+.store-request-feedback-error {
+  border-color: rgba(185, 28, 28, 0.2);
+  background: rgba(254, 242, 242, 0.9);
+  color: #991b1b;
+}
+
+.store-approvals-ledger-feedback {
+  margin-top: 12px;
+}
+
 .store-request-actions {
   flex-wrap: wrap;
   justify-content: flex-start;
