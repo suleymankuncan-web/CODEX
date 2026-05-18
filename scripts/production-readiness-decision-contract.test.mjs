@@ -69,10 +69,23 @@ test('production readiness decision preserves no-secret evidence rules', () => {
   }
 })
 
+test('production readiness decision uses repo-root-runnable auth evidence commands', () => {
+  for (const phrase of [
+    'npm.cmd --prefix admin-web run smoke:auth:staging',
+    'npm.cmd --prefix admin-web run smoke:auth:staging:action',
+    'npm.cmd --prefix admin-web run guard:auth:evidence',
+  ]) {
+    requireText(decision, phrase)
+  }
+
+  assert.doesNotMatch(decision, /`npm\.cmd run smoke:auth:staging`/)
+  assert.doesNotMatch(decision, /`npm\.cmd run smoke:auth:staging:action`/)
+  assert.doesNotMatch(decision, /`npm\.cmd run guard:auth:evidence`/)
+})
+
 test('handoff and action docs link the production readiness decision', () => {
   for (const text of [currentState, activeNextActions, debtLedger]) {
     requireText(text, 'Production Readiness Decision Packet V1')
     requireText(text, decisionPath)
   }
 })
-

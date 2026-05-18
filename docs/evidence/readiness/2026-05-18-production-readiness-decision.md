@@ -64,9 +64,9 @@ No-Go:
 ## Required Next Evidence
 
 1. Real staging auth/action smoke with sanitized evidence:
-   - `npm.cmd run smoke:auth:staging`
-   - `npm.cmd run smoke:auth:staging:action`
-   - `npm.cmd run guard:auth:evidence`
+   - `npm.cmd --prefix admin-web run smoke:auth:staging`
+   - `npm.cmd --prefix admin-web run smoke:auth:staging:action`
+   - `npm.cmd --prefix admin-web run guard:auth:evidence`
 2. Protected route load smoke with role-specific staging tokens:
    - `BACKEND_LOAD_SESSION_TOKEN`
    - `BACKEND_LOAD_STORE_TOKEN`
@@ -82,4 +82,3 @@ No-Go:
 - No bearer token, cookie, authorization code, PKCE verifier, client secret, private key, database URL, Redis URL, or production credential is recorded here.
 - No production database was touched by this packet.
 - This packet summarizes source-controlled evidence; provider console values and live secrets must remain outside the repo.
-
