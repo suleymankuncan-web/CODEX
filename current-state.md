@@ -26,27 +26,33 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-16, local `main` is aligned with `origin/main`.
+As of 2026-05-18, `origin/main` is verified through the production readiness
+load-smoke merge.
 
 Latest merge on main:
 
 ```text
-a2843c69 Merge pull request #186 from suleymankuncan-web/codex/admin-targets-data-prefetch
+c69b7cf2 Merge pull request #239 from suleymankuncan-web/codex/performance-budget-pass
 ```
 
-The recent performance/prefetch line is merged through:
+The production readiness roadmap is merged through:
 
-- PR #179 `store-tasks-data-prefetch`
-- PR #180 `store-task-checklist-prefetch`
-- PR #181 `store-task-approval-prefetch`
-- PR #182 `store-home-checklist-prefetch`
-- PR #183 `store-sidebar-data-prefetch`
-- PR #184 `admin-sidebar-data-prefetch`
-- PR #185 `admin-inbox-data-prefetch`
-- PR #186 `admin-targets-data-prefetch`
+- PR #228 Deployed Readiness Smoke
+- PR #229 Edge Security Headers
+- PR #230 Observability V1
+- PR #231 Alerting and Incident Evidence
+- PR #232 Redis-Backed Rate Limit
+- PR #233 Queue Durability Gate
+- PR #234 Backup/Restore Live Drill evidence gate
+- PR #235 Upload Resource Guardrails
+- PR #236 Upload Resource Guardrails review fixes
+- PR #237 Env/Secret Drift Guard
+- PR #238 Supabase Boundary Guard
+- PR #239 Performance Budget Pass
 
-These were frontend-side route/data prefetch and transition smoothness slices.
-Vercel deploy is enough for those; Render deploy was not required.
+Main `Release Check` passed after PR #239. Render deploy was not required for
+PR #239 because it changed readiness scripts/docs/evidence rather than backend
+runtime code.
 
 Known local working tree noise at recovery time:
 
@@ -60,6 +66,19 @@ Known local working tree noise at recovery time:
 Do not stage, delete, or "clean up" those unless the user explicitly asks.
 
 ## Product Position
+
+Latest readiness decision:
+
+- Production Readiness Decision Packet V1:
+  `docs/evidence/readiness/2026-05-18-production-readiness-decision.md`
+- Local code and release gate: `Go`
+- Controlled staging/internal hardening: `Conditional Go`
+- Controlled pilot expansion: `No-Go` until real staging auth/action and
+  protected-route evidence is captured
+- Broad production rollout: `No-Go`
+
+The next useful work is external evidence capture, not another invisible local
+foundation pass by reflex.
 
 Do not restart the project. The recovered thread ended with a clear decision:
 the project is not finished, but it is not throwaway. It is roughly an
@@ -257,8 +276,19 @@ Rule for new work:
 
 Recommended next action in this new window:
 
-Start a visible product-feel sprint. Do not begin with another backend/refactor
-cleanup unless a concrete blocker appears.
+Do not widen rollout yet. First close the external evidence gaps named by the
+Production Readiness Decision Packet V1:
+
+1. Real staging auth/action smoke with sanitized evidence.
+2. Protected route load smoke with role-specific staging bearer tokens.
+3. Supabase staging restore drill into an approved disposable target.
+4. Alert/error-tracking destination proof or accepted log-retention evidence.
+5. Broad-production Redis/BullMQ decision and health evidence if import or
+   snapshot durability is required.
+6. Authenticated integration-admin upload smoke with a safe sample file.
+
+If those external inputs are not available, the next local product work should
+be a narrow visible product-feel slice, not broad backend/refactor cleanup.
 
 Best first slice:
 
@@ -330,7 +360,7 @@ Migration smoke:
 
 Debt ledger:
 
-- Closed active debts: 94
+- Closed active debts: 95
 - Superseded before overbuilding: 1
 - Blocked external dependency: 1
 - Watchlist decision item: 0
@@ -341,6 +371,9 @@ The current debt ledger is `docs/plans/project-debt-ledger.md`.
 
 Project Debt Ledger Consistency Guard V1 keeps this handoff aligned with the
 canonical ledger counts.
+
+Production Readiness Decision Packet V1 keeps the current Go / Conditional Go /
+No-Go posture linked from this handoff.
 
 ## Guarded Reference Index
 
@@ -373,3 +406,4 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/plans/ui-localization-strategy.md` - UI Localization Strategy
 - `docs/plans/ui-localization-closeout-v1.md` - UI Localization Closeout V1
 - `docs/superpowers/plans/2026-05-06-master-data-validation-promotion-test-split.md` - Master Data Validation/Promotion Test Split V1
+- `docs/evidence/readiness/2026-05-18-production-readiness-decision.md` - Production Readiness Decision Packet V1

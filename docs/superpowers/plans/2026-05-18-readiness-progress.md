@@ -46,6 +46,8 @@ Slice 9 note: `gsd headless query` was retried after PR #238 merged and returned
 
 Slice 10 note: `gsd headless query` was retried after PR #237 merged and returned the same canonical DB blocker; execution continued from this checked-in plan, current Supabase API key/security docs, and repo tests. Current Supabase docs still state that secret/service_role keys are backend-only and bypass Row Level Security, so this slice keeps the active frontend boundary closed.
 
+Slice 12 note: `gsd headless query` was retried after PR #239 merged and returned the same canonical DB blocker; execution continued from this checked-in plan, merged PR evidence, GitHub release-check status, and repo tests.
+
 ## Current Readiness Baseline
 
 Strong areas that should be preserved:
@@ -92,10 +94,10 @@ Open risk areas this plan must progress:
 | 6 | Queue Durability Gate | Merged (#233) | Lost in-process background jobs | Render |
 | 7 | Backup/Restore Live Drill | Merged evidence gate (#234); external drill pending | Data-loss recovery uncertainty | No code deploy unless scripts change |
 | 8 | Upload Resource Guardrails | Merged (#235, review fixes #236) | CPU/memory spikes from imports | Render |
-| 9 | Performance Budget Pass | In progress | Slow critical routes under realistic load | No runtime deploy if scripts/docs only |
+| 9 | Performance Budget Pass | Merged (#239) | Slow critical routes under realistic load | No runtime deploy if scripts/docs only |
 | 10 | Supabase Boundary Guard | Merged (#238) | Accidental direct client/RLS exposure | No runtime deploy; main release check passed |
 | 11 | Env/Secret Drift Guard | Merged (#237) | Secret/public-env mistakes | No runtime deploy; main release check passed |
-| 12 | Final Go/No-Go Readiness Packet | Pending | Unclear launch decision | No |
+| 12 | Final Go/No-Go Readiness Packet | In progress | Unclear launch decision | No |
 
 ## Slice 1: Deployed Readiness Smoke
 
@@ -641,11 +643,14 @@ Open risk areas this plan must progress:
 - Staging public API health smoke passed with `NODE_OPTIONS=--dns-result-order=ipv4first`: availability `100%`, p50 `132.23ms`, p95 `224.59ms`, 5xx `0`.
 - Protected route performance remains blocked until real staging role-specific bearer tokens are provided.
 - Evidence file: `docs/evidence/readiness/2026-05-18-staging-backend-readiness-load-smoke.md`.
+- Review fix: Codex review identified that the timeout had to remain active through `response.text()` body reads; fixed in commit `6d6b20c3` before PR ready.
 - Local verification:
-  - `node --test scripts/backend-readiness-load-smoke.test.mjs` passed: 6 tests.
-  - `npm.cmd run test:scripts` passed: 227 tests.
+  - `node --test scripts/backend-readiness-load-smoke.test.mjs` passed: 7 tests.
+  - `npm.cmd run test:scripts` passed: 228 tests.
   - `npm.cmd run check:release` passed, including backend lint/test/build/audit and frontend build/Playwright/audit.
   - `git diff --check` passed with line-ending warnings only.
+- PR: #239 merged into `main`.
+- Main `Release Check` passed after merge commit `c69b7cf24605e9b65b7215f6557f74174dd6364b`.
 
 ## Slice 10: Supabase Boundary Guard
 
@@ -750,22 +755,22 @@ Open risk areas this plan must progress:
 
 **Implementation outline:**
 
-- [ ] Summarize each readiness slice:
+- [x] Summarize each readiness slice:
   - status
   - PR
   - deploy evidence
   - remaining risk
-- [ ] Assign final status:
+- [x] Assign final status:
   - Go
   - Conditional Go
   - No-Go
-- [ ] Keep broad production No-Go if any of these remain unresolved:
+- [x] Keep broad production No-Go if any of these remain unresolved:
   - no error tracking or log retention path
   - no deployed smoke evidence
   - no backup/restore evidence
   - direct Supabase access introduced without RLS/policies
   - upload/import resource risk unbounded
-- [ ] Update `current-state.md` with the final readiness position.
+- [x] Update `current-state.md` with the final readiness position.
 
 **Verification:**
 
@@ -777,11 +782,32 @@ Open risk areas this plan must progress:
 
 - A new engineer can read one packet and understand whether production rollout is allowed.
 
-## Recommended Next PR
+**Current branch evidence:**
 
-Start with **Slice 1: Deployed Readiness Smoke**.
+- Added final decision packet: `docs/evidence/readiness/2026-05-18-production-readiness-decision.md`.
+- Added guard: `scripts/production-readiness-decision-contract.test.mjs`.
+- Updated `current-state.md`, `docs/plans/active-next-actions.md`, and `docs/plans/project-debt-ledger.md` to link the packet and record:
+  - local code/release gate: `Go`
+  - controlled staging/internal hardening: `Conditional Go`
+  - controlled pilot expansion: `No-Go` until real staging auth/action and protected-route evidence exists
+  - broad production rollout: `No-Go`
+- Current broad-production blockers are external or operator-evidence bound:
+  - real staging auth/action smoke
+  - role-specific protected route load smoke
+  - Supabase staging restore drill
+  - external alert/error-tracking destination or log-retention proof
+  - Redis/BullMQ broad-production decision and health evidence
+  - authenticated integration-admin upload smoke
+- Local verification:
+  - `node --test scripts/production-readiness-decision-contract.test.mjs scripts/project-debt-ledger-consistency-contract.test.mjs` passed: 9 tests.
+  - `npm.cmd run test:scripts` passed: 232 tests.
+  - `npm.cmd run check:release` passed after installing worktree dependencies, including backend lint/test/build/audit and frontend build/Playwright/audit.
 
-Reason: it is low-risk, does not need new provider accounts, and directly catches the type of Render/Vercel misconfiguration that already caused deploy friction. After that, do **Slice 2: Edge Security Headers**, then **Slice 3: Observability V1** once the provider/log-drain decision is made.
+## Recommended Next Move
+
+Follow **Slice 12: Final Go/No-Go Readiness Packet** until it is merged.
+
+After that, do not open another local readiness guard by reflex. The next high-value work is one of the external evidence items named by the decision packet, or a narrow visible product-feel slice if those external inputs are not available.
 
 ## Open Decisions
 

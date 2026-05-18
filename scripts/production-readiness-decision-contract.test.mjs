@@ -1,0 +1,78 @@
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import test from 'node:test'
+
+const workspaceRoot = join(import.meta.dirname, '..')
+const decisionPath = 'docs/evidence/readiness/2026-05-18-production-readiness-decision.md'
+
+function readText(path) {
+  return readFileSync(join(workspaceRoot, path), 'utf8')
+}
+
+function requireText(text, value) {
+  assert.ok(text.includes(value), `Missing expected text: ${value}`)
+}
+
+const decision = readText(decisionPath)
+const currentState = readText('current-state.md')
+const activeNextActions = readText('docs/plans/active-next-actions.md')
+const debtLedger = readText('docs/plans/project-debt-ledger.md')
+
+test('production readiness decision records the final release posture', () => {
+  for (const phrase of [
+    'Local code and release gate: Go.',
+    'Controlled staging/internal hardening: Conditional Go.',
+    'Controlled pilot expansion: No-Go until real staging auth/action and protected-route evidence is captured.',
+    'Broad production rollout: No-Go.',
+    'PR #239',
+    'c69b7cf24605e9b65b7215f6557f74174dd6364b',
+  ]) {
+    requireText(decision, phrase)
+  }
+})
+
+test('production readiness decision summarizes every readiness slice and blocker', () => {
+  for (const phrase of [
+    'Merged PR #228',
+    'Merged PR #229',
+    'Merged PR #230',
+    'Merged PR #231',
+    'Merged PR #232',
+    'Merged PR #233',
+    'Merged PR #234',
+    'Merged PR #235 and review fixes PR #236',
+    'Merged PR #237',
+    'Merged PR #238',
+    'Merged PR #239',
+    'Supabase staging restore into a disposable target has not been executed.',
+    'Protected route performance and authenticated session evidence remain blocked',
+    'broad production requires Redis-backed rate limiting',
+    'broad production durable work requires BullMQ/Redis evidence',
+    'Staging authenticated upload smoke still needs integration-admin credentials and sample file.',
+  ]) {
+    requireText(decision, phrase)
+  }
+})
+
+test('production readiness decision preserves no-secret evidence rules', () => {
+  for (const phrase of [
+    'No bearer token',
+    'authorization code',
+    'PKCE verifier',
+    'client secret',
+    'database URL',
+    'Redis URL',
+    'provider console values and live secrets must remain outside the repo',
+  ]) {
+    requireText(decision, phrase)
+  }
+})
+
+test('handoff and action docs link the production readiness decision', () => {
+  for (const text of [currentState, activeNextActions, debtLedger]) {
+    requireText(text, 'Production Readiness Decision Packet V1')
+    requireText(text, decisionPath)
+  }
+})
+
