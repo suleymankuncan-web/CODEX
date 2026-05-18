@@ -799,8 +799,8 @@ Open risk areas this plan must progress:
   - Redis/BullMQ broad-production decision and health evidence
   - authenticated integration-admin upload smoke
 - Local verification:
-  - `node --test scripts/production-readiness-decision-contract.test.mjs scripts/project-debt-ledger-consistency-contract.test.mjs` passed: 9 tests.
-  - `npm.cmd run test:scripts` passed: 232 tests.
+  - `node --test scripts/production-readiness-decision-contract.test.mjs scripts/project-debt-ledger-consistency-contract.test.mjs` passed: 10 tests.
+  - `npm.cmd run test:scripts` passed: 233 tests.
   - `npm.cmd run check:release` passed after installing worktree dependencies, including backend lint/test/build/audit and frontend build/Playwright/audit.
 
 ## Recommended Next Move
