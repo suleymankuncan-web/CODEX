@@ -13,11 +13,11 @@ Rule:
 
 ## Snapshot
 
-Date: 30 April 2026
+Date: 18 May 2026
 
 Current count:
 
-- Closed active debts: 94
+- Closed active debts: 95
 - Superseded before overbuilding: 1
 - Blocked external dependency: 1
 - Watchlist decision item: 0
@@ -122,6 +122,7 @@ These are counted as paid because they have implementation or documentation evid
 92. Controlled Pilot Feedback Log Guard V1
 93. Staging Auth Session Edge Evidence Guard V1
 94. JSON Source Suspension V1
+95. Production Readiness Decision Packet V1
 
 Ranking Included Snapshot Contract V1 is counted as paid because `GET /reports/leaderboards/closed` now returns `includedSnapshotRuns`, daily ranking returns the included closed snapshot, monthly ranking returns every completed daily snapshot included in the month calculation, and `/store/rankings` uses that backend contract instead of frontend inference.
 
@@ -134,6 +135,8 @@ External ID Code Normalization Guard V1 is counted as paid because import/materi
 Source-Agnostic Import Boundary V1 is counted as paid because Excel is locked as the active source path, JSON source integration is suspended for the current pilot and Power BI/Excel operating path, and Excel/JSON/future sources must enter through the same canonical import payload before mapping, validation, data quality, lineage, materialization, snapshotting, scoring, or reporting. Reference: `docs/plans/source-agnostic-import-boundary-v1.md`.
 
 JSON Source Suspension V1 is counted as paid because Power BI/Excel outputs are the active operating source for the current pilot, JSON source integration is suspended, and the project no longer treats JSON ingest as an active blocker while Power BI/Excel remains the chosen source. Future JSON planning reopens only after real JSON-format files, official field list, delivery/cadence/auth model, and identity semantics exist. Reference: `docs/plans/source-agnostic-import-boundary-v1.md`.
+
+Production Readiness Decision Packet V1 is counted as paid because `docs/evidence/readiness/2026-05-18-production-readiness-decision.md` consolidates the readiness roadmap through PR #239 into one Go / Conditional Go / No-Go decision, links merged evidence, keeps broad production at No-Go, and names the external evidence required before controlled pilot expansion or broad rollout.
 
 Master Data Bootstrap Admin Dry-Run Evidence V1 is counted as paid because `/admin/master-data/:batchId` now exposes backend promotion-readiness row evidence before any live promotion command is executed. Operators can see ready/already-promoted/blocked row state, promoted entity evidence, and block reasons while promotion commands remain explicit and unchanged. Reference: `docs/plans/master-data-bootstrap-admin-dry-run-evidence-v1.md`.
 
@@ -470,7 +473,17 @@ Those have been actively reduced. The remaining work is mostly planned product d
 
 ## Next Logical Step
 
+Follow Production Readiness Decision Packet V1 first:
+`docs/evidence/readiness/2026-05-18-production-readiness-decision.md`.
+
 If staging provider and seeded DB values are available, run the guarded staging action smoke.
+
+If role-specific staging bearer tokens are available, run the backend readiness
+load smoke for authenticated session, store, competition, and import route
+groups.
+
+If an approved disposable Supabase restore target is available, run the staging
+restore drill and update the decision packet.
 
 JSON source integration is suspended for the current pilot and Power BI/Excel operating path. Do not reopen JSON planning unless real JSON-format files or an official field list arrive and the product owner reopens the path.
 

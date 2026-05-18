@@ -6,6 +6,20 @@ This is the short working list for the next practical steps. It keeps the projec
 
 ## Current Position
 
+As of 18 May 2026, the production readiness roadmap has a decision packet:
+
+- Production Readiness Decision Packet V1:
+  `docs/evidence/readiness/2026-05-18-production-readiness-decision.md`
+- Local code and release gate: `Go`
+- Controlled staging/internal hardening: `Conditional Go`
+- Controlled pilot expansion: `No-Go` until real staging auth/action and protected-route evidence is captured
+- Broad production rollout: `No-Go`
+
+The next useful work is evidence capture, not another local guard by reflex:
+real staging auth/action smoke, protected route load smoke with role-specific
+tokens, Supabase staging restore drill, alert/error-tracking destination proof,
+Redis/BullMQ broad-production decision, and authenticated upload smoke.
+
 As of 6 May 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, Store UX TR-First Copy V1, KPI Config Versioning V1, Source-Agnostic Ingest Contract Hardening V1, KPI Raw Row Lineage Persistence V1, Import Lineage Evidence Surface V1, Audit Event Taxonomy Guard V1, Data Quality Guard V1, Import Batch Quality Summary V1, Project-Wide Scope/Auth Guard Scan V1, No-Empty-Scope Repository Contract Pass V1, Production Environment Readiness Checklist V1, Environment Variable Inventory + Deployment Runbook Skeleton V1, Environment Drift Guard V1, Production/Staging Incident Response Skeleton V1, Personnel Management V1, Personnel Request Return/Resubmit V1, Personnel Master Data Bootstrap V1 planning, Project MVP Focus Map, Excel KPI Import V1, Excel KPI Import Operator Runbook V1, Production-Ready Migration System V1, Production Security Gate V1-A, Mobile Auth/Session V1 P0, Mobile API/BFF Endpoint Inventory V1, Checklist Acknowledgement Canonical Schema Alignment V1, Mobile Checklist Today V1 Design, Mobile Checklist Today V1, Checklist Store Score Integration V1, KPI Benchmark Scoring V1, Target Reference Control Surface V1, Target Coverage V1-B Readiness Signals, Personnel Master Data Bootstrap Staging Foundation V1, Ranking Included Snapshot Contract V1, Monthly Ranking Score Source Contract V1, Ranking Score Explanation Copy V1, Master Data Bootstrap Promotion Safety Guard V1, External ID Code Normalization Guard V1, Source-Agnostic Import Boundary V1, Master Data Bootstrap Admin Dry-Run Evidence V1, Master Data Bootstrap Pilot Smoke Runbook V1, Import Decision Evidence V1, Scope/Auth Regression Matrix V1, DB Health And Migration Evidence V1, Test Suite Hygiene V1, Import Batch Source Test Split V1, Import Batch Evidence Test Split V1, Competition Repository Test Split V1, Competition Stage Package Plan Test Split V1, Snapshot Run Read Model Test Split V1, Competition Service Team Template Test Split V1, Auth Action Scope Test Split V1, Operator Evidence Consistency Pass V1, Backup Restore Drill Runbook V1, Backup Restore Local Drill Evidence V1, Migration Fresh DB Smoke V1, Migration Smoke Release Preflight Policy V1, Master Data Validation/Promotion Test Split V1, Controlled Pilot Operating Checklist V1, Controlled Pilot Feedback Log Guard V1, and Staging Auth Session Edge Evidence Guard V1 have:
 
 - saved drafts
@@ -104,7 +118,7 @@ As of 6 May 2026, the competition package planning flow, Operational Feed V1, DM
 
 Reference: `docs/plans/project-debt-ledger.md`
 
-- Closed active debts: 94
+- Closed active debts: 95
 - Superseded before overbuilding: 1
 - Blocked external dependency: 1
 - Watchlist decision item: 0
@@ -114,6 +128,7 @@ Reference: `docs/plans/project-debt-ledger.md`
 Interpretation:
 
 - The local project is not carrying a known silent release-quality debt right now.
+- Production Readiness Decision Packet V1 now records the current `Go`, `Conditional Go`, and `No-Go` boundaries in `docs/evidence/readiness/2026-05-18-production-readiness-decision.md`.
 - Real IdP staging evidence is not counted as done because it requires outside staging IdP and seeded DB values.
 - JSON Source Suspension V1 is the current product decision: JSON source integration is suspended for the current pilot and Power BI/Excel operating path.
 - Power BI/Excel outputs remain the chosen operating source; JSON source work is not an active blocker while this remains true.
@@ -1260,7 +1275,16 @@ Interpretation:
 
 ## Recommended Next Move
 
+Follow Production Readiness Decision Packet V1 first:
+`docs/evidence/readiness/2026-05-18-production-readiness-decision.md`.
+
 If staging IdP and seeded staging DB values are available, start real staging evidence.
+
+If role-specific staging bearer tokens are available, run the backend readiness
+load smoke for session, store, competition, and import route groups.
+
+If a disposable Supabase restore target is approved, run the Supabase staging
+restore drill and update the readiness decision.
 
 JSON remains suspended for the current pilot. Do not reopen JSON planning until real JSON-format files or an official field list arrive and the product owner reopens the path.
 
