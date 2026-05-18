@@ -184,6 +184,8 @@ These values are read by `admin-web/scripts/auth-live-smoke.mjs`.
 - Keep committed `.env.example` files placeholder-only.
 - Store real secrets in the hosting environment or secret manager.
 - Rotate any value that appears in chat, issue comments, screenshots, or logs.
+- Supabase Boundary Guard: frontend files must not contain Supabase `service_role` / secret keys, `DATABASE_URL`, `JWT_SECRET`, direct Supabase client access to `ops.*`, or direct Supabase REST access to `ops.*`.
+- Direct Supabase client access to `ops.*` remains blocked until RLS and policy design is written, tested, and approved; direct Supabase REST access is the same boundary violation.
 
 ## Production Fill-In Checklist
 
@@ -224,6 +226,7 @@ These values are read by `admin-web/scripts/auth-live-smoke.mjs`.
 - [ ] `VITE_OIDC_RESPONSE_TYPE=code` if frontend fallback provider env is used.
 - [ ] `VITE_BEARER_TOKEN` is empty.
 - [ ] No `VITE_*` value contains a secret.
+- [ ] `npm.cmd run check:supabase-boundary` passes before direct Supabase/RLS exposure is considered.
 
 ### Smoke
 
