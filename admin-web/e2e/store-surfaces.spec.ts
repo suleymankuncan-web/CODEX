@@ -860,6 +860,8 @@ test('store rankings page renders Plum ranking table without signal chrome', asy
   ).toBeAttached()
   await expect(page.locator('.rankings-plum-page')).toBeVisible()
   await expect(page.getByText('Top 100 kapsam')).toBeVisible()
+  await expect(page.getByLabel('Sıralama güven özeti')).toContainText('Genel skor')
+  await expect(page.getByLabel('Sıralama güven özeti')).toContainText('Canlı rapor')
   await expect(page.getByRole('heading', { name: 'Mağaza listesi' })).toBeVisible()
   await expect(page.getByText('Mağaza skor')).toBeVisible()
   await expect(page.locator('.rankings-plum-score-track i').first()).toHaveCSS(
