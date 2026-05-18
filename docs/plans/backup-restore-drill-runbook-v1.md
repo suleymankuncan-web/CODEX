@@ -31,6 +31,67 @@ Do not capture raw secrets, raw tokens, raw `DATABASE_URL`, or personnel/custome
 - The restore target name is clearly disposable, for example `store_ops_restore_drill`.
 - The operator has confirmed the restore target can be dropped and recreated.
 
+## Supabase Managed Backup Notes
+
+These notes were reviewed against Supabase docs on 2026-05-18.
+
+- Supabase projects have daily managed backups; backup retention depends on the plan.
+- PITR is a paid add-on for eligible paid plans and is intended when the acceptable data-loss window is shorter than daily backups.
+- Projects using newer physical backups or PITR should not expect a downloadable legacy logical `backup.gz`; use `supabase db dump` or `pg_dump` when this runbook needs a portable logical drill artifact.
+- Managed dashboard restore to the same project creates downtime and must not be used as a readiness experiment against production.
+- "Restore to a new project" is the preferred managed Supabase rehearsal path when a paid-plan disposable clone is approved; it creates a database-only copy and still needs manual checks for Storage objects, Edge Functions, auth settings/API keys, Realtime settings, and external-operation extensions.
+- Supabase database backups do not restore Storage API objects themselves; only database metadata is part of the database backup.
+
+## Supabase Staging Drill Modes
+
+Use one of these modes for staging evidence.
+
+### Mode A: Logical Dump Into Disposable PostgreSQL Target
+
+Use this when the operator has a staging connection string and a separate disposable restore database.
+
+- Source: Supabase staging Postgres.
+- Target: local or staging PostgreSQL database named like `store_ops_restore_drill`.
+- Commands: `pg_dump`/`pg_restore` or Supabase CLI `db dump` followed by `psql`.
+- Evidence required:
+  - source project label, not a raw connection string,
+  - restore target label,
+  - backup artifact type and sanitized path,
+  - schema/table counts,
+  - migration tracking count,
+  - smoke query result,
+  - confirmation no production DB was touched.
+
+### Mode B: Supabase Restore To New Project
+
+Use this only when the Supabase plan supports it and the owner approves any cost.
+
+- Source: Supabase staging project.
+- Target: newly created disposable Supabase project.
+- Dashboard action: Database backups -> Restore to a New Project.
+- Evidence required:
+  - source project label,
+  - disposable target project label,
+  - backup date or PITR timestamp,
+  - restore duration,
+  - schema/table counts,
+  - migration tracking count,
+  - smoke query result,
+  - confirmation external-operation extensions such as `pg_net`, `pg_cron`, or wrappers were reviewed before any target use.
+
+Do not use same-project managed restore as a rehearsal unless the environment owner explicitly approves downtime and data rewind.
+
+## RPO/RTO Fields
+
+Every staging or production readiness evidence file must record:
+
+- Backup capability: daily backup, PITR, manual logical dump, or unknown.
+- RPO assumption: maximum acceptable data loss window.
+- RTO assumption: maximum acceptable restore duration.
+- Last available backup or recovery point timestamp.
+- Restore target type: disposable local database, disposable staging database, or disposable Supabase project.
+- Decision: Go, Conditional Go, or No-Go.
+
 ## Environment Variables
 
 Use environment variables in the terminal session. Do not paste secrets into committed docs or evidence.
@@ -171,6 +232,9 @@ Conditional Go:
 No-Go:
 
 - source or restore target cannot be confirmed,
+- Supabase plan backup capability is unknown,
+- PITR is required by the RPO but is not enabled or not approved,
+- restore-to-new-project is required but no disposable project/cost approval exists,
 - restore target may be production,
 - restore target equals the source database,
 - backup file is missing or empty,
@@ -183,15 +247,22 @@ No-Go:
 date=YYYY-MM-DD
 operator=[name or role]
 environment=local|staging
+source_platform=local-postgres|supabase-postgres
+backup_capability=daily|pitr|manual-logical-dump|unknown
+latest_backup_or_recovery_point_utc=YYYY-MM-DDTHH:mm:ssZ|unknown
+rpo_assumption=[duration or unknown]
+rto_assumption=[duration or unknown]
 source_database=[redacted-url]
 restore_database=[redacted-url]
 restore_target_disposable=yes|no
+restore_target_type=local-postgres|staging-postgres|supabase-new-project
 backup_file=[path only]
 backup_file_size_bytes=[number]
 backup_result=success|failed
 restore_result=success|failed
 restore_proof_schemas=ops:[count], stg:[count], rpt:[count], audit:[count]
 restore_proof_migration_rows=[count]
+smoke_query_result=success|failed|not-run
 personal_data_samples_captured=no
 decision=Go|Conditional Go|No-Go
 notes=[sanitized notes only]

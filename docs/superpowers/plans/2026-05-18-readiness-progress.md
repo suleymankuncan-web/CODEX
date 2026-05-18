@@ -38,6 +38,8 @@ Slice 5 note: `gsd headless query` was retried before implementation and again r
 
 Slice 6 note: `gsd headless query` was retried before implementation and returned the same canonical DB blocker; execution continued from this checked-in plan, post-merge smoke evidence, and repo tests.
 
+Slice 7 note: `gsd headless query` was retried before implementation and returned the same canonical DB blocker; execution continued from this checked-in plan, Supabase documentation review, and repo tests. No destructive restore command was run because no approved disposable Supabase restore target or staging restore credentials were available in source-controlled context.
+
 ## Current Readiness Baseline
 
 Strong areas that should be preserved:
@@ -81,8 +83,8 @@ Open risk areas this plan must progress:
 | 3 | Observability V1 | Merged (#230) | Silent backend/frontend failures | Backend + frontend |
 | 4 | Alerting and Incident Evidence | Merged (#231) | Nobody notices production degradation | Depends on provider |
 | 5 | Redis-Backed Rate Limit | Merged (#232) | Abuse bypass on multi-instance runtime | Render |
-| 6 | Queue Durability Gate | Ready for PR | Lost in-process background jobs | Render |
-| 7 | Backup/Restore Live Drill | Pending | Data-loss recovery uncertainty | No code deploy unless scripts change |
+| 6 | Queue Durability Gate | Merged (#233) | Lost in-process background jobs | Render |
+| 7 | Backup/Restore Live Drill | External drill pending | Data-loss recovery uncertainty | No code deploy unless scripts change |
 | 8 | Upload Resource Guardrails | Pending | CPU/memory spikes from imports | Render |
 | 9 | Performance Budget Pass | Pending | Slow critical routes under realistic load | Maybe |
 | 10 | Supabase Boundary Guard | Pending | Accidental direct client/RLS exposure | No deploy unless guard scripts only |
@@ -455,6 +457,12 @@ Open risk areas this plan must progress:
   - `npm.cmd --prefix admin-web run test:e2e -- e2e/admin-routing.spec.ts:372 --project=chromium` passed after one full release run hit that isolated Playwright route-load flake.
   - `npm.cmd run check:release` passed on rerun, including backend release checks, frontend checks, Playwright e2e, and audit.
 - Post-merge deploy note: Render deploy verification is required because backend runtime behavior changed. Staging smoke should confirm `/api/health` includes `queue.status=process-local` for controlled pilot, or `queue.status=durable` with Redis `status=ok` when BullMQ is enabled.
+- PR: #233 merged into `main`.
+- Post-merge staging deploy smoke passed:
+  - `READINESS_FRONTEND_URL=https://staging.hr-axis.com READINESS_BACKEND_URL=https://api-staging.hr-axis.com/api READINESS_TIMEOUT_MS=45000 npm.cmd run smoke:deployed-readiness`
+  - 13 passed, 0 failed, 1 skipped.
+  - `/api/health.queue.status` reported `process-local`, matching the controlled-pilot `QUEUE_BACKEND=in-memory` posture.
+  - Auth/session remained skipped because no real `READINESS_BEARER_TOKEN` was provided.
 
 ## Slice 7: Backup/Restore Live Drill
 
@@ -465,11 +473,12 @@ Open risk areas this plan must progress:
 - Modify: `docs/plans/backup-restore-drill-runbook-v1.md`
 - Modify: `docs/plans/production-environment-readiness-checklist.md`
 - Create: `docs/evidence/readiness/YYYY-MM-DD-supabase-staging-restore-drill.md`
-- Optional modify: `scripts/backup-restore-drill-runbook-contract.test.mjs`
+- Create: `scripts/supabase-staging-restore-drill-evidence-contract.test.mjs`
+- Modify: `admin-web/playwright.config.ts`
 
 **Implementation outline:**
 
-- [ ] Confirm Supabase plan backup capability:
+- [x] Confirm current Supabase managed-backup documentation and record unknown project capability:
   - backup cadence
   - PITR availability if paid plan
   - restore target options
@@ -496,6 +505,25 @@ Open risk areas this plan must progress:
 **Done when:**
 
 - A restore is proven in an environment that resembles production, not only local Docker.
+
+**Current branch evidence:**
+
+- Reviewed current Supabase backup docs before editing this slice.
+- Updated `docs/plans/backup-restore-drill-runbook-v1.md` with Supabase-specific daily backup, PITR, physical backup, logical dump, restore-to-new-project, Storage-object, RPO, and RTO caveats.
+- Added `docs/evidence/readiness/2026-05-18-supabase-staging-restore-drill.md`.
+- Current evidence is explicit `No-Go for broad production` because Supabase staging restore has not yet been executed against an approved disposable target.
+- The evidence preserves the existing local restore drill as useful local proof but does not count it as Supabase-managed restore proof.
+- Production checklist now requires Supabase plan backup capability, PITR availability, latest backup/recovery point, and staging restore evidence before broad production Go.
+- Added `scripts/supabase-staging-restore-drill-evidence-contract.test.mjs` to keep the blocker, RPO/RTO fields, and no-secret evidence rules from being diluted.
+- Pinned Playwright E2E to one worker after two full release attempts exposed a local parallel-preview blank-shell flake; the official release gate passed after serialization.
+- No production or staging restore command was executed in this branch.
+
+**Current branch verification:**
+
+- `node --test scripts/backup-restore-drill-runbook-contract.test.mjs scripts/backup-restore-local-evidence-contract.test.mjs scripts/supabase-staging-restore-drill-evidence-contract.test.mjs scripts/production-readiness-checklist-contract.test.mjs` passed: 16 tests.
+- `npm.cmd run test:scripts` passed: 210 tests.
+- `npm.cmd run test:e2e -- --workers=1` passed: 157 Playwright tests.
+- `npm.cmd run check:release` passed after Playwright worker serialization, including backend release checks, frontend checks, Playwright E2E, and audit.
 
 ## Slice 8: Upload Resource Guardrails
 

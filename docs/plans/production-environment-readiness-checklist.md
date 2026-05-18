@@ -133,6 +133,8 @@ Allowed sign-off states:
 - [ ] Audit retention owner is defined.
 - [ ] Backup cadence is defined for the target database.
 - [ ] Restore drill owner is defined before production Go.
+- [ ] Supabase plan backup capability, PITR availability, and latest backup/recovery point are recorded before broad production Go.
+- [ ] Supabase staging restore drill evidence exists before broad production Go, or broad production is explicitly No-Go.
 - [ ] Import evidence files and smoke evidence files have a retention owner.
 - [ ] Sensitive evidence redaction rules are applied before evidence is stored.
 
@@ -140,6 +142,7 @@ Allowed sign-off states:
 
 - [ ] Audit retention period is documented by data type.
 - [ ] Backup restore is tested at least once before broad rollout.
+- [ ] Restore-to-new-project cost and disposable-target owner are approved before any managed Supabase restore rehearsal.
 - [ ] Production incident contact path is written.
 - [ ] High-severity import/data quality events have an owner for triage.
 
@@ -255,7 +258,7 @@ These can proceed only with written owner and date:
 - Complete EN/TR expansion is not complete.
 - Real JSON import adapter is not complete because JSON source integration is suspended for the current pilot.
 - Staging data retention policy is temporary but documented.
-- Backup restore drill is scheduled but not yet performed for a limited pilot.
+- Local backup restore drill has passed, but Supabase staging restore is scheduled and not yet performed for a limited pilot.
 
 ## CODEX Dürüst Yorum
 
