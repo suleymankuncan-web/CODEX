@@ -72,7 +72,12 @@ Establish one repeatable measurement path for the critical backend flows before 
 - `BACKEND_LOAD_ITERATIONS`
 - `BACKEND_LOAD_CONCURRENCY`
 - `BACKEND_LOAD_TIMEOUT_MS`
-- `BACKEND_LOAD_BEARER_TOKEN` or `READINESS_BEARER_TOKEN` for real protected route budgets
+- `BACKEND_LOAD_SESSION_TOKEN` or `BACKEND_LOAD_AUTH_SESSION_TOKEN` for `GET /api/auth/session`
+- `BACKEND_LOAD_STORE_TOKEN`, `PROTECTED_PERF_STORE_MANAGER_TOKEN`, or `PROTECTED_PERF_STORE_PERSONNEL_TOKEN` for store read routes
+- `BACKEND_LOAD_COMPETITION_TOKEN`, `BACKEND_LOAD_STORE_TOKEN`, or `BACKEND_LOAD_HR_ADMIN_TOKEN` for competition read routes
+- `BACKEND_LOAD_IMPORT_TOKEN` or `BACKEND_LOAD_INTEGRATION_ADMIN_TOKEN` for import read routes
+- `BACKEND_LOAD_BEARER_TOKEN` or `READINESS_BEARER_TOKEN` for auth/session and explicit shared-token diagnostics
+- `BACKEND_LOAD_ALLOW_SHARED_TOKEN=true` to intentionally reuse one bearer token across role-specific groups for diagnostics
 - `BACKEND_LOAD_REQUIRE_PROTECTED=true` to fail the shell when protected budgets are skipped
 - `BACKEND_LOAD_OUTPUT=text|json|both`
 
@@ -118,6 +123,8 @@ Upload/import mutations are excluded from this simple GET budget:
 - `POST /api/snapshots/runs`
 
 Those paths remain covered by upload resource guardrails, command benchmarks, and background job evidence. If upload windows degrade API p95, move parsing/materialization to the durable worker path before broad production.
+
+Use role-specific tokens for protected budgets. A single shared token is not reused across store, competition, and import groups unless `BACKEND_LOAD_ALLOW_SHARED_TOKEN=true` is set, because those route groups require different personas in staging.
 
 ## Current Reality
 

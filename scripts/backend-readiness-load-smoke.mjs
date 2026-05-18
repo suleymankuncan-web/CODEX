@@ -25,6 +25,7 @@ const ROUTE_GROUPS = [
     name: 'authenticated session',
     description: 'Auth/session contract for real browser users.',
     requiresAuth: true,
+    tokenKey: 'session',
     budget: {
       minAvailability: 1,
       maxP50Ms: 700,
@@ -37,6 +38,7 @@ const ROUTE_GROUPS = [
     name: 'store read routes',
     description: 'Store dashboard, score, ranking, and self-performance reads.',
     requiresAuth: true,
+    tokenKey: 'store',
     budget: {
       minAvailability: 1,
       maxP50Ms: 900,
@@ -71,6 +73,7 @@ const ROUTE_GROUPS = [
     name: 'competition read routes',
     description: 'Competition list surface used by the competitions page.',
     requiresAuth: true,
+    tokenKey: 'competition',
     budget: {
       minAvailability: 1,
       maxP50Ms: 900,
@@ -83,6 +86,7 @@ const ROUTE_GROUPS = [
     name: 'import read routes',
     description: 'Import and upload-adjacent read surfaces; upload mutations are excluded.',
     requiresAuth: true,
+    tokenKey: 'import',
     budget: {
       minAvailability: 1,
       maxP50Ms: 1_000,
@@ -140,7 +144,8 @@ export function readBackendReadinessLoadConfig(env = process.env) {
     iterations: readPositiveInteger(env.BACKEND_LOAD_ITERATIONS, DEFAULT_ITERATIONS),
     concurrency: readPositiveInteger(env.BACKEND_LOAD_CONCURRENCY, DEFAULT_CONCURRENCY),
     timeoutMs: readPositiveInteger(env.BACKEND_LOAD_TIMEOUT_MS, DEFAULT_TIMEOUT_MS),
-    bearerToken: readBearerToken(env),
+    tokens: readBackendLoadTokens(env),
+    allowSharedToken: env.BACKEND_LOAD_ALLOW_SHARED_TOKEN === 'true',
     requireProtected: env.BACKEND_LOAD_REQUIRE_PROTECTED === 'true',
     output: readEnv(env, 'BACKEND_LOAD_OUTPUT') || 'both',
   }
@@ -158,14 +163,17 @@ export async function runBackendReadinessLoadSmoke(input = {}) {
   const groups = []
 
   for (const group of ROUTE_GROUPS) {
-    if (group.requiresAuth && !config.bearerToken) {
+    const token = resolveGroupToken(config, group)
+
+    if (group.requiresAuth && !token) {
       groups.push({
         name: group.name,
         description: group.description,
         status: 'skipped',
-        reason:
-          'No BACKEND_LOAD_BEARER_TOKEN or READINESS_BEARER_TOKEN was provided; protected route budget was not executed.',
+        reason: missingTokenReason(group, config),
         requiresAuth: true,
+        tokenKey: group.tokenKey,
+        tokenSources: describeGroupTokenSources(group),
         budget: group.budget,
         endpoints: group.endpoints.map(({ label, method, path }) => ({ label, method, path })),
       })
@@ -177,6 +185,8 @@ export async function runBackendReadinessLoadSmoke(input = {}) {
         group,
         config,
         fetchFn,
+        bearerToken: token?.value ?? '',
+        tokenSource: token?.source ?? null,
       }),
     )
   }
@@ -192,13 +202,15 @@ export async function runBackendReadinessLoadSmoke(input = {}) {
     iterations: config.iterations,
     concurrency: config.concurrency,
     timeoutMs: config.timeoutMs,
-    tokenProvided: Boolean(config.bearerToken),
+    tokenProvided: hasAnyToken(config.tokens),
+    tokenSources: summarizeTokenSources(config.tokens),
+    allowSharedToken: config.allowSharedToken,
     summary,
     groups,
     excludedMutationRoutes: EXCLUDED_MUTATION_ROUTES,
     safety: [
       'Raw bearer tokens, Clerk cookies, authorization codes, PKCE verifiers, client secrets, and private keys are not printed.',
-      'Protected route groups are skipped, not marked as passed, when no real bearer token is provided.',
+      'Protected route groups are skipped, not marked as passed, when no real role-specific bearer token is provided.',
       'API correctness requires non-HTML JSON responses; SPA fallback HTML from API routes is treated as a failure.',
     ],
   }
@@ -234,7 +246,7 @@ export function formatBackendReadinessLoadSummary(evidence) {
   return lines.join('\n')
 }
 
-async function measureGroup({ group, config, fetchFn }) {
+async function measureGroup({ group, config, fetchFn, bearerToken, tokenSource }) {
   const tasks = []
 
   for (const endpoint of group.endpoints) {
@@ -245,6 +257,7 @@ async function measureGroup({ group, config, fetchFn }) {
           iteration,
           config,
           fetchFn,
+          bearerToken,
         }),
       )
     }
@@ -272,6 +285,8 @@ async function measureGroup({ group, config, fetchFn }) {
     description: group.description,
     status: failures.length > 0 ? 'failed' : 'passed',
     requiresAuth: group.requiresAuth,
+    tokenKey: group.tokenKey ?? null,
+    tokenSource,
     budget: group.budget,
     samples: samples.length,
     availability,
@@ -284,13 +299,13 @@ async function measureGroup({ group, config, fetchFn }) {
   }
 }
 
-async function measureEndpoint({ endpoint, iteration, config, fetchFn }) {
+async function measureEndpoint({ endpoint, iteration, config, fetchFn, bearerToken }) {
   const url = `${config.apiBaseUrl}${ensureLeadingSlash(endpoint.path)}`
   const startedAt = performance.now()
 
   try {
     const response = await fetchWithTimeout(fetchFn, url, {
-      headers: buildHeaders(config),
+      headers: buildHeaders(bearerToken),
       timeoutMs: config.timeoutMs,
     })
     const durationMs = round(performance.now() - startedAt, 2)
@@ -458,26 +473,122 @@ async function fetchWithTimeout(fetchFn, url, { headers, timeoutMs }) {
   }
 }
 
-function buildHeaders(config) {
+function buildHeaders(bearerToken) {
   const headers = {
     accept: 'application/json',
     'cache-control': 'no-cache',
   }
 
-  if (config.bearerToken) {
-    headers.authorization = `Bearer ${config.bearerToken}`
+  if (bearerToken) {
+    headers.authorization = `Bearer ${bearerToken}`
   }
 
   return headers
 }
 
-function readBearerToken(env) {
-  return (
-    readEnv(env, 'BACKEND_LOAD_BEARER_TOKEN') ||
-    readEnv(env, 'READINESS_BEARER_TOKEN') ||
-    readEnv(env, 'PROTECTED_PERF_TOKEN') ||
-    readEnv(env, 'PERF_AUTH_TOKEN') ||
-    ''
+function readBackendLoadTokens(env) {
+  const shared = readTokenSource(env, [
+    'BACKEND_LOAD_BEARER_TOKEN',
+    'READINESS_BEARER_TOKEN',
+    'PROTECTED_PERF_TOKEN',
+    'PERF_AUTH_TOKEN',
+  ])
+  const store = readTokenSource(env, [
+    'BACKEND_LOAD_STORE_TOKEN',
+    'PROTECTED_PERF_STORE_MANAGER_TOKEN',
+    'PROTECTED_PERF_STORE_PERSONNEL_TOKEN',
+  ])
+  const competition = readTokenSource(env, [
+    'BACKEND_LOAD_COMPETITION_TOKEN',
+    'BACKEND_LOAD_STORE_TOKEN',
+    'BACKEND_LOAD_HR_ADMIN_TOKEN',
+    'PROTECTED_PERF_STORE_MANAGER_TOKEN',
+    'PROTECTED_PERF_STORE_PERSONNEL_TOKEN',
+    'PROTECTED_PERF_ADMIN_TOKEN',
+  ])
+  const integration = readTokenSource(env, [
+    'BACKEND_LOAD_IMPORT_TOKEN',
+    'BACKEND_LOAD_INTEGRATION_ADMIN_TOKEN',
+    'PROTECTED_PERF_ADMIN_TOKEN',
+  ])
+
+  return {
+    shared,
+    session:
+      readTokenSource(env, ['BACKEND_LOAD_SESSION_TOKEN', 'BACKEND_LOAD_AUTH_SESSION_TOKEN']) ??
+      shared,
+    store,
+    competition,
+    import: integration,
+  }
+}
+
+function readTokenSource(env, names) {
+  for (const name of names) {
+    const value = readEnv(env, name)
+
+    if (value) {
+      return { source: name, value }
+    }
+  }
+
+  return null
+}
+
+function resolveGroupToken(config, group) {
+  if (!group.requiresAuth) {
+    return null
+  }
+
+  const groupToken = config.tokens[group.tokenKey]
+
+  if (groupToken) {
+    return groupToken
+  }
+
+  if (config.allowSharedToken && config.tokens.shared) {
+    return config.tokens.shared
+  }
+
+  return null
+}
+
+function missingTokenReason(group, config) {
+  const names = describeGroupTokenSources(group)
+  const sharedHint = config.tokens.shared
+    ? ' A shared token was provided but was not reused because BACKEND_LOAD_ALLOW_SHARED_TOKEN=true was not set.'
+    : ''
+
+  return `No role-specific bearer token was provided for ${group.name}. Set one of ${names.join(', ')}.${sharedHint}`
+}
+
+function describeGroupTokenSources(group) {
+  if (group.tokenKey === 'session') {
+    return ['BACKEND_LOAD_SESSION_TOKEN', 'BACKEND_LOAD_AUTH_SESSION_TOKEN', 'BACKEND_LOAD_BEARER_TOKEN', 'READINESS_BEARER_TOKEN']
+  }
+
+  if (group.tokenKey === 'store') {
+    return ['BACKEND_LOAD_STORE_TOKEN', 'PROTECTED_PERF_STORE_MANAGER_TOKEN', 'PROTECTED_PERF_STORE_PERSONNEL_TOKEN']
+  }
+
+  if (group.tokenKey === 'competition') {
+    return ['BACKEND_LOAD_COMPETITION_TOKEN', 'BACKEND_LOAD_STORE_TOKEN', 'BACKEND_LOAD_HR_ADMIN_TOKEN']
+  }
+
+  if (group.tokenKey === 'import') {
+    return ['BACKEND_LOAD_IMPORT_TOKEN', 'BACKEND_LOAD_INTEGRATION_ADMIN_TOKEN', 'PROTECTED_PERF_ADMIN_TOKEN']
+  }
+
+  return []
+}
+
+function hasAnyToken(tokens) {
+  return Object.values(tokens).some(Boolean)
+}
+
+function summarizeTokenSources(tokens) {
+  return Object.fromEntries(
+    Object.entries(tokens).map(([key, token]) => [key, token?.source ?? null]),
   )
 }
 

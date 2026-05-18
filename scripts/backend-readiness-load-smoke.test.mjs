@@ -34,7 +34,8 @@ test('backend load smoke measures public health and blocks protected budgets wit
       iterations: 1,
       concurrency: 2,
       timeoutMs: 1000,
-      bearerToken: '',
+      tokens: emptyTokens(),
+      allowSharedToken: false,
       requireProtected: false,
       output: 'json',
     },
@@ -56,7 +57,44 @@ test('backend load smoke measures public health and blocks protected budgets wit
   ])
 })
 
-test('backend load smoke runs protected groups with bearer tokens and redacts token material', async () => {
+test('backend load smoke does not reuse a shared token across role-specific groups by default', async () => {
+  const requestedUrls = []
+  const evidence = await runBackendReadinessLoadSmoke({
+    config: {
+      environment: 'test',
+      apiBaseUrl: 'https://api.example.test/api',
+      iterations: 1,
+      concurrency: 2,
+      timeoutMs: 1000,
+      tokens: {
+        ...emptyTokens(),
+        shared: { source: 'BACKEND_LOAD_BEARER_TOKEN', value: 'shared-token-value' },
+        session: { source: 'BACKEND_LOAD_BEARER_TOKEN', value: 'shared-token-value' },
+      },
+      allowSharedToken: false,
+      requireProtected: false,
+      output: 'json',
+    },
+    now: () => '2026-05-18T00:00:00.000Z',
+    fetchFn: async (url) => {
+      requestedUrls.push(url)
+      return jsonResponse({ ok: true, data: [] })
+    },
+  })
+
+  assert.equal(evidence.status, 'blocked')
+  assert.equal(evidence.summary.passed, 2)
+  assert.equal(evidence.summary.skipped, 3)
+  assert.ok(requestedUrls.some((url) => url.endsWith('/auth/session')))
+  assert.ok(!requestedUrls.some((url) => url.includes('/integrations/import-batches/overview')))
+  assert.doesNotMatch(JSON.stringify(evidence), /shared-token-value/)
+  assert.match(
+    evidence.groups.find((group) => group.name === 'import read routes').reason,
+    /BACKEND_LOAD_ALLOW_SHARED_TOKEN=true/,
+  )
+})
+
+test('backend load smoke runs protected groups with role-specific tokens and redacts token material', async () => {
   const authHeaders = []
   const evidence = await runBackendReadinessLoadSmoke({
     config: {
@@ -65,7 +103,14 @@ test('backend load smoke runs protected groups with bearer tokens and redacts to
       iterations: 1,
       concurrency: 3,
       timeoutMs: 1000,
-      bearerToken: 'secret-token-value',
+      tokens: {
+        shared: null,
+        session: { source: 'BACKEND_LOAD_SESSION_TOKEN', value: 'session-token-value' },
+        store: { source: 'BACKEND_LOAD_STORE_TOKEN', value: 'store-token-value' },
+        competition: { source: 'BACKEND_LOAD_COMPETITION_TOKEN', value: 'competition-token-value' },
+        import: { source: 'BACKEND_LOAD_IMPORT_TOKEN', value: 'import-token-value' },
+      },
+      allowSharedToken: false,
       requireProtected: true,
       output: 'json',
     },
@@ -79,8 +124,11 @@ test('backend load smoke runs protected groups with bearer tokens and redacts to
   assert.equal(evidence.status, 'ok')
   assert.equal(evidence.summary.passed, 5)
   assert.equal(evidence.summary.skipped, 0)
-  assert.ok(authHeaders.includes('Bearer secret-token-value'))
-  assert.doesNotMatch(JSON.stringify(evidence), /secret-token-value/)
+  assert.ok(authHeaders.includes('Bearer store-token-value'))
+  assert.ok(authHeaders.includes('Bearer import-token-value'))
+  assert.equal(evidence.tokenSources.store, 'BACKEND_LOAD_STORE_TOKEN')
+  assert.equal(evidence.tokenSources.import, 'BACKEND_LOAD_IMPORT_TOKEN')
+  assert.doesNotMatch(JSON.stringify(evidence), /session-token-value|store-token-value|competition-token-value|import-token-value/)
   assert.equal(evidence.excludedMutationRoutes[0].path, '/integrations/power-bi-export-upload')
 })
 
@@ -92,7 +140,14 @@ test('backend load smoke fails API routes that return HTML or 5xx responses', as
       iterations: 1,
       concurrency: 2,
       timeoutMs: 1000,
-      bearerToken: 'token',
+      tokens: {
+        shared: null,
+        session: { source: 'BACKEND_LOAD_SESSION_TOKEN', value: 'session-token' },
+        store: { source: 'BACKEND_LOAD_STORE_TOKEN', value: 'store-token' },
+        competition: { source: 'BACKEND_LOAD_COMPETITION_TOKEN', value: 'competition-token' },
+        import: { source: 'BACKEND_LOAD_IMPORT_TOKEN', value: 'import-token' },
+      },
+      allowSharedToken: false,
       requireProtected: true,
       output: 'json',
     },
@@ -139,6 +194,9 @@ test('backend load smoke summary and docs expose the production readiness comman
   for (const expected of [
     'npm.cmd run smoke:backend-readiness-load',
     'BACKEND_LOAD_BEARER_TOKEN',
+    'BACKEND_LOAD_STORE_TOKEN',
+    'BACKEND_LOAD_IMPORT_TOKEN',
+    'BACKEND_LOAD_ALLOW_SHARED_TOKEN=true',
     'public api health',
     'competition read routes',
     'Upload/import mutations are excluded',
@@ -180,4 +238,14 @@ function jsonResponse(body, status = 200) {
     status,
     headers: { 'content-type': 'application/json' },
   })
+}
+
+function emptyTokens() {
+  return {
+    shared: null,
+    session: null,
+    store: null,
+    competition: null,
+    import: null,
+  }
 }

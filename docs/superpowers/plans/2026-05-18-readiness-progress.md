@@ -634,15 +634,16 @@ Open risk areas this plan must progress:
 - Added `scripts/backend-readiness-load-smoke.test.mjs`.
 - The smoke defines route groups for public API health, authenticated session, store read routes, competition read routes, and import read routes.
 - The smoke enforces availability, p50/p95 latency, non-HTML JSON API correctness, and max `5xx` count for measured groups.
-- Protected route groups are skipped/blocked, not marked as passed, when no real `BACKEND_LOAD_BEARER_TOKEN` or `READINESS_BEARER_TOKEN` is provided.
+- Protected route groups are skipped/blocked, not marked as passed, when no real role-specific bearer tokens are provided.
+- The smoke accepts group-specific tokens for store, competition, and import routes; shared token reuse requires explicit `BACKEND_LOAD_ALLOW_SHARED_TOKEN=true`.
 - Upload/import mutation routes remain excluded from this simple GET budget and stay covered by upload resource guardrails, command benchmarks, and background job evidence.
 - This is intentionally not a mandatory CI gate until staging baselines are stable.
-- Staging public API health smoke passed with `NODE_OPTIONS=--dns-result-order=ipv4first`: availability `100%`, p50 `58.08ms`, p95 `208.79ms`, 5xx `0`.
-- Protected route performance remains blocked until a real staging bearer token is provided.
+- Staging public API health smoke passed with `NODE_OPTIONS=--dns-result-order=ipv4first`: availability `100%`, p50 `132.23ms`, p95 `224.59ms`, 5xx `0`.
+- Protected route performance remains blocked until real staging role-specific bearer tokens are provided.
 - Evidence file: `docs/evidence/readiness/2026-05-18-staging-backend-readiness-load-smoke.md`.
 - Local verification:
-  - `node --test scripts/backend-readiness-load-smoke.test.mjs` passed: 5 tests.
-  - `npm.cmd run test:scripts` passed: 226 tests.
+  - `node --test scripts/backend-readiness-load-smoke.test.mjs` passed: 6 tests.
+  - `npm.cmd run test:scripts` passed: 227 tests.
   - `npm.cmd run check:release` passed, including backend lint/test/build/audit and frontend build/Playwright/audit.
   - `git diff --check` passed with line-ending warnings only.
 
