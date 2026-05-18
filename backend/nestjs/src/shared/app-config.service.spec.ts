@@ -247,6 +247,69 @@ describe("AppConfigService", () => {
     ).toThrow("RATE_LIMIT_BACKEND must be one of memory, redis");
   });
 
+  it("uses local queue defaults outside production", () => {
+    const config = createConfig({
+      NODE_ENV: "development",
+    });
+
+    expect(config.queueBackend).toBe("in-memory");
+    expect(config.redisUrl).toBe("redis://localhost:6379");
+    expect(config.importQueueName).toBe("store-ops-import");
+    expect(config.snapshotQueueName).toBe("store-ops-snapshot");
+  });
+
+  it("accepts BullMQ queue configuration", () => {
+    const config = createConfig({
+      QUEUE_BACKEND: "bullmq",
+      QUEUE_IMPORT_NAME: "imports",
+      QUEUE_SNAPSHOT_NAME: "snapshots",
+      REDIS_URL: "redis://cache.example.internal:6379",
+    });
+
+    expect(config.queueBackend).toBe("bullmq");
+    expect(config.redisUrl).toBe("redis://cache.example.internal:6379");
+    expect(config.importQueueName).toBe("imports");
+    expect(config.snapshotQueueName).toBe("snapshots");
+  });
+
+  it("requires BullMQ for broad production queue durability", () => {
+    expect(() =>
+      createConfig({
+        NODE_ENV: "production",
+        QUEUE_BACKEND: "in-memory",
+        READINESS_PROFILE: "broad-production",
+      }).queueBackend,
+    ).toThrow(
+      "QUEUE_BACKEND=bullmq is required when READINESS_PROFILE=broad-production",
+    );
+
+    expect(
+      createConfig({
+        NODE_ENV: "production",
+        QUEUE_BACKEND: "bullmq",
+        READINESS_PROFILE: "broad-production",
+        REDIS_URL: "redis://cache.example.internal:6379",
+      }).queueBackend,
+    ).toBe("bullmq");
+  });
+
+  it("requires Redis URL when BullMQ is enabled in production", () => {
+    expect(() =>
+      createConfig({
+        NODE_ENV: "production",
+        QUEUE_BACKEND: "bullmq",
+      }).queueBackend,
+    ).toThrow("REDIS_URL must be configured in production when QUEUE_BACKEND=bullmq");
+  });
+
+  it("rejects unknown queue backends", () => {
+    expect(() =>
+      createConfig({
+        QUEUE_BACKEND: "filesystem",
+      }).queueBackend,
+    ).toThrow("QUEUE_BACKEND must be one of in-memory, bullmq");
+  });
+
   it("uses no trusted proxy hops by default outside production", () => {
     const config = createConfig({
       NODE_ENV: "development",

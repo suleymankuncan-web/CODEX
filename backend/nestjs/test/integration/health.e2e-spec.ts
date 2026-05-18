@@ -35,6 +35,12 @@ describe("HealthController (integration)", () => {
         readinessProfile: "controlled-pilot",
       });
       expect(response.body.checks.database.status).toBe("ok");
+      expect(response.body.queue).toMatchObject({
+        backend: "in-memory",
+        durable: false,
+        redisRequired: false,
+        status: "process-local",
+      });
       expect(response.body.checks.redis.status).toBe("skipped");
     } finally {
       await app.close();

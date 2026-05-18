@@ -36,6 +36,8 @@ Slice 4 note: `gsd headless query` was retried again before implementation and r
 
 Slice 5 note: `gsd headless query` was retried before implementation and again returned `DB unavailable - runtime markdown state derivation is disabled`; execution continued from this checked-in plan, prior readiness evidence, and repo tests.
 
+Slice 6 note: `gsd headless query` was retried before implementation and returned the same canonical DB blocker; execution continued from this checked-in plan, post-merge smoke evidence, and repo tests.
+
 ## Current Readiness Baseline
 
 Strong areas that should be preserved:
@@ -78,8 +80,8 @@ Open risk areas this plan must progress:
 | 2 | Edge Security Headers | Merged (#229) | Browser token theft blast radius | Vercel, maybe Render |
 | 3 | Observability V1 | Merged (#230) | Silent backend/frontend failures | Backend + frontend |
 | 4 | Alerting and Incident Evidence | Merged (#231) | Nobody notices production degradation | Depends on provider |
-| 5 | Redis-Backed Rate Limit | Ready for PR | Abuse bypass on multi-instance runtime | Render |
-| 6 | Queue Durability Gate | Pending | Lost in-process background jobs | Render |
+| 5 | Redis-Backed Rate Limit | Merged (#232) | Abuse bypass on multi-instance runtime | Render |
+| 6 | Queue Durability Gate | Ready for PR | Lost in-process background jobs | Render |
 | 7 | Backup/Restore Live Drill | Pending | Data-loss recovery uncertainty | No code deploy unless scripts change |
 | 8 | Upload Resource Guardrails | Pending | CPU/memory spikes from imports | Render |
 | 9 | Performance Budget Pass | Pending | Slow critical routes under realistic load | Maybe |
@@ -396,6 +398,11 @@ Open risk areas this plan must progress:
   - `npm.cmd run check:release` passed, including backend release checks, frontend checks, Playwright e2e, and audit.
   - `git diff --check` passed with line-ending warnings only.
 - Post-merge deploy note: Render deploy verification is required because backend runtime behavior changed. Staging smoke should confirm rate-limit headers after deploy; if Redis is enabled, `REDIS_URL` and `RATE_LIMIT_REDIS_PREFIX` must be configured outside source control.
+- PR: #232 merged into `main`.
+- Post-merge staging deploy smoke passed:
+  - `READINESS_FRONTEND_URL=https://staging.hr-axis.com READINESS_BACKEND_URL=https://api-staging.hr-axis.com/api READINESS_TIMEOUT_MS=45000 npm.cmd run smoke:deployed-readiness`
+  - 13 passed, 0 failed, 1 skipped.
+  - Auth/session remained skipped because no real `READINESS_BEARER_TOKEN` was provided.
 
 ## Slice 6: Queue Durability Gate
 
@@ -430,6 +437,24 @@ Open risk areas this plan must progress:
 **Done when:**
 
 - The team can say exactly when in-memory queue is acceptable and when it blocks rollout.
+
+**Current branch evidence:**
+
+- `QUEUE_BACKEND` is now validated as `in-memory|bullmq`; broad production fails closed unless `QUEUE_BACKEND=bullmq`.
+- Production BullMQ mode fails closed unless `REDIS_URL` is explicitly configured.
+- `/api/health` preserves `queueBackend` and now adds a `queue` object describing whether dispatch is process-local or durable, whether Redis is required, and whether Redis health blocks queue readiness.
+- Redis health failure details remain sanitized before returning dependency health details.
+- Environment inventory and production readiness checklist now require BullMQ/Redis evidence before broad production or durable import/snapshot work is approved.
+- Added contract/unit coverage for queue config, health queue modes, Redis health dependency state, sanitized Redis errors, and readiness documentation.
+- Local verification:
+  - `npm.cmd --prefix backend/nestjs run lint` passed.
+  - `npm.cmd --prefix backend/nestjs test -- --runInBand` passed: 108 suites, 650 tests.
+  - `npm.cmd --prefix backend/nestjs run build` passed.
+  - `npm.cmd run test:scripts` passed: 206 tests.
+  - `node --test scripts/queue-durability-readiness-contract.test.mjs` passed.
+  - `npm.cmd --prefix admin-web run test:e2e -- e2e/admin-routing.spec.ts:372 --project=chromium` passed after one full release run hit that isolated Playwright route-load flake.
+  - `npm.cmd run check:release` passed on rerun, including backend release checks, frontend checks, Playwright e2e, and audit.
+- Post-merge deploy note: Render deploy verification is required because backend runtime behavior changed. Staging smoke should confirm `/api/health` includes `queue.status=process-local` for controlled pilot, or `queue.status=durable` with Redis `status=ok` when BullMQ is enabled.
 
 ## Slice 7: Backup/Restore Live Drill
 

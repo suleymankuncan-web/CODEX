@@ -44,6 +44,8 @@ Allowed sign-off states:
 - [ ] `RATE_LIMIT_BACKEND=redis` is configured before broad production rollout; `memory` is accepted only for local or controlled pilot with written risk acceptance.
 - [ ] `REDIS_URL` is explicitly configured when production rate limiting uses Redis.
 - [ ] `RATE_LIMIT_REDIS_PREFIX` is unique to the environment when Redis rate limiting is enabled.
+- [ ] `QUEUE_BACKEND=bullmq` is configured before broad production rollout; `in-memory` is accepted only for local or controlled pilot with written risk acceptance.
+- [ ] `/api/health` shows queue `status=durable` and Redis `status=ok` before durable import/snapshot background work is approved.
 - [ ] Error responses do not expose stack traces or raw exception details.
 - [ ] `DATABASE_URL` points to the target database and is not shared with local development.
 - [ ] Database user has the minimum permissions needed for the application runtime.
