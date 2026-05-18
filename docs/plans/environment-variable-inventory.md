@@ -54,7 +54,7 @@ These values are read by `backend/nestjs/src/shared/app-config.service.ts`.
 | `AUTH_CALLBACK_PATH` | P0 | `/auth/callback` unless route changes. | Must match provider callback registration. |
 | `AUTH_LOGOUT_URL` | P1 | Provider logout endpoint when supported. | Needed for provider logout smoke. |
 | `AUTH_POST_LOGOUT_REDIRECT_PATH` | P0 | `/auth/login` unless route changes. | Must match provider post-logout registration. |
-| `QUEUE_BACKEND` | P0 | `bullmq` when durable worker queue is required. | Local default is `in-memory`. |
+| `QUEUE_BACKEND` | P0 | `in-memory` is allowed for local and controlled pilot; `bullmq` is required when `READINESS_PROFILE=broad-production` or durable background processing is required. | Local default is `in-memory`; BullMQ uses Redis-backed queues. |
 | `REDIS_URL` | P0 conditional | Required when `QUEUE_BACKEND=bullmq` or `RATE_LIMIT_BACKEND=redis` in production. | Secret-bearing if provider uses credentials. |
 | `QUEUE_IMPORT_NAME` | P1 | Stable import queue name. | Defaults to `store-ops-import`. |
 | `QUEUE_SNAPSHOT_NAME` | P1 | Stable snapshot queue name. | Defaults to `store-ops-snapshot`. |
@@ -154,6 +154,8 @@ These values are read by `admin-web/scripts/auth-live-smoke.mjs`.
 - [ ] `RATE_LIMIT_BACKEND=redis` when `READINESS_PROFILE=broad-production`; `memory` is only accepted for local or controlled pilot risk.
 - [ ] `REDIS_URL` is explicitly configured when production rate limiting uses Redis.
 - [ ] `RATE_LIMIT_REDIS_PREFIX` is unique to the environment when Redis is shared.
+- [ ] `QUEUE_BACKEND=bullmq` when `READINESS_PROFILE=broad-production`; `in-memory` is only accepted for local or controlled pilot risk.
+- [ ] `/api/health` shows queue `status=durable` and Redis `status=ok` before durable background work is approved.
 - [ ] `LOG_LEVEL` is set to the intended runtime verbosity.
 - [ ] `ERROR_TRACKING_ENVIRONMENT` and `ERROR_TRACKING_RELEASE` identify the deploy in structured observability events.
 - [ ] `READINESS_PROFILE=controlled-pilot` unless broad production rollout is explicitly approved.

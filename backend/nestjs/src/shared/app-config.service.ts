@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 
+export type QueueBackend = "in-memory" | "bullmq";
+
 @Injectable()
 export class AppConfigService {
   constructor(private readonly configService: ConfigService) {}
@@ -382,8 +384,29 @@ export class AppConfigService {
     );
   }
 
-  get queueBackend(): string {
-    return this.readString("QUEUE_BACKEND", "in-memory");
+  get queueBackend(): QueueBackend {
+    const value = this.readString("QUEUE_BACKEND", "in-memory");
+    const allowedValues = new Set(["in-memory", "bullmq"]);
+
+    if (!allowedValues.has(value)) {
+      throw new Error("QUEUE_BACKEND must be one of in-memory, bullmq");
+    }
+
+    if (
+      this.isProduction &&
+      this.readinessProfile === "broad-production" &&
+      value !== "bullmq"
+    ) {
+      throw new Error(
+        "QUEUE_BACKEND=bullmq is required when READINESS_PROFILE=broad-production",
+      );
+    }
+
+    if (this.isProduction && value === "bullmq" && !this.readOptionalString("REDIS_URL")) {
+      throw new Error("REDIS_URL must be configured in production when QUEUE_BACKEND=bullmq");
+    }
+
+    return value as QueueBackend;
   }
 
   get redisUrl(): string {

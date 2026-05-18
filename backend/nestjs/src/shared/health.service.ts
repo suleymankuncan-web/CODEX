@@ -10,6 +10,14 @@ type DependencyCheck = {
   message?: string;
 };
 
+type QueueHealth = {
+  backend: "in-memory" | "bullmq";
+  durable: boolean;
+  redisRequired: boolean;
+  status: "process-local" | "durable" | "error";
+  message: string;
+};
+
 @Injectable()
 export class HealthService {
   constructor(
@@ -38,6 +46,7 @@ export class HealthService {
       service: this.appConfigService.appName,
       timestamp: new Date().toISOString(),
       queueBackend: this.appConfigService.queueBackend,
+      queue: this.buildQueueHealth(redis),
       observability: this.observabilityService.getStatus(),
       checks: {
         database,
@@ -107,6 +116,39 @@ export class HealthService {
         }
       }
     }
+  }
+
+  private buildQueueHealth(redis: DependencyCheck): QueueHealth {
+    const backend = this.appConfigService.queueBackend;
+
+    if (backend !== "bullmq") {
+      return {
+        backend,
+        durable: false,
+        redisRequired: false,
+        status: "process-local",
+        message:
+          "In-memory queue is process-local; acceptable for local or controlled pilot only.",
+      };
+    }
+
+    if (redis.status === "ok") {
+      return {
+        backend,
+        durable: true,
+        redisRequired: true,
+        status: "durable",
+        message: "BullMQ queue is using Redis-backed durable dispatch.",
+      };
+    }
+
+    return {
+      backend,
+      durable: true,
+      redisRequired: true,
+      status: "error",
+      message: "BullMQ queue requires Redis health to be ok.",
+    };
   }
 }
 
