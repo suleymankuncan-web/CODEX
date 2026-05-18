@@ -55,6 +55,9 @@ Allowed sign-off states:
 - [ ] Database user has the minimum permissions needed for the application runtime.
 - [ ] Migration user and runtime user are separated if the hosting model supports it.
 - [ ] Secrets are stored in the environment or a secret manager, not in source control.
+- [ ] Supabase Boundary Guard passes: `npm.cmd run check:supabase-boundary`.
+- [ ] Frontend app files do not contain Supabase `service_role` / secret keys, `DATABASE_URL`, `JWT_SECRET`, direct `@supabase/supabase-js` usage, or direct Supabase REST access to `ops.*`.
+- [ ] Direct Supabase client access to `ops.*` remains blocked until RLS and policy work is designed, tested, and approved; direct Supabase REST access is the same boundary violation.
 - [ ] Do not commit `.env` files.
 - [ ] Do not paste raw bearer tokens into docs, issue comments, chat, screenshots, or evidence files.
 - [ ] Do not paste raw id tokens into docs, issue comments, chat, screenshots, or evidence files.

@@ -42,6 +42,8 @@ Slice 7 note: `gsd headless query` was retried before implementation and returne
 
 Slice 8 note: `gsd headless query` was retried before implementation and returned the same canonical DB blocker; execution continued from this checked-in plan, upload service tests, config contracts, and repo release gates.
 
+Slice 10 note: `gsd headless query` was retried after PR #237 merged and returned the same canonical DB blocker; execution continued from this checked-in plan, current Supabase API key/security docs, and repo tests. Current Supabase docs still state that secret/service_role keys are backend-only and bypass Row Level Security, so this slice keeps the active frontend boundary closed.
+
 ## Current Readiness Baseline
 
 Strong areas that should be preserved:
@@ -87,10 +89,10 @@ Open risk areas this plan must progress:
 | 5 | Redis-Backed Rate Limit | Merged (#232) | Abuse bypass on multi-instance runtime | Render |
 | 6 | Queue Durability Gate | Merged (#233) | Lost in-process background jobs | Render |
 | 7 | Backup/Restore Live Drill | Merged evidence gate (#234); external drill pending | Data-loss recovery uncertainty | No code deploy unless scripts change |
-| 8 | Upload Resource Guardrails | In progress | CPU/memory spikes from imports | Render |
+| 8 | Upload Resource Guardrails | Merged (#235, review fixes #236) | CPU/memory spikes from imports | Render |
 | 9 | Performance Budget Pass | Pending | Slow critical routes under realistic load | Maybe |
-| 10 | Supabase Boundary Guard | Pending | Accidental direct client/RLS exposure | No deploy unless guard scripts only |
-| 11 | Env/Secret Drift Guard | Pending | Secret/public-env mistakes | Maybe |
+| 10 | Supabase Boundary Guard | In progress | Accidental direct client/RLS exposure | No deploy unless guard scripts only |
+| 11 | Env/Secret Drift Guard | Merged (#237) | Secret/public-env mistakes | No runtime deploy; main release check passed |
 | 12 | Final Go/No-Go Readiness Packet | Pending | Unclear launch decision | No |
 
 ## Slice 1: Deployed Readiness Smoke
@@ -656,6 +658,14 @@ Open risk areas this plan must progress:
 
 - The repo has a machine guard against the highest-impact Supabase boundary mistake.
 
+**Current branch evidence:**
+
+- Added `scripts/supabase-boundary-guard.test.mjs`.
+- Added root command: `npm.cmd run check:supabase-boundary`.
+- Guard scans tracked `admin-web` frontend files for Supabase service-role/secret keys, `DATABASE_URL`, `JWT_SECRET`, direct `@supabase/supabase-js` imports, and direct Supabase REST access to `ops.*` under `admin-web/src`.
+- Guard includes fake frontend fixtures proving service-role, direct client, direct REST, and unsafe `VITE_*` values fail.
+- Production checklist and env inventory now keep direct Supabase client access to `ops.*` blocked until RLS/policy work is designed, tested, and approved.
+
 ## Slice 11: Env/Secret Drift Guard
 
 **Why:** Many production failures are not code failures; they are env mismatches between repo docs, Render, Vercel, and Clerk.
@@ -694,6 +704,14 @@ Open risk areas this plan must progress:
 **Done when:**
 
 - Env changes cannot quietly drift away from docs and release checks.
+
+**Current branch evidence:**
+
+- Implemented in PR #237.
+- Added `scripts/readiness-env-contract.test.mjs`.
+- Added manual Render/Vercel env verification rules to deployment and readiness docs.
+- Codex review comments for missing `DB_SSL_MODE`, `AUTH_PROVIDER_KEY`, and `NODE_ENV` coverage were fixed before the PR was marked ready.
+- Main `Release Check` passed after merge commit `537b57f092f44033a5e3be43f38134e7eb00e875`.
 
 ## Slice 12: Final Go/No-Go Readiness Packet
 
