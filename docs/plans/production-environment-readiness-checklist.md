@@ -41,6 +41,9 @@ Allowed sign-off states:
 - [ ] `CORS_ALLOWED_ORIGINS` is explicitly configured and contains only approved frontend origins.
 - [ ] `TRUST_PROXY_HOPS` matches the target backend proxy path so rate limiting counts real client identity.
 - [ ] `RATE_LIMIT_WINDOW_MS` and `RATE_LIMIT_MAX` are explicitly configured for the environment.
+- [ ] `RATE_LIMIT_BACKEND=redis` is configured before broad production rollout; `memory` is accepted only for local or controlled pilot with written risk acceptance.
+- [ ] `REDIS_URL` is explicitly configured when production rate limiting uses Redis.
+- [ ] `RATE_LIMIT_REDIS_PREFIX` is unique to the environment when Redis rate limiting is enabled.
 - [ ] Error responses do not expose stack traces or raw exception details.
 - [ ] `DATABASE_URL` points to the target database and is not shared with local development.
 - [ ] Database user has the minimum permissions needed for the application runtime.

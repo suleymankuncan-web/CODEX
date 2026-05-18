@@ -188,6 +188,35 @@ export class AppConfigService {
     return this.readRequiredProductionNumber("RATE_LIMIT_MAX", "120");
   }
 
+  get rateLimitBackend(): "memory" | "redis" {
+    const value = this.readString("RATE_LIMIT_BACKEND", "memory");
+    const allowedValues = new Set(["memory", "redis"]);
+
+    if (!allowedValues.has(value)) {
+      throw new Error("RATE_LIMIT_BACKEND must be one of memory, redis");
+    }
+
+    if (
+      this.isProduction &&
+      this.readinessProfile === "broad-production" &&
+      value !== "redis"
+    ) {
+      throw new Error(
+        "RATE_LIMIT_BACKEND=redis is required when READINESS_PROFILE=broad-production",
+      );
+    }
+
+    if (this.isProduction && value === "redis" && !this.readOptionalString("REDIS_URL")) {
+      throw new Error("REDIS_URL must be configured in production when RATE_LIMIT_BACKEND=redis");
+    }
+
+    return value as "memory" | "redis";
+  }
+
+  get rateLimitRedisPrefix(): string {
+    return this.readString("RATE_LIMIT_REDIS_PREFIX", "hr-axis:rate-limit");
+  }
+
   get trustProxyHops(): number {
     return this.readRequiredProductionNonNegativeInteger("TRUST_PROXY_HOPS", "0");
   }

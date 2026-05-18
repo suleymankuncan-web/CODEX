@@ -34,6 +34,8 @@ Slice 3 note: `gsd headless query` was retried before implementation and still r
 
 Slice 4 note: `gsd headless query` was retried again before implementation and returned the same canonical DB blocker; execution continued from this checked-in plan, deployed smoke evidence, and repo tests.
 
+Slice 5 note: `gsd headless query` was retried before implementation and again returned `DB unavailable - runtime markdown state derivation is disabled`; execution continued from this checked-in plan, prior readiness evidence, and repo tests.
+
 ## Current Readiness Baseline
 
 Strong areas that should be preserved:
@@ -75,8 +77,8 @@ Open risk areas this plan must progress:
 | 1 | Deployed Readiness Smoke | Merged (#228) | Render/Vercel env drift after merge | Yes, when used against live env |
 | 2 | Edge Security Headers | Merged (#229) | Browser token theft blast radius | Vercel, maybe Render |
 | 3 | Observability V1 | Merged (#230) | Silent backend/frontend failures | Backend + frontend |
-| 4 | Alerting and Incident Evidence | Ready for PR | Nobody notices production degradation | Depends on provider |
-| 5 | Redis-Backed Rate Limit | Pending | Abuse bypass on multi-instance runtime | Render |
+| 4 | Alerting and Incident Evidence | Merged (#231) | Nobody notices production degradation | Depends on provider |
+| 5 | Redis-Backed Rate Limit | Ready for PR | Abuse bypass on multi-instance runtime | Render |
 | 6 | Queue Durability Gate | Pending | Lost in-process background jobs | Render |
 | 7 | Backup/Restore Live Drill | Pending | Data-loss recovery uncertainty | No code deploy unless scripts change |
 | 8 | Upload Resource Guardrails | Pending | CPU/memory spikes from imports | Render |
@@ -333,6 +335,8 @@ Open risk areas this plan must progress:
   - `node --test scripts/alert-routing-smoke.test.mjs scripts/incident-response-skeleton-contract.test.mjs` passed.
   - `ALERT_SMOKE_ENVIRONMENT=staging ALERT_SMOKE_BACKEND_URL=https://api-staging.hr-axis.com/api ALERT_SMOKE_TIMEOUT_MS=45000 npm.cmd run smoke:alert-routing` passed.
 - Provider note: external alert delivery remains skipped/not configured until an approved provider destination is configured outside source control. This slice closes routing metadata and first-response evidence, not provider delivery.
+- PR: #231 merged into `main`.
+- Post-merge deploy note: provider-alert delivery was not added, so no Render/Vercel runtime deploy verification was required by this documentation-only slice.
 
 ## Slice 5: Redis-Backed Rate Limit
 
@@ -375,6 +379,23 @@ Open risk areas this plan must progress:
 **Done when:**
 
 - Production can share rate limits across instances when Redis is configured.
+
+**Current branch evidence:**
+
+- Added a `RateLimitStore` boundary with async in-memory and Redis-backed implementations.
+- Redis store uses an atomic Lua-backed `INCR`/expiry flow through existing `ioredis` support.
+- `RATE_LIMIT_BACKEND=memory|redis` and `RATE_LIMIT_REDIS_PREFIX` are documented in `.env.example`, environment inventory, and production readiness checklist.
+- Broad production now fails closed at configuration time unless `RATE_LIMIT_BACKEND=redis`; production Redis mode also requires explicit `REDIS_URL`. Memory remains available for local/test and controlled pilot profiles.
+- Rate-limit middleware now fails closed with a sanitized `RATE_LIMIT_STORE_UNAVAILABLE` 503 when the shared store is unavailable.
+- Added contract/unit coverage for config, memory store behavior, Redis store parsing/arguments, async middleware headers, store-unavailable behavior, and readiness documentation.
+- Local verification:
+  - `npm.cmd --prefix backend/nestjs run lint` passed.
+  - `npm.cmd --prefix backend/nestjs test -- --runInBand` passed: 107 suites, 642 tests.
+  - `npm.cmd --prefix backend/nestjs run build` passed.
+  - `npm.cmd run test:scripts` passed: 202 tests.
+  - `npm.cmd run check:release` passed, including backend release checks, frontend checks, Playwright e2e, and audit.
+  - `git diff --check` passed with line-ending warnings only.
+- Post-merge deploy note: Render deploy verification is required because backend runtime behavior changed. Staging smoke should confirm rate-limit headers after deploy; if Redis is enabled, `REDIS_URL` and `RATE_LIMIT_REDIS_PREFIX` must be configured outside source control.
 
 ## Slice 6: Queue Durability Gate
 
