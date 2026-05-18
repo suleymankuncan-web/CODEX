@@ -304,13 +304,12 @@ async function measureEndpoint({ endpoint, iteration, config, fetchFn, bearerTok
   const startedAt = performance.now()
 
   try {
-    const response = await fetchWithTimeout(fetchFn, url, {
+    const { response, body } = await fetchTextWithTimeout(fetchFn, url, {
       headers: buildHeaders(bearerToken),
       timeoutMs: config.timeoutMs,
     })
     const durationMs = round(performance.now() - startedAt, 2)
     const contentType = response.headers.get('content-type') ?? ''
-    const body = await response.text()
     const bytes = Buffer.byteLength(body, 'utf8')
     const bodyLooksHtml = looksLikeHtml(body, contentType)
     const jsonOk = isJsonResponse(body, contentType)
@@ -458,16 +457,19 @@ async function runWithConcurrency(tasks, concurrency) {
   return results
 }
 
-async function fetchWithTimeout(fetchFn, url, { headers, timeoutMs }) {
+async function fetchTextWithTimeout(fetchFn, url, { headers, timeoutMs }) {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), timeoutMs)
 
   try {
-    return await fetchFn(url, {
+    const response = await fetchFn(url, {
       method: 'GET',
       headers,
       signal: controller.signal,
     })
+    const body = await response.text()
+
+    return { response, body }
   } finally {
     clearTimeout(timeout)
   }

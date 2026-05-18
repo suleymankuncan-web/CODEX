@@ -178,6 +178,52 @@ test('backend load smoke fails API routes that return HTML or 5xx responses', as
   assert.match(importGroup.failures.join(' '), /5xx|availability/)
 })
 
+test('backend load smoke keeps request timeout active while reading response bodies', async () => {
+  let requestSignal
+  const evidencePromise = runBackendReadinessLoadSmoke({
+    config: {
+      environment: 'test',
+      apiBaseUrl: 'https://api.example.test/api',
+      iterations: 1,
+      concurrency: 1,
+      timeoutMs: 10,
+      tokens: emptyTokens(),
+      allowSharedToken: false,
+      requireProtected: false,
+      output: 'json',
+    },
+    now: () => '2026-05-18T00:00:00.000Z',
+    fetchFn: async (_url, init) => {
+      requestSignal = init.signal
+      return {
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        text: () =>
+          new Promise((_resolve, reject) => {
+            requestSignal.addEventListener('abort', () => {
+              const error = new Error('aborted')
+              error.name = 'AbortError'
+              reject(error)
+            })
+          }),
+      }
+    },
+  })
+
+  const evidence = await Promise.race([
+    evidencePromise,
+    new Promise((_resolve, reject) =>
+      setTimeout(() => reject(new Error('body read did not respect BACKEND_LOAD_TIMEOUT_MS')), 250),
+    ),
+  ])
+
+  assert.equal(evidence.status, 'failed')
+  const publicGroup = evidence.groups.find((group) => group.name === 'public api health')
+  assert.equal(publicGroup.status, 'failed')
+  assert.match(publicGroup.endpoints[0].failures[0].reason, /request timed out/)
+})
+
 test('backend load smoke summary and docs expose the production readiness command', () => {
   const pkg = JSON.parse(readFileSync(join(workspaceRoot, 'package.json'), 'utf8'))
   const checklist = readFileSync(
