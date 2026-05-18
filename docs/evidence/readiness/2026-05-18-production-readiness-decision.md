@@ -65,8 +65,7 @@ No-Go:
 
 1. Real staging auth/action smoke with sanitized evidence:
    - `npm.cmd --prefix admin-web run smoke:auth:staging`
-   - `npm.cmd --prefix admin-web run smoke:auth:staging:action`
-   - `npm.cmd --prefix admin-web run guard:auth:evidence`
+   - `npm.cmd --prefix admin-web run --silent smoke:auth:staging:action | npm.cmd --prefix admin-web run --silent guard:auth:evidence -- --stdin`
 2. Protected route load smoke with role-specific staging tokens:
    - `BACKEND_LOAD_SESSION_TOKEN`
    - `BACKEND_LOAD_STORE_TOKEN`

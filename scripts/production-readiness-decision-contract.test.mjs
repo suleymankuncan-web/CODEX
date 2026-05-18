@@ -72,8 +72,7 @@ test('production readiness decision preserves no-secret evidence rules', () => {
 test('production readiness decision uses repo-root-runnable auth evidence commands', () => {
   for (const phrase of [
     'npm.cmd --prefix admin-web run smoke:auth:staging',
-    'npm.cmd --prefix admin-web run smoke:auth:staging:action',
-    'npm.cmd --prefix admin-web run guard:auth:evidence',
+    'npm.cmd --prefix admin-web run --silent smoke:auth:staging:action | npm.cmd --prefix admin-web run --silent guard:auth:evidence -- --stdin',
   ]) {
     requireText(decision, phrase)
   }
@@ -81,6 +80,7 @@ test('production readiness decision uses repo-root-runnable auth evidence comman
   assert.doesNotMatch(decision, /`npm\.cmd run smoke:auth:staging`/)
   assert.doesNotMatch(decision, /`npm\.cmd run smoke:auth:staging:action`/)
   assert.doesNotMatch(decision, /`npm\.cmd run guard:auth:evidence`/)
+  assert.doesNotMatch(decision, /`npm\.cmd --prefix admin-web run guard:auth:evidence`/)
 })
 
 test('handoff and action docs link the production readiness decision', () => {
