@@ -2,9 +2,13 @@ import { useMemo, useReducer, type CSSProperties, type ReactNode } from 'react'
 import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
+  BadgeCheck,
+  CalendarDays,
   ChevronLeft,
   ChevronRight,
+  Gauge,
   Search,
+  ShieldCheck,
   Sparkles,
   Store,
   Trophy,
@@ -465,6 +469,14 @@ export function StoreRankingsPage(input: {
             activeList={activeList}
           />
 
+          <RankingTrustBand
+            ranking={ranking}
+            isPrivileged={Boolean(isPrivileged)}
+            canSeeGlobalDetails={canSeeGlobalDetails}
+            locale={locale}
+            t={t}
+          />
+
           <RankingControls
             ranking={ranking}
             isPrivileged={Boolean(isPrivileged)}
@@ -541,6 +553,71 @@ export function StoreRankingsPage(input: {
         }}
       />
     </section>
+  )
+}
+
+function RankingTrustBand(input: {
+  ranking: RankingSummary
+  isPrivileged: boolean
+  canSeeGlobalDetails: boolean
+  locale: AppLocale
+  t: TranslateFunction
+}) {
+  return (
+    <section className="rankings-plum-trust-band" aria-label={input.t('storeRankings.trustTitle')}>
+      <RankingTrustItem
+        icon={<CalendarDays size={16} />}
+        label={input.t('storeRankings.trustPeriodLabel')}
+        value={formatPeriod(input.ranking.source, input.locale, input.t)}
+        note={input.t('storeRankings.trustPeriodNote')}
+      />
+      <RankingTrustItem
+        icon={<ShieldCheck size={16} />}
+        label={input.t('storeRankings.trustScopeLabel')}
+        value={
+          input.isPrivileged
+            ? input.t('storeRankings.trustScopeValue.full')
+            : input.t('storeRankings.trustScopeValue.scoped')
+        }
+        note={
+          input.canSeeGlobalDetails
+            ? input.t('storeRankings.trustScopeNote.full')
+            : input.t('storeRankings.trustScopeNote.scoped')
+        }
+      />
+      <RankingTrustItem
+        icon={<Gauge size={16} />}
+        label={input.t('storeRankings.trustScoreLabel')}
+        value={input.t('storeRankings.trustScoreValue')}
+        note={input.t('storeRankings.trustScoreNote')}
+      />
+      <RankingTrustItem
+        icon={<BadgeCheck size={16} />}
+        label={input.t('storeRankings.trustSourceLabel')}
+        value={input.t('storeRankings.trustSourceValue')}
+        note={input.t('storeRankings.trustSourceNote')}
+      />
+    </section>
+  )
+}
+
+function RankingTrustItem(input: {
+  icon: ReactNode
+  label: string
+  value: string
+  note: string
+}) {
+  return (
+    <article className="rankings-plum-trust-item">
+      <span className="rankings-plum-trust-icon" aria-hidden="true">
+        {input.icon}
+      </span>
+      <div>
+        <span>{input.label}</span>
+        <strong>{input.value}</strong>
+        <small>{input.note}</small>
+      </div>
+    </article>
   )
 }
 
