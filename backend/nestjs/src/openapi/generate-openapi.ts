@@ -2473,6 +2473,246 @@ const reportingStoreScoreBreakdownResponseSchema = {
   },
 };
 
+const reportingRankingMetricValueSchema = {
+  type: "object",
+  required: ["code", "label", "actualValue"],
+  properties: {
+    code: { type: "string" },
+    label: { type: "string" },
+    actualValue: { type: "number", nullable: true },
+    targetValue: { type: "number", nullable: true },
+    benchmarkValue: { type: "number", nullable: true },
+    contributionValue: { type: "number", nullable: true },
+  },
+};
+
+const reportingStoreRankingRowSchema = {
+  type: "object",
+  required: [
+    "subject",
+    "storeId",
+    "storeName",
+    "regionId",
+    "regionName",
+    "regionManagerUserId",
+    "regionManagerName",
+    "rank",
+    "population",
+    "scoreValue",
+    "visibility",
+  ],
+  properties: {
+    subject: { type: "string", enum: ["store"] },
+    storeId: { type: "string" },
+    storeName: { type: "string", nullable: true },
+    regionId: { type: "string", nullable: true },
+    regionName: { type: "string", nullable: true },
+    regionManagerUserId: { type: "string", nullable: true },
+    regionManagerName: { type: "string", nullable: true },
+    rank: { type: "integer", minimum: 1 },
+    population: { type: "integer", minimum: 0 },
+    scoreValue: { type: "number" },
+    visibility: { type: "string", enum: ["summary", "detail"] },
+    metrics: {
+      type: "array",
+      items: reportingRankingMetricValueSchema,
+    },
+  },
+};
+
+const reportingPersonnelRankingRowSchema = {
+  type: "object",
+  required: [
+    "subject",
+    "employeeId",
+    "displayName",
+    "storeId",
+    "storeName",
+    "regionId",
+    "regionName",
+    "regionManagerUserId",
+    "regionManagerName",
+    "rank",
+    "population",
+    "storeRank",
+    "storePopulation",
+    "scoreValue",
+    "visibility",
+  ],
+  properties: {
+    subject: { type: "string", enum: ["personnel"] },
+    employeeId: { type: "string" },
+    displayName: { type: "string" },
+    storeId: { type: "string", nullable: true },
+    storeName: { type: "string", nullable: true },
+    regionId: { type: "string", nullable: true },
+    regionName: { type: "string", nullable: true },
+    regionManagerUserId: { type: "string", nullable: true },
+    regionManagerName: { type: "string", nullable: true },
+    rank: { type: "integer", minimum: 1 },
+    population: { type: "integer", minimum: 0 },
+    storeRank: { type: "integer", nullable: true },
+    storePopulation: { type: "integer", minimum: 0 },
+    scoreValue: { type: "number" },
+    visibility: { type: "string", enum: ["summary", "detail"] },
+    metrics: {
+      type: "array",
+      items: reportingRankingMetricValueSchema,
+    },
+  },
+};
+
+const reportingRankingFilterOptionSchema = {
+  type: "object",
+  required: ["id", "label"],
+  properties: {
+    id: { type: "string" },
+    label: { type: "string" },
+  },
+};
+
+const reportingRankingReferenceMetricSchema = {
+  type: "object",
+  required: ["code", "label", "value"],
+  properties: {
+    code: { type: "string" },
+    label: { type: "string" },
+    value: { type: "number", nullable: true },
+  },
+};
+
+const reportingRankingReferenceGroupSchema = {
+  type: "object",
+  required: ["averageScore", "metrics"],
+  properties: {
+    averageScore: { type: "number", nullable: true },
+    metrics: {
+      type: "array",
+      items: reportingRankingReferenceMetricSchema,
+    },
+  },
+};
+
+const reportingRankingMetaSchema = {
+  type: "object",
+  required: ["total", "limit", "offset"],
+  properties: {
+    total: { type: "integer", minimum: 0 },
+    limit: { type: "integer", minimum: 1 },
+    offset: { type: "integer", minimum: 0 },
+  },
+};
+
+const reportingRankingsResponseSchema = {
+  type: "object",
+  required: [
+    "source",
+    "access",
+    "filters",
+    "reference",
+    "storeLeaderboard",
+    "personnelLeaderboard",
+    "availablePeriods",
+  ],
+  properties: {
+    source: {
+      type: "object",
+      required: ["mode", "periodType", "periodStart", "periodEnd"],
+      properties: {
+        mode: { type: "string", enum: ["live"] },
+        periodType: { type: "string", enum: ["monthly"] },
+        periodStart: { type: "string", nullable: true },
+        periodEnd: { type: "string", nullable: true },
+      },
+    },
+    access: {
+      type: "object",
+      required: [
+        "globalMode",
+        "canSeeGlobalDetails",
+        "canSeeManagedStorePersonnelDetails",
+      ],
+      properties: {
+        globalMode: { type: "string", enum: ["top100", "full"] },
+        canSeeGlobalDetails: { type: "boolean" },
+        canSeeManagedStorePersonnelDetails: { type: "boolean" },
+      },
+    },
+    filters: {
+      type: "object",
+      required: ["regionManagers", "regions", "stores"],
+      properties: {
+        regionManagers: {
+          type: "array",
+          items: reportingRankingFilterOptionSchema,
+        },
+        regions: {
+          type: "array",
+          items: reportingRankingFilterOptionSchema,
+        },
+        stores: {
+          type: "array",
+          items: reportingRankingFilterOptionSchema,
+        },
+      },
+    },
+    reference: {
+      type: "object",
+      required: ["store", "personnel"],
+      properties: {
+        store: reportingRankingReferenceGroupSchema,
+        personnel: reportingRankingReferenceGroupSchema,
+      },
+    },
+    storeLeaderboard: {
+      type: "object",
+      required: ["items", "currentStore", "meta"],
+      properties: {
+        items: {
+          type: "array",
+          items: reportingStoreRankingRowSchema,
+        },
+        currentStore: {
+          ...reportingStoreRankingRowSchema,
+          nullable: true,
+        },
+        meta: reportingRankingMetaSchema,
+      },
+    },
+    personnelLeaderboard: {
+      type: "object",
+      required: ["items", "currentEmployee", "managedStorePersonnel", "meta"],
+      properties: {
+        items: {
+          type: "array",
+          items: reportingPersonnelRankingRowSchema,
+        },
+        currentEmployee: {
+          ...reportingPersonnelRankingRowSchema,
+          nullable: true,
+        },
+        managedStorePersonnel: {
+          type: "array",
+          items: reportingPersonnelRankingRowSchema,
+        },
+        meta: reportingRankingMetaSchema,
+      },
+    },
+    availablePeriods: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["periodType", "periodStart", "periodEnd"],
+        properties: {
+          periodType: { type: "string", enum: ["monthly"] },
+          periodStart: { type: "string" },
+          periodEnd: { type: "string" },
+        },
+      },
+    },
+  },
+};
+
 const snapshotStatusTotalsSchema = {
   type: "object",
   required: ["all", "queued", "running", "completed", "failed"],
@@ -3278,6 +3518,7 @@ async function generateOpenApi(): Promise<void> {
       reportingStoreKpiHighlightsResponseSchema,
     ReportingStoreScoreBreakdownResponse:
       reportingStoreScoreBreakdownResponseSchema,
+    ReportingRankingsResponse: reportingRankingsResponseSchema,
     ImportOverview: importOverviewSchema,
     ImportPayloadTemplateResponse: importPayloadTemplateSchema,
     ImportBatchAuditResponse: importBatchAuditResponseSchema,
@@ -3561,6 +3802,14 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Store monthly score blend breakdown for a closed snapshot.",
     "ReportingStoreScoreBreakdownResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/reports/rankings",
+    "get",
+    "Live monthly store and personnel rankings visible to the current actor.",
+    "ReportingRankingsResponse",
   );
 
   setJsonResponseSchema(

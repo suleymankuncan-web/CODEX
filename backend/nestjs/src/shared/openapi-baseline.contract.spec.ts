@@ -768,6 +768,25 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const reportingRankingsResponse =
+      document.paths["/api/reports/rankings"].get.responses?.["200"];
+    expect(reportingRankingsResponse?.content?.["application/json"]?.schema).toEqual({
+      $ref: "#/components/schemas/ReportingRankingsResponse",
+    });
+    expect(
+      document.components?.schemas?.ReportingRankingsResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        source: expect.any(Object),
+        access: expect.any(Object),
+        filters: expect.any(Object),
+        reference: expect.any(Object),
+        storeLeaderboard: expect.any(Object),
+        personnelLeaderboard: expect.any(Object),
+        availablePeriods: expect.any(Object),
+      }),
+    );
+
     const lookupsResponse =
       document.paths["/api/integrations/lookups"].get.responses?.["200"];
     expect(lookupsResponse?.content?.["application/json"]?.schema).toEqual({

@@ -51,6 +51,7 @@ const selectedOperations = [
   { path: '/api/reports/kpis', method: 'get' },
   { path: '/api/reports/my-performance', method: 'get' },
   { path: '/api/reports/personnel-performance/{employeeId}', method: 'get' },
+  { path: '/api/reports/rankings', method: 'get' },
   { path: '/api/reports/snapshot-runs', method: 'get' },
   { path: '/api/reports/store-kpi-highlights', method: 'get' },
   { path: '/api/reports/store-score-breakdown', method: 'get' },

@@ -1008,6 +1008,187 @@ export type components = {
           "status"?: "reported" | "missing"
         }>
     }
+    "ReportingRankingsResponse": {
+      "source": {
+        "mode": "live"
+        "periodType": "monthly"
+        "periodStart": string | null
+        "periodEnd": string | null
+      }
+      "access": {
+        "globalMode": "top100" | "full"
+        "canSeeGlobalDetails": boolean
+        "canSeeManagedStorePersonnelDetails": boolean
+      }
+      "filters": {
+        "regionManagers": Array<{
+            "id": string
+            "label": string
+          }>
+        "regions": Array<{
+            "id": string
+            "label": string
+          }>
+        "stores": Array<{
+            "id": string
+            "label": string
+          }>
+      }
+      "reference": {
+        "store": {
+          "averageScore": number | null
+          "metrics": Array<{
+              "code": string
+              "label": string
+              "value": number | null
+            }>
+        }
+        "personnel": {
+          "averageScore": number | null
+          "metrics": Array<{
+              "code": string
+              "label": string
+              "value": number | null
+            }>
+        }
+      }
+      "storeLeaderboard": {
+        "items": Array<{
+            "subject": "store"
+            "storeId": string
+            "storeName": string | null
+            "regionId": string | null
+            "regionName": string | null
+            "regionManagerUserId": string | null
+            "regionManagerName": string | null
+            "rank": number
+            "population": number
+            "scoreValue": number
+            "visibility": "summary" | "detail"
+            "metrics"?: Array<{
+                "code": string
+                "label": string
+                "actualValue": number | null
+                "targetValue"?: number | null
+                "benchmarkValue"?: number | null
+                "contributionValue"?: number | null
+              }>
+          }>
+        "currentStore": ({
+          "subject": "store"
+          "storeId": string
+          "storeName": string | null
+          "regionId": string | null
+          "regionName": string | null
+          "regionManagerUserId": string | null
+          "regionManagerName": string | null
+          "rank": number
+          "population": number
+          "scoreValue": number
+          "visibility": "summary" | "detail"
+          "metrics"?: Array<{
+              "code": string
+              "label": string
+              "actualValue": number | null
+              "targetValue"?: number | null
+              "benchmarkValue"?: number | null
+              "contributionValue"?: number | null
+            }>
+        }) | null
+        "meta": {
+          "total": number
+          "limit": number
+          "offset": number
+        }
+      }
+      "personnelLeaderboard": {
+        "items": Array<{
+            "subject": "personnel"
+            "employeeId": string
+            "displayName": string
+            "storeId": string | null
+            "storeName": string | null
+            "regionId": string | null
+            "regionName": string | null
+            "regionManagerUserId": string | null
+            "regionManagerName": string | null
+            "rank": number
+            "population": number
+            "storeRank": number | null
+            "storePopulation": number
+            "scoreValue": number
+            "visibility": "summary" | "detail"
+            "metrics"?: Array<{
+                "code": string
+                "label": string
+                "actualValue": number | null
+                "targetValue"?: number | null
+                "benchmarkValue"?: number | null
+                "contributionValue"?: number | null
+              }>
+          }>
+        "currentEmployee": ({
+          "subject": "personnel"
+          "employeeId": string
+          "displayName": string
+          "storeId": string | null
+          "storeName": string | null
+          "regionId": string | null
+          "regionName": string | null
+          "regionManagerUserId": string | null
+          "regionManagerName": string | null
+          "rank": number
+          "population": number
+          "storeRank": number | null
+          "storePopulation": number
+          "scoreValue": number
+          "visibility": "summary" | "detail"
+          "metrics"?: Array<{
+              "code": string
+              "label": string
+              "actualValue": number | null
+              "targetValue"?: number | null
+              "benchmarkValue"?: number | null
+              "contributionValue"?: number | null
+            }>
+        }) | null
+        "managedStorePersonnel": Array<{
+            "subject": "personnel"
+            "employeeId": string
+            "displayName": string
+            "storeId": string | null
+            "storeName": string | null
+            "regionId": string | null
+            "regionName": string | null
+            "regionManagerUserId": string | null
+            "regionManagerName": string | null
+            "rank": number
+            "population": number
+            "storeRank": number | null
+            "storePopulation": number
+            "scoreValue": number
+            "visibility": "summary" | "detail"
+            "metrics"?: Array<{
+                "code": string
+                "label": string
+                "actualValue": number | null
+                "targetValue"?: number | null
+                "benchmarkValue"?: number | null
+                "contributionValue"?: number | null
+              }>
+          }>
+        "meta": {
+          "total": number
+          "limit": number
+          "offset": number
+        }
+      }
+      "availablePeriods": Array<{
+          "periodType": "monthly"
+          "periodStart": string
+          "periodEnd": string
+        }>
+    }
     "ReportingSnapshotRunsResponse": {
       "items": Array<{
           "snapshotRunId": string
@@ -1942,6 +2123,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["ReportingPerformanceResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/reports/rankings": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ReportingRankingsResponse"]
           }
         }
       }

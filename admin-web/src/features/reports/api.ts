@@ -43,113 +43,12 @@ export type MyPerformanceMetric = MyPerformanceSummary['metrics'][number]
 export type StoreKpiHighlightsSummary = ApiGetResponse<'/api/reports/store-kpi-highlights'>
 export type StoreMonthlyScoreBreakdown = ApiGetResponse<'/api/reports/store-score-breakdown'>
 
-type RankingVisibility = 'summary' | 'detail'
-
-export type RankingMetricValue = {
-  code: string
-  label: string
-  actualValue: number | null
-  targetValue?: number | null
-  benchmarkValue?: number | null
-  contributionValue?: number | null
-}
-
-export type StoreRankingRow = {
-  subject: 'store'
-  storeId: string
-  storeName: string | null
-  regionId: string | null
-  regionName: string | null
-  regionManagerUserId: string | null
-  regionManagerName: string | null
-  rank: number
-  population: number
-  scoreValue: number
-  visibility: RankingVisibility
-  metrics?: RankingMetricValue[]
-}
-
-export type PersonnelRankingRow = {
-  subject: 'personnel'
-  employeeId: string
-  displayName: string
-  storeId: string | null
-  storeName: string | null
-  regionId: string | null
-  regionName: string | null
-  regionManagerUserId: string | null
-  regionManagerName: string | null
-  rank: number
-  population: number
-  storeRank: number | null
-  storePopulation: number
-  scoreValue: number
-  visibility: RankingVisibility
-  metrics?: RankingMetricValue[]
-}
-
-type RankingFilterOption = {
-  id: string
-  label: string
-}
-
-type RankingReferenceMetric = {
-  code: string
-  label: string
-  value: number | null
-}
-
-export type RankingReferenceGroup = {
-  averageScore: number | null
-  metrics: RankingReferenceMetric[]
-}
-
-export type RankingSummary = {
-  source: {
-    mode: 'live'
-    periodType: 'monthly'
-    periodStart: string | null
-    periodEnd: string | null
-  }
-  access: {
-    globalMode: 'top100' | 'full'
-    canSeeGlobalDetails: boolean
-    canSeeManagedStorePersonnelDetails: boolean
-  }
-  filters: {
-    regionManagers: RankingFilterOption[]
-    regions: RankingFilterOption[]
-    stores: RankingFilterOption[]
-  }
-  reference?: {
-    store: RankingReferenceGroup
-    personnel: RankingReferenceGroup
-  }
-  storeLeaderboard: {
-    items: StoreRankingRow[]
-    currentStore: StoreRankingRow | null
-    meta: {
-      total: number
-      limit: number
-      offset: number
-    }
-  }
-  personnelLeaderboard: {
-    items: PersonnelRankingRow[]
-    currentEmployee: PersonnelRankingRow | null
-    managedStorePersonnel: PersonnelRankingRow[]
-    meta: {
-      total: number
-      limit: number
-      offset: number
-    }
-  }
-  availablePeriods: Array<{
-    periodType: 'monthly'
-    periodStart: string
-    periodEnd: string
-  }>
-}
+export type RankingSummary = ApiGetResponse<'/api/reports/rankings'>
+export type StoreRankingRow = RankingSummary['storeLeaderboard']['items'][number]
+export type PersonnelRankingRow =
+  RankingSummary['personnelLeaderboard']['items'][number]
+export type RankingMetricValue = NonNullable<StoreRankingRow['metrics']>[number]
+export type RankingReferenceGroup = RankingSummary['reference']['store']
 
 export type ChecklistRow = {
   snapshotRunId: string
@@ -354,7 +253,7 @@ export async function getRankings(input?: {
     params.set('offset', String(input.offset))
   }
 
-  return fetchJson<RankingSummary>(`/reports/rankings?${params.toString()}`)
+  return fetchOpenApiJson('/api/reports/rankings', { query: params })
 }
 
 export async function getChecklistReport(input: {
