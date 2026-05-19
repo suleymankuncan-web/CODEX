@@ -1,16 +1,6 @@
 import { fetchJson, sendJson } from '../../lib/api'
 import { fetchOpenApiJson, type ApiGetResponse } from '../../lib/openapi-client'
 
-type ListResponse<T> = {
-  items: T[]
-  meta: {
-    count: number
-    total: number
-    limit: number
-    offset: number
-  }
-}
-
 export type AuthLookups = ApiGetResponse<'/api/auth/lookups'>
 export type AuthLookupUser = AuthLookups['users'][number]
 export type AuthLookupStore = AuthLookups['stores'][number]
@@ -26,6 +16,8 @@ type AuthRoleAssignmentsResponse = ApiGetResponse<'/api/auth/role-assignments'>
 export type RoleAssignment = AuthRoleAssignmentsResponse['items'][number]
 type AuthActionStoreAssignmentsResponse = ApiGetResponse<'/api/auth/action-store-assignments'>
 export type ActionStoreAssignment = AuthActionStoreAssignmentsResponse['items'][number]
+type AuthAuditResponse = ApiGetResponse<'/api/auth/users/{userId}/audit'>
+export type AuditEvent = AuthAuditResponse['items'][number]
 
 export type UserAccessClosure = {
   closedRoleAssignments: number
@@ -45,24 +37,6 @@ export type PilotUserBinding = {
     storeId: string
     storeCode: string
     storeName: string
-  }
-}
-
-export type AuditEvent = {
-  eventLogId: string
-  occurredAt: string
-  actorUserId: string | null
-  correlationId: string | null
-  eventType: string
-  metadata: {
-    reason: string | null
-    correlationId: string | null
-    sourceContext?: {
-      module?: string
-      operation?: string
-    } | null
-    changedFields?: string[]
-    details?: Record<string, unknown>
   }
 }
 
@@ -362,15 +336,19 @@ export async function revokeRolePermission(input: {
 }
 
 export async function getUserAudit(userId: string) {
-  return fetchJson<ListResponse<AuditEvent>>(`/auth/users/${userId}/audit`)
+  return fetchOpenApiJson('/api/auth/users/{userId}/audit', {
+    params: { userId },
+  })
 }
 
 export async function getRoleAssignmentAudit(assignmentId: string) {
-  return fetchJson<ListResponse<AuditEvent>>(`/auth/role-assignments/${assignmentId}/audit`)
+  return fetchOpenApiJson('/api/auth/role-assignments/{assignmentId}/audit', {
+    params: { assignmentId },
+  })
 }
 
 export async function getActionStoreAssignmentAudit(assignmentId: string) {
-  return fetchJson<ListResponse<AuditEvent>>(
-    `/auth/action-store-assignments/${assignmentId}/audit`,
-  )
+  return fetchOpenApiJson('/api/auth/action-store-assignments/{assignmentId}/audit', {
+    params: { assignmentId },
+  })
 }

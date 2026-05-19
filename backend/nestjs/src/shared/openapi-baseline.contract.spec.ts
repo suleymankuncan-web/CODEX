@@ -959,6 +959,37 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const authUserAuditResponse =
+      document.paths["/api/auth/users/{userId}/audit"].get.responses?.["200"];
+    expect(authUserAuditResponse?.content?.["application/json"]?.schema).toEqual({
+      $ref: "#/components/schemas/AuthAuditResponse",
+    });
+
+    const authRoleAssignmentAuditResponse =
+      document.paths["/api/auth/role-assignments/{assignmentId}/audit"].get
+        .responses?.["200"];
+    expect(
+      authRoleAssignmentAuditResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/AuthAuditResponse",
+    });
+
+    const authActionStoreAssignmentAuditResponse =
+      document.paths["/api/auth/action-store-assignments/{assignmentId}/audit"].get
+        .responses?.["200"];
+    expect(
+      authActionStoreAssignmentAuditResponse?.content?.["application/json"]
+        ?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/AuthAuditResponse",
+    });
+    expect(document.components?.schemas?.AuthAuditResponse?.properties).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
     const lookupsResponse =
       document.paths["/api/integrations/lookups"].get.responses?.["200"];
     expect(lookupsResponse?.content?.["application/json"]?.schema).toEqual({

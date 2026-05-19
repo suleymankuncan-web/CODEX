@@ -28,6 +28,34 @@ export type components = {
         "offset": number
       }
     }
+    "AuthAuditResponse": {
+      "items": Array<{
+          "eventLogId": string
+          "occurredAt": string
+          "actorUserId": string | null
+          "correlationId": string | null
+          "eventType": string
+          "metadata": {
+            "reason": string | null
+            "correlationId": string | null
+            "sourceContext"?: ({
+              "module"?: string
+              "operation"?: string
+            }) | null
+            "changedFields"?: string[]
+            "details"?: {
+              [key: string]: unknown
+            }
+            [key: string]: unknown
+          }
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
     "AuthLookupsResponse": {
       "scopeTypes": string[]
       "authProviders": string[]
@@ -2087,6 +2115,17 @@ export type paths = {
       }
     }
   }
+  "/api/auth/action-store-assignments/{assignmentId}/audit": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["AuthAuditResponse"]
+          }
+        }
+      }
+    }
+  }
   "/api/auth/lookups": {
     get: {
       responses: {
@@ -2142,6 +2181,17 @@ export type paths = {
       }
     }
   }
+  "/api/auth/role-assignments/{assignmentId}/audit": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["AuthAuditResponse"]
+          }
+        }
+      }
+    }
+  }
   "/api/auth/roles": {
     get: {
       responses: {
@@ -2159,6 +2209,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["AuthUserAccountsResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/auth/users/{userId}/audit": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["AuthAuditResponse"]
           }
         }
       }
