@@ -158,6 +158,24 @@ const importBatchNeedsActionItemSchema = {
   },
 };
 
+const externalIdMapCandidateSchema = {
+  type: "object",
+  required: [
+    "entityType",
+    "internalId",
+    "label",
+    "secondaryLabel",
+    "internalTableName",
+  ],
+  properties: {
+    entityType: { type: "string", enum: ["employee", "store"] },
+    internalId: { type: "string" },
+    label: { type: "string" },
+    secondaryLabel: { type: "string" },
+    internalTableName: { type: "string" },
+  },
+};
+
 const integrationLookupSourceSchema = {
   type: "object",
   required: [
@@ -468,6 +486,18 @@ const importBatchNeedsActionResponseSchema = {
     items: {
       type: "array",
       items: importBatchNeedsActionItemSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
+const externalIdMapCandidatesResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: externalIdMapCandidateSchema,
     },
     meta: listResponseMetaSchema,
   },
@@ -824,6 +854,7 @@ async function generateOpenApi(): Promise<void> {
     ...(document.components.schemas ?? {}),
     ImportOverview: importOverviewSchema,
     ImportBatchNeedsActionResponse: importBatchNeedsActionResponseSchema,
+    ExternalIdMapCandidatesResponse: externalIdMapCandidatesResponseSchema,
     IntegrationLookups: integrationLookupsSchema,
     PersonnelMasterListResponse: personnelMasterListResponseSchema,
     PersonnelMasterLookups: personnelMasterLookupsSchema,
@@ -850,6 +881,14 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Paginated import batches requiring admin action.",
     "ImportBatchNeedsActionResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/integrations/external-id-map-candidates",
+    "get",
+    "Paginated internal entity candidates for external id mapping.",
+    "ExternalIdMapCandidatesResponse",
   );
 
   setJsonResponseSchema(

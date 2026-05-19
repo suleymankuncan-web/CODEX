@@ -13,6 +13,7 @@ const document = JSON.parse(await readFile(openApiPath, 'utf8'))
 
 const httpMethods = new Set(['get', 'post', 'put', 'patch', 'delete'])
 const selectedOperations = [
+  { path: '/api/integrations/external-id-map-candidates', method: 'get' },
   { path: '/api/integrations/import-batches/overview', method: 'get' },
   { path: '/api/integrations/import-batches/needs-action', method: 'get' },
   { path: '/api/integrations/lookups', method: 'get' },

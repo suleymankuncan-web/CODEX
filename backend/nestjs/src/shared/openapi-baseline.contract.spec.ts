@@ -111,6 +111,23 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const externalIdCandidatesResponse =
+      document.paths["/api/integrations/external-id-map-candidates"].get
+        .responses?.["200"];
+    expect(
+      externalIdCandidatesResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/ExternalIdMapCandidatesResponse",
+    });
+    expect(
+      document.components?.schemas?.ExternalIdMapCandidatesResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
     const lookupsResponse =
       document.paths["/api/integrations/lookups"].get.responses?.["200"];
     expect(lookupsResponse?.content?.["application/json"]?.schema).toEqual({
