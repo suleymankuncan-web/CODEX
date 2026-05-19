@@ -1,4 +1,5 @@
 import { fetchJson, sendJson } from '../../lib/api'
+import { fetchOpenApiJson, type ApiGetResponse } from '../../lib/openapi-client'
 
 type ListResponse<T> = {
   items: T[]
@@ -18,33 +19,9 @@ type CommandResponse<T> = {
   data: T
 }
 
-export type TargetDistributionAllocation = {
-  employeeId: string
-  assigneeLabel: string
-  targetValue: number
-  note?: string
-}
-
-export type TargetDistributionRequest = {
-  requestId: string
-  companyId: string
-  regionId: string
-  storeId: string
-  storeName: string
-  requestMonth: string
-  targetLabel: string
-  totalTargetValue: number
-  allocationCount: number
-  status: string
-  requestReason: string | null
-  allocations: TargetDistributionAllocation[]
-  submittedByUserId: string
-  approvedByUserId: string | null
-  approvedAt: string | null
-  approvalNote: string | null
-  createdAt: string
-  updatedAt: string
-}
+export type TargetDistributionRequests = ApiGetResponse<'/api/target-distributions/requests'>
+export type TargetDistributionRequest = TargetDistributionRequests['items'][number]
+export type TargetDistributionAllocation = TargetDistributionRequest['allocations'][number]
 
 export type StoreTargetingPerson = {
   employeeId: string
@@ -107,10 +84,7 @@ export async function getTargetDistributionRequests(input?: { status?: string })
     params.set('status', input.status)
   }
 
-  const query = params.toString()
-  return fetchJson<ListResponse<TargetDistributionRequest>>(
-    `/target-distributions/requests${query ? `?${query}` : ''}`,
-  )
+  return fetchOpenApiJson('/api/target-distributions/requests', { query: params })
 }
 
 export async function createTargetDistributionRequest(input: {

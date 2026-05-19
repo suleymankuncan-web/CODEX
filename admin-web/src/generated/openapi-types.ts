@@ -743,6 +743,39 @@ export type components = {
           "regionName": string
         }>
     }
+    "TargetDistributionRequestsResponse": {
+      "items": Array<{
+          "requestId": string
+          "companyId": string
+          "regionId": string
+          "storeId": string
+          "storeName": string
+          "requestMonth": string
+          "targetLabel": string
+          "totalTargetValue": number
+          "allocationCount": number
+          "status": string
+          "requestReason": string | null
+          "allocations": Array<{
+              "employeeId": string
+              "assigneeLabel": string
+              "targetValue": number
+              "note"?: string
+            }>
+          "submittedByUserId": string
+          "approvedByUserId": string | null
+          "approvedAt": string | null
+          "approvalNote": string | null
+          "createdAt": string
+          "updatedAt": string
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
   }
 }
 
@@ -984,6 +1017,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["MobileChecklistTodayResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/target-distributions/requests": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["TargetDistributionRequestsResponse"]
           }
         }
       }
