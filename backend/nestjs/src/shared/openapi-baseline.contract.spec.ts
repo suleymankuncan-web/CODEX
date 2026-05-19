@@ -1018,6 +1018,34 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const authActionStoreAssignmentCreate =
+      document.paths["/api/auth/action-store-assignments"].post;
+    expect(
+      authActionStoreAssignmentCreate.requestBody?.content?.["application/json"]
+        ?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/CreateActionStoreAssignmentDto",
+    });
+    expect(
+      authActionStoreAssignmentCreate.responses?.["201"]?.content?.[
+        "application/json"
+      ]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/AuthActionStoreAssignmentCommandResponse",
+    });
+
+    const authActionStoreAssignmentDeactivate =
+      document.paths[
+        "/api/auth/action-store-assignments/{assignmentId}/deactivate"
+      ].patch;
+    expect(
+      authActionStoreAssignmentDeactivate.responses?.["200"]?.content?.[
+        "application/json"
+      ]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/AuthActionStoreAssignmentCommandResponse",
+    });
+
     const authUserAuditResponse =
       document.paths["/api/auth/users/{userId}/audit"].get.responses?.["200"];
     expect(authUserAuditResponse?.content?.["application/json"]?.schema).toEqual({

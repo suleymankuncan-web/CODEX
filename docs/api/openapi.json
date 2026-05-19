@@ -169,7 +169,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Command result with the created auth action-store assignment.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthActionStoreAssignmentCommandResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -241,7 +248,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Command result with the deactivated auth action-store assignment.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthActionStoreAssignmentCommandResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -13143,6 +13157,103 @@
               "offset": {
                 "type": "integer",
                 "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "AuthActionStoreAssignmentCommandResponse": {
+        "type": "object",
+        "required": [
+          "command",
+          "data"
+        ],
+        "properties": {
+          "command": {
+            "type": "object",
+            "required": [
+              "status",
+              "message"
+            ],
+            "properties": {
+              "status": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "assignment"
+            ],
+            "properties": {
+              "assignment": {
+                "type": "object",
+                "required": [
+                  "assignmentId",
+                  "userId",
+                  "username",
+                  "email",
+                  "storeId",
+                  "storeCode",
+                  "storeName",
+                  "companyId",
+                  "regionId",
+                  "regionName",
+                  "effectiveFrom",
+                  "effectiveTo",
+                  "createdAt",
+                  "active"
+                ],
+                "properties": {
+                  "assignmentId": {
+                    "type": "string"
+                  },
+                  "userId": {
+                    "type": "string"
+                  },
+                  "username": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "storeId": {
+                    "type": "string"
+                  },
+                  "storeCode": {
+                    "type": "string"
+                  },
+                  "storeName": {
+                    "type": "string"
+                  },
+                  "companyId": {
+                    "type": "string"
+                  },
+                  "regionId": {
+                    "type": "string"
+                  },
+                  "regionName": {
+                    "type": "string"
+                  },
+                  "effectiveFrom": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "effectiveTo": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "createdAt": {
+                    "type": "string"
+                  },
+                  "active": {
+                    "type": "boolean"
+                  }
+                }
               }
             }
           }

@@ -1355,6 +1355,14 @@ const authActionStoreAssignmentSchema = {
   },
 };
 
+const authActionStoreAssignmentCommandResponseSchema = commandResponseSchema({
+  type: "object",
+  required: ["assignment"],
+  properties: {
+    assignment: authActionStoreAssignmentSchema,
+  },
+});
+
 const authLookupStoreSchema = {
   type: "object",
   required: [
@@ -4381,6 +4389,8 @@ async function generateOpenApi(): Promise<void> {
     AuthUserAccountsResponse: authUserAccountsResponseSchema,
     AuthRoleAssignmentCommandResponse: authRoleAssignmentCommandResponseSchema,
     AuthRoleAssignmentsResponse: authRoleAssignmentsResponseSchema,
+    AuthActionStoreAssignmentCommandResponse:
+      authActionStoreAssignmentCommandResponseSchema,
     AuthActionStoreAssignmentsResponse:
       authActionStoreAssignmentsResponseSchema,
     AuthAuditResponse: authAuditResponseSchema,
@@ -4805,6 +4815,23 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Paginated auth action-store assignments visible to auth admins.",
     "AuthActionStoreAssignmentsResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/action-store-assignments",
+    "post",
+    "Command result with the created auth action-store assignment.",
+    "AuthActionStoreAssignmentCommandResponse",
+    "201",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/action-store-assignments/{assignmentId}/deactivate",
+    "patch",
+    "Command result with the deactivated auth action-store assignment.",
+    "AuthActionStoreAssignmentCommandResponse",
   );
 
   setJsonResponseSchema(

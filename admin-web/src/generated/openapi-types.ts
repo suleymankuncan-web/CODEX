@@ -4,6 +4,30 @@
 
 export type components = {
   schemas: {
+    "AuthActionStoreAssignmentCommandResponse": {
+      "command": {
+        "status": string
+        "message": string
+      }
+      "data": {
+        "assignment": {
+          "assignmentId": string
+          "userId": string
+          "username": string
+          "email": string
+          "storeId": string
+          "storeCode": string
+          "storeName": string
+          "companyId": string
+          "regionId": string
+          "regionName": string
+          "effectiveFrom": string | null
+          "effectiveTo": string | null
+          "createdAt": string
+          "active": boolean
+        }
+      }
+    }
     "AuthActionStoreAssignmentsResponse": {
       "items": Array<{
           "assignmentId": string
@@ -482,6 +506,12 @@ export type components = {
         "limit": number
         "offset": number
       }
+    }
+    "CreateActionStoreAssignmentDto": {
+      "userId": string
+      "storeId": string
+      "effectiveFrom"?: string
+      "effectiveTo"?: string
     }
     "CreateRoleAssignmentDto": {
       "userId": string
@@ -2245,6 +2275,20 @@ export type paths = {
         }
       }
     }
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["CreateActionStoreAssignmentDto"]
+        }
+      }
+      responses: {
+        "201": {
+          content: {
+            'application/json': components['schemas']["AuthActionStoreAssignmentCommandResponse"]
+          }
+        }
+      }
+    }
   }
   "/api/auth/action-store-assignments/{assignmentId}/audit": {
     get: {
@@ -2252,6 +2296,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["AuthAuditResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/auth/action-store-assignments/{assignmentId}/deactivate": {
+    patch: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["AuthActionStoreAssignmentCommandResponse"]
           }
         }
       }
