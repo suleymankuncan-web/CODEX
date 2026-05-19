@@ -163,13 +163,10 @@ export type CreateCompetitionStagePackagePlanPayload = CreateCompetitionStagePac
 
 export type UpdateCompetitionStagePackagePlanPayload = CreateCompetitionStagePackagePlanPayload
 
-export type CompetitionStagePackagePlanAuditEvent = {
-  eventLogId: string
-  occurredAt: string
-  actorUserId: string | null
-  eventType: string
-  metadata: Record<string, unknown>
-}
+export type CompetitionStagePackagePlanAudit =
+  ApiGetResponse<'/api/competitions/stage-package-plans/{planId}/audit'>
+export type CompetitionStagePackagePlanAuditEvent =
+  CompetitionStagePackagePlanAudit['items'][number]
 
 export type ReviewCompetitionStagePackagePlanPayload = {
   reviewNote?: string
@@ -392,9 +389,9 @@ export async function cancelCompetitionStagePackagePlan(planId: string) {
 }
 
 export async function listCompetitionStagePackagePlanAudit(planId: string) {
-  return fetchJson<ListResponse<CompetitionStagePackagePlanAuditEvent>>(
-    `/competitions/stage-package-plans/${planId}/audit`,
-  )
+  return fetchOpenApiJson('/api/competitions/stage-package-plans/{planId}/audit', {
+    params: { planId },
+  })
 }
 
 export async function recalculateStage(stageId: string) {
