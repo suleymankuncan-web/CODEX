@@ -139,6 +139,20 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const storeMasterResponse =
+      document.paths["/api/integrations/store-master"].get.responses?.["200"];
+    expect(storeMasterResponse?.content?.["application/json"]?.schema).toEqual({
+      $ref: "#/components/schemas/StoreMasterListResponse",
+    });
+    expect(
+      document.components?.schemas?.StoreMasterListResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
     const personnelMasterLookupsResponse =
       document.paths["/api/integrations/personnel-master-lookups"].get.responses?.[
         "200"

@@ -2848,7 +2848,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Paginated store master data for the admin master-data surface.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoreMasterListResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -5779,6 +5786,86 @@
                 "label": {
                   "type": "string"
                 }
+              }
+            }
+          }
+        }
+      },
+      "StoreMasterListResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "meta"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "storeId",
+                "storeCode",
+                "storeName",
+                "storeType",
+                "status",
+                "kpiImportEnabled",
+                "regionId",
+                "regionName"
+              ],
+              "properties": {
+                "storeId": {
+                  "type": "string"
+                },
+                "storeCode": {
+                  "type": "string"
+                },
+                "storeName": {
+                  "type": "string"
+                },
+                "storeType": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "kpiImportEnabled": {
+                  "type": "boolean"
+                },
+                "regionId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "regionName": {
+                  "type": "string",
+                  "nullable": true
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "count",
+              "total",
+              "limit",
+              "offset"
+            ],
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
               }
             }
           }
