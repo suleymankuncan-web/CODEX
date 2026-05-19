@@ -1078,6 +1078,36 @@ const authPermissionCatalogItemSchema = {
   },
 };
 
+const authUserAccountSchema = {
+  type: "object",
+  required: [
+    "userId",
+    "employeeId",
+    "username",
+    "email",
+    "authProvider",
+    "providerSubject",
+    "isActive",
+    "lastLoginAt",
+    "createdAt",
+  ],
+  properties: {
+    userId: { type: "string" },
+    employeeId: { type: "string", nullable: true },
+    username: { type: "string" },
+    email: { type: "string" },
+    authProvider: { type: "string" },
+    providerSubject: { type: "string", nullable: true },
+    isActive: { type: "boolean" },
+    lastLoginAt: { type: "string", nullable: true },
+    createdAt: { type: "string" },
+    deactivatedAt: { type: "string", nullable: true },
+    deactivationReason: { type: "string", nullable: true },
+    deactivatedByUserId: { type: "string", nullable: true },
+    employeeStatus: { type: "string", nullable: true },
+  },
+};
+
 const authLookupStoreSchema = {
   type: "object",
   required: [
@@ -1541,6 +1571,18 @@ const authPermissionCatalogResponseSchema = {
     items: {
       type: "array",
       items: authPermissionCatalogItemSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
+const authUserAccountsResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: authUserAccountSchema,
     },
     meta: listResponseMetaSchema,
   },
@@ -4052,6 +4094,7 @@ async function generateOpenApi(): Promise<void> {
     AuthStoreLookupSearchResponse: authStoreLookupSearchResponseSchema,
     AuthRoleCatalogResponse: authRoleCatalogResponseSchema,
     AuthPermissionCatalogResponse: authPermissionCatalogResponseSchema,
+    AuthUserAccountsResponse: authUserAccountsResponseSchema,
     ImportOverview: importOverviewSchema,
     ImportPayloadTemplateResponse: importPayloadTemplateSchema,
     ImportBatchAuditResponse: importBatchAuditResponseSchema,
@@ -4407,6 +4450,14 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Paginated auth permission catalog.",
     "AuthPermissionCatalogResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/users",
+    "get",
+    "Paginated auth user accounts visible to auth admins.",
+    "AuthUserAccountsResponse",
   );
 
   setJsonResponseSchema(

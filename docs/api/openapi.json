@@ -235,7 +235,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Paginated auth user accounts visible to auth admins.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthUserAccountsResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -12409,6 +12416,107 @@
                   "type": "string"
                 },
                 "description": {
+                  "type": "string",
+                  "nullable": true
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "count",
+              "total",
+              "limit",
+              "offset"
+            ],
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "AuthUserAccountsResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "meta"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "userId",
+                "employeeId",
+                "username",
+                "email",
+                "authProvider",
+                "providerSubject",
+                "isActive",
+                "lastLoginAt",
+                "createdAt"
+              ],
+              "properties": {
+                "userId": {
+                  "type": "string"
+                },
+                "employeeId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "username": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string"
+                },
+                "authProvider": {
+                  "type": "string"
+                },
+                "providerSubject": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "isActive": {
+                  "type": "boolean"
+                },
+                "lastLoginAt": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "deactivatedAt": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "deactivationReason": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "deactivatedByUserId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "employeeStatus": {
                   "type": "string",
                   "nullable": true
                 }

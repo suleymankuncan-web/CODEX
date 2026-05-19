@@ -20,22 +20,8 @@ type AuthRoleCatalogResponse = ApiGetResponse<'/api/auth/roles'>
 export type RoleCatalogItem = AuthRoleCatalogResponse['items'][number]
 type AuthPermissionCatalogResponse = ApiGetResponse<'/api/auth/permissions'>
 export type PermissionCatalogItem = AuthPermissionCatalogResponse['items'][number]
-
-export type UserAccount = {
-  userId: string
-  employeeId: string | null
-  username: string
-  email: string
-  authProvider: string
-  providerSubject: string | null
-  isActive: boolean
-  lastLoginAt: string | null
-  createdAt: string
-  deactivatedAt?: string | null
-  deactivationReason?: string | null
-  deactivatedByUserId?: string | null
-  employeeStatus?: string | null
-}
+type AuthUserAccountsResponse = ApiGetResponse<'/api/auth/users'>
+export type UserAccount = AuthUserAccountsResponse['items'][number]
 
 export type UserAccessClosure = {
   closedRoleAssignments: number
@@ -211,7 +197,7 @@ export async function getUserAccounts(input?: {
     params.set('isActive', String(input.isActive))
   }
 
-  return fetchJson<ListResponse<UserAccount>>(`/auth/users?${params.toString()}`)
+  return fetchOpenApiJson('/api/auth/users', { query: params })
 }
 
 export async function getRoleAssignments(input?: {

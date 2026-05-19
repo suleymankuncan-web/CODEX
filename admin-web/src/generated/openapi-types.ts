@@ -125,6 +125,29 @@ export type components = {
         "limit": number
       }
     }
+    "AuthUserAccountsResponse": {
+      "items": Array<{
+          "userId": string
+          "employeeId": string | null
+          "username": string
+          "email": string
+          "authProvider": string
+          "providerSubject": string | null
+          "isActive": boolean
+          "lastLoginAt": string | null
+          "createdAt": string
+          "deactivatedAt"?: string | null
+          "deactivationReason"?: string | null
+          "deactivatedByUserId"?: string | null
+          "employeeStatus"?: string | null
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
     "AuthUserLookupSearchResponse": {
       "items": Array<{
           "userId": string
@@ -2055,6 +2078,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["AuthRoleCatalogResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/auth/users": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["AuthUserAccountsResponse"]
           }
         }
       }
