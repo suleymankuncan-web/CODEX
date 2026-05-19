@@ -50,73 +50,22 @@ import {
   stagePresetOptions,
   type StagePresetCode,
 } from './stage-presets'
+import {
+  formatCount,
+  formatPlanStatus,
+  formatStagePackage,
+  formatStagePreset,
+  formatStageType,
+  stagePackageLabelKeys,
+  stagePresetLabelKeys,
+  stageTypeOptions,
+} from './display'
 import { getErrorMessage } from '../../lib/format'
 import { transientQueryRetryOptions } from '../../lib/query-retry'
 import type { TranslateFunction, TranslationKey } from '../localization/dictionary'
 import { useLocalization } from '../localization/useLocalization'
 
 const codePattern = /^[A-Z0-9_]+$/
-const stageTypeOptions: CompetitionStageSummary['stageType'][] = [
-  'qualifier',
-  'league',
-  'quarter_final',
-  'semi_final',
-  'final',
-  'custom',
-]
-
-const stageTypeLabelKeys: Record<CompetitionStageSummary['stageType'], TranslationKey> = {
-  qualifier: 'competition.stageBuilder.stageType.qualifier',
-  league: 'competition.stageBuilder.stageType.league',
-  quarter_final: 'competition.stageBuilder.stageType.quarterFinal',
-  semi_final: 'competition.stageBuilder.stageType.semiFinal',
-  final: 'competition.stageBuilder.stageType.final',
-  custom: 'competition.stageBuilder.stageType.custom',
-}
-
-const stagePresetLabelKeys: Record<StagePresetCode, TranslationKey> = {
-  region_league: 'competition.stageBuilder.preset.regionLeague',
-  first_half_qualifier: 'competition.stageBuilder.preset.firstHalfQualifier',
-  final_showdown: 'competition.stageBuilder.preset.finalShowdown',
-}
-
-const stagePackageLabelKeys: Record<CompetitionStagePackageCode, TranslationKey> = {
-  league_then_final: 'competition.stageBuilder.package.leagueThenFinal',
-}
-
-const planStatusLabelKeys: Record<CompetitionStagePackagePlan['planStatus'], TranslationKey> = {
-  draft: 'competition.stageBuilder.status.draft',
-  submitted: 'competition.stageBuilder.status.submitted',
-  approved: 'competition.stageBuilder.status.approved',
-  rejected: 'competition.stageBuilder.status.rejected',
-  executed: 'competition.stageBuilder.status.executed',
-  cancelled: 'competition.stageBuilder.status.cancelled',
-}
-
-function formatStageType(stageType: CompetitionStageSummary['stageType'], t: TranslateFunction) {
-  return t(stageTypeLabelKeys[stageType])
-}
-
-function formatStagePreset(presetCode: StagePresetCode | undefined, t: TranslateFunction) {
-  return presetCode ? t(stagePresetLabelKeys[presetCode]) : ''
-}
-
-function formatStagePackage(packageCode: CompetitionStagePackageCode, t: TranslateFunction) {
-  return t(stagePackageLabelKeys[packageCode])
-}
-
-function formatPlanStatus(status: CompetitionStagePackagePlan['planStatus'], t: TranslateFunction) {
-  return t(planStatusLabelKeys[status])
-}
-
-function formatCount(
-  value: number,
-  singularKey: TranslationKey,
-  pluralKey: TranslationKey,
-  t: TranslateFunction,
-) {
-  return `${value} ${t(value === 1 ? singularKey : pluralKey)}`
-}
 
 type TeamDraft = {
   teamCode: string
