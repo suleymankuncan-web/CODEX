@@ -1,0 +1,212 @@
+import { mkdirSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { NestFactory } from "@nestjs/core";
+import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import { AppModule } from "../app.module";
+
+type MutableOperation = {
+  parameters?: Array<Record<string, unknown>>;
+  responses?: Record<string, Record<string, unknown>>;
+  security?: Array<Record<string, string[]>>;
+};
+
+type MutablePathItem = Record<string, MutableOperation | undefined>;
+
+const publicOperations = [
+  { path: "/api/auth/bootstrap", method: "get" },
+  { path: "/api/health", method: "get" },
+  { path: "/api/health/live", method: "get" },
+] as const;
+
+const mobileSessionOperations = [
+  { path: "/api/mobile/auth/session", method: "get" },
+  { path: "/api/mobile/auth/sessions", method: "get" },
+  { path: "/api/mobile/auth/logout", method: "post" },
+  { path: "/api/mobile/auth/sessions/{sessionId}", method: "delete" },
+] as const;
+
+const mobileSessionHeader = {
+  name: "x-mobile-session-id",
+  in: "header",
+  required: true,
+  description: "Active mobile session id returned by POST /api/mobile/auth/sessions.",
+  schema: {
+    type: "string",
+  },
+};
+
+const importOverviewSchema = {
+  type: "object",
+  required: ["totals", "healthTotals", "actionTotals", "latest"],
+  properties: {
+    totals: {
+      type: "object",
+      required: [
+        "all",
+        "completed",
+        "failed",
+        "completedWithErrors",
+        "pending",
+        "queued",
+        "processing",
+      ],
+      properties: countProperties([
+        "all",
+        "completed",
+        "failed",
+        "completedWithErrors",
+        "pending",
+        "queued",
+        "processing",
+      ]),
+    },
+    healthTotals: {
+      type: "object",
+      required: [
+        "healthy",
+        "inProgress",
+        "blocked",
+        "retryReady",
+        "needsAction",
+        "stuck",
+      ],
+      properties: countProperties([
+        "healthy",
+        "inProgress",
+        "blocked",
+        "retryReady",
+        "needsAction",
+        "stuck",
+      ]),
+    },
+    actionTotals: {
+      type: "object",
+      required: ["blocked", "retryReady", "needsAction", "stuck"],
+      properties: countProperties([
+        "blocked",
+        "retryReady",
+        "needsAction",
+        "stuck",
+      ]),
+    },
+    latest: {
+      type: "object",
+      required: [
+        "completedBatchId",
+        "failedBatchId",
+        "inProgressBatchId",
+        "stuckBatchId",
+      ],
+      properties: nullableStringProperties([
+        "completedBatchId",
+        "failedBatchId",
+        "inProgressBatchId",
+        "stuckBatchId",
+      ]),
+    },
+  },
+};
+
+async function generateOpenApi(): Promise<void> {
+  const app = await NestFactory.create(AppModule, { logger: false });
+  app.setGlobalPrefix("api");
+
+  const config = new DocumentBuilder()
+    .setTitle("Store Ops API")
+    .setDescription("Generated OpenAPI baseline for backend/frontend contract checks.")
+    .setVersion("0.1.0")
+    .addBearerAuth(
+      {
+        type: "http",
+        scheme: "bearer",
+        bearerFormat: "JWT",
+      },
+      "bearer",
+    )
+    .addSecurityRequirements("bearer")
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config, {
+    deepScanRoutes: true,
+    operationIdFactory: (controllerKey: string, methodKey: string) =>
+      `${controllerKey}_${methodKey}`,
+  });
+
+  for (const operationReference of publicOperations) {
+    const operation = (document.paths[operationReference.path] as
+      | MutablePathItem
+      | undefined)?.[operationReference.method];
+
+    if (operation) {
+      operation.security = [];
+    }
+  }
+
+  for (const operationReference of mobileSessionOperations) {
+    const operation = (document.paths[operationReference.path] as
+      | MutablePathItem
+      | undefined)?.[operationReference.method];
+
+    if (operation) {
+      const parameters = operation.parameters ?? [];
+      operation.parameters = [
+        ...parameters.filter(
+          (parameter) => parameter.name !== mobileSessionHeader.name,
+        ),
+        mobileSessionHeader,
+      ];
+    }
+  }
+
+  document.components = document.components ?? {};
+  document.components.schemas = {
+    ...(document.components.schemas ?? {}),
+    ImportOverview: importOverviewSchema,
+  };
+
+  const importOverviewOperation = (document.paths[
+    "/api/integrations/import-batches/overview"
+  ] as MutablePathItem | undefined)?.get;
+
+  if (importOverviewOperation) {
+    importOverviewOperation.responses = {
+      ...(importOverviewOperation.responses ?? {}),
+      "200": {
+        description: "Import admin overview with totals and latest actionable batches.",
+        content: {
+          "application/json": {
+            schema: {
+              $ref: "#/components/schemas/ImportOverview",
+            },
+          },
+        },
+      },
+    };
+  }
+
+  const outputPath = resolve(process.cwd(), "../../docs/api/openapi.json");
+  mkdirSync(dirname(outputPath), { recursive: true });
+  writeFileSync(outputPath, `${JSON.stringify(document, null, 2)}\n`);
+
+  await app.close();
+}
+
+void generateOpenApi();
+
+function countProperties(propertyNames: string[]) {
+  return Object.fromEntries(
+    propertyNames.map((propertyName) => [
+      propertyName,
+      { type: "integer", minimum: 0 },
+    ]),
+  );
+}
+
+function nullableStringProperties(propertyNames: string[]) {
+  return Object.fromEntries(
+    propertyNames.map((propertyName) => [
+      propertyName,
+      { type: "string", nullable: true },
+    ]),
+  );
+}

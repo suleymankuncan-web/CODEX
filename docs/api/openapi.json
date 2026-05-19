@@ -1,0 +1,5433 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/admin/migrations/run": {
+      "post": {
+        "operationId": "MigrationsController_runMigrations",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Migrations"
+        ]
+      }
+    },
+    "/api/admin/migrations/status": {
+      "get": {
+        "operationId": "MigrationsController_getMigrationStatus",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Migrations"
+        ]
+      }
+    },
+    "/api/auth/role-assignments": {
+      "post": {
+        "operationId": "AuthAdminController_createRoleAssignment",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRoleAssignmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "AuthAdmin"
+        ]
+      },
+      "get": {
+        "operationId": "AuthAdminController_listRoleAssignments",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "AuthAdmin"
+        ]
+      }
+    },
+    "/api/auth/role-assignments/{assignmentId}/audit": {
+      "get": {
+        "operationId": "AuthAdminController_getRoleAssignmentAudit",
+        "parameters": [
+          {
+            "name": "assignmentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "AuthAdmin"
+        ]
+      }
+    },
+    "/api/auth/role-assignments/{assignmentId}/deactivate": {
+      "patch": {
+        "operationId": "AuthAdminController_deactivateRoleAssignment",
+        "parameters": [
+          {
+            "name": "assignmentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "AuthAdmin"
+        ]
+      }
+    },
+    "/api/auth/action-store-assignments": {
+      "post": {
+        "operationId": "AuthAdminController_createActionStoreAssignment",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateActionStoreAssignmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "AuthAdmin"
+        ]
+      },
+      "get": {
+        "operationId": "AuthAdminController_listActionStoreAssignments",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "AuthAdmin"
+        ]
+      }
+    },
+    "/api/auth/action-store-assignments/{assignmentId}/audit": {
+      "get": {
+        "operationId": "AuthAdminController_getActionStoreAssignmentAudit",
+        "parameters": [
+          {
+            "name": "assignmentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "AuthAdmin"
+        ]
+      }
+    },
+    "/api/auth/action-store-assignments/{assignmentId}/deactivate": {
+      "patch": {
+        "operationId": "AuthAdminController_deactivateActionStoreAssignment",
+        "parameters": [
+          {
+            "name": "assignmentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "AuthAdmin"
+        ]
+      }
+    },
+    "/api/auth/users": {
+      "post": {
+        "operationId": "AuthAdminController_createUserAccount",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserAccountDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "AuthAdmin"
+        ]
+      },
+      "get": {
+        "operationId": "AuthAdminController_listUserAccounts",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "AuthAdmin"
+        ]
+      }
+    },
+    "/api/auth/pilot-user-bindings": {
+      "post": {
+        "operationId": "AuthAdminController_createPilotUserBinding",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePilotUserBindingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "AuthAdmin"
+        ]
+      }
+    },
+    "/api/auth/users/{userId}/audit": {
+      "get": {
+        "operationId": "AuthAdminController_getUserAccountAudit",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "AuthAdmin"
+        ]
+      }
+    },
+    "/api/auth/users/{userId}/deactivate": {
+      "patch": {
+        "operationId": "AuthAdminController_deactivateUserAccount",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "AuthAdmin"
+        ]
+      }
+    },
+    "/api/auth/users/{userId}/reactivate": {
+      "patch": {
+        "operationId": "AuthAdminController_reactivateUserAccount",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "AuthAdmin"
+        ]
+      }
+    },
+    "/api/auth/roles": {
+      "get": {
+        "operationId": "AuthAdminController_listRoles",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "AuthAdmin"
+        ]
+      }
+    },
+    "/api/auth/permissions": {
+      "get": {
+        "operationId": "AuthAdminController_listPermissions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "AuthAdmin"
+        ]
+      }
+    },
+    "/api/auth/lookups": {
+      "get": {
+        "operationId": "AuthAdminController_getAuthLookups",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "AuthAdmin"
+        ]
+      }
+    },
+    "/api/auth/lookups/users/search": {
+      "get": {
+        "operationId": "AuthAdminController_searchAuthUsers",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "AuthAdmin"
+        ]
+      }
+    },
+    "/api/auth/lookups/stores/search": {
+      "get": {
+        "operationId": "AuthAdminController_searchAuthStores",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "AuthAdmin"
+        ]
+      }
+    },
+    "/api/auth/roles/{roleId}/permissions": {
+      "post": {
+        "operationId": "AuthAdminController_grantRolePermission",
+        "parameters": [
+          {
+            "name": "roleId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GrantRolePermissionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "AuthAdmin"
+        ]
+      }
+    },
+    "/api/auth/roles/{roleId}/permissions/{permissionCode}": {
+      "delete": {
+        "operationId": "AuthAdminController_revokeRolePermission",
+        "parameters": [
+          {
+            "name": "roleId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "permissionCode",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "AuthAdmin"
+        ]
+      }
+    },
+    "/api/auth/bootstrap": {
+      "get": {
+        "operationId": "AuthSessionController_getBootstrap",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "AuthSession"
+        ],
+        "security": []
+      }
+    },
+    "/api/auth/session": {
+      "get": {
+        "operationId": "AuthSessionController_getSession",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "AuthSession"
+        ]
+      }
+    },
+    "/api/mobile/auth/sessions": {
+      "post": {
+        "operationId": "MobileAuthController_registerSession",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterMobileSessionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "MobileAuth"
+        ]
+      },
+      "get": {
+        "operationId": "MobileAuthController_listSessions",
+        "parameters": [
+          {
+            "name": "x-mobile-session-id",
+            "in": "header",
+            "required": true,
+            "description": "Active mobile session id returned by POST /api/mobile/auth/sessions.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "MobileAuth"
+        ]
+      }
+    },
+    "/api/mobile/auth/session": {
+      "get": {
+        "operationId": "MobileAuthController_getCurrentSession",
+        "parameters": [
+          {
+            "name": "x-mobile-session-id",
+            "in": "header",
+            "required": true,
+            "description": "Active mobile session id returned by POST /api/mobile/auth/sessions.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "MobileAuth"
+        ]
+      }
+    },
+    "/api/mobile/auth/logout": {
+      "post": {
+        "operationId": "MobileAuthController_logout",
+        "parameters": [
+          {
+            "name": "x-mobile-session-id",
+            "in": "header",
+            "required": true,
+            "description": "Active mobile session id returned by POST /api/mobile/auth/sessions.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "MobileAuth"
+        ]
+      }
+    },
+    "/api/mobile/auth/sessions/{sessionId}": {
+      "delete": {
+        "operationId": "MobileAuthController_revokeSession",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-mobile-session-id",
+            "in": "header",
+            "required": true,
+            "description": "Active mobile session id returned by POST /api/mobile/auth/sessions.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "MobileAuth"
+        ]
+      }
+    },
+    "/api/org/stores": {
+      "get": {
+        "operationId": "OrgController_listStores",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Org"
+        ]
+      }
+    },
+    "/api/workforce/headcount-gap": {
+      "get": {
+        "operationId": "WorkforceController_getHeadcountGap",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Workforce"
+        ]
+      }
+    },
+    "/api/workforce/seller-code-reference": {
+      "get": {
+        "operationId": "WorkforceController_getSellerCodeReference",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Workforce"
+        ]
+      }
+    },
+    "/api/workforce/seller-code-requests": {
+      "get": {
+        "operationId": "WorkforceController_listSellerCodeRequests",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Workforce"
+        ]
+      },
+      "post": {
+        "operationId": "WorkforceController_createSellerCodeRequest",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSellerCodeRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Workforce"
+        ]
+      }
+    },
+    "/api/workforce/position-options": {
+      "get": {
+        "operationId": "WorkforceController_listPositionOptions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Workforce"
+        ]
+      }
+    },
+    "/api/workforce/store-employees": {
+      "get": {
+        "operationId": "WorkforceController_listStoreEmployees",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Workforce"
+        ]
+      }
+    },
+    "/api/workforce/offboarding-requests": {
+      "get": {
+        "operationId": "WorkforceController_listOffboardingRequests",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Workforce"
+        ]
+      },
+      "post": {
+        "operationId": "WorkforceController_createOffboardingRequest",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOffboardingRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Workforce"
+        ]
+      }
+    },
+    "/api/workforce/seller-code-requests/{requestId}/approve": {
+      "patch": {
+        "operationId": "WorkforceController_approveSellerCodeRequest",
+        "parameters": [
+          {
+            "name": "requestId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveSellerCodeRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Workforce"
+        ]
+      }
+    },
+    "/api/workforce/seller-code-requests/{requestId}/reject": {
+      "patch": {
+        "operationId": "WorkforceController_rejectSellerCodeRequest",
+        "parameters": [
+          {
+            "name": "requestId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectWorkforceRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Workforce"
+        ]
+      }
+    },
+    "/api/workforce/seller-code-requests/{requestId}/resubmit": {
+      "patch": {
+        "operationId": "WorkforceController_resubmitSellerCodeRequest",
+        "parameters": [
+          {
+            "name": "requestId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResubmitSellerCodeRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Workforce"
+        ]
+      }
+    },
+    "/api/workforce/offboarding-requests/{requestId}/approve": {
+      "patch": {
+        "operationId": "WorkforceController_approveOffboardingRequest",
+        "parameters": [
+          {
+            "name": "requestId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveOffboardingRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Workforce"
+        ]
+      }
+    },
+    "/api/workforce/offboarding-requests/{requestId}/reject": {
+      "patch": {
+        "operationId": "WorkforceController_rejectOffboardingRequest",
+        "parameters": [
+          {
+            "name": "requestId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectWorkforceRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Workforce"
+        ]
+      }
+    },
+    "/api/workforce/offboarding-requests/{requestId}/resubmit": {
+      "patch": {
+        "operationId": "WorkforceController_resubmitOffboardingRequest",
+        "parameters": [
+          {
+            "name": "requestId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResubmitOffboardingRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Workforce"
+        ]
+      }
+    },
+    "/api/checklists/instances": {
+      "post": {
+        "operationId": "ChecklistController_createChecklistInstance",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateChecklistInstanceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Checklist"
+        ]
+      }
+    },
+    "/api/checklists/instances/{checklistInstanceId}/responses": {
+      "post": {
+        "operationId": "ChecklistController_addChecklistResponse",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddChecklistResponseDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Checklist"
+        ]
+      }
+    },
+    "/api/checklists/instances/{checklistInstanceId}/complete": {
+      "post": {
+        "operationId": "ChecklistController_completeChecklistInstance",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteChecklistInstanceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Checklist"
+        ]
+      }
+    },
+    "/api/checklists/instances/{checklistInstanceId}/acknowledge": {
+      "post": {
+        "operationId": "ChecklistController_acknowledgeChecklist",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcknowledgeChecklistInstanceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Checklist"
+        ]
+      }
+    },
+    "/api/checklists/acknowledgements/list": {
+      "post": {
+        "operationId": "ChecklistController_listChecklistAcknowledgements",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Checklist"
+        ]
+      }
+    },
+    "/api/admin/checklist-templates": {
+      "post": {
+        "operationId": "AdminChecklistTemplateController_createChecklistTemplate",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateChecklistTemplateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "AdminChecklistTemplate"
+        ]
+      }
+    },
+    "/api/admin/checklist-templates/{checklistTemplateId}/publish": {
+      "post": {
+        "operationId": "AdminChecklistTemplateController_publishChecklistTemplate",
+        "parameters": [
+          {
+            "name": "checklistTemplateId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishChecklistTemplateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "AdminChecklistTemplate"
+        ]
+      }
+    },
+    "/api/mobile/checklists/today": {
+      "get": {
+        "operationId": "MobileChecklistController_getToday",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "MobileChecklist"
+        ]
+      }
+    },
+    "/api/mobile/checklists/instances": {
+      "post": {
+        "operationId": "MobileChecklistController_startInstance",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartMobileChecklistInstanceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "MobileChecklist"
+        ]
+      }
+    },
+    "/api/mobile/checklists/instances/{checklistInstanceId}/responses": {
+      "patch": {
+        "operationId": "MobileChecklistController_saveResponse",
+        "parameters": [
+          {
+            "name": "checklistInstanceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveMobileChecklistResponseDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "MobileChecklist"
+        ]
+      }
+    },
+    "/api/mobile/checklists/instances/{checklistInstanceId}/complete": {
+      "post": {
+        "operationId": "MobileChecklistController_completeInstance",
+        "parameters": [
+          {
+            "name": "checklistInstanceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "MobileChecklist"
+        ]
+      }
+    },
+    "/api/mobile/checklists/instances/{checklistInstanceId}/acknowledge": {
+      "post": {
+        "operationId": "MobileChecklistController_acknowledge",
+        "parameters": [
+          {
+            "name": "checklistInstanceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcknowledgeChecklistInstanceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "MobileChecklist"
+        ]
+      }
+    },
+    "/api/snapshots/runs": {
+      "post": {
+        "operationId": "SnapshotController_createSnapshotRun",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSnapshotRunDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Snapshot"
+        ]
+      },
+      "get": {
+        "operationId": "SnapshotController_listSnapshotRuns",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Snapshot"
+        ]
+      }
+    },
+    "/api/snapshots/lookups": {
+      "get": {
+        "operationId": "SnapshotController_getSnapshotLookups",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Snapshot"
+        ]
+      }
+    },
+    "/api/snapshots/runs/summary": {
+      "get": {
+        "operationId": "SnapshotController_getSnapshotRunSummary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Snapshot"
+        ]
+      }
+    },
+    "/api/snapshots/runs/overview": {
+      "get": {
+        "operationId": "SnapshotController_getSnapshotRunOverview",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Snapshot"
+        ]
+      }
+    },
+    "/api/snapshots/runs/needs-action": {
+      "get": {
+        "operationId": "SnapshotController_getSnapshotRunNeedsAction",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Snapshot"
+        ]
+      }
+    },
+    "/api/snapshots/runs/{snapshotRunId}/audit": {
+      "get": {
+        "operationId": "SnapshotController_getSnapshotRunAudit",
+        "parameters": [
+          {
+            "name": "snapshotRunId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Snapshot"
+        ]
+      }
+    },
+    "/api/snapshots/runs/{snapshotRunId}/dependencies": {
+      "get": {
+        "operationId": "SnapshotController_getSnapshotRunDependencies",
+        "parameters": [
+          {
+            "name": "snapshotRunId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Snapshot"
+        ]
+      }
+    },
+    "/api/snapshots/runs/{snapshotRunId}/lineage": {
+      "get": {
+        "operationId": "SnapshotController_getSnapshotRunLineage",
+        "parameters": [
+          {
+            "name": "snapshotRunId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Snapshot"
+        ]
+      }
+    },
+    "/api/snapshots/runs/{snapshotRunId}/rerun": {
+      "post": {
+        "operationId": "SnapshotController_rerunSnapshotRun",
+        "parameters": [
+          {
+            "name": "snapshotRunId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Snapshot"
+        ]
+      }
+    },
+    "/api/snapshots/runs/{snapshotRunId}": {
+      "get": {
+        "operationId": "SnapshotController_getSnapshotRun",
+        "parameters": [
+          {
+            "name": "snapshotRunId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Snapshot"
+        ]
+      }
+    },
+    "/api/reports/snapshot-runs": {
+      "get": {
+        "operationId": "ReportingController_listSnapshotRuns",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Reporting"
+        ]
+      }
+    },
+    "/api/reports/summary": {
+      "get": {
+        "operationId": "ReportingController_getReportingSummary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Reporting"
+        ]
+      }
+    },
+    "/api/reports/kpi-config": {
+      "get": {
+        "operationId": "ReportingController_getKpiConfig",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Reporting"
+        ]
+      },
+      "patch": {
+        "operationId": "ReportingController_saveKpiConfigDraft",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Reporting"
+        ]
+      }
+    },
+    "/api/reports/kpi-config/editor": {
+      "get": {
+        "operationId": "ReportingController_getKpiConfigEditor",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Reporting"
+        ]
+      }
+    },
+    "/api/reports/kpi-config/audit": {
+      "get": {
+        "operationId": "ReportingController_getKpiConfigAudit",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Reporting"
+        ]
+      }
+    },
+    "/api/reports/kpi-config/publish": {
+      "patch": {
+        "operationId": "ReportingController_publishKpiConfigDraft",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Reporting"
+        ]
+      }
+    },
+    "/api/reports/workforce": {
+      "get": {
+        "operationId": "ReportingController_getWorkforceReport",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Reporting"
+        ]
+      }
+    },
+    "/api/reports/kpis": {
+      "get": {
+        "operationId": "ReportingController_getKpiReport",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Reporting"
+        ]
+      }
+    },
+    "/api/reports/my-performance": {
+      "get": {
+        "operationId": "ReportingController_getMyPerformance",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Reporting"
+        ]
+      }
+    },
+    "/api/reports/personnel-performance/{employeeId}": {
+      "get": {
+        "operationId": "ReportingController_getPersonnelPerformance",
+        "parameters": [
+          {
+            "name": "employeeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Reporting"
+        ]
+      }
+    },
+    "/api/reports/store-kpi-highlights": {
+      "get": {
+        "operationId": "ReportingController_getStoreKpiHighlights",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Reporting"
+        ]
+      }
+    },
+    "/api/reports/store-score-breakdown": {
+      "get": {
+        "operationId": "ReportingController_getStoreScoreBreakdown",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Reporting"
+        ]
+      }
+    },
+    "/api/reports/rankings": {
+      "get": {
+        "operationId": "ReportingController_getRankings",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Reporting"
+        ]
+      }
+    },
+    "/api/reports/leaderboards/closed": {
+      "get": {
+        "operationId": "ReportingController_getClosedLeaderboard",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Reporting"
+        ]
+      }
+    },
+    "/api/reports/checklists": {
+      "get": {
+        "operationId": "ReportingController_getChecklistReport",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Reporting"
+        ]
+      }
+    },
+    "/api/reports/turnover": {
+      "get": {
+        "operationId": "ReportingController_getTurnoverReport",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Reporting"
+        ]
+      }
+    },
+    "/api/target-distributions/store-personnel": {
+      "get": {
+        "operationId": "TargetDistributionController_listStorePersonnel",
+        "parameters": [
+          {
+            "name": "storeId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "TargetDistribution"
+        ]
+      }
+    },
+    "/api/target-distributions/requests": {
+      "get": {
+        "operationId": "TargetDistributionController_listRequests",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "TargetDistribution"
+        ]
+      },
+      "post": {
+        "operationId": "TargetDistributionController_createRequest",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTargetDistributionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "TargetDistribution"
+        ]
+      }
+    },
+    "/api/target-distributions/coverage": {
+      "get": {
+        "operationId": "TargetDistributionController_getTargetCoverage",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "TargetDistribution"
+        ]
+      }
+    },
+    "/api/target-distributions/requests/{requestId}/approve": {
+      "patch": {
+        "operationId": "TargetDistributionController_approveRequest",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveTargetDistributionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "TargetDistribution"
+        ]
+      }
+    },
+    "/api/workflow/inbox": {
+      "get": {
+        "operationId": "WorkflowInboxController_listInbox",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WorkflowInbox"
+        ]
+      }
+    },
+    "/api/competitions": {
+      "get": {
+        "operationId": "CompetitionController_listCompetitions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Competition"
+        ]
+      },
+      "post": {
+        "operationId": "CompetitionController_createCompetition",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCompetitionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Competition"
+        ]
+      }
+    },
+    "/api/competitions/team-templates": {
+      "get": {
+        "operationId": "CompetitionController_listTeamTemplates",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Competition"
+        ]
+      },
+      "post": {
+        "operationId": "CompetitionController_createTeamTemplate",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCompetitionTeamTemplateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Competition"
+        ]
+      }
+    },
+    "/api/competitions/{competitionId}": {
+      "get": {
+        "operationId": "CompetitionController_getCompetition",
+        "parameters": [
+          {
+            "name": "competitionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Competition"
+        ]
+      }
+    },
+    "/api/competitions/team-templates/{templateId}/deactivate": {
+      "patch": {
+        "operationId": "CompetitionController_deactivateTeamTemplate",
+        "parameters": [
+          {
+            "name": "templateId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Competition"
+        ]
+      }
+    },
+    "/api/competitions/team-templates/{templateId}": {
+      "put": {
+        "operationId": "CompetitionController_updateTeamTemplate",
+        "parameters": [
+          {
+            "name": "templateId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCompetitionTeamTemplateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Competition"
+        ]
+      }
+    },
+    "/api/competitions/team-templates/{templateId}/clone": {
+      "post": {
+        "operationId": "CompetitionController_cloneTeamTemplate",
+        "parameters": [
+          {
+            "name": "templateId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CloneCompetitionTeamTemplateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Competition"
+        ]
+      }
+    },
+    "/api/competitions/{competitionId}/stages": {
+      "post": {
+        "operationId": "CompetitionController_createStage",
+        "parameters": [
+          {
+            "name": "competitionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCompetitionStageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Competition"
+        ]
+      }
+    },
+    "/api/competitions/{competitionId}/stage-packages": {
+      "post": {
+        "operationId": "CompetitionController_createStagePackage",
+        "parameters": [
+          {
+            "name": "competitionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCompetitionStagePackageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Competition"
+        ]
+      }
+    },
+    "/api/competitions/{competitionId}/stage-package-plans": {
+      "get": {
+        "operationId": "CompetitionController_listStagePackagePlans",
+        "parameters": [
+          {
+            "name": "competitionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Competition"
+        ]
+      },
+      "post": {
+        "operationId": "CompetitionController_createStagePackagePlan",
+        "parameters": [
+          {
+            "name": "competitionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCompetitionStagePackagePlanDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Competition"
+        ]
+      }
+    },
+    "/api/competitions/stage-package-plans/{planId}": {
+      "put": {
+        "operationId": "CompetitionController_updateStagePackagePlan",
+        "parameters": [
+          {
+            "name": "planId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCompetitionStagePackagePlanDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Competition"
+        ]
+      }
+    },
+    "/api/competitions/stage-package-plans/{planId}/execute": {
+      "post": {
+        "operationId": "CompetitionController_executeStagePackagePlan",
+        "parameters": [
+          {
+            "name": "planId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Competition"
+        ]
+      }
+    },
+    "/api/competitions/stage-package-plans/{planId}/submit": {
+      "post": {
+        "operationId": "CompetitionController_submitStagePackagePlan",
+        "parameters": [
+          {
+            "name": "planId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Competition"
+        ]
+      }
+    },
+    "/api/competitions/stage-package-plans/{planId}/approve": {
+      "post": {
+        "operationId": "CompetitionController_approveStagePackagePlan",
+        "parameters": [
+          {
+            "name": "planId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewCompetitionStagePackagePlanDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Competition"
+        ]
+      }
+    },
+    "/api/competitions/stage-package-plans/{planId}/reject": {
+      "post": {
+        "operationId": "CompetitionController_rejectStagePackagePlan",
+        "parameters": [
+          {
+            "name": "planId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewCompetitionStagePackagePlanDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Competition"
+        ]
+      }
+    },
+    "/api/competitions/stage-package-plans/{planId}/clone": {
+      "post": {
+        "operationId": "CompetitionController_cloneStagePackagePlan",
+        "parameters": [
+          {
+            "name": "planId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Competition"
+        ]
+      }
+    },
+    "/api/competitions/stage-package-plans/{planId}/cancel": {
+      "patch": {
+        "operationId": "CompetitionController_cancelStagePackagePlan",
+        "parameters": [
+          {
+            "name": "planId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Competition"
+        ]
+      }
+    },
+    "/api/competitions/stage-package-plans/{planId}/audit": {
+      "get": {
+        "operationId": "CompetitionController_listStagePackagePlanAudit",
+        "parameters": [
+          {
+            "name": "planId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Competition"
+        ]
+      }
+    },
+    "/api/competitions/stages/{stageId}/recalculate": {
+      "post": {
+        "operationId": "CompetitionController_recalculateStage",
+        "parameters": [
+          {
+            "name": "stageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Competition"
+        ]
+      }
+    },
+    "/api/competitions/stages/{stageId}/finalize": {
+      "patch": {
+        "operationId": "CompetitionController_finalizeStage",
+        "parameters": [
+          {
+            "name": "stageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FinalizeCompetitionStageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Competition"
+        ]
+      }
+    },
+    "/api/feed": {
+      "get": {
+        "operationId": "FeedController_listVisibleFeed",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offset",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Feed"
+        ]
+      }
+    },
+    "/api/admin/feed": {
+      "get": {
+        "operationId": "FeedController_listManageableFeed",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offset",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Feed"
+        ]
+      },
+      "post": {
+        "operationId": "FeedController_createFeedPost",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFeedPostDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Feed"
+        ]
+      }
+    },
+    "/api/admin/feed/{feedPostId}": {
+      "put": {
+        "operationId": "FeedController_updateFeedPost",
+        "parameters": [
+          {
+            "name": "feedPostId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateFeedPostDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Feed"
+        ]
+      }
+    },
+    "/api/admin/feed/{feedPostId}/publish": {
+      "post": {
+        "operationId": "FeedController_publishFeedPost",
+        "parameters": [
+          {
+            "name": "feedPostId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Feed"
+        ]
+      }
+    },
+    "/api/admin/feed/{feedPostId}/pin": {
+      "post": {
+        "operationId": "FeedController_pinFeedPost",
+        "parameters": [
+          {
+            "name": "feedPostId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Feed"
+        ]
+      }
+    },
+    "/api/admin/feed/{feedPostId}/unpin": {
+      "post": {
+        "operationId": "FeedController_unpinFeedPost",
+        "parameters": [
+          {
+            "name": "feedPostId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Feed"
+        ]
+      }
+    },
+    "/api/admin/feed/{feedPostId}/archive": {
+      "post": {
+        "operationId": "FeedController_archiveFeedPost",
+        "parameters": [
+          {
+            "name": "feedPostId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Feed"
+        ]
+      }
+    },
+    "/api/integrations/sources": {
+      "get": {
+        "operationId": "IntegrationController_listIntegrationSources",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      },
+      "post": {
+        "operationId": "IntegrationController_createIntegrationSource",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateIntegrationSourceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/integrations/sources/{sourceId}/schedule": {
+      "patch": {
+        "operationId": "IntegrationController_updateIntegrationSourceSchedule",
+        "parameters": [
+          {
+            "name": "sourceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateIntegrationSourceScheduleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/integrations/sources/{sourceId}/deactivate": {
+      "patch": {
+        "operationId": "IntegrationController_deactivateIntegrationSource",
+        "parameters": [
+          {
+            "name": "sourceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/integrations/sources/{sourceId}/reactivate": {
+      "patch": {
+        "operationId": "IntegrationController_reactivateIntegrationSource",
+        "parameters": [
+          {
+            "name": "sourceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/integrations/lookups": {
+      "get": {
+        "operationId": "IntegrationController_getIntegrationLookups",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/integrations/external-id-map-candidates": {
+      "get": {
+        "operationId": "IntegrationController_listExternalIdMapCandidates",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/integrations/external-id-maps": {
+      "post": {
+        "operationId": "IntegrationController_approveExternalIdMap",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveExternalIdMapDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/integrations/kpi-import-store-scope": {
+      "get": {
+        "operationId": "IntegrationController_listKpiImportStoreScope",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/integrations/store-master": {
+      "get": {
+        "operationId": "IntegrationController_listStoreMaster",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/integrations/store-master-lookups": {
+      "get": {
+        "operationId": "IntegrationController_getStoreMasterLookups",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/integrations/personnel-master": {
+      "get": {
+        "operationId": "IntegrationController_listPersonnelMaster",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/integrations/personnel-master-lookups": {
+      "get": {
+        "operationId": "IntegrationController_getPersonnelMasterLookups",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/integrations/master-data-bootstrap/batches": {
+      "get": {
+        "operationId": "IntegrationController_listMasterDataBootstrapBatches",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      },
+      "post": {
+        "operationId": "IntegrationController_createMasterDataBootstrapBatch",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMasterDataBootstrapBatchDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/integrations/kpi-import-store-scope/{storeId}": {
+      "patch": {
+        "operationId": "IntegrationController_updateKpiImportStoreScope",
+        "parameters": [
+          {
+            "name": "storeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateKpiImportStoreScopeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/integrations/store-master/{storeId}": {
+      "patch": {
+        "operationId": "IntegrationController_updateStoreMaster",
+        "parameters": [
+          {
+            "name": "storeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateKpiImportStoreScopeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/integrations/personnel-master/{employeeId}": {
+      "patch": {
+        "operationId": "IntegrationController_updatePersonnelMaster",
+        "parameters": [
+          {
+            "name": "employeeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePersonnelMasterDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/integrations/master-data-bootstrap/batches/{batchId}/validate": {
+      "post": {
+        "operationId": "IntegrationController_validateMasterDataBootstrapBatch",
+        "parameters": [
+          {
+            "name": "batchId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/integrations/master-data-bootstrap/batches/{batchId}/rows": {
+      "get": {
+        "operationId": "IntegrationController_listMasterDataBootstrapRows",
+        "parameters": [
+          {
+            "name": "batchId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/integrations/master-data-bootstrap/batches/{batchId}/promotion-readiness": {
+      "get": {
+        "operationId": "IntegrationController_getMasterDataBootstrapPromotionReadiness",
+        "parameters": [
+          {
+            "name": "batchId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/integrations/master-data-bootstrap/batches/{batchId}/promote-stores": {
+      "post": {
+        "operationId": "IntegrationController_promoteMasterDataBootstrapStores",
+        "parameters": [
+          {
+            "name": "batchId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/integrations/master-data-bootstrap/batches/{batchId}/promote-personnel": {
+      "post": {
+        "operationId": "IntegrationController_promoteMasterDataBootstrapPersonnel",
+        "parameters": [
+          {
+            "name": "batchId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/integrations/master-data-bootstrap/batches/{batchId}": {
+      "get": {
+        "operationId": "IntegrationController_getMasterDataBootstrapBatch",
+        "parameters": [
+          {
+            "name": "batchId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/integrations/sources/due-schedule": {
+      "get": {
+        "operationId": "IntegrationController_listDueIntegrationSources",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/integrations/import-payload-templates": {
+      "get": {
+        "operationId": "IntegrationController_getImportPayloadTemplate",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/integrations/power-bi-export-upload": {
+      "post": {
+        "operationId": "IntegrationController_uploadPowerBiExport",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadPowerBiExportDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/integrations/sources/{sourceId}/audit": {
+      "get": {
+        "operationId": "IntegrationController_getIntegrationSourceAudit",
+        "parameters": [
+          {
+            "name": "sourceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/integrations/import-batches": {
+      "post": {
+        "operationId": "IntegrationController_createImportBatch",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateImportBatchDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      },
+      "get": {
+        "operationId": "IntegrationController_listImportBatches",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/integrations/import-batches/summary": {
+      "get": {
+        "operationId": "IntegrationController_getImportBatchSummary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/integrations/import-batches/overview": {
+      "get": {
+        "operationId": "IntegrationController_getImportBatchOverview",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Import admin overview with totals and latest actionable batches.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportOverview"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/integrations/import-batches/needs-action": {
+      "get": {
+        "operationId": "IntegrationController_getImportBatchNeedsAction",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/integrations/import-batches/{batchId}/errors": {
+      "get": {
+        "operationId": "IntegrationController_getImportBatchErrors",
+        "parameters": [
+          {
+            "name": "batchId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/integrations/import-batches/{batchId}/reconciliation": {
+      "get": {
+        "operationId": "IntegrationController_getImportBatchReconciliation",
+        "parameters": [
+          {
+            "name": "batchId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/integrations/import-batch-audit/{batchId}": {
+      "get": {
+        "operationId": "IntegrationController_getImportBatchAudit",
+        "parameters": [
+          {
+            "name": "batchId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/integrations/import-batches/{batchId}/audit": {
+      "get": {
+        "operationId": "IntegrationController_getImportBatchAuditNested",
+        "parameters": [
+          {
+            "name": "batchId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/integrations/import-batches/{batchId}/retry": {
+      "post": {
+        "operationId": "IntegrationController_retryImportBatch",
+        "parameters": [
+          {
+            "name": "batchId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/integrations/import-batches/{batchId}": {
+      "get": {
+        "operationId": "IntegrationController_getImportBatch",
+        "parameters": [
+          {
+            "name": "batchId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
+      }
+    },
+    "/api/snapshots/daily-closure": {
+      "get": {
+        "operationId": "SnapshotSchedulerController_getDailyClosureStatus",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "SnapshotScheduler"
+        ]
+      }
+    },
+    "/api/snapshots/daily-closure/run": {
+      "post": {
+        "operationId": "SnapshotSchedulerController_runDailyClosure",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunDailyClosureDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SnapshotScheduler"
+        ]
+      }
+    },
+    "/api/health/live": {
+      "get": {
+        "operationId": "HealthController_getLiveHealth",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Health"
+        ],
+        "security": []
+      }
+    },
+    "/api/health": {
+      "get": {
+        "operationId": "HealthController_getHealth",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Health"
+        ],
+        "security": []
+      }
+    }
+  },
+  "info": {
+    "title": "Store Ops API",
+    "description": "Generated OpenAPI baseline for backend/frontend contract checks.",
+    "version": "0.1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "CreateRoleAssignmentDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "roleCode": {
+            "type": "string",
+            "enum": [
+              "SUPER_ADMIN",
+              "INTEGRATION_ADMIN",
+              "SNAPSHOT_OPERATOR",
+              "REPORT_VIEWER",
+              "AUDITOR",
+              "REGION_MANAGER",
+              "STORE_MANAGER",
+              "STORE_PERSONNEL",
+              "VISUAL_MERCHANDISER"
+            ]
+          },
+          "scopeType": {
+            "enum": [
+              "company",
+              "region",
+              "store"
+            ],
+            "type": "string"
+          },
+          "companyId": {
+            "type": "string"
+          },
+          "regionId": {
+            "type": "string"
+          },
+          "storeId": {
+            "type": "string"
+          },
+          "effectiveFrom": {
+            "type": "string"
+          },
+          "effectiveTo": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "userId",
+          "roleCode",
+          "scopeType"
+        ]
+      },
+      "CreateActionStoreAssignmentDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "storeId": {
+            "type": "string"
+          },
+          "effectiveFrom": {
+            "type": "string"
+          },
+          "effectiveTo": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "userId",
+          "storeId"
+        ]
+      },
+      "CreateUserAccountDto": {
+        "type": "object",
+        "properties": {
+          "employeeId": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string",
+            "minLength": 3
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "authProvider": {
+            "enum": [
+              "local",
+              "oidc",
+              "sso",
+              "clerk"
+            ],
+            "type": "string"
+          },
+          "providerSubject": {
+            "type": "string",
+            "minLength": 8
+          }
+        },
+        "required": [
+          "username",
+          "email",
+          "authProvider"
+        ]
+      },
+      "CreatePilotUserBindingDto": {
+        "type": "object",
+        "properties": {
+          "employeeId": {
+            "type": "string"
+          },
+          "authProvider": {
+            "enum": [
+              "oidc",
+              "clerk"
+            ],
+            "type": "string"
+          },
+          "providerSubject": {
+            "type": "string",
+            "minLength": 8
+          },
+          "username": {
+            "type": "string",
+            "minLength": 3
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "roleCode": {
+            "enum": [
+              "REGION_MANAGER",
+              "STORE_MANAGER",
+              "VISUAL_MERCHANDISER"
+            ],
+            "type": "string"
+          },
+          "storeIds": {
+            "minItems": 1,
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "employeeId",
+          "authProvider",
+          "providerSubject",
+          "username",
+          "email",
+          "roleCode",
+          "storeIds"
+        ]
+      },
+      "GrantRolePermissionDto": {
+        "type": "object",
+        "properties": {
+          "permissionCode": {
+            "type": "string",
+            "minLength": 3
+          }
+        },
+        "required": [
+          "permissionCode"
+        ]
+      },
+      "RegisterMobileSessionDto": {
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 256
+          },
+          "platform": {
+            "enum": [
+              "ios",
+              "android"
+            ],
+            "type": "string"
+          },
+          "deviceName": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "appVersion": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "osVersion": {
+            "type": "string",
+            "maxLength": 40
+          }
+        },
+        "required": [
+          "deviceId",
+          "platform"
+        ]
+      },
+      "CreateSellerCodeRequestDto": {
+        "type": "object",
+        "properties": {
+          "storeId": {
+            "type": "string"
+          },
+          "requestType": {
+            "type": "string",
+            "enum": [
+              "create_code"
+            ]
+          },
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "nationalId": {
+            "type": "string",
+            "pattern": "^[0-9]{11}$"
+          },
+          "phoneNumber": {
+            "type": "string",
+            "pattern": "^[0-9+() -]{10,20}$"
+          },
+          "hireDate": {
+            "type": "string"
+          },
+          "requestedPositionId": {
+            "type": "string"
+          },
+          "employmentType": {
+            "enum": [
+              "full_time",
+              "part_time",
+              "temporary"
+            ],
+            "type": "string"
+          },
+          "requestedSellerCode": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 32
+          },
+          "requestReason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "storeId",
+          "requestType",
+          "firstName",
+          "lastName",
+          "nationalId",
+          "phoneNumber",
+          "hireDate",
+          "requestedPositionId",
+          "employmentType"
+        ]
+      },
+      "CreateOffboardingRequestDto": {
+        "type": "object",
+        "properties": {
+          "storeId": {
+            "type": "string"
+          },
+          "employeeId": {
+            "type": "string"
+          },
+          "terminationDate": {
+            "type": "string"
+          },
+          "terminationReason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "requestReason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "storeId",
+          "employeeId",
+          "terminationDate",
+          "terminationReason",
+          "requestReason"
+        ]
+      },
+      "ApproveSellerCodeRequestDto": {
+        "type": "object",
+        "properties": {
+          "sellerCode": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 32
+          },
+          "reviewNote": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "sellerCode"
+        ]
+      },
+      "RejectWorkforceRequestDto": {
+        "type": "object",
+        "properties": {
+          "reviewNote": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "reviewNote"
+        ]
+      },
+      "ResubmitSellerCodeRequestDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "nationalId": {
+            "type": "string",
+            "pattern": "^[0-9]{11}$"
+          },
+          "phoneNumber": {
+            "type": "string",
+            "pattern": "^[0-9+() -]{10,20}$"
+          },
+          "hireDate": {
+            "type": "string"
+          },
+          "requestedPositionId": {
+            "type": "string"
+          },
+          "employmentType": {
+            "enum": [
+              "full_time",
+              "part_time",
+              "temporary"
+            ],
+            "type": "string"
+          },
+          "requestReason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "firstName",
+          "lastName",
+          "nationalId",
+          "phoneNumber",
+          "hireDate",
+          "requestedPositionId",
+          "employmentType"
+        ]
+      },
+      "ApproveOffboardingRequestDto": {
+        "type": "object",
+        "properties": {
+          "reviewNote": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        }
+      },
+      "ResubmitOffboardingRequestDto": {
+        "type": "object",
+        "properties": {
+          "employeeId": {
+            "type": "string"
+          },
+          "terminationDate": {
+            "type": "string"
+          },
+          "terminationReason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "requestReason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "employeeId",
+          "terminationDate",
+          "terminationReason",
+          "requestReason"
+        ]
+      },
+      "CreateChecklistInstanceDto": {
+        "type": "object",
+        "properties": {
+          "templateId": {
+            "type": "string"
+          },
+          "storeId": {
+            "type": "string"
+          },
+          "assignedEmployeeId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "templateId",
+          "storeId"
+        ]
+      },
+      "AddChecklistResponseDto": {
+        "type": "object",
+        "properties": {
+          "templateItemId": {
+            "type": "string"
+          },
+          "responseValue": {
+            "type": "string"
+          },
+          "scoreValue": {
+            "type": "number"
+          },
+          "isNonCompliant": {
+            "type": "boolean"
+          },
+          "commentText": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "templateItemId"
+        ]
+      },
+      "CompleteChecklistInstanceDto": {
+        "type": "object",
+        "properties": {
+          "auditorEmployeeId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "auditorEmployeeId"
+        ]
+      },
+      "AcknowledgeChecklistInstanceDto": {
+        "type": "object",
+        "properties": {
+          "acknowledgementNote": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateChecklistTemplateItemDto": {
+        "type": "object",
+        "properties": {
+          "sectionName": {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          "itemNo": {
+            "type": "number",
+            "minimum": 1
+          },
+          "itemText": {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          "responseType": {
+            "type": "string",
+            "enum": [
+              "score",
+              "yes_no",
+              "partial",
+              "text"
+            ]
+          },
+          "weight": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "maxScore": {
+            "type": "number",
+            "minimum": 1
+          },
+          "expectedValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "sectionName",
+          "itemNo",
+          "itemText",
+          "responseType",
+          "weight",
+          "maxScore"
+        ]
+      },
+      "CreateChecklistTemplateDto": {
+        "type": "object",
+        "properties": {
+          "companyId": {
+            "type": "string"
+          },
+          "templateCode": {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          "templateName": {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          "templateType": {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          "category": {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          "effectiveFrom": {
+            "type": "string"
+          },
+          "effectiveTo": {
+            "type": "string"
+          },
+          "items": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateChecklistTemplateItemDto"
+            }
+          }
+        },
+        "required": [
+          "companyId",
+          "templateCode",
+          "templateName",
+          "templateType",
+          "category",
+          "effectiveFrom",
+          "items"
+        ]
+      },
+      "PublishChecklistTemplateDto": {
+        "type": "object",
+        "properties": {
+          "effectiveFrom": {
+            "type": "string"
+          },
+          "effectiveTo": {
+            "type": "string"
+          }
+        }
+      },
+      "StartMobileChecklistInstanceDto": {
+        "type": "object",
+        "properties": {
+          "checklistTemplateId": {
+            "type": "string"
+          },
+          "storeId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "checklistTemplateId",
+          "storeId"
+        ]
+      },
+      "SaveMobileChecklistResponseDto": {
+        "type": "object",
+        "properties": {
+          "templateItemId": {
+            "type": "string"
+          },
+          "scoreValue": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10
+          },
+          "commentText": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "templateItemId",
+          "scoreValue"
+        ]
+      },
+      "CreateSnapshotRunDto": {
+        "type": "object",
+        "properties": {
+          "snapshotType": {
+            "type": "string",
+            "enum": [
+              "daily",
+              "weekly",
+              "monthly",
+              "custom"
+            ]
+          },
+          "periodStart": {
+            "type": "string"
+          },
+          "periodEnd": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "snapshotType",
+          "periodStart",
+          "periodEnd"
+        ]
+      },
+      "TargetDistributionAllocationDto": {
+        "type": "object",
+        "properties": {
+          "employeeId": {
+            "type": "string"
+          },
+          "assigneeLabel": {
+            "type": "string"
+          },
+          "targetValue": {
+            "type": "number",
+            "minimum": 0
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "employeeId",
+          "assigneeLabel",
+          "targetValue"
+        ]
+      },
+      "CreateTargetDistributionRequestDto": {
+        "type": "object",
+        "properties": {
+          "storeId": {
+            "type": "string"
+          },
+          "requestMonth": {
+            "type": "string"
+          },
+          "targetLabel": {
+            "type": "string"
+          },
+          "totalTargetValue": {
+            "type": "number",
+            "minimum": 0
+          },
+          "requestReason": {
+            "type": "string"
+          },
+          "allocations": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TargetDistributionAllocationDto"
+            }
+          }
+        },
+        "required": [
+          "storeId",
+          "requestMonth",
+          "targetLabel",
+          "totalTargetValue",
+          "allocations"
+        ]
+      },
+      "ApproveTargetDistributionRequestDto": {
+        "type": "object",
+        "properties": {
+          "approvalNote": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateCompetitionDto": {
+        "type": "object",
+        "properties": {
+          "competitionCode": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 80,
+            "pattern": "^[A-Z0-9_]+$"
+          },
+          "competitionName": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 160
+          },
+          "description": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 1000
+          },
+          "competitionType": {
+            "enum": [
+              "region_challenge",
+              "region_league",
+              "campaign"
+            ],
+            "type": "string"
+          },
+          "startsOn": {
+            "type": "string"
+          },
+          "endsOn": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "competitionCode",
+          "competitionName",
+          "competitionType",
+          "startsOn",
+          "endsOn"
+        ]
+      },
+      "CreateCompetitionTeamTemplateDto": {
+        "type": "object",
+        "properties": {
+          "templateCode": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80,
+            "pattern": "^[A-Z0-9_]+$"
+          },
+          "templateName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 160
+          },
+          "description": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 1000
+          },
+          "storeIds": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "templateCode",
+          "templateName",
+          "storeIds"
+        ]
+      },
+      "UpdateCompetitionTeamTemplateDto": {
+        "type": "object",
+        "properties": {
+          "templateCode": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80,
+            "pattern": "^[A-Z0-9_]+$"
+          },
+          "templateName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 160
+          },
+          "description": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 1000
+          },
+          "storeIds": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "templateCode",
+          "templateName",
+          "storeIds"
+        ]
+      },
+      "CloneCompetitionTeamTemplateDto": {
+        "type": "object",
+        "properties": {
+          "templateCode": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80,
+            "pattern": "^[A-Z0-9_]+$"
+          },
+          "templateName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 160
+          },
+          "description": {
+            "type": "string",
+            "minLength": 0,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "templateCode",
+          "templateName"
+        ]
+      },
+      "CreateCompetitionTeamDto": {
+        "type": "object",
+        "properties": {
+          "teamCode": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80,
+            "pattern": "^[A-Z0-9_]+$"
+          },
+          "teamName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 160
+          },
+          "sourceTemplateId": {
+            "type": "string"
+          },
+          "storeIds": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "teamCode",
+          "teamName",
+          "storeIds"
+        ]
+      },
+      "CreateCompetitionStageDto": {
+        "type": "object",
+        "properties": {
+          "stageCode": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80,
+            "pattern": "^[A-Z0-9_]+$"
+          },
+          "stageName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 160
+          },
+          "stageOrder": {
+            "type": "number",
+            "minimum": 1
+          },
+          "stageType": {
+            "enum": [
+              "qualifier",
+              "league",
+              "quarter_final",
+              "semi_final",
+              "final",
+              "custom"
+            ],
+            "type": "string"
+          },
+          "stagePresetCode": {
+            "enum": [
+              "region_league",
+              "first_half_qualifier",
+              "final_showdown"
+            ],
+            "type": "string"
+          },
+          "startsOn": {
+            "type": "string"
+          },
+          "endsOn": {
+            "type": "string"
+          },
+          "teams": {
+            "minItems": 2,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateCompetitionTeamDto"
+            }
+          }
+        },
+        "required": [
+          "stageCode",
+          "stageName",
+          "stageOrder",
+          "stageType",
+          "startsOn",
+          "endsOn",
+          "teams"
+        ]
+      },
+      "CreateCompetitionStagePackageTeamDto": {
+        "type": "object",
+        "properties": {
+          "teamCode": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80,
+            "pattern": "^[A-Z0-9_]+$"
+          },
+          "teamName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 160
+          },
+          "sourceTemplateId": {
+            "type": "string"
+          },
+          "storeIds": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "teamCode",
+          "teamName",
+          "storeIds"
+        ]
+      },
+      "CreateCompetitionStagePackageStageDto": {
+        "type": "object",
+        "properties": {
+          "stageCode": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80,
+            "pattern": "^[A-Z0-9_]+$"
+          },
+          "stageName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 160
+          },
+          "stageOrder": {
+            "type": "number",
+            "minimum": 1
+          },
+          "stageType": {
+            "type": "string",
+            "enum": [
+              "qualifier",
+              "league",
+              "quarter_final",
+              "semi_final",
+              "final",
+              "custom"
+            ]
+          },
+          "stagePresetCode": {
+            "type": "string",
+            "enum": [
+              "region_league",
+              "first_half_qualifier",
+              "final_showdown"
+            ]
+          },
+          "startsOn": {
+            "type": "string"
+          },
+          "endsOn": {
+            "type": "string"
+          },
+          "teams": {
+            "minItems": 2,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateCompetitionStagePackageTeamDto"
+            }
+          }
+        },
+        "required": [
+          "stageCode",
+          "stageName",
+          "stageOrder",
+          "stageType",
+          "startsOn",
+          "endsOn",
+          "teams"
+        ]
+      },
+      "CreateCompetitionStagePackageDto": {
+        "type": "object",
+        "properties": {
+          "packageCode": {
+            "type": "string",
+            "enum": [
+              "league_then_final"
+            ]
+          },
+          "stages": {
+            "minItems": 2,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateCompetitionStagePackageStageDto"
+            }
+          }
+        },
+        "required": [
+          "packageCode",
+          "stages"
+        ]
+      },
+      "CreateCompetitionStagePackagePlanTeamDto": {
+        "type": "object",
+        "properties": {
+          "teamCode": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80,
+            "pattern": "^[A-Z0-9_]+$"
+          },
+          "teamName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 160
+          },
+          "sourceTemplateId": {
+            "type": "string"
+          },
+          "storeIds": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "teamCode",
+          "teamName",
+          "storeIds"
+        ]
+      },
+      "CreateCompetitionStagePackagePlanStageDto": {
+        "type": "object",
+        "properties": {
+          "stageCode": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80,
+            "pattern": "^[A-Z0-9_]+$"
+          },
+          "stageName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 160
+          },
+          "stageOrder": {
+            "type": "number",
+            "minimum": 1
+          },
+          "stageType": {
+            "type": "string",
+            "enum": [
+              "qualifier",
+              "league",
+              "quarter_final",
+              "semi_final",
+              "final",
+              "custom"
+            ]
+          },
+          "stagePresetCode": {
+            "type": "string",
+            "enum": [
+              "region_league",
+              "first_half_qualifier",
+              "final_showdown"
+            ]
+          },
+          "startsOn": {
+            "type": "string"
+          },
+          "endsOn": {
+            "type": "string"
+          },
+          "teams": {
+            "minItems": 2,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateCompetitionStagePackagePlanTeamDto"
+            }
+          }
+        },
+        "required": [
+          "stageCode",
+          "stageName",
+          "stageOrder",
+          "stageType",
+          "startsOn",
+          "endsOn",
+          "teams"
+        ]
+      },
+      "CreateCompetitionStagePackagePlanDto": {
+        "type": "object",
+        "properties": {
+          "packageCode": {
+            "type": "string",
+            "enum": [
+              "league_then_final"
+            ]
+          },
+          "planName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 160
+          },
+          "stages": {
+            "minItems": 2,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateCompetitionStagePackagePlanStageDto"
+            }
+          }
+        },
+        "required": [
+          "packageCode",
+          "planName",
+          "stages"
+        ]
+      },
+      "UpdateCompetitionStagePackagePlanDto": {
+        "type": "object",
+        "properties": {
+          "packageCode": {
+            "type": "string",
+            "enum": [
+              "league_then_final"
+            ]
+          },
+          "planName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 160
+          },
+          "stages": {
+            "minItems": 2,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateCompetitionStagePackagePlanStageDto"
+            }
+          }
+        },
+        "required": [
+          "packageCode",
+          "planName",
+          "stages"
+        ]
+      },
+      "ReviewCompetitionStagePackagePlanDto": {
+        "type": "object",
+        "properties": {
+          "reviewNote": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 500
+          }
+        }
+      },
+      "FinalizeCompetitionStageDto": {
+        "type": "object",
+        "properties": {
+          "allowOverride": {
+            "type": "boolean"
+          },
+          "overrideJustification": {
+            "type": "string",
+            "minLength": 12,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "allowOverride"
+        ]
+      },
+      "CreateFeedPostDto": {
+        "type": "object",
+        "properties": {
+          "postType": {
+            "enum": [
+              "announcement",
+              "challenge"
+            ],
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "linkLabel": {
+            "type": "string"
+          },
+          "linkUrl": {
+            "type": "string"
+          },
+          "visibilityScopeType": {
+            "enum": [
+              "company",
+              "region",
+              "store"
+            ],
+            "type": "string"
+          },
+          "visibilityScopeIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "isPinned": {
+            "type": "boolean"
+          },
+          "publishStatus": {
+            "enum": [
+              "draft",
+              "published",
+              "archived"
+            ],
+            "type": "string"
+          },
+          "startsAt": {
+            "type": "string"
+          },
+          "endsAt": {
+            "type": "string"
+          },
+          "metricCode": {
+            "type": "string"
+          },
+          "metricLabel": {
+            "type": "string"
+          },
+          "challengeStartsOn": {
+            "type": "string"
+          },
+          "challengeEndsOn": {
+            "type": "string"
+          },
+          "targetRoute": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "postType",
+          "title",
+          "body",
+          "visibilityScopeType"
+        ]
+      },
+      "UpdateFeedPostDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "linkLabel": {
+            "type": "string",
+            "nullable": true
+          },
+          "linkUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "visibilityScopeType": {
+            "enum": [
+              "company",
+              "region",
+              "store"
+            ],
+            "type": "string"
+          },
+          "visibilityScopeIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "startsAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "endsAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "metricCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "metricLabel": {
+            "type": "string",
+            "nullable": true
+          },
+          "challengeStartsOn": {
+            "type": "string",
+            "nullable": true
+          },
+          "challengeEndsOn": {
+            "type": "string",
+            "nullable": true
+          },
+          "targetRoute": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "CreateIntegrationSourceDto": {
+        "type": "object",
+        "properties": {
+          "sourceCode": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 64
+          },
+          "sourceName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 128
+          },
+          "entityType": {
+            "enum": [
+              "employee",
+              "store",
+              "kpi",
+              "assignment",
+              "position",
+              "company",
+              "region"
+            ],
+            "type": "string"
+          },
+          "sourceSystem": {
+            "default": "manual",
+            "enum": [
+              "nebim_v3",
+              "power_bi",
+              "manual",
+              "other"
+            ],
+            "type": "string"
+          },
+          "stateModel": {
+            "default": "latest_state",
+            "enum": [
+              "latest_state",
+              "closed_period"
+            ],
+            "type": "string"
+          },
+          "pollEnabled": {
+            "type": "boolean"
+          },
+          "pollIntervalMinutes": {
+            "type": "number",
+            "minimum": 5,
+            "maximum": 1440
+          },
+          "pollWindowStartLocal": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "pollWindowEndLocal": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "pollTimezone": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 64
+          }
+        },
+        "required": [
+          "sourceCode",
+          "sourceName",
+          "entityType",
+          "sourceSystem",
+          "stateModel"
+        ]
+      },
+      "UpdateIntegrationSourceScheduleDto": {
+        "type": "object",
+        "properties": {
+          "pollEnabled": {
+            "type": "boolean"
+          },
+          "pollIntervalMinutes": {
+            "type": "number",
+            "minimum": 5,
+            "maximum": 1440
+          },
+          "pollWindowStartLocal": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "pollWindowEndLocal": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+          },
+          "pollTimezone": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 64
+          }
+        }
+      },
+      "ApproveExternalIdMapDto": {
+        "type": "object",
+        "properties": {
+          "integrationSourceId": {
+            "type": "string"
+          },
+          "entityType": {
+            "enum": [
+              "employee",
+              "store"
+            ],
+            "type": "string"
+          },
+          "externalId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "internalId": {
+            "type": "string"
+          },
+          "internalTableName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "integrationSourceId",
+          "entityType",
+          "externalId",
+          "internalId"
+        ]
+      },
+      "UpdateKpiImportStoreScopeDto": {
+        "type": "object",
+        "properties": {
+          "storeType": {
+            "enum": [
+              "company",
+              "franchise",
+              "operator"
+            ],
+            "type": "string"
+          },
+          "regionId": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "inactive",
+              "closed"
+            ],
+            "type": "string"
+          },
+          "kpiImportEnabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "storeType",
+          "regionId",
+          "status",
+          "kpiImportEnabled"
+        ]
+      },
+      "UpdatePersonnelMasterDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "externalEmployeeRef": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "employmentStatus": {
+            "enum": [
+              "active",
+              "inactive",
+              "terminated"
+            ],
+            "type": "string"
+          },
+          "employmentType": {
+            "enum": [
+              "full_time",
+              "part_time",
+              "temporary"
+            ],
+            "type": "string"
+          },
+          "hireDate": {
+            "type": "string"
+          },
+          "storeId": {
+            "type": "string"
+          },
+          "positionId": {
+            "type": "string"
+          },
+          "assignmentStartDate": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "firstName",
+          "lastName",
+          "employmentStatus",
+          "employmentType",
+          "hireDate",
+          "storeId",
+          "positionId"
+        ]
+      },
+      "CreateMasterDataBootstrapBatchDto": {
+        "type": "object",
+        "properties": {
+          "bootstrapEntity": {
+            "enum": [
+              "store",
+              "personnel"
+            ],
+            "type": "string"
+          },
+          "sourceLabel": {
+            "type": "string",
+            "minLength": 3
+          },
+          "fileReference": {
+            "type": "string",
+            "minLength": 3
+          },
+          "rows": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "bootstrapEntity",
+          "sourceLabel",
+          "rows"
+        ]
+      },
+      "UploadPowerBiExportDto": {
+        "type": "object",
+        "properties": {
+          "sourceCode": {
+            "type": "string",
+            "minLength": 2
+          },
+          "periodMonth": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}$"
+          },
+          "periodType": {
+            "enum": [
+              "daily",
+              "weekly",
+              "monthly",
+              "custom"
+            ],
+            "type": "string"
+          },
+          "periodStart": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "periodEnd": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "sourceCode"
+        ]
+      },
+      "CreateImportBatchDto": {
+        "type": "object",
+        "properties": {
+          "sourceCode": {
+            "type": "string",
+            "minLength": 2
+          },
+          "entityType": {
+            "enum": [
+              "employee",
+              "store",
+              "kpi",
+              "assignment",
+              "position",
+              "company",
+              "region"
+            ],
+            "type": "string"
+          },
+          "fileReference": {
+            "type": "string",
+            "minLength": 3
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 6
+          },
+          "sourceBatchId": {
+            "type": "string",
+            "minLength": 2
+          },
+          "sourcePayloadHash": {
+            "type": "string",
+            "minLength": 8
+          },
+          "sourceCapturedAt": {
+            "type": "string"
+          },
+          "sourceWindowStartedAt": {
+            "type": "string"
+          },
+          "sourceWindowEndedAt": {
+            "type": "string"
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "sourceCode",
+          "entityType",
+          "fileReference"
+        ]
+      },
+      "RunDailyClosureDto": {
+        "type": "object",
+        "properties": {
+          "closureDate": {
+            "type": "string"
+          },
+          "referenceAt": {
+            "type": "string"
+          }
+        }
+      },
+      "ImportOverview": {
+        "type": "object",
+        "required": [
+          "totals",
+          "healthTotals",
+          "actionTotals",
+          "latest"
+        ],
+        "properties": {
+          "totals": {
+            "type": "object",
+            "required": [
+              "all",
+              "completed",
+              "failed",
+              "completedWithErrors",
+              "pending",
+              "queued",
+              "processing"
+            ],
+            "properties": {
+              "all": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "completed": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "failed": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "completedWithErrors": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "pending": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "queued": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "processing": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "healthTotals": {
+            "type": "object",
+            "required": [
+              "healthy",
+              "inProgress",
+              "blocked",
+              "retryReady",
+              "needsAction",
+              "stuck"
+            ],
+            "properties": {
+              "healthy": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "inProgress": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "blocked": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "retryReady": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "needsAction": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "stuck": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "actionTotals": {
+            "type": "object",
+            "required": [
+              "blocked",
+              "retryReady",
+              "needsAction",
+              "stuck"
+            ],
+            "properties": {
+              "blocked": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "retryReady": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "needsAction": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "stuck": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "latest": {
+            "type": "object",
+            "required": [
+              "completedBatchId",
+              "failedBatchId",
+              "inProgressBatchId",
+              "stuckBatchId"
+            ],
+            "properties": {
+              "completedBatchId": {
+                "type": "string",
+                "nullable": true
+              },
+              "failedBatchId": {
+                "type": "string",
+                "nullable": true
+              },
+              "inProgressBatchId": {
+                "type": "string",
+                "nullable": true
+              },
+              "stuckBatchId": {
+                "type": "string",
+                "nullable": true
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "bearer": []
+    }
+  ]
+}
