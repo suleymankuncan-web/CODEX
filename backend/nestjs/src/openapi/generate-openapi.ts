@@ -303,6 +303,115 @@ const masterDataBootstrapBatchesResponseSchema = {
   },
 };
 
+const masterDataBootstrapStatusCountsSchema = {
+  type: "object",
+  required: ["pending", "valid", "needs_review", "invalid", "promoted"],
+  properties: {
+    pending: { type: "integer", minimum: 0 },
+    valid: { type: "integer", minimum: 0 },
+    needs_review: { type: "integer", minimum: 0 },
+    invalid: { type: "integer", minimum: 0 },
+    promoted: { type: "integer", minimum: 0 },
+  },
+};
+
+const masterDataBootstrapDetailSummarySchema = {
+  type: "object",
+  required: [
+    "batchId",
+    "companyId",
+    "bootstrapEntity",
+    "sourceLabel",
+    "fileReference",
+    "uploadedByUserId",
+    "batchStatus",
+    "rowCount",
+    "validCount",
+    "needsReviewCount",
+    "invalidCount",
+    "promotedCount",
+    "createdAt",
+    "validatedAt",
+    "promotedAt",
+    "statusCounts",
+  ],
+  properties: {
+    batchId: { type: "string" },
+    companyId: { type: "string" },
+    bootstrapEntity: { type: "string", enum: ["store", "personnel"] },
+    sourceLabel: { type: "string" },
+    fileReference: { type: "string", nullable: true },
+    uploadedByUserId: { type: "string" },
+    batchStatus: { type: "string" },
+    rowCount: { type: "integer", minimum: 0 },
+    validCount: { type: "integer", minimum: 0 },
+    needsReviewCount: { type: "integer", minimum: 0 },
+    invalidCount: { type: "integer", minimum: 0 },
+    promotedCount: { type: "integer", minimum: 0 },
+    createdAt: { type: "string" },
+    validatedAt: { type: "string", nullable: true },
+    promotedAt: { type: "string", nullable: true },
+    statusCounts: masterDataBootstrapStatusCountsSchema,
+  },
+};
+
+const masterDataBootstrapDetailRowSchema = {
+  type: "object",
+  required: [
+    "rowId",
+    "rowNumber",
+    "sourceStoreCode",
+    "sourceEmployeeCode",
+    "validationStatus",
+    "issueCode",
+    "issueMessage",
+    "resolvedCompanyId",
+    "resolvedRegionId",
+    "resolvedStoreId",
+    "resolvedEmployeeId",
+    "resolvedPositionId",
+    "promotedEntityId",
+    "rawPayload",
+    "normalizedPayload",
+  ],
+  properties: {
+    rowId: { type: "string" },
+    rowNumber: { type: "integer", minimum: 0 },
+    sourceStoreCode: { type: "string", nullable: true },
+    sourceEmployeeCode: { type: "string", nullable: true },
+    validationStatus: { type: "string" },
+    issueCode: { type: "string", nullable: true },
+    issueMessage: { type: "string", nullable: true },
+    resolvedCompanyId: { type: "string", nullable: true },
+    resolvedRegionId: { type: "string", nullable: true },
+    resolvedStoreId: { type: "string", nullable: true },
+    resolvedEmployeeId: { type: "string", nullable: true },
+    resolvedPositionId: { type: "string", nullable: true },
+    promotedEntityId: { type: "string", nullable: true },
+    rawPayload: { type: "object", additionalProperties: true },
+    normalizedPayload: { type: "object", additionalProperties: true },
+  },
+};
+
+const masterDataBootstrapBatchDetailResponseSchema = {
+  type: "object",
+  required: ["summary", "rows"],
+  properties: {
+    summary: masterDataBootstrapDetailSummarySchema,
+    rows: {
+      type: "object",
+      required: ["items", "meta"],
+      properties: {
+        items: {
+          type: "array",
+          items: masterDataBootstrapDetailRowSchema,
+        },
+        meta: listResponseMetaSchema,
+      },
+    },
+  },
+};
+
 const masterDataBootstrapPromotionReadinessSchema = {
   type: "string",
   enum: [
@@ -462,6 +571,8 @@ async function generateOpenApi(): Promise<void> {
     ImportOverview: importOverviewSchema,
     IntegrationLookups: integrationLookupsSchema,
     MasterDataBootstrapBatchesResponse: masterDataBootstrapBatchesResponseSchema,
+    MasterDataBootstrapBatchDetailResponse:
+      masterDataBootstrapBatchDetailResponseSchema,
     MasterDataBootstrapPromotionReadinessResponse:
       masterDataBootstrapPromotionReadinessResponseSchema,
   };
@@ -496,6 +607,14 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Master data bootstrap promotion dry-run readiness for a batch.",
     "MasterDataBootstrapPromotionReadinessResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/integrations/master-data-bootstrap/batches/{batchId}",
+    "get",
+    "Master data bootstrap batch detail with staged row evidence.",
+    "MasterDataBootstrapBatchDetailResponse",
   );
 
   const outputPath = resolve(process.cwd(), "../../docs/api/openapi.json");

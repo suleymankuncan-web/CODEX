@@ -16,6 +16,7 @@ const selectedOperations = [
   { path: '/api/integrations/import-batches/overview', method: 'get' },
   { path: '/api/integrations/lookups', method: 'get' },
   { path: '/api/integrations/master-data-bootstrap/batches', method: 'get' },
+  { path: '/api/integrations/master-data-bootstrap/batches/{batchId}', method: 'get' },
   {
     path: '/api/integrations/master-data-bootstrap/batches/{batchId}/promotion-readiness',
     method: 'get',
