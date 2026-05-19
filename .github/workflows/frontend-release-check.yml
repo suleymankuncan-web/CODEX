@@ -7,10 +7,12 @@ on:
       - master
     paths:
       - "admin-web/**"
+      - "docs/api/**"
       - ".github/workflows/frontend-release-check.yml"
   pull_request:
     paths:
       - "admin-web/**"
+      - "docs/api/**"
       - ".github/workflows/frontend-release-check.yml"
   workflow_dispatch:
 
