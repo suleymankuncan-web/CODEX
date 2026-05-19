@@ -2,16 +2,6 @@ import { fetchJson, sendJson } from '../../lib/api'
 import { fetchOpenApiJson, type ApiGetResponse } from '../../lib/openapi-client'
 import type { StagePresetCode } from './stage-presets'
 
-type ListResponse<T> = {
-  items: T[]
-  meta: {
-    count: number
-    total: number
-    limit: number
-    offset: number
-  }
-}
-
 type CommandResponse<TData> = {
   command: {
     status: string
@@ -127,35 +117,9 @@ export type CreateCompetitionStagePackagePayload = {
   stages: CreateCompetitionStagePayload[]
 }
 
-type CompetitionStagePackagePlanStatus =
-  | 'draft'
-  | 'submitted'
-  | 'approved'
-  | 'rejected'
-  | 'executed'
-  | 'cancelled'
-
-export type CompetitionStagePackagePlan = {
-  planId: string
-  competitionId: string
-  packageCode: CompetitionStagePackageCode
-  planName: string
-  planStatus: CompetitionStagePackagePlanStatus
-  sourcePlan: {
-    planId: string
-    planName: string
-  } | null
-  stageDrafts: CreateCompetitionStagePayload[]
-  createdStageIds: string[]
-  submittedByUserId: string | null
-  submittedAt: string | null
-  reviewedByUserId: string | null
-  reviewedAt: string | null
-  reviewNote: string | null
-  createdAt: string
-  updatedAt: string
-  executedAt: string | null
-}
+export type CompetitionStagePackagePlanList =
+  ApiGetResponse<'/api/competitions/{competitionId}/stage-package-plans'>
+export type CompetitionStagePackagePlan = CompetitionStagePackagePlanList['items'][number]
 
 export type CreateCompetitionStagePackagePlanPayload = CreateCompetitionStagePackagePayload & {
   planName: string
@@ -293,9 +257,9 @@ export async function createCompetitionStagePackage(
 }
 
 export async function listCompetitionStagePackagePlans(competitionId: string) {
-  return fetchJson<ListResponse<CompetitionStagePackagePlan>>(
-    `/competitions/${competitionId}/stage-package-plans`,
-  )
+  return fetchOpenApiJson('/api/competitions/{competitionId}/stage-package-plans', {
+    params: { competitionId },
+  })
 }
 
 export async function createCompetitionStagePackagePlan(

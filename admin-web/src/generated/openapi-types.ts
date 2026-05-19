@@ -39,6 +39,49 @@ export type components = {
         "offset": number
       }
     }
+    "CompetitionStagePackagePlanListResponse": {
+      "items": Array<{
+          "planId": string
+          "competitionId": string
+          "packageCode": "league_then_final"
+          "planName": string
+          "planStatus": "draft" | "submitted" | "approved" | "rejected" | "executed" | "cancelled"
+          "sourcePlan": ({
+            "planId": string
+            "planName": string
+          }) | null
+          "stageDrafts": Array<{
+              "stagePresetCode"?: "region_league" | "first_half_qualifier" | "final_showdown"
+              "stageCode": string
+              "stageName": string
+              "stageOrder": number
+              "stageType": "qualifier" | "league" | "quarter_final" | "semi_final" | "final" | "custom"
+              "startsOn": string
+              "endsOn": string
+              "teams": Array<{
+                  "teamCode": string
+                  "teamName": string
+                  "sourceTemplateId"?: string
+                  "storeIds": string[]
+                }>
+            }>
+          "createdStageIds": string[]
+          "submittedByUserId": string | null
+          "submittedAt": string | null
+          "reviewedByUserId": string | null
+          "reviewedAt": string | null
+          "reviewNote": string | null
+          "createdAt": string
+          "updatedAt": string
+          "executedAt": string | null
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
     "CompetitionTeamTemplateListResponse": {
       "items": Array<{
           "templateId": string
@@ -573,6 +616,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["CompetitionListResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/competitions/{competitionId}/stage-package-plans": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["CompetitionStagePackagePlanListResponse"]
           }
         }
       }

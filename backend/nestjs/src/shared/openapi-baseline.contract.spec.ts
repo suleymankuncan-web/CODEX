@@ -246,6 +246,25 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const competitionStagePackagePlanListResponse =
+      document.paths["/api/competitions/{competitionId}/stage-package-plans"].get
+        .responses?.["200"];
+    expect(
+      competitionStagePackagePlanListResponse?.content?.["application/json"]
+        ?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/CompetitionStagePackagePlanListResponse",
+    });
+    expect(
+      document.components?.schemas?.CompetitionStagePackagePlanListResponse
+        ?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
     const competitionStagePackagePlanAuditResponse =
       document.paths[
         "/api/competitions/stage-package-plans/{planId}/audit"
