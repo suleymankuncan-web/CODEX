@@ -79,7 +79,7 @@ describe("OpenAPI baseline", () => {
     );
   });
 
-  it("captures the pilot import overview response schema", () => {
+  it("captures generated frontend pilot response schemas", () => {
     const response =
       document.paths["/api/integrations/import-batches/overview"].get.responses?.[
         "200"
@@ -93,6 +93,34 @@ describe("OpenAPI baseline", () => {
         healthTotals: expect.any(Object),
         actionTotals: expect.any(Object),
         latest: expect.any(Object),
+      }),
+    );
+
+    const lookupsResponse =
+      document.paths["/api/integrations/lookups"].get.responses?.["200"];
+    expect(lookupsResponse?.content?.["application/json"]?.schema).toEqual({
+      $ref: "#/components/schemas/IntegrationLookups",
+    });
+    expect(document.components?.schemas?.IntegrationLookups?.properties).toEqual(
+      expect.objectContaining({
+        entityTypes: expect.any(Object),
+        sourceStats: expect.any(Object),
+        activeSources: expect.any(Object),
+        sourcesByEntityType: expect.any(Object),
+        optionGroups: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+    expect(
+      document.components?.schemas?.IntegrationLookups?.properties?.optionGroups,
+    ).toEqual(
+      expect.objectContaining({
+        properties: expect.objectContaining({
+          entityTypes: expect.any(Object),
+          sources: expect.any(Object),
+          sourceSystems: expect.any(Object),
+          stateModels: expect.any(Object),
+        }),
       }),
     );
   });

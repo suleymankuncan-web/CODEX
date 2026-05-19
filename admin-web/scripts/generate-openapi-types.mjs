@@ -12,7 +12,7 @@ const checkMode = process.argv.includes('--check')
 const document = JSON.parse(await readFile(openApiPath, 'utf8'))
 
 const httpMethods = new Set(['get', 'post', 'put', 'patch', 'delete'])
-const selectedPaths = ['/api/integrations/import-batches/overview']
+const selectedPaths = ['/api/integrations/import-batches/overview', '/api/integrations/lookups']
 const selectedSchemaNames = collectReferencedSchemaNames(document, selectedPaths)
 
 const output = [

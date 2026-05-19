@@ -20,20 +20,7 @@ export type ImportPayloadTemplate = {
   requestBody: Record<string, unknown>
 }
 
-export type IntegrationLookups = {
-  activeSources: Array<{
-    sourceId: string
-    sourceCode: string
-    sourceName: string
-    entityType: string
-    sourceSystem: string
-    stateModel: string
-  }>
-  meta: {
-    totalEntityTypes: number
-    totalActiveSources: number
-  }
-}
+export type IntegrationLookups = ApiGetResponse<'/api/integrations/lookups'>
 
 export type PowerBiExportUploadResponse = {
   command: {
@@ -451,7 +438,7 @@ export async function getImportOverview() {
 }
 
 export async function getIntegrationLookups() {
-  return fetchJson<IntegrationLookups>('/integrations/lookups')
+  return fetchOpenApiJson('/api/integrations/lookups')
 }
 
 export async function getNeedsAction(input?: {

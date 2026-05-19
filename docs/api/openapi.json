@@ -2775,7 +2775,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Integration lookup options for admin import and source management screens.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntegrationLookups"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -5418,6 +5425,212 @@
               "stuckBatchId": {
                 "type": "string",
                 "nullable": true
+              }
+            }
+          }
+        }
+      },
+      "IntegrationLookups": {
+        "type": "object",
+        "required": [
+          "entityTypes",
+          "sourceStats",
+          "activeSources",
+          "sourcesByEntityType",
+          "optionGroups",
+          "meta"
+        ],
+        "properties": {
+          "entityTypes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sourceStats": {
+            "type": "object",
+            "required": [
+              "totalActiveSources"
+            ],
+            "properties": {
+              "totalActiveSources": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "activeSources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "sourceId",
+                "sourceCode",
+                "sourceName",
+                "entityType",
+                "sourceSystem",
+                "stateModel"
+              ],
+              "properties": {
+                "sourceId": {
+                  "type": "string"
+                },
+                "sourceCode": {
+                  "type": "string"
+                },
+                "sourceName": {
+                  "type": "string"
+                },
+                "entityType": {
+                  "type": "string"
+                },
+                "sourceSystem": {
+                  "type": "string"
+                },
+                "stateModel": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "sourcesByEntityType": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "sourceId",
+                  "sourceCode",
+                  "sourceName"
+                ],
+                "properties": {
+                  "sourceId": {
+                    "type": "string"
+                  },
+                  "sourceCode": {
+                    "type": "string"
+                  },
+                  "sourceName": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "optionGroups": {
+            "type": "object",
+            "required": [
+              "entityTypes",
+              "sources",
+              "sourceSystems",
+              "stateModels"
+            ],
+            "properties": {
+              "entityTypes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "value",
+                    "label"
+                  ],
+                  "properties": {
+                    "value": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "sources": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "value",
+                    "label",
+                    "entityType",
+                    "sourceCode",
+                    "sourceSystem",
+                    "stateModel"
+                  ],
+                  "properties": {
+                    "value": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "entityType": {
+                      "type": "string"
+                    },
+                    "sourceCode": {
+                      "type": "string"
+                    },
+                    "sourceSystem": {
+                      "type": "string"
+                    },
+                    "stateModel": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "sourceSystems": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "value",
+                    "label"
+                  ],
+                  "properties": {
+                    "value": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "stateModels": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "value",
+                    "label"
+                  ],
+                  "properties": {
+                    "value": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "totalEntityTypes",
+              "totalActiveSources"
+            ],
+            "properties": {
+              "totalEntityTypes": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "totalActiveSources": {
+                "type": "integer",
+                "minimum": 0
               }
             }
           }
