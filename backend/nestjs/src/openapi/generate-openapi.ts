@@ -1108,6 +1108,42 @@ const authUserAccountSchema = {
   },
 };
 
+const authRoleAssignmentSchema = {
+  type: "object",
+  required: [
+    "assignmentId",
+    "userId",
+    "username",
+    "email",
+    "roleCode",
+    "roleName",
+    "scopeType",
+    "companyId",
+    "regionId",
+    "storeId",
+    "effectiveFrom",
+    "effectiveTo",
+    "createdAt",
+    "active",
+  ],
+  properties: {
+    assignmentId: { type: "string" },
+    userId: { type: "string" },
+    username: { type: "string" },
+    email: { type: "string" },
+    roleCode: { type: "string" },
+    roleName: { type: "string" },
+    scopeType: { type: "string" },
+    companyId: { type: "string", nullable: true },
+    regionId: { type: "string", nullable: true },
+    storeId: { type: "string", nullable: true },
+    effectiveFrom: { type: "string", nullable: true },
+    effectiveTo: { type: "string", nullable: true },
+    createdAt: { type: "string" },
+    active: { type: "boolean" },
+  },
+};
+
 const authLookupStoreSchema = {
   type: "object",
   required: [
@@ -1583,6 +1619,18 @@ const authUserAccountsResponseSchema = {
     items: {
       type: "array",
       items: authUserAccountSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
+const authRoleAssignmentsResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: authRoleAssignmentSchema,
     },
     meta: listResponseMetaSchema,
   },
@@ -4095,6 +4143,7 @@ async function generateOpenApi(): Promise<void> {
     AuthRoleCatalogResponse: authRoleCatalogResponseSchema,
     AuthPermissionCatalogResponse: authPermissionCatalogResponseSchema,
     AuthUserAccountsResponse: authUserAccountsResponseSchema,
+    AuthRoleAssignmentsResponse: authRoleAssignmentsResponseSchema,
     ImportOverview: importOverviewSchema,
     ImportPayloadTemplateResponse: importPayloadTemplateSchema,
     ImportBatchAuditResponse: importBatchAuditResponseSchema,
@@ -4458,6 +4507,14 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Paginated auth user accounts visible to auth admins.",
     "AuthUserAccountsResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/role-assignments",
+    "get",
+    "Paginated auth role assignments visible to auth admins.",
+    "AuthRoleAssignmentsResponse",
   );
 
   setJsonResponseSchema(

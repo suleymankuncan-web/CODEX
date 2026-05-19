@@ -22,28 +22,13 @@ type AuthPermissionCatalogResponse = ApiGetResponse<'/api/auth/permissions'>
 export type PermissionCatalogItem = AuthPermissionCatalogResponse['items'][number]
 type AuthUserAccountsResponse = ApiGetResponse<'/api/auth/users'>
 export type UserAccount = AuthUserAccountsResponse['items'][number]
+type AuthRoleAssignmentsResponse = ApiGetResponse<'/api/auth/role-assignments'>
+export type RoleAssignment = AuthRoleAssignmentsResponse['items'][number]
 
 export type UserAccessClosure = {
   closedRoleAssignments: number
   closedActionStoreAssignments: number
   revokedMobileSessions: number
-}
-
-export type RoleAssignment = {
-  assignmentId: string
-  userId: string
-  username: string
-  email: string
-  roleCode: string
-  roleName: string
-  scopeType: string
-  companyId: string | null
-  regionId: string | null
-  storeId: string | null
-  effectiveFrom: string | null
-  effectiveTo: string | null
-  createdAt: string
-  active: boolean
 }
 
 export type ActionStoreAssignment = {
@@ -227,7 +212,7 @@ export async function getRoleAssignments(input?: {
     params.set('active', String(input.active))
   }
 
-  return fetchJson<ListResponse<RoleAssignment>>(`/auth/role-assignments?${params.toString()}`)
+  return fetchOpenApiJson('/api/auth/role-assignments', { query: params })
 }
 
 export async function getActionStoreAssignments(input?: {

@@ -926,6 +926,22 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const authRoleAssignmentsResponse =
+      document.paths["/api/auth/role-assignments"].get.responses?.["200"];
+    expect(
+      authRoleAssignmentsResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/AuthRoleAssignmentsResponse",
+    });
+    expect(
+      document.components?.schemas?.AuthRoleAssignmentsResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
     const lookupsResponse =
       document.paths["/api/integrations/lookups"].get.responses?.["200"];
     expect(lookupsResponse?.content?.["application/json"]?.schema).toEqual({

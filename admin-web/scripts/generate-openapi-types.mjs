@@ -17,6 +17,7 @@ const selectedOperations = [
   { path: '/api/auth/lookups/stores/search', method: 'get' },
   { path: '/api/auth/lookups/users/search', method: 'get' },
   { path: '/api/auth/permissions', method: 'get' },
+  { path: '/api/auth/role-assignments', method: 'get' },
   { path: '/api/auth/roles', method: 'get' },
   { path: '/api/auth/users', method: 'get' },
   { path: '/api/competitions', method: 'get' },

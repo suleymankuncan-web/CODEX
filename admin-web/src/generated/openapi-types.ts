@@ -89,6 +89,30 @@ export type components = {
         "offset": number
       }
     }
+    "AuthRoleAssignmentsResponse": {
+      "items": Array<{
+          "assignmentId": string
+          "userId": string
+          "username": string
+          "email": string
+          "roleCode": string
+          "roleName": string
+          "scopeType": string
+          "companyId": string | null
+          "regionId": string | null
+          "storeId": string | null
+          "effectiveFrom": string | null
+          "effectiveTo": string | null
+          "createdAt": string
+          "active": boolean
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
     "AuthRoleCatalogResponse": {
       "items": Array<{
           "roleId": string
@@ -2067,6 +2091,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["AuthPermissionCatalogResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/auth/role-assignments": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["AuthRoleAssignmentsResponse"]
           }
         }
       }

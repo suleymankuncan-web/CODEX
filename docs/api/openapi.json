@@ -71,7 +71,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Paginated auth role assignments visible to auth admins.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthRoleAssignmentsResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -12519,6 +12526,113 @@
                 "employeeStatus": {
                   "type": "string",
                   "nullable": true
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "count",
+              "total",
+              "limit",
+              "offset"
+            ],
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "AuthRoleAssignmentsResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "meta"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "assignmentId",
+                "userId",
+                "username",
+                "email",
+                "roleCode",
+                "roleName",
+                "scopeType",
+                "companyId",
+                "regionId",
+                "storeId",
+                "effectiveFrom",
+                "effectiveTo",
+                "createdAt",
+                "active"
+              ],
+              "properties": {
+                "assignmentId": {
+                  "type": "string"
+                },
+                "userId": {
+                  "type": "string"
+                },
+                "username": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string"
+                },
+                "roleCode": {
+                  "type": "string"
+                },
+                "roleName": {
+                  "type": "string"
+                },
+                "scopeType": {
+                  "type": "string"
+                },
+                "companyId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "regionId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "storeId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "effectiveFrom": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "effectiveTo": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "active": {
+                  "type": "boolean"
                 }
               }
             }
