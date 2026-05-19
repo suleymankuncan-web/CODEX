@@ -111,6 +111,45 @@ export type components = {
         "offset": number
       }
     }
+    "MasterDataBootstrapPromotionReadinessResponse": {
+      "summary": {
+        "batchId": string
+        "bootstrapEntity": "store" | "personnel"
+        "batchStatus": string
+        "rowCount": number
+        "readyCount": number
+        "waitingBatchCount": number
+        "needsValidationCount": number
+        "needsReviewCount": number
+        "blockedCount": number
+        "alreadyPromotedCount": number
+        "canPromote": boolean
+        "nextAction": "already_closed" | "validate_batch" | "review_rows" | "promote_ready_rows" | "wait_for_batch_ready"
+      }
+      "rows": {
+        "items": Array<{
+            "rowId": string
+            "rowNumber": number
+            "sourceStoreCode"?: string | null
+            "sourceEmployeeCode"?: string | null
+            "validationStatus": string
+            "issueCode": string | null
+            "issueMessage": string | null
+            "promotionReadiness": "needs_validation" | "needs_review" | "blocked" | "waiting_batch" | "ready" | "already_promoted"
+            "blockReason": string | null
+            "resolvedStoreId": string | null
+            "resolvedEmployeeId": string | null
+            "resolvedPositionId": string | null
+            "promotedEntityId": string | null
+          }>
+        "meta": {
+          "count": number
+          "total": number
+          "limit": number
+          "offset": number
+        }
+      }
+    }
   }
 }
 
@@ -143,6 +182,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["MasterDataBootstrapBatchesResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/integrations/master-data-bootstrap/batches/{batchId}/promotion-readiness": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["MasterDataBootstrapPromotionReadinessResponse"]
           }
         }
       }

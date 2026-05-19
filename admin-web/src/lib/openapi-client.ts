@@ -21,13 +21,29 @@ export type ApiGetResponse<Path extends keyof paths> = GetOperation<Path> extend
 
 export async function fetchOpenApiJson<Path extends keyof paths & `/api/${string}`>(
   path: Path,
-  input?: { query?: string | URLSearchParams },
+  input?: {
+    params?: Record<string, string | number>
+    query?: string | URLSearchParams
+  },
 ): Promise<ApiGetResponse<Path>> {
-  return fetchJson<ApiGetResponse<Path>>(`${toClientApiPath(path)}${formatQuery(input?.query)}`)
+  return fetchJson<ApiGetResponse<Path>>(
+    `${toClientApiPath(formatPathParams(path, input?.params))}${formatQuery(input?.query)}`,
+  )
 }
 
 function toClientApiPath(path: `/api/${string}`) {
   return path.slice('/api'.length) as `/${string}`
+}
+
+function formatPathParams(path: `/api/${string}`, params: Record<string, string | number> = {}) {
+  return path.replace(/\{([^}]+)\}/g, (_match, key: string) => {
+    const value = params[key]
+    if (value === undefined) {
+      throw new Error(`Missing OpenAPI path parameter: ${key}`)
+    }
+
+    return encodeURIComponent(String(value))
+  }) as `/api/${string}`
 }
 
 function formatQuery(query?: string | URLSearchParams) {

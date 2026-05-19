@@ -139,6 +139,25 @@ describe("OpenAPI baseline", () => {
         meta: expect.any(Object),
       }),
     );
+
+    const promotionReadinessResponse =
+      document.paths[
+        "/api/integrations/master-data-bootstrap/batches/{batchId}/promotion-readiness"
+      ].get.responses?.["200"];
+    expect(
+      promotionReadinessResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/MasterDataBootstrapPromotionReadinessResponse",
+    });
+    expect(
+      document.components?.schemas?.MasterDataBootstrapPromotionReadinessResponse
+        ?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        summary: expect.any(Object),
+        rows: expect.any(Object),
+      }),
+    );
   });
 
   it("documents the mobile session header required by the mobile session guard", () => {

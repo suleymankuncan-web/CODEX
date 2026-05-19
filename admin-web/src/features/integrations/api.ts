@@ -286,14 +286,6 @@ export type MasterDataBootstrapReadiness =
   | 'ready_to_promote'
   | 'closed'
 
-type MasterDataBootstrapPromotionReadiness =
-  | 'needs_validation'
-  | 'needs_review'
-  | 'blocked'
-  | 'waiting_batch'
-  | 'ready'
-  | 'already_promoted'
-
 export type MasterDataBootstrapBatchList =
   ApiGetResponse<'/api/integrations/master-data-bootstrap/batches'>
 export type MasterDataBootstrapBatchItem = MasterDataBootstrapBatchList['items'][number]
@@ -331,36 +323,8 @@ export type MasterDataBootstrapBatchDetail = {
   rows: ListResponse<MasterDataBootstrapRow>
 }
 
-export type MasterDataBootstrapPromotionReadinessResponse = {
-  summary: {
-    batchId: string
-    bootstrapEntity: MasterDataBootstrapEntity
-    batchStatus: string
-    rowCount: number
-    readyCount: number
-    waitingBatchCount: number
-    needsValidationCount: number
-    needsReviewCount: number
-    blockedCount: number
-    alreadyPromotedCount: number
-    canPromote: boolean
-    nextAction: string
-  }
-  rows: ListResponse<
-    Pick<
-      MasterDataBootstrapRow,
-      | 'rowId'
-      | 'rowNumber'
-      | 'sourceStoreCode'
-      | 'sourceEmployeeCode'
-      | 'validationStatus'
-      | 'promotedEntityId'
-    > & {
-      promotionReadiness: MasterDataBootstrapPromotionReadiness
-      blockReason: string | null
-    }
-  >
-}
+export type MasterDataBootstrapPromotionReadinessResponse =
+  ApiGetResponse<'/api/integrations/master-data-bootstrap/batches/{batchId}/promotion-readiness'>
 
 export type MasterDataBootstrapPromotionResponse = CommandResponse<{
   batch: MasterDataBootstrapBatchItem & {
@@ -671,8 +635,9 @@ export async function getMasterDataBootstrapBatchDetail(batchId: string) {
 }
 
 export async function getMasterDataBootstrapPromotionReadiness(batchId: string) {
-  return fetchJson<MasterDataBootstrapPromotionReadinessResponse>(
-    `/integrations/master-data-bootstrap/batches/${batchId}/promotion-readiness`,
+  return fetchOpenApiJson(
+    '/api/integrations/master-data-bootstrap/batches/{batchId}/promotion-readiness',
+    { params: { batchId } },
   )
 }
 

@@ -303,6 +303,108 @@ const masterDataBootstrapBatchesResponseSchema = {
   },
 };
 
+const masterDataBootstrapPromotionReadinessSchema = {
+  type: "string",
+  enum: [
+    "needs_validation",
+    "needs_review",
+    "blocked",
+    "waiting_batch",
+    "ready",
+    "already_promoted",
+  ],
+};
+
+const masterDataBootstrapPromotionReadinessRowSchema = {
+  type: "object",
+  required: [
+    "rowId",
+    "rowNumber",
+    "validationStatus",
+    "issueCode",
+    "issueMessage",
+    "promotionReadiness",
+    "blockReason",
+    "resolvedStoreId",
+    "resolvedEmployeeId",
+    "resolvedPositionId",
+    "promotedEntityId",
+  ],
+  properties: {
+    rowId: { type: "string" },
+    rowNumber: { type: "integer", minimum: 0 },
+    sourceStoreCode: { type: "string", nullable: true },
+    sourceEmployeeCode: { type: "string", nullable: true },
+    validationStatus: { type: "string" },
+    issueCode: { type: "string", nullable: true },
+    issueMessage: { type: "string", nullable: true },
+    promotionReadiness: masterDataBootstrapPromotionReadinessSchema,
+    blockReason: { type: "string", nullable: true },
+    resolvedStoreId: { type: "string", nullable: true },
+    resolvedEmployeeId: { type: "string", nullable: true },
+    resolvedPositionId: { type: "string", nullable: true },
+    promotedEntityId: { type: "string", nullable: true },
+  },
+};
+
+const masterDataBootstrapPromotionReadinessResponseSchema = {
+  type: "object",
+  required: ["summary", "rows"],
+  properties: {
+    summary: {
+      type: "object",
+      required: [
+        "batchId",
+        "bootstrapEntity",
+        "batchStatus",
+        "rowCount",
+        "readyCount",
+        "waitingBatchCount",
+        "needsValidationCount",
+        "needsReviewCount",
+        "blockedCount",
+        "alreadyPromotedCount",
+        "canPromote",
+        "nextAction",
+      ],
+      properties: {
+        batchId: { type: "string" },
+        bootstrapEntity: { type: "string", enum: ["store", "personnel"] },
+        batchStatus: { type: "string" },
+        rowCount: { type: "integer", minimum: 0 },
+        readyCount: { type: "integer", minimum: 0 },
+        waitingBatchCount: { type: "integer", minimum: 0 },
+        needsValidationCount: { type: "integer", minimum: 0 },
+        needsReviewCount: { type: "integer", minimum: 0 },
+        blockedCount: { type: "integer", minimum: 0 },
+        alreadyPromotedCount: { type: "integer", minimum: 0 },
+        canPromote: { type: "boolean" },
+        nextAction: {
+          type: "string",
+          enum: [
+            "already_closed",
+            "validate_batch",
+            "review_rows",
+            "promote_ready_rows",
+            "wait_for_batch_ready",
+          ],
+        },
+      },
+    },
+    rows: {
+      type: "object",
+      required: ["items", "meta"],
+      properties: {
+        items: {
+          type: "array",
+          items: masterDataBootstrapPromotionReadinessRowSchema,
+        },
+        meta: listResponseMetaSchema,
+      },
+    },
+  },
+};
+
 async function generateOpenApi(): Promise<void> {
   const app = await NestFactory.create(AppModule, { logger: false });
   app.setGlobalPrefix("api");
@@ -360,6 +462,8 @@ async function generateOpenApi(): Promise<void> {
     ImportOverview: importOverviewSchema,
     IntegrationLookups: integrationLookupsSchema,
     MasterDataBootstrapBatchesResponse: masterDataBootstrapBatchesResponseSchema,
+    MasterDataBootstrapPromotionReadinessResponse:
+      masterDataBootstrapPromotionReadinessResponseSchema,
   };
 
   setJsonResponseSchema(
@@ -384,6 +488,14 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Paginated master data bootstrap batches with derived readiness.",
     "MasterDataBootstrapBatchesResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/integrations/master-data-bootstrap/batches/{batchId}/promotion-readiness",
+    "get",
+    "Master data bootstrap promotion dry-run readiness for a batch.",
+    "MasterDataBootstrapPromotionReadinessResponse",
   );
 
   const outputPath = resolve(process.cwd(), "../../docs/api/openapi.json");
