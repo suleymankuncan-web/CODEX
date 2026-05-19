@@ -107,6 +107,57 @@ const importOverviewSchema = {
   },
 };
 
+const importBatchNeedsActionItemSchema = {
+  type: "object",
+  required: [
+    "batchId",
+    "integrationSourceId",
+    "sourceCode",
+    "sourceName",
+    "entityType",
+    "startedAt",
+    "finishedAt",
+    "status",
+    "fileReference",
+    "recordCount",
+    "errorCount",
+    "retryCount",
+    "lastRetriedAt",
+    "healthState",
+    "actionReason",
+    "recommendedAction",
+    "blockedByEntityTypes",
+    "recommendedNextEntityType",
+    "canRetryNow",
+    "isStuck",
+  ],
+  properties: {
+    batchId: { type: "string" },
+    integrationSourceId: { type: "string" },
+    sourceCode: { type: "string" },
+    sourceName: { type: "string" },
+    entityType: { type: "string" },
+    startedAt: { type: "string" },
+    finishedAt: { type: "string", nullable: true },
+    status: { type: "string" },
+    fileReference: { type: "string", nullable: true },
+    recordCount: { type: "integer", minimum: 0 },
+    errorCount: { type: "integer", minimum: 0 },
+    retryCount: { type: "integer", minimum: 0 },
+    lastRetriedAt: { type: "string", nullable: true },
+    healthState: { type: "string" },
+    actionReason: { type: "string" },
+    recommendedAction: { type: "string" },
+    blockedByEntityTypes: {
+      type: "array",
+      items: { type: "string" },
+    },
+    recommendedNextEntityType: { type: "string", nullable: true },
+    canRetryNow: { type: "boolean" },
+    isStuck: { type: "boolean" },
+  },
+};
+
 const integrationLookupSourceSchema = {
   type: "object",
   required: [
@@ -407,6 +458,18 @@ const listResponseMetaSchema = {
     total: { type: "integer", minimum: 0 },
     limit: { type: "integer", minimum: 0 },
     offset: { type: "integer", minimum: 0 },
+  },
+};
+
+const importBatchNeedsActionResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: importBatchNeedsActionItemSchema,
+    },
+    meta: listResponseMetaSchema,
   },
 };
 
@@ -760,6 +823,7 @@ async function generateOpenApi(): Promise<void> {
   document.components.schemas = {
     ...(document.components.schemas ?? {}),
     ImportOverview: importOverviewSchema,
+    ImportBatchNeedsActionResponse: importBatchNeedsActionResponseSchema,
     IntegrationLookups: integrationLookupsSchema,
     PersonnelMasterListResponse: personnelMasterListResponseSchema,
     PersonnelMasterLookups: personnelMasterLookupsSchema,
@@ -778,6 +842,14 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Import admin overview with totals and latest actionable batches.",
     "ImportOverview",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/integrations/import-batches/needs-action",
+    "get",
+    "Paginated import batches requiring admin action.",
+    "ImportBatchNeedsActionResponse",
   );
 
   setJsonResponseSchema(
