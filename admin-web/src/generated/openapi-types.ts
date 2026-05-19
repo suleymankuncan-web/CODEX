@@ -1128,6 +1128,59 @@ export type components = {
         "offset": number
       }
     }
+    "ReportingKpiConfigDraftRequest": {
+      "storeProfile": {
+        "profileCode": "store" | "personnel"
+        "title": string
+        "summary": string
+        "metrics": Array<{
+            "code": string
+            "label": string
+            "weightPercent": number
+            "ownerRole": "DEPUTY_GM" | "REGION_MANAGER" | "STORE_MANAGER" | "STORE_PERSONNEL" | "VISUAL_TEAM"
+            "scoreBehavior": "score_only" | "warning_first" | "task_candidate"
+            "direction"?: "HIGHER_IS_BETTER" | "LOWER_IS_BETTER" | "TARGET_BAND"
+            "benchmarkSource"?: "TARGET" | "TURKEY_AVERAGE" | "CHECKLIST_SCORE"
+            "capRatio"?: number
+            "aliases"?: string[]
+            "notes"?: string
+          }>
+        "futureMetricRule": string
+      }
+      "personnelProfile": {
+        "profileCode": "store" | "personnel"
+        "title": string
+        "summary": string
+        "metrics": Array<{
+            "code": string
+            "label": string
+            "weightPercent": number
+            "ownerRole": "DEPUTY_GM" | "REGION_MANAGER" | "STORE_MANAGER" | "STORE_PERSONNEL" | "VISUAL_TEAM"
+            "scoreBehavior": "score_only" | "warning_first" | "task_candidate"
+            "direction"?: "HIGHER_IS_BETTER" | "LOWER_IS_BETTER" | "TARGET_BAND"
+            "benchmarkSource"?: "TARGET" | "TURKEY_AVERAGE" | "CHECKLIST_SCORE"
+            "capRatio"?: number
+            "aliases"?: string[]
+            "notes"?: string
+          }>
+        "futureMetricRule": string
+      }
+      "ownershipMatrix": Array<{
+          "code": string
+          "label": string
+          "visibleTo": Array<"DEPUTY_GM" | "REGION_MANAGER" | "STORE_MANAGER" | "STORE_PERSONNEL" | "VISUAL_TEAM">
+          "operationalOwner": "DEPUTY_GM" | "REGION_MANAGER" | "STORE_MANAGER" | "STORE_PERSONNEL" | "VISUAL_TEAM"
+          "contributesTo": Array<"store" | "personnel">
+          "taskCandidate": boolean
+        }>
+      "gradingBands": Array<{
+          "code": string
+          "label": string
+          "emoji": string
+          "tone": "calm" | "accent" | "warning" | "danger" | "neutral"
+          "minScore": number
+        }>
+    }
     "ReportingKpiConfigEditorResponse": {
       "draftConfig": {
         "storeProfile": {
@@ -2631,6 +2684,20 @@ export type paths = {
         }
       }
     }
+    patch: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["ReportingKpiConfigDraftRequest"]
+        }
+      }
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ReportingKpiConfigEditorResponse"]
+          }
+        }
+      }
+    }
   }
   "/api/reports/kpi-config/audit": {
     get: {
@@ -2645,6 +2712,17 @@ export type paths = {
   }
   "/api/reports/kpi-config/editor": {
     get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ReportingKpiConfigEditorResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/reports/kpi-config/publish": {
+    patch: {
       responses: {
         "200": {
           content: {

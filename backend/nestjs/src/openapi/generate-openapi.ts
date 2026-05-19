@@ -6,6 +6,7 @@ import { AppModule } from "../app.module";
 
 type MutableOperation = {
   parameters?: Array<Record<string, unknown>>;
+  requestBody?: Record<string, unknown>;
   responses?: Record<string, Record<string, unknown>>;
   security?: Array<Record<string, string[]>>;
 };
@@ -4349,6 +4350,7 @@ async function generateOpenApi(): Promise<void> {
       workforceOffboardingRequestsResponseSchema,
     ReportingSummaryResponse: reportingSummaryResponseSchema,
     ReportingSnapshotRunsResponse: reportingSnapshotRunsResponseSchema,
+    ReportingKpiConfigDraftRequest: reportingKpiConfigSchema,
     ReportingKpiConfigResponse: reportingKpiConfigResponseSchema,
     ReportingKpiConfigEditorResponse: reportingKpiConfigEditorResponseSchema,
     ReportingKpiConfigAuditResponse: reportingKpiConfigAuditResponseSchema,
@@ -4596,6 +4598,21 @@ async function generateOpenApi(): Promise<void> {
     "ReportingKpiConfigResponse",
   );
 
+  setJsonRequestSchema(
+    document.paths,
+    "/api/reports/kpi-config",
+    "patch",
+    "ReportingKpiConfigDraftRequest",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/reports/kpi-config",
+    "patch",
+    "Draft and published KPI config editor state after saving a draft.",
+    "ReportingKpiConfigEditorResponse",
+  );
+
   setJsonResponseSchema(
     document.paths,
     "/api/reports/kpi-config/editor",
@@ -4610,6 +4627,14 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Paginated KPI config audit events for admin governance.",
     "ReportingKpiConfigAuditResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/reports/kpi-config/publish",
+    "patch",
+    "Draft and published KPI config editor state after publishing a draft.",
+    "ReportingKpiConfigEditorResponse",
   );
 
   setJsonResponseSchema(
@@ -4949,6 +4974,30 @@ function nullableStringProperties(propertyNames: string[]) {
       { type: "string", nullable: true },
     ]),
   );
+}
+
+function setJsonRequestSchema(
+  paths: Record<string, unknown>,
+  path: string,
+  method: string,
+  schemaName: string,
+) {
+  const operation = (paths[path] as MutablePathItem | undefined)?.[method];
+
+  if (!operation) {
+    return;
+  }
+
+  operation.requestBody = {
+    required: true,
+    content: {
+      "application/json": {
+        schema: {
+          $ref: `#/components/schemas/${schemaName}`,
+        },
+      },
+    },
+  };
 }
 
 function setJsonResponseSchema(

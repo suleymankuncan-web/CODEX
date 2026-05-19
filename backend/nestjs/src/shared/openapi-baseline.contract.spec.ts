@@ -10,6 +10,14 @@ type OpenApiDocument = {
       string,
       {
         parameters?: Array<Record<string, unknown>>;
+        requestBody?: {
+          content?: Record<
+            string,
+            {
+              schema?: Record<string, unknown>;
+            }
+          >;
+        };
         responses?: Record<
           string,
           {
@@ -637,6 +645,17 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const reportingKpiConfigPatch =
+      document.paths["/api/reports/kpi-config"].patch;
+    expect(
+      reportingKpiConfigPatch.requestBody?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/ReportingKpiConfigDraftRequest",
+    });
+    expect(reportingKpiConfigPatch.responses?.["200"]?.content?.["application/json"]?.schema).toEqual({
+      $ref: "#/components/schemas/ReportingKpiConfigEditorResponse",
+    });
+
     const reportingKpiConfigEditorResponse =
       document.paths["/api/reports/kpi-config/editor"].get.responses?.["200"];
     expect(
@@ -654,6 +673,14 @@ describe("OpenAPI baseline", () => {
         latestPublishedVersion: expect.any(Object),
       }),
     );
+
+    const reportingKpiConfigPublishResponse =
+      document.paths["/api/reports/kpi-config/publish"].patch.responses?.["200"];
+    expect(
+      reportingKpiConfigPublishResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/ReportingKpiConfigEditorResponse",
+    });
 
     const reportingKpiConfigAuditResponse =
       document.paths["/api/reports/kpi-config/audit"].get.responses?.["200"];
