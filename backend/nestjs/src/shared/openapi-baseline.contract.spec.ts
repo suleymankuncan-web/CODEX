@@ -140,6 +140,23 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const masterDataDetailResponse =
+      document.paths[
+        "/api/integrations/master-data-bootstrap/batches/{batchId}"
+      ].get.responses?.["200"];
+    expect(masterDataDetailResponse?.content?.["application/json"]?.schema).toEqual({
+      $ref: "#/components/schemas/MasterDataBootstrapBatchDetailResponse",
+    });
+    expect(
+      document.components?.schemas?.MasterDataBootstrapBatchDetailResponse
+        ?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        summary: expect.any(Object),
+        rows: expect.any(Object),
+      }),
+    );
+
     const promotionReadinessResponse =
       document.paths[
         "/api/integrations/master-data-bootstrap/batches/{batchId}/promotion-readiness"

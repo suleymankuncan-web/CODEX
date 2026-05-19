@@ -310,18 +310,8 @@ export type MasterDataBootstrapRow = {
   updatedAt?: string
 }
 
-export type MasterDataBootstrapBatchDetail = {
-  summary: MasterDataBootstrapBatchItem & {
-    statusCounts: {
-      pending: number
-      valid: number
-      needsReview: number
-      invalid: number
-      promoted: number
-    }
-  }
-  rows: ListResponse<MasterDataBootstrapRow>
-}
+export type MasterDataBootstrapBatchDetail =
+  ApiGetResponse<'/api/integrations/master-data-bootstrap/batches/{batchId}'>
 
 export type MasterDataBootstrapPromotionReadinessResponse =
   ApiGetResponse<'/api/integrations/master-data-bootstrap/batches/{batchId}/promotion-readiness'>
@@ -629,9 +619,9 @@ export async function getMasterDataBootstrapBatches(input?: {
 }
 
 export async function getMasterDataBootstrapBatchDetail(batchId: string) {
-  return fetchJson<MasterDataBootstrapBatchDetail>(
-    `/integrations/master-data-bootstrap/batches/${batchId}`,
-  )
+  return fetchOpenApiJson('/api/integrations/master-data-bootstrap/batches/{batchId}', {
+    params: { batchId },
+  })
 }
 
 export async function getMasterDataBootstrapPromotionReadiness(batchId: string) {

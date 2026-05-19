@@ -3177,7 +3177,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Master data bootstrap batch detail with staged row evidence.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MasterDataBootstrapBatchDetailResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -5786,6 +5793,246 @@
               "offset": {
                 "type": "integer",
                 "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "MasterDataBootstrapBatchDetailResponse": {
+        "type": "object",
+        "required": [
+          "summary",
+          "rows"
+        ],
+        "properties": {
+          "summary": {
+            "type": "object",
+            "required": [
+              "batchId",
+              "companyId",
+              "bootstrapEntity",
+              "sourceLabel",
+              "fileReference",
+              "uploadedByUserId",
+              "batchStatus",
+              "rowCount",
+              "validCount",
+              "needsReviewCount",
+              "invalidCount",
+              "promotedCount",
+              "createdAt",
+              "validatedAt",
+              "promotedAt",
+              "statusCounts"
+            ],
+            "properties": {
+              "batchId": {
+                "type": "string"
+              },
+              "companyId": {
+                "type": "string"
+              },
+              "bootstrapEntity": {
+                "type": "string",
+                "enum": [
+                  "store",
+                  "personnel"
+                ]
+              },
+              "sourceLabel": {
+                "type": "string"
+              },
+              "fileReference": {
+                "type": "string",
+                "nullable": true
+              },
+              "uploadedByUserId": {
+                "type": "string"
+              },
+              "batchStatus": {
+                "type": "string"
+              },
+              "rowCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "validCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "needsReviewCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "invalidCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "promotedCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "createdAt": {
+                "type": "string"
+              },
+              "validatedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "promotedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "statusCounts": {
+                "type": "object",
+                "required": [
+                  "pending",
+                  "valid",
+                  "needs_review",
+                  "invalid",
+                  "promoted"
+                ],
+                "properties": {
+                  "pending": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "valid": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "needs_review": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "invalid": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "promoted": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          "rows": {
+            "type": "object",
+            "required": [
+              "items",
+              "meta"
+            ],
+            "properties": {
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "rowId",
+                    "rowNumber",
+                    "sourceStoreCode",
+                    "sourceEmployeeCode",
+                    "validationStatus",
+                    "issueCode",
+                    "issueMessage",
+                    "resolvedCompanyId",
+                    "resolvedRegionId",
+                    "resolvedStoreId",
+                    "resolvedEmployeeId",
+                    "resolvedPositionId",
+                    "promotedEntityId",
+                    "rawPayload",
+                    "normalizedPayload"
+                  ],
+                  "properties": {
+                    "rowId": {
+                      "type": "string"
+                    },
+                    "rowNumber": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "sourceStoreCode": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "sourceEmployeeCode": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "validationStatus": {
+                      "type": "string"
+                    },
+                    "issueCode": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "issueMessage": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "resolvedCompanyId": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "resolvedRegionId": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "resolvedStoreId": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "resolvedEmployeeId": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "resolvedPositionId": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "promotedEntityId": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "rawPayload": {
+                      "type": "object",
+                      "additionalProperties": true
+                    },
+                    "normalizedPayload": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              },
+              "meta": {
+                "type": "object",
+                "required": [
+                  "count",
+                  "total",
+                  "limit",
+                  "offset"
+                ],
+                "properties": {
+                  "count": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "total": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "offset": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
               }
             }
           }

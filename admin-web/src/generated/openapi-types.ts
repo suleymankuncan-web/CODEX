@@ -82,6 +82,61 @@ export type components = {
         "totalActiveSources": number
       }
     }
+    "MasterDataBootstrapBatchDetailResponse": {
+      "summary": {
+        "batchId": string
+        "companyId": string
+        "bootstrapEntity": "store" | "personnel"
+        "sourceLabel": string
+        "fileReference": string | null
+        "uploadedByUserId": string
+        "batchStatus": string
+        "rowCount": number
+        "validCount": number
+        "needsReviewCount": number
+        "invalidCount": number
+        "promotedCount": number
+        "createdAt": string
+        "validatedAt": string | null
+        "promotedAt": string | null
+        "statusCounts": {
+          "pending": number
+          "valid": number
+          "needs_review": number
+          "invalid": number
+          "promoted": number
+        }
+      }
+      "rows": {
+        "items": Array<{
+            "rowId": string
+            "rowNumber": number
+            "sourceStoreCode": string | null
+            "sourceEmployeeCode": string | null
+            "validationStatus": string
+            "issueCode": string | null
+            "issueMessage": string | null
+            "resolvedCompanyId": string | null
+            "resolvedRegionId": string | null
+            "resolvedStoreId": string | null
+            "resolvedEmployeeId": string | null
+            "resolvedPositionId": string | null
+            "promotedEntityId": string | null
+            "rawPayload": {
+              [key: string]: unknown
+            }
+            "normalizedPayload": {
+              [key: string]: unknown
+            }
+          }>
+        "meta": {
+          "count": number
+          "total": number
+          "limit": number
+          "offset": number
+        }
+      }
+    }
     "MasterDataBootstrapBatchesResponse": {
       "items": Array<{
           "batchId": string
@@ -182,6 +237,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["MasterDataBootstrapBatchesResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/integrations/master-data-bootstrap/batches/{batchId}": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["MasterDataBootstrapBatchDetailResponse"]
           }
         }
       }
