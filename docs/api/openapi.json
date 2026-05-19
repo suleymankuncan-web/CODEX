@@ -1687,7 +1687,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Paginated workforce snapshot rows for reporting surfaces.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportingWorkforceResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -1701,7 +1708,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Paginated KPI snapshot rows for reporting surfaces.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportingKpiResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -9316,6 +9330,182 @@
                 "metadata": {
                   "type": "object",
                   "additionalProperties": true
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "count",
+              "total",
+              "limit",
+              "offset"
+            ],
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "ReportingWorkforceResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "meta"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "snapshotRunId",
+                "storeId",
+                "positionId",
+                "activeHeadcount",
+                "activeFte",
+                "plannedHeadcount",
+                "plannedFte",
+                "gapHeadcount",
+                "gapFte"
+              ],
+              "properties": {
+                "snapshotRunId": {
+                  "type": "string"
+                },
+                "storeId": {
+                  "type": "string"
+                },
+                "positionId": {
+                  "type": "string"
+                },
+                "activeHeadcount": {
+                  "type": "string"
+                },
+                "activeFte": {
+                  "type": "string"
+                },
+                "plannedHeadcount": {
+                  "type": "string"
+                },
+                "plannedFte": {
+                  "type": "string"
+                },
+                "gapHeadcount": {
+                  "type": "string"
+                },
+                "gapFte": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "count",
+              "total",
+              "limit",
+              "offset"
+            ],
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "ReportingKpiResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "meta"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "snapshotRunId",
+                "storeId",
+                "kpiId",
+                "kpiCode",
+                "kpiName",
+                "periodStart",
+                "periodEnd",
+                "targetValue",
+                "actualValue",
+                "achievementRate",
+                "statusBand"
+              ],
+              "properties": {
+                "snapshotRunId": {
+                  "type": "string"
+                },
+                "storeId": {
+                  "type": "string"
+                },
+                "kpiId": {
+                  "type": "string"
+                },
+                "kpiCode": {
+                  "type": "string"
+                },
+                "kpiName": {
+                  "type": "string"
+                },
+                "periodStart": {
+                  "type": "string"
+                },
+                "periodEnd": {
+                  "type": "string"
+                },
+                "targetValue": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "actualValue": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "achievementRate": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "statusBand": {
+                  "type": "string",
+                  "nullable": true
                 }
               }
             }

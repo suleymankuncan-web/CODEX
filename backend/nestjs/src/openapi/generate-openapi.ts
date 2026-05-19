@@ -2042,6 +2042,86 @@ const reportingKpiConfigAuditResponseSchema = {
   },
 };
 
+const reportingWorkforceRowSchema = {
+  type: "object",
+  required: [
+    "snapshotRunId",
+    "storeId",
+    "positionId",
+    "activeHeadcount",
+    "activeFte",
+    "plannedHeadcount",
+    "plannedFte",
+    "gapHeadcount",
+    "gapFte",
+  ],
+  properties: {
+    snapshotRunId: { type: "string" },
+    storeId: { type: "string" },
+    positionId: { type: "string" },
+    activeHeadcount: { type: "string" },
+    activeFte: { type: "string" },
+    plannedHeadcount: { type: "string" },
+    plannedFte: { type: "string" },
+    gapHeadcount: { type: "string" },
+    gapFte: { type: "string" },
+  },
+};
+
+const reportingWorkforceResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: reportingWorkforceRowSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
+const reportingKpiRowSchema = {
+  type: "object",
+  required: [
+    "snapshotRunId",
+    "storeId",
+    "kpiId",
+    "kpiCode",
+    "kpiName",
+    "periodStart",
+    "periodEnd",
+    "targetValue",
+    "actualValue",
+    "achievementRate",
+    "statusBand",
+  ],
+  properties: {
+    snapshotRunId: { type: "string" },
+    storeId: { type: "string" },
+    kpiId: { type: "string" },
+    kpiCode: { type: "string" },
+    kpiName: { type: "string" },
+    periodStart: { type: "string" },
+    periodEnd: { type: "string" },
+    targetValue: { type: "string", nullable: true },
+    actualValue: { type: "string", nullable: true },
+    achievementRate: { type: "string", nullable: true },
+    statusBand: { type: "string", nullable: true },
+  },
+};
+
+const reportingKpiResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: reportingKpiRowSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
 const snapshotStatusTotalsSchema = {
   type: "object",
   required: ["all", "queued", "running", "completed", "failed"],
@@ -2840,6 +2920,8 @@ async function generateOpenApi(): Promise<void> {
     ReportingKpiConfigResponse: reportingKpiConfigResponseSchema,
     ReportingKpiConfigEditorResponse: reportingKpiConfigEditorResponseSchema,
     ReportingKpiConfigAuditResponse: reportingKpiConfigAuditResponseSchema,
+    ReportingWorkforceResponse: reportingWorkforceResponseSchema,
+    ReportingKpiResponse: reportingKpiResponseSchema,
     ImportOverview: importOverviewSchema,
     ImportPayloadTemplateResponse: importPayloadTemplateSchema,
     ImportBatchAuditResponse: importBatchAuditResponseSchema,
@@ -3075,6 +3157,22 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Paginated KPI config audit events for admin governance.",
     "ReportingKpiConfigAuditResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/reports/workforce",
+    "get",
+    "Paginated workforce snapshot rows for reporting surfaces.",
+    "ReportingWorkforceResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/reports/kpis",
+    "get",
+    "Paginated KPI snapshot rows for reporting surfaces.",
+    "ReportingKpiResponse",
   );
 
   setJsonResponseSchema(

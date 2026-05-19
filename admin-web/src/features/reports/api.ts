@@ -16,31 +16,11 @@ export type ReportingSummary = ApiGetResponse<'/api/reports/summary'>
 export type ReportingSnapshotRuns = ApiGetResponse<'/api/reports/snapshot-runs'>
 export type ReportingSnapshotRun = ReportingSnapshotRuns['items'][number]
 
-export type WorkforceRow = {
-  snapshotRunId: string
-  storeId: string
-  positionId: string
-  activeHeadcount: string
-  activeFte: string
-  plannedHeadcount: string
-  plannedFte: string
-  gapHeadcount: string
-  gapFte: string
-}
+export type WorkforceReport = ApiGetResponse<'/api/reports/workforce'>
+export type WorkforceRow = WorkforceReport['items'][number]
 
-export type KpiRow = {
-  snapshotRunId: string
-  storeId: string
-  kpiId: string
-  kpiCode: string
-  kpiName: string
-  periodStart: string
-  periodEnd: string
-  targetValue: string | null
-  actualValue: string | null
-  achievementRate: string | null
-  statusBand: string | null
-}
+export type KpiReport = ApiGetResponse<'/api/reports/kpis'>
+export type KpiRow = KpiReport['items'][number]
 
 type KpiMetricScoreStatus =
   | 'scored'
@@ -381,15 +361,19 @@ export async function getReportingSnapshotRuns(input?: {
 }
 
 export async function getWorkforceReport(snapshotRunId: string) {
-  return fetchJson<ListResponse<WorkforceRow>>(
-    `/reports/workforce?snapshotRunId=${encodeURIComponent(snapshotRunId)}&limit=50&offset=0`,
-  )
+  return fetchOpenApiJson('/api/reports/workforce', {
+    query: new URLSearchParams({
+      snapshotRunId,
+      limit: '50',
+      offset: '0',
+    }),
+  })
 }
 
 export async function getKpiReport(snapshotRunId: string) {
-  return fetchJson<ListResponse<KpiRow>>(
-    `/reports/kpis?snapshotRunId=${encodeURIComponent(snapshotRunId)}`,
-  )
+  return fetchOpenApiJson('/api/reports/kpis', {
+    query: new URLSearchParams({ snapshotRunId }),
+  })
 }
 
 export async function getKpiConfig() {

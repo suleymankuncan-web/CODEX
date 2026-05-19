@@ -923,6 +923,27 @@ export type components = {
         "publishedBy": string | null
       }
     }
+    "ReportingKpiResponse": {
+      "items": Array<{
+          "snapshotRunId": string
+          "storeId": string
+          "kpiId": string
+          "kpiCode": string
+          "kpiName": string
+          "periodStart": string
+          "periodEnd": string
+          "targetValue": string | null
+          "actualValue": string | null
+          "achievementRate": string | null
+          "statusBand": string | null
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
     "ReportingSnapshotRunsResponse": {
       "items": Array<{
           "snapshotRunId": string
@@ -967,6 +988,25 @@ export type components = {
         "kpiRows": number
         "checklistRows": number
         "turnoverRows": number
+      }
+    }
+    "ReportingWorkforceResponse": {
+      "items": Array<{
+          "snapshotRunId": string
+          "storeId": string
+          "positionId": string
+          "activeHeadcount": string
+          "activeFte": string
+          "plannedHeadcount": string
+          "plannedFte": string
+          "gapHeadcount": string
+          "gapFte": string
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
       }
     }
     "SnapshotNeedsActionResponse": {
@@ -1713,6 +1753,17 @@ export type paths = {
       }
     }
   }
+  "/api/reports/kpis": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ReportingKpiResponse"]
+          }
+        }
+      }
+    }
+  }
   "/api/reports/snapshot-runs": {
     get: {
       responses: {
@@ -1730,6 +1781,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["ReportingSummaryResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/reports/workforce": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ReportingWorkforceResponse"]
           }
         }
       }
