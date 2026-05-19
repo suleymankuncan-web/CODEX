@@ -787,6 +787,25 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const reportingClosedLeaderboardResponse =
+      document.paths["/api/reports/leaderboards/closed"].get.responses?.["200"];
+    expect(
+      reportingClosedLeaderboardResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/ReportingClosedLeaderboardResponse",
+    });
+    expect(
+      document.components?.schemas?.ReportingClosedLeaderboardResponse
+        ?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        source: expect.any(Object),
+        includedSnapshotRuns: expect.any(Object),
+        currentEmployee: expect.any(Object),
+        personnelTop: expect.any(Object),
+      }),
+    );
+
     const lookupsResponse =
       document.paths["/api/integrations/lookups"].get.responses?.["200"];
     expect(lookupsResponse?.content?.["application/json"]?.schema).toEqual({

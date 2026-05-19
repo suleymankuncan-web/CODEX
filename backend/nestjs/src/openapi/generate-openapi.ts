@@ -2713,6 +2713,178 @@ const reportingRankingsResponseSchema = {
   },
 };
 
+const reportingClosedRankingMetricRankSchema = {
+  type: "object",
+  required: [
+    "code",
+    "label",
+    "actualValue",
+    "storeRank",
+    "storePopulation",
+    "turkeyRank",
+    "turkeyPopulation",
+  ],
+  properties: {
+    code: { type: "string" },
+    label: { type: "string" },
+    actualValue: { type: "number", nullable: true },
+    storeRank: { type: "integer", nullable: true },
+    storePopulation: { type: "integer", minimum: 0 },
+    turkeyRank: { type: "integer", nullable: true },
+    turkeyPopulation: { type: "integer", minimum: 0 },
+  },
+};
+
+const reportingClosedRankingCoverageSchema = {
+  type: "object",
+  required: [
+    "closedDaysInPeriod",
+    "daysWithPerformance",
+    "minimumRequiredDays",
+    "isEligibleForRanking",
+  ],
+  properties: {
+    closedDaysInPeriod: { type: "integer", minimum: 0 },
+    daysWithPerformance: { type: "integer", minimum: 0 },
+    minimumRequiredDays: { type: "integer", minimum: 0 },
+    isEligibleForRanking: { type: "boolean" },
+  },
+};
+
+const reportingClosedRankingEmployeeSchema = {
+  type: "object",
+  required: [
+    "employeeId",
+    "displayName",
+    "storeId",
+    "storeName",
+    "scoreValue",
+    "rankingStatus",
+    "eligibilityReason",
+    "neededPerformanceDays",
+    "rankings",
+    "coverage",
+    "metricRanks",
+  ],
+  properties: {
+    employeeId: { type: "string" },
+    displayName: { type: "string" },
+    storeId: { type: "string", nullable: true },
+    storeName: { type: "string", nullable: true },
+    scoreValue: { type: "number" },
+    rankingStatus: { type: "string", enum: ["official", "preview_only"] },
+    eligibilityReason: {
+      type: "string",
+      enum: ["eligible", "needs_more_closed_days"],
+    },
+    neededPerformanceDays: { type: "integer", minimum: 0 },
+    rankings: {
+      type: "object",
+      required: [
+        "turkeyRank",
+        "turkeyPopulation",
+        "storeRank",
+        "storePopulation",
+      ],
+      properties: {
+        turkeyRank: { type: "integer", nullable: true },
+        turkeyPopulation: { type: "integer", minimum: 0 },
+        storeRank: { type: "integer", nullable: true },
+        storePopulation: { type: "integer", minimum: 0 },
+      },
+    },
+    coverage: reportingClosedRankingCoverageSchema,
+    metricRanks: {
+      type: "array",
+      items: reportingClosedRankingMetricRankSchema,
+    },
+  },
+};
+
+const reportingClosedRankingIncludedSnapshotRunSchema = {
+  type: "object",
+  required: [
+    "snapshotRunId",
+    "snapshotDate",
+    "snapshotType",
+    "periodStart",
+    "periodEnd",
+    "runStatus",
+    "generatedAt",
+    "generatedBy",
+  ],
+  properties: {
+    snapshotRunId: { type: "string" },
+    snapshotDate: { type: "string" },
+    snapshotType: { type: "string" },
+    periodStart: { type: "string" },
+    periodEnd: { type: "string" },
+    runStatus: { type: "string" },
+    generatedAt: { type: "string" },
+    generatedBy: { type: "string" },
+  },
+};
+
+const reportingClosedLeaderboardResponseSchema = {
+  type: "object",
+  required: [
+    "source",
+    "includedSnapshotRuns",
+    "currentEmployee",
+    "personnelTop",
+  ],
+  properties: {
+    source: {
+      type: "object",
+      required: [
+        "mode",
+        "periodType",
+        "state",
+        "snapshotRunId",
+        "snapshotDate",
+        "periodStart",
+        "periodEnd",
+      ],
+      properties: {
+        mode: { type: "string", enum: ["closed", "live"] },
+        periodType: { type: "string", enum: ["daily", "monthly"] },
+        state: {
+          type: "string",
+          enum: ["closed", "live", "not_closed", "no_data"],
+        },
+        snapshotRunId: { type: "string", nullable: true },
+        snapshotDate: { type: "string", nullable: true },
+        periodStart: { type: "string", nullable: true },
+        periodEnd: { type: "string", nullable: true },
+      },
+    },
+    includedSnapshotRuns: {
+      type: "array",
+      items: reportingClosedRankingIncludedSnapshotRunSchema,
+    },
+    currentEmployee: {
+      ...reportingClosedRankingEmployeeSchema,
+      nullable: true,
+    },
+    personnelTop: {
+      type: "array",
+      items: reportingClosedRankingEmployeeSchema,
+    },
+    availablePeriods: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["periodType", "periodStart", "periodEnd"],
+        properties: {
+          periodType: { type: "string" },
+          periodStart: { type: "string" },
+          periodEnd: { type: "string" },
+        },
+      },
+    },
+  },
+};
+
 const snapshotStatusTotalsSchema = {
   type: "object",
   required: ["all", "queued", "running", "completed", "failed"],
@@ -3519,6 +3691,7 @@ async function generateOpenApi(): Promise<void> {
     ReportingStoreScoreBreakdownResponse:
       reportingStoreScoreBreakdownResponseSchema,
     ReportingRankingsResponse: reportingRankingsResponseSchema,
+    ReportingClosedLeaderboardResponse: reportingClosedLeaderboardResponseSchema,
     ImportOverview: importOverviewSchema,
     ImportPayloadTemplateResponse: importPayloadTemplateSchema,
     ImportBatchAuditResponse: importBatchAuditResponseSchema,
@@ -3810,6 +3983,14 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Live monthly store and personnel rankings visible to the current actor.",
     "ReportingRankingsResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/reports/leaderboards/closed",
+    "get",
+    "Closed daily or monthly personnel leaderboard for store users.",
+    "ReportingClosedLeaderboardResponse",
   );
 
   setJsonResponseSchema(

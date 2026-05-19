@@ -727,6 +727,94 @@ export type components = {
           "label": string
         }>
     }
+    "ReportingClosedLeaderboardResponse": {
+      "source": {
+        "mode": "closed" | "live"
+        "periodType": "daily" | "monthly"
+        "state": "closed" | "live" | "not_closed" | "no_data"
+        "snapshotRunId": string | null
+        "snapshotDate": string | null
+        "periodStart": string | null
+        "periodEnd": string | null
+      }
+      "includedSnapshotRuns": Array<{
+          "snapshotRunId": string
+          "snapshotDate": string
+          "snapshotType": string
+          "periodStart": string
+          "periodEnd": string
+          "runStatus": string
+          "generatedAt": string
+          "generatedBy": string
+        }>
+      "currentEmployee": ({
+        "employeeId": string
+        "displayName": string
+        "storeId": string | null
+        "storeName": string | null
+        "scoreValue": number
+        "rankingStatus": "official" | "preview_only"
+        "eligibilityReason": "eligible" | "needs_more_closed_days"
+        "neededPerformanceDays": number
+        "rankings": {
+          "turkeyRank": number | null
+          "turkeyPopulation": number
+          "storeRank": number | null
+          "storePopulation": number
+        }
+        "coverage": {
+          "closedDaysInPeriod": number
+          "daysWithPerformance": number
+          "minimumRequiredDays": number
+          "isEligibleForRanking": boolean
+        }
+        "metricRanks": Array<{
+            "code": string
+            "label": string
+            "actualValue": number | null
+            "storeRank": number | null
+            "storePopulation": number
+            "turkeyRank": number | null
+            "turkeyPopulation": number
+          }>
+      }) | null
+      "personnelTop": Array<{
+          "employeeId": string
+          "displayName": string
+          "storeId": string | null
+          "storeName": string | null
+          "scoreValue": number
+          "rankingStatus": "official" | "preview_only"
+          "eligibilityReason": "eligible" | "needs_more_closed_days"
+          "neededPerformanceDays": number
+          "rankings": {
+            "turkeyRank": number | null
+            "turkeyPopulation": number
+            "storeRank": number | null
+            "storePopulation": number
+          }
+          "coverage": {
+            "closedDaysInPeriod": number
+            "daysWithPerformance": number
+            "minimumRequiredDays": number
+            "isEligibleForRanking": boolean
+          }
+          "metricRanks": Array<{
+              "code": string
+              "label": string
+              "actualValue": number | null
+              "storeRank": number | null
+              "storePopulation": number
+              "turkeyRank": number | null
+              "turkeyPopulation": number
+            }>
+        }>
+      "availablePeriods"?: Array<{
+          "periodType": string
+          "periodStart": string
+          "periodEnd": string
+        }>
+    }
     "ReportingKpiConfigAuditResponse": {
       "items": Array<{
           "eventLogId": string
@@ -2101,6 +2189,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["ReportingKpiResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/reports/leaderboards/closed": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ReportingClosedLeaderboardResponse"]
           }
         }
       }
