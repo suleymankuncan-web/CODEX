@@ -158,6 +158,25 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const importBatchReconciliationResponse =
+      document.paths[
+        "/api/integrations/import-batches/{batchId}/reconciliation"
+      ].get.responses?.["200"];
+    expect(
+      importBatchReconciliationResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/ImportBatchReconciliationResponse",
+    });
+    expect(
+      document.components?.schemas?.ImportBatchReconciliationResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        batch: expect.any(Object),
+        totals: expect.any(Object),
+        reconciliation: expect.any(Object),
+      }),
+    );
+
     const lookupsResponse =
       document.paths["/api/integrations/lookups"].get.responses?.["200"];
     expect(lookupsResponse?.content?.["application/json"]?.schema).toEqual({
