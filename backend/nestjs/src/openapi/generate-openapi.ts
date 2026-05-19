@@ -1245,6 +1245,24 @@ const authPermissionCatalogItemSchema = {
   },
 };
 
+const authRolePermissionCommandResponseSchema = commandResponseSchema({
+  type: "object",
+  required: ["rolePermission"],
+  properties: {
+    rolePermission: {
+      type: "object",
+      required: ["roleId", "roleCode", "permissionId", "permissionCode"],
+      properties: {
+        roleId: { type: "string" },
+        roleCode: { type: "string" },
+        permissionId: { type: "string" },
+        permissionCode: { type: "string" },
+        grantedAt: { type: "string", nullable: true },
+      },
+    },
+  },
+});
+
 const authUserAccountSchema = {
   type: "object",
   required: [
@@ -4417,6 +4435,8 @@ async function generateOpenApi(): Promise<void> {
     AuthStoreLookupSearchResponse: authStoreLookupSearchResponseSchema,
     AuthRoleCatalogResponse: authRoleCatalogResponseSchema,
     AuthPermissionCatalogResponse: authPermissionCatalogResponseSchema,
+    AuthRolePermissionCommandResponse:
+      authRolePermissionCommandResponseSchema,
     AuthUserAccountCommandResponse: authUserAccountCommandResponseSchema,
     AuthUserDeactivationCommandResponse:
       authUserDeactivationCommandResponseSchema,
@@ -4808,6 +4828,23 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Paginated auth permission catalog.",
     "AuthPermissionCatalogResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/roles/{roleId}/permissions",
+    "post",
+    "Command result with the granted auth role permission.",
+    "AuthRolePermissionCommandResponse",
+    "201",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/roles/{roleId}/permissions/{permissionCode}",
+    "delete",
+    "Command result with the revoked auth role permission.",
+    "AuthRolePermissionCommandResponse",
   );
 
   setJsonResponseSchema(

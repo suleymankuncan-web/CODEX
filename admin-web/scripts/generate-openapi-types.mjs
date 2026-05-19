@@ -27,6 +27,8 @@ const selectedOperations = [
   { path: '/api/auth/role-assignments/{assignmentId}/audit', method: 'get' },
   { path: '/api/auth/role-assignments/{assignmentId}/deactivate', method: 'patch' },
   { path: '/api/auth/roles', method: 'get' },
+  { path: '/api/auth/roles/{roleId}/permissions', method: 'post' },
+  { path: '/api/auth/roles/{roleId}/permissions/{permissionCode}', method: 'delete' },
   { path: '/api/auth/session', method: 'get' },
   { path: '/api/auth/users', method: 'get' },
   { path: '/api/auth/users', method: 'post' },

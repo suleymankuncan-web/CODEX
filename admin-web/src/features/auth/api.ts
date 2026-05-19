@@ -248,18 +248,9 @@ export async function grantRolePermission(input: {
   roleId: string
   permissionCode: string
 }) {
-  return sendJson<
-    CommandResponse<{
-      rolePermission: {
-        roleId: string
-        roleCode: string
-        permissionId: string
-        permissionCode: string
-        grantedAt?: string | null
-      }
-    }>
-  >(`/auth/roles/${input.roleId}/permissions`, {
+  return sendOpenApiJson('/api/auth/roles/{roleId}/permissions', {
     method: 'POST',
+    params: { roleId: input.roleId },
     body: {
       permissionCode: input.permissionCode,
     },
@@ -270,17 +261,12 @@ export async function revokeRolePermission(input: {
   roleId: string
   permissionCode: string
 }) {
-  return sendJson<
-    CommandResponse<{
-      rolePermission: {
-        roleId: string
-        roleCode: string
-        permissionId: string
-        permissionCode: string
-      }
-    }>
-  >(`/auth/roles/${input.roleId}/permissions/${encodeURIComponent(input.permissionCode)}`, {
+  return sendOpenApiJson('/api/auth/roles/{roleId}/permissions/{permissionCode}', {
     method: 'DELETE',
+    params: {
+      roleId: input.roleId,
+      permissionCode: input.permissionCode,
+    },
   })
 }
 

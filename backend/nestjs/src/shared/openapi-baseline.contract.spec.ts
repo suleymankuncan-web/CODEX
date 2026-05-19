@@ -946,6 +946,32 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const authRolePermissionGrant =
+      document.paths["/api/auth/roles/{roleId}/permissions"].post;
+    expect(
+      authRolePermissionGrant.requestBody?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/GrantRolePermissionDto",
+    });
+    expect(
+      authRolePermissionGrant.responses?.["201"]?.content?.["application/json"]
+        ?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/AuthRolePermissionCommandResponse",
+    });
+
+    const authRolePermissionRevoke =
+      document.paths[
+        "/api/auth/roles/{roleId}/permissions/{permissionCode}"
+      ].delete;
+    expect(
+      authRolePermissionRevoke.responses?.["200"]?.content?.[
+        "application/json"
+      ]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/AuthRolePermissionCommandResponse",
+    });
+
     const authUsersResponse =
       document.paths["/api/auth/users"].get.responses?.["200"];
     expect(authUsersResponse?.content?.["application/json"]?.schema).toEqual({

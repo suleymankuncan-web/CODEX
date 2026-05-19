@@ -249,6 +249,21 @@ export type components = {
         "offset": number
       }
     }
+    "AuthRolePermissionCommandResponse": {
+      "command": {
+        "status": string
+        "message": string
+      }
+      "data": {
+        "rolePermission": {
+          "roleId": string
+          "roleCode": string
+          "permissionId": string
+          "permissionCode": string
+          "grantedAt"?: string | null
+        }
+      }
+    }
     "AuthSessionResponse": {
       "authMode": string
       "authenticated": boolean
@@ -612,6 +627,9 @@ export type components = {
         "limit": number
         "offset": number
       }
+    }
+    "GrantRolePermissionDto": {
+      "permissionCode": string
     }
     "ImportBatchAuditResponse": {
       "items": Array<{
@@ -2478,6 +2496,33 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["AuthRoleCatalogResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/auth/roles/{roleId}/permissions": {
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["GrantRolePermissionDto"]
+        }
+      }
+      responses: {
+        "201": {
+          content: {
+            'application/json': components['schemas']["AuthRolePermissionCommandResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/auth/roles/{roleId}/permissions/{permissionCode}": {
+    delete: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["AuthRolePermissionCommandResponse"]
           }
         }
       }
