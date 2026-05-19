@@ -17,6 +17,7 @@ import {
   searchAuthUsers,
   type AuthLookupStore,
   type AuthLookupUser,
+  type CreateRoleAssignmentInput,
 } from '../features/auth/api'
 import {
   AuthDashboardContent,
@@ -666,7 +667,7 @@ function useAuthDashboardViewModel(): AuthDashboardViewModel {
     dispatchAuthState({ type: 'clearFeedback' })
     createAssignmentMutation.mutate({
       userId: assignmentForm.userId,
-      roleCode: assignmentForm.roleCode,
+      roleCode: assignmentForm.roleCode as CreateRoleAssignmentInput['roleCode'],
       scopeType: assignmentForm.scopeType,
       ...(assignmentForm.companyId.trim() ? { companyId: assignmentForm.companyId.trim() } : {}),
       ...(assignmentForm.regionId.trim() ? { regionId: assignmentForm.regionId.trim() } : {}),
