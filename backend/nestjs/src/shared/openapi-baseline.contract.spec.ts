@@ -547,6 +547,40 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const workforceSellerCodeRequestsResponse =
+      document.paths["/api/workforce/seller-code-requests"].get.responses?.["200"];
+    expect(
+      workforceSellerCodeRequestsResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/WorkforceSellerCodeRequestsResponse",
+    });
+    expect(
+      document.components?.schemas?.WorkforceSellerCodeRequestsResponse
+        ?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
+    const workforceOffboardingRequestsResponse =
+      document.paths["/api/workforce/offboarding-requests"].get.responses?.["200"];
+    expect(
+      workforceOffboardingRequestsResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/WorkforceOffboardingRequestsResponse",
+    });
+    expect(
+      document.components?.schemas?.WorkforceOffboardingRequestsResponse
+        ?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
     const lookupsResponse =
       document.paths["/api/integrations/lookups"].get.responses?.["200"];
     expect(lookupsResponse?.content?.["application/json"]?.schema).toEqual({

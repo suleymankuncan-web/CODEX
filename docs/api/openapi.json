@@ -680,7 +680,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Paginated seller code requests visible to workforce reviewers.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkforceSellerCodeRequestsResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -758,7 +765,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Paginated employee offboarding requests visible to workforce reviewers.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkforceOffboardingRequestsResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -7697,6 +7711,308 @@
                   "type": "string"
                 },
                 "employmentStatus": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "count",
+              "total",
+              "limit",
+              "offset"
+            ],
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "WorkforceSellerCodeRequestsResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "meta"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "requestId",
+                "companyId",
+                "regionId",
+                "storeId",
+                "storeCode",
+                "storeName",
+                "storeType",
+                "requestType",
+                "status",
+                "firstName",
+                "lastName",
+                "nationalIdLast4",
+                "phoneNumber",
+                "hireDate",
+                "requestedPositionId",
+                "positionCode",
+                "positionName",
+                "employmentType",
+                "requestedSellerCode",
+                "approvedSellerCode",
+                "lastReferenceSellerCode",
+                "submittedByUserId",
+                "reviewedByUserId",
+                "reviewedAt",
+                "reviewNote",
+                "employeeId",
+                "createdAt",
+                "updatedAt"
+              ],
+              "properties": {
+                "requestId": {
+                  "type": "string"
+                },
+                "companyId": {
+                  "type": "string"
+                },
+                "regionId": {
+                  "type": "string"
+                },
+                "storeId": {
+                  "type": "string"
+                },
+                "storeCode": {
+                  "type": "string"
+                },
+                "storeName": {
+                  "type": "string"
+                },
+                "storeType": {
+                  "type": "string"
+                },
+                "requestType": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "firstName": {
+                  "type": "string"
+                },
+                "lastName": {
+                  "type": "string"
+                },
+                "nationalIdLast4": {
+                  "type": "string"
+                },
+                "phoneNumber": {
+                  "type": "string"
+                },
+                "hireDate": {
+                  "type": "string"
+                },
+                "requestedPositionId": {
+                  "type": "string"
+                },
+                "positionCode": {
+                  "type": "string"
+                },
+                "positionName": {
+                  "type": "string"
+                },
+                "employmentType": {
+                  "type": "string"
+                },
+                "requestedSellerCode": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "approvedSellerCode": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "lastReferenceSellerCode": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "submittedByUserId": {
+                  "type": "string"
+                },
+                "reviewedByUserId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "reviewedAt": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "reviewNote": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "employeeId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "count",
+              "total",
+              "limit",
+              "offset"
+            ],
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "WorkforceOffboardingRequestsResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "meta"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "requestId",
+                "companyId",
+                "regionId",
+                "storeId",
+                "storeCode",
+                "storeName",
+                "employeeId",
+                "displayName",
+                "externalEmployeeRef",
+                "positionCode",
+                "positionName",
+                "status",
+                "terminationDate",
+                "terminationReason",
+                "requestReason",
+                "submittedByUserId",
+                "reviewedByUserId",
+                "reviewedAt",
+                "reviewNote",
+                "createdAt",
+                "updatedAt"
+              ],
+              "properties": {
+                "requestId": {
+                  "type": "string"
+                },
+                "companyId": {
+                  "type": "string"
+                },
+                "regionId": {
+                  "type": "string"
+                },
+                "storeId": {
+                  "type": "string"
+                },
+                "storeCode": {
+                  "type": "string"
+                },
+                "storeName": {
+                  "type": "string"
+                },
+                "employeeId": {
+                  "type": "string"
+                },
+                "displayName": {
+                  "type": "string"
+                },
+                "externalEmployeeRef": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "positionCode": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "positionName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "status": {
+                  "type": "string"
+                },
+                "terminationDate": {
+                  "type": "string"
+                },
+                "terminationReason": {
+                  "type": "string"
+                },
+                "requestReason": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "submittedByUserId": {
+                  "type": "string"
+                },
+                "reviewedByUserId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "reviewedAt": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "reviewNote": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
                   "type": "string"
                 }
               }
