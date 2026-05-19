@@ -1,33 +1,11 @@
 import type { Tone } from '../../components/dashboard-primitives'
+import type { ApiGetResponse } from '../../lib/openapi-client'
 import type { TargetDistributionRequest } from '../targets/api'
 
-type WorkflowItemType = 'approval' | 'acknowledgement' | 'task' | 'notification'
-
-export type WorkflowInboxStatus = 'needs_attention' | 'completed' | 'informational'
-
-export type WorkflowUrgency = 'high' | 'medium' | 'low'
-
-export type WorkflowInboxItem = {
-  itemType: WorkflowItemType
-  sourceType: 'target_distribution_request' | 'checklist_receipt' | 'kpi_exception'
-  sourceId: string
-  title: string
-  summary: string
-  companyId?: string
-  regionId?: string
-  storeId: string
-  storeName?: string
-  workflowStatus: string
-  inboxStatus: WorkflowInboxStatus
-  urgency: WorkflowUrgency
-  createdAt?: string | null
-  needsAttentionAt?: string | null
-  actorRole: string
-  primaryActionLabel: string
-  secondaryActionLabel?: string
-  deepLink: string
-  historyPreview?: string
-}
+export type WorkflowInbox = ApiGetResponse<'/api/workflow/inbox'>
+export type WorkflowInboxItem = WorkflowInbox['items'][number]
+export type WorkflowInboxStatus = WorkflowInboxItem['inboxStatus']
+export type WorkflowUrgency = WorkflowInboxItem['urgency']
 
 export function mapInboxStatusTone(status: WorkflowInboxStatus): Tone {
   switch (status) {

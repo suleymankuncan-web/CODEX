@@ -367,6 +367,18 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const workflowInboxResponse =
+      document.paths["/api/workflow/inbox"].get.responses?.["200"];
+    expect(workflowInboxResponse?.content?.["application/json"]?.schema).toEqual({
+      $ref: "#/components/schemas/WorkflowInboxResponse",
+    });
+    expect(document.components?.schemas?.WorkflowInboxResponse?.properties).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
     const lookupsResponse =
       document.paths["/api/integrations/lookups"].get.responses?.["200"];
     expect(lookupsResponse?.content?.["application/json"]?.schema).toEqual({

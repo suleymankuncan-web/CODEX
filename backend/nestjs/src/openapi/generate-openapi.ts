@@ -1525,6 +1525,69 @@ const storeTargetingPersonnelResponseSchema = {
   },
 };
 
+const workflowInboxItemSchema = {
+  type: "object",
+  required: [
+    "itemType",
+    "sourceType",
+    "sourceId",
+    "title",
+    "summary",
+    "storeId",
+    "workflowStatus",
+    "inboxStatus",
+    "urgency",
+    "actorRole",
+    "primaryActionLabel",
+    "deepLink",
+  ],
+  properties: {
+    itemType: {
+      type: "string",
+      enum: ["approval", "acknowledgement", "task", "notification"],
+    },
+    sourceType: {
+      type: "string",
+      enum: ["target_distribution_request", "checklist_receipt", "kpi_exception"],
+    },
+    sourceId: { type: "string" },
+    title: { type: "string" },
+    summary: { type: "string" },
+    companyId: { type: "string" },
+    regionId: { type: "string" },
+    storeId: { type: "string" },
+    storeName: { type: "string" },
+    workflowStatus: { type: "string" },
+    inboxStatus: {
+      type: "string",
+      enum: ["needs_attention", "completed", "informational"],
+    },
+    urgency: {
+      type: "string",
+      enum: ["high", "medium", "low"],
+    },
+    createdAt: { type: "string", nullable: true },
+    needsAttentionAt: { type: "string", nullable: true },
+    actorRole: { type: "string" },
+    primaryActionLabel: { type: "string" },
+    secondaryActionLabel: { type: "string" },
+    deepLink: { type: "string" },
+    historyPreview: { type: "string" },
+  },
+};
+
+const workflowInboxResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: workflowInboxItemSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
 const importBatchNeedsActionResponseSchema = {
   type: "object",
   required: ["items", "meta"],
@@ -2030,6 +2093,7 @@ async function generateOpenApi(): Promise<void> {
     TargetDistributionRequestsResponse: targetDistributionRequestsResponseSchema,
     TargetCoverageResponse: targetCoverageResponseSchema,
     StoreTargetingPersonnelResponse: storeTargetingPersonnelResponseSchema,
+    WorkflowInboxResponse: workflowInboxResponseSchema,
     ImportOverview: importOverviewSchema,
     ImportPayloadTemplateResponse: importPayloadTemplateSchema,
     ImportBatchAuditResponse: importBatchAuditResponseSchema,
@@ -2121,6 +2185,14 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Store personnel available for target distribution requests.",
     "StoreTargetingPersonnelResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/workflow/inbox",
+    "get",
+    "Shared workflow inbox items visible to the current actor.",
+    "WorkflowInboxResponse",
   );
 
   setJsonResponseSchema(

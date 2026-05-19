@@ -41,6 +41,7 @@ const selectedOperations = [
   { path: '/api/target-distributions/coverage', method: 'get' },
   { path: '/api/target-distributions/requests', method: 'get' },
   { path: '/api/target-distributions/store-personnel', method: 'get' },
+  { path: '/api/workflow/inbox', method: 'get' },
 ]
 const selectedSchemaNames = collectReferencedSchemaNames(document, selectedOperations)
 
