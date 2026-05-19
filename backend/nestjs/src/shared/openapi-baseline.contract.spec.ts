@@ -960,6 +960,36 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const authUserCreate = document.paths["/api/auth/users"].post;
+    expect(
+      authUserCreate.requestBody?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/CreateUserAccountDto",
+    });
+    expect(
+      authUserCreate.responses?.["201"]?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/AuthUserAccountCommandResponse",
+    });
+
+    const authUserDeactivate =
+      document.paths["/api/auth/users/{userId}/deactivate"].patch;
+    expect(
+      authUserDeactivate.responses?.["200"]?.content?.["application/json"]
+        ?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/AuthUserDeactivationCommandResponse",
+    });
+
+    const authUserReactivate =
+      document.paths["/api/auth/users/{userId}/reactivate"].patch;
+    expect(
+      authUserReactivate.responses?.["200"]?.content?.["application/json"]
+        ?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/AuthUserAccountCommandResponse",
+    });
+
     const authRoleAssignmentsResponse =
       document.paths["/api/auth/role-assignments"].get.responses?.["200"];
     expect(

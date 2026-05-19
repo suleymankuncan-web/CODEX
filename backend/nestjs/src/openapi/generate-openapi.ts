@@ -1275,6 +1275,37 @@ const authUserAccountSchema = {
   },
 };
 
+const authUserAccessClosureSchema = {
+  type: "object",
+  required: [
+    "closedRoleAssignments",
+    "closedActionStoreAssignments",
+    "revokedMobileSessions",
+  ],
+  properties: countProperties([
+    "closedRoleAssignments",
+    "closedActionStoreAssignments",
+    "revokedMobileSessions",
+  ]),
+};
+
+const authUserAccountCommandResponseSchema = commandResponseSchema({
+  type: "object",
+  required: ["user"],
+  properties: {
+    user: authUserAccountSchema,
+  },
+});
+
+const authUserDeactivationCommandResponseSchema = commandResponseSchema({
+  type: "object",
+  required: ["user", "accessClosure"],
+  properties: {
+    user: authUserAccountSchema,
+    accessClosure: authUserAccessClosureSchema,
+  },
+});
+
 const authRoleAssignmentSchema = {
   type: "object",
   required: [
@@ -4386,6 +4417,9 @@ async function generateOpenApi(): Promise<void> {
     AuthStoreLookupSearchResponse: authStoreLookupSearchResponseSchema,
     AuthRoleCatalogResponse: authRoleCatalogResponseSchema,
     AuthPermissionCatalogResponse: authPermissionCatalogResponseSchema,
+    AuthUserAccountCommandResponse: authUserAccountCommandResponseSchema,
+    AuthUserDeactivationCommandResponse:
+      authUserDeactivationCommandResponseSchema,
     AuthUserAccountsResponse: authUserAccountsResponseSchema,
     AuthRoleAssignmentCommandResponse: authRoleAssignmentCommandResponseSchema,
     AuthRoleAssignmentsResponse: authRoleAssignmentsResponseSchema,
@@ -4782,6 +4816,31 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Paginated auth user accounts visible to auth admins.",
     "AuthUserAccountsResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/users",
+    "post",
+    "Command result with the created auth user account.",
+    "AuthUserAccountCommandResponse",
+    "201",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/users/{userId}/deactivate",
+    "patch",
+    "Command result with the deactivated auth user account and closed access summary.",
+    "AuthUserDeactivationCommandResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/users/{userId}/reactivate",
+    "patch",
+    "Command result with the reactivated auth user account.",
+    "AuthUserAccountCommandResponse",
   );
 
   setJsonResponseSchema(

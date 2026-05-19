@@ -293,6 +293,29 @@ export type components = {
         "limit": number
       }
     }
+    "AuthUserAccountCommandResponse": {
+      "command": {
+        "status": string
+        "message": string
+      }
+      "data": {
+        "user": {
+          "userId": string
+          "employeeId": string | null
+          "username": string
+          "email": string
+          "authProvider": string
+          "providerSubject": string | null
+          "isActive": boolean
+          "lastLoginAt": string | null
+          "createdAt": string
+          "deactivatedAt"?: string | null
+          "deactivationReason"?: string | null
+          "deactivatedByUserId"?: string | null
+          "employeeStatus"?: string | null
+        }
+      }
+    }
     "AuthUserAccountsResponse": {
       "items": Array<{
           "userId": string
@@ -314,6 +337,34 @@ export type components = {
         "total": number
         "limit": number
         "offset": number
+      }
+    }
+    "AuthUserDeactivationCommandResponse": {
+      "command": {
+        "status": string
+        "message": string
+      }
+      "data": {
+        "user": {
+          "userId": string
+          "employeeId": string | null
+          "username": string
+          "email": string
+          "authProvider": string
+          "providerSubject": string | null
+          "isActive": boolean
+          "lastLoginAt": string | null
+          "createdAt": string
+          "deactivatedAt"?: string | null
+          "deactivationReason"?: string | null
+          "deactivatedByUserId"?: string | null
+          "employeeStatus"?: string | null
+        }
+        "accessClosure": {
+          "closedRoleAssignments": number
+          "closedActionStoreAssignments": number
+          "revokedMobileSessions": number
+        }
       }
     }
     "AuthUserLookupSearchResponse": {
@@ -522,6 +573,13 @@ export type components = {
       "storeId"?: string
       "effectiveFrom"?: string
       "effectiveTo"?: string
+    }
+    "CreateUserAccountDto": {
+      "employeeId"?: string
+      "username": string
+      "email": string
+      "authProvider": "local" | "oidc" | "sso" | "clerk"
+      "providerSubject"?: string
     }
     "DailyClosureStatusResponse": {
       "automationEnabled": boolean
@@ -2446,6 +2504,20 @@ export type paths = {
         }
       }
     }
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["CreateUserAccountDto"]
+        }
+      }
+      responses: {
+        "201": {
+          content: {
+            'application/json': components['schemas']["AuthUserAccountCommandResponse"]
+          }
+        }
+      }
+    }
   }
   "/api/auth/users/{userId}/audit": {
     get: {
@@ -2453,6 +2525,28 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["AuthAuditResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/auth/users/{userId}/deactivate": {
+    patch: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["AuthUserDeactivationCommandResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/auth/users/{userId}/reactivate": {
+    patch: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["AuthUserAccountCommandResponse"]
           }
         }
       }

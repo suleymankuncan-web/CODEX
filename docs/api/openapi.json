@@ -279,7 +279,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Command result with the created auth user account.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthUserAccountCommandResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -375,7 +382,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Command result with the deactivated auth user account and closed access summary.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthUserDeactivationCommandResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -398,7 +412,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Command result with the reactivated auth user account.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthUserAccountCommandResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -12849,6 +12870,217 @@
               "offset": {
                 "type": "integer",
                 "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "AuthUserAccountCommandResponse": {
+        "type": "object",
+        "required": [
+          "command",
+          "data"
+        ],
+        "properties": {
+          "command": {
+            "type": "object",
+            "required": [
+              "status",
+              "message"
+            ],
+            "properties": {
+              "status": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "user"
+            ],
+            "properties": {
+              "user": {
+                "type": "object",
+                "required": [
+                  "userId",
+                  "employeeId",
+                  "username",
+                  "email",
+                  "authProvider",
+                  "providerSubject",
+                  "isActive",
+                  "lastLoginAt",
+                  "createdAt"
+                ],
+                "properties": {
+                  "userId": {
+                    "type": "string"
+                  },
+                  "employeeId": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "username": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "authProvider": {
+                    "type": "string"
+                  },
+                  "providerSubject": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  },
+                  "lastLoginAt": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "createdAt": {
+                    "type": "string"
+                  },
+                  "deactivatedAt": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "deactivationReason": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "deactivatedByUserId": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "employeeStatus": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "AuthUserDeactivationCommandResponse": {
+        "type": "object",
+        "required": [
+          "command",
+          "data"
+        ],
+        "properties": {
+          "command": {
+            "type": "object",
+            "required": [
+              "status",
+              "message"
+            ],
+            "properties": {
+              "status": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "user",
+              "accessClosure"
+            ],
+            "properties": {
+              "user": {
+                "type": "object",
+                "required": [
+                  "userId",
+                  "employeeId",
+                  "username",
+                  "email",
+                  "authProvider",
+                  "providerSubject",
+                  "isActive",
+                  "lastLoginAt",
+                  "createdAt"
+                ],
+                "properties": {
+                  "userId": {
+                    "type": "string"
+                  },
+                  "employeeId": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "username": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "authProvider": {
+                    "type": "string"
+                  },
+                  "providerSubject": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  },
+                  "lastLoginAt": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "createdAt": {
+                    "type": "string"
+                  },
+                  "deactivatedAt": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "deactivationReason": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "deactivatedByUserId": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "employeeStatus": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                }
+              },
+              "accessClosure": {
+                "type": "object",
+                "required": [
+                  "closedRoleAssignments",
+                  "closedActionStoreAssignments",
+                  "revokedMobileSessions"
+                ],
+                "properties": {
+                  "closedRoleAssignments": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "closedActionStoreAssignments": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "revokedMobileSessions": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
               }
             }
           }

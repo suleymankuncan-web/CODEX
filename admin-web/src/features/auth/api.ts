@@ -4,6 +4,7 @@ import {
   sendOpenApiJson,
   type ApiGetResponse,
   type ApiMutationBody,
+  type ApiMutationResponse,
 } from '../../lib/openapi-client'
 
 export type AuthLookups = ApiGetResponse<'/api/auth/lookups'>
@@ -17,6 +18,11 @@ type AuthPermissionCatalogResponse = ApiGetResponse<'/api/auth/permissions'>
 export type PermissionCatalogItem = AuthPermissionCatalogResponse['items'][number]
 type AuthUserAccountsResponse = ApiGetResponse<'/api/auth/users'>
 export type UserAccount = AuthUserAccountsResponse['items'][number]
+export type CreateUserAccountInput = ApiMutationBody<'/api/auth/users', 'POST'>
+type DeactivateUserAccountResponse = ApiMutationResponse<
+  '/api/auth/users/{userId}/deactivate',
+  'PATCH'
+>
 type AuthRoleAssignmentsResponse = ApiGetResponse<'/api/auth/role-assignments'>
 export type RoleAssignment = AuthRoleAssignmentsResponse['items'][number]
 export type CreateRoleAssignmentInput = ApiMutationBody<
@@ -34,11 +40,7 @@ export type AuditEvent = AuthAuditResponse['items'][number]
 export type AuthBootstrap = ApiGetResponse<'/api/auth/bootstrap'>
 export type AuthSessionSummary = ApiGetResponse<'/api/auth/session'>
 
-export type UserAccessClosure = {
-  closedRoleAssignments: number
-  closedActionStoreAssignments: number
-  revokedMobileSessions: number
-}
+export type UserAccessClosure = DeactivateUserAccountResponse['data']['accessClosure']
 
 export type PilotUserBinding = {
   user: UserAccount
@@ -191,28 +193,21 @@ export async function deactivateActionStoreAssignment(assignmentId: string) {
 }
 
 export async function deactivateUserAccount(userId: string) {
-  return sendJson<CommandResponse<{ user: UserAccount; accessClosure: UserAccessClosure }>>(
-    `/auth/users/${userId}/deactivate`,
-    {
-      method: 'PATCH',
-    },
-  )
-}
-
-export async function reactivateUserAccount(userId: string) {
-  return sendJson<CommandResponse<{ user: UserAccount }>>(`/auth/users/${userId}/reactivate`, {
+  return sendOpenApiJson('/api/auth/users/{userId}/deactivate', {
     method: 'PATCH',
+    params: { userId },
   })
 }
 
-export async function createUserAccount(input: {
-  employeeId?: string
-  username: string
-  email: string
-  authProvider: 'local' | 'oidc' | 'sso' | 'clerk'
-  providerSubject?: string
-}) {
-  return sendJson<CommandResponse<{ user: UserAccount }>>('/auth/users', {
+export async function reactivateUserAccount(userId: string) {
+  return sendOpenApiJson('/api/auth/users/{userId}/reactivate', {
+    method: 'PATCH',
+    params: { userId },
+  })
+}
+
+export async function createUserAccount(input: CreateUserAccountInput) {
+  return sendOpenApiJson('/api/auth/users', {
     method: 'POST',
     body: input,
   })
