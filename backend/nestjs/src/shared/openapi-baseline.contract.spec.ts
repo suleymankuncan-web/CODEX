@@ -694,6 +694,38 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const reportingMyPerformanceResponse =
+      document.paths["/api/reports/my-performance"].get.responses?.["200"];
+    expect(
+      reportingMyPerformanceResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/ReportingPerformanceResponse",
+    });
+    expect(
+      document.components?.schemas?.ReportingPerformanceResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        source: expect.any(Object),
+        employee: expect.any(Object),
+        period: expect.any(Object),
+        score: expect.any(Object),
+        rankings: expect.any(Object),
+        availablePeriods: expect.any(Object),
+        partial: expect.any(Object),
+        metrics: expect.any(Object),
+      }),
+    );
+
+    const reportingPersonnelPerformanceResponse =
+      document.paths["/api/reports/personnel-performance/{employeeId}"].get
+        .responses?.["200"];
+    expect(
+      reportingPersonnelPerformanceResponse?.content?.["application/json"]
+        ?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/ReportingPerformanceResponse",
+    });
+
     const lookupsResponse =
       document.paths["/api/integrations/lookups"].get.responses?.["200"];
     expect(lookupsResponse?.content?.["application/json"]?.schema).toEqual({

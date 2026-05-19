@@ -22,12 +22,6 @@ export type WorkforceRow = WorkforceReport['items'][number]
 export type KpiReport = ApiGetResponse<'/api/reports/kpis'>
 export type KpiRow = KpiReport['items'][number]
 
-type KpiMetricScoreStatus =
-  | 'scored'
-  | 'pending_normalization'
-  | 'missing_reference'
-  | 'missing'
-
 export type KpiConfigResponse = ApiGetResponse<'/api/reports/kpi-config'>
 export type KpiConfig = Pick<
   KpiConfigResponse,
@@ -44,72 +38,9 @@ type KpiBenchmarkSource = NonNullable<KpiScoreProfileMetric['benchmarkSource']>
 export type KpiGradingBand = KpiConfigResponse['gradingBands'][number]
 export type KpiOwnershipMatrixRow = KpiConfigResponse['ownershipMatrix'][number]
 
-export type MyPerformanceMetric = {
-  code: string
-  label: string
-  weightPercent: number
-  actualValue: number | null
-  targetValue?: number | null
-  achievementRate?: number | null
-  benchmarkValue?: number | null
-  benchmarkSource?: KpiBenchmarkSource
-  actualRatio?: number | null
-  scoredRatio?: number | null
-  capRatio?: number | null
-  isCapped?: boolean
-  missingReason?: string | null
-  contributionValue: number
-  dataStatus?: 'reported' | 'missing'
-  scoreStatus?: KpiMetricScoreStatus
-  status?: 'reported' | 'missing'
-}
-
-export type MyPerformanceSummary = {
-  source: {
-    mode: 'live' | 'closed'
-    snapshotRunId: string | null
-    snapshotDate: string | null
-  }
-  employee: {
-    employeeId: string
-    displayName: string
-    storeId: string | null
-    storeName: string | null
-  } | null
-  period: {
-    periodStart: string
-    periodEnd: string
-  } | null
-  score: {
-    value: number
-    matchedMetrics: number
-    totalMetrics: number
-  }
-  rankings: {
-    turkeyRank: number | null
-    turkeyPopulation: number
-    storeRank: number | null
-    storePopulation: number
-  }
-  availablePeriods: Array<{
-    periodType: 'daily' | 'weekly' | 'monthly' | string
-    periodStart: string
-    periodEnd: string
-  }>
-  partial: {
-    isPartial: boolean
-    missingMetricCodes: string[]
-    missingMetricLabels: string[]
-    pendingNormalizationCodes?: string[]
-    pendingNormalizationLabels?: string[]
-  }
-  supporting: {
-    netSalesValue: number | null
-    targetEntryMode: 'manager_assignment'
-    targetEditableByCurrentUser: boolean
-  }
-  metrics: MyPerformanceMetric[]
-}
+export type MyPerformanceSummary = ApiGetResponse<'/api/reports/my-performance'>
+export type MyPerformanceMetric = MyPerformanceSummary['metrics'][number]
+type KpiMetricScoreStatus = NonNullable<MyPerformanceMetric['scoreStatus']>
 
 type StoreKpiHighlightMetric = {
   code: string
@@ -428,7 +359,7 @@ function buildMyPerformanceQuery(input?: MyPerformanceQueryInput) {
 
 export async function getMyPerformance(input?: MyPerformanceQueryInput) {
   const query = buildMyPerformanceQuery(input)
-  return fetchJson<MyPerformanceSummary>(`/reports/my-performance${query ? `?${query}` : ''}`)
+  return fetchOpenApiJson('/api/reports/my-performance', { query })
 }
 
 export async function getPersonnelPerformance(
@@ -436,9 +367,10 @@ export async function getPersonnelPerformance(
   input?: MyPerformanceQueryInput,
 ) {
   const query = buildMyPerformanceQuery(input)
-  return fetchJson<MyPerformanceSummary>(
-    `/reports/personnel-performance/${encodeURIComponent(employeeId)}${query ? `?${query}` : ''}`,
-  )
+  return fetchOpenApiJson('/api/reports/personnel-performance/{employeeId}', {
+    params: { employeeId },
+    query,
+  })
 }
 
 export async function getStoreKpiHighlights(input?: {

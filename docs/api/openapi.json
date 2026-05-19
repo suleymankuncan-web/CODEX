@@ -1729,11 +1729,11 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "",
+            "description": "Current actor personnel performance summary for live or closed reporting.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/ReportingPerformanceResponse"
                 }
               }
             }
@@ -1759,11 +1759,11 @@
         ],
         "responses": {
           "200": {
-            "description": "",
+            "description": "Target personnel performance summary visible to authorized reviewers.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/ReportingPerformanceResponse"
                 }
               }
             }
@@ -9534,6 +9534,311 @@
               "offset": {
                 "type": "integer",
                 "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "ReportingPerformanceResponse": {
+        "type": "object",
+        "required": [
+          "source",
+          "employee",
+          "period",
+          "score",
+          "rankings",
+          "availablePeriods",
+          "partial",
+          "metrics"
+        ],
+        "properties": {
+          "source": {
+            "type": "object",
+            "required": [
+              "mode",
+              "snapshotRunId",
+              "snapshotDate"
+            ],
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "live",
+                  "closed"
+                ]
+              },
+              "snapshotRunId": {
+                "type": "string",
+                "nullable": true
+              },
+              "snapshotDate": {
+                "type": "string",
+                "nullable": true
+              }
+            }
+          },
+          "employee": {
+            "type": "object",
+            "nullable": true,
+            "required": [
+              "employeeId",
+              "displayName",
+              "storeId",
+              "storeName"
+            ],
+            "properties": {
+              "employeeId": {
+                "type": "string"
+              },
+              "displayName": {
+                "type": "string"
+              },
+              "storeId": {
+                "type": "string",
+                "nullable": true
+              },
+              "storeName": {
+                "type": "string",
+                "nullable": true
+              }
+            }
+          },
+          "period": {
+            "type": "object",
+            "nullable": true,
+            "required": [
+              "periodStart",
+              "periodEnd"
+            ],
+            "properties": {
+              "periodStart": {
+                "type": "string"
+              },
+              "periodEnd": {
+                "type": "string"
+              }
+            }
+          },
+          "score": {
+            "type": "object",
+            "required": [
+              "value",
+              "matchedMetrics",
+              "totalMetrics"
+            ],
+            "properties": {
+              "value": {
+                "type": "number"
+              },
+              "matchedMetrics": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "totalMetrics": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "rankings": {
+            "type": "object",
+            "required": [
+              "turkeyRank",
+              "turkeyPopulation",
+              "storeRank",
+              "storePopulation"
+            ],
+            "properties": {
+              "turkeyRank": {
+                "type": "integer",
+                "nullable": true
+              },
+              "turkeyPopulation": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "storeRank": {
+                "type": "integer",
+                "nullable": true
+              },
+              "storePopulation": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "availablePeriods": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "periodType",
+                "periodStart",
+                "periodEnd"
+              ],
+              "properties": {
+                "periodType": {
+                  "type": "string"
+                },
+                "periodStart": {
+                  "type": "string"
+                },
+                "periodEnd": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "partial": {
+            "type": "object",
+            "required": [
+              "isPartial",
+              "missingMetricCodes",
+              "missingMetricLabels"
+            ],
+            "properties": {
+              "isPartial": {
+                "type": "boolean"
+              },
+              "missingMetricCodes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "missingMetricLabels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "pendingNormalizationCodes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "pendingNormalizationLabels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "supporting": {
+            "type": "object",
+            "required": [
+              "netSalesValue",
+              "targetEntryMode",
+              "targetEditableByCurrentUser"
+            ],
+            "properties": {
+              "netSalesValue": {
+                "type": "number",
+                "nullable": true
+              },
+              "targetEntryMode": {
+                "type": "string",
+                "enum": [
+                  "manager_assignment"
+                ]
+              },
+              "targetEditableByCurrentUser": {
+                "type": "boolean"
+              }
+            }
+          },
+          "metrics": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "code",
+                "label",
+                "weightPercent",
+                "actualValue",
+                "contributionValue"
+              ],
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "weightPercent": {
+                  "type": "number"
+                },
+                "actualValue": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "targetValue": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "achievementRate": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "benchmarkValue": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "benchmarkSource": {
+                  "type": "string",
+                  "enum": [
+                    "TARGET",
+                    "TURKEY_AVERAGE",
+                    "CHECKLIST_SCORE"
+                  ]
+                },
+                "actualRatio": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "scoredRatio": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "capRatio": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "isCapped": {
+                  "type": "boolean"
+                },
+                "missingReason": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "contributionValue": {
+                  "type": "number"
+                },
+                "dataStatus": {
+                  "type": "string",
+                  "enum": [
+                    "reported",
+                    "missing"
+                  ]
+                },
+                "scoreStatus": {
+                  "type": "string",
+                  "enum": [
+                    "scored",
+                    "pending_normalization",
+                    "missing_reference",
+                    "missing"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "reported",
+                    "missing"
+                  ]
+                }
               }
             }
           }

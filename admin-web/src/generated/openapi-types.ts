@@ -944,6 +944,70 @@ export type components = {
         "offset": number
       }
     }
+    "ReportingPerformanceResponse": {
+      "source": {
+        "mode": "live" | "closed"
+        "snapshotRunId": string | null
+        "snapshotDate": string | null
+      }
+      "employee": ({
+        "employeeId": string
+        "displayName": string
+        "storeId": string | null
+        "storeName": string | null
+      }) | null
+      "period": ({
+        "periodStart": string
+        "periodEnd": string
+      }) | null
+      "score": {
+        "value": number
+        "matchedMetrics": number
+        "totalMetrics": number
+      }
+      "rankings": {
+        "turkeyRank": number | null
+        "turkeyPopulation": number
+        "storeRank": number | null
+        "storePopulation": number
+      }
+      "availablePeriods": Array<{
+          "periodType": string
+          "periodStart": string
+          "periodEnd": string
+        }>
+      "partial": {
+        "isPartial": boolean
+        "missingMetricCodes": string[]
+        "missingMetricLabels": string[]
+        "pendingNormalizationCodes"?: string[]
+        "pendingNormalizationLabels"?: string[]
+      }
+      "supporting"?: {
+        "netSalesValue": number | null
+        "targetEntryMode": "manager_assignment"
+        "targetEditableByCurrentUser": boolean
+      }
+      "metrics": Array<{
+          "code": string
+          "label": string
+          "weightPercent": number
+          "actualValue": number | null
+          "targetValue"?: number | null
+          "achievementRate"?: number | null
+          "benchmarkValue"?: number | null
+          "benchmarkSource"?: "TARGET" | "TURKEY_AVERAGE" | "CHECKLIST_SCORE"
+          "actualRatio"?: number | null
+          "scoredRatio"?: number | null
+          "capRatio"?: number | null
+          "isCapped"?: boolean
+          "missingReason"?: string | null
+          "contributionValue": number
+          "dataStatus"?: "reported" | "missing"
+          "scoreStatus"?: "scored" | "pending_normalization" | "missing_reference" | "missing"
+          "status"?: "reported" | "missing"
+        }>
+    }
     "ReportingSnapshotRunsResponse": {
       "items": Array<{
           "snapshotRunId": string
@@ -1759,6 +1823,28 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["ReportingKpiResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/reports/my-performance": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ReportingPerformanceResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/reports/personnel-performance/{employeeId}": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ReportingPerformanceResponse"]
           }
         }
       }
