@@ -320,6 +320,22 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const targetDistributionRequestsResponse =
+      document.paths["/api/target-distributions/requests"].get.responses?.["200"];
+    expect(
+      targetDistributionRequestsResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/TargetDistributionRequestsResponse",
+    });
+    expect(
+      document.components?.schemas?.TargetDistributionRequestsResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
     const lookupsResponse =
       document.paths["/api/integrations/lookups"].get.responses?.["200"];
     expect(lookupsResponse?.content?.["application/json"]?.schema).toEqual({

@@ -1789,7 +1789,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Target distribution approval requests visible to the current actor.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TargetDistributionRequestsResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -6237,6 +6244,151 @@
                 "metadata": {
                   "type": "object",
                   "additionalProperties": true
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "count",
+              "total",
+              "limit",
+              "offset"
+            ],
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "TargetDistributionRequestsResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "meta"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "requestId",
+                "companyId",
+                "regionId",
+                "storeId",
+                "storeName",
+                "requestMonth",
+                "targetLabel",
+                "totalTargetValue",
+                "allocationCount",
+                "status",
+                "requestReason",
+                "allocations",
+                "submittedByUserId",
+                "approvedByUserId",
+                "approvedAt",
+                "approvalNote",
+                "createdAt",
+                "updatedAt"
+              ],
+              "properties": {
+                "requestId": {
+                  "type": "string"
+                },
+                "companyId": {
+                  "type": "string"
+                },
+                "regionId": {
+                  "type": "string"
+                },
+                "storeId": {
+                  "type": "string"
+                },
+                "storeName": {
+                  "type": "string"
+                },
+                "requestMonth": {
+                  "type": "string"
+                },
+                "targetLabel": {
+                  "type": "string"
+                },
+                "totalTargetValue": {
+                  "type": "number"
+                },
+                "allocationCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "status": {
+                  "type": "string"
+                },
+                "requestReason": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "allocations": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "employeeId",
+                      "assigneeLabel",
+                      "targetValue"
+                    ],
+                    "properties": {
+                      "employeeId": {
+                        "type": "string"
+                      },
+                      "assigneeLabel": {
+                        "type": "string"
+                      },
+                      "targetValue": {
+                        "type": "number"
+                      },
+                      "note": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                "submittedByUserId": {
+                  "type": "string"
+                },
+                "approvedByUserId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "approvedAt": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "approvalNote": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
                 }
               }
             }

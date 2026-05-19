@@ -1354,6 +1354,76 @@ const competitionStagePackagePlanAuditResponseSchema = {
   },
 };
 
+const targetDistributionAllocationSchema = {
+  type: "object",
+  required: ["employeeId", "assigneeLabel", "targetValue"],
+  properties: {
+    employeeId: { type: "string" },
+    assigneeLabel: { type: "string" },
+    targetValue: { type: "number" },
+    note: { type: "string" },
+  },
+};
+
+const targetDistributionRequestSchema = {
+  type: "object",
+  required: [
+    "requestId",
+    "companyId",
+    "regionId",
+    "storeId",
+    "storeName",
+    "requestMonth",
+    "targetLabel",
+    "totalTargetValue",
+    "allocationCount",
+    "status",
+    "requestReason",
+    "allocations",
+    "submittedByUserId",
+    "approvedByUserId",
+    "approvedAt",
+    "approvalNote",
+    "createdAt",
+    "updatedAt",
+  ],
+  properties: {
+    requestId: { type: "string" },
+    companyId: { type: "string" },
+    regionId: { type: "string" },
+    storeId: { type: "string" },
+    storeName: { type: "string" },
+    requestMonth: { type: "string" },
+    targetLabel: { type: "string" },
+    totalTargetValue: { type: "number" },
+    allocationCount: { type: "integer", minimum: 0 },
+    status: { type: "string" },
+    requestReason: { type: "string", nullable: true },
+    allocations: {
+      type: "array",
+      items: targetDistributionAllocationSchema,
+    },
+    submittedByUserId: { type: "string" },
+    approvedByUserId: { type: "string", nullable: true },
+    approvedAt: { type: "string", nullable: true },
+    approvalNote: { type: "string", nullable: true },
+    createdAt: { type: "string" },
+    updatedAt: { type: "string" },
+  },
+};
+
+const targetDistributionRequestsResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: targetDistributionRequestSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
 const importBatchNeedsActionResponseSchema = {
   type: "object",
   required: ["items", "meta"],
@@ -1856,6 +1926,7 @@ async function generateOpenApi(): Promise<void> {
       competitionStagePackagePlanListResponseSchema,
     CompetitionStagePackagePlanAuditResponse:
       competitionStagePackagePlanAuditResponseSchema,
+    TargetDistributionRequestsResponse: targetDistributionRequestsResponseSchema,
     ImportOverview: importOverviewSchema,
     ImportPayloadTemplateResponse: importPayloadTemplateSchema,
     ImportBatchAuditResponse: importBatchAuditResponseSchema,
@@ -1923,6 +1994,14 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Competition stage package plan audit events for admin review.",
     "CompetitionStagePackagePlanAuditResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/target-distributions/requests",
+    "get",
+    "Target distribution approval requests visible to the current actor.",
+    "TargetDistributionRequestsResponse",
   );
 
   setJsonResponseSchema(
