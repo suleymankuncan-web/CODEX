@@ -7,6 +7,7 @@ const adminRoot = resolve(scriptDir, '..')
 const repoRoot = resolve(adminRoot, '..')
 const openApiPath = resolve(repoRoot, 'docs/api/openapi.json')
 const outputPath = resolve(adminRoot, 'src/generated/openapi-types.ts')
+const checkMode = process.argv.includes('--check')
 
 const document = JSON.parse(await readFile(openApiPath, 'utf8'))
 
@@ -24,11 +25,38 @@ const output = [
   renderPaths(document.paths ?? {}, selectedPaths),
   '',
 ]
+const outputText = `${output.join('\n')}\n`
 
-await mkdir(dirname(outputPath), { recursive: true })
-await writeFile(outputPath, `${output.join('\n')}\n`, 'utf8')
+if (checkMode) {
+  await verifyGeneratedTypesAreCurrent(outputText)
+} else {
+  await mkdir(dirname(outputPath), { recursive: true })
+  await writeFile(outputPath, outputText, 'utf8')
 
-console.log(`Generated ${outputPath}`)
+  console.log(`Generated ${outputPath}`)
+}
+
+async function verifyGeneratedTypesAreCurrent(expectedOutput) {
+  let currentOutput = ''
+
+  try {
+    currentOutput = await readFile(outputPath, 'utf8')
+  } catch {
+    console.error(`Generated OpenAPI types are missing at ${outputPath}. Run npm run api:generate in admin-web.`)
+    process.exit(1)
+  }
+
+  if (normalizeLineEndings(currentOutput) !== expectedOutput) {
+    console.error(`Generated OpenAPI types are stale at ${outputPath}. Run npm run api:generate in admin-web.`)
+    process.exit(1)
+  }
+
+  console.log('Generated OpenAPI types are current.')
+}
+
+function normalizeLineEndings(value) {
+  return value.replace(/\r\n/g, '\n')
+}
 
 function renderComponents(components, schemaNames) {
   const schemas = components.schemas ?? {}

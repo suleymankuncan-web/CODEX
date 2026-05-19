@@ -8,6 +8,7 @@ on:
     paths:
       - "admin-web/**"
       - "backend/nestjs/**"
+      - "docs/api/**"
       - "db/**"
       - "infra/**"
       - "package.json"
@@ -17,6 +18,7 @@ on:
     paths:
       - "admin-web/**"
       - "backend/nestjs/**"
+      - "docs/api/**"
       - "db/**"
       - "infra/**"
       - "package.json"
