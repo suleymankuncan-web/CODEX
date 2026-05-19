@@ -128,6 +128,21 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const importBatchErrorsResponse =
+      document.paths["/api/integrations/import-batches/{batchId}/errors"].get
+        .responses?.["200"];
+    expect(importBatchErrorsResponse?.content?.["application/json"]?.schema).toEqual({
+      $ref: "#/components/schemas/ImportBatchErrorsResponse",
+    });
+    expect(
+      document.components?.schemas?.ImportBatchErrorsResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
     const lookupsResponse =
       document.paths["/api/integrations/lookups"].get.responses?.["200"];
     expect(lookupsResponse?.content?.["application/json"]?.schema).toEqual({

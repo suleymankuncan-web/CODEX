@@ -176,6 +176,44 @@ const externalIdMapCandidateSchema = {
   },
 };
 
+const importBatchErrorMappingCandidateSchema = {
+  type: "object",
+  required: ["integrationSourceId", "entityType", "externalId", "internalTableName"],
+  properties: {
+    integrationSourceId: { type: "string" },
+    entityType: { type: "string", enum: ["employee", "store"] },
+    externalId: { type: "string" },
+    internalTableName: { type: "string" },
+  },
+};
+
+const importBatchErrorItemSchema = {
+  type: "object",
+  required: [
+    "rowId",
+    "sourceRef",
+    "normalizedStatus",
+    "errorCategory",
+    "validationError",
+    "processedAt",
+  ],
+  properties: {
+    rowId: { type: "string" },
+    sourceRef: { type: "string" },
+    rowHash: { type: "string", nullable: true },
+    rawRowReference: { type: "string", nullable: true },
+    normalizedStatus: { type: "string" },
+    errorCategory: {
+      type: "string",
+      enum: ["validation", "missing_dependency", "write_failure"],
+    },
+    qualityIssueCode: { type: "string" },
+    mappingCandidate: importBatchErrorMappingCandidateSchema,
+    validationError: { type: "string", nullable: true },
+    processedAt: { type: "string", nullable: true },
+  },
+};
+
 const integrationLookupSourceSchema = {
   type: "object",
   required: [
@@ -498,6 +536,18 @@ const externalIdMapCandidatesResponseSchema = {
     items: {
       type: "array",
       items: externalIdMapCandidateSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
+const importBatchErrorsResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: importBatchErrorItemSchema,
     },
     meta: listResponseMetaSchema,
   },
@@ -854,6 +904,7 @@ async function generateOpenApi(): Promise<void> {
     ...(document.components.schemas ?? {}),
     ImportOverview: importOverviewSchema,
     ImportBatchNeedsActionResponse: importBatchNeedsActionResponseSchema,
+    ImportBatchErrorsResponse: importBatchErrorsResponseSchema,
     ExternalIdMapCandidatesResponse: externalIdMapCandidatesResponseSchema,
     IntegrationLookups: integrationLookupsSchema,
     PersonnelMasterListResponse: personnelMasterListResponseSchema,
@@ -889,6 +940,14 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Paginated internal entity candidates for external id mapping.",
     "ExternalIdMapCandidatesResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/integrations/import-batches/{batchId}/errors",
+    "get",
+    "Paginated import batch row errors for admin remediation.",
+    "ImportBatchErrorsResponse",
   );
 
   setJsonResponseSchema(
