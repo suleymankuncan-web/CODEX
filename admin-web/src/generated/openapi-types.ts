@@ -92,6 +92,56 @@ export type components = {
         "offset": number
       }
     }
+    "ImportBatchReconciliationResponse": {
+      "batch": {
+        "batchId": string
+        "integrationSourceId": string
+        "sourceCode": string
+        "sourceName": string
+        "entityType": string
+        "sourceBatchId": string | null
+        "sourcePayloadHash": string | null
+        "sourceCapturedAt": string | null
+        "sourceWindowStartedAt": string | null
+        "sourceWindowEndedAt": string | null
+        "startedAt": string
+        "finishedAt": string | null
+        "status": string
+        "fileReference": string | null
+        "recordCount": number
+        "errorCount": number
+        "retryCount": number
+        "lastRetriedAt": string | null
+        "healthState": string
+      }
+      "totals": {
+        "recordCount": number
+        "accountedRows": number
+        "unaccountedRows": number
+        "countsMatchRecordCount": boolean
+      }
+      "rowStatusSummary": {
+        "processed": number
+        "validationFailed": number
+        "retryableError": number
+        "pending": number
+      }
+      "rates": {
+        "processedRate": number
+        "validationFailureRate": number
+        "retryableErrorRate": number
+        "pendingRate": number
+        "accountedRate": number
+      }
+      "reconciliation": {
+        "hasFailures": boolean
+        "hasPendingRows": boolean
+        "hasUnaccountedRows": boolean
+        "canRetryNow": boolean
+        "blockedByEntityTypes": string[]
+        "recommendedNextEntityType": string | null
+      }
+    }
     "ImportOverview": {
       "totals": {
         "all": number
@@ -410,6 +460,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["ImportBatchErrorsResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/integrations/import-batches/{batchId}/reconciliation": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ImportBatchReconciliationResponse"]
           }
         }
       }

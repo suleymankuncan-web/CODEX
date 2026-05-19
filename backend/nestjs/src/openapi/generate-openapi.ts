@@ -214,6 +214,63 @@ const importBatchErrorItemSchema = {
   },
 };
 
+const importBatchDetailBatchSchema = {
+  type: "object",
+  required: [
+    "batchId",
+    "integrationSourceId",
+    "sourceCode",
+    "sourceName",
+    "entityType",
+    "sourceBatchId",
+    "sourcePayloadHash",
+    "sourceCapturedAt",
+    "sourceWindowStartedAt",
+    "sourceWindowEndedAt",
+    "startedAt",
+    "finishedAt",
+    "status",
+    "fileReference",
+    "recordCount",
+    "errorCount",
+    "retryCount",
+    "lastRetriedAt",
+    "healthState",
+  ],
+  properties: {
+    batchId: { type: "string" },
+    integrationSourceId: { type: "string" },
+    sourceCode: { type: "string" },
+    sourceName: { type: "string" },
+    entityType: { type: "string" },
+    sourceBatchId: { type: "string", nullable: true },
+    sourcePayloadHash: { type: "string", nullable: true },
+    sourceCapturedAt: { type: "string", nullable: true },
+    sourceWindowStartedAt: { type: "string", nullable: true },
+    sourceWindowEndedAt: { type: "string", nullable: true },
+    startedAt: { type: "string" },
+    finishedAt: { type: "string", nullable: true },
+    status: { type: "string" },
+    fileReference: { type: "string", nullable: true },
+    recordCount: { type: "integer", minimum: 0 },
+    errorCount: { type: "integer", minimum: 0 },
+    retryCount: { type: "integer", minimum: 0 },
+    lastRetriedAt: { type: "string", nullable: true },
+    healthState: { type: "string" },
+  },
+};
+
+const importBatchRowStatusSummarySchema = {
+  type: "object",
+  required: ["processed", "validationFailed", "retryableError", "pending"],
+  properties: {
+    processed: { type: "integer", minimum: 0 },
+    validationFailed: { type: "integer", minimum: 0 },
+    retryableError: { type: "integer", minimum: 0 },
+    pending: { type: "integer", minimum: 0 },
+  },
+};
+
 const auditEventSchema = {
   type: "object",
   required: [
@@ -588,6 +645,69 @@ const importBatchAuditResponseSchema = {
   },
 };
 
+const importBatchReconciliationResponseSchema = {
+  type: "object",
+  required: ["batch", "totals", "rowStatusSummary", "rates", "reconciliation"],
+  properties: {
+    batch: importBatchDetailBatchSchema,
+    totals: {
+      type: "object",
+      required: [
+        "recordCount",
+        "accountedRows",
+        "unaccountedRows",
+        "countsMatchRecordCount",
+      ],
+      properties: {
+        recordCount: { type: "integer", minimum: 0 },
+        accountedRows: { type: "integer", minimum: 0 },
+        unaccountedRows: { type: "integer", minimum: 0 },
+        countsMatchRecordCount: { type: "boolean" },
+      },
+    },
+    rowStatusSummary: importBatchRowStatusSummarySchema,
+    rates: {
+      type: "object",
+      required: [
+        "processedRate",
+        "validationFailureRate",
+        "retryableErrorRate",
+        "pendingRate",
+        "accountedRate",
+      ],
+      properties: {
+        processedRate: { type: "number", minimum: 0 },
+        validationFailureRate: { type: "number", minimum: 0 },
+        retryableErrorRate: { type: "number", minimum: 0 },
+        pendingRate: { type: "number", minimum: 0 },
+        accountedRate: { type: "number", minimum: 0 },
+      },
+    },
+    reconciliation: {
+      type: "object",
+      required: [
+        "hasFailures",
+        "hasPendingRows",
+        "hasUnaccountedRows",
+        "canRetryNow",
+        "blockedByEntityTypes",
+        "recommendedNextEntityType",
+      ],
+      properties: {
+        hasFailures: { type: "boolean" },
+        hasPendingRows: { type: "boolean" },
+        hasUnaccountedRows: { type: "boolean" },
+        canRetryNow: { type: "boolean" },
+        blockedByEntityTypes: {
+          type: "array",
+          items: { type: "string" },
+        },
+        recommendedNextEntityType: { type: "string", nullable: true },
+      },
+    },
+  },
+};
+
 const storeMasterListResponseSchema = {
   type: "object",
   required: ["items", "meta"],
@@ -941,6 +1061,7 @@ async function generateOpenApi(): Promise<void> {
     ImportBatchAuditResponse: importBatchAuditResponseSchema,
     ImportBatchNeedsActionResponse: importBatchNeedsActionResponseSchema,
     ImportBatchErrorsResponse: importBatchErrorsResponseSchema,
+    ImportBatchReconciliationResponse: importBatchReconciliationResponseSchema,
     ExternalIdMapCandidatesResponse: externalIdMapCandidatesResponseSchema,
     IntegrationLookups: integrationLookupsSchema,
     PersonnelMasterListResponse: personnelMasterListResponseSchema,
@@ -992,6 +1113,14 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Import batch audit events for the admin detail timeline.",
     "ImportBatchAuditResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/integrations/import-batches/{batchId}/reconciliation",
+    "get",
+    "Import batch reconciliation rollup for admin detail evidence.",
+    "ImportBatchReconciliationResponse",
   );
 
   setJsonResponseSchema(

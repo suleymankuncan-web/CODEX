@@ -142,35 +142,8 @@ export type ImportBatchDetail = {
   }
 }
 
-export type ImportBatchReconciliation = {
-  totals: {
-    recordCount: number
-    accountedRows: number
-    unaccountedRows: number
-    countsMatchRecordCount: boolean
-  }
-  rowStatusSummary: {
-    processed: number
-    validationFailed: number
-    retryableError: number
-    pending: number
-  }
-  rates: {
-    processedRate: number
-    validationFailureRate: number
-    retryableErrorRate: number
-    pendingRate: number
-    accountedRate: number
-  }
-  reconciliation: {
-    hasFailures: boolean
-    hasPendingRows: boolean
-    hasUnaccountedRows: boolean
-    canRetryNow: boolean
-    blockedByEntityTypes: string[]
-    recommendedNextEntityType: string | null
-  }
-}
+export type ImportBatchReconciliation =
+  ApiGetResponse<'/api/integrations/import-batches/{batchId}/reconciliation'>
 
 export type ImportBatchErrors =
   ApiGetResponse<'/api/integrations/import-batches/{batchId}/errors'>
@@ -309,8 +282,9 @@ export async function getImportBatchDetail(batchId: string) {
 }
 
 export async function getImportBatchReconciliation(batchId: string) {
-  return fetchJson<ImportBatchReconciliation>(
-    `/integrations/import-batches/${batchId}/reconciliation`,
+  return fetchOpenApiJson(
+    '/api/integrations/import-batches/{batchId}/reconciliation',
+    { params: { batchId } },
   )
 }
 
