@@ -85,62 +85,8 @@ export type ListResponse<T> = {
   }
 }
 
-export type ImportBatchDetail = {
-  batch: {
-    batchId: string
-    integrationSourceId: string
-    sourceCode: string
-    sourceName: string
-    entityType: string
-    startedAt: string
-    finishedAt: string | null
-    status: string
-    fileReference: string | null
-    recordCount: number
-    errorCount: number
-    retryCount: number
-    lastRetriedAt: string | null
-    healthState: string
-  }
-  rowStatusSummary: {
-    processed: number
-    validationFailed: number
-    retryableError: number
-    pending: number
-  }
-  dependencySummary: {
-    employee: number
-    store: number
-    position: number
-    region: number
-    company: number
-    manager: number
-  }
-  qualityIssueSummary?: {
-    totalIssueRows: number
-    highSeverityRows: number
-    items: Array<{
-      code: string
-      label: string
-      owner: string
-      severity: string
-      description: string
-      count: number
-    }>
-  }
-  blockedByEntityTypes: string[]
-  recommendedImportOrder: string[]
-  recommendedNextEntityType: string | null
-  canRetryNow: boolean
-  healthState: string
-  lineageSummary?: {
-    supported: boolean
-    rowHashCount: number
-    rawRowReferenceCount: number
-    sampleRowHash: string | null
-    sampleRawRowReference: string | null
-  }
-}
+export type ImportBatchDetail =
+  ApiGetResponse<'/api/integrations/import-batches/{batchId}'>
 
 export type ImportBatchReconciliation =
   ApiGetResponse<'/api/integrations/import-batches/{batchId}/reconciliation'>
@@ -278,7 +224,9 @@ export async function getNeedsAction(input?: {
 }
 
 export async function getImportBatchDetail(batchId: string) {
-  return fetchJson<ImportBatchDetail>(`/integrations/import-batches/${batchId}`)
+  return fetchOpenApiJson('/api/integrations/import-batches/{batchId}', {
+    params: { batchId },
+  })
 }
 
 export async function getImportBatchReconciliation(batchId: string) {

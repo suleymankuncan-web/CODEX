@@ -17,6 +17,7 @@ const selectedOperations = [
   { path: '/api/integrations/import-batches/{batchId}/audit', method: 'get' },
   { path: '/api/integrations/import-batches/{batchId}/errors', method: 'get' },
   { path: '/api/integrations/import-batches/{batchId}/reconciliation', method: 'get' },
+  { path: '/api/integrations/import-batches/{batchId}', method: 'get' },
   { path: '/api/integrations/import-batches/overview', method: 'get' },
   { path: '/api/integrations/import-batches/needs-action', method: 'get' },
   { path: '/api/integrations/lookups', method: 'get' },
