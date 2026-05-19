@@ -3492,7 +3492,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Import batch audit events for the admin detail timeline.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportBatchAuditResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -5495,6 +5502,79 @@
               "stuckBatchId": {
                 "type": "string",
                 "nullable": true
+              }
+            }
+          }
+        }
+      },
+      "ImportBatchAuditResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "meta"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "eventLogId",
+                "occurredAt",
+                "actorUserId",
+                "correlationId",
+                "eventType",
+                "metadata"
+              ],
+              "properties": {
+                "eventLogId": {
+                  "type": "string"
+                },
+                "occurredAt": {
+                  "type": "string"
+                },
+                "actorUserId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "correlationId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "eventType": {
+                  "type": "string"
+                },
+                "metadata": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "count",
+              "total",
+              "limit",
+              "offset"
+            ],
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
               }
             }
           }

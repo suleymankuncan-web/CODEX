@@ -244,14 +244,9 @@ export type MasterDataBootstrapPromotionResponse = CommandResponse<{
   }>
 }>
 
-export type AuditEvent = {
-  eventLogId: string
-  occurredAt: string
-  actorUserId: string | null
-  correlationId: string | null
-  eventType: string
-  metadata: Record<string, unknown>
-}
+export type ImportBatchAudit =
+  ApiGetResponse<'/api/integrations/import-batches/{batchId}/audit'>
+export type AuditEvent = ImportBatchAudit['items'][number]
 
 type CommandResponse<T> = {
   command: {
@@ -335,9 +330,10 @@ export async function getImportBatchErrors(
 }
 
 export async function getImportBatchAudit(batchId: string) {
-  return fetchJson<ListResponse<AuditEvent>>(
-    `/integrations/import-batches/${batchId}/audit?limit=20&offset=0`,
-  )
+  return fetchOpenApiJson('/api/integrations/import-batches/{batchId}/audit', {
+    params: { batchId },
+    query: new URLSearchParams({ limit: '20', offset: '0' }),
+  })
 }
 
 export async function retryImportBatch(batchId: string) {

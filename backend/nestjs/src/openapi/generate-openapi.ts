@@ -214,6 +214,29 @@ const importBatchErrorItemSchema = {
   },
 };
 
+const auditEventSchema = {
+  type: "object",
+  required: [
+    "eventLogId",
+    "occurredAt",
+    "actorUserId",
+    "correlationId",
+    "eventType",
+    "metadata",
+  ],
+  properties: {
+    eventLogId: { type: "string" },
+    occurredAt: { type: "string" },
+    actorUserId: { type: "string", nullable: true },
+    correlationId: { type: "string", nullable: true },
+    eventType: { type: "string" },
+    metadata: {
+      type: "object",
+      additionalProperties: true,
+    },
+  },
+};
+
 const integrationLookupSourceSchema = {
   type: "object",
   required: [
@@ -548,6 +571,18 @@ const importBatchErrorsResponseSchema = {
     items: {
       type: "array",
       items: importBatchErrorItemSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
+const importBatchAuditResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: auditEventSchema,
     },
     meta: listResponseMetaSchema,
   },
@@ -903,6 +938,7 @@ async function generateOpenApi(): Promise<void> {
   document.components.schemas = {
     ...(document.components.schemas ?? {}),
     ImportOverview: importOverviewSchema,
+    ImportBatchAuditResponse: importBatchAuditResponseSchema,
     ImportBatchNeedsActionResponse: importBatchNeedsActionResponseSchema,
     ImportBatchErrorsResponse: importBatchErrorsResponseSchema,
     ExternalIdMapCandidatesResponse: externalIdMapCandidatesResponseSchema,
@@ -948,6 +984,14 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Paginated import batch row errors for admin remediation.",
     "ImportBatchErrorsResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/integrations/import-batches/{batchId}/audit",
+    "get",
+    "Import batch audit events for the admin detail timeline.",
+    "ImportBatchAuditResponse",
   );
 
   setJsonResponseSchema(
