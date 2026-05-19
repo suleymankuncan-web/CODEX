@@ -16,6 +16,10 @@ export type AuthLookupUser = AuthLookups['users'][number]
 export type AuthLookupStore = AuthLookups['stores'][number]
 type AuthLookupUserSearchResponse = ApiGetResponse<'/api/auth/lookups/users/search'>
 export type AuthLookupUserSearchResult = AuthLookupUserSearchResponse['items'][number]
+type AuthRoleCatalogResponse = ApiGetResponse<'/api/auth/roles'>
+export type RoleCatalogItem = AuthRoleCatalogResponse['items'][number]
+type AuthPermissionCatalogResponse = ApiGetResponse<'/api/auth/permissions'>
+export type PermissionCatalogItem = AuthPermissionCatalogResponse['items'][number]
 
 export type UserAccount = {
   userId: string
@@ -86,28 +90,6 @@ export type PilotUserBinding = {
     storeCode: string
     storeName: string
   }
-}
-
-export type RoleCatalogItem = {
-  roleId: string
-  roleCode: string
-  roleName: string
-  scopeType: string
-  description: string | null
-  isSystemRole: boolean
-  permissions: Array<{
-    permissionCode: string
-    resourceName: string
-    actionName: string
-  }>
-}
-
-export type PermissionCatalogItem = {
-  permissionId: string
-  permissionCode: string
-  resourceName: string
-  actionName: string
-  description: string | null
 }
 
 export type AuditEvent = {
@@ -290,11 +272,11 @@ export async function getActionStoreAssignments(input?: {
 }
 
 export async function getRoles() {
-  return fetchJson<ListResponse<RoleCatalogItem>>('/auth/roles')
+  return fetchOpenApiJson('/api/auth/roles')
 }
 
 export async function getPermissions() {
-  return fetchJson<ListResponse<PermissionCatalogItem>>('/auth/permissions')
+  return fetchOpenApiJson('/api/auth/permissions')
 }
 
 export async function deactivateRoleAssignment(assignmentId: string) {

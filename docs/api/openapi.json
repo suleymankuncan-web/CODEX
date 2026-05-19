@@ -342,7 +342,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Paginated auth role catalog with granted permissions.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthRoleCatalogResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -356,7 +363,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Paginated auth permission catalog.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthPermissionCatalogResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -12264,6 +12278,167 @@
               "limit": {
                 "type": "integer",
                 "minimum": 1
+              }
+            }
+          }
+        }
+      },
+      "AuthRoleCatalogResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "meta"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "roleId",
+                "roleCode",
+                "roleName",
+                "scopeType",
+                "description",
+                "isSystemRole",
+                "permissions"
+              ],
+              "properties": {
+                "roleId": {
+                  "type": "string"
+                },
+                "roleCode": {
+                  "type": "string"
+                },
+                "roleName": {
+                  "type": "string"
+                },
+                "scopeType": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "isSystemRole": {
+                  "type": "boolean"
+                },
+                "permissions": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "permissionCode",
+                      "resourceName",
+                      "actionName"
+                    ],
+                    "properties": {
+                      "permissionCode": {
+                        "type": "string"
+                      },
+                      "resourceName": {
+                        "type": "string"
+                      },
+                      "actionName": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "count",
+              "total",
+              "limit",
+              "offset"
+            ],
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "AuthPermissionCatalogResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "meta"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "permissionId",
+                "permissionCode",
+                "resourceName",
+                "actionName",
+                "description"
+              ],
+              "properties": {
+                "permissionId": {
+                  "type": "string"
+                },
+                "permissionCode": {
+                  "type": "string"
+                },
+                "resourceName": {
+                  "type": "string"
+                },
+                "actionName": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string",
+                  "nullable": true
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "count",
+              "total",
+              "limit",
+              "offset"
+            ],
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
               }
             }
           }

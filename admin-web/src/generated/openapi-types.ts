@@ -74,6 +74,42 @@ export type components = {
         "totalStores": number
       }
     }
+    "AuthPermissionCatalogResponse": {
+      "items": Array<{
+          "permissionId": string
+          "permissionCode": string
+          "resourceName": string
+          "actionName": string
+          "description": string | null
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
+    "AuthRoleCatalogResponse": {
+      "items": Array<{
+          "roleId": string
+          "roleCode": string
+          "roleName": string
+          "scopeType": string
+          "description": string | null
+          "isSystemRole": boolean
+          "permissions": Array<{
+              "permissionCode": string
+              "resourceName": string
+              "actionName": string
+            }>
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
     "AuthStoreLookupSearchResponse": {
       "items": Array<{
           "storeId": string
@@ -1997,6 +2033,28 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["AuthUserLookupSearchResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/auth/permissions": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["AuthPermissionCatalogResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/auth/roles": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["AuthRoleCatalogResponse"]
           }
         }
       }

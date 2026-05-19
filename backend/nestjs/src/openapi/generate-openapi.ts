@@ -1025,6 +1025,59 @@ const authLookupPermissionSchema = {
   },
 };
 
+const authRolePermissionSummarySchema = {
+  type: "object",
+  required: ["permissionCode", "resourceName", "actionName"],
+  properties: {
+    permissionCode: { type: "string" },
+    resourceName: { type: "string" },
+    actionName: { type: "string" },
+  },
+};
+
+const authRoleCatalogItemSchema = {
+  type: "object",
+  required: [
+    "roleId",
+    "roleCode",
+    "roleName",
+    "scopeType",
+    "description",
+    "isSystemRole",
+    "permissions",
+  ],
+  properties: {
+    roleId: { type: "string" },
+    roleCode: { type: "string" },
+    roleName: { type: "string" },
+    scopeType: { type: "string" },
+    description: { type: "string", nullable: true },
+    isSystemRole: { type: "boolean" },
+    permissions: {
+      type: "array",
+      items: authRolePermissionSummarySchema,
+    },
+  },
+};
+
+const authPermissionCatalogItemSchema = {
+  type: "object",
+  required: [
+    "permissionId",
+    "permissionCode",
+    "resourceName",
+    "actionName",
+    "description",
+  ],
+  properties: {
+    permissionId: { type: "string" },
+    permissionCode: { type: "string" },
+    resourceName: { type: "string" },
+    actionName: { type: "string" },
+    description: { type: "string", nullable: true },
+  },
+};
+
 const authLookupStoreSchema = {
   type: "object",
   required: [
@@ -1466,6 +1519,30 @@ const listResponseMetaSchema = {
     total: { type: "integer", minimum: 0 },
     limit: { type: "integer", minimum: 0 },
     offset: { type: "integer", minimum: 0 },
+  },
+};
+
+const authRoleCatalogResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: authRoleCatalogItemSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
+const authPermissionCatalogResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: authPermissionCatalogItemSchema,
+    },
+    meta: listResponseMetaSchema,
   },
 };
 
@@ -3973,6 +4050,8 @@ async function generateOpenApi(): Promise<void> {
     AuthLookupsResponse: authLookupsResponseSchema,
     AuthUserLookupSearchResponse: authUserLookupSearchResponseSchema,
     AuthStoreLookupSearchResponse: authStoreLookupSearchResponseSchema,
+    AuthRoleCatalogResponse: authRoleCatalogResponseSchema,
+    AuthPermissionCatalogResponse: authPermissionCatalogResponseSchema,
     ImportOverview: importOverviewSchema,
     ImportPayloadTemplateResponse: importPayloadTemplateSchema,
     ImportBatchAuditResponse: importBatchAuditResponseSchema,
@@ -4312,6 +4391,22 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Active store lookup search results for auth admin forms.",
     "AuthStoreLookupSearchResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/roles",
+    "get",
+    "Paginated auth role catalog with granted permissions.",
+    "AuthRoleCatalogResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/permissions",
+    "get",
+    "Paginated auth permission catalog.",
+    "AuthPermissionCatalogResponse",
   );
 
   setJsonResponseSchema(
