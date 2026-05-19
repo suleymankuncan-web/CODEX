@@ -2904,7 +2904,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Paginated master data bootstrap batches with derived readiness.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MasterDataBootstrapBatchesResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -5629,6 +5636,147 @@
                 "minimum": 0
               },
               "totalActiveSources": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "MasterDataBootstrapBatchesResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "meta"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "batchId",
+                "companyId",
+                "bootstrapEntity",
+                "sourceLabel",
+                "fileReference",
+                "uploadedByUserId",
+                "batchStatus",
+                "rowCount",
+                "pendingCount",
+                "validCount",
+                "needsReviewCount",
+                "invalidCount",
+                "promotedCount",
+                "createdAt",
+                "validatedAt",
+                "promotedAt",
+                "readiness",
+                "nextAction"
+              ],
+              "properties": {
+                "batchId": {
+                  "type": "string"
+                },
+                "companyId": {
+                  "type": "string"
+                },
+                "bootstrapEntity": {
+                  "type": "string",
+                  "enum": [
+                    "store",
+                    "personnel"
+                  ]
+                },
+                "sourceLabel": {
+                  "type": "string"
+                },
+                "fileReference": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "uploadedByUserId": {
+                  "type": "string"
+                },
+                "batchStatus": {
+                  "type": "string"
+                },
+                "rowCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "pendingCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "validCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "needsReviewCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "invalidCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "promotedCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "validatedAt": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "promotedAt": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "readiness": {
+                  "type": "string",
+                  "enum": [
+                    "needs_validation",
+                    "needs_review",
+                    "ready_to_promote",
+                    "closed"
+                  ]
+                },
+                "nextAction": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "count",
+              "total",
+              "limit",
+              "offset"
+            ],
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "offset": {
                 "type": "integer",
                 "minimum": 0
               }

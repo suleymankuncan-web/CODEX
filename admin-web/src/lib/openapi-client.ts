@@ -21,10 +21,16 @@ export type ApiGetResponse<Path extends keyof paths> = GetOperation<Path> extend
 
 export async function fetchOpenApiJson<Path extends keyof paths & `/api/${string}`>(
   path: Path,
+  input?: { query?: string | URLSearchParams },
 ): Promise<ApiGetResponse<Path>> {
-  return fetchJson<ApiGetResponse<Path>>(toClientApiPath(path))
+  return fetchJson<ApiGetResponse<Path>>(`${toClientApiPath(path)}${formatQuery(input?.query)}`)
 }
 
 function toClientApiPath(path: `/api/${string}`) {
   return path.slice('/api'.length) as `/${string}`
+}
+
+function formatQuery(query?: string | URLSearchParams) {
+  const value = typeof query === 'string' ? query : (query?.toString() ?? '')
+  return value ? `?${value}` : ''
 }

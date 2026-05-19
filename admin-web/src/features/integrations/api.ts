@@ -280,13 +280,6 @@ export type PersonnelMasterLookups = {
 
 export type MasterDataBootstrapEntity = 'store' | 'personnel'
 
-type MasterDataBootstrapBatchStatus =
-  | 'uploaded'
-  | 'validated'
-  | 'ready_to_promote'
-  | 'promoted'
-  | 'rejected'
-
 export type MasterDataBootstrapReadiness =
   | 'needs_validation'
   | 'needs_review'
@@ -301,28 +294,9 @@ type MasterDataBootstrapPromotionReadiness =
   | 'ready'
   | 'already_promoted'
 
-export type MasterDataBootstrapBatchItem = {
-  batchId: string
-  companyId: string
-  bootstrapEntity: MasterDataBootstrapEntity
-  sourceLabel: string
-  fileReference: string | null
-  batchStatus: MasterDataBootstrapBatchStatus | string
-  rowCount: number
-  pendingCount: number
-  validCount: number
-  needsReviewCount: number
-  invalidCount: number
-  promotedCount: number
-  createdByUserId?: string | null
-  uploadedByUserId?: string | null
-  createdAt: string
-  updatedAt?: string | null
-  validatedAt?: string | null
-  promotedAt: string | null
-  readiness?: MasterDataBootstrapReadiness
-  nextAction?: string
-}
+export type MasterDataBootstrapBatchList =
+  ApiGetResponse<'/api/integrations/master-data-bootstrap/batches'>
+export type MasterDataBootstrapBatchItem = MasterDataBootstrapBatchList['items'][number]
 
 export type MasterDataBootstrapRow = {
   rowId: string
@@ -687,9 +661,7 @@ export async function getMasterDataBootstrapBatches(input?: {
     params.set('q', search)
   }
 
-  return fetchJson<ListResponse<MasterDataBootstrapBatchItem>>(
-    `/integrations/master-data-bootstrap/batches?${params.toString()}`,
-  )
+  return fetchOpenApiJson('/api/integrations/master-data-bootstrap/batches', { query: params })
 }
 
 export async function getMasterDataBootstrapBatchDetail(batchId: string) {
