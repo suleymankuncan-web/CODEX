@@ -1965,11 +1965,11 @@
         ],
         "responses": {
           "200": {
-            "description": "",
+            "description": "Competition detail visible to the current actor.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/CompetitionDetailResponse"
                 }
               }
             }
@@ -5491,6 +5491,392 @@
               "offset": {
                 "type": "integer",
                 "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "CompetitionDetailResponse": {
+        "type": "object",
+        "required": [
+          "competition",
+          "stages",
+          "teams",
+          "latestScores",
+          "warnings",
+          "storeContributions"
+        ],
+        "properties": {
+          "competition": {
+            "type": "object",
+            "required": [
+              "competitionId",
+              "competitionCode",
+              "competitionName",
+              "description",
+              "competitionType",
+              "lifecycleState",
+              "startsOn",
+              "endsOn"
+            ],
+            "properties": {
+              "competitionId": {
+                "type": "string"
+              },
+              "competitionCode": {
+                "type": "string"
+              },
+              "competitionName": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string",
+                "nullable": true
+              },
+              "competitionType": {
+                "type": "string",
+                "enum": [
+                  "region_challenge",
+                  "region_league",
+                  "campaign"
+                ]
+              },
+              "lifecycleState": {
+                "type": "string",
+                "enum": [
+                  "draft",
+                  "published",
+                  "active",
+                  "completed",
+                  "cancelled"
+                ]
+              },
+              "startsOn": {
+                "type": "string"
+              },
+              "endsOn": {
+                "type": "string"
+              }
+            }
+          },
+          "stages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "competitionStageId",
+                "competitionId",
+                "stageCode",
+                "stageName",
+                "stageOrder",
+                "stageType",
+                "startsOn",
+                "endsOn",
+                "lifecycleState",
+                "finalizationState"
+              ],
+              "properties": {
+                "competitionStageId": {
+                  "type": "string"
+                },
+                "competitionId": {
+                  "type": "string"
+                },
+                "stageCode": {
+                  "type": "string"
+                },
+                "stageName": {
+                  "type": "string"
+                },
+                "stageOrder": {
+                  "type": "integer"
+                },
+                "stageType": {
+                  "type": "string",
+                  "enum": [
+                    "qualifier",
+                    "league",
+                    "quarter_final",
+                    "semi_final",
+                    "final",
+                    "custom"
+                  ]
+                },
+                "startsOn": {
+                  "type": "string"
+                },
+                "endsOn": {
+                  "type": "string"
+                },
+                "lifecycleState": {
+                  "type": "string",
+                  "enum": [
+                    "draft",
+                    "scheduled",
+                    "active",
+                    "awaiting_review",
+                    "finalized",
+                    "cancelled"
+                  ]
+                },
+                "finalizationState": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "clean",
+                    "warnings_present",
+                    "overridden"
+                  ]
+                }
+              }
+            }
+          },
+          "teams": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "competitionTeamId",
+                "teamCode",
+                "teamName",
+                "teamOrder",
+                "stores"
+              ],
+              "properties": {
+                "competitionTeamId": {
+                  "type": "string"
+                },
+                "teamCode": {
+                  "type": "string"
+                },
+                "teamName": {
+                  "type": "string"
+                },
+                "teamOrder": {
+                  "type": "integer"
+                },
+                "stores": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "storeId",
+                      "storeCode",
+                      "storeName",
+                      "companyId",
+                      "regionId"
+                    ],
+                    "properties": {
+                      "storeId": {
+                        "type": "string"
+                      },
+                      "storeCode": {
+                        "type": "string"
+                      },
+                      "storeName": {
+                        "type": "string"
+                      },
+                      "companyId": {
+                        "type": "string"
+                      },
+                      "regionId": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "latestScores": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "stageId",
+                "teamId",
+                "teamCode",
+                "teamName",
+                "snapshotDate",
+                "scoreValue",
+                "validStoreCount",
+                "totalStoreCount",
+                "coverageRate",
+                "rankPosition",
+                "rankingPopulation"
+              ],
+              "properties": {
+                "stageId": {
+                  "type": "string"
+                },
+                "teamId": {
+                  "type": "string"
+                },
+                "teamCode": {
+                  "type": "string"
+                },
+                "teamName": {
+                  "type": "string"
+                },
+                "snapshotDate": {
+                  "type": "string"
+                },
+                "scoreValue": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "validStoreCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "totalStoreCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "coverageRate": {
+                  "type": "number"
+                },
+                "rankPosition": {
+                  "type": "integer",
+                  "nullable": true
+                },
+                "rankingPopulation": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "warningId",
+                "stageId",
+                "teamId",
+                "storeId",
+                "warningCode",
+                "warningLevel",
+                "periodStart",
+                "periodEnd",
+                "message",
+                "resolvedAt"
+              ],
+              "properties": {
+                "warningId": {
+                  "type": "string"
+                },
+                "stageId": {
+                  "type": "string"
+                },
+                "teamId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "storeId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "warningCode": {
+                  "type": "string",
+                  "enum": [
+                    "missing_daily_store_data",
+                    "missing_bm_checklist",
+                    "missing_vm_checklist"
+                  ]
+                },
+                "warningLevel": {
+                  "type": "string",
+                  "enum": [
+                    "info",
+                    "warning",
+                    "blocker"
+                  ]
+                },
+                "periodStart": {
+                  "type": "string"
+                },
+                "periodEnd": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "resolvedAt": {
+                  "type": "string",
+                  "nullable": true
+                }
+              }
+            }
+          },
+          "storeContributions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "stageId",
+                "teamId",
+                "teamCode",
+                "teamName",
+                "storeId",
+                "storeCode",
+                "storeName",
+                "regionId",
+                "snapshotDate",
+                "scoreValue",
+                "reportedWeightPercent",
+                "expectedWeightPercent",
+                "hasDailyData",
+                "missingKpiCodes"
+              ],
+              "properties": {
+                "stageId": {
+                  "type": "string"
+                },
+                "teamId": {
+                  "type": "string"
+                },
+                "teamCode": {
+                  "type": "string"
+                },
+                "teamName": {
+                  "type": "string"
+                },
+                "storeId": {
+                  "type": "string"
+                },
+                "storeCode": {
+                  "type": "string"
+                },
+                "storeName": {
+                  "type": "string"
+                },
+                "regionId": {
+                  "type": "string"
+                },
+                "snapshotDate": {
+                  "type": "string"
+                },
+                "scoreValue": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "reportedWeightPercent": {
+                  "type": "number"
+                },
+                "expectedWeightPercent": {
+                  "type": "number"
+                },
+                "hasDailyData": {
+                  "type": "boolean"
+                },
+                "missingKpiCodes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
               }
             }
           }
