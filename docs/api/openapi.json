@@ -2150,7 +2150,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Competition stage package plan list for admin review.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompetitionStagePackagePlanListResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -5550,6 +5557,225 @@
                       }
                     }
                   }
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "count",
+              "total",
+              "limit",
+              "offset"
+            ],
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "CompetitionStagePackagePlanListResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "meta"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "planId",
+                "competitionId",
+                "packageCode",
+                "planName",
+                "planStatus",
+                "sourcePlan",
+                "stageDrafts",
+                "createdStageIds",
+                "submittedByUserId",
+                "submittedAt",
+                "reviewedByUserId",
+                "reviewedAt",
+                "reviewNote",
+                "createdAt",
+                "updatedAt",
+                "executedAt"
+              ],
+              "properties": {
+                "planId": {
+                  "type": "string"
+                },
+                "competitionId": {
+                  "type": "string"
+                },
+                "packageCode": {
+                  "type": "string",
+                  "enum": [
+                    "league_then_final"
+                  ]
+                },
+                "planName": {
+                  "type": "string"
+                },
+                "planStatus": {
+                  "type": "string",
+                  "enum": [
+                    "draft",
+                    "submitted",
+                    "approved",
+                    "rejected",
+                    "executed",
+                    "cancelled"
+                  ]
+                },
+                "sourcePlan": {
+                  "type": "object",
+                  "nullable": true,
+                  "required": [
+                    "planId",
+                    "planName"
+                  ],
+                  "properties": {
+                    "planId": {
+                      "type": "string"
+                    },
+                    "planName": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "stageDrafts": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "stageCode",
+                      "stageName",
+                      "stageOrder",
+                      "stageType",
+                      "startsOn",
+                      "endsOn",
+                      "teams"
+                    ],
+                    "properties": {
+                      "stagePresetCode": {
+                        "type": "string",
+                        "enum": [
+                          "region_league",
+                          "first_half_qualifier",
+                          "final_showdown"
+                        ]
+                      },
+                      "stageCode": {
+                        "type": "string"
+                      },
+                      "stageName": {
+                        "type": "string"
+                      },
+                      "stageOrder": {
+                        "type": "integer"
+                      },
+                      "stageType": {
+                        "type": "string",
+                        "enum": [
+                          "qualifier",
+                          "league",
+                          "quarter_final",
+                          "semi_final",
+                          "final",
+                          "custom"
+                        ]
+                      },
+                      "startsOn": {
+                        "type": "string"
+                      },
+                      "endsOn": {
+                        "type": "string"
+                      },
+                      "teams": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "required": [
+                            "teamCode",
+                            "teamName",
+                            "storeIds"
+                          ],
+                          "properties": {
+                            "teamCode": {
+                              "type": "string"
+                            },
+                            "teamName": {
+                              "type": "string"
+                            },
+                            "sourceTemplateId": {
+                              "type": "string"
+                            },
+                            "storeIds": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "createdStageIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "submittedByUserId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "submittedAt": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "reviewedByUserId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "reviewedAt": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "reviewNote": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
+                },
+                "executedAt": {
+                  "type": "string",
+                  "nullable": true
                 }
               }
             }

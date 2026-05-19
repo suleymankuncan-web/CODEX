@@ -233,6 +233,111 @@ const competitionTeamTemplateSchema = {
   },
 };
 
+const competitionStagePackagePlanStageTeamDraftSchema = {
+  type: "object",
+  required: ["teamCode", "teamName", "storeIds"],
+  properties: {
+    teamCode: { type: "string" },
+    teamName: { type: "string" },
+    sourceTemplateId: { type: "string" },
+    storeIds: {
+      type: "array",
+      items: { type: "string" },
+    },
+  },
+};
+
+const competitionStagePackagePlanStageDraftSchema = {
+  type: "object",
+  required: [
+    "stageCode",
+    "stageName",
+    "stageOrder",
+    "stageType",
+    "startsOn",
+    "endsOn",
+    "teams",
+  ],
+  properties: {
+    stagePresetCode: {
+      type: "string",
+      enum: ["region_league", "first_half_qualifier", "final_showdown"],
+    },
+    stageCode: { type: "string" },
+    stageName: { type: "string" },
+    stageOrder: { type: "integer" },
+    stageType: {
+      type: "string",
+      enum: ["qualifier", "league", "quarter_final", "semi_final", "final", "custom"],
+    },
+    startsOn: { type: "string" },
+    endsOn: { type: "string" },
+    teams: {
+      type: "array",
+      items: competitionStagePackagePlanStageTeamDraftSchema,
+    },
+  },
+};
+
+const competitionStagePackagePlanSourceSchema = {
+  type: "object",
+  nullable: true,
+  required: ["planId", "planName"],
+  properties: {
+    planId: { type: "string" },
+    planName: { type: "string" },
+  },
+};
+
+const competitionStagePackagePlanSchema = {
+  type: "object",
+  required: [
+    "planId",
+    "competitionId",
+    "packageCode",
+    "planName",
+    "planStatus",
+    "sourcePlan",
+    "stageDrafts",
+    "createdStageIds",
+    "submittedByUserId",
+    "submittedAt",
+    "reviewedByUserId",
+    "reviewedAt",
+    "reviewNote",
+    "createdAt",
+    "updatedAt",
+    "executedAt",
+  ],
+  properties: {
+    planId: { type: "string" },
+    competitionId: { type: "string" },
+    packageCode: { type: "string", enum: ["league_then_final"] },
+    planName: { type: "string" },
+    planStatus: {
+      type: "string",
+      enum: ["draft", "submitted", "approved", "rejected", "executed", "cancelled"],
+    },
+    sourcePlan: competitionStagePackagePlanSourceSchema,
+    stageDrafts: {
+      type: "array",
+      items: competitionStagePackagePlanStageDraftSchema,
+    },
+    createdStageIds: {
+      type: "array",
+      items: { type: "string" },
+    },
+    submittedByUserId: { type: "string", nullable: true },
+    submittedAt: { type: "string", nullable: true },
+    reviewedByUserId: { type: "string", nullable: true },
+    reviewedAt: { type: "string", nullable: true },
+    reviewNote: { type: "string", nullable: true },
+    createdAt: { type: "string" },
+    updatedAt: { type: "string" },
+    executedAt: { type: "string", nullable: true },
+  },
+};
+
 const competitionStagePackagePlanAuditEventSchema = {
   type: "object",
   required: [
@@ -825,6 +930,18 @@ const competitionTeamTemplateListResponseSchema = {
   },
 };
 
+const competitionStagePackagePlanListResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: competitionStagePackagePlanSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
 const competitionStagePackagePlanAuditResponseSchema = {
   type: "object",
   required: ["items", "meta"],
@@ -1334,6 +1451,8 @@ async function generateOpenApi(): Promise<void> {
     CompetitionListResponse: competitionListResponseSchema,
     CompetitionTeamTemplateListResponse:
       competitionTeamTemplateListResponseSchema,
+    CompetitionStagePackagePlanListResponse:
+      competitionStagePackagePlanListResponseSchema,
     CompetitionStagePackagePlanAuditResponse:
       competitionStagePackagePlanAuditResponseSchema,
     ImportOverview: importOverviewSchema,
@@ -1378,6 +1497,14 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Paginated competition team templates visible to competition admins.",
     "CompetitionTeamTemplateListResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/competitions/{competitionId}/stage-package-plans",
+    "get",
+    "Competition stage package plan list for admin review.",
+    "CompetitionStagePackagePlanListResponse",
   );
 
   setJsonResponseSchema(
