@@ -1,4 +1,4 @@
-import { fetchJson, sendJson } from '../../lib/api'
+import { sendJson } from '../../lib/api'
 import { fetchOpenApiJson, type ApiGetResponse } from '../../lib/openapi-client'
 import type { StagePresetCode } from './stage-presets'
 
@@ -12,87 +12,15 @@ type CommandResponse<TData> = {
 
 export type CompetitionList = ApiGetResponse<'/api/competitions'>
 export type CompetitionSummary = CompetitionList['items'][number]
-
-export type CompetitionStageSummary = {
-  competitionStageId: string
-  competitionId: string
-  stageCode: string
-  stageName: string
-  stageOrder: number
-  stageType: 'qualifier' | 'league' | 'quarter_final' | 'semi_final' | 'final' | 'custom'
-  startsOn: string
-  endsOn: string
-  lifecycleState: 'draft' | 'scheduled' | 'active' | 'awaiting_review' | 'finalized' | 'cancelled'
-  finalizationState: 'clean' | 'warnings_present' | 'overridden' | null
-}
-
-type CompetitionTeamScore = {
-  stageId: string
-  teamId: string
-  teamCode: string
-  teamName: string
-  snapshotDate: string
-  scoreValue: number | null
-  validStoreCount: number
-  totalStoreCount: number
-  coverageRate: number
-  rankPosition: number | null
-  rankingPopulation: number
-}
-
-export type CompetitionStoreContribution = {
-  stageId: string
-  teamId: string
-  teamCode: string
-  teamName: string
-  storeId: string
-  storeCode: string
-  storeName: string
-  regionId: string
-  snapshotDate: string
-  scoreValue: number | null
-  reportedWeightPercent: number
-  expectedWeightPercent: number
-  hasDailyData: boolean
-  missingKpiCodes: string[]
-}
+export type CompetitionDetail = ApiGetResponse<'/api/competitions/{competitionId}'>
+export type CompetitionStageSummary = CompetitionDetail['stages'][number]
+export type CompetitionStoreContribution = CompetitionDetail['storeContributions'][number]
 
 export type CompetitionTeamTemplateList =
   ApiGetResponse<'/api/competitions/team-templates'>
 export type CompetitionTeamTemplate = CompetitionTeamTemplateList['items'][number]
 
-export type CompetitionWarning = {
-  warningId: string
-  stageId: string
-  teamId: string | null
-  storeId: string | null
-  warningCode: 'missing_daily_store_data' | 'missing_bm_checklist' | 'missing_vm_checklist'
-  warningLevel: 'info' | 'warning' | 'blocker'
-  periodStart: string
-  periodEnd: string
-  message: string
-  resolvedAt: string | null
-}
-
-export type CompetitionDetail = {
-  competition: CompetitionSummary
-  stages: CompetitionStageSummary[]
-  teams: Array<{
-    competitionTeamId: string
-    teamCode: string
-    teamName: string
-    teamOrder: number
-    stores: Array<{
-      storeId: string
-      storeCode: string
-      storeName: string
-      regionId: string
-    }>
-  }>
-  latestScores: CompetitionTeamScore[]
-  warnings: CompetitionWarning[]
-  storeContributions: CompetitionStoreContribution[]
-}
+export type CompetitionWarning = CompetitionDetail['warnings'][number]
 
 export type CreateCompetitionStagePayload = {
   stagePresetCode?: StagePresetCode
@@ -168,7 +96,9 @@ export async function listCompetitionTeamTemplates(input?: { activeOnly?: boolea
 }
 
 export async function getCompetition(competitionId: string) {
-  return fetchJson<CompetitionDetail>(`/competitions/${competitionId}`)
+  return fetchOpenApiJson('/api/competitions/{competitionId}', {
+    params: { competitionId },
+  })
 }
 
 export async function createCompetition(payload: {

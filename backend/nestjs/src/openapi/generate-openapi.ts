@@ -199,6 +199,177 @@ const competitionSummarySchema = {
   },
 };
 
+const competitionStageSchema = {
+  type: "object",
+  required: [
+    "competitionStageId",
+    "competitionId",
+    "stageCode",
+    "stageName",
+    "stageOrder",
+    "stageType",
+    "startsOn",
+    "endsOn",
+    "lifecycleState",
+    "finalizationState",
+  ],
+  properties: {
+    competitionStageId: { type: "string" },
+    competitionId: { type: "string" },
+    stageCode: { type: "string" },
+    stageName: { type: "string" },
+    stageOrder: { type: "integer" },
+    stageType: {
+      type: "string",
+      enum: ["qualifier", "league", "quarter_final", "semi_final", "final", "custom"],
+    },
+    startsOn: { type: "string" },
+    endsOn: { type: "string" },
+    lifecycleState: {
+      type: "string",
+      enum: ["draft", "scheduled", "active", "awaiting_review", "finalized", "cancelled"],
+    },
+    finalizationState: {
+      type: "string",
+      nullable: true,
+      enum: ["clean", "warnings_present", "overridden"],
+    },
+  },
+};
+
+const competitionTeamStoreSchema = {
+  type: "object",
+  required: ["storeId", "storeCode", "storeName", "companyId", "regionId"],
+  properties: {
+    storeId: { type: "string" },
+    storeCode: { type: "string" },
+    storeName: { type: "string" },
+    companyId: { type: "string" },
+    regionId: { type: "string" },
+  },
+};
+
+const competitionTeamSchema = {
+  type: "object",
+  required: [
+    "competitionTeamId",
+    "teamCode",
+    "teamName",
+    "teamOrder",
+    "stores",
+  ],
+  properties: {
+    competitionTeamId: { type: "string" },
+    teamCode: { type: "string" },
+    teamName: { type: "string" },
+    teamOrder: { type: "integer" },
+    stores: {
+      type: "array",
+      items: competitionTeamStoreSchema,
+    },
+  },
+};
+
+const competitionTeamScoreSchema = {
+  type: "object",
+  required: [
+    "stageId",
+    "teamId",
+    "teamCode",
+    "teamName",
+    "snapshotDate",
+    "scoreValue",
+    "validStoreCount",
+    "totalStoreCount",
+    "coverageRate",
+    "rankPosition",
+    "rankingPopulation",
+  ],
+  properties: {
+    stageId: { type: "string" },
+    teamId: { type: "string" },
+    teamCode: { type: "string" },
+    teamName: { type: "string" },
+    snapshotDate: { type: "string" },
+    scoreValue: { type: "number", nullable: true },
+    validStoreCount: { type: "integer", minimum: 0 },
+    totalStoreCount: { type: "integer", minimum: 0 },
+    coverageRate: { type: "number" },
+    rankPosition: { type: "integer", nullable: true },
+    rankingPopulation: { type: "integer", minimum: 0 },
+  },
+};
+
+const competitionWarningSchema = {
+  type: "object",
+  required: [
+    "warningId",
+    "stageId",
+    "teamId",
+    "storeId",
+    "warningCode",
+    "warningLevel",
+    "periodStart",
+    "periodEnd",
+    "message",
+    "resolvedAt",
+  ],
+  properties: {
+    warningId: { type: "string" },
+    stageId: { type: "string" },
+    teamId: { type: "string", nullable: true },
+    storeId: { type: "string", nullable: true },
+    warningCode: {
+      type: "string",
+      enum: ["missing_daily_store_data", "missing_bm_checklist", "missing_vm_checklist"],
+    },
+    warningLevel: { type: "string", enum: ["info", "warning", "blocker"] },
+    periodStart: { type: "string" },
+    periodEnd: { type: "string" },
+    message: { type: "string" },
+    resolvedAt: { type: "string", nullable: true },
+  },
+};
+
+const competitionStoreContributionSchema = {
+  type: "object",
+  required: [
+    "stageId",
+    "teamId",
+    "teamCode",
+    "teamName",
+    "storeId",
+    "storeCode",
+    "storeName",
+    "regionId",
+    "snapshotDate",
+    "scoreValue",
+    "reportedWeightPercent",
+    "expectedWeightPercent",
+    "hasDailyData",
+    "missingKpiCodes",
+  ],
+  properties: {
+    stageId: { type: "string" },
+    teamId: { type: "string" },
+    teamCode: { type: "string" },
+    teamName: { type: "string" },
+    storeId: { type: "string" },
+    storeCode: { type: "string" },
+    storeName: { type: "string" },
+    regionId: { type: "string" },
+    snapshotDate: { type: "string" },
+    scoreValue: { type: "number", nullable: true },
+    reportedWeightPercent: { type: "number" },
+    expectedWeightPercent: { type: "number" },
+    hasDailyData: { type: "boolean" },
+    missingKpiCodes: {
+      type: "array",
+      items: { type: "string" },
+    },
+  },
+};
+
 const competitionTeamTemplateStoreSchema = {
   type: "object",
   required: ["storeId", "storeCode", "storeName", "regionId"],
@@ -918,6 +1089,41 @@ const competitionListResponseSchema = {
   },
 };
 
+const competitionDetailResponseSchema = {
+  type: "object",
+  required: [
+    "competition",
+    "stages",
+    "teams",
+    "latestScores",
+    "warnings",
+    "storeContributions",
+  ],
+  properties: {
+    competition: competitionSummarySchema,
+    stages: {
+      type: "array",
+      items: competitionStageSchema,
+    },
+    teams: {
+      type: "array",
+      items: competitionTeamSchema,
+    },
+    latestScores: {
+      type: "array",
+      items: competitionTeamScoreSchema,
+    },
+    warnings: {
+      type: "array",
+      items: competitionWarningSchema,
+    },
+    storeContributions: {
+      type: "array",
+      items: competitionStoreContributionSchema,
+    },
+  },
+};
+
 const competitionTeamTemplateListResponseSchema = {
   type: "object",
   required: ["items", "meta"],
@@ -1449,6 +1655,7 @@ async function generateOpenApi(): Promise<void> {
   document.components.schemas = {
     ...(document.components.schemas ?? {}),
     CompetitionListResponse: competitionListResponseSchema,
+    CompetitionDetailResponse: competitionDetailResponseSchema,
     CompetitionTeamTemplateListResponse:
       competitionTeamTemplateListResponseSchema,
     CompetitionStagePackagePlanListResponse:
@@ -1489,6 +1696,14 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Paginated competition summaries visible to the current actor.",
     "CompetitionListResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/competitions/{competitionId}",
+    "get",
+    "Competition detail visible to the current actor.",
+    "CompetitionDetailResponse",
   );
 
   setJsonResponseSchema(

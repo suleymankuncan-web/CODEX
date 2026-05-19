@@ -4,6 +4,84 @@
 
 export type components = {
   schemas: {
+    "CompetitionDetailResponse": {
+      "competition": {
+        "competitionId": string
+        "competitionCode": string
+        "competitionName": string
+        "description": string | null
+        "competitionType": "region_challenge" | "region_league" | "campaign"
+        "lifecycleState": "draft" | "published" | "active" | "completed" | "cancelled"
+        "startsOn": string
+        "endsOn": string
+      }
+      "stages": Array<{
+          "competitionStageId": string
+          "competitionId": string
+          "stageCode": string
+          "stageName": string
+          "stageOrder": number
+          "stageType": "qualifier" | "league" | "quarter_final" | "semi_final" | "final" | "custom"
+          "startsOn": string
+          "endsOn": string
+          "lifecycleState": "draft" | "scheduled" | "active" | "awaiting_review" | "finalized" | "cancelled"
+          "finalizationState": "clean" | "warnings_present" | "overridden" | null
+        }>
+      "teams": Array<{
+          "competitionTeamId": string
+          "teamCode": string
+          "teamName": string
+          "teamOrder": number
+          "stores": Array<{
+              "storeId": string
+              "storeCode": string
+              "storeName": string
+              "companyId": string
+              "regionId": string
+            }>
+        }>
+      "latestScores": Array<{
+          "stageId": string
+          "teamId": string
+          "teamCode": string
+          "teamName": string
+          "snapshotDate": string
+          "scoreValue": number | null
+          "validStoreCount": number
+          "totalStoreCount": number
+          "coverageRate": number
+          "rankPosition": number | null
+          "rankingPopulation": number
+        }>
+      "warnings": Array<{
+          "warningId": string
+          "stageId": string
+          "teamId": string | null
+          "storeId": string | null
+          "warningCode": "missing_daily_store_data" | "missing_bm_checklist" | "missing_vm_checklist"
+          "warningLevel": "info" | "warning" | "blocker"
+          "periodStart": string
+          "periodEnd": string
+          "message": string
+          "resolvedAt": string | null
+        }>
+      "storeContributions": Array<{
+          "stageId": string
+          "teamId": string
+          "teamCode": string
+          "teamName": string
+          "storeId": string
+          "storeCode": string
+          "storeName": string
+          "regionId": string
+          "snapshotDate": string
+          "scoreValue": number | null
+          "reportedWeightPercent": number
+          "expectedWeightPercent": number
+          "hasDailyData": boolean
+          "missingKpiCodes": string[]
+        }>
+    }
     "CompetitionListResponse": {
       "items": Array<{
           "competitionId": string
@@ -616,6 +694,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["CompetitionListResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/competitions/{competitionId}": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["CompetitionDetailResponse"]
           }
         }
       }
