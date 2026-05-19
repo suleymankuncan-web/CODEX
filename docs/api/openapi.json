@@ -3247,11 +3247,11 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "",
+            "description": "Sample import payload template and canonical KPI contract for admin imports.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/ImportPayloadTemplateResponse"
                 }
               }
             }
@@ -5518,6 +5518,92 @@
                 "nullable": true
               }
             }
+          }
+        }
+      },
+      "ImportPayloadTemplateResponse": {
+        "type": "object",
+        "required": [
+          "entityType",
+          "sourceSystem",
+          "canonicalContract",
+          "requestBody"
+        ],
+        "properties": {
+          "entityType": {
+            "type": "string"
+          },
+          "sourceSystem": {
+            "type": "string"
+          },
+          "canonicalContract": {
+            "type": "object",
+            "required": [
+              "envelopeFields",
+              "canonicalKpiRowFields",
+              "importedMetricCodes",
+              "derivedMetricCodes",
+              "checklistMetricCodes",
+              "dataQualityIssueCodes",
+              "rules"
+            ],
+            "properties": {
+              "envelopeFields": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "canonicalKpiRowFields": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "importedMetricCodes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "derivedMetricCodes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "checklistMetricCodes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "dataQualityIssueCodes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "rules": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "normalizedBehavior": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "note": {
+            "type": "string"
+          },
+          "requestBody": {
+            "type": "object",
+            "additionalProperties": true
           }
         }
       },

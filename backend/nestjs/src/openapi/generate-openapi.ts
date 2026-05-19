@@ -107,6 +107,68 @@ const importOverviewSchema = {
   },
 };
 
+const importPayloadTemplateCanonicalContractSchema = {
+  type: "object",
+  required: [
+    "envelopeFields",
+    "canonicalKpiRowFields",
+    "importedMetricCodes",
+    "derivedMetricCodes",
+    "checklistMetricCodes",
+    "dataQualityIssueCodes",
+    "rules",
+  ],
+  properties: {
+    envelopeFields: {
+      type: "array",
+      items: { type: "string" },
+    },
+    canonicalKpiRowFields: {
+      type: "array",
+      items: { type: "string" },
+    },
+    importedMetricCodes: {
+      type: "array",
+      items: { type: "string" },
+    },
+    derivedMetricCodes: {
+      type: "array",
+      items: { type: "string" },
+    },
+    checklistMetricCodes: {
+      type: "array",
+      items: { type: "string" },
+    },
+    dataQualityIssueCodes: {
+      type: "array",
+      items: { type: "string" },
+    },
+    rules: {
+      type: "array",
+      items: { type: "string" },
+    },
+  },
+};
+
+const importPayloadTemplateSchema = {
+  type: "object",
+  required: ["entityType", "sourceSystem", "canonicalContract", "requestBody"],
+  properties: {
+    entityType: { type: "string" },
+    sourceSystem: { type: "string" },
+    canonicalContract: importPayloadTemplateCanonicalContractSchema,
+    normalizedBehavior: {
+      type: "array",
+      items: { type: "string" },
+    },
+    note: { type: "string" },
+    requestBody: {
+      type: "object",
+      additionalProperties: true,
+    },
+  },
+};
+
 const importBatchNeedsActionItemSchema = {
   type: "object",
   required: [
@@ -1149,6 +1211,7 @@ async function generateOpenApi(): Promise<void> {
   document.components.schemas = {
     ...(document.components.schemas ?? {}),
     ImportOverview: importOverviewSchema,
+    ImportPayloadTemplateResponse: importPayloadTemplateSchema,
     ImportBatchAuditResponse: importBatchAuditResponseSchema,
     ImportBatchNeedsActionResponse: importBatchNeedsActionResponseSchema,
     ImportBatchDetailResponse: importBatchDetailResponseSchema,
@@ -1173,6 +1236,14 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Import admin overview with totals and latest actionable batches.",
     "ImportOverview",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/integrations/import-payload-templates",
+    "get",
+    "Sample import payload template and canonical KPI contract for admin imports.",
+    "ImportPayloadTemplateResponse",
   );
 
   setJsonResponseSchema(

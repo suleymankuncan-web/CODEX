@@ -234,6 +234,24 @@ export type components = {
         "stuckBatchId": string | null
       }
     }
+    "ImportPayloadTemplateResponse": {
+      "entityType": string
+      "sourceSystem": string
+      "canonicalContract": {
+        "envelopeFields": string[]
+        "canonicalKpiRowFields": string[]
+        "importedMetricCodes": string[]
+        "derivedMetricCodes": string[]
+        "checklistMetricCodes": string[]
+        "dataQualityIssueCodes": string[]
+        "rules": string[]
+      }
+      "normalizedBehavior"?: string[]
+      "note"?: string
+      "requestBody": {
+        [key: string]: unknown
+      }
+    }
     "IntegrationLookups": {
       "entityTypes": string[]
       "sourceStats": {
@@ -565,6 +583,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["ImportBatchNeedsActionResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/integrations/import-payload-templates": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ImportPayloadTemplateResponse"]
           }
         }
       }

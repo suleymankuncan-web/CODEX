@@ -20,6 +20,7 @@ const selectedOperations = [
   { path: '/api/integrations/import-batches/{batchId}', method: 'get' },
   { path: '/api/integrations/import-batches/overview', method: 'get' },
   { path: '/api/integrations/import-batches/needs-action', method: 'get' },
+  { path: '/api/integrations/import-payload-templates', method: 'get' },
   { path: '/api/integrations/lookups', method: 'get' },
   { path: '/api/integrations/personnel-master', method: 'get' },
   { path: '/api/integrations/personnel-master-lookups', method: 'get' },
