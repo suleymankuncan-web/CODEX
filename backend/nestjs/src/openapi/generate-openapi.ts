@@ -271,6 +271,63 @@ const importBatchRowStatusSummarySchema = {
   },
 };
 
+const importBatchDependencySummarySchema = {
+  type: "object",
+  required: ["employee", "store", "position", "region", "company", "manager"],
+  properties: countProperties([
+    "employee",
+    "store",
+    "position",
+    "region",
+    "company",
+    "manager",
+  ]),
+};
+
+const importBatchQualityIssueItemSchema = {
+  type: "object",
+  required: ["code", "label", "owner", "severity", "description", "count"],
+  properties: {
+    code: { type: "string" },
+    label: { type: "string" },
+    owner: { type: "string" },
+    severity: { type: "string" },
+    description: { type: "string" },
+    count: { type: "integer", minimum: 0 },
+  },
+};
+
+const importBatchQualityIssueSummarySchema = {
+  type: "object",
+  required: ["totalIssueRows", "highSeverityRows", "items"],
+  properties: {
+    totalIssueRows: { type: "integer", minimum: 0 },
+    highSeverityRows: { type: "integer", minimum: 0 },
+    items: {
+      type: "array",
+      items: importBatchQualityIssueItemSchema,
+    },
+  },
+};
+
+const importBatchLineageSummarySchema = {
+  type: "object",
+  required: [
+    "supported",
+    "rowHashCount",
+    "rawRowReferenceCount",
+    "sampleRowHash",
+    "sampleRawRowReference",
+  ],
+  properties: {
+    supported: { type: "boolean" },
+    rowHashCount: { type: "integer", minimum: 0 },
+    rawRowReferenceCount: { type: "integer", minimum: 0 },
+    sampleRowHash: { type: "string", nullable: true },
+    sampleRawRowReference: { type: "string", nullable: true },
+  },
+};
+
 const auditEventSchema = {
   type: "object",
   required: [
@@ -708,6 +765,40 @@ const importBatchReconciliationResponseSchema = {
   },
 };
 
+const importBatchDetailResponseSchema = {
+  type: "object",
+  required: [
+    "batch",
+    "rowStatusSummary",
+    "dependencySummary",
+    "qualityIssueSummary",
+    "blockedByEntityTypes",
+    "recommendedImportOrder",
+    "recommendedNextEntityType",
+    "canRetryNow",
+    "healthState",
+    "lineageSummary",
+  ],
+  properties: {
+    batch: importBatchDetailBatchSchema,
+    rowStatusSummary: importBatchRowStatusSummarySchema,
+    dependencySummary: importBatchDependencySummarySchema,
+    qualityIssueSummary: importBatchQualityIssueSummarySchema,
+    blockedByEntityTypes: {
+      type: "array",
+      items: { type: "string" },
+    },
+    recommendedImportOrder: {
+      type: "array",
+      items: { type: "string" },
+    },
+    recommendedNextEntityType: { type: "string", nullable: true },
+    canRetryNow: { type: "boolean" },
+    healthState: { type: "string" },
+    lineageSummary: importBatchLineageSummarySchema,
+  },
+};
+
 const storeMasterListResponseSchema = {
   type: "object",
   required: ["items", "meta"],
@@ -1060,6 +1151,7 @@ async function generateOpenApi(): Promise<void> {
     ImportOverview: importOverviewSchema,
     ImportBatchAuditResponse: importBatchAuditResponseSchema,
     ImportBatchNeedsActionResponse: importBatchNeedsActionResponseSchema,
+    ImportBatchDetailResponse: importBatchDetailResponseSchema,
     ImportBatchErrorsResponse: importBatchErrorsResponseSchema,
     ImportBatchReconciliationResponse: importBatchReconciliationResponseSchema,
     ExternalIdMapCandidatesResponse: externalIdMapCandidatesResponseSchema,
@@ -1121,6 +1213,14 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Import batch reconciliation rollup for admin detail evidence.",
     "ImportBatchReconciliationResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/integrations/import-batches/{batchId}",
+    "get",
+    "Import batch detail with row, dependency, quality, and lineage summaries.",
+    "ImportBatchDetailResponse",
   );
 
   setJsonResponseSchema(

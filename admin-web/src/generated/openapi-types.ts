@@ -37,6 +37,67 @@ export type components = {
         "offset": number
       }
     }
+    "ImportBatchDetailResponse": {
+      "batch": {
+        "batchId": string
+        "integrationSourceId": string
+        "sourceCode": string
+        "sourceName": string
+        "entityType": string
+        "sourceBatchId": string | null
+        "sourcePayloadHash": string | null
+        "sourceCapturedAt": string | null
+        "sourceWindowStartedAt": string | null
+        "sourceWindowEndedAt": string | null
+        "startedAt": string
+        "finishedAt": string | null
+        "status": string
+        "fileReference": string | null
+        "recordCount": number
+        "errorCount": number
+        "retryCount": number
+        "lastRetriedAt": string | null
+        "healthState": string
+      }
+      "rowStatusSummary": {
+        "processed": number
+        "validationFailed": number
+        "retryableError": number
+        "pending": number
+      }
+      "dependencySummary": {
+        "employee": number
+        "store": number
+        "position": number
+        "region": number
+        "company": number
+        "manager": number
+      }
+      "qualityIssueSummary": {
+        "totalIssueRows": number
+        "highSeverityRows": number
+        "items": Array<{
+            "code": string
+            "label": string
+            "owner": string
+            "severity": string
+            "description": string
+            "count": number
+          }>
+      }
+      "blockedByEntityTypes": string[]
+      "recommendedImportOrder": string[]
+      "recommendedNextEntityType": string | null
+      "canRetryNow": boolean
+      "healthState": string
+      "lineageSummary": {
+        "supported": boolean
+        "rowHashCount": number
+        "rawRowReferenceCount": number
+        "sampleRowHash": string | null
+        "sampleRawRowReference": string | null
+      }
+    }
     "ImportBatchErrorsResponse": {
       "items": Array<{
           "rowId": string
@@ -471,6 +532,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["ImportBatchReconciliationResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/integrations/import-batches/{batchId}": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ImportBatchDetailResponse"]
           }
         }
       }

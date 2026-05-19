@@ -3552,7 +3552,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Import batch detail with row, dependency, quality, and lineage summaries.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportBatchDetailResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -5718,6 +5725,287 @@
               "offset": {
                 "type": "integer",
                 "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "ImportBatchDetailResponse": {
+        "type": "object",
+        "required": [
+          "batch",
+          "rowStatusSummary",
+          "dependencySummary",
+          "qualityIssueSummary",
+          "blockedByEntityTypes",
+          "recommendedImportOrder",
+          "recommendedNextEntityType",
+          "canRetryNow",
+          "healthState",
+          "lineageSummary"
+        ],
+        "properties": {
+          "batch": {
+            "type": "object",
+            "required": [
+              "batchId",
+              "integrationSourceId",
+              "sourceCode",
+              "sourceName",
+              "entityType",
+              "sourceBatchId",
+              "sourcePayloadHash",
+              "sourceCapturedAt",
+              "sourceWindowStartedAt",
+              "sourceWindowEndedAt",
+              "startedAt",
+              "finishedAt",
+              "status",
+              "fileReference",
+              "recordCount",
+              "errorCount",
+              "retryCount",
+              "lastRetriedAt",
+              "healthState"
+            ],
+            "properties": {
+              "batchId": {
+                "type": "string"
+              },
+              "integrationSourceId": {
+                "type": "string"
+              },
+              "sourceCode": {
+                "type": "string"
+              },
+              "sourceName": {
+                "type": "string"
+              },
+              "entityType": {
+                "type": "string"
+              },
+              "sourceBatchId": {
+                "type": "string",
+                "nullable": true
+              },
+              "sourcePayloadHash": {
+                "type": "string",
+                "nullable": true
+              },
+              "sourceCapturedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "sourceWindowStartedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "sourceWindowEndedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "startedAt": {
+                "type": "string"
+              },
+              "finishedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "status": {
+                "type": "string"
+              },
+              "fileReference": {
+                "type": "string",
+                "nullable": true
+              },
+              "recordCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "errorCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "retryCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "lastRetriedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "healthState": {
+                "type": "string"
+              }
+            }
+          },
+          "rowStatusSummary": {
+            "type": "object",
+            "required": [
+              "processed",
+              "validationFailed",
+              "retryableError",
+              "pending"
+            ],
+            "properties": {
+              "processed": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "validationFailed": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "retryableError": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "pending": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "dependencySummary": {
+            "type": "object",
+            "required": [
+              "employee",
+              "store",
+              "position",
+              "region",
+              "company",
+              "manager"
+            ],
+            "properties": {
+              "employee": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "store": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "position": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "region": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "company": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "manager": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "qualityIssueSummary": {
+            "type": "object",
+            "required": [
+              "totalIssueRows",
+              "highSeverityRows",
+              "items"
+            ],
+            "properties": {
+              "totalIssueRows": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "highSeverityRows": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "label",
+                    "owner",
+                    "severity",
+                    "description",
+                    "count"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "owner": {
+                      "type": "string"
+                    },
+                    "severity": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "count": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "blockedByEntityTypes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "recommendedImportOrder": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "recommendedNextEntityType": {
+            "type": "string",
+            "nullable": true
+          },
+          "canRetryNow": {
+            "type": "boolean"
+          },
+          "healthState": {
+            "type": "string"
+          },
+          "lineageSummary": {
+            "type": "object",
+            "required": [
+              "supported",
+              "rowHashCount",
+              "rawRowReferenceCount",
+              "sampleRowHash",
+              "sampleRawRowReference"
+            ],
+            "properties": {
+              "supported": {
+                "type": "boolean"
+              },
+              "rowHashCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "rawRowReferenceCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "sampleRowHash": {
+                "type": "string",
+                "nullable": true
+              },
+              "sampleRawRowReference": {
+                "type": "string",
+                "nullable": true
               }
             }
           }
