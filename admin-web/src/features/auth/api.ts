@@ -1,4 +1,3 @@
-import { sendJson } from '../../lib/api'
 import {
   fetchOpenApiJson,
   sendOpenApiJson,
@@ -23,6 +22,14 @@ type DeactivateUserAccountResponse = ApiMutationResponse<
   '/api/auth/users/{userId}/deactivate',
   'PATCH'
 >
+export type CreatePilotUserBindingInput = ApiMutationBody<
+  '/api/auth/pilot-user-bindings',
+  'POST'
+>
+type CreatePilotUserBindingResponse = ApiMutationResponse<
+  '/api/auth/pilot-user-bindings',
+  'POST'
+>
 type AuthRoleAssignmentsResponse = ApiGetResponse<'/api/auth/role-assignments'>
 export type RoleAssignment = AuthRoleAssignmentsResponse['items'][number]
 export type CreateRoleAssignmentInput = ApiMutationBody<
@@ -42,28 +49,7 @@ export type AuthSessionSummary = ApiGetResponse<'/api/auth/session'>
 
 export type UserAccessClosure = DeactivateUserAccountResponse['data']['accessClosure']
 
-export type PilotUserBinding = {
-  user: UserAccount
-  roleAssignments: RoleAssignment[]
-  actionStoreAssignments: ActionStoreAssignment[]
-  employee: {
-    employeeId: string
-    employeeCode: string | null
-    firstName: string
-    lastName: string
-    storeId: string
-    storeCode: string
-    storeName: string
-  }
-}
-
-type CommandResponse<T> = {
-  command: {
-    status: string
-    message: string
-  }
-  data: T
-}
+export type PilotUserBinding = CreatePilotUserBindingResponse['data']['binding']
 
 export async function getAuthLookups() {
   return fetchOpenApiJson('/api/auth/lookups')
@@ -213,16 +199,8 @@ export async function createUserAccount(input: CreateUserAccountInput) {
   })
 }
 
-export async function createPilotUserBinding(input: {
-  employeeId: string
-  authProvider: 'oidc' | 'clerk'
-  providerSubject: string
-  username: string
-  email: string
-  roleCode: 'REGION_MANAGER' | 'STORE_MANAGER' | 'VISUAL_MERCHANDISER'
-  storeIds: string[]
-}) {
-  return sendJson<CommandResponse<{ binding: PilotUserBinding }>>('/auth/pilot-user-bindings', {
+export async function createPilotUserBinding(input: CreatePilotUserBindingInput) {
+  return sendOpenApiJson('/api/auth/pilot-user-bindings', {
     method: 'POST',
     body: input,
   })

@@ -1412,6 +1412,53 @@ const authActionStoreAssignmentCommandResponseSchema = commandResponseSchema({
   },
 });
 
+const authPilotUserBindingEmployeeSchema = {
+  type: "object",
+  required: [
+    "employeeId",
+    "employeeCode",
+    "firstName",
+    "lastName",
+    "storeId",
+    "storeCode",
+    "storeName",
+  ],
+  properties: {
+    employeeId: { type: "string" },
+    employeeCode: { type: "string", nullable: true },
+    firstName: { type: "string" },
+    lastName: { type: "string" },
+    storeId: { type: "string" },
+    storeCode: { type: "string" },
+    storeName: { type: "string" },
+  },
+};
+
+const authPilotUserBindingSchema = {
+  type: "object",
+  required: ["user", "roleAssignments", "actionStoreAssignments", "employee"],
+  properties: {
+    user: authUserAccountSchema,
+    roleAssignments: {
+      type: "array",
+      items: authRoleAssignmentSchema,
+    },
+    actionStoreAssignments: {
+      type: "array",
+      items: authActionStoreAssignmentSchema,
+    },
+    employee: authPilotUserBindingEmployeeSchema,
+  },
+};
+
+const authPilotUserBindingCommandResponseSchema = commandResponseSchema({
+  type: "object",
+  required: ["binding"],
+  properties: {
+    binding: authPilotUserBindingSchema,
+  },
+});
+
 const authLookupStoreSchema = {
   type: "object",
   required: [
@@ -4447,6 +4494,8 @@ async function generateOpenApi(): Promise<void> {
       authActionStoreAssignmentCommandResponseSchema,
     AuthActionStoreAssignmentsResponse:
       authActionStoreAssignmentsResponseSchema,
+    AuthPilotUserBindingCommandResponse:
+      authPilotUserBindingCommandResponseSchema,
     AuthAuditResponse: authAuditResponseSchema,
     AuthBootstrapResponse: authBootstrapResponseSchema,
     AuthSessionResponse: authSessionResponseSchema,
@@ -4861,6 +4910,15 @@ async function generateOpenApi(): Promise<void> {
     "post",
     "Command result with the created auth user account.",
     "AuthUserAccountCommandResponse",
+    "201",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/pilot-user-bindings",
+    "post",
+    "Command result with the created pilot user binding.",
+    "AuthPilotUserBindingCommandResponse",
     "201",
   );
 

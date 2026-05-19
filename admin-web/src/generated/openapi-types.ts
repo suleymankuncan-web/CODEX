@@ -180,6 +180,72 @@ export type components = {
         "offset": number
       }
     }
+    "AuthPilotUserBindingCommandResponse": {
+      "command": {
+        "status": string
+        "message": string
+      }
+      "data": {
+        "binding": {
+          "user": {
+            "userId": string
+            "employeeId": string | null
+            "username": string
+            "email": string
+            "authProvider": string
+            "providerSubject": string | null
+            "isActive": boolean
+            "lastLoginAt": string | null
+            "createdAt": string
+            "deactivatedAt"?: string | null
+            "deactivationReason"?: string | null
+            "deactivatedByUserId"?: string | null
+            "employeeStatus"?: string | null
+          }
+          "roleAssignments": Array<{
+              "assignmentId": string
+              "userId": string
+              "username": string
+              "email": string
+              "roleCode": string
+              "roleName": string
+              "scopeType": string
+              "companyId": string | null
+              "regionId": string | null
+              "storeId": string | null
+              "effectiveFrom": string | null
+              "effectiveTo": string | null
+              "createdAt": string
+              "active": boolean
+            }>
+          "actionStoreAssignments": Array<{
+              "assignmentId": string
+              "userId": string
+              "username": string
+              "email": string
+              "storeId": string
+              "storeCode": string
+              "storeName": string
+              "companyId": string
+              "regionId": string
+              "regionName": string
+              "effectiveFrom": string | null
+              "effectiveTo": string | null
+              "createdAt": string
+              "active": boolean
+            }>
+          "employee": {
+            "employeeId": string
+            "employeeCode": string | null
+            "firstName": string
+            "lastName": string
+            "storeId": string
+            "storeCode": string
+            "storeName": string
+          }
+        }
+      }
+    }
     "AuthRoleAssignmentCommandResponse": {
       "command": {
         "status": string
@@ -578,6 +644,15 @@ export type components = {
       "storeId": string
       "effectiveFrom"?: string
       "effectiveTo"?: string
+    }
+    "CreatePilotUserBindingDto": {
+      "employeeId": string
+      "authProvider": "oidc" | "clerk"
+      "providerSubject": string
+      "username": string
+      "email": string
+      "roleCode": "REGION_MANAGER" | "STORE_MANAGER" | "VISUAL_MERCHANDISER"
+      "storeIds": string[]
     }
     "CreateRoleAssignmentDto": {
       "userId": string
@@ -2438,6 +2513,22 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["AuthPermissionCatalogResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/auth/pilot-user-bindings": {
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["CreatePilotUserBindingDto"]
+        }
+      }
+      responses: {
+        "201": {
+          content: {
+            'application/json': components['schemas']["AuthPilotUserBindingCommandResponse"]
           }
         }
       }
