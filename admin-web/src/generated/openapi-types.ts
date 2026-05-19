@@ -56,6 +56,21 @@ export type components = {
         "offset": number
       }
     }
+    "AuthBootstrapResponse": {
+      "authMode": string
+      "provider": {
+        "configured": boolean
+        "authorizationUrl": string | null
+        "clientId": string | null
+        "scope": string | null
+        "responseType": string | null
+        "audience": string | null
+        "callbackPath": string
+        "tokenUrl": string | null
+        "logoutUrl": string | null
+        "postLogoutRedirectPath": string
+      }
+    }
     "AuthLookupsResponse": {
       "scopeTypes": string[]
       "authProviders": string[]
@@ -2121,6 +2136,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["AuthAuditResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/auth/bootstrap": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["AuthBootstrapResponse"]
           }
         }
       }

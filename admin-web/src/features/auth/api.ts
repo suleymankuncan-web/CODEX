@@ -18,6 +18,7 @@ type AuthActionStoreAssignmentsResponse = ApiGetResponse<'/api/auth/action-store
 export type ActionStoreAssignment = AuthActionStoreAssignmentsResponse['items'][number]
 type AuthAuditResponse = ApiGetResponse<'/api/auth/users/{userId}/audit'>
 export type AuditEvent = AuthAuditResponse['items'][number]
+export type AuthBootstrap = ApiGetResponse<'/api/auth/bootstrap'>
 
 export type UserAccessClosure = {
   closedRoleAssignments: number
@@ -70,22 +71,6 @@ export type AuthSessionSummary = {
   }
 }
 
-export type AuthBootstrap = {
-  authMode: string
-  provider: {
-    configured: boolean
-    authorizationUrl: string | null
-    clientId: string | null
-    scope: string | null
-    responseType: string | null
-    audience: string | null
-    callbackPath: string
-    tokenUrl: string | null
-    logoutUrl: string | null
-    postLogoutRedirectPath: string
-  }
-}
-
 type CommandResponse<T> = {
   command: {
     status: string
@@ -121,7 +106,7 @@ export async function getAuthSession() {
 }
 
 export async function getAuthBootstrap() {
-  return fetchJson<AuthBootstrap>('/auth/bootstrap')
+  return fetchOpenApiJson('/api/auth/bootstrap')
 }
 
 export async function getUserAccounts(input?: {

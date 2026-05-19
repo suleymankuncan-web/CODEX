@@ -61,6 +61,13 @@ describe("OpenAPI baseline", () => {
     expect(document.paths["/api/integrations/import-batches/overview"].get.security)
       .toBeUndefined();
     expect(document.paths["/api/auth/bootstrap"].get.security).toEqual([]);
+    expect(
+      document.paths["/api/auth/bootstrap"].get.responses?.["200"]?.content?.[
+        "application/json"
+      ]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/AuthBootstrapResponse",
+    });
     expect(document.paths["/api/health"].get.security).toEqual([]);
     expect(document.paths["/api/health/live"].get.security).toEqual([]);
   });

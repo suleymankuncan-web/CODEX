@@ -1018,6 +1018,41 @@ const authAuditEventSchema = {
   },
 };
 
+const authBootstrapResponseSchema = {
+  type: "object",
+  required: ["authMode", "provider"],
+  properties: {
+    authMode: { type: "string" },
+    provider: {
+      type: "object",
+      required: [
+        "configured",
+        "authorizationUrl",
+        "clientId",
+        "scope",
+        "responseType",
+        "audience",
+        "callbackPath",
+        "tokenUrl",
+        "logoutUrl",
+        "postLogoutRedirectPath",
+      ],
+      properties: {
+        configured: { type: "boolean" },
+        authorizationUrl: { type: "string", nullable: true },
+        clientId: { type: "string", nullable: true },
+        scope: { type: "string", nullable: true },
+        responseType: { type: "string", nullable: true },
+        audience: { type: "string", nullable: true },
+        callbackPath: { type: "string" },
+        tokenUrl: { type: "string", nullable: true },
+        logoutUrl: { type: "string", nullable: true },
+        postLogoutRedirectPath: { type: "string" },
+      },
+    },
+  },
+};
+
 const authLookupOptionSchema = {
   type: "object",
   required: ["value", "label"],
@@ -4257,6 +4292,7 @@ async function generateOpenApi(): Promise<void> {
     AuthActionStoreAssignmentsResponse:
       authActionStoreAssignmentsResponseSchema,
     AuthAuditResponse: authAuditResponseSchema,
+    AuthBootstrapResponse: authBootstrapResponseSchema,
     ImportOverview: importOverviewSchema,
     ImportPayloadTemplateResponse: importPayloadTemplateSchema,
     ImportBatchAuditResponse: importBatchAuditResponseSchema,
@@ -4660,6 +4696,14 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Paginated auth action-store assignment audit events.",
     "AuthAuditResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/bootstrap",
+    "get",
+    "Auth mode and provider metadata needed before login.",
+    "AuthBootstrapResponse",
   );
 
   setJsonResponseSchema(

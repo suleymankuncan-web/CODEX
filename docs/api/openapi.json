@@ -553,7 +553,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Auth mode and provider metadata needed before login.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthBootstrapResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -12902,6 +12909,72 @@
               "offset": {
                 "type": "integer",
                 "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "AuthBootstrapResponse": {
+        "type": "object",
+        "required": [
+          "authMode",
+          "provider"
+        ],
+        "properties": {
+          "authMode": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "object",
+            "required": [
+              "configured",
+              "authorizationUrl",
+              "clientId",
+              "scope",
+              "responseType",
+              "audience",
+              "callbackPath",
+              "tokenUrl",
+              "logoutUrl",
+              "postLogoutRedirectPath"
+            ],
+            "properties": {
+              "configured": {
+                "type": "boolean"
+              },
+              "authorizationUrl": {
+                "type": "string",
+                "nullable": true
+              },
+              "clientId": {
+                "type": "string",
+                "nullable": true
+              },
+              "scope": {
+                "type": "string",
+                "nullable": true
+              },
+              "responseType": {
+                "type": "string",
+                "nullable": true
+              },
+              "audience": {
+                "type": "string",
+                "nullable": true
+              },
+              "callbackPath": {
+                "type": "string"
+              },
+              "tokenUrl": {
+                "type": "string",
+                "nullable": true
+              },
+              "logoutUrl": {
+                "type": "string",
+                "nullable": true
+              },
+              "postLogoutRedirectPath": {
+                "type": "string"
               }
             }
           }
