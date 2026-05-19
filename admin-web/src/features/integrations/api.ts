@@ -172,23 +172,9 @@ export type ImportBatchReconciliation = {
   }
 }
 
-export type ImportBatchError = {
-  rowId: string
-  sourceRef: string
-  rowHash?: string | null
-  rawRowReference?: string | null
-  normalizedStatus: string
-  errorCategory: 'validation' | 'missing_dependency' | 'write_failure'
-  qualityIssueCode?: string
-  mappingCandidate?: {
-    integrationSourceId: string
-    entityType: 'employee' | 'store'
-    externalId: string
-    internalTableName: string
-  }
-  validationError: string | null
-  processedAt: string | null
-}
+export type ImportBatchErrors =
+  ApiGetResponse<'/api/integrations/import-batches/{batchId}/errors'>
+export type ImportBatchError = ImportBatchErrors['items'][number]
 
 export type ExternalIdMapCandidates =
   ApiGetResponse<'/api/integrations/external-id-map-candidates'>
@@ -342,9 +328,10 @@ export async function getImportBatchErrors(
     offset: String(input?.offset ?? 0),
   })
 
-  return fetchJson<ListResponse<ImportBatchError>>(
-    `/integrations/import-batches/${batchId}/errors?${params.toString()}`,
-  )
+  return fetchOpenApiJson('/api/integrations/import-batches/{batchId}/errors', {
+    params: { batchId },
+    query: params,
+  })
 }
 
 export async function getImportBatchAudit(batchId: string) {

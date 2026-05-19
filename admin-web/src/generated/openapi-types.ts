@@ -19,6 +19,31 @@ export type components = {
         "offset": number
       }
     }
+    "ImportBatchErrorsResponse": {
+      "items": Array<{
+          "rowId": string
+          "sourceRef": string
+          "rowHash"?: string | null
+          "rawRowReference"?: string | null
+          "normalizedStatus": string
+          "errorCategory": "validation" | "missing_dependency" | "write_failure"
+          "qualityIssueCode"?: string
+          "mappingCandidate"?: {
+            "integrationSourceId": string
+            "entityType": "employee" | "store"
+            "externalId": string
+            "internalTableName": string
+          }
+          "validationError": string | null
+          "processedAt": string | null
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
     "ImportBatchNeedsActionResponse": {
       "items": Array<{
           "batchId": string
@@ -345,6 +370,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["ExternalIdMapCandidatesResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/integrations/import-batches/{batchId}/errors": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ImportBatchErrorsResponse"]
           }
         }
       }
