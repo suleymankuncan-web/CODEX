@@ -19,6 +19,24 @@ export type components = {
         "offset": number
       }
     }
+    "ImportBatchAuditResponse": {
+      "items": Array<{
+          "eventLogId": string
+          "occurredAt": string
+          "actorUserId": string | null
+          "correlationId": string | null
+          "eventType": string
+          "metadata": {
+            [key: string]: unknown
+          }
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
     "ImportBatchErrorsResponse": {
       "items": Array<{
           "rowId": string
@@ -370,6 +388,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["ExternalIdMapCandidatesResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/integrations/import-batches/{batchId}/audit": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ImportBatchAuditResponse"]
           }
         }
       }
