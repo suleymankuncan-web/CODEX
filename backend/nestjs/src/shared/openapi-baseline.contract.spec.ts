@@ -124,6 +124,41 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const storeMasterLookupsResponse =
+      document.paths["/api/integrations/store-master-lookups"].get.responses?.[
+        "200"
+      ];
+    expect(storeMasterLookupsResponse?.content?.["application/json"]?.schema).toEqual({
+      $ref: "#/components/schemas/StoreMasterLookups",
+    });
+    expect(document.components?.schemas?.StoreMasterLookups?.properties).toEqual(
+      expect.objectContaining({
+        storeTypes: expect.any(Object),
+        statuses: expect.any(Object),
+        regions: expect.any(Object),
+      }),
+    );
+
+    const personnelMasterLookupsResponse =
+      document.paths["/api/integrations/personnel-master-lookups"].get.responses?.[
+        "200"
+      ];
+    expect(
+      personnelMasterLookupsResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/PersonnelMasterLookups",
+    });
+    expect(
+      document.components?.schemas?.PersonnelMasterLookups?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        stores: expect.any(Object),
+        positions: expect.any(Object),
+        employmentStatuses: expect.any(Object),
+        employmentTypes: expect.any(Object),
+      }),
+    );
+
     const masterDataBatchesResponse =
       document.paths["/api/integrations/master-data-bootstrap/batches"].get
         .responses?.["200"];

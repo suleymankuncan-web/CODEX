@@ -15,6 +15,8 @@ const httpMethods = new Set(['get', 'post', 'put', 'patch', 'delete'])
 const selectedOperations = [
   { path: '/api/integrations/import-batches/overview', method: 'get' },
   { path: '/api/integrations/lookups', method: 'get' },
+  { path: '/api/integrations/personnel-master-lookups', method: 'get' },
+  { path: '/api/integrations/store-master-lookups', method: 'get' },
   { path: '/api/integrations/master-data-bootstrap/batches', method: 'get' },
   { path: '/api/integrations/master-data-bootstrap/batches/{batchId}', method: 'get' },
   {

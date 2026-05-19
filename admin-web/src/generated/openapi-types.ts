@@ -205,6 +205,44 @@ export type components = {
         }
       }
     }
+    "PersonnelMasterLookups": {
+      "stores": Array<{
+          "storeId": string
+          "storeCode": string
+          "storeName": string
+          "regionId": string
+          "regionName": string
+        }>
+      "positions": Array<{
+          "positionId": string
+          "positionCode": string
+          "positionName": string
+          "isManagerial": boolean
+        }>
+      "employmentStatuses": Array<{
+          "value": "active" | "inactive" | "terminated"
+          "label": string
+        }>
+      "employmentTypes": Array<{
+          "value": "full_time" | "part_time" | "temporary"
+          "label": string
+        }>
+    }
+    "StoreMasterLookups": {
+      "storeTypes": Array<{
+          "value": "company" | "franchise" | "operator"
+          "label": string
+        }>
+      "statuses": Array<{
+          "value": "active" | "inactive" | "closed"
+          "label": string
+        }>
+      "regions": Array<{
+          "regionId": string
+          "regionCode": string
+          "regionName": string
+        }>
+    }
   }
 }
 
@@ -226,6 +264,28 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["IntegrationLookups"]
+          }
+        }
+      }
+    }
+  }
+  "/api/integrations/personnel-master-lookups": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["PersonnelMasterLookups"]
+          }
+        }
+      }
+    }
+  }
+  "/api/integrations/store-master-lookups": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["StoreMasterLookups"]
           }
         }
       }
