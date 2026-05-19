@@ -1138,7 +1138,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Mobile checklist dashboard data for the current actor.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MobileChecklistTodayResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -8575,6 +8582,283 @@
                   "offset": {
                     "type": "integer",
                     "minimum": 0
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "MobileChecklistTodayResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "stores",
+              "templates",
+              "activeInstances",
+              "completedThisMonth",
+              "pendingAcknowledgements",
+              "monthlySummaries"
+            ],
+            "properties": {
+              "stores": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "storeId",
+                    "storeName"
+                  ],
+                  "properties": {
+                    "storeId": {
+                      "type": "string"
+                    },
+                    "storeName": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "templates": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "checklistTemplateId",
+                    "templateCode",
+                    "templateType",
+                    "templateName",
+                    "versionNo",
+                    "items"
+                  ],
+                  "properties": {
+                    "checklistTemplateId": {
+                      "type": "string"
+                    },
+                    "templateCode": {
+                      "type": "string"
+                    },
+                    "templateType": {
+                      "type": "string"
+                    },
+                    "templateName": {
+                      "type": "string"
+                    },
+                    "versionNo": {
+                      "type": "integer"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "templateItemId",
+                          "sectionName",
+                          "itemNo",
+                          "itemText",
+                          "responseType",
+                          "weight",
+                          "maxScore"
+                        ],
+                        "properties": {
+                          "templateItemId": {
+                            "type": "string"
+                          },
+                          "sectionName": {
+                            "type": "string"
+                          },
+                          "itemNo": {
+                            "type": "integer"
+                          },
+                          "itemText": {
+                            "type": "string"
+                          },
+                          "responseType": {
+                            "type": "string",
+                            "enum": [
+                              "score",
+                              "yes_no",
+                              "partial",
+                              "text"
+                            ]
+                          },
+                          "weight": {
+                            "type": "number"
+                          },
+                          "maxScore": {
+                            "type": "number"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "activeInstances": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "checklistInstanceId",
+                    "checklistTemplateId",
+                    "storeId",
+                    "status",
+                    "startedAt",
+                    "updatedAt",
+                    "responses"
+                  ],
+                  "properties": {
+                    "checklistInstanceId": {
+                      "type": "string"
+                    },
+                    "checklistTemplateId": {
+                      "type": "string"
+                    },
+                    "storeId": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "planned",
+                        "in_progress",
+                        "completed",
+                        "cancelled"
+                      ]
+                    },
+                    "startedAt": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "responses": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "templateItemId",
+                          "scoreValue",
+                          "commentText"
+                        ],
+                        "properties": {
+                          "templateItemId": {
+                            "type": "string"
+                          },
+                          "scoreValue": {
+                            "type": "number"
+                          },
+                          "commentText": {
+                            "type": "string",
+                            "nullable": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "completedThisMonth": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "checklistInstanceId",
+                    "checklistTemplateId",
+                    "storeId",
+                    "completedAt",
+                    "totalScore",
+                    "acknowledgedAt"
+                  ],
+                  "properties": {
+                    "checklistInstanceId": {
+                      "type": "string"
+                    },
+                    "checklistTemplateId": {
+                      "type": "string"
+                    },
+                    "storeId": {
+                      "type": "string"
+                    },
+                    "completedAt": {
+                      "type": "string"
+                    },
+                    "totalScore": {
+                      "type": "number"
+                    },
+                    "acknowledgedAt": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  }
+                }
+              },
+              "pendingAcknowledgements": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "checklistInstanceId",
+                    "checklistTemplateId",
+                    "storeId",
+                    "completedAt",
+                    "totalScore"
+                  ],
+                  "properties": {
+                    "checklistInstanceId": {
+                      "type": "string"
+                    },
+                    "checklistTemplateId": {
+                      "type": "string"
+                    },
+                    "storeId": {
+                      "type": "string"
+                    },
+                    "completedAt": {
+                      "type": "string"
+                    },
+                    "totalScore": {
+                      "type": "number"
+                    }
+                  }
+                }
+              },
+              "monthlySummaries": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "storeId",
+                    "checklistTemplateId",
+                    "monthStart",
+                    "completedCount",
+                    "averageScore"
+                  ],
+                  "properties": {
+                    "storeId": {
+                      "type": "string"
+                    },
+                    "checklistTemplateId": {
+                      "type": "string"
+                    },
+                    "monthStart": {
+                      "type": "string"
+                    },
+                    "completedCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "averageScore": {
+                      "type": "number",
+                      "nullable": true
+                    }
                   }
                 }
               }

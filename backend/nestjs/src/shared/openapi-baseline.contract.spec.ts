@@ -305,6 +305,21 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const mobileChecklistTodayResponse =
+      document.paths["/api/mobile/checklists/today"].get.responses?.["200"];
+    expect(
+      mobileChecklistTodayResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/MobileChecklistTodayResponse",
+    });
+    expect(
+      document.components?.schemas?.MobileChecklistTodayResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        data: expect.any(Object),
+      }),
+    );
+
     const lookupsResponse =
       document.paths["/api/integrations/lookups"].get.responses?.["200"];
     expect(lookupsResponse?.content?.["application/json"]?.schema).toEqual({
