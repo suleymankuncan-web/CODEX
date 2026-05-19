@@ -727,6 +727,52 @@ export type components = {
           "label": string
         }>
     }
+    "ReportingSnapshotRunsResponse": {
+      "items": Array<{
+          "snapshotRunId": string
+          "snapshotDate": string
+          "snapshotType": string
+          "periodStart": string
+          "periodEnd": string
+          "runStatus": string
+          "generatedAt": string
+          "generatedBy": string
+          "kpiConfigVersion"?: ({
+            "kpiConfigVersionId": string | null
+            "versionNo": number | null
+            "state": "versioned" | "pre_governance"
+          }) | null
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
+    "ReportingSummaryResponse": {
+      "latestCompletedSnapshotRun": ({
+        "snapshotRunId": string
+        "snapshotDate": string
+        "snapshotType": string
+        "periodStart": string
+        "periodEnd": string
+        "runStatus": string
+        "generatedAt": string
+        "generatedBy": string
+        "kpiConfigVersion"?: ({
+          "kpiConfigVersionId": string | null
+          "versionNo": number | null
+          "state": "versioned" | "pre_governance"
+        }) | null
+      }) | null
+      "cards": {
+        "workforceRows": number
+        "kpiRows": number
+        "checklistRows": number
+        "turnoverRows": number
+      }
+    }
     "SnapshotNeedsActionResponse": {
       "items": Array<{
           "snapshotRunId": string
@@ -1433,6 +1479,28 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["SnapshotRunLineageResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/reports/snapshot-runs": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ReportingSnapshotRunsResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/reports/summary": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ReportingSummaryResponse"]
           }
         }
       }

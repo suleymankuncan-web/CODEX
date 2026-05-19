@@ -1556,7 +1556,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Paginated reporting snapshot runs available for reporting surfaces.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportingSnapshotRunsResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -1570,11 +1577,11 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "",
+            "description": "Reporting summary with latest completed snapshot and row count cards.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/ReportingSummaryResponse"
                 }
               }
             }
@@ -8014,6 +8021,212 @@
                 },
                 "updatedAt": {
                   "type": "string"
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "count",
+              "total",
+              "limit",
+              "offset"
+            ],
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "ReportingSummaryResponse": {
+        "type": "object",
+        "required": [
+          "latestCompletedSnapshotRun",
+          "cards"
+        ],
+        "properties": {
+          "latestCompletedSnapshotRun": {
+            "type": "object",
+            "required": [
+              "snapshotRunId",
+              "snapshotDate",
+              "snapshotType",
+              "periodStart",
+              "periodEnd",
+              "runStatus",
+              "generatedAt",
+              "generatedBy"
+            ],
+            "properties": {
+              "snapshotRunId": {
+                "type": "string"
+              },
+              "snapshotDate": {
+                "type": "string"
+              },
+              "snapshotType": {
+                "type": "string"
+              },
+              "periodStart": {
+                "type": "string"
+              },
+              "periodEnd": {
+                "type": "string"
+              },
+              "runStatus": {
+                "type": "string"
+              },
+              "generatedAt": {
+                "type": "string"
+              },
+              "generatedBy": {
+                "type": "string"
+              },
+              "kpiConfigVersion": {
+                "type": "object",
+                "nullable": true,
+                "required": [
+                  "kpiConfigVersionId",
+                  "versionNo",
+                  "state"
+                ],
+                "properties": {
+                  "kpiConfigVersionId": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "versionNo": {
+                    "type": "integer",
+                    "nullable": true
+                  },
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "versioned",
+                      "pre_governance"
+                    ]
+                  }
+                }
+              }
+            },
+            "nullable": true
+          },
+          "cards": {
+            "type": "object",
+            "required": [
+              "workforceRows",
+              "kpiRows",
+              "checklistRows",
+              "turnoverRows"
+            ],
+            "properties": {
+              "workforceRows": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "kpiRows": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "checklistRows": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "turnoverRows": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "ReportingSnapshotRunsResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "meta"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "snapshotRunId",
+                "snapshotDate",
+                "snapshotType",
+                "periodStart",
+                "periodEnd",
+                "runStatus",
+                "generatedAt",
+                "generatedBy"
+              ],
+              "properties": {
+                "snapshotRunId": {
+                  "type": "string"
+                },
+                "snapshotDate": {
+                  "type": "string"
+                },
+                "snapshotType": {
+                  "type": "string"
+                },
+                "periodStart": {
+                  "type": "string"
+                },
+                "periodEnd": {
+                  "type": "string"
+                },
+                "runStatus": {
+                  "type": "string"
+                },
+                "generatedAt": {
+                  "type": "string"
+                },
+                "generatedBy": {
+                  "type": "string"
+                },
+                "kpiConfigVersion": {
+                  "type": "object",
+                  "nullable": true,
+                  "required": [
+                    "kpiConfigVersionId",
+                    "versionNo",
+                    "state"
+                  ],
+                  "properties": {
+                    "kpiConfigVersionId": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "versionNo": {
+                      "type": "integer",
+                      "nullable": true
+                    },
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "versioned",
+                        "pre_governance"
+                      ]
+                    }
+                  }
                 }
               }
             }

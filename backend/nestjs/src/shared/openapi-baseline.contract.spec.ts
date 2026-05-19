@@ -581,6 +581,36 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const reportingSummaryResponse =
+      document.paths["/api/reports/summary"].get.responses?.["200"];
+    expect(
+      reportingSummaryResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/ReportingSummaryResponse",
+    });
+    expect(document.components?.schemas?.ReportingSummaryResponse?.properties).toEqual(
+      expect.objectContaining({
+        latestCompletedSnapshotRun: expect.any(Object),
+        cards: expect.any(Object),
+      }),
+    );
+
+    const reportingSnapshotRunsResponse =
+      document.paths["/api/reports/snapshot-runs"].get.responses?.["200"];
+    expect(
+      reportingSnapshotRunsResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/ReportingSnapshotRunsResponse",
+    });
+    expect(
+      document.components?.schemas?.ReportingSnapshotRunsResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
     const lookupsResponse =
       document.paths["/api/integrations/lookups"].get.responses?.["200"];
     expect(lookupsResponse?.content?.["application/json"]?.schema).toEqual({

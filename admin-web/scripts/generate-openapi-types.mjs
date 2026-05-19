@@ -45,6 +45,8 @@ const selectedOperations = [
   { path: '/api/snapshots/runs/{snapshotRunId}/audit', method: 'get' },
   { path: '/api/snapshots/runs/{snapshotRunId}/dependencies', method: 'get' },
   { path: '/api/snapshots/runs/{snapshotRunId}/lineage', method: 'get' },
+  { path: '/api/reports/snapshot-runs', method: 'get' },
+  { path: '/api/reports/summary', method: 'get' },
   { path: '/api/target-distributions/coverage', method: 'get' },
   { path: '/api/target-distributions/requests', method: 'get' },
   { path: '/api/target-distributions/store-personnel', method: 'get' },

@@ -1805,6 +1805,73 @@ const workforceOffboardingRequestsResponseSchema = {
   },
 };
 
+const reportingSnapshotRunSchema = {
+  type: "object",
+  required: [
+    "snapshotRunId",
+    "snapshotDate",
+    "snapshotType",
+    "periodStart",
+    "periodEnd",
+    "runStatus",
+    "generatedAt",
+    "generatedBy",
+  ],
+  properties: {
+    snapshotRunId: { type: "string" },
+    snapshotDate: { type: "string" },
+    snapshotType: { type: "string" },
+    periodStart: { type: "string" },
+    periodEnd: { type: "string" },
+    runStatus: { type: "string" },
+    generatedAt: { type: "string" },
+    generatedBy: { type: "string" },
+    kpiConfigVersion: {
+      type: "object",
+      nullable: true,
+      required: ["kpiConfigVersionId", "versionNo", "state"],
+      properties: {
+        kpiConfigVersionId: { type: "string", nullable: true },
+        versionNo: { type: "integer", nullable: true },
+        state: { type: "string", enum: ["versioned", "pre_governance"] },
+      },
+    },
+  },
+};
+
+const reportingSnapshotRunsResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: reportingSnapshotRunSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
+const reportingSummaryResponseSchema = {
+  type: "object",
+  required: ["latestCompletedSnapshotRun", "cards"],
+  properties: {
+    latestCompletedSnapshotRun: {
+      ...reportingSnapshotRunSchema,
+      nullable: true,
+    },
+    cards: {
+      type: "object",
+      required: ["workforceRows", "kpiRows", "checklistRows", "turnoverRows"],
+      properties: {
+        workforceRows: { type: "integer", minimum: 0 },
+        kpiRows: { type: "integer", minimum: 0 },
+        checklistRows: { type: "integer", minimum: 0 },
+        turnoverRows: { type: "integer", minimum: 0 },
+      },
+    },
+  },
+};
+
 const snapshotStatusTotalsSchema = {
   type: "object",
   required: ["all", "queued", "running", "completed", "failed"],
@@ -2598,6 +2665,8 @@ async function generateOpenApi(): Promise<void> {
       workforceSellerCodeRequestsResponseSchema,
     WorkforceOffboardingRequestsResponse:
       workforceOffboardingRequestsResponseSchema,
+    ReportingSummaryResponse: reportingSummaryResponseSchema,
+    ReportingSnapshotRunsResponse: reportingSnapshotRunsResponseSchema,
     ImportOverview: importOverviewSchema,
     ImportPayloadTemplateResponse: importPayloadTemplateSchema,
     ImportBatchAuditResponse: importBatchAuditResponseSchema,
@@ -2793,6 +2862,22 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Paginated employee offboarding requests visible to workforce reviewers.",
     "WorkforceOffboardingRequestsResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/reports/summary",
+    "get",
+    "Reporting summary with latest completed snapshot and row count cards.",
+    "ReportingSummaryResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/reports/snapshot-runs",
+    "get",
+    "Paginated reporting snapshot runs available for reporting surfaces.",
+    "ReportingSnapshotRunsResponse",
   );
 
   setJsonResponseSchema(

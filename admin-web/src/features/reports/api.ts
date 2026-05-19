@@ -1,4 +1,5 @@
 import { fetchJson, sendJson } from '../../lib/api'
+import { fetchOpenApiJson, type ApiGetResponse } from '../../lib/openapi-client'
 
 type ListResponse<T> = {
   items: T[]
@@ -19,42 +20,10 @@ export type AuditEvent = {
   metadata: Record<string, unknown>
 }
 
-export type ReportingSummary = {
-  latestCompletedSnapshotRun: {
-    snapshotRunId: string
-    snapshotDate: string
-    snapshotType: string
-    periodStart: string
-    periodEnd: string
-    runStatus: string
-    generatedAt: string
-    generatedBy: string
-  } | null
-  cards: {
-    workforceRows: number
-    kpiRows: number
-    checklistRows: number
-    turnoverRows: number
-  }
-}
+export type ReportingSummary = ApiGetResponse<'/api/reports/summary'>
 
-export type ReportingSnapshotRun = {
-  snapshotRunId: string
-  snapshotDate: string
-  snapshotType: string
-  periodStart: string
-  periodEnd: string
-  runStatus: string
-  generatedAt: string
-  generatedBy: string
-  kpiConfigVersion?: SnapshotKpiConfigVersion | null
-}
-
-type SnapshotKpiConfigVersion = {
-  kpiConfigVersionId: string | null
-  versionNo: number | null
-  state: 'versioned' | 'pre_governance'
-}
+export type ReportingSnapshotRuns = ApiGetResponse<'/api/reports/snapshot-runs'>
+export type ReportingSnapshotRun = ReportingSnapshotRuns['items'][number]
 
 export type WorkforceRow = {
   snapshotRunId: string
@@ -453,7 +422,7 @@ export type TurnoverRow = {
 }
 
 export async function getReportingSummary() {
-  return fetchJson<ReportingSummary>('/reports/summary')
+  return fetchOpenApiJson('/api/reports/summary')
 }
 
 export async function getReportingSnapshotRuns(input?: {
@@ -476,9 +445,7 @@ export async function getReportingSnapshotRuns(input?: {
   params.set('limit', String(input?.limit ?? 8))
   params.set('offset', String(input?.offset ?? 0))
 
-  return fetchJson<ListResponse<ReportingSnapshotRun>>(
-    `/reports/snapshot-runs?${params.toString()}`,
-  )
+  return fetchOpenApiJson('/api/reports/snapshot-runs', { query: params })
 }
 
 export async function getWorkforceReport(snapshotRunId: string) {
