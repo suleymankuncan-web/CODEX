@@ -2885,6 +2885,84 @@ const reportingClosedLeaderboardResponseSchema = {
   },
 };
 
+const reportingChecklistRowSchema = {
+  type: "object",
+  required: [
+    "snapshotRunId",
+    "storeId",
+    "checklistTemplateId",
+    "auditCount",
+    "avgScore",
+    "complianceRate",
+    "criticalIssueCount",
+  ],
+  properties: {
+    snapshotRunId: { type: "string" },
+    storeId: { type: "string" },
+    checklistTemplateId: { type: "string" },
+    auditCount: { type: "integer", minimum: 0 },
+    avgScore: { type: "string", nullable: true },
+    complianceRate: { type: "string", nullable: true },
+    criticalIssueCount: { type: "integer", minimum: 0 },
+  },
+};
+
+const reportingChecklistResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: reportingChecklistRowSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
+const reportingTurnoverRowSchema = {
+  type: "object",
+  required: [
+    "snapshotRunId",
+    "scopeType",
+    "companyId",
+    "regionId",
+    "storeId",
+    "periodStart",
+    "periodEnd",
+    "openingHeadcount",
+    "closingHeadcount",
+    "avgHeadcount",
+    "leaverCount",
+    "turnoverRate",
+  ],
+  properties: {
+    snapshotRunId: { type: "string" },
+    scopeType: { type: "string" },
+    companyId: { type: "string", nullable: true },
+    regionId: { type: "string", nullable: true },
+    storeId: { type: "string", nullable: true },
+    periodStart: { type: "string" },
+    periodEnd: { type: "string" },
+    openingHeadcount: { type: "string" },
+    closingHeadcount: { type: "string" },
+    avgHeadcount: { type: "string" },
+    leaverCount: { type: "integer", minimum: 0 },
+    turnoverRate: { type: "string" },
+  },
+};
+
+const reportingTurnoverResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: reportingTurnoverRowSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
 const snapshotStatusTotalsSchema = {
   type: "object",
   required: ["all", "queued", "running", "completed", "failed"],
@@ -3692,6 +3770,8 @@ async function generateOpenApi(): Promise<void> {
       reportingStoreScoreBreakdownResponseSchema,
     ReportingRankingsResponse: reportingRankingsResponseSchema,
     ReportingClosedLeaderboardResponse: reportingClosedLeaderboardResponseSchema,
+    ReportingChecklistResponse: reportingChecklistResponseSchema,
+    ReportingTurnoverResponse: reportingTurnoverResponseSchema,
     ImportOverview: importOverviewSchema,
     ImportPayloadTemplateResponse: importPayloadTemplateSchema,
     ImportBatchAuditResponse: importBatchAuditResponseSchema,
@@ -3991,6 +4071,22 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Closed daily or monthly personnel leaderboard for store users.",
     "ReportingClosedLeaderboardResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/reports/checklists",
+    "get",
+    "Paginated checklist snapshot rows for reporting surfaces.",
+    "ReportingChecklistResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/reports/turnover",
+    "get",
+    "Paginated turnover snapshot rows for reporting surfaces.",
+    "ReportingTurnoverResponse",
   );
 
   setJsonResponseSchema(

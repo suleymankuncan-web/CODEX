@@ -727,6 +727,23 @@ export type components = {
           "label": string
         }>
     }
+    "ReportingChecklistResponse": {
+      "items": Array<{
+          "snapshotRunId": string
+          "storeId": string
+          "checklistTemplateId": string
+          "auditCount": number
+          "avgScore": string | null
+          "complianceRate": string | null
+          "criticalIssueCount": number
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
     "ReportingClosedLeaderboardResponse": {
       "source": {
         "mode": "closed" | "live"
@@ -1420,6 +1437,28 @@ export type components = {
         "turnoverRows": number
       }
     }
+    "ReportingTurnoverResponse": {
+      "items": Array<{
+          "snapshotRunId": string
+          "scopeType": string
+          "companyId": string | null
+          "regionId": string | null
+          "storeId": string | null
+          "periodStart": string
+          "periodEnd": string
+          "openingHeadcount": string
+          "closingHeadcount": string
+          "avgHeadcount": string
+          "leaverCount": number
+          "turnoverRate": string
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
     "ReportingWorkforceResponse": {
       "items": Array<{
           "snapshotRunId": string
@@ -2073,6 +2112,17 @@ export type paths = {
       }
     }
   }
+  "/api/reports/checklists": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ReportingChecklistResponse"]
+          }
+        }
+      }
+    }
+  }
   "/api/snapshots/daily-closure": {
     get: {
       responses: {
@@ -2277,6 +2327,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["ReportingSummaryResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/reports/turnover": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ReportingTurnoverResponse"]
           }
         }
       }

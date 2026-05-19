@@ -1864,7 +1864,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Paginated checklist snapshot rows for reporting surfaces.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportingChecklistResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -1878,7 +1885,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Paginated turnover snapshot rows for reporting surfaces.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportingTurnoverResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -11609,6 +11623,182 @@
                 "periodEnd": {
                   "type": "string"
                 }
+              }
+            }
+          }
+        }
+      },
+      "ReportingChecklistResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "meta"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "snapshotRunId",
+                "storeId",
+                "checklistTemplateId",
+                "auditCount",
+                "avgScore",
+                "complianceRate",
+                "criticalIssueCount"
+              ],
+              "properties": {
+                "snapshotRunId": {
+                  "type": "string"
+                },
+                "storeId": {
+                  "type": "string"
+                },
+                "checklistTemplateId": {
+                  "type": "string"
+                },
+                "auditCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "avgScore": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "complianceRate": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "criticalIssueCount": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "count",
+              "total",
+              "limit",
+              "offset"
+            ],
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "ReportingTurnoverResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "meta"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "snapshotRunId",
+                "scopeType",
+                "companyId",
+                "regionId",
+                "storeId",
+                "periodStart",
+                "periodEnd",
+                "openingHeadcount",
+                "closingHeadcount",
+                "avgHeadcount",
+                "leaverCount",
+                "turnoverRate"
+              ],
+              "properties": {
+                "snapshotRunId": {
+                  "type": "string"
+                },
+                "scopeType": {
+                  "type": "string"
+                },
+                "companyId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "regionId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "storeId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "periodStart": {
+                  "type": "string"
+                },
+                "periodEnd": {
+                  "type": "string"
+                },
+                "openingHeadcount": {
+                  "type": "string"
+                },
+                "closingHeadcount": {
+                  "type": "string"
+                },
+                "avgHeadcount": {
+                  "type": "string"
+                },
+                "leaverCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "turnoverRate": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "count",
+              "total",
+              "limit",
+              "offset"
+            ],
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
               }
             }
           }

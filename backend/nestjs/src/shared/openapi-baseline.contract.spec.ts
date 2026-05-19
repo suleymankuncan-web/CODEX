@@ -806,6 +806,34 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const reportingChecklistResponse =
+      document.paths["/api/reports/checklists"].get.responses?.["200"];
+    expect(reportingChecklistResponse?.content?.["application/json"]?.schema).toEqual({
+      $ref: "#/components/schemas/ReportingChecklistResponse",
+    });
+    expect(
+      document.components?.schemas?.ReportingChecklistResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
+    const reportingTurnoverResponse =
+      document.paths["/api/reports/turnover"].get.responses?.["200"];
+    expect(reportingTurnoverResponse?.content?.["application/json"]?.schema).toEqual({
+      $ref: "#/components/schemas/ReportingTurnoverResponse",
+    });
+    expect(
+      document.components?.schemas?.ReportingTurnoverResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
     const lookupsResponse =
       document.paths["/api/integrations/lookups"].get.responses?.["200"];
     expect(lookupsResponse?.content?.["application/json"]?.schema).toEqual({

@@ -1,15 +1,5 @@
-import { fetchJson, sendJson } from '../../lib/api'
+import { sendJson } from '../../lib/api'
 import { fetchOpenApiJson, type ApiGetResponse } from '../../lib/openapi-client'
-
-type ListResponse<T> = {
-  items: T[]
-  meta: {
-    count: number
-    total: number
-    limit: number
-    offset: number
-  }
-}
 
 export type ReportingSummary = ApiGetResponse<'/api/reports/summary'>
 
@@ -50,30 +40,11 @@ export type PersonnelRankingRow =
 export type RankingMetricValue = NonNullable<StoreRankingRow['metrics']>[number]
 export type RankingReferenceGroup = RankingSummary['reference']['store']
 
-export type ChecklistRow = {
-  snapshotRunId: string
-  storeId: string
-  checklistTemplateId: string
-  auditCount: number
-  avgScore: string | null
-  complianceRate: string | null
-  criticalIssueCount: number
-}
+export type ChecklistReport = ApiGetResponse<'/api/reports/checklists'>
+export type ChecklistRow = ChecklistReport['items'][number]
 
-export type TurnoverRow = {
-  snapshotRunId: string
-  scopeType: string
-  companyId: string | null
-  regionId: string | null
-  storeId: string | null
-  periodStart: string
-  periodEnd: string
-  openingHeadcount: string
-  closingHeadcount: string
-  avgHeadcount: string
-  leaverCount: number
-  turnoverRate: string
-}
+export type TurnoverReport = ApiGetResponse<'/api/reports/turnover'>
+export type TurnoverRow = TurnoverReport['items'][number]
 
 export async function getReportingSummary() {
   return fetchOpenApiJson('/api/reports/summary')
@@ -275,11 +246,15 @@ export async function getChecklistReport(input: {
     params.set('checklistTemplateId', input.checklistTemplateId)
   }
 
-  return fetchJson<ListResponse<ChecklistRow>>(`/reports/checklists?${params.toString()}`)
+  return fetchOpenApiJson('/api/reports/checklists', { query: params })
 }
 
 export async function getTurnoverReport(snapshotRunId: string) {
-  return fetchJson<ListResponse<TurnoverRow>>(
-    `/reports/turnover?snapshotRunId=${encodeURIComponent(snapshotRunId)}&limit=50&offset=0`,
-  )
+  return fetchOpenApiJson('/api/reports/turnover', {
+    query: new URLSearchParams({
+      snapshotRunId,
+      limit: '50',
+      offset: '0',
+    }),
+  })
 }
