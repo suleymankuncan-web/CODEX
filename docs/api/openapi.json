@@ -2862,7 +2862,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Store master lookup options for the admin master-data surface.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoreMasterLookups"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -2890,7 +2897,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Personnel master lookup options for the admin master-data surface.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonnelMasterLookups"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -5652,6 +5666,197 @@
               "totalActiveSources": {
                 "type": "integer",
                 "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "PersonnelMasterLookups": {
+        "type": "object",
+        "required": [
+          "stores",
+          "positions",
+          "employmentStatuses",
+          "employmentTypes"
+        ],
+        "properties": {
+          "stores": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "storeId",
+                "storeCode",
+                "storeName",
+                "regionId",
+                "regionName"
+              ],
+              "properties": {
+                "storeId": {
+                  "type": "string"
+                },
+                "storeCode": {
+                  "type": "string"
+                },
+                "storeName": {
+                  "type": "string"
+                },
+                "regionId": {
+                  "type": "string"
+                },
+                "regionName": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "positions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "positionId",
+                "positionCode",
+                "positionName",
+                "isManagerial"
+              ],
+              "properties": {
+                "positionId": {
+                  "type": "string"
+                },
+                "positionCode": {
+                  "type": "string"
+                },
+                "positionName": {
+                  "type": "string"
+                },
+                "isManagerial": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "employmentStatuses": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "value",
+                "label"
+              ],
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "enum": [
+                    "active",
+                    "inactive",
+                    "terminated"
+                  ]
+                },
+                "label": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "employmentTypes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "value",
+                "label"
+              ],
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "enum": [
+                    "full_time",
+                    "part_time",
+                    "temporary"
+                  ]
+                },
+                "label": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "StoreMasterLookups": {
+        "type": "object",
+        "required": [
+          "storeTypes",
+          "statuses",
+          "regions"
+        ],
+        "properties": {
+          "storeTypes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "value",
+                "label"
+              ],
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "enum": [
+                    "company",
+                    "franchise",
+                    "operator"
+                  ]
+                },
+                "label": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "statuses": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "value",
+                "label"
+              ],
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "enum": [
+                    "active",
+                    "inactive",
+                    "closed"
+                  ]
+                },
+                "label": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "regions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "regionId",
+                "regionCode",
+                "regionName"
+              ],
+              "properties": {
+                "regionId": {
+                  "type": "string"
+                },
+                "regionCode": {
+                  "type": "string"
+                },
+                "regionName": {
+                  "type": "string"
+                }
               }
             }
           }

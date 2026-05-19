@@ -228,15 +228,7 @@ export type StoreMasterItem = {
   regionName: string | null
 }
 
-export type StoreMasterLookups = {
-  storeTypes: Array<{ value: 'company' | 'franchise' | 'operator'; label: string }>
-  statuses: Array<{ value: 'active' | 'inactive' | 'closed'; label: string }>
-  regions: Array<{
-    regionId: string
-    regionCode: string
-    regionName: string
-  }>
-}
+export type StoreMasterLookups = ApiGetResponse<'/api/integrations/store-master-lookups'>
 
 export type PersonnelMasterItem = {
   employeeId: string
@@ -260,23 +252,8 @@ export type PersonnelMasterItem = {
   positionName: string | null
 }
 
-export type PersonnelMasterLookups = {
-  stores: Array<{
-    storeId: string
-    storeCode: string
-    storeName: string
-    regionId: string
-    regionName: string
-  }>
-  positions: Array<{
-    positionId: string
-    positionCode: string
-    positionName: string
-    isManagerial: boolean
-  }>
-  employmentStatuses: Array<{ value: 'active' | 'inactive' | 'terminated'; label: string }>
-  employmentTypes: Array<{ value: 'full_time' | 'part_time' | 'temporary'; label: string }>
-}
+export type PersonnelMasterLookups =
+  ApiGetResponse<'/api/integrations/personnel-master-lookups'>
 
 export type MasterDataBootstrapEntity = 'store' | 'personnel'
 
@@ -503,7 +480,7 @@ export async function getStoreMasterData(input?: {
 }
 
 export async function getStoreMasterLookups() {
-  return fetchJson<StoreMasterLookups>('/integrations/store-master-lookups')
+  return fetchOpenApiJson('/api/integrations/store-master-lookups')
 }
 
 export async function updateStoreMasterData(input: {
@@ -555,7 +532,7 @@ export async function getPersonnelMasterData(input?: {
 }
 
 export async function getPersonnelMasterLookups() {
-  return fetchJson<PersonnelMasterLookups>('/integrations/personnel-master-lookups')
+  return fetchOpenApiJson('/api/integrations/personnel-master-lookups')
 }
 
 export async function updatePersonnelMasterData(input: {

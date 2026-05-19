@@ -232,6 +232,103 @@ const integrationLookupsSchema = {
   },
 };
 
+const storeMasterLookupsSchema = {
+  type: "object",
+  required: ["storeTypes", "statuses", "regions"],
+  properties: {
+    storeTypes: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["value", "label"],
+        properties: {
+          value: { type: "string", enum: ["company", "franchise", "operator"] },
+          label: { type: "string" },
+        },
+      },
+    },
+    statuses: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["value", "label"],
+        properties: {
+          value: { type: "string", enum: ["active", "inactive", "closed"] },
+          label: { type: "string" },
+        },
+      },
+    },
+    regions: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["regionId", "regionCode", "regionName"],
+        properties: {
+          regionId: { type: "string" },
+          regionCode: { type: "string" },
+          regionName: { type: "string" },
+        },
+      },
+    },
+  },
+};
+
+const personnelMasterLookupsSchema = {
+  type: "object",
+  required: ["stores", "positions", "employmentStatuses", "employmentTypes"],
+  properties: {
+    stores: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["storeId", "storeCode", "storeName", "regionId", "regionName"],
+        properties: {
+          storeId: { type: "string" },
+          storeCode: { type: "string" },
+          storeName: { type: "string" },
+          regionId: { type: "string" },
+          regionName: { type: "string" },
+        },
+      },
+    },
+    positions: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["positionId", "positionCode", "positionName", "isManagerial"],
+        properties: {
+          positionId: { type: "string" },
+          positionCode: { type: "string" },
+          positionName: { type: "string" },
+          isManagerial: { type: "boolean" },
+        },
+      },
+    },
+    employmentStatuses: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["value", "label"],
+        properties: {
+          value: { type: "string", enum: ["active", "inactive", "terminated"] },
+          label: { type: "string" },
+        },
+      },
+    },
+    employmentTypes: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["value", "label"],
+        properties: {
+          value: { type: "string", enum: ["full_time", "part_time", "temporary"] },
+          label: { type: "string" },
+        },
+      },
+    },
+  },
+};
+
 const listResponseMetaSchema = {
   type: "object",
   required: ["count", "total", "limit", "offset"],
@@ -570,6 +667,8 @@ async function generateOpenApi(): Promise<void> {
     ...(document.components.schemas ?? {}),
     ImportOverview: importOverviewSchema,
     IntegrationLookups: integrationLookupsSchema,
+    PersonnelMasterLookups: personnelMasterLookupsSchema,
+    StoreMasterLookups: storeMasterLookupsSchema,
     MasterDataBootstrapBatchesResponse: masterDataBootstrapBatchesResponseSchema,
     MasterDataBootstrapBatchDetailResponse:
       masterDataBootstrapBatchDetailResponseSchema,
@@ -591,6 +690,22 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Integration lookup options for admin import and source management screens.",
     "IntegrationLookups",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/integrations/store-master-lookups",
+    "get",
+    "Store master lookup options for the admin master-data surface.",
+    "StoreMasterLookups",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/integrations/personnel-master-lookups",
+    "get",
+    "Personnel master lookup options for the admin master-data surface.",
+    "PersonnelMasterLookups",
   );
 
   setJsonResponseSchema(
