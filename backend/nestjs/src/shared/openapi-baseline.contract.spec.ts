@@ -726,6 +726,48 @@ describe("OpenAPI baseline", () => {
       $ref: "#/components/schemas/ReportingPerformanceResponse",
     });
 
+    const reportingStoreKpiHighlightsResponse =
+      document.paths["/api/reports/store-kpi-highlights"].get.responses?.["200"];
+    expect(
+      reportingStoreKpiHighlightsResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/ReportingStoreKpiHighlightsResponse",
+    });
+    expect(
+      document.components?.schemas?.ReportingStoreKpiHighlightsResponse
+        ?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        source: expect.any(Object),
+        store: expect.any(Object),
+        period: expect.any(Object),
+        score: expect.any(Object),
+        availablePeriods: expect.any(Object),
+        partial: expect.any(Object),
+        metrics: expect.any(Object),
+      }),
+    );
+
+    const reportingStoreScoreBreakdownResponse =
+      document.paths["/api/reports/store-score-breakdown"].get.responses?.["200"];
+    expect(
+      reportingStoreScoreBreakdownResponse?.content?.["application/json"]
+        ?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/ReportingStoreScoreBreakdownResponse",
+    });
+    expect(
+      document.components?.schemas?.ReportingStoreScoreBreakdownResponse
+        ?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        snapshotRunId: expect.any(Object),
+        storeId: expect.any(Object),
+        totalScore: expect.any(Object),
+        components: expect.any(Object),
+      }),
+    );
+
     const lookupsResponse =
       document.paths["/api/integrations/lookups"].get.responses?.["200"];
     expect(lookupsResponse?.content?.["application/json"]?.schema).toEqual({

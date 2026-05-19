@@ -2269,6 +2269,210 @@ const reportingPerformanceResponseSchema = {
   },
 };
 
+const reportingStoreKpiHighlightMetricSchema = {
+  type: "object",
+  required: [
+    "code",
+    "label",
+    "weightPercent",
+    "actualValue",
+    "targetValue",
+    "achievementRate",
+    "statusBand",
+    "dataStatus",
+    "scoreStatus",
+  ],
+  properties: {
+    code: { type: "string" },
+    label: { type: "string" },
+    weightPercent: { type: "number" },
+    actualValue: { type: "number", nullable: true },
+    targetValue: { type: "number", nullable: true },
+    achievementRate: { type: "number", nullable: true },
+    benchmarkValue: { type: "number", nullable: true },
+    benchmarkSource: {
+      type: "string",
+      enum: ["TARGET", "TURKEY_AVERAGE", "CHECKLIST_SCORE"],
+    },
+    actualRatio: { type: "number", nullable: true },
+    scoredRatio: { type: "number", nullable: true },
+    capRatio: { type: "number", nullable: true },
+    isCapped: { type: "boolean" },
+    scoreContribution: { type: "number", nullable: true },
+    missingReason: { type: "string", nullable: true },
+    statusBand: { type: "string", nullable: true },
+    dataStatus: { type: "string", enum: ["reported", "missing"] },
+    scoreStatus: {
+      type: "string",
+      enum: ["scored", "pending_normalization", "missing_reference", "missing"],
+    },
+  },
+};
+
+const reportingStoreKpiHighlightsResponseSchema = {
+  type: "object",
+  required: [
+    "source",
+    "store",
+    "period",
+    "score",
+    "availablePeriods",
+    "partial",
+    "metrics",
+  ],
+  properties: {
+    source: {
+      type: "object",
+      required: ["mode", "snapshotRunId", "snapshotDate", "periodType"],
+      properties: {
+        mode: { type: "string", enum: ["live"] },
+        snapshotRunId: { type: "string", nullable: true },
+        snapshotDate: { type: "string", nullable: true },
+        periodType: { type: "string" },
+      },
+    },
+    store: {
+      type: "object",
+      nullable: true,
+      required: ["storeId", "storeName"],
+      properties: {
+        storeId: { type: "string" },
+        storeName: { type: "string", nullable: true },
+      },
+    },
+    period: {
+      type: "object",
+      nullable: true,
+      required: ["periodStart", "periodEnd"],
+      properties: {
+        periodStart: { type: "string" },
+        periodEnd: { type: "string" },
+      },
+    },
+    score: {
+      type: "object",
+      required: ["value", "matchedMetrics", "totalMetrics"],
+      properties: {
+        value: { type: "number" },
+        matchedMetrics: { type: "integer", minimum: 0 },
+        totalMetrics: { type: "integer", minimum: 0 },
+      },
+    },
+    availablePeriods: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["periodType", "periodStart", "periodEnd"],
+        properties: {
+          periodType: { type: "string" },
+          periodStart: { type: "string" },
+          periodEnd: { type: "string" },
+        },
+      },
+    },
+    partial: {
+      type: "object",
+      required: [
+        "isPartial",
+        "missingMetricCodes",
+        "missingMetricLabels",
+        "pendingNormalizationCodes",
+        "pendingNormalizationLabels",
+      ],
+      properties: {
+        isPartial: { type: "boolean" },
+        missingMetricCodes: {
+          type: "array",
+          items: { type: "string" },
+        },
+        missingMetricLabels: {
+          type: "array",
+          items: { type: "string" },
+        },
+        pendingNormalizationCodes: {
+          type: "array",
+          items: { type: "string" },
+        },
+        pendingNormalizationLabels: {
+          type: "array",
+          items: { type: "string" },
+        },
+      },
+    },
+    metrics: {
+      type: "array",
+      items: reportingStoreKpiHighlightMetricSchema,
+    },
+  },
+};
+
+const reportingStoreScoreWeightsSchema = {
+  type: "object",
+  required: ["kpiPerformanceWeight", "bmChecklistWeight", "vmChecklistWeight"],
+  properties: {
+    kpiPerformanceWeight: { type: "number" },
+    bmChecklistWeight: { type: "number" },
+    vmChecklistWeight: { type: "number" },
+  },
+};
+
+const reportingStoreScoreComponentSchema = {
+  type: "object",
+  required: ["included", "score", "weight", "contribution", "status"],
+  properties: {
+    included: { type: "boolean" },
+    score: { type: "number", nullable: true },
+    weight: { type: "number" },
+    contribution: { type: "number", nullable: true },
+    status: {
+      type: "string",
+      enum: ["included", "not_included", "missing_reference", "future_inactive"],
+    },
+    missingReason: { type: "string" },
+  },
+};
+
+const reportingStoreChecklistScoreComponentSchema = {
+  type: "object",
+  required: [...reportingStoreScoreComponentSchema.required, "visitCount"],
+  properties: {
+    ...reportingStoreScoreComponentSchema.properties,
+    visitCount: { type: "integer", minimum: 0 },
+  },
+};
+
+const reportingStoreScoreBreakdownResponseSchema = {
+  type: "object",
+  required: [
+    "snapshotRunId",
+    "storeId",
+    "scoreStatus",
+    "totalScore",
+    "missingWeightPolicy",
+    "configuredWeights",
+    "effectiveWeights",
+    "components",
+  ],
+  properties: {
+    snapshotRunId: { type: "string" },
+    storeId: { type: "string" },
+    scoreStatus: { type: "string", enum: ["preview", "final"] },
+    totalScore: { type: "number", nullable: true },
+    missingWeightPolicy: { type: "string", enum: ["return_missing_weight_to_kpi"] },
+    configuredWeights: reportingStoreScoreWeightsSchema,
+    effectiveWeights: reportingStoreScoreWeightsSchema,
+    components: {
+      type: "object",
+      required: ["kpi", "bmChecklist", "vmChecklist"],
+      properties: {
+        kpi: reportingStoreScoreComponentSchema,
+        bmChecklist: reportingStoreChecklistScoreComponentSchema,
+        vmChecklist: reportingStoreChecklistScoreComponentSchema,
+      },
+    },
+  },
+};
+
 const snapshotStatusTotalsSchema = {
   type: "object",
   required: ["all", "queued", "running", "completed", "failed"],
@@ -3070,6 +3274,10 @@ async function generateOpenApi(): Promise<void> {
     ReportingWorkforceResponse: reportingWorkforceResponseSchema,
     ReportingKpiResponse: reportingKpiResponseSchema,
     ReportingPerformanceResponse: reportingPerformanceResponseSchema,
+    ReportingStoreKpiHighlightsResponse:
+      reportingStoreKpiHighlightsResponseSchema,
+    ReportingStoreScoreBreakdownResponse:
+      reportingStoreScoreBreakdownResponseSchema,
     ImportOverview: importOverviewSchema,
     ImportPayloadTemplateResponse: importPayloadTemplateSchema,
     ImportBatchAuditResponse: importBatchAuditResponseSchema,
@@ -3337,6 +3545,22 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Target personnel performance summary visible to authorized reviewers.",
     "ReportingPerformanceResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/reports/store-kpi-highlights",
+    "get",
+    "Store KPI highlight summary for live reporting surfaces.",
+    "ReportingStoreKpiHighlightsResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/reports/store-score-breakdown",
+    "get",
+    "Store monthly score blend breakdown for a closed snapshot.",
+    "ReportingStoreScoreBreakdownResponse",
   );
 
   setJsonResponseSchema(

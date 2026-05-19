@@ -34,102 +34,14 @@ export type AuditEvent = KpiConfigAudit['items'][number]
 export type KpiScoreProfileMetric = KpiConfigResponse['storeProfile']['metrics'][number]
 export type KpiOwnerRole = KpiScoreProfileMetric['ownerRole']
 export type KpiScoreBehavior = KpiScoreProfileMetric['scoreBehavior']
-type KpiBenchmarkSource = NonNullable<KpiScoreProfileMetric['benchmarkSource']>
 export type KpiGradingBand = KpiConfigResponse['gradingBands'][number]
 export type KpiOwnershipMatrixRow = KpiConfigResponse['ownershipMatrix'][number]
 
 export type MyPerformanceSummary = ApiGetResponse<'/api/reports/my-performance'>
 export type MyPerformanceMetric = MyPerformanceSummary['metrics'][number]
-type KpiMetricScoreStatus = NonNullable<MyPerformanceMetric['scoreStatus']>
 
-type StoreKpiHighlightMetric = {
-  code: string
-  label: string
-  weightPercent: number
-  actualValue: number | null
-  targetValue: number | null
-  achievementRate: number | null
-  benchmarkValue?: number | null
-  benchmarkSource?: KpiBenchmarkSource
-  actualRatio?: number | null
-  scoredRatio?: number | null
-  capRatio?: number | null
-  isCapped?: boolean
-  scoreContribution?: number | null
-  missingReason?: string | null
-  statusBand: string | null
-  dataStatus: 'reported' | 'missing'
-  scoreStatus: KpiMetricScoreStatus
-}
-
-export type StoreKpiHighlightsSummary = {
-  source: {
-    mode: 'live'
-    snapshotRunId: string | null
-    snapshotDate: string | null
-    periodType: 'daily' | 'weekly' | 'monthly' | string
-  }
-  store: {
-    storeId: string
-    storeName: string | null
-  } | null
-  period: {
-    periodStart: string
-    periodEnd: string
-  } | null
-  score: {
-    value: number
-    matchedMetrics: number
-    totalMetrics: number
-  }
-  availablePeriods: Array<{
-    periodType: 'daily' | 'weekly' | 'monthly' | string
-    periodStart: string
-    periodEnd: string
-  }>
-  partial: {
-    isPartial: boolean
-    missingMetricCodes: string[]
-    missingMetricLabels: string[]
-    pendingNormalizationCodes: string[]
-    pendingNormalizationLabels: string[]
-  }
-  metrics: StoreKpiHighlightMetric[]
-}
-
-type StoreScoreBreakdownComponent = {
-  included: boolean
-  score: number | null
-  weight: number
-  contribution: number | null
-  status: string
-  missingReason?: string
-}
-
-type StoreScoreWeights = {
-  kpiPerformanceWeight: number
-  bmChecklistWeight: number
-  vmChecklistWeight: number
-}
-
-export type StoreMonthlyScoreBreakdown = {
-  snapshotRunId: string
-  storeId: string
-  scoreStatus: 'preview' | 'final'
-  totalScore: number | null
-  missingWeightPolicy: 'return_missing_weight_to_kpi'
-  configuredWeights: StoreScoreWeights
-  effectiveWeights: StoreScoreWeights
-  components: {
-    kpi: StoreScoreBreakdownComponent
-    bmChecklist: StoreScoreBreakdownComponent & {
-      visitCount: number
-    }
-    vmChecklist: StoreScoreBreakdownComponent & {
-      visitCount: number
-    }
-  }
-}
+export type StoreKpiHighlightsSummary = ApiGetResponse<'/api/reports/store-kpi-highlights'>
+export type StoreMonthlyScoreBreakdown = ApiGetResponse<'/api/reports/store-score-breakdown'>
 
 type RankingVisibility = 'summary' | 'detail'
 
@@ -386,9 +298,7 @@ export async function getStoreKpiHighlights(input?: {
   }
 
   const query = params.toString()
-  return fetchJson<StoreKpiHighlightsSummary>(
-    `/reports/store-kpi-highlights${query ? `?${query}` : ''}`,
-  )
+  return fetchOpenApiJson('/api/reports/store-kpi-highlights', { query })
 }
 
 export async function getStoreScoreBreakdown(input: {
@@ -400,9 +310,7 @@ export async function getStoreScoreBreakdown(input: {
     storeId: input.storeId,
   })
 
-  return fetchJson<StoreMonthlyScoreBreakdown>(
-    `/reports/store-score-breakdown?${params.toString()}`,
-  )
+  return fetchOpenApiJson('/api/reports/store-score-breakdown', { query: params })
 }
 
 export async function getRankings(input?: {

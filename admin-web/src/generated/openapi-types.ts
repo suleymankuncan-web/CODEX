@@ -1031,6 +1031,103 @@ export type components = {
         "offset": number
       }
     }
+    "ReportingStoreKpiHighlightsResponse": {
+      "source": {
+        "mode": "live"
+        "snapshotRunId": string | null
+        "snapshotDate": string | null
+        "periodType": string
+      }
+      "store": ({
+        "storeId": string
+        "storeName": string | null
+      }) | null
+      "period": ({
+        "periodStart": string
+        "periodEnd": string
+      }) | null
+      "score": {
+        "value": number
+        "matchedMetrics": number
+        "totalMetrics": number
+      }
+      "availablePeriods": Array<{
+          "periodType": string
+          "periodStart": string
+          "periodEnd": string
+        }>
+      "partial": {
+        "isPartial": boolean
+        "missingMetricCodes": string[]
+        "missingMetricLabels": string[]
+        "pendingNormalizationCodes": string[]
+        "pendingNormalizationLabels": string[]
+      }
+      "metrics": Array<{
+          "code": string
+          "label": string
+          "weightPercent": number
+          "actualValue": number | null
+          "targetValue": number | null
+          "achievementRate": number | null
+          "benchmarkValue"?: number | null
+          "benchmarkSource"?: "TARGET" | "TURKEY_AVERAGE" | "CHECKLIST_SCORE"
+          "actualRatio"?: number | null
+          "scoredRatio"?: number | null
+          "capRatio"?: number | null
+          "isCapped"?: boolean
+          "scoreContribution"?: number | null
+          "missingReason"?: string | null
+          "statusBand": string | null
+          "dataStatus": "reported" | "missing"
+          "scoreStatus": "scored" | "pending_normalization" | "missing_reference" | "missing"
+        }>
+    }
+    "ReportingStoreScoreBreakdownResponse": {
+      "snapshotRunId": string
+      "storeId": string
+      "scoreStatus": "preview" | "final"
+      "totalScore": number | null
+      "missingWeightPolicy": "return_missing_weight_to_kpi"
+      "configuredWeights": {
+        "kpiPerformanceWeight": number
+        "bmChecklistWeight": number
+        "vmChecklistWeight": number
+      }
+      "effectiveWeights": {
+        "kpiPerformanceWeight": number
+        "bmChecklistWeight": number
+        "vmChecklistWeight": number
+      }
+      "components": {
+        "kpi": {
+          "included": boolean
+          "score": number | null
+          "weight": number
+          "contribution": number | null
+          "status": "included" | "not_included" | "missing_reference" | "future_inactive"
+          "missingReason"?: string
+        }
+        "bmChecklist": {
+          "included": boolean
+          "score": number | null
+          "weight": number
+          "contribution": number | null
+          "status": "included" | "not_included" | "missing_reference" | "future_inactive"
+          "missingReason"?: string
+          "visitCount": number
+        }
+        "vmChecklist": {
+          "included": boolean
+          "score": number | null
+          "weight": number
+          "contribution": number | null
+          "status": "included" | "not_included" | "missing_reference" | "future_inactive"
+          "missingReason"?: string
+          "visitCount": number
+        }
+      }
+    }
     "ReportingSummaryResponse": {
       "latestCompletedSnapshotRun": ({
         "snapshotRunId": string
@@ -1856,6 +1953,28 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["ReportingSnapshotRunsResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/reports/store-kpi-highlights": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ReportingStoreKpiHighlightsResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/reports/store-score-breakdown": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ReportingStoreScoreBreakdownResponse"]
           }
         }
       }
