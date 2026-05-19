@@ -1,24 +1,10 @@
-import { fetchJson, sendFormData, sendJson } from '../../lib/api'
+import { sendFormData, sendJson } from '../../lib/api'
 import { fetchOpenApiJson, type ApiGetResponse } from '../../lib/openapi-client'
 
 export type ImportOverview = ApiGetResponse<'/api/integrations/import-batches/overview'>
 
-export type ImportPayloadTemplate = {
-  entityType: string
-  sourceSystem: string
-  canonicalContract?: {
-    envelopeFields: string[]
-    canonicalKpiRowFields: string[]
-    importedMetricCodes: string[]
-    derivedMetricCodes: string[]
-    checklistMetricCodes: string[]
-    dataQualityIssueCodes: string[]
-    rules: string[]
-  }
-  normalizedBehavior?: string[]
-  note?: string
-  requestBody: Record<string, unknown>
-}
+export type ImportPayloadTemplate =
+  ApiGetResponse<'/api/integrations/import-payload-templates'>
 
 export type IntegrationLookups = ApiGetResponse<'/api/integrations/lookups'>
 
@@ -492,8 +478,9 @@ export async function getImportPayloadTemplate(input?: {
     params.set('sourceSystem', input.sourceSystem)
   }
 
-  const suffix = params.toString() ? `?${params.toString()}` : ''
-  return fetchJson<ImportPayloadTemplate>(`/integrations/import-payload-templates${suffix}`)
+  return fetchOpenApiJson('/api/integrations/import-payload-templates', {
+    query: params,
+  })
 }
 
 export async function createImportBatch(input: CreateImportBatchBody) {

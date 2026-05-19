@@ -96,6 +96,25 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const importPayloadTemplateResponse =
+      document.paths["/api/integrations/import-payload-templates"].get
+        .responses?.["200"];
+    expect(
+      importPayloadTemplateResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/ImportPayloadTemplateResponse",
+    });
+    expect(
+      document.components?.schemas?.ImportPayloadTemplateResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        entityType: expect.any(Object),
+        sourceSystem: expect.any(Object),
+        canonicalContract: expect.any(Object),
+        requestBody: expect.any(Object),
+      }),
+    );
+
     const needsActionResponse =
       document.paths["/api/integrations/import-batches/needs-action"].get
         .responses?.["200"];
