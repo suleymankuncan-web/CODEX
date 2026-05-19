@@ -5,8 +5,12 @@ import type {
   CompetitionTeamTemplate,
   CreateCompetitionStagePayload,
 } from './api'
+import type { AuthLookupStore } from '../auth/api'
+import type { TranslationKey } from '../localization/dictionary'
 import { createStagePackageStageDrafts, type StagePackageStageDraft } from './stage-packages'
 import { buildStagePresetDraft, type StagePresetCode } from './stage-presets'
+
+export const codePattern = /^[A-Z0-9_]+$/
 
 export type TeamDraft = {
   teamCode: string
@@ -340,4 +344,36 @@ export function createTemplateCloneDraft(template: CompetitionTeamTemplate): Tem
     templateName: `${template.templateName} Copy`,
     description: template.description ?? '',
   }
+}
+
+export function storeLabel(store: AuthLookupStore) {
+  return `${store.storeCode} - ${store.storeName} - ${store.regionName}`
+}
+
+export function validateTemplateDraft(draft: TemplateDraft): TranslationKey | null {
+  if (!draft.templateCode.trim() || !codePattern.test(draft.templateCode)) {
+    return 'competition.stageBuilder.validation.templateCode'
+  }
+
+  if (!draft.templateName.trim()) {
+    return 'competition.stageBuilder.validation.templateName'
+  }
+
+  if (draft.storeIds.length === 0) {
+    return 'competition.stageBuilder.validation.templateStores'
+  }
+
+  return null
+}
+
+export function validateTemplateCloneDraft(draft: TemplateCloneDraft): TranslationKey | null {
+  if (!draft.templateCode.trim() || !codePattern.test(draft.templateCode)) {
+    return 'competition.stageBuilder.validation.templateCode'
+  }
+
+  if (!draft.templateName.trim()) {
+    return 'competition.stageBuilder.validation.templateName'
+  }
+
+  return null
 }
