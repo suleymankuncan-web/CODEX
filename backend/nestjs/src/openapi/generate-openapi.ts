@@ -1872,6 +1872,176 @@ const reportingSummaryResponseSchema = {
   },
 };
 
+const reportingKpiOwnerRoleSchema = {
+  type: "string",
+  enum: [
+    "DEPUTY_GM",
+    "REGION_MANAGER",
+    "STORE_MANAGER",
+    "STORE_PERSONNEL",
+    "VISUAL_TEAM",
+  ],
+};
+
+const reportingKpiScoreProfileMetricSchema = {
+  type: "object",
+  required: ["code", "label", "weightPercent", "ownerRole", "scoreBehavior"],
+  properties: {
+    code: { type: "string" },
+    label: { type: "string" },
+    weightPercent: { type: "number" },
+    ownerRole: reportingKpiOwnerRoleSchema,
+    scoreBehavior: {
+      type: "string",
+      enum: ["score_only", "warning_first", "task_candidate"],
+    },
+    direction: {
+      type: "string",
+      enum: ["HIGHER_IS_BETTER", "LOWER_IS_BETTER", "TARGET_BAND"],
+    },
+    benchmarkSource: {
+      type: "string",
+      enum: ["TARGET", "TURKEY_AVERAGE", "CHECKLIST_SCORE"],
+    },
+    capRatio: { type: "number" },
+    aliases: {
+      type: "array",
+      items: { type: "string" },
+    },
+    notes: { type: "string" },
+  },
+};
+
+const reportingKpiScoreProfileSchema = {
+  type: "object",
+  required: ["profileCode", "title", "summary", "metrics", "futureMetricRule"],
+  properties: {
+    profileCode: { type: "string", enum: ["store", "personnel"] },
+    title: { type: "string" },
+    summary: { type: "string" },
+    metrics: {
+      type: "array",
+      items: reportingKpiScoreProfileMetricSchema,
+    },
+    futureMetricRule: { type: "string" },
+  },
+};
+
+const reportingKpiOwnershipMatrixRowSchema = {
+  type: "object",
+  required: [
+    "code",
+    "label",
+    "visibleTo",
+    "operationalOwner",
+    "contributesTo",
+    "taskCandidate",
+  ],
+  properties: {
+    code: { type: "string" },
+    label: { type: "string" },
+    visibleTo: {
+      type: "array",
+      items: reportingKpiOwnerRoleSchema,
+    },
+    operationalOwner: reportingKpiOwnerRoleSchema,
+    contributesTo: {
+      type: "array",
+      items: { type: "string", enum: ["store", "personnel"] },
+    },
+    taskCandidate: { type: "boolean" },
+  },
+};
+
+const reportingKpiGradingBandSchema = {
+  type: "object",
+  required: ["code", "label", "emoji", "tone", "minScore"],
+  properties: {
+    code: { type: "string" },
+    label: { type: "string" },
+    emoji: { type: "string" },
+    tone: {
+      type: "string",
+      enum: ["calm", "accent", "warning", "danger", "neutral"],
+    },
+    minScore: { type: "number" },
+  },
+};
+
+const reportingKpiConfigSchema = {
+  type: "object",
+  required: ["storeProfile", "personnelProfile", "ownershipMatrix", "gradingBands"],
+  properties: {
+    storeProfile: reportingKpiScoreProfileSchema,
+    personnelProfile: reportingKpiScoreProfileSchema,
+    ownershipMatrix: {
+      type: "array",
+      items: reportingKpiOwnershipMatrixRowSchema,
+    },
+    gradingBands: {
+      type: "array",
+      items: reportingKpiGradingBandSchema,
+    },
+  },
+};
+
+const reportingKpiConfigVersionMetadataSchema = {
+  type: "object",
+  required: [
+    "kpiConfigVersionId",
+    "versionNo",
+    "effectiveFrom",
+    "effectiveTo",
+    "publishedAt",
+    "publishedBy",
+  ],
+  properties: {
+    kpiConfigVersionId: { type: "string", nullable: true },
+    versionNo: { type: "integer", nullable: true },
+    effectiveFrom: { type: "string", nullable: true },
+    effectiveTo: { type: "string", nullable: true },
+    publishedAt: { type: "string", nullable: true },
+    publishedBy: { type: "string", nullable: true },
+  },
+};
+
+const reportingKpiConfigResponseSchema = {
+  type: "object",
+  required: [...reportingKpiConfigSchema.required, "metadata"],
+  properties: {
+    ...reportingKpiConfigSchema.properties,
+    metadata: reportingKpiConfigVersionMetadataSchema,
+  },
+};
+
+const reportingKpiConfigEditorResponseSchema = {
+  type: "object",
+  required: [
+    "draftConfig",
+    "publishedConfig",
+    "hasUnpublishedChanges",
+    "latestPublishedVersion",
+  ],
+  properties: {
+    draftConfig: reportingKpiConfigSchema,
+    publishedConfig: reportingKpiConfigSchema,
+    hasUnpublishedChanges: { type: "boolean" },
+    latestPublishedVersion: reportingKpiConfigVersionMetadataSchema,
+  },
+};
+
+const reportingKpiConfigAuditResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: auditEventSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
 const snapshotStatusTotalsSchema = {
   type: "object",
   required: ["all", "queued", "running", "completed", "failed"],
@@ -2667,6 +2837,9 @@ async function generateOpenApi(): Promise<void> {
       workforceOffboardingRequestsResponseSchema,
     ReportingSummaryResponse: reportingSummaryResponseSchema,
     ReportingSnapshotRunsResponse: reportingSnapshotRunsResponseSchema,
+    ReportingKpiConfigResponse: reportingKpiConfigResponseSchema,
+    ReportingKpiConfigEditorResponse: reportingKpiConfigEditorResponseSchema,
+    ReportingKpiConfigAuditResponse: reportingKpiConfigAuditResponseSchema,
     ImportOverview: importOverviewSchema,
     ImportPayloadTemplateResponse: importPayloadTemplateSchema,
     ImportBatchAuditResponse: importBatchAuditResponseSchema,
@@ -2878,6 +3051,30 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Paginated reporting snapshot runs available for reporting surfaces.",
     "ReportingSnapshotRunsResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/reports/kpi-config",
+    "get",
+    "Published KPI score profile, ownership matrix, grading bands, and version metadata.",
+    "ReportingKpiConfigResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/reports/kpi-config/editor",
+    "get",
+    "Draft and published KPI config editor state for admin review.",
+    "ReportingKpiConfigEditorResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/reports/kpi-config/audit",
+    "get",
+    "Paginated KPI config audit events for admin governance.",
+    "ReportingKpiConfigAuditResponse",
   );
 
   setJsonResponseSchema(

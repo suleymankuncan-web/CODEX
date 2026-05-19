@@ -611,6 +611,59 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const reportingKpiConfigResponse =
+      document.paths["/api/reports/kpi-config"].get.responses?.["200"];
+    expect(
+      reportingKpiConfigResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/ReportingKpiConfigResponse",
+    });
+    expect(
+      document.components?.schemas?.ReportingKpiConfigResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        storeProfile: expect.any(Object),
+        personnelProfile: expect.any(Object),
+        ownershipMatrix: expect.any(Object),
+        gradingBands: expect.any(Object),
+        metadata: expect.any(Object),
+      }),
+    );
+
+    const reportingKpiConfigEditorResponse =
+      document.paths["/api/reports/kpi-config/editor"].get.responses?.["200"];
+    expect(
+      reportingKpiConfigEditorResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/ReportingKpiConfigEditorResponse",
+    });
+    expect(
+      document.components?.schemas?.ReportingKpiConfigEditorResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        draftConfig: expect.any(Object),
+        publishedConfig: expect.any(Object),
+        hasUnpublishedChanges: expect.any(Object),
+        latestPublishedVersion: expect.any(Object),
+      }),
+    );
+
+    const reportingKpiConfigAuditResponse =
+      document.paths["/api/reports/kpi-config/audit"].get.responses?.["200"];
+    expect(
+      reportingKpiConfigAuditResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/ReportingKpiConfigAuditResponse",
+    });
+    expect(
+      document.components?.schemas?.ReportingKpiConfigAuditResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
     const lookupsResponse =
       document.paths["/api/integrations/lookups"].get.responses?.["200"];
     expect(lookupsResponse?.content?.["application/json"]?.schema).toEqual({
