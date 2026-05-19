@@ -2395,7 +2395,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Competition stage package plan audit events for admin review.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompetitionStagePackagePlanAuditResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -5543,6 +5550,74 @@
                       }
                     }
                   }
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "count",
+              "total",
+              "limit",
+              "offset"
+            ],
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "CompetitionStagePackagePlanAuditResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "meta"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "eventLogId",
+                "occurredAt",
+                "actorUserId",
+                "eventType",
+                "metadata"
+              ],
+              "properties": {
+                "eventLogId": {
+                  "type": "string"
+                },
+                "occurredAt": {
+                  "type": "string"
+                },
+                "actorUserId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "eventType": {
+                  "type": "string"
+                },
+                "metadata": {
+                  "type": "object",
+                  "additionalProperties": true
                 }
               }
             }

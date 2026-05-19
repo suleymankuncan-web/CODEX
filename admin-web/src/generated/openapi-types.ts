@@ -22,6 +22,23 @@ export type components = {
         "offset": number
       }
     }
+    "CompetitionStagePackagePlanAuditResponse": {
+      "items": Array<{
+          "eventLogId": string
+          "occurredAt": string
+          "actorUserId": string | null
+          "eventType": string
+          "metadata": {
+            [key: string]: unknown
+          }
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
     "CompetitionTeamTemplateListResponse": {
       "items": Array<{
           "templateId": string
@@ -556,6 +573,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["CompetitionListResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/competitions/stage-package-plans/{planId}/audit": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["CompetitionStagePackagePlanAuditResponse"]
           }
         }
       }

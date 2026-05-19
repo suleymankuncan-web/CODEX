@@ -233,6 +233,27 @@ const competitionTeamTemplateSchema = {
   },
 };
 
+const competitionStagePackagePlanAuditEventSchema = {
+  type: "object",
+  required: [
+    "eventLogId",
+    "occurredAt",
+    "actorUserId",
+    "eventType",
+    "metadata",
+  ],
+  properties: {
+    eventLogId: { type: "string" },
+    occurredAt: { type: "string" },
+    actorUserId: { type: "string", nullable: true },
+    eventType: { type: "string" },
+    metadata: {
+      type: "object",
+      additionalProperties: true,
+    },
+  },
+};
+
 const importBatchNeedsActionItemSchema = {
   type: "object",
   required: [
@@ -804,6 +825,18 @@ const competitionTeamTemplateListResponseSchema = {
   },
 };
 
+const competitionStagePackagePlanAuditResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: competitionStagePackagePlanAuditEventSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
 const importBatchNeedsActionResponseSchema = {
   type: "object",
   required: ["items", "meta"],
@@ -1301,6 +1334,8 @@ async function generateOpenApi(): Promise<void> {
     CompetitionListResponse: competitionListResponseSchema,
     CompetitionTeamTemplateListResponse:
       competitionTeamTemplateListResponseSchema,
+    CompetitionStagePackagePlanAuditResponse:
+      competitionStagePackagePlanAuditResponseSchema,
     ImportOverview: importOverviewSchema,
     ImportPayloadTemplateResponse: importPayloadTemplateSchema,
     ImportBatchAuditResponse: importBatchAuditResponseSchema,
@@ -1343,6 +1378,14 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Paginated competition team templates visible to competition admins.",
     "CompetitionTeamTemplateListResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/competitions/stage-package-plans/{planId}/audit",
+    "get",
+    "Competition stage package plan audit events for admin review.",
+    "CompetitionStagePackagePlanAuditResponse",
   );
 
   setJsonResponseSchema(
