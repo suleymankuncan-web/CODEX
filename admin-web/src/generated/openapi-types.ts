@@ -228,6 +228,24 @@ export type components = {
           "label": string
         }>
     }
+    "StoreMasterListResponse": {
+      "items": Array<{
+          "storeId": string
+          "storeCode": string
+          "storeName": string
+          "storeType": string
+          "status": string
+          "kpiImportEnabled": boolean
+          "regionId": string | null
+          "regionName": string | null
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
     "StoreMasterLookups": {
       "storeTypes": Array<{
           "value": "company" | "franchise" | "operator"
@@ -275,6 +293,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["PersonnelMasterLookups"]
+          }
+        }
+      }
+    }
+  }
+  "/api/integrations/store-master": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["StoreMasterListResponse"]
           }
         }
       }

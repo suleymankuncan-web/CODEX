@@ -217,16 +217,8 @@ export type ExternalIdMapCandidate = {
   internalTableName: string
 }
 
-export type StoreMasterItem = {
-  storeId: string
-  storeCode: string
-  storeName: string
-  storeType: 'company' | 'franchise' | 'operator' | string
-  status: 'active' | 'inactive' | 'closed' | string
-  kpiImportEnabled: boolean
-  regionId: string | null
-  regionName: string | null
-}
+export type StoreMasterList = ApiGetResponse<'/api/integrations/store-master'>
+export type StoreMasterItem = StoreMasterList['items'][number]
 
 export type StoreMasterLookups = ApiGetResponse<'/api/integrations/store-master-lookups'>
 
@@ -474,9 +466,7 @@ export async function getStoreMasterData(input?: {
     params.set('status', input.status)
   }
 
-  return fetchJson<ListResponse<StoreMasterItem>>(
-    `/integrations/store-master?${params.toString()}`,
-  )
+  return fetchOpenApiJson('/api/integrations/store-master', { query: params })
 }
 
 export async function getStoreMasterLookups() {

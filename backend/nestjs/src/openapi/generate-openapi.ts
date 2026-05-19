@@ -273,6 +273,30 @@ const storeMasterLookupsSchema = {
   },
 };
 
+const storeMasterItemSchema = {
+  type: "object",
+  required: [
+    "storeId",
+    "storeCode",
+    "storeName",
+    "storeType",
+    "status",
+    "kpiImportEnabled",
+    "regionId",
+    "regionName",
+  ],
+  properties: {
+    storeId: { type: "string" },
+    storeCode: { type: "string" },
+    storeName: { type: "string" },
+    storeType: { type: "string" },
+    status: { type: "string" },
+    kpiImportEnabled: { type: "boolean" },
+    regionId: { type: "string", nullable: true },
+    regionName: { type: "string", nullable: true },
+  },
+};
+
 const personnelMasterLookupsSchema = {
   type: "object",
   required: ["stores", "positions", "employmentStatuses", "employmentTypes"],
@@ -337,6 +361,18 @@ const listResponseMetaSchema = {
     total: { type: "integer", minimum: 0 },
     limit: { type: "integer", minimum: 0 },
     offset: { type: "integer", minimum: 0 },
+  },
+};
+
+const storeMasterListResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: storeMasterItemSchema,
+    },
+    meta: listResponseMetaSchema,
   },
 };
 
@@ -668,6 +704,7 @@ async function generateOpenApi(): Promise<void> {
     ImportOverview: importOverviewSchema,
     IntegrationLookups: integrationLookupsSchema,
     PersonnelMasterLookups: personnelMasterLookupsSchema,
+    StoreMasterListResponse: storeMasterListResponseSchema,
     StoreMasterLookups: storeMasterLookupsSchema,
     MasterDataBootstrapBatchesResponse: masterDataBootstrapBatchesResponseSchema,
     MasterDataBootstrapBatchDetailResponse:
@@ -698,6 +735,14 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Store master lookup options for the admin master-data surface.",
     "StoreMasterLookups",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/integrations/store-master",
+    "get",
+    "Paginated store master data for the admin master-data surface.",
+    "StoreMasterListResponse",
   );
 
   setJsonResponseSchema(
