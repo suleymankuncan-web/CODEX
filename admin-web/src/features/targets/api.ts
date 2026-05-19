@@ -32,31 +32,9 @@ export type StoreTargetingPerson = {
   netSalesValue: number | null
 }
 
-export type TargetCoverageRow = {
-  storeId: string
-  storeName: string
-  employeeId: string
-  displayName: string
-  externalEmployeeRef: string | null
-  targetReferenceId: string | null
-  targetValue: number | null
-  pendingRequestId: string | null
-  pendingTargetValue: number | null
-  staleTargetReferenceId: string | null
-  targetStatus: string
-}
-
-export type TargetCoverageSummary = {
-  requestMonth: string
-  totalEmployees: number
-  coveredEmployees: number
-  missingEmployees: number
-  pendingEmployees: number
-  conflictEmployees: number
-  staleEmployees: number
-  uncoveredEmployees: number
-  coverageRate: number
-}
+export type TargetCoverage = ApiGetResponse<'/api/target-distributions/coverage'>
+export type TargetCoverageRow = TargetCoverage['items'][number]
+export type TargetCoverageSummary = TargetCoverage['summary']
 
 export async function getStoreTargetingPersonnel(storeId: string) {
   const params = new URLSearchParams({ storeId })
@@ -72,9 +50,7 @@ export async function getTargetCoverage(input: { requestMonth: string; storeId?:
     params.set('storeId', input.storeId)
   }
 
-  return fetchJson<ListResponse<TargetCoverageRow> & { summary: TargetCoverageSummary }>(
-    `/target-distributions/coverage?${params.toString()}`,
-  )
+  return fetchOpenApiJson('/api/target-distributions/coverage', { query: params })
 }
 
 export async function getTargetDistributionRequests(input?: { status?: string }) {
