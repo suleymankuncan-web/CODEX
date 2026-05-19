@@ -4,6 +4,24 @@
 
 export type components = {
   schemas: {
+    "CompetitionListResponse": {
+      "items": Array<{
+          "competitionId": string
+          "competitionCode": string
+          "competitionName": string
+          "description": string | null
+          "competitionType": "region_challenge" | "region_league" | "campaign"
+          "lifecycleState": "draft" | "published" | "active" | "completed" | "cancelled"
+          "startsOn": string
+          "endsOn": string
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
     "ExternalIdMapCandidatesResponse": {
       "items": Array<{
           "entityType": "employee" | "store"
@@ -511,6 +529,17 @@ export type components = {
 }
 
 export type paths = {
+  "/api/competitions": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["CompetitionListResponse"]
+          }
+        }
+      }
+    }
+  }
   "/api/integrations/external-id-map-candidates": {
     get: {
       responses: {

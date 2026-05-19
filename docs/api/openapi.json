@@ -1870,7 +1870,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Paginated competition summaries visible to the current actor.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompetitionListResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -5374,6 +5381,97 @@
           },
           "referenceAt": {
             "type": "string"
+          }
+        }
+      },
+      "CompetitionListResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "meta"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "competitionId",
+                "competitionCode",
+                "competitionName",
+                "description",
+                "competitionType",
+                "lifecycleState",
+                "startsOn",
+                "endsOn"
+              ],
+              "properties": {
+                "competitionId": {
+                  "type": "string"
+                },
+                "competitionCode": {
+                  "type": "string"
+                },
+                "competitionName": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "competitionType": {
+                  "type": "string",
+                  "enum": [
+                    "region_challenge",
+                    "region_league",
+                    "campaign"
+                  ]
+                },
+                "lifecycleState": {
+                  "type": "string",
+                  "enum": [
+                    "draft",
+                    "published",
+                    "active",
+                    "completed",
+                    "cancelled"
+                  ]
+                },
+                "startsOn": {
+                  "type": "string"
+                },
+                "endsOn": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "count",
+              "total",
+              "limit",
+              "offset"
+            ],
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
           }
         }
       },

@@ -169,6 +169,36 @@ const importPayloadTemplateSchema = {
   },
 };
 
+const competitionSummarySchema = {
+  type: "object",
+  required: [
+    "competitionId",
+    "competitionCode",
+    "competitionName",
+    "description",
+    "competitionType",
+    "lifecycleState",
+    "startsOn",
+    "endsOn",
+  ],
+  properties: {
+    competitionId: { type: "string" },
+    competitionCode: { type: "string" },
+    competitionName: { type: "string" },
+    description: { type: "string", nullable: true },
+    competitionType: {
+      type: "string",
+      enum: ["region_challenge", "region_league", "campaign"],
+    },
+    lifecycleState: {
+      type: "string",
+      enum: ["draft", "published", "active", "completed", "cancelled"],
+    },
+    startsOn: { type: "string" },
+    endsOn: { type: "string" },
+  },
+};
+
 const importBatchNeedsActionItemSchema = {
   type: "object",
   required: [
@@ -716,6 +746,18 @@ const listResponseMetaSchema = {
   },
 };
 
+const competitionListResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: competitionSummarySchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
 const importBatchNeedsActionResponseSchema = {
   type: "object",
   required: ["items", "meta"],
@@ -1210,6 +1252,7 @@ async function generateOpenApi(): Promise<void> {
   document.components = document.components ?? {};
   document.components.schemas = {
     ...(document.components.schemas ?? {}),
+    CompetitionListResponse: competitionListResponseSchema,
     ImportOverview: importOverviewSchema,
     ImportPayloadTemplateResponse: importPayloadTemplateSchema,
     ImportBatchAuditResponse: importBatchAuditResponseSchema,
@@ -1236,6 +1279,14 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Import admin overview with totals and latest actionable batches.",
     "ImportOverview",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/competitions",
+    "get",
+    "Paginated competition summaries visible to the current actor.",
+    "CompetitionListResponse",
   );
 
   setJsonResponseSchema(

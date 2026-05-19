@@ -215,6 +215,20 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const competitionListResponse =
+      document.paths["/api/competitions"].get.responses?.["200"];
+    expect(competitionListResponse?.content?.["application/json"]?.schema).toEqual({
+      $ref: "#/components/schemas/CompetitionListResponse",
+    });
+    expect(
+      document.components?.schemas?.CompetitionListResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
     const lookupsResponse =
       document.paths["/api/integrations/lookups"].get.responses?.["200"];
     expect(lookupsResponse?.content?.["application/json"]?.schema).toEqual({

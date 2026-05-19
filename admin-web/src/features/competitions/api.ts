@@ -1,4 +1,5 @@
 import { fetchJson, sendJson } from '../../lib/api'
+import { fetchOpenApiJson, type ApiGetResponse } from '../../lib/openapi-client'
 import type { StagePresetCode } from './stage-presets'
 
 type ListResponse<T> = {
@@ -19,16 +20,8 @@ type CommandResponse<TData> = {
   data: TData
 }
 
-export type CompetitionSummary = {
-  competitionId: string
-  competitionCode: string
-  competitionName: string
-  description: string | null
-  competitionType: 'region_challenge' | 'region_league' | 'campaign'
-  lifecycleState: 'draft' | 'published' | 'active' | 'completed' | 'cancelled'
-  startsOn: string
-  endsOn: string
-}
+export type CompetitionList = ApiGetResponse<'/api/competitions'>
+export type CompetitionSummary = CompetitionList['items'][number]
 
 export type CompetitionStageSummary = {
   competitionStageId: string
@@ -208,7 +201,7 @@ export type CloneCompetitionTeamTemplatePayload = {
 }
 
 export async function listCompetitions() {
-  return fetchJson<ListResponse<CompetitionSummary>>('/competitions')
+  return fetchOpenApiJson('/api/competitions')
 }
 
 export async function listCompetitionTeamTemplates(input?: { activeOnly?: boolean }) {
