@@ -4,6 +4,21 @@
 
 export type components = {
   schemas: {
+    "ExternalIdMapCandidatesResponse": {
+      "items": Array<{
+          "entityType": "employee" | "store"
+          "internalId": string
+          "label": string
+          "secondaryLabel": string
+          "internalTableName": string
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
     "ImportBatchNeedsActionResponse": {
       "items": Array<{
           "batchId": string
@@ -324,6 +339,17 @@ export type components = {
 }
 
 export type paths = {
+  "/api/integrations/external-id-map-candidates": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ExternalIdMapCandidatesResponse"]
+          }
+        }
+      }
+    }
+  }
   "/api/integrations/import-batches/overview": {
     get: {
       responses: {

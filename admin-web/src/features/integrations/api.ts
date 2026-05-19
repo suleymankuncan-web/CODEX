@@ -190,13 +190,9 @@ export type ImportBatchError = {
   processedAt: string | null
 }
 
-export type ExternalIdMapCandidate = {
-  entityType: 'employee' | 'store'
-  internalId: string
-  label: string
-  secondaryLabel: string
-  internalTableName: string
-}
+export type ExternalIdMapCandidates =
+  ApiGetResponse<'/api/integrations/external-id-map-candidates'>
+export type ExternalIdMapCandidate = ExternalIdMapCandidates['items'][number]
 
 export type StoreMasterList = ApiGetResponse<'/api/integrations/store-master'>
 export type StoreMasterItem = StoreMasterList['items'][number]
@@ -378,9 +374,9 @@ export async function getExternalIdMapCandidates(input: {
     params.set('q', search)
   }
 
-  return fetchJson<ListResponse<ExternalIdMapCandidate>>(
-    `/integrations/external-id-map-candidates?${params.toString()}`,
-  )
+  return fetchOpenApiJson('/api/integrations/external-id-map-candidates', {
+    query: params,
+  })
 }
 
 export async function approveExternalIdMap(input: {
