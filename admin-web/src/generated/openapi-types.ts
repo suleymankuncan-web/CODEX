@@ -4,6 +4,30 @@
 
 export type components = {
   schemas: {
+    "AuthActionStoreAssignmentsResponse": {
+      "items": Array<{
+          "assignmentId": string
+          "userId": string
+          "username": string
+          "email": string
+          "storeId": string
+          "storeCode": string
+          "storeName": string
+          "companyId": string
+          "regionId": string
+          "regionName": string
+          "effectiveFrom": string | null
+          "effectiveTo": string | null
+          "createdAt": string
+          "active": boolean
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
     "AuthLookupsResponse": {
       "scopeTypes": string[]
       "authProviders": string[]
@@ -2052,6 +2076,17 @@ export type components = {
 }
 
 export type paths = {
+  "/api/auth/action-store-assignments": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["AuthActionStoreAssignmentsResponse"]
+          }
+        }
+      }
+    }
+  }
   "/api/auth/lookups": {
     get: {
       responses: {

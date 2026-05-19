@@ -1144,6 +1144,42 @@ const authRoleAssignmentSchema = {
   },
 };
 
+const authActionStoreAssignmentSchema = {
+  type: "object",
+  required: [
+    "assignmentId",
+    "userId",
+    "username",
+    "email",
+    "storeId",
+    "storeCode",
+    "storeName",
+    "companyId",
+    "regionId",
+    "regionName",
+    "effectiveFrom",
+    "effectiveTo",
+    "createdAt",
+    "active",
+  ],
+  properties: {
+    assignmentId: { type: "string" },
+    userId: { type: "string" },
+    username: { type: "string" },
+    email: { type: "string" },
+    storeId: { type: "string" },
+    storeCode: { type: "string" },
+    storeName: { type: "string" },
+    companyId: { type: "string" },
+    regionId: { type: "string" },
+    regionName: { type: "string" },
+    effectiveFrom: { type: "string", nullable: true },
+    effectiveTo: { type: "string", nullable: true },
+    createdAt: { type: "string" },
+    active: { type: "boolean" },
+  },
+};
+
 const authLookupStoreSchema = {
   type: "object",
   required: [
@@ -1631,6 +1667,18 @@ const authRoleAssignmentsResponseSchema = {
     items: {
       type: "array",
       items: authRoleAssignmentSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
+const authActionStoreAssignmentsResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: authActionStoreAssignmentSchema,
     },
     meta: listResponseMetaSchema,
   },
@@ -4144,6 +4192,8 @@ async function generateOpenApi(): Promise<void> {
     AuthPermissionCatalogResponse: authPermissionCatalogResponseSchema,
     AuthUserAccountsResponse: authUserAccountsResponseSchema,
     AuthRoleAssignmentsResponse: authRoleAssignmentsResponseSchema,
+    AuthActionStoreAssignmentsResponse:
+      authActionStoreAssignmentsResponseSchema,
     ImportOverview: importOverviewSchema,
     ImportPayloadTemplateResponse: importPayloadTemplateSchema,
     ImportBatchAuditResponse: importBatchAuditResponseSchema,
@@ -4515,6 +4565,14 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Paginated auth role assignments visible to auth admins.",
     "AuthRoleAssignmentsResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/action-store-assignments",
+    "get",
+    "Paginated auth action-store assignments visible to auth admins.",
+    "AuthActionStoreAssignmentsResponse",
   );
 
   setJsonResponseSchema(

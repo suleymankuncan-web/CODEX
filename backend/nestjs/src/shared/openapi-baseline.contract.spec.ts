@@ -942,6 +942,23 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const authActionStoreAssignmentsResponse =
+      document.paths["/api/auth/action-store-assignments"].get.responses?.["200"];
+    expect(
+      authActionStoreAssignmentsResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/AuthActionStoreAssignmentsResponse",
+    });
+    expect(
+      document.components?.schemas?.AuthActionStoreAssignmentsResponse
+        ?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
     const lookupsResponse =
       document.paths["/api/integrations/lookups"].get.responses?.["200"];
     expect(lookupsResponse?.content?.["application/json"]?.schema).toEqual({
