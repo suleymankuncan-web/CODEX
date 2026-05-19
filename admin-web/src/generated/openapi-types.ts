@@ -599,6 +599,65 @@ export type components = {
         }
       }
     }
+    "MobileChecklistTodayResponse": {
+      "data": {
+        "stores": Array<{
+            "storeId": string
+            "storeName": string
+          }>
+        "templates": Array<{
+            "checklistTemplateId": string
+            "templateCode": string
+            "templateType": string
+            "templateName": string
+            "versionNo": number
+            "items": Array<{
+                "templateItemId": string
+                "sectionName": string
+                "itemNo": number
+                "itemText": string
+                "responseType": "score" | "yes_no" | "partial" | "text"
+                "weight": number
+                "maxScore": number
+              }>
+          }>
+        "activeInstances": Array<{
+            "checklistInstanceId": string
+            "checklistTemplateId": string
+            "storeId": string
+            "status": "planned" | "in_progress" | "completed" | "cancelled"
+            "startedAt": string | null
+            "updatedAt": string | null
+            "responses": Array<{
+                "templateItemId": string
+                "scoreValue": number
+                "commentText": string | null
+              }>
+          }>
+        "completedThisMonth": Array<{
+            "checklistInstanceId": string
+            "checklistTemplateId": string
+            "storeId": string
+            "completedAt": string
+            "totalScore": number
+            "acknowledgedAt": string | null
+          }>
+        "pendingAcknowledgements": Array<{
+            "checklistInstanceId": string
+            "checklistTemplateId": string
+            "storeId": string
+            "completedAt": string
+            "totalScore": number
+          }>
+        "monthlySummaries": Array<{
+            "storeId": string
+            "checklistTemplateId": string
+            "monthStart": string
+            "completedCount": number
+            "averageScore": number | null
+          }>
+      }
+    }
     "PersonnelMasterListResponse": {
       "items": Array<{
           "employeeId": string
@@ -914,6 +973,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["MasterDataBootstrapPromotionReadinessResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/mobile/checklists/today": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["MobileChecklistTodayResponse"]
           }
         }
       }

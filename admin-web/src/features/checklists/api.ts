@@ -1,4 +1,5 @@
-import { fetchJson, sendJson } from '../../lib/api'
+import { sendJson } from '../../lib/api'
+import { fetchOpenApiJson, type ApiGetResponse } from '../../lib/openapi-client'
 
 type ListResponse<T> = {
   items: T[]
@@ -93,69 +94,19 @@ export type ChecklistAcknowledgementItem = {
   } | null
 }
 
-export type MobileChecklistToday = {
-  stores: Array<{ storeId: string; storeName: string }>
-  templates: Array<{
-    checklistTemplateId: string
-    templateCode: string
-    templateType: string
-    templateName: string
-    versionNo: number
-    items: Array<{
-      templateItemId: string
-      sectionName: string
-      itemNo: number
-      itemText: string
-      responseType: string
-      weight: number
-      maxScore: number
-    }>
-  }>
-  activeInstances: Array<{
-    checklistInstanceId: string
-    checklistTemplateId: string
-    storeId: string
-    status: string
-    startedAt: string | null
-    updatedAt: string | null
-    responses: Array<{
-      templateItemId: string
-      scoreValue: number
-      commentText: string | null
-    }>
-  }>
-  completedThisMonth: Array<{
-    checklistInstanceId: string
-    checklistTemplateId: string
-    storeId: string
-    completedAt: string
-    totalScore: number
-    acknowledgedAt: string | null
-  }>
-  pendingAcknowledgements: Array<{
-    checklistInstanceId: string
-    checklistTemplateId: string
-    storeId: string
-    completedAt: string
-    totalScore: number
-  }>
-  monthlySummaries: Array<{
-    storeId: string
-    checklistTemplateId: string
-    monthStart: string
-    completedCount: number
-    averageScore: number | null
-  }>
-}
+export type MobileChecklistTodayResponse = ApiGetResponse<'/api/mobile/checklists/today'>
+export type MobileChecklistToday = MobileChecklistTodayResponse['data']
+export type MobileChecklistInstanceStatus =
+  MobileChecklistToday['activeInstances'][number]['status']
 
 export type MobileChecklistInstance = {
   checklist_instance_id: string
-  status: string
+  status: MobileChecklistInstanceStatus
   created_at: string
 }
 
 export async function getMobileChecklistToday() {
-  return fetchJson<{ data: MobileChecklistToday }>('/mobile/checklists/today')
+  return fetchOpenApiJson('/api/mobile/checklists/today')
 }
 
 export async function startMobileChecklistInstance(input: {
@@ -193,13 +144,17 @@ export async function saveMobileChecklistResponse(input: {
 export async function completeMobileChecklistInstance(input: {
   checklistInstanceId: string
 }) {
-  return sendJson<CommandResponse<{ checklistInstance: { checklist_instance_id: string; status: string } }>>(
-    `/mobile/checklists/instances/${input.checklistInstanceId}/complete`,
-    {
-      method: 'POST',
-      body: {},
-    },
-  )
+  return sendJson<
+    CommandResponse<{
+      checklistInstance: {
+        checklist_instance_id: string
+        status: MobileChecklistInstanceStatus
+      }
+    }>
+  >(`/mobile/checklists/instances/${input.checklistInstanceId}/complete`, {
+    method: 'POST',
+    body: {},
+  })
 }
 
 export async function getChecklistAcknowledgements() {

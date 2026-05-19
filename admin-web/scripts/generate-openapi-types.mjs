@@ -37,6 +37,7 @@ const selectedOperations = [
     path: '/api/integrations/master-data-bootstrap/batches/{batchId}/promotion-readiness',
     method: 'get',
   },
+  { path: '/api/mobile/checklists/today', method: 'get' },
 ]
 const selectedSchemaNames = collectReferencedSchemaNames(document, selectedOperations)
 

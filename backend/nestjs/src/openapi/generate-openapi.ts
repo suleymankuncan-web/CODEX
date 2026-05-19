@@ -35,6 +35,200 @@ const mobileSessionHeader = {
   },
 };
 
+const mobileChecklistTodayStoreSchema = {
+  type: "object",
+  required: ["storeId", "storeName"],
+  properties: {
+    storeId: { type: "string" },
+    storeName: { type: "string" },
+  },
+};
+
+const mobileChecklistTodayTemplateItemSchema = {
+  type: "object",
+  required: [
+    "templateItemId",
+    "sectionName",
+    "itemNo",
+    "itemText",
+    "responseType",
+    "weight",
+    "maxScore",
+  ],
+  properties: {
+    templateItemId: { type: "string" },
+    sectionName: { type: "string" },
+    itemNo: { type: "integer" },
+    itemText: { type: "string" },
+    responseType: { type: "string", enum: ["score", "yes_no", "partial", "text"] },
+    weight: { type: "number" },
+    maxScore: { type: "number" },
+  },
+};
+
+const mobileChecklistTodayTemplateSchema = {
+  type: "object",
+  required: [
+    "checklistTemplateId",
+    "templateCode",
+    "templateType",
+    "templateName",
+    "versionNo",
+    "items",
+  ],
+  properties: {
+    checklistTemplateId: { type: "string" },
+    templateCode: { type: "string" },
+    templateType: { type: "string" },
+    templateName: { type: "string" },
+    versionNo: { type: "integer" },
+    items: {
+      type: "array",
+      items: mobileChecklistTodayTemplateItemSchema,
+    },
+  },
+};
+
+const mobileChecklistTodayDraftResponseSchema = {
+  type: "object",
+  required: ["templateItemId", "scoreValue", "commentText"],
+  properties: {
+    templateItemId: { type: "string" },
+    scoreValue: { type: "number" },
+    commentText: { type: "string", nullable: true },
+  },
+};
+
+const mobileChecklistTodayActiveInstanceSchema = {
+  type: "object",
+  required: [
+    "checklistInstanceId",
+    "checklistTemplateId",
+    "storeId",
+    "status",
+    "startedAt",
+    "updatedAt",
+    "responses",
+  ],
+  properties: {
+    checklistInstanceId: { type: "string" },
+    checklistTemplateId: { type: "string" },
+    storeId: { type: "string" },
+    status: {
+      type: "string",
+      enum: ["planned", "in_progress", "completed", "cancelled"],
+    },
+    startedAt: { type: "string", nullable: true },
+    updatedAt: { type: "string", nullable: true },
+    responses: {
+      type: "array",
+      items: mobileChecklistTodayDraftResponseSchema,
+    },
+  },
+};
+
+const mobileChecklistTodayCompletedItemSchema = {
+  type: "object",
+  required: [
+    "checklistInstanceId",
+    "checklistTemplateId",
+    "storeId",
+    "completedAt",
+    "totalScore",
+    "acknowledgedAt",
+  ],
+  properties: {
+    checklistInstanceId: { type: "string" },
+    checklistTemplateId: { type: "string" },
+    storeId: { type: "string" },
+    completedAt: { type: "string" },
+    totalScore: { type: "number" },
+    acknowledgedAt: { type: "string", nullable: true },
+  },
+};
+
+const mobileChecklistTodayPendingAcknowledgementSchema = {
+  type: "object",
+  required: [
+    "checklistInstanceId",
+    "checklistTemplateId",
+    "storeId",
+    "completedAt",
+    "totalScore",
+  ],
+  properties: {
+    checklistInstanceId: { type: "string" },
+    checklistTemplateId: { type: "string" },
+    storeId: { type: "string" },
+    completedAt: { type: "string" },
+    totalScore: { type: "number" },
+  },
+};
+
+const mobileChecklistTodayMonthlySummarySchema = {
+  type: "object",
+  required: [
+    "storeId",
+    "checklistTemplateId",
+    "monthStart",
+    "completedCount",
+    "averageScore",
+  ],
+  properties: {
+    storeId: { type: "string" },
+    checklistTemplateId: { type: "string" },
+    monthStart: { type: "string" },
+    completedCount: { type: "integer", minimum: 0 },
+    averageScore: { type: "number", nullable: true },
+  },
+};
+
+const mobileChecklistTodaySchema = {
+  type: "object",
+  required: [
+    "stores",
+    "templates",
+    "activeInstances",
+    "completedThisMonth",
+    "pendingAcknowledgements",
+    "monthlySummaries",
+  ],
+  properties: {
+    stores: {
+      type: "array",
+      items: mobileChecklistTodayStoreSchema,
+    },
+    templates: {
+      type: "array",
+      items: mobileChecklistTodayTemplateSchema,
+    },
+    activeInstances: {
+      type: "array",
+      items: mobileChecklistTodayActiveInstanceSchema,
+    },
+    completedThisMonth: {
+      type: "array",
+      items: mobileChecklistTodayCompletedItemSchema,
+    },
+    pendingAcknowledgements: {
+      type: "array",
+      items: mobileChecklistTodayPendingAcknowledgementSchema,
+    },
+    monthlySummaries: {
+      type: "array",
+      items: mobileChecklistTodayMonthlySummarySchema,
+    },
+  },
+};
+
+const mobileChecklistTodayResponseSchema = {
+  type: "object",
+  required: ["data"],
+  properties: {
+    data: mobileChecklistTodaySchema,
+  },
+};
+
 const importOverviewSchema = {
   type: "object",
   required: ["totals", "healthTotals", "actionTotals", "latest"],
@@ -1680,6 +1874,7 @@ async function generateOpenApi(): Promise<void> {
       masterDataBootstrapBatchDetailResponseSchema,
     MasterDataBootstrapPromotionReadinessResponse:
       masterDataBootstrapPromotionReadinessResponseSchema,
+    MobileChecklistTodayResponse: mobileChecklistTodayResponseSchema,
   };
 
   setJsonResponseSchema(
@@ -1848,6 +2043,14 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Master data bootstrap batch detail with staged row evidence.",
     "MasterDataBootstrapBatchDetailResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/mobile/checklists/today",
+    "get",
+    "Mobile checklist dashboard data for the current actor.",
+    "MobileChecklistTodayResponse",
   );
 
   const outputPath = resolve(process.cwd(), "../../docs/api/openapi.json");
