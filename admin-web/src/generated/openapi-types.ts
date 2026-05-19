@@ -181,6 +181,23 @@ export type components = {
         "offset": number
       }
     }
+    "DailyClosureStatusResponse": {
+      "automationEnabled": boolean
+      "automationPollMinutes": number
+      "timezone": string
+      "referenceAt": string
+      "localDate": string
+      "closureDate": string
+      "healthState": string
+      "dueNow": boolean
+      "canQueue": boolean
+      "canRerun": boolean
+      "recommendedAction": string
+      "existingSnapshotRunId": string | null
+      "existingRunStatus": string | null
+      "existingFailureReason": string | null
+      "existingGeneratedAt": string | null
+    }
     "ExternalIdMapCandidatesResponse": {
       "items": Array<{
           "entityType": "employee" | "store"
@@ -710,6 +727,66 @@ export type components = {
           "label": string
         }>
     }
+    "SnapshotNeedsActionResponse": {
+      "items": Array<{
+          "snapshotRunId": string
+          "snapshotDate": string
+          "snapshotType": string
+          "periodStart": string
+          "periodEnd": string
+          "runStatus": string
+          "healthState": string
+          "generatedAt": string
+          "generatedBy": string
+          "startedAt": string | null
+          "finishedAt": string | null
+          "failureReason": string | null
+          "rerunOfSnapshotRunId": string | null
+          "kpiConfigVersion": {
+            "kpiConfigVersionId": string | null
+            "versionNo": number | null
+            "state": "versioned" | "pre_governance"
+          }
+          "actionReason": string
+          "recommendedAction": string
+          "canRerun": boolean
+          "rerunCount": number
+          "latestRerunSnapshotRunId": string | null
+          "isStuck": boolean
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
+    "SnapshotOverviewResponse": {
+      "totals": {
+        "all": number
+        "queued": number
+        "running": number
+        "completed": number
+        "failed": number
+      }
+      "healthTotals": {
+        "healthy": number
+        "inProgress": number
+        "retryReady": number
+        "needsAction": number
+        "stuck": number
+      }
+      "actionTotals": {
+        "retryReady": number
+        "stuck": number
+      }
+      "latest": {
+        "completedSnapshotRunId": string | null
+        "failedSnapshotRunId": string | null
+        "inProgressSnapshotRunId": string | null
+        "stuckSnapshotRunId": string | null
+      }
+    }
     "StoreMasterListResponse": {
       "items": Array<{
           "storeId": string
@@ -1094,6 +1171,39 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["MobileChecklistTodayResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/snapshots/daily-closure": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["DailyClosureStatusResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/snapshots/runs/needs-action": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["SnapshotNeedsActionResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/snapshots/runs/overview": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["SnapshotOverviewResponse"]
           }
         }
       }

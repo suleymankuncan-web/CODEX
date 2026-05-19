@@ -379,6 +379,55 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const snapshotOverviewResponse =
+      document.paths["/api/snapshots/runs/overview"].get.responses?.["200"];
+    expect(snapshotOverviewResponse?.content?.["application/json"]?.schema).toEqual({
+      $ref: "#/components/schemas/SnapshotOverviewResponse",
+    });
+    expect(
+      document.components?.schemas?.SnapshotOverviewResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        totals: expect.any(Object),
+        healthTotals: expect.any(Object),
+        actionTotals: expect.any(Object),
+        latest: expect.any(Object),
+      }),
+    );
+
+    const dailyClosureStatusResponse =
+      document.paths["/api/snapshots/daily-closure"].get.responses?.["200"];
+    expect(
+      dailyClosureStatusResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/DailyClosureStatusResponse",
+    });
+    expect(
+      document.components?.schemas?.DailyClosureStatusResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        automationEnabled: expect.any(Object),
+        healthState: expect.any(Object),
+        recommendedAction: expect.any(Object),
+      }),
+    );
+
+    const snapshotNeedsActionResponse =
+      document.paths["/api/snapshots/runs/needs-action"].get.responses?.["200"];
+    expect(
+      snapshotNeedsActionResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/SnapshotNeedsActionResponse",
+    });
+    expect(
+      document.components?.schemas?.SnapshotNeedsActionResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
     const lookupsResponse =
       document.paths["/api/integrations/lookups"].get.responses?.["200"];
     expect(lookupsResponse?.content?.["application/json"]?.schema).toEqual({

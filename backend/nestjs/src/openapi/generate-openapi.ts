@@ -1588,6 +1588,172 @@ const workflowInboxResponseSchema = {
   },
 };
 
+const snapshotStatusTotalsSchema = {
+  type: "object",
+  required: ["all", "queued", "running", "completed", "failed"],
+  properties: {
+    all: { type: "integer", minimum: 0 },
+    queued: { type: "integer", minimum: 0 },
+    running: { type: "integer", minimum: 0 },
+    completed: { type: "integer", minimum: 0 },
+    failed: { type: "integer", minimum: 0 },
+  },
+};
+
+const snapshotOverviewHealthTotalsSchema = {
+  type: "object",
+  required: ["healthy", "inProgress", "retryReady", "needsAction", "stuck"],
+  properties: {
+    healthy: { type: "integer", minimum: 0 },
+    inProgress: { type: "integer", minimum: 0 },
+    retryReady: { type: "integer", minimum: 0 },
+    needsAction: { type: "integer", minimum: 0 },
+    stuck: { type: "integer", minimum: 0 },
+  },
+};
+
+const snapshotOverviewActionTotalsSchema = {
+  type: "object",
+  required: ["retryReady", "stuck"],
+  properties: {
+    retryReady: { type: "integer", minimum: 0 },
+    stuck: { type: "integer", minimum: 0 },
+  },
+};
+
+const snapshotOverviewResponseSchema = {
+  type: "object",
+  required: ["totals", "healthTotals", "actionTotals", "latest"],
+  properties: {
+    totals: snapshotStatusTotalsSchema,
+    healthTotals: snapshotOverviewHealthTotalsSchema,
+    actionTotals: snapshotOverviewActionTotalsSchema,
+    latest: {
+      type: "object",
+      required: [
+        "completedSnapshotRunId",
+        "failedSnapshotRunId",
+        "inProgressSnapshotRunId",
+        "stuckSnapshotRunId",
+      ],
+      properties: {
+        completedSnapshotRunId: { type: "string", nullable: true },
+        failedSnapshotRunId: { type: "string", nullable: true },
+        inProgressSnapshotRunId: { type: "string", nullable: true },
+        stuckSnapshotRunId: { type: "string", nullable: true },
+      },
+    },
+  },
+};
+
+const dailyClosureStatusResponseSchema = {
+  type: "object",
+  required: [
+    "automationEnabled",
+    "automationPollMinutes",
+    "timezone",
+    "referenceAt",
+    "localDate",
+    "closureDate",
+    "healthState",
+    "dueNow",
+    "canQueue",
+    "canRerun",
+    "recommendedAction",
+    "existingSnapshotRunId",
+    "existingRunStatus",
+    "existingFailureReason",
+    "existingGeneratedAt",
+  ],
+  properties: {
+    automationEnabled: { type: "boolean" },
+    automationPollMinutes: { type: "integer", minimum: 0 },
+    timezone: { type: "string" },
+    referenceAt: { type: "string" },
+    localDate: { type: "string" },
+    closureDate: { type: "string" },
+    healthState: { type: "string" },
+    dueNow: { type: "boolean" },
+    canQueue: { type: "boolean" },
+    canRerun: { type: "boolean" },
+    recommendedAction: { type: "string" },
+    existingSnapshotRunId: { type: "string", nullable: true },
+    existingRunStatus: { type: "string", nullable: true },
+    existingFailureReason: { type: "string", nullable: true },
+    existingGeneratedAt: { type: "string", nullable: true },
+  },
+};
+
+const snapshotKpiConfigVersionSchema = {
+  type: "object",
+  required: ["kpiConfigVersionId", "versionNo", "state"],
+  properties: {
+    kpiConfigVersionId: { type: "string", nullable: true },
+    versionNo: { type: "integer", nullable: true },
+    state: { type: "string", enum: ["versioned", "pre_governance"] },
+  },
+};
+
+const snapshotNeedsActionItemSchema = {
+  type: "object",
+  required: [
+    "snapshotRunId",
+    "snapshotDate",
+    "snapshotType",
+    "periodStart",
+    "periodEnd",
+    "runStatus",
+    "healthState",
+    "generatedAt",
+    "generatedBy",
+    "startedAt",
+    "finishedAt",
+    "failureReason",
+    "rerunOfSnapshotRunId",
+    "kpiConfigVersion",
+    "actionReason",
+    "recommendedAction",
+    "canRerun",
+    "rerunCount",
+    "latestRerunSnapshotRunId",
+    "isStuck",
+  ],
+  properties: {
+    snapshotRunId: { type: "string" },
+    snapshotDate: { type: "string" },
+    snapshotType: { type: "string" },
+    periodStart: { type: "string" },
+    periodEnd: { type: "string" },
+    runStatus: { type: "string" },
+    healthState: { type: "string" },
+    generatedAt: { type: "string" },
+    generatedBy: { type: "string" },
+    startedAt: { type: "string", nullable: true },
+    finishedAt: { type: "string", nullable: true },
+    failureReason: { type: "string", nullable: true },
+    rerunOfSnapshotRunId: { type: "string", nullable: true },
+    kpiConfigVersion: snapshotKpiConfigVersionSchema,
+    actionReason: { type: "string" },
+    recommendedAction: { type: "string" },
+    canRerun: { type: "boolean" },
+    rerunCount: { type: "integer", minimum: 0 },
+    latestRerunSnapshotRunId: { type: "string", nullable: true },
+    isStuck: { type: "boolean" },
+  },
+};
+
+const snapshotNeedsActionResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: snapshotNeedsActionItemSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
 const importBatchNeedsActionResponseSchema = {
   type: "object",
   required: ["items", "meta"],
@@ -2094,6 +2260,9 @@ async function generateOpenApi(): Promise<void> {
     TargetCoverageResponse: targetCoverageResponseSchema,
     StoreTargetingPersonnelResponse: storeTargetingPersonnelResponseSchema,
     WorkflowInboxResponse: workflowInboxResponseSchema,
+    SnapshotOverviewResponse: snapshotOverviewResponseSchema,
+    DailyClosureStatusResponse: dailyClosureStatusResponseSchema,
+    SnapshotNeedsActionResponse: snapshotNeedsActionResponseSchema,
     ImportOverview: importOverviewSchema,
     ImportPayloadTemplateResponse: importPayloadTemplateSchema,
     ImportBatchAuditResponse: importBatchAuditResponseSchema,
@@ -2193,6 +2362,30 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Shared workflow inbox items visible to the current actor.",
     "WorkflowInboxResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/snapshots/runs/overview",
+    "get",
+    "Snapshot run overview totals and latest actionable run pointers.",
+    "SnapshotOverviewResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/snapshots/daily-closure",
+    "get",
+    "Daily snapshot closure readiness for the current actor.",
+    "DailyClosureStatusResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/snapshots/runs/needs-action",
+    "get",
+    "Paginated snapshot runs requiring operator action.",
+    "SnapshotNeedsActionResponse",
   );
 
   setJsonResponseSchema(

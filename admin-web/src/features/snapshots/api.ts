@@ -1,4 +1,5 @@
 import { fetchJson, sendJson } from '../../lib/api'
+import { fetchOpenApiJson, type ApiGetResponse } from '../../lib/openapi-client'
 
 type ListResponse<T> = {
   items: T[]
@@ -16,55 +17,10 @@ type SnapshotKpiConfigVersion = {
   state: 'versioned' | 'pre_governance'
 }
 
-export type SnapshotOverview = {
-  totals: {
-    all: number
-    queued: number
-    running: number
-    completed: number
-    failed: number
-  }
-  healthTotals: {
-    healthy: number
-    inProgress: number
-    retryReady: number
-    needsAction: number
-    stuck: number
-  }
-  actionTotals: {
-    retryReady: number
-    stuck: number
-  }
-  latest: {
-    completedSnapshotRunId: string | null
-    failedSnapshotRunId: string | null
-    inProgressSnapshotRunId: string | null
-    stuckSnapshotRunId: string | null
-  }
-}
+export type SnapshotOverview = ApiGetResponse<'/api/snapshots/runs/overview'>
 
-export type SnapshotNeedsActionItem = {
-  snapshotRunId: string
-  snapshotDate: string
-  snapshotType: string
-  periodStart: string
-  periodEnd: string
-  runStatus: string
-  healthState: string
-  generatedAt: string
-  generatedBy: string
-  startedAt: string | null
-  finishedAt: string | null
-  failureReason: string | null
-  rerunOfSnapshotRunId: string | null
-  kpiConfigVersion?: SnapshotKpiConfigVersion | null
-  actionReason: string
-  recommendedAction: string
-  canRerun: boolean
-  rerunCount: number
-  latestRerunSnapshotRunId: string | null
-  isStuck: boolean
-}
+export type SnapshotNeedsAction = ApiGetResponse<'/api/snapshots/runs/needs-action'>
+export type SnapshotNeedsActionItem = SnapshotNeedsAction['items'][number]
 
 export type SnapshotRunDetail = {
   snapshotRun: {
@@ -132,23 +88,7 @@ export type SnapshotAuditEvent = {
   metadata: Record<string, unknown>
 }
 
-export type DailyClosureStatus = {
-  automationEnabled: boolean
-  automationPollMinutes: number
-  timezone: string
-  referenceAt: string
-  localDate: string
-  closureDate: string
-  healthState: string
-  dueNow: boolean
-  canQueue: boolean
-  canRerun: boolean
-  recommendedAction: string
-  existingSnapshotRunId: string | null
-  existingRunStatus: string | null
-  existingFailureReason: string | null
-  existingGeneratedAt: string | null
-}
+export type DailyClosureStatus = ApiGetResponse<'/api/snapshots/daily-closure'>
 
 type CommandResponse<T> = {
   command: {
@@ -159,11 +99,11 @@ type CommandResponse<T> = {
 }
 
 export async function getSnapshotOverview() {
-  return fetchJson<SnapshotOverview>('/snapshots/runs/overview')
+  return fetchOpenApiJson('/api/snapshots/runs/overview')
 }
 
 export async function getDailyClosureStatus() {
-  return fetchJson<DailyClosureStatus>('/snapshots/daily-closure')
+  return fetchOpenApiJson('/api/snapshots/daily-closure')
 }
 
 export async function getSnapshotNeedsAction(input?: {
@@ -184,9 +124,7 @@ export async function getSnapshotNeedsAction(input?: {
     params.set('runStatus', input.runStatus)
   }
 
-  return fetchJson<ListResponse<SnapshotNeedsActionItem>>(
-    `/snapshots/runs/needs-action?${params.toString()}`,
-  )
+  return fetchOpenApiJson('/api/snapshots/runs/needs-action', { query: params })
 }
 
 export async function getSnapshotRunDetail(snapshotRunId: string) {
