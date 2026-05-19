@@ -36,13 +36,11 @@ import {
   type ChecklistResponseDraft,
   type ChecklistSession,
   type ChecklistSort,
-  type ChecklistSortDirection,
   type ChecklistSortKey,
   type ChecklistStatusFilter,
   type ChecklistStoreVisitRow,
   type ChecklistTab,
   type ChecklistTabOption,
-  type ChecklistTone,
   type ChecklistTypeFilter,
   type ChecklistVisitStartVariables,
 } from './store-checklists-model'
@@ -50,7 +48,6 @@ import {
   buildChecklistResponseDrafts,
   buildChecklistStoreVisitRows,
   buildMonthOptions,
-  clamp,
   doesChecklistItemMatchFilters,
   doesCoverageRowMatchFilters,
   formatChecklistStatus,
@@ -66,8 +63,6 @@ import {
   getChecklistTypeFilterOptions,
   getCoverageRowKey,
   getCoverageRowKeyFromRow,
-  getCoverageScore,
-  getLocalizedTemplateScoreStatus,
   getLowScoreResponses,
   getResponseRatio,
   getScoreQuickOptions,
@@ -88,6 +83,15 @@ import {
   sortCoverageRows,
   sortStoreVisitRows,
 } from './store-checklists-logic'
+import {
+  ChecklistBadge,
+  ChecklistEmptyBlock,
+  ChecklistFact,
+  ChecklistMetric,
+  ChecklistScoreBar,
+  ChecklistTemplateScore,
+  SortButton,
+} from './store-checklists-atoms'
 
 function useStoreChecklistsPageContent(input: {
   authSummary: AuthSessionSummary | null
@@ -1915,108 +1919,5 @@ function ChecklistResultModal(input: {
         </div>
       </section>
     </div>
-  )
-}
-
-function ChecklistMetric(input: { label: string; note?: string; tone: ChecklistTone; value: string }) {
-  return (
-    <div className={`store-checklists-metric store-checklists-tone-${input.tone}`}>
-      <span>{input.label}</span>
-      <strong>{input.value}</strong>
-      {input.note ? <small>{input.note}</small> : null}
-    </div>
-  )
-}
-
-function ChecklistBadge(input: { children: string; tone: ChecklistTone }) {
-  return <span className={`store-checklists-badge store-checklists-tone-${input.tone}`}>{input.children}</span>
-}
-
-function ChecklistFact(input: { label: string; value: string }) {
-  return (
-    <div className="store-checklists-fact">
-      <span>{input.label}</span>
-      <strong>{input.value}</strong>
-    </div>
-  )
-}
-
-function ChecklistScoreBar(input: {
-  label: string
-  percent: number
-  tone: ChecklistTone
-  value: string
-}) {
-  const percent = clamp(input.percent, 0, 100)
-
-  return (
-    <div
-      className={`store-checklists-scorebar${
-        input.tone === 'neutral' ? ' store-checklists-scorebar-empty' : ''
-      }`}
-    >
-      <div>
-        <span>{input.label}</span>
-        <strong>{input.value}</strong>
-      </div>
-      <i aria-hidden="true">
-        <b className={`store-checklists-tone-${input.tone}`} style={{ width: `${percent}%` }} />
-      </i>
-    </div>
-  )
-}
-
-function ChecklistTemplateScore(input: {
-  label: string
-  locale: AppLocale
-  row?: ChecklistCoverageRow
-  t: TranslateFunction
-}) {
-  const score = input.row ? getCoverageScore(input.row) : null
-  const tone = !input.row || score === null ? 'neutral' : score >= 70 ? 'calm' : 'warning'
-  const status = input.row
-    ? getLocalizedTemplateScoreStatus(input.t, input.locale, input.label, input.row)
-    : getStaticCopy(input.locale, `${input.label} yapılmadı`, `${input.label} not done`)
-
-  return (
-    <div className="store-checklists-template-score">
-      <small>{status}</small>
-      <b>
-        {score === null ? '-' : formatNumber(score, input.locale)}
-        <em>/100</em>
-      </b>
-      <span className={`store-checklists-template-scorebar${tone === 'neutral' ? ' store-checklists-scorebar-empty' : ''}`}>
-        <i>
-          <b className={`store-checklists-tone-${tone}`} style={{ width: `${clamp(score ?? 0, 0, 100)}%` }} />
-        </i>
-      </span>
-    </div>
-  )
-}
-
-function ChecklistEmptyBlock(input: { copy: string; title: string }) {
-  return (
-    <div className="store-checklists-empty-block">
-      <strong>{input.title}</strong>
-      <p>{input.copy}</p>
-    </div>
-  )
-}
-
-function SortButton(input: {
-  active: boolean
-  children: string
-  direction: ChecklistSortDirection
-  onClick: () => void
-}) {
-  return (
-    <button
-      className={`store-checklists-sort-button${input.active ? ' store-checklists-sort-button-active' : ''}`}
-      type="button"
-      onClick={input.onClick}
-    >
-      <span>{input.children}</span>
-      <small aria-hidden="true">{input.active ? (input.direction === 'asc' ? '↑' : '↓') : '↕'}</small>
-    </button>
   )
 }
