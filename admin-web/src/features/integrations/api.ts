@@ -71,28 +71,9 @@ export type PowerBiExportUploadResponse = {
   }
 }
 
-export type NeedsActionItem = {
-  batchId: string
-  integrationSourceId: string
-  sourceCode: string
-  sourceName: string
-  entityType: string
-  startedAt: string
-  finishedAt: string | null
-  status: string
-  fileReference: string | null
-  recordCount: number
-  errorCount: number
-  retryCount: number
-  lastRetriedAt: string | null
-  healthState: string
-  actionReason: string
-  recommendedAction: string
-  blockedByEntityTypes: string[]
-  recommendedNextEntityType: string | null
-  canRetryNow: boolean
-  isStuck: boolean
-}
+export type NeedsActionList =
+  ApiGetResponse<'/api/integrations/import-batches/needs-action'>
+export type NeedsActionItem = NeedsActionList['items'][number]
 
 export type ListResponse<T> = {
   items: T[]
@@ -341,9 +322,9 @@ export async function getNeedsAction(input?: {
     params.set('sourceCode', input.sourceCode)
   }
 
-  return fetchJson<ListResponse<NeedsActionItem>>(
-    `/integrations/import-batches/needs-action?${params.toString()}`,
-  )
+  return fetchOpenApiJson('/api/integrations/import-batches/needs-action', {
+    query: params,
+  })
 }
 
 export async function getImportBatchDetail(batchId: string) {

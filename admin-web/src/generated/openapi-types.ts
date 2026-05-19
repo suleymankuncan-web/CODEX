@@ -4,6 +4,36 @@
 
 export type components = {
   schemas: {
+    "ImportBatchNeedsActionResponse": {
+      "items": Array<{
+          "batchId": string
+          "integrationSourceId": string
+          "sourceCode": string
+          "sourceName": string
+          "entityType": string
+          "startedAt": string
+          "finishedAt": string | null
+          "status": string
+          "fileReference": string | null
+          "recordCount": number
+          "errorCount": number
+          "retryCount": number
+          "lastRetriedAt": string | null
+          "healthState": string
+          "actionReason": string
+          "recommendedAction": string
+          "blockedByEntityTypes": string[]
+          "recommendedNextEntityType": string | null
+          "canRetryNow": boolean
+          "isStuck": boolean
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
     "ImportOverview": {
       "totals": {
         "all": number
@@ -300,6 +330,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["ImportOverview"]
+          }
+        }
+      }
+    }
+  }
+  "/api/integrations/import-batches/needs-action": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ImportBatchNeedsActionResponse"]
           }
         }
       }
