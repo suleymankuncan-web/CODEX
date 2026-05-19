@@ -79,7 +79,7 @@ describe("OpenAPI baseline", () => {
     );
   });
 
-  it("captures generated frontend pilot response schemas", () => {
+  it("captures generated frontend response schemas", () => {
     const response =
       document.paths["/api/integrations/import-batches/overview"].get.responses?.[
         "200"
@@ -121,6 +121,22 @@ describe("OpenAPI baseline", () => {
           sourceSystems: expect.any(Object),
           stateModels: expect.any(Object),
         }),
+      }),
+    );
+
+    const masterDataBatchesResponse =
+      document.paths["/api/integrations/master-data-bootstrap/batches"].get
+        .responses?.["200"];
+    expect(masterDataBatchesResponse?.content?.["application/json"]?.schema).toEqual({
+      $ref: "#/components/schemas/MasterDataBootstrapBatchesResponse",
+    });
+    expect(
+      document.components?.schemas?.MasterDataBootstrapBatchesResponse
+        ?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
       }),
     );
   });

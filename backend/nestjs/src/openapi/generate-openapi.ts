@@ -232,6 +232,77 @@ const integrationLookupsSchema = {
   },
 };
 
+const listResponseMetaSchema = {
+  type: "object",
+  required: ["count", "total", "limit", "offset"],
+  properties: {
+    count: { type: "integer", minimum: 0 },
+    total: { type: "integer", minimum: 0 },
+    limit: { type: "integer", minimum: 0 },
+    offset: { type: "integer", minimum: 0 },
+  },
+};
+
+const masterDataBootstrapBatchItemSchema = {
+  type: "object",
+  required: [
+    "batchId",
+    "companyId",
+    "bootstrapEntity",
+    "sourceLabel",
+    "fileReference",
+    "uploadedByUserId",
+    "batchStatus",
+    "rowCount",
+    "pendingCount",
+    "validCount",
+    "needsReviewCount",
+    "invalidCount",
+    "promotedCount",
+    "createdAt",
+    "validatedAt",
+    "promotedAt",
+    "readiness",
+    "nextAction",
+  ],
+  properties: {
+    batchId: { type: "string" },
+    companyId: { type: "string" },
+    bootstrapEntity: { type: "string", enum: ["store", "personnel"] },
+    sourceLabel: { type: "string" },
+    fileReference: { type: "string", nullable: true },
+    uploadedByUserId: { type: "string" },
+    batchStatus: { type: "string" },
+    rowCount: { type: "integer", minimum: 0 },
+    pendingCount: { type: "integer", minimum: 0 },
+    validCount: { type: "integer", minimum: 0 },
+    needsReviewCount: { type: "integer", minimum: 0 },
+    invalidCount: { type: "integer", minimum: 0 },
+    promotedCount: { type: "integer", minimum: 0 },
+    createdAt: { type: "string" },
+    updatedAt: { type: "string", nullable: true },
+    validatedAt: { type: "string", nullable: true },
+    promotedAt: { type: "string", nullable: true },
+    readiness: {
+      type: "string",
+      enum: ["needs_validation", "needs_review", "ready_to_promote", "closed"],
+    },
+    nextAction: { type: "string" },
+  },
+};
+
+const masterDataBootstrapBatchesResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: masterDataBootstrapBatchItemSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
 async function generateOpenApi(): Promise<void> {
   const app = await NestFactory.create(AppModule, { logger: false });
   app.setGlobalPrefix("api");
@@ -288,6 +359,7 @@ async function generateOpenApi(): Promise<void> {
     ...(document.components.schemas ?? {}),
     ImportOverview: importOverviewSchema,
     IntegrationLookups: integrationLookupsSchema,
+    MasterDataBootstrapBatchesResponse: masterDataBootstrapBatchesResponseSchema,
   };
 
   setJsonResponseSchema(
@@ -304,6 +376,14 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Integration lookup options for admin import and source management screens.",
     "IntegrationLookups",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/integrations/master-data-bootstrap/batches",
+    "get",
+    "Paginated master data bootstrap batches with derived readiness.",
+    "MasterDataBootstrapBatchesResponse",
   );
 
   const outputPath = resolve(process.cwd(), "../../docs/api/openapi.json");
