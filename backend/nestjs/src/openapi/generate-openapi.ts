@@ -353,6 +353,52 @@ const personnelMasterLookupsSchema = {
   },
 };
 
+const personnelMasterItemSchema = {
+  type: "object",
+  required: [
+    "employeeId",
+    "externalEmployeeRef",
+    "firstName",
+    "lastName",
+    "displayName",
+    "hireDate",
+    "terminationDate",
+    "employmentStatus",
+    "employmentType",
+    "assignmentId",
+    "assignmentStartDate",
+    "storeId",
+    "storeCode",
+    "storeName",
+    "regionId",
+    "regionName",
+    "positionId",
+    "positionCode",
+    "positionName",
+  ],
+  properties: {
+    employeeId: { type: "string" },
+    externalEmployeeRef: { type: "string", nullable: true },
+    firstName: { type: "string" },
+    lastName: { type: "string" },
+    displayName: { type: "string" },
+    hireDate: { type: "string" },
+    terminationDate: { type: "string", nullable: true },
+    employmentStatus: { type: "string" },
+    employmentType: { type: "string" },
+    assignmentId: { type: "string", nullable: true },
+    assignmentStartDate: { type: "string", nullable: true },
+    storeId: { type: "string", nullable: true },
+    storeCode: { type: "string", nullable: true },
+    storeName: { type: "string", nullable: true },
+    regionId: { type: "string", nullable: true },
+    regionName: { type: "string", nullable: true },
+    positionId: { type: "string", nullable: true },
+    positionCode: { type: "string", nullable: true },
+    positionName: { type: "string", nullable: true },
+  },
+};
+
 const listResponseMetaSchema = {
   type: "object",
   required: ["count", "total", "limit", "offset"],
@@ -371,6 +417,18 @@ const storeMasterListResponseSchema = {
     items: {
       type: "array",
       items: storeMasterItemSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
+const personnelMasterListResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: personnelMasterItemSchema,
     },
     meta: listResponseMetaSchema,
   },
@@ -703,6 +761,7 @@ async function generateOpenApi(): Promise<void> {
     ...(document.components.schemas ?? {}),
     ImportOverview: importOverviewSchema,
     IntegrationLookups: integrationLookupsSchema,
+    PersonnelMasterListResponse: personnelMasterListResponseSchema,
     PersonnelMasterLookups: personnelMasterLookupsSchema,
     StoreMasterListResponse: storeMasterListResponseSchema,
     StoreMasterLookups: storeMasterLookupsSchema,
@@ -751,6 +810,14 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Personnel master lookup options for the admin master-data surface.",
     "PersonnelMasterLookups",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/integrations/personnel-master",
+    "get",
+    "Paginated personnel master data for the admin master-data surface.",
+    "PersonnelMasterListResponse",
   );
 
   setJsonResponseSchema(

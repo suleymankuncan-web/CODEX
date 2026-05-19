@@ -222,27 +222,8 @@ export type StoreMasterItem = StoreMasterList['items'][number]
 
 export type StoreMasterLookups = ApiGetResponse<'/api/integrations/store-master-lookups'>
 
-export type PersonnelMasterItem = {
-  employeeId: string
-  externalEmployeeRef: string | null
-  firstName: string
-  lastName: string
-  displayName: string
-  hireDate: string
-  terminationDate: string | null
-  employmentStatus: 'active' | 'inactive' | 'terminated' | string
-  employmentType: 'full_time' | 'part_time' | 'temporary' | string
-  assignmentId: string | null
-  assignmentStartDate: string | null
-  storeId: string | null
-  storeCode: string | null
-  storeName: string | null
-  regionId: string | null
-  regionName: string | null
-  positionId: string | null
-  positionCode: string | null
-  positionName: string | null
-}
+export type PersonnelMasterList = ApiGetResponse<'/api/integrations/personnel-master'>
+export type PersonnelMasterItem = PersonnelMasterList['items'][number]
 
 export type PersonnelMasterLookups =
   ApiGetResponse<'/api/integrations/personnel-master-lookups'>
@@ -516,9 +497,7 @@ export async function getPersonnelMasterData(input?: {
     params.set('storeId', input.storeId)
   }
 
-  return fetchJson<ListResponse<PersonnelMasterItem>>(
-    `/integrations/personnel-master?${params.toString()}`,
-  )
+  return fetchOpenApiJson('/api/integrations/personnel-master', { query: params })
 }
 
 export async function getPersonnelMasterLookups() {

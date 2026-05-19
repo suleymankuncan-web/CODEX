@@ -205,6 +205,35 @@ export type components = {
         }
       }
     }
+    "PersonnelMasterListResponse": {
+      "items": Array<{
+          "employeeId": string
+          "externalEmployeeRef": string | null
+          "firstName": string
+          "lastName": string
+          "displayName": string
+          "hireDate": string
+          "terminationDate": string | null
+          "employmentStatus": string
+          "employmentType": string
+          "assignmentId": string | null
+          "assignmentStartDate": string | null
+          "storeId": string | null
+          "storeCode": string | null
+          "storeName": string | null
+          "regionId": string | null
+          "regionName": string | null
+          "positionId": string | null
+          "positionCode": string | null
+          "positionName": string | null
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
     "PersonnelMasterLookups": {
       "stores": Array<{
           "storeId": string
@@ -282,6 +311,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["IntegrationLookups"]
+          }
+        }
+      }
+    }
+  }
+  "/api/integrations/personnel-master": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["PersonnelMasterListResponse"]
           }
         }
       }
