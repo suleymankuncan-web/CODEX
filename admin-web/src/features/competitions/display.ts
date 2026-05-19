@@ -1,7 +1,13 @@
 import type { Tone } from '../../components/dashboard-primitives'
 import { formatState } from '../../lib/format'
 import type { TranslateFunction, TranslationKey } from '../localization/dictionary'
-import type { CompetitionStageSummary, CompetitionSummary } from './api'
+import type {
+  CompetitionStagePackageCode,
+  CompetitionStagePackagePlan,
+  CompetitionStageSummary,
+  CompetitionSummary,
+} from './api'
+import type { StagePresetCode } from './stage-presets'
 
 type CompetitionLifecycleState = CompetitionSummary['lifecycleState']
 type CompetitionType = CompetitionSummary['competitionType']
@@ -73,4 +79,66 @@ export function formatCompetitionStageState(
 
 export function formatCompetitionType(type: CompetitionType, t: TranslateFunction) {
   return t(competitionTypeLabelKeys[type])
+}
+
+export const stageTypeOptions: CompetitionStageSummary['stageType'][] = [
+  'qualifier',
+  'league',
+  'quarter_final',
+  'semi_final',
+  'final',
+  'custom',
+]
+
+const stageTypeLabelKeys: Record<CompetitionStageSummary['stageType'], TranslationKey> = {
+  qualifier: 'competition.stageBuilder.stageType.qualifier',
+  league: 'competition.stageBuilder.stageType.league',
+  quarter_final: 'competition.stageBuilder.stageType.quarterFinal',
+  semi_final: 'competition.stageBuilder.stageType.semiFinal',
+  final: 'competition.stageBuilder.stageType.final',
+  custom: 'competition.stageBuilder.stageType.custom',
+}
+
+export const stagePresetLabelKeys: Record<StagePresetCode, TranslationKey> = {
+  region_league: 'competition.stageBuilder.preset.regionLeague',
+  first_half_qualifier: 'competition.stageBuilder.preset.firstHalfQualifier',
+  final_showdown: 'competition.stageBuilder.preset.finalShowdown',
+}
+
+export const stagePackageLabelKeys: Record<CompetitionStagePackageCode, TranslationKey> = {
+  league_then_final: 'competition.stageBuilder.package.leagueThenFinal',
+}
+
+const planStatusLabelKeys: Record<CompetitionStagePackagePlan['planStatus'], TranslationKey> = {
+  draft: 'competition.stageBuilder.status.draft',
+  submitted: 'competition.stageBuilder.status.submitted',
+  approved: 'competition.stageBuilder.status.approved',
+  rejected: 'competition.stageBuilder.status.rejected',
+  executed: 'competition.stageBuilder.status.executed',
+  cancelled: 'competition.stageBuilder.status.cancelled',
+}
+
+export function formatStageType(stageType: CompetitionStageSummary['stageType'], t: TranslateFunction) {
+  return t(stageTypeLabelKeys[stageType])
+}
+
+export function formatStagePreset(presetCode: StagePresetCode | undefined, t: TranslateFunction) {
+  return presetCode ? t(stagePresetLabelKeys[presetCode]) : ''
+}
+
+export function formatStagePackage(packageCode: CompetitionStagePackageCode, t: TranslateFunction) {
+  return t(stagePackageLabelKeys[packageCode])
+}
+
+export function formatPlanStatus(status: CompetitionStagePackagePlan['planStatus'], t: TranslateFunction) {
+  return t(planStatusLabelKeys[status])
+}
+
+export function formatCount(
+  value: number,
+  singularKey: TranslationKey,
+  pluralKey: TranslationKey,
+  t: TranslateFunction,
+) {
+  return `${value} ${t(value === 1 ? singularKey : pluralKey)}`
 }
