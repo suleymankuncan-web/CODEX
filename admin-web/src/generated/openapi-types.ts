@@ -743,6 +743,22 @@ export type components = {
           "regionName": string
         }>
     }
+    "StoreTargetingPersonnelResponse": {
+      "items": Array<{
+          "employeeId": string
+          "displayName": string
+          "externalEmployeeRef": string | null
+          "periodStart": string | null
+          "periodEnd": string | null
+          "netSalesValue": number | null
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
     "TargetCoverageResponse": {
       "items": Array<{
           "storeId": string
@@ -1071,6 +1087,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["TargetDistributionRequestsResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/target-distributions/store-personnel": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["StoreTargetingPersonnelResponse"]
           }
         }
       }

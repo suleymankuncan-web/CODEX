@@ -40,6 +40,7 @@ const selectedOperations = [
   { path: '/api/mobile/checklists/today', method: 'get' },
   { path: '/api/target-distributions/coverage', method: 'get' },
   { path: '/api/target-distributions/requests', method: 'get' },
+  { path: '/api/target-distributions/store-personnel', method: 'get' },
 ]
 const selectedSchemaNames = collectReferencedSchemaNames(document, selectedOperations)
 

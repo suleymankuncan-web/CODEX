@@ -1493,6 +1493,38 @@ const targetCoverageResponseSchema = {
   },
 };
 
+const storeTargetingPersonSchema = {
+  type: "object",
+  required: [
+    "employeeId",
+    "displayName",
+    "externalEmployeeRef",
+    "periodStart",
+    "periodEnd",
+    "netSalesValue",
+  ],
+  properties: {
+    employeeId: { type: "string" },
+    displayName: { type: "string" },
+    externalEmployeeRef: { type: "string", nullable: true },
+    periodStart: { type: "string", nullable: true },
+    periodEnd: { type: "string", nullable: true },
+    netSalesValue: { type: "number", nullable: true },
+  },
+};
+
+const storeTargetingPersonnelResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: storeTargetingPersonSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
 const importBatchNeedsActionResponseSchema = {
   type: "object",
   required: ["items", "meta"],
@@ -1997,6 +2029,7 @@ async function generateOpenApi(): Promise<void> {
       competitionStagePackagePlanAuditResponseSchema,
     TargetDistributionRequestsResponse: targetDistributionRequestsResponseSchema,
     TargetCoverageResponse: targetCoverageResponseSchema,
+    StoreTargetingPersonnelResponse: storeTargetingPersonnelResponseSchema,
     ImportOverview: importOverviewSchema,
     ImportPayloadTemplateResponse: importPayloadTemplateSchema,
     ImportBatchAuditResponse: importBatchAuditResponseSchema,
@@ -2080,6 +2113,14 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Target distribution coverage rows and summary visible to the current actor.",
     "TargetCoverageResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/target-distributions/store-personnel",
+    "get",
+    "Store personnel available for target distribution requests.",
+    "StoreTargetingPersonnelResponse",
   );
 
   setJsonResponseSchema(

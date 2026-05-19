@@ -349,6 +349,24 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const storeTargetingPersonnelResponse =
+      document.paths["/api/target-distributions/store-personnel"].get.responses?.[
+        "200"
+      ];
+    expect(
+      storeTargetingPersonnelResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/StoreTargetingPersonnelResponse",
+    });
+    expect(
+      document.components?.schemas?.StoreTargetingPersonnelResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
     const lookupsResponse =
       document.paths["/api/integrations/lookups"].get.responses?.["200"];
     expect(lookupsResponse?.content?.["application/json"]?.schema).toEqual({
