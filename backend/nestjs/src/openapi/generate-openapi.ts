@@ -968,6 +968,204 @@ const auditEventSchema = {
   },
 };
 
+const authLookupOptionSchema = {
+  type: "object",
+  required: ["value", "label"],
+  properties: {
+    value: { type: "string" },
+    label: { type: "string" },
+  },
+};
+
+const authLookupUserSchema = {
+  type: "object",
+  required: ["userId", "username", "email"],
+  properties: {
+    userId: { type: "string" },
+    username: { type: "string" },
+    email: { type: "string" },
+  },
+};
+
+const authLookupUserSearchResultSchema = {
+  type: "object",
+  required: [
+    "userId",
+    "username",
+    "email",
+    "authProvider",
+    "providerSubject",
+  ],
+  properties: {
+    ...authLookupUserSchema.properties,
+    authProvider: { type: "string" },
+    providerSubject: { type: "string", nullable: true },
+  },
+};
+
+const authLookupRoleSchema = {
+  type: "object",
+  required: ["roleId", "roleCode", "roleName", "scopeType"],
+  properties: {
+    roleId: { type: "string" },
+    roleCode: { type: "string" },
+    roleName: { type: "string" },
+    scopeType: { type: "string" },
+  },
+};
+
+const authLookupPermissionSchema = {
+  type: "object",
+  required: ["permissionId", "permissionCode", "resourceName", "actionName"],
+  properties: {
+    permissionId: { type: "string" },
+    permissionCode: { type: "string" },
+    resourceName: { type: "string" },
+    actionName: { type: "string" },
+  },
+};
+
+const authLookupStoreSchema = {
+  type: "object",
+  required: [
+    "storeId",
+    "storeCode",
+    "storeName",
+    "companyId",
+    "regionId",
+    "regionName",
+  ],
+  properties: {
+    storeId: { type: "string" },
+    storeCode: { type: "string" },
+    storeName: { type: "string" },
+    companyId: { type: "string" },
+    regionId: { type: "string" },
+    regionName: { type: "string" },
+  },
+};
+
+const authLookupSearchMetaSchema = {
+  type: "object",
+  required: ["query", "count", "limit"],
+  properties: {
+    query: { type: "string" },
+    count: { type: "integer", minimum: 0 },
+    limit: { type: "integer", minimum: 1 },
+  },
+};
+
+const authLookupsResponseSchema = {
+  type: "object",
+  required: [
+    "scopeTypes",
+    "authProviders",
+    "users",
+    "roles",
+    "permissions",
+    "stores",
+    "optionGroups",
+    "meta",
+  ],
+  properties: {
+    scopeTypes: {
+      type: "array",
+      items: { type: "string" },
+    },
+    authProviders: {
+      type: "array",
+      items: { type: "string" },
+    },
+    users: {
+      type: "array",
+      items: authLookupUserSchema,
+    },
+    roles: {
+      type: "array",
+      items: authLookupRoleSchema,
+    },
+    permissions: {
+      type: "array",
+      items: authLookupPermissionSchema,
+    },
+    stores: {
+      type: "array",
+      items: authLookupStoreSchema,
+    },
+    optionGroups: {
+      type: "object",
+      required: [
+        "users",
+        "roles",
+        "permissions",
+        "stores",
+        "scopeTypes",
+        "authProviders",
+      ],
+      properties: {
+        users: {
+          type: "array",
+          items: authLookupUserSchema,
+        },
+        roles: {
+          type: "array",
+          items: authLookupRoleSchema,
+        },
+        permissions: {
+          type: "array",
+          items: authLookupPermissionSchema,
+        },
+        stores: {
+          type: "array",
+          items: authLookupStoreSchema,
+        },
+        scopeTypes: {
+          type: "array",
+          items: authLookupOptionSchema,
+        },
+        authProviders: {
+          type: "array",
+          items: authLookupOptionSchema,
+        },
+      },
+    },
+    meta: {
+      type: "object",
+      required: ["totalUsers", "totalRoles", "totalPermissions", "totalStores"],
+      properties: countProperties([
+        "totalUsers",
+        "totalRoles",
+        "totalPermissions",
+        "totalStores",
+      ]),
+    },
+  },
+};
+
+const authUserLookupSearchResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: authLookupUserSearchResultSchema,
+    },
+    meta: authLookupSearchMetaSchema,
+  },
+};
+
+const authStoreLookupSearchResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: authLookupStoreSchema,
+    },
+    meta: authLookupSearchMetaSchema,
+  },
+};
+
 const integrationLookupSourceSchema = {
   type: "object",
   required: [
@@ -3772,6 +3970,9 @@ async function generateOpenApi(): Promise<void> {
     ReportingClosedLeaderboardResponse: reportingClosedLeaderboardResponseSchema,
     ReportingChecklistResponse: reportingChecklistResponseSchema,
     ReportingTurnoverResponse: reportingTurnoverResponseSchema,
+    AuthLookupsResponse: authLookupsResponseSchema,
+    AuthUserLookupSearchResponse: authUserLookupSearchResponseSchema,
+    AuthStoreLookupSearchResponse: authStoreLookupSearchResponseSchema,
     ImportOverview: importOverviewSchema,
     ImportPayloadTemplateResponse: importPayloadTemplateSchema,
     ImportBatchAuditResponse: importBatchAuditResponseSchema,
@@ -4087,6 +4288,30 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Paginated turnover snapshot rows for reporting surfaces.",
     "ReportingTurnoverResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/lookups",
+    "get",
+    "Auth admin lookup options for user, role, permission, and store forms.",
+    "AuthLookupsResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/lookups/users/search",
+    "get",
+    "Active user lookup search results for auth admin forms.",
+    "AuthUserLookupSearchResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/lookups/stores/search",
+    "get",
+    "Active store lookup search results for auth admin forms.",
+    "AuthStoreLookupSearchResponse",
   );
 
   setJsonResponseSchema(

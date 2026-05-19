@@ -370,7 +370,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Auth admin lookup options for user, role, permission, and store forms.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthLookupsResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -384,7 +391,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Active user lookup search results for auth admin forms.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthUserLookupSearchResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -398,7 +412,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Active store lookup search results for auth admin forms.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthStoreLookupSearchResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -11799,6 +11820,450 @@
               "offset": {
                 "type": "integer",
                 "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "AuthLookupsResponse": {
+        "type": "object",
+        "required": [
+          "scopeTypes",
+          "authProviders",
+          "users",
+          "roles",
+          "permissions",
+          "stores",
+          "optionGroups",
+          "meta"
+        ],
+        "properties": {
+          "scopeTypes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "authProviders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "users": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "userId",
+                "username",
+                "email"
+              ],
+              "properties": {
+                "userId": {
+                  "type": "string"
+                },
+                "username": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "roleId",
+                "roleCode",
+                "roleName",
+                "scopeType"
+              ],
+              "properties": {
+                "roleId": {
+                  "type": "string"
+                },
+                "roleCode": {
+                  "type": "string"
+                },
+                "roleName": {
+                  "type": "string"
+                },
+                "scopeType": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "permissionId",
+                "permissionCode",
+                "resourceName",
+                "actionName"
+              ],
+              "properties": {
+                "permissionId": {
+                  "type": "string"
+                },
+                "permissionCode": {
+                  "type": "string"
+                },
+                "resourceName": {
+                  "type": "string"
+                },
+                "actionName": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "stores": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "storeId",
+                "storeCode",
+                "storeName",
+                "companyId",
+                "regionId",
+                "regionName"
+              ],
+              "properties": {
+                "storeId": {
+                  "type": "string"
+                },
+                "storeCode": {
+                  "type": "string"
+                },
+                "storeName": {
+                  "type": "string"
+                },
+                "companyId": {
+                  "type": "string"
+                },
+                "regionId": {
+                  "type": "string"
+                },
+                "regionName": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "optionGroups": {
+            "type": "object",
+            "required": [
+              "users",
+              "roles",
+              "permissions",
+              "stores",
+              "scopeTypes",
+              "authProviders"
+            ],
+            "properties": {
+              "users": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "userId",
+                    "username",
+                    "email"
+                  ],
+                  "properties": {
+                    "userId": {
+                      "type": "string"
+                    },
+                    "username": {
+                      "type": "string"
+                    },
+                    "email": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "roles": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "roleId",
+                    "roleCode",
+                    "roleName",
+                    "scopeType"
+                  ],
+                  "properties": {
+                    "roleId": {
+                      "type": "string"
+                    },
+                    "roleCode": {
+                      "type": "string"
+                    },
+                    "roleName": {
+                      "type": "string"
+                    },
+                    "scopeType": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "permissions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "permissionId",
+                    "permissionCode",
+                    "resourceName",
+                    "actionName"
+                  ],
+                  "properties": {
+                    "permissionId": {
+                      "type": "string"
+                    },
+                    "permissionCode": {
+                      "type": "string"
+                    },
+                    "resourceName": {
+                      "type": "string"
+                    },
+                    "actionName": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "stores": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "storeId",
+                    "storeCode",
+                    "storeName",
+                    "companyId",
+                    "regionId",
+                    "regionName"
+                  ],
+                  "properties": {
+                    "storeId": {
+                      "type": "string"
+                    },
+                    "storeCode": {
+                      "type": "string"
+                    },
+                    "storeName": {
+                      "type": "string"
+                    },
+                    "companyId": {
+                      "type": "string"
+                    },
+                    "regionId": {
+                      "type": "string"
+                    },
+                    "regionName": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "scopeTypes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "value",
+                    "label"
+                  ],
+                  "properties": {
+                    "value": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "authProviders": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "value",
+                    "label"
+                  ],
+                  "properties": {
+                    "value": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "totalUsers",
+              "totalRoles",
+              "totalPermissions",
+              "totalStores"
+            ],
+            "properties": {
+              "totalUsers": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "totalRoles": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "totalPermissions": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "totalStores": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "AuthUserLookupSearchResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "meta"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "userId",
+                "username",
+                "email",
+                "authProvider",
+                "providerSubject"
+              ],
+              "properties": {
+                "userId": {
+                  "type": "string"
+                },
+                "username": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string"
+                },
+                "authProvider": {
+                  "type": "string"
+                },
+                "providerSubject": {
+                  "type": "string",
+                  "nullable": true
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "query",
+              "count",
+              "limit"
+            ],
+            "properties": {
+              "query": {
+                "type": "string"
+              },
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        }
+      },
+      "AuthStoreLookupSearchResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "meta"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "storeId",
+                "storeCode",
+                "storeName",
+                "companyId",
+                "regionId",
+                "regionName"
+              ],
+              "properties": {
+                "storeId": {
+                  "type": "string"
+                },
+                "storeCode": {
+                  "type": "string"
+                },
+                "storeName": {
+                  "type": "string"
+                },
+                "companyId": {
+                  "type": "string"
+                },
+                "regionId": {
+                  "type": "string"
+                },
+                "regionName": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "query",
+              "count",
+              "limit"
+            ],
+            "properties": {
+              "query": {
+                "type": "string"
+              },
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 1
               }
             }
           }

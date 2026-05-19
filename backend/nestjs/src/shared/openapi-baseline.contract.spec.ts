@@ -834,6 +834,56 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const authLookupsResponse =
+      document.paths["/api/auth/lookups"].get.responses?.["200"];
+    expect(authLookupsResponse?.content?.["application/json"]?.schema).toEqual({
+      $ref: "#/components/schemas/AuthLookupsResponse",
+    });
+    expect(document.components?.schemas?.AuthLookupsResponse?.properties).toEqual(
+      expect.objectContaining({
+        scopeTypes: expect.any(Object),
+        authProviders: expect.any(Object),
+        users: expect.any(Object),
+        roles: expect.any(Object),
+        permissions: expect.any(Object),
+        stores: expect.any(Object),
+        optionGroups: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
+    const authUserLookupSearchResponse =
+      document.paths["/api/auth/lookups/users/search"].get.responses?.["200"];
+    expect(
+      authUserLookupSearchResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/AuthUserLookupSearchResponse",
+    });
+    expect(
+      document.components?.schemas?.AuthUserLookupSearchResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
+    const authStoreLookupSearchResponse =
+      document.paths["/api/auth/lookups/stores/search"].get.responses?.["200"];
+    expect(
+      authStoreLookupSearchResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/AuthStoreLookupSearchResponse",
+    });
+    expect(
+      document.components?.schemas?.AuthStoreLookupSearchResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
     const lookupsResponse =
       document.paths["/api/integrations/lookups"].get.responses?.["200"];
     expect(lookupsResponse?.content?.["application/json"]?.schema).toEqual({

@@ -1,4 +1,5 @@
 import { fetchJson, sendJson } from '../../lib/api'
+import { fetchOpenApiJson, type ApiGetResponse } from '../../lib/openapi-client'
 
 type ListResponse<T> = {
   items: T[]
@@ -10,76 +11,11 @@ type ListResponse<T> = {
   }
 }
 
-type AuthLookupOption = {
-  value: string
-  label: string
-}
-
-export type AuthLookupUser = {
-  userId: string
-  username: string
-  email: string
-}
-
-export type AuthLookupUserSearchResult = AuthLookupUser & {
-  authProvider: string
-  providerSubject: string | null
-}
-
-type AuthLookupRole = {
-  roleId: string
-  roleCode: string
-  roleName: string
-  scopeType: string
-}
-
-type AuthLookupPermission = {
-  permissionId: string
-  permissionCode: string
-  resourceName: string
-  actionName: string
-}
-
-export type AuthLookupStore = {
-  storeId: string
-  storeCode: string
-  storeName: string
-  companyId: string
-  regionId: string
-  regionName: string
-}
-
-export type AuthLookups = {
-  scopeTypes: string[]
-  authProviders: string[]
-  users: AuthLookupUser[]
-  roles: AuthLookupRole[]
-  permissions: AuthLookupPermission[]
-  stores: AuthLookupStore[]
-  optionGroups: {
-    users: AuthLookupUser[]
-    roles: AuthLookupRole[]
-    permissions: AuthLookupPermission[]
-    stores: AuthLookupStore[]
-    scopeTypes: AuthLookupOption[]
-    authProviders: AuthLookupOption[]
-  }
-  meta: {
-    totalUsers: number
-    totalRoles: number
-    totalPermissions: number
-    totalStores: number
-  }
-}
-
-export type AuthLookupSearchResponse<T> = {
-  items: T[]
-  meta: {
-    query: string
-    count: number
-    limit: number
-  }
-}
+export type AuthLookups = ApiGetResponse<'/api/auth/lookups'>
+export type AuthLookupUser = AuthLookups['users'][number]
+export type AuthLookupStore = AuthLookups['stores'][number]
+type AuthLookupUserSearchResponse = ApiGetResponse<'/api/auth/lookups/users/search'>
+export type AuthLookupUserSearchResult = AuthLookupUserSearchResponse['items'][number]
 
 export type UserAccount = {
   userId: string
@@ -247,7 +183,7 @@ type CommandResponse<T> = {
 }
 
 export async function getAuthLookups() {
-  return fetchJson<AuthLookups>('/auth/lookups')
+  return fetchOpenApiJson('/api/auth/lookups')
 }
 
 export async function searchAuthUsers(input: { query: string; limit?: number }) {
@@ -256,9 +192,7 @@ export async function searchAuthUsers(input: { query: string; limit?: number }) 
     limit: String(input.limit ?? 20),
   })
 
-  return fetchJson<AuthLookupSearchResponse<AuthLookupUserSearchResult>>(
-    `/auth/lookups/users/search?${params.toString()}`,
-  )
+  return fetchOpenApiJson('/api/auth/lookups/users/search', { query: params })
 }
 
 export async function searchAuthStores(input: { query: string; limit?: number }) {
@@ -267,9 +201,7 @@ export async function searchAuthStores(input: { query: string; limit?: number })
     limit: String(input.limit ?? 20),
   })
 
-  return fetchJson<AuthLookupSearchResponse<AuthLookupStore>>(
-    `/auth/lookups/stores/search?${params.toString()}`,
-  )
+  return fetchOpenApiJson('/api/auth/lookups/stores/search', { query: params })
 }
 
 export async function getAuthSession() {

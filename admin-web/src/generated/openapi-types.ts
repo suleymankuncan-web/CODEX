@@ -4,6 +4,105 @@
 
 export type components = {
   schemas: {
+    "AuthLookupsResponse": {
+      "scopeTypes": string[]
+      "authProviders": string[]
+      "users": Array<{
+          "userId": string
+          "username": string
+          "email": string
+        }>
+      "roles": Array<{
+          "roleId": string
+          "roleCode": string
+          "roleName": string
+          "scopeType": string
+        }>
+      "permissions": Array<{
+          "permissionId": string
+          "permissionCode": string
+          "resourceName": string
+          "actionName": string
+        }>
+      "stores": Array<{
+          "storeId": string
+          "storeCode": string
+          "storeName": string
+          "companyId": string
+          "regionId": string
+          "regionName": string
+        }>
+      "optionGroups": {
+        "users": Array<{
+            "userId": string
+            "username": string
+            "email": string
+          }>
+        "roles": Array<{
+            "roleId": string
+            "roleCode": string
+            "roleName": string
+            "scopeType": string
+          }>
+        "permissions": Array<{
+            "permissionId": string
+            "permissionCode": string
+            "resourceName": string
+            "actionName": string
+          }>
+        "stores": Array<{
+            "storeId": string
+            "storeCode": string
+            "storeName": string
+            "companyId": string
+            "regionId": string
+            "regionName": string
+          }>
+        "scopeTypes": Array<{
+            "value": string
+            "label": string
+          }>
+        "authProviders": Array<{
+            "value": string
+            "label": string
+          }>
+      }
+      "meta": {
+        "totalUsers": number
+        "totalRoles": number
+        "totalPermissions": number
+        "totalStores": number
+      }
+    }
+    "AuthStoreLookupSearchResponse": {
+      "items": Array<{
+          "storeId": string
+          "storeCode": string
+          "storeName": string
+          "companyId": string
+          "regionId": string
+          "regionName": string
+        }>
+      "meta": {
+        "query": string
+        "count": number
+        "limit": number
+      }
+    }
+    "AuthUserLookupSearchResponse": {
+      "items": Array<{
+          "userId": string
+          "username": string
+          "email": string
+          "authProvider": string
+          "providerSubject": string | null
+        }>
+      "meta": {
+        "query": string
+        "count": number
+        "limit": number
+      }
+    }
     "CompetitionDetailResponse": {
       "competition": {
         "competitionId": string
@@ -1870,6 +1969,39 @@ export type components = {
 }
 
 export type paths = {
+  "/api/auth/lookups": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["AuthLookupsResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/auth/lookups/stores/search": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["AuthStoreLookupSearchResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/auth/lookups/users/search": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["AuthUserLookupSearchResponse"]
+          }
+        }
+      }
+    }
+  }
   "/api/competitions": {
     get: {
       responses: {
