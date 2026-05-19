@@ -23,6 +23,7 @@ const selectedOperations = [
   { path: '/api/auth/role-assignments', method: 'get' },
   { path: '/api/auth/role-assignments/{assignmentId}/audit', method: 'get' },
   { path: '/api/auth/roles', method: 'get' },
+  { path: '/api/auth/session', method: 'get' },
   { path: '/api/auth/users', method: 'get' },
   { path: '/api/auth/users/{userId}/audit', method: 'get' },
   { path: '/api/competitions', method: 'get' },

@@ -1,4 +1,4 @@
-import { fetchJson, sendJson } from '../../lib/api'
+import { sendJson } from '../../lib/api'
 import { fetchOpenApiJson, type ApiGetResponse } from '../../lib/openapi-client'
 
 export type AuthLookups = ApiGetResponse<'/api/auth/lookups'>
@@ -19,6 +19,7 @@ export type ActionStoreAssignment = AuthActionStoreAssignmentsResponse['items'][
 type AuthAuditResponse = ApiGetResponse<'/api/auth/users/{userId}/audit'>
 export type AuditEvent = AuthAuditResponse['items'][number]
 export type AuthBootstrap = ApiGetResponse<'/api/auth/bootstrap'>
+export type AuthSessionSummary = ApiGetResponse<'/api/auth/session'>
 
 export type UserAccessClosure = {
   closedRoleAssignments: number
@@ -38,36 +39,6 @@ export type PilotUserBinding = {
     storeId: string
     storeCode: string
     storeName: string
-  }
-}
-
-export type AuthSessionSummary = {
-  authMode: string
-  authenticated: boolean
-  user: {
-    userId: string
-    employeeId: string | null
-    roleCodes: string[]
-    scope: {
-      companyIds: string[]
-      regionIds: string[]
-      storeIds: string[]
-    }
-    readScope: {
-      companyIds: string[]
-      regionIds: string[]
-      storeIds: string[]
-    }
-    actionScope: {
-      assignedStoreIds: string[]
-    }
-    assignedStoreIds: string[]
-  }
-  scopeSummary: {
-    companyCount: number
-    regionCount: number
-    storeCount: number
-    assignedStoreCount: number
   }
 }
 
@@ -102,7 +73,7 @@ export async function searchAuthStores(input: { query: string; limit?: number })
 }
 
 export async function getAuthSession() {
-  return fetchJson<AuthSessionSummary>('/auth/session')
+  return fetchOpenApiJson('/api/auth/session')
 }
 
 export async function getAuthBootstrap() {

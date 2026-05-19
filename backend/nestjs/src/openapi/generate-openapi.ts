@@ -1053,6 +1053,87 @@ const authBootstrapResponseSchema = {
   },
 };
 
+const authScopeIdListSchema = {
+  type: "object",
+  required: ["companyIds", "regionIds", "storeIds"],
+  properties: {
+    companyIds: {
+      type: "array",
+      items: { type: "string" },
+    },
+    regionIds: {
+      type: "array",
+      items: { type: "string" },
+    },
+    storeIds: {
+      type: "array",
+      items: { type: "string" },
+    },
+  },
+};
+
+const authActionScopeSchema = {
+  type: "object",
+  required: ["assignedStoreIds"],
+  properties: {
+    assignedStoreIds: {
+      type: "array",
+      items: { type: "string" },
+    },
+  },
+};
+
+const authSessionResponseSchema = {
+  type: "object",
+  required: ["authMode", "authenticated", "user", "scopeSummary"],
+  properties: {
+    authMode: { type: "string" },
+    authenticated: { type: "boolean" },
+    user: {
+      type: "object",
+      required: [
+        "userId",
+        "employeeId",
+        "roleCodes",
+        "scope",
+        "readScope",
+        "actionScope",
+        "assignedStoreIds",
+      ],
+      properties: {
+        userId: { type: "string" },
+        employeeId: { type: "string", nullable: true },
+        roleCodes: {
+          type: "array",
+          items: { type: "string" },
+        },
+        scope: authScopeIdListSchema,
+        readScope: authScopeIdListSchema,
+        actionScope: authActionScopeSchema,
+        assignedStoreIds: {
+          type: "array",
+          items: { type: "string" },
+        },
+      },
+    },
+    scopeSummary: {
+      type: "object",
+      required: [
+        "companyCount",
+        "regionCount",
+        "storeCount",
+        "assignedStoreCount",
+      ],
+      properties: countProperties([
+        "companyCount",
+        "regionCount",
+        "storeCount",
+        "assignedStoreCount",
+      ]),
+    },
+  },
+};
+
 const authLookupOptionSchema = {
   type: "object",
   required: ["value", "label"],
@@ -4293,6 +4374,7 @@ async function generateOpenApi(): Promise<void> {
       authActionStoreAssignmentsResponseSchema,
     AuthAuditResponse: authAuditResponseSchema,
     AuthBootstrapResponse: authBootstrapResponseSchema,
+    AuthSessionResponse: authSessionResponseSchema,
     ImportOverview: importOverviewSchema,
     ImportPayloadTemplateResponse: importPayloadTemplateSchema,
     ImportBatchAuditResponse: importBatchAuditResponseSchema,
@@ -4704,6 +4786,14 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Auth mode and provider metadata needed before login.",
     "AuthBootstrapResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/session",
+    "get",
+    "Current authenticated admin or store session summary.",
+    "AuthSessionResponse",
   );
 
   setJsonResponseSchema(

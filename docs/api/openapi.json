@@ -575,7 +575,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Current authenticated admin or store session summary.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSessionResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -12975,6 +12982,153 @@
               },
               "postLogoutRedirectPath": {
                 "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "AuthSessionResponse": {
+        "type": "object",
+        "required": [
+          "authMode",
+          "authenticated",
+          "user",
+          "scopeSummary"
+        ],
+        "properties": {
+          "authMode": {
+            "type": "string"
+          },
+          "authenticated": {
+            "type": "boolean"
+          },
+          "user": {
+            "type": "object",
+            "required": [
+              "userId",
+              "employeeId",
+              "roleCodes",
+              "scope",
+              "readScope",
+              "actionScope",
+              "assignedStoreIds"
+            ],
+            "properties": {
+              "userId": {
+                "type": "string"
+              },
+              "employeeId": {
+                "type": "string",
+                "nullable": true
+              },
+              "roleCodes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "scope": {
+                "type": "object",
+                "required": [
+                  "companyIds",
+                  "regionIds",
+                  "storeIds"
+                ],
+                "properties": {
+                  "companyIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "regionIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "storeIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "readScope": {
+                "type": "object",
+                "required": [
+                  "companyIds",
+                  "regionIds",
+                  "storeIds"
+                ],
+                "properties": {
+                  "companyIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "regionIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "storeIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "actionScope": {
+                "type": "object",
+                "required": [
+                  "assignedStoreIds"
+                ],
+                "properties": {
+                  "assignedStoreIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "assignedStoreIds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "scopeSummary": {
+            "type": "object",
+            "required": [
+              "companyCount",
+              "regionCount",
+              "storeCount",
+              "assignedStoreCount"
+            ],
+            "properties": {
+              "companyCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "regionCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "storeCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "assignedStoreCount": {
+                "type": "integer",
+                "minimum": 0
               }
             }
           }

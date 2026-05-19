@@ -997,6 +997,20 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const authSessionResponse =
+      document.paths["/api/auth/session"].get.responses?.["200"];
+    expect(authSessionResponse?.content?.["application/json"]?.schema).toEqual({
+      $ref: "#/components/schemas/AuthSessionResponse",
+    });
+    expect(document.components?.schemas?.AuthSessionResponse?.properties).toEqual(
+      expect.objectContaining({
+        authMode: expect.any(Object),
+        authenticated: expect.any(Object),
+        user: expect.any(Object),
+        scopeSummary: expect.any(Object),
+      }),
+    );
+
     const lookupsResponse =
       document.paths["/api/integrations/lookups"].get.responses?.["200"];
     expect(lookupsResponse?.content?.["application/json"]?.schema).toEqual({

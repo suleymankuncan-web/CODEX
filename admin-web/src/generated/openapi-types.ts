@@ -201,6 +201,35 @@ export type components = {
         "offset": number
       }
     }
+    "AuthSessionResponse": {
+      "authMode": string
+      "authenticated": boolean
+      "user": {
+        "userId": string
+        "employeeId": string | null
+        "roleCodes": string[]
+        "scope": {
+          "companyIds": string[]
+          "regionIds": string[]
+          "storeIds": string[]
+        }
+        "readScope": {
+          "companyIds": string[]
+          "regionIds": string[]
+          "storeIds": string[]
+        }
+        "actionScope": {
+          "assignedStoreIds": string[]
+        }
+        "assignedStoreIds": string[]
+      }
+      "scopeSummary": {
+        "companyCount": number
+        "regionCount": number
+        "storeCount": number
+        "assignedStoreCount": number
+      }
+    }
     "AuthStoreLookupSearchResponse": {
       "items": Array<{
           "storeId": string
@@ -2224,6 +2253,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["AuthRoleCatalogResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/auth/session": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["AuthSessionResponse"]
           }
         }
       }
