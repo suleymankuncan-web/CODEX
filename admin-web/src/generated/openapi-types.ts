@@ -787,6 +787,82 @@ export type components = {
         "stuckSnapshotRunId": string | null
       }
     }
+    "SnapshotRunAuditResponse": {
+      "items": Array<{
+          "eventLogId": string
+          "occurredAt": string
+          "actorUserId": string | null
+          "correlationId": string | null
+          "eventType": string
+          "metadata": {
+            [key: string]: unknown
+          }
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
+    "SnapshotRunDependenciesResponse": {
+      "snapshotRunId": string
+      "runStatus": string
+      "rerunAllowed": boolean
+      "rerunBlockedReason": string | null
+      "checks": Array<{
+          "code": string
+          "status": "pass" | "fail"
+          "message": string
+        }>
+    }
+    "SnapshotRunDetailResponse": {
+      "snapshotRun": {
+        "snapshotRunId": string
+        "snapshotDate": string
+        "snapshotType": string
+        "periodStart": string
+        "periodEnd": string
+        "runStatus": string
+        "healthState": string
+        "generatedAt": string
+        "generatedBy": string
+        "startedAt": string | null
+        "finishedAt": string | null
+        "failureReason": string | null
+        "rerunOfSnapshotRunId": string | null
+        "kpiConfigVersion": {
+          "kpiConfigVersionId": string | null
+          "versionNo": number | null
+          "state": "versioned" | "pre_governance"
+        }
+      }
+      "cards": {
+        "workforceRows": number
+        "kpiRows": number
+        "checklistRows": number
+        "turnoverRows": number
+      }
+      "canRerun": boolean
+      "rerunAllowed": boolean
+      "rerunBlockedReason": string | null
+      "rerunCount": number
+      "latestRerunSnapshotRunId": string | null
+      "failureReason": string | null
+    }
+    "SnapshotRunLineageResponse": {
+      "snapshotRunId": string
+      "parent": ({
+        "snapshotRunId": string
+        "runStatus": string
+        "snapshotType": string
+      }) | null
+      "children": Array<{
+          "snapshotRunId": string
+          "runStatus": string
+          "snapshotType": string
+        }>
+    }
     "StoreMasterListResponse": {
       "items": Array<{
           "storeId": string
@@ -1204,6 +1280,50 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["SnapshotOverviewResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/snapshots/runs/{snapshotRunId}": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["SnapshotRunDetailResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/snapshots/runs/{snapshotRunId}/audit": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["SnapshotRunAuditResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/snapshots/runs/{snapshotRunId}/dependencies": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["SnapshotRunDependenciesResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/snapshots/runs/{snapshotRunId}/lineage": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["SnapshotRunLineageResponse"]
           }
         }
       }

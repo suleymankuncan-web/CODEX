@@ -1694,7 +1694,7 @@ const snapshotKpiConfigVersionSchema = {
   },
 };
 
-const snapshotNeedsActionItemSchema = {
+const snapshotRunReadModelSchema = {
   type: "object",
   required: [
     "snapshotRunId",
@@ -1711,12 +1711,6 @@ const snapshotNeedsActionItemSchema = {
     "failureReason",
     "rerunOfSnapshotRunId",
     "kpiConfigVersion",
-    "actionReason",
-    "recommendedAction",
-    "canRerun",
-    "rerunCount",
-    "latestRerunSnapshotRunId",
-    "isStuck",
   ],
   properties: {
     snapshotRunId: { type: "string" },
@@ -1733,12 +1727,124 @@ const snapshotNeedsActionItemSchema = {
     failureReason: { type: "string", nullable: true },
     rerunOfSnapshotRunId: { type: "string", nullable: true },
     kpiConfigVersion: snapshotKpiConfigVersionSchema,
+  },
+};
+
+const snapshotNeedsActionItemSchema = {
+  type: "object",
+  required: [
+    ...snapshotRunReadModelSchema.required,
+    "actionReason",
+    "recommendedAction",
+    "canRerun",
+    "rerunCount",
+    "latestRerunSnapshotRunId",
+    "isStuck",
+  ],
+  properties: {
+    ...snapshotRunReadModelSchema.properties,
     actionReason: { type: "string" },
     recommendedAction: { type: "string" },
     canRerun: { type: "boolean" },
     rerunCount: { type: "integer", minimum: 0 },
     latestRerunSnapshotRunId: { type: "string", nullable: true },
     isStuck: { type: "boolean" },
+  },
+};
+
+const snapshotRunDetailResponseSchema = {
+  type: "object",
+  required: [
+    "snapshotRun",
+    "cards",
+    "canRerun",
+    "rerunAllowed",
+    "rerunBlockedReason",
+    "rerunCount",
+    "latestRerunSnapshotRunId",
+    "failureReason",
+  ],
+  properties: {
+    snapshotRun: snapshotRunReadModelSchema,
+    cards: {
+      type: "object",
+      required: ["workforceRows", "kpiRows", "checklistRows", "turnoverRows"],
+      properties: {
+        workforceRows: { type: "integer", minimum: 0 },
+        kpiRows: { type: "integer", minimum: 0 },
+        checklistRows: { type: "integer", minimum: 0 },
+        turnoverRows: { type: "integer", minimum: 0 },
+      },
+    },
+    canRerun: { type: "boolean" },
+    rerunAllowed: { type: "boolean" },
+    rerunBlockedReason: { type: "string", nullable: true },
+    rerunCount: { type: "integer", minimum: 0 },
+    latestRerunSnapshotRunId: { type: "string", nullable: true },
+    failureReason: { type: "string", nullable: true },
+  },
+};
+
+const snapshotRunDependencyCheckSchema = {
+  type: "object",
+  required: ["code", "status", "message"],
+  properties: {
+    code: { type: "string" },
+    status: { type: "string", enum: ["pass", "fail"] },
+    message: { type: "string" },
+  },
+};
+
+const snapshotRunDependenciesResponseSchema = {
+  type: "object",
+  required: ["snapshotRunId", "runStatus", "rerunAllowed", "rerunBlockedReason", "checks"],
+  properties: {
+    snapshotRunId: { type: "string" },
+    runStatus: { type: "string" },
+    rerunAllowed: { type: "boolean" },
+    rerunBlockedReason: { type: "string", nullable: true },
+    checks: {
+      type: "array",
+      items: snapshotRunDependencyCheckSchema,
+    },
+  },
+};
+
+const snapshotRunLineageNodeSchema = {
+  type: "object",
+  required: ["snapshotRunId", "runStatus", "snapshotType"],
+  properties: {
+    snapshotRunId: { type: "string" },
+    runStatus: { type: "string" },
+    snapshotType: { type: "string" },
+  },
+};
+
+const snapshotRunLineageResponseSchema = {
+  type: "object",
+  required: ["snapshotRunId", "parent", "children"],
+  properties: {
+    snapshotRunId: { type: "string" },
+    parent: {
+      ...snapshotRunLineageNodeSchema,
+      nullable: true,
+    },
+    children: {
+      type: "array",
+      items: snapshotRunLineageNodeSchema,
+    },
+  },
+};
+
+const snapshotRunAuditResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: auditEventSchema,
+    },
+    meta: listResponseMetaSchema,
   },
 };
 
@@ -2263,6 +2369,10 @@ async function generateOpenApi(): Promise<void> {
     SnapshotOverviewResponse: snapshotOverviewResponseSchema,
     DailyClosureStatusResponse: dailyClosureStatusResponseSchema,
     SnapshotNeedsActionResponse: snapshotNeedsActionResponseSchema,
+    SnapshotRunDetailResponse: snapshotRunDetailResponseSchema,
+    SnapshotRunDependenciesResponse: snapshotRunDependenciesResponseSchema,
+    SnapshotRunLineageResponse: snapshotRunLineageResponseSchema,
+    SnapshotRunAuditResponse: snapshotRunAuditResponseSchema,
     ImportOverview: importOverviewSchema,
     ImportPayloadTemplateResponse: importPayloadTemplateSchema,
     ImportBatchAuditResponse: importBatchAuditResponseSchema,
@@ -2386,6 +2496,38 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Paginated snapshot runs requiring operator action.",
     "SnapshotNeedsActionResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/snapshots/runs/{snapshotRunId}",
+    "get",
+    "Snapshot run detail with output row counts and rerun state.",
+    "SnapshotRunDetailResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/snapshots/runs/{snapshotRunId}/dependencies",
+    "get",
+    "Snapshot run rerun dependency checks.",
+    "SnapshotRunDependenciesResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/snapshots/runs/{snapshotRunId}/lineage",
+    "get",
+    "Snapshot run rerun parent and child lineage.",
+    "SnapshotRunLineageResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/snapshots/runs/{snapshotRunId}/audit",
+    "get",
+    "Snapshot run audit event timeline.",
+    "SnapshotRunAuditResponse",
   );
 
   setJsonResponseSchema(

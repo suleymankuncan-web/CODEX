@@ -1,92 +1,18 @@
-import { fetchJson, sendJson } from '../../lib/api'
+import { sendJson } from '../../lib/api'
 import { fetchOpenApiJson, type ApiGetResponse } from '../../lib/openapi-client'
-
-type ListResponse<T> = {
-  items: T[]
-  meta: {
-    count: number
-    total: number
-    limit: number
-    offset: number
-  }
-}
-
-type SnapshotKpiConfigVersion = {
-  kpiConfigVersionId: string | null
-  versionNo: number | null
-  state: 'versioned' | 'pre_governance'
-}
 
 export type SnapshotOverview = ApiGetResponse<'/api/snapshots/runs/overview'>
 
 export type SnapshotNeedsAction = ApiGetResponse<'/api/snapshots/runs/needs-action'>
 export type SnapshotNeedsActionItem = SnapshotNeedsAction['items'][number]
 
-export type SnapshotRunDetail = {
-  snapshotRun: {
-    snapshotRunId: string
-    snapshotDate: string
-    snapshotType: string
-    periodStart: string
-    periodEnd: string
-    runStatus: string
-    healthState: string
-    generatedAt: string
-    generatedBy: string
-    startedAt: string | null
-    finishedAt: string | null
-    failureReason: string | null
-    rerunOfSnapshotRunId: string | null
-    kpiConfigVersion?: SnapshotKpiConfigVersion | null
-  }
-  cards: {
-    workforceRows: number
-    kpiRows: number
-    checklistRows: number
-    turnoverRows: number
-  }
-  canRerun: boolean
-  rerunAllowed: boolean
-  rerunBlockedReason: string | null
-  rerunCount: number
-  latestRerunSnapshotRunId: string | null
-  failureReason: string | null
-}
-
-export type SnapshotRunDependencies = {
-  snapshotRunId: string
-  runStatus: string
-  rerunAllowed: boolean
-  rerunBlockedReason: string | null
-  checks: Array<{
-    code: string
-    status: 'pass' | 'fail'
-    message: string
-  }>
-}
-
-export type SnapshotRunLineage = {
-  snapshotRunId: string
-  parent: {
-    snapshotRunId: string
-    runStatus: string
-    snapshotType: string
-  } | null
-  children: Array<{
-    snapshotRunId: string
-    runStatus: string
-    snapshotType: string
-  }>
-}
-
-export type SnapshotAuditEvent = {
-  eventLogId: string
-  occurredAt: string
-  actorUserId: string | null
-  correlationId: string | null
-  eventType: string
-  metadata: Record<string, unknown>
-}
+export type SnapshotRunDetail = ApiGetResponse<'/api/snapshots/runs/{snapshotRunId}'>
+export type SnapshotRunDependencies = ApiGetResponse<
+  '/api/snapshots/runs/{snapshotRunId}/dependencies'
+>
+export type SnapshotRunLineage = ApiGetResponse<'/api/snapshots/runs/{snapshotRunId}/lineage'>
+export type SnapshotRunAudit = ApiGetResponse<'/api/snapshots/runs/{snapshotRunId}/audit'>
+export type SnapshotAuditEvent = SnapshotRunAudit['items'][number]
 
 export type DailyClosureStatus = ApiGetResponse<'/api/snapshots/daily-closure'>
 
@@ -128,19 +54,27 @@ export async function getSnapshotNeedsAction(input?: {
 }
 
 export async function getSnapshotRunDetail(snapshotRunId: string) {
-  return fetchJson<SnapshotRunDetail>(`/snapshots/runs/${snapshotRunId}`)
+  return fetchOpenApiJson('/api/snapshots/runs/{snapshotRunId}', {
+    params: { snapshotRunId },
+  })
 }
 
 export async function getSnapshotRunDependencies(snapshotRunId: string) {
-  return fetchJson<SnapshotRunDependencies>(`/snapshots/runs/${snapshotRunId}/dependencies`)
+  return fetchOpenApiJson('/api/snapshots/runs/{snapshotRunId}/dependencies', {
+    params: { snapshotRunId },
+  })
 }
 
 export async function getSnapshotRunLineage(snapshotRunId: string) {
-  return fetchJson<SnapshotRunLineage>(`/snapshots/runs/${snapshotRunId}/lineage`)
+  return fetchOpenApiJson('/api/snapshots/runs/{snapshotRunId}/lineage', {
+    params: { snapshotRunId },
+  })
 }
 
 export async function getSnapshotRunAudit(snapshotRunId: string) {
-  return fetchJson<ListResponse<SnapshotAuditEvent>>(`/snapshots/runs/${snapshotRunId}/audit`)
+  return fetchOpenApiJson('/api/snapshots/runs/{snapshotRunId}/audit', {
+    params: { snapshotRunId },
+  })
 }
 
 export async function rerunSnapshotRun(snapshotRunId: string) {
