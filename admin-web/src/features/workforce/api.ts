@@ -1,4 +1,5 @@
 import { fetchJson, sendJson } from '../../lib/api'
+import { fetchOpenApiJson, type ApiGetResponse } from '../../lib/openapi-client'
 
 type ListResponse<T> = {
   items: T[]
@@ -18,12 +19,7 @@ type CommandResponse<T> = {
   data: T
 }
 
-export type SellerCodeReference = {
-  storeType: 'franchise'
-  prefix: 'FM'
-  lastSellerCode: string | null
-  nextSellerCodePreview: string | null
-}
+export type SellerCodeReference = ApiGetResponse<'/api/workforce/seller-code-reference'>
 
 export type SellerCodeRequest = {
   requestId: string
@@ -58,25 +54,11 @@ export type SellerCodeRequest = {
 
 export type SellerEmploymentType = 'full_time' | 'part_time' | 'temporary'
 
-export type PositionOption = {
-  positionId: string
-  positionCode: string
-  positionName: string
-  jobFamily: string | null
-  isManagerial: boolean
-}
+export type PositionOptions = ApiGetResponse<'/api/workforce/position-options'>
+export type PositionOption = PositionOptions['items'][number]
 
-export type StoreEmployee = {
-  employeeId: string
-  displayName: string
-  externalEmployeeRef: string | null
-  storeId: string
-  positionId: string
-  positionCode: string
-  positionName: string
-  assignmentStartDate: string
-  employmentStatus: string
-}
+export type StoreEmployees = ApiGetResponse<'/api/workforce/store-employees'>
+export type StoreEmployee = StoreEmployees['items'][number]
 
 export type OffboardingRequest = {
   requestId: string
@@ -111,7 +93,9 @@ export type OffboardingAccessClosure = {
 }
 
 export async function getSellerCodeReference() {
-  return fetchJson<SellerCodeReference>('/workforce/seller-code-reference?storeType=franchise')
+  return fetchOpenApiJson('/api/workforce/seller-code-reference', {
+    query: new URLSearchParams({ storeType: 'franchise' }),
+  })
 }
 
 export async function getSellerCodeRequests(input?: { status?: string }) {
@@ -189,14 +173,12 @@ export async function resubmitSellerCodeRequest(input: {
 
 export async function getPositionOptions(storeId: string) {
   const params = new URLSearchParams({ storeId })
-  return fetchJson<ListResponse<PositionOption>>(
-    `/workforce/position-options?${params.toString()}`,
-  )
+  return fetchOpenApiJson('/api/workforce/position-options', { query: params })
 }
 
 export async function getStoreEmployees(storeId: string) {
   const params = new URLSearchParams({ storeId })
-  return fetchJson<ListResponse<StoreEmployee>>(`/workforce/store-employees?${params.toString()}`)
+  return fetchOpenApiJson('/api/workforce/store-employees', { query: params })
 }
 
 export async function getOffboardingRequests(input?: { status?: string }) {

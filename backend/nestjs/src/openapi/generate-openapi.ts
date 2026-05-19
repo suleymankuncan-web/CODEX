@@ -1588,6 +1588,85 @@ const workflowInboxResponseSchema = {
   },
 };
 
+const workforceSellerCodeReferenceResponseSchema = {
+  type: "object",
+  required: ["storeType", "prefix", "lastSellerCode", "nextSellerCodePreview"],
+  properties: {
+    storeType: { type: "string", enum: ["franchise"] },
+    prefix: { type: "string", enum: ["FM"] },
+    lastSellerCode: { type: "string", nullable: true },
+    nextSellerCodePreview: { type: "string", nullable: true },
+  },
+};
+
+const workforcePositionOptionSchema = {
+  type: "object",
+  required: [
+    "positionId",
+    "positionCode",
+    "positionName",
+    "jobFamily",
+    "isManagerial",
+  ],
+  properties: {
+    positionId: { type: "string" },
+    positionCode: { type: "string" },
+    positionName: { type: "string" },
+    jobFamily: { type: "string", nullable: true },
+    isManagerial: { type: "boolean" },
+  },
+};
+
+const workforcePositionOptionsResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: workforcePositionOptionSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
+const workforceStoreEmployeeSchema = {
+  type: "object",
+  required: [
+    "employeeId",
+    "displayName",
+    "externalEmployeeRef",
+    "storeId",
+    "positionId",
+    "positionCode",
+    "positionName",
+    "assignmentStartDate",
+    "employmentStatus",
+  ],
+  properties: {
+    employeeId: { type: "string" },
+    displayName: { type: "string" },
+    externalEmployeeRef: { type: "string", nullable: true },
+    storeId: { type: "string" },
+    positionId: { type: "string" },
+    positionCode: { type: "string" },
+    positionName: { type: "string" },
+    assignmentStartDate: { type: "string" },
+    employmentStatus: { type: "string" },
+  },
+};
+
+const workforceStoreEmployeesResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: workforceStoreEmployeeSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
 const snapshotStatusTotalsSchema = {
   type: "object",
   required: ["all", "queued", "running", "completed", "failed"],
@@ -2373,6 +2452,10 @@ async function generateOpenApi(): Promise<void> {
     SnapshotRunDependenciesResponse: snapshotRunDependenciesResponseSchema,
     SnapshotRunLineageResponse: snapshotRunLineageResponseSchema,
     SnapshotRunAuditResponse: snapshotRunAuditResponseSchema,
+    WorkforceSellerCodeReferenceResponse:
+      workforceSellerCodeReferenceResponseSchema,
+    WorkforcePositionOptionsResponse: workforcePositionOptionsResponseSchema,
+    WorkforceStoreEmployeesResponse: workforceStoreEmployeesResponseSchema,
     ImportOverview: importOverviewSchema,
     ImportPayloadTemplateResponse: importPayloadTemplateSchema,
     ImportBatchAuditResponse: importBatchAuditResponseSchema,
@@ -2528,6 +2611,30 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Snapshot run audit event timeline.",
     "SnapshotRunAuditResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/workforce/seller-code-reference",
+    "get",
+    "Latest franchise seller code reference and next preview.",
+    "WorkforceSellerCodeReferenceResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/workforce/position-options",
+    "get",
+    "Store position options available for workforce requests.",
+    "WorkforcePositionOptionsResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/workforce/store-employees",
+    "get",
+    "Active store employees available for offboarding requests.",
+    "WorkforceStoreEmployeesResponse",
   );
 
   setJsonResponseSchema(

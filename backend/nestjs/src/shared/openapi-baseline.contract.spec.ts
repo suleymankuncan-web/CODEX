@@ -497,6 +497,56 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const workforceSellerCodeReferenceResponse =
+      document.paths["/api/workforce/seller-code-reference"].get.responses?.["200"];
+    expect(
+      workforceSellerCodeReferenceResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/WorkforceSellerCodeReferenceResponse",
+    });
+    expect(
+      document.components?.schemas?.WorkforceSellerCodeReferenceResponse
+        ?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        storeType: expect.any(Object),
+        prefix: expect.any(Object),
+        nextSellerCodePreview: expect.any(Object),
+      }),
+    );
+
+    const workforcePositionOptionsResponse =
+      document.paths["/api/workforce/position-options"].get.responses?.["200"];
+    expect(
+      workforcePositionOptionsResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/WorkforcePositionOptionsResponse",
+    });
+    expect(
+      document.components?.schemas?.WorkforcePositionOptionsResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
+    const workforceStoreEmployeesResponse =
+      document.paths["/api/workforce/store-employees"].get.responses?.["200"];
+    expect(
+      workforceStoreEmployeesResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/WorkforceStoreEmployeesResponse",
+    });
+    expect(
+      document.components?.schemas?.WorkforceStoreEmployeesResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
     const lookupsResponse =
       document.paths["/api/integrations/lookups"].get.responses?.["200"];
     expect(lookupsResponse?.content?.["application/json"]?.schema).toEqual({

@@ -1006,6 +1006,46 @@ export type components = {
         "offset": number
       }
     }
+    "WorkforcePositionOptionsResponse": {
+      "items": Array<{
+          "positionId": string
+          "positionCode": string
+          "positionName": string
+          "jobFamily": string | null
+          "isManagerial": boolean
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
+    "WorkforceSellerCodeReferenceResponse": {
+      "storeType": "franchise"
+      "prefix": "FM"
+      "lastSellerCode": string | null
+      "nextSellerCodePreview": string | null
+    }
+    "WorkforceStoreEmployeesResponse": {
+      "items": Array<{
+          "employeeId": string
+          "displayName": string
+          "externalEmployeeRef": string | null
+          "storeId": string
+          "positionId": string
+          "positionCode": string
+          "positionName": string
+          "assignmentStartDate": string
+          "employmentStatus": string
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
   }
 }
 
@@ -1357,6 +1397,39 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["StoreTargetingPersonnelResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/workforce/position-options": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["WorkforcePositionOptionsResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/workforce/seller-code-reference": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["WorkforceSellerCodeReferenceResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/workforce/store-employees": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["WorkforceStoreEmployeesResponse"]
           }
         }
       }
