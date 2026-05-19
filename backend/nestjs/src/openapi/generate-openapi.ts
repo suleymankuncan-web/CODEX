@@ -107,6 +107,131 @@ const importOverviewSchema = {
   },
 };
 
+const integrationLookupSourceSchema = {
+  type: "object",
+  required: [
+    "sourceId",
+    "sourceCode",
+    "sourceName",
+    "entityType",
+    "sourceSystem",
+    "stateModel",
+  ],
+  properties: {
+    sourceId: { type: "string" },
+    sourceCode: { type: "string" },
+    sourceName: { type: "string" },
+    entityType: { type: "string" },
+    sourceSystem: { type: "string" },
+    stateModel: { type: "string" },
+  },
+};
+
+const integrationLookupSourceSummarySchema = {
+  type: "object",
+  required: ["sourceId", "sourceCode", "sourceName"],
+  properties: {
+    sourceId: { type: "string" },
+    sourceCode: { type: "string" },
+    sourceName: { type: "string" },
+  },
+};
+
+const integrationLookupOptionSchema = {
+  type: "object",
+  required: ["value", "label"],
+  properties: {
+    value: { type: "string" },
+    label: { type: "string" },
+  },
+};
+
+const integrationLookupSourceOptionSchema = {
+  type: "object",
+  required: [
+    "value",
+    "label",
+    "entityType",
+    "sourceCode",
+    "sourceSystem",
+    "stateModel",
+  ],
+  properties: {
+    value: { type: "string" },
+    label: { type: "string" },
+    entityType: { type: "string" },
+    sourceCode: { type: "string" },
+    sourceSystem: { type: "string" },
+    stateModel: { type: "string" },
+  },
+};
+
+const integrationLookupsSchema = {
+  type: "object",
+  required: [
+    "entityTypes",
+    "sourceStats",
+    "activeSources",
+    "sourcesByEntityType",
+    "optionGroups",
+    "meta",
+  ],
+  properties: {
+    entityTypes: {
+      type: "array",
+      items: { type: "string" },
+    },
+    sourceStats: {
+      type: "object",
+      required: ["totalActiveSources"],
+      properties: {
+        totalActiveSources: { type: "integer", minimum: 0 },
+      },
+    },
+    activeSources: {
+      type: "array",
+      items: integrationLookupSourceSchema,
+    },
+    sourcesByEntityType: {
+      type: "object",
+      additionalProperties: {
+        type: "array",
+        items: integrationLookupSourceSummarySchema,
+      },
+    },
+    optionGroups: {
+      type: "object",
+      required: ["entityTypes", "sources", "sourceSystems", "stateModels"],
+      properties: {
+        entityTypes: {
+          type: "array",
+          items: integrationLookupOptionSchema,
+        },
+        sources: {
+          type: "array",
+          items: integrationLookupSourceOptionSchema,
+        },
+        sourceSystems: {
+          type: "array",
+          items: integrationLookupOptionSchema,
+        },
+        stateModels: {
+          type: "array",
+          items: integrationLookupOptionSchema,
+        },
+      },
+    },
+    meta: {
+      type: "object",
+      required: ["totalEntityTypes", "totalActiveSources"],
+      properties: {
+        totalEntityTypes: { type: "integer", minimum: 0 },
+        totalActiveSources: { type: "integer", minimum: 0 },
+      },
+    },
+  },
+};
+
 async function generateOpenApi(): Promise<void> {
   const app = await NestFactory.create(AppModule, { logger: false });
   app.setGlobalPrefix("api");
@@ -162,27 +287,24 @@ async function generateOpenApi(): Promise<void> {
   document.components.schemas = {
     ...(document.components.schemas ?? {}),
     ImportOverview: importOverviewSchema,
+    IntegrationLookups: integrationLookupsSchema,
   };
 
-  const importOverviewOperation = (document.paths[
-    "/api/integrations/import-batches/overview"
-  ] as MutablePathItem | undefined)?.get;
+  setJsonResponseSchema(
+    document.paths,
+    "/api/integrations/import-batches/overview",
+    "get",
+    "Import admin overview with totals and latest actionable batches.",
+    "ImportOverview",
+  );
 
-  if (importOverviewOperation) {
-    importOverviewOperation.responses = {
-      ...(importOverviewOperation.responses ?? {}),
-      "200": {
-        description: "Import admin overview with totals and latest actionable batches.",
-        content: {
-          "application/json": {
-            schema: {
-              $ref: "#/components/schemas/ImportOverview",
-            },
-          },
-        },
-      },
-    };
-  }
+  setJsonResponseSchema(
+    document.paths,
+    "/api/integrations/lookups",
+    "get",
+    "Integration lookup options for admin import and source management screens.",
+    "IntegrationLookups",
+  );
 
   const outputPath = resolve(process.cwd(), "../../docs/api/openapi.json");
   mkdirSync(dirname(outputPath), { recursive: true });
@@ -209,4 +331,32 @@ function nullableStringProperties(propertyNames: string[]) {
       { type: "string", nullable: true },
     ]),
   );
+}
+
+function setJsonResponseSchema(
+  paths: Record<string, unknown>,
+  path: string,
+  method: string,
+  description: string,
+  schemaName: string,
+) {
+  const operation = (paths[path] as MutablePathItem | undefined)?.[method];
+
+  if (!operation) {
+    return;
+  }
+
+  operation.responses = {
+    ...(operation.responses ?? {}),
+    "200": {
+      description,
+      content: {
+        "application/json": {
+          schema: {
+            $ref: `#/components/schemas/${schemaName}`,
+          },
+        },
+      },
+    },
+  };
 }

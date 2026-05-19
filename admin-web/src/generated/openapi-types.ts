@@ -35,6 +35,53 @@ export type components = {
         "stuckBatchId": string | null
       }
     }
+    "IntegrationLookups": {
+      "entityTypes": string[]
+      "sourceStats": {
+        "totalActiveSources": number
+      }
+      "activeSources": Array<{
+          "sourceId": string
+          "sourceCode": string
+          "sourceName": string
+          "entityType": string
+          "sourceSystem": string
+          "stateModel": string
+        }>
+      "sourcesByEntityType": {
+        [key: string]: Array<{
+            "sourceId": string
+            "sourceCode": string
+            "sourceName": string
+          }>
+      }
+      "optionGroups": {
+        "entityTypes": Array<{
+            "value": string
+            "label": string
+          }>
+        "sources": Array<{
+            "value": string
+            "label": string
+            "entityType": string
+            "sourceCode": string
+            "sourceSystem": string
+            "stateModel": string
+          }>
+        "sourceSystems": Array<{
+            "value": string
+            "label": string
+          }>
+        "stateModels": Array<{
+            "value": string
+            "label": string
+          }>
+      }
+      "meta": {
+        "totalEntityTypes": number
+        "totalActiveSources": number
+      }
+    }
   }
 }
 
@@ -45,6 +92,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["ImportOverview"]
+          }
+        }
+      }
+    }
+  }
+  "/api/integrations/lookups": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["IntegrationLookups"]
           }
         }
       }
