@@ -199,6 +199,40 @@ const competitionSummarySchema = {
   },
 };
 
+const competitionTeamTemplateStoreSchema = {
+  type: "object",
+  required: ["storeId", "storeCode", "storeName", "regionId"],
+  properties: {
+    storeId: { type: "string" },
+    storeCode: { type: "string" },
+    storeName: { type: "string" },
+    regionId: { type: "string" },
+  },
+};
+
+const competitionTeamTemplateSchema = {
+  type: "object",
+  required: [
+    "templateId",
+    "templateCode",
+    "templateName",
+    "description",
+    "isActive",
+    "stores",
+  ],
+  properties: {
+    templateId: { type: "string" },
+    templateCode: { type: "string" },
+    templateName: { type: "string" },
+    description: { type: "string", nullable: true },
+    isActive: { type: "boolean" },
+    stores: {
+      type: "array",
+      items: competitionTeamTemplateStoreSchema,
+    },
+  },
+};
+
 const importBatchNeedsActionItemSchema = {
   type: "object",
   required: [
@@ -758,6 +792,18 @@ const competitionListResponseSchema = {
   },
 };
 
+const competitionTeamTemplateListResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: competitionTeamTemplateSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
 const importBatchNeedsActionResponseSchema = {
   type: "object",
   required: ["items", "meta"],
@@ -1253,6 +1299,8 @@ async function generateOpenApi(): Promise<void> {
   document.components.schemas = {
     ...(document.components.schemas ?? {}),
     CompetitionListResponse: competitionListResponseSchema,
+    CompetitionTeamTemplateListResponse:
+      competitionTeamTemplateListResponseSchema,
     ImportOverview: importOverviewSchema,
     ImportPayloadTemplateResponse: importPayloadTemplateSchema,
     ImportBatchAuditResponse: importBatchAuditResponseSchema,
@@ -1287,6 +1335,14 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Paginated competition summaries visible to the current actor.",
     "CompetitionListResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/competitions/team-templates",
+    "get",
+    "Paginated competition team templates visible to competition admins.",
+    "CompetitionTeamTemplateListResponse",
   );
 
   setJsonResponseSchema(

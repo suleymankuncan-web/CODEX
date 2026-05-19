@@ -1913,7 +1913,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Paginated competition team templates visible to competition admins.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompetitionTeamTemplateListResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -5442,6 +5449,100 @@
                 },
                 "endsOn": {
                   "type": "string"
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "count",
+              "total",
+              "limit",
+              "offset"
+            ],
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "CompetitionTeamTemplateListResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "meta"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "templateId",
+                "templateCode",
+                "templateName",
+                "description",
+                "isActive",
+                "stores"
+              ],
+              "properties": {
+                "templateId": {
+                  "type": "string"
+                },
+                "templateCode": {
+                  "type": "string"
+                },
+                "templateName": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "isActive": {
+                  "type": "boolean"
+                },
+                "stores": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "storeId",
+                      "storeCode",
+                      "storeName",
+                      "regionId"
+                    ],
+                    "properties": {
+                      "storeId": {
+                        "type": "string"
+                      },
+                      "storeCode": {
+                        "type": "string"
+                      },
+                      "storeName": {
+                        "type": "string"
+                      },
+                      "regionId": {
+                        "type": "string"
+                      }
+                    }
+                  }
                 }
               }
             }

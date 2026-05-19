@@ -67,19 +67,9 @@ export type CompetitionStoreContribution = {
   missingKpiCodes: string[]
 }
 
-export type CompetitionTeamTemplate = {
-  templateId: string
-  templateCode: string
-  templateName: string
-  description: string | null
-  isActive: boolean
-  stores: Array<{
-    storeId: string
-    storeCode: string
-    storeName: string
-    regionId: string
-  }>
-}
+export type CompetitionTeamTemplateList =
+  ApiGetResponse<'/api/competitions/team-templates'>
+export type CompetitionTeamTemplate = CompetitionTeamTemplateList['items'][number]
 
 export type CompetitionWarning = {
   warningId: string
@@ -211,10 +201,9 @@ export async function listCompetitionTeamTemplates(input?: { activeOnly?: boolea
     params.set('activeOnly', String(input.activeOnly))
   }
 
-  const query = params.toString()
-  return fetchJson<ListResponse<CompetitionTeamTemplate>>(
-    `/competitions/team-templates${query ? `?${query}` : ''}`,
-  )
+  return fetchOpenApiJson('/api/competitions/team-templates', {
+    query: params,
+  })
 }
 
 export async function getCompetition(competitionId: string) {

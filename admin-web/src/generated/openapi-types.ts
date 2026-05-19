@@ -22,6 +22,27 @@ export type components = {
         "offset": number
       }
     }
+    "CompetitionTeamTemplateListResponse": {
+      "items": Array<{
+          "templateId": string
+          "templateCode": string
+          "templateName": string
+          "description": string | null
+          "isActive": boolean
+          "stores": Array<{
+              "storeId": string
+              "storeCode": string
+              "storeName": string
+              "regionId": string
+            }>
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
     "ExternalIdMapCandidatesResponse": {
       "items": Array<{
           "entityType": "employee" | "store"
@@ -535,6 +556,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["CompetitionListResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/competitions/team-templates": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["CompetitionTeamTemplateListResponse"]
           }
         }
       }
