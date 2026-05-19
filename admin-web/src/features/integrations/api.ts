@@ -1,36 +1,7 @@
 import { fetchJson, sendFormData, sendJson } from '../../lib/api'
+import { fetchOpenApiJson, type ApiGetResponse } from '../../lib/openapi-client'
 
-export type ImportOverview = {
-  totals: {
-    all: number
-    completed: number
-    failed: number
-    completedWithErrors: number
-    pending: number
-    queued: number
-    processing: number
-  }
-  healthTotals: {
-    healthy: number
-    inProgress: number
-    blocked: number
-    retryReady: number
-    needsAction: number
-    stuck: number
-  }
-  actionTotals: {
-    blocked: number
-    retryReady: number
-    needsAction: number
-    stuck: number
-  }
-  latest: {
-    completedBatchId: string | null
-    failedBatchId: string | null
-    inProgressBatchId: string | null
-    stuckBatchId: string | null
-  }
-}
+export type ImportOverview = ApiGetResponse<'/api/integrations/import-batches/overview'>
 
 export type ImportPayloadTemplate = {
   entityType: string
@@ -476,7 +447,7 @@ type CreateImportBatchBody = {
 }
 
 export async function getImportOverview() {
-  return fetchJson<ImportOverview>('/integrations/import-batches/overview')
+  return fetchOpenApiJson('/api/integrations/import-batches/overview')
 }
 
 export async function getIntegrationLookups() {

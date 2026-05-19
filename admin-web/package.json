@@ -19,6 +19,7 @@
     "smoke:pilot": "npm run build && playwright test pilot-smoke.spec.ts pilot-api-contracts.spec.ts",
     "smoke:pilot:live": "node scripts/pilot-live-smoke.mjs",
     "check:release": "npm run lint && npm run test:scripts && npm run smoke:ui && npm audit --omit=dev",
+    "api:generate": "node scripts/generate-openapi-types.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
