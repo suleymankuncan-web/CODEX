@@ -261,6 +261,18 @@ Short version:
   Sokrates for architectural, auth/API/DB, batch, or high-risk decisions.
 - Keep Sokrates proportional: use deeper questioning for higher-risk work, but
   do not turn low-risk documentation or mechanical updates into ceremony.
+- Choose an operating mode before acting: Scout, Planner, Builder, Reviewer, or
+  Finisher.
+- Use the triage gate to decide whether the work needs a direct answer,
+  status check, docs/plan update, low-risk implementation, medium-risk
+  implementation, full high-risk Sokrates, or external-evidence handling.
+- For "what next?" decisions, answer with a concrete recommendation contract:
+  now, next, park, and stop.
+- Keep evidence fresh: current repo state beats memory, `origin/main` beats old
+  local branches for merged work, and provider/runtime facts must be verified
+  before being treated as true.
+- Use the no-drift checkpoint before editing, before PR/merge, and before final
+  answer so the work follows the newest user request.
 - Merge only after local gates, GitHub/Vercel checks when relevant, mergeable
   status, and Codex no-major-issue/comment or clear approval reaction.
 - Check Codex approval signals quickly after checks go green: poll issue
