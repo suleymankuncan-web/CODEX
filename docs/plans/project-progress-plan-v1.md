@@ -213,19 +213,26 @@ Phase 1 evidence:
 - `docs/evidence/product-progress/2026-05-20-visible-flow-audit-v1.md`
 - `docs/evidence/product-progress/2026-05-20-store-home-manager-copy.md`
 - `docs/evidence/product-progress/2026-05-20-uiux-v1-route-inventory.md`
+- `docs/evidence/product-progress/2026-05-20-store-utility-handoff-v1.md`
 
 Recommended first PR after this plan:
 
 - A visible-flow audit document plus one small follow-up PR, not another large refactor.
 
-Current UI/UX V1 recommendation:
+Current UI/UX V1 status:
 
-- Start with the store utility/handoff route family:
+- Store utility/handoff route family has been improved:
   `/store/settings`, `/store/targets`, and `/store/reports`.
 - Park `/store/home` and `/admin/master-data` unless browser review or pilot
   feedback finds a concrete new gap.
-- Treat reports/admin/auth follow-ups as later slices, with route-level
-  Playwright evidence before visual polish.
+
+Next UI/UX V1 recommendation:
+
+- Treat admin reports as the next candidate, starting with `/admin/reports`
+  and `/admin/reports/snapshot-runs` only if the slice can stay read-only and
+  fixture-backed.
+- Treat auth/admin follow-ups as later slices, with route-level Playwright
+  evidence before visual polish.
 
 Stop rules:
 
