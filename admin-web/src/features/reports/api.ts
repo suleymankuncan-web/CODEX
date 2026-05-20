@@ -1,5 +1,9 @@
-import { sendJson } from '../../lib/api'
-import { fetchOpenApiJson, type ApiGetResponse } from '../../lib/openapi-client'
+import {
+  fetchOpenApiJson,
+  sendOpenApiJson,
+  type ApiGetResponse,
+  type ApiMutationBody,
+} from '../../lib/openapi-client'
 
 export type ReportingSummary = ApiGetResponse<'/api/reports/summary'>
 
@@ -13,10 +17,7 @@ export type KpiReport = ApiGetResponse<'/api/reports/kpis'>
 export type KpiRow = KpiReport['items'][number]
 
 export type KpiConfigResponse = ApiGetResponse<'/api/reports/kpi-config'>
-export type KpiConfig = Pick<
-  KpiConfigResponse,
-  'storeProfile' | 'personnelProfile' | 'ownershipMatrix' | 'gradingBands'
->
+export type KpiConfig = ApiMutationBody<'/api/reports/kpi-config', 'PATCH'>
 export type KpiConfigVersionMetadata = KpiConfigResponse['metadata']
 export type KpiConfigEditorState = ApiGetResponse<'/api/reports/kpi-config/editor'>
 export type KpiConfigAudit = ApiGetResponse<'/api/reports/kpi-config/audit'>
@@ -98,14 +99,14 @@ export async function getKpiConfigEditor() {
 }
 
 export async function updateKpiConfigDraft(input: KpiConfig) {
-  return sendJson<KpiConfigEditorState>('/reports/kpi-config', {
+  return sendOpenApiJson('/api/reports/kpi-config', {
     method: 'PATCH',
     body: input,
   })
 }
 
 export async function publishKpiConfig() {
-  return sendJson<KpiConfigEditorState>('/reports/kpi-config/publish', {
+  return sendOpenApiJson('/api/reports/kpi-config/publish', {
     method: 'PATCH',
   })
 }

@@ -1708,12 +1708,29 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Draft and published KPI config editor state after saving a draft.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportingKpiConfigEditorResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
           "Reporting"
-        ]
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportingKpiConfigDraftRequest"
+              }
+            }
+          }
+        }
       }
     },
     "/api/reports/kpi-config/editor": {
@@ -1764,7 +1781,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Draft and published KPI config editor state after publishing a draft.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportingKpiConfigEditorResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -8402,6 +8426,308 @@
               "offset": {
                 "type": "integer",
                 "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "ReportingKpiConfigDraftRequest": {
+        "type": "object",
+        "required": [
+          "storeProfile",
+          "personnelProfile",
+          "ownershipMatrix",
+          "gradingBands"
+        ],
+        "properties": {
+          "storeProfile": {
+            "type": "object",
+            "required": [
+              "profileCode",
+              "title",
+              "summary",
+              "metrics",
+              "futureMetricRule"
+            ],
+            "properties": {
+              "profileCode": {
+                "type": "string",
+                "enum": [
+                  "store",
+                  "personnel"
+                ]
+              },
+              "title": {
+                "type": "string"
+              },
+              "summary": {
+                "type": "string"
+              },
+              "metrics": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "label",
+                    "weightPercent",
+                    "ownerRole",
+                    "scoreBehavior"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "weightPercent": {
+                      "type": "number"
+                    },
+                    "ownerRole": {
+                      "type": "string",
+                      "enum": [
+                        "DEPUTY_GM",
+                        "REGION_MANAGER",
+                        "STORE_MANAGER",
+                        "STORE_PERSONNEL",
+                        "VISUAL_TEAM"
+                      ]
+                    },
+                    "scoreBehavior": {
+                      "type": "string",
+                      "enum": [
+                        "score_only",
+                        "warning_first",
+                        "task_candidate"
+                      ]
+                    },
+                    "direction": {
+                      "type": "string",
+                      "enum": [
+                        "HIGHER_IS_BETTER",
+                        "LOWER_IS_BETTER",
+                        "TARGET_BAND"
+                      ]
+                    },
+                    "benchmarkSource": {
+                      "type": "string",
+                      "enum": [
+                        "TARGET",
+                        "TURKEY_AVERAGE",
+                        "CHECKLIST_SCORE"
+                      ]
+                    },
+                    "capRatio": {
+                      "type": "number"
+                    },
+                    "aliases": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "notes": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "futureMetricRule": {
+                "type": "string"
+              }
+            }
+          },
+          "personnelProfile": {
+            "type": "object",
+            "required": [
+              "profileCode",
+              "title",
+              "summary",
+              "metrics",
+              "futureMetricRule"
+            ],
+            "properties": {
+              "profileCode": {
+                "type": "string",
+                "enum": [
+                  "store",
+                  "personnel"
+                ]
+              },
+              "title": {
+                "type": "string"
+              },
+              "summary": {
+                "type": "string"
+              },
+              "metrics": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "label",
+                    "weightPercent",
+                    "ownerRole",
+                    "scoreBehavior"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "weightPercent": {
+                      "type": "number"
+                    },
+                    "ownerRole": {
+                      "type": "string",
+                      "enum": [
+                        "DEPUTY_GM",
+                        "REGION_MANAGER",
+                        "STORE_MANAGER",
+                        "STORE_PERSONNEL",
+                        "VISUAL_TEAM"
+                      ]
+                    },
+                    "scoreBehavior": {
+                      "type": "string",
+                      "enum": [
+                        "score_only",
+                        "warning_first",
+                        "task_candidate"
+                      ]
+                    },
+                    "direction": {
+                      "type": "string",
+                      "enum": [
+                        "HIGHER_IS_BETTER",
+                        "LOWER_IS_BETTER",
+                        "TARGET_BAND"
+                      ]
+                    },
+                    "benchmarkSource": {
+                      "type": "string",
+                      "enum": [
+                        "TARGET",
+                        "TURKEY_AVERAGE",
+                        "CHECKLIST_SCORE"
+                      ]
+                    },
+                    "capRatio": {
+                      "type": "number"
+                    },
+                    "aliases": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "notes": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "futureMetricRule": {
+                "type": "string"
+              }
+            }
+          },
+          "ownershipMatrix": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "code",
+                "label",
+                "visibleTo",
+                "operationalOwner",
+                "contributesTo",
+                "taskCandidate"
+              ],
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "visibleTo": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "DEPUTY_GM",
+                      "REGION_MANAGER",
+                      "STORE_MANAGER",
+                      "STORE_PERSONNEL",
+                      "VISUAL_TEAM"
+                    ]
+                  }
+                },
+                "operationalOwner": {
+                  "type": "string",
+                  "enum": [
+                    "DEPUTY_GM",
+                    "REGION_MANAGER",
+                    "STORE_MANAGER",
+                    "STORE_PERSONNEL",
+                    "VISUAL_TEAM"
+                  ]
+                },
+                "contributesTo": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "store",
+                      "personnel"
+                    ]
+                  }
+                },
+                "taskCandidate": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "gradingBands": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "code",
+                "label",
+                "emoji",
+                "tone",
+                "minScore"
+              ],
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "emoji": {
+                  "type": "string"
+                },
+                "tone": {
+                  "type": "string",
+                  "enum": [
+                    "calm",
+                    "accent",
+                    "warning",
+                    "danger",
+                    "neutral"
+                  ]
+                },
+                "minScore": {
+                  "type": "number"
+                }
               }
             }
           }

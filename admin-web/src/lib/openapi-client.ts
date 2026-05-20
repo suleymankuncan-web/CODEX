@@ -1,5 +1,5 @@
 import type { paths } from '../generated/openapi-types'
-import { fetchJson } from './api'
+import { fetchJson, sendJson } from './api'
 
 type JsonContent<Response> = Response extends { content: { 'application/json': infer Body } } ? Body : never
 
@@ -15,9 +15,35 @@ type FirstJsonSuccessResponse<Responses> =
 
 type GetOperation<Path extends keyof paths> = paths[Path] extends { get: infer Operation } ? Operation : never
 
+type MutationMethod = 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+type MutationOperation<Path extends keyof paths, Method extends MutationMethod> =
+  paths[Path] extends Record<Lowercase<Method>, infer Operation> ? Operation : never
+
 export type ApiGetResponse<Path extends keyof paths> = GetOperation<Path> extends { responses: infer Responses }
   ? FirstJsonSuccessResponse<Responses>
   : never
+
+export type ApiMutationResponse<Path extends keyof paths, Method extends MutationMethod> = MutationOperation<
+  Path,
+  Method
+> extends { responses: infer Responses }
+  ? FirstJsonSuccessResponse<Responses>
+  : never
+
+export type ApiMutationBody<Path extends keyof paths, Method extends MutationMethod> = MutationOperation<
+  Path,
+  Method
+> extends { requestBody: infer RequestBody }
+  ? JsonContent<RequestBody>
+  : never
+
+type ApiMutationInput<Path extends keyof paths, Method extends MutationMethod> = {
+  method: Method
+  params?: Record<string, string | number>
+  query?: string | URLSearchParams
+} & ([ApiMutationBody<Path, Method>] extends [never]
+  ? { body?: never }
+  : { body: ApiMutationBody<Path, Method> })
 
 export async function fetchOpenApiJson<Path extends keyof paths & `/api/${string}`>(
   path: Path,
@@ -28,6 +54,19 @@ export async function fetchOpenApiJson<Path extends keyof paths & `/api/${string
 ): Promise<ApiGetResponse<Path>> {
   return fetchJson<ApiGetResponse<Path>>(
     `${toClientApiPath(formatPathParams(path, input?.params))}${formatQuery(input?.query)}`,
+  )
+}
+
+export async function sendOpenApiJson<Path extends keyof paths & `/api/${string}`, Method extends MutationMethod>(
+  path: Path,
+  input: ApiMutationInput<Path, Method>,
+): Promise<ApiMutationResponse<Path, Method>> {
+  return sendJson<ApiMutationResponse<Path, Method>>(
+    `${toClientApiPath(formatPathParams(path, input.params))}${formatQuery(input.query)}`,
+    {
+      method: input.method,
+      body: (input as { body?: unknown }).body,
+    },
   )
 }
 

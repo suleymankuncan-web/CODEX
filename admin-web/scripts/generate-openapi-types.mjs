@@ -60,8 +60,10 @@ const selectedOperations = [
   { path: '/api/snapshots/runs/{snapshotRunId}/dependencies', method: 'get' },
   { path: '/api/snapshots/runs/{snapshotRunId}/lineage', method: 'get' },
   { path: '/api/reports/kpi-config', method: 'get' },
+  { path: '/api/reports/kpi-config', method: 'patch' },
   { path: '/api/reports/kpi-config/audit', method: 'get' },
   { path: '/api/reports/kpi-config/editor', method: 'get' },
+  { path: '/api/reports/kpi-config/publish', method: 'patch' },
   { path: '/api/reports/kpis', method: 'get' },
   { path: '/api/reports/leaderboards/closed', method: 'get' },
   { path: '/api/reports/my-performance', method: 'get' },
@@ -153,8 +155,13 @@ function renderPaths(paths, operations) {
     lines.push(`  ${quoteKey(path)}: {`)
 
     for (const method of Array.from(methods).sort()) {
+      const operation = pathItem[method] ?? {}
+      const requestBodyType = requestBodyToType(operation.requestBody, 3)
       lines.push(`    ${method}: {`)
-      lines.push(`      responses: ${responsesToType(pathItem[method]?.responses ?? {}, 3)}`)
+      if (requestBodyType) {
+        lines.push(`      requestBody: ${requestBodyType}`)
+      }
+      lines.push(`      responses: ${responsesToType(operation.responses ?? {}, 3)}`)
       lines.push('    }')
     }
 
@@ -224,6 +231,24 @@ function collectReferencedSchemaNames(openApiDocument, operations) {
       collectSchema(propertySchema)
     }
   }
+}
+
+function requestBodyToType(requestBody, level) {
+  const jsonSchema = requestBody?.content?.['application/json']?.schema
+  if (!jsonSchema) {
+    return null
+  }
+
+  const indent = '  '.repeat(level)
+  const childIndent = '  '.repeat(level + 1)
+
+  return [
+    '{',
+    `${childIndent}content: {`,
+    `${childIndent}  'application/json': ${schemaToType(jsonSchema, level + 2)}`,
+    `${childIndent}}`,
+    `${indent}}`,
+  ].join('\n')
 }
 
 function responsesToType(responses, level) {
