@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { KpiConfigRepository } from "../infrastructure/kpi-config.repository";
 import { ReportingRepository } from "../infrastructure/reporting.repository";
+import { StorePerformanceReportingReadRepository } from "../infrastructure/store-performance-reporting-read.repository";
 import { KpiBenchmarkScoringService } from "./kpi-benchmark-scoring.service";
 import {
   KpiScoreProfile,
@@ -88,6 +89,8 @@ export class RankingService {
   constructor(
     private readonly reportingRepository: ReportingRepository,
     private readonly kpiConfigRepository: KpiConfigRepository,
+    private readonly storePerformanceReportingReadRepository: StorePerformanceReportingReadRepository =
+      reportingRepository as unknown as StorePerformanceReportingReadRepository,
   ) {}
 
   async getRankings(input: GetRankingsInput): Promise<RankingResponse> {
@@ -333,10 +336,10 @@ export class RankingService {
     periodStart: string;
     periodEnd: string;
   }) {
-    let rows = await this.reportingRepository.getStoreTurkeyBenchmarkValues(input);
+    let rows = await this.storePerformanceReportingReadRepository.getStoreTurkeyBenchmarkValues(input);
 
     if (input.companyId && !this.hasUsableBenchmarkRows(rows)) {
-      rows = await this.reportingRepository.getStoreTurkeyBenchmarkValues({
+      rows = await this.storePerformanceReportingReadRepository.getStoreTurkeyBenchmarkValues({
         ...input,
         companyId: undefined,
       });

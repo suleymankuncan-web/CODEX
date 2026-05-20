@@ -20,6 +20,7 @@ import { LiveMonthlyLeaderboardService } from "./live-monthly-leaderboard.servic
 import { StoreScoreReportingReadRepository } from "../infrastructure/store-score-reporting-read.repository";
 import { ClosedRankingRepository } from "../infrastructure/closed-ranking.repository";
 import { SnapshotReportingReadRepository } from "../infrastructure/snapshot-reporting-read.repository";
+import { StorePerformanceReportingReadRepository } from "../infrastructure/store-performance-reporting-read.repository";
 
 const storeChecklistMetricCodes = new Set(["BM_CHECKLIST", "VM_CHECKLIST"]);
 
@@ -38,6 +39,8 @@ export class ReportingService {
       reportingRepository as unknown as ClosedRankingRepository,
     private readonly snapshotReportingReadRepository: SnapshotReportingReadRepository =
       reportingRepository as unknown as SnapshotReportingReadRepository,
+    private readonly storePerformanceReportingReadRepository: StorePerformanceReportingReadRepository =
+      reportingRepository as unknown as StorePerformanceReportingReadRepository,
   ) {}
 
   private mapSnapshotRun(item: {
@@ -333,12 +336,12 @@ export class ReportingService {
     }
 
     const [storeName, availablePeriods, latestPeriod] = await Promise.all([
-      this.reportingRepository.getStoreNameById(storeId),
-      this.reportingRepository.listStoreKpiPeriods({
+      this.storePerformanceReportingReadRepository.getStoreNameById(storeId),
+      this.storePerformanceReportingReadRepository.listStoreKpiPeriods({
         storeId,
         metricCodes,
       }),
-      this.reportingRepository.getLatestStoreKpiPeriod({
+      this.storePerformanceReportingReadRepository.getLatestStoreKpiPeriod({
         storeId,
         metricCodes,
         periodType: input.periodType ?? "monthly",
@@ -394,7 +397,7 @@ export class ReportingService {
       storeChecklistMetricCodes.has(code),
     );
     const [storePerformanceRows, checklistRows] = await Promise.all([
-      this.reportingRepository.getStorePerformanceRows({
+      this.storePerformanceReportingReadRepository.getStorePerformanceRows({
         storeId,
         metricCodes,
         periodType: latestPeriod.period_type,
@@ -413,7 +416,7 @@ export class ReportingService {
       ...storePerformanceRows,
       ...checklistRows.filter((row) => row.store_id === storeId),
     ];
-    let benchmarkRows = await this.reportingRepository.getStoreTurkeyBenchmarkValues({
+    let benchmarkRows = await this.storePerformanceReportingReadRepository.getStoreTurkeyBenchmarkValues({
       companyId: input.companyIds[0] ?? undefined,
       periodType: latestPeriod.period_type,
       periodStart: latestPeriod.period_start,
@@ -421,7 +424,7 @@ export class ReportingService {
     });
 
     if (!this.hasUsableBenchmarkRows(benchmarkRows)) {
-      benchmarkRows = await this.reportingRepository.getStoreTurkeyBenchmarkValues({
+      benchmarkRows = await this.storePerformanceReportingReadRepository.getStoreTurkeyBenchmarkValues({
         companyId: undefined,
         periodType: latestPeriod.period_type,
         periodStart: latestPeriod.period_start,
