@@ -1,4 +1,5 @@
 import { fetchJson, sendJson } from '../../lib/api'
+import { fetchOpenApiJson, type ApiGetResponse } from '../../lib/openapi-client'
 
 type ListResponse<T> = {
   items: T[]
@@ -10,225 +11,36 @@ type ListResponse<T> = {
   }
 }
 
-export type AuditEvent = {
-  eventLogId: string
-  occurredAt: string
-  actorUserId: string | null
-  correlationId: string | null
-  eventType: string
-  metadata: Record<string, unknown>
-}
+export type ReportingSummary = ApiGetResponse<'/api/reports/summary'>
 
-export type ReportingSummary = {
-  latestCompletedSnapshotRun: {
-    snapshotRunId: string
-    snapshotDate: string
-    snapshotType: string
-    periodStart: string
-    periodEnd: string
-    runStatus: string
-    generatedAt: string
-    generatedBy: string
-  } | null
-  cards: {
-    workforceRows: number
-    kpiRows: number
-    checklistRows: number
-    turnoverRows: number
-  }
-}
+export type ReportingSnapshotRuns = ApiGetResponse<'/api/reports/snapshot-runs'>
+export type ReportingSnapshotRun = ReportingSnapshotRuns['items'][number]
 
-export type ReportingSnapshotRun = {
-  snapshotRunId: string
-  snapshotDate: string
-  snapshotType: string
-  periodStart: string
-  periodEnd: string
-  runStatus: string
-  generatedAt: string
-  generatedBy: string
-  kpiConfigVersion?: SnapshotKpiConfigVersion | null
-}
+export type WorkforceReport = ApiGetResponse<'/api/reports/workforce'>
+export type WorkforceRow = WorkforceReport['items'][number]
 
-type SnapshotKpiConfigVersion = {
-  kpiConfigVersionId: string | null
-  versionNo: number | null
-  state: 'versioned' | 'pre_governance'
-}
+export type KpiReport = ApiGetResponse<'/api/reports/kpis'>
+export type KpiRow = KpiReport['items'][number]
 
-export type WorkforceRow = {
-  snapshotRunId: string
-  storeId: string
-  positionId: string
-  activeHeadcount: string
-  activeFte: string
-  plannedHeadcount: string
-  plannedFte: string
-  gapHeadcount: string
-  gapFte: string
-}
+export type KpiConfigResponse = ApiGetResponse<'/api/reports/kpi-config'>
+export type KpiConfig = Pick<
+  KpiConfigResponse,
+  'storeProfile' | 'personnelProfile' | 'ownershipMatrix' | 'gradingBands'
+>
+export type KpiConfigVersionMetadata = KpiConfigResponse['metadata']
+export type KpiConfigEditorState = ApiGetResponse<'/api/reports/kpi-config/editor'>
+export type KpiConfigAudit = ApiGetResponse<'/api/reports/kpi-config/audit'>
+export type AuditEvent = KpiConfigAudit['items'][number]
+export type KpiScoreProfileMetric = KpiConfigResponse['storeProfile']['metrics'][number]
+export type KpiOwnerRole = KpiScoreProfileMetric['ownerRole']
+export type KpiScoreBehavior = KpiScoreProfileMetric['scoreBehavior']
+type KpiBenchmarkSource = NonNullable<KpiScoreProfileMetric['benchmarkSource']>
+export type KpiGradingBand = KpiConfigResponse['gradingBands'][number]
+export type KpiOwnershipMatrixRow = KpiConfigResponse['ownershipMatrix'][number]
 
-export type KpiRow = {
-  snapshotRunId: string
-  storeId: string
-  kpiId: string
-  kpiCode: string
-  kpiName: string
-  periodStart: string
-  periodEnd: string
-  targetValue: string | null
-  actualValue: string | null
-  achievementRate: string | null
-  statusBand: string | null
-}
-
-export type KpiOwnerRole =
-  | 'DEPUTY_GM'
-  | 'REGION_MANAGER'
-  | 'STORE_MANAGER'
-  | 'STORE_PERSONNEL'
-  | 'VISUAL_TEAM'
-
-export type KpiScoreBehavior = 'score_only' | 'warning_first' | 'task_candidate'
-type KpiMetricDirection = 'HIGHER_IS_BETTER' | 'LOWER_IS_BETTER' | 'TARGET_BAND'
-type KpiBenchmarkSource = 'TARGET' | 'TURKEY_AVERAGE' | 'CHECKLIST_SCORE'
-type KpiMetricScoreStatus =
-  | 'scored'
-  | 'pending_normalization'
-  | 'missing_reference'
-  | 'missing'
-
-export type KpiScoreProfileMetric = {
-  code: string
-  label: string
-  weightPercent: number
-  ownerRole: KpiOwnerRole
-  scoreBehavior: KpiScoreBehavior
-  direction?: KpiMetricDirection
-  benchmarkSource?: KpiBenchmarkSource
-  capRatio?: number
-  aliases?: string[]
-  notes?: string
-}
-
-type KpiScoreProfile = {
-  profileCode: 'store' | 'personnel'
-  title: string
-  summary: string
-  metrics: KpiScoreProfileMetric[]
-  futureMetricRule: string
-}
-
-export type KpiGradingBand = {
-  code: string
-  label: string
-  emoji: string
-  tone: 'calm' | 'accent' | 'warning' | 'danger' | 'neutral'
-  minScore: number
-}
-
-export type KpiOwnershipMatrixRow = {
-  code: string
-  label: string
-  visibleTo: KpiOwnerRole[]
-  operationalOwner: KpiOwnerRole
-  contributesTo: Array<'store' | 'personnel'>
-  taskCandidate: boolean
-}
-
-export type KpiConfig = {
-  storeProfile: KpiScoreProfile
-  personnelProfile: KpiScoreProfile
-  ownershipMatrix: KpiOwnershipMatrixRow[]
-  gradingBands: KpiGradingBand[]
-}
-
-export type KpiConfigVersionMetadata = {
-  kpiConfigVersionId: string | null
-  versionNo: number | null
-  effectiveFrom: string | null
-  effectiveTo: string | null
-  publishedAt: string | null
-  publishedBy: string | null
-}
-
-export type KpiConfigResponse = KpiConfig & {
-  metadata: KpiConfigVersionMetadata
-}
-
-export type KpiConfigEditorState = {
-  draftConfig: KpiConfig
-  publishedConfig: KpiConfig
-  hasUnpublishedChanges: boolean
-  latestPublishedVersion: KpiConfigVersionMetadata
-}
-
-export type MyPerformanceMetric = {
-  code: string
-  label: string
-  weightPercent: number
-  actualValue: number | null
-  targetValue?: number | null
-  achievementRate?: number | null
-  benchmarkValue?: number | null
-  benchmarkSource?: KpiBenchmarkSource
-  actualRatio?: number | null
-  scoredRatio?: number | null
-  capRatio?: number | null
-  isCapped?: boolean
-  missingReason?: string | null
-  contributionValue: number
-  dataStatus?: 'reported' | 'missing'
-  scoreStatus?: KpiMetricScoreStatus
-  status?: 'reported' | 'missing'
-}
-
-export type MyPerformanceSummary = {
-  source: {
-    mode: 'live' | 'closed'
-    snapshotRunId: string | null
-    snapshotDate: string | null
-  }
-  employee: {
-    employeeId: string
-    displayName: string
-    storeId: string | null
-    storeName: string | null
-  } | null
-  period: {
-    periodStart: string
-    periodEnd: string
-  } | null
-  score: {
-    value: number
-    matchedMetrics: number
-    totalMetrics: number
-  }
-  rankings: {
-    turkeyRank: number | null
-    turkeyPopulation: number
-    storeRank: number | null
-    storePopulation: number
-  }
-  availablePeriods: Array<{
-    periodType: 'daily' | 'weekly' | 'monthly' | string
-    periodStart: string
-    periodEnd: string
-  }>
-  partial: {
-    isPartial: boolean
-    missingMetricCodes: string[]
-    missingMetricLabels: string[]
-    pendingNormalizationCodes?: string[]
-    pendingNormalizationLabels?: string[]
-  }
-  supporting: {
-    netSalesValue: number | null
-    targetEntryMode: 'manager_assignment'
-    targetEditableByCurrentUser: boolean
-  }
-  metrics: MyPerformanceMetric[]
-}
+export type MyPerformanceSummary = ApiGetResponse<'/api/reports/my-performance'>
+export type MyPerformanceMetric = MyPerformanceSummary['metrics'][number]
+type KpiMetricScoreStatus = NonNullable<MyPerformanceMetric['scoreStatus']>
 
 type StoreKpiHighlightMetric = {
   code: string
@@ -453,7 +265,7 @@ export type TurnoverRow = {
 }
 
 export async function getReportingSummary() {
-  return fetchJson<ReportingSummary>('/reports/summary')
+  return fetchOpenApiJson('/api/reports/summary')
 }
 
 export async function getReportingSnapshotRuns(input?: {
@@ -476,29 +288,31 @@ export async function getReportingSnapshotRuns(input?: {
   params.set('limit', String(input?.limit ?? 8))
   params.set('offset', String(input?.offset ?? 0))
 
-  return fetchJson<ListResponse<ReportingSnapshotRun>>(
-    `/reports/snapshot-runs?${params.toString()}`,
-  )
+  return fetchOpenApiJson('/api/reports/snapshot-runs', { query: params })
 }
 
 export async function getWorkforceReport(snapshotRunId: string) {
-  return fetchJson<ListResponse<WorkforceRow>>(
-    `/reports/workforce?snapshotRunId=${encodeURIComponent(snapshotRunId)}&limit=50&offset=0`,
-  )
+  return fetchOpenApiJson('/api/reports/workforce', {
+    query: new URLSearchParams({
+      snapshotRunId,
+      limit: '50',
+      offset: '0',
+    }),
+  })
 }
 
 export async function getKpiReport(snapshotRunId: string) {
-  return fetchJson<ListResponse<KpiRow>>(
-    `/reports/kpis?snapshotRunId=${encodeURIComponent(snapshotRunId)}`,
-  )
+  return fetchOpenApiJson('/api/reports/kpis', {
+    query: new URLSearchParams({ snapshotRunId }),
+  })
 }
 
 export async function getKpiConfig() {
-  return fetchJson<KpiConfigResponse>('/reports/kpi-config')
+  return fetchOpenApiJson('/api/reports/kpi-config')
 }
 
 export async function getKpiConfigEditor() {
-  return fetchJson<KpiConfigEditorState>('/reports/kpi-config/editor')
+  return fetchOpenApiJson('/api/reports/kpi-config/editor')
 }
 
 export async function updateKpiConfigDraft(input: KpiConfig) {
@@ -515,7 +329,7 @@ export async function publishKpiConfig() {
 }
 
 export async function getKpiConfigAudit() {
-  return fetchJson<ListResponse<AuditEvent>>('/reports/kpi-config/audit')
+  return fetchOpenApiJson('/api/reports/kpi-config/audit')
 }
 
 export type MyPerformanceQueryInput = {
@@ -545,7 +359,7 @@ function buildMyPerformanceQuery(input?: MyPerformanceQueryInput) {
 
 export async function getMyPerformance(input?: MyPerformanceQueryInput) {
   const query = buildMyPerformanceQuery(input)
-  return fetchJson<MyPerformanceSummary>(`/reports/my-performance${query ? `?${query}` : ''}`)
+  return fetchOpenApiJson('/api/reports/my-performance', { query })
 }
 
 export async function getPersonnelPerformance(
@@ -553,9 +367,10 @@ export async function getPersonnelPerformance(
   input?: MyPerformanceQueryInput,
 ) {
   const query = buildMyPerformanceQuery(input)
-  return fetchJson<MyPerformanceSummary>(
-    `/reports/personnel-performance/${encodeURIComponent(employeeId)}${query ? `?${query}` : ''}`,
-  )
+  return fetchOpenApiJson('/api/reports/personnel-performance/{employeeId}', {
+    params: { employeeId },
+    query,
+  })
 }
 
 export async function getStoreKpiHighlights(input?: {

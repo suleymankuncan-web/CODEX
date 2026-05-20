@@ -1556,7 +1556,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Paginated reporting snapshot runs available for reporting surfaces.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportingSnapshotRunsResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -1570,11 +1577,11 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "",
+            "description": "Reporting summary with latest completed snapshot and row count cards.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/ReportingSummaryResponse"
                 }
               }
             }
@@ -1591,7 +1598,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Published KPI score profile, ownership matrix, grading bands, and version metadata.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportingKpiConfigResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -1617,7 +1631,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Draft and published KPI config editor state for admin review.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportingKpiConfigEditorResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -1631,7 +1652,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Paginated KPI config audit events for admin governance.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportingKpiConfigAuditResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -1659,7 +1687,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Paginated workforce snapshot rows for reporting surfaces.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportingWorkforceResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -1673,7 +1708,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Paginated KPI snapshot rows for reporting surfaces.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportingKpiResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -1687,11 +1729,11 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "",
+            "description": "Current actor personnel performance summary for live or closed reporting.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/ReportingPerformanceResponse"
                 }
               }
             }
@@ -1717,11 +1759,11 @@
         ],
         "responses": {
           "200": {
-            "description": "",
+            "description": "Target personnel performance summary visible to authorized reviewers.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/ReportingPerformanceResponse"
                 }
               }
             }
@@ -8042,6 +8084,1761 @@
               "offset": {
                 "type": "integer",
                 "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "ReportingSummaryResponse": {
+        "type": "object",
+        "required": [
+          "latestCompletedSnapshotRun",
+          "cards"
+        ],
+        "properties": {
+          "latestCompletedSnapshotRun": {
+            "type": "object",
+            "required": [
+              "snapshotRunId",
+              "snapshotDate",
+              "snapshotType",
+              "periodStart",
+              "periodEnd",
+              "runStatus",
+              "generatedAt",
+              "generatedBy"
+            ],
+            "properties": {
+              "snapshotRunId": {
+                "type": "string"
+              },
+              "snapshotDate": {
+                "type": "string"
+              },
+              "snapshotType": {
+                "type": "string"
+              },
+              "periodStart": {
+                "type": "string"
+              },
+              "periodEnd": {
+                "type": "string"
+              },
+              "runStatus": {
+                "type": "string"
+              },
+              "generatedAt": {
+                "type": "string"
+              },
+              "generatedBy": {
+                "type": "string"
+              },
+              "kpiConfigVersion": {
+                "type": "object",
+                "nullable": true,
+                "required": [
+                  "kpiConfigVersionId",
+                  "versionNo",
+                  "state"
+                ],
+                "properties": {
+                  "kpiConfigVersionId": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "versionNo": {
+                    "type": "integer",
+                    "nullable": true
+                  },
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "versioned",
+                      "pre_governance"
+                    ]
+                  }
+                }
+              }
+            },
+            "nullable": true
+          },
+          "cards": {
+            "type": "object",
+            "required": [
+              "workforceRows",
+              "kpiRows",
+              "checklistRows",
+              "turnoverRows"
+            ],
+            "properties": {
+              "workforceRows": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "kpiRows": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "checklistRows": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "turnoverRows": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "ReportingSnapshotRunsResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "meta"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "snapshotRunId",
+                "snapshotDate",
+                "snapshotType",
+                "periodStart",
+                "periodEnd",
+                "runStatus",
+                "generatedAt",
+                "generatedBy"
+              ],
+              "properties": {
+                "snapshotRunId": {
+                  "type": "string"
+                },
+                "snapshotDate": {
+                  "type": "string"
+                },
+                "snapshotType": {
+                  "type": "string"
+                },
+                "periodStart": {
+                  "type": "string"
+                },
+                "periodEnd": {
+                  "type": "string"
+                },
+                "runStatus": {
+                  "type": "string"
+                },
+                "generatedAt": {
+                  "type": "string"
+                },
+                "generatedBy": {
+                  "type": "string"
+                },
+                "kpiConfigVersion": {
+                  "type": "object",
+                  "nullable": true,
+                  "required": [
+                    "kpiConfigVersionId",
+                    "versionNo",
+                    "state"
+                  ],
+                  "properties": {
+                    "kpiConfigVersionId": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "versionNo": {
+                      "type": "integer",
+                      "nullable": true
+                    },
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "versioned",
+                        "pre_governance"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "count",
+              "total",
+              "limit",
+              "offset"
+            ],
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "ReportingKpiConfigResponse": {
+        "type": "object",
+        "required": [
+          "storeProfile",
+          "personnelProfile",
+          "ownershipMatrix",
+          "gradingBands",
+          "metadata"
+        ],
+        "properties": {
+          "storeProfile": {
+            "type": "object",
+            "required": [
+              "profileCode",
+              "title",
+              "summary",
+              "metrics",
+              "futureMetricRule"
+            ],
+            "properties": {
+              "profileCode": {
+                "type": "string",
+                "enum": [
+                  "store",
+                  "personnel"
+                ]
+              },
+              "title": {
+                "type": "string"
+              },
+              "summary": {
+                "type": "string"
+              },
+              "metrics": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "label",
+                    "weightPercent",
+                    "ownerRole",
+                    "scoreBehavior"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "weightPercent": {
+                      "type": "number"
+                    },
+                    "ownerRole": {
+                      "type": "string",
+                      "enum": [
+                        "DEPUTY_GM",
+                        "REGION_MANAGER",
+                        "STORE_MANAGER",
+                        "STORE_PERSONNEL",
+                        "VISUAL_TEAM"
+                      ]
+                    },
+                    "scoreBehavior": {
+                      "type": "string",
+                      "enum": [
+                        "score_only",
+                        "warning_first",
+                        "task_candidate"
+                      ]
+                    },
+                    "direction": {
+                      "type": "string",
+                      "enum": [
+                        "HIGHER_IS_BETTER",
+                        "LOWER_IS_BETTER",
+                        "TARGET_BAND"
+                      ]
+                    },
+                    "benchmarkSource": {
+                      "type": "string",
+                      "enum": [
+                        "TARGET",
+                        "TURKEY_AVERAGE",
+                        "CHECKLIST_SCORE"
+                      ]
+                    },
+                    "capRatio": {
+                      "type": "number"
+                    },
+                    "aliases": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "notes": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "futureMetricRule": {
+                "type": "string"
+              }
+            }
+          },
+          "personnelProfile": {
+            "type": "object",
+            "required": [
+              "profileCode",
+              "title",
+              "summary",
+              "metrics",
+              "futureMetricRule"
+            ],
+            "properties": {
+              "profileCode": {
+                "type": "string",
+                "enum": [
+                  "store",
+                  "personnel"
+                ]
+              },
+              "title": {
+                "type": "string"
+              },
+              "summary": {
+                "type": "string"
+              },
+              "metrics": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "label",
+                    "weightPercent",
+                    "ownerRole",
+                    "scoreBehavior"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "weightPercent": {
+                      "type": "number"
+                    },
+                    "ownerRole": {
+                      "type": "string",
+                      "enum": [
+                        "DEPUTY_GM",
+                        "REGION_MANAGER",
+                        "STORE_MANAGER",
+                        "STORE_PERSONNEL",
+                        "VISUAL_TEAM"
+                      ]
+                    },
+                    "scoreBehavior": {
+                      "type": "string",
+                      "enum": [
+                        "score_only",
+                        "warning_first",
+                        "task_candidate"
+                      ]
+                    },
+                    "direction": {
+                      "type": "string",
+                      "enum": [
+                        "HIGHER_IS_BETTER",
+                        "LOWER_IS_BETTER",
+                        "TARGET_BAND"
+                      ]
+                    },
+                    "benchmarkSource": {
+                      "type": "string",
+                      "enum": [
+                        "TARGET",
+                        "TURKEY_AVERAGE",
+                        "CHECKLIST_SCORE"
+                      ]
+                    },
+                    "capRatio": {
+                      "type": "number"
+                    },
+                    "aliases": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "notes": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "futureMetricRule": {
+                "type": "string"
+              }
+            }
+          },
+          "ownershipMatrix": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "code",
+                "label",
+                "visibleTo",
+                "operationalOwner",
+                "contributesTo",
+                "taskCandidate"
+              ],
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "visibleTo": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "DEPUTY_GM",
+                      "REGION_MANAGER",
+                      "STORE_MANAGER",
+                      "STORE_PERSONNEL",
+                      "VISUAL_TEAM"
+                    ]
+                  }
+                },
+                "operationalOwner": {
+                  "type": "string",
+                  "enum": [
+                    "DEPUTY_GM",
+                    "REGION_MANAGER",
+                    "STORE_MANAGER",
+                    "STORE_PERSONNEL",
+                    "VISUAL_TEAM"
+                  ]
+                },
+                "contributesTo": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "store",
+                      "personnel"
+                    ]
+                  }
+                },
+                "taskCandidate": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "gradingBands": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "code",
+                "label",
+                "emoji",
+                "tone",
+                "minScore"
+              ],
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "emoji": {
+                  "type": "string"
+                },
+                "tone": {
+                  "type": "string",
+                  "enum": [
+                    "calm",
+                    "accent",
+                    "warning",
+                    "danger",
+                    "neutral"
+                  ]
+                },
+                "minScore": {
+                  "type": "number"
+                }
+              }
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "required": [
+              "kpiConfigVersionId",
+              "versionNo",
+              "effectiveFrom",
+              "effectiveTo",
+              "publishedAt",
+              "publishedBy"
+            ],
+            "properties": {
+              "kpiConfigVersionId": {
+                "type": "string",
+                "nullable": true
+              },
+              "versionNo": {
+                "type": "integer",
+                "nullable": true
+              },
+              "effectiveFrom": {
+                "type": "string",
+                "nullable": true
+              },
+              "effectiveTo": {
+                "type": "string",
+                "nullable": true
+              },
+              "publishedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "publishedBy": {
+                "type": "string",
+                "nullable": true
+              }
+            }
+          }
+        }
+      },
+      "ReportingKpiConfigEditorResponse": {
+        "type": "object",
+        "required": [
+          "draftConfig",
+          "publishedConfig",
+          "hasUnpublishedChanges",
+          "latestPublishedVersion"
+        ],
+        "properties": {
+          "draftConfig": {
+            "type": "object",
+            "required": [
+              "storeProfile",
+              "personnelProfile",
+              "ownershipMatrix",
+              "gradingBands"
+            ],
+            "properties": {
+              "storeProfile": {
+                "type": "object",
+                "required": [
+                  "profileCode",
+                  "title",
+                  "summary",
+                  "metrics",
+                  "futureMetricRule"
+                ],
+                "properties": {
+                  "profileCode": {
+                    "type": "string",
+                    "enum": [
+                      "store",
+                      "personnel"
+                    ]
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "summary": {
+                    "type": "string"
+                  },
+                  "metrics": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "label",
+                        "weightPercent",
+                        "ownerRole",
+                        "scoreBehavior"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "label": {
+                          "type": "string"
+                        },
+                        "weightPercent": {
+                          "type": "number"
+                        },
+                        "ownerRole": {
+                          "type": "string",
+                          "enum": [
+                            "DEPUTY_GM",
+                            "REGION_MANAGER",
+                            "STORE_MANAGER",
+                            "STORE_PERSONNEL",
+                            "VISUAL_TEAM"
+                          ]
+                        },
+                        "scoreBehavior": {
+                          "type": "string",
+                          "enum": [
+                            "score_only",
+                            "warning_first",
+                            "task_candidate"
+                          ]
+                        },
+                        "direction": {
+                          "type": "string",
+                          "enum": [
+                            "HIGHER_IS_BETTER",
+                            "LOWER_IS_BETTER",
+                            "TARGET_BAND"
+                          ]
+                        },
+                        "benchmarkSource": {
+                          "type": "string",
+                          "enum": [
+                            "TARGET",
+                            "TURKEY_AVERAGE",
+                            "CHECKLIST_SCORE"
+                          ]
+                        },
+                        "capRatio": {
+                          "type": "number"
+                        },
+                        "aliases": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "notes": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "futureMetricRule": {
+                    "type": "string"
+                  }
+                }
+              },
+              "personnelProfile": {
+                "type": "object",
+                "required": [
+                  "profileCode",
+                  "title",
+                  "summary",
+                  "metrics",
+                  "futureMetricRule"
+                ],
+                "properties": {
+                  "profileCode": {
+                    "type": "string",
+                    "enum": [
+                      "store",
+                      "personnel"
+                    ]
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "summary": {
+                    "type": "string"
+                  },
+                  "metrics": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "label",
+                        "weightPercent",
+                        "ownerRole",
+                        "scoreBehavior"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "label": {
+                          "type": "string"
+                        },
+                        "weightPercent": {
+                          "type": "number"
+                        },
+                        "ownerRole": {
+                          "type": "string",
+                          "enum": [
+                            "DEPUTY_GM",
+                            "REGION_MANAGER",
+                            "STORE_MANAGER",
+                            "STORE_PERSONNEL",
+                            "VISUAL_TEAM"
+                          ]
+                        },
+                        "scoreBehavior": {
+                          "type": "string",
+                          "enum": [
+                            "score_only",
+                            "warning_first",
+                            "task_candidate"
+                          ]
+                        },
+                        "direction": {
+                          "type": "string",
+                          "enum": [
+                            "HIGHER_IS_BETTER",
+                            "LOWER_IS_BETTER",
+                            "TARGET_BAND"
+                          ]
+                        },
+                        "benchmarkSource": {
+                          "type": "string",
+                          "enum": [
+                            "TARGET",
+                            "TURKEY_AVERAGE",
+                            "CHECKLIST_SCORE"
+                          ]
+                        },
+                        "capRatio": {
+                          "type": "number"
+                        },
+                        "aliases": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "notes": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "futureMetricRule": {
+                    "type": "string"
+                  }
+                }
+              },
+              "ownershipMatrix": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "label",
+                    "visibleTo",
+                    "operationalOwner",
+                    "contributesTo",
+                    "taskCandidate"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "visibleTo": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "DEPUTY_GM",
+                          "REGION_MANAGER",
+                          "STORE_MANAGER",
+                          "STORE_PERSONNEL",
+                          "VISUAL_TEAM"
+                        ]
+                      }
+                    },
+                    "operationalOwner": {
+                      "type": "string",
+                      "enum": [
+                        "DEPUTY_GM",
+                        "REGION_MANAGER",
+                        "STORE_MANAGER",
+                        "STORE_PERSONNEL",
+                        "VISUAL_TEAM"
+                      ]
+                    },
+                    "contributesTo": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "store",
+                          "personnel"
+                        ]
+                      }
+                    },
+                    "taskCandidate": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              },
+              "gradingBands": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "label",
+                    "emoji",
+                    "tone",
+                    "minScore"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "emoji": {
+                      "type": "string"
+                    },
+                    "tone": {
+                      "type": "string",
+                      "enum": [
+                        "calm",
+                        "accent",
+                        "warning",
+                        "danger",
+                        "neutral"
+                      ]
+                    },
+                    "minScore": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "publishedConfig": {
+            "type": "object",
+            "required": [
+              "storeProfile",
+              "personnelProfile",
+              "ownershipMatrix",
+              "gradingBands"
+            ],
+            "properties": {
+              "storeProfile": {
+                "type": "object",
+                "required": [
+                  "profileCode",
+                  "title",
+                  "summary",
+                  "metrics",
+                  "futureMetricRule"
+                ],
+                "properties": {
+                  "profileCode": {
+                    "type": "string",
+                    "enum": [
+                      "store",
+                      "personnel"
+                    ]
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "summary": {
+                    "type": "string"
+                  },
+                  "metrics": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "label",
+                        "weightPercent",
+                        "ownerRole",
+                        "scoreBehavior"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "label": {
+                          "type": "string"
+                        },
+                        "weightPercent": {
+                          "type": "number"
+                        },
+                        "ownerRole": {
+                          "type": "string",
+                          "enum": [
+                            "DEPUTY_GM",
+                            "REGION_MANAGER",
+                            "STORE_MANAGER",
+                            "STORE_PERSONNEL",
+                            "VISUAL_TEAM"
+                          ]
+                        },
+                        "scoreBehavior": {
+                          "type": "string",
+                          "enum": [
+                            "score_only",
+                            "warning_first",
+                            "task_candidate"
+                          ]
+                        },
+                        "direction": {
+                          "type": "string",
+                          "enum": [
+                            "HIGHER_IS_BETTER",
+                            "LOWER_IS_BETTER",
+                            "TARGET_BAND"
+                          ]
+                        },
+                        "benchmarkSource": {
+                          "type": "string",
+                          "enum": [
+                            "TARGET",
+                            "TURKEY_AVERAGE",
+                            "CHECKLIST_SCORE"
+                          ]
+                        },
+                        "capRatio": {
+                          "type": "number"
+                        },
+                        "aliases": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "notes": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "futureMetricRule": {
+                    "type": "string"
+                  }
+                }
+              },
+              "personnelProfile": {
+                "type": "object",
+                "required": [
+                  "profileCode",
+                  "title",
+                  "summary",
+                  "metrics",
+                  "futureMetricRule"
+                ],
+                "properties": {
+                  "profileCode": {
+                    "type": "string",
+                    "enum": [
+                      "store",
+                      "personnel"
+                    ]
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "summary": {
+                    "type": "string"
+                  },
+                  "metrics": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "label",
+                        "weightPercent",
+                        "ownerRole",
+                        "scoreBehavior"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "label": {
+                          "type": "string"
+                        },
+                        "weightPercent": {
+                          "type": "number"
+                        },
+                        "ownerRole": {
+                          "type": "string",
+                          "enum": [
+                            "DEPUTY_GM",
+                            "REGION_MANAGER",
+                            "STORE_MANAGER",
+                            "STORE_PERSONNEL",
+                            "VISUAL_TEAM"
+                          ]
+                        },
+                        "scoreBehavior": {
+                          "type": "string",
+                          "enum": [
+                            "score_only",
+                            "warning_first",
+                            "task_candidate"
+                          ]
+                        },
+                        "direction": {
+                          "type": "string",
+                          "enum": [
+                            "HIGHER_IS_BETTER",
+                            "LOWER_IS_BETTER",
+                            "TARGET_BAND"
+                          ]
+                        },
+                        "benchmarkSource": {
+                          "type": "string",
+                          "enum": [
+                            "TARGET",
+                            "TURKEY_AVERAGE",
+                            "CHECKLIST_SCORE"
+                          ]
+                        },
+                        "capRatio": {
+                          "type": "number"
+                        },
+                        "aliases": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "notes": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "futureMetricRule": {
+                    "type": "string"
+                  }
+                }
+              },
+              "ownershipMatrix": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "label",
+                    "visibleTo",
+                    "operationalOwner",
+                    "contributesTo",
+                    "taskCandidate"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "visibleTo": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "DEPUTY_GM",
+                          "REGION_MANAGER",
+                          "STORE_MANAGER",
+                          "STORE_PERSONNEL",
+                          "VISUAL_TEAM"
+                        ]
+                      }
+                    },
+                    "operationalOwner": {
+                      "type": "string",
+                      "enum": [
+                        "DEPUTY_GM",
+                        "REGION_MANAGER",
+                        "STORE_MANAGER",
+                        "STORE_PERSONNEL",
+                        "VISUAL_TEAM"
+                      ]
+                    },
+                    "contributesTo": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "store",
+                          "personnel"
+                        ]
+                      }
+                    },
+                    "taskCandidate": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              },
+              "gradingBands": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "label",
+                    "emoji",
+                    "tone",
+                    "minScore"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "emoji": {
+                      "type": "string"
+                    },
+                    "tone": {
+                      "type": "string",
+                      "enum": [
+                        "calm",
+                        "accent",
+                        "warning",
+                        "danger",
+                        "neutral"
+                      ]
+                    },
+                    "minScore": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "hasUnpublishedChanges": {
+            "type": "boolean"
+          },
+          "latestPublishedVersion": {
+            "type": "object",
+            "required": [
+              "kpiConfigVersionId",
+              "versionNo",
+              "effectiveFrom",
+              "effectiveTo",
+              "publishedAt",
+              "publishedBy"
+            ],
+            "properties": {
+              "kpiConfigVersionId": {
+                "type": "string",
+                "nullable": true
+              },
+              "versionNo": {
+                "type": "integer",
+                "nullable": true
+              },
+              "effectiveFrom": {
+                "type": "string",
+                "nullable": true
+              },
+              "effectiveTo": {
+                "type": "string",
+                "nullable": true
+              },
+              "publishedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "publishedBy": {
+                "type": "string",
+                "nullable": true
+              }
+            }
+          }
+        }
+      },
+      "ReportingKpiConfigAuditResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "meta"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "eventLogId",
+                "occurredAt",
+                "actorUserId",
+                "correlationId",
+                "eventType",
+                "metadata"
+              ],
+              "properties": {
+                "eventLogId": {
+                  "type": "string"
+                },
+                "occurredAt": {
+                  "type": "string"
+                },
+                "actorUserId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "correlationId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "eventType": {
+                  "type": "string"
+                },
+                "metadata": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "count",
+              "total",
+              "limit",
+              "offset"
+            ],
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "ReportingWorkforceResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "meta"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "snapshotRunId",
+                "storeId",
+                "positionId",
+                "activeHeadcount",
+                "activeFte",
+                "plannedHeadcount",
+                "plannedFte",
+                "gapHeadcount",
+                "gapFte"
+              ],
+              "properties": {
+                "snapshotRunId": {
+                  "type": "string"
+                },
+                "storeId": {
+                  "type": "string"
+                },
+                "positionId": {
+                  "type": "string"
+                },
+                "activeHeadcount": {
+                  "type": "string"
+                },
+                "activeFte": {
+                  "type": "string"
+                },
+                "plannedHeadcount": {
+                  "type": "string"
+                },
+                "plannedFte": {
+                  "type": "string"
+                },
+                "gapHeadcount": {
+                  "type": "string"
+                },
+                "gapFte": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "count",
+              "total",
+              "limit",
+              "offset"
+            ],
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "ReportingKpiResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "meta"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "snapshotRunId",
+                "storeId",
+                "kpiId",
+                "kpiCode",
+                "kpiName",
+                "periodStart",
+                "periodEnd",
+                "targetValue",
+                "actualValue",
+                "achievementRate",
+                "statusBand"
+              ],
+              "properties": {
+                "snapshotRunId": {
+                  "type": "string"
+                },
+                "storeId": {
+                  "type": "string"
+                },
+                "kpiId": {
+                  "type": "string"
+                },
+                "kpiCode": {
+                  "type": "string"
+                },
+                "kpiName": {
+                  "type": "string"
+                },
+                "periodStart": {
+                  "type": "string"
+                },
+                "periodEnd": {
+                  "type": "string"
+                },
+                "targetValue": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "actualValue": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "achievementRate": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "statusBand": {
+                  "type": "string",
+                  "nullable": true
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "count",
+              "total",
+              "limit",
+              "offset"
+            ],
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "ReportingPerformanceResponse": {
+        "type": "object",
+        "required": [
+          "source",
+          "employee",
+          "period",
+          "score",
+          "rankings",
+          "availablePeriods",
+          "partial",
+          "metrics"
+        ],
+        "properties": {
+          "source": {
+            "type": "object",
+            "required": [
+              "mode",
+              "snapshotRunId",
+              "snapshotDate"
+            ],
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "live",
+                  "closed"
+                ]
+              },
+              "snapshotRunId": {
+                "type": "string",
+                "nullable": true
+              },
+              "snapshotDate": {
+                "type": "string",
+                "nullable": true
+              }
+            }
+          },
+          "employee": {
+            "type": "object",
+            "nullable": true,
+            "required": [
+              "employeeId",
+              "displayName",
+              "storeId",
+              "storeName"
+            ],
+            "properties": {
+              "employeeId": {
+                "type": "string"
+              },
+              "displayName": {
+                "type": "string"
+              },
+              "storeId": {
+                "type": "string",
+                "nullable": true
+              },
+              "storeName": {
+                "type": "string",
+                "nullable": true
+              }
+            }
+          },
+          "period": {
+            "type": "object",
+            "nullable": true,
+            "required": [
+              "periodStart",
+              "periodEnd"
+            ],
+            "properties": {
+              "periodStart": {
+                "type": "string"
+              },
+              "periodEnd": {
+                "type": "string"
+              }
+            }
+          },
+          "score": {
+            "type": "object",
+            "required": [
+              "value",
+              "matchedMetrics",
+              "totalMetrics"
+            ],
+            "properties": {
+              "value": {
+                "type": "number"
+              },
+              "matchedMetrics": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "totalMetrics": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "rankings": {
+            "type": "object",
+            "required": [
+              "turkeyRank",
+              "turkeyPopulation",
+              "storeRank",
+              "storePopulation"
+            ],
+            "properties": {
+              "turkeyRank": {
+                "type": "integer",
+                "nullable": true
+              },
+              "turkeyPopulation": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "storeRank": {
+                "type": "integer",
+                "nullable": true
+              },
+              "storePopulation": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "availablePeriods": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "periodType",
+                "periodStart",
+                "periodEnd"
+              ],
+              "properties": {
+                "periodType": {
+                  "type": "string"
+                },
+                "periodStart": {
+                  "type": "string"
+                },
+                "periodEnd": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "partial": {
+            "type": "object",
+            "required": [
+              "isPartial",
+              "missingMetricCodes",
+              "missingMetricLabels"
+            ],
+            "properties": {
+              "isPartial": {
+                "type": "boolean"
+              },
+              "missingMetricCodes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "missingMetricLabels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "pendingNormalizationCodes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "pendingNormalizationLabels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "supporting": {
+            "type": "object",
+            "required": [
+              "netSalesValue",
+              "targetEntryMode",
+              "targetEditableByCurrentUser"
+            ],
+            "properties": {
+              "netSalesValue": {
+                "type": "number",
+                "nullable": true
+              },
+              "targetEntryMode": {
+                "type": "string",
+                "enum": [
+                  "manager_assignment"
+                ]
+              },
+              "targetEditableByCurrentUser": {
+                "type": "boolean"
+              }
+            }
+          },
+          "metrics": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "code",
+                "label",
+                "weightPercent",
+                "actualValue",
+                "contributionValue"
+              ],
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "weightPercent": {
+                  "type": "number"
+                },
+                "actualValue": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "targetValue": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "achievementRate": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "benchmarkValue": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "benchmarkSource": {
+                  "type": "string",
+                  "enum": [
+                    "TARGET",
+                    "TURKEY_AVERAGE",
+                    "CHECKLIST_SCORE"
+                  ]
+                },
+                "actualRatio": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "scoredRatio": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "capRatio": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "isCapped": {
+                  "type": "boolean"
+                },
+                "missingReason": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "contributionValue": {
+                  "type": "number"
+                },
+                "dataStatus": {
+                  "type": "string",
+                  "enum": [
+                    "reported",
+                    "missing"
+                  ]
+                },
+                "scoreStatus": {
+                  "type": "string",
+                  "enum": [
+                    "scored",
+                    "pending_normalization",
+                    "missing_reference",
+                    "missing"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "reported",
+                    "missing"
+                  ]
+                }
               }
             }
           }

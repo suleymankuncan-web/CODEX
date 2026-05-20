@@ -581,6 +581,151 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const reportingSummaryResponse =
+      document.paths["/api/reports/summary"].get.responses?.["200"];
+    expect(
+      reportingSummaryResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/ReportingSummaryResponse",
+    });
+    expect(document.components?.schemas?.ReportingSummaryResponse?.properties).toEqual(
+      expect.objectContaining({
+        latestCompletedSnapshotRun: expect.any(Object),
+        cards: expect.any(Object),
+      }),
+    );
+
+    const reportingSnapshotRunsResponse =
+      document.paths["/api/reports/snapshot-runs"].get.responses?.["200"];
+    expect(
+      reportingSnapshotRunsResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/ReportingSnapshotRunsResponse",
+    });
+    expect(
+      document.components?.schemas?.ReportingSnapshotRunsResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
+    const reportingKpiConfigResponse =
+      document.paths["/api/reports/kpi-config"].get.responses?.["200"];
+    expect(
+      reportingKpiConfigResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/ReportingKpiConfigResponse",
+    });
+    expect(
+      document.components?.schemas?.ReportingKpiConfigResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        storeProfile: expect.any(Object),
+        personnelProfile: expect.any(Object),
+        ownershipMatrix: expect.any(Object),
+        gradingBands: expect.any(Object),
+        metadata: expect.any(Object),
+      }),
+    );
+
+    const reportingKpiConfigEditorResponse =
+      document.paths["/api/reports/kpi-config/editor"].get.responses?.["200"];
+    expect(
+      reportingKpiConfigEditorResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/ReportingKpiConfigEditorResponse",
+    });
+    expect(
+      document.components?.schemas?.ReportingKpiConfigEditorResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        draftConfig: expect.any(Object),
+        publishedConfig: expect.any(Object),
+        hasUnpublishedChanges: expect.any(Object),
+        latestPublishedVersion: expect.any(Object),
+      }),
+    );
+
+    const reportingKpiConfigAuditResponse =
+      document.paths["/api/reports/kpi-config/audit"].get.responses?.["200"];
+    expect(
+      reportingKpiConfigAuditResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/ReportingKpiConfigAuditResponse",
+    });
+    expect(
+      document.components?.schemas?.ReportingKpiConfigAuditResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
+    const reportingWorkforceResponse =
+      document.paths["/api/reports/workforce"].get.responses?.["200"];
+    expect(
+      reportingWorkforceResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/ReportingWorkforceResponse",
+    });
+    expect(
+      document.components?.schemas?.ReportingWorkforceResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
+    const reportingKpiResponse =
+      document.paths["/api/reports/kpis"].get.responses?.["200"];
+    expect(reportingKpiResponse?.content?.["application/json"]?.schema).toEqual({
+      $ref: "#/components/schemas/ReportingKpiResponse",
+    });
+    expect(
+      document.components?.schemas?.ReportingKpiResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
+    const reportingMyPerformanceResponse =
+      document.paths["/api/reports/my-performance"].get.responses?.["200"];
+    expect(
+      reportingMyPerformanceResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/ReportingPerformanceResponse",
+    });
+    expect(
+      document.components?.schemas?.ReportingPerformanceResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        source: expect.any(Object),
+        employee: expect.any(Object),
+        period: expect.any(Object),
+        score: expect.any(Object),
+        rankings: expect.any(Object),
+        availablePeriods: expect.any(Object),
+        partial: expect.any(Object),
+        metrics: expect.any(Object),
+      }),
+    );
+
+    const reportingPersonnelPerformanceResponse =
+      document.paths["/api/reports/personnel-performance/{employeeId}"].get
+        .responses?.["200"];
+    expect(
+      reportingPersonnelPerformanceResponse?.content?.["application/json"]
+        ?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/ReportingPerformanceResponse",
+    });
+
     const lookupsResponse =
       document.paths["/api/integrations/lookups"].get.responses?.["200"];
     expect(lookupsResponse?.content?.["application/json"]?.schema).toEqual({

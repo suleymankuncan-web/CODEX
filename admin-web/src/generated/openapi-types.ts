@@ -727,6 +727,352 @@ export type components = {
           "label": string
         }>
     }
+    "ReportingKpiConfigAuditResponse": {
+      "items": Array<{
+          "eventLogId": string
+          "occurredAt": string
+          "actorUserId": string | null
+          "correlationId": string | null
+          "eventType": string
+          "metadata": {
+            [key: string]: unknown
+          }
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
+    "ReportingKpiConfigEditorResponse": {
+      "draftConfig": {
+        "storeProfile": {
+          "profileCode": "store" | "personnel"
+          "title": string
+          "summary": string
+          "metrics": Array<{
+              "code": string
+              "label": string
+              "weightPercent": number
+              "ownerRole": "DEPUTY_GM" | "REGION_MANAGER" | "STORE_MANAGER" | "STORE_PERSONNEL" | "VISUAL_TEAM"
+              "scoreBehavior": "score_only" | "warning_first" | "task_candidate"
+              "direction"?: "HIGHER_IS_BETTER" | "LOWER_IS_BETTER" | "TARGET_BAND"
+              "benchmarkSource"?: "TARGET" | "TURKEY_AVERAGE" | "CHECKLIST_SCORE"
+              "capRatio"?: number
+              "aliases"?: string[]
+              "notes"?: string
+            }>
+          "futureMetricRule": string
+        }
+        "personnelProfile": {
+          "profileCode": "store" | "personnel"
+          "title": string
+          "summary": string
+          "metrics": Array<{
+              "code": string
+              "label": string
+              "weightPercent": number
+              "ownerRole": "DEPUTY_GM" | "REGION_MANAGER" | "STORE_MANAGER" | "STORE_PERSONNEL" | "VISUAL_TEAM"
+              "scoreBehavior": "score_only" | "warning_first" | "task_candidate"
+              "direction"?: "HIGHER_IS_BETTER" | "LOWER_IS_BETTER" | "TARGET_BAND"
+              "benchmarkSource"?: "TARGET" | "TURKEY_AVERAGE" | "CHECKLIST_SCORE"
+              "capRatio"?: number
+              "aliases"?: string[]
+              "notes"?: string
+            }>
+          "futureMetricRule": string
+        }
+        "ownershipMatrix": Array<{
+            "code": string
+            "label": string
+            "visibleTo": Array<"DEPUTY_GM" | "REGION_MANAGER" | "STORE_MANAGER" | "STORE_PERSONNEL" | "VISUAL_TEAM">
+            "operationalOwner": "DEPUTY_GM" | "REGION_MANAGER" | "STORE_MANAGER" | "STORE_PERSONNEL" | "VISUAL_TEAM"
+            "contributesTo": Array<"store" | "personnel">
+            "taskCandidate": boolean
+          }>
+        "gradingBands": Array<{
+            "code": string
+            "label": string
+            "emoji": string
+            "tone": "calm" | "accent" | "warning" | "danger" | "neutral"
+            "minScore": number
+          }>
+      }
+      "publishedConfig": {
+        "storeProfile": {
+          "profileCode": "store" | "personnel"
+          "title": string
+          "summary": string
+          "metrics": Array<{
+              "code": string
+              "label": string
+              "weightPercent": number
+              "ownerRole": "DEPUTY_GM" | "REGION_MANAGER" | "STORE_MANAGER" | "STORE_PERSONNEL" | "VISUAL_TEAM"
+              "scoreBehavior": "score_only" | "warning_first" | "task_candidate"
+              "direction"?: "HIGHER_IS_BETTER" | "LOWER_IS_BETTER" | "TARGET_BAND"
+              "benchmarkSource"?: "TARGET" | "TURKEY_AVERAGE" | "CHECKLIST_SCORE"
+              "capRatio"?: number
+              "aliases"?: string[]
+              "notes"?: string
+            }>
+          "futureMetricRule": string
+        }
+        "personnelProfile": {
+          "profileCode": "store" | "personnel"
+          "title": string
+          "summary": string
+          "metrics": Array<{
+              "code": string
+              "label": string
+              "weightPercent": number
+              "ownerRole": "DEPUTY_GM" | "REGION_MANAGER" | "STORE_MANAGER" | "STORE_PERSONNEL" | "VISUAL_TEAM"
+              "scoreBehavior": "score_only" | "warning_first" | "task_candidate"
+              "direction"?: "HIGHER_IS_BETTER" | "LOWER_IS_BETTER" | "TARGET_BAND"
+              "benchmarkSource"?: "TARGET" | "TURKEY_AVERAGE" | "CHECKLIST_SCORE"
+              "capRatio"?: number
+              "aliases"?: string[]
+              "notes"?: string
+            }>
+          "futureMetricRule": string
+        }
+        "ownershipMatrix": Array<{
+            "code": string
+            "label": string
+            "visibleTo": Array<"DEPUTY_GM" | "REGION_MANAGER" | "STORE_MANAGER" | "STORE_PERSONNEL" | "VISUAL_TEAM">
+            "operationalOwner": "DEPUTY_GM" | "REGION_MANAGER" | "STORE_MANAGER" | "STORE_PERSONNEL" | "VISUAL_TEAM"
+            "contributesTo": Array<"store" | "personnel">
+            "taskCandidate": boolean
+          }>
+        "gradingBands": Array<{
+            "code": string
+            "label": string
+            "emoji": string
+            "tone": "calm" | "accent" | "warning" | "danger" | "neutral"
+            "minScore": number
+          }>
+      }
+      "hasUnpublishedChanges": boolean
+      "latestPublishedVersion": {
+        "kpiConfigVersionId": string | null
+        "versionNo": number | null
+        "effectiveFrom": string | null
+        "effectiveTo": string | null
+        "publishedAt": string | null
+        "publishedBy": string | null
+      }
+    }
+    "ReportingKpiConfigResponse": {
+      "storeProfile": {
+        "profileCode": "store" | "personnel"
+        "title": string
+        "summary": string
+        "metrics": Array<{
+            "code": string
+            "label": string
+            "weightPercent": number
+            "ownerRole": "DEPUTY_GM" | "REGION_MANAGER" | "STORE_MANAGER" | "STORE_PERSONNEL" | "VISUAL_TEAM"
+            "scoreBehavior": "score_only" | "warning_first" | "task_candidate"
+            "direction"?: "HIGHER_IS_BETTER" | "LOWER_IS_BETTER" | "TARGET_BAND"
+            "benchmarkSource"?: "TARGET" | "TURKEY_AVERAGE" | "CHECKLIST_SCORE"
+            "capRatio"?: number
+            "aliases"?: string[]
+            "notes"?: string
+          }>
+        "futureMetricRule": string
+      }
+      "personnelProfile": {
+        "profileCode": "store" | "personnel"
+        "title": string
+        "summary": string
+        "metrics": Array<{
+            "code": string
+            "label": string
+            "weightPercent": number
+            "ownerRole": "DEPUTY_GM" | "REGION_MANAGER" | "STORE_MANAGER" | "STORE_PERSONNEL" | "VISUAL_TEAM"
+            "scoreBehavior": "score_only" | "warning_first" | "task_candidate"
+            "direction"?: "HIGHER_IS_BETTER" | "LOWER_IS_BETTER" | "TARGET_BAND"
+            "benchmarkSource"?: "TARGET" | "TURKEY_AVERAGE" | "CHECKLIST_SCORE"
+            "capRatio"?: number
+            "aliases"?: string[]
+            "notes"?: string
+          }>
+        "futureMetricRule": string
+      }
+      "ownershipMatrix": Array<{
+          "code": string
+          "label": string
+          "visibleTo": Array<"DEPUTY_GM" | "REGION_MANAGER" | "STORE_MANAGER" | "STORE_PERSONNEL" | "VISUAL_TEAM">
+          "operationalOwner": "DEPUTY_GM" | "REGION_MANAGER" | "STORE_MANAGER" | "STORE_PERSONNEL" | "VISUAL_TEAM"
+          "contributesTo": Array<"store" | "personnel">
+          "taskCandidate": boolean
+        }>
+      "gradingBands": Array<{
+          "code": string
+          "label": string
+          "emoji": string
+          "tone": "calm" | "accent" | "warning" | "danger" | "neutral"
+          "minScore": number
+        }>
+      "metadata": {
+        "kpiConfigVersionId": string | null
+        "versionNo": number | null
+        "effectiveFrom": string | null
+        "effectiveTo": string | null
+        "publishedAt": string | null
+        "publishedBy": string | null
+      }
+    }
+    "ReportingKpiResponse": {
+      "items": Array<{
+          "snapshotRunId": string
+          "storeId": string
+          "kpiId": string
+          "kpiCode": string
+          "kpiName": string
+          "periodStart": string
+          "periodEnd": string
+          "targetValue": string | null
+          "actualValue": string | null
+          "achievementRate": string | null
+          "statusBand": string | null
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
+    "ReportingPerformanceResponse": {
+      "source": {
+        "mode": "live" | "closed"
+        "snapshotRunId": string | null
+        "snapshotDate": string | null
+      }
+      "employee": ({
+        "employeeId": string
+        "displayName": string
+        "storeId": string | null
+        "storeName": string | null
+      }) | null
+      "period": ({
+        "periodStart": string
+        "periodEnd": string
+      }) | null
+      "score": {
+        "value": number
+        "matchedMetrics": number
+        "totalMetrics": number
+      }
+      "rankings": {
+        "turkeyRank": number | null
+        "turkeyPopulation": number
+        "storeRank": number | null
+        "storePopulation": number
+      }
+      "availablePeriods": Array<{
+          "periodType": string
+          "periodStart": string
+          "periodEnd": string
+        }>
+      "partial": {
+        "isPartial": boolean
+        "missingMetricCodes": string[]
+        "missingMetricLabels": string[]
+        "pendingNormalizationCodes"?: string[]
+        "pendingNormalizationLabels"?: string[]
+      }
+      "supporting"?: {
+        "netSalesValue": number | null
+        "targetEntryMode": "manager_assignment"
+        "targetEditableByCurrentUser": boolean
+      }
+      "metrics": Array<{
+          "code": string
+          "label": string
+          "weightPercent": number
+          "actualValue": number | null
+          "targetValue"?: number | null
+          "achievementRate"?: number | null
+          "benchmarkValue"?: number | null
+          "benchmarkSource"?: "TARGET" | "TURKEY_AVERAGE" | "CHECKLIST_SCORE"
+          "actualRatio"?: number | null
+          "scoredRatio"?: number | null
+          "capRatio"?: number | null
+          "isCapped"?: boolean
+          "missingReason"?: string | null
+          "contributionValue": number
+          "dataStatus"?: "reported" | "missing"
+          "scoreStatus"?: "scored" | "pending_normalization" | "missing_reference" | "missing"
+          "status"?: "reported" | "missing"
+        }>
+    }
+    "ReportingSnapshotRunsResponse": {
+      "items": Array<{
+          "snapshotRunId": string
+          "snapshotDate": string
+          "snapshotType": string
+          "periodStart": string
+          "periodEnd": string
+          "runStatus": string
+          "generatedAt": string
+          "generatedBy": string
+          "kpiConfigVersion"?: ({
+            "kpiConfigVersionId": string | null
+            "versionNo": number | null
+            "state": "versioned" | "pre_governance"
+          }) | null
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
+    "ReportingSummaryResponse": {
+      "latestCompletedSnapshotRun": ({
+        "snapshotRunId": string
+        "snapshotDate": string
+        "snapshotType": string
+        "periodStart": string
+        "periodEnd": string
+        "runStatus": string
+        "generatedAt": string
+        "generatedBy": string
+        "kpiConfigVersion"?: ({
+          "kpiConfigVersionId": string | null
+          "versionNo": number | null
+          "state": "versioned" | "pre_governance"
+        }) | null
+      }) | null
+      "cards": {
+        "workforceRows": number
+        "kpiRows": number
+        "checklistRows": number
+        "turnoverRows": number
+      }
+    }
+    "ReportingWorkforceResponse": {
+      "items": Array<{
+          "snapshotRunId": string
+          "storeId": string
+          "positionId": string
+          "activeHeadcount": string
+          "activeFte": string
+          "plannedHeadcount": string
+          "plannedFte": string
+          "gapHeadcount": string
+          "gapFte": string
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
     "SnapshotNeedsActionResponse": {
       "items": Array<{
           "snapshotRunId": string
@@ -1433,6 +1779,105 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["SnapshotRunLineageResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/reports/kpi-config": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ReportingKpiConfigResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/reports/kpi-config/audit": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ReportingKpiConfigAuditResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/reports/kpi-config/editor": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ReportingKpiConfigEditorResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/reports/kpis": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ReportingKpiResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/reports/my-performance": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ReportingPerformanceResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/reports/personnel-performance/{employeeId}": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ReportingPerformanceResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/reports/snapshot-runs": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ReportingSnapshotRunsResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/reports/summary": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ReportingSummaryResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/reports/workforce": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ReportingWorkforceResponse"]
           }
         }
       }

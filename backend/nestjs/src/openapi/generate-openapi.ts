@@ -1805,6 +1805,470 @@ const workforceOffboardingRequestsResponseSchema = {
   },
 };
 
+const reportingSnapshotRunSchema = {
+  type: "object",
+  required: [
+    "snapshotRunId",
+    "snapshotDate",
+    "snapshotType",
+    "periodStart",
+    "periodEnd",
+    "runStatus",
+    "generatedAt",
+    "generatedBy",
+  ],
+  properties: {
+    snapshotRunId: { type: "string" },
+    snapshotDate: { type: "string" },
+    snapshotType: { type: "string" },
+    periodStart: { type: "string" },
+    periodEnd: { type: "string" },
+    runStatus: { type: "string" },
+    generatedAt: { type: "string" },
+    generatedBy: { type: "string" },
+    kpiConfigVersion: {
+      type: "object",
+      nullable: true,
+      required: ["kpiConfigVersionId", "versionNo", "state"],
+      properties: {
+        kpiConfigVersionId: { type: "string", nullable: true },
+        versionNo: { type: "integer", nullable: true },
+        state: { type: "string", enum: ["versioned", "pre_governance"] },
+      },
+    },
+  },
+};
+
+const reportingSnapshotRunsResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: reportingSnapshotRunSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
+const reportingSummaryResponseSchema = {
+  type: "object",
+  required: ["latestCompletedSnapshotRun", "cards"],
+  properties: {
+    latestCompletedSnapshotRun: {
+      ...reportingSnapshotRunSchema,
+      nullable: true,
+    },
+    cards: {
+      type: "object",
+      required: ["workforceRows", "kpiRows", "checklistRows", "turnoverRows"],
+      properties: {
+        workforceRows: { type: "integer", minimum: 0 },
+        kpiRows: { type: "integer", minimum: 0 },
+        checklistRows: { type: "integer", minimum: 0 },
+        turnoverRows: { type: "integer", minimum: 0 },
+      },
+    },
+  },
+};
+
+const reportingKpiOwnerRoleSchema = {
+  type: "string",
+  enum: [
+    "DEPUTY_GM",
+    "REGION_MANAGER",
+    "STORE_MANAGER",
+    "STORE_PERSONNEL",
+    "VISUAL_TEAM",
+  ],
+};
+
+const reportingKpiScoreProfileMetricSchema = {
+  type: "object",
+  required: ["code", "label", "weightPercent", "ownerRole", "scoreBehavior"],
+  properties: {
+    code: { type: "string" },
+    label: { type: "string" },
+    weightPercent: { type: "number" },
+    ownerRole: reportingKpiOwnerRoleSchema,
+    scoreBehavior: {
+      type: "string",
+      enum: ["score_only", "warning_first", "task_candidate"],
+    },
+    direction: {
+      type: "string",
+      enum: ["HIGHER_IS_BETTER", "LOWER_IS_BETTER", "TARGET_BAND"],
+    },
+    benchmarkSource: {
+      type: "string",
+      enum: ["TARGET", "TURKEY_AVERAGE", "CHECKLIST_SCORE"],
+    },
+    capRatio: { type: "number" },
+    aliases: {
+      type: "array",
+      items: { type: "string" },
+    },
+    notes: { type: "string" },
+  },
+};
+
+const reportingKpiScoreProfileSchema = {
+  type: "object",
+  required: ["profileCode", "title", "summary", "metrics", "futureMetricRule"],
+  properties: {
+    profileCode: { type: "string", enum: ["store", "personnel"] },
+    title: { type: "string" },
+    summary: { type: "string" },
+    metrics: {
+      type: "array",
+      items: reportingKpiScoreProfileMetricSchema,
+    },
+    futureMetricRule: { type: "string" },
+  },
+};
+
+const reportingKpiOwnershipMatrixRowSchema = {
+  type: "object",
+  required: [
+    "code",
+    "label",
+    "visibleTo",
+    "operationalOwner",
+    "contributesTo",
+    "taskCandidate",
+  ],
+  properties: {
+    code: { type: "string" },
+    label: { type: "string" },
+    visibleTo: {
+      type: "array",
+      items: reportingKpiOwnerRoleSchema,
+    },
+    operationalOwner: reportingKpiOwnerRoleSchema,
+    contributesTo: {
+      type: "array",
+      items: { type: "string", enum: ["store", "personnel"] },
+    },
+    taskCandidate: { type: "boolean" },
+  },
+};
+
+const reportingKpiGradingBandSchema = {
+  type: "object",
+  required: ["code", "label", "emoji", "tone", "minScore"],
+  properties: {
+    code: { type: "string" },
+    label: { type: "string" },
+    emoji: { type: "string" },
+    tone: {
+      type: "string",
+      enum: ["calm", "accent", "warning", "danger", "neutral"],
+    },
+    minScore: { type: "number" },
+  },
+};
+
+const reportingKpiConfigSchema = {
+  type: "object",
+  required: ["storeProfile", "personnelProfile", "ownershipMatrix", "gradingBands"],
+  properties: {
+    storeProfile: reportingKpiScoreProfileSchema,
+    personnelProfile: reportingKpiScoreProfileSchema,
+    ownershipMatrix: {
+      type: "array",
+      items: reportingKpiOwnershipMatrixRowSchema,
+    },
+    gradingBands: {
+      type: "array",
+      items: reportingKpiGradingBandSchema,
+    },
+  },
+};
+
+const reportingKpiConfigVersionMetadataSchema = {
+  type: "object",
+  required: [
+    "kpiConfigVersionId",
+    "versionNo",
+    "effectiveFrom",
+    "effectiveTo",
+    "publishedAt",
+    "publishedBy",
+  ],
+  properties: {
+    kpiConfigVersionId: { type: "string", nullable: true },
+    versionNo: { type: "integer", nullable: true },
+    effectiveFrom: { type: "string", nullable: true },
+    effectiveTo: { type: "string", nullable: true },
+    publishedAt: { type: "string", nullable: true },
+    publishedBy: { type: "string", nullable: true },
+  },
+};
+
+const reportingKpiConfigResponseSchema = {
+  type: "object",
+  required: [...reportingKpiConfigSchema.required, "metadata"],
+  properties: {
+    ...reportingKpiConfigSchema.properties,
+    metadata: reportingKpiConfigVersionMetadataSchema,
+  },
+};
+
+const reportingKpiConfigEditorResponseSchema = {
+  type: "object",
+  required: [
+    "draftConfig",
+    "publishedConfig",
+    "hasUnpublishedChanges",
+    "latestPublishedVersion",
+  ],
+  properties: {
+    draftConfig: reportingKpiConfigSchema,
+    publishedConfig: reportingKpiConfigSchema,
+    hasUnpublishedChanges: { type: "boolean" },
+    latestPublishedVersion: reportingKpiConfigVersionMetadataSchema,
+  },
+};
+
+const reportingKpiConfigAuditResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: auditEventSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
+const reportingWorkforceRowSchema = {
+  type: "object",
+  required: [
+    "snapshotRunId",
+    "storeId",
+    "positionId",
+    "activeHeadcount",
+    "activeFte",
+    "plannedHeadcount",
+    "plannedFte",
+    "gapHeadcount",
+    "gapFte",
+  ],
+  properties: {
+    snapshotRunId: { type: "string" },
+    storeId: { type: "string" },
+    positionId: { type: "string" },
+    activeHeadcount: { type: "string" },
+    activeFte: { type: "string" },
+    plannedHeadcount: { type: "string" },
+    plannedFte: { type: "string" },
+    gapHeadcount: { type: "string" },
+    gapFte: { type: "string" },
+  },
+};
+
+const reportingWorkforceResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: reportingWorkforceRowSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
+const reportingKpiRowSchema = {
+  type: "object",
+  required: [
+    "snapshotRunId",
+    "storeId",
+    "kpiId",
+    "kpiCode",
+    "kpiName",
+    "periodStart",
+    "periodEnd",
+    "targetValue",
+    "actualValue",
+    "achievementRate",
+    "statusBand",
+  ],
+  properties: {
+    snapshotRunId: { type: "string" },
+    storeId: { type: "string" },
+    kpiId: { type: "string" },
+    kpiCode: { type: "string" },
+    kpiName: { type: "string" },
+    periodStart: { type: "string" },
+    periodEnd: { type: "string" },
+    targetValue: { type: "string", nullable: true },
+    actualValue: { type: "string", nullable: true },
+    achievementRate: { type: "string", nullable: true },
+    statusBand: { type: "string", nullable: true },
+  },
+};
+
+const reportingKpiResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: reportingKpiRowSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
+const reportingPerformanceMetricSchema = {
+  type: "object",
+  required: ["code", "label", "weightPercent", "actualValue", "contributionValue"],
+  properties: {
+    code: { type: "string" },
+    label: { type: "string" },
+    weightPercent: { type: "number" },
+    actualValue: { type: "number", nullable: true },
+    targetValue: { type: "number", nullable: true },
+    achievementRate: { type: "number", nullable: true },
+    benchmarkValue: { type: "number", nullable: true },
+    benchmarkSource: {
+      type: "string",
+      enum: ["TARGET", "TURKEY_AVERAGE", "CHECKLIST_SCORE"],
+    },
+    actualRatio: { type: "number", nullable: true },
+    scoredRatio: { type: "number", nullable: true },
+    capRatio: { type: "number", nullable: true },
+    isCapped: { type: "boolean" },
+    missingReason: { type: "string", nullable: true },
+    contributionValue: { type: "number" },
+    dataStatus: { type: "string", enum: ["reported", "missing"] },
+    scoreStatus: {
+      type: "string",
+      enum: ["scored", "pending_normalization", "missing_reference", "missing"],
+    },
+    status: { type: "string", enum: ["reported", "missing"] },
+  },
+};
+
+const reportingPerformanceResponseSchema = {
+  type: "object",
+  required: [
+    "source",
+    "employee",
+    "period",
+    "score",
+    "rankings",
+    "availablePeriods",
+    "partial",
+    "metrics",
+  ],
+  properties: {
+    source: {
+      type: "object",
+      required: ["mode", "snapshotRunId", "snapshotDate"],
+      properties: {
+        mode: { type: "string", enum: ["live", "closed"] },
+        snapshotRunId: { type: "string", nullable: true },
+        snapshotDate: { type: "string", nullable: true },
+      },
+    },
+    employee: {
+      type: "object",
+      nullable: true,
+      required: ["employeeId", "displayName", "storeId", "storeName"],
+      properties: {
+        employeeId: { type: "string" },
+        displayName: { type: "string" },
+        storeId: { type: "string", nullable: true },
+        storeName: { type: "string", nullable: true },
+      },
+    },
+    period: {
+      type: "object",
+      nullable: true,
+      required: ["periodStart", "periodEnd"],
+      properties: {
+        periodStart: { type: "string" },
+        periodEnd: { type: "string" },
+      },
+    },
+    score: {
+      type: "object",
+      required: ["value", "matchedMetrics", "totalMetrics"],
+      properties: {
+        value: { type: "number" },
+        matchedMetrics: { type: "integer", minimum: 0 },
+        totalMetrics: { type: "integer", minimum: 0 },
+      },
+    },
+    rankings: {
+      type: "object",
+      required: [
+        "turkeyRank",
+        "turkeyPopulation",
+        "storeRank",
+        "storePopulation",
+      ],
+      properties: {
+        turkeyRank: { type: "integer", nullable: true },
+        turkeyPopulation: { type: "integer", minimum: 0 },
+        storeRank: { type: "integer", nullable: true },
+        storePopulation: { type: "integer", minimum: 0 },
+      },
+    },
+    availablePeriods: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["periodType", "periodStart", "periodEnd"],
+        properties: {
+          periodType: { type: "string" },
+          periodStart: { type: "string" },
+          periodEnd: { type: "string" },
+        },
+      },
+    },
+    partial: {
+      type: "object",
+      required: ["isPartial", "missingMetricCodes", "missingMetricLabels"],
+      properties: {
+        isPartial: { type: "boolean" },
+        missingMetricCodes: {
+          type: "array",
+          items: { type: "string" },
+        },
+        missingMetricLabels: {
+          type: "array",
+          items: { type: "string" },
+        },
+        pendingNormalizationCodes: {
+          type: "array",
+          items: { type: "string" },
+        },
+        pendingNormalizationLabels: {
+          type: "array",
+          items: { type: "string" },
+        },
+      },
+    },
+    supporting: {
+      type: "object",
+      required: ["netSalesValue", "targetEntryMode", "targetEditableByCurrentUser"],
+      properties: {
+        netSalesValue: { type: "number", nullable: true },
+        targetEntryMode: { type: "string", enum: ["manager_assignment"] },
+        targetEditableByCurrentUser: { type: "boolean" },
+      },
+    },
+    metrics: {
+      type: "array",
+      items: reportingPerformanceMetricSchema,
+    },
+  },
+};
+
 const snapshotStatusTotalsSchema = {
   type: "object",
   required: ["all", "queued", "running", "completed", "failed"],
@@ -2598,6 +3062,14 @@ async function generateOpenApi(): Promise<void> {
       workforceSellerCodeRequestsResponseSchema,
     WorkforceOffboardingRequestsResponse:
       workforceOffboardingRequestsResponseSchema,
+    ReportingSummaryResponse: reportingSummaryResponseSchema,
+    ReportingSnapshotRunsResponse: reportingSnapshotRunsResponseSchema,
+    ReportingKpiConfigResponse: reportingKpiConfigResponseSchema,
+    ReportingKpiConfigEditorResponse: reportingKpiConfigEditorResponseSchema,
+    ReportingKpiConfigAuditResponse: reportingKpiConfigAuditResponseSchema,
+    ReportingWorkforceResponse: reportingWorkforceResponseSchema,
+    ReportingKpiResponse: reportingKpiResponseSchema,
+    ReportingPerformanceResponse: reportingPerformanceResponseSchema,
     ImportOverview: importOverviewSchema,
     ImportPayloadTemplateResponse: importPayloadTemplateSchema,
     ImportBatchAuditResponse: importBatchAuditResponseSchema,
@@ -2793,6 +3265,78 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Paginated employee offboarding requests visible to workforce reviewers.",
     "WorkforceOffboardingRequestsResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/reports/summary",
+    "get",
+    "Reporting summary with latest completed snapshot and row count cards.",
+    "ReportingSummaryResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/reports/snapshot-runs",
+    "get",
+    "Paginated reporting snapshot runs available for reporting surfaces.",
+    "ReportingSnapshotRunsResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/reports/kpi-config",
+    "get",
+    "Published KPI score profile, ownership matrix, grading bands, and version metadata.",
+    "ReportingKpiConfigResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/reports/kpi-config/editor",
+    "get",
+    "Draft and published KPI config editor state for admin review.",
+    "ReportingKpiConfigEditorResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/reports/kpi-config/audit",
+    "get",
+    "Paginated KPI config audit events for admin governance.",
+    "ReportingKpiConfigAuditResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/reports/workforce",
+    "get",
+    "Paginated workforce snapshot rows for reporting surfaces.",
+    "ReportingWorkforceResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/reports/kpis",
+    "get",
+    "Paginated KPI snapshot rows for reporting surfaces.",
+    "ReportingKpiResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/reports/my-performance",
+    "get",
+    "Current actor personnel performance summary for live or closed reporting.",
+    "ReportingPerformanceResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/reports/personnel-performance/{employeeId}",
+    "get",
+    "Target personnel performance summary visible to authorized reviewers.",
+    "ReportingPerformanceResponse",
   );
 
   setJsonResponseSchema(
