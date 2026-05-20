@@ -7,7 +7,7 @@ const workspaceRoot = join(import.meta.dirname, '..')
 const repository = readFileSync(
   join(
     workspaceRoot,
-    'backend/nestjs/src/modules/store-ops/infrastructure/reporting.repository.ts',
+    'backend/nestjs/src/modules/store-ops/infrastructure/ranking-reporting-read.repository.ts',
   ),
   'utf8',
 )
