@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CheckCircle2, Clock3, ReceiptText, ShieldCheck } from 'lucide-react'
 import {
   EmptyState,
-  KeyValue,
   ScreenState,
   StatusPill,
 } from '../components/dashboard-primitives'
@@ -41,13 +40,12 @@ import {
   type SellerEmploymentType,
   type StoreEmployee,
 } from '../features/workforce/api'
-import { formatDate, formatDateTime, getErrorMessage } from '../lib/format'
+import { getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 import { StoreRequestFeedback } from './store-approvals-atoms'
 import {
   createStoreApprovalsPageState,
   formatAllocationShare,
-  formatApprovalStatus,
   formatEmploymentType,
   formatTargetNumber,
   getStoreSellerPositionOptions,
@@ -62,8 +60,8 @@ import {
   type StringFieldSetter,
 } from './store-approvals-model'
 import { ReturnedRequestsPanel } from './store-approvals-returned-panel'
+import { SubmittedTargetRequestsPanel } from './store-approvals-submitted-targets-panel'
 import { TargetApprovalLedger } from './store-approvals-target-approval-ledger'
-import { TargetAllocationBreakdown } from './store-approvals-target-atoms'
 
 function useStoreApprovalsPageContent(input: {
   authSummary: AuthSessionSummary | null
@@ -564,7 +562,6 @@ function useStoreApprovalsPageContent(input: {
     </section>
   )
 }
-
 export function StoreApprovalsPage(input: {
   authSummary: AuthSessionSummary | null
 }) {
@@ -1597,85 +1594,5 @@ function OffboardingRequestForm(input: {
         </div>
       )}
     </article>
-  )
-}
-
-function SubmittedTargetRequestsPanel(input: {
-  locale: AppLocale
-  requests: TargetDistributionRequest[]
-  t: TranslateFunction
-}) {
-  return (
-    <section className="store-approvals-ledger-card">
-      <div className="store-approvals-ledger-card-head">
-        <div>
-          <div className="store-approvals-ledger-eyebrow">
-            {input.t('storeApprovals.submittedEyebrow')}
-          </div>
-          <h3>{input.t('storeApprovals.submittedTargetLedgerTitle')}</h3>
-        </div>
-      </div>
-
-      {input.requests.length === 0 ? (
-        <EmptyState
-          title={input.t('storeApprovals.noSubmittedTitle')}
-          copy={input.t('storeApprovals.noSubmittedCopy')}
-        />
-      ) : (
-        <div className="store-approvals-ledger-rows">
-          {input.requests.map((item) => (
-            <article className="store-approvals-ledger-row" key={item.requestId}>
-              <div className="store-approvals-ledger-row-head">
-                <strong>{item.targetLabel}</strong>
-                <StatusPill tone={item.status === 'approved' ? 'calm' : 'warning'}>
-                  {formatApprovalStatus(item.status, input.t)}
-                </StatusPill>
-              </div>
-              <p>
-                {input.t('storeApprovals.targetSummary', {
-                  month: formatDate(item.requestMonth, input.locale),
-                  storeName: item.storeName || item.storeId,
-                  value: item.totalTargetValue,
-                })}
-              </p>
-              <div className="store-approvals-ledger-key-grid">
-                <KeyValue
-                  label={input.t('storeApprovals.allocationCount')}
-                  value={String(item.allocationCount)}
-                />
-                <KeyValue
-                  label={input.t('storeApprovals.createdAt')}
-                  value={formatDateTime(item.createdAt, input.locale)}
-                />
-                <KeyValue
-                  label={input.t('storeApprovals.approvedAt')}
-                  value={
-                    item.approvedAt
-                      ? formatDateTime(item.approvedAt, input.locale)
-                      : input.t('storeApprovals.pending')
-                  }
-                />
-                <KeyValue label={input.t('storeApprovals.requestId')} value={item.requestId} />
-              </div>
-              {item.requestReason ? (
-                <p className="store-approvals-ledger-row-note">
-                  {input.t('storeApprovals.reasonPrefix', { reason: item.requestReason })}
-                </p>
-              ) : null}
-              <TargetAllocationBreakdown
-                allocations={item.allocations}
-                locale={input.locale}
-                totalTargetValue={item.totalTargetValue}
-              />
-              {item.approvalNote ? (
-                <p className="store-approvals-ledger-row-note">
-                  {input.t('storeApprovals.approvalNotePrefix', { note: item.approvalNote })}
-                </p>
-              ) : null}
-            </article>
-          ))}
-        </div>
-      )}
-    </section>
   )
 }
