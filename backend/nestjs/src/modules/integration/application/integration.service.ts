@@ -13,6 +13,7 @@ import { MaterializationService } from "./materialization.service";
 import { IntegrationRepository } from "../infrastructure/integration.repository";
 import { ImportBatchReadRepository } from "../infrastructure/import-batch-read.repository";
 import { ExternalIdMappingReadRepository } from "../infrastructure/external-id-mapping-read.repository";
+import { KpiImportStoreReadRepository } from "../infrastructure/kpi-import-store-read.repository";
 import { IntegrationSourceRepository } from "../infrastructure/integration-source.repository";
 import { KpiImportNormalizationService } from "./kpi-import-normalization.service";
 import { IntegrationSchedulerService } from "./integration-scheduler.service";
@@ -62,6 +63,7 @@ export class IntegrationService {
     private readonly integrationRepository: IntegrationRepository,
     private readonly importBatchReadRepository: ImportBatchReadRepository,
     private readonly externalIdMappingReadRepository: ExternalIdMappingReadRepository,
+    private readonly kpiImportStoreReadRepository: KpiImportStoreReadRepository,
     private readonly integrationSourceRepository: IntegrationSourceRepository,
     private readonly materializationService: MaterializationService,
     private readonly kpiImportNormalizationService: KpiImportNormalizationService,
@@ -524,7 +526,7 @@ export class IntegrationService {
     limit?: number;
     offset?: number;
   }) {
-    const result = await this.integrationRepository.listKpiImportStoreScope(input);
+    const result = await this.kpiImportStoreReadRepository.listKpiImportStoreScope(input);
 
     return buildListResponse(
       result.rows.map((item) => this.mapStoreMaster(item)),
@@ -533,7 +535,7 @@ export class IntegrationService {
   }
 
   async getStoreMasterLookups(input: { actorCompanyIds: string[] }) {
-    const regions = await this.integrationRepository.listStoreMasterRegions({
+    const regions = await this.kpiImportStoreReadRepository.listStoreMasterRegions({
       actorCompanyIds: input.actorCompanyIds,
     });
 
