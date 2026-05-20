@@ -18,6 +18,7 @@ import { StoreScoreBlendService } from "./store-score-blend.service";
 import { KpiBenchmarkScoringService } from "./kpi-benchmark-scoring.service";
 import { LiveMonthlyLeaderboardService } from "./live-monthly-leaderboard.service";
 import { StoreScoreReportingReadRepository } from "../infrastructure/store-score-reporting-read.repository";
+import { ClosedRankingRepository } from "../infrastructure/closed-ranking.repository";
 
 const storeChecklistMetricCodes = new Set(["BM_CHECKLIST", "VM_CHECKLIST"]);
 
@@ -32,6 +33,8 @@ export class ReportingService {
     private readonly liveMonthlyLeaderboardService: LiveMonthlyLeaderboardService,
     private readonly storeScoreReportingReadRepository: StoreScoreReportingReadRepository =
       reportingRepository as unknown as StoreScoreReportingReadRepository,
+    private readonly closedRankingRepository: ClosedRankingRepository =
+      reportingRepository as unknown as ClosedRankingRepository,
   ) {}
 
   private mapSnapshotRun(item: {
@@ -1286,12 +1289,12 @@ export class ReportingService {
     }
 
     const snapshotRun = input.snapshotDate
-      ? await this.reportingRepository.getCompletedSnapshotRunByTypeAndDate({
+      ? await this.closedRankingRepository.getCompletedSnapshotRunByTypeAndDate({
           snapshotType: "daily",
           periodStart: input.snapshotDate,
           periodEnd: input.snapshotDate,
         })
-      : await this.reportingRepository.getLatestCompletedSnapshotRunByType("daily");
+      : await this.closedRankingRepository.getLatestCompletedSnapshotRunByType("daily");
 
     if (!snapshotRun) {
       return {
@@ -1330,11 +1333,11 @@ export class ReportingService {
       };
     }
 
-    const summaryRow = await this.reportingRepository.getEmployeePerformanceSnapshot({
+    const summaryRow = await this.closedRankingRepository.getEmployeePerformanceSnapshot({
       snapshotRunId: snapshotRun.snapshot_run_id,
       employeeId,
     });
-    const metricRows = await this.reportingRepository.getEmployeeKpiSnapshotRows({
+    const metricRows = await this.closedRankingRepository.getEmployeeKpiSnapshotRows({
       snapshotRunId: snapshotRun.snapshot_run_id,
       employeeId,
       metricCodes: employeeDataMetricCodes,

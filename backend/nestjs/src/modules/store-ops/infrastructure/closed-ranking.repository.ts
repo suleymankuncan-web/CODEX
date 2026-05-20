@@ -10,6 +10,87 @@ import type {
 export class ClosedRankingRepository {
   constructor(private readonly databaseService: DatabaseService) {}
 
+  async getLatestCompletedSnapshotRunByType(snapshotType: string) {
+    const result = await this.databaseService.query<ClosedRankingSnapshotRunRow>(
+      `
+        SELECT
+          sr.snapshot_run_id,
+          sr.snapshot_date::text AS snapshot_date,
+          sr.snapshot_type,
+          sr.period_start::text AS period_start,
+          sr.period_end::text AS period_end,
+          sr.run_status,
+          sr.generated_at,
+          sr.generated_by
+        FROM rpt.snapshot_run sr
+        WHERE sr.run_status = 'completed'
+          AND sr.snapshot_type = $1
+          AND ($1 <> 'daily' OR sr.period_start = sr.period_end)
+        ORDER BY sr.generated_at DESC
+        LIMIT 1
+      `,
+      [snapshotType],
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  async getCompletedSnapshotRunByTypeAndDate(input: {
+    snapshotType: string;
+    periodStart: string;
+    periodEnd: string;
+  }) {
+    const result = await this.databaseService.query<ClosedRankingSnapshotRunRow>(
+      `
+        SELECT
+          sr.snapshot_run_id,
+          sr.snapshot_date::text AS snapshot_date,
+          sr.snapshot_type,
+          sr.period_start::text AS period_start,
+          sr.period_end::text AS period_end,
+          sr.run_status,
+          sr.generated_at,
+          sr.generated_by
+        FROM rpt.snapshot_run sr
+        WHERE sr.run_status = 'completed'
+          AND sr.snapshot_type = $1
+          AND sr.period_start = $2::date
+          AND sr.period_end = $3::date
+        ORDER BY sr.generated_at DESC
+        LIMIT 1
+      `,
+      [input.snapshotType, input.periodStart, input.periodEnd],
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  async getCompletedDailySnapshotByDate(input: { periodStart: string }) {
+    const result = await this.databaseService.query<ClosedRankingSnapshotRunRow>(
+      `
+        SELECT
+          sr.snapshot_run_id,
+          sr.snapshot_date::text AS snapshot_date,
+          sr.snapshot_type,
+          sr.period_start::text AS period_start,
+          sr.period_end::text AS period_end,
+          sr.run_status,
+          sr.generated_at,
+          sr.generated_by
+        FROM rpt.snapshot_run sr
+        WHERE sr.run_status = 'completed'
+          AND sr.snapshot_type = $1
+          AND sr.period_start = $2::date
+          AND sr.period_end = $2::date
+        ORDER BY sr.generated_at DESC
+        LIMIT 1
+      `,
+      ["daily", input.periodStart],
+    );
+
+    return result.rows[0] ?? null;
+  }
+
   async listClosedDailyPersonnelRankRows(input: {
     snapshotRunId: string;
     companyId?: string;
@@ -316,6 +397,90 @@ export class ClosedRankingRepository {
         ORDER BY employee_id ASC, kpi_code ASC
       `,
       [input.snapshotRunIds, input.employeeIds],
+    );
+
+    return result.rows;
+  }
+
+  async getEmployeePerformanceSnapshot(input: {
+    snapshotRunId: string;
+    employeeId: string;
+  }) {
+    const result = await this.databaseService.query<{
+      employee_id: string;
+      first_name: string;
+      last_name: string;
+      store_id: string | null;
+      store_name: string | null;
+      period_start: string;
+      period_end: string;
+      score_value: string;
+      matched_metrics: number;
+      total_metrics: number;
+      turkey_rank: number | null;
+      turkey_population: number;
+      store_rank: number | null;
+      store_population: number;
+    }>(
+      `
+        SELECT
+          eps.employee_id,
+          e.first_name,
+          e.last_name,
+          eps.store_id,
+          store.store_name,
+          eps.period_start,
+          eps.period_end,
+          eps.score_value::text AS score_value,
+          eps.matched_metrics,
+          eps.total_metrics,
+          eps.turkey_rank,
+          eps.turkey_population,
+          eps.store_rank,
+          eps.store_population
+        FROM rpt.employee_performance_snapshot eps
+        INNER JOIN ops.employee e
+          ON e.employee_id = eps.employee_id
+        LEFT JOIN ops.store store
+          ON store.store_id = eps.store_id
+        WHERE eps.snapshot_run_id = $1::uuid
+          AND eps.employee_id = $2::uuid
+        LIMIT 1
+      `,
+      [input.snapshotRunId, input.employeeId],
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  async getEmployeeKpiSnapshotRows(input: {
+    snapshotRunId: string;
+    employeeId: string;
+    metricCodes: string[];
+  }) {
+    const result = await this.databaseService.query<{
+      employee_id: string;
+      store_id: string | null;
+      kpi_code: string;
+      kpi_name: string;
+      actual_value: string;
+    }>(
+      `
+        SELECT
+          eks.employee_id,
+          eks.store_id,
+          kd.kpi_code,
+          kd.kpi_name,
+          eks.actual_value::text AS actual_value
+        FROM rpt.employee_kpi_snapshot eks
+        INNER JOIN ops.kpi_definition kd
+          ON kd.kpi_id = eks.kpi_id
+        WHERE eks.snapshot_run_id = $1::uuid
+          AND eks.employee_id = $2::uuid
+          AND kd.kpi_code = ANY($3::text[])
+        ORDER BY kd.kpi_code ASC
+      `,
+      [input.snapshotRunId, input.employeeId, input.metricCodes],
     );
 
     return result.rows;

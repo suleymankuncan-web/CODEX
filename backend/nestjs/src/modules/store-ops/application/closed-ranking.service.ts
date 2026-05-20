@@ -36,10 +36,10 @@ export class ClosedRankingService {
     const periodStart = input.periodStart ?? input.snapshotDate;
     const currentEmployeeId = await this.resolveCurrentEmployeeId(input);
     const snapshotRun = periodStart
-      ? await this.reportingRepository.getCompletedDailySnapshotByDate({
+      ? await this.closedRankingRepository.getCompletedDailySnapshotByDate({
           periodStart,
         })
-      : await this.reportingRepository.getLatestCompletedSnapshotRunByType("daily");
+      : await this.closedRankingRepository.getLatestCompletedSnapshotRunByType("daily");
 
     if (!snapshotRun) {
       return this.getEmptyResponse({
@@ -271,7 +271,7 @@ export class ClosedRankingService {
       return currentTopRow;
     }
 
-    return this.reportingRepository.getEmployeePerformanceSnapshot({
+    return this.closedRankingRepository.getEmployeePerformanceSnapshot({
       snapshotRunId: input.snapshotRun.snapshot_run_id,
       employeeId: input.currentEmployeeId,
     });

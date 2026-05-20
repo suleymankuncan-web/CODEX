@@ -11,6 +11,30 @@ describe("ClosedRankingRepository closed ranking queries", () => {
     return { query, repository };
   }
 
+  it("ignores multi-day daily snapshots when selecting the latest closed daily run", async () => {
+    const { query, repository } = createRepository();
+
+    await repository.getLatestCompletedSnapshotRunByType("daily");
+
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining("($1 <> 'daily' OR sr.period_start = sr.period_end)"),
+      ["daily"],
+    );
+  });
+
+  it("casts closed daily snapshot dates to API-safe date strings", async () => {
+    const { query, repository } = createRepository();
+
+    await repository.getLatestCompletedSnapshotRunByType("daily");
+    await repository.getCompletedDailySnapshotByDate({ periodStart: "2026-04-24" });
+
+    for (const [sql] of query.mock.calls) {
+      expect(String(sql)).toContain("sr.snapshot_date::text AS snapshot_date");
+      expect(String(sql)).toContain("sr.period_start::text AS period_start");
+      expect(String(sql)).toContain("sr.period_end::text AS period_end");
+    }
+  });
+
   it("only lists single-day daily snapshots for monthly closed rankings", async () => {
     const { query, repository } = createRepository();
 
