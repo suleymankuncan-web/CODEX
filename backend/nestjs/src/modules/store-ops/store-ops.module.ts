@@ -29,6 +29,7 @@ import { ClosedRankingRepository } from "./infrastructure/closed-ranking.reposit
 import { ReportingRepository } from "./infrastructure/reporting.repository";
 import { StoreScoreReportingReadRepository } from "./infrastructure/store-score-reporting-read.repository";
 import { SnapshotReportingReadRepository } from "./infrastructure/snapshot-reporting-read.repository";
+import { StorePerformanceReportingReadRepository } from "./infrastructure/store-performance-reporting-read.repository";
 import { SnapshotOperationsRepository } from "./infrastructure/snapshot-operations.repository";
 import { TargetDistributionRepository } from "./infrastructure/target-distribution.repository";
 import { ChecklistAcknowledgementRepository } from "./infrastructure/checklist-acknowledgement.repository";
@@ -72,6 +73,7 @@ import { FeedRepository } from "./infrastructure/feed.repository";
     ReportingRepository,
     StoreScoreReportingReadRepository,
     SnapshotReportingReadRepository,
+    StorePerformanceReportingReadRepository,
     SnapshotOperationsRepository,
     TargetDistributionRepository,
     CompetitionRepository,
@@ -99,6 +101,7 @@ import { FeedRepository } from "./infrastructure/feed.repository";
     ReportingRepository,
     StoreScoreReportingReadRepository,
     SnapshotReportingReadRepository,
+    StorePerformanceReportingReadRepository,
     SnapshotOperationsRepository,
     TargetDistributionRepository,
     CompetitionRepository,
