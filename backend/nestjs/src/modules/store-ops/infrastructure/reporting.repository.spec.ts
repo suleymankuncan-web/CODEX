@@ -14,37 +14,6 @@ describe("ReportingRepository access scope contract", () => {
     storeIds: [],
   };
 
-  it("returns empty report lists without querying when actor scope is empty", async () => {
-    const { query, repository } = createRepository();
-
-    await expect(
-      repository.getWorkforceReport({
-        snapshotRunId: "00000000-0000-4000-8000-000000000001",
-        ...emptyScope,
-      }),
-    ).resolves.toEqual({ rows: [], total: 0 });
-    await expect(
-      repository.getKpiReport({
-        snapshotRunId: "00000000-0000-4000-8000-000000000001",
-        ...emptyScope,
-      }),
-    ).resolves.toEqual({ rows: [], total: 0 });
-    await expect(
-      repository.getChecklistReport({
-        snapshotRunId: "00000000-0000-4000-8000-000000000001",
-        ...emptyScope,
-      }),
-    ).resolves.toEqual({ rows: [], total: 0 });
-    await expect(
-      repository.getTurnoverReport({
-        snapshotRunId: "00000000-0000-4000-8000-000000000001",
-        ...emptyScope,
-      }),
-    ).resolves.toEqual({ rows: [], total: 0 });
-
-    expect(query).not.toHaveBeenCalled();
-  });
-
   it("returns empty employee KPI period lookups without querying when actor scope is empty", async () => {
     const { query, repository } = createRepository();
 

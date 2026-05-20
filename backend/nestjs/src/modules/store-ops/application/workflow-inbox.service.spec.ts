@@ -8,13 +8,14 @@ describe("WorkflowInboxService", () => {
     const checklistAcknowledgementRepository = {
       listChecklistAcknowledgements: jest.fn(async () => []),
     };
-    const reportingRepository = {
+    const snapshotReportingReadRepository = {
       getLatestCompletedSnapshotRun: jest.fn(async () => null),
     };
     const service = new WorkflowInboxService(
       targetDistributionRepository as never,
       checklistAcknowledgementRepository as never,
-      reportingRepository as never,
+      {} as never,
+      snapshotReportingReadRepository as never,
     );
 
     await service.listInbox({
@@ -44,7 +45,7 @@ describe("WorkflowInboxService", () => {
     const checklistAcknowledgementRepository = {
       listChecklistAcknowledgements: jest.fn(async () => []),
     };
-    const reportingRepository = {
+    const snapshotReportingReadRepository = {
       getLatestCompletedSnapshotRun: jest.fn(async () => ({
         snapshot_run_id: "snapshot-1",
       })),
@@ -70,7 +71,8 @@ describe("WorkflowInboxService", () => {
     const service = new WorkflowInboxService(
       targetDistributionRepository as never,
       checklistAcknowledgementRepository as never,
-      reportingRepository as never,
+      {} as never,
+      snapshotReportingReadRepository as never,
     );
 
     const result = await service.listInbox({
@@ -85,7 +87,7 @@ describe("WorkflowInboxService", () => {
       },
     });
 
-    expect(reportingRepository.getKpiReport).toHaveBeenCalledWith({
+    expect(snapshotReportingReadRepository.getKpiReport).toHaveBeenCalledWith({
       snapshotRunId: "snapshot-1",
       companyIds: [],
       regionIds: [],
@@ -123,13 +125,14 @@ describe("WorkflowInboxService", () => {
         },
       ]),
     };
-    const reportingRepository = {
+    const snapshotReportingReadRepository = {
       getLatestCompletedSnapshotRun: jest.fn(async () => null),
     };
     const service = new WorkflowInboxService(
       targetDistributionRepository as never,
       checklistAcknowledgementRepository as never,
-      reportingRepository as never,
+      {} as never,
+      snapshotReportingReadRepository as never,
     );
 
     const result = await service.listInbox({
