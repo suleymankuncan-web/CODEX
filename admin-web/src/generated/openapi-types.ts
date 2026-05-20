@@ -4,6 +4,30 @@
 
 export type components = {
   schemas: {
+    "AuthActionStoreAssignmentCommandResponse": {
+      "command": {
+        "status": string
+        "message": string
+      }
+      "data": {
+        "assignment": {
+          "assignmentId": string
+          "userId": string
+          "username": string
+          "email": string
+          "storeId": string
+          "storeCode": string
+          "storeName": string
+          "companyId": string
+          "regionId": string
+          "regionName": string
+          "effectiveFrom": string | null
+          "effectiveTo": string | null
+          "createdAt": string
+          "active": boolean
+        }
+      }
+    }
     "AuthActionStoreAssignmentsResponse": {
       "items": Array<{
           "assignmentId": string
@@ -154,6 +178,30 @@ export type components = {
         "total": number
         "limit": number
         "offset": number
+      }
+    }
+    "AuthRoleAssignmentCommandResponse": {
+      "command": {
+        "status": string
+        "message": string
+      }
+      "data": {
+        "assignment": {
+          "assignmentId": string
+          "userId": string
+          "username": string
+          "email": string
+          "roleCode": string
+          "roleName": string
+          "scopeType": string
+          "companyId": string | null
+          "regionId": string | null
+          "storeId": string | null
+          "effectiveFrom": string | null
+          "effectiveTo": string | null
+          "createdAt": string
+          "active": boolean
+        }
       }
     }
     "AuthRoleAssignmentsResponse": {
@@ -458,6 +506,22 @@ export type components = {
         "limit": number
         "offset": number
       }
+    }
+    "CreateActionStoreAssignmentDto": {
+      "userId": string
+      "storeId": string
+      "effectiveFrom"?: string
+      "effectiveTo"?: string
+    }
+    "CreateRoleAssignmentDto": {
+      "userId": string
+      "roleCode": "SUPER_ADMIN" | "INTEGRATION_ADMIN" | "SNAPSHOT_OPERATOR" | "REPORT_VIEWER" | "AUDITOR" | "REGION_MANAGER" | "STORE_MANAGER" | "STORE_PERSONNEL" | "VISUAL_MERCHANDISER"
+      "scopeType": "company" | "region" | "store"
+      "companyId"?: string
+      "regionId"?: string
+      "storeId"?: string
+      "effectiveFrom"?: string
+      "effectiveTo"?: string
     }
     "DailyClosureStatusResponse": {
       "automationEnabled": boolean
@@ -2211,6 +2275,20 @@ export type paths = {
         }
       }
     }
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["CreateActionStoreAssignmentDto"]
+        }
+      }
+      responses: {
+        "201": {
+          content: {
+            'application/json': components['schemas']["AuthActionStoreAssignmentCommandResponse"]
+          }
+        }
+      }
+    }
   }
   "/api/auth/action-store-assignments/{assignmentId}/audit": {
     get: {
@@ -2218,6 +2296,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["AuthAuditResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/auth/action-store-assignments/{assignmentId}/deactivate": {
+    patch: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["AuthActionStoreAssignmentCommandResponse"]
           }
         }
       }
@@ -2288,6 +2377,20 @@ export type paths = {
         }
       }
     }
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["CreateRoleAssignmentDto"]
+        }
+      }
+      responses: {
+        "201": {
+          content: {
+            'application/json': components['schemas']["AuthRoleAssignmentCommandResponse"]
+          }
+        }
+      }
+    }
   }
   "/api/auth/role-assignments/{assignmentId}/audit": {
     get: {
@@ -2295,6 +2398,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["AuthAuditResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/auth/role-assignments/{assignmentId}/deactivate": {
+    patch: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["AuthRoleAssignmentCommandResponse"]
           }
         }
       }

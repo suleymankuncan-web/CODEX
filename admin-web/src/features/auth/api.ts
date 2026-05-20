@@ -1,5 +1,10 @@
 import { sendJson } from '../../lib/api'
-import { fetchOpenApiJson, type ApiGetResponse } from '../../lib/openapi-client'
+import {
+  fetchOpenApiJson,
+  sendOpenApiJson,
+  type ApiGetResponse,
+  type ApiMutationBody,
+} from '../../lib/openapi-client'
 
 export type AuthLookups = ApiGetResponse<'/api/auth/lookups'>
 export type AuthLookupUser = AuthLookups['users'][number]
@@ -14,8 +19,16 @@ type AuthUserAccountsResponse = ApiGetResponse<'/api/auth/users'>
 export type UserAccount = AuthUserAccountsResponse['items'][number]
 type AuthRoleAssignmentsResponse = ApiGetResponse<'/api/auth/role-assignments'>
 export type RoleAssignment = AuthRoleAssignmentsResponse['items'][number]
+export type CreateRoleAssignmentInput = ApiMutationBody<
+  '/api/auth/role-assignments',
+  'POST'
+>
 type AuthActionStoreAssignmentsResponse = ApiGetResponse<'/api/auth/action-store-assignments'>
 export type ActionStoreAssignment = AuthActionStoreAssignmentsResponse['items'][number]
+export type CreateActionStoreAssignmentInput = ApiMutationBody<
+  '/api/auth/action-store-assignments',
+  'POST'
+>
 type AuthAuditResponse = ApiGetResponse<'/api/auth/users/{userId}/audit'>
 export type AuditEvent = AuthAuditResponse['items'][number]
 export type AuthBootstrap = ApiGetResponse<'/api/auth/bootstrap'>
@@ -164,17 +177,17 @@ export async function getPermissions() {
 }
 
 export async function deactivateRoleAssignment(assignmentId: string) {
-  return sendJson<CommandResponse<{ assignment: RoleAssignment }>>(
-    `/auth/role-assignments/${assignmentId}/deactivate`,
-    { method: 'PATCH' },
-  )
+  return sendOpenApiJson('/api/auth/role-assignments/{assignmentId}/deactivate', {
+    method: 'PATCH',
+    params: { assignmentId },
+  })
 }
 
 export async function deactivateActionStoreAssignment(assignmentId: string) {
-  return sendJson<CommandResponse<{ assignment: ActionStoreAssignment }>>(
-    `/auth/action-store-assignments/${assignmentId}/deactivate`,
-    { method: 'PATCH' },
-  )
+  return sendOpenApiJson('/api/auth/action-store-assignments/{assignmentId}/deactivate', {
+    method: 'PATCH',
+    params: { assignmentId },
+  })
 }
 
 export async function deactivateUserAccount(userId: string) {
@@ -220,35 +233,20 @@ export async function createPilotUserBinding(input: {
   })
 }
 
-export async function createRoleAssignment(input: {
-  userId: string
-  roleCode: string
-  scopeType: 'company' | 'region' | 'store'
-  companyId?: string
-  regionId?: string
-  storeId?: string
-  effectiveFrom?: string
-  effectiveTo?: string
-}) {
-  return sendJson<CommandResponse<{ assignment: RoleAssignment }>>('/auth/role-assignments', {
+export async function createRoleAssignment(
+  input: CreateRoleAssignmentInput,
+) {
+  return sendOpenApiJson('/api/auth/role-assignments', {
     method: 'POST',
     body: input,
   })
 }
 
-export async function createActionStoreAssignment(input: {
-  userId: string
-  storeId: string
-  effectiveFrom?: string
-  effectiveTo?: string
-}) {
-  return sendJson<CommandResponse<{ assignment: ActionStoreAssignment }>>(
-    '/auth/action-store-assignments',
-    {
-      method: 'POST',
-      body: input,
-    },
-  )
+export async function createActionStoreAssignment(input: CreateActionStoreAssignmentInput) {
+  return sendOpenApiJson('/api/auth/action-store-assignments', {
+    method: 'POST',
+    body: input,
+  })
 }
 
 export async function grantRolePermission(input: {

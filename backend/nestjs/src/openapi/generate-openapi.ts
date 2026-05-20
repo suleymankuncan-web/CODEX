@@ -1311,6 +1311,14 @@ const authRoleAssignmentSchema = {
   },
 };
 
+const authRoleAssignmentCommandResponseSchema = commandResponseSchema({
+  type: "object",
+  required: ["assignment"],
+  properties: {
+    assignment: authRoleAssignmentSchema,
+  },
+});
+
 const authActionStoreAssignmentSchema = {
   type: "object",
   required: [
@@ -1346,6 +1354,14 @@ const authActionStoreAssignmentSchema = {
     active: { type: "boolean" },
   },
 };
+
+const authActionStoreAssignmentCommandResponseSchema = commandResponseSchema({
+  type: "object",
+  required: ["assignment"],
+  properties: {
+    assignment: authActionStoreAssignmentSchema,
+  },
+});
 
 const authLookupStoreSchema = {
   type: "object",
@@ -4371,7 +4387,10 @@ async function generateOpenApi(): Promise<void> {
     AuthRoleCatalogResponse: authRoleCatalogResponseSchema,
     AuthPermissionCatalogResponse: authPermissionCatalogResponseSchema,
     AuthUserAccountsResponse: authUserAccountsResponseSchema,
+    AuthRoleAssignmentCommandResponse: authRoleAssignmentCommandResponseSchema,
     AuthRoleAssignmentsResponse: authRoleAssignmentsResponseSchema,
+    AuthActionStoreAssignmentCommandResponse:
+      authActionStoreAssignmentCommandResponseSchema,
     AuthActionStoreAssignmentsResponse:
       authActionStoreAssignmentsResponseSchema,
     AuthAuditResponse: authAuditResponseSchema,
@@ -4775,10 +4794,44 @@ async function generateOpenApi(): Promise<void> {
 
   setJsonResponseSchema(
     document.paths,
+    "/api/auth/role-assignments",
+    "post",
+    "Command result with the created auth role assignment.",
+    "AuthRoleAssignmentCommandResponse",
+    "201",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/role-assignments/{assignmentId}/deactivate",
+    "patch",
+    "Command result with the deactivated auth role assignment.",
+    "AuthRoleAssignmentCommandResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
     "/api/auth/action-store-assignments",
     "get",
     "Paginated auth action-store assignments visible to auth admins.",
     "AuthActionStoreAssignmentsResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/action-store-assignments",
+    "post",
+    "Command result with the created auth action-store assignment.",
+    "AuthActionStoreAssignmentCommandResponse",
+    "201",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/action-store-assignments/{assignmentId}/deactivate",
+    "patch",
+    "Command result with the deactivated auth action-store assignment.",
+    "AuthActionStoreAssignmentCommandResponse",
   );
 
   setJsonResponseSchema(
@@ -4976,6 +5029,24 @@ function nullableStringProperties(propertyNames: string[]) {
   );
 }
 
+function commandResponseSchema(dataSchema: Record<string, unknown>) {
+  return {
+    type: "object",
+    required: ["command", "data"],
+    properties: {
+      command: {
+        type: "object",
+        required: ["status", "message"],
+        properties: {
+          status: { type: "string" },
+          message: { type: "string" },
+        },
+      },
+      data: dataSchema,
+    },
+  };
+}
+
 function setJsonRequestSchema(
   paths: Record<string, unknown>,
   path: string,
@@ -5006,6 +5077,7 @@ function setJsonResponseSchema(
   method: string,
   description: string,
   schemaName: string,
+  status = "200",
 ) {
   const operation = (paths[path] as MutablePathItem | undefined)?.[method];
 
@@ -5015,7 +5087,7 @@ function setJsonResponseSchema(
 
   operation.responses = {
     ...(operation.responses ?? {}),
-    "200": {
+    [status]: {
       description,
       content: {
         "application/json": {

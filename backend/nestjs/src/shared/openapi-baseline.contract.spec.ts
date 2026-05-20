@@ -976,6 +976,31 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const authRoleAssignmentCreate =
+      document.paths["/api/auth/role-assignments"].post;
+    expect(
+      authRoleAssignmentCreate.requestBody?.content?.["application/json"]
+        ?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/CreateRoleAssignmentDto",
+    });
+    expect(
+      authRoleAssignmentCreate.responses?.["201"]?.content?.["application/json"]
+        ?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/AuthRoleAssignmentCommandResponse",
+    });
+
+    const authRoleAssignmentDeactivate =
+      document.paths["/api/auth/role-assignments/{assignmentId}/deactivate"].patch;
+    expect(
+      authRoleAssignmentDeactivate.responses?.["200"]?.content?.[
+        "application/json"
+      ]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/AuthRoleAssignmentCommandResponse",
+    });
+
     const authActionStoreAssignmentsResponse =
       document.paths["/api/auth/action-store-assignments"].get.responses?.["200"];
     expect(
@@ -992,6 +1017,34 @@ describe("OpenAPI baseline", () => {
         meta: expect.any(Object),
       }),
     );
+
+    const authActionStoreAssignmentCreate =
+      document.paths["/api/auth/action-store-assignments"].post;
+    expect(
+      authActionStoreAssignmentCreate.requestBody?.content?.["application/json"]
+        ?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/CreateActionStoreAssignmentDto",
+    });
+    expect(
+      authActionStoreAssignmentCreate.responses?.["201"]?.content?.[
+        "application/json"
+      ]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/AuthActionStoreAssignmentCommandResponse",
+    });
+
+    const authActionStoreAssignmentDeactivate =
+      document.paths[
+        "/api/auth/action-store-assignments/{assignmentId}/deactivate"
+      ].patch;
+    expect(
+      authActionStoreAssignmentDeactivate.responses?.["200"]?.content?.[
+        "application/json"
+      ]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/AuthActionStoreAssignmentCommandResponse",
+    });
 
     const authUserAuditResponse =
       document.paths["/api/auth/users/{userId}/audit"].get.responses?.["200"];
