@@ -36,7 +36,8 @@ test('snapshot runs page localizes KPI config version reporting context', async 
   await expect(page.getByText('KPI ayar sürümü').first()).toBeVisible()
   await expect(page.getByText('v7')).toBeVisible()
   await expect(page.getByText('Yönetişim öncesi snapshot')).toBeVisible()
-  await expect(page.getByRole('link', { name: 'İşgücünü aç' }).first()).toBeVisible()
+  await expect(page.getByRole('link', { name: 'snapshot-versioned için işgücünü aç' })).toBeVisible()
+  await expect(page.getByText("KPI'ları aç").first()).toBeVisible()
   await expect(page.getByText('KPI config version')).toHaveCount(0)
   await expect(page.locator('body')).not.toContainText('Ã')
   await expect(page.locator('body')).not.toContainText('Ä')
@@ -49,7 +50,7 @@ test('snapshot runs page localizes KPI config version reporting context', async 
   await expect(page.getByText('Snapshot contexts')).toBeVisible()
   await expect(page.getByText('KPI config version').first()).toBeVisible()
   await expect(page.getByText('Pre-governance snapshot')).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Open workforce' }).first()).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Open workforce for snapshot-versioned' })).toBeVisible()
   await expect(page.getByText('KPI ayar sürümü')).toHaveCount(0)
 
   await page.reload()
@@ -69,6 +70,11 @@ test('reports summary page switches hub chrome to English copy and persists loca
   await expect(page.getByText('Snapshot çalışma ID')).toBeVisible()
   await expect(page.getByText('tamamlandı').first()).toBeVisible()
   await expect(page.getByRole('link', { name: 'Detay seçiciyi aç' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'snapshot-versioned için işgücü raporunu aç' })).toHaveAttribute(
+    'href',
+    '/admin/reports/workforce/snapshot-versioned',
+  )
+  await expect(page.getByText("KPI'lar").first()).toBeVisible()
   await expect(page.getByText('Reporting Summary')).toHaveCount(0)
   await expect(page.getByText('Total report rows')).toHaveCount(0)
   await expect(page.getByText('Open drill-down chooser')).toHaveCount(0)
@@ -85,6 +91,10 @@ test('reports summary page switches hub chrome to English copy and persists loca
   await expect(page.getByRole('heading', { name: 'Reporting anchor' })).toBeVisible()
   await expect(page.getByText('completed').first()).toBeVisible()
   await expect(page.getByRole('link', { name: 'Open drill-down chooser' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Open workforce report for snapshot-versioned' })).toHaveAttribute(
+    'href',
+    '/admin/reports/workforce/snapshot-versioned',
+  )
   await expect(page.getByText('Raporlama özeti')).toHaveCount(0)
   await expect(page.getByText('Toplam rapor satırı')).toHaveCount(0)
 

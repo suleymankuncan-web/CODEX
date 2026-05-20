@@ -51,9 +51,13 @@ export const reportsSummaryTr = {
   'reportsSummary.status.queued': 'kuyrukta',
   'reportsSummary.status.pending': 'bekliyor',
   'reportsSummary.openWorkforce': 'İşgücü',
-  'reportsSummary.openKpis': 'KPIlar',
+  'reportsSummary.openKpis': "KPI'lar",
   'reportsSummary.openChecklists': 'Checklistler',
   'reportsSummary.openTurnover': 'Personel çıkışı',
+  'reportsSummary.openWorkforceForSnapshot': '{snapshotRunId} için işgücü raporunu aç',
+  'reportsSummary.openKpisForSnapshot': '{snapshotRunId} için KPI raporunu aç',
+  'reportsSummary.openChecklistsForSnapshot': '{snapshotRunId} için checklist raporunu aç',
+  'reportsSummary.openTurnoverForSnapshot': '{snapshotRunId} için personel çıkışı raporunu aç',
 } as const
 
 export const reportsSummaryEn: Record<keyof typeof reportsSummaryTr, string> = {
@@ -112,4 +116,8 @@ export const reportsSummaryEn: Record<keyof typeof reportsSummaryTr, string> = {
   'reportsSummary.openKpis': 'KPIs',
   'reportsSummary.openChecklists': 'Checklists',
   'reportsSummary.openTurnover': 'Turnover',
+  'reportsSummary.openWorkforceForSnapshot': 'Open workforce report for {snapshotRunId}',
+  'reportsSummary.openKpisForSnapshot': 'Open KPI report for {snapshotRunId}',
+  'reportsSummary.openChecklistsForSnapshot': 'Open checklist report for {snapshotRunId}',
+  'reportsSummary.openTurnoverForSnapshot': 'Open turnover report for {snapshotRunId}',
 }

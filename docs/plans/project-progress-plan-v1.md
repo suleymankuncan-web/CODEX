@@ -214,6 +214,7 @@ Phase 1 evidence:
 - `docs/evidence/product-progress/2026-05-20-store-home-manager-copy.md`
 - `docs/evidence/product-progress/2026-05-20-uiux-v1-route-inventory.md`
 - `docs/evidence/product-progress/2026-05-20-store-utility-handoff-v1.md`
+- `docs/evidence/product-progress/2026-05-20-admin-reports-link-context-v1.md`
 
 Recommended first PR after this plan:
 
@@ -228,9 +229,12 @@ Current UI/UX V1 status:
 
 Next UI/UX V1 recommendation:
 
-- Treat admin reports as the next candidate, starting with `/admin/reports`
-  and `/admin/reports/snapshot-runs` only if the slice can stay read-only and
-  fixture-backed.
+- Admin reports summary/snapshot chooser now have snapshot-specific drill-down
+  link context and mobile/browser evidence.
+- Continue reports only if a browser pass on detail pages finds concrete
+  overflow, focus, or context issues.
+- Otherwise treat admin import detail as the next higher-value candidate from
+  the route inventory.
 - Treat auth/admin follow-ups as later slices, with route-level Playwright
   evidence before visual polish.
 

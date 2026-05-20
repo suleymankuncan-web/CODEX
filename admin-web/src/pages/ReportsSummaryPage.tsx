@@ -165,16 +165,32 @@ export function ReportsSummaryPage() {
                   <p>{formatDate(run.periodStart, locale)} - {formatDate(run.periodEnd, locale)}</p>
                   <span className="queue-subtitle">{run.snapshotRunId}</span>
                   <div className="action-cluster">
-                    <Link className="back-link" to={`/admin/reports/workforce/${run.snapshotRunId}`}>
+                    <Link
+                      className="back-link"
+                      to={`/admin/reports/workforce/${run.snapshotRunId}`}
+                      aria-label={t('reportsSummary.openWorkforceForSnapshot', { snapshotRunId: run.snapshotRunId })}
+                    >
                       <span>{t('reportsSummary.openWorkforce')}</span>
                     </Link>
-                    <Link className="back-link" to={`/admin/reports/kpis/${run.snapshotRunId}`}>
+                    <Link
+                      className="back-link"
+                      to={`/admin/reports/kpis/${run.snapshotRunId}`}
+                      aria-label={t('reportsSummary.openKpisForSnapshot', { snapshotRunId: run.snapshotRunId })}
+                    >
                       <span>{t('reportsSummary.openKpis')}</span>
                     </Link>
-                    <Link className="back-link" to={`/admin/reports/checklists/${run.snapshotRunId}`}>
+                    <Link
+                      className="back-link"
+                      to={`/admin/reports/checklists/${run.snapshotRunId}`}
+                      aria-label={t('reportsSummary.openChecklistsForSnapshot', { snapshotRunId: run.snapshotRunId })}
+                    >
                       <span>{t('reportsSummary.openChecklists')}</span>
                     </Link>
-                    <Link className="back-link" to={`/admin/reports/turnover/${run.snapshotRunId}`}>
+                    <Link
+                      className="back-link"
+                      to={`/admin/reports/turnover/${run.snapshotRunId}`}
+                      aria-label={t('reportsSummary.openTurnoverForSnapshot', { snapshotRunId: run.snapshotRunId })}
+                    >
                       <span>{t('reportsSummary.openTurnover')}</span>
                     </Link>
                   </div>
