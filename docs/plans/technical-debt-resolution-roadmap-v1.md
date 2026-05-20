@@ -368,6 +368,17 @@ Safe first slice:
 
 - Read-only inventory: list read, write, audit, lookup, and permission method
   families; map each to existing regression tests.
+- Current inventory:
+  `docs/plans/auth-admin-repository-boundary-inventory-v1.md`.
+
+Current status:
+
+- Inventory/test-map is prepared.
+- `AuthAdminRepository` is roughly 1845 physical lines / 1715 non-empty lines
+  and owns 36 repository methods.
+- Auth admin remains security-sensitive. Start implementation with lookup and
+  catalog reads only; do not begin with writes, pilot binding, permission
+  mutation, or DB migrations.
 
 Candidate extraction order:
 
@@ -376,7 +387,8 @@ Candidate extraction order:
 3. User account write boundary.
 4. Role assignment write boundary.
 5. Action-store assignment write boundary.
-6. Permission grant/revoke boundary.
+6. Pilot binding boundary, only if it grows beyond setup workflow.
+7. Permission grant/revoke boundary.
 
 Verification:
 
