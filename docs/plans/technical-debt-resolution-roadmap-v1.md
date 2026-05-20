@@ -395,13 +395,16 @@ Current status:
   the next safe code slice. User create/reactivate, provider-subject lookup,
   active employee/store validation, and pilot binding stay parked until the
   invariant and negative-test strategy are stronger.
+- The narrow user-account read-only extraction has been implemented:
+  `listUserAccounts` and `getUserAccountById` now live in
+  `AuthAdminUserAccountReadRepository`. `AuthAdminRepository` is roughly 1356
+  physical lines / 1278 non-empty lines after this slice.
 
 Candidate extraction order:
 
 1. Done: lookup/read-only catalog boundary.
 2. Done: audit read boundary.
-3. Next allowed auth slice: user account read-only boundary for list/detail
-   queries, following
+3. Done: user account read-only boundary for list/detail queries, following
    `docs/plans/auth-admin-user-account-boundary-decision-v1.md`.
 4. Parked/high-risk: user account create/reactivate write boundary.
 5. Later/high-risk: role assignment write boundary.
@@ -645,17 +648,18 @@ input changes priority.
 4. Done: auth admin repository inventory/test-map PR.
 5. Done: auth admin lookup/audit read-boundary line.
 6. Done: auth admin user-account invariant/test-map decision.
-7. Next: either the narrow auth admin user-account read-only extraction from
-   `docs/plans/auth-admin-user-account-boundary-decision-v1.md`, or shift to
-   stage builder / competition work if no auth write risk is active.
-8. Stage builder frontend pure model/section split PR, if product work touches
+7. Done: narrow auth admin user-account read-only extraction from
+   `docs/plans/auth-admin-user-account-boundary-decision-v1.md`.
+8. Next: shift to stage builder / competition work unless a concrete auth
+   write-risk or product change requires the next invariant decision.
+9. Stage builder frontend pure model/section split PR, if product work touches
    competitions.
-9. Master-data bootstrap frontend model/section split PR, if product work
+10. Master-data bootstrap frontend model/section split PR, if product work
    touches master-data bootstrap.
-10. Competition repository inventory/read-boundary PR.
-11. TypeScript strictness inventory PR.
-12. One strictness domain PR only if the inventory shows a reviewable slice.
-13. External evidence PRs only when real provider inputs exist.
+11. Competition repository inventory/read-boundary PR.
+12. TypeScript strictness inventory PR.
+13. One strictness domain PR only if the inventory shows a reviewable slice.
+14. External evidence PRs only when real provider inputs exist.
 
 Batch rule:
 
