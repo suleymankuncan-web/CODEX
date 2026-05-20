@@ -207,8 +207,13 @@ Frontend smoke:
    - Required gates:
      - role assignment, action-store assignment, and user account e2e specs.
 3. User account read/write boundary
-   - Only after deciding whether one active account per employee is a product
-     invariant.
+   - Decision recorded in
+     `docs/plans/auth-admin-user-account-boundary-decision-v1.md`.
+   - Next safe code slice is read-only: move `listUserAccounts` and
+     `getUserAccountById` only.
+   - Keep provider-subject lookup, active employee/store validation,
+     create/reactivate writes, and pilot binding parked until invariant and
+     negative-test coverage are stronger.
 4. Role assignment write boundary
    - Only after DB-level active uniqueness is designed or explicitly parked.
 5. Action-store assignment write boundary
@@ -250,9 +255,12 @@ Next:
 
 - Do not start user writes, role assignment writes, action-store writes, pilot
   binding, role permission writes, or DB migrations by default.
-- If auth admin remains the active roadmap line, first document the
-  user-account invariant decision and the exact negative auth tests required
-  for the next write-boundary slice.
+- If auth admin remains the active roadmap line, the only approved next code
+  move is the user-account read-only list/detail boundary from
+  `docs/plans/auth-admin-user-account-boundary-decision-v1.md`.
+- User-account writes remain parked until the product explicitly chooses the
+  employee-account invariant and the negative auth tests required for that
+  write-boundary slice.
 - If there is no active auth write risk, shift to the next roadmap candidate:
   stage builder/frontend competition decomposition or competition repository
   inventory.
