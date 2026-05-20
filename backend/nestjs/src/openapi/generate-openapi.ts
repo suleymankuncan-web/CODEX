@@ -1588,6 +1588,223 @@ const workflowInboxResponseSchema = {
   },
 };
 
+const workforceSellerCodeReferenceResponseSchema = {
+  type: "object",
+  required: ["storeType", "prefix", "lastSellerCode", "nextSellerCodePreview"],
+  properties: {
+    storeType: { type: "string", enum: ["franchise"] },
+    prefix: { type: "string", enum: ["FM"] },
+    lastSellerCode: { type: "string", nullable: true },
+    nextSellerCodePreview: { type: "string", nullable: true },
+  },
+};
+
+const workforcePositionOptionSchema = {
+  type: "object",
+  required: [
+    "positionId",
+    "positionCode",
+    "positionName",
+    "jobFamily",
+    "isManagerial",
+  ],
+  properties: {
+    positionId: { type: "string" },
+    positionCode: { type: "string" },
+    positionName: { type: "string" },
+    jobFamily: { type: "string", nullable: true },
+    isManagerial: { type: "boolean" },
+  },
+};
+
+const workforcePositionOptionsResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: workforcePositionOptionSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
+const workforceStoreEmployeeSchema = {
+  type: "object",
+  required: [
+    "employeeId",
+    "displayName",
+    "externalEmployeeRef",
+    "storeId",
+    "positionId",
+    "positionCode",
+    "positionName",
+    "assignmentStartDate",
+    "employmentStatus",
+  ],
+  properties: {
+    employeeId: { type: "string" },
+    displayName: { type: "string" },
+    externalEmployeeRef: { type: "string", nullable: true },
+    storeId: { type: "string" },
+    positionId: { type: "string" },
+    positionCode: { type: "string" },
+    positionName: { type: "string" },
+    assignmentStartDate: { type: "string" },
+    employmentStatus: { type: "string" },
+  },
+};
+
+const workforceStoreEmployeesResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: workforceStoreEmployeeSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
+const workforceSellerCodeRequestSchema = {
+  type: "object",
+  required: [
+    "requestId",
+    "companyId",
+    "regionId",
+    "storeId",
+    "storeCode",
+    "storeName",
+    "storeType",
+    "requestType",
+    "status",
+    "firstName",
+    "lastName",
+    "nationalIdLast4",
+    "phoneNumber",
+    "hireDate",
+    "requestedPositionId",
+    "positionCode",
+    "positionName",
+    "employmentType",
+    "requestedSellerCode",
+    "approvedSellerCode",
+    "lastReferenceSellerCode",
+    "submittedByUserId",
+    "reviewedByUserId",
+    "reviewedAt",
+    "reviewNote",
+    "employeeId",
+    "createdAt",
+    "updatedAt",
+  ],
+  properties: {
+    requestId: { type: "string" },
+    companyId: { type: "string" },
+    regionId: { type: "string" },
+    storeId: { type: "string" },
+    storeCode: { type: "string" },
+    storeName: { type: "string" },
+    storeType: { type: "string" },
+    requestType: { type: "string" },
+    status: { type: "string" },
+    firstName: { type: "string" },
+    lastName: { type: "string" },
+    nationalIdLast4: { type: "string" },
+    phoneNumber: { type: "string" },
+    hireDate: { type: "string" },
+    requestedPositionId: { type: "string" },
+    positionCode: { type: "string" },
+    positionName: { type: "string" },
+    employmentType: { type: "string" },
+    requestedSellerCode: { type: "string", nullable: true },
+    approvedSellerCode: { type: "string", nullable: true },
+    lastReferenceSellerCode: { type: "string", nullable: true },
+    submittedByUserId: { type: "string" },
+    reviewedByUserId: { type: "string", nullable: true },
+    reviewedAt: { type: "string", nullable: true },
+    reviewNote: { type: "string", nullable: true },
+    employeeId: { type: "string", nullable: true },
+    createdAt: { type: "string" },
+    updatedAt: { type: "string" },
+  },
+};
+
+const workforceSellerCodeRequestsResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: workforceSellerCodeRequestSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
+const workforceOffboardingRequestSchema = {
+  type: "object",
+  required: [
+    "requestId",
+    "companyId",
+    "regionId",
+    "storeId",
+    "storeCode",
+    "storeName",
+    "employeeId",
+    "displayName",
+    "externalEmployeeRef",
+    "positionCode",
+    "positionName",
+    "status",
+    "terminationDate",
+    "terminationReason",
+    "requestReason",
+    "submittedByUserId",
+    "reviewedByUserId",
+    "reviewedAt",
+    "reviewNote",
+    "createdAt",
+    "updatedAt",
+  ],
+  properties: {
+    requestId: { type: "string" },
+    companyId: { type: "string" },
+    regionId: { type: "string" },
+    storeId: { type: "string" },
+    storeCode: { type: "string" },
+    storeName: { type: "string" },
+    employeeId: { type: "string" },
+    displayName: { type: "string" },
+    externalEmployeeRef: { type: "string", nullable: true },
+    positionCode: { type: "string", nullable: true },
+    positionName: { type: "string", nullable: true },
+    status: { type: "string" },
+    terminationDate: { type: "string" },
+    terminationReason: { type: "string" },
+    requestReason: { type: "string", nullable: true },
+    submittedByUserId: { type: "string" },
+    reviewedByUserId: { type: "string", nullable: true },
+    reviewedAt: { type: "string", nullable: true },
+    reviewNote: { type: "string", nullable: true },
+    createdAt: { type: "string" },
+    updatedAt: { type: "string" },
+  },
+};
+
+const workforceOffboardingRequestsResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: workforceOffboardingRequestSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
 const snapshotStatusTotalsSchema = {
   type: "object",
   required: ["all", "queued", "running", "completed", "failed"],
@@ -2373,6 +2590,14 @@ async function generateOpenApi(): Promise<void> {
     SnapshotRunDependenciesResponse: snapshotRunDependenciesResponseSchema,
     SnapshotRunLineageResponse: snapshotRunLineageResponseSchema,
     SnapshotRunAuditResponse: snapshotRunAuditResponseSchema,
+    WorkforceSellerCodeReferenceResponse:
+      workforceSellerCodeReferenceResponseSchema,
+    WorkforcePositionOptionsResponse: workforcePositionOptionsResponseSchema,
+    WorkforceStoreEmployeesResponse: workforceStoreEmployeesResponseSchema,
+    WorkforceSellerCodeRequestsResponse:
+      workforceSellerCodeRequestsResponseSchema,
+    WorkforceOffboardingRequestsResponse:
+      workforceOffboardingRequestsResponseSchema,
     ImportOverview: importOverviewSchema,
     ImportPayloadTemplateResponse: importPayloadTemplateSchema,
     ImportBatchAuditResponse: importBatchAuditResponseSchema,
@@ -2528,6 +2753,46 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Snapshot run audit event timeline.",
     "SnapshotRunAuditResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/workforce/seller-code-reference",
+    "get",
+    "Latest franchise seller code reference and next preview.",
+    "WorkforceSellerCodeReferenceResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/workforce/position-options",
+    "get",
+    "Store position options available for workforce requests.",
+    "WorkforcePositionOptionsResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/workforce/store-employees",
+    "get",
+    "Active store employees available for offboarding requests.",
+    "WorkforceStoreEmployeesResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/workforce/seller-code-requests",
+    "get",
+    "Paginated seller code requests visible to workforce reviewers.",
+    "WorkforceSellerCodeRequestsResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/workforce/offboarding-requests",
+    "get",
+    "Paginated employee offboarding requests visible to workforce reviewers.",
+    "WorkforceOffboardingRequestsResponse",
   );
 
   setJsonResponseSchema(

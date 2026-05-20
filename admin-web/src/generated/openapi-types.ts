@@ -1006,6 +1006,115 @@ export type components = {
         "offset": number
       }
     }
+    "WorkforceOffboardingRequestsResponse": {
+      "items": Array<{
+          "requestId": string
+          "companyId": string
+          "regionId": string
+          "storeId": string
+          "storeCode": string
+          "storeName": string
+          "employeeId": string
+          "displayName": string
+          "externalEmployeeRef": string | null
+          "positionCode": string | null
+          "positionName": string | null
+          "status": string
+          "terminationDate": string
+          "terminationReason": string
+          "requestReason": string | null
+          "submittedByUserId": string
+          "reviewedByUserId": string | null
+          "reviewedAt": string | null
+          "reviewNote": string | null
+          "createdAt": string
+          "updatedAt": string
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
+    "WorkforcePositionOptionsResponse": {
+      "items": Array<{
+          "positionId": string
+          "positionCode": string
+          "positionName": string
+          "jobFamily": string | null
+          "isManagerial": boolean
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
+    "WorkforceSellerCodeReferenceResponse": {
+      "storeType": "franchise"
+      "prefix": "FM"
+      "lastSellerCode": string | null
+      "nextSellerCodePreview": string | null
+    }
+    "WorkforceSellerCodeRequestsResponse": {
+      "items": Array<{
+          "requestId": string
+          "companyId": string
+          "regionId": string
+          "storeId": string
+          "storeCode": string
+          "storeName": string
+          "storeType": string
+          "requestType": string
+          "status": string
+          "firstName": string
+          "lastName": string
+          "nationalIdLast4": string
+          "phoneNumber": string
+          "hireDate": string
+          "requestedPositionId": string
+          "positionCode": string
+          "positionName": string
+          "employmentType": string
+          "requestedSellerCode": string | null
+          "approvedSellerCode": string | null
+          "lastReferenceSellerCode": string | null
+          "submittedByUserId": string
+          "reviewedByUserId": string | null
+          "reviewedAt": string | null
+          "reviewNote": string | null
+          "employeeId": string | null
+          "createdAt": string
+          "updatedAt": string
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
+    "WorkforceStoreEmployeesResponse": {
+      "items": Array<{
+          "employeeId": string
+          "displayName": string
+          "externalEmployeeRef": string | null
+          "storeId": string
+          "positionId": string
+          "positionCode": string
+          "positionName": string
+          "assignmentStartDate": string
+          "employmentStatus": string
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
   }
 }
 
@@ -1357,6 +1466,61 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["StoreTargetingPersonnelResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/workforce/offboarding-requests": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["WorkforceOffboardingRequestsResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/workforce/position-options": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["WorkforcePositionOptionsResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/workforce/seller-code-reference": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["WorkforceSellerCodeReferenceResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/workforce/seller-code-requests": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["WorkforceSellerCodeRequestsResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/workforce/store-employees": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["WorkforceStoreEmployeesResponse"]
           }
         }
       }

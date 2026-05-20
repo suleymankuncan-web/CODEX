@@ -48,6 +48,11 @@ const selectedOperations = [
   { path: '/api/target-distributions/coverage', method: 'get' },
   { path: '/api/target-distributions/requests', method: 'get' },
   { path: '/api/target-distributions/store-personnel', method: 'get' },
+  { path: '/api/workforce/offboarding-requests', method: 'get' },
+  { path: '/api/workforce/position-options', method: 'get' },
+  { path: '/api/workforce/seller-code-reference', method: 'get' },
+  { path: '/api/workforce/seller-code-requests', method: 'get' },
+  { path: '/api/workforce/store-employees', method: 'get' },
   { path: '/api/workflow/inbox', method: 'get' },
 ]
 const selectedSchemaNames = collectReferencedSchemaNames(document, selectedOperations)
