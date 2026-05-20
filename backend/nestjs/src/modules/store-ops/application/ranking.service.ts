@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { KpiConfigRepository } from "../infrastructure/kpi-config.repository";
+import { RankingReportingReadRepository } from "../infrastructure/ranking-reporting-read.repository";
 import { ReportingRepository } from "../infrastructure/reporting.repository";
 import { StorePerformanceReportingReadRepository } from "../infrastructure/store-performance-reporting-read.repository";
 import { KpiBenchmarkScoringService } from "./kpi-benchmark-scoring.service";
@@ -91,6 +92,8 @@ export class RankingService {
     private readonly kpiConfigRepository: KpiConfigRepository,
     private readonly storePerformanceReportingReadRepository: StorePerformanceReportingReadRepository =
       reportingRepository as unknown as StorePerformanceReportingReadRepository,
+    private readonly rankingReportingReadRepository: RankingReportingReadRepository =
+      reportingRepository as unknown as RankingReportingReadRepository,
   ) {}
 
   async getRankings(input: GetRankingsInput): Promise<RankingResponse> {
@@ -110,15 +113,16 @@ export class RankingService {
         employeeId: input.employeeId,
         companyIds: input.companyIds,
       }),
-      this.reportingRepository.getLatestMonthlyRankingPeriod({
+      this.rankingReportingReadRepository.getLatestMonthlyRankingPeriod({
         metricCodes: allMetricCodes,
         periodStart: input.periodStart,
       }),
     ]);
 
-    const availablePeriods = await this.reportingRepository.listRankingAvailablePeriods({
-      metricCodes: allMetricCodes,
-    });
+    const availablePeriods =
+      await this.rankingReportingReadRepository.listRankingAvailablePeriods({
+        metricCodes: allMetricCodes,
+      });
 
     if (!latestPeriod) {
       return this.getEmptyResponse({
@@ -137,19 +141,19 @@ export class RankingService {
       personnelBenchmarkRows,
       filters,
     ] = await Promise.all([
-      this.reportingRepository.listRankingStoreKpiRows({
+      this.rankingReportingReadRepository.listRankingStoreKpiRows({
         metricCodes: storeMetricCodes,
         companyIds: input.companyIds,
         periodType: latestPeriod.period_type,
         periodStart: latestPeriod.period_start,
         periodEnd: latestPeriod.period_end,
       }),
-      this.reportingRepository.listRankingStoreChecklistRows({
+      this.rankingReportingReadRepository.listRankingStoreChecklistRows({
         companyIds: input.companyIds,
         periodStart: latestPeriod.period_start,
         periodEnd: latestPeriod.period_end,
       }),
-      this.reportingRepository.listRankingPersonnelKpiRows({
+      this.rankingReportingReadRepository.listRankingPersonnelKpiRows({
         metricCodes: personnelMetricCodes,
         companyIds: input.companyIds,
         periodType: latestPeriod.period_type,
@@ -168,7 +172,7 @@ export class RankingService {
         periodStart: latestPeriod.period_start,
         periodEnd: latestPeriod.period_end,
       }),
-      this.reportingRepository.listRankingFilterOptions({
+      this.rankingReportingReadRepository.listRankingFilterOptions({
         companyIds: input.companyIds,
         periodType: latestPeriod.period_type,
         periodStart: latestPeriod.period_start,

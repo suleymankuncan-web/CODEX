@@ -148,57 +148,6 @@ describe("ReportingRepository benchmark queries", () => {
     expect(sql).not.toContain("SUM(item_count.actual_value)");
     expect(sql).not.toContain("SUM(ticket_count.actual_value)");
   });
-});
-
-describe("ReportingRepository ranking source filters", () => {
-  function createRepository() {
-    const query = jest.fn(async (_sql: string, _params?: unknown[]) => ({
-      rowCount: 0,
-      rows: [],
-    }));
-    const repository = new ReportingRepository({ query } as never);
-
-    return { query, repository };
-  }
-
-  it("excludes demo seed KPI rows from ranking period selection and lists", async () => {
-    const { query, repository } = createRepository();
-
-    await repository.getLatestMonthlyRankingPeriod({
-      metricCodes: ["ATV"],
-    });
-    await repository.listRankingAvailablePeriods({
-      metricCodes: ["ATV"],
-    });
-    await repository.listRankingStoreKpiRows({
-      metricCodes: ["ATV"],
-      companyIds: [],
-      periodType: "monthly",
-      periodStart: "2026-03-01",
-      periodEnd: "2026-03-31",
-    });
-    await repository.listRankingPersonnelKpiRows({
-      metricCodes: ["ATV"],
-      companyIds: [],
-      periodType: "monthly",
-      periodStart: "2026-03-01",
-      periodEnd: "2026-03-31",
-    });
-    await repository.listRankingFilterOptions({
-      companyIds: [],
-      periodType: "monthly",
-      periodStart: "2026-03-01",
-      periodEnd: "2026-03-31",
-    });
-
-    for (const [sql] of query.mock.calls) {
-      if (!String(sql).includes("ops.kpi_actual ka")) {
-        continue;
-      }
-
-      expect(String(sql)).toContain("COALESCE(ka.source_type, '') <> 'demo_seed'");
-    }
-  });
 
   it("excludes demo seed KPI rows from personnel ranking Turkey benchmarks", async () => {
     const { query, repository } = createRepository();
@@ -212,66 +161,6 @@ describe("ReportingRepository ranking source filters", () => {
     for (const [sql] of query.mock.calls) {
       expect(String(sql)).toContain("COALESCE(ka.source_type, '') <> 'demo_seed'");
     }
-  });
-
-  it("uses KPI import enabled stores for ranking lists and filter options", async () => {
-    const { query, repository } = createRepository();
-
-    await repository.listRankingStoreKpiRows({
-      metricCodes: ["ATV"],
-      companyIds: [],
-      periodType: "monthly",
-      periodStart: "2026-03-01",
-      periodEnd: "2026-03-31",
-    });
-    await repository.listRankingPersonnelKpiRows({
-      metricCodes: ["ATV"],
-      companyIds: [],
-      periodType: "monthly",
-      periodStart: "2026-03-01",
-      periodEnd: "2026-03-31",
-    });
-    await repository.listRankingFilterOptions({
-      companyIds: [],
-      periodType: "monthly",
-      periodStart: "2026-03-01",
-      periodEnd: "2026-03-31",
-    });
-
-    const storeScopedQueries = query.mock.calls
-      .map(([sql]) => String(sql))
-      .filter((sql) => sql.includes("ops.store store"));
-
-    expect(storeScopedQueries.length).toBeGreaterThan(0);
-    for (const sql of storeScopedQueries) {
-      expect(sql).toContain("store.kpi_import_enabled = TRUE");
-    }
-  });
-
-  it("reads completed BM and VM checklist averages for live store rankings", async () => {
-    const { query, repository } = createRepository();
-
-    await repository.listRankingStoreChecklistRows({
-      companyIds: ["00000000-0000-4000-8000-000000000001"],
-      periodStart: "2026-03-01",
-      periodEnd: "2026-03-31",
-    });
-
-    const [sql, params] = query.mock.calls[0];
-
-    expect(String(sql)).toContain("FROM ops.checklist_instance ci");
-    expect(String(sql)).toContain("INNER JOIN ops.checklist_template ct");
-    expect(String(sql)).toContain("ci.status = 'completed'");
-    expect(String(sql)).toContain("ci.completed_at::date BETWEEN $1::date AND $2::date");
-    expect(String(sql)).toContain("WHEN 'BM_STORE_VISIT' THEN 'BM_CHECKLIST'");
-    expect(String(sql)).toContain("WHEN 'VM_STORE_VISIT' THEN 'VM_CHECKLIST'");
-    expect(String(sql)).toContain("store.kpi_import_enabled = TRUE");
-    expect(String(sql)).toContain("store.company_id = ANY($3::uuid[])");
-    expect(params).toEqual([
-      "2026-03-01",
-      "2026-03-31",
-      ["00000000-0000-4000-8000-000000000001"],
-    ]);
   });
 });
 
@@ -339,27 +228,6 @@ describe("ReportingRepository personnel target reference queries", () => {
     );
   });
 
-  it("joins approved personnel target references for ranking personnel NET_SALES rows", async () => {
-    const { query, repository } = createRepository();
-
-    await repository.listRankingPersonnelKpiRows({
-      metricCodes: ["NET_SALES"],
-      companyIds: [],
-      periodType: "monthly",
-      periodStart: "2026-03-01",
-      periodEnd: "2026-03-31",
-    });
-
-    const sql = String(query.mock.calls[0][0]);
-    expect(sql).toContain("LEFT JOIN ops.personnel_target_reference ptr");
-    expect(sql).toContain("ptr.employee_id = ka.employee_id");
-    expect(sql).toContain("ptr.target_type = 'monthly_sales_target'");
-    expect(sql).toContain("ptr.status = 'approved'");
-    expect(sql).toContain(
-      "kd.kpi_code IN ('TARGET_ACHIEVEMENT', 'NET_SALES', 'STORE_SALES', 'SALES_TARGET_ACHIEVEMENT')",
-    );
-    expect(sql).toContain("ptr.target_value::text AS target_value");
-  });
 });
 
 describe("ReportingRepository personnel period compatibility", () => {
