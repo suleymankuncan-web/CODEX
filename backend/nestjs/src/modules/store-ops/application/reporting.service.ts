@@ -19,6 +19,7 @@ import { KpiBenchmarkScoringService } from "./kpi-benchmark-scoring.service";
 import { LiveMonthlyLeaderboardService } from "./live-monthly-leaderboard.service";
 import { StoreScoreReportingReadRepository } from "../infrastructure/store-score-reporting-read.repository";
 import { ClosedRankingRepository } from "../infrastructure/closed-ranking.repository";
+import { RankingReportingReadRepository } from "../infrastructure/ranking-reporting-read.repository";
 import { SnapshotReportingReadRepository } from "../infrastructure/snapshot-reporting-read.repository";
 import { StorePerformanceReportingReadRepository } from "../infrastructure/store-performance-reporting-read.repository";
 
@@ -41,6 +42,8 @@ export class ReportingService {
       reportingRepository as unknown as SnapshotReportingReadRepository,
     private readonly storePerformanceReportingReadRepository: StorePerformanceReportingReadRepository =
       reportingRepository as unknown as StorePerformanceReportingReadRepository,
+    private readonly rankingReportingReadRepository: RankingReportingReadRepository =
+      reportingRepository as unknown as RankingReportingReadRepository,
   ) {}
 
   private mapSnapshotRun(item: {
@@ -405,7 +408,7 @@ export class ReportingService {
         periodEnd: latestPeriod.period_end,
       }),
       shouldReadChecklistRows
-        ? this.reportingRepository.listRankingStoreChecklistRows({
+        ? this.rankingReportingReadRepository.listRankingStoreChecklistRows({
             companyIds: input.companyIds,
             periodStart: latestPeriod.period_start,
             periodEnd: latestPeriod.period_end,
