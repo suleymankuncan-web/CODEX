@@ -17,6 +17,7 @@ import { ClosedRankingService } from "./closed-ranking.service";
 import { StoreScoreBlendService } from "./store-score-blend.service";
 import { KpiBenchmarkScoringService } from "./kpi-benchmark-scoring.service";
 import { LiveMonthlyLeaderboardService } from "./live-monthly-leaderboard.service";
+import { StoreScoreReportingReadRepository } from "../infrastructure/store-score-reporting-read.repository";
 
 const storeChecklistMetricCodes = new Set(["BM_CHECKLIST", "VM_CHECKLIST"]);
 
@@ -29,6 +30,8 @@ export class ReportingService {
     private readonly kpiConfigRepository: KpiConfigRepository,
     private readonly closedRankingService: ClosedRankingService,
     private readonly liveMonthlyLeaderboardService: LiveMonthlyLeaderboardService,
+    private readonly storeScoreReportingReadRepository: StoreScoreReportingReadRepository =
+      reportingRepository as unknown as StoreScoreReportingReadRepository,
   ) {}
 
   private mapSnapshotRun(item: {
@@ -564,16 +567,16 @@ export class ReportingService {
 
     const [config, kpiRows, bmChecklist, vmChecklist] = await Promise.all([
       this.getKpiConfig(),
-      this.reportingRepository.getStoreKpiSnapshotRowsForScore({
+      this.storeScoreReportingReadRepository.getStoreKpiSnapshotRowsForScore({
         snapshotRunId: input.snapshotRunId,
         storeId: input.storeId,
       }),
-      this.reportingRepository.getStoreChecklistSnapshotForScore({
+      this.storeScoreReportingReadRepository.getStoreChecklistSnapshotForScore({
         snapshotRunId: input.snapshotRunId,
         storeId: input.storeId,
         templateType: "BM_STORE_VISIT",
       }),
-      this.reportingRepository.getStoreChecklistSnapshotForScore({
+      this.storeScoreReportingReadRepository.getStoreChecklistSnapshotForScore({
         snapshotRunId: input.snapshotRunId,
         storeId: input.storeId,
         templateType: "VM_STORE_VISIT",
