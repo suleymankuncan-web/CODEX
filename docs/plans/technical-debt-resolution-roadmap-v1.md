@@ -324,9 +324,10 @@ Current status:
 - Extracted boundaries include import batch list/summary/detail/evidence reads,
   external ID mapping candidate/scoped-target reads, KPI import store-scope
   reads, and personnel master list/lookup reads.
-- `IntegrationRepository` is now roughly 674 physical lines and mostly holds
-  command/write flows: import batch creation/raw staging, store/personnel
-  master updates, retry/status writes, and external mapping approval audit.
+- `IntegrationRepository` is now roughly 711 physical lines / 674 non-empty
+  lines and mostly holds command/write flows: import batch creation/raw
+  staging, store/personnel master updates, retry/status writes, and external
+  mapping approval audit.
 - Park this line unless a concrete import lifecycle, retry queue, raw staging,
   or approval-audit risk appears.
 

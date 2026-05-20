@@ -246,10 +246,10 @@ Latest technical assessment decision:
     `KpiImportStoreReadRepository`.
   - PR #349 split personnel master list/lookup reads into
     `PersonnelMasterReadRepository`.
-- `IntegrationRepository` is now roughly 674 physical lines on `origin/main`
-  and mostly holds command/write flows: import batch creation/raw staging,
-  store/personnel master updates, retry/status writes, and external mapping
-  approval audit.
+- `IntegrationRepository` is now roughly 711 physical lines / 674 non-empty
+  lines on `origin/main` and mostly holds command/write flows: import batch
+  creation/raw staging, store/personnel master updates, retry/status writes,
+  and external mapping approval audit.
 - Do not continue splitting integration retry/status/raw-staging writes unless
   a concrete product/risk change needs them. The next safer technical-debt
   hotspot is the auth admin repository, but auth work must begin with a fresh
