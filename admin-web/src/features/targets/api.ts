@@ -1,15 +1,5 @@
-import { fetchJson, sendJson } from '../../lib/api'
+import { sendJson } from '../../lib/api'
 import { fetchOpenApiJson, type ApiGetResponse } from '../../lib/openapi-client'
-
-type ListResponse<T> = {
-  items: T[]
-  meta: {
-    count: number
-    total: number
-    limit: number
-    offset: number
-  }
-}
 
 type CommandResponse<T> = {
   command: {
@@ -23,14 +13,8 @@ export type TargetDistributionRequests = ApiGetResponse<'/api/target-distributio
 export type TargetDistributionRequest = TargetDistributionRequests['items'][number]
 export type TargetDistributionAllocation = TargetDistributionRequest['allocations'][number]
 
-export type StoreTargetingPerson = {
-  employeeId: string
-  displayName: string
-  externalEmployeeRef: string | null
-  periodStart: string | null
-  periodEnd: string | null
-  netSalesValue: number | null
-}
+export type StoreTargetingPersonnel = ApiGetResponse<'/api/target-distributions/store-personnel'>
+export type StoreTargetingPerson = StoreTargetingPersonnel['items'][number]
 
 export type TargetCoverage = ApiGetResponse<'/api/target-distributions/coverage'>
 export type TargetCoverageRow = TargetCoverage['items'][number]
@@ -38,9 +22,7 @@ export type TargetCoverageSummary = TargetCoverage['summary']
 
 export async function getStoreTargetingPersonnel(storeId: string) {
   const params = new URLSearchParams({ storeId })
-  return fetchJson<ListResponse<StoreTargetingPerson>>(
-    `/target-distributions/store-personnel?${params.toString()}`,
-  )
+  return fetchOpenApiJson('/api/target-distributions/store-personnel', { query: params })
 }
 
 export async function getTargetCoverage(input: { requestMonth: string; storeId?: string }) {

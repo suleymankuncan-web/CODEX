@@ -1775,7 +1775,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Store personnel available for target distribution requests.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoreTargetingPersonnelResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -1877,7 +1884,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Shared workflow inbox items visible to the current actor.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowInboxResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -6571,6 +6585,218 @@
               },
               "coverageRate": {
                 "type": "number",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "StoreTargetingPersonnelResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "meta"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "employeeId",
+                "displayName",
+                "externalEmployeeRef",
+                "periodStart",
+                "periodEnd",
+                "netSalesValue"
+              ],
+              "properties": {
+                "employeeId": {
+                  "type": "string"
+                },
+                "displayName": {
+                  "type": "string"
+                },
+                "externalEmployeeRef": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "periodStart": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "periodEnd": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "netSalesValue": {
+                  "type": "number",
+                  "nullable": true
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "count",
+              "total",
+              "limit",
+              "offset"
+            ],
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "WorkflowInboxResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "meta"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "itemType",
+                "sourceType",
+                "sourceId",
+                "title",
+                "summary",
+                "storeId",
+                "workflowStatus",
+                "inboxStatus",
+                "urgency",
+                "actorRole",
+                "primaryActionLabel",
+                "deepLink"
+              ],
+              "properties": {
+                "itemType": {
+                  "type": "string",
+                  "enum": [
+                    "approval",
+                    "acknowledgement",
+                    "task",
+                    "notification"
+                  ]
+                },
+                "sourceType": {
+                  "type": "string",
+                  "enum": [
+                    "target_distribution_request",
+                    "checklist_receipt",
+                    "kpi_exception"
+                  ]
+                },
+                "sourceId": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "summary": {
+                  "type": "string"
+                },
+                "companyId": {
+                  "type": "string"
+                },
+                "regionId": {
+                  "type": "string"
+                },
+                "storeId": {
+                  "type": "string"
+                },
+                "storeName": {
+                  "type": "string"
+                },
+                "workflowStatus": {
+                  "type": "string"
+                },
+                "inboxStatus": {
+                  "type": "string",
+                  "enum": [
+                    "needs_attention",
+                    "completed",
+                    "informational"
+                  ]
+                },
+                "urgency": {
+                  "type": "string",
+                  "enum": [
+                    "high",
+                    "medium",
+                    "low"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "needsAttentionAt": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "actorRole": {
+                  "type": "string"
+                },
+                "primaryActionLabel": {
+                  "type": "string"
+                },
+                "secondaryActionLabel": {
+                  "type": "string"
+                },
+                "deepLink": {
+                  "type": "string"
+                },
+                "historyPreview": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "count",
+              "total",
+              "limit",
+              "offset"
+            ],
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "offset": {
+                "type": "integer",
                 "minimum": 0
               }
             }

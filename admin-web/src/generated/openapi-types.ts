@@ -743,6 +743,22 @@ export type components = {
           "regionName": string
         }>
     }
+    "StoreTargetingPersonnelResponse": {
+      "items": Array<{
+          "employeeId": string
+          "displayName": string
+          "externalEmployeeRef": string | null
+          "periodStart": string | null
+          "periodEnd": string | null
+          "netSalesValue": number | null
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
     "TargetCoverageResponse": {
       "items": Array<{
           "storeId": string
@@ -800,6 +816,35 @@ export type components = {
           "approvalNote": string | null
           "createdAt": string
           "updatedAt": string
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
+    "WorkflowInboxResponse": {
+      "items": Array<{
+          "itemType": "approval" | "acknowledgement" | "task" | "notification"
+          "sourceType": "target_distribution_request" | "checklist_receipt" | "kpi_exception"
+          "sourceId": string
+          "title": string
+          "summary": string
+          "companyId"?: string
+          "regionId"?: string
+          "storeId": string
+          "storeName"?: string
+          "workflowStatus": string
+          "inboxStatus": "needs_attention" | "completed" | "informational"
+          "urgency": "high" | "medium" | "low"
+          "createdAt"?: string | null
+          "needsAttentionAt"?: string | null
+          "actorRole": string
+          "primaryActionLabel": string
+          "secondaryActionLabel"?: string
+          "deepLink": string
+          "historyPreview"?: string
         }>
       "meta": {
         "count": number
@@ -1071,6 +1116,28 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["TargetDistributionRequestsResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/target-distributions/store-personnel": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["StoreTargetingPersonnelResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/workflow/inbox": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["WorkflowInboxResponse"]
           }
         }
       }
