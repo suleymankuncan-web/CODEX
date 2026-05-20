@@ -26,14 +26,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-20, `origin/main` has been fetched through PR #335.
+As of 2026-05-20, `origin/main` has been fetched through PR #343.
 The root checkout may still be on a non-main local branch with unrelated
 handoff noise; do not assume the root working tree is clean.
 
 Latest merge on main:
 
 ```text
-a8c51ea7 feat: improve reports detail mobile layout (#335)
+213e6a06 refactor: split ranking reporting reads (#343)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -89,6 +89,13 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #333 `feat: clarify import detail mapping controls`
 - PR #334 `feat: improve import detail panel readability`
 - PR #335 `feat: improve reports detail mobile layout`
+- PR #337 `docs: add technical roadmap and Sokrates calibration`
+- PR #338 `docs: inventory reporting repository boundaries`
+- PR #339 `refactor: split store score reporting reads`
+- PR #340 `refactor: move closed reporting reads to closed ranking repository`
+- PR #341 `refactor: split snapshot reporting reads`
+- PR #342 `refactor: split store performance reporting reads`
+- PR #343 `refactor: split ranking reporting reads`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -218,6 +225,14 @@ Latest technical assessment decision:
   repository boundary refactor, frontend surface decomposition, TypeScript
   strictness, API contract maintenance, performance evidence, and auth/security
   regression work.
+- Reporting repository first boundary-refactor pass is complete through PR #343:
+  store score reads, closed ranking reads, snapshot reads, store performance
+  reads, and ranking reads were split out; `ReportingRepository` is now roughly
+  503 physical lines with identity/personnel live performance helpers remaining.
+- The next technical-debt hotspot is `IntegrationRepository`; begin with
+  `docs/plans/integration-repository-boundary-inventory-v1.md` and do not move
+  retry/status/raw-staging writes before the import evidence read boundary is
+  stable.
 
 ## Sokrates
 

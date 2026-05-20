@@ -77,12 +77,14 @@ Repo evidence:
 Measured hotspots:
 
 - Backend repositories/services still above the comfortable review band:
-  - reporting repository,
   - integration repository,
   - competition repository,
   - auth admin repository,
   - reporting service,
   - workforce request repository.
+- Reporting repository has completed its first boundary-refactor pass through
+  PR #343 and is no longer the next hotspot unless a concrete identity/personnel
+  reporting risk appears.
 - Frontend surfaces still above the comfortable review band:
   - competition stage builder,
   - master-data bootstrap,
@@ -238,12 +240,13 @@ Goal:
 
 Priority:
 
-1. Reporting repository.
-2. Integration repository.
-3. Auth admin repository.
-4. Competition repository.
-5. Reporting service.
-6. Workforce request repository.
+1. Integration repository.
+2. Auth admin repository.
+3. Competition repository.
+4. Reporting service.
+5. Workforce request repository.
+6. Reporting repository remaining identity/personnel live reads, only if a
+   concrete risk or product change requires it.
 
 #### 2.1 Reporting Repository
 
@@ -257,6 +260,15 @@ Safe first slice:
 - Boundary inventory plus tests map. No production code movement.
 - Current inventory:
   `docs/plans/reporting-repository-boundary-inventory-v1.md`.
+
+Current status:
+
+- First pass completed through PR #338 through PR #343.
+- Extracted boundaries include store score reads, closed ranking reads,
+  snapshot reads, store performance reads, and ranking reads.
+- `ReportingRepository` is now roughly 503 physical lines and mostly holds
+  identity/personnel live performance helper reads.
+- Park this line unless a concrete identity/personnel reporting risk appears.
 
 Candidate extraction order:
 
@@ -298,6 +310,8 @@ Why:
 Safe first slice:
 
 - Inventory existing method families and tests. No production code movement.
+- Current inventory:
+  `docs/plans/integration-repository-boundary-inventory-v1.md`.
 
 Candidate extraction order:
 
