@@ -375,7 +375,7 @@ Current status:
 
 - Inventory/test-map is prepared.
 - `AuthAdminRepository` is roughly 1845 physical lines / 1715 non-empty lines
-  and owns 34 repository methods.
+  and owns 36 repository methods.
 - Auth admin remains security-sensitive. Start implementation with lookup and
   catalog reads only; do not begin with writes, pilot binding, permission
   mutation, or DB migrations.

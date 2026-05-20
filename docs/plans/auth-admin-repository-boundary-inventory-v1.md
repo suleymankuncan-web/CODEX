@@ -20,7 +20,7 @@ Current size on `origin/main` after PR #350:
 
 - roughly 1845 physical lines,
 - roughly 1715 non-empty lines,
-- 34 repository methods.
+- 36 repository methods.
 
 Primary caller:
 
