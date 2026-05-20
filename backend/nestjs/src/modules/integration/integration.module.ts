@@ -6,6 +6,7 @@ import { ImportBatchReadRepository } from "./infrastructure/import-batch-read.re
 import { ImportBatchRawWriterRepository } from "./infrastructure/import-batch-raw-writer.repository";
 import { ExternalIdMappingReadRepository } from "./infrastructure/external-id-mapping-read.repository";
 import { KpiImportStoreReadRepository } from "./infrastructure/kpi-import-store-read.repository";
+import { PersonnelMasterReadRepository } from "./infrastructure/personnel-master-read.repository";
 import { IntegrationSourceRepository } from "./infrastructure/integration-source.repository";
 import { MaterializationService } from "./application/materialization.service";
 import { ExternalIdMappingService } from "./application/external-id-mapping.service";
@@ -24,6 +25,7 @@ import { MasterDataBootstrapRepository } from "./infrastructure/master-data-boot
     ImportBatchRawWriterRepository,
     ExternalIdMappingReadRepository,
     KpiImportStoreReadRepository,
+    PersonnelMasterReadRepository,
     IntegrationSourceRepository,
     MaterializationService,
     ExternalIdMappingService,
@@ -39,6 +41,7 @@ import { MasterDataBootstrapRepository } from "./infrastructure/master-data-boot
     ImportBatchReadRepository,
     ExternalIdMappingReadRepository,
     KpiImportStoreReadRepository,
+    PersonnelMasterReadRepository,
     IntegrationSourceRepository,
     MaterializationService,
     ExternalIdMappingService,

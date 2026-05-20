@@ -14,6 +14,7 @@ import { IntegrationRepository } from "../infrastructure/integration.repository"
 import { ImportBatchReadRepository } from "../infrastructure/import-batch-read.repository";
 import { ExternalIdMappingReadRepository } from "../infrastructure/external-id-mapping-read.repository";
 import { KpiImportStoreReadRepository } from "../infrastructure/kpi-import-store-read.repository";
+import { PersonnelMasterReadRepository } from "../infrastructure/personnel-master-read.repository";
 import { IntegrationSourceRepository } from "../infrastructure/integration-source.repository";
 import { KpiImportNormalizationService } from "./kpi-import-normalization.service";
 import { IntegrationSchedulerService } from "./integration-scheduler.service";
@@ -64,6 +65,7 @@ export class IntegrationService {
     private readonly importBatchReadRepository: ImportBatchReadRepository,
     private readonly externalIdMappingReadRepository: ExternalIdMappingReadRepository,
     private readonly kpiImportStoreReadRepository: KpiImportStoreReadRepository,
+    private readonly personnelMasterReadRepository: PersonnelMasterReadRepository,
     private readonly integrationSourceRepository: IntegrationSourceRepository,
     private readonly materializationService: MaterializationService,
     private readonly kpiImportNormalizationService: KpiImportNormalizationService,
@@ -601,7 +603,7 @@ export class IntegrationService {
   }) {
     const actorCompanyIds = this.normalizeCompanyScope(input.actorCompanyIds);
     this.assertCompanyScope(actorCompanyIds);
-    const result = await this.integrationRepository.listPersonnelMaster({
+    const result = await this.personnelMasterReadRepository.listPersonnelMaster({
       ...input,
       actorCompanyIds,
     });
@@ -615,7 +617,7 @@ export class IntegrationService {
   async getPersonnelMasterLookups(input: { actorCompanyIds: string[] }) {
     const actorCompanyIds = this.normalizeCompanyScope(input.actorCompanyIds);
     this.assertCompanyScope(actorCompanyIds);
-    const lookups = await this.integrationRepository.listPersonnelMasterLookups({
+    const lookups = await this.personnelMasterReadRepository.listPersonnelMasterLookups({
       actorCompanyIds,
     });
 
