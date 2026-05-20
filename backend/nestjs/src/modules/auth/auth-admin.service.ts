@@ -8,6 +8,7 @@ import { buildCommandResponse, buildListResponse } from "../../shared/http/respo
 import { mapAuditEvent } from "../../shared/audit/audit-event.mapper";
 import { semanticValidation } from "../../shared/http/api-errors";
 import { AccessLifecycleService } from "./access-lifecycle.service";
+import { AuthAdminLookupRepository } from "./auth-admin-lookup.repository";
 import { AuthAdminRepository } from "./auth-admin.repository";
 import { AuthRoleScopePolicyService } from "./auth-role-scope-policy.service";
 
@@ -15,6 +16,7 @@ import { AuthRoleScopePolicyService } from "./auth-role-scope-policy.service";
 export class AuthAdminService {
   constructor(
     private readonly authAdminRepository: AuthAdminRepository,
+    private readonly authAdminLookupRepository: AuthAdminLookupRepository,
     private readonly authRoleScopePolicyService: AuthRoleScopePolicyService,
     private readonly accessLifecycleService: AccessLifecycleService,
   ) {}
@@ -33,7 +35,7 @@ export class AuthAdminService {
     this.authRoleScopePolicyService.validateAssignmentScope(input);
     await this.assertAssignmentScopeHierarchy(input);
 
-    const role = await this.authAdminRepository.getRoleByCode(input.roleCode);
+    const role = await this.authAdminLookupRepository.getRoleByCode(input.roleCode);
 
     if (!role) {
       throw new NotFoundException(`Role not found: ${input.roleCode}`);
@@ -141,7 +143,7 @@ export class AuthAdminService {
     effectiveTo?: string;
     actorUserId: string;
   }) {
-    const store = await this.authAdminRepository.getStoreLookupById(input.storeId);
+    const store = await this.authAdminLookupRepository.getStoreLookupById(input.storeId);
 
     if (!store) {
       throw new NotFoundException(`Store not found: ${input.storeId}`);
@@ -309,7 +311,7 @@ export class AuthAdminService {
       throw semanticValidation("STORE_MANAGER pilot binding must use the employee active store");
     }
 
-    const role = await this.authAdminRepository.getRoleByCode(input.roleCode);
+    const role = await this.authAdminLookupRepository.getRoleByCode(input.roleCode);
 
     if (!role) {
       throw new NotFoundException(`Role not found: ${input.roleCode}`);
@@ -453,7 +455,7 @@ export class AuthAdminService {
   }
 
   async listRoles() {
-    const rows = await this.authAdminRepository.listRoles();
+    const rows = await this.authAdminLookupRepository.listRoles();
     const grouped = new Map<
       string,
       {
@@ -502,7 +504,7 @@ export class AuthAdminService {
   }
 
   async listPermissions() {
-    const rows = await this.authAdminRepository.listPermissions();
+    const rows = await this.authAdminLookupRepository.listPermissions();
 
     return buildListResponse(
       rows.map((item) => ({
@@ -522,10 +524,10 @@ export class AuthAdminService {
 
   async getAuthLookups() {
     const [users, roles, permissions, stores] = await Promise.all([
-      this.authAdminRepository.listActiveUserLookups(),
-      this.authAdminRepository.listRoles(),
-      this.authAdminRepository.listPermissions(),
-      this.authAdminRepository.listActiveStoreLookups(),
+      this.authAdminLookupRepository.listActiveUserLookups(),
+      this.authAdminLookupRepository.listRoles(),
+      this.authAdminLookupRepository.listPermissions(),
+      this.authAdminLookupRepository.listActiveStoreLookups(),
     ]);
 
     const groupedRoles = new Map<
@@ -595,7 +597,7 @@ export class AuthAdminService {
   }
 
   async searchAuthUsers(input: { query: string; limit: number }) {
-    const rows = await this.authAdminRepository.searchActiveUserLookups(input);
+    const rows = await this.authAdminLookupRepository.searchActiveUserLookups(input);
     const items = rows.map((item) => ({
       userId: item.user_id,
       username: item.username,
@@ -615,7 +617,7 @@ export class AuthAdminService {
   }
 
   async searchAuthStores(input: { query: string; limit: number }) {
-    const rows = await this.authAdminRepository.searchActiveStoreLookups(input);
+    const rows = await this.authAdminLookupRepository.searchActiveStoreLookups(input);
     const items = rows.map((item) => ({
       storeId: item.store_id,
       storeCode: item.store_code,
@@ -640,8 +642,8 @@ export class AuthAdminService {
     permissionCode: string;
     actorUserId: string;
   }) {
-    const resolvedRole = await this.authAdminRepository.getRoleById(input.roleId);
-    const permission = await this.authAdminRepository.getPermissionByCode(input.permissionCode);
+    const resolvedRole = await this.authAdminLookupRepository.getRoleById(input.roleId);
+    const permission = await this.authAdminLookupRepository.getPermissionByCode(input.permissionCode);
 
     if (!resolvedRole) {
       throw new NotFoundException(`Role not found: ${input.roleId}`);
@@ -651,7 +653,7 @@ export class AuthAdminService {
       throw new NotFoundException(`Permission not found: ${input.permissionCode}`);
     }
 
-    const existing = await this.authAdminRepository.getRolePermission({
+    const existing = await this.authAdminLookupRepository.getRolePermission({
       roleId: resolvedRole.role_id,
       permissionId: permission.permission_id,
     });
@@ -741,7 +743,7 @@ export class AuthAdminService {
       return;
     }
 
-    const company = await this.authAdminRepository.getCompanyLookupById(companyId);
+    const company = await this.authAdminLookupRepository.getCompanyLookupById(companyId);
 
     if (!company) {
       throw new NotFoundException(`Company not found or inactive: ${companyId}`);
@@ -757,7 +759,7 @@ export class AuthAdminService {
       return;
     }
 
-    const region = await this.authAdminRepository.getRegionLookupById(regionId);
+    const region = await this.authAdminLookupRepository.getRegionLookupById(regionId);
 
     if (!region) {
       throw new NotFoundException(`Region not found or inactive: ${regionId}`);
@@ -777,7 +779,7 @@ export class AuthAdminService {
       return;
     }
 
-    const store = await this.authAdminRepository.getStoreLookupById(storeId);
+    const store = await this.authAdminLookupRepository.getStoreLookupById(storeId);
 
     if (!store) {
       throw new NotFoundException(`Store not found or inactive: ${storeId}`);
