@@ -18,14 +18,6 @@ type RoleAssignmentRow = {
   created_at: string;
 };
 
-type RoleAssignmentAuditRow = {
-  event_log_id: string;
-  occurred_at: string;
-  actor_user_id: string | null;
-  event_type: string;
-  metadata_json: Record<string, unknown>;
-};
-
 type ActionStoreAssignmentRow = {
   user_action_store_assignment_id: string;
   user_id: string;
@@ -77,14 +69,6 @@ type UserAccountRow = {
   deactivation_reason?: string | null;
   deactivated_by_user_id?: string | null;
   employee_status?: string | null;
-};
-
-type UserAccountAuditRow = {
-  event_log_id: string;
-  occurred_at: string;
-  actor_user_id: string | null;
-  event_type: string;
-  metadata_json: Record<string, unknown>;
 };
 
 type RolePermissionRow = {
@@ -554,30 +538,6 @@ export class AuthAdminRepository {
     });
   }
 
-  async getRoleAssignmentAudit(input: { assignmentId: string; limit?: number; offset?: number }) {
-    const limit = input.limit ?? 50;
-    const offset = input.offset ?? 0;
-
-    const result = await this.databaseService.query<RoleAssignmentAuditRow>(
-      `
-        SELECT
-          event_log_id,
-          occurred_at,
-          actor_user_id,
-          event_type,
-          metadata_json
-        FROM audit.event_log
-        WHERE entity_name = 'ops.user_role_assignment'
-          AND entity_id = $1::uuid
-        ORDER BY occurred_at ASC, event_log_id ASC
-        LIMIT $2 OFFSET $3
-      `,
-      [input.assignmentId, limit, offset],
-    );
-
-    return result.rows;
-  }
-
   async countActiveActionStoreAssignments(input: { userId: string; storeId: string }) {
     const result = await this.databaseService.query<{
       active_action_store_assignment_count: string;
@@ -909,34 +869,6 @@ export class AuthAdminRepository {
 
       return assignment;
     });
-  }
-
-  async getActionStoreAssignmentAudit(input: {
-    assignmentId: string;
-    limit?: number;
-    offset?: number;
-  }) {
-    const limit = input.limit ?? 50;
-    const offset = input.offset ?? 0;
-
-    const result = await this.databaseService.query<RoleAssignmentAuditRow>(
-      `
-        SELECT
-          event_log_id,
-          occurred_at,
-          actor_user_id,
-          event_type,
-          metadata_json
-        FROM audit.event_log
-        WHERE entity_name = 'ops.user_action_store_assignment'
-          AND entity_id = $1::uuid
-        ORDER BY occurred_at ASC, event_log_id ASC
-        LIMIT $2 OFFSET $3
-      `,
-      [input.assignmentId, limit, offset],
-    );
-
-    return result.rows;
   }
 
   async createUserAccount(input: {
@@ -1390,30 +1322,6 @@ export class AuthAdminRepository {
 
       return user;
     });
-  }
-
-  async getUserAccountAudit(input: { userId: string; limit?: number; offset?: number }) {
-    const limit = input.limit ?? 50;
-    const offset = input.offset ?? 0;
-
-    const result = await this.databaseService.query<UserAccountAuditRow>(
-      `
-        SELECT
-          event_log_id,
-          occurred_at,
-          actor_user_id,
-          event_type,
-          metadata_json
-        FROM audit.event_log
-        WHERE entity_name = 'ops.user_account'
-          AND entity_id = $1::uuid
-        ORDER BY occurred_at ASC, event_log_id ASC
-        LIMIT $2 OFFSET $3
-      `,
-      [input.userId, limit, offset],
-    );
-
-    return result.rows;
   }
 
   async grantRolePermission(input: {
