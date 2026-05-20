@@ -2470,12 +2470,24 @@ test('store approvals page presents returned request load failures as alerts', a
       body: 'Returned seller queue unavailable',
     })
   })
+  await page.unroute('**/api/workforce/offboarding-requests**')
+  await page.route('**/api/workforce/offboarding-requests**', async (route) => {
+    await route.fulfill({
+      status: 500,
+      body: 'Returned offboarding queue unavailable',
+    })
+  })
 
   await page.goto('/store/approvals')
   await page.getByRole('button', { name: 'İade kayıtlarını aç' }).click()
-  const alert = page.getByRole('alert').filter({ hasText: 'Returned seller queue unavailable' })
-  await expect(alert).toBeVisible()
-  await expect(alert).toHaveClass(/store-request-feedback-error/)
+  const alerts = page.getByRole('alert')
+  await expect(alerts).toHaveCount(2)
+  await expect(alerts.filter({ hasText: 'Returned seller queue unavailable' })).toHaveClass(
+    /store-request-feedback-error/,
+  )
+  await expect(alerts.filter({ hasText: 'Returned offboarding queue unavailable' })).toHaveClass(
+    /store-request-feedback-error/,
+  )
 })
 
 test('store approvals page submits target distribution allocations with employee ids', async ({ page }) => {
