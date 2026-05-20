@@ -1780,11 +1780,11 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "",
+            "description": "Store KPI highlight summary for live reporting surfaces.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/ReportingStoreKpiHighlightsResponse"
                 }
               }
             }
@@ -1801,7 +1801,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Store monthly score blend breakdown for a closed snapshot.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportingStoreScoreBreakdownResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -1815,11 +1822,11 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "",
+            "description": "Live monthly store and personnel rankings visible to the current actor.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/ReportingRankingsResponse"
                 }
               }
             }
@@ -1836,11 +1843,11 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "",
+            "description": "Closed daily or monthly personnel leaderboard for store users.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/ReportingClosedLeaderboardResponse"
                 }
               }
             }
@@ -1857,7 +1864,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Paginated checklist snapshot rows for reporting surfaces.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportingChecklistResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -1871,7 +1885,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Paginated turnover snapshot rows for reporting surfaces.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportingTurnoverResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -9839,6 +9860,1945 @@
                     "missing"
                   ]
                 }
+              }
+            }
+          }
+        }
+      },
+      "ReportingStoreKpiHighlightsResponse": {
+        "type": "object",
+        "required": [
+          "source",
+          "store",
+          "period",
+          "score",
+          "availablePeriods",
+          "partial",
+          "metrics"
+        ],
+        "properties": {
+          "source": {
+            "type": "object",
+            "required": [
+              "mode",
+              "snapshotRunId",
+              "snapshotDate",
+              "periodType"
+            ],
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "live"
+                ]
+              },
+              "snapshotRunId": {
+                "type": "string",
+                "nullable": true
+              },
+              "snapshotDate": {
+                "type": "string",
+                "nullable": true
+              },
+              "periodType": {
+                "type": "string"
+              }
+            }
+          },
+          "store": {
+            "type": "object",
+            "nullable": true,
+            "required": [
+              "storeId",
+              "storeName"
+            ],
+            "properties": {
+              "storeId": {
+                "type": "string"
+              },
+              "storeName": {
+                "type": "string",
+                "nullable": true
+              }
+            }
+          },
+          "period": {
+            "type": "object",
+            "nullable": true,
+            "required": [
+              "periodStart",
+              "periodEnd"
+            ],
+            "properties": {
+              "periodStart": {
+                "type": "string"
+              },
+              "periodEnd": {
+                "type": "string"
+              }
+            }
+          },
+          "score": {
+            "type": "object",
+            "required": [
+              "value",
+              "matchedMetrics",
+              "totalMetrics"
+            ],
+            "properties": {
+              "value": {
+                "type": "number"
+              },
+              "matchedMetrics": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "totalMetrics": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "availablePeriods": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "periodType",
+                "periodStart",
+                "periodEnd"
+              ],
+              "properties": {
+                "periodType": {
+                  "type": "string"
+                },
+                "periodStart": {
+                  "type": "string"
+                },
+                "periodEnd": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "partial": {
+            "type": "object",
+            "required": [
+              "isPartial",
+              "missingMetricCodes",
+              "missingMetricLabels",
+              "pendingNormalizationCodes",
+              "pendingNormalizationLabels"
+            ],
+            "properties": {
+              "isPartial": {
+                "type": "boolean"
+              },
+              "missingMetricCodes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "missingMetricLabels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "pendingNormalizationCodes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "pendingNormalizationLabels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "metrics": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "code",
+                "label",
+                "weightPercent",
+                "actualValue",
+                "targetValue",
+                "achievementRate",
+                "statusBand",
+                "dataStatus",
+                "scoreStatus"
+              ],
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "weightPercent": {
+                  "type": "number"
+                },
+                "actualValue": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "targetValue": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "achievementRate": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "benchmarkValue": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "benchmarkSource": {
+                  "type": "string",
+                  "enum": [
+                    "TARGET",
+                    "TURKEY_AVERAGE",
+                    "CHECKLIST_SCORE"
+                  ]
+                },
+                "actualRatio": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "scoredRatio": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "capRatio": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "isCapped": {
+                  "type": "boolean"
+                },
+                "scoreContribution": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "missingReason": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "statusBand": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "dataStatus": {
+                  "type": "string",
+                  "enum": [
+                    "reported",
+                    "missing"
+                  ]
+                },
+                "scoreStatus": {
+                  "type": "string",
+                  "enum": [
+                    "scored",
+                    "pending_normalization",
+                    "missing_reference",
+                    "missing"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "ReportingStoreScoreBreakdownResponse": {
+        "type": "object",
+        "required": [
+          "snapshotRunId",
+          "storeId",
+          "scoreStatus",
+          "totalScore",
+          "missingWeightPolicy",
+          "configuredWeights",
+          "effectiveWeights",
+          "components"
+        ],
+        "properties": {
+          "snapshotRunId": {
+            "type": "string"
+          },
+          "storeId": {
+            "type": "string"
+          },
+          "scoreStatus": {
+            "type": "string",
+            "enum": [
+              "preview",
+              "final"
+            ]
+          },
+          "totalScore": {
+            "type": "number",
+            "nullable": true
+          },
+          "missingWeightPolicy": {
+            "type": "string",
+            "enum": [
+              "return_missing_weight_to_kpi"
+            ]
+          },
+          "configuredWeights": {
+            "type": "object",
+            "required": [
+              "kpiPerformanceWeight",
+              "bmChecklistWeight",
+              "vmChecklistWeight"
+            ],
+            "properties": {
+              "kpiPerformanceWeight": {
+                "type": "number"
+              },
+              "bmChecklistWeight": {
+                "type": "number"
+              },
+              "vmChecklistWeight": {
+                "type": "number"
+              }
+            }
+          },
+          "effectiveWeights": {
+            "type": "object",
+            "required": [
+              "kpiPerformanceWeight",
+              "bmChecklistWeight",
+              "vmChecklistWeight"
+            ],
+            "properties": {
+              "kpiPerformanceWeight": {
+                "type": "number"
+              },
+              "bmChecklistWeight": {
+                "type": "number"
+              },
+              "vmChecklistWeight": {
+                "type": "number"
+              }
+            }
+          },
+          "components": {
+            "type": "object",
+            "required": [
+              "kpi",
+              "bmChecklist",
+              "vmChecklist"
+            ],
+            "properties": {
+              "kpi": {
+                "type": "object",
+                "required": [
+                  "included",
+                  "score",
+                  "weight",
+                  "contribution",
+                  "status"
+                ],
+                "properties": {
+                  "included": {
+                    "type": "boolean"
+                  },
+                  "score": {
+                    "type": "number",
+                    "nullable": true
+                  },
+                  "weight": {
+                    "type": "number"
+                  },
+                  "contribution": {
+                    "type": "number",
+                    "nullable": true
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "included",
+                      "not_included",
+                      "missing_reference",
+                      "future_inactive"
+                    ]
+                  },
+                  "missingReason": {
+                    "type": "string"
+                  }
+                }
+              },
+              "bmChecklist": {
+                "type": "object",
+                "required": [
+                  "included",
+                  "score",
+                  "weight",
+                  "contribution",
+                  "status",
+                  "visitCount"
+                ],
+                "properties": {
+                  "included": {
+                    "type": "boolean"
+                  },
+                  "score": {
+                    "type": "number",
+                    "nullable": true
+                  },
+                  "weight": {
+                    "type": "number"
+                  },
+                  "contribution": {
+                    "type": "number",
+                    "nullable": true
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "included",
+                      "not_included",
+                      "missing_reference",
+                      "future_inactive"
+                    ]
+                  },
+                  "missingReason": {
+                    "type": "string"
+                  },
+                  "visitCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              },
+              "vmChecklist": {
+                "type": "object",
+                "required": [
+                  "included",
+                  "score",
+                  "weight",
+                  "contribution",
+                  "status",
+                  "visitCount"
+                ],
+                "properties": {
+                  "included": {
+                    "type": "boolean"
+                  },
+                  "score": {
+                    "type": "number",
+                    "nullable": true
+                  },
+                  "weight": {
+                    "type": "number"
+                  },
+                  "contribution": {
+                    "type": "number",
+                    "nullable": true
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "included",
+                      "not_included",
+                      "missing_reference",
+                      "future_inactive"
+                    ]
+                  },
+                  "missingReason": {
+                    "type": "string"
+                  },
+                  "visitCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "ReportingRankingsResponse": {
+        "type": "object",
+        "required": [
+          "source",
+          "access",
+          "filters",
+          "reference",
+          "storeLeaderboard",
+          "personnelLeaderboard",
+          "availablePeriods"
+        ],
+        "properties": {
+          "source": {
+            "type": "object",
+            "required": [
+              "mode",
+              "periodType",
+              "periodStart",
+              "periodEnd"
+            ],
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "live"
+                ]
+              },
+              "periodType": {
+                "type": "string",
+                "enum": [
+                  "monthly"
+                ]
+              },
+              "periodStart": {
+                "type": "string",
+                "nullable": true
+              },
+              "periodEnd": {
+                "type": "string",
+                "nullable": true
+              }
+            }
+          },
+          "access": {
+            "type": "object",
+            "required": [
+              "globalMode",
+              "canSeeGlobalDetails",
+              "canSeeManagedStorePersonnelDetails"
+            ],
+            "properties": {
+              "globalMode": {
+                "type": "string",
+                "enum": [
+                  "top100",
+                  "full"
+                ]
+              },
+              "canSeeGlobalDetails": {
+                "type": "boolean"
+              },
+              "canSeeManagedStorePersonnelDetails": {
+                "type": "boolean"
+              }
+            }
+          },
+          "filters": {
+            "type": "object",
+            "required": [
+              "regionManagers",
+              "regions",
+              "stores"
+            ],
+            "properties": {
+              "regionManagers": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "label"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "regions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "label"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "stores": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "label"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "reference": {
+            "type": "object",
+            "required": [
+              "store",
+              "personnel"
+            ],
+            "properties": {
+              "store": {
+                "type": "object",
+                "required": [
+                  "averageScore",
+                  "metrics"
+                ],
+                "properties": {
+                  "averageScore": {
+                    "type": "number",
+                    "nullable": true
+                  },
+                  "metrics": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "label",
+                        "value"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "label": {
+                          "type": "string"
+                        },
+                        "value": {
+                          "type": "number",
+                          "nullable": true
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "personnel": {
+                "type": "object",
+                "required": [
+                  "averageScore",
+                  "metrics"
+                ],
+                "properties": {
+                  "averageScore": {
+                    "type": "number",
+                    "nullable": true
+                  },
+                  "metrics": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "label",
+                        "value"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "label": {
+                          "type": "string"
+                        },
+                        "value": {
+                          "type": "number",
+                          "nullable": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "storeLeaderboard": {
+            "type": "object",
+            "required": [
+              "items",
+              "currentStore",
+              "meta"
+            ],
+            "properties": {
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "subject",
+                    "storeId",
+                    "storeName",
+                    "regionId",
+                    "regionName",
+                    "regionManagerUserId",
+                    "regionManagerName",
+                    "rank",
+                    "population",
+                    "scoreValue",
+                    "visibility"
+                  ],
+                  "properties": {
+                    "subject": {
+                      "type": "string",
+                      "enum": [
+                        "store"
+                      ]
+                    },
+                    "storeId": {
+                      "type": "string"
+                    },
+                    "storeName": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "regionId": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "regionName": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "regionManagerUserId": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "regionManagerName": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "rank": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "population": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "scoreValue": {
+                      "type": "number"
+                    },
+                    "visibility": {
+                      "type": "string",
+                      "enum": [
+                        "summary",
+                        "detail"
+                      ]
+                    },
+                    "metrics": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "code",
+                          "label",
+                          "actualValue"
+                        ],
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "actualValue": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "targetValue": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "benchmarkValue": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "contributionValue": {
+                            "type": "number",
+                            "nullable": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "currentStore": {
+                "type": "object",
+                "required": [
+                  "subject",
+                  "storeId",
+                  "storeName",
+                  "regionId",
+                  "regionName",
+                  "regionManagerUserId",
+                  "regionManagerName",
+                  "rank",
+                  "population",
+                  "scoreValue",
+                  "visibility"
+                ],
+                "properties": {
+                  "subject": {
+                    "type": "string",
+                    "enum": [
+                      "store"
+                    ]
+                  },
+                  "storeId": {
+                    "type": "string"
+                  },
+                  "storeName": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "regionId": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "regionName": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "regionManagerUserId": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "regionManagerName": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "rank": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "population": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "scoreValue": {
+                    "type": "number"
+                  },
+                  "visibility": {
+                    "type": "string",
+                    "enum": [
+                      "summary",
+                      "detail"
+                    ]
+                  },
+                  "metrics": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "label",
+                        "actualValue"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "label": {
+                          "type": "string"
+                        },
+                        "actualValue": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "targetValue": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "benchmarkValue": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "contributionValue": {
+                          "type": "number",
+                          "nullable": true
+                        }
+                      }
+                    }
+                  }
+                },
+                "nullable": true
+              },
+              "meta": {
+                "type": "object",
+                "required": [
+                  "total",
+                  "limit",
+                  "offset"
+                ],
+                "properties": {
+                  "total": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "offset": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          "personnelLeaderboard": {
+            "type": "object",
+            "required": [
+              "items",
+              "currentEmployee",
+              "managedStorePersonnel",
+              "meta"
+            ],
+            "properties": {
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "subject",
+                    "employeeId",
+                    "displayName",
+                    "storeId",
+                    "storeName",
+                    "regionId",
+                    "regionName",
+                    "regionManagerUserId",
+                    "regionManagerName",
+                    "rank",
+                    "population",
+                    "storeRank",
+                    "storePopulation",
+                    "scoreValue",
+                    "visibility"
+                  ],
+                  "properties": {
+                    "subject": {
+                      "type": "string",
+                      "enum": [
+                        "personnel"
+                      ]
+                    },
+                    "employeeId": {
+                      "type": "string"
+                    },
+                    "displayName": {
+                      "type": "string"
+                    },
+                    "storeId": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "storeName": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "regionId": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "regionName": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "regionManagerUserId": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "regionManagerName": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "rank": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "population": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "storeRank": {
+                      "type": "integer",
+                      "nullable": true
+                    },
+                    "storePopulation": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "scoreValue": {
+                      "type": "number"
+                    },
+                    "visibility": {
+                      "type": "string",
+                      "enum": [
+                        "summary",
+                        "detail"
+                      ]
+                    },
+                    "metrics": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "code",
+                          "label",
+                          "actualValue"
+                        ],
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "actualValue": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "targetValue": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "benchmarkValue": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "contributionValue": {
+                            "type": "number",
+                            "nullable": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "currentEmployee": {
+                "type": "object",
+                "required": [
+                  "subject",
+                  "employeeId",
+                  "displayName",
+                  "storeId",
+                  "storeName",
+                  "regionId",
+                  "regionName",
+                  "regionManagerUserId",
+                  "regionManagerName",
+                  "rank",
+                  "population",
+                  "storeRank",
+                  "storePopulation",
+                  "scoreValue",
+                  "visibility"
+                ],
+                "properties": {
+                  "subject": {
+                    "type": "string",
+                    "enum": [
+                      "personnel"
+                    ]
+                  },
+                  "employeeId": {
+                    "type": "string"
+                  },
+                  "displayName": {
+                    "type": "string"
+                  },
+                  "storeId": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "storeName": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "regionId": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "regionName": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "regionManagerUserId": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "regionManagerName": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "rank": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "population": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "storeRank": {
+                    "type": "integer",
+                    "nullable": true
+                  },
+                  "storePopulation": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "scoreValue": {
+                    "type": "number"
+                  },
+                  "visibility": {
+                    "type": "string",
+                    "enum": [
+                      "summary",
+                      "detail"
+                    ]
+                  },
+                  "metrics": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "label",
+                        "actualValue"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "label": {
+                          "type": "string"
+                        },
+                        "actualValue": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "targetValue": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "benchmarkValue": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "contributionValue": {
+                          "type": "number",
+                          "nullable": true
+                        }
+                      }
+                    }
+                  }
+                },
+                "nullable": true
+              },
+              "managedStorePersonnel": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "subject",
+                    "employeeId",
+                    "displayName",
+                    "storeId",
+                    "storeName",
+                    "regionId",
+                    "regionName",
+                    "regionManagerUserId",
+                    "regionManagerName",
+                    "rank",
+                    "population",
+                    "storeRank",
+                    "storePopulation",
+                    "scoreValue",
+                    "visibility"
+                  ],
+                  "properties": {
+                    "subject": {
+                      "type": "string",
+                      "enum": [
+                        "personnel"
+                      ]
+                    },
+                    "employeeId": {
+                      "type": "string"
+                    },
+                    "displayName": {
+                      "type": "string"
+                    },
+                    "storeId": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "storeName": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "regionId": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "regionName": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "regionManagerUserId": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "regionManagerName": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "rank": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "population": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "storeRank": {
+                      "type": "integer",
+                      "nullable": true
+                    },
+                    "storePopulation": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "scoreValue": {
+                      "type": "number"
+                    },
+                    "visibility": {
+                      "type": "string",
+                      "enum": [
+                        "summary",
+                        "detail"
+                      ]
+                    },
+                    "metrics": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "code",
+                          "label",
+                          "actualValue"
+                        ],
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "actualValue": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "targetValue": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "benchmarkValue": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "contributionValue": {
+                            "type": "number",
+                            "nullable": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "meta": {
+                "type": "object",
+                "required": [
+                  "total",
+                  "limit",
+                  "offset"
+                ],
+                "properties": {
+                  "total": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "offset": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          "availablePeriods": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "periodType",
+                "periodStart",
+                "periodEnd"
+              ],
+              "properties": {
+                "periodType": {
+                  "type": "string",
+                  "enum": [
+                    "monthly"
+                  ]
+                },
+                "periodStart": {
+                  "type": "string"
+                },
+                "periodEnd": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ReportingClosedLeaderboardResponse": {
+        "type": "object",
+        "required": [
+          "source",
+          "includedSnapshotRuns",
+          "currentEmployee",
+          "personnelTop"
+        ],
+        "properties": {
+          "source": {
+            "type": "object",
+            "required": [
+              "mode",
+              "periodType",
+              "state",
+              "snapshotRunId",
+              "snapshotDate",
+              "periodStart",
+              "periodEnd"
+            ],
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "closed",
+                  "live"
+                ]
+              },
+              "periodType": {
+                "type": "string",
+                "enum": [
+                  "daily",
+                  "monthly"
+                ]
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "closed",
+                  "live",
+                  "not_closed",
+                  "no_data"
+                ]
+              },
+              "snapshotRunId": {
+                "type": "string",
+                "nullable": true
+              },
+              "snapshotDate": {
+                "type": "string",
+                "nullable": true
+              },
+              "periodStart": {
+                "type": "string",
+                "nullable": true
+              },
+              "periodEnd": {
+                "type": "string",
+                "nullable": true
+              }
+            }
+          },
+          "includedSnapshotRuns": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "snapshotRunId",
+                "snapshotDate",
+                "snapshotType",
+                "periodStart",
+                "periodEnd",
+                "runStatus",
+                "generatedAt",
+                "generatedBy"
+              ],
+              "properties": {
+                "snapshotRunId": {
+                  "type": "string"
+                },
+                "snapshotDate": {
+                  "type": "string"
+                },
+                "snapshotType": {
+                  "type": "string"
+                },
+                "periodStart": {
+                  "type": "string"
+                },
+                "periodEnd": {
+                  "type": "string"
+                },
+                "runStatus": {
+                  "type": "string"
+                },
+                "generatedAt": {
+                  "type": "string"
+                },
+                "generatedBy": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "currentEmployee": {
+            "type": "object",
+            "required": [
+              "employeeId",
+              "displayName",
+              "storeId",
+              "storeName",
+              "scoreValue",
+              "rankingStatus",
+              "eligibilityReason",
+              "neededPerformanceDays",
+              "rankings",
+              "coverage",
+              "metricRanks"
+            ],
+            "properties": {
+              "employeeId": {
+                "type": "string"
+              },
+              "displayName": {
+                "type": "string"
+              },
+              "storeId": {
+                "type": "string",
+                "nullable": true
+              },
+              "storeName": {
+                "type": "string",
+                "nullable": true
+              },
+              "scoreValue": {
+                "type": "number"
+              },
+              "rankingStatus": {
+                "type": "string",
+                "enum": [
+                  "official",
+                  "preview_only"
+                ]
+              },
+              "eligibilityReason": {
+                "type": "string",
+                "enum": [
+                  "eligible",
+                  "needs_more_closed_days"
+                ]
+              },
+              "neededPerformanceDays": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "rankings": {
+                "type": "object",
+                "required": [
+                  "turkeyRank",
+                  "turkeyPopulation",
+                  "storeRank",
+                  "storePopulation"
+                ],
+                "properties": {
+                  "turkeyRank": {
+                    "type": "integer",
+                    "nullable": true
+                  },
+                  "turkeyPopulation": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "storeRank": {
+                    "type": "integer",
+                    "nullable": true
+                  },
+                  "storePopulation": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              },
+              "coverage": {
+                "type": "object",
+                "required": [
+                  "closedDaysInPeriod",
+                  "daysWithPerformance",
+                  "minimumRequiredDays",
+                  "isEligibleForRanking"
+                ],
+                "properties": {
+                  "closedDaysInPeriod": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "daysWithPerformance": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "minimumRequiredDays": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "isEligibleForRanking": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              "metricRanks": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "label",
+                    "actualValue",
+                    "storeRank",
+                    "storePopulation",
+                    "turkeyRank",
+                    "turkeyPopulation"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "actualValue": {
+                      "type": "number",
+                      "nullable": true
+                    },
+                    "storeRank": {
+                      "type": "integer",
+                      "nullable": true
+                    },
+                    "storePopulation": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "turkeyRank": {
+                      "type": "integer",
+                      "nullable": true
+                    },
+                    "turkeyPopulation": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  }
+                }
+              }
+            },
+            "nullable": true
+          },
+          "personnelTop": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "employeeId",
+                "displayName",
+                "storeId",
+                "storeName",
+                "scoreValue",
+                "rankingStatus",
+                "eligibilityReason",
+                "neededPerformanceDays",
+                "rankings",
+                "coverage",
+                "metricRanks"
+              ],
+              "properties": {
+                "employeeId": {
+                  "type": "string"
+                },
+                "displayName": {
+                  "type": "string"
+                },
+                "storeId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "storeName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "scoreValue": {
+                  "type": "number"
+                },
+                "rankingStatus": {
+                  "type": "string",
+                  "enum": [
+                    "official",
+                    "preview_only"
+                  ]
+                },
+                "eligibilityReason": {
+                  "type": "string",
+                  "enum": [
+                    "eligible",
+                    "needs_more_closed_days"
+                  ]
+                },
+                "neededPerformanceDays": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "rankings": {
+                  "type": "object",
+                  "required": [
+                    "turkeyRank",
+                    "turkeyPopulation",
+                    "storeRank",
+                    "storePopulation"
+                  ],
+                  "properties": {
+                    "turkeyRank": {
+                      "type": "integer",
+                      "nullable": true
+                    },
+                    "turkeyPopulation": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "storeRank": {
+                      "type": "integer",
+                      "nullable": true
+                    },
+                    "storePopulation": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  }
+                },
+                "coverage": {
+                  "type": "object",
+                  "required": [
+                    "closedDaysInPeriod",
+                    "daysWithPerformance",
+                    "minimumRequiredDays",
+                    "isEligibleForRanking"
+                  ],
+                  "properties": {
+                    "closedDaysInPeriod": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "daysWithPerformance": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "minimumRequiredDays": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "isEligibleForRanking": {
+                      "type": "boolean"
+                    }
+                  }
+                },
+                "metricRanks": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "code",
+                      "label",
+                      "actualValue",
+                      "storeRank",
+                      "storePopulation",
+                      "turkeyRank",
+                      "turkeyPopulation"
+                    ],
+                    "properties": {
+                      "code": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "actualValue": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "storeRank": {
+                        "type": "integer",
+                        "nullable": true
+                      },
+                      "storePopulation": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "turkeyRank": {
+                        "type": "integer",
+                        "nullable": true
+                      },
+                      "turkeyPopulation": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "availablePeriods": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "periodType",
+                "periodStart",
+                "periodEnd"
+              ],
+              "properties": {
+                "periodType": {
+                  "type": "string"
+                },
+                "periodStart": {
+                  "type": "string"
+                },
+                "periodEnd": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ReportingChecklistResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "meta"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "snapshotRunId",
+                "storeId",
+                "checklistTemplateId",
+                "auditCount",
+                "avgScore",
+                "complianceRate",
+                "criticalIssueCount"
+              ],
+              "properties": {
+                "snapshotRunId": {
+                  "type": "string"
+                },
+                "storeId": {
+                  "type": "string"
+                },
+                "checklistTemplateId": {
+                  "type": "string"
+                },
+                "auditCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "avgScore": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "complianceRate": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "criticalIssueCount": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "count",
+              "total",
+              "limit",
+              "offset"
+            ],
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "ReportingTurnoverResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "meta"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "snapshotRunId",
+                "scopeType",
+                "companyId",
+                "regionId",
+                "storeId",
+                "periodStart",
+                "periodEnd",
+                "openingHeadcount",
+                "closingHeadcount",
+                "avgHeadcount",
+                "leaverCount",
+                "turnoverRate"
+              ],
+              "properties": {
+                "snapshotRunId": {
+                  "type": "string"
+                },
+                "scopeType": {
+                  "type": "string"
+                },
+                "companyId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "regionId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "storeId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "periodStart": {
+                  "type": "string"
+                },
+                "periodEnd": {
+                  "type": "string"
+                },
+                "openingHeadcount": {
+                  "type": "string"
+                },
+                "closingHeadcount": {
+                  "type": "string"
+                },
+                "avgHeadcount": {
+                  "type": "string"
+                },
+                "leaverCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "turnoverRate": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "count",
+              "total",
+              "limit",
+              "offset"
+            ],
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
               }
             }
           }

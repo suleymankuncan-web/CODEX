@@ -727,6 +727,111 @@ export type components = {
           "label": string
         }>
     }
+    "ReportingChecklistResponse": {
+      "items": Array<{
+          "snapshotRunId": string
+          "storeId": string
+          "checklistTemplateId": string
+          "auditCount": number
+          "avgScore": string | null
+          "complianceRate": string | null
+          "criticalIssueCount": number
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
+    "ReportingClosedLeaderboardResponse": {
+      "source": {
+        "mode": "closed" | "live"
+        "periodType": "daily" | "monthly"
+        "state": "closed" | "live" | "not_closed" | "no_data"
+        "snapshotRunId": string | null
+        "snapshotDate": string | null
+        "periodStart": string | null
+        "periodEnd": string | null
+      }
+      "includedSnapshotRuns": Array<{
+          "snapshotRunId": string
+          "snapshotDate": string
+          "snapshotType": string
+          "periodStart": string
+          "periodEnd": string
+          "runStatus": string
+          "generatedAt": string
+          "generatedBy": string
+        }>
+      "currentEmployee": ({
+        "employeeId": string
+        "displayName": string
+        "storeId": string | null
+        "storeName": string | null
+        "scoreValue": number
+        "rankingStatus": "official" | "preview_only"
+        "eligibilityReason": "eligible" | "needs_more_closed_days"
+        "neededPerformanceDays": number
+        "rankings": {
+          "turkeyRank": number | null
+          "turkeyPopulation": number
+          "storeRank": number | null
+          "storePopulation": number
+        }
+        "coverage": {
+          "closedDaysInPeriod": number
+          "daysWithPerformance": number
+          "minimumRequiredDays": number
+          "isEligibleForRanking": boolean
+        }
+        "metricRanks": Array<{
+            "code": string
+            "label": string
+            "actualValue": number | null
+            "storeRank": number | null
+            "storePopulation": number
+            "turkeyRank": number | null
+            "turkeyPopulation": number
+          }>
+      }) | null
+      "personnelTop": Array<{
+          "employeeId": string
+          "displayName": string
+          "storeId": string | null
+          "storeName": string | null
+          "scoreValue": number
+          "rankingStatus": "official" | "preview_only"
+          "eligibilityReason": "eligible" | "needs_more_closed_days"
+          "neededPerformanceDays": number
+          "rankings": {
+            "turkeyRank": number | null
+            "turkeyPopulation": number
+            "storeRank": number | null
+            "storePopulation": number
+          }
+          "coverage": {
+            "closedDaysInPeriod": number
+            "daysWithPerformance": number
+            "minimumRequiredDays": number
+            "isEligibleForRanking": boolean
+          }
+          "metricRanks": Array<{
+              "code": string
+              "label": string
+              "actualValue": number | null
+              "storeRank": number | null
+              "storePopulation": number
+              "turkeyRank": number | null
+              "turkeyPopulation": number
+            }>
+        }>
+      "availablePeriods"?: Array<{
+          "periodType": string
+          "periodStart": string
+          "periodEnd": string
+        }>
+    }
     "ReportingKpiConfigAuditResponse": {
       "items": Array<{
           "eventLogId": string
@@ -1008,6 +1113,187 @@ export type components = {
           "status"?: "reported" | "missing"
         }>
     }
+    "ReportingRankingsResponse": {
+      "source": {
+        "mode": "live"
+        "periodType": "monthly"
+        "periodStart": string | null
+        "periodEnd": string | null
+      }
+      "access": {
+        "globalMode": "top100" | "full"
+        "canSeeGlobalDetails": boolean
+        "canSeeManagedStorePersonnelDetails": boolean
+      }
+      "filters": {
+        "regionManagers": Array<{
+            "id": string
+            "label": string
+          }>
+        "regions": Array<{
+            "id": string
+            "label": string
+          }>
+        "stores": Array<{
+            "id": string
+            "label": string
+          }>
+      }
+      "reference": {
+        "store": {
+          "averageScore": number | null
+          "metrics": Array<{
+              "code": string
+              "label": string
+              "value": number | null
+            }>
+        }
+        "personnel": {
+          "averageScore": number | null
+          "metrics": Array<{
+              "code": string
+              "label": string
+              "value": number | null
+            }>
+        }
+      }
+      "storeLeaderboard": {
+        "items": Array<{
+            "subject": "store"
+            "storeId": string
+            "storeName": string | null
+            "regionId": string | null
+            "regionName": string | null
+            "regionManagerUserId": string | null
+            "regionManagerName": string | null
+            "rank": number
+            "population": number
+            "scoreValue": number
+            "visibility": "summary" | "detail"
+            "metrics"?: Array<{
+                "code": string
+                "label": string
+                "actualValue": number | null
+                "targetValue"?: number | null
+                "benchmarkValue"?: number | null
+                "contributionValue"?: number | null
+              }>
+          }>
+        "currentStore": ({
+          "subject": "store"
+          "storeId": string
+          "storeName": string | null
+          "regionId": string | null
+          "regionName": string | null
+          "regionManagerUserId": string | null
+          "regionManagerName": string | null
+          "rank": number
+          "population": number
+          "scoreValue": number
+          "visibility": "summary" | "detail"
+          "metrics"?: Array<{
+              "code": string
+              "label": string
+              "actualValue": number | null
+              "targetValue"?: number | null
+              "benchmarkValue"?: number | null
+              "contributionValue"?: number | null
+            }>
+        }) | null
+        "meta": {
+          "total": number
+          "limit": number
+          "offset": number
+        }
+      }
+      "personnelLeaderboard": {
+        "items": Array<{
+            "subject": "personnel"
+            "employeeId": string
+            "displayName": string
+            "storeId": string | null
+            "storeName": string | null
+            "regionId": string | null
+            "regionName": string | null
+            "regionManagerUserId": string | null
+            "regionManagerName": string | null
+            "rank": number
+            "population": number
+            "storeRank": number | null
+            "storePopulation": number
+            "scoreValue": number
+            "visibility": "summary" | "detail"
+            "metrics"?: Array<{
+                "code": string
+                "label": string
+                "actualValue": number | null
+                "targetValue"?: number | null
+                "benchmarkValue"?: number | null
+                "contributionValue"?: number | null
+              }>
+          }>
+        "currentEmployee": ({
+          "subject": "personnel"
+          "employeeId": string
+          "displayName": string
+          "storeId": string | null
+          "storeName": string | null
+          "regionId": string | null
+          "regionName": string | null
+          "regionManagerUserId": string | null
+          "regionManagerName": string | null
+          "rank": number
+          "population": number
+          "storeRank": number | null
+          "storePopulation": number
+          "scoreValue": number
+          "visibility": "summary" | "detail"
+          "metrics"?: Array<{
+              "code": string
+              "label": string
+              "actualValue": number | null
+              "targetValue"?: number | null
+              "benchmarkValue"?: number | null
+              "contributionValue"?: number | null
+            }>
+        }) | null
+        "managedStorePersonnel": Array<{
+            "subject": "personnel"
+            "employeeId": string
+            "displayName": string
+            "storeId": string | null
+            "storeName": string | null
+            "regionId": string | null
+            "regionName": string | null
+            "regionManagerUserId": string | null
+            "regionManagerName": string | null
+            "rank": number
+            "population": number
+            "storeRank": number | null
+            "storePopulation": number
+            "scoreValue": number
+            "visibility": "summary" | "detail"
+            "metrics"?: Array<{
+                "code": string
+                "label": string
+                "actualValue": number | null
+                "targetValue"?: number | null
+                "benchmarkValue"?: number | null
+                "contributionValue"?: number | null
+              }>
+          }>
+        "meta": {
+          "total": number
+          "limit": number
+          "offset": number
+        }
+      }
+      "availablePeriods": Array<{
+          "periodType": "monthly"
+          "periodStart": string
+          "periodEnd": string
+        }>
+    }
     "ReportingSnapshotRunsResponse": {
       "items": Array<{
           "snapshotRunId": string
@@ -1031,6 +1317,103 @@ export type components = {
         "offset": number
       }
     }
+    "ReportingStoreKpiHighlightsResponse": {
+      "source": {
+        "mode": "live"
+        "snapshotRunId": string | null
+        "snapshotDate": string | null
+        "periodType": string
+      }
+      "store": ({
+        "storeId": string
+        "storeName": string | null
+      }) | null
+      "period": ({
+        "periodStart": string
+        "periodEnd": string
+      }) | null
+      "score": {
+        "value": number
+        "matchedMetrics": number
+        "totalMetrics": number
+      }
+      "availablePeriods": Array<{
+          "periodType": string
+          "periodStart": string
+          "periodEnd": string
+        }>
+      "partial": {
+        "isPartial": boolean
+        "missingMetricCodes": string[]
+        "missingMetricLabels": string[]
+        "pendingNormalizationCodes": string[]
+        "pendingNormalizationLabels": string[]
+      }
+      "metrics": Array<{
+          "code": string
+          "label": string
+          "weightPercent": number
+          "actualValue": number | null
+          "targetValue": number | null
+          "achievementRate": number | null
+          "benchmarkValue"?: number | null
+          "benchmarkSource"?: "TARGET" | "TURKEY_AVERAGE" | "CHECKLIST_SCORE"
+          "actualRatio"?: number | null
+          "scoredRatio"?: number | null
+          "capRatio"?: number | null
+          "isCapped"?: boolean
+          "scoreContribution"?: number | null
+          "missingReason"?: string | null
+          "statusBand": string | null
+          "dataStatus": "reported" | "missing"
+          "scoreStatus": "scored" | "pending_normalization" | "missing_reference" | "missing"
+        }>
+    }
+    "ReportingStoreScoreBreakdownResponse": {
+      "snapshotRunId": string
+      "storeId": string
+      "scoreStatus": "preview" | "final"
+      "totalScore": number | null
+      "missingWeightPolicy": "return_missing_weight_to_kpi"
+      "configuredWeights": {
+        "kpiPerformanceWeight": number
+        "bmChecklistWeight": number
+        "vmChecklistWeight": number
+      }
+      "effectiveWeights": {
+        "kpiPerformanceWeight": number
+        "bmChecklistWeight": number
+        "vmChecklistWeight": number
+      }
+      "components": {
+        "kpi": {
+          "included": boolean
+          "score": number | null
+          "weight": number
+          "contribution": number | null
+          "status": "included" | "not_included" | "missing_reference" | "future_inactive"
+          "missingReason"?: string
+        }
+        "bmChecklist": {
+          "included": boolean
+          "score": number | null
+          "weight": number
+          "contribution": number | null
+          "status": "included" | "not_included" | "missing_reference" | "future_inactive"
+          "missingReason"?: string
+          "visitCount": number
+        }
+        "vmChecklist": {
+          "included": boolean
+          "score": number | null
+          "weight": number
+          "contribution": number | null
+          "status": "included" | "not_included" | "missing_reference" | "future_inactive"
+          "missingReason"?: string
+          "visitCount": number
+        }
+      }
+    }
     "ReportingSummaryResponse": {
       "latestCompletedSnapshotRun": ({
         "snapshotRunId": string
@@ -1052,6 +1435,28 @@ export type components = {
         "kpiRows": number
         "checklistRows": number
         "turnoverRows": number
+      }
+    }
+    "ReportingTurnoverResponse": {
+      "items": Array<{
+          "snapshotRunId": string
+          "scopeType": string
+          "companyId": string | null
+          "regionId": string | null
+          "storeId": string | null
+          "periodStart": string
+          "periodEnd": string
+          "openingHeadcount": string
+          "closingHeadcount": string
+          "avgHeadcount": string
+          "leaverCount": number
+          "turnoverRate": string
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
       }
     }
     "ReportingWorkforceResponse": {
@@ -1707,6 +2112,17 @@ export type paths = {
       }
     }
   }
+  "/api/reports/checklists": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ReportingChecklistResponse"]
+          }
+        }
+      }
+    }
+  }
   "/api/snapshots/daily-closure": {
     get: {
       responses: {
@@ -1828,6 +2244,17 @@ export type paths = {
       }
     }
   }
+  "/api/reports/leaderboards/closed": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ReportingClosedLeaderboardResponse"]
+          }
+        }
+      }
+    }
+  }
   "/api/reports/my-performance": {
     get: {
       responses: {
@@ -1850,6 +2277,17 @@ export type paths = {
       }
     }
   }
+  "/api/reports/rankings": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ReportingRankingsResponse"]
+          }
+        }
+      }
+    }
+  }
   "/api/reports/snapshot-runs": {
     get: {
       responses: {
@@ -1861,12 +2299,45 @@ export type paths = {
       }
     }
   }
+  "/api/reports/store-kpi-highlights": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ReportingStoreKpiHighlightsResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/reports/store-score-breakdown": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ReportingStoreScoreBreakdownResponse"]
+          }
+        }
+      }
+    }
+  }
   "/api/reports/summary": {
     get: {
       responses: {
         "200": {
           content: {
             'application/json': components['schemas']["ReportingSummaryResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/reports/turnover": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ReportingTurnoverResponse"]
           }
         }
       }

@@ -726,6 +726,114 @@ describe("OpenAPI baseline", () => {
       $ref: "#/components/schemas/ReportingPerformanceResponse",
     });
 
+    const reportingStoreKpiHighlightsResponse =
+      document.paths["/api/reports/store-kpi-highlights"].get.responses?.["200"];
+    expect(
+      reportingStoreKpiHighlightsResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/ReportingStoreKpiHighlightsResponse",
+    });
+    expect(
+      document.components?.schemas?.ReportingStoreKpiHighlightsResponse
+        ?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        source: expect.any(Object),
+        store: expect.any(Object),
+        period: expect.any(Object),
+        score: expect.any(Object),
+        availablePeriods: expect.any(Object),
+        partial: expect.any(Object),
+        metrics: expect.any(Object),
+      }),
+    );
+
+    const reportingStoreScoreBreakdownResponse =
+      document.paths["/api/reports/store-score-breakdown"].get.responses?.["200"];
+    expect(
+      reportingStoreScoreBreakdownResponse?.content?.["application/json"]
+        ?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/ReportingStoreScoreBreakdownResponse",
+    });
+    expect(
+      document.components?.schemas?.ReportingStoreScoreBreakdownResponse
+        ?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        snapshotRunId: expect.any(Object),
+        storeId: expect.any(Object),
+        totalScore: expect.any(Object),
+        components: expect.any(Object),
+      }),
+    );
+
+    const reportingRankingsResponse =
+      document.paths["/api/reports/rankings"].get.responses?.["200"];
+    expect(reportingRankingsResponse?.content?.["application/json"]?.schema).toEqual({
+      $ref: "#/components/schemas/ReportingRankingsResponse",
+    });
+    expect(
+      document.components?.schemas?.ReportingRankingsResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        source: expect.any(Object),
+        access: expect.any(Object),
+        filters: expect.any(Object),
+        reference: expect.any(Object),
+        storeLeaderboard: expect.any(Object),
+        personnelLeaderboard: expect.any(Object),
+        availablePeriods: expect.any(Object),
+      }),
+    );
+
+    const reportingClosedLeaderboardResponse =
+      document.paths["/api/reports/leaderboards/closed"].get.responses?.["200"];
+    expect(
+      reportingClosedLeaderboardResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/ReportingClosedLeaderboardResponse",
+    });
+    expect(
+      document.components?.schemas?.ReportingClosedLeaderboardResponse
+        ?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        source: expect.any(Object),
+        includedSnapshotRuns: expect.any(Object),
+        currentEmployee: expect.any(Object),
+        personnelTop: expect.any(Object),
+      }),
+    );
+
+    const reportingChecklistResponse =
+      document.paths["/api/reports/checklists"].get.responses?.["200"];
+    expect(reportingChecklistResponse?.content?.["application/json"]?.schema).toEqual({
+      $ref: "#/components/schemas/ReportingChecklistResponse",
+    });
+    expect(
+      document.components?.schemas?.ReportingChecklistResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
+    const reportingTurnoverResponse =
+      document.paths["/api/reports/turnover"].get.responses?.["200"];
+    expect(reportingTurnoverResponse?.content?.["application/json"]?.schema).toEqual({
+      $ref: "#/components/schemas/ReportingTurnoverResponse",
+    });
+    expect(
+      document.components?.schemas?.ReportingTurnoverResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
     const lookupsResponse =
       document.paths["/api/integrations/lookups"].get.responses?.["200"];
     expect(lookupsResponse?.content?.["application/json"]?.schema).toEqual({

@@ -1,15 +1,5 @@
-import { fetchJson, sendJson } from '../../lib/api'
+import { sendJson } from '../../lib/api'
 import { fetchOpenApiJson, type ApiGetResponse } from '../../lib/openapi-client'
-
-type ListResponse<T> = {
-  items: T[]
-  meta: {
-    count: number
-    total: number
-    limit: number
-    offset: number
-  }
-}
 
 export type ReportingSummary = ApiGetResponse<'/api/reports/summary'>
 
@@ -34,235 +24,27 @@ export type AuditEvent = KpiConfigAudit['items'][number]
 export type KpiScoreProfileMetric = KpiConfigResponse['storeProfile']['metrics'][number]
 export type KpiOwnerRole = KpiScoreProfileMetric['ownerRole']
 export type KpiScoreBehavior = KpiScoreProfileMetric['scoreBehavior']
-type KpiBenchmarkSource = NonNullable<KpiScoreProfileMetric['benchmarkSource']>
 export type KpiGradingBand = KpiConfigResponse['gradingBands'][number]
 export type KpiOwnershipMatrixRow = KpiConfigResponse['ownershipMatrix'][number]
 
 export type MyPerformanceSummary = ApiGetResponse<'/api/reports/my-performance'>
 export type MyPerformanceMetric = MyPerformanceSummary['metrics'][number]
-type KpiMetricScoreStatus = NonNullable<MyPerformanceMetric['scoreStatus']>
 
-type StoreKpiHighlightMetric = {
-  code: string
-  label: string
-  weightPercent: number
-  actualValue: number | null
-  targetValue: number | null
-  achievementRate: number | null
-  benchmarkValue?: number | null
-  benchmarkSource?: KpiBenchmarkSource
-  actualRatio?: number | null
-  scoredRatio?: number | null
-  capRatio?: number | null
-  isCapped?: boolean
-  scoreContribution?: number | null
-  missingReason?: string | null
-  statusBand: string | null
-  dataStatus: 'reported' | 'missing'
-  scoreStatus: KpiMetricScoreStatus
-}
+export type StoreKpiHighlightsSummary = ApiGetResponse<'/api/reports/store-kpi-highlights'>
+export type StoreMonthlyScoreBreakdown = ApiGetResponse<'/api/reports/store-score-breakdown'>
 
-export type StoreKpiHighlightsSummary = {
-  source: {
-    mode: 'live'
-    snapshotRunId: string | null
-    snapshotDate: string | null
-    periodType: 'daily' | 'weekly' | 'monthly' | string
-  }
-  store: {
-    storeId: string
-    storeName: string | null
-  } | null
-  period: {
-    periodStart: string
-    periodEnd: string
-  } | null
-  score: {
-    value: number
-    matchedMetrics: number
-    totalMetrics: number
-  }
-  availablePeriods: Array<{
-    periodType: 'daily' | 'weekly' | 'monthly' | string
-    periodStart: string
-    periodEnd: string
-  }>
-  partial: {
-    isPartial: boolean
-    missingMetricCodes: string[]
-    missingMetricLabels: string[]
-    pendingNormalizationCodes: string[]
-    pendingNormalizationLabels: string[]
-  }
-  metrics: StoreKpiHighlightMetric[]
-}
+export type RankingSummary = ApiGetResponse<'/api/reports/rankings'>
+export type StoreRankingRow = RankingSummary['storeLeaderboard']['items'][number]
+export type PersonnelRankingRow =
+  RankingSummary['personnelLeaderboard']['items'][number]
+export type RankingMetricValue = NonNullable<StoreRankingRow['metrics']>[number]
+export type RankingReferenceGroup = RankingSummary['reference']['store']
 
-type StoreScoreBreakdownComponent = {
-  included: boolean
-  score: number | null
-  weight: number
-  contribution: number | null
-  status: string
-  missingReason?: string
-}
+export type ChecklistReport = ApiGetResponse<'/api/reports/checklists'>
+export type ChecklistRow = ChecklistReport['items'][number]
 
-type StoreScoreWeights = {
-  kpiPerformanceWeight: number
-  bmChecklistWeight: number
-  vmChecklistWeight: number
-}
-
-export type StoreMonthlyScoreBreakdown = {
-  snapshotRunId: string
-  storeId: string
-  scoreStatus: 'preview' | 'final'
-  totalScore: number | null
-  missingWeightPolicy: 'return_missing_weight_to_kpi'
-  configuredWeights: StoreScoreWeights
-  effectiveWeights: StoreScoreWeights
-  components: {
-    kpi: StoreScoreBreakdownComponent
-    bmChecklist: StoreScoreBreakdownComponent & {
-      visitCount: number
-    }
-    vmChecklist: StoreScoreBreakdownComponent & {
-      visitCount: number
-    }
-  }
-}
-
-type RankingVisibility = 'summary' | 'detail'
-
-export type RankingMetricValue = {
-  code: string
-  label: string
-  actualValue: number | null
-  targetValue?: number | null
-  benchmarkValue?: number | null
-  contributionValue?: number | null
-}
-
-export type StoreRankingRow = {
-  subject: 'store'
-  storeId: string
-  storeName: string | null
-  regionId: string | null
-  regionName: string | null
-  regionManagerUserId: string | null
-  regionManagerName: string | null
-  rank: number
-  population: number
-  scoreValue: number
-  visibility: RankingVisibility
-  metrics?: RankingMetricValue[]
-}
-
-export type PersonnelRankingRow = {
-  subject: 'personnel'
-  employeeId: string
-  displayName: string
-  storeId: string | null
-  storeName: string | null
-  regionId: string | null
-  regionName: string | null
-  regionManagerUserId: string | null
-  regionManagerName: string | null
-  rank: number
-  population: number
-  storeRank: number | null
-  storePopulation: number
-  scoreValue: number
-  visibility: RankingVisibility
-  metrics?: RankingMetricValue[]
-}
-
-type RankingFilterOption = {
-  id: string
-  label: string
-}
-
-type RankingReferenceMetric = {
-  code: string
-  label: string
-  value: number | null
-}
-
-export type RankingReferenceGroup = {
-  averageScore: number | null
-  metrics: RankingReferenceMetric[]
-}
-
-export type RankingSummary = {
-  source: {
-    mode: 'live'
-    periodType: 'monthly'
-    periodStart: string | null
-    periodEnd: string | null
-  }
-  access: {
-    globalMode: 'top100' | 'full'
-    canSeeGlobalDetails: boolean
-    canSeeManagedStorePersonnelDetails: boolean
-  }
-  filters: {
-    regionManagers: RankingFilterOption[]
-    regions: RankingFilterOption[]
-    stores: RankingFilterOption[]
-  }
-  reference?: {
-    store: RankingReferenceGroup
-    personnel: RankingReferenceGroup
-  }
-  storeLeaderboard: {
-    items: StoreRankingRow[]
-    currentStore: StoreRankingRow | null
-    meta: {
-      total: number
-      limit: number
-      offset: number
-    }
-  }
-  personnelLeaderboard: {
-    items: PersonnelRankingRow[]
-    currentEmployee: PersonnelRankingRow | null
-    managedStorePersonnel: PersonnelRankingRow[]
-    meta: {
-      total: number
-      limit: number
-      offset: number
-    }
-  }
-  availablePeriods: Array<{
-    periodType: 'monthly'
-    periodStart: string
-    periodEnd: string
-  }>
-}
-
-export type ChecklistRow = {
-  snapshotRunId: string
-  storeId: string
-  checklistTemplateId: string
-  auditCount: number
-  avgScore: string | null
-  complianceRate: string | null
-  criticalIssueCount: number
-}
-
-export type TurnoverRow = {
-  snapshotRunId: string
-  scopeType: string
-  companyId: string | null
-  regionId: string | null
-  storeId: string | null
-  periodStart: string
-  periodEnd: string
-  openingHeadcount: string
-  closingHeadcount: string
-  avgHeadcount: string
-  leaverCount: number
-  turnoverRate: string
-}
+export type TurnoverReport = ApiGetResponse<'/api/reports/turnover'>
+export type TurnoverRow = TurnoverReport['items'][number]
 
 export async function getReportingSummary() {
   return fetchOpenApiJson('/api/reports/summary')
@@ -386,9 +168,7 @@ export async function getStoreKpiHighlights(input?: {
   }
 
   const query = params.toString()
-  return fetchJson<StoreKpiHighlightsSummary>(
-    `/reports/store-kpi-highlights${query ? `?${query}` : ''}`,
-  )
+  return fetchOpenApiJson('/api/reports/store-kpi-highlights', { query })
 }
 
 export async function getStoreScoreBreakdown(input: {
@@ -400,9 +180,7 @@ export async function getStoreScoreBreakdown(input: {
     storeId: input.storeId,
   })
 
-  return fetchJson<StoreMonthlyScoreBreakdown>(
-    `/reports/store-score-breakdown?${params.toString()}`,
-  )
+  return fetchOpenApiJson('/api/reports/store-score-breakdown', { query: params })
 }
 
 export async function getRankings(input?: {
@@ -446,7 +224,7 @@ export async function getRankings(input?: {
     params.set('offset', String(input.offset))
   }
 
-  return fetchJson<RankingSummary>(`/reports/rankings?${params.toString()}`)
+  return fetchOpenApiJson('/api/reports/rankings', { query: params })
 }
 
 export async function getChecklistReport(input: {
@@ -468,11 +246,15 @@ export async function getChecklistReport(input: {
     params.set('checklistTemplateId', input.checklistTemplateId)
   }
 
-  return fetchJson<ListResponse<ChecklistRow>>(`/reports/checklists?${params.toString()}`)
+  return fetchOpenApiJson('/api/reports/checklists', { query: params })
 }
 
 export async function getTurnoverReport(snapshotRunId: string) {
-  return fetchJson<ListResponse<TurnoverRow>>(
-    `/reports/turnover?snapshotRunId=${encodeURIComponent(snapshotRunId)}&limit=50&offset=0`,
-  )
+  return fetchOpenApiJson('/api/reports/turnover', {
+    query: new URLSearchParams({
+      snapshotRunId,
+      limit: '50',
+      offset: '0',
+    }),
+  })
 }
