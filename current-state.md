@@ -493,11 +493,12 @@ Product Progress Plan V1 status:
 - PR #325 added `sokrates.md`, `docs/plans/project-progress-plan-v1.md`, and
   the first visible-flow audit at
   `docs/evidence/product-progress/2026-05-20-visible-flow-audit-v1.md`.
-- The first implementation slice fills the empty `/store/home` store-manager
-  intro/hero copy in Turkish and English and records evidence at
+- PR #326 filled the empty `/store/home` store-manager intro/hero copy in
+  Turkish and English and records evidence at
   `docs/evidence/product-progress/2026-05-20-store-home-manager-copy.md`.
 - External/live evidence remains parked until real staging/provider inputs are
-  provided.
+  provided. The latest presence-only input check is recorded at
+  `docs/evidence/product-progress/2026-05-20-external-evidence-input-check.md`.
 
 The `/store/approvals` first pass has started:
 

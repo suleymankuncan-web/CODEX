@@ -89,6 +89,12 @@ Rule:
 - Do not claim these from local code.
 - If inputs are unavailable, record the blocker and work on local-only product slices.
 
+Latest input check:
+
+- `docs/evidence/product-progress/2026-05-20-external-evidence-input-check.md`
+  records that the required staging/provider inputs are absent in the current
+  local environment, so Phase 2 remains blocked.
+
 ### 2. Visible Product Feel
 
 Status: open and high-value.
@@ -227,6 +233,11 @@ Tasks:
 - [ ] If alert provider destination exists, run alert routing smoke and record sanitized evidence.
 - [ ] If Redis/BullMQ provider config exists, verify `/api/health` reports durable queue and Redis ok.
 - [ ] If an integration-admin session and sample upload file exist, run authenticated upload smoke.
+
+Current result:
+
+- Blocked by missing staging/provider inputs. See
+  `docs/evidence/product-progress/2026-05-20-external-evidence-input-check.md`.
 
 Verification commands:
 
