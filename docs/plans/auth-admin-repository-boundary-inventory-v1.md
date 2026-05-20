@@ -16,11 +16,16 @@ Source file:
 
 - `backend/nestjs/src/modules/auth/auth-admin.repository.ts`
 
-Current size on `origin/main` after PR #350:
+Current size on `origin/main` after PR #353:
 
-- roughly 1845 physical lines,
-- roughly 1715 non-empty lines,
-- 36 repository methods.
+- roughly 1449 physical lines,
+- roughly 1361 non-empty lines.
+
+Completed read boundaries:
+
+- PR #352 moved lookup/catalog reads into `AuthAdminLookupRepository`.
+- PR #353 moved role assignment, action-store assignment, and user account
+  audit reads into `AuthAdminAuditRepository`.
 
 Primary caller:
 
@@ -62,6 +67,10 @@ Suggested boundary:
 
 - `AuthAdminLookupRepository`
 
+Status:
+
+- Done in PR #352.
+
 ### Role Assignment Persistence
 
 Methods:
@@ -81,7 +90,7 @@ Risk:
 
 Split guidance:
 
-- Move audit reads only after lookup/catalog boundary is stable.
+- Audit reads moved in PR #353 after lookup/catalog boundary was stable.
 - Do not move create/deactivate until negative permission and scope tests are
   explicitly selected.
 - Do not add DB uniqueness migration in the same PR.
@@ -105,6 +114,7 @@ Risk:
 
 Split guidance:
 
+- Audit reads moved in PR #353.
 - Keep action-store assignment writes together when they move.
 - Include negative assigned-store/action-scope tests before moving writes.
 
@@ -129,6 +139,7 @@ Risk:
 
 Split guidance:
 
+- User account audit reads moved in PR #353.
 - Do not combine pilot binding with role assignment or action-store write
   splits.
 - Keep provider-subject and active employee access checks close to pilot
@@ -182,7 +193,7 @@ Frontend smoke:
 
 ## Recommended Implementation Order
 
-1. `AuthAdminLookupRepository`
+1. Done: `AuthAdminLookupRepository`
    - Move lookup/catalog read methods only.
    - Keep response mapping in `AuthAdminService`.
    - Required gates:
@@ -190,7 +201,7 @@ Frontend smoke:
      - `npm.cmd --prefix backend/nestjs run build`
      - `npm.cmd --prefix backend/nestjs run lint`
      - `npm.cmd --prefix backend/nestjs test -- --runInBand`
-2. Audit read boundary
+2. Done: audit read boundary
    - Move `getRoleAssignmentAudit`, `getActionStoreAssignmentAudit`, and
      `getUserAccountAudit` together only if the lookup split is stable.
    - Required gates:
@@ -224,15 +235,24 @@ Stop or split the plan if:
 
 ## Sokrates Decision
 
-Decision: proceed next with a lookup/catalog read-only split only.
+Decision: the lookup/catalog and audit read-only split line is complete.
 
 Why:
 
-- It removes a meaningful chunk from the 1845-line auth admin repository.
-- It has the smallest auth blast radius among the candidate splits.
-- It is reversible by a normal squash revert.
-- Existing auth lookup, role assignment, and role permission tests can verify
-  the behavior surface without changing permissions.
+- It removed a meaningful chunk from the original 1845-line auth admin
+  repository while preserving auth/permission/API behavior.
+- The remaining auth admin work is no longer read-only cleanup; it is
+  write-heavy and security-sensitive.
+- Continuing requires a stronger test and invariant decision than the read
+  boundary line required.
 
-Do not start with user writes, role assignment writes, action-store writes,
-pilot binding, role permission writes, or DB migrations.
+Next:
+
+- Do not start user writes, role assignment writes, action-store writes, pilot
+  binding, role permission writes, or DB migrations by default.
+- If auth admin remains the active roadmap line, first document the
+  user-account invariant decision and the exact negative auth tests required
+  for the next write-boundary slice.
+- If there is no active auth write risk, shift to the next roadmap candidate:
+  stage builder/frontend competition decomposition or competition repository
+  inventory.

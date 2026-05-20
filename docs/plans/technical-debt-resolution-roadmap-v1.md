@@ -88,6 +88,10 @@ Measured hotspots:
 - Reporting repository has completed its first boundary-refactor pass through
   PR #343 and is no longer the next hotspot unless a concrete identity/personnel
   reporting risk appears.
+- Auth admin repository has completed its first safe read-boundary pass through
+  PR #353. Lookup/catalog reads and audit reads are split out; the remaining
+  auth admin repository work is write-heavy and should not continue without a
+  tighter invariant/test decision.
 - Frontend surfaces still above the comfortable review band:
   - competition stage builder,
   - master-data bootstrap,
@@ -373,22 +377,28 @@ Safe first slice:
 
 Current status:
 
-- Inventory/test-map is prepared.
-- `AuthAdminRepository` is roughly 1845 physical lines / 1715 non-empty lines
-  and owns 36 repository methods.
-- Auth admin remains security-sensitive. Start implementation with lookup and
-  catalog reads only; do not begin with writes, pilot binding, permission
-  mutation, or DB migrations.
+- Inventory/test-map was prepared in PR #351.
+- PR #352 split lookup/catalog read methods into
+  `AuthAdminLookupRepository`.
+- PR #353 split role assignment, action-store assignment, and user account
+  audit reads into `AuthAdminAuditRepository`.
+- `AuthAdminRepository` is now roughly 1449 physical lines / 1361 non-empty
+  lines and mostly owns command/write flows: role assignment persistence,
+  action-store assignment persistence, user account create/reactivate, pilot
+  binding, and role permission mutation.
+- Auth admin remains security-sensitive. The next auth admin step is no longer
+  a simple read split; it needs an explicit invariant/test decision before any
+  write boundary moves.
 
 Candidate extraction order:
 
-1. Lookup/read-only catalog boundary.
-2. Audit read boundary.
-3. User account write boundary.
-4. Role assignment write boundary.
-5. Action-store assignment write boundary.
-6. Pilot binding boundary, only if it grows beyond setup workflow.
-7. Permission grant/revoke boundary.
+1. Done: lookup/read-only catalog boundary.
+2. Done: audit read boundary.
+3. Next only after decision: user account read/write boundary.
+4. Later/high-risk: role assignment write boundary.
+5. Later/high-risk: action-store assignment write boundary.
+6. Later/high-risk: pilot binding boundary, only if it grows beyond setup workflow.
+7. Last/high-risk: permission grant/revoke boundary.
 
 Verification:
 
@@ -623,17 +633,18 @@ input changes priority.
 1. Done: docs-only roadmap and handoff planning.
 2. Done: reporting repository inventory and first read-boundary line.
 3. Done: integration repository inventory and safe read-boundary line.
-4. Next: auth admin repository inventory/test-map PR.
-5. Auth admin lookup/audit boundary PR, only with negative tests and no
-   permission behavior changes.
-6. Stage builder frontend pure model/section split PR, if product work touches
+4. Done: auth admin repository inventory/test-map PR.
+5. Done: auth admin lookup/audit read-boundary line.
+6. Next: either an auth admin user-account invariant/test-map decision, or
+   shift to stage builder / competition work if no auth write risk is active.
+7. Stage builder frontend pure model/section split PR, if product work touches
    competitions.
-7. Master-data bootstrap frontend model/section split PR, if product work
+8. Master-data bootstrap frontend model/section split PR, if product work
    touches master-data bootstrap.
-8. Competition repository inventory/read-boundary PR.
-9. TypeScript strictness inventory PR.
-10. One strictness domain PR only if the inventory shows a reviewable slice.
-11. External evidence PRs only when real provider inputs exist.
+9. Competition repository inventory/read-boundary PR.
+10. TypeScript strictness inventory PR.
+11. One strictness domain PR only if the inventory shows a reviewable slice.
+12. External evidence PRs only when real provider inputs exist.
 
 Batch rule:
 
