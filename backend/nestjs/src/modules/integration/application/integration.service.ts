@@ -11,6 +11,7 @@ import { ImportBatchJobPayload } from "../../../shared/jobs/job-payloads";
 import { JOB_DISPATCHER } from "../../../shared/jobs/jobs.constants";
 import { MaterializationService } from "./materialization.service";
 import { IntegrationRepository } from "../infrastructure/integration.repository";
+import { ImportBatchReadRepository } from "../infrastructure/import-batch-read.repository";
 import { IntegrationSourceRepository } from "../infrastructure/integration-source.repository";
 import { KpiImportNormalizationService } from "./kpi-import-normalization.service";
 import { IntegrationSchedulerService } from "./integration-scheduler.service";
@@ -58,6 +59,7 @@ export class IntegrationService {
 
   constructor(
     private readonly integrationRepository: IntegrationRepository,
+    private readonly importBatchReadRepository: ImportBatchReadRepository,
     private readonly integrationSourceRepository: IntegrationSourceRepository,
     private readonly materializationService: MaterializationService,
     private readonly kpiImportNormalizationService: KpiImportNormalizationService,
@@ -715,7 +717,7 @@ export class IntegrationService {
     const actorCompanyIds = this.normalizeCompanyScope(input.actorCompanyIds);
     this.assertCompanyScope(actorCompanyIds);
 
-    const result = await this.integrationRepository.listImportBatches({
+    const result = await this.importBatchReadRepository.listImportBatches({
       actorCompanyIds,
       limit: input.limit,
       offset: input.offset,
@@ -756,17 +758,17 @@ export class IntegrationService {
       actorCompanyIds,
     };
 
-    const summary = await this.integrationRepository.getImportBatchSummary(scopedInput);
+    const summary = await this.importBatchReadRepository.getImportBatchSummary(scopedInput);
     const [completedBatchId, failedBatchId, inProgressBatchId] = await Promise.all([
-      this.integrationRepository.getLatestImportBatchIdByStatus({
+      this.importBatchReadRepository.getLatestImportBatchIdByStatus({
         ...scopedInput,
         status: "completed",
       }),
-      this.integrationRepository.getLatestImportBatchIdByStatus({
+      this.importBatchReadRepository.getLatestImportBatchIdByStatus({
         ...scopedInput,
         status: "failed",
       }),
-      this.integrationRepository.getLatestImportBatchIdByStatus({
+      this.importBatchReadRepository.getLatestImportBatchIdByStatus({
         ...scopedInput,
         status: "processing",
       }),
@@ -814,24 +816,24 @@ export class IntegrationService {
     const stuckBefore = getImportStuckBeforeIso();
     const [summary, actionCounts, completedBatchId, failedBatchId, inProgressBatchId, stuckBatchId] =
       await Promise.all([
-        this.integrationRepository.getImportBatchSummary(scopedInput),
-        this.integrationRepository.getImportBatchActionCounts({
+        this.importBatchReadRepository.getImportBatchSummary(scopedInput),
+        this.importBatchReadRepository.getImportBatchActionCounts({
           ...scopedInput,
           stuckBefore,
         }),
-        this.integrationRepository.getLatestImportBatchIdByStatus({
+        this.importBatchReadRepository.getLatestImportBatchIdByStatus({
           ...scopedInput,
           status: "completed",
         }),
-        this.integrationRepository.getLatestImportBatchIdByStatus({
+        this.importBatchReadRepository.getLatestImportBatchIdByStatus({
           ...scopedInput,
           status: "failed",
         }),
-        this.integrationRepository.getLatestImportBatchIdByStatus({
+        this.importBatchReadRepository.getLatestImportBatchIdByStatus({
           ...scopedInput,
           status: "processing",
         }),
-        this.integrationRepository.getLatestStuckImportBatchId({
+        this.importBatchReadRepository.getLatestStuckImportBatchId({
           ...scopedInput,
           stuckBefore,
         }),
@@ -878,7 +880,7 @@ export class IntegrationService {
     const actorCompanyIds = this.normalizeCompanyScope(input.actorCompanyIds);
     this.assertCompanyScope(actorCompanyIds);
 
-    const result = await this.integrationRepository.listImportBatchesNeedingAction({
+    const result = await this.importBatchReadRepository.listImportBatchesNeedingAction({
       ...input,
       actorCompanyIds,
       stuckBefore: getImportStuckBeforeIso(),
