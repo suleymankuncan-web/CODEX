@@ -1180,6 +1180,8 @@ function ReturnedRequestsPanel(input: {
 }) {
   const returnedRequestCount =
     input.returnedSellerCodeRequests.length + input.returnedOffboardingRequests.length
+  const hasReturnedRequestError =
+    input.hasSellerCodeRequestsError || input.hasOffboardingRequestsError
 
   return (
     <section
@@ -1198,10 +1200,19 @@ function ReturnedRequestsPanel(input: {
         </StatusPill>
       </div>
 
-      {input.hasSellerCodeRequestsError || input.hasOffboardingRequestsError ? (
-        <StoreRequestFeedback tone="error" className="store-approvals-ledger-feedback">
-          {getErrorMessage(input.sellerCodeRequestsError ?? input.offboardingRequestsError)}
-        </StoreRequestFeedback>
+      {hasReturnedRequestError ? (
+        <>
+          {input.hasSellerCodeRequestsError ? (
+            <StoreRequestFeedback tone="error" className="store-approvals-ledger-feedback">
+              {getErrorMessage(input.sellerCodeRequestsError)}
+            </StoreRequestFeedback>
+          ) : null}
+          {input.hasOffboardingRequestsError ? (
+            <StoreRequestFeedback tone="error" className="store-approvals-ledger-feedback">
+              {getErrorMessage(input.offboardingRequestsError)}
+            </StoreRequestFeedback>
+          ) : null}
+        </>
       ) : returnedRequestCount === 0 ? (
         <EmptyState
           title={input.t('storeApprovals.returnedEmptyTitle')}
