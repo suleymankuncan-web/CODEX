@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #349, and is the starting point for continuing in a fresh window.
+PR #350, and is the starting point for continuing in a fresh window.
 
 ## Active Workspace
 
@@ -26,14 +26,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-20, `origin/main` has been fetched through PR #349.
+As of 2026-05-20, `origin/main` has been fetched through PR #350.
 The root checkout may still be on a non-main local branch with unrelated
 handoff noise; do not assume the root working tree is clean.
 
 Latest merge on main:
 
 ```text
-2703c7ea refactor: split personnel master reads (#349)
+5f166d58 docs: update integration boundary handoff (#350)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -102,6 +102,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #347 `refactor: split external mapping reads`
 - PR #348 `refactor: split KPI store read repository`
 - PR #349 `refactor: split personnel master reads`
+- PR #350 `docs: update integration boundary handoff`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -254,6 +255,9 @@ Latest technical assessment decision:
   a concrete product/risk change needs them. The next safer technical-debt
   hotspot is the auth admin repository, but auth work must begin with a fresh
   inventory/test map because it is security-sensitive.
+- The next auth-admin planning artifact is
+  `docs/plans/auth-admin-repository-boundary-inventory-v1.md`; start auth code
+  movement only with lookup/catalog reads and only with auth regression gates.
 
 ## Sokrates
 
