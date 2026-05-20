@@ -765,3 +765,9 @@
 .store-command-settings-control {
   margin-top: 1rem;
 }
+
+@media (max-width: 980px) {
+  .store-command-utility-page {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
+  }
+}

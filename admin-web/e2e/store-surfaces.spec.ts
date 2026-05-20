@@ -831,6 +831,56 @@ test('store sidebar transitions across visible manager pages without requiring m
   await expectHealthyStoreTransition(page)
 })
 
+test('store utility pages explain handoff boundaries and stay mobile-safe', async ({ page }) => {
+  await page.goto('/store/settings')
+
+  await expect(page.getByRole('heading', { name: 'Profil ve dil tercihleri' })).toBeVisible()
+  await expect(page.getByLabel('Dil tercihi kontrolü')).toContainText('Tercih')
+  await expect(page.getByLabel('Ayarlar çalışma sınırı')).toContainText('/store/settings')
+  await expect(page.getByText('Sadece tarayıcıdaki dil tercihi')).toBeVisible()
+
+  await page.goto('/store/targets')
+
+  await expect(page.getByRole('heading', { name: 'Hedef yönetimi store shell içinde bağlı' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Hedef akışını aç' })).toHaveAttribute('href', '/admin/targets')
+  await expect(page.getByLabel('Hedef sayfası çalışma sınırı')).toContainText('Burada yeni store hedef yazma kontratı yok')
+
+  await page.goto('/store/reports')
+
+  await expect(page.getByRole('heading', { name: 'Raporlar store shell içinde bağlı' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Raporları aç' })).toHaveAttribute('href', '/admin/reports')
+  await expect(page.getByLabel('Rapor sayfası çalışma sınırı')).toContainText('Burada yeni store rapor kontratı yok')
+
+  await page.setViewportSize({ width: 390, height: 900 })
+  await page.reload()
+
+  await expect(page.getByRole('heading', { name: 'Raporlar store shell içinde bağlı' })).toBeVisible()
+  await expect.poll(
+    () => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth),
+  ).toBe(true)
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+  await expect.poll(() =>
+    page.evaluate(() => {
+      const nav = document.querySelector<HTMLElement>('.store-command-sidebar')
+      const nextStep = Array.from(document.querySelectorAll<HTMLElement>('.key-item strong')).find((node) =>
+        node.textContent?.includes('Store rapor özeti'),
+      )
+
+      if (!nav || !nextStep) {
+        return false
+      }
+
+      return nextStep.getBoundingClientRect().bottom + 12 <= nav.getBoundingClientRect().top
+    }),
+  ).toBe(true)
+
+  await setStoredLocale(page, 'en')
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'Reports are connected inside store shell' })).toBeVisible()
+  await expect(page.getByLabel('Report page operating boundary')).toContainText('No new store reporting contract here')
+})
+
 test('store route transitions show a loading layer and hide stale page content', async ({ page }) => {
   const storeNav = page.locator('.store-command-nav')
   await page.goto('/store/home')

@@ -136,7 +136,8 @@ Score is 1-5:
 
 ## Priority Order
 
-1. Store utility/handoff surfaces:
+1. Store utility/handoff surfaces (completed by
+   `docs/evidence/product-progress/2026-05-20-store-utility-handoff-v1.md`):
    `/store/settings`, `/store/targets`, `/store/reports`.
    Reason: small files, low blast radius, visible route gaps, easy targeted
    Playwright assertions, and no data/API/auth behavior needed.

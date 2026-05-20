@@ -1,5 +1,6 @@
 import { LanguageToggle } from '../features/localization/LanguageToggle'
 import { useLocalization } from '../features/localization/useLocalization'
+import { KeyValue, StatusPill } from '../components/dashboard-primitives'
 
 export function StoreSettingsPage() {
   const { t } = useLocalization()
@@ -14,13 +15,27 @@ export function StoreSettingsPage() {
         </div>
       </div>
 
-      <section className="store-command-panel">
+      <section className="store-command-panel" aria-label={t('storeHome.settings.languagePanelAria')}>
         <div className="store-command-panel-head">
           <h3>{t('storeHome.settings.languageTitle')}</h3>
+          <StatusPill tone="calm">{t('storeHome.utility.statusPreference')}</StatusPill>
         </div>
         <p className="store-command-panel-note">{t('storeHome.settings.languageCopy')}</p>
         <div className="store-command-settings-control">
           <LanguageToggle />
+        </div>
+      </section>
+
+      <section className="store-command-panel" aria-label={t('storeHome.settings.boundaryAria')}>
+        <div className="store-command-panel-head">
+          <h3>{t('storeHome.settings.boundaryTitle')}</h3>
+          <StatusPill tone="neutral">{t('storeHome.utility.statusBoundary')}</StatusPill>
+        </div>
+        <div className="key-grid">
+          <KeyValue label={t('storeHome.utility.currentRoute')} value="/store/settings" />
+          <KeyValue label={t('storeHome.utility.primaryAction')} value={t('storeHome.settings.primaryActionValue')} />
+          <KeyValue label={t('storeHome.utility.dataBoundary')} value={t('storeHome.settings.dataBoundaryValue')} />
+          <KeyValue label={t('storeHome.utility.nextStep')} value={t('storeHome.settings.nextStepValue')} />
         </div>
       </section>
     </section>

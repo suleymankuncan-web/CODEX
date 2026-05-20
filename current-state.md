@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #324, and is the starting point for continuing in a fresh window.
+PR #330, and is the starting point for continuing in a fresh window.
 
 ## Active Workspace
 
@@ -26,14 +26,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-20, `origin/main` has been fetched through PR #324.
+As of 2026-05-20, `origin/main` has been fetched through PR #330.
 The root checkout may still be on a non-main local branch with unrelated
 handoff noise; do not assume the root working tree is clean.
 
 Latest merge on main:
 
 ```text
-eacc6cff refactor: split store checklists result modal (#324)
+babebb7f docs: add UI/UX V1 route inventory (#330)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -78,6 +78,12 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #322 `refactor: split store checklists controls`
 - PR #323 `refactor: split store checklists hero`
 - PR #324 `refactor: split store checklists result modal`
+- PR #325 `docs: add project progress operating plan`
+- PR #326 `feat: fill store home manager copy`
+- PR #327 `docs: record external evidence input blockers`
+- PR #328 `feat: clarify master data store labels`
+- PR #329 `docs: shape incentive module intake`
+- PR #330 `docs: add UI/UX V1 route inventory`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -515,6 +521,11 @@ Product Progress Plan V1 status:
   handoff family: `/store/settings`, `/store/targets`, and `/store/reports`.
   Do not reopen `/store/home` or `/admin/master-data` without a concrete new
   gap.
+- The store utility/handoff V1 slice improved `/store/settings`,
+  `/store/targets`, and `/store/reports` with localized boundary/action panels,
+  targeted route assertions, and a scoped mobile bottom-nav clearance fix.
+  Evidence:
+  `docs/evidence/product-progress/2026-05-20-store-utility-handoff-v1.md`.
 
 The `/store/approvals` first pass has started:
 
