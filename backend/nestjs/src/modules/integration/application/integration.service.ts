@@ -892,7 +892,7 @@ export class IntegrationService {
 
         if (batch.health_state === "blocked") {
           const dependencySummaryRow =
-            await this.integrationRepository.getImportBatchDependencySummary(
+            await this.importBatchReadRepository.getImportBatchDependencySummary(
               batch.import_batch_id,
               batch.entity_type as
                 | "employee"
@@ -928,7 +928,7 @@ export class IntegrationService {
   async getImportBatch(input: { actorCompanyIds: string[]; batchId: string }) {
     const actorCompanyIds = this.normalizeCompanyScope(input.actorCompanyIds);
     this.assertCompanyScope(actorCompanyIds);
-    const batch = await this.integrationRepository.getImportBatch({
+    const batch = await this.importBatchReadRepository.getImportBatch({
       actorCompanyIds,
       batchId: input.batchId,
     });
@@ -937,20 +937,20 @@ export class IntegrationService {
       throw new NotFoundException(`Import batch not found: ${input.batchId}`);
     }
 
-    const summaryRows = await this.integrationRepository.getImportBatchRowStatusSummary(
+    const summaryRows = await this.importBatchReadRepository.getImportBatchRowStatusSummary(
       batch.import_batch_id,
       batch.entity_type,
     );
     const dependencySummaryRow =
-      await this.integrationRepository.getImportBatchDependencySummary(
+      await this.importBatchReadRepository.getImportBatchDependencySummary(
         batch.import_batch_id,
         batch.entity_type,
       );
     const lineageSummaryRow =
       batch.entity_type === "kpi"
-        ? await this.integrationRepository.getImportBatchLineageSummary(batch.import_batch_id)
+        ? await this.importBatchReadRepository.getImportBatchLineageSummary(batch.import_batch_id)
         : null;
-    const qualityIssueRows = await this.integrationRepository.getImportBatchQualityIssueRows(
+    const qualityIssueRows = await this.importBatchReadRepository.getImportBatchQualityIssueRows(
       batch.import_batch_id,
       batch.entity_type,
     );
@@ -1065,7 +1065,7 @@ export class IntegrationService {
   }) {
     const actorCompanyIds = this.normalizeCompanyScope(input.actorCompanyIds);
     this.assertCompanyScope(actorCompanyIds);
-    const batch = await this.integrationRepository.getImportBatch({
+    const batch = await this.importBatchReadRepository.getImportBatch({
       actorCompanyIds,
       batchId: input.batchId,
     });
@@ -1074,7 +1074,7 @@ export class IntegrationService {
       throw new NotFoundException(`Import batch not found: ${input.batchId}`);
     }
 
-    const result = await this.integrationRepository.getImportBatchErrors({
+    const result = await this.importBatchReadRepository.getImportBatchErrors({
       batchId: input.batchId,
       entityType: batch.entity_type,
       limit: input.limit,
@@ -1192,7 +1192,7 @@ export class IntegrationService {
   async getImportBatchAudit(input: { actorCompanyIds: string[]; batchId: string }) {
     const actorCompanyIds = this.normalizeCompanyScope(input.actorCompanyIds);
     this.assertCompanyScope(actorCompanyIds);
-    const batch = await this.integrationRepository.getImportBatch({
+    const batch = await this.importBatchReadRepository.getImportBatch({
       actorCompanyIds,
       batchId: input.batchId,
     });
@@ -1201,7 +1201,7 @@ export class IntegrationService {
       throw new NotFoundException(`Import batch not found: ${input.batchId}`);
     }
 
-    const events = await this.integrationRepository.getImportBatchAudit(input.batchId);
+    const events = await this.importBatchReadRepository.getImportBatchAudit(input.batchId);
 
     return buildListResponse(
       events.map((event) => mapAuditEvent(event)),
