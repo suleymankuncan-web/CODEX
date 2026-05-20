@@ -1245,6 +1245,24 @@ const authPermissionCatalogItemSchema = {
   },
 };
 
+const authRolePermissionCommandResponseSchema = commandResponseSchema({
+  type: "object",
+  required: ["rolePermission"],
+  properties: {
+    rolePermission: {
+      type: "object",
+      required: ["roleId", "roleCode", "permissionId", "permissionCode"],
+      properties: {
+        roleId: { type: "string" },
+        roleCode: { type: "string" },
+        permissionId: { type: "string" },
+        permissionCode: { type: "string" },
+        grantedAt: { type: "string", nullable: true },
+      },
+    },
+  },
+});
+
 const authUserAccountSchema = {
   type: "object",
   required: [
@@ -1274,6 +1292,37 @@ const authUserAccountSchema = {
     employeeStatus: { type: "string", nullable: true },
   },
 };
+
+const authUserAccessClosureSchema = {
+  type: "object",
+  required: [
+    "closedRoleAssignments",
+    "closedActionStoreAssignments",
+    "revokedMobileSessions",
+  ],
+  properties: countProperties([
+    "closedRoleAssignments",
+    "closedActionStoreAssignments",
+    "revokedMobileSessions",
+  ]),
+};
+
+const authUserAccountCommandResponseSchema = commandResponseSchema({
+  type: "object",
+  required: ["user"],
+  properties: {
+    user: authUserAccountSchema,
+  },
+});
+
+const authUserDeactivationCommandResponseSchema = commandResponseSchema({
+  type: "object",
+  required: ["user", "accessClosure"],
+  properties: {
+    user: authUserAccountSchema,
+    accessClosure: authUserAccessClosureSchema,
+  },
+});
 
 const authRoleAssignmentSchema = {
   type: "object",
@@ -1360,6 +1409,53 @@ const authActionStoreAssignmentCommandResponseSchema = commandResponseSchema({
   required: ["assignment"],
   properties: {
     assignment: authActionStoreAssignmentSchema,
+  },
+});
+
+const authPilotUserBindingEmployeeSchema = {
+  type: "object",
+  required: [
+    "employeeId",
+    "employeeCode",
+    "firstName",
+    "lastName",
+    "storeId",
+    "storeCode",
+    "storeName",
+  ],
+  properties: {
+    employeeId: { type: "string" },
+    employeeCode: { type: "string", nullable: true },
+    firstName: { type: "string" },
+    lastName: { type: "string" },
+    storeId: { type: "string" },
+    storeCode: { type: "string" },
+    storeName: { type: "string" },
+  },
+};
+
+const authPilotUserBindingSchema = {
+  type: "object",
+  required: ["user", "roleAssignments", "actionStoreAssignments", "employee"],
+  properties: {
+    user: authUserAccountSchema,
+    roleAssignments: {
+      type: "array",
+      items: authRoleAssignmentSchema,
+    },
+    actionStoreAssignments: {
+      type: "array",
+      items: authActionStoreAssignmentSchema,
+    },
+    employee: authPilotUserBindingEmployeeSchema,
+  },
+};
+
+const authPilotUserBindingCommandResponseSchema = commandResponseSchema({
+  type: "object",
+  required: ["binding"],
+  properties: {
+    binding: authPilotUserBindingSchema,
   },
 });
 
@@ -4386,6 +4482,11 @@ async function generateOpenApi(): Promise<void> {
     AuthStoreLookupSearchResponse: authStoreLookupSearchResponseSchema,
     AuthRoleCatalogResponse: authRoleCatalogResponseSchema,
     AuthPermissionCatalogResponse: authPermissionCatalogResponseSchema,
+    AuthRolePermissionCommandResponse:
+      authRolePermissionCommandResponseSchema,
+    AuthUserAccountCommandResponse: authUserAccountCommandResponseSchema,
+    AuthUserDeactivationCommandResponse:
+      authUserDeactivationCommandResponseSchema,
     AuthUserAccountsResponse: authUserAccountsResponseSchema,
     AuthRoleAssignmentCommandResponse: authRoleAssignmentCommandResponseSchema,
     AuthRoleAssignmentsResponse: authRoleAssignmentsResponseSchema,
@@ -4393,6 +4494,8 @@ async function generateOpenApi(): Promise<void> {
       authActionStoreAssignmentCommandResponseSchema,
     AuthActionStoreAssignmentsResponse:
       authActionStoreAssignmentsResponseSchema,
+    AuthPilotUserBindingCommandResponse:
+      authPilotUserBindingCommandResponseSchema,
     AuthAuditResponse: authAuditResponseSchema,
     AuthBootstrapResponse: authBootstrapResponseSchema,
     AuthSessionResponse: authSessionResponseSchema,
@@ -4778,10 +4881,61 @@ async function generateOpenApi(): Promise<void> {
 
   setJsonResponseSchema(
     document.paths,
+    "/api/auth/roles/{roleId}/permissions",
+    "post",
+    "Command result with the granted auth role permission.",
+    "AuthRolePermissionCommandResponse",
+    "201",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/roles/{roleId}/permissions/{permissionCode}",
+    "delete",
+    "Command result with the revoked auth role permission.",
+    "AuthRolePermissionCommandResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
     "/api/auth/users",
     "get",
     "Paginated auth user accounts visible to auth admins.",
     "AuthUserAccountsResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/users",
+    "post",
+    "Command result with the created auth user account.",
+    "AuthUserAccountCommandResponse",
+    "201",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/pilot-user-bindings",
+    "post",
+    "Command result with the created pilot user binding.",
+    "AuthPilotUserBindingCommandResponse",
+    "201",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/users/{userId}/deactivate",
+    "patch",
+    "Command result with the deactivated auth user account and closed access summary.",
+    "AuthUserDeactivationCommandResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/users/{userId}/reactivate",
+    "patch",
+    "Command result with the reactivated auth user account.",
+    "AuthUserAccountCommandResponse",
   );
 
   setJsonResponseSchema(

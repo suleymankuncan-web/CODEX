@@ -1,9 +1,9 @@
-import { sendJson } from '../../lib/api'
 import {
   fetchOpenApiJson,
   sendOpenApiJson,
   type ApiGetResponse,
   type ApiMutationBody,
+  type ApiMutationResponse,
 } from '../../lib/openapi-client'
 
 export type AuthLookups = ApiGetResponse<'/api/auth/lookups'>
@@ -17,6 +17,19 @@ type AuthPermissionCatalogResponse = ApiGetResponse<'/api/auth/permissions'>
 export type PermissionCatalogItem = AuthPermissionCatalogResponse['items'][number]
 type AuthUserAccountsResponse = ApiGetResponse<'/api/auth/users'>
 export type UserAccount = AuthUserAccountsResponse['items'][number]
+export type CreateUserAccountInput = ApiMutationBody<'/api/auth/users', 'POST'>
+type DeactivateUserAccountResponse = ApiMutationResponse<
+  '/api/auth/users/{userId}/deactivate',
+  'PATCH'
+>
+export type CreatePilotUserBindingInput = ApiMutationBody<
+  '/api/auth/pilot-user-bindings',
+  'POST'
+>
+type CreatePilotUserBindingResponse = ApiMutationResponse<
+  '/api/auth/pilot-user-bindings',
+  'POST'
+>
 type AuthRoleAssignmentsResponse = ApiGetResponse<'/api/auth/role-assignments'>
 export type RoleAssignment = AuthRoleAssignmentsResponse['items'][number]
 export type CreateRoleAssignmentInput = ApiMutationBody<
@@ -34,34 +47,9 @@ export type AuditEvent = AuthAuditResponse['items'][number]
 export type AuthBootstrap = ApiGetResponse<'/api/auth/bootstrap'>
 export type AuthSessionSummary = ApiGetResponse<'/api/auth/session'>
 
-export type UserAccessClosure = {
-  closedRoleAssignments: number
-  closedActionStoreAssignments: number
-  revokedMobileSessions: number
-}
+export type UserAccessClosure = DeactivateUserAccountResponse['data']['accessClosure']
 
-export type PilotUserBinding = {
-  user: UserAccount
-  roleAssignments: RoleAssignment[]
-  actionStoreAssignments: ActionStoreAssignment[]
-  employee: {
-    employeeId: string
-    employeeCode: string | null
-    firstName: string
-    lastName: string
-    storeId: string
-    storeCode: string
-    storeName: string
-  }
-}
-
-type CommandResponse<T> = {
-  command: {
-    status: string
-    message: string
-  }
-  data: T
-}
+export type PilotUserBinding = CreatePilotUserBindingResponse['data']['binding']
 
 export async function getAuthLookups() {
   return fetchOpenApiJson('/api/auth/lookups')
@@ -191,43 +179,28 @@ export async function deactivateActionStoreAssignment(assignmentId: string) {
 }
 
 export async function deactivateUserAccount(userId: string) {
-  return sendJson<CommandResponse<{ user: UserAccount; accessClosure: UserAccessClosure }>>(
-    `/auth/users/${userId}/deactivate`,
-    {
-      method: 'PATCH',
-    },
-  )
-}
-
-export async function reactivateUserAccount(userId: string) {
-  return sendJson<CommandResponse<{ user: UserAccount }>>(`/auth/users/${userId}/reactivate`, {
+  return sendOpenApiJson('/api/auth/users/{userId}/deactivate', {
     method: 'PATCH',
+    params: { userId },
   })
 }
 
-export async function createUserAccount(input: {
-  employeeId?: string
-  username: string
-  email: string
-  authProvider: 'local' | 'oidc' | 'sso' | 'clerk'
-  providerSubject?: string
-}) {
-  return sendJson<CommandResponse<{ user: UserAccount }>>('/auth/users', {
+export async function reactivateUserAccount(userId: string) {
+  return sendOpenApiJson('/api/auth/users/{userId}/reactivate', {
+    method: 'PATCH',
+    params: { userId },
+  })
+}
+
+export async function createUserAccount(input: CreateUserAccountInput) {
+  return sendOpenApiJson('/api/auth/users', {
     method: 'POST',
     body: input,
   })
 }
 
-export async function createPilotUserBinding(input: {
-  employeeId: string
-  authProvider: 'oidc' | 'clerk'
-  providerSubject: string
-  username: string
-  email: string
-  roleCode: 'REGION_MANAGER' | 'STORE_MANAGER' | 'VISUAL_MERCHANDISER'
-  storeIds: string[]
-}) {
-  return sendJson<CommandResponse<{ binding: PilotUserBinding }>>('/auth/pilot-user-bindings', {
+export async function createPilotUserBinding(input: CreatePilotUserBindingInput) {
+  return sendOpenApiJson('/api/auth/pilot-user-bindings', {
     method: 'POST',
     body: input,
   })
@@ -253,18 +226,9 @@ export async function grantRolePermission(input: {
   roleId: string
   permissionCode: string
 }) {
-  return sendJson<
-    CommandResponse<{
-      rolePermission: {
-        roleId: string
-        roleCode: string
-        permissionId: string
-        permissionCode: string
-        grantedAt?: string | null
-      }
-    }>
-  >(`/auth/roles/${input.roleId}/permissions`, {
+  return sendOpenApiJson('/api/auth/roles/{roleId}/permissions', {
     method: 'POST',
+    params: { roleId: input.roleId },
     body: {
       permissionCode: input.permissionCode,
     },
@@ -275,17 +239,12 @@ export async function revokeRolePermission(input: {
   roleId: string
   permissionCode: string
 }) {
-  return sendJson<
-    CommandResponse<{
-      rolePermission: {
-        roleId: string
-        roleCode: string
-        permissionId: string
-        permissionCode: string
-      }
-    }>
-  >(`/auth/roles/${input.roleId}/permissions/${encodeURIComponent(input.permissionCode)}`, {
+  return sendOpenApiJson('/api/auth/roles/{roleId}/permissions/{permissionCode}', {
     method: 'DELETE',
+    params: {
+      roleId: input.roleId,
+      permissionCode: input.permissionCode,
+    },
   })
 }
 

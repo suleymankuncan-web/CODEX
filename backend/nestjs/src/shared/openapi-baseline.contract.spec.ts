@@ -946,6 +946,32 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const authRolePermissionGrant =
+      document.paths["/api/auth/roles/{roleId}/permissions"].post;
+    expect(
+      authRolePermissionGrant.requestBody?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/GrantRolePermissionDto",
+    });
+    expect(
+      authRolePermissionGrant.responses?.["201"]?.content?.["application/json"]
+        ?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/AuthRolePermissionCommandResponse",
+    });
+
+    const authRolePermissionRevoke =
+      document.paths[
+        "/api/auth/roles/{roleId}/permissions/{permissionCode}"
+      ].delete;
+    expect(
+      authRolePermissionRevoke.responses?.["200"]?.content?.[
+        "application/json"
+      ]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/AuthRolePermissionCommandResponse",
+    });
+
     const authUsersResponse =
       document.paths["/api/auth/users"].get.responses?.["200"];
     expect(authUsersResponse?.content?.["application/json"]?.schema).toEqual({
@@ -959,6 +985,52 @@ describe("OpenAPI baseline", () => {
         meta: expect.any(Object),
       }),
     );
+
+    const authUserCreate = document.paths["/api/auth/users"].post;
+    expect(
+      authUserCreate.requestBody?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/CreateUserAccountDto",
+    });
+    expect(
+      authUserCreate.responses?.["201"]?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/AuthUserAccountCommandResponse",
+    });
+
+    const authPilotUserBindingCreate =
+      document.paths["/api/auth/pilot-user-bindings"].post;
+    expect(
+      authPilotUserBindingCreate.requestBody?.content?.["application/json"]
+        ?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/CreatePilotUserBindingDto",
+    });
+    expect(
+      authPilotUserBindingCreate.responses?.["201"]?.content?.[
+        "application/json"
+      ]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/AuthPilotUserBindingCommandResponse",
+    });
+
+    const authUserDeactivate =
+      document.paths["/api/auth/users/{userId}/deactivate"].patch;
+    expect(
+      authUserDeactivate.responses?.["200"]?.content?.["application/json"]
+        ?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/AuthUserDeactivationCommandResponse",
+    });
+
+    const authUserReactivate =
+      document.paths["/api/auth/users/{userId}/reactivate"].patch;
+    expect(
+      authUserReactivate.responses?.["200"]?.content?.["application/json"]
+        ?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/AuthUserAccountCommandResponse",
+    });
 
     const authRoleAssignmentsResponse =
       document.paths["/api/auth/role-assignments"].get.responses?.["200"];

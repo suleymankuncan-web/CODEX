@@ -279,7 +279,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Command result with the created auth user account.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthUserAccountCommandResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -322,7 +329,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Command result with the created pilot user binding.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthPilotUserBindingCommandResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -375,7 +389,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Command result with the deactivated auth user account and closed access summary.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthUserDeactivationCommandResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -398,7 +419,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Command result with the reactivated auth user account.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthUserAccountCommandResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -536,7 +564,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "Command result with the granted auth role permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthRolePermissionCommandResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -567,7 +602,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Command result with the revoked auth role permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthRolePermissionCommandResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -12854,6 +12896,276 @@
           }
         }
       },
+      "AuthRolePermissionCommandResponse": {
+        "type": "object",
+        "required": [
+          "command",
+          "data"
+        ],
+        "properties": {
+          "command": {
+            "type": "object",
+            "required": [
+              "status",
+              "message"
+            ],
+            "properties": {
+              "status": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "rolePermission"
+            ],
+            "properties": {
+              "rolePermission": {
+                "type": "object",
+                "required": [
+                  "roleId",
+                  "roleCode",
+                  "permissionId",
+                  "permissionCode"
+                ],
+                "properties": {
+                  "roleId": {
+                    "type": "string"
+                  },
+                  "roleCode": {
+                    "type": "string"
+                  },
+                  "permissionId": {
+                    "type": "string"
+                  },
+                  "permissionCode": {
+                    "type": "string"
+                  },
+                  "grantedAt": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "AuthUserAccountCommandResponse": {
+        "type": "object",
+        "required": [
+          "command",
+          "data"
+        ],
+        "properties": {
+          "command": {
+            "type": "object",
+            "required": [
+              "status",
+              "message"
+            ],
+            "properties": {
+              "status": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "user"
+            ],
+            "properties": {
+              "user": {
+                "type": "object",
+                "required": [
+                  "userId",
+                  "employeeId",
+                  "username",
+                  "email",
+                  "authProvider",
+                  "providerSubject",
+                  "isActive",
+                  "lastLoginAt",
+                  "createdAt"
+                ],
+                "properties": {
+                  "userId": {
+                    "type": "string"
+                  },
+                  "employeeId": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "username": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "authProvider": {
+                    "type": "string"
+                  },
+                  "providerSubject": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  },
+                  "lastLoginAt": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "createdAt": {
+                    "type": "string"
+                  },
+                  "deactivatedAt": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "deactivationReason": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "deactivatedByUserId": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "employeeStatus": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "AuthUserDeactivationCommandResponse": {
+        "type": "object",
+        "required": [
+          "command",
+          "data"
+        ],
+        "properties": {
+          "command": {
+            "type": "object",
+            "required": [
+              "status",
+              "message"
+            ],
+            "properties": {
+              "status": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "user",
+              "accessClosure"
+            ],
+            "properties": {
+              "user": {
+                "type": "object",
+                "required": [
+                  "userId",
+                  "employeeId",
+                  "username",
+                  "email",
+                  "authProvider",
+                  "providerSubject",
+                  "isActive",
+                  "lastLoginAt",
+                  "createdAt"
+                ],
+                "properties": {
+                  "userId": {
+                    "type": "string"
+                  },
+                  "employeeId": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "username": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "authProvider": {
+                    "type": "string"
+                  },
+                  "providerSubject": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "isActive": {
+                    "type": "boolean"
+                  },
+                  "lastLoginAt": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "createdAt": {
+                    "type": "string"
+                  },
+                  "deactivatedAt": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "deactivationReason": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "deactivatedByUserId": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "employeeStatus": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                }
+              },
+              "accessClosure": {
+                "type": "object",
+                "required": [
+                  "closedRoleAssignments",
+                  "closedActionStoreAssignments",
+                  "revokedMobileSessions"
+                ],
+                "properties": {
+                  "closedRoleAssignments": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "closedActionStoreAssignments": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "revokedMobileSessions": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
       "AuthUserAccountsResponse": {
         "type": "object",
         "required": [
@@ -13358,6 +13670,286 @@
               "offset": {
                 "type": "integer",
                 "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "AuthPilotUserBindingCommandResponse": {
+        "type": "object",
+        "required": [
+          "command",
+          "data"
+        ],
+        "properties": {
+          "command": {
+            "type": "object",
+            "required": [
+              "status",
+              "message"
+            ],
+            "properties": {
+              "status": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "binding"
+            ],
+            "properties": {
+              "binding": {
+                "type": "object",
+                "required": [
+                  "user",
+                  "roleAssignments",
+                  "actionStoreAssignments",
+                  "employee"
+                ],
+                "properties": {
+                  "user": {
+                    "type": "object",
+                    "required": [
+                      "userId",
+                      "employeeId",
+                      "username",
+                      "email",
+                      "authProvider",
+                      "providerSubject",
+                      "isActive",
+                      "lastLoginAt",
+                      "createdAt"
+                    ],
+                    "properties": {
+                      "userId": {
+                        "type": "string"
+                      },
+                      "employeeId": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "username": {
+                        "type": "string"
+                      },
+                      "email": {
+                        "type": "string"
+                      },
+                      "authProvider": {
+                        "type": "string"
+                      },
+                      "providerSubject": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "isActive": {
+                        "type": "boolean"
+                      },
+                      "lastLoginAt": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "createdAt": {
+                        "type": "string"
+                      },
+                      "deactivatedAt": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "deactivationReason": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "deactivatedByUserId": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "employeeStatus": {
+                        "type": "string",
+                        "nullable": true
+                      }
+                    }
+                  },
+                  "roleAssignments": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "assignmentId",
+                        "userId",
+                        "username",
+                        "email",
+                        "roleCode",
+                        "roleName",
+                        "scopeType",
+                        "companyId",
+                        "regionId",
+                        "storeId",
+                        "effectiveFrom",
+                        "effectiveTo",
+                        "createdAt",
+                        "active"
+                      ],
+                      "properties": {
+                        "assignmentId": {
+                          "type": "string"
+                        },
+                        "userId": {
+                          "type": "string"
+                        },
+                        "username": {
+                          "type": "string"
+                        },
+                        "email": {
+                          "type": "string"
+                        },
+                        "roleCode": {
+                          "type": "string"
+                        },
+                        "roleName": {
+                          "type": "string"
+                        },
+                        "scopeType": {
+                          "type": "string"
+                        },
+                        "companyId": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "regionId": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "storeId": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "effectiveFrom": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "effectiveTo": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "active": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  },
+                  "actionStoreAssignments": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "assignmentId",
+                        "userId",
+                        "username",
+                        "email",
+                        "storeId",
+                        "storeCode",
+                        "storeName",
+                        "companyId",
+                        "regionId",
+                        "regionName",
+                        "effectiveFrom",
+                        "effectiveTo",
+                        "createdAt",
+                        "active"
+                      ],
+                      "properties": {
+                        "assignmentId": {
+                          "type": "string"
+                        },
+                        "userId": {
+                          "type": "string"
+                        },
+                        "username": {
+                          "type": "string"
+                        },
+                        "email": {
+                          "type": "string"
+                        },
+                        "storeId": {
+                          "type": "string"
+                        },
+                        "storeCode": {
+                          "type": "string"
+                        },
+                        "storeName": {
+                          "type": "string"
+                        },
+                        "companyId": {
+                          "type": "string"
+                        },
+                        "regionId": {
+                          "type": "string"
+                        },
+                        "regionName": {
+                          "type": "string"
+                        },
+                        "effectiveFrom": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "effectiveTo": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "active": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  },
+                  "employee": {
+                    "type": "object",
+                    "required": [
+                      "employeeId",
+                      "employeeCode",
+                      "firstName",
+                      "lastName",
+                      "storeId",
+                      "storeCode",
+                      "storeName"
+                    ],
+                    "properties": {
+                      "employeeId": {
+                        "type": "string"
+                      },
+                      "employeeCode": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "firstName": {
+                        "type": "string"
+                      },
+                      "lastName": {
+                        "type": "string"
+                      },
+                      "storeId": {
+                        "type": "string"
+                      },
+                      "storeCode": {
+                        "type": "string"
+                      },
+                      "storeName": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
               }
             }
           }
