@@ -139,6 +139,10 @@ test('admin integrations keeps store master controls in the master data surface'
   await expect(storePanel.getByRole('heading', { name: 'Mağaza ana veri düzenleme' })).toBeVisible()
   await expect(storePanel.getByText('Marmara Park')).toBeVisible()
   await expect(storePanel.getByText('MP001')).toBeVisible()
+  const storeTypeSelect = storePanel.getByRole('combobox', { name: 'Marmara Park mağaza tipi' })
+  const storeStatusSelect = storePanel.getByRole('combobox', { name: 'Marmara Park durumu' })
+  await expect(storeTypeSelect.locator('option[value="company"]')).toHaveText('Şirket')
+  await expect(storeStatusSelect.locator('option[value="active"]')).toHaveText('Aktif')
   await expect(storePanel.getByRole('checkbox', { name: 'Marmara Park KPI import kapsamı' })).toBeChecked()
 })
 
