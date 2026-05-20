@@ -882,9 +882,15 @@ function MappingAction(input: {
         <button
           className="control-button"
           type="button"
-          aria-label={t('importBatchDetail.approveMappingForExternal', {
-            externalId: mappingCandidate.externalId,
-          })}
+          aria-label={t(
+            isApproving
+              ? 'importBatchDetail.approvingMappingForExternal'
+              : 'importBatchDetail.approveMappingForExternal',
+            {
+              externalId: mappingCandidate.externalId,
+            },
+          )}
+          aria-busy={isApproving}
           disabled={!mappingValue.trim() || isApproving}
           onClick={() =>
             onApproveMapping({
