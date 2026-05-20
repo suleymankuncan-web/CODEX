@@ -968,6 +968,172 @@ const auditEventSchema = {
   },
 };
 
+const authAuditSourceContextSchema = {
+  type: "object",
+  properties: {
+    module: { type: "string" },
+    operation: { type: "string" },
+  },
+};
+
+const authAuditMetadataSchema = {
+  type: "object",
+  required: ["reason", "correlationId"],
+  properties: {
+    reason: { type: "string", nullable: true },
+    correlationId: { type: "string", nullable: true },
+    sourceContext: {
+      ...authAuditSourceContextSchema,
+      nullable: true,
+    },
+    changedFields: {
+      type: "array",
+      items: { type: "string" },
+    },
+    details: {
+      type: "object",
+      additionalProperties: true,
+    },
+  },
+  additionalProperties: true,
+};
+
+const authAuditEventSchema = {
+  type: "object",
+  required: [
+    "eventLogId",
+    "occurredAt",
+    "actorUserId",
+    "correlationId",
+    "eventType",
+    "metadata",
+  ],
+  properties: {
+    eventLogId: { type: "string" },
+    occurredAt: { type: "string" },
+    actorUserId: { type: "string", nullable: true },
+    correlationId: { type: "string", nullable: true },
+    eventType: { type: "string" },
+    metadata: authAuditMetadataSchema,
+  },
+};
+
+const authBootstrapResponseSchema = {
+  type: "object",
+  required: ["authMode", "provider"],
+  properties: {
+    authMode: { type: "string" },
+    provider: {
+      type: "object",
+      required: [
+        "configured",
+        "authorizationUrl",
+        "clientId",
+        "scope",
+        "responseType",
+        "audience",
+        "callbackPath",
+        "tokenUrl",
+        "logoutUrl",
+        "postLogoutRedirectPath",
+      ],
+      properties: {
+        configured: { type: "boolean" },
+        authorizationUrl: { type: "string", nullable: true },
+        clientId: { type: "string", nullable: true },
+        scope: { type: "string", nullable: true },
+        responseType: { type: "string", nullable: true },
+        audience: { type: "string", nullable: true },
+        callbackPath: { type: "string" },
+        tokenUrl: { type: "string", nullable: true },
+        logoutUrl: { type: "string", nullable: true },
+        postLogoutRedirectPath: { type: "string" },
+      },
+    },
+  },
+};
+
+const authScopeIdListSchema = {
+  type: "object",
+  required: ["companyIds", "regionIds", "storeIds"],
+  properties: {
+    companyIds: {
+      type: "array",
+      items: { type: "string" },
+    },
+    regionIds: {
+      type: "array",
+      items: { type: "string" },
+    },
+    storeIds: {
+      type: "array",
+      items: { type: "string" },
+    },
+  },
+};
+
+const authActionScopeSchema = {
+  type: "object",
+  required: ["assignedStoreIds"],
+  properties: {
+    assignedStoreIds: {
+      type: "array",
+      items: { type: "string" },
+    },
+  },
+};
+
+const authSessionResponseSchema = {
+  type: "object",
+  required: ["authMode", "authenticated", "user", "scopeSummary"],
+  properties: {
+    authMode: { type: "string" },
+    authenticated: { type: "boolean" },
+    user: {
+      type: "object",
+      required: [
+        "userId",
+        "employeeId",
+        "roleCodes",
+        "scope",
+        "readScope",
+        "actionScope",
+        "assignedStoreIds",
+      ],
+      properties: {
+        userId: { type: "string" },
+        employeeId: { type: "string", nullable: true },
+        roleCodes: {
+          type: "array",
+          items: { type: "string" },
+        },
+        scope: authScopeIdListSchema,
+        readScope: authScopeIdListSchema,
+        actionScope: authActionScopeSchema,
+        assignedStoreIds: {
+          type: "array",
+          items: { type: "string" },
+        },
+      },
+    },
+    scopeSummary: {
+      type: "object",
+      required: [
+        "companyCount",
+        "regionCount",
+        "storeCount",
+        "assignedStoreCount",
+      ],
+      properties: countProperties([
+        "companyCount",
+        "regionCount",
+        "storeCount",
+        "assignedStoreCount",
+      ]),
+    },
+  },
+};
+
 const authLookupOptionSchema = {
   type: "object",
   required: ["value", "label"],
@@ -1679,6 +1845,18 @@ const authActionStoreAssignmentsResponseSchema = {
     items: {
       type: "array",
       items: authActionStoreAssignmentSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
+const authAuditResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: authAuditEventSchema,
     },
     meta: listResponseMetaSchema,
   },
@@ -4194,6 +4372,9 @@ async function generateOpenApi(): Promise<void> {
     AuthRoleAssignmentsResponse: authRoleAssignmentsResponseSchema,
     AuthActionStoreAssignmentsResponse:
       authActionStoreAssignmentsResponseSchema,
+    AuthAuditResponse: authAuditResponseSchema,
+    AuthBootstrapResponse: authBootstrapResponseSchema,
+    AuthSessionResponse: authSessionResponseSchema,
     ImportOverview: importOverviewSchema,
     ImportPayloadTemplateResponse: importPayloadTemplateSchema,
     ImportBatchAuditResponse: importBatchAuditResponseSchema,
@@ -4573,6 +4754,46 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Paginated auth action-store assignments visible to auth admins.",
     "AuthActionStoreAssignmentsResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/users/{userId}/audit",
+    "get",
+    "Paginated auth user account audit events.",
+    "AuthAuditResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/role-assignments/{assignmentId}/audit",
+    "get",
+    "Paginated auth role assignment audit events.",
+    "AuthAuditResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/action-store-assignments/{assignmentId}/audit",
+    "get",
+    "Paginated auth action-store assignment audit events.",
+    "AuthAuditResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/bootstrap",
+    "get",
+    "Auth mode and provider metadata needed before login.",
+    "AuthBootstrapResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/session",
+    "get",
+    "Current authenticated admin or store session summary.",
+    "AuthSessionResponse",
   );
 
   setJsonResponseSchema(

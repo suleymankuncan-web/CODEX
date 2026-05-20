@@ -61,6 +61,13 @@ describe("OpenAPI baseline", () => {
     expect(document.paths["/api/integrations/import-batches/overview"].get.security)
       .toBeUndefined();
     expect(document.paths["/api/auth/bootstrap"].get.security).toEqual([]);
+    expect(
+      document.paths["/api/auth/bootstrap"].get.responses?.["200"]?.content?.[
+        "application/json"
+      ]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/AuthBootstrapResponse",
+    });
     expect(document.paths["/api/health"].get.security).toEqual([]);
     expect(document.paths["/api/health/live"].get.security).toEqual([]);
   });
@@ -956,6 +963,51 @@ describe("OpenAPI baseline", () => {
       expect.objectContaining({
         items: expect.any(Object),
         meta: expect.any(Object),
+      }),
+    );
+
+    const authUserAuditResponse =
+      document.paths["/api/auth/users/{userId}/audit"].get.responses?.["200"];
+    expect(authUserAuditResponse?.content?.["application/json"]?.schema).toEqual({
+      $ref: "#/components/schemas/AuthAuditResponse",
+    });
+
+    const authRoleAssignmentAuditResponse =
+      document.paths["/api/auth/role-assignments/{assignmentId}/audit"].get
+        .responses?.["200"];
+    expect(
+      authRoleAssignmentAuditResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/AuthAuditResponse",
+    });
+
+    const authActionStoreAssignmentAuditResponse =
+      document.paths["/api/auth/action-store-assignments/{assignmentId}/audit"].get
+        .responses?.["200"];
+    expect(
+      authActionStoreAssignmentAuditResponse?.content?.["application/json"]
+        ?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/AuthAuditResponse",
+    });
+    expect(document.components?.schemas?.AuthAuditResponse?.properties).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
+    const authSessionResponse =
+      document.paths["/api/auth/session"].get.responses?.["200"];
+    expect(authSessionResponse?.content?.["application/json"]?.schema).toEqual({
+      $ref: "#/components/schemas/AuthSessionResponse",
+    });
+    expect(document.components?.schemas?.AuthSessionResponse?.properties).toEqual(
+      expect.objectContaining({
+        authMode: expect.any(Object),
+        authenticated: expect.any(Object),
+        user: expect.any(Object),
+        scopeSummary: expect.any(Object),
       }),
     );
 

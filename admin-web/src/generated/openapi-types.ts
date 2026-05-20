@@ -28,6 +28,49 @@ export type components = {
         "offset": number
       }
     }
+    "AuthAuditResponse": {
+      "items": Array<{
+          "eventLogId": string
+          "occurredAt": string
+          "actorUserId": string | null
+          "correlationId": string | null
+          "eventType": string
+          "metadata": {
+            "reason": string | null
+            "correlationId": string | null
+            "sourceContext"?: ({
+              "module"?: string
+              "operation"?: string
+            }) | null
+            "changedFields"?: string[]
+            "details"?: {
+              [key: string]: unknown
+            }
+            [key: string]: unknown
+          }
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
+    "AuthBootstrapResponse": {
+      "authMode": string
+      "provider": {
+        "configured": boolean
+        "authorizationUrl": string | null
+        "clientId": string | null
+        "scope": string | null
+        "responseType": string | null
+        "audience": string | null
+        "callbackPath": string
+        "tokenUrl": string | null
+        "logoutUrl": string | null
+        "postLogoutRedirectPath": string
+      }
+    }
     "AuthLookupsResponse": {
       "scopeTypes": string[]
       "authProviders": string[]
@@ -156,6 +199,35 @@ export type components = {
         "total": number
         "limit": number
         "offset": number
+      }
+    }
+    "AuthSessionResponse": {
+      "authMode": string
+      "authenticated": boolean
+      "user": {
+        "userId": string
+        "employeeId": string | null
+        "roleCodes": string[]
+        "scope": {
+          "companyIds": string[]
+          "regionIds": string[]
+          "storeIds": string[]
+        }
+        "readScope": {
+          "companyIds": string[]
+          "regionIds": string[]
+          "storeIds": string[]
+        }
+        "actionScope": {
+          "assignedStoreIds": string[]
+        }
+        "assignedStoreIds": string[]
+      }
+      "scopeSummary": {
+        "companyCount": number
+        "regionCount": number
+        "storeCount": number
+        "assignedStoreCount": number
       }
     }
     "AuthStoreLookupSearchResponse": {
@@ -2087,6 +2159,28 @@ export type paths = {
       }
     }
   }
+  "/api/auth/action-store-assignments/{assignmentId}/audit": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["AuthAuditResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/auth/bootstrap": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["AuthBootstrapResponse"]
+          }
+        }
+      }
+    }
+  }
   "/api/auth/lookups": {
     get: {
       responses: {
@@ -2142,6 +2236,17 @@ export type paths = {
       }
     }
   }
+  "/api/auth/role-assignments/{assignmentId}/audit": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["AuthAuditResponse"]
+          }
+        }
+      }
+    }
+  }
   "/api/auth/roles": {
     get: {
       responses: {
@@ -2153,12 +2258,34 @@ export type paths = {
       }
     }
   }
+  "/api/auth/session": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["AuthSessionResponse"]
+          }
+        }
+      }
+    }
+  }
   "/api/auth/users": {
     get: {
       responses: {
         "200": {
           content: {
             'application/json': components['schemas']["AuthUserAccountsResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/auth/users/{userId}/audit": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["AuthAuditResponse"]
           }
         }
       }

@@ -101,7 +101,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Paginated auth role assignment audit events.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthAuditResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -190,7 +197,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Paginated auth action-store assignment audit events.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthAuditResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -303,7 +317,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Paginated auth user account audit events.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthAuditResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -532,7 +553,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Auth mode and provider metadata needed before login.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthBootstrapResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -547,7 +575,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Current authenticated admin or store session summary.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSessionResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -12770,6 +12805,328 @@
                 "minimum": 0
               },
               "offset": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "AuthAuditResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "meta"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "eventLogId",
+                "occurredAt",
+                "actorUserId",
+                "correlationId",
+                "eventType",
+                "metadata"
+              ],
+              "properties": {
+                "eventLogId": {
+                  "type": "string"
+                },
+                "occurredAt": {
+                  "type": "string"
+                },
+                "actorUserId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "correlationId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "eventType": {
+                  "type": "string"
+                },
+                "metadata": {
+                  "type": "object",
+                  "required": [
+                    "reason",
+                    "correlationId"
+                  ],
+                  "properties": {
+                    "reason": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "correlationId": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "sourceContext": {
+                      "type": "object",
+                      "properties": {
+                        "module": {
+                          "type": "string"
+                        },
+                        "operation": {
+                          "type": "string"
+                        }
+                      },
+                      "nullable": true
+                    },
+                    "changedFields": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "details": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "count",
+              "total",
+              "limit",
+              "offset"
+            ],
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "AuthBootstrapResponse": {
+        "type": "object",
+        "required": [
+          "authMode",
+          "provider"
+        ],
+        "properties": {
+          "authMode": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "object",
+            "required": [
+              "configured",
+              "authorizationUrl",
+              "clientId",
+              "scope",
+              "responseType",
+              "audience",
+              "callbackPath",
+              "tokenUrl",
+              "logoutUrl",
+              "postLogoutRedirectPath"
+            ],
+            "properties": {
+              "configured": {
+                "type": "boolean"
+              },
+              "authorizationUrl": {
+                "type": "string",
+                "nullable": true
+              },
+              "clientId": {
+                "type": "string",
+                "nullable": true
+              },
+              "scope": {
+                "type": "string",
+                "nullable": true
+              },
+              "responseType": {
+                "type": "string",
+                "nullable": true
+              },
+              "audience": {
+                "type": "string",
+                "nullable": true
+              },
+              "callbackPath": {
+                "type": "string"
+              },
+              "tokenUrl": {
+                "type": "string",
+                "nullable": true
+              },
+              "logoutUrl": {
+                "type": "string",
+                "nullable": true
+              },
+              "postLogoutRedirectPath": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "AuthSessionResponse": {
+        "type": "object",
+        "required": [
+          "authMode",
+          "authenticated",
+          "user",
+          "scopeSummary"
+        ],
+        "properties": {
+          "authMode": {
+            "type": "string"
+          },
+          "authenticated": {
+            "type": "boolean"
+          },
+          "user": {
+            "type": "object",
+            "required": [
+              "userId",
+              "employeeId",
+              "roleCodes",
+              "scope",
+              "readScope",
+              "actionScope",
+              "assignedStoreIds"
+            ],
+            "properties": {
+              "userId": {
+                "type": "string"
+              },
+              "employeeId": {
+                "type": "string",
+                "nullable": true
+              },
+              "roleCodes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "scope": {
+                "type": "object",
+                "required": [
+                  "companyIds",
+                  "regionIds",
+                  "storeIds"
+                ],
+                "properties": {
+                  "companyIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "regionIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "storeIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "readScope": {
+                "type": "object",
+                "required": [
+                  "companyIds",
+                  "regionIds",
+                  "storeIds"
+                ],
+                "properties": {
+                  "companyIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "regionIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "storeIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "actionScope": {
+                "type": "object",
+                "required": [
+                  "assignedStoreIds"
+                ],
+                "properties": {
+                  "assignedStoreIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "assignedStoreIds": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "scopeSummary": {
+            "type": "object",
+            "required": [
+              "companyCount",
+              "regionCount",
+              "storeCount",
+              "assignedStoreCount"
+            ],
+            "properties": {
+              "companyCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "regionCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "storeCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "assignedStoreCount": {
                 "type": "integer",
                 "minimum": 0
               }
