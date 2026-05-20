@@ -1424,6 +1424,75 @@ const targetDistributionRequestsResponseSchema = {
   },
 };
 
+const targetCoverageRowSchema = {
+  type: "object",
+  required: [
+    "storeId",
+    "storeName",
+    "employeeId",
+    "displayName",
+    "externalEmployeeRef",
+    "targetReferenceId",
+    "targetValue",
+    "pendingRequestId",
+    "pendingTargetValue",
+    "staleTargetReferenceId",
+    "targetStatus",
+  ],
+  properties: {
+    storeId: { type: "string" },
+    storeName: { type: "string" },
+    employeeId: { type: "string" },
+    displayName: { type: "string" },
+    externalEmployeeRef: { type: "string", nullable: true },
+    targetReferenceId: { type: "string", nullable: true },
+    targetValue: { type: "number", nullable: true },
+    pendingRequestId: { type: "string", nullable: true },
+    pendingTargetValue: { type: "number", nullable: true },
+    staleTargetReferenceId: { type: "string", nullable: true },
+    targetStatus: { type: "string" },
+  },
+};
+
+const targetCoverageSummarySchema = {
+  type: "object",
+  required: [
+    "requestMonth",
+    "totalEmployees",
+    "coveredEmployees",
+    "missingEmployees",
+    "pendingEmployees",
+    "conflictEmployees",
+    "staleEmployees",
+    "uncoveredEmployees",
+    "coverageRate",
+  ],
+  properties: {
+    requestMonth: { type: "string" },
+    totalEmployees: { type: "integer", minimum: 0 },
+    coveredEmployees: { type: "integer", minimum: 0 },
+    missingEmployees: { type: "integer", minimum: 0 },
+    pendingEmployees: { type: "integer", minimum: 0 },
+    conflictEmployees: { type: "integer", minimum: 0 },
+    staleEmployees: { type: "integer", minimum: 0 },
+    uncoveredEmployees: { type: "integer", minimum: 0 },
+    coverageRate: { type: "number", minimum: 0 },
+  },
+};
+
+const targetCoverageResponseSchema = {
+  type: "object",
+  required: ["items", "meta", "summary"],
+  properties: {
+    items: {
+      type: "array",
+      items: targetCoverageRowSchema,
+    },
+    meta: listResponseMetaSchema,
+    summary: targetCoverageSummarySchema,
+  },
+};
+
 const importBatchNeedsActionResponseSchema = {
   type: "object",
   required: ["items", "meta"],
@@ -1927,6 +1996,7 @@ async function generateOpenApi(): Promise<void> {
     CompetitionStagePackagePlanAuditResponse:
       competitionStagePackagePlanAuditResponseSchema,
     TargetDistributionRequestsResponse: targetDistributionRequestsResponseSchema,
+    TargetCoverageResponse: targetCoverageResponseSchema,
     ImportOverview: importOverviewSchema,
     ImportPayloadTemplateResponse: importPayloadTemplateSchema,
     ImportBatchAuditResponse: importBatchAuditResponseSchema,
@@ -2002,6 +2072,14 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Target distribution approval requests visible to the current actor.",
     "TargetDistributionRequestsResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/target-distributions/coverage",
+    "get",
+    "Target distribution coverage rows and summary visible to the current actor.",
+    "TargetCoverageResponse",
   );
 
   setJsonResponseSchema(

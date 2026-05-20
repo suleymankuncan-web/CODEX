@@ -743,6 +743,38 @@ export type components = {
           "regionName": string
         }>
     }
+    "TargetCoverageResponse": {
+      "items": Array<{
+          "storeId": string
+          "storeName": string
+          "employeeId": string
+          "displayName": string
+          "externalEmployeeRef": string | null
+          "targetReferenceId": string | null
+          "targetValue": number | null
+          "pendingRequestId": string | null
+          "pendingTargetValue": number | null
+          "staleTargetReferenceId": string | null
+          "targetStatus": string
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+      "summary": {
+        "requestMonth": string
+        "totalEmployees": number
+        "coveredEmployees": number
+        "missingEmployees": number
+        "pendingEmployees": number
+        "conflictEmployees": number
+        "staleEmployees": number
+        "uncoveredEmployees": number
+        "coverageRate": number
+      }
+    }
     "TargetDistributionRequestsResponse": {
       "items": Array<{
           "requestId": string
@@ -1017,6 +1049,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["MobileChecklistTodayResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/target-distributions/coverage": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["TargetCoverageResponse"]
           }
         }
       }

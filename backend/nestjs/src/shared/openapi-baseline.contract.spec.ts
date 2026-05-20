@@ -336,6 +336,19 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const targetCoverageResponse =
+      document.paths["/api/target-distributions/coverage"].get.responses?.["200"];
+    expect(targetCoverageResponse?.content?.["application/json"]?.schema).toEqual({
+      $ref: "#/components/schemas/TargetCoverageResponse",
+    });
+    expect(document.components?.schemas?.TargetCoverageResponse?.properties).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+        summary: expect.any(Object),
+      }),
+    );
+
     const lookupsResponse =
       document.paths["/api/integrations/lookups"].get.responses?.["200"];
     expect(lookupsResponse?.content?.["application/json"]?.schema).toEqual({
