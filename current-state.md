@@ -508,6 +508,13 @@ Product Progress Plan V1 status:
   `docs/plans/incentive-prim-module-intake-v1.md`.
 - External/live evidence remains parked until real staging/provider inputs are
   provided.
+- The UI/UX V1 route inventory has been expanded at
+  `docs/evidence/product-progress/2026-05-20-uiux-v1-route-inventory.md`.
+  It scores all current auth/admin/store routes against V1 criteria and
+  recommends the first low-risk implementation slice as the store utility
+  handoff family: `/store/settings`, `/store/targets`, and `/store/reports`.
+  Do not reopen `/store/home` or `/admin/master-data` without a concrete new
+  gap.
 
 The `/store/approvals` first pass has started:
 

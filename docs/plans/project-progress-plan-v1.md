@@ -107,6 +107,10 @@ Missing:
 - Store checklist result/ack/history clarity review after structural splits.
 - Store approvals action/error/returned-state clarity review after structural splits.
 - Admin master-data/integrations/checklists/targets operational consistency review.
+- A full auth/admin/store route inventory that scores V1 readiness across
+  first-screen purpose, primary action, state handling, readability,
+  localization, accessibility, responsive risk, deep-link trust, and test
+  coverage.
 
 Rule:
 
@@ -208,10 +212,20 @@ Phase 1 evidence:
 
 - `docs/evidence/product-progress/2026-05-20-visible-flow-audit-v1.md`
 - `docs/evidence/product-progress/2026-05-20-store-home-manager-copy.md`
+- `docs/evidence/product-progress/2026-05-20-uiux-v1-route-inventory.md`
 
 Recommended first PR after this plan:
 
 - A visible-flow audit document plus one small follow-up PR, not another large refactor.
+
+Current UI/UX V1 recommendation:
+
+- Start with the store utility/handoff route family:
+  `/store/settings`, `/store/targets`, and `/store/reports`.
+- Park `/store/home` and `/admin/master-data` unless browser review or pilot
+  feedback finds a concrete new gap.
+- Treat reports/admin/auth follow-ups as later slices, with route-level
+  Playwright evidence before visual polish.
 
 Stop rules:
 
