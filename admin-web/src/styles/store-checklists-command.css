@@ -1036,11 +1036,14 @@
     grid-template-columns: 1fr;
   }
 
-  .store-checklists-table-head {
+  .store-checklists-table-head,
+  .store-checklists-visit-table .store-checklists-table-head,
+  .store-checklists-visit-table.store-checklists-visit-table-single-score .store-checklists-table-head {
     display: none;
   }
 
   .store-checklists-visit-table .store-checklists-visit-row,
+  .store-checklists-visit-table.store-checklists-visit-table-single-score .store-checklists-visit-row,
   .store-checklists-visit-row,
   .store-checklists-history-row,
   .store-checklist-modal-item,
@@ -1098,6 +1101,21 @@
 
   .store-checklists-command-page {
     gap: 0.72rem;
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  .store-checklists-command-hero,
+  .store-checklists-command-card,
+  .store-checklists-toolbar,
+  .store-checklists-table,
+  .store-checklists-visit-row,
+  .store-checklists-history-row,
+  .store-checklist-modal,
+  .store-checklist-modal-section,
+  .store-checklist-result-section {
+    min-width: 0;
+    max-width: 100%;
   }
 
   .store-checklists-command-hero {
@@ -1138,6 +1156,17 @@
 
   .store-checklists-metric {
     min-height: 4.35rem;
+  }
+
+  .store-checklists-badge,
+  .store-checklists-action-button,
+  .store-checklists-ghost-button {
+    white-space: normal;
+  }
+
+  .store-checklists-badge {
+    line-height: 1.2;
+    overflow-wrap: anywhere;
   }
 
   .store-checklist-modal-live {
