@@ -12,6 +12,7 @@ import { JOB_DISPATCHER } from "../../../shared/jobs/jobs.constants";
 import { MaterializationService } from "./materialization.service";
 import { IntegrationRepository } from "../infrastructure/integration.repository";
 import { ImportBatchReadRepository } from "../infrastructure/import-batch-read.repository";
+import { ExternalIdMappingReadRepository } from "../infrastructure/external-id-mapping-read.repository";
 import { IntegrationSourceRepository } from "../infrastructure/integration-source.repository";
 import { KpiImportNormalizationService } from "./kpi-import-normalization.service";
 import { IntegrationSchedulerService } from "./integration-scheduler.service";
@@ -60,6 +61,7 @@ export class IntegrationService {
   constructor(
     private readonly integrationRepository: IntegrationRepository,
     private readonly importBatchReadRepository: ImportBatchReadRepository,
+    private readonly externalIdMappingReadRepository: ExternalIdMappingReadRepository,
     private readonly integrationSourceRepository: IntegrationSourceRepository,
     private readonly materializationService: MaterializationService,
     private readonly kpiImportNormalizationService: KpiImportNormalizationService,
@@ -494,7 +496,7 @@ export class IntegrationService {
   }) {
     this.assertCompanyScope(input.actorCompanyIds);
     const limit = input.limit ?? 10;
-    const result = await this.integrationRepository.listExternalIdMapCandidates({
+    const result = await this.externalIdMappingReadRepository.listExternalIdMapCandidates({
       actorCompanyIds: input.actorCompanyIds,
       entityType: input.entityType,
       q: input.q,
@@ -1136,7 +1138,7 @@ export class IntegrationService {
     }
 
     const internalTableName = this.getExternalIdInternalTableName(input.entityType);
-    const mappingTarget = await this.integrationRepository.getScopedExternalIdMappingTarget({
+    const mappingTarget = await this.externalIdMappingReadRepository.getScopedExternalIdMappingTarget({
       actorCompanyIds: input.actorCompanyIds,
       entityType: input.entityType,
       internalId: input.internalId,
