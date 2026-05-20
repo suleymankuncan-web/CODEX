@@ -208,6 +208,17 @@ What is already real:
 The next value is not "more architecture". It is making the visible flows feel
 calm, fast, coherent, and product-like.
 
+Latest technical assessment decision:
+
+- Net decision: `KISMI REFACTOR`.
+- Do not rewrite and do not treat the project as debt-free.
+- The actionable follow-up plan is
+  `docs/plans/technical-debt-resolution-roadmap-v1.md`.
+- Use that roadmap when choosing between external evidence closure, backend
+  repository boundary refactor, frontend surface decomposition, TypeScript
+  strictness, API contract maintenance, performance evidence, and auth/security
+  regression work.
+
 ## Sokrates
 
 Sokrates is the default working principle for this project.
@@ -250,6 +261,18 @@ Short version:
   Sokrates for architectural, auth/API/DB, batch, or high-risk decisions.
 - Keep Sokrates proportional: use deeper questioning for higher-risk work, but
   do not turn low-risk documentation or mechanical updates into ceremony.
+- Choose an operating mode before acting: Scout, Planner, Builder, Reviewer, or
+  Finisher.
+- Use the triage gate to decide whether the work needs a direct answer,
+  status check, docs/plan update, low-risk implementation, medium-risk
+  implementation, full high-risk Sokrates, or external-evidence handling.
+- For "what next?" decisions, answer with a concrete recommendation contract:
+  now, next, park, and stop.
+- Keep evidence fresh: current repo state beats memory, `origin/main` beats old
+  local branches for merged work, and provider/runtime facts must be verified
+  before being treated as true.
+- Use the no-drift checkpoint before editing, before PR/merge, and before final
+  answer so the work follows the newest user request.
 - Merge only after local gates, GitHub/Vercel checks when relevant, mergeable
   status, and Codex no-major-issue/comment or clear approval reaction.
 - Check Codex approval signals quickly after checks go green: poll issue
@@ -467,6 +490,7 @@ Known planned refactor candidates still exist, but they are not the best next
 move unless a concrete bug or product change requires them:
 
 - `docs/plans/refactor-execution-plan-v1.md`
+- `docs/plans/technical-debt-resolution-roadmap-v1.md`
 - `admin-web/src/App.tsx`
 - `ReportingRepository`
 - `IntegrationRepository`

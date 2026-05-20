@@ -1,0 +1,674 @@
+# Technical Debt Resolution Roadmap V1
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use
+> `superpowers:executing-plans` to implement this plan task-by-task. Steps use
+> checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Turn the latest objective technical assessment into an executable
+roadmap that keeps the existing project, resolves concentrated debt, and avoids
+rewrite or broad architecture churn.
+
+**Architecture:** Preserve the current Vite + React frontend, NestJS modular
+backend, PostgreSQL/Supabase database boundary, Clerk auth boundary, generated
+OpenAPI client path, and guarded release flow. Fixes must be small, reversible,
+and evidence-driven: product polish when it improves real user workflows,
+refactor when it reduces a known hotspot, and live evidence only when real
+provider inputs exist.
+
+**Tech Stack:** Vite, React, TypeScript, Playwright, NestJS, PostgreSQL,
+Supabase, Clerk, OpenAPI generated clients, Vercel, Render, GitHub Actions.
+
+---
+
+## Reader And Action
+
+Reader:
+
+- A future engineer or agent continuing the Store Ops project after the
+  technical assessment.
+
+After reading, they should be able to:
+
+- choose the next safe PR or batch PR,
+- know which problems are local-code work and which are external evidence
+  blockers,
+- avoid rewrite/broad redesign,
+- run the correct verification ladder for each class of work.
+
+## Decision
+
+Decision: **KISMI REFACTOR**.
+
+Do not rewrite. Do not continue as if there is no debt. The architecture is
+recoverable and already guarded, but several debt clusters need controlled,
+evidence-backed cleanup.
+
+Why this is not `DEVAM ET`:
+
+- There are still large backend repositories/services and large frontend
+  surfaces that increase review, onboarding, and regression cost.
+- Broad production remains blocked by live evidence, not by local code alone.
+- Some frontend TypeScript and UX consistency work is still incremental.
+
+Why this is not `KRITIK REFACTOR`:
+
+- Backend/frontend separation is sound.
+- Auth, DB, API contracts, release gates, and E2E coverage are real.
+- OpenAPI generated clients and previous structural splits already reduced
+  systemic drift.
+
+Why this is not `SIFIRDAN YAZ`:
+
+- Rewrite would throw away guarded auth/scope, import, ranking, checklist,
+  approvals, migration, release, and OpenAPI work.
+- The remaining problems are concentrated and can be solved incrementally.
+
+## Evidence Summary
+
+Repo evidence:
+
+- `origin/main` is past the API contract drift line and the approvals/checklist
+  structural split lines.
+- `admin-web/src/index.css` is now only an import/entry-level file.
+- Store approvals and store checklists have been reduced below the earlier
+  danger zone.
+- OpenAPI generated frontend client/types cover the main API domains.
+
+Measured hotspots:
+
+- Backend repositories/services still above the comfortable review band:
+  - reporting repository,
+  - integration repository,
+  - competition repository,
+  - auth admin repository,
+  - reporting service,
+  - workforce request repository.
+- Frontend surfaces still above the comfortable review band:
+  - competition stage builder,
+  - master-data bootstrap,
+  - integration dashboard,
+  - import batch detail,
+  - store KPI/ranking/admin KPI pages.
+
+Runtime evidence still missing:
+
+- real staging auth/session proof with a bearer token,
+- assigned-store positive action smoke and unassigned-store negative action
+  smoke,
+- authenticated integration-admin upload smoke,
+- Supabase restore drill into an approved disposable target,
+- alert/error-tracking destination proof,
+- Redis/BullMQ broad-production health proof.
+
+## Operating Guardrails
+
+These rules apply to every phase:
+
+- Preserve business logic unless the phase explicitly scopes behavior change.
+- Preserve API response shape unless the phase explicitly scopes contract
+  change.
+- Preserve auth, permission, and action-store semantics.
+- Do not add DB migrations unless the phase explicitly scopes DB work.
+- Do not change CSS/user-facing behavior in structural refactor PRs.
+- Do not batch unrelated domains.
+- Stop if the PR cannot be explained in one paragraph.
+- Stop if rollback is not a normal squash-revert.
+- Every PR must have one clear review story.
+
+## Work Categories
+
+### Category A: Local And Immediately Actionable
+
+These can proceed without provider secrets:
+
+- backend repository boundary inventories,
+- pure backend read/write/domain extraction,
+- frontend page/component/hook/model extraction,
+- targeted UI/UX V1 gaps with browser/Playwright evidence,
+- generated API client drift gates,
+- TypeScript strictness inventory,
+- performance baseline scripts or local query profiling on disposable data.
+
+### Category B: Local Preparation Only
+
+These can be prepared locally but not claimed complete:
+
+- runbooks for staging auth smoke,
+- runbooks for restore drill,
+- Redis/BullMQ configuration checklist,
+- alert routing checklist,
+- upload smoke checklist,
+- placeholder-free evidence templates.
+
+### Category C: External Evidence Blocked
+
+These must not be marked done without real input:
+
+- real staging bearer tokens,
+- provider dashboard configuration,
+- approved disposable Supabase restore target,
+- real Redis/queue provider configuration,
+- real alert destination,
+- authenticated upload session and safe sample file.
+
+## Roadmap
+
+### Phase 0: Baseline And Scope Lock
+
+Goal:
+
+- Freeze the current decision and avoid accidental rewrite or broad refactor.
+
+Tasks:
+
+- [x] Record the technical assessment decision as `KISMI REFACTOR`.
+- [x] Separate local debt from external evidence blockers.
+- [x] Confirm that `index.css` is no longer the next debt target.
+- [ ] Before each new PR line, run a fresh hotspot inventory from `origin/main`.
+- [ ] Before each new PR line, choose one category: product polish, refactor,
+  external evidence, or intake.
+
+Verification:
+
+- For docs-only updates: `git diff --check`.
+- For later implementation: use the phase-specific ladder below.
+
+Stop rules:
+
+- Stop if the next proposed work mixes product UI, backend behavior, auth, DB,
+  and refactor in one PR.
+
+### Phase 1: External Evidence Closure
+
+Goal:
+
+- Move controlled pilot and broad-production readiness from documented
+  blocker to real evidence when inputs exist.
+
+Work order:
+
+1. Staging auth/session and protected route proof.
+2. Assigned-store `201` and unassigned-store `403` action proof.
+3. Authenticated integration-admin upload proof.
+4. Supabase restore drill into an approved disposable target.
+5. Alert/error-tracking destination proof.
+6. Redis/BullMQ production-mode health proof.
+
+Implementation steps:
+
+- [ ] Check whether the required secure inputs are present.
+- [ ] If inputs are absent, update only the evidence blocker note; do not
+  fake runtime evidence.
+- [ ] If a staging bearer token exists, run deployed readiness smoke with
+  `READINESS_BEARER_TOKEN`.
+- [ ] If assigned/unassigned staging store data exists, run the action smoke
+  path and record positive/negative proof.
+- [ ] If an approved restore target exists, run the restore drill from the
+  existing runbook and record sanitized evidence.
+- [ ] If Redis/BullMQ provider config exists, verify backend health reports
+  durable queue and Redis OK.
+
+Verification:
+
+```powershell
+npm.cmd run smoke:deployed-readiness
+npm.cmd run smoke:alert-routing
+npm.cmd run check:pilot-stabilization
+```
+
+PR shape:
+
+- One external evidence PR per evidence family.
+- Docs/evidence plus any tiny script/runbook fix required to make the proof
+  repeatable.
+
+Stop rules:
+
+- Stop if raw tokens, cookies, JWTs, database credentials, or provider secrets
+  would enter docs, screenshots, logs, or PR text.
+- Stop if a restore target is not explicitly disposable and approved.
+- Stop if the result depends on provider state that cannot be verified.
+
+### Phase 2: Backend Repository Boundary Refactor
+
+Goal:
+
+- Reduce the highest developer-experience and regression-risk hotspots without
+  changing behavior.
+
+Priority:
+
+1. Reporting repository.
+2. Integration repository.
+3. Auth admin repository.
+4. Competition repository.
+5. Reporting service.
+6. Workforce request repository.
+
+#### 2.1 Reporting Repository
+
+Why:
+
+- It owns multiple read families: snapshot reports, KPI performance, store
+  score, closed leaderboard, ranking identity helpers, and benchmark reads.
+
+Safe first slice:
+
+- Boundary inventory plus tests map. No production code movement.
+
+Candidate extraction order:
+
+1. Closed leaderboard read boundary.
+2. Store score breakdown read boundary.
+3. KPI report read boundary.
+4. Workforce/checklist/turnover report read boundary.
+5. Identity lookup helper boundary.
+
+Verification:
+
+```powershell
+npm.cmd --prefix backend/nestjs test -- reporting.service.store-score-blend.spec.ts --runInBand
+npm.cmd --prefix backend/nestjs test -- reporting.service.live-leaderboard.spec.ts --runInBand
+npm.cmd --prefix backend/nestjs test -- reporting.service.kpi-benchmark-scoring.spec.ts --runInBand
+npm.cmd --prefix backend/nestjs run build
+```
+
+Broader gate when a query family moves:
+
+```powershell
+npm.cmd --prefix backend/nestjs test -- --runInBand
+```
+
+Stop rules:
+
+- Stop if query output shape changes.
+- Stop if scope filters move without a regression test.
+- Stop if an index/migration becomes necessary; split that into a separate DB
+  evidence decision.
+
+#### 2.2 Integration Repository
+
+Why:
+
+- It mixes import batch lifecycle, raw writes, mapping evidence, retry/action
+  queues, store import scope, audit evidence, and source governance.
+
+Safe first slice:
+
+- Inventory existing method families and tests. No production code movement.
+
+Candidate extraction order:
+
+1. Import batch read/evidence query boundary.
+2. External ID mapping evidence boundary.
+3. Raw import writer boundary.
+4. Retry/action queue write boundary.
+5. Source governance boundary, only when source behavior changes.
+
+Verification:
+
+```powershell
+npm.cmd --prefix backend/nestjs test -- import-batch.e2e-spec.ts --runInBand
+npm.cmd --prefix backend/nestjs test -- import-batch-evidence.e2e-spec.ts --runInBand
+npm.cmd --prefix backend/nestjs test -- integration-sources.e2e-spec.ts --runInBand
+npm.cmd --prefix backend/nestjs run build
+```
+
+Stop rules:
+
+- Stop if import status transitions change.
+- Stop if idempotency behavior changes.
+- Stop if raw import table indexes are proposed without measured volume or
+  slow-query evidence.
+
+#### 2.3 Auth Admin Repository
+
+Why:
+
+- It is security-sensitive and large. The blast radius is higher than normal
+  repository cleanup.
+
+Safe first slice:
+
+- Read-only inventory: list read, write, audit, lookup, and permission method
+  families; map each to existing regression tests.
+
+Candidate extraction order:
+
+1. Lookup/read-only catalog boundary.
+2. Audit read boundary.
+3. User account write boundary.
+4. Role assignment write boundary.
+5. Action-store assignment write boundary.
+6. Permission grant/revoke boundary.
+
+Verification:
+
+```powershell
+npm.cmd --prefix backend/nestjs test -- auth-admin --runInBand
+npm.cmd --prefix backend/nestjs test -- auth-authorization.repository.spec.ts --runInBand
+npm.cmd --prefix backend/nestjs run build
+```
+
+Stop rules:
+
+- Stop if a low-role user could gain visibility or write authority.
+- Stop if `SUPER_ADMIN` role behavior or assigned-store action scope changes.
+- Stop if negative permission tests are missing for the moved behavior.
+
+#### 2.4 Competition Repository And Stage Builder
+
+Why:
+
+- Backend competition repository and frontend stage builder are both large and
+  connected to package-plan workflows.
+
+Safe first slice:
+
+- Do not start with backend and frontend together. Pick either repository
+  boundary or frontend render/model extraction.
+
+Candidate extraction order:
+
+1. Frontend stage builder model/constants extraction.
+2. Frontend template section extraction.
+3. Frontend package-plan section extraction.
+4. Backend team-template read/write boundary.
+5. Backend stage-package plan read/write/audit boundary.
+
+Verification:
+
+```powershell
+npm.cmd --prefix admin-web run lint
+npm.cmd --prefix admin-web run build
+npm.cmd --prefix admin-web run test:e2e -- competition-surfaces.spec.ts --workers=1
+npm.cmd --prefix backend/nestjs test -- competition --runInBand
+```
+
+Stop rules:
+
+- Stop if stage/package-plan business state changes.
+- Stop if frontend extraction changes form submission payloads.
+- Stop if backend and frontend changes become one broad PR.
+
+### Phase 3: Frontend Surface Decomposition
+
+Goal:
+
+- Reduce oversized route/page files and improve future UI work reviewability
+  without changing user-facing behavior.
+
+Priority:
+
+1. Stage builder.
+2. Master-data bootstrap page.
+3. Integration dashboard and import detail.
+4. Store KPI highlights and rankings.
+5. Admin KPI config.
+6. Auth dashboard sections.
+
+Slice pattern:
+
+1. Extract types/constants/model helpers.
+2. Extract pure display utilities.
+3. Extract render-only sections.
+4. Extract hooks/state only after render sections are stable.
+5. Add or strengthen targeted Playwright only when the existing route coverage
+   does not cover the moved behavior.
+
+Verification:
+
+```powershell
+npm.cmd --prefix admin-web run lint
+npm.cmd --prefix admin-web run build
+npm.cmd --prefix admin-web run test:e2e -- <target-spec> --workers=1
+```
+
+Targeted specs by surface:
+
+- Competition: `competition-surfaces.spec.ts`.
+- Master data: `integration-surfaces.spec.ts` or relevant master-data route
+  grep.
+- Import detail: `integration-surfaces.spec.ts`.
+- Store KPI/ranking: `store-surfaces.spec.ts` and
+  `kpi-benchmark-explainability.spec.ts`.
+- Admin KPI config: `admin-kpi-config.spec.ts`.
+- Auth admin: `auth-admin-surfaces.spec.ts`.
+
+Stop rules:
+
+- Stop if copy/layout changes sneak into a structural refactor.
+- Stop if API calls, query keys, route paths, or permission assumptions change.
+- Stop if mobile/responsive behavior changes without an explicit UI/UX slice.
+
+### Phase 4: Frontend TypeScript Strictness
+
+Goal:
+
+- Improve developer experience and type safety without opening a destabilizing
+  all-at-once strictness PR.
+
+Safe first slice:
+
+- TypeScript strictness inventory only. Count current errors for proposed flags
+  without committing flag changes.
+
+Candidate flag order:
+
+1. `strictNullChecks` inventory.
+2. `noUncheckedIndexedAccess` inventory.
+3. `exactOptionalPropertyTypes` inventory.
+4. `noImplicitAny` inventory if not already covered by current build behavior.
+
+Implementation pattern:
+
+- [ ] Run the proposed flag locally with no code changes.
+- [ ] Record error categories by domain.
+- [ ] Fix only one domain per PR if the flag is enabled.
+- [ ] Prefer generated API types and local model narrowing over broad casts.
+
+Verification:
+
+```powershell
+npm.cmd --prefix admin-web run build
+npm.cmd --prefix admin-web run lint
+```
+
+Stop rules:
+
+- Stop if a strictness flag creates cross-project churn.
+- Stop if fixes require behavior changes.
+- Stop if a PR becomes mostly type assertions instead of real safety.
+
+### Phase 5: API Contract Drift Guard Maintenance
+
+Goal:
+
+- Keep the OpenAPI/generated-client win from regressing.
+
+Tasks:
+
+- [ ] Keep backend OpenAPI schema generation passing.
+- [ ] Keep frontend `api:generate` and `api:check` in the release path.
+- [ ] When adding a new endpoint, add schema coverage before frontend usage.
+- [ ] For write endpoints, verify request body, response shape, error path,
+  and auth scope.
+
+Verification:
+
+```powershell
+npm.cmd --prefix backend/nestjs run openapi:generate
+npm.cmd --prefix admin-web run api:generate
+npm.cmd --prefix admin-web run api:check
+npm.cmd --prefix admin-web run build
+```
+
+Stop rules:
+
+- Stop if an endpoint path, status code, auth requirement, or response shape
+  changes unintentionally.
+- Stop if generated files and source wrappers drift.
+
+### Phase 6: Performance And Scale Evidence
+
+Goal:
+
+- Avoid guessing about performance. Measure first, then refactor or index.
+
+Candidate work:
+
+- Reporting query baseline on disposable data.
+- Import batch list/detail query baseline.
+- Store ranking/KPI route frontend load check.
+- Backend readiness load smoke for authenticated route groups when tokens
+  exist.
+- Redis/BullMQ health proof when provider config exists.
+
+Verification:
+
+```powershell
+npm.cmd run perf:public
+npm.cmd run perf:protected
+npm.cmd run smoke:backend-readiness-load
+npm.cmd --prefix backend/nestjs run perf:baseline
+```
+
+Stop rules:
+
+- Stop if performance work proposes indexes without query evidence.
+- Stop if local demo data is presented as production scale proof.
+- Stop if provider credentials are needed but unavailable.
+
+### Phase 7: Security And Auth Regression Pass
+
+Goal:
+
+- Keep auth/scope strong while broadening product use.
+
+Candidate work:
+
+- Auth-admin repository boundary split before broad user rollout.
+- Negative tests around role/scope/action-store changes.
+- Staging auth session edge evidence when real bearer tokens exist.
+- Protected route load smoke with real role-specific sessions.
+
+Verification:
+
+```powershell
+npm.cmd run check:pilot-stabilization
+npm.cmd --prefix backend/nestjs test -- auth --runInBand
+npm.cmd --prefix admin-web run test:e2e -- auth-admin-surfaces.spec.ts --workers=1
+npm.cmd --prefix admin-web run test:e2e -- pilot-smoke.spec.ts pilot-api-contracts.spec.ts --workers=1
+```
+
+Stop rules:
+
+- Stop if a change could broaden access.
+- Stop if fail-closed behavior weakens.
+- Stop if local mock auth is used as evidence for real staging auth.
+
+## Recommended PR Sequence
+
+Use this order unless a production bug, failing gate, or user-provided external
+input changes priority.
+
+1. Docs-only: land this roadmap and link it from handoff/current planning.
+2. External input check: update blocker/evidence status only if inputs exist.
+3. Reporting repository inventory PR.
+4. Reporting closed leaderboard or store score read-boundary PR.
+5. Integration repository inventory PR.
+6. Integration import evidence/read-boundary PR.
+7. Stage builder frontend pure model/section split PR.
+8. Master-data bootstrap frontend model/section split PR.
+9. Auth admin repository inventory PR.
+10. Auth admin lookup/audit boundary PR, only with negative tests.
+11. TypeScript strictness inventory PR.
+12. One strictness domain PR only if the inventory shows a reviewable slice.
+
+Batch rule:
+
+- Inventory docs may batch with no-code test-map updates in the same domain.
+- Do not batch backend repository extraction with frontend UI extraction.
+- Do not batch auth-admin work with reporting/integration work.
+- Do not batch external evidence with local refactor.
+
+## Verification Ladder By Risk
+
+LOW, docs/inventory:
+
+```powershell
+git diff --check
+```
+
+MEDIUM, frontend structural refactor:
+
+```powershell
+npm.cmd --prefix admin-web run lint
+npm.cmd --prefix admin-web run build
+npm.cmd --prefix admin-web run test:e2e -- <target-spec> --workers=1
+```
+
+MEDIUM, backend read-boundary refactor:
+
+```powershell
+npm.cmd --prefix backend/nestjs test -- <target-spec> --runInBand
+npm.cmd --prefix backend/nestjs run build
+```
+
+HIGH, auth/API/DB/provider:
+
+```powershell
+npm.cmd --prefix backend/nestjs test -- <target-spec> --runInBand
+npm.cmd --prefix backend/nestjs test -- --runInBand
+npm.cmd --prefix backend/nestjs run build
+npm.cmd run check:pilot-stabilization
+```
+
+Contract-related:
+
+```powershell
+npm.cmd --prefix backend/nestjs run openapi:generate
+npm.cmd --prefix admin-web run api:generate
+npm.cmd --prefix admin-web run api:check
+```
+
+Release-level:
+
+```powershell
+npm.cmd run check:release
+```
+
+## Done Criteria
+
+A phase is done only when:
+
+- the chosen scope is complete,
+- diff inspection shows no unrelated domain,
+- targeted tests pass,
+- broader gate passes when blast radius requires it,
+- evidence docs are updated if future agents need the context,
+- the PR can be reverted with one squash revert,
+- GitHub/Vercel/Codex merge gates pass if a PR is opened.
+
+## Parked Until Real Input
+
+Do not start implementation for these without new evidence:
+
+- JSON/source adapter work.
+- Broad API Gateway or service decomposition.
+- New DB indexes for reporting/import without measured query evidence.
+- Broad production rollout.
+- New roles or pilot expansion.
+- Incentive/Prim module implementation beyond intake/spec.
+
+## Reader-Test Notes
+
+Cold-read result:
+
+- A future worker can identify the decision, choose the next PR, and know which
+  verification ladder applies.
+- External/live work is separated from local work, so the plan does not pretend
+  local code can close provider evidence.
+- The first safe action is docs-only roadmap linkage, followed by either an
+  external input check or a reporting repository inventory depending on the
+  user's next direction.

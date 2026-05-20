@@ -11,6 +11,13 @@ Sokrates exists to keep the project calm, reversible, and technically honest.
 The goal is not to move slowly. The goal is to move with clear judgment, small
 verified steps, and no hidden behavior changes.
 
+The target is not a larger process. The target is better judgment:
+
+- fast when the work is safe,
+- skeptical when the work is risky,
+- decisive when evidence is enough,
+- willing to stop when the next step would be dishonest or too broad.
+
 ## Core Stance
 
 - When the user brings an external prompt, plan, tool suggestion, or
@@ -29,6 +36,9 @@ verified steps, and no hidden behavior changes.
   broad change.
 - Protect the project from both kinds of failure: reckless speed and ceremonial
   overthinking.
+- Treat Sokrates as a steering system, not a permission form. It should help
+  choose the next best action, not merely approve or reject what was already
+  suggested.
 
 ## Fresh Session Bootstrap
 
@@ -44,6 +54,48 @@ At the start of a new session or after context loss:
 
 Do not restart old work from memory when local handoff files provide fresher
 context.
+
+Freshness rule:
+
+- If `current-state.md`, `sokrates.md`, git history, and local worktree state
+  disagree, trust the freshest verifiable source and name the conflict.
+- If the user gives a newer instruction than a stored plan, the newer
+  instruction steers the turn unless it violates a hard boundary.
+- If a decision depends on latest PR, CI, provider, dependency, price, schedule,
+  or runtime status, verify it before treating it as fact.
+
+## Operating Modes
+
+Choose one mode before acting. This keeps Sokrates from mixing jobs.
+
+- Scout: inspect, inventory, compare options, and do not edit. Use when the
+  user asks for analysis, review, planning, or "what next?"
+- Planner: produce an executable plan or roadmap. Use when the next action is
+  unclear or multi-step.
+- Builder: implement a scoped slice. Use when the goal, boundaries, and gates
+  are clear.
+- Reviewer: look for bugs, security issues, regression risk, and missing tests.
+  Use when asked for a review or before merging high-risk work.
+- Finisher: verify, push/PR/merge when authorized, update handoff, and close
+  the loop.
+
+If the active mode changes mid-turn, say so briefly and explain why.
+
+## Triage Gate
+
+Before doing more than a small read-only action, classify the request:
+
+- Simple answer: answer directly.
+- Status/check: inspect current state and report.
+- Docs/plan: update documentation only if it helps future execution.
+- Low-risk implementation: proceed with light Sokrates and targeted gates.
+- Medium-risk implementation: use standard Sokrates and explicit verification.
+- High-risk or one-way-door: use full Sokrates or stop for more evidence.
+- External/live dependency: verify input exists, otherwise park or prepare
+  local-only work.
+
+Use this gate to reduce ceremony for low-risk work and increase rigor for
+high-risk work.
 
 ## Project Invariants
 
@@ -118,14 +170,39 @@ For medium/high-risk decisions, score the decision before acting:
 - 3: Evidence, counterargument, risk, rollback, and verification are all clear.
 - 4: Same as 3, plus runtime confidence, blast radius, and handoff impact are
   understood.
+- 5: Same as 4, plus the next best alternative was compared, the cost of delay
+  is understood, and the decision can survive a cold-reader review.
 
 Target:
 
 - LOW work can proceed at 2.
 - MEDIUM work should reach 3.
 - HIGH or one-way-door work should reach 4 or stop for more evidence/alignment.
+- Strategic roadmap, rewrite, broad refactor, production, auth/DB/API-contract,
+  or batching decisions should aim for 5 before execution.
 
 Do not inflate the score to move faster. If the score is low, narrow the slice.
+
+## Sokrates Quality Bar
+
+Use this scorecard when improving Sokrates itself or evaluating whether it is
+working:
+
+1. Evidence discipline: facts, inferences, assumptions, and user preferences are
+   separated.
+2. Priority judgment: the recommendation points to the most valuable next
+   slice, not merely a safe slice.
+3. Proportionality: low-risk work stays light; high-risk work gets full depth.
+4. Boundary protection: business logic, API shape, auth, DB, provider config,
+   and user behavior stay guarded.
+5. Reviewability: PR/batch size is explainable in one paragraph.
+6. Verification: tests and runtime checks match blast radius.
+7. Rollback clarity: recovery is known before risky work starts.
+8. Freshness: stale plans do not override newer evidence or user direction.
+9. Communication: caveats, blockers, and next steps are stated plainly.
+10. Learning loop: real misses simplify or improve the rules.
+
+No single turn needs to recite this list. Use it as a calibration tool.
 
 ## Sokrates Self-Audit
 
@@ -189,6 +266,16 @@ Use this sequence:
 The recommendation should be concrete enough to become a PR or first slice, not
 just a theme like "improve quality".
 
+Recommendation contract:
+
+- Now: the best immediate action and why.
+- Next: the likely follow-up if the immediate action succeeds.
+- Park: what should not be touched yet and what evidence would unpark it.
+- Stop: the first condition that would make the recommendation invalid.
+
+When two valid paths are close, prefer the one that either improves a real user
+workflow or reduces an operational/security risk that is likely to hurt later.
+
 ## Candidate Comparison Rule
 
 When choosing between multiple plausible paths, compare them explicitly:
@@ -228,6 +315,16 @@ Stop and re-plan when:
 Use PR count, slice count, and dependency state as the planning unit. Avoid
 calendar-based certainty when the real constraint is review, checks, merge
 order, or external evidence.
+
+Friction budget:
+
+- A process step is worth keeping only if it prevents a likely bug, improves
+  reviewability, protects a hard boundary, or helps future continuation.
+- If a process step repeatedly adds delay without catching risk, simplify it in
+  the next plan.
+- If a task is small and reversible, do not force a full architecture report.
+- If a task is broad and irreversible, do not hide it behind a short status
+  update.
 
 ## Blast Radius Map
 
@@ -340,6 +437,16 @@ When making a technical judgment, distinguish the evidence level:
 Do not present an inference or assumption as proven fact. If a decision depends
 on an assumption, either verify it or make the uncertainty explicit.
 
+Evidence freshness:
+
+- Current repo state beats memory.
+- Current `origin/main` beats an old local branch when assessing merged work.
+- Runtime/provider facts expire quickly; verify before acting on them.
+- A documented blocker remains blocked until the required external input is
+  actually present.
+- If local tests pass but runtime evidence is required, call the local result a
+  local result, not production proof.
+
 ## Counterargument Rule
 
 For medium/high-risk work, write the strongest reasonable argument against the
@@ -399,6 +506,14 @@ A task is ready to start only when these are clear enough:
 
 If these are not clear, use Sokrates questioning before coding.
 
+If a task is not ready, the next action should be one of:
+
+- inventory the current state,
+- write or update a plan,
+- ask one concise blocking question,
+- park the task with the exact evidence needed,
+- choose a smaller two-way-door slice.
+
 ## Ambiguity Protocol
 
 When something is unclear:
@@ -437,6 +552,15 @@ Work is done only when:
 Passing tests are necessary, not sufficient. Also verify that the diff matches
 the intended scope, the user-facing behavior is understood, and any skipped or
 known-bad gate is named explicitly.
+
+No-drift checkpoint:
+
+- Before editing: confirm the work still answers the newest user request.
+- Before push/PR: inspect the final diff for unrelated files and hidden
+  behavior changes.
+- Before merge: confirm checks, approval, mergeability, and scope.
+- Before final answer: make sure the response matches the newest request, not
+  an older plan still in context.
 
 ## Hard Boundaries
 
@@ -589,6 +713,15 @@ Use the lightest report that still protects the work:
 Do not make the user ask for this every time. Choose the depth based on risk
 and uncertainty.
 
+Report shape:
+
+- For low-risk work, prefer one short paragraph plus verification.
+- For normal work, include what changed, files touched, checks, and next step.
+- For high-risk decisions, include the decision record fields.
+- For "what next?" answers, use the recommendation contract: now, next, park,
+  stop.
+- Do not bury the actual recommendation under process narration.
+
 ## Verification Ladder
 
 Use the cheapest useful signal first, then climb only as needed:
@@ -673,6 +806,19 @@ Sokrates improves through use. After real work, calibrate the system:
 
 Do not chase perfect process. Calibrate from real misses, real friction, and
 real user value.
+
+Calibration triggers:
+
+- after three related PRs,
+- after a failed or flaky gate changes the plan,
+- after Codex/GitHub review catches a real issue,
+- after the user corrects priority,
+- after a process rule feels slower than the risk it protects,
+- after a bug reaches staging despite local checks.
+
+Calibration output should be small: keep, simplify, add one guard, or change
+the next-step heuristic. Do not rewrite the whole working principle for one
+minor miss.
 
 ## Failure Taxonomy
 
