@@ -35,9 +35,13 @@ export const reportsSnapshotRunsTr = {
   'reportsSnapshotRuns.preGovernanceSnapshot': 'Yönetişim öncesi snapshot',
 
   'reportsSnapshotRuns.openWorkforce': 'İşgücünü aç',
-  'reportsSnapshotRuns.openKpis': 'KPIları aç',
+  'reportsSnapshotRuns.openKpis': "KPI'ları aç",
   'reportsSnapshotRuns.openChecklists': 'Checklistleri aç',
   'reportsSnapshotRuns.openTurnover': 'Personel çıkışını aç',
+  'reportsSnapshotRuns.openWorkforceForSnapshot': '{snapshotRunId} için işgücünü aç',
+  'reportsSnapshotRuns.openKpisForSnapshot': "{snapshotRunId} için KPI'ları aç",
+  'reportsSnapshotRuns.openChecklistsForSnapshot': '{snapshotRunId} için checklistleri aç',
+  'reportsSnapshotRuns.openTurnoverForSnapshot': '{snapshotRunId} için personel çıkışını aç',
 } as const
 
 export const reportsSnapshotRunsEn: Record<keyof typeof reportsSnapshotRunsTr, string> = {
@@ -80,4 +84,8 @@ export const reportsSnapshotRunsEn: Record<keyof typeof reportsSnapshotRunsTr, s
   'reportsSnapshotRuns.openKpis': 'Open KPIs',
   'reportsSnapshotRuns.openChecklists': 'Open checklists',
   'reportsSnapshotRuns.openTurnover': 'Open turnover',
+  'reportsSnapshotRuns.openWorkforceForSnapshot': 'Open workforce for {snapshotRunId}',
+  'reportsSnapshotRuns.openKpisForSnapshot': 'Open KPIs for {snapshotRunId}',
+  'reportsSnapshotRuns.openChecklistsForSnapshot': 'Open checklists for {snapshotRunId}',
+  'reportsSnapshotRuns.openTurnoverForSnapshot': 'Open turnover for {snapshotRunId}',
 }

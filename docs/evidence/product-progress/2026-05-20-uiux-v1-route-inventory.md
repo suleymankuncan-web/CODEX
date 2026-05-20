@@ -142,8 +142,10 @@ Score is 1-5:
    Reason: small files, low blast radius, visible route gaps, easy targeted
    Playwright assertions, and no data/API/auth behavior needed.
 2. Admin reports route coverage and minor clarity:
-   `/admin/reports` plus `/admin/reports/snapshot-runs`, then detail pages if
-   coverage confirms safe fixtures.
+   `/admin/reports` plus `/admin/reports/snapshot-runs` have link-context
+   evidence at
+   `docs/evidence/product-progress/2026-05-20-admin-reports-link-context-v1.md`.
+   Continue into detail pages only if browser review finds a concrete gap.
 3. Admin import detail:
    `/admin/integrations/:batchId` as one read-only evidence clarity slice.
 4. Auth catalog/audit read-only surfaces:

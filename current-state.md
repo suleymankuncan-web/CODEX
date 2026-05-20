@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #330, and is the starting point for continuing in a fresh window.
+PR #331, and is the starting point for continuing in a fresh window.
 
 ## Active Workspace
 
@@ -26,14 +26,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-20, `origin/main` has been fetched through PR #330.
+As of 2026-05-20, `origin/main` has been fetched through PR #331.
 The root checkout may still be on a non-main local branch with unrelated
 handoff noise; do not assume the root working tree is clean.
 
 Latest merge on main:
 
 ```text
-babebb7f docs: add UI/UX V1 route inventory (#330)
+ded8bc01 feat: clarify store utility handoff pages (#331)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -84,6 +84,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #328 `feat: clarify master data store labels`
 - PR #329 `docs: shape incentive module intake`
 - PR #330 `docs: add UI/UX V1 route inventory`
+- PR #331 `feat: clarify store utility handoff pages`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -526,6 +527,11 @@ Product Progress Plan V1 status:
   targeted route assertions, and a scoped mobile bottom-nav clearance fix.
   Evidence:
   `docs/evidence/product-progress/2026-05-20-store-utility-handoff-v1.md`.
+- The admin reports link-context V1 slice improved `/admin/reports` and
+  `/admin/reports/snapshot-runs` by making repeated drill-down links
+  snapshot-specific for assistive technology and tightening TR KPI copy.
+  Evidence:
+  `docs/evidence/product-progress/2026-05-20-admin-reports-link-context-v1.md`.
 
 The `/store/approvals` first pass has started:
 
