@@ -496,9 +496,13 @@ Product Progress Plan V1 status:
 - PR #326 filled the empty `/store/home` store-manager intro/hero copy in
   Turkish and English and records evidence at
   `docs/evidence/product-progress/2026-05-20-store-home-manager-copy.md`.
-- External/live evidence remains parked until real staging/provider inputs are
-  provided. The latest presence-only input check is recorded at
+- PR #327 recorded the latest presence-only external evidence input check at
   `docs/evidence/product-progress/2026-05-20-external-evidence-input-check.md`.
+- The first Phase 3 operator coherence slice improved `/admin/master-data`
+  store type/status labels without changing submitted values. Evidence:
+  `docs/evidence/product-progress/2026-05-20-master-data-store-labels.md`.
+- External/live evidence remains parked until real staging/provider inputs are
+  provided.
 
 The `/store/approvals` first pass has started:
 

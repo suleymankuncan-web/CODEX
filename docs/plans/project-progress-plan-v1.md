@@ -268,10 +268,14 @@ Candidate slices:
 
 Tasks:
 
-- [ ] Inventory the current admin surfaces against existing E2E coverage.
-- [ ] Pick one surface with the clearest operator confusion.
-- [ ] Improve information hierarchy or state explanation without changing backend contracts.
-- [ ] Verify with admin build and targeted admin Playwright spec.
+- [x] Inventory the current admin surfaces against existing E2E coverage.
+- [x] Pick one surface with the clearest operator confusion.
+- [x] Improve information hierarchy or state explanation without changing backend contracts.
+- [x] Verify with admin build and targeted admin Playwright spec.
+
+Phase 3 evidence:
+
+- `docs/evidence/product-progress/2026-05-20-master-data-store-labels.md`
 
 Stop rules:
 
