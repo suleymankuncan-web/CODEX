@@ -164,7 +164,7 @@ export function ReportsChecklistsPage() {
         <MetricCard title={t('reportsChecklists.criticalRows')} value={totals.rowsWithCriticalIssues} note={t('reportsChecklists.criticalRowsNote')} icon={<ShieldAlert size={18} />} tone={totals.rowsWithCriticalIssues === 0 ? 'calm' : 'warning'} />
       </section>
 
-      <section className="panel">
+      <section className="panel reports-detail-table-panel">
         <div className="panel-heading panel-heading-spread">
           <div>
             <div className="eyebrow">{t('reportsChecklists.tableEyebrow')}</div>

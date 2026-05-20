@@ -175,7 +175,7 @@ export function ReportsKpisPage() {
         <MetricCard title={t('reportsKpis.offTrackTitle')} value={totals.offTrack} note={t('reportsKpis.offTrackNote', { value: formatPercent(String(averageAchievement), locale) })} icon={<Activity size={18} />} tone={totals.offTrack === 0 ? 'neutral' : 'danger'} />
       </section>
 
-      <section className="panel">
+      <section className="panel reports-detail-table-panel">
         <div className="panel-heading panel-heading-spread">
           <div>
             <div className="eyebrow">{t('reportsKpis.tableEyebrow')}</div>

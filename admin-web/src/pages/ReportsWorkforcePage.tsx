@@ -149,7 +149,7 @@ export function ReportsWorkforcePage() {
         <MetricCard title={t('reportsWorkforce.gapRows')} value={rowsWithGap} note={t('reportsWorkforce.gapRowsNote')} icon={<ArrowRight size={18} />} tone={rowsWithGap === 0 ? 'calm' : 'danger'} />
       </section>
 
-      <section className="panel">
+      <section className="panel reports-detail-table-panel">
         <div className="panel-heading panel-heading-spread">
           <div>
             <div className="eyebrow">{t('reportsWorkforce.tableEyebrow')}</div>

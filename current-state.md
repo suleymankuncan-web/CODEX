@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #333, and is the starting point for continuing in a fresh window.
+PR #334, and is the starting point for continuing in a fresh window.
 
 ## Active Workspace
 
@@ -26,14 +26,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-20, `origin/main` has been fetched through PR #333.
+As of 2026-05-20, `origin/main` has been fetched through PR #334.
 The root checkout may still be on a non-main local branch with unrelated
 handoff noise; do not assume the root working tree is clean.
 
 Latest merge on main:
 
 ```text
-228d9e7e feat: clarify import detail mapping controls (#333)
+60cfcb83 feat: improve import detail panel readability (#334)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -87,6 +87,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #331 `feat: clarify store utility handoff pages`
 - PR #332 `feat: clarify admin reports drilldown links`
 - PR #333 `feat: clarify import detail mapping controls`
+- PR #334 `feat: improve import detail panel readability`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -539,10 +540,16 @@ Product Progress Plan V1 status:
   adding external-ID context to repeated mapping control accessible names.
   Evidence:
   `docs/evidence/product-progress/2026-05-20-import-detail-mapping-context-v1.md`.
-- The admin import detail panel-readability V1 slice is the active next UI/UX
-  PR candidate. It keeps import behavior/layout/copy unchanged and scopes
-  panel-copy contrast to the import detail page wrapper. Evidence:
+- The admin import detail panel-readability V1 slice keeps import
+  behavior/layout/copy unchanged and scopes panel-copy contrast to the import
+  detail page wrapper. Evidence:
   `docs/evidence/product-progress/2026-05-20-import-detail-panel-readability-v1.md`.
+- The reports detail mobile table-readability V1 slice improves the table
+  header/action layout across workforce, KPI, checklist, and turnover report
+  detail routes. It keeps report API calls, response shapes, auth/permission
+  behavior, export/search/sort behavior, copy, and data calculations unchanged.
+  Evidence:
+  `docs/evidence/product-progress/2026-05-20-reports-detail-mobile-readability-v1.md`.
 
 The `/store/approvals` first pass has started:
 

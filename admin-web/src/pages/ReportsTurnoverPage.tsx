@@ -200,7 +200,7 @@ export function ReportsTurnoverPage() {
         <MetricCard title={t('reportsTurnover.turnoverRateTitle')} value={Math.round(averageTurnover * 100)} note={t('reportsTurnover.turnoverRateNote')} icon={<Ratio size={18} />} tone={averageTurnover < 0.08 ? 'calm' : averageTurnover < 0.15 ? 'warning' : 'danger'} />
       </section>
 
-      <section className="panel">
+      <section className="panel reports-detail-table-panel">
         <div className="panel-heading panel-heading-spread">
           <div>
             <div className="eyebrow">{t('reportsTurnover.tableEyebrow')}</div>
