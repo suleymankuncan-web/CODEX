@@ -501,6 +501,11 @@ Product Progress Plan V1 status:
 - The first Phase 3 operator coherence slice improved `/admin/master-data`
   store type/status labels without changing submitted values. Evidence:
   `docs/evidence/product-progress/2026-05-20-master-data-store-labels.md`.
+- Phase 4 has no active strategic refactor trigger; do not open mechanical
+  refactor work without a concrete product/risk slice.
+- Phase 5 shaped the Incentive / Prim Module only at intake level and kept it
+  out of implementation. Reference:
+  `docs/plans/incentive-prim-module-intake-v1.md`.
 - External/live evidence remains parked until real staging/provider inputs are
   provided.
 

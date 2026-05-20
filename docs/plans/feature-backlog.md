@@ -123,7 +123,7 @@ Use it before implementation so new ideas do not get scattered across chat histo
 - Reference: [ui-localization-strategy.md](./ui-localization-strategy.md)
 
 ### 2. Incentive / Prim Module
-- Status: `captured`
+- Status: `shaping`
 - Priority: `P1`
 - Business goal: manage incentive logic and payout-related workflows
 - User/operator need: define, calculate, review, and possibly approve employee/store incentive outcomes
@@ -136,7 +136,8 @@ Use it before implementation so new ideas do not get scattered across chat histo
 - API: required
 - Admin UI: required
 - Reporting UI: likely required
-- Risks / Notes: must decide whether this is rule management, payout calculation, approval workflow, or all three
+- Risks / Notes: must decide whether this is rule management, payout calculation, approval workflow, read-only visibility, or a combination before any implementation
+- Intake: [incentive-prim-module-intake-v1.md](./incentive-prim-module-intake-v1.md)
 
 ### 3. KPI Expansion Pack
 - Status: `captured`
