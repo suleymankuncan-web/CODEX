@@ -19,6 +19,7 @@ import { KpiBenchmarkScoringService } from "./kpi-benchmark-scoring.service";
 import { LiveMonthlyLeaderboardService } from "./live-monthly-leaderboard.service";
 import { StoreScoreReportingReadRepository } from "../infrastructure/store-score-reporting-read.repository";
 import { ClosedRankingRepository } from "../infrastructure/closed-ranking.repository";
+import { SnapshotReportingReadRepository } from "../infrastructure/snapshot-reporting-read.repository";
 
 const storeChecklistMetricCodes = new Set(["BM_CHECKLIST", "VM_CHECKLIST"]);
 
@@ -35,6 +36,8 @@ export class ReportingService {
       reportingRepository as unknown as StoreScoreReportingReadRepository,
     private readonly closedRankingRepository: ClosedRankingRepository =
       reportingRepository as unknown as ClosedRankingRepository,
+    private readonly snapshotReportingReadRepository: SnapshotReportingReadRepository =
+      reportingRepository as unknown as SnapshotReportingReadRepository,
   ) {}
 
   private mapSnapshotRun(item: {
@@ -66,7 +69,7 @@ export class ReportingService {
     limit?: number;
     offset?: number;
   }) {
-    const result = await this.reportingRepository.listSnapshotRuns(input);
+    const result = await this.snapshotReportingReadRepository.listSnapshotRuns(input);
     return buildListResponse(
       result.rows.map((item) => this.mapSnapshotRun(item)),
       { total: result.total, limit: input.limit, offset: input.offset },
@@ -82,7 +85,7 @@ export class ReportingService {
     limit?: number;
     offset?: number;
   }) {
-    const result = await this.reportingRepository.getWorkforceReport(input);
+    const result = await this.snapshotReportingReadRepository.getWorkforceReport(input);
 
     return buildListResponse(
       result.rows.map((item) => ({
@@ -110,7 +113,7 @@ export class ReportingService {
     limit?: number;
     offset?: number;
   }) {
-    const result = await this.reportingRepository.getKpiReport(input);
+    const result = await this.snapshotReportingReadRepository.getKpiReport(input);
 
     return buildListResponse(
       result.rows.map((item) => ({
@@ -140,7 +143,7 @@ export class ReportingService {
     limit?: number;
     offset?: number;
   }) {
-    const result = await this.reportingRepository.getChecklistReport(input);
+    const result = await this.snapshotReportingReadRepository.getChecklistReport(input);
 
     return buildListResponse(
       result.rows.map((item) => ({
@@ -168,7 +171,7 @@ export class ReportingService {
     limit?: number;
     offset?: number;
   }) {
-    const result = await this.reportingRepository.getTurnoverReport(input);
+    const result = await this.snapshotReportingReadRepository.getTurnoverReport(input);
 
     return buildListResponse(
       result.rows.map((item) => ({
@@ -191,7 +194,7 @@ export class ReportingService {
 
   async getReportingSummary() {
     const latestCompletedSnapshotRun =
-      await this.reportingRepository.getLatestCompletedSnapshotRun();
+      await this.snapshotReportingReadRepository.getLatestCompletedSnapshotRun();
 
     if (!latestCompletedSnapshotRun) {
       return {
@@ -205,7 +208,7 @@ export class ReportingService {
       };
     }
 
-    const cards = await this.reportingRepository.getSnapshotRowCounts(
+    const cards = await this.snapshotReportingReadRepository.getSnapshotRowCounts(
       latestCompletedSnapshotRun.snapshot_run_id,
     );
 

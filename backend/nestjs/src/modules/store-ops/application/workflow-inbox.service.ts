@@ -9,6 +9,7 @@ import {
 import { ChecklistAcknowledgementRepository } from "../infrastructure/checklist-acknowledgement.repository";
 import { TargetDistributionRepository } from "../infrastructure/target-distribution.repository";
 import { ReportingRepository } from "../infrastructure/reporting.repository";
+import { SnapshotReportingReadRepository } from "../infrastructure/snapshot-reporting-read.repository";
 
 @Injectable()
 export class WorkflowInboxService {
@@ -18,6 +19,8 @@ export class WorkflowInboxService {
     private readonly targetDistributionRepository: TargetDistributionRepository,
     private readonly checklistAcknowledgementRepository: ChecklistAcknowledgementRepository,
     private readonly reportingRepository: ReportingRepository,
+    private readonly snapshotReportingReadRepository: SnapshotReportingReadRepository =
+      reportingRepository as unknown as SnapshotReportingReadRepository,
   ) {}
 
   async listInbox(input: {
@@ -79,7 +82,7 @@ export class WorkflowInboxService {
 
     try {
       const latestCompletedSnapshotRun =
-        await this.reportingRepository.getLatestCompletedSnapshotRun();
+        await this.snapshotReportingReadRepository.getLatestCompletedSnapshotRun();
 
       if (latestCompletedSnapshotRun) {
         const canUseAdminKpiRoute =
@@ -88,7 +91,7 @@ export class WorkflowInboxService {
           "REPORT_VIEWER",
           "SUPER_ADMIN",
         ]);
-        const kpiExceptions = await this.reportingRepository.getKpiReport({
+        const kpiExceptions = await this.snapshotReportingReadRepository.getKpiReport({
           snapshotRunId: latestCompletedSnapshotRun.snapshot_run_id,
           companyIds: kpiScope.companyIds,
           regionIds: kpiScope.regionIds,
