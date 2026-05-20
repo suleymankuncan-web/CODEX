@@ -2,6 +2,7 @@ import { Global, Module } from "@nestjs/common";
 import { APP_GUARD } from "@nestjs/core";
 import { AccessLifecycleRepository } from "./access-lifecycle.repository";
 import { AccessLifecycleService } from "./access-lifecycle.service";
+import { AuthAdminLookupRepository } from "./auth-admin-lookup.repository";
 import { AuthAdminRepository } from "./auth-admin.repository";
 import { AuthAdminService } from "./auth-admin.service";
 import { AuthAuthorizationRepository } from "./auth-authorization.repository";
@@ -25,6 +26,7 @@ import { MobileAuthController } from "./web/mobile-auth.controller";
   providers: [
     AccessLifecycleRepository,
     AccessLifecycleService,
+    AuthAdminLookupRepository,
     AuthAdminRepository,
     AuthAdminService,
     AuthRoleScopePolicyService,
