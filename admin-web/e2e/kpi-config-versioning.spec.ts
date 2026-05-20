@@ -255,6 +255,27 @@ test('turnover report page switches drill-down chrome to English copy and persis
   await expect(page.getByRole('heading', { name: 'Turnover rows for one immutable reporting context.' })).toBeVisible()
 })
 
+test('reports detail table controls stack below copy on mobile', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 900 })
+  await page.goto('/admin/reports/workforce/snapshot-versioned')
+
+  const tablePanel = page.locator('.reports-detail-table-panel')
+  await expect(tablePanel).toBeVisible()
+  await expect(tablePanel.locator('.panel-copy')).toHaveCSS('color', 'rgb(90, 101, 95)')
+
+  const copyBox = await tablePanel.locator('.panel-copy').boundingBox()
+  const toolbarBox = await tablePanel.locator('.toolbar-cluster').boundingBox()
+
+  if (!copyBox || !toolbarBox) {
+    throw new Error('Expected reports detail copy and toolbar to be measurable on mobile.')
+  }
+
+  expect(toolbarBox.y).toBeGreaterThanOrEqual(copyBox.y + copyBox.height - 1)
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth))
+    .toBe(true)
+})
+
 async function routeVersioningApi(page: Page) {
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: authSessionFixture })

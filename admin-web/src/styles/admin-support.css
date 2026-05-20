@@ -3,6 +3,12 @@
   line-height: 1.62;
 }
 
+.reports-detail-table-panel .panel-copy {
+  color: var(--surface-muted);
+  line-height: 1.62;
+  max-width: 64ch;
+}
+
 .lineage-chip-list {
   display: grid;
   gap: 0.5rem;
@@ -122,4 +128,26 @@
   border-color: rgba(185, 95, 24, 0.28);
   background: rgba(255, 244, 235, 0.92);
   color: var(--warning);
+}
+
+@media (max-width: 720px) {
+  .reports-detail-table-panel .panel-heading {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .reports-detail-table-panel .toolbar-cluster {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .reports-detail-table-panel .toolbar-cluster > *,
+  .reports-detail-table-panel .search-field,
+  .reports-detail-table-panel .search-field input,
+  .reports-detail-table-panel .control-select,
+  .reports-detail-table-panel .control-select select,
+  .reports-detail-table-panel .control-button {
+    width: 100%;
+    min-width: 0;
+  }
 }

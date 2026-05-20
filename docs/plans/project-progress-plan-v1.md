@@ -232,6 +232,8 @@ Current UI/UX V1 status:
   repeated search/select/approve controls.
 - Admin import detail panel copy now uses a page-scoped light-surface muted
   text token for better readability on dense evidence panels.
+- Reports detail table panels now stack copy and search/sort/export controls
+  cleanly on mobile across workforce, KPI, checklist, and turnover routes.
 - Park `/store/home` and `/admin/master-data` unless browser review or pilot
   feedback finds a concrete new gap.
 
@@ -239,8 +241,8 @@ Next UI/UX V1 recommendation:
 
 - Do not keep expanding import detail without a new concrete browser or pilot
   gap; mapping context and scoped panel-copy readability are now covered.
-- Continue reports detail pages only if a browser pass finds concrete overflow,
-  focus, or context issues.
+- Park reports detail pages unless a new browser or pilot gap appears; the
+  current mobile table header/readability gap is covered.
 - Treat auth/admin follow-ups as later slices, with route-level Playwright
   evidence before visual polish.
 
