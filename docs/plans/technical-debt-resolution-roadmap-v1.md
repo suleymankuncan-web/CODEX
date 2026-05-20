@@ -255,6 +255,8 @@ Why:
 Safe first slice:
 
 - Boundary inventory plus tests map. No production code movement.
+- Current inventory:
+  `docs/plans/reporting-repository-boundary-inventory-v1.md`.
 
 Candidate extraction order:
 
