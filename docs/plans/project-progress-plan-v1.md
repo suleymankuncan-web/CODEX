@@ -191,12 +191,17 @@ Scope:
 
 Tasks:
 
-- [ ] Create `docs/evidence/product-progress/2026-05-20-visible-flow-audit-v1.md`.
-- [ ] For each route, record first-screen purpose, primary action, loading state, empty state, error state, mobile risk, and trust/copy risk.
-- [ ] Run or inspect only the relevant existing E2E route coverage before choosing a PR.
-- [ ] Choose one first PR using this order: user value, risk reduction, blocker removal, blast radius, verification clarity.
-- [ ] Implement one small visible slice.
-- [ ] Verify with admin lint/build and targeted Playwright for that route.
+- [x] Create `docs/evidence/product-progress/2026-05-20-visible-flow-audit-v1.md`.
+- [x] For each route, record first-screen purpose, primary action, loading state, empty state, error state, mobile risk, and trust/copy risk.
+- [x] Run or inspect only the relevant existing E2E route coverage before choosing a PR.
+- [x] Choose one first PR using this order: user value, risk reduction, blocker removal, blast radius, verification clarity.
+- [x] Implement one small visible slice.
+- [x] Verify with admin lint/build and targeted Playwright for that route.
+
+Phase 1 evidence:
+
+- `docs/evidence/product-progress/2026-05-20-visible-flow-audit-v1.md`
+- `docs/evidence/product-progress/2026-05-20-store-home-manager-copy.md`
 
 Recommended first PR after this plan:
 

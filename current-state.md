@@ -488,6 +488,17 @@ If those external inputs are not available, continue with one narrow
 product-hardening slice. Do not begin with another backend/refactor cleanup
 unless a concrete blocker appears.
 
+Product Progress Plan V1 status:
+
+- PR #325 added `sokrates.md`, `docs/plans/project-progress-plan-v1.md`, and
+  the first visible-flow audit at
+  `docs/evidence/product-progress/2026-05-20-visible-flow-audit-v1.md`.
+- The first implementation slice fills the empty `/store/home` store-manager
+  intro/hero copy in Turkish and English and records evidence at
+  `docs/evidence/product-progress/2026-05-20-store-home-manager-copy.md`.
+- External/live evidence remains parked until real staging/provider inputs are
+  provided.
+
 The `/store/approvals` first pass has started:
 
 - PR #312 closed a real returned-queue error visibility bug.

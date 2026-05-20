@@ -53,9 +53,11 @@ export const storeHomeTr = {
   'storeHome.command.personnelSummaryTitle': 'Kişisel özet',
   'storeHome.command.personnelTimelineTitle': 'Kişisel akış',
   'storeHome.command.managerTitle': 'Mağaza Yönetim Paneli',
-  'storeHome.command.managerCopy': '',
-  'storeHome.command.managerHeroTitle': '',
-  'storeHome.command.managerHeroCopy': '',
+  'storeHome.command.managerCopy':
+    'KPI, sıralama, talep ve checklist aksiyonları mağaza müdürü için tek girişte toplandı.',
+  'storeHome.command.managerHeroTitle': 'Mağaza operasyonu tek komuta yüzeyinden yönetilir.',
+  'storeHome.command.managerHeroCopy':
+    'Günlük KPI görünümü, bekleyen talepler ve checklist kabul işleri bu panelden ilgili sayfalara yönlenir.',
   'storeHome.command.managerFocusTitle': 'Satıcı kodu ve hedef işleri Talepler / Onaylar altında.',
   'storeHome.command.managerFocusCopy':
     'Bekleyen talebe dokunulduğunda mağaza müdürünün aksiyon alacağı sayfa açılır.',
@@ -303,9 +305,11 @@ export const storeHomeEn: Record<keyof typeof storeHomeTr, string> = {
   'storeHome.command.personnelSummaryTitle': 'Personal summary',
   'storeHome.command.personnelTimelineTitle': 'Personal flow',
   'storeHome.command.managerTitle': 'Store Management Panel',
-  'storeHome.command.managerCopy': '',
-  'storeHome.command.managerHeroTitle': '',
-  'storeHome.command.managerHeroCopy': '',
+  'storeHome.command.managerCopy':
+    'KPIs, rankings, requests, and checklist actions are collected in one store-manager entry.',
+  'storeHome.command.managerHeroTitle': 'Store operations run from one command surface.',
+  'storeHome.command.managerHeroCopy':
+    'Daily KPI visibility, pending requests, and checklist acknowledgements route from this panel to their pages.',
   'storeHome.command.managerFocusTitle': 'Salesperson code and target work live under Requests / Approvals.',
   'storeHome.command.managerFocusCopy':
     'Clicking pending requests opens the page where store managers take action.',

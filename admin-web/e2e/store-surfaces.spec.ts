@@ -536,6 +536,7 @@ test('store home prefetches the task queue for manager navigation', async ({ pag
   await page.goto('/store/home')
 
   await expect(page.getByRole('heading', { name: /Mağaza Yönetim Paneli/i })).toBeVisible()
+  await expect(page.getByText('Mağaza operasyonu tek komuta yüzeyinden yönetilir.')).toBeVisible()
   await expect.poll(() => workflowInboxRequests).toBeGreaterThanOrEqual(1)
 
   await page
@@ -678,6 +679,7 @@ test('store home switches to English copy and persists locale', async ({ page })
   const storeSidebar = page.locator('.store-command-sidebar')
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: /Store Management Panel/i })).toBeVisible()
+  await expect(page.getByText('Store operations run from one command surface.')).toBeVisible()
   await expect(page.getByText('Store performance and requests share one entry.')).toHaveCount(0)
   await expect(storeNav.getByRole('link', { name: 'Store KPIs', exact: true })).toBeVisible()
   await expect(storeNav.getByRole('link', { name: 'Rankings', exact: true })).toBeVisible()
