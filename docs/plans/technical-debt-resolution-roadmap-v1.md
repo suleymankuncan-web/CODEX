@@ -381,7 +381,7 @@ Verification:
 ```powershell
 npm.cmd --prefix admin-web run lint
 npm.cmd --prefix admin-web run build
-npx.cmd playwright test competition-surfaces.spec.ts --workers=1
+npm.cmd --prefix admin-web run test:e2e -- competition-surfaces.spec.ts --workers=1
 npm.cmd --prefix backend/nestjs test -- competition --runInBand
 ```
 
@@ -421,7 +421,7 @@ Verification:
 ```powershell
 npm.cmd --prefix admin-web run lint
 npm.cmd --prefix admin-web run build
-npx.cmd playwright test <target-spec> --workers=1
+npm.cmd --prefix admin-web run test:e2e -- <target-spec> --workers=1
 ```
 
 Targeted specs by surface:
@@ -557,8 +557,8 @@ Verification:
 ```powershell
 npm.cmd run check:pilot-stabilization
 npm.cmd --prefix backend/nestjs test -- auth --runInBand
-npx.cmd playwright test auth-admin-surfaces.spec.ts --workers=1
-npx.cmd playwright test pilot-smoke.spec.ts pilot-api-contracts.spec.ts --workers=1
+npm.cmd --prefix admin-web run test:e2e -- auth-admin-surfaces.spec.ts --workers=1
+npm.cmd --prefix admin-web run test:e2e -- pilot-smoke.spec.ts pilot-api-contracts.spec.ts --workers=1
 ```
 
 Stop rules:
@@ -605,7 +605,7 @@ MEDIUM, frontend structural refactor:
 ```powershell
 npm.cmd --prefix admin-web run lint
 npm.cmd --prefix admin-web run build
-npx.cmd playwright test <target-spec> --workers=1
+npm.cmd --prefix admin-web run test:e2e -- <target-spec> --workers=1
 ```
 
 MEDIUM, backend read-boundary refactor:
