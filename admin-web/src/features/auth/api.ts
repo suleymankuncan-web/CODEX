@@ -1,4 +1,5 @@
 import { fetchJson, sendJson } from '../../lib/api'
+import { fetchOpenApiJson, type ApiGetResponse } from '../../lib/openapi-client'
 
 type ListResponse<T> = {
   items: T[]
@@ -10,131 +11,26 @@ type ListResponse<T> = {
   }
 }
 
-type AuthLookupOption = {
-  value: string
-  label: string
-}
-
-export type AuthLookupUser = {
-  userId: string
-  username: string
-  email: string
-}
-
-export type AuthLookupUserSearchResult = AuthLookupUser & {
-  authProvider: string
-  providerSubject: string | null
-}
-
-type AuthLookupRole = {
-  roleId: string
-  roleCode: string
-  roleName: string
-  scopeType: string
-}
-
-type AuthLookupPermission = {
-  permissionId: string
-  permissionCode: string
-  resourceName: string
-  actionName: string
-}
-
-export type AuthLookupStore = {
-  storeId: string
-  storeCode: string
-  storeName: string
-  companyId: string
-  regionId: string
-  regionName: string
-}
-
-export type AuthLookups = {
-  scopeTypes: string[]
-  authProviders: string[]
-  users: AuthLookupUser[]
-  roles: AuthLookupRole[]
-  permissions: AuthLookupPermission[]
-  stores: AuthLookupStore[]
-  optionGroups: {
-    users: AuthLookupUser[]
-    roles: AuthLookupRole[]
-    permissions: AuthLookupPermission[]
-    stores: AuthLookupStore[]
-    scopeTypes: AuthLookupOption[]
-    authProviders: AuthLookupOption[]
-  }
-  meta: {
-    totalUsers: number
-    totalRoles: number
-    totalPermissions: number
-    totalStores: number
-  }
-}
-
-export type AuthLookupSearchResponse<T> = {
-  items: T[]
-  meta: {
-    query: string
-    count: number
-    limit: number
-  }
-}
-
-export type UserAccount = {
-  userId: string
-  employeeId: string | null
-  username: string
-  email: string
-  authProvider: string
-  providerSubject: string | null
-  isActive: boolean
-  lastLoginAt: string | null
-  createdAt: string
-  deactivatedAt?: string | null
-  deactivationReason?: string | null
-  deactivatedByUserId?: string | null
-  employeeStatus?: string | null
-}
+export type AuthLookups = ApiGetResponse<'/api/auth/lookups'>
+export type AuthLookupUser = AuthLookups['users'][number]
+export type AuthLookupStore = AuthLookups['stores'][number]
+type AuthLookupUserSearchResponse = ApiGetResponse<'/api/auth/lookups/users/search'>
+export type AuthLookupUserSearchResult = AuthLookupUserSearchResponse['items'][number]
+type AuthRoleCatalogResponse = ApiGetResponse<'/api/auth/roles'>
+export type RoleCatalogItem = AuthRoleCatalogResponse['items'][number]
+type AuthPermissionCatalogResponse = ApiGetResponse<'/api/auth/permissions'>
+export type PermissionCatalogItem = AuthPermissionCatalogResponse['items'][number]
+type AuthUserAccountsResponse = ApiGetResponse<'/api/auth/users'>
+export type UserAccount = AuthUserAccountsResponse['items'][number]
+type AuthRoleAssignmentsResponse = ApiGetResponse<'/api/auth/role-assignments'>
+export type RoleAssignment = AuthRoleAssignmentsResponse['items'][number]
+type AuthActionStoreAssignmentsResponse = ApiGetResponse<'/api/auth/action-store-assignments'>
+export type ActionStoreAssignment = AuthActionStoreAssignmentsResponse['items'][number]
 
 export type UserAccessClosure = {
   closedRoleAssignments: number
   closedActionStoreAssignments: number
   revokedMobileSessions: number
-}
-
-export type RoleAssignment = {
-  assignmentId: string
-  userId: string
-  username: string
-  email: string
-  roleCode: string
-  roleName: string
-  scopeType: string
-  companyId: string | null
-  regionId: string | null
-  storeId: string | null
-  effectiveFrom: string | null
-  effectiveTo: string | null
-  createdAt: string
-  active: boolean
-}
-
-export type ActionStoreAssignment = {
-  assignmentId: string
-  userId: string
-  username: string
-  email: string
-  storeId: string
-  storeCode: string
-  storeName: string
-  companyId: string
-  regionId: string
-  regionName: string
-  effectiveFrom: string | null
-  effectiveTo: string | null
-  createdAt: string
-  active: boolean
 }
 
 export type PilotUserBinding = {
@@ -150,28 +46,6 @@ export type PilotUserBinding = {
     storeCode: string
     storeName: string
   }
-}
-
-export type RoleCatalogItem = {
-  roleId: string
-  roleCode: string
-  roleName: string
-  scopeType: string
-  description: string | null
-  isSystemRole: boolean
-  permissions: Array<{
-    permissionCode: string
-    resourceName: string
-    actionName: string
-  }>
-}
-
-export type PermissionCatalogItem = {
-  permissionId: string
-  permissionCode: string
-  resourceName: string
-  actionName: string
-  description: string | null
 }
 
 export type AuditEvent = {
@@ -247,7 +121,7 @@ type CommandResponse<T> = {
 }
 
 export async function getAuthLookups() {
-  return fetchJson<AuthLookups>('/auth/lookups')
+  return fetchOpenApiJson('/api/auth/lookups')
 }
 
 export async function searchAuthUsers(input: { query: string; limit?: number }) {
@@ -256,9 +130,7 @@ export async function searchAuthUsers(input: { query: string; limit?: number }) 
     limit: String(input.limit ?? 20),
   })
 
-  return fetchJson<AuthLookupSearchResponse<AuthLookupUserSearchResult>>(
-    `/auth/lookups/users/search?${params.toString()}`,
-  )
+  return fetchOpenApiJson('/api/auth/lookups/users/search', { query: params })
 }
 
 export async function searchAuthStores(input: { query: string; limit?: number }) {
@@ -267,9 +139,7 @@ export async function searchAuthStores(input: { query: string; limit?: number })
     limit: String(input.limit ?? 20),
   })
 
-  return fetchJson<AuthLookupSearchResponse<AuthLookupStore>>(
-    `/auth/lookups/stores/search?${params.toString()}`,
-  )
+  return fetchOpenApiJson('/api/auth/lookups/stores/search', { query: params })
 }
 
 export async function getAuthSession() {
@@ -297,7 +167,7 @@ export async function getUserAccounts(input?: {
     params.set('isActive', String(input.isActive))
   }
 
-  return fetchJson<ListResponse<UserAccount>>(`/auth/users?${params.toString()}`)
+  return fetchOpenApiJson('/api/auth/users', { query: params })
 }
 
 export async function getRoleAssignments(input?: {
@@ -327,7 +197,7 @@ export async function getRoleAssignments(input?: {
     params.set('active', String(input.active))
   }
 
-  return fetchJson<ListResponse<RoleAssignment>>(`/auth/role-assignments?${params.toString()}`)
+  return fetchOpenApiJson('/api/auth/role-assignments', { query: params })
 }
 
 export async function getActionStoreAssignments(input?: {
@@ -352,17 +222,15 @@ export async function getActionStoreAssignments(input?: {
     params.set('active', String(input.active))
   }
 
-  return fetchJson<ListResponse<ActionStoreAssignment>>(
-    `/auth/action-store-assignments?${params.toString()}`,
-  )
+  return fetchOpenApiJson('/api/auth/action-store-assignments', { query: params })
 }
 
 export async function getRoles() {
-  return fetchJson<ListResponse<RoleCatalogItem>>('/auth/roles')
+  return fetchOpenApiJson('/api/auth/roles')
 }
 
 export async function getPermissions() {
-  return fetchJson<ListResponse<PermissionCatalogItem>>('/auth/permissions')
+  return fetchOpenApiJson('/api/auth/permissions')
 }
 
 export async function deactivateRoleAssignment(assignmentId: string) {

@@ -968,6 +968,359 @@ const auditEventSchema = {
   },
 };
 
+const authLookupOptionSchema = {
+  type: "object",
+  required: ["value", "label"],
+  properties: {
+    value: { type: "string" },
+    label: { type: "string" },
+  },
+};
+
+const authLookupUserSchema = {
+  type: "object",
+  required: ["userId", "username", "email"],
+  properties: {
+    userId: { type: "string" },
+    username: { type: "string" },
+    email: { type: "string" },
+  },
+};
+
+const authLookupUserSearchResultSchema = {
+  type: "object",
+  required: [
+    "userId",
+    "username",
+    "email",
+    "authProvider",
+    "providerSubject",
+  ],
+  properties: {
+    ...authLookupUserSchema.properties,
+    authProvider: { type: "string" },
+    providerSubject: { type: "string", nullable: true },
+  },
+};
+
+const authLookupRoleSchema = {
+  type: "object",
+  required: ["roleId", "roleCode", "roleName", "scopeType"],
+  properties: {
+    roleId: { type: "string" },
+    roleCode: { type: "string" },
+    roleName: { type: "string" },
+    scopeType: { type: "string" },
+  },
+};
+
+const authLookupPermissionSchema = {
+  type: "object",
+  required: ["permissionId", "permissionCode", "resourceName", "actionName"],
+  properties: {
+    permissionId: { type: "string" },
+    permissionCode: { type: "string" },
+    resourceName: { type: "string" },
+    actionName: { type: "string" },
+  },
+};
+
+const authRolePermissionSummarySchema = {
+  type: "object",
+  required: ["permissionCode", "resourceName", "actionName"],
+  properties: {
+    permissionCode: { type: "string" },
+    resourceName: { type: "string" },
+    actionName: { type: "string" },
+  },
+};
+
+const authRoleCatalogItemSchema = {
+  type: "object",
+  required: [
+    "roleId",
+    "roleCode",
+    "roleName",
+    "scopeType",
+    "description",
+    "isSystemRole",
+    "permissions",
+  ],
+  properties: {
+    roleId: { type: "string" },
+    roleCode: { type: "string" },
+    roleName: { type: "string" },
+    scopeType: { type: "string" },
+    description: { type: "string", nullable: true },
+    isSystemRole: { type: "boolean" },
+    permissions: {
+      type: "array",
+      items: authRolePermissionSummarySchema,
+    },
+  },
+};
+
+const authPermissionCatalogItemSchema = {
+  type: "object",
+  required: [
+    "permissionId",
+    "permissionCode",
+    "resourceName",
+    "actionName",
+    "description",
+  ],
+  properties: {
+    permissionId: { type: "string" },
+    permissionCode: { type: "string" },
+    resourceName: { type: "string" },
+    actionName: { type: "string" },
+    description: { type: "string", nullable: true },
+  },
+};
+
+const authUserAccountSchema = {
+  type: "object",
+  required: [
+    "userId",
+    "employeeId",
+    "username",
+    "email",
+    "authProvider",
+    "providerSubject",
+    "isActive",
+    "lastLoginAt",
+    "createdAt",
+  ],
+  properties: {
+    userId: { type: "string" },
+    employeeId: { type: "string", nullable: true },
+    username: { type: "string" },
+    email: { type: "string" },
+    authProvider: { type: "string" },
+    providerSubject: { type: "string", nullable: true },
+    isActive: { type: "boolean" },
+    lastLoginAt: { type: "string", nullable: true },
+    createdAt: { type: "string" },
+    deactivatedAt: { type: "string", nullable: true },
+    deactivationReason: { type: "string", nullable: true },
+    deactivatedByUserId: { type: "string", nullable: true },
+    employeeStatus: { type: "string", nullable: true },
+  },
+};
+
+const authRoleAssignmentSchema = {
+  type: "object",
+  required: [
+    "assignmentId",
+    "userId",
+    "username",
+    "email",
+    "roleCode",
+    "roleName",
+    "scopeType",
+    "companyId",
+    "regionId",
+    "storeId",
+    "effectiveFrom",
+    "effectiveTo",
+    "createdAt",
+    "active",
+  ],
+  properties: {
+    assignmentId: { type: "string" },
+    userId: { type: "string" },
+    username: { type: "string" },
+    email: { type: "string" },
+    roleCode: { type: "string" },
+    roleName: { type: "string" },
+    scopeType: { type: "string" },
+    companyId: { type: "string", nullable: true },
+    regionId: { type: "string", nullable: true },
+    storeId: { type: "string", nullable: true },
+    effectiveFrom: { type: "string", nullable: true },
+    effectiveTo: { type: "string", nullable: true },
+    createdAt: { type: "string" },
+    active: { type: "boolean" },
+  },
+};
+
+const authActionStoreAssignmentSchema = {
+  type: "object",
+  required: [
+    "assignmentId",
+    "userId",
+    "username",
+    "email",
+    "storeId",
+    "storeCode",
+    "storeName",
+    "companyId",
+    "regionId",
+    "regionName",
+    "effectiveFrom",
+    "effectiveTo",
+    "createdAt",
+    "active",
+  ],
+  properties: {
+    assignmentId: { type: "string" },
+    userId: { type: "string" },
+    username: { type: "string" },
+    email: { type: "string" },
+    storeId: { type: "string" },
+    storeCode: { type: "string" },
+    storeName: { type: "string" },
+    companyId: { type: "string" },
+    regionId: { type: "string" },
+    regionName: { type: "string" },
+    effectiveFrom: { type: "string", nullable: true },
+    effectiveTo: { type: "string", nullable: true },
+    createdAt: { type: "string" },
+    active: { type: "boolean" },
+  },
+};
+
+const authLookupStoreSchema = {
+  type: "object",
+  required: [
+    "storeId",
+    "storeCode",
+    "storeName",
+    "companyId",
+    "regionId",
+    "regionName",
+  ],
+  properties: {
+    storeId: { type: "string" },
+    storeCode: { type: "string" },
+    storeName: { type: "string" },
+    companyId: { type: "string" },
+    regionId: { type: "string" },
+    regionName: { type: "string" },
+  },
+};
+
+const authLookupSearchMetaSchema = {
+  type: "object",
+  required: ["query", "count", "limit"],
+  properties: {
+    query: { type: "string" },
+    count: { type: "integer", minimum: 0 },
+    limit: { type: "integer", minimum: 1 },
+  },
+};
+
+const authLookupsResponseSchema = {
+  type: "object",
+  required: [
+    "scopeTypes",
+    "authProviders",
+    "users",
+    "roles",
+    "permissions",
+    "stores",
+    "optionGroups",
+    "meta",
+  ],
+  properties: {
+    scopeTypes: {
+      type: "array",
+      items: { type: "string" },
+    },
+    authProviders: {
+      type: "array",
+      items: { type: "string" },
+    },
+    users: {
+      type: "array",
+      items: authLookupUserSchema,
+    },
+    roles: {
+      type: "array",
+      items: authLookupRoleSchema,
+    },
+    permissions: {
+      type: "array",
+      items: authLookupPermissionSchema,
+    },
+    stores: {
+      type: "array",
+      items: authLookupStoreSchema,
+    },
+    optionGroups: {
+      type: "object",
+      required: [
+        "users",
+        "roles",
+        "permissions",
+        "stores",
+        "scopeTypes",
+        "authProviders",
+      ],
+      properties: {
+        users: {
+          type: "array",
+          items: authLookupUserSchema,
+        },
+        roles: {
+          type: "array",
+          items: authLookupRoleSchema,
+        },
+        permissions: {
+          type: "array",
+          items: authLookupPermissionSchema,
+        },
+        stores: {
+          type: "array",
+          items: authLookupStoreSchema,
+        },
+        scopeTypes: {
+          type: "array",
+          items: authLookupOptionSchema,
+        },
+        authProviders: {
+          type: "array",
+          items: authLookupOptionSchema,
+        },
+      },
+    },
+    meta: {
+      type: "object",
+      required: ["totalUsers", "totalRoles", "totalPermissions", "totalStores"],
+      properties: countProperties([
+        "totalUsers",
+        "totalRoles",
+        "totalPermissions",
+        "totalStores",
+      ]),
+    },
+  },
+};
+
+const authUserLookupSearchResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: authLookupUserSearchResultSchema,
+    },
+    meta: authLookupSearchMetaSchema,
+  },
+};
+
+const authStoreLookupSearchResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: authLookupStoreSchema,
+    },
+    meta: authLookupSearchMetaSchema,
+  },
+};
+
 const integrationLookupSourceSchema = {
   type: "object",
   required: [
@@ -1268,6 +1621,66 @@ const listResponseMetaSchema = {
     total: { type: "integer", minimum: 0 },
     limit: { type: "integer", minimum: 0 },
     offset: { type: "integer", minimum: 0 },
+  },
+};
+
+const authRoleCatalogResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: authRoleCatalogItemSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
+const authPermissionCatalogResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: authPermissionCatalogItemSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
+const authUserAccountsResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: authUserAccountSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
+const authRoleAssignmentsResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: authRoleAssignmentSchema,
+    },
+    meta: listResponseMetaSchema,
+  },
+};
+
+const authActionStoreAssignmentsResponseSchema = {
+  type: "object",
+  required: ["items", "meta"],
+  properties: {
+    items: {
+      type: "array",
+      items: authActionStoreAssignmentSchema,
+    },
+    meta: listResponseMetaSchema,
   },
 };
 
@@ -3772,6 +4185,15 @@ async function generateOpenApi(): Promise<void> {
     ReportingClosedLeaderboardResponse: reportingClosedLeaderboardResponseSchema,
     ReportingChecklistResponse: reportingChecklistResponseSchema,
     ReportingTurnoverResponse: reportingTurnoverResponseSchema,
+    AuthLookupsResponse: authLookupsResponseSchema,
+    AuthUserLookupSearchResponse: authUserLookupSearchResponseSchema,
+    AuthStoreLookupSearchResponse: authStoreLookupSearchResponseSchema,
+    AuthRoleCatalogResponse: authRoleCatalogResponseSchema,
+    AuthPermissionCatalogResponse: authPermissionCatalogResponseSchema,
+    AuthUserAccountsResponse: authUserAccountsResponseSchema,
+    AuthRoleAssignmentsResponse: authRoleAssignmentsResponseSchema,
+    AuthActionStoreAssignmentsResponse:
+      authActionStoreAssignmentsResponseSchema,
     ImportOverview: importOverviewSchema,
     ImportPayloadTemplateResponse: importPayloadTemplateSchema,
     ImportBatchAuditResponse: importBatchAuditResponseSchema,
@@ -4087,6 +4509,70 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Paginated turnover snapshot rows for reporting surfaces.",
     "ReportingTurnoverResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/lookups",
+    "get",
+    "Auth admin lookup options for user, role, permission, and store forms.",
+    "AuthLookupsResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/lookups/users/search",
+    "get",
+    "Active user lookup search results for auth admin forms.",
+    "AuthUserLookupSearchResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/lookups/stores/search",
+    "get",
+    "Active store lookup search results for auth admin forms.",
+    "AuthStoreLookupSearchResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/roles",
+    "get",
+    "Paginated auth role catalog with granted permissions.",
+    "AuthRoleCatalogResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/permissions",
+    "get",
+    "Paginated auth permission catalog.",
+    "AuthPermissionCatalogResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/users",
+    "get",
+    "Paginated auth user accounts visible to auth admins.",
+    "AuthUserAccountsResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/role-assignments",
+    "get",
+    "Paginated auth role assignments visible to auth admins.",
+    "AuthRoleAssignmentsResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/auth/action-store-assignments",
+    "get",
+    "Paginated auth action-store assignments visible to auth admins.",
+    "AuthActionStoreAssignmentsResponse",
   );
 
   setJsonResponseSchema(

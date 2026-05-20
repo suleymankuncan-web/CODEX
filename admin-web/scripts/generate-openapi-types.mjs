@@ -13,6 +13,14 @@ const document = JSON.parse(await readFile(openApiPath, 'utf8'))
 
 const httpMethods = new Set(['get', 'post', 'put', 'patch', 'delete'])
 const selectedOperations = [
+  { path: '/api/auth/action-store-assignments', method: 'get' },
+  { path: '/api/auth/lookups', method: 'get' },
+  { path: '/api/auth/lookups/stores/search', method: 'get' },
+  { path: '/api/auth/lookups/users/search', method: 'get' },
+  { path: '/api/auth/permissions', method: 'get' },
+  { path: '/api/auth/role-assignments', method: 'get' },
+  { path: '/api/auth/roles', method: 'get' },
+  { path: '/api/auth/users', method: 'get' },
   { path: '/api/competitions', method: 'get' },
   { path: '/api/competitions/{competitionId}', method: 'get' },
   { path: '/api/competitions/{competitionId}/stage-package-plans', method: 'get' },

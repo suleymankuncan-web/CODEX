@@ -4,6 +4,212 @@
 
 export type components = {
   schemas: {
+    "AuthActionStoreAssignmentsResponse": {
+      "items": Array<{
+          "assignmentId": string
+          "userId": string
+          "username": string
+          "email": string
+          "storeId": string
+          "storeCode": string
+          "storeName": string
+          "companyId": string
+          "regionId": string
+          "regionName": string
+          "effectiveFrom": string | null
+          "effectiveTo": string | null
+          "createdAt": string
+          "active": boolean
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
+    "AuthLookupsResponse": {
+      "scopeTypes": string[]
+      "authProviders": string[]
+      "users": Array<{
+          "userId": string
+          "username": string
+          "email": string
+        }>
+      "roles": Array<{
+          "roleId": string
+          "roleCode": string
+          "roleName": string
+          "scopeType": string
+        }>
+      "permissions": Array<{
+          "permissionId": string
+          "permissionCode": string
+          "resourceName": string
+          "actionName": string
+        }>
+      "stores": Array<{
+          "storeId": string
+          "storeCode": string
+          "storeName": string
+          "companyId": string
+          "regionId": string
+          "regionName": string
+        }>
+      "optionGroups": {
+        "users": Array<{
+            "userId": string
+            "username": string
+            "email": string
+          }>
+        "roles": Array<{
+            "roleId": string
+            "roleCode": string
+            "roleName": string
+            "scopeType": string
+          }>
+        "permissions": Array<{
+            "permissionId": string
+            "permissionCode": string
+            "resourceName": string
+            "actionName": string
+          }>
+        "stores": Array<{
+            "storeId": string
+            "storeCode": string
+            "storeName": string
+            "companyId": string
+            "regionId": string
+            "regionName": string
+          }>
+        "scopeTypes": Array<{
+            "value": string
+            "label": string
+          }>
+        "authProviders": Array<{
+            "value": string
+            "label": string
+          }>
+      }
+      "meta": {
+        "totalUsers": number
+        "totalRoles": number
+        "totalPermissions": number
+        "totalStores": number
+      }
+    }
+    "AuthPermissionCatalogResponse": {
+      "items": Array<{
+          "permissionId": string
+          "permissionCode": string
+          "resourceName": string
+          "actionName": string
+          "description": string | null
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
+    "AuthRoleAssignmentsResponse": {
+      "items": Array<{
+          "assignmentId": string
+          "userId": string
+          "username": string
+          "email": string
+          "roleCode": string
+          "roleName": string
+          "scopeType": string
+          "companyId": string | null
+          "regionId": string | null
+          "storeId": string | null
+          "effectiveFrom": string | null
+          "effectiveTo": string | null
+          "createdAt": string
+          "active": boolean
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
+    "AuthRoleCatalogResponse": {
+      "items": Array<{
+          "roleId": string
+          "roleCode": string
+          "roleName": string
+          "scopeType": string
+          "description": string | null
+          "isSystemRole": boolean
+          "permissions": Array<{
+              "permissionCode": string
+              "resourceName": string
+              "actionName": string
+            }>
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
+    "AuthStoreLookupSearchResponse": {
+      "items": Array<{
+          "storeId": string
+          "storeCode": string
+          "storeName": string
+          "companyId": string
+          "regionId": string
+          "regionName": string
+        }>
+      "meta": {
+        "query": string
+        "count": number
+        "limit": number
+      }
+    }
+    "AuthUserAccountsResponse": {
+      "items": Array<{
+          "userId": string
+          "employeeId": string | null
+          "username": string
+          "email": string
+          "authProvider": string
+          "providerSubject": string | null
+          "isActive": boolean
+          "lastLoginAt": string | null
+          "createdAt": string
+          "deactivatedAt"?: string | null
+          "deactivationReason"?: string | null
+          "deactivatedByUserId"?: string | null
+          "employeeStatus"?: string | null
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
+    "AuthUserLookupSearchResponse": {
+      "items": Array<{
+          "userId": string
+          "username": string
+          "email": string
+          "authProvider": string
+          "providerSubject": string | null
+        }>
+      "meta": {
+        "query": string
+        "count": number
+        "limit": number
+      }
+    }
     "CompetitionDetailResponse": {
       "competition": {
         "competitionId": string
@@ -1870,6 +2076,94 @@ export type components = {
 }
 
 export type paths = {
+  "/api/auth/action-store-assignments": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["AuthActionStoreAssignmentsResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/auth/lookups": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["AuthLookupsResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/auth/lookups/stores/search": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["AuthStoreLookupSearchResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/auth/lookups/users/search": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["AuthUserLookupSearchResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/auth/permissions": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["AuthPermissionCatalogResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/auth/role-assignments": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["AuthRoleAssignmentsResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/auth/roles": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["AuthRoleCatalogResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/auth/users": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["AuthUserAccountsResponse"]
+          }
+        }
+      }
+    }
+  }
   "/api/competitions": {
     get: {
       responses: {

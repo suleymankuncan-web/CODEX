@@ -834,6 +834,131 @@ describe("OpenAPI baseline", () => {
       }),
     );
 
+    const authLookupsResponse =
+      document.paths["/api/auth/lookups"].get.responses?.["200"];
+    expect(authLookupsResponse?.content?.["application/json"]?.schema).toEqual({
+      $ref: "#/components/schemas/AuthLookupsResponse",
+    });
+    expect(document.components?.schemas?.AuthLookupsResponse?.properties).toEqual(
+      expect.objectContaining({
+        scopeTypes: expect.any(Object),
+        authProviders: expect.any(Object),
+        users: expect.any(Object),
+        roles: expect.any(Object),
+        permissions: expect.any(Object),
+        stores: expect.any(Object),
+        optionGroups: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
+    const authUserLookupSearchResponse =
+      document.paths["/api/auth/lookups/users/search"].get.responses?.["200"];
+    expect(
+      authUserLookupSearchResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/AuthUserLookupSearchResponse",
+    });
+    expect(
+      document.components?.schemas?.AuthUserLookupSearchResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
+    const authStoreLookupSearchResponse =
+      document.paths["/api/auth/lookups/stores/search"].get.responses?.["200"];
+    expect(
+      authStoreLookupSearchResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/AuthStoreLookupSearchResponse",
+    });
+    expect(
+      document.components?.schemas?.AuthStoreLookupSearchResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
+    const authRolesResponse =
+      document.paths["/api/auth/roles"].get.responses?.["200"];
+    expect(authRolesResponse?.content?.["application/json"]?.schema).toEqual({
+      $ref: "#/components/schemas/AuthRoleCatalogResponse",
+    });
+    expect(
+      document.components?.schemas?.AuthRoleCatalogResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
+    const authPermissionsResponse =
+      document.paths["/api/auth/permissions"].get.responses?.["200"];
+    expect(authPermissionsResponse?.content?.["application/json"]?.schema).toEqual({
+      $ref: "#/components/schemas/AuthPermissionCatalogResponse",
+    });
+    expect(
+      document.components?.schemas?.AuthPermissionCatalogResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
+    const authUsersResponse =
+      document.paths["/api/auth/users"].get.responses?.["200"];
+    expect(authUsersResponse?.content?.["application/json"]?.schema).toEqual({
+      $ref: "#/components/schemas/AuthUserAccountsResponse",
+    });
+    expect(
+      document.components?.schemas?.AuthUserAccountsResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
+    const authRoleAssignmentsResponse =
+      document.paths["/api/auth/role-assignments"].get.responses?.["200"];
+    expect(
+      authRoleAssignmentsResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/AuthRoleAssignmentsResponse",
+    });
+    expect(
+      document.components?.schemas?.AuthRoleAssignmentsResponse?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
+    const authActionStoreAssignmentsResponse =
+      document.paths["/api/auth/action-store-assignments"].get.responses?.["200"];
+    expect(
+      authActionStoreAssignmentsResponse?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/AuthActionStoreAssignmentsResponse",
+    });
+    expect(
+      document.components?.schemas?.AuthActionStoreAssignmentsResponse
+        ?.properties,
+    ).toEqual(
+      expect.objectContaining({
+        items: expect.any(Object),
+        meta: expect.any(Object),
+      }),
+    );
+
     const lookupsResponse =
       document.paths["/api/integrations/lookups"].get.responses?.["200"];
     expect(lookupsResponse?.content?.["application/json"]?.schema).toEqual({
