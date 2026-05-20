@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #334, and is the starting point for continuing in a fresh window.
+PR #335, and is the starting point for continuing in a fresh window.
 
 ## Active Workspace
 
@@ -26,14 +26,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-20, `origin/main` has been fetched through PR #334.
+As of 2026-05-20, `origin/main` has been fetched through PR #335.
 The root checkout may still be on a non-main local branch with unrelated
 handoff noise; do not assume the root working tree is clean.
 
 Latest merge on main:
 
 ```text
-60cfcb83 feat: improve import detail panel readability (#334)
+a8c51ea7 feat: improve reports detail mobile layout (#335)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -88,6 +88,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #332 `feat: clarify admin reports drilldown links`
 - PR #333 `feat: clarify import detail mapping controls`
 - PR #334 `feat: improve import detail panel readability`
+- PR #335 `feat: improve reports detail mobile layout`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -550,6 +551,11 @@ Product Progress Plan V1 status:
   behavior, export/search/sort behavior, copy, and data calculations unchanged.
   Evidence:
   `docs/evidence/product-progress/2026-05-20-reports-detail-mobile-readability-v1.md`.
+- The store mobile shell/checklist V1 slice moves shared mobile bottom-nav
+  rules into the store command shell, keeps active bottom toolbar icons visible,
+  and fixes checklist mobile overflow caused by visit-table selector
+  specificity. Evidence:
+  `docs/evidence/product-progress/2026-05-20-store-mobile-shell-checklist-v1.md`.
 
 The `/store/approvals` first pass has started:
 

@@ -497,22 +497,39 @@ test('store checklist surface switches to English copy and persists locale', asy
 })
 
 test('checklist visit surface stays usable on mobile width', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 })
-  await setupChecklistPage(page, ['REGION_MANAGER'])
+  await page.setViewportSize({ width: 360, height: 844 })
+  await setupChecklistPage(page, ['REGION_MANAGER'], { longCopy: true })
   await page.goto('/store/checklists')
 
   await expect(page.getByRole('tab', { name: /Ziyaret akışı/ })).toBeVisible()
-  await expect.poll(async () =>
-    page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1),
-  ).toBe(true)
+  await expectNoHorizontalOverflow(page)
+
+  const activeBottomNavItem = page.locator('.store-command-nav-link-active').first()
+  await expect(activeBottomNavItem).toBeVisible()
+  await expect
+    .poll(async () =>
+      activeBottomNavItem.evaluate((link) => {
+        const linkStyle = window.getComputedStyle(link)
+        const icon = link.querySelector('.store-command-nav-icon')
+        const iconStyle = icon ? window.getComputedStyle(icon) : null
+        return {
+          backgroundImage: linkStyle.backgroundImage,
+          color: linkStyle.color,
+          iconColor: iconStyle?.color ?? '',
+        }
+      }),
+    )
+    .toMatchObject({
+      backgroundImage: expect.not.stringMatching(/^none$/),
+      color: 'rgb(255, 255, 255)',
+      iconColor: 'rgb(255, 255, 255)',
+    })
 
   await page.getByRole('button', { name: 'Devam et' }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
   await expect(page.getByLabel('Puan')).toBeVisible()
   await expect(page.getByLabel('Not')).toBeVisible()
-  await expect.poll(async () =>
-    page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1),
-  ).toBe(true)
+  await expectNoHorizontalOverflow(page)
 })
 
 type ChecklistFixtureOptions = {
@@ -520,6 +537,7 @@ type ChecklistFixtureOptions = {
   templateCode?: string
   templateName?: string
   includeVmTemplate?: boolean
+  longCopy?: boolean
   omitTemplates?: boolean
   activeInstances?: ChecklistActiveInstanceFixture[]
   monthlySummaries?: ChecklistMonthlySummaryFixture[]
@@ -580,6 +598,47 @@ function createChecklistRequestLog(): ChecklistRequestLog {
     completes: [],
     acknowledgements: [],
   }
+}
+
+async function expectNoHorizontalOverflow(page: Page) {
+  await expect
+    .poll(async () =>
+      page.evaluate(() => {
+        const viewportWidth = document.documentElement.clientWidth
+        const documentScrollWidth = document.documentElement.scrollWidth
+        const offenders = Array.from(document.querySelectorAll<HTMLElement>('body *'))
+          .filter((element) => !element.closest('.store-command-nav'))
+          .map((element) => {
+            const rect = element.getBoundingClientRect()
+            return {
+              className: element.className.toString(),
+              tagName: element.tagName.toLowerCase(),
+              left: Math.round(rect.left),
+              right: Math.round(rect.right),
+              width: Math.round(rect.width),
+            }
+          })
+          .filter((entry) => entry.width > 0 && (entry.left < -1 || entry.right > viewportWidth + 1))
+          .slice(0, 5)
+
+        return {
+          documentScrollWidth,
+          offenders,
+          viewportWidth,
+        }
+      }),
+    )
+    .toMatchObject({
+      documentScrollWidth: expect.any(Number),
+      offenders: [],
+      viewportWidth: expect.any(Number),
+    })
+
+  await expect
+    .poll(async () =>
+      page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1),
+    )
+    .toBe(true)
 }
 
 async function setupChecklistPage(page: Page, roleCodes: string[], options: ChecklistFixtureOptions = {}) {
@@ -758,7 +817,15 @@ function createAuthSessionFixture(roleCodes: string[]) {
 function createMobileChecklistTodayFixture(options: ChecklistFixtureOptions = {}) {
   const templateType = options.templateType ?? 'BM_STORE_VISIT'
   const templateCode = options.templateCode ?? 'BM_VISIT_V1'
-  const templateName = options.templateName ?? 'BM Visit'
+  const templateName =
+    options.templateName ??
+    (options.longCopy ? 'BM Visit - extended mobile checklist surface copy' : 'BM Visit')
+  const fixtureStoreName = options.longCopy
+    ? 'IstinyePark Cadde Uzeri Sezon Sonu Denetim Noktasi - Uzun Magaza Adi'
+    : 'Marmara Park'
+  const fixtureItemText = options.longCopy
+    ? 'Vitrin standartlara uygun ve kampanya etiketleri tum ana kategori bloklarinda hizali'
+    : 'Vitrin standartlara uygun'
   const templates = [
     {
       checklistTemplateId: templateId,
@@ -771,7 +838,7 @@ function createMobileChecklistTodayFixture(options: ChecklistFixtureOptions = {}
           templateItemId: '55555555-5555-4555-8555-555555555555',
           sectionName: 'Gorsel duzen',
           itemNo: 1,
-          itemText: 'Vitrin standartlara uygun',
+          itemText: fixtureItemText,
           responseType: 'score',
           weight: 100,
           maxScore: 10,
@@ -804,7 +871,7 @@ function createMobileChecklistTodayFixture(options: ChecklistFixtureOptions = {}
 
   return {
   data: {
-    stores: [{ storeId, storeName: 'Marmara Park' }],
+    stores: [{ storeId, storeName: fixtureStoreName }],
     templates: visibleTemplates,
     activeInstances: (
       options.activeInstances ?? [
@@ -837,6 +904,12 @@ function createChecklistAcknowledgementsFixture(
   roleCodes: string[],
   options: ChecklistFixtureOptions = {},
 ) {
+  const fixtureStoreName = options.longCopy
+    ? 'IstinyePark Cadde Uzeri Sezon Sonu Denetim Noktasi - Uzun Magaza Adi'
+    : 'Marmara Park'
+  const fixtureLowScoreComment = options.longCopy
+    ? 'Eksik manken, kampanya etiketi ve vitrin odak urunu ayni blokta toparlanmali'
+    : 'Eksik manken'
   const handoffState = options.handoffState
   const acknowledgement = handoffState?.acknowledged
     ? {
@@ -854,7 +927,7 @@ function createChecklistAcknowledgementsFixture(
       templateType: 'BM_STORE_VISIT',
       category: 'BM',
       storeId,
-      storeName: 'Marmara Park',
+      storeName: fixtureStoreName,
       completedByUserId: 'region-user-1',
       completedAt: '2026-04-28T09:00:00.000Z',
       status: 'completed',
@@ -870,7 +943,7 @@ function createChecklistAcknowledgementsFixture(
           weight: 60,
           maxScore: 10,
           scoreValue: 5,
-          commentText: 'Eksik manken',
+          commentText: fixtureLowScoreComment,
         },
         {
           templateItemId: '55555555-5555-4555-8555-555555555556',
@@ -893,7 +966,7 @@ function createChecklistAcknowledgementsFixture(
       templateType: 'VM_STORE_VISIT',
       category: 'VM',
       storeId,
-      storeName: 'Marmara Park',
+      storeName: fixtureStoreName,
       completedByUserId: 'vm-user-1',
       completedAt: '2026-04-27T09:00:00.000Z',
       status: 'completed',

@@ -217,6 +217,8 @@ Phase 1 evidence:
 - `docs/evidence/product-progress/2026-05-20-admin-reports-link-context-v1.md`
 - `docs/evidence/product-progress/2026-05-20-import-detail-mapping-context-v1.md`
 - `docs/evidence/product-progress/2026-05-20-import-detail-panel-readability-v1.md`
+- `docs/evidence/product-progress/2026-05-20-reports-detail-mobile-readability-v1.md`
+- `docs/evidence/product-progress/2026-05-20-store-mobile-shell-checklist-v1.md`
 
 Recommended first PR after this plan:
 
@@ -234,6 +236,9 @@ Current UI/UX V1 status:
   text token for better readability on dense evidence panels.
 - Reports detail table panels now stack copy and search/sort/export controls
   cleanly on mobile across workforce, KPI, checklist, and turnover routes.
+- Store mobile shell/checklist now keeps bottom toolbar active icons visible on
+  tap/route state and prevents checklist visit table overflow at small mobile
+  widths.
 - Park `/store/home` and `/admin/master-data` unless browser review or pilot
   feedback finds a concrete new gap.
 
@@ -243,6 +248,8 @@ Next UI/UX V1 recommendation:
   gap; mapping context and scoped panel-copy readability are now covered.
 - Park reports detail pages unless a new browser or pilot gap appears; the
   current mobile table header/readability gap is covered.
+- Park store mobile shell/checklist follow-up unless a new browser or pilot gap
+  appears; the active-icon and checklist overflow issues are covered.
 - Treat auth/admin follow-ups as later slices, with route-level Playwright
   evidence before visual polish.
 
