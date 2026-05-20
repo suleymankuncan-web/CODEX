@@ -389,16 +389,25 @@ Current status:
 - Auth admin remains security-sensitive. The next auth admin step is no longer
   a simple read split; it needs an explicit invariant/test decision before any
   write boundary moves.
+- The user-account boundary decision is recorded at
+  `docs/plans/auth-admin-user-account-boundary-decision-v1.md`. It allows only
+  a narrow read-only `listUserAccounts` / `getUserAccountById` extraction as
+  the next safe code slice. User create/reactivate, provider-subject lookup,
+  active employee/store validation, and pilot binding stay parked until the
+  invariant and negative-test strategy are stronger.
 
 Candidate extraction order:
 
 1. Done: lookup/read-only catalog boundary.
 2. Done: audit read boundary.
-3. Next only after decision: user account read/write boundary.
-4. Later/high-risk: role assignment write boundary.
-5. Later/high-risk: action-store assignment write boundary.
-6. Later/high-risk: pilot binding boundary, only if it grows beyond setup workflow.
-7. Last/high-risk: permission grant/revoke boundary.
+3. Next allowed auth slice: user account read-only boundary for list/detail
+   queries, following
+   `docs/plans/auth-admin-user-account-boundary-decision-v1.md`.
+4. Parked/high-risk: user account create/reactivate write boundary.
+5. Later/high-risk: role assignment write boundary.
+6. Later/high-risk: action-store assignment write boundary.
+7. Later/high-risk: pilot binding boundary, only if it grows beyond setup workflow.
+8. Last/high-risk: permission grant/revoke boundary.
 
 Verification:
 
@@ -635,16 +644,18 @@ input changes priority.
 3. Done: integration repository inventory and safe read-boundary line.
 4. Done: auth admin repository inventory/test-map PR.
 5. Done: auth admin lookup/audit read-boundary line.
-6. Next: either an auth admin user-account invariant/test-map decision, or
-   shift to stage builder / competition work if no auth write risk is active.
-7. Stage builder frontend pure model/section split PR, if product work touches
+6. Done: auth admin user-account invariant/test-map decision.
+7. Next: either the narrow auth admin user-account read-only extraction from
+   `docs/plans/auth-admin-user-account-boundary-decision-v1.md`, or shift to
+   stage builder / competition work if no auth write risk is active.
+8. Stage builder frontend pure model/section split PR, if product work touches
    competitions.
-8. Master-data bootstrap frontend model/section split PR, if product work
+9. Master-data bootstrap frontend model/section split PR, if product work
    touches master-data bootstrap.
-9. Competition repository inventory/read-boundary PR.
-10. TypeScript strictness inventory PR.
-11. One strictness domain PR only if the inventory shows a reviewable slice.
-12. External evidence PRs only when real provider inputs exist.
+10. Competition repository inventory/read-boundary PR.
+11. TypeScript strictness inventory PR.
+12. One strictness domain PR only if the inventory shows a reviewable slice.
+13. External evidence PRs only when real provider inputs exist.
 
 Batch rule:
 

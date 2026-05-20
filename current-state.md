@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #353, and is the starting point for continuing in a fresh window.
+PR #354, and is the starting point for continuing in a fresh window.
 
 ## Active Workspace
 
@@ -26,14 +26,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-20, `origin/main` has been fetched through PR #353.
+As of 2026-05-20, `origin/main` has been fetched through PR #354.
 The root checkout may still be on a non-main local branch with unrelated
 handoff noise; do not assume the root working tree is clean.
 
 Latest merge on main:
 
 ```text
-dc92055c refactor: split auth admin audit reads (#353)
+15dce829 docs: update auth admin boundary handoff (#354)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -106,6 +106,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #351 `docs: inventory auth admin repository boundaries`
 - PR #352 `refactor: split auth admin lookups`
 - PR #353 `refactor: split auth admin audit reads`
+- PR #354 `docs: update auth admin boundary handoff`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -274,6 +275,12 @@ Latest technical assessment decision:
   boundary work needs an explicit decision on whether one active account per
   employee is a product invariant, and role/action-store writes need negative
   permission/scope coverage selected before code movement.
+- The user-account boundary decision is now recorded at
+  `docs/plans/auth-admin-user-account-boundary-decision-v1.md`. It allows only
+  a narrow read-only extraction of `listUserAccounts` and `getUserAccountById`
+  as the next auth code slice. Provider-subject lookup, active employee/store
+  validation, create/reactivate writes, and pilot binding stay parked until the
+  employee-account invariant and negative-test strategy are stronger.
 
 ## Sokrates
 
