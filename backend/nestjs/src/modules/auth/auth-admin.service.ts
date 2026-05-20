@@ -8,6 +8,7 @@ import { buildCommandResponse, buildListResponse } from "../../shared/http/respo
 import { mapAuditEvent } from "../../shared/audit/audit-event.mapper";
 import { semanticValidation } from "../../shared/http/api-errors";
 import { AccessLifecycleService } from "./access-lifecycle.service";
+import { AuthAdminAuditRepository } from "./auth-admin-audit.repository";
 import { AuthAdminLookupRepository } from "./auth-admin-lookup.repository";
 import { AuthAdminRepository } from "./auth-admin.repository";
 import { AuthRoleScopePolicyService } from "./auth-role-scope-policy.service";
@@ -17,6 +18,7 @@ export class AuthAdminService {
   constructor(
     private readonly authAdminRepository: AuthAdminRepository,
     private readonly authAdminLookupRepository: AuthAdminLookupRepository,
+    private readonly authAdminAuditRepository: AuthAdminAuditRepository,
     private readonly authRoleScopePolicyService: AuthRoleScopePolicyService,
     private readonly accessLifecycleService: AccessLifecycleService,
   ) {}
@@ -124,7 +126,7 @@ export class AuthAdminService {
   }
 
   async getRoleAssignmentAudit(input: { assignmentId: string; limit?: number; offset?: number }) {
-    const rows = await this.authAdminRepository.getRoleAssignmentAudit(input);
+    const rows = await this.authAdminAuditRepository.getRoleAssignmentAudit(input);
 
     return buildListResponse(
       rows.map((item) => mapAuditEvent(item)),
@@ -223,7 +225,7 @@ export class AuthAdminService {
     limit?: number;
     offset?: number;
   }) {
-    const rows = await this.authAdminRepository.getActionStoreAssignmentAudit(input);
+    const rows = await this.authAdminAuditRepository.getActionStoreAssignmentAudit(input);
 
     return buildListResponse(
       rows.map((item) => mapAuditEvent(item)),
@@ -442,7 +444,7 @@ export class AuthAdminService {
   }
 
   async getUserAccountAudit(input: { userId: string; limit?: number; offset?: number }) {
-    const rows = await this.authAdminRepository.getUserAccountAudit(input);
+    const rows = await this.authAdminAuditRepository.getUserAccountAudit(input);
 
     return buildListResponse(
       rows.map((item) => mapAuditEvent(item)),
