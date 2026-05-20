@@ -181,6 +181,23 @@ export type components = {
         "offset": number
       }
     }
+    "DailyClosureStatusResponse": {
+      "automationEnabled": boolean
+      "automationPollMinutes": number
+      "timezone": string
+      "referenceAt": string
+      "localDate": string
+      "closureDate": string
+      "healthState": string
+      "dueNow": boolean
+      "canQueue": boolean
+      "canRerun": boolean
+      "recommendedAction": string
+      "existingSnapshotRunId": string | null
+      "existingRunStatus": string | null
+      "existingFailureReason": string | null
+      "existingGeneratedAt": string | null
+    }
     "ExternalIdMapCandidatesResponse": {
       "items": Array<{
           "entityType": "employee" | "store"
@@ -710,6 +727,142 @@ export type components = {
           "label": string
         }>
     }
+    "SnapshotNeedsActionResponse": {
+      "items": Array<{
+          "snapshotRunId": string
+          "snapshotDate": string
+          "snapshotType": string
+          "periodStart": string
+          "periodEnd": string
+          "runStatus": string
+          "healthState": string
+          "generatedAt": string
+          "generatedBy": string
+          "startedAt": string | null
+          "finishedAt": string | null
+          "failureReason": string | null
+          "rerunOfSnapshotRunId": string | null
+          "kpiConfigVersion": {
+            "kpiConfigVersionId": string | null
+            "versionNo": number | null
+            "state": "versioned" | "pre_governance"
+          }
+          "actionReason": string
+          "recommendedAction": string
+          "canRerun": boolean
+          "rerunCount": number
+          "latestRerunSnapshotRunId": string | null
+          "isStuck": boolean
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
+    "SnapshotOverviewResponse": {
+      "totals": {
+        "all": number
+        "queued": number
+        "running": number
+        "completed": number
+        "failed": number
+      }
+      "healthTotals": {
+        "healthy": number
+        "inProgress": number
+        "retryReady": number
+        "needsAction": number
+        "stuck": number
+      }
+      "actionTotals": {
+        "retryReady": number
+        "stuck": number
+      }
+      "latest": {
+        "completedSnapshotRunId": string | null
+        "failedSnapshotRunId": string | null
+        "inProgressSnapshotRunId": string | null
+        "stuckSnapshotRunId": string | null
+      }
+    }
+    "SnapshotRunAuditResponse": {
+      "items": Array<{
+          "eventLogId": string
+          "occurredAt": string
+          "actorUserId": string | null
+          "correlationId": string | null
+          "eventType": string
+          "metadata": {
+            [key: string]: unknown
+          }
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
+    "SnapshotRunDependenciesResponse": {
+      "snapshotRunId": string
+      "runStatus": string
+      "rerunAllowed": boolean
+      "rerunBlockedReason": string | null
+      "checks": Array<{
+          "code": string
+          "status": "pass" | "fail"
+          "message": string
+        }>
+    }
+    "SnapshotRunDetailResponse": {
+      "snapshotRun": {
+        "snapshotRunId": string
+        "snapshotDate": string
+        "snapshotType": string
+        "periodStart": string
+        "periodEnd": string
+        "runStatus": string
+        "healthState": string
+        "generatedAt": string
+        "generatedBy": string
+        "startedAt": string | null
+        "finishedAt": string | null
+        "failureReason": string | null
+        "rerunOfSnapshotRunId": string | null
+        "kpiConfigVersion": {
+          "kpiConfigVersionId": string | null
+          "versionNo": number | null
+          "state": "versioned" | "pre_governance"
+        }
+      }
+      "cards": {
+        "workforceRows": number
+        "kpiRows": number
+        "checklistRows": number
+        "turnoverRows": number
+      }
+      "canRerun": boolean
+      "rerunAllowed": boolean
+      "rerunBlockedReason": string | null
+      "rerunCount": number
+      "latestRerunSnapshotRunId": string | null
+      "failureReason": string | null
+    }
+    "SnapshotRunLineageResponse": {
+      "snapshotRunId": string
+      "parent": ({
+        "snapshotRunId": string
+        "runStatus": string
+        "snapshotType": string
+      }) | null
+      "children": Array<{
+          "snapshotRunId": string
+          "runStatus": string
+          "snapshotType": string
+        }>
+    }
     "StoreMasterListResponse": {
       "items": Array<{
           "storeId": string
@@ -1094,6 +1247,83 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["MobileChecklistTodayResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/snapshots/daily-closure": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["DailyClosureStatusResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/snapshots/runs/needs-action": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["SnapshotNeedsActionResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/snapshots/runs/overview": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["SnapshotOverviewResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/snapshots/runs/{snapshotRunId}": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["SnapshotRunDetailResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/snapshots/runs/{snapshotRunId}/audit": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["SnapshotRunAuditResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/snapshots/runs/{snapshotRunId}/dependencies": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["SnapshotRunDependenciesResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/snapshots/runs/{snapshotRunId}/lineage": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["SnapshotRunLineageResponse"]
           }
         }
       }

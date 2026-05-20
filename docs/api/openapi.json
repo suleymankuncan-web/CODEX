@@ -1336,7 +1336,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Snapshot run overview totals and latest actionable run pointers.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnapshotOverviewResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -1350,7 +1357,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Paginated snapshot runs requiring operator action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnapshotNeedsActionResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -1373,7 +1387,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Snapshot run audit event timeline.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnapshotRunAuditResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -1396,7 +1417,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Snapshot run rerun dependency checks.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnapshotRunDependenciesResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -1419,7 +1447,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Snapshot run rerun parent and child lineage.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnapshotRunLineageResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -1465,7 +1500,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Snapshot run detail with output row counts and rerun state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnapshotRunDetailResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -3636,7 +3678,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Daily snapshot closure readiness for the current actor.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DailyClosureStatusResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -6770,6 +6819,683 @@
                 },
                 "historyPreview": {
                   "type": "string"
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "count",
+              "total",
+              "limit",
+              "offset"
+            ],
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "SnapshotOverviewResponse": {
+        "type": "object",
+        "required": [
+          "totals",
+          "healthTotals",
+          "actionTotals",
+          "latest"
+        ],
+        "properties": {
+          "totals": {
+            "type": "object",
+            "required": [
+              "all",
+              "queued",
+              "running",
+              "completed",
+              "failed"
+            ],
+            "properties": {
+              "all": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "queued": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "running": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "completed": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "failed": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "healthTotals": {
+            "type": "object",
+            "required": [
+              "healthy",
+              "inProgress",
+              "retryReady",
+              "needsAction",
+              "stuck"
+            ],
+            "properties": {
+              "healthy": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "inProgress": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "retryReady": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "needsAction": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "stuck": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "actionTotals": {
+            "type": "object",
+            "required": [
+              "retryReady",
+              "stuck"
+            ],
+            "properties": {
+              "retryReady": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "stuck": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "latest": {
+            "type": "object",
+            "required": [
+              "completedSnapshotRunId",
+              "failedSnapshotRunId",
+              "inProgressSnapshotRunId",
+              "stuckSnapshotRunId"
+            ],
+            "properties": {
+              "completedSnapshotRunId": {
+                "type": "string",
+                "nullable": true
+              },
+              "failedSnapshotRunId": {
+                "type": "string",
+                "nullable": true
+              },
+              "inProgressSnapshotRunId": {
+                "type": "string",
+                "nullable": true
+              },
+              "stuckSnapshotRunId": {
+                "type": "string",
+                "nullable": true
+              }
+            }
+          }
+        }
+      },
+      "DailyClosureStatusResponse": {
+        "type": "object",
+        "required": [
+          "automationEnabled",
+          "automationPollMinutes",
+          "timezone",
+          "referenceAt",
+          "localDate",
+          "closureDate",
+          "healthState",
+          "dueNow",
+          "canQueue",
+          "canRerun",
+          "recommendedAction",
+          "existingSnapshotRunId",
+          "existingRunStatus",
+          "existingFailureReason",
+          "existingGeneratedAt"
+        ],
+        "properties": {
+          "automationEnabled": {
+            "type": "boolean"
+          },
+          "automationPollMinutes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "referenceAt": {
+            "type": "string"
+          },
+          "localDate": {
+            "type": "string"
+          },
+          "closureDate": {
+            "type": "string"
+          },
+          "healthState": {
+            "type": "string"
+          },
+          "dueNow": {
+            "type": "boolean"
+          },
+          "canQueue": {
+            "type": "boolean"
+          },
+          "canRerun": {
+            "type": "boolean"
+          },
+          "recommendedAction": {
+            "type": "string"
+          },
+          "existingSnapshotRunId": {
+            "type": "string",
+            "nullable": true
+          },
+          "existingRunStatus": {
+            "type": "string",
+            "nullable": true
+          },
+          "existingFailureReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "existingGeneratedAt": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "SnapshotNeedsActionResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "meta"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "snapshotRunId",
+                "snapshotDate",
+                "snapshotType",
+                "periodStart",
+                "periodEnd",
+                "runStatus",
+                "healthState",
+                "generatedAt",
+                "generatedBy",
+                "startedAt",
+                "finishedAt",
+                "failureReason",
+                "rerunOfSnapshotRunId",
+                "kpiConfigVersion",
+                "actionReason",
+                "recommendedAction",
+                "canRerun",
+                "rerunCount",
+                "latestRerunSnapshotRunId",
+                "isStuck"
+              ],
+              "properties": {
+                "snapshotRunId": {
+                  "type": "string"
+                },
+                "snapshotDate": {
+                  "type": "string"
+                },
+                "snapshotType": {
+                  "type": "string"
+                },
+                "periodStart": {
+                  "type": "string"
+                },
+                "periodEnd": {
+                  "type": "string"
+                },
+                "runStatus": {
+                  "type": "string"
+                },
+                "healthState": {
+                  "type": "string"
+                },
+                "generatedAt": {
+                  "type": "string"
+                },
+                "generatedBy": {
+                  "type": "string"
+                },
+                "startedAt": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "finishedAt": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "failureReason": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "rerunOfSnapshotRunId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "kpiConfigVersion": {
+                  "type": "object",
+                  "required": [
+                    "kpiConfigVersionId",
+                    "versionNo",
+                    "state"
+                  ],
+                  "properties": {
+                    "kpiConfigVersionId": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "versionNo": {
+                      "type": "integer",
+                      "nullable": true
+                    },
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "versioned",
+                        "pre_governance"
+                      ]
+                    }
+                  }
+                },
+                "actionReason": {
+                  "type": "string"
+                },
+                "recommendedAction": {
+                  "type": "string"
+                },
+                "canRerun": {
+                  "type": "boolean"
+                },
+                "rerunCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "latestRerunSnapshotRunId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "isStuck": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "count",
+              "total",
+              "limit",
+              "offset"
+            ],
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "SnapshotRunDetailResponse": {
+        "type": "object",
+        "required": [
+          "snapshotRun",
+          "cards",
+          "canRerun",
+          "rerunAllowed",
+          "rerunBlockedReason",
+          "rerunCount",
+          "latestRerunSnapshotRunId",
+          "failureReason"
+        ],
+        "properties": {
+          "snapshotRun": {
+            "type": "object",
+            "required": [
+              "snapshotRunId",
+              "snapshotDate",
+              "snapshotType",
+              "periodStart",
+              "periodEnd",
+              "runStatus",
+              "healthState",
+              "generatedAt",
+              "generatedBy",
+              "startedAt",
+              "finishedAt",
+              "failureReason",
+              "rerunOfSnapshotRunId",
+              "kpiConfigVersion"
+            ],
+            "properties": {
+              "snapshotRunId": {
+                "type": "string"
+              },
+              "snapshotDate": {
+                "type": "string"
+              },
+              "snapshotType": {
+                "type": "string"
+              },
+              "periodStart": {
+                "type": "string"
+              },
+              "periodEnd": {
+                "type": "string"
+              },
+              "runStatus": {
+                "type": "string"
+              },
+              "healthState": {
+                "type": "string"
+              },
+              "generatedAt": {
+                "type": "string"
+              },
+              "generatedBy": {
+                "type": "string"
+              },
+              "startedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "finishedAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "failureReason": {
+                "type": "string",
+                "nullable": true
+              },
+              "rerunOfSnapshotRunId": {
+                "type": "string",
+                "nullable": true
+              },
+              "kpiConfigVersion": {
+                "type": "object",
+                "required": [
+                  "kpiConfigVersionId",
+                  "versionNo",
+                  "state"
+                ],
+                "properties": {
+                  "kpiConfigVersionId": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "versionNo": {
+                    "type": "integer",
+                    "nullable": true
+                  },
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "versioned",
+                      "pre_governance"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "cards": {
+            "type": "object",
+            "required": [
+              "workforceRows",
+              "kpiRows",
+              "checklistRows",
+              "turnoverRows"
+            ],
+            "properties": {
+              "workforceRows": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "kpiRows": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "checklistRows": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "turnoverRows": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "canRerun": {
+            "type": "boolean"
+          },
+          "rerunAllowed": {
+            "type": "boolean"
+          },
+          "rerunBlockedReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "rerunCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "latestRerunSnapshotRunId": {
+            "type": "string",
+            "nullable": true
+          },
+          "failureReason": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "SnapshotRunDependenciesResponse": {
+        "type": "object",
+        "required": [
+          "snapshotRunId",
+          "runStatus",
+          "rerunAllowed",
+          "rerunBlockedReason",
+          "checks"
+        ],
+        "properties": {
+          "snapshotRunId": {
+            "type": "string"
+          },
+          "runStatus": {
+            "type": "string"
+          },
+          "rerunAllowed": {
+            "type": "boolean"
+          },
+          "rerunBlockedReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "checks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "code",
+                "status",
+                "message"
+              ],
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pass",
+                    "fail"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "SnapshotRunLineageResponse": {
+        "type": "object",
+        "required": [
+          "snapshotRunId",
+          "parent",
+          "children"
+        ],
+        "properties": {
+          "snapshotRunId": {
+            "type": "string"
+          },
+          "parent": {
+            "type": "object",
+            "required": [
+              "snapshotRunId",
+              "runStatus",
+              "snapshotType"
+            ],
+            "properties": {
+              "snapshotRunId": {
+                "type": "string"
+              },
+              "runStatus": {
+                "type": "string"
+              },
+              "snapshotType": {
+                "type": "string"
+              }
+            },
+            "nullable": true
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "snapshotRunId",
+                "runStatus",
+                "snapshotType"
+              ],
+              "properties": {
+                "snapshotRunId": {
+                  "type": "string"
+                },
+                "runStatus": {
+                  "type": "string"
+                },
+                "snapshotType": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "SnapshotRunAuditResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "meta"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "eventLogId",
+                "occurredAt",
+                "actorUserId",
+                "correlationId",
+                "eventType",
+                "metadata"
+              ],
+              "properties": {
+                "eventLogId": {
+                  "type": "string"
+                },
+                "occurredAt": {
+                  "type": "string"
+                },
+                "actorUserId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "correlationId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "eventType": {
+                  "type": "string"
+                },
+                "metadata": {
+                  "type": "object",
+                  "additionalProperties": true
                 }
               }
             }
