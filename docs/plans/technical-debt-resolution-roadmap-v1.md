@@ -73,11 +73,14 @@ Repo evidence:
 - Store approvals and store checklists have been reduced below the earlier
   danger zone.
 - OpenAPI generated frontend client/types cover the main API domains.
+- Reporting repository boundary refactor is complete through PR #343.
+- Integration repository safe read-boundary refactor is complete through
+  PR #349. `IntegrationRepository` is now mostly command/write persistence
+  and should not be split further without a concrete product/risk trigger.
 
 Measured hotspots:
 
 - Backend repositories/services still above the comfortable review band:
-  - integration repository,
   - competition repository,
   - auth admin repository,
   - reporting service,
@@ -240,11 +243,13 @@ Goal:
 
 Priority:
 
-1. Integration repository.
-2. Auth admin repository.
-3. Competition repository.
-4. Reporting service.
-5. Workforce request repository.
+1. Auth admin repository, inventory/test-map first because it is
+   security-sensitive.
+2. Competition repository.
+3. Reporting service.
+4. Workforce request repository.
+5. Integration repository remaining command/write persistence, only with a
+   concrete product/risk trigger.
 6. Reporting repository remaining identity/personnel live reads, only if a
    concrete risk or product change requires it.
 
@@ -313,13 +318,28 @@ Safe first slice:
 - Current inventory:
   `docs/plans/integration-repository-boundary-inventory-v1.md`.
 
+Current status:
+
+- First safe read-boundary pass completed through PR #344 through PR #349.
+- Extracted boundaries include import batch list/summary/detail/evidence reads,
+  external ID mapping candidate/scoped-target reads, KPI import store-scope
+  reads, and personnel master list/lookup reads.
+- `IntegrationRepository` is now roughly 711 physical lines / 674 non-empty
+  lines and mostly holds command/write flows: import batch creation/raw
+  staging, store/personnel master updates, retry/status writes, and external
+  mapping approval audit.
+- Park this line unless a concrete import lifecycle, retry queue, raw staging,
+  or approval-audit risk appears.
+
 Candidate extraction order:
 
-1. Import batch read/evidence query boundary.
-2. External ID mapping evidence boundary.
-3. Raw import writer boundary.
-4. Retry/action queue write boundary.
-5. Source governance boundary, only when source behavior changes.
+1. Done: import batch read/evidence query boundary.
+2. Done: external ID mapping evidence boundary.
+3. Done: KPI import store-scope read boundary.
+4. Done: personnel master read boundary.
+5. Parked/high-risk: raw import writer boundary.
+6. Parked/high-risk: retry/action queue write boundary.
+7. Source governance boundary, only when source behavior changes.
 
 Verification:
 
@@ -588,18 +608,20 @@ Stop rules:
 Use this order unless a production bug, failing gate, or user-provided external
 input changes priority.
 
-1. Docs-only: land this roadmap and link it from handoff/current planning.
-2. External input check: update blocker/evidence status only if inputs exist.
-3. Reporting repository inventory PR.
-4. Reporting closed leaderboard or store score read-boundary PR.
-5. Integration repository inventory PR.
-6. Integration import evidence/read-boundary PR.
-7. Stage builder frontend pure model/section split PR.
-8. Master-data bootstrap frontend model/section split PR.
-9. Auth admin repository inventory PR.
-10. Auth admin lookup/audit boundary PR, only with negative tests.
-11. TypeScript strictness inventory PR.
-12. One strictness domain PR only if the inventory shows a reviewable slice.
+1. Done: docs-only roadmap and handoff planning.
+2. Done: reporting repository inventory and first read-boundary line.
+3. Done: integration repository inventory and safe read-boundary line.
+4. Next: auth admin repository inventory/test-map PR.
+5. Auth admin lookup/audit boundary PR, only with negative tests and no
+   permission behavior changes.
+6. Stage builder frontend pure model/section split PR, if product work touches
+   competitions.
+7. Master-data bootstrap frontend model/section split PR, if product work
+   touches master-data bootstrap.
+8. Competition repository inventory/read-boundary PR.
+9. TypeScript strictness inventory PR.
+10. One strictness domain PR only if the inventory shows a reviewable slice.
+11. External evidence PRs only when real provider inputs exist.
 
 Batch rule:
 

@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #335, and is the starting point for continuing in a fresh window.
+PR #349, and is the starting point for continuing in a fresh window.
 
 ## Active Workspace
 
@@ -26,14 +26,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-20, `origin/main` has been fetched through PR #343.
+As of 2026-05-20, `origin/main` has been fetched through PR #349.
 The root checkout may still be on a non-main local branch with unrelated
 handoff noise; do not assume the root working tree is clean.
 
 Latest merge on main:
 
 ```text
-213e6a06 refactor: split ranking reporting reads (#343)
+2703c7ea refactor: split personnel master reads (#349)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -96,6 +96,12 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #341 `refactor: split snapshot reporting reads`
 - PR #342 `refactor: split store performance reporting reads`
 - PR #343 `refactor: split ranking reporting reads`
+- PR #344 `docs: inventory integration repository boundaries`
+- PR #345 `refactor: split import batch read repository`
+- PR #346 `refactor: move import batch detail reads`
+- PR #347 `refactor: split external mapping reads`
+- PR #348 `refactor: split KPI store read repository`
+- PR #349 `refactor: split personnel master reads`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -229,10 +235,25 @@ Latest technical assessment decision:
   store score reads, closed ranking reads, snapshot reads, store performance
   reads, and ranking reads were split out; `ReportingRepository` is now roughly
   503 physical lines with identity/personnel live performance helpers remaining.
-- The next technical-debt hotspot is `IntegrationRepository`; begin with
-  `docs/plans/integration-repository-boundary-inventory-v1.md` and do not move
-  retry/status/raw-staging writes before the import evidence read boundary is
-  stable.
+- Integration repository boundary work is complete through the safe read split
+  line:
+  - PR #344 recorded the boundary inventory.
+  - PR #345 and PR #346 split import batch list/summary/detail/evidence reads
+    into `ImportBatchReadRepository`.
+  - PR #347 split external ID mapping candidate/scoped target reads into
+    `ExternalIdMappingReadRepository`.
+  - PR #348 split KPI import store-scope reads into
+    `KpiImportStoreReadRepository`.
+  - PR #349 split personnel master list/lookup reads into
+    `PersonnelMasterReadRepository`.
+- `IntegrationRepository` is now roughly 711 physical lines / 674 non-empty
+  lines on `origin/main` and mostly holds command/write flows: import batch
+  creation/raw staging, store/personnel master updates, retry/status writes,
+  and external mapping approval audit.
+- Do not continue splitting integration retry/status/raw-staging writes unless
+  a concrete product/risk change needs them. The next safer technical-debt
+  hotspot is the auth admin repository, but auth work must begin with a fresh
+  inventory/test map because it is security-sensitive.
 
 ## Sokrates
 
