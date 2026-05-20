@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #331, and is the starting point for continuing in a fresh window.
+PR #332, and is the starting point for continuing in a fresh window.
 
 ## Active Workspace
 
@@ -26,14 +26,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-20, `origin/main` has been fetched through PR #331.
+As of 2026-05-20, `origin/main` has been fetched through PR #332.
 The root checkout may still be on a non-main local branch with unrelated
 handoff noise; do not assume the root working tree is clean.
 
 Latest merge on main:
 
 ```text
-ded8bc01 feat: clarify store utility handoff pages (#331)
+84bf10b1 feat: clarify admin reports drilldown links (#332)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -85,6 +85,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #329 `docs: shape incentive module intake`
 - PR #330 `docs: add UI/UX V1 route inventory`
 - PR #331 `feat: clarify store utility handoff pages`
+- PR #332 `feat: clarify admin reports drilldown links`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -532,6 +533,10 @@ Product Progress Plan V1 status:
   snapshot-specific for assistive technology and tightening TR KPI copy.
   Evidence:
   `docs/evidence/product-progress/2026-05-20-admin-reports-link-context-v1.md`.
+- The admin import detail mapping-context V1 slice is the active next UI/UX
+  PR candidate. It keeps import behavior/layout unchanged and adds external-ID
+  context to repeated mapping control accessible names. Evidence:
+  `docs/evidence/product-progress/2026-05-20-import-detail-mapping-context-v1.md`.
 
 The `/store/approvals` first pass has started:
 

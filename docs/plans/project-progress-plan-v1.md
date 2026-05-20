@@ -215,6 +215,7 @@ Phase 1 evidence:
 - `docs/evidence/product-progress/2026-05-20-uiux-v1-route-inventory.md`
 - `docs/evidence/product-progress/2026-05-20-store-utility-handoff-v1.md`
 - `docs/evidence/product-progress/2026-05-20-admin-reports-link-context-v1.md`
+- `docs/evidence/product-progress/2026-05-20-import-detail-mapping-context-v1.md`
 
 Recommended first PR after this plan:
 
@@ -224,17 +225,19 @@ Current UI/UX V1 status:
 
 - Store utility/handoff route family has been improved:
   `/store/settings`, `/store/targets`, and `/store/reports`.
+- Admin reports summary/snapshot chooser routes have snapshot-specific
+  drill-down link context.
+- Admin import detail mapping controls now expose external-ID context for
+  repeated search/select/approve controls.
 - Park `/store/home` and `/admin/master-data` unless browser review or pilot
   feedback finds a concrete new gap.
 
 Next UI/UX V1 recommendation:
 
-- Admin reports summary/snapshot chooser now have snapshot-specific drill-down
-  link context and mobile/browser evidence.
-- Continue reports only if a browser pass on detail pages finds concrete
-  overflow, focus, or context issues.
-- Otherwise treat admin import detail as the next higher-value candidate from
-  the route inventory.
+- Do not expand import detail in the same story; a separate browser-polish
+  slice may address low-emphasis dense panel copy only if intentionally scoped.
+- Continue reports detail pages only if a browser pass finds concrete overflow,
+  focus, or context issues.
 - Treat auth/admin follow-ups as later slices, with route-level Playwright
   evidence before visual polish.
 

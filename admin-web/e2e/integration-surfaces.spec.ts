@@ -112,13 +112,19 @@ test('admin import batch detail explains KPI row lineage evidence', async ({ pag
 
   const mappingPanel = page.getByLabel('Dış ID eşleme onayı')
   await expect(mappingPanel.getByText('Dış mağaza')).toBeVisible()
-  await expect(mappingPanel.getByRole('textbox', { name: 'İç mağaza adaylarında ara' })).toBeVisible()
-  await expect(mappingPanel.getByRole('combobox', { name: 'İç mağaza ile eşleştir' })).toBeVisible()
-  await mappingPanel.getByRole('textbox', { name: 'İç mağaza adaylarında ara' }).fill('Marmara')
+  await expect(
+    mappingPanel.getByRole('textbox', { name: 'powerbi:MARMARA PARK için iç mağaza adaylarında ara' }),
+  ).toBeVisible()
+  await expect(
+    mappingPanel.getByRole('combobox', { name: 'powerbi:MARMARA PARK için iç mağaza ile eşleştir' }),
+  ).toBeVisible()
   await mappingPanel
-    .getByRole('combobox', { name: 'İç mağaza ile eşleştir' })
+    .getByRole('textbox', { name: 'powerbi:MARMARA PARK için iç mağaza adaylarında ara' })
+    .fill('Marmara')
+  await mappingPanel
+    .getByRole('combobox', { name: 'powerbi:MARMARA PARK için iç mağaza ile eşleştir' })
     .selectOption({ label: 'Marmara Park - MP001 / active' })
-  await mappingPanel.getByRole('button', { name: 'Eşlemeyi onayla' }).click()
+  await mappingPanel.getByRole('button', { name: 'powerbi:MARMARA PARK eşlemesini onayla' }).click()
   await expect(page.getByText('External ID mapping approved')).toBeVisible()
   await expect(page.getByText('Parti detayı açılamadı')).toHaveCount(0)
 })

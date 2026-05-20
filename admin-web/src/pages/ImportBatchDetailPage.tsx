@@ -854,14 +854,20 @@ function MappingAction(input: {
         <input
           className="control-input mapping-input"
           type="text"
-          aria-label={t('importBatchDetail.searchInternalCandidates', { entity: entityLabel })}
+          aria-label={t('importBatchDetail.searchInternalCandidatesForExternal', {
+            entity: entityLabel,
+            externalId: mappingCandidate.externalId,
+          })}
           value={searchValue}
           placeholder={t('importBatchDetail.searchInternalCandidates', { entity: entityLabel })}
           onChange={(event) => onSearchInputChange(entityType, event.target.value)}
         />
         <select
           className="control-input mapping-select"
-          aria-label={t('importBatchDetail.mapToInternal', { entity: entityLabel })}
+          aria-label={t('importBatchDetail.mapToInternalForExternal', {
+            entity: entityLabel,
+            externalId: mappingCandidate.externalId,
+          })}
           value={mappingValue}
           disabled={candidateQuery.isLoading || candidates.length === 0}
           onChange={(event) => onMappingInputChange(error.rowId, event.target.value)}
@@ -876,6 +882,9 @@ function MappingAction(input: {
         <button
           className="control-button"
           type="button"
+          aria-label={t('importBatchDetail.approveMappingForExternal', {
+            externalId: mappingCandidate.externalId,
+          })}
           disabled={!mappingValue.trim() || isApproving}
           onClick={() =>
             onApproveMapping({

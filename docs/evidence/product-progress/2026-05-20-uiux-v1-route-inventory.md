@@ -82,7 +82,7 @@ Score is 1-5:
 | --- | --- | --- | ---: | --- | --- |
 | `/admin/session` | `SessionGate` / `SessionReadinessPage` | `admin-routing`, `admin-inbox`, `store-return-to` | 4 | Dev/auth mode page is intentionally technical. | Park unless auth evidence work reopens it. |
 | `/admin/integrations` | `IntegrationDashboardPage.tsx` | `integration-surfaces`, `admin-routing`, `pilot-smoke` | 3.5 | High-value operator screen; large page, dense upload/evidence/errors tabs, limited mobile evidence. | Candidate after utility slices; keep view/copy only. |
-| `/admin/integrations/:batchId` | `ImportBatchDetailPage.tsx` | `integration-surfaces` | 3.4 | Detail page is large and evidence-heavy; useful but review risk is higher. | Candidate as a single read-only detail clarity PR. |
+| `/admin/integrations/:batchId` | `ImportBatchDetailPage.tsx` | `integration-surfaces` | 3.7 | Mapping controls now expose external-ID context; remaining risk is dense evidence-heavy copy on small screens. | Park broad redesign; consider only a separate scoped readability pass. |
 | `/admin/master-data` | `MasterDataBootstrapPage.tsx` | `admin-routing`, `integration-surfaces`, recent label PR | 4.1 | Large page, but just improved and has state coverage. | Park unless browser pass finds a concrete gap. |
 | `/admin/master-data/:batchId` | `MasterDataBootstrapPage.tsx` | Same as master-data | 4 | Deep-link route depends on selected batch readability. | Park. |
 | `/admin/snapshots` | `SnapshotsDashboardPage.tsx` | `admin-routing` | 3.8 | Operational clarity exists; no recent mobile/browser evidence. | Candidate later if snapshot operator flow becomes priority. |
@@ -146,8 +146,11 @@ Score is 1-5:
    evidence at
    `docs/evidence/product-progress/2026-05-20-admin-reports-link-context-v1.md`.
    Continue into detail pages only if browser review finds a concrete gap.
-3. Admin import detail:
-   `/admin/integrations/:batchId` as one read-only evidence clarity slice.
+3. Admin import detail (mapping context completed by
+   `docs/evidence/product-progress/2026-05-20-import-detail-mapping-context-v1.md`):
+   `/admin/integrations/:batchId` now has external-ID context on repeated
+   mapping controls. Continue only if a separate browser pass isolates a
+   concrete readability issue.
 4. Auth catalog/audit read-only surfaces:
    only if the slice is purely presentation/coverage; auth behavior stays
    untouched.
