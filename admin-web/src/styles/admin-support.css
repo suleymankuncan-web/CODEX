@@ -1,3 +1,8 @@
+.import-detail-page .panel-copy {
+  color: var(--surface-muted);
+  line-height: 1.62;
+}
+
 .lineage-chip-list {
   display: grid;
   gap: 0.5rem;

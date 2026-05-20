@@ -163,7 +163,7 @@ export function ImportBatchDetailPage() {
   })
 
   return (
-    <section className="page-stack">
+    <section className="page-stack import-detail-page">
       <Link className="back-link" to="/admin/integrations">
         <ArrowLeft size={16} />
         {t('importBatchDetail.backToQueue')}
