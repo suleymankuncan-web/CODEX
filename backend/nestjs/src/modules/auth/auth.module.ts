@@ -6,6 +6,7 @@ import { AuthAdminAuditRepository } from "./auth-admin-audit.repository";
 import { AuthAdminLookupRepository } from "./auth-admin-lookup.repository";
 import { AuthAdminRepository } from "./auth-admin.repository";
 import { AuthAdminService } from "./auth-admin.service";
+import { AuthAdminUserAccountReadRepository } from "./auth-admin-user-account-read.repository";
 import { AuthAuthorizationRepository } from "./auth-authorization.repository";
 import { AuthContextService } from "./auth-context.service";
 import { AuthRoleScopePolicyService } from "./auth-role-scope-policy.service";
@@ -29,6 +30,7 @@ import { MobileAuthController } from "./web/mobile-auth.controller";
     AccessLifecycleService,
     AuthAdminAuditRepository,
     AuthAdminLookupRepository,
+    AuthAdminUserAccountReadRepository,
     AuthAdminRepository,
     AuthAdminService,
     AuthRoleScopePolicyService,

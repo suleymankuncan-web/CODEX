@@ -209,8 +209,9 @@ Frontend smoke:
 3. User account read/write boundary
    - Decision recorded in
      `docs/plans/auth-admin-user-account-boundary-decision-v1.md`.
-   - Next safe code slice is read-only: move `listUserAccounts` and
-     `getUserAccountById` only.
+   - Read-only list/detail slice is done:
+     `AuthAdminUserAccountReadRepository` owns `listUserAccounts` and
+     `getUserAccountById`.
    - Keep provider-subject lookup, active employee/store validation,
      create/reactivate writes, and pilot binding parked until invariant and
      negative-test coverage are stronger.
@@ -255,9 +256,8 @@ Next:
 
 - Do not start user writes, role assignment writes, action-store writes, pilot
   binding, role permission writes, or DB migrations by default.
-- If auth admin remains the active roadmap line, the only approved next code
-  move is the user-account read-only list/detail boundary from
-  `docs/plans/auth-admin-user-account-boundary-decision-v1.md`.
+- The user-account read-only list/detail boundary from
+  `docs/plans/auth-admin-user-account-boundary-decision-v1.md` is complete.
 - User-account writes remain parked until the product explicitly chooses the
   employee-account invariant and the negative auth tests required for that
   write-boundary slice.

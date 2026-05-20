@@ -30,6 +30,13 @@ Keep these methods in `AuthAdminRepository` for now:
 - `createPilotUserBinding`,
 - `reactivateUserAccount`.
 
+Status:
+
+- The read-only extraction is complete: `listUserAccounts` and
+  `getUserAccountById` now live in `AuthAdminUserAccountReadRepository`.
+- User-account writes, provider-subject lookup, active employee/store
+  validation, and pilot binding remain parked.
+
 Why:
 
 - `listUserAccounts` and `getUserAccountById` are simple admin read/detail

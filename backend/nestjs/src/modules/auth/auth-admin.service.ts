@@ -11,6 +11,7 @@ import { AccessLifecycleService } from "./access-lifecycle.service";
 import { AuthAdminAuditRepository } from "./auth-admin-audit.repository";
 import { AuthAdminLookupRepository } from "./auth-admin-lookup.repository";
 import { AuthAdminRepository } from "./auth-admin.repository";
+import { AuthAdminUserAccountReadRepository } from "./auth-admin-user-account-read.repository";
 import { AuthRoleScopePolicyService } from "./auth-role-scope-policy.service";
 
 @Injectable()
@@ -19,6 +20,7 @@ export class AuthAdminService {
     private readonly authAdminRepository: AuthAdminRepository,
     private readonly authAdminLookupRepository: AuthAdminLookupRepository,
     private readonly authAdminAuditRepository: AuthAdminAuditRepository,
+    private readonly authAdminUserAccountReadRepository: AuthAdminUserAccountReadRepository,
     private readonly authRoleScopePolicyService: AuthRoleScopePolicyService,
     private readonly accessLifecycleService: AccessLifecycleService,
   ) {}
@@ -382,7 +384,7 @@ export class AuthAdminService {
     authProvider?: "local" | "oidc" | "sso" | "clerk";
     isActive?: boolean;
   }) {
-    const result = await this.authAdminRepository.listUserAccounts(input);
+    const result = await this.authAdminUserAccountReadRepository.listUserAccounts(input);
 
     return buildListResponse(result.rows.map((item) => this.mapUser(item)), {
       total: result.total,
@@ -392,7 +394,7 @@ export class AuthAdminService {
   }
 
   async deactivateUserAccount(userId: string, actorUserId: string) {
-    const existingUser = await this.authAdminRepository.getUserAccountById(userId);
+    const existingUser = await this.authAdminUserAccountReadRepository.getUserAccountById(userId);
 
     if (!existingUser) {
       throw new NotFoundException(`User account not found: ${userId}`);
@@ -419,7 +421,7 @@ export class AuthAdminService {
   }
 
   async reactivateUserAccount(userId: string, actorUserId: string) {
-    const existingUser = await this.authAdminRepository.getUserAccountById(userId);
+    const existingUser = await this.authAdminUserAccountReadRepository.getUserAccountById(userId);
 
     if (!existingUser) {
       throw new NotFoundException(`User account not found: ${userId}`);
