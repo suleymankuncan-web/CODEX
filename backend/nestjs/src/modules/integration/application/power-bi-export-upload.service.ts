@@ -15,7 +15,7 @@ import {
   logStructuredError,
   logStructuredMessage,
 } from "../../../shared/structured-log";
-import { IntegrationRepository } from "../infrastructure/integration.repository";
+import { KpiImportStoreReadRepository } from "../infrastructure/kpi-import-store-read.repository";
 import { IntegrationSourceRepository } from "../infrastructure/integration-source.repository";
 import { IntegrationService } from "./integration.service";
 
@@ -165,7 +165,7 @@ export class PowerBiExportUploadService {
 
   constructor(
     _databaseService: DatabaseService,
-    private readonly integrationRepository: IntegrationRepository,
+    private readonly kpiImportStoreReadRepository: KpiImportStoreReadRepository,
     private readonly integrationSourceRepository: IntegrationSourceRepository,
     private readonly integrationService: IntegrationService,
     private readonly appConfigService: AppConfigService,
@@ -208,7 +208,7 @@ export class PowerBiExportUploadService {
       const sourceCapturedAt = new Date().toISOString();
 
       const { personnelRows, storeRows } = await this.readUploadedRows(input);
-      const scopedStoreRefs = await this.integrationRepository.listKpiImportStoreExternalRefs({
+      const scopedStoreRefs = await this.kpiImportStoreReadRepository.listKpiImportStoreExternalRefs({
         actorCompanyIds: input.actorCompanyIds ?? [],
         integrationSourceId: source.integration_source_id,
       });

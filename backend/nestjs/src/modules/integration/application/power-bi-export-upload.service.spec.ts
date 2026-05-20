@@ -38,7 +38,7 @@ function createService(
       return { rowCount: 0, rows: [] };
     }),
   };
-  const integrationRepository = {
+  const kpiImportStoreReadRepository = {
     listKpiImportStoreExternalRefs: jest.fn().mockResolvedValue([
       { external_ref: "Kadikoy" },
       { external_ref: "Istanbul Marmara Park Avm" },
@@ -64,7 +64,7 @@ function createService(
   };
   const service = new PowerBiExportUploadService(
     databaseService as never,
-    integrationRepository as never,
+    kpiImportStoreReadRepository as never,
     integrationSourceRepository as never,
     integrationService as never,
     appConfigService as never,
@@ -73,7 +73,7 @@ function createService(
   return {
     appConfigService,
     databaseService,
-    integrationRepository,
+    kpiImportStoreReadRepository,
     integrationSourceRepository,
     integrationService,
     service,
@@ -567,8 +567,8 @@ describe("PowerBiExportUploadService", () => {
   });
 
   it("keeps same-name personnel separate across stores", async () => {
-    const { integrationRepository, integrationService, service } = createService();
-    integrationRepository.listKpiImportStoreExternalRefs.mockResolvedValue([
+    const { kpiImportStoreReadRepository, integrationService, service } = createService();
+    kpiImportStoreReadRepository.listKpiImportStoreExternalRefs.mockResolvedValue([
       { external_ref: "Istanbul Marmara Park Avm" },
       { external_ref: "Kadikoy" },
     ]);
@@ -804,8 +804,8 @@ describe("PowerBiExportUploadService", () => {
   });
 
   it("limits Excel KPI import to stores enabled in the local store scope", async () => {
-    const { integrationRepository, integrationService, service } = createService();
-    integrationRepository.listKpiImportStoreExternalRefs.mockResolvedValue([
+    const { kpiImportStoreReadRepository, integrationService, service } = createService();
+    kpiImportStoreReadRepository.listKpiImportStoreExternalRefs.mockResolvedValue([
       { external_ref: "Istanbul Marmara Park Avm" },
     ]);
     const storeBuffer = createWorkbookBuffer([
@@ -884,7 +884,7 @@ describe("PowerBiExportUploadService", () => {
         }),
       ]),
     );
-    expect(integrationRepository.listKpiImportStoreExternalRefs).toHaveBeenCalledWith(
+    expect(kpiImportStoreReadRepository.listKpiImportStoreExternalRefs).toHaveBeenCalledWith(
       {
         actorCompanyIds: [],
         integrationSourceId: "00000000-0000-0000-0000-000000000010",
