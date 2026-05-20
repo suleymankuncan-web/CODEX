@@ -328,6 +328,13 @@ Goal:
 
 - Reduce developer friction only where it unlocks real work.
 
+Detailed follow-up:
+
+- Use `docs/plans/technical-debt-resolution-roadmap-v1.md` as the canonical
+  execution roadmap for the `KISMI REFACTOR` decision. It separates local
+  refactor work from external evidence blockers and defines the backend,
+  frontend, TypeScript, API contract, performance, and auth/security ladders.
+
 Candidate order:
 
 1. `StageBuilderForm.tsx` when a competition UI change is needed.

@@ -208,6 +208,17 @@ What is already real:
 The next value is not "more architecture". It is making the visible flows feel
 calm, fast, coherent, and product-like.
 
+Latest technical assessment decision:
+
+- Net decision: `KISMI REFACTOR`.
+- Do not rewrite and do not treat the project as debt-free.
+- The actionable follow-up plan is
+  `docs/plans/technical-debt-resolution-roadmap-v1.md`.
+- Use that roadmap when choosing between external evidence closure, backend
+  repository boundary refactor, frontend surface decomposition, TypeScript
+  strictness, API contract maintenance, performance evidence, and auth/security
+  regression work.
+
 ## Sokrates
 
 Sokrates is the default working principle for this project.
@@ -467,6 +478,7 @@ Known planned refactor candidates still exist, but they are not the best next
 move unless a concrete bug or product change requires them:
 
 - `docs/plans/refactor-execution-plan-v1.md`
+- `docs/plans/technical-debt-resolution-roadmap-v1.md`
 - `admin-web/src/App.tsx`
 - `ReportingRepository`
 - `IntegrationRepository`
