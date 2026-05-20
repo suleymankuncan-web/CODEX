@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #350, and is the starting point for continuing in a fresh window.
+PR #353, and is the starting point for continuing in a fresh window.
 
 ## Active Workspace
 
@@ -26,14 +26,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-20, `origin/main` has been fetched through PR #350.
+As of 2026-05-20, `origin/main` has been fetched through PR #353.
 The root checkout may still be on a non-main local branch with unrelated
 handoff noise; do not assume the root working tree is clean.
 
 Latest merge on main:
 
 ```text
-5f166d58 docs: update integration boundary handoff (#350)
+dc92055c refactor: split auth admin audit reads (#353)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -103,6 +103,9 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #348 `refactor: split KPI store read repository`
 - PR #349 `refactor: split personnel master reads`
 - PR #350 `docs: update integration boundary handoff`
+- PR #351 `docs: inventory auth admin repository boundaries`
+- PR #352 `refactor: split auth admin lookups`
+- PR #353 `refactor: split auth admin audit reads`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -255,9 +258,22 @@ Latest technical assessment decision:
   a concrete product/risk change needs them. The next safer technical-debt
   hotspot is the auth admin repository, but auth work must begin with a fresh
   inventory/test map because it is security-sensitive.
-- The next auth-admin planning artifact is
-  `docs/plans/auth-admin-repository-boundary-inventory-v1.md`; start auth code
-  movement only with lookup/catalog reads and only with auth regression gates.
+- Auth admin repository boundary work is complete through the safe read split
+  line:
+  - PR #351 recorded the auth admin boundary inventory and test map.
+  - PR #352 split lookup/catalog read methods into
+    `AuthAdminLookupRepository`.
+  - PR #353 split role assignment, action-store assignment, and user account
+    audit reads into `AuthAdminAuditRepository`.
+- `AuthAdminRepository` is now roughly 1449 physical lines / 1361 non-empty
+  lines on `origin/main`. It still owns high-risk command/write flows:
+  role assignment persistence, action-store assignment persistence, user
+  account create/reactivate, pilot binding, and role permission mutation.
+- Do not continue into auth admin write-boundary extraction without first
+  choosing the exact invariant/test strategy. In particular, user-account
+  boundary work needs an explicit decision on whether one active account per
+  employee is a product invariant, and role/action-store writes need negative
+  permission/scope coverage selected before code movement.
 
 ## Sokrates
 
