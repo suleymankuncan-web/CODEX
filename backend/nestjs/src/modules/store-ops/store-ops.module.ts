@@ -27,6 +27,7 @@ import { WorkforceRequestRepository } from "./infrastructure/workforce-request.r
 import { ChecklistRepository } from "./infrastructure/checklist.repository";
 import { ClosedRankingRepository } from "./infrastructure/closed-ranking.repository";
 import { ReportingRepository } from "./infrastructure/reporting.repository";
+import { StoreScoreReportingReadRepository } from "./infrastructure/store-score-reporting-read.repository";
 import { SnapshotOperationsRepository } from "./infrastructure/snapshot-operations.repository";
 import { TargetDistributionRepository } from "./infrastructure/target-distribution.repository";
 import { ChecklistAcknowledgementRepository } from "./infrastructure/checklist-acknowledgement.repository";
@@ -68,6 +69,7 @@ import { FeedRepository } from "./infrastructure/feed.repository";
     KpiConfigRepository,
     ClosedRankingRepository,
     ReportingRepository,
+    StoreScoreReportingReadRepository,
     SnapshotOperationsRepository,
     TargetDistributionRepository,
     CompetitionRepository,
@@ -93,6 +95,7 @@ import { FeedRepository } from "./infrastructure/feed.repository";
     KpiConfigRepository,
     ClosedRankingRepository,
     ReportingRepository,
+    StoreScoreReportingReadRepository,
     SnapshotOperationsRepository,
     TargetDistributionRepository,
     CompetitionRepository,
