@@ -34,6 +34,7 @@ import {
 } from '../features/snapshots/api'
 import { formatDateTime, getErrorMessage, mapHealthTone } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
+import { MetricCoveragePanel } from './operations-metric-coverage-panel'
 
 const SIGNAL_STALE_TIME_MS = 30_000
 const QUEUE_PREVIEW_SIZE = 4
@@ -280,6 +281,8 @@ export function OperationsControlTowerPage() {
           />
         ))}
       </section>
+
+      <MetricCoveragePanel t={t} />
 
       <OperatorActionListPanel actions={operatorActions} t={t} />
 

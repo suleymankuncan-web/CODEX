@@ -78,6 +78,57 @@ export const adminOperationsTr = {
   'adminOperations.owner.auth': 'Auth / pilot readiness',
   'adminOperations.owner.integration': 'Integration operations',
   'adminOperations.owner.platform': 'Platform / provider',
+  'adminOperations.owner.reporting': 'Reporting / KPI governance',
+  'adminOperations.owner.storeOps': 'Store operations',
+  'adminOperations.owner.workforce': 'HR / workforce operations',
+
+  'adminOperations.coverageEyebrow': 'Metrik kapsamı',
+  'adminOperations.coverageTitle': 'Canlı, planlı ve input bekleyen sinyaller',
+  'adminOperations.coverageCopy':
+    'Bu harita bütün ana metrik başlıklarını görünür tutar; canlı veri olmayan alanları gerçek metrik gibi göstermez.',
+  'adminOperations.coverageCount': '{count} başlık',
+  'adminOperations.coverageOpenSource': 'Kaynak yüzeyi aç',
+  'adminOperations.coverage.live': 'Canlı',
+  'adminOperations.coverage.partial': 'Kısmi',
+  'adminOperations.coverage.planned': 'Planlı',
+  'adminOperations.coverage.guarded': 'Guardlı',
+  'adminOperations.coverage.blockedByInput': 'Input bekliyor',
+  'adminOperations.coverage.backendTitle': 'Backend / DB / Queue',
+  'adminOperations.coverage.backendCopy':
+    'API health, DB kontrolü, Redis durumu ve kuyruk posture mevcut public health payloadından okunuyor.',
+  'adminOperations.coverage.backendSource': '/api/health',
+  'adminOperations.coverage.importTitle': 'Integration / Import',
+  'adminOperations.coverage.importCopy':
+    'Import batch overview ve needs-action kuyruğu failed, retry-ready, blocked ve stuck baskısını gösteriyor.',
+  'adminOperations.coverage.importSource': 'import overview',
+  'adminOperations.coverage.dataQualityTitle': 'Data Quality / Mapping',
+  'adminOperations.coverage.dataQualityCopy':
+    'Önizleme hata satırı, mapping blocker entity type, blocked batch ve snapshot issue sinyalleri yükseltiliyor.',
+  'adminOperations.coverage.dataQualitySource': 'import + snapshot signals',
+  'adminOperations.coverage.snapshotTitle': 'Snapshot / Reporting',
+  'adminOperations.coverage.snapshotCopy':
+    'Snapshot overview ve needs-action kuyruğu rapor tazeliği, retry ve stuck baskısını görünür kılıyor.',
+  'adminOperations.coverage.snapshotSource': 'snapshot overview',
+  'adminOperations.coverage.authTitle': 'Auth / Role / Scope',
+  'adminOperations.coverage.authCopy':
+    'Auth drift en yüksek riskli başlıklardan biri; şimdilik matrix guard, test ve audit yüzeyleriyle izleniyor.',
+  'adminOperations.coverage.authSource': 'auth matrix + audit',
+  'adminOperations.coverage.workforceTitle': 'Workforce Requests',
+  'adminOperations.coverage.workforceCopy':
+    'Seller-code ve offboarding kuyruk baskısı önemli; canlı control-tower metriği için mevcut endpoint shape doğrulanmalı.',
+  'adminOperations.coverage.workforceSource': 'admin inbox / store approvals',
+  'adminOperations.coverage.workflowTitle': 'Workflow Inbox',
+  'adminOperations.coverage.workflowCopy':
+    'Inbox görünürlüğü read queue olarak kalmalı; overdue, unseen ve urgency metriği ayrı küçük slice ile ele alınmalı.',
+  'adminOperations.coverage.workflowSource': 'workflow inbox',
+  'adminOperations.coverage.kpiTitle': 'KPI / Rankings',
+  'adminOperations.coverage.kpiCopy':
+    'KPI kaynak güveni ve leaderboard freshness rapor yüzeylerinde var; control-tower canlı metriği ayrıca tasarlanmalı.',
+  'adminOperations.coverage.kpiSource': 'reports + rankings',
+  'adminOperations.coverage.releaseTitle': 'Release / External Evidence',
+  'adminOperations.coverage.releaseCopy':
+    'Gerçek bearer token, provider hedefi, restore targetı ve Redis/BullMQ kanıtı gelmeden bu başlık kapanmaz.',
+  'adminOperations.coverage.releaseSource': 'evidence blockers',
 
   'adminOperations.importEyebrow': 'Veri hattı',
   'adminOperations.importTitle': 'Import sağlık ve aksiyon kuyruğu',
@@ -230,6 +281,57 @@ export const adminOperationsEn: Record<keyof typeof adminOperationsTr, string> =
   'adminOperations.owner.auth': 'Auth / pilot readiness',
   'adminOperations.owner.integration': 'Integration operations',
   'adminOperations.owner.platform': 'Platform / provider',
+  'adminOperations.owner.reporting': 'Reporting / KPI governance',
+  'adminOperations.owner.storeOps': 'Store operations',
+  'adminOperations.owner.workforce': 'HR / workforce operations',
+
+  'adminOperations.coverageEyebrow': 'Metric Coverage',
+  'adminOperations.coverageTitle': 'Live, planned, and input-blocked signals',
+  'adminOperations.coverageCopy':
+    'This map keeps every major metric topic visible; areas without live data are not presented as real metrics.',
+  'adminOperations.coverageCount': '{count} topics',
+  'adminOperations.coverageOpenSource': 'Open source surface',
+  'adminOperations.coverage.live': 'Live',
+  'adminOperations.coverage.partial': 'Partial',
+  'adminOperations.coverage.planned': 'Planned',
+  'adminOperations.coverage.guarded': 'Guarded',
+  'adminOperations.coverage.blockedByInput': 'Input needed',
+  'adminOperations.coverage.backendTitle': 'Backend / DB / Queue',
+  'adminOperations.coverage.backendCopy':
+    'API health, DB check, Redis status, and queue posture are read from the existing public health payload.',
+  'adminOperations.coverage.backendSource': '/api/health',
+  'adminOperations.coverage.importTitle': 'Integration / Import',
+  'adminOperations.coverage.importCopy':
+    'Import batch overview and needs-action queue show failed, retry-ready, blocked, and stuck pressure.',
+  'adminOperations.coverage.importSource': 'import overview',
+  'adminOperations.coverage.dataQualityTitle': 'Data Quality / Mapping',
+  'adminOperations.coverage.dataQualityCopy':
+    'Preview error rows, mapping blocker entity types, blocked batches, and snapshot issues are elevated.',
+  'adminOperations.coverage.dataQualitySource': 'import + snapshot signals',
+  'adminOperations.coverage.snapshotTitle': 'Snapshot / Reporting',
+  'adminOperations.coverage.snapshotCopy':
+    'Snapshot overview and needs-action queue expose reporting freshness, retry, and stuck pressure.',
+  'adminOperations.coverage.snapshotSource': 'snapshot overview',
+  'adminOperations.coverage.authTitle': 'Auth / Role / Scope',
+  'adminOperations.coverage.authCopy':
+    'Auth drift is one of the highest-risk topics; for now it is tracked through matrix guards, tests, and audit surfaces.',
+  'adminOperations.coverage.authSource': 'auth matrix + audit',
+  'adminOperations.coverage.workforceTitle': 'Workforce Requests',
+  'adminOperations.coverage.workforceCopy':
+    'Seller-code and offboarding queue pressure matter; a live control-tower metric needs the existing endpoint shape confirmed first.',
+  'adminOperations.coverage.workforceSource': 'admin inbox / store approvals',
+  'adminOperations.coverage.workflowTitle': 'Workflow Inbox',
+  'adminOperations.coverage.workflowCopy':
+    'Inbox visibility should remain a read queue; overdue, unseen, and urgency metrics need a separate small slice.',
+  'adminOperations.coverage.workflowSource': 'workflow inbox',
+  'adminOperations.coverage.kpiTitle': 'KPI / Rankings',
+  'adminOperations.coverage.kpiCopy':
+    'KPI source trust and leaderboard freshness exist in report surfaces; a live control-tower metric should be designed separately.',
+  'adminOperations.coverage.kpiSource': 'reports + rankings',
+  'adminOperations.coverage.releaseTitle': 'Release / External Evidence',
+  'adminOperations.coverage.releaseCopy':
+    'This topic cannot close until real bearer token, provider target, restore target, and Redis/BullMQ evidence are available.',
+  'adminOperations.coverage.releaseSource': 'evidence blockers',
 
   'adminOperations.importEyebrow': 'Data Pipeline',
   'adminOperations.importTitle': 'Import health and action queue',

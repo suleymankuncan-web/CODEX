@@ -130,6 +130,10 @@ What it does:
   signals,
 - derives a read-only operator action list from the same existing health,
   import, data-quality, snapshot, and external blocker signals,
+- shows a metric coverage map so backend/queue, import, data quality,
+  snapshot/reporting, auth, workforce, workflow, KPI/rankings, and release
+  evidence topics are visible as live, partial, planned, guarded, or
+  input-blocked,
 - shows external/live evidence blockers as blocked-by-input rather than
   complete,
 - keeps the route `SUPER_ADMIN` scoped for V1.
@@ -150,3 +154,4 @@ Evidence:
 - `docs/evidence/product-progress/2026-05-21-operations-control-tower-v1.md`
 - `docs/evidence/product-progress/2026-05-21-operations-data-quality-signal-v1.md`
 - `docs/evidence/product-progress/2026-05-21-operations-action-list-v1.md`
+- `docs/evidence/product-progress/2026-05-21-operations-metric-coverage-map-v1.md`
