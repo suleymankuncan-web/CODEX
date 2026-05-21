@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #400, the Product Readiness V1 first-pass closeout, Operations Control Tower
+PR #401, the Product Readiness V1 first-pass closeout, Operations Control Tower
 readiness line, Sokrates/discipline operating docs, current workspace hygiene,
 the Clerk persona staging evidence runbook, and the generated system-flow map.
 It is the starting point for continuing in a fresh window.
@@ -29,14 +29,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-22, `origin/main` has been fetched through PR #400.
+As of 2026-05-22, `origin/main` has been fetched through PR #401.
 The root checkout has been moved back to clean `main` and is aligned with
 `origin/main`.
 
 Latest merge on main:
 
 ```text
-0c71461b docs: classify unlinked system flow endpoints
+0f0fc227 docs: add system flow auth overlay
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -156,6 +156,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #398 `docs: refine system flow readiness map`
 - PR #399 `fix: unblock frontend production audit`
 - PR #400 `docs: classify unlinked system flow endpoints`
+- PR #401 `docs: add system flow auth overlay`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -174,7 +175,7 @@ frontend root, security headers, SPA fallback, and static assets passed.
 Current local hygiene state:
 
 - Root workspace `D:\store-ops-workspace` is clean on `main...origin/main` at
-  `0c71461b`.
+  `0f0fc227`.
 - The previous dirty root state was not deleted. It was saved as stash
   `codex hygiene backup 2026-05-21 root dirty state`. Do not drop that stash
   unless the user explicitly approves.
@@ -224,11 +225,17 @@ Active follow-up line:
   unlinked endpoints are classified as external/provider, mobile/field-client,
   admin/operator-only, parked product/UI candidates, or legacy/deprecation
   candidates before any behavior change.
-- Milestone 3 auth/role/scope overlay evidence is being recorded in
+- Milestone 3 auth/role/scope overlay evidence is recorded in
   `docs/evidence/system-flow/auth-role-scope-overlay-v1.md`: route visibility,
   endpoint guard families, read scope, assigned-store action scope, and
   existing positive/negative test families are connected without changing auth
   behavior.
+- Milestone 4 fanout/bottleneck audit evidence is recorded in
+  `docs/evidence/system-flow/fanout-bottleneck-audit-v1.md`: static route/API
+  fanout is separated from likely runtime pressure, with `/admin/operations`,
+  `/admin/master-data`, `/admin/auth`, and `/store/approvals` identified as the
+  most useful future telemetry candidates without claiming live traffic or
+  changing behavior.
 
 ## API Contract Drift Status
 
