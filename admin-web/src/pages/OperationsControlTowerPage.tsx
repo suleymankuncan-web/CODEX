@@ -51,6 +51,16 @@ type DataQualitySnapshot = {
   snapshotIssueCount: number
 }
 
+type OperatorAction = {
+  href?: string
+  id: string
+  reason: string
+  status: string
+  subtitle: string
+  title: string
+  tone: Tone
+}
+
 type ProviderBlocker = {
   id: string
   titleKey: TranslationKey
@@ -155,6 +165,13 @@ export function OperationsControlTowerPage() {
     health: healthQuery.data,
     hasSignalError,
     operationalPressure,
+    t,
+  })
+  const operatorActions = buildOperatorActions({
+    dataQuality,
+    hasSignalError,
+    importActionCount,
+    snapshotActionCount,
     t,
   })
 
@@ -264,6 +281,8 @@ export function OperationsControlTowerPage() {
         ))}
       </section>
 
+      <OperatorActionListPanel actions={operatorActions} t={t} />
+
       <section className="two-up-grid">
         <BackendSignalPanel
           health={healthQuery.data}
@@ -301,6 +320,58 @@ export function OperationsControlTowerPage() {
   )
 }
 
+function OperatorActionListPanel(input: {
+  actions: OperatorAction[]
+  t: TranslateFunction
+}) {
+  return (
+    <article className="panel">
+      <div className="panel-heading panel-heading-spread">
+        <div>
+          <div className="eyebrow">{input.t('adminOperations.actionEyebrow')}</div>
+          <h3>{input.t('adminOperations.actionTitle')}</h3>
+          <p className="queue-subtitle">{input.t('adminOperations.actionCopy')}</p>
+        </div>
+        <StatusPill tone={input.actions.length > 0 ? 'warning' : 'calm'}>
+          {input.t('adminOperations.actionCount', { count: input.actions.length })}
+        </StatusPill>
+      </div>
+      <div className="queue-list">
+        {input.actions.map((action) => {
+          const content = (
+            <>
+              <div className="queue-row-head">
+                <div>
+                  <div className="queue-title">{action.title}</div>
+                  <div className="queue-subtitle">{action.subtitle}</div>
+                </div>
+                <StatusPill tone={action.tone}>{action.status}</StatusPill>
+              </div>
+              <p className="queue-reason">{action.reason}</p>
+              {action.href ? (
+                <div className="queue-footer">
+                  <span>{input.t('adminOperations.openActionDetail')}</span>
+                  <Activity size={16} />
+                </div>
+              ) : null}
+            </>
+          )
+
+          return action.href ? (
+            <Link className="queue-row" key={action.id} to={action.href}>
+              {content}
+            </Link>
+          ) : (
+            <div className="queue-row" key={action.id}>
+              {content}
+            </div>
+          )
+        })}
+      </div>
+    </article>
+  )
+}
+
 function OperationsHero(input: {
   operationalPressure: number
   providerBlockerCount: number
@@ -327,6 +398,87 @@ function OperationsHero(input: {
       </div>
     </section>
   )
+}
+
+function buildOperatorActions(input: {
+  dataQuality: DataQualitySnapshot
+  hasSignalError: boolean
+  importActionCount: number
+  snapshotActionCount: number
+  t: TranslateFunction
+}): OperatorAction[] {
+  const actions: OperatorAction[] = []
+  const hasDataQualityPressure =
+    input.dataQuality.errorRowCount > 0 ||
+    input.dataQuality.blockedBatchCount > 0 ||
+    input.dataQuality.mappingEntityTypes.length > 0 ||
+    input.dataQuality.snapshotIssueCount > 0
+
+  if (input.hasSignalError) {
+    actions.push({
+      id: 'signal-unavailable',
+      title: input.t('adminOperations.actionSignalTitle'),
+      subtitle: input.t('adminOperations.actionSignalSubtitle'),
+      reason: input.t('adminOperations.actionSignalReason'),
+      status: input.t('adminOperations.attention'),
+      tone: 'warning',
+    })
+  }
+
+  if (input.importActionCount > 0) {
+    actions.push({
+      href: '/admin/integrations',
+      id: 'import-queue',
+      title: input.t('adminOperations.actionImportTitle'),
+      subtitle: input.t('adminOperations.actionImportSubtitle'),
+      reason: input.t('adminOperations.actionImportReason', {
+        count: input.importActionCount,
+      }),
+      status: input.t('adminOperations.queueHasItems', { count: input.importActionCount }),
+      tone: 'warning',
+    })
+  }
+
+  if (hasDataQualityPressure) {
+    actions.push({
+      href: '/admin/integrations',
+      id: 'data-quality',
+      title: input.t('adminOperations.actionDataQualityTitle'),
+      subtitle: input.t('adminOperations.actionDataQualitySubtitle'),
+      reason: input.t('adminOperations.actionDataQualityReason', {
+        blocked: input.dataQuality.blockedBatchCount,
+        errors: input.dataQuality.errorRowCount,
+        snapshots: input.dataQuality.snapshotIssueCount,
+      }),
+      status: input.t('adminOperations.needsAttention'),
+      tone: 'warning',
+    })
+  }
+
+  if (input.snapshotActionCount > 0) {
+    actions.push({
+      href: '/admin/snapshots',
+      id: 'snapshot-queue',
+      title: input.t('adminOperations.actionSnapshotTitle'),
+      subtitle: input.t('adminOperations.actionSnapshotSubtitle'),
+      reason: input.t('adminOperations.actionSnapshotReason', {
+        count: input.snapshotActionCount,
+      }),
+      status: input.t('adminOperations.queueHasItems', { count: input.snapshotActionCount }),
+      tone: 'warning',
+    })
+  }
+
+  actions.push({
+    id: 'external-evidence',
+    title: input.t('adminOperations.actionExternalTitle'),
+    subtitle: input.t('adminOperations.actionExternalSubtitle'),
+    reason: input.t('adminOperations.actionExternalReason'),
+    status: input.t('adminOperations.inputNeeded'),
+    tone: 'warning',
+  })
+
+  return actions
 }
 
 function DataQualitySignalPanel(input: {

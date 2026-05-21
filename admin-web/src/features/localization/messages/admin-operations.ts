@@ -20,6 +20,31 @@ export const adminOperationsTr = {
   'adminOperations.snapshotMetricNote': '{count} snapshot çalışması içinde aksiyon baskısı',
   'adminOperations.externalMetricNote': 'Gerçek token/provider/restore inputu bekleyen kanıtlar',
 
+  'adminOperations.actionEyebrow': 'Sıradaki hareket',
+  'adminOperations.actionTitle': 'Operatör aksiyon listesi',
+  'adminOperations.actionCopy':
+    'Bu liste mevcut read-only sinyallerden türetilir; yeni workflow başlatmaz ve kanıt sahipliğini değiştirmez.',
+  'adminOperations.actionCount': '{count} aksiyon',
+  'adminOperations.openActionDetail': 'Detaya git',
+  'adminOperations.actionSignalTitle': 'Readiness sinyalini kontrol et',
+  'adminOperations.actionSignalSubtitle': 'Sağlık / erişilebilirlik',
+  'adminOperations.actionSignalReason':
+    'Bir veya daha fazla kontrol açılamadı; release/readiness gate çıktısı incelenmeli.',
+  'adminOperations.actionImportTitle': 'Import kuyruğunu aç',
+  'adminOperations.actionImportSubtitle': 'Import health',
+  'adminOperations.actionImportReason': '{count} import aksiyonu retry, blocker veya needs-action olarak bekliyor.',
+  'adminOperations.actionDataQualityTitle': 'Veri kalitesi sinyalini doğrula',
+  'adminOperations.actionDataQualitySubtitle': 'Mapping / hata satırı',
+  'adminOperations.actionDataQualityReason':
+    '{errors} önizleme hata satırı, {blocked} bloke batch ve {snapshots} snapshot issue görünüyor.',
+  'adminOperations.actionSnapshotTitle': 'Snapshot kuyruğunu aç',
+  'adminOperations.actionSnapshotSubtitle': 'Rapor tazeliği',
+  'adminOperations.actionSnapshotReason': '{count} snapshot aksiyonu retry veya stuck incelemesi bekliyor.',
+  'adminOperations.actionExternalTitle': 'Dış kanıt inputlarını toparla',
+  'adminOperations.actionExternalSubtitle': 'Auth / provider / restore',
+  'adminOperations.actionExternalReason':
+    'Gerçek staging tokenı, provider hedefi veya onaylı restore inputu gelmeden bu blocker kapanmaz.',
+
   'adminOperations.backendEyebrow': 'API ve kuyruk',
   'adminOperations.backendTitle': 'Sağlık endpointi ve queue posture',
   'adminOperations.backendCopy':
@@ -146,6 +171,31 @@ export const adminOperationsEn: Record<keyof typeof adminOperationsTr, string> =
   'adminOperations.dataQualityMetricNote': 'Preview error rows across {count} blocked batches',
   'adminOperations.snapshotMetricNote': 'Action pressure across {count} snapshot runs',
   'adminOperations.externalMetricNote': 'Evidence waiting for real token/provider/restore inputs',
+
+  'adminOperations.actionEyebrow': 'Next move',
+  'adminOperations.actionTitle': 'Operator action list',
+  'adminOperations.actionCopy':
+    'This list is derived from existing read-only signals; it starts no new workflow and does not change evidence ownership.',
+  'adminOperations.actionCount': '{count} actions',
+  'adminOperations.openActionDetail': 'Open detail',
+  'adminOperations.actionSignalTitle': 'Check readiness signal',
+  'adminOperations.actionSignalSubtitle': 'Health / availability',
+  'adminOperations.actionSignalReason':
+    'One or more checks could not load; review the release/readiness gate output.',
+  'adminOperations.actionImportTitle': 'Open import queue',
+  'adminOperations.actionImportSubtitle': 'Import health',
+  'adminOperations.actionImportReason': '{count} import actions are waiting as retry, blocker, or needs-action work.',
+  'adminOperations.actionDataQualityTitle': 'Verify data quality signal',
+  'adminOperations.actionDataQualitySubtitle': 'Mapping / error rows',
+  'adminOperations.actionDataQualityReason':
+    '{errors} preview error rows, {blocked} blocked batches, and {snapshots} snapshot issues are visible.',
+  'adminOperations.actionSnapshotTitle': 'Open snapshot queue',
+  'adminOperations.actionSnapshotSubtitle': 'Report freshness',
+  'adminOperations.actionSnapshotReason': '{count} snapshot actions are waiting for retry or stuck review.',
+  'adminOperations.actionExternalTitle': 'Gather external evidence inputs',
+  'adminOperations.actionExternalSubtitle': 'Auth / provider / restore',
+  'adminOperations.actionExternalReason':
+    'This blocker cannot close without a real staging token, provider target, or approved restore input.',
 
   'adminOperations.backendEyebrow': 'API And Queue',
   'adminOperations.backendTitle': 'Health endpoint and queue posture',

@@ -128,6 +128,8 @@ What it does:
 - reads snapshot overview plus snapshot needs-action preview,
 - derives a read-only data-quality snapshot from existing import and snapshot
   signals,
+- derives a read-only operator action list from the same existing health,
+  import, data-quality, snapshot, and external blocker signals,
 - shows external/live evidence blockers as blocked-by-input rather than
   complete,
 - keeps the route `SUPER_ADMIN` scoped for V1.
@@ -147,3 +149,4 @@ Evidence:
 
 - `docs/evidence/product-progress/2026-05-21-operations-control-tower-v1.md`
 - `docs/evidence/product-progress/2026-05-21-operations-data-quality-signal-v1.md`
+- `docs/evidence/product-progress/2026-05-21-operations-action-list-v1.md`
