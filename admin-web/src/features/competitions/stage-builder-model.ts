@@ -4,6 +4,7 @@ import type {
   CompetitionStageSummary,
   CompetitionTeamTemplate,
   CreateCompetitionStagePayload,
+  UpdateCompetitionStagePackagePlanPayload,
 } from './api'
 import type { AuthLookupStore } from '../auth/api'
 import type { TranslationKey } from '../localization/dictionary'
@@ -376,4 +377,174 @@ export function validateTemplateCloneDraft(draft: TemplateCloneDraft): Translati
   }
 
   return null
+}
+
+export function validateStageDraft(draft: StageDraft): TranslationKey | null {
+  const stageOrder = Number(draft.stageOrder)
+
+  if (!draft.stageCode.trim() || !codePattern.test(draft.stageCode)) {
+    return 'competition.stageBuilder.validation.stageCode'
+  }
+
+  if (!draft.stageName.trim()) {
+    return 'competition.stageBuilder.validation.stageName'
+  }
+
+  if (!Number.isInteger(stageOrder) || stageOrder < 1) {
+    return 'competition.stageBuilder.validation.stageOrder'
+  }
+
+  if (!draft.startsOn || !draft.endsOn || draft.endsOn < draft.startsOn) {
+    return 'competition.stageBuilder.validation.stageDateRange'
+  }
+
+  if (draft.teams.length < 2) {
+    return 'competition.stageBuilder.validation.teamCount'
+  }
+
+  const invalidTeam = draft.teams.find(
+    (team) =>
+      !team.teamCode.trim() ||
+      !codePattern.test(team.teamCode) ||
+      !team.teamName.trim() ||
+      team.storeIds.length === 0,
+  )
+
+  if (invalidTeam) {
+    return 'competition.stageBuilder.validation.teamFields'
+  }
+
+  return null
+}
+
+export function validateStagePackageDraft(
+  draft: StagePackageDraft,
+  templates: CompetitionTeamTemplate[],
+): TranslationKey | null {
+  if (!draft.packageCode) {
+    return 'competition.stageBuilder.validation.packageRequired'
+  }
+
+  if (!draft.firstTemplateId || !draft.secondTemplateId) {
+    return 'competition.stageBuilder.validation.packageTwoTemplates'
+  }
+
+  if (draft.firstTemplateId === draft.secondTemplateId) {
+    return 'competition.stageBuilder.validation.packageDifferentTemplates'
+  }
+
+  const selectedTemplates = templates.filter((template) =>
+    [draft.firstTemplateId, draft.secondTemplateId].includes(template.templateId),
+  )
+
+  if (selectedTemplates.length !== 2) {
+    return 'competition.stageBuilder.validation.packageActiveTemplates'
+  }
+
+  if (selectedTemplates.some((template) => template.stores.length === 0)) {
+    return 'competition.stageBuilder.validation.packageTemplateStores'
+  }
+
+  if (draft.stageDrafts.length < 2) {
+    return 'competition.stageBuilder.validation.packageStageCount'
+  }
+
+  const stageCodes = draft.stageDrafts.map((stage) => stage.stageCode.trim())
+  if (new Set(stageCodes).size !== stageCodes.length) {
+    return 'competition.stageBuilder.validation.packageUniqueStageCodes'
+  }
+
+  const invalidStage = draft.stageDrafts.find((stage) => {
+    const stageOrder = Number(stage.stageOrder)
+
+    return (
+      !stage.stageCode.trim() ||
+      !codePattern.test(stage.stageCode) ||
+      !stage.stageName.trim() ||
+      !Number.isInteger(stageOrder) ||
+      stageOrder < 1 ||
+      !stage.startsOn ||
+      !stage.endsOn ||
+      stage.endsOn < stage.startsOn
+    )
+  })
+
+  if (invalidStage) {
+    return 'competition.stageBuilder.validation.packageStageFields'
+  }
+
+  return null
+}
+
+export function validateStagePackagePlanDraft(
+  draft: StagePackageDraft,
+  templates: CompetitionTeamTemplate[],
+): TranslationKey | null {
+  const packageValidation = validateStagePackageDraft(draft, templates)
+  if (packageValidation) return packageValidation
+
+  if (!draft.planName.trim()) {
+    return 'competition.stageBuilder.validation.packagePlanName'
+  }
+
+  return null
+}
+
+export function validateStagePackagePlanEditDraft(
+  draft: StagePackagePlanEditDraft,
+): TranslationKey | null {
+  if (!draft.planName.trim()) {
+    return 'competition.stageBuilder.validation.packagePlanName'
+  }
+
+  if (draft.stageDrafts.length < 2) {
+    return 'competition.stageBuilder.validation.packageStageCount'
+  }
+
+  const stageCodes = draft.stageDrafts.map((stage) => stage.stageCode.trim())
+  if (new Set(stageCodes).size !== stageCodes.length) {
+    return 'competition.stageBuilder.validation.packageUniqueStageCodes'
+  }
+
+  const invalidStage = draft.stageDrafts.find((stage) => {
+    const stageOrder = Number(stage.stageOrder)
+
+    return (
+      !stage.stageCode.trim() ||
+      !codePattern.test(stage.stageCode) ||
+      !stage.stageName.trim() ||
+      !Number.isInteger(stageOrder) ||
+      stageOrder < 1 ||
+      !stage.startsOn ||
+      !stage.endsOn ||
+      stage.endsOn < stage.startsOn ||
+      stage.teams.length < 2 ||
+      stage.teams.some((team) => team.storeIds.length === 0)
+    )
+  })
+
+  if (invalidStage) {
+    return 'competition.stageBuilder.validation.packageEditStageFields'
+  }
+
+  return null
+}
+
+export function buildStagePackagePlanUpdatePayload(
+  draft: StagePackagePlanEditDraft,
+): UpdateCompetitionStagePackagePlanPayload {
+  return {
+    packageCode: draft.packageCode,
+    planName: draft.planName.trim(),
+    stages: draft.stageDrafts.map((stageDraft) => ({
+      stagePresetCode: stageDraft.stagePresetCode,
+      stageCode: stageDraft.stageCode.trim(),
+      stageName: stageDraft.stageName.trim(),
+      stageOrder: Number(stageDraft.stageOrder),
+      stageType: stageDraft.stageType,
+      startsOn: stageDraft.startsOn,
+      endsOn: stageDraft.endsOn,
+      teams: stageDraft.teams,
+    })),
+  }
 }

@@ -440,8 +440,9 @@ Safe first slice:
 
 Candidate extraction order:
 
-1. Frontend stage builder model/constants extraction.
-2. Frontend template section extraction.
+1. Done: frontend stage builder model/constants extraction for validation
+   helpers and package-plan update payload construction.
+2. Next: frontend template section extraction.
 3. Frontend package-plan section extraction.
 4. Backend team-template read/write boundary.
 5. Backend stage-package plan read/write/audit boundary.
@@ -652,14 +653,15 @@ input changes priority.
    `docs/plans/auth-admin-user-account-boundary-decision-v1.md`.
 8. Next: shift to stage builder / competition work unless a concrete auth
    write-risk or product change requires the next invariant decision.
-9. Stage builder frontend pure model/section split PR, if product work touches
-   competitions.
-10. Master-data bootstrap frontend model/section split PR, if product work
+9. Done: stage builder frontend pure model/constants extraction.
+10. Next: stage builder template section extraction, if continuing frontend
+   competition decomposition.
+11. Master-data bootstrap frontend model/section split PR, if product work
    touches master-data bootstrap.
-11. Competition repository inventory/read-boundary PR.
-12. TypeScript strictness inventory PR.
-13. One strictness domain PR only if the inventory shows a reviewable slice.
-14. External evidence PRs only when real provider inputs exist.
+12. Competition repository inventory/read-boundary PR.
+13. TypeScript strictness inventory PR.
+14. One strictness domain PR only if the inventory shows a reviewable slice.
+15. External evidence PRs only when real provider inputs exist.
 
 Batch rule:
 
