@@ -210,6 +210,7 @@ test('operations workflow metric treats inbox errors as unavailable', async ({ p
   await expect(workflowMetric).toContainText('Unavailable')
   await expect(workflowPanel.getByText('Unavailable', { exact: true })).toBeVisible()
   await expect(workflowPanel.locator('.inline-state-warning')).toBeVisible()
+  await expect(workflowPanel.getByText('Workflow action preview', { exact: true })).toHaveCount(0)
   await expect(page.locator('.accent-chip').filter({ hasText: 'Operator pressure' })).toContainText('108')
   await expect(main.getByText('Open workflow inbox')).toHaveCount(0)
 })

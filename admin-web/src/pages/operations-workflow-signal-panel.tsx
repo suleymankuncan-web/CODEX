@@ -29,18 +29,20 @@ export function WorkflowSignalPanel(input: {
   pressure: WorkflowInboxPressure
   t: TranslateFunction
 }) {
-  const previewItems = input.items.map((item): WorkflowQueuePreviewItem => ({
-    href: item.deepLink,
-    id: item.sourceId,
-    meta: input.t('adminOperations.workflowItemMeta', {
-      source: formatWorkflowSourceType(item.sourceType, input.t),
-      urgency: formatWorkflowUrgency(item.urgency, input.t),
-    }),
-    reason: item.summary,
-    status: formatWorkflowUrgency(item.urgency, input.t),
-    title: item.title,
-    tone: mapWorkflowUrgencyTone(item.urgency),
-  })).slice(0, 4)
+  const previewItems = input.isError
+    ? []
+    : input.items.map((item): WorkflowQueuePreviewItem => ({
+        href: item.deepLink,
+        id: item.sourceId,
+        meta: input.t('adminOperations.workflowItemMeta', {
+          source: formatWorkflowSourceType(item.sourceType, input.t),
+          urgency: formatWorkflowUrgency(item.urgency, input.t),
+        }),
+        reason: item.summary,
+        status: formatWorkflowUrgency(item.urgency, input.t),
+        title: item.title,
+        tone: mapWorkflowUrgencyTone(item.urgency),
+      })).slice(0, 4)
 
   return (
     <article className="panel">
@@ -78,36 +80,38 @@ export function WorkflowSignalPanel(input: {
         </div>
       )}
 
-      <div className="queue-list">
-        <div className="queue-row-head">
-          <strong>{input.t('adminOperations.workflowQueueTitle')}</strong>
-          <StatusPill tone={previewItems.length > 0 ? 'warning' : 'calm'}>
-            {previewItems.length > 0
-              ? input.t('adminOperations.queueHasItems', { count: previewItems.length })
-              : input.t('adminOperations.queueClear')}
-          </StatusPill>
-        </div>
-        {previewItems.length === 0 ? (
-          <EmptyState copy={input.t('adminOperations.workflowQueueEmpty')} />
-        ) : (
-          previewItems.map((item) => (
-            <Link className="queue-row" key={item.id} to={item.href}>
-              <div className="queue-row-head">
-                <div>
-                  <div className="queue-title">{item.title}</div>
-                  <div className="queue-subtitle">{item.id}</div>
+      {!input.isError ? (
+        <div className="queue-list">
+          <div className="queue-row-head">
+            <strong>{input.t('adminOperations.workflowQueueTitle')}</strong>
+            <StatusPill tone={previewItems.length > 0 ? 'warning' : 'calm'}>
+              {previewItems.length > 0
+                ? input.t('adminOperations.queueHasItems', { count: previewItems.length })
+                : input.t('adminOperations.queueClear')}
+            </StatusPill>
+          </div>
+          {previewItems.length === 0 ? (
+            <EmptyState copy={input.t('adminOperations.workflowQueueEmpty')} />
+          ) : (
+            previewItems.map((item) => (
+              <Link className="queue-row" key={item.id} to={item.href}>
+                <div className="queue-row-head">
+                  <div>
+                    <div className="queue-title">{item.title}</div>
+                    <div className="queue-subtitle">{item.id}</div>
+                  </div>
+                  <StatusPill tone={item.tone}>{item.status}</StatusPill>
                 </div>
-                <StatusPill tone={item.tone}>{item.status}</StatusPill>
-              </div>
-              <p className="queue-reason">{item.reason}</p>
-              <div className="queue-footer">
-                <span>{item.meta}</span>
-                <Activity size={16} />
-              </div>
-            </Link>
-          ))
-        )}
-      </div>
+                <p className="queue-reason">{item.reason}</p>
+                <div className="queue-footer">
+                  <span>{item.meta}</span>
+                  <Activity size={16} />
+                </div>
+              </Link>
+            ))
+          )}
+        </div>
+      ) : null}
 
       <div className="toolbar-cluster">
         <Link className="back-link" to="/admin/inbox">
