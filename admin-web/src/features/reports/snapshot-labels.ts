@@ -19,6 +19,9 @@ function parseDateOnly(input: string) {
   }
 
   const [year, month, day] = input.slice(0, 10).split('-').map(Number)
+  if (year === undefined || month === undefined || day === undefined) {
+    return new Date(Number.NaN)
+  }
   return new Date(year, month - 1, day)
 }
 

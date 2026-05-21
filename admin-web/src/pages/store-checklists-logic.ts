@@ -441,6 +441,9 @@ export function getMonthKey(value?: string | null) {
 
 export function formatMonthKey(value: string, locale: AppLocale) {
   const [year, month] = value.split('-').map(Number)
+  if (year === undefined || month === undefined) {
+    return checklistMonthFormatters[locale].format(new Date(Number.NaN))
+  }
   return checklistMonthFormatters[locale].format(new Date(year, month - 1, 1))
 }
 
@@ -648,7 +651,7 @@ export function buildChecklistResponseDrafts(input: {
 
   for (const item of input.session.template.items) {
     const score = input.scores[item.templateItemId]
-    if (!Number.isFinite(score)) continue
+    if (typeof score !== 'number' || !Number.isFinite(score)) continue
 
     drafts.push({
         checklistInstanceId: input.checklistInstanceId,

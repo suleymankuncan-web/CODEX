@@ -25,10 +25,11 @@ export function resolvePerformanceGrade(
     return { code: 'D', label: 'Kritik', emoji: '🚨', tone: 'danger' }
   }
 
+  const fallbackBand = defaultGradingBands[defaultGradingBands.length - 1] as KpiGradingBand
   const band =
     gradingBands
       .toSorted((left, right) => right.minScore - left.minScore)
-      .find((item) => score >= item.minScore) ?? defaultGradingBands[defaultGradingBands.length - 1]
+      .find((item) => score >= item.minScore) ?? fallbackBand
 
   return {
     code: band.code as PerformanceGradeCode,
