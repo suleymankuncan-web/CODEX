@@ -278,6 +278,9 @@ Current result:
 
 - Blocked by missing staging/provider inputs. See
   `docs/evidence/product-progress/2026-05-20-external-evidence-input-check.md`.
+- The 2026-05-21 blocker refresh confirms the same class of inputs is still
+  absent in the local environment:
+  `docs/evidence/product-progress/2026-05-21-external-evidence-blocker-refresh.md`.
 
 Verification commands:
 
@@ -460,18 +463,26 @@ Park the work when:
 
 Next action:
 
-- Start Phase 1 with a visible-flow audit and choose the first small product-readiness PR from that audit.
+- Use the growth-foundation docs as the current local planning layer, then pick
+  one first implementation slice from those plans.
 
 Why:
 
-- External readiness is parked until real inputs exist.
-- Recent refactor lines have reduced the biggest immediate frontend file pressure.
-- Product polish is the highest-value local work that does not depend on providers.
+- External readiness is still parked until real inputs exist.
+- The latest UI/UX V1 and refactor lines have closed the immediate visible
+  blockers that triggered them.
+- The next useful local work is to turn one documented growth guardrail into a
+  small, reversible implementation.
 
 Expected first output:
 
-- `docs/evidence/product-progress/2026-05-20-visible-flow-audit-v1.md`.
-- One small PR against the highest-value route found by that audit.
+- First safest code/config candidate: enable frontend `strict: true` for app
+  and node TypeScript configs, because temporary strict checks pass with zero
+  errors.
+- First product/operator candidate: read-only Operations Control Tower V1 using
+  existing health/readiness/import/snapshot signals only.
+- Keep rules engine, auth model changes, DB schema, provider config, and
+  data-quality workflow implementation parked until separately scoped.
 
 ## Self-Review
 

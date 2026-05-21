@@ -2,8 +2,8 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #361 plus the active competition team-template read slice, and is the starting
-point for continuing in a fresh window.
+PR #362 plus the current growth-foundation docs planning line, and is the
+starting point for continuing in a fresh window.
 
 ## Active Workspace
 
@@ -27,14 +27,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-21, `origin/main` has been fetched through PR #361.
+As of 2026-05-21, `origin/main` has been fetched through PR #362.
 The root checkout may still be on a non-main local branch with unrelated
 handoff noise; do not assume the root working tree is clean.
 
 Latest merge on main:
 
 ```text
-c1d7a5ee refactor: split competition read repository (#361)
+24502041 refactor: split competition team template reads (#362)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -115,6 +115,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #359 `docs: inventory competition repository boundaries`
 - PR #360 `refactor: split competition stage plan reads`
 - PR #361 `refactor: split competition read repository`
+- PR #362 `refactor: split competition team template reads`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -317,11 +318,14 @@ Latest technical assessment decision:
   user-facing behavior change is intended. After the slice,
   `CompetitionRepository` is roughly 1792 physical lines and
   `CompetitionStagePackagePlanReadRepository` is roughly 76 physical lines.
-- Next backend competition candidates, in order: `CompetitionReadRepository`
-  for list/detail/contribution reads, then team-template read boundary. Keep
-  stage-package plan writes, stage creation/execution, access-context helpers,
-  and score recalculation/finalization parked until a tighter invariant/test
-  decision exists.
+- The competition list/detail/contribution read boundary has moved into
+  `CompetitionReadRepository`.
+- The team-template read boundary for `listTeamTemplates` has moved into
+  `CompetitionTeamTemplateReadRepository`.
+- Next backend competition candidate: team-template command/write boundary, but
+  only with an explicit invariant/test decision. Keep stage-package plan writes,
+  stage creation/execution, access-context helpers, score recalculation, and
+  finalization parked until a tighter invariant/test decision exists.
 
 ## Sokrates
 
@@ -609,6 +613,36 @@ Rule for new work:
 - Do not commit tokens, cookies, JWTs, local `.env`, generated `dist`,
   `test-results`, `coverage`, `node_modules`, or `outputs/` artifacts.
   `outputs/` is ignored local scratch work.
+
+## Growth Foundation Planning
+
+The local `x.md` conversation record identified the next growth-foundation
+risks after the project-flow review: rules/config drift, data-quality trust,
+authorization drift, operations visibility, and TypeScript strictness.
+
+The current docs-only growth-foundation branch records these as planning and
+inventory work only:
+
+- `docs/plans/growth-foundation-gap-classification-v1.md`
+- `docs/evidence/product-progress/2026-05-21-external-evidence-blocker-refresh.md`
+- `docs/plans/rules-config-boundary-decision-v1.md`
+- `docs/plans/operations-control-tower-v1.md`
+- `docs/plans/authorization-matrix-drift-guard-v1.md`
+- `docs/plans/cross-domain-data-quality-inventory-v1.md`
+- `docs/plans/frontend-typescript-strictness-inventory-v1.md`
+
+Important outcome:
+
+- Do not build a generic rules engine yet.
+- Do not add `dm` or `config` schemas yet.
+- Do not change auth, permissions, DB schema, API response shape, CSS, or
+  user-facing behavior from this planning line.
+- External/live evidence remains blocked until real bearer/provider/restore/
+  Redis/upload inputs are provided.
+- Frontend temporary `--strict` checks pass for app and node configs; the
+  first safe strictness implementation slice is a config-only `strict: true`
+  PR. `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes` need later
+  measured code slices.
 
 ## Next Best Work
 
