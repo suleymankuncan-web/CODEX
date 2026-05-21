@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #388, the parked Workforce Request safe-read boundary line, and the Product
+PR #389, the parked Workforce Request safe-read boundary line, and the Product
 Readiness V1 UI/UX first-pass closeout, and is
 the starting point for continuing in a fresh window.
 
@@ -28,14 +28,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-21, `origin/main` has been fetched through PR #388.
+As of 2026-05-21, `origin/main` has been fetched through PR #389.
 The root checkout may still be on a non-main local branch with unrelated
 handoff noise; do not assume the root working tree is clean.
 
 Latest merge on main:
 
 ```text
-c768b1a2 feat: clarify master data personnel controls
+bf674d7a docs: close product readiness v1 pass
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -143,6 +143,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #386 `feat: clarify admin KPI row context`
 - PR #387 `feat: clarify store rankings table context`
 - PR #388 `feat: clarify master data personnel controls`
+- PR #389 `docs: close product readiness v1 pass`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -401,6 +402,15 @@ Latest technical assessment decision:
   No new endpoint, API response shape, auth/permission, DB, provider config,
   import retry, mapping approval, snapshot rerun, scoring, or workflow change
   is included.
+- Operations Metric Coverage Map V1 is the current operations-readiness slice:
+  it keeps every major bottleneck topic visible in `/admin/operations` and
+  labels backend/queue, import, data quality, snapshot/reporting, auth,
+  workforce, workflow, KPI/rankings, and release evidence as live, partial,
+  planned, guarded, or input-blocked. Evidence:
+  `docs/evidence/product-progress/2026-05-21-operations-metric-coverage-map-v1.md`.
+  No new endpoint, API response shape, auth/permission, DB, provider config,
+  import retry, mapping approval, snapshot rerun, scoring, workforce command,
+  or workflow behavior change is included.
 - Auth Surface Readability V1 is the current route-level product-evidence
   slice: it fixes low-contrast explanatory copy on `/admin/auth` and
   `/admin/auth/catalog` light panels by reusing the existing `queue-subtitle`

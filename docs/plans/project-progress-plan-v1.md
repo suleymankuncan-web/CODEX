@@ -255,6 +255,12 @@ Current UI/UX V1 status:
   `/admin/operations` using the same existing health, import, data-quality,
   snapshot, and external blocker signals. Evidence:
   `docs/evidence/product-progress/2026-05-21-operations-action-list-v1.md`.
+- Operations Metric Coverage Map V1 makes the main bottleneck/metric topics
+  explicit in `/admin/operations`: backend/queue, import, data quality,
+  snapshot/reporting, auth, workforce, workflow, KPI/rankings, and release
+  evidence. It labels each as live, partial, planned, guarded, or input-blocked
+  instead of pretending every topic is already a live metric. Evidence:
+  `docs/evidence/product-progress/2026-05-21-operations-metric-coverage-map-v1.md`.
 - Auth Surface Readability V1 fixes low-contrast explanatory copy on
   `/admin/auth` and `/admin/auth/catalog` light panels after route-level browser
   evidence isolated the issue. Evidence:
