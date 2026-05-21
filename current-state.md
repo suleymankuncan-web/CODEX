@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #357, and is the starting point for continuing in a fresh window.
+PR #358, and is the starting point for continuing in a fresh window.
 
 ## Active Workspace
 
@@ -26,14 +26,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-21, `origin/main` has been fetched through PR #357.
+As of 2026-05-21, `origin/main` has been fetched through PR #358.
 The root checkout may still be on a non-main local branch with unrelated
 handoff noise; do not assume the root working tree is clean.
 
 Latest merge on main:
 
 ```text
-06094195 refactor: split stage builder model helpers (#357)
+524cee2f refactor: split stage builder package section (#358)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -110,6 +110,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #355 `docs: plan auth admin user account boundary`
 - PR #356 `refactor: split auth user account reads`
 - PR #357 `refactor: split stage builder model helpers`
+- PR #358 `refactor: split stage builder package section`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -293,13 +294,18 @@ Latest technical assessment decision:
 - Stage builder frontend decomposition has started with the safest model slice:
   validation helpers and stage package plan update-payload construction moved
   from `StageBuilderForm.tsx` into `stage-builder-model.ts`. The form remains
-  render/hook/API orchestration only for those helpers and is now roughly 1696
-  physical lines / 1579 non-empty lines.
-- The next StageBuilder frontend slice extracts the package/package-plan render
-  section into `stage-builder-package-section.tsx`. This is structural only:
-  query/mutation orchestration, API calls, payload shapes, copy, CSS, and auth
-  behavior stay unchanged. After the extraction, `StageBuilderForm.tsx` is
-  roughly 866 physical lines.
+  render/hook/API orchestration only for those helpers.
+- The package/package-plan render section has now moved into
+  `stage-builder-package-section.tsx`. Query/mutation orchestration, API calls,
+  payload shapes, copy, CSS, and auth behavior stayed unchanged.
+- `StageBuilderForm.tsx` is now roughly 789 physical lines on `origin/main`
+  after PR #358. This is below the earlier danger zone, so pause tiny frontend
+  StageBuilder splits unless a concrete product/risk change needs them.
+- The next more meaningful technical-debt step is a docs-only
+  `CompetitionRepository` boundary/test-map inventory before backend code
+  movement. The repository is roughly 1839 physical lines and mixes reads,
+  plan state transitions, score recalculation, finalization, audit, and access
+  context helpers.
 
 ## Sokrates
 
