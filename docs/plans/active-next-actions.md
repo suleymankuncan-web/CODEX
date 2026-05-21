@@ -21,7 +21,10 @@ items plus 3 broad-production/operational hardening items:
 
 Tier A - controlled pilot expansion first:
 
-1. Real staging auth/action smoke with sanitized evidence.
+1. Real staging auth/action smoke with sanitized evidence. Use
+   `docs/plans/clerk-persona-staging-evidence-runbook-v1.md` to create Clerk
+   personas, bind app roles/scopes, run token/action smokes, and store only
+   sanitized evidence.
 2. Protected route load smoke with role-specific staging bearer tokens.
 3. Authenticated integration-admin upload smoke with a safe sample file.
 

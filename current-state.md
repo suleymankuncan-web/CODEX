@@ -2,9 +2,10 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #393, the parked Workforce Request safe-read boundary line, and the Product
-Readiness V1 UI/UX first-pass closeout, and is
-the starting point for continuing in a fresh window.
+PR #395, the Product Readiness V1 first-pass closeout, Operations Control Tower
+readiness line, Sokrates/discipline operating docs, current workspace hygiene,
+and the Clerk persona staging evidence runbook. It is the starting point for
+continuing in a fresh window.
 
 ## Active Workspace
 
@@ -28,14 +29,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-21, `origin/main` has been fetched through PR #393.
-The root checkout may still be on a non-main local branch with unrelated
-handoff noise; do not assume the root working tree is clean.
+As of 2026-05-21, `origin/main` has been fetched through PR #395.
+The root checkout has been moved back to clean `main` and is aligned with
+`origin/main`.
 
 Latest merge on main:
 
 ```text
-c462ab84 feat: surface kpi ranking readiness in operations
+92d8c3ab docs: add work discipline guide
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -148,6 +149,8 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #391 `feat: surface workforce pressure in operations`
 - PR #392 `feat: surface workflow inbox pressure in operations`
 - PR #393 `feat: surface kpi ranking readiness in operations`
+- PR #394 `docs: close operations metrics readiness line`
+- PR #395 `docs: add work discipline guide`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -163,21 +166,24 @@ Result: 13 passed, 0 failed, 1 skipped. The skipped check was
 Backend health, database health, rate-limit headers, correlation headers,
 frontend root, security headers, SPA fallback, and static assets passed.
 
-Known local working tree noise at recovery time:
+Current local hygiene state:
 
-- `current-state.md` modified for this handoff update
-- `docs/plans/feature-backlog.md` modified
-- `.bg-shell/` untracked
-- `docs/plans/project-progress-plan-v1.md` untracked in the root checkout
-- `docs/superpowers/plans/2026-05-13-checklist-command-surfaces-v1.md` untracked
-- `docs/superpowers/specs/2026-05-12-coach-insight-rules-v1-design.md` untracked
-- `sokrates.md` untracked in the root checkout
-- `thread-019dfcf6-6c3c-7470-81dd-9513de42746d-transcript.md` untracked recovery transcript
-- `x.md` untracked in the root checkout
-
-Do not stage, delete, or "clean up" those unless the user explicitly asks.
-`.gsd/` is local-only/ignored state; use it for planning but do not make it a
-repo PR artifact.
+- Root workspace `D:\store-ops-workspace` is clean on `main...origin/main` at
+  `92d8c3ab`.
+- The previous dirty root state was not deleted. It was saved as stash
+  `codex hygiene backup 2026-05-21 root dirty state`. Do not drop that stash
+  unless the user explicitly approves.
+- Merged local branch hygiene was run: 226 local branches already merged into
+  `main` were deleted with safe `git branch -d`, and stale remote refs were
+  pruned.
+- Worktree hygiene was started. The count dropped from 163 worktrees to 88.
+  The remaining old worktrees are dependency-heavy checkouts, mostly with
+  `node_modules`, so removal is safe but slow and should be done as a separate
+  hygiene batch.
+- Active docs branch for the next PR is
+  `codex/clerk-persona-evidence-runbook` at
+  `D:\store-ops-worktrees\clerk-persona-evidence-runbook`. It contains the
+  Clerk persona staging evidence runbook and this current-state refresh.
 
 ## API Contract Drift Status
 
@@ -630,6 +636,11 @@ The controlled pilot operating checklist is
 The staging auth session edge evidence guard is
 `docs/plans/staging-auth-session-edge-evidence-guard-v1.md`.
 
+The Clerk persona staging evidence runbook is
+`docs/plans/clerk-persona-staging-evidence-runbook-v1.md`. Use it for
+staging-only Clerk personas, DB-backed role/scope/action-store binding,
+local-only token handling, and sanitized auth/action evidence.
+
 Pilot Readiness Gate V1 remains the guarded decision framework:
 `docs/plans/pilot-readiness-gate-v1.md`.
 
@@ -654,7 +665,8 @@ There are six external evidence gaps. Treat them as two tiers:
 
 Tier A - controlled pilot expansion first:
 
-- Real staging auth/action smoke with sanitized evidence.
+- Real staging auth/action smoke with sanitized evidence, using
+  `docs/plans/clerk-persona-staging-evidence-runbook-v1.md`.
 - Protected route load smoke with role-specific staging bearer tokens.
 - Authenticated integration-admin upload smoke with a safe sample file.
 
@@ -748,8 +760,9 @@ Useful traps from the recovered thread:
   reviews, review comments, reactions, and timeline in parallel/short intervals;
   user-reported GitHub thumbs-up counts as approval evidence when checks are
   green and the PR is mergeable.
-- Do not touch unrelated dirty docs, `.gsd`, `.bg-shell`, or local transcript
-  files while making product/code slices.
+- Root dirty recovery files are currently saved in the hygiene stash; do not
+  drop or apply that stash casually. New work should start from clean `main`
+  or a fresh worktree.
 
 ## Current Risk View
 
@@ -1186,6 +1199,7 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/plans/repo-hygiene-contract-v1.md` - Repo Hygiene Guard V1 reference is tracked through the contract tests and debt ledger
 - `docs/plans/source-agnostic-import-boundary-v1.md` - Source-Agnostic Import Boundary V1
 - `docs/plans/staging-auth-session-edge-evidence-guard-v1.md` - Staging Auth Session Edge Evidence Guard V1
+- `docs/plans/clerk-persona-staging-evidence-runbook-v1.md` - Clerk Persona Staging Evidence Runbook V1
 - `docs/plans/test-suite-hygiene-v1.md` - Test Suite Hygiene V1
 - `docs/plans/ui-localization-strategy.md` - UI Localization Strategy
 - `docs/plans/ui-localization-closeout-v1.md` - UI Localization Closeout V1
