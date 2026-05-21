@@ -266,6 +266,11 @@ Current UI/UX V1 status:
   `/admin/integrations` across the Uploads, Evidence, and Issues operator tabs
   before further integrations polish. Evidence:
   `docs/evidence/product-progress/2026-05-21-admin-integrations-mobile-evidence-v1.md`.
+- Admin Checklists Mobile Evidence V1 adds mobile boundedness coverage for
+  `/admin/checklists` across the template editor shell, status strip, item
+  settings, and BM/VM template switch before further checklist-template polish.
+  Evidence:
+  `docs/evidence/product-progress/2026-05-21-admin-checklists-mobile-evidence-v1.md`.
 - Park `/store/home` and `/admin/master-data` unless browser review or pilot
   feedback finds a concrete new gap.
 
@@ -274,6 +279,8 @@ Next UI/UX V1 recommendation:
 - Do not keep expanding import detail without a new concrete browser or pilot
   gap; mapping context and scoped panel-copy readability are now covered.
 - Do not keep expanding the main integrations screen without a new concrete
+  browser or pilot gap; the current mobile boundedness evidence is covered.
+- Do not keep expanding the checklist template editor without a new concrete
   browser or pilot gap; the current mobile boundedness evidence is covered.
 - Park reports detail pages unless a new browser or pilot gap appears; the
   current mobile table header/readability gap is covered.
@@ -527,6 +534,9 @@ Candidate next outputs:
   unless a fresh browser/pilot gap appears.
 - Admin Integrations Mobile Evidence V1 covers the main integrations screen
   with route-level mobile overflow evidence; do not continue integrations UI
+  polish unless a fresh browser/pilot gap appears.
+- Admin Checklists Mobile Evidence V1 covers the checklist template editor with
+  route-level mobile overflow evidence; do not continue checklist-template UI
   polish unless a fresh browser/pilot gap appears.
 - Keep rules engine, auth model changes, DB schema, provider config, broad
   data-quality workflows, and new backend aggregation parked until separately
