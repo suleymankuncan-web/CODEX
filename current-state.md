@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #379 plus the current Workforce Request Boundary Inventory V1 slice, and is
+PR #380 plus the current Workforce Seller Code Read Repository V1 slice, and is
 the starting point for continuing in a fresh window.
 
 ## Active Workspace
@@ -27,14 +27,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-21, `origin/main` has been fetched through PR #379.
+As of 2026-05-21, `origin/main` has been fetched through PR #380.
 The root checkout may still be on a non-main local branch with unrelated
 handoff noise; do not assume the root working tree is clean.
 
 Latest merge on main:
 
 ```text
-bb3537de refactor: split competition team template commands
+6aa1184a docs: inventory workforce request boundaries
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -133,6 +133,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #377 `test: guard admin reports mobile layout`
 - PR #378 `docs: decide competition team template command boundary`
 - PR #379 `refactor: split competition team template commands`
+- PR #380 `docs: inventory workforce request boundaries`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -885,10 +886,17 @@ Product Progress Plan V1 status:
   access-context helpers, stage-package plan writes, stage creation/execution,
   scoring, finalization, API contracts, auth, DB schema, CSS, or user-facing
   behavior.
-- The current Workforce Request Boundary Inventory V1 slice is docs-only. It
-  maps `WorkforceRequestRepository` method families, risk boundaries, existing
+- The Workforce Request Boundary Inventory V1 slice is docs-only. It maps
+  `WorkforceRequestRepository` method families, risk boundaries, existing
   regression tests, and the next safe read-only extraction candidate before any
   workforce request code movement.
+- The current Workforce Seller Code Read Repository V1 slice implements that
+  first safe code boundary: seller-code list/detail reads move into
+  `workforce-seller-code-read.repository.ts`, while
+  `WorkforceRequestRepository` remains the service-facing facade. It does not
+  move seller-code create/approve/reject/resubmit, duplicate validation,
+  offboarding reads, offboarding commands, access lifecycle behavior, API
+  contracts, auth, DB schema, CSS, or user-facing behavior.
 
 The `/store/approvals` first pass has started:
 
