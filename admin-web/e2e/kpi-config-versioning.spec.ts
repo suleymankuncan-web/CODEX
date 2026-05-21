@@ -104,6 +104,36 @@ test('reports summary page switches hub chrome to English copy and persists loca
   await expect(page.getByRole('heading', { name: 'Read-only reporting from the latest trustworthy snapshot.' })).toBeVisible()
 })
 
+test('reports hub and snapshot chooser stay bounded on mobile width', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 900 })
+
+  await page.goto('/admin/reports')
+  await setStoredLocale(page, 'en')
+
+  let main = page.getByRole('main')
+
+  await expect(page).toHaveURL(/\/admin\/reports$/)
+  await expect(main.getByText('Reporting Summary')).toBeVisible()
+  await expect(
+    main.getByRole('heading', { name: 'Read-only reporting from the latest trustworthy snapshot.' }),
+  ).toBeVisible()
+  await expect(main.getByRole('link', { name: 'Open drill-down chooser' })).toBeVisible()
+  await expect(main.getByRole('link', { name: 'Open workforce report for snapshot-versioned' })).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+
+  await page.goto('/admin/reports/snapshot-runs')
+  await setStoredLocale(page, 'en')
+
+  main = page.getByRole('main')
+
+  await expect(page).toHaveURL(/\/admin\/reports\/snapshot-runs$/)
+  await expect(main.getByRole('heading', { name: 'Recent reporting runs' })).toBeVisible()
+  await expect(main.getByText('Snapshot contexts')).toBeVisible()
+  await expect(main.getByText('KPI config version').first()).toBeVisible()
+  await expect(main.getByRole('link', { name: 'Open workforce for snapshot-versioned' })).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+})
+
 test('workforce report page switches drill-down chrome to English copy and persists locale', async ({ page }) => {
   await page.goto('/admin/reports/workforce/snapshot-versioned')
 
@@ -275,6 +305,12 @@ test('reports detail table controls stack below copy on mobile', async ({ page }
     .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth))
     .toBe(true)
 })
+
+async function expectNoHorizontalOverflow(page: Page) {
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth))
+    .toBe(true)
+}
 
 async function routeVersioningApi(page: Page) {
   await page.route('**/api/auth/session', async (route) => {
