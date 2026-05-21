@@ -239,6 +239,9 @@ Current UI/UX V1 status:
 - Store mobile shell/checklist now keeps bottom toolbar active icons visible on
   tap/route state and prevents checklist visit table overflow at small mobile
   widths.
+- Operations Control Tower V1 now adds `/admin/operations` as a read-only
+  `SUPER_ADMIN` surface over backend health, import overview/needs-action,
+  snapshot overview/needs-action, and external evidence blockers.
 - Park `/store/home` and `/admin/master-data` unless browser review or pilot
   feedback finds a concrete new gap.
 
@@ -463,26 +466,28 @@ Park the work when:
 
 Next action:
 
-- Use the growth-foundation docs as the current local planning layer, then pick
-  one first implementation slice from those plans.
+- Continue turning growth-foundation docs into one small implementation slice
+  at a time, only where the first UI/config/test guard can use existing
+  contracts.
 
 Why:
 
 - External readiness is still parked until real inputs exist.
 - The latest UI/UX V1 and refactor lines have closed the immediate visible
   blockers that triggered them.
-- The next useful local work is to turn one documented growth guardrail into a
-  small, reversible implementation.
+- Frontend strictness and the first Operations Control Tower UI slice are now
+  implemented; the next useful local work should come from a remaining
+  growth guardrail with a clear test-only or read-only boundary.
 
-Expected first output:
+Candidate next outputs:
 
-- First safest code/config candidate: enable frontend `strict: true` for app
-  and node TypeScript configs, because temporary strict checks pass with zero
-  errors.
-- First product/operator candidate: read-only Operations Control Tower V1 using
-  existing health/readiness/import/snapshot signals only.
-- Keep rules engine, auth model changes, DB schema, provider config, and
-  data-quality workflow implementation parked until separately scoped.
+- Authorization matrix drift guard implementation, if it can stay docs/script
+  or targeted route/endpoint test only.
+- Cross-domain data-quality signal implementation, only as read-only inventory
+  or UI over existing import/mapping/snapshot signals.
+- Keep rules engine, auth model changes, DB schema, provider config, broad
+  data-quality workflows, and new backend aggregation parked until separately
+  scoped.
 
 ## Self-Review
 

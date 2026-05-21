@@ -20,6 +20,7 @@ import {
   ImportBatchDetailPage,
   IntegrationDashboardPage,
   MasterDataBootstrapPage,
+  OperationsControlTowerPage,
   ReportsChecklistsPage,
   ReportsKpisPage,
   ReportsSnapshotRunsPage,
@@ -72,6 +73,10 @@ export function AdminShell(input: {
               <Routes>
             <Route path="/" element={<Navigate to={input.firstAllowedPath} replace />} />
             <Route path="/admin/session" element={<SessionGate />} />
+            <Route
+              path="/admin/operations"
+              element={adminRoute(['SUPER_ADMIN'], <OperationsControlTowerPage />)}
+            />
             <Route
               path="/admin/integrations"
               element={adminRoute(['SUPER_ADMIN', 'INTEGRATION_ADMIN'], <IntegrationDashboardPage />)}
