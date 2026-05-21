@@ -179,6 +179,15 @@ Second strictness line:
 - Tackle `noUncheckedIndexedAccess` as a small code PR, starting with pure
   helpers and navigation/date parsing before page-level state.
 
+Progress:
+
+- The first `noUncheckedIndexedAccess` implementation slice resolved the 25
+  temporary app errors and enabled the flag in both frontend TypeScript configs.
+- Fixes were limited to explicit indexing guards/fallbacks for sidebars,
+  competition team selection, KPI grading fallback, snapshot/checklist month
+  parsing, checklist score maps, audit query arrays, checklist template
+  defaults, and store performance trend rows.
+
 Park for later:
 
 - `exactOptionalPropertyTypes` until optional-payload helper patterns are agreed.

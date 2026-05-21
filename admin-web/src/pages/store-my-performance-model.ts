@@ -492,7 +492,14 @@ function buildTrendPoints(rows: Array<{ scoreValue: number | null }>) {
   }
 
   if (usableRows.length === 1) {
-    const y = Math.max(22, Math.min(186, 198 - usableRows[0].scoreValue! * 1.72))
+    const firstRow = usableRows[0]
+    if (!firstRow) {
+      return {
+        line: '0,160 640,160',
+        area: '0,160 640,160 640,210 0,210',
+      }
+    }
+    const y = Math.max(22, Math.min(186, 198 - firstRow.scoreValue! * 1.72))
     return {
       line: `0,${y} 640,${y}`,
       area: `0,${y} 640,${y} 640,210 0,210`,

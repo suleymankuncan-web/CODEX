@@ -607,7 +607,7 @@ function useStoreChecklistsPageContent(input: {
         onCommentChange={(templateItemId, comment) => {
           dispatchPageState({ type: 'setCommentDraft', templateItemId, comment })
           const score = scores[templateItemId]
-          if (selectedSession?.active && Number.isFinite(score)) {
+          if (selectedSession?.active && typeof score === 'number' && Number.isFinite(score)) {
             queueResponseAutoSave({
               checklistInstanceId: selectedSession.active.checklistInstanceId,
               templateItemId,
@@ -762,7 +762,7 @@ function ChecklistVisitModal(input: {
 
   for (const item of input.session.template.items) {
     const score = input.scores[item.templateItemId]
-    if (!Number.isFinite(score) || item.maxScore <= 0) continue
+    if (typeof score !== 'number' || !Number.isFinite(score) || item.maxScore <= 0) continue
     scoredRatioTotal += Math.round((score / item.maxScore) * 100)
     scoredRatioCount += 1
   }

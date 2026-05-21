@@ -79,6 +79,9 @@ export function AuditCenterPage() {
 
     for (let index = 0; index < userAuditQueries.length; index += 1) {
       const query = userAuditQueries[index]
+      if (!query) {
+        continue
+      }
       const user = users[index]
       const event = query.data?.items?.[0]
       if (!event || !user) {
@@ -100,6 +103,9 @@ export function AuditCenterPage() {
 
     for (let index = 0; index < assignmentAuditQueries.length; index += 1) {
       const query = assignmentAuditQueries[index]
+      if (!query) {
+        continue
+      }
       const assignment = assignments[index]
       const event = query.data?.items?.[0]
       if (!event || !assignment) {

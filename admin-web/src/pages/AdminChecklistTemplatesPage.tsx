@@ -65,6 +65,8 @@ const templateOptions: TemplateOption[] = [
     category: 'visual_merchandising',
   },
 ]
+const defaultTemplateOption = templateOptions[0] as TemplateOption
+const vmTemplateOption = templateOptions[1] as TemplateOption
 
 const today = new Date().toISOString().slice(0, 10)
 
@@ -221,14 +223,14 @@ function createInitialDrafts(): Record<ChecklistTemplateType, TemplateDraft> {
       isDirty: true,
       savedTemplate: null,
       sections: cloneSections(initialSections),
-      templateName: templateOptions[0].templateName,
+      templateName: defaultTemplateOption.templateName,
     },
     VM_STORE_VISIT: {
       effectiveFrom: today,
       isDirty: true,
       savedTemplate: null,
       sections: cloneSections(vmInitialSections),
-      templateName: templateOptions[1].templateName,
+      templateName: vmTemplateOption.templateName,
     },
   }
 }
@@ -330,7 +332,7 @@ function useAdminChecklistTemplatesPageModel(input: { authSummary: AuthSessionSu
     text: t('adminChecklists.responseText'),
   }
   const [templateType, setTemplateType] = useState<ChecklistTemplateType>('BM_STORE_VISIT')
-  const selectedTemplate = templateOptions.find((option) => option.templateType === templateType) ?? templateOptions[0]
+  const selectedTemplate = templateOptions.find((option) => option.templateType === templateType) ?? defaultTemplateOption
   const [draftsByTemplate, setDraftsByTemplate] = useState<Record<ChecklistTemplateType, TemplateDraft>>(
     createInitialDrafts,
   )

@@ -425,6 +425,9 @@ function useStageBuilderFormContent(input: StageBuilderFormProps) {
 
   function toggleStore(teamIndex: number, storeId: string) {
     const team = draft.teams[teamIndex]
+    if (!team) {
+      return
+    }
     const nextStoreIds = team.storeIds.includes(storeId)
       ? team.storeIds.filter((currentStoreId) => currentStoreId !== storeId)
       : [...team.storeIds, storeId]
