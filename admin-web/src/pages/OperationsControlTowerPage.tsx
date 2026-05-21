@@ -173,7 +173,8 @@ export function OperationsControlTowerPage() {
     offboardingRequests: offboardingRequestsQuery.data,
     sellerCodeRequests: sellerCodeRequestsQuery.data,
   })
-  const operationalPressure = importActionCount + snapshotActionCount + workforcePressure.total
+  const workforcePressureTotal = hasWorkforceSignalError ? 0 : workforcePressure.total
+  const operationalPressure = importActionCount + snapshotActionCount + workforcePressureTotal
   const hasSignalError =
     healthQuery.isError ||
     importOverviewQuery.isError ||
@@ -190,6 +191,7 @@ export function OperationsControlTowerPage() {
   const operatorActions = buildOperatorActions({
     dataQuality,
     hasSignalError,
+    hasWorkforceSignalError,
     importActionCount,
     snapshotActionCount,
     t,

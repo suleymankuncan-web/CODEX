@@ -22,6 +22,7 @@ export type OperatorAction = {
 export function buildOperatorActions(input: {
   dataQuality: DataQualitySnapshot
   hasSignalError: boolean
+  hasWorkforceSignalError: boolean
   importActionCount: number
   snapshotActionCount: number
   t: TranslateFunction
@@ -89,7 +90,7 @@ export function buildOperatorActions(input: {
     })
   }
 
-  if (input.workforcePressure.total > 0) {
+  if (!input.hasWorkforceSignalError && input.workforcePressure.total > 0) {
     actions.push({
       href: '/admin/inbox',
       id: 'workforce-queue',

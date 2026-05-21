@@ -80,6 +80,7 @@ test('operations control tower composes read-only readiness signals', async ({ p
   await expect(main.getByText('store', { exact: true })).toBeVisible()
   await expect(main.getByText('External evidence', { exact: true })).toBeVisible()
   await expect(main.getByText('Workforce', { exact: true })).toBeVisible()
+  await expect(page.locator('.accent-chip').filter({ hasText: 'Operator pressure' })).toContainText('108')
   await expect(page.locator('.metric-card').filter({ hasText: 'Workforce' })).toContainText('104')
   await expect(page.locator('.key-item').filter({ hasText: 'Seller-code requests' })).toContainText('51')
   await expect(page.locator('.key-item').filter({ hasText: 'Offboarding requests' })).toContainText('53')
@@ -178,6 +179,8 @@ test('operations workforce metric treats request errors as unavailable', async (
   await expect(workforceMetric).toContainText('Unavailable')
   await expect(workforcePanel.getByText('Unavailable', { exact: true })).toBeVisible()
   await expect(workforcePanel.locator('.inline-state-warning')).toBeVisible()
+  await expect(page.locator('.accent-chip').filter({ hasText: 'Operator pressure' })).toContainText('4')
+  await expect(main.getByText('Open workforce queue')).toHaveCount(0)
 })
 
 test('operations control tower keeps mobile width bounded', async ({ page }) => {
