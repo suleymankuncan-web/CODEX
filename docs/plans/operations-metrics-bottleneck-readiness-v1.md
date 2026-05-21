@@ -91,7 +91,7 @@ Decision quality score:
 | Auth / Role / Scope | Is route/endpoint access drifting from the matrix? | Auth matrix docs, backend auth tests, admin auth/audit pages. | Auth / pilot readiness. | Guarded, not live metric. | Add docs/test guard evidence link before any runtime metric. |
 | Workforce Requests | Are seller-code/offboarding queues aging or piling up? | Workforce request read endpoints, Admin Inbox, and Store Approvals. | HR / store operations. | Live count/preview in `/admin/operations`. | Add queue age/overdue only after threshold ownership is decided. |
 | Workflow Inbox | Are inbox items overdue, unseen, or concentrating by source type? | Workflow inbox endpoint and store/admin task surfaces. | Store operations. | Live count/urgency/preview in `/admin/operations`. | Add overdue/unseen only after threshold ownership is decided. |
-| KPI / Rankings | Are KPI source trust, closed snapshot mode, and leaderboard freshness clear? | Reporting read models, KPI config, ranking pages. | Reporting / KPI governance. | Partly visible through snapshot/reporting pages. | Add source-trust/freshness caveat only as read-only copy unless source metrics exist. |
+| KPI / Rankings | Are KPI source trust, closed snapshot mode, and leaderboard freshness clear? | Reporting read models, KPI config, ranking pages. | Reporting / KPI governance. | Live KPI config/ranking metadata in `/admin/operations`. | Add source certification or freshness thresholds only after reporting ownership defines them. |
 | Release / External Evidence | Which production blockers need real input? | Evidence docs, smoke scripts, health observability, provider state. | Platform / product owner. | Static blockers visible. | Convert a blocker to live only after real provider input exists. |
 
 ## Threshold Policy
@@ -180,9 +180,10 @@ Implemented:
   read endpoints.
 - Workflow inbox pressure is live in `/admin/operations` as a read-only
   count/urgency/preview over the existing workflow inbox endpoint.
+- KPI/ranking readiness is live in `/admin/operations` as a read-only published
+  config and leaderboard source metadata signal over existing reports endpoints.
 
 Still planned:
 
 - Auth drift runtime evidence beyond docs/test guards.
-- KPI/ranking source-trust and leaderboard freshness.
 - Release/external provider evidence closure.

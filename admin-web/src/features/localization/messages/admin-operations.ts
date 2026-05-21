@@ -17,12 +17,14 @@ export const adminOperationsTr = {
   'adminOperations.metric.external': 'Dış kanıt',
   'adminOperations.metric.workforce': 'Workforce',
   'adminOperations.metric.workflow': 'Workflow',
+  'adminOperations.metric.kpiRankings': 'KPI / Rankings',
   'adminOperations.importMetricNote': '{count} import batch içinde aksiyon baskısı',
   'adminOperations.dataQualityMetricNote': '{count} bloke batch içinde önizleme hata satırı',
   'adminOperations.snapshotMetricNote': '{count} snapshot çalışması içinde aksiyon baskısı',
   'adminOperations.externalMetricNote': 'Gerçek token/provider/restore inputu bekleyen kanıtlar',
   'adminOperations.workforceMetricNote': '{seller} seller-code, {offboarding} offboarding bekliyor',
   'adminOperations.workflowMetricNote': '{total} workflow kaydı, {high} yüksek aciliyetli',
+  'adminOperations.kpiRankingMetricNote': '{periods} dönem, {total} leaderboard kaydı',
 
   'adminOperations.actionEyebrow': 'Sıradaki hareket',
   'adminOperations.actionTitle': 'Operatör aksiyon listesi',
@@ -135,7 +137,7 @@ export const adminOperationsTr = {
   'adminOperations.coverage.workflowSource': 'workflow inbox',
   'adminOperations.coverage.kpiTitle': 'KPI / Rankings',
   'adminOperations.coverage.kpiCopy':
-    'KPI kaynak güveni ve leaderboard freshness rapor yüzeylerinde var; control-tower canlı metriği ayrıca tasarlanmalı.',
+    'KPI config yayını ve leaderboard dönem/popülasyon sinyali mevcut reports read modellerinden canlı okunuyor.',
   'adminOperations.coverage.kpiSource': 'reports + rankings',
   'adminOperations.coverage.releaseTitle': 'Release / External Evidence',
   'adminOperations.coverage.releaseCopy':
@@ -209,6 +211,23 @@ export const adminOperationsTr = {
   'adminOperations.workflowUrgency.medium': 'orta',
   'adminOperations.workflowUrgency.low': 'düşük',
 
+  'adminOperations.kpiRankingsEyebrow': 'KPI yönetişimi',
+  'adminOperations.kpiRankingsTitle': 'KPI ve ranking readiness',
+  'adminOperations.kpiRankingsCopy':
+    'Published KPI config ve monthly leaderboard kaynağı mevcut read endpointlerinden doğrulanır; skor hesabı değiştirilmez.',
+  'adminOperations.kpiConfigVersion': 'Yayınlanan KPI config',
+  'adminOperations.kpiPublishedAt': 'Yayın zamanı',
+  'adminOperations.rankingPeriod': 'Leaderboard dönemi',
+  'adminOperations.rankingPopulation': 'Leaderboard popülasyonu',
+  'adminOperations.rankingPopulationValue': '{stores} mağaza, {personnel} personel',
+  'adminOperations.availableRankingPeriods': 'Kullanılabilir dönem',
+  'adminOperations.kpiVersionValue': 'v{version}',
+  'adminOperations.kpiRankingsSourceCopy':
+    'Kaynak kanıt admin reports, KPI config ve store rankings yüzeylerinde kalır; kontrol kulesi sadece freshness/trust sinyalini yükseltir.',
+  'adminOperations.openReports': 'Reports yüzeyini aç',
+  'adminOperations.openKpiConfig': 'KPI config aç',
+  'adminOperations.openStoreRankings': 'Store rankings aç',
+
   'adminOperations.ready': 'Hazır',
   'adminOperations.controlled': 'Kontrollü',
   'adminOperations.attention': 'Dikkat',
@@ -264,12 +283,14 @@ export const adminOperationsEn: Record<keyof typeof adminOperationsTr, string> =
   'adminOperations.metric.external': 'External evidence',
   'adminOperations.metric.workforce': 'Workforce',
   'adminOperations.metric.workflow': 'Workflow',
+  'adminOperations.metric.kpiRankings': 'KPI / Rankings',
   'adminOperations.importMetricNote': 'Action pressure across {count} import batches',
   'adminOperations.dataQualityMetricNote': 'Preview error rows across {count} blocked batches',
   'adminOperations.snapshotMetricNote': 'Action pressure across {count} snapshot runs',
   'adminOperations.externalMetricNote': 'Evidence waiting for real token/provider/restore inputs',
   'adminOperations.workforceMetricNote': '{seller} seller-code, {offboarding} offboarding waiting',
   'adminOperations.workflowMetricNote': '{total} workflow items, {high} high urgency',
+  'adminOperations.kpiRankingMetricNote': '{periods} periods, {total} leaderboard records',
 
   'adminOperations.actionEyebrow': 'Next move',
   'adminOperations.actionTitle': 'Operator action list',
@@ -382,7 +403,7 @@ export const adminOperationsEn: Record<keyof typeof adminOperationsTr, string> =
   'adminOperations.coverage.workflowSource': 'workflow inbox',
   'adminOperations.coverage.kpiTitle': 'KPI / Rankings',
   'adminOperations.coverage.kpiCopy':
-    'KPI source trust and leaderboard freshness exist in report surfaces; a live control-tower metric should be designed separately.',
+    'KPI config publication and leaderboard period/population signals are read live from existing reports read models.',
   'adminOperations.coverage.kpiSource': 'reports + rankings',
   'adminOperations.coverage.releaseTitle': 'Release / External Evidence',
   'adminOperations.coverage.releaseCopy':
@@ -455,6 +476,23 @@ export const adminOperationsEn: Record<keyof typeof adminOperationsTr, string> =
   'adminOperations.workflowUrgency.high': 'high',
   'adminOperations.workflowUrgency.medium': 'medium',
   'adminOperations.workflowUrgency.low': 'low',
+
+  'adminOperations.kpiRankingsEyebrow': 'KPI Governance',
+  'adminOperations.kpiRankingsTitle': 'KPI and ranking readiness',
+  'adminOperations.kpiRankingsCopy':
+    'The published KPI config and monthly leaderboard source are verified from existing read endpoints; scoring is not changed.',
+  'adminOperations.kpiConfigVersion': 'Published KPI config',
+  'adminOperations.kpiPublishedAt': 'Published at',
+  'adminOperations.rankingPeriod': 'Leaderboard period',
+  'adminOperations.rankingPopulation': 'Leaderboard population',
+  'adminOperations.rankingPopulationValue': '{stores} stores, {personnel} personnel',
+  'adminOperations.availableRankingPeriods': 'Available periods',
+  'adminOperations.kpiVersionValue': 'v{version}',
+  'adminOperations.kpiRankingsSourceCopy':
+    'Source evidence stays in admin reports, KPI config, and store rankings; the control tower only elevates freshness/trust posture.',
+  'adminOperations.openReports': 'Open reports',
+  'adminOperations.openKpiConfig': 'Open KPI config',
+  'adminOperations.openStoreRankings': 'Open store rankings',
 
   'adminOperations.ready': 'Ready',
   'adminOperations.controlled': 'Controlled',

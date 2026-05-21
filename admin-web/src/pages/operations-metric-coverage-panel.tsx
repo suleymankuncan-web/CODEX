@@ -93,8 +93,8 @@ const metricCoverageItems: MetricCoverageItem[] = [
     copyKey: 'adminOperations.coverage.kpiCopy',
     ownerKey: 'adminOperations.owner.reporting',
     sourceKey: 'adminOperations.coverage.kpiSource',
-    statusKey: 'adminOperations.coverage.planned',
-    tone: 'neutral',
+    statusKey: 'adminOperations.coverage.live',
+    tone: 'calm',
   },
   {
     id: 'release-external-evidence',

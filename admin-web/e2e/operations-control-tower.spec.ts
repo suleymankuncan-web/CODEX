@@ -33,6 +33,7 @@ test('operations control tower composes read-only readiness signals', async ({ p
   await expect(main.getByRole('heading', { name: 'Dış kanıt', exact: true })).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Workforce', exact: true })).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Workflow', exact: true })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'KPI / Rankings', exact: true })).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Operatör aksiyon listesi' })).toBeVisible()
   await expect(main.getByText('Import kuyruğunu aç')).toBeVisible()
   await expect(main.getByText('Veri kalitesi sinyalini doğrula')).toBeVisible()
@@ -55,8 +56,7 @@ test('operations control tower composes read-only readiness signals', async ({ p
   await expect(main.getByText('Auth / Role / Scope')).toBeVisible()
   await expect(main.getByText('Workforce Requests')).toBeVisible()
   await expect(main.getByText('Workflow Inbox', { exact: true })).toBeVisible()
-  await expect(main.getByText('KPI / Rankings')).toBeVisible()
-  await expect(main.getByText('Planlı').first()).toBeVisible()
+  await expect(page.locator('.queue-row').filter({ hasText: 'KPI / Rankings' }).first()).toContainText('Canlı')
   await expect(main.getByRole('link', { name: /Entegrasyon panelini aç/i })).toHaveAttribute('href', '/admin/integrations')
   await expect(main.getByRole('link', { name: /Workforce Requests/i })).toHaveAttribute('href', '/admin/inbox')
   await expect(main.getByRole('link', { name: /Admin inbox aç/i }).first()).toHaveAttribute('href', '/admin/inbox')
@@ -83,21 +83,26 @@ test('operations control tower composes read-only readiness signals', async ({ p
   await expect(main.getByText('External evidence', { exact: true })).toBeVisible()
   await expect(main.getByText('Workforce', { exact: true })).toBeVisible()
   await expect(main.getByText('Workflow', { exact: true })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'KPI / Rankings', exact: true })).toBeVisible()
   await expect(page.locator('.accent-chip').filter({ hasText: 'Operator pressure' })).toContainText('111')
   await expect(page.locator('.metric-card').filter({ hasText: 'Workforce' })).toContainText('104')
   await expect(page.locator('.metric-card').filter({ hasText: 'Workflow' })).toContainText('3')
+  await expect(page.locator('.metric-card').filter({ hasText: 'KPI / Rankings' })).toContainText('Ready')
   await expect(page.locator('.key-item').filter({ hasText: 'Seller-code requests' })).toContainText('51')
   await expect(page.locator('.key-item').filter({ hasText: 'Offboarding requests' })).toContainText('53')
   await expect(page.locator('.key-item').filter({ hasText: 'Total workforce pressure' })).toContainText('104')
   await expect(main.getByRole('heading', { name: 'Workflow inbox pressure' })).toBeVisible()
   await expect(page.locator('.key-item').filter({ hasText: 'High urgency' })).toContainText('1')
   await expect(page.locator('.key-item').filter({ hasText: 'Total workflow pressure' })).toContainText('3')
+  await expect(main.getByRole('heading', { name: 'KPI and ranking readiness' })).toBeVisible()
+  await expect(page.locator('.key-item').filter({ hasText: 'Published KPI config' })).toContainText('v4')
+  await expect(page.locator('.key-item').filter({ hasText: 'Leaderboard population' })).toContainText('1 stores, 42 personnel')
   await expect(main.getByText('Staging auth/session evidence')).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Live, planned, and input-blocked signals' })).toBeVisible()
   await expect(main.getByText('Auth / Role / Scope')).toBeVisible()
   await expect(main.getByText('Workflow Inbox', { exact: true })).toBeVisible()
   await expect(main.getByText('Release / External Evidence')).toBeVisible()
-  await expect(main.getByText('Planned').first()).toBeVisible()
+  await expect(page.locator('.queue-row').filter({ hasText: 'KPI / Rankings' }).first()).toContainText('Live')
   await expect(main.getByText('Operasyon kontrol kulesi')).toHaveCount(0)
 })
 
@@ -215,6 +220,71 @@ test('operations workflow metric treats inbox errors as unavailable', async ({ p
   await expect(main.getByText('Open workflow inbox')).toHaveCount(0)
 })
 
+test('operations kpi ranking metric treats report errors as unavailable', async ({ page }) => {
+  await setInitialLocale(page, 'en')
+  await page.unroute('**/api/reports/rankings?**')
+  await page.route('**/api/reports/rankings?**', async (route) => {
+    await route.fulfill({
+      status: 503,
+      json: { message: 'Rankings unavailable' },
+    })
+  })
+
+  await page.goto('/admin/operations')
+
+  const main = page.getByRole('main')
+  const kpiMetric = page.locator('.metric-card').filter({ hasText: 'KPI / Rankings' })
+  const kpiPanel = page.locator('.panel').filter({ hasText: 'KPI and ranking readiness' })
+  await expect(main.getByText('Attention', { exact: true }).first()).toBeVisible()
+  await expect(kpiMetric).toHaveClass(/metric-card-warning/)
+  await expect(kpiMetric).toContainText('Unavailable')
+  await expect(kpiPanel.getByText('Unavailable', { exact: true })).toBeVisible()
+  await expect(kpiPanel.locator('.inline-state-warning')).toBeVisible()
+  await expect(kpiPanel.getByText('Leaderboard period', { exact: true })).toHaveCount(0)
+  await expect(page.locator('.accent-chip').filter({ hasText: 'Operator pressure' })).toContainText('111')
+})
+
+test('operations kpi ranking metadata gaps feed readiness pressure', async ({ page }) => {
+  await setInitialLocale(page, 'en')
+  await page.unroute('**/api/reports/kpi-config')
+  await page.route('**/api/reports/kpi-config', async (route) => {
+    await route.fulfill({
+      json: {
+        ...kpiConfigFixture,
+        metadata: {
+          ...kpiConfigFixture.metadata,
+          publishedAt: null,
+          versionNo: null,
+        },
+      },
+    })
+  })
+  await page.unroute('**/api/reports/rankings?**')
+  await page.route('**/api/reports/rankings?**', async (route) => {
+    await route.fulfill({
+      json: {
+        ...rankingsFixture,
+        source: {
+          ...rankingsFixture.source,
+          periodEnd: null,
+          periodStart: null,
+        },
+      },
+    })
+  })
+
+  await page.goto('/admin/operations')
+
+  const main = page.getByRole('main')
+  const kpiMetric = page.locator('.metric-card').filter({ hasText: 'KPI / Rankings' })
+  const kpiPanel = page.locator('.panel').filter({ hasText: 'KPI and ranking readiness' })
+  await expect(main.getByText('Controlled', { exact: true }).first()).toBeVisible()
+  await expect(kpiMetric).toHaveClass(/metric-card-warning/)
+  await expect(kpiMetric).toContainText('Needs attention')
+  await expect(kpiPanel.getByText('Needs attention', { exact: true })).toBeVisible()
+  await expect(page.locator('.accent-chip').filter({ hasText: 'Operator pressure' })).toContainText('113')
+})
+
 test('operations control tower keeps mobile width bounded', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/admin/operations')
@@ -260,6 +330,14 @@ async function routeOperationsApi(page: Page, sessionFixture: typeof operationsS
 
   await page.route('**/api/workflow/inbox', async (route) => {
     await route.fulfill({ json: workflowInboxFixture })
+  })
+
+  await page.route('**/api/reports/kpi-config', async (route) => {
+    await route.fulfill({ json: kpiConfigFixture })
+  })
+
+  await page.route('**/api/reports/rankings?**', async (route) => {
+    await route.fulfill({ json: rankingsFixture })
   })
 }
 
@@ -536,6 +614,91 @@ const workflowInboxFixture = {
     limit: 50,
     offset: 0,
   },
+}
+
+const kpiConfigFixture = {
+  metadata: {
+    kpiConfigVersionId: 'kpi-config-version-4',
+    versionNo: 4,
+    effectiveFrom: '2026-05-01',
+    effectiveTo: null,
+    publishedAt: '2026-05-20T12:00:00.000Z',
+    publishedBy: 'operations-admin',
+  },
+  storeProfile: {
+    targetAchievementWeight: 70,
+    kpiPerformanceWeight: 20,
+    bmChecklistWeight: 5,
+    vmChecklistWeight: 5,
+  },
+  personnelProfile: {
+    targetAchievementWeight: 70,
+    kpiPerformanceWeight: 20,
+    bmChecklistWeight: 5,
+    vmChecklistWeight: 5,
+  },
+  ownershipMatrix: [],
+  gradingBands: [],
+}
+
+const rankingsFixture = {
+  source: {
+    mode: 'live',
+    periodType: 'monthly',
+    periodStart: '2026-05-01',
+    periodEnd: '2026-05-31',
+  },
+  access: {
+    globalMode: 'full',
+    canSeeGlobalDetails: true,
+    canSeeManagedStorePersonnelDetails: true,
+  },
+  filters: {
+    regionManagers: [],
+    regions: [],
+    stores: [],
+  },
+  reference: {
+    store: {
+      averageScore: 82,
+      metrics: [],
+    },
+    personnel: {
+      averageScore: 78,
+      metrics: [],
+    },
+  },
+  storeLeaderboard: {
+    items: [],
+    currentStore: null,
+    meta: {
+      total: 1,
+      limit: 1,
+      offset: 0,
+    },
+  },
+  personnelLeaderboard: {
+    items: [],
+    currentEmployee: null,
+    managedStorePersonnel: [],
+    meta: {
+      total: 42,
+      limit: 1,
+      offset: 0,
+    },
+  },
+  availablePeriods: [
+    {
+      periodType: 'monthly',
+      periodStart: '2026-05-01',
+      periodEnd: '2026-05-31',
+    },
+    {
+      periodType: 'monthly',
+      periodStart: '2026-04-01',
+      periodEnd: '2026-04-30',
+    },
+  ],
 }
 
 const sellerCodeRequestsFixture = {
