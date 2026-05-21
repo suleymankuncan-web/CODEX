@@ -64,6 +64,7 @@ export const adminKpiConfigTr = {
   'adminKpiConfig.versionValue': 'v{version}',
 
   'adminKpiConfig.scoreProfile': 'Skor profili',
+  'adminKpiConfig.metricRow': 'Metrik satiri',
   'adminKpiConfig.weightTotal': '%{total} toplam',
   'adminKpiConfig.profile.store': 'Mağaza',
   'adminKpiConfig.profile.personnel': 'Personel',
@@ -209,6 +210,7 @@ export const adminKpiConfigEn: Record<keyof typeof adminKpiConfigTr, string> = {
   'adminKpiConfig.versionValue': 'v{version}',
 
   'adminKpiConfig.scoreProfile': 'Score Profile',
+  'adminKpiConfig.metricRow': 'Metric row',
   'adminKpiConfig.weightTotal': '{total}% total',
   'adminKpiConfig.profile.store': 'Store',
   'adminKpiConfig.profile.personnel': 'Personnel',

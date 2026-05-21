@@ -149,6 +149,38 @@ test('admin KPI config explains weight totals before saving draft', async ({ pag
   await expect(saveButton).toBeEnabled()
 })
 
+test('admin KPI config labels repeated editor rows and actions with row context', async ({ page }) => {
+  await page.goto('/admin/kpi-config')
+  await setStoredLocale(page, 'en')
+
+  await expect(page.getByRole('group', { name: 'Store Score Metric row TARGET_ACHIEVEMENT' })).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: 'Remove metric: Store Score TARGET_ACHIEVEMENT' }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('group', { name: 'Personnel Score Metric row TARGET_ACHIEVEMENT' }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: 'Remove metric: Personnel Score TARGET_ACHIEVEMENT' }),
+  ).toBeVisible()
+  await expect(page.getByRole('group', { name: 'Ownership Matrix: TARGET_ACHIEVEMENT' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Remove row: TARGET_ACHIEVEMENT' })).toBeVisible()
+  await expect(page.getByRole('group', { name: 'Grading Bands: A' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Remove band: A' })).toBeVisible()
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.reload()
+
+  await expect(page.getByRole('group', { name: 'Store Score Metric row TARGET_ACHIEVEMENT' })).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: 'Remove metric: Store Score TARGET_ACHIEVEMENT' }),
+  ).toBeVisible()
+  const hasNoHorizontalOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+  )
+  expect(hasNoHorizontalOverflow).toBe(true)
+})
+
 async function routeAdminKpiConfigApi(page: Page) {
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: authSessionFixture })
