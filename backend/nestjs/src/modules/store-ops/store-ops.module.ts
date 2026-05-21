@@ -38,6 +38,7 @@ import { KpiConfigRepository } from "./infrastructure/kpi-config.repository";
 import { CompetitionRepository } from "./infrastructure/competition.repository";
 import { CompetitionReadRepository } from "./infrastructure/competition-read.repository";
 import { CompetitionStagePackagePlanReadRepository } from "./infrastructure/competition-stage-package-plan-read.repository";
+import { CompetitionTeamTemplateReadRepository } from "./infrastructure/competition-team-template-read.repository";
 import { FeedRepository } from "./infrastructure/feed.repository";
 
 @Module({
@@ -82,6 +83,7 @@ import { FeedRepository } from "./infrastructure/feed.repository";
     TargetDistributionRepository,
     CompetitionReadRepository,
     CompetitionStagePackagePlanReadRepository,
+    CompetitionTeamTemplateReadRepository,
     CompetitionRepository,
     FeedRepository,
   ],
@@ -113,6 +115,7 @@ import { FeedRepository } from "./infrastructure/feed.repository";
     TargetDistributionRepository,
     CompetitionReadRepository,
     CompetitionStagePackagePlanReadRepository,
+    CompetitionTeamTemplateReadRepository,
     CompetitionRepository,
     FeedRepository,
   ],
