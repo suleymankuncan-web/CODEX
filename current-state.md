@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #402, the Product Readiness V1 first-pass closeout, Operations Control Tower
+PR #403, the Product Readiness V1 first-pass closeout, Operations Control Tower
 readiness line, Sokrates/discipline operating docs, current workspace hygiene,
 the Clerk persona staging evidence runbook, and the generated system-flow map.
 It is the starting point for continuing in a fresh window.
@@ -29,14 +29,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-22, `origin/main` has been fetched through PR #402.
+As of 2026-05-22, `origin/main` has been fetched through PR #403.
 The root checkout has been moved back to clean `main` and is aligned with
 `origin/main`.
 
 Latest merge on main:
 
 ```text
-b4bbb74a docs: audit system flow fanout pressure
+e693b3d1 docs: record operations telemetry gap check
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -158,6 +158,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #400 `docs: classify unlinked system flow endpoints`
 - PR #401 `docs: add system flow auth overlay`
 - PR #402 `docs: audit system flow fanout pressure`
+- PR #403 `docs: record operations telemetry gap check`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -176,7 +177,7 @@ frontend root, security headers, SPA fallback, and static assets passed.
 Current local hygiene state:
 
 - Root workspace `D:\store-ops-workspace` is clean on `main...origin/main` at
-  `b4bbb74a`.
+  `e693b3d1`.
 - The previous dirty root state was not deleted. It was saved as stash
   `codex hygiene backup 2026-05-21 root dirty state`. Do not drop that stash
   unless the user explicitly approves.
@@ -242,6 +243,11 @@ Active follow-up line:
   `/admin/operations` V1 surface already covers the safe live read-only signal
   families, and more telemetry fetches should wait for a proven missing signal,
   owner, threshold decision, and verification path.
+- Milestone 6 store placeholder route decision evidence is recorded in
+  `docs/evidence/system-flow/store-placeholder-route-decision-v1.md`:
+  `/store/settings` remains a real browser-local utility route, while
+  `/store/reports`, `/store/targets`, and `/store/incentives` remain honest
+  handoff/intake routes until native store contracts are explicitly scoped.
 
 ## API Contract Drift Status
 
