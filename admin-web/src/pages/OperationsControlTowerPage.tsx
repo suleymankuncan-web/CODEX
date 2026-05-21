@@ -6,6 +6,7 @@ import {
   Layers3,
   ServerCog,
   ShieldCheck,
+  Users,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import {
@@ -32,9 +33,17 @@ import {
   type SnapshotNeedsActionItem,
   type SnapshotOverview,
 } from '../features/snapshots/api'
+import {
+  getOffboardingRequests,
+  getSellerCodeRequests,
+} from '../features/workforce/api'
 import { formatDateTime, getErrorMessage, mapHealthTone } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
+import { buildOperatorActions } from './operations-operator-action-model'
+import { OperatorActionListPanel } from './operations-operator-action-list'
 import { MetricCoveragePanel } from './operations-metric-coverage-panel'
+import { summarizeWorkforcePressure } from './operations-workforce-signal-model'
+import { WorkforceSignalPanel } from './operations-workforce-signal-panel'
 
 const SIGNAL_STALE_TIME_MS = 30_000
 const QUEUE_PREVIEW_SIZE = 4
@@ -50,16 +59,6 @@ type DataQualitySnapshot = {
   errorRowCount: number
   mappingEntityTypes: string[]
   snapshotIssueCount: number
-}
-
-type OperatorAction = {
-  href?: string
-  id: string
-  reason: string
-  status: string
-  subtitle: string
-  title: string
-  tone: Tone
 }
 
 type ProviderBlocker = {
@@ -137,15 +136,29 @@ export function OperationsControlTowerPage() {
     queryFn: () => getSnapshotNeedsAction({ limit: QUEUE_PREVIEW_SIZE, offset: 0 }),
     staleTime: SIGNAL_STALE_TIME_MS,
   })
+  const sellerCodeRequestsQuery = useQuery({
+    queryKey: ['operations-workforce', 'seller-code-requests', 'pending_hr_approval'],
+    queryFn: () => getSellerCodeRequests({ status: 'pending_hr_approval' }),
+    staleTime: SIGNAL_STALE_TIME_MS,
+  })
+  const offboardingRequestsQuery = useQuery({
+    queryKey: ['operations-workforce', 'offboarding-requests', 'pending_hr_approval'],
+    queryFn: () => getOffboardingRequests({ status: 'pending_hr_approval' }),
+    staleTime: SIGNAL_STALE_TIME_MS,
+  })
 
   const importNeedsActionItems = importNeedsActionQuery.data?.items ?? []
   const snapshotNeedsActionItems = snapshotNeedsActionQuery.data?.items ?? []
+  const sellerCodeItems = sellerCodeRequestsQuery.data?.items ?? []
+  const offboardingItems = offboardingRequestsQuery.data?.items ?? []
   const isInitialLoading = [
     healthQuery,
     importOverviewQuery,
     importNeedsActionQuery,
     snapshotOverviewQuery,
     snapshotNeedsActionQuery,
+    sellerCodeRequestsQuery,
+    offboardingRequestsQuery,
   ].every((query) => query.isLoading)
 
   const importActionCount = countImportActions(importOverviewQuery.data)
@@ -155,13 +168,19 @@ export function OperationsControlTowerPage() {
     importOverview: importOverviewQuery.data,
     snapshotOverview: snapshotOverviewQuery.data,
   })
-  const operationalPressure = importActionCount + snapshotActionCount
+  const workforcePressure = summarizeWorkforcePressure({
+    offboardingItems,
+    sellerCodeItems,
+  })
+  const operationalPressure = importActionCount + snapshotActionCount + workforcePressure.total
   const hasSignalError =
     healthQuery.isError ||
     importOverviewQuery.isError ||
     importNeedsActionQuery.isError ||
     snapshotOverviewQuery.isError ||
-    snapshotNeedsActionQuery.isError
+    snapshotNeedsActionQuery.isError ||
+    sellerCodeRequestsQuery.isError ||
+    offboardingRequestsQuery.isError
   const readiness = resolveReadinessStatus({
     health: healthQuery.data,
     hasSignalError,
@@ -174,6 +193,7 @@ export function OperationsControlTowerPage() {
     importActionCount,
     snapshotActionCount,
     t,
+    workforcePressure,
   })
 
   const summaryCards = useMemo(() => {
@@ -231,6 +251,16 @@ export function OperationsControlTowerPage() {
         icon: <ShieldCheck size={18} />,
         tone: 'neutral',
       },
+      {
+        title: t('adminOperations.metric.workforce'),
+        value: String(workforcePressure.total),
+        note: t('adminOperations.workforceMetricNote', {
+          offboarding: workforcePressure.offboardingCount,
+          seller: workforcePressure.sellerCodeCount,
+        }),
+        icon: <Users size={18} />,
+        tone: workforcePressure.total > 0 ? 'warning' : 'calm',
+      },
     ] satisfies Array<{
       title: string
       value: string
@@ -254,6 +284,9 @@ export function OperationsControlTowerPage() {
     snapshotOverviewQuery.isError,
     snapshotOverviewQuery.error,
     t,
+    workforcePressure.offboardingCount,
+    workforcePressure.sellerCodeCount,
+    workforcePressure.total,
   ])
 
   if (isInitialLoading) {
@@ -303,6 +336,15 @@ export function OperationsControlTowerPage() {
         t={t}
       />
 
+      <WorkforceSignalPanel
+        error={sellerCodeRequestsQuery.error ?? offboardingRequestsQuery.error}
+        isError={sellerCodeRequestsQuery.isError || offboardingRequestsQuery.isError}
+        offboardingItems={offboardingItems}
+        pressure={workforcePressure}
+        sellerCodeItems={sellerCodeItems}
+        t={t}
+      />
+
       <section className="two-up-grid">
         <ImportSignalPanel
           error={importOverviewQuery.error ?? importNeedsActionQuery.error}
@@ -320,58 +362,6 @@ export function OperationsControlTowerPage() {
         />
       </section>
     </section>
-  )
-}
-
-function OperatorActionListPanel(input: {
-  actions: OperatorAction[]
-  t: TranslateFunction
-}) {
-  return (
-    <article className="panel">
-      <div className="panel-heading panel-heading-spread">
-        <div>
-          <div className="eyebrow">{input.t('adminOperations.actionEyebrow')}</div>
-          <h3>{input.t('adminOperations.actionTitle')}</h3>
-          <p className="queue-subtitle">{input.t('adminOperations.actionCopy')}</p>
-        </div>
-        <StatusPill tone={input.actions.length > 0 ? 'warning' : 'calm'}>
-          {input.t('adminOperations.actionCount', { count: input.actions.length })}
-        </StatusPill>
-      </div>
-      <div className="queue-list">
-        {input.actions.map((action) => {
-          const content = (
-            <>
-              <div className="queue-row-head">
-                <div>
-                  <div className="queue-title">{action.title}</div>
-                  <div className="queue-subtitle">{action.subtitle}</div>
-                </div>
-                <StatusPill tone={action.tone}>{action.status}</StatusPill>
-              </div>
-              <p className="queue-reason">{action.reason}</p>
-              {action.href ? (
-                <div className="queue-footer">
-                  <span>{input.t('adminOperations.openActionDetail')}</span>
-                  <Activity size={16} />
-                </div>
-              ) : null}
-            </>
-          )
-
-          return action.href ? (
-            <Link className="queue-row" key={action.id} to={action.href}>
-              {content}
-            </Link>
-          ) : (
-            <div className="queue-row" key={action.id}>
-              {content}
-            </div>
-          )
-        })}
-      </div>
-    </article>
   )
 }
 
@@ -401,87 +391,6 @@ function OperationsHero(input: {
       </div>
     </section>
   )
-}
-
-function buildOperatorActions(input: {
-  dataQuality: DataQualitySnapshot
-  hasSignalError: boolean
-  importActionCount: number
-  snapshotActionCount: number
-  t: TranslateFunction
-}): OperatorAction[] {
-  const actions: OperatorAction[] = []
-  const hasDataQualityPressure =
-    input.dataQuality.errorRowCount > 0 ||
-    input.dataQuality.blockedBatchCount > 0 ||
-    input.dataQuality.mappingEntityTypes.length > 0 ||
-    input.dataQuality.snapshotIssueCount > 0
-
-  if (input.hasSignalError) {
-    actions.push({
-      id: 'signal-unavailable',
-      title: input.t('adminOperations.actionSignalTitle'),
-      subtitle: input.t('adminOperations.actionSignalSubtitle'),
-      reason: input.t('adminOperations.actionSignalReason'),
-      status: input.t('adminOperations.attention'),
-      tone: 'warning',
-    })
-  }
-
-  if (input.importActionCount > 0) {
-    actions.push({
-      href: '/admin/integrations',
-      id: 'import-queue',
-      title: input.t('adminOperations.actionImportTitle'),
-      subtitle: input.t('adminOperations.actionImportSubtitle'),
-      reason: input.t('adminOperations.actionImportReason', {
-        count: input.importActionCount,
-      }),
-      status: input.t('adminOperations.queueHasItems', { count: input.importActionCount }),
-      tone: 'warning',
-    })
-  }
-
-  if (hasDataQualityPressure) {
-    actions.push({
-      href: '/admin/integrations',
-      id: 'data-quality',
-      title: input.t('adminOperations.actionDataQualityTitle'),
-      subtitle: input.t('adminOperations.actionDataQualitySubtitle'),
-      reason: input.t('adminOperations.actionDataQualityReason', {
-        blocked: input.dataQuality.blockedBatchCount,
-        errors: input.dataQuality.errorRowCount,
-        snapshots: input.dataQuality.snapshotIssueCount,
-      }),
-      status: input.t('adminOperations.needsAttention'),
-      tone: 'warning',
-    })
-  }
-
-  if (input.snapshotActionCount > 0) {
-    actions.push({
-      href: '/admin/snapshots',
-      id: 'snapshot-queue',
-      title: input.t('adminOperations.actionSnapshotTitle'),
-      subtitle: input.t('adminOperations.actionSnapshotSubtitle'),
-      reason: input.t('adminOperations.actionSnapshotReason', {
-        count: input.snapshotActionCount,
-      }),
-      status: input.t('adminOperations.queueHasItems', { count: input.snapshotActionCount }),
-      tone: 'warning',
-    })
-  }
-
-  actions.push({
-    id: 'external-evidence',
-    title: input.t('adminOperations.actionExternalTitle'),
-    subtitle: input.t('adminOperations.actionExternalSubtitle'),
-    reason: input.t('adminOperations.actionExternalReason'),
-    status: input.t('adminOperations.inputNeeded'),
-    tone: 'warning',
-  })
-
-  return actions
 }
 
 function DataQualitySignalPanel(input: {

@@ -89,7 +89,7 @@ Decision quality score:
 | Data Quality / Mapping | Are error rows, mapping blockers, or failed materialization signals visible? | Import needs-action preview plus import/snapshot overview. | Integration operations. | Partial live signal. | Add unresolved mapping backlog only from existing read endpoints. |
 | Snapshot / Reporting | Are reports fresh, failed, retry-ready, or stuck? | Snapshot overview and needs-action preview. | Snapshot / reporting. | Live in `/admin/operations`. | Add latest reporting snapshot age only if the existing reporting endpoint already exposes it. |
 | Auth / Role / Scope | Is route/endpoint access drifting from the matrix? | Auth matrix docs, backend auth tests, admin auth/audit pages. | Auth / pilot readiness. | Guarded, not live metric. | Add docs/test guard evidence link before any runtime metric. |
-| Workforce Requests | Are seller-code/offboarding queues aging or piling up? | Workforce request repositories and admin/store approval surfaces. | HR / store operations. | Planned. | Add read-only queue pressure only after existing endpoint shape is confirmed. |
+| Workforce Requests | Are seller-code/offboarding queues aging or piling up? | Workforce request read endpoints, Admin Inbox, and Store Approvals. | HR / store operations. | Live count/preview in `/admin/operations`. | Add queue age/overdue only after threshold ownership is decided. |
 | Workflow Inbox | Are inbox items overdue, unseen, or concentrating by source type? | Workflow inbox endpoint and store/admin task surfaces. | Store operations. | Planned. | Start with count/urgency/freshness read-only signal if existing endpoint is enough. |
 | KPI / Rankings | Are KPI source trust, closed snapshot mode, and leaderboard freshness clear? | Reporting read models, KPI config, ranking pages. | Reporting / KPI governance. | Partly visible through snapshot/reporting pages. | Add source-trust/freshness caveat only as read-only copy unless source metrics exist. |
 | Release / External Evidence | Which production blockers need real input? | Evidence docs, smoke scripts, health observability, provider state. | Platform / product owner. | Static blockers visible. | Convert a blocker to live only after real provider input exists. |
@@ -169,3 +169,19 @@ Expected result:
 - Operators can also see that auth drift, workforce queues, workflow inbox
   pressure, and KPI/ranking source trust are not yet full live metrics.
 - Future work starts from a named gap instead of a vague dashboard expansion.
+
+## Current Implementation Status
+
+Implemented:
+
+- Metric coverage map is live in `/admin/operations`.
+- Workforce request pressure is live in `/admin/operations` as a read-only
+  pending HR approval count/preview over existing seller-code and offboarding
+  read endpoints.
+
+Still planned:
+
+- Workflow inbox pressure.
+- Auth drift runtime evidence beyond docs/test guards.
+- KPI/ranking source-trust and leaderboard freshness.
+- Release/external provider evidence closure.

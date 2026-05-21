@@ -134,6 +134,8 @@ What it does:
   snapshot/reporting, auth, workforce, workflow, KPI/rankings, and release
   evidence topics are visible as live, partial, planned, guarded, or
   input-blocked,
+- reads pending workforce seller-code and offboarding HR approval queues as a
+  live read-only pressure signal,
 - shows external/live evidence blockers as blocked-by-input rather than
   complete,
 - keeps the route `SUPER_ADMIN` scoped for V1.
@@ -148,6 +150,8 @@ What it intentionally does not do:
 - no API response shape change.
 - no data-quality workflow, mapping approval, import retry, scoring, or
   snapshot rerun behavior change.
+- no workforce approval/reject/resubmit command behavior or access lifecycle
+  behavior change.
 
 Evidence:
 
@@ -155,3 +159,4 @@ Evidence:
 - `docs/evidence/product-progress/2026-05-21-operations-data-quality-signal-v1.md`
 - `docs/evidence/product-progress/2026-05-21-operations-action-list-v1.md`
 - `docs/evidence/product-progress/2026-05-21-operations-metric-coverage-map-v1.md`
+- `docs/evidence/product-progress/2026-05-21-operations-workforce-pressure-v1.md`

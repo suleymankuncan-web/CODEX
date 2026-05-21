@@ -31,16 +31,23 @@ test('operations control tower composes read-only readiness signals', async ({ p
   await expect(main.getByRole('heading', { name: 'Veri kalitesi', exact: true })).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Snapshot', exact: true })).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Dış kanıt', exact: true })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Workforce', exact: true })).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Operatör aksiyon listesi' })).toBeVisible()
   await expect(main.getByText('Import kuyruğunu aç')).toBeVisible()
   await expect(main.getByText('Veri kalitesi sinyalini doğrula')).toBeVisible()
   await expect(main.getByText('Snapshot kuyruğunu aç')).toBeVisible()
+  await expect(main.getByText('Workforce kuyruğunu aç')).toBeVisible()
   await expect(main.getByText('Dış kanıt inputlarını toparla')).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Data quality ve mapping sinyali' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Workforce request pressure' })).toBeVisible()
   await expect(main.getByText('Önizleme hata satırı', { exact: true })).toBeVisible()
+  await expect(main.getByText('Seller-code isteği', { exact: true })).toBeVisible()
+  await expect(main.getByText('Offboarding isteği', { exact: true })).toBeVisible()
   await expect(main.getByText('mağaza', { exact: true })).toBeVisible()
   await expect(main.getByText('batch-ops-1')).toBeVisible()
   await expect(main.getByText('snapshot-ops-1')).toBeVisible()
+  await expect(main.getByText('55555555-5555-4555-8555-555555555555')).toBeVisible()
+  await expect(main.getByText('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee')).toBeVisible()
   await expect(main.getByText('Staging auth/session kanıtı')).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Canlı, planlı ve input bekleyen sinyaller' })).toBeVisible()
   await expect(main.getByText('Backend / DB / Queue')).toBeVisible()
@@ -51,6 +58,7 @@ test('operations control tower composes read-only readiness signals', async ({ p
   await expect(main.getByText('Planlı').first()).toBeVisible()
   await expect(main.getByRole('link', { name: /Entegrasyon panelini aç/i })).toHaveAttribute('href', '/admin/integrations')
   await expect(main.getByRole('link', { name: /Workforce Requests/i })).toHaveAttribute('href', '/admin/inbox')
+  await expect(main.getByRole('link', { name: /Admin inbox aç/i })).toHaveAttribute('href', '/admin/inbox')
   await expect(main.getByRole('link', { name: /Snapshot operasyonlarını aç/i })).toHaveAttribute('href', '/admin/snapshots')
   await expect(page.locator('body')).not.toContainText('Ãƒ')
 
@@ -63,12 +71,15 @@ test('operations control tower composes read-only readiness signals', async ({ p
   await expect(main.getByText('Open import queue')).toBeVisible()
   await expect(main.getByText('Verify data quality signal')).toBeVisible()
   await expect(main.getByText('Open snapshot queue')).toBeVisible()
+  await expect(main.getByText('Open workforce queue')).toBeVisible()
   await expect(main.getByText('Gather external evidence inputs')).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Data quality', exact: true })).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Data quality and mapping signal' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Workforce request pressure' })).toBeVisible()
   await expect(main.getByText('Preview error rows', { exact: true })).toBeVisible()
   await expect(main.getByText('store', { exact: true })).toBeVisible()
   await expect(main.getByText('External evidence', { exact: true })).toBeVisible()
+  await expect(main.getByText('Workforce', { exact: true })).toBeVisible()
   await expect(main.getByText('Staging auth/session evidence')).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Live, planned, and input-blocked signals' })).toBeVisible()
   await expect(main.getByText('Auth / Role / Scope')).toBeVisible()
@@ -176,6 +187,14 @@ async function routeOperationsApi(page: Page, sessionFixture: typeof operationsS
 
   await page.route('**/api/snapshots/runs/needs-action?**', async (route) => {
     await route.fulfill({ json: snapshotNeedsActionFixture })
+  })
+
+  await page.route('**/api/workforce/seller-code-requests?**', async (route) => {
+    await route.fulfill({ json: sellerCodeRequestsFixture })
+  })
+
+  await page.route('**/api/workforce/offboarding-requests?**', async (route) => {
+    await route.fulfill({ json: offboardingRequestsFixture })
   })
 }
 
@@ -376,6 +395,81 @@ const snapshotNeedsActionFixture = {
     count: 1,
     total: 1,
     limit: 4,
+    offset: 0,
+  },
+}
+
+const sellerCodeRequestsFixture = {
+  items: [
+    {
+      requestId: '55555555-5555-4555-8555-555555555555',
+      companyId: '00000000-0000-0000-0000-000000000001',
+      regionId: '00000000-0000-0000-0000-000000000010',
+      storeId: '00000000-0000-0000-0000-000000000100',
+      storeCode: 'MP001',
+      storeName: 'Marmara Park',
+      storeType: 'franchise',
+      requestType: 'create_code',
+      status: 'pending_hr_approval',
+      firstName: 'Ayse',
+      lastName: 'Yilmaz',
+      nationalIdLast4: '8901',
+      phoneNumber: '05551234567',
+      hireDate: '2026-05-01',
+      requestedPositionId: '44444444-4444-4444-8444-444444444444',
+      positionCode: 'SALES_CONSULTANT',
+      positionName: 'Sales Consultant',
+      employmentType: 'full_time',
+      requestedSellerCode: null,
+      approvedSellerCode: null,
+      lastReferenceSellerCode: 'FM8375',
+      submittedByUserId: 'store-manager-1',
+      reviewedByUserId: null,
+      reviewedAt: null,
+      reviewNote: null,
+      employeeId: null,
+      createdAt: '2026-04-27T12:00:00.000Z',
+      updatedAt: '2026-04-27T12:00:00.000Z',
+    },
+  ],
+  meta: {
+    count: 1,
+    total: 1,
+    limit: 50,
+    offset: 0,
+  },
+}
+
+const offboardingRequestsFixture = {
+  items: [
+    {
+      requestId: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+      companyId: '00000000-0000-0000-0000-000000000001',
+      regionId: '00000000-0000-0000-0000-000000000010',
+      storeId: '00000000-0000-0000-0000-000000000100',
+      storeCode: 'MP001',
+      storeName: 'Marmara Park',
+      employeeId: '00000000-0000-0000-0000-000000000202',
+      displayName: 'Store Personnel',
+      externalEmployeeRef: 'FM8001',
+      positionCode: 'SALES_CONSULTANT',
+      positionName: 'Sales Consultant',
+      status: 'pending_hr_approval',
+      terminationDate: '2026-05-10',
+      terminationReason: 'resignation',
+      requestReason: 'Personel istifa etti',
+      submittedByUserId: 'store-manager-1',
+      reviewedByUserId: null,
+      reviewedAt: null,
+      reviewNote: null,
+      createdAt: '2026-04-27T12:00:00.000Z',
+      updatedAt: '2026-04-27T12:00:00.000Z',
+    },
+  ],
+  meta: {
+    count: 1,
+    total: 1,
+    limit: 50,
     offset: 0,
   },
 }

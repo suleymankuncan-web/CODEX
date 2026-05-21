@@ -261,6 +261,10 @@ Current UI/UX V1 status:
   evidence. It labels each as live, partial, planned, guarded, or input-blocked
   instead of pretending every topic is already a live metric. Evidence:
   `docs/evidence/product-progress/2026-05-21-operations-metric-coverage-map-v1.md`.
+- Operations Workforce Pressure V1 promotes pending seller-code and
+  offboarding HR approval queues into `/admin/operations` as a live read-only
+  count/preview over existing workforce read endpoints. Evidence:
+  `docs/evidence/product-progress/2026-05-21-operations-workforce-pressure-v1.md`.
 - Auth Surface Readability V1 fixes low-contrast explanatory copy on
   `/admin/auth` and `/admin/auth/catalog` light panels after route-level browser
   evidence isolated the issue. Evidence:

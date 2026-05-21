@@ -83,8 +83,8 @@ Stop rule used:
 
 ## Residual Risk
 
-- Workforce, workflow inbox, auth drift, KPI/ranking source trust, and release
-  evidence are now visible as coverage topics, but most are not live control
-  tower metrics yet.
+- Workflow inbox, auth drift, KPI/ranking source trust, and release evidence
+  are now visible as coverage topics, but they are not live control tower
+  metrics yet.
 - The next code slice should choose exactly one of those planned topics and
   reuse existing read endpoints if possible.
