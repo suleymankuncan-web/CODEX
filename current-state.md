@@ -2,8 +2,8 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #387, the parked Workforce Request safe-read boundary line, and the active
-Product Readiness V1 UI/UX line, and is
+PR #388, the parked Workforce Request safe-read boundary line, and the Product
+Readiness V1 UI/UX first-pass closeout, and is
 the starting point for continuing in a fresh window.
 
 ## Active Workspace
@@ -28,14 +28,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-21, `origin/main` has been fetched through PR #387.
+As of 2026-05-21, `origin/main` has been fetched through PR #388.
 The root checkout may still be on a non-main local branch with unrelated
 handoff noise; do not assume the root working tree is clean.
 
 Latest merge on main:
 
 ```text
-a11036b2 feat: clarify store rankings table context
+c768b1a2 feat: clarify master data personnel controls
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -142,6 +142,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #385 `docs: refresh product surface audit`
 - PR #386 `feat: clarify admin KPI row context`
 - PR #387 `feat: clarify store rankings table context`
+- PR #388 `feat: clarify master data personnel controls`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -162,9 +163,12 @@ Known local working tree noise at recovery time:
 - `current-state.md` modified for this handoff update
 - `docs/plans/feature-backlog.md` modified
 - `.bg-shell/` untracked
+- `docs/plans/project-progress-plan-v1.md` untracked in the root checkout
 - `docs/superpowers/plans/2026-05-13-checklist-command-surfaces-v1.md` untracked
 - `docs/superpowers/specs/2026-05-12-coach-insight-rules-v1-design.md` untracked
+- `sokrates.md` untracked in the root checkout
 - `thread-019dfcf6-6c3c-7470-81dd-9513de42746d-transcript.md` untracked recovery transcript
+- `x.md` untracked in the root checkout
 
 Do not stage, delete, or "clean up" those unless the user explicitly asks.
 `.gsd/` is local-only/ignored state; use it for planning but do not make it a
@@ -789,9 +793,10 @@ the exact evidence path. Examples: a real staging bearer token, approved
 Supabase disposable restore target, alert provider destination, or Redis/BullMQ
 Render configuration.
 
-If those external inputs are not available, continue with one narrow
-product-hardening slice. Do not begin with another backend/refactor cleanup
-unless a concrete blocker appears.
+If those external inputs are not available, do not continue broad UI polish from
+inertia. Run a fresh route-level audit, pick a narrow pilot-facing product gap
+with browser/test evidence, or choose one isolated technical-debt guardrail only
+when a concrete blocker appears.
 
 Product Progress Plan V1 status:
 
@@ -898,12 +903,19 @@ Product Progress Plan V1 status:
   without changing ranking data, KPI scoring, sort semantics, API calls, auth,
   permissions, DB state, CSS behavior, or user workflow semantics. Evidence:
   `docs/evidence/product-progress/2026-05-21-store-rankings-table-context-v1.md`.
-- The current Master Data Personnel Row Context V1 slice adds row-specific
+- The Master Data Personnel Row Context V1 slice added row-specific
   accessible labels and mobile boundedness evidence for `/admin/master-data`
   personnel controls without changing store/personnel save payloads, import
   lifecycle, promotion semantics, API calls, auth, permissions, DB state, CSS
   behavior, or user workflow semantics. Evidence:
   `docs/evidence/product-progress/2026-05-21-master-data-personnel-row-context-v1.md`.
+- The Product Readiness V1 closeout keeps Stage Builder / Competition parked
+  unless fresh browser, pilot, or test evidence isolates a concrete
+  readability, accessibility, mobile boundedness, or test-coverage gap. Do not
+  touch competition payloads, package-plan lifecycle, scoring, finalization,
+  execution, state-machine behavior, backend repositories, API contracts, auth,
+  permissions, DB state, or CSS-global behavior as part of UI polish. Evidence:
+  `docs/evidence/product-progress/2026-05-21-product-readiness-v1-closeout.md`.
 - The Competition Team Template Command Boundary Decision V1 slice defined the
   invariants, verification ladder, and stop rules for the
   `CompetitionTeamTemplateCommandRepository` extraction.
