@@ -1,9 +1,8 @@
 {
-  "generatedAt": "2026-05-21T19:16:11.796Z",
+  "generatedAt": "2026-05-21T19:28:52.351Z",
   "generator": {
     "name": "store-ops-system-flow",
-    "version": 1,
-    "commit": "5a64ed96d37a"
+    "version": 1
   },
   "summary": {
     "backendEndpointCount": 164,

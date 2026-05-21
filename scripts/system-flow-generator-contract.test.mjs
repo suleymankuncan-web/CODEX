@@ -18,6 +18,10 @@ function readJson(file) {
   return JSON.parse(readText(file))
 }
 
+function normalizeLineEndings(value) {
+  return value.replace(/\r\n/g, '\n')
+}
+
 function withoutVolatileFields(flow) {
   return {
     ...flow,
@@ -47,7 +51,10 @@ test('system flow artifacts are generated from current repository sources', () =
   const current = buildSystemFlow({ rootDir: normalizedRootDir })
 
   assert.deepEqual(withoutVolatileFields(recorded), withoutVolatileFields(current))
-  assert.equal(readText('docs/flows/store-ops-system-flow.html'), renderSystemFlowHtml(recorded))
+  assert.equal(
+    normalizeLineEndings(readText('docs/flows/store-ops-system-flow.html')),
+    normalizeLineEndings(renderSystemFlowHtml(recorded)),
+  )
 })
 
 test('system flow captures the main route, API, controller, and OpenAPI layers', () => {

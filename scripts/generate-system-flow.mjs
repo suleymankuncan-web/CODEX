@@ -1,4 +1,3 @@
-import { execFileSync } from 'node:child_process'
 import {
   existsSync,
   mkdirSync,
@@ -56,7 +55,6 @@ export function buildSystemFlow(input = {}) {
     generator: {
       name: 'store-ops-system-flow',
       version: 1,
-      commit: readGitHead(rootDir),
     },
     summary: {
       backendEndpointCount: backendEndpoints.length,
@@ -1174,18 +1172,6 @@ function inferRouteDomain(routePath) {
 function inferApiDomain(apiPath) {
   const segments = apiPath.split('/').filter(Boolean)
   return segments[1] ?? segments[0] ?? 'root'
-}
-
-function readGitHead(rootDir) {
-  try {
-    return execFileSync('git', ['rev-parse', '--short=12', 'HEAD'], {
-      cwd: rootDir,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-    }).trim()
-  } catch {
-    return null
-  }
 }
 
 function resolveModulePath(fromDir, specifier) {
