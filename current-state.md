@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #370 plus the current Operations Action List V1 slice, and is the
+PR #371 plus the current Auth Surface Readability V1 slice, and is the
 starting point for continuing in a fresh window.
 
 ## Active Workspace
@@ -27,14 +27,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-21, `origin/main` has been fetched through PR #370.
+As of 2026-05-21, `origin/main` has been fetched through PR #371.
 The root checkout may still be on a non-main local branch with unrelated
 handoff noise; do not assume the root working tree is clean.
 
 Latest merge on main:
 
 ```text
-671d3f82 test: guard rules config boundary decision
+c8e474d4 feat: add operations action list
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -124,6 +124,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #368 `feat: add operations control tower`
 - PR #369 `feat: surface operations data quality signal`
 - PR #370 `test: guard rules config boundary decision`
+- PR #371 `feat: add operations action list`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -372,6 +373,13 @@ Latest technical assessment decision:
   No new endpoint, API response shape, auth/permission, DB, provider config,
   import retry, mapping approval, snapshot rerun, scoring, or workflow change
   is included.
+- Auth Surface Readability V1 is the current route-level product-evidence
+  slice: it fixes low-contrast explanatory copy on `/admin/auth` and
+  `/admin/auth/catalog` light panels by reusing the existing `queue-subtitle`
+  text token. Evidence:
+  `docs/evidence/product-progress/2026-05-21-auth-surface-readability-v1.md`.
+  No auth, permission, route access, API, DB, provider, role assignment, pilot
+  binding, action-store, or mutation behavior change is included.
 
 ## Sokrates
 
@@ -800,6 +808,10 @@ Product Progress Plan V1 status:
 - The current Operations Action List V1 slice adds the top operator next-step
   panel to `/admin/operations` and records evidence at
   `docs/evidence/product-progress/2026-05-21-operations-action-list-v1.md`.
+- The current Auth Surface Readability V1 slice keeps auth/admin follow-up
+  narrow: route-level browser evidence found low-contrast copy on auth light
+  panels, so only the readable text token and targeted e2e assertions are
+  changed.
 
 The `/store/approvals` first pass has started:
 

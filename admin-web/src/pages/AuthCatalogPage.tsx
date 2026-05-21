@@ -124,7 +124,7 @@ export function AuthCatalogPage() {
             <div>
               <div className="eyebrow">{t('authCatalog.roles')}</div>
               <h3>{t('authCatalog.roleDefinitions')}</h3>
-              <p className="panel-copy">{t('authCatalog.roleSearchCopy')}</p>
+              <p className="queue-subtitle">{t('authCatalog.roleSearchCopy')}</p>
             </div>
             <label className="search-field">
               <span className="sr-only">{t('authCatalog.filterRoles')}</span>

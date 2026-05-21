@@ -255,6 +255,10 @@ Current UI/UX V1 status:
   `/admin/operations` using the same existing health, import, data-quality,
   snapshot, and external blocker signals. Evidence:
   `docs/evidence/product-progress/2026-05-21-operations-action-list-v1.md`.
+- Auth Surface Readability V1 fixes low-contrast explanatory copy on
+  `/admin/auth` and `/admin/auth/catalog` light panels after route-level browser
+  evidence isolated the issue. Evidence:
+  `docs/evidence/product-progress/2026-05-21-auth-surface-readability-v1.md`.
 - Park `/store/home` and `/admin/master-data` unless browser review or pilot
   feedback finds a concrete new gap.
 
@@ -506,6 +510,9 @@ Candidate next outputs:
   justified by the control-tower spec. After this, pause the growth-foundation
   line unless browser/pilot evidence finds a concrete Operations gap, and
   return to route-level product evidence.
+- Auth Surface Readability V1 is the first route-level auth/admin evidence
+  follow-up after that pause; keep future auth/admin work equally narrow and
+  evidence-led.
 - Keep rules engine, auth model changes, DB schema, provider config, broad
   data-quality workflows, and new backend aggregation parked until separately
   scoped.
