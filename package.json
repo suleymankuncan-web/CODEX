@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "check:release": "npm run test:scripts && node scripts/check-release.mjs",
+    "system-flow:generate": "node scripts/generate-system-flow.mjs",
     "perf:public": "node scripts/public-performance-baseline.mjs",
     "perf:protected": "node scripts/protected-performance-baseline.mjs",
     "smoke:backend-readiness-load": "node scripts/backend-readiness-load-smoke.mjs",
