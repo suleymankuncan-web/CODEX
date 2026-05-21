@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #360 plus the active competition read-boundary slice, and is the starting
+PR #361 plus the active competition team-template read slice, and is the starting
 point for continuing in a fresh window.
 
 ## Active Workspace
@@ -27,14 +27,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-21, `origin/main` has been fetched through PR #360.
+As of 2026-05-21, `origin/main` has been fetched through PR #361.
 The root checkout may still be on a non-main local branch with unrelated
 handoff noise; do not assume the root working tree is clean.
 
 Latest merge on main:
 
 ```text
-22fd970e refactor: split competition stage plan reads (#360)
+c1d7a5ee refactor: split competition read repository (#361)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -114,6 +114,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #358 `refactor: split stage builder package section`
 - PR #359 `docs: inventory competition repository boundaries`
 - PR #360 `refactor: split competition stage plan reads`
+- PR #361 `refactor: split competition read repository`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:

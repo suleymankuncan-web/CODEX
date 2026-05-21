@@ -165,6 +165,16 @@ Split guidance:
 - If command methods move, keep audit event names, membership replacement
   semantics, and clone-source-store semantics unchanged.
 
+Current status:
+
+- In progress on the next code slice: `listTeamTemplates` is extracted into
+  `CompetitionTeamTemplateReadRepository`.
+- Team-template command methods still live in `CompetitionRepository` and keep
+  using the existing `queryTeamTemplateRows` helper to read back the updated
+  template rows inside write transactions.
+- `CompetitionRepository` is roughly 1516 physical lines after this slice, and
+  `CompetitionTeamTemplateReadRepository` is roughly 23 physical lines.
+
 ### Stage Creation And Stage Package Execution
 
 Methods:
@@ -309,14 +319,15 @@ Frontend E2E:
    - `getStagePackagePlanForAccess` remains parked because it is
      auth-adjacent.
    - Do not move state-transition writes in the same PR.
-2. `CompetitionReadRepository`
+2. Done: `CompetitionReadRepository`
    - Move competition list/detail/contribution/detail-helper reads after the
      first small read boundary proves the provider split.
-   - Current slice extracts these reads without moving access-context helpers
+   - Extracted these reads without moving access-context helpers
      or write/state-machine behavior.
 3. `CompetitionTeamTemplateReadRepository`
    - Move read/access pieces before command methods if template work becomes
      active.
+   - Current slice extracts `listTeamTemplates` only.
 4. `CompetitionTeamTemplateRepository` command boundary
    - Move create/deactivate/update/clone together only with repository and
      service tests.

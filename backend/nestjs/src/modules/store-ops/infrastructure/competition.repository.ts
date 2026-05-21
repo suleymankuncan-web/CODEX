@@ -30,6 +30,7 @@ import { writeCompetitionAudit } from "./competition.repository.audit";
 import { type Queryable } from "./competition.repository.db";
 import { CompetitionReadRepository } from "./competition-read.repository";
 import { CompetitionStagePackagePlanReadRepository } from "./competition-stage-package-plan-read.repository";
+import { CompetitionTeamTemplateReadRepository } from "./competition-team-template-read.repository";
 import {
   buildStageAdvancementRule,
   mapCompetition,
@@ -52,11 +53,14 @@ import { queryTeamTemplateRows } from "./competition.repository.team-template-qu
 export class CompetitionRepository {
   private readonly competitionReadRepository: CompetitionReadRepository;
   private readonly stagePackagePlanReadRepository: CompetitionStagePackagePlanReadRepository;
+  private readonly teamTemplateReadRepository: CompetitionTeamTemplateReadRepository;
 
   constructor(private readonly databaseService: DatabaseService) {
     this.competitionReadRepository = new CompetitionReadRepository(databaseService);
     this.stagePackagePlanReadRepository =
       new CompetitionStagePackagePlanReadRepository(databaseService);
+    this.teamTemplateReadRepository =
+      new CompetitionTeamTemplateReadRepository(databaseService);
   }
 
   private hasReadScope(input: {
@@ -250,14 +254,7 @@ export class CompetitionRepository {
     regionIds?: string[];
     storeIds?: string[];
   } = {}): Promise<CompetitionTeamTemplate[]> {
-    const rows = await queryTeamTemplateRows(this.databaseService, {
-      activeOnly: input.activeOnly ?? true,
-      companyIds: input.companyIds,
-      regionIds: input.regionIds,
-      storeIds: input.storeIds,
-    });
-
-    return mapTeamTemplates(rows);
+    return this.teamTemplateReadRepository.listTeamTemplates(input);
   }
 
   async createCompetition(input: {
