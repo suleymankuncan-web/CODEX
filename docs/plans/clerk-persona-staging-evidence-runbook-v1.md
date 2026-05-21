@@ -233,9 +233,11 @@ Remove-Item Env:AUTH_SMOKE_BEARER_TOKEN -ErrorAction SilentlyContinue
 ```
 
 Use deployed readiness smoke with a real token when checking the deployed
-frontend/backend readiness path:
+frontend/backend readiness path. Return to the workspace root first; this
+smoke is a root script:
 
 ```powershell
+cd "<workspace-root>"
 $env:READINESS_FRONTEND_URL="https://staging.hr-axis.com"
 $env:READINESS_BACKEND_URL="https://api-staging.hr-axis.com/api"
 $env:READINESS_BEARER_TOKEN="<local-only-clerk-bearer-token>"
