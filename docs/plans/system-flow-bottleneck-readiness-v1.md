@@ -234,6 +234,19 @@ Verification:
 - Backend telemetry/read-model work uses targeted Jest/build and API contract
   checks when contracts change.
 
+Current evidence:
+
+- `docs/evidence/system-flow/operations-telemetry-v1-gap-check.md` confirms
+  that the current Operations Control Tower already covers the V1 live
+  read-only signal families that are safe without new contracts: health,
+  integrations, snapshots, workforce, workflow, KPI/rankings, and external
+  blocker posture.
+- The gap check explicitly avoids adding another fetch to the multi-domain
+  aggregator without a proven missing signal, owner, threshold decision, and
+  verification path.
+- Auth/session runtime evidence remains parked for Milestone 7 because real
+  Clerk/persona inputs are required.
+
 ### 6. Store Placeholder Route Decision
 
 Goal:
