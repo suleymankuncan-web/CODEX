@@ -211,3 +211,14 @@ Next safe move:
 - If no external inputs exist, choose a new local-only product/risk slice from
   `docs/plans/project-progress-plan-v1.md` or a fresh Sokrates candidate
   comparison.
+
+System-flow Milestone 5 gap check:
+
+- `docs/evidence/system-flow/operations-telemetry-v1-gap-check.md` confirms
+  that the current `/admin/operations` V1 surface already covers health,
+  integrations, snapshots, workforce, workflow, KPI/rankings, and external
+  blocker posture with existing read-only sources and targeted E2E coverage.
+- No new local telemetry fetch is justified without a proven missing signal,
+  owner, source, threshold decision, and verification path.
+- Auth/session runtime evidence remains parked for the Clerk persona evidence
+  milestone because it requires real staging Clerk/session inputs.
