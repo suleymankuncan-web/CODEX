@@ -172,6 +172,17 @@ Expected result:
 
 ## Current Implementation Status
 
+Closeout:
+
+- The safe internal read-only metric line is complete through PR #393.
+- `/admin/operations` now exposes the coverage map plus live workforce,
+  workflow, and KPI/ranking readiness signals over existing endpoints.
+- No backend aggregate endpoint, write path, DB migration, auth/permission
+  change, provider configuration, alert wiring, SLA threshold, KPI scoring
+  change, or workflow behavior change was introduced.
+- Evidence:
+  `docs/evidence/product-progress/2026-05-21-operations-metrics-bottleneck-closeout-v1.md`.
+
 Implemented:
 
 - Metric coverage map is live in `/admin/operations`.
@@ -183,7 +194,20 @@ Implemented:
 - KPI/ranking readiness is live in `/admin/operations` as a read-only published
   config and leaderboard source metadata signal over existing reports endpoints.
 
-Still planned:
+Parked / requires separate input or decision:
 
-- Auth drift runtime evidence beyond docs/test guards.
-- Release/external provider evidence closure.
+- Auth drift runtime evidence beyond docs/test guards requires real staging
+  auth/session inputs or a separately scoped auth runtime evidence plan.
+- Release/external provider evidence closure requires real provider inputs:
+  bearer tokens, assigned/unassigned store smoke IDs, approved restore target,
+  alert destination, Redis/BullMQ provider configuration, or authenticated
+  upload inputs.
+
+Next safe move:
+
+- Do not keep adding local dashboard metrics by inertia.
+- If real external inputs arrive, execute the exact evidence path from the
+  readiness plan.
+- If no external inputs exist, choose a new local-only product/risk slice from
+  `docs/plans/project-progress-plan-v1.md` or a fresh Sokrates candidate
+  comparison.

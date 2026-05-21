@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #392, the parked Workforce Request safe-read boundary line, and the Product
+PR #393, the parked Workforce Request safe-read boundary line, and the Product
 Readiness V1 UI/UX first-pass closeout, and is
 the starting point for continuing in a fresh window.
 
@@ -28,14 +28,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-21, `origin/main` has been fetched through PR #392.
+As of 2026-05-21, `origin/main` has been fetched through PR #393.
 The root checkout may still be on a non-main local branch with unrelated
 handoff noise; do not assume the root working tree is clean.
 
 Latest merge on main:
 
 ```text
-9ce5c18a feat: surface workflow inbox pressure in operations
+c462ab84 feat: surface kpi ranking readiness in operations
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -147,6 +147,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #390 `feat: surface operations metric coverage`
 - PR #391 `feat: surface workforce pressure in operations`
 - PR #392 `feat: surface workflow inbox pressure in operations`
+- PR #393 `feat: surface kpi ranking readiness in operations`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -437,6 +438,15 @@ Latest technical assessment decision:
   No backend endpoint, API response shape, auth/permission, DB, provider
   config, KPI weight, ranking score, leaderboard sort, or workflow behavior
   change is included.
+- Operations Metrics Bottleneck Readiness V1 is now complete for the safe
+  internal read-only signals planned in
+  `docs/plans/operations-metrics-bottleneck-readiness-v1.md`: coverage map,
+  workforce request pressure, workflow inbox pressure, and KPI/ranking
+  readiness are live in `/admin/operations`. Evidence:
+  `docs/evidence/product-progress/2026-05-21-operations-metrics-bottleneck-closeout-v1.md`.
+  Remaining auth drift runtime evidence and release/external provider evidence
+  stay parked because they require real staging/provider inputs or a separate
+  high-risk auth/provider decision.
 - Auth Surface Readability V1 is the current route-level product-evidence
   slice: it fixes low-contrast explanatory copy on `/admin/auth` and
   `/admin/auth/catalog` light panels by reusing the existing `queue-subtitle`
@@ -815,6 +825,11 @@ Important outcome:
 - Operations Action List V1 is now represented in `/admin/operations` as a
   read-only action-priority panel over existing signals. Do not turn it into a
   command surface without a separate write/API/auth/DB decision.
+- Operations metrics bottleneck readiness is now represented by the
+  `/admin/operations` coverage map plus live read-only workforce, workflow, and
+  KPI/ranking signals. Do not add further dashboard metrics unless the source,
+  owner, threshold, and verification path are clear; auth runtime evidence and
+  release/provider evidence remain parked behind real inputs.
 
 ## Next Best Work
 
