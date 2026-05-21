@@ -442,10 +442,14 @@ Candidate extraction order:
 
 1. Done: frontend stage builder model/constants extraction for validation
    helpers and package-plan update payload construction.
-2. Next: frontend template section extraction.
-3. Frontend package-plan section extraction.
-4. Backend team-template read/write boundary.
-5. Backend stage-package plan read/write/audit boundary.
+2. Already split before this line: frontend template builder/library sections
+   live in `stage-builder-template-sections.tsx`.
+3. Done: frontend package/package-plan section extraction into
+   `stage-builder-package-section.tsx`.
+4. Next: frontend stage team section extraction, if continuing frontend
+   competition decomposition.
+5. Backend team-template read/write boundary.
+6. Backend stage-package plan read/write/audit boundary.
 
 Verification:
 
@@ -654,14 +658,15 @@ input changes priority.
 8. Next: shift to stage builder / competition work unless a concrete auth
    write-risk or product change requires the next invariant decision.
 9. Done: stage builder frontend pure model/constants extraction.
-10. Next: stage builder template section extraction, if continuing frontend
+10. Done: stage builder package/package-plan section extraction.
+11. Next: stage builder team section extraction, if continuing frontend
    competition decomposition.
-11. Master-data bootstrap frontend model/section split PR, if product work
+12. Master-data bootstrap frontend model/section split PR, if product work
    touches master-data bootstrap.
-12. Competition repository inventory/read-boundary PR.
-13. TypeScript strictness inventory PR.
-14. One strictness domain PR only if the inventory shows a reviewable slice.
-15. External evidence PRs only when real provider inputs exist.
+13. Competition repository inventory/read-boundary PR.
+14. TypeScript strictness inventory PR.
+15. One strictness domain PR only if the inventory shows a reviewable slice.
+16. External evidence PRs only when real provider inputs exist.
 
 Batch rule:
 
