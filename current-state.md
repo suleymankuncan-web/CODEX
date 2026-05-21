@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #382 plus the current Workforce Lookup Read Repository V1 slice, and is
+PR #383 and the parked Workforce Request safe-read boundary line, and is
 the starting point for continuing in a fresh window.
 
 ## Active Workspace
@@ -27,14 +27,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-21, `origin/main` has been fetched through PR #382.
+As of 2026-05-21, `origin/main` has been fetched through PR #383.
 The root checkout may still be on a non-main local branch with unrelated
 handoff noise; do not assume the root working tree is clean.
 
 Latest merge on main:
 
 ```text
-e2635413 refactor: split workforce offboarding reads
+75461572 refactor: split workforce lookup reads
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -136,6 +136,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #380 `docs: inventory workforce request boundaries`
 - PR #381 `refactor: split workforce seller code reads`
 - PR #382 `refactor: split workforce offboarding reads`
+- PR #383 `refactor: split workforce lookup reads`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -904,11 +905,15 @@ Product Progress Plan V1 status:
   `workforce-offboarding-read.repository.ts`, while offboarding
   create/approve/reject/resubmit and access lifecycle closure stay parked in
   `WorkforceRequestRepository`.
-- The current Workforce Lookup Read Repository V1 slice moves the remaining
-  safe store/personnel lookup reads into `workforce-lookup-read.repository.ts`.
-  After this slice, the workforce request refactor line should park: the
-  remaining repository body is command/write/status/audit/access-lifecycle
-  behavior and needs a separate invariant/test decision before movement.
+- The Workforce Lookup Read Repository V1 slice moved the remaining safe
+  store/personnel lookup reads into `workforce-lookup-read.repository.ts`.
+- Workforce request safe read-boundary pass is now complete and parked.
+  `WorkforceRequestRepository` is roughly 1282 physical lines. The remaining
+  repository body is command/write/status/audit/access-lifecycle behavior:
+  seller-code create/approve/reject/resubmit, duplicate validation, offboarding
+  create/approve/reject/resubmit, employee mutation, turnover event persistence,
+  and access lifecycle closure. Do not split that area without a separate
+  invariant/test decision.
 
 The `/store/approvals` first pass has started:
 
