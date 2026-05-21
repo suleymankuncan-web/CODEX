@@ -191,6 +191,21 @@ Verification:
 - Browser/network or targeted Playwright evidence when touching UI/tests.
 - Docs-only audit can use `git diff --check`.
 
+Current evidence:
+
+- `docs/evidence/system-flow/fanout-bottleneck-audit-v1.md` records the
+  post-precision static fanout ranking and separates static reachability from
+  likely runtime pressure.
+- Highest static fanout remains `/admin/competitions` with 23 route/API edges,
+  but page code shows normal entry is list plus selected detail, not 23 eager
+  calls.
+- The strongest future telemetry candidates are `/admin/operations`,
+  `/admin/master-data`, `/admin/auth`, and `/store/approvals` because they are
+  multi-domain, payload-sensitive, security-sensitive, or mutation-heavy.
+- No live bottleneck, latency, request volume, DB query cost, or provider
+  behavior claim is made by this milestone.
+- No frontend, backend, API, auth, DB, queue, or CSS behavior changed.
+
 ### 5. Operations Telemetry V1
 
 Goal:
