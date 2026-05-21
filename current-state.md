@@ -2,7 +2,8 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #376 plus the current Admin Reports Mobile Evidence V1 slice, and is
+PR #377 plus the current Competition Team Template Command Boundary Decision V1
+slice, and is
 the starting point for continuing in a fresh window.
 
 ## Active Workspace
@@ -27,14 +28,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-21, `origin/main` has been fetched through PR #376.
+As of 2026-05-21, `origin/main` has been fetched through PR #377.
 The root checkout may still be on a non-main local branch with unrelated
 handoff noise; do not assume the root working tree is clean.
 
 Latest merge on main:
 
 ```text
-4bd85385 test: guard admin snapshots mobile layout
+fc856ae8 test: guard admin reports mobile layout
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -130,6 +131,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #374 `test: guard admin integrations mobile layout`
 - PR #375 `test: guard admin checklist mobile layout`
 - PR #376 `test: guard admin snapshots mobile layout`
+- PR #377 `test: guard admin reports mobile layout`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -347,9 +349,11 @@ Latest technical assessment decision:
 - The team-template read boundary for `listTeamTemplates` has moved into
   `CompetitionTeamTemplateReadRepository`.
 - Next backend competition candidate: team-template command/write boundary, but
-  only with an explicit invariant/test decision. Keep stage-package plan writes,
-  stage creation/execution, access-context helpers, score recalculation, and
-  finalization parked until a tighter invariant/test decision exists.
+  only with an explicit invariant/test decision. The current docs-only decision
+  records that contract at
+  `docs/plans/competition-team-template-command-boundary-decision-v1.md`.
+  Keep stage-package plan writes, stage creation/execution, access-context
+  helpers, score recalculation, and finalization parked until separately scoped.
 - Operations Control Tower V1 first read-only UI slice adds `/admin/operations`
   for `SUPER_ADMIN` over existing backend health, import overview/needs-action,
   snapshot overview/needs-action, and external blocker language. Evidence:
@@ -865,6 +869,11 @@ Product Progress Plan V1 status:
 - The current Admin Reports Mobile Evidence V1 slice adds route-level mobile
   overflow coverage for the reports summary hub and snapshot run chooser before
   any visual or interaction changes.
+- The current Competition Team Template Command Boundary Decision V1 slice is
+  docs-only: it defines the invariants, verification ladder, and stop rules for
+  a future `CompetitionTeamTemplateCommandRepository` extraction. It changes no
+  backend code, SQL, DTO, API response shape, auth, DB, CSS, or user-facing
+  behavior.
 
 The `/store/approvals` first pass has started:
 
