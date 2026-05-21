@@ -251,6 +251,10 @@ Current UI/UX V1 status:
   `scripts/rules-config-boundary-contract.test.mjs` in the root `test:scripts`
   path. It does not add a rules engine, DB schema, auth/API behavior, runtime
   config editor, or user-facing workflow.
+- Operations Action List V1 adds a read-only operator action list to
+  `/admin/operations` using the same existing health, import, data-quality,
+  snapshot, and external blocker signals. Evidence:
+  `docs/evidence/product-progress/2026-05-21-operations-action-list-v1.md`.
 - Park `/store/home` and `/admin/master-data` unless browser review or pilot
   feedback finds a concrete new gap.
 
@@ -497,9 +501,11 @@ Candidate next outputs:
   using existing read signals only; do not build a dedicated dashboard without
   a concrete operator gap.
 - Rules/config boundary guard is now represented as docs/script-only contract
-  coverage. Candidate next output after that: a tiny Operations Control Tower
-  follow-up only if it still uses existing contracts and stays read-only, or
-  pause the growth-foundation line and return to route-level product evidence.
+  coverage.
+- Operations Action List V1 is the final small read-only follow-up currently
+  justified by the control-tower spec. After this, pause the growth-foundation
+  line unless browser/pilot evidence finds a concrete Operations gap, and
+  return to route-level product evidence.
 - Keep rules engine, auth model changes, DB schema, provider config, broad
   data-quality workflows, and new backend aggregation parked until separately
   scoped.
