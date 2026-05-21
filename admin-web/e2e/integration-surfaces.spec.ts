@@ -283,6 +283,30 @@ test('admin integrations page switches chrome to English copy and persists local
   await expect(page.getByText('Integration control panel')).toBeVisible()
 })
 
+test('admin integrations mobile layout stays bounded across operator tabs', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/admin/integrations')
+  await setStoredLocale(page, 'en')
+
+  const main = page.getByRole('main')
+
+  await expect(main.getByRole('heading', { name: 'Integration control panel' })).toBeVisible()
+  await expect(main.locator('.integration-management-metrics')).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+
+  await page.getByRole('button', { name: 'Evidence' }).click()
+  await expect(
+    main.getByRole('heading', { name: 'Payload, audit, and reconciliation evidence' }),
+  ).toBeVisible()
+  await expect(main.locator('.integration-management-code-block')).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+
+  await page.getByRole('button', { name: /^Issues/ }).click()
+  await expect(main.getByRole('heading', { name: 'Issue records to review' })).toBeVisible()
+  await expect(main.getByRole('button', { name: 'Clear filters' })).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+})
+
 test('admin dashboard exposes Power BI period controls', async ({ page }) => {
   await page.goto('/admin/integrations')
 
@@ -445,6 +469,18 @@ async function routeIntegrationApi(page: Page) {
       await route.fulfill({ json: masterDataBootstrapDetailFixture })
     },
   )
+}
+
+async function expectNoHorizontalOverflow(page: Page) {
+  const measurements = await page.evaluate(() => ({
+    bodyWidth: document.body.scrollWidth,
+    documentWidth: document.documentElement.scrollWidth,
+    viewportWidth: window.innerWidth,
+  }))
+
+  expect(
+    Math.max(measurements.bodyWidth, measurements.documentWidth) - measurements.viewportWidth,
+  ).toBeLessThanOrEqual(1)
 }
 
 async function routeStoreMasterApi(
