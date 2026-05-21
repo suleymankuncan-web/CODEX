@@ -458,8 +458,7 @@ Candidate extraction order:
 7. Done: competition list/detail/contribution read boundary for
    `listCompetitions`, `getCompetitionDetail`,
    `listStoreContributionsForCompetition`, and detail helper reads.
-8. Current slice: backend team-template read boundary for
-   `listTeamTemplates` only.
+8. Done: backend team-template read boundary for `listTeamTemplates`.
 9. Parked/medium-to-high: backend team-template command boundary.
 10. Later/high-risk: stage-package plan write state machine.
 11. Later/high-risk: stage creation/package execution boundary.
@@ -546,6 +545,15 @@ Safe first slice:
 
 - TypeScript strictness inventory only. Count current errors for proposed flags
   without committing flag changes.
+
+Current inventory:
+
+- `docs/plans/frontend-typescript-strictness-inventory-v1.md` records the
+  measured flag impact from `origin/main`.
+- Temporary app and node `--strict` checks pass with zero errors.
+- `noUncheckedIndexedAccess` currently produces 25 app errors.
+- `exactOptionalPropertyTypes` currently produces 66 app errors.
+- The first safe implementation slice is a config-only `strict: true` PR.
 
 Candidate flag order:
 
@@ -681,17 +689,19 @@ input changes priority.
 11. Next: competition repository boundary inventory/test-map.
 12. Done: stage-package plan list/audit read repository boundary.
 13. Done: competition list/detail/contribution read repository boundary.
-14. Current slice: team-template read repository boundary for
-   `listTeamTemplates` only.
-15. Next backend competition candidate after this slice: team-template command
+14. Done: team-template read repository boundary for `listTeamTemplates`.
+15. Next backend competition candidate after this line: team-template command
    boundary, only with explicit invariant/test decision.
 16. Stage builder team section extraction, only if continuing frontend
    competition decomposition for a concrete product/reviewability reason.
 17. Master-data bootstrap frontend model/section split PR, if product work
    touches master-data bootstrap.
-18. TypeScript strictness inventory PR.
-19. One strictness domain PR only if the inventory shows a reviewable slice.
-20. External evidence PRs only when real provider inputs exist.
+18. Done/current docs line: TypeScript strictness inventory PR.
+19. Next safe strictness implementation: config-only `strict: true` PR for
+    frontend app and node configs.
+20. Later strictness domain PR: `noUncheckedIndexedAccess` helpers/navigation
+    first if the config-only strict PR lands cleanly.
+21. External evidence PRs only when real provider inputs exist.
 
 Batch rule:
 
