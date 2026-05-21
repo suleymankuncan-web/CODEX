@@ -123,6 +123,17 @@ Split guidance:
 - Include repository scope tests plus service redaction/scope tests.
 - Stop if the frontend or API response shape needs changes.
 
+Current status:
+
+- In progress on the next code slice: `listCompetitions`,
+  `getCompetitionDetail`, `listStoreContributionsForCompetition`, and the
+  detail helper reads are extracted into `CompetitionReadRepository`.
+- `CompetitionRepository` delegates these methods and remains responsible for
+  access-context reads, team-template commands, stage/package writes,
+  stage-package plan state transitions, score recalculation, and finalization.
+- After this slice, `CompetitionRepository` is roughly 1518 physical lines and
+  `CompetitionReadRepository` is roughly 336 physical lines.
+
 ### Team Template Reads And Commands
 
 Methods:
@@ -301,6 +312,8 @@ Frontend E2E:
 2. `CompetitionReadRepository`
    - Move competition list/detail/contribution/detail-helper reads after the
      first small read boundary proves the provider split.
+   - Current slice extracts these reads without moving access-context helpers
+     or write/state-machine behavior.
 3. `CompetitionTeamTemplateReadRepository`
    - Move read/access pieces before command methods if template work becomes
      active.

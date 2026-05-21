@@ -36,6 +36,7 @@ import { TargetDistributionRepository } from "./infrastructure/target-distributi
 import { ChecklistAcknowledgementRepository } from "./infrastructure/checklist-acknowledgement.repository";
 import { KpiConfigRepository } from "./infrastructure/kpi-config.repository";
 import { CompetitionRepository } from "./infrastructure/competition.repository";
+import { CompetitionReadRepository } from "./infrastructure/competition-read.repository";
 import { CompetitionStagePackagePlanReadRepository } from "./infrastructure/competition-stage-package-plan-read.repository";
 import { FeedRepository } from "./infrastructure/feed.repository";
 
@@ -79,6 +80,7 @@ import { FeedRepository } from "./infrastructure/feed.repository";
     StorePerformanceReportingReadRepository,
     SnapshotOperationsRepository,
     TargetDistributionRepository,
+    CompetitionReadRepository,
     CompetitionStagePackagePlanReadRepository,
     CompetitionRepository,
     FeedRepository,
@@ -109,6 +111,7 @@ import { FeedRepository } from "./infrastructure/feed.repository";
     StorePerformanceReportingReadRepository,
     SnapshotOperationsRepository,
     TargetDistributionRepository,
+    CompetitionReadRepository,
     CompetitionStagePackagePlanReadRepository,
     CompetitionRepository,
     FeedRepository,
