@@ -437,6 +437,8 @@ Safe first slice:
 
 - Do not start with backend and frontend together. Pick either repository
   boundary or frontend render/model extraction.
+- Current backend inventory:
+  `docs/plans/competition-repository-boundary-inventory-v1.md`.
 
 Candidate extraction order:
 
@@ -446,10 +448,17 @@ Candidate extraction order:
    live in `stage-builder-template-sections.tsx`.
 3. Done: frontend package/package-plan section extraction into
    `stage-builder-package-section.tsx`.
-4. Next: frontend stage team section extraction, if continuing frontend
-   competition decomposition.
-5. Backend team-template read/write boundary.
-6. Backend stage-package plan read/write/audit boundary.
+4. Parked: frontend stage team section extraction, unless a concrete product
+   or reviewability trigger appears. `StageBuilderForm.tsx` is now below the
+   earlier danger zone, so another tiny frontend split is not the best default.
+5. Next backend-safe step: stage-package plan read/audit boundary, starting
+   with list/audit reads and optionally the access lookup if service access
+   tests are included.
+6. Backend competition list/detail/contribution read boundary.
+7. Backend team-template read boundary, then command boundary.
+8. Later/high-risk: stage-package plan write state machine.
+9. Later/high-risk: stage creation/package execution boundary.
+10. Last/high-risk: score recalculation/finalization boundary.
 
 Verification:
 
@@ -457,6 +466,8 @@ Verification:
 npm.cmd --prefix admin-web run lint
 npm.cmd --prefix admin-web run build
 npm.cmd --prefix admin-web run test:e2e -- competition-surfaces.spec.ts --workers=1
+npm.cmd --prefix backend/nestjs test -- competition-stage-package-plan.repository.spec.ts --runInBand
+npm.cmd --prefix backend/nestjs test -- competition.service.spec.ts --runInBand
 npm.cmd --prefix backend/nestjs test -- competition --runInBand
 ```
 
@@ -465,6 +476,9 @@ Stop rules:
 - Stop if stage/package-plan business state changes.
 - Stop if frontend extraction changes form submission payloads.
 - Stop if backend and frontend changes become one broad PR.
+- Stop if stage-package plan state transitions, audit metadata, score
+  recalculation, finalization, or access-scope behavior changes during a
+  structural repository extraction.
 
 ### Phase 3: Frontend Surface Decomposition
 
@@ -659,14 +673,16 @@ input changes priority.
    write-risk or product change requires the next invariant decision.
 9. Done: stage builder frontend pure model/constants extraction.
 10. Done: stage builder package/package-plan section extraction.
-11. Next: stage builder team section extraction, if continuing frontend
-   competition decomposition.
-12. Master-data bootstrap frontend model/section split PR, if product work
+11. Next: competition repository boundary inventory/test-map.
+12. Next code candidate after inventory: stage-package plan read/audit
+   repository boundary.
+13. Stage builder team section extraction, only if continuing frontend
+   competition decomposition for a concrete product/reviewability reason.
+14. Master-data bootstrap frontend model/section split PR, if product work
    touches master-data bootstrap.
-13. Competition repository inventory/read-boundary PR.
-14. TypeScript strictness inventory PR.
-15. One strictness domain PR only if the inventory shows a reviewable slice.
-16. External evidence PRs only when real provider inputs exist.
+15. TypeScript strictness inventory PR.
+16. One strictness domain PR only if the inventory shows a reviewable slice.
+17. External evidence PRs only when real provider inputs exist.
 
 Batch rule:
 
