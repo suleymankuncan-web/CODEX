@@ -15,10 +15,12 @@ export const adminOperationsTr = {
   'adminOperations.metric.dataQuality': 'Veri kalitesi',
   'adminOperations.metric.snapshots': 'Snapshot',
   'adminOperations.metric.external': 'Dış kanıt',
+  'adminOperations.metric.workforce': 'Workforce',
   'adminOperations.importMetricNote': '{count} import batch içinde aksiyon baskısı',
   'adminOperations.dataQualityMetricNote': '{count} bloke batch içinde önizleme hata satırı',
   'adminOperations.snapshotMetricNote': '{count} snapshot çalışması içinde aksiyon baskısı',
   'adminOperations.externalMetricNote': 'Gerçek token/provider/restore inputu bekleyen kanıtlar',
+  'adminOperations.workforceMetricNote': '{seller} seller-code, {offboarding} offboarding bekliyor',
 
   'adminOperations.actionEyebrow': 'Sıradaki hareket',
   'adminOperations.actionTitle': 'Operatör aksiyon listesi',
@@ -40,6 +42,10 @@ export const adminOperationsTr = {
   'adminOperations.actionSnapshotTitle': 'Snapshot kuyruğunu aç',
   'adminOperations.actionSnapshotSubtitle': 'Rapor tazeliği',
   'adminOperations.actionSnapshotReason': '{count} snapshot aksiyonu retry veya stuck incelemesi bekliyor.',
+  'adminOperations.actionWorkforceTitle': 'Workforce kuyruğunu aç',
+  'adminOperations.actionWorkforceSubtitle': 'Seller-code / offboarding',
+  'adminOperations.actionWorkforceReason':
+    '{seller} seller-code ve {offboarding} offboarding isteği HR incelemesi bekliyor.',
   'adminOperations.actionExternalTitle': 'Dış kanıt inputlarını toparla',
   'adminOperations.actionExternalSubtitle': 'Auth / provider / restore',
   'adminOperations.actionExternalReason':
@@ -115,7 +121,7 @@ export const adminOperationsTr = {
   'adminOperations.coverage.authSource': 'auth matrix + audit',
   'adminOperations.coverage.workforceTitle': 'Workforce Requests',
   'adminOperations.coverage.workforceCopy':
-    'Seller-code ve offboarding kuyruk baskısı önemli; canlı control-tower metriği için mevcut endpoint shape doğrulanmalı.',
+    'Seller-code ve offboarding HR onay baskısı mevcut read endpointlerinden canlı okunuyor.',
   'adminOperations.coverage.workforceSource': 'admin inbox / store approvals',
   'adminOperations.coverage.workflowTitle': 'Workflow Inbox',
   'adminOperations.coverage.workflowCopy':
@@ -164,6 +170,21 @@ export const adminOperationsTr = {
   'adminOperations.snapshotQueueMeta': '{type} · {status}',
   'adminOperations.snapshotRunTitle': '{type} snapshot',
   'adminOperations.openSnapshots': 'Snapshot operasyonlarını aç',
+
+  'adminOperations.workforceEyebrow': 'İnsan operasyonu',
+  'adminOperations.workforceTitle': 'Workforce request pressure',
+  'adminOperations.workforceCopy':
+    'Seller-code ve offboarding HR onay kuyrukları mevcut read-only endpointlerden tek sinyale yükseltilir.',
+  'adminOperations.workforceSellerCode': 'Seller-code isteği',
+  'adminOperations.workforceOffboarding': 'Offboarding isteği',
+  'adminOperations.workforceTotal': 'Toplam workforce baskısı',
+  'adminOperations.workforceQueueTitle': 'Workforce aksiyon önizlemesi',
+  'adminOperations.workforceQueueEmpty': 'HR onayı bekleyen görünen workforce isteği yok.',
+  'adminOperations.workforceSellerMeta': '{store} · seller-code',
+  'adminOperations.workforceSellerReason': 'Yeni seller-code isteği HR onayı bekliyor.',
+  'adminOperations.workforceOffboardingMeta': '{store} · offboarding',
+  'adminOperations.workforceOffboardingReason': 'Offboarding isteği HR onayı bekliyor.',
+  'adminOperations.openInbox': 'Admin inbox aç',
 
   'adminOperations.ready': 'Hazır',
   'adminOperations.controlled': 'Kontrollü',
@@ -218,10 +239,12 @@ export const adminOperationsEn: Record<keyof typeof adminOperationsTr, string> =
   'adminOperations.metric.dataQuality': 'Data quality',
   'adminOperations.metric.snapshots': 'Snapshot',
   'adminOperations.metric.external': 'External evidence',
+  'adminOperations.metric.workforce': 'Workforce',
   'adminOperations.importMetricNote': 'Action pressure across {count} import batches',
   'adminOperations.dataQualityMetricNote': 'Preview error rows across {count} blocked batches',
   'adminOperations.snapshotMetricNote': 'Action pressure across {count} snapshot runs',
   'adminOperations.externalMetricNote': 'Evidence waiting for real token/provider/restore inputs',
+  'adminOperations.workforceMetricNote': '{seller} seller-code, {offboarding} offboarding waiting',
 
   'adminOperations.actionEyebrow': 'Next move',
   'adminOperations.actionTitle': 'Operator action list',
@@ -243,6 +266,10 @@ export const adminOperationsEn: Record<keyof typeof adminOperationsTr, string> =
   'adminOperations.actionSnapshotTitle': 'Open snapshot queue',
   'adminOperations.actionSnapshotSubtitle': 'Report freshness',
   'adminOperations.actionSnapshotReason': '{count} snapshot actions are waiting for retry or stuck review.',
+  'adminOperations.actionWorkforceTitle': 'Open workforce queue',
+  'adminOperations.actionWorkforceSubtitle': 'Seller-code / offboarding',
+  'adminOperations.actionWorkforceReason':
+    '{seller} seller-code and {offboarding} offboarding requests are waiting for HR review.',
   'adminOperations.actionExternalTitle': 'Gather external evidence inputs',
   'adminOperations.actionExternalSubtitle': 'Auth / provider / restore',
   'adminOperations.actionExternalReason':
@@ -318,7 +345,7 @@ export const adminOperationsEn: Record<keyof typeof adminOperationsTr, string> =
   'adminOperations.coverage.authSource': 'auth matrix + audit',
   'adminOperations.coverage.workforceTitle': 'Workforce Requests',
   'adminOperations.coverage.workforceCopy':
-    'Seller-code and offboarding queue pressure matter; a live control-tower metric needs the existing endpoint shape confirmed first.',
+    'Seller-code and offboarding HR approval pressure is read live from existing read endpoints.',
   'adminOperations.coverage.workforceSource': 'admin inbox / store approvals',
   'adminOperations.coverage.workflowTitle': 'Workflow Inbox',
   'adminOperations.coverage.workflowCopy':
@@ -367,6 +394,21 @@ export const adminOperationsEn: Record<keyof typeof adminOperationsTr, string> =
   'adminOperations.snapshotQueueMeta': '{type} · {status}',
   'adminOperations.snapshotRunTitle': '{type} snapshot',
   'adminOperations.openSnapshots': 'Open snapshot operations',
+
+  'adminOperations.workforceEyebrow': 'People Operations',
+  'adminOperations.workforceTitle': 'Workforce request pressure',
+  'adminOperations.workforceCopy':
+    'Seller-code and offboarding HR approval queues are elevated from existing read-only endpoints.',
+  'adminOperations.workforceSellerCode': 'Seller-code requests',
+  'adminOperations.workforceOffboarding': 'Offboarding requests',
+  'adminOperations.workforceTotal': 'Total workforce pressure',
+  'adminOperations.workforceQueueTitle': 'Workforce action preview',
+  'adminOperations.workforceQueueEmpty': 'No visible workforce requests are waiting for HR approval.',
+  'adminOperations.workforceSellerMeta': '{store} · seller-code',
+  'adminOperations.workforceSellerReason': 'A new seller-code request is waiting for HR approval.',
+  'adminOperations.workforceOffboardingMeta': '{store} · offboarding',
+  'adminOperations.workforceOffboardingReason': 'An offboarding request is waiting for HR approval.',
+  'adminOperations.openInbox': 'Open admin inbox',
 
   'adminOperations.ready': 'Ready',
   'adminOperations.controlled': 'Controlled',
