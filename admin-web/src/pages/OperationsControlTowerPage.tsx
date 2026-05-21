@@ -7,6 +7,7 @@ import {
   Layers3,
   ServerCog,
   ShieldCheck,
+  Trophy,
   Users,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
@@ -28,6 +29,7 @@ import {
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import { getOperationsHealth, type OperationsHealth } from '../features/operations/api'
+import { getKpiConfig, getRankings } from '../features/reports/api'
 import {
   getSnapshotNeedsAction,
   getSnapshotOverview,
@@ -43,6 +45,8 @@ import { formatDateTime, getErrorMessage, mapHealthTone } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 import { buildOperatorActions } from './operations-operator-action-model'
 import { OperatorActionListPanel } from './operations-operator-action-list'
+import { summarizeKpiRankingReadiness } from './operations-kpi-ranking-signal-model'
+import { KpiRankingSignalPanel } from './operations-kpi-ranking-signal-panel'
 import { MetricCoveragePanel } from './operations-metric-coverage-panel'
 import { summarizeWorkflowInboxPressure } from './operations-workflow-signal-model'
 import { WorkflowSignalPanel } from './operations-workflow-signal-panel'
@@ -155,6 +159,16 @@ export function OperationsControlTowerPage() {
     queryFn: getWorkflowInbox,
     staleTime: SIGNAL_STALE_TIME_MS,
   })
+  const kpiConfigQuery = useQuery({
+    queryKey: ['operations-kpi-config'],
+    queryFn: getKpiConfig,
+    staleTime: SIGNAL_STALE_TIME_MS,
+  })
+  const rankingsQuery = useQuery({
+    queryKey: ['operations-rankings', 'monthly', 1],
+    queryFn: () => getRankings({ limit: 1 }),
+    staleTime: SIGNAL_STALE_TIME_MS,
+  })
 
   const importNeedsActionItems = importNeedsActionQuery.data?.items ?? []
   const snapshotNeedsActionItems = snapshotNeedsActionQuery.data?.items ?? []
@@ -163,6 +177,8 @@ export function OperationsControlTowerPage() {
   const workflowItems = workflowInboxQuery.data?.items ?? []
   const hasWorkforceSignalError = sellerCodeRequestsQuery.isError || offboardingRequestsQuery.isError
   const hasWorkflowSignalError = workflowInboxQuery.isError
+  const hasKpiRankingSignalError = kpiConfigQuery.isError || rankingsQuery.isError
+  const isKpiRankingSignalLoading = kpiConfigQuery.isLoading || rankingsQuery.isLoading
   const isInitialLoading = [
     healthQuery,
     importOverviewQuery,
@@ -172,6 +188,8 @@ export function OperationsControlTowerPage() {
     sellerCodeRequestsQuery,
     offboardingRequestsQuery,
     workflowInboxQuery,
+    kpiConfigQuery,
+    rankingsQuery,
   ].every((query) => query.isLoading)
 
   const importActionCount = countImportActions(importOverviewQuery.data)
@@ -188,6 +206,10 @@ export function OperationsControlTowerPage() {
   const workflowPressure = summarizeWorkflowInboxPressure({
     inbox: workflowInboxQuery.data,
   })
+  const kpiRankingReadiness = summarizeKpiRankingReadiness({
+    config: kpiConfigQuery.data,
+    rankings: rankingsQuery.data,
+  })
   const workforcePressureTotal = hasWorkforceSignalError ? 0 : workforcePressure.total
   const workflowPressureTotal = hasWorkflowSignalError ? 0 : workflowPressure.needsAttentionCount
   const operationalPressure =
@@ -199,7 +221,8 @@ export function OperationsControlTowerPage() {
     snapshotOverviewQuery.isError ||
     snapshotNeedsActionQuery.isError ||
     hasWorkforceSignalError ||
-    hasWorkflowSignalError
+    hasWorkflowSignalError ||
+    hasKpiRankingSignalError
   const readiness = resolveReadinessStatus({
     health: healthQuery.data,
     hasSignalError,
@@ -305,6 +328,34 @@ export function OperationsControlTowerPage() {
         icon: <Inbox size={18} />,
         tone: hasWorkflowSignalError ? 'warning' : workflowPressure.total > 0 ? 'warning' : 'calm',
       },
+      {
+        title: t('adminOperations.metric.kpiRankings'),
+        value: isKpiRankingSignalLoading
+          ? t('adminOperations.loading')
+          : hasKpiRankingSignalError
+          ? t('adminOperations.unavailable')
+          : kpiRankingReadiness.issueCount > 0
+            ? t('adminOperations.needsAttention')
+            : t('adminOperations.ready'),
+        note: isKpiRankingSignalLoading
+          ? t('adminOperations.signalLoadingCopy')
+          : hasKpiRankingSignalError
+          ? getSignalFallbackCopy(
+              hasKpiRankingSignalError,
+              kpiConfigQuery.error ?? rankingsQuery.error,
+              t,
+            )
+          : t('adminOperations.kpiRankingMetricNote', {
+              periods: kpiRankingReadiness.availablePeriodCount,
+              total: kpiRankingReadiness.totalPopulation,
+            }),
+        icon: <Trophy size={18} />,
+        tone: isKpiRankingSignalLoading
+          ? 'neutral'
+          : hasKpiRankingSignalError || kpiRankingReadiness.issueCount > 0
+            ? 'warning'
+            : 'calm',
+      },
     ] satisfies Array<{
       title: string
       value: string
@@ -330,15 +381,22 @@ export function OperationsControlTowerPage() {
     t,
     hasWorkforceSignalError,
     hasWorkflowSignalError,
+    hasKpiRankingSignalError,
+    isKpiRankingSignalLoading,
     sellerCodeRequestsQuery.error,
     offboardingRequestsQuery.error,
     workflowInboxQuery.error,
+    kpiConfigQuery.error,
+    rankingsQuery.error,
     workforcePressure.offboardingCount,
     workforcePressure.sellerCodeCount,
     workforcePressure.total,
     workflowPressure.highUrgencyCount,
     workflowPressure.needsAttentionCount,
     workflowPressure.total,
+    kpiRankingReadiness.availablePeriodCount,
+    kpiRankingReadiness.issueCount,
+    kpiRankingReadiness.totalPopulation,
   ])
 
   if (isInitialLoading) {
@@ -402,6 +460,17 @@ export function OperationsControlTowerPage() {
         isError={workflowInboxQuery.isError}
         items={workflowItems}
         pressure={workflowPressure}
+        t={t}
+      />
+
+      <KpiRankingSignalPanel
+        config={kpiConfigQuery.data}
+        error={kpiConfigQuery.error ?? rankingsQuery.error}
+        isError={hasKpiRankingSignalError}
+        isLoading={isKpiRankingSignalLoading}
+        locale={locale}
+        rankings={rankingsQuery.data}
+        readiness={kpiRankingReadiness}
         t={t}
       />
 

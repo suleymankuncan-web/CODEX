@@ -269,6 +269,10 @@ Current UI/UX V1 status:
   `/admin/operations` as a live read-only count/urgency/preview signal over
   existing workflow inbox data. Evidence:
   `docs/evidence/product-progress/2026-05-21-operations-workflow-inbox-pressure-v1.md`.
+- Operations KPI Ranking Readiness V1 promotes existing reports read models
+  into `/admin/operations` as a live read-only published config and leaderboard
+  source metadata signal. Evidence:
+  `docs/evidence/product-progress/2026-05-21-operations-kpi-ranking-readiness-v1.md`.
 - Auth Surface Readability V1 fixes low-contrast explanatory copy on
   `/admin/auth` and `/admin/auth/catalog` light panels after route-level browser
   evidence isolated the issue. Evidence:
