@@ -174,6 +174,11 @@ Current status:
   template rows inside write transactions.
 - `CompetitionRepository` is roughly 1516 physical lines after this slice, and
   `CompetitionTeamTemplateReadRepository` is roughly 23 physical lines.
+- The command/write boundary decision is now recorded at
+  `docs/plans/competition-team-template-command-boundary-decision-v1.md`.
+  Future command extraction is allowed only for create/update/deactivate/clone
+  team-template methods, with transaction, audit, membership replacement, and
+  response-shape invariants preserved.
 
 ### Stage Creation And Stage Package Execution
 

@@ -704,8 +704,13 @@ input changes priority.
 12. Done: stage-package plan list/audit read repository boundary.
 13. Done: competition list/detail/contribution read repository boundary.
 14. Done: team-template read repository boundary for `listTeamTemplates`.
-15. Next backend competition candidate after this line: team-template command
-   boundary, only with explicit invariant/test decision.
+15. Current docs-only step: record the team-template command boundary
+     invariant/test decision in
+     `docs/plans/competition-team-template-command-boundary-decision-v1.md`.
+     Next backend competition code candidate after this decision:
+     `CompetitionTeamTemplateCommandRepository`, only if the required
+     verification ladder stays green and the slice remains command-boundary
+     only.
 16. Stage builder team section extraction, only if continuing frontend
    competition decomposition for a concrete product/reviewability reason.
 17. Master-data bootstrap frontend model/section split PR, if product work
