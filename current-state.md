@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #403, the Product Readiness V1 first-pass closeout, Operations Control Tower
+PR #404, the Product Readiness V1 first-pass closeout, Operations Control Tower
 readiness line, Sokrates/discipline operating docs, current workspace hygiene,
 the Clerk persona staging evidence runbook, and the generated system-flow map.
 It is the starting point for continuing in a fresh window.
@@ -29,14 +29,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-22, `origin/main` has been fetched through PR #403.
+As of 2026-05-22, `origin/main` has been fetched through PR #404.
 The root checkout has been moved back to clean `main` and is aligned with
 `origin/main`.
 
 Latest merge on main:
 
 ```text
-e693b3d1 docs: record operations telemetry gap check
+f9e45ba8 docs: decide store placeholder routes
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -159,6 +159,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #401 `docs: add system flow auth overlay`
 - PR #402 `docs: audit system flow fanout pressure`
 - PR #403 `docs: record operations telemetry gap check`
+- PR #404 `docs: decide store placeholder routes`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -177,7 +178,7 @@ frontend root, security headers, SPA fallback, and static assets passed.
 Current local hygiene state:
 
 - Root workspace `D:\store-ops-workspace` is clean on `main...origin/main` at
-  `e693b3d1`.
+  `f9e45ba8`.
 - The previous dirty root state was not deleted. It was saved as stash
   `codex hygiene backup 2026-05-21 root dirty state`. Do not drop that stash
   unless the user explicitly approves.
@@ -248,6 +249,11 @@ Active follow-up line:
   `/store/settings` remains a real browser-local utility route, while
   `/store/reports`, `/store/targets`, and `/store/incentives` remain honest
   handoff/intake routes until native store contracts are explicitly scoped.
+- Milestone 7 Clerk persona evidence status is recorded in
+  `docs/evidence/system-flow/clerk-persona-evidence-status-v1.md`: historical
+  controlled staging Clerk persona evidence exists for the pilot set, but fresh
+  current-session Clerk smoke is blocked until a real local-only staging token
+  and assigned/unassigned store inputs are available.
 
 ## API Contract Drift Status
 

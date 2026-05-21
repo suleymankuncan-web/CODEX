@@ -307,6 +307,18 @@ Verification:
 - `guard:auth:evidence` and smoke commands named by the runbook when inputs
   exist.
 
+Current evidence:
+
+- `docs/evidence/system-flow/clerk-persona-evidence-status-v1.md` records the
+  current Milestone 7 status.
+- Existing controlled staging Clerk evidence exists for the four pilot persona
+  set in the May 2026 pilot-readiness notes.
+- A fresh current-session Clerk persona smoke cannot be produced from this
+  shell because the local-only bearer token and assigned/unassigned store
+  inputs are absent.
+- The token-scope smoke fails closed without `AUTH_SMOKE_BEARER_TOKEN`; no fake
+  token, mock JWT, provider subject, or secret evidence was created.
+
 ## PR Rhythm
 
 - Seven milestones stay fixed, but PR count is not fixed.
