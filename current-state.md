@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #386, the parked Workforce Request safe-read boundary line, and the active
+PR #387, the parked Workforce Request safe-read boundary line, and the active
 Product Readiness V1 UI/UX line, and is
 the starting point for continuing in a fresh window.
 
@@ -28,14 +28,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-21, `origin/main` has been fetched through PR #386.
+As of 2026-05-21, `origin/main` has been fetched through PR #387.
 The root checkout may still be on a non-main local branch with unrelated
 handoff noise; do not assume the root working tree is clean.
 
 Latest merge on main:
 
 ```text
-9d9c985a feat: clarify admin KPI row context
+a11036b2 feat: clarify store rankings table context
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -141,6 +141,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #384 `docs: park workforce request command boundaries`
 - PR #385 `docs: refresh product surface audit`
 - PR #386 `feat: clarify admin KPI row context`
+- PR #387 `feat: clarify store rankings table context`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -892,11 +893,17 @@ Product Progress Plan V1 status:
   persistence, validation, API calls, auth, permissions, DB state, KPI scoring,
   ranking interpretation, or publish/draft semantics. Evidence:
   `docs/evidence/product-progress/2026-05-21-admin-kpi-config-row-context-v1.md`.
-- The current Store Rankings Table Context V1 slice adds a hidden localized
-  table caption and targeted mobile boundedness evidence for `/store/rankings`
+- The Store Rankings Table Context V1 slice added a hidden localized table
+  caption and targeted mobile boundedness evidence for `/store/rankings`
   without changing ranking data, KPI scoring, sort semantics, API calls, auth,
   permissions, DB state, CSS behavior, or user workflow semantics. Evidence:
   `docs/evidence/product-progress/2026-05-21-store-rankings-table-context-v1.md`.
+- The current Master Data Personnel Row Context V1 slice adds row-specific
+  accessible labels and mobile boundedness evidence for `/admin/master-data`
+  personnel controls without changing store/personnel save payloads, import
+  lifecycle, promotion semantics, API calls, auth, permissions, DB state, CSS
+  behavior, or user workflow semantics. Evidence:
+  `docs/evidence/product-progress/2026-05-21-master-data-personnel-row-context-v1.md`.
 - The Competition Team Template Command Boundary Decision V1 slice defined the
   invariants, verification ladder, and stop rules for the
   `CompetitionTeamTemplateCommandRepository` extraction.
