@@ -77,6 +77,11 @@ Repo evidence:
 - Integration repository safe read-boundary refactor is complete through
   PR #349. `IntegrationRepository` is now mostly command/write persistence
   and should not be split further without a concrete product/risk trigger.
+- Rules / Config Boundary Decision V1 is recorded at
+  `docs/plans/rules-config-boundary-decision-v1.md` and guarded by
+  `scripts/rules-config-boundary-contract.test.mjs`; do not add a generic
+  rules engine, `dm` schema, or `config` schema without a separately scoped
+  product/data-governance decision.
 
 Measured hotspots:
 
@@ -709,9 +714,9 @@ input changes priority.
 19. Done: config-only `strict: true` PR for frontend app and node configs.
 20. Done: `noUncheckedIndexedAccess` implementation and config enablement PR.
 21. Done: `exactOptionalPropertyTypes` implementation and config enablement PR.
-22. Next local auth/security guard candidate: authorization matrix drift guard
-    contract, docs/script only.
-23. External evidence PRs only when real provider inputs exist.
+22. Done: authorization matrix drift guard contract, docs/script only.
+23. Done: rules/config boundary guard contract, docs/script only.
+24. External evidence PRs only when real provider inputs exist.
 
 Batch rule:
 

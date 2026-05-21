@@ -246,6 +246,11 @@ Current UI/UX V1 status:
   `/admin/operations` using existing import needs-action, import overview, and
   snapshot overview data only. Evidence:
   `docs/evidence/product-progress/2026-05-21-operations-data-quality-signal-v1.md`.
+- Rules / Config Boundary Guard V1 keeps Rules / Config Boundary Decision V1
+  (`docs/plans/rules-config-boundary-decision-v1.md`) guarded by
+  `scripts/rules-config-boundary-contract.test.mjs` in the root `test:scripts`
+  path. It does not add a rules engine, DB schema, auth/API behavior, runtime
+  config editor, or user-facing workflow.
 - Park `/store/home` and `/admin/master-data` unless browser review or pilot
   feedback finds a concrete new gap.
 
@@ -491,9 +496,10 @@ Candidate next outputs:
 - Cross-domain data-quality signal V1 is now represented in `/admin/operations`
   using existing read signals only; do not build a dedicated dashboard without
   a concrete operator gap.
-- Candidate next output: rules/config boundary guard as docs/script only, or a
-  tiny Operations Control Tower follow-up only if it still uses existing
-  contracts and stays read-only.
+- Rules/config boundary guard is now represented as docs/script-only contract
+  coverage. Candidate next output after that: a tiny Operations Control Tower
+  follow-up only if it still uses existing contracts and stays read-only, or
+  pause the growth-foundation line and return to route-level product evidence.
 - Keep rules engine, auth model changes, DB schema, provider config, broad
   data-quality workflows, and new backend aggregation parked until separately
   scoped.
