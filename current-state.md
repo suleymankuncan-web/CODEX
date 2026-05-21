@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #368 plus the current Operations Data Quality Signal V1 slice, and is the
+PR #369 plus the current Rules / Config Boundary Guard V1 slice, and is the
 starting point for continuing in a fresh window.
 
 ## Active Workspace
@@ -27,14 +27,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-21, `origin/main` has been fetched through PR #368.
+As of 2026-05-21, `origin/main` has been fetched through PR #369.
 The root checkout may still be on a non-main local branch with unrelated
 handoff noise; do not assume the root working tree is clean.
 
 Latest merge on main:
 
 ```text
-1a1aa898 feat: add operations control tower
+c6e03083 feat: surface operations data quality signal
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -122,6 +122,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #366 `docs: guard authorization matrix drift`
 - PR #367 `chore: enable exact optional frontend types`
 - PR #368 `feat: add operations control tower`
+- PR #369 `feat: surface operations data quality signal`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -355,6 +356,13 @@ Latest technical assessment decision:
   `docs/evidence/product-progress/2026-05-21-operations-data-quality-signal-v1.md`.
   No new backend endpoint, DB/API/auth change, import retry, mapping approval,
   scoring, snapshot rerun, or data-quality workflow is included.
+- Rules / Config Boundary Guard V1 is the current docs/script follow-up slice:
+  it keeps Rules / Config Boundary Decision V1
+  (`docs/plans/rules-config-boundary-decision-v1.md`) in the root
+  `test:scripts` release path so the no-generic-engine decision, domain-owned
+  rule placement, promotion triggers, and first-code-slice guardrails cannot
+  drift quietly. No application behavior, API, auth, DB, CSS, or runtime config
+  change is included.
 
 ## Sokrates
 
@@ -685,6 +693,11 @@ Important outcome:
   from existing import/snapshot responses only. Dedicated data-quality
   dashboards, mapping workflows, backend aggregation, and DB/API changes stay
   parked.
+- Rules / Config Boundary Guard V1 is now represented as a docs/script guard:
+  `scripts/rules-config-boundary-contract.test.mjs` protects the boundary
+  decision in the root `test:scripts` path. Do not implement a generic rules
+  engine, `dm` schema, or `config` schema without a separately scoped
+  product/data-governance decision.
 
 ## Next Best Work
 
@@ -764,10 +777,14 @@ Product Progress Plan V1 status:
   read-only `SUPER_ADMIN` operator surface over existing health/import/snapshot
   signals and external blocker status. Evidence:
   `docs/evidence/product-progress/2026-05-21-operations-control-tower-v1.md`.
-- The current Operations Data Quality Signal V1 slice adds a read-only
-  data-quality snapshot to `/admin/operations` using existing import and
-  snapshot signals. Evidence:
+- The Operations Data Quality Signal V1 slice adds a read-only data-quality
+  snapshot to `/admin/operations` using existing import and snapshot signals.
+  Evidence:
   `docs/evidence/product-progress/2026-05-21-operations-data-quality-signal-v1.md`.
+- The current Rules / Config Boundary Guard V1 slice adds a root script
+  contract test for `docs/plans/rules-config-boundary-decision-v1.md` and keeps
+  the first future implementation path limited to one read-only governance
+  panel or guard over an existing rule family.
 
 The `/store/approvals` first pass has started:
 

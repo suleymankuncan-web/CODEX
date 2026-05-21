@@ -104,3 +104,10 @@ Recommended first code/product slice when needed:
   admin tests.
 
 Do not combine this with DB schema, auth, API shape, or reporting math changes.
+
+## Guard Status
+
+This decision is now guarded by `scripts/rules-config-boundary-contract.test.mjs`.
+The guard keeps the no-generic-engine decision, domain ownership table,
+promotion triggers, and first-code-slice guardrails in the root `test:scripts`
+release path.
