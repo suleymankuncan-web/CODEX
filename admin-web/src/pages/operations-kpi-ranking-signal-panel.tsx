@@ -5,8 +5,8 @@ import {
 } from '../components/dashboard-primitives'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import type { KpiConfigResponse, RankingSummary } from '../features/reports/api'
-import { getErrorMessage } from '../lib/format'
-import type { AppLocale } from '../lib/i18n'
+import { formatDateTime, getErrorMessage } from '../lib/format'
+import { getIntlLocale, type AppLocale } from '../lib/i18n'
 import type { KpiRankingReadiness } from './operations-kpi-ranking-signal-model'
 
 export function KpiRankingSignalPanel(input: {
@@ -106,7 +106,7 @@ function formatKpiPublishedAt(
   t: TranslateFunction,
 ) {
   if (!config?.metadata.publishedAt) return t('adminOperations.notCaptured')
-  return formatDate(config.metadata.publishedAt, locale)
+  return formatDateTime(config.metadata.publishedAt, locale)
 }
 
 function formatRankingPeriod(
@@ -118,13 +118,18 @@ function formatRankingPeriod(
     return t('adminOperations.notCaptured')
   }
 
-  return `${formatDate(rankings.source.periodStart, locale)} - ${formatDate(rankings.source.periodEnd, locale)}`
+  return `${formatBusinessDate(rankings.source.periodStart, locale)} - ${formatBusinessDate(rankings.source.periodEnd, locale)}`
 }
 
-function formatDate(input: string, locale: AppLocale) {
-  const normalized = input.includes('T') ? input : `${input}T00:00:00.000Z`
-  const date = new Date(normalized)
+function formatBusinessDate(input: string, locale: AppLocale) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(input)
+  const date = match
+    ? new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])))
+    : new Date(input)
   if (Number.isNaN(date.getTime())) return input
 
-  return new Intl.DateTimeFormat(locale).format(date)
+  return new Intl.DateTimeFormat(getIntlLocale(locale), {
+    dateStyle: 'medium',
+    timeZone: 'UTC',
+  }).format(date)
 }
