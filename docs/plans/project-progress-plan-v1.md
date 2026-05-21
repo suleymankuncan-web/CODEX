@@ -279,6 +279,24 @@ Current UI/UX V1 status:
   `/admin/reports` and `/admin/reports/snapshot-runs` before further reports
   summary/chooser polish. Evidence:
   `docs/evidence/product-progress/2026-05-21-admin-reports-mobile-evidence-v1.md`.
+- Product Surface Audit V2 selected the Product Readiness V1 first-pass order:
+  Admin KPI Config, Store KPI / Rankings, and Integration Dashboard / Master
+  Data. Evidence:
+  `docs/evidence/product-progress/2026-05-21-product-surface-audit-v2.md`.
+- Admin KPI Config Row Context V1 improved repeated metric, ownership, and
+  grading-band row accessibility with targeted mobile boundedness evidence.
+  Evidence:
+  `docs/evidence/product-progress/2026-05-21-admin-kpi-config-row-context-v1.md`.
+- Store Rankings Table Context V1 added a localized hidden table caption and
+  targeted mobile boundedness evidence for `/store/rankings`. Evidence:
+  `docs/evidence/product-progress/2026-05-21-store-rankings-table-context-v1.md`.
+- Master Data Personnel Row Context V1 added row-specific accessible labels and
+  targeted mobile boundedness evidence for `/admin/master-data` personnel
+  controls. Evidence:
+  `docs/evidence/product-progress/2026-05-21-master-data-personnel-row-context-v1.md`.
+- Product Readiness V1 closeout parks Stage Builder / Competition unless fresh
+  browser, pilot, or test evidence isolates a concrete safe gap. Evidence:
+  `docs/evidence/product-progress/2026-05-21-product-readiness-v1-closeout.md`.
 - Park `/store/home` and `/admin/master-data` unless browser review or pilot
   feedback finds a concrete new gap.
 
@@ -301,6 +319,11 @@ Next UI/UX V1 recommendation:
   appears; the active-icon and checklist overflow issues are covered.
 - Treat auth/admin follow-ups as later slices, with route-level Playwright
   evidence before visual polish.
+- Treat Stage Builder / Competition as parked unless the gap is explicitly
+  readability, accessibility, mobile boundedness, or test evidence only. Do not
+  touch package-plan payloads, command semantics, state-machine behavior,
+  scoring, finalization, backend repositories, API contracts, auth,
+  permissions, DB state, or CSS-global behavior from the product-readiness line.
 
 Stop rules:
 
