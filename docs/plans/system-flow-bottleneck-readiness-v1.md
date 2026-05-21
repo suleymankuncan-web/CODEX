@@ -268,6 +268,21 @@ Verification:
 - Frontend lint/build and the relevant store Playwright spec when UI changes.
 - No backend/API/auth/DB behavior changes unless separately scoped.
 
+Current evidence:
+
+- `docs/evidence/system-flow/store-placeholder-route-decision-v1.md`
+  classifies the four store routes without API calls.
+- `/store/settings` remains a real utility route for browser-local language
+  preference and does not need a backend API until profile persistence is
+  explicitly scoped.
+- `/store/reports` and `/store/targets` remain honest handoff placeholders
+  because native store read models are not explicitly scoped yet.
+- `/store/incentives` remains product expansion intake/foundation because no
+  live incentive engine, payout model, rule lookup, approval outcome, or
+  recalculation contract exists.
+- No route access, API calls, auth/permission behavior, DB state, CSS behavior,
+  or user workflow semantics changed.
+
 ### 7. Clerk Persona Evidence
 
 Goal:
