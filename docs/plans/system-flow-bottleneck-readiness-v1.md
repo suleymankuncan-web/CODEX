@@ -153,6 +153,15 @@ Verification:
 - Backend auth tests only if behavior is touched, which this milestone should
   avoid by default.
 
+Current evidence:
+
+- `docs/evidence/system-flow/auth-role-scope-overlay-v1.md` connects the
+  generated route map to frontend route guards, backend role guards, read
+  scope, assigned-store action scope, and existing positive/negative auth test
+  families.
+- The overlay is static and docs-only. It changes no route visibility, backend
+  auth behavior, provider config, DB assignment logic, or user workflow.
+
 ### 4. Fanout / Bottleneck Audit
 
 Goal:
