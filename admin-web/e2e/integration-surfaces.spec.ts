@@ -2,6 +2,7 @@ import { expect, test, type Page } from './test-fixtures'
 import { setStoredLocale } from './locale-test-utils'
 
 const STORE_MASTER_ROUTE = /\/api\/integrations\/store-master(?:\/[^/?]+)?(?:\?.*)?$/
+const PERSONNEL_MASTER_ROUTE = /\/api\/integrations\/personnel-master(?:\/[^/?]+)?(?:\?.*)?$/
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -256,6 +257,34 @@ test('admin store master update keeps near-expiry bearer tokens on action reques
   expect(patchAuthorizations.some((authorization) => authorization.includes(nearExpiryToken))).toBe(true)
 })
 
+test('admin personnel master controls expose row context and stay mobile-safe', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/admin/master-data')
+  await setStoredLocale(page, 'en')
+
+  const main = page.getByRole('main')
+  await main.getByRole('button', { name: /Personnel/ }).click()
+
+  const personnelPanel = main.getByLabel('Personnel master data tab')
+  await expect(
+    personnelPanel.getByRole('heading', { name: 'Personnel master data editing' }),
+  ).toBeVisible()
+  await expect(personnelPanel.getByLabel('Ada Yilmaz first name')).toBeVisible()
+  await expect(personnelPanel.getByLabel('Ada Yilmaz last name')).toBeVisible()
+  await expect(personnelPanel.getByLabel('Ada Yilmaz seller code')).toBeVisible()
+  await expect(personnelPanel.getByRole('combobox', { name: 'Ada Yilmaz store' })).toBeVisible()
+  await expect(personnelPanel.getByRole('combobox', { name: 'Ada Yilmaz position' })).toBeVisible()
+  await expect(
+    personnelPanel.getByRole('combobox', { name: 'Ada Yilmaz employment status' }),
+  ).toBeVisible()
+  await expect(
+    personnelPanel.getByRole('combobox', { name: 'Ada Yilmaz employment type' }),
+  ).toBeVisible()
+  await expect(personnelPanel.getByLabel('Ada Yilmaz hire date')).toBeVisible()
+  await expect(personnelPanel.getByLabel('Ada Yilmaz assignment start')).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+})
+
 test('admin integrations page switches chrome to English copy and persists locale', async ({ page }) => {
   await page.goto('/admin/integrations')
 
@@ -392,6 +421,14 @@ async function routeIntegrationApi(page: Page) {
   })
 
   await routeStoreMasterApi(page)
+
+  await page.route('**/api/integrations/personnel-master-lookups', async (route) => {
+    await route.fulfill({ json: personnelMasterLookupsFixture })
+  })
+
+  await page.route(PERSONNEL_MASTER_ROUTE, async (route) => {
+    await route.fulfill({ json: personnelMasterFixture })
+  })
 
   await page.route('**/api/integrations/import-batches/batch-kpi-lineage-ui-1/reconciliation', async (route) => {
     await route.fulfill({ json: reconciliationFixture })
@@ -728,6 +765,68 @@ const storeMasterFixture = {
   meta: {
     count: 2,
     total: 2,
+    limit: 50,
+    offset: 0,
+  },
+}
+
+const personnelMasterLookupsFixture = {
+  stores: [
+    {
+      storeId: '44444444-4444-4444-8444-444444444444',
+      storeCode: 'MP001',
+      storeName: 'Marmara Park',
+      regionId: '22222222-2222-4222-8222-222222222222',
+      regionName: 'Marmara',
+    },
+  ],
+  positions: [
+    {
+      positionId: '77777777-7777-4777-8777-777777777777',
+      positionCode: 'SC',
+      positionName: 'Sales Consultant',
+      isManagerial: false,
+    },
+  ],
+  employmentStatuses: [
+    { value: 'active', label: 'Active' },
+    { value: 'inactive', label: 'Inactive' },
+    { value: 'terminated', label: 'Terminated' },
+  ],
+  employmentTypes: [
+    { value: 'full_time', label: 'Full time' },
+    { value: 'part_time', label: 'Part time' },
+    { value: 'temporary', label: 'Temporary' },
+  ],
+}
+
+const personnelMasterFixture = {
+  items: [
+    {
+      employeeId: '88888888-8888-4888-8888-888888888888',
+      externalEmployeeRef: 'FM8375',
+      firstName: 'Ada',
+      lastName: 'Yilmaz',
+      displayName: 'Ada Yilmaz',
+      hireDate: '2026-01-05',
+      terminationDate: null,
+      employmentStatus: 'active',
+      employmentType: 'full_time',
+      assignmentId: '99999999-9999-4999-8999-999999999999',
+      assignmentStartDate: '2026-01-05',
+      storeId: '44444444-4444-4444-8444-444444444444',
+      storeCode: 'MP001',
+      storeName: 'Marmara Park',
+      regionId: '22222222-2222-4222-8222-222222222222',
+      regionName: 'Marmara',
+      positionId: '77777777-7777-4777-8777-777777777777',
+      positionCode: 'SC',
+      positionName: 'Sales Consultant',
+    },
+  ],
+  meta: {
+    count: 1,
+    total: 1,
     limit: 50,
     offset: 0,
   },

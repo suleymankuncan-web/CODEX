@@ -1239,13 +1239,14 @@ function PersonnelMasterPanel(input: {
                 {input.items.map((personnel) => {
                   const effectivePersonnel = input.getEffectivePersonnel(personnel)
                   const saving = input.savingPersonnelIds.has(personnel.employeeId)
+                  const personnelName = getPersonnelMasterRowLabel(personnel)
 
                   return (
                     <tr key={personnel.employeeId}>
                       <td>
                         <div className="master-data-command-name-grid">
                           <input
-                            aria-label={t('adminMasterData.firstName')}
+                            aria-label={t('adminMasterData.personnelFirstNameAria', { personnelName })}
                             className="master-data-command-row-control"
                             disabled={saving}
                             value={effectivePersonnel.firstName}
@@ -1254,7 +1255,7 @@ function PersonnelMasterPanel(input: {
                             }
                           />
                           <input
-                            aria-label={t('adminMasterData.lastName')}
+                            aria-label={t('adminMasterData.personnelLastNameAria', { personnelName })}
                             className="master-data-command-row-control"
                             disabled={saving}
                             value={effectivePersonnel.lastName}
@@ -1266,7 +1267,7 @@ function PersonnelMasterPanel(input: {
                       </td>
                       <td>
                         <input
-                          aria-label={t('adminMasterData.sellerCode')}
+                          aria-label={t('adminMasterData.personnelSellerCodeAria', { personnelName })}
                           className="master-data-command-row-control"
                           disabled={saving}
                           value={effectivePersonnel.externalEmployeeRef}
@@ -1279,6 +1280,7 @@ function PersonnelMasterPanel(input: {
                       </td>
                       <td>
                         <select
+                          aria-label={t('adminMasterData.personnelStoreAria', { personnelName })}
                           className="master-data-command-row-control"
                           disabled={saving}
                           value={effectivePersonnel.storeId}
@@ -1296,6 +1298,7 @@ function PersonnelMasterPanel(input: {
                       </td>
                       <td>
                         <select
+                          aria-label={t('adminMasterData.personnelPositionAria', { personnelName })}
                           className="master-data-command-row-control"
                           disabled={saving}
                           value={effectivePersonnel.positionId}
@@ -1314,6 +1317,7 @@ function PersonnelMasterPanel(input: {
                       <td>
                         <div className="master-data-command-name-grid">
                           <select
+                            aria-label={t('adminMasterData.personnelEmploymentStatusAria', { personnelName })}
                             className="master-data-command-row-control"
                             disabled={saving}
                             value={normalizePersonnelStatus(effectivePersonnel.employmentStatus)}
@@ -1328,6 +1332,7 @@ function PersonnelMasterPanel(input: {
                             <option value="terminated">{t('adminMasterData.employmentStatus.terminated')}</option>
                           </select>
                           <select
+                            aria-label={t('adminMasterData.personnelEmploymentTypeAria', { personnelName })}
                             className="master-data-command-row-control"
                             disabled={saving}
                             value={normalizeEmploymentType(effectivePersonnel.employmentType)}
@@ -1346,7 +1351,7 @@ function PersonnelMasterPanel(input: {
                       <td>
                         <div className="master-data-command-name-grid">
                           <input
-                            aria-label={t('adminMasterData.hireDate')}
+                            aria-label={t('adminMasterData.personnelHireDateAria', { personnelName })}
                             className="master-data-command-row-control"
                             disabled={saving}
                             type="date"
@@ -1356,7 +1361,7 @@ function PersonnelMasterPanel(input: {
                             }
                           />
                           <input
-                            aria-label={t('adminMasterData.assignmentStart')}
+                            aria-label={t('adminMasterData.personnelAssignmentStartAria', { personnelName })}
                             className="master-data-command-row-control"
                             disabled={saving}
                             type="date"
@@ -1385,6 +1390,16 @@ function PersonnelMasterPanel(input: {
       )}
     </section>
   )
+}
+
+function getPersonnelMasterRowLabel(personnel: PersonnelMasterItem) {
+  const displayName = personnel.displayName.trim()
+  if (displayName) {
+    return displayName
+  }
+
+  const fullName = [personnel.firstName, personnel.lastName].filter(Boolean).join(' ').trim()
+  return fullName || personnel.externalEmployeeRef || personnel.employeeId
 }
 
 function MasterDataHistoryPanel(input: { t: TranslateFunction }) {
