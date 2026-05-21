@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #355, and is the starting point for continuing in a fresh window.
+PR #356, and is the starting point for continuing in a fresh window.
 
 ## Active Workspace
 
@@ -26,14 +26,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-20, `origin/main` has been fetched through PR #355.
+As of 2026-05-20, `origin/main` has been fetched through PR #356.
 The root checkout may still be on a non-main local branch with unrelated
 handoff noise; do not assume the root working tree is clean.
 
 Latest merge on main:
 
 ```text
-7c374350 docs: plan auth admin user account boundary (#355)
+6abfc8a8 refactor: split auth user account reads (#356)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -108,6 +108,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #353 `refactor: split auth admin audit reads`
 - PR #354 `docs: update auth admin boundary handoff`
 - PR #355 `docs: plan auth admin user account boundary`
+- PR #356 `refactor: split auth user account reads`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -288,6 +289,11 @@ Latest technical assessment decision:
   lines. Remaining auth admin work is write-heavy and should stay parked unless
   a concrete auth/security risk or product change requires the next invariant
   decision.
+- Stage builder frontend decomposition has started with the safest model slice:
+  validation helpers and stage package plan update-payload construction moved
+  from `StageBuilderForm.tsx` into `stage-builder-model.ts`. The form remains
+  render/hook/API orchestration only for those helpers and is now roughly 1696
+  physical lines / 1579 non-empty lines.
 
 ## Sokrates
 
