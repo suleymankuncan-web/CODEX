@@ -411,6 +411,7 @@ export function renderSystemFlowHtml(flow) {
     const flow = window.STORE_OPS_SYSTEM_FLOW;
     const endpointById = new Map(flow.backendEndpoints.map((endpoint) => [endpoint.id, endpoint]));
     const callById = new Map(flow.frontendApiCalls.map((call) => [call.id, call]));
+    const linkedEndpointIds = new Set(flow.edges.apiToEndpoint.map((edge) => edge.backendEndpointId));
     const routeEdges = new Map();
 
     for (const edge of flow.edges.routeToApi) {
@@ -538,12 +539,12 @@ export function renderSystemFlowHtml(flow) {
     }
 
     function endpointMatches(endpoint, state) {
-      const stats = flow.hotspots.endpointsByFrontendCallCount.find((item) => item.endpointId === endpoint.id);
+      const isLinked = linkedEndpointIds.has(endpoint.id);
       const haystack = [endpoint.path, endpoint.method, endpoint.controller, endpoint.domain, endpoint.source.file].join(' ').toLowerCase();
       if (state.domain !== 'all' && endpoint.domain !== state.domain) return false;
       if (state.search && !haystack.includes(state.search)) return false;
-      if (state.signal === 'linked' && !stats) return false;
-      if (state.signal === 'unlinked' && stats) return false;
+      if (state.signal === 'linked' && !isLinked) return false;
+      if (state.signal === 'unlinked' && isLinked) return false;
       if (state.signal === 'unmatched') return false;
       return true;
     }

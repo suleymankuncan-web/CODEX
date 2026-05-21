@@ -101,3 +101,16 @@ test('system flow links representative product routes to their backend API surfa
     'auth admin dashboard should link to user admin reads',
   )
 })
+
+test('system flow endpoint filters use the full API-to-endpoint edge set', () => {
+  const flow = readJson('docs/flows/store-ops-system-flow.json')
+
+  assert.ok(
+    flow.edges.apiToEndpoint.length > flow.hotspots.endpointsByFrontendCallCount.length,
+    'expected full endpoint edge coverage to be larger than the displayed hotspot sample',
+  )
+  assert.ok(
+    renderSystemFlowHtml(flow).includes('linkedEndpointIds'),
+    'backend endpoint filtering should use full API-to-endpoint edges instead of the truncated hotspot sample',
+  )
+})
