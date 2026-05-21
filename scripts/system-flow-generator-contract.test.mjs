@@ -90,6 +90,22 @@ test('system flow route IDs and source lines keep route shells distinct', () => 
   }
 })
 
+test('system flow resolves shell-local and conditional route components', () => {
+  const flow = readJson('docs/flows/store-ops-system-flow.json')
+
+  for (const [routePath, component] of [
+    ['/admin/session', 'SessionGate'],
+    ['/store', 'StoreHomePage'],
+    ['/store/home', 'StoreHomePage'],
+    ['/auth/login', 'AuthLoginPage'],
+  ]) {
+    const route = findRoute(flow, routePath)
+    assert.equal(route.component, component)
+    assert.equal(route.kind, 'page')
+    assert.ok(route.componentFile, `${routePath} should resolve a component file`)
+  }
+})
+
 test('system flow links representative product routes to their backend API surfaces', () => {
   const flow = readJson('docs/flows/store-ops-system-flow.json')
 

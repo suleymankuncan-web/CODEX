@@ -653,6 +653,7 @@ function parseFrontendRoutes(rootDir, routeLoaders) {
 
   for (const shell of shells) {
     const text = readFileSync(path.join(rootDir, shell.file), 'utf8')
+    const shellLocalComponents = parseShellLocalComponentImports(rootDir, shell.file, text)
     for (const block of collectRouteBlocks(text)) {
       const pathMatch = block.text.match(/\bpath="([^"]+)"/)
       if (!pathMatch) continue
@@ -660,6 +661,7 @@ function parseFrontendRoutes(rootDir, routeLoaders) {
       const routePath = pathMatch[1]
       const component = extractRouteComponent(block.text)
       const loader = component ? routeLoaders.get(component) : null
+      const localComponent = component ? shellLocalComponents.get(component) : null
       const roles = extractRouteRoles(block.text, shell.surface)
       const allowVm = /allowVm:\s*true/.test(block.text)
       const kind = component === 'Navigate' ? 'redirect' : component ? 'page' : 'unknown'
@@ -670,7 +672,7 @@ function parseFrontendRoutes(rootDir, routeLoaders) {
         domain: inferRouteDomain(routePath),
         kind,
         component: component ?? null,
-        componentFile: loader?.file ?? null,
+        componentFile: loader?.file ?? localComponent?.file ?? null,
         guard: extractRouteGuard(block.text, shell.surface),
         roles: allowVm ? uniqueSorted([...roles, 'VISUAL_MERCHANDISER']) : roles,
         source: {
@@ -682,6 +684,29 @@ function parseFrontendRoutes(rootDir, routeLoaders) {
   }
 
   return sortBy(routes, (route) => `${route.path}:${route.surface}`)
+}
+
+function parseShellLocalComponentImports(rootDir, shellFile, text) {
+  const imports = new Map()
+  const shellPath = path.join(rootDir, fromRepoPath(shellFile))
+  const importRegex = /^import\s+{((?:(?!^import\b)[\s\S])*?)}\s+from\s+['"]([^'"]+)['"]/gm
+
+  for (const match of text.matchAll(importRegex)) {
+    const specifier = match[2]
+    if (!specifier.startsWith('.')) continue
+
+    const resolved = resolveModulePath(path.dirname(shellPath), specifier)
+    if (!resolved) continue
+
+    for (const namedImport of parseNamedImports(match[1])) {
+      imports.set(namedImport.local, {
+        component: namedImport.local,
+        file: toRepoPath(rootDir, resolved),
+      })
+    }
+  }
+
+  return imports
 }
 
 function collectRouteBlocks(text) {
@@ -721,7 +746,15 @@ function extractRouteComponent(block) {
   const elementMatch = block.match(/element=\{\s*<([A-Z][A-Za-z0-9_]*)/)
   if (elementMatch) return elementMatch[1]
 
-  return null
+  return extractPrimaryJsxComponent(block)
+}
+
+function extractPrimaryJsxComponent(block) {
+  const components = [...block.matchAll(/<([A-Z][A-Za-z0-9_]*)\b/g)].map((match) => match[1])
+  const ignored = new Set(['Route'])
+  const primary = components.find((component) => !ignored.has(component) && component !== 'Navigate')
+
+  return primary ?? (components.includes('Navigate') ? 'Navigate' : null)
 }
 
 function extractRouteRoles(block, surface) {
