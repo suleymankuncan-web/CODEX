@@ -512,8 +512,7 @@ Candidate extraction order:
 2. Done: offboarding queue/detail read boundary for
    `listOffboardingRequests` and `getOffboardingRequestById`, only after the
    seller-code read slice proves the facade/delegation pattern.
-3. Later: store/personnel lookup read helpers, only if a concrete service
-   readability or product trigger appears.
+3. Done: store/personnel lookup read helpers.
 4. Parked/high-risk: seller-code create/approve/reject/resubmit commands and
    duplicate validation.
 5. Parked/high-risk: offboarding create/approve/reject/resubmit commands,
