@@ -664,7 +664,7 @@ function parseFrontendRoutes(rootDir, routeLoaders) {
       const allowVm = /allowVm:\s*true/.test(block.text)
       const kind = component === 'Navigate' ? 'redirect' : component ? 'page' : 'unknown'
       routes.push({
-        id: `route:${routePath}`,
+        id: `route:${shell.surface}:${routePath}`,
         path: routePath,
         surface: shell.surface,
         domain: inferRouteDomain(routePath),
@@ -681,7 +681,7 @@ function parseFrontendRoutes(rootDir, routeLoaders) {
     }
   }
 
-  return sortBy(routes, (route) => route.path)
+  return sortBy(routes, (route) => `${route.path}:${route.surface}`)
 }
 
 function collectRouteBlocks(text) {
@@ -690,13 +690,15 @@ function collectRouteBlocks(text) {
   let current = null
 
   lines.forEach((line, index) => {
-    if (!current && line.includes('<Route')) {
+    if (!current && /<Route(?:\s|\/|>|$)/.test(line)) {
       current = { lines: [], startLine: index + 1 }
     }
 
     if (current) {
       current.lines.push(line)
-      if (line.trim().endsWith('/>')) {
+      const isSingleLineRoute = current.lines.length === 1 && line.trim().endsWith('/>')
+      const isRouteClosingLine = line.trim() === '/>'
+      if (isSingleLineRoute || isRouteClosingLine) {
         blocks.push({
           startLine: current.startLine,
           text: current.lines.join('\n'),

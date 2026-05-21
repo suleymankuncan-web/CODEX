@@ -77,6 +77,19 @@ test('system flow captures the main route, API, controller, and OpenAPI layers',
   }
 })
 
+test('system flow route IDs and source lines keep route shells distinct', () => {
+  const flow = readJson('docs/flows/store-ops-system-flow.json')
+  const routeIds = flow.frontendRoutes.map((route) => route.id)
+
+  assert.equal(new Set(routeIds).size, routeIds.length, 'route IDs should be unique across app shells')
+
+  for (const route of flow.frontendRoutes) {
+    const sourceLine = readText(route.source.file).split(/\r?\n/)[route.source.line - 1] ?? ''
+    assert.match(sourceLine, /<Route(?:\s|\/|>|$)/, `${route.id} should point at a concrete Route tag`)
+    assert.doesNotMatch(sourceLine, /<Routes|<RouteTransitionFrame/, `${route.id} should not point at a route wrapper`)
+  }
+})
+
 test('system flow links representative product routes to their backend API surfaces', () => {
   const flow = readJson('docs/flows/store-ops-system-flow.json')
 
