@@ -16,6 +16,11 @@ The generator reads checked-in source only:
 - backend controller decorators,
 - OpenAPI paths.
 
+Route/API edges are static page reachability edges. The generator intentionally
+does not traverse dynamic route-preloader registries as page dependencies, so a
+login or session route does not inherit every lazy route module as false API
+fanout.
+
 It writes:
 
 - `store-ops-system-flow.json` for machine-readable analysis,

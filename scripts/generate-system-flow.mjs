@@ -662,6 +662,9 @@ function parseFrontendRoutes(rootDir, routeLoaders) {
       const component = extractRouteComponent(block.text)
       const loader = component ? routeLoaders.get(component) : null
       const localComponent = component ? shellLocalComponents.get(component) : null
+      const resolvedLocalComponentFile = component && localComponent?.file
+        ? resolveLocalRouteComponentFile(rootDir, localComponent.file, component, routeLoaders)
+        : null
       const roles = extractRouteRoles(block.text, shell.surface)
       const allowVm = /allowVm:\s*true/.test(block.text)
       const kind = component === 'Navigate' ? 'redirect' : component ? 'page' : 'unknown'
@@ -672,7 +675,7 @@ function parseFrontendRoutes(rootDir, routeLoaders) {
         domain: inferRouteDomain(routePath),
         kind,
         component: component ?? null,
-        componentFile: loader?.file ?? localComponent?.file ?? null,
+        componentFile: loader?.file ?? resolvedLocalComponentFile ?? localComponent?.file ?? null,
         guard: extractRouteGuard(block.text, shell.surface),
         roles: allowVm ? uniqueSorted([...roles, 'VISUAL_MERCHANDISER']) : roles,
         source: {
@@ -687,26 +690,46 @@ function parseFrontendRoutes(rootDir, routeLoaders) {
 }
 
 function parseShellLocalComponentImports(rootDir, shellFile, text) {
-  const imports = new Map()
-  const shellPath = path.join(rootDir, fromRepoPath(shellFile))
-  const importRegex = /^import\s+{((?:(?!^import\b)[\s\S])*?)}\s+from\s+['"]([^'"]+)['"]/gm
+  return parseLocalNamedComponentImports(rootDir, shellFile, text)
+}
 
-  for (const match of text.matchAll(importRegex)) {
-    const specifier = match[2]
+function parseLocalNamedComponentImports(rootDir, sourceFile, text, routeLoaders = new Map()) {
+  const imports = new Map()
+  const sourcePath = path.join(rootDir, fromRepoPath(sourceFile))
+
+  for (const statement of parseNamedImportStatements(text)) {
+    if (statement.isTypeOnly) continue
+    const specifier = statement.specifier
     if (!specifier.startsWith('.')) continue
 
-    const resolved = resolveModulePath(path.dirname(shellPath), specifier)
+    const resolved = resolveModulePath(path.dirname(sourcePath), specifier)
     if (!resolved) continue
 
-    for (const namedImport of parseNamedImports(match[1])) {
+    for (const namedImport of parseNamedImports(statement.imports)) {
+      const loader = routeLoaders.get(namedImport.imported)
       imports.set(namedImport.local, {
         component: namedImport.local,
-        file: toRepoPath(rootDir, resolved),
+        file: loader?.file ?? toRepoPath(rootDir, resolved),
       })
     }
   }
 
   return imports
+}
+
+function resolveLocalRouteComponentFile(rootDir, repoFile, component, routeLoaders) {
+  const file = path.join(rootDir, fromRepoPath(repoFile))
+  if (!existsSync(file)) return null
+
+  const text = readFileSync(file, 'utf8')
+  const body = extractFunctionBody(text, component)
+  if (!body) return null
+
+  const imports = parseLocalNamedComponentImports(rootDir, repoFile, text, routeLoaders)
+  const returnedComponent = extractPrimaryJsxComponent(body)
+  if (!returnedComponent) return null
+
+  return imports.get(returnedComponent)?.file ?? null
 }
 
 function collectRouteBlocks(text) {
@@ -940,14 +963,35 @@ function extractExportedFunctionRanges(text) {
 
   for (const match of text.matchAll(functionRegex)) {
     const start = match.index ?? 0
-    const bodyStart = text.indexOf('{', start)
-    if (bodyStart === -1) continue
-    const end = findBalancedEnd(text, bodyStart, '{', '}')
-    if (end === -1) continue
-    ranges.push({ name: match[1], start, end })
+    const bodyRange = extractFunctionBodyRange(text, start, match[0].length)
+    if (!bodyRange) continue
+    ranges.push({ name: match[1], start, end: bodyRange.end })
   }
 
   return ranges
+}
+
+function extractFunctionBody(text, functionName) {
+  const functionRegex = new RegExp(`(?:export\\s+)?function\\s+${escapeRegExp(functionName)}\\s*\\(`)
+  const match = functionRegex.exec(text)
+  if (!match) return null
+
+  const bodyRange = extractFunctionBodyRange(text, match.index, match[0].length)
+  return bodyRange ? text.slice(bodyRange.start, bodyRange.end + 1) : null
+}
+
+function extractFunctionBodyRange(text, functionStart, matchLength) {
+  const paramsOpen = functionStart + matchLength - 1
+  const paramsEnd = findBalancedEnd(text, paramsOpen, '(', ')')
+  if (paramsEnd === -1) return null
+
+  const bodyStart = text.indexOf('{', paramsEnd)
+  if (bodyStart === -1) return null
+
+  const bodyEnd = findBalancedEnd(text, bodyStart, '{', '}')
+  if (bodyEnd === -1) return null
+
+  return { start: bodyStart, end: bodyEnd }
 }
 
 function linkApiUsageToBackend(apiCalls, backendEndpoints, openApiEndpoints) {
@@ -1041,10 +1085,10 @@ function collectReachableFrontendFiles(rootDir, entryFile) {
 
 function extractRelativeImports(text) {
   const imports = []
-  const importRegex = /(?:from\s+['"](\.[^'"]+)['"]|import\s*\(\s*['"](\.[^'"]+)['"]\s*\))/g
+  const importRegex = /^import\s+(?!type\b)[\s\S]*?\s+from\s+['"](\.[^'"]+)['"]/gm
 
   for (const match of text.matchAll(importRegex)) {
-    imports.push(match[1] ?? match[2])
+    imports.push(match[1])
   }
 
   return imports
@@ -1052,14 +1096,15 @@ function extractRelativeImports(text) {
 
 function findImportedApiFunctionCallIds(rootDir, file, text, apiFunctionIndex) {
   const ids = new Set()
-  const importRegex = /^import\s+{((?:(?!^import\b)[\s\S])*?)}\s+from\s+['"]([^'"]*\/api)['"]/gm
 
-  for (const match of text.matchAll(importRegex)) {
-    const importedModule = resolveModulePath(path.dirname(file), match[2])
+  for (const statement of parseNamedImportStatements(text)) {
+    if (statement.isTypeOnly || !statement.specifier.endsWith('/api')) continue
+
+    const importedModule = resolveModulePath(path.dirname(file), statement.specifier)
     if (!importedModule) continue
     const importedModuleRepoPath = toRepoPath(rootDir, importedModule)
 
-    for (const importedName of parseNamedImports(match[1])) {
+    for (const importedName of parseNamedImports(statement.imports)) {
       const key = `${importedModuleRepoPath}#${importedName.imported}`
       const functionCallIds = apiFunctionIndex.get(key) ?? []
       if (!functionCallIds.length) continue
@@ -1075,6 +1120,21 @@ function findImportedApiFunctionCallIds(rootDir, file, text, apiFunctionIndex) {
   }
 
   return ids
+}
+
+function parseNamedImportStatements(text) {
+  const statements = []
+  const importRegex = /^import\s+(type\s+)?{([\s\S]*?)}\s+from\s+['"]([^'"]+)['"]/gm
+
+  for (const match of text.matchAll(importRegex)) {
+    statements.push({
+      imports: match[2],
+      isTypeOnly: Boolean(match[1]),
+      specifier: match[3],
+    })
+  }
+
+  return statements
 }
 
 function parseNamedImports(importText) {
