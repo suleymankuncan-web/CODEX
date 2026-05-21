@@ -550,23 +550,31 @@ Current inventory:
 
 - `docs/plans/frontend-typescript-strictness-inventory-v1.md` records the
   measured flag impact from `origin/main`.
-- Temporary app and node `--strict` checks pass with zero errors.
-- `noUncheckedIndexedAccess` currently produces 25 app errors.
+- PR #364 enabled `strict: true` in the frontend app and node TypeScript
+  configs after temporary strict checks passed with zero errors.
+- PR #365 resolved the measured `noUncheckedIndexedAccess` errors and enabled
+  the flag in the frontend app and node TypeScript configs.
 - `exactOptionalPropertyTypes` currently produces 66 app errors.
-- The first safe implementation slice is a config-only `strict: true` PR.
+- The next strictness implementation is not a blind flag flip:
+  `exactOptionalPropertyTypes` needs an optional payload/state pattern decision
+  before code changes.
 
 Candidate flag order:
 
-1. `strictNullChecks` inventory.
-2. `noUncheckedIndexedAccess` inventory.
-3. `exactOptionalPropertyTypes` inventory.
-4. `noImplicitAny` inventory if not already covered by current build behavior.
+1. Done: `strict: true` config enablement.
+2. Done: `noUncheckedIndexedAccess` guard fixes and config enablement.
+3. Parked: `exactOptionalPropertyTypes` pattern decision and smaller domain
+   slices.
+4. `noImplicitAny` is already covered by current strict build behavior.
 
 Implementation pattern:
 
-- [ ] Run the proposed flag locally with no code changes.
-- [ ] Record error categories by domain.
-- [ ] Fix only one domain per PR if the flag is enabled.
+- [x] Run the proposed strict and indexed-access flags locally before changing
+  config.
+- [x] Record error categories by domain.
+- [x] Enable safe flags only after the full compiler/build gates pass.
+- [ ] For `exactOptionalPropertyTypes`, agree on optional payload/state helper
+  patterns before touching API wrappers or dense pages.
 - [ ] Prefer generated API types and local model narrowing over broad casts.
 
 Verification:
@@ -696,12 +704,12 @@ input changes priority.
    competition decomposition for a concrete product/reviewability reason.
 17. Master-data bootstrap frontend model/section split PR, if product work
    touches master-data bootstrap.
-18. Done/current docs line: TypeScript strictness inventory PR.
-19. Next safe strictness implementation: config-only `strict: true` PR for
-    frontend app and node configs.
-20. Later strictness domain PR: `noUncheckedIndexedAccess` helpers/navigation
-    first if the config-only strict PR lands cleanly.
-21. External evidence PRs only when real provider inputs exist.
+18. Done: TypeScript strictness inventory PR.
+19. Done: config-only `strict: true` PR for frontend app and node configs.
+20. Done: `noUncheckedIndexedAccess` implementation and config enablement PR.
+21. Next local auth/security guard candidate: authorization matrix drift guard
+    contract, docs/script only.
+22. External evidence PRs only when real provider inputs exist.
 
 Batch rule:
 
