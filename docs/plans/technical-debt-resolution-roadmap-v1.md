@@ -507,7 +507,7 @@ Safe first slice:
 
 Candidate extraction order:
 
-1. Next safe candidate: seller-code queue/detail read boundary for
+1. Done: seller-code queue/detail read boundary for
    `listSellerCodeRequests` and `getSellerCodeRequestById`.
 2. Later: offboarding queue/detail read boundary for
    `listOffboardingRequests` and `getOffboardingRequestById`, only after the
