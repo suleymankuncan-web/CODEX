@@ -505,6 +505,16 @@ Safe first slice:
 - Current inventory:
   `docs/plans/workforce-request-repository-boundary-inventory-v1.md`.
 
+Current status:
+
+- Safe read-boundary pass completed through PR #380 through PR #383.
+- Extracted boundaries include seller-code queue/detail reads, offboarding
+  queue/detail reads, and store/personnel lookup helper reads.
+- `WorkforceRequestRepository` is now roughly 1282 physical lines and mostly
+  owns command/write/status/audit/access-lifecycle behavior.
+- Park this line unless there is a concrete invariant/test decision for
+  seller-code commands or offboarding approval/access closure.
+
 Candidate extraction order:
 
 1. Done: seller-code queue/detail read boundary for
