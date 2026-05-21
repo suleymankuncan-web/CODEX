@@ -16,11 +16,13 @@ export const adminOperationsTr = {
   'adminOperations.metric.snapshots': 'Snapshot',
   'adminOperations.metric.external': 'Dış kanıt',
   'adminOperations.metric.workforce': 'Workforce',
+  'adminOperations.metric.workflow': 'Workflow',
   'adminOperations.importMetricNote': '{count} import batch içinde aksiyon baskısı',
   'adminOperations.dataQualityMetricNote': '{count} bloke batch içinde önizleme hata satırı',
   'adminOperations.snapshotMetricNote': '{count} snapshot çalışması içinde aksiyon baskısı',
   'adminOperations.externalMetricNote': 'Gerçek token/provider/restore inputu bekleyen kanıtlar',
   'adminOperations.workforceMetricNote': '{seller} seller-code, {offboarding} offboarding bekliyor',
+  'adminOperations.workflowMetricNote': '{total} workflow kaydı, {high} yüksek aciliyetli',
 
   'adminOperations.actionEyebrow': 'Sıradaki hareket',
   'adminOperations.actionTitle': 'Operatör aksiyon listesi',
@@ -46,6 +48,10 @@ export const adminOperationsTr = {
   'adminOperations.actionWorkforceSubtitle': 'Seller-code / offboarding',
   'adminOperations.actionWorkforceReason':
     '{seller} seller-code ve {offboarding} offboarding isteği HR incelemesi bekliyor.',
+  'adminOperations.actionWorkflowTitle': 'Workflow inbox aç',
+  'adminOperations.actionWorkflowSubtitle': 'Ortak aksiyon kuyruğu',
+  'adminOperations.actionWorkflowReason':
+    '{total} workflow kaydı görünür; {high} tanesi yüksek aciliyetli.',
   'adminOperations.actionExternalTitle': 'Dış kanıt inputlarını toparla',
   'adminOperations.actionExternalSubtitle': 'Auth / provider / restore',
   'adminOperations.actionExternalReason':
@@ -125,7 +131,7 @@ export const adminOperationsTr = {
   'adminOperations.coverage.workforceSource': 'admin inbox / store approvals',
   'adminOperations.coverage.workflowTitle': 'Workflow Inbox',
   'adminOperations.coverage.workflowCopy':
-    'Inbox görünürlüğü read queue olarak kalmalı; overdue, unseen ve urgency metriği ayrı küçük slice ile ele alınmalı.',
+    'Workflow inbox artık mevcut read endpointinden canlı count, urgency ve önizleme sinyali olarak okunuyor.',
   'adminOperations.coverage.workflowSource': 'workflow inbox',
   'adminOperations.coverage.kpiTitle': 'KPI / Rankings',
   'adminOperations.coverage.kpiCopy':
@@ -186,6 +192,23 @@ export const adminOperationsTr = {
   'adminOperations.workforceOffboardingReason': 'Offboarding isteği HR onayı bekliyor.',
   'adminOperations.openInbox': 'Admin inbox aç',
 
+  'adminOperations.workflowEyebrow': 'Ortak kuyruk',
+  'adminOperations.workflowTitle': 'Workflow inbox pressure',
+  'adminOperations.workflowCopy':
+    'Target approval, checklist acknowledgement ve KPI exception kayıtları mevcut workflow inbox read endpointinden yükseltilir.',
+  'adminOperations.workflowNeedsAttention': 'Aksiyon bekleyen',
+  'adminOperations.workflowHighUrgency': 'Yüksek aciliyet',
+  'adminOperations.workflowTotal': 'Toplam workflow baskısı',
+  'adminOperations.workflowQueueTitle': 'Workflow aksiyon önizlemesi',
+  'adminOperations.workflowQueueEmpty': 'Workflow inbox içinde görünen aksiyon yok.',
+  'adminOperations.workflowItemMeta': '{source} · {urgency}',
+  'adminOperations.workflowSource.target': 'target approval',
+  'adminOperations.workflowSource.checklist': 'checklist receipt',
+  'adminOperations.workflowSource.kpi': 'KPI exception',
+  'adminOperations.workflowUrgency.high': 'yüksek',
+  'adminOperations.workflowUrgency.medium': 'orta',
+  'adminOperations.workflowUrgency.low': 'düşük',
+
   'adminOperations.ready': 'Hazır',
   'adminOperations.controlled': 'Kontrollü',
   'adminOperations.attention': 'Dikkat',
@@ -240,11 +263,13 @@ export const adminOperationsEn: Record<keyof typeof adminOperationsTr, string> =
   'adminOperations.metric.snapshots': 'Snapshot',
   'adminOperations.metric.external': 'External evidence',
   'adminOperations.metric.workforce': 'Workforce',
+  'adminOperations.metric.workflow': 'Workflow',
   'adminOperations.importMetricNote': 'Action pressure across {count} import batches',
   'adminOperations.dataQualityMetricNote': 'Preview error rows across {count} blocked batches',
   'adminOperations.snapshotMetricNote': 'Action pressure across {count} snapshot runs',
   'adminOperations.externalMetricNote': 'Evidence waiting for real token/provider/restore inputs',
   'adminOperations.workforceMetricNote': '{seller} seller-code, {offboarding} offboarding waiting',
+  'adminOperations.workflowMetricNote': '{total} workflow items, {high} high urgency',
 
   'adminOperations.actionEyebrow': 'Next move',
   'adminOperations.actionTitle': 'Operator action list',
@@ -270,6 +295,10 @@ export const adminOperationsEn: Record<keyof typeof adminOperationsTr, string> =
   'adminOperations.actionWorkforceSubtitle': 'Seller-code / offboarding',
   'adminOperations.actionWorkforceReason':
     '{seller} seller-code and {offboarding} offboarding requests are waiting for HR review.',
+  'adminOperations.actionWorkflowTitle': 'Open workflow inbox',
+  'adminOperations.actionWorkflowSubtitle': 'Shared action queue',
+  'adminOperations.actionWorkflowReason':
+    '{total} workflow items are visible; {high} are high urgency.',
   'adminOperations.actionExternalTitle': 'Gather external evidence inputs',
   'adminOperations.actionExternalSubtitle': 'Auth / provider / restore',
   'adminOperations.actionExternalReason':
@@ -349,7 +378,7 @@ export const adminOperationsEn: Record<keyof typeof adminOperationsTr, string> =
   'adminOperations.coverage.workforceSource': 'admin inbox / store approvals',
   'adminOperations.coverage.workflowTitle': 'Workflow Inbox',
   'adminOperations.coverage.workflowCopy':
-    'Inbox visibility should remain a read queue; overdue, unseen, and urgency metrics need a separate small slice.',
+    'Workflow inbox is now read live from the existing endpoint as count, urgency, and preview signal.',
   'adminOperations.coverage.workflowSource': 'workflow inbox',
   'adminOperations.coverage.kpiTitle': 'KPI / Rankings',
   'adminOperations.coverage.kpiCopy':
@@ -409,6 +438,23 @@ export const adminOperationsEn: Record<keyof typeof adminOperationsTr, string> =
   'adminOperations.workforceOffboardingMeta': '{store} · offboarding',
   'adminOperations.workforceOffboardingReason': 'An offboarding request is waiting for HR approval.',
   'adminOperations.openInbox': 'Open admin inbox',
+
+  'adminOperations.workflowEyebrow': 'Shared Queue',
+  'adminOperations.workflowTitle': 'Workflow inbox pressure',
+  'adminOperations.workflowCopy':
+    'Target approval, checklist acknowledgement, and KPI exception items are elevated from the existing workflow inbox read endpoint.',
+  'adminOperations.workflowNeedsAttention': 'Needs attention',
+  'adminOperations.workflowHighUrgency': 'High urgency',
+  'adminOperations.workflowTotal': 'Total workflow pressure',
+  'adminOperations.workflowQueueTitle': 'Workflow action preview',
+  'adminOperations.workflowQueueEmpty': 'No visible actions in the workflow inbox.',
+  'adminOperations.workflowItemMeta': '{source} · {urgency}',
+  'adminOperations.workflowSource.target': 'target approval',
+  'adminOperations.workflowSource.checklist': 'checklist receipt',
+  'adminOperations.workflowSource.kpi': 'KPI exception',
+  'adminOperations.workflowUrgency.high': 'high',
+  'adminOperations.workflowUrgency.medium': 'medium',
+  'adminOperations.workflowUrgency.low': 'low',
 
   'adminOperations.ready': 'Ready',
   'adminOperations.controlled': 'Controlled',

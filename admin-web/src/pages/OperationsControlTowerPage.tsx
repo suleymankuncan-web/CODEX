@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import {
   Activity,
   DatabaseZap,
+  Inbox,
   Layers3,
   ServerCog,
   ShieldCheck,
@@ -37,11 +38,14 @@ import {
   getOffboardingRequests,
   getSellerCodeRequests,
 } from '../features/workforce/api'
+import { getWorkflowInbox } from '../features/workflow/api'
 import { formatDateTime, getErrorMessage, mapHealthTone } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 import { buildOperatorActions } from './operations-operator-action-model'
 import { OperatorActionListPanel } from './operations-operator-action-list'
 import { MetricCoveragePanel } from './operations-metric-coverage-panel'
+import { summarizeWorkflowInboxPressure } from './operations-workflow-signal-model'
+import { WorkflowSignalPanel } from './operations-workflow-signal-panel'
 import { summarizeWorkforcePressure } from './operations-workforce-signal-model'
 import { WorkforceSignalPanel } from './operations-workforce-signal-panel'
 
@@ -146,12 +150,19 @@ export function OperationsControlTowerPage() {
     queryFn: () => getOffboardingRequests({ status: 'pending_hr_approval' }),
     staleTime: SIGNAL_STALE_TIME_MS,
   })
+  const workflowInboxQuery = useQuery({
+    queryKey: ['operations-workflow-inbox'],
+    queryFn: getWorkflowInbox,
+    staleTime: SIGNAL_STALE_TIME_MS,
+  })
 
   const importNeedsActionItems = importNeedsActionQuery.data?.items ?? []
   const snapshotNeedsActionItems = snapshotNeedsActionQuery.data?.items ?? []
   const sellerCodeItems = sellerCodeRequestsQuery.data?.items ?? []
   const offboardingItems = offboardingRequestsQuery.data?.items ?? []
+  const workflowItems = workflowInboxQuery.data?.items ?? []
   const hasWorkforceSignalError = sellerCodeRequestsQuery.isError || offboardingRequestsQuery.isError
+  const hasWorkflowSignalError = workflowInboxQuery.isError
   const isInitialLoading = [
     healthQuery,
     importOverviewQuery,
@@ -160,6 +171,7 @@ export function OperationsControlTowerPage() {
     snapshotNeedsActionQuery,
     sellerCodeRequestsQuery,
     offboardingRequestsQuery,
+    workflowInboxQuery,
   ].every((query) => query.isLoading)
 
   const importActionCount = countImportActions(importOverviewQuery.data)
@@ -173,15 +185,21 @@ export function OperationsControlTowerPage() {
     offboardingRequests: offboardingRequestsQuery.data,
     sellerCodeRequests: sellerCodeRequestsQuery.data,
   })
+  const workflowPressure = summarizeWorkflowInboxPressure({
+    inbox: workflowInboxQuery.data,
+  })
   const workforcePressureTotal = hasWorkforceSignalError ? 0 : workforcePressure.total
-  const operationalPressure = importActionCount + snapshotActionCount + workforcePressureTotal
+  const workflowPressureTotal = hasWorkflowSignalError ? 0 : workflowPressure.needsAttentionCount
+  const operationalPressure =
+    importActionCount + snapshotActionCount + workforcePressureTotal + workflowPressureTotal
   const hasSignalError =
     healthQuery.isError ||
     importOverviewQuery.isError ||
     importNeedsActionQuery.isError ||
     snapshotOverviewQuery.isError ||
     snapshotNeedsActionQuery.isError ||
-    hasWorkforceSignalError
+    hasWorkforceSignalError ||
+    hasWorkflowSignalError
   const readiness = resolveReadinessStatus({
     health: healthQuery.data,
     hasSignalError,
@@ -192,9 +210,11 @@ export function OperationsControlTowerPage() {
     dataQuality,
     hasSignalError,
     hasWorkforceSignalError,
+    hasWorkflowSignalError,
     importActionCount,
     snapshotActionCount,
     t,
+    workflowPressure,
     workforcePressure,
   })
 
@@ -271,6 +291,20 @@ export function OperationsControlTowerPage() {
         icon: <Users size={18} />,
         tone: hasWorkforceSignalError ? 'warning' : workforcePressure.total > 0 ? 'warning' : 'calm',
       },
+      {
+        title: t('adminOperations.metric.workflow'),
+        value: hasWorkflowSignalError
+          ? t('adminOperations.unavailable')
+          : String(workflowPressure.needsAttentionCount),
+        note: hasWorkflowSignalError
+          ? getSignalFallbackCopy(hasWorkflowSignalError, workflowInboxQuery.error, t)
+          : t('adminOperations.workflowMetricNote', {
+              high: workflowPressure.highUrgencyCount,
+              total: workflowPressure.total,
+            }),
+        icon: <Inbox size={18} />,
+        tone: hasWorkflowSignalError ? 'warning' : workflowPressure.total > 0 ? 'warning' : 'calm',
+      },
     ] satisfies Array<{
       title: string
       value: string
@@ -295,11 +329,16 @@ export function OperationsControlTowerPage() {
     snapshotOverviewQuery.error,
     t,
     hasWorkforceSignalError,
+    hasWorkflowSignalError,
     sellerCodeRequestsQuery.error,
     offboardingRequestsQuery.error,
+    workflowInboxQuery.error,
     workforcePressure.offboardingCount,
     workforcePressure.sellerCodeCount,
     workforcePressure.total,
+    workflowPressure.highUrgencyCount,
+    workflowPressure.needsAttentionCount,
+    workflowPressure.total,
   ])
 
   if (isInitialLoading) {
@@ -355,6 +394,14 @@ export function OperationsControlTowerPage() {
         offboardingItems={offboardingItems}
         pressure={workforcePressure}
         sellerCodeItems={sellerCodeItems}
+        t={t}
+      />
+
+      <WorkflowSignalPanel
+        error={workflowInboxQuery.error}
+        isError={workflowInboxQuery.isError}
+        items={workflowItems}
+        pressure={workflowPressure}
         t={t}
       />
 

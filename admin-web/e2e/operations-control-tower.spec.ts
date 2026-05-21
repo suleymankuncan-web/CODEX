@@ -32,6 +32,7 @@ test('operations control tower composes read-only readiness signals', async ({ p
   await expect(main.getByRole('heading', { name: 'Snapshot', exact: true })).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Dış kanıt', exact: true })).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Workforce', exact: true })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Workflow', exact: true })).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Operatör aksiyon listesi' })).toBeVisible()
   await expect(main.getByText('Import kuyruğunu aç')).toBeVisible()
   await expect(main.getByText('Veri kalitesi sinyalini doğrula')).toBeVisible()
@@ -45,7 +46,7 @@ test('operations control tower composes read-only readiness signals', async ({ p
   await expect(main.getByText('Offboarding isteği', { exact: true })).toBeVisible()
   await expect(main.getByText('mağaza', { exact: true })).toBeVisible()
   await expect(main.getByText('batch-ops-1')).toBeVisible()
-  await expect(main.getByText('snapshot-ops-1')).toBeVisible()
+  await expect(main.getByText('snapshot-ops-1', { exact: true })).toBeVisible()
   await expect(main.getByText('55555555-5555-4555-8555-555555555555')).toBeVisible()
   await expect(main.getByText('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee')).toBeVisible()
   await expect(main.getByText('Staging auth/session kanıtı')).toBeVisible()
@@ -58,7 +59,7 @@ test('operations control tower composes read-only readiness signals', async ({ p
   await expect(main.getByText('Planlı').first()).toBeVisible()
   await expect(main.getByRole('link', { name: /Entegrasyon panelini aç/i })).toHaveAttribute('href', '/admin/integrations')
   await expect(main.getByRole('link', { name: /Workforce Requests/i })).toHaveAttribute('href', '/admin/inbox')
-  await expect(main.getByRole('link', { name: /Admin inbox aç/i })).toHaveAttribute('href', '/admin/inbox')
+  await expect(main.getByRole('link', { name: /Admin inbox aç/i }).first()).toHaveAttribute('href', '/admin/inbox')
   await expect(main.getByRole('link', { name: /Snapshot operasyonlarını aç/i })).toHaveAttribute('href', '/admin/snapshots')
   await expect(page.locator('body')).not.toContainText('Ãƒ')
 
@@ -72,6 +73,7 @@ test('operations control tower composes read-only readiness signals', async ({ p
   await expect(main.getByText('Verify data quality signal')).toBeVisible()
   await expect(main.getByText('Open snapshot queue')).toBeVisible()
   await expect(main.getByText('Open workforce queue')).toBeVisible()
+  await expect(main.getByText('Open workflow inbox')).toBeVisible()
   await expect(main.getByText('Gather external evidence inputs')).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Data quality', exact: true })).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Data quality and mapping signal' })).toBeVisible()
@@ -80,11 +82,16 @@ test('operations control tower composes read-only readiness signals', async ({ p
   await expect(main.getByText('store', { exact: true })).toBeVisible()
   await expect(main.getByText('External evidence', { exact: true })).toBeVisible()
   await expect(main.getByText('Workforce', { exact: true })).toBeVisible()
-  await expect(page.locator('.accent-chip').filter({ hasText: 'Operator pressure' })).toContainText('108')
+  await expect(main.getByText('Workflow', { exact: true })).toBeVisible()
+  await expect(page.locator('.accent-chip').filter({ hasText: 'Operator pressure' })).toContainText('111')
   await expect(page.locator('.metric-card').filter({ hasText: 'Workforce' })).toContainText('104')
+  await expect(page.locator('.metric-card').filter({ hasText: 'Workflow' })).toContainText('3')
   await expect(page.locator('.key-item').filter({ hasText: 'Seller-code requests' })).toContainText('51')
   await expect(page.locator('.key-item').filter({ hasText: 'Offboarding requests' })).toContainText('53')
   await expect(page.locator('.key-item').filter({ hasText: 'Total workforce pressure' })).toContainText('104')
+  await expect(main.getByRole('heading', { name: 'Workflow inbox pressure' })).toBeVisible()
+  await expect(page.locator('.key-item').filter({ hasText: 'High urgency' })).toContainText('1')
+  await expect(page.locator('.key-item').filter({ hasText: 'Total workflow pressure' })).toContainText('3')
   await expect(main.getByText('Staging auth/session evidence')).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Live, planned, and input-blocked signals' })).toBeVisible()
   await expect(main.getByText('Auth / Role / Scope')).toBeVisible()
@@ -179,8 +186,32 @@ test('operations workforce metric treats request errors as unavailable', async (
   await expect(workforceMetric).toContainText('Unavailable')
   await expect(workforcePanel.getByText('Unavailable', { exact: true })).toBeVisible()
   await expect(workforcePanel.locator('.inline-state-warning')).toBeVisible()
-  await expect(page.locator('.accent-chip').filter({ hasText: 'Operator pressure' })).toContainText('4')
+  await expect(page.locator('.accent-chip').filter({ hasText: 'Operator pressure' })).toContainText('7')
   await expect(main.getByText('Open workforce queue')).toHaveCount(0)
+})
+
+test('operations workflow metric treats inbox errors as unavailable', async ({ page }) => {
+  await setInitialLocale(page, 'en')
+  await page.unroute('**/api/workflow/inbox')
+  await page.route('**/api/workflow/inbox', async (route) => {
+    await route.fulfill({
+      status: 503,
+      json: { message: 'Workflow inbox unavailable' },
+    })
+  })
+
+  await page.goto('/admin/operations')
+
+  const main = page.getByRole('main')
+  const workflowMetric = page.locator('.metric-card').filter({ hasText: 'Workflow' })
+  const workflowPanel = page.locator('.panel').filter({ hasText: 'Workflow inbox pressure' })
+  await expect(main.getByText('Attention', { exact: true }).first()).toBeVisible()
+  await expect(workflowMetric).toHaveClass(/metric-card-warning/)
+  await expect(workflowMetric).toContainText('Unavailable')
+  await expect(workflowPanel.getByText('Unavailable', { exact: true })).toBeVisible()
+  await expect(workflowPanel.locator('.inline-state-warning')).toBeVisible()
+  await expect(page.locator('.accent-chip').filter({ hasText: 'Operator pressure' })).toContainText('108')
+  await expect(main.getByText('Open workflow inbox')).toHaveCount(0)
 })
 
 test('operations control tower keeps mobile width bounded', async ({ page }) => {
@@ -224,6 +255,10 @@ async function routeOperationsApi(page: Page, sessionFixture: typeof operationsS
 
   await page.route('**/api/workforce/offboarding-requests?**', async (route) => {
     await route.fulfill({ json: offboardingRequestsFixture })
+  })
+
+  await page.route('**/api/workflow/inbox', async (route) => {
+    await route.fulfill({ json: workflowInboxFixture })
   })
 }
 
@@ -424,6 +459,80 @@ const snapshotNeedsActionFixture = {
     count: 1,
     total: 1,
     limit: 4,
+    offset: 0,
+  },
+}
+
+const workflowInboxFixture = {
+  items: [
+    {
+      itemType: 'approval',
+      sourceType: 'target_distribution_request',
+      sourceId: 'target-request-ops-1',
+      title: 'May Target Distribution',
+      summary: 'Marmara Park target distribution is waiting for region approval.',
+      companyId: '00000000-0000-0000-0000-000000000001',
+      regionId: '00000000-0000-0000-0000-000000000010',
+      storeId: '00000000-0000-0000-0000-000000000100',
+      storeName: 'Marmara Park',
+      workflowStatus: 'pending_region_approval',
+      inboxStatus: 'needs_attention',
+      urgency: 'medium',
+      createdAt: '2026-05-21T07:30:00.000Z',
+      needsAttentionAt: '2026-05-21T07:30:00.000Z',
+      actorRole: 'REGION_APPROVER',
+      primaryActionLabel: 'Approve request',
+      secondaryActionLabel: 'Open detail',
+      deepLink: '/admin/targets',
+      historyPreview: 'Submitted by store manager',
+    },
+    {
+      itemType: 'task',
+      sourceType: 'kpi_exception',
+      sourceId: 'snapshot-ops-1:store-1:kpi-1',
+      title: 'Conversion off track',
+      summary: 'Marmara Park conversion needs KPI exception follow-up.',
+      companyId: '00000000-0000-0000-0000-000000000001',
+      regionId: '00000000-0000-0000-0000-000000000010',
+      storeId: '00000000-0000-0000-0000-000000000100',
+      storeName: 'Marmara Park',
+      workflowStatus: 'off_track',
+      inboxStatus: 'needs_attention',
+      urgency: 'high',
+      createdAt: '2026-05-20T21:00:00.000Z',
+      needsAttentionAt: '2026-05-20T21:00:00.000Z',
+      actorRole: 'STORE_MANAGER',
+      primaryActionLabel: 'Open KPI detail',
+      secondaryActionLabel: 'Review exception',
+      deepLink: '/admin/reports/kpis/snapshot-ops-1',
+      historyPreview: 'Achievement 62%',
+    },
+    {
+      itemType: 'acknowledgement',
+      sourceType: 'checklist_receipt',
+      sourceId: 'checklist-instance-ops-1',
+      title: 'BM visit result',
+      summary: 'Marmara Park completed checklist is waiting for acknowledgement.',
+      companyId: '00000000-0000-0000-0000-000000000001',
+      regionId: '00000000-0000-0000-0000-000000000010',
+      storeId: '00000000-0000-0000-0000-000000000100',
+      storeName: 'Marmara Park',
+      workflowStatus: 'completed',
+      inboxStatus: 'needs_attention',
+      urgency: 'medium',
+      createdAt: '2026-05-20T09:30:00.000Z',
+      needsAttentionAt: '2026-05-20T09:30:00.000Z',
+      actorRole: 'STORE_MANAGER',
+      primaryActionLabel: 'Acknowledge',
+      secondaryActionLabel: 'Open checklist receipt',
+      deepLink: '/store/checklists?tab=inbox&result=checklist-instance-ops-1',
+      historyPreview: 'BM score 82',
+    },
+  ],
+  meta: {
+    count: 3,
+    total: 3,
+    limit: 50,
     offset: 0,
   },
 }
