@@ -108,6 +108,20 @@ Recommended first code/product slice:
   read endpoints, or place those signals in the first operations control tower
   V1 surface.
 
+Current status:
+
+- The first read-only product slice places a data-quality snapshot in
+  `/admin/operations`.
+- It derives the signal only from existing import needs-action preview,
+  import overview, and snapshot overview data.
+- It shows preview error-row pressure, visible mapping blocker entity types,
+  blocked import batches, and snapshot issue pressure.
+- It does not add a backend aggregation endpoint, data-quality workflow, DB
+  migration, API response shape change, mapping approval behavior, import retry
+  behavior, scoring change, or snapshot rerun behavior.
+- Evidence:
+  `docs/evidence/product-progress/2026-05-21-operations-data-quality-signal-v1.md`.
+
 Verification later:
 
 - admin lint/build,

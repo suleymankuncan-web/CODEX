@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #367 plus the current Operations Control Tower V1 slice, and is the
+PR #368 plus the current Operations Data Quality Signal V1 slice, and is the
 starting point for continuing in a fresh window.
 
 ## Active Workspace
@@ -27,14 +27,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-21, `origin/main` has been fetched through PR #367.
+As of 2026-05-21, `origin/main` has been fetched through PR #368.
 The root checkout may still be on a non-main local branch with unrelated
 handoff noise; do not assume the root working tree is clean.
 
 Latest merge on main:
 
 ```text
-4ecbfd46 chore: enable exact optional frontend types
+1a1aa898 feat: add operations control tower
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -121,6 +121,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #365 `chore: enable indexed access checks`
 - PR #366 `docs: guard authorization matrix drift`
 - PR #367 `chore: enable exact optional frontend types`
+- PR #368 `feat: add operations control tower`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -347,6 +348,13 @@ Latest technical assessment decision:
   `docs/evidence/product-progress/2026-05-21-operations-control-tower-v1.md`.
   No backend aggregation endpoint, writes, DB migration, auth model change, API
   response shape change, or provider configuration is included.
+- Operations Data Quality Signal V1 is the current small follow-up slice: it
+  adds a read-only data-quality snapshot to `/admin/operations` using existing
+  import needs-action preview, import overview, and snapshot overview data
+  only. Evidence:
+  `docs/evidence/product-progress/2026-05-21-operations-data-quality-signal-v1.md`.
+  No new backend endpoint, DB/API/auth change, import retry, mapping approval,
+  scoring, snapshot rerun, or data-quality workflow is included.
 
 ## Sokrates
 
@@ -671,6 +679,12 @@ Important outcome:
   import, snapshot, and blocker signals only. Keep backend aggregation,
   provider config, alert delivery wiring, writes, DB/schema changes, and auth
   model changes parked until separately scoped.
+- Cross-domain data-quality V1 now has a first read-only control-tower slice:
+  `/admin/operations` summarizes preview error-row pressure, visible mapping
+  blocker entity types, blocked import batches, and snapshot issue pressure
+  from existing import/snapshot responses only. Dedicated data-quality
+  dashboards, mapping workflows, backend aggregation, and DB/API changes stay
+  parked.
 
 ## Next Best Work
 
@@ -750,6 +764,10 @@ Product Progress Plan V1 status:
   read-only `SUPER_ADMIN` operator surface over existing health/import/snapshot
   signals and external blocker status. Evidence:
   `docs/evidence/product-progress/2026-05-21-operations-control-tower-v1.md`.
+- The current Operations Data Quality Signal V1 slice adds a read-only
+  data-quality snapshot to `/admin/operations` using existing import and
+  snapshot signals. Evidence:
+  `docs/evidence/product-progress/2026-05-21-operations-data-quality-signal-v1.md`.
 
 The `/store/approvals` first pass has started:
 

@@ -12,9 +12,11 @@ export const adminOperationsTr = {
 
   'adminOperations.metric.backend': 'Backend',
   'adminOperations.metric.imports': 'Import',
+  'adminOperations.metric.dataQuality': 'Veri kalitesi',
   'adminOperations.metric.snapshots': 'Snapshot',
   'adminOperations.metric.external': 'Dış kanıt',
   'adminOperations.importMetricNote': '{count} import batch içinde aksiyon baskısı',
+  'adminOperations.dataQualityMetricNote': '{count} bloke batch içinde önizleme hata satırı',
   'adminOperations.snapshotMetricNote': '{count} snapshot çalışması içinde aksiyon baskısı',
   'adminOperations.externalMetricNote': 'Gerçek token/provider/restore inputu bekleyen kanıtlar',
 
@@ -61,6 +63,20 @@ export const adminOperationsTr = {
   'adminOperations.importQueueEmpty': 'Import needs-action kuyruğunda görünen kayıt yok.',
   'adminOperations.importQueueMeta': '{entity} · {errors} hata',
   'adminOperations.openIntegrations': 'Entegrasyon panelini aç',
+
+  'adminOperations.dataQualityEyebrow': 'Veri güveni',
+  'adminOperations.dataQualityTitle': 'Data quality ve mapping sinyali',
+  'adminOperations.dataQualityCopy':
+    'Bu kart yeni workflow başlatmaz; import önizlemesi ve snapshot overview içindeki mevcut read-only risk sinyallerini toplar.',
+  'adminOperations.previewErrorRows': 'Önizleme hata satırı',
+  'adminOperations.mappingBlockers': 'Mapping blocker',
+  'adminOperations.blockedImportBatches': 'Bloke import batch',
+  'adminOperations.snapshotIssues': 'Snapshot issue',
+  'adminOperations.noMappingBlockers': 'görünen blocker yok',
+  'adminOperations.dataQualitySourceCopy':
+    'Kaynak kanıt import detail, mapping queue ve snapshot sayfalarındadır; kontrol kulesi sadece bu sinyali yükseltir.',
+  'adminOperations.entity.employee': 'personel',
+  'adminOperations.entity.store': 'mağaza',
 
   'adminOperations.snapshotEyebrow': 'Rapor tazeliği',
   'adminOperations.snapshotTitle': 'Snapshot health ve freshness',
@@ -123,9 +139,11 @@ export const adminOperationsEn: Record<keyof typeof adminOperationsTr, string> =
 
   'adminOperations.metric.backend': 'Backend',
   'adminOperations.metric.imports': 'Import',
+  'adminOperations.metric.dataQuality': 'Data quality',
   'adminOperations.metric.snapshots': 'Snapshot',
   'adminOperations.metric.external': 'External evidence',
   'adminOperations.importMetricNote': 'Action pressure across {count} import batches',
+  'adminOperations.dataQualityMetricNote': 'Preview error rows across {count} blocked batches',
   'adminOperations.snapshotMetricNote': 'Action pressure across {count} snapshot runs',
   'adminOperations.externalMetricNote': 'Evidence waiting for real token/provider/restore inputs',
 
@@ -172,6 +190,20 @@ export const adminOperationsEn: Record<keyof typeof adminOperationsTr, string> =
   'adminOperations.importQueueEmpty': 'No visible items in the import needs-action queue.',
   'adminOperations.importQueueMeta': '{entity} · {errors} errors',
   'adminOperations.openIntegrations': 'Open integrations panel',
+
+  'adminOperations.dataQualityEyebrow': 'Data Trust',
+  'adminOperations.dataQualityTitle': 'Data quality and mapping signal',
+  'adminOperations.dataQualityCopy':
+    'This card does not start a new workflow; it summarizes existing read-only risk signals from import preview and snapshot overview.',
+  'adminOperations.previewErrorRows': 'Preview error rows',
+  'adminOperations.mappingBlockers': 'Mapping blockers',
+  'adminOperations.blockedImportBatches': 'Blocked import batches',
+  'adminOperations.snapshotIssues': 'Snapshot issues',
+  'adminOperations.noMappingBlockers': 'no visible blockers',
+  'adminOperations.dataQualitySourceCopy':
+    'Source evidence stays in import detail, mapping queue, and snapshot pages; the control tower only elevates the signal.',
+  'adminOperations.entity.employee': 'employee',
+  'adminOperations.entity.store': 'store',
 
   'adminOperations.snapshotEyebrow': 'Report Freshness',
   'adminOperations.snapshotTitle': 'Snapshot health and freshness',
