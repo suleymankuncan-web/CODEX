@@ -2,8 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #378 plus the current Competition Team Template Command Repository V1 slice,
-and is
+PR #379 plus the current Workforce Request Boundary Inventory V1 slice, and is
 the starting point for continuing in a fresh window.
 
 ## Active Workspace
@@ -28,14 +27,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-21, `origin/main` has been fetched through PR #378.
+As of 2026-05-21, `origin/main` has been fetched through PR #379.
 The root checkout may still be on a non-main local branch with unrelated
 handoff noise; do not assume the root working tree is clean.
 
 Latest merge on main:
 
 ```text
-f53a3567 docs: decide competition team template command boundary
+bb3537de refactor: split competition team template commands
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -133,6 +132,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #376 `test: guard admin snapshots mobile layout`
 - PR #377 `test: guard admin reports mobile layout`
 - PR #378 `docs: decide competition team template command boundary`
+- PR #379 `refactor: split competition team template commands`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -875,18 +875,20 @@ Product Progress Plan V1 status:
 - The current Admin Reports Mobile Evidence V1 slice adds route-level mobile
   overflow coverage for the reports summary hub and snapshot run chooser before
   any visual or interaction changes.
-- The current Competition Team Template Command Boundary Decision V1 slice is
-  docs-only: it defines the invariants, verification ladder, and stop rules for
-  a future `CompetitionTeamTemplateCommandRepository` extraction. It changes no
-  backend code, SQL, DTO, API response shape, auth, DB, CSS, or user-facing
-  behavior.
-- The current Competition Team Template Command Repository V1 slice implements
-  that narrow boundary: create/update/deactivate/clone team-template command
-  persistence moves into `competition-team-template-command.repository.ts`, and
-  `CompetitionRepository` delegates those methods. It does not move
+- The Competition Team Template Command Boundary Decision V1 slice defined the
+  invariants, verification ladder, and stop rules for the
+  `CompetitionTeamTemplateCommandRepository` extraction.
+- The Competition Team Template Command Repository V1 slice implemented that
+  narrow boundary: create/update/deactivate/clone team-template command
+  persistence moved into `competition-team-template-command.repository.ts`, and
+  `CompetitionRepository` delegates those methods. It did not move
   access-context helpers, stage-package plan writes, stage creation/execution,
   scoring, finalization, API contracts, auth, DB schema, CSS, or user-facing
   behavior.
+- The current Workforce Request Boundary Inventory V1 slice is docs-only. It
+  maps `WorkforceRequestRepository` method families, risk boundaries, existing
+  regression tests, and the next safe read-only extraction candidate before any
+  workforce request code movement.
 
 The `/store/approvals` first pass has started:
 
