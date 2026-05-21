@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #381 plus the current Workforce Offboarding Read Repository V1 slice, and is
+PR #382 plus the current Workforce Lookup Read Repository V1 slice, and is
 the starting point for continuing in a fresh window.
 
 ## Active Workspace
@@ -27,14 +27,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-21, `origin/main` has been fetched through PR #381.
+As of 2026-05-21, `origin/main` has been fetched through PR #382.
 The root checkout may still be on a non-main local branch with unrelated
 handoff noise; do not assume the root working tree is clean.
 
 Latest merge on main:
 
 ```text
-40ca8367 refactor: split workforce seller code reads
+e2635413 refactor: split workforce offboarding reads
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -135,6 +135,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #379 `refactor: split competition team template commands`
 - PR #380 `docs: inventory workforce request boundaries`
 - PR #381 `refactor: split workforce seller code reads`
+- PR #382 `refactor: split workforce offboarding reads`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -898,11 +899,16 @@ Product Progress Plan V1 status:
   move seller-code create/approve/reject/resubmit, duplicate validation,
   offboarding reads, offboarding commands, access lifecycle behavior, API
   contracts, auth, DB schema, CSS, or user-facing behavior.
-- The current Workforce Offboarding Read Repository V1 slice implements the
-  second safe read boundary: offboarding list/detail reads move into
+- The Workforce Offboarding Read Repository V1 slice implemented the second
+  safe read boundary: offboarding list/detail reads move into
   `workforce-offboarding-read.repository.ts`, while offboarding
   create/approve/reject/resubmit and access lifecycle closure stay parked in
   `WorkforceRequestRepository`.
+- The current Workforce Lookup Read Repository V1 slice moves the remaining
+  safe store/personnel lookup reads into `workforce-lookup-read.repository.ts`.
+  After this slice, the workforce request refactor line should park: the
+  remaining repository body is command/write/status/audit/access-lifecycle
+  behavior and needs a separate invariant/test decision before movement.
 
 The `/store/approvals` first pass has started:
 
