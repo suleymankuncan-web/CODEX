@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #397, the Product Readiness V1 first-pass closeout, Operations Control Tower
+PR #399, the Product Readiness V1 first-pass closeout, Operations Control Tower
 readiness line, Sokrates/discipline operating docs, current workspace hygiene,
 the Clerk persona staging evidence runbook, and the generated system-flow map.
 It is the starting point for continuing in a fresh window.
@@ -29,14 +29,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-22, `origin/main` has been fetched through PR #397.
+As of 2026-05-22, `origin/main` has been fetched through PR #399.
 The root checkout has been moved back to clean `main` and is aligned with
 `origin/main`.
 
 Latest merge on main:
 
 ```text
-839369fc docs: add generated system flow map
+2154e3c7 docs: refine system flow readiness map
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -153,6 +153,8 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #395 `docs: add work discipline guide`
 - PR #396 `docs: add clerk persona evidence runbook`
 - PR #397 `docs: add generated system flow map`
+- PR #398 `docs: refine system flow readiness map`
+- PR #399 `fix: unblock frontend production audit`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -171,7 +173,7 @@ frontend root, security headers, SPA fallback, and static assets passed.
 Current local hygiene state:
 
 - Root workspace `D:\store-ops-workspace` is clean on `main...origin/main` at
-  `5a64ed96`.
+  `2154e3c7`.
 - The previous dirty root state was not deleted. It was saved as stash
   `codex hygiene backup 2026-05-21 root dirty state`. Do not drop that stash
   unless the user explicitly approves.
@@ -216,6 +218,11 @@ Active follow-up line:
 - Current generated precision snapshot: 164 backend endpoints, 164 OpenAPI
   endpoints, 130 matched frontend API calls, 193 route/API edges, 34 backend
   endpoints without frontend calls, and 4 store routes without API calls.
+- Milestone 2 classification evidence is being recorded in
+  `docs/evidence/system-flow/unlinked-endpoints-classification-v1.md`: the 34
+  unlinked endpoints are classified as external/provider, mobile/field-client,
+  admin/operator-only, parked product/UI candidates, or legacy/deprecation
+  candidates before any behavior change.
 
 ## API Contract Drift Status
 
