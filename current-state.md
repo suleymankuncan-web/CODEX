@@ -2,7 +2,8 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #384 and the parked Workforce Request safe-read boundary line, and is
+PR #385, the parked Workforce Request safe-read boundary line, and the active
+Product Readiness V1 UI/UX line, and is
 the starting point for continuing in a fresh window.
 
 ## Active Workspace
@@ -27,14 +28,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-21, `origin/main` has been fetched through PR #384.
+As of 2026-05-21, `origin/main` has been fetched through PR #385.
 The root checkout may still be on a non-main local branch with unrelated
 handoff noise; do not assume the root working tree is clean.
 
 Latest merge on main:
 
 ```text
-4da62d10 docs: park workforce request command boundaries
+40ede237 docs: refresh product surface audit
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -138,6 +139,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #382 `refactor: split workforce offboarding reads`
 - PR #383 `refactor: split workforce lookup reads`
 - PR #384 `docs: park workforce request command boundaries`
+- PR #385 `docs: refresh product surface audit`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:

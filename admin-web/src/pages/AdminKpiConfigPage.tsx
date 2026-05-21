@@ -569,86 +569,96 @@ function OwnershipMatrixPanel(input: {
         <EmptyState copy={input.t('adminKpiConfig.noOwnershipRows')} />
       ) : (
         <div className="stacked-table">
-          {input.rows.map(({ item: row, key }, index) => (
-            <article className="stacked-row" key={key}>
-              <div className="key-grid">
-                <TextField
-                  label={input.t('adminKpiConfig.field.code')}
-                  value={row.code}
-                  onChange={(next) =>
-                    updateOwnershipRow(input.setDraft, input.draft, index, { ...row, code: next })
-                  }
-                />
-                <TextField
-                  label={input.t('adminKpiConfig.field.label')}
-                  value={row.label}
-                  onChange={(next) =>
-                    updateOwnershipRow(input.setDraft, input.draft, index, { ...row, label: next })
-                  }
-                />
-                <SelectField
-                  label={input.t('adminKpiConfig.field.owner')}
-                  value={row.operationalOwner}
-                  options={ownerRoleOptions}
-                  optionLabel={(option) => formatOwnerRole(option as KpiOwnerRole, input.t)}
-                  onChange={(next) =>
-                    updateOwnershipRow(input.setDraft, input.draft, index, {
-                      ...row,
-                      operationalOwner: next as KpiOwnerRole,
-                    })
-                  }
-                />
-                <TextField
-                  label={input.t('adminKpiConfig.field.visibleTo')}
-                  value={row.visibleTo.join(', ')}
-                  onChange={(next) =>
-                    updateOwnershipRow(input.setDraft, input.draft, index, {
-                      ...row,
-                      visibleTo: splitCsv(next) as KpiOwnerRole[],
-                    })
-                  }
-                />
-                <TextField
-                  label={input.t('adminKpiConfig.field.contributesTo')}
-                  value={row.contributesTo.join(', ')}
-                  onChange={(next) =>
-                    updateOwnershipRow(input.setDraft, input.draft, index, {
-                      ...row,
-                      contributesTo: splitCsv(next) as Array<'store' | 'personnel'>,
-                    })
-                  }
-                />
-                <SelectField
-                  label={input.t('adminKpiConfig.field.taskCandidate')}
-                  value={row.taskCandidate ? 'true' : 'false'}
-                  options={['true', 'false']}
-                  optionLabel={(option) => formatBooleanOption(option, input.t)}
-                  onChange={(next) =>
-                    updateOwnershipRow(input.setDraft, input.draft, index, {
-                      ...row,
-                      taskCandidate: next === 'true',
-                    })
-                  }
-                />
+          {input.rows.map(({ item: row, key }, index) => {
+            const rowReference = formatEditorRowReference(row.code, row.label, index)
+
+            return (
+              <div
+                aria-label={`${input.t('adminKpiConfig.ownershipMatrix')}: ${rowReference}`}
+                className="stacked-row"
+                key={key}
+                role="group"
+              >
+                <div className="key-grid">
+                  <TextField
+                    label={input.t('adminKpiConfig.field.code')}
+                    value={row.code}
+                    onChange={(next) =>
+                      updateOwnershipRow(input.setDraft, input.draft, index, { ...row, code: next })
+                    }
+                  />
+                  <TextField
+                    label={input.t('adminKpiConfig.field.label')}
+                    value={row.label}
+                    onChange={(next) =>
+                      updateOwnershipRow(input.setDraft, input.draft, index, { ...row, label: next })
+                    }
+                  />
+                  <SelectField
+                    label={input.t('adminKpiConfig.field.owner')}
+                    value={row.operationalOwner}
+                    options={ownerRoleOptions}
+                    optionLabel={(option) => formatOwnerRole(option as KpiOwnerRole, input.t)}
+                    onChange={(next) =>
+                      updateOwnershipRow(input.setDraft, input.draft, index, {
+                        ...row,
+                        operationalOwner: next as KpiOwnerRole,
+                      })
+                    }
+                  />
+                  <TextField
+                    label={input.t('adminKpiConfig.field.visibleTo')}
+                    value={row.visibleTo.join(', ')}
+                    onChange={(next) =>
+                      updateOwnershipRow(input.setDraft, input.draft, index, {
+                        ...row,
+                        visibleTo: splitCsv(next) as KpiOwnerRole[],
+                      })
+                    }
+                  />
+                  <TextField
+                    label={input.t('adminKpiConfig.field.contributesTo')}
+                    value={row.contributesTo.join(', ')}
+                    onChange={(next) =>
+                      updateOwnershipRow(input.setDraft, input.draft, index, {
+                        ...row,
+                        contributesTo: splitCsv(next) as Array<'store' | 'personnel'>,
+                      })
+                    }
+                  />
+                  <SelectField
+                    label={input.t('adminKpiConfig.field.taskCandidate')}
+                    value={row.taskCandidate ? 'true' : 'false'}
+                    options={['true', 'false']}
+                    optionLabel={(option) => formatBooleanOption(option, input.t)}
+                    onChange={(next) =>
+                      updateOwnershipRow(input.setDraft, input.draft, index, {
+                        ...row,
+                        taskCandidate: next === 'true',
+                      })
+                    }
+                  />
+                </div>
+                <div className="action-cluster">
+                  <button
+                    aria-label={`${input.t('adminKpiConfig.removeRow')}: ${rowReference}`}
+                    className="control-button"
+                    type="button"
+                    onClick={() =>
+                      input.updateDraft((current) => ({
+                        ...current,
+                        ownershipMatrix: current.ownershipMatrix.filter(
+                          (_item, itemIndex) => itemIndex !== index,
+                        ),
+                      }))
+                    }
+                  >
+                    {input.t('adminKpiConfig.removeRow')}
+                  </button>
+                </div>
               </div>
-              <div className="action-cluster">
-                <button
-                  className="control-button"
-                  type="button"
-                  onClick={() =>
-                    input.updateDraft((current) => ({
-                      ...current,
-                      ownershipMatrix: current.ownershipMatrix.filter(
-                        (_item, itemIndex) => itemIndex !== index,
-                      ),
-                    }))
-                  }
-                >
-                  {input.t('adminKpiConfig.removeRow')}
-                </button>
-              </div>
-            </article>
-          ))}
+            )
+          })}
         </div>
       )}
       <div className="action-cluster">
@@ -686,68 +696,78 @@ function GradingBandsPanel(input: {
         <StatusPill tone="accent">{input.t('adminKpiConfig.editable')}</StatusPill>
       </div>
       <div className="stacked-table">
-        {input.rows.map(({ item: band, key }, index) => (
-          <article className="stacked-row" key={key}>
-            <div className="key-grid">
-              <TextField
-                label={input.t('adminKpiConfig.field.code')}
-                value={band.code}
-                onChange={(next) =>
-                  updateGradingBand(input.setDraft, input.draft, index, { ...band, code: next })
-                }
-              />
-              <TextField
-                label={input.t('adminKpiConfig.field.label')}
-                value={band.label}
-                onChange={(next) =>
-                  updateGradingBand(input.setDraft, input.draft, index, { ...band, label: next })
-                }
-              />
-              <TextField
-                label={input.t('adminKpiConfig.field.emoji')}
-                value={band.emoji}
-                onChange={(next) =>
-                  updateGradingBand(input.setDraft, input.draft, index, { ...band, emoji: next })
-                }
-              />
-              <SelectField
-                label={input.t('adminKpiConfig.field.tone')}
-                value={band.tone}
-                options={['calm', 'accent', 'warning', 'danger', 'neutral']}
-                optionLabel={(option) => formatToneOption(option as KpiGradingBand['tone'], input.t)}
-                onChange={(next) =>
-                  updateGradingBand(input.setDraft, input.draft, index, {
-                    ...band,
-                    tone: next as KpiGradingBand['tone'],
-                  })
-                }
-              />
-              <NumberField
-                label={input.t('adminKpiConfig.field.minScore')}
-                value={band.minScore}
-                onChange={(next) =>
-                  updateGradingBand(input.setDraft, input.draft, index, { ...band, minScore: next })
-                }
-              />
+        {input.rows.map(({ item: band, key }, index) => {
+          const rowReference = formatEditorRowReference(band.code, band.label, index)
+
+          return (
+            <div
+              aria-label={`${input.t('adminKpiConfig.gradingBands')}: ${rowReference}`}
+              className="stacked-row"
+              key={key}
+              role="group"
+            >
+              <div className="key-grid">
+                <TextField
+                  label={input.t('adminKpiConfig.field.code')}
+                  value={band.code}
+                  onChange={(next) =>
+                    updateGradingBand(input.setDraft, input.draft, index, { ...band, code: next })
+                  }
+                />
+                <TextField
+                  label={input.t('adminKpiConfig.field.label')}
+                  value={band.label}
+                  onChange={(next) =>
+                    updateGradingBand(input.setDraft, input.draft, index, { ...band, label: next })
+                  }
+                />
+                <TextField
+                  label={input.t('adminKpiConfig.field.emoji')}
+                  value={band.emoji}
+                  onChange={(next) =>
+                    updateGradingBand(input.setDraft, input.draft, index, { ...band, emoji: next })
+                  }
+                />
+                <SelectField
+                  label={input.t('adminKpiConfig.field.tone')}
+                  value={band.tone}
+                  options={['calm', 'accent', 'warning', 'danger', 'neutral']}
+                  optionLabel={(option) => formatToneOption(option as KpiGradingBand['tone'], input.t)}
+                  onChange={(next) =>
+                    updateGradingBand(input.setDraft, input.draft, index, {
+                      ...band,
+                      tone: next as KpiGradingBand['tone'],
+                    })
+                  }
+                />
+                <NumberField
+                  label={input.t('adminKpiConfig.field.minScore')}
+                  value={band.minScore}
+                  onChange={(next) =>
+                    updateGradingBand(input.setDraft, input.draft, index, { ...band, minScore: next })
+                  }
+                />
+              </div>
+              <div className="action-cluster">
+                <button
+                  aria-label={`${input.t('adminKpiConfig.removeBand')}: ${rowReference}`}
+                  className="control-button"
+                  type="button"
+                  onClick={() =>
+                    input.updateDraft((current) => ({
+                      ...current,
+                      gradingBands: current.gradingBands.filter(
+                        (_item, itemIndex) => itemIndex !== index,
+                      ),
+                    }))
+                  }
+                >
+                  {input.t('adminKpiConfig.removeBand')}
+                </button>
+              </div>
             </div>
-            <div className="action-cluster">
-              <button
-                className="control-button"
-                type="button"
-                onClick={() =>
-                  input.updateDraft((current) => ({
-                    ...current,
-                    gradingBands: current.gradingBands.filter(
-                      (_item, itemIndex) => itemIndex !== index,
-                    ),
-                  }))
-                }
-              >
-                {input.t('adminKpiConfig.removeBand')}
-              </button>
-            </div>
-          </article>
-        ))}
+          )
+        })}
       </div>
       <div className="action-cluster">
         <button
@@ -1145,77 +1165,87 @@ function ProfileEditor(input: {
       <p className="queue-subtitle">{input.summary}</p>
       <p className="queue-subtitle">{input.weightGuidance}</p>
       <div className="stacked-table">
-        {metricRows.map(({ item: metric, key }, index) => (
-          <article className="stacked-row" key={key}>
-            <div className="key-grid">
+        {metricRows.map(({ item: metric, key }, index) => {
+          const rowReference = formatEditorRowReference(metric.code, metric.label, index)
+
+          return (
+            <div
+              aria-label={`${input.title} ${input.t('adminKpiConfig.metricRow')} ${rowReference}`}
+              className="stacked-row"
+              key={key}
+              role="group"
+            >
+              <div className="key-grid">
+                <TextField
+                  label={input.t('adminKpiConfig.field.code')}
+                  value={metric.code}
+                  onChange={(next) => input.onMetricChange(index, { ...metric, code: next })}
+                />
+                <TextField
+                  label={input.t('adminKpiConfig.field.label')}
+                  value={metric.label}
+                  onChange={(next) => input.onMetricChange(index, { ...metric, label: next })}
+                />
+                <NumberField
+                  label={input.t('adminKpiConfig.field.weight')}
+                  value={metric.weightPercent}
+                  onChange={(next) =>
+                    input.onMetricChange(index, { ...metric, weightPercent: next })
+                  }
+                />
+                <SelectField
+                  label={input.t('adminKpiConfig.field.owner')}
+                  value={metric.ownerRole}
+                  options={ownerRoleOptions}
+                  optionLabel={(option) => formatOwnerRole(option as KpiOwnerRole, input.t)}
+                  onChange={(next) =>
+                    input.onMetricChange(index, {
+                      ...metric,
+                      ownerRole: next as KpiOwnerRole,
+                    })
+                  }
+                />
+                <SelectField
+                  label={input.t('adminKpiConfig.field.behavior')}
+                  value={metric.scoreBehavior}
+                  options={behaviorOptions}
+                  optionLabel={(option) => formatScoreBehavior(option as KpiScoreBehavior, input.t)}
+                  onChange={(next) =>
+                    input.onMetricChange(index, {
+                      ...metric,
+                      scoreBehavior: next as KpiScoreBehavior,
+                    })
+                  }
+                />
+                <TextField
+                  label={input.t('adminKpiConfig.field.aliases')}
+                  value={(metric.aliases ?? []).join(', ')}
+                  onChange={(next) =>
+                    input.onMetricChange(index, {
+                      ...metric,
+                      aliases: splitCsv(next),
+                    })
+                  }
+                />
+              </div>
               <TextField
-                label={input.t('adminKpiConfig.field.code')}
-                value={metric.code}
-                onChange={(next) => input.onMetricChange(index, { ...metric, code: next })}
+                label={input.t('adminKpiConfig.field.notes')}
+                value={metric.notes ?? ''}
+                onChange={(next) => input.onMetricChange(index, { ...metric, notes: next })}
               />
-              <TextField
-                label={input.t('adminKpiConfig.field.label')}
-                value={metric.label}
-                onChange={(next) => input.onMetricChange(index, { ...metric, label: next })}
-              />
-              <NumberField
-                label={input.t('adminKpiConfig.field.weight')}
-                value={metric.weightPercent}
-                onChange={(next) =>
-                  input.onMetricChange(index, { ...metric, weightPercent: next })
-                }
-              />
-              <SelectField
-                label={input.t('adminKpiConfig.field.owner')}
-                value={metric.ownerRole}
-                options={ownerRoleOptions}
-                optionLabel={(option) => formatOwnerRole(option as KpiOwnerRole, input.t)}
-                onChange={(next) =>
-                  input.onMetricChange(index, {
-                    ...metric,
-                    ownerRole: next as KpiOwnerRole,
-                  })
-                }
-              />
-              <SelectField
-                label={input.t('adminKpiConfig.field.behavior')}
-                value={metric.scoreBehavior}
-                options={behaviorOptions}
-                optionLabel={(option) => formatScoreBehavior(option as KpiScoreBehavior, input.t)}
-                onChange={(next) =>
-                  input.onMetricChange(index, {
-                    ...metric,
-                    scoreBehavior: next as KpiScoreBehavior,
-                  })
-                }
-              />
-              <TextField
-                label={input.t('adminKpiConfig.field.aliases')}
-                value={(metric.aliases ?? []).join(', ')}
-                onChange={(next) =>
-                  input.onMetricChange(index, {
-                    ...metric,
-                    aliases: splitCsv(next),
-                  })
-                }
-              />
+              <div className="action-cluster">
+                <button
+                  aria-label={`${input.t('adminKpiConfig.removeMetric')}: ${input.title} ${rowReference}`}
+                  className="control-button"
+                  type="button"
+                  onClick={() => input.onRemoveMetric(index)}
+                >
+                  {input.t('adminKpiConfig.removeMetric')}
+                </button>
+              </div>
             </div>
-            <TextField
-              label={input.t('adminKpiConfig.field.notes')}
-              value={metric.notes ?? ''}
-              onChange={(next) => input.onMetricChange(index, { ...metric, notes: next })}
-            />
-            <div className="action-cluster">
-              <button
-                className="control-button"
-                type="button"
-                onClick={() => input.onRemoveMetric(index)}
-              >
-                {input.t('adminKpiConfig.removeMetric')}
-              </button>
-            </div>
-          </article>
-        ))}
+          )
+        })}
       </div>
       <div className="action-cluster">
         <button className="control-button" type="button" onClick={input.onAddMetric}>
@@ -1279,6 +1309,10 @@ function SelectField(input: {
       </select>
     </label>
   )
+}
+
+function formatEditorRowReference(code: string, label: string, index: number) {
+  return code.trim() || label.trim() || `#${index + 1}`
 }
 
 function formatOwnerRole(role: KpiOwnerRole, t: TranslateFunction) {
