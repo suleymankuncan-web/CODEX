@@ -131,6 +131,22 @@ test('system flow links representative product routes to their backend API surfa
   )
 })
 
+test('system flow does not treat route preload registries as route API fanout', () => {
+  const flow = readJson('docs/flows/store-ops-system-flow.json')
+
+  assert.deepEqual(routeApiPaths(flow, '/auth/login'), ['GET /api/auth/bootstrap'])
+  assert.deepEqual(routeApiPaths(flow, '/admin/session'), ['GET /api/auth/session'])
+
+  assert.ok(
+    !routeApiPaths(flow, '/auth/login').includes('GET /api/reports/rankings'),
+    'auth login should not inherit unrelated report calls from route preloader registries',
+  )
+  assert.ok(
+    !routeApiPaths(flow, '/admin/session').includes('GET /api/integrations/import-batches/overview'),
+    'session readiness should not inherit unrelated route-loader imports',
+  )
+})
+
 test('system flow endpoint filters use the full API-to-endpoint edge set', () => {
   const flow = readJson('docs/flows/store-ops-system-flow.json')
 

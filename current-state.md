@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #396, the Product Readiness V1 first-pass closeout, Operations Control Tower
+PR #397, the Product Readiness V1 first-pass closeout, Operations Control Tower
 readiness line, Sokrates/discipline operating docs, current workspace hygiene,
 the Clerk persona staging evidence runbook, and the generated system-flow map.
 It is the starting point for continuing in a fresh window.
@@ -29,14 +29,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-21, `origin/main` has been fetched through PR #396.
+As of 2026-05-22, `origin/main` has been fetched through PR #397.
 The root checkout has been moved back to clean `main` and is aligned with
 `origin/main`.
 
 Latest merge on main:
 
 ```text
-5a64ed96 docs: add clerk persona evidence runbook
+839369fc docs: add generated system flow map
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -152,6 +152,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #394 `docs: close operations metrics readiness line`
 - PR #395 `docs: add work discipline guide`
 - PR #396 `docs: add clerk persona evidence runbook`
+- PR #397 `docs: add generated system flow map`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -202,6 +203,19 @@ Outputs:
 This is a static repo map. It does not prove staging health, auth session
 behavior, provider setup, database freshness, or queue durability; those still
 require the relevant smoke/evidence runbooks.
+
+Active follow-up line:
+
+- `docs/plans/system-flow-bottleneck-readiness-v1.md` is the current seven
+  milestone plan for system-flow precision, unlinked endpoint classification,
+  auth/role/scope overlay, fanout/bottleneck audit, Operations Telemetry V1,
+  store placeholder route decisions, and Clerk persona evidence.
+- The first precision slice reduces false route fanout from route preloaders
+  and keeps `/auth/login` and `/admin/session` from inheriting unrelated API
+  calls.
+- Current generated precision snapshot: 164 backend endpoints, 164 OpenAPI
+  endpoints, 130 matched frontend API calls, 193 route/API edges, 34 backend
+  endpoints without frontend calls, and 4 store routes without API calls.
 
 ## API Contract Drift Status
 
@@ -1202,6 +1216,7 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/flows/README.md` - Store Ops System Flow generator note
 - `docs/flows/store-ops-system-flow.html` - source-derived frontend/API/backend flow map
 - `docs/flows/store-ops-system-flow.json` - machine-readable system flow inventory
+- `docs/plans/system-flow-bottleneck-readiness-v1.md` - System Flow And Bottleneck Readiness V1
 - `docs/plans/controlled-pilot-operating-checklist-v1.md` - Controlled Pilot Operating Checklist V1
 - `docs/plans/db-health-migration-evidence-v1.md` - DB Health And Migration Evidence V1
 - `docs/evidence/pilot-readiness/2026-05-08-render-free-plan-migration-deploy.md` - Render Free Plan Migration Deploy Evidence
