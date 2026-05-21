@@ -455,9 +455,11 @@ Candidate extraction order:
    `listStagePackagePlans` and `listStagePackagePlanAudit`.
 6. Parked/auth-adjacent: `getStagePackagePlanForAccess`, unless focused
    service access/fail-closed tests are included.
-7. Next backend-safe candidate: competition list/detail/contribution read
-   boundary.
-8. Backend team-template read boundary, then command boundary.
+7. Current slice: competition list/detail/contribution read boundary for
+   `listCompetitions`, `getCompetitionDetail`,
+   `listStoreContributionsForCompetition`, and detail helper reads.
+8. Next backend-safe candidate after this slice: backend team-template read
+   boundary, then command boundary.
 9. Later/high-risk: stage-package plan write state machine.
 10. Later/high-risk: stage creation/package execution boundary.
 11. Last/high-risk: score recalculation/finalization boundary.
@@ -677,15 +679,17 @@ input changes priority.
 10. Done: stage builder package/package-plan section extraction.
 11. Next: competition repository boundary inventory/test-map.
 12. Done: stage-package plan list/audit read repository boundary.
-13. Next code candidate after the first backend competition slice:
-   competition list/detail/contribution read repository boundary.
-14. Stage builder team section extraction, only if continuing frontend
+13. Current slice: competition list/detail/contribution read repository
+   boundary.
+14. Next backend competition candidate after this slice: team-template read
+   boundary, only if it remains a reviewability/product-risk hotspot.
+15. Stage builder team section extraction, only if continuing frontend
    competition decomposition for a concrete product/reviewability reason.
-15. Master-data bootstrap frontend model/section split PR, if product work
+16. Master-data bootstrap frontend model/section split PR, if product work
    touches master-data bootstrap.
-16. TypeScript strictness inventory PR.
-17. One strictness domain PR only if the inventory shows a reviewable slice.
-18. External evidence PRs only when real provider inputs exist.
+17. TypeScript strictness inventory PR.
+18. One strictness domain PR only if the inventory shows a reviewable slice.
+19. External evidence PRs only when real provider inputs exist.
 
 Batch rule:
 
