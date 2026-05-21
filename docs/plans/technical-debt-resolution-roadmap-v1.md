@@ -464,7 +464,8 @@ Candidate extraction order:
    `listCompetitions`, `getCompetitionDetail`,
    `listStoreContributionsForCompetition`, and detail helper reads.
 8. Done: backend team-template read boundary for `listTeamTemplates`.
-9. Parked/medium-to-high: backend team-template command boundary.
+9. Done: backend team-template command boundary for
+   create/update/deactivate/clone team-template persistence.
 10. Later/high-risk: stage-package plan write state machine.
 11. Later/high-risk: stage creation/package execution boundary.
 12. Last/high-risk: score recalculation/finalization boundary.
@@ -488,6 +489,53 @@ Stop rules:
 - Stop if stage-package plan state transitions, audit metadata, score
   recalculation, finalization, or access-scope behavior changes during a
   structural repository extraction.
+
+#### 2.5 Workforce Request Repository
+
+Why:
+
+- It mixes store/personnel lookup reads, seller-code request reads, seller-code
+  command flows, offboarding reads, offboarding command flows, audit writes,
+  employee mutation, turnover event persistence, and offboarding access
+  lifecycle closure.
+
+Safe first slice:
+
+- Boundary inventory plus tests map. No production code movement.
+- Current inventory:
+  `docs/plans/workforce-request-repository-boundary-inventory-v1.md`.
+
+Candidate extraction order:
+
+1. Next safe candidate: seller-code queue/detail read boundary for
+   `listSellerCodeRequests` and `getSellerCodeRequestById`.
+2. Later: offboarding queue/detail read boundary for
+   `listOffboardingRequests` and `getOffboardingRequestById`, only after the
+   seller-code read slice proves the facade/delegation pattern.
+3. Later: store/personnel lookup read helpers, only if a concrete service
+   readability or product trigger appears.
+4. Parked/high-risk: seller-code create/approve/reject/resubmit commands and
+   duplicate validation.
+5. Parked/high-risk: offboarding create/approve/reject/resubmit commands,
+   especially approval and access lifecycle closure.
+
+Verification:
+
+```powershell
+npm.cmd --prefix backend/nestjs test -- workforce-seller-code.e2e-spec.ts --runInBand
+npm.cmd --prefix backend/nestjs test -- workforce-offboarding.e2e-spec.ts --runInBand
+npm.cmd --prefix backend/nestjs test -- workforce --runInBand
+npm.cmd --prefix backend/nestjs run build
+npm.cmd --prefix backend/nestjs run lint
+```
+
+Stop rules:
+
+- Stop if API response shape, request status transitions, auth scope, duplicate
+  seller-code behavior, audit metadata, employee mutation, turnover event
+  persistence, or access lifecycle closure would change.
+- Stop if the first code PR needs to move both read and write behavior.
+- Stop if DB migrations or index changes become necessary.
 
 ### Phase 3: Frontend Surface Decomposition
 
