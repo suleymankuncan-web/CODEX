@@ -344,6 +344,22 @@ for (const detail of authAuditDetailCases) {
   })
 }
 
+test('auth audit detail trio stays bounded on mobile width', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+
+  for (const detail of authAuditDetailCases) {
+    await page.goto(detail.path)
+
+    const main = page.getByRole('main')
+    await expect(main.getByRole('heading', { name: detail.trHeading })).toBeVisible()
+    await expect(main.getByRole('heading', { name: detail.trTimelineTitle })).toBeVisible()
+    await expect(main.getByText('Aktör: audit-admin | Modül: auth | Operasyon: update')).toBeVisible()
+
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
+    expect(overflow).toBeLessThanOrEqual(1)
+  }
+})
+
 test('audit center switches chrome to English copy and persists locale', async ({ page }) => {
   await page.goto('/admin/audit')
 

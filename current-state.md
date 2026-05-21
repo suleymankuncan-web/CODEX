@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #371 plus the current Auth Surface Readability V1 slice, and is the
+PR #372 plus the current Auth Audit Detail Mobile Evidence V1 slice, and is the
 starting point for continuing in a fresh window.
 
 ## Active Workspace
@@ -27,14 +27,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-21, `origin/main` has been fetched through PR #371.
+As of 2026-05-21, `origin/main` has been fetched through PR #372.
 The root checkout may still be on a non-main local branch with unrelated
 handoff noise; do not assume the root working tree is clean.
 
 Latest merge on main:
 
 ```text
-c8e474d4 feat: add operations action list
+1d6d34d6 fix: improve auth surface copy readability
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -125,6 +125,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #369 `feat: surface operations data quality signal`
 - PR #370 `test: guard rules config boundary decision`
 - PR #371 `feat: add operations action list`
+- PR #372 `fix: improve auth surface copy readability`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -380,6 +381,12 @@ Latest technical assessment decision:
   `docs/evidence/product-progress/2026-05-21-auth-surface-readability-v1.md`.
   No auth, permission, route access, API, DB, provider, role assignment, pilot
   binding, action-store, or mutation behavior change is included.
+- Auth Audit Detail Mobile Evidence V1 is the current test/evidence follow-up
+  slice: it adds mobile-width boundedness coverage for the auth audit detail
+  trio under `/admin/audit/*/audit`. Evidence:
+  `docs/evidence/product-progress/2026-05-21-auth-audit-detail-mobile-evidence-v1.md`.
+  No auth, permission, route access, API, DB, provider, audit data, CSS, copy, or
+  layout behavior change is included.
 
 ## Sokrates
 
@@ -812,6 +819,9 @@ Product Progress Plan V1 status:
   narrow: route-level browser evidence found low-contrast copy on auth light
   panels, so only the readable text token and targeted e2e assertions are
   changed.
+- The current Auth Audit Detail Mobile Evidence V1 slice adds route-level
+  mobile overflow coverage for the auth audit detail trio before any further
+  visual polish.
 
 The `/store/approvals` first pass has started:
 

@@ -259,6 +259,9 @@ Current UI/UX V1 status:
   `/admin/auth` and `/admin/auth/catalog` light panels after route-level browser
   evidence isolated the issue. Evidence:
   `docs/evidence/product-progress/2026-05-21-auth-surface-readability-v1.md`.
+- Auth Audit Detail Mobile Evidence V1 adds mobile boundedness coverage for the
+  auth audit detail trio before further auth/admin polish. Evidence:
+  `docs/evidence/product-progress/2026-05-21-auth-audit-detail-mobile-evidence-v1.md`.
 - Park `/store/home` and `/admin/master-data` unless browser review or pilot
   feedback finds a concrete new gap.
 
@@ -513,6 +516,9 @@ Candidate next outputs:
 - Auth Surface Readability V1 is the first route-level auth/admin evidence
   follow-up after that pause; keep future auth/admin work equally narrow and
   evidence-led.
+- Auth Audit Detail Mobile Evidence V1 covers the audit detail trio with
+  route-level mobile overflow evidence; do not continue auth/admin UI polish
+  unless a fresh browser/pilot gap appears.
 - Keep rules engine, auth model changes, DB schema, provider config, broad
   data-quality workflows, and new backend aggregation parked until separately
   scoped.
