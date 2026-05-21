@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #374 plus the current Admin Checklists Mobile Evidence V1 slice, and is
+PR #375 plus the current Admin Snapshots Mobile Evidence V1 slice, and is
 the starting point for continuing in a fresh window.
 
 ## Active Workspace
@@ -27,14 +27,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-21, `origin/main` has been fetched through PR #374.
+As of 2026-05-21, `origin/main` has been fetched through PR #375.
 The root checkout may still be on a non-main local branch with unrelated
 handoff noise; do not assume the root working tree is clean.
 
 Latest merge on main:
 
 ```text
-70b4f396 test: guard admin integrations mobile layout
+145e478b test: guard admin checklist mobile layout
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -128,6 +128,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #372 `fix: improve auth surface copy readability`
 - PR #373 `test: guard auth audit detail mobile layout`
 - PR #374 `test: guard admin integrations mobile layout`
+- PR #375 `test: guard admin checklist mobile layout`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -402,6 +403,13 @@ Latest technical assessment decision:
   `docs/evidence/product-progress/2026-05-21-admin-checklists-mobile-evidence-v1.md`.
   No checklist template behavior, API, auth, permission, DB, CSS, copy, layout,
   publishing, saving, or draft-state behavior change is included.
+- Admin Snapshots Mobile Evidence V1 is the current test/evidence follow-up
+  slice: it adds mobile-width boundedness coverage for `/admin/snapshots` and
+  `/admin/snapshots/:snapshotRunId`. Evidence:
+  `docs/evidence/product-progress/2026-05-21-admin-snapshots-mobile-evidence-v1.md`.
+  No snapshot rerun behavior, API, auth, permission, DB, CSS, copy, layout,
+  audit data, materialized slice data, or data-calculation behavior change is
+  included.
 
 ## Sokrates
 
@@ -843,6 +851,9 @@ Product Progress Plan V1 status:
 - The current Admin Checklists Mobile Evidence V1 slice adds route-level mobile
   overflow coverage for the template editor before any visual or interaction
   changes.
+- The current Admin Snapshots Mobile Evidence V1 slice adds route-level mobile
+  overflow coverage for the snapshot operations overview and snapshot run detail
+  before any visual or interaction changes.
 
 The `/store/approvals` first pass has started:
 

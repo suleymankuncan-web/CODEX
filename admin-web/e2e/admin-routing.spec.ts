@@ -577,6 +577,39 @@ test('snapshot run detail page switches chrome to English copy and persists loca
   await expect(page.getByRole('heading', { name: 'daily snapshot run' })).toBeVisible()
 })
 
+test('snapshot operations routes stay bounded on mobile width', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+
+  await page.goto('/admin/snapshots')
+  await setStoredLocale(page, 'en')
+
+  let main = page.getByRole('main')
+
+  await expect(page).toHaveURL(/\/admin\/snapshots$/)
+  await expect(main.getByText('Snapshot Operations')).toBeVisible()
+  await expect(
+    main.getByRole('heading', { name: 'Immutable runs need visibility before they need reruns.' }),
+  ).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Runs needing operator attention' })).toBeVisible()
+  await expect(main.getByPlaceholder('Search by run, type, reason, or state')).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+
+  await page.goto('/admin/snapshots/snapshot-run-1')
+  await setStoredLocale(page, 'en')
+
+  main = page.getByRole('main')
+
+  await expect(page).toHaveURL(/\/admin\/snapshots\/snapshot-run-1$/)
+  await expect(main.getByRole('link', { name: 'Back to snapshot operations' })).toBeVisible()
+  await expect(main.getByText('Snapshot Run Detail')).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'daily snapshot run' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Run summary' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Dependencies and checks' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Materialized report slices' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Operator-visible trace' })).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+})
+
 async function expectNoHorizontalOverflow(page: Page) {
   const measurements = await page.evaluate(() => ({
     bodyWidth: document.body.scrollWidth,
