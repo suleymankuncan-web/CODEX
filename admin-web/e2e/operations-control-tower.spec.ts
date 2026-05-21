@@ -80,6 +80,10 @@ test('operations control tower composes read-only readiness signals', async ({ p
   await expect(main.getByText('store', { exact: true })).toBeVisible()
   await expect(main.getByText('External evidence', { exact: true })).toBeVisible()
   await expect(main.getByText('Workforce', { exact: true })).toBeVisible()
+  await expect(page.locator('.metric-card').filter({ hasText: 'Workforce' })).toContainText('104')
+  await expect(page.locator('.key-item').filter({ hasText: 'Seller-code requests' })).toContainText('51')
+  await expect(page.locator('.key-item').filter({ hasText: 'Offboarding requests' })).toContainText('53')
+  await expect(page.locator('.key-item').filter({ hasText: 'Total workforce pressure' })).toContainText('104')
   await expect(main.getByText('Staging auth/session evidence')).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Live, planned, and input-blocked signals' })).toBeVisible()
   await expect(main.getByText('Auth / Role / Scope')).toBeVisible()
@@ -152,6 +156,28 @@ test('operations backend metric treats health error payloads as failures', async
   await expect(backendMetric).toHaveClass(/metric-card-danger/)
   await expect(backendMetric).toContainText('Unavailable')
   await expect(backendMetric).toContainText('The health endpoint reports an error; deployment/readiness needs review.')
+})
+
+test('operations workforce metric treats request errors as unavailable', async ({ page }) => {
+  await setInitialLocale(page, 'en')
+  await page.unroute('**/api/workforce/seller-code-requests?**')
+  await page.route('**/api/workforce/seller-code-requests?**', async (route) => {
+    await route.fulfill({
+      status: 503,
+      json: { message: 'Seller code request queue unavailable' },
+    })
+  })
+
+  await page.goto('/admin/operations')
+
+  const main = page.getByRole('main')
+  const workforceMetric = page.locator('.metric-card').filter({ hasText: 'Workforce' })
+  const workforcePanel = page.locator('.panel').filter({ hasText: 'Workforce request pressure' })
+  await expect(main.getByText('Attention', { exact: true }).first()).toBeVisible()
+  await expect(workforceMetric).toHaveClass(/metric-card-warning/)
+  await expect(workforceMetric).toContainText('Unavailable')
+  await expect(workforcePanel.getByText('Unavailable', { exact: true })).toBeVisible()
+  await expect(workforcePanel.locator('.inline-state-warning')).toBeVisible()
 })
 
 test('operations control tower keeps mobile width bounded', async ({ page }) => {
@@ -434,7 +460,7 @@ const sellerCodeRequestsFixture = {
   ],
   meta: {
     count: 1,
-    total: 1,
+    total: 51,
     limit: 50,
     offset: 0,
   },
@@ -468,7 +494,7 @@ const offboardingRequestsFixture = {
   ],
   meta: {
     count: 1,
-    total: 1,
+    total: 53,
     limit: 50,
     offset: 0,
   },

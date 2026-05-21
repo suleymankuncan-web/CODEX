@@ -151,6 +151,7 @@ export function OperationsControlTowerPage() {
   const snapshotNeedsActionItems = snapshotNeedsActionQuery.data?.items ?? []
   const sellerCodeItems = sellerCodeRequestsQuery.data?.items ?? []
   const offboardingItems = offboardingRequestsQuery.data?.items ?? []
+  const hasWorkforceSignalError = sellerCodeRequestsQuery.isError || offboardingRequestsQuery.isError
   const isInitialLoading = [
     healthQuery,
     importOverviewQuery,
@@ -169,8 +170,8 @@ export function OperationsControlTowerPage() {
     snapshotOverview: snapshotOverviewQuery.data,
   })
   const workforcePressure = summarizeWorkforcePressure({
-    offboardingItems,
-    sellerCodeItems,
+    offboardingRequests: offboardingRequestsQuery.data,
+    sellerCodeRequests: sellerCodeRequestsQuery.data,
   })
   const operationalPressure = importActionCount + snapshotActionCount + workforcePressure.total
   const hasSignalError =
@@ -179,8 +180,7 @@ export function OperationsControlTowerPage() {
     importNeedsActionQuery.isError ||
     snapshotOverviewQuery.isError ||
     snapshotNeedsActionQuery.isError ||
-    sellerCodeRequestsQuery.isError ||
-    offboardingRequestsQuery.isError
+    hasWorkforceSignalError
   const readiness = resolveReadinessStatus({
     health: healthQuery.data,
     hasSignalError,
@@ -253,13 +253,21 @@ export function OperationsControlTowerPage() {
       },
       {
         title: t('adminOperations.metric.workforce'),
-        value: String(workforcePressure.total),
-        note: t('adminOperations.workforceMetricNote', {
-          offboarding: workforcePressure.offboardingCount,
-          seller: workforcePressure.sellerCodeCount,
-        }),
+        value: hasWorkforceSignalError
+          ? t('adminOperations.unavailable')
+          : String(workforcePressure.total),
+        note: hasWorkforceSignalError
+          ? getSignalFallbackCopy(
+              hasWorkforceSignalError,
+              sellerCodeRequestsQuery.error ?? offboardingRequestsQuery.error,
+              t,
+            )
+          : t('adminOperations.workforceMetricNote', {
+              offboarding: workforcePressure.offboardingCount,
+              seller: workforcePressure.sellerCodeCount,
+            }),
         icon: <Users size={18} />,
-        tone: workforcePressure.total > 0 ? 'warning' : 'calm',
+        tone: hasWorkforceSignalError ? 'warning' : workforcePressure.total > 0 ? 'warning' : 'calm',
       },
     ] satisfies Array<{
       title: string
@@ -284,6 +292,9 @@ export function OperationsControlTowerPage() {
     snapshotOverviewQuery.isError,
     snapshotOverviewQuery.error,
     t,
+    hasWorkforceSignalError,
+    sellerCodeRequestsQuery.error,
+    offboardingRequestsQuery.error,
     workforcePressure.offboardingCount,
     workforcePressure.sellerCodeCount,
     workforcePressure.total,

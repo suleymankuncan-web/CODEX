@@ -1,6 +1,6 @@
 import type {
-  OffboardingRequest,
-  SellerCodeRequest,
+  OffboardingRequests,
+  SellerCodeRequests,
 } from '../features/workforce/api'
 
 export type WorkforcePressure = {
@@ -10,12 +10,15 @@ export type WorkforcePressure = {
 }
 
 export function summarizeWorkforcePressure(input: {
-  offboardingItems: OffboardingRequest[]
-  sellerCodeItems: SellerCodeRequest[]
+  offboardingRequests: OffboardingRequests | undefined
+  sellerCodeRequests: SellerCodeRequests | undefined
 }): WorkforcePressure {
+  const offboardingCount = input.offboardingRequests?.meta.total ?? 0
+  const sellerCodeCount = input.sellerCodeRequests?.meta.total ?? 0
+
   return {
-    offboardingCount: input.offboardingItems.length,
-    sellerCodeCount: input.sellerCodeItems.length,
-    total: input.offboardingItems.length + input.sellerCodeItems.length,
+    offboardingCount,
+    sellerCodeCount,
+    total: offboardingCount + sellerCodeCount,
   }
 }
