@@ -122,6 +122,18 @@ Verification:
 - Docs/evidence plus `git diff --check`.
 - Do not delete or change endpoints in this milestone.
 
+Current evidence:
+
+- `docs/evidence/system-flow/unlinked-endpoints-classification-v1.md`
+  classifies all 34 unlinked backend endpoints.
+- Distribution:
+  - 1 intentional external/provider endpoint,
+  - 9 mobile or field-client endpoints,
+  - 7 admin/operator-only endpoints,
+  - 12 parked product/UI candidates,
+  - 5 legacy/deprecation candidates.
+- No endpoint behavior, response shape, auth semantics, or DB behavior changed.
+
 ### 3. Auth / Role / Scope Overlay
 
 Goal:
