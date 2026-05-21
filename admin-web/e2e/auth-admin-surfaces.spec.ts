@@ -53,6 +53,9 @@ test('auth dashboard page switches chrome to English copy and persists locale', 
   await expect(main.getByRole('heading', { name: 'Scoped role grant' })).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Assigned stores for operational actions' })).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Role assignment queue' })).toBeVisible()
+  await expect(
+    main.getByText('Search by user, role, store, or scope identifiers to inspect the current access map.'),
+  ).toHaveClass(/queue-subtitle/)
   await expect(main.getByRole('link', { name: 'Open catalog' }).first()).toBeVisible()
   await expect(main.getByText('Auth operasyonları')).toHaveCount(0)
 
@@ -253,6 +256,7 @@ test('auth catalog page switches chrome to English copy and persists locale', as
   await expect(main.getByRole('heading', { name: 'Role and permission definitions stay explicit and inspectable.' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Back to auth overview' })).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Role definitions' })).toBeVisible()
+  await expect(main.getByText('Search by code, name, scope, or permission code.')).toHaveClass(/queue-subtitle/)
   await expect(main.getByPlaceholder('Search role code, name, scope, or permission')).toBeVisible()
   await expect(main.getByText('System role', { exact: true })).toBeVisible()
   await expect(main.getByText('Revoke STORE_READ')).toBeVisible()

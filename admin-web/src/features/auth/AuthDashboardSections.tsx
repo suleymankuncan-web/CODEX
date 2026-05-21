@@ -873,7 +873,7 @@ function RoleAssignmentsPanel({
         <div>
           <div className="eyebrow">{t('authAdmin.scopedGrants')}</div>
           <h3>{t('authAdmin.roleAssignmentQueue')}</h3>
-          <p className="panel-copy">{t('authAdmin.assignmentSearchCopy')}</p>
+          <p className="queue-subtitle">{t('authAdmin.assignmentSearchCopy')}</p>
         </div>
         <label className="search-field">
           <span className="sr-only">{t('authAdmin.filterAssignments')}</span>
