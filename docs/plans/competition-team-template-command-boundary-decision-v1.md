@@ -145,3 +145,24 @@ Recommended future code PR:
   behavior.
 - Do not batch with frontend StageBuilder, stage package plans, scoring,
   finalization, or access/scope work.
+
+## Implementation Status
+
+- In progress on the next code slice:
+  `CompetitionTeamTemplateCommandRepository` owns create/update/deactivate/clone
+  team-template command persistence.
+- `CompetitionRepository` remains the facade for service/controller callers.
+- Access-context helpers, stage-package plan writes, stage creation/execution,
+  scoring, finalization, API contracts, auth, DB schema, CSS, and user-facing
+  behavior stay unchanged.
+
+Implementation verification:
+
+- `competition-team-template.repository.spec.ts`: 6 passed.
+- `competition-team-template.service.spec.ts`: 8 passed.
+- `competition.e2e-spec.ts`: 5 passed.
+- `npm.cmd --prefix backend/nestjs test -- competition --runInBand`: 116 suites,
+  674 tests passed.
+- `npm.cmd --prefix backend/nestjs run build`: passed.
+- `npm.cmd --prefix backend/nestjs run lint`: passed.
+- `npm.cmd --prefix backend/nestjs audit --omit=dev`: 0 vulnerabilities.

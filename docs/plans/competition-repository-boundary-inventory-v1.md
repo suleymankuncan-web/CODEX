@@ -179,6 +179,13 @@ Current status:
   Future command extraction is allowed only for create/update/deactivate/clone
   team-template methods, with transaction, audit, membership replacement, and
   response-shape invariants preserved.
+- The command/write extraction is now in progress as
+  `CompetitionTeamTemplateCommandRepository`, with `CompetitionRepository`
+  delegating create/update/deactivate/clone team-template methods. After this
+  slice, `CompetitionRepository` is roughly 1432 physical lines and
+  `CompetitionTeamTemplateCommandRepository` is roughly 254 physical lines.
+  Access-context helpers, stage-package writes, stage creation/execution, score
+  recalculation, and finalization stay parked.
 
 ### Stage Creation And Stage Package Execution
 
