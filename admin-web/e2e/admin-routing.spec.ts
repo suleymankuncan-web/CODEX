@@ -490,6 +490,27 @@ test('admin checklist editor keeps BM and VM template drafts separate', async ({
   await expect(firstQuestion).toHaveValue('VM-only fixture question')
 })
 
+test('admin checklist template editor stays bounded on mobile width', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/admin/checklists')
+  await setStoredLocale(page, 'en')
+
+  const main = page.getByRole('main')
+  const templateTypeSelect = main.locator('.admin-checklist-builder-template-strip select')
+  const firstQuestion = main.locator('.admin-checklist-builder-question-line input').first()
+
+  await expect(main.getByRole('heading', { name: 'Checklist template editor' })).toBeVisible()
+  await expect(main.locator('.admin-checklist-builder-template-strip')).toBeVisible()
+  await expect(main.locator('.admin-checklist-builder-status-strip')).toBeVisible()
+  await expect(main.locator('.admin-checklist-builder-item-settings').first()).toBeVisible()
+  await expect(main.getByRole('button', { name: 'Add Section' }).first()).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+
+  await templateTypeSelect.selectOption('VM_STORE_VISIT')
+  await expect(firstQuestion).toHaveValue('Vitrin konsepti VM standardina uygun mu?')
+  await expectNoHorizontalOverflow(page)
+})
+
 test('snapshot operations page switches chrome to English copy and persists locale', async ({ page }) => {
   await page.goto('/admin/snapshots')
 
@@ -555,6 +576,18 @@ test('snapshot run detail page switches chrome to English copy and persists loca
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: 'daily snapshot run' })).toBeVisible()
 })
+
+async function expectNoHorizontalOverflow(page: Page) {
+  const measurements = await page.evaluate(() => ({
+    bodyWidth: document.body.scrollWidth,
+    documentWidth: document.documentElement.scrollWidth,
+    viewportWidth: window.innerWidth,
+  }))
+
+  expect(
+    Math.max(measurements.bodyWidth, measurements.documentWidth) - measurements.viewportWidth,
+  ).toBeLessThanOrEqual(1)
+}
 
 async function routeAdminShellApi(page: Page) {
   await page.route('**/api/auth/session', async (route) => {

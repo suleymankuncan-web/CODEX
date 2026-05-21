@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #373 plus the current Admin Integrations Mobile Evidence V1 slice, and is
+PR #374 plus the current Admin Checklists Mobile Evidence V1 slice, and is
 the starting point for continuing in a fresh window.
 
 ## Active Workspace
@@ -27,14 +27,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-21, `origin/main` has been fetched through PR #373.
+As of 2026-05-21, `origin/main` has been fetched through PR #374.
 The root checkout may still be on a non-main local branch with unrelated
 handoff noise; do not assume the root working tree is clean.
 
 Latest merge on main:
 
 ```text
-f4a98653 test: guard auth audit detail mobile layout
+70b4f396 test: guard admin integrations mobile layout
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -127,6 +127,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #371 `feat: add operations action list`
 - PR #372 `fix: improve auth surface copy readability`
 - PR #373 `test: guard auth audit detail mobile layout`
+- PR #374 `test: guard admin integrations mobile layout`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -394,6 +395,13 @@ Latest technical assessment decision:
   `docs/evidence/product-progress/2026-05-21-admin-integrations-mobile-evidence-v1.md`.
   No upload behavior, import retry behavior, API, auth, permission, DB, CSS,
   copy, layout, or data-calculation behavior change is included.
+- Admin Checklists Mobile Evidence V1 is the current test/evidence follow-up
+  slice: it adds mobile-width boundedness coverage for `/admin/checklists`
+  across the template editor shell, status strip, item settings, and BM/VM
+  template switch. Evidence:
+  `docs/evidence/product-progress/2026-05-21-admin-checklists-mobile-evidence-v1.md`.
+  No checklist template behavior, API, auth, permission, DB, CSS, copy, layout,
+  publishing, saving, or draft-state behavior change is included.
 
 ## Sokrates
 
@@ -832,6 +840,9 @@ Product Progress Plan V1 status:
 - The current Admin Integrations Mobile Evidence V1 slice adds route-level
   mobile overflow coverage for the main integrations screen across its operator
   tabs before any further visual polish.
+- The current Admin Checklists Mobile Evidence V1 slice adds route-level mobile
+  overflow coverage for the template editor before any visual or interaction
+  changes.
 
 The `/store/approvals` first pass has started:
 
