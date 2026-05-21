@@ -2,10 +2,10 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #395, the Product Readiness V1 first-pass closeout, Operations Control Tower
+PR #396, the Product Readiness V1 first-pass closeout, Operations Control Tower
 readiness line, Sokrates/discipline operating docs, current workspace hygiene,
-and the Clerk persona staging evidence runbook. It is the starting point for
-continuing in a fresh window.
+the Clerk persona staging evidence runbook, and the generated system-flow map.
+It is the starting point for continuing in a fresh window.
 
 ## Active Workspace
 
@@ -29,14 +29,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-21, `origin/main` has been fetched through PR #395.
+As of 2026-05-21, `origin/main` has been fetched through PR #396.
 The root checkout has been moved back to clean `main` and is aligned with
 `origin/main`.
 
 Latest merge on main:
 
 ```text
-92d8c3ab docs: add work discipline guide
+5a64ed96 docs: add clerk persona evidence runbook
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -151,6 +151,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #393 `feat: surface kpi ranking readiness in operations`
 - PR #394 `docs: close operations metrics readiness line`
 - PR #395 `docs: add work discipline guide`
+- PR #396 `docs: add clerk persona evidence runbook`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -169,7 +170,7 @@ frontend root, security headers, SPA fallback, and static assets passed.
 Current local hygiene state:
 
 - Root workspace `D:\store-ops-workspace` is clean on `main...origin/main` at
-  `92d8c3ab`.
+  `5a64ed96`.
 - The previous dirty root state was not deleted. It was saved as stash
   `codex hygiene backup 2026-05-21 root dirty state`. Do not drop that stash
   unless the user explicitly approves.
@@ -180,10 +181,27 @@ Current local hygiene state:
   The remaining old worktrees are dependency-heavy checkouts, mostly with
   `node_modules`, so removal is safe but slow and should be done as a separate
   hygiene batch.
-- Active docs branch for the next PR is
-  `codex/clerk-persona-evidence-runbook` at
-  `D:\store-ops-worktrees\clerk-persona-evidence-runbook`. It contains the
-  Clerk persona staging evidence runbook and this current-state refresh.
+- Source-derived flow-map work should continue from a fresh worktree and should
+  regenerate the checked-in HTML/JSON artifacts before PR.
+
+## System Flow Map Status
+
+The source-derived system flow map is generated from repository files, not
+hand-drawn. Use it to inspect frontend route, API client, backend controller,
+and OpenAPI coverage relationships:
+
+```powershell
+npm.cmd run system-flow:generate
+```
+
+Outputs:
+
+- `docs/flows/store-ops-system-flow.json`
+- `docs/flows/store-ops-system-flow.html`
+
+This is a static repo map. It does not prove staging health, auth session
+behavior, provider setup, database freshness, or queue durability; those still
+require the relevant smoke/evidence runbooks.
 
 ## API Contract Drift Status
 
@@ -665,8 +683,8 @@ There are six external evidence gaps. Treat them as two tiers:
 
 Tier A - controlled pilot expansion first:
 
-- Real staging auth/action smoke with sanitized evidence, using
-  `docs/plans/clerk-persona-staging-evidence-runbook-v1.md`.
+- Real staging auth/action smoke with sanitized evidence.
+  Use `docs/plans/clerk-persona-staging-evidence-runbook-v1.md`.
 - Protected route load smoke with role-specific staging bearer tokens.
 - Authenticated integration-admin upload smoke with a safe sample file.
 
@@ -1181,6 +1199,9 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md` - Controlled Pilot Feedback Log
 - `docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-conditional-go-consolidation.md` - Controlled Pilot Conditional Go Consolidation
 - `docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-round-1-outcome.md` - Controlled Pilot Round 1 Outcome
+- `docs/flows/README.md` - Store Ops System Flow generator note
+- `docs/flows/store-ops-system-flow.html` - source-derived frontend/API/backend flow map
+- `docs/flows/store-ops-system-flow.json` - machine-readable system flow inventory
 - `docs/plans/controlled-pilot-operating-checklist-v1.md` - Controlled Pilot Operating Checklist V1
 - `docs/plans/db-health-migration-evidence-v1.md` - DB Health And Migration Evidence V1
 - `docs/evidence/pilot-readiness/2026-05-08-render-free-plan-migration-deploy.md` - Render Free Plan Migration Deploy Evidence
