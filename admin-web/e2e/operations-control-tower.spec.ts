@@ -28,8 +28,12 @@ test('operations control tower composes read-only readiness signals', async ({ p
   await expect(main.getByRole('heading', { name: 'Pilot güven sinyalleri tek ekranda görünmeli.' })).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Backend', exact: true })).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Import', exact: true })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Veri kalitesi', exact: true })).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Snapshot', exact: true })).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Dış kanıt', exact: true })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Data quality ve mapping sinyali' })).toBeVisible()
+  await expect(main.getByText('Önizleme hata satırı', { exact: true })).toBeVisible()
+  await expect(main.getByText('mağaza', { exact: true })).toBeVisible()
   await expect(main.getByText('batch-ops-1')).toBeVisible()
   await expect(main.getByText('snapshot-ops-1')).toBeVisible()
   await expect(main.getByText('Staging auth/session kanıtı')).toBeVisible()
@@ -42,6 +46,10 @@ test('operations control tower composes read-only readiness signals', async ({ p
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(main.getByText('Operations Control Tower')).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Pilot confidence signals should be visible in one place.' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Data quality', exact: true })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Data quality and mapping signal' })).toBeVisible()
+  await expect(main.getByText('Preview error rows', { exact: true })).toBeVisible()
+  await expect(main.getByText('store', { exact: true })).toBeVisible()
   await expect(main.getByText('External evidence')).toBeVisible()
   await expect(main.getByText('Staging auth/session evidence')).toBeVisible()
   await expect(main.getByText('Operasyon kontrol kulesi')).toHaveCount(0)
@@ -271,7 +279,7 @@ const importNeedsActionFixture = {
       healthState: 'retry_ready',
       actionReason: 'Mapping recovery is complete; retry can be attempted from the integration panel.',
       recommendedAction: 'Open integration detail before retrying.',
-      blockedByEntityTypes: [],
+      blockedByEntityTypes: ['store'],
       recommendedNextEntityType: null,
       canRetryNow: true,
       isStuck: false,

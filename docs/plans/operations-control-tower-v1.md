@@ -126,6 +126,8 @@ What it does:
 - reads public backend health and queue posture,
 - reads import overview plus import needs-action preview,
 - reads snapshot overview plus snapshot needs-action preview,
+- derives a read-only data-quality snapshot from existing import and snapshot
+  signals,
 - shows external/live evidence blockers as blocked-by-input rather than
   complete,
 - keeps the route `SUPER_ADMIN` scoped for V1.
@@ -138,7 +140,10 @@ What it intentionally does not do:
 - no DB migration,
 - no auth/permission model change,
 - no API response shape change.
+- no data-quality workflow, mapping approval, import retry, scoring, or
+  snapshot rerun behavior change.
 
 Evidence:
 
 - `docs/evidence/product-progress/2026-05-21-operations-control-tower-v1.md`
+- `docs/evidence/product-progress/2026-05-21-operations-data-quality-signal-v1.md`

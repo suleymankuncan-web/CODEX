@@ -242,6 +242,10 @@ Current UI/UX V1 status:
 - Operations Control Tower V1 now adds `/admin/operations` as a read-only
   `SUPER_ADMIN` surface over backend health, import overview/needs-action,
   snapshot overview/needs-action, and external evidence blockers.
+- Operations Data Quality Signal V1 adds a read-only data-quality snapshot to
+  `/admin/operations` using existing import needs-action, import overview, and
+  snapshot overview data only. Evidence:
+  `docs/evidence/product-progress/2026-05-21-operations-data-quality-signal-v1.md`.
 - Park `/store/home` and `/admin/master-data` unless browser review or pilot
   feedback finds a concrete new gap.
 
@@ -475,16 +479,21 @@ Why:
 - External readiness is still parked until real inputs exist.
 - The latest UI/UX V1 and refactor lines have closed the immediate visible
   blockers that triggered them.
-- Frontend strictness and the first Operations Control Tower UI slice are now
-  implemented; the next useful local work should come from a remaining
-  growth guardrail with a clear test-only or read-only boundary.
+- Frontend strictness, the first Operations Control Tower UI slice, and the
+  first read-only data-quality control-tower signal are now implemented; the
+  next useful local work should come from a remaining growth guardrail with a
+  clear test-only, docs/script, or read-only boundary.
 
 Candidate next outputs:
 
-- Authorization matrix drift guard implementation, if it can stay docs/script
-  or targeted route/endpoint test only.
-- Cross-domain data-quality signal implementation, only as read-only inventory
-  or UI over existing import/mapping/snapshot signals.
+- Authorization matrix drift guard is already implemented as a docs/script
+  guard through the scope/auth regression matrix contract; do not repeat it.
+- Cross-domain data-quality signal V1 is now represented in `/admin/operations`
+  using existing read signals only; do not build a dedicated dashboard without
+  a concrete operator gap.
+- Candidate next output: rules/config boundary guard as docs/script only, or a
+  tiny Operations Control Tower follow-up only if it still uses existing
+  contracts and stays read-only.
 - Keep rules engine, auth model changes, DB schema, provider config, broad
   data-quality workflows, and new backend aggregation parked until separately
   scoped.

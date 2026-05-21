@@ -44,6 +44,13 @@ type SignalStatus = {
   tone: Tone
 }
 
+type DataQualitySnapshot = {
+  blockedBatchCount: number
+  errorRowCount: number
+  mappingEntityTypes: string[]
+  snapshotIssueCount: number
+}
+
 type ProviderBlocker = {
   id: string
   titleKey: TranslationKey
@@ -120,6 +127,8 @@ export function OperationsControlTowerPage() {
     staleTime: SIGNAL_STALE_TIME_MS,
   })
 
+  const importNeedsActionItems = importNeedsActionQuery.data?.items ?? []
+  const snapshotNeedsActionItems = snapshotNeedsActionQuery.data?.items ?? []
   const isInitialLoading = [
     healthQuery,
     importOverviewQuery,
@@ -130,6 +139,11 @@ export function OperationsControlTowerPage() {
 
   const importActionCount = countImportActions(importOverviewQuery.data)
   const snapshotActionCount = countSnapshotActions(snapshotOverviewQuery.data)
+  const dataQuality = summarizeDataQuality({
+    importItems: importNeedsActionItems,
+    importOverview: importOverviewQuery.data,
+    snapshotOverview: snapshotOverviewQuery.data,
+  })
   const operationalPressure = importActionCount + snapshotActionCount
   const hasSignalError =
     healthQuery.isError ||
@@ -167,6 +181,21 @@ export function OperationsControlTowerPage() {
         tone: importActionCount > 0 ? 'warning' : 'calm',
       },
       {
+        title: t('adminOperations.metric.dataQuality'),
+        value: String(dataQuality.errorRowCount),
+        note: t('adminOperations.dataQualityMetricNote', {
+          count: dataQuality.blockedBatchCount,
+        }),
+        icon: <Activity size={18} />,
+        tone:
+          dataQuality.errorRowCount > 0 ||
+          dataQuality.blockedBatchCount > 0 ||
+          dataQuality.mappingEntityTypes.length > 0 ||
+          dataQuality.snapshotIssueCount > 0
+            ? 'warning'
+            : 'calm',
+      },
+      {
         title: t('adminOperations.metric.snapshots'),
         value: String(snapshotActionCount),
         note: snapshotOverviewQuery.data
@@ -194,6 +223,10 @@ export function OperationsControlTowerPage() {
   }, [
     healthQuery.data,
     healthQuery.isError,
+    dataQuality.blockedBatchCount,
+    dataQuality.errorRowCount,
+    dataQuality.mappingEntityTypes.length,
+    dataQuality.snapshotIssueCount,
     importActionCount,
     importOverviewQuery.data,
     importOverviewQuery.isError,
@@ -242,18 +275,24 @@ export function OperationsControlTowerPage() {
         <ProviderBlockersPanel t={t} />
       </section>
 
+      <DataQualitySignalPanel
+        dataQuality={dataQuality}
+        isError={importNeedsActionQuery.isError || importOverviewQuery.isError || snapshotOverviewQuery.isError}
+        t={t}
+      />
+
       <section className="two-up-grid">
         <ImportSignalPanel
           error={importOverviewQuery.error ?? importNeedsActionQuery.error}
           isError={importOverviewQuery.isError || importNeedsActionQuery.isError}
-          items={importNeedsActionQuery.data?.items ?? []}
+          items={importNeedsActionItems}
           overview={importOverviewQuery.data}
           t={t}
         />
         <SnapshotSignalPanel
           error={snapshotOverviewQuery.error ?? snapshotNeedsActionQuery.error}
           isError={snapshotOverviewQuery.isError || snapshotNeedsActionQuery.isError}
-          items={snapshotNeedsActionQuery.data?.items ?? []}
+          items={snapshotNeedsActionItems}
           overview={snapshotOverviewQuery.data}
           t={t}
         />
@@ -287,6 +326,56 @@ function OperationsHero(input: {
         />
       </div>
     </section>
+  )
+}
+
+function DataQualitySignalPanel(input: {
+  dataQuality: DataQualitySnapshot
+  isError: boolean
+  t: TranslateFunction
+}) {
+  const hasDataQualityPressure =
+    input.dataQuality.errorRowCount > 0 ||
+    input.dataQuality.blockedBatchCount > 0 ||
+    input.dataQuality.mappingEntityTypes.length > 0 ||
+    input.dataQuality.snapshotIssueCount > 0
+
+  return (
+    <article className="panel">
+      <div className="panel-heading panel-heading-spread">
+        <div>
+          <div className="eyebrow">{input.t('adminOperations.dataQualityEyebrow')}</div>
+          <h3>{input.t('adminOperations.dataQualityTitle')}</h3>
+          <p className="panel-copy">{input.t('adminOperations.dataQualityCopy')}</p>
+        </div>
+        <StatusPill tone={input.isError ? 'warning' : hasDataQualityPressure ? 'warning' : 'calm'}>
+          {input.isError
+            ? input.t('adminOperations.unavailable')
+            : hasDataQualityPressure
+              ? input.t('adminOperations.needsAttention')
+              : input.t('adminOperations.ready')}
+        </StatusPill>
+      </div>
+      <div className="key-grid">
+        <KeyValue
+          label={input.t('adminOperations.previewErrorRows')}
+          value={String(input.dataQuality.errorRowCount)}
+        />
+        <KeyValue
+          label={input.t('adminOperations.mappingBlockers')}
+          value={formatMappingEntityTypes(input.dataQuality.mappingEntityTypes, input.t)}
+        />
+        <KeyValue
+          label={input.t('adminOperations.blockedImportBatches')}
+          value={String(input.dataQuality.blockedBatchCount)}
+        />
+        <KeyValue
+          label={input.t('adminOperations.snapshotIssues')}
+          value={String(input.dataQuality.snapshotIssueCount)}
+        />
+      </div>
+      <p className="queue-reason">{input.t('adminOperations.dataQualitySourceCopy')}</p>
+    </article>
   )
 }
 
@@ -592,6 +681,30 @@ function countSnapshotActions(overview: SnapshotOverview | undefined) {
   )
 }
 
+function summarizeDataQuality(input: {
+  importItems: NeedsActionItem[]
+  importOverview: ImportOverview | undefined
+  snapshotOverview: SnapshotOverview | undefined
+}): DataQualitySnapshot {
+  const mappingEntityTypes = new Set<string>()
+
+  for (const item of input.importItems) {
+    for (const entityType of item.blockedByEntityTypes) {
+      mappingEntityTypes.add(entityType)
+    }
+  }
+
+  return {
+    blockedBatchCount: input.importOverview?.healthTotals.blocked ?? 0,
+    errorRowCount: input.importItems.reduce((total, item) => total + item.errorCount, 0),
+    mappingEntityTypes: [...mappingEntityTypes].sort(),
+    snapshotIssueCount:
+      (input.snapshotOverview?.healthTotals.needsAction ?? 0) +
+      (input.snapshotOverview?.healthTotals.retryReady ?? 0) +
+      (input.snapshotOverview?.healthTotals.stuck ?? 0),
+  }
+}
+
 function resolveReadinessStatus(input: {
   hasSignalError: boolean
   health: OperationsHealth | undefined
@@ -697,5 +810,17 @@ function formatOperationsHealthState(input: string, t: TranslateFunction) {
   if (input === 'needs_action') return t('adminOperations.health.needsAction')
   if (input === 'stuck') return t('adminOperations.health.stuck')
   if (input === 'queued') return t('adminOperations.health.queued')
+  return input.replaceAll('_', ' ')
+}
+
+function formatMappingEntityTypes(input: string[], t: TranslateFunction) {
+  if (input.length === 0) return t('adminOperations.noMappingBlockers')
+
+  return input.map((entityType) => formatMappingEntityType(entityType, t)).join(', ')
+}
+
+function formatMappingEntityType(input: string, t: TranslateFunction) {
+  if (input === 'employee' || input === 'personnel') return t('adminOperations.entity.employee')
+  if (input === 'store') return t('adminOperations.entity.store')
   return input.replaceAll('_', ' ')
 }
