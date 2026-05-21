@@ -83,8 +83,8 @@ const metricCoverageItems: MetricCoverageItem[] = [
     copyKey: 'adminOperations.coverage.workflowCopy',
     ownerKey: 'adminOperations.owner.storeOps',
     sourceKey: 'adminOperations.coverage.workflowSource',
-    statusKey: 'adminOperations.coverage.planned',
-    tone: 'neutral',
+    statusKey: 'adminOperations.coverage.live',
+    tone: 'calm',
   },
   {
     href: '/admin/reports',

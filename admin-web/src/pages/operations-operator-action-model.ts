@@ -1,5 +1,6 @@
 import type { Tone } from '../components/dashboard-primitives'
 import type { TranslateFunction } from '../features/localization/dictionary'
+import type { WorkflowInboxPressure } from './operations-workflow-signal-model'
 import type { WorkforcePressure } from './operations-workforce-signal-model'
 
 type DataQualitySnapshot = {
@@ -23,9 +24,11 @@ export function buildOperatorActions(input: {
   dataQuality: DataQualitySnapshot
   hasSignalError: boolean
   hasWorkforceSignalError: boolean
+  hasWorkflowSignalError: boolean
   importActionCount: number
   snapshotActionCount: number
   t: TranslateFunction
+  workflowPressure: WorkflowInboxPressure
   workforcePressure: WorkforcePressure
 }): OperatorAction[] {
   const actions: OperatorAction[] = []
@@ -104,6 +107,23 @@ export function buildOperatorActions(input: {
         count: input.workforcePressure.total,
       }),
       tone: 'warning',
+    })
+  }
+
+  if (!input.hasWorkflowSignalError && input.workflowPressure.needsAttentionCount > 0) {
+    actions.push({
+      href: '/admin/inbox',
+      id: 'workflow-inbox',
+      title: input.t('adminOperations.actionWorkflowTitle'),
+      subtitle: input.t('adminOperations.actionWorkflowSubtitle'),
+      reason: input.t('adminOperations.actionWorkflowReason', {
+        high: input.workflowPressure.highUrgencyCount,
+        total: input.workflowPressure.total,
+      }),
+      status: input.t('adminOperations.queueHasItems', {
+        count: input.workflowPressure.needsAttentionCount,
+      }),
+      tone: input.workflowPressure.highUrgencyCount > 0 ? 'danger' : 'warning',
     })
   }
 

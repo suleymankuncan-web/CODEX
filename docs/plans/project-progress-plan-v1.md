@@ -265,6 +265,10 @@ Current UI/UX V1 status:
   offboarding HR approval queues into `/admin/operations` as a live read-only
   count/preview over existing workforce read endpoints. Evidence:
   `docs/evidence/product-progress/2026-05-21-operations-workforce-pressure-v1.md`.
+- Operations Workflow Inbox Pressure V1 promotes `/api/workflow/inbox` into
+  `/admin/operations` as a live read-only count/urgency/preview signal over
+  existing workflow inbox data. Evidence:
+  `docs/evidence/product-progress/2026-05-21-operations-workflow-inbox-pressure-v1.md`.
 - Auth Surface Readability V1 fixes low-contrast explanatory copy on
   `/admin/auth` and `/admin/auth/catalog` light panels after route-level browser
   evidence isolated the issue. Evidence:
