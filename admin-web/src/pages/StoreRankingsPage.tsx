@@ -993,6 +993,7 @@ function RankingWorkspace(input: {
           }`}
           aria-describedby="rankings-heading"
         >
+          <caption className="sr-only">{caption}</caption>
           <colgroup>
             <col className="rankings-plum-col-rank" />
             <col className="rankings-plum-col-entity" />

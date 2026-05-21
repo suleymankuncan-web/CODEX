@@ -1686,8 +1686,11 @@ test('store rankings page switches to English copy and persists locale', async (
   await expect(page.locator('.rankings-plum-page')).toBeVisible()
   await expect(page.getByText('Top 100 scope')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Store list' })).toBeVisible()
+  await expect(page.getByRole('table', { name: /Showing store results/i })).toBeVisible()
   await page.getByRole('tab', { name: 'Personnel list' }).click()
   await expect(page.getByRole('heading', { name: 'Personnel list' })).toBeVisible()
+  await expect(page.getByRole('table', { name: /Showing personnel results/i })).toBeVisible()
+  await page.setViewportSize({ width: 390, height: 844 })
   await expect(page.getByText('Mağaza ve personel sıralamaları')).toHaveCount(0)
   await expect(page.locator('body')).not.toContainText('Ã')
   await expect(page.locator('body')).not.toContainText('Ä')
@@ -1697,6 +1700,13 @@ test('store rankings page switches to English copy and persists locale', async (
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: 'Rankings' })).toBeVisible()
+  await expect(page.getByRole('table', { name: /Showing store results/i })).toBeVisible()
+  await expect
+    .poll(
+      () => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth),
+      { message: 'store rankings should not create page-level horizontal overflow on mobile' },
+    )
+    .toBe(true)
 })
 
 test('store rankings page explains monthly preview-only ranking', async ({ page }) => {
