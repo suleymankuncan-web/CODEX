@@ -244,6 +244,47 @@ test('operations kpi ranking metric treats report errors as unavailable', async 
   await expect(page.locator('.accent-chip').filter({ hasText: 'Operator pressure' })).toContainText('111')
 })
 
+test('operations kpi ranking metadata gaps feed readiness pressure', async ({ page }) => {
+  await setInitialLocale(page, 'en')
+  await page.unroute('**/api/reports/kpi-config')
+  await page.route('**/api/reports/kpi-config', async (route) => {
+    await route.fulfill({
+      json: {
+        ...kpiConfigFixture,
+        metadata: {
+          ...kpiConfigFixture.metadata,
+          publishedAt: null,
+          versionNo: null,
+        },
+      },
+    })
+  })
+  await page.unroute('**/api/reports/rankings?**')
+  await page.route('**/api/reports/rankings?**', async (route) => {
+    await route.fulfill({
+      json: {
+        ...rankingsFixture,
+        source: {
+          ...rankingsFixture.source,
+          periodEnd: null,
+          periodStart: null,
+        },
+      },
+    })
+  })
+
+  await page.goto('/admin/operations')
+
+  const main = page.getByRole('main')
+  const kpiMetric = page.locator('.metric-card').filter({ hasText: 'KPI / Rankings' })
+  const kpiPanel = page.locator('.panel').filter({ hasText: 'KPI and ranking readiness' })
+  await expect(main.getByText('Controlled', { exact: true }).first()).toBeVisible()
+  await expect(kpiMetric).toHaveClass(/metric-card-warning/)
+  await expect(kpiMetric).toContainText('Needs attention')
+  await expect(kpiPanel.getByText('Needs attention', { exact: true })).toBeVisible()
+  await expect(page.locator('.accent-chip').filter({ hasText: 'Operator pressure' })).toContainText('113')
+})
+
 test('operations control tower keeps mobile width bounded', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/admin/operations')

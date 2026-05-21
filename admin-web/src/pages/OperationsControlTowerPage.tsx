@@ -212,8 +212,14 @@ export function OperationsControlTowerPage() {
   })
   const workforcePressureTotal = hasWorkforceSignalError ? 0 : workforcePressure.total
   const workflowPressureTotal = hasWorkflowSignalError ? 0 : workflowPressure.needsAttentionCount
+  const kpiRankingPressure =
+    hasKpiRankingSignalError || isKpiRankingSignalLoading ? 0 : kpiRankingReadiness.issueCount
   const operationalPressure =
-    importActionCount + snapshotActionCount + workforcePressureTotal + workflowPressureTotal
+    importActionCount +
+    snapshotActionCount +
+    workforcePressureTotal +
+    workflowPressureTotal +
+    kpiRankingPressure
   const hasSignalError =
     healthQuery.isError ||
     importOverviewQuery.isError ||
