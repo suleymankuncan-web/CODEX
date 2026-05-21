@@ -109,6 +109,16 @@ Recommended first code/docs slice:
   columns and add a small docs contract test that prevents removing the
   negative-test guidance.
 
+Current status:
+
+- The first code/docs slice extends
+  `docs/plans/scope-auth-regression-matrix-v1.md` with route/entrypoint,
+  backend boundary, role guard, read-scope guard, action-scope guard, positive
+  evidence, and negative evidence columns.
+- `scripts/scope-auth-regression-matrix-contract.test.mjs` now fails if those
+  drift-guard columns disappear, if a protected surface row is removed, or if a
+  row loses positive/negative evidence.
+
 Verification later:
 
 - script contract test,

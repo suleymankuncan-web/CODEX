@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #362 plus the current growth-foundation docs planning line, and is the
+PR #365 plus the current growth-foundation docs planning line, and is the
 starting point for continuing in a fresh window.
 
 ## Active Workspace
@@ -27,14 +27,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-21, `origin/main` has been fetched through PR #362.
+As of 2026-05-21, `origin/main` has been fetched through PR #365.
 The root checkout may still be on a non-main local branch with unrelated
 handoff noise; do not assume the root working tree is clean.
 
 Latest merge on main:
 
 ```text
-24502041 refactor: split competition team template reads (#362)
+a62b482f chore: enable indexed access checks
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -116,6 +116,9 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #360 `refactor: split competition stage plan reads`
 - PR #361 `refactor: split competition read repository`
 - PR #362 `refactor: split competition team template reads`
+- PR #363 `docs: plan growth foundation guardrails`
+- PR #364 `chore: enable frontend strict typescript`
+- PR #365 `chore: enable indexed access checks`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -245,6 +248,14 @@ Latest technical assessment decision:
   repository boundary refactor, frontend surface decomposition, TypeScript
   strictness, API contract maintenance, performance evidence, and auth/security
   regression work.
+- Growth foundation docs are planned through PR #363:
+  rules/config boundary, operations control tower V1, authorization matrix drift
+  guard, cross-domain data quality inventory, and frontend TypeScript
+  strictness inventory.
+- Frontend TypeScript strictness is now stronger through PR #364 and PR #365:
+  `strict: true` and `noUncheckedIndexedAccess` are enabled in the frontend app
+  and node configs. `exactOptionalPropertyTypes` remains parked until optional
+  API payload/state patterns are agreed.
 - Reporting repository first boundary-refactor pass is complete through PR #343:
   store score reads, closed ranking reads, snapshot reads, store performance
   reads, and ranking reads were split out; `ReportingRepository` is now roughly

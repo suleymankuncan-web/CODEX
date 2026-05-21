@@ -13,11 +13,39 @@ function requireText(text, expected) {
   assert.match(text, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
 }
 
+function matrixRowFor(surface) {
+  const row = matrix.split('\n').find((line) => line.startsWith(`| ${surface} |`))
+  assert.ok(row, `matrix must include a row for ${surface}`)
+  return row
+}
+
+function splitMatrixRow(row) {
+  return row
+    .split('|')
+    .slice(1, -1)
+    .map((cell) => cell.trim())
+}
+
 const matrixPath = 'docs/plans/scope-auth-regression-matrix-v1.md'
 const matrix = readText(matrixPath)
 const currentState = readText('current-state.md')
 const activeNextActions = readText('docs/plans/active-next-actions.md')
 const debtLedger = readText('docs/plans/project-debt-ledger.md')
+
+const protectedSurfaces = [
+  'Auth session context',
+  'Role/scope policy',
+  'Store/org read scope',
+  'Reporting read scope',
+  'Feed visible posts',
+  'Competition read scope',
+  'Checklist read model',
+  'Checklist assigned-store actions',
+  'Target distribution read scope',
+  'Target distribution assigned-store actions',
+  'Workforce lifecycle assigned-store actions',
+  'Admin/integration/migration roles',
+]
 
 test('scope/auth regression matrix keeps the auth boundary explicit', () => {
   for (const phrase of [
@@ -53,6 +81,26 @@ test('scope/auth regression matrix covers assigned-store action surfaces', () =>
     'A broad read scope does not allow create, approve, complete, acknowledge, or mutate outside `assignedStoreIds`.',
   ]) {
     requireText(matrix, phrase)
+  }
+})
+
+test('scope/auth regression matrix keeps route endpoint and action-scope drift columns', () => {
+  for (const phrase of [
+    '| Surface | Route / entrypoint | Backend boundary | Role guard | Read scope guard | Action scope guard | Positive evidence | Negative evidence |',
+    'Frontend visibility check is not a backend authorization test',
+    'backend role guard is not enough for store-scoped actions',
+  ]) {
+    requireText(matrix, phrase)
+  }
+})
+
+test('scope/auth regression matrix rows keep positive and negative evidence cells', () => {
+  for (const surface of protectedSurfaces) {
+    const cells = splitMatrixRow(matrixRowFor(surface))
+    assert.equal(cells.length, 8, `${surface} row must keep the drift guard column count`)
+    assert.notEqual(cells[6], '', `${surface} row must include positive evidence`)
+    assert.notEqual(cells[7], '', `${surface} row must include negative evidence`)
+    assert.doesNotMatch(cells.join(' '), /\b(TBD|TODO)\b/, `${surface} row must not use placeholder evidence`)
   }
 })
 
