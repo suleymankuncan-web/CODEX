@@ -509,7 +509,7 @@ Candidate extraction order:
 
 1. Done: seller-code queue/detail read boundary for
    `listSellerCodeRequests` and `getSellerCodeRequestById`.
-2. Later: offboarding queue/detail read boundary for
+2. Done: offboarding queue/detail read boundary for
    `listOffboardingRequests` and `getOffboardingRequestById`, only after the
    seller-code read slice proves the facade/delegation pattern.
 3. Later: store/personnel lookup read helpers, only if a concrete service
