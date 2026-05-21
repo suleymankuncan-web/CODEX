@@ -275,6 +275,10 @@ Current UI/UX V1 status:
   `/admin/snapshots` and `/admin/snapshots/:snapshotRunId` before further
   snapshot UI polish. Evidence:
   `docs/evidence/product-progress/2026-05-21-admin-snapshots-mobile-evidence-v1.md`.
+- Admin Reports Mobile Evidence V1 adds mobile boundedness coverage for
+  `/admin/reports` and `/admin/reports/snapshot-runs` before further reports
+  summary/chooser polish. Evidence:
+  `docs/evidence/product-progress/2026-05-21-admin-reports-mobile-evidence-v1.md`.
 - Park `/store/home` and `/admin/master-data` unless browser review or pilot
   feedback finds a concrete new gap.
 
@@ -288,6 +292,9 @@ Next UI/UX V1 recommendation:
   browser or pilot gap; the current mobile boundedness evidence is covered.
 - Do not keep expanding snapshot operations without a new concrete browser or
   pilot gap; the current mobile boundedness evidence is covered.
+- Do not keep expanding reports summary or snapshot chooser without a new
+  concrete browser or pilot gap; the current mobile boundedness evidence is
+  covered.
 - Park reports detail pages unless a new browser or pilot gap appears; the
   current mobile table header/readability gap is covered.
 - Park store mobile shell/checklist follow-up unless a new browser or pilot gap
@@ -547,6 +554,9 @@ Candidate next outputs:
 - Admin Snapshots Mobile Evidence V1 covers the snapshot operations overview
   and snapshot run detail with route-level mobile overflow evidence; do not
   continue snapshot UI polish unless a fresh browser/pilot gap appears.
+- Admin Reports Mobile Evidence V1 covers the reports summary hub and snapshot
+  run chooser with route-level mobile overflow evidence; do not continue
+  reports summary/chooser UI polish unless a fresh browser/pilot gap appears.
 - Keep rules engine, auth model changes, DB schema, provider config, broad
   data-quality workflows, and new backend aggregation parked until separately
   scoped.
