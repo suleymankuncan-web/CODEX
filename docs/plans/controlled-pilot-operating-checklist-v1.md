@@ -16,6 +16,10 @@ Auth session edge guard:
 
 - `docs/plans/staging-auth-session-edge-evidence-guard-v1.md`
 
+Clerk persona evidence runbook:
+
+- `docs/plans/clerk-persona-staging-evidence-runbook-v1.md`
+
 Controlled staging/internal pilot: `Conditional Go`.
 
 Broad production rollout: `No-Go`.
