@@ -451,14 +451,16 @@ Candidate extraction order:
 4. Parked: frontend stage team section extraction, unless a concrete product
    or reviewability trigger appears. `StageBuilderForm.tsx` is now below the
    earlier danger zone, so another tiny frontend split is not the best default.
-5. Next backend-safe step: stage-package plan read/audit boundary, starting
-   with list/audit reads and optionally the access lookup if service access
-   tests are included.
-6. Backend competition list/detail/contribution read boundary.
-7. Backend team-template read boundary, then command boundary.
-8. Later/high-risk: stage-package plan write state machine.
-9. Later/high-risk: stage creation/package execution boundary.
-10. Last/high-risk: score recalculation/finalization boundary.
+5. Done: stage-package plan read/audit boundary for
+   `listStagePackagePlans` and `listStagePackagePlanAudit`.
+6. Parked/auth-adjacent: `getStagePackagePlanForAccess`, unless focused
+   service access/fail-closed tests are included.
+7. Next backend-safe candidate: competition list/detail/contribution read
+   boundary.
+8. Backend team-template read boundary, then command boundary.
+9. Later/high-risk: stage-package plan write state machine.
+10. Later/high-risk: stage creation/package execution boundary.
+11. Last/high-risk: score recalculation/finalization boundary.
 
 Verification:
 
@@ -674,15 +676,16 @@ input changes priority.
 9. Done: stage builder frontend pure model/constants extraction.
 10. Done: stage builder package/package-plan section extraction.
 11. Next: competition repository boundary inventory/test-map.
-12. Next code candidate after inventory: stage-package plan read/audit
-   repository boundary.
-13. Stage builder team section extraction, only if continuing frontend
+12. Done: stage-package plan list/audit read repository boundary.
+13. Next code candidate after the first backend competition slice:
+   competition list/detail/contribution read repository boundary.
+14. Stage builder team section extraction, only if continuing frontend
    competition decomposition for a concrete product/reviewability reason.
-14. Master-data bootstrap frontend model/section split PR, if product work
+15. Master-data bootstrap frontend model/section split PR, if product work
    touches master-data bootstrap.
-15. TypeScript strictness inventory PR.
-16. One strictness domain PR only if the inventory shows a reviewable slice.
-17. External evidence PRs only when real provider inputs exist.
+16. TypeScript strictness inventory PR.
+17. One strictness domain PR only if the inventory shows a reviewable slice.
+18. External evidence PRs only when real provider inputs exist.
 
 Batch rule:
 

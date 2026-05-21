@@ -210,6 +210,15 @@ Recommended first code boundary:
   - optionally `getStagePackagePlanForAccess` only if service access tests are
     included and the fail-closed behavior stays unchanged.
 
+Current status:
+
+- Done for `listStagePackagePlans` and `listStagePackagePlanAudit`.
+- `CompetitionRepository` is roughly 1792 physical lines after the slice, and
+  `CompetitionStagePackagePlanReadRepository` is roughly 76 physical lines.
+- Parked for `getStagePackagePlanForAccess` because it feeds service
+  authorization checks and should move only with focused access/fail-closed
+  tests.
+
 Parked:
 
 - create/update/submit/approve/reject/clone/cancel/execute state transitions.
@@ -284,10 +293,10 @@ Frontend E2E:
 
 ## Recommended Extraction Order
 
-1. `CompetitionStagePackagePlanReadRepository`
+1. Done: `CompetitionStagePackagePlanReadRepository`
    - Move plan list and audit reads first.
-   - Include `getStagePackagePlanForAccess` only if the service access tests
-     are run and the diff stays small.
+   - `getStagePackagePlanForAccess` remains parked because it is
+     auth-adjacent.
    - Do not move state-transition writes in the same PR.
 2. `CompetitionReadRepository`
    - Move competition list/detail/contribution/detail-helper reads after the
@@ -314,6 +323,12 @@ Preferred first code PR:
 
 - Extract `CompetitionStagePackagePlanReadRepository` for stage-package plan
   list/audit reads.
+
+Status:
+
+- Done for list/audit reads only.
+- `getStagePackagePlanForAccess` is intentionally not part of this first code
+  slice.
 
 Reason:
 
@@ -367,7 +382,7 @@ Stop and re-plan if a future code PR:
 
 Nothing at runtime.
 
-It narrows the next safe backend refactor from "split competition repository"
-to a reviewable first code slice: stage-package plan read/audit extraction,
-with full state-machine writes, scoring, finalization, and access-context
-changes parked until they have a tighter invariant and test decision.
+It narrowed the first safe backend refactor from "split competition repository"
+to a reviewable first code slice: stage-package plan list/audit extraction.
+Full state-machine writes, scoring, finalization, and access-context changes
+remain parked until they have a tighter invariant and test decision.

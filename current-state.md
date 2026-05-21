@@ -2,7 +2,8 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #358, and is the starting point for continuing in a fresh window.
+PR #359 plus the active competition read-boundary slice, and is the starting
+point for continuing in a fresh window.
 
 ## Active Workspace
 
@@ -26,14 +27,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-21, `origin/main` has been fetched through PR #358.
+As of 2026-05-21, `origin/main` has been fetched through PR #359.
 The root checkout may still be on a non-main local branch with unrelated
 handoff noise; do not assume the root working tree is clean.
 
 Latest merge on main:
 
 ```text
-524cee2f refactor: split stage builder package section (#358)
+67b48d0f docs: inventory competition repository boundaries (#359)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -111,6 +112,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #356 `refactor: split auth user account reads`
 - PR #357 `refactor: split stage builder model helpers`
 - PR #358 `refactor: split stage builder package section`
+- PR #359 `docs: inventory competition repository boundaries`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -301,11 +303,23 @@ Latest technical assessment decision:
 - `StageBuilderForm.tsx` is now roughly 789 physical lines on `origin/main`
   after PR #358. This is below the earlier danger zone, so pause tiny frontend
   StageBuilder splits unless a concrete product/risk change needs them.
-- The next more meaningful technical-debt step is a docs-only
-  `CompetitionRepository` boundary/test-map inventory before backend code
-  movement. The repository is roughly 1839 physical lines and mixes reads,
-  plan state transitions, score recalculation, finalization, audit, and access
-  context helpers.
+- The `CompetitionRepository` boundary/test-map inventory is recorded at
+  `docs/plans/competition-repository-boundary-inventory-v1.md`. The repository
+  is roughly 1839 physical lines and mixes reads, plan state transitions, score
+  recalculation, finalization, audit, and access-context helpers.
+- The first backend competition code slice moves only stage-package plan
+  list/audit reads into `CompetitionStagePackagePlanReadRepository`, keeping
+  `getStagePackagePlanForAccess` and all write/state-machine methods in
+  `CompetitionRepository`. This is structural only: no API response shape,
+  auth/scope behavior, SQL semantics, audit metadata, DB migration, CSS, or
+  user-facing behavior change is intended. After the slice,
+  `CompetitionRepository` is roughly 1792 physical lines and
+  `CompetitionStagePackagePlanReadRepository` is roughly 76 physical lines.
+- Next backend competition candidates, in order: `CompetitionReadRepository`
+  for list/detail/contribution reads, then team-template read boundary. Keep
+  stage-package plan writes, stage creation/execution, access-context helpers,
+  and score recalculation/finalization parked until a tighter invariant/test
+  decision exists.
 
 ## Sokrates
 
