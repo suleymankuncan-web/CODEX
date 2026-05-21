@@ -226,19 +226,27 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
       postType: form.postType,
       title: form.title,
       body: form.body,
-      linkLabel: form.linkLabel || undefined,
-      linkUrl: form.linkUrl || undefined,
+      ...(form.linkLabel ? { linkLabel: form.linkLabel } : {}),
+      ...(form.linkUrl ? { linkUrl: form.linkUrl } : {}),
       visibilityScopeType: form.visibilityScopeType,
       visibilityScopeIds: form.visibilityScopeType === 'company' ? [] : [form.scopeId],
       isPinned: form.isPinned,
       publishStatus,
-      startsAt: form.startsAt || undefined,
-      endsAt: form.endsAt || undefined,
-      metricCode: form.postType === 'challenge' ? selectedMetric?.metricCode : undefined,
-      metricLabel: form.postType === 'challenge' ? selectedMetric?.metricLabel : undefined,
-      challengeStartsOn: form.postType === 'challenge' ? form.challengeStartsOn : undefined,
-      challengeEndsOn: form.postType === 'challenge' ? form.challengeEndsOn : undefined,
-      targetRoute: form.postType === 'challenge' ? form.targetRoute : undefined,
+      ...(form.startsAt ? { startsAt: form.startsAt } : {}),
+      ...(form.endsAt ? { endsAt: form.endsAt } : {}),
+      ...(form.postType === 'challenge' && selectedMetric
+        ? {
+            metricCode: selectedMetric.metricCode,
+            metricLabel: selectedMetric.metricLabel,
+          }
+        : {}),
+      ...(form.postType === 'challenge' && form.challengeStartsOn
+        ? { challengeStartsOn: form.challengeStartsOn }
+        : {}),
+      ...(form.postType === 'challenge' && form.challengeEndsOn
+        ? { challengeEndsOn: form.challengeEndsOn }
+        : {}),
+      ...(form.postType === 'challenge' && form.targetRoute ? { targetRoute: form.targetRoute } : {}),
     })
   }
 

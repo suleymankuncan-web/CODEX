@@ -29,7 +29,7 @@ export function AuthLogoutPage() {
     handledRef.current = true
     const providerIdToken = readClientProviderIdToken()
     const providerLogoutUrl = buildProviderLogoutUrl({
-      bootstrap: bootstrapQuery.data,
+      ...(bootstrapQuery.data === undefined ? {} : { bootstrap: bootstrapQuery.data }),
       idToken: providerIdToken,
     })
     clearToBearerMode()

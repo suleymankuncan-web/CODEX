@@ -55,7 +55,7 @@ export function ChecklistScoreBar(input: {
 export function ChecklistTemplateScore(input: {
   label: string
   locale: AppLocale
-  row?: ChecklistCoverageRow
+  row: ChecklistCoverageRow | undefined
   t: TranslateFunction
 }) {
   const score = input.row ? getCoverageScore(input.row) : null

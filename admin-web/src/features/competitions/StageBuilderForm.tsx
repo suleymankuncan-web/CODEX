@@ -443,7 +443,7 @@ function useStageBuilderFormContent(input: StageBuilderFormProps) {
     const template = templates.find((item) => item.templateId === templateId)
 
     if (!template) {
-      updateTeam(teamIndex, { sourceTemplateId: undefined })
+      dispatch({ type: 'clearTeamTemplate', index: teamIndex })
       return
     }
 
@@ -479,10 +479,12 @@ function useStageBuilderFormContent(input: StageBuilderFormProps) {
   }
 
   function buildTemplatePayload(): CreateCompetitionTeamTemplatePayload {
+    const description = templateDraft.description.trim()
+
     return {
       templateCode: templateDraft.templateCode.trim(),
       templateName: templateDraft.templateName.trim(),
-      description: templateDraft.description.trim() || undefined,
+      ...(description ? { description } : {}),
       storeIds: templateDraft.storeIds,
     }
   }

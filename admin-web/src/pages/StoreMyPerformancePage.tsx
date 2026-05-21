@@ -94,8 +94,12 @@ export function StoreMyPerformancePage(input: {
   const [state, dispatch] = useReducer(
     storeMyPerformancePageReducer,
     {
-      initialLivePeriodStart: input.initialLivePeriodStart,
-      initialLivePeriodType: input.initialLivePeriodType,
+      ...(input.initialLivePeriodStart === undefined
+        ? {}
+        : { initialLivePeriodStart: input.initialLivePeriodStart }),
+      ...(input.initialLivePeriodType === undefined
+        ? {}
+        : { initialLivePeriodType: input.initialLivePeriodType }),
     },
     createStoreMyPerformancePageState,
   )
@@ -158,10 +162,13 @@ export function StoreMyPerformancePage(input: {
     queryFn: () =>
       fetchPerformance({
         mode: sourceMode,
-        periodType: sourceMode === 'live' ? selectedLivePeriodType : undefined,
-        periodStart: sourceMode === 'live' && selectedLivePeriodStart ? selectedLivePeriodStart : undefined,
-        snapshotDate:
-          sourceMode === 'closed' && selectedClosedSnapshotDate ? selectedClosedSnapshotDate : undefined,
+        ...(sourceMode === 'live' ? { periodType: selectedLivePeriodType } : {}),
+        ...(sourceMode === 'live' && selectedLivePeriodStart
+          ? { periodStart: selectedLivePeriodStart }
+          : {}),
+        ...(sourceMode === 'closed' && selectedClosedSnapshotDate
+          ? { snapshotDate: selectedClosedSnapshotDate }
+          : {}),
       }),
     enabled: enabled && (sourceMode === 'live' || !usesClosedSnapshotMode || !closedRunsQuery.isLoading),
     ...transientQueryRetryOptions,

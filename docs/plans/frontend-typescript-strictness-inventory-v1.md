@@ -30,8 +30,8 @@ Repo evidence:
 - The current frontend build passes.
 - Temporary `--strict`, `--strictNullChecks`, and `--noImplicitAny` checks pass
   without source changes.
-- `--noUncheckedIndexedAccess` and `--exactOptionalPropertyTypes` expose real
-  work that should not be mixed into the first config PR.
+- `--noUncheckedIndexedAccess` and `--exactOptionalPropertyTypes` exposed real
+  work and needed separate implementation passes after the first config PR.
 
 Counterargument:
 
@@ -45,8 +45,8 @@ Risk:
 - LOW to MEDIUM for a later config-only `strict: true` PR because the compiler
   already passes with `--strict`.
 - MEDIUM for `noUncheckedIndexedAccess` fixes.
-- MEDIUM to HIGH for `exactOptionalPropertyTypes` because it touches API helper
-  payloads, query result state, and many page props.
+- MEDIUM for `exactOptionalPropertyTypes` after the optional-payload pattern is
+  constrained to omission/no behavior change.
 
 Door:
 
@@ -188,8 +188,24 @@ Progress:
   parsing, checklist score maps, audit query arrays, checklist template
   defaults, and store performance trend rows.
 
-Park for later:
+Exact optional pattern decision:
 
-- `exactOptionalPropertyTypes` until optional-payload helper patterns are agreed.
-  That flag cuts across API wrappers, generated-client payload usage, route
-  props, and dense pages; it should not be mixed with the first strictness PR.
+- Optional request/body/query/component fields must be omitted when absent
+  instead of being set to `undefined`.
+- If a frontend state/view-model field is always present but may not yet have a
+  value, model it as `field: T | undefined` rather than `field?: T`.
+- Do not add broad `| undefined` to generated API payload contracts just to
+  silence the compiler; keep optional API fields as omission semantics.
+- Do not use type assertions as the primary migration strategy.
+
+Progress:
+
+- The `exactOptionalPropertyTypes` implementation pass resolved the 66
+  temporary app errors and enabled the flag in both frontend TypeScript
+  configs.
+- Fixes were limited to optional payload/query/prop omission and state/view
+  model types whose value can genuinely be absent.
+- Main touched domains: shared API request helper, auth login/logout/Clerk
+  bridge, competition stage builder, workflow inbox fallback items,
+  integration/import/master-data pages, store approvals/checklists/home,
+  store KPI highlights, rankings, snapshots, and store performance routing.

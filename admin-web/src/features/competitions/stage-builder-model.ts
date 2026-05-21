@@ -104,6 +104,7 @@ export type StageBuilderFormAction =
   | { type: 'updateStageDraftType'; value: CompetitionStageSummary['stageType'] }
   | { type: 'clearStagePreset' }
   | { type: 'applyStagePreset'; presetDraft: StagePresetDraft }
+  | { type: 'clearTeamTemplate'; index: number }
   | { type: 'updateTeam'; index: number; patch: Partial<TeamDraft> }
   | {
       type: 'updateStagePackageCode'
@@ -170,17 +171,37 @@ export function stageBuilderFormReducer(
         feedback: null,
         draft: { ...state.draft, stageType: action.value },
       }
-    case 'clearStagePreset':
+    case 'clearStagePreset': {
+      const draftWithoutStagePreset = { ...state.draft }
+      delete draftWithoutStagePreset.stagePresetCode
       return {
         ...state,
         feedback: null,
-        draft: { ...state.draft, stagePresetCode: undefined },
+        draft: draftWithoutStagePreset,
       }
+    }
     case 'applyStagePreset':
       return {
         ...state,
         feedback: null,
         draft: { ...state.draft, ...action.presetDraft },
+      }
+    case 'clearTeamTemplate':
+      return {
+        ...state,
+        feedback: null,
+        draft: {
+          ...state.draft,
+          teams: state.draft.teams.map((team, teamIndex) => {
+            if (teamIndex !== action.index) {
+              return team
+            }
+
+            const teamWithoutTemplate = { ...team }
+            delete teamWithoutTemplate.sourceTemplateId
+            return teamWithoutTemplate
+          }),
+        },
       }
     case 'updateTeam':
       return {

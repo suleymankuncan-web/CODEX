@@ -43,7 +43,10 @@ export function AuthLoginPage() {
 
     let cancelled = false
 
-    buildProviderLoginUrl({ returnTo, bootstrap: bootstrapQuery.data })
+    buildProviderLoginUrl({
+      returnTo,
+      ...(bootstrapQuery.data === undefined ? {} : { bootstrap: bootstrapQuery.data }),
+    })
       .then((url) => {
         if (!cancelled) {
           setProviderLogin({ url, error: null })

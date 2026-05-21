@@ -3,15 +3,15 @@ import type { MobileChecklistToday } from '../features/checklists/api'
 export type ChecklistCoverageRow = {
   store: MobileChecklistToday['stores'][number]
   template: MobileChecklistToday['templates'][number]
-  active?: MobileChecklistToday['activeInstances'][number]
-  summary?: MobileChecklistToday['monthlySummaries'][number]
+  active: MobileChecklistToday['activeInstances'][number] | undefined
+  summary: MobileChecklistToday['monthlySummaries'][number] | undefined
   completedCount: number
 }
 
 export type ChecklistStoreVisitRow = {
   store: MobileChecklistToday['stores'][number]
-  bm?: ChecklistCoverageRow
-  vm?: ChecklistCoverageRow
+  bm: ChecklistCoverageRow | undefined
+  vm: ChecklistCoverageRow | undefined
   primary: ChecklistCoverageRow
 }
 

@@ -254,7 +254,9 @@ function useStoreChecklistsPageContent(input: {
           checklistInstanceId: active.checklistInstanceId,
           templateItemId: response.templateItemId,
           scoreValue: response.scoreValue,
-          commentText: response.commentText ?? undefined,
+          ...(response.commentText === null || response.commentText === undefined
+            ? {}
+            : { commentText: response.commentText }),
         }
         savedResponseDraftsRef.current[getChecklistResponseDraftKey(draft)] =
           serializeChecklistResponseDraft(draft)
@@ -599,7 +601,9 @@ function useStoreChecklistsPageContent(input: {
           if (!selectedResult) return
           acknowledgeMutation.mutate({
             checklistInstanceId: selectedResult.checklistInstanceId,
-            acknowledgementNote: acknowledgementNote.trim() || undefined,
+            ...(acknowledgementNote.trim()
+              ? { acknowledgementNote: acknowledgementNote.trim() }
+              : {}),
           })
         }}
         onCloseResult={closeChecklistResult}
@@ -612,7 +616,7 @@ function useStoreChecklistsPageContent(input: {
               checklistInstanceId: selectedSession.active.checklistInstanceId,
               templateItemId,
               scoreValue: score,
-              commentText: comment || undefined,
+              ...(comment ? { commentText: comment } : {}),
             })
           }
         }}
@@ -645,7 +649,7 @@ function useStoreChecklistsPageContent(input: {
               checklistInstanceId: selectedSession.active.checklistInstanceId,
               templateItemId,
               scoreValue: score,
-              commentText: comments[templateItemId] || undefined,
+              ...(comments[templateItemId] ? { commentText: comments[templateItemId] } : {}),
             })
           }
         }}
@@ -735,7 +739,7 @@ function StoreChecklistsModals(input: {
   )
 }
 function ChecklistVisitModal(input: {
-  active?: MobileChecklistToday['activeInstances'][number]
+  active: MobileChecklistToday['activeInstances'][number] | undefined
   comments: Record<string, string>
   isCompleting: boolean
   isSaving: boolean

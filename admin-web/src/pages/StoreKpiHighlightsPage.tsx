@@ -54,14 +54,14 @@ type DisplayKpiRow = {
   targetValue: string | null
   actualValue: string | null
   achievementRate: string | null
-  benchmarkValue?: string | null
-  benchmarkSource?: string
-  actualRatio?: number | null
-  scoredRatio?: number | null
-  capRatio?: number | null
-  isCapped?: boolean
-  scoreContribution?: number | null
-  missingReason?: string | null
+  benchmarkValue: string | null | undefined
+  benchmarkSource: string | undefined
+  actualRatio: number | null | undefined
+  scoredRatio: number | null | undefined
+  capRatio: number | null | undefined
+  isCapped: boolean | undefined
+  scoreContribution: number | null | undefined
+  missingReason: string | null | undefined
   statusBand: string | null
   scoreStatus: 'scored' | 'pending_normalization' | 'missing_reference' | 'missing'
 }
@@ -142,12 +142,12 @@ function formatChecklistMissingNote(t: TranslateFunction, input: {
 function resolveLiveChecklistImpact(input: {
   rows: DisplayKpiRow[]
   metricCode: 'BM_CHECKLIST' | 'VM_CHECKLIST'
-  scoreProfile?: {
+  scoreProfile: {
     metrics: Array<{
       code: string
       weightPercent: number
     }>
-  }
+  } | undefined
 }): ChecklistImpactComponent | null {
   const metricConfig = input.scoreProfile?.metrics.find(
     (metric) => metric.code === input.metricCode,
@@ -260,7 +260,7 @@ function formatOwnerRole(t: TranslateFunction, role: KpiOwnerRole) {
 function formatMetricValue(locale: AppLocale, t: TranslateFunction, input: string | null, kpiCode?: string) {
   return formatKpiMetricValue(locale, t, input, {
     noDataKey: 'storeKpis.noData',
-    code: kpiCode,
+    ...(kpiCode === undefined ? {} : { code: kpiCode }),
     percentMetricCodes: ['CR'],
   })
 }
@@ -357,12 +357,16 @@ function resolveLocalizedStoreScoreMeaning(input: {
 function describeLocalizedBenchmarkCap(
   t: TranslateFunction,
   input: {
-    actualRatio?: number | null
-    scoredRatio?: number | null
-    isCapped?: boolean
+    actualRatio: number | null | undefined
+    scoredRatio: number | null | undefined
+    isCapped: boolean | undefined
   },
 ) {
-  return describeSharedBenchmarkCap(t, 'storeKpis.benchmarkCap', input)
+  return describeSharedBenchmarkCap(t, 'storeKpis.benchmarkCap', {
+    ...(input.actualRatio === undefined ? {} : { actualRatio: input.actualRatio }),
+    ...(input.scoredRatio === undefined ? {} : { scoredRatio: input.scoredRatio }),
+    ...(input.isCapped === undefined ? {} : { isCapped: input.isCapped }),
+  })
 }
 
 function clampScore(input: number) {
@@ -411,7 +415,7 @@ function useStoreKpiHighlightsPageModel(input: {
     queryFn: () =>
       getStoreKpiHighlights({
         periodType: 'monthly',
-        periodStart: livePeriodStart || undefined,
+        ...(livePeriodStart ? { periodStart: livePeriodStart } : {}),
       }),
     enabled: reportingAllowed && viewMode === 'live',
     ...transientQueryRetryOptions,
