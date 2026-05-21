@@ -23,6 +23,7 @@ const routePreloaders: Array<{
   { match: (pathname) => pathname === '/store/targets', preload: () => import('../pages/StoreTargetsPage') },
   { match: (pathname) => pathname === '/store/reports', preload: () => import('../pages/StoreReportsPage') },
   { match: (pathname) => pathname === '/admin/session', preload: () => import('../pages/SessionReadinessPage') },
+  { match: (pathname) => pathname === '/admin/operations', preload: () => import('../pages/OperationsControlTowerPage') },
   { match: (pathname) => pathname.startsWith('/admin/integrations/'), preload: () => import('../pages/ImportBatchDetailPage') },
   { match: (pathname) => pathname === '/admin/integrations', preload: () => import('../pages/IntegrationDashboardPage') },
   { match: (pathname) => pathname.startsWith('/admin/master-data'), preload: () => import('../pages/MasterDataBootstrapPage') },

@@ -116,3 +116,29 @@ Verification later:
 - targeted Playwright for the page,
 - no backend tests unless a backend read aggregation endpoint is explicitly
   added in a later plan.
+
+## Current Implementation Status
+
+The first read-only UI slice is implemented as `/admin/operations`.
+
+What it does:
+
+- reads public backend health and queue posture,
+- reads import overview plus import needs-action preview,
+- reads snapshot overview plus snapshot needs-action preview,
+- shows external/live evidence blockers as blocked-by-input rather than
+  complete,
+- keeps the route `SUPER_ADMIN` scoped for V1.
+
+What it intentionally does not do:
+
+- no backend aggregation endpoint,
+- no write actions,
+- no provider configuration,
+- no DB migration,
+- no auth/permission model change,
+- no API response shape change.
+
+Evidence:
+
+- `docs/evidence/product-progress/2026-05-21-operations-control-tower-v1.md`

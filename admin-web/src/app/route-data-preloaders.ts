@@ -20,6 +20,8 @@ import {
   getRankings,
   getStoreKpiHighlights,
 } from '../features/reports/api'
+import { getOperationsHealth } from '../features/operations/api'
+import { getSnapshotNeedsAction, getSnapshotOverview } from '../features/snapshots/api'
 import { getStoreApprovalsPrefetchTasks } from '../features/store-approvals/prefetch'
 import {
   getTargetCoverage,
@@ -52,6 +54,7 @@ const adminInboxWorkforceRoles = ['SUPER_ADMIN', 'HR_ADMIN']
 const adminCompetitionRoles = ['SUPER_ADMIN', 'HR_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER']
 const adminIntegrationRoles = ['SUPER_ADMIN', 'INTEGRATION_ADMIN']
 const adminMasterDataRoles = ['SUPER_ADMIN', 'HR_ADMIN', 'INTEGRATION_ADMIN']
+const adminOperationsRoles = ['SUPER_ADMIN']
 const adminTargetRoles = ['SUPER_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER']
 const storeCompetitionRoles = ['STORE_PERSONNEL', 'STORE_MANAGER']
 const storeReportingRoles = ['SUPER_ADMIN', 'REPORT_VIEWER', 'AUDITOR', 'STORE_MANAGER']
@@ -121,6 +124,10 @@ function resolveRoutePrefetchTasks(
 
   if (pathname === '/admin/integrations') {
     return getAdminIntegrationsPrefetchTasks(authSummary)
+  }
+
+  if (pathname === '/admin/operations') {
+    return getAdminOperationsPrefetchTasks(authSummary)
   }
 
   if (pathname === '/admin/master-data') {
@@ -289,6 +296,38 @@ function getAdminIntegrationsPrefetchTasks(authSummary: AuthSessionSummary | nul
     {
       queryKey: ['integration-lookups'],
       queryFn: getIntegrationLookups,
+      enabled,
+    },
+  ]
+}
+
+function getAdminOperationsPrefetchTasks(authSummary: AuthSessionSummary | null): PrefetchTask[] {
+  const enabled = hasAnyRole(authSummary, adminOperationsRoles)
+
+  return [
+    {
+      queryKey: ['operations-health'],
+      queryFn: getOperationsHealth,
+      enabled,
+    },
+    {
+      queryKey: ['integration-overview'],
+      queryFn: getImportOverview,
+      enabled,
+    },
+    {
+      queryKey: ['integration-needs-action', 0, '', '', 4],
+      queryFn: () => getNeedsAction({ limit: 4, offset: 0 }),
+      enabled,
+    },
+    {
+      queryKey: ['snapshot-overview'],
+      queryFn: getSnapshotOverview,
+      enabled,
+    },
+    {
+      queryKey: ['snapshot-needs-action', 0, '', '', 4],
+      queryFn: () => getSnapshotNeedsAction({ limit: 4, offset: 0 }),
       enabled,
     },
   ]

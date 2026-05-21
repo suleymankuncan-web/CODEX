@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react'
 import {
+  Activity,
   BarChart3,
   Bell,
   ClipboardList,
@@ -35,12 +36,20 @@ type AdminNavIconId =
   | 'integrations'
   | 'kpiConfig'
   | 'masterData'
+  | 'operations'
   | 'reports'
   | 'session'
   | 'snapshots'
   | 'targets'
 
 export const adminNavDefinitions: NavDefinition[] = [
+  {
+    id: 'operations',
+    to: '/admin/operations',
+    icon: Activity,
+    labelKey: 'adminShell.nav.operations',
+    roles: ['SUPER_ADMIN'],
+  },
   {
     id: 'integrations',
     to: '/admin/integrations',

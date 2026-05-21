@@ -1,5 +1,6 @@
 export const adminShellTr = {
   'adminShell.nav.integrations': 'Entegrasyonlar',
+  'adminShell.nav.operations': 'Operasyon',
   'adminShell.nav.masterData': 'Ana Veri',
   'adminShell.nav.snapshots': 'Snapshotlar',
   'adminShell.nav.inbox': 'Gelen Kutusu',
@@ -84,6 +85,7 @@ export const adminShellTr = {
 
 export const adminShellEn: Record<keyof typeof adminShellTr, string> = {
   'adminShell.nav.integrations': 'Integrations',
+  'adminShell.nav.operations': 'Operations',
   'adminShell.nav.masterData': 'Master Data',
   'adminShell.nav.snapshots': 'Snapshots',
   'adminShell.nav.inbox': 'Inbox',

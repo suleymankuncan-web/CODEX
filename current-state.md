@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #366 plus the current frontend strictness line, and is the
+PR #367 plus the current Operations Control Tower V1 slice, and is the
 starting point for continuing in a fresh window.
 
 ## Active Workspace
@@ -27,14 +27,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-21, `origin/main` has been fetched through PR #366.
+As of 2026-05-21, `origin/main` has been fetched through PR #367.
 The root checkout may still be on a non-main local branch with unrelated
 handoff noise; do not assume the root working tree is clean.
 
 Latest merge on main:
 
 ```text
-35ea6c1 docs: guard authorization matrix drift
+4ecbfd46 chore: enable exact optional frontend types
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -120,6 +120,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #364 `chore: enable frontend strict typescript`
 - PR #365 `chore: enable indexed access checks`
 - PR #366 `docs: guard authorization matrix drift`
+- PR #367 `chore: enable exact optional frontend types`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -254,7 +255,7 @@ Latest technical assessment decision:
   guard, cross-domain data quality inventory, and frontend TypeScript
   strictness inventory.
 - Frontend TypeScript strictness is now stronger through PR #364, PR #365, and
-  the current exact-optional line: `strict: true`,
+  PR #367: `strict: true`,
   `noUncheckedIndexedAccess`, and `exactOptionalPropertyTypes` are enabled in
   the frontend app and node configs. The exact-optional rule is: omit absent
   optional API/query/prop fields; use `field: T | undefined` only for internal
@@ -340,6 +341,12 @@ Latest technical assessment decision:
   only with an explicit invariant/test decision. Keep stage-package plan writes,
   stage creation/execution, access-context helpers, score recalculation, and
   finalization parked until a tighter invariant/test decision exists.
+- Operations Control Tower V1 first read-only UI slice adds `/admin/operations`
+  for `SUPER_ADMIN` over existing backend health, import overview/needs-action,
+  snapshot overview/needs-action, and external blocker language. Evidence:
+  `docs/evidence/product-progress/2026-05-21-operations-control-tower-v1.md`.
+  No backend aggregation endpoint, writes, DB migration, auth model change, API
+  response shape change, or provider configuration is included.
 
 ## Sokrates
 
@@ -634,8 +641,8 @@ The local `x.md` conversation record identified the next growth-foundation
 risks after the project-flow review: rules/config drift, data-quality trust,
 authorization drift, operations visibility, and TypeScript strictness.
 
-The current docs-only growth-foundation branch records these as planning and
-inventory work only:
+The growth-foundation planning line records these as planning and inventory
+work:
 
 - `docs/plans/growth-foundation-gap-classification-v1.md`
 - `docs/evidence/product-progress/2026-05-21-external-evidence-blocker-refresh.md`
@@ -659,6 +666,11 @@ Important outcome:
   omit absent optional API/query/prop fields; use `field: T | undefined` only
   for internal state/view models where the field is always present but not yet
   resolved.
+- Operations Control Tower V1 now has a first implementation slice:
+  `/admin/operations` is a read-only `SUPER_ADMIN` page using existing health,
+  import, snapshot, and blocker signals only. Keep backend aggregation,
+  provider config, alert delivery wiring, writes, DB/schema changes, and auth
+  model changes parked until separately scoped.
 
 ## Next Best Work
 
@@ -734,6 +746,10 @@ Product Progress Plan V1 status:
   and fixes checklist mobile overflow caused by visit-table selector
   specificity. Evidence:
   `docs/evidence/product-progress/2026-05-20-store-mobile-shell-checklist-v1.md`.
+- The first Operations Control Tower V1 slice adds `/admin/operations` as a
+  read-only `SUPER_ADMIN` operator surface over existing health/import/snapshot
+  signals and external blocker status. Evidence:
+  `docs/evidence/product-progress/2026-05-21-operations-control-tower-v1.md`.
 
 The `/store/approvals` first pass has started:
 
