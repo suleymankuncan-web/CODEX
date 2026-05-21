@@ -247,7 +247,13 @@ export function AuthDashboardPage() {
   const dashboard = useAuthDashboardViewModel()
 
   if (dashboard.status === 'screen') {
-    return <ScreenState title={dashboard.title} copy={dashboard.copy} tone={dashboard.tone} />
+    return (
+      <ScreenState
+        title={dashboard.title}
+        copy={dashboard.copy}
+        {...(dashboard.tone === undefined ? {} : { tone: dashboard.tone })}
+      />
+    )
   }
 
   return <AuthDashboardContent {...dashboard} />

@@ -115,7 +115,12 @@ export function buildChecklistStoreVisitRows(rows: ChecklistCoverageRow[]) {
   const grouped = new Map<string, ChecklistStoreVisitRow>()
 
   for (const row of rows) {
-    const current = grouped.get(row.store.storeId) ?? { store: row.store, primary: row }
+    const current = grouped.get(row.store.storeId) ?? {
+      store: row.store,
+      bm: undefined,
+      vm: undefined,
+      primary: row,
+    }
     const next = { ...current }
 
     if (row.template.templateType === 'VM_STORE_VISIT') {
@@ -653,11 +658,12 @@ export function buildChecklistResponseDrafts(input: {
     const score = input.scores[item.templateItemId]
     if (typeof score !== 'number' || !Number.isFinite(score)) continue
 
+    const commentText = input.comments[item.templateItemId]
     drafts.push({
-        checklistInstanceId: input.checklistInstanceId,
-        templateItemId: item.templateItemId,
-        scoreValue: score,
-        commentText: input.comments[item.templateItemId] || undefined,
+      checklistInstanceId: input.checklistInstanceId,
+      templateItemId: item.templateItemId,
+      scoreValue: score,
+      ...(commentText ? { commentText } : {}),
     })
   }
 

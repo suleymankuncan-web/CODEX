@@ -143,8 +143,8 @@ export function SnapshotsDashboardPage() {
       getSnapshotNeedsAction({
         limit: PAGE_SIZE,
         offset,
-        snapshotType: snapshotTypeFilter || undefined,
-        runStatus: runStatusFilter || undefined,
+        ...(snapshotTypeFilter ? { snapshotType: snapshotTypeFilter } : {}),
+        ...(runStatusFilter ? { runStatus: runStatusFilter } : {}),
       }),
   })
   const rerunMutation = useMutation({

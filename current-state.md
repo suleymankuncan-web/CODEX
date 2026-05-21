@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #365 plus the current growth-foundation docs planning line, and is the
+PR #366 plus the current frontend strictness line, and is the
 starting point for continuing in a fresh window.
 
 ## Active Workspace
@@ -27,14 +27,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-21, `origin/main` has been fetched through PR #365.
+As of 2026-05-21, `origin/main` has been fetched through PR #366.
 The root checkout may still be on a non-main local branch with unrelated
 handoff noise; do not assume the root working tree is clean.
 
 Latest merge on main:
 
 ```text
-a62b482f chore: enable indexed access checks
+35ea6c1 docs: guard authorization matrix drift
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -119,6 +119,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #363 `docs: plan growth foundation guardrails`
 - PR #364 `chore: enable frontend strict typescript`
 - PR #365 `chore: enable indexed access checks`
+- PR #366 `docs: guard authorization matrix drift`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -252,10 +253,12 @@ Latest technical assessment decision:
   rules/config boundary, operations control tower V1, authorization matrix drift
   guard, cross-domain data quality inventory, and frontend TypeScript
   strictness inventory.
-- Frontend TypeScript strictness is now stronger through PR #364 and PR #365:
-  `strict: true` and `noUncheckedIndexedAccess` are enabled in the frontend app
-  and node configs. `exactOptionalPropertyTypes` remains parked until optional
-  API payload/state patterns are agreed.
+- Frontend TypeScript strictness is now stronger through PR #364, PR #365, and
+  the current exact-optional line: `strict: true`,
+  `noUncheckedIndexedAccess`, and `exactOptionalPropertyTypes` are enabled in
+  the frontend app and node configs. The exact-optional rule is: omit absent
+  optional API/query/prop fields; use `field: T | undefined` only for internal
+  state/view models where the field is always present but unresolved.
 - Reporting repository first boundary-refactor pass is complete through PR #343:
   store score reads, closed ranking reads, snapshot reads, store performance
   reads, and ranking reads were split out; `ReportingRepository` is now roughly
@@ -650,10 +653,12 @@ Important outcome:
   user-facing behavior from this planning line.
 - External/live evidence remains blocked until real bearer/provider/restore/
   Redis/upload inputs are provided.
-- Frontend temporary `--strict` checks pass for app and node configs; the
-  first safe strictness implementation slice is a config-only `strict: true`
-  PR. `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes` need later
-  measured code slices.
+- Frontend strictness has moved past the original inventory: `strict: true`,
+  `noUncheckedIndexedAccess`, and `exactOptionalPropertyTypes` are enabled in
+  both frontend TypeScript configs. Keep the exact-optional convention intact:
+  omit absent optional API/query/prop fields; use `field: T | undefined` only
+  for internal state/view models where the field is always present but not yet
+  resolved.
 
 ## Next Best Work
 

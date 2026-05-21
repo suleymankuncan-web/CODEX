@@ -227,8 +227,8 @@ export function IntegrationDashboardPage() {
       getNeedsAction({
         limit: PAGE_SIZE,
         offset,
-        entityType: entityTypeFilter || undefined,
-        status: statusFilter || undefined,
+        ...(entityTypeFilter ? { entityType: entityTypeFilter } : {}),
+        ...(statusFilter ? { status: statusFilter } : {}),
       }),
     staleTime: 30_000,
   })
@@ -712,13 +712,13 @@ function IntegrationDashboardLoadedContent(input: IntegrationDashboardLoadedCont
 }
 
 type PowerBiUploadMutationState = {
-  data?: PowerBiExportUploadResponse
+  data: PowerBiExportUploadResponse | undefined
   isPending: boolean
   mutate: (input: Parameters<typeof uploadPowerBiExport>[0]) => void
 }
 
 type ImportTemplateQueryState = {
-  data?: ImportPayloadTemplate
+  data: ImportPayloadTemplate | undefined
   error: unknown
   isError: boolean
   isLoading: boolean
@@ -926,14 +926,18 @@ function IntegrationUploadsPanel(input: IntegrationUploadsPanelProps) {
                     uploadPowerBiMutation.mutate({
                       sourceCode: resolvedPowerBiSourceCode,
                       periodType: powerBiPeriodType,
-                      periodMonth: powerBiPeriodType === 'monthly' ? powerBiPeriodMonth : undefined,
-                      periodStart: powerBiPeriodType === 'monthly' ? undefined : powerBiPeriodStart,
-                      periodEnd:
-                        powerBiPeriodType === 'monthly'
-                          ? undefined
-                          : powerBiPeriodType === 'daily'
-                            ? powerBiPeriodStart
-                            : powerBiPeriodEnd,
+                      ...(powerBiPeriodType === 'monthly' && powerBiPeriodMonth
+                        ? { periodMonth: powerBiPeriodMonth }
+                        : {}),
+                      ...(powerBiPeriodType !== 'monthly' && powerBiPeriodStart
+                        ? { periodStart: powerBiPeriodStart }
+                        : {}),
+                      ...(powerBiPeriodType !== 'monthly'
+                        ? {
+                            periodEnd:
+                              powerBiPeriodType === 'daily' ? powerBiPeriodStart : powerBiPeriodEnd,
+                          }
+                        : {}),
                       personnelFile,
                       storeFile,
                     })

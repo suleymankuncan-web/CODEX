@@ -352,13 +352,14 @@ export function StoreRankingsPage(input: {
     ],
     queryFn: () =>
       getRankings({
-        periodStart: periodStart || undefined,
-        regionManagerUserId: privilegedSession ? regionManagerUserId || undefined : undefined,
-        regionId: privilegedSession ? regionId || undefined : undefined,
-        storeId: privilegedSession ? storeId || undefined : undefined,
-        search: privilegedSession ? search || undefined : undefined,
-        sortKey: privilegedSession && hasNonDefaultSort ? sortKey : undefined,
-        sortDirection: privilegedSession && hasNonDefaultSort ? sortDirection : undefined,
+        ...(periodStart ? { periodStart } : {}),
+        ...(privilegedSession && regionManagerUserId ? { regionManagerUserId } : {}),
+        ...(privilegedSession && regionId ? { regionId } : {}),
+        ...(privilegedSession && storeId ? { storeId } : {}),
+        ...(privilegedSession && search ? { search } : {}),
+        ...(privilegedSession && hasNonDefaultSort
+          ? { sortKey, sortDirection }
+          : {}),
         limit,
         offset: privilegedSession ? offset : 0,
       }),

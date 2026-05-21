@@ -131,7 +131,7 @@ export function StoreSidebar(input: {
               className={({ isActive }) =>
                 `store-command-nav-link${isActive ? ' store-command-nav-link-active' : ''}`
               }
-              end={item.end}
+              {...(item.end === undefined ? {} : { end: item.end })}
               key={item.id}
               onFocus={() => warmStoreRoute(item.path)}
               onPointerDown={() => warmStoreRoute(item.path)}

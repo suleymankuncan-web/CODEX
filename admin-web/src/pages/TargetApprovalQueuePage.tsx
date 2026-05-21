@@ -218,7 +218,9 @@ export function TargetApprovalQueuePage(input: {
 
                       approveMutation.mutate({
                         requestId: item.requestId,
-                        approvalNote: approvalNotes[item.requestId] || undefined,
+                        ...(approvalNotes[item.requestId]
+                          ? { approvalNote: approvalNotes[item.requestId] }
+                          : {}),
                       })
                     }}
                     approving={

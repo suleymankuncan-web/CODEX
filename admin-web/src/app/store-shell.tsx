@@ -43,7 +43,10 @@ export function StoreShell(input: {
   const storePersonnelRoute = location.pathname.startsWith('/store/personnel/')
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const storeRoute = (element: ReactNode, options?: { allowVm?: boolean }) => (
-    <StoreRouteGuard authSummary={input.authSummary} allowVm={options?.allowVm}>
+    <StoreRouteGuard
+      authSummary={input.authSummary}
+      {...(options?.allowVm === undefined ? {} : { allowVm: options.allowVm })}
+    >
       {element}
     </StoreRouteGuard>
   )

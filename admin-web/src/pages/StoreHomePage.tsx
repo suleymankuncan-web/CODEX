@@ -141,8 +141,9 @@ function buildMetrics(input: {
       {
         labelKey: 'storeHome.metric.checklistCoverage',
         value: input.checklistSummary?.metricValue ?? input.pendingValue,
-        note: input.checklistSummary?.metricNote,
-        noteKey: input.checklistSummary ? undefined : 'storeHome.metric.checklistPending',
+        ...(input.checklistSummary
+          ? { note: input.checklistSummary.metricNote }
+          : { noteKey: 'storeHome.metric.checklistPending' }),
         tone: 'link',
         href: '/store/checklists',
       },
@@ -172,8 +173,9 @@ function buildMetrics(input: {
       {
         labelKey: 'storeHome.metric.checklistStatus',
         value: input.checklistSummary?.metricValue ?? input.pendingValue,
-        note: input.checklistSummary?.metricNote,
-        noteKey: input.checklistSummary ? undefined : 'storeHome.metric.checklistPending',
+        ...(input.checklistSummary
+          ? { note: input.checklistSummary.metricNote }
+          : { noteKey: 'storeHome.metric.checklistPending' }),
         tone: 'link',
         href: '/store/checklists',
       },
@@ -185,8 +187,9 @@ function buildMetrics(input: {
       {
         labelKey: 'storeHome.metric.checklistQueue',
         value: input.checklistSummary?.metricValue ?? input.pendingValue,
-        note: input.checklistSummary?.metricNote,
-        noteKey: input.checklistSummary ? undefined : 'storeHome.metric.checklistPending',
+        ...(input.checklistSummary
+          ? { note: input.checklistSummary.metricNote }
+          : { noteKey: 'storeHome.metric.checklistPending' }),
         tone: 'score',
         href: '/store/checklists',
       },

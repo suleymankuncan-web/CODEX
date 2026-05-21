@@ -76,7 +76,7 @@ export function ImportBatchDetailPage() {
     queryFn: () =>
       getExternalIdMapCandidates({
         entityType: 'store',
-        q: storeCandidateSearch || undefined,
+        ...(storeCandidateSearch ? { q: storeCandidateSearch } : {}),
         limit: 25,
       }),
     enabled: hasStoreMapping,
@@ -86,7 +86,7 @@ export function ImportBatchDetailPage() {
     queryFn: () =>
       getExternalIdMapCandidates({
         entityType: 'employee',
-        q: employeeCandidateSearch || undefined,
+        ...(employeeCandidateSearch ? { q: employeeCandidateSearch } : {}),
         limit: 25,
       }),
     enabled: hasEmployeeMapping,
@@ -119,7 +119,7 @@ export function ImportBatchDetailPage() {
         entityType: input.entityType,
         externalId: input.externalId,
         internalId: input.internalId,
-        internalTableName: input.internalTableName,
+        ...(input.internalTableName === undefined ? {} : { internalTableName: input.internalTableName }),
       }),
     onSuccess: async (response, variables) => {
       setFeedback(response.command.message)
@@ -155,7 +155,12 @@ export function ImportBatchDetailPage() {
   const errors = errorItems
   const auditItems = auditQuery.data?.items ?? []
   const qualityIssueItems = detail.qualityIssueSummary?.items ?? []
-  const importDecision = buildImportDecisionEvidence({ detail, reconciliation, errors, t })
+  const importDecision = buildImportDecisionEvidence({
+    detail,
+    ...(reconciliation === undefined ? {} : { reconciliation }),
+    errors,
+    t,
+  })
   const kpiReviewEvidence = buildKpiReviewEvidence({
     errors,
     totalErrorRows: errorsQuery.data?.meta.total ?? errors.length,
@@ -247,7 +252,7 @@ type MappingApprovalInput = {
   internalTableName?: string
 }
 type CandidateQueryState = {
-  data?: { items: ExternalIdMapCandidate[] }
+  data: { items: ExternalIdMapCandidate[] } | undefined
   isLoading: boolean
   isError: boolean
   error: unknown

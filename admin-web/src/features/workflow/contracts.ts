@@ -37,6 +37,7 @@ export function toTargetApprovalInboxItem(
   deepLink = '/admin/targets',
 ): WorkflowInboxItem {
   const needsAttention = item.status === 'pending_region_approval'
+  const historyPreview = item.approvalNote ?? item.requestReason ?? undefined
 
   return {
     itemType: 'approval',
@@ -57,6 +58,6 @@ export function toTargetApprovalInboxItem(
     primaryActionLabel: needsAttention ? 'Talebi onayla' : 'Geçmişi incele',
     secondaryActionLabel: 'Detayı aç',
     deepLink,
-    historyPreview: item.approvalNote ?? item.requestReason ?? undefined,
+    ...(historyPreview === undefined ? {} : { historyPreview }),
   }
 }

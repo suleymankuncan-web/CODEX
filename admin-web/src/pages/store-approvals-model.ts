@@ -54,9 +54,9 @@ export function formatEmploymentType(type: SellerEmploymentType, t: TranslateFun
 }
 
 export type ListQuerySnapshot<T> = {
-  data?: {
+  data: {
     items: T[]
-  }
+  } | undefined
   error: unknown
   isError: boolean
   isLoading: boolean

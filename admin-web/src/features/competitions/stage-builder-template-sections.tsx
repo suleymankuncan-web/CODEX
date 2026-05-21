@@ -61,11 +61,12 @@ export function TemplateLibrarySection(input: {
 
   function submitEditDraft() {
     if (!editDraft || validateTemplateDraft(editDraft)) return
+    const description = editDraft.description.trim()
 
     input.onUpdate(editDraft.templateId, {
       templateCode: editDraft.templateCode.trim(),
       templateName: editDraft.templateName.trim(),
-      description: editDraft.description.trim() || undefined,
+      ...(description ? { description } : {}),
       storeIds: editDraft.storeIds,
     })
     setEditDraft(null)
@@ -77,11 +78,12 @@ export function TemplateLibrarySection(input: {
 
   function submitCloneDraft() {
     if (!cloneDraft || validateTemplateCloneDraft(cloneDraft)) return
+    const description = cloneDraft.description.trim()
 
     input.onClone(cloneDraft.sourceTemplateId, {
       templateCode: cloneDraft.templateCode.trim(),
       templateName: cloneDraft.templateName.trim(),
-      description: cloneDraft.description.trim() || undefined,
+      ...(description ? { description } : {}),
     })
     setCloneDraft(null)
   }

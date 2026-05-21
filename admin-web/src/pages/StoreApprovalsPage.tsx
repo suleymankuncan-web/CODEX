@@ -310,11 +310,12 @@ function useStoreApprovalsPageContent(input: {
       requestMonth: `${requestMonth}-01`,
       targetLabel,
       totalTargetValue: Number(totalTargetValue),
-      requestReason: requestReason || undefined,
+      ...(requestReason ? { requestReason } : {}),
       allocations: activeAllocations,
     })
   }
   const submitSellerCodeRequest = () => {
+    const trimmedSellerRequestReason = sellerRequestReason.trim()
     const payload = {
       firstName: sellerFirstName.trim(),
       lastName: sellerLastName.trim(),
@@ -323,7 +324,7 @@ function useStoreApprovalsPageContent(input: {
       hireDate: sellerHireDate,
       requestedPositionId: sellerPositionId.trim(),
       employmentType: sellerEmploymentType,
-      requestReason: sellerRequestReason.trim() || undefined,
+      ...(trimmedSellerRequestReason ? { requestReason: trimmedSellerRequestReason } : {}),
     }
 
     if (editingSellerRequestId) {
@@ -377,7 +378,7 @@ function useStoreApprovalsPageContent(input: {
 
     approveTargetMutation.mutate({
       requestId: request.requestId,
-      approvalNote: approvalNotes[request.requestId] || undefined,
+      ...(approvalNotes[request.requestId] ? { approvalNote: approvalNotes[request.requestId] } : {}),
     })
   }
 

@@ -99,9 +99,9 @@ function useMasterDataBootstrapQueries(input: {
     queryKey: ['master-data-bootstrap-batches', input.entityFilter, input.readinessFilter, deferredBatchSearch],
     queryFn: () =>
       getMasterDataBootstrapBatches({
-        bootstrapEntity: input.entityFilter === 'all' ? undefined : input.entityFilter,
-        readiness: input.readinessFilter === 'all' ? undefined : input.readinessFilter,
-        q: deferredBatchSearch || undefined,
+        ...(input.entityFilter === 'all' ? {} : { bootstrapEntity: input.entityFilter }),
+        ...(input.readinessFilter === 'all' ? {} : { readiness: input.readinessFilter }),
+        ...(deferredBatchSearch ? { q: deferredBatchSearch } : {}),
         limit: PAGE_SIZE,
         offset: 0,
       }),
@@ -127,9 +127,11 @@ function useMasterDataBootstrapQueries(input: {
     ],
     queryFn: () =>
       getStoreMasterData({
-        q: deferredStoreSearch || undefined,
-        enabled: input.storeEnabledFilter === 'all' ? undefined : input.storeEnabledFilter === 'enabled',
-        status: input.storeStatusFilter === 'all' ? undefined : input.storeStatusFilter,
+        ...(deferredStoreSearch ? { q: deferredStoreSearch } : {}),
+        ...(input.storeEnabledFilter === 'all'
+          ? {}
+          : { enabled: input.storeEnabledFilter === 'enabled' }),
+        ...(input.storeStatusFilter === 'all' ? {} : { status: input.storeStatusFilter }),
         limit: PAGE_SIZE,
         offset: input.storeOffset,
       }),
@@ -150,9 +152,9 @@ function useMasterDataBootstrapQueries(input: {
     ],
     queryFn: () =>
       getPersonnelMasterData({
-        q: deferredPersonnelSearch || undefined,
-        status: input.personnelStatusFilter === 'all' ? undefined : input.personnelStatusFilter,
-        storeId: input.personnelStoreFilter === 'all' ? undefined : input.personnelStoreFilter,
+        ...(deferredPersonnelSearch ? { q: deferredPersonnelSearch } : {}),
+        ...(input.personnelStatusFilter === 'all' ? {} : { status: input.personnelStatusFilter }),
+        ...(input.personnelStoreFilter === 'all' ? {} : { storeId: input.personnelStoreFilter }),
         limit: PAGE_SIZE,
         offset: input.personnelOffset,
       }),
@@ -384,9 +386,23 @@ export function MasterDataBootstrapPage() {
   }
 
   const tabs: MasterDataCommandTab[] = [
-    { id: 'batches', label: t('adminMasterData.tabBatches'), count: batchesQuery.data?.meta.total },
-    { id: 'stores', label: t('adminMasterData.tabStores'), count: storeMasterQuery.data?.meta.total },
-    { id: 'personnel', label: t('adminMasterData.tabPersonnel'), count: personnelMasterQuery.data?.meta.total },
+    {
+      id: 'batches',
+      label: t('adminMasterData.tabBatches'),
+      ...(batchesQuery.data?.meta.total === undefined ? {} : { count: batchesQuery.data.meta.total }),
+    },
+    {
+      id: 'stores',
+      label: t('adminMasterData.tabStores'),
+      ...(storeMasterQuery.data?.meta.total === undefined ? {} : { count: storeMasterQuery.data.meta.total }),
+    },
+    {
+      id: 'personnel',
+      label: t('adminMasterData.tabPersonnel'),
+      ...(personnelMasterQuery.data?.meta.total === undefined
+        ? {}
+        : { count: personnelMasterQuery.data.meta.total }),
+    },
     { id: 'history', label: t('adminMasterData.tabHistory') },
   ]
   const promotedRows =
@@ -854,13 +870,17 @@ async function submitPersonnelMasterDrafts(input: {
           employeeId: personnel.employeeId,
           firstName: nextPersonnel.firstName,
           lastName: nextPersonnel.lastName,
-          externalEmployeeRef: nextPersonnel.externalEmployeeRef || undefined,
+          ...(nextPersonnel.externalEmployeeRef
+            ? { externalEmployeeRef: nextPersonnel.externalEmployeeRef }
+            : {}),
           employmentStatus: normalizePersonnelStatus(nextPersonnel.employmentStatus),
           employmentType: normalizeEmploymentType(nextPersonnel.employmentType),
           hireDate: nextPersonnel.hireDate,
           storeId: nextPersonnel.storeId,
           positionId: nextPersonnel.positionId,
-          assignmentStartDate: nextPersonnel.assignmentStartDate || undefined,
+          ...(nextPersonnel.assignmentStartDate
+            ? { assignmentStartDate: nextPersonnel.assignmentStartDate }
+            : {}),
         })
         input.updateCache(response.data.personnelMaster)
         input.clearDraft(personnel.employeeId)

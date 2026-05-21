@@ -60,11 +60,7 @@ async function requestJson<T>(path: string, input?: { method?: JsonMethod; body?
   const prepared = await prepareHeaders(input?.body !== undefined)
   const method = input?.method ?? 'GET'
 
-  let attempt = await performFetchAttempt(path, {
-    method,
-    headers: prepared.headers,
-    body,
-  })
+  let attempt = await performFetchAttempt(path, buildJsonRequest(method, prepared.headers, body))
   let response = attempt.response
 
   if (response.status === 401 && prepared.session.mode === 'bearer') {
@@ -72,11 +68,7 @@ async function requestJson<T>(path: string, input?: { method?: JsonMethod; body?
     if (retryHeaders) {
       attempt = await performFetchAttempt(
         path,
-        {
-          method,
-          headers: retryHeaders,
-          body,
-        },
+        buildJsonRequest(method, retryHeaders, body),
         2,
       )
       response = attempt.response
@@ -167,6 +159,23 @@ export async function sendFormData<T>(
   },
 ): Promise<T> {
   return requestFormData<T>(path, input)
+}
+
+function buildJsonRequest(
+  method: JsonMethod,
+  headers: Record<string, string>,
+  body: string | undefined,
+): RequestInit & { method: JsonMethod } {
+  const request: RequestInit & { method: JsonMethod } = {
+    method,
+    headers,
+  }
+
+  if (body !== undefined) {
+    request.body = body
+  }
+
+  return request
 }
 
 async function performFetchAttempt(

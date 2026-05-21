@@ -149,7 +149,7 @@ function ClerkSessionBridge() {
     }
 
     return registerBearerTokenRefreshHandler(async (input) => {
-      const token = await getClerkToken({ skipCache: input?.skipCache })
+      const token = await getClerkToken(input?.skipCache ? { skipCache: true } : undefined)
       if (!token) {
         return null
       }

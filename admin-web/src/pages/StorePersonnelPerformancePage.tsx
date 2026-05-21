@@ -21,7 +21,7 @@ export function StorePersonnelPerformancePage(input: {
     <StoreMyPerformancePage
       key={`${employeeId ?? ''}:${initialLivePeriodType}:${initialLivePeriodStart}`}
       authSummary={input.authSummary}
-      employeeId={employeeId}
+      {...(employeeId === undefined ? {} : { employeeId })}
       initialLivePeriodType={initialLivePeriodType}
       initialLivePeriodStart={initialLivePeriodStart}
       profileMode="personnel"

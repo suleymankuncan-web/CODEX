@@ -48,7 +48,7 @@ Why this is not `DEVAM ET`:
 - There are still large backend repositories/services and large frontend
   surfaces that increase review, onboarding, and regression cost.
 - Broad production remains blocked by live evidence, not by local code alone.
-- Some frontend TypeScript and UX consistency work is still incremental.
+- Some frontend UX consistency work is still incremental.
 
 Why this is not `KRITIK REFACTOR`:
 
@@ -135,7 +135,7 @@ These can proceed without provider secrets:
 - frontend page/component/hook/model extraction,
 - targeted UI/UX V1 gaps with browser/Playwright evidence,
 - generated API client drift gates,
-- TypeScript strictness inventory,
+- TypeScript strictness maintenance,
 - performance baseline scripts or local query profiling on disposable data.
 
 ### Category B: Local Preparation Only
@@ -554,17 +554,18 @@ Current inventory:
   configs after temporary strict checks passed with zero errors.
 - PR #365 resolved the measured `noUncheckedIndexedAccess` errors and enabled
   the flag in the frontend app and node TypeScript configs.
-- `exactOptionalPropertyTypes` currently produces 66 app errors.
-- The next strictness implementation is not a blind flag flip:
-  `exactOptionalPropertyTypes` needs an optional payload/state pattern decision
-  before code changes.
+- The exact-optional line resolved the measured 66 app errors and enabled
+  `exactOptionalPropertyTypes` in the frontend app and node TypeScript configs.
+- The adopted pattern is omission for absent optional API/query/prop fields,
+  and `field: T | undefined` only for internal state/view models where the
+  field is always present but unresolved.
 
 Candidate flag order:
 
 1. Done: `strict: true` config enablement.
 2. Done: `noUncheckedIndexedAccess` guard fixes and config enablement.
-3. Parked: `exactOptionalPropertyTypes` pattern decision and smaller domain
-   slices.
+3. Done: `exactOptionalPropertyTypes` optional payload/state fixes and config
+   enablement.
 4. `noImplicitAny` is already covered by current strict build behavior.
 
 Implementation pattern:
@@ -573,7 +574,7 @@ Implementation pattern:
   config.
 - [x] Record error categories by domain.
 - [x] Enable safe flags only after the full compiler/build gates pass.
-- [ ] For `exactOptionalPropertyTypes`, agree on optional payload/state helper
+- [x] For `exactOptionalPropertyTypes`, agree on optional payload/state helper
   patterns before touching API wrappers or dense pages.
 - [ ] Prefer generated API types and local model narrowing over broad casts.
 
@@ -707,9 +708,10 @@ input changes priority.
 18. Done: TypeScript strictness inventory PR.
 19. Done: config-only `strict: true` PR for frontend app and node configs.
 20. Done: `noUncheckedIndexedAccess` implementation and config enablement PR.
-21. Next local auth/security guard candidate: authorization matrix drift guard
+21. Done: `exactOptionalPropertyTypes` implementation and config enablement PR.
+22. Next local auth/security guard candidate: authorization matrix drift guard
     contract, docs/script only.
-22. External evidence PRs only when real provider inputs exist.
+23. External evidence PRs only when real provider inputs exist.
 
 Batch rule:
 

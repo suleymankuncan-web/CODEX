@@ -111,7 +111,9 @@ export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummar
     mutationFn: (stageId: string) =>
       finalizeStage(stageId, {
         allowOverride: overrideJustification.trim().length >= 12,
-        overrideJustification: overrideJustification.trim() || undefined,
+        ...(overrideJustification.trim()
+          ? { overrideJustification: overrideJustification.trim() }
+          : {}),
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['competition-detail'] }),
   })
