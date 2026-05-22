@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #404, the Product Readiness V1 first-pass closeout, Operations Control Tower
+PR #405, the Product Readiness V1 first-pass closeout, Operations Control Tower
 readiness line, Sokrates/discipline operating docs, current workspace hygiene,
 the Clerk persona staging evidence runbook, and the generated system-flow map.
 It is the starting point for continuing in a fresh window.
@@ -29,14 +29,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-22, `origin/main` has been fetched through PR #404.
+As of 2026-05-22, `origin/main` has been fetched through PR #405.
 The root checkout has been moved back to clean `main` and is aligned with
 `origin/main`.
 
 Latest merge on main:
 
 ```text
-f9e45ba8 docs: decide store placeholder routes
+62bad148 docs: record clerk persona evidence status
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -160,6 +160,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #402 `docs: audit system flow fanout pressure`
 - PR #403 `docs: record operations telemetry gap check`
 - PR #404 `docs: decide store placeholder routes`
+- PR #405 `docs: record clerk persona evidence status`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -177,8 +178,8 @@ frontend root, security headers, SPA fallback, and static assets passed.
 
 Current local hygiene state:
 
-- Root workspace `D:\store-ops-workspace` is clean on `main...origin/main` at
-  `f9e45ba8`.
+- Root workspace `D:\store-ops-workspace` was clean on `main...origin/main` at
+  `62bad148` before the Clerk live-evidence branch was created.
 - The previous dirty root state was not deleted. It was saved as stash
   `codex hygiene backup 2026-05-21 root dirty state`. Do not drop that stash
   unless the user explicitly approves.
@@ -249,11 +250,15 @@ Active follow-up line:
   `/store/settings` remains a real browser-local utility route, while
   `/store/reports`, `/store/targets`, and `/store/incentives` remain honest
   handoff/intake routes until native store contracts are explicitly scoped.
-- Milestone 7 Clerk persona evidence status is recorded in
-  `docs/evidence/system-flow/clerk-persona-evidence-status-v1.md`: historical
-  controlled staging Clerk persona evidence exists for the pilot set, but fresh
-  current-session Clerk smoke is blocked until a real local-only staging token
-  and assigned/unassigned store inputs are available.
+- Milestone 7 original blocker status is recorded in
+  `docs/evidence/system-flow/clerk-persona-evidence-status-v1.md`; it is now
+  superseded by the fresh live evidence below.
+- Fresh Milestone 7 live evidence is recorded in
+  `docs/evidence/system-flow/clerk-persona-live-evidence-2026-05-22.md`: the
+  existing staging pilot Clerk accounts produced real tokens, four persona
+  session/route smokes passed, store-manager assigned/unassigned action-scope
+  proof passed (`200`/`403`), and deployed readiness with a real token passed
+  `14/14`.
 
 ## API Contract Drift Status
 
@@ -881,8 +886,12 @@ Important outcome:
 - Do not add `dm` or `config` schemas yet.
 - Do not change auth, permissions, DB schema, API response shape, CSS, or
   user-facing behavior from this planning line.
-- External/live evidence remains blocked until real bearer/provider/restore/
-  Redis/upload inputs are provided.
+- External/live evidence is no longer blocked for the existing Clerk pilot
+  bearer/persona path; fresh evidence is recorded in
+  `docs/evidence/system-flow/clerk-persona-live-evidence-2026-05-22.md`.
+  Remaining external blockers still include non-pilot provider onboarding,
+  restore, Redis, upload, and alert-delivery inputs until those are explicitly
+  provided.
 - Frontend strictness has moved past the original inventory: `strict: true`,
   `noUncheckedIndexedAccess`, and `exactOptionalPropertyTypes` are enabled in
   both frontend TypeScript configs. Keep the exact-optional convention intact:
