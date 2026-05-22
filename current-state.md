@@ -2,10 +2,11 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #431, the Product Readiness V1 first-pass closeout, Operations Control Tower
-readiness line, Sokrates/discipline operating docs, current workspace hygiene,
-the Clerk persona staging evidence runbook, the generated system-flow map, and
-the production evidence closure joint plan plus Redis/BullMQ, alert-provider,
+PR #432 plus the Store Action V1B decision packet, the Product Readiness V1
+first-pass closeout, Operations Control Tower readiness line,
+Sokrates/discipline operating docs, current workspace hygiene, the Clerk
+persona staging evidence runbook, the generated system-flow map, and the
+production evidence closure joint plan plus Redis/BullMQ, alert-provider,
 Supabase restore, readiness profile reset, and Sokrates calibration proofs.
 It is the starting point for continuing in a fresh window.
 
@@ -31,14 +32,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-22, `origin/main` has been fetched through PR #431. The root
+As of 2026-05-22, `origin/main` has been fetched through PR #432. The root
 checkout was clean `main` and aligned with `origin/main` before the Store
-Action target source decision branch.
+Action V1B decision branch.
 
 Latest merge on main:
 
 ```text
-67f85c17 docs: decide store action checklist source
+e13e2c68 docs: decide store action target source
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -189,6 +190,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #429 `feat: derive store action candidates`
 - PR #430 `test: guard store action source decisions`
 - PR #431 `docs: decide store action checklist source`
+- PR #432 `docs: decide store action target source`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -207,7 +209,7 @@ frontend root, security headers, SPA fallback, and static assets passed.
 Current local hygiene state:
 
 - Root workspace `D:\store-ops-workspace` was clean on `main...origin/main` at
-  `67f85c17` after PR #431 was merged and `origin/main` was fetched.
+  `e13e2c68` after PR #432 was merged and `origin/main` was fetched.
 - The previous dirty root state was not deleted. It was saved as stash
   `codex hygiene backup 2026-05-21 root dirty state`. Do not drop that stash
   unless the user explicitly approves.
@@ -1381,6 +1383,13 @@ Store Action V1A status:
   explicit.
 - Target source evidence:
   `docs/evidence/store-action-target-source-decision-v1.md`.
+- V1B persisted action-plan decision status: implementation is NO-GO right
+  now. V1B can proceed only as a separately approved write-feature slice with
+  DB placement, rollback, command authorization, assigned-store negative tests,
+  audit events, workflow inbox source/status mapping, OpenAPI/generated client,
+  and frontend recovery states.
+- V1B decision evidence:
+  `docs/evidence/store-action-persisted-action-plan-v1b-decision.md`.
 
 Current user direction on 2026-05-18:
 
