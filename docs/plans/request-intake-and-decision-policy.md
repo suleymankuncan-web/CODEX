@@ -220,6 +220,7 @@ From this point forward:
 
 This policy should be used together with:
 
+- [feature-integration-spine-v1.md](./feature-integration-spine-v1.md)
 - [new-module-template.md](./new-module-template.md)
 - [feature-backlog.md](./feature-backlog.md)
 - [phase-7-production-ux-and-real-auth.md](./phase-7-production-ux-and-real-auth.md)

@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #426, the Product Readiness V1 first-pass closeout, Operations Control Tower
+PR #427, the Product Readiness V1 first-pass closeout, Operations Control Tower
 readiness line, Sokrates/discipline operating docs, current workspace hygiene,
 the Clerk persona staging evidence runbook, the generated system-flow map, and
 the production evidence closure joint plan plus Redis/BullMQ, alert-provider,
@@ -31,14 +31,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-22, `origin/main` has been fetched through PR #426. The root
-checkout was clean `main` and aligned with `origin/main` before the File Size
-Guard V1 follow-up branch.
+As of 2026-05-22, `origin/main` has been fetched through PR #427. The root
+checkout was clean `main` and aligned with `origin/main` before the Feature
+Integration Spine V1 docs-only branch.
 
 Latest merge on main:
 
 ```text
-47dec704 docs: close refactor completion state
+ad90dd94 test: guard source file size budgets
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -184,6 +184,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #424 `refactor: split reporting kpi config helpers`
 - PR #425 `refactor: split integration read model helpers`
 - PR #426 `docs: close refactor completion state`
+- PR #427 `test: guard source file size budgets`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -202,17 +203,17 @@ frontend root, security headers, SPA fallback, and static assets passed.
 Current local hygiene state:
 
 - Root workspace `D:\store-ops-workspace` was clean on `main...origin/main` at
-  `a5d416ba` after PR #417 was merged and `origin/main` was fetched.
+  `ad90dd94` after PR #427 was merged and `origin/main` was fetched.
 - The previous dirty root state was not deleted. It was saved as stash
   `codex hygiene backup 2026-05-21 root dirty state`. Do not drop that stash
   unless the user explicitly approves.
-- Merged local branch hygiene was run: 226 local branches already merged into
-  `main` were deleted with safe `git branch -d`, and stale remote refs were
-  pruned.
-- Worktree hygiene was started. The count dropped from 163 worktrees to 88.
-  The remaining old worktrees are dependency-heavy checkouts, mostly with
-  `node_modules`, so removal is safe but slow and should be done as a separate
-  hygiene batch.
+- Repository hygiene was completed after the refactor closeout line: old
+  merged worktrees, merged local branches, and merged remote `origin/codex/*`
+  branches were cleaned up. The root workspace stayed clean.
+- Remaining intentional local quarantine before the Feature Integration Spine
+  branch: roughly 10 local branches, 2 worktrees, and 2 remote `origin/codex/*`
+  refs. Do not delete the remaining closed/unmerged branch state unless the
+  user explicitly approves abandoned/quarantine cleanup.
 - Source-derived flow-map work should continue from a fresh worktree and should
   regenerate the checked-in HTML/JSON artifacts before PR.
 
@@ -1331,6 +1332,26 @@ Good candidates:
 - Checklist: tighten result/ack/history surfaces now that the workflow works.
 - Admin master/integration/checklist shells: make the command surfaces visually
   and operationally consistent.
+
+## Feature Integration Spine Status
+
+Feature Integration Spine V1 is the current docs-only decision line for future
+feature growth. It is not Store Action-specific. It defines how new features
+enter the project without overloading workflow inbox, auth/scope, OpenAPI,
+audit, Operations Control Tower, route/navigation, localization, reporting, or
+data-placement junctions.
+
+Primary references:
+
+- `docs/plans/feature-integration-spine-v1.md`
+- `docs/plans/new-module-template.md`
+- `docs/plans/store-action-coaching-loop-v1.md`
+
+The spine keeps generic workflow engines, rules engines, event buses, API
+Gateway work, broad OpenAPI generator refactor, and Operations Tower dumping
+out of scope. Store Action / Coaching Loop V1 is the first planned feature to
+use the spine, starting from read-only action candidates before any persisted
+action-plan write model.
 
 Current user direction on 2026-05-18:
 

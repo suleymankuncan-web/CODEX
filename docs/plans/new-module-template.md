@@ -14,14 +14,62 @@ This template exists to keep the system easy to extend, easy to change later, an
 No new module or major feature starts with code first.
 
 The minimum order is:
-1. mini spec
-2. bounded context decision
-3. data placement decision
-4. API surface
-5. admin operations
-6. reporting impact
-7. UI impact
-8. implementation
+1. operating mode decision
+2. mini spec
+3. bounded context decision
+4. source-of-truth decision
+5. data placement decision
+6. auth/read-scope/action-scope decision
+7. API surface
+8. workflow/inbox/audit impact
+9. operations/reporting/UI impact
+10. verification ladder
+11. implementation
+
+Use this template together with
+[feature-integration-spine-v1.md](./feature-integration-spine-v1.md). The
+spine defines which gates are mandatory for every meaningful feature and which
+gates apply only when the feature touches API, auth, workflow, audit,
+operations, UI, localization, DB, or external providers.
+
+Do not turn this template into ceremony for trivial fixes. Do use it for any
+feature that changes product behavior, routes, workflow, data ownership,
+permissions, API contracts, operational state, or future module boundaries.
+
+## Feature Integration Spine Gate
+
+### Operating Mode
+- `bugfix`
+- `docs-only`
+- `refactor`
+- `read-only feature`
+- `write feature`
+- `workflow feature`
+- `external integration`
+
+### Owner And Lifecycle
+- Owner:
+- Status: `intake` / `shaping` / `planned` / `active` / `parked` /
+  `deprecated` / `retired`
+- Completion boundary:
+- Park or retire trigger:
+
+### Blast Radius Budget
+Mark each central junction this feature touches:
+
+- [ ] Auth / read scope / action scope
+- [ ] API / OpenAPI / generated client
+- [ ] Workflow inbox
+- [ ] Audit catalog
+- [ ] DB schema or migration
+- [ ] Reporting / KPI / snapshot interpretation
+- [ ] Operations / telemetry
+- [ ] Route / navigation shell
+- [ ] Localization / user-facing copy
+- [ ] External provider / upload / queue / live evidence
+
+If three or more are checked, write a short blast-radius decision before
+implementation or split the work.
 
 ## Module Header
 
@@ -45,6 +93,11 @@ The minimum order is:
 - Which module owns this feature?
 - Is it a new module or an extension of an existing one?
 - Why does it belong there?
+
+### Source Of Truth
+- Which domain, table, external source, or snapshot is authoritative?
+- Which neighboring domains may be read but not reinterpreted?
+- What must not become a second source of truth?
 
 ### Neighbor Modules
 - Which existing modules can read from it?
@@ -103,6 +156,8 @@ The minimum order is:
 ### Scope
 - Is access `company`, `region`, or `store` scoped?
 - What is the minimum scope required for each command and read?
+- Does the feature need read scope, action scope, or both?
+- What foreign-scope or forbidden case proves access stays narrow?
 
 ### Sensitive Actions
 - Which actions require stronger audit or governance?
@@ -129,6 +184,12 @@ The minimum order is:
 - retry rules
 - state machine rules
 
+### OpenAPI / Generated Client
+- Will this add or change OpenAPI schemas?
+- Which generated client/wrapper consumes it?
+- Is the response shape additive or intentionally changed?
+- What check proves generated types stay current?
+
 ## Operational Workflow
 
 ### Happy Path
@@ -145,10 +206,35 @@ The minimum order is:
 - Is rerun immutable?
 - Do we create a new run/version instead of overwriting old output?
 
+## Workflow, Inbox, And Audit
+
+### Workflow Type
+- Is this an `approval`, `acknowledgement`, `task`, `notification`, or no
+  workflow item?
+
+### Inbox Contract
+- Does this feature create inbox items?
+- Which source type owns the item?
+- What is the primary action and deep link?
+- Which source status maps to `needs_attention`, `completed`, or
+  `informational`?
+
+### Audit Contract
+- Which commands write audit events?
+- What is the event name?
+- What is the target entity?
+- Which fields or reasons must be traceable?
+
 ## Reporting And Analytics
 
 ### Dashboard Impact
 - Does this feature need summary cards, trend charts, queue views, or drill-down tables?
+
+### Operations Impact
+- Does it belong in the Operations Control Tower?
+- Is the tower showing only summary/link/status, or is this accidentally moving
+  source workflow detail into operations?
+- Is the signal live, planned, stale, failed, or external-input blocked?
 
 ### Snapshot Impact
 - Should it be represented in snapshots?
@@ -180,6 +266,15 @@ The minimum order is:
 - Which actions are destructive, high-risk, or irreversible?
 - What confirmation, warnings, or diff previews are needed?
 
+### Route And Navigation
+- Which shell owns the route: admin, store, auth, or mobile?
+- Is navigation visible by default or contextual?
+- Does the route need loading, empty, error, unauthorized, and recovery states?
+
+### Localization
+- Is there user-facing copy?
+- Which workflow/status terms must stay canonical in Turkish and English?
+
 ## Data Model Checklist
 - [ ] `ops/stg/rpt/audit` placement is explicit
 - [ ] table ownership is clear
@@ -188,6 +283,8 @@ The minimum order is:
 - [ ] versioning/history decision is explicit
 - [ ] audit requirements are explicit
 - [ ] retry/reprocess behavior is explicit
+- [ ] source of truth is explicit
+- [ ] second-source-of-truth risk is addressed
 
 ## Engineering Checklist
 - [ ] module ownership decided
@@ -197,6 +294,10 @@ The minimum order is:
 - [ ] tests planned
 - [ ] docs impact identified
 - [ ] migration strategy identified
+- [ ] operating mode selected
+- [ ] blast radius budget checked
+- [ ] OpenAPI/generated client impact planned, if any
+- [ ] workflow/inbox adapter impact planned, if any
 
 ## Testing Checklist
 - [ ] unit tests for rule logic
@@ -205,6 +306,9 @@ The minimum order is:
 - [ ] authorization/scope tests
 - [ ] audit visibility tests
 - [ ] snapshot/reporting tests if applicable
+- [ ] negative/foreign-scope tests for commands
+- [ ] OpenAPI/client checks if API is touched
+- [ ] targeted frontend E2E if a user-facing surface changes
 
 ## Rollout Checklist
 - [ ] migration order defined
@@ -219,10 +323,19 @@ The minimum order is:
 ### Feature
 -
 
+### Operating Mode
+-
+
 ### Why
 -
 
 ### Owner Module
+-
+
+### Lifecycle
+-
+
+### Source Of Truth
 -
 
 ### Data Placement
@@ -231,13 +344,22 @@ The minimum order is:
 - `rpt`:
 - `audit`:
 
+### Blast Radius
+-
+
 ### Commands
 -
 
 ### Reads
 -
 
-### Roles And Scope
+### Roles, Read Scope, And Action Scope
+-
+
+### Workflow / Inbox
+-
+
+### Audit
 -
 
 ### Retry / Rerun / History
@@ -246,7 +368,16 @@ The minimum order is:
 ### Reporting Impact
 -
 
+### Operations Impact
+-
+
 ### UI Impact
+-
+
+### Localization Impact
+-
+
+### Verification Ladder
 -
 
 ### Risks
@@ -259,7 +390,12 @@ The minimum order is:
 Before coding starts, confirm these:
 - Is the feature in the correct bounded context?
 - Are all writes owned by one module?
+- Is the source of truth clear?
 - Is operational data separated from reporting data?
+- Are read scope and action scope separated when needed?
+- Are workflow and inbox semantics explicit?
+- Are audit requirements explicit for commands?
+- Is the blast radius small enough for one PR?
 - Can future changes happen without rewriting unrelated modules?
 - Can we trace and explain backward changes later?
 
