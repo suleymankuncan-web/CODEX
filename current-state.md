@@ -2,10 +2,10 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #414, the Product Readiness V1 first-pass closeout, Operations Control Tower
+PR #416, the Product Readiness V1 first-pass closeout, Operations Control Tower
 readiness line, Sokrates/discipline operating docs, current workspace hygiene,
 the Clerk persona staging evidence runbook, the generated system-flow map, and
-the production evidence closure joint plan.
+the production evidence closure joint plan plus Redis/BullMQ staging proof.
 It is the starting point for continuing in a fresh window.
 
 ## Active Workspace
@@ -30,14 +30,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-22, `origin/main` has been fetched through PR #415. Before the
-current docs-only closure-plan branch, the root checkout was moved back to
-clean `main` and aligned with `origin/main`.
+As of 2026-05-22, `origin/main` has been fetched through PR #416. Before the
+current alert provider evidence branch, the root checkout was clean `main` and
+aligned with `origin/main`.
 
 Latest merge on main:
 
 ```text
-d00da43e docs: plan production evidence closure (#415)
+73054791 docs: record redis bullmq staging proof (#416)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -172,6 +172,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #413 `docs: record controlled pilot round 2 stabilization`
 - PR #414 `fix: close store personnel approvals route gap`
 - PR #415 `docs: plan production evidence closure`
+- PR #416 `docs: record redis bullmq staging proof`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -190,7 +191,7 @@ frontend root, security headers, SPA fallback, and static assets passed.
 Current local hygiene state:
 
 - Root workspace `D:\store-ops-workspace` was clean on `main...origin/main` at
-  `d00da43e` after PR #415 was merged and `origin/main` was fetched.
+  `73054791` after PR #416 was merged and `origin/main` was fetched.
 - The previous dirty root state was not deleted. It was saved as stash
   `codex hygiene backup 2026-05-21 root dirty state`. Do not drop that stash
   unless the user explicitly approves.
@@ -830,10 +831,10 @@ missing item is one of these external proofs.
   load passed while protected groups were correctly skipped, and alert routing
   passed backend-health checks while external provider delivery remained
   unconfigured.
-- Supabase restore, external alert provider delivery, Redis/BullMQ
-  broad-production health, and any future import/upload role-delegation change
-  still need real inputs and explicit verification before broad production can
-  move out of `No-Go`.
+- Supabase restore, Redis/BullMQ broad-production health, production alert
+  policy, and any future import/upload role-delegation change still need real
+  inputs and explicit verification before broad production can move out of
+  `No-Go`.
 - Joint-plan preflight on 2026-05-22 reran deployed readiness and alert routing:
   public staging stayed healthy, but `/api/health` still reported
   `queueBackend=in-memory`, Redis `skipped`, and provider delivery
@@ -845,6 +846,14 @@ missing item is one of these external proofs.
   Redis `status=ok`. This proves staging wiring, not broad-production
   durability; broad production still needs a production-grade Redis tier/profile
   decision, alert provider delivery, and Supabase restore proof.
+- Alert provider delivery proof is recorded in
+  `docs/evidence/readiness/2026-05-22-alert-provider-delivery-proof.md`.
+  Render Notifications delivered a staging backend deploy notification to
+  Slack after the health check path was changed to `/api/health`. The alert
+  routing smoke passed 5/5 with provider metadata and deployed backend health.
+  Email delivery was not observed and is not counted as proven. This proves one
+  staging external delivery path, not app-level error tracking or final
+  broad-production incident readiness.
 
 GSD notes:
 
