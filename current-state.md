@@ -30,14 +30,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-22, `origin/main` has been fetched through PR #414. Before the
+As of 2026-05-22, `origin/main` has been fetched through PR #415. Before the
 current docs-only closure-plan branch, the root checkout was moved back to
 clean `main` and aligned with `origin/main`.
 
 Latest merge on main:
 
 ```text
-4ed9a23e fix: close store personnel approvals route gap (#414)
+d00da43e docs: plan production evidence closure (#415)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -171,6 +171,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #412 `docs: refresh current state latest merge`
 - PR #413 `docs: record controlled pilot round 2 stabilization`
 - PR #414 `fix: close store personnel approvals route gap`
+- PR #415 `docs: plan production evidence closure`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -189,7 +190,7 @@ frontend root, security headers, SPA fallback, and static assets passed.
 Current local hygiene state:
 
 - Root workspace `D:\store-ops-workspace` was clean on `main...origin/main` at
-  `4ed9a23e` after PR #414 was merged and `origin/main` was fetched.
+  `d00da43e` after PR #415 was merged and `origin/main` was fetched.
 - The previous dirty root state was not deleted. It was saved as stash
   `codex hygiene backup 2026-05-21 root dirty state`. Do not drop that stash
   unless the user explicitly approves.
@@ -837,6 +838,13 @@ missing item is one of these external proofs.
   public staging stayed healthy, but `/api/health` still reported
   `queueBackend=in-memory`, Redis `skipped`, and provider delivery
   `not-configured`.
+- Redis/BullMQ staging proof is recorded in
+  `docs/evidence/readiness/2026-05-22-redis-bullmq-staging-proof.md`. After
+  the operator connected Render Key Value to the staging backend,
+  `/api/health` returned `queueBackend=bullmq`, queue `status=durable`, and
+  Redis `status=ok`. This proves staging wiring, not broad-production
+  durability; broad production still needs a production-grade Redis tier/profile
+  decision, alert provider delivery, and Supabase restore proof.
 
 GSD notes:
 
@@ -1339,6 +1347,7 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/plans/backend-foundation-hardening-plan-v1.md` - Backend Foundation Hardening Plan V1
 - `docs/plans/backup-restore-drill-runbook-v1.md` - Backup Restore Drill Runbook V1
 - `docs/plans/backup-restore-drill-local-evidence-2026-04-30.md` - Backup Restore Local Drill Evidence
+- `docs/evidence/readiness/2026-05-22-redis-bullmq-staging-proof.md` - Redis / BullMQ Staging Proof
 - `docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md` - Controlled Pilot Feedback Log
 - `docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-conditional-go-consolidation.md` - Controlled Pilot Conditional Go Consolidation
 - `docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-round-1-outcome.md` - Controlled Pilot Round 1 Outcome
