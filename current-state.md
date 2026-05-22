@@ -866,6 +866,18 @@ missing item is one of these external proofs.
   Supabase staging application-schema logical recovery, not managed
   restore-to-new-project, PITR, Storage/Auth/Realtime/Edge settings restore, or
   final production RPO/RTO.
+- Readiness profile reset evidence is recorded in
+  `docs/evidence/readiness/2026-05-22-readiness-profile-reset-after-broad-smoke.md`.
+  Staging briefly ran `READINESS_PROFILE=broad-production` with
+  `queueBackend=bullmq`, queue `status=durable`, and Redis `status=ok`; the
+  gate correctly reported observability `degraded` because no real
+  `ERROR_TRACKING_DSN` exists. The environment was then reset to
+  `READINESS_PROFILE=controlled-pilot` while keeping Redis/BullMQ enabled.
+  After redeploy, `/api/health` reported observability `ok`, deployed
+  readiness passed `13/14` with auth skipped, public backend load passed, and
+  alert routing passed `5/5`. Broad production remains `No-Go`; the next real
+  decision is app-level error tracking versus explicit platform-alert policy,
+  plus production-grade Redis and managed backup/PITR/RPO/RTO acceptance.
 
 GSD notes:
 
