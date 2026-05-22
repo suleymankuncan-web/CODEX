@@ -63,8 +63,10 @@ Operating plan:
   `MasterDataBootstrapService` normalization/hash/read helpers now live in
   `master-data-bootstrap-normalization.helpers.ts`. `ReportingService` KPI
   config resolve/default/metadata/validation helpers now live in
-  `reporting-kpi-config.helpers.ts`; after that slice, the next active
-  candidate is `IntegrationService` pure mapping/helper extraction.
+  `reporting-kpi-config.helpers.ts`. `IntegrationService` read-model mappers
+  and supported lookup lists now live in `integration-read-model.helpers.ts`;
+  after that slice, broad refactor is closed as an active workstream. Test-suite
+  helper extraction remains conditional on real gate pain/flakiness.
   Redesign-sensitive UI plus auth/write/data state-machine work stays parked
   until concrete triggers appear.
 - Fresh Clerk controlled-pilot persona/token/action evidence is recorded in

@@ -801,10 +801,13 @@ input changes priority.
    `reporting-kpi-config.helpers.ts`; no KPI scoring, benchmark math,
    live/closed fallback, personnel access, API shape, auth, DB, or frontend
    behavior changed.
-28. Next active refactor candidate: `IntegrationService` pure mapping/helper
-   extraction, unless a production bug, failing gate, user-provided redesign
-   input, or concrete auth/data/security trigger changes priority.
-29. External evidence PRs only when real provider inputs exist.
+28. Done: `IntegrationService` read-model helper extraction into
+   `integration-read-model.helpers.ts`; no import lifecycle, retry, source
+   governance, approval, queue, raw staging write, API shape, auth, DB, or
+   frontend behavior changed.
+29. No normal active refactor candidate remains. Test-suite helper extraction is
+   conditional only on real gate pain, flakiness, or review friction.
+30. External evidence PRs only when real provider inputs exist.
 
 Batch rule:
 
