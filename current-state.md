@@ -2,9 +2,10 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #413, the Product Readiness V1 first-pass closeout, Operations Control Tower
+PR #414, the Product Readiness V1 first-pass closeout, Operations Control Tower
 readiness line, Sokrates/discipline operating docs, current workspace hygiene,
-the Clerk persona staging evidence runbook, and the generated system-flow map.
+the Clerk persona staging evidence runbook, the generated system-flow map, and
+the production evidence closure joint plan.
 It is the starting point for continuing in a fresh window.
 
 ## Active Workspace
@@ -29,14 +30,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-22, `origin/main` has been fetched through PR #413.
-The root checkout has been moved back to clean `main` and is aligned with
-`origin/main`.
+As of 2026-05-22, `origin/main` has been fetched through PR #414. Before the
+current docs-only closure-plan branch, the root checkout was moved back to
+clean `main` and aligned with `origin/main`.
 
 Latest merge on main:
 
 ```text
-55d7ada1 docs: record controlled pilot round 2 stabilization (#413)
+4ed9a23e fix: close store personnel approvals route gap (#414)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -169,6 +170,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #411 `docs: record import upload authorization decision`
 - PR #412 `docs: refresh current state latest merge`
 - PR #413 `docs: record controlled pilot round 2 stabilization`
+- PR #414 `fix: close store personnel approvals route gap`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -187,7 +189,7 @@ frontend root, security headers, SPA fallback, and static assets passed.
 Current local hygiene state:
 
 - Root workspace `D:\store-ops-workspace` was clean on `main...origin/main` at
-  `55d7ada1` after PR #413 was merged and `origin/main` was fetched.
+  `4ed9a23e` after PR #414 was merged and `origin/main` was fetched.
 - The previous dirty root state was not deleted. It was saved as stash
   `codex hygiene backup 2026-05-21 root dirty state`. Do not drop that stash
   unless the user explicitly approves.
@@ -774,6 +776,16 @@ Tier B - broad-production/operational hardening:
 - Alert/error-tracking destination proof or accepted log-retention evidence.
 - Broad-production Redis/BullMQ decision and health evidence.
 
+Current closure plan:
+
+- `docs/plans/production-evidence-closure-joint-plan-v1.md` is the working
+  plan for closing the remaining broad-production evidence items together with
+  the operator.
+- Work order: Redis/BullMQ staging proof first, alert provider delivery second,
+  Supabase restore drill third.
+- Free Redis/provider tiers may prove staging setup only; do not count them as
+  broad-production durability unless the owner explicitly accepts their limits.
+
 These cannot be honestly closed by local code changes alone. They require real
 infrastructure access, real tokens, an approved restore target, or provider
 configuration. Do not open another local readiness guard by reflex if the next
@@ -821,6 +833,10 @@ missing item is one of these external proofs.
   broad-production health, and any future import/upload role-delegation change
   still need real inputs and explicit verification before broad production can
   move out of `No-Go`.
+- Joint-plan preflight on 2026-05-22 reran deployed readiness and alert routing:
+  public staging stayed healthy, but `/api/health` still reported
+  `queueBackend=in-memory`, Redis `skipped`, and provider delivery
+  `not-configured`.
 
 GSD notes:
 
@@ -1345,6 +1361,7 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/plans/pilot-readiness-gate-v1.md` - Pilot Readiness Gate V1
 - `docs/plans/project-health-snapshot-2026-05-01.md`
 - `docs/plans/project-progress-plan-v1.md` - Project Progress Plan V1
+- `docs/plans/production-evidence-closure-joint-plan-v1.md` - Production Evidence Closure Joint Plan V1
 - `docs/plans/refactor-execution-plan-v1.md` - Refactor Execution Plan V1
 - `docs/plans/repo-hygiene-contract-v1.md` - Repo Hygiene Guard V1 reference is tracked through the contract tests and debt ledger
 - `docs/plans/source-agnostic-import-boundary-v1.md` - Source-Agnostic Import Boundary V1
