@@ -388,6 +388,24 @@ Evidence:
 - `docs/plans/store-action-v1b-persisted-action-plan-design-v1.md`
 - `docs/superpowers/plans/2026-05-22-store-action-v1b-persisted-action-plans.md`
 
+## V1B Schema Contract And Migration
+
+The first implementation kademe adds the persisted action-plan schema without
+exposing runtime behavior.
+
+Decision:
+
+- Add `ops.store_action_plan` and indexes as an additive DB migration.
+- Keep the active source bounded to `kpi_exception`.
+- Keep service commands, audit writes, API, workflow inbox integration, and UI
+  out of this kademe.
+
+Evidence:
+
+- `db/migrations/049_store_action_plan_v1.sql`
+- `backend/nestjs/src/modules/store-ops/store-action-plan-schema-contract.spec.ts`
+- `docs/evidence/store-action-v1b-schema-v1.md`
+
 ## Data Placement Draft
 
 V1A read-only:

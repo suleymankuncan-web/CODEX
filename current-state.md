@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #433 plus the Store Action V1B design packet, the Product Readiness V1
+PR #434 plus the Store Action V1B schema packet, the Product Readiness V1
 first-pass closeout, Operations Control Tower readiness line,
 Sokrates/discipline operating docs, current workspace hygiene, the Clerk
 persona staging evidence runbook, the generated system-flow map, and the
@@ -32,14 +32,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-22, `origin/main` has been fetched through PR #433. The root
+As of 2026-05-22, `origin/main` has been fetched through PR #434. The root
 checkout was clean `main` and aligned with `origin/main` before the Store
-Action V1B design branch.
+Action V1B schema branch.
 
 Latest merge on main:
 
 ```text
-f081a5fe docs: decide store action v1b boundary
+8e79244f docs: design store action v1b plans
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -192,6 +192,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #431 `docs: decide store action checklist source`
 - PR #432 `docs: decide store action target source`
 - PR #433 `docs: decide store action v1b boundary`
+- PR #434 `docs: design store action v1b plans`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -210,7 +211,7 @@ frontend root, security headers, SPA fallback, and static assets passed.
 Current local hygiene state:
 
 - Root workspace `D:\store-ops-workspace` was clean on `main...origin/main` at
-  `f081a5fe` after PR #433 was merged and `origin/main` was fetched.
+  `8e79244f` after PR #434 was merged and `origin/main` was fetched.
 - The previous dirty root state was not deleted. It was saved as stash
   `codex hygiene backup 2026-05-21 root dirty state`. Do not drop that stash
   unless the user explicitly approves.
@@ -1399,6 +1400,20 @@ Store Action V1A status:
 - V1B design references:
   `docs/plans/store-action-v1b-persisted-action-plan-design-v1.md` and
   `docs/superpowers/plans/2026-05-22-store-action-v1b-persisted-action-plans.md`.
+- V1B schema kademe status: `ops.store_action_plan` is being added as an
+  additive schema/migration slice only. It does not expose endpoints, service
+  commands, audit writes, workflow inbox integration, or UI behavior.
+- V1B schema local proof: backend schema contract, root Store Action schema
+  guard, `test:scripts`, backend `check:release`, and disposable
+  `smoke:migration:fresh-db` passed. The fresh DB smoke applied 49/49
+  migrations including `049_store_action_plan_v1.sql` with 0 failures.
+- V1B schema release-gate note: the first PR run exposed a transitive
+  production-audit blocker in `qs@6.15.1`; `backend/nestjs` now overrides
+  `qs` to `6.15.2`, and backend production audit reports 0 vulnerabilities.
+- V1B schema references:
+  `db/migrations/049_store_action_plan_v1.sql`,
+  `backend/nestjs/src/modules/store-ops/store-action-plan-schema-contract.spec.ts`,
+  and `docs/evidence/store-action-v1b-schema-v1.md`.
 
 Current user direction on 2026-05-18:
 

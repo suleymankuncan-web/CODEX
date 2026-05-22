@@ -12,8 +12,8 @@
 
 ## File Map
 
-- Create `db/migrations/040_store_action_plan_v1.sql`: add the action-plan table and indexes.
-- Modify `db/schema.sql`: keep the canonical schema aligned with migration 040.
+- Create `db/migrations/049_store_action_plan_v1.sql`: add the action-plan table and indexes.
+- Modify `db/schema.sql`: keep the canonical schema aligned with migration 049.
 - Create `backend/nestjs/src/modules/store-ops/store-action-plan-schema-contract.spec.ts`: guard schema shape and indexes.
 - Modify `backend/nestjs/src/shared/audit/audit-event-catalog.ts`: add four Store Action audit events.
 - Create `backend/nestjs/src/modules/store-ops/application/store-action-plan.contract.ts`: backend domain DTOs and lifecycle helpers.
@@ -34,11 +34,11 @@
 ## Task 1: Schema Contract And Migration
 
 **Files:**
-- Create: `db/migrations/040_store_action_plan_v1.sql`
+- Create: `db/migrations/049_store_action_plan_v1.sql`
 - Modify: `db/schema.sql`
 - Create: `backend/nestjs/src/modules/store-ops/store-action-plan-schema-contract.spec.ts`
 
-- [ ] **Step 1: Add the failing schema contract test**
+- [x] **Step 1: Add the failing schema contract test**
 
 Create `backend/nestjs/src/modules/store-ops/store-action-plan-schema-contract.spec.ts` with assertions for:
 
@@ -49,7 +49,7 @@ import { join } from "path";
 const root = join(__dirname, "../../../../..");
 const schemaSql = readFileSync(join(root, "db/schema.sql"), "utf8");
 const migrationSql = readFileSync(
-  join(root, "db/migrations/040_store_action_plan_v1.sql"),
+  join(root, "db/migrations/049_store_action_plan_v1.sql"),
   "utf8",
 );
 const combinedSql = `${schemaSql}\n${migrationSql}`;
@@ -74,7 +74,7 @@ describe("store action plan schema contract", () => {
 });
 ```
 
-- [ ] **Step 2: Verify the schema contract fails**
+- [x] **Step 2: Verify the schema contract fails**
 
 Run:
 
@@ -82,13 +82,13 @@ Run:
 npm.cmd --prefix backend/nestjs test -- store-action-plan-schema-contract.spec.ts
 ```
 
-Expected: fails because migration 040 and table text do not exist yet.
+Expected: fails because migration 049 and table text do not exist yet.
 
-- [ ] **Step 3: Add the migration and canonical schema block**
+- [x] **Step 3: Add the migration and canonical schema block**
 
-Add the SQL from `docs/plans/store-action-v1b-persisted-action-plan-design-v1.md` under `Data Model Draft` to both `db/migrations/040_store_action_plan_v1.sql` and the operational table area in `db/schema.sql`.
+Add the SQL from `docs/plans/store-action-v1b-persisted-action-plan-design-v1.md` under `Data Model Draft` to both `db/migrations/049_store_action_plan_v1.sql` and the operational table area in `db/schema.sql`.
 
-- [ ] **Step 4: Verify schema contract passes**
+- [x] **Step 4: Verify schema contract passes**
 
 Run:
 
@@ -98,10 +98,10 @@ npm.cmd --prefix backend/nestjs test -- store-action-plan-schema-contract.spec.t
 
 Expected: pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
-git add db/schema.sql db/migrations/040_store_action_plan_v1.sql backend/nestjs/src/modules/store-ops/store-action-plan-schema-contract.spec.ts
+git add db/schema.sql db/migrations/049_store_action_plan_v1.sql backend/nestjs/src/modules/store-ops/store-action-plan-schema-contract.spec.ts
 git commit -m "feat: add store action plan schema"
 ```
 

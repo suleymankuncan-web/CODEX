@@ -662,6 +662,38 @@ CREATE TABLE rpt.snapshot_run (
     CHECK (period_end >= period_start)
 );
 
+CREATE TABLE ops.store_action_plan (
+    store_action_plan_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL REFERENCES ops.company(company_id),
+    region_id UUID NOT NULL REFERENCES ops.region(region_id),
+    store_id UUID NOT NULL REFERENCES ops.store(store_id),
+    owner_user_id UUID NOT NULL REFERENCES ops.user_account(user_id),
+    created_by_user_id UUID NOT NULL REFERENCES ops.user_account(user_id),
+    source_type TEXT NOT NULL,
+    source_id TEXT NOT NULL,
+    source_deep_link TEXT,
+    source_snapshot_run_id UUID REFERENCES rpt.snapshot_run(snapshot_run_id),
+    source_kpi_id UUID REFERENCES ops.kpi_definition(kpi_id),
+    title TEXT NOT NULL,
+    summary TEXT,
+    priority TEXT NOT NULL DEFAULT 'medium',
+    status TEXT NOT NULL DEFAULT 'open',
+    due_on DATE NOT NULL,
+    resolution_note TEXT,
+    closed_by_user_id UUID REFERENCES ops.user_account(user_id),
+    closed_at TIMESTAMPTZ,
+    cancel_reason TEXT,
+    cancelled_by_user_id UUID REFERENCES ops.user_account(user_id),
+    cancelled_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (source_type IN ('kpi_exception')),
+    CHECK (priority IN ('high', 'medium', 'low')),
+    CHECK (status IN ('open', 'in_progress', 'blocked', 'closed', 'cancelled')),
+    CHECK (status <> 'closed' OR (closed_at IS NOT NULL AND resolution_note IS NOT NULL)),
+    CHECK (status <> 'cancelled' OR (cancelled_at IS NOT NULL AND cancel_reason IS NOT NULL))
+);
+
 CREATE TABLE rpt.store_workforce_snapshot (
     snapshot_run_id UUID NOT NULL REFERENCES rpt.snapshot_run(snapshot_run_id),
     store_id UUID NOT NULL REFERENCES ops.store(store_id),
@@ -1073,6 +1105,19 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_personnel_target_reference_active_unique
     ON ops.personnel_target_reference (employee_id, period_start, period_end, target_type)
     WHERE status = 'approved';
 
+CREATE INDEX IF NOT EXISTS idx_store_action_plan_store_status_due
+    ON ops.store_action_plan (store_id, status, due_on);
+
+CREATE INDEX IF NOT EXISTS idx_store_action_plan_owner_status_due
+    ON ops.store_action_plan (owner_user_id, status, due_on);
+
+CREATE INDEX IF NOT EXISTS idx_store_action_plan_scope_status_due
+    ON ops.store_action_plan (company_id, region_id, status, due_on);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_store_action_plan_active_source_unique
+    ON ops.store_action_plan (store_id, source_type, source_id)
+    WHERE status IN ('open', 'in_progress', 'blocked');
+
 CREATE INDEX competition_stage_competition_state_idx
     ON ops.competition_stage (competition_id, lifecycle_state, starts_on, ends_on);
 
@@ -1229,6 +1274,7 @@ COMMENT ON TABLE ops.user_action_store_assignment IS 'Store-level action grants 
 COMMENT ON TABLE ops.mobile_device_session IS 'Mobile device session registry for active/revoked app sessions. Refresh tokens remain IdP-owned in V1.';
 COMMENT ON TABLE ops.target_distribution_request IS 'Store-level target distribution requests that are submitted by store managers and approved by region-level oversight.';
 COMMENT ON TABLE ops.personnel_target_reference IS 'Approved personnel target references promoted from region-approved target distribution requests for scoring.';
+COMMENT ON TABLE ops.store_action_plan IS 'Store-owned follow-up plans created from approved Store Action candidate sources.';
 COMMENT ON TABLE ops.feed_post IS 'Scoped operational announcements and challenge posts. Challenge posts announce focus windows but do not calculate scores.';
 COMMENT ON TABLE ops.checklist_acknowledgement IS 'Store acknowledgement evidence for completed checklist instances.';
 COMMENT ON TABLE ops.kpi_score_profile_config IS 'Data-driven KPI scoring configuration for store/personnel score profiles, ownership matrix and grading bands.';
