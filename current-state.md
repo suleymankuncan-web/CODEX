@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #428, the Product Readiness V1 first-pass closeout, Operations Control Tower
+PR #429, the Product Readiness V1 first-pass closeout, Operations Control Tower
 readiness line, Sokrates/discipline operating docs, current workspace hygiene,
 the Clerk persona staging evidence runbook, the generated system-flow map, and
 the production evidence closure joint plan plus Redis/BullMQ, alert-provider,
@@ -31,14 +31,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-22, `origin/main` has been fetched through PR #428. The root
+As of 2026-05-22, `origin/main` has been fetched through PR #429. The root
 checkout was clean `main` and aligned with `origin/main` before the Store
-Action read-only candidates branch.
+Action source guard branch.
 
 Latest merge on main:
 
 ```text
-3ba41c23 docs: add feature integration spine
+5ecee297 feat: derive store action candidates
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -186,6 +186,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #426 `docs: close refactor completion state`
 - PR #427 `test: guard source file size budgets`
 - PR #428 `docs: add feature integration spine`
+- PR #429 `feat: derive store action candidates`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -204,7 +205,7 @@ frontend root, security headers, SPA fallback, and static assets passed.
 Current local hygiene state:
 
 - Root workspace `D:\store-ops-workspace` was clean on `main...origin/main` at
-  `3ba41c23` after PR #428 was merged and `origin/main` was fetched.
+  `5ecee297` after PR #429 was merged and `origin/main` was fetched.
 - The previous dirty root state was not deleted. It was saved as stash
   `codex hygiene backup 2026-05-21 root dirty state`. Do not drop that stash
   unless the user explicitly approves.
@@ -1361,6 +1362,10 @@ Store Action V1A status:
 - No new Store Action endpoint, DB migration, auth change, workflow status,
   KPI scoring rule, or Operations Control Tower signal in the first slice.
 - Evidence: `docs/evidence/store-action-readonly-candidates-v1.md`.
+- Source guard status: checklist receipt acknowledgements and target
+  distribution approvals remain parked boundaries, not automatic Store Action
+  coaching candidates.
+- Source guard evidence: `docs/evidence/store-action-source-guard-v1.md`.
 
 Current user direction on 2026-05-18:
 

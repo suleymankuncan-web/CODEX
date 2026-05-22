@@ -255,6 +255,36 @@ Evidence:
 
 - `docs/evidence/store-action-readonly-candidates-v1.md`
 
+## V1A Source Guard Decision
+
+The second implementation slice keeps current workflow source classification
+explicit before adding another candidate family.
+
+Decision:
+
+- `kpi_exception` remains the only active read-only Store Action candidate
+  source.
+- `checklist_receipt` remains parked at the acknowledgement boundary. A
+  completed checklist waiting for store acknowledgement is not automatically a
+  coaching candidate.
+- `target_distribution_request` remains parked at the approval boundary. A
+  pending target approval is not automatically a coaching candidate.
+- Frontend Store Action candidate logic must cover every current
+  `WorkflowInboxItem['sourceType']` with an explicit source decision.
+
+Why:
+
+- Checklist low-score follow-up needs a clear threshold owner and a decision on
+  how it relates to existing acknowledgement.
+- Target coverage/miss follow-up must not reinterpret target approval,
+  reference promotion, or KPI scoring-reference semantics.
+- Store Action should not become a shadow workflow engine by treating every
+  inbox item as coaching work.
+
+Evidence:
+
+- `docs/evidence/store-action-source-guard-v1.md`
+
 ## Data Placement Draft
 
 V1A read-only:
@@ -414,6 +444,9 @@ Current status:
 
 - Completed as a narrow read-only frontend model over existing workflow inbox
   KPI exception tasks.
+- Current source guard keeps checklist receipt acknowledgements and target
+  distribution approvals parked until their source-specific decisions are
+  explicit.
 - Persisted action plans remain a separate V1B decision.
 
 ## CODEX DURUST YORUM
