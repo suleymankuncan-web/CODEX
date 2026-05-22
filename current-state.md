@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #430, the Product Readiness V1 first-pass closeout, Operations Control Tower
+PR #431, the Product Readiness V1 first-pass closeout, Operations Control Tower
 readiness line, Sokrates/discipline operating docs, current workspace hygiene,
 the Clerk persona staging evidence runbook, the generated system-flow map, and
 the production evidence closure joint plan plus Redis/BullMQ, alert-provider,
@@ -31,14 +31,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-22, `origin/main` has been fetched through PR #430. The root
+As of 2026-05-22, `origin/main` has been fetched through PR #431. The root
 checkout was clean `main` and aligned with `origin/main` before the Store
-Action checklist source decision branch.
+Action target source decision branch.
 
 Latest merge on main:
 
 ```text
-35461d58 test: guard store action source decisions
+67f85c17 docs: decide store action checklist source
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -188,6 +188,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #428 `docs: add feature integration spine`
 - PR #429 `feat: derive store action candidates`
 - PR #430 `test: guard store action source decisions`
+- PR #431 `docs: decide store action checklist source`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -206,7 +207,7 @@ frontend root, security headers, SPA fallback, and static assets passed.
 Current local hygiene state:
 
 - Root workspace `D:\store-ops-workspace` was clean on `main...origin/main` at
-  `35461d58` after PR #430 was merged and `origin/main` was fetched.
+  `67f85c17` after PR #431 was merged and `origin/main` was fetched.
 - The previous dirty root state was not deleted. It was saved as stash
   `codex hygiene backup 2026-05-21 root dirty state`. Do not drop that stash
   unless the user explicitly approves.
@@ -1373,6 +1374,13 @@ Store Action V1A status:
   and acknowledgement interaction are explicit.
 - Checklist source evidence:
   `docs/evidence/store-action-checklist-source-decision-v1.md`.
+- Target source decision status: target-driven coaching follows the KPI
+  exception candidate path for `TARGET_ACHIEVEMENT`; direct
+  `target_distribution_request` approval and target coverage/miss candidates
+  stay parked until owner-by-status and scoring-reference semantics are
+  explicit.
+- Target source evidence:
+  `docs/evidence/store-action-target-source-decision-v1.md`.
 
 Current user direction on 2026-05-18:
 

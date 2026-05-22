@@ -313,6 +313,36 @@ Evidence:
 
 - `docs/evidence/store-action-checklist-source-decision-v1.md`
 
+## V1A Target Source Decision
+
+Target-derived Store Action follow-up should not be created directly from
+target coverage rows yet.
+
+Decision:
+
+- `target_distribution_request` remains approval work.
+- Target coverage/readiness states remain target-domain signals, not automatic
+  coaching candidates.
+- Target performance follow-up may enter Store Action through the existing KPI
+  exception source when `TARGET_ACHIEVEMENT` contributes to an at-risk/off-track
+  KPI status.
+- Direct target coverage/miss candidates are parked until owner-by-status,
+  source reference, deep link, scope tests, and scoring-reference semantics are
+  explicit.
+
+Why:
+
+- Store score configuration already marks `TARGET_ACHIEVEMENT` as a
+  `task_candidate` metric.
+- Target coverage states can mean different actions: approval, conflict
+  resolution, stale reference cleanup, missing target setup, or coaching.
+- Store Action should not mutate or reinterpret target approval, target
+  reference promotion, or KPI scoring-reference behavior.
+
+Evidence:
+
+- `docs/evidence/store-action-target-source-decision-v1.md`
+
 ## Data Placement Draft
 
 V1A read-only:
@@ -478,6 +508,10 @@ Current status:
 - Checklist source decision keeps direct checklist receipts as
   acknowledgements; checklist-driven coaching can only come through the KPI
   exception path until direct low-score policy is explicit.
+- Target source decision keeps target distribution requests as approvals and
+  target coverage as target-domain readiness; target-driven coaching can only
+  come through the KPI exception path until direct target source policy is
+  explicit.
 - Persisted action plans remain a separate V1B decision.
 
 ## CODEX DURUST YORUM

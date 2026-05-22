@@ -5,6 +5,7 @@ import test from 'node:test'
 const evidence = readFileSync('docs/evidence/store-action-readonly-candidates-v1.md', 'utf8')
 const sourceGuardEvidence = readFileSync('docs/evidence/store-action-source-guard-v1.md', 'utf8')
 const checklistSourceDecision = readFileSync('docs/evidence/store-action-checklist-source-decision-v1.md', 'utf8')
+const targetSourceDecision = readFileSync('docs/evidence/store-action-target-source-decision-v1.md', 'utf8')
 const sourcePlan = readFileSync('docs/plans/store-action-coaching-loop-v1.md', 'utf8')
 
 test('store action V1A evidence keeps the read-only boundary explicit', () => {
@@ -63,4 +64,23 @@ test('store action checklist source decision routes score follow-up through KPI 
   assert.match(kpiConfig, /code: "VM_CHECKLIST"[\s\S]*?scoreBehavior: "task_candidate"/)
   assert.match(workflowContract, /itemType: "acknowledgement"[\s\S]*?sourceType: "checklist_receipt"/)
   assert.match(workflowContract, /itemType: "task"[\s\S]*?sourceType: "kpi_exception"/)
+})
+
+test('store action target source decision keeps approval and coverage outside direct candidates', () => {
+  const kpiConfig = readFileSync('backend/nestjs/src/modules/store-ops/application/kpi-config.contract.ts', 'utf8')
+  const workflowContract = readFileSync('backend/nestjs/src/modules/store-ops/application/workflow-inbox.contract.ts', 'utf8')
+  const targetService = readFileSync('backend/nestjs/src/modules/store-ops/application/target-distribution.service.ts', 'utf8')
+  const targetPage = readFileSync('admin-web/src/pages/TargetApprovalQueuePage.tsx', 'utf8')
+
+  assert.match(targetSourceDecision, /TARGET_ACHIEVEMENT/)
+  assert.match(targetSourceDecision, /KPI exception source/)
+  assert.match(targetSourceDecision, /`target_distribution_request` remains approval work/)
+  assert.match(targetSourceDecision, /Do not create direct target coverage\/miss Store Action candidates/)
+  assert.match(targetSourceDecision, /missing.*pending_region_approval.*pending_change_conflict.*stale_reference/s)
+  assert.match(sourcePlan, /V1A Target Source Decision/)
+
+  assert.match(kpiConfig, /code: "TARGET_ACHIEVEMENT"[\s\S]*?scoreBehavior: "task_candidate"/)
+  assert.match(workflowContract, /itemType: "approval"[\s\S]*?sourceType: "target_distribution_request"/)
+  assert.match(targetService, /missingEmployees[\s\S]*?pendingEmployees[\s\S]*?conflictEmployees[\s\S]*?staleEmployees/)
+  assert.match(targetPage, /targetStatus !== 'approved'/)
 })
