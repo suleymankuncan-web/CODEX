@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #406, the Product Readiness V1 first-pass closeout, Operations Control Tower
+PR #411, the Product Readiness V1 first-pass closeout, Operations Control Tower
 readiness line, Sokrates/discipline operating docs, current workspace hygiene,
 the Clerk persona staging evidence runbook, and the generated system-flow map.
 It is the starting point for continuing in a fresh window.
@@ -29,14 +29,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-22, `origin/main` has been fetched through PR #406.
+As of 2026-05-22, `origin/main` has been fetched through PR #411.
 The root checkout has been moved back to clean `main` and is aligned with
 `origin/main`.
 
 Latest merge on main:
 
 ```text
-d961599a docs: record live clerk persona evidence (#406)
+6c614ec1 docs: record import upload authorization decision (#411)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -162,6 +162,11 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #404 `docs: decide store placeholder routes`
 - PR #405 `docs: record clerk persona evidence status`
 - PR #406 `docs: record live clerk persona evidence`
+- PR #407 `docs: record production evidence blockers v2`
+- PR #408 `docs: record live evidence proof pass`
+- PR #409 `fix: qualify import batch list query columns`
+- PR #410 `docs: record import batch live readback`
+- PR #411 `docs: record import upload authorization decision`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -180,7 +185,7 @@ frontend root, security headers, SPA fallback, and static assets passed.
 Current local hygiene state:
 
 - Root workspace `D:\store-ops-workspace` was clean on `main...origin/main` at
-  `d961599a` before the production evidence blocker V2 branch was created.
+  `6c614ec1` after PR #411 was merged and `origin/main` was fetched.
 - The previous dirty root state was not deleted. It was saved as stash
   `codex hygiene backup 2026-05-21 root dirty state`. Do not drop that stash
   unless the user explicitly approves.
