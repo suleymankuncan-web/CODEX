@@ -159,32 +159,39 @@ Expected: pass before runtime service/repository commands exist.
 - Create: `backend/nestjs/src/modules/store-ops/application/store-action-plan.service.ts`
 - Create: `backend/nestjs/src/modules/store-ops/application/store-action-plan.service.spec.ts`
 
-- [ ] **Step 1: Write service tests first**
+- [x] **Step 1: Write service tests first**
 
 Cover these cases:
 
 - assigned store create succeeds,
 - unassigned store create throws `ForbiddenException`,
 - duplicate active source maps to `ConflictException`,
+- missing due date throws `BadRequestException` before repository insert,
 - terminal plan update throws `ConflictException`,
+- concurrent lifecycle write misses map to `ConflictException`,
 - close requires resolution note,
 - cancel requires cancel reason.
 
-- [ ] **Step 2: Implement service validation**
+- [x] **Step 2: Implement service validation**
 
-Service must check assigned-store action scope before writes and must not use broad read scope as write permission.
+Service must check assigned-store action scope before writes, require a due date
+before repository insert, pass the observed status as the expected write state,
+and must not use broad read scope as write permission.
 
-- [ ] **Step 3: Implement repository SQL and audit writes**
+- [x] **Step 3: Implement repository SQL and audit writes**
 
-Repository must insert the plan and audit event in one transaction. Status, close, and cancel commands must update the plan and insert the matching audit event.
+Repository must insert the plan and audit event in one transaction. Status,
+close, and cancel commands must update the plan only when the observed
+expected status still matches, then insert the matching audit event. Zero-row
+lifecycle writes are transition conflicts and must not emit audit events.
 
-- [ ] **Step 4: Run backend targeted tests**
+- [x] **Step 4: Run backend targeted tests**
 
 ```powershell
 npm.cmd --prefix backend/nestjs test -- store-action-plan.service.spec.ts store-action-plan.repository.spec.ts audit-event-catalog.spec.ts
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add backend/nestjs/src/modules/store-ops/application/store-action-plan* backend/nestjs/src/modules/store-ops/infrastructure/store-action-plan* backend/nestjs/src/shared/audit/audit-event-catalog.ts

@@ -426,6 +426,30 @@ Evidence:
 - `backend/nestjs/src/modules/store-ops/application/store-action-plan.contract.spec.ts`
 - `docs/evidence/store-action-v1b-lifecycle-contract-v1.md`
 
+## V1B Service And Repository Command Boundary
+
+The third implementation kademe adds backend command behavior without exposing
+runtime routes.
+
+Decision:
+
+- Add a service boundary for assigned-store write scope, lifecycle transitions,
+  required due date validation, duplicate active source conflict mapping, and
+  terminal evidence validation.
+- Add a repository boundary for create/status/close/cancel SQL and audit event
+  writes in one transaction, with expected-state predicates on lifecycle
+  updates to guard concurrent terminal transitions.
+- Keep module registration, controller/DTO, OpenAPI/generated client, workflow
+  inbox integration, and UI out of this kademe.
+
+Evidence:
+
+- `backend/nestjs/src/modules/store-ops/application/store-action-plan.service.ts`
+- `backend/nestjs/src/modules/store-ops/application/store-action-plan.service.spec.ts`
+- `backend/nestjs/src/modules/store-ops/infrastructure/store-action-plan.repository.ts`
+- `backend/nestjs/src/modules/store-ops/infrastructure/store-action-plan.repository.spec.ts`
+- `docs/evidence/store-action-v1b-command-boundary-v1.md`
+
 ## Data Placement Draft
 
 V1A read-only:
