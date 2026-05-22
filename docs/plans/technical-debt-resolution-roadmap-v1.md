@@ -790,10 +790,13 @@ input changes priority.
 23. Done: rules/config boundary guard contract, docs/script only.
 24. Done: refactor completion inventory/guard, docs/script only. It closes
    broad refactor as a standing theme and keeps only finite active candidates.
-25. Next active refactor candidate: `RankingService` pure helper extraction,
-   unless a production bug, failing gate, user-provided redesign input, or
-   concrete auth/data/security trigger changes priority.
-26. External evidence PRs only when real provider inputs exist.
+25. Done: `RankingService` pure helper extraction into
+   `ranking-list.helpers.ts`; no ranking math, API shape, auth, DB, or
+   frontend behavior changed.
+26. Next active refactor candidate: `MasterDataBootstrapService` validation
+   boundary, unless a production bug, failing gate, user-provided redesign
+   input, or concrete auth/data/security trigger changes priority.
+27. External evidence PRs only when real provider inputs exist.
 
 Batch rule:
 

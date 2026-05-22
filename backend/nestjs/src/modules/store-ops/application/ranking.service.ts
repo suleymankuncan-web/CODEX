@@ -11,23 +11,35 @@ import {
   storeKpiScoreProfile,
 } from "./kpi-config.contract";
 import {
-  PersonnelRankingRow,
   RankingMetricValue,
   RankingPeriodType,
   RankingReferenceGroup,
   RankingResponse,
   RankingSortDirection,
   RankingSortKey,
-  RankingVisibility,
-  StoreRankingRow,
 } from "./ranking.contract";
 import { resolveRankingAccess } from "./ranking-access.policy";
-
-type RankingPeriodRow = {
-  period_type: string;
-  period_start: string;
-  period_end: string;
-};
+import {
+  applyPersonnelFilters,
+  applyStoreFilters,
+  average,
+  getEmptyRankingResponse,
+  getMetricComparableValue,
+  mapAvailablePeriods,
+  maskPersonnelRow,
+  maskStoreRow,
+  rankPersonnelRows,
+  RankingFilters,
+  rankStoreRows,
+  resolveCurrentStoreId,
+  resolveMonthEnd,
+  selectGlobalRows,
+  sortRowsForList,
+  toFiniteNumber,
+  uniqueIds,
+  UnrankedPersonnelRankingRow,
+  UnrankedStoreRankingRow,
+} from "./ranking-list.helpers";
 
 type RawStoreRankingKpiRow = {
   store_id: string;
@@ -56,13 +68,6 @@ type RawPersonnelRankingKpiRow = {
   kpi_name: string | null;
   actual_value: string | null;
   target_value: string | null;
-};
-
-type RankingFilters = {
-  regionManagerUserId?: string;
-  regionId?: string;
-  storeId?: string;
-  search?: string;
 };
 
 const storeChecklistMetricCodes = new Set(["BM_CHECKLIST", "VM_CHECKLIST"]);
@@ -105,7 +110,7 @@ export class RankingService {
     const { storeProfile, personnelProfile } = await this.getKpiProfiles();
     const storeMetricCodes = this.getProfileMetricCodes(storeProfile);
     const personnelMetricCodes = this.getProfileMetricCodes(personnelProfile);
-    const allMetricCodes = this.uniqueIds([...storeMetricCodes, ...personnelMetricCodes]);
+    const allMetricCodes = uniqueIds([...storeMetricCodes, ...personnelMetricCodes]);
 
     const [employeeId, latestPeriod] = await Promise.all([
       this.reportingRepository.resolveEmployeeIdForAuthIdentity({
@@ -125,11 +130,11 @@ export class RankingService {
       });
 
     if (!latestPeriod) {
-      return this.getEmptyResponse({
+      return getEmptyRankingResponse({
         access,
         availablePeriods,
         periodStart: input.periodStart ?? null,
-        periodEnd: input.periodStart ? this.resolveMonthEnd(input.periodStart) : null,
+        periodEnd: input.periodStart ? resolveMonthEnd(input.periodStart) : null,
       });
     }
 
@@ -183,14 +188,14 @@ export class RankingService {
 
     const storeBenchmarkLookup = this.toBenchmarkLookup(storeBenchmarkRows);
     const personnelBenchmarkLookup = this.toBenchmarkLookup(personnelBenchmarkRows);
-    const storeRows = this.rankStoreRows(
+    const storeRows = rankStoreRows(
       this.buildStoreRows({
         rows: rawStoreRows,
         profile: storeProfile,
         benchmarkLookup: storeBenchmarkLookup,
       }),
     );
-    const personnelRows = this.rankPersonnelRows(
+    const personnelRows = rankPersonnelRows(
       this.buildPersonnelRows({
         rows: rawPersonnelRows,
         profile: personnelProfile,
@@ -211,48 +216,48 @@ export class RankingService {
     };
 
     const filteredStoreRows = access.isPrivileged
-      ? this.applyStoreFilters(storeRows, input)
+      ? applyStoreFilters(storeRows, input)
       : storeRows;
     const filteredPersonnelRows = access.isPrivileged
-      ? this.applyPersonnelFilters(personnelRows, input)
+      ? applyPersonnelFilters(personnelRows, input)
       : personnelRows;
     const effectiveSortKey = access.canSeeGlobalDetails ? input.sortKey ?? "score" : "score";
     const effectiveSortDirection = access.canSeeGlobalDetails
       ? input.sortDirection ?? "desc"
       : "desc";
-    const sortedStoreRows = this.sortRowsForList(
+    const sortedStoreRows = sortRowsForList(
       filteredStoreRows,
       effectiveSortKey,
       effectiveSortDirection,
       (row) => row.storeId,
     );
-    const sortedPersonnelRows = this.sortRowsForList(
+    const sortedPersonnelRows = sortRowsForList(
       filteredPersonnelRows,
       effectiveSortKey,
       effectiveSortDirection,
       (row) => row.employeeId,
     );
-    const storeItems = this.selectGlobalRows(sortedStoreRows, access).map((row) =>
-      this.maskStoreRow(row, access.canSeeGlobalDetails ? "detail" : "summary"),
+    const storeItems = selectGlobalRows(sortedStoreRows, access).map((row) =>
+      maskStoreRow(row, access.canSeeGlobalDetails ? "detail" : "summary"),
     );
-    const personnelItems = this.selectGlobalRows(sortedPersonnelRows, access).map((row) =>
-      this.maskPersonnelRow(row, access.canSeeGlobalDetails ? "detail" : "summary"),
+    const personnelItems = selectGlobalRows(sortedPersonnelRows, access).map((row) =>
+      maskPersonnelRow(row, access.canSeeGlobalDetails ? "detail" : "summary"),
     );
     const currentEmployee =
       employeeId !== null
         ? personnelRows.find((row) => row.employeeId === employeeId) ?? null
         : null;
-    const currentStoreId = this.resolveCurrentStoreId(input, currentEmployee);
+    const currentStoreId = resolveCurrentStoreId(input, currentEmployee);
     const currentStore =
       currentStoreId !== null
         ? storeRows.find((row) => row.storeId === currentStoreId) ?? null
         : null;
-    const managedStoreIds = this.uniqueIds([...input.assignedStoreIds, ...input.storeIds]);
+    const managedStoreIds = uniqueIds([...input.assignedStoreIds, ...input.storeIds]);
     const managedStorePersonnel =
       access.canSeeManagedStorePersonnelDetails && managedStoreIds.length > 0
         ? personnelRows
             .filter((row) => row.storeId !== null && managedStoreIds.includes(row.storeId))
-            .map((row) => this.maskPersonnelRow(row, "detail"))
+            .map((row) => maskPersonnelRow(row, "detail"))
         : [];
 
     return {
@@ -272,7 +277,7 @@ export class RankingService {
       storeLeaderboard: {
         items: storeItems,
         currentStore: currentStore
-          ? this.maskStoreRow(currentStore, access.canSeeGlobalDetails ? "detail" : "summary")
+          ? maskStoreRow(currentStore, access.canSeeGlobalDetails ? "detail" : "summary")
           : null,
         meta: {
           total: access.isPrivileged ? filteredStoreRows.length : storeRows.length,
@@ -283,7 +288,7 @@ export class RankingService {
       personnelLeaderboard: {
         items: personnelItems,
         currentEmployee: currentEmployee
-          ? this.maskPersonnelRow(
+          ? maskPersonnelRow(
               currentEmployee,
               access.canSeeGlobalDetails ? "detail" : "summary",
             )
@@ -295,7 +300,7 @@ export class RankingService {
           offset: access.globalOffset,
         },
       },
-      availablePeriods: this.mapAvailablePeriods(availablePeriods),
+      availablePeriods: mapAvailablePeriods(availablePeriods),
     };
   }
 
@@ -329,7 +334,7 @@ export class RankingService {
   }
 
   private getProfileMetricCodes(profile: KpiScoreProfile) {
-    return this.uniqueIds(
+    return uniqueIds(
       profile.metrics.flatMap((metric) => [metric.code, ...(metric.aliases ?? [])]),
     );
   }
@@ -394,9 +399,7 @@ export class RankingService {
     rows: RawStoreRankingKpiRow[];
     profile: KpiScoreProfile;
     benchmarkLookup: Map<string, number | null>;
-  }): Array<Omit<StoreRankingRow, "rank" | "population" | "visibility"> & {
-    metrics: RankingMetricValue[];
-  }> {
+  }): UnrankedStoreRankingRow[] {
     const grouped = new Map<
       string,
       {
@@ -427,8 +430,8 @@ export class RankingService {
       };
       current.values.set(row.kpi_code, {
         label: row.kpi_name ?? row.kpi_code,
-        actualValue: this.toFiniteNumber(row.actual_value),
-        targetValue: this.toFiniteNumber(row.target_value),
+        actualValue: toFiniteNumber(row.actual_value),
+        targetValue: toFiniteNumber(row.target_value),
       });
       grouped.set(row.store_id, current);
     });
@@ -460,14 +463,7 @@ export class RankingService {
     rows: RawPersonnelRankingKpiRow[];
     profile: KpiScoreProfile;
     benchmarkLookup: Map<string, number | null>;
-  }): Array<
-    Omit<
-      PersonnelRankingRow,
-      "rank" | "population" | "storeRank" | "storePopulation" | "visibility"
-    > & {
-      metrics: RankingMetricValue[];
-    }
-  > {
+  }): UnrankedPersonnelRankingRow[] {
     const grouped = new Map<
       string,
       {
@@ -504,8 +500,8 @@ export class RankingService {
       };
       current.values.set(row.kpi_code, {
         label: row.kpi_name ?? row.kpi_code,
-        actualValue: this.toFiniteNumber(row.actual_value),
-        targetValue: this.toFiniteNumber(row.target_value),
+        actualValue: toFiniteNumber(row.actual_value),
+        targetValue: toFiniteNumber(row.target_value),
       });
       grouped.set(row.employee_id, current);
     });
@@ -652,14 +648,14 @@ export class RankingService {
     benchmarkLookup: Map<string, number | null>;
   }): RankingReferenceGroup {
     return {
-      averageScore: this.average(input.rows.map((row) => row.scoreValue)),
+      averageScore: average(input.rows.map((row) => row.scoreValue)),
       metrics: input.profile.metrics.map((metric) => {
         const benchmarkValue = input.benchmarkLookup.get(metric.code) ?? null;
         const value =
           metric.code === "TARGET_ACHIEVEMENT" || benchmarkValue === null
-            ? this.average(
+            ? average(
                 input.rows.map((row) =>
-                  this.getMetricComparableValue(row.metrics, metric.code),
+                  getMetricComparableValue(row.metrics, metric.code),
                 ),
               )
             : benchmarkValue;
@@ -673,397 +669,4 @@ export class RankingService {
     };
   }
 
-  private sortRowsForList<Row extends { rank: number; scoreValue: number; metrics: RankingMetricValue[] }>(
-    rows: Row[],
-    sortKey: RankingSortKey,
-    sortDirection: RankingSortDirection,
-    stableId: (row: Row) => string,
-  ) {
-    const direction = sortDirection === "desc" ? -1 : 1;
-
-    return [...rows].sort((left, right) => {
-      const leftValue = this.getSortValue(left, sortKey);
-      const rightValue = this.getSortValue(right, sortKey);
-
-      if (leftValue === null && rightValue === null) {
-        return left.rank - right.rank || stableId(left).localeCompare(stableId(right));
-      }
-
-      if (leftValue === null) {
-        return 1;
-      }
-
-      if (rightValue === null) {
-        return -1;
-      }
-
-      return (
-        (leftValue - rightValue) * direction ||
-        left.rank - right.rank ||
-        stableId(left).localeCompare(stableId(right))
-      );
-    });
-  }
-
-  private getSortValue(
-    row: { scoreValue: number; metrics: RankingMetricValue[] },
-    sortKey: RankingSortKey,
-  ) {
-    if (sortKey === "score") {
-      return row.scoreValue;
-    }
-
-    return this.getMetricComparableValue(row.metrics, sortKey);
-  }
-
-  private getMetricComparableValue(metrics: RankingMetricValue[], code: string) {
-    const metric = metrics.find((candidate) => candidate.code === code);
-
-    if (!metric || metric.actualValue === null || !Number.isFinite(metric.actualValue)) {
-      return null;
-    }
-
-    if (code !== "TARGET_ACHIEVEMENT") {
-      return metric.actualValue;
-    }
-
-    if (
-      metric.targetValue === null ||
-      metric.targetValue === undefined ||
-      !Number.isFinite(metric.targetValue) ||
-      metric.targetValue === 0
-    ) {
-      return metric.actualValue;
-    }
-
-    return metric.actualValue / Math.abs(metric.targetValue);
-  }
-
-  private average(values: Array<number | null>) {
-    const numericValues = values.filter(
-      (value): value is number => value !== null && Number.isFinite(value),
-    );
-
-    if (!numericValues.length) {
-      return null;
-    }
-
-    return Number(
-      (
-        numericValues.reduce((total, value) => total + value, 0) /
-        numericValues.length
-      ).toFixed(4),
-    );
-  }
-
-  private rankStoreRows(
-    rows: Array<Omit<StoreRankingRow, "rank" | "population" | "visibility"> & {
-      metrics: RankingMetricValue[];
-    }>,
-  ): Array<StoreRankingRow & { metrics: RankingMetricValue[] }> {
-    const sorted = [...rows].sort(
-      (left, right) =>
-        right.scoreValue - left.scoreValue || left.storeId.localeCompare(right.storeId),
-    );
-    const population = sorted.length;
-
-    return sorted.map((row, index) => ({
-      ...row,
-      rank: index + 1,
-      population,
-      visibility: "detail",
-    }));
-  }
-
-  private rankPersonnelRows(
-    rows: Array<
-      Omit<
-        PersonnelRankingRow,
-        "rank" | "population" | "storeRank" | "storePopulation" | "visibility"
-      > & {
-        metrics: RankingMetricValue[];
-      }
-    >,
-  ): Array<PersonnelRankingRow & { metrics: RankingMetricValue[] }> {
-    const sorted = [...rows].sort(
-      (left, right) =>
-        right.scoreValue - left.scoreValue ||
-        left.employeeId.localeCompare(right.employeeId),
-    );
-    const storeRanks = this.buildStoreRanks(sorted);
-    const population = sorted.length;
-
-    return sorted.map((row, index) => {
-      const storeRank = storeRanks.get(row.employeeId);
-
-      return {
-        ...row,
-        rank: index + 1,
-        population,
-        storeRank: storeRank?.rank ?? null,
-        storePopulation: storeRank?.population ?? 0,
-        visibility: "detail",
-      };
-    });
-  }
-
-  private buildStoreRanks(
-    rows: Array<{
-      employeeId: string;
-      storeId: string | null;
-      scoreValue: number;
-    }>,
-  ) {
-    const byStore = rows.reduce((map, row) => {
-      const key = row.storeId ?? "__no_store__";
-      const current = map.get(key) ?? [];
-      current.push(row);
-      map.set(key, current);
-      return map;
-    }, new Map<string, Array<{ employeeId: string; storeId: string | null; scoreValue: number }>>());
-    const ranks = new Map<string, { rank: number; population: number }>();
-
-    byStore.forEach((storeRows) => {
-      const sorted = [...storeRows].sort(
-        (left, right) =>
-          right.scoreValue - left.scoreValue ||
-          left.employeeId.localeCompare(right.employeeId),
-      );
-      sorted.forEach((row, index) => {
-        ranks.set(row.employeeId, {
-          rank: index + 1,
-          population: sorted.length,
-        });
-      });
-    });
-
-    return ranks;
-  }
-
-  private applyStoreFilters(
-    rows: Array<StoreRankingRow & { metrics: RankingMetricValue[] }>,
-    filters: RankingFilters,
-  ) {
-    const normalizedSearch = this.normalizeSearch(filters.search);
-
-    return rows.filter((row) => {
-      if (
-        filters.regionManagerUserId &&
-        row.regionManagerUserId !== filters.regionManagerUserId
-      ) {
-        return false;
-      }
-
-      if (filters.regionId && row.regionId !== filters.regionId) {
-        return false;
-      }
-
-      if (filters.storeId && row.storeId !== filters.storeId) {
-        return false;
-      }
-
-      if (normalizedSearch && !this.matchesSearch(normalizedSearch, [
-        row.storeName,
-        row.regionName,
-        row.regionManagerName,
-      ])) {
-        return false;
-      }
-
-      return true;
-    });
-  }
-
-  private applyPersonnelFilters(
-    rows: Array<PersonnelRankingRow & { metrics: RankingMetricValue[] }>,
-    filters: RankingFilters,
-  ) {
-    const normalizedSearch = this.normalizeSearch(filters.search);
-
-    return rows.filter((row) => {
-      if (
-        filters.regionManagerUserId &&
-        row.regionManagerUserId !== filters.regionManagerUserId
-      ) {
-        return false;
-      }
-
-      if (filters.regionId && row.regionId !== filters.regionId) {
-        return false;
-      }
-
-      if (filters.storeId && row.storeId !== filters.storeId) {
-        return false;
-      }
-
-      if (normalizedSearch && !this.matchesSearch(normalizedSearch, [
-        row.displayName,
-        row.storeName,
-        row.regionName,
-        row.regionManagerName,
-      ])) {
-        return false;
-      }
-
-      return true;
-    });
-  }
-
-  private selectGlobalRows<Row>(rows: Row[], access: { globalLimit: number; globalOffset: number; isPrivileged: boolean }) {
-    if (!access.isPrivileged) {
-      return rows.slice(0, access.globalLimit);
-    }
-
-    return rows.slice(access.globalOffset, access.globalOffset + access.globalLimit);
-  }
-
-  private maskStoreRow(
-    row: StoreRankingRow & { metrics?: RankingMetricValue[] },
-    visibility: RankingVisibility,
-  ): StoreRankingRow {
-    if (visibility === "detail") {
-      return {
-        ...row,
-        visibility,
-        metrics: row.metrics ?? [],
-      };
-    }
-
-    const { metrics: _metrics, ...summary } = row;
-    return {
-      ...summary,
-      visibility,
-    };
-  }
-
-  private maskPersonnelRow(
-    row: PersonnelRankingRow & { metrics?: RankingMetricValue[] },
-    visibility: RankingVisibility,
-  ): PersonnelRankingRow {
-    if (visibility === "detail") {
-      return {
-        ...row,
-        visibility,
-        metrics: row.metrics ?? [],
-      };
-    }
-
-    const { metrics: _metrics, ...summary } = row;
-    return {
-      ...summary,
-      visibility,
-    };
-  }
-
-  private resolveCurrentStoreId(
-    input: GetRankingsInput,
-    currentEmployee: PersonnelRankingRow | null,
-  ) {
-    return (
-      input.assignedStoreIds[0] ??
-      input.storeIds[0] ??
-      currentEmployee?.storeId ??
-      null
-    );
-  }
-
-  private mapAvailablePeriods(periods: RankingPeriodRow[]) {
-    return periods.map((period) => ({
-      periodType: "monthly" as const,
-      periodStart: period.period_start,
-      periodEnd: period.period_end,
-    }));
-  }
-
-  private getEmptyResponse(input: {
-    access: ReturnType<typeof resolveRankingAccess>;
-    availablePeriods: RankingPeriodRow[];
-    periodStart: string | null;
-    periodEnd: string | null;
-  }): RankingResponse {
-    return {
-      source: {
-        mode: "live",
-        periodType: "monthly",
-        periodStart: input.periodStart,
-        periodEnd: input.periodEnd,
-      },
-      access: {
-        globalMode: input.access.globalMode,
-        canSeeGlobalDetails: input.access.canSeeGlobalDetails,
-        canSeeManagedStorePersonnelDetails:
-          input.access.canSeeManagedStorePersonnelDetails,
-      },
-      filters: {
-        regionManagers: [],
-        regions: [],
-        stores: [],
-      },
-      reference: {
-        store: {
-          averageScore: null,
-          metrics: [],
-        },
-        personnel: {
-          averageScore: null,
-          metrics: [],
-        },
-      },
-      storeLeaderboard: {
-        items: [],
-        currentStore: null,
-        meta: {
-          total: 0,
-          limit: input.access.globalLimit,
-          offset: input.access.globalOffset,
-        },
-      },
-      personnelLeaderboard: {
-        items: [],
-        currentEmployee: null,
-        managedStorePersonnel: [],
-        meta: {
-          total: 0,
-          limit: input.access.globalLimit,
-          offset: input.access.globalOffset,
-        },
-      },
-      availablePeriods: this.mapAvailablePeriods(input.availablePeriods),
-    };
-  }
-
-  private toFiniteNumber(value: string | null) {
-    if (value === null) {
-      return null;
-    }
-
-    const numericValue = Number(value);
-    return Number.isFinite(numericValue) ? numericValue : null;
-  }
-
-  private normalizeSearch(value?: string) {
-    const normalized = value?.trim().toLocaleLowerCase("tr-TR");
-    return normalized ? normalized : null;
-  }
-
-  private matchesSearch(search: string, candidates: Array<string | null>) {
-    return candidates.some((candidate) =>
-      candidate?.toLocaleLowerCase("tr-TR").includes(search),
-    );
-  }
-
-  private uniqueIds(values: Array<string | null | undefined>) {
-    return [...new Set(values.filter((value): value is string => Boolean(value)))];
-  }
-
-  private resolveMonthEnd(periodStart: string) {
-    const [year, month] = periodStart.split("-").map(Number);
-
-    if (!year || !month) {
-      return null;
-    }
-
-    const monthEnd = new Date(Date.UTC(year, month, 0));
-    return monthEnd.toISOString().slice(0, 10);
-  }
 }

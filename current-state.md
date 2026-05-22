@@ -381,13 +381,15 @@ Latest technical assessment decision:
 - Refactor Completion Inventory V1 is recorded at
   `docs/plans/refactor-completion-inventory-v1.md`. It closes broad refactor
   as a standing theme and replaces generic large-file prompts with a finite
-  active backlog plus explicit parked triggers. The first active code candidate
-  is `RankingService` pure helper extraction; `MasterDataBootstrapService`
-  validation boundary work is second. UI page splits are parked while the user
-  prepares a larger page/content redesign. Auth-admin writes, workforce
-  command lifecycles, competition scoring/finalization, materialization,
-  snapshots, and generator scripts remain parked until a concrete trigger and
-  verification ladder exist.
+  active backlog plus explicit parked triggers. The first active code candidate,
+  `RankingService` pure helper extraction, has moved ranking list helpers into
+  `ranking-list.helpers.ts`; `RankingService` stays focused on repository
+  reads, KPI profile/scoring orchestration, and response assembly. The next
+  active refactor candidate is `MasterDataBootstrapService` validation boundary
+  work. UI page splits are parked while the user prepares a larger page/content
+  redesign. Auth-admin writes, workforce command lifecycles, competition
+  scoring/finalization, materialization, snapshots, and generator scripts remain
+  parked until a concrete trigger and verification ladder exist.
 - Growth foundation docs are planned through PR #363:
   rules/config boundary, operations control tower V1, authorization matrix drift
   guard, cross-domain data quality inventory, and frontend TypeScript

@@ -104,6 +104,8 @@ change, failing gate, reviewability blocker, or explicit user decision.
 
 Risk: LOW to MEDIUM
 
+Status: Done by the `RankingService` list-helper extraction slice.
+
 Why first:
 
 - It is UI-independent and survives the upcoming page redesign.
@@ -127,6 +129,16 @@ npm.cmd --prefix backend/nestjs run build
 
 Climb to reporting E2E only if the diff touches shared reporting or leaderboard
 contracts.
+
+Result:
+
+- Pure ranking list helpers now live in `ranking-list.helpers.ts`.
+- `ranking.service.ts` stays focused on repository reads, KPI profile/scoring
+  orchestration, and response assembly.
+- Ranking score math, sort semantics, masking rules, API response shape, auth,
+  DB, and frontend behavior are unchanged.
+- Current line-count shape after the slice: `ranking.service.ts` roughly 627
+  lines and `ranking-list.helpers.ts` roughly 375 lines.
 
 ### S02: MasterDataBootstrapService Validation Boundary
 
