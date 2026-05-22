@@ -135,7 +135,7 @@ function renderPagination(input: {
   onPreviousPage: () => void
   onNextPage: () => void
 }) {
-  if (input.isLoading || input.isError || !input.meta || input.meta.total === 0) {
+  if (input.isLoading || input.isError || input.plans.length === 0 || !input.meta || input.meta.total === 0) {
     return null
   }
 

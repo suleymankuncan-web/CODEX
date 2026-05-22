@@ -50,7 +50,8 @@ Added:
 - Meta-backed total/range display and previous/next paging for the read-only
   list, so the page does not hide records beyond the first API page.
 - Out-of-range page recovery when the current page becomes empty while the API
-  still reports records on earlier pages.
+  still reports records on earlier pages; pagination is hidden during that
+  transient stale-page state so impossible ranges are not shown.
 - Guarded source navigation: `sourceDeepLink` renders only when it is a safe
   in-app path.
 - Blank summaries render the explicit no-summary fallback instead of leaving

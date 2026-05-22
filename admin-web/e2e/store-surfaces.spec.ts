@@ -2106,6 +2106,7 @@ test('store tasks recovers when the current action plan page becomes empty', asy
   await actionPlansPanel.getByRole('button', { name: 'Next' }).click()
 
   await expect(actionPlansPanel.getByText('First page recovery plan')).toBeVisible()
+  await expect(actionPlansPanel.getByText('21-20 / 20')).toHaveCount(0)
   await expect(actionPlansPanel.getByText('No persisted action plans')).toHaveCount(0)
   await expect(actionPlansPanel.getByText('1-20 / 21')).toBeVisible()
 })
