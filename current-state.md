@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #405, the Product Readiness V1 first-pass closeout, Operations Control Tower
+PR #406, the Product Readiness V1 first-pass closeout, Operations Control Tower
 readiness line, Sokrates/discipline operating docs, current workspace hygiene,
 the Clerk persona staging evidence runbook, and the generated system-flow map.
 It is the starting point for continuing in a fresh window.
@@ -29,14 +29,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-22, `origin/main` has been fetched through PR #405.
+As of 2026-05-22, `origin/main` has been fetched through PR #406.
 The root checkout has been moved back to clean `main` and is aligned with
 `origin/main`.
 
 Latest merge on main:
 
 ```text
-62bad148 docs: record clerk persona evidence status
+d961599a docs: record live clerk persona evidence (#406)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -161,6 +161,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #403 `docs: record operations telemetry gap check`
 - PR #404 `docs: decide store placeholder routes`
 - PR #405 `docs: record clerk persona evidence status`
+- PR #406 `docs: record live clerk persona evidence`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -179,7 +180,7 @@ frontend root, security headers, SPA fallback, and static assets passed.
 Current local hygiene state:
 
 - Root workspace `D:\store-ops-workspace` was clean on `main...origin/main` at
-  `62bad148` before the Clerk live-evidence branch was created.
+  `d961599a` before the production evidence blocker V2 branch was created.
 - The previous dirty root state was not deleted. It was saved as stash
   `codex hygiene backup 2026-05-21 root dirty state`. Do not drop that stash
   unless the user explicitly approves.
@@ -755,6 +756,21 @@ These cannot be honestly closed by local code changes alone. They require real
 infrastructure access, real tokens, an approved restore target, or provider
 configuration. Do not open another local readiness guard by reflex if the next
 missing item is one of these external proofs.
+
+2026-05-22 update:
+
+- Fresh Clerk controlled-pilot persona/token/action evidence is now recorded in
+  `docs/evidence/system-flow/clerk-persona-live-evidence-2026-05-22.md`.
+- The remaining production-evidence blocker refresh is recorded in
+  `docs/evidence/readiness/2026-05-22-production-evidence-blockers-v2.md`.
+- Current staging health/deployed readiness still shows
+  `queueBackend=in-memory`, queue `process-local`, Redis `skipped`, and
+  observability `log-only`.
+- Alert routing passes metadata/backend-health checks but external provider
+  delivery is still not configured.
+- Supabase restore, authenticated integration-admin upload, Redis/BullMQ health,
+  and role-specific protected route load budgets still need real inputs before
+  broad production can move out of `No-Go`.
 
 GSD notes:
 
