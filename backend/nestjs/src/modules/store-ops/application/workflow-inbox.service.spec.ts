@@ -1,5 +1,11 @@
 import { WorkflowInboxService } from "./workflow-inbox.service";
 
+function createEmptyStoreActionPlanRepository() {
+  return {
+    listWorkflowInboxPlans: jest.fn(async () => []),
+  };
+}
+
 describe("WorkflowInboxService", () => {
   it("keeps store manager acknowledgement inbox items limited to assigned stores even when company scope is present", async () => {
     const targetDistributionRepository = {
@@ -16,6 +22,7 @@ describe("WorkflowInboxService", () => {
       checklistAcknowledgementRepository as never,
       {} as never,
       snapshotReportingReadRepository as never,
+      createEmptyStoreActionPlanRepository() as never,
     );
 
     await service.listInbox({
@@ -73,6 +80,7 @@ describe("WorkflowInboxService", () => {
       checklistAcknowledgementRepository as never,
       {} as never,
       snapshotReportingReadRepository as never,
+      createEmptyStoreActionPlanRepository() as never,
     );
 
     const result = await service.listInbox({
@@ -100,6 +108,84 @@ describe("WorkflowInboxService", () => {
         sourceType: "kpi_exception",
         storeId: "store-1",
         deepLink: "/store/kpis",
+      }),
+    ]);
+  });
+
+  it("adds active store action plans as assigned-store workflow tasks", async () => {
+    const targetDistributionRepository = {
+      listRequests: jest.fn(),
+    };
+    const checklistAcknowledgementRepository = {
+      listChecklistAcknowledgements: jest.fn(async () => []),
+    };
+    const snapshotReportingReadRepository = {
+      getLatestCompletedSnapshotRun: jest.fn(async () => null),
+    };
+    const storeActionPlanRepository = {
+      listWorkflowInboxPlans: jest.fn(async () => [
+        {
+          actionPlanId: "action-plan-1",
+          companyId: "company-1",
+          regionId: "region-1",
+          storeId: "store-1",
+          ownerUserId: "user-1",
+          createdByUserId: "user-1",
+          sourceType: "kpi_exception",
+          sourceId: "snapshot-1:store-1:kpi-1",
+          sourceDeepLink: "/store/kpis",
+          sourceSnapshotRunId: null,
+          sourceKpiId: null,
+          title: "Net sales follow-up",
+          summary: "Call the team and plan the shift recovery",
+          priority: "high",
+          status: "open",
+          dueOn: "2026-05-24",
+          resolutionNote: null,
+          closedByUserId: null,
+          closedAt: null,
+          cancelReason: null,
+          cancelledByUserId: null,
+          cancelledAt: null,
+          createdAt: "2026-05-22T08:00:00.000Z",
+          updatedAt: "2026-05-22T09:00:00.000Z",
+        },
+      ]),
+    };
+    const service = new WorkflowInboxService(
+      targetDistributionRepository as never,
+      checklistAcknowledgementRepository as never,
+      {} as never,
+      snapshotReportingReadRepository as never,
+      storeActionPlanRepository as never,
+    );
+
+    const result = await service.listInbox({
+      actorRoles: ["STORE_MANAGER"],
+      actorScope: {
+        companyIds: ["company-1"],
+        regionIds: ["region-1"],
+        storeIds: ["legacy-store"],
+      },
+      actorActionScope: {
+        assignedStoreIds: ["store-1"],
+      },
+    });
+
+    expect(storeActionPlanRepository.listWorkflowInboxPlans).toHaveBeenCalledWith({
+      storeIds: ["store-1"],
+      statuses: ["open", "in_progress", "blocked"],
+      limit: 20,
+    });
+    expect(result.items).toEqual([
+      expect.objectContaining({
+        itemType: "task",
+        sourceType: "store_action_plan",
+        sourceId: "action-plan-1",
+        title: "Net sales follow-up",
+        inboxStatus: "needs_attention",
+        urgency: "high",
+        deepLink: "/store/tasks?actionPlan=action-plan-1",
       }),
     ]);
   });
@@ -133,6 +219,7 @@ describe("WorkflowInboxService", () => {
       checklistAcknowledgementRepository as never,
       {} as never,
       snapshotReportingReadRepository as never,
+      createEmptyStoreActionPlanRepository() as never,
     );
 
     const result = await service.listInbox({

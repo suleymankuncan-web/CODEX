@@ -127,6 +127,8 @@ function resolveSourceAction(item: WorkflowInboxItem, t: TranslateFunction) {
       return t('storeTasks.sourceAction.checklist')
     case 'kpi_exception':
       return t('storeTasks.sourceAction.kpi')
+    case 'store_action_plan':
+      return t('storeTasks.sourceAction.actionPlan')
     default:
       return item.primaryActionLabel
   }

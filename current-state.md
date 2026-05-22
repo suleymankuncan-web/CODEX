@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #437 plus the Store Action V1B API contract branch, the Product Readiness V1
+PR #438 plus the Store Action V1B workflow inbox branch, the Product Readiness V1
 first-pass closeout, Operations Control Tower readiness line,
 Sokrates/discipline operating docs, current workspace hygiene, the Clerk
 persona staging evidence runbook, the generated system-flow map, and the
@@ -32,14 +32,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-22, `origin/main` has been fetched through PR #437. The root
+As of 2026-05-22, `origin/main` has been fetched through PR #438. The root
 checkout was clean `main` and aligned with `origin/main` before the Store
-Action V1B API contract branch.
+Action V1B workflow inbox branch.
 
 Latest merge on main:
 
 ```text
-4a9e4ff7 feat: add store action plan commands
+41bf44d5 feat: expose store action plan api (#438)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -196,6 +196,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #435 `feat: add store action plan schema`
 - PR #436 `feat: add store action lifecycle contract`
 - PR #437 `feat: add store action plan commands`
+- PR #438 `feat: expose store action plan api`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -214,7 +215,7 @@ frontend root, security headers, SPA fallback, and static assets passed.
 Current local hygiene state:
 
 - Root workspace `D:\store-ops-workspace` was clean on `main...origin/main` at
-  `4a9e4ff7` after PR #437 was merged and `origin/main` was fetched.
+  `41bf44d5` after PR #438 was merged and `origin/main` was fetched.
 - The previous dirty root state was not deleted. It was saved as stash
   `codex hygiene backup 2026-05-21 root dirty state`. Do not drop that stash
   unless the user explicitly approves.
@@ -1444,10 +1445,10 @@ Store Action V1A status:
   `backend/nestjs/src/modules/store-ops/infrastructure/store-action-plan.repository.ts`,
   `backend/nestjs/src/modules/store-ops/infrastructure/store-action-plan.repository.spec.ts`,
   and `docs/evidence/store-action-v1b-command-boundary-v1.md`.
-- V1B API contract branch status: the fourth kademe exposes the command/read
-  boundary through `/api/store-actions/plans` endpoints, DTOs, OpenAPI schemas,
-  generated frontend types, and refreshed system-flow artifacts. It still does
-  not add workflow inbox mapping, Store Tasks UI mutation behavior, DB
+- V1B API contract status: PR #438 landed the fourth kademe. It exposes the
+  command/read boundary through `/api/store-actions/plans` endpoints, DTOs,
+  OpenAPI schemas, generated frontend types, and refreshed system-flow
+  artifacts. It still does not add Store Tasks UI mutation behavior, DB
   migration, KPI/checklist/target rule changes, provider config, or broad auth
   semantic changes.
 - V1B API contract references:
@@ -1457,6 +1458,17 @@ Store Action V1A status:
   `backend/nestjs/src/openapi/store-action-plan-openapi.ts`,
   `admin-web/src/generated/openapi-types.ts`, and
   `docs/evidence/store-action-v1b-api-contract-v1.md`.
+- V1B workflow inbox status: the fifth kademe adds `store_action_plan` as a
+  shared workflow inbox `task` source for active plans only, keeps assigned action
+  store visibility, updates OpenAPI/generated frontend types and labels, and
+  does not change lifecycle commands, auth semantics, DB schema, source-domain
+  business rules, or Store Tasks write UI.
+- V1B workflow inbox references:
+  `backend/nestjs/src/modules/store-ops/application/workflow-inbox.contract.ts`,
+  `backend/nestjs/src/modules/store-ops/application/workflow-inbox.service.ts`,
+  `backend/nestjs/src/modules/store-ops/infrastructure/store-action-plan.repository.ts`,
+  `admin-web/src/generated/openapi-types.ts`, and
+  `docs/evidence/store-action-v1b-workflow-inbox-v1.md`.
 
 Current user direction on 2026-05-18:
 

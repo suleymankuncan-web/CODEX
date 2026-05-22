@@ -6,7 +6,11 @@ export type WorkflowUrgency = "high" | "medium" | "low";
 
 export type WorkflowInboxItem = {
   itemType: WorkflowItemType;
-  sourceType: "target_distribution_request" | "checklist_receipt" | "kpi_exception";
+  sourceType:
+    | "target_distribution_request"
+    | "checklist_receipt"
+    | "kpi_exception"
+    | "store_action_plan";
   sourceId: string;
   title: string;
   summary: string;
@@ -79,6 +83,23 @@ type KpiExceptionItem = {
   statusBand: string | null;
   storeName?: string;
   deepLink?: string;
+};
+
+type StoreActionPlanInboxSource = {
+  actionPlanId: string;
+  companyId: string;
+  regionId: string;
+  storeId: string;
+  sourceDeepLink: string | null;
+  title: string;
+  summary: string | null;
+  priority: "high" | "medium" | "low";
+  status: string;
+  dueOn: string;
+  resolutionNote: string | null;
+  cancelReason: string | null;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export function toTargetApprovalInboxItem(item: TargetDistributionRequest): WorkflowInboxItem {
@@ -160,4 +181,45 @@ export function toKpiExceptionInboxItem(item: KpiExceptionItem): WorkflowInboxIt
         ? `Achievement ${Math.round(Number(item.achievementRate) * 100)}%`
         : undefined,
   };
+}
+
+export function toStoreActionPlanInboxItem(
+  item: StoreActionPlanInboxSource,
+  now = new Date(),
+): WorkflowInboxItem {
+  const isActive =
+    item.status === "open" || item.status === "in_progress" || item.status === "blocked";
+  const overdue = isDateBeforeToday(item.dueOn, now);
+
+  return {
+    itemType: "task",
+    sourceType: "store_action_plan",
+    sourceId: item.actionPlanId,
+    title: item.title,
+    summary: item.summary ?? `Store action plan due ${item.dueOn}`,
+    companyId: item.companyId,
+    regionId: item.regionId,
+    storeId: item.storeId,
+    workflowStatus: item.status,
+    inboxStatus: isActive ? "needs_attention" : "completed",
+    urgency: overdue || item.priority === "high" ? "high" : item.priority,
+    createdAt: item.createdAt,
+    needsAttentionAt: item.dueOn,
+    actorRole: "STORE_MANAGER",
+    primaryActionLabel: isActive ? "Open action plan" : "Review action plan",
+    secondaryActionLabel: "Review source",
+    deepLink: `/store/tasks?actionPlan=${encodeURIComponent(item.actionPlanId)}`,
+    historyPreview:
+      item.resolutionNote ?? item.cancelReason ?? `Due ${item.dueOn}; updated ${item.updatedAt}`,
+  };
+}
+
+function isDateBeforeToday(value: string, now: Date) {
+  const dueTime = Date.parse(`${value}T00:00:00.000Z`);
+  if (!Number.isFinite(dueTime)) {
+    return false;
+  }
+
+  const todayTime = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  return dueTime < todayTime;
 }

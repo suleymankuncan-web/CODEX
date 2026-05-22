@@ -126,6 +126,7 @@ function formatWorkflowSourceType(input: WorkflowInboxItem['sourceType'], t: Tra
   if (input === 'target_distribution_request') return t('adminOperations.workflowSource.target')
   if (input === 'checklist_receipt') return t('adminOperations.workflowSource.checklist')
   if (input === 'kpi_exception') return t('adminOperations.workflowSource.kpi')
+  if (input === 'store_action_plan') return t('adminOperations.workflowSource.actionPlan')
   return String(input).replaceAll('_', ' ')
 }
 

@@ -7329,7 +7329,8 @@
                   "enum": [
                     "target_distribution_request",
                     "checklist_receipt",
-                    "kpi_exception"
+                    "kpi_exception",
+                    "store_action_plan"
                   ]
                 },
                 "sourceId": {

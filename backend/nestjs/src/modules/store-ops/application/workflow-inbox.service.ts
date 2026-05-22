@@ -3,6 +3,7 @@ import { buildListResponse } from "../../../shared/http/response-builders";
 import {
   toKpiExceptionInboxItem,
   toChecklistAcknowledgementInboxItem,
+  toStoreActionPlanInboxItem,
   toTargetApprovalInboxItem,
   type WorkflowInboxItem,
 } from "./workflow-inbox.contract";
@@ -10,6 +11,9 @@ import { ChecklistAcknowledgementRepository } from "../infrastructure/checklist-
 import { TargetDistributionRepository } from "../infrastructure/target-distribution.repository";
 import { ReportingRepository } from "../infrastructure/reporting.repository";
 import { SnapshotReportingReadRepository } from "../infrastructure/snapshot-reporting-read.repository";
+import { StoreActionPlanRepository } from "../infrastructure/store-action-plan.repository";
+
+const activeStoreActionPlanStatuses = ["open", "in_progress", "blocked"] as const;
 
 @Injectable()
 export class WorkflowInboxService {
@@ -21,6 +25,7 @@ export class WorkflowInboxService {
     private readonly reportingRepository: ReportingRepository,
     private readonly snapshotReportingReadRepository: SnapshotReportingReadRepository =
       reportingRepository as unknown as SnapshotReportingReadRepository,
+    private readonly storeActionPlanRepository: StoreActionPlanRepository,
   ) {}
 
   async listInbox(input: {
@@ -131,6 +136,28 @@ export class WorkflowInboxService {
       );
     }
 
+    const canSeeStoreActionPlans =
+      input.actorRoles.includes("SUPER_ADMIN") || input.actorRoles.includes("STORE_MANAGER");
+    if (canSeeStoreActionPlans) {
+      try {
+        const storeIds = this.resolveAssignedActionStoreIds(input);
+        if (storeIds.length > 0) {
+          const plans = await this.storeActionPlanRepository.listWorkflowInboxPlans({
+            storeIds,
+            statuses: [...activeStoreActionPlanStatuses],
+            limit: 20,
+          });
+          items.push(...plans.map((item) => toStoreActionPlanInboxItem(item)));
+        }
+      } catch (error) {
+        this.logger.warn(
+          `Shared inbox skipped store action plan items: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
+    }
+
     items.sort((left, right) => {
       const leftDate = new Date(left.needsAttentionAt ?? left.createdAt ?? 0).getTime();
       const rightDate = new Date(right.needsAttentionAt ?? right.createdAt ?? 0).getTime();
@@ -195,5 +222,13 @@ export class WorkflowInboxService {
           ? []
           : storeIds,
     };
+  }
+
+  private resolveAssignedActionStoreIds(input: {
+    actorActionScope?: {
+      assignedStoreIds: string[];
+    };
+  }) {
+    return [...new Set(input.actorActionScope?.assignedStoreIds ?? [])];
   }
 }

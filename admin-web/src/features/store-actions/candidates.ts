@@ -2,11 +2,13 @@ import type { WorkflowInboxItem } from '../workflow/contracts'
 
 type StoreActionWorkflowSourceDecision =
   | 'read_only_candidate'
+  | 'persisted_action_plan'
   | 'parked_acknowledgement_boundary'
   | 'parked_approval_boundary'
 
 export const STORE_ACTION_WORKFLOW_SOURCE_DECISIONS = {
   kpi_exception: 'read_only_candidate',
+  store_action_plan: 'persisted_action_plan',
   checklist_receipt: 'parked_acknowledgement_boundary',
   target_distribution_request: 'parked_approval_boundary',
 } as const satisfies Record<WorkflowInboxItem['sourceType'], StoreActionWorkflowSourceDecision>

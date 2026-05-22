@@ -118,6 +118,31 @@ describe("StoreActionPlanRepository", () => {
     });
   });
 
+  it("lists active plans for workflow inbox without completed terminal states", async () => {
+    const { query, repository } = createTransactionHarness();
+    query.mockResolvedValueOnce({ rows: [planRow] });
+
+    const result = await repository.listWorkflowInboxPlans({
+      storeIds: [planRow.store_id],
+      statuses: ["open", "in_progress", "blocked"],
+      limit: 20,
+    });
+
+    const sql = String(query.mock.calls[0][0]);
+    expect(sql).toContain("FROM ops.store_action_plan");
+    expect(sql).toContain("store_id = ANY($1::uuid[])");
+    expect(sql).toContain("status = ANY($2::text[])");
+    expect(sql).toContain("ORDER BY due_on ASC, updated_at DESC");
+    expect(query.mock.calls[0][1]).toEqual([
+      [planRow.store_id],
+      ["open", "in_progress", "blocked"],
+      20,
+    ]);
+    expect(result).toEqual([
+      expect.objectContaining({ actionPlanId: planRow.store_action_plan_id }),
+    ]);
+  });
+
   it("updates non-terminal status and records audit metadata", async () => {
     const { query, repository } = createTransactionHarness();
     query.mockResolvedValueOnce({

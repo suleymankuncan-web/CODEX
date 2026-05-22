@@ -2252,7 +2252,7 @@ const workflowInboxItemSchema = {
     },
     sourceType: {
       type: "string",
-      enum: ["target_distribution_request", "checklist_receipt", "kpi_exception"],
+      enum: ["target_distribution_request", "checklist_receipt", "kpi_exception", "store_action_plan"],
     },
     sourceId: { type: "string" },
     title: { type: "string" },
