@@ -116,10 +116,17 @@ test('handoff docs keep post-merge readiness evidence tiers clear', () => {
   requireText(activeNextActions, 'docs/evidence/readiness/2026-05-22-live-evidence-proof-pass.md')
   requireText(activeNextActions, 'docs/plans/import-upload-authorization-decision-v1.md')
 
-  for (const text of [currentState, activeNextActions]) {
-    requireText(text, 'Tier B - broad-production/operational hardening')
-    requireText(text, 'Supabase staging restore drill into an approved disposable target.')
-    requireText(text, 'Alert/error-tracking destination proof or accepted log-retention evidence.')
-    requireText(text, 'Broad-production Redis/BullMQ decision and health evidence')
-  }
+  requireText(currentState, 'Tier B - broad-production/operational hardening')
+  requireText(currentState, 'Supabase staging restore drill into an approved disposable target.')
+  requireText(currentState, 'Alert/error-tracking destination proof or accepted log-retention evidence.')
+  requireText(currentState, 'Broad-production Redis/BullMQ decision and health evidence')
+
+  requireText(activeNextActions, 'Tier B - broad-production/operational hardening')
+  requireText(activeNextActions, 'Supabase staging restore drill into an approved disposable target.')
+  requireText(
+    activeNextActions,
+    'Production alert policy decision and production destination proof',
+  )
+  requireText(activeNextActions, 'Broad-production Redis/BullMQ decision and health evidence')
+  requireText(activeNextActions, 'proven external delivery path for this staging pass.')
 })
