@@ -188,6 +188,18 @@ describe("POST /api/integrations/import-batches", () => {
             ]),
       ),
     ).toBe(true);
+    const listSql = query.mock.calls
+      .map((call) => call[0])
+      .find(
+        (sql): sql is string =>
+          typeof sql === "string" &&
+          sql.includes("FROM stg.import_batch") &&
+          sql.includes("src.source_code") &&
+          sql.includes("LIMIT $"),
+      );
+    expect(listSql).toMatch(
+      /SELECT\s+stg\.import_batch\.import_batch_id,\s+stg\.import_batch\.integration_source_id,[\s\S]*stg\.import_batch\.entity_type,/,
+    );
 
     await app.close();
   });

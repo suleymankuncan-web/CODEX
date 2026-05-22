@@ -63,7 +63,8 @@ test('live evidence proof pass keeps broad production as no-go', () => {
 test('current state points to the live evidence proof pass', () => {
   requireText(currentState, evidencePath)
   requireText(currentState, 'Protected route load smoke and safe staging upload smoke are now proven.')
-  requireText(currentState, 'Import batch list read model returns HTTP `500`')
+  requireText(currentState, 'Import batch list read model previously returned HTTP `500`')
+  requireText(currentState, 'list query selecting shared join columns without `stg.import_batch`')
 })
 
 test('live evidence proof pass contains no obvious secret material', () => {

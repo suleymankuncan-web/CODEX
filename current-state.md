@@ -773,9 +773,12 @@ missing item is one of these external proofs.
 - Protected route load smoke and safe staging upload smoke are now proven.
 - Dedicated non-super-admin `INTEGRATION_ADMIN` persona proof is still missing
   because active staging role assignments include no `INTEGRATION_ADMIN`.
-- Import batch list read model returns HTTP `500` while
-  `/integrations/import-batches/overview` returns `200`; fix this before using
-  import batch list/readback as operator evidence.
+- Import batch list read model previously returned HTTP `500` while
+  `/integrations/import-batches/overview` returned `200`. Root cause was the
+  list query selecting shared join columns without `stg.import_batch`
+  qualification. The fix qualifies list SELECT/ORDER BY columns and adds a
+  regression test; rerun staging readback after deploy before treating this as
+  closed operator evidence.
 - Supabase restore, external alert provider delivery, and Redis/BullMQ
   broad-production health still need real inputs before broad production can
   move out of `No-Go`.

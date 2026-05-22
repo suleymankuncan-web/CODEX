@@ -106,7 +106,7 @@ test('handoff docs keep post-merge readiness evidence tiers clear', () => {
 
   requireText(activeNextActions, 'The original six external evidence gaps are now')
   requireText(activeNextActions, 'Tier A - controlled pilot expansion follow-up')
-  requireText(activeNextActions, 'Fix the staging `GET /api/integrations/import-batches` HTTP `500`')
+  requireText(activeNextActions, 'Verify staging `GET /api/integrations/import-batches` after the SQL')
   requireText(activeNextActions, 'Dedicated integration-admin persona proof if strict non-super-admin upload')
   requireText(activeNextActions, 'docs/evidence/readiness/2026-05-22-live-evidence-proof-pass.md')
 
