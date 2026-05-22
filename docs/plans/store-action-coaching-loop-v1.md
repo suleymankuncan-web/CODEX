@@ -285,6 +285,34 @@ Evidence:
 
 - `docs/evidence/store-action-source-guard-v1.md`
 
+## V1A Checklist Source Decision
+
+Checklist-derived Store Action follow-up should not be created directly from
+raw checklist receipts yet.
+
+Decision:
+
+- `checklist_receipt` remains acknowledgement work.
+- Checklist score follow-up may enter Store Action through the existing KPI
+  exception source when `BM_CHECKLIST` or `VM_CHECKLIST` contributes to an
+  at-risk/off-track KPI status.
+- Direct checklist low-score candidates are parked until low-score threshold
+  ownership, acknowledgement interaction, BM/VM differences, source reference,
+  and scope tests are explicit.
+
+Why:
+
+- Store score configuration already marks `BM_CHECKLIST` and `VM_CHECKLIST` as
+  `task_candidate` metrics.
+- Using the KPI exception path avoids inventing a second threshold outside KPI
+  status-band and scoring semantics.
+- A completed checklist receipt waiting for acknowledgement is not the same
+  product concept as a coaching follow-up.
+
+Evidence:
+
+- `docs/evidence/store-action-checklist-source-decision-v1.md`
+
 ## Data Placement Draft
 
 V1A read-only:
@@ -447,6 +475,9 @@ Current status:
 - Current source guard keeps checklist receipt acknowledgements and target
   distribution approvals parked until their source-specific decisions are
   explicit.
+- Checklist source decision keeps direct checklist receipts as
+  acknowledgements; checklist-driven coaching can only come through the KPI
+  exception path until direct low-score policy is explicit.
 - Persisted action plans remain a separate V1B decision.
 
 ## CODEX DURUST YORUM
