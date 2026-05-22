@@ -24,7 +24,7 @@ test('production readiness decision records the final release posture', () => {
   for (const phrase of [
     'Local code and release gate: Go.',
     'Controlled staging/internal hardening: Conditional Go.',
-    'Controlled pilot expansion: No-Go until real staging auth/action and protected-route evidence is captured.',
+    'Controlled pilot expansion: Conditional Go for existing scoped pilot users and',
     'Broad production rollout: No-Go.',
     'PR #239',
     'c69b7cf24605e9b65b7215f6557f74174dd6364b',
@@ -50,7 +50,7 @@ test('production readiness decision summarizes every readiness slice and blocker
     'Protected route performance and authenticated session evidence remain blocked',
     'broad production requires Redis-backed rate limiting',
     'broad production durable work requires BullMQ/Redis evidence',
-    'Staging authenticated upload smoke still needs integration-admin credentials and sample file.',
+    'Current pilot upload/readback evidence is closed with the existing `SUPER_ADMIN` pilot session',
   ]) {
     requireText(decision, phrase)
   }
@@ -70,10 +70,14 @@ test('production readiness decision preserves no-secret evidence rules', () => {
   }
 })
 
-test('production readiness decision uses repo-root-runnable auth evidence commands', () => {
+test('production readiness decision keeps remaining evidence inputs current', () => {
   for (const phrase of [
-    'npm.cmd --prefix admin-web run smoke:auth:staging',
-    'npm.cmd --prefix admin-web run --silent smoke:auth:staging:action | npm.cmd --prefix admin-web run --silent guard:auth:evidence -- --stdin',
+    'Protected route load smoke with fresh role-specific staging tokens',
+    'BACKEND_LOAD_SESSION_TOKEN',
+    'BACKEND_LOAD_STORE_TOKEN',
+    'BACKEND_LOAD_COMPETITION_TOKEN',
+    'BACKEND_LOAD_IMPORT_TOKEN',
+    'If import/upload ownership shifts away from `SUPER_ADMIN`',
   ]) {
     requireText(decision, phrase)
   }
@@ -82,6 +86,7 @@ test('production readiness decision uses repo-root-runnable auth evidence comman
   assert.doesNotMatch(decision, /`npm\.cmd run smoke:auth:staging:action`/)
   assert.doesNotMatch(decision, /`npm\.cmd run guard:auth:evidence`/)
   assert.doesNotMatch(decision, /`npm\.cmd --prefix admin-web run guard:auth:evidence`/)
+  assert.doesNotMatch(decision, /Authenticated integration-admin upload smoke/)
 })
 
 test('handoff and action docs link the production readiness decision', () => {
@@ -98,17 +103,18 @@ test('handoff docs keep post-merge readiness evidence tiers clear', () => {
   requireText(debtLedger, 'PR #240 merged')
   requireText(readinessProgress, '| 12 | Final Go/No-Go Readiness Packet | Merged (#240) |')
 
-  requireText(currentState, 'There are six external evidence gaps')
-  requireText(currentState, 'Tier A - controlled pilot expansion first')
-  requireText(currentState, 'Real staging auth/action smoke with sanitized evidence.')
-  requireText(currentState, 'Protected route load smoke with role-specific staging bearer tokens.')
-  requireText(currentState, 'Authenticated integration-admin upload smoke with a safe sample file.')
+  requireText(currentState, 'The original six external evidence gaps are now split into closed controlled')
+  requireText(currentState, 'Tier A - controlled pilot evidence')
+  requireText(currentState, 'Real staging auth/action smoke with sanitized evidence is recorded.')
+  requireText(currentState, 'Protected route load smoke with role-specific staging bearer tokens is')
+  requireText(currentState, 'Authenticated safe upload smoke with the approved pilot operator is recorded.')
 
   requireText(activeNextActions, 'The original six external evidence gaps are now')
   requireText(activeNextActions, 'Tier A - controlled pilot expansion follow-up')
   requireText(activeNextActions, 'Import batch list/readback operator evidence is now closed by PR #409')
-  requireText(activeNextActions, 'Dedicated integration-admin persona proof if strict non-super-admin upload')
+  requireText(activeNextActions, 'Dedicated integration-admin persona proof is no longer required')
   requireText(activeNextActions, 'docs/evidence/readiness/2026-05-22-live-evidence-proof-pass.md')
+  requireText(activeNextActions, 'docs/plans/import-upload-authorization-decision-v1.md')
 
   for (const text of [currentState, activeNextActions]) {
     requireText(text, 'Tier B - broad-production/operational hardening')

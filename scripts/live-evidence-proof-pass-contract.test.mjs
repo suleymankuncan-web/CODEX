@@ -22,7 +22,7 @@ test('live evidence proof pass records proven and blocked items separately', () 
     '# Live Evidence Proof Pass - 2026-05-22',
     'Protected route load smoke | Proven',
     'Authenticated upload smoke | Proven with existing super-admin pilot session',
-    'Dedicated integration-admin persona | Still missing',
+    'Dedicated integration-admin persona | Not required for current pilot',
     'Redis/BullMQ broad-production health | Still missing',
     'External alert provider delivery | Still missing',
     'Supabase restore drill | Still missing',
@@ -56,6 +56,7 @@ test('live evidence proof pass keeps broad production as no-go', () => {
     'Supabase restore drill is not proven.',
     'External alert delivery is not proven.',
     'Import batch list/readback operator evidence is now fixed and live-verified.',
+    'Dedicated `INTEGRATION_ADMIN` persona proof: not required for the current',
   ]) {
     requireText(evidence, phrase)
   }
@@ -64,6 +65,7 @@ test('live evidence proof pass keeps broad production as no-go', () => {
 test('current state points to the live evidence proof pass', () => {
   requireText(currentState, evidencePath)
   requireText(currentState, 'Protected route load smoke and safe staging upload smoke are now proven.')
+  requireText(currentState, 'docs/plans/import-upload-authorization-decision-v1.md')
   requireText(currentState, 'Import batch list read model previously returned HTTP `500`')
   requireText(currentState, 'list query selecting shared join columns without `stg.import_batch`')
   requireText(currentState, 'After Render deploy, real Clerk readback at')

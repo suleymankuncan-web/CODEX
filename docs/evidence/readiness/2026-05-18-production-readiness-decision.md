@@ -6,7 +6,8 @@ Local code and release gate: Go.
 
 Controlled staging/internal hardening: Conditional Go.
 
-Controlled pilot expansion: No-Go until real staging auth/action and protected-route evidence is captured.
+Controlled pilot expansion: Conditional Go for existing scoped pilot users and
+flows with sanitized evidence.
 
 Broad production rollout: No-Go.
 
@@ -20,8 +21,12 @@ This is a decision packet, not approval to widen rollout. It summarizes the read
   `docs/evidence/readiness/2026-05-22-production-evidence-blockers-v2.md`.
 - Broad production rollout remains No-Go until Redis/BullMQ health, Supabase
   restore, external alert delivery or accepted log-retention evidence,
-  authenticated upload smoke, and protected-route load budgets are proven or
-  explicitly accepted under a narrower rollout decision.
+- protected-route load budgets, and any owner-required future role delegation
+  are proven or explicitly accepted under a narrower rollout decision.
+- Import/upload evidence for the current controlled pilot is accepted through
+  the existing `SUPER_ADMIN` pilot session; dedicated `INTEGRATION_ADMIN`
+  evidence is no longer required for pilot continuation. See
+  `docs/plans/import-upload-authorization-decision-v1.md`.
 
 ## Current Baseline
 
@@ -43,7 +48,7 @@ This is a decision packet, not approval to widen rollout. It summarizes the read
 | 5. Redis-Backed Rate Limit | Merged PR #232 | Config/tests/checklist gates | Controlled pilot can use memory; broad production requires Redis-backed rate limiting. |
 | 6. Queue Durability Gate | Merged PR #233 | Health/config/tests/checklist gates | Controlled pilot can use process-local queue; broad production durable work requires BullMQ/Redis evidence. |
 | 7. Backup/Restore Live Drill | Merged PR #234 evidence gate | `docs/evidence/readiness/2026-05-18-supabase-staging-restore-drill.md` | Supabase staging restore into a disposable target has not been executed. |
-| 8. Upload Resource Guardrails | Merged PR #235 and review fixes PR #236 | Upload guardrail tests and release gate | Staging authenticated upload smoke still needs integration-admin credentials and sample file. |
+| 8. Upload Resource Guardrails | Merged PR #235 and review fixes PR #236 | Upload guardrail tests, release gate, and 2026-05-22 live proof pass | Current pilot upload/readback evidence is closed with the existing `SUPER_ADMIN` pilot session; future HR admin delegation would need a separate auth PR. |
 | 9. Performance Budget Pass | Merged PR #239 | `docs/evidence/readiness/2026-05-18-staging-backend-readiness-load-smoke.md` | Store, competition, import, and auth/session route budgets need real role-specific staging tokens. |
 | 10. Supabase Boundary Guard | Merged PR #238 | `scripts/supabase-boundary-guard.test.mjs` | Direct Supabase client access stays blocked until RLS/policy work is explicitly designed and tested. |
 | 11. Env/Secret Drift Guard | Merged PR #237 | `scripts/readiness-env-contract.test.mjs` and deployment docs | Live Render/Vercel secret values remain manually verified outside source control. |
@@ -70,22 +75,20 @@ No-Go:
 - Controlled pilot expansion to new users until real staging auth/action smoke, protected route performance tokens, and current pilot operator evidence are available.
 - Treating Supabase backup/restore readiness as proven before a disposable restore drill is completed.
 - Treating process-local queue or memory rate limit as broad-production safe without Redis/BullMQ evidence.
-- Treating upload/import resource risk as fully staged until an authenticated integration-admin upload smoke is captured.
+- Treating HR admin import/upload delegation as real before a scoped auth PR and regression tests exist.
 
 ## Required Next Evidence
 
-1. Real staging auth/action smoke with sanitized evidence:
-   - `npm.cmd --prefix admin-web run smoke:auth:staging`
-   - `npm.cmd --prefix admin-web run --silent smoke:auth:staging:action | npm.cmd --prefix admin-web run --silent guard:auth:evidence -- --stdin`
-2. Protected route load smoke with role-specific staging tokens:
+1. Protected route load smoke with fresh role-specific staging tokens when the
+   next pilot or scale decision requires updated load budgets:
    - `BACKEND_LOAD_SESSION_TOKEN`
    - `BACKEND_LOAD_STORE_TOKEN`
    - `BACKEND_LOAD_COMPETITION_TOKEN`
    - `BACKEND_LOAD_IMPORT_TOKEN`
-3. Supabase staging restore drill into an approved disposable target.
-4. Alert/error-tracking destination proof or accepted log-retention provider evidence.
-5. Broad-production Redis/BullMQ decision and health evidence if import/snapshot durability is required.
-6. Authenticated integration-admin upload smoke with a safe sample file.
+2. Supabase staging restore drill into an approved disposable target.
+3. Alert/error-tracking destination proof or accepted log-retention provider evidence.
+4. Broad-production Redis/BullMQ decision and health evidence if import/snapshot durability is required.
+5. If import/upload ownership shifts away from `SUPER_ADMIN`, define the target role and capture a new sanitized upload/readback smoke after the scoped auth change.
 
 ## Safety
 
