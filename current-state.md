@@ -31,14 +31,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-22, `origin/main` has been fetched through PR #423. Before the
-current reporting KPI config helper branch, the root checkout was clean `main`
+As of 2026-05-22, `origin/main` has been fetched through PR #424. Before the
+current integration read-model helper branch, the root checkout was clean `main`
 and aligned with `origin/main`.
 
 Latest merge on main:
 
 ```text
-290309a1 refactor: split master data bootstrap normalization helpers
+08c4b3f3 refactor: split reporting kpi config helpers
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -181,6 +181,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #421 `docs: add refactor completion inventory`
 - PR #422 `refactor: split ranking list helpers`
 - PR #423 `refactor: split master data bootstrap normalization helpers`
+- PR #424 `refactor: split reporting kpi config helpers`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -389,11 +390,14 @@ Latest technical assessment decision:
   `RankingService` stays focused on repository reads, KPI profile/scoring
   orchestration, and response assembly. The S02 slice moved
   `MasterDataBootstrapService` normalization/hash/read helpers into
-  `master-data-bootstrap-normalization.helpers.ts`. The current S03 slice moves
+  `master-data-bootstrap-normalization.helpers.ts`. The S03 slice moved
   KPI config resolve/default/metadata/validation helpers out of
-  `ReportingService` into `reporting-kpi-config.helpers.ts`; after that, the
-  next active refactor candidate is `IntegrationService` pure mapping/helper
-  extraction. UI page splits are parked while the user prepares a larger
+  `ReportingService` into `reporting-kpi-config.helpers.ts`. The current S04
+  slice moves IntegrationService read-model mappers and supported lookup lists
+  into `integration-read-model.helpers.ts`; after that, there is no normal
+  active refactor candidate left. Test-suite helper extraction remains
+  conditional on real gate pain/flakiness. UI page splits are parked while the
+  user prepares a larger
   page/content redesign. Auth-admin writes, workforce command lifecycles,
   competition scoring/finalization, materialization, snapshots, and generator
   scripts remain parked until a concrete trigger and verification ladder exist.

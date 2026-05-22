@@ -62,7 +62,7 @@ This snapshot is a triage input, not a mandate to split every file.
 | `backend/nestjs/src/modules/store-ops/application/reporting.service.ts` | 1613 | backend application orchestration | S03 KPI config helper extraction is done; park further reporting movement unless a concrete scoring/reporting trigger appears. |
 | `admin-web/src/pages/MasterDataBootstrapPage.tsx` | 1690 | redesign-sensitive UI page | Park until the upcoming page/content redesign touches it or a blocking UX bug appears. |
 | `admin-web/e2e/competition-surfaces.spec.ts` | 1557 | broad competition E2E | Park unless gate time/flakiness or helper extraction evidence appears. |
-| `backend/nestjs/src/modules/integration/application/integration.service.ts` | 1408 | mixed read/write orchestration | Active only for pure mapping/helper extraction; park command behavior. |
+| `backend/nestjs/src/modules/integration/application/integration.service.ts` | 1439 | mixed read/write orchestration | S04 read-model helper extraction is done; park command/import lifecycle behavior unless concrete trigger appears. |
 | `admin-web/src/pages/IntegrationDashboardPage.tsx` | 1354 | redesign-sensitive UI page | Park until redesign or concrete data-risk UX evidence. |
 | `admin-web/src/pages/StoreKpiHighlightsPage.tsx` | 1351 | redesign-sensitive UI page | Park until redesign or concrete KPI trust/overflow bug. |
 | `backend/nestjs/src/modules/integration/application/master-data-bootstrap.service.ts` | 1194 | validation/promotion orchestration | S02 normalization helper extraction is done; park remaining promotion/write boundary unless concrete trigger appears. |
@@ -219,16 +219,31 @@ Result:
 
 Risk: MEDIUM
 
-Status: Next active refactor candidate.
+Status: Done by the read-model helper extraction slice.
 
 Allowed only when:
 
 - The target helper is pure mapping/formatting, not import lifecycle, retry,
   source governance, approval, queue, or raw staging writes.
 
+Result:
+
+- Integration source, store master, personnel master, and supported lookup-list
+  read-model helpers now live in `integration-read-model.helpers.ts`.
+- `IntegrationService` still owns import creation, source governance,
+  materialization dispatch, retry, approval, reconciliation, and repository
+  orchestration.
+- Import lifecycle, retry, source governance, approval, queue, raw staging
+  writes, API response shape, auth, DB, and frontend behavior are unchanged.
+- Current line-count shape after the slice: `integration.service.ts` roughly
+  1439 lines and `integration-read-model.helpers.ts` roughly 109 lines.
+
 ### S05: Test Suite Helper Extraction
 
 Risk: LOW to MEDIUM
+
+Status: Conditional only; not an active refactor candidate without real gate
+pain, flakiness, or review friction.
 
 Allowed only when:
 
@@ -264,10 +279,12 @@ Broad refactor is considered closed as a standing project theme when:
 - Future "what next?" decisions use the active backlog above instead of generic
   large-file prompts.
 - Parked areas have explicit unpark triggers.
-- The first active code candidate is known and testable.
+- The finite active code candidates have either landed or have explicit
+  conditional triggers.
 
 Net decision:
 
 - The project is not debt-free.
 - The generic "refactor debt" loop is closed.
-- Continue only with the active candidates above or with a new concrete trigger.
+- Continue only with a new concrete trigger; test-suite helper extraction is
+  conditional on real gate pain, flakiness, or review friction.
