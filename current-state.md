@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #420, the Product Readiness V1 first-pass closeout, Operations Control Tower
+PR #422, the Product Readiness V1 first-pass closeout, Operations Control Tower
 readiness line, Sokrates/discipline operating docs, current workspace hygiene,
 the Clerk persona staging evidence runbook, the generated system-flow map, and
 the production evidence closure joint plan plus Redis/BullMQ, alert-provider,
@@ -31,14 +31,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-22, `origin/main` has been fetched through PR #420. Before the
-current refactor completion inventory branch, the root checkout was clean
-`main` and aligned with `origin/main`.
+As of 2026-05-22, `origin/main` has been fetched through PR #422. Before the
+current master-data bootstrap normalization helper branch, the root checkout was
+clean `main` and aligned with `origin/main`.
 
 Latest merge on main:
 
 ```text
-9438d910 docs: calibrate Sokrates prioritization rules
+8893915a refactor: split ranking list helpers
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -178,6 +178,8 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #418 `docs: record supabase restore proof`
 - PR #419 `docs: record readiness profile reset proof`
 - PR #420 `docs: calibrate Sokrates prioritization rules`
+- PR #421 `docs: add refactor completion inventory`
+- PR #422 `refactor: split ranking list helpers`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -381,15 +383,17 @@ Latest technical assessment decision:
 - Refactor Completion Inventory V1 is recorded at
   `docs/plans/refactor-completion-inventory-v1.md`. It closes broad refactor
   as a standing theme and replaces generic large-file prompts with a finite
-  active backlog plus explicit parked triggers. The first active code candidate,
-  `RankingService` pure helper extraction, has moved ranking list helpers into
-  `ranking-list.helpers.ts`; `RankingService` stays focused on repository
-  reads, KPI profile/scoring orchestration, and response assembly. The next
-  active refactor candidate is `MasterDataBootstrapService` validation boundary
-  work. UI page splits are parked while the user prepares a larger page/content
-  redesign. Auth-admin writes, workforce command lifecycles, competition
-  scoring/finalization, materialization, snapshots, and generator scripts remain
-  parked until a concrete trigger and verification ladder exist.
+  active backlog plus explicit parked triggers. `RankingService` pure helper
+  extraction has moved ranking list helpers into `ranking-list.helpers.ts`;
+  `RankingService` stays focused on repository reads, KPI profile/scoring
+  orchestration, and response assembly. The S02 slice moves
+  `MasterDataBootstrapService` normalization/hash/read helpers into
+  `master-data-bootstrap-normalization.helpers.ts`; the next active refactor
+  candidate is `ReportingService` test-map or one pure helper
+  extraction. UI page splits are parked while the user prepares a larger
+  page/content redesign. Auth-admin writes, workforce command lifecycles,
+  competition scoring/finalization, materialization, snapshots, and generator
+  scripts remain parked until a concrete trigger and verification ladder exist.
 - Growth foundation docs are planned through PR #363:
   rules/config boundary, operations control tower V1, authorization matrix drift
   guard, cross-domain data quality inventory, and frontend TypeScript
