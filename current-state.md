@@ -1483,6 +1483,15 @@ Store Action V1A status:
   sources, comments, attachments, notifications, escalation, new routes,
   DB/auth/workflow/scoring/API-shape changes remain NO-GO until separate PRs.
   Evidence: `docs/evidence/store-action-v1b-write-ui-go-no-go-v1.md`.
+- Store Action V1B create-from-KPI-candidate UI slice adds the first narrow write
+  affordance on `/store/tasks`: existing KPI exception rows can create persisted
+  action plans through `POST /api/store-actions/plans` with required title,
+  summary, due date, and priority. It uses generated frontend types, safe in-app
+  source links, local create-error rendering, and invalidates Store Action plans
+  plus workflow inbox after success. It does not add status, close, cancel,
+  comments, attachments, notifications, escalation, non-KPI sources, new routes,
+  DB/auth/workflow/scoring/API-shape changes, or broad redesign.
+  Evidence: `docs/evidence/store-action-v1b-create-from-kpi-candidate-ui-v1.md`.
 
 Current user direction on 2026-05-18:
 

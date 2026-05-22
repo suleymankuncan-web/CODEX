@@ -486,7 +486,12 @@ It must not own plan detail, commands, assignment, or resolution.
      non-KPI sources, new routes, DB/auth/workflow/scoring/API-shape changes
      remain NO-GO.
    - Evidence: `docs/evidence/store-action-v1b-write-ui-go-no-go-v1.md`.
-8. Targeted Playwright and deployed smoke evidence when staging is ready.
+8. Create-from-KPI-candidate Store Tasks UI.
+   - Adds one inline create form on existing KPI exception candidate rows.
+   - Uses generated frontend write helper for `POST /api/store-actions/plans`.
+   - Keeps lifecycle/status/close/cancel/detail/non-KPI sources out of scope.
+   - Evidence: `docs/evidence/store-action-v1b-create-from-kpi-candidate-ui-v1.md`.
+9. Targeted Playwright and deployed smoke evidence when staging is ready.
 
 Stop before the next kademe if the current one changes KPI scoring, checklist
 rules, target approval semantics, auth semantics, or workflow behavior outside
