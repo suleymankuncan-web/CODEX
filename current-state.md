@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #439 plus the Store Action V1B Store Tasks read-only list branch, the Product Readiness V1
+PR #440 plus the Store Action V1B Store Tasks read-only list, the Product Readiness V1
 first-pass closeout, Operations Control Tower readiness line,
 Sokrates/discipline operating docs, current workspace hygiene, the Clerk
 persona staging evidence runbook, the generated system-flow map, and the
@@ -1470,14 +1470,19 @@ Store Action V1A status:
   `backend/nestjs/src/modules/store-ops/infrastructure/store-action-plan.repository.ts`,
   `admin-web/src/generated/openapi-types.ts`, and
   `docs/evidence/store-action-v1b-workflow-inbox-v1.md`.
-- V1B Store Tasks read-only list branch status: in progress on
-  `codex/store-action-plan-store-tasks-list`. The intended sixth kademe lists
-  persisted action plans from `/api/store-actions/plans` on `/store/tasks`
-  without adding create/status/close/cancel UI, auth semantic changes, DB
-  migration, workflow lifecycle changes, or broad redesign. PR #440 review
-  hardening added safe in-app `sourceDeepLink` rendering, meta-backed
-  total/range paging with stale-page recovery, and the pilot smoke API fixture for
+- PR #440 `feat: list store action plans on tasks` is merged at
+  `695e0dba186550473b2075140814db0809808b81`. It lists persisted action plans
+  from `/api/store-actions/plans` on `/store/tasks` without adding
+  create/status/close/cancel UI, auth semantic changes, DB migration, workflow
+  lifecycle changes, or broad redesign. Review hardening added safe in-app
+  `sourceDeepLink` rendering, meta-backed total/range paging with stale-page
+  recovery, blank-summary fallback, and the pilot smoke API fixture for
   `/api/store-actions/plans`.
+- Current Store Action V1B next decision: write UI is conditional GO only for a
+  create-from-existing-KPI-candidate slice. Status, close, cancel, non-KPI
+  sources, comments, attachments, notifications, escalation, new routes,
+  DB/auth/workflow/scoring/API-shape changes remain NO-GO until separate PRs.
+  Evidence: `docs/evidence/store-action-v1b-write-ui-go-no-go-v1.md`.
 
 Current user direction on 2026-05-18:
 

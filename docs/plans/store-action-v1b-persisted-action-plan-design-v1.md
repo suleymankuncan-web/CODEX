@@ -480,7 +480,13 @@ It must not own plan detail, commands, assignment, or resolution.
    - First read-only list slice shows persisted action plans on `/store/tasks`
      without lifecycle commands.
    - Evidence: `docs/evidence/store-action-v1b-store-tasks-list-v1.md`.
-7. Targeted Playwright and deployed smoke evidence when staging is ready.
+7. Write UI go/no-go decision.
+   - First write UI is conditional GO only for create-from-KPI-candidate.
+   - Status, close, cancel, comments, attachments, notifications, escalation,
+     non-KPI sources, new routes, DB/auth/workflow/scoring/API-shape changes
+     remain NO-GO.
+   - Evidence: `docs/evidence/store-action-v1b-write-ui-go-no-go-v1.md`.
+8. Targeted Playwright and deployed smoke evidence when staging is ready.
 
 Stop before the next kademe if the current one changes KPI scoring, checklist
 rules, target approval semantics, auth semantics, or workflow behavior outside
