@@ -58,9 +58,12 @@ Operating plan:
 - Current local direction: broad refactor should be inventoried and closed as a
   recurring theme before opening more code movement. Use
   `docs/plans/refactor-completion-inventory-v1.md`: generic large-file prompts
-  are replaced by a finite active backlog, with `RankingService` pure helper
-  extraction as the first active code candidate and redesign-sensitive UI plus
-  auth/write/data state-machine work parked until concrete triggers appear.
+  are replaced by a finite active backlog. The first active code candidate,
+  `RankingService` pure helper extraction, has moved ranking list helpers into
+  `ranking-list.helpers.ts`; the next active candidate is
+  `MasterDataBootstrapService` validation boundary work. Redesign-sensitive UI
+  plus auth/write/data state-machine work stays parked until concrete triggers
+  appear.
 - Fresh Clerk controlled-pilot persona/token/action evidence is recorded in
   `docs/evidence/system-flow/clerk-persona-live-evidence-2026-05-22.md`.
 - The remaining production-evidence blocker refresh is recorded in
