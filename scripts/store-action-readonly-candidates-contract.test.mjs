@@ -4,6 +4,7 @@ import test from 'node:test'
 
 const evidence = readFileSync('docs/evidence/store-action-readonly-candidates-v1.md', 'utf8')
 const sourceGuardEvidence = readFileSync('docs/evidence/store-action-source-guard-v1.md', 'utf8')
+const checklistSourceDecision = readFileSync('docs/evidence/store-action-checklist-source-decision-v1.md', 'utf8')
 const sourcePlan = readFileSync('docs/plans/store-action-coaching-loop-v1.md', 'utf8')
 
 test('store action V1A evidence keeps the read-only boundary explicit', () => {
@@ -45,4 +46,21 @@ test('store action source guard parks acknowledgement and approval workflow sour
   assert.match(sourceGuardEvidence, /parked_approval_boundary/)
   assert.match(sourceGuardEvidence, /not automatically a coaching candidate/)
   assert.match(sourcePlan, /V1A Source Guard Decision/)
+})
+
+test('store action checklist source decision routes score follow-up through KPI exceptions', () => {
+  const kpiConfig = readFileSync('backend/nestjs/src/modules/store-ops/application/kpi-config.contract.ts', 'utf8')
+  const workflowContract = readFileSync('backend/nestjs/src/modules/store-ops/application/workflow-inbox.contract.ts', 'utf8')
+
+  assert.match(checklistSourceDecision, /BM_CHECKLIST/)
+  assert.match(checklistSourceDecision, /VM_CHECKLIST/)
+  assert.match(checklistSourceDecision, /KPI exception source/)
+  assert.match(checklistSourceDecision, /Do not create direct `checklist_receipt` Store Action candidates/)
+  assert.match(checklistSourceDecision, /direct Store Action low-score threshold owner/)
+  assert.match(sourcePlan, /V1A Checklist Source Decision/)
+
+  assert.match(kpiConfig, /code: "BM_CHECKLIST"[\s\S]*?scoreBehavior: "task_candidate"/)
+  assert.match(kpiConfig, /code: "VM_CHECKLIST"[\s\S]*?scoreBehavior: "task_candidate"/)
+  assert.match(workflowContract, /itemType: "acknowledgement"[\s\S]*?sourceType: "checklist_receipt"/)
+  assert.match(workflowContract, /itemType: "task"[\s\S]*?sourceType: "kpi_exception"/)
 })
