@@ -2,11 +2,11 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #417, the Product Readiness V1 first-pass closeout, Operations Control Tower
+PR #420, the Product Readiness V1 first-pass closeout, Operations Control Tower
 readiness line, Sokrates/discipline operating docs, current workspace hygiene,
 the Clerk persona staging evidence runbook, the generated system-flow map, and
-the production evidence closure joint plan plus Redis/BullMQ and alert-provider
-staging proofs.
+the production evidence closure joint plan plus Redis/BullMQ, alert-provider,
+Supabase restore, readiness profile reset, and Sokrates calibration proofs.
 It is the starting point for continuing in a fresh window.
 
 ## Active Workspace
@@ -31,14 +31,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-22, `origin/main` has been fetched through PR #417. Before the
-current Supabase restore evidence branch, the root checkout was clean `main`
-and aligned with `origin/main`.
+As of 2026-05-22, `origin/main` has been fetched through PR #420. Before the
+current refactor completion inventory branch, the root checkout was clean
+`main` and aligned with `origin/main`.
 
 Latest merge on main:
 
 ```text
-a5d416ba docs: record alert provider delivery proof
+9438d910 docs: calibrate Sokrates prioritization rules
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -175,6 +175,9 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #415 `docs: plan production evidence closure`
 - PR #416 `docs: record redis bullmq staging proof`
 - PR #417 `docs: record alert provider delivery proof`
+- PR #418 `docs: record supabase restore proof`
+- PR #419 `docs: record readiness profile reset proof`
+- PR #420 `docs: calibrate Sokrates prioritization rules`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -375,6 +378,16 @@ Latest technical assessment decision:
   repository boundary refactor, frontend surface decomposition, TypeScript
   strictness, API contract maintenance, performance evidence, and auth/security
   regression work.
+- Refactor Completion Inventory V1 is recorded at
+  `docs/plans/refactor-completion-inventory-v1.md`. It closes broad refactor
+  as a standing theme and replaces generic large-file prompts with a finite
+  active backlog plus explicit parked triggers. The first active code candidate
+  is `RankingService` pure helper extraction; `MasterDataBootstrapService`
+  validation boundary work is second. UI page splits are parked while the user
+  prepares a larger page/content redesign. Auth-admin writes, workforce
+  command lifecycles, competition scoring/finalization, materialization,
+  snapshots, and generator scripts remain parked until a concrete trigger and
+  verification ladder exist.
 - Growth foundation docs are planned through PR #363:
   rules/config boundary, operations control tower V1, authorization matrix drift
   guard, cross-domain data quality inventory, and frontend TypeScript
@@ -1413,6 +1426,7 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/plans/project-progress-plan-v1.md` - Project Progress Plan V1
 - `docs/plans/production-evidence-closure-joint-plan-v1.md` - Production Evidence Closure Joint Plan V1
 - `docs/plans/refactor-execution-plan-v1.md` - Refactor Execution Plan V1
+- `docs/plans/refactor-completion-inventory-v1.md` - Refactor Completion Inventory V1
 - `docs/plans/repo-hygiene-contract-v1.md` - Repo Hygiene Guard V1 reference is tracked through the contract tests and debt ledger
 - `docs/plans/source-agnostic-import-boundary-v1.md` - Source-Agnostic Import Boundary V1
 - `docs/plans/staging-auth-session-edge-evidence-guard-v1.md` - Staging Auth Session Edge Evidence Guard V1
