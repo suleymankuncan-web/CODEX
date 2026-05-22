@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { buildCommandResponse } from "../../../shared/http/response-builders";
+import { buildCommandResponse, buildListResponse } from "../../../shared/http/response-builders";
 import {
   canTransitionStoreActionPlanStatus,
   StoreActionPlanPriority,
@@ -21,6 +21,9 @@ import { StoreOpsRepository } from "../infrastructure/store-ops.repository";
 
 type StoreActionPlanActorInput = {
   actorUserId: string;
+} & StoreActionPlanActionScopeInput;
+
+type StoreActionPlanActionScopeInput = {
   actorActionScope?: {
     assignedStoreIds: readonly string[];
   };
@@ -38,6 +41,56 @@ export class StoreActionPlanService {
     private readonly storeActionPlanRepository: StoreActionPlanRepository,
     private readonly storeOpsRepository: StoreOpsRepository,
   ) {}
+
+  async listPlans(input: {
+    actorActionScope?: {
+      assignedStoreIds: readonly string[];
+    };
+    storeId?: string;
+    status?: StoreActionPlanStatus;
+    limit?: number;
+    offset?: number;
+  }) {
+    const limit = this.normalizeLimit(input.limit);
+    const offset = this.normalizeOffset(input.offset);
+    const storeIds = this.resolveAssignedStoreFilter(input.actorActionScope, input.storeId);
+
+    if (storeIds.length === 0) {
+      return buildListResponse([], {
+        total: 0,
+        limit,
+        offset,
+      });
+    }
+
+    const result = await this.storeActionPlanRepository.listPlans({
+      storeIds,
+      status: input.status,
+      limit,
+      offset,
+    });
+
+    return buildListResponse(result.items, {
+      total: result.total,
+      limit,
+      offset,
+    });
+  }
+
+  async getPlan(input: StoreActionPlanActionScopeInput & { actionPlanId: string }) {
+    const plan = await this.storeActionPlanRepository.getPlanById(input.actionPlanId);
+    if (!plan) {
+      throw new NotFoundException("Store action plan was not found");
+    }
+
+    this.assertAssignedActionStore(input.actorActionScope, plan.storeId);
+
+    return {
+      data: {
+        plan,
+      },
+    };
+  }
 
   async createPlan(input: StoreActionPlanActorInput & {
     actorScope: StoreActionPlanActorScope;
@@ -197,6 +250,18 @@ export class StoreActionPlanService {
     }
   }
 
+  private resolveAssignedStoreFilter(
+    actionScope: { assignedStoreIds: readonly string[] } | undefined,
+    storeId: string | undefined,
+  ) {
+    if (storeId) {
+      this.assertAssignedActionStore(actionScope, storeId);
+      return [storeId];
+    }
+
+    return [...new Set(actionScope?.assignedStoreIds ?? [])];
+  }
+
   private assertTransition(plan: StoreActionPlan, status: StoreActionPlanStatus) {
     if (!canTransitionStoreActionPlanStatus(plan.status, status)) {
       throw new ConflictException("Store action plan status transition is not allowed");
@@ -230,6 +295,22 @@ export class StoreActionPlanService {
       companyId: store.company_id,
       regionId: store.region_id,
     };
+  }
+
+  private normalizeLimit(limit?: number) {
+    if (!limit || Number.isNaN(limit)) {
+      return 50;
+    }
+
+    return Math.min(Math.max(Math.trunc(limit), 1), 100);
+  }
+
+  private normalizeOffset(offset?: number) {
+    if (!offset || Number.isNaN(offset)) {
+      return 0;
+    }
+
+    return Math.max(Math.trunc(offset), 0);
   }
 }
 

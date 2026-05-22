@@ -10,6 +10,7 @@ import { TargetDistributionController } from "./web/target-distribution.controll
 import { WorkflowInboxController } from "./web/workflow-inbox.controller";
 import { CompetitionController } from "./web/competition.controller";
 import { FeedController } from "./web/feed.controller";
+import { StoreActionPlanController } from "./web/store-action-plan.controller";
 import { OrgService } from "./application/org.service";
 import { WorkforceService } from "./application/workforce.service";
 import { ChecklistService } from "./application/checklist.service";
@@ -22,6 +23,7 @@ import { TargetDistributionService } from "./application/target-distribution.ser
 import { WorkflowInboxService } from "./application/workflow-inbox.service";
 import { CompetitionService } from "./application/competition.service";
 import { FeedService } from "./application/feed.service";
+import { StoreActionPlanService } from "./application/store-action-plan.service";
 import { StoreOpsRepository } from "./infrastructure/store-ops.repository";
 import { WorkforceRequestRepository } from "./infrastructure/workforce-request.repository";
 import { ChecklistRepository } from "./infrastructure/checklist.repository";
@@ -40,6 +42,7 @@ import { CompetitionReadRepository } from "./infrastructure/competition-read.rep
 import { CompetitionStagePackagePlanReadRepository } from "./infrastructure/competition-stage-package-plan-read.repository";
 import { CompetitionTeamTemplateReadRepository } from "./infrastructure/competition-team-template-read.repository";
 import { FeedRepository } from "./infrastructure/feed.repository";
+import { StoreActionPlanRepository } from "./infrastructure/store-action-plan.repository";
 
 @Module({
   controllers: [
@@ -54,6 +57,7 @@ import { FeedRepository } from "./infrastructure/feed.repository";
     WorkflowInboxController,
     CompetitionController,
     FeedController,
+    StoreActionPlanController,
   ],
   providers: [
     OrgService,
@@ -68,6 +72,7 @@ import { FeedRepository } from "./infrastructure/feed.repository";
     WorkflowInboxService,
     CompetitionService,
     FeedService,
+    StoreActionPlanService,
     StoreOpsRepository,
     WorkforceRequestRepository,
     ChecklistRepository,
@@ -86,6 +91,7 @@ import { FeedRepository } from "./infrastructure/feed.repository";
     CompetitionTeamTemplateReadRepository,
     CompetitionRepository,
     FeedRepository,
+    StoreActionPlanRepository,
   ],
   exports: [
     OrgService,
@@ -100,6 +106,7 @@ import { FeedRepository } from "./infrastructure/feed.repository";
     WorkflowInboxService,
     CompetitionService,
     FeedService,
+    StoreActionPlanService,
     StoreOpsRepository,
     WorkforceRequestRepository,
     ChecklistRepository,
@@ -118,6 +125,7 @@ import { FeedRepository } from "./infrastructure/feed.repository";
     CompetitionTeamTemplateReadRepository,
     CompetitionRepository,
     FeedRepository,
+    StoreActionPlanRepository,
   ],
 })
 export class StoreOpsModule {}

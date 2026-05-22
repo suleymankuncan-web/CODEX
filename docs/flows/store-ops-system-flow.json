@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-05-22T08:45:45.401Z",
+  "generatedAt": "2026-05-22T20:08:12.792Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
   },
   "summary": {
-    "backendEndpointCount": 164,
-    "backendEndpointsWithoutFrontendCallCount": 34,
-    "controllerCount": 18,
+    "backendEndpointCount": 170,
+    "backendEndpointsWithoutFrontendCallCount": 40,
+    "controllerCount": 19,
     "frontendApiCallCount": 130,
     "frontendRouteCount": 51,
     "matchedFrontendApiCallCount": 130,
-    "openApiEndpointCount": 164,
+    "openApiEndpointCount": 170,
     "routeApiEdgeCount": 193,
     "routesWithoutApiCallCount": 4,
     "unmatchedFrontendApiCallCount": 0
@@ -4866,6 +4866,90 @@
       }
     },
     {
+      "id": "endpoint:GET:/api/store-actions/plans",
+      "method": "GET",
+      "path": "/api/store-actions/plans",
+      "rawControllerPath": "store-actions",
+      "rawMethodPath": "plans",
+      "controller": "store-action-plan",
+      "domain": "store-actions",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/store-action-plan.controller.ts",
+        "line": 20
+      }
+    },
+    {
+      "id": "endpoint:POST:/api/store-actions/plans",
+      "method": "POST",
+      "path": "/api/store-actions/plans",
+      "rawControllerPath": "store-actions",
+      "rawMethodPath": "plans",
+      "controller": "store-action-plan",
+      "domain": "store-actions",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/store-action-plan.controller.ts",
+        "line": 49
+      }
+    },
+    {
+      "id": "endpoint:GET:/api/store-actions/plans/{actionPlanId}",
+      "method": "GET",
+      "path": "/api/store-actions/plans/{actionPlanId}",
+      "rawControllerPath": "store-actions",
+      "rawMethodPath": "plans/:actionPlanId",
+      "controller": "store-action-plan",
+      "domain": "store-actions",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/store-action-plan.controller.ts",
+        "line": 36
+      }
+    },
+    {
+      "id": "endpoint:PATCH:/api/store-actions/plans/{actionPlanId}/cancel",
+      "method": "PATCH",
+      "path": "/api/store-actions/plans/{actionPlanId}/cancel",
+      "rawControllerPath": "store-actions",
+      "rawMethodPath": "plans/:actionPlanId/cancel",
+      "controller": "store-action-plan",
+      "domain": "store-actions",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/store-action-plan.controller.ts",
+        "line": 98
+      }
+    },
+    {
+      "id": "endpoint:PATCH:/api/store-actions/plans/{actionPlanId}/close",
+      "method": "PATCH",
+      "path": "/api/store-actions/plans/{actionPlanId}/close",
+      "rawControllerPath": "store-actions",
+      "rawMethodPath": "plans/:actionPlanId/close",
+      "controller": "store-action-plan",
+      "domain": "store-actions",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/store-action-plan.controller.ts",
+        "line": 82
+      }
+    },
+    {
+      "id": "endpoint:PATCH:/api/store-actions/plans/{actionPlanId}/status",
+      "method": "PATCH",
+      "path": "/api/store-actions/plans/{actionPlanId}/status",
+      "rawControllerPath": "store-actions",
+      "rawMethodPath": "plans/:actionPlanId/status",
+      "controller": "store-action-plan",
+      "domain": "store-actions",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/store-action-plan.controller.ts",
+        "line": 65
+      }
+    },
+    {
       "id": "endpoint:GET:/api/target-distributions/coverage",
       "method": "GET",
       "path": "/api/target-distributions/coverage",
@@ -6010,6 +6094,42 @@
       "method": "GET",
       "path": "/api/snapshots/runs/summary",
       "domain": "snapshots"
+    },
+    {
+      "id": "openapi:GET:/api/store-actions/plans",
+      "method": "GET",
+      "path": "/api/store-actions/plans",
+      "domain": "store-actions"
+    },
+    {
+      "id": "openapi:POST:/api/store-actions/plans",
+      "method": "POST",
+      "path": "/api/store-actions/plans",
+      "domain": "store-actions"
+    },
+    {
+      "id": "openapi:GET:/api/store-actions/plans/{actionPlanId}",
+      "method": "GET",
+      "path": "/api/store-actions/plans/{actionPlanId}",
+      "domain": "store-actions"
+    },
+    {
+      "id": "openapi:PATCH:/api/store-actions/plans/{actionPlanId}/cancel",
+      "method": "PATCH",
+      "path": "/api/store-actions/plans/{actionPlanId}/cancel",
+      "domain": "store-actions"
+    },
+    {
+      "id": "openapi:PATCH:/api/store-actions/plans/{actionPlanId}/close",
+      "method": "PATCH",
+      "path": "/api/store-actions/plans/{actionPlanId}/close",
+      "domain": "store-actions"
+    },
+    {
+      "id": "openapi:PATCH:/api/store-actions/plans/{actionPlanId}/status",
+      "method": "PATCH",
+      "path": "/api/store-actions/plans/{actionPlanId}/status",
+      "domain": "store-actions"
     },
     {
       "id": "openapi:GET:/api/target-distributions/coverage",
@@ -8023,6 +8143,13 @@
         "frontendCallCount": 1
       },
       {
+        "id": "controller:store-action-plan",
+        "controller": "store-action-plan",
+        "domain": "store-actions",
+        "endpointCount": 6,
+        "frontendCallCount": 0
+      },
+      {
         "id": "controller:mobile-auth",
         "controller": "mobile-auth",
         "domain": "mobile",
@@ -8080,6 +8207,12 @@
       "endpoint:GET:/api/snapshots/runs",
       "endpoint:POST:/api/snapshots/runs",
       "endpoint:GET:/api/snapshots/runs/summary",
+      "endpoint:GET:/api/store-actions/plans",
+      "endpoint:POST:/api/store-actions/plans",
+      "endpoint:GET:/api/store-actions/plans/{actionPlanId}",
+      "endpoint:PATCH:/api/store-actions/plans/{actionPlanId}/cancel",
+      "endpoint:PATCH:/api/store-actions/plans/{actionPlanId}/close",
+      "endpoint:PATCH:/api/store-actions/plans/{actionPlanId}/status",
       "endpoint:GET:/api/workforce/headcount-gap"
     ],
     "routesWithoutApiCalls": [

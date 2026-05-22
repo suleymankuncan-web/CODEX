@@ -3,7 +3,7 @@ import { dirname, resolve } from "node:path";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "../app.module";
-
+import { applyStoreActionPlanOpenApi } from "./store-action-plan-openapi";
 type MutableOperation = {
   parameters?: Array<Record<string, unknown>>;
   requestBody?: Record<string, unknown>;
@@ -4520,6 +4520,7 @@ async function generateOpenApi(): Promise<void> {
     MobileChecklistTodayResponse: mobileChecklistTodayResponseSchema,
   };
 
+  applyStoreActionPlanOpenApi(document);
   setJsonResponseSchema(
     document.paths,
     "/api/integrations/import-batches/overview",
@@ -5208,7 +5209,6 @@ function setJsonRequestSchema(
   schemaName: string,
 ) {
   const operation = (paths[path] as MutablePathItem | undefined)?.[method];
-
   if (!operation) {
     return;
   }
@@ -5234,7 +5234,6 @@ function setJsonResponseSchema(
   status = "200",
 ) {
   const operation = (paths[path] as MutablePathItem | undefined)?.[method];
-
   if (!operation) {
     return;
   }

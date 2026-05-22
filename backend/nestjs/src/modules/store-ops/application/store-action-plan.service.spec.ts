@@ -9,6 +9,7 @@ function createHarness() {
   const storeActionPlanRepository = {
     createPlan: jest.fn(),
     getPlanById: jest.fn(),
+    listPlans: jest.fn(),
     updateStatus: jest.fn(),
     closePlan: jest.fn(),
     cancelPlan: jest.fn(),
@@ -212,6 +213,74 @@ describe("StoreActionPlanService", () => {
         note: "Waiting for stock confirmation",
       }),
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it("lists only assigned action-store plans with normalized pagination", async () => {
+    const { service, storeActionPlanRepository } = createHarness();
+    storeActionPlanRepository.listPlans.mockResolvedValue({
+      items: [existingPlan()],
+      total: 1,
+    });
+
+    const result = await service.listPlans({
+      actorActionScope: { assignedStoreIds: [assignedStoreId] },
+      status: "open",
+      limit: 500,
+      offset: -4,
+    });
+
+    expect(storeActionPlanRepository.listPlans).toHaveBeenCalledWith({
+      storeIds: [assignedStoreId],
+      status: "open",
+      limit: 100,
+      offset: 0,
+    });
+    expect(result.items).toHaveLength(1);
+    expect(result.meta).toEqual({
+      count: 1,
+      total: 1,
+      limit: 100,
+      offset: 0,
+    });
+  });
+
+  it("rejects list filters outside assigned action stores", async () => {
+    const { service, storeActionPlanRepository } = createHarness();
+
+    await expect(
+      service.listPlans({
+        actorActionScope: { assignedStoreIds: [assignedStoreId] },
+        storeId: unassignedStoreId,
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    expect(storeActionPlanRepository.listPlans).not.toHaveBeenCalled();
+  });
+
+  it("returns plan detail only inside assigned action stores", async () => {
+    const { service, storeActionPlanRepository } = createHarness();
+    storeActionPlanRepository.getPlanById.mockResolvedValue(existingPlan());
+
+    const result = await service.getPlan({
+      actorActionScope: { assignedStoreIds: [assignedStoreId] },
+      actionPlanId: "00000000-0000-4000-8000-000000000701",
+    });
+
+    expect(result.data.plan.actionPlanId).toBe("00000000-0000-4000-8000-000000000701");
+  });
+
+  it("rejects plan detail outside assigned action stores", async () => {
+    const { service, storeActionPlanRepository } = createHarness();
+    storeActionPlanRepository.getPlanById.mockResolvedValue(
+      existingPlan({ storeId: unassignedStoreId }),
+    );
+
+    await expect(
+      service.getPlan({
+        actorActionScope: { assignedStoreIds: [assignedStoreId] },
+        actionPlanId: "00000000-0000-4000-8000-000000000701",
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
   it("rejects status updates on terminal plans", async () => {

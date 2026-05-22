@@ -94,6 +94,30 @@ describe("StoreActionPlanRepository", () => {
     expect(result.actionPlanId).toBe(planRow.store_action_plan_id);
   });
 
+  it("lists plans for assigned action stores with status and pagination filters", async () => {
+    const { query, repository } = createTransactionHarness();
+    query.mockResolvedValueOnce({ rows: [{ total: "1" }] }).mockResolvedValueOnce({
+      rows: [planRow],
+    });
+
+    const result = await repository.listPlans({
+      storeIds: [planRow.store_id],
+      status: "open",
+      limit: 25,
+      offset: 10,
+    });
+
+    expect(String(query.mock.calls[0][0])).toContain("COUNT(*)::int AS total");
+    expect(String(query.mock.calls[0][0])).toContain("store_id = ANY($1::uuid[])");
+    expect(String(query.mock.calls[0][0])).toContain("status = $2");
+    expect(String(query.mock.calls[1][0])).toContain("ORDER BY due_on ASC, updated_at DESC");
+    expect(query.mock.calls[1][1]).toEqual([[planRow.store_id], "open", 25, 10]);
+    expect(result).toEqual({
+      items: [expect.objectContaining({ actionPlanId: planRow.store_action_plan_id })],
+      total: 1,
+    });
+  });
+
   it("updates non-terminal status and records audit metadata", async () => {
     const { query, repository } = createTransactionHarness();
     query.mockResolvedValueOnce({

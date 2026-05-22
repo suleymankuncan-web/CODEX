@@ -205,9 +205,9 @@ git commit -m "feat: add store action plan commands"
 - Create DTOs under `backend/nestjs/src/modules/store-ops/web/dto/`
 - Modify: `backend/nestjs/src/modules/store-ops/store-ops.module.ts`
 - Modify: `backend/nestjs/src/openapi/generate-openapi.ts`
-- Generated frontend client files under `admin-web/src/api/generated/`
+- Generated frontend client files under `admin-web/src/generated/`
 
-- [ ] **Step 1: Add DTOs**
+- [x] **Step 1: Add DTOs**
 
 DTOs must match the API design:
 
@@ -217,7 +217,7 @@ DTOs must match the API design:
 - close body: `resolutionNote`,
 - cancel body: `cancelReason`.
 
-- [ ] **Step 2: Add controller endpoints**
+- [x] **Step 2: Add controller endpoints**
 
 Endpoints:
 
@@ -228,7 +228,7 @@ Endpoints:
 - `PATCH /api/store-actions/plans/:actionPlanId/close`,
 - `PATCH /api/store-actions/plans/:actionPlanId/cancel`.
 
-- [ ] **Step 3: Add OpenAPI schemas and generated client**
+- [x] **Step 3: Add OpenAPI schemas and generated client**
 
 Run:
 
@@ -238,7 +238,7 @@ npm.cmd --prefix admin-web run api:generate
 npm.cmd --prefix admin-web run api:check
 ```
 
-- [ ] **Step 4: Run backend and API gates**
+- [x] **Step 4: Run backend and API gates**
 
 ```powershell
 npm.cmd --prefix backend/nestjs test -- store-action-plan
@@ -246,10 +246,10 @@ npm.cmd --prefix backend/nestjs run build
 npm.cmd --prefix admin-web run api:check
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
-git add backend/nestjs/src/modules/store-ops/web backend/nestjs/src/modules/store-ops/store-ops.module.ts backend/nestjs/src/openapi/generate-openapi.ts admin-web/src/api/generated
+git add backend/nestjs/src/modules/store-ops/web backend/nestjs/src/modules/store-ops/store-ops.module.ts backend/nestjs/src/openapi admin-web/src/generated
 git commit -m "feat: expose store action plan api"
 ```
 
