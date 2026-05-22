@@ -450,6 +450,35 @@ Evidence:
 - `backend/nestjs/src/modules/store-ops/infrastructure/store-action-plan.repository.spec.ts`
 - `docs/evidence/store-action-v1b-command-boundary-v1.md`
 
+## V1B API Contract Boundary
+
+The fourth implementation kademe exposes the already-tested action-plan command
+boundary through a narrow REST/API contract.
+
+Decision:
+
+- Register the Store Action service/repository/controller in `StoreOpsModule`.
+- Expose list, detail, create, status, close, and cancel endpoints under
+  `/api/store-actions/plans`.
+- Use `RequireActionScope("store")` only on create, where the body carries
+  `storeId`.
+- Use authenticated role guards plus service-level assigned-store validation on
+  list/detail/lifecycle commands, where the path does not carry a store-scope
+  identifier.
+- Add generated OpenAPI schemas and frontend types before any Store Tasks UI
+  mutation flow uses these endpoints.
+- Keep workflow inbox integration and UI lifecycle behavior for later
+  kademeler.
+
+Evidence:
+
+- `backend/nestjs/src/modules/store-ops/web/store-action-plan.controller.ts`
+- `backend/nestjs/src/modules/store-ops/web/store-action-plan.controller.spec.ts`
+- `backend/nestjs/src/modules/store-ops/web/store-action-plan.openapi.contract.spec.ts`
+- `backend/nestjs/src/openapi/store-action-plan-openapi.ts`
+- `admin-web/src/generated/openapi-types.ts`
+- `docs/evidence/store-action-v1b-api-contract-v1.md`
+
 ## Data Placement Draft
 
 V1A read-only:

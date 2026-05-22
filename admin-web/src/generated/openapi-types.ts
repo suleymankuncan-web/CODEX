@@ -462,6 +462,12 @@ export type components = {
         "limit": number
       }
     }
+    "CancelStoreActionPlanRequest": {
+      "cancelReason": string
+    }
+    "CloseStoreActionPlanRequest": {
+      "resolutionNote": string
+    }
     "CompetitionDetailResponse": {
       "competition": {
         "competitionId": string
@@ -663,6 +669,18 @@ export type components = {
       "storeId"?: string
       "effectiveFrom"?: string
       "effectiveTo"?: string
+    }
+    "CreateStoreActionPlanRequest": {
+      "storeId": string
+      "sourceType": "kpi_exception"
+      "sourceId": string
+      "sourceDeepLink"?: string
+      "sourceSnapshotRunId"?: string
+      "sourceKpiId"?: string
+      "title": string
+      "summary"?: string
+      "priority": "high" | "medium" | "low"
+      "dueOn": string
     }
     "CreateUserAccountDto": {
       "employeeId"?: string
@@ -2160,6 +2178,104 @@ export type components = {
           "snapshotType": string
         }>
     }
+    "StoreActionPlanCommandResponse": {
+      "command": {
+        "status": string
+        "message": string
+      }
+      "data": {
+        "plan": {
+          "actionPlanId": string
+          "companyId": string
+          "regionId": string
+          "storeId": string
+          "ownerUserId": string
+          "createdByUserId": string
+          "sourceType": "kpi_exception"
+          "sourceId": string
+          "sourceDeepLink": string | null
+          "sourceSnapshotRunId": string | null
+          "sourceKpiId": string | null
+          "title": string
+          "summary": string | null
+          "priority": "high" | "medium" | "low"
+          "status": "open" | "in_progress" | "blocked" | "closed" | "cancelled"
+          "dueOn": string
+          "resolutionNote": string | null
+          "closedByUserId": string | null
+          "closedAt": string | null
+          "cancelReason": string | null
+          "cancelledByUserId": string | null
+          "cancelledAt": string | null
+          "createdAt": string
+          "updatedAt": string
+        }
+      }
+    }
+    "StoreActionPlanDetailResponse": {
+      "data": {
+        "plan": {
+          "actionPlanId": string
+          "companyId": string
+          "regionId": string
+          "storeId": string
+          "ownerUserId": string
+          "createdByUserId": string
+          "sourceType": "kpi_exception"
+          "sourceId": string
+          "sourceDeepLink": string | null
+          "sourceSnapshotRunId": string | null
+          "sourceKpiId": string | null
+          "title": string
+          "summary": string | null
+          "priority": "high" | "medium" | "low"
+          "status": "open" | "in_progress" | "blocked" | "closed" | "cancelled"
+          "dueOn": string
+          "resolutionNote": string | null
+          "closedByUserId": string | null
+          "closedAt": string | null
+          "cancelReason": string | null
+          "cancelledByUserId": string | null
+          "cancelledAt": string | null
+          "createdAt": string
+          "updatedAt": string
+        }
+      }
+    }
+    "StoreActionPlanListResponse": {
+      "items": Array<{
+          "actionPlanId": string
+          "companyId": string
+          "regionId": string
+          "storeId": string
+          "ownerUserId": string
+          "createdByUserId": string
+          "sourceType": "kpi_exception"
+          "sourceId": string
+          "sourceDeepLink": string | null
+          "sourceSnapshotRunId": string | null
+          "sourceKpiId": string | null
+          "title": string
+          "summary": string | null
+          "priority": "high" | "medium" | "low"
+          "status": "open" | "in_progress" | "blocked" | "closed" | "cancelled"
+          "dueOn": string
+          "resolutionNote": string | null
+          "closedByUserId": string | null
+          "closedAt": string | null
+          "cancelReason": string | null
+          "cancelledByUserId": string | null
+          "cancelledAt": string | null
+          "createdAt": string
+          "updatedAt": string
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
     "StoreMasterListResponse": {
       "items": Array<{
           "storeId": string
@@ -2273,6 +2389,10 @@ export type components = {
         "limit": number
         "offset": number
       }
+    }
+    "UpdateStoreActionPlanStatusRequest": {
+      "status": "open" | "in_progress" | "blocked"
+      "note"?: string
     }
     "WorkflowInboxResponse": {
       "items": Array<{
@@ -3013,6 +3133,90 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["SnapshotRunLineageResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/store-actions/plans": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["StoreActionPlanListResponse"]
+          }
+        }
+      }
+    }
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["CreateStoreActionPlanRequest"]
+        }
+      }
+      responses: {
+        "201": {
+          content: {
+            'application/json': components['schemas']["StoreActionPlanCommandResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/store-actions/plans/{actionPlanId}": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["StoreActionPlanDetailResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/store-actions/plans/{actionPlanId}/cancel": {
+    patch: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["CancelStoreActionPlanRequest"]
+        }
+      }
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["StoreActionPlanCommandResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/store-actions/plans/{actionPlanId}/close": {
+    patch: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["CloseStoreActionPlanRequest"]
+        }
+      }
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["StoreActionPlanCommandResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/store-actions/plans/{actionPlanId}/status": {
+    patch: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["UpdateStoreActionPlanStatusRequest"]
+        }
+      }
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["StoreActionPlanCommandResponse"]
           }
         }
       }

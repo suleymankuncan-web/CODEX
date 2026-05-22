@@ -117,6 +117,57 @@ export class StoreActionPlanRepository {
     return result.rows[0] ? this.mapPlan(result.rows[0]) : null;
   }
 
+  async listPlans(input: {
+    storeIds: readonly string[];
+    status?: StoreActionPlanStatus;
+    limit: number;
+    offset: number;
+  }) {
+    if (input.storeIds.length === 0) {
+      return {
+        items: [],
+        total: 0,
+      };
+    }
+
+    const params: unknown[] = [[...input.storeIds]];
+    const filters = ["store_id = ANY($1::uuid[])"];
+
+    if (input.status) {
+      params.push(input.status);
+      filters.push(`status = $${params.length}`);
+    }
+
+    const whereSql = filters.join(" AND ");
+    const countResult = await this.databaseService.query<{ total: number }>(
+      `
+        SELECT COUNT(*)::int AS total
+        FROM ops.store_action_plan
+        WHERE ${whereSql}
+      `,
+      params,
+    );
+    const listParams = [...params, input.limit, input.offset];
+    const limitParam = params.length + 1;
+    const offsetParam = params.length + 2;
+    const result = await this.databaseService.query<StoreActionPlanRow>(
+      `
+        SELECT ${STORE_ACTION_PLAN_COLUMNS}
+        FROM ops.store_action_plan
+        WHERE ${whereSql}
+        ORDER BY due_on ASC, updated_at DESC
+        LIMIT $${limitParam}
+        OFFSET $${offsetParam}
+      `,
+      listParams,
+    );
+
+    return {
+      items: result.rows.map((row) => this.mapPlan(row)),
+      total: Number(countResult.rows[0]?.total ?? 0),
+    };
+  }
+
   async createPlan(input: {
     companyId: string;
     regionId: string;

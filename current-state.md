@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #436 plus the Store Action V1B command boundary packet, the Product Readiness V1
+PR #437 plus the Store Action V1B API contract branch, the Product Readiness V1
 first-pass closeout, Operations Control Tower readiness line,
 Sokrates/discipline operating docs, current workspace hygiene, the Clerk
 persona staging evidence runbook, the generated system-flow map, and the
@@ -32,14 +32,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-22, `origin/main` has been fetched through PR #436. The root
+As of 2026-05-22, `origin/main` has been fetched through PR #437. The root
 checkout was clean `main` and aligned with `origin/main` before the Store
-Action V1B command boundary branch.
+Action V1B API contract branch.
 
 Latest merge on main:
 
 ```text
-303a4b87 feat: add store action lifecycle contract
+4a9e4ff7 feat: add store action plan commands
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -195,6 +195,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #434 `docs: design store action v1b plans`
 - PR #435 `feat: add store action plan schema`
 - PR #436 `feat: add store action lifecycle contract`
+- PR #437 `feat: add store action plan commands`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -213,7 +214,7 @@ frontend root, security headers, SPA fallback, and static assets passed.
 Current local hygiene state:
 
 - Root workspace `D:\store-ops-workspace` was clean on `main...origin/main` at
-  `8e79244f` after PR #434 was merged and `origin/main` was fetched.
+  `4a9e4ff7` after PR #437 was merged and `origin/main` was fetched.
 - The previous dirty root state was not deleted. It was saved as stash
   `codex hygiene backup 2026-05-21 root dirty state`. Do not drop that stash
   unless the user explicitly approves.
@@ -255,9 +256,11 @@ Active follow-up line:
 - The first precision slice reduces false route fanout from route preloaders
   and keeps `/auth/login` and `/admin/session` from inheriting unrelated API
   calls.
-- Current generated precision snapshot: 164 backend endpoints, 164 OpenAPI
-  endpoints, 130 matched frontend API calls, 193 route/API edges, 34 backend
-  endpoints without frontend calls, and 4 store routes without API calls.
+- Current generated precision snapshot: 170 backend endpoints, 170 OpenAPI
+  endpoints, 130 matched frontend API calls, 193 route/API edges, 40 backend
+  endpoints without frontend calls, and 4 store routes without API calls. The
+  six new Store Action plan endpoints are intentionally not frontend-called
+  until the later Store Tasks UI kademe.
 - Milestone 2 classification evidence is recorded in
   `docs/evidence/system-flow/unlinked-endpoints-classification-v1.md`: the 34
   unlinked endpoints are classified as external/provider, mobile/field-client,
@@ -1427,20 +1430,33 @@ Store Action V1A status:
   `backend/nestjs/src/modules/store-ops/application/store-action-plan.contract.ts`,
   `backend/nestjs/src/modules/store-ops/application/store-action-plan.contract.spec.ts`,
   and `docs/evidence/store-action-v1b-lifecycle-contract-v1.md`.
-- V1B command boundary status: service/repository command behavior is being
-  added as the third kademe. It proves assigned-store write scope, duplicate
+- V1B command boundary status: service/repository command behavior landed via
+  PR #437 as the third kademe. It proves assigned-store write scope, duplicate
   active source conflict mapping, required due date validation, terminal
   lifecycle guards, expected-state guarded writes for concurrent terminal
   transitions, close/cancel evidence requirements, and transactional audit
   writes without exposing a controller, API route, OpenAPI/generated client,
   workflow inbox integration, UI behavior, DB migration, or auth semantic
-  change.
+  change in that PR.
 - V1B command boundary references:
   `backend/nestjs/src/modules/store-ops/application/store-action-plan.service.ts`,
   `backend/nestjs/src/modules/store-ops/application/store-action-plan.service.spec.ts`,
   `backend/nestjs/src/modules/store-ops/infrastructure/store-action-plan.repository.ts`,
   `backend/nestjs/src/modules/store-ops/infrastructure/store-action-plan.repository.spec.ts`,
   and `docs/evidence/store-action-v1b-command-boundary-v1.md`.
+- V1B API contract branch status: the fourth kademe exposes the command/read
+  boundary through `/api/store-actions/plans` endpoints, DTOs, OpenAPI schemas,
+  generated frontend types, and refreshed system-flow artifacts. It still does
+  not add workflow inbox mapping, Store Tasks UI mutation behavior, DB
+  migration, KPI/checklist/target rule changes, provider config, or broad auth
+  semantic changes.
+- V1B API contract references:
+  `backend/nestjs/src/modules/store-ops/web/store-action-plan.controller.ts`,
+  `backend/nestjs/src/modules/store-ops/web/store-action-plan.controller.spec.ts`,
+  `backend/nestjs/src/modules/store-ops/web/store-action-plan.openapi.contract.spec.ts`,
+  `backend/nestjs/src/openapi/store-action-plan-openapi.ts`,
+  `admin-web/src/generated/openapi-types.ts`, and
+  `docs/evidence/store-action-v1b-api-contract-v1.md`.
 
 Current user direction on 2026-05-18:
 
