@@ -38,7 +38,8 @@ test('live evidence proof pass captures concrete staging smoke outputs', () => {
     'HTTP status: `201`.',
     'Batch id tail: `be350e95`.',
     '`canonicalRowCount`: `2`.',
-    'GET /api/integrations/import-batches?limit=5`: HTTP `500`',
+    'GET /api/integrations/import-batches?limit=5`: HTTP `200`',
+    'Merge commit: `0971883f6a876086225b68c2e47a08aaba29d013`.',
     'backend health alert signal: passed with HTTP `200`.',
     '`queueBackend`: `in-memory`.',
     'Redis status: `skipped`.',
@@ -54,7 +55,7 @@ test('live evidence proof pass keeps broad production as no-go', () => {
     'Redis/BullMQ durable queue health is not proven.',
     'Supabase restore drill is not proven.',
     'External alert delivery is not proven.',
-    'Import batch list read model currently returns HTTP `500`.',
+    'Import batch list/readback operator evidence is now fixed and live-verified.',
   ]) {
     requireText(evidence, phrase)
   }
@@ -65,6 +66,7 @@ test('current state points to the live evidence proof pass', () => {
   requireText(currentState, 'Protected route load smoke and safe staging upload smoke are now proven.')
   requireText(currentState, 'Import batch list read model previously returned HTTP `500`')
   requireText(currentState, 'list query selecting shared join columns without `stg.import_batch`')
+  requireText(currentState, 'After Render deploy, real Clerk readback at')
 })
 
 test('live evidence proof pass contains no obvious secret material', () => {
