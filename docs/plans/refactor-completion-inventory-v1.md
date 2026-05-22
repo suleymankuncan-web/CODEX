@@ -288,3 +288,7 @@ Net decision:
 - The generic "refactor debt" loop is closed.
 - Continue only with a new concrete trigger; test-suite helper extraction is
   conditional on real gate pain, flakiness, or review friction.
+- File Size Guard V1 keeps the loop closed by enforcing source-file size
+  budgets in `scripts/file-size-guard.test.mjs`: new active source files must
+  stay within standard limits, and existing oversized source files are frozen at
+  their current baseline unless Sokrates explicitly reopens the exception.
