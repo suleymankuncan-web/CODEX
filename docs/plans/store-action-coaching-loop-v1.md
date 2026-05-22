@@ -3,7 +3,8 @@
 ## Status
 
 - State: `shaping`
-- Implementation: not approved yet
+- Implementation: V1A read-only candidate shaping is active; persisted write
+  behavior is not approved yet
 - Feature Integration Spine mode: start as `docs-only`, then likely
   `read-only feature`, then later `write feature`
 
@@ -215,6 +216,45 @@ business fact.
 | Workforce/headcount | Later candidate. | Staffing follow-up or people lifecycle pressure. | Do not mutate seller-code/offboarding approval behavior. |
 | Incentive/challenge | Parked. | Future motivational nudge. | No payout, reward, or challenge logic in V1. |
 
+## V1A Read-Only Candidate Decision
+
+The first implementation slice uses the existing workflow inbox KPI exception
+source instead of a new Store Action endpoint.
+
+Decision:
+
+- KPI exception workflow inbox items are the first read-only Store Action
+  candidates.
+- `/store/tasks` remains the first owning surface.
+- The frontend derives read-only Store Action candidates from existing
+  `/api/workflow/inbox` items where:
+  - `sourceType` is `kpi_exception`,
+  - `itemType` is `task`,
+  - `inboxStatus` is `needs_attention`.
+
+Why:
+
+- Backend workflow inbox already scopes store-manager KPI exception reads to
+  assigned stores.
+- The source fact remains the reporting/KPI snapshot status band.
+- A dedicated `/api/store-actions/candidates` endpoint would duplicate the
+  current read model before there is a second consumer or a persisted action
+  plan detail.
+
+Guardrails:
+
+- No DB migration.
+- No new command endpoint.
+- No new workflow status.
+- No auth or permission change.
+- No KPI threshold, score, status-band, or target-value reinterpretation.
+- No Operations Control Tower signal yet; workflow inbox pressure already
+  summarizes this family.
+
+Evidence:
+
+- `docs/evidence/store-action-readonly-candidates-v1.md`
+
 ## Data Placement Draft
 
 V1A read-only:
@@ -369,6 +409,12 @@ Smallest safe candidate:
 
 If no existing signal can support a useful candidate without inventing new
 business thresholds, stop and refine the source rule instead of coding.
+
+Current status:
+
+- Completed as a narrow read-only frontend model over existing workflow inbox
+  KPI exception tasks.
+- Persisted action plans remain a separate V1B decision.
 
 ## CODEX DURUST YORUM
 
