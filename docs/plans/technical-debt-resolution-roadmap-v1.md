@@ -106,10 +106,12 @@ Measured hotspots:
 
 Runtime evidence still missing:
 
-- real staging auth/session proof with a bearer token,
+- real staging auth/session proof with a bearer token: closed for the current
+  controlled pilot,
 - assigned-store positive action smoke and unassigned-store negative action
-  smoke,
-- authenticated integration-admin upload smoke,
+  smoke: closed for the current controlled pilot,
+- authenticated import/upload smoke: closed for the current controlled pilot
+  with the existing `SUPER_ADMIN` pilot session,
 - Supabase restore drill into an approved disposable target,
 - alert/error-tracking destination proof,
 - Redis/BullMQ broad-production health proof.
@@ -201,9 +203,14 @@ Goal:
 
 Work order:
 
-1. Staging auth/session and protected route proof.
-2. Assigned-store `201` and unassigned-store `403` action proof.
-3. Authenticated integration-admin upload proof.
+1. Staging auth/session and protected route proof. Closed for the current
+   controlled pilot by 2026-05-22 live Clerk evidence.
+2. Assigned-store `201` and unassigned-store `403` action proof. Closed for the
+   current controlled pilot by 2026-05-22 live Clerk evidence.
+3. Authenticated import/upload proof. Closed for the current controlled pilot
+   with the existing `SUPER_ADMIN` pilot session; dedicated
+   `INTEGRATION_ADMIN` proof is no longer required by
+   `docs/plans/import-upload-authorization-decision-v1.md`.
 4. Supabase restore drill into an approved disposable target.
 5. Alert/error-tracking destination proof.
 6. Redis/BullMQ production-mode health proof.

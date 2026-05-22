@@ -588,7 +588,10 @@ Open risk areas this plan must progress:
   - `node --test scripts/deployment-runbook-contract.test.mjs` passed: 11 tests.
   - `npm.cmd run lint` passed in `backend/nestjs`.
   - `npm.cmd run check:release` passed from the workspace root, including scripts, backend release checks, frontend Playwright E2E, builds, and audit.
-- Staging upload smoke remains a post-merge/operator task because it needs a real authenticated integration-admin session and sample upload file in the target environment.
+- Staging upload smoke was later closed for the current controlled pilot with a
+  real `SUPER_ADMIN` Clerk session and safe sample file. Dedicated
+  `INTEGRATION_ADMIN` proof is no longer required for pilot continuation; future
+  HR admin delegation remains a separate scoped auth decision.
 
 ## Slice 9: Performance Budget Pass
 
@@ -789,17 +792,16 @@ Open risk areas this plan must progress:
 - Updated `current-state.md`, `docs/plans/active-next-actions.md`, and `docs/plans/project-debt-ledger.md` to link the packet and record:
   - local code/release gate: `Go`
   - controlled staging/internal hardening: `Conditional Go`
-  - controlled pilot expansion: `No-Go` until real staging auth/action and protected-route evidence exists
+  - controlled pilot expansion: originally `No-Go`; now `Conditional Go` for existing scoped pilot users after 2026-05-22 live evidence
   - broad production rollout: `No-Go`
 - Current broad-production blockers are external or operator-evidence bound:
-  - real staging auth/action smoke
-  - role-specific protected route load smoke
+  - fresh role-specific protected route load smoke when the next scale decision requires updated budgets
   - Supabase staging restore drill
   - external alert/error-tracking destination or log-retention proof
   - Redis/BullMQ broad-production decision and health evidence
-  - authenticated integration-admin upload smoke
+  - future import/upload role delegation if ownership shifts away from `SUPER_ADMIN`
 - Post-merge evidence tier:
-  - Tier A - controlled pilot expansion first: real staging auth/action smoke, role-specific protected route load smoke, authenticated integration-admin upload smoke.
+  - Tier A - controlled pilot evidence: real staging auth/action smoke, sampled role-specific protected route load smoke, and authenticated safe upload/readback are recorded.
   - Tier B - broad-production/operational hardening: Supabase staging restore drill, external alert/error-tracking or log-retention proof, Redis/BullMQ broad-production decision and health evidence.
 - Local verification:
   - `node --test scripts/production-readiness-decision-contract.test.mjs scripts/project-debt-ledger-consistency-contract.test.mjs` passed: 11 tests.

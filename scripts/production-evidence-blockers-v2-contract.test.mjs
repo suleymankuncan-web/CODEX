@@ -43,6 +43,7 @@ test('production evidence blocker V2 records real smoke results without upgradin
     'public p50: `79.79ms`',
     'protected groups skipped',
     'status: `blocked`',
+    'Authenticated staging upload smoke for the current controlled pilot: Go.',
     'Broad production rollout: No-Go.',
   ]) {
     requireText(evidence, phrase)
@@ -54,7 +55,7 @@ test('production evidence blocker V2 keeps missing live inputs as blockers', () 
     'Cannot close broad-production Redis/queue evidence.',
     'Cannot run restore drill.',
     'Alert routing stays metadata/log-only.',
-    'Cannot close upload smoke.',
+    'Dedicated `INTEGRATION_ADMIN` persona proof: not a current pilot blocker.',
     'Protected route load budgets remain blocked in this run.',
     'Stop before inventing provider delivery',
     'protected route budget evidence.',
@@ -67,6 +68,7 @@ test('handoff and action docs point to the V2 blocker refresh', () => {
   for (const text of [currentState, activeNextActions, v1Decision]) {
     requireText(text, evidencePath)
     requireText(text, 'docs/evidence/system-flow/clerk-persona-live-evidence-2026-05-22.md')
+    requireText(text, 'docs/plans/import-upload-authorization-decision-v1.md')
   }
 })
 

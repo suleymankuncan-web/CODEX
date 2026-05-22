@@ -29,8 +29,9 @@ Assumptions:
 - `https://staging.hr-axis.com` and `https://api-staging.hr-axis.com/api` are
   the active staging surfaces.
 - The existing Clerk pilot persona evidence is valid for controlled pilot auth
-  proof, but it does not automatically prove integration-admin upload, durable
-  queue, restore, or external alert delivery.
+  proof. The later live proof pass also closes current pilot upload/readback
+  evidence with `SUPER_ADMIN`; dedicated `INTEGRATION_ADMIN` separation is not
+  required for this pilot.
 - Broad production requires stronger evidence than controlled pilot.
 
 Repo/live evidence:
@@ -41,21 +42,23 @@ Repo/live evidence:
   delivery because no provider metadata was supplied.
 - Backend readiness load passes public API health but skips protected route
   groups because no role-specific load tokens were supplied in this session.
-- No Supabase restore target/input, Redis provider input, alert provider input,
-  or upload smoke input exists in the local environment.
+- No Supabase restore target/input, Redis provider input, or alert provider
+  input exists in the local environment.
+- Authenticated safe upload evidence exists in
+  `docs/evidence/readiness/2026-05-22-live-evidence-proof-pass.md`.
 
 Counterargument:
 
-- Redis/BullMQ, alert providers, upload smokes, and restore drills could be
+- Redis/BullMQ, alert providers, role-delegation smokes, and restore drills could be
   "implemented" or configured now. That would be theater without the approved
-  provider credentials, disposable target, safe sample file, and operator
+  provider credentials, disposable target, scoped auth decision, and operator
   acceptance required by the readiness checklist.
 
 Risk:
 
 - Docs-only evidence update: LOW.
 - Treating process-local queue, log-only observability, missing restore, or
-  missing upload smoke as production-ready: HIGH.
+  unverified future role delegation as production-ready: HIGH.
 
 Door:
 
@@ -89,7 +92,7 @@ recorded; no secret values were printed.
 | `REDIS_URL`, `QUEUE_BACKEND`, `RATE_LIMIT_BACKEND`, `BULLMQ_REDIS_URL` | Redis-backed rate limit and BullMQ queue health proof | absent | Cannot close broad-production Redis/queue evidence. |
 | `DATABASE_URL`, `RESTORE_DATABASE_URL`, Supabase access/project/password inputs | Supabase restore drill into a disposable target | absent | Cannot run restore drill. |
 | `ALERT_PROVIDER_NAME`, `ALERT_PRIMARY_DESTINATION`, `ALERT_BACKUP_DESTINATION`, alert webhook/provider input | External alert delivery proof | absent | Alert routing stays metadata/log-only. |
-| `UPLOAD_SMOKE_FILE`, `UPLOAD_SMOKE_BEARER_TOKEN` or integration-admin bearer token | Authenticated Power BI upload smoke | absent | Cannot close upload smoke. |
+| `UPLOAD_SMOKE_FILE`, `UPLOAD_SMOKE_BEARER_TOKEN` or integration-admin bearer token | Authenticated Power BI upload smoke | absent in this shell, later proven with a real `SUPER_ADMIN` Clerk browser session | Upload smoke is closed for the current controlled pilot; dedicated `INTEGRATION_ADMIN` proof is no longer a pilot blocker. |
 | `BACKEND_LOAD_STORE_TOKEN`, `BACKEND_LOAD_IMPORT_TOKEN`, `READINESS_BEARER_TOKEN` | Role-specific protected route load smoke | absent in this shell | Protected route load budgets remain blocked in this run. |
 
 ## Live Checks Run
@@ -272,22 +275,29 @@ Next exact input:
 Current evidence:
 
 - Upload resource guardrails and backend tests exist.
-- The authenticated staging upload mutation has not been proven in this run.
-- No integration-admin bearer token and no safe upload sample file exist in this
-  shell.
+- This V2 run did not have upload inputs in the shell.
+- The follow-up live evidence pass proved a safe staging upload with the
+  existing `SUPER_ADMIN` pilot session.
+- The product decision in
+  `docs/plans/import-upload-authorization-decision-v1.md` says a dedicated
+  `INTEGRATION_ADMIN` persona is not required for the current controlled pilot.
+- `HR_ADMIN` import/upload delegation is not claimed by this note because the
+  current repo guards still require `INTEGRATION_ADMIN` while `SUPER_ADMIN`
+  satisfies the guard through the existing role bypass.
 
 Decision:
 
 - Upload guardrails: Go.
-- Authenticated staging upload smoke: No-Go until a real integration-admin
-  session and safe Power BI/Excel sample are supplied.
+- Authenticated staging upload smoke for the current controlled pilot: Go.
+- Dedicated `INTEGRATION_ADMIN` persona proof: not a current pilot blocker.
+- Any future `HR_ADMIN` delegation: separate scoped auth/permission PR with
+  regression tests.
 
 Next exact input:
 
-- Integration-admin Clerk session/bearer token handled local-only.
-- Safe staging upload file with no private data.
-- Sanitized evidence recording status code, batch id/status, row counts, and no
-  raw file/private payload data.
+- No input is needed to continue the current controlled pilot on this point.
+- If ownership later shifts away from `SUPER_ADMIN`, define the exact operator
+  role and run a new sanitized upload/readback smoke after the auth change.
 
 ### 4. Alert Delivery
 
@@ -321,8 +331,8 @@ Updated decision:
   scoped pilot personas.
 - Controlled staging/internal hardening: Conditional Go.
 - Controlled pilot expansion: Conditional Go only for already scoped pilot
-  users and flows with sanitized evidence; do not widen to integration-admin
-  upload or new role/user groups without the missing evidence above.
+  users and flows with sanitized evidence; current import/upload evidence is
+  accepted through the existing `SUPER_ADMIN` pilot session.
 - Broad production rollout: No-Go.
 
 Why broad production is still No-Go:
@@ -330,7 +340,6 @@ Why broad production is still No-Go:
 - Redis/BullMQ health is not proven.
 - Supabase staging restore is not proven.
 - External alert delivery is not proven.
-- Authenticated upload smoke is not proven.
 - Role-specific protected route load budgets were not proven in this run.
 
 ## Safety

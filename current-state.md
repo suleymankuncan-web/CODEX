@@ -737,14 +737,16 @@ It is split into repo-owned work and external/live evidence:
 - Broad production remains `No-Go`.
 - Controlled/internal hardening remains `Conditional Go`.
 
-There are six external evidence gaps. Treat them as two tiers:
+The original six external evidence gaps are now split into closed controlled
+pilot evidence and remaining broad-production evidence:
 
-Tier A - controlled pilot expansion first:
+Tier A - controlled pilot evidence:
 
-- Real staging auth/action smoke with sanitized evidence.
+- Real staging auth/action smoke with sanitized evidence is recorded.
   Use `docs/plans/clerk-persona-staging-evidence-runbook-v1.md`.
-- Protected route load smoke with role-specific staging bearer tokens.
-- Authenticated integration-admin upload smoke with a safe sample file.
+- Protected route load smoke with role-specific staging bearer tokens is
+  recorded for the sampled controlled-pilot routes.
+- Authenticated safe upload smoke with the approved pilot operator is recorded.
 
 Tier B - broad-production/operational hardening:
 
@@ -771,8 +773,13 @@ missing item is one of these external proofs.
 - A follow-up live proof pass is recorded in
   `docs/evidence/readiness/2026-05-22-live-evidence-proof-pass.md`.
 - Protected route load smoke and safe staging upload smoke are now proven.
-- Dedicated non-super-admin `INTEGRATION_ADMIN` persona proof is still missing
-  because active staging role assignments include no `INTEGRATION_ADMIN`.
+- Dedicated non-super-admin `INTEGRATION_ADMIN` persona proof is no longer a
+  controlled-pilot blocker. Product decision:
+  `docs/plans/import-upload-authorization-decision-v1.md`. Current pilot upload
+  evidence is accepted with the existing `SUPER_ADMIN` pilot session. `HR_ADMIN`
+  delegation would require a separate scoped auth change because current
+  integration route/API guards still center on `INTEGRATION_ADMIN` with
+  `SUPER_ADMIN` bypass.
 - Import batch list read model previously returned HTTP `500` while
   `/integrations/import-batches/overview` returned `200`. Root cause was the
   list query selecting shared join columns without `stg.import_batch`
@@ -782,8 +789,9 @@ missing item is one of these external proofs.
   `/integrations/import-batches?limit=5`,
   `/integrations/import-batches?sourceCode=power-bi-kpi&limit=5`, and
   `/integrations/import-batches/overview`.
-- Supabase restore, external alert provider delivery, and Redis/BullMQ
-  broad-production health still need real inputs before broad production can
+- Supabase restore, external alert provider delivery, Redis/BullMQ
+  broad-production health, and any future import/upload role-delegation change
+  still need real inputs and explicit verification before broad production can
   move out of `No-Go`.
 
 GSD notes:

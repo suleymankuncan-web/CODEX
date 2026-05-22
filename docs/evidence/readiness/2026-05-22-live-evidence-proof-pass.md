@@ -37,10 +37,11 @@ Repo/live evidence:
 
 Counterargument:
 
-- A dedicated `INTEGRATION_ADMIN` persona would be cleaner than using the
-  existing pilot super-admin for upload. That is true. The live DB check found
-  no active `INTEGRATION_ADMIN` assignment, so creating one would be a separate
-  auth/data mutation, not a pure evidence pass.
+- A dedicated `INTEGRATION_ADMIN` persona would be cleaner if import operations
+  needed strict separation of duties. The product decision in
+  `docs/plans/import-upload-authorization-decision-v1.md` says that separation
+  is not required for the current controlled pilot; creating the role assignment
+  only to make evidence pass would add auth/data mutation risk.
 
 Risk:
 
@@ -70,7 +71,7 @@ Stop rule used:
 | --- | --- | --- |
 | Protected route load smoke | Proven | Real store-manager and super-admin Clerk tokens ran role-specific backend read-load groups successfully. |
 | Authenticated upload smoke | Proven with existing super-admin pilot session | `POST /api/integrations/power-bi-export-upload` returned `201` with one safe staging CSV row against `power-bi-kpi`. |
-| Dedicated integration-admin persona | Still missing | Active staging role-assignment query found `0` active `INTEGRATION_ADMIN` assignments. |
+| Dedicated integration-admin persona | Not required for current pilot | Product decision records `INTEGRATION_ADMIN` as future optional; current upload evidence is accepted with the existing `SUPER_ADMIN` pilot session. |
 | Import batch list read model | Fixed and live-verified | PR #409 qualified shared list-query columns; live Clerk readback returned `200` for list, source-filtered list, and overview. |
 | Redis/BullMQ broad-production health | Still missing | `/api/health` reports `queueBackend=in-memory`, `process-local`, Redis `skipped`. |
 | Alert backend health signal | Proven | `smoke:alert-routing` passed backend health signal with HTTP `200`. |
@@ -153,9 +154,11 @@ Result:
 Decision:
 
 - Authenticated staging upload smoke with a safe sample file: Go.
-- Dedicated integration-admin persona proof remains open if the product owner
-  requires upload to be proven through a non-super-admin `INTEGRATION_ADMIN`
-  account.
+- Dedicated integration-admin persona proof is not required for the current
+  controlled pilot.
+- `HR_ADMIN` import/upload delegation is not claimed here; current backend and
+  route guards would need a separately scoped auth PR before that behavior is
+  real.
 
 ## Import Batch List 500 Follow-Up
 
@@ -282,6 +285,8 @@ Controlled staging/internal pilot:
 - Protected route load smoke: Go for sampled protected routes.
 - Authenticated safe upload smoke: Go with the existing super-admin pilot
   session.
+- Dedicated `INTEGRATION_ADMIN` persona proof: not required for the current
+  controlled pilot.
 
 Broad production:
 
@@ -292,8 +297,6 @@ Why broad production is still No-Go:
 - Redis/BullMQ durable queue health is not proven.
 - Supabase restore drill is not proven.
 - External alert delivery is not proven.
-- Dedicated `INTEGRATION_ADMIN` persona proof is not available if strict
-  role-specific upload evidence is required.
 
 ## Safety
 
