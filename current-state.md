@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #411, the Product Readiness V1 first-pass closeout, Operations Control Tower
+PR #413, the Product Readiness V1 first-pass closeout, Operations Control Tower
 readiness line, Sokrates/discipline operating docs, current workspace hygiene,
 the Clerk persona staging evidence runbook, and the generated system-flow map.
 It is the starting point for continuing in a fresh window.
@@ -29,14 +29,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-22, `origin/main` has been fetched through PR #411.
+As of 2026-05-22, `origin/main` has been fetched through PR #413.
 The root checkout has been moved back to clean `main` and is aligned with
 `origin/main`.
 
 Latest merge on main:
 
 ```text
-6c614ec1 docs: record import upload authorization decision (#411)
+55d7ada1 docs: record controlled pilot round 2 stabilization (#413)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -167,6 +167,8 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #409 `fix: qualify import batch list query columns`
 - PR #410 `docs: record import batch live readback`
 - PR #411 `docs: record import upload authorization decision`
+- PR #412 `docs: refresh current state latest merge`
+- PR #413 `docs: record controlled pilot round 2 stabilization`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -185,7 +187,7 @@ frontend root, security headers, SPA fallback, and static assets passed.
 Current local hygiene state:
 
 - Root workspace `D:\store-ops-workspace` was clean on `main...origin/main` at
-  `6c614ec1` after PR #411 was merged and `origin/main` was fetched.
+  `55d7ada1` after PR #413 was merged and `origin/main` was fetched.
 - The previous dirty root state was not deleted. It was saved as stash
   `codex hygiene backup 2026-05-21 root dirty state`. Do not drop that stash
   unless the user explicitly approves.
@@ -717,6 +719,12 @@ with role-specific bearer tokens.
 
 The active controlled pilot feedback log is
 `docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md`.
+
+The `PILOT-005` store personnel approvals UX cleanup evidence is
+`docs/evidence/pilot-readiness/2026-05-22-pilot-005-store-approvals-personnel-ux.md`.
+It records the frontend route/link guard that keeps `STORE_PERSONNEL` out of
+`/store/approvals` without changing backend authorization or approval
+semantics.
 
 The controlled pilot operating checklist is
 `docs/plans/controlled-pilot-operating-checklist-v1.md`.

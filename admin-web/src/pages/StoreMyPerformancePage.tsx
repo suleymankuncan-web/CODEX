@@ -2,6 +2,7 @@ import { useQueries, useQuery } from '@tanstack/react-query'
 import { useEffect, useReducer } from 'react'
 import { ScreenState } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
+import { canListTargetDistributionRequests } from '../features/auth/authorization'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import {
@@ -68,6 +69,7 @@ type StoreMyPerformancePageExperienceProps = {
   performanceEmployeeName: string
   selectedClosedSnapshotRunId: string
   selectedLivePeriodType: LivePeriodType
+  showApprovalsLink: boolean
   showInternalRail: boolean
   sourceMode: StorePerformanceSourceMode
   t: TranslateFunction
@@ -343,6 +345,7 @@ export function StoreMyPerformancePage(input: {
       performanceEmployeeName={performance.employee.displayName}
       selectedClosedSnapshotRunId={selectedClosedSnapshotRunId}
       selectedLivePeriodType={selectedLivePeriodType}
+      showApprovalsLink={canListTargetDistributionRequests(input.authSummary)}
       showInternalRail={showInternalRail}
       sourceMode={sourceMode}
       t={t}
@@ -365,6 +368,7 @@ function StoreMyPerformancePageExperience({
   performanceEmployeeName,
   selectedClosedSnapshotRunId,
   selectedLivePeriodType,
+  showApprovalsLink,
   showInternalRail,
   sourceMode,
   t,
@@ -409,7 +413,7 @@ function StoreMyPerformancePageExperience({
       className={`store-me-v2-page${showInternalRail ? '' : ' store-me-v2-page-shell-owned'}`}
       aria-label={t('storeMe.title')}
     >
-      {showInternalRail ? <StoreMyPerformanceRail t={t} /> : null}
+      {showInternalRail ? <StoreMyPerformanceRail showApprovalsLink={showApprovalsLink} t={t} /> : null}
 
       <main className="store-me-v2-main">
         <section className="store-me-v2-content" aria-label={t('storeMe.title')}>
@@ -506,7 +510,7 @@ function StoreMyPerformancePageExperience({
         t={t}
       />
 
-      <StoreMyPerformanceMobileDock t={t} />
+      <StoreMyPerformanceMobileDock showApprovalsLink={showApprovalsLink} t={t} />
     </section>
   )
 }

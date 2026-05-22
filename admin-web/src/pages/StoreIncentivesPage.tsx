@@ -8,6 +8,7 @@ import {
   StatusPill,
 } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
+import { canListTargetDistributionRequests } from '../features/auth/authorization'
 import { getDisplayRoleCodes } from '../features/auth/display'
 import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
@@ -49,6 +50,7 @@ export function StoreIncentivesPage(input: {
   const user = input.authSummary?.user
   const primaryStoreId = user?.scope.storeIds[0] ?? null
   const storeIntent = hasStoreShellIntent(input.authSummary)
+  const showApprovalsLink = canListTargetDistributionRequests(input.authSummary)
 
   return (
     <section className="page-stack">
@@ -239,9 +241,11 @@ export function StoreIncentivesPage(input: {
         <Link className="control-button store-shell-link" to="/store">
           {t('storeIncentives.backHome')}
         </Link>
-        <Link className="control-button store-shell-link" to="/store/approvals">
-          {t('storeIncentives.storeApprovals')}
-        </Link>
+        {showApprovalsLink ? (
+          <Link className="control-button store-shell-link" to="/store/approvals">
+            {t('storeIncentives.storeApprovals')}
+          </Link>
+        ) : null}
       </div>
     </section>
   )

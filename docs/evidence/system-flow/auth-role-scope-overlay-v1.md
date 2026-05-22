@@ -79,6 +79,7 @@ backend authorization guarantee.
 | `/store/checklists` | `StoreRouteGuard` | `STORE_ACCESS`, `VISUAL_MERCHANDISER` | Checklist result/action access remains backend-scoped by role and assigned stores. |
 | `/store/feed` | `StoreRouteGuard` | `STORE_ACCESS`, `VISUAL_MERCHANDISER` | Feed visibility is computed by backend feed scope, not route visibility alone. |
 | `/store/settings` | `StoreRouteGuard` | `STORE_ACCESS`, `VISUAL_MERCHANDISER` | Settings is a shell/user preference surface; do not infer domain write permission. |
+| `/store/approvals` | `StoreRouteGuard` + target-request list eligibility | `STORE_MANAGER`, `REGION_MANAGER`, `REPORT_VIEWER`, `SUPER_ADMIN` | `STORE_PERSONNEL` is excluded from the route/link UX; backend read/write/action-scope checks remain the source of truth. |
 | Other `/store/*` pages | `StoreRouteGuard` | `STORE_ACCESS` | Store access is a route family signal; concrete backend endpoints still enforce role, read scope, and action scope. |
 
 ## Endpoint Boundary Overlay

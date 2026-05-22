@@ -3,6 +3,8 @@ import { existsSync, readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const feedbackLogPath = 'docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md'
+const pilot005EvidencePath =
+  'docs/evidence/pilot-readiness/2026-05-22-pilot-005-store-approvals-personnel-ux.md'
 const checklistPath = 'docs/plans/controlled-pilot-operating-checklist-v1.md'
 const gatePath = 'docs/plans/pilot-readiness-gate-v1.md'
 const currentStatePath = 'current-state.md'
@@ -24,6 +26,7 @@ function requireNoJwt(text) {
 }
 
 const feedbackLog = readText(feedbackLogPath)
+const pilot005Evidence = readText(pilot005EvidencePath)
 const checklist = readText(checklistPath)
 const gate = readText(gatePath)
 const currentState = readText(currentStatePath)
@@ -81,6 +84,28 @@ test('controlled pilot feedback log records fixed route blockers without reopeni
   ]) {
     requireText(feedbackLog, expected)
   }
+})
+
+test('controlled pilot feedback log records the closed PILOT-005 approvals UX cleanup', () => {
+  for (const expected of [
+    'PILOT-005',
+    'Closed on 2026-05-22 by route/navigation cleanup',
+    '`STORE_PERSONNEL` no longer opens `/store/approvals` by direct route',
+    pilot005EvidencePath,
+  ]) {
+    requireText(feedbackLog, expected)
+  }
+
+  for (const expected of [
+    '# PILOT-005 Store Approvals Personnel UX Evidence',
+    'This is a UX/navigation correction.',
+    'Store personnel targeted Playwright: `8/8` passed.',
+    'Store approvals targeted Playwright: `10/10` passed.',
+  ]) {
+    requireText(pilot005Evidence, expected)
+  }
+
+  requireNoJwt(pilot005Evidence)
 })
 
 test('handoff gate and checklist link the controlled pilot feedback log as the active operating record', () => {

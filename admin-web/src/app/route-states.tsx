@@ -21,9 +21,15 @@ export function StoreRouteGuard(input: {
   authSummary: AuthSessionSummary | null
   children: ReactNode
   allowVm?: boolean
+  allowed?: boolean
+  firstAllowedPath?: string
 }) {
   if (isVisualMerchandiserOnly(input.authSummary) && !input.allowVm) {
     return <ForbiddenRoute firstAllowedPath="/store/checklists" />
+  }
+
+  if (input.allowed === false) {
+    return <ForbiddenRoute firstAllowedPath={input.firstAllowedPath ?? '/store'} />
   }
 
   return <>{input.children}</>

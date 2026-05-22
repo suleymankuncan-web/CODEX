@@ -13,6 +13,7 @@ type LiveDayPeriod = {
 }
 
 type StoreMyPerformanceRailProps = {
+  showApprovalsLink: boolean
   t: TranslateFunction
 }
 
@@ -199,7 +200,7 @@ function NavGlyph(input: { type: 'home' | 'me' | 'rank' | 'target' | 'settings' 
   )
 }
 
-export function StoreMyPerformanceRail({ t }: StoreMyPerformanceRailProps) {
+export function StoreMyPerformanceRail({ showApprovalsLink, t }: StoreMyPerformanceRailProps) {
   return (
     <aside className="store-me-v2-rail" aria-label={t('storeMe.nav.aria')}>
       <div className="store-me-v2-brand-mark" aria-label={t('storeMe.brandAria')}>
@@ -221,10 +222,12 @@ export function StoreMyPerformanceRail({ t }: StoreMyPerformanceRailProps) {
           <NavGlyph type="rank" />
           <span>{t('storeMe.nav.rankings')}</span>
         </NavLink>
-        <NavLink to="/store/approvals" className="store-me-v2-rail-link">
-          <NavGlyph type="target" />
-          <span>{t('storeMe.nav.targets')}</span>
-        </NavLink>
+        {showApprovalsLink ? (
+          <NavLink to="/store/approvals" className="store-me-v2-rail-link">
+            <NavGlyph type="target" />
+            <span>{t('storeMe.nav.targets')}</span>
+          </NavLink>
+        ) : null}
       </nav>
       <div className="store-me-v2-rail-spacer" />
       <NavLink to="/store/tasks" className="store-me-v2-rail-link">
@@ -848,13 +851,15 @@ export function StoreMyPerformanceKpiDialog({
   )
 }
 
-export function StoreMyPerformanceMobileDock({ t }: StoreMyPerformanceRailProps) {
+export function StoreMyPerformanceMobileDock({ showApprovalsLink, t }: StoreMyPerformanceRailProps) {
   return (
     <nav className="store-me-v2-mobile-dock" aria-label={t('storeMe.mobileNav')}>
       <NavLink to="/store/home">{t('storeMe.nav.home')}</NavLink>
       <NavLink to="/store/me">{t('storeMe.nav.me')}</NavLink>
       <NavLink to="/store/rankings">{t('storeMe.nav.rankings')}</NavLink>
-      <NavLink to="/store/approvals">{t('storeMe.nav.targets')}</NavLink>
+      {showApprovalsLink ? (
+        <NavLink to="/store/approvals">{t('storeMe.nav.targets')}</NavLink>
+      ) : null}
     </nav>
   )
 }
