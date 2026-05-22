@@ -1962,7 +1962,7 @@ test('store tasks renders persisted action plans from the workflow inbox', async
   await expect(page.getByText('Review plan source')).toBeVisible()
 })
 
-test('store tasks lists persisted action plan records read-only', async ({ page }) => {
+test('store tasks lists persisted action plan records without lifecycle controls', async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem('store-ops-app-locale', 'en')
   })
@@ -1986,6 +1986,155 @@ test('store tasks lists persisted action plan records read-only', async ({ page 
   await expect(sourceLink).toHaveAttribute('href', '/store/kpis')
   await expect(actionPlansPanel.getByText('1-1 / 1')).toBeVisible()
   await expect(actionPlansPanel.getByRole('button', { name: /close|cancel|blocked|in progress/i })).toHaveCount(0)
+})
+
+test('store tasks creates an action plan from a KPI follow-up candidate', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'en')
+  })
+  const competingStoreId = '00000000-0000-0000-0000-000000000101'
+  let created = false
+  let capturedCreateBody: Record<string, unknown> | null = null
+
+  await page.unroute('**/api/workflow/inbox')
+  await page.route('**/api/workflow/inbox', async (route) => {
+    await route.fulfill({
+      json: {
+        items: [
+          workflowInboxFixture.items[0],
+          {
+            ...workflowInboxFixture.items[0],
+            title: 'UPT at risk in a second store',
+            summary: 'Kanyon Demo Store icin KPI exception takibi gerekiyor',
+            storeId: competingStoreId,
+            storeName: 'Kanyon Demo Store',
+            deepLink: '/store/kpis?store=kanyon',
+          },
+        ],
+        meta: {
+          count: 2,
+          total: 2,
+          limit: 30,
+          offset: 0,
+        },
+      },
+    })
+  })
+  await page.unroute('**/api/store-actions/plans**')
+  await page.route('**/api/store-actions/plans**', async (route) => {
+    const request = route.request()
+
+    if (request.method() === 'POST') {
+      const requestBody = request.postDataJSON() as Record<string, unknown>
+      capturedCreateBody = requestBody
+      created = true
+      await route.fulfill({
+        status: 201,
+        json: {
+          command: {
+            status: 'created',
+            message: 'Store action plan created',
+          },
+          data: {
+            plan: {
+              ...storeActionPlansFixture.items[0],
+              actionPlanId: '00000000-0000-0000-0000-00000000a111',
+              sourceId: requestBody.sourceId,
+              sourceDeepLink: requestBody.sourceDeepLink,
+              title: requestBody.title,
+              summary: requestBody.summary,
+              priority: requestBody.priority,
+              dueOn: requestBody.dueOn,
+            },
+          },
+        },
+      })
+      return
+    }
+
+    await route.fulfill({
+      json: created
+        ? {
+            items: [
+              {
+                ...storeActionPlansFixture.items[0],
+                actionPlanId: '00000000-0000-0000-0000-00000000a111',
+                title: 'UPT at risk',
+                summary: 'IstinyePark Demo Store icin KPI exception takibi gerekiyor',
+                dueOn: '2026-05-27',
+              },
+            ],
+            meta: { count: 1, total: 1, limit: 20, offset: 0 },
+          }
+        : {
+            items: [],
+            meta: { count: 0, total: 0, limit: 20, offset: 0 },
+          },
+    })
+  })
+
+  await page.goto('/store/tasks')
+
+  const firstKpiFollowUp = page
+    .locator('article.stacked-row')
+    .filter({ hasText: 'IstinyePark Demo Store' })
+    .filter({ hasText: 'UPT at risk' })
+    .first()
+  await firstKpiFollowUp.getByRole('button', { name: 'Create action plan' }).click()
+  const createForm = page.locator('form[aria-label="KPI follow-up action plan"]')
+  await expect(createForm.getByLabel('Title')).toHaveValue('UPT at risk')
+  await createForm.getByLabel('Due date').fill('2026-05-27')
+  await createForm.getByRole('button', { name: 'Create plan' }).click()
+
+  expect(capturedCreateBody).toMatchObject({
+    storeId: demoStoreId,
+    sourceType: 'kpi_exception',
+    sourceId: 'snapshot-2026-04-24:store:kpi',
+    sourceDeepLink: '/store/kpis',
+    title: 'UPT at risk',
+    summary: 'IstinyePark Demo Store icin KPI exception takibi gerekiyor',
+    priority: 'high',
+    dueOn: '2026-05-27',
+  })
+  const actionPlansPanel = page.locator('.panel').filter({ hasText: 'Persisted follow-up' })
+  await expect(actionPlansPanel.getByText('UPT at risk')).toBeVisible()
+  await expect(actionPlansPanel.getByText('May 27, 2026')).toBeVisible()
+  await expect(actionPlansPanel.getByText('1-1 / 1')).toBeVisible()
+})
+
+test('store tasks keeps create failures local to the KPI follow-up form', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'en')
+  })
+
+  await page.unroute('**/api/store-actions/plans**')
+  await page.route('**/api/store-actions/plans**', async (route) => {
+    if (route.request().method() === 'POST') {
+      await route.fulfill({
+        status: 409,
+        json: { message: 'Active store action plan already exists for this source' },
+      })
+      return
+    }
+
+    await route.fulfill({
+      json: {
+        items: [],
+        meta: { count: 0, total: 0, limit: 20, offset: 0 },
+      },
+    })
+  })
+
+  await page.goto('/store/tasks')
+
+  await page.getByRole('button', { name: 'Create action plan' }).click()
+  const createForm = page.locator('form[aria-label="KPI follow-up action plan"]')
+  await createForm.getByLabel('Due date').fill('2026-05-27')
+  await createForm.getByRole('button', { name: 'Create plan' }).click()
+
+  await expect(createForm.getByRole('alert')).toContainText('Action plan could not be created')
+  await expect(createForm.getByRole('alert')).toContainText('Active store action plan already exists')
+  await expect(page.getByText('No persisted action plans')).toBeVisible()
 })
 
 test('store tasks pages persisted action plan records', async ({ page }) => {

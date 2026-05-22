@@ -16,7 +16,11 @@ import { getChecklistAcknowledgements } from '../features/checklists/api'
 import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import { listStoreActionPlans } from '../features/store-actions/api'
-import { buildReadOnlyStoreActionCandidates } from '../features/store-actions/candidates'
+import { StoreActionPlanCreateControl } from '../features/store-actions/StoreActionPlanCreateControl'
+import {
+  buildReadOnlyStoreActionCandidates,
+  type ReadOnlyStoreActionCandidate,
+} from '../features/store-actions/candidates'
 import { StoreActionPlansPanel } from '../features/store-actions/StoreActionPlansPanel'
 import { getStoreApprovalsPrefetchTasks } from '../features/store-approvals/prefetch'
 import { WorkflowInboxDetail } from '../features/workflow/WorkflowInboxDetail'
@@ -143,6 +147,16 @@ export function StoreTasksPage(input: {
   const actionCandidates = useMemo(
     () => buildReadOnlyStoreActionCandidates(items),
     [items],
+  )
+  const actionCandidatesBySource = useMemo(
+    () =>
+      new Map<string, ReadOnlyStoreActionCandidate>(
+        actionCandidates.map((candidate) => [
+          getWorkflowSourceKey(candidate.storeId, candidate.sourceType, candidate.sourceId),
+          candidate,
+        ] as [string, ReadOnlyStoreActionCandidate]),
+      ),
+    [actionCandidates],
   )
   const hasChecklistReceiptAction = useMemo(
     () => items.some((item) => item.sourceType === 'checklist_receipt'),
@@ -386,8 +400,14 @@ export function StoreTasksPage(input: {
               <WorkflowInboxRow
                 key={`${item.sourceType}:${item.sourceId}`}
                 item={item}
+                actionCandidate={
+                  storeActionPlansEnabled
+                    ? actionCandidatesBySource.get(getWorkflowSourceKey(item.storeId, item.sourceType, item.sourceId))
+                    : undefined
+                }
                 locale={locale}
                 t={t}
+                onActionPlanCreated={() => setStoreActionPlansOffset(0)}
               />
             ))}
           </div>
@@ -408,8 +428,10 @@ export function StoreTasksPage(input: {
 
 function WorkflowInboxRow(input: {
   item: WorkflowInboxItem
+  actionCandidate: ReadOnlyStoreActionCandidate | undefined
   locale: AppLocale
   t: TranslateFunction
+  onActionPlanCreated: () => void
 }) {
   return (
     <article className="stacked-row">
@@ -451,12 +473,23 @@ function WorkflowInboxRow(input: {
         <Link className="control-button store-shell-link" to={input.item.deepLink}>
           {formatWorkflowPrimaryActionLabel(input.t, input.item)}
         </Link>
+        {input.actionCandidate ? (
+          <StoreActionPlanCreateControl
+            candidate={input.actionCandidate}
+            t={input.t}
+            onCreated={input.onActionPlanCreated}
+          />
+        ) : null}
         <span className="queue-subtitle">
           {formatWorkflowSecondaryActionLabel(input.t, input.item)}
         </span>
       </div>
     </article>
   )
+}
+
+function getWorkflowSourceKey(storeId: string, sourceType: WorkflowInboxItem['sourceType'], sourceId: string) {
+  return `${storeId}:${sourceType}:${sourceId}`
 }
 
 function formatDisplayRoleLabels(t: TranslateFunction, roleCodes: readonly string[] | null | undefined) {

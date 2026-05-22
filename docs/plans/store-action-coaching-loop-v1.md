@@ -557,6 +557,27 @@ Evidence:
 
 - `docs/evidence/store-action-v1b-write-ui-go-no-go-v1.md`
 
+## V1B Create From KPI Candidate UI
+
+The first write UI slice creates a persisted action plan only from an existing
+KPI exception candidate on `/store/tasks`.
+
+Decision:
+
+- Use the generated `POST /api/store-actions/plans` frontend helper.
+- Show one inline create form on KPI follow-up rows.
+- Require title, summary, due date, and priority before submit.
+- Keep `sourceType` fixed to `kpi_exception`.
+- Refetch Store Action plans and workflow inbox after successful create.
+- Keep 403/409/422-style failures local to the form.
+- Keep status, close, cancel, comments, attachments, notifications, escalation,
+  non-KPI sources, new routes, DB/auth/workflow/scoring/API-shape changes out of
+  this slice.
+
+Evidence:
+
+- `docs/evidence/store-action-v1b-create-from-kpi-candidate-ui-v1.md`
+
 ## Data Placement Draft
 
 V1A read-only:
