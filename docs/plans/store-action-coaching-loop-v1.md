@@ -3,8 +3,8 @@
 ## Status
 
 - State: `shaping`
-- Implementation: V1A read-only candidate shaping is active; persisted write
-  behavior is not approved yet
+- Implementation: V1A read-only candidate shaping is complete; V1B persisted
+  write behavior is being designed in stages and is not implemented yet
 - Feature Integration Spine mode: start as `docs-only`, then likely
   `read-only feature`, then later `write feature`
 
@@ -369,6 +369,25 @@ Evidence:
 
 - `docs/evidence/store-action-persisted-action-plan-v1b-decision.md`
 
+## V1B Detailed Design
+
+The next safe step after the V1B go/no-go decision is a detailed design, not
+runtime behavior.
+
+Decision:
+
+- V1B implementation should proceed in kademeler after design review.
+- The first active source remains `kpi_exception`.
+- Persisted plans should live in `ops.store_action_plan`.
+- Write commands require assigned-store action scope.
+- Audit events, API shapes, workflow inbox mapping, and Store Tasks UI must be
+  implemented in separate reviewable steps.
+
+Evidence:
+
+- `docs/plans/store-action-v1b-persisted-action-plan-design-v1.md`
+- `docs/superpowers/plans/2026-05-22-store-action-v1b-persisted-action-plans.md`
+
 ## Data Placement Draft
 
 V1A read-only:
@@ -541,6 +560,9 @@ Current status:
 - Persisted action plans are an explicit V1B NO-GO for implementation right
   now; only a future approved write-feature slice should open DB, command,
   audit, workflow inbox, OpenAPI, or frontend lifecycle work.
+- Detailed V1B design now defines the action-plan lifecycle, schema draft,
+  assigned-store write scope, audit events, API endpoints, workflow inbox
+  mapping, UI boundary, and implementation kademeleri before code.
 
 ## CODEX DURUST YORUM
 
