@@ -1,6 +1,22 @@
 import type { WorkflowInboxItem } from '../workflow/contracts'
 
-export type StoreActionCandidateSource = 'kpi_exception'
+type StoreActionWorkflowSourceDecision =
+  | 'read_only_candidate'
+  | 'parked_acknowledgement_boundary'
+  | 'parked_approval_boundary'
+
+export const STORE_ACTION_WORKFLOW_SOURCE_DECISIONS = {
+  kpi_exception: 'read_only_candidate',
+  checklist_receipt: 'parked_acknowledgement_boundary',
+  target_distribution_request: 'parked_approval_boundary',
+} as const satisfies Record<WorkflowInboxItem['sourceType'], StoreActionWorkflowSourceDecision>
+
+export type StoreActionCandidateSource = {
+  [Source in WorkflowInboxItem['sourceType']]:
+    (typeof STORE_ACTION_WORKFLOW_SOURCE_DECISIONS)[Source] extends 'read_only_candidate'
+      ? Source
+      : never
+}[WorkflowInboxItem['sourceType']]
 
 export type ReadOnlyStoreActionCandidate = {
   candidateId: string
@@ -43,7 +59,7 @@ function isReadOnlyStoreActionCandidate(
 ): item is WorkflowInboxItem & { sourceType: StoreActionCandidateSource } {
   return (
     item.itemType === 'task' &&
-    item.sourceType === 'kpi_exception' &&
+    STORE_ACTION_WORKFLOW_SOURCE_DECISIONS[item.sourceType] === 'read_only_candidate' &&
     item.inboxStatus === 'needs_attention'
   )
 }

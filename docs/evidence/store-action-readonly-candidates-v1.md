@@ -151,6 +151,11 @@ No backend gate is required unless backend code changes.
 
 Do not move to persisted action plans automatically.
 
+The follow-up source guard is recorded at
+`docs/evidence/store-action-source-guard-v1.md`. It keeps checklist receipt
+acknowledgements and target distribution approvals parked until their
+source-specific decisions are explicit.
+
 The next Store Action decision should choose one of:
 
 1. add checklist low-score candidates after threshold ownership is explicit,

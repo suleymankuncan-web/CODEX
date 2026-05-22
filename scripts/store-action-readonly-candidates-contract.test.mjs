@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const evidence = readFileSync('docs/evidence/store-action-readonly-candidates-v1.md', 'utf8')
+const sourceGuardEvidence = readFileSync('docs/evidence/store-action-source-guard-v1.md', 'utf8')
+const sourcePlan = readFileSync('docs/plans/store-action-coaching-loop-v1.md', 'utf8')
 
 test('store action V1A evidence keeps the read-only boundary explicit', () => {
   assert.match(evidence, /read-only Store\s+Action candidate source/)
@@ -23,7 +25,24 @@ test('store tasks derives candidates through the Store Action helper', () => {
   const helper = readFileSync('admin-web/src/features/store-actions/candidates.ts', 'utf8')
 
   assert.match(page, /buildReadOnlyStoreActionCandidates/)
-  assert.match(helper, /item\.sourceType === 'kpi_exception'/)
+  assert.match(helper, /kpi_exception: 'read_only_candidate'/)
+  assert.match(helper, /STORE_ACTION_WORKFLOW_SOURCE_DECISIONS\[item\.sourceType\] === 'read_only_candidate'/)
   assert.match(helper, /item\.itemType === 'task'/)
   assert.match(helper, /item\.inboxStatus === 'needs_attention'/)
+})
+
+test('store action source guard parks acknowledgement and approval workflow sources', () => {
+  const helper = readFileSync('admin-web/src/features/store-actions/candidates.ts', 'utf8')
+
+  assert.match(helper, /STORE_ACTION_WORKFLOW_SOURCE_DECISIONS/)
+  assert.match(helper, /satisfies Record<WorkflowInboxItem\['sourceType'\], StoreActionWorkflowSourceDecision>/)
+  assert.match(helper, /checklist_receipt: 'parked_acknowledgement_boundary'/)
+  assert.match(helper, /target_distribution_request: 'parked_approval_boundary'/)
+
+  assert.match(sourceGuardEvidence, /checklist_receipt/)
+  assert.match(sourceGuardEvidence, /parked_acknowledgement_boundary/)
+  assert.match(sourceGuardEvidence, /target_distribution_request/)
+  assert.match(sourceGuardEvidence, /parked_approval_boundary/)
+  assert.match(sourceGuardEvidence, /not automatically a coaching candidate/)
+  assert.match(sourcePlan, /V1A Source Guard Decision/)
 })
