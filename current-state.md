@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #435 plus the Store Action V1B lifecycle contract packet, the Product Readiness V1
+PR #436 plus the Store Action V1B command boundary packet, the Product Readiness V1
 first-pass closeout, Operations Control Tower readiness line,
 Sokrates/discipline operating docs, current workspace hygiene, the Clerk
 persona staging evidence runbook, the generated system-flow map, and the
@@ -32,14 +32,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-22, `origin/main` has been fetched through PR #435. The root
+As of 2026-05-22, `origin/main` has been fetched through PR #436. The root
 checkout was clean `main` and aligned with `origin/main` before the Store
-Action V1B lifecycle contract branch.
+Action V1B command boundary branch.
 
 Latest merge on main:
 
 ```text
-c2031241 feat: add store action plan schema
+303a4b87 feat: add store action lifecycle contract
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -194,6 +194,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #433 `docs: decide store action v1b boundary`
 - PR #434 `docs: design store action v1b plans`
 - PR #435 `feat: add store action plan schema`
+- PR #436 `feat: add store action lifecycle contract`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -1417,7 +1418,7 @@ Store Action V1A status:
   `backend/nestjs/src/modules/store-ops/store-action-plan-schema-contract.spec.ts`,
   and `docs/evidence/store-action-v1b-schema-v1.md`.
 - V1B lifecycle contract status: audit catalog metadata and lifecycle helper
-  contracts are being added as the second kademe. This does not expose
+  contracts landed via PR #436 as the second kademe. This does not expose
   endpoints, service commands, repository writes, workflow inbox integration,
   OpenAPI/generated client changes, UI behavior, DB migration, or auth
   semantic changes.
@@ -1426,6 +1427,20 @@ Store Action V1A status:
   `backend/nestjs/src/modules/store-ops/application/store-action-plan.contract.ts`,
   `backend/nestjs/src/modules/store-ops/application/store-action-plan.contract.spec.ts`,
   and `docs/evidence/store-action-v1b-lifecycle-contract-v1.md`.
+- V1B command boundary status: service/repository command behavior is being
+  added as the third kademe. It proves assigned-store write scope, duplicate
+  active source conflict mapping, required due date validation, terminal
+  lifecycle guards, expected-state guarded writes for concurrent terminal
+  transitions, close/cancel evidence requirements, and transactional audit
+  writes without exposing a controller, API route, OpenAPI/generated client,
+  workflow inbox integration, UI behavior, DB migration, or auth semantic
+  change.
+- V1B command boundary references:
+  `backend/nestjs/src/modules/store-ops/application/store-action-plan.service.ts`,
+  `backend/nestjs/src/modules/store-ops/application/store-action-plan.service.spec.ts`,
+  `backend/nestjs/src/modules/store-ops/infrastructure/store-action-plan.repository.ts`,
+  `backend/nestjs/src/modules/store-ops/infrastructure/store-action-plan.repository.spec.ts`,
+  and `docs/evidence/store-action-v1b-command-boundary-v1.md`.
 
 Current user direction on 2026-05-18:
 
