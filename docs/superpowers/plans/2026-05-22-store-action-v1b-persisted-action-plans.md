@@ -110,9 +110,9 @@ git commit -m "feat: add store action plan schema"
 **Files:**
 - Modify: `backend/nestjs/src/shared/audit/audit-event-catalog.ts`
 - Create: `backend/nestjs/src/modules/store-ops/application/store-action-plan.contract.ts`
-- Add tests in `backend/nestjs/src/modules/store-ops/application/store-action-plan.service.spec.ts`
+- Add tests in `backend/nestjs/src/modules/store-ops/application/store-action-plan.contract.spec.ts`
 
-- [ ] **Step 1: Add audit event catalog entries**
+- [x] **Step 1: Add audit event catalog entries**
 
 Add these four entries under the `store_ops` section:
 
@@ -123,7 +123,7 @@ auditEvent("store_action_plan.closed", "ops.store_action_plan", "store_ops", "St
 auditEvent("store_action_plan.cancelled", "ops.store_action_plan", "store_ops", "Store action plan was cancelled."),
 ```
 
-- [ ] **Step 2: Create lifecycle helpers**
+- [x] **Step 2: Create lifecycle helpers**
 
 Create `store-action-plan.contract.ts` with:
 
@@ -141,15 +141,15 @@ export function canTransitionStoreActionPlanStatus(from: StoreActionPlanStatus, 
 }
 ```
 
-- [ ] **Step 3: Verify audit catalog and lifecycle tests**
+- [x] **Step 3: Verify audit catalog and lifecycle tests**
 
 Run:
 
 ```powershell
-npm.cmd --prefix backend/nestjs test -- audit-event-catalog.spec.ts store-action-plan.service.spec.ts
+npm.cmd --prefix backend/nestjs test -- store-action-plan.contract.spec.ts audit-event-catalog.spec.ts
 ```
 
-Expected: pass after service spec exists in Task 3.
+Expected: pass before runtime service/repository commands exist.
 
 ## Task 3: Repository And Service Commands
 

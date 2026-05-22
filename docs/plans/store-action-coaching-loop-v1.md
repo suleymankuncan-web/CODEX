@@ -406,6 +406,26 @@ Evidence:
 - `backend/nestjs/src/modules/store-ops/store-action-plan-schema-contract.spec.ts`
 - `docs/evidence/store-action-v1b-schema-v1.md`
 
+## V1B Audit Catalog And Lifecycle Contract
+
+The second implementation kademe adds audit metadata and lifecycle helpers
+without exposing runtime behavior.
+
+Decision:
+
+- Catalog Store Action plan audit event names as feature-owned audit metadata.
+- Add lifecycle constants and helpers for action-plan statuses, priorities,
+  source type, transition rules, and terminal evidence requirements.
+- Keep service commands, repository writes, API, workflow inbox integration,
+  and UI out of this kademe.
+
+Evidence:
+
+- `backend/nestjs/src/shared/audit/audit-event-catalog.ts`
+- `backend/nestjs/src/modules/store-ops/application/store-action-plan.contract.ts`
+- `backend/nestjs/src/modules/store-ops/application/store-action-plan.contract.spec.ts`
+- `docs/evidence/store-action-v1b-lifecycle-contract-v1.md`
+
 ## Data Placement Draft
 
 V1A read-only:
@@ -422,7 +442,8 @@ V1B persisted action plans:
 - `rpt`: optional later summaries, never mutation source.
 - `stg`: no action-plan state.
 
-No migration should be added until V1B is explicitly selected.
+No additional migration should be added unless the next V1B kademe explicitly
+needs it and has a rollback/migration-smoke plan.
 
 ## Access Model Draft
 

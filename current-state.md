@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #434 plus the Store Action V1B schema packet, the Product Readiness V1
+PR #435 plus the Store Action V1B lifecycle contract packet, the Product Readiness V1
 first-pass closeout, Operations Control Tower readiness line,
 Sokrates/discipline operating docs, current workspace hygiene, the Clerk
 persona staging evidence runbook, the generated system-flow map, and the
@@ -32,14 +32,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-22, `origin/main` has been fetched through PR #434. The root
+As of 2026-05-22, `origin/main` has been fetched through PR #435. The root
 checkout was clean `main` and aligned with `origin/main` before the Store
-Action V1B schema branch.
+Action V1B lifecycle contract branch.
 
 Latest merge on main:
 
 ```text
-8e79244f docs: design store action v1b plans
+c2031241 feat: add store action plan schema
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -193,6 +193,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #432 `docs: decide store action target source`
 - PR #433 `docs: decide store action v1b boundary`
 - PR #434 `docs: design store action v1b plans`
+- PR #435 `feat: add store action plan schema`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -1385,11 +1386,12 @@ Store Action V1A status:
   explicit.
 - Target source evidence:
   `docs/evidence/store-action-target-source-decision-v1.md`.
-- V1B persisted action-plan decision status: implementation is NO-GO right
-  now. V1B can proceed only as a separately approved write-feature slice with
-  DB placement, rollback, command authorization, assigned-store negative tests,
-  audit events, workflow inbox source/status mapping, OpenAPI/generated client,
-  and frontend recovery states.
+- V1B persisted action-plan decision status: broad implementation remains
+  NO-GO, but the user approved the controlled kademe line. V1B proceeds only
+  through separately verified slices with DB placement, rollback, command
+  authorization, assigned-store negative tests, audit events, workflow inbox
+  source/status mapping, OpenAPI/generated client, and frontend recovery
+  states.
 - V1B decision evidence:
   `docs/evidence/store-action-persisted-action-plan-v1b-decision.md`.
 - V1B detailed design status: the next safe step is a docs/spec design PR, not
@@ -1400,7 +1402,7 @@ Store Action V1A status:
 - V1B design references:
   `docs/plans/store-action-v1b-persisted-action-plan-design-v1.md` and
   `docs/superpowers/plans/2026-05-22-store-action-v1b-persisted-action-plans.md`.
-- V1B schema kademe status: `ops.store_action_plan` is being added as an
+- V1B schema kademe status: `ops.store_action_plan` landed via PR #435 as an
   additive schema/migration slice only. It does not expose endpoints, service
   commands, audit writes, workflow inbox integration, or UI behavior.
 - V1B schema local proof: backend schema contract, root Store Action schema
@@ -1414,6 +1416,16 @@ Store Action V1A status:
   `db/migrations/049_store_action_plan_v1.sql`,
   `backend/nestjs/src/modules/store-ops/store-action-plan-schema-contract.spec.ts`,
   and `docs/evidence/store-action-v1b-schema-v1.md`.
+- V1B lifecycle contract status: audit catalog metadata and lifecycle helper
+  contracts are being added as the second kademe. This does not expose
+  endpoints, service commands, repository writes, workflow inbox integration,
+  OpenAPI/generated client changes, UI behavior, DB migration, or auth
+  semantic changes.
+- V1B lifecycle references:
+  `backend/nestjs/src/shared/audit/audit-event-catalog.ts`,
+  `backend/nestjs/src/modules/store-ops/application/store-action-plan.contract.ts`,
+  `backend/nestjs/src/modules/store-ops/application/store-action-plan.contract.spec.ts`,
+  and `docs/evidence/store-action-v1b-lifecycle-contract-v1.md`.
 
 Current user direction on 2026-05-18:
 
