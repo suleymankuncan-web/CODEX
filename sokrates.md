@@ -260,7 +260,12 @@ Use this sequence:
    bug, blocker, user request, or explicit plan.
 6. If the next step depends on missing external evidence, say so and recommend
    either an evidence-gathering step or a local-only preparation slice.
-7. Make a clear recommendation: next slice, batch branch, multi-PR line,
+7. If the user's near-term product direction makes a normally useful task
+   likely to be wasted, park that task and choose technical groundwork instead.
+   Example: if major page/content redesign is coming, avoid UI polish and work
+   on tests, contracts, refactor boundaries, or evidence that will survive the
+   redesign.
+8. Make a clear recommendation: next slice, batch branch, multi-PR line,
    inventory/spike, park, or stop.
 
 The recommendation should be concrete enough to become a PR or first slice, not
@@ -383,6 +388,9 @@ Use these mini playbooks when the work touches a sensitive domain.
 
 - Default risk: MEDIUM; LOW for isolated copy/layout polish.
 - Optimize for the user's actual workflow, not decorative polish.
+- If the user says a major visual/content redesign is coming, park cosmetic
+  polish unless it fixes a blocking usability bug, accessibility issue, broken
+  navigation, or data-risking workflow.
 - Preserve existing behavior and data semantics unless behavior change is the
   task.
 - Check loading, empty, error, mobile, and repeated-use states.
@@ -416,6 +424,9 @@ Use these mini playbooks when the work touches a sensitive domain.
 - Identify required tokens, provider access, approved targets, and safety
   boundaries.
 - If evidence is unavailable, either park it or prepare local-only work clearly.
+- After parking blocked evidence, immediately offer the next honest options:
+  gather the real input, accept a documented risk/policy decision, or switch to
+  local work that still improves the project.
 - Record what remains externally blocked.
 - Stop if the task requires live access or provider changes not available in the
   current session.
@@ -803,6 +814,8 @@ Sokrates improves through use. After real work, calibrate the system:
 - If a PR was hard to review, tighten batch/scope guidance.
 - If a gate was repeatedly noisy, document the caveat and targeted replacement.
 - If the user repeatedly corrects priority, update next-best-step heuristics.
+- If Sokrates correctly parks a task, also record what should replace it so the
+  project keeps momentum without pretending the parked work is done.
 
 Do not chase perfect process. Calibrate from real misses, real friction, and
 real user value.
