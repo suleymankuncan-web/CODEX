@@ -632,6 +632,14 @@ Short version:
   implementation, full high-risk Sokrates, or external-evidence handling.
 - For "what next?" decisions, answer with a concrete recommendation contract:
   now, next, park, and stop.
+- If the user's near-term product direction would make a task wasteful, park it
+  and recommend technical groundwork that will survive the direction change.
+  Current example: upcoming page/content redesign means UI polish is parked
+  unless it fixes a blocking usability, accessibility, navigation, or data-risk
+  issue.
+- When external/live evidence is blocked, do not only say "blocked"; offer the
+  next honest options: gather the real input, accept a documented policy/risk,
+  or switch to local work that still improves the project.
 - Keep evidence fresh: current repo state beats memory, `origin/main` beats old
   local branches for merged work, and provider/runtime facts must be verified
   before being treated as true.
