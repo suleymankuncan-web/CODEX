@@ -12,6 +12,17 @@ Broad production rollout: No-Go.
 
 This is a decision packet, not approval to widen rollout. It summarizes the readiness slices merged through PR #239 and names the remaining evidence that must be captured outside source control.
 
+2026-05-22 update:
+
+- Fresh Clerk controlled-pilot persona/token/action evidence is now recorded in
+  `docs/evidence/system-flow/clerk-persona-live-evidence-2026-05-22.md`.
+- The current blocker refresh is recorded in
+  `docs/evidence/readiness/2026-05-22-production-evidence-blockers-v2.md`.
+- Broad production rollout remains No-Go until Redis/BullMQ health, Supabase
+  restore, external alert delivery or accepted log-retention evidence,
+  authenticated upload smoke, and protected-route load budgets are proven or
+  explicitly accepted under a narrower rollout decision.
+
 ## Current Baseline
 
 - Latest main merge reviewed: PR #239, merge commit `c69b7cf24605e9b65b7215f6557f74174dd6364b`.
