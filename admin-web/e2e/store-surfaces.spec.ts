@@ -1962,6 +1962,31 @@ test('store tasks renders persisted action plans from the workflow inbox', async
   await expect(page.getByText('Review plan source')).toBeVisible()
 })
 
+test('store tasks lists persisted action plan records read-only', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'en')
+  })
+  await page.unroute('**/api/store-actions/plans**')
+  await page.route('**/api/store-actions/plans**', async (route) => {
+    await route.fulfill({ json: storeActionPlansFixture })
+  })
+
+  await page.goto('/store/tasks')
+
+  const actionPlansPanel = page.locator('.panel').filter({ hasText: 'Persisted follow-up' })
+  await expect(actionPlansPanel.getByRole('heading', { name: 'Action plans' })).toBeVisible()
+  await expect(actionPlansPanel.getByText('1 plan')).toBeVisible()
+  await expect(actionPlansPanel.getByText('Net sales recovery plan')).toBeVisible()
+  await expect(actionPlansPanel.getByText('Confirm the daily recovery checklist with the team.')).toBeVisible()
+  await expect(actionPlansPanel.getByText('Open', { exact: true })).toBeVisible()
+  await expect(actionPlansPanel.getByText('High', { exact: true })).toBeVisible()
+  await expect(actionPlansPanel.getByText('May 24, 2026')).toBeVisible()
+  const sourceLink = actionPlansPanel.getByRole('link', { name: 'Open source' })
+  await expect(sourceLink).toBeVisible()
+  await expect(sourceLink).toHaveAttribute('href', '/store/kpis')
+  await expect(actionPlansPanel.getByRole('button', { name: /close|cancel|blocked|in progress/i })).toHaveCount(0)
+})
+
 test('store tasks lets managers retry after the queue load fails', async ({ page }) => {
   let inboxAttempts = 0
   let allowInbox = false
@@ -3078,6 +3103,15 @@ async function routeStoreSurfaceApi(page: Page) {
     await route.fulfill({ json: workflowInboxFixture })
   })
 
+  await page.route('**/api/store-actions/plans**', async (route) => {
+    await route.fulfill({
+      json: {
+        items: [],
+        meta: { count: 0, total: 0, limit: 20, offset: 0 },
+      },
+    })
+  })
+
   await page.route('**/api/checklists/acknowledgements/list', async (route) => {
     await route.fulfill({ json: checklistAcknowledgementsFixture })
   })
@@ -3213,6 +3247,43 @@ const workflowInboxFixture = {
     count: 1,
     total: 1,
     limit: 30,
+    offset: 0,
+  },
+}
+
+const storeActionPlansFixture = {
+  items: [
+    {
+      actionPlanId: '00000000-0000-0000-0000-00000000a001',
+      companyId: '00000000-0000-0000-0000-000000000001',
+      regionId: '00000000-0000-0000-0000-000000000010',
+      storeId: demoStoreId,
+      ownerUserId: '00000000-0000-0000-0000-00000000b001',
+      createdByUserId: '00000000-0000-0000-0000-00000000b001',
+      sourceType: 'kpi_exception',
+      sourceId: 'snapshot-2026-04-24:store:kpi',
+      sourceDeepLink: '/store/kpis',
+      sourceSnapshotRunId: null,
+      sourceKpiId: null,
+      title: 'Net sales recovery plan',
+      summary: 'Confirm the daily recovery checklist with the team.',
+      priority: 'high',
+      status: 'open',
+      dueOn: '2026-05-24',
+      resolutionNote: null,
+      closedByUserId: null,
+      closedAt: null,
+      cancelReason: null,
+      cancelledByUserId: null,
+      cancelledAt: null,
+      createdAt: '2026-05-22T08:00:00.000Z',
+      updatedAt: '2026-05-22T08:30:00.000Z',
+    },
+  ],
+  meta: {
+    count: 1,
+    total: 1,
+    limit: 20,
     offset: 0,
   },
 }

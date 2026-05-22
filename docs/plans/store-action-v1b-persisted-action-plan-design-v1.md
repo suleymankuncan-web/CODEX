@@ -477,6 +477,9 @@ It must not own plan detail, commands, assignment, or resolution.
    - Implemented as a narrow active-plan inbox adapter.
    - Evidence: `docs/evidence/store-action-v1b-workflow-inbox-v1.md`.
 6. Minimal Store Tasks UI.
+   - First read-only list slice shows persisted action plans on `/store/tasks`
+     without lifecycle commands.
+   - Evidence: `docs/evidence/store-action-v1b-store-tasks-list-v1.md`.
 7. Targeted Playwright and deployed smoke evidence when staging is ready.
 
 Stop before the next kademe if the current one changes KPI scoring, checklist
