@@ -2397,7 +2397,7 @@ export type components = {
     "WorkflowInboxResponse": {
       "items": Array<{
           "itemType": "approval" | "acknowledgement" | "task" | "notification"
-          "sourceType": "target_distribution_request" | "checklist_receipt" | "kpi_exception"
+          "sourceType": "target_distribution_request" | "checklist_receipt" | "kpi_exception" | "store_action_plan"
           "sourceId": string
           "title": string
           "summary": string

@@ -168,6 +168,30 @@ export class StoreActionPlanRepository {
     };
   }
 
+  async listWorkflowInboxPlans(input: {
+    storeIds: readonly string[];
+    statuses: readonly StoreActionPlanStatus[];
+    limit: number;
+  }) {
+    if (input.storeIds.length === 0 || input.statuses.length === 0) {
+      return [];
+    }
+
+    const result = await this.databaseService.query<StoreActionPlanRow>(
+      `
+        SELECT ${STORE_ACTION_PLAN_COLUMNS}
+        FROM ops.store_action_plan
+        WHERE store_id = ANY($1::uuid[])
+          AND status = ANY($2::text[])
+        ORDER BY due_on ASC, updated_at DESC
+        LIMIT $3
+      `,
+      [[...input.storeIds], [...input.statuses], input.limit],
+    );
+
+    return result.rows.map((row) => this.mapPlan(row));
+  }
+
   async createPlan(input: {
     companyId: string;
     regionId: string;

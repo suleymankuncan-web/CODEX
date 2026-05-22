@@ -1910,6 +1910,58 @@ test('store tasks page renders readable Turkish queue labels', async ({ page }) 
   await expect(page.locator('body')).not.toContainText('Å')
 })
 
+test('store tasks renders persisted action plans from the workflow inbox', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'en')
+  })
+  await page.unroute('**/api/workflow/inbox')
+  await page.route('**/api/workflow/inbox', async (route) => {
+    await route.fulfill({
+      json: {
+        items: [
+          {
+            itemType: 'task',
+            sourceType: 'store_action_plan',
+            sourceId: 'action-plan-1',
+            title: 'Net sales recovery plan',
+            summary: 'Call the team and confirm recovery actions.',
+            companyId: '00000000-0000-0000-0000-000000000001',
+            regionId: '00000000-0000-0000-0000-000000000010',
+            storeId: demoStoreId,
+            storeName: 'IstinyePark Demo Store',
+            workflowStatus: 'open',
+            inboxStatus: 'needs_attention',
+            urgency: 'high',
+            createdAt: '2026-05-22T08:00:00.000Z',
+            needsAttentionAt: '2026-05-24T12:00:00.000Z',
+            actorRole: 'STORE_MANAGER',
+            primaryActionLabel: 'Open action plan',
+            secondaryActionLabel: 'Review source',
+            deepLink: '/store/tasks?actionPlan=action-plan-1',
+            historyPreview: 'Due 2026-05-24',
+          },
+        ],
+        meta: {
+          count: 1,
+          total: 1,
+          limit: 30,
+          offset: 0,
+        },
+      },
+    })
+  })
+
+  await page.goto('/store/tasks')
+
+  await expect(page.getByText('Action plan', { exact: true })).toBeVisible()
+  await expect(page.getByText('Net sales recovery plan')).toBeVisible()
+  await expect(page.getByText('Call the team and confirm recovery actions.')).toBeVisible()
+  const actionLink = page.getByRole('link', { name: 'Go to action plan' })
+  await expect(actionLink).toBeVisible()
+  await expect(actionLink).toHaveAttribute('href', '/store/tasks?actionPlan=action-plan-1')
+  await expect(page.getByText('Review plan source')).toBeVisible()
+})
+
 test('store tasks lets managers retry after the queue load fails', async ({ page }) => {
   let inboxAttempts = 0
   let allowInbox = false

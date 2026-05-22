@@ -479,6 +479,35 @@ Evidence:
 - `admin-web/src/generated/openapi-types.ts`
 - `docs/evidence/store-action-v1b-api-contract-v1.md`
 
+## V1B Workflow Inbox Boundary
+
+The fifth implementation kademe lets persisted action plans appear in the
+existing shared workflow inbox.
+
+Decision:
+
+- Add `store_action_plan` as a workflow inbox source type.
+- Represent action plans as `task`, not `approval`.
+- Fetch only active action plans for the shared inbox:
+  - `open`,
+  - `in_progress`,
+  - `blocked`.
+- Keep closed/cancelled history in the action-plan read API/detail path instead
+  of filling the default inbox with completed history.
+- Keep store visibility tied to assigned action stores. `SUPER_ADMIN` does not
+  get a silent broad bypass in this slice.
+- Update generated OpenAPI types and existing frontend labels so the new source
+  type is readable wherever workflow inbox items are rendered.
+
+Evidence:
+
+- `backend/nestjs/src/modules/store-ops/application/workflow-inbox.contract.ts`
+- `backend/nestjs/src/modules/store-ops/application/workflow-inbox.service.ts`
+- `backend/nestjs/src/modules/store-ops/application/workflow-inbox.service.spec.ts`
+- `backend/nestjs/src/modules/store-ops/infrastructure/store-action-plan.repository.ts`
+- `admin-web/src/generated/openapi-types.ts`
+- `docs/evidence/store-action-v1b-workflow-inbox-v1.md`
+
 ## Data Placement Draft
 
 V1A read-only:

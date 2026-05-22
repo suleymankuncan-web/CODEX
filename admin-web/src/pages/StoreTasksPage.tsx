@@ -412,6 +412,8 @@ function formatWorkflowSourceTypeLabel(t: TranslateFunction, sourceType: Workflo
       return t('storeTasks.sourceType.checklist_receipt')
     case 'kpi_exception':
       return t('storeTasks.sourceType.kpi_exception')
+    case 'store_action_plan':
+      return t('storeTasks.sourceType.store_action_plan')
     default:
       return sourceType
   }
@@ -429,6 +431,8 @@ function formatWorkflowPrimaryActionLabel(t: TranslateFunction, item: WorkflowIn
         : t('storeTasks.primary.checklistRecord')
     case 'kpi_exception':
       return t('storeTasks.primary.kpiDetail')
+    case 'store_action_plan':
+      return t('storeTasks.primary.actionPlan')
     default:
       return item.primaryActionLabel
   }
@@ -442,6 +446,8 @@ function formatWorkflowSecondaryActionLabel(t: TranslateFunction, item: Workflow
       return t('storeTasks.secondary.checklistResult')
     case 'kpi_exception':
       return t('storeTasks.secondary.kpiDeviation')
+    case 'store_action_plan':
+      return t('storeTasks.secondary.actionPlan')
     default:
       return item.secondaryActionLabel ?? t('storeTasks.secondary.targetDetail')
   }

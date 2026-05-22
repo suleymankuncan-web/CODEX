@@ -57,6 +57,7 @@ const workflowSourceTypeLabelKeys: Record<WorkflowInboxItem['sourceType'], Trans
   target_distribution_request: 'storeTasks.sourceType.target_distribution_request',
   checklist_receipt: 'storeTasks.sourceType.checklist_receipt',
   kpi_exception: 'storeTasks.sourceType.kpi_exception',
+  store_action_plan: 'storeTasks.sourceType.store_action_plan',
 }
 
 const workflowStateLabelKeys: Record<string, TranslationKey> = {

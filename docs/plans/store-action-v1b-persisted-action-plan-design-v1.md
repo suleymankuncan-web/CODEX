@@ -474,6 +474,8 @@ It must not own plan detail, commands, assignment, or resolution.
 3. Repository and service commands with assigned-store negative tests.
 4. Controller, DTOs, OpenAPI, and generated frontend client.
 5. Workflow inbox `store_action_plan` source adapter.
+   - Implemented as a narrow active-plan inbox adapter.
+   - Evidence: `docs/evidence/store-action-v1b-workflow-inbox-v1.md`.
 6. Minimal Store Tasks UI.
 7. Targeted Playwright and deployed smoke evidence when staging is ready.
 
