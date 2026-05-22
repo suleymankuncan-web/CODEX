@@ -82,6 +82,11 @@ Repo evidence:
   `scripts/rules-config-boundary-contract.test.mjs`; do not add a generic
   rules engine, `dm` schema, or `config` schema without a separately scoped
   product/data-governance decision.
+- Refactor Completion Inventory V1 is recorded at
+  `docs/plans/refactor-completion-inventory-v1.md` and guarded by
+  `scripts/refactor-completion-inventory-contract.test.mjs`; do not reopen
+  broad refactor from line count alone. Use its active backlog and parked
+  triggers when choosing any new refactor slice.
 
 Measured hotspots:
 
@@ -783,7 +788,12 @@ input changes priority.
 21. Done: `exactOptionalPropertyTypes` implementation and config enablement PR.
 22. Done: authorization matrix drift guard contract, docs/script only.
 23. Done: rules/config boundary guard contract, docs/script only.
-24. External evidence PRs only when real provider inputs exist.
+24. Done: refactor completion inventory/guard, docs/script only. It closes
+   broad refactor as a standing theme and keeps only finite active candidates.
+25. Next active refactor candidate: `RankingService` pure helper extraction,
+   unless a production bug, failing gate, user-provided redesign input, or
+   concrete auth/data/security trigger changes priority.
+26. External evidence PRs only when real provider inputs exist.
 
 Batch rule:
 
