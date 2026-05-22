@@ -219,6 +219,19 @@ Why third:
 - It needs a disposable target and PostgreSQL tooling before any command is
   safe.
 
+2026-05-22 status:
+
+- Supabase staging application-schema logical restore proof is recorded in
+  `docs/evidence/readiness/2026-05-22-supabase-staging-logical-restore-drill.md`.
+- A PostgreSQL 17 logical dump from staging restored into a disposable local
+  PostgreSQL 17 target after excluding the Supabase-managed `vault`
+  extension/schema from the restore list.
+- Source and restore app schema table counts matched, migration tracking rows
+  matched, and an `ops.store` smoke count matched.
+- This closes the local logical application-schema restore proof. It does not
+  close managed Supabase restore-to-new-project, PITR, Storage/Auth/Realtime/
+  Edge settings restore, or final production RPO/RTO acceptance.
+
 Operator input required:
 
 - Confirm the source is staging, not production.

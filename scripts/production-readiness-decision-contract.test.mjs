@@ -122,7 +122,10 @@ test('handoff docs keep post-merge readiness evidence tiers clear', () => {
   requireText(currentState, 'Broad-production Redis/BullMQ decision and health evidence')
 
   requireText(activeNextActions, 'Tier B - broad-production/operational hardening')
-  requireText(activeNextActions, 'Supabase staging restore drill into an approved disposable target.')
+  requireText(
+    activeNextActions,
+    'Supabase staging restore drill into an approved disposable target is now',
+  )
   requireText(
     activeNextActions,
     'Production alert policy decision and production destination proof',

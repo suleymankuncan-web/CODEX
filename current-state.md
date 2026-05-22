@@ -2,10 +2,11 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #416, the Product Readiness V1 first-pass closeout, Operations Control Tower
+PR #417, the Product Readiness V1 first-pass closeout, Operations Control Tower
 readiness line, Sokrates/discipline operating docs, current workspace hygiene,
 the Clerk persona staging evidence runbook, the generated system-flow map, and
-the production evidence closure joint plan plus Redis/BullMQ staging proof.
+the production evidence closure joint plan plus Redis/BullMQ and alert-provider
+staging proofs.
 It is the starting point for continuing in a fresh window.
 
 ## Active Workspace
@@ -30,14 +31,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-22, `origin/main` has been fetched through PR #416. Before the
-current alert provider evidence branch, the root checkout was clean `main` and
-aligned with `origin/main`.
+As of 2026-05-22, `origin/main` has been fetched through PR #417. Before the
+current Supabase restore evidence branch, the root checkout was clean `main`
+and aligned with `origin/main`.
 
 Latest merge on main:
 
 ```text
-73054791 docs: record redis bullmq staging proof (#416)
+a5d416ba docs: record alert provider delivery proof
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -173,6 +174,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #414 `fix: close store personnel approvals route gap`
 - PR #415 `docs: plan production evidence closure`
 - PR #416 `docs: record redis bullmq staging proof`
+- PR #417 `docs: record alert provider delivery proof`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -191,7 +193,7 @@ frontend root, security headers, SPA fallback, and static assets passed.
 Current local hygiene state:
 
 - Root workspace `D:\store-ops-workspace` was clean on `main...origin/main` at
-  `73054791` after PR #416 was merged and `origin/main` was fetched.
+  `a5d416ba` after PR #417 was merged and `origin/main` was fetched.
 - The previous dirty root state was not deleted. It was saved as stash
   `codex hygiene backup 2026-05-21 root dirty state`. Do not drop that stash
   unless the user explicitly approves.
@@ -854,6 +856,16 @@ missing item is one of these external proofs.
   Email delivery was not observed and is not counted as proven. This proves one
   staging external delivery path, not app-level error tracking or final
   broad-production incident readiness.
+- Supabase staging logical restore proof is recorded in
+  `docs/evidence/readiness/2026-05-22-supabase-staging-logical-restore-drill.md`.
+  A PostgreSQL 17 logical dump from the Supabase staging source restored into a
+  disposable local PostgreSQL 17 target after excluding the Supabase-managed
+  `vault` extension/schema from the restore list. Source and restore app schema
+  table counts matched (`audit:3`, `ops:39`, `rpt:10`, `stg:12`), migration
+  rows matched (`48`), and `ops.store` count matched (`160`). This proves
+  Supabase staging application-schema logical recovery, not managed
+  restore-to-new-project, PITR, Storage/Auth/Realtime/Edge settings restore, or
+  final production RPO/RTO.
 
 GSD notes:
 
