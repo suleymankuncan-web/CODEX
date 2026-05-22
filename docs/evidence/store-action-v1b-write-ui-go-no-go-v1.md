@@ -46,10 +46,10 @@ Assumptions:
 
 Repo evidence:
 
-- `docs/evidence/store-action-v1a-read-only-candidates-v1.md`
+- `docs/evidence/store-action-readonly-candidates-v1.md`
 - `docs/evidence/store-action-v1b-schema-v1.md`
 - `docs/evidence/store-action-v1b-lifecycle-contract-v1.md`
-- `docs/evidence/store-action-v1b-command-service-v1.md`
+- `docs/evidence/store-action-v1b-command-boundary-v1.md`
 - `docs/evidence/store-action-v1b-api-contract-v1.md`
 - `docs/evidence/store-action-v1b-workflow-inbox-v1.md`
 - `docs/evidence/store-action-v1b-store-tasks-list-v1.md`
