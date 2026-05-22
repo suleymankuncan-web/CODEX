@@ -2049,6 +2049,7 @@ test('store tasks hides unsafe persisted action plan source links', async ({ pag
             ...storeActionPlansFixture.items[0],
             actionPlanId: '00000000-0000-0000-0000-00000000bad1',
             title: 'Unsafe source plan',
+            summary: '   ',
             sourceDeepLink: 'javascript:alert(1)',
           },
         ],
@@ -2061,6 +2062,7 @@ test('store tasks hides unsafe persisted action plan source links', async ({ pag
 
   const actionPlansPanel = page.locator('.panel').filter({ hasText: 'Persisted follow-up' })
   await expect(actionPlansPanel.getByText('Unsafe source plan')).toBeVisible()
+  await expect(actionPlansPanel.getByText('No plan summary')).toBeVisible()
   await expect(actionPlansPanel.getByRole('link', { name: 'Open source' })).toHaveCount(0)
   await expect(actionPlansPanel.getByText('No source link')).toBeVisible()
 })

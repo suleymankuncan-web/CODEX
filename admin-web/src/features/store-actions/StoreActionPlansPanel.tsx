@@ -181,6 +181,7 @@ function StoreActionPlanRow(input: {
   t: TranslateFunction
 }) {
   const safeSourceDeepLink = getSafeSourceDeepLink(input.plan.sourceDeepLink)
+  const summary = input.plan.summary?.trim()
 
   return (
     <article className="stacked-row">
@@ -188,7 +189,7 @@ function StoreActionPlanRow(input: {
         <div>
           <strong>{input.plan.title}</strong>
           <p className="queue-subtitle">
-            {input.plan.summary ?? input.t('storeTasks.actionPlansNoSummary')}
+            {summary ? summary : input.t('storeTasks.actionPlansNoSummary')}
           </p>
         </div>
         <div className="action-cluster">

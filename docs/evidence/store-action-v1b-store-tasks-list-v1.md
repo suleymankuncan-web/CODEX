@@ -53,9 +53,12 @@ Added:
   still reports records on earlier pages.
 - Guarded source navigation: `sourceDeepLink` renders only when it is a safe
   in-app path.
+- Blank summaries render the explicit no-summary fallback instead of leaving
+  the row subtitle empty.
 - Store Tasks localization copy.
 - Playwright coverage for persisted action plan read-only rendering,
-  pagination, out-of-range recovery, and unsafe source-link handling.
+  pagination, out-of-range recovery, blank-summary fallback, and unsafe
+  source-link handling.
 
 Intentionally unchanged:
 
