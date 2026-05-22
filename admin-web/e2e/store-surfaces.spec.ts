@@ -1962,6 +1962,155 @@ test('store tasks renders persisted action plans from the workflow inbox', async
   await expect(page.getByText('Review plan source')).toBeVisible()
 })
 
+test('store tasks lists persisted action plan records read-only', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'en')
+  })
+  await page.unroute('**/api/store-actions/plans**')
+  await page.route('**/api/store-actions/plans**', async (route) => {
+    await route.fulfill({ json: storeActionPlansFixture })
+  })
+
+  await page.goto('/store/tasks')
+
+  const actionPlansPanel = page.locator('.panel').filter({ hasText: 'Persisted follow-up' })
+  await expect(actionPlansPanel.getByRole('heading', { name: 'Action plans' })).toBeVisible()
+  await expect(actionPlansPanel.getByText('1 plan')).toBeVisible()
+  await expect(actionPlansPanel.getByText('Net sales recovery plan')).toBeVisible()
+  await expect(actionPlansPanel.getByText('Confirm the daily recovery checklist with the team.')).toBeVisible()
+  await expect(actionPlansPanel.getByText('Open', { exact: true })).toBeVisible()
+  await expect(actionPlansPanel.getByText('High', { exact: true })).toBeVisible()
+  await expect(actionPlansPanel.getByText('May 24, 2026')).toBeVisible()
+  const sourceLink = actionPlansPanel.getByRole('link', { name: 'Open source' })
+  await expect(sourceLink).toBeVisible()
+  await expect(sourceLink).toHaveAttribute('href', '/store/kpis')
+  await expect(actionPlansPanel.getByText('1-1 / 1')).toBeVisible()
+  await expect(actionPlansPanel.getByRole('button', { name: /close|cancel|blocked|in progress/i })).toHaveCount(0)
+})
+
+test('store tasks pages persisted action plan records', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'en')
+  })
+  await page.unroute('**/api/store-actions/plans**')
+  await page.route('**/api/store-actions/plans**', async (route) => {
+    const offset = Number(new URL(route.request().url()).searchParams.get('offset') ?? '0')
+    const isSecondPage = offset === 20
+
+    await route.fulfill({
+      json: {
+        items: [
+          {
+            ...storeActionPlansFixture.items[0],
+            actionPlanId: isSecondPage
+              ? '00000000-0000-0000-0000-00000000a021'
+              : '00000000-0000-0000-0000-00000000a001',
+            title: isSecondPage ? 'Second page recovery plan' : 'First page recovery plan',
+          },
+        ],
+        meta: {
+          count: isSecondPage ? 1 : 20,
+          total: 21,
+          limit: 20,
+          offset,
+        },
+      },
+    })
+  })
+
+  await page.goto('/store/tasks')
+
+  const actionPlansPanel = page.locator('.panel').filter({ hasText: 'Persisted follow-up' })
+  await expect(actionPlansPanel.getByText('21 plan')).toBeVisible()
+  await expect(actionPlansPanel.getByText('First page recovery plan')).toBeVisible()
+  await expect(actionPlansPanel.getByText('1-20 / 21')).toBeVisible()
+  await expect(actionPlansPanel.getByRole('button', { name: 'Previous' })).toBeDisabled()
+
+  const nextButton = actionPlansPanel.getByRole('button', { name: 'Next' })
+  await expect(nextButton).toBeEnabled()
+  await nextButton.click()
+
+  await expect(actionPlansPanel.getByText('Second page recovery plan')).toBeVisible()
+  await expect(actionPlansPanel.getByText('21-21 / 21')).toBeVisible()
+  await expect(actionPlansPanel.getByRole('button', { name: 'Previous' })).toBeEnabled()
+  await expect(actionPlansPanel.getByRole('button', { name: 'Next' })).toBeDisabled()
+})
+
+test('store tasks hides unsafe persisted action plan source links', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'en')
+  })
+  await page.unroute('**/api/store-actions/plans**')
+  await page.route('**/api/store-actions/plans**', async (route) => {
+    await route.fulfill({
+      json: {
+        items: [
+          {
+            ...storeActionPlansFixture.items[0],
+            actionPlanId: '00000000-0000-0000-0000-00000000bad1',
+            title: 'Unsafe source plan',
+            summary: '   ',
+            sourceDeepLink: 'javascript:alert(1)',
+          },
+        ],
+        meta: { count: 1, total: 1, limit: 20, offset: 0 },
+      },
+    })
+  })
+
+  await page.goto('/store/tasks')
+
+  const actionPlansPanel = page.locator('.panel').filter({ hasText: 'Persisted follow-up' })
+  await expect(actionPlansPanel.getByText('Unsafe source plan')).toBeVisible()
+  await expect(actionPlansPanel.getByText('No plan summary')).toBeVisible()
+  await expect(actionPlansPanel.getByRole('link', { name: 'Open source' })).toHaveCount(0)
+  await expect(actionPlansPanel.getByText('No source link')).toBeVisible()
+})
+
+test('store tasks recovers when the current action plan page becomes empty', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'en')
+  })
+  await page.unroute('**/api/store-actions/plans**')
+  await page.route('**/api/store-actions/plans**', async (route) => {
+    const offset = Number(new URL(route.request().url()).searchParams.get('offset') ?? '0')
+
+    if (offset === 20) {
+      await route.fulfill({
+        json: {
+          items: [],
+          meta: { count: 0, total: 20, limit: 20, offset: 20 },
+        },
+      })
+      return
+    }
+
+    await route.fulfill({
+      json: {
+        items: [
+          {
+            ...storeActionPlansFixture.items[0],
+            actionPlanId: '00000000-0000-0000-0000-00000000a001',
+            title: 'First page recovery plan',
+          },
+        ],
+        meta: { count: 20, total: 21, limit: 20, offset: 0 },
+      },
+    })
+  })
+
+  await page.goto('/store/tasks')
+
+  const actionPlansPanel = page.locator('.panel').filter({ hasText: 'Persisted follow-up' })
+  await expect(actionPlansPanel.getByText('First page recovery plan')).toBeVisible()
+  await actionPlansPanel.getByRole('button', { name: 'Next' }).click()
+
+  await expect(actionPlansPanel.getByText('First page recovery plan')).toBeVisible()
+  await expect(actionPlansPanel.getByText('21-20 / 20')).toHaveCount(0)
+  await expect(actionPlansPanel.getByText('No persisted action plans')).toHaveCount(0)
+  await expect(actionPlansPanel.getByText('1-20 / 21')).toBeVisible()
+})
+
 test('store tasks lets managers retry after the queue load fails', async ({ page }) => {
   let inboxAttempts = 0
   let allowInbox = false
@@ -3078,6 +3227,15 @@ async function routeStoreSurfaceApi(page: Page) {
     await route.fulfill({ json: workflowInboxFixture })
   })
 
+  await page.route('**/api/store-actions/plans**', async (route) => {
+    await route.fulfill({
+      json: {
+        items: [],
+        meta: { count: 0, total: 0, limit: 20, offset: 0 },
+      },
+    })
+  })
+
   await page.route('**/api/checklists/acknowledgements/list', async (route) => {
     await route.fulfill({ json: checklistAcknowledgementsFixture })
   })
@@ -3213,6 +3371,43 @@ const workflowInboxFixture = {
     count: 1,
     total: 1,
     limit: 30,
+    offset: 0,
+  },
+}
+
+const storeActionPlansFixture = {
+  items: [
+    {
+      actionPlanId: '00000000-0000-0000-0000-00000000a001',
+      companyId: '00000000-0000-0000-0000-000000000001',
+      regionId: '00000000-0000-0000-0000-000000000010',
+      storeId: demoStoreId,
+      ownerUserId: '00000000-0000-0000-0000-00000000b001',
+      createdByUserId: '00000000-0000-0000-0000-00000000b001',
+      sourceType: 'kpi_exception',
+      sourceId: 'snapshot-2026-04-24:store:kpi',
+      sourceDeepLink: '/store/kpis',
+      sourceSnapshotRunId: null,
+      sourceKpiId: null,
+      title: 'Net sales recovery plan',
+      summary: 'Confirm the daily recovery checklist with the team.',
+      priority: 'high',
+      status: 'open',
+      dueOn: '2026-05-24',
+      resolutionNote: null,
+      closedByUserId: null,
+      closedAt: null,
+      cancelReason: null,
+      cancelledByUserId: null,
+      cancelledAt: null,
+      createdAt: '2026-05-22T08:00:00.000Z',
+      updatedAt: '2026-05-22T08:30:00.000Z',
+    },
+  ],
+  meta: {
+    count: 1,
+    total: 1,
+    limit: 20,
     offset: 0,
   },
 }

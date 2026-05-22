@@ -508,6 +508,33 @@ Evidence:
 - `admin-web/src/generated/openapi-types.ts`
 - `docs/evidence/store-action-v1b-workflow-inbox-v1.md`
 
+## V1B Store Tasks Read-Only List
+
+The sixth implementation kademe makes persisted action plans visible in the
+owning Store Tasks surface without exposing lifecycle commands.
+
+Decision:
+
+- List plans from the generated `/api/store-actions/plans` contract.
+- Keep the panel read-only in this slice.
+- Use response `meta` to show total/range and previous/next paging instead of
+  hiding records behind a fixed first-page cap.
+- If the current page becomes empty while `meta.total` still reports records,
+  clamp back to the nearest earlier available page instead of showing a true
+  empty-list state.
+- Render `sourceDeepLink` only when it is a safe in-app path.
+- Keep create/status/close/cancel UI for a later write-risk slice.
+- Keep auth semantics, DB schema, API response shape, workflow inbox lifecycle,
+  KPI scoring, checklist scoring, target approval, and broad redesign out of
+  this slice.
+
+Evidence:
+
+- `admin-web/src/features/store-actions/api.ts`
+- `admin-web/src/features/store-actions/StoreActionPlansPanel.tsx`
+- `admin-web/src/pages/StoreTasksPage.tsx`
+- `docs/evidence/store-action-v1b-store-tasks-list-v1.md`
+
 ## Data Placement Draft
 
 V1A read-only:

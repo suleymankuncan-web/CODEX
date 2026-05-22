@@ -354,6 +354,11 @@ async function routePilotSmokeApi(context: BrowserContext) {
       return
     }
 
+    if (pathname.endsWith('/api/store-actions/plans')) {
+      await route.fulfill({ json: storeActionPlansFixture })
+      return
+    }
+
     if (pathname.endsWith('/api/reports/kpi-config')) {
       await route.fulfill({ json: kpiConfigFixture })
       return
@@ -585,6 +590,11 @@ const authAuditFixture = {
 const emptyListFixture = {
   items: [],
   meta: { count: 0, total: 0, limit: 50, offset: 0 },
+}
+
+const storeActionPlansFixture = {
+  items: [],
+  meta: { count: 0, total: 0, limit: 20, offset: 0 },
 }
 
 const feedFixture = {

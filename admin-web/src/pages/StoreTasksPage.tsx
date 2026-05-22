@@ -1,6 +1,6 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Bell, CheckCircle2, ClipboardList, ReceiptText, RefreshCw, TrendingUp } from 'lucide-react'
+import { Bell, CheckCircle2, ClipboardList, ListChecks, ReceiptText, RefreshCw, TrendingUp } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import {
   EmptyState,
@@ -15,7 +15,9 @@ import { getDisplayRoleCodes } from '../features/auth/display'
 import { getChecklistAcknowledgements } from '../features/checklists/api'
 import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
+import { listStoreActionPlans } from '../features/store-actions/api'
 import { buildReadOnlyStoreActionCandidates } from '../features/store-actions/candidates'
+import { StoreActionPlansPanel } from '../features/store-actions/StoreActionPlansPanel'
 import { getStoreApprovalsPrefetchTasks } from '../features/store-approvals/prefetch'
 import { WorkflowInboxDetail } from '../features/workflow/WorkflowInboxDetail'
 import { getWorkflowInbox } from '../features/workflow/api'
@@ -35,10 +37,16 @@ const actorRoleTranslationKeys: Partial<Record<string, TranslationKey>> = {
   STORE_PERSONNEL: 'storeTasks.role.STORE_PERSONNEL',
   SUPER_ADMIN: 'storeTasks.role.SUPER_ADMIN',
 }
+const STORE_ACTION_PLAN_PAGE_SIZE = 20
 
 function canUseWorkflowInbox(authSummary: AuthSessionSummary | null) {
   const roles = authSummary?.user.roleCodes ?? []
   return roles.includes('STORE_MANAGER') || roles.includes('SUPER_ADMIN') || roles.includes('REPORT_VIEWER')
+}
+
+function canUseStoreActionPlans(authSummary: AuthSessionSummary | null) {
+  const roles = authSummary?.user.roleCodes ?? []
+  return roles.includes('STORE_MANAGER') || roles.includes('SUPER_ADMIN')
 }
 
 export function StoreTasksPage(input: {
@@ -47,6 +55,8 @@ export function StoreTasksPage(input: {
   const { locale, t } = useLocalization()
   const queryClient = useQueryClient()
   const inboxEnabled = canUseWorkflowInbox(input.authSummary)
+  const storeActionPlansEnabled = canUseStoreActionPlans(input.authSummary)
+  const [storeActionPlansOffset, setStoreActionPlansOffset] = useState(0)
   const primaryStoreId = input.authSummary?.user.scope.storeIds[0] ?? t('storeTasks.noStoreScope')
   const inboxQuery = useQuery({
     queryKey: ['workflow-inbox'],
@@ -54,8 +64,54 @@ export function StoreTasksPage(input: {
     enabled: inboxEnabled,
     ...transientQueryRetryOptions,
   })
+  const storeActionPlansQuery = useQuery({
+    queryKey: ['store-action-plans', 'store-tasks', storeActionPlansOffset],
+    queryFn: () =>
+      listStoreActionPlans({
+        limit: STORE_ACTION_PLAN_PAGE_SIZE,
+        offset: storeActionPlansOffset,
+      }),
+    enabled: storeActionPlansEnabled,
+    ...transientQueryRetryOptions,
+  })
 
   const items = useMemo(() => inboxQuery.data?.items ?? [], [inboxQuery.data?.items])
+  const storeActionPlans = useMemo(
+    () => storeActionPlansQuery.data?.items ?? [],
+    [storeActionPlansQuery.data?.items],
+  )
+  const storeActionPlansMeta = storeActionPlansQuery.data?.meta
+  const storeActionPlansTotal = storeActionPlansMeta?.total ?? storeActionPlans.length
+  useEffect(() => {
+    if (
+      !storeActionPlansEnabled ||
+      storeActionPlansQuery.isFetching ||
+      !storeActionPlansMeta ||
+      storeActionPlans.length > 0 ||
+      storeActionPlansMeta.total === 0 ||
+      storeActionPlansOffset === 0
+    ) {
+      return
+    }
+
+    const lastAvailableOffset =
+      Math.floor((storeActionPlansMeta.total - 1) / STORE_ACTION_PLAN_PAGE_SIZE) *
+      STORE_ACTION_PLAN_PAGE_SIZE
+    const previousPageOffset = Math.max(0, storeActionPlansOffset - STORE_ACTION_PLAN_PAGE_SIZE)
+    const nextOffset = Math.min(lastAvailableOffset, previousPageOffset)
+
+    const timeoutId = window.setTimeout(() => {
+      setStoreActionPlansOffset(nextOffset)
+    }, 0)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [
+    storeActionPlans.length,
+    storeActionPlansEnabled,
+    storeActionPlansMeta,
+    storeActionPlansOffset,
+    storeActionPlansQuery.isFetching,
+  ])
   const sortedItems = useMemo(() => {
     const urgencyRank = { high: 0, medium: 1, low: 2 }
     const statusRank = { needs_attention: 0, informational: 1, completed: 2 }
@@ -227,6 +283,15 @@ export function StoreTasksPage(input: {
           icon={<TrendingUp size={18} />}
           tone={actionCandidates.length > 0 ? 'warning' : 'neutral'}
         />
+        {storeActionPlansEnabled ? (
+          <MetricCard
+            title={t('storeTasks.actionPlansMetric')}
+            value={storeActionPlansTotal}
+            note={t('storeTasks.actionPlansMetricNote')}
+            icon={<ListChecks size={18} />}
+            tone={storeActionPlansTotal > 0 ? 'warning' : 'neutral'}
+          />
+        ) : null}
       </section>
 
       <section className="two-up-grid">
@@ -281,6 +346,26 @@ export function StoreTasksPage(input: {
           </div>
         </article>
       </section>
+
+      {storeActionPlansEnabled ? (
+        <StoreActionPlansPanel
+          plans={storeActionPlans}
+          meta={storeActionPlansMeta}
+          isLoading={storeActionPlansQuery.isLoading}
+          isError={storeActionPlansQuery.isError}
+          isFetching={storeActionPlansQuery.isFetching}
+          error={storeActionPlansQuery.error}
+          locale={locale}
+          t={t}
+          onRetry={() => void storeActionPlansQuery.refetch()}
+          onPreviousPage={() =>
+            setStoreActionPlansOffset((offset) => Math.max(0, offset - STORE_ACTION_PLAN_PAGE_SIZE))
+          }
+          onNextPage={() =>
+            setStoreActionPlansOffset((offset) => offset + STORE_ACTION_PLAN_PAGE_SIZE)
+          }
+        />
+      ) : null}
 
       <section className="panel">
         <div className="panel-heading">
