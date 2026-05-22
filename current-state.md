@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #432 plus the Store Action V1B decision packet, the Product Readiness V1
+PR #433 plus the Store Action V1B design packet, the Product Readiness V1
 first-pass closeout, Operations Control Tower readiness line,
 Sokrates/discipline operating docs, current workspace hygiene, the Clerk
 persona staging evidence runbook, the generated system-flow map, and the
@@ -32,14 +32,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-22, `origin/main` has been fetched through PR #432. The root
+As of 2026-05-22, `origin/main` has been fetched through PR #433. The root
 checkout was clean `main` and aligned with `origin/main` before the Store
-Action V1B decision branch.
+Action V1B design branch.
 
 Latest merge on main:
 
 ```text
-e13e2c68 docs: decide store action target source
+f081a5fe docs: decide store action v1b boundary
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -191,6 +191,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #430 `test: guard store action source decisions`
 - PR #431 `docs: decide store action checklist source`
 - PR #432 `docs: decide store action target source`
+- PR #433 `docs: decide store action v1b boundary`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -209,7 +210,7 @@ frontend root, security headers, SPA fallback, and static assets passed.
 Current local hygiene state:
 
 - Root workspace `D:\store-ops-workspace` was clean on `main...origin/main` at
-  `e13e2c68` after PR #432 was merged and `origin/main` was fetched.
+  `f081a5fe` after PR #433 was merged and `origin/main` was fetched.
 - The previous dirty root state was not deleted. It was saved as stash
   `codex hygiene backup 2026-05-21 root dirty state`. Do not drop that stash
   unless the user explicitly approves.
@@ -1390,6 +1391,14 @@ Store Action V1A status:
   and frontend recovery states.
 - V1B decision evidence:
   `docs/evidence/store-action-persisted-action-plan-v1b-decision.md`.
+- V1B detailed design status: the next safe step is a docs/spec design PR, not
+  runtime behavior. The design defines `ops.store_action_plan`, KPI-exception
+  source scope, assigned-store write scope, audit events, REST endpoints,
+  workflow inbox mapping, Store Tasks UI boundary, and implementation
+  kademeleri.
+- V1B design references:
+  `docs/plans/store-action-v1b-persisted-action-plan-design-v1.md` and
+  `docs/superpowers/plans/2026-05-22-store-action-v1b-persisted-action-plans.md`.
 
 Current user direction on 2026-05-18:
 
