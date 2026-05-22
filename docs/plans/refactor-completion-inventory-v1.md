@@ -16,9 +16,9 @@ Claim:
 
 Repository evidence:
 
-- The original high-risk CSS, page, repository, API contract, TypeScript, and
-  read-boundary lines have already landed across the PR #300 through PR #420
-  sequence.
+- The original high-risk CSS, page, repository, API contract, TypeScript,
+  read-boundary, and first refactor-inventory lines have already landed across
+  the PR #300 through PR #422 sequence.
 - `index.css` is no longer the active structural blocker.
 - Store approvals and store checklists have completed their first structural
   passes and are below the earlier danger zone.
@@ -65,7 +65,7 @@ This snapshot is a triage input, not a mandate to split every file.
 | `backend/nestjs/src/modules/integration/application/integration.service.ts` | 1408 | mixed read/write orchestration | Active only for pure mapping/helper extraction; park command behavior. |
 | `admin-web/src/pages/IntegrationDashboardPage.tsx` | 1354 | redesign-sensitive UI page | Park until redesign or concrete data-risk UX evidence. |
 | `admin-web/src/pages/StoreKpiHighlightsPage.tsx` | 1351 | redesign-sensitive UI page | Park until redesign or concrete KPI trust/overflow bug. |
-| `backend/nestjs/src/modules/integration/application/master-data-bootstrap.service.ts` | 1345 | validation/promotion orchestration | Active candidate after test-map; pure validation helper extraction is plausible. |
+| `backend/nestjs/src/modules/integration/application/master-data-bootstrap.service.ts` | 1194 | validation/promotion orchestration | S02 normalization helper extraction is done; park remaining promotion/write boundary unless concrete trigger appears. |
 | `backend/nestjs/test/integration/import-batch-evidence.e2e-spec.ts` | 1340 | evidence-heavy E2E | Park unless gate time/flakiness proves test helper extraction value. |
 | `admin-web/src/pages/ImportBatchDetailPage.tsx` | 1339 | redesign-sensitive UI page | Park until redesign or concrete import operator bug. |
 | `admin-web/src/pages/AdminKpiConfigPage.tsx` | 1339 | redesign-sensitive UI page | Park until redesign or concrete governance/action UX bug. |
@@ -144,6 +144,8 @@ Result:
 
 Risk: MEDIUM
 
+Status: Done by the normalization/hash/read-helper extraction slice.
+
 Why after S01:
 
 - It has focused validation, read-model, promotion, and staging service specs.
@@ -165,9 +167,25 @@ npm.cmd --prefix backend/nestjs test -- master-data-bootstrap-read-models.servic
 npm.cmd --prefix backend/nestjs run build
 ```
 
+Result:
+
+- Pure bootstrap normalization, row hashing, validation-result assembly, and
+  normalized field readers now live in
+  `master-data-bootstrap-normalization.helpers.ts`.
+- `master-data-bootstrap.service.ts` stays focused on staging, validation,
+  readiness, promotion orchestration, and repository coordination.
+- Row readiness classification, conflict handling, promotion eligibility,
+  live `ops.*` writes, API response shape, DB schema, and import lifecycle are
+  unchanged.
+- Current line-count shape after the slice: `master-data-bootstrap.service.ts`
+  roughly 1194 lines and `master-data-bootstrap-normalization.helpers.ts`
+  roughly 340 lines.
+
 ### S03: ReportingService Test-Map And Pure Helper Candidate
 
 Risk: MEDIUM to HIGH
+
+Status: Next active refactor candidate.
 
 Why not first:
 

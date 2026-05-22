@@ -793,10 +793,14 @@ input changes priority.
 25. Done: `RankingService` pure helper extraction into
    `ranking-list.helpers.ts`; no ranking math, API shape, auth, DB, or
    frontend behavior changed.
-26. Next active refactor candidate: `MasterDataBootstrapService` validation
-   boundary, unless a production bug, failing gate, user-provided redesign
-   input, or concrete auth/data/security trigger changes priority.
-27. External evidence PRs only when real provider inputs exist.
+26. Done: `MasterDataBootstrapService` normalization/hash/read helper
+   extraction into `master-data-bootstrap-normalization.helpers.ts`; no row
+   readiness classification, promotion eligibility, live `ops.*` writes, API
+   shape, DB, or import lifecycle behavior changed.
+27. Next active refactor candidate: `ReportingService` test-map or one pure
+   helper extraction, unless a production bug, failing gate, user-provided
+   redesign input, or concrete auth/data/security trigger changes priority.
+28. External evidence PRs only when real provider inputs exist.
 
 Batch rule:
 
