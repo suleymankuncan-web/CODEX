@@ -15,6 +15,7 @@ import { getDisplayRoleCodes } from '../features/auth/display'
 import { getChecklistAcknowledgements } from '../features/checklists/api'
 import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
+import { buildReadOnlyStoreActionCandidates } from '../features/store-actions/candidates'
 import { getStoreApprovalsPrefetchTasks } from '../features/store-approvals/prefetch'
 import { WorkflowInboxDetail } from '../features/workflow/WorkflowInboxDetail'
 import { getWorkflowInbox } from '../features/workflow/api'
@@ -83,6 +84,10 @@ export function StoreTasksPage(input: {
     () => items.filter((item) => item.itemType === 'acknowledgement'),
     [items],
   )
+  const actionCandidates = useMemo(
+    () => buildReadOnlyStoreActionCandidates(items),
+    [items],
+  )
   const hasChecklistReceiptAction = useMemo(
     () => items.some((item) => item.sourceType === 'checklist_receipt'),
     [items],
@@ -96,11 +101,6 @@ export function StoreTasksPage(input: {
       ),
     [items],
   )
-  const taskItems = useMemo(
-    () => items.filter((item) => item.itemType === 'task'),
-    [items],
-  )
-
   useEffect(() => {
     if (!hasChecklistReceiptAction) return
 
@@ -222,10 +222,10 @@ export function StoreTasksPage(input: {
         />
         <MetricCard
           title={t('storeTasks.kpiFollowUps')}
-          value={taskItems.length}
+          value={actionCandidates.length}
           note={t('storeTasks.kpiFollowUpsNote')}
           icon={<TrendingUp size={18} />}
-          tone={taskItems.length > 0 ? 'warning' : 'neutral'}
+          tone={actionCandidates.length > 0 ? 'warning' : 'neutral'}
         />
       </section>
 
@@ -241,7 +241,11 @@ export function StoreTasksPage(input: {
             <KeyValue label={t('storeTasks.workTypes')} value={t('storeTasks.workTypesValue')} />
             <KeyValue
               label={t('storeTasks.kpiConnection')}
-              value={taskItems.length > 0 ? t('storeTasks.kpiActive') : t('storeTasks.kpiReady')}
+              value={
+                actionCandidates.length > 0
+                  ? t('storeTasks.kpiActive')
+                  : t('storeTasks.kpiReady')
+              }
             />
             <KeyValue label={t('storeTasks.queueStatuses')} value={t('storeTasks.queueStatusesValue')} />
             <KeyValue label={t('storeTasks.mainLayout')} value={t('storeTasks.mainLayoutValue')} />
