@@ -152,6 +152,21 @@ Acceptance:
 - Backend readiness smoke remains green or any protected-token skip is
   explicitly labeled as token-missing, not a pass.
 
+2026-05-22 follow-up:
+
+- Redis/BullMQ staging wiring was first proven with
+  `READINESS_PROFILE=controlled-pilot`.
+- A temporary broad-production profile smoke is recorded in
+  `docs/evidence/readiness/2026-05-22-readiness-profile-reset-after-broad-smoke.md`.
+- The broad-production smoke proved `queueBackend=bullmq`, queue
+  `status=durable`, and Redis `status=ok`, but it correctly reported
+  observability `degraded` because no real `ERROR_TRACKING_DSN` is configured.
+- The backend was then reset to `READINESS_PROFILE=controlled-pilot` while
+  keeping Redis/BullMQ enabled; health, deployed readiness, public backend
+  load, and alert routing passed after the reset.
+- Do not count the free/staging Redis tier or the temporary broad-production
+  profile smoke as final production durability approval.
+
 Rollback:
 
 - Revert backend env to:
