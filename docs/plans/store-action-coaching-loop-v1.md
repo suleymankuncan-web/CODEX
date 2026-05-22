@@ -343,6 +343,32 @@ Evidence:
 
 - `docs/evidence/store-action-target-source-decision-v1.md`
 
+## V1B Persisted Action Plan Decision
+
+V1A read-only source decisions are now bounded enough to stop before write
+state.
+
+Decision:
+
+- Do not implement persisted Store Action action plans yet.
+- Treat V1A as complete for the current foundation: KPI exception candidates
+  are active, while direct checklist and target sources remain parked.
+- V1B requires explicit write-feature approval before DB, command, audit,
+  workflow inbox, OpenAPI, or frontend lifecycle work starts.
+
+Why:
+
+- Persisted action plans are not a continuation of a read-only candidate
+  helper. They create operational state.
+- They need action-plan owner, lifecycle, assigned-store action scope, audit
+  event names, API contracts, workflow inbox source mapping, frontend recovery
+  states, migration smoke, and rollback.
+- Starting them casually would risk a shadow workflow engine.
+
+Evidence:
+
+- `docs/evidence/store-action-persisted-action-plan-v1b-decision.md`
+
 ## Data Placement Draft
 
 V1A read-only:
@@ -512,7 +538,9 @@ Current status:
   target coverage as target-domain readiness; target-driven coaching can only
   come through the KPI exception path until direct target source policy is
   explicit.
-- Persisted action plans remain a separate V1B decision.
+- Persisted action plans are an explicit V1B NO-GO for implementation right
+  now; only a future approved write-feature slice should open DB, command,
+  audit, workflow inbox, OpenAPI, or frontend lifecycle work.
 
 ## CODEX DURUST YORUM
 

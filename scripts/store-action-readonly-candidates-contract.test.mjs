@@ -6,6 +6,7 @@ const evidence = readFileSync('docs/evidence/store-action-readonly-candidates-v1
 const sourceGuardEvidence = readFileSync('docs/evidence/store-action-source-guard-v1.md', 'utf8')
 const checklistSourceDecision = readFileSync('docs/evidence/store-action-checklist-source-decision-v1.md', 'utf8')
 const targetSourceDecision = readFileSync('docs/evidence/store-action-target-source-decision-v1.md', 'utf8')
+const persistedActionPlanDecision = readFileSync('docs/evidence/store-action-persisted-action-plan-v1b-decision.md', 'utf8')
 const sourcePlan = readFileSync('docs/plans/store-action-coaching-loop-v1.md', 'utf8')
 
 test('store action V1A evidence keeps the read-only boundary explicit', () => {
@@ -83,4 +84,19 @@ test('store action target source decision keeps approval and coverage outside di
   assert.match(workflowContract, /itemType: "approval"[\s\S]*?sourceType: "target_distribution_request"/)
   assert.match(targetService, /missingEmployees[\s\S]*?pendingEmployees[\s\S]*?conflictEmployees[\s\S]*?staleEmployees/)
   assert.match(targetPage, /targetStatus !== 'approved'/)
+})
+
+test('store action V1B persisted action-plan decision blocks casual write state', () => {
+  assert.match(persistedActionPlanDecision, /NO-GO for V1B implementation right now/)
+  assert.match(persistedActionPlanDecision, /DB/)
+  assert.match(persistedActionPlanDecision, /command/)
+  assert.match(persistedActionPlanDecision, /auth\/action-scope/)
+  assert.match(persistedActionPlanDecision, /audit/)
+  assert.match(persistedActionPlanDecision, /workflow inbox/)
+  assert.match(persistedActionPlanDecision, /OpenAPI/)
+  assert.match(persistedActionPlanDecision, /frontend/)
+  assert.match(persistedActionPlanDecision, /assigned-store action scope/)
+  assert.match(persistedActionPlanDecision, /Stop if the first slice tries to add notifications/)
+  assert.match(sourcePlan, /V1B Persisted Action Plan Decision/)
+  assert.match(sourcePlan, /Persisted action plans are an explicit V1B NO-GO/)
 })
