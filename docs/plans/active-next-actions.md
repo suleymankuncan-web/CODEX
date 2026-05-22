@@ -61,8 +61,10 @@ Operating plan:
   are replaced by a finite active backlog. `RankingService` pure helper
   extraction has moved ranking list helpers into `ranking-list.helpers.ts`.
   `MasterDataBootstrapService` normalization/hash/read helpers now live in
-  `master-data-bootstrap-normalization.helpers.ts`; the next
-  active candidate is `ReportingService` test-map or one pure helper extraction.
+  `master-data-bootstrap-normalization.helpers.ts`. `ReportingService` KPI
+  config resolve/default/metadata/validation helpers now live in
+  `reporting-kpi-config.helpers.ts`; after that slice, the next active
+  candidate is `IntegrationService` pure mapping/helper extraction.
   Redesign-sensitive UI plus auth/write/data state-machine work stays parked
   until concrete triggers appear.
 - Fresh Clerk controlled-pilot persona/token/action evidence is recorded in

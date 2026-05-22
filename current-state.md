@@ -31,14 +31,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-22, `origin/main` has been fetched through PR #422. Before the
-current master-data bootstrap normalization helper branch, the root checkout was
-clean `main` and aligned with `origin/main`.
+As of 2026-05-22, `origin/main` has been fetched through PR #423. Before the
+current reporting KPI config helper branch, the root checkout was clean `main`
+and aligned with `origin/main`.
 
 Latest merge on main:
 
 ```text
-8893915a refactor: split ranking list helpers
+290309a1 refactor: split master data bootstrap normalization helpers
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -180,6 +180,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #420 `docs: calibrate Sokrates prioritization rules`
 - PR #421 `docs: add refactor completion inventory`
 - PR #422 `refactor: split ranking list helpers`
+- PR #423 `refactor: split master data bootstrap normalization helpers`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -386,10 +387,12 @@ Latest technical assessment decision:
   active backlog plus explicit parked triggers. `RankingService` pure helper
   extraction has moved ranking list helpers into `ranking-list.helpers.ts`;
   `RankingService` stays focused on repository reads, KPI profile/scoring
-  orchestration, and response assembly. The S02 slice moves
+  orchestration, and response assembly. The S02 slice moved
   `MasterDataBootstrapService` normalization/hash/read helpers into
-  `master-data-bootstrap-normalization.helpers.ts`; the next active refactor
-  candidate is `ReportingService` test-map or one pure helper
+  `master-data-bootstrap-normalization.helpers.ts`. The current S03 slice moves
+  KPI config resolve/default/metadata/validation helpers out of
+  `ReportingService` into `reporting-kpi-config.helpers.ts`; after that, the
+  next active refactor candidate is `IntegrationService` pure mapping/helper
   extraction. UI page splits are parked while the user prepares a larger
   page/content redesign. Auth-admin writes, workforce command lifecycles,
   competition scoring/finalization, materialization, snapshots, and generator

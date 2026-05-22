@@ -59,7 +59,7 @@ This snapshot is a triage input, not a mandate to split every file.
 | --- | ---: | --- | --- |
 | `backend/nestjs/src/openapi/generate-openapi.ts` | 4967 | generator infrastructure | Park unless schema generation bug or reviewability blocker appears. |
 | `admin-web/e2e/store-surfaces.spec.ts` | 4034 | broad E2E safety net | Park unless gate time/flakiness or reviewability becomes a real blocker. |
-| `backend/nestjs/src/modules/store-ops/application/reporting.service.ts` | 1701 | backend application orchestration | Active candidate, but start with inventory/test-map or pure helper extraction only. |
+| `backend/nestjs/src/modules/store-ops/application/reporting.service.ts` | 1613 | backend application orchestration | S03 KPI config helper extraction is done; park further reporting movement unless a concrete scoring/reporting trigger appears. |
 | `admin-web/src/pages/MasterDataBootstrapPage.tsx` | 1690 | redesign-sensitive UI page | Park until the upcoming page/content redesign touches it or a blocking UX bug appears. |
 | `admin-web/e2e/competition-surfaces.spec.ts` | 1557 | broad competition E2E | Park unless gate time/flakiness or helper extraction evidence appears. |
 | `backend/nestjs/src/modules/integration/application/integration.service.ts` | 1408 | mixed read/write orchestration | Active only for pure mapping/helper extraction; park command behavior. |
@@ -185,7 +185,7 @@ Result:
 
 Risk: MEDIUM to HIGH
 
-Status: Next active refactor candidate.
+Status: Done by the KPI config helper extraction slice.
 
 Why not first:
 
@@ -203,9 +203,23 @@ Guardrails:
 - Do not change KPI scoring, benchmark math, live/closed fallback, personnel
   profile access, response shape, API path, auth, or DB behavior.
 
+Result:
+
+- KPI config row resolution, default config assembly, published-version metadata
+  mapping, and KPI config input validation now live in
+  `reporting-kpi-config.helpers.ts`.
+- `ReportingService` still owns repository orchestration, KPI highlights,
+  performance profiles, live/closed leaderboard fallback, and response assembly.
+- KPI scoring, benchmark math, live/closed fallback, personnel profile access,
+  API response shape, auth, DB, and frontend behavior are unchanged.
+- Current line-count shape after the slice: `reporting.service.ts` roughly 1613
+  lines and `reporting-kpi-config.helpers.ts` roughly 241 lines.
+
 ### S04: IntegrationService Pure Mapping Helper Extraction
 
 Risk: MEDIUM
+
+Status: Next active refactor candidate.
 
 Allowed only when:
 
