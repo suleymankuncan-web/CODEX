@@ -230,6 +230,20 @@ Satir sayisi tek basina kalite olcusu degildir, ama reviewability ve
 maintainability icin erken uyari sinyalidir. Bu limitler soft guardrail'dir:
 asildiginda otomatik rewrite degil, Sokrates triage gerekir.
 
+File Size Guard V1 bu prensibi otomatik kontrol eder. Guard
+`scripts/file-size-guard.test.mjs` icindedir ve `npm.cmd run test:scripts`
+ile calisir.
+
+Kural:
+
+- Yeni aktif source dosyalari standart limitleri asamaz.
+- Mevcut buyuk dosyalar frozen baseline olarak kalabilir, ama buyuyemez.
+- Bir baseline dosyasi kuculup standart limite girerse exception kaldirilir.
+- Limit asimi gerekiyorsa once Sokrates triage yapilir: gerekce, alternatif,
+  rollback ve dogrulama netlesmeden guard gevsetilmez.
+- Generated OpenAPI/type dosyalari guard disindadir; source generator dosyalari
+  generated sayilmaz ve baseline ile dondurulur.
+
 Genel kural:
 
 - Yeni dosyalar mumkunse 300 satirin altinda kalir.

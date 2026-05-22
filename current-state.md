@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #422, the Product Readiness V1 first-pass closeout, Operations Control Tower
+PR #426, the Product Readiness V1 first-pass closeout, Operations Control Tower
 readiness line, Sokrates/discipline operating docs, current workspace hygiene,
 the Clerk persona staging evidence runbook, the generated system-flow map, and
 the production evidence closure joint plan plus Redis/BullMQ, alert-provider,
@@ -31,14 +31,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-22, `origin/main` has been fetched through PR #425. The root
-checkout was clean `main` and aligned with `origin/main` before this final
-docs-only refactor closeout note.
+As of 2026-05-22, `origin/main` has been fetched through PR #426. The root
+checkout was clean `main` and aligned with `origin/main` before the File Size
+Guard V1 follow-up branch.
 
 Latest merge on main:
 
 ```text
-aad6e23d refactor: split integration read model helpers
+47dec704 docs: close refactor completion state
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -183,6 +183,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #423 `refactor: split master data bootstrap normalization helpers`
 - PR #424 `refactor: split reporting kpi config helpers`
 - PR #425 `refactor: split integration read model helpers`
+- PR #426 `docs: close refactor completion state`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -402,6 +403,11 @@ Latest technical assessment decision:
   page/content redesign. Auth-admin writes, workforce command lifecycles,
   competition scoring/finalization, materialization, snapshots, and generator
   scripts remain parked until a concrete trigger and verification ladder exist.
+- File Size Guard V1 prevents the same refactor debt from silently returning:
+  `scripts/file-size-guard.test.mjs` runs through `npm.cmd run test:scripts`.
+  New active source files must stay within standard budgets, and existing
+  oversized source files are frozen at their current baseline instead of being
+  allowed to grow.
 - Growth foundation docs are planned through PR #363:
   rules/config boundary, operations control tower V1, authorization matrix drift
   guard, cross-domain data quality inventory, and frontend TypeScript
