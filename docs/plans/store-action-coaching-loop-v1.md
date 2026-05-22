@@ -535,6 +535,28 @@ Evidence:
 - `admin-web/src/pages/StoreTasksPage.tsx`
 - `docs/evidence/store-action-v1b-store-tasks-list-v1.md`
 
+## V1B Write UI Go/No-Go
+
+The next Store Action step is not a broad lifecycle UI. It is a conditional GO
+only for one create-only Store Tasks slice from existing KPI exception
+candidates.
+
+Decision:
+
+- GO for `POST /api/store-actions/plans` frontend usage only when the source is
+  an existing `kpi_exception` candidate.
+- GO for one explicit create affordance with title, summary, due date, priority,
+  and existing source context.
+- GO for refetching the Store Action plan list and workflow inbox after a
+  successful create.
+- NO-GO for status, close, cancel, comments, attachments, notifications,
+  escalation, non-KPI sources, new routes, DB migration, auth semantics,
+  workflow state-machine changes, scoring rules, or API response-shape changes.
+
+Evidence:
+
+- `docs/evidence/store-action-v1b-write-ui-go-no-go-v1.md`
+
 ## Data Placement Draft
 
 V1A read-only:
