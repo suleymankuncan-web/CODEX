@@ -517,6 +517,9 @@ Decision:
 
 - List plans from the generated `/api/store-actions/plans` contract.
 - Keep the panel read-only in this slice.
+- Use response `meta` to show total/range and previous/next paging instead of
+  hiding records behind a fixed first-page cap.
+- Render `sourceDeepLink` only when it is a safe in-app path.
 - Keep create/status/close/cancel UI for a later write-risk slice.
 - Keep auth semantics, DB schema, API response shape, workflow inbox lifecycle,
   KPI scoring, checklist scoring, target approval, and broad redesign out of

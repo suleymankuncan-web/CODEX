@@ -11,12 +11,16 @@ import type { AppLocale } from '../../lib/i18n'
 import type { TranslateFunction } from '../localization/dictionary'
 import type {
   StoreActionPlan,
+  StoreActionPlanList,
   StoreActionPlanPriority,
   StoreActionPlanStatus,
 } from './api'
 
+type StoreActionPlanListMeta = StoreActionPlanList['meta']
+
 export function StoreActionPlansPanel(input: {
   plans: readonly StoreActionPlan[]
+  meta: StoreActionPlanListMeta | undefined
   isLoading: boolean
   isError: boolean
   isFetching: boolean
@@ -24,7 +28,11 @@ export function StoreActionPlansPanel(input: {
   locale: AppLocale
   t: TranslateFunction
   onRetry: () => void
+  onPreviousPage: () => void
+  onNextPage: () => void
 }) {
+  const displayedCount = input.meta?.total ?? input.plans.length
+
   return (
     <section className="panel">
       <div className="panel-heading">
@@ -33,17 +41,19 @@ export function StoreActionPlansPanel(input: {
           <h3>{input.t('storeTasks.actionPlansTitle')}</h3>
         </div>
         <StatusPill tone={input.plans.length > 0 ? 'warning' : 'neutral'}>
-          {input.t('storeTasks.actionPlansCount', { count: input.plans.length })}
+          {input.t('storeTasks.actionPlansCount', { count: displayedCount })}
         </StatusPill>
       </div>
 
       {renderPanelBody(input)}
+      {renderPagination(input)}
     </section>
   )
 }
 
 function renderPanelBody(input: {
   plans: readonly StoreActionPlan[]
+  meta: StoreActionPlanListMeta | undefined
   isLoading: boolean
   isError: boolean
   isFetching: boolean
@@ -51,6 +61,8 @@ function renderPanelBody(input: {
   locale: AppLocale
   t: TranslateFunction
   onRetry: () => void
+  onPreviousPage: () => void
+  onNextPage: () => void
 }) {
   if (input.isLoading) {
     return (
@@ -104,11 +116,63 @@ function renderPanelBody(input: {
   )
 }
 
+function renderPagination(input: {
+  plans: readonly StoreActionPlan[]
+  meta: StoreActionPlanListMeta | undefined
+  isLoading: boolean
+  isError: boolean
+  isFetching: boolean
+  t: TranslateFunction
+  onPreviousPage: () => void
+  onNextPage: () => void
+}) {
+  if (input.isLoading || input.isError || !input.meta || input.meta.total === 0) {
+    return null
+  }
+
+  const start = input.meta.offset + 1
+  const end = input.meta.offset + input.meta.count
+  const canGoPrevious = input.meta.offset > 0
+  const canGoNext = end < input.meta.total
+
+  return (
+    <div className="queue-meta">
+      <span>
+        {input.t('storeTasks.actionPlansRange', {
+          start,
+          end,
+          total: input.meta.total,
+        })}
+      </span>
+      <div className="action-cluster">
+        <button
+          type="button"
+          className="control-button"
+          disabled={!canGoPrevious || input.isFetching}
+          onClick={input.onPreviousPage}
+        >
+          {input.t('storeTasks.actionPlansPrevious')}
+        </button>
+        <button
+          type="button"
+          className="control-button"
+          disabled={!canGoNext || input.isFetching}
+          onClick={input.onNextPage}
+        >
+          {input.t('storeTasks.actionPlansNext')}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function StoreActionPlanRow(input: {
   plan: StoreActionPlan
   locale: AppLocale
   t: TranslateFunction
 }) {
+  const safeSourceDeepLink = getSafeSourceDeepLink(input.plan.sourceDeepLink)
+
   return (
     <article className="stacked-row">
       <div className="stacked-row-head">
@@ -145,8 +209,8 @@ function StoreActionPlanRow(input: {
       </div>
 
       <div className="action-cluster">
-        {input.plan.sourceDeepLink ? (
-          <Link className="control-button store-shell-link" to={input.plan.sourceDeepLink}>
+        {safeSourceDeepLink ? (
+          <Link className="control-button store-shell-link" to={safeSourceDeepLink}>
             {input.t('storeTasks.actionPlansOpenSource')}
           </Link>
         ) : (
@@ -155,6 +219,21 @@ function StoreActionPlanRow(input: {
       </div>
     </article>
   )
+}
+
+function getSafeSourceDeepLink(input: string | null) {
+  if (!input || !input.startsWith('/') || input.startsWith('//')) {
+    return null
+  }
+
+  for (let index = 0; index < input.length; index += 1) {
+    const codePoint = input.charCodeAt(index)
+    if (codePoint <= 31 || codePoint === 127) {
+      return null
+    }
+  }
+
+  return input
 }
 
 function mapStoreActionPlanStatusTone(status: StoreActionPlanStatus): Tone {
