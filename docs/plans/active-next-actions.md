@@ -12,21 +12,25 @@ As of 18 May 2026, the production readiness roadmap has a decision packet:
   `docs/evidence/readiness/2026-05-18-production-readiness-decision.md`
 - Local code and release gate: `Go`
 - Controlled staging/internal hardening: `Conditional Go`
-- Controlled pilot expansion: `No-Go` until real staging auth/action and protected-route evidence is captured
+- Controlled pilot expansion: `Conditional Go` for existing scoped pilot users
+  after Clerk persona/action, protected-route load, and safe upload evidence;
+  still no broad production
 - Broad production rollout: `No-Go`
 
-The next useful work is evidence capture, not another local guard by reflex.
-There are six external evidence gaps. Treat them as 3 pilot-expansion-first
-items plus 3 broad-production/operational hardening items:
+The next useful work is evidence capture and targeted blocker repair, not
+another local guard by reflex. The original six external evidence gaps are now
+partly closed; keep the remaining work split between pilot-expansion follow-up
+and broad-production/operational hardening.
 
-Tier A - controlled pilot expansion first:
+Tier A - controlled pilot expansion follow-up:
 
-1. Real staging auth/action smoke with sanitized evidence. Use
-   `docs/plans/clerk-persona-staging-evidence-runbook-v1.md` to create Clerk
-   personas, bind app roles/scopes, run token/action smokes, and store only
-   sanitized evidence.
-2. Protected route load smoke with role-specific staging bearer tokens.
-3. Authenticated integration-admin upload smoke with a safe sample file.
+1. Fix the staging `GET /api/integrations/import-batches` HTTP `500` before
+   treating import batch list/readback as operator evidence.
+2. Dedicated integration-admin persona proof if strict non-super-admin upload
+   evidence is required. The existing super-admin pilot session has already
+   proven a safe staging upload smoke.
+3. Keep using `docs/plans/clerk-persona-staging-evidence-runbook-v1.md` for any
+   new persona onboarding or role/scope evidence.
 
 Tier B - broad-production/operational hardening:
 
@@ -44,9 +48,14 @@ Tier B - broad-production/operational hardening:
 - Staging public health/deployed readiness are reachable, but health still
   reports process-local queue, Redis skipped, and log-only observability.
 - Alert routing still lacks external provider delivery proof.
-- Supabase restore, authenticated integration-admin upload, Redis/BullMQ health,
-  and role-specific protected route load budget evidence remain input-blocked
-  until real provider/restore/token/upload inputs are supplied.
+- Protected route load smoke and a safe staging upload smoke are now recorded in
+  `docs/evidence/readiness/2026-05-22-live-evidence-proof-pass.md`.
+- `GET /api/integrations/import-batches` currently returns HTTP `500` in
+  staging while `/integrations/import-batches/overview` returns `200`; debug the
+  list read model before treating import list readback as operator evidence.
+- Supabase restore, Redis/BullMQ health, external alert delivery, and a
+  dedicated non-super-admin integration-admin persona remain open until real
+  inputs are supplied.
 
 As of 6 May 2026, the competition package planning flow, Operational Feed V1, DM/CONFIG boundary decision, competition read polish, Turkish UI Localization Foundation V1, Local Keycloak real-provider/action smoke, Daily Closure Ranking V2 Explainability, Score Meaning V1, KPI Source Semantics V1, Store Score Threshold Language V1, KPI Interpretation Governance V1, KPI Config Editor Governance Preview V1, Ranking Completeness Segment Readiness V1, Shared Inbox Maturity V1, Store UX TR-First Copy V1, KPI Config Versioning V1, Source-Agnostic Ingest Contract Hardening V1, KPI Raw Row Lineage Persistence V1, Import Lineage Evidence Surface V1, Audit Event Taxonomy Guard V1, Data Quality Guard V1, Import Batch Quality Summary V1, Project-Wide Scope/Auth Guard Scan V1, No-Empty-Scope Repository Contract Pass V1, Production Environment Readiness Checklist V1, Environment Variable Inventory + Deployment Runbook Skeleton V1, Environment Drift Guard V1, Production/Staging Incident Response Skeleton V1, Personnel Management V1, Personnel Request Return/Resubmit V1, Personnel Master Data Bootstrap V1 planning, Project MVP Focus Map, Excel KPI Import V1, Excel KPI Import Operator Runbook V1, Production-Ready Migration System V1, Production Security Gate V1-A, Mobile Auth/Session V1 P0, Mobile API/BFF Endpoint Inventory V1, Checklist Acknowledgement Canonical Schema Alignment V1, Mobile Checklist Today V1 Design, Mobile Checklist Today V1, Checklist Store Score Integration V1, KPI Benchmark Scoring V1, Target Reference Control Surface V1, Target Coverage V1-B Readiness Signals, Personnel Master Data Bootstrap Staging Foundation V1, Ranking Included Snapshot Contract V1, Monthly Ranking Score Source Contract V1, Ranking Score Explanation Copy V1, Master Data Bootstrap Promotion Safety Guard V1, External ID Code Normalization Guard V1, Source-Agnostic Import Boundary V1, Master Data Bootstrap Admin Dry-Run Evidence V1, Master Data Bootstrap Pilot Smoke Runbook V1, Import Decision Evidence V1, Scope/Auth Regression Matrix V1, DB Health And Migration Evidence V1, Test Suite Hygiene V1, Import Batch Source Test Split V1, Import Batch Evidence Test Split V1, Competition Repository Test Split V1, Competition Stage Package Plan Test Split V1, Snapshot Run Read Model Test Split V1, Competition Service Team Template Test Split V1, Auth Action Scope Test Split V1, Operator Evidence Consistency Pass V1, Backup Restore Drill Runbook V1, Backup Restore Local Drill Evidence V1, Migration Fresh DB Smoke V1, Migration Smoke Release Preflight Policy V1, Master Data Validation/Promotion Test Split V1, Controlled Pilot Operating Checklist V1, Controlled Pilot Feedback Log Guard V1, and Staging Auth Session Edge Evidence Guard V1 have:
 

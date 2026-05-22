@@ -768,9 +768,17 @@ missing item is one of these external proofs.
   observability `log-only`.
 - Alert routing passes metadata/backend-health checks but external provider
   delivery is still not configured.
-- Supabase restore, authenticated integration-admin upload, Redis/BullMQ health,
-  and role-specific protected route load budgets still need real inputs before
-  broad production can move out of `No-Go`.
+- A follow-up live proof pass is recorded in
+  `docs/evidence/readiness/2026-05-22-live-evidence-proof-pass.md`.
+- Protected route load smoke and safe staging upload smoke are now proven.
+- Dedicated non-super-admin `INTEGRATION_ADMIN` persona proof is still missing
+  because active staging role assignments include no `INTEGRATION_ADMIN`.
+- Import batch list read model returns HTTP `500` while
+  `/integrations/import-batches/overview` returns `200`; fix this before using
+  import batch list/readback as operator evidence.
+- Supabase restore, external alert provider delivery, and Redis/BullMQ
+  broad-production health still need real inputs before broad production can
+  move out of `No-Go`.
 
 GSD notes:
 

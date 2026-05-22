@@ -98,12 +98,19 @@ test('handoff docs keep post-merge readiness evidence tiers clear', () => {
   requireText(debtLedger, 'PR #240 merged')
   requireText(readinessProgress, '| 12 | Final Go/No-Go Readiness Packet | Merged (#240) |')
 
+  requireText(currentState, 'There are six external evidence gaps')
+  requireText(currentState, 'Tier A - controlled pilot expansion first')
+  requireText(currentState, 'Real staging auth/action smoke with sanitized evidence.')
+  requireText(currentState, 'Protected route load smoke with role-specific staging bearer tokens.')
+  requireText(currentState, 'Authenticated integration-admin upload smoke with a safe sample file.')
+
+  requireText(activeNextActions, 'The original six external evidence gaps are now')
+  requireText(activeNextActions, 'Tier A - controlled pilot expansion follow-up')
+  requireText(activeNextActions, 'Fix the staging `GET /api/integrations/import-batches` HTTP `500`')
+  requireText(activeNextActions, 'Dedicated integration-admin persona proof if strict non-super-admin upload')
+  requireText(activeNextActions, 'docs/evidence/readiness/2026-05-22-live-evidence-proof-pass.md')
+
   for (const text of [currentState, activeNextActions]) {
-    requireText(text, 'There are six external evidence gaps')
-    requireText(text, 'Tier A - controlled pilot expansion first')
-    requireText(text, 'Real staging auth/action smoke with sanitized evidence.')
-    requireText(text, 'Protected route load smoke with role-specific staging bearer tokens.')
-    requireText(text, 'Authenticated integration-admin upload smoke with a safe sample file.')
     requireText(text, 'Tier B - broad-production/operational hardening')
     requireText(text, 'Supabase staging restore drill into an approved disposable target.')
     requireText(text, 'Alert/error-tracking destination proof or accepted log-retention evidence.')
