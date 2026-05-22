@@ -13,6 +13,7 @@ Decision source:
 Current outcome source:
 
 - `docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-round-1-outcome.md` - Controlled Pilot Round 1 Outcome
+- `docs/evidence/pilot-readiness/2026-05-22-controlled-pilot-round-2-stabilization.md` - Controlled Pilot Round 2 technical stabilization
 
 Pilot decision:
 
@@ -417,3 +418,4 @@ Next action:
 | 2026-05-05 | Continue controlled pilot after route smoke | Product owner confirmed `/store/kpis` has no issue and `/store/rankings` behaves as expected for low-role summary plus managed-store detail. | Continue pilot feedback collection; next focus is user-facing wording/data trust issues. |
 | 2026-05-06 | Controlled Pilot Round 1 Outcome | `docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-round-1-outcome.md` records `Continue` for the same controlled staging/internal pilot scope with no active route blocker remaining from Round 1. | Continue collecting Round 2 feedback in this log; run `npm.cmd run check:pilot-stabilization` before any new invite wave or deploy that can affect pilot routes. |
 | 2026-05-06 | Continue controlled pilot after Round 2 role browser check | Product owner confirmed admin, store manager, store personnel, and region manager / BM identities are OK on the checked staging routes; all current pilot users checked in this pass are OK. `/store/approvals` for `STORE_PERSONNEL` is UX cleanup only. | Keep collecting Round 2 feedback; batch approvals visibility cleanup with a navigation/UX slice if needed. |
+| 2026-05-22 | Controlled Pilot Round 2 technical stabilization | `docs/evidence/pilot-readiness/2026-05-22-controlled-pilot-round-2-stabilization.md` records local pilot gate stability and public staging/deploy health after PR #409-#412. | Continue the same controlled pilot scope; do not count protected load, external alert delivery, Supabase restore, or Redis/BullMQ as closed without the required inputs. |

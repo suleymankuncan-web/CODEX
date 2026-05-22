@@ -708,6 +708,13 @@ The current controlled pilot Round 1 outcome note is
 Controlled Pilot Round 1 Outcome: `Continue` with the same controlled
 staging/internal pilot scope. No active route blocker remains from Round 1.
 
+The current controlled pilot Round 2 technical stabilization note is
+`docs/evidence/pilot-readiness/2026-05-22-controlled-pilot-round-2-stabilization.md`.
+Controlled Pilot Round 2 technical stabilization: `Continue` with the same
+controlled staging/internal pilot scope. It proves local pilot gate stability
+and public staging/deploy health; it does not prove fresh protected route load
+with role-specific bearer tokens.
+
 The active controlled pilot feedback log is
 `docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md`.
 
@@ -794,6 +801,14 @@ missing item is one of these external proofs.
   `/integrations/import-batches?limit=5`,
   `/integrations/import-batches?sourceCode=power-bi-kpi&limit=5`, and
   `/integrations/import-batches/overview`.
+- Controlled Pilot Round 2 technical stabilization is recorded in
+  `docs/evidence/pilot-readiness/2026-05-22-controlled-pilot-round-2-stabilization.md`:
+  `check:pilot-stabilization` passed with 14/14 contract checks and 7/7 pilot
+  Playwright tests, deployed readiness passed 13/14 with auth/session skipped
+  because no `READINESS_BEARER_TOKEN` was present, public backend readiness
+  load passed while protected groups were correctly skipped, and alert routing
+  passed backend-health checks while external provider delivery remained
+  unconfigured.
 - Supabase restore, external alert provider delivery, Redis/BullMQ
   broad-production health, and any future import/upload role-delegation change
   still need real inputs and explicit verification before broad production can
@@ -1303,6 +1318,7 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md` - Controlled Pilot Feedback Log
 - `docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-conditional-go-consolidation.md` - Controlled Pilot Conditional Go Consolidation
 - `docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-round-1-outcome.md` - Controlled Pilot Round 1 Outcome
+- `docs/evidence/pilot-readiness/2026-05-22-controlled-pilot-round-2-stabilization.md` - Controlled Pilot Round 2 Stabilization Evidence
 - `docs/flows/README.md` - Store Ops System Flow generator note
 - `docs/flows/store-ops-system-flow.html` - source-derived frontend/API/backend flow map
 - `docs/flows/store-ops-system-flow.json` - machine-readable system flow inventory
