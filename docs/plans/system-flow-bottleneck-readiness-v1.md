@@ -244,8 +244,10 @@ Current evidence:
 - The gap check explicitly avoids adding another fetch to the multi-domain
   aggregator without a proven missing signal, owner, threshold decision, and
   verification path.
-- Auth/session runtime evidence remains parked for Milestone 7 because real
-  Clerk/persona inputs are required.
+- Auth/session runtime evidence is no longer parked for the existing pilot
+  persona set: fresh Clerk persona evidence is recorded in
+  `docs/evidence/system-flow/clerk-persona-live-evidence-2026-05-22.md`.
+  New account onboarding and non-pilot personas remain separate scoped work.
 
 ### 6. Store Placeholder Route Decision
 
@@ -310,14 +312,20 @@ Verification:
 Current evidence:
 
 - `docs/evidence/system-flow/clerk-persona-evidence-status-v1.md` records the
-  current Milestone 7 status.
+  original Milestone 7 blocker status.
+- `docs/evidence/system-flow/clerk-persona-live-evidence-2026-05-22.md`
+  supersedes the blocker with fresh live evidence.
 - Existing controlled staging Clerk evidence exists for the four pilot persona
   set in the May 2026 pilot-readiness notes.
-- A fresh current-session Clerk persona smoke cannot be produced from this
-  shell because the local-only bearer token and assigned/unassigned store
-  inputs are absent.
-- The token-scope smoke fails closed without `AUTH_SMOKE_BEARER_TOKEN`; no fake
-  token, mock JWT, provider subject, or secret evidence was created.
+- Fresh current-session Clerk persona smoke now exists for the four pilot
+  personas, using real Clerk browser sessions and sanitized evidence.
+- Store manager action-scope proof passed with assigned-store `200` and
+  unassigned-store `403`.
+- Deployed readiness was rerun with a real token and passed `14/14`, including
+  backend auth/session.
+- No duplicate Clerk accounts were created because the existing staging pilot
+  accounts already produce valid real tokens and are DB-bound to the expected
+  roles/scopes.
 
 ## PR Rhythm
 
