@@ -31,14 +31,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-22, `origin/main` has been fetched through PR #424. Before the
-current integration read-model helper branch, the root checkout was clean `main`
-and aligned with `origin/main`.
+As of 2026-05-22, `origin/main` has been fetched through PR #425. The root
+checkout was clean `main` and aligned with `origin/main` before this final
+docs-only refactor closeout note.
 
 Latest merge on main:
 
 ```text
-08c4b3f3 refactor: split reporting kpi config helpers
+aad6e23d refactor: split integration read model helpers
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -182,6 +182,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #422 `refactor: split ranking list helpers`
 - PR #423 `refactor: split master data bootstrap normalization helpers`
 - PR #424 `refactor: split reporting kpi config helpers`
+- PR #425 `refactor: split integration read model helpers`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -392,10 +393,10 @@ Latest technical assessment decision:
   `MasterDataBootstrapService` normalization/hash/read helpers into
   `master-data-bootstrap-normalization.helpers.ts`. The S03 slice moved
   KPI config resolve/default/metadata/validation helpers out of
-  `ReportingService` into `reporting-kpi-config.helpers.ts`. The current S04
-  slice moves IntegrationService read-model mappers and supported lookup lists
-  into `integration-read-model.helpers.ts`; after that, there is no normal
-  active refactor candidate left. Test-suite helper extraction remains
+  `ReportingService` into `reporting-kpi-config.helpers.ts`. The S04 slice moved
+  IntegrationService read-model mappers and supported lookup lists into
+  `integration-read-model.helpers.ts`. There is no normal active refactor
+  candidate left. Test-suite helper extraction remains
   conditional on real gate pain/flakiness. UI page splits are parked while the
   user prepares a larger
   page/content redesign. Auth-admin writes, workforce command lifecycles,
