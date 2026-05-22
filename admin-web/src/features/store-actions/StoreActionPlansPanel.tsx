@@ -93,6 +93,15 @@ function renderPanelBody(input: {
     )
   }
 
+  if (input.plans.length === 0 && (input.meta?.total ?? 0) > 0) {
+    return (
+      <EmptyState
+        title={input.t('storeTasks.actionPlansPageStaleTitle')}
+        copy={input.t('storeTasks.actionPlansPageStaleCopy')}
+      />
+    )
+  }
+
   if (input.plans.length === 0) {
     return (
       <EmptyState

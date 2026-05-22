@@ -519,6 +519,9 @@ Decision:
 - Keep the panel read-only in this slice.
 - Use response `meta` to show total/range and previous/next paging instead of
   hiding records behind a fixed first-page cap.
+- If the current page becomes empty while `meta.total` still reports records,
+  clamp back to the nearest earlier available page instead of showing a true
+  empty-list state.
 - Render `sourceDeepLink` only when it is a safe in-app path.
 - Keep create/status/close/cancel UI for a later write-risk slice.
 - Keep auth semantics, DB schema, API response shape, workflow inbox lifecycle,

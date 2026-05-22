@@ -49,11 +49,13 @@ Added:
 - Store Tasks integration for a read-only plan panel and metric.
 - Meta-backed total/range display and previous/next paging for the read-only
   list, so the page does not hide records beyond the first API page.
+- Out-of-range page recovery when the current page becomes empty while the API
+  still reports records on earlier pages.
 - Guarded source navigation: `sourceDeepLink` renders only when it is a safe
   in-app path.
 - Store Tasks localization copy.
 - Playwright coverage for persisted action plan read-only rendering,
-  pagination, and unsafe source-link handling.
+  pagination, out-of-range recovery, and unsafe source-link handling.
 
 Intentionally unchanged:
 

@@ -82,6 +82,36 @@ export function StoreTasksPage(input: {
   )
   const storeActionPlansMeta = storeActionPlansQuery.data?.meta
   const storeActionPlansTotal = storeActionPlansMeta?.total ?? storeActionPlans.length
+  useEffect(() => {
+    if (
+      !storeActionPlansEnabled ||
+      storeActionPlansQuery.isFetching ||
+      !storeActionPlansMeta ||
+      storeActionPlans.length > 0 ||
+      storeActionPlansMeta.total === 0 ||
+      storeActionPlansOffset === 0
+    ) {
+      return
+    }
+
+    const lastAvailableOffset =
+      Math.floor((storeActionPlansMeta.total - 1) / STORE_ACTION_PLAN_PAGE_SIZE) *
+      STORE_ACTION_PLAN_PAGE_SIZE
+    const previousPageOffset = Math.max(0, storeActionPlansOffset - STORE_ACTION_PLAN_PAGE_SIZE)
+    const nextOffset = Math.min(lastAvailableOffset, previousPageOffset)
+
+    const timeoutId = window.setTimeout(() => {
+      setStoreActionPlansOffset(nextOffset)
+    }, 0)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [
+    storeActionPlans.length,
+    storeActionPlansEnabled,
+    storeActionPlansMeta,
+    storeActionPlansOffset,
+    storeActionPlansQuery.isFetching,
+  ])
   const sortedItems = useMemo(() => {
     const urgencyRank = { high: 0, medium: 1, low: 2 }
     const statusRank = { needs_attention: 0, informational: 1, completed: 2 }

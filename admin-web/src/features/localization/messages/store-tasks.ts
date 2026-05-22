@@ -73,6 +73,9 @@ export const storeTasksTr = {
   'storeTasks.actionPlansEmptyTitle': 'Kayitli aksiyon plani yok',
   'storeTasks.actionPlansEmptyCopy':
     'Bir KPI sapmasi icin plan olusturuldugunda bu okunur listede gorunur.',
+  'storeTasks.actionPlansPageStaleTitle': 'Plan sayfasi yenileniyor',
+  'storeTasks.actionPlansPageStaleCopy':
+    'Bu sayfadaki kayitlar degismis olabilir; liste onceki uygun sayfaya cekiliyor.',
   'storeTasks.actionPlansNoSummary': 'Plan ozeti yok',
   'storeTasks.actionPlansStore': 'Magaza',
   'storeTasks.actionPlansDueOn': 'Termin',
@@ -230,6 +233,9 @@ export const storeTasksEn: Record<keyof typeof storeTasksTr, string> = {
   'storeTasks.actionPlansEmptyTitle': 'No persisted action plans',
   'storeTasks.actionPlansEmptyCopy':
     'Plans created from KPI deviations will appear in this read-only list.',
+  'storeTasks.actionPlansPageStaleTitle': 'Refreshing plan page',
+  'storeTasks.actionPlansPageStaleCopy':
+    'Records on this page may have changed; the list is returning to the nearest available page.',
   'storeTasks.actionPlansNoSummary': 'No plan summary',
   'storeTasks.actionPlansStore': 'Store',
   'storeTasks.actionPlansDueOn': 'Due date',

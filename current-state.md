@@ -1476,7 +1476,7 @@ Store Action V1A status:
   without adding create/status/close/cancel UI, auth semantic changes, DB
   migration, workflow lifecycle changes, or broad redesign. PR #440 review
   hardening added safe in-app `sourceDeepLink` rendering, meta-backed
-  total/range paging, and the pilot smoke API fixture for
+  total/range paging with stale-page recovery, and the pilot smoke API fixture for
   `/api/store-actions/plans`.
 
 Current user direction on 2026-05-18:

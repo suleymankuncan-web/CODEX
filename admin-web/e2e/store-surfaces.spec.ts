@@ -2065,6 +2065,49 @@ test('store tasks hides unsafe persisted action plan source links', async ({ pag
   await expect(actionPlansPanel.getByText('No source link')).toBeVisible()
 })
 
+test('store tasks recovers when the current action plan page becomes empty', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'en')
+  })
+  await page.unroute('**/api/store-actions/plans**')
+  await page.route('**/api/store-actions/plans**', async (route) => {
+    const offset = Number(new URL(route.request().url()).searchParams.get('offset') ?? '0')
+
+    if (offset === 20) {
+      await route.fulfill({
+        json: {
+          items: [],
+          meta: { count: 0, total: 20, limit: 20, offset: 20 },
+        },
+      })
+      return
+    }
+
+    await route.fulfill({
+      json: {
+        items: [
+          {
+            ...storeActionPlansFixture.items[0],
+            actionPlanId: '00000000-0000-0000-0000-00000000a001',
+            title: 'First page recovery plan',
+          },
+        ],
+        meta: { count: 20, total: 21, limit: 20, offset: 0 },
+      },
+    })
+  })
+
+  await page.goto('/store/tasks')
+
+  const actionPlansPanel = page.locator('.panel').filter({ hasText: 'Persisted follow-up' })
+  await expect(actionPlansPanel.getByText('First page recovery plan')).toBeVisible()
+  await actionPlansPanel.getByRole('button', { name: 'Next' }).click()
+
+  await expect(actionPlansPanel.getByText('First page recovery plan')).toBeVisible()
+  await expect(actionPlansPanel.getByText('No persisted action plans')).toHaveCount(0)
+  await expect(actionPlansPanel.getByText('1-20 / 21')).toBeVisible()
+})
+
 test('store tasks lets managers retry after the queue load fails', async ({ page }) => {
   let inboxAttempts = 0
   let allowInbox = false
