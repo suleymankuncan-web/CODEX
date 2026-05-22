@@ -24,9 +24,8 @@ and broad-production/operational hardening.
 
 Tier A - controlled pilot expansion follow-up:
 
-1. Verify staging `GET /api/integrations/import-batches` after the SQL
-   qualification fix deploys; only then treat import batch list/readback as
-   operator evidence.
+1. Import batch list/readback operator evidence is now closed by PR #409 plus
+   live Clerk readback after Render deploy.
 2. Dedicated integration-admin persona proof if strict non-super-admin upload
    evidence is required. The existing super-admin pilot session has already
    proven a safe staging upload smoke.
@@ -51,10 +50,11 @@ Tier B - broad-production/operational hardening:
 - Alert routing still lacks external provider delivery proof.
 - Protected route load smoke and a safe staging upload smoke are now recorded in
   `docs/evidence/readiness/2026-05-22-live-evidence-proof-pass.md`.
-- `GET /api/integrations/import-batches` returned HTTP `500` in staging while
-  `/integrations/import-batches/overview` returned `200`; the root-cause fix
-  qualifies shared join columns in the list query, and staging readback still
-  needs rerun after deploy.
+- `GET /api/integrations/import-batches` previously returned HTTP `500` in
+  staging while `/integrations/import-batches/overview` returned `200`; PR #409
+  qualifies shared join columns in the list query. After Render deploy, real
+  Clerk readback returned HTTP `200` for the list, source-filtered list, and
+  overview endpoints.
 - Supabase restore, Redis/BullMQ health, external alert delivery, and a
   dedicated non-super-admin integration-admin persona remain open until real
   inputs are supplied.

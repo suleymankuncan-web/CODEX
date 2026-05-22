@@ -776,9 +776,12 @@ missing item is one of these external proofs.
 - Import batch list read model previously returned HTTP `500` while
   `/integrations/import-batches/overview` returned `200`. Root cause was the
   list query selecting shared join columns without `stg.import_batch`
-  qualification. The fix qualifies list SELECT/ORDER BY columns and adds a
-  regression test; rerun staging readback after deploy before treating this as
-  closed operator evidence.
+  qualification. PR #409 fixed this with qualified list SELECT/ORDER BY columns
+  and a regression test. After Render deploy, real Clerk readback at
+  `2026-05-22T07:33:11.089Z` returned HTTP `200` for
+  `/integrations/import-batches?limit=5`,
+  `/integrations/import-batches?sourceCode=power-bi-kpi&limit=5`, and
+  `/integrations/import-batches/overview`.
 - Supabase restore, external alert provider delivery, and Redis/BullMQ
   broad-production health still need real inputs before broad production can
   move out of `No-Go`.

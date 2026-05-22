@@ -71,7 +71,7 @@ Stop rule used:
 | Protected route load smoke | Proven | Real store-manager and super-admin Clerk tokens ran role-specific backend read-load groups successfully. |
 | Authenticated upload smoke | Proven with existing super-admin pilot session | `POST /api/integrations/power-bi-export-upload` returned `201` with one safe staging CSV row against `power-bi-kpi`. |
 | Dedicated integration-admin persona | Still missing | Active staging role-assignment query found `0` active `INTEGRATION_ADMIN` assignments. |
-| Import batch list read model | New blocker | `GET /api/integrations/import-batches` returned `500`; `/overview` returned `200`. |
+| Import batch list read model | Fixed and live-verified | PR #409 qualified shared list-query columns; live Clerk readback returned `200` for list, source-filtered list, and overview. |
 | Redis/BullMQ broad-production health | Still missing | `/api/health` reports `queueBackend=in-memory`, `process-local`, Redis `skipped`. |
 | Alert backend health signal | Proven | `smoke:alert-routing` passed backend health signal with HTTP `200`. |
 | External alert provider delivery | Still missing | Provider delivery remains `not-configured`; provider metadata skipped. |
@@ -157,12 +157,12 @@ Decision:
   requires upload to be proven through a non-super-admin `INTEGRATION_ADMIN`
   account.
 
-## New Finding: Import Batch List 500
+## Import Batch List 500 Follow-Up
 
 After the upload smoke, read-only verification was attempted through import
 batch list endpoints.
 
-Result:
+Initial result:
 
 - `GET /api/integrations/import-batches?limit=5`: HTTP `500`,
   `INTERNAL_SERVER_ERROR`.
@@ -170,16 +170,31 @@ Result:
   `500`, `INTERNAL_SERVER_ERROR`.
 - `GET /api/integrations/import-batches/overview`: HTTP `200`.
 
+Root cause and fix:
+
+- PR #409 fixed the list read model by qualifying shared joined columns with
+  `stg.import_batch` in the list SELECT and ORDER BY query path.
+- Regression coverage now asserts that the list query selects
+  `stg.import_batch.import_batch_id`,
+  `stg.import_batch.integration_source_id`, and
+  `stg.import_batch.entity_type`.
+
+Live readback after Render deploy:
+
+- Evidence time: `2026-05-22T07:33:11.089Z`.
+- Merge commit: `0971883f6a876086225b68c2e47a08aaba29d013`.
+- Real Clerk super-admin browser session was used.
+- Raw bearer token stayed in local process memory and was not printed.
+- `GET /api/auth/session`: HTTP `200`.
+- `GET /api/integrations/import-batches?limit=5`: HTTP `200`.
+- `GET /api/integrations/import-batches?sourceCode=power-bi-kpi&limit=5`:
+  HTTP `200`.
+- `GET /api/integrations/import-batches/overview`: HTTP `200`.
+
 Decision:
 
-- This is a real operator-readiness blocker for the import batch list surface.
-- It does not invalidate the upload `201`, but it blocks clean operator
-  verification through the list read model until fixed.
-
-Next exact action:
-
-- Debug the staging/backend import batch list path and add a regression test
-  for the `GET /api/integrations/import-batches` read model.
+- Import batch list/readback operator evidence is now fixed and live-verified.
+- This closes the new list-read blocker found during the upload smoke.
 
 ## Redis And Durable Queue Proof
 
@@ -277,7 +292,6 @@ Why broad production is still No-Go:
 - Redis/BullMQ durable queue health is not proven.
 - Supabase restore drill is not proven.
 - External alert delivery is not proven.
-- Import batch list read model currently returns HTTP `500`.
 - Dedicated `INTEGRATION_ADMIN` persona proof is not available if strict
   role-specific upload evidence is required.
 
