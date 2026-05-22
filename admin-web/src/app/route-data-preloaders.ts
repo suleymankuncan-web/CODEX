@@ -1,6 +1,10 @@
 import type { QueryClient, QueryKey } from '@tanstack/react-query'
 import { getAuthLookups, type AuthSessionSummary } from '../features/auth/api'
-import { canReadChecklistResults, hasAnyRole } from '../features/auth/authorization'
+import {
+  canListTargetDistributionRequests,
+  canReadChecklistResults,
+  hasAnyRole,
+} from '../features/auth/authorization'
 import {
   getChecklistAcknowledgements,
   getMobileChecklistToday,
@@ -119,6 +123,10 @@ function resolveRoutePrefetchTasks(
   }
 
   if (pathname === '/store/approvals') {
+    if (!canListTargetDistributionRequests(authSummary)) {
+      return []
+    }
+
     return getStoreApprovalsPrefetchTasks(authSummary)
   }
 

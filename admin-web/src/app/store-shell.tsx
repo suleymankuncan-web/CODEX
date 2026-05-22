@@ -2,6 +2,7 @@ import { Suspense, useState, type ReactNode } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { ScreenState } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
+import { canListTargetDistributionRequests } from '../features/auth/authorization'
 import { useLocalization } from '../features/localization/useLocalization'
 import {
   StoreApprovalsPage,
@@ -42,10 +43,16 @@ export function StoreShell(input: {
   const storeMeRoute = location.pathname === '/store/me'
   const storePersonnelRoute = location.pathname.startsWith('/store/personnel/')
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
-  const storeRoute = (element: ReactNode, options?: { allowVm?: boolean }) => (
+  const storeRoute = (element: ReactNode, options?: {
+    allowVm?: boolean
+    allowed?: boolean
+    firstAllowedPath?: string
+  }) => (
     <StoreRouteGuard
       authSummary={input.authSummary}
       {...(options?.allowVm === undefined ? {} : { allowVm: options.allowVm })}
+      {...(options?.allowed === undefined ? {} : { allowed: options.allowed })}
+      {...(options?.firstAllowedPath === undefined ? {} : { firstAllowedPath: options.firstAllowedPath })}
     >
       {element}
     </StoreRouteGuard>
@@ -143,7 +150,13 @@ export function StoreShell(input: {
             />
             <Route
               path="/store/approvals"
-              element={storeRoute(<StoreApprovalsPage authSummary={input.authSummary} />)}
+              element={storeRoute(
+                <StoreApprovalsPage authSummary={input.authSummary} />,
+                {
+                  allowed: canListTargetDistributionRequests(input.authSummary),
+                  firstAllowedPath: input.firstAllowedPath,
+                },
+              )}
             />
             <Route
               path="/store/incentives"

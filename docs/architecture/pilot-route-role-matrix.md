@@ -27,7 +27,7 @@
 | `/store` | store | core | authenticated store shell session | first landing for store roles | must return to same route after auth verification | current store shell overview | yes |
 | `/store/me` | store | core | `STORE_MANAGER`, `STORE_PERSONNEL` | direct navigation or store landing link | must return to same route after auth verification | current employee performance only | yes |
 | `/store/rankings` | store | core | `STORE_MANAGER`, `STORE_PERSONNEL`, `REGION_MANAGER`, `SUPER_ADMIN` | direct navigation or store landing link | must return to same route after auth verification | top 100 for store roles, full list for privileged roles | yes |
-| `/store/approvals` | store | core | `STORE_MANAGER`, `SUPER_ADMIN` with assigned action store | direct navigation or store landing link | must return to same route after auth verification | assigned action store requests | yes |
+| `/store/approvals` | store | core | `STORE_MANAGER`, `REGION_MANAGER`, `REPORT_VIEWER`, `SUPER_ADMIN`; write actions remain action-store scoped | direct navigation or store landing link for eligible roles only | must return to same route after auth verification | target/workforce request ledger by read/action scope | yes |
 | `/store/checklists` | store | secondary | `STORE_MANAGER`, `STORE_PERSONNEL`, `VISUAL_MERCHANDISER` | first landing for visual merchandiser-only sessions | must return to same route after auth verification | checklist tasks by store scope | yes |
 | `/store/tasks` | store | secondary | authenticated store shell session except visual merchandiser-only | direct navigation only | must return to same route after auth verification | current store tasks | no |
 | `/store/kpis` | store | secondary | authenticated store shell session except visual merchandiser-only | direct navigation only | must return to same route after auth verification | current store KPI highlights | no |
@@ -54,3 +54,5 @@ Current landing resolution in `admin-web/src/App.tsx`:
 - No route should be removed from navigation until this matrix is reviewed.
 - `needs decision` screens stay visible until a product decision moves them to `core`, `ops`, `secondary`, or `legacy/pilot`.
 - Store role detail visibility is enforced by page/API access rules, not by hiding the route alone.
+- `STORE_PERSONNEL` is intentionally excluded from `/store/approvals` until a
+  scoped read-only personnel approvals product requirement exists.

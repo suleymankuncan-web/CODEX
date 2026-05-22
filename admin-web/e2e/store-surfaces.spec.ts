@@ -630,6 +630,40 @@ test('store personnel sidebar only exposes personnel surfaces', async ({ page })
   await expect(storeNav.locator('a[href="/store/kpis"]')).toHaveCount(0)
   await expect(storeNav.locator('a[href="/store/approvals"]')).toHaveCount(0)
   await expect(storeNav.locator('a[href="/store/tasks"]')).toHaveCount(0)
+  await expect(page.locator('a[href="/store/approvals"]')).toHaveCount(0)
+})
+
+test('store personnel cannot open approvals by direct route', async ({ page }) => {
+  let targetDistributionRequests = 0
+
+  await page.unroute('**/api/auth/session')
+  await page.unroute('**/api/target-distributions/requests**')
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      json: {
+        ...authSessionFixture,
+        user: {
+          ...authSessionFixture.user,
+          roleCodes: ['STORE_PERSONNEL'],
+          actionScope: {
+            assignedStoreIds: [demoStoreId],
+          },
+          assignedStoreIds: [demoStoreId],
+        },
+      },
+    })
+  })
+  await page.route('**/api/target-distributions/requests**', async (route) => {
+    targetDistributionRequests += 1
+    await route.fulfill({ json: targetDistributionRequestsFixture })
+  })
+
+  await page.goto('/store/approvals')
+
+  await expect(page.getByRole('heading', { name: /rota kullanılamaz/i })).toBeVisible()
+  await expect(page.getByText('/store/me')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Talepler / Onaylar' })).toHaveCount(0)
+  expect(targetDistributionRequests).toBe(0)
 })
 
 test('visual merchandiser lands on checklist-only shell from store root', async ({ page }) => {

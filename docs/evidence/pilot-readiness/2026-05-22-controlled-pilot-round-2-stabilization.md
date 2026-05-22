@@ -189,8 +189,8 @@ Next work should be one of:
 - collect the next real pilot user feedback session in the feedback log,
 - run role-specific protected backend load when fresh bearer tokens are
   intentionally provided,
-- address `PILOT-005` only if `/store/approvals` visibility for
-  `STORE_PERSONNEL` becomes confusing in real pilot use,
+- keep the 2026-05-22 `PILOT-005` route/link cleanup monitored during store
+  personnel feedback,
 - keep broad-production evidence parked until Supabase restore, Redis/BullMQ,
   and alert provider inputs exist.
 
