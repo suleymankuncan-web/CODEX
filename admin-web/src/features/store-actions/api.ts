@@ -12,6 +12,14 @@ export type StoreActionPlanPriority = StoreActionPlan['priority']
 export type StoreActionPlanStatus = StoreActionPlan['status']
 export type CreateStoreActionPlanInput = ApiMutationBody<'/api/store-actions/plans', 'POST'>
 export type CreateStoreActionPlanResponse = ApiMutationResponse<'/api/store-actions/plans', 'POST'>
+export type UpdateStoreActionPlanStatusInput = ApiMutationBody<
+  '/api/store-actions/plans/{actionPlanId}/status',
+  'PATCH'
+>
+export type UpdateStoreActionPlanStatusResponse = ApiMutationResponse<
+  '/api/store-actions/plans/{actionPlanId}/status',
+  'PATCH'
+>
 
 export function listStoreActionPlans(input: {
   storeId?: string
@@ -33,6 +41,17 @@ export function createStoreActionPlan(input: CreateStoreActionPlanInput) {
   return sendOpenApiJson('/api/store-actions/plans', {
     method: 'POST',
     body: input,
+  })
+}
+
+export function updateStoreActionPlanStatus(input: {
+  actionPlanId: string
+  body: UpdateStoreActionPlanStatusInput
+}) {
+  return sendOpenApiJson('/api/store-actions/plans/{actionPlanId}/status', {
+    method: 'PATCH',
+    params: { actionPlanId: input.actionPlanId },
+    body: input.body,
   })
 }
 
