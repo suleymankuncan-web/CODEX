@@ -124,29 +124,29 @@ export class ImportBatchReadRepository {
     }>(
       `
         SELECT
-          import_batch_id,
-          integration_source_id,
+          stg.import_batch.import_batch_id,
+          stg.import_batch.integration_source_id,
           src.source_code,
           src.source_name,
-          entity_type,
-          source_batch_id,
-          source_payload_hash,
-          source_captured_at,
-          source_window_started_at,
-          source_window_ended_at,
-          started_at,
-          finished_at,
-          status,
-          raw_file_name,
-          record_count,
-          error_count,
-          retry_count,
-          last_retried_at
+          stg.import_batch.entity_type,
+          stg.import_batch.source_batch_id,
+          stg.import_batch.source_payload_hash,
+          stg.import_batch.source_captured_at,
+          stg.import_batch.source_window_started_at,
+          stg.import_batch.source_window_ended_at,
+          stg.import_batch.started_at,
+          stg.import_batch.finished_at,
+          stg.import_batch.status,
+          stg.import_batch.raw_file_name,
+          stg.import_batch.record_count,
+          stg.import_batch.error_count,
+          stg.import_batch.retry_count,
+          stg.import_batch.last_retried_at
         FROM stg.import_batch
         INNER JOIN stg.integration_source src
           ON src.integration_source_id = stg.import_batch.integration_source_id
         ${whereClause}
-        ORDER BY started_at DESC, import_batch_id DESC
+        ORDER BY stg.import_batch.started_at DESC, stg.import_batch.import_batch_id DESC
         LIMIT $${params.length + 1}
         OFFSET $${params.length + 2}
       `,
