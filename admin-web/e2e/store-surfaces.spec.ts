@@ -1933,7 +1933,7 @@ test('store tasks renders persisted action plans from the workflow inbox', async
             inboxStatus: 'needs_attention',
             urgency: 'high',
             createdAt: '2026-05-22T08:00:00.000Z',
-            needsAttentionAt: '2026-05-24',
+            needsAttentionAt: '2026-05-24T12:00:00.000Z',
             actorRole: 'STORE_MANAGER',
             primaryActionLabel: 'Open action plan',
             secondaryActionLabel: 'Review source',

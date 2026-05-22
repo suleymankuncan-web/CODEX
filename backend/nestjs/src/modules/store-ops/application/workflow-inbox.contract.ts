@@ -204,7 +204,7 @@ export function toStoreActionPlanInboxItem(
     inboxStatus: isActive ? "needs_attention" : "completed",
     urgency: overdue || item.priority === "high" ? "high" : item.priority,
     createdAt: item.createdAt,
-    needsAttentionAt: item.dueOn,
+    needsAttentionAt: toDateOnlyNoonUtcTimestamp(item.dueOn),
     actorRole: "STORE_MANAGER",
     primaryActionLabel: isActive ? "Open action plan" : "Review action plan",
     secondaryActionLabel: "Review source",
@@ -222,4 +222,12 @@ function isDateBeforeToday(value: string, now: Date) {
 
   const todayTime = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
   return dueTime < todayTime;
+}
+
+function toDateOnlyNoonUtcTimestamp(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+
+  return `${value}T12:00:00.000Z`;
 }

@@ -70,6 +70,9 @@ Backend:
     plans for the shared inbox.
   - high priority or overdue plans become high urgency.
   - deep link: `/store/tasks?actionPlan=<actionPlanId>`
+  - date-only `dueOn` values are emitted as explicit noon-UTC timestamps in
+    `needsAttentionAt` so frontend date-time formatting does not shift the
+    calendar day in UTC-negative timezones.
 - Added `StoreActionPlanRepository.listWorkflowInboxPlans` for active queue
   reads.
 - `WorkflowInboxService` fetches action plans only for `STORE_MANAGER` and

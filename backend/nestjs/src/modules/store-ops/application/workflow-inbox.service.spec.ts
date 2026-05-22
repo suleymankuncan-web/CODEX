@@ -185,6 +185,7 @@ describe("WorkflowInboxService", () => {
         title: "Net sales follow-up",
         inboxStatus: "needs_attention",
         urgency: "high",
+        needsAttentionAt: "2026-05-24T12:00:00.000Z",
         deepLink: "/store/tasks?actionPlan=action-plan-1",
       }),
     ]);
