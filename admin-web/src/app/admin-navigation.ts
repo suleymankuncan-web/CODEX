@@ -9,6 +9,7 @@ import {
   KeyRound,
   Layers3,
   Megaphone,
+  MessageSquareWarning,
   ShieldCheck,
   SlidersHorizontal,
   Target,
@@ -37,6 +38,7 @@ type AdminNavIconId =
   | 'kpiConfig'
   | 'masterData'
   | 'operations'
+  | 'pilotFeedback'
   | 'reports'
   | 'session'
   | 'snapshots'
@@ -118,6 +120,13 @@ export const adminNavDefinitions: NavDefinition[] = [
     to: '/admin/kpi-config',
     icon: SlidersHorizontal,
     labelKey: 'adminShell.nav.kpiConfig',
+    roles: ['SUPER_ADMIN'],
+  },
+  {
+    id: 'pilotFeedback',
+    to: '/admin/pilot-feedback',
+    icon: MessageSquareWarning,
+    labelKey: 'adminShell.nav.pilotFeedback',
     roles: ['SUPER_ADMIN'],
   },
   {

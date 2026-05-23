@@ -80,6 +80,13 @@ Goal:
 - capture pilot feedback inside the product and make it classifiable as
   `P0 stop`, `P1 pilot blocker`, `P2 pilot friction`, or `P3 backlog`.
 
+Current status:
+
+- Backend foundation merged in PR #479 with create/list/classify API, storage,
+  OpenAPI coverage, audit events, and targeted backend tests.
+- Active frontend slice: generated client adoption, in-app feedback control,
+  SUPER_ADMIN triage queue, and targeted Playwright coverage.
+
 Source of truth:
 
 - controlled pilot feedback log remains the operating record until the in-app

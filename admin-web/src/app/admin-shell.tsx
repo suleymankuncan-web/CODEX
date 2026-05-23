@@ -2,6 +2,7 @@ import { Suspense, useState, type ReactNode } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { useLocalization } from '../features/localization/useLocalization'
+import { PilotFeedbackControl } from '../features/pilot-feedback/PilotFeedbackControl'
 import type { SessionMode } from '../features/session/session-storage'
 import { AdminSidebar } from './admin-sidebar'
 import type { NavDefinition } from './admin-navigation'
@@ -10,6 +11,7 @@ import {
   AdminFeedPage,
   AdminInboxPage,
   AdminKpiConfigPage,
+  AdminPilotFeedbackPage,
   AuditCenterPage,
   AuthActionStoreAssignmentAuditPage,
   AuthAssignmentAuditPage,
@@ -65,6 +67,7 @@ export function AdminShell(input: {
         collapsed={isSidebarCollapsed}
         onCollapsedChange={setIsSidebarCollapsed}
       />
+      {input.shellState.mode === 'ready' ? <PilotFeedbackControl /> : null}
 
       <main className="admin-command-main" aria-label={t('adminShell.adminWorkspaceAria')}>
         <RouteTransitionFrame>
@@ -148,6 +151,10 @@ export function AdminShell(input: {
             <Route
               path="/admin/kpi-config"
               element={adminRoute(['SUPER_ADMIN'], <AdminKpiConfigPage />)}
+            />
+            <Route
+              path="/admin/pilot-feedback"
+              element={adminRoute(['SUPER_ADMIN'], <AdminPilotFeedbackPage />)}
             />
             <Route
               path="/admin/auth"

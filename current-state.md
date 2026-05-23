@@ -8,6 +8,7 @@ execution evidence, and the active Clerk protected persona evidence matrix,
 the Controlled Pilot Dry Run V1 evidence refresh,
 the Controlled Pilot Scenario Rehearsal V1 runbook,
 the first Controlled Pilot Scenario Rehearsal V1 evidence pass,
+the Pilot Feedback backend foundation,
 the Product Readiness V1 first-pass closeout, Operations Control Tower
 readiness line, Sokrates/discipline operating docs, current workspace hygiene,
 the Clerk persona staging evidence runbooks, the generated system-flow map,
@@ -53,17 +54,22 @@ Primary app endpoints:
 
 As of 2026-05-23, `origin/main` includes the Controlled Pilot Scenario
 Rehearsal V1 runbook, the first evidence pass, the assisted persona route
-checks, the Store Action command smoke harness, and the Store Action live
-command proof. The root checkout is clean on `main` before starting new work.
+checks, the Store Action command smoke harness, the Store Action live command
+proof, and the Pilot Feedback backend foundation.
 
 Current maintenance branch:
 
-- None. Main is the current handoff baseline.
-- The latest merged docs-only slice recorded sanitized live staging Store
-  Action command proof: a real `STORE_MANAGER` token exercised assigned-store
-  create/status/close/cancel, while an unassigned-store create returned `403`.
-  This closes `PILOT-007` for the controlled pilot path without approving broad
-  production.
+- Active branch: `codex/pilot-feedback-frontend-v1`.
+- This branch adds the Pilot Feedback frontend loop on top of PR #479: generated
+  frontend client coverage, in-app feedback capture, SUPER_ADMIN triage queue,
+  and targeted Playwright coverage. It should stay limited to Pilot Feedback
+  UI/API-client adoption; do not mix Track 2 data-quality work into it.
+
+Latest project-growth merge:
+
+```text
+cc7cf13 feat: add pilot feedback backend foundation (#479)
+```
 
 Latest controlled-pilot evidence merge:
 
@@ -259,6 +265,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #463 `docs: stabilize handoff latest state`
 - PR #464 `docs: add controlled pilot scenario rehearsal`
 - PR #465 `docs: record controlled pilot rehearsal evidence`
+- PR #479 `feat: add pilot feedback backend foundation`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:

@@ -1,0 +1,119 @@
+.pilot-feedback-control {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 70;
+  display: grid;
+  justify-items: end;
+  gap: 0.5rem;
+  max-width: min(360px, calc(100vw - 2rem));
+}
+
+.pilot-feedback-trigger,
+.pilot-feedback-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 42px;
+  border: 1px solid rgba(15, 118, 110, 0.26);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--accent-strong);
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.16);
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.pilot-feedback-trigger {
+  padding: 0 0.95rem;
+}
+
+.pilot-feedback-close {
+  width: 40px;
+  padding: 0;
+}
+
+.pilot-feedback-trigger:focus-visible,
+.pilot-feedback-close:focus-visible {
+  outline: 3px solid rgba(15, 118, 110, 0.18);
+  border-color: rgba(15, 118, 110, 0.44);
+}
+
+.pilot-feedback-success {
+  border: 1px solid rgba(15, 118, 110, 0.22);
+  border-radius: 999px;
+  background: rgba(236, 253, 245, 0.96);
+  padding: 0.45rem 0.75rem;
+  color: var(--accent-strong);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.pilot-feedback-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  align-items: end;
+  justify-items: end;
+  background: rgba(15, 23, 42, 0.26);
+  padding: 1rem;
+}
+
+.pilot-feedback-dialog {
+  display: grid;
+  gap: 1rem;
+  width: min(520px, 100%);
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-card);
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.24);
+  padding: 1rem;
+}
+
+.pilot-feedback-dialog-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.85rem;
+}
+
+.pilot-feedback-dialog-head h3,
+.pilot-feedback-dialog-head p {
+  margin: 0;
+}
+
+.pilot-feedback-dialog-head p {
+  margin-top: 0.35rem;
+  color: var(--surface-muted);
+}
+
+.pilot-feedback-dialog .key-item {
+  min-width: 0;
+}
+
+.pilot-feedback-dialog .key-item strong {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 720px) {
+  .pilot-feedback-control {
+    right: 0.75rem;
+    bottom: 0.75rem;
+  }
+
+  .pilot-feedback-trigger span {
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .pilot-feedback-backdrop {
+    align-items: stretch;
+    padding: 0.75rem;
+  }
+}
