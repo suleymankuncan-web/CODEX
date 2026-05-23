@@ -29,6 +29,9 @@ Use these first:
 
 - V1A read-only candidates derive from KPI/reporting signals.
 - V1B persisted action plans support the narrow lifecycle already implemented.
+- V2A coaching detail is read-only and on-demand: `/store/tasks` may open the
+  existing plan detail endpoint for context, but it does not create comments,
+  attachments, escalation, notification, or new source-family behavior.
 - Assigned-store command access must pass; unassigned-store command access must
   fail closed.
 - Source families stay source-owned. Store Action should not become a generic
@@ -46,3 +49,7 @@ Use these first:
 
 Open those only with a source decision, auth/action-scope evidence, and a
 separate go/no-go note.
+
+## Latest Evidence
+
+- `docs/evidence/store-action-coaching-detail-v2a.md`

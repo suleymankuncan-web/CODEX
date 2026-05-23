@@ -17,6 +17,7 @@ import type {
 } from './api'
 import { StoreActionPlanCancelControl } from './StoreActionPlanCancelControl'
 import { StoreActionPlanCloseControl } from './StoreActionPlanCloseControl'
+import { StoreActionPlanDetailDisclosure } from './StoreActionPlanDetailDisclosure'
 import { StoreActionPlanStatusControl } from './StoreActionPlanStatusControl'
 
 type StoreActionPlanListMeta = StoreActionPlanList['meta']
@@ -242,6 +243,12 @@ function StoreActionPlanRow(input: {
           t={input.t}
         />
       </div>
+
+      <StoreActionPlanDetailDisclosure
+        plan={input.plan}
+        locale={input.locale}
+        t={input.t}
+      />
     </article>
   )
 }
