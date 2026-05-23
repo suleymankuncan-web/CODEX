@@ -936,9 +936,13 @@ missing item is one of these external proofs.
   Render Notifications delivered a staging backend deploy notification to
   Slack after the health check path was changed to `/api/health`. The alert
   routing smoke passed 5/5 with provider metadata and deployed backend health.
-  Email delivery was not observed and is not counted as proven. This proves one
-  staging external delivery path, not app-level error tracking or final
-  broad-production incident readiness.
+  The later alert email policy decision is recorded in
+  `docs/evidence/readiness/2026-05-23-alert-email-policy-decision-v1.md`.
+  Render email delivery is historically observed for failed `hr-axis-api`
+  deploys, with the closest sanitized example from 2026-05-18. Email delivery was not observed
+  for successful deploy events and is not required for incident readiness. This
+  proves staging platform notification paths, not app-level error tracking or
+  final broad-production incident readiness.
 - Supabase staging logical restore proof is recorded in
   `docs/evidence/readiness/2026-05-22-supabase-staging-logical-restore-drill.md`.
   A PostgreSQL 17 logical dump from the Supabase staging source restored into a
@@ -1695,6 +1699,7 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/plans/backup-restore-drill-runbook-v1.md` - Backup Restore Drill Runbook V1
 - `docs/plans/backup-restore-drill-local-evidence-2026-04-30.md` - Backup Restore Local Drill Evidence
 - `docs/evidence/readiness/2026-05-22-redis-bullmq-staging-proof.md` - Redis / BullMQ Staging Proof
+- `docs/evidence/readiness/2026-05-23-alert-email-policy-decision-v1.md` - Alert Email Policy Decision V1
 - `docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md` - Controlled Pilot Feedback Log
 - `docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-conditional-go-consolidation.md` - Controlled Pilot Conditional Go Consolidation
 - `docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-round-1-outcome.md` - Controlled Pilot Round 1 Outcome
