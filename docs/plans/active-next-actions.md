@@ -8,6 +8,9 @@ Documentation entry point:
 
 - `docs/README.md` is the library index for operating, pilot, readiness,
   architecture, domain, evidence, and historical shelves.
+- `docs/plans/project-control-board-v1.md` is the short current-mode board.
+- `docs/plans/decision-registry-v1.md` is the decision map.
+- `docs/plans/runbook-registry-v1.md` is the repeatable checklist map.
 
 ## Current Position
 
@@ -77,6 +80,12 @@ Tier B - broad-production/operational hardening:
 
 Operating plan:
 
+- `docs/plans/project-control-board-v1.md` is the short answer to "where are
+  we now and what is allowed?"
+- `docs/plans/decision-registry-v1.md` records active/parked/blocked decisions
+  and points to source documents.
+- `docs/plans/runbook-registry-v1.md` maps repeatable operator and evidence
+  procedures to the right runbook.
 - `docs/plans/controlled-pilot-execution-roadmap-v1.md` is the current control
   document for day-to-day pilot execution.
 - `docs/plans/production-evidence-closure-joint-plan-v1.md` remains the

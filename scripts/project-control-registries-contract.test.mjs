@@ -1,0 +1,122 @@
+import assert from 'node:assert/strict'
+import { existsSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import test from 'node:test'
+
+const workspaceRoot = join(import.meta.dirname, '..')
+
+function readText(path) {
+  return readFileSync(join(workspaceRoot, path), 'utf8')
+}
+
+function requirePath(path) {
+  assert.ok(existsSync(join(workspaceRoot, path)), `Missing expected path: ${path}`)
+}
+
+function requireText(text, value) {
+  assert.ok(text.includes(value), `Missing expected text: ${value}`)
+}
+
+const docs = {
+  library: readText('docs/README.md'),
+  currentState: readText('current-state.md'),
+  activeNextActions: readText('docs/plans/active-next-actions.md'),
+  decisionRegistry: readText('docs/plans/decision-registry-v1.md'),
+  runbookRegistry: readText('docs/plans/runbook-registry-v1.md'),
+  controlBoard: readText('docs/plans/project-control-board-v1.md'),
+}
+
+const controlDocs = [
+  'docs/plans/decision-registry-v1.md',
+  'docs/plans/runbook-registry-v1.md',
+  'docs/plans/project-control-board-v1.md',
+]
+
+test('project control docs are discoverable from operating handoff docs', () => {
+  for (const path of controlDocs) {
+    requirePath(path)
+    requireText(docs.library, path)
+    requireText(docs.currentState, path)
+    requireText(docs.activeNextActions, path)
+  }
+
+  requireText(docs.library, '### Operating Shelf')
+  requireText(docs.currentState, 'Project mode and go/no-go board')
+  requireText(docs.activeNextActions, 'is the short current-mode board')
+})
+
+test('decision registry keeps source documents and change triggers visible', () => {
+  for (const phrase of [
+    '# Decision Registry V1',
+    'Status: active',
+    'Shelf: operating',
+    'This registry is a map, not a replacement for the source documents.',
+    '| Decision | Status | Current stance | Source of truth | Change trigger |',
+    'Controlled pilot execution',
+    'Broad production rollout',
+    'Store Action V1B',
+    'Auth source of truth',
+    'Redis/BullMQ posture',
+    'Supabase recovery posture',
+    'UI redesign',
+    'Norm Kadro module',
+    '## Stop Rules',
+  ]) {
+    requireText(docs.decisionRegistry, phrase)
+  }
+
+  requireText(docs.decisionRegistry, 'Broad production rollout | blocked_external | No-Go.')
+  requireText(docs.decisionRegistry, 'JSON source integration | parked')
+})
+
+test('runbook registry maps procedures to inputs, output, and stop conditions', () => {
+  for (const phrase of [
+    '# Runbook Registry V1',
+    'Status: active',
+    'Shelf: operating',
+    '| Situation | Runbook | Required input | Output/evidence | Stop condition |',
+    'Continue controlled pilot',
+    'Prove Clerk persona route visibility',
+    'Prove Store Action command path',
+    'Check deployed readiness',
+    'Check alert routing',
+    'Check Redis/BullMQ posture',
+    'Prove Supabase restore posture',
+    'Generate system flow map',
+    'Guard docs library structure',
+    '## Evidence Safety',
+  ]) {
+    requireText(docs.runbookRegistry, phrase)
+  }
+
+  for (const forbiddenSecret of [
+    'raw bearer tokens',
+    'Clerk cookies',
+    'database URLs',
+    'Redis URLs',
+  ]) {
+    requireText(docs.runbookRegistry, forbiddenSecret)
+  }
+})
+
+test('project control board preserves current go no-go boundaries', () => {
+  for (const phrase of [
+    '# Project Control Board V1',
+    'Status: active',
+    'Shelf: operating',
+    'The project is in controlled pilot execution mode.',
+    'Controlled staging/internal pilot: `Conditional Go`.',
+    'Broad production rollout: `No-Go`.',
+    'Broad UI redesign: `Parked until user starts that track`.',
+    '## What We Do Now',
+    '## What We Do Not Do Now',
+    '## Go / No-Go Board',
+    '## Next Best Default Action',
+    '## Stop Rules',
+  ]) {
+    requireText(docs.controlBoard, phrase)
+  }
+
+  requireText(docs.controlBoard, 'Do not change auth, API response shape, DB, provider config')
+  requireText(docs.controlBoard, 'run a scoped pilot session')
+})
