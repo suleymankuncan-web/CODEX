@@ -16,6 +16,11 @@ alert-provider, Supabase restore, readiness profile reset, and Sokrates
 calibration proofs.
 It is the starting point for continuing in a fresh window.
 
+For the documentation library entry point, use `docs/README.md`. It maps the
+operating, pilot, readiness, architecture, domain, evidence, and historical
+shelves so future sessions do not have to rediscover the project by reading
+every plan.
+
 ## Active Workspace
 
 Use this workspace only:
@@ -1848,6 +1853,7 @@ canonical ledger counts.
 
 Keep these references because contract tests and future resumes depend on them:
 
+- `docs/README.md` - Documentation Library entry point
 - `docs/plans/backend-foundation-hardening-plan-v1.md` - Backend Foundation Hardening Plan V1
 - `docs/plans/backup-restore-drill-runbook-v1.md` - Backup Restore Drill Runbook V1
 - `docs/plans/backup-restore-drill-local-evidence-2026-04-30.md` - Backup Restore Local Drill Evidence

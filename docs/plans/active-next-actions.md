@@ -4,6 +4,11 @@
 
 This is the short working list for the next practical steps. It keeps the project from scattering into many half-started ideas.
 
+Documentation entry point:
+
+- `docs/README.md` is the library index for operating, pilot, readiness,
+  architecture, domain, evidence, and historical shelves.
+
 ## Current Position
 
 As of 23 May 2026, the project is no longer in generic foundation-building
