@@ -31,6 +31,7 @@ const authExpectedTestNames = [
   'rejects HR admin pilot user bindings outside the actor company scope',
   'rejects pilot user binding when provider subject is already linked',
   'creates a role assignment for a user',
+  'creates an HR admin role assignment for a company-scoped user',
   'rejects duplicate active role assignments',
   'rejects region-scoped role assignments when the region belongs to another company',
   'rejects store-scoped role assignments when the store hierarchy does not match',
@@ -306,7 +307,7 @@ test('auth admin integration tests are split without dropping test cases', () =>
     combinedText += `\n${text}`
   }
 
-  assert.equal(totalTests, 38)
+  assert.equal(totalTests, 39)
   for (const testName of authExpectedTestNames) {
     const exactOccurrences = [...combinedText.matchAll(new RegExp(`it\\("${testName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'g'))].length
     assert.equal(exactOccurrences, 1, `${testName} must appear exactly once`)

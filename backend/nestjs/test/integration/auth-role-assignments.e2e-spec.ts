@@ -9,6 +9,7 @@ describe("Auth role assignments", () => {
   const reportUserId = "90000000-0000-4000-8000-000000000002";
   const snapshotUserId = "90000000-0000-4000-8000-000000000003";
   const createdUserId = "90000000-0000-4000-8000-000000000004";
+  const hrUserId = "90000000-0000-4000-8000-000000000005";
   const pilotUserId = "90000000-0000-4000-8000-000000000101";
   const pilotEmployeeId = "70000000-0000-4000-8000-000000000101";
   const pilotProviderSubject = "2f7b9d1e-8a41-4c7e-9d63-0d6b3c9a5f22";
@@ -102,6 +103,97 @@ describe("Auth role assignments", () => {
       assignmentId,
       userId: reportUserId,
       roleCode: "REPORT_VIEWER",
+      scopeType: "company",
+      companyId,
+      regionId: null,
+      storeId: null,
+      effectiveFrom: "2026-04-17T20:00:00.000Z",
+      effectiveTo: null,
+      createdAt: "2026-04-17T20:00:00.000Z",
+      active: true,
+    });
+
+    await app.close();
+  });
+
+  it("creates an HR admin role assignment for a company-scoped user", async () => {
+    const query = jest.fn(async (sql: string) => {
+      if (sql.includes("FROM ops.user_account ua")) {
+        return { rowCount: 0, rows: [] };
+      }
+
+      if (sql.includes("FROM ops.company c")) {
+        return {
+          rowCount: 1,
+          rows: [{ company_id: companyId }],
+        };
+      }
+
+      if (sql.includes("FROM ops.role r") && sql.includes("WHERE r.role_code = $1")) {
+        return {
+          rowCount: 1,
+          rows: [{ role_id: "role-hr", role_code: "HR_ADMIN", role_scope_type: "company" }],
+        };
+      }
+
+      if (sql.includes("FROM ops.user_role_assignment ura") && sql.includes("active_assignment_count")) {
+        return {
+          rowCount: 1,
+          rows: [{ active_assignment_count: "0" }],
+        };
+      }
+
+      if (sql.includes("INSERT INTO ops.user_role_assignment")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              user_role_assignment_id: secondAssignmentId,
+              user_id: hrUserId,
+              role_code: "HR_ADMIN",
+              scope_type: "company",
+              company_id: companyId,
+              region_id: null,
+              store_id: null,
+              start_at: "2026-04-17T20:00:00.000Z",
+              end_at: null,
+              created_at: "2026-04-17T20:00:00.000Z",
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("INSERT INTO audit.event_log")) {
+        return { rowCount: 1, rows: [] };
+      }
+
+      return { rowCount: 0, rows: [] };
+    });
+
+    const app = await createIntegrationApp({
+      databaseService: {
+        query,
+        withTransaction: async <T>(work: (client: { query: typeof query }) => Promise<T>) =>
+          work({ query }),
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .post("/api/auth/role-assignments")
+      .set("x-user-id", adminUserId)
+      .set("x-role-codes", "SUPER_ADMIN")
+      .send({
+        userId: hrUserId,
+        roleCode: "HR_ADMIN",
+        scopeType: "company",
+        companyId,
+      });
+
+    expect(response.status).toBe(201);
+    expect(response.body.data.assignment).toEqual({
+      assignmentId: secondAssignmentId,
+      userId: hrUserId,
+      roleCode: "HR_ADMIN",
       scopeType: "company",
       companyId,
       regionId: null,

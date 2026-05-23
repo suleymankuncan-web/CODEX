@@ -662,7 +662,7 @@ export type components = {
     }
     "CreateRoleAssignmentDto": {
       "userId": string
-      "roleCode": "SUPER_ADMIN" | "INTEGRATION_ADMIN" | "SNAPSHOT_OPERATOR" | "REPORT_VIEWER" | "AUDITOR" | "REGION_MANAGER" | "STORE_MANAGER" | "STORE_PERSONNEL" | "VISUAL_MERCHANDISER"
+      "roleCode": "SUPER_ADMIN" | "HR_ADMIN" | "INTEGRATION_ADMIN" | "SNAPSHOT_OPERATOR" | "REPORT_VIEWER" | "AUDITOR" | "REGION_MANAGER" | "STORE_MANAGER" | "STORE_PERSONNEL" | "VISUAL_MERCHANDISER"
       "scopeType": "company" | "region" | "store"
       "companyId"?: string
       "regionId"?: string
