@@ -2,7 +2,8 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #445 plus the Store Action V1B Store Tasks cancel-reason UI closeout, the Product Readiness V1
+PR #445 plus the Store Action V1B Store Tasks cancel-reason UI closeout,
+Store Action test hygiene/visibility evidence, the Product Readiness V1
 first-pass closeout, Operations Control Tower readiness line,
 Sokrates/discipline operating docs, current workspace hygiene, the Clerk
 persona staging evidence runbook, the generated system-flow map, and the
@@ -32,9 +33,18 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-23, `origin/main` has been fetched through PR #445. The root
-checkout is clean `main` and aligned with `origin/main` after the Store Action
-V1B cancel-reason UI merge.
+As of 2026-05-23, the baseline before the current maintenance branch had
+`origin/main` fetched through PR #445. The root checkout was clean `main` and
+aligned with `origin/main` after the Store Action V1B cancel-reason UI merge.
+
+Current maintenance branch after PR #445:
+
+- `codex/night-maintenance-store-action-hygiene`
+- Scope: Store Action E2E test split, Store Action visibility evidence,
+  pilot-readiness note, Norm Kadro parked backlog entry, and project-wide bug
+  hunt evidence.
+- No product code, API response shape, auth semantics, DB migration, CSS, or
+  user-facing workflow behavior changes.
 
 Latest merge on main:
 
@@ -1529,6 +1539,17 @@ Store Action V1A status:
   create from KPI candidate, update active status, close with resolution note,
   and cancel with reason. The next Store Action work should be a new explicit
   decision, not automatic continuation.
+- Store Action test hygiene and visibility evidence branch split 13 plan
+  lifecycle tests from `admin-web/e2e/store-surfaces.spec.ts` into
+  `admin-web/e2e/store-action-plans.spec.ts`, reducing the broad spec by
+  676 lines by Node line count. It records that Store Action is visible on
+  `/store/tasks` for `STORE_MANAGER`/`SUPER_ADMIN` persisted-plan controls,
+  while `REPORT_VIEWER` only gets workflow inbox read visibility. Public staging
+  readiness and alert-routing smokes passed their tokenless checks; protected
+  persona evidence remains blocked without a secure token/session.
+  Evidence:
+  `docs/evidence/store-action-test-hygiene-and-visibility-v1.md` and
+  `docs/evidence/pilot-readiness/2026-05-23-store-action-visibility-readiness.md`.
 
 Current user direction on 2026-05-18:
 
@@ -1624,6 +1645,9 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-conditional-go-consolidation.md` - Controlled Pilot Conditional Go Consolidation
 - `docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-round-1-outcome.md` - Controlled Pilot Round 1 Outcome
 - `docs/evidence/pilot-readiness/2026-05-22-controlled-pilot-round-2-stabilization.md` - Controlled Pilot Round 2 Stabilization Evidence
+- `docs/evidence/pilot-readiness/2026-05-23-store-action-visibility-readiness.md` - Store Action visibility readiness
+- `docs/evidence/store-action-test-hygiene-and-visibility-v1.md` - Store Action test hygiene and visibility evidence
+- `docs/evidence/project-wide-bug-hunt-2026-05-23.md` - project-wide bug hunt pass
 - `docs/flows/README.md` - Store Ops System Flow generator note
 - `docs/flows/store-ops-system-flow.html` - source-derived frontend/API/backend flow map
 - `docs/flows/store-ops-system-flow.json` - machine-readable system flow inventory
