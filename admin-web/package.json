@@ -15,6 +15,7 @@
     "smoke:auth:staging": "node scripts/auth-live-smoke.mjs --staging",
     "smoke:auth:staging:action": "node scripts/auth-live-smoke.mjs --staging --include-action-smoke",
     "smoke:auth:staging:token-scope": "node scripts/auth-token-scope-smoke.mjs --staging",
+    "smoke:store-action:staging:command": "node scripts/store-action-command-smoke.mjs --staging",
     "smoke:ui": "npm run build && npm run test:e2e",
     "smoke:pilot": "npm run build && playwright test pilot-smoke.spec.ts pilot-api-contracts.spec.ts",
     "smoke:pilot:live": "node scripts/pilot-live-smoke.mjs",
