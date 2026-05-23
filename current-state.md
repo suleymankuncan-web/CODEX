@@ -7,6 +7,7 @@ test hygiene/visibility evidence, the Pilot Reliability Spine V1 docs, first
 execution evidence, and the active Clerk protected persona evidence matrix,
 the Controlled Pilot Dry Run V1 evidence refresh,
 the Controlled Pilot Scenario Rehearsal V1 runbook,
+the first Controlled Pilot Scenario Rehearsal V1 evidence pass,
 the Product Readiness V1 first-pass closeout, Operations Control Tower
 readiness line, Sokrates/discipline operating docs, current workspace hygiene,
 the Clerk persona staging evidence runbooks, the generated system-flow map,
@@ -1694,6 +1695,14 @@ Pilot Reliability Spine V1 current branch:
   `5/5`. Controlled internal pilot remains `Conditional Go / Continue`; broad
   production remains `No-Go`. The combined multi-context logout cleanup check
   was inconclusive and is not counted as proof.
+- Controlled Pilot Scenario Rehearsal V1 first evidence pass:
+  `docs/evidence/pilot-readiness/2026-05-23-controlled-pilot-scenario-rehearsal-v1.md`.
+  This read-only rehearsal evidence ran public staging readiness, alert routing
+  with backend health signal, public backend load, pilot stabilization, Store
+  Action frontend coverage, Store Action/workflow backend coverage, admin lint,
+  and generated API check. Protected persona phases were correctly recorded as
+  blocked/skipped in this pass because no secure role-specific token/session
+  input was available in the shell.
 
 Current user direction on 2026-05-18:
 
@@ -1797,6 +1806,7 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/evidence/pilot-readiness/2026-05-23-store-action-visibility-readiness.md` - Store Action visibility readiness
 - `docs/evidence/pilot-readiness/2026-05-23-pilot-reliability-spine-execution-v1.md` - Pilot Reliability Spine first execution evidence
 - `docs/evidence/pilot-readiness/2026-05-23-controlled-pilot-dry-run-v1.md` - Controlled Pilot Dry Run V1 evidence refresh
+- `docs/evidence/pilot-readiness/2026-05-23-controlled-pilot-scenario-rehearsal-v1.md` - Controlled Pilot Scenario Rehearsal V1 evidence
 - `docs/evidence/system-flow/clerk-persona-live-evidence-2026-05-23.md` - Fresh Clerk persona protected evidence
 - `docs/evidence/system-flow/clerk-region-manager-live-evidence-2026-05-23.md` - Fresh Region Manager protected evidence
 - `docs/evidence/pilot-evidence-operating-matrix-v1.md` - Pilot Evidence Operating Matrix V1

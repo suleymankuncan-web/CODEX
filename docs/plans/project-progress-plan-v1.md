@@ -147,6 +147,9 @@ Current runbook:
 - Controlled Pilot Scenario Rehearsal V1 provides the pilot-day moderator script
   for preflight, persona passes, cross-domain sanity, stop rules, and final
   Go / Conditional Go / Pause / No-Go decision.
+- The first read-only rehearsal evidence pass refreshed local/public gates and
+  recorded protected persona phases as blocked/skipped when this shell had no
+  secure role-specific token/session input.
 
 Missing:
 
@@ -645,6 +648,10 @@ Candidate next outputs:
   adding role-specific flows.
 - Use `docs/plans/controlled-pilot-scenario-rehearsal-v1.md` before asking real
   pilot users to rely on the system for a coordinated pilot session.
+- Use
+  `docs/evidence/pilot-readiness/2026-05-23-controlled-pilot-scenario-rehearsal-v1.md`
+  as the first rehearsal evidence baseline; rerun protected persona phases when
+  secure live sessions are available.
 - Use `docs/plans/feature-growth-checklist-v1.md` before starting Norm Kadro,
   Coaching, new reports, new workflow sources, or new module work.
 - Authorization matrix drift guard is already implemented as a docs/script
