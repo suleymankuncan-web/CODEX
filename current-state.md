@@ -2,9 +2,9 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #448 plus the Store Action V1B Store Tasks basic loop closeout, Store Action
-test hygiene/visibility evidence, the Pilot Reliability Spine V1 docs and first
-execution evidence,
+PR #449 plus the Store Action V1B Store Tasks basic loop closeout, Store Action
+test hygiene/visibility evidence, the Pilot Reliability Spine V1 docs, first
+execution evidence, and fresh Clerk persona protected evidence,
 the Product Readiness V1 first-pass closeout, Operations Control Tower
 readiness line, Sokrates/discipline operating docs, current workspace hygiene,
 the Clerk persona staging evidence runbooks, the generated system-flow map,
@@ -35,24 +35,25 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-23, the baseline before the current Pilot Reliability Spine
-execution branch had `origin/main` fetched through PR #448. The root checkout
-was clean `main` and aligned with `origin/main` after the Pilot Reliability
-Spine V1 docs merge.
+As of 2026-05-23, the baseline before the current Clerk persona evidence branch
+had `origin/main` fetched through PR #449. The root checkout was clean `main`
+and aligned with `origin/main` after the Pilot Reliability Spine first
+execution evidence merge.
 
-Current maintenance branch after PR #448:
+Current maintenance branch after PR #449:
 
-- `codex/pilot-reliability-spine-execution-v1`
-- Scope: docs-only first execution evidence for the Pilot Reliability Spine V1:
-  public deployed readiness, public backend load, alert-routing health, and
-  explicit protected/provider blockers.
+- `codex/clerk-persona-live-evidence-2026-05-23`
+- Scope: docs-only fresh Clerk persona protected evidence for the existing
+  staging pilot accounts: browser session/route checks, Store Action
+  assigned/unassigned action-scope read proof, deployed readiness with a real
+  token, and backend protected load with role-specific tokens.
 - No product code, API response shape, auth semantics, DB migration, CSS,
   provider config, or user-facing workflow behavior changes.
 
 Latest merge on main:
 
 ```text
-05bc76c4 docs: add pilot reliability spine (#448)
+de72b197 docs: record pilot reliability execution (#449)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -220,6 +221,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #446 `docs: close store action v1b handoff`
 - PR #447 `test: split store action plan coverage`
 - PR #448 `docs: add pilot reliability spine`
+- PR #449 `docs: record pilot reliability execution`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -238,7 +240,7 @@ frontend root, security headers, SPA fallback, and static assets passed.
 Current local hygiene state:
 
 - Root workspace `D:\store-ops-workspace` was clean on `main...origin/main` at
-  `05bc76c4` after PR #448 was merged and `origin/main` was fetched.
+  `de72b197` after PR #449 was merged and `origin/main` was fetched.
 - The previous dirty root state was not deleted. It was saved as stash
   `codex hygiene backup 2026-05-21 root dirty state`. Do not drop that stash
   unless the user explicitly approves.
@@ -1575,9 +1577,11 @@ Pilot Reliability Spine V1 current branch:
   auth/session skipped for missing `READINESS_BEARER_TOKEN`; public backend load
   health passed with p50 `101.9ms`, p95 `259.57ms`, and 0 5xx; alert routing
   passed tokenless checks but provider delivery was `not-configured`.
-- Current protected/provider blockers: fresh role-specific Clerk tokens, alert
-  provider metadata/delivery proof, disposable Supabase restore target, and
-  authenticated upload token/file. Do not treat skipped token checks as proof.
+- Current protected/provider blockers for this line: `HR_ADMIN` and
+  `REPORT_VIEWER` staging aliases/credentials if the full five-persona matrix
+  is required, plus any future alert provider, restore, or upload rerun inputs
+  that are not already provided securely. Do not treat skipped token checks as
+  proof.
 - First execution evidence:
   `docs/evidence/pilot-readiness/2026-05-23-pilot-reliability-spine-execution-v1.md`.
   Public deployed readiness passed `13/14`, public backend load health passed
@@ -1585,6 +1589,15 @@ Pilot Reliability Spine V1 current branch:
   passed `4/5`. Protected persona/load checks and provider delivery were
   correctly recorded as blocked/skipped because no secure token/provider inputs
   were present.
+- Fresh Clerk persona protected evidence:
+  `docs/evidence/system-flow/clerk-persona-live-evidence-2026-05-23.md`.
+  Four existing staging pilot accounts (`SUPER_ADMIN`, `REGION_MANAGER`,
+  `STORE_MANAGER`, and `STORE_PERSONNEL`) produced real Clerk sessions,
+  backend `/auth/session` responses, and same-session route allow/deny proof.
+  Store-manager assigned/unassigned action-scope read proof passed with `200`
+  and `403`; deployed readiness passed `14/14` with a real token; backend
+  protected load passed `5/5` groups with role-specific tokens. `HR_ADMIN` and
+  `REPORT_VIEWER` remain blocked until staging aliases/credentials exist.
 
 Current user direction on 2026-05-18:
 
@@ -1682,6 +1695,7 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/evidence/pilot-readiness/2026-05-22-controlled-pilot-round-2-stabilization.md` - Controlled Pilot Round 2 Stabilization Evidence
 - `docs/evidence/pilot-readiness/2026-05-23-store-action-visibility-readiness.md` - Store Action visibility readiness
 - `docs/evidence/pilot-readiness/2026-05-23-pilot-reliability-spine-execution-v1.md` - Pilot Reliability Spine first execution evidence
+- `docs/evidence/system-flow/clerk-persona-live-evidence-2026-05-23.md` - Fresh Clerk persona protected evidence
 - `docs/evidence/pilot-evidence-operating-matrix-v1.md` - Pilot Evidence Operating Matrix V1
 - `docs/evidence/store-action-test-hygiene-and-visibility-v1.md` - Store Action test hygiene and visibility evidence
 - `docs/evidence/project-wide-bug-hunt-2026-05-23.md` - project-wide bug hunt pass
