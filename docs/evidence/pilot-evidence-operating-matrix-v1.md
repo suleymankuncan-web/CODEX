@@ -52,9 +52,9 @@ Verification ladder:
 | --- | --- | --- | --- |
 | Local test | Unit, script, build, Playwright, and generated-contract checks run in this workspace. | Available and repeatable. Store Action lifecycle coverage is split into `admin-web/e2e/store-action-plans.spec.ts`; root script gates exist. | Run the relevant local gate before each PR. Record only command, date, result, and sanitized failures. |
 | Public staging | Deployed frontend/backend checks that do not need secrets. | Fresh tokenless public checks passed on 2026-05-23. | Run `smoke:deployed-readiness`, `smoke:alert-routing`, and public load smoke with staging URLs. |
-| Protected staging | Clerk/persona route visibility, backend endpoint access, read scope, and assigned-store action scope. | Fresh real Clerk proof exists from 2026-05-23 for the existing pilot accounts: `SUPER_ADMIN`, `REGION_MANAGER`, `STORE_MANAGER`, and `STORE_PERSONNEL`. `HR_ADMIN` and `REPORT_VIEWER` remain blocked by missing staging aliases/credentials. | Use the persona runbook with sanitized token handling. Never write raw bearer tokens, cookies, JWTs, auth codes, provider subject IDs, or private PII. |
+| Protected staging | Clerk/persona route visibility, backend endpoint access, read scope, and assigned-store action scope. | Fresh real Clerk proof exists from 2026-05-23 for the full current five-persona matrix: `SUPER_ADMIN`, `HR_ADMIN`, `STORE_MANAGER`, `STORE_PERSONNEL`, and `REPORT_VIEWER`. | Use the persona runbook with sanitized token handling. Never write raw bearer tokens, cookies, JWTs, auth codes, provider subject IDs, or private PII. |
 | Provider | Alert delivery, Redis/BullMQ, Supabase restore, upload provider path, Vercel/Render deployment evidence. | Mixed. Redis/BullMQ is live in health; alert routing is log-only/not-configured in the latest smoke; restore and upload require explicit inputs. | Use provider-specific runbooks and redact destinations/secrets. |
-| Blocked | Evidence that cannot be produced from the current shell without user/provider input. | Current blockers are missing `HR_ADMIN`/`REPORT_VIEWER` staging personas for the full matrix, provider metadata for alert delivery, disposable restore target, and authenticated upload inputs for any fresh upload rerun. | Record as blocker; do not fake. |
+| Blocked | Evidence that cannot be produced from the current shell without user/provider input. | Current blockers are provider metadata for alert delivery, disposable restore target, and authenticated upload inputs for any fresh upload rerun. The Clerk five-persona matrix is no longer blocked. | Record as blocker; do not fake. |
 | Outdated | Evidence that was valid for an older deploy/config but should not be used as current proof. | Older May 1-9 pilot/readiness notes remain useful history but are superseded for present rollout decisions. | Keep as history, and require fresh public/protected/provider evidence before widening pilot scope. |
 
 ## 2026-05-23 Fresh Public Evidence
@@ -146,27 +146,25 @@ Source:
 
 Result:
 
-- Existing pilot persona browser/session smoke: passed for `SUPER_ADMIN`,
-  `REGION_MANAGER`, `STORE_MANAGER`, and `STORE_PERSONNEL`.
-- Same-session route allow/deny checks: passed for the sampled admin and store
+- Full pilot persona browser/session smoke passed for `SUPER_ADMIN`,
+  `HR_ADMIN`, `STORE_MANAGER`, `STORE_PERSONNEL`, and `REPORT_VIEWER`.
+- Same-session route allow/deny checks passed for the sampled admin and store
   routes.
+- Report-viewer `/store/tasks` is intentionally read-only visible; Store Action
+  create/status/close/cancel controls were absent for that persona.
+- Non-super-admin auth-admin negative checks returned `403`.
 - Store-manager action-scope read: assigned store returned `200` with 7 rows;
   unassigned store returned `403` with `Out-of-scope store action`.
 - Deployed readiness with a real token: `14/14` passed, no skipped checks.
 - Backend protected load with role-specific tokens: `5/5` groups passed, no
   skipped groups.
-
-Still blocked:
-
-- `HR_ADMIN` and `REPORT_VIEWER` were not proven because no staging Clerk
-  alias/credential was found in repo evidence or the local environment.
 - This is controlled-pilot protected evidence, not broad-production approval.
 
 ## Current Blocker Register
 
 | Blocker | Why It Matters | Current Handling |
 | --- | --- | --- |
-| Fresh role-specific Clerk bearer/session tokens | Needed to prove protected route visibility, backend endpoint authorization, and assigned-store scoping after the latest deploy. | Closed for the existing pilot account set on 2026-05-23. `HR_ADMIN` and `REPORT_VIEWER` remain blocked until staging accounts/credentials exist. |
+| Fresh role-specific Clerk bearer/session tokens | Needed to prove protected route visibility, backend endpoint authorization, and assigned-store scoping after the latest deploy. | Closed for the current five-persona matrix on 2026-05-23. |
 | Alert provider metadata or panel proof | Needed to prove real external delivery, not only log-only alert routing. | Blocked for fresh proof. The latest public smoke says provider delivery is `not-configured`. |
 | Disposable Supabase restore target | Needed to prove managed restore without touching production/staging data. | Blocked until an explicitly disposable target is approved. |
 | Authenticated upload token and sample file | Needed to prove import upload authorization and resource guardrails on staging. | Blocked until a real allowed persona and file are provided. |
