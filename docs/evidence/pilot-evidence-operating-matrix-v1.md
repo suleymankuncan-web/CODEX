@@ -144,6 +144,7 @@ Source:
 
 - `docs/evidence/system-flow/clerk-persona-live-evidence-2026-05-23.md`
 - `docs/evidence/system-flow/clerk-region-manager-live-evidence-2026-05-23.md`
+- `docs/evidence/pilot-readiness/2026-05-23-controlled-pilot-dry-run-v1.md`
 
 Result:
 
@@ -162,6 +163,10 @@ Result:
   skipped groups.
 - Region-manager deployed readiness with a real token: `14/14` passed, no
   skipped checks.
+- Controlled Pilot Dry Run V1 refreshed the active six-persona route/session
+  matrix, non-super auth-admin `403` checks, Store Action assigned/unassigned
+  scope read, deployed readiness `14/14` with a real role token, and protected
+  backend load `5/5` without recording raw tokens or private IDs.
 - This is controlled-pilot protected evidence, not broad-production approval.
 
 ## Current Blocker Register
