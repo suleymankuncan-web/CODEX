@@ -5,6 +5,7 @@ It summarizes the recovered long Codex thread and the follow-up work through
 PR #452 plus the Store Action V1B Store Tasks basic loop closeout, Store Action
 test hygiene/visibility evidence, the Pilot Reliability Spine V1 docs, first
 execution evidence, and the active Clerk protected persona evidence matrix,
+the Controlled Pilot Dry Run V1 evidence refresh,
 the Product Readiness V1 first-pass closeout, Operations Control Tower
 readiness line, Sokrates/discipline operating docs, current workspace hygiene,
 the Clerk persona staging evidence runbooks, the generated system-flow map,
@@ -35,23 +36,23 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-23, `origin/main` was fetched through PR #459. The root checkout
-was clean after the pilot scenario and feature growth gates PR was merged.
+As of 2026-05-23, `origin/main` was fetched through PR #460. The root checkout
+was clean after the region manager live evidence PR was merged.
 
-Current maintenance branch after PR #459:
+Current maintenance branch after PR #460:
 
-- `codex/region-manager-live-evidence`
-- Scope: docs-only `REGION_MANAGER` live Clerk evidence closeout and stale
-  handoff cleanup. It records the fresh protected staging session, route
-  allow/deny checks, auth-admin `403` checks, deployed readiness `14/14`, and
-  current route-matrix landing behavior.
+- `codex/controlled-pilot-dry-run-v1`
+- Scope: docs-only controlled pilot dry-run plan/evidence refresh. It records
+  public staging readiness, alert-routing, backend load, local pilot gates,
+  sanitized six-persona Clerk route/session evidence, auth-admin `403`
+  negatives, Store Action scope checks, and the controlled-pilot decision.
 - No product code, API response shape, auth semantics, DB migration, CSS,
   provider config, or user-facing workflow behavior changes.
 
 Latest merge on main:
 
 ```text
-7f1a7f82 docs: add pilot scenario and feature growth gates (#459)
+7646f21b docs: record region manager live evidence (#460)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -230,6 +231,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #457 `docs: record supabase recovery posture`
 - PR #458 `docs: consolidate external evidence closure`
 - PR #459 `docs: add pilot scenario and feature growth gates`
+- PR #460 `docs: record region manager live evidence`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -1670,6 +1672,15 @@ Pilot Reliability Spine V1 current branch:
   `/admin/master-data`, and `/admin/integrations` showed the forbidden route
   state; sampled auth-admin endpoints returned `403`; deployed readiness passed
   `14/14`; and logout cleared bearer/provider token storage.
+- Controlled Pilot Dry Run V1 evidence refresh:
+  `docs/evidence/pilot-readiness/2026-05-23-controlled-pilot-dry-run-v1.md`.
+  This docs-only pass refreshed public staging smokes, local script/frontend/API
+  and backend targeted gates, sanitized six-persona Clerk route/session checks,
+  auth-admin `403` negatives, Store Action assigned/unassigned scope checks,
+  deployed readiness `14/14` with a real role token, and protected backend load
+  `5/5`. Controlled internal pilot remains `Conditional Go / Continue`; broad
+  production remains `No-Go`. The combined multi-context logout cleanup check
+  was inconclusive and is not counted as proof.
 
 Current user direction on 2026-05-18:
 
@@ -1772,9 +1783,11 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/evidence/pilot-readiness/2026-05-22-controlled-pilot-round-2-stabilization.md` - Controlled Pilot Round 2 Stabilization Evidence
 - `docs/evidence/pilot-readiness/2026-05-23-store-action-visibility-readiness.md` - Store Action visibility readiness
 - `docs/evidence/pilot-readiness/2026-05-23-pilot-reliability-spine-execution-v1.md` - Pilot Reliability Spine first execution evidence
+- `docs/evidence/pilot-readiness/2026-05-23-controlled-pilot-dry-run-v1.md` - Controlled Pilot Dry Run V1 evidence refresh
 - `docs/evidence/system-flow/clerk-persona-live-evidence-2026-05-23.md` - Fresh Clerk persona protected evidence
 - `docs/evidence/system-flow/clerk-region-manager-live-evidence-2026-05-23.md` - Fresh Region Manager protected evidence
 - `docs/evidence/pilot-evidence-operating-matrix-v1.md` - Pilot Evidence Operating Matrix V1
+- `docs/plans/controlled-pilot-dry-run-v1.md` - Controlled Pilot Dry Run V1 plan
 - `docs/superpowers/plans/2026-05-23-external-evidence-closure-v2.md` - External Evidence Closure V2 plan
 - `docs/evidence/store-action-test-hygiene-and-visibility-v1.md` - Store Action test hygiene and visibility evidence
 - `docs/evidence/project-wide-bug-hunt-2026-05-23.md` - project-wide bug hunt pass
