@@ -70,9 +70,10 @@ Still not done:
 - Supabase app-owned schema logical restore is proven for controlled pilot;
   managed restore-to-new-project/PITR posture still needs an approved target or
   explicit owner acceptance.
-- Render Slack notification delivery is proven for staging; final production
-  alert policy, email delivery, or app-level error-provider scope still needs
-  explicit owner acceptance.
+- Render Slack notification delivery is proven for staging, and Better Stack
+  external email test alert delivery is proven for controlled pilot. Final
+  broad-production incident policy and app-level error-provider scope still
+  need explicit owner acceptance.
 - Redis/BullMQ staging wiring and health are proven; broad-production posture
   still needs a production-grade tier/profile decision or explicit risk
   acceptance.
@@ -92,8 +93,9 @@ Missing:
 - Supabase recovery posture decision: accept the existing controlled-pilot
   logical restore proof, or run managed restore/PITR against an approved
   disposable target.
-- Alert policy decision: accept the existing Render Slack notification path for
-  V1, fix/prove email delivery, or scope app-level error tracking separately.
+- Alert policy decision: controlled-pilot external email delivery is proven via
+  Better Stack; broad-production incident policy and app-level error tracking
+  remain separate owner decisions.
 - Redis/BullMQ broad-production tier/profile decision and health evidence.
 - Authenticated upload smoke is closed for the current controlled-pilot
   `SUPER_ADMIN` operator path; future HR/admin-specific delegation or sample

@@ -943,6 +943,13 @@ missing item is one of these external proofs.
   for successful deploy events and is not required for incident readiness. This
   proves staging platform notification paths, not app-level error tracking or
   final broad-production incident readiness.
+- Fresh external email alert proof is recorded in
+  `docs/evidence/readiness/2026-05-23-better-stack-email-alert-proof-v1.md`.
+  Better Stack monitors `https://api-staging.hr-axis.com/api/health` with the
+  keyword `"status":"ok"`, reported the monitor as `up`, and delivered a test
+  alert email to the primary responder. This closes the fresh external email
+  alert proof for controlled pilot. It does not claim app-level exception
+  tracking, SMS/phone escalation, or final broad-production incident readiness.
 - Supabase staging logical restore proof is recorded in
   `docs/evidence/readiness/2026-05-22-supabase-staging-logical-restore-drill.md`.
   A PostgreSQL 17 logical dump from the Supabase staging source restored into a
@@ -1700,6 +1707,7 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/plans/backup-restore-drill-local-evidence-2026-04-30.md` - Backup Restore Local Drill Evidence
 - `docs/evidence/readiness/2026-05-22-redis-bullmq-staging-proof.md` - Redis / BullMQ Staging Proof
 - `docs/evidence/readiness/2026-05-23-alert-email-policy-decision-v1.md` - Alert Email Policy Decision V1
+- `docs/evidence/readiness/2026-05-23-better-stack-email-alert-proof-v1.md` - Better Stack Email Alert Proof V1
 - `docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md` - Controlled Pilot Feedback Log
 - `docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-conditional-go-consolidation.md` - Controlled Pilot Conditional Go Consolidation
 - `docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-round-1-outcome.md` - Controlled Pilot Round 1 Outcome

@@ -142,6 +142,13 @@ Phase 1 actual record:
   `docs/evidence/readiness/2026-05-23-alert-email-policy-decision-v1.md`.
   It records Render email as a historically observed failure backup channel,
   not fresh successful-deploy email or app-level error tracking.
+- Fresh external email alert delivery proof is recorded in
+  `docs/evidence/readiness/2026-05-23-better-stack-email-alert-proof-v1.md`.
+  Better Stack monitors the staging backend health endpoint for the keyword
+  `"status":"ok"`, reported the monitor as `up`, and delivered a test alert
+  email to the primary responder. This closes the controlled-pilot external
+  email alert proof while keeping app-level error tracking and broad-production
+  incident policy as separate decisions.
 
 ## Phase 2 - Redis / BullMQ Production Posture
 
