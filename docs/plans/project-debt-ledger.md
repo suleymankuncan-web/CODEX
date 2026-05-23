@@ -252,39 +252,45 @@ This is a good deletion, not lost work.
 
 ## Blocked External Dependency
 
-### Real IdP Staging Evidence
+### Broad Production Operational Posture
 
 Status: `blocked_external`
 
 Why it is not counted as completed:
 
-- Real staging IdP registration values are not available in the repo.
-- Real staging smoke credentials are not available in the repo.
-- Seeded staging assigned/unassigned store IDs are not confirmed in a real staging DB.
+- Controlled-pilot Clerk persona, role/scope, upload, Store Action command,
+  Redis/BullMQ, alert, and logical restore evidence now exist.
+- Broad production still needs explicit owner acceptance or live provider proof
+  for the production-grade Redis tier, incident/error-tracking posture, and
+  managed recovery/PITR/RPO/RTO posture.
+- These decisions require provider/account context and rollout intent outside
+  the repo; local code checks cannot honestly close them.
 
 What is already ready:
 
-- `npm.cmd run smoke:auth:staging`
-- `npm.cmd run smoke:auth:staging:action`
-- `npm.cmd run guard:auth:evidence`
-- operator checklist
-- evidence template
-- JSON guard against raw token/code/verifier/secret leakage
+- controlled-pilot protected persona evidence for the active role set
+- Store Action assigned-store command proof and unassigned-store `403`
+- Redis/BullMQ staging health with accepted Free-tier pilot risk
+- Render Slack and Better Stack email alert proof
+- Supabase application-schema logical restore proof
+- safe upload proof for the approved `SUPER_ADMIN` operator path
 
-Completion command when external inputs exist:
+Completion path when broad production becomes the goal:
 
-```powershell
-cd "<workspace-root>\admin-web"
-npm.cmd run --silent smoke:auth:staging:action | npm.cmd run --silent guard:auth:evidence -- --stdin
-```
+- choose and prove a persistent production Redis-compatible tier, or record
+  explicit written risk acceptance,
+- choose incident policy and app-level error-tracking posture,
+- accept or test managed Supabase restore/PITR/RPO/RTO posture,
+- rerun protected persona/performance evidence after final broad-release
+  config changes.
 
 Exit criteria:
 
-- PKCE login/logout passes against real staging IdP.
-- `/api/auth/session` returns expected role, read scope, and action scope.
-- assigned-store action returns success.
-- unassigned-store action returns `403`.
-- guarded evidence passes and is stored sanitized.
+- broad-production Redis/posture decision is explicit,
+- alerting/incident policy is explicit,
+- recovery RPO/RTO posture is explicit,
+- final readiness decision keeps sanitized evidence and does not record
+  secrets, provider tokens, raw database URLs, or private payloads.
 
 ## Suspended Product Decisions
 

@@ -39,22 +39,23 @@ Primary app endpoints:
 ## Latest Git State
 
 As of 2026-05-23, `origin/main` includes the Controlled Pilot Scenario
-Rehearsal V1 runbook and first evidence pass. The root checkout is clean on
-`main` before starting new work.
+Rehearsal V1 runbook, the first evidence pass, the assisted persona route
+checks, the Store Action command smoke harness, and the Store Action live
+command proof. The root checkout is clean on `main` before starting new work.
 
 Current maintenance branch:
 
 - None. Main is the current handoff baseline.
-- The latest merged docs-only slice recorded public staging readiness,
-  alert-routing with backend health signal, public backend load, local pilot
-  gates, Store Action frontend/backend coverage, admin lint, generated API
-  check, and correctly blocked/skipped protected persona phases when no secure
-  role-specific token/session input was available in that shell.
+- The latest merged docs-only slice recorded sanitized live staging Store
+  Action command proof: a real `STORE_MANAGER` token exercised assigned-store
+  create/status/close/cancel, while an unassigned-store create returned `403`.
+  This closes `PILOT-007` for the controlled pilot path without approving broad
+  production.
 
 Latest controlled-pilot evidence merge:
 
 ```text
-01e79993 docs: record controlled pilot rehearsal evidence (#465)
+bec7a23f docs: record store action live command proof (#472)
 ```
 
 Latest controlled-pilot runbook merge:
@@ -1755,6 +1756,11 @@ Pilot Reliability Spine V1 current branch:
   `docs/evidence/pilot-readiness/2026-05-23-store-action-command-live-proof-v1.md`:
   a real `STORE_MANAGER` staging token exercised assigned-store
   create/status/close/cancel, while an unassigned-store create returned `403`.
+- Active next direction after PR #472:
+  `docs/plans/controlled-pilot-execution-roadmap-v1.md` and
+  `docs/plans/active-next-actions.md` should steer work toward the controlled
+  pilot execution loop: collect real feedback, classify P0/P1/P2/P3, fix only
+  concrete blockers, and keep broad production posture decisions separate.
 
 Current user direction on 2026-05-18:
 
