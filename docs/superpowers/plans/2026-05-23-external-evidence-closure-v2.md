@@ -152,11 +152,11 @@ Phase 1 actual record:
 
 ## Phase 2 - Redis / BullMQ Production Posture
 
-- [ ] Keep the current staging Redis/BullMQ proof closed for controlled pilot.
-- [ ] Decide broad-production posture:
+- [x] Keep the current staging Redis/BullMQ proof closed for controlled pilot.
+- [x] Decide broad-production posture:
   `controlled-pilot-free-tier-accepted`, `upgrade-before-broad-production`, or
   `no-broad-production-redis-decision-yet`.
-- [ ] Do not count a free/non-persistent staging tier as broad-production
+- [x] Do not count a free/non-persistent staging tier as broad-production
   durable queue evidence unless the operator explicitly accepts the risk.
 - [ ] Safe smoke commands:
 
@@ -175,8 +175,18 @@ $env:BACKEND_LOAD_TIMEOUT_MS='45000'
 npm.cmd run smoke:backend-readiness-load
 ```
 
-- [ ] Record sanitized output and the explicit decision in
+- [x] Record sanitized output and the explicit decision in
   `docs/evidence/readiness/2026-05-23-redis-production-posture-v1.md`.
+
+Phase 2 actual record:
+
+- Redis/BullMQ production posture is recorded in
+  `docs/evidence/readiness/2026-05-23-redis-production-posture-v1.md`.
+  The decision is `controlled-pilot-free-tier-accepted` plus
+  `upgrade-before-broad-production`: the current Render Key Value Free tier can
+  exercise the staging BullMQ path during controlled pilot, but broad production
+  remains No-Go until a persistent Redis-compatible tier or explicit written
+  risk acceptance exists.
 
 ## Phase 3 - Supabase Recovery Posture
 
