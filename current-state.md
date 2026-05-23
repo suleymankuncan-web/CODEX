@@ -1714,6 +1714,14 @@ Pilot Reliability Spine V1 current branch:
   targeted fix loop, later UI redesign intake, and future module intake through
   the feature-growth gate. It does not approve broad production or new module
   implementation by itself.
+- Controlled Pilot Execution Preflight V1:
+  `docs/evidence/pilot-readiness/2026-05-23-controlled-pilot-execution-preflight-v1.md`.
+  This autonomous local/public pass ran pilot stabilization, deployed
+  readiness, alert routing, and backend readiness load. Local pilot gates
+  passed, public staging health passed, Redis/BullMQ remained healthy, and
+  public backend load stayed inside budget. Protected persona/load groups were
+  correctly recorded as skipped/blocked because no secure role-specific
+  token/session input was present in the shell.
 
 Current user direction on 2026-05-18:
 
@@ -1819,6 +1827,7 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/evidence/pilot-readiness/2026-05-23-controlled-pilot-dry-run-v1.md` - Controlled Pilot Dry Run V1 evidence refresh
 - `docs/evidence/pilot-readiness/2026-05-23-controlled-pilot-scenario-rehearsal-v1.md` - Controlled Pilot Scenario Rehearsal V1 evidence
 - `docs/plans/controlled-pilot-execution-roadmap-v1.md` - Controlled Pilot Execution Roadmap V1
+- `docs/evidence/pilot-readiness/2026-05-23-controlled-pilot-execution-preflight-v1.md` - Controlled Pilot Execution Preflight V1
 - `docs/evidence/system-flow/clerk-persona-live-evidence-2026-05-23.md` - Fresh Clerk persona protected evidence
 - `docs/evidence/system-flow/clerk-region-manager-live-evidence-2026-05-23.md` - Fresh Region Manager protected evidence
 - `docs/evidence/pilot-evidence-operating-matrix-v1.md` - Pilot Evidence Operating Matrix V1
