@@ -482,28 +482,24 @@ Issues:
 - `PILOT-006`: Closed. `HR_ADMIN`/`REPORT_VIEWER` first-route observation is
   explained by `returnTo` behavior and direct route allow/deny checks remain
   valid.
-- `PILOT-007`: Open/input-gated. Store Action live command proof requires a
-  fresh `STORE_MANAGER` token, assigned/unassigned store ids, and explicit
-  mutation acknowledgement.
+- `PILOT-007`: Closed. Store Action live command proof passed with a real
+  `STORE_MANAGER` token, assigned-store create/status/close/cancel, and
+  unassigned-store `403`.
 
 Pause criteria triggered:
 
 - No for the controlled read-only/route pilot.
-- Yes for claiming live Store Action command proof until the required secure
-  input and mutation approval are present.
+- No for Store Action command proof after the live smoke passed.
 
 Decision:
 
 - Continue controlled pilot.
-- Do not claim live Store Action command proof yet.
+- Store Action live command proof is now closed for the controlled pilot path.
 - Do not change auth redirect behavior without a dedicated UX/auth decision.
 
 Next action:
 
-- If the next session includes Store Action mutation, run the new smoke harness
-  with a fresh `STORE_MANAGER` token and sanitized output only.
-- Otherwise continue pilot feedback collection and keep broad production at
-  `No-Go`.
+- Continue pilot feedback collection and keep broad production at `No-Go`.
 
 ## Issue Register
 
@@ -515,7 +511,7 @@ Next action:
 | PILOT-004 | 2026-05-05 | P0 | Ranking visibility | Closed | Product owner clarified that rankings show only ranking and score, not all metric details. | Product owner | Expected low-role behavior. |
 | PILOT-005 | 2026-05-06 | P3 | Store / approvals UX | Closed | `STORE_PERSONNEL` could open `/store/approvals`, but had no expected operation there; route guard and leftover link visibility now keep personnel on `/store/me`/personnel surfaces while manager/review approvals remain available. | Product owner + Codex | Keep monitoring pilot navigation; add a personnel approvals read-only surface only if explicitly scoped later. |
 | PILOT-006 | 2026-05-23 | P2 | Auth / landing | Closed | `HR_ADMIN` and `REPORT_VIEWER` first-route observations are explained by preserved `returnTo`; clean default landing and direct route allow/deny behavior remain correct. | Codex | Keep `returnTo` behavior unchanged unless a dedicated UX/auth decision scopes a change. |
-| PILOT-007 | 2026-05-23 | P2 | Store Action / command proof | Open | Live Store Action command proof now has a staging smoke harness, but cannot be claimed until a fresh `STORE_MANAGER` token, assigned/unassigned store ids, and explicit mutation acknowledgement are present. | Product owner + Codex | Use `npm.cmd --prefix admin-web run smoke:store-action:staging:command` only with sanitized evidence and approved staging mutation. |
+| PILOT-007 | 2026-05-23 | P2 | Store Action / command proof | Closed | Live Store Action command proof passed with a real `STORE_MANAGER` token: assigned-store create/status/close/cancel succeeded and unassigned-store create returned `403`. | Product owner + Codex | Keep `docs/evidence/pilot-readiness/2026-05-23-store-action-command-live-proof-v1.md`; rerun only after auth/scope or Store Action command changes. |
 
 ## Decision Register
 
@@ -532,3 +528,4 @@ Next action:
 | 2026-05-22 | Close `PILOT-005` store personnel approvals UX cleanup | `docs/evidence/pilot-readiness/2026-05-22-pilot-005-store-approvals-personnel-ux.md` records the route/link guard and targeted Playwright evidence. | Continue monitoring store personnel navigation; do not widen approvals visibility without a scoped product decision. |
 | 2026-05-23 | Close landing/return-state follow-up | `docs/evidence/pilot-readiness/2026-05-23-landing-return-state-investigation-v1.md` records that observed first-route mismatches came from intentional `returnTo` preservation, while clean role defaults remain correct. | Keep auth redirect behavior unchanged unless repeated pilot friction justifies a scoped UX/auth decision. |
 | 2026-05-23 | Prepare Store Action live command proof harness | `docs/evidence/pilot-readiness/2026-05-23-store-action-command-smoke-harness-v1.md` adds a token-safe staging smoke for assigned-store create/status/close/cancel plus unassigned-store `403`. | Run only with a fresh `STORE_MANAGER` token and explicit staging mutation acknowledgement; do not claim live command proof before then. |
+| 2026-05-23 | Close Store Action live command proof | `docs/evidence/pilot-readiness/2026-05-23-store-action-command-live-proof-v1.md` records live staging assigned-store create/status/close/cancel success and unassigned-store `403`. | Continue controlled pilot; do not use this targeted proof to approve broad production. |
