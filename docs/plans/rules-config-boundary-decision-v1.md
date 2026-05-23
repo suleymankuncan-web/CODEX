@@ -77,6 +77,7 @@ Stop rule:
 | Checklist weights and item scoring | Checklist template/version ownership. | Keep template weights with the checklist domain until score blending needs cross-module version governance. | No global weight engine. No automatic redistribution rules unless explicitly designed. |
 | Target approval | Target distribution workflow and assigned-store action scope. | Approval rules stay with target distribution while the workflow is region/store-action scoped. | No multi-step approval engine until delegated approval chains are real. |
 | Competitions | Competition service/repository and package-plan approval lifecycle. | Stage/package/team rules stay competition-owned; snapshots/read models consume results. | No cross-module rule table for stage progression or score recalculation yet. |
+| Store Action candidates and lifecycle | Store Action domain plus source-specific decisions, currently KPI exception follow-up for persisted action plans. | Candidate generation stays source-bounded; persisted plan lifecycle and audit stay Store Action-owned. | No generic workflow engine, non-KPI source ingestion, comments, escalation, or notification rules without a new go/no-go decision. |
 | Incentives / prim | Intake/spec only. | Do not implement payout rules until owner, formula, exceptions, audit, and payout lifecycle are defined. | No incentive engine, DB schema, or payout API from assumptions. |
 | Workflow inbox routing | Source workflows plus shared workflow language. | Inbox maps source status into shared queue language; source flows keep their own state machines. | No central workflow engine or notification service yet. |
 | Runtime/provider configuration | Environment config and backend config service. | Runtime config stays outside business-editable UI. | No DB-backed runtime config editor. |
@@ -111,3 +112,8 @@ This decision is now guarded by `scripts/rules-config-boundary-contract.test.mjs
 The guard keeps the no-generic-engine decision, domain ownership table,
 promotion triggers, and first-code-slice guardrails in the root `test:scripts`
 release path.
+
+Track 6 execution inventory is recorded in
+`docs/evidence/rules-config-versioning-inventory-v1.md`. It classifies KPI,
+checklist, target, competition, Store Action, incentive, workflow, and runtime
+config ownership without adding a generic engine or changing behavior.
