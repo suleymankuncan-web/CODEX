@@ -190,17 +190,27 @@ Phase 2 actual record:
 
 ## Phase 3 - Supabase Recovery Posture
 
-- [ ] Keep the local logical restore proof closed for app-owned schemas.
-- [ ] Decide the next recovery posture:
+- [x] Keep the local logical restore proof closed for app-owned schemas.
+- [x] Decide the next recovery posture:
   `controlled-pilot-logical-restore-accepted`,
   `managed-restore-drill-required`, or `pitr-plan-required`.
-- [ ] If managed restore is required, the operator must provide an explicitly
+- [x] If managed restore is required, the operator must provide an explicitly
   disposable target project/connection string through a secure local env file.
-- [ ] Never run restore against production or the staging source database.
+- [x] Never run restore against production or the staging source database.
 - [ ] If a safe target exists, execute the existing restore runbook and record
   sanitized table/schema counts only.
-- [ ] Record the decision in
+- [x] Record the decision in
   `docs/evidence/readiness/2026-05-23-supabase-recovery-posture-v1.md`.
+
+Phase 3 actual record:
+
+- Supabase recovery posture is recorded in
+  `docs/evidence/readiness/2026-05-23-supabase-recovery-posture-v1.md`.
+  The decision is `controlled-pilot-logical-restore-accepted`: the existing
+  app-owned schema logical restore proof is accepted for controlled pilot.
+  Broad production remains No-Go until managed restore/PITR/RPO/RTO posture is
+  explicitly accepted or tested against an approved disposable target. No safe
+  managed restore target exists in this slice, so no restore command was run.
 
 ## Phase 4 - Upload Evidence Reconciliation
 
