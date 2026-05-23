@@ -60,17 +60,16 @@ and Operations Telemetry V2.
 
 Current maintenance branch:
 
-- Active branch: `codex/norm-kadro-workforce-planning-readonly-v1`.
-- This branch starts Track 7 of the project-growth roadmap: Norm Kadro /
-  Workforce Planning Read-Only V1 evidence. It must not add a new module,
-  staffing baseline editor, DB migration, API response change, workforce command
-  behavior, Store Action source expansion, approval flow, payroll/shift logic,
-  or automatic action generation.
+- Active branch: `codex/production-ops-closure-decision-packet-v1`.
+- This branch starts Track 8 of the project-growth roadmap: Production Ops
+  Closure Decision Packet V1. It must not claim broad-production Go, change
+  provider configuration, run restore commands, change code, change API response
+  shape, change auth/permission semantics, add DB migration, or record secrets.
 
 Latest project-growth merge:
 
 ```text
-2e900042 docs: add rules config versioning inventory (#485)
+355e28fb docs: add norm kadro workforce planning inventory (#486)
 ```
 
 Latest controlled-pilot evidence merge:
@@ -1909,6 +1908,7 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/evidence/role-permission-preview-v1.md` - Role/permission preview evidence
 - `docs/evidence/rules-config-versioning-inventory-v1.md` - Rules / Config Versioning Inventory V1
 - `docs/evidence/norm-kadro-workforce-planning-readonly-v1.md` - Norm Kadro / Workforce Planning Read-Only V1
+- `docs/evidence/readiness/2026-05-23-production-ops-closure-decision-packet-v1.md` - Production Ops Closure Decision Packet V1
 - `docs/evidence/project-wide-bug-hunt-2026-05-23.md` - project-wide bug hunt pass
 - `docs/flows/README.md` - Store Ops System Flow generator note
 - `docs/flows/store-ops-system-flow.html` - source-derived frontend/API/backend flow map

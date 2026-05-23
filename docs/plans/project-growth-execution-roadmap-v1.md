@@ -45,8 +45,8 @@ Why:
 | 4 | Store Action -> Coaching Loop V2 | first read-only coaching detail merged | action detail/history/comment design, then minimal comments/history slice | workflow state machine, KPI scoring, broad notification system |
 | 5 | Role / Permission Preview UI | first read-only preview merged | read-only role/route/scope preview using existing auth matrix | permission semantics, assignments, Clerk/provider behavior |
 | 6 | Rules / Config Versioning | first inventory slice merged | inventory current domain-owned config/version sources and first read-only diff/audit surface | generic rule engine, shared workflow engine, scoring changes |
-| 7 | Norm Kadro / Workforce Planning Read-Only V1 | active read-only inventory slice | read-only staffing baseline spec and current workforce capacity inventory | write/config targets, auto action generation, approval flows |
-| 8 | Production Ops Closure | after controlled-pilot feedback stabilizes | owner decision packet for Redis tier, backup/PITR/RPO/RTO, alerts, incident ownership | broad production Go claim without owner acceptance |
+| 7 | Norm Kadro / Workforce Planning Read-Only V1 | first inventory slice merged | read-only staffing baseline spec and current workforce capacity inventory | write/config targets, auto action generation, approval flows |
+| 8 | Production Ops Closure | active decision packet slice | owner decision packet for Redis tier, backup/PITR/RPO/RTO, alerts, incident ownership | broad production Go claim without owner acceptance |
 
 ## Dependency Graph
 
@@ -324,6 +324,11 @@ Stop rules:
 - stop if it needs labor-law/business policy inputs,
 - stop if it starts assigning headcount targets.
 
+Merged first slice:
+
+- PR #486 added `docs/evidence/norm-kadro-workforce-planning-readonly-v1.md`
+  and guarded the read-only workforce planning boundary.
+
 ## Track 8: Production Ops Closure
 
 Goal:
@@ -335,6 +340,15 @@ First safe slice:
 
 - decision packet checklist for Redis tier, Supabase backup/PITR/RPO/RTO,
   alert escalation, incident ownership, and rollback authority.
+
+Active slice:
+
+- record
+  `docs/evidence/readiness/2026-05-23-production-ops-closure-decision-packet-v1.md`
+  as Production Ops Closure Decision Packet V1. It keeps controlled pilot at
+  `Conditional Go / Continue`, broad production at `No-Go`, and turns Redis,
+  Supabase recovery, alert/incident ownership, protected smoke reruns, upload
+  delegation, and rollback authority into explicit owner-acceptance rows.
 
 Verification:
 

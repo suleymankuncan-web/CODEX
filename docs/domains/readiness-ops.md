@@ -23,6 +23,7 @@ Use these first:
 - `docs/evidence/readiness/2026-05-23-supabase-recovery-posture-v1.md`
 - `docs/evidence/readiness/2026-05-23-alert-email-policy-decision-v1.md`
 - `docs/evidence/readiness/2026-05-23-better-stack-email-alert-proof-v1.md`
+- `docs/evidence/readiness/2026-05-23-production-ops-closure-decision-packet-v1.md`
 - `docs/plans/production-evidence-closure-joint-plan-v1.md`
 - `docs/plans/production-staging-incident-response-skeleton.md`
 - `docs/plans/performance-budget-v1.md`
@@ -41,6 +42,7 @@ Use these first:
 - Production-grade Redis tier change.
 - Managed Supabase restore/PITR/RPO/RTO acceptance.
 - App-level error tracking decision.
+- Production Ops Closure Decision Packet V1 owner acceptance rows.
 - Broad-production protected persona/performance rerun after config changes.
 
 Open those only when the owner explicitly chooses broad-production readiness
