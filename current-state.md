@@ -916,10 +916,11 @@ missing item is one of these external proofs.
   load passed while protected groups were correctly skipped, and alert routing
   passed backend-health checks while external provider delivery remained
   unconfigured.
-- Supabase restore, Redis/BullMQ broad-production health, production alert
-  policy, and any future import/upload role-delegation change still need real
-  inputs and explicit verification before broad production can move out of
-  `No-Go`.
+- Supabase controlled-pilot logical restore, Redis/BullMQ controlled-pilot
+  posture, and external alert delivery are now named. Broad production still
+  needs production-grade Redis upgrade/evidence, managed recovery/PITR/RPO/RTO
+  posture, incident policy/app-level error-tracking acceptance, and any future
+  import/upload role-delegation decision before it can move out of `No-Go`.
 - Joint-plan preflight on 2026-05-22 reran deployed readiness and alert routing:
   public staging stayed healthy, but `/api/health` still reported
   `queueBackend=in-memory`, Redis `skipped`, and provider delivery
@@ -968,6 +969,11 @@ missing item is one of these external proofs.
   Supabase staging application-schema logical recovery, not managed
   restore-to-new-project, PITR, Storage/Auth/Realtime/Edge settings restore, or
   final production RPO/RTO.
+- Supabase recovery posture is recorded in
+  `docs/evidence/readiness/2026-05-23-supabase-recovery-posture-v1.md`.
+  Current decision: `controlled-pilot-logical-restore-accepted`. Broad
+  production remains No-Go until managed restore/PITR/RPO/RTO posture is
+  explicitly accepted or tested against an approved disposable target.
 - Readiness profile reset evidence is recorded in
   `docs/evidence/readiness/2026-05-22-readiness-profile-reset-after-broad-smoke.md`.
   Staging briefly ran `READINESS_PROFILE=broad-production` with
@@ -1715,6 +1721,7 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/plans/backup-restore-drill-local-evidence-2026-04-30.md` - Backup Restore Local Drill Evidence
 - `docs/evidence/readiness/2026-05-22-redis-bullmq-staging-proof.md` - Redis / BullMQ Staging Proof
 - `docs/evidence/readiness/2026-05-23-redis-production-posture-v1.md` - Redis / BullMQ Production Posture Decision V1
+- `docs/evidence/readiness/2026-05-23-supabase-recovery-posture-v1.md` - Supabase Recovery Posture Decision V1
 - `docs/evidence/readiness/2026-05-23-alert-email-policy-decision-v1.md` - Alert Email Policy Decision V1
 - `docs/evidence/readiness/2026-05-23-better-stack-email-alert-proof-v1.md` - Better Stack Email Alert Proof V1
 - `docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md` - Controlled Pilot Feedback Log

@@ -67,9 +67,9 @@ Still not done:
 - Controlled/internal pilot remains `Conditional Go`.
 - Real staging auth/session evidence is current for the full five-persona
   controlled staging matrix.
-- Supabase app-owned schema logical restore is proven for controlled pilot;
-  managed restore-to-new-project/PITR posture still needs an approved target or
-  explicit owner acceptance.
+- Supabase app-owned schema logical restore is proven and accepted for
+  controlled pilot; managed restore-to-new-project/PITR/RPO/RTO posture remains
+  a broad-production gate.
 - Render Slack notification delivery is proven for staging, and Better Stack
   external email test alert delivery is proven for controlled pilot. Final
   broad-production incident policy and app-level error-provider scope still
@@ -91,9 +91,9 @@ Missing:
 - Real Clerk/staging bearer-token proof for `/api/auth/session` is closed for
   the current five-persona matrix on 2026-05-23.
 - Assigned-store `201` and unassigned-store `403` action smoke proof in staging.
-- Supabase recovery posture decision: accept the existing controlled-pilot
-  logical restore proof, or run managed restore/PITR against an approved
-  disposable target.
+- Supabase broad-production recovery evidence: controlled-pilot logical restore
+  is accepted, but managed restore/PITR/RPO/RTO posture still needs explicit
+  owner acceptance before broad production.
 - Alert policy decision: controlled-pilot external email delivery is proven via
   Better Stack; broad-production incident policy and app-level error tracking
   remain separate owner decisions.
@@ -387,8 +387,8 @@ Tasks:
 - [x] Verify Redis/BullMQ staging health reports durable queue and Redis ok.
 - [x] Run authenticated safe upload smoke for the current controlled-pilot
   `SUPER_ADMIN` operator path.
-- [ ] Execute broad-production Redis upgrade/evidence, alert policy, and
-  recovery RPO/RTO posture.
+- [ ] Execute broad-production Redis upgrade/evidence, incident policy, and
+  managed recovery/PITR/RPO/RTO posture.
 
 Current result:
 
@@ -421,10 +421,11 @@ Current result:
   with role-specific tokens.
 - Redis/BullMQ staging, Render Slack alert delivery, Better Stack external
   email alert delivery, Supabase local logical restore, and safe upload proof
-  are recorded in readiness evidence. Redis Free-tier use is accepted only for
-  controlled pilot. What remains is not generic missing code; it is explicit
-  owner decision work for broad-production Redis upgrade/evidence, incident
-  policy/app-level error tracking, and managed recovery posture.
+  are recorded in readiness evidence. Redis Free-tier use and Supabase logical
+  restore are accepted only for controlled pilot. What remains is not generic
+  missing code; it is explicit owner decision work for broad-production Redis
+  upgrade/evidence, incident policy/app-level error tracking, and managed
+  recovery/PITR/RPO/RTO posture.
 
 Verification commands:
 
