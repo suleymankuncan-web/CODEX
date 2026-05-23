@@ -622,6 +622,27 @@ Evidence:
 
 - `docs/evidence/store-action-v1b-close-resolution-ui-v1.md`
 
+## V1B Cancel Reason UI
+
+The final V1B terminal UI slice cancels only an existing active persisted action
+plan with a required cancel reason.
+
+Decision:
+
+- Use the generated
+  `PATCH /api/store-actions/plans/{actionPlanId}/cancel` frontend helper.
+- Show one inline cancel form on active persisted action-plan rows.
+- Require `cancelReason` before submit.
+- Refetch Store Action plans and workflow inbox after successful cancel.
+- Keep failures local to the cancel form.
+- Keep reopen, delete, comments, attachments, notifications, escalation,
+  non-KPI sources, new routes, DB/auth/workflow/scoring/API-shape changes, and
+  broad redesign out of this slice.
+
+Evidence:
+
+- `docs/evidence/store-action-v1b-cancel-reason-ui-v1.md`
+
 ## Data Placement Draft
 
 V1A read-only:

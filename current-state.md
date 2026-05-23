@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #443 plus the Store Action V1B Store Tasks status-update UI, the Product Readiness V1
+PR #444 plus the Store Action V1B Store Tasks close-resolution UI, the Product Readiness V1
 first-pass closeout, Operations Control Tower readiness line,
 Sokrates/discipline operating docs, current workspace hygiene, the Clerk
 persona staging evidence runbook, the generated system-flow map, and the
@@ -32,14 +32,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-23, `origin/main` has been fetched through PR #443. The root
+As of 2026-05-23, `origin/main` has been fetched through PR #444. The root
 checkout was clean `main` and aligned with `origin/main` before the Store
-Action V1B close-resolution UI branch.
+Action V1B cancel-reason UI branch.
 
 Latest merge on main:
 
 ```text
-79869124 feat: update store action plan status from tasks (#443)
+dd6e1d87 feat: close store action plans from tasks (#444)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -1501,7 +1501,7 @@ Store Action V1A status:
   new routes, DB/auth/workflow/scoring/API-shape changes, and broad redesign
   remain parked.
   Evidence: `docs/evidence/store-action-v1b-status-update-ui-v1.md`.
-- Current Store Action V1B next active slice: close-resolution UI is limited to
+- PR #444 Store Action V1B close-resolution UI slice is limited to
   existing active persisted action plans on `/store/tasks` and the generated
   `PATCH /api/store-actions/plans/{actionPlanId}/close` contract. It may only
   close a plan with required `resolutionNote` text and local form errors.
@@ -1509,6 +1509,14 @@ Store Action V1A status:
   escalation, non-KPI sources, new routes, DB/auth/workflow/scoring/API-shape
   changes, and broad redesign remain parked.
   Evidence: `docs/evidence/store-action-v1b-close-resolution-ui-v1.md`.
+- Current Store Action V1B next active slice: cancel-reason UI is limited to
+  existing active persisted action plans on `/store/tasks` and the generated
+  `PATCH /api/store-actions/plans/{actionPlanId}/cancel` contract. It may only
+  cancel a plan with required `cancelReason` text and local form errors. Reopen,
+  delete, comments, attachments, notifications, escalation, non-KPI sources, new
+  routes, DB/auth/workflow/scoring/API-shape changes, and broad redesign remain
+  parked.
+  Evidence: `docs/evidence/store-action-v1b-cancel-reason-ui-v1.md`.
 
 Current user direction on 2026-05-18:
 
