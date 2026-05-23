@@ -59,7 +59,7 @@ test('decision registry keeps source documents and change triggers visible', () 
     'Redis/BullMQ posture',
     'Supabase recovery posture',
     'UI redesign',
-    'Norm Kadro module',
+    'Norm Kadro / Workforce Planning Read-Only V1',
     '## Stop Rules',
   ]) {
     requireText(docs.decisionRegistry, phrase)

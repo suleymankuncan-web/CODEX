@@ -60,17 +60,17 @@ and Operations Telemetry V2.
 
 Current maintenance branch:
 
-- Active branch: `codex/rules-config-versioning-inventory-v1`.
-- This branch starts Track 6 of the project-growth roadmap: rules/config
-  versioning inventory and guard evidence. It must not add a generic rules
-  engine, shared config schema, DB migration, API response change, scoring
-  change, approval behavior change, workflow behavior change, or provider
-  config change.
+- Active branch: `codex/norm-kadro-workforce-planning-readonly-v1`.
+- This branch starts Track 7 of the project-growth roadmap: Norm Kadro /
+  Workforce Planning Read-Only V1 evidence. It must not add a new module,
+  staffing baseline editor, DB migration, API response change, workforce command
+  behavior, Store Action source expansion, approval flow, payroll/shift logic,
+  or automatic action generation.
 
 Latest project-growth merge:
 
 ```text
-d1164f20 feat: add auth role permission preview (#484)
+2e900042 docs: add rules config versioning inventory (#485)
 ```
 
 Latest controlled-pilot evidence merge:
@@ -1908,6 +1908,7 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/evidence/store-action-coaching-detail-v2a.md` - Store Action read-only coaching detail V2A evidence
 - `docs/evidence/role-permission-preview-v1.md` - Role/permission preview evidence
 - `docs/evidence/rules-config-versioning-inventory-v1.md` - Rules / Config Versioning Inventory V1
+- `docs/evidence/norm-kadro-workforce-planning-readonly-v1.md` - Norm Kadro / Workforce Planning Read-Only V1
 - `docs/evidence/project-wide-bug-hunt-2026-05-23.md` - project-wide bug hunt pass
 - `docs/flows/README.md` - Store Ops System Flow generator note
 - `docs/flows/store-ops-system-flow.html` - source-derived frontend/API/backend flow map
