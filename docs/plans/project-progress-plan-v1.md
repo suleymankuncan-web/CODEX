@@ -644,6 +644,9 @@ Why:
 
 Candidate next outputs:
 
+- Use `docs/plans/controlled-pilot-execution-roadmap-v1.md` as the control
+  document for the next direction: real persona rehearsal, feedback triage,
+  targeted fix loop, later UI redesign intake, and future module intake.
 - Use `docs/plans/pilot-scenario-pack-v1.md` before widening pilot scenarios or
   adding role-specific flows.
 - Use `docs/plans/controlled-pilot-scenario-rehearsal-v1.md` before asking real
