@@ -55,20 +55,21 @@ Primary app endpoints:
 As of 2026-05-23, `origin/main` includes the Controlled Pilot Scenario
 Rehearsal V1 runbook, the first evidence pass, the assisted persona route
 checks, the Store Action command smoke harness, the Store Action live command
-proof, and the Pilot Feedback backend foundation.
+proof, and the Pilot Feedback backend and frontend loop.
 
 Current maintenance branch:
 
-- Active branch: `codex/pilot-feedback-frontend-v1`.
-- This branch adds the Pilot Feedback frontend loop on top of PR #479: generated
-  frontend client coverage, in-app feedback capture, SUPER_ADMIN triage queue,
-  and targeted Playwright coverage. It should stay limited to Pilot Feedback
-  UI/API-client adoption; do not mix Track 2 data-quality work into it.
+- Active branch: `codex/data-quality-center-v1`.
+- This branch starts Track 2 of the project-growth roadmap: a read-only
+  `/admin/data-quality` center that reuses existing import, snapshot,
+  workforce, KPI config, and ranking signals. It must not change import
+  lifecycle, mapping approval behavior, KPI math, backend contracts, auth
+  semantics, DB schema, or provider config.
 
 Latest project-growth merge:
 
 ```text
-cc7cf13 feat: add pilot feedback backend foundation (#479)
+20148ee feat: add pilot feedback frontend loop (#480)
 ```
 
 Latest controlled-pilot evidence merge:

@@ -15,6 +15,7 @@ import { adminSnapshotsEn, adminSnapshotsTr } from './admin-snapshots'
 import { adminTargetsEn, adminTargetsTr } from './admin-targets'
 import { commonEn, commonTr } from './common'
 import { competitionEn, competitionTr } from './competition'
+import { dataQualityEn, dataQualityTr } from './data-quality'
 import { importBatchDetailEn, importBatchDetailTr } from './import-batch-detail'
 import { pilotFeedbackEn, pilotFeedbackTr } from './pilot-feedback'
 import { reportsChecklistsEn, reportsChecklistsTr } from './reports-checklists'
@@ -53,6 +54,7 @@ const tr = {
   ...adminTargetsTr,
   ...commonTr,
   ...competitionTr,
+  ...dataQualityTr,
   ...importBatchDetailTr,
   ...pilotFeedbackTr,
   ...reportsChecklistsTr,
@@ -92,6 +94,7 @@ const en: Record<keyof typeof tr, string> = {
   ...adminTargetsEn,
   ...commonEn,
   ...competitionEn,
+  ...dataQualityEn,
   ...importBatchDetailEn,
   ...pilotFeedbackEn,
   ...reportsChecklistsEn,
