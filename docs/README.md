@@ -82,6 +82,7 @@ evidence, incident posture, and recovery.
 
 Use for project shape, growth rules, API contracts, and system boundaries.
 
+- `docs/plans/docs-library-metadata-standard-v1.md`
 - `docs/plans/feature-integration-spine-v1.md`
 - `docs/plans/new-module-template.md`
 - `docs/plans/technical-debt-resolution-roadmap-v1.md`
@@ -154,6 +155,8 @@ Use these labels when adding or updating important docs:
    practical work.
 7. Add a script guard only when drift would create real confusion, not for every
    note.
+
+Metadata details live in `docs/plans/docs-library-metadata-standard-v1.md`.
 
 ## Current Direction
 
