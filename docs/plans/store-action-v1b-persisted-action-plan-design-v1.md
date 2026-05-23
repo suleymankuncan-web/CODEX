@@ -491,7 +491,14 @@ It must not own plan detail, commands, assignment, or resolution.
    - Uses generated frontend write helper for `POST /api/store-actions/plans`.
    - Keeps lifecycle/status/close/cancel/detail/non-KPI sources out of scope.
    - Evidence: `docs/evidence/store-action-v1b-create-from-kpi-candidate-ui-v1.md`.
-9. Targeted Playwright and deployed smoke evidence when staging is ready.
+9. Status update Store Tasks UI.
+   - Adds one inline status form on persisted action-plan rows.
+   - Uses generated frontend write helper for
+     `PATCH /api/store-actions/plans/{actionPlanId}/status`.
+   - Limits status choices to `open`, `in_progress`, and `blocked`.
+   - Keeps close/cancel/detail/non-KPI sources out of scope.
+   - Evidence: `docs/evidence/store-action-v1b-status-update-ui-v1.md`.
+10. Targeted Playwright and deployed smoke evidence when staging is ready.
 
 Stop before the next kademe if the current one changes KPI scoring, checklist
 rules, target approval semantics, auth semantics, or workflow behavior outside

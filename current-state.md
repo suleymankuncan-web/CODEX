@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #440 plus the Store Action V1B Store Tasks read-only list, the Product Readiness V1
+PR #442 plus the Store Action V1B Store Tasks create-from-KPI-candidate UI, the Product Readiness V1
 first-pass closeout, Operations Control Tower readiness line,
 Sokrates/discipline operating docs, current workspace hygiene, the Clerk
 persona staging evidence runbook, the generated system-flow map, and the
@@ -32,14 +32,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-22, `origin/main` has been fetched through PR #439. The root
+As of 2026-05-22, `origin/main` has been fetched through PR #442. The root
 checkout was clean `main` and aligned with `origin/main` before the Store
-Action V1B Store Tasks read-only list branch.
+Action V1B status-update UI branch.
 
 Latest merge on main:
 
 ```text
-47f465ca feat: add store action workflow inbox source (#439)
+5aa2dd33 feat: create store action plans from KPI candidates (#442)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -1492,6 +1492,15 @@ Store Action V1A status:
   comments, attachments, notifications, escalation, non-KPI sources, new routes,
   DB/auth/workflow/scoring/API-shape changes, or broad redesign.
   Evidence: `docs/evidence/store-action-v1b-create-from-kpi-candidate-ui-v1.md`.
+- Current Store Action V1B next active slice: status update UI is limited to
+  existing persisted action plans on `/store/tasks` and the generated
+  `PATCH /api/store-actions/plans/{actionPlanId}/status` contract. It may only
+  move active statuses among `open`, `in_progress`, and `blocked`, with optional
+  note text and local form errors. Close, cancel, resolution notes, cancel
+  reasons, comments, attachments, notifications, escalation, non-KPI sources,
+  new routes, DB/auth/workflow/scoring/API-shape changes, and broad redesign
+  remain parked.
+  Evidence: `docs/evidence/store-action-v1b-status-update-ui-v1.md`.
 
 Current user direction on 2026-05-18:
 

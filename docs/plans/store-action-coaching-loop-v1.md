@@ -578,6 +578,29 @@ Evidence:
 
 - `docs/evidence/store-action-v1b-create-from-kpi-candidate-ui-v1.md`
 
+## V1B Status Update UI
+
+The second write UI slice updates only active persisted action-plan statuses on
+`/store/tasks`.
+
+Decision:
+
+- Use the generated
+  `PATCH /api/store-actions/plans/{actionPlanId}/status` frontend helper.
+- Show one inline status form on persisted action-plan rows.
+- Limit status choices to `open`, `in_progress`, and `blocked`.
+- Allow an optional note, but do not add comments or history UI in this slice.
+- Refetch Store Action plans and workflow inbox after successful status update.
+- Keep failures local to the status form.
+- Keep close, cancel, resolution notes, cancel reasons, comments, attachments,
+  notifications, escalation, non-KPI sources, new routes,
+  DB/auth/workflow/scoring/API-shape changes, and broad redesign out of this
+  slice.
+
+Evidence:
+
+- `docs/evidence/store-action-v1b-status-update-ui-v1.md`
+
 ## Data Placement Draft
 
 V1A read-only:

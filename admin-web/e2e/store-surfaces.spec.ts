@@ -1962,7 +1962,7 @@ test('store tasks renders persisted action plans from the workflow inbox', async
   await expect(page.getByText('Review plan source')).toBeVisible()
 })
 
-test('store tasks lists persisted action plan records without lifecycle controls', async ({ page }) => {
+test('store tasks lists persisted action plan records with active status controls', async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem('store-ops-app-locale', 'en')
   })
@@ -1984,8 +1984,104 @@ test('store tasks lists persisted action plan records without lifecycle controls
   const sourceLink = actionPlansPanel.getByRole('link', { name: 'Open source' })
   await expect(sourceLink).toBeVisible()
   await expect(sourceLink).toHaveAttribute('href', '/store/kpis')
+  await expect(actionPlansPanel.getByRole('button', { name: 'Update status' })).toBeVisible()
   await expect(actionPlansPanel.getByText('1-1 / 1')).toBeVisible()
-  await expect(actionPlansPanel.getByRole('button', { name: /close|cancel|blocked|in progress/i })).toHaveCount(0)
+  await expect(actionPlansPanel.getByRole('button', { name: /close|cancel/i })).toHaveCount(0)
+})
+
+test('store tasks updates a persisted action plan status', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'en')
+  })
+  let updated = false
+  let capturedStatusBody: Record<string, unknown> | null = null
+
+  await page.unroute('**/api/store-actions/plans**')
+  await page.route('**/api/store-actions/plans**', async (route) => {
+    const request = route.request()
+
+    if (request.method() === 'PATCH' && request.url().endsWith('/status')) {
+      capturedStatusBody = request.postDataJSON() as Record<string, unknown>
+      updated = true
+      await route.fulfill({
+        json: {
+          command: {
+            status: 'updated',
+            message: 'Store action plan status updated',
+          },
+          data: {
+            plan: {
+              ...storeActionPlansFixture.items[0],
+              status: 'blocked',
+            },
+          },
+        },
+      })
+      return
+    }
+
+    await route.fulfill({
+      json: {
+        ...storeActionPlansFixture,
+        items: [
+          {
+            ...storeActionPlansFixture.items[0],
+            status: updated ? 'blocked' : 'open',
+          },
+        ],
+      },
+    })
+  })
+
+  await page.goto('/store/tasks')
+
+  const actionPlansPanel = page.locator('.panel').filter({ hasText: 'Persisted follow-up' })
+  const actionPlanRow = actionPlansPanel.locator('article.stacked-row').filter({ hasText: 'Net sales recovery plan' })
+  await actionPlanRow.getByRole('button', { name: 'Update status' }).click()
+  const statusForm = actionPlanRow.locator('form[aria-label="Action plan status"]')
+  await statusForm.getByLabel('Status').selectOption('blocked')
+  await statusForm.getByLabel('Note').fill('Waiting for regional input')
+  await statusForm.getByRole('button', { name: 'Save status' }).click()
+
+  expect(capturedStatusBody).toMatchObject({
+    status: 'blocked',
+    note: 'Waiting for regional input',
+  })
+  await expect(actionPlansPanel.getByText('Blocked', { exact: true })).toBeVisible()
+})
+
+test('store tasks keeps status update failures local to the action plan form', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'en')
+  })
+
+  await page.unroute('**/api/store-actions/plans**')
+  await page.route('**/api/store-actions/plans**', async (route) => {
+    const request = route.request()
+
+    if (request.method() === 'PATCH' && request.url().endsWith('/status')) {
+      await route.fulfill({
+        status: 409,
+        json: { message: 'Terminal plan cannot be updated' },
+      })
+      return
+    }
+
+    await route.fulfill({ json: storeActionPlansFixture })
+  })
+
+  await page.goto('/store/tasks')
+
+  const actionPlansPanel = page.locator('.panel').filter({ hasText: 'Persisted follow-up' })
+  const actionPlanRow = actionPlansPanel.locator('article.stacked-row').filter({ hasText: 'Net sales recovery plan' })
+  await actionPlanRow.getByRole('button', { name: 'Update status' }).click()
+  const statusForm = actionPlanRow.locator('form[aria-label="Action plan status"]')
+  await statusForm.getByLabel('Status').selectOption('blocked')
+  await statusForm.getByRole('button', { name: 'Save status' }).click()
+
+  await expect(statusForm.getByRole('alert')).toContainText('Status could not be updated')
+  await expect(statusForm.getByRole('alert')).toContainText('Terminal plan cannot be updated')
+  await expect(actionPlanRow.locator('.status-pill').filter({ hasText: 'Open' })).toBeVisible()
 })
 
 test('store tasks creates an action plan from a KPI follow-up candidate', async ({ page }) => {
