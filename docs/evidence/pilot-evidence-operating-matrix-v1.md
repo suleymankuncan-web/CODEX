@@ -145,6 +145,7 @@ Source:
 - `docs/evidence/system-flow/clerk-persona-live-evidence-2026-05-23.md`
 - `docs/evidence/system-flow/clerk-region-manager-live-evidence-2026-05-23.md`
 - `docs/evidence/pilot-readiness/2026-05-23-controlled-pilot-dry-run-v1.md`
+- `docs/evidence/pilot-readiness/2026-05-23-controlled-pilot-scenario-rehearsal-v1.md`
 
 Result:
 
@@ -167,6 +168,9 @@ Result:
   matrix, non-super auth-admin `403` checks, Store Action assigned/unassigned
   scope read, deployed readiness `14/14` with a real role token, and protected
   backend load `5/5` without recording raw tokens or private IDs.
+- Controlled Pilot Scenario Rehearsal V1 refreshed local/public rehearsal gates
+  and intentionally recorded protected persona phases as blocked/skipped because
+  no secure role-specific token/session input was available in that shell.
 - This is controlled-pilot protected evidence, not broad-production approval.
 
 ## Current Blocker Register
