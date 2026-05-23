@@ -60,16 +60,17 @@ and Operations Telemetry V2.
 
 Current maintenance branch:
 
-- Active branch: `codex/role-permission-preview-v1`.
-- This branch starts Track 5 of the project-growth roadmap: a read-only
-  role/permission preview surface on the existing auth admin page. It must not
-  change role assignments, permission semantics, Clerk/provider behavior,
-  backend guards, DB schema, API response shape, or route access decisions.
+- Active branch: `codex/rules-config-versioning-inventory-v1`.
+- This branch starts Track 6 of the project-growth roadmap: rules/config
+  versioning inventory and guard evidence. It must not add a generic rules
+  engine, shared config schema, DB migration, API response change, scoring
+  change, approval behavior change, workflow behavior change, or provider
+  config change.
 
 Latest project-growth merge:
 
 ```text
-d1fdf99 feat: add store action coaching detail (#483)
+d1164f20 feat: add auth role permission preview (#484)
 ```
 
 Latest controlled-pilot evidence merge:
@@ -1906,6 +1907,7 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/evidence/store-action-test-hygiene-and-visibility-v1.md` - Store Action test hygiene and visibility evidence
 - `docs/evidence/store-action-coaching-detail-v2a.md` - Store Action read-only coaching detail V2A evidence
 - `docs/evidence/role-permission-preview-v1.md` - Role/permission preview evidence
+- `docs/evidence/rules-config-versioning-inventory-v1.md` - Rules / Config Versioning Inventory V1
 - `docs/evidence/project-wide-bug-hunt-2026-05-23.md` - project-wide bug hunt pass
 - `docs/flows/README.md` - Store Ops System Flow generator note
 - `docs/flows/store-ops-system-flow.html` - source-derived frontend/API/backend flow map

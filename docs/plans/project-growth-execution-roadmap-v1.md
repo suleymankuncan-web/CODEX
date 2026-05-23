@@ -43,8 +43,8 @@ Why:
 | 2 | Data Quality & Reconciliation Center V1 | first read-only center merged | read-only data-quality dashboard from existing import/snapshot/KPI/workforce signals | import lifecycle, KPI math, mapping approval behavior |
 | 3 | Operations Telemetry / Control Tower V2 | active | real signal expansion on existing Operations Control Tower | external observability platform, provider config, alert semantics |
 | 4 | Store Action -> Coaching Loop V2 | first read-only coaching detail merged | action detail/history/comment design, then minimal comments/history slice | workflow state machine, KPI scoring, broad notification system |
-| 5 | Role / Permission Preview UI | active | read-only role/route/scope preview using existing auth matrix | permission semantics, assignments, Clerk/provider behavior |
-| 6 | Rules / Config Versioning | after role preview | inventory current domain-owned config/version sources and first read-only diff/audit surface | generic rule engine, shared workflow engine, scoring changes |
+| 5 | Role / Permission Preview UI | first read-only preview merged | read-only role/route/scope preview using existing auth matrix | permission semantics, assignments, Clerk/provider behavior |
+| 6 | Rules / Config Versioning | active inventory slice | inventory current domain-owned config/version sources and first read-only diff/audit surface | generic rule engine, shared workflow engine, scoring changes |
 | 7 | Norm Kadro / Workforce Planning Read-Only V1 | after data quality + rules inventory | read-only staffing baseline spec and current workforce capacity inventory | write/config targets, auto action generation, approval flows |
 | 8 | Production Ops Closure | after controlled-pilot feedback stabilizes | owner decision packet for Redis tier, backup/PITR/RPO/RTO, alerts, incident ownership | broad production Go claim without owner acceptance |
 
@@ -236,6 +236,11 @@ Active slice:
   action-store boundaries without mutating assignments or becoming the
   authorization engine.
 
+Merged first slice:
+
+- PR #484 added the read-only role/route/scope preview panel on `/admin/auth`
+  and recorded `docs/evidence/role-permission-preview-v1.md`.
+
 Verification:
 
 - no auth assignment mutation,
@@ -259,6 +264,14 @@ First safe slice:
 
 - inventory current KPI config, checklist weights, target approval rules,
   Store Action rules, competition rules, and ownership boundaries.
+
+Active slice:
+
+- record `docs/evidence/rules-config-versioning-inventory-v1.md` as
+  Rules / Config Versioning Inventory V1 for Track 6. The first read-only diff/audit
+  surface is the existing `/admin/kpi-config` governance preview and audit
+  panel; no second surface, generic rules engine, DB schema, API shape,
+  scoring, approval, or workflow behavior change is introduced.
 
 Verification:
 
