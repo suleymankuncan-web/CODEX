@@ -1854,6 +1854,7 @@ canonical ledger counts.
 Keep these references because contract tests and future resumes depend on them:
 
 - `docs/README.md` - Documentation Library entry point
+- `docs/plans/docs-library-metadata-standard-v1.md` - Docs Library metadata and guard policy
 - `docs/plans/backend-foundation-hardening-plan-v1.md` - Backend Foundation Hardening Plan V1
 - `docs/plans/backup-restore-drill-runbook-v1.md` - Backup Restore Drill Runbook V1
 - `docs/plans/backup-restore-drill-local-evidence-2026-04-30.md` - Backup Restore Local Drill Evidence
