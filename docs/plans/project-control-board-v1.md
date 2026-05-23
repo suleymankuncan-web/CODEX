@@ -55,6 +55,7 @@ The project is in controlled pilot execution mode.
 | Start from the library | `docs/README.md` |
 | See active decisions | `docs/plans/decision-registry-v1.md` |
 | Pick an operating checklist | `docs/plans/runbook-registry-v1.md` |
+| Execute next growth tracks | `docs/plans/project-growth-execution-roadmap-v1.md` |
 | Continue the pilot loop | `docs/plans/controlled-pilot-execution-roadmap-v1.md` |
 | Check next practical work | `docs/plans/active-next-actions.md` |
 | Check debt/backlog state | `docs/plans/project-debt-ledger.md` |

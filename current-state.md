@@ -26,6 +26,9 @@ For the shortest current-mode answer, use
 lookup, use `docs/plans/decision-registry-v1.md` and
 `docs/plans/runbook-registry-v1.md`.
 
+For the ordered first eight post-foundation growth tracks, use
+`docs/plans/project-growth-execution-roadmap-v1.md`.
+
 ## Active Workspace
 
 Use this workspace only:
@@ -1862,6 +1865,7 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/plans/project-control-board-v1.md` - Project mode and go/no-go board
 - `docs/plans/decision-registry-v1.md` - Active decision registry
 - `docs/plans/runbook-registry-v1.md` - Repeatable runbook registry
+- `docs/plans/project-growth-execution-roadmap-v1.md` - Ordered first eight growth tracks
 - `docs/plans/docs-library-metadata-standard-v1.md` - Docs Library metadata and guard policy
 - `docs/plans/backend-foundation-hardening-plan-v1.md` - Backend Foundation Hardening Plan V1
 - `docs/plans/backup-restore-drill-runbook-v1.md` - Backup Restore Drill Runbook V1
