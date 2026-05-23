@@ -11,6 +11,7 @@ import { WorkflowInboxController } from "./web/workflow-inbox.controller";
 import { CompetitionController } from "./web/competition.controller";
 import { FeedController } from "./web/feed.controller";
 import { StoreActionPlanController } from "./web/store-action-plan.controller";
+import { PilotFeedbackController } from "./web/pilot-feedback.controller";
 import { OrgService } from "./application/org.service";
 import { WorkforceService } from "./application/workforce.service";
 import { ChecklistService } from "./application/checklist.service";
@@ -24,6 +25,7 @@ import { WorkflowInboxService } from "./application/workflow-inbox.service";
 import { CompetitionService } from "./application/competition.service";
 import { FeedService } from "./application/feed.service";
 import { StoreActionPlanService } from "./application/store-action-plan.service";
+import { PilotFeedbackService } from "./application/pilot-feedback.service";
 import { StoreOpsRepository } from "./infrastructure/store-ops.repository";
 import { WorkforceRequestRepository } from "./infrastructure/workforce-request.repository";
 import { ChecklistRepository } from "./infrastructure/checklist.repository";
@@ -43,6 +45,7 @@ import { CompetitionStagePackagePlanReadRepository } from "./infrastructure/comp
 import { CompetitionTeamTemplateReadRepository } from "./infrastructure/competition-team-template-read.repository";
 import { FeedRepository } from "./infrastructure/feed.repository";
 import { StoreActionPlanRepository } from "./infrastructure/store-action-plan.repository";
+import { PilotFeedbackRepository } from "./infrastructure/pilot-feedback.repository";
 
 @Module({
   controllers: [
@@ -58,6 +61,7 @@ import { StoreActionPlanRepository } from "./infrastructure/store-action-plan.re
     CompetitionController,
     FeedController,
     StoreActionPlanController,
+    PilotFeedbackController,
   ],
   providers: [
     OrgService,
@@ -73,6 +77,7 @@ import { StoreActionPlanRepository } from "./infrastructure/store-action-plan.re
     CompetitionService,
     FeedService,
     StoreActionPlanService,
+    PilotFeedbackService,
     StoreOpsRepository,
     WorkforceRequestRepository,
     ChecklistRepository,
@@ -92,6 +97,7 @@ import { StoreActionPlanRepository } from "./infrastructure/store-action-plan.re
     CompetitionRepository,
     FeedRepository,
     StoreActionPlanRepository,
+    PilotFeedbackRepository,
   ],
   exports: [
     OrgService,
@@ -107,6 +113,7 @@ import { StoreActionPlanRepository } from "./infrastructure/store-action-plan.re
     CompetitionService,
     FeedService,
     StoreActionPlanService,
+    PilotFeedbackService,
     StoreOpsRepository,
     WorkforceRequestRepository,
     ChecklistRepository,
@@ -126,6 +133,7 @@ import { StoreActionPlanRepository } from "./infrastructure/store-action-plan.re
     CompetitionRepository,
     FeedRepository,
     StoreActionPlanRepository,
+    PilotFeedbackRepository,
   ],
 })
 export class StoreOpsModule {}

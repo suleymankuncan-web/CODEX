@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-05-23T00:25:01.945Z",
+  "generatedAt": "2026-05-23T17:16:39.662Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
   },
   "summary": {
-    "backendEndpointCount": 170,
-    "backendEndpointsWithoutFrontendCallCount": 35,
-    "controllerCount": 19,
+    "backendEndpointCount": 173,
+    "backendEndpointsWithoutFrontendCallCount": 38,
+    "controllerCount": 20,
     "frontendApiCallCount": 135,
     "frontendRouteCount": 51,
     "matchedFrontendApiCallCount": 135,
-    "openApiEndpointCount": 170,
+    "openApiEndpointCount": 173,
     "routeApiEdgeCount": 198,
     "routesWithoutApiCallCount": 4,
     "unmatchedFrontendApiCallCount": 0
@@ -3079,6 +3079,34 @@
       }
     },
     {
+      "id": "endpoint:GET:/api/admin/pilot-feedback",
+      "method": "GET",
+      "path": "/api/admin/pilot-feedback",
+      "rawControllerPath": "",
+      "rawMethodPath": "admin/pilot-feedback",
+      "controller": "pilot-feedback",
+      "domain": "admin",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/pilot-feedback.controller.ts",
+        "line": 30
+      }
+    },
+    {
+      "id": "endpoint:PATCH:/api/admin/pilot-feedback/{feedbackId}/classification",
+      "method": "PATCH",
+      "path": "/api/admin/pilot-feedback/{feedbackId}/classification",
+      "rawControllerPath": "",
+      "rawMethodPath": "admin/pilot-feedback/:feedbackId/classification",
+      "controller": "pilot-feedback",
+      "domain": "admin",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/pilot-feedback.controller.ts",
+        "line": 42
+      }
+    },
+    {
       "id": "endpoint:GET:/api/auth/action-store-assignments",
       "method": "GET",
       "path": "/api/auth/action-store-assignments",
@@ -4521,6 +4549,20 @@
       }
     },
     {
+      "id": "endpoint:POST:/api/pilot-feedback",
+      "method": "POST",
+      "path": "/api/pilot-feedback",
+      "rawControllerPath": "",
+      "rawMethodPath": "pilot-feedback",
+      "controller": "pilot-feedback",
+      "domain": "pilot-feedback",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/pilot-feedback.controller.ts",
+        "line": 20
+      }
+    },
+    {
       "id": "endpoint:GET:/api/reports/checklists",
       "method": "GET",
       "path": "/api/reports/checklists",
@@ -5373,6 +5415,18 @@
       "domain": "admin"
     },
     {
+      "id": "openapi:GET:/api/admin/pilot-feedback",
+      "method": "GET",
+      "path": "/api/admin/pilot-feedback",
+      "domain": "admin"
+    },
+    {
+      "id": "openapi:PATCH:/api/admin/pilot-feedback/{feedbackId}/classification",
+      "method": "PATCH",
+      "path": "/api/admin/pilot-feedback/{feedbackId}/classification",
+      "domain": "admin"
+    },
+    {
       "id": "openapi:GET:/api/auth/action-store-assignments",
       "method": "GET",
       "path": "/api/auth/action-store-assignments",
@@ -5989,6 +6043,12 @@
       "method": "GET",
       "path": "/api/org/stores",
       "domain": "org"
+    },
+    {
+      "id": "openapi:POST:/api/pilot-feedback",
+      "method": "POST",
+      "path": "/api/pilot-feedback",
+      "domain": "pilot-feedback"
     },
     {
       "id": "openapi:GET:/api/reports/checklists",
@@ -8282,6 +8342,13 @@
         "frontendCallCount": 0
       },
       {
+        "id": "controller:pilot-feedback",
+        "controller": "pilot-feedback",
+        "domain": "admin",
+        "endpointCount": 3,
+        "frontendCallCount": 0
+      },
+      {
         "id": "controller:migrations",
         "controller": "migrations",
         "domain": "admin",
@@ -8302,6 +8369,8 @@
       "endpoint:PUT:/api/admin/feed/{feedPostId}",
       "endpoint:POST:/api/admin/migrations/run",
       "endpoint:GET:/api/admin/migrations/status",
+      "endpoint:GET:/api/admin/pilot-feedback",
+      "endpoint:PATCH:/api/admin/pilot-feedback/{feedbackId}/classification",
       "endpoint:POST:/api/checklists/instances",
       "endpoint:POST:/api/checklists/instances/{checklistInstanceId}/complete",
       "endpoint:POST:/api/checklists/instances/{checklistInstanceId}/responses",
@@ -8327,6 +8396,7 @@
       "endpoint:DELETE:/api/mobile/auth/sessions/{sessionId}",
       "endpoint:POST:/api/mobile/checklists/instances/{checklistInstanceId}/acknowledge",
       "endpoint:GET:/api/org/stores",
+      "endpoint:POST:/api/pilot-feedback",
       "endpoint:GET:/api/reports/leaderboards/closed",
       "endpoint:GET:/api/snapshots/lookups",
       "endpoint:GET:/api/snapshots/runs",
