@@ -1750,9 +1750,11 @@ Pilot Reliability Spine V1 current branch:
 - Controlled Pilot Feedback Log Session 3:
   `docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md`.
   Session 3 records PR #469/#470 follow-up closure: landing/return-state is
-  closed as intentional `returnTo` behavior, and Store Action command proof is
-  ready but input-gated until a fresh `STORE_MANAGER` token and explicit staging
-  mutation acknowledgement are available.
+  closed as intentional `returnTo` behavior. Store Action command proof is now
+  also closed by
+  `docs/evidence/pilot-readiness/2026-05-23-store-action-command-live-proof-v1.md`:
+  a real `STORE_MANAGER` staging token exercised assigned-store
+  create/status/close/cancel, while an unassigned-store create returned `403`.
 
 Current user direction on 2026-05-18:
 
@@ -1862,6 +1864,7 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/evidence/pilot-readiness/2026-05-23-assisted-persona-rehearsal-v1.md` - Assisted Persona Rehearsal V1
 - `docs/evidence/pilot-readiness/2026-05-23-landing-return-state-investigation-v1.md` - Landing Return-State Investigation V1
 - `docs/evidence/pilot-readiness/2026-05-23-store-action-command-smoke-harness-v1.md` - Store Action Command Smoke Harness V1
+- `docs/evidence/pilot-readiness/2026-05-23-store-action-command-live-proof-v1.md` - Store Action Command Live Proof V1
 - `docs/evidence/system-flow/clerk-persona-live-evidence-2026-05-23.md` - Fresh Clerk persona protected evidence
 - `docs/evidence/system-flow/clerk-region-manager-live-evidence-2026-05-23.md` - Fresh Region Manager protected evidence
 - `docs/evidence/pilot-evidence-operating-matrix-v1.md` - Pilot Evidence Operating Matrix V1
