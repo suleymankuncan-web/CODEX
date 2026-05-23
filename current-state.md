@@ -1722,6 +1722,15 @@ Pilot Reliability Spine V1 current branch:
   public backend load stayed inside budget. Protected persona/load groups were
   correctly recorded as skipped/blocked because no secure role-specific
   token/session input was present in the shell.
+- Assisted Persona Rehearsal V1:
+  `docs/evidence/pilot-readiness/2026-05-23-assisted-persona-rehearsal-v1.md`.
+  This assisted browser pass checked real staging route visibility for
+  `SUPER_ADMIN`, `HR_ADMIN`, `REGION_MANAGER`, `STORE_MANAGER`,
+  `STORE_PERSONNEL`, and `REPORT_VIEWER`. Expected positive routes opened,
+  forbidden routes failed closed, read-only/personnel personas did not see Store
+  Action command controls, and no red error/infinite loading/blank screen was
+  reported. Landing/return-state quirks for `HR_ADMIN` and `REPORT_VIEWER` and
+  missing Store Action command-mode proof remain follow-up notes, not blockers.
 
 Current user direction on 2026-05-18:
 
@@ -1828,6 +1837,7 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/evidence/pilot-readiness/2026-05-23-controlled-pilot-scenario-rehearsal-v1.md` - Controlled Pilot Scenario Rehearsal V1 evidence
 - `docs/plans/controlled-pilot-execution-roadmap-v1.md` - Controlled Pilot Execution Roadmap V1
 - `docs/evidence/pilot-readiness/2026-05-23-controlled-pilot-execution-preflight-v1.md` - Controlled Pilot Execution Preflight V1
+- `docs/evidence/pilot-readiness/2026-05-23-assisted-persona-rehearsal-v1.md` - Assisted Persona Rehearsal V1
 - `docs/evidence/system-flow/clerk-persona-live-evidence-2026-05-23.md` - Fresh Clerk persona protected evidence
 - `docs/evidence/system-flow/clerk-region-manager-live-evidence-2026-05-23.md` - Fresh Region Manager protected evidence
 - `docs/evidence/pilot-evidence-operating-matrix-v1.md` - Pilot Evidence Operating Matrix V1
