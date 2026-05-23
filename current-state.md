@@ -4,8 +4,7 @@ This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
 PR #452 plus the Store Action V1B Store Tasks basic loop closeout, Store Action
 test hygiene/visibility evidence, the Pilot Reliability Spine V1 docs, first
-execution evidence, five-persona Clerk protected evidence, and an explicit
-`REGION_MANAGER` active-role evidence follow-up,
+execution evidence, and the active Clerk protected persona evidence matrix,
 the Product Readiness V1 first-pass closeout, Operations Control Tower
 readiness line, Sokrates/discipline operating docs, current workspace hygiene,
 the Clerk persona staging evidence runbooks, the generated system-flow map,
@@ -36,23 +35,23 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-23, `origin/main` was fetched through PR #458. The root checkout
-was clean after the external evidence closure decision PR was merged.
+As of 2026-05-23, `origin/main` was fetched through PR #459. The root checkout
+was clean after the pilot scenario and feature growth gates PR was merged.
 
-Current maintenance branch after PR #458:
+Current maintenance branch after PR #459:
 
-- `codex/pilot-scenario-feature-growth-v1`
-- Scope: docs-only pilot scenario and feature growth gate. It adds the active
-  pilot role scenario pack, including `REGION_MANAGER`, and a reusable feature
-  growth checklist for source-of-truth, scope, read/write, auth/API/DB/OpenAPI,
-  workflow, operations, data-quality, test, rollback, and stop-rule decisions.
+- `codex/region-manager-live-evidence`
+- Scope: docs-only `REGION_MANAGER` live Clerk evidence closeout and stale
+  handoff cleanup. It records the fresh protected staging session, route
+  allow/deny checks, auth-admin `403` checks, deployed readiness `14/14`, and
+  current route-matrix landing behavior.
 - No product code, API response shape, auth semantics, DB migration, CSS,
   provider config, or user-facing workflow behavior changes.
 
 Latest merge on main:
 
 ```text
-1d3f744a docs: consolidate external evidence closure (#458)
+7f1a7f82 docs: add pilot scenario and feature growth gates (#459)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -230,6 +229,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #456 `docs: record redis production posture`
 - PR #457 `docs: record supabase recovery posture`
 - PR #458 `docs: consolidate external evidence closure`
+- PR #459 `docs: add pilot scenario and feature growth gates`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -1439,8 +1439,8 @@ Pilot Scenario Pack V1 and Feature Growth Checklist V1 status:
   `VISUAL_MERCHANDISER` are support/special roles unless a future slice scopes
   them into the active pilot path.
 - `REGION_MANAGER` is an active product role, not a future placeholder. Fresh
-  live Clerk evidence should be added before treating it as a signed-off pilot
-  persona because the latest protected live matrix covered five personas.
+  protected Clerk evidence is recorded in
+  `docs/evidence/system-flow/clerk-region-manager-live-evidence-2026-05-23.md`.
 - New features must state their scope type: person, store, region, company,
   support, provider-backed, or system-level.
 
@@ -1612,9 +1612,8 @@ Store Action V1A status:
   `/store/tasks` for `STORE_MANAGER`/`SUPER_ADMIN` persisted-plan controls,
   while `REPORT_VIEWER` only gets workflow inbox read visibility. Public staging
   readiness and alert-routing smokes passed their tokenless checks; the later
-  five-persona Clerk evidence closes the protected evidence matrix for those
-  personas, while `REGION_MANAGER` remains an active product role that still
-  needs a fresh live persona pass before signed-off pilot use.
+  five-persona Clerk evidence plus the `REGION_MANAGER` addendum closes the
+  protected evidence matrix for the active pilot persona set.
   Evidence:
   `docs/evidence/store-action-test-hygiene-and-visibility-v1.md` and
   `docs/evidence/pilot-readiness/2026-05-23-store-action-visibility-readiness.md`.
@@ -1639,10 +1638,10 @@ Pilot Reliability Spine V1 current branch:
   passed tokenless checks but provider delivery was `not-configured` in that
   early pass. Later Render Slack notification delivery proof is recorded in the
   readiness evidence; final production alert policy is still an owner decision.
-- Current protected/provider blockers for this line: the Clerk five-persona
-  protected matrix is closed for the proven pilot personas; `REGION_MANAGER`
-  fresh live persona evidence remains a follow-up. Remaining blockers are
-  future alert policy, managed restore/PITR, broad-production Redis
+- Current protected/provider blockers for this line: the Clerk protected matrix
+  is closed for the active controlled-pilot personas, including
+  `REGION_MANAGER`. Remaining blockers are future alert policy, managed
+  restore/PITR, broad-production Redis
   tier/profile, or other external rerun inputs that are not already provided
   securely. Do not treat skipped token checks as proof.
 - First execution evidence:
@@ -1662,6 +1661,15 @@ Pilot Reliability Spine V1 current branch:
   store-manager assigned/unassigned action-scope read proof passed with `200`
   and `403`; deployed readiness passed `14/14` with a real token; backend
   protected load passed `5/5` groups with role-specific tokens.
+- Fresh `REGION_MANAGER` protected evidence addendum:
+  `docs/evidence/system-flow/clerk-region-manager-live-evidence-2026-05-23.md`.
+  The region manager staging Clerk persona produced a real session, backend
+  `/auth/session` returned `REGION_MANAGER` with company `1`, region `1`, store
+  `0`, and assigned action-store count `1`; `/admin/targets`,
+  `/admin/competitions`, and `/store/rankings` opened; `/admin/auth`,
+  `/admin/master-data`, and `/admin/integrations` showed the forbidden route
+  state; sampled auth-admin endpoints returned `403`; deployed readiness passed
+  `14/14`; and logout cleared bearer/provider token storage.
 
 Current user direction on 2026-05-18:
 
@@ -1765,6 +1773,7 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/evidence/pilot-readiness/2026-05-23-store-action-visibility-readiness.md` - Store Action visibility readiness
 - `docs/evidence/pilot-readiness/2026-05-23-pilot-reliability-spine-execution-v1.md` - Pilot Reliability Spine first execution evidence
 - `docs/evidence/system-flow/clerk-persona-live-evidence-2026-05-23.md` - Fresh Clerk persona protected evidence
+- `docs/evidence/system-flow/clerk-region-manager-live-evidence-2026-05-23.md` - Fresh Region Manager protected evidence
 - `docs/evidence/pilot-evidence-operating-matrix-v1.md` - Pilot Evidence Operating Matrix V1
 - `docs/superpowers/plans/2026-05-23-external-evidence-closure-v2.md` - External Evidence Closure V2 plan
 - `docs/evidence/store-action-test-hygiene-and-visibility-v1.md` - Store Action test hygiene and visibility evidence

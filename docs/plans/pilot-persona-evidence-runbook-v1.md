@@ -4,9 +4,9 @@ Date: 2026-05-23
 
 ## Purpose
 
-Make protected staging evidence repeatable for the five current pilot personas:
-`SUPER_ADMIN`, `HR_ADMIN`, `STORE_MANAGER`, `STORE_PERSONNEL`, and
-`REPORT_VIEWER`.
+Make protected staging evidence repeatable for the current active pilot
+personas: `SUPER_ADMIN`, `HR_ADMIN`, `REGION_MANAGER`, `STORE_MANAGER`,
+`STORE_PERSONNEL`, and `REPORT_VIEWER`.
 
 This runbook complements
 `docs/plans/clerk-persona-staging-evidence-runbook-v1.md`. It does not require a
@@ -69,6 +69,7 @@ Verification ladder:
 | --- | --- | --- | --- | --- |
 | `SUPER_ADMIN` | `/admin/integrations`, `/admin/auth`, `/admin/session`, `/store/tasks` if super admin has store shell assignment. | Session context, admin read endpoint, optional import/readiness endpoint. | Store Action command must still honor action-store scope if no assigned store exists. | Broadest admin proof, but not a bypass for store action scoping. |
 | `HR_ADMIN` | `/admin/competitions`, `/admin/master-data`, `/admin/checklists`, relevant admin reports if configured. | Session context, HR-visible read endpoint, workflow or checklist read where applicable. | `/admin/auth` and other super-admin-only writes must not be available unless explicitly scoped. | Can carry operator/admin evidence without adding `INTEGRATION_ADMIN`. |
+| `REGION_MANAGER` | `/store/home`, `/admin/targets`, `/admin/competitions`, `/store/rankings`, region/store follow-up routes where scoped. | Session context, region read scope, assigned action-store count when applicable. | `/admin/auth`, `/admin/master-data`, and `/admin/integrations` must show forbidden route state; auth-admin endpoints must return `403`. | Region manager default landing is `/store/home`; admin target route remains allowed by direct navigation. |
 | `STORE_MANAGER` | `/store`, `/store/me`, `/store/tasks`, `/store/approvals`, `/store/kpis`, `/store/rankings`. | Store session, assigned-store reads, Store Action list, create/status/close/cancel only for assigned store. | Unassigned store action commands return forbidden/blocked and do not mutate data. | Main Store Action pilot persona. |
 | `STORE_PERSONNEL` | `/store`, `/store/me`, `/store/rankings`, allowed store read surfaces. | Store session and personnel read scope. | No admin shell; no Store Action command controls; no manager-only approvals. | Use this to prove the UI is not overexposing command surfaces. |
 | `REPORT_VIEWER` | `/admin/reports`, `/admin/targets`, `/admin/inbox`. | Reporting/read-only endpoint and workflow inbox read if scoped. | No Store Action plan command controls; no auth/admin mutation surfaces. | Read-only evidence persona. |
@@ -139,6 +140,7 @@ Backend: https://api-staging.hr-axis.com/api
 
 - SUPER_ADMIN: passed/blocked/skipped
 - HR_ADMIN: passed/blocked/skipped
+- REGION_MANAGER: passed/blocked/skipped
 - STORE_MANAGER: passed/blocked/skipped
 - STORE_PERSONNEL: passed/blocked/skipped
 - REPORT_VIEWER: passed/blocked/skipped

@@ -23,7 +23,9 @@ subject, or session storage dump was recorded.
 ## Status Update - 2026-05-23
 
 The 2026-05-22 live evidence is now refreshed by
-`docs/evidence/system-flow/clerk-persona-live-evidence-2026-05-23.md`.
+`docs/evidence/system-flow/clerk-persona-live-evidence-2026-05-23.md` and the
+same-day `REGION_MANAGER` addendum in
+`docs/evidence/system-flow/clerk-region-manager-live-evidence-2026-05-23.md`.
 
 The newer pass first refreshed protected evidence for the available pilot
 accounts, then upgraded the run to the full five-persona matrix after
@@ -34,6 +36,8 @@ real Clerk sessions for `SUPER_ADMIN`, `HR_ADMIN`, `STORE_MANAGER`,
 checks, proved report-viewer `/store/tasks` is read-only, proved the
 store-manager assigned/unassigned action-scope read path, and ran deployed
 readiness plus backend protected load with real role-specific tokens.
+The addendum then closed `REGION_MANAGER` with real session, route allow/deny,
+auth-admin `403`, deployed readiness, and logout-storage evidence.
 
 No raw token, Clerk cookie, password, auth code, full provider subject, full
 session storage, or private user/employee/store ID was recorded.
@@ -110,7 +114,7 @@ Stop rule:
 
 | Evidence area | Status after 2026-05-22 live evidence | Accepted for | Not accepted for |
 | --- | --- | --- | --- |
-| Full five-persona Clerk route smoke | Freshly rerun in `clerk-persona-live-evidence-2026-05-23.md` | Controlled staging/internal pilot role evidence | Broad production rollout |
+| Active Clerk route smoke | Freshly rerun in `clerk-persona-live-evidence-2026-05-23.md` plus `clerk-region-manager-live-evidence-2026-05-23.md` | Controlled staging/internal pilot role evidence | Broad production rollout |
 | Ranking privacy smoke | Existing controlled staging evidence from 2026-05-06 | Store-manager/store-personnel ranking privacy posture | Full auth/session edge coverage |
 | Token-scope action smoke | Freshly rerun for store manager in `clerk-persona-live-evidence-2026-05-23.md` | Assigned/unassigned action-scope proof for the pilot store-manager persona | New-account onboarding proof |
 | Deployed readiness auth/session | Freshly rerun with a real token in `clerk-persona-live-evidence-2026-05-23.md` | Staging auth/session readiness for the pilot token path | Broad production rollout |
@@ -120,9 +124,9 @@ Stop rule:
 ## Historical Fresh Rerun Blockers
 
 These were the required inputs before the fresh Milestone 7 rerun. They were
-resolved for the current five pilot personas by reusing existing staging Clerk
-test accounts where available, creating the missing staging-only HR/report
-aliases through Clerk test-mode sign-in, binding them through the approved app
+resolved for the active pilot personas by reusing existing staging Clerk test
+accounts where available, creating the missing staging-only HR/report aliases
+through Clerk test-mode sign-in, binding them through the approved app
 auth-admin API path, and collecting local-only template bearer tokens. They
 still apply to any new account onboarding or non-pilot persona evidence.
 
@@ -143,9 +147,9 @@ Milestone 7 earlier local-only result:
 
 - Controlled Clerk persona evidence exists historically for the pilot route and
   privacy posture.
-- Fresh current-session Clerk persona evidence is now closed for the current
-  five-persona controlled staging matrix by
-  `clerk-persona-live-evidence-2026-05-23.md`.
+- Fresh current-session Clerk persona evidence is now closed for the active
+  controlled staging matrix by `clerk-persona-live-evidence-2026-05-23.md` and
+  `clerk-region-manager-live-evidence-2026-05-23.md`.
 - Broad production remains No-Go under the existing production readiness
   decision until the broader external evidence set is rerun and accepted.
 

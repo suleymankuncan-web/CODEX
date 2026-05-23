@@ -1,5 +1,13 @@
 # Clerk Persona Live Evidence - 2026-05-23
 
+Update note:
+
+- This file records the five-persona pass completed earlier on 2026-05-23.
+- `REGION_MANAGER` was closed later the same day in
+  `docs/evidence/system-flow/clerk-region-manager-live-evidence-2026-05-23.md`.
+- Read the two files together for the current active controlled-pilot persona
+  evidence set.
+
 ## Scope
 
 This evidence refresh was run after the operator asked Codex to sign in and

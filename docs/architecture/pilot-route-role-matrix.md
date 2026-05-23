@@ -19,12 +19,12 @@
 | `/admin/checklists` | admin | needs decision | `SUPER_ADMIN`, `HR_ADMIN` | direct navigation only | must return to same route after auth verification | checklist template governance | yes |
 | `/admin/competitions` | admin | needs decision | `SUPER_ADMIN`, `HR_ADMIN`, `REPORT_VIEWER`, `REGION_MANAGER` | first landing for HR admin | must return to same route after auth verification | competition setup and read scope | yes |
 | `/admin/reports` | admin | ops | `SUPER_ADMIN`, `REPORT_VIEWER` | first landing for report viewer | must return to same route after auth verification | reporting read models | yes |
-| `/admin/targets` | admin | core | `SUPER_ADMIN`, `REPORT_VIEWER`, `REGION_MANAGER` | first landing for region manager | must return to same route after auth verification | target approval queue by scope | yes |
+| `/admin/targets` | admin | core | `SUPER_ADMIN`, `REPORT_VIEWER`, `REGION_MANAGER` | direct navigation for region manager target follow-up | must return to same route after auth verification when opened directly | target approval queue by scope | yes |
 | `/admin/kpi-config` | admin | ops | `SUPER_ADMIN` | direct navigation only | must return to same route after auth verification | global KPI governance | yes |
 | `/admin/auth` | admin | core | `SUPER_ADMIN` | direct navigation only | must return to same route after auth verification | auth admin catalog and assignment scope | yes |
 | `/admin/audit` | admin | core | `SUPER_ADMIN`, `AUDITOR` | first landing for auditor | must return to same route after auth verification | audit event read scope | yes |
 | `/admin/session` | admin | ops | any authenticated admin shell session | direct navigation only | must stay on `/admin/session` | local/session diagnostics only | yes |
-| `/store` | store | core | authenticated store shell session | first landing for store roles | must return to same route after auth verification | current store shell overview | yes |
+| `/store` | store | core | authenticated store shell session | first landing family varies by role: `STORE_PERSONNEL` resolves to `/store/me`; `STORE_MANAGER`, `REGION_MANAGER`, and broad store sessions resolve to `/store/home` | must return to same route after auth verification | current store shell overview | yes |
 | `/store/me` | store | core | `STORE_MANAGER`, `STORE_PERSONNEL` | direct navigation or store landing link | must return to same route after auth verification | current employee performance only | yes |
 | `/store/rankings` | store | core | `STORE_MANAGER`, `STORE_PERSONNEL`, `REGION_MANAGER`, `SUPER_ADMIN` | direct navigation or store landing link | must return to same route after auth verification | top 100 for store roles, full list for privileged roles | yes |
 | `/store/approvals` | store | core | `STORE_MANAGER`, `REGION_MANAGER`, `REPORT_VIEWER`, `SUPER_ADMIN`; write actions remain action-store scoped | direct navigation or store landing link for eligible roles only | must return to same route after auth verification | target/workforce request ledger by read/action scope | yes |
@@ -43,11 +43,11 @@ Current landing resolution in `admin-web/src/App.tsx`:
 2. `SUPER_ADMIN` or `INTEGRATION_ADMIN`: `/admin/integrations`
 3. `SNAPSHOT_OPERATOR`: `/admin/snapshots`
 4. `HR_ADMIN`: `/admin/competitions`
-5. `REGION_MANAGER`: `/admin/targets`
-6. `REPORT_VIEWER`: `/admin/reports`
-7. `AUDITOR`: `/admin/audit`
-8. `VISUAL_MERCHANDISER`: `/store/checklists`
-9. remaining authenticated store sessions: `/store`
+5. `REPORT_VIEWER`: `/admin/reports`
+6. `AUDITOR`: `/admin/audit`
+7. `VISUAL_MERCHANDISER`: `/store/checklists`
+8. `STORE_PERSONNEL` without manager/region role: `/store/me`
+9. `REGION_MANAGER`, `STORE_MANAGER`, or broad store sessions: `/store/home`
 
 ## Review Notes
 
