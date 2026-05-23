@@ -7,6 +7,7 @@ export class CreateRoleAssignmentDto {
 
   @IsIn([
     "SUPER_ADMIN",
+    "HR_ADMIN",
     "INTEGRATION_ADMIN",
     "SNAPSHOT_OPERATOR",
     "REPORT_VIEWER",

@@ -4265,6 +4265,7 @@
             "type": "string",
             "enum": [
               "SUPER_ADMIN",
+              "HR_ADMIN",
               "INTEGRATION_ADMIN",
               "SNAPSHOT_OPERATOR",
               "REPORT_VIEWER",
