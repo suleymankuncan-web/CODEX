@@ -4,7 +4,8 @@ This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
 PR #452 plus the Store Action V1B Store Tasks basic loop closeout, Store Action
 test hygiene/visibility evidence, the Pilot Reliability Spine V1 docs, first
-execution evidence, and full five-persona Clerk protected evidence,
+execution evidence, five-persona Clerk protected evidence, and an explicit
+`REGION_MANAGER` active-role evidence follow-up,
 the Product Readiness V1 first-pass closeout, Operations Control Tower
 readiness line, Sokrates/discipline operating docs, current workspace hygiene,
 the Clerk persona staging evidence runbooks, the generated system-flow map,
@@ -35,23 +36,23 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-23, `origin/main` was fetched through PR #452. The root checkout
-was clean after the full Clerk persona matrix evidence PR was merged.
+As of 2026-05-23, `origin/main` was fetched through PR #458. The root checkout
+was clean after the external evidence closure decision PR was merged.
 
-Current maintenance branch after PR #452:
+Current maintenance branch after PR #458:
 
-- `codex/external-evidence-closure-v2`
-- Scope: docs-only plan/status reconciliation for the remaining external
-  evidence decisions: alert delivery policy, Redis/BullMQ production posture,
-  Supabase recovery posture, upload proof status, and final controlled-pilot
-  versus broad-production readiness classification.
+- `codex/pilot-scenario-feature-growth-v1`
+- Scope: docs-only pilot scenario and feature growth gate. It adds the active
+  pilot role scenario pack, including `REGION_MANAGER`, and a reusable feature
+  growth checklist for source-of-truth, scope, read/write, auth/API/DB/OpenAPI,
+  workflow, operations, data-quality, test, rollback, and stop-rule decisions.
 - No product code, API response shape, auth semantics, DB migration, CSS,
   provider config, or user-facing workflow behavior changes.
 
 Latest merge on main:
 
 ```text
-f87cbada docs: record full clerk persona matrix evidence (#452)
+1d3f744a docs: consolidate external evidence closure (#458)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -223,6 +224,12 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #450 `docs: record live clerk persona evidence`
 - PR #451 `fix: allow hr admin role assignments`
 - PR #452 `docs: record full clerk persona matrix evidence`
+- PR #453 `docs: plan external evidence closure`
+- PR #454 `docs: record alert email policy evidence`
+- PR #455 `docs: record better stack email alert proof`
+- PR #456 `docs: record redis production posture`
+- PR #457 `docs: record supabase recovery posture`
+- PR #458 `docs: consolidate external evidence closure`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -240,9 +247,9 @@ frontend root, security headers, SPA fallback, and static assets passed.
 
 Current local hygiene state:
 
-- Root workspace `D:\store-ops-workspace` was clean on `main` after PR #452
-  before the current `codex/external-evidence-closure-v2` docs-only evidence
-  edits.
+- Root workspace `D:\store-ops-workspace` was clean on `main` after PR #458
+  before the current `codex/pilot-scenario-feature-growth-v1` docs-only
+  growth-governance edits.
 - The previous dirty root state was not deleted. It was saved as stash
   `codex hygiene backup 2026-05-21 root dirty state`. Do not drop that stash
   unless the user explicitly approves.
@@ -1418,7 +1425,24 @@ Primary references:
 
 - `docs/plans/feature-integration-spine-v1.md`
 - `docs/plans/new-module-template.md`
+- `docs/plans/pilot-scenario-pack-v1.md`
+- `docs/plans/feature-growth-checklist-v1.md`
 - `docs/plans/store-action-coaching-loop-v1.md`
+
+Pilot Scenario Pack V1 and Feature Growth Checklist V1 status:
+
+- They are the docs-only bridge between the current pilot product flow and the
+  generic feature-entry spine.
+- Active pilot roles are `SUPER_ADMIN`, `HR_ADMIN`, `REGION_MANAGER`,
+  `STORE_MANAGER`, `STORE_PERSONNEL`, and `REPORT_VIEWER`.
+- `INTEGRATION_ADMIN`, `AUDITOR`, `SNAPSHOT_OPERATOR`, and
+  `VISUAL_MERCHANDISER` are support/special roles unless a future slice scopes
+  them into the active pilot path.
+- `REGION_MANAGER` is an active product role, not a future placeholder. Fresh
+  live Clerk evidence should be added before treating it as a signed-off pilot
+  persona because the latest protected live matrix covered five personas.
+- New features must state their scope type: person, store, region, company,
+  support, provider-backed, or system-level.
 
 The spine keeps generic workflow engines, rules engines, event buses, API
 Gateway work, broad OpenAPI generator refactor, and Operations Tower dumping
@@ -1588,8 +1612,9 @@ Store Action V1A status:
   `/store/tasks` for `STORE_MANAGER`/`SUPER_ADMIN` persisted-plan controls,
   while `REPORT_VIEWER` only gets workflow inbox read visibility. Public staging
   readiness and alert-routing smokes passed their tokenless checks; the later
-  full five-persona Clerk evidence closes the protected persona matrix for the
-  current pilot set.
+  five-persona Clerk evidence closes the protected evidence matrix for those
+  personas, while `REGION_MANAGER` remains an active product role that still
+  needs a fresh live persona pass before signed-off pilot use.
   Evidence:
   `docs/evidence/store-action-test-hygiene-and-visibility-v1.md` and
   `docs/evidence/pilot-readiness/2026-05-23-store-action-visibility-readiness.md`.
@@ -1614,11 +1639,12 @@ Pilot Reliability Spine V1 current branch:
   passed tokenless checks but provider delivery was `not-configured` in that
   early pass. Later Render Slack notification delivery proof is recorded in the
   readiness evidence; final production alert policy is still an owner decision.
-- Current protected/provider blockers for this line: the Clerk full
-  five-persona matrix is closed; remaining blockers are future alert policy,
-  managed restore/PITR, broad-production Redis tier/profile, or other external
-  rerun inputs that are not already provided securely. Do not treat skipped
-  token checks as proof.
+- Current protected/provider blockers for this line: the Clerk five-persona
+  protected matrix is closed for the proven pilot personas; `REGION_MANAGER`
+  fresh live persona evidence remains a follow-up. Remaining blockers are
+  future alert policy, managed restore/PITR, broad-production Redis
+  tier/profile, or other external rerun inputs that are not already provided
+  securely. Do not treat skipped token checks as proof.
 - First execution evidence:
   `docs/evidence/pilot-readiness/2026-05-23-pilot-reliability-spine-execution-v1.md`.
   Public deployed readiness passed `13/14`, public backend load health passed
@@ -1766,6 +1792,8 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/plans/performance-budget-v1.md` - Performance Budget V1
 - `docs/plans/project-health-snapshot-2026-05-01.md`
 - `docs/plans/project-progress-plan-v1.md` - Project Progress Plan V1
+- `docs/plans/pilot-scenario-pack-v1.md` - Pilot Scenario Pack V1
+- `docs/plans/feature-growth-checklist-v1.md` - Feature Growth Checklist V1
 - `docs/plans/production-evidence-closure-joint-plan-v1.md` - Production Evidence Closure Joint Plan V1
 - `docs/plans/refactor-execution-plan-v1.md` - Refactor Execution Plan V1
 - `docs/plans/refactor-completion-inventory-v1.md` - Refactor Completion Inventory V1

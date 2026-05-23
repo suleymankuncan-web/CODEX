@@ -26,8 +26,9 @@ Evidence:
 - Repo evidence: `current-state.md`, `sokrates.md`, `docs/plans/project-debt-ledger.md`, `docs/plans/feature-backlog.md`, and `docs/superpowers/plans/2026-05-18-readiness-progress.md`.
 - Test evidence: recent PR lines used lint/build/Playwright/GitHub/Vercel/Codex checks before merge.
 - Runtime evidence: deployed readiness has passed both tokenless public checks
-  and, as of 2026-05-23, a protected Clerk token pass for the current
-  five-persona matrix.
+  and, as of 2026-05-23, a protected Clerk token pass for five pilot personas;
+  `REGION_MANAGER` is an active product role but still needs fresh live persona
+  evidence before it is treated as a signed-off pilot persona.
 - User preference: no rewrite, no rushed broad refactor, small slices, PRs only when meaningful, autonomous merge after checks and Codex approval.
 
 Counterargument:
@@ -65,8 +66,9 @@ Still not done:
 
 - Broad production is still `No-Go`.
 - Controlled/internal pilot remains `Conditional Go`.
-- Real staging auth/session evidence is current for the full five-persona
-  controlled staging matrix.
+- Real staging auth/session evidence is current for the five-persona controlled
+  staging matrix. `REGION_MANAGER` remains an active product role with a
+  separate fresh-evidence follow-up.
 - Supabase app-owned schema logical restore is proven and accepted for
   controlled pilot; managed restore-to-new-project/PITR/RPO/RTO posture remains
   a broad-production gate.
@@ -90,7 +92,8 @@ broad-production owner/provider decisions.
 Missing:
 
 - Real Clerk/staging bearer-token proof for `/api/auth/session` is closed for
-  the current five-persona matrix on 2026-05-23.
+  five pilot personas on 2026-05-23; `REGION_MANAGER` needs a separate fresh
+  protected pass before signed-off pilot use.
 - Assigned-store `201` and unassigned-store `403` action smoke proof in staging.
 - Supabase broad-production recovery evidence: controlled-pilot logical restore
   is accepted, but managed restore/PITR/RPO/RTO posture still needs explicit
@@ -413,10 +416,12 @@ Current result:
   available.
 - Fresh 2026-05-23 protected Clerk proof is now recorded in
   `docs/evidence/system-flow/clerk-persona-live-evidence-2026-05-23.md` for
-  the current five-persona matrix. `SUPER_ADMIN`, `HR_ADMIN`,
-  `STORE_MANAGER`, `STORE_PERSONNEL`, and `REPORT_VIEWER` passed browser
-  route/session checks; non-super-admin sampled auth-admin endpoints returned
-  `403`; report-viewer `/store/tasks` remained read-only; Store Action
+  five pilot personas. `SUPER_ADMIN`, `HR_ADMIN`, `STORE_MANAGER`,
+  `STORE_PERSONNEL`, and `REPORT_VIEWER` passed browser route/session checks;
+  `REGION_MANAGER` is an active product role that still needs fresh live
+  evidence before signed-off pilot use. Non-super-admin sampled auth-admin
+  endpoints returned `403`; report-viewer `/store/tasks` remained read-only;
+  Store Action
   assigned/unassigned action-scope read proof passed; deployed readiness passed
   `14/14` with a real token; and backend protected load passed `5/5` groups
   with role-specific tokens.
@@ -626,9 +631,17 @@ Why:
   first read-only data-quality control-tower signal are now implemented; the
   next useful local work should come from a remaining growth guardrail with a
   clear test-only, docs/script, or read-only boundary.
+- Pilot Scenario Pack V1 and Feature Growth Checklist V1 now provide the
+  product-facing bridge for feature growth: active pilot roles, including
+  `REGION_MANAGER`, route/action scope, domain source-of-truth, freshness
+  expectations, and the minimum intake gate before new feature code.
 
 Candidate next outputs:
 
+- Use `docs/plans/pilot-scenario-pack-v1.md` before widening pilot scenarios or
+  adding role-specific flows.
+- Use `docs/plans/feature-growth-checklist-v1.md` before starting Norm Kadro,
+  Coaching, new reports, new workflow sources, or new module work.
 - Authorization matrix drift guard is already implemented as a docs/script
   guard through the scope/auth regression matrix contract; do not repeat it.
 - Cross-domain data-quality signal V1 is now represented in `/admin/operations`
