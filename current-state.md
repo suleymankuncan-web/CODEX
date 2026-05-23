@@ -38,28 +38,29 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-23, `origin/main` includes the Controlled Pilot Dry Run V1
-evidence refresh and the follow-up handoff cleanup. The root checkout is clean
-on `main`.
+As of 2026-05-23, `origin/main` includes the Controlled Pilot Scenario
+Rehearsal V1 runbook and first evidence pass. The root checkout is clean on
+`main` before starting new work.
 
 Current maintenance branch:
 
 - None. Main is the current handoff baseline.
 - The latest merged docs-only slice recorded public staging readiness,
-  alert-routing, backend load, local pilot gates, sanitized six-persona Clerk
-  route/session evidence, auth-admin `403` negatives, Store Action scope checks,
-  and the controlled-pilot decision.
+  alert-routing with backend health signal, public backend load, local pilot
+  gates, Store Action frontend/backend coverage, admin lint, generated API
+  check, and correctly blocked/skipped protected persona phases when no secure
+  role-specific token/session input was available in that shell.
 
 Latest controlled-pilot evidence merge:
 
 ```text
-0ea4cab0 docs: record controlled pilot dry run (#461)
+01e79993 docs: record controlled pilot rehearsal evidence (#465)
 ```
 
-Latest handoff cleanup merge before this stable wording:
+Latest controlled-pilot runbook merge:
 
 ```text
-c6f92cf0 docs: update handoff after dry run merge (#462)
+2a3083db docs: add controlled pilot scenario rehearsal (#464)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -241,6 +242,9 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #460 `docs: record region manager live evidence`
 - PR #461 `docs: record controlled pilot dry run`
 - PR #462 `docs: update handoff after dry run merge`
+- PR #463 `docs: stabilize handoff latest state`
+- PR #464 `docs: add controlled pilot scenario rehearsal`
+- PR #465 `docs: record controlled pilot rehearsal evidence`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -1703,6 +1707,13 @@ Pilot Reliability Spine V1 current branch:
   and generated API check. Protected persona phases were correctly recorded as
   blocked/skipped in this pass because no secure role-specific token/session
   input was available in the shell.
+- Controlled Pilot Execution Roadmap V1:
+  `docs/plans/controlled-pilot-execution-roadmap-v1.md`.
+  This is the next control document after the first rehearsal evidence pass. It
+  orders the project direction as real persona rehearsal, feedback/bug triage,
+  targeted fix loop, later UI redesign intake, and future module intake through
+  the feature-growth gate. It does not approve broad production or new module
+  implementation by itself.
 
 Current user direction on 2026-05-18:
 
@@ -1807,6 +1818,7 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/evidence/pilot-readiness/2026-05-23-pilot-reliability-spine-execution-v1.md` - Pilot Reliability Spine first execution evidence
 - `docs/evidence/pilot-readiness/2026-05-23-controlled-pilot-dry-run-v1.md` - Controlled Pilot Dry Run V1 evidence refresh
 - `docs/evidence/pilot-readiness/2026-05-23-controlled-pilot-scenario-rehearsal-v1.md` - Controlled Pilot Scenario Rehearsal V1 evidence
+- `docs/plans/controlled-pilot-execution-roadmap-v1.md` - Controlled Pilot Execution Roadmap V1
 - `docs/evidence/system-flow/clerk-persona-live-evidence-2026-05-23.md` - Fresh Clerk persona protected evidence
 - `docs/evidence/system-flow/clerk-region-manager-live-evidence-2026-05-23.md` - Fresh Region Manager protected evidence
 - `docs/evidence/pilot-evidence-operating-matrix-v1.md` - Pilot Evidence Operating Matrix V1
