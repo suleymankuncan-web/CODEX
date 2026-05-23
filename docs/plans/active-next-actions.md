@@ -6,21 +6,27 @@ This is the short working list for the next practical steps. It keeps the projec
 
 ## Current Position
 
-As of 18 May 2026, the production readiness roadmap has a decision packet:
+As of 23 May 2026, the project is no longer in generic foundation-building
+mode. The production readiness roadmap still provides the broad release
+boundary, but the practical next track is the controlled pilot execution loop:
+run real scoped sessions, record feedback, fix only concrete blockers, and keep
+new module or broad redesign work behind explicit decisions.
 
 - Production Readiness Decision Packet V1:
   `docs/evidence/readiness/2026-05-18-production-readiness-decision.md`
 - Local code and release gate: `Go`
 - Controlled staging/internal hardening: `Conditional Go`
-- Controlled pilot expansion: `Conditional Go` for existing scoped pilot users
-  after Clerk persona/action, protected-route load, and safe upload evidence;
-  still no broad production
+- Controlled pilot expansion: `Conditional Go / Continue` for the existing
+  scoped pilot users. Clerk persona, role/scope route checks, protected
+  readiness/load checks, safe upload evidence, and Store Action command proof
+  are now closed for the current controlled-pilot path.
 - Broad production rollout: `No-Go`
 
-The next useful work is evidence capture and targeted blocker repair, not
-another local guard by reflex. The original six external evidence gaps are now
-partly closed; keep the remaining work split between pilot-expansion follow-up
-and broad-production/operational hardening.
+The next useful work is not another reflex guard or broad refactor. It is
+pilot feedback capture and targeted blocker repair.
+
+The original six external evidence gaps are now split into current
+controlled-pilot evidence and broad-production posture decisions.
 
 Tier A - controlled pilot expansion follow-up:
 
@@ -30,7 +36,24 @@ Tier A - controlled pilot expansion follow-up:
    current controlled pilot. The existing super-admin pilot session has already
    proven a safe staging upload smoke. See
    `docs/plans/import-upload-authorization-decision-v1.md`.
-3. Keep using `docs/plans/clerk-persona-staging-evidence-runbook-v1.md` for any
+3. Protected route/load and upload evidence is recorded in
+   `docs/evidence/readiness/2026-05-22-live-evidence-proof-pass.md` and
+   refreshed by the later 2026-05-23 protected persona evidence.
+4. Store Action command proof is now closed for the controlled-pilot
+   `STORE_MANAGER` path.
+5. Keep using `docs/plans/clerk-persona-staging-evidence-runbook-v1.md` for any
+   new persona onboarding or role/scope evidence.
+
+Current execution loop under Tier A:
+
+1. Add each real pilot session to the controlled pilot feedback log.
+2. Classify findings as `P0 stop`, `P1 pilot blocker`, `P2 pilot friction`, or
+   `P3 backlog`.
+3. Fix only concrete P0/P1 blockers immediately. Batch P2 friction only when it
+   shares one surface, risk class, and verification story.
+4. Keep `/store/me` product-feel and broad UI redesign parked until the user
+   explicitly starts that design track.
+5. Keep using `docs/plans/clerk-persona-staging-evidence-runbook-v1.md` for any
    new persona onboarding or role/scope evidence.
 
 Tier B - broad-production/operational hardening:
@@ -39,19 +62,37 @@ Tier B - broad-production/operational hardening:
    logically proven for application schemas; production-grade managed
    backup/PITR/RPO/RTO policy remains open.
 2. Production alert policy decision and production destination proof if the
-   team wants broad-production readiness beyond the staging Slack proof.
+   team wants broad-production readiness beyond the staging Slack and Better
+   Stack proof. Slack is the proven external delivery path for this staging
+   pass.
 3. Broad-production Redis/BullMQ decision and health evidence if import or
-   snapshot durability is required.
+   snapshot durability is required. Redis/BullMQ is live on staging and accepted
+   with Free-tier risk for controlled pilot; broad production still needs a
+   persistent production tier or explicit written risk acceptance.
 
 Operating plan:
 
-- `docs/plans/production-evidence-closure-joint-plan-v1.md` is the current
-  joint closure plan for Redis/BullMQ, alert provider delivery, and Supabase
-  restore evidence.
-- Work order: Redis/BullMQ staging proof first, alert provider delivery second,
-  Supabase restore drill third.
+- `docs/plans/controlled-pilot-execution-roadmap-v1.md` is the current control
+  document for day-to-day pilot execution.
+- `docs/plans/production-evidence-closure-joint-plan-v1.md` remains the
+  reference for broad-production provider posture, not the active pilot loop.
 - Do not claim broad-production readiness from docs or local checks alone; each
-  item needs real provider input and sanitized live evidence.
+  broad-production item needs explicit owner acceptance, real provider input,
+  and sanitized live evidence.
+
+2026-05-23 update:
+
+- Fresh six-role Clerk persona evidence is recorded, including
+  `REGION_MANAGER`.
+- Store Action live command proof is closed by
+  `docs/evidence/pilot-readiness/2026-05-23-store-action-command-live-proof-v1.md`:
+  assigned-store create/status/close/cancel passed with a real
+  `STORE_MANAGER` session and unassigned-store create returned `403`.
+- The old generic "real IdP staging evidence" blocker is superseded for the
+  current controlled-pilot scope. Future role/scope changes still require a
+  rerun, but they are not an active blocker today.
+- The right next move is to run the controlled pilot execution loop and let
+  real feedback, not generic hardening, choose the next code PR.
 
 2026-05-22 update:
 
@@ -250,7 +291,10 @@ Interpretation:
 
 - The local project is not carrying a known silent release-quality debt right now.
 - Production Readiness Decision Packet V1 now records the current `Go`, `Conditional Go`, and `No-Go` boundaries in `docs/evidence/readiness/2026-05-18-production-readiness-decision.md`.
-- Real IdP staging evidence is not counted as done because it requires outside staging IdP and seeded DB values.
+- The remaining blocked external dependency is broad-production operational
+  posture, not controlled-pilot IdP evidence. Current pilot persona/action
+  evidence is closed; broad-production Redis, recovery, incident, and
+  provider-posture decisions remain separate.
 - JSON Source Suspension V1 is the current product decision: JSON source integration is suspended for the current pilot and Power BI/Excel operating path.
 - Power BI/Excel outputs remain the chosen operating source; JSON source work is not an active blocker while this remains true.
 - Daily Closure / Historical Ranking V2 explainability now exists over the existing read model.
@@ -1381,35 +1425,45 @@ Interpretation:
 - Reference:
   - `docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-round-1-outcome.md`
 
-### 1. Real IdP Staging Evidence
+### 1. Controlled Pilot Execution Loop
 - Priority: `P1`
-- Why: local provider and action mechanics are proven, but production confidence still needs real staging IdP and seeded staging action evidence.
+- Why: the code foundation and controlled-pilot evidence are strong enough that
+  the next useful signal must come from real scoped use, not another generic
+  readiness document.
 - Scope:
-  - fill real staging provider registration values
-  - run PKCE login/logout smoke against staging
-  - run positive action smoke on assigned store
-  - run negative action smoke proving unassigned store returns `403`
-  - store sanitized evidence only
+  - run scoped pilot sessions for the active roles
+  - add session notes to the controlled pilot feedback log
+  - classify issues as `P0 stop`, `P1 pilot blocker`, `P2 pilot friction`, or
+    `P3 backlog`
+  - fix concrete P0/P1 blockers with small PRs and targeted tests
+  - batch P2 friction only when the surface, risk, and verification story match
+  - keep broad production, UI redesign, and new modules out of this loop unless
+    explicitly reopened
 - References:
-  - `docs/plans/phase-7-provider-readiness-checklist.md`
-  - `docs/plans/phase-7-auth-evidence-template.md`
+  - `docs/plans/controlled-pilot-execution-roadmap-v1.md`
+  - `docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md`
+  - `docs/plans/clerk-persona-staging-evidence-runbook-v1.md`
 
 ## Recommended Next Move
 
-Follow Production Readiness Decision Packet V1 first:
-`docs/evidence/readiness/2026-05-18-production-readiness-decision.md`.
+Follow the Controlled Pilot Execution Roadmap first:
+`docs/plans/controlled-pilot-execution-roadmap-v1.md`.
 
-If staging IdP and seeded staging DB values are available, start real staging evidence.
+If a new pilot session happens, add it to the feedback log and classify the
+findings before coding.
 
-If role-specific staging bearer tokens are available, run the backend readiness
-load smoke for session, store, competition, and import route groups.
+If a concrete P0/P1 pilot blocker appears, open a small targeted fix loop.
 
-If a disposable Supabase restore target is approved, run the Supabase staging
-restore drill and update the readiness decision.
+If the owner decides to move toward broad production, return to the production
+readiness decision packet and explicitly close or accept the Redis, alerting,
+recovery, and provider-posture items.
 
 JSON remains suspended for the current pilot. Do not reopen JSON planning until real JSON-format files or an official field list arrive and the product owner reopens the path.
 
-If the current controlled pilot continues without widening scope, add the next session to the controlled pilot feedback log and run `npm.cmd run check:pilot-stabilization` before any new invite wave or deploy that can affect pilot routes.
+If the current controlled pilot continues without widening scope, add the next
+session to the controlled pilot feedback log and run
+`npm.cmd run check:pilot-stabilization` before any new invite wave or deploy
+that can affect pilot routes.
 
 If neither staging values nor true baseline files are available, do not open source-specific adapter work yet. Excel KPI Import V1 is now local implementation-complete, and the inspected March files remain KPI snapshot files, not master-data baseline files, so do not run a real personnel/store bootstrap promotion until a true baseline list with store codes and seller codes exists.
 
