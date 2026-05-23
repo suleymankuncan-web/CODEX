@@ -601,6 +601,27 @@ Evidence:
 
 - `docs/evidence/store-action-v1b-status-update-ui-v1.md`
 
+## V1B Close Resolution UI
+
+The first terminal UI slice closes only an existing active persisted action plan
+with a required resolution note.
+
+Decision:
+
+- Use the generated
+  `PATCH /api/store-actions/plans/{actionPlanId}/close` frontend helper.
+- Show one inline close form on active persisted action-plan rows.
+- Require `resolutionNote` before submit.
+- Refetch Store Action plans and workflow inbox after successful close.
+- Keep failures local to the close form.
+- Keep cancel, cancel reasons, reopen, comments, attachments, notifications,
+  escalation, non-KPI sources, new routes, DB/auth/workflow/scoring/API-shape
+  changes, and broad redesign out of this slice.
+
+Evidence:
+
+- `docs/evidence/store-action-v1b-close-resolution-ui-v1.md`
+
 ## Data Placement Draft
 
 V1A read-only:

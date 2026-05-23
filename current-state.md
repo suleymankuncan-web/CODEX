@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #442 plus the Store Action V1B Store Tasks create-from-KPI-candidate UI, the Product Readiness V1
+PR #443 plus the Store Action V1B Store Tasks status-update UI, the Product Readiness V1
 first-pass closeout, Operations Control Tower readiness line,
 Sokrates/discipline operating docs, current workspace hygiene, the Clerk
 persona staging evidence runbook, the generated system-flow map, and the
@@ -32,14 +32,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-22, `origin/main` has been fetched through PR #442. The root
+As of 2026-05-23, `origin/main` has been fetched through PR #443. The root
 checkout was clean `main` and aligned with `origin/main` before the Store
-Action V1B status-update UI branch.
+Action V1B close-resolution UI branch.
 
 Latest merge on main:
 
 ```text
-5aa2dd33 feat: create store action plans from KPI candidates (#442)
+79869124 feat: update store action plan status from tasks (#443)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -1492,7 +1492,7 @@ Store Action V1A status:
   comments, attachments, notifications, escalation, non-KPI sources, new routes,
   DB/auth/workflow/scoring/API-shape changes, or broad redesign.
   Evidence: `docs/evidence/store-action-v1b-create-from-kpi-candidate-ui-v1.md`.
-- Current Store Action V1B next active slice: status update UI is limited to
+- PR #443 Store Action V1B status-update UI slice is limited to
   existing persisted action plans on `/store/tasks` and the generated
   `PATCH /api/store-actions/plans/{actionPlanId}/status` contract. It may only
   move active statuses among `open`, `in_progress`, and `blocked`, with optional
@@ -1501,6 +1501,14 @@ Store Action V1A status:
   new routes, DB/auth/workflow/scoring/API-shape changes, and broad redesign
   remain parked.
   Evidence: `docs/evidence/store-action-v1b-status-update-ui-v1.md`.
+- Current Store Action V1B next active slice: close-resolution UI is limited to
+  existing active persisted action plans on `/store/tasks` and the generated
+  `PATCH /api/store-actions/plans/{actionPlanId}/close` contract. It may only
+  close a plan with required `resolutionNote` text and local form errors.
+  Cancel, cancel reasons, reopen, comments, attachments, notifications,
+  escalation, non-KPI sources, new routes, DB/auth/workflow/scoring/API-shape
+  changes, and broad redesign remain parked.
+  Evidence: `docs/evidence/store-action-v1b-close-resolution-ui-v1.md`.
 
 Current user direction on 2026-05-18:
 

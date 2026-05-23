@@ -498,7 +498,14 @@ It must not own plan detail, commands, assignment, or resolution.
    - Limits status choices to `open`, `in_progress`, and `blocked`.
    - Keeps close/cancel/detail/non-KPI sources out of scope.
    - Evidence: `docs/evidence/store-action-v1b-status-update-ui-v1.md`.
-10. Targeted Playwright and deployed smoke evidence when staging is ready.
+10. Close resolution Store Tasks UI.
+   - Adds one inline close form on active persisted action-plan rows.
+   - Uses generated frontend write helper for
+     `PATCH /api/store-actions/plans/{actionPlanId}/close`.
+   - Requires a resolution note.
+   - Keeps cancel/reopen/detail/non-KPI sources out of scope.
+   - Evidence: `docs/evidence/store-action-v1b-close-resolution-ui-v1.md`.
+11. Targeted Playwright and deployed smoke evidence when staging is ready.
 
 Stop before the next kademe if the current one changes KPI scoring, checklist
 rules, target approval semantics, auth semantics, or workflow behavior outside
