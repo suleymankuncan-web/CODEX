@@ -1729,8 +1729,15 @@ Pilot Reliability Spine V1 current branch:
   `STORE_PERSONNEL`, and `REPORT_VIEWER`. Expected positive routes opened,
   forbidden routes failed closed, read-only/personnel personas did not see Store
   Action command controls, and no red error/infinite loading/blank screen was
-  reported. Landing/return-state quirks for `HR_ADMIN` and `REPORT_VIEWER` and
-  missing Store Action command-mode proof remain follow-up notes, not blockers.
+  reported.
+- Landing Return-State Investigation V1:
+  `docs/evidence/pilot-readiness/2026-05-23-landing-return-state-investigation-v1.md`.
+  This docs-only root-cause pass closes the `HR_ADMIN` and `REPORT_VIEWER`
+  first-route follow-up as intentional `returnTo` preservation rather than a
+  broken role default. Clean default landing remains `/admin/competitions` for
+  `HR_ADMIN` and `/admin/reports` for `REPORT_VIEWER`; changing that precedence
+  would be an auth/navigation behavior decision. Missing Store Action
+  command-mode proof remains the next controlled-pilot follow-up.
 
 Current user direction on 2026-05-18:
 
@@ -1838,6 +1845,7 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/plans/controlled-pilot-execution-roadmap-v1.md` - Controlled Pilot Execution Roadmap V1
 - `docs/evidence/pilot-readiness/2026-05-23-controlled-pilot-execution-preflight-v1.md` - Controlled Pilot Execution Preflight V1
 - `docs/evidence/pilot-readiness/2026-05-23-assisted-persona-rehearsal-v1.md` - Assisted Persona Rehearsal V1
+- `docs/evidence/pilot-readiness/2026-05-23-landing-return-state-investigation-v1.md` - Landing Return-State Investigation V1
 - `docs/evidence/system-flow/clerk-persona-live-evidence-2026-05-23.md` - Fresh Clerk persona protected evidence
 - `docs/evidence/system-flow/clerk-region-manager-live-evidence-2026-05-23.md` - Fresh Region Manager protected evidence
 - `docs/evidence/pilot-evidence-operating-matrix-v1.md` - Pilot Evidence Operating Matrix V1
