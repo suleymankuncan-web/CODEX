@@ -100,6 +100,55 @@ test('store tasks lists persisted action plan records with active status control
   await expect(actionPlansPanel.getByText('1-1 / 1')).toBeVisible()
 })
 
+test('store tasks opens persisted action plan coaching detail on demand', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'en')
+  })
+  let detailRequested = false
+
+  await page.unroute('**/api/store-actions/plans**')
+  await page.route('**/api/store-actions/plans**', async (route) => {
+    const request = route.request()
+    const url = new URL(request.url())
+
+    if (
+      request.method() === 'GET' &&
+      url.pathname.endsWith(`/store-actions/plans/${storeActionPlansFixture.items[0].actionPlanId}`)
+    ) {
+      detailRequested = true
+      await route.fulfill({
+        json: {
+          data: {
+            plan: {
+              ...storeActionPlansFixture.items[0],
+              status: 'blocked',
+              sourceSnapshotRunId: '00000000-0000-0000-0000-00000000c001',
+              sourceKpiId: '00000000-0000-0000-0000-00000000d001',
+              updatedAt: '2026-05-23T10:30:00.000Z',
+            },
+          },
+        },
+      })
+      return
+    }
+
+    await route.fulfill({ json: storeActionPlansFixture })
+  })
+
+  await page.goto('/store/tasks')
+
+  const actionPlansPanel = page.locator('.panel').filter({ hasText: 'Persisted follow-up' })
+  const actionPlanRow = actionPlansPanel.locator('article.stacked-row').filter({ hasText: 'Net sales recovery plan' })
+  await actionPlanRow.getByRole('button', { name: 'Open coaching detail' }).click()
+
+  await expect(actionPlanRow.getByLabel('Action plan coaching detail')).toBeVisible()
+  await expect(actionPlanRow.getByText('Lifecycle snapshot')).toBeVisible()
+  await expect(actionPlanRow.getByText('00000000-0000-0000-0000-00000000c001')).toBeVisible()
+  await expect(actionPlanRow.getByText('00000000-0000-0000-0000-00000000d001')).toBeVisible()
+  await expect(actionPlanRow.getByText('Not available').first()).toBeVisible()
+  expect(detailRequested).toBe(true)
+})
+
 test('store tasks updates a persisted action plan status', async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem('store-ops-app-locale', 'en')

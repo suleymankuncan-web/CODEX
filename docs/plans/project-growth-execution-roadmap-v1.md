@@ -193,6 +193,13 @@ First safe slice:
 - action detail/history/comments decision doc, then minimal comment/history
   read/write if the decision is accepted.
 
+Active slice:
+
+- V2A starts with an on-demand read-only coaching detail disclosure over the
+  existing `GET /api/store-actions/plans/{actionPlanId}` endpoint. It records
+  source/lifecycle/resolution context without adding comments, storage,
+  escalation, notification, new source families, or workflow state.
+
 Verification:
 
 - assigned-store scope remains enforced,

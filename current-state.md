@@ -55,22 +55,22 @@ Primary app endpoints:
 As of 2026-05-23, `origin/main` includes the Controlled Pilot Scenario
 Rehearsal V1 runbook, the first evidence pass, the assisted persona route
 checks, the Store Action command smoke harness, the Store Action live command
-proof, and the Pilot Feedback backend and frontend loop.
+proof, the Pilot Feedback backend and frontend loop, the Data Quality Center,
+and Operations Telemetry V2.
 
 Current maintenance branch:
 
-- Active branch: `codex/operations-telemetry-v2`.
-- This branch starts Track 3 of the project-growth roadmap: a read-only
-  Operations Control Tower V2 signal-freshness slice that reuses already
-  loaded import, snapshot, workforce, workflow, KPI config, and ranking
-  signals. It must not change provider config, alert semantics, queue posture,
-  backend contracts, auth semantics, DB schema, or user-facing workflow
-  behavior.
+- Active branch: `codex/store-action-coaching-v2`.
+- This branch starts Track 4 of the project-growth roadmap: a read-only
+  Store Action coaching detail slice that reuses the existing
+  `GET /api/store-actions/plans/{actionPlanId}` endpoint on demand. It must not
+  add comments, attachments, escalation, notification, DB schema, auth
+  semantics, workflow state, KPI scoring, or command behavior.
 
 Latest project-growth merge:
 
 ```text
-1871674 feat: add data quality center (#481)
+fa8b7b7 feat: surface operations signal freshness (#482)
 ```
 
 Latest controlled-pilot evidence merge:
@@ -1905,6 +1905,7 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/plans/controlled-pilot-dry-run-v1.md` - Controlled Pilot Dry Run V1 plan
 - `docs/superpowers/plans/2026-05-23-external-evidence-closure-v2.md` - External Evidence Closure V2 plan
 - `docs/evidence/store-action-test-hygiene-and-visibility-v1.md` - Store Action test hygiene and visibility evidence
+- `docs/evidence/store-action-coaching-detail-v2a.md` - Store Action read-only coaching detail V2A evidence
 - `docs/evidence/project-wide-bug-hunt-2026-05-23.md` - project-wide bug hunt pass
 - `docs/flows/README.md` - Store Ops System Flow generator note
 - `docs/flows/store-ops-system-flow.html` - source-derived frontend/API/backend flow map

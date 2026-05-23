@@ -8,6 +8,8 @@ import {
 
 export type StoreActionPlanList = ApiGetResponse<'/api/store-actions/plans'>
 export type StoreActionPlan = StoreActionPlanList['items'][number]
+export type StoreActionPlanDetailResponse = ApiGetResponse<'/api/store-actions/plans/{actionPlanId}'>
+export type StoreActionPlanDetail = StoreActionPlanDetailResponse['data']['plan']
 export type StoreActionPlanPriority = StoreActionPlan['priority']
 export type StoreActionPlanStatus = StoreActionPlan['status']
 export type CreateStoreActionPlanInput = ApiMutationBody<'/api/store-actions/plans', 'POST'>
@@ -51,6 +53,12 @@ export function listStoreActionPlans(input: {
   appendQueryParam(params, 'offset', input.offset)
 
   return fetchOpenApiJson('/api/store-actions/plans', { query: params })
+}
+
+export function getStoreActionPlan(input: { actionPlanId: string }) {
+  return fetchOpenApiJson('/api/store-actions/plans/{actionPlanId}', {
+    params: { actionPlanId: input.actionPlanId },
+  })
 }
 
 export function createStoreActionPlan(input: CreateStoreActionPlanInput) {
