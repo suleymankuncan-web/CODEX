@@ -84,7 +84,8 @@ Still not done:
 
 ### 1. Live External Evidence
 
-Status: blocked by provider access or real staging inputs.
+Status: controlled-pilot evidence is mostly closed; remaining items are
+broad-production owner/provider decisions.
 
 Missing:
 
@@ -426,6 +427,10 @@ Current result:
   missing code; it is explicit owner decision work for broad-production Redis
   upgrade/evidence, incident policy/app-level error tracking, and managed
   recovery/PITR/RPO/RTO posture.
+- Final external evidence closure is recorded in
+  `docs/evidence/readiness/2026-05-23-external-evidence-closure-decision-v1.md`:
+  controlled internal pilot is `Conditional Go`; broad production remains
+  `No-Go`.
 
 Verification commands:
 

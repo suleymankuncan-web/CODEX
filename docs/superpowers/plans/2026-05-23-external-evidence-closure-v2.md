@@ -214,26 +214,36 @@ Phase 3 actual record:
 
 ## Phase 4 - Upload Evidence Reconciliation
 
-- [ ] Keep current controlled-pilot upload proof closed for the approved
+- [x] Keep current controlled-pilot upload proof closed for the approved
   `SUPER_ADMIN` operator path.
-- [ ] Do not create a new `INTEGRATION_ADMIN` role; the current decision is
+- [x] Do not create a new `INTEGRATION_ADMIN` role; the current decision is
   to let `SUPER_ADMIN` or `HR_ADMIN` own this operation when scoped later.
-- [ ] If a future role-specific upload rerun is required, require an explicit
+- [x] If a future role-specific upload rerun is required, require an explicit
   allowed persona, safe sample file, and no raw private data in output.
-- [ ] Record any change in
-  `docs/plans/import-upload-authorization-decision-v1.md`.
+- [x] Record any change in
+  `docs/plans/import-upload-authorization-decision-v1.md`; no change was
+  needed because the existing decision already covers the current pilot path.
 
 ## Phase 5 - Final External Evidence Decision
 
-- [ ] Create or update a consolidated external evidence closure note.
-- [ ] Classify each line as `closed-for-controlled-pilot`,
+- [x] Create or update a consolidated external evidence closure note.
+- [x] Classify each line as `closed-for-controlled-pilot`,
   `accepted-risk-for-controlled-pilot`, `blocked-for-broad-production`, or
   `requires-owner-decision`.
-- [ ] Final readiness rule:
+- [x] Final readiness rule:
   controlled pilot can be `Conditional Go` if protected persona, Redis staging,
   safe upload, alert policy, and logical restore posture are named. Broad
   production remains `No-Go` unless Redis tier, alert delivery policy, restore
   posture, and RPO/RTO acceptance are explicitly closed.
+
+Phase 4/5 actual record:
+
+- Final external evidence closure is recorded in
+  `docs/evidence/readiness/2026-05-23-external-evidence-closure-decision-v1.md`.
+  The current result is controlled internal pilot `Conditional Go` and broad
+  production `No-Go`. Upload evidence remains closed for the approved
+  `SUPER_ADMIN` pilot path; future `HR_ADMIN` or other role ownership needs a
+  separate scoped auth/API decision and sanitized upload/readback smoke.
 
 ## PR Rhythm
 
