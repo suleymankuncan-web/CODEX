@@ -512,7 +512,13 @@ It must not own plan detail, commands, assignment, or resolution.
    - Requires a cancel reason.
    - Keeps reopen/delete/detail/non-KPI sources out of scope.
    - Evidence: `docs/evidence/store-action-v1b-cancel-reason-ui-v1.md`.
-12. Targeted Playwright and deployed smoke evidence when staging is ready.
+12. Basic Store Tasks loop closeout.
+   - Completed loop: list, create from KPI candidate, active status update,
+     close with resolution note, and cancel with reason.
+   - Future detail routes, comments, attachments, notifications, escalation,
+     non-KPI source families, AI coaching copy, and live staging persona
+     evidence require separate go/no-go decisions.
+13. Targeted deployed smoke evidence when staging is ready.
 
 Stop before the next kademe if the current one changes KPI scoring, checklist
 rules, target approval semantics, auth semantics, or workflow behavior outside

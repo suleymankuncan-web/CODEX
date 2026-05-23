@@ -813,12 +813,16 @@ Current status:
   target coverage as target-domain readiness; target-driven coaching can only
   come through the KPI exception path until direct target source policy is
   explicit.
-- Persisted action plans are an explicit V1B NO-GO for implementation right
-  now; only a future approved write-feature slice should open DB, command,
-  audit, workflow inbox, OpenAPI, or frontend lifecycle work.
-- Detailed V1B design now defines the action-plan lifecycle, schema draft,
-  assigned-store write scope, audit events, API endpoints, workflow inbox
-  mapping, UI boundary, and implementation kademeleri before code.
+- Original safety rule: Persisted action plans are an explicit V1B NO-GO for
+  casual implementation. They moved from NO-GO to approved V1B kademeleri only
+  after the boundary/design/spec slices landed. The completed basic loop is:
+  schema, lifecycle/audit, command boundary, API contract, workflow inbox
+  source, Store Tasks list, create from KPI candidate, active status update,
+  close with resolution note, and cancel with reason.
+- The remaining Store Action work is not automatic continuation. Detail routes,
+  comments, attachments, notifications, escalation, non-KPI source families,
+  AI coaching copy, and live staging persona evidence all require a fresh
+  decision and their own verification ladder.
 
 ## CODEX DURUST YORUM
 

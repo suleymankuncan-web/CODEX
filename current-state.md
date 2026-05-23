@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #444 plus the Store Action V1B Store Tasks close-resolution UI, the Product Readiness V1
+PR #445 plus the Store Action V1B Store Tasks cancel-reason UI closeout, the Product Readiness V1
 first-pass closeout, Operations Control Tower readiness line,
 Sokrates/discipline operating docs, current workspace hygiene, the Clerk
 persona staging evidence runbook, the generated system-flow map, and the
@@ -32,14 +32,14 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-23, `origin/main` has been fetched through PR #444. The root
-checkout was clean `main` and aligned with `origin/main` before the Store
-Action V1B cancel-reason UI branch.
+As of 2026-05-23, `origin/main` has been fetched through PR #445. The root
+checkout is clean `main` and aligned with `origin/main` after the Store Action
+V1B cancel-reason UI merge.
 
 Latest merge on main:
 
 ```text
-dd6e1d87 feat: close store action plans from tasks (#444)
+283e4053 feat: cancel store action plans from tasks (#445)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -198,6 +198,12 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #437 `feat: add store action plan commands`
 - PR #438 `feat: expose store action plan api`
 - PR #439 `feat: add store action workflow inbox source`
+- PR #440 `feat: list store action plans on tasks`
+- PR #441 `docs: decide store action write ui boundary`
+- PR #442 `feat: create store action plans from KPI candidates`
+- PR #443 `feat: update store action plan status from tasks`
+- PR #444 `feat: close store action plans from tasks`
+- PR #445 `feat: cancel store action plans from tasks`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -1478,10 +1484,12 @@ Store Action V1A status:
   `sourceDeepLink` rendering, meta-backed total/range paging with stale-page
   recovery, blank-summary fallback, and the pilot smoke API fixture for
   `/api/store-actions/plans`.
-- Current Store Action V1B next decision: write UI is conditional GO only for a
-  create-from-existing-KPI-candidate slice. Status, close, cancel, non-KPI
-  sources, comments, attachments, notifications, escalation, new routes,
-  DB/auth/workflow/scoring/API-shape changes remain NO-GO until separate PRs.
+- Store Action V1B write UI decision started as a conditional GO only for a
+  create-from-existing-KPI-candidate slice. Later separate PRs deliberately
+  expanded the same Store Tasks surface to status update, close, and cancel
+  after each prior slice passed review and gates. Non-KPI sources, comments,
+  attachments, notifications, escalation, new routes, DB/auth/workflow/scoring/
+  API-shape changes remain NO-GO until separate decisions.
   Evidence: `docs/evidence/store-action-v1b-write-ui-go-no-go-v1.md`.
 - Store Action V1B create-from-KPI-candidate UI slice adds the first narrow write
   affordance on `/store/tasks`: existing KPI exception rows can create persisted
@@ -1509,14 +1517,18 @@ Store Action V1A status:
   escalation, non-KPI sources, new routes, DB/auth/workflow/scoring/API-shape
   changes, and broad redesign remain parked.
   Evidence: `docs/evidence/store-action-v1b-close-resolution-ui-v1.md`.
-- Current Store Action V1B next active slice: cancel-reason UI is limited to
-  existing active persisted action plans on `/store/tasks` and the generated
+- PR #445 Store Action V1B cancel-reason UI slice is limited to existing active
+  persisted action plans on `/store/tasks` and the generated
   `PATCH /api/store-actions/plans/{actionPlanId}/cancel` contract. It may only
   cancel a plan with required `cancelReason` text and local form errors. Reopen,
   delete, comments, attachments, notifications, escalation, non-KPI sources, new
   routes, DB/auth/workflow/scoring/API-shape changes, and broad redesign remain
   parked.
   Evidence: `docs/evidence/store-action-v1b-cancel-reason-ui-v1.md`.
+- Store Action V1B Store Tasks basic loop is now complete: list persisted plans,
+  create from KPI candidate, update active status, close with resolution note,
+  and cancel with reason. The next Store Action work should be a new explicit
+  decision, not automatic continuation.
 
 Current user direction on 2026-05-18:
 
