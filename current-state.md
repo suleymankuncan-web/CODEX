@@ -36,10 +36,11 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-23, `origin/main` was fetched through PR #461. The root checkout
-was clean after the controlled pilot dry-run evidence PR was merged.
+As of 2026-05-23, `origin/main` includes the Controlled Pilot Dry Run V1
+evidence refresh and the follow-up handoff cleanup. The root checkout is clean
+on `main`.
 
-Current maintenance branch after PR #461:
+Current maintenance branch:
 
 - None. Main is the current handoff baseline.
 - The latest merged docs-only slice recorded public staging readiness,
@@ -47,10 +48,16 @@ Current maintenance branch after PR #461:
   route/session evidence, auth-admin `403` negatives, Store Action scope checks,
   and the controlled-pilot decision.
 
-Latest merge on main:
+Latest controlled-pilot evidence merge:
 
 ```text
 0ea4cab0 docs: record controlled pilot dry run (#461)
+```
+
+Latest handoff cleanup merge before this stable wording:
+
+```text
+c6f92cf0 docs: update handoff after dry run merge (#462)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -231,6 +238,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #459 `docs: add pilot scenario and feature growth gates`
 - PR #460 `docs: record region manager live evidence`
 - PR #461 `docs: record controlled pilot dry run`
+- PR #462 `docs: update handoff after dry run merge`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
