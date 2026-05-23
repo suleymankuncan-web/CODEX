@@ -36,9 +36,8 @@ Assumptions:
 - Broad production remains No-Go.
 - The project should not invent a new role, workflow, or data source while
   writing this pack.
-- `REGION_MANAGER` is an active product role and must be included, even though
-  the latest five-persona live Clerk evidence did not include a fresh
-  `REGION_MANAGER` session.
+- `REGION_MANAGER` is an active product role and must be included in pilot
+  scenario planning.
 
 Evidence:
 
@@ -46,6 +45,8 @@ Evidence:
   competition, feed, ranking, approval, and checklist-facing surfaces.
 - Fresh protected evidence exists for `SUPER_ADMIN`, `HR_ADMIN`,
   `STORE_MANAGER`, `STORE_PERSONNEL`, and `REPORT_VIEWER`.
+- Fresh protected addendum evidence exists for `REGION_MANAGER` in
+  `docs/evidence/system-flow/clerk-region-manager-live-evidence-2026-05-23.md`.
 - External evidence is closed enough for controlled pilot and explicitly parked
   for broad production.
 - Store Action V1B already gives store managers and super admins a narrow
@@ -79,7 +80,7 @@ Stop rule:
 | --- | --- | --- | --- |
 | `SUPER_ADMIN` | company | Owns system health, auth/admin control, imports, operations, and exception handling. | Fresh live evidence exists. |
 | `HR_ADMIN` | company | Owns HR/personnel-facing admin operations, master-data readiness, competitions, and governance surfaces. | Fresh live evidence exists. |
-| `REGION_MANAGER` | region | Owns regional performance review, target/approval follow-up, region-visible ranking, and escalation. | Active product role; fresh live Clerk persona evidence should be added before using it as a signed-off pilot persona. |
+| `REGION_MANAGER` | region | Owns regional performance review, target/approval follow-up, region-visible ranking, and escalation. | Fresh live evidence exists through the 2026-05-23 region-manager addendum. |
 | `STORE_MANAGER` | store | Owns store daily execution, checklist follow-up, KPI/ranking review, approvals, and Store Action plan work. | Fresh live evidence exists. |
 | `STORE_PERSONNEL` | person/store | Sees personal/store-facing work such as own performance and checklist/task surfaces. | Fresh live evidence exists. |
 | `REPORT_VIEWER` | company/read-only | Reads reports, rankings, and selected workflow/task visibility without mutating operational state. | Fresh live evidence exists. |
@@ -197,7 +198,7 @@ Legend:
 | KPI source trust | KPI-derived action should point back to accepted KPI source and period. | action candidate without source period, score, store/person context, or import lineage. | Store Action candidates derive from existing KPI signals. |
 | Workflow/inbox | Queue items should preserve source type, owner, urgency, deep link, and status. | generic "approval" label for non-approval work, missing owner role, broken deep link. | Feature Integration Spine inbox rule. |
 | Store Action plans | Store managers should see active plans, status controls, close/cancel reasons, and empty states. | plan without source, action outside assigned store, read-only role gets command controls. | Store Action V1B coverage and visibility evidence. |
-| Auth/scope | Role and scope evidence must match the intended pilot persona. | frontend-visible route without backend authorization, region role used without fresh evidence. | Five-persona evidence exists; `REGION_MANAGER` needs fresh evidence before signed-off use. |
+| Auth/scope | Role and scope evidence must match the intended pilot persona. | frontend-visible route without backend authorization, stale role evidence after deploy/config change. | Fresh evidence exists for the six active pilot roles; rerun after auth, route, role, or deploy changes. |
 | External providers | Provider state must be named as real, local, blocked, historical, or accepted risk. | treating tokenless smoke or free/non-persistent provider as broad-production proof. | External evidence closure decision keeps broad production No-Go. |
 
 Numeric freshness thresholds are intentionally not invented here. When a feature
