@@ -18,6 +18,7 @@ import type {
 } from './api'
 import { PilotUserBindingPanel } from './PilotUserBindingPanel'
 import type { LocalizationContextValue } from '../localization/localization-context'
+import { RolePermissionPreviewPanel } from './RolePermissionPreviewPanel'
 
 export type RoleScopeType = 'company' | 'region' | 'store'
 export type AuthProvider = 'local' | 'oidc' | 'sso' | 'clerk'
@@ -127,12 +128,11 @@ export function AuthDashboardContent(props: AuthDashboardContentProps) {
       <AuthMetricsGrid {...props} />
       <FeedbackPanels feedback={props.feedback} errorFeedback={props.errorFeedback} />
       <PilotUserBindingPanel stores={props.lookups.stores} />
-
+      <RolePermissionPreviewPanel t={props.t} lookups={props.lookups} />
       <section className="two-up-grid">
         <CreateUserPanel {...props} />
         <CreateRoleAssignmentPanel {...props} />
       </section>
-
       <section className="two-up-grid">
         <CreateActionStoreAssignmentPanel {...props} />
         <ActionStoreGrantsPanel {...props} />

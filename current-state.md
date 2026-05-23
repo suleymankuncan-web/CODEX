@@ -60,17 +60,16 @@ and Operations Telemetry V2.
 
 Current maintenance branch:
 
-- Active branch: `codex/store-action-coaching-v2`.
-- This branch starts Track 4 of the project-growth roadmap: a read-only
-  Store Action coaching detail slice that reuses the existing
-  `GET /api/store-actions/plans/{actionPlanId}` endpoint on demand. It must not
-  add comments, attachments, escalation, notification, DB schema, auth
-  semantics, workflow state, KPI scoring, or command behavior.
+- Active branch: `codex/role-permission-preview-v1`.
+- This branch starts Track 5 of the project-growth roadmap: a read-only
+  role/permission preview surface on the existing auth admin page. It must not
+  change role assignments, permission semantics, Clerk/provider behavior,
+  backend guards, DB schema, API response shape, or route access decisions.
 
 Latest project-growth merge:
 
 ```text
-fa8b7b7 feat: surface operations signal freshness (#482)
+d1fdf99 feat: add store action coaching detail (#483)
 ```
 
 Latest controlled-pilot evidence merge:
@@ -1906,6 +1905,7 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/superpowers/plans/2026-05-23-external-evidence-closure-v2.md` - External Evidence Closure V2 plan
 - `docs/evidence/store-action-test-hygiene-and-visibility-v1.md` - Store Action test hygiene and visibility evidence
 - `docs/evidence/store-action-coaching-detail-v2a.md` - Store Action read-only coaching detail V2A evidence
+- `docs/evidence/role-permission-preview-v1.md` - Role/permission preview evidence
 - `docs/evidence/project-wide-bug-hunt-2026-05-23.md` - project-wide bug hunt pass
 - `docs/flows/README.md` - Store Ops System Flow generator note
 - `docs/flows/store-ops-system-flow.html` - source-derived frontend/API/backend flow map
