@@ -28,6 +28,14 @@ export type CloseStoreActionPlanResponse = ApiMutationResponse<
   '/api/store-actions/plans/{actionPlanId}/close',
   'PATCH'
 >
+export type CancelStoreActionPlanInput = ApiMutationBody<
+  '/api/store-actions/plans/{actionPlanId}/cancel',
+  'PATCH'
+>
+export type CancelStoreActionPlanResponse = ApiMutationResponse<
+  '/api/store-actions/plans/{actionPlanId}/cancel',
+  'PATCH'
+>
 
 export function listStoreActionPlans(input: {
   storeId?: string
@@ -68,6 +76,17 @@ export function closeStoreActionPlan(input: {
   body: CloseStoreActionPlanInput
 }) {
   return sendOpenApiJson('/api/store-actions/plans/{actionPlanId}/close', {
+    method: 'PATCH',
+    params: { actionPlanId: input.actionPlanId },
+    body: input.body,
+  })
+}
+
+export function cancelStoreActionPlan(input: {
+  actionPlanId: string
+  body: CancelStoreActionPlanInput
+}) {
+  return sendOpenApiJson('/api/store-actions/plans/{actionPlanId}/cancel', {
     method: 'PATCH',
     params: { actionPlanId: input.actionPlanId },
     body: input.body,

@@ -1986,8 +1986,8 @@ test('store tasks lists persisted action plan records with active status control
   await expect(sourceLink).toHaveAttribute('href', '/store/kpis')
   await expect(actionPlansPanel.getByRole('button', { name: 'Update status' })).toBeVisible()
   await expect(actionPlansPanel.getByRole('button', { name: 'Close plan' })).toBeVisible()
+  await expect(actionPlansPanel.getByRole('button', { name: 'Cancel plan' })).toBeVisible()
   await expect(actionPlansPanel.getByText('1-1 / 1')).toBeVisible()
-  await expect(actionPlansPanel.getByRole('button', { name: /^cancel$/i })).toHaveCount(0)
 })
 
 test('store tasks updates a persisted action plan status', async ({ page }) => {
@@ -2178,6 +2178,102 @@ test('store tasks keeps close failures local to the action plan form', async ({ 
 
   await expect(closeForm.getByRole('alert')).toContainText('Plan could not be closed')
   await expect(closeForm.getByRole('alert')).toContainText('Action plan was already closed')
+  await expect(actionPlanRow.locator('.status-pill').filter({ hasText: 'Open' })).toBeVisible()
+})
+
+test('store tasks cancels a persisted action plan with a reason', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'en')
+  })
+  let cancelled = false
+  let capturedCancelBody: Record<string, unknown> | null = null
+
+  await page.unroute('**/api/store-actions/plans**')
+  await page.route('**/api/store-actions/plans**', async (route) => {
+    const request = route.request()
+
+    if (request.method() === 'PATCH' && request.url().endsWith('/cancel')) {
+      capturedCancelBody = request.postDataJSON() as Record<string, unknown>
+      cancelled = true
+      await route.fulfill({
+        json: {
+          command: {
+            status: 'cancelled',
+            message: 'Store action plan cancelled',
+          },
+          data: {
+            plan: {
+              ...storeActionPlansFixture.items[0],
+              status: 'cancelled',
+              cancelReason: 'Duplicate of a regional recovery plan',
+            },
+          },
+        },
+      })
+      return
+    }
+
+    await route.fulfill({
+      json: {
+        ...storeActionPlansFixture,
+        items: [
+          {
+            ...storeActionPlansFixture.items[0],
+            status: cancelled ? 'cancelled' : 'open',
+            cancelReason: cancelled ? 'Duplicate of a regional recovery plan' : null,
+          },
+        ],
+      },
+    })
+  })
+
+  await page.goto('/store/tasks')
+
+  const actionPlansPanel = page.locator('.panel').filter({ hasText: 'Persisted follow-up' })
+  const actionPlanRow = actionPlansPanel.locator('article.stacked-row').filter({ hasText: 'Net sales recovery plan' })
+  await actionPlanRow.getByRole('button', { name: 'Cancel plan' }).click()
+  const cancelForm = actionPlanRow.locator('form[aria-label="Cancel action plan"]')
+  await cancelForm.getByLabel('Cancel reason').fill('Duplicate of a regional recovery plan')
+  await cancelForm.getByRole('button', { name: 'Cancel plan' }).click()
+
+  expect(capturedCancelBody).toMatchObject({
+    cancelReason: 'Duplicate of a regional recovery plan',
+  })
+  await expect(actionPlansPanel.getByText('Cancelled', { exact: true })).toBeVisible()
+  await expect(actionPlanRow.getByRole('button', { name: 'Cancel plan' })).toHaveCount(0)
+})
+
+test('store tasks keeps cancel failures local to the action plan form', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'en')
+  })
+
+  await page.unroute('**/api/store-actions/plans**')
+  await page.route('**/api/store-actions/plans**', async (route) => {
+    const request = route.request()
+
+    if (request.method() === 'PATCH' && request.url().endsWith('/cancel')) {
+      await route.fulfill({
+        status: 409,
+        json: { message: 'Action plan was already cancelled' },
+      })
+      return
+    }
+
+    await route.fulfill({ json: storeActionPlansFixture })
+  })
+
+  await page.goto('/store/tasks')
+
+  const actionPlansPanel = page.locator('.panel').filter({ hasText: 'Persisted follow-up' })
+  const actionPlanRow = actionPlansPanel.locator('article.stacked-row').filter({ hasText: 'Net sales recovery plan' })
+  await actionPlanRow.getByRole('button', { name: 'Cancel plan' }).click()
+  const cancelForm = actionPlanRow.locator('form[aria-label="Cancel action plan"]')
+  await cancelForm.getByLabel('Cancel reason').fill('Duplicate of a regional recovery plan')
+  await cancelForm.getByRole('button', { name: 'Cancel plan' }).click()
+
+  await expect(cancelForm.getByRole('alert')).toContainText('Plan could not be cancelled')
+  await expect(cancelForm.getByRole('alert')).toContainText('Action plan was already cancelled')
   await expect(actionPlanRow.locator('.status-pill').filter({ hasText: 'Open' })).toBeVisible()
 })
 

@@ -15,6 +15,7 @@ import type {
   StoreActionPlanPriority,
   StoreActionPlanStatus,
 } from './api'
+import { StoreActionPlanCancelControl } from './StoreActionPlanCancelControl'
 import { StoreActionPlanCloseControl } from './StoreActionPlanCloseControl'
 import { StoreActionPlanStatusControl } from './StoreActionPlanStatusControl'
 
@@ -233,6 +234,10 @@ function StoreActionPlanRow(input: {
           t={input.t}
         />
         <StoreActionPlanCloseControl
+          plan={input.plan}
+          t={input.t}
+        />
+        <StoreActionPlanCancelControl
           plan={input.plan}
           t={input.t}
         />
