@@ -36,6 +36,7 @@ Use this directory like an operating library, not a diary.
 | See the current control board | `docs/plans/project-control-board-v1.md` | Current project mode, go/no-go board, and what is parked. |
 | Find an active decision | `docs/plans/decision-registry-v1.md` | Decision status, source document, and change trigger. |
 | Choose an operating checklist | `docs/plans/runbook-registry-v1.md` | Repeatable runbooks, required input, output, and stop condition. |
+| Execute the next growth tracks | `docs/plans/project-growth-execution-roadmap-v1.md` | Ordered plan for feedback, data quality, operations, coaching, auth preview, rules, workforce planning, and production ops. |
 | Pick the next practical task | `docs/plans/active-next-actions.md` | Current working list and pilot-vs-production split. |
 | Check whether a debt is open | `docs/plans/project-debt-ledger.md` | Closed debts, blocked dependencies, and strategic backlog. |
 | Run the controlled pilot loop | `docs/plans/controlled-pilot-execution-roadmap-v1.md` | Real session, feedback, blocker, and fix workflow. |
@@ -54,6 +55,7 @@ Use for daily direction and working discipline.
 - `docs/plans/project-control-board-v1.md`
 - `docs/plans/decision-registry-v1.md`
 - `docs/plans/runbook-registry-v1.md`
+- `docs/plans/project-growth-execution-roadmap-v1.md`
 - `docs/plans/active-next-actions.md`
 - `docs/plans/project-debt-ledger.md`
 - `docs/plans/project-progress-plan-v1.md`

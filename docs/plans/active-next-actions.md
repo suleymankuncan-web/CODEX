@@ -11,6 +11,8 @@ Documentation entry point:
 - `docs/plans/project-control-board-v1.md` is the short current-mode board.
 - `docs/plans/decision-registry-v1.md` is the decision map.
 - `docs/plans/runbook-registry-v1.md` is the repeatable checklist map.
+- `docs/plans/project-growth-execution-roadmap-v1.md` is the ordered execution
+  map for the first eight post-foundation growth tracks.
 
 ## Current Position
 
@@ -86,6 +88,10 @@ Operating plan:
   and points to source documents.
 - `docs/plans/runbook-registry-v1.md` maps repeatable operator and evidence
   procedures to the right runbook.
+- `docs/plans/project-growth-execution-roadmap-v1.md` is the active execution
+  order for Pilot Feedback Loop V1, Data Quality Center V1, Operations
+  Telemetry V2, Coaching Loop V2, Role Preview UI, Rules/Config Versioning,
+  Norm Kadro Read-Only V1, and Production Ops Closure.
 - `docs/plans/controlled-pilot-execution-roadmap-v1.md` is the current control
   document for day-to-day pilot execution.
 - `docs/plans/production-evidence-closure-joint-plan-v1.md` remains the

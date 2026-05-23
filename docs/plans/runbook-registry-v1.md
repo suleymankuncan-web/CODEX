@@ -43,6 +43,7 @@ procedures.
 | Generate system flow map | `docs/flows/README.md` | Current repo source and generator scripts | Updated flow JSON/HTML and contract test result | Generator creates false fanout or broad behavior claim. |
 | Add a new feature safely | `docs/plans/feature-integration-spine-v1.md` and `docs/plans/new-module-template.md` | Problem, role, scope, source-of-truth, read/write boundary | Feature intake/spec and go/no-go gates | Source-of-truth, auth, DB, API, or rollback is unclear. |
 | Guard docs library structure | `docs/plans/docs-library-metadata-standard-v1.md` | Important doc or shelf change | Metadata, library links, and docs contract test | The library becomes a dumping ground. |
+| Execute growth track sequence | `docs/plans/project-growth-execution-roadmap-v1.md` | Current branch, selected track, and Sokrates triage | One reviewable slice with matching verification | Slice mixes multiple tracks or needs missing external input. |
 | Run release gate | `docs/plans/project-progress-plan-v1.md` | Clean branch and relevant code/test changes | Local/CI release-gate output | Red check, hidden behavior change, or unreviewable diff. |
 
 ## Evidence Safety
