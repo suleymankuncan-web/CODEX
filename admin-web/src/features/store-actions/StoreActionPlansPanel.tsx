@@ -15,6 +15,7 @@ import type {
   StoreActionPlanPriority,
   StoreActionPlanStatus,
 } from './api'
+import { StoreActionPlanCloseControl } from './StoreActionPlanCloseControl'
 import { StoreActionPlanStatusControl } from './StoreActionPlanStatusControl'
 
 type StoreActionPlanListMeta = StoreActionPlanList['meta']
@@ -228,6 +229,10 @@ function StoreActionPlanRow(input: {
           <span className="queue-subtitle">{input.t('storeTasks.actionPlansNoSourceLink')}</span>
         )}
         <StoreActionPlanStatusControl
+          plan={input.plan}
+          t={input.t}
+        />
+        <StoreActionPlanCloseControl
           plan={input.plan}
           t={input.t}
         />

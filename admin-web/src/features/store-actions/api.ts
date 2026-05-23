@@ -20,6 +20,14 @@ export type UpdateStoreActionPlanStatusResponse = ApiMutationResponse<
   '/api/store-actions/plans/{actionPlanId}/status',
   'PATCH'
 >
+export type CloseStoreActionPlanInput = ApiMutationBody<
+  '/api/store-actions/plans/{actionPlanId}/close',
+  'PATCH'
+>
+export type CloseStoreActionPlanResponse = ApiMutationResponse<
+  '/api/store-actions/plans/{actionPlanId}/close',
+  'PATCH'
+>
 
 export function listStoreActionPlans(input: {
   storeId?: string
@@ -49,6 +57,17 @@ export function updateStoreActionPlanStatus(input: {
   body: UpdateStoreActionPlanStatusInput
 }) {
   return sendOpenApiJson('/api/store-actions/plans/{actionPlanId}/status', {
+    method: 'PATCH',
+    params: { actionPlanId: input.actionPlanId },
+    body: input.body,
+  })
+}
+
+export function closeStoreActionPlan(input: {
+  actionPlanId: string
+  body: CloseStoreActionPlanInput
+}) {
+  return sendOpenApiJson('/api/store-actions/plans/{actionPlanId}/close', {
     method: 'PATCH',
     params: { actionPlanId: input.actionPlanId },
     body: input.body,

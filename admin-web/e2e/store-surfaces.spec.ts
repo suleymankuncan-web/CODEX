@@ -1985,8 +1985,9 @@ test('store tasks lists persisted action plan records with active status control
   await expect(sourceLink).toBeVisible()
   await expect(sourceLink).toHaveAttribute('href', '/store/kpis')
   await expect(actionPlansPanel.getByRole('button', { name: 'Update status' })).toBeVisible()
+  await expect(actionPlansPanel.getByRole('button', { name: 'Close plan' })).toBeVisible()
   await expect(actionPlansPanel.getByText('1-1 / 1')).toBeVisible()
-  await expect(actionPlansPanel.getByRole('button', { name: /close|cancel/i })).toHaveCount(0)
+  await expect(actionPlansPanel.getByRole('button', { name: /^cancel$/i })).toHaveCount(0)
 })
 
 test('store tasks updates a persisted action plan status', async ({ page }) => {
@@ -2081,6 +2082,102 @@ test('store tasks keeps status update failures local to the action plan form', a
 
   await expect(statusForm.getByRole('alert')).toContainText('Status could not be updated')
   await expect(statusForm.getByRole('alert')).toContainText('Terminal plan cannot be updated')
+  await expect(actionPlanRow.locator('.status-pill').filter({ hasText: 'Open' })).toBeVisible()
+})
+
+test('store tasks closes a persisted action plan with a resolution note', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'en')
+  })
+  let closed = false
+  let capturedCloseBody: Record<string, unknown> | null = null
+
+  await page.unroute('**/api/store-actions/plans**')
+  await page.route('**/api/store-actions/plans**', async (route) => {
+    const request = route.request()
+
+    if (request.method() === 'PATCH' && request.url().endsWith('/close')) {
+      capturedCloseBody = request.postDataJSON() as Record<string, unknown>
+      closed = true
+      await route.fulfill({
+        json: {
+          command: {
+            status: 'closed',
+            message: 'Store action plan closed',
+          },
+          data: {
+            plan: {
+              ...storeActionPlansFixture.items[0],
+              status: 'closed',
+              resolutionNote: capturedCloseBody.resolutionNote,
+            },
+          },
+        },
+      })
+      return
+    }
+
+    await route.fulfill({
+      json: {
+        ...storeActionPlansFixture,
+        items: [
+          {
+            ...storeActionPlansFixture.items[0],
+            status: closed ? 'closed' : 'open',
+            resolutionNote: closed ? 'Coaching completed with the store team' : null,
+          },
+        ],
+      },
+    })
+  })
+
+  await page.goto('/store/tasks')
+
+  const actionPlansPanel = page.locator('.panel').filter({ hasText: 'Persisted follow-up' })
+  const actionPlanRow = actionPlansPanel.locator('article.stacked-row').filter({ hasText: 'Net sales recovery plan' })
+  await actionPlanRow.getByRole('button', { name: 'Close plan' }).click()
+  const closeForm = actionPlanRow.locator('form[aria-label="Close action plan"]')
+  await closeForm.getByLabel('Resolution note').fill('Coaching completed with the store team')
+  await closeForm.getByRole('button', { name: 'Close' }).click()
+
+  expect(capturedCloseBody).toMatchObject({
+    resolutionNote: 'Coaching completed with the store team',
+  })
+  await expect(actionPlansPanel.getByText('Closed', { exact: true })).toBeVisible()
+  await expect(actionPlanRow.getByRole('button', { name: 'Close plan' })).toHaveCount(0)
+})
+
+test('store tasks keeps close failures local to the action plan form', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'en')
+  })
+
+  await page.unroute('**/api/store-actions/plans**')
+  await page.route('**/api/store-actions/plans**', async (route) => {
+    const request = route.request()
+
+    if (request.method() === 'PATCH' && request.url().endsWith('/close')) {
+      await route.fulfill({
+        status: 409,
+        json: { message: 'Action plan was already closed' },
+      })
+      return
+    }
+
+    await route.fulfill({ json: storeActionPlansFixture })
+  })
+
+  await page.goto('/store/tasks')
+
+  const actionPlansPanel = page.locator('.panel').filter({ hasText: 'Persisted follow-up' })
+  const actionPlanRow = actionPlansPanel.locator('article.stacked-row').filter({ hasText: 'Net sales recovery plan' })
+  await actionPlanRow.getByRole('button', { name: 'Close plan' }).click()
+  const closeForm = actionPlanRow.locator('form[aria-label="Close action plan"]')
+  await closeForm.getByLabel('Resolution note').fill('Coaching completed with the store team')
+  await closeForm.getByRole('button', { name: 'Close' }).click()
+
+  await expect(closeForm.getByRole('alert')).toContainText('Plan could not be closed')
+  await expect(closeForm.getByRole('alert')).toContainText('Action plan was already closed')
   await expect(actionPlanRow.locator('.status-pill').filter({ hasText: 'Open' })).toBeVisible()
 })
 
