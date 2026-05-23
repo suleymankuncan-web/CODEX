@@ -59,17 +59,18 @@ proof, and the Pilot Feedback backend and frontend loop.
 
 Current maintenance branch:
 
-- Active branch: `codex/data-quality-center-v1`.
-- This branch starts Track 2 of the project-growth roadmap: a read-only
-  `/admin/data-quality` center that reuses existing import, snapshot,
-  workforce, KPI config, and ranking signals. It must not change import
-  lifecycle, mapping approval behavior, KPI math, backend contracts, auth
-  semantics, DB schema, or provider config.
+- Active branch: `codex/operations-telemetry-v2`.
+- This branch starts Track 3 of the project-growth roadmap: a read-only
+  Operations Control Tower V2 signal-freshness slice that reuses already
+  loaded import, snapshot, workforce, workflow, KPI config, and ranking
+  signals. It must not change provider config, alert semantics, queue posture,
+  backend contracts, auth semantics, DB schema, or user-facing workflow
+  behavior.
 
 Latest project-growth merge:
 
 ```text
-20148ee feat: add pilot feedback frontend loop (#480)
+1871674 feat: add data quality center (#481)
 ```
 
 Latest controlled-pilot evidence merge:

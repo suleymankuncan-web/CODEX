@@ -14,7 +14,6 @@ import { Link } from 'react-router-dom'
 import {
   EmptyState,
   KeyValue,
-  MetricAccent,
   MetricCard,
   ScreenState,
   StatusPill,
@@ -43,11 +42,15 @@ import {
 import { getWorkflowInbox } from '../features/workflow/api'
 import { formatDateTime, getErrorMessage, mapHealthTone } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
+import { DataQualitySignalPanel, type DataQualitySnapshot } from './operations-data-quality-signal-panel'
+import { OperationsHero, type SignalStatus } from './operations-hero'
 import { buildOperatorActions } from './operations-operator-action-model'
 import { OperatorActionListPanel } from './operations-operator-action-list'
 import { summarizeKpiRankingReadiness } from './operations-kpi-ranking-signal-model'
 import { KpiRankingSignalPanel } from './operations-kpi-ranking-signal-panel'
 import { MetricCoveragePanel } from './operations-metric-coverage-panel'
+import { signalStateFromQueries, summarizeSignalFreshness } from './operations-signal-freshness-model'
+import { SignalFreshnessPanel } from './operations-signal-freshness-panel'
 import { summarizeWorkflowInboxPressure } from './operations-workflow-signal-model'
 import { WorkflowSignalPanel } from './operations-workflow-signal-panel'
 import { summarizeWorkforcePressure } from './operations-workforce-signal-model'
@@ -55,19 +58,6 @@ import { WorkforceSignalPanel } from './operations-workforce-signal-panel'
 
 const SIGNAL_STALE_TIME_MS = 30_000
 const QUEUE_PREVIEW_SIZE = 4
-
-type SignalStatus = {
-  copy: string
-  label: string
-  tone: Tone
-}
-
-type DataQualitySnapshot = {
-  blockedBatchCount: number
-  errorRowCount: number
-  mappingEntityTypes: string[]
-  snapshotIssueCount: number
-}
 
 type ProviderBlocker = {
   id: string
@@ -245,6 +235,24 @@ export function OperationsControlTowerPage() {
     t,
     workflowPressure,
     workforcePressure,
+  })
+  const signalFreshness = summarizeSignalFreshness({
+    importActionCount,
+    importItems: importNeedsActionItems,
+    importState: signalStateFromQueries(importOverviewQuery, importNeedsActionQuery),
+    kpiRankingReadiness,
+    kpiState: signalStateFromQueries(kpiConfigQuery, rankingsQuery),
+    offboardingItems,
+    rankings: rankingsQuery.data,
+    sellerCodeItems,
+    snapshotActionCount,
+    snapshotItems: snapshotNeedsActionItems,
+    snapshotState: signalStateFromQueries(snapshotOverviewQuery, snapshotNeedsActionQuery),
+    workflowItems,
+    workflowPressure,
+    workflowState: signalStateFromQueries(workflowInboxQuery),
+    workforcePressure,
+    workforceState: signalStateFromQueries(sellerCodeRequestsQuery, offboardingRequestsQuery),
   })
 
   const summaryCards = useMemo(() => {
@@ -435,6 +443,8 @@ export function OperationsControlTowerPage() {
 
       <OperatorActionListPanel actions={operatorActions} t={t} />
 
+      <SignalFreshnessPanel items={signalFreshness} locale={locale} t={t} />
+
       <section className="two-up-grid">
         <BackendSignalPanel
           health={healthQuery.data}
@@ -497,84 +507,6 @@ export function OperationsControlTowerPage() {
         />
       </section>
     </section>
-  )
-}
-
-function OperationsHero(input: {
-  operationalPressure: number
-  providerBlockerCount: number
-  readiness: SignalStatus
-  t: TranslateFunction
-}) {
-  return (
-    <section className="hero-panel">
-      <div>
-        <div className="eyebrow">{input.t('adminOperations.heroEyebrow')}</div>
-        <h2 className="hero-title">{input.t('adminOperations.heroTitle')}</h2>
-        <p className="hero-copy">{input.t('adminOperations.heroCopy')}</p>
-      </div>
-      <div className="hero-metrics">
-        <MetricAccent label={input.t('adminOperations.readiness')} value={input.readiness.label} />
-        <MetricAccent
-          label={input.t('adminOperations.operatorPressure')}
-          value={String(input.operationalPressure)}
-        />
-        <MetricAccent
-          label={input.t('adminOperations.externalBlockers')}
-          value={String(input.providerBlockerCount)}
-        />
-      </div>
-    </section>
-  )
-}
-
-function DataQualitySignalPanel(input: {
-  dataQuality: DataQualitySnapshot
-  isError: boolean
-  t: TranslateFunction
-}) {
-  const hasDataQualityPressure =
-    input.dataQuality.errorRowCount > 0 ||
-    input.dataQuality.blockedBatchCount > 0 ||
-    input.dataQuality.mappingEntityTypes.length > 0 ||
-    input.dataQuality.snapshotIssueCount > 0
-
-  return (
-    <article className="panel">
-      <div className="panel-heading panel-heading-spread">
-        <div>
-          <div className="eyebrow">{input.t('adminOperations.dataQualityEyebrow')}</div>
-          <h3>{input.t('adminOperations.dataQualityTitle')}</h3>
-          <p className="panel-copy">{input.t('adminOperations.dataQualityCopy')}</p>
-        </div>
-        <StatusPill tone={input.isError ? 'warning' : hasDataQualityPressure ? 'warning' : 'calm'}>
-          {input.isError
-            ? input.t('adminOperations.unavailable')
-            : hasDataQualityPressure
-              ? input.t('adminOperations.needsAttention')
-              : input.t('adminOperations.ready')}
-        </StatusPill>
-      </div>
-      <div className="key-grid">
-        <KeyValue
-          label={input.t('adminOperations.previewErrorRows')}
-          value={String(input.dataQuality.errorRowCount)}
-        />
-        <KeyValue
-          label={input.t('adminOperations.mappingBlockers')}
-          value={formatMappingEntityTypes(input.dataQuality.mappingEntityTypes, input.t)}
-        />
-        <KeyValue
-          label={input.t('adminOperations.blockedImportBatches')}
-          value={String(input.dataQuality.blockedBatchCount)}
-        />
-        <KeyValue
-          label={input.t('adminOperations.snapshotIssues')}
-          value={String(input.dataQuality.snapshotIssueCount)}
-        />
-      </div>
-      <p className="queue-reason">{input.t('adminOperations.dataQualitySourceCopy')}</p>
-    </article>
   )
 }
 
@@ -1009,17 +941,5 @@ function formatOperationsHealthState(input: string, t: TranslateFunction) {
   if (input === 'needs_action') return t('adminOperations.health.needsAction')
   if (input === 'stuck') return t('adminOperations.health.stuck')
   if (input === 'queued') return t('adminOperations.health.queued')
-  return input.replaceAll('_', ' ')
-}
-
-function formatMappingEntityTypes(input: string[], t: TranslateFunction) {
-  if (input.length === 0) return t('adminOperations.noMappingBlockers')
-
-  return input.map((entityType) => formatMappingEntityType(entityType, t)).join(', ')
-}
-
-function formatMappingEntityType(input: string, t: TranslateFunction) {
-  if (input === 'employee' || input === 'personnel') return t('adminOperations.entity.employee')
-  if (input === 'store') return t('adminOperations.entity.store')
   return input.replaceAll('_', ' ')
 }
