@@ -75,8 +75,8 @@ Verification ladder:
 
 ## Environment Variables
 
-Use descriptive local variables; names can be adapted to the smoke script being
-run:
+Use the exact variable names consumed by the smoke scripts. Do not invent
+persona-specific names unless a script has been updated to read them.
 
 ```powershell
 $env:READINESS_FRONTEND_URL='https://staging.hr-axis.com'
@@ -86,12 +86,17 @@ $env:READINESS_TIMEOUT_MS='45000'
 
 # Optional, secret, never committed:
 $env:READINESS_BEARER_TOKEN='<securely pasted token>'
-$env:BACKEND_LOAD_SUPER_ADMIN_TOKEN='<securely pasted token>'
+$env:BACKEND_LOAD_SESSION_TOKEN='<securely pasted token>'
+$env:BACKEND_LOAD_STORE_TOKEN='<securely pasted token>'
+$env:BACKEND_LOAD_COMPETITION_TOKEN='<securely pasted token>'
 $env:BACKEND_LOAD_HR_ADMIN_TOKEN='<securely pasted token>'
-$env:BACKEND_LOAD_STORE_MANAGER_TOKEN='<securely pasted token>'
-$env:BACKEND_LOAD_STORE_PERSONNEL_TOKEN='<securely pasted token>'
-$env:BACKEND_LOAD_REPORT_VIEWER_TOKEN='<securely pasted token>'
+$env:BACKEND_LOAD_IMPORT_TOKEN='<securely pasted token>'
 ```
+
+`smoke:backend-readiness-load` currently groups protected checks by session,
+store, competition, and import/read surfaces. The persona evidence note should
+record which real persona supplied each group token, but the environment
+variable name must stay one of the script-supported names above.
 
 ## Run Order
 
