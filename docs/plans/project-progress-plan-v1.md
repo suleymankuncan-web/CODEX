@@ -26,9 +26,8 @@ Evidence:
 - Repo evidence: `current-state.md`, `sokrates.md`, `docs/plans/project-debt-ledger.md`, `docs/plans/feature-backlog.md`, and `docs/superpowers/plans/2026-05-18-readiness-progress.md`.
 - Test evidence: recent PR lines used lint/build/Playwright/GitHub/Vercel/Codex checks before merge.
 - Runtime evidence: deployed readiness has passed both tokenless public checks
-  and, as of 2026-05-23, a protected Clerk token pass for the existing pilot
-  account set. Full `HR_ADMIN`/`REPORT_VIEWER` persona proof still needs
-  staging aliases/credentials.
+  and, as of 2026-05-23, a protected Clerk token pass for the current
+  five-persona matrix.
 - User preference: no rewrite, no rushed broad refactor, small slices, PRs only when meaningful, autonomous merge after checks and Codex approval.
 
 Counterargument:
@@ -66,9 +65,8 @@ Still not done:
 
 - Broad production is still `No-Go`.
 - Controlled/internal pilot remains `Conditional Go`.
-- Real staging auth/session evidence is current for the existing pilot account
-  set; `HR_ADMIN` and `REPORT_VIEWER` remain blocked until staging accounts or
-  credentials exist.
+- Real staging auth/session evidence is current for the full five-persona
+  controlled staging matrix.
 - Supabase managed restore evidence still needs an approved disposable restore target.
 - Real alert delivery evidence still needs an approved provider destination.
 - Redis/BullMQ broad-production posture still needs real provider configuration and health evidence.
@@ -83,8 +81,7 @@ Status: blocked by provider access or real staging inputs.
 Missing:
 
 - Real Clerk/staging bearer-token proof for `/api/auth/session` is closed for
-  the existing pilot account set on 2026-05-23. `HR_ADMIN` and
-  `REPORT_VIEWER` remain blocked until staging accounts or credentials exist.
+  the current five-persona matrix on 2026-05-23.
 - Assigned-store `201` and unassigned-store `403` action smoke proof in staging.
 - Supabase staging restore drill into an approved disposable target.
 - Real alert/error tracking/log-retention destination proof.
@@ -393,12 +390,13 @@ Current result:
   provider metadata/delivery input.
 - Fresh 2026-05-23 protected Clerk proof is now recorded in
   `docs/evidence/system-flow/clerk-persona-live-evidence-2026-05-23.md` for
-  the existing pilot account set. Four available personas passed browser
-  route/session checks, Store Action assigned/unassigned action-scope read
-  proof passed, deployed readiness passed `14/14` with a real token, and
-  backend protected load passed `5/5` groups with role-specific tokens.
-  `HR_ADMIN` and `REPORT_VIEWER` remain blocked until staging
-  aliases/credentials exist.
+  the current five-persona matrix. `SUPER_ADMIN`, `HR_ADMIN`,
+  `STORE_MANAGER`, `STORE_PERSONNEL`, and `REPORT_VIEWER` passed browser
+  route/session checks; non-super-admin sampled auth-admin endpoints returned
+  `403`; report-viewer `/store/tasks` remained read-only; Store Action
+  assigned/unassigned action-scope read proof passed; deployed readiness passed
+  `14/14` with a real token; and backend protected load passed `5/5` groups
+  with role-specific tokens.
 
 Verification commands:
 

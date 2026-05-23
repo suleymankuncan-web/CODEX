@@ -2,9 +2,9 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #449 plus the Store Action V1B Store Tasks basic loop closeout, Store Action
+PR #451 plus the Store Action V1B Store Tasks basic loop closeout, Store Action
 test hygiene/visibility evidence, the Pilot Reliability Spine V1 docs, first
-execution evidence, and fresh Clerk persona protected evidence,
+execution evidence, and full five-persona Clerk protected evidence,
 the Product Readiness V1 first-pass closeout, Operations Control Tower
 readiness line, Sokrates/discipline operating docs, current workspace hygiene,
 the Clerk persona staging evidence runbooks, the generated system-flow map,
@@ -35,16 +35,17 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-23, the baseline before the current Clerk persona evidence branch
-had `origin/main` fetched through PR #449. The root checkout was clean `main`
-and aligned with `origin/main` after the Pilot Reliability Spine first
-execution evidence merge.
+As of 2026-05-23, the baseline before the current Clerk full-matrix evidence
+branch had `origin/main` fetched through PR #451. The root checkout was clean
+after the HR admin role-assignment enum fix was merged and deployed.
 
-Current maintenance branch after PR #449:
+Current maintenance branch after PR #451:
 
-- `codex/clerk-persona-live-evidence-2026-05-23`
-- Scope: docs-only fresh Clerk persona protected evidence for the existing
-  staging pilot accounts: browser session/route checks, Store Action
+- `codex/full-persona-matrix-live-evidence`
+- Scope: docs-only full five-persona Clerk protected evidence for
+  `SUPER_ADMIN`, `HR_ADMIN`, `STORE_MANAGER`, `STORE_PERSONNEL`, and
+  `REPORT_VIEWER`: browser session/route checks, backend negative auth-admin
+  checks, report-viewer read-only Store Tasks boundary proof, Store Action
   assigned/unassigned action-scope read proof, deployed readiness with a real
   token, and backend protected load with role-specific tokens.
 - No product code, API response shape, auth semantics, DB migration, CSS,
@@ -53,7 +54,7 @@ Current maintenance branch after PR #449:
 Latest merge on main:
 
 ```text
-de72b197 docs: record pilot reliability execution (#449)
+4d15179f fix: allow hr admin role assignments (#451)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -222,6 +223,8 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #447 `test: split store action plan coverage`
 - PR #448 `docs: add pilot reliability spine`
 - PR #449 `docs: record pilot reliability execution`
+- PR #450 `docs: record live clerk persona evidence`
+- PR #451 `fix: allow hr admin role assignments`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -239,8 +242,9 @@ frontend root, security headers, SPA fallback, and static assets passed.
 
 Current local hygiene state:
 
-- Root workspace `D:\store-ops-workspace` was clean on `main...origin/main` at
-  `de72b197` after PR #449 was merged and `origin/main` was fetched.
+- Root workspace `D:\store-ops-workspace` was clean on
+  `codex/full-persona-matrix-live-evidence` at `4d15179f` before the current
+  docs-only evidence edits.
 - The previous dirty root state was not deleted. It was saved as stash
   `codex hygiene backup 2026-05-21 root dirty state`. Do not drop that stash
   unless the user explicitly approves.
@@ -1553,8 +1557,9 @@ Store Action V1A status:
   676 lines by Node line count. It records that Store Action is visible on
   `/store/tasks` for `STORE_MANAGER`/`SUPER_ADMIN` persisted-plan controls,
   while `REPORT_VIEWER` only gets workflow inbox read visibility. Public staging
-  readiness and alert-routing smokes passed their tokenless checks; protected
-  persona evidence remains blocked without a secure token/session.
+  readiness and alert-routing smokes passed their tokenless checks; the later
+  full five-persona Clerk evidence closes the protected persona matrix for the
+  current pilot set.
   Evidence:
   `docs/evidence/store-action-test-hygiene-and-visibility-v1.md` and
   `docs/evidence/pilot-readiness/2026-05-23-store-action-visibility-readiness.md`.
@@ -1577,11 +1582,10 @@ Pilot Reliability Spine V1 current branch:
   auth/session skipped for missing `READINESS_BEARER_TOKEN`; public backend load
   health passed with p50 `101.9ms`, p95 `259.57ms`, and 0 5xx; alert routing
   passed tokenless checks but provider delivery was `not-configured`.
-- Current protected/provider blockers for this line: `HR_ADMIN` and
-  `REPORT_VIEWER` staging aliases/credentials if the full five-persona matrix
-  is required, plus any future alert provider, restore, or upload rerun inputs
-  that are not already provided securely. Do not treat skipped token checks as
-  proof.
+- Current protected/provider blockers for this line: the Clerk full
+  five-persona matrix is closed; remaining blockers are future alert provider,
+  restore, upload, or other external rerun inputs that are not already provided
+  securely. Do not treat skipped token checks as proof.
 - First execution evidence:
   `docs/evidence/pilot-readiness/2026-05-23-pilot-reliability-spine-execution-v1.md`.
   Public deployed readiness passed `13/14`, public backend load health passed
@@ -1591,13 +1595,14 @@ Pilot Reliability Spine V1 current branch:
   were present.
 - Fresh Clerk persona protected evidence:
   `docs/evidence/system-flow/clerk-persona-live-evidence-2026-05-23.md`.
-  Four existing staging pilot accounts (`SUPER_ADMIN`, `REGION_MANAGER`,
-  `STORE_MANAGER`, and `STORE_PERSONNEL`) produced real Clerk sessions,
+  The current five personas (`SUPER_ADMIN`, `HR_ADMIN`, `STORE_MANAGER`,
+  `STORE_PERSONNEL`, and `REPORT_VIEWER`) produced real Clerk sessions,
   backend `/auth/session` responses, and same-session route allow/deny proof.
-  Store-manager assigned/unassigned action-scope read proof passed with `200`
+  Non-super-admin sampled auth-admin endpoints returned `403`; report-viewer
+  `/store/tasks` is read-only visible with command controls absent;
+  store-manager assigned/unassigned action-scope read proof passed with `200`
   and `403`; deployed readiness passed `14/14` with a real token; backend
-  protected load passed `5/5` groups with role-specific tokens. `HR_ADMIN` and
-  `REPORT_VIEWER` remain blocked until staging aliases/credentials exist.
+  protected load passed `5/5` groups with role-specific tokens.
 
 Current user direction on 2026-05-18:
 

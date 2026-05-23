@@ -25,17 +25,18 @@ subject, or session storage dump was recorded.
 The 2026-05-22 live evidence is now refreshed by
 `docs/evidence/system-flow/clerk-persona-live-evidence-2026-05-23.md`.
 
-The newer pass reused the same existing staging pilot account set, verified
-real Clerk sessions for `SUPER_ADMIN`, `REGION_MANAGER`, `STORE_MANAGER`, and
-`STORE_PERSONNEL`, reran same-session route allow/deny checks, proved the
+The newer pass first refreshed protected evidence for the available pilot
+accounts, then upgraded the run to the full five-persona matrix after
+`HR_ADMIN` and `REPORT_VIEWER` staging-only Clerk aliases were created and
+bound through the approved app auth-admin API path. The final pass verified
+real Clerk sessions for `SUPER_ADMIN`, `HR_ADMIN`, `STORE_MANAGER`,
+`STORE_PERSONNEL`, and `REPORT_VIEWER`, reran same-session route allow/deny
+checks, proved report-viewer `/store/tasks` is read-only, proved the
 store-manager assigned/unassigned action-scope read path, and ran deployed
 readiness plus backend protected load with real role-specific tokens.
 
-`HR_ADMIN` and `REPORT_VIEWER` remain blocked for the full five-persona matrix
-because no staging Clerk alias or credential was found in repo evidence or the
-local environment. No raw token, Clerk cookie, password, auth code, full
-provider subject, full session storage, or private user/employee ID was
-recorded.
+No raw token, Clerk cookie, password, auth code, full provider subject, full
+session storage, or private user/employee/store ID was recorded.
 
 ## Sokrates Decision
 
@@ -109,7 +110,7 @@ Stop rule:
 
 | Evidence area | Status after 2026-05-22 live evidence | Accepted for | Not accepted for |
 | --- | --- | --- | --- |
-| Four-persona Clerk route smoke | Freshly rerun in `clerk-persona-live-evidence-2026-05-23.md` | Controlled staging/internal pilot role evidence | Broad production rollout |
+| Full five-persona Clerk route smoke | Freshly rerun in `clerk-persona-live-evidence-2026-05-23.md` | Controlled staging/internal pilot role evidence | Broad production rollout |
 | Ranking privacy smoke | Existing controlled staging evidence from 2026-05-06 | Store-manager/store-personnel ranking privacy posture | Full auth/session edge coverage |
 | Token-scope action smoke | Freshly rerun for store manager in `clerk-persona-live-evidence-2026-05-23.md` | Assigned/unassigned action-scope proof for the pilot store-manager persona | New-account onboarding proof |
 | Deployed readiness auth/session | Freshly rerun with a real token in `clerk-persona-live-evidence-2026-05-23.md` | Staging auth/session readiness for the pilot token path | Broad production rollout |
@@ -119,9 +120,11 @@ Stop rule:
 ## Historical Fresh Rerun Blockers
 
 These were the required inputs before the fresh Milestone 7 rerun. They were
-resolved for the existing pilot persona set by reusing the already-created
-staging Clerk test accounts and collecting local-only bearer tokens. They still
-apply to any new account onboarding or non-pilot persona evidence.
+resolved for the current five pilot personas by reusing existing staging Clerk
+test accounts where available, creating the missing staging-only HR/report
+aliases through Clerk test-mode sign-in, binding them through the approved app
+auth-admin API path, and collecting local-only template bearer tokens. They
+still apply to any new account onboarding or non-pilot persona evidence.
 
 - staging Clerk persona credentials through the approved secret channel,
 - local-only `AUTH_SMOKE_BEARER_TOKEN` captured from an authenticated staging
@@ -140,10 +143,9 @@ Milestone 7 earlier local-only result:
 
 - Controlled Clerk persona evidence exists historically for the pilot route and
   privacy posture.
-- Fresh current-session Clerk persona evidence was blocked by missing real
-  local-only token/session inputs at the time of this note. It is now
-  superseded for the pilot persona set by
-  `clerk-persona-live-evidence-2026-05-22.md`.
+- Fresh current-session Clerk persona evidence is now closed for the current
+  five-persona controlled staging matrix by
+  `clerk-persona-live-evidence-2026-05-23.md`.
 - Broad production remains No-Go under the existing production readiness
   decision until the broader external evidence set is rerun and accepted.
 
