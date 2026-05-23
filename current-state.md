@@ -974,6 +974,13 @@ missing item is one of these external proofs.
   Current decision: `controlled-pilot-logical-restore-accepted`. Broad
   production remains No-Go until managed restore/PITR/RPO/RTO posture is
   explicitly accepted or tested against an approved disposable target.
+- Final external evidence closure is recorded in
+  `docs/evidence/readiness/2026-05-23-external-evidence-closure-decision-v1.md`.
+  Current posture: controlled internal pilot is `Conditional Go`; broad
+  production remains `No-Go`. The old generic blocker is now split into named
+  decisions: persistent Redis before broad production, incident policy/app-level
+  error tracking if required, managed recovery/PITR/RPO/RTO posture, and future
+  upload role-delegation proof only if ownership changes.
 - Readiness profile reset evidence is recorded in
   `docs/evidence/readiness/2026-05-22-readiness-profile-reset-after-broad-smoke.md`.
   Staging briefly ran `READINESS_PROFILE=broad-production` with
@@ -1722,6 +1729,7 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/evidence/readiness/2026-05-22-redis-bullmq-staging-proof.md` - Redis / BullMQ Staging Proof
 - `docs/evidence/readiness/2026-05-23-redis-production-posture-v1.md` - Redis / BullMQ Production Posture Decision V1
 - `docs/evidence/readiness/2026-05-23-supabase-recovery-posture-v1.md` - Supabase Recovery Posture Decision V1
+- `docs/evidence/readiness/2026-05-23-external-evidence-closure-decision-v1.md` - External Evidence Closure Decision V1
 - `docs/evidence/readiness/2026-05-23-alert-email-policy-decision-v1.md` - Alert Email Policy Decision V1
 - `docs/evidence/readiness/2026-05-23-better-stack-email-alert-proof-v1.md` - Better Stack Email Alert Proof V1
 - `docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md` - Controlled Pilot Feedback Log

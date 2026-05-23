@@ -162,6 +162,12 @@ Result:
 
 ## Current Blocker Register
 
+Final consolidated posture:
+
+- `docs/evidence/readiness/2026-05-23-external-evidence-closure-decision-v1.md`
+  records controlled internal pilot as `Conditional Go` and broad production as
+  `No-Go`.
+
 | Blocker | Why It Matters | Current Handling |
 | --- | --- | --- |
 | Fresh role-specific Clerk bearer/session tokens | Needed to prove protected route visibility, backend endpoint authorization, and assigned-store scoping after the latest deploy. | Closed for the current five-persona matrix on 2026-05-23. |
