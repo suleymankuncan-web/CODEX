@@ -36,23 +36,21 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-23, `origin/main` was fetched through PR #460. The root checkout
-was clean after the region manager live evidence PR was merged.
+As of 2026-05-23, `origin/main` was fetched through PR #461. The root checkout
+was clean after the controlled pilot dry-run evidence PR was merged.
 
-Current maintenance branch after PR #460:
+Current maintenance branch after PR #461:
 
-- `codex/controlled-pilot-dry-run-v1`
-- Scope: docs-only controlled pilot dry-run plan/evidence refresh. It records
-  public staging readiness, alert-routing, backend load, local pilot gates,
-  sanitized six-persona Clerk route/session evidence, auth-admin `403`
-  negatives, Store Action scope checks, and the controlled-pilot decision.
-- No product code, API response shape, auth semantics, DB migration, CSS,
-  provider config, or user-facing workflow behavior changes.
+- None. Main is the current handoff baseline.
+- The latest merged docs-only slice recorded public staging readiness,
+  alert-routing, backend load, local pilot gates, sanitized six-persona Clerk
+  route/session evidence, auth-admin `403` negatives, Store Action scope checks,
+  and the controlled-pilot decision.
 
 Latest merge on main:
 
 ```text
-7646f21b docs: record region manager live evidence (#460)
+0ea4cab0 docs: record controlled pilot dry run (#461)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -232,6 +230,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #458 `docs: consolidate external evidence closure`
 - PR #459 `docs: add pilot scenario and feature growth gates`
 - PR #460 `docs: record region manager live evidence`
+- PR #461 `docs: record controlled pilot dry run`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
