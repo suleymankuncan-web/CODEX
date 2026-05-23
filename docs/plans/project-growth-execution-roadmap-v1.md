@@ -41,12 +41,12 @@ Why:
 | --- | --- | --- | --- | --- |
 | 1 | Pilot Feedback Loop V1 | first frontend/backend loop merged | in-app feedback intake/read model for scoped pilot users | auth semantics, pilot status, broad issue tracker integration |
 | 2 | Data Quality & Reconciliation Center V1 | first read-only center merged | read-only data-quality dashboard from existing import/snapshot/KPI/workforce signals | import lifecycle, KPI math, mapping approval behavior |
-| 3 | Operations Telemetry / Control Tower V2 | active | real signal expansion on existing Operations Control Tower | external observability platform, provider config, alert semantics |
+| 3 | Operations Telemetry / Control Tower V2 | first signal expansion merged | real signal expansion on existing Operations Control Tower | external observability platform, provider config, alert semantics |
 | 4 | Store Action -> Coaching Loop V2 | first read-only coaching detail merged | action detail/history/comment design, then minimal comments/history slice | workflow state machine, KPI scoring, broad notification system |
 | 5 | Role / Permission Preview UI | first read-only preview merged | read-only role/route/scope preview using existing auth matrix | permission semantics, assignments, Clerk/provider behavior |
 | 6 | Rules / Config Versioning | first inventory slice merged | inventory current domain-owned config/version sources and first read-only diff/audit surface | generic rule engine, shared workflow engine, scoring changes |
 | 7 | Norm Kadro / Workforce Planning Read-Only V1 | first inventory slice merged | read-only staffing baseline spec and current workforce capacity inventory | write/config targets, auto action generation, approval flows |
-| 8 | Production Ops Closure | active decision packet slice | owner decision packet for Redis tier, backup/PITR/RPO/RTO, alerts, incident ownership | broad production Go claim without owner acceptance |
+| 8 | Production Ops Closure | decision packet merged | owner decision packet for Redis tier, backup/PITR/RPO/RTO, alerts, incident ownership | broad production Go claim without owner acceptance |
 
 ## Dependency Graph
 
@@ -349,6 +349,11 @@ Active slice:
   `Conditional Go / Continue`, broad production at `No-Go`, and turns Redis,
   Supabase recovery, alert/incident ownership, protected smoke reruns, upload
   delegation, and rollback authority into explicit owner-acceptance rows.
+
+Merged first slice:
+
+- PR #487 added the Production Ops Closure Decision Packet V1 and guarded the
+  broad-production No-Go / owner-acceptance boundary.
 
 Verification:
 

@@ -56,20 +56,21 @@ As of 2026-05-23, `origin/main` includes the Controlled Pilot Scenario
 Rehearsal V1 runbook, the first evidence pass, the assisted persona route
 checks, the Store Action command smoke harness, the Store Action live command
 proof, the Pilot Feedback backend and frontend loop, the Data Quality Center,
-and Operations Telemetry V2.
+Operations Telemetry V2, and the completed first-eight project-growth line
+through Production Ops Closure Decision Packet V1.
 
 Current maintenance branch:
 
-- Active branch: `codex/production-ops-closure-decision-packet-v1`.
-- This branch starts Track 8 of the project-growth roadmap: Production Ops
-  Closure Decision Packet V1. It must not claim broad-production Go, change
-  provider configuration, run restore commands, change code, change API response
-  shape, change auth/permission semantics, add DB migration, or record secrets.
+- Active branch: none. `main` is clean and aligned with `origin/main` after the
+  first-eight project-growth line.
+- Next work should start from `main`, choose a new branch, and use
+  `docs/plans/project-control-board-v1.md`, `docs/plans/decision-registry-v1.md`,
+  and `docs/plans/project-growth-execution-roadmap-v1.md` as reference.
 
 Latest project-growth merge:
 
 ```text
-355e28fb docs: add norm kadro workforce planning inventory (#486)
+0a1b5858 docs: add production ops closure decision packet (#487)
 ```
 
 Latest controlled-pilot evidence merge:
