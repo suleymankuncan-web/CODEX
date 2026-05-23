@@ -217,16 +217,17 @@ function PilotFeedbackRow(input: {
   const [classification, setClassification] = useState<PilotFeedbackClassification>(
     input.item.classification ?? 'p2_pilot_friction',
   )
-  const [note, setNote] = useState('')
+  const [note, setNote] = useState<string | null>(null)
   const classifyMutation = useMutation({
     mutationFn: classifyPilotFeedback,
     onSuccess: async () => {
-      setNote('')
+      setNote(trimmedNote)
       await queryClient.invalidateQueries({ queryKey: ['pilot-feedback'] })
     },
   })
 
-  const trimmedNote = note.trim()
+  const currentNote = note ?? input.item.classificationNote ?? ''
+  const trimmedNote = currentNote.trim()
 
   function submitClassification(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -295,7 +296,7 @@ function PilotFeedbackRow(input: {
             <span>{input.t('pilotFeedback.admin.noteLabel')}</span>
             <input
               className="control-input"
-              value={note}
+              value={currentNote}
               maxLength={2000}
               onChange={(event) => setNote(event.target.value)}
             />

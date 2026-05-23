@@ -83,12 +83,13 @@ test.beforeEach(async ({ page }) => {
     )
   })
 
-  await routePilotFeedbackApi(page)
+  await routeAuthSession(page)
 })
 
 test('pilot feedback can be submitted and classified inside the app', async ({ page }) => {
   const submittedBodies: unknown[] = []
   const classifiedBodies: unknown[] = []
+  await routePilotFeedbackApi(page)
   await capturePilotFeedbackWrites(page, submittedBodies, classifiedBodies)
 
   await page.goto('/admin/session')
@@ -133,13 +134,41 @@ test('pilot feedback can be submitted and classified inside the app', async ({ p
   })
 })
 
-async function routePilotFeedbackApi(page: Page) {
-  let currentItem = { ...pilotFeedbackItem }
+test('pilot feedback classification keeps an existing note when unchanged', async ({ page }) => {
+  const classifiedBodies: unknown[] = []
+  await routePilotFeedbackApi(page, {
+    ...pilotFeedbackItem,
+    feedbackId: 'pilot-feedback-existing-note',
+    status: 'triaged',
+    classification: 'p2_pilot_friction',
+    classificationNote: 'Existing triage context.',
+  })
+  await capturePilotFeedbackWrites(page, [], classifiedBodies)
 
+  await page.goto('/admin/pilot-feedback')
+
+  const row = page.locator('.stacked-row').filter({ hasText: 'Checkout submit failed' }).first()
+  await expect(row.getByLabel('Note')).toHaveValue('Existing triage context.')
+  await row.getByLabel('Class').selectOption('p3_backlog')
+  await row.getByRole('button', { name: 'Classify' }).click()
+
+  await expect(row.getByRole('status')).toContainText('Class updated')
+  expect(classifiedBodies).toHaveLength(1)
+  expect(classifiedBodies[0]).toMatchObject({
+    classification: 'p3_backlog',
+    note: 'Existing triage context.',
+  })
+})
+
+async function routeAuthSession(page: Page) {
   await page.unroute('**/api/auth/session').catch(() => undefined)
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: superAdminSession })
   })
+}
+
+async function routePilotFeedbackApi(page: Page, initialItem: PilotFeedbackFixture = pilotFeedbackItem) {
+  let currentItem = { ...initialItem }
 
   await page.route('**/api/admin/pilot-feedback**', async (route) => {
     const request = route.request()
