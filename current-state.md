@@ -2,13 +2,14 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #445 plus the Store Action V1B Store Tasks cancel-reason UI closeout,
-Store Action test hygiene/visibility evidence, the Product Readiness V1
-first-pass closeout, Operations Control Tower readiness line,
-Sokrates/discipline operating docs, current workspace hygiene, the Clerk
-persona staging evidence runbook, the generated system-flow map, and the
-production evidence closure joint plan plus Redis/BullMQ, alert-provider,
-Supabase restore, readiness profile reset, and Sokrates calibration proofs.
+PR #447 plus the Store Action V1B Store Tasks basic loop closeout, Store Action
+test hygiene/visibility evidence, the Pilot Reliability Spine V1 docs,
+the Product Readiness V1 first-pass closeout, Operations Control Tower
+readiness line, Sokrates/discipline operating docs, current workspace hygiene,
+the Clerk persona staging evidence runbooks, the generated system-flow map,
+and the production evidence closure joint plan plus Redis/BullMQ,
+alert-provider, Supabase restore, readiness profile reset, and Sokrates
+calibration proofs.
 It is the starting point for continuing in a fresh window.
 
 ## Active Workspace
@@ -33,23 +34,23 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-23, the baseline before the current maintenance branch had
-`origin/main` fetched through PR #445. The root checkout was clean `main` and
-aligned with `origin/main` after the Store Action V1B cancel-reason UI merge.
+As of 2026-05-23, the baseline before the current Pilot Reliability Spine V1
+branch had `origin/main` fetched through PR #447. The root checkout was clean
+`main` and aligned with `origin/main` after the Store Action test hygiene merge.
 
-Current maintenance branch after PR #445:
+Current maintenance branch after PR #447:
 
-- `codex/night-maintenance-store-action-hygiene`
-- Scope: Store Action E2E test split, Store Action visibility evidence,
-  pilot-readiness note, Norm Kadro parked backlog entry, and project-wide bug
-  hunt evidence.
-- No product code, API response shape, auth semantics, DB migration, CSS, or
-  user-facing workflow behavior changes.
+- `codex/pilot-reliability-spine-v1`
+- Scope: docs-only Pilot Reliability Spine V1 evidence matrix, persona runbook,
+  staging dataset contract, role/scope drift guard, data freshness/quality
+  guard, performance budget, and handoff references.
+- No product code, API response shape, auth semantics, DB migration, CSS,
+  provider config, or user-facing workflow behavior changes.
 
 Latest merge on main:
 
 ```text
-283e4053 feat: cancel store action plans from tasks (#445)
+d968ee2d test: split store action plan coverage (#447)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -214,6 +215,8 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #443 `feat: update store action plan status from tasks`
 - PR #444 `feat: close store action plans from tasks`
 - PR #445 `feat: cancel store action plans from tasks`
+- PR #446 `docs: close store action v1b handoff`
+- PR #447 `test: split store action plan coverage`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -232,7 +235,7 @@ frontend root, security headers, SPA fallback, and static assets passed.
 Current local hygiene state:
 
 - Root workspace `D:\store-ops-workspace` was clean on `main...origin/main` at
-  `47f465ca` after PR #439 was merged and `origin/main` was fetched.
+  `d968ee2d` after PR #447 was merged and `origin/main` was fetched.
 - The previous dirty root state was not deleted. It was saved as stash
   `codex hygiene backup 2026-05-21 root dirty state`. Do not drop that stash
   unless the user explicitly approves.
@@ -1551,6 +1554,28 @@ Store Action V1A status:
   `docs/evidence/store-action-test-hygiene-and-visibility-v1.md` and
   `docs/evidence/pilot-readiness/2026-05-23-store-action-visibility-readiness.md`.
 
+Pilot Reliability Spine V1 current branch:
+
+- Evidence matrix:
+  `docs/evidence/pilot-evidence-operating-matrix-v1.md`.
+- Repeatable persona runbook:
+  `docs/plans/pilot-persona-evidence-runbook-v1.md`.
+- Staging dataset contract:
+  `docs/plans/staging-pilot-dataset-contract-v1.md`.
+- Role/scope drift guard:
+  `docs/plans/role-scope-drift-guard-v1.md`.
+- Data freshness/quality guard:
+  `docs/plans/data-freshness-quality-guard-v1.md`.
+- Performance budget:
+  `docs/plans/performance-budget-v1.md`.
+- 2026-05-23 public staging smokes: deployed readiness passed `13/14` with
+  auth/session skipped for missing `READINESS_BEARER_TOKEN`; public backend load
+  health passed with p50 `101.9ms`, p95 `259.57ms`, and 0 5xx; alert routing
+  passed tokenless checks but provider delivery was `not-configured`.
+- Current protected/provider blockers: fresh role-specific Clerk tokens, alert
+  provider metadata/delivery proof, disposable Supabase restore target, and
+  authenticated upload token/file. Do not treat skipped token checks as proof.
+
 Current user direction on 2026-05-18:
 
 - Keep the `/store/me` product-feel slice parked for now.
@@ -1646,6 +1671,7 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-round-1-outcome.md` - Controlled Pilot Round 1 Outcome
 - `docs/evidence/pilot-readiness/2026-05-22-controlled-pilot-round-2-stabilization.md` - Controlled Pilot Round 2 Stabilization Evidence
 - `docs/evidence/pilot-readiness/2026-05-23-store-action-visibility-readiness.md` - Store Action visibility readiness
+- `docs/evidence/pilot-evidence-operating-matrix-v1.md` - Pilot Evidence Operating Matrix V1
 - `docs/evidence/store-action-test-hygiene-and-visibility-v1.md` - Store Action test hygiene and visibility evidence
 - `docs/evidence/project-wide-bug-hunt-2026-05-23.md` - project-wide bug hunt pass
 - `docs/flows/README.md` - Store Ops System Flow generator note
@@ -1664,6 +1690,11 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/plans/operator-evidence-consistency-pass-v1.md` - Operator Evidence Consistency Pass V1
 - `docs/evidence/pilot-readiness/2026-05-01-preflight-no-go.md` - pilot preflight No-Go evidence
 - `docs/plans/pilot-readiness-gate-v1.md` - Pilot Readiness Gate V1
+- `docs/plans/pilot-persona-evidence-runbook-v1.md` - Pilot Persona Evidence Runbook V1
+- `docs/plans/staging-pilot-dataset-contract-v1.md` - Staging Pilot Dataset Contract V1
+- `docs/plans/role-scope-drift-guard-v1.md` - Role Scope Drift Guard V1
+- `docs/plans/data-freshness-quality-guard-v1.md` - Data Freshness Quality Guard V1
+- `docs/plans/performance-budget-v1.md` - Performance Budget V1
 - `docs/plans/project-health-snapshot-2026-05-01.md`
 - `docs/plans/project-progress-plan-v1.md` - Project Progress Plan V1
 - `docs/plans/production-evidence-closure-joint-plan-v1.md` - Production Evidence Closure Joint Plan V1

@@ -371,6 +371,19 @@ Current result:
 - The 2026-05-21 blocker refresh confirms the same class of inputs is still
   absent in the local environment:
   `docs/evidence/product-progress/2026-05-21-external-evidence-blocker-refresh.md`.
+- Pilot Reliability Spine V1 now makes the evidence classes explicit instead of
+  leaving them as one generic "blocked" bucket:
+  `docs/evidence/pilot-evidence-operating-matrix-v1.md`,
+  `docs/plans/pilot-persona-evidence-runbook-v1.md`,
+  `docs/plans/staging-pilot-dataset-contract-v1.md`,
+  `docs/plans/role-scope-drift-guard-v1.md`,
+  `docs/plans/data-freshness-quality-guard-v1.md`, and
+  `docs/plans/performance-budget-v1.md`.
+- Fresh 2026-05-23 public staging checks passed tokenless deployed readiness,
+  public backend health load, and alert-routing health checks. Fresh protected
+  persona/load proof remains blocked by missing role-specific bearer tokens;
+  fresh alert provider delivery proof remains blocked by missing provider
+  metadata/delivery input.
 
 Verification commands:
 
