@@ -3,6 +3,7 @@ import { dirname, resolve } from "node:path";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "../app.module";
+import { applyPilotFeedbackOpenApi } from "./pilot-feedback-openapi";
 import { applyStoreActionPlanOpenApi } from "./store-action-plan-openapi";
 type MutableOperation = {
   parameters?: Array<Record<string, unknown>>;
@@ -25,7 +26,6 @@ const mobileSessionOperations = [
   { path: "/api/mobile/auth/logout", method: "post" },
   { path: "/api/mobile/auth/sessions/{sessionId}", method: "delete" },
 ] as const;
-
 const mobileSessionHeader = {
   name: "x-mobile-session-id",
   in: "header",
@@ -4378,7 +4378,6 @@ const masterDataBootstrapPromotionReadinessResponseSchema = {
     },
   },
 };
-
 async function generateOpenApi(): Promise<void> {
   const app = await NestFactory.create(AppModule, { logger: false });
   app.setGlobalPrefix("api");
@@ -4521,6 +4520,7 @@ async function generateOpenApi(): Promise<void> {
   };
 
   applyStoreActionPlanOpenApi(document);
+  applyPilotFeedbackOpenApi(document);
   setJsonResponseSchema(
     document.paths,
     "/api/integrations/import-batches/overview",

@@ -4236,6 +4236,146 @@
         ],
         "security": []
       }
+    },
+    "/api/pilot-feedback": {
+      "post": {
+        "operationId": "PilotFeedbackController_createFeedback",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePilotFeedbackRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Command result with the recorded pilot feedback.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PilotFeedbackCommandResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PilotFeedback"
+        ]
+      }
+    },
+    "/api/admin/pilot-feedback": {
+      "get": {
+        "operationId": "PilotFeedbackController_listFeedback",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "new",
+                "triaged",
+                "parked",
+                "resolved"
+              ]
+            }
+          },
+          {
+            "name": "classification",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "p0_stop",
+                "p1_pilot_blocker",
+                "p2_pilot_friction",
+                "p3_backlog"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "offset",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated pilot feedback items for controlled pilot triage.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PilotFeedbackListResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PilotFeedback"
+        ]
+      }
+    },
+    "/api/admin/pilot-feedback/{feedbackId}/classification": {
+      "patch": {
+        "operationId": "PilotFeedbackController_classifyFeedback",
+        "parameters": [
+          {
+            "name": "feedbackId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClassifyPilotFeedbackRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Command result with the classified pilot feedback.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PilotFeedbackCommandResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PilotFeedback"
+        ]
+      }
     }
   },
   "info": {
@@ -17855,6 +17995,255 @@
         "properties": {
           "cancelReason": {
             "type": "string"
+          }
+        }
+      },
+      "PilotFeedback": {
+        "type": "object",
+        "required": [
+          "feedbackId",
+          "actorUserId",
+          "actorRoleCodes",
+          "feedbackType",
+          "severitySuggestion",
+          "routePath",
+          "pageTitle",
+          "title",
+          "description",
+          "status",
+          "classification",
+          "classifiedByUserId",
+          "classifiedAt",
+          "classificationNote",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "feedbackId": {
+            "type": "string"
+          },
+          "actorUserId": {
+            "type": "string"
+          },
+          "actorRoleCodes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "feedbackType": {
+            "type": "string",
+            "enum": [
+              "bug",
+              "friction",
+              "idea",
+              "data_quality",
+              "other"
+            ]
+          },
+          "severitySuggestion": {
+            "type": "string",
+            "enum": [
+              "p0",
+              "p1",
+              "p2",
+              "p3"
+            ]
+          },
+          "routePath": {
+            "type": "string"
+          },
+          "pageTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "new",
+              "triaged",
+              "parked",
+              "resolved"
+            ]
+          },
+          "classification": {
+            "type": "string",
+            "enum": [
+              "p0_stop",
+              "p1_pilot_blocker",
+              "p2_pilot_friction",
+              "p3_backlog"
+            ],
+            "nullable": true
+          },
+          "classifiedByUserId": {
+            "type": "string",
+            "nullable": true
+          },
+          "classifiedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "classificationNote": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        }
+      },
+      "PilotFeedbackCommandResponse": {
+        "type": "object",
+        "required": [
+          "command",
+          "data"
+        ],
+        "properties": {
+          "command": {
+            "type": "object",
+            "required": [
+              "status",
+              "message"
+            ],
+            "properties": {
+              "status": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "feedback"
+            ],
+            "properties": {
+              "feedback": {
+                "$ref": "#/components/schemas/PilotFeedback"
+              }
+            }
+          }
+        }
+      },
+      "PilotFeedbackListResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "meta"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PilotFeedback"
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "count",
+              "total",
+              "limit",
+              "offset"
+            ],
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "CreatePilotFeedbackRequest": {
+        "type": "object",
+        "required": [
+          "feedbackType",
+          "severitySuggestion",
+          "routePath",
+          "title",
+          "description"
+        ],
+        "properties": {
+          "feedbackType": {
+            "type": "string",
+            "enum": [
+              "bug",
+              "friction",
+              "idea",
+              "data_quality",
+              "other"
+            ]
+          },
+          "severitySuggestion": {
+            "type": "string",
+            "enum": [
+              "p0",
+              "p1",
+              "p2",
+              "p3"
+            ]
+          },
+          "routePath": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "pageTitle": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 4000
+          }
+        }
+      },
+      "ClassifyPilotFeedbackRequest": {
+        "type": "object",
+        "required": [
+          "classification"
+        ],
+        "properties": {
+          "classification": {
+            "type": "string",
+            "enum": [
+              "p0_stop",
+              "p1_pilot_blocker",
+              "p2_pilot_friction",
+              "p3_backlog"
+            ]
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 2000
           }
         }
       }

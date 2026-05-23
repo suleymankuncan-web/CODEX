@@ -694,6 +694,31 @@ CREATE TABLE ops.store_action_plan (
     CHECK (status <> 'cancelled' OR (cancelled_at IS NOT NULL AND cancel_reason IS NOT NULL))
 );
 
+CREATE TABLE ops.pilot_feedback (
+    pilot_feedback_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    actor_user_id UUID NOT NULL REFERENCES ops.user_account(user_id),
+    actor_role_codes TEXT[] NOT NULL DEFAULT '{}'::text[],
+    feedback_type TEXT NOT NULL,
+    severity_suggestion TEXT NOT NULL,
+    route_path TEXT NOT NULL,
+    page_title TEXT,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'new',
+    classification TEXT,
+    classified_by_user_id UUID REFERENCES ops.user_account(user_id),
+    classified_at TIMESTAMPTZ,
+    classification_note TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (feedback_type IN ('bug', 'friction', 'idea', 'data_quality', 'other')),
+    CHECK (severity_suggestion IN ('p0', 'p1', 'p2', 'p3')),
+    CHECK (status IN ('new', 'triaged', 'parked', 'resolved')),
+    CHECK (classification IS NULL OR classification IN ('p0_stop', 'p1_pilot_blocker', 'p2_pilot_friction', 'p3_backlog')),
+    CHECK (status <> 'triaged' OR classification IS NOT NULL),
+    CHECK (classified_at IS NULL OR classified_by_user_id IS NOT NULL)
+);
+
 CREATE TABLE rpt.store_workforce_snapshot (
     snapshot_run_id UUID NOT NULL REFERENCES rpt.snapshot_run(snapshot_run_id),
     store_id UUID NOT NULL REFERENCES ops.store(store_id),
@@ -1118,6 +1143,15 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_store_action_plan_active_source_unique
     ON ops.store_action_plan (store_id, source_type, source_id)
     WHERE status IN ('open', 'in_progress', 'blocked');
 
+CREATE INDEX IF NOT EXISTS idx_pilot_feedback_status_created
+    ON ops.pilot_feedback (status, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_pilot_feedback_classification_created
+    ON ops.pilot_feedback (classification, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_pilot_feedback_actor_created
+    ON ops.pilot_feedback (actor_user_id, created_at DESC);
+
 CREATE INDEX competition_stage_competition_state_idx
     ON ops.competition_stage (competition_id, lifecycle_state, starts_on, ends_on);
 
@@ -1275,6 +1309,7 @@ COMMENT ON TABLE ops.mobile_device_session IS 'Mobile device session registry fo
 COMMENT ON TABLE ops.target_distribution_request IS 'Store-level target distribution requests that are submitted by store managers and approved by region-level oversight.';
 COMMENT ON TABLE ops.personnel_target_reference IS 'Approved personnel target references promoted from region-approved target distribution requests for scoring.';
 COMMENT ON TABLE ops.store_action_plan IS 'Store-owned follow-up plans created from approved Store Action candidate sources.';
+COMMENT ON TABLE ops.pilot_feedback IS 'Controlled pilot feedback intake for classifying P0/P1/P2/P3 findings without changing pilot go/no-go semantics.';
 COMMENT ON TABLE ops.feed_post IS 'Scoped operational announcements and challenge posts. Challenge posts announce focus windows but do not calculate scores.';
 COMMENT ON TABLE ops.checklist_acknowledgement IS 'Store acknowledgement evidence for completed checklist instances.';
 COMMENT ON TABLE ops.kpi_score_profile_config IS 'Data-driven KPI scoring configuration for store/personnel score profiles, ownership matrix and grading bands.';

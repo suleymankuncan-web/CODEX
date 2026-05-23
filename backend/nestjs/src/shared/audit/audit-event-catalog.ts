@@ -190,6 +190,20 @@ export const AUDIT_EVENT_CATALOG = [
     "Store action plan was cancelled.",
     "feature_audit",
   ),
+  auditEvent(
+    "pilot_feedback.created",
+    "ops.pilot_feedback",
+    "store_ops",
+    "Controlled pilot feedback was recorded.",
+    "feature_audit",
+  ),
+  auditEvent(
+    "pilot_feedback.classified",
+    "ops.pilot_feedback",
+    "store_ops",
+    "Controlled pilot feedback was classified for pilot readiness triage.",
+    "feature_audit",
+  ),
 
   auditEvent("competition.created", "ops.competition", "competition", "Competition was created."),
   auditEvent("competition_stage.created", "ops.competition_stage", "competition", "Competition stage was created."),
