@@ -142,6 +142,12 @@ Rule:
 
 Status: controlled pilot exists, but the operating loop must stay alive.
 
+Current runbook:
+
+- Controlled Pilot Scenario Rehearsal V1 provides the pilot-day moderator script
+  for preflight, persona passes, cross-domain sanity, stop rules, and final
+  Go / Conditional Go / Pause / No-Go decision.
+
 Missing:
 
 - Fresh session entries in the controlled pilot feedback log when real sessions happen.
@@ -637,6 +643,8 @@ Candidate next outputs:
 
 - Use `docs/plans/pilot-scenario-pack-v1.md` before widening pilot scenarios or
   adding role-specific flows.
+- Use `docs/plans/controlled-pilot-scenario-rehearsal-v1.md` before asking real
+  pilot users to rely on the system for a coordinated pilot session.
 - Use `docs/plans/feature-growth-checklist-v1.md` before starting Norm Kadro,
   Coaching, new reports, new workflow sources, or new module work.
 - Authorization matrix drift guard is already implemented as a docs/script
