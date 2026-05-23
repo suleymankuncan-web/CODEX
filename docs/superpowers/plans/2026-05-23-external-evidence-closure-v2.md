@@ -36,7 +36,8 @@ posture explicitly.
 Repo evidence:
 
 - `docs/evidence/system-flow/clerk-persona-live-evidence-2026-05-23.md`
-  closes the current five-persona protected Clerk matrix.
+  plus `docs/evidence/system-flow/clerk-region-manager-live-evidence-2026-05-23.md`
+  close the active protected Clerk matrix.
 - `docs/evidence/readiness/2026-05-22-redis-bullmq-staging-proof.md`
   proves staging Redis/BullMQ wiring and health.
 - `docs/evidence/readiness/2026-05-22-alert-provider-delivery-proof.md`

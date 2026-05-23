@@ -53,7 +53,7 @@ Verification ladder:
 | Company | One active pilot company. | Anchors regions, stores, users, imports, snapshots, and reporting. |
 | Region | One active region under the pilot company. | Proves region manager/reporting filters later without inventing data. |
 | Stores | At least two active stores: one assigned to the store manager, one unassigned negative-control store. | Required for positive and negative assigned-store action proof. |
-| Users | Five Clerk-linked personas: `SUPER_ADMIN`, `HR_ADMIN`, `STORE_MANAGER`, `STORE_PERSONNEL`, `REPORT_VIEWER`. | Required for route/backend role evidence. |
+| Users | Six Clerk-linked active pilot personas: `SUPER_ADMIN`, `HR_ADMIN`, `REGION_MANAGER`, `STORE_MANAGER`, `STORE_PERSONNEL`, `REPORT_VIEWER`. | Required for route/backend role evidence. |
 | Employees | At least one employee/personnel record tied to the assigned store. | Required for store/personnel surfaces and workforce references. |
 | Role assignments | Application DB role records for each persona. | Clerk identity alone is not authorization. |
 | Scope assignments | Store/company/region/action-store scopes matching the matrix. | Required for fail-closed checks. |

@@ -4,8 +4,7 @@ This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
 PR #452 plus the Store Action V1B Store Tasks basic loop closeout, Store Action
 test hygiene/visibility evidence, the Pilot Reliability Spine V1 docs, first
-execution evidence, five-persona Clerk protected evidence, and the
-`REGION_MANAGER` protected evidence addendum,
+execution evidence, and the active Clerk protected persona evidence matrix,
 the Product Readiness V1 first-pass closeout, Operations Control Tower
 readiness line, Sokrates/discipline operating docs, current workspace hygiene,
 the Clerk persona staging evidence runbooks, the generated system-flow map,
