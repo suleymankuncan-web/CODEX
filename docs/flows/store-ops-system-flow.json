@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-23T18:14:33.225Z",
+  "generatedAt": "2026-05-23T19:04:18.714Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -9,10 +9,10 @@
     "backendEndpointsWithoutFrontendCallCount": 35,
     "controllerCount": 20,
     "frontendApiCallCount": 138,
-    "frontendRouteCount": 52,
+    "frontendRouteCount": 53,
     "matchedFrontendApiCallCount": 138,
     "openApiEndpointCount": 173,
-    "routeApiEdgeCount": 200,
+    "routeApiEdgeCount": 208,
     "routesWithoutApiCallCount": 4,
     "unmatchedFrontendApiCallCount": 0
   },
@@ -29,7 +29,7 @@
       "roles": [],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 195
+        "line": 200
       }
     },
     {
@@ -74,7 +74,7 @@
       "roles": [],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 77
+        "line": 78
       }
     },
     {
@@ -92,7 +92,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 191
+        "line": 196
       }
     },
     {
@@ -110,7 +110,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 187
+        "line": 192
       }
     },
     {
@@ -128,7 +128,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 183
+        "line": 188
       }
     },
     {
@@ -146,7 +146,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 179
+        "line": 184
       }
     },
     {
@@ -163,7 +163,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 159
+        "line": 164
       }
     },
     {
@@ -180,7 +180,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 175
+        "line": 180
       }
     },
     {
@@ -197,7 +197,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 163
+        "line": 168
       }
     },
     {
@@ -214,7 +214,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 171
+        "line": 176
       }
     },
     {
@@ -231,7 +231,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 167
+        "line": 172
       }
     },
     {
@@ -249,7 +249,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 115
+        "line": 120
       }
     },
     {
@@ -269,7 +269,24 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 119
+        "line": 124
+      }
+    },
+    {
+      "id": "route:admin:/admin/data-quality",
+      "path": "/admin/data-quality",
+      "surface": "admin",
+      "domain": "data-quality",
+      "kind": "page",
+      "component": "AdminDataQualityCenterPage",
+      "componentFile": "admin-web/src/pages/AdminDataQualityCenterPage.tsx",
+      "guard": "AdminRouteGuard",
+      "roles": [
+        "SUPER_ADMIN"
+      ],
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 84
       }
     },
     {
@@ -288,7 +305,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 111
+        "line": 116
       }
     },
     {
@@ -307,7 +324,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 107
+        "line": 112
       }
     },
     {
@@ -325,7 +342,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 83
+        "line": 88
       }
     },
     {
@@ -343,7 +360,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 87
+        "line": 92
       }
     },
     {
@@ -360,7 +377,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 151
+        "line": 156
       }
     },
     {
@@ -379,7 +396,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 91
+        "line": 96
       }
     },
     {
@@ -398,7 +415,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 95
+        "line": 100
       }
     },
     {
@@ -415,7 +432,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 79
+        "line": 80
       }
     },
     {
@@ -432,7 +449,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 155
+        "line": 160
       }
     },
     {
@@ -450,7 +467,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 123
+        "line": 128
       }
     },
     {
@@ -468,7 +485,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 139
+        "line": 144
       }
     },
     {
@@ -486,7 +503,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 135
+        "line": 140
       }
     },
     {
@@ -504,7 +521,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 127
+        "line": 132
       }
     },
     {
@@ -522,7 +539,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 143
+        "line": 148
       }
     },
     {
@@ -540,7 +557,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 131
+        "line": 136
       }
     },
     {
@@ -555,7 +572,7 @@
       "roles": [],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 78
+        "line": 79
       }
     },
     {
@@ -573,7 +590,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 99
+        "line": 104
       }
     },
     {
@@ -591,7 +608,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 103
+        "line": 108
       }
     },
     {
@@ -610,7 +627,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 147
+        "line": 152
       }
     },
     {
@@ -6725,6 +6742,46 @@
         "id": "edge:route:admin:/admin/competitions:api:53",
         "routeId": "route:admin:/admin/competitions",
         "apiCallId": "api:53"
+      },
+      {
+        "id": "edge:route:admin:/admin/data-quality:api:103",
+        "routeId": "route:admin:/admin/data-quality",
+        "apiCallId": "api:103"
+      },
+      {
+        "id": "edge:route:admin:/admin/data-quality:api:106",
+        "routeId": "route:admin:/admin/data-quality",
+        "apiCallId": "api:106"
+      },
+      {
+        "id": "edge:route:admin:/admin/data-quality:api:108",
+        "routeId": "route:admin:/admin/data-quality",
+        "apiCallId": "api:108"
+      },
+      {
+        "id": "edge:route:admin:/admin/data-quality:api:127",
+        "routeId": "route:admin:/admin/data-quality",
+        "apiCallId": "api:127"
+      },
+      {
+        "id": "edge:route:admin:/admin/data-quality:api:133",
+        "routeId": "route:admin:/admin/data-quality",
+        "apiCallId": "api:133"
+      },
+      {
+        "id": "edge:route:admin:/admin/data-quality:api:61",
+        "routeId": "route:admin:/admin/data-quality",
+        "apiCallId": "api:61"
+      },
+      {
+        "id": "edge:route:admin:/admin/data-quality:api:63",
+        "routeId": "route:admin:/admin/data-quality",
+        "apiCallId": "api:63"
+      },
+      {
+        "id": "edge:route:admin:/admin/data-quality:api:94",
+        "routeId": "route:admin:/admin/data-quality",
+        "apiCallId": "api:94"
       },
       {
         "id": "edge:route:admin:/admin/feed:api:1",

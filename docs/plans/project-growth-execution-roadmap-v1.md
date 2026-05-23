@@ -39,8 +39,8 @@ Why:
 
 | Order | Track | Current stance | First safe slice | What must not change |
 | --- | --- | --- | --- | --- |
-| 1 | Pilot Feedback Loop V1 | start now | in-app feedback intake/read model for scoped pilot users | auth semantics, pilot status, broad issue tracker integration |
-| 2 | Data Quality & Reconciliation Center V1 | next | read-only data-quality dashboard from existing import/snapshot/KPI/workforce signals | import lifecycle, KPI math, mapping approval behavior |
+| 1 | Pilot Feedback Loop V1 | first frontend/backend loop merged | in-app feedback intake/read model for scoped pilot users | auth semantics, pilot status, broad issue tracker integration |
+| 2 | Data Quality & Reconciliation Center V1 | active | read-only data-quality dashboard from existing import/snapshot/KPI/workforce signals | import lifecycle, KPI math, mapping approval behavior |
 | 3 | Operations Telemetry / Control Tower V2 | next after data quality | real signal expansion on existing Operations Control Tower | external observability platform, provider config, alert semantics |
 | 4 | Store Action -> Coaching Loop V2 | after feedback/data quality | action detail/history/comment design, then minimal comments/history slice | workflow state machine, KPI scoring, broad notification system |
 | 5 | Role / Permission Preview UI | after coaching first slice or sooner if auth confusion appears | read-only role/route/scope preview using existing auth matrix | permission semantics, assignments, Clerk/provider behavior |
@@ -84,8 +84,8 @@ Current status:
 
 - Backend foundation merged in PR #479 with create/list/classify API, storage,
   OpenAPI coverage, audit events, and targeted backend tests.
-- Active frontend slice: generated client adoption, in-app feedback control,
-  SUPER_ADMIN triage queue, and targeted Playwright coverage.
+- Frontend loop merged in PR #480 with generated client adoption, in-app
+  feedback control, SUPER_ADMIN triage queue, and targeted Playwright coverage.
 
 Source of truth:
 
@@ -130,6 +130,12 @@ First safe slice:
 
 - read-only dashboard card set that reuses existing import quality issue
   summaries and snapshot freshness signals.
+
+Active slice:
+
+- `/admin/data-quality` read-only center for SUPER_ADMIN using existing import,
+  snapshot, workforce, KPI config, and ranking reads. The page is an operator
+  trust separator, not a repair workflow.
 
 Verification:
 

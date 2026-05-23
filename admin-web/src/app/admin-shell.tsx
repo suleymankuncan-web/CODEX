@@ -11,6 +11,7 @@ import {
   AdminFeedPage,
   AdminInboxPage,
   AdminKpiConfigPage,
+  AdminDataQualityCenterPage,
   AdminPilotFeedbackPage,
   AuditCenterPage,
   AuthActionStoreAssignmentAuditPage,
@@ -79,6 +80,10 @@ export function AdminShell(input: {
             <Route
               path="/admin/operations"
               element={adminRoute(['SUPER_ADMIN'], <OperationsControlTowerPage />)}
+            />
+            <Route
+              path="/admin/data-quality"
+              element={adminRoute(['SUPER_ADMIN'], <AdminDataQualityCenterPage />)}
             />
             <Route
               path="/admin/integrations"

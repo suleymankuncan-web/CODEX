@@ -59,6 +59,7 @@ const adminCompetitionRoles = ['SUPER_ADMIN', 'HR_ADMIN', 'REPORT_VIEWER', 'REGI
 const adminIntegrationRoles = ['SUPER_ADMIN', 'INTEGRATION_ADMIN']
 const adminMasterDataRoles = ['SUPER_ADMIN', 'HR_ADMIN', 'INTEGRATION_ADMIN']
 const adminOperationsRoles = ['SUPER_ADMIN']
+const adminDataQualityRoles = ['SUPER_ADMIN']
 const adminTargetRoles = ['SUPER_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER']
 const storeCompetitionRoles = ['STORE_PERSONNEL', 'STORE_MANAGER']
 const storeReportingRoles = ['SUPER_ADMIN', 'REPORT_VIEWER', 'AUDITOR', 'STORE_MANAGER']
@@ -136,6 +137,10 @@ function resolveRoutePrefetchTasks(
 
   if (pathname === '/admin/operations') {
     return getAdminOperationsPrefetchTasks(authSummary)
+  }
+
+  if (pathname === '/admin/data-quality') {
+    return getAdminDataQualityPrefetchTasks(authSummary)
   }
 
   if (pathname === '/admin/master-data') {
@@ -336,6 +341,53 @@ function getAdminOperationsPrefetchTasks(authSummary: AuthSessionSummary | null)
     {
       queryKey: ['snapshot-needs-action', 0, '', '', 4],
       queryFn: () => getSnapshotNeedsAction({ limit: 4, offset: 0 }),
+      enabled,
+    },
+  ]
+}
+
+function getAdminDataQualityPrefetchTasks(authSummary: AuthSessionSummary | null): PrefetchTask[] {
+  const enabled = hasAnyRole(authSummary, adminDataQualityRoles)
+
+  return [
+    {
+      queryKey: ['integration-overview'],
+      queryFn: getImportOverview,
+      enabled,
+    },
+    {
+      queryKey: ['integration-needs-action', 0, '', '', 6],
+      queryFn: () => getNeedsAction({ limit: 6, offset: 0 }),
+      enabled,
+    },
+    {
+      queryKey: ['snapshot-overview'],
+      queryFn: getSnapshotOverview,
+      enabled,
+    },
+    {
+      queryKey: ['snapshot-needs-action', 0, '', '', 6],
+      queryFn: () => getSnapshotNeedsAction({ limit: 6, offset: 0 }),
+      enabled,
+    },
+    {
+      queryKey: ['seller-code-requests', 'pending_hr_approval'],
+      queryFn: () => getSellerCodeRequests({ status: 'pending_hr_approval' }),
+      enabled,
+    },
+    {
+      queryKey: ['offboarding-requests', 'pending_hr_approval'],
+      queryFn: () => getOffboardingRequests({ status: 'pending_hr_approval' }),
+      enabled,
+    },
+    {
+      queryKey: ['kpi-config'],
+      queryFn: getKpiConfig,
+      enabled,
+    },
+    {
+      queryKey: ['operations-rankings', 'monthly', 1],
+      queryFn: () => getRankings({ limit: 1 }),
       enabled,
     },
   ]

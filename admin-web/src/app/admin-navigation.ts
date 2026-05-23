@@ -32,6 +32,7 @@ type AdminNavIconId =
   | 'auth'
   | 'checklists'
   | 'competitions'
+  | 'dataQuality'
   | 'feed'
   | 'inbox'
   | 'integrations'
@@ -50,6 +51,13 @@ export const adminNavDefinitions: NavDefinition[] = [
     to: '/admin/operations',
     icon: Activity,
     labelKey: 'adminShell.nav.operations',
+    roles: ['SUPER_ADMIN'],
+  },
+  {
+    id: 'dataQuality',
+    to: '/admin/data-quality',
+    icon: DatabaseZap,
+    labelKey: 'adminShell.nav.dataQuality',
     roles: ['SUPER_ADMIN'],
   },
   {
