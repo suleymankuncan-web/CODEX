@@ -1738,6 +1738,15 @@ Pilot Reliability Spine V1 current branch:
   `HR_ADMIN` and `/admin/reports` for `REPORT_VIEWER`; changing that precedence
   would be an auth/navigation behavior decision. Missing Store Action
   command-mode proof remains the next controlled-pilot follow-up.
+- Store Action Command Smoke Harness V1:
+  `docs/evidence/pilot-readiness/2026-05-23-store-action-command-smoke-harness-v1.md`.
+  The Store Action live command-proof gap now has a token-safe staging harness:
+  `npm.cmd --prefix admin-web run smoke:store-action:staging:command`. It fails
+  fast without a real bearer token and explicit mutation acknowledgement, then
+  proves assigned-store create/status/close/cancel plus unassigned-store `403`
+  using sanitized output. It was not run live in this shell because no
+  `STORE_ACTION_SMOKE_BEARER_TOKEN` or explicit staging mutation approval was
+  present.
 
 Current user direction on 2026-05-18:
 
@@ -1846,6 +1855,7 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/evidence/pilot-readiness/2026-05-23-controlled-pilot-execution-preflight-v1.md` - Controlled Pilot Execution Preflight V1
 - `docs/evidence/pilot-readiness/2026-05-23-assisted-persona-rehearsal-v1.md` - Assisted Persona Rehearsal V1
 - `docs/evidence/pilot-readiness/2026-05-23-landing-return-state-investigation-v1.md` - Landing Return-State Investigation V1
+- `docs/evidence/pilot-readiness/2026-05-23-store-action-command-smoke-harness-v1.md` - Store Action Command Smoke Harness V1
 - `docs/evidence/system-flow/clerk-persona-live-evidence-2026-05-23.md` - Fresh Clerk persona protected evidence
 - `docs/evidence/system-flow/clerk-region-manager-live-evidence-2026-05-23.md` - Fresh Region Manager protected evidence
 - `docs/evidence/pilot-evidence-operating-matrix-v1.md` - Pilot Evidence Operating Matrix V1

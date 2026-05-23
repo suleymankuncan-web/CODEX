@@ -124,6 +124,22 @@ variable name must stay one of the script-supported names above.
    and only the explicit Store Action smoke/runbook for the manager persona.
    Negative unassigned-store proof is required before calling the slice closed.
 
+   ```powershell
+   $env:STORE_ACTION_SMOKE_API_BASE_URL='https://api-staging.hr-axis.com/api'
+   $env:STORE_ACTION_SMOKE_BEARER_TOKEN='<securely pasted token>'
+   $env:STORE_ACTION_SMOKE_EXPECTED_ROLE='STORE_MANAGER'
+   $env:STORE_ACTION_SMOKE_ENVIRONMENT='staging'
+   $env:STORE_ACTION_SMOKE_ASSIGNED_STORE_ID='<assigned store id>'
+   $env:STORE_ACTION_SMOKE_UNASSIGNED_STORE_ID='<unassigned store id>'
+   $env:STORE_ACTION_SMOKE_ALLOW_STAGING_MUTATION='I_UNDERSTAND_THIS_CREATES_TERMINAL_STORE_ACTION_PLANS'
+   npm.cmd --prefix admin-web run smoke:store-action:staging:command
+   Remove-Item Env:STORE_ACTION_SMOKE_BEARER_TOKEN -ErrorAction SilentlyContinue
+   Remove-Item Env:STORE_ACTION_SMOKE_ALLOW_STAGING_MUTATION -ErrorAction SilentlyContinue
+   ```
+
+   This command intentionally creates terminal Store Action evidence rows in
+   staging. Do not run it without operator approval and a rollback/cleanup note.
+
 5. Record sanitized evidence in a dated file under
    `docs/evidence/pilot-readiness/` or `docs/evidence/system-flow/`.
 
