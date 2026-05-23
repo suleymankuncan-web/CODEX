@@ -1747,6 +1747,12 @@ Pilot Reliability Spine V1 current branch:
   using sanitized output. It was not run live in this shell because no
   `STORE_ACTION_SMOKE_BEARER_TOKEN` or explicit staging mutation approval was
   present.
+- Controlled Pilot Feedback Log Session 3:
+  `docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md`.
+  Session 3 records PR #469/#470 follow-up closure: landing/return-state is
+  closed as intentional `returnTo` behavior, and Store Action command proof is
+  ready but input-gated until a fresh `STORE_MANAGER` token and explicit staging
+  mutation acknowledgement are available.
 
 Current user direction on 2026-05-18:
 
