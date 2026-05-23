@@ -105,14 +105,14 @@ npm.cmd run test:scripts
 
 ## Phase 1 - Alert Delivery Policy
 
-- [ ] Treat the existing Render Slack notification proof as staging provider
+- [x] Treat the existing Render Slack notification proof as staging provider
   evidence, not app-level error tracking.
-- [ ] Ask the operator to choose one policy:
+- [x] Ask the operator to choose one policy:
   `slack-only-v1`, `fix-email-before-broad-production`, or
   `add-app-level-error-provider-later`.
 - [ ] If `slack-only-v1`, record an explicit production alert policy decision
   and keep email/app-level error tracking as parked work.
-- [ ] If email proof is required, the operator must inspect the mailbox,
+- [x] If email proof is required, the operator must inspect the mailbox,
   spam folder, provider panel, or DNS/mail settings. Do not claim email delivery
   from Slack delivery.
 - [ ] Safe smoke command:
@@ -127,8 +127,21 @@ $env:ALERT_SMOKE_TIMEOUT_MS='45000'
 npm.cmd run smoke:alert-routing
 ```
 
-- [ ] Record sanitized output in
-  `docs/evidence/readiness/2026-05-23-alert-policy-decision-v1.md`.
+- [x] Record sanitized output in
+  `docs/evidence/readiness/2026-05-23-alert-email-policy-decision-v1.md`.
+
+Phase 1 actual record:
+
+- The operator chose to pursue email delivery instead of Slack-only.
+- Render workspace and service notification settings showed `Email and Slack`
+  plus `All notifications`.
+- A 2026-05-23 successful deploy email was not observed.
+- Historical Render email delivery for failed `hr-axis-api` deploys was
+  observed, with the closest sanitized example from 2026-05-18.
+- The real evidence file is
+  `docs/evidence/readiness/2026-05-23-alert-email-policy-decision-v1.md`.
+  It records Render email as a historically observed failure backup channel,
+  not fresh successful-deploy email or app-level error tracking.
 
 ## Phase 2 - Redis / BullMQ Production Posture
 
