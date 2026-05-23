@@ -99,17 +99,19 @@ a second source of truth.
 
 | Domain | Current Source Documents |
 | --- | --- |
-| Auth and authorization | `docs/plans/scope-auth-regression-matrix-v1.md`, `docs/plans/authorization-matrix-drift-guard-v1.md`, `docs/plans/auth-admin-repository-risk-review-2026-04-30.md` |
-| Store Action | `docs/plans/store-action-coaching-loop-v1.md`, `docs/plans/store-action-v1b-persisted-action-plan-design-v1.md`, `docs/evidence/store-action-test-hygiene-and-visibility-v1.md` |
-| Import and master data | `docs/plans/source-agnostic-import-boundary-v1.md`, `docs/plans/excel-kpi-import-operator-runbook.md`, `docs/plans/master-data-bootstrap-pilot-smoke-runbook.md` |
-| Reporting and KPI | `docs/plans/monthly-ranking-score-source-contract-v1.md`, `docs/plans/reporting-repository-risk-review-2026-04-30.md`, `docs/plans/performance-budget-v1.md` |
-| Workforce | `docs/plans/workforce-request-repository-boundary-inventory-v1.md`, `docs/plans/store-ops-repository-risk-review-2026-04-30.md` |
+| Auth and authorization | `docs/domains/auth.md` |
+| Store Action | `docs/domains/store-action.md` |
+| Import and master data | `docs/domains/import-master-data.md` |
+| Reporting and KPI | `docs/domains/reporting-kpi.md` |
+| Workforce | `docs/domains/workforce.md` |
+| Readiness and operations | `docs/domains/readiness-ops.md` |
 | Competition | `docs/plans/competition-repository-boundary-inventory-v1.md`, `docs/plans/stage-builder-form-risk-review-2026-04-30.md` |
 
 ### Evidence Shelf
 
 Use to verify claims. Evidence files are not automatically active direction.
 
+- Start with `docs/evidence/README.md`.
 - `docs/evidence/pilot-readiness/` for pilot sessions, route checks, and pilot
   decisions.
 - `docs/evidence/readiness/` for release, provider, alert, Redis, restore, and
