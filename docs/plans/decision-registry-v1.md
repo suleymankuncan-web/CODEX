@@ -45,7 +45,7 @@ This registry is a map, not a replacement for the source documents.
 | Alert provider posture | active/blocked_external | Slack/Better Stack staging alert path is proven; email is not counted as proven. | `docs/evidence/readiness/2026-05-23-better-stack-email-alert-proof-v1.md` | Production alert destination, escalation owner, and provider proof are accepted. |
 | Supabase recovery posture | active/blocked_external | Staging logical restore is proven; managed backup/PITR/RPO/RTO acceptance remains broad-production work. | `docs/evidence/readiness/2026-05-23-supabase-recovery-posture-v1.md` | Production recovery policy and restore target are approved. |
 | UI redesign | parked | Do not polish or redesign broad UI until the user starts the design track. | `docs/plans/active-next-actions.md` | User explicitly begins the visual/site/page redesign phase. |
-| Norm Kadro module | parked | Not needed for current Store Action flow; future work starts with docs/spec and read-only inventory. | `docs/plans/project-debt-ledger.md` | User starts workforce planning or staffing baseline requirements. |
+| Norm Kadro / Workforce Planning Read-Only V1 | active evidence | Do not create a new module now; use existing workforce norm plan, snapshot/reporting, and headcount-gap reads as read-only planning context. | `docs/evidence/norm-kadro-workforce-planning-readonly-v1.md` | A mutable baseline editor, new API, Store Action source, approval flow, payroll, scheduling, or labor-policy behavior is proposed. |
 
 ## Update Rule
 

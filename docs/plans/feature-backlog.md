@@ -124,8 +124,9 @@ Use it before implementation so new ideas do not get scattered across chat histo
 - Reference: [ui-localization-strategy.md](./ui-localization-strategy.md)
 
 ### 1D. Norm Kadro / Staffing Baseline
-- Status: `parked`
+- Status: `read-only inventory active`
 - Priority: `P1`
+- Current execution name: Norm Kadro / Workforce Planning Read-Only V1.
 - Business goal: compare planned staffing capacity against actual workforce,
   store coverage, and future coaching/action needs without turning every gap
   into an automatic command.
@@ -134,18 +135,22 @@ Use it before implementation so new ideas do not get scattered across chat histo
   pressure.
 - Owning bounded context: workforce/config boundary to be shaped.
 - Related modules: `workforce`, `reporting`, `store action`, `operations`.
-- `ops`: possible future staffing baseline state, not approved yet.
+- `ops`: existing `ops.workforce_norm_plan` is the current planned headcount
+  and FTE source; write/config changes are not approved.
 - `stg`: possible imported staffing reference, not approved yet.
 - `rpt`: read-only comparison outputs after source ownership is clear.
 - `audit`: required only if staffing baseline writes/config changes are later
   approved.
-- API: none now; first step must be docs/spec plus read-only inventory.
-- Admin UI: none now; later only after source of truth and role owner are clear.
-- Reporting UI: possible later read-only comparison.
+- API: existing read-only paths are `GET /api/reports/workforce` and the
+  store-scoped `GET /api/workforce/headcount-gap`; no new API is approved.
+- Admin UI: no new module now; use the existing workforce reporting path first.
+- Reporting UI: existing `/admin/reports/workforce/:snapshotRunId` is the safe
+  first read-only surface.
 - Risks / Notes: do not add write/config flows, automatic Store Action creation,
   or staffing-rule behavior yet. The first future slice is a spec and read-only
   inventory that names source of truth, owner, cadence, role/scope, and
-  verification ladder.
+  verification ladder. Reference:
+  `docs/evidence/norm-kadro-workforce-planning-readonly-v1.md`.
 
 ### 2. Incentive / Prim Module
 - Status: `shaping`

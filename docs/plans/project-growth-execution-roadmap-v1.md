@@ -44,8 +44,8 @@ Why:
 | 3 | Operations Telemetry / Control Tower V2 | active | real signal expansion on existing Operations Control Tower | external observability platform, provider config, alert semantics |
 | 4 | Store Action -> Coaching Loop V2 | first read-only coaching detail merged | action detail/history/comment design, then minimal comments/history slice | workflow state machine, KPI scoring, broad notification system |
 | 5 | Role / Permission Preview UI | first read-only preview merged | read-only role/route/scope preview using existing auth matrix | permission semantics, assignments, Clerk/provider behavior |
-| 6 | Rules / Config Versioning | active inventory slice | inventory current domain-owned config/version sources and first read-only diff/audit surface | generic rule engine, shared workflow engine, scoring changes |
-| 7 | Norm Kadro / Workforce Planning Read-Only V1 | after data quality + rules inventory | read-only staffing baseline spec and current workforce capacity inventory | write/config targets, auto action generation, approval flows |
+| 6 | Rules / Config Versioning | first inventory slice merged | inventory current domain-owned config/version sources and first read-only diff/audit surface | generic rule engine, shared workflow engine, scoring changes |
+| 7 | Norm Kadro / Workforce Planning Read-Only V1 | active read-only inventory slice | read-only staffing baseline spec and current workforce capacity inventory | write/config targets, auto action generation, approval flows |
 | 8 | Production Ops Closure | after controlled-pilot feedback stabilizes | owner decision packet for Redis tier, backup/PITR/RPO/RTO, alerts, incident ownership | broad production Go claim without owner acceptance |
 
 ## Dependency Graph
@@ -285,6 +285,11 @@ Stop rules:
 - stop if multiple domains are merged into shared mutable config,
 - stop if historical rule replay is required before the source is stable.
 
+Merged first slice:
+
+- PR #485 added `docs/evidence/rules-config-versioning-inventory-v1.md` and
+  guarded the domain-owned config inventory.
+
 ## Track 7: Norm Kadro / Workforce Planning Read-Only V1
 
 Goal:
@@ -296,6 +301,16 @@ First safe slice:
 
 - read-only inventory/spec mapping current workforce data to staffing baseline
   needs.
+
+Active slice:
+
+- record `docs/evidence/norm-kadro-workforce-planning-readonly-v1.md` as
+  Norm Kadro / Workforce Planning Read-Only V1. Existing `ops.workforce_norm_plan`,
+  snapshot jobs, `GET /api/reports/workforce`, and
+  `/admin/reports/workforce/:snapshotRunId` are the first read-only path; no
+  new module, baseline editor, DB schema, API response shape, Store Action
+  source, approval flow, payroll, scheduling, or staffing-rule behavior is
+  introduced.
 
 Verification:
 
