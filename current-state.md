@@ -21,6 +21,11 @@ operating, pilot, readiness, architecture, domain, evidence, and historical
 shelves so future sessions do not have to rediscover the project by reading
 every plan.
 
+For the shortest current-mode answer, use
+`docs/plans/project-control-board-v1.md`. For decision and repeatable runbook
+lookup, use `docs/plans/decision-registry-v1.md` and
+`docs/plans/runbook-registry-v1.md`.
+
 ## Active Workspace
 
 Use this workspace only:
@@ -1854,6 +1859,9 @@ canonical ledger counts.
 Keep these references because contract tests and future resumes depend on them:
 
 - `docs/README.md` - Documentation Library entry point
+- `docs/plans/project-control-board-v1.md` - Project mode and go/no-go board
+- `docs/plans/decision-registry-v1.md` - Active decision registry
+- `docs/plans/runbook-registry-v1.md` - Repeatable runbook registry
 - `docs/plans/docs-library-metadata-standard-v1.md` - Docs Library metadata and guard policy
 - `docs/plans/backend-foundation-hardening-plan-v1.md` - Backend Foundation Hardening Plan V1
 - `docs/plans/backup-restore-drill-runbook-v1.md` - Backup Restore Drill Runbook V1
