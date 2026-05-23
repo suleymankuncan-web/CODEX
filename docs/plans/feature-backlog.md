@@ -19,6 +19,7 @@ Use it before implementation so new ideas do not get scattered across chat histo
 - `in_progress`: active work started
 - `done`: implemented
 - `deferred`: intentionally postponed
+- `parked`: intentionally blocked until a named trigger/input exists
 
 ## Priority Model
 - `P0`: blocking / foundational
@@ -121,6 +122,30 @@ Use it before implementation so new ideas do not get scattered across chat histo
 - `rpt`: none expected
 - `audit`: no schema impact; audit event codes stay stable and only display labels localize
 - Reference: [ui-localization-strategy.md](./ui-localization-strategy.md)
+
+### 1D. Norm Kadro / Staffing Baseline
+- Status: `parked`
+- Priority: `P1`
+- Business goal: compare planned staffing capacity against actual workforce,
+  store coverage, and future coaching/action needs without turning every gap
+  into an automatic command.
+- User/operator need: HR/admin and store operations need to understand whether
+  a store is under/over staffed before interpreting KPI, workload, or action
+  pressure.
+- Owning bounded context: workforce/config boundary to be shaped.
+- Related modules: `workforce`, `reporting`, `store action`, `operations`.
+- `ops`: possible future staffing baseline state, not approved yet.
+- `stg`: possible imported staffing reference, not approved yet.
+- `rpt`: read-only comparison outputs after source ownership is clear.
+- `audit`: required only if staffing baseline writes/config changes are later
+  approved.
+- API: none now; first step must be docs/spec plus read-only inventory.
+- Admin UI: none now; later only after source of truth and role owner are clear.
+- Reporting UI: possible later read-only comparison.
+- Risks / Notes: do not add write/config flows, automatic Store Action creation,
+  or staffing-rule behavior yet. The first future slice is a spec and read-only
+  inventory that names source of truth, owner, cadence, role/scope, and
+  verification ladder.
 
 ### 2. Incentive / Prim Module
 - Status: `shaping`

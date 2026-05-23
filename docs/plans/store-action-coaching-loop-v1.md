@@ -819,6 +819,10 @@ Current status:
   schema, lifecycle/audit, command boundary, API contract, workflow inbox
   source, Store Tasks list, create from KPI candidate, active status update,
   close with resolution note, and cancel with reason.
+- Store Action test hygiene now separates plan lifecycle coverage into
+  `admin-web/e2e/store-action-plans.spec.ts` and records the current visibility
+  conditions for `/store/tasks`.
+  Evidence: `docs/evidence/store-action-test-hygiene-and-visibility-v1.md`.
 - The remaining Store Action work is not automatic continuation. Detail routes,
   comments, attachments, notifications, escalation, non-KPI source families,
   AI coaching copy, and live staging persona evidence all require a fresh
