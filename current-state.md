@@ -6,6 +6,7 @@ PR #452 plus the Store Action V1B Store Tasks basic loop closeout, Store Action
 test hygiene/visibility evidence, the Pilot Reliability Spine V1 docs, first
 execution evidence, and the active Clerk protected persona evidence matrix,
 the Controlled Pilot Dry Run V1 evidence refresh,
+the Controlled Pilot Scenario Rehearsal V1 runbook,
 the Product Readiness V1 first-pass closeout, Operations Control Tower
 readiness line, Sokrates/discipline operating docs, current workspace hygiene,
 the Clerk persona staging evidence runbooks, the generated system-flow map,
@@ -1435,13 +1436,18 @@ Primary references:
 - `docs/plans/feature-integration-spine-v1.md`
 - `docs/plans/new-module-template.md`
 - `docs/plans/pilot-scenario-pack-v1.md`
+- `docs/plans/controlled-pilot-scenario-rehearsal-v1.md`
 - `docs/plans/feature-growth-checklist-v1.md`
 - `docs/plans/store-action-coaching-loop-v1.md`
 
-Pilot Scenario Pack V1 and Feature Growth Checklist V1 status:
+Pilot Scenario Pack V1, Controlled Pilot Scenario Rehearsal V1, and Feature
+Growth Checklist V1 status:
 
 - They are the docs-only bridge between the current pilot product flow and the
   generic feature-entry spine.
+- The scenario pack answers who does what; the rehearsal runbook turns that
+  into a timeboxed pilot-day script with moderator, support, persona, evidence,
+  stop-rule, and decision steps.
 - Active pilot roles are `SUPER_ADMIN`, `HR_ADMIN`, `REGION_MANAGER`,
   `STORE_MANAGER`, `STORE_PERSONNEL`, and `REPORT_VIEWER`.
 - `INTEGRATION_ADMIN`, `AUDITOR`, `SNAPSHOT_OPERATOR`, and
@@ -1822,6 +1828,7 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/plans/project-health-snapshot-2026-05-01.md`
 - `docs/plans/project-progress-plan-v1.md` - Project Progress Plan V1
 - `docs/plans/pilot-scenario-pack-v1.md` - Pilot Scenario Pack V1
+- `docs/plans/controlled-pilot-scenario-rehearsal-v1.md` - Controlled Pilot Scenario Rehearsal V1
 - `docs/plans/feature-growth-checklist-v1.md` - Feature Growth Checklist V1
 - `docs/plans/production-evidence-closure-joint-plan-v1.md` - Production Evidence Closure Joint Plan V1
 - `docs/plans/refactor-execution-plan-v1.md` - Refactor Execution Plan V1
