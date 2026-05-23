@@ -41,6 +41,7 @@ const routePreloaders: Array<{
   { match: (pathname) => pathname.startsWith('/admin/reports/turnover/'), preload: () => import('../pages/ReportsTurnoverPage') },
   { match: (pathname) => pathname === '/admin/targets', preload: () => import('../pages/TargetApprovalQueuePage') },
   { match: (pathname) => pathname === '/admin/kpi-config', preload: () => import('../pages/AdminKpiConfigPage') },
+  { match: (pathname) => pathname === '/admin/pilot-feedback', preload: () => import('../pages/AdminPilotFeedbackPage') },
   { match: (pathname) => pathname === '/admin/auth/catalog', preload: () => import('../pages/AuthCatalogPage') },
   { match: (pathname) => pathname.startsWith('/admin/auth/users/'), preload: () => import('../pages/AuthUserAuditPage') },
   { match: (pathname) => pathname.startsWith('/admin/auth/role-assignments/'), preload: () => import('../pages/AuthAssignmentAuditPage') },

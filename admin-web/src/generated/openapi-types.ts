@@ -465,6 +465,10 @@ export type components = {
     "CancelStoreActionPlanRequest": {
       "cancelReason": string
     }
+    "ClassifyPilotFeedbackRequest": {
+      "classification": "p0_stop" | "p1_pilot_blocker" | "p2_pilot_friction" | "p3_backlog"
+      "note"?: string
+    }
     "CloseStoreActionPlanRequest": {
       "resolutionNote": string
     }
@@ -650,6 +654,14 @@ export type components = {
       "storeId": string
       "effectiveFrom"?: string
       "effectiveTo"?: string
+    }
+    "CreatePilotFeedbackRequest": {
+      "feedbackType": "bug" | "friction" | "idea" | "data_quality" | "other"
+      "severitySuggestion": "p0" | "p1" | "p2" | "p3"
+      "routePath": string
+      "pageTitle"?: string
+      "title": string
+      "description": string
     }
     "CreatePilotUserBindingDto": {
       "employeeId": string
@@ -1237,6 +1249,42 @@ export type components = {
           "value": "full_time" | "part_time" | "temporary"
           "label": string
         }>
+    }
+    "PilotFeedback": {
+      "feedbackId": string
+      "actorUserId": string
+      "actorRoleCodes": string[]
+      "feedbackType": "bug" | "friction" | "idea" | "data_quality" | "other"
+      "severitySuggestion": "p0" | "p1" | "p2" | "p3"
+      "routePath": string
+      "pageTitle": string | null
+      "title": string
+      "description": string
+      "status": "new" | "triaged" | "parked" | "resolved"
+      "classification": "p0_stop" | "p1_pilot_blocker" | "p2_pilot_friction" | "p3_backlog" | null
+      "classifiedByUserId": string | null
+      "classifiedAt": string | null
+      "classificationNote": string | null
+      "createdAt": string
+      "updatedAt": string
+    }
+    "PilotFeedbackCommandResponse": {
+      "command": {
+        "status": string
+        "message": string
+      }
+      "data": {
+        "feedback": components['schemas']["PilotFeedback"]
+      }
+    }
+    "PilotFeedbackListResponse": {
+      "items": components['schemas']["PilotFeedback"][]
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
     }
     "ReportingChecklistResponse": {
       "items": Array<{
@@ -3045,6 +3093,49 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["MobileChecklistTodayResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/pilot-feedback": {
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["CreatePilotFeedbackRequest"]
+        }
+      }
+      responses: {
+        "201": {
+          content: {
+            'application/json': components['schemas']["PilotFeedbackCommandResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/admin/pilot-feedback": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["PilotFeedbackListResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/admin/pilot-feedback/{feedbackId}/classification": {
+    patch: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["ClassifyPilotFeedbackRequest"]
+        }
+      }
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["PilotFeedbackCommandResponse"]
           }
         }
       }

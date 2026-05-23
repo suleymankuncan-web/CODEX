@@ -4,6 +4,7 @@ import { ScreenState } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { canListTargetDistributionRequests } from '../features/auth/authorization'
 import { useLocalization } from '../features/localization/useLocalization'
+import { PilotFeedbackControl } from '../features/pilot-feedback/PilotFeedbackControl'
 import {
   StoreApprovalsPage,
   StoreChecklistsPage,
@@ -94,6 +95,7 @@ export function StoreShell(input: {
         collapsed={isSidebarCollapsed}
         onCollapsedChange={setIsSidebarCollapsed}
       />
+      <PilotFeedbackControl />
 
       <main className="store-main store-command-main" aria-label={t('adminShell.storeWorkspaceAria')}>
         <RouteTransitionFrame>
