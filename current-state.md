@@ -2,7 +2,7 @@
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace.
 It summarizes the recovered long Codex thread and the follow-up work through
-PR #451 plus the Store Action V1B Store Tasks basic loop closeout, Store Action
+PR #452 plus the Store Action V1B Store Tasks basic loop closeout, Store Action
 test hygiene/visibility evidence, the Pilot Reliability Spine V1 docs, first
 execution evidence, and full five-persona Clerk protected evidence,
 the Product Readiness V1 first-pass closeout, Operations Control Tower
@@ -35,26 +35,23 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-23, the baseline before the current Clerk full-matrix evidence
-branch had `origin/main` fetched through PR #451. The root checkout was clean
-after the HR admin role-assignment enum fix was merged and deployed.
+As of 2026-05-23, `origin/main` was fetched through PR #452. The root checkout
+was clean after the full Clerk persona matrix evidence PR was merged.
 
-Current maintenance branch after PR #451:
+Current maintenance branch after PR #452:
 
-- `codex/full-persona-matrix-live-evidence`
-- Scope: docs-only full five-persona Clerk protected evidence for
-  `SUPER_ADMIN`, `HR_ADMIN`, `STORE_MANAGER`, `STORE_PERSONNEL`, and
-  `REPORT_VIEWER`: browser session/route checks, backend negative auth-admin
-  checks, report-viewer read-only Store Tasks boundary proof, Store Action
-  assigned/unassigned action-scope read proof, deployed readiness with a real
-  token, and backend protected load with role-specific tokens.
+- `codex/external-evidence-closure-v2`
+- Scope: docs-only plan/status reconciliation for the remaining external
+  evidence decisions: alert delivery policy, Redis/BullMQ production posture,
+  Supabase recovery posture, upload proof status, and final controlled-pilot
+  versus broad-production readiness classification.
 - No product code, API response shape, auth semantics, DB migration, CSS,
   provider config, or user-facing workflow behavior changes.
 
 Latest merge on main:
 
 ```text
-4d15179f fix: allow hr admin role assignments (#451)
+f87cbada docs: record full clerk persona matrix evidence (#452)
 ```
 
 Recent verified merges after the recovered PR #227 handoff:
@@ -225,6 +222,7 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #449 `docs: record pilot reliability execution`
 - PR #450 `docs: record live clerk persona evidence`
 - PR #451 `fix: allow hr admin role assignments`
+- PR #452 `docs: record full clerk persona matrix evidence`
 
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
@@ -242,9 +240,9 @@ frontend root, security headers, SPA fallback, and static assets passed.
 
 Current local hygiene state:
 
-- Root workspace `D:\store-ops-workspace` was clean on
-  `codex/full-persona-matrix-live-evidence` at `4d15179f` before the current
-  docs-only evidence edits.
+- Root workspace `D:\store-ops-workspace` was clean on `main` after PR #452
+  before the current `codex/external-evidence-closure-v2` docs-only evidence
+  edits.
 - The previous dirty root state was not deleted. It was saved as stash
   `codex hygiene backup 2026-05-21 root dirty state`. Do not drop that stash
   unless the user explicitly approves.
@@ -1581,11 +1579,14 @@ Pilot Reliability Spine V1 current branch:
 - 2026-05-23 public staging smokes: deployed readiness passed `13/14` with
   auth/session skipped for missing `READINESS_BEARER_TOKEN`; public backend load
   health passed with p50 `101.9ms`, p95 `259.57ms`, and 0 5xx; alert routing
-  passed tokenless checks but provider delivery was `not-configured`.
+  passed tokenless checks but provider delivery was `not-configured` in that
+  early pass. Later Render Slack notification delivery proof is recorded in the
+  readiness evidence; final production alert policy is still an owner decision.
 - Current protected/provider blockers for this line: the Clerk full
-  five-persona matrix is closed; remaining blockers are future alert provider,
-  restore, upload, or other external rerun inputs that are not already provided
-  securely. Do not treat skipped token checks as proof.
+  five-persona matrix is closed; remaining blockers are future alert policy,
+  managed restore/PITR, broad-production Redis tier/profile, or other external
+  rerun inputs that are not already provided securely. Do not treat skipped
+  token checks as proof.
 - First execution evidence:
   `docs/evidence/pilot-readiness/2026-05-23-pilot-reliability-spine-execution-v1.md`.
   Public deployed readiness passed `13/14`, public backend load health passed
@@ -1702,6 +1703,7 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/evidence/pilot-readiness/2026-05-23-pilot-reliability-spine-execution-v1.md` - Pilot Reliability Spine first execution evidence
 - `docs/evidence/system-flow/clerk-persona-live-evidence-2026-05-23.md` - Fresh Clerk persona protected evidence
 - `docs/evidence/pilot-evidence-operating-matrix-v1.md` - Pilot Evidence Operating Matrix V1
+- `docs/superpowers/plans/2026-05-23-external-evidence-closure-v2.md` - External Evidence Closure V2 plan
 - `docs/evidence/store-action-test-hygiene-and-visibility-v1.md` - Store Action test hygiene and visibility evidence
 - `docs/evidence/project-wide-bug-hunt-2026-05-23.md` - project-wide bug hunt pass
 - `docs/flows/README.md` - Store Ops System Flow generator note
