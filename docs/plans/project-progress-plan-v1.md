@@ -67,9 +67,15 @@ Still not done:
 - Controlled/internal pilot remains `Conditional Go`.
 - Real staging auth/session evidence is current for the full five-persona
   controlled staging matrix.
-- Supabase managed restore evidence still needs an approved disposable restore target.
-- Real alert delivery evidence still needs an approved provider destination.
-- Redis/BullMQ broad-production posture still needs real provider configuration and health evidence.
+- Supabase app-owned schema logical restore is proven for controlled pilot;
+  managed restore-to-new-project/PITR posture still needs an approved target or
+  explicit owner acceptance.
+- Render Slack notification delivery is proven for staging; final production
+  alert policy, email delivery, or app-level error-provider scope still needs
+  explicit owner acceptance.
+- Redis/BullMQ staging wiring and health are proven; broad-production posture
+  still needs a production-grade tier/profile decision or explicit risk
+  acceptance.
 - Product feel is still weaker than the backend foundation.
 
 ## Missing Pieces
@@ -83,10 +89,15 @@ Missing:
 - Real Clerk/staging bearer-token proof for `/api/auth/session` is closed for
   the current five-persona matrix on 2026-05-23.
 - Assigned-store `201` and unassigned-store `403` action smoke proof in staging.
-- Supabase staging restore drill into an approved disposable target.
-- Real alert/error tracking/log-retention destination proof.
-- Redis/BullMQ broad-production configuration and health evidence.
-- Authenticated upload smoke using a real integration-admin session and sample file.
+- Supabase recovery posture decision: accept the existing controlled-pilot
+  logical restore proof, or run managed restore/PITR against an approved
+  disposable target.
+- Alert policy decision: accept the existing Render Slack notification path for
+  V1, fix/prove email delivery, or scope app-level error tracking separately.
+- Redis/BullMQ broad-production tier/profile decision and health evidence.
+- Authenticated upload smoke is closed for the current controlled-pilot
+  `SUPER_ADMIN` operator path; future HR/admin-specific delegation or sample
+  changes require a new explicit decision.
 
 Rule:
 
@@ -361,19 +372,27 @@ Goal:
 
 Tasks:
 
-- [ ] If a real staging bearer token exists, run deployed readiness smoke with `READINESS_BEARER_TOKEN`.
-- [ ] If seeded assigned/unassigned store data exists, run staging action smoke for positive `201` and negative `403`.
-- [ ] If an approved Supabase disposable restore target exists, execute the staging restore drill and record sanitized evidence.
-- [ ] If alert provider destination exists, run alert routing smoke and record sanitized evidence.
-- [ ] If Redis/BullMQ provider config exists, verify `/api/health` reports durable queue and Redis ok.
-- [ ] If an integration-admin session and sample upload file exist, run authenticated upload smoke.
+- [x] Run deployed readiness smoke with real controlled-pilot Clerk evidence.
+- [x] Prove assigned/unassigned Store Action scope in staging with
+  allowed/forbidden reads.
+- [x] Prove Supabase app-owned schema logical restore into a disposable local
+  PostgreSQL target; decide separately whether managed restore/PITR is required.
+- [x] Prove Render Slack notification delivery for staging; decide separately
+  whether email delivery or app-level error tracking is required before broad
+  production.
+- [x] Verify Redis/BullMQ staging health reports durable queue and Redis ok.
+- [x] Run authenticated safe upload smoke for the current controlled-pilot
+  `SUPER_ADMIN` operator path.
+- [ ] Decide broad-production Redis tier/profile, alert policy, and recovery
+  RPO/RTO posture.
 
 Current result:
 
-- Blocked by missing staging/provider inputs. See
-  `docs/evidence/product-progress/2026-05-20-external-evidence-input-check.md`.
-- The 2026-05-21 blocker refresh confirms the same class of inputs is still
-  absent in the local environment:
+- Earlier May 20-21 blocker checks are now historical for several controlled
+  pilot lines. They still explain why the work was parked, but no longer
+  represent the current full status:
+  `docs/evidence/product-progress/2026-05-20-external-evidence-input-check.md`
+  and
   `docs/evidence/product-progress/2026-05-21-external-evidence-blocker-refresh.md`.
 - Pilot Reliability Spine V1 now makes the evidence classes explicit instead of
   leaving them as one generic "blocked" bucket:
@@ -386,8 +405,7 @@ Current result:
 - Fresh 2026-05-23 public staging checks passed tokenless deployed readiness,
   public backend health load, and alert-routing health checks. The first public
   pass had protected checks skipped until secure role-specific tokens were
-  available; fresh alert provider delivery proof remains blocked by missing
-  provider metadata/delivery input.
+  available.
 - Fresh 2026-05-23 protected Clerk proof is now recorded in
   `docs/evidence/system-flow/clerk-persona-live-evidence-2026-05-23.md` for
   the current five-persona matrix. `SUPER_ADMIN`, `HR_ADMIN`,
@@ -397,6 +415,11 @@ Current result:
   assigned/unassigned action-scope read proof passed; deployed readiness passed
   `14/14` with a real token; and backend protected load passed `5/5` groups
   with role-specific tokens.
+- Redis/BullMQ staging, Render Slack alert delivery, Supabase local logical
+  restore, and safe upload proof are recorded in readiness evidence. What
+  remains is not generic missing code; it is explicit owner decision work for
+  broad-production Redis tier/profile, alert policy, and managed recovery
+  posture.
 
 Verification commands:
 
