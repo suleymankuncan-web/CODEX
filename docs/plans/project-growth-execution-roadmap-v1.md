@@ -40,8 +40,8 @@ Why:
 | Order | Track | Current stance | First safe slice | What must not change |
 | --- | --- | --- | --- | --- |
 | 1 | Pilot Feedback Loop V1 | first frontend/backend loop merged | in-app feedback intake/read model for scoped pilot users | auth semantics, pilot status, broad issue tracker integration |
-| 2 | Data Quality & Reconciliation Center V1 | active | read-only data-quality dashboard from existing import/snapshot/KPI/workforce signals | import lifecycle, KPI math, mapping approval behavior |
-| 3 | Operations Telemetry / Control Tower V2 | next after data quality | real signal expansion on existing Operations Control Tower | external observability platform, provider config, alert semantics |
+| 2 | Data Quality & Reconciliation Center V1 | first read-only center merged | read-only data-quality dashboard from existing import/snapshot/KPI/workforce signals | import lifecycle, KPI math, mapping approval behavior |
+| 3 | Operations Telemetry / Control Tower V2 | active | real signal expansion on existing Operations Control Tower | external observability platform, provider config, alert semantics |
 | 4 | Store Action -> Coaching Loop V2 | after feedback/data quality | action detail/history/comment design, then minimal comments/history slice | workflow state machine, KPI scoring, broad notification system |
 | 5 | Role / Permission Preview UI | after coaching first slice or sooner if auth confusion appears | read-only role/route/scope preview using existing auth matrix | permission semantics, assignments, Clerk/provider behavior |
 | 6 | Rules / Config Versioning | after role preview | inventory current domain-owned config/version sources and first read-only diff/audit surface | generic rule engine, shared workflow engine, scoring changes |
@@ -131,7 +131,7 @@ First safe slice:
 - read-only dashboard card set that reuses existing import quality issue
   summaries and snapshot freshness signals.
 
-Active slice:
+Merged first slice:
 
 - `/admin/data-quality` read-only center for SUPER_ADMIN using existing import,
   snapshot, workforce, KPI config, and ranking reads. The page is an operator
@@ -160,6 +160,13 @@ First safe slice:
 
 - add one additional real signal family to the existing tower and document its
   freshness/staleness meaning.
+
+Active slice:
+
+- add a read-only signal freshness and queue pressure panel to
+  `/admin/operations` using already loaded import, snapshot, workforce,
+  workflow, KPI config, and ranking reads. This is an operator surface
+  clarification, not a live telemetry/provider integration.
 
 Verification:
 

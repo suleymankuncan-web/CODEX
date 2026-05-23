@@ -144,6 +144,25 @@ export const adminOperationsTr = {
     'Gerçek bearer token, provider hedefi, restore targetı ve Redis/BullMQ kanıtı gelmeden bu başlık kapanmaz.',
   'adminOperations.coverage.releaseSource': 'evidence blockers',
 
+  'adminOperations.freshnessEyebrow': 'Sinyal tazeliği',
+  'adminOperations.freshnessTitle': 'Sinyal tazeliği ve kuyruk baskısı',
+  'adminOperations.freshnessCopy':
+    'Mevcut read-only payloadlardan son görülen zaman ve açık sinyal baskısı toparlanır; bu panel canlı telemetry iddiası üretmez.',
+  'adminOperations.freshnessOpenSignals': 'Açık sinyal',
+  'adminOperations.freshnessOpenValue': '{count} açık sinyal',
+  'adminOperations.freshnessLastObserved': 'Son görülen',
+  'adminOperations.freshnessNoObservation': 'gözlem yok',
+  'adminOperations.freshness.importTitle': 'Import kuyruğu',
+  'adminOperations.freshness.snapshotTitle': 'Snapshot tazeliği',
+  'adminOperations.freshness.workforceTitle': 'Workforce kimliği',
+  'adminOperations.freshness.workflowTitle': 'Workflow inbox',
+  'adminOperations.freshness.kpiTitle': 'KPI / ranking kaynağı',
+  'adminOperations.freshness.importSource': 'import overview + needs-action',
+  'adminOperations.freshness.snapshotSource': 'snapshot overview + needs-action',
+  'adminOperations.freshness.workforceSource': 'seller-code + offboarding',
+  'adminOperations.freshness.workflowSource': 'workflow inbox',
+  'adminOperations.freshness.kpiSource': 'reports ranking source',
+
   'adminOperations.importEyebrow': 'Veri hattı',
   'adminOperations.importTitle': 'Import sağlık ve aksiyon kuyruğu',
   'adminOperations.importCopy':
@@ -410,6 +429,25 @@ export const adminOperationsEn: Record<keyof typeof adminOperationsTr, string> =
   'adminOperations.coverage.releaseCopy':
     'This topic cannot close until real bearer token, provider target, restore target, and Redis/BullMQ evidence are available.',
   'adminOperations.coverage.releaseSource': 'evidence blockers',
+
+  'adminOperations.freshnessEyebrow': 'Signal Freshness',
+  'adminOperations.freshnessTitle': 'Signal freshness and queue pressure',
+  'adminOperations.freshnessCopy':
+    'Existing read-only payloads are summarized into last-observed time and open signal pressure; this panel does not claim live telemetry.',
+  'adminOperations.freshnessOpenSignals': 'Open signals',
+  'adminOperations.freshnessOpenValue': '{count} open signals',
+  'adminOperations.freshnessLastObserved': 'Last observed',
+  'adminOperations.freshnessNoObservation': 'no observation',
+  'adminOperations.freshness.importTitle': 'Import queue',
+  'adminOperations.freshness.snapshotTitle': 'Snapshot freshness',
+  'adminOperations.freshness.workforceTitle': 'Workforce identity',
+  'adminOperations.freshness.workflowTitle': 'Workflow inbox',
+  'adminOperations.freshness.kpiTitle': 'KPI / rankings source',
+  'adminOperations.freshness.importSource': 'import overview + needs-action',
+  'adminOperations.freshness.snapshotSource': 'snapshot overview + needs-action',
+  'adminOperations.freshness.workforceSource': 'seller-code + offboarding',
+  'adminOperations.freshness.workflowSource': 'workflow inbox',
+  'adminOperations.freshness.kpiSource': 'reports ranking source',
 
   'adminOperations.importEyebrow': 'Data Pipeline',
   'adminOperations.importTitle': 'Import health and action queue',
