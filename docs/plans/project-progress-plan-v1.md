@@ -74,8 +74,9 @@ Still not done:
   external email test alert delivery is proven for controlled pilot. Final
   broad-production incident policy and app-level error-provider scope still
   need explicit owner acceptance.
-- Redis/BullMQ staging wiring and health are proven; broad-production posture
-  still needs a production-grade tier/profile decision or explicit risk
+- Redis/BullMQ staging wiring and health are proven. The Redis posture decision
+  accepts the current Free tier only for controlled pilot; broad production
+  still requires a persistent Redis-compatible tier or explicit written risk
   acceptance.
 - Product feel is still weaker than the backend foundation.
 
@@ -96,7 +97,8 @@ Missing:
 - Alert policy decision: controlled-pilot external email delivery is proven via
   Better Stack; broad-production incident policy and app-level error tracking
   remain separate owner decisions.
-- Redis/BullMQ broad-production tier/profile decision and health evidence.
+- Redis/BullMQ broad-production upgrade/evidence: the decision is now recorded,
+  but Free/non-persistent Key Value is not broad-production ready.
 - Authenticated upload smoke is closed for the current controlled-pilot
   `SUPER_ADMIN` operator path; future HR/admin-specific delegation or sample
   changes require a new explicit decision.
@@ -385,8 +387,8 @@ Tasks:
 - [x] Verify Redis/BullMQ staging health reports durable queue and Redis ok.
 - [x] Run authenticated safe upload smoke for the current controlled-pilot
   `SUPER_ADMIN` operator path.
-- [ ] Decide broad-production Redis tier/profile, alert policy, and recovery
-  RPO/RTO posture.
+- [ ] Execute broad-production Redis upgrade/evidence, alert policy, and
+  recovery RPO/RTO posture.
 
 Current result:
 
@@ -417,11 +419,12 @@ Current result:
   assigned/unassigned action-scope read proof passed; deployed readiness passed
   `14/14` with a real token; and backend protected load passed `5/5` groups
   with role-specific tokens.
-- Redis/BullMQ staging, Render Slack alert delivery, Supabase local logical
-  restore, and safe upload proof are recorded in readiness evidence. What
-  remains is not generic missing code; it is explicit owner decision work for
-  broad-production Redis tier/profile, alert policy, and managed recovery
-  posture.
+- Redis/BullMQ staging, Render Slack alert delivery, Better Stack external
+  email alert delivery, Supabase local logical restore, and safe upload proof
+  are recorded in readiness evidence. Redis Free-tier use is accepted only for
+  controlled pilot. What remains is not generic missing code; it is explicit
+  owner decision work for broad-production Redis upgrade/evidence, incident
+  policy/app-level error tracking, and managed recovery posture.
 
 Verification commands:
 

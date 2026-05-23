@@ -929,8 +929,16 @@ missing item is one of these external proofs.
   the operator connected Render Key Value to the staging backend,
   `/api/health` returned `queueBackend=bullmq`, queue `status=durable`, and
   Redis `status=ok`. This proves staging wiring, not broad-production
-  durability; broad production still needs a production-grade Redis tier/profile
-  decision, alert provider delivery, and Supabase restore proof.
+  durability; broad production still needs production-grade Redis
+  upgrade/evidence, incident policy/app-level error-tracking acceptance, and
+  managed recovery posture.
+- Redis/BullMQ production posture is recorded in
+  `docs/evidence/readiness/2026-05-23-redis-production-posture-v1.md`. Current
+  decision: Render Key Value Free is accepted only for controlled pilot while
+  `READINESS_PROFILE=controlled-pilot`; broad production remains No-Go on the
+  non-persistent Free tier and should upgrade to a persistent Redis-compatible
+  tier or record explicit written risk acceptance before relying on durable
+  queue behavior.
 - Alert provider delivery proof is recorded in
   `docs/evidence/readiness/2026-05-22-alert-provider-delivery-proof.md`.
   Render Notifications delivered a staging backend deploy notification to
@@ -1706,6 +1714,7 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/plans/backup-restore-drill-runbook-v1.md` - Backup Restore Drill Runbook V1
 - `docs/plans/backup-restore-drill-local-evidence-2026-04-30.md` - Backup Restore Local Drill Evidence
 - `docs/evidence/readiness/2026-05-22-redis-bullmq-staging-proof.md` - Redis / BullMQ Staging Proof
+- `docs/evidence/readiness/2026-05-23-redis-production-posture-v1.md` - Redis / BullMQ Production Posture Decision V1
 - `docs/evidence/readiness/2026-05-23-alert-email-policy-decision-v1.md` - Alert Email Policy Decision V1
 - `docs/evidence/readiness/2026-05-23-better-stack-email-alert-proof-v1.md` - Better Stack Email Alert Proof V1
 - `docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md` - Controlled Pilot Feedback Log
