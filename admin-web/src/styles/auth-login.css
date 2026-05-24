@@ -222,17 +222,6 @@
   line-height: 1.4;
 }
 
-.auth-login-mark {
-  position: fixed;
-  right: max(1rem, env(safe-area-inset-right));
-  bottom: max(0.875rem, env(safe-area-inset-bottom));
-  width: 2.125rem;
-  height: auto;
-  opacity: 0.58;
-  pointer-events: none;
-  filter: drop-shadow(0 10px 26px rgba(32, 24, 48, 0.1));
-}
-
 @media (max-width: 520px) {
   .auth-login-page {
     padding: 1.125rem 0.875rem 4rem;
@@ -255,12 +244,5 @@
   .auth-login-message {
     padding-left: 1rem;
     padding-right: 1rem;
-  }
-
-  .auth-login-mark {
-    right: max(0.75rem, env(safe-area-inset-right));
-    bottom: max(0.625rem, env(safe-area-inset-bottom));
-    width: 1.875rem;
-    opacity: 0.48;
   }
 }
