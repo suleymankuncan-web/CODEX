@@ -84,6 +84,7 @@ evidence, incident posture, and recovery.
 - `docs/evidence/readiness/2026-05-23-better-stack-email-alert-proof-v1.md`
 - `docs/plans/production-evidence-closure-joint-plan-v1.md`
 - `docs/plans/production-staging-incident-response-skeleton.md`
+- `docs/plans/operational-observability-review.md`
 - `docs/plans/p0-trust-operations-execution-v1.md`
 - `docs/plans/p1-operator-support-execution-v1.md`
 - `docs/plans/p2-product-intelligence-execution-v1.md`

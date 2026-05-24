@@ -98,7 +98,7 @@ Definition of done:
 - we know current bottlenecks before adding new domains
 
 ### 4. Operational Observability Review
-Status: Partially complete
+Status: Complete for controlled pilot; backend-wide audit feed parked for next phase
 
 - verify correlation id visibility across request and audit flows
 - verify import retry actions leave readable trace
@@ -106,6 +106,9 @@ Status: Partially complete
 - verify audit center is sufficient for operator entry points
 - identify missing audit surfaces that still require direct API usage
 - decide whether a global audit feed endpoint is needed in the next phase
+
+Current reference:
+- `docs/plans/operational-observability-review.md`
 
 Definition of done:
 - operator can answer:
