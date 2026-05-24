@@ -87,6 +87,73 @@ dated decision, sanitized evidence, and rollback note.
 | Protected evidence rerun | Which personas/routes must be rechecked after final config? | active pilot role set plus protected load groups | sanitized persona route/API evidence and backend load output |
 | Upload delegation | Who may import or upload data? | current `SUPER_ADMIN` path, HR/admin delegation, or future role | upload/readback proof if delegation changes |
 
+## Ranked Future Work Backlog Before Implementation
+
+Do not implement these yet. This is no longer an idea dump. Use this ranked
+queue to choose work that clearly improves pilot trust, operator usefulness, or
+future product leverage before opening code.
+
+Promotion rule: an item moves from future work to implementation only when it
+has a real pilot signal, broad-production owner decision, security/compliance
+need, or measured reliability bottleneck. Otherwise it stays parked.
+
+Rank rule:
+
+- P0 protects pilot or broad-production trust.
+- P1 removes operator/support ambiguity that will slow real usage.
+- P2 creates product leverage, but should wait for UI/product work or a clear
+  pilot signal.
+- P3 is useful only when its trigger appears; do not pull it forward for
+  tidiness.
+
+### P0 - Trust And Incident Readiness
+
+| Item | Why it matters | First safe slice | Stop rule |
+| --- | --- | --- | --- |
+| App-level error tracking V1 | Health checks say the app is up; error tracking proves whether real users hit exceptions by release, route, and environment. | Decide provider, then add sanitized backend capture before frontend capture, release mapping, redaction tests, safe smoke proof, and incident routing. | Stop if provider setup would send raw tokens, cookies, PII, private payloads, noisy test errors, or change API/user-facing error behavior. |
+| Incident ownership and rollback authority | Alerts are only useful if someone owns them and can stop or roll back a bad release. | Name primary/backup owner, severity levels, response windows, rollback owner, business stop authority, log retention, and escalation channel. | Stop if ownership is assigned only to a mailbox/channel, or rollback needs ad hoc approval during an incident. |
+| Security and tenant isolation preflight | Scope leakage or secret exposure would be a critical failure before broad usage. | Create a named final checklist for auth/scope, tenant/company isolation, secret exposure, headers, Supabase boundary, uploads/imports, dependency audit, and evidence redaction. | Stop if this becomes a broad penetration-test claim without a concrete scope and evidence. |
+| Evidence expiry and protected rerun policy | Old good evidence becomes dangerous after auth, role, deploy, data-shape, provider, or seed changes. | Add expiry/refresh triggers for protected persona proof, restore proof, alert proof, performance baselines, upload/import proof, and protected load groups. | Stop if old evidence is used to approve a newer environment without rerun criteria. |
+| Owner and responsibility map | During incidents, implicit ownership burns time. | Map alert owner, rollback owner, restore owner, import owner, auth owner, data-quality owner, and business stop authority. | Stop if the map names a team but not an accountable path. |
+
+### P1 - Operator And Support Leverage
+
+| Item | Why it matters | First safe slice | Stop rule |
+| --- | --- | --- | --- |
+| Correlation ID and request trace policy | Operators need to connect frontend action, backend log, audit event, and provider alert without exposing private data. | Define request ID propagation and sanitized evidence fields before code. | Stop if tracing would store raw auth tokens, cookies, provider subjects, or private payloads. |
+| User support diagnostic panel | Support needs to answer "why can this user not see or do this?" without database spelunking. | Spec a read-only diagnostic summary for role, scope, store assignment, release, and recent safe error context. | Stop if it exposes private data or becomes an assignment editor. |
+| Support troubleshooting playbook | First-line support needs fast diagnosis for common failures. | Define 5-minute flows for login, forbidden route, missing store, missing action, stale data, import issue, and role mismatch. | Stop if the playbook asks support to inspect secrets or edit production data. |
+| Cache and stale-data policy | Users must understand which data is live, cached, preview, snapshot, or official. | Classify KPI, ranking, workforce, import, snapshot, and Store Action surfaces by freshness and trust level. | Stop if the policy changes user-facing numbers or source-of-truth semantics. |
+| Background job idempotency registry | Import, snapshot, materialization, queue, and retry jobs must be safe to rerun or clearly marked unsafe. | Inventory each job with idempotency key, retry behavior, owner, and manual intervention rule. | Stop if the registry changes job behavior without tests. |
+| Data correction workflow policy | Wrong imported or KPI data needs a safe correction path with ownership and audit. | Decide source-file correction versus in-app correction rules for import, workforce, KPI, ranking, and snapshot data. | Stop if it creates manual overrides without audit and source-of-truth rules. |
+| Import dry-run / preview contract | Operators should know what a file would change before committing a risky import. | Spec a no-write preview contract for row counts, mapping gaps, conflicts, and expected changes. | Stop if preview becomes a write path or changes the import lifecycle. |
+| Performance budget escalation | Existing budgets catch regressions; operators need to know what happens when thresholds are crossed. | Map bundle, backend latency, queue pressure, and protected-route smoke thresholds to action levels. | Stop if thresholds are not backed by current smoke, build, or browser evidence. |
+| Role lifecycle and offboarding guard | Access must close cleanly when role, store, company, or employment status changes. | Define offboarding scenarios and route/API smoke evidence for revoked or changed access. | Stop if the work changes auth semantics without a separate decision. |
+| Metric glossary and data dictionary | KPI, ranking, snapshot, official, preview, action, target, and checklist terms must mean the same thing everywhere. | Create a short canonical glossary tied to source-of-truth documents and UI copy. | Stop if glossary work tries to change KPI math or source ownership. |
+
+### P2 - Product Intelligence Worth Keeping
+
+| Item | Why it matters | First safe slice | Stop rule |
+| --- | --- | --- | --- |
+| Store personnel checklist exposure cleanup | `STORE_PERSONNEL` should not receive checklist brief cards, nav links, or direct checklist route access if the role is not meant to work checklist flows. | Align route guard, route matrix, role preview, and targeted Playwright evidence so direct `/store/checklists` access is forbidden for personnel-only sessions. | Stop if cleanup changes checklist scoring, BM/VM ownership, or manager/region/VM behavior. |
+| Daily Command Brief V1 on `/store/home` | Store users need one first-screen answer to "what should I look at today?" using only real, sourced signals. | Add a read-only brief design/spec for role-based top priorities from Store Action, KPI/ranking, checklist where allowed, workflow/approvals, and data freshness. | Stop if any card is unsourced, AI-generated, changes scoring/workflow semantics, or turns `/store/home` into a broad dashboard redesign. |
+| Command Chain Intelligence V1 | The same source-linked operational truth should roll from executive/company view down to region, store, and personnel focus without becoming separate dashboards or invented advice. | Create an AI-free signal contract and role brief map for executive, HR, region, store, and personnel views using only existing KPI/ranking, Store Action, workflow, checklist-where-allowed, snapshot/import freshness, auth/scope, and audit sources. | Stop if any brief item lacks source, scope, freshness, official/preview state, deep link, and evidence label; or if the work introduces AI, prediction, causation claims, scoring changes, auth/workflow changes, or broad dashboard redesign. |
+| Store Performance Replay / Action Impact Timeline V1 | Operators need one sourced story of what happened in a store: data arrival, KPI/ranking movement, Store Action work, checklist/workflow signals, and later performance movement. | Create a read-only design/spec that links each timeline item to existing official or preview sources without new scoring, command behavior, or AI claims. | Stop if the timeline claims causation, invents data, changes scoring/workflow semantics, or uses unsourced AI narrative. |
+| Release notes and change visibility | Pilot and support users need to know what changed so feedback ties to the right release. | Define lightweight internal release notes linked to deploy/release IDs and pilot feedback categories. | Stop if it becomes a public marketing changelog or slows emergency fixes. |
+
+### P3 - Keep Parked Until The Trigger Appears
+
+| Item | Trigger | First safe slice | Stop rule |
+| --- | --- | --- | --- |
+| Migration rollback / forward-only policy | Next risky DB migration or restore-policy decision. | Record example playbooks for additive migrations, failed deploys, forward fixes, and restore involvement. | Stop if the policy pretends destructive rollback is safe without restore proof. |
+| Dependency upgrade cadence | Security advisory, framework drift, or repeated upgrade friction. | Set cadence and minimum gate for React/Vite/Nest/Clerk/Playwright/Supabase updates. | Stop if upgrades are bundled with feature work or broad refactor. |
+| Browser and device support matrix | Real pilot device issue or UI redesign start. | Define supported browsers, mobile widths, and smoke viewports. | Stop if it becomes a redesign project instead of a support contract. |
+| Evidence automation index | Evidence lookup becomes slow or PRs repeatedly miss required proof. | Maintain an index from evidence files to decisions, gates, and owner acceptance rows. | Stop if automated evidence claims more than the underlying proof supports. |
+| Operational freeze window policy | Month-end/ranking close/import windows create release risk. | Define freeze windows, emergency fixes, and approval requirements. | Stop if the policy blocks urgent security or data-loss fixes without an emergency path. |
+| Manual override approval policy | A real domain asks for manual override. | Define allowed domains, approver, evidence, audit, and reversal path. | Stop if override approval bypasses source-of-truth ownership. |
+| Pilot issue triage cadence | Pilot feedback volume becomes noisy or repeated. | Define P0/P1/P2/P3 review rhythm, sign-off, and batching rules. | Stop if cadence widens pilot scope or turns every friction item urgent. |
+| Mutable Norm Kadro / staffing baseline module | Owner explicitly chooses editable staffing targets. | Start from source-of-truth, owner, effective-date, audit, rollback, and role/scope decision. | Stop if it adds payroll, scheduling, auto action generation, or staffing-rule behavior before approval. |
+
 ## Verification Ladder
 
 Local docs/guard packet:
