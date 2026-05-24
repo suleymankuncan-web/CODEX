@@ -87,6 +87,12 @@ Current Daily Command Brief V1 product evidence:
 docs/evidence/product-progress/2026-05-24-daily-command-brief-v1.md
 ```
 
+Current Command Chain Intelligence source map:
+
+```text
+docs/plans/command-chain-intelligence-source-map-v1.md
+```
+
 Current P3 trigger-only operating reference:
 
 ```text
