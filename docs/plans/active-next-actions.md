@@ -92,6 +92,11 @@ Operating plan:
   order for Pilot Feedback Loop V1, Data Quality Center V1, Operations
   Telemetry V2, Coaching Loop V2, Role Preview UI, Rules/Config Versioning,
   Norm Kadro Read-Only V1, and Production Ops Closure.
+- `docs/plans/p2-product-intelligence-execution-v1.md` maps the next product
+  intelligence ideas without starting UI work: Daily Command Brief,
+  Command Chain Intelligence, Store Performance Replay, internal change
+  visibility, usage/performance correlation policy, and app-level error
+  tracking boundaries.
 - `docs/plans/controlled-pilot-execution-roadmap-v1.md` is the current control
   document for day-to-day pilot execution.
 - `docs/plans/production-evidence-closure-joint-plan-v1.md` remains the
