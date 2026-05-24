@@ -63,3 +63,7 @@ export function canAcknowledgeChecklist(authSummary: AuthSessionSummary | null, 
 export function canReadChecklistResults(authSummary: AuthSessionSummary | null) {
   return hasAnyRole(authSummary, checklistResultReadRoles)
 }
+
+export function canOpenStoreChecklists(authSummary: AuthSessionSummary | null) {
+  return canReadChecklistResults(authSummary)
+}

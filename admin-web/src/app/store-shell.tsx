@@ -2,7 +2,10 @@ import { Suspense, useState, type ReactNode } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { ScreenState } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
-import { canListTargetDistributionRequests } from '../features/auth/authorization'
+import {
+  canListTargetDistributionRequests,
+  canOpenStoreChecklists,
+} from '../features/auth/authorization'
 import { useLocalization } from '../features/localization/useLocalization'
 import { PilotFeedbackControl } from '../features/pilot-feedback/PilotFeedbackControl'
 import {
@@ -30,6 +33,7 @@ import {
   isVisualMerchandiserOnly,
   type ShellState,
 } from './shell-state'
+import { resolveStorePersona } from './store-navigation'
 import { StoreSidebar } from './store-sidebar'
 
 export function StoreShell(input: {
@@ -39,6 +43,9 @@ export function StoreShell(input: {
 }) {
   const { t } = useLocalization()
   const checklistOnly = isVisualMerchandiserOnly(input.authSummary)
+  const storeChecklistAllowed =
+    resolveStorePersona(input.authSummary) !== 'personnel' &&
+    canOpenStoreChecklists(input.authSummary)
   const location = useLocation()
   const rankingsRoute = location.pathname === '/store/rankings'
   const storeMeRoute = location.pathname === '/store/me'
@@ -120,7 +127,14 @@ export function StoreShell(input: {
             />
             <Route
               path="/store/checklists"
-              element={storeRoute(<StoreChecklistsPage authSummary={input.authSummary} />, { allowVm: true })}
+              element={storeRoute(
+                <StoreChecklistsPage authSummary={input.authSummary} />,
+                {
+                  allowVm: true,
+                  allowed: storeChecklistAllowed,
+                  firstAllowedPath: input.firstAllowedPath,
+                },
+              )}
             />
             <Route
               path="/store/tasks"
