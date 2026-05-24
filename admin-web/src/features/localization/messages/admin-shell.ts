@@ -63,8 +63,8 @@ export const adminShellTr = {
   'adminShell.failureHandlingMock': 'Mock oturum geliştirme akışı için local kalır',
   'adminShell.primaryNavigation': 'Birincil',
   'adminShell.storeWorkspaceAria': 'Mağaza çalışma alanı',
-  'adminShell.routeLoadingTitle': 'Rota yükleniyor',
-  'adminShell.routeLoadingCopy': 'İstenen yüzey hazırlanıyor.',
+  'adminShell.routeLoadingTitle': 'Yükleniyor',
+  'adminShell.routeLoadingCopy': 'Sayfa hazırlanıyor.',
   'adminShell.routeErrorTitle': 'Sayfa geçişi tamamlanamadı',
   'adminShell.routeErrorCopy':
     'Bu yüzey açılırken beklenmeyen bir hata oluştu. Menüden başka bir sayfaya geçebilir veya sayfayı yenileyebilirsin.',
@@ -148,8 +148,8 @@ export const adminShellEn: Record<keyof typeof adminShellTr, string> = {
   'adminShell.failureHandlingMock': 'Mock session stays local for dev flow',
   'adminShell.primaryNavigation': 'Primary',
   'adminShell.storeWorkspaceAria': 'Store workspace',
-  'adminShell.routeLoadingTitle': 'Loading route',
-  'adminShell.routeLoadingCopy': 'Preparing the requested surface.',
+  'adminShell.routeLoadingTitle': 'Page loading',
+  'adminShell.routeLoadingCopy': 'Preparing the page.',
   'adminShell.routeErrorTitle': 'Page transition could not finish',
   'adminShell.routeErrorCopy':
     'An unexpected error occurred while opening this surface. Use the menu to move elsewhere or reload the page.',

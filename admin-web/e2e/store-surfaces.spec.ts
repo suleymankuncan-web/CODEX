@@ -1027,6 +1027,8 @@ test('store route transitions show a loading layer and hide stale page content',
 
   await transitionVisible
   await expect(transitionLayer).toBeVisible()
+  await expect(transitionLayer.locator('.route-transition-compact')).toBeVisible()
+  await expect(transitionLayer.locator('.route-transition-card')).toHaveCount(0)
   await expect(page.locator('.store-command-home')).toBeHidden()
   await expect(page).toHaveURL(/\/store\/feed$/)
   await expect(transitionLayer).toHaveCount(0)

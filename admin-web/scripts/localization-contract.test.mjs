@@ -131,8 +131,8 @@ test('app shell fallback copy stays dictionary-owned', () => {
 
   for (const phrase of [
     'Route not available for this role',
-    'Loading route',
-    'Preparing the requested surface.',
+    'Page loading',
+    'Preparing the page.',
     'Verifying session',
     'Session rejected',
     'Store workspace',

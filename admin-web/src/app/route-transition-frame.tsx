@@ -7,6 +7,8 @@ const ROUTE_TRANSITION_MIN_MS = 360
 export function RouteTransitionFrame(input: { children: ReactNode }) {
   const location = useLocation()
   const { t } = useLocalization()
+  const routeLoadingTitle = t('adminShell.routeLoadingTitle')
+  const routeLoadingCopy = t('adminShell.routeLoadingCopy')
   const routeKey = `${location.pathname}${location.search}`
   const [settledRouteKey, setSettledRouteKey] = useState(routeKey)
   const isTransitioning = settledRouteKey !== routeKey
@@ -33,12 +35,9 @@ export function RouteTransitionFrame(input: { children: ReactNode }) {
       </div>
       {isTransitioning ? (
         <div className="route-transition-layer" data-testid="route-transition" role="status" aria-live="polite">
-          <div className="route-transition-card">
+          <div className="route-transition-compact" aria-label={`${routeLoadingTitle}. ${routeLoadingCopy}`}>
             <span className="route-transition-orbit" aria-hidden="true" />
-            <div>
-              <strong>{t('adminShell.routeLoadingTitle')}</strong>
-              <p>{t('adminShell.routeLoadingCopy')}</p>
-            </div>
+            <span>{routeLoadingTitle}</span>
           </div>
         </div>
       ) : null}
