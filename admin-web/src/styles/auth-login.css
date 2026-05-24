@@ -71,55 +71,6 @@
   padding: 1.25rem 1.375rem 1.375rem;
 }
 
-.auth-login-form {
-  display: grid;
-  gap: 0.875rem;
-}
-
-.auth-login-field {
-  display: grid;
-  gap: 0.375rem;
-}
-
-.auth-login-field label {
-  color: #171421;
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
-.auth-login-field input {
-  width: 100%;
-  min-height: 2.75rem;
-  border: 1px solid rgba(36, 28, 50, 0.18);
-  border-radius: 0.5rem;
-  background: #ffffff;
-  color: #171421;
-  font-size: 0.875rem;
-  outline: none;
-  padding: 0 0.75rem;
-  transition:
-    border-color 160ms ease,
-    box-shadow 160ms ease,
-    background 160ms ease;
-}
-
-.auth-login-field input::placeholder {
-  color: #9e93aa;
-}
-
-.auth-login-field input:focus {
-  border-color: #7c3aed;
-  background: #ffffff;
-  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.22);
-}
-
-.auth-login-form-error {
-  margin: 0;
-  color: #a33f2c;
-  font-size: 0.75rem;
-  line-height: 1.4;
-}
-
 .auth-login-primary {
   display: inline-flex;
   align-items: center;
@@ -158,6 +109,43 @@
 .auth-login-primary:focus-visible {
   outline: 4px solid rgba(124, 58, 237, 0.22);
   outline-offset: 3px;
+}
+
+.auth-login-clerk,
+.auth-login-clerk-root,
+.auth-login-clerk-card {
+  width: 100%;
+}
+
+.auth-login-clerk :where(.auth-login-clerk-card) {
+  border: 0;
+  box-shadow: none;
+}
+
+.auth-login-clerk :where(.auth-login-clerk-root, .auth-login-clerk-card) {
+  background: transparent;
+}
+
+.auth-login-clerk-hidden {
+  display: none !important;
+}
+
+.auth-login-clerk-submit {
+  margin-top: 0.125rem;
+}
+
+.auth-login-clerk-input {
+  min-height: 2.75rem;
+  border-color: rgba(36, 28, 50, 0.18);
+  border-radius: 0.5rem;
+  color: #171421;
+  font-size: 0.875rem;
+}
+
+.auth-login-clerk-label {
+  color: #171421;
+  font-size: 0.75rem;
+  font-weight: 700;
 }
 
 .auth-login-message,
