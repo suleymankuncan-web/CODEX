@@ -1,4 +1,5 @@
 import { HttpStatus } from "@nestjs/common";
+import { sanitizeRequestPath } from "./sanitize-request-path";
 
 export type StandardErrorResponse = {
   correlationId: string;
@@ -27,16 +28,23 @@ const HTTP_ERROR_CODES: Record<number, string> = {
   [HttpStatus.INTERNAL_SERVER_ERROR]: "INTERNAL_SERVER_ERROR",
   [HttpStatus.SERVICE_UNAVAILABLE]: "SERVICE_UNAVAILABLE",
 };
+const CORRELATION_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 
 export function resolveRequestPath(request: ErrorRequestLike): string {
-  return request.originalUrl ?? request.url ?? "";
+  return sanitizeRequestPath(request.originalUrl ?? request.url ?? "");
 }
 
 export function resolveRequestCorrelationId(request: ErrorRequestLike): string {
   const headerValue = request.headers?.["x-correlation-id"];
   const headerCorrelationId = Array.isArray(headerValue) ? headerValue[0] : headerValue;
 
-  return request.correlationId ?? headerCorrelationId ?? "unknown";
+  const requestCandidate = request.correlationId?.trim();
+  if (requestCandidate && CORRELATION_ID_PATTERN.test(requestCandidate)) {
+    return requestCandidate;
+  }
+
+  const candidate = headerCorrelationId?.trim();
+  return candidate && CORRELATION_ID_PATTERN.test(candidate) ? candidate : "unknown";
 }
 
 export function buildStandardErrorResponse(input: {

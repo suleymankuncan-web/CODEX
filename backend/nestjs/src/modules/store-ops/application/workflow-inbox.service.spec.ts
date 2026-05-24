@@ -1,3 +1,4 @@
+import { Logger } from "@nestjs/common";
 import { WorkflowInboxService } from "./workflow-inbox.service";
 
 function createEmptyStoreActionPlanRepository() {
@@ -7,6 +8,10 @@ function createEmptyStoreActionPlanRepository() {
 }
 
 describe("WorkflowInboxService", () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it("keeps store manager acknowledgement inbox items limited to assigned stores even when company scope is present", async () => {
     const targetDistributionRepository = {
       listRequests: jest.fn(),
@@ -242,5 +247,45 @@ describe("WorkflowInboxService", () => {
         deepLink: "/store/checklists?tab=inbox&result=checklist-instance-1",
       }),
     ]);
+  });
+
+  it("redacts secret-like material from skipped inbox warning logs", async () => {
+    const warnSpy = jest.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+    const targetDistributionRepository = {
+      listRequests: jest.fn(async () => {
+        throw new Error("database failed password=secret token=abc123");
+      }),
+    };
+    const checklistAcknowledgementRepository = {
+      listChecklistAcknowledgements: jest.fn(async () => []),
+    };
+    const snapshotReportingReadRepository = {
+      getLatestCompletedSnapshotRun: jest.fn(async () => null),
+    };
+    const service = new WorkflowInboxService(
+      targetDistributionRepository as never,
+      checklistAcknowledgementRepository as never,
+      {} as never,
+      snapshotReportingReadRepository as never,
+      createEmptyStoreActionPlanRepository() as never,
+    );
+
+    await service.listInbox({
+      actorRoles: ["SUPER_ADMIN"],
+      actorScope: {
+        companyIds: ["company-1"],
+        regionIds: [],
+        storeIds: [],
+      },
+      actorActionScope: {
+        assignedStoreIds: [],
+      },
+    });
+
+    const warning = String(warnSpy.mock.calls.at(-1)?.[0]);
+    expect(warning).toContain("password=[redacted]");
+    expect(warning).toContain("token=[redacted]");
+    expect(warning).not.toContain("secret");
+    expect(warning).not.toContain("abc123");
   });
 });

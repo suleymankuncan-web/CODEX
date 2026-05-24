@@ -1,6 +1,7 @@
 import { Injectable, Logger, UnauthorizedException } from "@nestjs/common";
 import { createRemoteJWKSet, jwtVerify, JWTVerifyGetKey } from "jose";
 import { AppConfigService } from "../../../shared/app-config.service";
+import { redactSensitiveLogValue } from "../../../shared/structured-log";
 import { AuthenticatedUser, buildAuthenticatedUser } from "../auth-context.service";
 import { AuthProvider } from "../interfaces/auth-provider.interface";
 
@@ -158,7 +159,9 @@ export class JwtAuthProvider implements AuthProvider {
       );
     } catch (error) {
       this.logger.warn(
-        `JWT verification failed: ${error instanceof Error ? error.message : String(error)}`,
+        `JWT verification failed: ${String(
+          redactSensitiveLogValue(error instanceof Error ? error.message : String(error)),
+        )}`,
       );
       throw new UnauthorizedException("Invalid JWT");
     }

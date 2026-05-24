@@ -1,3 +1,4 @@
+import { Logger } from "@nestjs/common";
 import { AuthAuthorizationRepository } from "./auth-authorization.repository";
 import { AuthContextService } from "./auth-context.service";
 import { muteNestLogger } from "../../../test/jest/mute-nest-logger";
@@ -15,6 +16,7 @@ describe("AuthContextService", () => {
       email: string;
       is_active: boolean;
     } | null;
+    roleAssignmentErrorMessage?: string;
     throwOnRoleAssignments?: boolean;
   } = {}) {
     return {
@@ -23,7 +25,9 @@ describe("AuthContextService", () => {
       ),
       getActiveRoleAssignments: jest.fn(async () => {
         if (input.throwOnRoleAssignments) {
-          throw new Error("connect ECONNREFUSED 127.0.0.1:5432");
+          throw new Error(
+            input.roleAssignmentErrorMessage ?? "connect ECONNREFUSED 127.0.0.1:5432",
+          );
         }
 
         return input.roleAssignments ?? [];
@@ -535,7 +539,7 @@ describe("AuthContextService", () => {
   });
 
   it("fails closed in production when DB authorization lookup throws", async () => {
-    const restoreLogger = muteNestLogger(["error"]);
+    const errorSpy = jest.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
     const service = new AuthContextService(
       { authMode: "jwt", allowMockAuth: false, isProduction: true } as never,
       buildAuthorizationRepository({
@@ -546,6 +550,7 @@ describe("AuthContextService", () => {
           email: "prod.user@example.com",
           is_active: true,
         },
+        roleAssignmentErrorMessage: "db failed token=abc123",
         throwOnRoleAssignments: true,
       }),
       { resolveUser: jest.fn() } as never,
@@ -573,8 +578,13 @@ describe("AuthContextService", () => {
           },
         }),
       ).rejects.toThrow("Authorization context is unavailable");
+      const renderedLogs = errorSpy.mock.calls.flat().map(String).join("\n");
+      expect(renderedLogs).toContain("authorization lookup failed for provider user");
+      expect(renderedLogs).toContain("token=[redacted]");
+      expect(renderedLogs).not.toContain("abc123");
+      expect(renderedLogs).not.toContain("prod-user-1");
     } finally {
-      restoreLogger();
+      errorSpy.mockRestore();
     }
   });
 

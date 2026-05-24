@@ -114,8 +114,8 @@ function sanitizeSession(session) {
     authMode: session?.authMode,
     authenticated: session?.authenticated,
     user: {
-      userId: session?.user?.userId,
-      employeeId: session?.user?.employeeId ?? null,
+      userIdPresent: typeof session?.user?.userId === 'string' && session.user.userId.length > 0,
+      employeeLinked: typeof session?.user?.employeeId === 'string' && session.user.employeeId.length > 0,
       roleCodes: session?.user?.roleCodes ?? [],
       readScope: session?.user?.readScope,
       actionScope: session?.user?.actionScope,

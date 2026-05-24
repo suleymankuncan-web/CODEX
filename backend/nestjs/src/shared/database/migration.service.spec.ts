@@ -60,7 +60,7 @@ function createDatabaseMock(options?: {
       }
 
       if (options?.failOnSql && sql.includes(options.failOnSql)) {
-        throw new Error("migration exploded");
+        throw new Error("migration exploded password=secret token=abc123");
       }
 
       return { rowCount: 0, rows: [] };
@@ -71,7 +71,7 @@ function createDatabaseMock(options?: {
           query: async (sql: string) => {
             calls.push({ params: [], sql });
             if (options?.failOnSql && sql.includes(options.failOnSql)) {
-              throw new Error("migration exploded");
+              throw new Error("migration exploded password=secret token=abc123");
             }
             return { rowCount: 0, rows: [] };
           },
@@ -172,8 +172,17 @@ describe("MigrationService", () => {
     );
 
     expect(calls.some((call) => call.sql.includes("status = 'failed'"))).toBe(true);
-    expect(calls.some((call) => call.params.includes("migration exploded"))).toBe(
-      true,
+    expect(
+      calls.some((call) =>
+        call.params.includes("migration exploded password=[redacted] token=[redacted]"),
+      ),
+    ).toBe(true);
+    expect(
+      calls.some((call) =>
+        call.params.some((param) => String(param).includes("abc123") || String(param).includes("secret")),
+      ),
+    ).toBe(
+      false,
     );
   });
 

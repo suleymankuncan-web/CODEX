@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { RequestContextStore } from "../../../shared/request-context";
 import { DatabaseService } from "../../../shared/database/database.service";
 import { ExternalIdMappingService } from "./external-id-mapping.service";
-import { logStructuredError, logStructuredMessage } from "../../../shared/structured-log";
+import { logStructuredError, logStructuredMessage, redactSensitiveLogValue } from "../../../shared/structured-log";
 
 type MaterializationStats = {
   processedCount: number;
@@ -1404,7 +1404,7 @@ export class MaterializationService {
     rowId: string,
     error: unknown,
   ): Promise<void> {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = String(redactSensitiveLogValue(error instanceof Error ? error.message : String(error)));
     logStructuredError(this.logger, "import_batch.row.retryable_error", error, {
       tableName,
       rowId,

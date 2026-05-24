@@ -38,9 +38,9 @@ export function redactSensitiveLogValue(value: unknown, depth = 0): unknown {
 function redactSensitiveString(value: string): string {
   return value
     .replace(/\bBearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [redacted]")
-    .replace(/\b(?:postgres(?:ql)?|redis):\/\/[^\s"'<>]+/gi, "[redacted-url]")
+    .replace(/\b(?:postgres(?:ql)?|rediss?):\/\/[^\s"'<>]+/gi, "[redacted-url]")
     .replace(
-      /\b(authorization|client_secret|password|pwd|refresh_token|secret|token)=([^;\s&,]+)/gi,
+      /["']?\b(authorization|client_secret|password|pwd|refresh_token|secret|token)\b["']?\s*[=:]\s*("[^"]*"|'[^']*'|[^;\s&,}]+)/gi,
       "$1=[redacted]",
     );
 }

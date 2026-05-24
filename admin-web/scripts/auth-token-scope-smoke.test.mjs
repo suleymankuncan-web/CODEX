@@ -151,6 +151,7 @@ test('token scope smoke prints sanitized assigned and unassigned action-scope ev
 
     assert.equal(result.status, 0, output)
     assert.doesNotMatch(output, new RegExp(bearerToken))
+    assert.doesNotMatch(output, /80000000-0000-0000-0000-000000000900/)
     assert.equal(seen.length, 3)
     assert.deepEqual(
       seen.map((item) => item.authorization),
@@ -159,6 +160,8 @@ test('token scope smoke prints sanitized assigned and unassigned action-scope ev
 
     const evidence = JSON.parse(result.stdout)
     assert.equal(evidence.evidenceStatus, 'test-clerk-token-action-scope-smoke-passed')
+    assert.equal(evidence.session.user.userIdPresent, true)
+    assert.equal(evidence.session.user.employeeLinked, false)
     assert.equal(evidence.session.user.roleCodes.includes('STORE_MANAGER'), true)
     assert.equal(evidence.session.user.actionScope.assignedStoreIds[0], assignedStoreId)
     assert.equal(evidence.actionScopeSmoke.assignedStore.status, 200)

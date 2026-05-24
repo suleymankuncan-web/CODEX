@@ -10,6 +10,7 @@ import { StandardErrorFilter } from "./standard-error.filter";
 function createHost(input: {
   correlationId?: string;
   originalUrl?: string;
+  requestCorrelationId?: string;
   url?: string;
 }) {
   const json = jest.fn();
@@ -19,6 +20,7 @@ function createHost(input: {
     headers: input.correlationId
       ? { "x-correlation-id": input.correlationId }
       : {},
+    correlationId: input.requestCorrelationId,
     originalUrl: input.originalUrl,
     url: input.url,
   };
@@ -93,6 +95,56 @@ describe("StandardErrorFilter", () => {
       }),
     );
     expect(observabilityService.captureException).not.toHaveBeenCalled();
+  });
+
+  it("redacts query values from error responses and observability context", () => {
+    const observabilityService = {
+      captureException: jest.fn(),
+    };
+    const filter = new StandardErrorFilter(observabilityService as never);
+    const { host, json } = createHost({
+      correlationId: "corr-error-query-redaction",
+      originalUrl:
+        "/api/admin/broken/123e4567-e89b-12d3-a456-426614174000?storeId=00000000-0000-0000-0000-000000000100&token=secret-token&email=person@example.com",
+    });
+    const exception = new InternalServerErrorException("failed");
+
+    filter.catch(exception, host);
+
+    const responseBody = json.mock.calls[0][0];
+    expect(responseBody).toEqual(
+      expect.objectContaining({
+        path: "/api/admin/broken/:id?storeId=:value&token=[redacted]&email=:value",
+      }),
+    );
+    expect(JSON.stringify(responseBody)).not.toContain("secret-token");
+    expect(JSON.stringify(responseBody)).not.toContain("person@example.com");
+    expect(JSON.stringify(responseBody)).not.toContain(
+      "00000000-0000-0000-0000-000000000100",
+    );
+    expect(observabilityService.captureException).toHaveBeenCalledWith(
+      exception,
+      expect.objectContaining({
+        path: "/api/admin/broken/:id?storeId=:value&token=[redacted]&email=:value",
+      }),
+    );
+  });
+
+  it("does not echo unsafe fallback correlation id headers", () => {
+    const filter = new StandardErrorFilter();
+    const { host, json } = createHost({
+      correlationId: "bad id\r\nx-extra: injected",
+      requestCorrelationId: "bad request id\r\nx-extra: injected",
+      originalUrl: "/api/admin/broken",
+    });
+
+    filter.catch(new BadRequestException("invalid request"), host);
+
+    expect(json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        correlationId: "unknown",
+      }),
+    );
   });
 
   it("forwards retry-after metadata from retryable capacity exceptions", () => {

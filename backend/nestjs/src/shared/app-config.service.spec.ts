@@ -130,6 +130,32 @@ describe("AppConfigService", () => {
     expect(config.corsAllowedOrigins).toEqual(["http://localhost:5173"]);
   });
 
+  it("requires database SSL in production", () => {
+    expect(createConfig({ NODE_ENV: "development" }).dbSslMode).toBe("disable");
+
+    expect(() =>
+      createConfig({
+        DB_SSL_MODE: "disable",
+        NODE_ENV: "production",
+      }).dbSslMode,
+    ).toThrow("DB_SSL_MODE=require is required in production");
+
+    expect(
+      createConfig({
+        DB_SSL_MODE: "require",
+        NODE_ENV: "production",
+      }).dbSslMode,
+    ).toBe("require");
+  });
+
+  it("rejects invalid database SSL modes", () => {
+    expect(() =>
+      createConfig({
+        DB_SSL_MODE: "prefer",
+      }).dbSslMode,
+    ).toThrow("DB_SSL_MODE must be one of disable, require");
+  });
+
   it("parses comma-separated CORS origins", () => {
     const config = createConfig({
       CORS_ALLOWED_ORIGINS:

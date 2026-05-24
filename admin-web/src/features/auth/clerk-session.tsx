@@ -52,7 +52,7 @@ export function ClerkSessionProvider(input: { children: ReactNode }) {
 
 export function ClerkLoginActions(input: { returnTo: string }) {
   const { t } = useLocalization()
-  const { isLoaded: authLoaded, isSignedIn, userId } = useAuth()
+  const { isLoaded: authLoaded, isSignedIn } = useAuth()
   const safeReturnTo = sanitizeAuthReturnPath(input.returnTo) ?? '/'
 
   if (!authLoaded) {
@@ -68,7 +68,7 @@ export function ClerkLoginActions(input: { returnTo: string }) {
       <div className="auth-login-session-card">
         <div>
           <StatusPill tone="calm">{t('authFlow.clerkSignedIn')}</StatusPill>
-          <p>{t('authFlow.clerkSyncingUser', { userId: userId ?? 'unknown' })}</p>
+          <p>{t('authFlow.clerkSyncingUser')}</p>
         </div>
         <UserButton />
       </div>

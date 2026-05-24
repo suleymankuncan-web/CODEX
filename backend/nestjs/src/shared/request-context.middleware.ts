@@ -1,5 +1,6 @@
 import { Injectable, Logger, NestMiddleware } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
+import { sanitizeRequestPath } from "./http/sanitize-request-path";
 import { RequestContextStore } from "./request-context";
 
 const CORRELATION_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
@@ -48,7 +49,7 @@ export class RequestContextMiddleware implements NestMiddleware {
             event: "http.request.completed",
             correlationId,
             method: req.method,
-            path: req.originalUrl ?? req.url ?? "",
+            path: sanitizeRequestPath(req.originalUrl ?? req.url ?? ""),
             statusCode: res.statusCode,
             durationMs: Date.now() - startedAt,
             actorUserId: requestContext.actorUserId ?? req.user?.userId ?? null,

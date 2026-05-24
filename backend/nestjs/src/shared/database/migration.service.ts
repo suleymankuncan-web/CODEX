@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
+import { redactSensitiveLogValue } from "../structured-log";
 import { DatabaseService } from "./database.service";
 
 export type MigrationRunResult = {
@@ -167,7 +168,9 @@ export class MigrationService {
         await this.markSucceeded(file, checksum, Date.now() - startedAt);
         result.applied.push(file);
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage = String(
+          redactSensitiveLogValue(error instanceof Error ? error.message : String(error)),
+        );
         await this.markFailed(file, checksum, Date.now() - startedAt, errorMessage);
         result.failed.push({ errorMessage, migrationName: file });
         throw error;
