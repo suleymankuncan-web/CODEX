@@ -55,6 +55,7 @@ Use for daily direction and working discipline.
 - `docs/plans/project-control-board-v1.md`
 - `docs/plans/decision-registry-v1.md`
 - `docs/plans/runbook-registry-v1.md`
+- `docs/plans/evidence-automation-index-v1.md`
 - `docs/plans/project-growth-execution-roadmap-v1.md`
 - `docs/plans/active-next-actions.md`
 - `docs/plans/project-debt-ledger.md`
