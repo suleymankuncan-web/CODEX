@@ -97,6 +97,11 @@ Operating plan:
   Command Chain Intelligence, Store Performance Replay, internal change
   visibility, usage/performance correlation policy, and app-level error
   tracking boundaries.
+- `docs/plans/p3-operating-triggers-v1.md` keeps low-urgency operating ideas
+  parked until real triggers exist: migration policy, dependency cadence,
+  browser/device support, evidence automation, freeze windows, manual
+  overrides, pilot triage cadence, mutable Norm Kadro, protected performance,
+  and app-level error tracking.
 - `docs/plans/controlled-pilot-execution-roadmap-v1.md` is the current control
   document for day-to-day pilot execution.
 - `docs/plans/production-evidence-closure-joint-plan-v1.md` remains the

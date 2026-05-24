@@ -51,6 +51,11 @@ Use these first:
   checklist exposure cleanup is closed, and Daily Command Brief / command-chain
   / replay ideas stay read-only and source-linked until the user starts the
   UI/content phase.
+- P3 operating triggers are mapped in
+  `docs/plans/p3-operating-triggers-v1.md`; migration policy, dependency
+  cadence, browser/device support, evidence automation, freeze windows, manual
+  overrides, pilot triage cadence, mutable Norm Kadro, protected performance,
+  and app-level error tracking stay parked until a real trigger occurs.
 
 ## Parked Or High-Risk
 
@@ -65,9 +70,8 @@ Use these first:
   Intelligence, Store Performance Replay, internal change visibility, and
   usage/performance correlation policy. Store Personnel checklist exposure
   cleanup is no longer parked.
-- P3 trigger-only backlog: migration policy, dependency cadence, browser/device
-  support matrix, evidence automation index, freeze windows, manual overrides,
-  pilot triage cadence, and mutable Norm Kadro/staffing baseline.
+- P3 trigger-only backlog: governed by
+  `docs/plans/p3-operating-triggers-v1.md`.
 - Production Ops Closure Decision Packet V1 owner acceptance rows.
 - Broad-production protected persona/performance rerun after config changes.
 

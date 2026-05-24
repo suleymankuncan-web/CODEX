@@ -74,10 +74,16 @@ Latest route/scope guard merge:
 0f4555ba fix: block personnel checklist route (#492)
 ```
 
-Latest P2 product-intelligence planning reference:
+Current P2 product-intelligence planning reference:
 
 ```text
 docs/plans/p2-product-intelligence-execution-v1.md
+```
+
+Current P3 trigger-only operating reference:
+
+```text
+docs/plans/p3-operating-triggers-v1.md
 ```
 
 Latest controlled-pilot evidence merge:
