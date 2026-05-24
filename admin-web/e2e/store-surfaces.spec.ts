@@ -537,6 +537,12 @@ test('store home prefetches the task queue for manager navigation', async ({ pag
 
   await expect(page.getByRole('heading', { name: /Mağaza Yönetim Paneli/i })).toBeVisible()
   await expect(page.getByText('Mağaza operasyonu tek komuta yüzeyinden yönetilir.')).toBeVisible()
+  const dailyBrief = page.getByLabel('Gunluk komuta ozeti')
+  await expect(dailyBrief).toBeVisible()
+  await expect(dailyBrief).toContainText('KPI takip adaylari')
+  await expect(dailyBrief.locator('a[href="/store/tasks"]')).toHaveText('1')
+  await expect(dailyBrief.locator('a[href="/store/checklists"]')).toBeVisible()
+  await expect(dailyBrief.locator('a[href="/store/approvals"]')).toBeVisible()
   await expect.poll(() => workflowInboxRequests).toBeGreaterThanOrEqual(1)
 
   await page
@@ -546,6 +552,23 @@ test('store home prefetches the task queue for manager navigation', async ({ pag
 
   await expect(page.getByRole('heading', { name: 'Aksiyon gerektiren işler tek mağaza kuyruğunda.' })).toBeVisible()
   expect(workflowInboxRequests).toBe(1)
+})
+
+test('store home keeps the daily brief pending when workflow inbox fails', async ({ page }) => {
+  await page.unroute('**/api/workflow/inbox')
+  await page.route('**/api/workflow/inbox', async (route) => {
+    await route.fulfill({
+      status: 503,
+      json: { message: 'Workflow unavailable' },
+    })
+  })
+
+  await page.goto('/store/home')
+
+  const dailyBrief = page.getByLabel('Gunluk komuta ozeti')
+  await expect(dailyBrief).toBeVisible()
+  await expect(dailyBrief.locator('a[href="/store/tasks"]')).toHaveText('Bekliyor')
+  await expect(dailyBrief.locator('a[href="/store/tasks"]')).not.toHaveText('0')
 })
 
 test('region manager home surfaces checklist field queue summary', async ({ page }) => {
@@ -591,6 +614,11 @@ test('region manager home surfaces checklist field queue summary', async ({ page
   await expect(checklistCard).toContainText('2')
   await expect(checklistCard).toContainText('1')
   await expect(checklistCard).toHaveAttribute('href', '/store/checklists')
+  const dailyBrief = page.getByLabel('Gunluk komuta ozeti')
+  await expect(dailyBrief).toBeVisible()
+  await expect(dailyBrief.locator('a[href="/store/checklists"]')).toHaveText('2')
+  await expect(dailyBrief.locator('a[href="/store/kpis"]')).toBeVisible()
+  await expect(dailyBrief.locator('a[href="/store/tasks"]')).toHaveCount(0)
   await expect.poll(() => acknowledgementRequests).toBeGreaterThanOrEqual(1)
   await expect.poll(() => mobileTodayRequests).toBeGreaterThanOrEqual(1)
   const prefetchedAcknowledgementRequests = acknowledgementRequests
@@ -633,6 +661,35 @@ test('store personnel sidebar only exposes personnel surfaces', async ({ page })
   await expect(storeNav.locator('a[href="/store/tasks"]')).toHaveCount(0)
   await expect(page.locator('a[href="/store/checklists"]')).toHaveCount(0)
   await expect(page.locator('a[href="/store/approvals"]')).toHaveCount(0)
+})
+
+test('store personnel daily command brief stays personal and read-only', async ({ page }) => {
+  await page.unroute('**/api/auth/session')
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      json: {
+        ...authSessionFixture,
+        user: {
+          ...authSessionFixture.user,
+          roleCodes: ['STORE_PERSONNEL'],
+          actionScope: {
+            assignedStoreIds: [demoStoreId],
+          },
+          assignedStoreIds: [demoStoreId],
+        },
+      },
+    })
+  })
+
+  await page.goto('/store/home')
+
+  const dailyBrief = page.getByLabel('Gunluk komuta ozeti')
+  await expect(dailyBrief).toBeVisible()
+  await expect(dailyBrief.locator('a[href="/store/me"]')).toBeVisible()
+  await expect(dailyBrief.locator('a[href="/store/rankings"]')).toBeVisible()
+  await expect(dailyBrief.locator('a[href="/store/feed"]')).toBeVisible()
+  await expect(dailyBrief.locator('a[href="/store/tasks"]')).toHaveCount(0)
+  await expect(dailyBrief.locator('a[href="/store/checklists"]')).toHaveCount(0)
 })
 
 test('store personnel cannot open checklists by direct route', async ({ page }) => {

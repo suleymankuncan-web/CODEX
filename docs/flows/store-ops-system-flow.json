@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-24T01:03:45.229Z",
+  "generatedAt": "2026-05-24T04:08:36.176Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -12,7 +12,7 @@
     "frontendRouteCount": 53,
     "matchedFrontendApiCallCount": 139,
     "openApiEndpointCount": 173,
-    "routeApiEdgeCount": 209,
+    "routeApiEdgeCount": 211,
     "routesWithoutApiCallCount": 4,
     "unmatchedFrontendApiCallCount": 0
   },
@@ -7264,6 +7264,11 @@
         "apiCallId": "api:5"
       },
       {
+        "id": "edge:route:store:/store:api:126",
+        "routeId": "route:store:/store",
+        "apiCallId": "api:126"
+      },
+      {
         "id": "edge:route:store:/store:api:24",
         "routeId": "route:store:/store",
         "apiCallId": "api:24"
@@ -7377,6 +7382,11 @@
         "id": "edge:route:store:/store/feed:api:54",
         "routeId": "route:store:/store/feed",
         "apiCallId": "api:54"
+      },
+      {
+        "id": "edge:route:store:/store/home:api:126",
+        "routeId": "route:store:/store/home",
+        "apiCallId": "api:126"
       },
       {
         "id": "edge:route:store:/store/home:api:24",
