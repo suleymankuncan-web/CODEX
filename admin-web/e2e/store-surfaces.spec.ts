@@ -627,10 +627,52 @@ test('store personnel sidebar only exposes personnel surfaces', async ({ page })
   const storeNav = page.locator('.store-command-nav')
   await expect(storeNav.locator('a[href="/store/me"]')).toBeVisible()
   await expect(storeNav.locator('a[href="/store/rankings"]')).toBeVisible()
+  await expect(storeNav.locator('a[href="/store/checklists"]')).toHaveCount(0)
   await expect(storeNav.locator('a[href="/store/kpis"]')).toHaveCount(0)
   await expect(storeNav.locator('a[href="/store/approvals"]')).toHaveCount(0)
   await expect(storeNav.locator('a[href="/store/tasks"]')).toHaveCount(0)
+  await expect(page.locator('a[href="/store/checklists"]')).toHaveCount(0)
   await expect(page.locator('a[href="/store/approvals"]')).toHaveCount(0)
+})
+
+test('store personnel cannot open checklists by direct route', async ({ page }) => {
+  let acknowledgementRequests = 0
+  let mobileTodayRequests = 0
+
+  await page.unroute('**/api/auth/session')
+  await page.unroute('**/api/checklists/acknowledgements/list')
+  await page.unroute('**/api/mobile/checklists/today')
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      json: {
+        ...authSessionFixture,
+        user: {
+          ...authSessionFixture.user,
+          roleCodes: ['STORE_PERSONNEL'],
+          actionScope: {
+            assignedStoreIds: [demoStoreId],
+          },
+          assignedStoreIds: [demoStoreId],
+        },
+      },
+    })
+  })
+  await page.route('**/api/checklists/acknowledgements/list', async (route) => {
+    acknowledgementRequests += 1
+    await route.fulfill({ json: checklistAcknowledgementsFixture })
+  })
+  await page.route('**/api/mobile/checklists/today', async (route) => {
+    mobileTodayRequests += 1
+    await route.fulfill({ json: mobileChecklistTodayFixture })
+  })
+
+  await page.goto('/store/checklists')
+
+  await expect(page.getByRole('heading', { name: /rota kullan/i })).toBeVisible()
+  await expect(page.getByText('/store/me')).toBeVisible()
+  await expect(page.locator('.store-checklists-command-page')).toHaveCount(0)
+  expect(acknowledgementRequests).toBe(0)
+  expect(mobileTodayRequests).toBe(0)
 })
 
 test('store personnel cannot open approvals by direct route', async ({ page }) => {
@@ -660,7 +702,7 @@ test('store personnel cannot open approvals by direct route', async ({ page }) =
 
   await page.goto('/store/approvals')
 
-  await expect(page.getByRole('heading', { name: /rota kullanılamaz/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /rota kullan/i })).toBeVisible()
   await expect(page.getByText('/store/me')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Talepler / Onaylar' })).toHaveCount(0)
   expect(targetDistributionRequests).toBe(0)

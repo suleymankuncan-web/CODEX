@@ -28,7 +28,7 @@
 | `/store/me` | store | core | `STORE_MANAGER`, `STORE_PERSONNEL` | direct navigation or store landing link | must return to same route after auth verification | current employee performance only | yes |
 | `/store/rankings` | store | core | `STORE_MANAGER`, `STORE_PERSONNEL`, `REGION_MANAGER`, `SUPER_ADMIN` | direct navigation or store landing link | must return to same route after auth verification | top 100 for store roles, full list for privileged roles | yes |
 | `/store/approvals` | store | core | `STORE_MANAGER`, `REGION_MANAGER`, `REPORT_VIEWER`, `SUPER_ADMIN`; write actions remain action-store scoped | direct navigation or store landing link for eligible roles only | must return to same route after auth verification | target/workforce request ledger by read/action scope | yes |
-| `/store/checklists` | store | secondary | `STORE_MANAGER`, `STORE_PERSONNEL`, `VISUAL_MERCHANDISER` | first landing for visual merchandiser-only sessions | must return to same route after auth verification | checklist tasks by store scope | yes |
+| `/store/checklists` | store | secondary | `STORE_MANAGER`, `REGION_MANAGER`, `VISUAL_MERCHANDISER`, `REPORT_VIEWER`, `SUPER_ADMIN` | first landing for visual merchandiser-only sessions | must return to same route after auth verification | checklist tasks/results by store scope; `STORE_PERSONNEL` is forbidden | yes |
 | `/store/tasks` | store | secondary | authenticated store shell session except visual merchandiser-only | direct navigation only | must return to same route after auth verification | current store tasks | no |
 | `/store/kpis` | store | secondary | authenticated store shell session except visual merchandiser-only | direct navigation only | must return to same route after auth verification | current store KPI highlights | no |
 | `/store/feed` | store | secondary | authenticated store shell session except visual merchandiser-only | direct navigation only | must return to same route after auth verification | store announcements | yes |
@@ -56,3 +56,7 @@ Current landing resolution in `admin-web/src/App.tsx`:
 - Store role detail visibility is enforced by page/API access rules, not by hiding the route alone.
 - `STORE_PERSONNEL` is intentionally excluded from `/store/approvals` until a
   scoped read-only personnel approvals product requirement exists.
+- `STORE_PERSONNEL` is intentionally excluded from `/store/checklists`; personal
+  KPI/checklist impact can appear through `/store/me` or sourced KPI views, but
+  checklist execution/result queues belong to manager, region, VM, reporting,
+  or super-admin roles.
