@@ -26,7 +26,7 @@ behavior.
 - `node --test scripts/file-size-guard.test.mjs`
 - `npm.cmd --prefix admin-web run lint`
 - `npm.cmd --prefix admin-web run build`
-- `npm.cmd --prefix admin-web run test:e2e -- store-surfaces.spec.ts -g "store home prefetches|region manager home surfaces|store personnel daily command brief"`
+- `npm.cmd --prefix admin-web run test:e2e -- store-surfaces.spec.ts -g "store home prefetches|workflow inbox fails|region manager home surfaces|store personnel daily command brief"`
 - `npm.cmd run system-flow:generate`
 - `npm.cmd run test:scripts`
 
@@ -35,6 +35,8 @@ behavior.
 - The brief intentionally does not query persisted action-plan records on store
   home. That keeps the first slice aligned with the existing workflow prefetch
   and avoids adding another home-page API dependency.
+- If the workflow inbox is unavailable, the Store Action brief value remains
+  pending instead of claiming zero follow-up work.
 - Store personnel do not receive task or checklist links from the brief.
 - The generated system-flow map was refreshed because `/store` and
   `/store/home` now have an explicit Store Home workflow-inbox dependency.

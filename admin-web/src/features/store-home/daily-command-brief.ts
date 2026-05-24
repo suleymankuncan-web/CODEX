@@ -26,10 +26,15 @@ export function buildDailyCommandBriefItems(input: {
   persona: StorePersona
   workflowItems: readonly WorkflowInboxItem[]
   workflowLoading: boolean
+  workflowUnavailable: boolean
 }): DailyCommandBriefItem[] {
   const items: DailyCommandBriefItem[] = []
   const workflowItems = input.canUseWorkflowInbox ? input.workflowItems : []
   const actionCandidates = buildReadOnlyStoreActionCandidates(workflowItems)
+  const workflowValue =
+    input.workflowLoading || input.workflowUnavailable
+      ? input.pendingValue
+      : String(actionCandidates.length)
 
   if (input.canUseWorkflowInbox) {
     items.push({
@@ -38,7 +43,7 @@ export function buildDailyCommandBriefItems(input: {
       copyKey: 'storeHome.dailyBrief.actionCopy',
       href: '/store/tasks',
       sourceLabelKey: 'storeHome.nav.tasks',
-      value: input.workflowLoading ? input.pendingValue : String(actionCandidates.length),
+      value: workflowValue,
       priority: actionCandidates.length > 0 ? 10 : 40,
     })
   }

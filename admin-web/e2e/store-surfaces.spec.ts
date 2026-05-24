@@ -554,6 +554,23 @@ test('store home prefetches the task queue for manager navigation', async ({ pag
   expect(workflowInboxRequests).toBe(1)
 })
 
+test('store home keeps the daily brief pending when workflow inbox fails', async ({ page }) => {
+  await page.unroute('**/api/workflow/inbox')
+  await page.route('**/api/workflow/inbox', async (route) => {
+    await route.fulfill({
+      status: 503,
+      json: { message: 'Workflow unavailable' },
+    })
+  })
+
+  await page.goto('/store/home')
+
+  const dailyBrief = page.getByLabel('Gunluk komuta ozeti')
+  await expect(dailyBrief).toBeVisible()
+  await expect(dailyBrief.locator('a[href="/store/tasks"]')).toHaveText('Bekliyor')
+  await expect(dailyBrief.locator('a[href="/store/tasks"]')).not.toHaveText('0')
+})
+
 test('region manager home surfaces checklist field queue summary', async ({ page }) => {
   let acknowledgementRequests = 0
   let mobileTodayRequests = 0

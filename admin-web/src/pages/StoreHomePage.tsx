@@ -295,6 +295,7 @@ export function StoreHomePage(input: {
     persona,
     workflowItems: workflowInboxQuery.data?.items ?? [],
     workflowLoading: workflowInboxQuery.isLoading,
+    workflowUnavailable: workflowInboxQuery.isError,
   })
   const summaryRows = [
     {
