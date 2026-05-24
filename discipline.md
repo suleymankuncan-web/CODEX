@@ -42,6 +42,45 @@ Varsayilan ritim:
 Kodlamaya gecmeden once is gercekten kod istiyor mu diye sorulur. Bazi isler
 docs-only, inventory, evidence veya park karari olarak daha dogrudur.
 
+## Istisare ve Kodlama Freni
+
+Kullanici bir konu, fikir, sikayet, ekran goruntusu, risk veya "sence?" sorusu
+getirdiginde varsayilan mod kod yazmak degil, birlikte dusunmektir. Bu durumda
+once problem netlestirilir, olasi nedenler ve secenekler tartilir, riskler
+soylenir ve ancak kullanici acik aksiyon verdiginde implementasyona gecilir.
+
+Asagidaki sinyaller kodlama freni sayilir:
+
+- "once dusunelim",
+- "once istisare edelim",
+- "beyin firtinasi yapalim",
+- "konusalim",
+- "sence ne olur",
+- "yorumun ne",
+- "nasil ilerleyelim",
+- sadece problem/rahatsizlik anlatimi.
+
+Bu sinyaller varken dosya editlenmez, kod yazilmaz, commit atilmaz, PR acilmaz
+ve merge yapilmaz. Gerekirse sadece read-only inceleme, repo aramasi, diff
+okuma veya evidence toplama yapilir; bunlar da kullaniciya "su an sadece
+inceliyorum" diye aciklanir.
+
+Aksiyon izni acik fiille gelir:
+
+- "yaz",
+- "yap",
+- "uygula",
+- "duzelt",
+- "kodla",
+- "implement et",
+- "commit at",
+- "PR ac",
+- "merge et".
+
+"Bak", "kontrol et", "incele" gibi ifadeler edit izni degildir. Bu ifadelerle
+once bulgu ve onerilen cozum raporlanir; kullanici "yap/uygula/duzelt" demeden
+kod degisikligine gecilmez.
+
 ## Worktree Dependency Bootstrap
 
 Yeni git worktree acildiginda `node_modules` beklenmez. `node_modules` git'e
