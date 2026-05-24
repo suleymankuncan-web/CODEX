@@ -97,6 +97,9 @@ Operating plan:
   Command Chain Intelligence, Store Performance Replay, internal change
   visibility, usage/performance correlation policy, and app-level error
   tracking boundaries.
+- `docs/plans/store-performance-replay-readonly-surface-spec-v1.md` keeps Store
+  Performance Replay ready for a future sourced read-only surface without
+  starting visible UI before the UI/content phase.
 - `docs/plans/p3-operating-triggers-v1.md` keeps low-urgency operating ideas
   parked until real triggers exist: migration policy, dependency cadence,
   browser/device support, evidence automation, freeze windows, manual
