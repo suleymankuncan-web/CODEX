@@ -99,6 +99,12 @@ Current Command Chain Reason Helper V1 evidence:
 docs/evidence/product-progress/2026-05-24-command-chain-reason-helper-v1.md
 ```
 
+Current Store Performance Replay event-source inventory:
+
+```text
+docs/plans/store-performance-replay-event-source-inventory-v1.md
+```
+
 Current P3 trigger-only operating reference:
 
 ```text
