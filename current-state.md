@@ -105,6 +105,12 @@ Current Store Performance Replay event-source inventory:
 docs/plans/store-performance-replay-event-source-inventory-v1.md
 ```
 
+Current Store Performance Replay pure mapper:
+
+```text
+admin-web/src/features/store-performance-replay/event-candidates.ts
+```
+
 Current P3 trigger-only operating reference:
 
 ```text

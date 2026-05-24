@@ -71,7 +71,7 @@ Decision:
 | Store personnel checklist exposure cleanup | closed | `STORE_PERSONNEL` should not open checklist execution/result queues directly. PR #492 blocks direct route access and preserves manager/region/VM/reporting access. | Done. Re-run route matrix/e2e if role visibility changes. |
 | Daily Command Brief on `/store/home` | first_slice_merged | High value and understandable: "what should I pay attention to today?" The first read-only slice now uses existing source links and no generated advice. | Keep it source-linked; expand only with real pilot feedback. |
 | Command Chain Intelligence | helper_ready | Useful for region/admin: show why a store needs attention and which source proves it. Daily Brief V1 supplies the first source vocabulary, and the first pure read-only reason helper exists. | Use `docs/plans/command-chain-intelligence-source-map-v1.md`; next code should wire the helper only into a minimal read-only surface if pilot feedback asks for it. |
-| Store Performance Replay | event_inventory_ready | Strong "wow" idea, and the first event-source inventory now separates READY/PARTIAL/PARKED sources before any UI work. | Use `docs/plans/store-performance-replay-event-source-inventory-v1.md`; next slice can only be a pure read-only event candidate mapper if product code is explicitly approved. |
+| Store Performance Replay | mapper_ready | Strong "wow" idea, and the first event-source inventory now separates READY/PARTIAL/PARKED sources before any UI work. A pure read-only event candidate mapper exists without UI/backend behavior changes. | Use `docs/plans/store-performance-replay-event-source-inventory-v1.md`; next slice must still avoid a visible timeline until UI/content direction is explicit. |
 | Internal Change Visibility | ready_docs_only | Operators need to know what changed, but a live changelog feature is not necessary yet. | Maintain release/operator notes in docs/evidence; later expose read-only product copy if pilot asks. |
 | Site usage vs performance correlation | parked_data_policy | The question is valid, but every login/session event can become noisy or sensitive. Existing auth/audit evidence is enough for now. | Define privacy/data policy and aggregate engagement metric before adding new tracking. |
 | App-level error tracking | blocked_external | Useful for broad production, but P0 trust ops already blocks provider SDK work until provider, destination, redaction, owner, and smoke proof are accepted. | Follow `docs/plans/p0-trust-operations-execution-v1.md`. |
@@ -185,6 +185,10 @@ Current source inventory:
 - `docs/plans/store-performance-replay-event-source-inventory-v1.md` classifies
   event families as READY, PARTIAL, or PARKED and records the source id,
   timestamp, scope, route, and guardrail required before any timeline UI.
+- `admin-web/src/features/store-performance-replay/event-candidates.ts` provides
+  the first pure read-only mapper/test map for already-fetched rows. It creates
+  sourced event candidates only; it does not fetch data, add routes, add
+  persistence, or infer impact.
 
 Candidate event sources:
 
@@ -198,9 +202,9 @@ Candidate event sources:
 
 First safe slice:
 
-- pure read-only event candidate mapper/test map, only after product code is
-  explicitly approved. Do not create a timeline UI until the mapped event list
-  has stable IDs, timestamps, scope, source routes, and no-causality wording.
+- Done as a pure mapper/test slice. Do not create a timeline UI until the mapped
+  event list has stable IDs, timestamps, scope, source routes, and
+  no-causality wording accepted by the UI/content phase.
 
 Stop before:
 
@@ -259,9 +263,9 @@ After the user's UI/content redesign direction starts, choose one of these:
 
 1. Minimal Command Chain read-only surface if admin/region "why this store
    needs attention" visibility is the next pilot question.
-2. Store Performance Replay pure read-only event candidate mapper if the user
-   wants a stronger executive story first and accepts no UI until the mapper is
-   verified.
+2. Store Performance Replay read-only surface spec if the user wants a stronger
+   executive story first and accepts no UI implementation before the visual
+   redesign/content direction.
 3. Daily Command Brief expansion only if real pilot feedback asks for more
    source families on `/store/home`.
 
