@@ -19,36 +19,21 @@
 
 .route-loading-state {
   display: grid;
-  align-content: center;
-  justify-items: center;
-  gap: 0.55rem;
-  min-height: clamp(14rem, 48vh, 28rem);
-  padding: clamp(2rem, 10vh, 5rem) 1rem;
-  color: var(--surface-ink);
+  min-height: 100dvh;
+  place-items: center;
+  padding: 2rem;
+  background: #fff;
+  color: #171421;
   text-align: center;
 }
 
 .route-loading-orbit {
   width: 2rem;
   height: 2rem;
-  border: 2px solid rgba(15, 118, 110, 0.18);
-  border-top-color: var(--accent);
+  border: 2px solid rgba(23, 20, 33, 0.14);
+  border-top-color: rgba(23, 20, 33, 0.58);
   border-radius: 999px;
   animation: route-transition-spin 900ms linear infinite;
-}
-
-.route-loading-title {
-  color: var(--surface-ink);
-  font-size: 0.92rem;
-  font-weight: 800;
-  line-height: 1.25;
-}
-
-.route-loading-copy {
-  max-width: 20rem;
-  color: var(--surface-muted);
-  font-size: 0.78rem;
-  line-height: 1.45;
 }
 
 .auth-flow-shell-login .route-loading-state {
@@ -96,35 +81,33 @@
   place-items: center;
   border: 0;
   border-radius: 0;
-  background: rgba(248, 250, 252, 0.42);
+  background: rgba(255, 255, 255, 0.72);
   padding: 1rem;
   box-shadow: none;
-  backdrop-filter: blur(3px);
+  backdrop-filter: blur(2px);
 }
 
 .route-transition-compact {
   display: inline-flex;
   align-items: center;
-  gap: 0.62rem;
-  max-width: min(16rem, 100%);
-  border: 1px solid rgba(36, 28, 50, 0.1);
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.82);
-  padding: 0.58rem 0.78rem;
-  color: var(--surface-ink);
-  font-size: 0.8rem;
-  font-weight: 800;
-  line-height: 1.2;
-  box-shadow: 0 10px 30px rgba(24, 33, 39, 0.08);
-  backdrop-filter: blur(12px);
+  background: transparent;
+  padding: 0;
+  color: #171421;
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
 .route-transition-orbit {
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1.5rem;
+  height: 1.5rem;
   flex: 0 0 auto;
-  border: 2px solid rgba(15, 118, 110, 0.18);
-  border-top-color: var(--accent);
+  border: 2px solid rgba(23, 20, 33, 0.14);
+  border-top-color: rgba(23, 20, 33, 0.58);
   border-radius: 999px;
   animation: route-transition-spin 900ms linear infinite;
 }
