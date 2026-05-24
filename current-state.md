@@ -59,10 +59,11 @@ proof, the Pilot Feedback backend and frontend loop, the Data Quality Center,
 Operations Telemetry V2, and the completed first-eight project-growth line
 through Production Ops Closure Decision Packet V1.
 
-Current maintenance branch:
+Current maintenance baseline:
 
-- Active branch: none. `main` is clean and aligned with `origin/main` after the
-  Store Personnel checklist route guard.
+- `main` should be aligned with `origin/main` before new work. The recent
+  baseline includes the Store Personnel checklist route guard plus the P2/P3
+  operating docs line.
 - Next work should start from `main`, choose a new branch, and use
   `docs/plans/project-control-board-v1.md`, `docs/plans/decision-registry-v1.md`,
   `docs/plans/project-growth-execution-roadmap-v1.md`, and
@@ -78,6 +79,12 @@ Current P2 product-intelligence planning reference:
 
 ```text
 docs/plans/p2-product-intelligence-execution-v1.md
+```
+
+Current Daily Command Brief V1 product evidence:
+
+```text
+docs/evidence/product-progress/2026-05-24-daily-command-brief-v1.md
 ```
 
 Current P3 trigger-only operating reference:

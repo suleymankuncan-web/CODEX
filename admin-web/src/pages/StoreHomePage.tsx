@@ -16,6 +16,11 @@ import {
   resolveStorePersona,
   type StorePersona,
 } from '../app/store-navigation'
+import {
+  buildDailyCommandBriefItems,
+  type DailyCommandBriefItem,
+} from '../features/store-home/daily-command-brief'
+import { getWorkflowInbox } from '../features/workflow/api'
 import { transientQueryRetryOptions } from '../lib/query-retry'
 
 type HomeMetric = {
@@ -236,6 +241,11 @@ export function StoreHomePage(input: {
     'VISUAL_MERCHANDISER',
     'SUPER_ADMIN',
   ])
+  const canUseWorkflowInbox = hasAnyRole(input.authSummary, [
+    'STORE_MANAGER',
+    'SUPER_ADMIN',
+    'REPORT_VIEWER',
+  ])
   const canReadChecklistInbox = canReadChecklistResults(input.authSummary)
   const checklistAcknowledgementsQuery = useQuery({
     queryKey: ['checklist-acknowledgements'],
@@ -247,6 +257,12 @@ export function StoreHomePage(input: {
     queryKey: ['mobile-checklists-today'],
     queryFn: getMobileChecklistToday,
     enabled: canManageChecklistVisits && persona !== 'storeManager' && persona !== 'personnel',
+    ...transientQueryRetryOptions,
+  })
+  const workflowInboxQuery = useQuery({
+    queryKey: ['workflow-inbox'],
+    queryFn: getWorkflowInbox,
+    enabled: canUseWorkflowInbox,
     ...transientQueryRetryOptions,
   })
   const config = homeConfigByPersona[persona]
@@ -271,6 +287,14 @@ export function StoreHomePage(input: {
     persona,
     pendingValue,
     storeScopeValue,
+  })
+  const dailyBriefItems = buildDailyCommandBriefItems({
+    checklistSummary,
+    canUseWorkflowInbox,
+    pendingValue,
+    persona,
+    workflowItems: workflowInboxQuery.data?.items ?? [],
+    workflowLoading: workflowInboxQuery.isLoading,
   })
   const summaryRows = [
     {
@@ -334,6 +358,8 @@ export function StoreHomePage(input: {
             {checklistSummary ? <ChecklistHomeCard summary={checklistSummary} /> : null}
           </section>
 
+          <DailyCommandBriefPanel items={dailyBriefItems} />
+
           <section className="store-command-panel">
             <div className="store-command-panel-head">
               <h3>{t(config.timelineTitleKey)}</h3>
@@ -387,6 +413,37 @@ export function StoreHomePage(input: {
           </section>
         </aside>
       </section>
+    </section>
+  )
+}
+
+function DailyCommandBriefPanel(input: { items: DailyCommandBriefItem[] }) {
+  const { t } = useLocalization()
+
+  return (
+    <section className="store-command-panel" aria-label={t('storeHome.dailyBrief.title')}>
+      <div className="store-command-panel-head">
+        <h3>{t('storeHome.dailyBrief.title')}</h3>
+        <span className="store-command-status-dot">{t('storeHome.dailyBrief.sourceLinked')}</span>
+      </div>
+      <p className="store-command-panel-note">{t('storeHome.dailyBrief.copy')}</p>
+      <div className="store-command-mini-list">
+        {input.items.map((item) => (
+          <div className="store-command-mini-row" key={item.id}>
+            <span>
+              <strong>{t(item.titleKey)}</strong>
+              <small className="store-command-panel-note">{t(item.copyKey)}</small>
+            </span>
+            <Link
+              aria-label={`${t('storeHome.dailyBrief.openSource')}: ${t(item.sourceLabelKey)}`}
+              className="store-command-mini-value"
+              to={item.href}
+            >
+              {item.value}
+            </Link>
+          </div>
+        ))}
+      </div>
     </section>
   )
 }
