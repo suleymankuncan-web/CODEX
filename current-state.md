@@ -332,6 +332,12 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #465 `docs: record controlled pilot rehearsal evidence`
 - PR #479 `feat: add pilot feedback backend foundation`
 
+Current operational observability review:
+
+```text
+docs/plans/operational-observability-review.md
+```
+
 PR #242 was frontend-only and did not require Render deploy. After merge, a
 deployed readiness smoke was run against staging:
 
