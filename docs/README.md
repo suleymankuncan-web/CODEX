@@ -42,6 +42,7 @@ Use this directory like an operating library, not a diary.
 | Run the controlled pilot loop | `docs/plans/controlled-pilot-execution-roadmap-v1.md` | Real session, feedback, blocker, and fix workflow. |
 | Add a future feature safely | `docs/plans/feature-integration-spine-v1.md` and `docs/plans/new-module-template.md` | Source-of-truth, auth, API, DB, workflow, operations, and rollback gates. |
 | Inspect the system map | `docs/flows/README.md` | Generated frontend route, API, controller, and OpenAPI flow map. |
+| Continue UI pilot prototypes | `docs/prototypes/README.md` | Prototype shelf, Plum Glacier token set, login pilot references, and visual boundary rules. |
 
 ## Shelves
 
@@ -110,6 +111,16 @@ Use for project shape, growth rules, API contracts, and system boundaries.
 - `docs/flows/README.md`
 - `docs/flows/store-ops-system-flow.html`
 - `docs/flows/store-ops-system-flow.json`
+
+### Prototype Shelf
+
+Use for visual exploration artifacts and UI pilot references that are not
+production source by themselves.
+
+- `docs/prototypes/README.md`
+- `docs/prototypes/plum-glacier-token-set-v1.md`
+- `docs/prototypes/login-pilot-v3.html`
+- `docs/prototypes/assets/hr-axis-06-assets.md`
 
 ### Domain Shelf
 
