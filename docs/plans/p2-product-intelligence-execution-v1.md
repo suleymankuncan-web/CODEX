@@ -73,7 +73,7 @@ Decision:
 | Command Chain Intelligence | helper_ready | Useful for region/admin: show why a store needs attention and which source proves it. Daily Brief V1 supplies the first source vocabulary, and the first pure read-only reason helper exists. | Use `docs/plans/command-chain-intelligence-source-map-v1.md`; next code should wire the helper only into a minimal read-only surface if pilot feedback asks for it. |
 | Store Performance Replay | surface_spec_ready | Strong "wow" idea, and the first event-source inventory plus pure mapper now separate factual events from unsafe claims before any UI work. The read-only surface spec defines the future UI contract without starting UI implementation. | Use `docs/plans/store-performance-replay-event-source-inventory-v1.md` and `docs/plans/store-performance-replay-readonly-surface-spec-v1.md`; next code before UI redesign should be pure view-model only. |
 | Internal Change Visibility | operating_model_ready | Operators need to know what changed, but a live changelog feature is not necessary yet. The operating model now defines curated operator notes and seed evidence without starting UI. | Use `docs/plans/internal-change-visibility-operating-model-v1.md` and `docs/evidence/product-progress/2026-05-24-internal-change-visibility-v1.md`; later expose read-only product copy only if pilot asks. |
-| Site usage vs performance correlation | parked_data_policy | The question is valid, but every login/session event can become noisy or sensitive. Existing auth/audit evidence is enough for now. | Define privacy/data policy and aggregate engagement metric before adding new tracking. |
+| Site usage vs performance correlation | data_policy_ready | The question is valid, but raw login counts are noisy and sensitive. The policy now separates visited/read/acted/completed signals and blocks surveillance, causality, and scoring misuse before tracking. | Use `docs/plans/usage-performance-correlation-policy-v1.md`; no tracking or UI until an owner/pilot question selects an aggregate read-only slice. |
 | App-level error tracking | blocked_external | Useful for broad production, but P0 trust ops already blocks provider SDK work until provider, destination, redaction, owner, and smoke proof are accepted. | Follow `docs/plans/p0-trust-operations-execution-v1.md`. |
 
 ## Daily Command Brief V1
@@ -261,6 +261,13 @@ Safe future approach:
    brief" instead of one login count.
 3. Compare only after data policy, retention, consent/notice, and role-level
    visibility are decided.
+
+Current policy:
+
+- `docs/plans/usage-performance-correlation-policy-v1.md` defines the
+  acceptable engagement/outcome vocabulary, privacy defaults, retention
+  posture, analysis rules, stop rules, and aggregate-first implementation
+  ladder.
 
 Stop before:
 
