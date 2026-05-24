@@ -147,7 +147,7 @@ export type BuildStorePerformanceReplayEventsInput = {
 export function buildStorePerformanceReplayEvents(
   input: BuildStorePerformanceReplayEventsInput,
 ): StorePerformanceReplayEventCandidate[] {
-  const limit = input.limit ?? 50
+  const limit = normalizeReplayLimit(input.limit)
 
   return [
     ...(input.importBatches ?? []).flatMap(buildImportBatchEvents),
@@ -167,13 +167,13 @@ export function buildImportBatchEvents(
   batch: ReplayImportBatchSource,
 ): StorePerformanceReplayEventCandidate[] {
   const sourceId = safePublicId(batch.batchId)
-  const occurredAt =
+  const occurredAt = firstValidTimestamp(
     batch.finishedAt ??
-    batch.lastRetriedAt ??
-    batch.startedAt ??
-    batch.sourceWindowEndedAt ??
-    batch.sourceWindowStartedAt ??
-    null
+      batch.lastRetriedAt ??
+      batch.startedAt ??
+      batch.sourceWindowEndedAt ??
+      batch.sourceWindowStartedAt,
+  )
 
   if (!sourceId || !occurredAt) {
     return []
@@ -206,7 +206,7 @@ export function buildSnapshotRunEvents(
   run: ReplaySnapshotRunSource,
 ): StorePerformanceReplayEventCandidate[] {
   const sourceId = safePublicId(run.snapshotRunId)
-  const occurredAt = run.finishedAt ?? run.startedAt ?? run.generatedAt
+  const occurredAt = firstValidTimestamp(run.finishedAt, run.startedAt, run.generatedAt)
 
   if (!sourceId || !occurredAt) {
     return []
@@ -238,14 +238,16 @@ export function buildKpiRankingEvents(
   period: ReplayKpiRankingSource,
 ): StorePerformanceReplayEventCandidate[] {
   const sourceId = safePublicId(period.snapshotRunId)
-  if (!sourceId || !period.generatedAt) {
+  const occurredAt = firstValidTimestamp(period.generatedAt)
+
+  if (!sourceId || !occurredAt) {
     return []
   }
 
   return [
     replayEvent({
-      id: replayId('kpi-ranking', sourceId, 'generated', period.generatedAt),
-      occurredAt: period.generatedAt,
+      id: replayId('kpi-ranking', sourceId, 'generated', occurredAt),
+      occurredAt,
       readiness: 'partial',
       redactionNotes: [
         'KPI and ranking facts are derived from an official snapshot run; do not invent a separate ranking event.',
@@ -270,7 +272,7 @@ export function buildTargetRequestEvents(
 ): StorePerformanceReplayEventCandidate[] {
   const sourceId = safePublicId(request.requestId)
   const isApproved = request.status === 'approved' && Boolean(request.approvedAt)
-  const occurredAt = isApproved ? request.approvedAt : request.createdAt
+  const occurredAt = firstValidTimestamp(isApproved ? request.approvedAt : request.createdAt)
 
   if (!sourceId || !occurredAt) {
     return []
@@ -309,7 +311,11 @@ export function buildChecklistEvents(
     : checklist.completedAt
       ? 'completed'
       : 'created'
-  const occurredAt = checklist.acknowledgedAt ?? checklist.completedAt ?? checklist.createdAt ?? null
+  const occurredAt = firstValidTimestamp(
+    checklist.acknowledgedAt,
+    checklist.completedAt,
+    checklist.createdAt,
+  )
 
   if (!sourceId || !occurredAt) {
     return []
@@ -340,7 +346,12 @@ export function buildStoreActionEvents(
   plan: ReplayStoreActionSource,
 ): StorePerformanceReplayEventCandidate[] {
   const sourceId = safePublicId(plan.actionPlanId)
-  const occurredAt = plan.closedAt ?? plan.cancelledAt ?? plan.updatedAt ?? plan.createdAt
+  const occurredAt = firstValidTimestamp(
+    plan.closedAt,
+    plan.cancelledAt,
+    plan.updatedAt,
+    plan.createdAt,
+  )
 
   if (!sourceId || !occurredAt) {
     return []
@@ -374,7 +385,7 @@ export function buildPilotFeedbackEvents(
 ): StorePerformanceReplayEventCandidate[] {
   const sourceId = safePublicId(feedback.feedbackId)
   const isClassified = Boolean(feedback.classification && feedback.classifiedAt)
-  const occurredAt = isClassified ? feedback.classifiedAt : feedback.createdAt
+  const occurredAt = firstValidTimestamp(isClassified ? feedback.classifiedAt : feedback.createdAt)
 
   if (!sourceId || !occurredAt) {
     return []
@@ -406,7 +417,7 @@ export function buildWorkflowEvents(
   }
 
   const sourceId = safePublicId(item.sourceId)
-  const occurredAt = item.needsAttentionAt ?? item.createdAt ?? null
+  const occurredAt = firstValidTimestamp(item.needsAttentionAt, item.createdAt)
 
   if (!sourceId || !occurredAt) {
     return []
@@ -458,6 +469,24 @@ function compareReplayEvents(
 
 function readinessRank(readiness: StorePerformanceReplayReadiness) {
   return readiness === 'ready' ? 0 : 1
+}
+
+function normalizeReplayLimit(limit: number | undefined) {
+  if (limit === undefined || !Number.isFinite(limit)) {
+    return 50
+  }
+
+  return Math.max(0, Math.trunc(limit))
+}
+
+function firstValidTimestamp(...values: Array<string | null | undefined>) {
+  for (const value of values) {
+    if (value && Number.isFinite(Date.parse(value))) {
+      return value
+    }
+  }
+
+  return null
 }
 
 function replayId(

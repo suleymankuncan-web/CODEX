@@ -84,7 +84,7 @@ test('Store Performance Replay mapper orders factual candidates by occurrence ti
   assert.equal(events[3].readiness, 'partial')
 })
 
-test('Store Performance Replay mapper skips missing timestamps and secret-like ids', () => {
+test('Store Performance Replay mapper skips missing or invalid timestamps and secret-like ids', () => {
   const events = replay.buildStorePerformanceReplayEvents({
     importBatches: [
       {
@@ -92,6 +92,12 @@ test('Store Performance Replay mapper skips missing timestamps and secret-like i
         sourceCode: 'powerbi',
         status: 'completed',
         startedAt: '2026-05-24T08:00:00.000Z',
+      },
+      {
+        batchId: 'batch-with-invalid-time',
+        sourceCode: 'powerbi',
+        status: 'completed',
+        startedAt: 'not-a-date',
       },
       {
         batchId: 'batch-without-time',
@@ -112,6 +118,37 @@ test('Store Performance Replay mapper skips missing timestamps and secret-like i
   assert.equal(events[0].sourceId, 'snapshot-1')
   assert.equal(events[0].sourceRoute, '/admin/snapshots/snapshot-1')
   assert.doesNotMatch(JSON.stringify(events), /token\./u)
+  assert.doesNotMatch(JSON.stringify(events), /batch-with-invalid-time/u)
+})
+
+test('Store Performance Replay mapper clamps bad limits', () => {
+  const source = {
+    generatedAt: '2026-05-24T09:00:00.000Z',
+    runStatus: 'completed',
+    snapshotRunId: 'snapshot-1',
+  }
+
+  assert.deepEqual(
+    replay.buildStorePerformanceReplayEvents({
+      limit: -1,
+      snapshotRuns: [source],
+    }),
+    [],
+  )
+  assert.equal(
+    replay.buildStorePerformanceReplayEvents({
+      limit: 1.9,
+      snapshotRuns: [
+        source,
+        {
+          generatedAt: '2026-05-24T10:00:00.000Z',
+          runStatus: 'completed',
+          snapshotRunId: 'snapshot-2',
+        },
+      ],
+    }).length,
+    1,
+  )
 })
 
 test('Store Performance Replay mapper keeps partial sources explicit', () => {
