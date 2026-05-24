@@ -19,7 +19,7 @@
   gap: 18px;
   border-radius: 24px;
   background:
-    radial-gradient(circle at 82% 12%, rgba(122, 74, 232, 0.16), transparent 34%),
+    radial-gradient(circle at 82% 12%, rgba(124, 58, 237, 0.16), transparent 34%),
     linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(247, 243, 251, 0.78));
   padding: 20px;
 }
@@ -88,7 +88,7 @@
   align-content: space-between;
   border-radius: 22px;
   background:
-    linear-gradient(135deg, rgba(122, 74, 232, 0.08), rgba(19, 167, 179, 0.05)),
+    linear-gradient(135deg, rgba(124, 58, 237, 0.08), rgba(19, 167, 179, 0.05)),
     rgba(255, 255, 255, 0.82);
   padding: 16px;
 }
@@ -99,7 +99,7 @@
   height: 34px;
   place-items: center;
   border-radius: 14px;
-  background: rgba(122, 74, 232, 0.1);
+  background: rgba(124, 58, 237, 0.1);
   color: var(--store-command-plum-deep);
 }
 
@@ -223,8 +223,8 @@
 .store-approvals-ledger-card input:focus,
 .store-approvals-ledger-card select:focus,
 .store-approvals-ledger-card textarea:focus {
-  border-color: rgba(122, 74, 232, 0.5);
-  box-shadow: 0 0 0 4px rgba(122, 74, 232, 0.12);
+  border-color: rgba(124, 58, 237, 0.5);
+  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.12);
   outline: none;
 }
 
@@ -350,7 +350,7 @@
 }
 
 .store-approvals-ledger-table-row:hover {
-  background: rgba(122, 74, 232, 0.08);
+  background: rgba(124, 58, 237, 0.08);
 }
 
 .store-approvals-ledger-table-row strong {
@@ -374,7 +374,7 @@
   width: fit-content;
   max-width: 100%;
   border-radius: 999px;
-  background: rgba(122, 74, 232, 0.1);
+  background: rgba(124, 58, 237, 0.1);
   color: var(--store-command-plum-deep);
   padding: 5px 8px;
   font-size: 10px;
@@ -383,17 +383,17 @@
 }
 
 .store-approvals-ledger-type-warning {
-  background: rgba(222, 157, 38, 0.12);
+  background: rgba(245, 158, 11, 0.12);
   color: #9a650d;
 }
 
 .store-approvals-ledger-type-danger {
-  background: rgba(196, 79, 104, 0.1);
+  background: rgba(225, 29, 72, 0.1);
   color: #a3334d;
 }
 
 .store-approvals-ledger-type-calm {
-  background: rgba(40, 185, 133, 0.12);
+  background: rgba(16, 185, 129, 0.12);
   color: #087451;
 }
 
@@ -500,7 +500,7 @@
 
 .store-approvals-request-action {
   min-height: 34px;
-  border: 1px solid rgba(122, 74, 232, 0.16);
+  border: 1px solid rgba(124, 58, 237, 0.16);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.9);
   color: var(--store-command-plum-deep);
@@ -561,7 +561,7 @@
 
 .store-approvals-action-tab {
   min-height: 32px;
-  border: 1px solid rgba(122, 74, 232, 0.16);
+  border: 1px solid rgba(124, 58, 237, 0.16);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.84);
   color: var(--store-command-muted);
@@ -593,7 +593,7 @@
 }
 
 .store-approvals-action-panel > .empty-card {
-  border: 1px dashed rgba(122, 74, 232, 0.2);
+  border: 1px dashed rgba(124, 58, 237, 0.2);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.68);
   padding: 14px;
@@ -603,7 +603,7 @@
   display: grid;
   max-width: 940px;
   gap: 10px;
-  border: 1px solid rgba(122, 74, 232, 0.16);
+  border: 1px solid rgba(124, 58, 237, 0.16);
   border-radius: 18px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(249, 251, 255, 0.86)),
@@ -668,7 +668,7 @@
   display: grid;
   min-width: 0;
   gap: 7px;
-  border: 1px solid rgba(122, 74, 232, 0.12);
+  border: 1px solid rgba(124, 58, 237, 0.12);
   border-radius: 13px;
   background: rgba(255, 255, 255, 0.74);
   padding: 9px;
@@ -690,7 +690,7 @@
 .store-request-allocation-share {
   display: grid;
   gap: 2px;
-  border: 1px solid rgba(122, 74, 232, 0.12);
+  border: 1px solid rgba(124, 58, 237, 0.12);
   border-radius: 11px;
   background: rgba(255, 255, 255, 0.78);
   padding: 7px 9px;
@@ -744,7 +744,7 @@
 
 .store-request-subsection {
   background:
-    linear-gradient(135deg, rgba(122, 74, 232, 0.06), rgba(19, 167, 179, 0.05)),
+    linear-gradient(135deg, rgba(124, 58, 237, 0.06), rgba(19, 167, 179, 0.05)),
     rgba(255, 255, 255, 0.72);
 }
 
@@ -758,7 +758,7 @@
 .store-request-sheet select,
 .store-request-sheet textarea {
   width: 100%;
-  border: 1px solid rgba(122, 74, 232, 0.16);
+  border: 1px solid rgba(124, 58, 237, 0.16);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.92);
   color: var(--store-command-ink);
@@ -775,8 +775,8 @@
 .store-request-sheet input:focus,
 .store-request-sheet select:focus,
 .store-request-sheet textarea:focus {
-  border-color: rgba(122, 74, 232, 0.52);
-  box-shadow: 0 0 0 4px rgba(122, 74, 232, 0.12);
+  border-color: rgba(124, 58, 237, 0.52);
+  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.12);
   outline: none;
 }
 
@@ -802,7 +802,7 @@
 .store-request-feedback-success {
   border-color: rgba(13, 148, 136, 0.24);
   background: rgba(236, 253, 245, 0.9);
-  color: #0f766e;
+  color: var(--calm);
 }
 
 .store-request-feedback-error {
@@ -823,7 +823,7 @@
 
 .store-request-button {
   min-height: 36px;
-  border: 1px solid rgba(122, 74, 232, 0.16);
+  border: 1px solid rgba(124, 58, 237, 0.16);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.9);
   color: var(--store-command-ink);
@@ -863,7 +863,7 @@
   grid-template-columns: minmax(160px, 1fr) 120px 88px minmax(120px, 0.8fr);
   gap: 8px;
   align-items: center;
-  border: 1px solid rgba(122, 74, 232, 0.12);
+  border: 1px solid rgba(124, 58, 237, 0.12);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.74);
   padding: 8px 10px;

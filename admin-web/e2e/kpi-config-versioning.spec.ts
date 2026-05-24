@@ -291,7 +291,7 @@ test('reports detail table controls stack below copy on mobile', async ({ page }
 
   const tablePanel = page.locator('.reports-detail-table-panel')
   await expect(tablePanel).toBeVisible()
-  await expect(tablePanel.locator('.panel-copy')).toHaveCSS('color', 'rgb(90, 101, 95)')
+  await expect(tablePanel.locator('.panel-copy')).toHaveCSS('color', 'rgb(108, 100, 120)')
 
   const copyBox = await tablePanel.locator('.panel-copy').boundingBox()
   const toolbarBox = await tablePanel.locator('.toolbar-cluster').boundingBox()

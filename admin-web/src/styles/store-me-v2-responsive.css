@@ -208,6 +208,6 @@
 
   .store-me-v2-mobile-dock a[aria-current='page'] {
     color: #ffffff;
-    background: linear-gradient(135deg, rgba(124, 58, 237, 0.92), rgba(37, 99, 235, 0.9));
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.92), rgba(55, 101, 234, 0.9));
   }
 }

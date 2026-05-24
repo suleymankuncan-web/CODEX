@@ -105,14 +105,14 @@
 .audit-link-row:hover,
 .audit-link-row:focus-visible {
   transform: translateY(-2px);
-  border-color: rgba(15, 118, 110, 0.3);
+  border-color: rgba(124, 58, 237, 0.3);
   background: rgba(255, 255, 255, 0.88);
   outline: none;
 }
 
 .shell-context-panel {
   background:
-    linear-gradient(140deg, rgba(255, 250, 241, 0.96), rgba(238, 244, 255, 0.78)),
+    linear-gradient(140deg, rgba(255, 255, 255, 0.96), rgba(237, 247, 246, 0.78)),
     var(--surface);
 }
 
@@ -125,8 +125,8 @@
 }
 
 .shell-notice-warning {
-  border-color: rgba(185, 95, 24, 0.28);
-  background: rgba(255, 244, 235, 0.92);
+  border-color: rgba(245, 158, 11, 0.28);
+  background: var(--warning-soft);
   color: var(--warning);
 }
 

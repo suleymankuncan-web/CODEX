@@ -25,7 +25,7 @@
   border-radius: 50%;
   width: 2.15rem;
   height: 2.15rem;
-  background: rgba(24, 33, 39, 0.07);
+  background: var(--neutral-soft);
 }
 
 .detail-bottom-grid {

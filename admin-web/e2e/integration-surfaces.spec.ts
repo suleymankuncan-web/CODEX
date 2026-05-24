@@ -79,7 +79,7 @@ test('admin import batch detail explains KPI row lineage evidence', async ({ pag
 
   const decisionPanel = page.getByLabel('Aktarım karar kanıtı')
   await expect(decisionPanel.getByRole('heading', { name: 'Operatör karar kanıtı' })).toBeVisible()
-  await expect(decisionPanel.locator('.panel-copy').first()).toHaveCSS('color', 'rgb(90, 101, 95)')
+  await expect(decisionPanel.locator('.panel-copy').first()).toHaveCSS('color', 'rgb(108, 100, 120)')
   await expect(decisionPanel.getByText('Go / Conditional Go / No-Go')).toBeVisible()
   await expect(decisionPanel.getByText('Conditional Go', { exact: true })).toBeVisible()
   await expect(

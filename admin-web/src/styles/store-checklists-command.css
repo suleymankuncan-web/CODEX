@@ -1,10 +1,10 @@
 .store-checklists-command-page {
-  --checklist-plum: #734ce8;
+  --checklist-plum: #7c3aed;
   --checklist-blue: #3765ea;
-  --checklist-cyan: #10a9b7;
-  --checklist-mint: #28b985;
-  --checklist-amber: #de9d26;
-  --checklist-danger: #c44f68;
+  --checklist-cyan: #13a7b3;
+  --checklist-mint: #10b981;
+  --checklist-amber: #f59e0b;
+  --checklist-danger: #e11d48;
   --checklist-ink: #171421;
   --checklist-muted: #6d667a;
   --checklist-line: rgba(36, 28, 50, 0.1);
@@ -41,7 +41,7 @@
   width: 23rem;
   height: 23rem;
   border-radius: 999px;
-  background: radial-gradient(circle, rgba(16, 169, 183, 0.16), transparent 64%);
+  background: radial-gradient(circle, rgba(19, 167, 179, 0.16), transparent 64%);
   content: '';
   pointer-events: none;
 }
@@ -184,17 +184,17 @@
 }
 
 .store-checklists-tab[aria-selected="true"] {
-  border-color: rgba(115, 76, 232, 0.16);
+  border-color: rgba(124, 58, 237, 0.16);
   background:
-    radial-gradient(circle at 100% 0, rgba(16, 169, 183, 0.12), transparent 52%),
-    linear-gradient(135deg, rgba(115, 76, 232, 0.12), rgba(255, 255, 255, 0.78));
+    radial-gradient(circle at 100% 0, rgba(19, 167, 179, 0.12), transparent 52%),
+    linear-gradient(135deg, rgba(124, 58, 237, 0.12), rgba(255, 255, 255, 0.78));
   color: var(--surface-ink, var(--checklist-ink));
   box-shadow: 0 12px 28px rgba(55, 101, 234, 0.1);
 }
 
 .store-checklists-tab:hover,
 .store-checklists-tab:focus-visible {
-  border-color: rgba(115, 76, 232, 0.18);
+  border-color: rgba(124, 58, 237, 0.18);
   transform: translateY(-1px);
 }
 
@@ -214,7 +214,7 @@
   border: 1px solid var(--checklist-line);
   border-radius: 1rem;
   background:
-    radial-gradient(circle at 0 0, rgba(122, 74, 232, 0.07), transparent 60%),
+    radial-gradient(circle at 0 0, rgba(124, 58, 237, 0.07), transparent 60%),
     rgba(255, 255, 255, 0.7);
   padding: 0.42rem 0.6rem;
 }
@@ -250,8 +250,8 @@
 .store-checklist-modal-inputs input:focus,
 .store-checklist-modal-inputs textarea:focus,
 .store-checklist-result-ack textarea:focus {
-  border-color: rgba(115, 76, 232, 0.32);
-  box-shadow: 0 0 0 4px rgba(115, 76, 232, 0.1);
+  border-color: rgba(124, 58, 237, 0.32);
+  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.1);
   background: #fff;
 }
 
@@ -327,7 +327,7 @@
 }
 
 .store-checklists-sort-button small {
-  color: rgba(115, 76, 232, 0.8);
+  color: rgba(124, 58, 237, 0.8);
   font-size: 0.76rem;
 }
 
@@ -350,7 +350,7 @@
 
 .store-checklists-visit-row:hover,
 .store-checklists-history-row:hover {
-  border-color: rgba(115, 76, 232, 0.2);
+  border-color: rgba(124, 58, 237, 0.2);
   box-shadow: 0 16px 34px rgba(32, 24, 48, 0.075);
   transform: translateY(-1px);
 }
@@ -399,7 +399,7 @@
 
 .store-checklist-result-digest span {
   border-radius: 999px;
-  background: rgba(115, 76, 232, 0.09);
+  background: rgba(124, 58, 237, 0.09);
   color: var(--checklist-plum);
   padding: 0.12rem 0.42rem;
   font-size: 0.62rem;
@@ -423,26 +423,26 @@
 }
 
 .store-checklists-tone-calm {
-  border-color: rgba(40, 185, 133, 0.2);
-  background: rgba(40, 185, 133, 0.12);
+  border-color: rgba(16, 185, 129, 0.2);
+  background: rgba(16, 185, 129, 0.12);
   color: #087a56;
 }
 
 .store-checklists-tone-warning {
-  border-color: rgba(222, 157, 38, 0.26);
-  background: rgba(222, 157, 38, 0.13);
+  border-color: rgba(245, 158, 11, 0.26);
+  background: rgba(245, 158, 11, 0.13);
   color: #a16207;
 }
 
 .store-checklists-tone-accent {
-  border-color: rgba(16, 169, 183, 0.24);
-  background: rgba(16, 169, 183, 0.12);
-  color: #0f7f8a;
+  border-color: rgba(19, 167, 179, 0.24);
+  background: rgba(19, 167, 179, 0.12);
+  color: #13a7b3;
 }
 
 .store-checklists-tone-danger {
-  border-color: rgba(196, 79, 104, 0.22);
-  background: rgba(196, 79, 104, 0.1);
+  border-color: rgba(225, 29, 72, 0.22);
+  background: rgba(225, 29, 72, 0.1);
   color: #a3344e;
 }
 
@@ -493,10 +493,10 @@
   display: grid;
   min-height: 3rem;
   gap: 0.25rem;
-  border: 1px solid rgba(122, 74, 232, 0.11);
+  border: 1px solid rgba(124, 58, 237, 0.11);
   border-radius: 0.9rem;
   background:
-    linear-gradient(135deg, rgba(122, 74, 232, 0.08), rgba(19, 167, 179, 0.06)),
+    linear-gradient(135deg, rgba(124, 58, 237, 0.08), rgba(19, 167, 179, 0.06)),
     rgba(255, 255, 255, 0.64);
   padding: 0.43rem;
 }
@@ -537,11 +537,11 @@
   position: relative;
   overflow: hidden;
   height: 0.5rem;
-  border: 1px solid rgba(122, 74, 232, 0.15);
+  border: 1px solid rgba(124, 58, 237, 0.15);
   border-radius: 999px;
   background:
     repeating-linear-gradient(90deg, rgba(76, 42, 165, 0.13) 0 2px, transparent 2px 10px),
-    linear-gradient(90deg, rgba(122, 74, 232, 0.08), rgba(19, 167, 179, 0.09));
+    linear-gradient(90deg, rgba(124, 58, 237, 0.08), rgba(19, 167, 179, 0.09));
   box-shadow: inset 0 1px 5px rgba(32, 24, 48, 0.08);
 }
 
@@ -551,7 +551,7 @@
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #4c2aa5, #7a4ae8 48%, #13a7b3);
+  background: linear-gradient(90deg, #4c2aa5, #7c3aed 48%, #13a7b3);
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.28) inset,
     0 0 18px rgba(19, 167, 179, 0.26);
@@ -571,11 +571,11 @@
   display: block;
   overflow: hidden;
   height: 0.62rem;
-  border: 1px solid rgba(122, 74, 232, 0.15);
+  border: 1px solid rgba(124, 58, 237, 0.15);
   border-radius: 999px;
   background:
     repeating-linear-gradient(90deg, rgba(76, 42, 165, 0.13) 0 2px, transparent 2px 10px),
-    linear-gradient(90deg, rgba(122, 74, 232, 0.08), rgba(19, 167, 179, 0.09));
+    linear-gradient(90deg, rgba(124, 58, 237, 0.08), rgba(19, 167, 179, 0.09));
   box-shadow: inset 0 1px 5px rgba(32, 24, 48, 0.08);
 }
 
@@ -595,7 +595,7 @@
   height: 100%;
   border: 0;
   border-radius: inherit;
-  background: linear-gradient(90deg, #4c2aa5, #7a4ae8 48%, #13a7b3);
+  background: linear-gradient(90deg, #4c2aa5, #7c3aed 48%, #13a7b3);
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.28) inset,
     0 0 18px rgba(19, 167, 179, 0.26);
@@ -667,7 +667,7 @@
 
 .store-checklists-empty-block,
 .store-checklists-inline-notice {
-  border: 1px dashed rgba(115, 76, 232, 0.18);
+  border: 1px dashed rgba(124, 58, 237, 0.18);
   border-radius: 1.1rem;
   background: rgba(255, 255, 255, 0.62);
   padding: 0.9rem;
@@ -696,8 +696,8 @@
   place-items: center;
   padding: 1.15rem;
   background:
-    radial-gradient(circle at 18% 12%, rgba(115, 76, 232, 0.2), transparent 30%),
-    radial-gradient(circle at 80% 8%, rgba(16, 169, 183, 0.16), transparent 28%),
+    radial-gradient(circle at 18% 12%, rgba(124, 58, 237, 0.2), transparent 30%),
+    radial-gradient(circle at 80% 8%, rgba(19, 167, 179, 0.16), transparent 28%),
     rgba(18, 16, 28, 0.52);
   backdrop-filter: blur(16px);
 }
@@ -734,7 +734,7 @@
   align-items: start;
   border-bottom: 1px solid var(--checklist-soft-line);
   background:
-    radial-gradient(circle at 100% 0, rgba(16, 169, 183, 0.12), transparent 48%),
+    radial-gradient(circle at 100% 0, rgba(19, 167, 179, 0.12), transparent 48%),
     linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(248, 250, 252, 0.74));
   padding: 1rem 1rem 0.9rem;
 }
@@ -771,10 +771,10 @@
   align-self: start;
   display: grid;
   gap: 0.75rem;
-  border: 1px solid rgba(115, 76, 232, 0.13);
+  border: 1px solid rgba(124, 58, 237, 0.13);
   border-radius: 1.15rem;
   background:
-    radial-gradient(circle at 100% 0, rgba(16, 169, 183, 0.12), transparent 56%),
+    radial-gradient(circle at 100% 0, rgba(19, 167, 179, 0.12), transparent 56%),
     rgba(255, 255, 255, 0.72);
   padding: 0.9rem;
 }
@@ -812,7 +812,7 @@
 .store-checklist-result-section-head {
   align-items: center;
   border-bottom: 1px solid var(--checklist-soft-line);
-  background: linear-gradient(90deg, rgba(115, 76, 232, 0.08), rgba(16, 169, 183, 0.04));
+  background: linear-gradient(90deg, rgba(124, 58, 237, 0.08), rgba(19, 167, 179, 0.04));
   padding: 0.68rem 0.75rem;
 }
 
@@ -869,7 +869,7 @@
   height: 2rem;
   place-items: center;
   border-radius: 0.75rem;
-  background: rgba(115, 76, 232, 0.1);
+  background: rgba(124, 58, 237, 0.1);
   color: var(--checklist-plum);
   font-size: 0.82rem;
   font-weight: 900;
@@ -907,7 +907,7 @@
 
 .store-checklist-modal-answer-cluster button {
   min-height: 2rem;
-  border: 1px solid rgba(122, 74, 232, 0.12);
+  border: 1px solid rgba(124, 58, 237, 0.12);
   border-radius: 0.78rem;
   background: rgba(255, 255, 255, 0.72);
   color: var(--surface-ink, var(--checklist-ink));
@@ -918,8 +918,8 @@
 .store-checklist-modal-answer-cluster button:hover:not(:disabled),
 .store-checklist-modal-answer-cluster button:focus-visible,
 .store-checklist-modal-answer-active {
-  border-color: rgba(122, 74, 232, 0.28);
-  background: linear-gradient(135deg, rgba(122, 74, 232, 0.12), rgba(19, 167, 179, 0.12));
+  border-color: rgba(124, 58, 237, 0.28);
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.12), rgba(19, 167, 179, 0.12));
   color: var(--checklist-plum);
 }
 
@@ -956,7 +956,7 @@
   display: grid;
   gap: 0.45rem;
   margin-top: 0.8rem;
-  border: 1px solid rgba(222, 157, 38, 0.22);
+  border: 1px solid rgba(245, 158, 11, 0.22);
   border-radius: 1.1rem;
   background: rgba(255, 247, 237, 0.7);
   padding: 0.82rem;
@@ -971,10 +971,10 @@
   display: grid;
   gap: 0.28rem;
   margin-top: 0.8rem;
-  border: 1px solid rgba(115, 76, 232, 0.12);
+  border: 1px solid rgba(124, 58, 237, 0.12);
   border-radius: 1.1rem;
   background:
-    linear-gradient(135deg, rgba(115, 76, 232, 0.08), rgba(16, 169, 183, 0.06)),
+    linear-gradient(135deg, rgba(124, 58, 237, 0.08), rgba(19, 167, 179, 0.06)),
     rgba(255, 255, 255, 0.74);
   padding: 0.78rem 0.86rem;
 }
@@ -1000,14 +1000,14 @@
 }
 
 .store-checklist-result-digest-card-calm {
-  border-color: rgba(40, 185, 133, 0.2);
+  border-color: rgba(16, 185, 129, 0.2);
   background:
-    linear-gradient(135deg, rgba(40, 185, 133, 0.1), rgba(16, 169, 183, 0.05)),
+    linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(19, 167, 179, 0.05)),
     rgba(255, 255, 255, 0.74);
 }
 
 .store-checklist-result-digest-card-warning {
-  border-color: rgba(222, 157, 38, 0.28);
+  border-color: rgba(245, 158, 11, 0.28);
   background:
     linear-gradient(135deg, rgba(255, 247, 237, 0.88), rgba(255, 255, 255, 0.74)),
     rgba(255, 255, 255, 0.74);

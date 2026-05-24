@@ -16,7 +16,7 @@
   justify-content: center;
   gap: 0.45rem;
   min-height: 42px;
-  border: 1px solid rgba(15, 118, 110, 0.26);
+  border: 1px solid rgba(124, 58, 237, 0.24);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.96);
   color: var(--accent-strong);
@@ -36,16 +36,16 @@
 
 .pilot-feedback-trigger:focus-visible,
 .pilot-feedback-close:focus-visible {
-  outline: 3px solid rgba(15, 118, 110, 0.18);
-  border-color: rgba(15, 118, 110, 0.44);
+  outline: 3px solid var(--focus-ring);
+  border-color: rgba(124, 58, 237, 0.44);
 }
 
 .pilot-feedback-success {
-  border: 1px solid rgba(15, 118, 110, 0.22);
+  border: 1px solid rgba(16, 185, 129, 0.22);
   border-radius: 999px;
   background: rgba(236, 253, 245, 0.96);
   padding: 0.45rem 0.75rem;
-  color: var(--accent-strong);
+  color: var(--calm);
   font-size: 0.82rem;
   font-weight: 800;
 }

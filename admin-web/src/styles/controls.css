@@ -9,8 +9,8 @@
 }
 
 .search-field input:focus-visible {
-  outline: 3px solid rgba(15, 118, 110, 0.18);
-  border-color: rgba(15, 118, 110, 0.44);
+  outline: 3px solid var(--focus-ring);
+  border-color: rgba(124, 58, 237, 0.44);
 }
 
 .toolbar-cluster {
@@ -47,8 +47,8 @@
 .control-select select:focus-visible,
 .control-input:focus-visible,
 .control-button:focus-visible {
-  outline: 3px solid rgba(15, 118, 110, 0.18);
-  border-color: rgba(15, 118, 110, 0.44);
+  outline: 3px solid var(--focus-ring);
+  border-color: rgba(124, 58, 237, 0.44);
 }
 
 .form-grid {
@@ -85,8 +85,8 @@
 .field-block input:focus-visible,
 .field-block select:focus-visible,
 .field-textarea:focus-visible {
-  outline: 3px solid rgba(15, 118, 110, 0.18);
-  border-color: rgba(15, 118, 110, 0.44);
+  outline: 3px solid var(--focus-ring);
+  border-color: rgba(124, 58, 237, 0.44);
 }
 
 .field-textarea {
@@ -143,7 +143,7 @@
 }
 
 .segmented-button-active {
-  border-color: rgba(15, 118, 110, 0.44);
-  background: rgba(15, 118, 110, 0.1);
+  border-color: rgba(124, 58, 237, 0.44);
+  background: var(--accent-soft);
   color: var(--accent-strong);
 }

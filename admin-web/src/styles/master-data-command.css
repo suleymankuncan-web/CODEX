@@ -160,7 +160,7 @@
   height: 2rem;
   place-items: center;
   border-radius: 999px;
-  background: rgba(115, 76, 232, 0.1);
+  background: rgba(124, 58, 237, 0.1);
   color: var(--admin-command-plum);
 }
 
@@ -204,7 +204,7 @@
 .master-data-command-tab span {
   min-width: 1.4rem;
   border-radius: 999px;
-  background: rgba(115, 76, 232, 0.1);
+  background: rgba(124, 58, 237, 0.1);
   color: var(--admin-command-plum);
   padding: 0.16rem 0.42rem;
   font-family: var(--font-mono);
@@ -324,7 +324,7 @@
 }
 
 .master-data-command-pill-accent {
-  background: rgba(115, 76, 232, 0.12);
+  background: rgba(124, 58, 237, 0.12);
   color: var(--admin-command-plum);
 }
 

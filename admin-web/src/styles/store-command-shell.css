@@ -8,10 +8,10 @@
   --store-command-line: rgba(36, 28, 50, 0.1);
   --store-command-line-strong: rgba(36, 28, 50, 0.18);
   --store-command-surface: rgba(255, 255, 255, 0.82);
-  --store-command-plum: #7a4ae8;
+  --store-command-plum: #7c3aed;
   --store-command-plum-deep: #4c2aa5;
   --store-command-cyan: #13a7b3;
-  --store-command-mint: #28b985;
+  --store-command-mint: #10b981;
   --store-command-shadow: 0 24px 80px rgba(32, 24, 48, 0.12);
   --store-command-soft-shadow: 0 14px 38px rgba(32, 24, 48, 0.08);
   min-height: 100vh;
@@ -19,7 +19,7 @@
   padding: 0 0 0 var(--store-command-sidebar);
   color: var(--store-command-ink);
   background:
-    radial-gradient(circle at 8% 0%, rgba(122, 74, 232, 0.16), transparent 32rem),
+    radial-gradient(circle at 8% 0%, rgba(124, 58, 237, 0.16), transparent 32rem),
     radial-gradient(circle at 96% 4%, rgba(19, 167, 179, 0.15), transparent 28rem),
     linear-gradient(135deg, var(--store-command-bg) 0%, #fbfcff 48%, var(--store-command-bg-2) 100%);
   transition: padding-left 240ms ease;
@@ -66,7 +66,7 @@
   height: 40px;
   place-items: center;
   border-radius: 13px;
-  background: linear-gradient(135deg, rgba(122, 74, 232, 0.96), rgba(19, 167, 179, 0.92));
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.96), rgba(19, 167, 179, 0.92));
   box-shadow: 0 18px 34px rgba(91, 71, 201, 0.28);
   color: #fff;
   font-weight: 900;
@@ -166,7 +166,7 @@
   height: 34px;
   place-items: center;
   border-radius: 12px;
-  background: rgba(122, 74, 232, 0.08);
+  background: rgba(124, 58, 237, 0.08);
   color: currentColor;
 }
 
@@ -238,7 +238,7 @@
 
 .store-command-identity-link-active {
   border-color: transparent;
-  background: linear-gradient(135deg, rgba(122, 74, 232, 0.14), rgba(19, 167, 179, 0.12));
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.14), rgba(19, 167, 179, 0.12));
 }
 
 .store-command-avatar {
@@ -436,7 +436,7 @@
   gap: 18px;
   border-radius: 24px;
   background:
-    linear-gradient(135deg, rgba(122, 74, 232, 0.12), rgba(19, 167, 179, 0.08)),
+    linear-gradient(135deg, rgba(124, 58, 237, 0.12), rgba(19, 167, 179, 0.08)),
     rgba(255, 255, 255, 0.82);
   padding: 20px;
 }
@@ -495,9 +495,9 @@
 }
 
 .store-command-score-card {
-  border-color: rgba(122, 74, 232, 0.18);
+  border-color: rgba(124, 58, 237, 0.18);
   background:
-    linear-gradient(135deg, rgba(122, 74, 232, 0.14), rgba(19, 167, 179, 0.08)),
+    linear-gradient(135deg, rgba(124, 58, 237, 0.14), rgba(19, 167, 179, 0.08)),
     rgba(255, 255, 255, 0.88);
 }
 
@@ -509,7 +509,7 @@
 .store-command-metric-link:hover,
 .store-command-metric-link:focus-visible {
   transform: translateY(-2px);
-  border-color: rgba(122, 74, 232, 0.3);
+  border-color: rgba(124, 58, 237, 0.3);
   box-shadow: 0 18px 42px rgba(89, 70, 206, 0.14);
   outline: none;
 }
@@ -522,7 +522,7 @@
   justify-self: end;
   align-self: end;
   border-radius: 999px;
-  background: rgba(122, 74, 232, 0.1);
+  background: rgba(124, 58, 237, 0.1);
   color: var(--store-command-plum-deep);
 }
 
@@ -557,7 +557,7 @@
   align-items: center;
   gap: 16px;
   margin-top: 14px;
-  border: 1px solid rgba(122, 74, 232, 0.18);
+  border: 1px solid rgba(124, 58, 237, 0.18);
   border-radius: 24px;
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(240, 252, 255, 0.72)),
@@ -572,7 +572,7 @@
 .store-command-checklist-card:hover,
 .store-command-checklist-card:focus-visible {
   transform: translateY(-2px);
-  border-color: rgba(122, 74, 232, 0.34);
+  border-color: rgba(124, 58, 237, 0.34);
   box-shadow: 0 22px 48px rgba(89, 70, 206, 0.15);
   outline: none;
 }
@@ -607,7 +607,7 @@
   place-items: center;
   border-radius: 20px;
   background:
-    linear-gradient(135deg, rgba(122, 74, 232, 0.14), rgba(19, 167, 179, 0.12)),
+    linear-gradient(135deg, rgba(124, 58, 237, 0.14), rgba(19, 167, 179, 0.12)),
     rgba(255, 255, 255, 0.74);
   color: var(--store-command-plum-deep);
   font-size: 1.7rem;
@@ -623,7 +623,7 @@
 }
 
 .store-command-checklist-card-attention {
-  border-color: rgba(222, 157, 38, 0.28);
+  border-color: rgba(245, 158, 11, 0.28);
   background:
     linear-gradient(135deg, rgba(255, 247, 237, 0.94), rgba(240, 252, 255, 0.64)),
     rgba(255, 255, 255, 0.82);
@@ -674,7 +674,7 @@
   height: 9px;
   border-radius: 999px;
   background: var(--store-command-mint);
-  box-shadow: 0 0 0 6px rgba(40, 185, 133, 0.14);
+  box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.14);
   content: "";
 }
 
@@ -706,7 +706,7 @@
 .store-command-kpi-row span {
   min-width: 72px;
   border-radius: 999px;
-  background: rgba(122, 74, 232, 0.1);
+  background: rgba(124, 58, 237, 0.1);
   color: var(--store-command-plum-deep);
   padding: 8px 10px;
   text-align: center;
