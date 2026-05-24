@@ -71,7 +71,7 @@ Decision:
 | Store personnel checklist exposure cleanup | closed | `STORE_PERSONNEL` should not open checklist execution/result queues directly. PR #492 blocks direct route access and preserves manager/region/VM/reporting access. | Done. Re-run route matrix/e2e if role visibility changes. |
 | Daily Command Brief on `/store/home` | first_slice_merged | High value and understandable: "what should I pay attention to today?" The first read-only slice now uses existing source links and no generated advice. | Keep it source-linked; expand only with real pilot feedback. |
 | Command Chain Intelligence | helper_ready | Useful for region/admin: show why a store needs attention and which source proves it. Daily Brief V1 supplies the first source vocabulary, and the first pure read-only reason helper exists. | Use `docs/plans/command-chain-intelligence-source-map-v1.md`; next code should wire the helper only into a minimal read-only surface if pilot feedback asks for it. |
-| Store Performance Replay | mapper_ready | Strong "wow" idea, and the first event-source inventory now separates READY/PARTIAL/PARKED sources before any UI work. A pure read-only event candidate mapper exists without UI/backend behavior changes. | Use `docs/plans/store-performance-replay-event-source-inventory-v1.md`; next slice must still avoid a visible timeline until UI/content direction is explicit. |
+| Store Performance Replay | surface_spec_ready | Strong "wow" idea, and the first event-source inventory plus pure mapper now separate factual events from unsafe claims before any UI work. The read-only surface spec defines the future UI contract without starting UI implementation. | Use `docs/plans/store-performance-replay-event-source-inventory-v1.md` and `docs/plans/store-performance-replay-readonly-surface-spec-v1.md`; next code before UI redesign should be pure view-model only. |
 | Internal Change Visibility | ready_docs_only | Operators need to know what changed, but a live changelog feature is not necessary yet. | Maintain release/operator notes in docs/evidence; later expose read-only product copy if pilot asks. |
 | Site usage vs performance correlation | parked_data_policy | The question is valid, but every login/session event can become noisy or sensitive. Existing auth/audit evidence is enough for now. | Define privacy/data policy and aggregate engagement metric before adding new tracking. |
 | App-level error tracking | blocked_external | Useful for broad production, but P0 trust ops already blocks provider SDK work until provider, destination, redaction, owner, and smoke proof are accepted. | Follow `docs/plans/p0-trust-operations-execution-v1.md`. |
@@ -189,6 +189,9 @@ Current source inventory:
   the first pure read-only mapper/test map for already-fetched rows. It creates
   sourced event candidates only; it does not fetch data, add routes, add
   persistence, or infer impact.
+- `docs/plans/store-performance-replay-readonly-surface-spec-v1.md` defines
+  the future read-only surface contract, role/scope omission rule, no-causality
+  copy rules, states, and verification ladder without approving visible UI yet.
 
 Candidate event sources:
 
@@ -205,6 +208,9 @@ First safe slice:
 - Done as a pure mapper/test slice. Do not create a timeline UI until the mapped
   event list has stable IDs, timestamps, scope, source routes, and
   no-causality wording accepted by the UI/content phase.
+- The next safe non-UI code slice, if needed, is a pure view-model adapter that
+  accepts mapped candidates and existing route/scope visibility hints. Visible
+  UI remains parked until UI/content direction starts.
 
 Stop before:
 

@@ -111,6 +111,12 @@ Current Store Performance Replay pure mapper:
 admin-web/src/features/store-performance-replay/event-candidates.ts
 ```
 
+Current Store Performance Replay read-only surface spec:
+
+```text
+docs/plans/store-performance-replay-readonly-surface-spec-v1.md
+```
+
 Current P3 trigger-only operating reference:
 
 ```text
