@@ -52,7 +52,7 @@ Primary app endpoints:
 
 ## Latest Git State
 
-As of 2026-05-23, `origin/main` includes the Controlled Pilot Scenario
+As of 2026-05-24, `origin/main` includes the Controlled Pilot Scenario
 Rehearsal V1 runbook, the first evidence pass, the assisted persona route
 checks, the Store Action command smoke harness, the Store Action live command
 proof, the Pilot Feedback backend and frontend loop, the Data Quality Center,
@@ -62,16 +62,22 @@ through Production Ops Closure Decision Packet V1.
 Current maintenance branch:
 
 - Active branch: none. `main` is clean and aligned with `origin/main` after the
-  ranked readiness backlog line.
+  Store Personnel checklist route guard.
 - Next work should start from `main`, choose a new branch, and use
   `docs/plans/project-control-board-v1.md`, `docs/plans/decision-registry-v1.md`,
   `docs/plans/project-growth-execution-roadmap-v1.md`, and
   `docs/domains/readiness-ops.md` as reference.
 
-Latest readiness operations merge:
+Latest route/scope guard merge:
 
 ```text
-8f00ce1d docs: map p0 trust operations (#490)
+0f4555ba fix: block personnel checklist route (#492)
+```
+
+Latest P2 product-intelligence planning reference:
+
+```text
+docs/plans/p2-product-intelligence-execution-v1.md
 ```
 
 Latest controlled-pilot evidence merge:
