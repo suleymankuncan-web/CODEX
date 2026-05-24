@@ -95,9 +95,10 @@ test('Store Performance Replay mapper skips missing or invalid timestamps and se
       },
       {
         batchId: 'batch-with-invalid-time',
+        finishedAt: 'not-a-date',
         sourceCode: 'powerbi',
         status: 'completed',
-        startedAt: 'not-a-date',
+        startedAt: '2026-05-24T07:59:00.000Z',
       },
       {
         batchId: 'batch-without-time',
@@ -114,11 +115,47 @@ test('Store Performance Replay mapper skips missing or invalid timestamps and se
     ],
   })
 
-  assert.equal(events.length, 1)
-  assert.equal(events[0].sourceId, 'snapshot-1')
-  assert.equal(events[0].sourceRoute, '/admin/snapshots/snapshot-1')
+  assert.equal(events.length, 2)
+  assert.deepEqual(
+    events.map((event) => event.sourceId),
+    ['snapshot-1', 'batch-with-invalid-time'],
+  )
   assert.doesNotMatch(JSON.stringify(events), /token\./u)
-  assert.doesNotMatch(JSON.stringify(events), /batch-with-invalid-time/u)
+  assert.equal(events[1].occurredAt, '2026-05-24T07:59:00.000Z')
+})
+
+test('Store Performance Replay mapper falls back to created evidence when terminal timestamps are invalid', () => {
+  const events = replay.buildStorePerformanceReplayEvents({
+    pilotFeedbackItems: [
+      {
+        classification: 'bug',
+        classifiedAt: 'not-a-date',
+        createdAt: '2026-05-24T11:55:00.000Z',
+        feedbackId: 'feedback-1',
+        feedbackType: 'friction',
+        routePath: '/store/tasks',
+        status: 'triaged',
+        title: 'Button label unclear',
+      },
+    ],
+    targetRequests: [
+      {
+        approvedAt: 'not-a-date',
+        createdAt: '2026-05-24T08:10:00.000Z',
+        requestId: 'target-1',
+        status: 'approved',
+        targetLabel: 'May target distribution',
+      },
+    ],
+  })
+
+  assert.deepEqual(
+    events.map((event) => [event.sourceFamily, event.title, event.occurredAt]),
+    [
+      ['pilot_feedback', 'Pilot feedback submitted: Button label unclear', '2026-05-24T11:55:00.000Z'],
+      ['target', 'Target request submitted', '2026-05-24T08:10:00.000Z'],
+    ],
+  )
 })
 
 test('Store Performance Replay mapper clamps bad limits', () => {

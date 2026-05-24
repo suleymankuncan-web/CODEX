@@ -168,11 +168,11 @@ export function buildImportBatchEvents(
 ): StorePerformanceReplayEventCandidate[] {
   const sourceId = safePublicId(batch.batchId)
   const occurredAt = firstValidTimestamp(
-    batch.finishedAt ??
-      batch.lastRetriedAt ??
-      batch.startedAt ??
-      batch.sourceWindowEndedAt ??
-      batch.sourceWindowStartedAt,
+    batch.finishedAt,
+    batch.lastRetriedAt,
+    batch.startedAt,
+    batch.sourceWindowEndedAt,
+    batch.sourceWindowStartedAt,
   )
 
   if (!sourceId || !occurredAt) {
@@ -271,8 +271,10 @@ export function buildTargetRequestEvents(
   request: ReplayTargetRequestSource,
 ): StorePerformanceReplayEventCandidate[] {
   const sourceId = safePublicId(request.requestId)
-  const isApproved = request.status === 'approved' && Boolean(request.approvedAt)
-  const occurredAt = firstValidTimestamp(isApproved ? request.approvedAt : request.createdAt)
+  const approvedAt = firstValidTimestamp(request.approvedAt)
+  const createdAt = firstValidTimestamp(request.createdAt)
+  const isApproved = request.status === 'approved' && Boolean(approvedAt)
+  const occurredAt = isApproved ? approvedAt : createdAt
 
   if (!sourceId || !occurredAt) {
     return []
@@ -384,8 +386,10 @@ export function buildPilotFeedbackEvents(
   feedback: ReplayPilotFeedbackSource,
 ): StorePerformanceReplayEventCandidate[] {
   const sourceId = safePublicId(feedback.feedbackId)
-  const isClassified = Boolean(feedback.classification && feedback.classifiedAt)
-  const occurredAt = firstValidTimestamp(isClassified ? feedback.classifiedAt : feedback.createdAt)
+  const classifiedAt = firstValidTimestamp(feedback.classifiedAt)
+  const createdAt = firstValidTimestamp(feedback.createdAt)
+  const isClassified = Boolean(feedback.classification && classifiedAt)
+  const occurredAt = isClassified ? classifiedAt : createdAt
 
   if (!sourceId || !occurredAt) {
     return []
