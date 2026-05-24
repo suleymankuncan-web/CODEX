@@ -62,15 +62,16 @@ through Production Ops Closure Decision Packet V1.
 Current maintenance branch:
 
 - Active branch: none. `main` is clean and aligned with `origin/main` after the
-  first-eight project-growth line.
+  ranked readiness backlog line.
 - Next work should start from `main`, choose a new branch, and use
   `docs/plans/project-control-board-v1.md`, `docs/plans/decision-registry-v1.md`,
-  and `docs/plans/project-growth-execution-roadmap-v1.md` as reference.
+  `docs/plans/project-growth-execution-roadmap-v1.md`, and
+  `docs/domains/readiness-ops.md` as reference.
 
-Latest project-growth merge:
+Latest project-growth/backlog merge:
 
 ```text
-0a1b5858 docs: add production ops closure decision packet (#487)
+b23042d6 docs: rank readiness backlog (#489)
 ```
 
 Latest controlled-pilot evidence merge:
