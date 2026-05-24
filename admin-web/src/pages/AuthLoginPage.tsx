@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { useLocation, useSearchParams } from 'react-router-dom'
 import { preloadRouteModule } from '../app/route-preloaders'
-import hrAxisMarkUrl from '../assets/hr-axis-06-mark-transparent.png'
 import { getAuthBootstrap } from '../features/auth/api'
 import { buildProviderLoginUrl, hasProviderLoginConfig } from '../features/auth/auth-flow'
 import { isClerkSessionProviderAvailable } from '../features/auth/clerk-config'
@@ -99,7 +98,6 @@ export function AuthLoginPage() {
 
         <p className="auth-login-help">{t('authFlow.loginHelpCopy')}</p>
       </section>
-      <img className="auth-login-mark" src={hrAxisMarkUrl} alt="" />
     </section>
   )
 }

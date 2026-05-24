@@ -117,29 +117,28 @@
   width: 100%;
 }
 
-.auth-login-clerk :where(.auth-login-clerk-card) {
+.auth-login-clerk-card {
   border: 0;
   box-shadow: none;
+  overflow: visible !important;
 }
 
-.auth-login-clerk :where(.auth-login-clerk-root, .auth-login-clerk-card) {
+.auth-login-clerk-root,
+.auth-login-clerk-card {
   background: transparent;
 }
 
-.auth-login-clerk .cl-card,
-.auth-login-clerk .cl-main {
+.auth-login-clerk-main {
   padding: 0 !important;
 }
 
-.auth-login-clerk .cl-header,
-.auth-login-clerk .cl-socialButtonsRoot,
-.auth-login-clerk .cl-dividerRow {
-  display: none !important;
+.auth-login-clerk-main,
+.auth-login-clerk-form {
+  gap: 0.875rem !important;
 }
 
-.auth-login-clerk .cl-main,
-.auth-login-clerk .cl-form {
-  gap: 0.875rem !important;
+.auth-login-clerk-form {
+  padding-top: 0.125rem;
 }
 
 .auth-login-clerk-hidden {
@@ -148,6 +147,18 @@
 
 .auth-login-clerk-submit {
   margin-top: 0.125rem;
+  line-height: 1.25;
+  overflow: visible;
+}
+
+.auth-login-clerk-field-row,
+.auth-login-clerk-input-group {
+  min-width: 0;
+}
+
+.auth-login-clerk-label-row {
+  min-height: 1.125rem;
+  overflow: visible;
 }
 
 .auth-login-clerk-input {
@@ -160,8 +171,12 @@
 
 .auth-login-clerk-label {
   color: #171421;
+  display: inline-flex;
+  align-items: center;
   font-size: 0.75rem;
   font-weight: 700;
+  line-height: 1.25;
+  min-height: 1.125rem;
 }
 
 .auth-login-message,
@@ -207,17 +222,6 @@
   line-height: 1.4;
 }
 
-.auth-login-mark {
-  position: fixed;
-  right: 1.375rem;
-  bottom: 1.25rem;
-  width: 2.625rem;
-  height: auto;
-  opacity: 0.72;
-  pointer-events: none;
-  filter: drop-shadow(0 12px 30px rgba(32, 24, 48, 0.1));
-}
-
 @media (max-width: 520px) {
   .auth-login-page {
     padding: 1.125rem 0.875rem 4rem;
@@ -240,11 +244,5 @@
   .auth-login-message {
     padding-left: 1rem;
     padding-right: 1rem;
-  }
-
-  .auth-login-mark {
-    right: 1rem;
-    bottom: 0.875rem;
-    width: 2.25rem;
   }
 }

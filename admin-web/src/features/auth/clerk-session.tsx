@@ -99,14 +99,23 @@ export function ClerkLoginActions(input: { returnTo: string }) {
           elements: {
             card: 'auth-login-clerk-card',
             cardBox: 'auth-login-clerk-card',
+            dividerRow: 'auth-login-clerk-hidden',
             footer: 'auth-login-clerk-hidden',
+            form: 'auth-login-clerk-form',
             formButtonPrimary: 'auth-login-primary auth-login-clerk-submit',
+            formFieldInputGroup: 'auth-login-clerk-input-group',
             formFieldInput: 'auth-login-clerk-input',
             formFieldLabel: 'auth-login-clerk-label',
+            formFieldLabelRow: 'auth-login-clerk-label-row',
+            formFieldRow: 'auth-login-clerk-field-row',
+            header: 'auth-login-clerk-hidden',
             headerSubtitle: 'auth-login-clerk-hidden',
             headerTitle: 'auth-login-clerk-hidden',
+            main: 'auth-login-clerk-main',
             rootBox: 'auth-login-clerk-root',
+            socialButtons: 'auth-login-clerk-hidden',
             socialButtonsBlockButton: 'auth-login-clerk-hidden',
+            socialButtonsRoot: 'auth-login-clerk-hidden',
           },
         }}
       />
