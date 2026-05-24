@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>HR Axis Login Pilot V2</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap");
+
+      :root {
+        --color-bg: #f8f5fb;
+        --color-bg-glacier: #edf7f6;
+        --color-surface: rgba(255, 255, 255, 0.88);
+        --color-surface-strong: #ffffff;
+        --color-surface-soft: rgba(255, 255, 255, 0.68);
+        --color-ink: #171421;
+        --color-muted: #6c6478;
+        --color-quiet: #9e93aa;
+        --color-line: rgba(36, 28, 50, 0.1);
+        --color-line-strong: rgba(36, 28, 50, 0.18);
+        --color-primary: #7c3aed;
+        --color-primary-deep: #4c2aa5;
+        --color-primary-soft: rgba(124, 58, 237, 0.12);
+        --color-blue: #3765ea;
+        --color-accent: #13a7b3;
+        --color-accent-soft: rgba(19, 167, 179, 0.12);
+        --color-success: #10b981;
+        --color-warning: #f59e0b;
+        --color-danger: #e11d48;
+        --color-focus: rgba(124, 58, 237, 0.22);
+        --shadow-soft: 0 18px 48px rgba(32, 24, 48, 0.08);
+        --shadow-panel: 0 24px 80px rgba(32, 24, 48, 0.12);
+        font-family: "Manrope", "Segoe UI", sans-serif;
+        color: var(--color-ink);
+        background: var(--color-bg);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100dvh;
+        margin: 0;
+        background:
+          linear-gradient(90deg, rgba(54, 44, 76, 0.045) 1px, transparent 1px),
+          linear-gradient(180deg, rgba(54, 44, 76, 0.035) 1px, transparent 1px),
+          radial-gradient(circle at 14% 12%, var(--color-primary-soft), transparent 28rem),
+          radial-gradient(circle at 86% 8%, var(--color-accent-soft), transparent 26rem),
+          linear-gradient(135deg, var(--color-bg) 0%, #fbfcff 48%, var(--color-bg-glacier) 100%);
+        background-size: 56px 56px, 56px 56px, auto;
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      .split-page {
+        min-height: 100dvh;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      }
+
+      .login-side,
+      .brand-side {
+        min-height: 100dvh;
+        display: grid;
+        place-items: center;
+        padding: clamp(24px, 5vw, 64px);
+      }
+
+      .login-side {
+        border-right: 1px solid var(--color-line);
+        background: rgba(255, 255, 255, 0.26);
+      }
+
+      .login-shell {
+        width: min(100%, 408px);
+      }
+
+      .brand-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+
+      .brand-mark {
+        width: 30px;
+        height: 30px;
+        border: 1px solid rgba(124, 58, 237, 0.26);
+        border-radius: 8px;
+        background:
+          linear-gradient(135deg, var(--color-primary), var(--color-blue) 58%, var(--color-accent)),
+          var(--color-surface-strong);
+        box-shadow: 0 14px 30px rgba(124, 58, 237, 0.18);
+        position: relative;
+        flex: 0 0 auto;
+      }
+
+      .brand-mark::before,
+      .brand-mark::after {
+        content: "";
+        position: absolute;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.92);
+      }
+
+      .brand-mark::before {
+        width: 12px;
+        height: 4px;
+        left: 8px;
+        top: 9px;
+      }
+
+      .brand-mark::after {
+        width: 4px;
+        height: 12px;
+        right: 8px;
+        bottom: 7px;
+      }
+
+      .brand-title {
+        display: grid;
+        gap: 1px;
+      }
+
+      .brand-title strong {
+        font-size: 15px;
+        line-height: 1.2;
+        letter-spacing: 0;
+      }
+
+      .brand-title span {
+        color: var(--color-muted);
+        font-size: 11px;
+        line-height: 1.2;
+      }
+
+      .panel {
+        border: 1px solid var(--color-line);
+        border-radius: 12px;
+        background: var(--color-surface);
+        box-shadow: var(--shadow-panel);
+        overflow: hidden;
+        backdrop-filter: blur(18px);
+      }
+
+      .panel-head {
+        padding: 22px 22px 16px;
+        border-bottom: 1px solid var(--color-line);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 22px;
+        line-height: 1.22;
+        letter-spacing: 0;
+      }
+
+      .subline {
+        margin: 8px 0 0;
+        color: var(--color-muted);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      form {
+        display: grid;
+        gap: 14px;
+        padding: 20px 22px 22px;
+      }
+
+      .field {
+        display: grid;
+        gap: 6px;
+      }
+
+      label {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--color-ink);
+      }
+
+      input {
+        width: 100%;
+        min-height: 44px;
+        border: 1px solid var(--color-line-strong);
+        border-radius: 8px;
+        background: var(--color-surface-strong);
+        color: var(--color-ink);
+        padding: 0 12px;
+        font-size: 14px;
+        outline: none;
+        transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+      }
+
+      input::placeholder {
+        color: var(--color-quiet);
+      }
+
+      input:focus {
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 4px var(--color-focus);
+        background: var(--color-surface-strong);
+      }
+
+      .row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .check {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--color-muted);
+        font-size: 12px;
+        user-select: none;
+      }
+
+      .check input {
+        width: 16px;
+        min-height: 16px;
+        height: 16px;
+        accent-color: var(--color-primary);
+        padding: 0;
+      }
+
+      .link {
+        border: 0;
+        background: transparent;
+        color: var(--color-primary-deep);
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 700;
+        padding: 8px 0;
+      }
+
+      .link:focus-visible {
+        outline: 3px solid var(--color-focus);
+        outline-offset: 3px;
+        border-radius: 6px;
+      }
+
+      .submit {
+        min-height: 44px;
+        border: 1px solid var(--color-primary-deep);
+        border-radius: 8px;
+        background: linear-gradient(135deg, var(--color-primary), var(--color-blue) 58%, var(--color-accent));
+        color: #ffffff;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 800;
+        transition: transform 160ms ease, background 160ms ease, box-shadow 160ms ease;
+      }
+
+      .submit:hover {
+        background: linear-gradient(135deg, var(--color-primary-deep), var(--color-blue) 58%, var(--color-accent));
+        box-shadow: 0 16px 34px rgba(124, 58, 237, 0.24);
+      }
+
+      .submit:active {
+        transform: translateY(1px);
+      }
+
+      .submit:focus-visible {
+        outline: 4px solid var(--color-focus);
+        outline-offset: 3px;
+      }
+
+      .fine-print {
+        margin: 12px 4px 0;
+        color: var(--color-muted);
+        font-size: 11px;
+        line-height: 1.45;
+        text-align: center;
+      }
+
+      .brand-side {
+        position: relative;
+        overflow: hidden;
+      }
+
+      .brand-side::before {
+        content: "";
+        position: absolute;
+        inset: 10%;
+        border: 1px solid rgba(124, 58, 237, 0.12);
+        border-radius: 28px;
+        pointer-events: none;
+      }
+
+      .lufian-stage {
+        width: min(100%, 520px);
+        min-height: 520px;
+        display: grid;
+        place-items: center;
+        position: relative;
+      }
+
+      .lufian-card {
+        width: min(100%, 430px);
+        border: 1px solid rgba(36, 28, 50, 0.08);
+        border-radius: 18px;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.74)),
+          radial-gradient(circle at 50% 0%, var(--color-primary-soft), transparent 45%);
+        box-shadow: var(--shadow-soft);
+        padding: 52px 42px 38px;
+        text-align: center;
+        backdrop-filter: blur(16px);
+      }
+
+      .lufian-wordmark {
+        color: #111111;
+        font-size: clamp(34px, 5vw, 54px);
+        font-weight: 500;
+        letter-spacing: 0.28em;
+        line-height: 1;
+        text-indent: 0.28em;
+      }
+
+      .brand-rule {
+        width: 76px;
+        height: 2px;
+        margin: 26px auto 18px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--color-primary), var(--color-blue), var(--color-accent));
+      }
+
+      .lufian-copy {
+        margin: 0;
+        color: var(--color-muted);
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      .brand-tags {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 24px;
+      }
+
+      .brand-tags span {
+        border: 1px solid var(--color-line);
+        border-radius: 999px;
+        background: var(--color-surface-soft);
+        color: var(--color-muted);
+        font-size: 11px;
+        font-weight: 700;
+        padding: 7px 10px;
+      }
+
+      .edge-note {
+        position: absolute;
+        right: 28px;
+        bottom: 28px;
+        color: rgba(108, 100, 120, 0.72);
+        font-family: "IBM Plex Mono", "Consolas", monospace;
+        font-size: 10px;
+        letter-spacing: 0.04em;
+      }
+
+      @media (max-width: 900px) {
+        .split-page {
+          grid-template-columns: 1fr;
+        }
+
+        .login-side,
+        .brand-side {
+          min-height: auto;
+          padding: 24px 16px;
+        }
+
+        .login-side {
+          border-right: 0;
+          border-bottom: 1px solid var(--color-line);
+        }
+
+        .brand-side {
+          padding-top: 10px;
+        }
+
+        .brand-side::before,
+        .edge-note {
+          display: none;
+        }
+
+        .lufian-stage {
+          min-height: 260px;
+        }
+
+        .lufian-card {
+          padding: 34px 22px 28px;
+        }
+      }
+
+      @media (max-width: 520px) {
+        .panel-head,
+        form {
+          padding-left: 16px;
+          padding-right: 16px;
+        }
+
+        .brand-tags {
+          margin-top: 18px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          transition-duration: 1ms !important;
+          animation-duration: 1ms !important;
+          animation-iteration-count: 1 !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="split-page">
+      <section class="login-side" aria-labelledby="login-title">
+        <div class="login-shell">
+          <div class="brand-row">
+            <span class="brand-mark" aria-hidden="true"></span>
+            <span class="brand-title">
+              <strong>HR Axis</strong>
+              <span>Store Ops Console</span>
+            </span>
+          </div>
+
+          <section class="panel">
+            <header class="panel-head">
+              <h1 id="login-title">Giriş yap</h1>
+              <p class="subline">Mağaza operasyon ekranına erişim.</p>
+            </header>
+
+            <form>
+              <div class="field">
+                <label for="email">E-posta</label>
+                <input id="email" name="email" type="email" autocomplete="email" placeholder="ornek@lufian.com" />
+              </div>
+
+              <div class="field">
+                <label for="password">Şifre</label>
+                <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Şifreniz" />
+              </div>
+
+              <div class="row">
+                <label class="check" for="remember">
+                  <input id="remember" name="remember" type="checkbox" />
+                  Beni hatırla
+                </label>
+                <button class="link" type="button">Yardım al</button>
+              </div>
+
+              <button class="submit" type="button">Giriş yap</button>
+            </form>
+          </section>
+
+          <p class="fine-print">Erişim yetkin yoksa yöneticinle iletişime geç.</p>
+        </div>
+      </section>
+
+      <aside class="brand-side" aria-label="LUFIAN">
+        <div class="lufian-stage">
+          <section class="lufian-card">
+            <div class="lufian-wordmark" aria-label="LUFIAN">LUFIAN</div>
+            <div class="brand-rule" aria-hidden="true"></div>
+            <p class="lufian-copy">Mağaza operasyon paneli</p>
+            <div class="brand-tags" aria-label="Operasyon alanları">
+              <span>Performans</span>
+              <span>Görev</span>
+              <span>Aksiyon</span>
+            </div>
+          </section>
+        </div>
+        <span class="edge-note">STORE OPS</span>
+      </aside>
+    </main>
+  </body>
+</html>

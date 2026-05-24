@@ -393,6 +393,26 @@ Use these mini playbooks when the work touches a sensitive domain.
   navigation, or data-risking workflow.
 - Preserve existing behavior and data semantics unless behavior change is the
   task.
+- Keep internal architecture out of user-facing UI. Route names, auth/scope
+  mechanics, provider state, API/OpenAPI/DB/queue/Redis details, mock/evidence
+  labels, and other implementation notes belong in docs, evidence, logs, or
+  developer tooling, not in pages used by real operators. During page
+  refactors, remove them or translate them into plain user benefit/recovery
+  language.
+- A page-level UI refactor must remove old UI residue from that page. Do not
+  leave the previous hero-card skeleton, decorative metric grids, nested cards,
+  broad gradient blocks, long explanatory copy, placeholder/handoff language,
+  dev/debug actions, or scaffold/readiness/evidence wording visible in the
+  refactored surface. If old residue must remain for scope reasons, name it as
+  parked work and do not call the page fully refactored.
+- The target page skeleton is quiet and operational: compact title, necessary
+  status/filter row, one clear primary action, main table/list/form, and short
+  loading/empty/error recovery. Anything beyond that must earn its space by
+  helping the user decide or act.
+- For UI pilot/refactor work, use `docs/prototypes/plum-glacier-token-set-v1.md`
+  as the active Plum Glacier token vocabulary. This is not approval for a
+  global theme rewrite; it is the single-source palette for the login pilot and
+  future redesigned surfaces so color drift does not return.
 - Check loading, empty, error, mobile, and repeated-use states.
 - Use screenshots/browser verification when visual behavior matters.
 - Stop if layout polish starts changing API behavior, auth assumptions, or

@@ -99,7 +99,7 @@ export function AuthLoginPage() {
 
         <p className="auth-login-help">{t('authFlow.loginHelpCopy')}</p>
       </section>
-      <img className="auth-login-mark" src={hrAxisMarkUrl} alt="" />
+      <img className="auth-login-mark" src={hrAxisMarkUrl} alt="" aria-hidden="true" />
     </section>
   )
 }

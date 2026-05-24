@@ -142,6 +142,31 @@ Current evidence automation command index:
 docs/plans/evidence-automation-index-v1.md
 ```
 
+Current UI pilot theme:
+
+```text
+docs/prototypes/plum-glacier-token-set-v1.md
+```
+
+Use this as the active Plum Glacier working palette for login and future
+UI/page refactor pilots. It is not a global theme rewrite. New redesigned
+surfaces should avoid mixing the old cream/teal foundation look with the
+plum/glacier direction, and user-facing pages must not show internal
+architecture, auth, provider, OpenAPI, evidence, mock, staging, Redis, DB, or
+debug wording.
+
+Current login refresh state:
+
+```text
+docs/prototypes/login-pilot-v3.html
+admin-web/src/styles/auth-login.css
+```
+
+PR #505 simplified the Lufian login screen, and PR #507 tightened Clerk login
+form spacing after visual verification. The chosen product framing is
+`LUFIAN Magaza Yonetim Paneli` for the tenant-facing login surface, while HR
+Axis remains the platform/company-subdomain product frame behind it.
+
 Latest controlled-pilot evidence merge:
 
 ```text
@@ -337,6 +362,9 @@ Recent verified merges after the recovered PR #227 handoff:
 - PR #464 `docs: add controlled pilot scenario rehearsal`
 - PR #465 `docs: record controlled pilot rehearsal evidence`
 - PR #479 `feat: add pilot feedback backend foundation`
+- PR #505 `Simplify Lufian auth login`
+- PR #506 `Harden auth and logging evidence paths`
+- PR #507 `Tighten Clerk login form spacing`
 
 Current operational observability review:
 
@@ -784,6 +812,13 @@ Sokrates is the default working principle for this project.
 
 Always read `sokrates.md` after reading `current-state.md` and before planning
 or coding. That file is the canonical, detailed operating rule.
+
+Working relationship note: the user is a non-developer HR/operator building
+this product through close, candid collaboration with Codex. Keep the tone
+warm, direct, and practical; act as a technical guide who questions assumptions,
+protects scope, explains tradeoffs plainly, and keeps the project moving in
+small verified slices. The familiar "agam/pasam" tone is welcome, but technical
+judgment must stay honest even when the answer is uncomfortable.
 
 Short version:
 

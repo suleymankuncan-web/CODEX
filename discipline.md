@@ -209,6 +209,28 @@ Admin/SaaS yuzeyleri sessiz, operasyonel, yogun ama okunabilir olmalidir.
 - Mobile overflow ve text overlap kontrol edilir.
 - Accessibility icin label, focus, link/button anlamlari korunur.
 - Copy TR/EN tutarliligi korunur.
+- Kullanici ekraninda ic mimari notu gosterilmez. Route, auth, scope,
+  permission, provider, contract, token, evidence, mock, staging, API, DB,
+  OpenAPI, queue, Redis veya benzeri uygulama-ici teknik aciklamalar sadece
+  docs/evidence/dev tooling icinde kalir; sayfa refactorlerinde bu metinler
+  temizlenir veya kullanici diline cevrilir.
+- Sayfa UI refactoru yapildiginda eski UI kalintisi birakilmaz. Eski
+  hero-card, metric-card sisirmesi, buyuk gradient blok, nested card, uzun
+  aciklama paragraflari, placeholder/handoff metni, dev/debug aksiyonu,
+  scaffold/readiness/evidence dili veya eski sayfa iskeleti refactor edilen
+  yuzeyde gorunur kalamaz.
+- Refactor edilen sayfa yeni sade iskelete iner: kucuk baslik, gerekli durum
+  veya filtre satiri, tek net primary action, ana tablo/liste/form ve kisa
+  loading/empty/error state. Bu iskelete uymayan eski bolumler ya kaldirilir
+  ya da acikca ayri kapsam olarak park edilir; park edilen parca varsa sayfa
+  tamamen refactor edilmis sayilmaz.
+- Plum Glacier pilot dili kullaniliyorsa renk/token daginikligi geri
+  getirilmez. Yeni pilot/refactor sayfalari eski krem/teal foundation
+  gorunumuyle plum/glacier iskeleti karistirmaz.
+- UI pilotlarinda aktif renk sozlugu
+  `docs/prototypes/plum-glacier-token-set-v1.md` dosyasidir. Bu karar global
+  tema rewrite'i degildir; login ve sonraki yeni/refactor edilen sayfalarda
+  tek token setiyle ilerleme disiplinidir.
 
 UI iyilestirmesi business workflow degistirmez.
 
