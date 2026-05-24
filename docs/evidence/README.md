@@ -76,6 +76,13 @@ Folder: `docs/evidence/product-progress/`
 Use for product-readiness, copy clarity, UI/UX V1, and operations-surface
 evidence. Do not treat these as broad redesign approval.
 
+Current anchors:
+
+- `docs/evidence/product-progress/2026-05-24-daily-command-brief-v1.md`
+- `docs/evidence/product-progress/2026-05-24-command-chain-reason-helper-v1.md`
+- `docs/evidence/product-progress/2026-05-24-internal-change-visibility-v1.md`
+- `docs/plans/internal-change-visibility-operating-model-v1.md`
+
 ### Performance
 
 Folder: `docs/evidence/performance/`
