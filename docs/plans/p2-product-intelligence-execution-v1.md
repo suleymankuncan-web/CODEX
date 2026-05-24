@@ -69,8 +69,8 @@ Decision:
 | Idea | Status | Why | First safe slice |
 | --- | --- | --- | --- |
 | Store personnel checklist exposure cleanup | closed | `STORE_PERSONNEL` should not open checklist execution/result queues directly. PR #492 blocks direct route access and preserves manager/region/VM/reporting access. | Done. Re-run route matrix/e2e if role visibility changes. |
-| Daily Command Brief on `/store/home` | ready_next_after_ui_intake | High value and understandable: "what should I pay attention to today?" It can use existing Store Action, workflow, KPI, ranking, checklist, target, feed, and freshness signals. | Read-only brief model with source labels and no generated advice. |
-| Command Chain Intelligence | parked_until_daily_brief | Useful for region/admin: show why a store needs attention and which source proves it. It depends on Daily Brief vocabulary first. | Docs/spec plus read-only admin/region summary using existing operations/data-quality signals. |
+| Daily Command Brief on `/store/home` | first_slice_merged | High value and understandable: "what should I pay attention to today?" The first read-only slice now uses existing source links and no generated advice. | Keep it source-linked; expand only with real pilot feedback. |
+| Command Chain Intelligence | source_map_ready | Useful for region/admin: show why a store needs attention and which source proves it. Daily Brief V1 now supplies the first source vocabulary. | Use `docs/plans/command-chain-intelligence-source-map-v1.md`; next code should be a pure read-only reason helper before any page/backend work. |
 | Store Performance Replay | parked_until_event_inventory | Strong "wow" idea, but only safe if every timeline event has a reliable source and timestamp. | Inventory event sources across imports, snapshots, Store Action status, checklist completion, target approval, and feedback. |
 | Internal Change Visibility | ready_docs_only | Operators need to know what changed, but a live changelog feature is not necessary yet. | Maintain release/operator notes in docs/evidence; later expose read-only product copy if pilot asks. |
 | Site usage vs performance correlation | parked_data_policy | The question is valid, but every login/session event can become noisy or sensitive. Existing auth/audit evidence is enough for now. | Define privacy/data policy and aggregate engagement metric before adding new tracking. |
@@ -146,19 +146,29 @@ Purpose:
   import/snapshot freshness -> KPI/ranking/checklist signal -> workflow/Store
   Action item -> owner/status.
 
-Use only after Daily Command Brief has stable source vocabulary.
+Current source map:
+
+- `docs/plans/command-chain-intelligence-source-map-v1.md` defines allowed
+  source families, safe/unsafe claims, role/scope visibility, reason item
+  shape, stop rules, and verification ladder.
+
+Use only after Daily Command Brief has stable source vocabulary. That condition
+is now satisfied for docs/source-map work; code should still begin with a pure
+read-only helper before any new surface or backend aggregator.
 
 First safe slice:
 
-- docs/spec or read-only admin/region panel that lists source-linked reasons for
-  store attention, using existing data-quality and operations signals.
+- pure helper or docs/evidence audit that lists source-linked reasons for store
+  attention, using existing data-quality, operations, workflow, Store Action,
+  and reporting signals.
 
 Stop before:
 
 - automated escalation,
 - cross-store ranking rule changes,
 - alert provider behavior,
-- support-only permission bypasses.
+- support-only permission bypasses,
+- new backend aggregation until the helper proves the vocabulary works.
 
 ## Store Performance Replay
 
@@ -236,11 +246,12 @@ Stop before:
 
 After the user's UI/content redesign direction starts, choose one of these:
 
-1. Daily Command Brief read-only selector on `/store/home`.
+1. Command Chain pure read-only reason helper if admin/region "why this store
+   needs attention" visibility is the next pilot question.
 2. Store Performance Replay event-source inventory if the user wants a stronger
    executive story first.
-3. Command Chain Intelligence spec if region/admin flow becomes the next pilot
-   focus.
+3. Daily Command Brief expansion only if real pilot feedback asks for more
+   source families on `/store/home`.
 
 Until then, keep the active project mode on controlled pilot execution and fix
 only concrete P0/P1/P2 findings.
