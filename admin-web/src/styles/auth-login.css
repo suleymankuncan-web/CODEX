@@ -126,6 +126,22 @@
   background: transparent;
 }
 
+.auth-login-clerk .cl-card,
+.auth-login-clerk .cl-main {
+  padding: 0 !important;
+}
+
+.auth-login-clerk .cl-header,
+.auth-login-clerk .cl-socialButtonsRoot,
+.auth-login-clerk .cl-dividerRow {
+  display: none !important;
+}
+
+.auth-login-clerk .cl-main,
+.auth-login-clerk .cl-form {
+  gap: 0.875rem !important;
+}
+
 .auth-login-clerk-hidden {
   display: none !important;
 }
