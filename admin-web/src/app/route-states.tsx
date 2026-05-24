@@ -18,11 +18,18 @@ export function RouteLoadingState() {
 }
 
 export function RouteProgressState(input: { title: string; copy: string }) {
+  const statusLabel = `${input.title}. ${input.copy}`
+
   return (
-    <section className="route-loading-state" role="status" aria-live="polite" aria-busy="true">
+    <section
+      className="route-loading-state"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+      aria-label={statusLabel}
+    >
       <span className="route-loading-orbit" aria-hidden="true" />
-      <span className="route-loading-title">{input.title}</span>
-      <span className="route-loading-copy">{input.copy}</span>
+      <span className="sr-only">{statusLabel}</span>
     </section>
   )
 }

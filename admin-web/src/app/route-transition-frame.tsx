@@ -37,7 +37,7 @@ export function RouteTransitionFrame(input: { children: ReactNode }) {
         <div className="route-transition-layer" data-testid="route-transition" role="status" aria-live="polite">
           <div className="route-transition-compact" aria-label={`${routeLoadingTitle}. ${routeLoadingCopy}`}>
             <span className="route-transition-orbit" aria-hidden="true" />
-            <span>{routeLoadingTitle}</span>
+            <span className="sr-only">{routeLoadingTitle}</span>
           </div>
         </div>
       ) : null}
