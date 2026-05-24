@@ -104,6 +104,10 @@ Operating plan:
   `docs/evidence/product-progress/2026-05-24-internal-change-visibility-v1.md`
   define how accepted changes are translated into operator-facing notes without
   exposing commit logs or starting an in-app changelog.
+- `docs/plans/usage-performance-correlation-policy-v1.md` keeps usage versus
+  performance analysis parked behind aggregate engagement vocabulary, privacy,
+  no-surveillance, no-causality, and no-scoring-misuse rules before tracking or
+  UI work.
 - `docs/plans/p3-operating-triggers-v1.md` keeps low-urgency operating ideas
   parked until real triggers exist: migration policy, dependency cadence,
   browser/device support, evidence automation, freeze windows, manual

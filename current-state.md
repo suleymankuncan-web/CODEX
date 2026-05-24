@@ -124,6 +124,12 @@ docs/plans/internal-change-visibility-operating-model-v1.md
 docs/evidence/product-progress/2026-05-24-internal-change-visibility-v1.md
 ```
 
+Current Usage Performance Correlation data policy:
+
+```text
+docs/plans/usage-performance-correlation-policy-v1.md
+```
+
 Current P3 trigger-only operating reference:
 
 ```text

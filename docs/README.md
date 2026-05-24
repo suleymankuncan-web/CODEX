@@ -90,6 +90,7 @@ evidence, incident posture, and recovery.
 - `docs/plans/internal-change-visibility-operating-model-v1.md`
 - `docs/plans/store-performance-replay-event-source-inventory-v1.md`
 - `docs/plans/store-performance-replay-readonly-surface-spec-v1.md`
+- `docs/plans/usage-performance-correlation-policy-v1.md`
 - `docs/plans/p3-operating-triggers-v1.md`
 - `docs/plans/performance-budget-v1.md`
 
