@@ -85,6 +85,7 @@ evidence, incident posture, and recovery.
 - `docs/plans/production-evidence-closure-joint-plan-v1.md`
 - `docs/plans/production-staging-incident-response-skeleton.md`
 - `docs/plans/p0-trust-operations-execution-v1.md`
+- `docs/plans/p1-operator-support-execution-v1.md`
 - `docs/plans/performance-budget-v1.md`
 
 ### Architecture Shelf

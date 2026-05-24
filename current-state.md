@@ -68,10 +68,10 @@ Current maintenance branch:
   `docs/plans/project-growth-execution-roadmap-v1.md`, and
   `docs/domains/readiness-ops.md` as reference.
 
-Latest project-growth/backlog merge:
+Latest readiness operations merge:
 
 ```text
-b23042d6 docs: rank readiness backlog (#489)
+8f00ce1d docs: map p0 trust operations (#490)
 ```
 
 Latest controlled-pilot evidence merge:

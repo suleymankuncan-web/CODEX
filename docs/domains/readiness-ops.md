@@ -27,6 +27,7 @@ Use these first:
 - `docs/plans/production-evidence-closure-joint-plan-v1.md`
 - `docs/plans/production-staging-incident-response-skeleton.md`
 - `docs/plans/p0-trust-operations-execution-v1.md`
+- `docs/plans/p1-operator-support-execution-v1.md`
 - `docs/plans/performance-budget-v1.md`
 
 ## Active Rules
@@ -41,6 +42,10 @@ Use these first:
   `docs/plans/p0-trust-operations-execution-v1.md`; provider-backed
   app-level error tracking remains blocked until a real provider/destination,
   redaction policy, and owner path are accepted.
+- P1 operator support work is execution-mapped in
+  `docs/plans/p1-operator-support-execution-v1.md`; first slices stay
+  read-only/docs-only until source, owner, freshness, and support scope are
+  explicit.
 
 ## Parked Or High-Risk
 
@@ -48,9 +53,9 @@ Use these first:
 - Managed Supabase restore/PITR/RPO/RTO acceptance.
 - P0 trust backlog implementation without provider/owner input: app-level
   provider SDK work, private owner contacts, and broad-production trust claims.
-- P1 operator/support backlog: trace policy, support diagnostics,
-  troubleshooting, stale-data policy, job idempotency, data correction, import
-  preview, performance escalation, role lifecycle, and metric glossary.
+- P1 operator/support implementation without source/owner clarity: diagnostic
+  editors, manual data corrections, import preview writes, and support-only
+  permission bypasses.
 - P2 product-intelligence backlog: store personnel checklist exposure cleanup,
   Daily Command Brief, Command Chain Intelligence, Store Performance Replay,
   and internal change visibility.
