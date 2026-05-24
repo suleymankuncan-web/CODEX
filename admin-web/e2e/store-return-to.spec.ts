@@ -83,7 +83,8 @@ test('store shell preserves requested store route when bearer session needs logi
   await page.goto('/store/approvals')
 
   await expect(page).toHaveURL(/\/auth\/login\?returnTo=%2Fstore%2Fapprovals$/)
-  await expect(page.getByText('/store/approvals')).toBeVisible()
+  await expect(page.getByText('LUFIAN')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Giriş yap' })).toBeVisible()
 })
 
 test('auth login and callback pages switch chrome to English copy and persist locale', async ({ page }) => {
@@ -105,12 +106,13 @@ test('auth login and callback pages switch chrome to English copy and persist lo
   await page.goto('/auth/login?returnTo=/store/approvals')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'tr')
-  await expect(page.getByText('Kimlik girişi')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Uygulama admin veya mağaza kabuklarını açmadan önce gerçek giriş buradan yapılacak.' })).toBeVisible()
-  await expect(page.getByText('Sağlayıcı akışı', { exact: true })).toBeVisible()
-  await expect(page.getByText('Ortam gerekli', { exact: true })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Bu route şu anda ne yapabilir' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Callback route simülasyonu' })).toBeVisible()
+  await expect(page.getByText('LUFIAN')).toBeVisible()
+  await expect(page.getByText('Mağaza Yönetim Paneli')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Giriş yap' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Giriş yapılamıyor' })).toBeVisible()
+  await expect(page.getByText('Giriş şu anda kullanılamıyor.')).toBeVisible()
+  await expect(page.getByText('Callback route simülasyonu')).toHaveCount(0)
+  await expect(page.getByText('Manuel oturum kurulumu')).toHaveCount(0)
   await expect(page.getByText('Auth Entry')).toHaveCount(0)
   await expect(page.locator('body')).not.toContainText('ÃƒÆ’')
   await expect(page.locator('body')).not.toContainText('Ãƒâ€')
@@ -119,18 +121,19 @@ test('auth login and callback pages switch chrome to English copy and persist lo
   await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByText('Auth Entry')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Real login will enter here before the app opens admin or store shells.' })).toBeVisible()
-  await expect(page.getByText('Provider flow', { exact: true })).toBeVisible()
-  await expect(page.getByText('Needs env', { exact: true })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'What this route can do now' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Simulate callback route' })).toBeVisible()
+  await expect(page.getByText('LUFIAN')).toBeVisible()
+  await expect(page.getByText('Store Management Panel')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Sign-in unavailable' })).toBeVisible()
+  await expect(page.getByText('Sign-in is currently unavailable.')).toBeVisible()
+  await expect(page.getByText('Auth Entry')).toHaveCount(0)
   await expect(page.getByText('Kimlik girişi')).toHaveCount(0)
+  await expect(page.getByText('Simulate callback route')).toHaveCount(0)
 
   await page.reload()
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: 'Real login will enter here before the app opens admin or store shells.' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible()
 
   await page.goto('/auth/callback#access_token=demo-placeholder-token&state=%2Fstore%2Fapprovals')
 

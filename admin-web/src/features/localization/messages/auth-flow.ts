@@ -1,4 +1,19 @@
 export const authFlowTr = {
+  'authFlow.tenantProductTitle': 'Mağaza Yönetim Paneli',
+  'authFlow.loginTitle': 'Giriş yap',
+  'authFlow.emailLabel': 'E-posta',
+  'authFlow.emailPlaceholder': 'ornek@lufian.com',
+  'authFlow.passwordLabel': 'Şifre',
+  'authFlow.passwordPlaceholder': 'Şifreniz',
+  'authFlow.emailPasswordRequired': 'E-posta ve şifre gerekli.',
+  'authFlow.emailPasswordFailed': 'E-posta veya şifre hatalı.',
+  'authFlow.additionalVerificationRequired': 'Giriş için ek doğrulama gerekiyor.',
+  'authFlow.loginSubmitting': 'Giriş yapılıyor',
+  'authFlow.loginPreparing': 'Giriş hazırlanıyor',
+  'authFlow.loginUnavailableButton': 'Giriş yapılamıyor',
+  'authFlow.loginTemporarilyUnavailable': 'Giriş şu anda kullanılamıyor.',
+  'authFlow.loginUnavailableCopy': 'Giriş başlatılamadı. Lütfen daha sonra tekrar dene.',
+  'authFlow.loginHelpCopy': 'Erişim yetkin yoksa yöneticinle iletişime geç.',
   'authFlow.loginHeroEyebrow': 'Kimlik girişi',
   'authFlow.loginHeroTitle': 'Uygulama admin veya mağaza kabuklarını açmadan önce gerçek giriş buradan yapılacak.',
   'authFlow.loginHeroCopy':
@@ -55,7 +70,7 @@ export const authFlowTr = {
   'authFlow.clerkSignedIn': 'Clerk oturumu açık',
   'authFlow.clerkSyncingUser':
     'Frontend, Clerk kullanıcısı {userId} için backend bearer oturumunu eşitliyor.',
-  'authFlow.signInWithClerk': 'Clerk ile giriş yap',
+  'authFlow.signInWithClerk': 'E-posta ile giriş yap',
   'authFlow.createClerkUser': 'Clerk kullanıcısı oluştur',
 
   'authFlow.callbackEyebrow': 'Kimlik callback',
@@ -91,6 +106,21 @@ export const authFlowTr = {
 } as const
 
 export const authFlowEn: Record<keyof typeof authFlowTr, string> = {
+  'authFlow.tenantProductTitle': 'Store Management Panel',
+  'authFlow.loginTitle': 'Sign in',
+  'authFlow.emailLabel': 'Email',
+  'authFlow.emailPlaceholder': 'name@lufian.com',
+  'authFlow.passwordLabel': 'Password',
+  'authFlow.passwordPlaceholder': 'Your password',
+  'authFlow.emailPasswordRequired': 'Email and password are required.',
+  'authFlow.emailPasswordFailed': 'Email or password is incorrect.',
+  'authFlow.additionalVerificationRequired': 'Additional verification is required.',
+  'authFlow.loginSubmitting': 'Signing in',
+  'authFlow.loginPreparing': 'Preparing sign-in',
+  'authFlow.loginUnavailableButton': 'Sign-in unavailable',
+  'authFlow.loginTemporarilyUnavailable': 'Sign-in is currently unavailable.',
+  'authFlow.loginUnavailableCopy': 'Sign-in could not be started. Please try again later.',
+  'authFlow.loginHelpCopy': 'Contact your manager if you do not have access.',
   'authFlow.loginHeroEyebrow': 'Auth Entry',
   'authFlow.loginHeroTitle': 'Real login will enter here before the app opens admin or store shells.',
   'authFlow.loginHeroCopy':
@@ -147,7 +177,7 @@ export const authFlowEn: Record<keyof typeof authFlowTr, string> = {
   'authFlow.clerkSignedIn': 'Clerk signed in',
   'authFlow.clerkSyncingUser':
     'The frontend is syncing Clerk user {userId} into the backend bearer session.',
-  'authFlow.signInWithClerk': 'Sign in with Clerk',
+  'authFlow.signInWithClerk': 'Sign in with email',
   'authFlow.createClerkUser': 'Create Clerk user',
 
   'authFlow.callbackEyebrow': 'Auth Callback',

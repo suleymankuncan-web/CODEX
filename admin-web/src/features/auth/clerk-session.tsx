@@ -1,11 +1,10 @@
 import {
   ClerkProvider,
-  SignInButton,
-  SignUpButton,
   UserButton,
   useAuth,
+  useSignIn,
 } from '@clerk/react'
-import { useCallback, useEffect, useRef, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { ScreenState, StatusPill } from '../../components/dashboard-primitives'
 import { registerBearerTokenRefreshHandler } from '../../lib/api'
 import { readStoredAppLocale } from '../../lib/i18n'
@@ -53,12 +52,18 @@ export function ClerkSessionProvider(input: { children: ReactNode }) {
 
 export function ClerkLoginActions(input: { returnTo: string }) {
   const { t } = useLocalization()
-  const { isLoaded, isSignedIn, userId } = useAuth()
+  const { isLoaded: authLoaded, isSignedIn, userId } = useAuth()
+  const signInSignal = useSignIn()
+  const signIn = signInSignal.signIn
   const safeReturnTo = sanitizeAuthReturnPath(input.returnTo) ?? '/'
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
 
-  if (!isLoaded) {
+  if (!authLoaded || !signIn) {
     return (
-      <button className="control-button auth-flow-link" type="button" disabled>
+      <button className="auth-login-primary" type="button" disabled>
         {t('authFlow.loadingClerk')}
       </button>
     )
@@ -66,29 +71,98 @@ export function ClerkLoginActions(input: { returnTo: string }) {
 
   if (isSignedIn) {
     return (
-      <div className="clerk-session-card">
+      <div className="auth-login-session-card">
         <div>
           <StatusPill tone="calm">{t('authFlow.clerkSignedIn')}</StatusPill>
-          <p className="panel-copy">{t('authFlow.clerkSyncingUser', { userId: userId ?? 'unknown' })}</p>
+          <p>{t('authFlow.clerkSyncingUser', { userId: userId ?? 'unknown' })}</p>
         </div>
         <UserButton />
       </div>
     )
   }
 
+  const submitLogin = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setError(null)
+
+    if (!email.trim() || !password) {
+      setError(t('authFlow.emailPasswordRequired'))
+      return
+    }
+
+    setSubmitting(true)
+
+    try {
+      const result = await signIn.password({
+        identifier: email.trim(),
+        password,
+      })
+
+      if (result.error) {
+        setError(t('authFlow.emailPasswordFailed'))
+        return
+      }
+
+      if (signIn.status === 'complete') {
+        const finalizeResult = await signIn.finalize({
+          navigate: ({ decorateUrl }) => {
+            window.location.assign(String(decorateUrl(safeReturnTo)))
+          },
+        })
+
+        if (finalizeResult.error) {
+          setError(t('authFlow.emailPasswordFailed'))
+        }
+
+        return
+      }
+
+      setError(t('authFlow.additionalVerificationRequired'))
+    } catch {
+      setError(t('authFlow.emailPasswordFailed'))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return (
-    <>
-      <SignInButton mode="modal" fallbackRedirectUrl={safeReturnTo}>
-        <button className="control-button auth-flow-link" type="button">
-          {t('authFlow.signInWithClerk')}
-        </button>
-      </SignInButton>
-      <SignUpButton mode="modal" fallbackRedirectUrl={safeReturnTo}>
-        <button className="control-button auth-flow-link" type="button">
-          {t('authFlow.createClerkUser')}
-        </button>
-      </SignUpButton>
-    </>
+    <form className="auth-login-form" onSubmit={(event) => void submitLogin(event)}>
+      <div className="auth-login-field">
+        <label htmlFor="auth-email">{t('authFlow.emailLabel')}</label>
+        <input
+          id="auth-email"
+          name="email"
+          type="email"
+          autoComplete="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          placeholder={t('authFlow.emailPlaceholder')}
+        />
+      </div>
+
+      <div className="auth-login-field">
+        <label htmlFor="auth-password">{t('authFlow.passwordLabel')}</label>
+        <input
+          id="auth-password"
+          name="password"
+          type="password"
+          autoComplete="current-password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          placeholder={t('authFlow.passwordPlaceholder')}
+        />
+      </div>
+
+      {error ? (
+        <p className="auth-login-form-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+
+      <button className="auth-login-primary" type="submit" disabled={submitting || signInSignal.fetchStatus === 'fetching'}>
+        {submitting ? t('authFlow.loginSubmitting') : t('authFlow.signInWithClerk')}
+      </button>
+    </form>
   )
 }
 
