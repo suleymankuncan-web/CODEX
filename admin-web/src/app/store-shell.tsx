@@ -24,7 +24,7 @@ import {
   StoreTargetsPage,
   StoreTasksPage,
 } from './route-loaders'
-import { RouteLoadingState, StoreRouteGuard } from './route-states'
+import { RouteLoadingState, RouteProgressState, StoreRouteGuard } from './route-states'
 import { RouteRecoveryBoundary } from './route-recovery-boundary'
 import { RouteTransitionFrame } from './route-transition-frame'
 import {
@@ -72,7 +72,7 @@ export function StoreShell(input: {
 
   if (input.shellState.mode === 'verifying') {
     return (
-      <ScreenState
+      <RouteProgressState
         title={t('storeHome.shellVerifyingTitle')}
         copy={t('storeHome.shellVerifyingCopy')}
       />

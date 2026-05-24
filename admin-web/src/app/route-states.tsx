@@ -10,10 +10,20 @@ export function RouteLoadingState() {
   const { t } = useLocalization()
 
   return (
-    <ScreenState
+    <RouteProgressState
       title={t('adminShell.routeLoadingTitle')}
       copy={t('adminShell.routeLoadingCopy')}
     />
+  )
+}
+
+export function RouteProgressState(input: { title: string; copy: string }) {
+  return (
+    <section className="route-loading-state" role="status" aria-live="polite" aria-busy="true">
+      <span className="route-loading-orbit" aria-hidden="true" />
+      <span className="route-loading-title">{input.title}</span>
+      <span className="route-loading-copy">{input.copy}</span>
+    </section>
   )
 }
 
@@ -68,7 +78,7 @@ function RouteVerifyingState() {
   const { t } = useLocalization()
 
   return (
-    <ScreenState
+    <RouteProgressState
       title={t('adminShell.routeVerifyingTitle')}
       copy={t('adminShell.routeVerifyingCopy')}
     />
