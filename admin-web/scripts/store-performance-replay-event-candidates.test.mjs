@@ -124,6 +124,31 @@ test('Store Performance Replay mapper skips missing or invalid timestamps and se
   assert.equal(events[1].occurredAt, '2026-05-24T07:59:00.000Z')
 })
 
+test('Store Performance Replay mapper rejects calendar-invalid timestamps', () => {
+  const events = replay.buildStorePerformanceReplayEvents({
+    importBatches: [
+      {
+        batchId: 'batch-calendar-invalid',
+        finishedAt: '2026-02-30T10:00:00.000Z',
+        sourceCode: 'powerbi',
+        startedAt: '2026-03-01T08:00:00.000Z',
+        status: 'completed',
+      },
+    ],
+    snapshotRuns: [
+      {
+        generatedAt: '2026-02-30T09:00:00.000Z',
+        runStatus: 'completed',
+        snapshotRunId: 'snapshot-calendar-invalid',
+      },
+    ],
+  })
+
+  assert.equal(events.length, 1)
+  assert.equal(events[0].sourceId, 'batch-calendar-invalid')
+  assert.equal(events[0].occurredAt, '2026-03-01T08:00:00.000Z')
+})
+
 test('Store Performance Replay mapper falls back to created evidence when terminal timestamps are invalid', () => {
   const events = replay.buildStorePerformanceReplayEvents({
     checklistItems: [

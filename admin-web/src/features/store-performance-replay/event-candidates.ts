@@ -144,6 +144,8 @@ export type BuildStorePerformanceReplayEventsInput = {
   workflowItems?: readonly ReplayWorkflowSource[]
 }
 
+const REPLAY_TIMESTAMP_PATTERN = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/
+
 export function buildStorePerformanceReplayEvents(
   input: BuildStorePerformanceReplayEventsInput,
 ): StorePerformanceReplayEventCandidate[] {
@@ -484,12 +486,30 @@ function normalizeReplayLimit(limit: number | undefined) {
 
 function firstValidTimestamp(...values: Array<string | null | undefined>) {
   for (const value of values) {
-    if (value && Number.isFinite(Date.parse(value))) {
+    if (value && isValidReplayTimestamp(value)) {
       return value
     }
   }
 
   return null
+}
+
+function isValidReplayTimestamp(value: string) {
+  const match = REPLAY_TIMESTAMP_PATTERN.exec(value)
+  if (!match || !Number.isFinite(Date.parse(value))) return false
+
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const [day = NaN, hour = NaN, minute = NaN, second = NaN] = match.slice(3, 7).map(Number)
+  const normalized = new Date(Date.UTC(year, month - 1, day, hour, minute, second))
+  return (
+    normalized.getUTCFullYear() === year &&
+    normalized.getUTCMonth() === month - 1 &&
+    normalized.getUTCDate() === day &&
+    normalized.getUTCHours() === hour &&
+    normalized.getUTCMinutes() === minute &&
+    normalized.getUTCSeconds() === second
+  )
 }
 
 function replayId(
