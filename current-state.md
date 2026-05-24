@@ -167,6 +167,28 @@ form spacing after visual verification. The chosen product framing is
 `LUFIAN Magaza Yonetim Paneli` for the tenant-facing login surface, while HR
 Axis remains the platform/company-subdomain product frame behind it.
 
+Recent login/UI discipline continuation:
+
+- PR #508 polished the login UI pilot foundation.
+- PR #509 removed the login bottom mark; PR #510 restored it cleanly; PR #511
+  removed the mobile bottom residue at the root.
+- The route loading follow-up made route progress spinner-only for visible UI:
+  no route-loading card and no visible route copy.
+- PR #514 aligned the skeleton/foundation palette with the active Plum Glacier
+  token set and updated palette assertions.
+- PR #515 codified the GitHub 30-second checks/comments/reviews polling loop
+  before merge.
+- PR #516 added the consultation-before-coding discipline: brainstorming,
+  "sence", "bak", "kontrol et", and "incele" are no-edit signals unless the
+  user gives an explicit action verb such as "yap", "uygula", "duzelt",
+  "commit at", "PR ac", or "merge et".
+
+Current night-shift quality evidence:
+
+```text
+docs/evidence/project-wide-bug-hunt-2026-05-25.md
+```
+
 Latest controlled-pilot evidence merge:
 
 ```text
@@ -2021,6 +2043,7 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/evidence/norm-kadro-workforce-planning-readonly-v1.md` - Norm Kadro / Workforce Planning Read-Only V1
 - `docs/evidence/readiness/2026-05-23-production-ops-closure-decision-packet-v1.md` - Production Ops Closure Decision Packet V1
 - `docs/evidence/project-wide-bug-hunt-2026-05-23.md` - project-wide bug hunt pass
+- `docs/evidence/project-wide-bug-hunt-2026-05-25.md` - night shift quality sweep
 - `docs/flows/README.md` - Store Ops System Flow generator note
 - `docs/flows/store-ops-system-flow.html` - source-derived frontend/API/backend flow map
 - `docs/flows/store-ops-system-flow.json` - machine-readable system flow inventory
