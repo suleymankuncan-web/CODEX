@@ -113,6 +113,9 @@ Operating plan:
   browser/device support, evidence automation, freeze windows, manual
   overrides, pilot triage cadence, mutable Norm Kadro, protected performance,
   and app-level error tracking.
+- `docs/plans/evidence-automation-index-v1.md` is the triggered P3 evidence
+  command index; use it to choose verification commands without treating local
+  or mock checks as protected, provider, restore, or production proof.
 - `docs/plans/controlled-pilot-execution-roadmap-v1.md` is the current control
   document for day-to-day pilot execution.
 - `docs/plans/production-evidence-closure-joint-plan-v1.md` remains the

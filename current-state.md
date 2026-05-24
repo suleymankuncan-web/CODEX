@@ -136,6 +136,12 @@ Current P3 trigger-only operating reference:
 docs/plans/p3-operating-triggers-v1.md
 ```
 
+Current evidence automation command index:
+
+```text
+docs/plans/evidence-automation-index-v1.md
+```
+
 Latest controlled-pilot evidence merge:
 
 ```text

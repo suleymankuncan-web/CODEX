@@ -64,7 +64,7 @@ Decision:
 | Migration policy refresh | Prevent schema-change fear and release drift. | A DB migration touches auth, scoring, import, Store Action, checklist, or workforce lifecycle tables; or release smoke catches migration uncertainty. | Update migration runbook/evidence checklist; run fresh DB smoke if schema changed. | Changing migration executor or production DB policy without owner acceptance. |
 | Dependency cadence | Avoid surprise breakage from stale frontend/backend packages. | Security advisory, Node/Playwright/Vite/Nest major change, or release gate dependency pain. | Inventory outdated packages and propose batch groups. | Broad dependency upgrade without a rollback plan and CI evidence. |
 | Browser/device support matrix | Keep pilot UX expectations honest. | Pilot expands beyond known desktop/mobile browsers or reports device-specific breakage. | Document supported browser/device set and one smoke route list. | Full visual redesign or device lab work without user starting UI phase. |
-| Evidence automation index | Make evidence repeatable without faking live proof. | Same evidence command is manually repeated three times or a release is blocked by "which smoke do I run?" confusion. | Add index/runbook mapping existing commands to evidence outputs. | Treating mocks/local checks as provider or protected-user evidence. |
+| Evidence automation index | Make evidence repeatable without faking live proof. | Triggered on 2026-05-24 after repeated PR evidence gates and smoke-command selection. | `docs/plans/evidence-automation-index-v1.md` maps existing commands to evidence outputs and blockers. | Treating mocks/local checks as provider or protected-user evidence. |
 | Freeze windows | Reduce release risk during live pilot moments. | Pilot sessions become scheduled, customer-facing, or operationally sensitive. | Document release freeze / emergency exception rules. | Blocking urgent P0 fixes or inventing a heavy release bureaucracy. |
 | Manual override policy | Keep support actions from becoming hidden admin powers. | A real support request needs correction, rerun, unblock, or operator override. | Decision doc: allowed roles, audit, source of truth, rollback, and evidence. | Adding bypass UI or DB write tools without audit and owner approval. |
 | Pilot triage cadence | Keep feedback moving without overreacting. | There are recurring pilot sessions or more than five open pilot findings. | Define weekly or per-session triage ritual and status labels. | Turning pilot feedback into a full ticketing system before needed. |
@@ -75,6 +75,13 @@ Decision:
 ## Operating Rule
 
 P3 items should not compete with concrete pilot blockers.
+
+Triggered P3 slice:
+
+- Evidence Automation Index V1 is active as a command-to-claim map:
+  `docs/plans/evidence-automation-index-v1.md`.
+- It does not implement provider automation, protected-user proof, restore
+  proof, or production approval.
 
 Promote a P3 item only when:
 
