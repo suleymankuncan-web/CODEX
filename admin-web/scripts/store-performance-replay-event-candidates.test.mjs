@@ -126,6 +126,15 @@ test('Store Performance Replay mapper skips missing or invalid timestamps and se
 
 test('Store Performance Replay mapper falls back to created evidence when terminal timestamps are invalid', () => {
   const events = replay.buildStorePerformanceReplayEvents({
+    checklistItems: [
+      {
+        acknowledgedAt: 'not-a-date',
+        checklistInstanceId: 'checklist-1',
+        completedAt: 'also-not-a-date',
+        createdAt: '2026-05-24T10:20:00.000Z',
+        status: 'acknowledged',
+      },
+    ],
     pilotFeedbackItems: [
       {
         classification: 'bug',
@@ -153,6 +162,7 @@ test('Store Performance Replay mapper falls back to created evidence when termin
     events.map((event) => [event.sourceFamily, event.title, event.occurredAt]),
     [
       ['pilot_feedback', 'Pilot feedback submitted: Button label unclear', '2026-05-24T11:55:00.000Z'],
+      ['checklist', 'Checklist created', '2026-05-24T10:20:00.000Z'],
       ['target', 'Target request submitted', '2026-05-24T08:10:00.000Z'],
     ],
   )

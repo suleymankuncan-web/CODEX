@@ -308,16 +308,15 @@ export function buildChecklistEvents(
   checklist: ReplayChecklistSource,
 ): StorePerformanceReplayEventCandidate[] {
   const sourceId = safePublicId(checklist.checklistInstanceId)
-  const status = checklist.acknowledgedAt
+  const acknowledgedAt = firstValidTimestamp(checklist.acknowledgedAt)
+  const completedAt = firstValidTimestamp(checklist.completedAt)
+  const createdAt = firstValidTimestamp(checklist.createdAt)
+  const status = acknowledgedAt
     ? 'acknowledged'
-    : checklist.completedAt
+    : completedAt
       ? 'completed'
       : 'created'
-  const occurredAt = firstValidTimestamp(
-    checklist.acknowledgedAt,
-    checklist.completedAt,
-    checklist.createdAt,
-  )
+  const occurredAt = acknowledgedAt ?? completedAt ?? createdAt
 
   if (!sourceId || !occurredAt) {
     return []
