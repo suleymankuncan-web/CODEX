@@ -6,7 +6,7 @@
   place-items: center;
   padding: 18px;
   background:
-    radial-gradient(circle at 18% 18%, rgba(115, 76, 232, 0.18), transparent 34%),
+    radial-gradient(circle at 18% 18%, rgba(124, 58, 237, 0.18), transparent 34%),
     rgba(15, 23, 42, 0.46);
   backdrop-filter: blur(12px);
 }
@@ -72,7 +72,7 @@
   align-items: center;
   padding: 11px 12px;
   border-bottom: 1px solid rgba(36, 28, 50, 0.1);
-  background: linear-gradient(90deg, rgba(115, 76, 232, 0.09), rgba(16, 169, 183, 0.04));
+  background: linear-gradient(90deg, rgba(124, 58, 237, 0.09), rgba(19, 167, 179, 0.04));
 }
 
 .store-checklist-modal-section-head strong {
@@ -188,8 +188,8 @@
 
 .store-checklist-result-alert {
   margin-top: 14px;
-  border-color: rgba(185, 95, 24, 0.22);
-  background: linear-gradient(135deg, rgba(255, 247, 237, 0.96), rgba(255, 255, 255, 0.86));
+  border-color: rgba(245, 158, 11, 0.22);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(255, 255, 255, 0.86));
 }
 
 .store-checklist-result-alert p {
@@ -243,8 +243,8 @@
 }
 
 .store-checklist-result-item-low {
-  border-color: rgba(185, 95, 24, 0.24);
-  background: rgba(255, 247, 237, 0.92);
+  border-color: rgba(245, 158, 11, 0.24);
+  background: var(--warning-soft);
 }
 
 .store-checklist-result-item strong {

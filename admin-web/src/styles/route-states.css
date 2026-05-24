@@ -7,7 +7,7 @@
 }
 
 .screen-state-error {
-  background: linear-gradient(180deg, rgba(255, 245, 241, 0.98), rgba(255, 251, 244, 0.88));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(225, 29, 72, 0.08));
 }
 
 .screen-state-actions {

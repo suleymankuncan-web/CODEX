@@ -95,12 +95,12 @@
 }
 
 .store-me-v2-metric-card.upt {
-  --store-me-v2-accent: #2563eb;
+  --store-me-v2-accent: #3765ea;
   --store-me-v2-accent-2: #06b6d4;
   --store-me-v2-accent-dark: #1d4ed8;
-  --store-me-v2-accent-soft: rgba(37, 99, 235, 0.2);
-  --store-me-v2-accent-wash: rgba(37, 99, 235, 0.1);
-  --store-me-v2-accent-glow: rgba(37, 99, 235, 0.32);
+  --store-me-v2-accent-soft: rgba(55, 101, 234, 0.2);
+  --store-me-v2-accent-wash: rgba(55, 101, 234, 0.1);
+  --store-me-v2-accent-glow: rgba(55, 101, 234, 0.32);
 }
 
 .store-me-v2-metric-card.atv {

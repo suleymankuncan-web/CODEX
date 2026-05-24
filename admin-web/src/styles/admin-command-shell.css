@@ -8,8 +8,8 @@
   --admin-command-line: rgba(36, 28, 50, 0.1);
   --admin-command-line-strong: rgba(36, 28, 50, 0.18);
   --admin-command-surface: rgba(255, 255, 255, 0.84);
-  --admin-command-plum: #734ce8;
-  --admin-command-cyan: #10a9b7;
+  --admin-command-plum: #7c3aed;
+  --admin-command-cyan: #13a7b3;
   --admin-command-shadow: 0 24px 80px rgba(32, 24, 48, 0.12);
   min-height: 100vh;
   overflow-x: hidden;
@@ -18,8 +18,8 @@
   background:
     linear-gradient(rgba(54, 44, 76, 0.045) 1px, transparent 1px),
     linear-gradient(90deg, rgba(54, 44, 76, 0.045) 1px, transparent 1px),
-    radial-gradient(circle at 14% 12%, rgba(115, 76, 232, 0.13), transparent 34rem),
-    radial-gradient(circle at 88% 8%, rgba(16, 169, 183, 0.13), transparent 32rem),
+    radial-gradient(circle at 14% 12%, rgba(124, 58, 237, 0.13), transparent 34rem),
+    radial-gradient(circle at 88% 8%, rgba(19, 167, 179, 0.13), transparent 32rem),
     linear-gradient(135deg, var(--admin-command-bg) 0%, #fbfcff 48%, var(--admin-command-bg-2) 100%);
   background-size: 28px 28px, 28px 28px, auto, auto, auto;
   transition: padding-left 220ms ease;

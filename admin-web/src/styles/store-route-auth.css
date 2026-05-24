@@ -64,9 +64,9 @@
   min-height: 100vh;
   padding: 1.5rem;
   background:
-    radial-gradient(circle at top left, rgba(15, 118, 110, 0.12), transparent 26rem),
-    radial-gradient(circle at top right, rgba(24, 33, 39, 0.08), transparent 22rem),
-    linear-gradient(180deg, #f4f6f2 0%, #e8ede6 100%);
+    radial-gradient(circle at top left, rgba(124, 58, 237, 0.12), transparent 26rem),
+    radial-gradient(circle at top right, rgba(19, 167, 179, 0.12), transparent 22rem),
+    linear-gradient(135deg, #f8f5fb 0%, #ffffff 48%, #edf7f6 100%);
 }
 
 .auth-flow-toolbar {
@@ -78,7 +78,7 @@
 
 .auth-hero-panel {
   background:
-    linear-gradient(140deg, rgba(249, 255, 252, 0.96), rgba(236, 244, 255, 0.82)),
+    linear-gradient(140deg, rgba(255, 255, 255, 0.96), rgba(237, 247, 246, 0.82)),
     var(--surface);
 }
 
@@ -99,7 +99,7 @@
   gap: 0.85rem;
   width: 100%;
   min-width: min(100%, 320px);
-  border: 1px solid rgba(15, 118, 110, 0.24);
+  border: 1px solid rgba(124, 58, 237, 0.22);
   border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.72);
   padding: 0.9rem 1rem;

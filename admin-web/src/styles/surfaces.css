@@ -28,7 +28,7 @@
   display: grid;
   gap: 1.25rem;
   background:
-    linear-gradient(140deg, rgba(255, 250, 241, 0.96), rgba(235, 245, 241, 0.88)),
+    linear-gradient(140deg, rgba(255, 255, 255, 0.96), rgba(237, 247, 246, 0.88)),
     var(--surface);
 }
 
@@ -43,7 +43,7 @@
 
 .hero-panel-detail {
   background:
-    linear-gradient(140deg, rgba(255, 250, 241, 0.96), rgba(248, 232, 221, 0.88)),
+    linear-gradient(140deg, rgba(255, 255, 255, 0.96), rgba(248, 245, 251, 0.88)),
     var(--surface);
 }
 
@@ -71,7 +71,7 @@
 .accent-chip {
   justify-content: space-between;
   min-width: 150px;
-  border: 1px solid rgba(15, 118, 110, 0.24);
+  border: 1px solid rgba(124, 58, 237, 0.22);
   background: rgba(255, 255, 255, 0.58);
   padding: 0.75rem 0.9rem;
 }
@@ -241,7 +241,7 @@
 .status-bar-track {
   overflow: hidden;
   border-radius: 999px;
-  background: rgba(24, 33, 39, 0.08);
+  background: var(--neutral-soft);
   height: 0.72rem;
 }
 

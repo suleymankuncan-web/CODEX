@@ -29,7 +29,7 @@
   content: "";
   background:
     radial-gradient(circle at 50% 22%, rgba(124, 58, 237, 0.16), transparent 28%),
-    radial-gradient(circle at 8% 88%, rgba(8, 145, 178, 0.13), transparent 26%);
+    radial-gradient(circle at 8% 88%, rgba(19, 167, 179, 0.13), transparent 26%);
   pointer-events: none;
 }
 
@@ -295,7 +295,7 @@
   width: var(--store-me-v2-fill);
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #7c3aed, #2563eb, #10b981);
+  background: linear-gradient(90deg, #7c3aed, #3765ea, #10b981);
   box-shadow: 0 0 22px rgba(124, 58, 237, 0.3);
 }
 
@@ -374,7 +374,7 @@
   color: white;
   background:
     radial-gradient(circle at 10% 10%, rgba(255, 255, 255, 0.22), transparent 22%),
-    linear-gradient(135deg, #4c1d95 0%, #2563eb 58%, #0891b2 100%);
+    linear-gradient(135deg, #4c2aa5 0%, #3765ea 58%, #13a7b3 100%);
 }
 
 .store-me-v2-compare-card::before {
