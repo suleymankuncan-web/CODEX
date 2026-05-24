@@ -132,6 +132,25 @@ okunur:
 - reaction gruplari,
 - status check rollup.
 
+GitHub kontrolu tek seferlik snapshot degildir. PR acildiktan veya branch'e yeni
+push geldikten sonra merge karari verilene kadar GitHub durumu 30 saniyede bir
+loop ile tekrar cekilir ve birlikte degerlendirilir:
+
+- GitHub Actions checks,
+- Vercel/deploy checks,
+- PR issue comments,
+- latest reviews,
+- inline PR review comments,
+- reaction gruplari,
+- status check rollup,
+- mergeability / branch state.
+
+Bu 30 saniyelik loop ancak tum checks yesil, PR mergeable, Codex review kanallari
+temiz/onayli ve yeni actionable yorum olmadigi goruldugunde biter. Failed check,
+pending belirsizlik, yeni yorum veya actionable Codex notu gorulurse merge
+yapilmaz; once sebep okunur, gerekirse duzeltme push'lanir ve loop yeniden
+baslatilir.
+
 ## Verification Ladder
 
 Docs-only:
