@@ -68,8 +68,7 @@ export const authFlowTr = {
     'VITE_AUTH_PROVIDER clerk olarak ayarlı, ancak bu frontend build için VITE_CLERK_PUBLISHABLE_KEY yapılandırılmamış.',
   'authFlow.loadingClerk': 'Clerk yükleniyor',
   'authFlow.clerkSignedIn': 'Clerk oturumu açık',
-  'authFlow.clerkSyncingUser':
-    'Frontend, Clerk kullanıcısı {userId} için backend bearer oturumunu eşitliyor.',
+  'authFlow.clerkSyncingUser': 'Oturum doğrulanıyor.',
   'authFlow.signInWithClerk': 'E-posta ile giriş yap',
   'authFlow.createClerkUser': 'Clerk kullanıcısı oluştur',
 
@@ -175,8 +174,7 @@ export const authFlowEn: Record<keyof typeof authFlowTr, string> = {
     'VITE_AUTH_PROVIDER is set to clerk, but VITE_CLERK_PUBLISHABLE_KEY is not configured for this frontend build.',
   'authFlow.loadingClerk': 'Loading Clerk',
   'authFlow.clerkSignedIn': 'Clerk signed in',
-  'authFlow.clerkSyncingUser':
-    'The frontend is syncing Clerk user {userId} into the backend bearer session.',
+  'authFlow.clerkSyncingUser': 'Verifying session.',
   'authFlow.signInWithClerk': 'Sign in with email',
   'authFlow.createClerkUser': 'Create Clerk user',
 

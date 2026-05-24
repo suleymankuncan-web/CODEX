@@ -16,7 +16,7 @@ import {
 } from "../../../shared/http/response-builders";
 import { mapAuditEvent } from "../../../shared/audit/audit-event.mapper";
 import { SnapshotOperationsRepository } from "../infrastructure/snapshot-operations.repository";
-import { logStructuredError, logStructuredMessage } from "../../../shared/structured-log";
+import { logStructuredError, logStructuredMessage, redactSensitiveLogValue } from "../../../shared/structured-log";
 import { KpiConfigRepository } from "../infrastructure/kpi-config.repository";
 import {
   KpiScoreProfile,
@@ -752,7 +752,7 @@ export class SnapshotService {
     } catch (error) {
       await this.snapshotOperationsRepository.markSnapshotRunFailed(
         snapshotRunId,
-        error instanceof Error ? error.message : "Unknown snapshot generation failure",
+        String(redactSensitiveLogValue(error instanceof Error ? error.message : "Unknown snapshot generation failure")),
       );
 
       logStructuredError(this.logger, "snapshot_run.execution.failed", error, {

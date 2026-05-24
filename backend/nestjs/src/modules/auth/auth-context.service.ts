@@ -5,6 +5,7 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 import { AppConfigService } from "../../shared/app-config.service";
+import { redactSensitiveLogValue } from "../../shared/structured-log";
 import { AuthAuthorizationRepository } from "./auth-authorization.repository";
 import { JwtAuthProvider } from "./providers/jwt-auth.provider";
 import { MockAuthProvider } from "./providers/mock-auth.provider";
@@ -146,17 +147,13 @@ export class AuthContextService {
 
       if (this.appConfigService.isProduction) {
         this.logger.error(
-          `Failing closed because authorization lookup failed for user ${providerUser.userId}: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
+          `Failing closed because authorization lookup failed for provider user: ${this.safeErrorMessage(error)}`,
         );
         throw new ServiceUnavailableException("Authorization context is unavailable");
       }
 
       this.logger.warn(
-        `Falling back to provider auth context because role assignment lookup failed for user ${providerUser.userId}: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
+        `Falling back to provider auth context because role assignment lookup failed for provider user: ${this.safeErrorMessage(error)}`,
       );
       return providerUser;
     }
@@ -222,5 +219,10 @@ export class AuthContextService {
         assignedStoreIds,
       },
     });
+  }
+
+  private safeErrorMessage(error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    return String(redactSensitiveLogValue(message));
   }
 }

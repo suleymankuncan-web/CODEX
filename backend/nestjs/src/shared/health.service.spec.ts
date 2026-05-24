@@ -133,13 +133,13 @@ describe("HealthService", () => {
   it("reports sanitized Redis dependency failures for BullMQ queue mode", async () => {
     redisConnectMock.mockRejectedValue(
       new Error(
-        "connect ECONNREFUSED redis://:secret-pass@redis.example.com:6379 password=secret-pass",
+        "connect ECONNREFUSED rediss://:secret-pass@redis.example.com:6379 password=secret-pass",
       ),
     );
     redisQuitMock.mockResolvedValue("OK");
     const service = createService({
       queueBackend: "bullmq",
-      redisUrl: "redis://:secret-pass@redis.example.com:6379",
+      redisUrl: "rediss://:secret-pass@redis.example.com:6379",
     });
 
     const result = await service.getHealth();

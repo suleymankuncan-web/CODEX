@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { buildListResponse } from "../../../shared/http/response-builders";
+import { redactSensitiveLogValue } from "../../../shared/structured-log";
 import {
   toKpiExceptionInboxItem,
   toChecklistAcknowledgementInboxItem,
@@ -59,7 +60,7 @@ export class WorkflowInboxService {
         items.push(...approvals.map((item) => toTargetApprovalInboxItem(item)));
       } catch (error) {
         this.logger.warn(
-          `Shared inbox skipped approval items: ${error instanceof Error ? error.message : String(error)}`,
+          `Shared inbox skipped approval items: ${this.safeErrorMessage(error)}`,
         );
       }
     }
@@ -80,7 +81,7 @@ export class WorkflowInboxService {
         );
       } catch (error) {
         this.logger.warn(
-          `Shared inbox skipped acknowledgement items: ${error instanceof Error ? error.message : String(error)}`,
+          `Shared inbox skipped acknowledgement items: ${this.safeErrorMessage(error)}`,
         );
       }
     }
@@ -132,7 +133,7 @@ export class WorkflowInboxService {
       }
     } catch (error) {
       this.logger.warn(
-        `Shared inbox skipped KPI exception items: ${error instanceof Error ? error.message : String(error)}`,
+        `Shared inbox skipped KPI exception items: ${this.safeErrorMessage(error)}`,
       );
     }
 
@@ -151,9 +152,7 @@ export class WorkflowInboxService {
         }
       } catch (error) {
         this.logger.warn(
-          `Shared inbox skipped store action plan items: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
+          `Shared inbox skipped store action plan items: ${this.safeErrorMessage(error)}`,
         );
       }
     }
@@ -230,5 +229,10 @@ export class WorkflowInboxService {
     };
   }) {
     return [...new Set(input.actorActionScope?.assignedStoreIds ?? [])];
+  }
+
+  private safeErrorMessage(error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    return String(redactSensitiveLogValue(message));
   }
 }

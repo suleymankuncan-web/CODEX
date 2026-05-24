@@ -73,4 +73,28 @@ describe("RequestContextMiddleware", () => {
     });
     expect(typeof payload.durationMs).toBe("number");
   });
+
+  it("redacts query values from completed request logs", () => {
+    const middleware = new RequestContextMiddleware();
+    const response = new FakeResponse();
+    const request: MiddlewareRequest = {
+      method: "GET",
+      originalUrl:
+        "/api/auth/users/123e4567-e89b-12d3-a456-426614174000?storeId=00000000-0000-0000-0000-000000000100&token=secret-token&email=person@example.com",
+      headers: {
+        "x-correlation-id": "corr-query-redaction",
+      },
+    };
+
+    middleware.use(request, response, jest.fn());
+    response.emit("finish");
+
+    const payload = JSON.parse(logSpy.mock.calls.at(-1)?.[0] as string) as Record<string, unknown>;
+    expect(payload.path).toBe(
+      "/api/auth/users/:id?storeId=:value&token=[redacted]&email=:value",
+    );
+    expect(JSON.stringify(payload)).not.toContain("secret-token");
+    expect(JSON.stringify(payload)).not.toContain("person@example.com");
+    expect(JSON.stringify(payload)).not.toContain("00000000-0000-0000-0000-000000000100");
+  });
 });

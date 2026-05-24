@@ -47,12 +47,12 @@ function validEvidence(overrides = {}) {
     },
     accessTokenPayload: {
       iss: 'https://idp.stage.example.com/realms/store-ops',
-      sub: 'stage-user-1',
+      subPresent: true,
       aud: 'store-ops-api',
       exp: 1893456000,
       iat: 1893452400,
-      preferred_username: 'stage.store.manager@example.com',
-      email: 'stage.store.manager@example.com',
+      preferredUsernamePresent: true,
+      emailPresent: true,
       roles: ['STORE_MANAGER'],
       read_company_ids: ['00000000-0000-0000-0000-000000000001'],
       read_region_ids: ['11111111-1111-1111-1111-111111111111'],
@@ -64,7 +64,8 @@ function validEvidence(overrides = {}) {
       authMode: 'jwt',
       authenticated: true,
       user: {
-        userId: 'stage-user-1',
+        userIdPresent: true,
+        employeeLinked: false,
         roleCodes: ['STORE_MANAGER'],
         readScope: {
           companyIds: ['00000000-0000-0000-0000-000000000001'],
@@ -130,6 +131,21 @@ test('auth evidence guard rejects raw compact JWT material', () => {
 
   assert.notEqual(result.status, 0)
   assert.match(result.stderr, /raw compact JWT/i)
+})
+
+test('auth evidence guard rejects raw private identity material', () => {
+  const result = runGuard(
+    validEvidence({
+      accessTokenPayload: {
+        ...validEvidence().accessTokenPayload,
+        sub: 'stage-user-1',
+        email: 'stage.store.manager@example.com',
+      },
+    }),
+  )
+
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /private identity material/i)
 })
 
 test('auth evidence guard rejects unredacted sensitive URL parameters', () => {

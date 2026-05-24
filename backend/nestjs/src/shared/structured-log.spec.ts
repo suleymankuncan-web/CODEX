@@ -23,6 +23,7 @@ describe("structured-log", () => {
       redactSensitiveLogValue({
         authorization: "Bearer secret-token",
         databaseUrl: "postgres://user:secret@db.example.com:5432/app",
+        redisTlsUrl: "rediss://:redis-secret@cache.example.com:6379",
         nested: {
           refreshToken: "refresh-secret",
         },
@@ -30,6 +31,7 @@ describe("structured-log", () => {
     ).toEqual({
       authorization: "[redacted]",
       databaseUrl: "[redacted-url]",
+      redisTlsUrl: "[redacted-url]",
       nested: {
         refreshToken: "[redacted]",
       },
@@ -66,7 +68,9 @@ describe("structured-log", () => {
     logStructuredError(
       logger,
       "test.error",
-      new Error("failed with token=abc and postgres://u:p@db.example.com/app"),
+      new Error(
+        'failed with token=abc, password: secret and {"refresh_token":"refresh-secret"} postgres://u:p@db.example.com/app',
+      ),
     );
 
     const payload = JSON.parse(errorSpy.mock.calls[0][0] as string) as Record<
@@ -75,7 +79,9 @@ describe("structured-log", () => {
     >;
 
     expect(payload.errorMessage).toBe(
-      "failed with token=[redacted] and [redacted-url]",
+      "failed with token=[redacted], password=[redacted] and {refresh_token=[redacted]} [redacted-url]",
     );
+    expect(JSON.stringify(payload)).not.toContain("refresh-secret");
+    expect(JSON.stringify(payload)).not.toContain("secret");
   });
 });

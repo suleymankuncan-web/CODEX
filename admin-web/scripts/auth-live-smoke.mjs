@@ -163,13 +163,14 @@ function pickArray(value) {
 function sanitizeJwtPayload(payload) {
   return {
     iss: payload.iss,
-    sub: payload.sub,
+    subPresent: typeof payload.sub === 'string' && payload.sub.length > 0,
     aud: payload.aud,
     exp: payload.exp,
     iat: payload.iat,
-    preferred_username: payload.preferred_username,
-    email: payload.email,
-    employee_id: payload.employee_id,
+    preferredUsernamePresent:
+      typeof payload.preferred_username === 'string' && payload.preferred_username.length > 0,
+    emailPresent: typeof payload.email === 'string' && payload.email.length > 0,
+    employeeIdPresent: typeof payload.employee_id === 'string' && payload.employee_id.length > 0,
     roles: pickArray(payload.roles),
     read_company_ids: pickArray(payload.read_company_ids),
     read_region_ids: pickArray(payload.read_region_ids),
@@ -183,8 +184,8 @@ function sanitizeSession(session) {
     authMode: session.authMode,
     authenticated: session.authenticated,
     user: {
-      userId: session.user?.userId,
-      employeeId: session.user?.employeeId ?? null,
+      userIdPresent: typeof session.user?.userId === 'string' && session.user.userId.length > 0,
+      employeeLinked: typeof session.user?.employeeId === 'string' && session.user.employeeId.length > 0,
       roleCodes: session.user?.roleCodes ?? [],
       readScope: session.user?.readScope,
       actionScope: session.user?.actionScope,
@@ -214,6 +215,31 @@ function sanitizeUrl(inputUrl) {
   }
 
   return url.toString()
+}
+
+function redactSensitiveOutput(value) {
+  let output = String(value)
+
+  for (const exactValue of [username, password]) {
+    if (exactValue) {
+      output = output.replaceAll(exactValue, '<redacted>')
+    }
+  }
+
+  output = output.replace(
+    /([?&#](?:access_token|client_secret|code|code_challenge|code_verifier|id_token_hint|refresh_token|session_state|state|token)=)[^&#\s)]+/gi,
+    '$1<present-redacted>',
+  )
+  output = output.replace(/\bBearer\s+[A-Za-z0-9._-]+/gi, 'Bearer <redacted-bearer-token>')
+  output = output.replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*\b/g, '<redacted-jwt>')
+
+  return output
+}
+
+async function clickProviderLogin(page) {
+  const providerLoginLink = page.locator('a.auth-login-primary[href]').first()
+  await providerLoginLink.waitFor({ timeout: 15_000 })
+  await providerLoginLink.click()
 }
 
 function makeExpiredJwt() {
@@ -356,7 +382,7 @@ async function main() {
   })
 
   await page.goto(`/auth/login?returnTo=${encodeURIComponent(expectedLandingPath)}`)
-  await page.getByRole('link', { name: /Start provider login/i }).click()
+  await clickProviderLogin(page)
   await page.waitForURL((url) => url.href.includes('/protocol/openid-connect/auth'), {
     timeout: 15_000,
   })
@@ -385,7 +411,7 @@ async function main() {
     Boolean(window.sessionStorage.getItem('store-ops-admin-provider-id-token')),
   )
   const sanitizedPayload = sanitizeJwtPayload(decodeJwtPayload(accessToken))
-  assert(sanitizedPayload.sub, 'access token direct sub is missing')
+  assert(sanitizedPayload.subPresent, 'access token direct sub is missing')
   assert(sanitizedPayload.aud, 'access token direct aud is missing')
   assert(sanitizedPayload.roles.includes(expectedRole), `access token does not include ${expectedRole}`)
 
@@ -521,6 +547,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(error instanceof Error ? error.stack : String(error))
+  console.error(redactSensitiveOutput(error instanceof Error ? error.stack : String(error)))
   process.exit(1)
 })

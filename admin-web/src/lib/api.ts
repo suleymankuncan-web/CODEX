@@ -334,11 +334,11 @@ async function parseJsonResponse<T>(
 ): Promise<T> {
   const contentType = response.headers.get('content-type') ?? ''
   if (!contentType.toLowerCase().includes('application/json')) {
-    const body = await response.text()
+    await response.text()
     emitResponseFailureDiagnostic(response, path, context, 'non_json', 'API returned a non-JSON response')
     throw new ApiError(
       response.status,
-      `API returned a non-JSON response for ${path}. Check VITE_API_BASE_URL or the staging API rewrite. ${body.slice(0, 160)}`,
+      `API returned a non-JSON response for ${path}. Check VITE_API_BASE_URL or the staging API rewrite.`,
     )
   }
 

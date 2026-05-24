@@ -36,6 +36,7 @@ declare global {
 const API_FAILURE_EVENT_NAME = 'store-ops-api-failure'
 const API_FAILURE_LOG_PREFIX = '[store-ops:api-failure]'
 const API_FAILURE_RING_LIMIT = 20
+const REQUEST_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:/=-]{0,127}$/
 
 export function emitApiFailureDiagnostic(input: ApiFailureDiagnosticInput) {
   const diagnostic = buildApiFailureDiagnostic(input)
@@ -70,17 +71,17 @@ function buildApiFailureDiagnostic(input: ApiFailureDiagnosticInput): ApiFailure
     requestAttempt: Math.max(1, input.requestAttempt),
     errorCategory: input.errorCategory,
     errorMessage: sanitizeErrorMessage(input.errorMessage),
-    requestId: input.requestId?.trim() || null,
+    requestId: sanitizeRequestId(input.requestId),
     occurredAt: new Date().toISOString(),
   }
 }
 
 export function getRequestIdFromHeaders(headers: Headers) {
-  return (
+  return sanitizeRequestId(
     headers.get('x-request-id') ||
     headers.get('x-correlation-id') ||
     headers.get('traceparent') ||
-    null
+    null,
   )
 }
 
@@ -127,6 +128,16 @@ function sanitizePathname(pathname: string) {
 
 function sanitizeErrorMessage(message: string) {
   return message.trim() || 'API request failed'
+}
+
+function sanitizeRequestId(value: string | null) {
+  const normalized = value?.trim()
+
+  if (!normalized || !REQUEST_ID_PATTERN.test(normalized)) {
+    return null
+  }
+
+  return normalized
 }
 
 function isRetryableFailure(status: number | null, category: ApiFailureCategory) {

@@ -11,6 +11,7 @@ function readText(path) {
 
 test('frontend shell session query key is stable across Clerk token refreshes', () => {
   const app = readText('admin-web/src/App.tsx')
+  const sessionStorage = readText('admin-web/src/features/session/session-storage.ts')
   const queryStart = app.indexOf('const sessionQuery = useQuery({')
   const queryEnd = app.indexOf('  })', queryStart)
 
@@ -26,4 +27,11 @@ test('frontend shell session query key is stable across Clerk token refreshes', 
   assert.match(queryBlock, /bearerTokenReadiness/)
   assert.match(app, /token-present/)
   assert.match(app, /token-missing/)
+  assert.match(sessionStorage, /buildStableIdentityFingerprint\(payload\)/)
+  assert.match(sessionStorage, /hashTokenFingerprint\(identityParts\.join\('\|'\)\)/)
+  assert.doesNotMatch(
+    sessionStorage,
+    /return `token:\$\{hashTokenFingerprint\(normalized\)\}`/,
+    'hashing the whole bearer token makes the shell query key churn on token rotation',
+  )
 })

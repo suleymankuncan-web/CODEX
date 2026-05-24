@@ -18,6 +18,8 @@ const rawJwtPattern = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]*
 const redactedValuePattern = /^<[^>]*redacted[^>]*>$/i
 const sensitiveKeyPattern =
   /^(accessToken|authorizationCode|bearerToken|clientSecret|code|codeChallenge|codeVerifier|cookie|cookies|idToken|idTokenHint|privateKey|refreshToken|sessionState|sessionStorage)$/i
+const privateIdentityKeyPattern =
+  /^(email|employee_id|employeeId|preferred_username|preferredUsername|providerSubject|sub|userId)$/i
 
 function getPathValue(value, path) {
   return path.reduce((current, key) => current?.[key], value)
@@ -79,6 +81,10 @@ function walkEvidence(value, path, failures) {
       failures.push(`${path.join('.')} contains unredacted secret-like material`)
     }
 
+    if (privateIdentityKeyPattern.test(key) && !isRedacted(value)) {
+      failures.push(`${path.join('.')} contains unredacted private identity material`)
+    }
+
     inspectUrl(value, path, failures)
     return
   }
@@ -117,11 +123,12 @@ function validateEvidenceShape(evidence, failures) {
   requireEqual(evidence, failures, ['loginRedirect', 'codeChallengeMethod'], 'S256')
   requireEqual(evidence, failures, ['loginRedirect', 'statePresent'], true)
 
-  requireTruthy(evidence, failures, ['accessTokenPayload', 'sub'])
+  requireEqual(evidence, failures, ['accessTokenPayload', 'subPresent'], true)
   requireTruthy(evidence, failures, ['accessTokenPayload', 'aud'])
   requireArray(evidence, failures, ['accessTokenPayload', 'roles'])
 
   requireEqual(evidence, failures, ['session', 'authenticated'], true)
+  requireEqual(evidence, failures, ['session', 'user', 'userIdPresent'], true)
   requireArray(evidence, failures, ['session', 'user', 'roleCodes'])
   requireArray(evidence, failures, ['session', 'user', 'readScope', 'companyIds'])
   requireArray(evidence, failures, ['session', 'user', 'actionScope', 'assignedStoreIds'])

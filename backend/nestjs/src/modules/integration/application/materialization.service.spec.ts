@@ -518,7 +518,7 @@ describe("MaterializationService", () => {
       }
 
       if (sql.includes("INSERT INTO ops.employee")) {
-        throw new Error("database unavailable");
+        throw new Error("database unavailable password=secret token=abc123");
       }
 
       return { rowCount: 1, rows: [] };
@@ -529,7 +529,7 @@ describe("MaterializationService", () => {
     expect(databaseService.query).toHaveBeenCalledWith(
       expect.stringContaining("SET processed_flag = FALSE, normalized_status = 'retryable_error'"),
       [
-        expect.stringContaining("database unavailable"),
+        "database unavailable password=[redacted] token=[redacted]",
         "00000000-0000-0000-0000-000000000103",
       ],
     );

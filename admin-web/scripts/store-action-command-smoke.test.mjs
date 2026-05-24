@@ -281,6 +281,7 @@ test('store action command smoke prints sanitized assigned and unassigned comman
 
     assert.equal(result.status, 0, output)
     assert.doesNotMatch(output, /secret-token-value/)
+    assert.doesNotMatch(output, /80000000-0000-0000-0000-000000000900/)
     assert.equal(seen.length, 7)
     assert.deepEqual(
       seen.map((item) => item.authorization),
@@ -289,6 +290,8 @@ test('store action command smoke prints sanitized assigned and unassigned comman
 
     const evidence = JSON.parse(result.stdout)
     assert.equal(evidence.evidenceStatus, 'test-store-action-command-smoke-passed')
+    assert.equal(evidence.session.user.userIdPresent, true)
+    assert.equal(evidence.session.user.employeeLinked, false)
     assert.equal(evidence.session.user.roleCodes.includes('STORE_MANAGER'), true)
     assert.equal(evidence.storeActionCommandSmoke.assignedStore.createForClose.command.status, 'created')
     assert.equal(evidence.storeActionCommandSmoke.assignedStore.statusUpdate.plan.status, 'in_progress')

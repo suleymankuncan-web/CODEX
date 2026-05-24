@@ -147,21 +147,11 @@ export function getBearerSessionCacheKey(token: string) {
   }
 
   const payload = readJwtPayload(normalized)
-  if (!payload) {
-    return 'token-unreadable'
-  }
+  const identityFingerprint = buildStableIdentityFingerprint(payload)
 
-  const sub = stringifyClaim(payload.sub)
-  const sid = stringifyClaim(payload.sid)
-  const aud = stringifyClaim(payload.aud)
-
-  return [
-    `sub:${sub || 'unknown'}`,
-    sid ? `sid:${sid}` : null,
-    aud ? `aud:${aud}` : null,
-  ]
-    .filter(Boolean)
-    .join('|')
+  return identityFingerprint
+    ? `identity:${identityFingerprint}`
+    : `token:${hashTokenFingerprint(normalized)}`
 }
 
 export function isBearerTokenExpiringSoon(token: string) {
@@ -238,7 +228,23 @@ function readJwtPayload(token: string) {
   }
 }
 
-function stringifyClaim(value: unknown) {
+function buildStableIdentityFingerprint(payload: Record<string, unknown> | null) {
+  if (!payload) {
+    return ''
+  }
+
+  const identityParts = [
+    ['sub', payload.sub],
+    ['sid', payload.sid],
+    ['aud', payload.aud],
+  ]
+    .map(([key, value]) => `${key}:${stringifyStableClaim(value)}`)
+    .filter((part) => !part.endsWith(':'))
+
+  return identityParts.length > 0 ? hashTokenFingerprint(identityParts.join('|')) : ''
+}
+
+function stringifyStableClaim(value: unknown) {
   if (Array.isArray(value)) {
     return value.map((item) => String(item)).sort().join(',')
   }
@@ -253,4 +259,15 @@ function stringifyClaim(value: unknown) {
 function toBase64(value: string) {
   const normalized = value.replace(/-/g, '+').replace(/_/g, '/')
   return normalized.padEnd(normalized.length + ((4 - (normalized.length % 4)) % 4), '=')
+}
+
+function hashTokenFingerprint(value: string) {
+  let hash = 0x811c9dc5
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index)
+    hash = Math.imul(hash, 0x01000193)
+  }
+
+  return (hash >>> 0).toString(36)
 }

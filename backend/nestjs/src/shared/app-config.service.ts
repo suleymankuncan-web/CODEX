@@ -318,7 +318,18 @@ export class AppConfigService {
   }
 
   get dbSslMode(): string {
-    return this.readString("DB_SSL_MODE", "disable");
+    const value = this.readString("DB_SSL_MODE", "disable");
+    const allowedValues = new Set(["disable", "require"]);
+
+    if (!allowedValues.has(value)) {
+      throw new Error("DB_SSL_MODE must be one of disable, require");
+    }
+
+    if (this.isProduction && value !== "require") {
+      throw new Error("DB_SSL_MODE=require is required in production");
+    }
+
+    return value;
   }
 
   get jwtAudience(): string {

@@ -447,11 +447,13 @@ function SessionVerificationPanel(input: {
 }
 
 function truncateToken(token: string) {
-  if (token.length < 18) {
-    return token
+  const normalized = token.trim()
+
+  if (normalized.length < 18) {
+    return '[redacted]'
   }
 
-  return `${token.slice(0, 10)}...${token.slice(-6)}`
+  return `${normalized.slice(0, 10)}...${normalized.slice(-6)}`
 }
 
 function formatSessionMode(mode: SessionMode, t: TranslateFunction) {

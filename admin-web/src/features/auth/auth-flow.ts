@@ -211,8 +211,7 @@ export async function exchangeAuthorizationCodeForToken(input: {
   })
 
   if (!response.ok) {
-    const message = await response.text()
-    throw new Error(message || `Token exchange failed with status ${response.status}`)
+    throw new Error(`Token exchange failed with status ${response.status}`)
   }
 
   const payload = (await response.json()) as TokenResponse

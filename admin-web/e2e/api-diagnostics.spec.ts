@@ -78,6 +78,28 @@ test('keeps API diagnostics quiet when feed API requests succeed', async ({ page
   expect(await readCapturedApiFailureEvents(page)).toEqual([])
 })
 
+test('drops unsafe request id headers from API failure diagnostics', async ({ page }) => {
+  await seedStoreSession(page)
+  await captureApiFailureEvents(page)
+  await routeFeedApi(page, {
+    status: 503,
+    headers: {
+      'x-request-id': 'Bearer secret-request-token',
+    },
+    json: {
+      message: 'Temporary feed outage',
+    },
+  })
+
+  await page.goto('/store/feed')
+
+  await expect.poll(() => readFeedFailureCount(page)).toBeGreaterThan(0)
+
+  const diagnostic = await readLastFeedFailure(page)
+  expect(diagnostic?.requestId).toBeNull()
+  expect(JSON.stringify(diagnostic)).not.toContain('secret-request-token')
+})
+
 async function seedStoreSession(page: Page) {
   await page.addInitScript(
     ({ seededCompanyId }) => {
