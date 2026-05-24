@@ -26,6 +26,7 @@ Use these first:
 - `docs/evidence/readiness/2026-05-23-production-ops-closure-decision-packet-v1.md`
 - `docs/plans/production-evidence-closure-joint-plan-v1.md`
 - `docs/plans/production-staging-incident-response-skeleton.md`
+- `docs/plans/p0-trust-operations-execution-v1.md`
 - `docs/plans/performance-budget-v1.md`
 
 ## Active Rules
@@ -36,13 +37,17 @@ Use these first:
 - Logical restore is accepted only for controlled pilot.
 - Render Slack and Better Stack email proof support controlled-pilot alerting,
   not final app-level production observability.
+- P0 trust operations are execution-mapped in
+  `docs/plans/p0-trust-operations-execution-v1.md`; provider-backed
+  app-level error tracking remains blocked until a real provider/destination,
+  redaction policy, and owner path are accepted.
 
 ## Parked Or High-Risk
 
 - Production-grade Redis tier change.
 - Managed Supabase restore/PITR/RPO/RTO acceptance.
-- P0 trust backlog: app-level error tracking, incident ownership, rollback
-  authority, security/tenant preflight, evidence expiry, and owner map.
+- P0 trust backlog implementation without provider/owner input: app-level
+  provider SDK work, private owner contacts, and broad-production trust claims.
 - P1 operator/support backlog: trace policy, support diagnostics,
   troubleshooting, stale-data policy, job idempotency, data correction, import
   preview, performance escalation, role lifecycle, and metric glossary.
