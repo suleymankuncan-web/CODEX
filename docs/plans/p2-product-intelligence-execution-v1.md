@@ -70,7 +70,7 @@ Decision:
 | --- | --- | --- | --- |
 | Store personnel checklist exposure cleanup | closed | `STORE_PERSONNEL` should not open checklist execution/result queues directly. PR #492 blocks direct route access and preserves manager/region/VM/reporting access. | Done. Re-run route matrix/e2e if role visibility changes. |
 | Daily Command Brief on `/store/home` | first_slice_merged | High value and understandable: "what should I pay attention to today?" The first read-only slice now uses existing source links and no generated advice. | Keep it source-linked; expand only with real pilot feedback. |
-| Command Chain Intelligence | source_map_ready | Useful for region/admin: show why a store needs attention and which source proves it. Daily Brief V1 now supplies the first source vocabulary. | Use `docs/plans/command-chain-intelligence-source-map-v1.md`; next code should be a pure read-only reason helper before any page/backend work. |
+| Command Chain Intelligence | helper_ready | Useful for region/admin: show why a store needs attention and which source proves it. Daily Brief V1 supplies the first source vocabulary, and the first pure read-only reason helper exists. | Use `docs/plans/command-chain-intelligence-source-map-v1.md`; next code should wire the helper only into a minimal read-only surface if pilot feedback asks for it. |
 | Store Performance Replay | parked_until_event_inventory | Strong "wow" idea, but only safe if every timeline event has a reliable source and timestamp. | Inventory event sources across imports, snapshots, Store Action status, checklist completion, target approval, and feedback. |
 | Internal Change Visibility | ready_docs_only | Operators need to know what changed, but a live changelog feature is not necessary yet. | Maintain release/operator notes in docs/evidence; later expose read-only product copy if pilot asks. |
 | Site usage vs performance correlation | parked_data_policy | The question is valid, but every login/session event can become noisy or sensitive. Existing auth/audit evidence is enough for now. | Define privacy/data policy and aggregate engagement metric before adding new tracking. |
@@ -151,16 +151,20 @@ Current source map:
 - `docs/plans/command-chain-intelligence-source-map-v1.md` defines allowed
   source families, safe/unsafe claims, role/scope visibility, reason item
   shape, stop rules, and verification ladder.
+- `docs/evidence/product-progress/2026-05-24-command-chain-reason-helper-v1.md`
+  records the first pure helper slice: existing workflow, Store Action, and
+  operations signal inputs can become source-linked reason items without a new
+  route, backend endpoint, auth change, workflow change, or advice layer.
 
 Use only after Daily Command Brief has stable source vocabulary. That condition
-is now satisfied for docs/source-map work; code should still begin with a pure
-read-only helper before any new surface or backend aggregator.
+is now satisfied for docs/source-map work and the pure helper. Product UI should
+still begin with a minimal read-only surface and no backend aggregator.
 
 First safe slice:
 
-- pure helper or docs/evidence audit that lists source-linked reasons for store
-  attention, using existing data-quality, operations, workflow, Store Action,
-  and reporting signals.
+- minimal read-only admin/region surface, only if pilot feedback asks for store
+  attention reasons, using the existing pure helper and already-fetched
+  data-quality, operations, workflow, Store Action, and reporting signals.
 
 Stop before:
 
@@ -168,7 +172,7 @@ Stop before:
 - cross-store ranking rule changes,
 - alert provider behavior,
 - support-only permission bypasses,
-- new backend aggregation until the helper proves the vocabulary works.
+- new backend aggregation until a read-only surface proves the vocabulary works.
 
 ## Store Performance Replay
 
@@ -246,7 +250,7 @@ Stop before:
 
 After the user's UI/content redesign direction starts, choose one of these:
 
-1. Command Chain pure read-only reason helper if admin/region "why this store
+1. Minimal Command Chain read-only surface if admin/region "why this store
    needs attention" visibility is the next pilot question.
 2. Store Performance Replay event-source inventory if the user wants a stronger
    executive story first.
