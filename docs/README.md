@@ -87,6 +87,7 @@ evidence, incident posture, and recovery.
 - `docs/plans/p0-trust-operations-execution-v1.md`
 - `docs/plans/p1-operator-support-execution-v1.md`
 - `docs/plans/p2-product-intelligence-execution-v1.md`
+- `docs/plans/internal-change-visibility-operating-model-v1.md`
 - `docs/plans/store-performance-replay-event-source-inventory-v1.md`
 - `docs/plans/store-performance-replay-readonly-surface-spec-v1.md`
 - `docs/plans/p3-operating-triggers-v1.md`

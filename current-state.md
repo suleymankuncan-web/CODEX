@@ -117,6 +117,13 @@ Current Store Performance Replay read-only surface spec:
 docs/plans/store-performance-replay-readonly-surface-spec-v1.md
 ```
 
+Current Internal Change Visibility operating model and seed evidence:
+
+```text
+docs/plans/internal-change-visibility-operating-model-v1.md
+docs/evidence/product-progress/2026-05-24-internal-change-visibility-v1.md
+```
+
 Current P3 trigger-only operating reference:
 
 ```text

@@ -100,6 +100,10 @@ Operating plan:
 - `docs/plans/store-performance-replay-readonly-surface-spec-v1.md` keeps Store
   Performance Replay ready for a future sourced read-only surface without
   starting visible UI before the UI/content phase.
+- `docs/plans/internal-change-visibility-operating-model-v1.md` and
+  `docs/evidence/product-progress/2026-05-24-internal-change-visibility-v1.md`
+  define how accepted changes are translated into operator-facing notes without
+  exposing commit logs or starting an in-app changelog.
 - `docs/plans/p3-operating-triggers-v1.md` keeps low-urgency operating ideas
   parked until real triggers exist: migration policy, dependency cadence,
   browser/device support, evidence automation, freeze windows, manual

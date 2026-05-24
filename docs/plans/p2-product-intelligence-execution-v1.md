@@ -72,7 +72,7 @@ Decision:
 | Daily Command Brief on `/store/home` | first_slice_merged | High value and understandable: "what should I pay attention to today?" The first read-only slice now uses existing source links and no generated advice. | Keep it source-linked; expand only with real pilot feedback. |
 | Command Chain Intelligence | helper_ready | Useful for region/admin: show why a store needs attention and which source proves it. Daily Brief V1 supplies the first source vocabulary, and the first pure read-only reason helper exists. | Use `docs/plans/command-chain-intelligence-source-map-v1.md`; next code should wire the helper only into a minimal read-only surface if pilot feedback asks for it. |
 | Store Performance Replay | surface_spec_ready | Strong "wow" idea, and the first event-source inventory plus pure mapper now separate factual events from unsafe claims before any UI work. The read-only surface spec defines the future UI contract without starting UI implementation. | Use `docs/plans/store-performance-replay-event-source-inventory-v1.md` and `docs/plans/store-performance-replay-readonly-surface-spec-v1.md`; next code before UI redesign should be pure view-model only. |
-| Internal Change Visibility | ready_docs_only | Operators need to know what changed, but a live changelog feature is not necessary yet. | Maintain release/operator notes in docs/evidence; later expose read-only product copy if pilot asks. |
+| Internal Change Visibility | operating_model_ready | Operators need to know what changed, but a live changelog feature is not necessary yet. The operating model now defines curated operator notes and seed evidence without starting UI. | Use `docs/plans/internal-change-visibility-operating-model-v1.md` and `docs/evidence/product-progress/2026-05-24-internal-change-visibility-v1.md`; later expose read-only product copy only if pilot asks. |
 | Site usage vs performance correlation | parked_data_policy | The question is valid, but every login/session event can become noisy or sensitive. Existing auth/audit evidence is enough for now. | Define privacy/data policy and aggregate engagement metric before adding new tracking. |
 | App-level error tracking | blocked_external | Useful for broad production, but P0 trust ops already blocks provider SDK work until provider, destination, redaction, owner, and smoke proof are accepted. | Follow `docs/plans/p0-trust-operations-execution-v1.md`. |
 
@@ -228,6 +228,11 @@ Current safe path:
 
 - Continue using docs/evidence and PR summaries for operator-visible change
   notes.
+- `docs/plans/internal-change-visibility-operating-model-v1.md` defines the
+  note contract, audience rules, allowed sources, redaction rules, and stop
+  rules.
+- `docs/evidence/product-progress/2026-05-24-internal-change-visibility-v1.md`
+  seeds accepted operator notes for the current P2 product-intelligence line.
 - If pilot feedback asks for in-app release notes, start with a static,
   read-only list curated from accepted release notes, not commit logs.
 
