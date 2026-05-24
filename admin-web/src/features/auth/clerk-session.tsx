@@ -1,7 +1,6 @@
 import {
   ClerkProvider,
-  SignInButton,
-  SignUpButton,
+  SignIn,
   UserButton,
   useAuth,
 } from '@clerk/react'
@@ -53,12 +52,12 @@ export function ClerkSessionProvider(input: { children: ReactNode }) {
 
 export function ClerkLoginActions(input: { returnTo: string }) {
   const { t } = useLocalization()
-  const { isLoaded, isSignedIn, userId } = useAuth()
+  const { isLoaded: authLoaded, isSignedIn, userId } = useAuth()
   const safeReturnTo = sanitizeAuthReturnPath(input.returnTo) ?? '/'
 
-  if (!isLoaded) {
+  if (!authLoaded) {
     return (
-      <button className="control-button auth-flow-link" type="button" disabled>
+      <button className="auth-login-primary" type="button" disabled>
         {t('authFlow.loadingClerk')}
       </button>
     )
@@ -66,10 +65,10 @@ export function ClerkLoginActions(input: { returnTo: string }) {
 
   if (isSignedIn) {
     return (
-      <div className="clerk-session-card">
+      <div className="auth-login-session-card">
         <div>
           <StatusPill tone="calm">{t('authFlow.clerkSignedIn')}</StatusPill>
-          <p className="panel-copy">{t('authFlow.clerkSyncingUser', { userId: userId ?? 'unknown' })}</p>
+          <p>{t('authFlow.clerkSyncingUser', { userId: userId ?? 'unknown' })}</p>
         </div>
         <UserButton />
       </div>
@@ -77,18 +76,46 @@ export function ClerkLoginActions(input: { returnTo: string }) {
   }
 
   return (
-    <>
-      <SignInButton mode="modal" fallbackRedirectUrl={safeReturnTo}>
-        <button className="control-button auth-flow-link" type="button">
+    <div className="auth-login-clerk">
+      <SignIn
+        routing="hash"
+        forceRedirectUrl={safeReturnTo}
+        fallbackRedirectUrl={safeReturnTo}
+        withSignUp={false}
+        fallback={(
+          <button className="auth-login-primary" type="button" disabled>
+            {t('authFlow.loadingClerk')}
+          </button>
+        )}
+        appearance={{
+          variables: {
+            borderRadius: '0.5rem',
+            colorBackground: '#ffffff',
+            colorPrimary: '#7c3aed',
+            colorText: '#171421',
+            colorTextSecondary: '#6c6478',
+            fontSize: '14px',
+          },
+          elements: {
+            card: 'auth-login-clerk-card',
+            cardBox: 'auth-login-clerk-card',
+            footer: 'auth-login-clerk-hidden',
+            formButtonPrimary: 'auth-login-primary auth-login-clerk-submit',
+            formFieldInput: 'auth-login-clerk-input',
+            formFieldLabel: 'auth-login-clerk-label',
+            headerSubtitle: 'auth-login-clerk-hidden',
+            headerTitle: 'auth-login-clerk-hidden',
+            rootBox: 'auth-login-clerk-root',
+            socialButtonsBlockButton: 'auth-login-clerk-hidden',
+          },
+        }}
+      />
+      <noscript>
+        <button className="auth-login-primary" type="button" disabled>
           {t('authFlow.signInWithClerk')}
         </button>
-      </SignInButton>
-      <SignUpButton mode="modal" fallbackRedirectUrl={safeReturnTo}>
-        <button className="control-button auth-flow-link" type="button">
-          {t('authFlow.createClerkUser')}
-        </button>
-      </SignUpButton>
-    </>
+      </noscript>
+    </div>
   )
 }
 

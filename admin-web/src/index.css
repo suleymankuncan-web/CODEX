@@ -26,6 +26,7 @@
 @import './styles/store-shell-core.css';
 @import './styles/store-me-core.css';
 @import './styles/store-route-auth.css';
+@import './styles/auth-login.css';
 @import './styles/rankings-plum-overview.css';
 @import './styles/rankings-plum-table.css';
 @import './styles/admin-checklist-builder.css';
