@@ -1,7 +1,55 @@
-import { type CSSProperties } from 'react'
-import { NavLink } from 'react-router-dom'
-import { CalendarDays, ChevronDown, X } from 'lucide-react'
+import {
+  CalendarDays,
+  ChartNoAxesColumnIncreasing,
+  ChevronDown,
+  LineChart,
+  ListChecks,
+  Target,
+} from 'lucide-react'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Progress } from '@/components/ui/progress'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Separator } from '@/components/ui/separator'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import type { TranslateFunction } from '../features/localization/dictionary'
+import { cn } from '../lib/utils'
+export {
+  StoreMyPerformanceMobileDock,
+  StoreMyPerformanceRail,
+  StoreMyPerformanceTopbar,
+} from './store-my-performance-navigation'
 
 type StorePerformanceSourceMode = 'live' | 'closed'
 type LivePeriodType = 'monthly' | 'daily'
@@ -10,18 +58,6 @@ type LiveDayPeriod = {
   periodType: string
   periodStart: string
   periodEnd: string
-}
-
-type StoreMyPerformanceRailProps = {
-  showApprovalsLink: boolean
-  t: TranslateFunction
-}
-
-type StoreMyPerformanceTopbarProps = {
-  employeeHeading: string
-  introCopy: string
-  periodLabel: string
-  t: TranslateFunction
 }
 
 type StoreMyPerformanceDateFilterProps = {
@@ -151,120 +187,88 @@ type StoreMyPerformanceKpiDialogProps = {
   t: TranslateFunction
 }
 
-function NavGlyph(input: { type: 'home' | 'me' | 'rank' | 'target' | 'settings' }) {
-  if (input.type === 'home') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M4 11.5 12 5l8 6.5V20H4z" />
-        <path d="M9 20v-6h6v6" />
-      </svg>
-    )
+const LATEST_CLOSED_SNAPSHOT_VALUE = '__latest_closed_snapshot__'
+
+function clampProgress(value: number) {
+  if (!Number.isFinite(value)) {
+    return 0
   }
 
-  if (input.type === 'rank') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M18 20V10" />
-        <path d="M12 20V4" />
-        <path d="M6 20v-6" />
-      </svg>
-    )
-  }
+  return Math.min(100, Math.max(0, Math.round(value)))
+}
 
-  if (input.type === 'target') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M12 20a8 8 0 1 0-8-8" />
-        <path d="M12 12 18 8" />
-        <path d="M4 12H2" />
-      </svg>
-    )
-  }
+function progressFromWidth(width: string) {
+  return clampProgress(Number.parseFloat(width.replace('%', '')))
+}
 
-  if (input.type === 'settings') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z" />
-        <path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.04.04a2.1 2.1 0 1 1-2.97 2.97l-.04-.04a1.8 1.8 0 0 0-1.98-.36 1.8 1.8 0 0 0-1.09 1.65V21a2.1 2.1 0 1 1-4.2 0v-.06A1.8 1.8 0 0 0 8.43 19.3a1.8 1.8 0 0 0-1.98.36l-.04.04a2.1 2.1 0 1 1-2.97-2.97l.04-.04A1.8 1.8 0 0 0 3.84 15a1.8 1.8 0 0 0-1.65-1.09H2a2.1 2.1 0 1 1 0-4.2h.06a1.8 1.8 0 0 0 1.65-1.09 1.8 1.8 0 0 0-.36-1.98l-.04-.04a2.1 2.1 0 1 1 2.97-2.97l.04.04a1.8 1.8 0 0 0 1.98.36h.01A1.8 1.8 0 0 0 9.4 2.38V2a2.1 2.1 0 1 1 4.2 0v.06a1.8 1.8 0 0 0 1.09 1.65 1.8 1.8 0 0 0 1.98-.36l.04-.04a2.1 2.1 0 1 1 2.97 2.97l-.04.04a1.8 1.8 0 0 0-.36 1.98v.01a1.8 1.8 0 0 0 1.65 1.09H21a2.1 2.1 0 1 1 0 4.2h-.06A1.8 1.8 0 0 0 19.4 15z" />
-      </svg>
-    )
-  }
+function scoreBadgeVariant(isPartial: boolean): 'destructive' | 'secondary' {
+  return isPartial ? 'destructive' : 'secondary'
+}
 
+function PeriodCheck({
+  checked,
+  children,
+  disabled,
+  onChange,
+}: {
+  checked: boolean
+  children: string
+  disabled: boolean
+  onChange: () => void
+}) {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M4 19V9" />
-      <path d="M10 19V5" />
-      <path d="M16 19v-8" />
-      <path d="M22 19H2" />
-    </svg>
+    <label
+      className={cn(
+        'tw:inline-flex tw:min-h-8 tw:min-w-0 tw:items-center tw:gap-2 tw:rounded-lg tw:border tw:border-border tw:bg-background tw:px-2.5 tw:text-sm tw:font-medium tw:text-muted-foreground',
+        checked && 'tw:bg-muted tw:text-foreground',
+        disabled && 'tw:cursor-not-allowed tw:opacity-50',
+      )}
+    >
+      <input
+        className="tw:accent-primary"
+        type="checkbox"
+        checked={checked}
+        onChange={onChange}
+        disabled={disabled}
+      />
+      <span className="tw:truncate">{children}</span>
+    </label>
   )
 }
 
-export function StoreMyPerformanceRail({ showApprovalsLink, t }: StoreMyPerformanceRailProps) {
+function RankCell({
+  label,
+  note,
+  value,
+}: {
+  label: string
+  note: string
+  value: string
+}) {
   return (
-    <aside className="store-me-v2-rail" aria-label={t('storeMe.nav.aria')}>
-      <div className="store-me-v2-brand-mark" aria-label={t('storeMe.brandAria')}>
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M4 16.5 9.2 11l3.8 3.7L20 7" />
-          <path d="M15 7h5v5" />
-        </svg>
-      </div>
-      <nav className="store-me-v2-rail-nav" aria-label={t('storeMe.nav.aria')}>
-        <NavLink to="/store/home" className="store-me-v2-rail-link">
-          <NavGlyph type="home" />
-          <span>{t('storeMe.nav.home')}</span>
-        </NavLink>
-        <NavLink to="/store/me" className="store-me-v2-rail-link">
-          <NavGlyph type="me" />
-          <span>{t('storeMe.nav.me')}</span>
-        </NavLink>
-        <NavLink to="/store/rankings" className="store-me-v2-rail-link">
-          <NavGlyph type="rank" />
-          <span>{t('storeMe.nav.rankings')}</span>
-        </NavLink>
-        {showApprovalsLink ? (
-          <NavLink to="/store/approvals" className="store-me-v2-rail-link">
-            <NavGlyph type="target" />
-            <span>{t('storeMe.nav.targets')}</span>
-          </NavLink>
-        ) : null}
-      </nav>
-      <div className="store-me-v2-rail-spacer" />
-      <NavLink to="/store/tasks" className="store-me-v2-rail-link">
-        <NavGlyph type="settings" />
-        <span>{t('storeMe.nav.tasks')}</span>
-      </NavLink>
-    </aside>
+    <div className="tw:grid tw:min-w-0 tw:gap-1 tw:rounded-lg tw:border tw:border-border tw:bg-background tw:p-3">
+      <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{label}</span>
+      <strong className="tw:truncate tw:text-base tw:font-medium">{value}</strong>
+      <small className="tw:truncate tw:text-xs tw:text-muted-foreground">{note}</small>
+    </div>
   )
 }
 
-export function StoreMyPerformanceTopbar({
-  employeeHeading,
-  introCopy,
-  periodLabel,
-  t,
-}: StoreMyPerformanceTopbarProps) {
+function MetricProgress({
+  label,
+  value,
+}: {
+  label: string
+  value: number
+}) {
   return (
-    <header className="store-me-v2-topbar">
-      <div className="store-me-v2-identity">
-        <h1>{employeeHeading}</h1>
-        <p>{introCopy}</p>
+    <div className="tw:grid tw:gap-1.5">
+      <div className="tw:flex tw:items-center tw:justify-between tw:gap-2 tw:text-xs tw:text-muted-foreground">
+        <span>{label}</span>
+        <span>{clampProgress(value)}%</span>
       </div>
-      <div className="store-me-v2-top-actions" aria-label={t('storeMe.pageTools')}>
-        <button className="store-me-v2-period-pill" type="button">
-          {periodLabel}
-        </button>
-        <button className="store-me-v2-theme-pill" type="button">
-          {t('storeMe.lightTheme')}
-        </button>
-        <button className="store-me-v2-icon-button" type="button" aria-label={t('storeMe.notifications')}>
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
-            <path d="M10 21h4" />
-          </svg>
-        </button>
-      </div>
-    </header>
+      <Progress value={clampProgress(value)} className="tw:h-2" />
+    </div>
   )
 }
 
@@ -292,173 +296,176 @@ export function StoreMyPerformanceDateFilter({
   t,
   usesClosedSnapshotMode,
 }: StoreMyPerformanceDateFilterProps) {
+  const selectedClosedValue =
+    selectedClosedSnapshotRunId || activeClosedSnapshotRunId || LATEST_CLOSED_SNAPSHOT_VALUE
+
   return (
-    <section className="store-me-v2-date-filter">
-      <button
-        className="store-me-v2-date-filter-trigger"
+    <section className="tw:relative tw:grid tw:gap-3" aria-label={t('storeMe.dateFilter')}>
+      <Button
+        className="tw:h-auto tw:w-full tw:justify-between tw:gap-3 tw:rounded-xl tw:p-3"
         type="button"
+        variant="outline"
         aria-expanded={isDateFilterOpen}
         onClick={onToggleDateFilter}
       >
-        <span className="store-me-v2-filter-trigger-icon" aria-hidden="true">
-          <CalendarDays size={20} />
+        <CalendarDays data-icon="inline-start" />
+        <span className="tw:grid tw:min-w-0 tw:flex-1 tw:gap-0.5 tw:text-left">
+          <span className="tw:text-xs tw:text-muted-foreground">{t('storeMe.dateFilter')}</span>
+          <strong className="tw:truncate tw:text-sm tw:font-medium">{selectedPeriodLabel}</strong>
         </span>
-        <span className="store-me-v2-filter-trigger-main">
-          <span>{t('storeMe.dateFilter')}</span>
-          <strong>{selectedPeriodLabel}</strong>
+        <span className="tw:hidden tw:items-center tw:gap-2 tw:md:flex">
+          <Badge variant="outline">{t('storeMe.loadedPeriodCount', { count: loadedPeriodCount })}</Badge>
+          <Badge variant={isPartial ? 'destructive' : 'secondary'}>{dataQualityLabel}</Badge>
         </span>
-        <span className="store-me-v2-filter-trigger-meta" aria-hidden="true">
-          <span>{t('storeMe.loadedPeriodCount', { count: loadedPeriodCount })}</span>
-          <span className={isPartial ? '' : 'success'}>{dataQualityLabel}</span>
-        </span>
-        <span className="store-me-v2-filter-caret" aria-hidden="true">
-          <ChevronDown size={18} />
-        </span>
-      </button>
+        <ChevronDown data-icon="inline-end" />
+      </Button>
 
       {isDateFilterOpen ? (
-        <div className="store-me-v2-date-filter-popover" role="group" aria-label={t('storeMe.dateFilter')}>
-          {usesClosedSnapshotMode ? (
-            <div className="store-me-v2-filter-field">
-              <span>{t('storeMe.view')}</span>
-              <div className="store-me-v2-choice-row">
-                <button
-                  className={sourceMode === 'live' ? 'active' : ''}
-                  type="button"
-                  onClick={() => onSelectSourceMode('live')}
+        <div className="tw:grid tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-card tw:p-3 tw:text-card-foreground tw:shadow-sm">
+          <div className="tw:flex tw:flex-wrap tw:gap-2 tw:md:hidden" aria-hidden="true">
+            <Badge variant="outline">{t('storeMe.loadedPeriodCount', { count: loadedPeriodCount })}</Badge>
+            <Badge variant={isPartial ? 'destructive' : 'secondary'}>{dataQualityLabel}</Badge>
+          </div>
+
+          <div className="tw:grid tw:gap-3 tw:lg:grid-cols-2">
+            {usesClosedSnapshotMode ? (
+              <div className="tw:grid tw:gap-2">
+                <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{t('storeMe.view')}</span>
+                <ToggleGroup
+                  type="single"
+                  value={sourceMode}
+                  onValueChange={(value) => {
+                    if (value === 'live' || value === 'closed') {
+                      onSelectSourceMode(value)
+                    }
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="tw:flex-wrap"
                 >
-                  {t('storeMe.liveStatus')}
-                </button>
-                <button
-                  className={sourceMode === 'closed' ? 'active' : ''}
-                  type="button"
-                  onClick={() => onSelectSourceMode('closed')}
-                >
-                  {t('storeMe.closedDay')}
-                </button>
+                  <ToggleGroupItem value="live">{t('storeMe.liveStatus')}</ToggleGroupItem>
+                  <ToggleGroupItem value="closed">{t('storeMe.closedDay')}</ToggleGroupItem>
+                </ToggleGroup>
               </div>
-            </div>
-          ) : null}
-          <div className="store-me-v2-filter-field">
-            <span>{t('storeMe.liveGranularity')}</span>
-            <div className="store-me-v2-choice-row">
-              <button
-                className={selectedLivePeriodType === 'monthly' ? 'active' : ''}
-                type="button"
-                disabled={sourceMode !== 'live'}
-                onClick={() => onChangeLivePeriodType('monthly')}
+            ) : null}
+
+            <div className="tw:grid tw:gap-2">
+              <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{t('storeMe.liveGranularity')}</span>
+              <ToggleGroup
+                type="single"
+                value={selectedLivePeriodType}
+                onValueChange={(value) => {
+                  if (value === 'monthly' || value === 'daily') {
+                    onChangeLivePeriodType(value)
+                  }
+                }}
+                variant="outline"
+                size="sm"
+                className="tw:flex-wrap"
               >
-                {t('storeMe.liveMonth')}
-              </button>
-              <button
-                className={selectedLivePeriodType === 'daily' ? 'active' : ''}
-                type="button"
-                disabled={sourceMode !== 'live'}
-                onClick={() => onChangeLivePeriodType('daily')}
-              >
-                {t('storeMe.liveDay')}
-              </button>
+                <ToggleGroupItem value="monthly" disabled={sourceMode !== 'live'}>
+                  {t('storeMe.liveMonth')}
+                </ToggleGroupItem>
+                <ToggleGroupItem value="daily" disabled={sourceMode !== 'live'}>
+                  {t('storeMe.liveDay')}
+                </ToggleGroupItem>
+              </ToggleGroup>
             </div>
           </div>
-          <div className="store-me-v2-filter-field">
-            <span>{t('storeMe.loadedYears')}</span>
-            <div
-              className="store-me-v2-period-picklist"
-              role="group"
-              aria-label={t('storeMe.loadedYears')}
-            >
-              {availableLiveYearOptions.length ? (
-                availableLiveYearOptions.map((year) => (
-                  <label
-                    className={`store-me-v2-period-check${year.checked ? ' active' : ''}`}
-                    key={year.key}
-                  >
-                    <input
-                      type="checkbox"
+
+          <Separator />
+
+          <div className="tw:grid tw:gap-3 tw:lg:grid-cols-3">
+            <div className="tw:grid tw:gap-2">
+              <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{t('storeMe.loadedYears')}</span>
+              <div className="tw:flex tw:max-h-36 tw:flex-wrap tw:gap-2 tw:overflow-auto">
+                {availableLiveYearOptions.length ? (
+                  availableLiveYearOptions.map((year) => (
+                    <PeriodCheck
+                      key={year.key}
                       checked={year.checked}
+                      disabled={sourceMode !== 'live'}
                       onChange={() => onToggleLiveYear(year.key)}
-                      disabled={sourceMode !== 'live'}
-                    />
-                    <span>{year.key}</span>
-                  </label>
-                ))
-              ) : (
-                <span className="store-me-v2-period-empty">{t('storeMe.noLoadedPeriods')}</span>
-              )}
-            </div>
-          </div>
-          <div className="store-me-v2-filter-field">
-            <span>{t('storeMe.loadedMonthBuckets')}</span>
-            <div
-              className="store-me-v2-period-picklist"
-              role="group"
-              aria-label={t('storeMe.loadedMonthBuckets')}
-            >
-              {availableLiveMonthOptions.length ? (
-                availableLiveMonthOptions.map((month) => (
-                  <label
-                    className={`store-me-v2-period-check${month.checked ? ' active' : ''}`}
-                    key={month.key}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={month.checked}
-                      onChange={() => onToggleLiveMonth(month.key)}
-                      disabled={sourceMode !== 'live'}
-                    />
-                    <span>{month.label}</span>
-                  </label>
-                ))
-              ) : (
-                <span className="store-me-v2-period-empty">{t('storeMe.noLoadedPeriods')}</span>
-              )}
-            </div>
-          </div>
-          {selectedLivePeriodType === 'daily' ? (
-            <div className="store-me-v2-filter-field">
-              <span>{t('storeMe.loadedDays')}</span>
-              <div
-                className="store-me-v2-period-picklist"
-                role="group"
-                aria-label={t('storeMe.loadedDaySelect')}
-              >
-                {scopedAvailableDailyPeriods.length ? (
-                  scopedAvailableDailyPeriods.map((period) => (
-                    <label
-                      className={`store-me-v2-period-check${period.checked ? ' active' : ''}`}
-                      key={`${period.period.periodType}-${period.key}`}
                     >
-                      <input
-                        type="checkbox"
-                        checked={period.checked}
-                        onChange={() => onToggleLiveDay(period.period)}
-                        disabled={sourceMode !== 'live'}
-                      />
-                      <span>{period.label}</span>
-                    </label>
+                      {year.key}
+                    </PeriodCheck>
                   ))
                 ) : (
-                  <span className="store-me-v2-period-empty">{t('storeMe.noLoadedPeriods')}</span>
+                  <span className="tw:text-sm tw:text-muted-foreground">{t('storeMe.noLoadedPeriods')}</span>
                 )}
               </div>
             </div>
-          ) : null}
+
+            <div className="tw:grid tw:gap-2">
+              <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{t('storeMe.loadedMonthBuckets')}</span>
+              <div className="tw:flex tw:max-h-36 tw:flex-wrap tw:gap-2 tw:overflow-auto">
+                {availableLiveMonthOptions.length ? (
+                  availableLiveMonthOptions.map((month) => (
+                    <PeriodCheck
+                      key={month.key}
+                      checked={month.checked}
+                      disabled={sourceMode !== 'live'}
+                      onChange={() => onToggleLiveMonth(month.key)}
+                    >
+                      {month.label}
+                    </PeriodCheck>
+                  ))
+                ) : (
+                  <span className="tw:text-sm tw:text-muted-foreground">{t('storeMe.noLoadedPeriods')}</span>
+                )}
+              </div>
+            </div>
+
+            {selectedLivePeriodType === 'daily' ? (
+              <div className="tw:grid tw:gap-2">
+                <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{t('storeMe.loadedDays')}</span>
+                <div className="tw:flex tw:max-h-36 tw:flex-wrap tw:gap-2 tw:overflow-auto">
+                  {scopedAvailableDailyPeriods.length ? (
+                    scopedAvailableDailyPeriods.map((period) => (
+                      <PeriodCheck
+                        key={`${period.period.periodType}-${period.key}`}
+                        checked={period.checked}
+                        disabled={sourceMode !== 'live'}
+                        onChange={() => onToggleLiveDay(period.period)}
+                      >
+                        {period.label}
+                      </PeriodCheck>
+                    ))
+                  ) : (
+                    <span className="tw:text-sm tw:text-muted-foreground">{t('storeMe.noLoadedPeriods')}</span>
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </div>
+
           {usesClosedSnapshotMode ? (
-            <label className="store-me-v2-filter-field">
-              <span>{t('storeMe.closedSnapshotSelect')}</span>
-              <select
-                value={selectedClosedSnapshotRunId || activeClosedSnapshotRunId || ''}
-                onChange={(event) => onSelectClosedSnapshotRun(event.target.value)}
+            <div className="tw:grid tw:gap-2">
+              <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{t('storeMe.closedSnapshotSelect')}</span>
+              <Select
+                value={selectedClosedValue}
+                onValueChange={(value) =>
+                  onSelectClosedSnapshotRun(value === LATEST_CLOSED_SNAPSHOT_VALUE ? '' : value)
+                }
                 disabled={sourceMode !== 'closed' || availableClosedSnapshotRuns.length === 0}
               >
-                <option value="">{t('storeMe.latestClosedSnapshot')}</option>
-                {availableClosedSnapshotRuns.map((run) => (
-                  <option key={run.snapshotRunId} value={run.snapshotRunId}>
-                    {run.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+                <SelectTrigger className="tw:w-full">
+                  <SelectValue placeholder={t('storeMe.latestClosedSnapshot')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value={LATEST_CLOSED_SNAPSHOT_VALUE}>
+                      {t('storeMe.latestClosedSnapshot')}
+                    </SelectItem>
+                    {availableClosedSnapshotRuns.map((run) => (
+                      <SelectItem key={run.snapshotRunId} value={run.snapshotRunId}>
+                        {run.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
           ) : null}
         </div>
       ) : null}
@@ -480,55 +487,40 @@ export function StoreMyPerformanceScorePanel({
   turkeyRankLabel,
 }: StoreMyPerformanceScorePanelProps) {
   return (
-    <aside className="store-me-v2-panel store-me-v2-score-panel" aria-label={t('storeMe.performanceScore')}>
-      <div className="store-me-v2-score-head">
-        <div>
-          <span>{t('storeMe.overallPerformance')}</span>
-          <strong>{t('storeMe.personalScoreCard')}</strong>
-        </div>
-        <div className="store-me-v2-status-chip">
-          <i />
-          {isPartial ? t('storeMe.incompleteData') : gradeLabel}
-        </div>
-      </div>
-
-      <div className="store-me-v2-score-core">
-        <div
-          className="store-me-v2-score-orbit"
-          style={{ '--store-me-v2-score': `${scoreValue}%` } as CSSProperties}
-        >
-          <div className="store-me-v2-score-number">
-            <strong>{scoreValue}</strong>
-            <span>/100</span>
-            <small>{scoreDeltaLabel}</small>
+    <Card aria-label={t('storeMe.performanceScore')} className="tw:min-h-full">
+      <CardHeader>
+        <CardTitle>{t('storeMe.personalScoreCard')}</CardTitle>
+        <CardDescription>{t('storeMe.overallPerformance')}</CardDescription>
+        <CardAction>
+          <Badge variant={scoreBadgeVariant(isPartial)}>
+            {isPartial ? t('storeMe.incompleteData') : gradeLabel}
+          </Badge>
+        </CardAction>
+      </CardHeader>
+      <CardContent className="tw:grid tw:gap-5">
+        <div className="tw:grid tw:gap-3">
+          <div className="tw:flex tw:items-end tw:gap-2">
+            <strong className="tw:text-6xl tw:font-medium tw:leading-none tw:text-foreground">
+              {scoreValue}
+            </strong>
+            <span className="tw:pb-2 tw:text-sm tw:text-muted-foreground">/100</span>
           </div>
+          <MetricProgress label={scoreDeltaLabel} value={scoreValue} />
         </div>
-      </div>
 
-      <div className="store-me-v2-rank-ladder" aria-label={t('storeMe.generalScoreRankings')}>
-        <article className="store-me-v2-rank-card">
-          <span>{t('storeMe.store')}</span>
-          <strong>{storeRankLabel}</strong>
-          <small>{storePopulationLabel}</small>
-        </article>
-        <article className="store-me-v2-rank-card">
-          <span>{t('storeMe.region')}</span>
-          <strong>{t('storeMe.noData')}</strong>
-          <small>{t('storeMe.regionRankPending')}</small>
-        </article>
-        <article className="store-me-v2-rank-card">
-          <span>{t('storeMe.turkey')}</span>
-          <strong>{turkeyRankLabel}</strong>
-          <small>{turkeyPopulationLabel}</small>
-        </article>
-      </div>
+        <div className="tw:grid tw:gap-2">
+          <RankCell label={t('storeMe.store')} value={storeRankLabel} note={storePopulationLabel} />
+          <RankCell label={t('storeMe.region')} value={t('storeMe.noData')} note={t('storeMe.regionRankPending')} />
+          <RankCell label={t('storeMe.turkey')} value={turkeyRankLabel} note={turkeyPopulationLabel} />
+        </div>
 
-      <section className="store-me-v2-coach-card" aria-label={t('storeMe.coachingMode')}>
-        <span>{t('storeMe.coachingMode')}</span>
-        <strong>{scoreFocus}</strong>
-        <p>{scoreConfidence}</p>
-      </section>
-    </aside>
+        <div className="tw:grid tw:gap-2 tw:rounded-lg tw:border tw:border-border tw:bg-muted/50 tw:p-3">
+          <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{t('storeMe.coachingMode')}</span>
+          <strong className="tw:text-sm tw:font-medium">{scoreFocus}</strong>
+          <p className="tw:text-sm tw:leading-6 tw:text-muted-foreground">{scoreConfidence}</p>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -545,70 +537,68 @@ export function StoreMyPerformanceHeroPanel({
   targetStatusLabel,
 }: StoreMyPerformanceHeroPanelProps) {
   return (
-    <section className="store-me-v2-panel store-me-v2-hero-panel" aria-label={t('storeMe.performanceSummary')}>
-      <div className="store-me-v2-hero-copy">
-        <h2>{t('storeMe.v2HeroTitle')}</h2>
-        <p>{scoreSummary}</p>
-        <section className="store-me-v2-target-progress-card" aria-label={t('storeMe.targetProgress')}>
-          <div className="store-me-v2-target-progress-head">
-            <div>
-              <span>{t('storeMe.targetProgress')}</span>
-              <strong>{t('storeMe.targetProgressPercent', { value: targetProgressPercent })}</strong>
-            </div>
-            <em>{targetStatusLabel}</em>
+    <Card aria-label={t('storeMe.performanceSummary')} data-testid="store-me-target-progress-card">
+      <CardHeader>
+        <CardTitle>{t('storeMe.v2HeroTitle')}</CardTitle>
+        <CardDescription>{scoreSummary}</CardDescription>
+        <CardAction>
+          <Badge variant="outline">{targetStatusLabel}</Badge>
+        </CardAction>
+      </CardHeader>
+      <CardContent className="tw:grid tw:gap-5">
+        <div className="tw:grid tw:gap-3">
+          <span className="tw:text-sm tw:font-medium">{t('storeMe.targetProgress')}</span>
+          <MetricProgress
+            label={t('storeMe.targetProgressPercent', { value: targetProgressPercent })}
+            value={targetProgressPercent}
+          />
+          <div className="tw:grid tw:gap-2 tw:md:grid-cols-3">
+            <RankCell label={t('storeMe.target')} value={targetSalesLabel} note={t('storeMe.approvedTarget')} />
+            <RankCell label={t('storeMe.actual')} value={actualSalesLabel} note={t('storeMe.currentPeriod')} />
+            <RankCell label={t('storeMe.remaining')} value={remainingTargetLabel} note={t('storeMe.follow')} />
           </div>
-          <div className="store-me-v2-target-progress-track" aria-hidden="true">
-            <i style={{ '--store-me-v2-fill': `${targetProgressPercent}%` } as CSSProperties} />
+        </div>
+
+        <Separator />
+
+        <div className="tw:grid tw:gap-3 tw:lg:grid-cols-[minmax(0,1fr)_minmax(17rem,0.55fr)]">
+          <div className="tw:grid tw:gap-3">
+            <span className="tw:text-sm tw:font-medium">{t('storeMe.samePeriodComparison')}</span>
+            <div className="tw:grid tw:gap-2">
+              {samePeriodMetrics.map((metric) => (
+                <MetricProgress
+                  key={metric.code}
+                  label={`${metric.label}: ${metric.delta ?? t('storeMe.noData')}`}
+                  value={progressFromWidth(metric.width)}
+                />
+              ))}
+            </div>
           </div>
-          <div className="store-me-v2-target-progress-meta">
-            <div>
-              <span>{t('storeMe.target')}</span>
-              <strong>{targetSalesLabel}</strong>
-            </div>
-            <div>
-              <span>{t('storeMe.actual')}</span>
-              <strong>{actualSalesLabel}</strong>
-            </div>
-            <div>
-              <span>{t('storeMe.remaining')}</span>
-              <strong>{remainingTargetLabel}</strong>
-            </div>
+          <div className="tw:grid tw:content-between tw:gap-3 tw:rounded-lg tw:border tw:border-border tw:bg-muted/50 tw:p-3">
+            <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">
+              {t('storeMe.samePeriodComparison')}
+            </span>
+            <strong className="tw:text-lg tw:font-medium">
+              {samePeriodScoreDelta
+                ? t('storeMe.samePeriodSummary', { value: samePeriodScoreDelta })
+                : t('storeMe.noTrendData')}
+            </strong>
           </div>
-        </section>
-        <div className="store-me-v2-hero-actions">
-          <a className="store-me-v2-primary-button" href="#store-me-v2-actions">
+        </div>
+      </CardContent>
+      <div className="tw:flex tw:flex-wrap tw:gap-2 tw:px-4 tw:pb-4">
+        <Button asChild>
+          <a href="#store-me-actions">
+            <ListChecks data-icon="inline-start" />
             {t('storeMe.todayFocus')}
           </a>
-          <button
-            className="store-me-v2-secondary-button"
-            type="button"
-            onClick={onOpenKpiDetails}
-          >
-            {t('storeMe.kpiDetails')}
-          </button>
-        </div>
+        </Button>
+        <Button type="button" variant="outline" onClick={onOpenKpiDetails}>
+          <LineChart data-icon="inline-start" />
+          {t('storeMe.kpiDetails')}
+        </Button>
       </div>
-
-      <article className="store-me-v2-compare-card" aria-label={t('storeMe.samePeriodComparison')}>
-        <div>
-          <span>{t('storeMe.samePeriodComparison')}</span>
-          <strong>
-            {samePeriodScoreDelta
-              ? t('storeMe.samePeriodSummary', { value: samePeriodScoreDelta })
-              : t('storeMe.noTrendData')}
-          </strong>
-        </div>
-        <div className="store-me-v2-mini-bars" aria-label={t('storeMe.samePeriodComparison')}>
-          {samePeriodMetrics.map((metric) => (
-            <div className="store-me-v2-mini-bar" key={metric.code}>
-              <b>{metric.label}</b>
-              <i style={{ '--store-me-v2-width': metric.width } as CSSProperties} />
-              <em>{metric.delta ?? t('storeMe.noData')}</em>
-            </div>
-          ))}
-        </div>
-      </article>
-    </section>
+    </Card>
   )
 }
 
@@ -623,21 +613,23 @@ export function StoreMyPerformancePartialAlert({
   }
 
   return (
-    <section className="store-me-v2-alert" aria-label={t('storeMe.partialTitle')}>
-      <strong>{t('storeMe.partialTitle')}</strong>
-      <p>
-        {t('storeMe.missingMetrics', {
-          labels: missingMetricLabels.join(', ') || t('storeMe.noMetricDetail'),
-        })}
-      </p>
-      {pendingNormalizationLabels.length ? (
+    <Alert variant="destructive" aria-label={t('storeMe.partialTitle')}>
+      <AlertTitle>{t('storeMe.partialTitle')}</AlertTitle>
+      <AlertDescription>
         <p>
-          {t('storeMe.pendingNormalization', {
-            labels: pendingNormalizationLabels.join(', '),
+          {t('storeMe.missingMetrics', {
+            labels: missingMetricLabels.join(', ') || t('storeMe.noMetricDetail'),
           })}
         </p>
-      ) : null}
-    </section>
+        {pendingNormalizationLabels.length ? (
+          <p>
+            {t('storeMe.pendingNormalization', {
+              labels: pendingNormalizationLabels.join(', '),
+            })}
+          </p>
+        ) : null}
+      </AlertDescription>
+    </Alert>
   )
 }
 
@@ -648,36 +640,31 @@ export function StoreMyPerformanceMetricGrid({
   turkeyRankLabel,
 }: StoreMyPerformanceMetricGridProps) {
   return (
-    <section id="metrics" className="store-me-v2-metric-grid" aria-label={t('storeMe.kpiDetails')}>
+    <section id="metrics" className="tw:grid tw:gap-3 tw:lg:grid-cols-3" aria-label={t('storeMe.kpiDetails')}>
       {metricCards.map((card) => (
-        <article className={`store-me-v2-metric-card ${card.tone}`} key={card.code}>
-          <div className="store-me-v2-metric-top">
-            <span>{card.label}</span>
-            <small>{card.statusLabel}</small>
-          </div>
-          <div className="store-me-v2-metric-value">
-            <strong>{card.displayValue}</strong>
-            <span>{card.narrative}</span>
-          </div>
-          <div className="store-me-v2-metric-track" aria-hidden="true">
-            <i style={{ '--store-me-v2-fill': `${card.progressPercent}%` } as CSSProperties} />
-          </div>
-          <div className="store-me-v2-metric-ranks">
-            <div>
-              <span>{t('storeMe.store')}</span>
-              <strong>{storeRankLabel}</strong>
+        <Card key={card.code} size="sm" data-testid="store-me-metric-card">
+          <CardHeader>
+            <CardTitle>{card.label}</CardTitle>
+            <CardDescription>{card.narrative}</CardDescription>
+            <CardAction>
+              <Badge variant="secondary">{card.statusLabel}</Badge>
+            </CardAction>
+          </CardHeader>
+          <CardContent className="tw:grid tw:gap-4">
+            <div className="tw:grid tw:gap-2">
+              <strong className="tw:text-3xl tw:font-medium tw:text-foreground">{card.displayValue}</strong>
+              <MetricProgress label={t('storeMe.performanceScore')} value={card.progressPercent} />
             </div>
-            <div>
-              <span>{t('storeMe.region')}</span>
-              <strong>{t('storeMe.noData')}</strong>
+            <div className="tw:grid tw:gap-2">
+              <RankCell label={t('storeMe.store')} value={storeRankLabel} note={t('storeMe.storeRank')} />
+              <RankCell label={t('storeMe.region')} value={t('storeMe.noData')} note={t('storeMe.regionRankPending')} />
+              <RankCell label={t('storeMe.turkey')} value={turkeyRankLabel} note={t('storeMe.turkeyRank')} />
             </div>
-            <div>
-              <span>{t('storeMe.turkey')}</span>
-              <strong>{turkeyRankLabel}</strong>
-            </div>
-          </div>
-          <p>{t('storeMe.metricCardCopy', { metric: card.label })}</p>
-        </article>
+            <p className="tw:text-sm tw:leading-6 tw:text-muted-foreground">
+              {t('storeMe.metricCardCopy', { metric: card.label })}
+            </p>
+          </CardContent>
+        </Card>
       ))}
     </section>
   )
@@ -689,87 +676,74 @@ export function StoreMyPerformanceLowerGrid({
   trendPoints,
 }: StoreMyPerformanceLowerGridProps) {
   return (
-    <section className="store-me-v2-lower-grid">
-      <section className="store-me-v2-panel store-me-v2-timeline" aria-label={t('storeMe.progressLine')}>
-        <div className="store-me-v2-section-head">
-          <div>
-            <h3>{t('storeMe.progressLine')}</h3>
-            <p>{t('storeMe.progressLineCopy')}</p>
+    <section className="tw:grid tw:gap-3 tw:xl:grid-cols-[minmax(0,1.15fr)_minmax(20rem,0.85fr)]">
+      <Card aria-label={t('storeMe.progressLine')}>
+        <CardHeader>
+          <CardTitle>{t('storeMe.progressLine')}</CardTitle>
+          <CardDescription>{t('storeMe.progressLineCopy')}</CardDescription>
+          <CardAction>
+            <Badge variant="outline">{samePeriodScoreDelta ?? t('storeMe.noTrendData')}</Badge>
+          </CardAction>
+        </CardHeader>
+        <CardContent>
+          <div className="tw:relative tw:min-h-64 tw:overflow-hidden tw:rounded-lg tw:border tw:border-border tw:bg-muted/50 tw:p-3">
+            <svg className="tw:h-56 tw:w-full" viewBox="0 0 640 210" preserveAspectRatio="none" aria-hidden="true">
+              <defs>
+                <linearGradient id="storeMeShadcnArea" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.22" />
+                  <stop offset="100%" stopColor="var(--primary)" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              <polygon fill="url(#storeMeShadcnArea)" points={trendPoints.area} />
+              <polyline
+                fill="none"
+                points={trendPoints.line}
+                stroke="var(--primary)"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="5"
+              />
+            </svg>
+            <div className="tw:flex tw:flex-wrap tw:gap-2 tw:text-xs tw:text-muted-foreground">
+              <Badge variant="secondary">{t('storeMe.thisPeriod')}</Badge>
+              <Badge variant="outline">{t('storeMe.previousComparablePeriod')}</Badge>
+            </div>
           </div>
-          <span>{samePeriodScoreDelta ?? t('storeMe.noTrendData')}</span>
-        </div>
-        <div className="store-me-v2-chart-card">
-          <div className="store-me-v2-y-axis"><span>100</span><span>75</span><span>50</span><span>25</span></div>
-          <div className="store-me-v2-chart-grid" />
-          <svg className="store-me-v2-chart-svg" viewBox="0 0 640 210" preserveAspectRatio="none" aria-hidden="true">
-            <defs>
-              <linearGradient id="storeMeV2Area" x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0%" stopColor="#7c3aed" stopOpacity="0.22" />
-                <stop offset="100%" stopColor="#7c3aed" stopOpacity="0" />
-              </linearGradient>
-            </defs>
-            <polygon className="area" points={trendPoints.area} />
-            <polyline className="line" points={trendPoints.line} />
-          </svg>
-          <div className="store-me-v2-chart-legend">
-            <span className="current">{t('storeMe.thisPeriod')}</span>
-            <span className="previous">{t('storeMe.previousComparablePeriod')}</span>
+        </CardContent>
+      </Card>
+
+      <Card id="store-me-actions" aria-label={t('storeMe.todayCoaching')}>
+        <CardHeader>
+          <CardTitle>{t('storeMe.todayCoaching')}</CardTitle>
+          <CardDescription>{t('storeMe.todayCoachingCopy')}</CardDescription>
+        </CardHeader>
+        <CardContent className="tw:grid tw:gap-2">
+          <div className="tw:grid tw:grid-cols-[auto_minmax(0,1fr)_auto] tw:items-center tw:gap-3 tw:rounded-lg tw:border tw:border-border tw:bg-background tw:p-3">
+            <ListChecks aria-hidden="true" />
+            <div className="tw:grid tw:gap-1">
+              <strong className="tw:text-sm tw:font-medium">{t('storeMe.action.keepRhythm.title')}</strong>
+              <span className="tw:text-sm tw:text-muted-foreground">{t('storeMe.action.keepRhythm.copy')}</span>
+            </div>
+            <Badge variant="secondary">{t('storeMe.priorityOne')}</Badge>
           </div>
-        </div>
-      </section>
-
-      <section id="store-me-v2-actions" className="store-me-v2-panel store-me-v2-actions" aria-label={t('storeMe.todayCoaching')}>
-        <div className="store-me-v2-section-head">
-          <div>
-            <h3>{t('storeMe.todayCoaching')}</h3>
-            <p>{t('storeMe.todayCoachingCopy')}</p>
+          <div className="tw:grid tw:grid-cols-[auto_minmax(0,1fr)_auto] tw:items-center tw:gap-3 tw:rounded-lg tw:border tw:border-border tw:bg-background tw:p-3">
+            <ChartNoAxesColumnIncreasing aria-hidden="true" />
+            <div className="tw:grid tw:gap-1">
+              <strong className="tw:text-sm tw:font-medium">{t('storeMe.action.growBasket.title')}</strong>
+              <span className="tw:text-sm tw:text-muted-foreground">{t('storeMe.action.growBasket.copy')}</span>
+            </div>
+            <Badge variant="outline">{t('storeMe.opportunity')}</Badge>
           </div>
-        </div>
-
-        <div className="store-me-v2-action-list">
-          <article className="store-me-v2-action-row focus">
-            <div className="store-me-v2-action-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24">
-                <path d="M4 12h16" />
-                <path d="M12 4v16" />
-              </svg>
+          <div className="tw:grid tw:grid-cols-[auto_minmax(0,1fr)_auto] tw:items-center tw:gap-3 tw:rounded-lg tw:border tw:border-border tw:bg-background tw:p-3">
+            <Target aria-hidden="true" />
+            <div className="tw:grid tw:gap-1">
+              <strong className="tw:text-sm tw:font-medium">{t('storeMe.action.trackTarget.title')}</strong>
+              <span className="tw:text-sm tw:text-muted-foreground">{t('storeMe.action.trackTarget.copy')}</span>
             </div>
-            <div>
-              <strong>{t('storeMe.action.keepRhythm.title')}</strong>
-              <span>{t('storeMe.action.keepRhythm.copy')}</span>
-            </div>
-            <small>{t('storeMe.priorityOne')}</small>
-          </article>
-
-          <article className="store-me-v2-action-row growth">
-            <div className="store-me-v2-action-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24">
-                <path d="M4 18 10 12l4 4 6-9" />
-                <path d="M15 7h5v5" />
-              </svg>
-            </div>
-            <div>
-              <strong>{t('storeMe.action.growBasket.title')}</strong>
-              <span>{t('storeMe.action.growBasket.copy')}</span>
-            </div>
-            <small>{t('storeMe.opportunity')}</small>
-          </article>
-
-          <article className="store-me-v2-action-row target">
-            <div className="store-me-v2-action-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="8" />
-                <circle cx="12" cy="12" r="3" />
-              </svg>
-            </div>
-            <div>
-              <strong>{t('storeMe.action.trackTarget.title')}</strong>
-              <span>{t('storeMe.action.trackTarget.copy')}</span>
-            </div>
-            <small>{t('storeMe.follow')}</small>
-          </article>
-        </div>
-      </section>
+            <Badge variant="outline">{t('storeMe.follow')}</Badge>
+          </div>
+        </CardContent>
+      </Card>
     </section>
   )
 }
@@ -781,85 +755,65 @@ export function StoreMyPerformanceKpiDialog({
   onClose,
   t,
 }: StoreMyPerformanceKpiDialogProps) {
-  if (!isOpen) {
-    return null
-  }
-
   return (
-    <div
-      className="store-me-v2-dialog-backdrop"
-      role="presentation"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) {
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) {
           onClose()
         }
       }}
     >
-      <section
-        className="store-me-v2-kpi-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="store-me-v2-kpi-dialog-title"
+      <DialogContent
+        closeLabel={t('storeMe.closeKpiDetails')}
+        className="tw:max-h-[min(44rem,calc(100vh-2rem))] tw:max-w-5xl tw:overflow-auto"
+        data-testid="store-me-kpi-dialog"
       >
-        <div className="store-me-v2-kpi-dialog-head">
-          <div>
-            <span>{t('storeMe.kpiDetails')}</span>
-            <h3 id="store-me-v2-kpi-dialog-title">
-              {t('storeMe.monthlyPerformanceTitle', {
-                name: employeeName,
-              })}
-            </h3>
-            <p>{t('storeMe.monthlyPerformanceCopy')}</p>
-          </div>
-          <button
-            className="store-me-v2-dialog-close"
-            type="button"
-            aria-label={t('storeMe.closeKpiDetails')}
-            onClick={onClose}
-          >
-            <X size={20} />
-          </button>
-        </div>
-        <div className="store-me-v2-monthly-table" aria-label={t('storeMe.monthlyPerformanceTable')}>
-          <div className="store-me-v2-monthly-row header" aria-hidden="true">
-            <span>{t('storeMe.month')}</span>
-            <span>{t('storeMe.score')}</span>
-            <span>{t('storeMe.metric.uptShort')}</span>
-            <span>{t('storeMe.metric.atvShort')}</span>
-            <span>{t('storeMe.metric.hgShort')}</span>
-            <span>{t('storeMe.monthlyTrend')}</span>
-          </div>
-          {monthlyDetailRows.map((row) => (
-            <article className="store-me-v2-monthly-row" key={row.key}>
-              <div>
-                <strong>{row.label}</strong>
-                <small>{row.periodNote}</small>
-              </div>
-              <b>{row.scoreLabel}</b>
-              <b>{row.uptLabel}</b>
-              <b>{row.atvLabel}</b>
-              <b>{row.targetLabel}</b>
-              <div className="store-me-v2-trend-strip">
-                <i style={{ '--store-me-v2-width': row.trendWidth } as CSSProperties} />
-                <em>{row.trendLabel ?? t('storeMe.noTrendData')}</em>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-    </div>
-  )
-}
-
-export function StoreMyPerformanceMobileDock({ showApprovalsLink, t }: StoreMyPerformanceRailProps) {
-  return (
-    <nav className="store-me-v2-mobile-dock" aria-label={t('storeMe.mobileNav')}>
-      <NavLink to="/store/home">{t('storeMe.nav.home')}</NavLink>
-      <NavLink to="/store/me">{t('storeMe.nav.me')}</NavLink>
-      <NavLink to="/store/rankings">{t('storeMe.nav.rankings')}</NavLink>
-      {showApprovalsLink ? (
-        <NavLink to="/store/approvals">{t('storeMe.nav.targets')}</NavLink>
-      ) : null}
-    </nav>
+        <DialogHeader>
+          <DialogTitle>
+            {t('storeMe.monthlyPerformanceTitle', {
+              name: employeeName,
+            })}
+          </DialogTitle>
+          <DialogDescription>{t('storeMe.monthlyPerformanceCopy')}</DialogDescription>
+        </DialogHeader>
+        <Table aria-label={t('storeMe.monthlyPerformanceTable')}>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t('storeMe.month')}</TableHead>
+              <TableHead>{t('storeMe.score')}</TableHead>
+              <TableHead>{t('storeMe.metric.uptShort')}</TableHead>
+              <TableHead>{t('storeMe.metric.atvShort')}</TableHead>
+              <TableHead>{t('storeMe.metric.hgShort')}</TableHead>
+              <TableHead>{t('storeMe.monthlyTrend')}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {monthlyDetailRows.map((row) => (
+              <TableRow key={row.key}>
+                <TableCell>
+                  <div className="tw:grid tw:gap-1">
+                    <strong className="tw:font-medium">{row.label}</strong>
+                    <span className="tw:text-xs tw:text-muted-foreground">{row.periodNote}</span>
+                  </div>
+                </TableCell>
+                <TableCell>{row.scoreLabel}</TableCell>
+                <TableCell>{row.uptLabel}</TableCell>
+                <TableCell>{row.atvLabel}</TableCell>
+                <TableCell>{row.targetLabel}</TableCell>
+                <TableCell>
+                  <div className="tw:grid tw:min-w-40 tw:gap-1">
+                    <Progress value={progressFromWidth(row.trendWidth)} className="tw:h-2" />
+                    <span className="tw:text-xs tw:text-muted-foreground">
+                      {row.trendLabel ?? t('storeMe.noTrendData')}
+                    </span>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </DialogContent>
+    </Dialog>
   )
 }

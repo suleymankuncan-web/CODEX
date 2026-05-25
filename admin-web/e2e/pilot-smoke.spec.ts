@@ -83,7 +83,7 @@ test('core store routes open without unavailable states', async ({ page }) => {
     {
       path: '/store/me',
       urlPattern: /\/store\/me$/,
-      heading: page.locator('.store-me-v2-page'),
+      heading: page.locator('[data-testid="store-me-page"]'),
     },
     {
       path: '/store/checklists',

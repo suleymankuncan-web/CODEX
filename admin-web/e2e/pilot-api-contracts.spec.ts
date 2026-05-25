@@ -44,7 +44,7 @@ test('store my performance renders fallback data when optional support fields ar
 
   await page.goto('/store/me')
 
-  await expect(page.locator('.store-me-v2-page')).toBeVisible()
+  await expect(page.locator('[data-testid="store-me-page"]')).toBeVisible()
   await expect(page.getByText('Pilot Employee')).toBeVisible()
   expect(pageErrors).toEqual([])
 })

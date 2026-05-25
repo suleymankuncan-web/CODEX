@@ -326,10 +326,6 @@
   padding: 0;
 }
 
-.store-me-v2-page-shell-owned {
-  grid-template-columns: minmax(0, 1fr);
-}
-
 .store-command-home,
 .store-command-utility-page {
   color: var(--store-command-ink);

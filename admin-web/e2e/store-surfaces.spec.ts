@@ -25,7 +25,7 @@ test.beforeEach(async ({ page }) => {
 test('store self-performance page renders live score, metrics, and ranks', async ({ page }) => {
   await page.goto('/store/me')
 
-  await expect(page.locator('.store-me-v2-page')).toBeVisible()
+  await expect(page.locator('[data-testid="store-me-page"]')).toBeVisible()
   await expect(page.getByRole('heading', { name: /Store Personnel · IstinyePark Demo Store/i })).toBeVisible()
   await expect(page.getByText('Genel performans')).toBeVisible()
   await expect(page.getByText('Kişisel skor kartı')).toBeVisible()
@@ -34,9 +34,9 @@ test('store self-performance page renders live score, metrics, and ranks', async
   await expect(page.getByText('Türkiye', { exact: true }).first()).toBeVisible()
   await expect(page.getByText('Bugünkü koçluk')).toBeVisible()
   await expect(page.getByText('Gelişim çizgisi')).toBeVisible()
-  await expect(page.getByRole('heading', { name: /Bugün tablo/i })).toBeVisible()
+  await expect(page.getByText(/Bugün tablo/i)).toBeVisible()
   await expect(page.getByText('Hedef gerçekleşme barı')).toBeVisible()
-  await expect(page.getByText('Aynı gün kıyaslaması')).toBeVisible()
+  await expect(page.getByText('Aynı gün kıyaslaması').first()).toBeVisible()
   await expect(page.getByRole('button', { name: /Tarih filtresi/i })).toBeVisible()
   await page.getByRole('button', { name: 'KPI detayları' }).click()
   const kpiDetailsDialog = page.getByRole('dialog', { name: /ay ay performansı/i })
@@ -44,10 +44,10 @@ test('store self-performance page renders live score, metrics, and ranks', async
   await expect(kpiDetailsDialog).toContainText('Nisan 2026')
   await expect(kpiDetailsDialog).toContainText('Mayıs 2026')
   await expect(kpiDetailsDialog).not.toContainText('CR')
-  await expect(page.locator('.store-me-v2-metric-card')).toHaveCount(3)
-  await expect(page.locator('.store-me-v2-metric-card').filter({ hasText: 'UPT' })).toBeVisible()
-  await expect(page.locator('.store-me-v2-metric-card').filter({ hasText: 'ATV' })).toBeVisible()
-  await expect(page.locator('.store-me-v2-metric-card').filter({ hasText: 'HG%' })).toBeVisible()
+  await expect(page.locator('[data-testid="store-me-metric-card"]')).toHaveCount(3)
+  await expect(page.locator('[data-testid="store-me-metric-card"]').filter({ hasText: 'UPT' })).toBeVisible()
+  await expect(page.locator('[data-testid="store-me-metric-card"]').filter({ hasText: 'ATV' })).toBeVisible()
+  await expect(page.locator('[data-testid="store-me-metric-card"]').filter({ hasText: 'HG%' })).toBeVisible()
   await expect(page.locator('.store-metric-grid')).toHaveCount(0)
   await expect(page.locator('.stacked-row')).toHaveCount(0)
   await expect(page.locator('.store-hero-panel')).toHaveCount(0)
@@ -128,13 +128,13 @@ test('store self-performance does not treat raw net sales as HG percent when tar
   await page.goto('/store/me')
 
   await expect(page.getByText(/Hedefin %0/)).toBeVisible()
-  await expect(page.locator('.store-me-v2-target-progress-card')).toContainText('Hedef bekleniyor')
-  await expect(page.locator('.store-me-v2-target-progress-card')).toContainText('Veri yok')
-  await expect(page.locator('.store-me-v2-metric-card').filter({ hasText: 'HG%' })).toContainText('Eksik referans')
+  await expect(page.locator('[data-testid="store-me-target-progress-card"]')).toContainText('Hedef bekleniyor')
+  await expect(page.locator('[data-testid="store-me-target-progress-card"]')).toContainText('Veri yok')
+  await expect(page.locator('[data-testid="store-me-metric-card"]').filter({ hasText: 'HG%' })).toContainText('Eksik referans')
   await expect(page.getByText(/9\.200\.202%/)).toHaveCount(0)
 
   await page.getByRole('button', { name: /KPI detay/i }).click()
-  await expect(page.locator('.store-me-v2-kpi-dialog')).not.toContainText(/9\.200\.202%/)
+  await expect(page.locator('[data-testid="store-me-kpi-dialog"]')).not.toContainText(/9\.200\.202%/)
 })
 
 test('store self-performance tolerates ISO period timestamps from live API', async ({ page }) => {
@@ -183,7 +183,7 @@ test('store self-performance tolerates ISO period timestamps from live API', asy
 
   await page.goto('/store/me')
 
-  await expect(page.locator('.store-me-v2-page')).toBeVisible()
+  await expect(page.locator('[data-testid="store-me-page"]')).toBeVisible()
   await page.getByRole('button', { name: /KPI detayları/i }).click()
   const kpiDetailsDialog = page.getByRole('dialog', { name: /ay ay performansı/i })
   await expect(kpiDetailsDialog).toBeVisible()
@@ -198,14 +198,14 @@ test('store self-performance switches to English copy and persists locale', asyn
   await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.locator('.store-me-v2-page')).toBeVisible()
+  await expect(page.locator('[data-testid="store-me-page"]')).toBeVisible()
   await expect(page.getByRole('heading', { name: /Store Personnel · IstinyePark Demo Store/i })).toBeVisible()
   await expect(page.getByText('Overall performance')).toBeVisible()
   await expect(page.getByText('Personal score card')).toBeVisible()
   await expect(page.getByText("Today's coaching")).toBeVisible()
   await expect(page.getByText('Progress line')).toBeVisible()
   await expect(page.getByText('Target achievement bar')).toBeVisible()
-  await expect(page.getByText('Same-day comparison')).toBeVisible()
+  await expect(page.getByText('Same-day comparison').first()).toBeVisible()
   await expect(page.getByText('Score meaning')).toHaveCount(0)
   await expect(page.getByText('Data source')).toHaveCount(0)
   await expect(page.getByText('Target-based score')).toHaveCount(0)
@@ -220,7 +220,7 @@ test('store self-performance switches to English copy and persists locale', asyn
   await page.reload()
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.locator('.store-me-v2-page')).toBeVisible()
+  await expect(page.locator('[data-testid="store-me-page"]')).toBeVisible()
 })
 
 test('store self-performance handles live no-data responses without supporting metadata', async ({ page }) => {
@@ -299,7 +299,7 @@ test('store self-performance handles live no-data responses without supporting m
 
   await page.goto('/store/me')
 
-  await expect(page.locator('.store-me-v2-page')).toBeVisible()
+  await expect(page.locator('[data-testid="store-me-page"]')).toBeVisible()
   await expect(page.getByText('Eksik veri var')).toBeVisible()
   await expect(page.getByText('Bu skor şu an kısmi veriyle hesaplanıyor')).toBeVisible()
   await expect(page.getByText('Performans yüzeyi açılamadı')).toHaveCount(0)
@@ -309,13 +309,14 @@ test('store self-performance handles live no-data responses without supporting m
 test('store self-performance closed mode uses readable snapshot labels', async ({ page }) => {
   await page.goto('/store/me')
   await page.getByRole('button', { name: /Tarih filtresi/i }).click()
-  await page.getByRole('button', { name: 'Kapanmış gün' }).click()
+  await page.getByRole('radio', { name: 'Kapanmış gün' }).click()
+  await page.getByRole('combobox').click()
 
   await expect(
     page.getByRole('option', {
       name: /24 Nis 2026 kapanışı/,
     }),
-  ).toBeAttached()
+  ).toBeVisible()
 })
 
 test('store KPI highlights page explains metric source semantics', async ({ page }) => {
@@ -1211,12 +1212,12 @@ test('store rankings personnel detail opens the selected personnel performance p
   await expect.poll(() => new URL(page.url()).searchParams.get('mode')).toBe('live')
   await expect.poll(() => new URL(page.url()).searchParams.get('periodType')).toBe('monthly')
   await expect.poll(() => new URL(page.url()).searchParams.get('periodStart')).toBe('2026-04-01')
-  await expect(page.locator('.store-me-v2-page')).toBeVisible()
+  await expect(page.locator('[data-testid="store-me-page"]')).toBeVisible()
   await expect(
     page.getByRole('heading', { name: /Store Personnel - 1 . IstinyePark Demo Store/i }),
   ).toBeVisible()
-  await expect(page.locator('.store-me-v2-metric-card')).toHaveCount(3)
-  await expect(page.locator('.store-me-v2-metric-card').filter({ hasText: 'CR' })).toHaveCount(0)
+  await expect(page.locator('[data-testid="store-me-metric-card"]')).toHaveCount(3)
+  await expect(page.locator('[data-testid="store-me-metric-card"]').filter({ hasText: 'CR' })).toHaveCount(0)
   await expect
     .poll(() =>
       personnelPerformanceRequests.some((requestUrl) => requestUrl.searchParams.get('periodStart') === '2026-04-01'),
@@ -1434,8 +1435,8 @@ test('store personnel profile date filter exposes loaded months and days', async
   await page.goto(`/store/personnel/${demoEmployeeId}?mode=live&periodType=monthly&periodStart=2026-04-01`)
   await page.getByRole('button', { name: /Tarih filtresi/i }).click()
 
-  await expect(page.getByRole('button', { name: 'Ay', exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Gün', exact: true })).toBeVisible()
+  await expect(page.getByRole('radio', { name: 'Ay', exact: true })).toBeVisible()
+  await expect(page.getByRole('radio', { name: 'Gün', exact: true })).toBeVisible()
   await expect(page.getByRole('checkbox', { name: '2026', exact: true })).toBeChecked()
   await expect(page.getByRole('checkbox', { name: 'Nisan 2026', exact: true })).toBeChecked()
   await expect(page.getByRole('checkbox', { name: 'Mayıs 2026', exact: true })).toBeChecked()
@@ -1443,7 +1444,7 @@ test('store personnel profile date filter exposes loaded months and days', async
   await expect(page.getByRole('checkbox', { name: 'Nisan 2026', exact: true })).toBeChecked()
   await expect(page.getByRole('checkbox', { name: 'Mayıs 2026', exact: true })).not.toBeChecked()
 
-  await page.getByRole('button', { name: 'Gün', exact: true }).click()
+  await page.getByRole('radio', { name: 'Gün', exact: true }).click()
   await expect(page.getByLabel('24 Nis 2026')).toBeChecked()
   await expect(page.getByLabel('25 Nis 2026')).toBeChecked()
   await page.getByLabel('25 Nis 2026').uncheck()
@@ -1457,7 +1458,7 @@ test('store personnel profile date filter exposes loaded months and days', async
         requestUrl.searchParams.get('periodStart') === '2026-04-24',
     ),
   ).toBe(true)
-  await expect(page.locator('.store-me-v2-period-pill')).toHaveText('24 Nis 2026 - 24 Nis 2026')
+  await expect(page.locator('[data-testid="store-me-period-pill"]')).toHaveText('24 Nis 2026 - 24 Nis 2026')
 })
 
 test('store personnel profile derives date filters from the active period when the period list is empty', async ({ page }) => {
@@ -1708,7 +1709,7 @@ test('store personnel profile uses employee periods instead of global closed sna
   await expect(page.getByRole('checkbox', { name: 'Mart 2026', exact: true })).toBeChecked()
   await expect(page.getByText('Nisan 2026')).toHaveCount(0)
 
-  await page.getByRole('button', { name: 'Gün', exact: true }).click()
+  await page.getByRole('radio', { name: 'Gün', exact: true }).click()
   await expect(page.getByLabel('1 Mar 2026')).toBeChecked()
   await expect(page.getByLabel('2 Mar 2026')).toBeChecked()
   await page.getByLabel('2 Mar 2026').uncheck()
@@ -1722,7 +1723,7 @@ test('store personnel profile uses employee periods instead of global closed sna
         requestUrl.searchParams.get('periodStart') === '2026-03-01',
     ),
   ).toBe(true)
-  await expect(page.locator('.store-me-v2-period-pill')).toHaveText('1 Mar 2026 - 1 Mar 2026')
+  await expect(page.locator('[data-testid="store-me-period-pill"]')).toHaveText('1 Mar 2026 - 1 Mar 2026')
   expect(snapshotRunRequests).toEqual([])
 })
 

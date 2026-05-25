@@ -10,12 +10,6 @@
 @import './styles/store-checklist-modals.css';
 @import './styles/admin-support.css';
 @import './styles/store-shells.css';
-@import './styles/store-me-v2-shell.css';
-@import './styles/store-me-v2-summary.css';
-@import './styles/store-me-v2-metrics.css';
-@import './styles/store-me-v2-activity.css';
-@import './styles/store-me-v2-dialog.css';
-@import './styles/store-me-v2-responsive.css';
 @import './styles/admin-command-shell.css';
 @import './styles/integration-management.css';
 @import './styles/pilot-feedback.css';

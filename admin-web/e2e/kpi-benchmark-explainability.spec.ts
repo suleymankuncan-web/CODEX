@@ -30,7 +30,7 @@ test('kpi metrics explain capped benchmark performance', async ({ page }) => {
 test('my performance explains missing benchmark or target', async ({ page }) => {
   await page.goto('/store/me')
 
-  await expect(page.locator('.store-me-v2-page')).toBeVisible()
+  await expect(page.locator('[data-testid="store-me-page"]')).toBeVisible()
   await expect(page.getByText('Bu skor şu an kısmi veriyle hesaplanıyor')).toBeVisible()
   await expect(page.getByText('Normalizasyon bekleyenler: Target Achievement')).toBeVisible()
   await expect(page.getByText('benchmark_missing')).toHaveCount(0)

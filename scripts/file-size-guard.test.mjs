@@ -37,7 +37,7 @@ const oversizedBaseline = new Map([
   ['backend/nestjs/src/modules/auth/auth-admin.service.ts', 936],
   ['backend/nestjs/src/modules/integration/web/integration.controller.ts', 899],
   ['admin-web/src/features/competitions/StageBuilderForm.tsx', 871],
-  ['admin-web/src/styles/store-command-shell.css', 868],
+  ['admin-web/src/styles/store-command-shell.css', 864],
   ['admin-web/src/pages/store-my-performance-sections.tsx', 865],
   ['backend/nestjs/src/modules/integration/infrastructure/import-batch-read.repository.ts', 858],
   ['admin-web/src/features/competitions/stage-builder-package-section.tsx', 851],
