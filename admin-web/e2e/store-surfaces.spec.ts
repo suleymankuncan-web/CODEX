@@ -692,6 +692,54 @@ test('store personnel daily command brief stays personal and read-only', async (
   await expect(dailyBrief.locator('a[href="/store/checklists"]')).toHaveCount(0)
 })
 
+test('store personnel cannot open tasks by direct route', async ({ page }) => {
+  let workflowInboxRequests = 0
+  let storeActionPlanRequests = 0
+
+  await page.unroute('**/api/auth/session')
+  await page.unroute('**/api/workflow/inbox**')
+  await page.unroute('**/api/store-actions/plans**')
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      json: {
+        ...authSessionFixture,
+        user: {
+          ...authSessionFixture.user,
+          roleCodes: ['STORE_PERSONNEL'],
+          actionScope: {
+            assignedStoreIds: [demoStoreId],
+          },
+          assignedStoreIds: [demoStoreId],
+        },
+      },
+    })
+  })
+  await page.route('**/api/workflow/inbox**', async (route) => {
+    workflowInboxRequests += 1
+    await route.fulfill({ json: workflowInboxFixture })
+  })
+  await page.route('**/api/store-actions/plans**', async (route) => {
+    storeActionPlanRequests += 1
+    await route.fulfill({
+      json: {
+        items: [],
+        meta: {
+          total: 0,
+          limit: 20,
+          offset: 0,
+        },
+      },
+    })
+  })
+
+  await page.goto('/store/tasks')
+
+  await expect(page.getByRole('heading', { name: /rota kullan/i })).toBeVisible()
+  await expect(page.getByText('/store/me')).toBeVisible()
+  expect(workflowInboxRequests).toBe(0)
+  expect(storeActionPlanRequests).toBe(0)
+})
+
 test('store personnel cannot open checklists by direct route', async ({ page }) => {
   let acknowledgementRequests = 0
   let mobileTodayRequests = 0
