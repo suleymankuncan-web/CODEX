@@ -15,6 +15,7 @@ import {
 import { getErrorMessage } from '../lib/format'
 import { ApiError } from '../lib/api'
 import { transientQueryRetryOptions } from '../lib/query-retry'
+import { cn } from '../lib/utils'
 import {
   buildStoreMyPerformanceViewModel,
   createStoreMyPerformancePageState,
@@ -410,18 +411,21 @@ function StoreMyPerformancePageExperience({
 
   return (
     <section
-      className={`store-me-v2-page${showInternalRail ? '' : ' store-me-v2-page-shell-owned'}`}
+      className={cn(
+        'tw:min-h-screen tw:bg-background tw:text-foreground',
+        showInternalRail && 'tw:md:grid tw:md:grid-cols-[5rem_minmax(0,1fr)]',
+      )}
+      data-testid="store-me-page"
       aria-label={t('storeMe.title')}
     >
       {showInternalRail ? <StoreMyPerformanceRail showApprovalsLink={showApprovalsLink} t={t} /> : null}
 
-      <main className="store-me-v2-main">
-        <section className="store-me-v2-content" aria-label={t('storeMe.title')}>
+      <main className="tw:min-w-0 tw:px-3 tw:py-4 tw:pb-24 tw:md:px-6 tw:md:py-6">
+        <section className="tw:mx-auto tw:grid tw:max-w-7xl tw:gap-4" aria-label={t('storeMe.title')}>
           <StoreMyPerformanceTopbar
             employeeHeading={employeeHeading}
             introCopy={introCopy}
             periodLabel={periodLabel}
-            t={t}
           />
 
           <StoreMyPerformanceDateFilter
@@ -449,7 +453,7 @@ function StoreMyPerformancePageExperience({
             usesClosedSnapshotMode={usesClosedSnapshotMode}
           />
 
-          <div className="store-me-v2-layout">
+          <div className="tw:grid tw:gap-4 tw:xl:grid-cols-[minmax(18rem,0.36fr)_minmax(0,1fr)]">
             <StoreMyPerformanceScorePanel
               gradeLabel={gradeLabel}
               isPartial={partial.isPartial}
@@ -464,7 +468,7 @@ function StoreMyPerformancePageExperience({
               turkeyRankLabel={turkeyRankLabel}
             />
 
-            <section className="store-me-v2-workspace">
+            <section className="tw:grid tw:min-w-0 tw:gap-4">
               <StoreMyPerformanceHeroPanel
                 actualSalesLabel={actualSalesLabel}
                 onOpenKpiDetails={onOpenKpiDetails}

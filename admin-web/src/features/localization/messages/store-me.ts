@@ -42,10 +42,7 @@ export const storeMeTr = {
   'storeMe.personnelProfileIntro':
     "Seçili personelin performansı aynı dönem penceresiyle okunur. Bu profilde sadece kişisel KPI'lar görünür: UPT, ATV ve HG%.",
   'storeMe.v2HeroTitle': 'Bugün tablo iyi; seni yukarı taşıyacak alan çok net.',
-  'storeMe.pageTools': 'Sayfa araçları',
   'storeMe.brandAria': 'HR-Axis performans markası',
-  'storeMe.lightTheme': 'Açık tema',
-  'storeMe.notifications': 'Bildirimler',
   'storeMe.loadedPeriodCount': '{count} dönem',
   'storeMe.overallPerformance': 'Genel performans',
   'storeMe.generalScoreRankings': 'Genel skor sıralamaları',
@@ -275,10 +272,7 @@ export const storeMeEn: Record<keyof typeof storeMeTr, string> = {
   'storeMe.personnelProfileIntro':
     'The selected personnel performance is read through the comparable-period window. This profile only shows personal KPIs: UPT, ATV, and HG%.',
   'storeMe.v2HeroTitle': 'The table looks good today; the next lift is very clear.',
-  'storeMe.pageTools': 'Page tools',
   'storeMe.brandAria': 'HR-Axis performance brand',
-  'storeMe.lightTheme': 'Light theme',
-  'storeMe.notifications': 'Notifications',
   'storeMe.loadedPeriodCount': '{count} periods',
   'storeMe.overallPerformance': 'Overall performance',
   'storeMe.generalScoreRankings': 'Overall score rankings',
