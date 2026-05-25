@@ -29,7 +29,7 @@
 | `/store/rankings` | store | core | `STORE_MANAGER`, `STORE_PERSONNEL`, `REGION_MANAGER`, `SUPER_ADMIN` | direct navigation or store landing link | must return to same route after auth verification | top 100 for store roles, full list for privileged roles | yes |
 | `/store/approvals` | store | core | `STORE_MANAGER`, `REGION_MANAGER`, `REPORT_VIEWER`, `SUPER_ADMIN`; write actions remain action-store scoped | direct navigation or store landing link for eligible roles only | must return to same route after auth verification | target/workforce request ledger by read/action scope | yes |
 | `/store/checklists` | store | secondary | `STORE_MANAGER`, `REGION_MANAGER`, `VISUAL_MERCHANDISER`, `REPORT_VIEWER`, `SUPER_ADMIN` | first landing for visual merchandiser-only sessions | must return to same route after auth verification | checklist tasks/results by store scope; `STORE_PERSONNEL` is forbidden | yes |
-| `/store/tasks` | store | secondary | authenticated store shell session except visual merchandiser-only | direct navigation only | must return to same route after auth verification | current store tasks | no |
+| `/store/tasks` | store | secondary | `STORE_MANAGER`, `SUPER_ADMIN`, `REPORT_VIEWER`; `STORE_PERSONNEL` is forbidden | direct navigation only for eligible roles | must return to same route after auth verification | workflow inbox and Store Action task visibility by read/action scope | no |
 | `/store/kpis` | store | secondary | authenticated store shell session except visual merchandiser-only | direct navigation only | must return to same route after auth verification | current store KPI highlights | no |
 | `/store/feed` | store | secondary | authenticated store shell session except visual merchandiser-only | direct navigation only | must return to same route after auth verification | store announcements | yes |
 | `/store/competitions` | store | secondary | authenticated store shell session except visual merchandiser-only | direct navigation only | must return to same route after auth verification | store-visible competitions | yes |
@@ -60,3 +60,6 @@ Current landing resolution in `admin-web/src/App.tsx`:
   KPI/checklist impact can appear through `/store/me` or sourced KPI views, but
   checklist execution/result queues belong to manager, region, VM, reporting,
   or super-admin roles.
+- `STORE_PERSONNEL` is intentionally excluded from `/store/tasks`; personal
+  next-step context should remain on `/store/me`, `/store/home`, or
+  `/store/rankings` until a separate personal task surface is scoped.

@@ -43,9 +43,11 @@ export function StoreShell(input: {
 }) {
   const { t } = useLocalization()
   const checklistOnly = isVisualMerchandiserOnly(input.authSummary)
+  const storePersona = resolveStorePersona(input.authSummary)
   const storeChecklistAllowed =
-    resolveStorePersona(input.authSummary) !== 'personnel' &&
+    storePersona !== 'personnel' &&
     canOpenStoreChecklists(input.authSummary)
+  const storeTasksAllowed = storePersona !== 'personnel'
   const location = useLocation()
   const rankingsRoute = location.pathname === '/store/rankings'
   const storeMeRoute = location.pathname === '/store/me'
@@ -138,7 +140,13 @@ export function StoreShell(input: {
             />
             <Route
               path="/store/tasks"
-              element={storeRoute(<StoreTasksPage authSummary={input.authSummary} />)}
+              element={storeRoute(
+                <StoreTasksPage authSummary={input.authSummary} />,
+                {
+                  allowed: storeTasksAllowed,
+                  firstAllowedPath: input.firstAllowedPath,
+                },
+              )}
             />
             <Route
               path="/store/kpis"
