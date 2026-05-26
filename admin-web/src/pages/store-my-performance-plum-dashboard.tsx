@@ -385,10 +385,11 @@ export function StoreMyPerformancePlumDashboard({
           <div className="store-me-target-metric-frame" data-testid="store-me-metric-card">
             <div className="store-me-kpi-body">
               <h2>{t('storeMe.targetProgress')}</h2>
-              <span className="store-me-kpi-code">{targetMetricLabel}</span>
-              <span className="store-me-kpi-status">{targetMetric?.statusLabel ?? targetStatusLabel}</span>
               <strong>%{clampPercent(targetProgressPercent)}</strong>
-              <p>{t('storeMe.targetProgressPercent', { value: clampPercent(targetProgressPercent) })}</p>
+              <p>
+                {targetMetricLabel} · {targetMetric?.statusLabel ?? targetStatusLabel} ·{' '}
+                {t('storeMe.targetProgressPercent', { value: clampPercent(targetProgressPercent) })}
+              </p>
             </div>
             <KpiProgress label={t('storeMe.targetProgress')} value={targetProgressPercent} />
             <div className="store-me-target-strip">
