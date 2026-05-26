@@ -54,6 +54,7 @@ export function StoreSidebar(input: {
   const { t } = useLocalization()
   const queryClient = useQueryClient()
   const persona = resolveStorePersona(input.authSummary)
+  const personaLabel = t(getStorePersonaLabelKey(persona))
   const navItems = getRoleAwareStoreNavigation(input.authSummary)
   const identityLabel = getIdentityLabel(input.authSummary)
   const assignedStoreCount = input.authSummary?.scopeSummary.assignedStoreCount ?? 0
@@ -91,6 +92,11 @@ export function StoreSidebar(input: {
         </div>
       </div>
 
+      <div className="store-command-persona-chip" aria-hidden="true">
+        <span className="store-command-persona-dot" />
+        <span>{personaLabel}</span>
+      </div>
+
       <nav className="store-command-nav" aria-label={t('storeHome.sidebar.navAria')}>
         {navItems.map((item) => {
           const Icon = iconById[item.icon]
@@ -124,9 +130,7 @@ export function StoreSidebar(input: {
           </span>
           <span className="store-command-identity-text">
             <strong>{identityLabel ?? t('storeHome.sidebar.sessionUser')}</strong>
-            <small>
-              {t(getStorePersonaLabelKey(persona))} · {identityMeta}
-            </small>
+            <small>{personaLabel} / {identityMeta}</small>
           </span>
         </div>
       </div>

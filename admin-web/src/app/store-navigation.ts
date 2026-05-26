@@ -152,6 +152,12 @@ const managerNavigation: StoreNavigationItem[] = [
     icon: 'tasks',
   },
   {
+    id: 'checklists',
+    labelKey: 'storeHome.nav.checklists',
+    path: '/store/checklists',
+    icon: 'checklist',
+  },
+  {
     id: 'feed',
     labelKey: 'storeHome.nav.announcements',
     path: '/store/feed',

@@ -516,6 +516,9 @@ test('store shell exposes Turkish-first chrome and hides technical auth roles', 
 
   const storeNav = page.locator('.store-command-nav')
   const storeSidebar = page.locator('.store-command-sidebar')
+  await expect(storeNav.locator('a[href="/store/checklists"]')).toBeVisible()
+  await expect(storeNav.locator('a[href="/store/targets"]')).toHaveCount(0)
+  await expect(storeNav.locator('a[href="/store/reports"]')).toHaveCount(0)
   await expect(page.getByRole('main', { name: 'Mağaza çalışma alanı' })).toBeVisible()
   await expect(page.getByRole('heading', { name: /Mağaza Yönetim Paneli/i })).toBeVisible()
   await expect(storeNav.getByRole('link', { name: 'Mağaza KPI', exact: true })).toBeVisible()
