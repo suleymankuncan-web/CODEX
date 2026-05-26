@@ -14,7 +14,8 @@ readiness line, Sokrates/discipline operating docs, current workspace hygiene,
 the Clerk persona staging evidence runbooks, the generated system-flow map,
 and the production evidence closure joint plan plus Redis/BullMQ,
 alert-provider, Supabase restore, readiness profile reset, and Sokrates
-calibration proofs.
+calibration proofs, plus the Store Me Plum Glacier redesign line through
+PR #524.
 It is the starting point for continuing in a fresh window.
 
 For the documentation library entry point, use `docs/README.md`. It maps the
@@ -155,6 +156,56 @@ plum/glacier direction, and user-facing pages must not show internal
 architecture, auth, provider, OpenAPI, evidence, mock, staging, Redis, DB, or
 debug wording.
 
+Current Store Me redesign reference:
+
+```text
+admin-web/src/pages/StoreMyPerformancePage.tsx
+admin-web/src/pages/store-my-performance-plum-dashboard.tsx
+admin-web/src/pages/store-my-performance-model.ts
+admin-web/src/app/store-navigation.ts
+admin-web/src/app/store-sidebar.tsx
+admin-web/src/styles/store-me-plum-dashboard.css
+admin-web/src/styles/store-command-shell.css
+admin-web/e2e/store-surfaces.spec.ts
+```
+
+Store Me is the active reference pattern for the next page refactor pilots,
+not because every page should look identical, but because the work established
+the right operating method:
+
+- PR #519 validated Tailwind/shadcn setup as reversible infrastructure.
+- PR #520 integrated the first shadcn-based Store Me redesign.
+- PR #521 aligned Store Me shell actions with real source data.
+- PR #522 integrated the Plum Glacier dashboard implementation.
+- PR #523 compacted oversized KPI cards after visual review.
+- PR #524 refreshed the role-aware Store sidebar and merged it after release
+  gates, Vercel preview, and Codex review.
+
+Reusable Store Me lessons for other surfaces:
+
+- Start from real data contracts and role visibility, not decorative layout.
+  The top-level KPIs, Today's Actions, ranks, KPI contribution, and trend copy
+  must be derived from existing API/view-model data or omitted.
+- Keep first viewport dense and useful: compact KPI cards, one clear filter
+  row, one primary trend/breakdown story, and short action copy. Avoid large
+  explanatory text pools.
+- Mobile chart behavior is the design baseline. Prefer compact line/checkpoint
+  trends that also work on desktop; do not let a chart consume the mobile first
+  screen without making the data easier to understand.
+- KPI cards should combine value, status, progress, role/rank context, and
+  contribution/weight in one compact structure. Do not scatter percentages,
+  points, and ranking chips as unrelated fragments.
+- "Bugun Yapilacaklar" style sections must be computed from actual KPI/partial
+  performance state. Do not invent coaching or motivational copy that is not
+  supported by the user's current performance.
+- The left Store toolbar is role-aware: pages not assigned to the current role
+  stay out of the toolbar. Route availability and toolbar visibility should be
+  reconciled before a page is considered redesigned.
+- Plum Glacier is the token language for refactor pilots, but not a global
+  rewrite. A redesigned page should not mix old cream/teal foundation remnants,
+  old hero scaffolds, long handoff copy, or debug/internal wording into the new
+  surface.
+
 Current login refresh state:
 
 ```text
@@ -182,6 +233,9 @@ Recent login/UI discipline continuation:
   "sence", "bak", "kontrol et", and "incele" are no-edit signals unless the
   user gives an explicit action verb such as "yap", "uygula", "duzelt",
   "commit at", "PR ac", or "merge et".
+- PR #519 through PR #524 define the Store Me redesign and role-aware sidebar
+  reference line for future Store page refactors. Read the Store Me reference
+  section above before redesigning another Store surface.
 
 Current night-shift quality evidence:
 
@@ -425,6 +479,11 @@ Current local hygiene state:
   state unless the user explicitly approves abandoned/quarantine cleanup.
 - Source-derived flow-map work should continue from a fresh worktree and should
   regenerate the checked-in HTML/JSON artifacts before PR.
+- As of 2026-05-26, the root workspace is on `main` at
+  `c30e0def Refresh role-based store sidebar` after PR #524. The only visible
+  local dirt is untracked prototype/skill material such as `.agents/` and
+  `docs/prototypes/store-me-*`; do not stage or delete those unless the user
+  explicitly asks.
 
 ## System Flow Map Status
 
