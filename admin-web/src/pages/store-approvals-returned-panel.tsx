@@ -1,10 +1,15 @@
-import { EmptyState, KeyValue, StatusPill } from '../components/dashboard-primitives'
+import { Button } from '@/components/ui/button'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import type { OffboardingRequest, SellerCodeRequest } from '../features/workforce/api'
 import { formatDate, formatDateTime, getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 import { formatApprovalStatus } from './store-approvals-model'
-import { StoreRequestFeedback } from './store-approvals-atoms'
+import {
+  StoreApprovalEmptyState,
+  StoreApprovalKeyValue,
+  StoreApprovalStatusBadge,
+  StoreRequestFeedback,
+} from './store-approvals-atoms'
 
 export function ReturnedRequestsPanel(input: {
   locale: AppLocale
@@ -25,19 +30,19 @@ export function ReturnedRequestsPanel(input: {
 
   return (
     <section
-      className="store-approvals-ledger-card"
+      className="store-approvals-panel"
       aria-label={input.t('storeApprovals.returnedAria')}
     >
-      <div className="store-approvals-ledger-card-head">
+      <div className="store-approvals-panel-head">
         <div>
           <div className="store-approvals-ledger-eyebrow">
             {input.t('storeApprovals.returnedEyebrow')}
           </div>
           <h3>{input.t('storeApprovals.returnedTitle')}</h3>
         </div>
-        <StatusPill tone={returnedRequestCount > 0 ? 'warning' : 'calm'}>
+        <StoreApprovalStatusBadge tone={returnedRequestCount > 0 ? 'warning' : 'calm'}>
           {String(returnedRequestCount)}
-        </StatusPill>
+        </StoreApprovalStatusBadge>
       </div>
 
       {hasReturnedRequestError ? (
@@ -54,7 +59,7 @@ export function ReturnedRequestsPanel(input: {
           ) : null}
         </>
       ) : returnedRequestCount === 0 ? (
-        <EmptyState
+        <StoreApprovalEmptyState
           title={input.t('storeApprovals.returnedEmptyTitle')}
           copy={input.t('storeApprovals.returnedEmptyCopy')}
         />
@@ -72,30 +77,29 @@ export function ReturnedRequestsPanel(input: {
                     })}
                   </p>
                 </div>
-                <StatusPill tone="warning">
+                <StoreApprovalStatusBadge tone="warning">
                   {formatApprovalStatus(item.status, input.t)}
-                </StatusPill>
+                </StoreApprovalStatusBadge>
               </div>
               <div className="store-approvals-ledger-key-grid">
-                <KeyValue label={input.t('storeApprovals.position')} value={item.positionName} />
-                <KeyValue
+                <StoreApprovalKeyValue label={input.t('storeApprovals.position')} value={item.positionName} />
+                <StoreApprovalKeyValue
                   label={input.t('storeApprovals.reviewNote')}
                   value={item.reviewNote ?? input.t('storeApprovals.noNote')}
                 />
-                <KeyValue
+                <StoreApprovalKeyValue
                   label={input.t('storeApprovals.updatedAt')}
                   value={formatDateTime(item.updatedAt, input.locale)}
                 />
-                <KeyValue label={input.t('storeApprovals.requestId')} value={item.requestId} />
+                <StoreApprovalKeyValue label={input.t('storeApprovals.requestId')} value={item.requestId} />
               </div>
               <div className="store-approvals-ledger-actions">
-                <button
-                  className="store-approvals-ledger-button"
+                <Button
                   type="button"
                   onClick={() => input.onEditSellerCodeRequest(item)}
                 >
                   {input.t('storeApprovals.editSellerCodeRequest')}
-                </button>
+                </Button>
               </div>
             </article>
           ))}
@@ -112,33 +116,32 @@ export function ReturnedRequestsPanel(input: {
                     })}
                   </p>
                 </div>
-                <StatusPill tone="warning">
+                <StoreApprovalStatusBadge tone="warning">
                   {formatApprovalStatus(item.status, input.t)}
-                </StatusPill>
+                </StoreApprovalStatusBadge>
               </div>
               <div className="store-approvals-ledger-key-grid">
-                <KeyValue
+                <StoreApprovalKeyValue
                   label={input.t('storeApprovals.terminationDate')}
                   value={formatDate(item.terminationDate, input.locale)}
                 />
-                <KeyValue
+                <StoreApprovalKeyValue
                   label={input.t('storeApprovals.requestReason')}
                   value={item.requestReason ?? input.t('storeApprovals.noNote')}
                 />
-                <KeyValue
+                <StoreApprovalKeyValue
                   label={input.t('storeApprovals.reviewNote')}
                   value={item.reviewNote ?? input.t('storeApprovals.noNote')}
                 />
-                <KeyValue label={input.t('storeApprovals.requestId')} value={item.requestId} />
+                <StoreApprovalKeyValue label={input.t('storeApprovals.requestId')} value={item.requestId} />
               </div>
               <div className="store-approvals-ledger-actions">
-                <button
-                  className="store-approvals-ledger-button"
+                <Button
                   type="button"
                   onClick={() => input.onEditOffboardingRequest(item)}
                 >
                   {input.t('storeApprovals.editOffboardingRequest')}
-                </button>
+                </Button>
               </div>
             </article>
           ))}

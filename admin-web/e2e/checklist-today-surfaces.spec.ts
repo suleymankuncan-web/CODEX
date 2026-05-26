@@ -350,12 +350,8 @@ test('visual merchandiser sees checklist-only VM coverage and no broad store lin
       },
     },
   )
-  await expect(
-    page.locator('.store-command-nav').getByRole('link', { name: 'Checklist', exact: true }),
-  ).toBeVisible()
-  await expect(
-    page.locator('.store-command-nav').getByRole('link', { name: 'Duyurular', exact: true }),
-  ).toBeVisible()
+  await expect(page.locator('a[href="/store/checklists"]')).toBeVisible()
+  await expect(page.locator('a[href="/store/feed"]')).toBeVisible()
   await expect(page.locator('a[href="/admin/reports"]')).toHaveCount(0)
   await expect(page.locator('a[href="/store/kpis"]')).toHaveCount(0)
   await expect(page.locator('a[href="/store/rankings"]')).toHaveCount(0)
@@ -381,10 +377,12 @@ test('visual merchandiser without a published VM template still sees assigned st
   await expect(page.locator('.store-checklists-command-metrics')).toContainText('Atanmış mağaza')
   await expect(page.locator('.store-checklists-command-metrics .store-checklists-metric').first()).toContainText('1')
   await expect(page.getByText('VM şablonu yayında değil')).toBeVisible()
-  const templateTypeSelect = page.locator('.store-checklists-toolbar select').nth(1)
-  await expect(templateTypeSelect).toHaveValue('VM_STORE_VISIT')
-  await expect(templateTypeSelect.locator('option')).toHaveCount(1)
-  await expect(templateTypeSelect.locator('option')).toHaveText(['VM'])
+  const templateTypeSelect = page.getByRole('combobox', { name: 'Şablon tipi' })
+  await expect(templateTypeSelect).toContainText('VM')
+  await templateTypeSelect.click()
+  await expect(page.getByRole('option', { name: 'VM', exact: true })).toHaveCount(1)
+  await expect(page.getByRole('option', { name: 'BM + VM', exact: true })).toHaveCount(0)
+  await page.keyboard.press('Escape')
   await expect(page.getByText('BM + VM')).toHaveCount(0)
 })
 
@@ -487,6 +485,8 @@ test('store checklist surface switches to English copy and persists locale', asy
   await expect(page.locator('body')).not.toContainText('Ãƒ')
   await expect(page.locator('body')).not.toContainText('Ã„')
   await expect(page.locator('body')).not.toContainText('Ã…')
+
+  await page.getByRole('dialog').getByRole('button', { name: 'Close' }).click()
 
   await page.reload()
 

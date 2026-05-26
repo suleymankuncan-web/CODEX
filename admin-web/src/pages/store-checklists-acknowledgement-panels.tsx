@@ -1,3 +1,4 @@
+import { Button } from '@/components/ui/button'
 import type { ChecklistAcknowledgementItem } from '../features/checklists/api'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import type { AppLocale } from '../lib/i18n'
@@ -198,9 +199,9 @@ function ChecklistResultRow(input: {
         label={input.t('storeChecklists.resultLowScore')}
         value={input.t('storeChecklists.lowScoreCount', { count: lowScoreCount })}
       />
-      <button className="store-checklists-action-button" type="button" onClick={input.onOpen}>
+      <Button className="store-checklists-action-button" type="button" onClick={input.onOpen}>
         {input.t('storeChecklists.viewResultDetail')}
-      </button>
+      </Button>
       {input.item.acknowledgement?.acknowledgementNote ? (
         <p className="store-checklists-row-note">{input.item.acknowledgement.acknowledgementNote}</p>
       ) : null}

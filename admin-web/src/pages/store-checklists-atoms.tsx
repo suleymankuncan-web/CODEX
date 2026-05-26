@@ -1,3 +1,4 @@
+import { Button } from '@/components/ui/button'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { formatNumber } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
@@ -96,13 +97,15 @@ export function SortButton(input: {
   onClick: () => void
 }) {
   return (
-    <button
+    <Button
       className={`store-checklists-sort-button${input.active ? ' store-checklists-sort-button-active' : ''}`}
       type="button"
+      variant="ghost"
+      size="xs"
       onClick={input.onClick}
     >
       <span>{input.children}</span>
       <small aria-hidden="true">{input.active ? (input.direction === 'asc' ? '↑' : '↓') : '↕'}</small>
-    </button>
+    </Button>
   )
 }

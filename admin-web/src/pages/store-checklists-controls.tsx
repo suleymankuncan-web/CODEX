@@ -1,3 +1,6 @@
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import type { AppLocale } from '../lib/i18n'
 import type {
@@ -25,12 +28,12 @@ export function ChecklistToolbar(input: {
 }) {
   return (
     <section
-      className="store-checklists-toolbar"
+      className="store-checklists-toolbar tw:grid tw:gap-3 tw:lg:grid-cols-[minmax(240px,1.4fr)_repeat(3,minmax(160px,1fr))_auto]"
       aria-label={getStaticCopy(input.locale, 'Checklist filtreleri', 'Checklist filters')}
     >
       <label className="store-checklists-filter store-checklists-filter-search">
         <span>{getStaticCopy(input.locale, 'Arama', 'Search')}</span>
-        <input
+        <Input
           aria-label={getStaticCopy(input.locale, 'Checklist arama', 'Checklist search')}
           placeholder={getStaticCopy(input.locale, 'Mağaza veya checklist ara', 'Search store or checklist')}
           value={input.searchQuery}
@@ -39,50 +42,65 @@ export function ChecklistToolbar(input: {
       </label>
       <label className="store-checklists-filter">
         <span>{getStaticCopy(input.locale, 'Ay', 'Month')}</span>
-        <select
-          aria-label={getStaticCopy(input.locale, 'Ay filtresi', 'Month filter')}
-          value={input.selectedMonth}
-          onChange={(event) => input.onMonthChange(event.target.value)}
-        >
-          {input.monthOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+        <Select value={input.selectedMonth} onValueChange={input.onMonthChange}>
+          <SelectTrigger aria-label={getStaticCopy(input.locale, 'Ay filtresi', 'Month filter')} className="tw:w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {input.monthOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
       </label>
       <label className="store-checklists-filter">
         <span>{input.t('storeChecklists.templateType')}</span>
-        <select
-          aria-label={input.t('storeChecklists.templateType')}
+        <Select
           value={input.typeFilter}
-          onChange={(event) => input.onTypeChange(event.target.value as ChecklistTypeFilter)}
+          onValueChange={(value) => input.onTypeChange(value as ChecklistTypeFilter)}
         >
-          {input.typeOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger aria-label={input.t('storeChecklists.templateType')} className="tw:w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {input.typeOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
       </label>
       <label className="store-checklists-filter">
         <span>{input.t('storeChecklists.status')}</span>
-        <select
-          aria-label={input.t('storeChecklists.status')}
+        <Select
           value={input.statusFilter}
-          onChange={(event) => input.onStatusChange(event.target.value as ChecklistStatusFilter)}
+          onValueChange={(value) => input.onStatusChange(value as ChecklistStatusFilter)}
         >
-          <option value="all">{getStaticCopy(input.locale, 'Tüm durumlar', 'All statuses')}</option>
-          <option value="missing">{input.t('storeChecklists.noVisit')}</option>
-          <option value="draft">{input.t('storeChecklists.coverage.draft')}</option>
-          <option value="completed">{input.t('storeChecklists.status.completed')}</option>
-          <option value="pending">{input.t('storeChecklists.needsAcknowledgement')}</option>
-          <option value="acknowledged">{input.t('storeChecklists.acknowledged')}</option>
-        </select>
+          <SelectTrigger aria-label={input.t('storeChecklists.status')} className="tw:w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectItem value="all">{getStaticCopy(input.locale, 'Tüm durumlar', 'All statuses')}</SelectItem>
+              <SelectItem value="missing">{input.t('storeChecklists.noVisit')}</SelectItem>
+              <SelectItem value="draft">{input.t('storeChecklists.coverage.draft')}</SelectItem>
+              <SelectItem value="completed">{input.t('storeChecklists.status.completed')}</SelectItem>
+              <SelectItem value="pending">{input.t('storeChecklists.needsAcknowledgement')}</SelectItem>
+              <SelectItem value="acknowledged">{input.t('storeChecklists.acknowledged')}</SelectItem>
+            </SelectGroup>
+          </SelectContent>
+        </Select>
       </label>
-      <button className="store-checklists-ghost-button" type="button" onClick={input.onClear}>
+      <Button className="tw:self-end" type="button" variant="outline" onClick={input.onClear}>
         {getStaticCopy(input.locale, 'Filtreleri sıfırla', 'Reset filters')}
-      </button>
+      </Button>
     </section>
   )
 }
@@ -93,22 +111,52 @@ export function ChecklistTabs(input: {
   onChange: (tab: ChecklistTab) => void
 }) {
   return (
-    <nav className="store-checklists-tabs" role="tablist" aria-label="Checklist bölümleri">
-      {input.tabs.map((tab) => (
-        <button
+    <div
+      className="store-checklists-tabs"
+      aria-label="Checklist bölümleri"
+      role="tablist"
+    >
+      {input.tabs.map((tab, index) => (
+        <Button
           aria-controls={`store-checklist-panel-${tab.key}`}
           aria-selected={input.activeTab === tab.key}
           className={`store-checklists-tab store-checklists-tone-${tab.tone}`}
           id={`store-checklist-tab-${tab.key}`}
           key={tab.key}
           role="tab"
+          tabIndex={input.activeTab === tab.key ? 0 : -1}
           type="button"
+          variant="ghost"
           onClick={() => input.onChange(tab.key)}
+          onKeyDown={(event) => {
+            if (input.tabs.length === 0) return
+            const lastIndex = input.tabs.length - 1
+            const nextIndex =
+              event.key === 'ArrowRight' || event.key === 'ArrowDown'
+                ? (index + 1) % input.tabs.length
+                : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+                  ? (index - 1 + input.tabs.length) % input.tabs.length
+                  : event.key === 'Home'
+                    ? 0
+                    : event.key === 'End'
+                      ? lastIndex
+                      : index
+
+            if (nextIndex === index) return
+
+            event.preventDefault()
+            const nextTab = input.tabs[nextIndex]
+            if (!nextTab) return
+            input.onChange(nextTab.key)
+            window.requestAnimationFrame(() => {
+              document.getElementById(`store-checklist-tab-${nextTab.key}`)?.focus()
+            })
+          }}
         >
           <span>{tab.label}</span>
           <small>{tab.count}</small>
-        </button>
+        </Button>
       ))}
-    </nav>
+    </div>
   )
 }

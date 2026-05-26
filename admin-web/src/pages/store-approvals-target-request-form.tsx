@@ -1,4 +1,7 @@
-import { EmptyState, StatusPill } from '../components/dashboard-primitives'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import type {
   StoreTargetingPerson,
@@ -6,7 +9,11 @@ import type {
 } from '../features/targets/api'
 import { getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
-import { StoreRequestFeedback } from './store-approvals-atoms'
+import {
+  StoreApprovalEmptyState,
+  StoreApprovalStatusBadge,
+  StoreRequestFeedback,
+} from './store-approvals-atoms'
 import {
   formatAllocationShare,
   formatTargetNumber,
@@ -63,11 +70,11 @@ export function TargetDistributionRequestForm(input: {
           </div>
           <h3>{input.t('storeApprovals.targetTitle')}</h3>
         </div>
-        <StatusPill tone="accent">{input.t('storeApprovals.writeFlow')}</StatusPill>
+        <StoreApprovalStatusBadge tone="accent">{input.t('storeApprovals.writeFlow')}</StoreApprovalStatusBadge>
       </div>
 
       {!input.access.createAllowed ? (
-        <EmptyState
+        <StoreApprovalEmptyState
           title={input.t('storeApprovals.assignedActionStoreRequired')}
           copy={input.t('storeApprovals.targetUnavailableCopy')}
         />
@@ -78,19 +85,25 @@ export function TargetDistributionRequestForm(input: {
               {input.t('storeApprovals.storeId')}
             </label>
             {input.assignedStoreIds.length > 1 ? (
-              <select
-                id="store-id"
+              <Select
                 value={input.storeId}
-                onChange={(event) => input.onStoreIdChange(event.target.value)}
+                onValueChange={input.onStoreIdChange}
               >
-                {input.assignedStoreIds.map((assignedStoreId) => (
-                  <option key={assignedStoreId} value={assignedStoreId}>
-                    {assignedStoreId}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="store-id" className="tw:w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {input.assignedStoreIds.map((assignedStoreId) => (
+                      <SelectItem key={assignedStoreId} value={assignedStoreId}>
+                        {assignedStoreId}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             ) : (
-              <input
+              <Input
                 id="store-id"
                 value={input.storeId}
                 onChange={(event) => input.onStoreIdChange(event.target.value)}
@@ -104,7 +117,7 @@ export function TargetDistributionRequestForm(input: {
             <label className="store-request-label" htmlFor="request-month">
               {input.t('storeApprovals.requestMonth')}
             </label>
-            <input
+            <Input
               id="request-month"
               type="month"
               value={input.requestMonth}
@@ -116,7 +129,7 @@ export function TargetDistributionRequestForm(input: {
             <label className="store-request-label" htmlFor="target-label">
               {input.t('storeApprovals.targetLabel')}
             </label>
-            <input
+            <Input
               id="target-label"
               value={input.targetLabel}
               onChange={(event) => input.onTargetLabelChange(event.target.value)}
@@ -128,7 +141,7 @@ export function TargetDistributionRequestForm(input: {
             <label className="store-request-label" htmlFor="total-target-value">
               {input.t('storeApprovals.totalTargetValue')}
             </label>
-            <input
+            <Input
               id="total-target-value"
               type="number"
               min="0"
@@ -141,7 +154,7 @@ export function TargetDistributionRequestForm(input: {
             <label className="store-request-label" htmlFor="request-reason">
               {input.t('storeApprovals.requestReason')}
             </label>
-            <textarea
+            <Textarea
               id="request-reason"
               rows={3}
               value={input.requestReason}
@@ -162,9 +175,9 @@ export function TargetDistributionRequestForm(input: {
                   <small>{input.t('storeApprovals.remainingTarget')}</small>
                   <strong>{formatTargetNumber(remainingTargetValue, input.locale)}</strong>
                 </span>
-                <StatusPill tone={input.totalsAligned ? 'calm' : 'warning'}>
+                <StoreApprovalStatusBadge tone={input.totalsAligned ? 'calm' : 'warning'}>
                   {completionShare}
-                </StatusPill>
+                </StoreApprovalStatusBadge>
               </div>
             </div>
             {input.personnelQuery.isError ? (
@@ -195,7 +208,7 @@ export function TargetDistributionRequestForm(input: {
                     <div className="store-request-allocation-person">
                       <strong>{allocation.assigneeLabel || input.t('storeApprovals.unassigned')}</strong>
                     </div>
-                    <input
+                    <Input
                       aria-label={input.t('storeApprovals.personTargetValue')}
                       type="number"
                       min="0"
@@ -209,7 +222,7 @@ export function TargetDistributionRequestForm(input: {
                       <span>{input.t('storeApprovals.allocationShare')}</span>
                       <strong>{formatAllocationShare(targetValue, totalTargetNumber, input.locale)}</strong>
                     </div>
-                    <input
+                    <Input
                       value={allocation.note ?? ''}
                       onChange={(event) => input.onAllocationNoteChange(index, event.target.value)}
                       placeholder={input.t('storeApprovals.optionalNote')}
@@ -228,8 +241,7 @@ export function TargetDistributionRequestForm(input: {
           </div>
 
           <div className="store-request-actions store-request-field-wide">
-            <button
-              className="store-request-button store-request-button-primary"
+            <Button
               type="button"
               disabled={!input.access.submitAllowed || input.submission.pending}
               onClick={input.onSubmit}
@@ -237,7 +249,7 @@ export function TargetDistributionRequestForm(input: {
               {input.submission.pending
                 ? input.t('storeApprovals.submitting')
                 : input.t('storeApprovals.submitTargetRequest')}
-            </button>
+            </Button>
           </div>
 
           {input.errors.createVisible ? (

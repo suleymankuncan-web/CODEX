@@ -1,8 +1,15 @@
-import { EmptyState, StatusPill } from '../components/dashboard-primitives'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import type { StoreEmployee } from '../features/workforce/api'
 import { getErrorMessage } from '../lib/format'
-import { StoreRequestFeedback } from './store-approvals-atoms'
+import {
+  StoreApprovalEmptyState,
+  StoreApprovalStatusBadge,
+  StoreRequestFeedback,
+} from './store-approvals-atoms'
 import {
   type ListQuerySnapshot,
   type RequestFormAccess,
@@ -10,6 +17,8 @@ import {
   type RequestFormSubmission,
   type StringFieldSetter,
 } from './store-approvals-model'
+
+const UNSELECTED_EMPLOYEE_VALUE = '__unselected_employee__'
 
 export function OffboardingRequestForm(input: {
   access: RequestFormAccess
@@ -39,11 +48,11 @@ export function OffboardingRequestForm(input: {
           </div>
           <h3>{input.t('storeApprovals.offboardingTitle')}</h3>
         </div>
-        <StatusPill tone="warning">{input.t('storeApprovals.hrQueue')}</StatusPill>
+        <StoreApprovalStatusBadge tone="warning">{input.t('storeApprovals.hrQueue')}</StoreApprovalStatusBadge>
       </div>
 
       {!input.access.createAllowed ? (
-        <EmptyState
+        <StoreApprovalEmptyState
           title={input.t('storeApprovals.assignedActionStoreRequired')}
           copy={input.t('storeApprovals.offboardingUnavailableCopy')}
         />
@@ -53,19 +62,29 @@ export function OffboardingRequestForm(input: {
             <label className="store-request-label" htmlFor="offboarding-employee-id">
               {input.t('storeApprovals.employee')}
             </label>
-            <select
-              id="offboarding-employee-id"
-              value={input.offboardingEmployeeId}
+            <Select
+              value={input.offboardingEmployeeId || UNSELECTED_EMPLOYEE_VALUE}
               disabled={input.storeEmployeesQuery.isLoading || input.storeEmployeesQuery.isError}
-              onChange={(event) => input.onEmployeeIdChange(event.target.value)}
+              onValueChange={(value) =>
+                input.onEmployeeIdChange(value === UNSELECTED_EMPLOYEE_VALUE ? '' : value)
+              }
             >
-              <option value="">{input.t('storeApprovals.selectEmployee')}</option>
-              {(input.storeEmployeesQuery.data?.items ?? []).map((employee) => (
-                <option key={employee.employeeId} value={employee.employeeId}>
-                  {employee.displayName} ({employee.externalEmployeeRef ?? employee.positionName})
-                </option>
-              ))}
-            </select>
+              <SelectTrigger id="offboarding-employee-id" className="tw:w-full">
+                <SelectValue placeholder={input.t('storeApprovals.selectEmployee')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value={UNSELECTED_EMPLOYEE_VALUE}>
+                    {input.t('storeApprovals.selectEmployee')}
+                  </SelectItem>
+                  {(input.storeEmployeesQuery.data?.items ?? []).map((employee) => (
+                    <SelectItem key={employee.employeeId} value={employee.employeeId}>
+                      {employee.displayName} ({employee.externalEmployeeRef ?? employee.positionName})
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
             {input.storeEmployeesQuery.isLoading ? (
               <p className="store-request-note">
                 {input.t('storeApprovals.activePersonnelLoading')}
@@ -87,7 +106,7 @@ export function OffboardingRequestForm(input: {
             <label className="store-request-label" htmlFor="offboarding-termination-date">
               {input.t('storeApprovals.terminationDate')}
             </label>
-            <input
+            <Input
               id="offboarding-termination-date"
               type="date"
               value={input.offboardingTerminationDate}
@@ -99,7 +118,7 @@ export function OffboardingRequestForm(input: {
             <label className="store-request-label" htmlFor="offboarding-request-reason">
               {input.t('storeApprovals.requestReason')}
             </label>
-            <textarea
+            <Textarea
               id="offboarding-request-reason"
               rows={3}
               value={input.offboardingRequestReason}
@@ -109,8 +128,7 @@ export function OffboardingRequestForm(input: {
           </div>
 
           <div className="store-request-actions store-request-field-wide">
-            <button
-              className="store-request-button store-request-button-primary"
+            <Button
               type="button"
               disabled={!input.access.submitAllowed || input.submission.pending}
               onClick={input.onSubmit}
@@ -120,16 +138,16 @@ export function OffboardingRequestForm(input: {
                 : input.editingRequestId
                   ? input.t('storeApprovals.resubmitOffboardingRequest')
                   : input.t('storeApprovals.submitOffboardingRequest')}
-            </button>
+            </Button>
             {input.editingRequestId ? (
-              <button
-                className="store-request-button"
+              <Button
+                variant="outline"
                 type="button"
                 disabled={input.submission.pending}
                 onClick={input.onCancelEdit}
               >
                 {input.t('storeApprovals.cancelEdit')}
-              </button>
+              </Button>
             ) : null}
           </div>
 

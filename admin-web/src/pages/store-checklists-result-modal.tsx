@@ -1,4 +1,7 @@
 import { useEffect, useRef } from 'react'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Textarea } from '@/components/ui/textarea'
 import type { ChecklistAcknowledgementItem } from '../features/checklists/api'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { formatDateTime } from '../lib/format'
@@ -40,23 +43,23 @@ export function ChecklistResultModal(input: {
   const digest = getChecklistResultDigest(input.t, input.locale, input.item)
 
   return (
-    <div className="store-checklist-modal-backdrop">
-      <section
-        aria-labelledby="store-checklist-result-title"
-        aria-modal="true"
-        className="store-checklist-modal store-checklist-result-modal"
-        role="dialog"
+    <Dialog open onOpenChange={(open) => {
+      if (!open) input.onClose()
+    }}>
+      <DialogContent
+        className="store-checklist-modal store-checklist-result-modal tw:max-w-[min(1120px,calc(100vw-2rem))] tw:sm:max-w-[min(1120px,calc(100vw-2rem))]"
+        showCloseButton={false}
       >
-        <div className="store-checklist-modal-head">
+        <DialogHeader className="store-checklist-modal-head">
           <div>
             <div className="store-checklists-eyebrow">{input.t('storeChecklists.resultEyebrow')}</div>
-            <h3 id="store-checklist-result-title">{input.item.templateName}</h3>
-            <p>{formatCompletedSentence(input.t, input.locale, input.item)}</p>
+            <DialogTitle id="store-checklist-result-title">{input.item.templateName}</DialogTitle>
+            <DialogDescription>{formatCompletedSentence(input.t, input.locale, input.item)}</DialogDescription>
           </div>
-          <button className="store-checklists-ghost-button" type="button" onClick={input.onClose}>
+          <Button variant="outline" type="button" onClick={input.onClose}>
             {input.t('storeChecklists.closeSession')}
-          </button>
-        </div>
+          </Button>
+        </DialogHeader>
 
         <div className="store-checklist-modal-summary">
           <ChecklistFact label={input.t('storeChecklists.store')} value={input.item.storeName || input.item.storeId} />
@@ -178,7 +181,7 @@ export function ChecklistResultModal(input: {
               <label className="store-checklists-eyebrow" htmlFor={`result-ack-note-${input.item.checklistInstanceId}`}>
                 {input.t('storeChecklists.acknowledgementNote')}
               </label>
-              <textarea
+              <Textarea
                 id={`result-ack-note-${input.item.checklistInstanceId}`}
                 rows={3}
                 value={input.acknowledgementNote}
@@ -189,11 +192,10 @@ export function ChecklistResultModal(input: {
                 placeholder={input.t('storeChecklists.acknowledgementNotePlaceholder')}
               />
               <div className="store-checklist-modal-footer">
-                <button className="store-checklists-ghost-button" type="button" onClick={input.onClose}>
+                <Button variant="outline" type="button" onClick={input.onClose}>
                   {input.t('storeChecklists.cancelSession')}
-                </button>
-                <button
-                  className="store-checklists-action-button"
+                </Button>
+                <Button
                   disabled={input.isAcknowledging}
                   type="button"
                   onClick={() => input.onAcknowledge(acknowledgementNoteRef.current)}
@@ -201,14 +203,14 @@ export function ChecklistResultModal(input: {
                   {input.isAcknowledging
                     ? input.t('storeChecklists.acknowledging')
                     : input.t('storeChecklists.acknowledge')}
-                </button>
+                </Button>
               </div>
             </>
           ) : (
             <p className="store-checklists-inline-notice">{input.t('storeChecklists.reviewOnlyCopy')}</p>
           )}
         </div>
-      </section>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

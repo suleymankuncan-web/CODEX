@@ -71,7 +71,7 @@ test('store approvals render pending requests with nullable approval fields', as
   await routeStoreApprovalsMinimalApi(page)
 
   await page.goto('/store/approvals')
-  await page.getByRole('button', { name: 'Hedef onaylarını aç' }).click()
+  await page.getByRole('radio', { name: 'Hedef onaylarını aç' }).click()
 
   await expect(
     page.getByLabel('Hedef onay kayıtları').getByText('May target split'),

@@ -1,9 +1,15 @@
-import { EmptyState, KeyValue, StatusPill } from '../components/dashboard-primitives'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import type { TargetDistributionRequest } from '../features/targets/api'
 import { formatDate, formatDateTime } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
-import { StoreRequestFeedback } from './store-approvals-atoms'
+import {
+  StoreApprovalEmptyState,
+  StoreApprovalKeyValue,
+  StoreApprovalStatusBadge,
+  StoreRequestFeedback,
+} from './store-approvals-atoms'
 import { formatApprovalStatus } from './store-approvals-model'
 import { TargetAllocationBreakdown } from './store-approvals-target-atoms'
 
@@ -21,23 +27,23 @@ export function TargetApprovalLedger(input: {
 }) {
   return (
     <section
-      className="store-approvals-ledger-card"
+      className="store-approvals-panel"
       aria-label={input.t('storeApprovals.targetApprovalQueueTitle')}
     >
-      <div className="store-approvals-ledger-card-head">
+      <div className="store-approvals-panel-head">
         <div>
           <div className="store-approvals-ledger-eyebrow">
             {input.t('storeApprovals.ledgerStatus')}
           </div>
           <h3>{input.t('storeApprovals.targetApprovalQueueTitle')}</h3>
         </div>
-        <StatusPill tone={input.requests.length > 0 ? 'warning' : 'calm'}>
+        <StoreApprovalStatusBadge tone={input.requests.length > 0 ? 'warning' : 'calm'}>
           {String(input.requests.length)}
-        </StatusPill>
+        </StoreApprovalStatusBadge>
       </div>
 
       {input.requests.length === 0 ? (
-        <EmptyState
+        <StoreApprovalEmptyState
           title={input.t('storeApprovals.targetApprovalEmptyTitle')}
           copy={input.t('storeApprovals.targetApprovalEmptyCopy')}
         />
@@ -59,24 +65,24 @@ export function TargetApprovalLedger(input: {
                       })}
                     </p>
                   </div>
-                  <StatusPill tone="warning">
+                  <StoreApprovalStatusBadge tone="warning">
                     {formatApprovalStatus(item.status, input.t)}
-                  </StatusPill>
+                  </StoreApprovalStatusBadge>
                 </div>
                 <div className="store-approvals-ledger-key-grid">
-                  <KeyValue
+                  <StoreApprovalKeyValue
                     label={input.t('storeApprovals.allocationCount')}
                     value={String(item.allocationCount)}
                   />
-                  <KeyValue
+                  <StoreApprovalKeyValue
                     label={input.t('storeApprovals.createdAt')}
                     value={formatDateTime(item.createdAt, input.locale)}
                   />
-                  <KeyValue
+                  <StoreApprovalKeyValue
                     label={input.t('storeApprovals.userId')}
                     value={item.submittedByUserId}
                   />
-                  <KeyValue label={input.t('storeApprovals.requestId')} value={item.requestId} />
+                  <StoreApprovalKeyValue label={input.t('storeApprovals.requestId')} value={item.requestId} />
                 </div>
                 {item.requestReason ? (
                   <p className="store-approvals-ledger-row-note">
@@ -94,7 +100,7 @@ export function TargetApprovalLedger(input: {
                 >
                   {input.t('storeApprovals.approvalNote')}
                 </label>
-                <textarea
+                <Textarea
                   id={`store-approval-note-${item.requestId}`}
                   value={input.approvalNotes[item.requestId] ?? ''}
                   onChange={(event) =>
@@ -105,8 +111,7 @@ export function TargetApprovalLedger(input: {
                   disabled={!canApprove}
                 />
                 <div className="store-approvals-ledger-actions">
-                  <button
-                    className="store-approvals-ledger-button"
+                  <Button
                     type="button"
                     disabled={
                       !canApprove ||
@@ -117,7 +122,7 @@ export function TargetApprovalLedger(input: {
                     {input.isApproving && input.approvingRequestId === item.requestId
                       ? input.t('storeApprovals.approving')
                       : input.t('storeApprovals.approveTargetRequest')}
-                  </button>
+                  </Button>
                   {!canApprove ? (
                     <span className="store-approvals-ledger-row-note">
                       {input.t('storeApprovals.cannotApproveStore')}
