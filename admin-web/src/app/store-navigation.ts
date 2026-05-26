@@ -226,11 +226,18 @@ const visualMerchandiserNavigation: StoreNavigationItem[] = [
   },
 ]
 
+const settingsNavigationItem: StoreNavigationItem = {
+  id: 'settings',
+  labelKey: 'storeHome.nav.settings',
+  path: '/store/settings',
+  icon: 'settings',
+}
+
 export function getStoreNavigation(persona: StorePersona) {
-  if (persona === 'visualMerchandiser') return visualMerchandiserNavigation
-  if (persona === 'regionManager') return regionManagerNavigation
-  if (persona === 'storeManager') return managerNavigation
-  return personnelNavigation
+  if (persona === 'visualMerchandiser') return [...visualMerchandiserNavigation, settingsNavigationItem]
+  if (persona === 'regionManager') return [...regionManagerNavigation, settingsNavigationItem]
+  if (persona === 'storeManager') return [...managerNavigation, settingsNavigationItem]
+  return [...personnelNavigation, settingsNavigationItem]
 }
 
 function isStoreNavigationItemAllowed(
@@ -257,6 +264,8 @@ function isStoreNavigationItemAllowed(
       return hasAnyRole(authSummary, ['SUPER_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER'])
     case 'reports':
       return hasAnyRole(authSummary, ['SUPER_ADMIN', 'REPORT_VIEWER', 'AUDITOR', 'STORE_MANAGER'])
+    case 'settings':
+      return authSummary !== null
     default:
       return false
   }
