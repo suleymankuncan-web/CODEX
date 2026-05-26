@@ -482,7 +482,7 @@ function useStoreChecklistsPageContent(input: {
 
   if (isError) {
     return (
-      <StoreSurfacePage ariaLabel={t('storeChecklists.errorTitle')}>
+      <StoreSurfacePage ariaLabel={t('storeChecklists.errorTitle')} className="store-checklists-command-page">
         <StoreErrorState
           title={t('storeChecklists.errorTitle')}
           description={errorMessage}
@@ -499,7 +499,7 @@ function useStoreChecklistsPageContent(input: {
   }
 
   return (
-    <StoreSurfacePage ariaLabel={t('storeChecklists.title')}>
+    <StoreSurfacePage ariaLabel={t('storeChecklists.title')} className="store-checklists-command-page">
       <StoreChecklistsHero
         canManageVisits={canManageVisits}
         heroAverageScore={heroAverageScore}

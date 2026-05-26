@@ -43,6 +43,7 @@ export function StoreActionPlansPanel(input: {
 
   return (
     <StoreSectionCard
+      testId="store-action-plans-panel"
       title={input.t('storeTasks.actionPlansTitle')}
       description={input.t('storeTasks.actionPlansEyebrow')}
       badge={{
@@ -80,7 +81,7 @@ function renderPanelBody(input: {
 
   if (input.isError) {
     return (
-      <StoreStackedRow tone="danger">
+      <StoreStackedRow tone="danger" testId="store-action-plans-error-row">
         <div className="tw:flex tw:flex-col tw:gap-3 tw:sm:flex-row tw:sm:items-start tw:sm:justify-between">
           <strong className="tw:text-sm tw:text-foreground">{input.t('storeTasks.actionPlansErrorTitle')}</strong>
           <Button
@@ -189,7 +190,7 @@ function StoreActionPlanRow(input: {
   const summary = input.plan.summary?.trim()
 
   return (
-    <StoreStackedRow>
+    <StoreStackedRow testId="store-action-plan-row">
       <div className="tw:flex tw:flex-col tw:gap-3">
         <div className="tw:flex tw:flex-col tw:gap-3 tw:md:flex-row tw:md:items-start tw:md:justify-between">
           <div className="tw:min-w-0">

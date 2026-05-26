@@ -144,7 +144,7 @@ function StoreFeedPostRow(input: {
   const destination = input.post.targetRoute ?? input.post.linkUrl
 
   return (
-    <StoreStackedRow>
+    <StoreStackedRow testId="store-feed-post-row">
       <div className="tw:flex tw:flex-col tw:gap-3">
         <div className="tw:flex tw:flex-col tw:gap-3 tw:md:flex-row tw:md:items-start tw:md:justify-between">
           <div className="tw:min-w-0">

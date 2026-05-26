@@ -273,7 +273,7 @@ export function StoreHomePage(input: {
   ] satisfies Array<{ labelKey: TranslationKey; value: string }>
 
   return (
-    <StoreSurfacePage ariaLabel={t('storeHome.command.aria')}>
+    <StoreSurfacePage ariaLabel={t('storeHome.command.aria')} className="store-command-home">
       <StoreSurfaceHeader
         eyebrow={t('storeHome.homeEyebrow')}
         title={title}
@@ -419,6 +419,7 @@ function ChecklistHomeCard(input: { summary: ChecklistHomeSummary }) {
   return (
     <StoreStackedRow
       className="tw:mt-3"
+      testId="store-home-checklist-card"
       tone={input.summary.tone === 'attention' ? 'warning' : 'calm'}
     >
       <div className="tw:flex tw:flex-col tw:gap-3 tw:sm:flex-row tw:sm:items-center tw:sm:justify-between">
@@ -430,7 +431,10 @@ function ChecklistHomeCard(input: { summary: ChecklistHomeSummary }) {
         <div className="tw:flex tw:items-center tw:gap-3">
           <strong className="tw:text-2xl tw:text-foreground">{input.summary.metricValue}</strong>
           <Button asChild size="sm" variant="outline">
-            <Link to="/store/checklists">
+            <Link
+              aria-label={`${input.summary.title} ${input.summary.actionLabel}`}
+              to="/store/checklists"
+            >
               {input.summary.actionLabel}
               <ArrowRight data-icon="inline-end" />
             </Link>

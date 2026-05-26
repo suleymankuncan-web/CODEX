@@ -393,7 +393,7 @@ function WorkflowInboxRow(input: {
   onActionPlanCreated: () => void
 }) {
   return (
-    <StoreStackedRow>
+    <StoreStackedRow testId="store-task-queue-row">
       <div className="tw:flex tw:flex-col tw:gap-3">
         <div className="tw:flex tw:flex-col tw:gap-3 tw:md:flex-row tw:md:items-start tw:md:justify-between">
           <div className="tw:min-w-0">

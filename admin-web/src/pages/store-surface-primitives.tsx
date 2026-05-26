@@ -191,6 +191,7 @@ export function StoreSectionCard(input: {
   badge?: { label: string; tone?: StoreSurfaceTone }
   action?: StoreSurfaceAction
   className?: string
+  testId?: string
   ariaLabel?: string
   ariaLabelledBy?: string
 }) {
@@ -198,6 +199,7 @@ export function StoreSectionCard(input: {
     <Card
       aria-label={input.ariaLabel}
       aria-labelledby={input.ariaLabelledBy}
+      data-testid={input.testId}
       className={cn('tw:bg-card/85 tw:shadow-sm', input.className)}
     >
       <CardHeader>
@@ -271,10 +273,12 @@ export function StoreStackedRow(input: {
   className?: string
   tone?: StoreSurfaceTone
   ariaLabel?: string
+  testId?: string
 }) {
   return (
     <article
       aria-label={input.ariaLabel}
+      data-testid={input.testId}
       className={cn(
         'tw:rounded-lg tw:border tw:p-3 tw:transition-colors',
         toneClasses[input.tone ?? 'neutral'],
@@ -322,7 +326,9 @@ export function StoreErrorState(input: {
 }) {
   return (
     <Alert variant="destructive">
-      <AlertTitle>{input.title}</AlertTitle>
+      <AlertTitle role="heading" aria-level={2}>
+        {input.title}
+      </AlertTitle>
       <AlertDescription className="tw:flex tw:flex-col tw:gap-3">
         <span>{input.description}</span>
         {input.action ? <StoreSurfaceActionButton action={input.action} /> : null}
