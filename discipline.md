@@ -317,6 +317,13 @@ Store Me refactorundan cikan tekrar kullanilabilir sayfa kurali:
 - Eski UI kalintisi sadece CSS rengi degildir. Eski class, eski hero iskeleti,
   eski copy, eski loading/empty state, rol disi link ve debug/handoff metni de
   kalinti sayilir.
+- Store sayfa refactorlerinde final consistency pass zorunludur: aktif Store
+  route'larinda eski primitive/class/copy taranir, role disi toolbar linkleri
+  kontrol edilir, parked route istisnalari acikca belgelenir, mobil/desktop
+  verification kosulur ve current-state/evidence guncellenir.
+- Parked Store route'lari sessizce yeni urun UI'ina alinmaz. Ornek:
+  `/store/incentives` kullanici tarafindan yeniden kapsamlanana kadar toolbar'a
+  eklenmez ve Store Me kalitesinde productize edilmis sayilmaz.
 
 UI iyilestirmesi business workflow degistirmez.
 

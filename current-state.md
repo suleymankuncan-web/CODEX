@@ -175,6 +175,23 @@ Current Store UI refactor intent matrix:
 docs/plans/store-surfaces-redesign-implementation-plan-v1.md
 ```
 
+Current Store UI refactor batch state:
+
+```text
+docs/evidence/store-ui-refactor-final-consistency-2026-05-26.md
+```
+
+As of 2026-05-26, the active Store refactor line has progressed through the
+small PR rhythm:
+
+- PR #528 documented the Store Page Intent Matrix.
+- PR #529 cleaned the first legacy Store remnants.
+- PR #530 clarified utility Store surfaces.
+- PR #531 refreshed operational read surfaces.
+- PR #532 refreshed workflow-heavy checklists and approvals.
+- `/store/incentives` remains a parked exception and must not be productized or
+  added to the Store toolbar until the user explicitly scopes it.
+
 Store Me is the active reference pattern for the next page refactor pilots,
 not because every page should look identical, but because the work established
 the right operating method:
@@ -186,6 +203,9 @@ the right operating method:
 - PR #523 compacted oversized KPI cards after visual review.
 - PR #524 refreshed the role-aware Store sidebar and merged it after release
   gates, Vercel preview, and Codex review.
+- PR #528 through PR #532 extended the same operating method across the active
+  Store route set in reviewable batches without changing auth, API, scoring,
+  approval workflow, or DB behavior.
 
 Reusable Store Me lessons for other surfaces:
 

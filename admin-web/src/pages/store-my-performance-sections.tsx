@@ -1,7 +1,9 @@
+import { useId } from 'react'
 import { CalendarDays, ChevronDown } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -135,22 +137,27 @@ function PeriodCheck({
   disabled: boolean
   onChange: () => void
 }) {
+  const id = useId()
+
   return (
     <label
+      htmlFor={id}
       className={cn(
         'tw:inline-flex tw:min-h-8 tw:min-w-0 tw:items-center tw:gap-2 tw:rounded-lg tw:border tw:border-border tw:bg-background tw:px-2.5 tw:text-sm tw:font-medium tw:text-muted-foreground',
         checked && 'tw:bg-muted tw:text-foreground',
         disabled && 'tw:cursor-not-allowed tw:opacity-50',
       )}
     >
-      <input
-        className="tw:accent-primary"
-        type="checkbox"
+      <Checkbox
+        id={id}
         checked={checked}
-        onChange={onChange}
         disabled={disabled}
+        onCheckedChange={(value) => {
+          if (value === 'indeterminate') return
+          onChange()
+        }}
       />
-      <span className="tw:truncate">{children}</span>
+      <span className="tw:min-w-0 tw:truncate">{children}</span>
     </label>
   )
 }
