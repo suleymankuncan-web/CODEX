@@ -25,7 +25,6 @@ export function StorePersonnelPerformancePage(input: {
       initialLivePeriodType={initialLivePeriodType}
       initialLivePeriodStart={initialLivePeriodStart}
       profileMode="personnel"
-      showInternalRail={false}
     />
   )
 }

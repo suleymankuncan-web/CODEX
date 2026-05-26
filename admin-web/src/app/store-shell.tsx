@@ -1,4 +1,4 @@
-import { Suspense, useState, type ReactNode } from 'react'
+import { Suspense, type ReactNode } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { ScreenState } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
@@ -52,7 +52,6 @@ export function StoreShell(input: {
   const rankingsRoute = location.pathname === '/store/rankings'
   const storeMeRoute = location.pathname === '/store/me'
   const storePersonnelRoute = location.pathname.startsWith('/store/personnel/')
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const storeRoute = (element: ReactNode, options?: {
     allowVm?: boolean
     allowed?: boolean
@@ -93,16 +92,12 @@ export function StoreShell(input: {
 
   return (
     <div
-      className={`store-shell store-command-app${
-        isSidebarCollapsed ? ' store-command-app-collapsed' : ''
-      }${rankingsRoute ? ' store-shell-rankings' : ''}${
+      className={`store-shell store-command-app${rankingsRoute ? ' store-shell-rankings' : ''}${
         storeMeRoute || storePersonnelRoute ? ' store-shell-store-me' : ''
       }`}
     >
       <StoreSidebar
         authSummary={input.authSummary}
-        collapsed={isSidebarCollapsed}
-        onCollapsedChange={setIsSidebarCollapsed}
       />
       <PilotFeedbackControl />
 
@@ -154,7 +149,7 @@ export function StoreShell(input: {
             />
             <Route
               path="/store/me"
-              element={storeRoute(<StoreMyPerformancePage authSummary={input.authSummary} showInternalRail={false} />)}
+              element={storeRoute(<StoreMyPerformancePage authSummary={input.authSummary} />)}
             />
             <Route
               path="/store/personnel/:employeeId"

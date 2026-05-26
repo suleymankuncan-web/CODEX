@@ -5,10 +5,9 @@ import {
   ClipboardList,
   Home,
   Megaphone,
-  PanelLeftClose,
-  PanelLeftOpen,
   ReceiptText,
   Settings,
+  Store,
   Target,
   TrendingUp,
   Trophy,
@@ -20,7 +19,7 @@ import lufianLogoUrl from '../assets/lufian-logo.png'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { useLocalization } from '../features/localization/useLocalization'
 import {
-  getStoreNavigation,
+  getRoleAwareStoreNavigation,
   getStorePersonaLabelKey,
   resolveStorePersona,
   type StoreNavIconId,
@@ -41,23 +40,6 @@ const iconById: Record<StoreNavIconId, LucideIcon> = {
   tasks: Bell,
 }
 
-function getIdentityInitials(authSummary: AuthSessionSummary | null) {
-  const employeeId = authSummary?.user.employeeId?.trim()
-  const userId = authSummary?.user.userId?.trim()
-  const source = employeeId || userId || 'HR'
-  const parts = source
-    .replace(/[^A-Za-z0-9ğüşöçıİĞÜŞÖÇ]+/g, ' ')
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-
-  if (parts.length >= 2) {
-    return `${parts[0]?.[0] ?? ''}${parts[1]?.[0] ?? ''}`.toUpperCase()
-  }
-
-  return source.slice(0, 2).toUpperCase()
-}
-
 function getIdentityLabel(authSummary: AuthSessionSummary | null) {
   const employeeId = authSummary?.user.employeeId?.trim()
   const userId = authSummary?.user.userId?.trim()
@@ -68,13 +50,11 @@ function getIdentityLabel(authSummary: AuthSessionSummary | null) {
 
 export function StoreSidebar(input: {
   authSummary: AuthSessionSummary | null
-  collapsed: boolean
-  onCollapsedChange: (collapsed: boolean) => void
 }) {
   const { t } = useLocalization()
   const queryClient = useQueryClient()
   const persona = resolveStorePersona(input.authSummary)
-  const navItems = getStoreNavigation(persona)
+  const navItems = getRoleAwareStoreNavigation(input.authSummary)
   const identityLabel = getIdentityLabel(input.authSummary)
   const assignedStoreCount = input.authSummary?.scopeSummary.assignedStoreCount ?? 0
   const scopedStoreCount =
@@ -86,7 +66,6 @@ export function StoreSidebar(input: {
     assignedStoreCount > 0
       ? t('storeHome.sidebar.assignedStores', { count: assignedStoreCount })
       : t('storeHome.sidebar.scopedStores', { count: scopedStoreCount })
-  const ToggleIcon = input.collapsed ? PanelLeftOpen : PanelLeftClose
   const warmStoreRoute = (path: string) => {
     preloadRouteModule(path)
     void import('./route-data-preloaders')
@@ -112,16 +91,6 @@ export function StoreSidebar(input: {
         </div>
       </div>
 
-      <button
-        aria-expanded={!input.collapsed}
-        className="store-command-sidebar-toggle"
-        type="button"
-        onClick={() => input.onCollapsedChange(!input.collapsed)}
-      >
-        <ToggleIcon aria-hidden="true" size={18} />
-        <span>{input.collapsed ? t('storeHome.sidebar.expand') : t('storeHome.sidebar.collapse')}</span>
-      </button>
-
       <nav className="store-command-nav" aria-label={t('storeHome.sidebar.navAria')}>
         {navItems.map((item) => {
           const Icon = iconById[item.icon]
@@ -140,7 +109,7 @@ export function StoreSidebar(input: {
               to={item.path}
             >
               <span className="store-command-nav-icon" aria-hidden="true">
-                <Icon size={20} />
+                <Icon size={18} />
               </span>
               <span className="store-command-nav-label">{t(item.labelKey)}</span>
             </NavLink>
@@ -149,20 +118,9 @@ export function StoreSidebar(input: {
       </nav>
 
       <div className="store-command-sidebar-footer">
-        <NavLink
-          className={({ isActive }) =>
-            `store-command-identity store-command-identity-link${
-              isActive ? ' store-command-identity-link-active' : ''
-            }`
-          }
-          onFocus={() => warmStoreRoute('/store/settings')}
-          onPointerDown={() => warmStoreRoute('/store/settings')}
-          onPointerEnter={() => warmStoreRoute('/store/settings')}
-          title={t('storeHome.nav.settings')}
-          to="/store/settings"
-        >
+        <div className="store-command-identity" aria-label={t('storeHome.sidebar.contextAria')}>
           <span className="store-command-avatar" aria-hidden="true">
-            {getIdentityInitials(input.authSummary)}
+            <Store size={18} />
           </span>
           <span className="store-command-identity-text">
             <strong>{identityLabel ?? t('storeHome.sidebar.sessionUser')}</strong>
@@ -170,8 +128,7 @@ export function StoreSidebar(input: {
               {t(getStorePersonaLabelKey(persona))} · {identityMeta}
             </small>
           </span>
-        </NavLink>
-
+        </div>
       </div>
     </aside>
   )

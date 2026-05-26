@@ -13,6 +13,7 @@ import type {
 import { formatSnapshotOptionLabel } from '../features/reports/snapshot-labels'
 import { formatDate } from '../lib/format'
 import { getIntlLocale, type AppLocale } from '../lib/i18n'
+import { buildStoreMyPerformanceTodayActions } from './store-my-performance-actions'
 
 export type LivePeriodType = 'monthly' | 'daily'
 export type StorePerformanceSourceMode = 'live' | 'closed'
@@ -1028,15 +1029,11 @@ export function buildStoreMyPerformanceViewModel(input: {
       }),
     }
   })
+  const todayActions = buildStoreMyPerformanceTodayActions({ metricCards, partial, pendingNormalizationLabels, samePeriodScoreDelta, samePeriodScoreDeltaValue, t: input.t, targetProgressPercent })
   const targetMetric = findMetric(personnelMetrics, 'TARGET_ACHIEVEMENT')
-  const targetSalesValue =
-    typeof targetMetric?.targetValue === 'number' && Number.isFinite(targetMetric.targetValue) && targetMetric.targetValue > 0
-      ? targetMetric.targetValue
-      : null
+  const targetSalesValue = typeof targetMetric?.targetValue === 'number' && Number.isFinite(targetMetric.targetValue) && targetMetric.targetValue > 0 ? targetMetric.targetValue : null
   const remainingTargetValue =
-    targetSalesValue !== null && supporting.netSalesValue !== null
-      ? Math.max(0, targetSalesValue - supporting.netSalesValue)
-      : null
+    targetSalesValue !== null && supporting.netSalesValue !== null ? Math.max(0, targetSalesValue - supporting.netSalesValue) : null
   const trendPoints = buildTrendPoints(monthlyDetailRows)
   const employeeStore = input.performance.employee?.storeName ?? input.t('storeMe.noStore')
   const periodLabelWithSource = `${periodLabel} \u00B7 ${formatSourceMode(input.t, input.performance.source.mode)}`
@@ -1092,6 +1089,7 @@ export function buildStoreMyPerformanceViewModel(input: {
     targetProgressPercent,
     targetSalesLabel: formatCurrency(input.locale, input.t, targetSalesValue),
     targetStatusLabel: targetSalesValue !== null ? input.t('storeMe.approvedTarget') : input.t('storeMe.targetPending'),
+    todayActions,
     trendPoints,
     turkeyPopulationLabel: formatPopulation(input.performance.rankings.turkeyPopulation, input.t),
     turkeyRankLabel: formatRank(input.performance.rankings.turkeyRank, input.t),

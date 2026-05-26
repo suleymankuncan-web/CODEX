@@ -57,9 +57,9 @@ export const storeMeTr = {
     'Yüklenen dönemlere göre kişisel skorun akışını gösterir; karşılaştırma aynı dönem mantığıyla okunur.',
   'storeMe.thisPeriod': 'Bu dönem',
   'storeMe.previousComparablePeriod': 'Önceki karşılaştırılabilir dönem',
-  'storeMe.todayCoaching': 'Bugünkü koçluk',
+  'storeMe.todayCoaching': 'Bugün Yapılacaklar',
   'storeMe.todayCoachingCopy':
-    'Bu bölüm personele bilgi verir, yönlendirir ve tek bakışta ne yapacağını söyler.',
+    'Seçili dönem KPI verisine göre oluşan aksiyonlar.',
   'storeMe.metricStatus.strong': 'En güçlü alan',
   'storeMe.metricStatus.rising': 'Yükselişte',
   'storeMe.metricStatus.stable': 'Stabil',
@@ -71,24 +71,27 @@ export const storeMeTr = {
   'storeMe.metricNarrative.hg':
     'Hedef gerçekleşme oranı. Önceki karşılaştırılabilir döneme göre {delta}.',
   'storeMe.metricCardCopy': '{metric} toplam skora doğrudan bağlanır; bu kart canlı KPI verisinden beslenir.',
-  'storeMe.action.keepRhythm.title': 'UPT standardını koru',
-  'storeMe.action.keepRhythm.copy': 'Kombin ve tamamlayıcı ürün önerisini aynı ritimde sürdür.',
-  'storeMe.action.growBasket.title': 'ATV sepetini büyüt',
-  'storeMe.action.growBasket.copy':
-    'Sepet değeri güçlü. İkinci ürün veya aksesuar önerisiyle fark açılır.',
-  'storeMe.action.trackTarget.title': 'HG% çizgisini takip et',
-  'storeMe.action.trackTarget.copy': 'Hedef gerçekleşme dengesini gün sonunda tekrar kontrol et.',
+  'storeMe.action.dataConfidence.title': 'Veri güvenini kontrol et',
+  'storeMe.action.dataConfidence.copy':
+    'Skor şu an kısmi veriyle okunuyor: {labels}. Aksiyonları bu sınırla değerlendir.',
+  'storeMe.action.targetBehind.title': 'HG% çizgisini kapat',
+  'storeMe.action.targetBehind.copy':
+    'Hedef gerçekleşme %{value}. Kapanıştan önce hedef açığını kontrol et.',
+  'storeMe.action.atvWatch.title': 'ATV sepetini toparla',
+  'storeMe.action.atvWatch.copy':
+    'ATV {value} seviyesinde. Sepet değerini yükseltecek tamamlayıcı öneriye odaklan.',
+  'storeMe.action.uptWatch.title': 'UPT ritmini yükselt',
+  'storeMe.action.uptWatch.copy':
+    'UPT {value} seviyesinde. Fiş başı ürün önerisini güçlendir.',
+  'storeMe.action.scoreTrend.title': 'Skor düşüşünü tersine çevir',
+  'storeMe.action.scoreTrend.copy':
+    'Aynı dönem farkı {delta}. En düşük katkılı KPI ile başla.',
+  'storeMe.action.maintain.title': 'Ritmi koru',
+  'storeMe.action.maintain.copy':
+    '{metric} güçlü görünüyor. Bu ritmi koruyup zayıflayan ilk KPI’yı takip et.',
   'storeMe.priorityOne': 'Öncelik 1',
   'storeMe.opportunity': 'Fırsat',
   'storeMe.follow': 'Takip',
-  'storeMe.nav.aria': 'Personel navigasyonu',
-  'storeMe.nav.home': 'Ana',
-  'storeMe.nav.me': 'Ben',
-  'storeMe.nav.rankings': 'Sıra',
-  'storeMe.nav.targets': 'Hedef',
-  'storeMe.nav.tasks': 'Ayar',
-  'storeMe.mobileNav': 'Mobil alt navigasyon',
-
   'storeMe.performanceSummary': 'Performans özeti',
   'storeMe.periodPerformance': 'Dönem performansı',
   'storeMe.liveStatus': 'Canlı durum',
@@ -287,9 +290,9 @@ export const storeMeEn: Record<keyof typeof storeMeTr, string> = {
     'Shows your personal score flow by loaded periods; comparison is read through the same-period logic.',
   'storeMe.thisPeriod': 'This period',
   'storeMe.previousComparablePeriod': 'Previous comparable period',
-  'storeMe.todayCoaching': "Today's coaching",
+  'storeMe.todayCoaching': "Today's Actions",
   'storeMe.todayCoachingCopy':
-    'This section informs the personnel, guides them, and says what to do at a glance.',
+    'Actions generated from the selected period KPI data.',
   'storeMe.metricStatus.strong': 'Strongest area',
   'storeMe.metricStatus.rising': 'Rising',
   'storeMe.metricStatus.stable': 'Stable',
@@ -301,24 +304,27 @@ export const storeMeEn: Record<keyof typeof storeMeTr, string> = {
   'storeMe.metricNarrative.hg':
     'Target achievement rate. Versus the previous comparable period: {delta}.',
   'storeMe.metricCardCopy': '{metric} is directly tied to total score; this card is fed by live KPI data.',
-  'storeMe.action.keepRhythm.title': 'Keep the UPT standard',
-  'storeMe.action.keepRhythm.copy': 'Keep combination and complementary product suggestions in the same rhythm.',
-  'storeMe.action.growBasket.title': 'Grow the ATV basket',
-  'storeMe.action.growBasket.copy':
-    'Basket value is strong. The gap opens with a second item or accessory suggestion.',
-  'storeMe.action.trackTarget.title': 'Track the HG% line',
-  'storeMe.action.trackTarget.copy': 'Check the target achievement balance again at end of day.',
+  'storeMe.action.dataConfidence.title': 'Check data confidence',
+  'storeMe.action.dataConfidence.copy':
+    'The score is currently read with partial data: {labels}. Evaluate actions with that limit.',
+  'storeMe.action.targetBehind.title': 'Close the HG% gap',
+  'storeMe.action.targetBehind.copy':
+    'Target achievement is %{value}. Check the remaining gap before close.',
+  'storeMe.action.atvWatch.title': 'Recover the ATV basket',
+  'storeMe.action.atvWatch.copy':
+    'ATV is at {value}. Focus on complementary suggestions that lift basket value.',
+  'storeMe.action.uptWatch.title': 'Lift the UPT rhythm',
+  'storeMe.action.uptWatch.copy':
+    'UPT is at {value}. Strengthen product suggestions per ticket.',
+  'storeMe.action.scoreTrend.title': 'Reverse the score decline',
+  'storeMe.action.scoreTrend.copy':
+    'Same-period difference is {delta}. Start with the lowest-contributing KPI.',
+  'storeMe.action.maintain.title': 'Maintain the rhythm',
+  'storeMe.action.maintain.copy':
+    '{metric} looks strong. Keep this rhythm and watch the first weakening KPI.',
   'storeMe.priorityOne': 'Priority 1',
   'storeMe.opportunity': 'Opportunity',
   'storeMe.follow': 'Follow',
-  'storeMe.nav.aria': 'Personnel navigation',
-  'storeMe.nav.home': 'Home',
-  'storeMe.nav.me': 'Me',
-  'storeMe.nav.rankings': 'Rank',
-  'storeMe.nav.targets': 'Target',
-  'storeMe.nav.tasks': 'Setup',
-  'storeMe.mobileNav': 'Mobile bottom navigation',
-
   'storeMe.performanceSummary': 'Performance summary',
   'storeMe.periodPerformance': 'Period performance',
   'storeMe.liveStatus': 'Live status',
