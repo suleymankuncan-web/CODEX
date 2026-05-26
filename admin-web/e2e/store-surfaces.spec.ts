@@ -1029,13 +1029,16 @@ test('store sidebar transitions across visible manager pages without requiring m
   await expectHealthyStoreTransition(page)
 })
 
-test('store utility pages explain handoff boundaries and stay mobile-safe', async ({ page }) => {
+test('store utility pages show honest preferences and stay mobile-safe', async ({ page }) => {
   await page.goto('/store/settings')
 
   await expect(page.getByRole('heading', { name: 'Profil ve dil tercihleri' })).toBeVisible()
   await expect(page.getByLabel('Dil tercihi kontrolü')).toContainText('Tercih')
-  await expect(page.getByLabel('Ayarlar çalışma sınırı')).toContainText('/store/settings')
-  await expect(page.getByText('Sadece tarayıcıdaki dil tercihi')).toBeVisible()
+  await expect(page.getByLabel('Ayarlar çalışma sınırı')).toContainText('Kayıtlı profil tercihi yok')
+  await expect(page.getByLabel('Dil tercihi kontrolü').getByText('Bu tarayıcı')).toBeVisible()
+  await expect(page.getByLabel('Dil tercihi kontrolü').getByText('Uygulama metinleri')).toBeVisible()
+  await expect(page.getByText('/store/settings')).toHaveCount(0)
+  await expect(page.getByText('Sonraki güvenli adım')).toHaveCount(0)
 
   await page.goto('/store/targets')
 
@@ -2444,7 +2447,7 @@ test('store competitions page renders scoped contribution details', async ({ pag
   await page.goto('/store/competitions')
 
   await expect(page.getByRole('heading', { name: /Mağaza yarışmaları/i })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'April Region Challenge' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'April Region Challenge' }).first()).toBeVisible()
   const readSummary = page.getByLabel('Mağaza yarışma okuma özeti')
   const contributionRows = page.getByLabel('Kapsamdaki mağaza yarışma katkıları')
   await expect(readSummary.getByText('Okuma özeti')).toBeVisible()

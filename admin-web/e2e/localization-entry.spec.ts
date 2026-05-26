@@ -7,14 +7,19 @@ test('keeps language control in store settings and out of work surfaces', async 
   await page.goto('/store')
 
   await expect(page.locator('.language-toggle-button')).toHaveCount(0)
+  await expect(page.getByRole('group', { name: 'Dil seçimi' })).toHaveCount(0)
 
   await page.goto('/store/settings')
 
-  await expect(page.locator('.language-toggle-button')).toHaveCount(2)
+  await expect(page.locator('.language-toggle-button')).toHaveCount(0)
+  await expect(page.getByRole('group', { name: 'Dil seçimi' })).toBeVisible()
+  await expect(page.getByRole('radio', { name: 'Türkçeye geç' })).toBeVisible()
+  await expect(page.getByRole('radio', { name: 'İngilizceye geç' })).toBeVisible()
 
   await page.goto('/admin/integrations')
 
   await expect(page.locator('.language-toggle-button')).toHaveCount(0)
+  await expect(page.getByRole('group', { name: 'Dil seçimi' })).toHaveCount(0)
 })
 
 test('keeps auth entry free of the language control', async ({ page }) => {
