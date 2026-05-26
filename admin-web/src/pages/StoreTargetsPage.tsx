@@ -16,6 +16,10 @@ export function StoreTargetsPage() {
         eyebrow={t('storeHome.targets.eyebrow')}
         title={t('storeHome.targets.surfaceTitle')}
         description={t('storeHome.targets.surfaceCopy')}
+        badges={[
+          { label: t('storeHome.targets.bridgeBadge'), tone: 'accent' },
+          { label: t('storeHome.targets.flowBadge'), tone: 'neutral' },
+        ]}
         action={{
           icon: <Target data-icon="inline-start" />,
           label: t('storeHome.targets.openAdminTargets'),
@@ -26,7 +30,7 @@ export function StoreTargetsPage() {
       <StoreSectionCard
         title={t('storeHome.targets.surfaceWorkflowTitle')}
         description={t('storeHome.targets.surfaceWorkflowCopy')}
-        badge={{ label: t('storeHome.utility.statusPreference'), tone: 'accent' }}
+        badge={{ label: t('storeHome.targets.flowBadge'), tone: 'accent' }}
       >
         <StoreInfoGrid
           items={[

@@ -36,6 +36,7 @@ import { storeMeEn, storeMeTr } from './store-me'
 import { storeRankingsEn, storeRankingsTr } from './store-rankings'
 import { storeSettingsEn, storeSettingsTr } from './store-settings'
 import { storeTasksEn, storeTasksTr } from './store-tasks'
+import { storeUtilityEn, storeUtilityTr } from './store-utility'
 
 const tr = {
   ...adminAuditTr,
@@ -76,6 +77,7 @@ const tr = {
   ...storeRankingsTr,
   ...storeSettingsTr,
   ...storeTasksTr,
+  ...storeUtilityTr,
 } as const
 
 const en: Record<keyof typeof tr, string> = {
@@ -117,6 +119,7 @@ const en: Record<keyof typeof tr, string> = {
   ...storeRankingsEn,
   ...storeSettingsEn,
   ...storeTasksEn,
+  ...storeUtilityEn,
 }
 
 export const messages = { tr, en } as const

@@ -16,6 +16,10 @@ export function StoreReportsPage() {
         eyebrow={t('storeHome.reports.eyebrow')}
         title={t('storeHome.reports.surfaceTitle')}
         description={t('storeHome.reports.surfaceCopy')}
+        badges={[
+          { label: t('storeHome.reports.bridgeBadge'), tone: 'accent' },
+          { label: t('storeHome.reports.flowBadge'), tone: 'neutral' },
+        ]}
         action={{
           icon: <BarChart3 data-icon="inline-start" />,
           label: t('storeHome.reports.openAdminReports'),
@@ -26,7 +30,7 @@ export function StoreReportsPage() {
       <StoreSectionCard
         title={t('storeHome.reports.surfaceWorkflowTitle')}
         description={t('storeHome.reports.surfaceWorkflowCopy')}
-        badge={{ label: t('storeHome.utility.statusPreference'), tone: 'accent' }}
+        badge={{ label: t('storeHome.reports.flowBadge'), tone: 'accent' }}
       >
         <StoreInfoGrid
           items={[
