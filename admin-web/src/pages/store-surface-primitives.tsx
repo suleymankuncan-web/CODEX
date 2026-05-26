@@ -292,12 +292,19 @@ export function StoreStackedRow(input: {
 
 export function StoreEmptyState(input: {
   title?: string
+  titleAsHeading?: boolean
   description: string
   action?: StoreSurfaceAction
 }) {
+  const title = input.titleAsHeading ? (
+    <h2 className="tw:text-sm tw:font-semibold tw:text-foreground">{input.title}</h2>
+  ) : (
+    <strong className="tw:text-sm tw:text-foreground">{input.title}</strong>
+  )
+
   return (
     <div className="tw:flex tw:min-h-28 tw:flex-col tw:items-start tw:justify-center tw:gap-3 tw:rounded-lg tw:border tw:border-dashed tw:border-border tw:bg-muted/30 tw:p-4">
-      {input.title ? <strong className="tw:text-sm tw:text-foreground">{input.title}</strong> : null}
+      {input.title ? title : null}
       <p className="tw:text-sm tw:leading-6 tw:text-muted-foreground">{input.description}</p>
       {input.action ? <StoreSurfaceActionButton action={input.action} /> : null}
     </div>

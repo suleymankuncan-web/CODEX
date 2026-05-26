@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom'
 import { ScreenState } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { useLocalization } from '../features/localization/useLocalization'
+import { StoreEmptyState, StoreSurfacePage } from '../pages/store-surface-primitives'
 import { SessionReadinessPage } from './route-loaders'
 import { hasAnyRole, isVisualMerchandiserOnly, type ShellState } from './shell-state'
 
@@ -42,11 +43,11 @@ export function StoreRouteGuard(input: {
   firstAllowedPath?: string
 }) {
   if (isVisualMerchandiserOnly(input.authSummary) && !input.allowVm) {
-    return <ForbiddenRoute firstAllowedPath="/store/checklists" />
+    return <StoreForbiddenRoute firstAllowedPath="/store/checklists" />
   }
 
   if (input.allowed === false) {
-    return <ForbiddenRoute firstAllowedPath={input.firstAllowedPath ?? '/store'} />
+    return <StoreForbiddenRoute firstAllowedPath={input.firstAllowedPath ?? '/store'} />
   }
 
   return <>{input.children}</>
@@ -113,5 +114,19 @@ function ForbiddenRoute(input: { firstAllowedPath: string }) {
       copy={t('adminShell.forbiddenCopy', { firstAllowedPath: input.firstAllowedPath })}
       tone="error"
     />
+  )
+}
+
+function StoreForbiddenRoute(input: { firstAllowedPath: string }) {
+  const { t } = useLocalization()
+
+  return (
+    <StoreSurfacePage ariaLabel={t('adminShell.forbiddenTitle')}>
+      <StoreEmptyState
+        title={t('adminShell.forbiddenTitle')}
+        titleAsHeading
+        description={t('adminShell.forbiddenCopy', { firstAllowedPath: input.firstAllowedPath })}
+      />
+    </StoreSurfacePage>
   )
 }

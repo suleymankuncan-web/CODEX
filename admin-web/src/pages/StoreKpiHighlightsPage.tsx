@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ShieldAlert, Target, TrendingUp } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import type { AuthSessionSummary } from '../features/auth/api'
 import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
@@ -13,7 +12,6 @@ import {
   getStoreKpiHighlights,
   type KpiOwnerRole,
 } from '../features/reports/api'
-import { formatSnapshotOptionLabel } from '../features/reports/snapshot-labels'
 import { formatDate, formatState, getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 import { ApiError } from '../lib/api'
@@ -51,6 +49,7 @@ import {
   resolveLocalizedKpiScoreReference as resolveSharedKpiScoreReference,
   toKpiDisplayNumber as toNumber,
 } from '../features/kpi/display'
+import { StoreKpiViewModePanel } from './store-kpi-view-mode-panel'
 
 type DisplayKpiRow = {
   storeId: string
@@ -238,17 +237,6 @@ function formatScoreBehavior(t: TranslateFunction, input: string) {
       return t('storeKpis.scoreBehavior.warning_first')
     case 'task_candidate':
       return t('storeKpis.scoreBehavior.task_candidate')
-    default:
-      return formatState(input)
-  }
-}
-
-function formatPeriodTypeLabel(t: TranslateFunction, input: string) {
-  switch (input) {
-    case 'monthly':
-      return t('storeKpis.periodType.monthly')
-    case 'daily':
-      return t('storeKpis.periodType.daily')
     default:
       return formatState(input)
   }
@@ -935,81 +923,6 @@ function StoreKpiHeroPanel({ model }: { model: StoreKpiHighlightsPageModel }) {
         },
       ]}
     />
-  )
-}
-
-function StoreKpiViewModePanel({ model }: { model: StoreKpiHighlightsPageModel }) {
-  const {
-    activeSnapshotRun,
-    availableSnapshotRuns,
-    latestLivePeriodLabel,
-    livePeriodStart,
-    liveSummary,
-    locale,
-    selectedSnapshotRunId,
-    setLivePeriodStart,
-    setSelectedSnapshotRunId,
-    setViewMode,
-    t,
-    viewMode,
-  } = model
-
-  return (
-    <StoreSectionCard title={t('storeKpis.viewModeTitle')} description={t('storeKpis.viewModeEyebrow')}>
-      <div className="tw:flex tw:flex-col tw:gap-3">
-        <div className="tw:flex tw:flex-wrap tw:gap-2">
-        <Button type="button" variant={viewMode === 'live' ? 'default' : 'outline'} onClick={() => setViewMode('live')}>
-          {t('storeKpis.livePeriod')}
-        </Button>
-        <Button type="button" variant={viewMode === 'closed' ? 'default' : 'outline'} onClick={() => setViewMode('closed')}>
-          {t('storeKpis.closedDay')}
-        </Button>
-        </div>
-      {viewMode === 'live' ? (
-        <div className="tw:flex tw:flex-wrap tw:gap-2">
-          <select
-            className="tw:h-9 tw:min-w-64 tw:rounded-md tw:border tw:border-input tw:bg-transparent tw:px-3 tw:text-sm tw:shadow-xs tw:outline-none tw:focus-visible:border-ring tw:focus-visible:ring-ring/50 tw:focus-visible:ring-[3px]"
-            value={livePeriodStart}
-            onChange={(event) => setLivePeriodStart(event.target.value)}
-            aria-label={t('storeKpis.livePeriodSelect')}
-          >
-            <option value="">{latestLivePeriodLabel}</option>
-            {(liveSummary?.availablePeriods ?? []).map((period) => (
-              <option key={`${period.periodType}:${period.periodStart}`} value={period.periodStart}>
-                {t('storeKpis.periodOption', {
-                  start: formatDate(period.periodStart, locale),
-                  end: formatDate(period.periodEnd, locale),
-                  periodType: formatPeriodTypeLabel(t, period.periodType),
-                })}
-              </option>
-            ))}
-          </select>
-          <Button type="button" variant="outline" onClick={() => setLivePeriodStart('')} disabled={!livePeriodStart}>
-            {t('storeKpis.clearFilter')}
-          </Button>
-        </div>
-      ) : (
-        <div className="tw:flex tw:flex-wrap tw:gap-2">
-          <select
-            className="tw:h-9 tw:min-w-64 tw:rounded-md tw:border tw:border-input tw:bg-transparent tw:px-3 tw:text-sm tw:shadow-xs tw:outline-none tw:focus-visible:border-ring tw:focus-visible:ring-ring/50 tw:focus-visible:ring-[3px]"
-            value={activeSnapshotRun?.snapshotRunId ?? ''}
-            onChange={(event) => setSelectedSnapshotRunId(event.target.value)}
-            aria-label={t('storeKpis.closedRecordSelect')}
-          >
-            {activeSnapshotRun ? null : <option value="">{t('storeKpis.noRecord')}</option>}
-            {availableSnapshotRuns.map((run) => (
-              <option key={run.snapshotRunId} value={run.snapshotRunId}>
-                {formatSnapshotOptionLabel(run, locale)}
-              </option>
-            ))}
-          </select>
-          <Button type="button" variant="outline" onClick={() => setSelectedSnapshotRunId('')} disabled={!selectedSnapshotRunId}>
-            {t('storeKpis.returnLatestClosedDay')}
-          </Button>
-        </div>
-      )}
-      </div>
-    </StoreSectionCard>
   )
 }
 

@@ -1121,33 +1121,27 @@ test('store rankings page renders Plum ranking table without signal chrome', asy
   await page.goto('/store/rankings')
 
   await expect(page.getByRole('heading', { name: 'Sıralamalar' })).toBeVisible()
+  await page.getByRole('combobox', { name: 'Sıralama dönem seçimi' }).click()
   await expect(
     page.getByRole('option', {
       name: /1 Nis 2026 - 30 Nis 2026/,
     }),
-  ).toBeAttached()
-  await expect(page.locator('.rankings-plum-page')).toBeVisible()
+  ).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByTestId('store-rankings-page')).toBeVisible()
   await expect(page.getByText('Top 100 kapsam')).toBeVisible()
   await expect(page.getByLabel('Sıralama güven özeti')).toContainText('Genel skor')
   await expect(page.getByLabel('Sıralama güven özeti')).toContainText('Canlı rapor')
   await expect(page.getByRole('heading', { name: 'Mağaza listesi' })).toBeVisible()
   await expect(page.getByText('Mağaza skor')).toBeVisible()
-  await expect(page.locator('.rankings-plum-score-track i').first()).toHaveCSS(
-    'background-image',
-    /linear-gradient/,
-  )
+  await expect(page.locator('.store-rankings-scorebar [data-slot="progress"]').first()).toBeVisible()
   await expect(page.getByText('Sinyal')).toHaveCount(0)
-  await expect(page.locator('.rankings-plum-trend')).toHaveCount(0)
   await page.getByRole('tab', { name: 'Personel listesi' }).click()
   await expect(page.getByRole('heading', { name: 'Personel listesi' })).toBeVisible()
   await expect(page.getByText('Store Personnel - 1').first()).toBeVisible()
   await expect(page.getByText('Personel skor')).toBeVisible()
-  await expect(page.locator('.rankings-plum-score-track i').first()).toHaveCSS(
-    'background-image',
-    /linear-gradient/,
-  )
+  await expect(page.locator('.store-rankings-scorebar [data-slot="progress"]').first()).toBeVisible()
   await expect(page.getByText('Sinyal')).toHaveCount(0)
-  await expect(page.locator('.rankings-plum-trend')).toHaveCount(0)
   await expect(page.getByText('Magaza ve personel rankingleri')).toHaveCount(0)
   await expect(page.getByText('Top 100 gorunumu')).toHaveCount(0)
   await expect(page.getByText('Turkiye magaza siralamasi')).toHaveCount(0)
@@ -1175,7 +1169,7 @@ test('store rankings retries a transient API failure without leaving the user st
   await page.goto('/store/rankings')
 
   await expect.poll(() => rankingAttempts).toBeGreaterThanOrEqual(2)
-  await expect(page.locator('.rankings-plum-page')).toBeVisible()
+  await expect(page.getByTestId('store-rankings-page')).toBeVisible()
   await expect(page.getByText('IstinyePark Demo Store')).toBeVisible()
   await expect(page.getByText('Siralama yuzeyi acilamadi')).toHaveCount(0)
 })
@@ -1236,7 +1230,7 @@ test('store rankings personnel detail opens the selected personnel performance p
   await page.getByRole('tab', { name: 'Personel listesi' }).click()
   await page.getByRole('button', { name: 'Store Personnel - 1' }).click()
 
-  const drawer = page.locator('.rankings-plum-drawer')
+  const drawer = page.locator('.store-rankings-drawer')
   await expect(drawer).toBeVisible()
   await drawer.getByRole('button', { name: 'Detaya git' }).click()
 
@@ -1370,7 +1364,7 @@ test('store personnel profile falls back when ranking period has no personnel da
   await page.goto('/store/rankings')
   await page.getByRole('tab', { name: 'Personel listesi' }).click()
   await page.getByRole('button', { name: 'Store Personnel - 1' }).click()
-  await page.locator('.rankings-plum-drawer').getByRole('button', { name: 'Detaya git' }).click()
+  await page.locator('.store-rankings-drawer').getByRole('button', { name: 'Detaya git' }).click()
 
   await expect.poll(() =>
     personnelPerformanceRequests.some((requestUrl) => requestUrl.searchParams.get('periodStart') === '2026-05-01'),
@@ -1894,12 +1888,14 @@ test('store rankings page switches to English copy and persists locale', async (
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: 'Rankings' })).toBeVisible()
+  await page.getByRole('combobox', { name: 'Ranking period selection' }).click()
   await expect(
     page.getByRole('option', {
       name: /Apr 1, 2026 - Apr 30, 2026/,
     }),
-  ).toBeAttached()
-  await expect(page.locator('.rankings-plum-page')).toBeVisible()
+  ).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByTestId('store-rankings-page')).toBeVisible()
   await expect(page.getByText('Top 100 scope')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Store list' })).toBeVisible()
   await expect(page.getByRole('table', { name: /Showing store results/i })).toBeVisible()
@@ -1927,14 +1923,16 @@ test('store rankings page switches to English copy and persists locale', async (
 
 test('store rankings page explains monthly preview-only ranking', async ({ page }) => {
   await page.goto('/store/rankings')
-  await page.getByLabel('Sıralama dönem seçimi').selectOption('2026-04-01')
+  const periodSelect = page.getByRole('combobox', { name: 'Sıralama dönem seçimi' })
+  await periodSelect.click()
+  await page.getByRole('option', { name: /1 Nis 2026 - 30 Nis 2026/ }).click()
 
   await expect(
     page.getByRole('option', {
       name: /1 Nis 2026 - 30 Nis 2026/,
     }),
-  ).toBeAttached()
-  await expect(page.getByLabel('Sıralama dönem seçimi')).toHaveValue('2026-04-01')
+  ).toHaveCount(0)
+  await expect(periodSelect).toContainText(/1 Nis 2026 - 30 Nis 2026/)
   await expect(page.getByText('Top 100 kapsam')).toBeVisible()
   await expect(
     page.getByText('Top 100 görünümünü, kendi mağaza ve personel konumunla birlikte takip et.'),
@@ -1987,28 +1985,28 @@ test('store rankings uses Turkey reference, checklist metrics, normalized HG, an
 
   await page.goto('/store/rankings')
 
-  await expect(page.locator('.rankings-plum-reference-title')).toBeVisible()
-  await expect(page.locator('.rankings-plum-reference-bar')).toContainText('Türkiye Referansı')
-  await expect(page.locator('.rankings-plum-metric-heading')).not.toContainText('KPI')
+  await expect(page.getByRole('heading', { name: 'Türkiye Referansı' })).toBeVisible()
+  await expect(page.getByLabel('Seçili kapsam referansı')).toContainText('Türkiye Referansı')
+  await expect(page.locator('.store-rankings-metric-sort-row')).not.toContainText('KPI')
   await expect(page.locator('td[data-label="KPI özeti"]')).toHaveCount(0)
   await expect(page.locator('td[data-label="KPI summary"]')).toHaveCount(0)
-  await expect(page.locator('.rankings-plum-metric-sort-row')).toContainText('BM Checklist')
-  await expect(page.locator('.rankings-plum-metric-sort-row')).toContainText('VM Checklist')
+  await expect(page.locator('.store-rankings-metric-sort-row')).toContainText('BM Checklist')
+  await expect(page.locator('.store-rankings-metric-sort-row')).toContainText('VM Checklist')
   await expect
     .poll(() =>
       page
-        .locator('.rankings-plum-metric-sort-row')
+        .locator('.store-rankings-metric-sort-row')
         .first()
         .evaluate((element) =>
           getComputedStyle(element).gridTemplateColumns.split(' ').filter(Boolean).length,
         ),
     )
     .toBe(6)
-  await expect(page.locator('.rankings-plum-metric-grid').first()).toContainText('371,09%')
-  await expect(page.locator('.rankings-plum-metric-grid').first()).not.toContainText('371.088.457%')
+  await expect(page.locator('.store-rankings-metric-grid').first()).toContainText('371,09%')
+  await expect(page.locator('.store-rankings-metric-grid').first()).not.toContainText('371.088.457%')
 
-  await page.locator('.rankings-plum-sort-button', { hasText: 'HG%' }).click()
-  await page.locator('.rankings-plum-sort-button', { hasText: 'HG%' }).click()
+  await page.locator('.store-rankings-sort-button', { hasText: 'HG%' }).click()
+  await page.locator('.store-rankings-sort-button', { hasText: 'HG%' }).click()
 
   await expect(page.getByRole('button', { name: 'High HG Store' })).toBeVisible()
   await expect(page.getByText('Sıralama hazırlanıyor')).toHaveCount(0)
@@ -2053,20 +2051,18 @@ test('store rankings removes signal chrome while preserving weighted score rows'
 
   await page.goto('/store/rankings')
 
-  const rows = page.locator('.rankings-plum-table tbody tr')
+  const rows = page.locator('.store-rankings-table tbody tr')
   await expect(rows.nth(0)).toContainText('Weighted Score Leader')
-  await expect(rows.nth(0).locator('.rankings-plum-scorebar')).toContainText('112,30')
+  await expect(rows.nth(0).locator('.store-rankings-scorebar')).toContainText('112,30')
   await expect(rows.nth(1)).toContainText('Raw Delta Trap')
-  await expect(rows.nth(1).locator('.rankings-plum-scorebar')).toContainText('104,20')
+  await expect(rows.nth(1).locator('.store-rankings-scorebar')).toContainText('104,20')
   await expect(page.getByText('Sinyal')).toHaveCount(0)
-  await expect(page.locator('.rankings-plum-trend')).toHaveCount(0)
 
   await page.getByRole('button', { name: 'Weighted Score Leader' }).click()
 
-  await expect(page.locator('.rankings-plum-drawer')).toBeVisible()
-  await expect(page.locator('.rankings-plum-drawer')).not.toContainText('Detaya git')
-  await expect(page.locator('.rankings-plum-drawer .rankings-plum-trend')).toHaveCount(0)
-  await expect(page.locator('.rankings-plum-month-row')).toContainText('112,30')
+  await expect(page.locator('.store-rankings-drawer')).toBeVisible()
+  await expect(page.locator('.store-rankings-drawer')).not.toContainText('Detaya git')
+  await expect(page.locator('.store-rankings-drawer')).toContainText('112,30')
 })
 
 test('store tasks page renders readable Turkish queue labels', async ({ page }) => {
