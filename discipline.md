@@ -290,6 +290,29 @@ Admin/SaaS yuzeyleri sessiz, operasyonel, yogun ama okunabilir olmalidir.
   tema rewrite'i degildir; login ve sonraki yeni/refactor edilen sayfalarda
   tek token setiyle ilerleme disiplinidir.
 
+Store Me refactorundan cikan tekrar kullanilabilir sayfa kurali:
+
+- Redesign once data envanteriyle baslar: hangi API/view-model alani, hangi
+  rol, hangi KPI/aksiyon/rank gorunecek netlesmeden layout uretilmez.
+- Gorunen her metrik, aksiyon ve onerinin gercek veri kaynagi olmalidir.
+  Kaynak yoksa motivasyonel/coaching metni, fake todo veya temsili skor
+  yazilmaz; bolum ya gizlenir ya da dogru empty state alir.
+- Operasyonel dashboard ilk viewportta kompakt olmalidir: kisa baslik,
+  gerekli filtre, sinirli KPI kartlari, anlasilir trend ve data-driven action
+  listesi. Uzun aciklama havuzlari ve cok parcali bilgi bloklari dagitilmaz.
+- KPI kartlari tek basina anlamli olur: ana deger, hedef/ilerleme, durum,
+  rank veya kapsam, varsa weight/puan katkisi ayni ritimde verilir. Yuzde,
+  puan ve siralama bilgisi alelade chip/bar olarak dagitilmaz.
+- Chart karari mobile-first verilir. Mobilde anlasilmayan aylik/haftalik
+  grafik desktopta da dogru sayilmaz; checkpoint, tarih etiketi ve ozet copy
+  veri okumayi kolaylastirmalidir.
+- Sidebar/toolbar refactoru role-aware olmak zorundadir. Kullanici rolune
+  tanimli olmayan sayfa navigasyonda gorunmez; mevcut route guard ile toolbar
+  listesi birlikte kontrol edilir.
+- Eski UI kalintisi sadece CSS rengi degildir. Eski class, eski hero iskeleti,
+  eski copy, eski loading/empty state, rol disi link ve debug/handoff metni de
+  kalinti sayilir.
+
 UI iyilestirmesi business workflow degistirmez.
 
 ## Refactor Disiplini
