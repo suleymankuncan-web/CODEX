@@ -910,10 +910,7 @@ export function buildStoreMyPerformanceViewModel(input: {
     targetEntryMode: 'manager_assignment' as const,
     targetEditableByCurrentUser: false,
   }
-  const performanceGrade = resolvePerformanceGrade(
-    input.performance.score.value,
-    input.gradingBands,
-  )
+  const performanceGrade = resolvePerformanceGrade(input.performance.score.value, input.gradingBands)
   const scoreMeaning = resolveLocalizedScoreMeaning({
     t: input.t,
     gradeCode: performanceGrade.code,
@@ -1022,6 +1019,8 @@ export function buildStoreMyPerformanceViewModel(input: {
       ...metricDelta,
       displayValue,
       progressPercent,
+      contributionValue: getFiniteMetricNumber(metric?.contributionValue) ?? 0,
+      weightPercent: getFiniteMetricNumber(metric?.weightPercent) ?? 0,
       tone: getMetricTone(metricDelta.code),
       statusLabel: getMetricStatusLabel(input.t, metric, metricDelta.deltaValue),
       narrative: input.t(getMetricNarrativeKey(metricDelta.code), {

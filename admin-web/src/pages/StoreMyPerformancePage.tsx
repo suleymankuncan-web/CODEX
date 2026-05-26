@@ -26,14 +26,11 @@ import {
 } from './store-my-performance-model'
 import {
   StoreMyPerformanceDateFilter,
-  StoreMyPerformanceHeroPanel,
   StoreMyPerformanceKpiDialog,
-  StoreMyPerformanceLowerGrid,
-  StoreMyPerformanceMetricGrid,
   StoreMyPerformancePartialAlert,
-  StoreMyPerformanceScorePanel,
   StoreMyPerformanceTopbar,
 } from './store-my-performance-sections'
+import { StoreMyPerformancePlumDashboard } from './store-my-performance-plum-dashboard'
 
 function canUseSelfPerformance(authSummary: AuthSessionSummary | null) {
   const roles = authSummary?.user.roleCodes ?? []
@@ -381,9 +378,7 @@ function StoreMyPerformancePageExperience({
     periodLabel,
     pendingNormalizationLabels,
     remainingTargetLabel,
-    samePeriodMetrics,
     samePeriodScoreDelta,
-    scoreDeltaLabel,
     scoreMeaning,
     scoreValue,
     selectedPeriodLabel,
@@ -393,18 +388,17 @@ function StoreMyPerformancePageExperience({
     targetSalesLabel,
     targetStatusLabel,
     todayActions,
-    trendPoints,
     turkeyPopulationLabel,
     turkeyRankLabel,
   } = viewModel
 
   return (
     <section
-      className="tw:min-h-screen tw:bg-background tw:text-foreground"
+      className="store-me-plum-page tw:min-h-screen tw:text-foreground"
       data-testid="store-me-page"
       aria-label={t('storeMe.title')}
     >
-      <main className="tw:min-w-0 tw:px-3 tw:py-4 tw:md:px-6 tw:md:py-6">
+      <main className="store-me-plum-content tw:min-w-0">
         <section className="tw:mx-auto tw:grid tw:max-w-7xl tw:gap-4" aria-label={t('storeMe.title')}>
           <StoreMyPerformanceTopbar
             employeeHeading={employeeHeading}
@@ -437,57 +431,36 @@ function StoreMyPerformancePageExperience({
             usesClosedSnapshotMode={usesClosedSnapshotMode}
           />
 
-          <div className="tw:grid tw:gap-4 tw:xl:grid-cols-[minmax(18rem,0.36fr)_minmax(0,1fr)]">
-            <StoreMyPerformanceScorePanel
-              gradeLabel={gradeLabel}
-              isPartial={partial.isPartial}
-              scoreConfidence={scoreMeaning.confidence}
-              scoreDeltaLabel={scoreDeltaLabel}
-              scoreFocus={scoreMeaning.focus}
-              scoreValue={scoreValue}
-              storePopulationLabel={storePopulationLabel}
-              storeRankLabel={storeRankLabel}
-              t={t}
-              turkeyPopulationLabel={turkeyPopulationLabel}
-              turkeyRankLabel={turkeyRankLabel}
-            />
+          <StoreMyPerformancePartialAlert
+            isPartial={partial.isPartial}
+            missingMetricLabels={partial.missingMetricLabels}
+            pendingNormalizationLabels={pendingNormalizationLabels}
+            t={t}
+          />
 
-            <section className="tw:grid tw:min-w-0 tw:gap-4">
-              <StoreMyPerformanceHeroPanel
-                actualSalesLabel={actualSalesLabel}
-                onOpenKpiDetails={onOpenKpiDetails}
-                remainingTargetLabel={remainingTargetLabel}
-                samePeriodMetrics={samePeriodMetrics}
-                samePeriodScoreDelta={samePeriodScoreDelta}
-                scoreSummary={scoreMeaning.summary}
-                t={t}
-                targetProgressPercent={targetProgressPercent}
-                targetSalesLabel={targetSalesLabel}
-                targetStatusLabel={targetStatusLabel}
-              />
-
-              <StoreMyPerformancePartialAlert
-                isPartial={partial.isPartial}
-                missingMetricLabels={partial.missingMetricLabels}
-                pendingNormalizationLabels={pendingNormalizationLabels}
-                t={t}
-              />
-
-              <StoreMyPerformanceMetricGrid
-                metricCards={metricCards}
-                storeRankLabel={storeRankLabel}
-                t={t}
-                turkeyRankLabel={turkeyRankLabel}
-              />
-
-              <StoreMyPerformanceLowerGrid
-                samePeriodScoreDelta={samePeriodScoreDelta}
-                t={t}
-                todayActions={todayActions}
-                trendPoints={trendPoints}
-              />
-            </section>
-          </div>
+          <StoreMyPerformancePlumDashboard
+            actualSalesLabel={actualSalesLabel}
+            gradeLabel={gradeLabel}
+            isPartial={partial.isPartial}
+            metricCards={metricCards}
+            monthlyDetailRows={monthlyDetailRows}
+            onOpenKpiDetails={onOpenKpiDetails}
+            remainingTargetLabel={remainingTargetLabel}
+            samePeriodScoreDelta={samePeriodScoreDelta}
+            scoreConfidence={scoreMeaning.confidence}
+            scoreFocus={scoreMeaning.focus}
+            scoreSummary={scoreMeaning.summary}
+            scoreValue={scoreValue}
+            storePopulationLabel={storePopulationLabel}
+            storeRankLabel={storeRankLabel}
+            t={t}
+            targetProgressPercent={targetProgressPercent}
+            targetSalesLabel={targetSalesLabel}
+            targetStatusLabel={targetStatusLabel}
+            todayActions={todayActions}
+            turkeyPopulationLabel={turkeyPopulationLabel}
+            turkeyRankLabel={turkeyRankLabel}
+          />
         </section>
       </main>
 
