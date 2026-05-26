@@ -169,6 +169,12 @@ admin-web/src/styles/store-command-shell.css
 admin-web/e2e/store-surfaces.spec.ts
 ```
 
+Current Store UI refactor intent matrix:
+
+```text
+docs/plans/store-surfaces-redesign-implementation-plan-v1.md
+```
+
 Store Me is the active reference pattern for the next page refactor pilots,
 not because every page should look identical, but because the work established
 the right operating method:
